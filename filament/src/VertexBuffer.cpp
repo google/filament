@@ -21,17 +21,17 @@
 namespace filament {
 
 size_t VertexBuffer::getVertexCount() const noexcept {
-    return upcast(this)->getVertexCount();
+    return downcast(this)->getVertexCount();
 }
 
 void VertexBuffer::setBufferAt(Engine& engine, uint8_t bufferIndex,
         backend::BufferDescriptor&& buffer, uint32_t byteOffset) {
-    upcast(this)->setBufferAt(upcast(engine), bufferIndex, std::move(buffer), byteOffset);
+    downcast(this)->setBufferAt(downcast(engine), bufferIndex, std::move(buffer), byteOffset);
 }
 
 void VertexBuffer::setBufferObjectAt(Engine& engine, uint8_t bufferIndex,
         BufferObject const* bufferObject) {
-    upcast(this)->setBufferObjectAt(upcast(engine), bufferIndex, upcast(bufferObject));
+    downcast(this)->setBufferObjectAt(downcast(engine), bufferIndex, downcast(bufferObject));
 }
 
 } // namespace filament

@@ -99,7 +99,7 @@ FView::FView(FEngine& engine)
 FView::~FView() noexcept = default;
 
 void FView::terminate(FEngine& engine) {
-    // Here we would cleanly free resources we've allocated or we own (currently none).
+    // Here we would cleanly free resources we've allocated, or we own (currently none).
 
     while (mActivePickingQueriesList) {
         FPickingQuery* const pQuery = mActivePickingQueriesList;
@@ -290,13 +290,13 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         const auto& shadowOptions = lcm.getShadowOptions(directionalLight);
         assert_invariant(shadowOptions.shadowCascades >= 1 &&
                 shadowOptions.shadowCascades <= CONFIG_MAX_SHADOW_CASCADES);
-        mShadowMapManager.setShadowCascades(0, &shadowOptions);
+        mShadowMapManager.setDirectionalShadowMap(0, &shadowOptions);
     }
 
     // Find all shadow-casting spotlights.
-    size_t shadowCastingSpotCount = 0;
+    size_t shadowLayerCount = 0;
 
-    // We allow a max of CONFIG_MAX_SHADOW_CASTING_SPOTS spot light shadows. Any additional
+    // We allow a max of CONFIG_MAX_SHADOW_CASTING_SPOTS spotlight shadows. Any additional
     // shadow-casting spotlights are ignored.
     for (size_t l = FScene::DIRECTIONAL_LIGHTS_COUNT; l < lightData.size(); l++) {
 
@@ -313,14 +313,16 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
             continue; // doesn't cast shadows
         }
 
-        if (UTILS_LIKELY(!lcm.isSpotLight(li))) {
-            continue; // is not a spot-li (we're not supporting point-lights yet)
+        const auto& shadowOptions = lcm.getShadowOptions(li);
+        mShadowMapManager.addShadowMap(l, lcm.isSpotLight(li), &shadowOptions);
+
+        if (lcm.isSpotLight(li)) {
+            shadowLayerCount += 6;
+        } else {
+            shadowLayerCount += 1;
         }
 
-        const auto& shadowOptions = lcm.getShadowOptions(li);
-        mShadowMapManager.addSpotShadowMap(l, &shadowOptions);
-        ++shadowCastingSpotCount;
-        if (shadowCastingSpotCount > CONFIG_MAX_SHADOW_CASTING_SPOTS - 1) {
+        if (shadowLayerCount > CONFIG_MAX_SHADOWMAP_PUNCTUAL - 1) {
             break; // we ran out of spotlight shadow casting
         }
     }
@@ -507,11 +509,11 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
          * Partition the SoA so that renderables are partitioned w.r.t their visibility into the
          * following groups:
          *
-         * 1. renderables
-         * 2. renderables and directional shadow casters
+         * 1. visible (main camera) renderables
+         * 2. visible (main camera) renderables and directional shadow casters
          * 3. directional shadow casters only
-         * 4. punctual light shadow casters only
-         * 5. invisible renderables
+         * 4. potential punctual light shadow casters only
+         * 5. definitely invisible renderables
          *
          * Note that the first three groups are partitioned based only on the lowest two bits of the
          * VISIBLE_MASK (VISIBLE_RENDERABLE and VISIBLE_DIR_SHADOW_CASTER), and thus can also
@@ -522,6 +524,9 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
          * of sort(), which gives us O(4.N) instead of O(N.log(N)) application of swap().
          */
 
+        // TODO: we need to compare performance of doing this partitioning vs not doing it.
+        //       and rely on checking visibility in the loops
+
         // calculate the sorting key for all elements, based on their visibility
         uint8_t const* layers = renderableData.data<FScene::LAYERS>();
         auto const* visibility = renderableData.data<FScene::VISIBILITY_STATE>();
@@ -529,24 +534,42 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
                 renderableData.size());
 
         auto const beginRenderables = renderableData.begin();
-        auto beginCasters = partition(beginRenderables, renderableData.end(), VISIBLE_RENDERABLE);
-        auto beginCastersOnly = partition(beginCasters, renderableData.end(),
+
+        auto beginDirCasters = partition(beginRenderables, renderableData.end(),
+                VISIBLE_RENDERABLE | VISIBLE_DIR_SHADOW_RENDERABLE,
+                VISIBLE_RENDERABLE);
+
+        auto beginDirCastersOnly = partition(beginDirCasters, renderableData.end(),
+                VISIBLE_RENDERABLE | VISIBLE_DIR_SHADOW_RENDERABLE,
                 VISIBLE_RENDERABLE | VISIBLE_DIR_SHADOW_RENDERABLE);
-        auto beginSpotLightCastersOnly = partition(beginCastersOnly, renderableData.end(),
+
+        auto endDirCastersOnly = partition(beginDirCastersOnly, renderableData.end(),
+                VISIBLE_RENDERABLE | VISIBLE_DIR_SHADOW_RENDERABLE,
                 VISIBLE_DIR_SHADOW_RENDERABLE);
-        auto endSpotLightCastersOnly = std::partition(beginSpotLightCastersOnly,
-                renderableData.end(), [](auto it) {
-                    return (it.template get<FScene::VISIBLE_MASK>() & VISIBLE_SPOT_SHADOW_RENDERABLE);
-                });
+
+        auto endPotentialSpotCastersOnly = partition(endDirCastersOnly, renderableData.end(),
+                VISIBLE_DYN_SHADOW_RENDERABLE,
+                VISIBLE_DYN_SHADOW_RENDERABLE);
 
         // convert to indices
-        uint32_t iEnd = uint32_t(beginSpotLightCastersOnly - beginRenderables);
-        uint32_t iSpotLightCastersEnd = uint32_t(endSpotLightCastersOnly - beginRenderables);
-        mVisibleRenderables = Range{ 0, uint32_t(beginCastersOnly - beginRenderables) };
-        mVisibleDirectionalShadowCasters = Range{ uint32_t(beginCasters - beginRenderables), iEnd };
-        mSpotLightShadowCasters = Range{ 0, iSpotLightCastersEnd };
-        merged = Range{ 0, iSpotLightCastersEnd };
+        mVisibleRenderables = { 0, uint32_t(beginDirCastersOnly - beginRenderables) };
 
+        mVisibleDirectionalShadowCasters = {
+                uint32_t(beginDirCasters - beginRenderables),
+                uint32_t(endDirCastersOnly - beginRenderables)};
+
+        merged = { 0, uint32_t(endPotentialSpotCastersOnly - beginRenderables) };
+        if (!mShadowMapManager.hasSpotShadows()) {
+            // we know we don't have spot shadows, we can reduce the range to not even include
+            // the potential spot casters
+            merged = { 0, uint32_t(endDirCastersOnly - beginRenderables) };
+        }
+
+        mSpotLightShadowCasters = merged;
+
+        // TODO: when any spotlight is used, `merged` ends-up being the whole list. However,
+        //       some of the items will end-up not being visible by any light. Can we do better?
+        //       e.g. could we deffer some of the prepareVisibleRenderables() to later?
         scene->prepareVisibleRenderables(merged);
 
         // update those UBOs
@@ -568,8 +591,8 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
     }
 
     /*
-     * Prepare lighting -- this is where we update the lights UBOs, set-up the IBL,
-     * set-up the froxelization parameters.
+     * Prepare lighting -- this is where we update the lights UBOs, set up the IBL,
+     * set up the froxelization parameters.
      * Relies on FScene::prepare() and prepareVisibleLights()
      */
 
@@ -598,37 +621,24 @@ void FView::computeVisibilityMasks(
     // This is vectorized 16x.
     count = (count + 0xFu) & ~0xFu; // capacity guaranteed to be multiple of 16
     for (size_t i = 0; i < count; ++i) {
-        Culler::result_type mask = visibleMask[i];
-        FRenderableManager::Visibility v = visibility[i];
-        bool inVisibleLayer = layers[i] & visibleLayers;
+        const Culler::result_type mask = visibleMask[i];
+        const FRenderableManager::Visibility v = visibility[i];
+        const bool inVisibleLayer = layers[i] & visibleLayers;
 
-        // The logic below essentially does the following:
-        //
-        // if inVisibleLayer:
-        //     if !v.culling:
-        //         set all bits in visibleMask to 1
-        // else:
-        //     set all bits in visibleMask to 0
-        // if !v.castShadows:
-        //     if !vsm or !v.receivesShadows:       // with vsm, we also render shadow receivers
-        //         set shadow visibility bits in visibleMask to 0
-        //
-        // It is written without if statements to avoid branches, which allows it to be vectorized 16x.
+        const bool visibleRenderable = inVisibleLayer &&
+                (!v.culling || (mask & VISIBLE_RENDERABLE));
 
-        const bool visRenderables = (!v.culling || (mask & VISIBLE_RENDERABLE)) && inVisibleLayer;
-        const bool visShadowParticipant = v.castShadows;
-        const bool visShadowRenderable = (!v.culling || (mask & VISIBLE_DIR_SHADOW_RENDERABLE))
-                && inVisibleLayer && visShadowParticipant;
-        visibleMask[i] = Culler::result_type(visRenderables) |
-                Culler::result_type(visShadowRenderable << 1u);
-        // this loop gets fully unrolled
-        for (size_t j = 0; j < CONFIG_MAX_SHADOW_CASTING_SPOTS; ++j) {
-            const bool visSpotShadowRenderable =
-                    (!v.culling || (mask & VISIBLE_SPOT_SHADOW_RENDERABLE_N(j))) &&
-                        inVisibleLayer && visShadowParticipant;
-            visibleMask[i] |=
-                Culler::result_type(visSpotShadowRenderable << VISIBLE_SPOT_SHADOW_RENDERABLE_N_BIT(j));
-        }
+        const bool visibleDirectionalShadowRenderable = (v.castShadows && inVisibleLayer) &&
+                (!v.culling || (mask & VISIBLE_DIR_SHADOW_RENDERABLE));
+
+        const bool potentialSpotShadowRenderable = v.castShadows && inVisibleLayer;
+
+        using Type = Culler::result_type;
+
+        visibleMask[i] =
+                Type(visibleRenderable << VISIBLE_RENDERABLE_BIT) |
+                Type(visibleDirectionalShadowRenderable << VISIBLE_DIR_SHADOW_RENDERABLE_BIT) |
+                Type(potentialSpotShadowRenderable << VISIBLE_DYN_SHADOW_RENDERABLE_BIT);
     }
 }
 
@@ -636,12 +646,11 @@ UTILS_NOINLINE
 /* static */ FScene::RenderableSoa::iterator FView::partition(
         FScene::RenderableSoa::iterator begin,
         FScene::RenderableSoa::iterator end,
-        uint8_t mask) noexcept {
-    return std::partition(begin, end, [mask](auto it) {
+        Culler::result_type mask, Culler::result_type value) noexcept {
+    return std::partition(begin, end, [mask, value](auto it) {
         // Mask VISIBLE_MASK to ignore higher bits related to spot shadows. We only partition based
         // on renderable and directional shadow visibility.
-        return (it.template get<FScene::VISIBLE_MASK>() &
-                (VISIBLE_RENDERABLE | VISIBLE_DIR_SHADOW_RENDERABLE)) == mask;
+        return (it.template get<FScene::VISIBLE_MASK>() & mask) == value;
     });
 }
 
@@ -702,8 +711,8 @@ void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
     }
 }
 
-void FView::prepareShadowMap() const noexcept {
-    mPerViewUniforms.prepareShadowMapping();
+void FView::prepareShadowMap(bool highPrecision) const noexcept {
+    mPerViewUniforms.prepareShadowMapping(highPrecision);
 }
 
 void FView::cleanupRenderPasses() const noexcept {
@@ -834,7 +843,7 @@ void FView::prepareVisibleLights(FLightManager const& lcm, ArenaScope& rootArena
 
     ArenaScope arena(rootArena.getAllocator());
     size_t const size = visibleLightCount;
-    // number of point/spot lights
+    // number of point/spotlights
     size_t const positionalLightCount = size - FScene::DIRECTIONAL_LIGHTS_COUNT;
     if (positionalLightCount) {
         // always allocate at least 4 entries, because the vectorized loops below rely on that
@@ -886,9 +895,8 @@ void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
 }
 
 FrameGraphId<FrameGraphTexture> FView::renderShadowMaps(FrameGraph& fg, FEngine& engine,
-        FEngine::DriverApi& driver,
-        RenderPass const& pass) noexcept {
-    return mShadowMapManager.render(fg, engine, pass, *this);
+        CameraInfo const& cameraInfo, RenderPass const& pass) noexcept {
+    return mShadowMapManager.render(fg, engine, pass, *this, cameraInfo);
 }
 
 void FView::commitFrameHistory(FEngine& engine) noexcept {

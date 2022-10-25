@@ -23,7 +23,6 @@ import androidx.annotation.Nullable;
 import com.google.android.filament.Box;
 import com.google.android.filament.Engine;
 import com.google.android.filament.Entity;
-import com.google.android.filament.MaterialInstance;
 
 /**
  * Owns a bundle of Filament objects that have been created by <code>AssetLoader</code>.
@@ -35,25 +34,32 @@ import com.google.android.filament.MaterialInstance;
  * <code>NameComponentManager</code>, <code>RenderableManager</code>, and others.</p>
  *
  * <p>In addition to the aforementioned entities, an asset has strong ownership over a list of
- * <code>VertexBuffer</code>, <code>IndexBuffer</code>, <code>MaterialInstance</code>, and
- * <code>Texture</code>.</p>
+ * <code>VertexBuffer</code>, <code>IndexBuffer</code>, and <code>Texture</code>.</p>
  *
  * <p>Clients can use {@link ResourceLoader} to create textures, compute tangent quaternions, and
  * upload data into vertex buffers and index buffers.</p>
  *
  * @see ResourceLoader
- * @see Animator
+ * @see FilamentInstance
  * @see AssetLoader
  */
 public class FilamentAsset {
     private long mNativeObject;
-    private Animator mAnimator;
+    private FilamentInstance mPrimaryInstance;
     private Engine mEngine;
 
     FilamentAsset(Engine engine, long nativeObject) {
         mEngine = engine;
         mNativeObject = nativeObject;
-        mAnimator = null;
+    }
+
+    public FilamentInstance getInstance() {
+        if (mPrimaryInstance != null) {
+            return mPrimaryInstance;
+        }
+        long nativeInstance = nGetInstance(getNativeObject());
+        mPrimaryInstance = new FilamentInstance(this, nativeInstance);
+        return mPrimaryInstance;
     }
 
     long getNativeObject() {
@@ -169,17 +175,6 @@ public class FilamentAsset {
         return result;
     }
 
-    public @NonNull MaterialInstance[] getMaterialInstances() {
-        final int count = nGetMaterialInstanceCount(mNativeObject);
-        MaterialInstance[] result = new MaterialInstance[count];
-        long[] natives = new long[count];
-        nGetMaterialInstances(mNativeObject, natives);
-        for (int i = 0; i < count; i++) {
-            result[i] = new MaterialInstance(mEngine, natives[i]);
-        }
-        return result;
-    }
-
     /**
      * Gets the bounding box computed from the supplied min / max values in glTF accessors.
      *
@@ -210,25 +205,6 @@ public class FilamentAsset {
     }
 
     /**
-     * Retrieves the <code>Animator</code> interface for this asset.
-     *
-     * <p>When calling this for the first time, this must be called after
-     * {@link ResourceLoader#loadResources} or {@link ResourceLoader#asyncBeginLoad}. When the asset
-     * is destroyed, its animator becomes invalid.</p>
-     */
-    public @NonNull Animator getAnimator() {
-        if (mAnimator != null) {
-            return mAnimator;
-        }
-        long nativeAnimator = nGetAnimator(getNativeObject());
-        if (nativeAnimator == 0) {
-            throw new IllegalStateException("Unable to create animator");
-        }
-        mAnimator = new Animator(nativeAnimator);
-        return mAnimator;
-    }
-
-    /**
      * Gets the names of all morph targets in the given entity.
      */
     public @NonNull String[] getMorphTargetNames(@Entity int entity) {
@@ -247,31 +223,6 @@ public class FilamentAsset {
     }
 
     /**
-     * Returns the names of all material variants.
-     */
-    public @NonNull String[] getMaterialVariantNames() {
-        String[] names = new String[nGetMaterialVariantCount(mNativeObject)];
-        nGetMaterialVariantNames(mNativeObject, names);
-        return names;
-    }
-
-    /**
-     * Applies the given material variant to all primitives that it affects.
-     *
-     * This is efficient because it merely swaps around persistent MaterialInstances. If you change
-     * a material parameter while a certain variant is active, the updated value will be remembered
-     * after you re-apply that variant.
-     *
-     * If the asset is instanced, this affects all instances in the same way.
-     * To set the variant on an individual instance, use FilamentInstance#applyMaterialVariant.
-     *
-     * Ignored if variantIndex is out of bounds.
-     */
-    public void applyMaterialVariant(@IntRange(from = 0) int variantIndex) {
-        nApplyMaterialVariant(getNativeObject(), variantIndex);
-    }
-
-    /**
      * Reclaims CPU-side memory for URI strings, binding lists, and raw animation data.
      *
      * This should only be called after ResourceLoader#loadResources() or
@@ -282,8 +233,10 @@ public class FilamentAsset {
         nReleaseSourceData(mNativeObject);
     }
 
+    public Engine getEngine() { return mEngine; }
+
     void clearNativeObject() {
-        if (mAnimator != null) mAnimator.clearNativeObject();
+        mPrimaryInstance = null;
         mNativeObject = 0;
     }
 
@@ -307,21 +260,17 @@ public class FilamentAsset {
     private static native int nGetCameraEntityCount(long nativeAsset);
     private static native void nGetCameraEntities(long nativeAsset, int[] result);
 
-    private static native int nGetMaterialInstanceCount(long nativeAsset);
-    private static native void nGetMaterialInstances(long nativeAsset, long[] nativeResults);
-
-    private static native int nGetMaterialVariantCount(long nativeAsset);
-    private static native void nGetMaterialVariantNames(long nativeAsset, String[] result);
-
     private static native int nGetMorphTargetCount(long nativeAsset, int entity);
     private static native void nGetMorphTargetNames(long nativeAsset, int entity, String[] result);
 
     private static native void nGetBoundingBox(long nativeAsset, float[] box);
     private static native String nGetName(long nativeAsset, int entity);
     private static native String nGetExtras(long nativeAsset, int entity);
-    private static native long nGetAnimator(long nativeAsset);
-    private static native void nApplyMaterialVariant(long nativeAsset, int variantIndex);
+
+    private static native long nGetInstance(long nativeAsset);
+
     private static native int nGetResourceUriCount(long nativeAsset);
     private static native void nGetResourceUris(long nativeAsset, String[] result);
+
     private static native void nReleaseSourceData(long nativeAsset);
 }

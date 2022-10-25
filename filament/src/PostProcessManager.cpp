@@ -127,7 +127,7 @@ void PostProcessManager::PostProcessMaterial::loadMaterial(FEngine& engine) cons
     // TODO: After all materials using this class have been converted to the post-process material
     //       domain, load both OPAQUE and TRANSPARENT variants here.
     mHasMaterial = true;
-    mMaterial = upcast(Material::Builder().package(mData, mSize).build(engine));
+    mMaterial = downcast(Material::Builder().package(mData, mSize).build(engine));
 }
 
 UTILS_NOINLINE
@@ -990,8 +990,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
             float x1 = float(i * 2);
             float k0 = std::exp(-alpha * x0 * x0);
             float k1 = std::exp(-alpha * x1 * x1);
+
+            // k * textureLod(..., o) with bilinear sampling is equivalent to:
+            //      k * (s[0] * (1 - o) + s[1] * o)
+            // solve:
+            //      k0 = k * (1 - o)
+            //      k1 = k * o
+
             float k = k0 + k1;
-            float o = k0 / k;
+            float o = k1 / k;
             kernel[i].x = k;
             kernel[i].y = o;
             totalWeight += (k0 + k1) * 2.0f;
@@ -1039,7 +1046,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
 
-                // don't use auto for those, b/c the can't resolve them
+                // don't use auto for those, b/c the ide can't resolve them
                 using FGTD = FrameGraphTexture::Descriptor;
                 using FGTSD = FrameGraphTexture::SubResourceDescriptor;
 
@@ -1055,7 +1062,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 using namespace std::literals;
                 std::string_view materialName;
                 const bool is2dArray = inDesc.type == SamplerType::SAMPLER_2D_ARRAY;
-                switch (backend::getFormatSize(outDesc.format)) {
+                switch (backend::getFormatComponentCount(outDesc.format)) {
                     case 1: materialName  = is2dArray ?
                             "separableGaussianBlur1L"sv : "separableGaussianBlur1"sv;   break;
                     case 2: materialName  = is2dArray ?
@@ -2258,7 +2265,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
     if (bloomOptions.enabled) {
         bloomStrength = clamp(bloomOptions.strength, 0.0f, 1.0f);
         if (bloomOptions.dirt) {
-            FTexture* fdirt = upcast(bloomOptions.dirt);
+            FTexture* fdirt = downcast(bloomOptions.dirt);
             FrameGraphTexture frameGraphTexture{ .handle = fdirt->getHwHandle() };
             bloomDirt = fg.import("dirt", {
                     .width = (uint32_t)fdirt->getWidth(0u),

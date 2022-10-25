@@ -22,6 +22,10 @@
 
 #include <filament/Box.h>
 
+namespace filament {
+class MaterialInstance;
+}
+
 namespace filament::gltfio {
 
 class Animator;
@@ -31,7 +35,7 @@ class FilamentAsset;
  * \class FilamentInstance FilamentInstance.h gltfio/FilamentInstance.h
  * \brief Provides access to a hierarchy of entities that have been instanced from a glTF asset.
  *
- * Every entity has a filament::TransformManager component, and some entities also have \c Name or
+ * Every entity has a TransformManager component, and some entities also have \c Name or
  * \c Renderable components.
  *
  * \see AssetLoader::createInstancedAsset()
@@ -64,6 +68,16 @@ public:
      * Ignored if variantIndex is out of bounds.
      */
     void applyMaterialVariant(size_t variantIndex) noexcept;
+
+    /**
+     * Returns the number of material variants in the asset.
+     */
+    size_t getMaterialVariantCount() const noexcept;
+
+    /**
+     * Returns the name of the given material variant, or null if it is out of bounds.
+     */
+    const char* getMaterialVariantName(size_t variantIndex) const noexcept;
 
     /**
      * Returns the animation engine for the instance.
@@ -129,6 +143,23 @@ public:
      * If recomputeBoundingBoxes() has been called, then this returns the recomputed AABB.
      */
     Aabb getBoundingBox() const noexcept;
+
+    /** Gets all material instances. These are already bound to renderables. */
+    const MaterialInstance* const* getMaterialInstances() const noexcept;
+
+    /** Gets all material instances (non-const). These are already bound to renderables. */
+    MaterialInstance* const* getMaterialInstances() noexcept;
+
+    /** Gets the number of materials returned by getMaterialInstances(). */
+    size_t getMaterialInstanceCount() const noexcept;
+
+    /**
+     * Releases ownership of material instances.
+     *
+     * This makes the client take responsibility for destroying MaterialInstance
+     * objects. The getMaterialInstances query becomes invalid after detachment.
+     */
+    void detachMaterialInstances();
 };
 
 } // namespace filament::gltfio

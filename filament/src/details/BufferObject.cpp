@@ -46,7 +46,7 @@ BufferObject::Builder& BufferObject::Builder::bindingType(BindingType bindingTyp
 }
 
 BufferObject* BufferObject::Builder::build(Engine& engine) {
-    return upcast(engine).createBufferObject(*this);
+    return downcast(engine).createBufferObject(*this);
 }
 
 // ------------------------------------------------------------------------------------------------

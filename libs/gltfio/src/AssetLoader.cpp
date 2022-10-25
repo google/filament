@@ -53,7 +53,7 @@
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
 
-#include "upcast.h"
+#include "downcast.h"
 
 using namespace filament;
 using namespace filament::math;
@@ -141,7 +141,7 @@ static LightManager::Type getLightType(const cgltf_light_type light) {
 //
 // Notes:
 // - The Material objects (used to create instances) are cached in MaterialProvider, not here.
-// - The cache is not responsible for destroying material instances. They are owned by the asset.
+// - The cache is not responsible for destroying material instances.
 class MaterialInstanceCache {
 public:
     struct Entry {
@@ -155,6 +155,44 @@ public:
         mHierarchy(hierarchy),
         mMaterialInstances(hierarchy->materials_count, Entry{}),
         mMaterialInstancesWithVertexColor(hierarchy->materials_count, Entry{}) {}
+
+    void flush(utils::FixedCapacityVector<MaterialInstance*>* dest) {
+        size_t count = 0;
+        for (const Entry& entry : mMaterialInstances) {
+            if (entry.instance) {
+                ++count;
+            }
+        }
+        for (const Entry& entry : mMaterialInstancesWithVertexColor) {
+            if (entry.instance) {
+                ++count;
+            }
+        }
+        if (mDefaultMaterialInstance.instance) {
+            ++count;
+        }
+        if (mDefaultMaterialInstanceWithVertexColor.instance) {
+            ++count;
+        }
+        assert_invariant(dest->size() == 0);
+        dest->reserve(count);
+        for (const Entry& entry : mMaterialInstances) {
+            if (entry.instance) {
+                dest->push_back(entry.instance);
+            }
+        }
+        for (const Entry& entry : mMaterialInstancesWithVertexColor) {
+            if (entry.instance) {
+                dest->push_back(entry.instance);
+            }
+        }
+        if (mDefaultMaterialInstance.instance) {
+            dest->push_back(mDefaultMaterialInstance.instance);
+        }
+        if (mDefaultMaterialInstanceWithVertexColor.instance) {
+            dest->push_back(mDefaultMaterialInstanceWithVertexColor.instance);
+        }
+    }
 
     Entry* getEntry(const cgltf_material** mat, bool vertexColor) {
         if (*mat) {
@@ -231,7 +269,7 @@ private:
     void recurseEntities(const cgltf_data* srcAsset, const cgltf_node* node, SceneMask scenes,
             Entity parent, FFilamentInstance* instance);
     void createRenderable(const cgltf_data* srcAsset, const cgltf_node* node, Entity entity,
-            const char* name);
+            const char* name, FFilamentInstance* instance);
     void createLight(const cgltf_light* light, Entity entity);
     void createCamera(const cgltf_camera* camera, Entity entity);
     void addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
@@ -270,7 +308,7 @@ public:
     BufferObject* mDummyBufferObject = nullptr;
 };
 
-FILAMENT_UPCAST(AssetLoader)
+FILAMENT_DOWNCAST(AssetLoader)
 
 FFilamentAsset* FAssetLoader::createAsset(const uint8_t* bytes, uint32_t byteCount) {
     FilamentInstance* instances;
@@ -331,6 +369,7 @@ FFilamentAsset* FAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_
     return mAsset;
 }
 
+// note there a two overloads; this is the high-level one
 FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary) {
     if (!primary->mSourceAsset) {
         slog.e << "Source data has been released; asset is frozen." << io::endl;
@@ -342,13 +381,7 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary) {
         return nullptr;
     }
 
-    mMaterialInstanceCache = MaterialInstanceCache(srcAsset);
-
     FFilamentInstance* instance = createInstance(srcAsset);
-
-    if (primary->mAnimator) {
-        primary->mAnimator->addInstance(instance);
-    }
 
     primary->mDependencyGraph.commitEdges();
     return instance;
@@ -366,9 +399,8 @@ void FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
     }
     #endif
 
+    mDummyBufferObject = nullptr;
     mAsset = new FFilamentAsset(&mEngine, mNameManager, &mEntityManager, &mNodeManager, srcAsset);
-
-    mMaterialInstanceCache = MaterialInstanceCache(srcAsset);
 
     // It is not an error for a glTF file to have zero scenes.
     mAsset->mScenes.clear();
@@ -385,14 +417,6 @@ void FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
     const cgltf_size extras_size = asset.extras.end_offset - asset.extras.start_offset;
     if (extras_size > 1) {
         mAsset->mAssetExtras = CString(srcAsset->json + asset.extras.start_offset, extras_size);
-    }
-
-    // Check if the asset has variants.
-    if (srcAsset->variants_count > 0) {
-        mAsset->mVariants.reserve(srcAsset->variants_count);
-        for (cgltf_size i = 0, len = srcAsset->variants_count; i < len; ++i) {
-            mAsset->mVariants.push_back({CString(srcAsset->variants[i].name)});
-        }
     }
 
     // Build a mapping of root nodes to scene membership sets.
@@ -481,10 +505,13 @@ void FAssetLoader::createInstances(const cgltf_data* srcAsset, size_t numInstanc
     }
 }
 
+// note there a two overloads; this is the low-level one
 FFilamentInstance* FAssetLoader::createInstance(const cgltf_data* srcAsset) {
     auto rootTransform = mTransformManager.getInstance(mAsset->mRoot);
     Entity instanceRoot = mEntityManager.create();
     mTransformManager.create(instanceRoot, rootTransform);
+
+    mMaterialInstanceCache = MaterialInstanceCache(srcAsset);
 
     // Create an instance object, which is a just a lightweight wrapper around a vector of
     // entities and an animator. The creation of animator is triggered from ResourceLoader
@@ -504,12 +531,18 @@ FFilamentInstance* FAssetLoader::createInstance(const cgltf_data* srcAsset) {
 
     importSkins(mAsset, instance, srcAsset);
 
+    // Now that all entities have been created, the instance can create the animator component.
+    // Note that it may need to defer actual creation until external buffers are fully loaded.
+    instance->createAnimator();
+
     mAsset->mInstances.push_back(instance);
 
     // Bounding boxes are not shared because users might call recomputeBoundingBoxes() which can
     // be affected by entity transforms. However, upon instance creation we can safely copy over
     // the asset's bounding box.
     instance->boundingBox = mAsset->mBoundingBox;
+
+    mMaterialInstanceCache.flush(&instance->mMaterialInstances);
 
     return instance;
 }
@@ -564,7 +597,7 @@ void FAssetLoader::recurseEntities(const cgltf_data* srcAsset, const cgltf_node*
 
     // If the node has a mesh, then create a renderable component.
     if (node->mesh) {
-        createRenderable(srcAsset, node, entity, name);
+        createRenderable(srcAsset, node, entity, name, instance);
         if (srcAsset->variants_count > 0) {
             createMaterialVariants(srcAsset, node->mesh, entity, instance);
         }
@@ -623,7 +656,7 @@ void FAssetLoader::createPrimitives(const cgltf_data* srcAsset, const cgltf_node
  }
 
 void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node* node,
-        Entity entity, const char* name) {
+        Entity entity, const char* name, FFilamentInstance* instance) {
     const cgltf_mesh* mesh = node->mesh;
     const cgltf_size primitiveCount = mesh->primitives_count;
 
@@ -740,11 +773,6 @@ void FAssetLoader::createMaterialVariants(const cgltf_data* srcAsset, const cglt
         for (size_t i = 0, m = srcPrim.mappings_count; i < m; i++) {
             const size_t variantIndex = srcPrim.mappings[i].variant;
             const cgltf_material* material = srcPrim.mappings[i].material;
-            assert_invariant(variantIndex < mAsset->mVariants.size());
-            if (variantIndex >= mAsset->mVariants.size()) {
-                mError = true;
-                break;
-            }
             bool hasVertexColor = primitiveHasVertexColor(srcPrim);
             MaterialInstance* mi =
                     createMaterialInstance(srcAsset, material, &uvmap, hasVertexColor);
@@ -755,7 +783,6 @@ void FAssetLoader::createMaterialVariants(const cgltf_data* srcAsset, const cglt
             }
             mAsset->mDependencyGraph.addEdge(entity, mi);
             instance->variants[variantIndex].mappings.push_back({entity, prim, mi});
-            mAsset->mVariants[variantIndex].mappings.push_back({entity, prim, mi});
         }
     }
 }
@@ -1287,8 +1314,6 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         return nullptr;
     }
 
-    mAsset->mMaterialInstances.push_back(mi);
-
     auto mrConfig = inputMat->pbr_metallic_roughness;
     auto sgConfig = inputMat->pbr_specular_glossiness;
     auto ccConfig = inputMat->clearcoat;
@@ -1527,46 +1552,46 @@ AssetLoader* AssetLoader::create(const AssetConfiguration& config) {
 }
 
 void AssetLoader::destroy(AssetLoader** loader) {
-    FAssetLoader* temp(upcast(*loader));
+    FAssetLoader* temp(downcast(*loader));
     FAssetLoader::destroy(&temp);
     *loader = temp;
 }
 
 FilamentAsset* AssetLoader::createAsset(uint8_t const* bytes, uint32_t nbytes) {
-    return upcast(this)->createAsset(bytes, nbytes);
+    return downcast(this)->createAsset(bytes, nbytes);
 }
 
 FilamentAsset* AssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
         FilamentInstance** instances, size_t numInstances) {
-    return upcast(this)->createInstancedAsset(bytes, numBytes, instances, numInstances);
+    return downcast(this)->createInstancedAsset(bytes, numBytes, instances, numInstances);
 }
 
 FilamentInstance* AssetLoader::createInstance(FilamentAsset* asset) {
-    return upcast(this)->createInstance(upcast(asset));
+    return downcast(this)->createInstance(downcast(asset));
 }
 
 void AssetLoader::enableDiagnostics(bool enable) {
-    upcast(this)->mDiagnosticsEnabled = enable;
+    downcast(this)->mDiagnosticsEnabled = enable;
 }
 
 void AssetLoader::destroyAsset(const FilamentAsset* asset) {
-    upcast(this)->destroyAsset(upcast(asset));
+    downcast(this)->destroyAsset(downcast(asset));
 }
 
 size_t AssetLoader::getMaterialsCount() const noexcept {
-    return upcast(this)->getMaterialsCount();
+    return downcast(this)->getMaterialsCount();
 }
 
 NameComponentManager* AssetLoader::getNames() const noexcept {
-    return upcast(this)->getNames();
+    return downcast(this)->getNames();
 }
 
 const Material* const* AssetLoader::getMaterials() const noexcept {
-    return upcast(this)->getMaterials();
+    return downcast(this)->getMaterials();
 }
 
 MaterialProvider& AssetLoader::getMaterialProvider() noexcept {
-    return upcast(this)->mMaterials;
+    return downcast(this)->mMaterials;
 }
 
 } // namespace filament::gltfio

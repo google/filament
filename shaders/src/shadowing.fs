@@ -4,7 +4,7 @@
 
 // Keep this in sync with PerViewUniforms.h
 #define SHADOW_SAMPLING_RUNTIME_PCF     0u
-#define SHADOW_SAMPLING_RUNTIME_VSM     1u
+#define SHADOW_SAMPLING_RUNTIME_EVSM    1u
 #define SHADOW_SAMPLING_RUNTIME_DPCF    2u
 #define SHADOW_SAMPLING_RUNTIME_PCSS    3u
 
@@ -443,7 +443,7 @@ float evaluateShadowVSM(const highp vec2 moments, const highp float depth) {
     return chebyshevUpperBound(moments, depth, minVariance, frameUniforms.vsmLightBleedReduction);
 }
 
-float ShadowSample_VSM(const mediump sampler2DArray shadowMap,
+float ShadowSample_VSM(const bool ELVSM, const mediump sampler2DArray shadowMap,
         const uint layer, const highp vec4 shadowPosition) {
 
     // note: shadowPosition.z is in linear light-space normalized to [0, 1]
@@ -457,11 +457,13 @@ float ShadowSample_VSM(const mediump sampler2DArray shadowMap,
 
     // EVSM depth warping
     depth = depth * 2.0 - 1.0;
+    depth = frameUniforms.vsmExponent * depth;
 
-    depth = exp(frameUniforms.vsmExponent * depth);
+    depth = exp(depth);
     float p = evaluateShadowVSM(moments.xy, depth);
-    // enable for full EVSM (needed for large blurs). RGBA16F needed.
-    //p = min(p, evaluateShadowVSM(moments.zw, -1.0/depth));
+    if (ELVSM) {
+        p = min(p, evaluateShadowVSM(moments.zw, -1.0 / depth));
+    }
     return p;
 }
 
@@ -475,24 +477,72 @@ float ShadowSample_VSM(const mediump sampler2DArray shadowMap,
  * the light intensity.
  */
 
-// PCF sampling
-float shadow(const bool DIRECTIONAL,
-        const mediump sampler2DArrayShadow shadowMap,
-        const uint layer, const uint index, const uint cascade) {
-
-    highp vec4 shadowPosition;
-
+// get texture coordinate for directional and spot shadow maps
+highp vec4 getShadowPosition(const bool DIRECTIONAL,
+        const uint index, const uint cascade, const highp float zLight) {
+    highp vec4 p;
     // This conditional is resolved at compile time
     if (DIRECTIONAL) {
 #if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
-        shadowPosition = getCascadeLightSpacePosition(cascade);
+        p = getCascadeLightSpacePosition(cascade);
 #endif
     } else {
 #if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
-        highp float zLight = dot(shadowUniforms.shadows[index].lightFromWorldZ, vec4(getWorldPosition(), 1.0));
-        shadowPosition = getSpotLightSpacePosition(index, zLight);
+        p = getSpotLightSpacePosition(index, zLight);
 #endif
     }
+    return p;
+}
+
+// get {texture coordinate, layer} for point shadow maps
+highp vec4 getShadowPosition(const highp vec3 r, const highp vec4 nf,
+        inout uint layer, out highp float d) {
+    highp vec4 tc;
+    highp float rx = abs(r.x);
+    highp float ry = abs(r.y);
+    highp float rz = abs(r.z);
+    d = max(rx, max(ry, rz));
+    highp float ma = 1.0 / d;
+    if (d == rx) {
+        tc.x = r.x >= 0.0 ? r.z : -r.z;
+        tc.y = r.y;
+        layer += (r.x >= 0.0 ? 0u : 1u);
+    } else if (d == ry) {
+        tc.x = r.y >= 0.0 ? r.x : -r.x;
+        tc.y = r.z;
+        layer += (r.y >= 0.0 ? 2u : 3u);
+    } else {
+        tc.x = r.z >= 0.0 ? -r.x : r.x;
+        tc.y = r.y;
+        layer += (r.z >= 0.0 ? 4u : 5u);
+    }
+
+    // ma is guaranteed to be >= sc and tc
+    tc.xy = (tc.xy * ma + vec2(1.0)) * 0.5;
+
+    // z coordinate of the normalized fragment position in light-space
+    // i.e.: remap [near, far] to [0,1] : d = (d - n) / (f - n)
+    d = nf[2] + nf[3] * d;
+
+    if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_EVSM) {
+        // for VSM, the depth metric is linear normalized in light-space
+        tc.z = d;
+    } else {
+        // for other types of shadows it's clip-space depth. Below is an optimized version of
+        // (lightProjection * position).z
+        tc.z = nf[0] + nf[1] * ma;
+    }
+
+    // FIXME: the normal bias is not applied
+
+    tc.w = 1.0;
+    return tc;
+}
+
+// PCF sampling
+float shadow(const bool DIRECTIONAL,
+        const mediump sampler2DArrayShadow shadowMap,
+        const uint layer, const uint index, highp vec4 shadowPosition, highp float zLight) {
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
     return ShadowSample_PCF_Hard(shadowMap, layer, shadowPosition);
 #elif SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_LOW
@@ -503,25 +553,17 @@ float shadow(const bool DIRECTIONAL,
 // Shadow requiring a sampler2D sampler (VSM, DPCF and PCSS)
 float shadow(const bool DIRECTIONAL,
         const mediump sampler2DArray shadowMap,
-        const uint layer, const uint index, const uint cascade) {
-
-    highp vec4 shadowPosition;
-    highp float zLight = 0.0;
+        const uint layer, const uint index, highp vec4 shadowPosition, highp float zLight) {
 
     // This conditional is resolved at compile time
-    if (DIRECTIONAL) {
-#if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
-        shadowPosition = getCascadeLightSpacePosition(cascade);
-#endif
-    } else {
-#if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
-        zLight = dot(shadowUniforms.shadows[index].lightFromWorldZ, vec4(getWorldPosition(), 1.0));
-        shadowPosition = getSpotLightSpacePosition(index, zLight);
-#endif
-    }
-
-    if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_VSM) {
-        return ShadowSample_VSM(shadowMap, layer, shadowPosition);
+    if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_EVSM) {
+        bool elvsm = false;
+        if (DIRECTIONAL) {
+            elvsm = bool((frameUniforms.cascades >> 31u) & 1u);
+        } else {
+            elvsm = shadowUniforms.shadows[index].elvsm;
+        }
+        return ShadowSample_VSM(elvsm, shadowMap, layer, shadowPosition);
     }
 
     if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_DPCF) {

@@ -32,6 +32,13 @@ void main() {
 
     fragColor = evaluateMaterial(inputs);
 
+#if defined(TARGET_METAL_ENVIRONMENT)
+    // Hack to force spirv-cross to keep the light_structure texture present in the argument buffer.
+    float hack = textureLod(light_structure, vec2(0.0, 0.0), 0.0).r;
+    fragColor.x += hack;
+    fragColor.x -= hack;
+#endif
+
 #if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING) && defined(VARIANT_HAS_SHADOWING)
     bool visualizeCascades = bool(frameUniforms.cascades & 0x10u);
     if (visualizeCascades) {

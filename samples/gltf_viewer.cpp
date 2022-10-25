@@ -81,6 +81,7 @@ struct App {
 
     AssetLoader* assetLoader;
     FilamentAsset* asset = nullptr;
+    FilamentInstance* instance = nullptr;
     NameComponentManager* names;
 
     MaterialProvider* materials;
@@ -505,6 +506,7 @@ int main(int argc, char** argv) {
 
         // Parse the glTF file and create Filament entities.
         app.asset = app.assetLoader->createAsset(buffer.data(), buffer.size());
+        app.instance = app.asset->getInstance();
         buffer.clear();
         buffer.shrink_to_fit();
 
@@ -543,8 +545,8 @@ int main(int argc, char** argv) {
         app.asset->releaseSourceData();
 
         // Enable stencil writes on all material instances.
-        const size_t matInstanceCount = app.asset->getMaterialInstanceCount();
-        MaterialInstance* const* const instances = app.asset->getMaterialInstances();
+        const size_t matInstanceCount = app.instance->getMaterialInstanceCount();
+        MaterialInstance* const* const instances = app.instance->getMaterialInstances();
         for (int mi = 0; mi < matInstanceCount; mi++) {
             instances[mi]->setStencilWrite(true);
             instances[mi]->setStencilOpDepthStencilPass(MaterialInstance::StencilOperation::INCR);
@@ -618,12 +620,13 @@ int main(int argc, char** argv) {
             app.asset = app.assetLoader->createAsset(
                     GLTF_DEMO_DAMAGEDHELMET_DATA,
                     GLTF_DEMO_DAMAGEDHELMET_SIZE);
+            app.instance = app.asset->getInstance();
         } else {
             loadAsset(filename);
         }
 
         loadResources(filename);
-        app.viewer->setAsset(app.asset);
+        app.viewer->setAsset(app.asset, app.instance);
 
         createGroundPlane(engine, scene, app);
         createOverdrawVisualizerEntities(engine, scene, app);
@@ -909,8 +912,8 @@ int main(int argc, char** argv) {
         AutomationEngine::ViewerContent content = {
             .view = view,
             .renderer = renderer,
-            .materials = app.asset->getMaterialInstances(),
-            .materialCount = app.asset->getMaterialInstanceCount(),
+            .materials = app.instance->getMaterialInstances(),
+            .materialCount = app.instance->getMaterialInstanceCount(),
         };
         app.automationEngine->tick(engine, content, ImGui::GetIO().DeltaTime);
     };
@@ -926,7 +929,7 @@ int main(int argc, char** argv) {
         app.assetLoader->destroyAsset(app.asset);
         loadAsset(path);
         loadResources(path);
-        app.viewer->setAsset(app.asset);
+        app.viewer->setAsset(app.asset, app.instance);
     });
 
     filamentApp.run(app.config, setup, cleanup, gui, preRender, postRender);

@@ -393,19 +393,22 @@ ViewerGui::~ViewerGui() {
     delete mImGuiHelper;
 }
 
-void ViewerGui::setAsset(FilamentAsset* asset,  FilamentInstance* instanceToAnimate) {
-    if (mAsset != asset) {
+void ViewerGui::setAsset(FilamentAsset* asset, FilamentInstance* instance) {
+    if (mInstance != instance || mAsset != asset) {
         removeAsset();
+
+        // We keep a non-const reference to the asset for popRenderables and getWireframe.
         mAsset = asset;
+        mInstance = instance;
+
         mVisibleScenes.reset();
         mVisibleScenes.set(0);
         mCurrentCamera = 0;
-        if (!asset) {
-            mAnimator = nullptr;
+        if (!mAsset) {
+            mAsset = nullptr;
+            mInstance = nullptr;
             return;
         }
-        mAnimator = instanceToAnimate ? instanceToAnimate->getAnimator() : asset->getAnimator();
-        assert_invariant(mAnimator && "Call loadResources or asyncBeginLoad before setAsset.");
         updateRootTransform();
         mScene->addEntities(asset->getLightEntities(), asset->getLightEntityCount());
         auto& rcm = mEngine->getRenderableManager();
@@ -428,7 +431,6 @@ void ViewerGui::removeAsset() {
     if (!isRemoteMode()) {
         mScene->removeEntities(mAsset->getEntities(), mAsset->getEntityCount());
         mAsset = nullptr;
-        mAnimator = nullptr;
     }
 }
 
@@ -500,9 +502,14 @@ void ViewerGui::sceneSelectionUI() {
     }
 }
 
-void ViewerGui::applyAnimation(double currentTime) {
+void ViewerGui::applyAnimation(double currentTime, FilamentInstance* instance) {
+    instance = instance ? instance : mInstance;
     assert_invariant(!isRemoteMode());
-    const size_t numAnimations = mAnimator->getAnimationCount();
+    if (instance == nullptr) {
+        return;
+    }
+    Animator& animator = *instance->getAnimator();
+    const size_t numAnimations = animator.getAnimationCount();
     if (mResetAnimation) {
         mPreviousStartTime = mCurrentStartTime;
         mCurrentStartTime = currentTime;
@@ -510,17 +517,17 @@ void ViewerGui::applyAnimation(double currentTime) {
     }
     const double elapsedSeconds = currentTime - mCurrentStartTime;
     if (numAnimations > 0 && mCurrentAnimation > 0) {
-        mAnimator->applyAnimation(mCurrentAnimation - 1, elapsedSeconds);
+        animator.applyAnimation(mCurrentAnimation - 1, elapsedSeconds);
         if (elapsedSeconds < mCrossFadeDuration && mPreviousAnimation > 0) {
             const double previousSeconds = currentTime - mPreviousStartTime;
             const float lerpFactor = elapsedSeconds / mCrossFadeDuration;
-            mAnimator->applyCrossFade(mPreviousAnimation - 1, previousSeconds, lerpFactor);
+            animator.applyCrossFade(mPreviousAnimation - 1, previousSeconds, lerpFactor);
         }
     }
     if (mShowingRestPose) {
-        mAnimator->resetBoneMatrices();
+        animator.resetBoneMatrices();
     } else {
-        mAnimator->updateBoneMatrices();
+        animator.updateBoneMatrices();
     }
 }
 
@@ -834,6 +841,8 @@ void ViewerGui::updateUserInterface() {
             mSettings.view.shadowType = (ShadowType)shadowType;
 
             if (mSettings.view.shadowType == ShadowType::VSM) {
+                ImGui::Checkbox("High precision", &mSettings.view.vsmShadowOptions.highPrecision);
+                ImGui::Checkbox("ELVSM", &mSettings.lighting.shadowOptions.vsm.elvsm);
                 char label[32];
                 snprintf(label, 32, "%d", 1 << mVsmMsaaSamplesLog2);
                 ImGui::SliderInt("VSM MSAA samples", &mVsmMsaaSamplesLog2, 0, 3, label);
@@ -1021,28 +1030,29 @@ void ViewerGui::updateUserInterface() {
             ImGui::Unindent();
         }
 
-        if (mAsset->getMaterialVariantCount() > 0 && ImGui::CollapsingHeader("Variants")) {
+        if (mInstance->getMaterialVariantCount() > 0 && ImGui::CollapsingHeader("Variants")) {
             ImGui::Indent();
             int selectedVariant = mCurrentVariant;
-            for (size_t i = 0, count = mAsset->getMaterialVariantCount(); i < count; ++i) {
-                const char* label = mAsset->getMaterialVariantName(i);
+            for (size_t i = 0, count = mInstance->getMaterialVariantCount(); i < count; ++i) {
+                const char* label = mInstance->getMaterialVariantName(i);
                 ImGui::RadioButton(label, &selectedVariant, i);
             }
             if (selectedVariant != mCurrentVariant) {
                 mCurrentVariant = selectedVariant;
-                mAsset->applyMaterialVariant(mCurrentVariant);
+                mInstance->applyMaterialVariant(mCurrentVariant);
             }
             ImGui::Unindent();
         }
 
-        if (mAnimator->getAnimationCount() > 0 && ImGui::CollapsingHeader("Animation")) {
+        Animator& animator = *mInstance->getAnimator();
+        if (animator.getAnimationCount() > 0 && ImGui::CollapsingHeader("Animation")) {
             ImGui::Indent();
             int selectedAnimation = mCurrentAnimation;
             ImGui::RadioButton("Disable", &selectedAnimation, 0);
             ImGui::SliderFloat("Cross fade", &mCrossFadeDuration, 0.0f, 2.0f,
                     "%4.2f seconds", ImGuiSliderFlags_AlwaysClamp);
-            for (size_t i = 0, count = mAnimator->getAnimationCount(); i < count; ++i) {
-                std::string label = mAnimator->getAnimationName(i);
+            for (size_t i = 0, count = animator.getAnimationCount(); i < count; ++i) {
+                std::string label = animator.getAnimationName(i);
                 if (label.empty()) {
                     label = "Unnamed " + std::to_string(i);
                 }
@@ -1058,7 +1068,7 @@ void ViewerGui::updateUserInterface() {
         }
 
         if (mCurrentMorphingEntity && ImGui::CollapsingHeader("Morphing")) {
-            const bool isAnimating = mCurrentAnimation > 0 && mAnimator->getAnimationCount() > 0;
+            const bool isAnimating = mCurrentAnimation > 0 && animator.getAnimationCount() > 0;
             if (isAnimating) {
                 ImGui::BeginDisabled();
             }

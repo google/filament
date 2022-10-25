@@ -251,7 +251,7 @@ ResourceNode* FrameGraph::createNewVersionForSubresourceIfNeeded(ResourceNode* n
     ResourceSlot& slot = getResourceSlot(node->resourceHandle);
     if (slot.sid < 0) {
         // if we don't already have a new ResourceNode for this resource, create one.
-        // we keep the old ResourceNode index so we can direct all the reads to it.
+        // we keep the old ResourceNode index, so we can direct all the reads to it.
         slot.sid = slot.nid; // record the current ResourceNode of the parent
         slot.nid = mResourceNodes.size();   // create the new parent node
         node = mArena.make<ResourceNode>(*this, node->resourceHandle, node->getParentHandle());

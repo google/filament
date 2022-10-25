@@ -48,7 +48,7 @@ class FilamentInstance;
  * \c Light, \c Camera, or \c Node components.
  *
  * In addition to the aforementioned entities, an asset has strong ownership over a list of
- * filament::VertexBuffer, filament::IndexBuffer, filament::MaterialInstance, filament::Texture,
+ * filament::VertexBuffer, filament::IndexBuffer, filament::Texture,
  * and, optionally, a simple animation engine (gltfio::Animator).
  *
  * Clients must use ResourceLoader to create filament::Texture objects, compute tangent quaternions,
@@ -157,15 +157,6 @@ public:
      */
     size_t popRenderables(Entity* entities, size_t count) noexcept;
 
-    /** Gets all material instances. These are already bound to renderables. */
-    const filament::MaterialInstance* const* getMaterialInstances() const noexcept;
-
-    /** Gets all material instances (non-const). These are already bound to renderables. */
-    filament::MaterialInstance* const* getMaterialInstances() noexcept;
-
-    /** Gets the number of materials returned by getMaterialInstances(). */
-    size_t getMaterialInstanceCount() const noexcept;
-
     /** Gets resource URIs for all externally-referenced buffers. */
     const char* const* getResourceUris() const noexcept;
 
@@ -216,16 +207,6 @@ public:
     const char* getExtras(Entity entity = {}) const noexcept;
 
     /**
-     * Returns the animation engine.
-     *
-     * The animator is owned by the asset and should not be manually deleted.
-     * Must be called after loadResources or asyncBeginLoad, otherwise returns null.
-     * If the asset is instanced, this returns a "primary" animator that controls all instances.
-     * To animate each instance individually, use \see FilamentInstance.
-     */
-    Animator* getAnimator() const noexcept;
-
-    /**
      * Gets the morph target name at the given index in the given entity.
      */
     const char* getMorphTargetNameAt(Entity entity, size_t targetIndex) const noexcept;
@@ -234,30 +215,6 @@ public:
      * Returns the number of morph targets in the given entity.
      */
     size_t getMorphTargetCountAt(Entity entity) const noexcept;
-
-    /**
-     * Returns the number of material variants in the asset.
-     */
-    size_t getMaterialVariantCount() const noexcept;
-
-    /**
-     * Returns the name of the given material variant, or null if it is out of bounds.
-     */
-    const char* getMaterialVariantName(size_t variantIndex) const noexcept;
-
-    /**
-     * Applies the given material variant to all primitives that it affects.
-     *
-     * This is efficient because it merely swaps around persistent MaterialInstances. If you change
-     * a material parameter while a certain variant is active, the updated value will be remembered
-     * after you re-apply that variant.
-     *
-     * If the asset is instanced, this affects all instances in the same way.
-     * To set the variant on an individual instance, use FilamentInstance::applyMaterialVariant.
-     *
-     * Ignored if variantIndex is out of bounds.
-     */
-    void applyMaterialVariant(size_t variantIndex) noexcept;
 
     /**
      * Lazily creates a single LINES renderable that draws the transformed bounding-box hierarchy
@@ -304,7 +261,7 @@ public:
      * and provides filtering functionality.
      */
     void addEntitiesToScene(filament::Scene& targetScene, const Entity* entities, size_t count,
-            SceneMask sceneFilter);
+            SceneMask sceneFilter) const;
 
     /**
      * Releases ownership of entities and their Filament components.
@@ -316,14 +273,6 @@ public:
     void detachFilamentComponents() noexcept;
 
     bool areFilamentComponentsDetached() const noexcept;
-
-    /**
-     * Releases ownership of material instances.
-     *
-     * This makes the client take responsibility for destroying MaterialInstance
-     * objects. The getMaterialInstances query becomes invalid after detachment.
-     */
-    void detachMaterialInstances();
 
     /**
      * Convenience function to get the first instance, or null if it doesn't exist.

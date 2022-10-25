@@ -40,7 +40,7 @@
 
 #include <cgltf.h>
 
-#include "upcast.h"
+#include "downcast.h"
 #include "DependencyGraph.h"
 #include "DracoCache.h"
 #include "FFilamentInstance.h"
@@ -70,7 +70,6 @@ namespace utils {
 
 namespace filament::gltfio {
 
-class Animator;
 class Wireframe;
 
 // Encapsulates VertexBuffer::setBufferAt() or IndexBuffer::setBuffer().
@@ -141,7 +140,9 @@ struct FFilamentAsset : public FilamentAsset {
     }
 
     size_t getRenderableEntityCount() const noexcept {
-        return mRenderableCount;
+        // Note that mRenderableCount is a "predicted" number of renderables, so if this is a
+        // zero-instance asset, then we need to explicitly return zero.
+        return mEntities.empty() ? 0 : mRenderableCount;
     }
 
     const utils::Entity* getCameraEntities() const noexcept {
@@ -158,18 +159,6 @@ struct FFilamentAsset : public FilamentAsset {
 
     size_t popRenderables(utils::Entity* entities, size_t count) noexcept {
         return mDependencyGraph.popRenderables(entities, count);
-    }
-
-    size_t getMaterialInstanceCount() const noexcept {
-        return mMaterialInstances.size();
-    }
-
-    const MaterialInstance* const* getMaterialInstances() const noexcept {
-        return mMaterialInstances.data();
-    }
-
-    MaterialInstance* const* getMaterialInstances() noexcept {
-        return mMaterialInstances.data();
     }
 
     size_t getResourceUriCount() const noexcept {
@@ -196,17 +185,9 @@ struct FFilamentAsset : public FilamentAsset {
     size_t getEntitiesByPrefix(const char* prefix, utils::Entity* entities,
             size_t maxCount) const noexcept;
 
-    Animator* getAnimator() const noexcept { return mAnimator; }
-
     const char* getMorphTargetNameAt(utils::Entity entity, size_t targetIndex) const noexcept;
 
     size_t getMorphTargetCountAt(utils::Entity entity) const noexcept;
-
-    size_t getMaterialVariantCount() const noexcept;
-
-    const char* getMaterialVariantName(size_t variantIndex) const noexcept;
-
-    void applyMaterialVariant(size_t variantIndex) noexcept;
 
     utils::Entity getWireframe() noexcept;
 
@@ -235,14 +216,10 @@ struct FFilamentAsset : public FilamentAsset {
     }
 
     void addEntitiesToScene(Scene& targetScene, const Entity* entities, size_t count,
-            SceneMask sceneFilter);
+            SceneMask sceneFilter) const;
 
     void detachFilamentComponents() noexcept {
         mDetachedFilamentComponents = true;
-    }
-
-    void detachMaterialInstances() {
-        mMaterialInstances.clear();
     }
 
     // end public API
@@ -255,8 +232,6 @@ struct FFilamentAsset : public FilamentAsset {
     // Calls mi->setParameter() for the given texture slot and optionally adds an edge
     // to the dependency graph used for gradual reveal of entities.
     void applyTextureBinding(size_t textureIndex,const TextureSlot& tb, bool addDependency = true);
-
-    void createAnimators();
 
     struct Skin {
         utils::CString name;
@@ -271,18 +246,15 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<utils::Entity> mLightEntities;
     std::vector<utils::Entity> mCameraEntities;
     size_t mRenderableCount = 0;
-    std::vector<MaterialInstance*> mMaterialInstances;
     std::vector<VertexBuffer*> mVertexBuffers;
     std::vector<BufferObject*> mBufferObjects;
     std::vector<IndexBuffer*> mIndexBuffers;
     std::vector<MorphTargetBuffer*> mMorphTargetBuffers;
     utils::FixedCapacityVector<Skin> mSkins;
-    utils::FixedCapacityVector<Variant> mVariants;
     utils::FixedCapacityVector<utils::CString> mScenes;
     Aabb mBoundingBox;
     utils::Entity mRoot;
     std::vector<FFilamentInstance*> mInstances;
-    Animator* mAnimator = nullptr;
     Wireframe* mWireframe = nullptr;
 
     // Indicates if resource decoding has started (not necessarily finished)
@@ -337,7 +309,7 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<std::pair<const cgltf_primitive*, VertexBuffer*> > mPrimitives;
 };
 
-FILAMENT_UPCAST(FilamentAsset)
+FILAMENT_DOWNCAST(FilamentAsset)
 
 } // namespace filament::gltfio
 

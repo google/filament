@@ -27,9 +27,7 @@
 
 #include <private/filament/EngineEnums.h>
 
-#include <private/backend/DriverApi.h>
-#include "backend/DriverApiForward.h"
-
+#include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
@@ -54,12 +52,15 @@ struct ShadowMappingUniforms {
     float ssContactShadowDistance;
     uint32_t directionalShadows;
     uint32_t cascades;
+    bool elvsm;
 };
 
 class ShadowMapManager {
 public:
 
     using ShadowMappingUniforms = ShadowMappingUniforms;
+
+    using ShadowType = ShadowMap::ShadowType;
 
     enum class ShadowTechnique : uint8_t {
         NONE = 0x0u,
@@ -76,10 +77,13 @@ public:
     // Reset shadow map layout.
     void reset() noexcept;
 
-    void setShadowCascades(size_t lightIndex, LightManager::ShadowOptions const* options) noexcept;
-    void addSpotShadowMap(size_t lightIndex, LightManager::ShadowOptions const* options) noexcept;
+    void setDirectionalShadowMap(size_t lightIndex,
+            LightManager::ShadowOptions const* options) noexcept;
 
-    // Updates all of the shadow maps and performs culling.
+    void addShadowMap(size_t lightIndex, bool spotlight,
+            LightManager::ShadowOptions const* options) noexcept;
+
+    // Updates all the shadow maps and performs culling.
     // Returns true if any of the shadow maps have visible shadows.
     ShadowMapManager::ShadowTechnique update(FEngine& engine, FView& view,
             CameraInfo const& cameraInfo,
@@ -87,7 +91,7 @@ public:
 
     // Renders all the shadow maps.
     FrameGraphId<FrameGraphTexture> render(FrameGraph& fg, FEngine& engine,
-            RenderPass const& pass, FView& view) noexcept;
+            RenderPass const& pass, FView& view, CameraInfo const& mainCameraInfo) noexcept;
 
     ShadowMap* getCascadeShadowMap(size_t cascade) noexcept {
         assert_invariant(cascade < CONFIG_MAX_SHADOW_CASCADES);
@@ -98,14 +102,14 @@ public:
         return const_cast<ShadowMapManager*>(this)->getCascadeShadowMap(cascade);
     }
 
-    ShadowMap* getSpotShadowMap(size_t spot) noexcept {
-        assert_invariant(spot < CONFIG_MAX_SHADOW_CASTING_SPOTS);
+    ShadowMap* getPointOrSpotShadowMap(size_t index) noexcept {
+        assert_invariant(index < CONFIG_MAX_SHADOWMAP_PUNCTUAL);
         return std::launder(reinterpret_cast<ShadowMap*>(
-                &mShadowMapCache[CONFIG_MAX_SHADOW_CASCADES + spot]));
+                &mShadowMapCache[CONFIG_MAX_SHADOW_CASCADES + index]));
     }
 
-    ShadowMap const* getSpotShadowMap(size_t spot) const noexcept {
-        return const_cast<ShadowMapManager*>(this)->getSpotShadowMap(spot);
+    ShadowMap const* getPointOrSpotShadowMap(size_t spot) const noexcept {
+        return const_cast<ShadowMapManager*>(this)->getPointOrSpotShadowMap(spot);
     }
 
     // valid after calling update() above
@@ -113,9 +117,9 @@ public:
         return mShadowMappingUniforms;
     }
 
-    auto& getShadowUniforms() const { return mShadowUb; }
-
     auto& getShadowUniformsHandle() const { return mShadowUbh; }
+
+    bool hasSpotShadows() const { return !mSpotShadowMaps.empty(); }
 
 private:
     ShadowMapManager::ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
@@ -123,36 +127,27 @@ private:
             FScene::LightSoa& lightData, ShadowMap::SceneInfo& sceneInfo) noexcept;
 
     ShadowMapManager::ShadowTechnique updateSpotShadowMaps(FEngine& engine,
-            FView& view, CameraInfo const& cameraInfo, FScene::RenderableSoa& renderableData,
-            FScene::LightSoa& lightData, ShadowMap::SceneInfo& sceneInfo) noexcept;
+            FScene::LightSoa& lightData) noexcept;
 
-    void calculateTextureRequirements(FEngine& engine, FView& view, FScene::LightSoa& lightData) noexcept;
+    void calculateTextureRequirements(FEngine& engine, FView& view,
+            FScene::LightSoa& lightData) noexcept;
 
-    class ShadowMapEntry {
-    public:
-        ShadowMapEntry() = default;
-        ShadowMapEntry(ShadowMap* shadowMap, size_t light,
-                LightManager::ShadowOptions const* options) :
-                mShadowMap(shadowMap), mOptions(options), mLightIndex(light) {
-        }
+    void prepareSpotShadowMap(ShadowMap& shadowMap,
+            FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
+            FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
+            FScene::LightSoa& lightData, ShadowMap::SceneInfo const& sceneInfo) noexcept;
 
-        explicit operator bool() const { return mShadowMap != nullptr; }
+    void preparePointShadowMap(ShadowMap& map,
+            FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
+            FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
+            FScene::LightSoa& lightData, uint8_t face,
+            ShadowMap::SceneInfo const& sceneInfo) noexcept;
 
-        void setLayer(uint8_t layer) noexcept { mLayer = layer; }
-        uint8_t getLayer() const noexcept { return mLayer; }
-
-        LightManager::ShadowOptions const* getShadowOptions() const noexcept { return mOptions; }
-        ShadowMap& getShadowMap() const { return *mShadowMap; }
-        size_t getLightIndex() const { return mLightIndex; }
-
-        bool hasVisibleShadows() const { return mShadowMap->hasVisibleShadows(); }
-
-    private:
-        ShadowMap* mShadowMap = nullptr;
-        LightManager::ShadowOptions const* mOptions = nullptr;
-        uint32_t mLightIndex = 0;
-        uint8_t mLayer = 0;
-    };
+    static void updateSpotVisibilityMasks(
+            uint8_t visibleLayers,
+            uint8_t const* UTILS_RESTRICT layers,
+            FRenderableManager::Visibility const* UTILS_RESTRICT visibility,
+            Culler::result_type* UTILS_RESTRICT visibleMask, size_t count);
 
     class CascadeSplits {
     public:
@@ -191,12 +186,15 @@ private:
         size_t mSplitCount;
     };
 
+    FEngine& mEngine;
+
     // Atlas requirements, updated in ShadowMapManager::update(),
     // consumed in ShadowMapManager::render()
     struct TextureAtlasRequirements {
         uint16_t size = 0;
         uint8_t layers = 0;
         uint8_t levels = 0;
+        backend::TextureFormat format = backend::TextureFormat::DEPTH16;
     } mTextureAtlasRequirements;
 
     SoftShadowOptions mSoftShadowOptions;
@@ -204,30 +202,26 @@ private:
     CascadeSplits::Params mCascadeSplitParams;
     CascadeSplits mCascadeSplits;
 
-    // 16-bits seems enough.
-    // TODO: make it an option.
-    // TODO: iOS does not support the DEPTH16 texture format.
-    backend::TextureFormat mTextureFormat = backend::TextureFormat::DEPTH16;
-
     mutable TypedUniformBuffer<ShadowUib> mShadowUb;
     backend::Handle<backend::HwBufferObject> mShadowUbh;
 
     ShadowMappingUniforms mShadowMappingUniforms;
 
-    utils::FixedCapacityVector<ShadowMapEntry> mCascadeShadowMaps{
-            utils::FixedCapacityVector<ShadowMapEntry>::with_capacity(
+    ShadowMap::SceneInfo mSceneInfo;
+
+    utils::FixedCapacityVector<ShadowMap*> mCascadeShadowMaps{
+            utils::FixedCapacityVector<ShadowMap*>::with_capacity(
                     CONFIG_MAX_SHADOW_CASCADES) };
 
-    utils::FixedCapacityVector<ShadowMapEntry> mSpotShadowMaps{
-            utils::FixedCapacityVector<ShadowMapEntry>::with_capacity(
-                    CONFIG_MAX_SHADOW_CASTING_SPOTS) };
+    utils::FixedCapacityVector<ShadowMap*> mSpotShadowMaps{
+            utils::FixedCapacityVector<ShadowMap*>::with_capacity(
+                    CONFIG_MAX_SHADOWMAP_PUNCTUAL) };
 
     // inline storage for all our ShadowMap objects, we can't easily use a std::array<> directly.
     // because ShadowMap doesn't have a default ctor, and we avoid out-of-line allocations.
-    // Each ShadowMap is currently 128 bytes.
+    // Each ShadowMap is currently 32 bytes.
     using ShadowMapStorage = std::aligned_storage<sizeof(ShadowMap), alignof(ShadowMap)>::type;
-    std::array<ShadowMapStorage,
-            CONFIG_MAX_SHADOW_CASCADES + CONFIG_MAX_SHADOW_CASTING_SPOTS> mShadowMapCache;
+    std::array<ShadowMapStorage, CONFIG_MAX_SHADOW_LAYERS> mShadowMapCache;
 };
 
 } // namespace filament

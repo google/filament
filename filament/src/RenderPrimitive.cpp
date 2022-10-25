@@ -30,12 +30,12 @@ void FRenderPrimitive::init(HwRenderPrimitiveFactory& factory, backend::DriverAp
 
     assert_invariant(entry.materialInstance);
 
-    mMaterialInstance = upcast(entry.materialInstance);
+    mMaterialInstance = downcast(entry.materialInstance);
     mBlendOrder = entry.blendOrder;
 
     if (entry.indices && entry.vertices) {
-        FVertexBuffer* vertexBuffer = upcast(entry.vertices);
-        FIndexBuffer* indexBuffer = upcast(entry.indices);
+        FVertexBuffer* vertexBuffer = downcast(entry.vertices);
+        FIndexBuffer* indexBuffer = downcast(entry.indices);
 
         AttributeBitset enabledAttributes = vertexBuffer->getDeclaredAttributes();
 

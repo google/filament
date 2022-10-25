@@ -598,12 +598,12 @@ export class gltfio$FilamentAsset {
     public getCameraEntities(): Entity[];
     public getRoot(): Entity;
     public popRenderable(): Entity;
-    public getMaterialInstances(): Vector<MaterialInstance>;
-    public getResourceUris(): Vector<string>;
+    public getInstance(): gltfio$FilamentInstance;
+    public geAssetInstances(): gltfio$FilamentInstance[];
+    public getResourceUris(): string[];
     public getBoundingBox(): Aabb;
     public getName(entity: Entity): string;
     public getExtras(entity: Entity): string;
-    public getAnimator(): gltfio$Animator;
     public getWireframe(): Entity;
     public getEngine(): Engine;
     public releaseSourceData(): void;
@@ -617,6 +617,10 @@ export class gltfio$FilamentInstance {
     public getSkinNames(): Vector<string>;
     public attachSkin(skinIndex: number, entity: Entity): void;
     public detachSkin(skinIndex: number, entity: Entity): void;
+    public getMaterialInstances(): Vector<MaterialInstance>;
+    public detachMaterialInstances(): void;
+    public getMaterialVariantNames(): string[];
+    public applyMaterialVariant(index: number): void;
 }
 
 export class gltfio$Animator {
@@ -1663,6 +1667,13 @@ export interface View$VsmShadowOptions {
      * Whether to generate mipmaps for all VSM shadow maps.
      */
     mipmapping?: boolean;
+    /**
+     * Whether to use a 32-bits or 16-bits texture format for VSM shadow maps. 32-bits
+     * precision is rarely needed, but it does reduces light leaks as well as "fading"
+     * of the shadows in some situations. Setting highPrecision to true for a single
+     * shadow map will double the memory usage of all shadow maps.
+     */
+    highPrecision?: boolean;
     /**
      * VSM minimum variance scale, must be positive.
      */

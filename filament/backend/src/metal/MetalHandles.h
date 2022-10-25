@@ -301,7 +301,7 @@ public:
     // the texture types have changed.
     // Mutate re-encodes the current set of samplers/textures into the new argument
     // buffer.
-    void reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEncoder> e);
+    void reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEncoder> e, id<MTLDevice> device);
     void mutate(id<MTLCommandBuffer> cmdBuffer);
 
     id<MTLBuffer> getArgumentBuffer() const {
@@ -429,8 +429,7 @@ private:
 
     static MTLLoadAction getLoadAction(const RenderPassParams& params, TargetBufferFlags buffer);
     static MTLStoreAction getStoreAction(const RenderPassParams& params, TargetBufferFlags buffer);
-    static id<MTLTexture> createMultisampledTexture(id<MTLDevice> device, MTLPixelFormat format,
-            uint32_t width, uint32_t height, uint8_t samples);
+    id<MTLTexture> createMultisampledTexture(MTLPixelFormat format, uint32_t width, uint32_t height, uint8_t samples) const;
 
     MetalContext* context;
     bool defaultRenderTarget = false;

@@ -179,7 +179,7 @@ class ModelViewer(
         asset = assetLoader.createAsset(buffer)
         asset?.let { asset ->
             resourceLoader.asyncBeginLoad(asset)
-            animator = asset.animator
+            animator = asset.getInstance().animator
             asset.releaseSourceData()
         }
     }
@@ -202,7 +202,7 @@ class ModelViewer(
                 resourceLoader.addResourceData(uri, resourceBuffer)
             }
             resourceLoader.asyncBeginLoad(asset)
-            animator = asset.animator
+            animator = asset.getInstance().animator
             asset.releaseSourceData()
         }
     }
@@ -359,7 +359,7 @@ class ModelViewer(
                 resourceLoader.addResourceData(uri, buffer)
             }
             resourceLoader.asyncBeginLoad(asset)
-            animator = asset.animator
+            animator = asset.getInstance().animator
             asset.releaseSourceData()
         }
     }

@@ -24,7 +24,7 @@ namespace filament {
 namespace Exposure {
 
 float ev100(const Camera& c) noexcept {
-    const FCamera& camera = upcast(c);
+    const FCamera& camera = downcast(c);
     return ev100(camera.getAperture(), camera.getShutterSpeed(), camera.getSensitivity());
 }
 
@@ -79,7 +79,7 @@ float ev100FromIlluminance(float illuminance) noexcept {
 }
 
 float exposure(const Camera& c) noexcept {
-    const FCamera& camera = upcast(c);
+    const FCamera& camera = downcast(c);
     return exposure(camera.getAperture(), camera.getShutterSpeed(), camera.getSensitivity());
 }
 
@@ -136,7 +136,7 @@ float exposure(float ev100) noexcept {
 }
 
 float luminance(const Camera& c) noexcept {
-    const FCamera& camera = upcast(c);
+    const FCamera& camera = downcast(c);
     return luminance(camera.getAperture(), camera.getShutterSpeed(), camera.getSensitivity());
 }
 
@@ -168,7 +168,7 @@ float luminance(float ev100) noexcept {
 }
 
 float illuminance(const Camera& c) noexcept {
-    const FCamera& camera = upcast(c);
+    const FCamera& camera = downcast(c);
     return illuminance(camera.getAperture(), camera.getShutterSpeed(), camera.getSensitivity());
 }
 

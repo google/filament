@@ -209,6 +209,129 @@ size_t getFormatSize(TextureFormat format) noexcept {
     }
 }
 
+size_t getFormatComponentCount(TextureFormat format) noexcept {
+    switch (format) {
+        case TextureFormat::R8:
+        case TextureFormat::R8_SNORM:
+        case TextureFormat::R8UI:
+        case TextureFormat::R8I:
+        case TextureFormat::R16F:
+        case TextureFormat::R16UI:
+        case TextureFormat::R16I:
+        case TextureFormat::R32F:
+        case TextureFormat::R32I:
+        case TextureFormat::R32UI:
+        case TextureFormat::STENCIL8:
+        case TextureFormat::DEPTH16:
+        case TextureFormat::DEPTH24:
+        case TextureFormat::DEPTH32F:
+            return 1;
+
+        case TextureFormat::RG8:
+        case TextureFormat::RG8_SNORM:
+        case TextureFormat::RG8UI:
+        case TextureFormat::RG8I:
+        case TextureFormat::RG16F:
+        case TextureFormat::RG16UI:
+        case TextureFormat::RG16I:
+        case TextureFormat::RG32F:
+        case TextureFormat::RG32UI:
+        case TextureFormat::RG32I:
+        case TextureFormat::DEPTH24_STENCIL8:
+        case TextureFormat::DEPTH32F_STENCIL8:
+            return 2;
+
+        case TextureFormat::RGB565:
+        case TextureFormat::RGB8:
+        case TextureFormat::SRGB8:
+        case TextureFormat::RGB8_SNORM:
+        case TextureFormat::RGB8UI:
+        case TextureFormat::RGB8I:
+        case TextureFormat::R11F_G11F_B10F:
+        case TextureFormat::RGB16F:
+        case TextureFormat::RGB16UI:
+        case TextureFormat::RGB16I:
+        case TextureFormat::RGB32F:
+        case TextureFormat::RGB32UI:
+        case TextureFormat::RGB32I:
+            return 3;
+
+        case TextureFormat::RGB5_A1:
+        case TextureFormat::RGBA4:
+        case TextureFormat::RGB9_E5:
+        case TextureFormat::RGBA8:
+        case TextureFormat::SRGB8_A8:
+        case TextureFormat::RGBA8_SNORM:
+        case TextureFormat::RGB10_A2:
+        case TextureFormat::RGBA8UI:
+        case TextureFormat::RGBA8I:
+        case TextureFormat::RGBA16F:
+        case TextureFormat::RGBA16UI:
+        case TextureFormat::RGBA16I:
+        case TextureFormat::RGBA32F:
+        case TextureFormat::RGBA32UI:
+        case TextureFormat::RGBA32I:
+            return 4;
+
+        // Compressed formats ---------------------------------------------------------------------
+        case TextureFormat::EAC_R11:
+        case TextureFormat::EAC_R11_SIGNED:
+            return 1;
+
+        case TextureFormat::EAC_RG11:
+        case TextureFormat::EAC_RG11_SIGNED:
+            return 2;
+
+        case TextureFormat::ETC2_RGB8:
+        case TextureFormat::ETC2_SRGB8:
+        case TextureFormat::DXT1_RGB:
+        case TextureFormat::DXT1_SRGB:
+            return 3;
+
+        case TextureFormat::ETC2_EAC_RGBA8:
+        case TextureFormat::ETC2_EAC_SRGBA8:
+        case TextureFormat::ETC2_RGB8_A1:
+        case TextureFormat::ETC2_SRGB8_A1:
+        case TextureFormat::DXT1_RGBA:
+        case TextureFormat::DXT1_SRGBA:
+        case TextureFormat::DXT3_RGBA:
+        case TextureFormat::DXT3_SRGBA:
+        case TextureFormat::DXT5_RGBA:
+        case TextureFormat::DXT5_SRGBA:
+        case TextureFormat::RGBA_ASTC_4x4:
+        case TextureFormat::RGBA_ASTC_5x4:
+        case TextureFormat::RGBA_ASTC_5x5:
+        case TextureFormat::RGBA_ASTC_6x5:
+        case TextureFormat::RGBA_ASTC_6x6:
+        case TextureFormat::RGBA_ASTC_8x5:
+        case TextureFormat::RGBA_ASTC_8x6:
+        case TextureFormat::RGBA_ASTC_8x8:
+        case TextureFormat::RGBA_ASTC_10x5:
+        case TextureFormat::RGBA_ASTC_10x6:
+        case TextureFormat::RGBA_ASTC_10x8:
+        case TextureFormat::RGBA_ASTC_10x10:
+        case TextureFormat::RGBA_ASTC_12x10:
+        case TextureFormat::RGBA_ASTC_12x12:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_4x4:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_5x4:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_5x5:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_6x5:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_6x6:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_8x5:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_8x6:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_8x8:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_10x5:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_10x6:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_10x8:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_10x10:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_12x10:
+        case TextureFormat::SRGB8_ALPHA8_ASTC_12x12:
+            return 4;
+        case TextureFormat::UNUSED:
+            return 0;
+    }
+}
+
 size_t getBlockWidth(TextureFormat format) noexcept {
     switch (format) {
         case TextureFormat::EAC_RG11:
@@ -384,53 +507,53 @@ bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped)
 namespace utils {
 
 template<>
-CString to_string<filament::backend::TextureUsage>(filament::backend::TextureUsage usage) noexcept {
+CString to_string<filament::backend::TextureUsage>(filament::backend::TextureUsage value) noexcept {
     using namespace filament::backend;
     char string[7] = {'-', '-', '-', '-', '-', '-', 0};
-    if (any(usage & TextureUsage::UPLOADABLE)) {
+    if (any(value & TextureUsage::UPLOADABLE)) {
         string[0]='U';
     }
-    if (any(usage & TextureUsage::SAMPLEABLE)) {
+    if (any(value & TextureUsage::SAMPLEABLE)) {
         string[1]='S';
     }
-    if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
+    if (any(value & TextureUsage::COLOR_ATTACHMENT)) {
         string[2]='c';
     }
-    if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
+    if (any(value & TextureUsage::DEPTH_ATTACHMENT)) {
         string[3]='d';
     }
-    if (any(usage & TextureUsage::STENCIL_ATTACHMENT)) {
+    if (any(value & TextureUsage::STENCIL_ATTACHMENT)) {
         string[4] = 's';
     }
-    if (any(usage & TextureUsage::SUBPASS_INPUT)) {
+    if (any(value & TextureUsage::SUBPASS_INPUT)) {
         string[5]='f';
     }
-    return CString(string, 6);
+    return { string, 6 };
 }
 
 template<>
-CString to_string<filament::backend::TargetBufferFlags>(filament::backend::TargetBufferFlags flags) noexcept {
+CString to_string<filament::backend::TargetBufferFlags>(filament::backend::TargetBufferFlags value) noexcept {
     using namespace filament::backend;
     char string[7] = {'-', '-', '-', '-', '-', '-', 0};
-    if (any(flags & TargetBufferFlags::COLOR0)) {
+    if (any(value & TargetBufferFlags::COLOR0)) {
         string[0]='0';
     }
-    if (any(flags & TargetBufferFlags::COLOR1)) {
+    if (any(value & TargetBufferFlags::COLOR1)) {
         string[1]='1';
     }
-    if (any(flags & TargetBufferFlags::COLOR2)) {
+    if (any(value & TargetBufferFlags::COLOR2)) {
         string[2]='2';
     }
-    if (any(flags & TargetBufferFlags::COLOR3)) {
+    if (any(value & TargetBufferFlags::COLOR3)) {
         string[3]='3';
     }
-    if (any(flags & TargetBufferFlags::DEPTH)) {
+    if (any(value & TargetBufferFlags::DEPTH)) {
         string[4]='D';
     }
-    if (any(flags & TargetBufferFlags::STENCIL)) {
+    if (any(value & TargetBufferFlags::STENCIL)) {
         string[5]='S';
     }
-    return CString(string, 6);
+    return { string, 6 };
 }
 
 } // namespace utils

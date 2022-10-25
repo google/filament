@@ -21,11 +21,11 @@ namespace filament {
 using namespace backend;
 
 FenceStatus Fence::waitAndDestroy(Fence* fence, Mode mode) {
-    return FFence::waitAndDestroy(upcast(fence), mode);
+    return FFence::waitAndDestroy(downcast(fence), mode);
 }
 
 FenceStatus Fence::wait(Mode mode, uint64_t timeout) {
-    return upcast(this)->wait(mode, timeout);
+    return downcast(this)->wait(mode, timeout);
 }
 
 } // namespace filament

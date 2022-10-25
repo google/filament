@@ -93,7 +93,7 @@ Material::Builder& Material::Builder::package(const void* payload, size_t size) 
 
 Material* Material::Builder::build(Engine& engine) {
     std::unique_ptr<MaterialParser> materialParser{ createParser(
-            upcast(engine).getBackend(), mImpl->mPayload, mImpl->mSize) };
+            downcast(engine).getBackend(), mImpl->mPayload, mImpl->mSize) };
 
     if (materialParser == nullptr) {
         return nullptr;
@@ -104,7 +104,7 @@ Material* Material::Builder::build(Engine& engine) {
     utils::bitset32 shaderModels;
     shaderModels.setValue(v);
 
-    ShaderModel shaderModel = upcast(engine).getShaderModel();
+    ShaderModel shaderModel = downcast(engine).getShaderModel();
     if (!shaderModels.test(static_cast<uint32_t>(shaderModel))) {
         CString name;
         materialParser->getName(&name);
@@ -124,7 +124,7 @@ Material* Material::Builder::build(Engine& engine) {
 
     mImpl->mMaterialParser = materialParser.release();
 
-    return upcast(engine).createMaterial(*this);
+    return downcast(engine).createMaterial(*this);
 }
 
 FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
@@ -168,7 +168,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
 
 #if FILAMENT_ENABLE_MATDBG
     // Register the material with matdbg.
-    matdbg::DebugServer* server = upcast(engine).debug.server;
+    matdbg::DebugServer* server = downcast(engine).debug.server;
     if (UTILS_UNLIKELY(server)) {
         auto details = builder.mImpl;
         mDebuggerId = server->addMaterial(mName, details->mPayload, details->mSize, this);
@@ -319,7 +319,7 @@ void FMaterial::terminate(FEngine& engine) {
 
 #if FILAMENT_ENABLE_MATDBG
     // Unregister the material with matdbg.
-    matdbg::DebugServer* server = upcast(mEngine).debug.server;
+    matdbg::DebugServer* server = downcast(mEngine).debug.server;
     if (UTILS_UNLIKELY(server)) {
         server->removeMaterial(mDebuggerId);
     }
@@ -527,7 +527,7 @@ void FMaterial::applyPendingEdits() noexcept {
 
 void FMaterial::onEditCallback(void* userdata, const utils::CString& name, const void* packageData,
         size_t packageSize) {
-    FMaterial* material = upcast((Material*) userdata);
+    FMaterial* material = downcast((Material*) userdata);
     FEngine& engine = material->mEngine;
 
     // This is called on a web server thread so we defer clearing the program cache
@@ -536,7 +536,7 @@ void FMaterial::onEditCallback(void* userdata, const utils::CString& name, const
 }
 
 void FMaterial::onQueryCallback(void* userdata, VariantList* pVariants) {
-    FMaterial* material = upcast((Material*) userdata);
+    FMaterial* material = downcast((Material*) userdata);
     std::lock_guard<utils::Mutex> lock(material->mActiveProgramsLock);
     *pVariants = material->mActivePrograms;
     material->mActivePrograms.reset();

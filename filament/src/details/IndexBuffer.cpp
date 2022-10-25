@@ -46,7 +46,7 @@ IndexBuffer::Builder& IndexBuffer::Builder::bufferType(IndexType indexType) noex
 }
 
 IndexBuffer* IndexBuffer::Builder::build(Engine& engine) {
-    return upcast(engine).createIndexBuffer(*this);
+    return downcast(engine).createIndexBuffer(*this);
 }
 
 // ------------------------------------------------------------------------------------------------

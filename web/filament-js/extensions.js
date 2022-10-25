@@ -659,11 +659,15 @@ Filament.loadClassExtensions = function() {
         return Filament.vectorToArray(this._getCameraEntities());
     };
 
-    Filament.gltfio$FilamentAsset.prototype.getResourceUris = function(buffer, instances) {
+    Filament.gltfio$FilamentAsset.prototype.getResourceUris = function() {
         return Filament.vectorToArray(this._getResourceUris());
     }
 
-    Filament.gltfio$FilamentAsset.prototype.getMaterialVariantNames = function(buffer, instances) {
+    Filament.gltfio$FilamentAsset.prototype.getAssetInstances = function() {
+        return Filament.vectorToArray(this._getAssetInstances());
+    }
+
+    Filament.gltfio$FilamentInstance.prototype.getMaterialVariantNames = function() {
         return Filament.vectorToArray(this._getMaterialVariantNames());
     }
 };

@@ -5,6 +5,18 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.28.1
+
+- gltfio: fix reloading crash in ubershader mode
+- Vulkan: improve performance in the readPixels path
+- engine: raise the spot shadows limit to 64, from 14.
+- engine: add experimental support for point light shadows.
+- gltfio: fix ubershader issues with assignment of dummy textures
+- gltfio: material instances and variants are now accessed via `FilamentInstance` [⚠️ **API Change**]
+- gltfio: the animator can now only be accessed via `FilamentInstance` [⚠️ **API Change**]
+- engine: fix "stable" shadows and make the default cascade splits logarithmic.
+- engine: Add new quality options to EVSM shadows + rendering fixes
+
 ## v1.28.0
 
 - engine: LiSPSM is now a user settable option

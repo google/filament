@@ -322,6 +322,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
         CHECK_KEY(tok);
         if (compare(tok, jsonChunk, "msaaSamples") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->msaaSamples);
+        } else if (compare(tok, jsonChunk, "elvsm") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->elvsm);
         } else if (compare(tok, jsonChunk, "blurWidth") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->blurWidth);
         } else {
@@ -677,6 +679,7 @@ static std::ostream& operator<<(std::ostream& out, const LightManager::ShadowOpt
     return out << "{\n"
         << "\"vsm\": {\n"
         << "\"msaaSamples\": " << int(in.vsm.msaaSamples) << ",\n"
+        << "\"elvsm\": " << to_string(in.vsm.elvsm) << ",\n"
         << "\"blurWidth\": " << in.vsm.blurWidth << "\n"
         << "},\n"
         << "\"mapSize\": " << in.mapSize << ",\n"

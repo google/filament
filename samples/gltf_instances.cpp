@@ -287,7 +287,14 @@ int main(int argc, char** argv) {
         app.resourceLoader->asyncUpdateLoad();
         app.viewer->updateRootTransform();
         app.viewer->populateScene();
-        app.viewer->applyAnimation(now);
+
+        if (app.instanceToAnimate == -1) {
+            for (FilamentInstance* instance : app.instances) {
+                app.viewer->applyAnimation(now, instance);
+            }
+        } else {
+            app.viewer->applyAnimation(now);
+        }
 
         // Add a new instance every second until reaching 100 instances.
         static double previous = 0.0;
@@ -295,7 +302,7 @@ int main(int argc, char** argv) {
             FilamentInstance* instance = app.loader->createInstance(app.asset);
 
             // If the asset has variants, rotate through each variant.
-            const size_t variantCount = app.asset->getMaterialVariantCount();
+            const size_t variantCount = instance->getMaterialVariantCount();
             if (variantCount > 1) {
                 instance->applyMaterialVariant(app.instances.size() % variantCount);
             }

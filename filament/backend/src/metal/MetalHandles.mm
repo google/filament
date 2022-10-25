@@ -820,7 +820,8 @@ void MetalSamplerGroup::finalize() {
     finalized = true;
 }
 
-void MetalSamplerGroup::reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEncoder> e) {
+void MetalSamplerGroup::reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEncoder> e,
+        id<MTLDevice> device) {
     encoder = e;
 
     // The number of slots in the ring buffer we use to manage argument buffer allocations.
@@ -838,7 +839,7 @@ void MetalSamplerGroup::reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEnco
     // Chances are, even though the MTLArgumentEncoder might change, the required size and alignment
     // probably won't. So we can re-use the previous ring buffer.
     if (UTILS_UNLIKELY(!argBuffer || !argBuffer->canAccomodateLayout(argBufferLayout))) {
-        argBuffer = std::make_unique<MetalRingBuffer>(encoder.device, MTLResourceStorageModeShared,
+        argBuffer = std::make_unique<MetalRingBuffer>(device, MTLResourceStorageModeShared,
                 argBufferLayout, METAL_ARGUMENT_BUFFER_SLOTS);
     } else {
         argBuffer->createNewAllocation(cmdBuffer);
@@ -908,7 +909,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         if (samples > 1 && color[i].getSampleCount() == 1) {
             auto& sidecar = color[i].metalTexture->msaaSidecar;
             if (!sidecar) {
-                sidecar = createMultisampledTexture(context->device, color[i].getPixelFormat(),
+                sidecar = createMultisampledTexture(color[i].getPixelFormat(),
                         color[i].metalTexture->width, color[i].metalTexture->height, samples);
             }
         }
@@ -933,7 +934,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         if (samples > 1 && depth.getSampleCount() == 1) {
             auto& sidecar = depth.metalTexture->msaaSidecar;
             if (!sidecar) {
-                sidecar = createMultisampledTexture(context->device, depth.getPixelFormat(),
+                sidecar = createMultisampledTexture(depth.getPixelFormat(),
                         depth.metalTexture->width, depth.metalTexture->height, samples);
             }
         }
@@ -958,7 +959,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         if (samples > 1 && stencil.getSampleCount() == 1) {
             auto& sidecar = stencil.metalTexture->msaaSidecar;
             if (!sidecar) {
-                sidecar = createMultisampledTexture(context->device, stencil.getPixelFormat(),
+                sidecar = createMultisampledTexture(stencil.getPixelFormat(),
                         stencil.metalTexture->width, stencil.metalTexture->height, samples);
             }
         }
@@ -1142,8 +1143,8 @@ MTLStoreAction MetalRenderTarget::getStoreAction(const RenderPassParams& params,
     return MTLStoreActionStore;
 }
 
-id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device,
-        MTLPixelFormat format, uint32_t width, uint32_t height, uint8_t samples) {
+id<MTLTexture> MetalRenderTarget::createMultisampledTexture(MTLPixelFormat format,
+        uint32_t width, uint32_t height, uint8_t samples) const {
     MTLTextureDescriptor* descriptor =
             [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:format
                                                                width:width
@@ -1154,7 +1155,13 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
     descriptor.usage = MTLTextureUsageRenderTarget;
     descriptor.resourceOptions = MTLResourceStorageModePrivate;
 
-    return [device newTextureWithDescriptor:descriptor];
+    if (context->supportsMemorylessRenderTargets) {
+        if (@available(macOS 11.0, *)) {
+            descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
+        }
+    }
+
+    return [context->device newTextureWithDescriptor:descriptor];
 }
 
 math::uint2 MetalRenderTarget::getAttachmentSize() noexcept {

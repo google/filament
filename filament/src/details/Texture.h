@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_TEXTURE_H
 #define TNT_FILAMENT_DETAILS_TEXTURE_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <backend/Handle.h>
 
@@ -126,7 +126,7 @@ private:
 };
 
 
-FILAMENT_UPCAST(Texture)
+FILAMENT_DOWNCAST(Texture)
 
 } // namespace filament
 

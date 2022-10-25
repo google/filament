@@ -184,8 +184,8 @@ void main() {
     // rescale [near, far] to [0, 1]
     highp float depth = -z * frameUniforms.oneOverFarMinusNear - frameUniforms.nearOverFarMinusNear;
 
-    // EVSM pre-mapping
-    depth = frameUniforms.vsmExponent * (depth * 2.0 - 1.0);
+    // remap depth between -1 and 1
+    depth = depth * 2.0 - 1.0;
 
     vertex_worldPosition.w = depth;
 #endif

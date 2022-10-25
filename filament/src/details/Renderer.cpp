@@ -656,7 +656,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
         RenderPass shadowPass(pass);
         shadowPass.setVariant(shadowVariant);
-        auto shadows = view.renderShadowMaps(fg, engine, driver, shadowPass);
+        auto shadows = view.renderShadowMaps(fg, engine, cameraInfo, shadowPass);
         blackboard["shadows"] = shadows;
     }
 
@@ -664,7 +664,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // recorded in the list of targets already rendered into -- this ensures that
     // initializeClearFlags() is called only once for the default RenderTarget.
     auto& previousRenderTargets = mPreviousRenderTargets;
-    FRenderTarget* const currentRenderTarget = upcast(view.getRenderTarget());
+    FRenderTarget* const currentRenderTarget = downcast(view.getRenderTarget());
     if (UTILS_LIKELY(
             previousRenderTargets.find(currentRenderTarget) == previousRenderTargets.end())) {
         previousRenderTargets.insert(currentRenderTarget);

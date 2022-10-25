@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_DEBUGREGISTRY_H
 #define TNT_FILAMENT_DETAILS_DEBUGREGISTRY_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <filament/DebugRegistry.h>
 
@@ -76,7 +76,7 @@ private:
     std::unordered_map<std::string_view, DataSource> mDataSourceMap;
 };
 
-FILAMENT_UPCAST(DebugRegistry)
+FILAMENT_DOWNCAST(DebugRegistry)
 
 } // namespace filament
 

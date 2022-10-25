@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_SKINNINGBUFFER_H
 #define TNT_FILAMENT_DETAILS_SKINNINGBUFFER_H
 
-#include "upcast.h"
+#include "downcast.h"
 #include <filament/SkinningBuffer.h>
 
 #include "private/filament/EngineEnums.h"
@@ -73,7 +73,7 @@ private:
     uint32_t mBoneCount;
 };
 
-FILAMENT_UPCAST(SkinningBuffer)
+FILAMENT_DOWNCAST(SkinningBuffer)
 
 } // namespace filament
 

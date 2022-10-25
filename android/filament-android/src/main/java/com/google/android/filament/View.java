@@ -793,7 +793,7 @@ public class View {
     public void setVsmShadowOptions(@NonNull VsmShadowOptions options) {
         mVsmShadowOptions = options;
         nSetVsmShadowOptions(getNativeObject(), options.anisotropy, options.mipmapping,
-                options.minVarianceScale, options.lightBleedReduction);
+                options.highPrecision, options.minVarianceScale, options.lightBleedReduction);
     }
 
     /**
@@ -1144,7 +1144,7 @@ public class View {
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetShadowType(long nativeView, int type);
-    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy, boolean mipmapping, float minVarianceScale, float lightBleedReduction);
+    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy, boolean mipmapping, boolean highPrecision, float minVarianceScale, float lightBleedReduction);
     private static native void nSetSoftShadowOptions(long nativeView, float penumbraScale, float penumbraRatioScale);
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
@@ -1817,6 +1817,13 @@ public class View {
          * Whether to generate mipmaps for all VSM shadow maps.
          */
         public boolean mipmapping = false;
+        /**
+         * Whether to use a 32-bits or 16-bits texture format for VSM shadow maps. 32-bits
+         * precision is rarely needed, but it does reduces light leaks as well as "fading"
+         * of the shadows in some situations. Setting highPrecision to true for a single
+         * shadow map will double the memory usage of all shadow maps.
+         */
+        public boolean highPrecision = false;
         /**
          * VSM minimum variance scale, must be positive.
          */

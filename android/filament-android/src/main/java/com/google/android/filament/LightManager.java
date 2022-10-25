@@ -240,7 +240,7 @@ public class LightManager {
          */
         @NonNull
         @Size(min = 3)
-        public float[] cascadeSplitPositions = { 0.25f, 0.50f, 0.75f };
+        public float[] cascadeSplitPositions = { 0.125f, 0.25f, 0.50f };
 
         /** Constant bias in world units (e.g. meters) by which shadows are moved away from the
          * light. 1mm by default.
@@ -361,6 +361,15 @@ public class LightManager {
          */
         @IntRange(from = 1)
         public int vsmMsaaSamples = 1;
+
+
+        /**
+         * When elvsm is set to true, "Exponential Layered VSM without Layers" are used. It is
+         * an improvement to the default EVSM which suffers important light leaks. Enabling
+         * ELVSM for a single shadowmap doubles the memory usage of all shadow maps.
+         * ELVSM is mostly useful when large blurs are used.
+         */
+        public boolean elvsm = false;
 
         /**
          * Blur width for the VSM blur. Zero do disable.
@@ -486,11 +495,6 @@ public class LightManager {
         /**
          * Whether this Light casts shadows (disabled by default)
          *
-         * <p>
-         * <b>warning:</b>
-         *  {@link Type#POINT} lights cannot cast shadows.
-         * </p>
-         *
          * @param enable Enables or disables casting shadows from this Light.
          *
          * @return This Builder, for chaining calls.
@@ -516,7 +520,7 @@ public class LightManager {
                     options.polygonOffsetConstant, options.polygonOffsetSlope,
                     options.screenSpaceContactShadows,
                     options.stepCount, options.maxShadowDistance, options.vsmMsaaSamples,
-                    options.blurWidth, options.shadowBulbRadius);
+                    options.elvsm, options.blurWidth, options.shadowBulbRadius);
             return this;
         }
 
@@ -1181,7 +1185,7 @@ public class LightManager {
              boolean stable, boolean lispsm,
              float polygonOffsetConstant, float polygonOffsetSlope,
              boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance,
-             int vsmMsaaSamples, float blurWidth, float shadowBulbRadius);
+             int vsmMsaaSamples, boolean elvsm, float blurWidth, float shadowBulbRadius);
     private static native void nBuilderCastLight(long nativeBuilder, boolean enabled);
     private static native void nBuilderPosition(long nativeBuilder, float x, float y, float z);
     private static native void nBuilderDirection(long nativeBuilder, float x, float y, float z);

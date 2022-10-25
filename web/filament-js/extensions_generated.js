@@ -164,6 +164,7 @@ Filament.loadGeneratedExtensions = function() {
         const options = {
             anisotropy: 0,
             mipmapping: false,
+            highPrecision: false,
             minVarianceScale: 0.5,
             lightBleedReduction: 0.15,
         };

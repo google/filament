@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_COMPONENTS_LIGHTMANAGER_H
 #define TNT_FILAMENT_COMPONENTS_LIGHTMANAGER_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include "backend/DriverApiForward.h"
 
@@ -300,7 +300,7 @@ private:
     FEngine& mEngine;
 };
 
-FILAMENT_UPCAST(LightManager)
+FILAMENT_DOWNCAST(LightManager)
 
 
 } // namespace filament

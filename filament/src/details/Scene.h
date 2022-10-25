@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_SCENE_H
 #define TNT_FILAMENT_DETAILS_SCENE_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include "Allocators.h"
 #include "Culler.h"
@@ -224,7 +224,7 @@ private:
     BufferPoolAllocator<3> mBufferPoolAllocator;
 };
 
-FILAMENT_UPCAST(Scene)
+FILAMENT_DOWNCAST(Scene)
 
 } // namespace filament
 

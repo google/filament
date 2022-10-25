@@ -135,6 +135,7 @@ value_object<View::GuardBandOptions>("View$GuardBandOptions")
 value_object<View::VsmShadowOptions>("View$VsmShadowOptions")
     .field("anisotropy", &View::VsmShadowOptions::anisotropy)
     .field("mipmapping", &View::VsmShadowOptions::mipmapping)
+    .field("highPrecision", &View::VsmShadowOptions::highPrecision)
     .field("minVarianceScale", &View::VsmShadowOptions::minVarianceScale)
     .field("lightBleedReduction", &View::VsmShadowOptions::lightBleedReduction)
     ;

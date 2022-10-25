@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_RENDERTAGET_H
 #define TNT_FILAMENT_DETAILS_RENDERTAGET_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <backend/Handle.h>
 
@@ -75,7 +75,7 @@ private:
     const uint8_t mSupportedColorAttachmentsCount;
 };
 
-FILAMENT_UPCAST(RenderTarget)
+FILAMENT_DOWNCAST(RenderTarget)
 
 } // namespace filament
 

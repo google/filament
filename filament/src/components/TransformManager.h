@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_COMPONENTS_TRANSFORMMANAGER_H
 #define TNT_FILAMENT_COMPONENTS_TRANSFORMMANAGER_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <filament/TransformManager.h>
 
@@ -197,7 +197,7 @@ private:
     bool mAccurateTranslations = false;
 };
 
-FILAMENT_UPCAST(TransformManager)
+FILAMENT_DOWNCAST(TransformManager)
 
 } // namespace filament
 

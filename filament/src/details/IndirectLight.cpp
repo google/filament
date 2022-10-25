@@ -165,14 +165,14 @@ IndirectLight* IndirectLight::Builder::build(Engine& engine) {
                 "irradiance map must a cubemap");
     }
 
-    return upcast(engine).createIndirectLight(*this);
+    return downcast(engine).createIndirectLight(*this);
 }
 
 // ------------------------------------------------------------------------------------------------
 
 FIndirectLight::FIndirectLight(FEngine& engine, const Builder& builder) noexcept {
     if (builder->mReflectionsMap) {
-        mReflectionsTexture = upcast(builder->mReflectionsMap);
+        mReflectionsTexture = downcast(builder->mReflectionsMap);
         mLevelCount = builder->mReflectionsMap->getLevels();
     }
 
@@ -184,7 +184,7 @@ FIndirectLight::FIndirectLight(FEngine& engine, const Builder& builder) noexcept
     mRotation = builder->mRotation;
     mIntensity = builder->mIntensity;
     if (builder->mIrradianceMap) {
-        mIrradianceTexture = upcast(builder->mIrradianceMap);
+        mIrradianceTexture = downcast(builder->mIrradianceMap);
     } else {
         // TODO: if needed, generate the irradiance map, this is an engine config
         if (CONFIG_IBL_USE_IRRADIANCE_MAP) {
