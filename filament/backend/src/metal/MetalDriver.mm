@@ -92,6 +92,13 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
             mContext->highestSupportedGpuFamily.mac   >= 2;     // newer macOS GPUs
     }
 
+    // In order to support resolve store action on depth attachment, the GPU needs to support it.
+    // Note that support for depth resolve implies support for stencil resolve using .sample0 resolve filter.
+    // (Other resolve filters are supported starting .apple5 and .mac2 families).
+    mContext->supportsAutoDepthResolve =
+        mContext->highestSupportedGpuFamily.apple >= 3 ||
+        mContext->highestSupportedGpuFamily.mac   >= 2;
+
     // In order to support memoryless render targets, an Apple GPU is needed.
     // Available starting macOS 11.0, the first version to run on Apple GPUs.
     // On iOS, it's available on all OS versions.
@@ -696,7 +703,7 @@ bool MetalDriver::isFrameTimeSupported() {
 }
 
 bool MetalDriver::isAutoDepthResolveSupported() {
-    return true;
+    return mContext->supportsAutoDepthResolve;
 }
 
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
