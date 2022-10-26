@@ -1582,24 +1582,19 @@ Value
 :     `true` or `false`. Defaults to `false`.
 
 Description
-:     Only available in the `unlit` shading model. If this property is enabled, the final color
-      computed by the material is multiplied by the shadowing factor (or visibility). This allows to
-      create transparent shadow-receiving objects (for instance an invisible ground plane in AR).
-      This is only supported with shadows from directional lights.
+:     When `doubleSided` is `true` both front and back faces of the geometry are visible.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
-    name : "Invisible shadow plane",
-    shadingModel : unlit,
-    shadowMultiplier : true,
-    blending : transparent
+    name : "Double sided material",
+    shadingModel : lit,
+    doubleSided : true
 }
 
 fragment {
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
-        // baseColor defines the color and opacity of the final shadow
-        material.baseColor = vec4(0.0, 0.0, 0.0, 0.7);
+        material.baseColor = materialParams.albedo;
     }
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
