@@ -1582,7 +1582,10 @@ Value
 :     `true` or `false`. Defaults to `false`.
 
 Description
-:     When `doubleSided` is `true` both front and back faces of the geometry are visible.
+:     Enables two-sided rendering and its capability to be toggled at run time. When set to `true`,
+      `culling` is automatically set to `none`; if the triangle is back-facing, the triangle's
+      normal is flipped to become front-facing. When explicitly set to `false`, this allows the
+      double-sidedness to be toggled at run time.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
