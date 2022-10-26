@@ -1432,12 +1432,13 @@ non-shader data.
 
 </p><dl><table><tbody><tr valign="top"><td><dt>Type</dt></td><td><dd><p>     <code>number</code>
 
-</p></dd></td></tr><tr valign="top"><td><dt>Value</dt></td><td><dd><p>      An integer value, either 1 or 2. Defaults to 1.
+</p></dd></td></tr><tr valign="top"><td><dt>Value</dt></td><td><dd><p>      An integer value, either 1, 2 or 3. Defaults to 1.
 
 </p></dd></td></tr></tbody></table></dl><div class="table">
 <table class="table"><tbody><tr><th style="text-align:left"> Feature Level </th><th style="text-align:left"> Guaranteed features </th></tr>
 <tr><td style="text-align:left"> 1 </td><td style="text-align:left"> 9 textures per material </td></tr>
-<tr><td style="text-align:left"> 2 </td><td style="text-align:left"> 12 textures per material, cubemap arrays, ESSL 3.10 </td></tr>
+<tr><td style="text-align:left"> 2 </td><td style="text-align:left"> 9 textures per material, cubemap arrays, ESSL 3.10 </td></tr>
+<tr><td style="text-align:left"> 3 </td><td style="text-align:left"> 12 textures per material, cubemap arrays, ESSL 3.10 </td></tr>
 </tbody></table><center><div class="tablecaption"><a class="target" name="table_featurelevels">&nbsp;</a><b style="font-style:normal;">Table&nbsp;13:</b> Feature levels</div></center></div>
 
 <p></p><p>
@@ -2036,23 +2037,21 @@ and sorting issues are minimized or eliminated</span></center></div></center>
 
 </p></dd><dt>Value</dt><dd><p>      <code>true</code> or <code>false</code>. Defaults to <code>false</code>.
 
-</p></dd><dt>Description</dt><dd><p>      Only available in the <code>unlit</code> shading model. If this property is enabled, the final color
-      computed by the material is multiplied by the shadowing factor (or visibility). This allows to
-      create transparent shadow-receiving objects (for instance an invisible ground plane in AR).
-      This is only supported with shadows from directional lights.
+</p></dd><dt>Description</dt><dd><p>      Enables two-sided rendering and its capability to be toggled at run time. When set to <code>true</code>,
+      <code>culling</code> is automatically set to <code>none</code>; if the triangle is back-facing, the triangle's
+      normal is flipped to become front-facing. When explicitly set to <code>false</code>, this allows the
+      double-sidedness to be toggled at run time.
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
-<span class="line">    name : <span class="hljs-string">"Invisible shadow plane"</span>,</span>
-<span class="line">    shadingModel : unlit,</span>
-<span class="line">    shadowMultiplier : <span class="hljs-literal">true</span>,</span>
-<span class="line">    blending : transparent</span>
+<span class="line">    name : <span class="hljs-string">"Double sided material"</span>,</span>
+<span class="line">    shadingModel : lit,</span>
+<span class="line">    doubleSided : <span class="hljs-literal">true</span></span>
 <span class="line">}</span>
 <span class="line"></span>
 <span class="line">fragment {</span>
 <span class="line">    void material(inout MaterialInputs material) {</span>
 <span class="line">        prepareMaterial(material);</span>
-<span class="line">        <span class="hljs-comment">// baseColor defines the color and opacity of the final shadow</span></span>
-<span class="line">        material.baseColor = vec4(0.0, 0.0, 0.0, 0.7);</span>
+<span class="line">        material.baseColor = materialParams.albedo;</span>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre>
 <a class="target" name="lighting:reflections">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:reflections">&nbsp;</a><a class="target" name="toc4.2.25">&nbsp;</a><h3>Lighting: reflections</h3>
