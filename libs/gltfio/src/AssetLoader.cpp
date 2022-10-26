@@ -645,7 +645,7 @@ void FAssetLoader::createPrimitives(const cgltf_data* srcAsset, const cgltf_node
         // Expand the object-space bounding box.
         aabb.min = min(outputPrim.aabb.min, aabb.min);
         aabb.max = max(outputPrim.aabb.max, aabb.max);
-     }
+    }
 
     mat4f worldTransform;
     cgltf_node_transform_world(node, &worldTransform[0][0]);
