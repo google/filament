@@ -160,7 +160,7 @@ public:
     }
 
     inline size_t getLevelCount(Instance) const noexcept { return 1; }
-    inline size_t getPrimitiveCount(Instance instance, uint8_t level) const noexcept;
+    size_t getPrimitiveCount(Instance instance, uint8_t level) const noexcept;
     void setMaterialInstanceAt(Instance instance, uint8_t level,
             size_t primitiveIndex, FMaterialInstance const* materialInstance);
     MaterialInstance* getMaterialInstanceAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
@@ -409,10 +409,6 @@ utils::Slice<FRenderableManager::MorphTargets> const& FRenderableManager::getMor
 utils::Slice<FRenderableManager::MorphTargets>& FRenderableManager::getMorphTargets(
         Instance instance, uint8_t level) noexcept {
     return mManager[instance].morphTargets;
-}
-
-size_t FRenderableManager::getPrimitiveCount(Instance instance, uint8_t level) const noexcept {
-    return getRenderPrimitives(instance, level).size();
 }
 
 } // namespace filament
