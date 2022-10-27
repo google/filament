@@ -964,6 +964,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* out
         targetsCount = MAX_MORPH_TARGETS;
     }
 
+    const Aabb baseAabb(outPrim->aabb);
     for (cgltf_size targetIndex = 0; targetIndex < targetsCount; targetIndex++) {
         const cgltf_morph_target& morphTarget = inPrim.targets[targetIndex];
         for (cgltf_size aindex = 0; aindex < morphTarget.attributes_count; aindex++) {
@@ -982,10 +983,20 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* out
                 return false;
             }
 
+            if (!accessor->has_min || !accessor->has_max) {
+                continue;
+            }
+
+            Aabb targetAabb(baseAabb);
             const float* minp = &accessor->min[0];
             const float* maxp = &accessor->max[0];
-            outPrim->aabb.min = min(outPrim->aabb.min, float3(minp[0], minp[1], minp[2]));
-            outPrim->aabb.max = max(outPrim->aabb.max, float3(maxp[0], maxp[1], maxp[2]));
+
+            // We assume that the range of morph target weight is [-1,1].
+            targetAabb.min += float3(minp[0], minp[1], minp[2]);
+            targetAabb.max += float3(maxp[0], maxp[1], maxp[2]);
+
+            outPrim->aabb.min = min(outPrim->aabb.min, targetAabb.min);
+            outPrim->aabb.max = max(outPrim->aabb.max, targetAabb.max);
 
             VertexBuffer::AttributeType fatype;
             VertexBuffer::AttributeType actualType;
