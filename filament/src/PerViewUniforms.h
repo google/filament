@@ -64,7 +64,7 @@ public:
     void terminate(backend::DriverApi& driver);
 
     void prepareCamera(const CameraInfo& camera) noexcept;
-    void prepareUpscaler(math::float2 scale, DynamicResolutionOptions const& options) noexcept;
+    void prepareLodBias(float bias) noexcept;
 
     /*
      * @param viewport  viewport (should be same as RenderPassParams::viewport)

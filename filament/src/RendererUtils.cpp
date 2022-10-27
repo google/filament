@@ -173,7 +173,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                 view.prepareSSAO(data.ssao ?
                         resources.getTexture(data.ssao) : engine.getOneTextureArray());
 
-                view.prepareShadowMap(view.getVsmShadowOptions().highPrecision);
+                view.prepareShadowMapping(view.getVsmShadowOptions().highPrecision);
 
                 // set shadow sampler
                 view.prepareShadow(data.shadows ?
@@ -200,6 +200,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
 
                 view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport),
                         config.xoffset, config.yoffset);
+
                 view.commitUniforms(driver);
 
                 out.params.clearColor = data.clearColor;

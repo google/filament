@@ -606,9 +606,19 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
     mPerViewUniforms.prepareFog(cameraInfo.getPosition(), mFogOptions);
     mPerViewUniforms.prepareTemporalNoise(mTemporalAntiAliasingOptions);
     mPerViewUniforms.prepareBlending(needsAlphaChannel);
+}
 
-    // set uniforms and samplers
-    bindPerViewUniformsAndSamplers(driver);
+void FView::bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
+    mPerViewUniforms.bind(driver);
+
+    driver.bindUniformBuffer(+UniformBindingPoints::LIGHTS,
+            mLightUbh);
+
+    driver.bindUniformBuffer(+UniformBindingPoints::SHADOW,
+            mShadowMapManager.getShadowUniformsHandle());
+
+    driver.bindUniformBuffer(+UniformBindingPoints::FROXEL_RECORDS,
+            mFroxelizer.getRecordBuffer());
 }
 
 void FView::computeVisibilityMasks(
@@ -656,7 +666,9 @@ UTILS_NOINLINE
 
 void FView::prepareUpscaler(float2 scale) const noexcept {
     SYSTRACE_CALL();
-    mPerViewUniforms.prepareUpscaler(scale, mDynamicResolution);
+    const float bias = (mDynamicResolution.quality >= QualityLevel::HIGH) ?
+            std::log2(std::min(scale.x, scale.y)) : 0.0f;
+    mPerViewUniforms.prepareLodBias(bias);
 }
 
 void FView::prepareCamera(const CameraInfo& cameraInfo) const noexcept {
@@ -711,7 +723,7 @@ void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
     }
 }
 
-void FView::prepareShadowMap(bool highPrecision) const noexcept {
+void FView::prepareShadowMapping(bool highPrecision) const noexcept {
     mPerViewUniforms.prepareShadowMapping(highPrecision);
 }
 
@@ -894,9 +906,9 @@ void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
     }
 }
 
-FrameGraphId<FrameGraphTexture> FView::renderShadowMaps(FrameGraph& fg, FEngine& engine,
-        CameraInfo const& cameraInfo, RenderPass const& pass) noexcept {
-    return mShadowMapManager.render(fg, engine, pass, *this, cameraInfo);
+FrameGraphId<FrameGraphTexture> FView::renderShadowMaps(FEngine& engine, FrameGraph& fg,
+        CameraInfo const& cameraInfo, float4 const& userTime, RenderPass const& pass) noexcept {
+    return mShadowMapManager.render(engine, fg, pass, *this, cameraInfo, userTime);
 }
 
 void FView::commitFrameHistory(FEngine& engine) noexcept {
