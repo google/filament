@@ -90,8 +90,8 @@ public:
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
 
     // Renders all the shadow maps.
-    FrameGraphId<FrameGraphTexture> render(FrameGraph& fg, FEngine& engine,
-            RenderPass const& pass, FView& view, CameraInfo const& mainCameraInfo) noexcept;
+    FrameGraphId<FrameGraphTexture> render(FEngine& engine, FrameGraph& fg, RenderPass const& pass,
+            FView& view, CameraInfo const& mainCameraInfo, math::float4 const& userTime) noexcept;
 
     ShadowMap* getCascadeShadowMap(size_t cascade) noexcept {
         assert_invariant(cascade < CONFIG_MAX_SHADOW_CASCADES);
@@ -140,7 +140,7 @@ private:
     void preparePointShadowMap(ShadowMap& map,
             FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
-            FScene::LightSoa& lightData, uint8_t face,
+            FScene::LightSoa& lightData,
             ShadowMap::SceneInfo const& sceneInfo) noexcept;
 
     static void updateSpotVisibilityMasks(
