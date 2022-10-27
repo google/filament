@@ -132,7 +132,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
 
     struct PrepareShadowPassData {
         struct ShadowPass {
-            mutable RenderPass pass;
+            mutable RenderPass::Executor executor;
             mutable CameraInfo cameraInfo;
             ShadowMap* shadowMap;
             utils::Range<uint32_t> range;
@@ -166,7 +166,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                         // for the directional light, we already know if it has visible shadows.
                         if (pShadowMap->hasVisibleShadows()) {
                             passList.push_back({
-                                    pass, {}, pShadowMap, directionalShadowCastersRange,
+                                    {}, {}, pShadowMap, directionalShadowCastersRange,
                                     VISIBLE_DIR_SHADOW_RENDERABLE });
                         }
                     }
@@ -178,13 +178,13 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                     for (auto* pShadowMap : mSpotShadowMaps) {
                         assert_invariant(!pShadowMap->isDirectionalShadow());
                         passList.push_back({
-                                pass, {}, pShadowMap, spotShadowCastersRange,
+                                {}, {}, pShadowMap, spotShadowCastersRange,
                                 VISIBLE_DYN_SHADOW_RENDERABLE });
                         if (pShadowMap->isPointShadow()) {
                             // add the 5 extra faces
                             for (uint8_t face = 1; face < 6; face++) {
                                 passList.push_back({
-                                        pass, {}, pShadowMap, spotShadowCastersRange,
+                                        {}, {}, pShadowMap, spotShadowCastersRange,
                                         VISIBLE_DYN_SHADOW_RENDERABLE, face });
                             }
                         }
@@ -197,7 +197,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                 // "read" from one of its resource (only writes), so the FrameGraph culls it.
                 builder.sideEffect();
             },
-            [this, &engine, &view, scene, &mainCameraInfo](
+            [this, &engine, &view, scene, &mainCameraInfo, &passTemplate = pass](
                     FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 // set uniforms needed to render this ShadowMap
                 view.prepareShadowMap(view.getVsmShadowOptions().highPrecision);
@@ -247,12 +247,15 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                         view.updatePrimitivesLod(engine,
                                 cameraInfo, scene->getRenderableData(), entry.range);
 
-                        entry.pass.setCamera(cameraInfo);
-                        entry.pass.setVisibilityMask(entry.visibilityMask);
-                        entry.pass.setGeometry(scene->getRenderableData(),
+                        RenderPass pass(passTemplate);
+                        pass.setCamera(cameraInfo);
+                        pass.setVisibilityMask(entry.visibilityMask);
+                        pass.setGeometry(scene->getRenderableData(),
                                 entry.range, scene->getRenderableUBO());
-                        entry.pass.appendCommands(engine, RenderPass::SHADOW);
-                        entry.pass.sortCommands(engine);
+                        pass.appendCommands(engine, RenderPass::SHADOW);
+                        pass.sortCommands(engine);
+
+                        entry.executor = pass.getExecutor();
                         entry.cameraInfo = cameraInfo;
                     }
                 }
@@ -361,9 +364,9 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                     // It wouldn't work to capture by copy because entry.pass wouldn't be
                     // initialized, as this happens in an `execute` block.
 
+                    auto& executor = entry.executor;
                     CameraInfo const& cameraInfo = entry.cameraInfo;
 
-                    auto executor = entry.pass.getExecutor();
                     const bool blur = view.hasVSM() && options->vsm.blurWidth > 0.0f;
 
                     // set uniforms relative to the camera
