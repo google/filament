@@ -696,11 +696,11 @@ void RenderPass::Executor::overrideScissor(backend::Viewport const* scissor) noe
 }
 
 void RenderPass::Executor::execute(FEngine& engine, const char* name) const noexcept {
-    recordDriverCommands(engine.getDriverApi(), mBegin, mEnd);
+    execute(engine.getDriverApi(), mCommands.begin(), mCommands.end());
 }
 
 UTILS_NOINLINE // no need to be inlined
-void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
+void RenderPass::Executor::execute(backend::DriverApi& driver,
         const Command* first, const Command* last) const noexcept {
     SYSTRACE_CALL();
 
@@ -823,8 +823,8 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
 // ------------------------------------------------------------------------------------------------
 
 RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept
-        : mBegin(b), mEnd(e),
-          mCustomCommands(pass->mCustomCommands),
+        : mCommands(b, e),
+          mCustomCommands(pass->mCustomCommands.data(), pass->mCustomCommands.size()),
           mUboHandle(pass->mUboHandle),
           mInstancedUboHandle(pass->mInstancedUboHandle),
           mScissorViewport(pass->mScissorViewport),
