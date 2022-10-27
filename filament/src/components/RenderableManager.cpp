@@ -747,4 +747,8 @@ bool FRenderableManager::getLightChannel(Instance ci, unsigned int channel) cons
     return false;
 }
 
+size_t FRenderableManager::getPrimitiveCount(Instance instance, uint8_t level) const noexcept {
+    return getRenderPrimitives(instance, level).size();
+}
+
 } // namespace filament
