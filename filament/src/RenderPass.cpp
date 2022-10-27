@@ -606,6 +606,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
                     // cancel command if asked to filter translucent objects
                     key |= select(filterTranslucentObjects);
 
+                    // cancel command if both front and back faces are culled
+                    key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
+
                     *curr = cmdColor;
                     curr->key = key;
                     ++curr;
@@ -632,6 +635,10 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 }
 
                 *curr = cmdColor;
+
+                // cancel command if both front and back faces are culled
+                curr->key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
+
                 ++curr;
             }
 
@@ -660,7 +667,12 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
                         & !(filterTranslucentObjects & translucent)
                         & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
                             | writeDepthForShadowCasters;
+
                 *curr = cmdDepth;
+
+                // cancel command if both front and back faces are culled
+                curr->key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
+
                 ++curr;
             }
         }
