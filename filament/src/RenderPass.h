@@ -319,16 +319,15 @@ public:
      */
     class Executor {
         using CustomCommandFn = std::function<void()>;
-        using CustomCommandVector = std::vector<CustomCommandFn,
-                utils::STLAllocator<CustomCommandFn, LinearAllocatorArena>>;
         friend class RenderPass;
 
-        Command const* const mBegin;
-        Command const* const mEnd;
-        const CustomCommandVector mCustomCommands;
-        const backend::Handle<backend::HwBufferObject> mUboHandle;
-        const backend::Handle<backend::HwBufferObject> mInstancedUboHandle;
-        const backend::Viewport mScissorViewport;
+        // these fields are constant after creation
+        utils::Slice<Command> mCommands;
+        utils::Slice<CustomCommandFn> mCustomCommands;
+        backend::Handle<backend::HwBufferObject> mUboHandle;
+        backend::Handle<backend::HwBufferObject> mInstancedUboHandle;
+        backend::Viewport mScissorViewport;
+
         backend::Viewport mScissor{};            // value of scissor override
         backend::PolygonOffset mPolygonOffset{}; // value of the override
         bool mPolygonOffsetOverride : 1;         // whether to override the polygon offset setting
@@ -336,11 +335,13 @@ public:
 
         Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept;
 
-        void recordDriverCommands(backend::DriverApi& driver,
+        void execute(backend::DriverApi& driver,
                 const Command* first, const Command* last) const noexcept;
 
     public:
+        Executor() = default;
         Executor(Executor const& rhs);
+        Executor& operator=(Executor const& rhs) = default;
         ~Executor() noexcept;
 
         // if non-null, overrides the material's polygon offset
@@ -448,7 +449,9 @@ private:
             std::numeric_limits<int32_t>::max() };
 
     // a vector for our custom commands
-    mutable Executor::CustomCommandVector mCustomCommands;
+    using CustomCommandVector = std::vector<Executor::CustomCommandFn,
+            utils::STLAllocator<Executor::CustomCommandFn, LinearAllocatorArena>>;
+    mutable CustomCommandVector mCustomCommands;
 };
 
 } // namespace filament

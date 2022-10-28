@@ -606,6 +606,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
                     // cancel command if asked to filter translucent objects
                     key |= select(filterTranslucentObjects);
 
+                    // cancel command if both front and back faces are culled
+                    key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
+
                     *curr = cmdColor;
                     curr->key = key;
                     ++curr;
@@ -632,6 +635,10 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 }
 
                 *curr = cmdColor;
+
+                // cancel command if both front and back faces are culled
+                curr->key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
+
                 ++curr;
             }
 
@@ -660,7 +667,12 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
                         & !(filterTranslucentObjects & translucent)
                         & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
                             | writeDepthForShadowCasters;
+
                 *curr = cmdDepth;
+
+                // cancel command if both front and back faces are culled
+                curr->key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
+
                 ++curr;
             }
         }
@@ -696,11 +708,11 @@ void RenderPass::Executor::overrideScissor(backend::Viewport const* scissor) noe
 }
 
 void RenderPass::Executor::execute(FEngine& engine, const char* name) const noexcept {
-    recordDriverCommands(engine.getDriverApi(), mBegin, mEnd);
+    execute(engine.getDriverApi(), mCommands.begin(), mCommands.end());
 }
 
 UTILS_NOINLINE // no need to be inlined
-void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
+void RenderPass::Executor::execute(backend::DriverApi& driver,
         const Command* first, const Command* last) const noexcept {
     SYSTRACE_CALL();
 
@@ -823,8 +835,8 @@ void RenderPass::Executor::recordDriverCommands(backend::DriverApi& driver,
 // ------------------------------------------------------------------------------------------------
 
 RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept
-        : mBegin(b), mEnd(e),
-          mCustomCommands(pass->mCustomCommands),
+        : mCommands(b, e),
+          mCustomCommands(pass->mCustomCommands.data(), pass->mCustomCommands.size()),
           mUboHandle(pass->mUboHandle),
           mInstancedUboHandle(pass->mInstancedUboHandle),
           mScissorViewport(pass->mScissorViewport),

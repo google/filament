@@ -2476,7 +2476,7 @@ void PostProcessManager::prepareTaa(FrameGraph& fg, filament::Viewport const& sv
 
     fg.addTrivialSideEffectPass("Jitter Camera",
             [=, &uniforms] (DriverApi& driver) {
-        uniforms.prepareCamera(*inoutCameraInfo);
+        uniforms.prepareCamera(mEngine, *inoutCameraInfo);
         uniforms.commit(driver);
     });
 }

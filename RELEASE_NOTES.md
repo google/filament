@@ -6,6 +6,8 @@ A new header is inserted each time a *tag* is created.
 ## main branch
 
 - gltfio: calculate primitive's AABB correctly. 
+- gltfio: fix glTF breaking issue
+- engine: primitives with `CullingMode::FRONT_AND_BACK` are now skipped.
 
 ## v1.28.2
 
