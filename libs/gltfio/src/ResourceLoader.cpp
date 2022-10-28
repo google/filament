@@ -509,7 +509,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             data = bufferData + accessor->offset;
         } else {
             bufferData = (const uint8_t*) accessor->buffer_view->buffer->data;
-            data = computeBindingOffset(accessor) + bufferData + accessor->offset;
+            data = computeBindingOffset(accessor) + bufferData;
         }
         assert_invariant(bufferData);
         const uint32_t size = computeBindingSize(accessor);
