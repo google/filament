@@ -215,7 +215,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     // for spot shadow map, we need to do the culling
                     switch (shadowMap.getShadowType()) {
                         case ShadowType::DIRECTIONAL:
-                            shadowMap.prepareDirectionalLight(
+                            shadowMap.prepareDirectionalLight(engine,
                                     scene->getLightData().elementAt<FScene::DIRECTION>(0),
                                     scene->getLightData().elementAt<FScene::LIGHT_INSTANCE>(0));
                             break;
@@ -245,9 +245,9 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         // cameraInfo only valid after calling update
                         const CameraInfo cameraInfo{ shadowMap.getCamera() };
 
-                        shadowMap.prepareCamera(cameraInfo);
+                        shadowMap.prepareCamera(engine, cameraInfo);
                         shadowMap.prepareViewport(shadowMap.getViewport());
-                        shadowMap.prepareTime(userTime);
+                        shadowMap.prepareTime(engine, userTime);
                         shadowMap.prepareShadowMapping(view.getVsmShadowOptions().highPrecision);
                         shadowMap.commitUniforms(driver);
 

@@ -34,25 +34,19 @@
 
 #include <math/mat4.h>
 
-
 namespace filament {
 
 using namespace backend;
 using namespace math;
 
 PerViewUniforms::PerViewUniforms(FEngine& engine) noexcept
-        : mEngine(engine),
-          mSamplers(PerViewSib::SAMPLER_COUNT) {
+        : mSamplers(PerViewSib::SAMPLER_COUNT) {
     DriverApi& driver = engine.getDriverApi();
 
     mSamplerGroupHandle = driver.createSamplerGroup(mSamplers.getSize());
 
     mUniformBufferHandle = driver.createBufferObject(mUniforms.getSize(),
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
-
-    // with a clip-space of [-w, w] ==> z' = -z
-    // with a clip-space of [0,  w] ==> z' = (w - z)/2
-    mClipControl = driver.getClipSpaceParams();
 
     if (engine.getDFG().isValid()) {
         TextureSampler sampler(TextureSampler::MagFilter::LINEAR);
@@ -66,7 +60,7 @@ void PerViewUniforms::terminate(DriverApi& driver) {
     driver.destroySamplerGroup(mSamplerGroupHandle);
 }
 
-void PerViewUniforms::prepareCamera(const CameraInfo& camera) noexcept {
+void PerViewUniforms::prepareCamera(FEngine& engine, const CameraInfo& camera) noexcept {
     mat4f const& viewFromWorld = camera.view;
     mat4f const& worldFromView = camera.model;
     mat4f const& clipFromView  = camera.projection;
@@ -88,7 +82,10 @@ void PerViewUniforms::prepareCamera(const CameraInfo& camera) noexcept {
     s.cameraFar = camera.zf;
     s.oneOverFarMinusNear = 1.0f / (camera.zf - camera.zn);
     s.nearOverFarMinusNear = camera.zn / (camera.zf - camera.zn);
-    s.clipControl = mClipControl;
+
+    // with a clip-space of [-w, w] ==> z' = -z
+    // with a clip-space of [0,  w] ==> z' = (w - z)/2
+    s.clipControl = engine.getDriverApi().getClipSpaceParams();
 }
 
 void PerViewUniforms::prepareLodBias(float bias) noexcept {
@@ -113,17 +110,19 @@ void PerViewUniforms::prepareViewport(const filament::Viewport& viewport,
     s.offset = float2{ xoffset, yoffset };
 }
 
-void PerViewUniforms::prepareTime(math::float4 const& userTime) noexcept {
+void PerViewUniforms::prepareTime(FEngine& engine, math::float4 const& userTime) noexcept {
     auto& s = mUniforms.edit();
-    const uint64_t oneSecondRemainder = mEngine.getEngineTime().count() % 1000000000;
+    const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1000000000;
     const float fraction = float(double(oneSecondRemainder) / 1000000000.0);
     s.time = fraction;
     s.userTime = userTime;
 }
 
-void PerViewUniforms::prepareTemporalNoise(TemporalAntiAliasingOptions const& options) noexcept {
+void PerViewUniforms::prepareTemporalNoise(FEngine& engine,
+        TemporalAntiAliasingOptions const& options) noexcept {
+    std::uniform_real_distribution<float> uniformDistribution{ 0.0f, 1.0f };
     auto& s = mUniforms.edit();
-    const float temporalNoise = mUniformDistribution(mEngine.getRandomEngine());
+    const float temporalNoise = uniformDistribution(engine.getRandomEngine());
     s.temporalNoise = options.enabled ? temporalNoise : 0.0f;
 }
 
@@ -212,11 +211,11 @@ void PerViewUniforms::prepareStructure(Handle<HwTexture> structure) noexcept {
     mSamplers.setSampler(PerViewSib::STRUCTURE, { structure, {}});
 }
 
-void PerViewUniforms::prepareDirectionalLight(
+void PerViewUniforms::prepareDirectionalLight(FEngine& engine,
         float exposure,
         float3 const& sceneSpaceDirection,
         PerViewUniforms::LightManagerInstance directionalLight) noexcept {
-    FLightManager& lcm = mEngine.getLightManager();
+    FLightManager& lcm = engine.getLightManager();
     auto& s = mUniforms.edit();
 
     const float3 l = -sceneSpaceDirection; // guaranteed normalized
@@ -250,9 +249,8 @@ void PerViewUniforms::prepareDirectionalLight(
     }
 }
 
-void PerViewUniforms::prepareAmbientLight(FIndirectLight const& ibl,
+void PerViewUniforms::prepareAmbientLight(FEngine& engine, FIndirectLight const& ibl,
         float intensity, float exposure) noexcept {
-    auto& engine = mEngine;
     auto& s = mUniforms.edit();
 
     // Set up uniforms and sampler for the IBL, guaranteed to be non-null at this point.
