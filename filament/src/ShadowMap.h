@@ -187,10 +187,10 @@ public:
     ShadowType getShadowType() const noexcept { return mShadowType; }
     uint8_t getFace() const noexcept { return mFace; }
 
-    void prepareCamera(const CameraInfo& cameraInfo) noexcept;
+    void prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) noexcept;
     void prepareViewport(const filament::Viewport& viewport) noexcept;
-    void prepareTime(math::float4 const& userTime) noexcept;
-    void prepareDirectionalLight(math::float3 const& sceneSpaceDirection,
+    void prepareTime(FEngine& engine, math::float4 const& userTime) noexcept;
+    void prepareDirectionalLight(FEngine& engine, math::float3 const& sceneSpaceDirection,
             LightManager::Instance instance) noexcept;
     void prepareShadowMapping(bool highPrecision) noexcept;
     void commitUniforms(backend::DriverApi& driver) const noexcept;
@@ -292,7 +292,9 @@ private:
             { 2, 6, 7, 3 },  // top
     };
 
-    mutable PerViewUniforms mPerViewUniforms;   // 64 + 2048
+    // TODO: for shadow maps we don't need the whole `PerViewUniforms` which is large.
+    //       replace it with a smaller version that updates only what we need.
+    mutable PerViewUniforms mPerViewUniforms;   // 40 + 2048
 
     FCamera* mCamera = nullptr;                 //  8
     FCamera* mDebugCamera = nullptr;            //  8
@@ -308,7 +310,8 @@ private:
     uint8_t mFace           : 3;                                            // :3
 };
 
-static_assert(sizeof(ShadowMap) == 32 + 2048 + 64);
+// when changing this update comment in ShadowMapManager.h:222
+static_assert(sizeof(ShadowMap) == 32 + 2048 + 40);
 
 } // namespace filament
 

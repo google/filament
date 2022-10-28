@@ -1264,8 +1264,8 @@ filament::Viewport ShadowMap::getViewport() const noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-void ShadowMap::prepareCamera(const CameraInfo& cameraInfo) noexcept {
-    mPerViewUniforms.prepareCamera(cameraInfo);
+void ShadowMap::prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) noexcept {
+    mPerViewUniforms.prepareCamera(engine, cameraInfo);
     mPerViewUniforms.prepareLodBias(0.0f);
 }
 
@@ -1273,13 +1273,13 @@ void ShadowMap::prepareViewport(const filament::Viewport& viewport) noexcept {
     mPerViewUniforms.prepareViewport(viewport, 0, 0);
 }
 
-void ShadowMap::prepareTime(math::float4 const& userTime) noexcept {
-    mPerViewUniforms.prepareTime(userTime);
+void ShadowMap::prepareTime(FEngine& engine, math::float4 const& userTime) noexcept {
+    mPerViewUniforms.prepareTime(engine, userTime);
 }
 
-void ShadowMap::prepareDirectionalLight(math::float3 const& sceneSpaceDirection,
+void ShadowMap::prepareDirectionalLight(FEngine& engine, math::float3 const& sceneSpaceDirection,
         LightManager::Instance instance) noexcept {
-    mPerViewUniforms.prepareDirectionalLight(1.0f, sceneSpaceDirection, instance);
+    mPerViewUniforms.prepareDirectionalLight(engine, 1.0f, sceneSpaceDirection, instance);
 }
 
 void ShadowMap::prepareShadowMapping(bool highPrecision) noexcept {

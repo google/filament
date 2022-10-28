@@ -740,8 +740,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // view set-ups that need to happen before rendering
     fg.addTrivialSideEffectPass("Prepare View Uniforms",
-            [=, &view](DriverApi& driver) {
-                view.prepareCamera(cameraInfo);
+            [=, &view, &engine](DriverApi& driver) {
+                view.prepareCamera(engine, cameraInfo);
 
                 // The code here is a little fragile. In theory, we need to call prepareViewport()
                 // for each render pass, because the viewport parameters depend on the resolution.

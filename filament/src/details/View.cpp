@@ -383,7 +383,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
         intensity = skybox ? skybox->getIntensity() : FIndirectLight::DEFAULT_INTENSITY;
     }
 
-    mPerViewUniforms.prepareAmbientLight(*ibl, intensity, exposure);
+    mPerViewUniforms.prepareAmbientLight(engine, *ibl, intensity, exposure);
 
     /*
      * Directional light (always at index 0)
@@ -391,7 +391,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
 
     FLightManager::Instance directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
     const float3 sceneSpaceDirection = lightData.elementAt<FScene::DIRECTION>(0); // guaranteed normalized
-    mPerViewUniforms.prepareDirectionalLight(exposure, sceneSpaceDirection, directionalLight);
+    mPerViewUniforms.prepareDirectionalLight(engine, exposure, sceneSpaceDirection, directionalLight);
     mHasDirectionalLight = directionalLight.isValid();
 }
 
@@ -602,9 +602,9 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * Update driver state
      */
 
-    mPerViewUniforms.prepareTime(userTime);
+    mPerViewUniforms.prepareTime(engine, userTime);
     mPerViewUniforms.prepareFog(cameraInfo.getPosition(), mFogOptions);
-    mPerViewUniforms.prepareTemporalNoise(mTemporalAntiAliasingOptions);
+    mPerViewUniforms.prepareTemporalNoise(engine, mTemporalAntiAliasingOptions);
     mPerViewUniforms.prepareBlending(needsAlphaChannel);
 }
 
@@ -671,9 +671,9 @@ void FView::prepareUpscaler(float2 scale) const noexcept {
     mPerViewUniforms.prepareLodBias(bias);
 }
 
-void FView::prepareCamera(const CameraInfo& cameraInfo) const noexcept {
+void FView::prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) const noexcept {
     SYSTRACE_CALL();
-    mPerViewUniforms.prepareCamera(cameraInfo);
+    mPerViewUniforms.prepareCamera(engine, cameraInfo);
 }
 
 void FView::prepareViewport(const filament::Viewport& viewport,
