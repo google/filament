@@ -398,6 +398,11 @@ enum_<backend::CullingMode>("CullingMode")
     .value("BACK", backend::CullingMode::BACK)
     .value("FRONT_AND_BACK", backend::CullingMode::FRONT_AND_BACK);
 
+enum_<filament::TransparencyMode>("TransparencyMode")
+    .value("DEFAULT", filament::TransparencyMode::DEFAULT)
+    .value("TWO_PASSES_ONE_SIDE", filament::TransparencyMode::TWO_PASSES_ONE_SIDE)
+    .value("TWO_PASSES_TWO_SIDES", filament::TransparencyMode::TWO_PASSES_TWO_SIDES);
+
 enum_<backend::FeatureLevel>("FeatureLevel")
     .value("FEATURE_LEVEL_1", backend::FeatureLevel::FEATURE_LEVEL_1)
     .value("FEATURE_LEVEL_2", backend::FeatureLevel::FEATURE_LEVEL_2);

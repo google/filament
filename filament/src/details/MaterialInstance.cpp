@@ -35,17 +35,30 @@ namespace filament {
 
 using namespace backend;
 
-FMaterialInstance::FMaterialInstance() noexcept = default;
+FMaterialInstance::FMaterialInstance() noexcept
+        : mCulling(CullingMode::BACK),
+          mDepthFunc(RasterState::DepthFunc::LE),
+          mColorWrite(false),
+          mDepthWrite(false),
+          mHasScissor(false),
+          mIsDoubleSided(false),
+          mTransparencyMode(TransparencyMode::DEFAULT) {
+}
 
 FMaterialInstance::FMaterialInstance(FEngine& engine,
         FMaterialInstance const* other, const char* name)
         : mMaterial(other->mMaterial),
           mPolygonOffset(other->mPolygonOffset),
+          mStencilState(other->mStencilState),
+          mMaskThreshold(other->mMaskThreshold),
+          mSpecularAntiAliasingVariance(other->mSpecularAntiAliasingVariance),
+          mSpecularAntiAliasingThreshold(other->mSpecularAntiAliasingThreshold),
           mCulling(other->mCulling),
+          mDepthFunc(other->mDepthFunc),
           mColorWrite(other->mColorWrite),
           mDepthWrite(other->mDepthWrite),
-          mStencilState(other->mStencilState),
-          mDepthFunc(other->mDepthFunc),
+          mHasScissor(false),
+          mIsDoubleSided(other->mIsDoubleSided),
           mScissorRect(other->mScissorRect),
           mName(name ? CString(name) : other->mName) {
 
@@ -63,10 +76,20 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
         mSbHandle = driver.createSamplerGroup(mSamplers.getSize());
     }
 
-    mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
-            material->getId(), material->generateMaterialInstanceId());
+    if (material->hasDoubleSidedCapability()) {
+        setDoubleSided(mIsDoubleSided);
+    }
+
+    setMaskThreshold(mMaskThreshold);
+
+    setSpecularAntiAliasingThreshold(mSpecularAntiAliasingThreshold);
+
+    setSpecularAntiAliasingVariance(mSpecularAntiAliasingVariance);
 
     setTransparencyMode(material->getTransparencyMode());
+
+    mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
+            material->getId(), material->generateMaterialInstanceId());
 }
 
 FMaterialInstance* FMaterialInstance::duplicate(
@@ -183,14 +206,29 @@ void FMaterialInstance::setParameterImpl(std::string_view name,
 
 void FMaterialInstance::setMaskThreshold(float threshold) noexcept {
     setParameter("_maskThreshold", math::saturate(threshold));
+    mMaskThreshold = math::saturate(threshold);
+}
+
+float FMaterialInstance::getMaskThreshold() const noexcept {
+    return mMaskThreshold;
 }
 
 void FMaterialInstance::setSpecularAntiAliasingVariance(float variance) noexcept {
     setParameter("_specularAntiAliasingVariance", math::saturate(variance));
+    mSpecularAntiAliasingVariance = math::saturate(variance);
+}
+
+float FMaterialInstance::getSpecularAntiAliasingVariance() const noexcept {
+    return mSpecularAntiAliasingVariance;
 }
 
 void FMaterialInstance::setSpecularAntiAliasingThreshold(float threshold) noexcept {
     setParameter("_specularAntiAliasingThreshold", math::saturate(threshold * threshold));
+    mSpecularAntiAliasingThreshold = std::sqrt(math::saturate(threshold * threshold));
+}
+
+float FMaterialInstance::getSpecularAntiAliasingThreshold() const noexcept {
+    return mSpecularAntiAliasingThreshold;
 }
 
 void FMaterialInstance::setDoubleSided(bool doubleSided) noexcept {
@@ -202,6 +240,11 @@ void FMaterialInstance::setDoubleSided(bool doubleSided) noexcept {
     if (doubleSided) {
         setCullingMode(CullingMode::NONE);
     }
+    mIsDoubleSided = doubleSided;
+}
+
+bool FMaterialInstance::isDoubleSided() const noexcept {
+    return mIsDoubleSided;
 }
 
 void FMaterialInstance::setTransparencyMode(TransparencyMode mode) noexcept {
@@ -210,6 +253,10 @@ void FMaterialInstance::setTransparencyMode(TransparencyMode mode) noexcept {
 
 void FMaterialInstance::setDepthCulling(bool enable) noexcept {
     mDepthFunc = enable ? RasterState::DepthFunc::GE : RasterState::DepthFunc::A;
+}
+
+bool FMaterialInstance::isDepthCullingEnabled() const noexcept {
+    return mDepthFunc != RasterState::DepthFunc::A;
 }
 
 const char* FMaterialInstance::getName() const noexcept {

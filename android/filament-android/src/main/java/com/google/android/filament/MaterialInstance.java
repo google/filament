@@ -24,6 +24,7 @@ import com.google.android.filament.proguard.UsedByNative;
 
 @UsedByNative("AssetLoader.cpp")
 public class MaterialInstance {
+    private static final Material.CullingMode[] sCullingModeValues = Material.CullingMode.values();
     private Material mMaterial;
     private String mName;
     private long mNativeObject;
@@ -474,6 +475,14 @@ public class MaterialInstance {
     }
 
     /**
+     * Gets the minimum alpha value a fragment must have to not be discarded when the blend
+     * mode is MASKED
+     */
+    public float getMaskThreshold() {
+        return nGetMaskThreshold(getNativeObject());
+    }
+
+    /**
      * Sets the screen space variance of the filter kernel used when applying specular
      * anti-aliasing. The default value is set to 0.15. The specified value should be between
      * 0 and 1 and will be clamped if necessary.
@@ -484,6 +493,14 @@ public class MaterialInstance {
      */
     public void setSpecularAntiAliasingVariance(float variance) {
         nSetSpecularAntiAliasingVariance(getNativeObject(), variance);
+    }
+
+    /**
+     * Gets the screen space variance of the filter kernel used when applying specular
+     * anti-aliasing.
+     */
+    public float getSpecularAntiAliasingVariance() {
+        return nGetSpecularAntiAliasingVariance(getNativeObject());
     }
 
     /**
@@ -500,6 +517,14 @@ public class MaterialInstance {
     }
 
     /**
+     * Gets the clamping threshold used to suppress estimation errors when applying specular
+     * anti-aliasing.
+     */
+    public float getSpecularAntiAliasingThreshold() {
+        return nGetSpecularAntiAliasingThreshold(getNativeObject());
+    }
+
+    /**
      * Enables or disables double-sided lighting if the parent Material has double-sided capability,
      * otherwise prints a warning. If double-sided lighting is enabled, backface culling is
      * automatically disabled.
@@ -513,14 +538,30 @@ public class MaterialInstance {
     }
 
     /**
+     * Returns whether double-sided lighting is enabled when the parent Material has double-sided
+     * capability.
+     */
+    public boolean isDoubleSided() {
+        return nIsDoubleSided(getNativeObject());
+    }
+
+    /**
      * Overrides the default triangle culling state that was set on the material.
      *
      * @see
      * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:culling">
      * Rasterization: culling</a>
      */
-    public void setCullingMode(Material.CullingMode mode) {
+    public void setCullingMode(@NonNull Material.CullingMode mode) {
         nSetCullingMode(getNativeObject(), mode.ordinal());
+    }
+
+    /**
+     * Returns the face culling mode.
+     */
+    @NonNull
+    public Material.CullingMode getCullingMode() {
+        return sCullingModeValues[nGetCullingMode(getNativeObject())];
     }
 
     /**
@@ -535,6 +576,13 @@ public class MaterialInstance {
     }
 
     /**
+     * Returns whether color write is enabled.
+     */
+    public boolean isColorWriteEnabled() {
+        return nIsColorWriteEnabled(getNativeObject());
+    }
+
+    /**
      * Overrides the default depth-buffer write state that was set on the material.
      *
      * @see
@@ -545,8 +593,25 @@ public class MaterialInstance {
         nSetDepthWrite(getNativeObject(), enable);
     }
 
+    /**
+     * Returns whether depth write is enabled.
+     */
+    public boolean isDepthWriteEnabled() {
+        return nIsDepthWriteEnabled(getNativeObject());
+    }
+
+    /**
+     * Enables or Disable stencil writes
+     */
     public void setStencilWrite(boolean enable) {
         nSetStencilWrite(getNativeObject(), enable);
+    }
+
+    /**
+     * Returns whether stencil write is enabled.
+     */
+    public boolean isStencilWriteEnabled() {
+        return nIsStencilWriteEnabled(getNativeObject());
     }
 
     /**
@@ -558,6 +623,13 @@ public class MaterialInstance {
      */
     public void setDepthCulling(boolean enable) {
         nSetDepthCulling(getNativeObject(), enable);
+    }
+
+    /**
+     * Returns whether depth culling is enabled.
+     */
+    public boolean isDepthCullingEnabled() {
+        return nIsDepthCullingEnabled(getNativeObject());
     }
 
     /**
@@ -856,4 +928,15 @@ public class MaterialInstance {
     private static native long nGetMaterial(long nativeMaterialInstance);
 
     private static native long nDuplicate(long otherNativeMaterialInstance, String name);
+
+
+    private static native float nGetMaskThreshold(long nativeMaterialInstance);
+    private static native float nGetSpecularAntiAliasingVariance(long nativeMaterialInstance);
+    private static native float nGetSpecularAntiAliasingThreshold(long nativeMaterialInstance);
+    private static native boolean nIsDoubleSided(long nativeMaterialInstance);
+    private static native int nGetCullingMode(long nativeMaterialInstance);
+    private static native boolean nIsColorWriteEnabled(long nativeMaterialInstance);
+    private static native boolean nIsDepthWriteEnabled(long nativeMaterialInstance);
+    private static native boolean nIsStencilWriteEnabled(long nativeMaterialInstance);
+    private static native boolean nIsDepthCullingEnabled(long nativeMaterialInstance);
 }
