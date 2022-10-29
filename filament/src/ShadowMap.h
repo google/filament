@@ -310,9 +310,6 @@ private:
     uint8_t mFace           : 3;                                            // :3
 };
 
-// when changing this update comment in ShadowMapManager.h:222
-static_assert(sizeof(ShadowMap) == 32 + 2048 + 40);
-
 } // namespace filament
 
 #endif // TNT_FILAMENT_DETAILS_SHADOWMAP_H
