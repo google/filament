@@ -36,7 +36,7 @@ TEST(ArgBufferFixup, Empty) {
 
     EXPECT_EQ(argBuffer->getMsl(), expected);
 
-    delete argBuffer;
+    MetalArgumentBuffer::destroy(&argBuffer);
 }
 
 TEST(ArgBufferFixup, NoName) {
@@ -45,11 +45,11 @@ TEST(ArgBufferFixup, NoName) {
 #ifndef NDEBUG
     EXPECT_DEATH({
         auto argBuffer = MetalArgumentBuffer::Builder().build();
-        delete argBuffer;
+        MetalArgumentBuffer::destroy(&argBuffer);
     }, "failed assertion");
     EXPECT_DEATH({
         auto argBuffer = MetalArgumentBuffer::Builder().name("").build();
-        delete argBuffer;
+        MetalArgumentBuffer::destroy(&argBuffer);
     }, "failed assertion");
 #endif
 }
@@ -63,7 +63,7 @@ TEST(ArgBufferFixup, DuplicateIndices) {
                                          .sampler(0, "samplerA")
                                          .sampler(0, "samplerB")
                         .build();
-                delete argBuffer;
+                MetalArgumentBuffer::destroy(&argBuffer);
     }, "failed assertion");
 #endif
 }
@@ -85,7 +85,7 @@ TEST(ArgBufferFixup, TextureAndSampler) {
 
     EXPECT_EQ(argBuffer->getMsl(), expected);
 
-    delete argBuffer;
+    MetalArgumentBuffer::destroy(&argBuffer);
 }
 
 TEST(ArgBufferFixup, Sorted) {
@@ -109,7 +109,7 @@ TEST(ArgBufferFixup, Sorted) {
 
     EXPECT_EQ(argBuffer->getMsl(), expected);
 
-    delete argBuffer;
+    MetalArgumentBuffer::destroy(&argBuffer);
 }
 
 TEST(ArgBufferFixup, TextureTypes) {
@@ -137,7 +137,7 @@ TEST(ArgBufferFixup, TextureTypes) {
 
     EXPECT_EQ(argBuffer->getMsl(), expected);
 
-    delete argBuffer;
+    MetalArgumentBuffer::destroy(&argBuffer);
 }
 
 TEST(ArgBufferFixup, InvalidType) {
@@ -149,7 +149,7 @@ TEST(ArgBufferFixup, InvalidType) {
                         .name("myArgumentBuffer")
                         .texture(0, "textureA", SamplerType::SAMPLER_3D, SamplerFormat::SHADOW)
                         .build();
-        delete argBuffer;
+        MetalArgumentBuffer::destroy(&argBuffer);
     }, "failed assertion");
 #endif
 }

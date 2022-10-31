@@ -286,10 +286,10 @@ void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl
     *outMsl = minifier.removeWhitespace(*outMsl);
 
     // Replace spirv-cross' generated argument buffers with our own.
-    for (const auto* argBuffer : argumentBuffers) {
+    for (auto* argBuffer : argumentBuffers) {
         auto argBufferMsl = argBuffer->getMsl();
         MetalArgumentBuffer::replaceInShader(*outMsl, argBuffer->getName(), argBufferMsl);
-        delete argBuffer;
+        MetalArgumentBuffer::destroy(&argBuffer);
     }
 }
 

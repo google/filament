@@ -27,10 +27,10 @@
 namespace filamat {
 
 class MetalArgumentBuffer {
-   public:
+public:
 
     class Builder {
-       public:
+    public:
 
         /**
          * Set the name of the argument buffer structure.
@@ -61,7 +61,7 @@ class MetalArgumentBuffer {
 
         friend class MetalArgumentBuffer;
 
-       private:
+    private:
         std::string mName;
 
         struct TextureArgument {
@@ -84,6 +84,8 @@ class MetalArgumentBuffer {
         std::vector<ArgumentType> mArguments;
     };
 
+    static void destroy(MetalArgumentBuffer** argumentBuffer);
+
     const std::string& getName() const noexcept { return mName; }
 
     /**
@@ -101,9 +103,10 @@ class MetalArgumentBuffer {
      */
     static bool replaceInShader(std::string& shader, const std::string& targetArgBufferName,
             const std::string& replacement) noexcept;
-   private:
+private:
 
     MetalArgumentBuffer(Builder& builder);
+    ~MetalArgumentBuffer() = default;
 
     std::string mName;
     std::string mShaderText;

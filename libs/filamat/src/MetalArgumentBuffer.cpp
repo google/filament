@@ -131,6 +131,11 @@ MetalArgumentBuffer::MetalArgumentBuffer(Builder& builder) {
     mShaderText = ss.str();
 }
 
+void MetalArgumentBuffer::destroy(MetalArgumentBuffer** argumentBuffer) {
+    delete *argumentBuffer;
+    *argumentBuffer = nullptr;
+}
+
 static bool isWhitespace(char c) {
     return (c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v');
 }
