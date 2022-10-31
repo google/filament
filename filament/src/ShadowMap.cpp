@@ -62,6 +62,7 @@ void ShadowMap::terminate(FEngine& engine) {
         engine.destroyCameraComponent(e);
     }
     engine.getEntityManager().destroy(sizeof(entities) / sizeof(Entity), entities);
+    mPerViewUniforms.terminate(engine.getDriverApi());
 }
 
 ShadowMap::~ShadowMap() = default;
