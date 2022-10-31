@@ -41,7 +41,7 @@ using namespace backend;
 static constexpr bool USE_DEPTH_CLAMP = false;
 
 ShadowMap::ShadowMap(FEngine& engine) noexcept
-        : mPerViewUniforms(engine),
+        : mPerShadowMapUniforms(engine),
           mShadowType(ShadowType::DIRECTIONAL),
           mHasVisibleShadows(false),
           mFace(0) {
@@ -62,7 +62,7 @@ void ShadowMap::terminate(FEngine& engine) {
         engine.destroyCameraComponent(e);
     }
     engine.getEntityManager().destroy(sizeof(entities) / sizeof(Entity), entities);
-    mPerViewUniforms.terminate(engine.getDriverApi());
+    mPerShadowMapUniforms.terminate(engine.getDriverApi());
 }
 
 ShadowMap::~ShadowMap() = default;
@@ -1265,34 +1265,45 @@ filament::Viewport ShadowMap::getViewport() const noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-void ShadowMap::prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) noexcept {
-    mPerViewUniforms.prepareCamera(engine, cameraInfo);
-    mPerViewUniforms.prepareLodBias(0.0f);
+void ShadowMap::prepareCamera(Transaction const& transaction,
+        FEngine& engine, const CameraInfo& cameraInfo) noexcept {
+    PerShadowMapUniforms::prepareCamera(transaction, engine, cameraInfo);
+    PerShadowMapUniforms::prepareLodBias(transaction, 0.0f);
 }
 
-void ShadowMap::prepareViewport(const filament::Viewport& viewport) noexcept {
-    mPerViewUniforms.prepareViewport(viewport, 0, 0);
+void ShadowMap::prepareViewport(Transaction const& transaction,
+        const filament::Viewport& viewport) noexcept {
+    PerShadowMapUniforms::prepareViewport(transaction, viewport, 0, 0);
 }
 
-void ShadowMap::prepareTime(FEngine& engine, math::float4 const& userTime) noexcept {
-    mPerViewUniforms.prepareTime(engine, userTime);
+void ShadowMap::prepareTime(Transaction const& transaction,
+        FEngine& engine, math::float4 const& userTime) noexcept {
+    PerShadowMapUniforms::prepareTime(transaction, engine, userTime);
 }
 
-void ShadowMap::prepareDirectionalLight(FEngine& engine, math::float3 const& sceneSpaceDirection,
+void ShadowMap::prepareDirectionalLight(Transaction const& transaction,
+        FEngine& engine, math::float3 const& sceneSpaceDirection,
         LightManager::Instance instance) noexcept {
-    mPerViewUniforms.prepareDirectionalLight(engine, 1.0f, sceneSpaceDirection, instance);
+    PerShadowMapUniforms::prepareDirectionalLight(transaction,
+            engine, 1.0f, sceneSpaceDirection, instance);
 }
 
-void ShadowMap::prepareShadowMapping(bool highPrecision) noexcept {
-    mPerViewUniforms.prepareShadowMapping(highPrecision);
+void ShadowMap::prepareShadowMapping(Transaction const& transaction,
+        bool highPrecision) noexcept {
+    PerShadowMapUniforms::prepareShadowMapping(transaction, highPrecision);
 }
 
-void ShadowMap::commitUniforms(backend::DriverApi& driver) const noexcept {
-    mPerViewUniforms.commit(driver);
+PerShadowMapUniforms::Transaction ShadowMap::open(DriverApi& driver) noexcept {
+    return PerShadowMapUniforms::open(driver);
+}
+
+void ShadowMap::commit(Transaction& transaction,
+        backend::DriverApi& driver) const noexcept {
+    mPerShadowMapUniforms.commit(transaction, driver);
 }
 
 void ShadowMap::bindPerViewUniformsAndSamplers(backend::DriverApi& driver) const noexcept {
-    mPerViewUniforms.bind(driver);
+    mPerShadowMapUniforms.bind(driver);
 }
 
 } // namespace filament

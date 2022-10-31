@@ -215,9 +215,6 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     // for spot shadow map, we need to do the culling
                     switch (shadowMap.getShadowType()) {
                         case ShadowType::DIRECTIONAL:
-                            shadowMap.prepareDirectionalLight(engine,
-                                    scene->getLightData().elementAt<FScene::DIRECTION>(0),
-                                    scene->getLightData().elementAt<FScene::LIGHT_INSTANCE>(0));
                             break;
                         case ShadowType::SPOT:
                             prepareSpotShadowMap(shadowMap, engine, view, mainCameraInfo,
@@ -245,11 +242,18 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         // cameraInfo only valid after calling update
                         const CameraInfo cameraInfo{ shadowMap.getCamera() };
 
-                        shadowMap.prepareCamera(engine, cameraInfo);
-                        shadowMap.prepareViewport(shadowMap.getViewport());
-                        shadowMap.prepareTime(engine, userTime);
-                        shadowMap.prepareShadowMapping(view.getVsmShadowOptions().highPrecision);
-                        shadowMap.commitUniforms(driver);
+                        auto transaction = ShadowMap::open(driver);
+                        ShadowMap::prepareCamera(transaction, engine, cameraInfo);
+                        ShadowMap::prepareViewport(transaction, shadowMap.getViewport());
+                        ShadowMap::prepareTime(transaction, engine, userTime);
+                        ShadowMap::prepareShadowMapping(transaction,
+                                view.getVsmShadowOptions().highPrecision);
+                        if (shadowMap.getShadowType() == ShadowType::DIRECTIONAL) {
+                            ShadowMap::prepareDirectionalLight(transaction, engine,
+                                    scene->getLightData().elementAt<FScene::DIRECTION>(0),
+                                    scene->getLightData().elementAt<FScene::LIGHT_INSTANCE>(0));
+                        }
+                        shadowMap.commit(transaction, driver);
 
                         // updatePrimitivesLod must be run before RenderPass::appendCommands.
                         view.updatePrimitivesLod(engine,
