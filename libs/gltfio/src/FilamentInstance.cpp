@@ -130,6 +130,37 @@ void FFilamentInstance::recomputeBoundingBoxes() {
                     aabb.min = min(aabb.min, pt);
                     aabb.max = max(aabb.max, pt);
                 }
+
+                Aabb baseAabb(aabb);
+                for (cgltf_size targetIndex = 0; targetIndex < prim->targets_count; ++targetIndex) {
+                    const cgltf_morph_target& target = prim->targets[targetIndex];
+                    for (cgltf_size attribIndex = 0; attribIndex < target.attributes_count; ++attribIndex) {
+                        const cgltf_attribute& targetAttribute = target.attributes[attribIndex];
+                        if (targetAttribute.type != cgltf_attribute_type_position) {
+                            continue;
+                        }
+
+                        const cgltf_accessor* targetAccessor = targetAttribute.data;
+                        const cgltf_size targetCount = targetAccessor->count;
+                        const cgltf_size targetDim = cgltf_num_components(targetAccessor->type);
+                        utils::FixedCapacityVector<float> targetData(targetCount * targetDim);
+
+                        cgltf_accessor_unpack_floats(targetAccessor, targetData.data(), targetData.size());
+
+                        Aabb targetAabb;
+                        for (cgltf_size i = 0, j = 0; i < targetCount; ++i, j += dim) {
+                            float3 delta(targetData[j + 0], targetData[j + 1], targetData[j + 2]);
+                            targetAabb.min = min(targetAabb.min, delta);
+                            targetAabb.max = max(targetAabb.max, delta);
+                        }
+
+                        targetAabb.min += baseAabb.min;
+                        targetAabb.max += baseAabb.max;
+
+                        aabb.min = min(aabb.min, targetAabb.min);
+                        aabb.max = max(aabb.max, targetAabb.max);
+                    }
+                }
                 break;
             }
         }
