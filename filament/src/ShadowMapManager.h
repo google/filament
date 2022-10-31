@@ -219,7 +219,7 @@ private:
 
     // inline storage for all our ShadowMap objects, we can't easily use a std::array<> directly.
     // because ShadowMap doesn't have a default ctor, and we avoid out-of-line allocations.
-    // Each ShadowMap is currently 2120 bytes (total of 132KB for 64 shadow maps)
+    // Each ShadowMap is currently 40 bytes (total of 2.5KB for 64 shadow maps)
     using ShadowMapStorage = std::aligned_storage<sizeof(ShadowMap), alignof(ShadowMap)>::type;
     std::array<ShadowMapStorage, CONFIG_MAX_SHADOW_LAYERS> mShadowMapCache;
 };

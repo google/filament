@@ -73,6 +73,7 @@ set(SRCS
         src/MaterialParser.cpp
         src/MorphTargetBuffer.cpp
         src/PerViewUniforms.cpp
+        src/PerShadowMapUniforms.cpp
         src/PostProcessManager.cpp
         src/RenderPass.cpp
         src/RenderPrimitive.cpp
@@ -146,6 +147,7 @@ set(PRIVATE_HDRS
         src/Intersections.h
         src/MaterialParser.h
         src/PerViewUniforms.h
+        src/PerShadowMapUniforms.h
         src/PIDController.h
         src/PostProcessManager.h
         src/RendererUtils.h

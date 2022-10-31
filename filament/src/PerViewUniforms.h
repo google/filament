@@ -48,6 +48,11 @@ class FIndirectLight;
 class Froxelizer;
 class LightManager;
 
+/*
+ * PerViewUniforms manages the UBO and samplers needed to render the color passes. Internally it
+ * holds onto handles for the PER_VIEW UBO and SamplerGroup. This class maintains a shadow copy
+ * of the UBO/sampler data, so it is possible to partially update it between commits.
+ */
 class PerViewUniforms {
 
     using LightManagerInstance = utils::EntityInstance<LightManager>;
