@@ -217,7 +217,7 @@ inline bool getElementType(cgltf_type type, cgltf_component_type ctype,
                     *actualType = filament::VertexBuffer::AttributeType::UBYTE3;
                     return true;
                 case cgltf_component_type_r_16:
-                    *permitType = filament::VertexBuffer::AttributeType::FLOAT3;
+                    *permitType = filament::VertexBuffer::AttributeType::SHORT3;
                     *actualType = filament::VertexBuffer::AttributeType::SHORT3;
                     return true;
                 case cgltf_component_type_r_16u:
