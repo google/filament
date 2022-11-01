@@ -131,6 +131,10 @@ void FFilamentInstance::recomputeBoundingBoxes() {
                     aabb.max = max(aabb.max, pt);
                 }
 
+                if (!prim->targets_count) {
+                    break;
+                }
+
                 Aabb baseAabb(aabb);
                 for (cgltf_size targetIndex = 0; targetIndex < prim->targets_count; ++targetIndex) {
                     const cgltf_morph_target& target = prim->targets[targetIndex];
@@ -143,13 +147,15 @@ void FFilamentInstance::recomputeBoundingBoxes() {
                         const cgltf_accessor* targetAccessor = targetAttribute.data;
                         const cgltf_size targetCount = targetAccessor->count;
                         const cgltf_size targetDim = cgltf_num_components(targetAccessor->type);
-                        utils::FixedCapacityVector<float> targetData(targetCount * targetDim);
 
-                        cgltf_accessor_unpack_floats(targetAccessor, targetData.data(), targetData.size());
+                        assert_invariant(targetCount == accessor->count);
+                        assert_invariant(targetDim == dim);
+
+                        cgltf_accessor_unpack_floats(targetAccessor, unpacked.data(), unpacked.size());
 
                         Aabb targetAabb;
-                        for (cgltf_size i = 0, j = 0; i < targetCount; ++i, j += dim) {
-                            float3 delta(targetData[j + 0], targetData[j + 1], targetData[j + 2]);
+                        for (cgltf_size i = 0, j = 0, n = accessor->count; i < n; ++i, j += dim) {
+                            float3 delta(unpacked[j + 0], unpacked[j + 1], unpacked[j + 2]);
                             targetAabb.min = min(targetAabb.min, delta);
                             targetAabb.max = max(targetAabb.max, delta);
                         }
@@ -159,6 +165,8 @@ void FFilamentInstance::recomputeBoundingBoxes() {
 
                         aabb.min = min(aabb.min, targetAabb.min);
                         aabb.max = max(aabb.max, targetAabb.max);
+
+                        break;
                     }
                 }
                 break;
