@@ -5,8 +5,6 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
-- gltfio: fix glTF breaking issue
-
 ## v1.28.2
 
 - gltfio: support EXT_meshopt_compression
