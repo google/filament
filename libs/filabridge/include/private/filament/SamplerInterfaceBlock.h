@@ -49,7 +49,7 @@ public:
 
     struct SamplerInfo { // NOLINT(cppcoreguidelines-pro-type-member-init)
         utils::CString name;        // name of this sampler
-        utils::CString uniformName; // name of the uniform holding this sampler (needed for glsl)
+        utils::CString uniformName; // name of the uniform holding this sampler (needed for glsl/MSL)
         uint8_t offset;             // offset in "Sampler" of this sampler in the buffer
         Type type;                  // type of this sampler
         Format format;              // format of this sampler
