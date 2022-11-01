@@ -10,6 +10,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: fix glTF breaking issue
 - gltfio: recompute bounding boxes with morph targets
 - engine: primitives with `CullingMode::FRONT_AND_BACK` are now skipped.
+- engine: add missing getters on `MaterialInstance`
 
 ## v1.28.2
 
