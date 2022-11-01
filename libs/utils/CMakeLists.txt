@@ -13,6 +13,7 @@ file(GLOB_RECURSE PUBLIC_HDRS ${PUBLIC_HDR_DIR}/${TARGET}/*.h)
 
 set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/algorithm.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/architecture.h
         ${PUBLIC_HDR_DIR}/${TARGET}/bitset.h
         ${PUBLIC_HDR_DIR}/${TARGET}/CallStack.h
         ${PUBLIC_HDR_DIR}/${TARGET}/debug.h
@@ -26,6 +27,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/FixedCapacityVector.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Invocable.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/JobSystem.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Log.h
         ${PUBLIC_HDR_DIR}/${TARGET}/memalign.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Mutex.h
@@ -40,6 +42,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/SpinLock.h
         ${PUBLIC_HDR_DIR}/${TARGET}/StructureOfArrays.h
         ${PUBLIC_HDR_DIR}/${TARGET}/unwindows.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/WorkStealingDequeue.h
 )
 
 # Use our custom mutex/condition only on ANDROID
@@ -49,6 +52,7 @@ set(DIST_ANDROID_HDRS
 
 set(DIST_GENERIC_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET_GENERIC}/Mutex.h
+        ${PUBLIC_HDR_DIR}/${TARGET_GENERIC}/Condition.h
 )
 
 set(SRCS
