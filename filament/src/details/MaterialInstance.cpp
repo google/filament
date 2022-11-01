@@ -80,11 +80,14 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
         setDoubleSided(mIsDoubleSided);
     }
 
-    setMaskThreshold(mMaskThreshold);
+    if (material->getBlendingMode() == BlendingMode::MASKED) {
+        setMaskThreshold(mMaskThreshold);
+    }
 
-    setSpecularAntiAliasingThreshold(mSpecularAntiAliasingThreshold);
-
-    setSpecularAntiAliasingVariance(mSpecularAntiAliasingVariance);
+    if (material->hasSpecularAntiAliasing()) {
+        setSpecularAntiAliasingThreshold(mSpecularAntiAliasingThreshold);
+        setSpecularAntiAliasingVariance(mSpecularAntiAliasingVariance);
+    }
 
     setTransparencyMode(material->getTransparencyMode());
 
