@@ -34,6 +34,11 @@ static void usage(char* name) {
     std::string exec_name(utils::Path(name).getName());
     std::string usage(
             "MATC is a command-line tool to compile material definition.\n"
+            "\n"
+            "Caution! MATC was designed to operate on trusted inputs. To minimize the risk of\n"
+            "triggering memory corruption vulnerabilities, please make sure that the files passed\n"
+            "to MATC come from a trusted source, or run MATC in a sandboxed environment.\n"
+            "\n"
             "Usages:\n"
             "    MATC [options] <input-file>\n"
             "\n"

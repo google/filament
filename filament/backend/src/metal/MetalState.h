@@ -37,6 +37,8 @@ inline bool operator==(const SamplerParams& lhs, const SamplerParams& rhs) {
     return lhs.u == rhs.u;
 }
 
+//   Rasterization Bindings
+//   ----------------------
 //   Bindings    Buffer name                          Count
 //   ------------------------------------------------------
 //   0           Zero buffer (placeholder vertex buffer)  1
@@ -45,6 +47,16 @@ inline bool operator==(const SamplerParams& lhs, const SamplerParams& rhs) {
 //   27-30       Sampler groups (argument buffers)        4   Program::SAMPLER_BINDING_COUNT
 //
 //   Total                                               31
+
+//   Compute Bindings
+//   ----------------------
+//   Bindings    Buffer name                          Count
+//   ------------------------------------------------------
+//   0-3         SSBO buffers                             4   MAX_SSBO_COUNT
+//   17-26       Uniform buffers                         10   Program::UNIFORM_BINDING_COUNT
+//   27-30       Sampler groups (argument buffers)        4   Program::SAMPLER_BINDING_COUNT
+//
+//   Total                                               18
 
 // The total number of vertex buffer "slots" that the Metal backend can bind.
 // + 1 to account for the zero buffer, a placeholder buffer used internally by the Metal backend.
@@ -59,6 +71,7 @@ static constexpr uint32_t USER_VERTEX_BUFFER_BINDING_START = 1u;
 
 // These constants must match the equivalent in CodeGenerator.h.
 static constexpr uint32_t UNIFORM_BUFFER_BINDING_START = 17u;
+static constexpr uint32_t SSBO_BINDING_START = 0u;
 static constexpr uint32_t SAMPLER_GROUP_BINDING_START = 27u;
 
 // Forward declarations necessary here, definitions at end of file.
@@ -335,26 +348,11 @@ using DepthStencilStateCache = StateCache<DepthStencilState, id<MTLDepthStencilS
 
 class MetalBufferObject;
 
-struct UniformBufferState {
+struct BufferState {
     MetalBufferObject* buffer = nullptr;  // 8 bytes
     uint32_t offset = 0;                  // 4 bytes
     bool bound = false;                   // 1 byte
-    char padding[3] = { 0 };              // 3 bytes
-
-    bool operator==(const UniformBufferState& rhs) const noexcept {
-        return this->bound == rhs.bound &&
-               this->buffer == rhs.buffer &&
-               this->offset == rhs.offset;
-    }
-
-    bool operator!=(const UniformBufferState& rhs) const noexcept {
-        return !operator==(rhs);
-    }
 };
-
-static_assert(sizeof(UniformBufferState) == 16, "UniformBufferState unexpected size.");
-
-using UniformBufferStateTracker = StateTracker<UniformBufferState>;
 
 // Sampler states
 

@@ -232,6 +232,11 @@ static void printUsage(const char* name) {
     std::string execName(utils::Path(name).getName());
     std::string usage(
             "FILAMESH is a tool to convert meshes into an optimized binary format\n"
+            "\n"
+            "Caution! FILAMESH was designed to operate on trusted inputs. To minimize the risk of\n"
+            "triggering memory corruption vulnerabilities, please make sure that the files passed\n"
+            "to FILAMESH come from a trusted source, or run FILAMESH in a sandboxed environment.\n"
+            "\n"
                     "Usage:\n"
                     "    FILAMESH [options] <source mesh> <destination file>\n"
                     "\n"

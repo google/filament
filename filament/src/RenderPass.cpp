@@ -39,7 +39,7 @@ using namespace backend;
 
 RenderPass::RenderPass(FEngine& engine,
         RenderPass::Arena& arena) noexcept
-        : mEngine(engine), mCommandArena(arena),
+        : mCommandArena(arena),
           mCustomCommands(engine.getPerRenderPassAllocator()) {
 }
 
@@ -98,7 +98,7 @@ void RenderPass::overrideScissor(backend::Viewport const* scissor) noexcept {
     }
 }
 
-void RenderPass::appendCommands(CommandTypeFlags const commandTypeFlags) noexcept {
+void RenderPass::appendCommands(FEngine& engine, CommandTypeFlags const commandTypeFlags) noexcept {
     SYSTRACE_CONTEXT();
 
     assert_invariant(mRenderableSoa);
@@ -110,7 +110,6 @@ void RenderPass::appendCommands(CommandTypeFlags const commandTypeFlags) noexcep
         return;
     }
 
-    FEngine& engine = mEngine;
     JobSystem& js = engine.getJobSystem();
     const RenderFlags renderFlags = mFlags;
     const Variant variant = mVariant;
@@ -179,7 +178,7 @@ void RenderPass::appendCustomCommand(Pass pass, CustomCommand custom, uint32_t o
     curr->key = cmd;
 }
 
-void RenderPass::sortCommands() noexcept {
+void RenderPass::sortCommands(FEngine& engine) noexcept {
     SYSTRACE_NAME("sort and trim commands");
 
     std::sort(mCommandBegin, mCommandEnd);
@@ -192,12 +191,12 @@ void RenderPass::sortCommands() noexcept {
 
     resize(uint32_t(last - mCommandBegin));
 
-    if (mEngine.isAutomaticInstancingEnabled()) {
-        instanceify();
+    if (engine.isAutomaticInstancingEnabled()) {
+        instanceify(engine);
     }
 }
 
-void RenderPass::instanceify() noexcept {
+void RenderPass::instanceify(FEngine& engine) noexcept {
     SYSTRACE_NAME("instanceify");
 
     // instanceify works by scanning the **sorted** command stream, looking for repeat draw
@@ -284,7 +283,7 @@ void RenderPass::instanceify() noexcept {
 #endif
 
         // we have instanced primitives
-        DriverApi& driver = mEngine.getDriverApi();
+        DriverApi& driver = engine.getDriverApi();
 
         // TODO: maybe use a pool? so we can reuse the buffer.
         // create a ubo to hold the instanced primitive data
@@ -686,10 +685,9 @@ void RenderPass::updateSummedPrimitiveCounts(
 
 // ------------------------------------------------------------------------------------------------
 
-void RenderPass::Executor::execute(const char* name,
+void RenderPass::Executor::execute(FEngine& engine, const char* name,
         backend::Handle<backend::HwRenderTarget> renderTarget,
         backend::RenderPassParams const& params) const noexcept {
-    FEngine& engine = mEngine;
     DriverApi& driver = engine.getDriverApi();
 
     // this is a good time to flush the CommandStream, because we're about to potentially
@@ -831,7 +829,7 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
 // ------------------------------------------------------------------------------------------------
 
 RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept
-        : mEngine(pass->mEngine), mBegin(b), mEnd(e),
+        : mBegin(b), mEnd(e),
           mCustomCommands(pass->mCustomCommands),
           mUboHandle(pass->mUboHandle),
           mInstancedUboHandle(pass->mInstancedUboHandle),

@@ -217,7 +217,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                 if (colorGradingConfig.asSubpass || colorGradingConfig.customResolve) {
                     out.params.subpassMask = 1;
                 }
-                passExecutor.execute(resources.getPassName(), out.target, out.params);
+                passExecutor.execute(engine, resources.getPassName(), out.target, out.params);
 
                 // color pass is typically heavy, and we don't have much CPU work left after
                 // this point, so flushing now allows us to start the GPU earlier and reduce

@@ -267,8 +267,8 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                         entry.pass.setGeometry(scene->getRenderableData(),
                                 entry.range, scene->getRenderableUBO());
                         entry.pass.overrideScissor(&disabledScissor);
-                        entry.pass.appendCommands(RenderPass::SHADOW);
-                        entry.pass.sortCommands();
+                        entry.pass.appendCommands(engine, RenderPass::SHADOW);
+                        entry.pass.sortCommands(engine);
                         entry.cameraInfo = cameraInfo;
                     }
                 }
@@ -367,7 +367,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                     // finally, create the shadowmap render target -- one per layer.
                     data.shadowRt = builder.declareRenderPass("Shadow RT", renderTargetDesc);
                 },
-                [=, &entry, &view](FrameGraphResources const& resources,
+                [=, &engine, &entry, &view](FrameGraphResources const& resources,
                         auto const& data, DriverApi& driver) {
 
                     // Note: we capture entry by reference here. That's actually okay because
@@ -411,7 +411,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FrameGraph& fg, FEngine
                     auto rt = resources.getRenderPassInfo(blur ? data.blurRt : data.shadowRt);
                     rt.params.viewport = viewport;
 
-                    executor.execute("Shadow Pass", rt.target, rt.params);
+                    executor.execute(engine, "Shadow Pass", rt.target, rt.params);
                 });
 
 

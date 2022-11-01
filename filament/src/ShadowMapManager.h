@@ -205,7 +205,7 @@ private:
     mutable TypedUniformBuffer<ShadowUib> mShadowUb;
     backend::Handle<backend::HwBufferObject> mShadowUbh;
 
-    ShadowMappingUniforms mShadowMappingUniforms;
+    ShadowMappingUniforms mShadowMappingUniforms = {};
 
     ShadowMap::SceneInfo mSceneInfo;
 

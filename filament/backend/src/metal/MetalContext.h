@@ -64,6 +64,7 @@ struct MetalContext {
 
     // Supported features.
     bool supportsTextureSwizzling = false;
+    bool supportsAutoDepthResolve = false;
     bool supportsMemorylessRenderTargets = false;
     uint8_t maxColorRenderTargets = 4;
     struct {
@@ -84,7 +85,8 @@ struct MetalContext {
     // State trackers.
     PipelineStateTracker pipelineState;
     DepthStencilStateTracker depthStencilState;
-    UniformBufferState uniformState[Program::UNIFORM_BINDING_COUNT];
+    std::array<BufferState, Program::UNIFORM_BINDING_COUNT> uniformState;
+    std::array<BufferState, MAX_SSBO_COUNT> ssboState;
     CullModeStateTracker cullModeState;
     WindingStateTracker windingState;
 

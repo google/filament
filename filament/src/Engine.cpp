@@ -273,4 +273,10 @@ FeatureLevel Engine::getActiveFeatureLevel() const noexcept {
     return downcast(this)->getActiveFeatureLevel();
 }
 
+#if defined(__EMSCRIPTEN__)
+void Engine::resetBackendState() noexcept {
+    downcast(this)->resetBackendState();
+}
+#endif
+
 } // namespace filament

@@ -5,6 +5,11 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.28.2
+
+- gltfio: support EXT_meshopt_compression
+- release packaging: fixed location of default IBL file
+
 ## v1.28.1
 
 - gltfio: fix reloading crash in ubershader mode
@@ -35,6 +40,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: fix regression with meshes that have no material
 - gltfio: fix regression with recomputeBoundingBoxes()
 - filamesh / matinfo: fix minor ASAN issues
+- engine: Added `Engine::resetBackendState()`, available only in WebGL builds
 
 ## v1.27.1
 

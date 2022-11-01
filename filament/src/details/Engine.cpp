@@ -1072,4 +1072,10 @@ Engine::FeatureLevel FEngine::setActiveFeatureLevel(FeatureLevel featureLevel) {
     return (mActiveFeatureLevel = std::max(mActiveFeatureLevel, featureLevel));
 }
 
+#if defined(__EMSCRIPTEN__)
+void FEngine::resetBackendState() noexcept {
+    getDriverApi().resetState();
+}
+#endif
+
 } // namespace filament

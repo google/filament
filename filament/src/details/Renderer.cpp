@@ -850,8 +850,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // This one doesn't need to be a FrameGraph pass because it always happens by construction
     // (i.e. it won't be culled, unless everything is culled), so no need to complexify things.
     pass.setVariant(variant);
-    pass.appendCommands(RenderPass::COLOR);
-    pass.sortCommands();
+    pass.appendCommands(engine, RenderPass::COLOR);
+    pass.sortCommands(engine);
 
     FrameGraphTexture::Descriptor desc = {
             .width = config.width,

@@ -399,9 +399,9 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 auto out = resources.getRenderPassInfo();
                 renderPass.setRenderFlags(structureRenderFlags);
                 renderPass.setVariant(structureVariant);
-                renderPass.appendCommands(RenderPass::CommandTypeFlags::SSAO);
-                renderPass.sortCommands();
-                renderPass.execute(resources.getPassName(), out.target, out.params);
+                renderPass.appendCommands(mEngine, RenderPass::CommandTypeFlags::SSAO);
+                renderPass.sortCommands(mEngine);
+                renderPass.execute(mEngine, resources.getPassName(), out.target, out.params);
             });
 
     auto depth = structurePass->depth;
@@ -544,9 +544,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                 // the SCREEN_SPACE ReflectionMode.
                 renderPass.setVariant(Variant{Variant::SPECIAL_SSR});
                 // generate all our drawing commands, except blended objects.
-                renderPass.appendCommands(RenderPass::CommandTypeFlags::SCREEN_SPACE_REFLECTIONS);
-                renderPass.sortCommands();
-                renderPass.execute(resources.getPassName(), out.target, out.params);
+                renderPass.appendCommands(mEngine, RenderPass::CommandTypeFlags::SCREEN_SPACE_REFLECTIONS);
+                renderPass.sortCommands(mEngine);
+                renderPass.execute(mEngine, resources.getPassName(), out.target, out.params);
             });
 
     return ssrPass->reflections;

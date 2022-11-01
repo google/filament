@@ -374,6 +374,10 @@ public:
         return FEngine::getActiveFeatureLevel() >= neededFeatureLevel;
     }
 
+#if defined(__EMSCRIPTEN__)
+    void resetBackendState() noexcept;
+#endif
+
 private:
     static Config validateConfig(const Config* pConfig) noexcept;
 

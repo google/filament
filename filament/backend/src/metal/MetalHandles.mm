@@ -26,6 +26,7 @@
 
 #include "private/backend/BackendUtils.h"
 
+#include <utils/compiler.h>
 #include <utils/Panic.h>
 #include <utils/trap.h>
 #include <utils/debug.h>
@@ -270,8 +271,9 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
     }];
 }
 
-MetalBufferObject::MetalBufferObject(MetalContext& context, BufferUsage usage, uint32_t byteCount)
-        : HwBufferObject(byteCount), buffer(context, usage, byteCount) {}
+MetalBufferObject::MetalBufferObject(MetalContext& context, BufferObjectBinding bindingType,
+        BufferUsage usage, uint32_t byteCount)
+        : HwBufferObject(byteCount), buffer(context, bindingType, usage, byteCount) {}
 
 void MetalBufferObject::updateBuffer(void* data, size_t size, uint32_t byteOffset) {
     buffer.copyIntoBuffer(data, size, byteOffset);
@@ -287,7 +289,7 @@ MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
 
 MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,
         uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
-        buffer(context, usage, elementSize * indexCount, true) { }
+        buffer(context, BufferObjectBinding::VERTEX, usage, elementSize * indexCount, true) { }
 
 void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer*
         indexBuffer) {
@@ -338,13 +340,12 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
 
 MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcept
     : HwProgram(program.getName()), vertexFunction(nil), fragmentFunction(nil),
-        isValid(false) {
+            computeFunction(nil), isValid(false) {
 
     using MetalFunctionPtr = __strong id<MTLFunction>*;
 
-    // FIXME: rework this to handle compute
-    //static_assert(Program::SHADER_TYPE_COUNT == 2, "Only vertex and fragment shaders expected.");
-    MetalFunctionPtr shaderFunctions[2] = { &vertexFunction, &fragmentFunction };
+    static_assert(Program::SHADER_TYPE_COUNT == 3, "Only vertex, fragment, and/or compute shaders expected.");
+    MetalFunctionPtr shaderFunctions[3] = { &vertexFunction, &fragmentFunction, &computeFunction };
 
     const auto& sources = program.getShadersSource();
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
@@ -387,11 +388,18 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
             }, sc.value);
         }
 
-        *shaderFunctions[i] = [library newFunctionWithName:@"main0"
-                                            constantValues:constants
-                                                     error:&error];
-
+        id<MTLFunction> function = [library newFunctionWithName:@"main0"
+                                                 constantValues:constants
+                                                          error:&error];
+        assert_invariant(function);
+        *shaderFunctions[i] = function;
     }
+
+    UTILS_UNUSED_IN_RELEASE const bool isRasterizationProgram =
+            vertexFunction != nil && fragmentFunction != nil;
+    UTILS_UNUSED_IN_RELEASE const bool isComputeProgram = computeFunction != nil;
+    // The program must be either a rasterization program XOR a compute program.
+    assert_invariant(isRasterizationProgram != isComputeProgram);
 
     // All stages of the program have compiled successfully, this is a valid program.
     isValid = true;
@@ -1046,6 +1054,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         descriptor.depthAttachment.slice = 0;
         const bool discard = any(discardFlags & TargetBufferFlags::DEPTH);
         if (!discard) {
+            assert_invariant(context->supportsAutoDepthResolve);
             descriptor.depthAttachment.resolveTexture = depthAttachment.getTexture();
             descriptor.depthAttachment.resolveLevel = depthAttachment.level;
             descriptor.depthAttachment.resolveSlice = depthAttachment.layer;
@@ -1078,10 +1087,14 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         descriptor.stencilAttachment.slice = 0;
         const bool discard = any(discardFlags & TargetBufferFlags::STENCIL);
         if (!discard) {
+            assert_invariant(context->supportsAutoDepthResolve);
             descriptor.stencilAttachment.resolveTexture = stencilAttachment.getTexture();
             descriptor.stencilAttachment.resolveLevel = stencilAttachment.level;
             descriptor.stencilAttachment.resolveSlice = stencilAttachment.layer;
             descriptor.stencilAttachment.storeAction = MTLStoreActionMultisampleResolve;
+            if (@available(iOS 12.0, *)) {
+                descriptor.stencilAttachment.stencilResolveFilter = MTLMultisampleStencilResolveFilterSample0;
+            }
         }
     }
 }
