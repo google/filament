@@ -42,7 +42,7 @@ TEST(ArgBufferFixup, Empty) {
 TEST(ArgBufferFixup, NoName) {
     // A valid arg buffer name must be provided to MetalArgumentBuffer.
     // This assertion is only fired in debug builds.
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(GTEST_HAS_DEATH_TEST)
     EXPECT_DEATH({
         auto argBuffer = MetalArgumentBuffer::Builder().build();
         MetalArgumentBuffer::destroy(&argBuffer);
@@ -56,7 +56,7 @@ TEST(ArgBufferFixup, NoName) {
 
 TEST(ArgBufferFixup, DuplicateIndices) {
     // Each index must be unique.
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(GTEST_HAS_DEATH_TEST)
     EXPECT_DEATH({
                 auto argBuffer = MetalArgumentBuffer::Builder()
                                          .name("myArgumentBuffer")
@@ -142,7 +142,7 @@ TEST(ArgBufferFixup, TextureTypes) {
 
 TEST(ArgBufferFixup, InvalidType) {
     // All combinations of SamplerType and SamplerFormat are valid except for SAMPLER_3D / SHADOW.
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(GTEST_HAS_DEATH_TEST)
     EXPECT_DEATH({
         auto argBuffer =
                 MetalArgumentBuffer::Builder()
