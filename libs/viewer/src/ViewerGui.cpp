@@ -841,6 +841,8 @@ void ViewerGui::updateUserInterface() {
             mSettings.view.shadowType = (ShadowType)shadowType;
 
             if (mSettings.view.shadowType == ShadowType::VSM) {
+                ImGui::Checkbox("High precision", &mSettings.view.vsmShadowOptions.highPrecision);
+                ImGui::Checkbox("ELVSM", &mSettings.lighting.shadowOptions.vsm.elvsm);
                 char label[32];
                 snprintf(label, 32, "%d", 1 << mVsmMsaaSamplesLog2);
                 ImGui::SliderInt("VSM MSAA samples", &mVsmMsaaSamplesLog2, 0, 3, label);

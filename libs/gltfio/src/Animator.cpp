@@ -19,7 +19,7 @@
 
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
-#include "upcast.h"
+#include "downcast.h"
 
 #include <filament/VertexBuffer.h>
 #include <filament/RenderableManager.h>
@@ -88,9 +88,16 @@ struct AnimatorImpl {
 static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
     // Copy the time values into a red-black tree.
     const cgltf_accessor* timelineAccessor = src.input;
-    const uint8_t* timelineBlob = (const uint8_t*) timelineAccessor->buffer_view->buffer->data;
-    const float* timelineFloats = (const float*) (timelineBlob + timelineAccessor->offset +
-            timelineAccessor->buffer_view->offset);
+    const uint8_t* timelineBlob = nullptr;
+    const float* timelineFloats = nullptr;
+    if (timelineAccessor->buffer_view->has_meshopt_compression) {
+        timelineBlob = (const uint8_t*) timelineAccessor->buffer_view->data;
+        timelineFloats = (const float*) (timelineBlob + timelineAccessor->offset);
+    } else {
+        timelineBlob = (const uint8_t*) timelineAccessor->buffer_view->buffer->data;
+        timelineFloats = (const float*) (timelineBlob + timelineAccessor->offset +
+                timelineAccessor->buffer_view->offset);
+    }
     for (size_t i = 0, len = timelineAccessor->count; i < len; ++i) {
         dst.times[timelineFloats[i]] = i;
     }
@@ -219,10 +226,10 @@ Animator::Animator(FFilamentAsset const* asset, FFilamentInstance* instance) {
 
         // Import each glTF channel into a custom data structure.
         if (instance) {
-            mImpl->addChannels(instance->nodeMap, srcAnim, dstAnim);
+            mImpl->addChannels(instance->mNodeMap, srcAnim, dstAnim);
         } else {
             for (FFilamentInstance* instance : asset->mInstances) {
-                mImpl->addChannels(instance->nodeMap, srcAnim, dstAnim);
+                mImpl->addChannels(instance->mNodeMap, srcAnim, dstAnim);
             }
         }
     }
@@ -240,7 +247,7 @@ void Animator::addInstance(FFilamentInstance* instance) {
     for (cgltf_size i = 0, len = srcAsset->animations_count; i < len; ++i) {
         const cgltf_animation& srcAnim = srcAnims[i];
         Animation& dstAnim = mImpl->animations[i];
-        mImpl->addChannels(instance->nodeMap, srcAnim, dstAnim);
+        mImpl->addChannels(instance->mNodeMap, srcAnim, dstAnim);
     }
 }
 
@@ -517,7 +524,7 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
 }
 
 void AnimatorImpl::resetBoneMatrices(FFilamentInstance* instance) {
-    for (const auto& skin : instance->skins) {
+    for (const auto& skin : instance->mSkins) {
         size_t njoints = skin.joints.size();
         boneMatrices.resize(njoints);
         for (const auto& entity : skin.targets) {
@@ -533,9 +540,9 @@ void AnimatorImpl::resetBoneMatrices(FFilamentInstance* instance) {
 }
 
 void AnimatorImpl::updateBoneMatrices(FFilamentInstance* instance) {
-    assert_invariant(instance->skins.size() == asset->mSkins.size());
+    assert_invariant(instance->mSkins.size() == asset->mSkins.size());
     size_t skinIndex = 0;
-    for (const auto& skin : instance->skins) {
+    for (const auto& skin : instance->mSkins) {
         const auto& assetSkin = asset->mSkins[skinIndex++];
         size_t njoints = skin.joints.size();
         boneMatrices.resize(njoints);

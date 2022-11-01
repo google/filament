@@ -54,7 +54,6 @@ io::ostream& operator<<(io::ostream& out, PrimitiveType type) {
         CASE(PrimitiveType, LINES)
         CASE(PrimitiveType, LINE_STRIP)
         CASE(PrimitiveType, POINTS)
-        CASE(PrimitiveType, NONE)
     }
     return out;
 }

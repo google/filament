@@ -19,15 +19,15 @@
 namespace filament {
 
 void* SwapChain::getNativeWindow() const noexcept {
-    return upcast(this)->getNativeWindow();
+    return downcast(this)->getNativeWindow();
 }
 
 void SwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, void* user) {
-    return upcast(this)->setFrameScheduledCallback(callback, user);
+    return downcast(this)->setFrameScheduledCallback(callback, user);
 }
 
 void SwapChain::setFrameCompletedCallback(FrameCompletedCallback callback, void* user) {
-    return upcast(this)->setFrameCompletedCallback(callback, user);
+    return downcast(this)->setFrameCompletedCallback(callback, user);
 }
 
 } // namespace filament

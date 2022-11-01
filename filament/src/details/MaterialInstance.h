@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_MATERIALINSTANCE_H
 #define TNT_FILAMENT_DETAILS_MATERIALINSTANCE_H
 
-#include "upcast.h"
+#include "downcast.h"
 #include "UniformBuffer.h"
 #include "details/Engine.h"
 
@@ -89,9 +89,11 @@ public:
 
     backend::CullingMode getCullingMode() const noexcept { return mCulling; }
 
-    bool getColorWrite() const noexcept { return mColorWrite; }
+    bool isColorWriteEnabled() const noexcept { return mColorWrite; }
 
-    bool getDepthWrite() const noexcept { return mDepthWrite; }
+    bool isDepthWriteEnabled() const noexcept { return mDepthWrite; }
+
+    bool isStencilWriteEnabled() const noexcept { return mStencilState.stencilWrite; }
 
     backend::StencilState getStencilState() const noexcept { return mStencilState; }
 
@@ -108,11 +110,19 @@ public:
 
     void setMaskThreshold(float threshold) noexcept;
 
+    float getMaskThreshold() const noexcept;
+
     void setSpecularAntiAliasingVariance(float variance) noexcept;
+
+    float getSpecularAntiAliasingVariance() const noexcept;
 
     void setSpecularAntiAliasingThreshold(float threshold) noexcept;
 
+    float getSpecularAntiAliasingThreshold() const noexcept;
+
     void setDoubleSided(bool doubleSided) noexcept;
+
+    bool isDoubleSided() const noexcept;
 
     void setTransparencyMode(TransparencyMode mode) noexcept;
 
@@ -125,6 +135,8 @@ public:
     void setStencilWrite(bool enable) noexcept { mStencilState.stencilWrite = enable; }
 
     void setDepthCulling(bool enable) noexcept;
+
+    bool isDepthCullingEnabled() const noexcept;
 
     void setStencilCompareFunction(StencilCompareFunc func, StencilFace face) noexcept {
         if (any(face & StencilFace::FRONT)) {
@@ -222,19 +234,26 @@ private:
 
     // keep these grouped, they're accessed together in the render-loop
     FMaterial const* mMaterial = nullptr;
+
     backend::Handle<backend::HwBufferObject> mUbHandle;
     backend::Handle<backend::HwSamplerGroup> mSbHandle;
-
     UniformBuffer mUniforms;
     backend::SamplerGroup mSamplers;
-    backend::PolygonOffset mPolygonOffset;
-    backend::CullingMode mCulling;
-    bool mColorWrite;
-    bool mDepthWrite;
-    bool mHasScissor = false;
-    backend::StencilState mStencilState = {};
-    backend::RasterState::DepthFunc mDepthFunc;
-    TransparencyMode mTransparencyMode;
+
+    backend::PolygonOffset mPolygonOffset{};
+    backend::StencilState mStencilState{};
+
+    float mMaskThreshold = 0.0f;
+    float mSpecularAntiAliasingVariance = 0.0f;
+    float mSpecularAntiAliasingThreshold = 0.0f;
+
+    backend::CullingMode mCulling : 2;
+    backend::RasterState::DepthFunc mDepthFunc : 3;
+    bool mColorWrite : 1;
+    bool mDepthWrite : 1;
+    bool mHasScissor : 1;
+    bool mIsDoubleSided : 1;
+    TransparencyMode mTransparencyMode : 2;
 
     uint64_t mMaterialSortingKey = 0;
 
@@ -247,7 +266,7 @@ private:
     utils::CString mName;
 };
 
-FILAMENT_UPCAST(MaterialInstance)
+FILAMENT_DOWNCAST(MaterialInstance)
 
 } // namespace filament
 

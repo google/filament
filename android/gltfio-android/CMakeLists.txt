@@ -11,6 +11,10 @@ add_library(dracodec STATIC IMPORTED)
 set_target_properties(dracodec PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libdracodec.a)
 
+add_library(meshoptimizer STATIC IMPORTED)
+set_target_properties(meshoptimizer PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libmeshoptimizer.a)
+
 add_library(ktxreader STATIC IMPORTED)
 set_target_properties(ktxreader PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libktxreader.a)
@@ -76,7 +80,7 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/src/UbershaderProvider.cpp
         ${GLTFIO_DIR}/src/Wireframe.cpp
         ${GLTFIO_DIR}/src/Wireframe.h
-        ${GLTFIO_DIR}/src/upcast.h
+        ${GLTFIO_DIR}/src/downcast.h
 
         src/main/cpp/Animator.cpp
         src/main/cpp/AssetLoader.cpp
@@ -99,6 +103,7 @@ set(GLTFIO_INCLUDE_DIRS
         ../../libs/gltfio/include
         ../../third_party/basisu/zstd
         ../../third_party/cgltf
+        ../../third_party/meshoptimizer/src
         ../../third_party/robin-map
         ../../third_party/hat-trie
         ../../third_party/stb
@@ -111,7 +116,7 @@ target_include_directories(gltfio-jni PRIVATE ${GLTFIO_INCLUDE_DIRS})
 set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.symbols)
 set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.map)
 target_link_libraries(gltfio-jni filament-jni utils uberzlib log stb ktxreader basis_transcoder zstd uberarchive)
-target_link_libraries(gltfio-jni dracodec)
+target_link_libraries(gltfio-jni dracodec meshoptimizer)
 target_compile_definitions(gltfio-jni PUBLIC GLTFIO_DRACO_SUPPORTED=1)
 target_include_directories(gltfio-jni PRIVATE ${DRACO_DIR}/src)
 target_include_directories(gltfio-jni PRIVATE ${DRACO_DIR}/tnt)

@@ -391,6 +391,14 @@ struct VsmShadowOptions {
     bool mipmapping = false;
 
     /**
+     * Whether to use a 32-bits or 16-bits texture format for VSM shadow maps. 32-bits
+     * precision is rarely needed, but it does reduces light leaks as well as "fading"
+     * of the shadows in some situations. Setting highPrecision to true for a single
+     * shadow map will double the memory usage of all shadow maps.
+     */
+    bool highPrecision = false;
+
+    /**
      * VSM minimum variance scale, must be positive.
      */
     float minVarianceScale = 0.5f;

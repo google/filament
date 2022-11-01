@@ -55,7 +55,7 @@ layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
 // This parameter is ignored for other backends.
-layout(location = 0, set = 1) uniform {samplerType} tex;
+layout(location = 0, set = 1) uniform {samplerType} test_tex;
 
 void main() {
     vec2 fbsize = vec2(512);
@@ -63,7 +63,7 @@ void main() {
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
     uv.y = 1.0 - uv.y;
 #endif
-    fragColor = vec4(texture(tex, uv).rgb, 1.0f);
+    fragColor = vec4(texture(test_tex, uv).rgb, 1.0f);
 }
 
 )");
@@ -73,7 +73,7 @@ std::string fragmentUpdateImage3DTemplate (R"(#version 450 core
 layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
-layout(location = 0, set = 1) uniform {samplerType} tex;
+layout(location = 0, set = 1) uniform {samplerType} test_tex;
 
 float getLayer(in sampler3D s) { return 2.5f / 4.0f; }
 float getLayer(in sampler2DArray s) { return 2.0f; }
@@ -84,7 +84,7 @@ void main() {
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
     uv.y = 1.0 - uv.y;
 #endif
-    fragColor = vec4(texture(tex, vec3(uv, getLayer(tex))).rgb, 1.0f);
+    fragColor = vec4(texture(test_tex, vec3(uv, getLayer(test_tex))).rgb, 1.0f);
 }
 
 )");
@@ -94,7 +94,7 @@ std::string fragmentUpdateImageMip (R"(#version 450 core
 layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
-layout(location = 0, set = 1) uniform sampler2D tex;
+layout(location = 0, set = 1) uniform sampler2D test_tex;
 
 void main() {
     vec2 fbsize = vec2(512);
@@ -102,7 +102,7 @@ void main() {
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
     uv.y = 1.0 - uv.y;
 #endif
-    fragColor = vec4(textureLod(tex, uv, 1.0f).rgb, 1.0f);
+    fragColor = vec4(textureLod(test_tex, uv, 1.0f).rgb, 1.0f);
 }
 
 )");
@@ -345,7 +345,7 @@ TEST_F(BackendTest, UpdateImage2D) {
 
         // Create a program.
         SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
-                .name("backend_test_sib")
+                .name("Test")
                 .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
                 .add( {{"tex", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
                 .build();
@@ -430,7 +430,7 @@ TEST_F(BackendTest, UpdateImageSRGB) {
 
     // Create a program.
     SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
-            .name("backend_test_sib")
+            .name("Test")
             .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
             .add( {{"tex", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
             .build();
@@ -521,7 +521,7 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
 
     // Create a program.
     SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
-            .name("backend_test_sib")
+            .name("Test")
             .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
             .add( {{"tex", SamplerType::SAMPLER_3D, SamplerFormat::FLOAT, Precision::HIGH }} )
             .build();
@@ -598,7 +598,7 @@ TEST_F(BackendTest, UpdateImage3D) {
 
     // Create a program.
     SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
-            .name("backend_test_sib")
+            .name("Test")
             .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
             .add( {{"tex", SamplerType::SAMPLER_3D, SamplerFormat::FLOAT, Precision::HIGH }} )
             .build();

@@ -53,7 +53,7 @@
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
 
-#include "upcast.h"
+#include "downcast.h"
 
 using namespace filament;
 using namespace filament::math;
@@ -308,7 +308,7 @@ public:
     BufferObject* mDummyBufferObject = nullptr;
 };
 
-FILAMENT_UPCAST(AssetLoader)
+FILAMENT_DOWNCAST(AssetLoader)
 
 FFilamentAsset* FAssetLoader::createAsset(const uint8_t* bytes, uint32_t byteCount) {
     FilamentInstance* instances;
@@ -399,6 +399,7 @@ void FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
     }
     #endif
 
+    mDummyBufferObject = nullptr;
     mAsset = new FFilamentAsset(&mEngine, mNameManager, &mEntityManager, &mNodeManager, srcAsset);
 
     // It is not an error for a glTF file to have zero scenes.
@@ -518,9 +519,9 @@ FFilamentInstance* FAssetLoader::createInstance(const cgltf_data* srcAsset) {
     FFilamentInstance* instance = new FFilamentInstance(instanceRoot, mAsset);
 
     // Check if the asset has variants.
-    instance->variants.reserve(srcAsset->variants_count);
+    instance->mVariants.reserve(srcAsset->variants_count);
     for (cgltf_size i = 0, len = srcAsset->variants_count; i < len; ++i) {
-        instance->variants.push_back({CString(srcAsset->variants[i].name)});
+        instance->mVariants.push_back({CString(srcAsset->variants[i].name)});
     }
 
     // For each scene root, recursively create all entities.
@@ -539,7 +540,7 @@ FFilamentInstance* FAssetLoader::createInstance(const cgltf_data* srcAsset) {
     // Bounding boxes are not shared because users might call recomputeBoundingBoxes() which can
     // be affected by entity transforms. However, upon instance creation we can safely copy over
     // the asset's bounding box.
-    instance->boundingBox = mAsset->mBoundingBox;
+    instance->mBoundingBox = mAsset->mBoundingBox;
 
     mMaterialInstanceCache.flush(&instance->mMaterialInstances);
 
@@ -578,8 +579,8 @@ void FAssetLoader::recurseEntities(const cgltf_data* srcAsset, const cgltf_node*
 
     // Update the asset's entity list and private node mapping.
     mAsset->mEntities.push_back(entity);
-    instance->entities.push_back(entity);
-    instance->nodeMap[node - srcAsset->nodes] = entity;
+    instance->mEntities.push_back(entity);
+    instance->mNodeMap[node - srcAsset->nodes] = entity;
 
     const char* name = getNodeName(node, mDefaultNodeName);
 
@@ -644,7 +645,7 @@ void FAssetLoader::createPrimitives(const cgltf_data* srcAsset, const cgltf_node
         // Expand the object-space bounding box.
         aabb.min = min(outputPrim.aabb.min, aabb.min);
         aabb.max = max(outputPrim.aabb.max, aabb.max);
-     }
+    }
 
     mat4f worldTransform;
     cgltf_node_transform_world(node, &worldTransform[0][0]);
@@ -781,7 +782,7 @@ void FAssetLoader::createMaterialVariants(const cgltf_data* srcAsset, const cglt
                 break;
             }
             mAsset->mDependencyGraph.addEdge(entity, mi);
-            instance->variants[variantIndex].mappings.push_back({entity, prim, mi});
+            instance->mVariants[variantIndex].mappings.push_back({entity, prim, mi});
         }
     }
 }
@@ -963,6 +964,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* out
         targetsCount = MAX_MORPH_TARGETS;
     }
 
+    const Aabb baseAabb(outPrim->aabb);
     for (cgltf_size targetIndex = 0; targetIndex < targetsCount; targetIndex++) {
         const cgltf_morph_target& morphTarget = inPrim.targets[targetIndex];
         for (cgltf_size aindex = 0; aindex < morphTarget.attributes_count; aindex++) {
@@ -981,10 +983,20 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* out
                 return false;
             }
 
+            if (!accessor->has_min || !accessor->has_max) {
+                continue;
+            }
+
+            Aabb targetAabb(baseAabb);
             const float* minp = &accessor->min[0];
             const float* maxp = &accessor->max[0];
-            outPrim->aabb.min = min(outPrim->aabb.min, float3(minp[0], minp[1], minp[2]));
-            outPrim->aabb.max = max(outPrim->aabb.max, float3(maxp[0], maxp[1], maxp[2]));
+
+            // We assume that the range of morph target weight is [-1,1].
+            targetAabb.min += float3(minp[0], minp[1], minp[2]);
+            targetAabb.max += float3(maxp[0], maxp[1], maxp[2]);
+
+            outPrim->aabb.min = min(outPrim->aabb.min, targetAabb.min);
+            outPrim->aabb.max = max(outPrim->aabb.max, targetAabb.max);
 
             VertexBuffer::AttributeType fatype;
             VertexBuffer::AttributeType actualType;
@@ -1523,19 +1535,19 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
 
 void FAssetLoader::importSkins(FFilamentAsset* primary,
         FFilamentInstance* instance, const cgltf_data* gltf) {
-    instance->skins.reserve(gltf->skins_count);
-    instance->skins.resize(gltf->skins_count);
-    const auto& nodeMap = instance->nodeMap;
+    instance->mSkins.reserve(gltf->skins_count);
+    instance->mSkins.resize(gltf->skins_count);
+    const auto& nodeMap = instance->mNodeMap;
     for (cgltf_size i = 0, len = gltf->nodes_count; i < len; ++i) {
         const cgltf_node& node = gltf->nodes[i];
         Entity entity = nodeMap[i];
         if (node.skin && entity) {
             int skinIndex = node.skin - &gltf->skins[0];
-            instance->skins[skinIndex].targets.insert(entity);
+            instance->mSkins[skinIndex].targets.insert(entity);
         }
     }
     for (cgltf_size i = 0, len = gltf->skins_count; i < len; ++i) {
-        FFilamentInstance::Skin& dstSkin = instance->skins[i];
+        FFilamentInstance::Skin& dstSkin = instance->mSkins[i];
         const cgltf_skin& srcSkin = gltf->skins[i];
 
         // Build a list of transformables for this skin, one for each joint.
@@ -1551,46 +1563,46 @@ AssetLoader* AssetLoader::create(const AssetConfiguration& config) {
 }
 
 void AssetLoader::destroy(AssetLoader** loader) {
-    FAssetLoader* temp(upcast(*loader));
+    FAssetLoader* temp(downcast(*loader));
     FAssetLoader::destroy(&temp);
     *loader = temp;
 }
 
 FilamentAsset* AssetLoader::createAsset(uint8_t const* bytes, uint32_t nbytes) {
-    return upcast(this)->createAsset(bytes, nbytes);
+    return downcast(this)->createAsset(bytes, nbytes);
 }
 
 FilamentAsset* AssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
         FilamentInstance** instances, size_t numInstances) {
-    return upcast(this)->createInstancedAsset(bytes, numBytes, instances, numInstances);
+    return downcast(this)->createInstancedAsset(bytes, numBytes, instances, numInstances);
 }
 
 FilamentInstance* AssetLoader::createInstance(FilamentAsset* asset) {
-    return upcast(this)->createInstance(upcast(asset));
+    return downcast(this)->createInstance(downcast(asset));
 }
 
 void AssetLoader::enableDiagnostics(bool enable) {
-    upcast(this)->mDiagnosticsEnabled = enable;
+    downcast(this)->mDiagnosticsEnabled = enable;
 }
 
 void AssetLoader::destroyAsset(const FilamentAsset* asset) {
-    upcast(this)->destroyAsset(upcast(asset));
+    downcast(this)->destroyAsset(downcast(asset));
 }
 
 size_t AssetLoader::getMaterialsCount() const noexcept {
-    return upcast(this)->getMaterialsCount();
+    return downcast(this)->getMaterialsCount();
 }
 
 NameComponentManager* AssetLoader::getNames() const noexcept {
-    return upcast(this)->getNames();
+    return downcast(this)->getNames();
 }
 
 const Material* const* AssetLoader::getMaterials() const noexcept {
-    return upcast(this)->getMaterials();
+    return downcast(this)->getMaterials();
 }
 
 MaterialProvider& AssetLoader::getMaterialProvider() noexcept {
-    return upcast(this)->mMaterials;
+    return downcast(this)->mMaterials;
 }
 
 } // namespace filament::gltfio

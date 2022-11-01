@@ -29,7 +29,7 @@
 
 #include <vector>
 
-#include "upcast.h"
+#include "downcast.h"
 
 struct cgltf_node;
 
@@ -91,21 +91,21 @@ struct FFilamentInstance : public FilamentInstance {
         tsl::robin_set<utils::Entity, utils::Entity::Hasher> targets;
     };
 
-    const utils::Entity root;
-    FFilamentAsset const* owner;
+    const utils::Entity mRoot;
+    FFilamentAsset const* mOwner;
 
-    std::vector<utils::Entity> entities;
-    utils::FixedCapacityVector<Variant> variants;
-    Animator* animator = nullptr;
-    utils::FixedCapacityVector<Skin> skins;
+    std::vector<utils::Entity> mEntities;
+    utils::FixedCapacityVector<Variant> mVariants;
+    Animator* mAnimator = nullptr;
+    utils::FixedCapacityVector<Skin> mSkins;
 
     // Note that nodeMap is yet another a vector of entities, but unlike the "entities" field, it
     // may be sparsely populated. This is used as a simple mapping between cgltf_node and Entity,
     // and therefore has the same size as the number of cgltf_node in the original asset. We
     // considered using the ECS for this, but we need Node => Entity, not the other way around.
-    utils::FixedCapacityVector<utils::Entity> nodeMap;
+    utils::FixedCapacityVector<utils::Entity> mNodeMap;
 
-    Aabb boundingBox;
+    Aabb mBoundingBox;
 
     utils::FixedCapacityVector<MaterialInstance*> mMaterialInstances;
 
@@ -120,7 +120,7 @@ struct FFilamentInstance : public FilamentInstance {
     void recomputeBoundingBoxes();
 };
 
-FILAMENT_UPCAST(FilamentInstance)
+FILAMENT_DOWNCAST(FilamentInstance)
 
 } // namespace filament::gltfio
 

@@ -226,7 +226,7 @@ public:
          * @see ShadowCascades::computeLogSplits
          * @see ShadowCascades::computePracticalSplits
          */
-        float cascadeSplitPositions[3] = { 0.25f, 0.50f, 0.75f };
+        float cascadeSplitPositions[3] = { 0.125f, 0.25f, 0.50f };
 
         /** Constant bias in world units (e.g. meters) by which shadows are moved away from the
          * light. 1mm by default.
@@ -349,6 +349,14 @@ public:
             uint8_t msaaSamples = 1;
 
             /**
+             * When elvsm is set to true, "Exponential Layered VSM without Layers" are used. It is
+             * an improvement to the default EVSM which suffers important light leaks. Enabling
+             * ELVSM for a single shadowmap doubles the memory usage of all shadow maps.
+             * ELVSM is mostly useful when large blurs are used.
+             */
+            bool elvsm = false;
+
+            /**
              * Blur width for the VSM blur. Zero do disable.
              * The maximum value is 125.
              */
@@ -438,9 +446,6 @@ public:
          * @param enable Enables or disables casting shadows from this Light.
          *
          * @return This Builder, for chaining calls.
-         *
-         * @warning
-         * - Only a Type.DIRECTIONAL, Type.SUN, Type.SPOT, or Type.FOCUSED_SPOT light can cast shadows
          */
         Builder& castShadows(bool enable) noexcept;
 

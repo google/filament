@@ -185,7 +185,7 @@ RenderableManager::Builder& RenderableManager::Builder::skinning(
 
 RenderableManager::Builder& RenderableManager::Builder::skinning(
         SkinningBuffer* skinningBuffer, size_t count, size_t offset) noexcept {
-    mImpl->mSkinningBuffer = upcast(skinningBuffer);
+    mImpl->mSkinningBuffer = downcast(skinningBuffer);
     mImpl->mSkinningBoneCount = count;
     mImpl->mSkinningBufferOffset = offset;
     return *this;
@@ -241,10 +241,10 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
         // entry.materialInstance must be set to something even if indices/vertices are null
         FMaterial const* material = nullptr;
         if (!entry.materialInstance) {
-            material = upcast(engine.getDefaultMaterial());
+            material = downcast(engine.getDefaultMaterial());
             entry.materialInstance = material->getDefaultInstance();
         } else {
-            material = upcast(entry.materialInstance->getMaterial());
+            material = downcast(entry.materialInstance->getMaterial());
         }
 
         // primitives without indices or vertices will be ignored
@@ -253,7 +253,7 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
         }
 
         // we want a feature level violation to be a hard error (exception if enabled, or crash)
-        ASSERT_PRECONDITION(upcast(engine).hasFeatureLevel(material->getFeatureLevel()),
+        ASSERT_PRECONDITION(downcast(engine).hasFeatureLevel(material->getFeatureLevel()),
                 "Material \"%s\" has feature level %u which is not supported by this Engine",
                 material->getName().c_str_safe(), (uint8_t)material->getFeatureLevel());
 
@@ -271,7 +271,7 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
         // this can't be an error because (1) those values are not immutable, so the caller
         // could fix later, and (2) the material's shader will work (i.e. compile), and
         // use the default values for this attribute, which maybe be acceptable.
-        AttributeBitset declared = upcast(entry.vertices)->getDeclaredAttributes();
+        AttributeBitset declared = downcast(entry.vertices)->getDeclaredAttributes();
         AttributeBitset required = material->getRequiredAttributes();
         if ((declared & required) != required) {
             slog.w << "[entity=" << entity.getId() << ", primitive @ " << i
@@ -290,7 +290,7 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
             "[entity=%u] AABB can't be empty, unless culling is disabled and "
                     "the object is not a shadow caster/receiver", entity.getId());
 
-    upcast(engine).createRenderable(*this, entity);
+    downcast(engine).createRenderable(*this, entity);
     return Success;
 }
 
@@ -437,7 +437,7 @@ void FRenderableManager::create(
                 if (!morphing.buffer) {
                     continue;
                 }
-                morphTargets[i] = { upcast(morphing.buffer), (uint32_t)morphing.offset,
+                morphTargets[i] = { downcast(morphing.buffer), (uint32_t)morphing.offset,
                                     (uint32_t)morphing.count };
             }
             
@@ -745,6 +745,10 @@ bool FRenderableManager::getLightChannel(Instance ci, unsigned int channel) cons
         }
     }
     return false;
+}
+
+size_t FRenderableManager::getPrimitiveCount(Instance instance, uint8_t level) const noexcept {
+    return getRenderPrimitives(instance, level).size();
 }
 
 } // namespace filament

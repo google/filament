@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_MORPHTARGETBUFFER_H
 #define TNT_FILAMENT_DETAILS_MORPHTARGETBUFFER_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <filament/MorphTargetBuffer.h>
 
@@ -76,7 +76,7 @@ private:
     size_t mCount;
 };
 
-FILAMENT_UPCAST(MorphTargetBuffer)
+FILAMENT_DOWNCAST(MorphTargetBuffer)
 
 } // namespace filament
 

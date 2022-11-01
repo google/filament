@@ -48,6 +48,7 @@ set(PUBLIC_HDRS
 )
 
 set(SRCS
+        src/AtlasAllocator.cpp
         src/Box.cpp
         src/BufferObject.cpp
         src/Camera.cpp
@@ -72,6 +73,7 @@ set(SRCS
         src/MaterialParser.cpp
         src/MorphTargetBuffer.cpp
         src/PerViewUniforms.cpp
+        src/PerShadowMapUniforms.cpp
         src/PostProcessManager.cpp
         src/RenderPass.cpp
         src/RenderPrimitive.cpp
@@ -145,6 +147,7 @@ set(PRIVATE_HDRS
         src/Intersections.h
         src/MaterialParser.h
         src/PerViewUniforms.h
+        src/PerShadowMapUniforms.h
         src/PIDController.h
         src/PostProcessManager.h
         src/RendererUtils.h
@@ -198,7 +201,7 @@ set(PRIVATE_HDRS
         src/materials/fsr/ffx_a.h
         src/materials/fsr/ffx_fsr1.h
         src/materials/fsr/ffx_fsr1_mobile.fs
-        src/upcast.h
+        src/downcast.h
 )
 
 set(MATERIAL_SRCS

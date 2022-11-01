@@ -118,15 +118,18 @@ private:
 
 class MetalBufferObject : public HwBufferObject {
 public:
-    MetalBufferObject(MetalContext& context, BufferUsage usage, uint32_t byteCount);
+    MetalBufferObject(MetalContext& context, BufferObjectBinding bindingType, BufferUsage usage,
+         uint32_t byteCount);
 
     void updateBuffer(void* data, size_t size, uint32_t byteOffset);
     void updateBufferUnsynchronized(void* data, size_t size, uint32_t byteOffset);
     MetalBuffer* getBuffer() { return &buffer; }
 
-    // Tracks which uniform buffers this buffer object is bound into.
+    // Tracks which uniform/ssbo buffers this buffer object is bound into.
     static_assert(Program::UNIFORM_BINDING_COUNT <= 32);
+    static_assert(MAX_SSBO_COUNT <= 32);
     utils::bitset32 boundUniformBuffers;
+    utils::bitset32 boundSsbos;
 
 private:
     MetalBuffer buffer;
@@ -163,6 +166,7 @@ struct MetalProgram : public HwProgram {
 
     id<MTLFunction> vertexFunction;
     id<MTLFunction> fragmentFunction;
+    id<MTLFunction> computeFunction;
 
     Program::SamplerGroupInfo samplerGroupInfo;
 
@@ -279,24 +283,20 @@ public:
 
     // Encode a MTLTexture into this SamplerGroup at the given index.
     inline void setFinalizedTexture(size_t index, id<MTLTexture> t) {
-        assert_invariant(encoder);
         assert_invariant(!finalized);
-        [encoder setTexture:t atIndex:(index * 2 + 0)];
         textures[index] = t;
     }
 
     // Encode a MTLSamplerState into this SamplerGroup at the given index.
     inline void setFinalizedSampler(size_t index, id<MTLSamplerState> s) {
-        assert_invariant(encoder);
         assert_invariant(!finalized);
-        [encoder setSamplerState:s atIndex:(index * 2 + 1)];
         samplers[index] = s;
     }
 
     // A SamplerGroup is "finalized" when all of its textures have been set and is ready for use in
     // a draw call.
     // Once a SamplerGroup is finalized, it must be reset or mutated to be written into again.
-    void finalize() { finalized = true; }
+    void finalize();
     bool isFinalized() const noexcept { return finalized; }
 
     // Both of these methods "unfinalize" a SamplerGroup, allowing it to be updated via calls to
@@ -305,7 +305,7 @@ public:
     // the texture types have changed.
     // Mutate re-encodes the current set of samplers/textures into the new argument
     // buffer.
-    void reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEncoder> e);
+    void reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEncoder> e, id<MTLDevice> device);
     void mutate(id<MTLCommandBuffer> cmdBuffer);
 
     id<MTLBuffer> getArgumentBuffer() const {
@@ -433,8 +433,7 @@ private:
 
     static MTLLoadAction getLoadAction(const RenderPassParams& params, TargetBufferFlags buffer);
     static MTLStoreAction getStoreAction(const RenderPassParams& params, TargetBufferFlags buffer);
-    static id<MTLTexture> createMultisampledTexture(id<MTLDevice> device, MTLPixelFormat format,
-            uint32_t width, uint32_t height, uint8_t samples);
+    id<MTLTexture> createMultisampledTexture(MTLPixelFormat format, uint32_t width, uint32_t height, uint8_t samples) const;
 
     MetalContext* context;
     bool defaultRenderTarget = false;

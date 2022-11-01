@@ -139,7 +139,7 @@ Texture* Texture::Builder::build(Engine& engine) {
     ASSERT_PRECONDITION((imported && sampleable) || !imported,
             "Imported texture must be SAMPLEABLE");
 
-    return upcast(engine).createTexture(*this);
+    return downcast(engine).createTexture(*this);
 }
 
 // ------------------------------------------------------------------------------------------------

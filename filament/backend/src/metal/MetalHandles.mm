@@ -26,6 +26,7 @@
 
 #include "private/backend/BackendUtils.h"
 
+#include <utils/compiler.h>
 #include <utils/Panic.h>
 #include <utils/trap.h>
 #include <utils/debug.h>
@@ -270,8 +271,9 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
     }];
 }
 
-MetalBufferObject::MetalBufferObject(MetalContext& context, BufferUsage usage, uint32_t byteCount)
-        : HwBufferObject(byteCount), buffer(context, usage, byteCount) {}
+MetalBufferObject::MetalBufferObject(MetalContext& context, BufferObjectBinding bindingType,
+        BufferUsage usage, uint32_t byteCount)
+        : HwBufferObject(byteCount), buffer(context, bindingType, usage, byteCount) {}
 
 void MetalBufferObject::updateBuffer(void* data, size_t size, uint32_t byteOffset) {
     buffer.copyIntoBuffer(data, size, byteOffset);
@@ -287,7 +289,7 @@ MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
 
 MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,
         uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
-        buffer(context, usage, elementSize * indexCount, true) { }
+        buffer(context, BufferObjectBinding::VERTEX, usage, elementSize * indexCount, true) { }
 
 void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer*
         indexBuffer) {
@@ -338,13 +340,12 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
 
 MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcept
     : HwProgram(program.getName()), vertexFunction(nil), fragmentFunction(nil),
-        isValid(false) {
+            computeFunction(nil), isValid(false) {
 
     using MetalFunctionPtr = __strong id<MTLFunction>*;
 
-    // FIXME: rework this to handle compute
-    //static_assert(Program::SHADER_TYPE_COUNT == 2, "Only vertex and fragment shaders expected.");
-    MetalFunctionPtr shaderFunctions[2] = { &vertexFunction, &fragmentFunction };
+    static_assert(Program::SHADER_TYPE_COUNT == 3, "Only vertex, fragment, and/or compute shaders expected.");
+    MetalFunctionPtr shaderFunctions[3] = { &vertexFunction, &fragmentFunction, &computeFunction };
 
     const auto& sources = program.getShadersSource();
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
@@ -387,11 +388,18 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
             }, sc.value);
         }
 
-        *shaderFunctions[i] = [library newFunctionWithName:@"main0"
-                                            constantValues:constants
-                                                     error:&error];
-
+        id<MTLFunction> function = [library newFunctionWithName:@"main0"
+                                                 constantValues:constants
+                                                          error:&error];
+        assert_invariant(function);
+        *shaderFunctions[i] = function;
     }
+
+    UTILS_UNUSED_IN_RELEASE const bool isRasterizationProgram =
+            vertexFunction != nil && fragmentFunction != nil;
+    UTILS_UNUSED_IN_RELEASE const bool isComputeProgram = computeFunction != nil;
+    // The program must be either a rasterization program XOR a compute program.
+    assert_invariant(isRasterizationProgram != isComputeProgram);
 
     // All stages of the program have compiled successfully, this is a valid program.
     isValid = true;
@@ -802,7 +810,26 @@ void MetalTexture::updateLodRange(uint32_t min, uint32_t max) {
     lodTextureView = nil;
 }
 
-void MetalSamplerGroup::reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEncoder> e) {
+void MetalSamplerGroup::finalize() {
+    assert_invariant(encoder);
+    // TODO: we should be able to encode textures and samplers inside setFinalizedTexture and
+    // setFinalizedSampler as they become available, but Metal doesn't seem to like this; the arg
+    // buffer gets encoded incorrectly. This warrants more investigation.
+
+    auto [buffer, offset] = argBuffer->getCurrentAllocation();
+    [encoder setArgumentBuffer:buffer offset:offset];
+
+    // Encode all textures and samplers.
+    for (size_t s = 0; s < size; s++) {
+        [encoder setTexture:textures[s] atIndex:(s * 2 + 0)];
+        [encoder setSamplerState:samplers[s] atIndex:(s * 2 + 1)];
+    }
+
+    finalized = true;
+}
+
+void MetalSamplerGroup::reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEncoder> e,
+        id<MTLDevice> device) {
     encoder = e;
 
     // The number of slots in the ring buffer we use to manage argument buffer allocations.
@@ -820,14 +847,11 @@ void MetalSamplerGroup::reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEnco
     // Chances are, even though the MTLArgumentEncoder might change, the required size and alignment
     // probably won't. So we can re-use the previous ring buffer.
     if (UTILS_UNLIKELY(!argBuffer || !argBuffer->canAccomodateLayout(argBufferLayout))) {
-        argBuffer = std::make_unique<MetalRingBuffer>(encoder.device, MTLResourceStorageModeShared,
+        argBuffer = std::make_unique<MetalRingBuffer>(device, MTLResourceStorageModeShared,
                 argBufferLayout, METAL_ARGUMENT_BUFFER_SLOTS);
     } else {
         argBuffer->createNewAllocation(cmdBuffer);
     }
-
-    auto [buffer, offset] = argBuffer->getCurrentAllocation();
-    [encoder setArgumentBuffer:buffer offset:offset];
 
     // Clear all textures and samplers.
     assert_invariant(textureHandles.size() == textures.size());
@@ -844,15 +868,7 @@ void MetalSamplerGroup::reset(id<MTLCommandBuffer> cmdBuffer, id<MTLArgumentEnco
 void MetalSamplerGroup::mutate(id<MTLCommandBuffer> cmdBuffer) {
     assert_invariant(finalized);    // only makes sense to mutate if this sampler group is finalized
     assert_invariant(argBuffer);
-    auto [buffer, offset] = argBuffer->createNewAllocation(cmdBuffer);
-    [encoder setArgumentBuffer:buffer offset:offset];
-
-    // Re-encode all textures and samplers.
-    for (size_t s = 0; s < size; s++) {
-        [encoder setTexture:textures[s] atIndex:(s * 2 + 0)];
-        [encoder setSamplerState:samplers[s] atIndex:(s * 2 + 1)];
-    }
-
+    argBuffer->createNewAllocation(cmdBuffer);
     finalized = false;
 }
 
@@ -901,7 +917,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         if (samples > 1 && color[i].getSampleCount() == 1) {
             auto& sidecar = color[i].metalTexture->msaaSidecar;
             if (!sidecar) {
-                sidecar = createMultisampledTexture(context->device, color[i].getPixelFormat(),
+                sidecar = createMultisampledTexture(color[i].getPixelFormat(),
                         color[i].metalTexture->width, color[i].metalTexture->height, samples);
             }
         }
@@ -926,7 +942,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         if (samples > 1 && depth.getSampleCount() == 1) {
             auto& sidecar = depth.metalTexture->msaaSidecar;
             if (!sidecar) {
-                sidecar = createMultisampledTexture(context->device, depth.getPixelFormat(),
+                sidecar = createMultisampledTexture(depth.getPixelFormat(),
                         depth.metalTexture->width, depth.metalTexture->height, samples);
             }
         }
@@ -951,7 +967,7 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         if (samples > 1 && stencil.getSampleCount() == 1) {
             auto& sidecar = stencil.metalTexture->msaaSidecar;
             if (!sidecar) {
-                sidecar = createMultisampledTexture(context->device, stencil.getPixelFormat(),
+                sidecar = createMultisampledTexture(stencil.getPixelFormat(),
                         stencil.metalTexture->width, stencil.metalTexture->height, samples);
             }
         }
@@ -1038,6 +1054,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         descriptor.depthAttachment.slice = 0;
         const bool discard = any(discardFlags & TargetBufferFlags::DEPTH);
         if (!discard) {
+            assert_invariant(context->supportsAutoDepthResolve);
             descriptor.depthAttachment.resolveTexture = depthAttachment.getTexture();
             descriptor.depthAttachment.resolveLevel = depthAttachment.level;
             descriptor.depthAttachment.resolveSlice = depthAttachment.layer;
@@ -1070,10 +1087,14 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
         descriptor.stencilAttachment.slice = 0;
         const bool discard = any(discardFlags & TargetBufferFlags::STENCIL);
         if (!discard) {
+            assert_invariant(context->supportsAutoDepthResolve);
             descriptor.stencilAttachment.resolveTexture = stencilAttachment.getTexture();
             descriptor.stencilAttachment.resolveLevel = stencilAttachment.level;
             descriptor.stencilAttachment.resolveSlice = stencilAttachment.layer;
             descriptor.stencilAttachment.storeAction = MTLStoreActionMultisampleResolve;
+            if (@available(iOS 12.0, *)) {
+                descriptor.stencilAttachment.stencilResolveFilter = MTLMultisampleStencilResolveFilterSample0;
+            }
         }
     }
 }
@@ -1135,8 +1156,8 @@ MTLStoreAction MetalRenderTarget::getStoreAction(const RenderPassParams& params,
     return MTLStoreActionStore;
 }
 
-id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device,
-        MTLPixelFormat format, uint32_t width, uint32_t height, uint8_t samples) {
+id<MTLTexture> MetalRenderTarget::createMultisampledTexture(MTLPixelFormat format,
+        uint32_t width, uint32_t height, uint8_t samples) const {
     MTLTextureDescriptor* descriptor =
             [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:format
                                                                width:width
@@ -1147,7 +1168,13 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
     descriptor.usage = MTLTextureUsageRenderTarget;
     descriptor.resourceOptions = MTLResourceStorageModePrivate;
 
-    return [device newTextureWithDescriptor:descriptor];
+    if (context->supportsMemorylessRenderTargets) {
+        if (@available(macOS 11.0, *)) {
+            descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
+        }
+    }
+
+    return [context->device newTextureWithDescriptor:descriptor];
 }
 
 math::uint2 MetalRenderTarget::getAttachmentSize() noexcept {

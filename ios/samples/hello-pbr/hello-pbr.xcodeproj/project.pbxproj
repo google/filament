@@ -120,7 +120,7 @@
 				};
 			};
 			buildConfigurationList = 0479354FB8D9A411347D91A6 /* Build configuration list for PBXProject "hello-pbr" */;
-			compatibilityVersion = "Xcode 10.0";
+			compatibilityVersion = "Xcode 11.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (

@@ -37,6 +37,27 @@
     #ifndef VK_NO_PROTOTYPES
     #define VK_NO_PROTOTYPES
     #endif
+
+    #if defined(__ANDROID__)
+    #define VK_USE_PLATFORM_ANDROID_KHR 1
+    #elif defined(IOS)
+    #define VK_USE_PLATFORM_IOS_MVK 1
+    #elif defined(__linux__)
+    #if defined(FILAMENT_SUPPORTS_XCB)
+    #define VK_USE_PLATFORM_XCB_KHR 1
+    #endif
+    #if defined(FILAMENT_SUPPORTS_XLIB)
+    #define VK_USE_PLATFORM_XLIB_KHR 1
+    #endif
+    #if defined(FILAMENT_SUPPORTS_WAYLAND)
+    #define VK_USE_PLATFORM_WAYLAND_KHR 1
+    #endif
+    #elif defined(__APPLE__)
+    #define VK_USE_PLATFORM_MACOS_MVK 1
+    #elif defined(WIN32)
+    #define VK_USE_PLATFORM_WIN32_KHR 1
+    #endif
+
     #include <vulkan/vulkan.h>
 #endif
 

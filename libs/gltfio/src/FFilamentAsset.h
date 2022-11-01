@@ -40,7 +40,7 @@
 
 #include <cgltf.h>
 
-#include "upcast.h"
+#include "downcast.h"
 #include "DependencyGraph.h"
 #include "DracoCache.h"
 #include "FFilamentInstance.h"
@@ -309,7 +309,7 @@ struct FFilamentAsset : public FilamentAsset {
     std::vector<std::pair<const cgltf_primitive*, VertexBuffer*> > mPrimitives;
 };
 
-FILAMENT_UPCAST(FilamentAsset)
+FILAMENT_DOWNCAST(FilamentAsset)
 
 } // namespace filament::gltfio
 

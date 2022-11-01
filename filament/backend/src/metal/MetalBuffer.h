@@ -27,13 +27,15 @@
 #include <utils/compiler.h>
 
 #include <utility>
+#include <memory>
 
 namespace filament::backend {
 
 class MetalBuffer {
 public:
 
-    MetalBuffer(MetalContext& context, BufferUsage usage, size_t size, bool forceGpuBuffer = false);
+    MetalBuffer(MetalContext& context, BufferObjectBinding bindingType, BufferUsage usage,
+         size_t size, bool forceGpuBuffer = false);
     ~MetalBuffer();
 
     MetalBuffer(const MetalBuffer& rhs) = delete;
@@ -60,18 +62,21 @@ public:
 
     void* getCpuBuffer() const noexcept { return mCpuBuffer; }
 
-    enum Stage {
-        VERTEX = 1,
-        FRAGMENT = 2
+    enum Stage : uint8_t {
+        VERTEX      = 1u << 0u,
+        FRAGMENT    = 1u << 1u,
+        COMPUTE     = 1u << 2u
     };
 
     /**
      * Bind multiple buffers to pipeline stages.
      *
-     * bindBuffers binds an array of buffers to the given stage(s) of a MTLRenderCommandEncoder's
-     * pipeline.
+     * bindBuffers binds an array of buffers to the given stage(s) of a MTLCommandEncoders's
+     * pipeline. The encoder must be either a MTLRenderCommandEncoder or a MTLComputeCommandEncoder.
+     * For MTLRenderCommandEncoders, only the VERTEX and FRAGMENT stages may be specified.
+     * For MTLComputeCommandEncoders, only the COMPUTE stage may be specified.
      */
-    static void bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLRenderCommandEncoder> encoder,
+    static void bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLCommandEncoder> encoder,
             size_t bufferStart, uint8_t stages, MetalBuffer* const* buffers, size_t const* offsets,
             size_t count);
 
@@ -106,7 +111,12 @@ public:
     // address space. Constant buffers have specific alignment requirements when specifying an
     // offset.
 #if defined(IOS)
+#if TARGET_OS_SIMULATOR
+    // The iOS simulator has differing alignment requirements.
+    static constexpr auto METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT = 256;
+#else
     static constexpr auto METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT = 4;
+#endif  // TARGET_OS_SIMULATOR
 #else
     static constexpr auto METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT = 32;
 #endif
@@ -132,7 +142,7 @@ public:
      * @return the id<MTLBuffer> and offset for the new allocation
      */
     std::pair<id<MTLBuffer>, NSUInteger> createNewAllocation(id<MTLCommandBuffer> cmdBuffer) {
-        const auto occupiedSlots = mOccupiedSlots.load(std::memory_order_relaxed);
+        const auto occupiedSlots = mOccupiedSlots->load(std::memory_order_relaxed);
         assert_invariant(occupiedSlots <= mSlotCount);
         if (UTILS_UNLIKELY(occupiedSlots == mSlotCount)) {
             // We don't have any room left, so we fall back to creating a one-off aux buffer.
@@ -144,14 +154,19 @@ public:
             return {mAuxBuffer, 0};
         }
         mCurrentSlot = (mCurrentSlot + 1) % mSlotCount;
-        mOccupiedSlots.fetch_add(1, std::memory_order_relaxed);
+        mOccupiedSlots->fetch_add(1, std::memory_order_relaxed);
 
         // Release the previous allocation.
         if (UTILS_UNLIKELY(mAuxBuffer)) {
             mAuxBuffer = nil;
         } else {
+            // Capture the mOccupiedSlots var via a weak_ptr because the MetalRingBuffer could be
+            // destructed before the block executes.
+            std::weak_ptr<AtomicCounterType> slots = mOccupiedSlots;
             [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer) {
-                mOccupiedSlots.fetch_sub(1, std::memory_order_relaxed);
+                if (auto s = slots.lock()) {
+                    s->fetch_sub(1, std::memory_order_relaxed);
+                }
             }];
         }
         return getCurrentAllocation();
@@ -185,7 +200,8 @@ private:
     NSUInteger mSlotCount;
 
     NSUInteger mCurrentSlot = 0;
-    std::atomic<NSUInteger> mOccupiedSlots = 1;
+    using AtomicCounterType = std::atomic<NSUInteger>;
+    std::shared_ptr<AtomicCounterType> mOccupiedSlots = std::make_shared<AtomicCounterType>(1);
 };
 
 } // namespace filament::backend

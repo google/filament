@@ -91,12 +91,14 @@ blitterFrag(VertexOut in [[stage_in]],
 {
     FragmentOut out = {};
 
+#if defined(BLIT_COLOR) || defined(BLIT_DEPTH)
     // These coordinates match the Vulkan vkCmdBlitImage spec:
     // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/vkCmdBlitImage.html
     float2 uvbase = in.position.xy; // unnormalized coordinates at center of texel: (1.5, 2.5, etc)
     float2 uvoffset = uvbase - args->dstOffset;
     float2 uvscaled = uvoffset * args->scale;
     float2 uv = uvscaled + args->srcOffset;
+#endif
 
 #ifdef BLIT_COLOR
 #ifdef MSAA_COLOR_SOURCE

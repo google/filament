@@ -45,7 +45,7 @@ BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const
 BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
 
 RenderTarget::Builder& RenderTarget::Builder::texture(AttachmentPoint pt, Texture* texture) noexcept {
-    mImpl->mAttachments[(size_t)pt].texture = upcast(texture);
+    mImpl->mAttachments[(size_t)pt].texture = downcast(texture);
     return *this;
 }
 
@@ -78,7 +78,7 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
                 "Texture usage must contain DEPTH_ATTACHMENT");
     }
 
-    const size_t maxDrawBuffers = upcast(engine).getDriverApi().getMaxDrawBuffers();
+    const size_t maxDrawBuffers = downcast(engine).getDriverApi().getMaxDrawBuffers();
     for (size_t i = maxDrawBuffers; i < MAX_SUPPORTED_COLOR_ATTACHMENTS_COUNT; i++) {
         ASSERT_PRECONDITION(!mImpl->mAttachments[i].texture,
                 "Only %u color attachments are supported, but COLOR%u attachment is set",
@@ -105,7 +105,7 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
 
     mImpl->mWidth  = minWidth;
     mImpl->mHeight = minHeight;
-    return upcast(engine).createRenderTarget(*this);
+    return downcast(engine).createRenderTarget(*this);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -121,7 +121,7 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
 
     auto setAttachment = [this](TargetBufferInfo& info, AttachmentPoint attachmentPoint) {
         Attachment const& attachment = mAttachments[(size_t)attachmentPoint];
-        auto t = upcast(attachment.texture);
+        auto t = downcast(attachment.texture);
         info.handle = t->getHwHandle();
         info.level  = attachment.mipLevel;
         if (t->getTarget() == Texture::Sampler::SAMPLER_CUBEMAP) {

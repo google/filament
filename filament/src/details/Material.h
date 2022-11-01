@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_MATERIAL_H
 #define TNT_FILAMENT_DETAILS_MATERIAL_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include "details/MaterialInstance.h"
 
@@ -245,7 +245,7 @@ private:
 };
 
 
-FILAMENT_UPCAST(Material)
+FILAMENT_DOWNCAST(Material)
 
 } // namespace filament
 

@@ -28,6 +28,8 @@
 #include "shaders/CodeGenerator.h"
 #include "shaders/MaterialInfo.h"
 
+#include "MetalArgumentBuffer.h"
+
 #include <filament/MaterialEnums.h>
 #include <private/filament/Variant.h>
 #include "SibGenerator.h"
@@ -165,8 +167,31 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob *spirv, std::string *outMsl,
 
     mslOptions.argument_buffers = true;
 
-    // Necessary to keep all argument buffers the same size across material variants.
-    mslOptions.pad_argument_buffer_resources = true;
+    // We're using argument buffers for texture resources, however, we cannot rely on spirv-cross to
+    // generate the argument buffer definitions.
+    //
+    // Consider a shader with 3 textures:
+    // layout (set = 0, binding = 0) uniform sampler2D texture1;
+    // layout (set = 0, binding = 1) uniform sampler2D texture2;
+    // layout (set = 0, binding = 2) uniform sampler2D texture3;
+    //
+    // If only texture1 and texture2 are used in the material, then texture3 will be optimized away.
+    // This results in an argument buffer like the following:
+    // struct spvDescriptorSetBuffer0 {
+    //     texture2d<float> texture1 [[id(0)]];
+    //     sampler texture1Smplr [[id(1)]];
+    //     texture2d<float> texture2 [[id(2)]];
+    //     sampler texture2Smplr [[id(3)]];
+    // };
+    // Note that this happens even if "pad_argument_buffer_resources" and
+    // "force_active_argument_buffer_resources" are true.
+    //
+    // This would be fine, except older Apple devices don't like it when the argument buffer in the
+    // shader doesn't precisely match the one generated at runtime.
+    //
+    // So, we use the MetalArgumentBuffer class to replace spirv-cross' argument buffer definitions
+    // with our own that contain all the textures/samples, even those optimized away.
+    std::vector<MetalArgumentBuffer*> argumentBuffers;
 
     mslCompiler.set_msl_options(mslOptions);
 
@@ -198,26 +223,21 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob *spirv, std::string *outMsl,
     // constant spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(27)]]
     for (auto [bindingPoint, sib] : sibs) {
         const auto& infoList = sib->getSamplerInfoList();
+
+        // bindingPoint + 1, because the first descriptor set is for uniforms
+        auto argBufferBuilder = MetalArgumentBuffer::Builder()
+                .name("spvDescriptorSetBuffer" + std::to_string(int(bindingPoint + 1)));
+
         for (const auto& info: infoList) {
-            // A MSLResourceBinding tells SPIRV-Cross how to map a sampler2D with a given set and
-            // binding to Metal resources.
-            // For example, textureB in the above example has:
-            //   bindingPoint = 0      (it's the first sampler group)
-            //   set = 1               (bindingPoint + 1, the first descriptor set is for uniforms)
-            //   offset = 1            (it's the second sampler in the sampler group)
-            // The equivalent MSL texture argument is assigned the [[id(2)]] binding and its sampler
-            // resource assigned the [[id(3)]] binding (controlled via msl_texture and msl_sampler).
-            MSLResourceBinding newBinding;
-            newBinding.basetype = SPIRType::BaseType::SampledImage;
-            newBinding.stage = executionModel;
-            newBinding.desc_set = bindingPoint + 1;
-            newBinding.binding = info.offset;
-            newBinding.count = 1;
-            newBinding.msl_texture = info.offset * 2;
-            newBinding.msl_sampler = info.offset * 2 + 1;
-            mslCompiler.add_msl_resource_binding(newBinding);
+            const std::string name = info.uniformName.c_str();
+            argBufferBuilder
+                    .texture(info.offset * 2, name, info.type, info.format)
+                    .sampler(info.offset * 2 + 1, name + "Smplr");
         }
-        // This final MSLResourceBinding is how we control the [[buffer(n)]] binding of the argument
+
+        argumentBuffers.push_back(argBufferBuilder.build());
+
+        // This MSLResourceBinding is how we control the [[buffer(n)]] binding of the argument
         // buffer itself;
         MSLResourceBinding argBufferBinding;
         // the baseType doesn't matter, but can't be UNKNOWN
@@ -247,8 +267,12 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob *spirv, std::string *outMsl,
         mslCompiler.add_msl_resource_binding(newBinding);
     };
 
-    auto resources = mslCompiler.get_shader_resources();
-    for (const auto& resource : resources.uniform_buffers) {
+    auto uniformResources = mslCompiler.get_shader_resources();
+    for (const auto& resource : uniformResources.uniform_buffers) {
+        updateResourceBindingDefault(resource);
+    }
+    auto ssboResources = mslCompiler.get_shader_resources();
+    for (const auto& resource : ssboResources.storage_buffers) {
         updateResourceBindingDefault(resource);
     }
 
@@ -259,6 +283,13 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob *spirv, std::string *outMsl,
     *outMsl = mslCompiler.compile();
     if (minifier) {
         *outMsl = minifier->removeWhitespace(*outMsl);
+    }
+
+    // Replace spirv-cross' generated argument buffers with our own.
+    for (auto* argBuffer : argumentBuffers) {
+        auto argBufferMsl = argBuffer->getMsl();
+        MetalArgumentBuffer::replaceInShader(*outMsl, argBuffer->getName(), argBufferMsl);
+        MetalArgumentBuffer::destroy(&argBuffer);
     }
 }
 

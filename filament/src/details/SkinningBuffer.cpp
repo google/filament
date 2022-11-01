@@ -55,7 +55,7 @@ SkinningBuffer::Builder& SkinningBuffer::Builder::initialize(bool initialize) no
 }
 
 SkinningBuffer* SkinningBuffer::Builder::build(Engine& engine) {
-    return upcast(engine).createSkinningBuffer(*this);
+    return downcast(engine).createSkinningBuffer(*this);
 }
 
 // ------------------------------------------------------------------------------------------------

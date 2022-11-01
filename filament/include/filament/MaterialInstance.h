@@ -278,11 +278,23 @@ public:
     void setMaskThreshold(float threshold) noexcept;
 
     /**
+     * Gets the minimum alpha value a fragment must have to not be discarded when the blend
+     * mode is MASKED
+     */
+    float getMaskThreshold() const noexcept;
+
+    /**
      * Sets the screen space variance of the filter kernel used when applying specular
      * anti-aliasing. The default value is set to 0.15. The specified value should be between
      * 0 and 1 and will be clamped if necessary.
      */
     void setSpecularAntiAliasingVariance(float variance) noexcept;
+
+    /**
+     * Gets the screen space variance of the filter kernel used when applying specular
+     * anti-aliasing.
+     */
+    float getSpecularAntiAliasingVariance() const noexcept;
 
     /**
      * Sets the clamping threshold used to suppress estimation errors when applying specular
@@ -292,6 +304,12 @@ public:
     void setSpecularAntiAliasingThreshold(float threshold) noexcept;
 
     /**
+     * Gets the clamping threshold used to suppress estimation errors when applying specular
+     * anti-aliasing.
+     */
+    float getSpecularAntiAliasingThreshold() const noexcept;
+
+    /**
      * Enables or disables double-sided lighting if the parent Material has double-sided capability,
      * otherwise prints a warning. If double-sided lighting is enabled, backface culling is
      * automatically disabled.
@@ -299,9 +317,20 @@ public:
     void setDoubleSided(bool doubleSided) noexcept;
 
     /**
+     * Returns whether double-sided lighting is enabled when the parent Material has double-sided
+     * capability.
+     */
+    bool isDoubleSided() const noexcept;
+
+    /**
      * Specifies how transparent objects should be rendered (default is DEFAULT).
      */
     void setTransparencyMode(TransparencyMode mode) noexcept;
+
+    /**
+     * Returns the transparency mode.
+     */
+    TransparencyMode getTransparencyMode() const noexcept;
 
     /**
      * Overrides the default triangle culling state that was set on the material.
@@ -309,9 +338,19 @@ public:
     void setCullingMode(CullingMode culling) noexcept;
 
     /**
+     * Returns the face culling mode.
+     */
+    CullingMode getCullingMode() const noexcept;
+
+    /**
      * Overrides the default color-buffer write state that was set on the material.
      */
     void setColorWrite(bool enable) noexcept;
+
+    /**
+     * Returns whether color write is enabled.
+     */
+    bool isColorWriteEnabled() const noexcept;
 
     /**
      * Overrides the default depth-buffer write state that was set on the material.
@@ -319,14 +358,29 @@ public:
     void setDepthWrite(bool enable) noexcept;
 
     /**
+     * Returns whether depth write is enabled.
+     */
+    bool isDepthWriteEnabled() const noexcept;
+
+    /**
      * Overrides the default depth testing state that was set on the material.
      */
     void setDepthCulling(bool enable) noexcept;
 
     /**
+     * Returns whether depth culling is enabled.
+     */
+    bool isDepthCullingEnabled() const noexcept;
+
+    /**
      * Overrides the default stencil-buffer write state that was set on the material.
      */
     void setStencilWrite(bool enable) noexcept;
+
+    /**
+     * Returns whether stencil write is enabled.
+     */
+    bool isStencilWriteEnabled() const noexcept;
 
     /**
      * Sets the stencil comparison function (default is StencilCompareFunc::A).

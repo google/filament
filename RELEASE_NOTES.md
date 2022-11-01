@@ -5,6 +5,30 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- backend: add support for GGP platform
+- gltfio: calculate primitive's AABB correctly. 
+- gltfio: fix glTF breaking issue
+- gltfio: recompute bounding boxes with morph targets
+- engine: primitives with `CullingMode::FRONT_AND_BACK` are now skipped.
+- engine: add missing getters on `MaterialInstance`
+
+## v1.28.2
+
+- gltfio: support EXT_meshopt_compression
+- release packaging: fixed location of default IBL file
+
+## v1.28.1
+
+- gltfio: fix reloading crash in ubershader mode
+- Vulkan: improve performance in the readPixels path
+- engine: raise the spot shadows limit to 64, from 14.
+- engine: add experimental support for point light shadows.
+- gltfio: fix ubershader issues with assignment of dummy textures
+- gltfio: material instances and variants are now accessed via `FilamentInstance` [⚠️ **API Change**]
+- gltfio: the animator can now only be accessed via `FilamentInstance` [⚠️ **API Change**]
+- engine: fix "stable" shadows and make the default cascade splits logarithmic.
+- engine: Add new quality options to EVSM shadows + rendering fixes
+
 ## v1.28.0
 
 - engine: LiSPSM is now a user settable option
@@ -13,9 +37,7 @@ A new header is inserted each time a *tag* is created.
 - Metal: newer devices are no longer limited to 16 samplers per Material.
 - gltfio: fix interpretation of occlusion strength
 - engine: minsdk is now 21 instead of 19. This allows the use of OpenGL ES 3.1
-- gltfio: fix ubershader issues with assignment of dummy textures
-- gltfio: material instances and variants are now accessed via `FilamentInstance` [⚠️ **API Change**]
-- gltfio: the animator can now only be accessed via `FilamentInstance` [⚠️ **API Change**]
+- Vulkan: fix black screen regression
 
 ## v1.27.2
 
@@ -25,6 +47,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: fix regression with meshes that have no material
 - gltfio: fix regression with recomputeBoundingBoxes()
 - filamesh / matinfo: fix minor ASAN issues
+- engine: Added `Engine::resetBackendState()`, available only in WebGL builds
 
 ## v1.27.1
 

@@ -147,7 +147,7 @@ LightManager::Builder& LightManager::Builder::lightChannel(unsigned int channel,
 }
 
 LightManager::Builder::Result LightManager::Builder::build(Engine& engine, Entity entity) {
-    upcast(engine).createLight(*this, entity);
+    downcast(engine).createLight(*this, entity);
     return Success;
 }
 

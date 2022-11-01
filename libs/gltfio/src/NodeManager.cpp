@@ -18,7 +18,7 @@
 
 #include <utils/Log.h>
 
-#include "upcast.h"
+#include "downcast.h"
 
 using namespace utils;
 
@@ -41,43 +41,43 @@ void FNodeManager::terminate() noexcept {
 }
 
 bool NodeManager::hasComponent(Entity e) const noexcept {
-    return upcast(this)->hasComponent(e);
+    return downcast(this)->hasComponent(e);
 }
 
 Instance NodeManager::getInstance(Entity e) const noexcept {
-    return upcast(this)->getInstance(e);
+    return downcast(this)->getInstance(e);
 }
 
 void NodeManager::create(Entity entity) {
-    upcast(this)->create(entity);
+    downcast(this)->create(entity);
 }
 
 void NodeManager::destroy(Entity e) noexcept {
-    upcast(this)->destroy(e);
+    downcast(this)->destroy(e);
 }
 
 void NodeManager::setMorphTargetNames(Instance ci, FixedCapacityVector<CString> names) noexcept {
-    upcast(this)->setMorphTargetNames(ci, std::move(names));
+    downcast(this)->setMorphTargetNames(ci, std::move(names));
 }
 
 const FixedCapacityVector<CString>& NodeManager::getMorphTargetNames(Instance ci) const noexcept {
-    return upcast(this)->getMorphTargetNames(ci);
+    return downcast(this)->getMorphTargetNames(ci);
 }
 
 void NodeManager::setExtras(Instance ci, CString extras) noexcept {
-    return upcast(this)->setExtras(ci, std::move(extras));
+    return downcast(this)->setExtras(ci, std::move(extras));
 }
 
 const CString& NodeManager::getExtras(Instance ci) const noexcept {
-    return upcast(this)->getExtras(ci);
+    return downcast(this)->getExtras(ci);
 }
 
 void NodeManager::setSceneMembership(Instance ci, SceneMask scenes) noexcept {
-    upcast(this)->setSceneMembership(ci, scenes);
+    downcast(this)->setSceneMembership(ci, scenes);
 }
 
 bitset32 NodeManager::getSceneMembership(Instance ci) const noexcept {
-    return upcast(this)->getSceneMembership(ci);
+    return downcast(this)->getSceneMembership(ci);
 }
 
 } // namespace filament::gltfio

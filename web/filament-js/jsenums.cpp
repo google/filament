@@ -120,8 +120,7 @@ enum_<RenderableManager::PrimitiveType>("RenderableManager$PrimitiveType")
     .value("LINES", RenderableManager::PrimitiveType::LINES)
     .value("LINE_STRIP", RenderableManager::PrimitiveType::LINE_STRIP)
     .value("TRIANGLES", RenderableManager::PrimitiveType::TRIANGLES)
-    .value("TRIANGLE_STRIP", RenderableManager::PrimitiveType::TRIANGLE_STRIP)
-    .value("NONE", RenderableManager::PrimitiveType::NONE);
+    .value("TRIANGLE_STRIP", RenderableManager::PrimitiveType::TRIANGLE_STRIP);
 
 enum_<View::AmbientOcclusion>("View$AmbientOcclusion")
     .value("NONE", View::AmbientOcclusion::NONE)
@@ -398,6 +397,11 @@ enum_<backend::CullingMode>("CullingMode")
     .value("FRONT", backend::CullingMode::FRONT)
     .value("BACK", backend::CullingMode::BACK)
     .value("FRONT_AND_BACK", backend::CullingMode::FRONT_AND_BACK);
+
+enum_<filament::TransparencyMode>("TransparencyMode")
+    .value("DEFAULT", filament::TransparencyMode::DEFAULT)
+    .value("TWO_PASSES_ONE_SIDE", filament::TransparencyMode::TWO_PASSES_ONE_SIDE)
+    .value("TWO_PASSES_TWO_SIDES", filament::TransparencyMode::TWO_PASSES_TWO_SIDES);
 
 enum_<backend::FeatureLevel>("FeatureLevel")
     .value("FEATURE_LEVEL_1", backend::FeatureLevel::FEATURE_LEVEL_1)

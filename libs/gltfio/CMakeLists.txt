@@ -44,7 +44,7 @@ set(SRCS
         src/UbershaderProvider.cpp
         src/Wireframe.cpp
         src/Wireframe.h
-        src/upcast.h
+        src/downcast.h
 )
 
 # ==================================================================================================
@@ -161,7 +161,7 @@ target_include_directories(gltfio_core PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(gltfio_core PROPERTIES FOLDER Libs)
 
 target_compile_definitions(gltfio_core PUBLIC -DGLTFIO_DRACO_SUPPORTED=1)
-target_link_libraries(gltfio_core PUBLIC dracodec)
+target_link_libraries(gltfio_core PUBLIC dracodec meshoptimizer)
 
 if (WEBGL_PTHREADS)
     target_compile_definitions(gltfio_core PUBLIC -DFILAMENT_WASM_THREADS)

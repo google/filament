@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_VERTEXBUFFER_H
 #define TNT_FILAMENT_DETAILS_VERTEXBUFFER_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -76,7 +76,7 @@ private:
     bool mBufferObjectsEnabled = false;
 };
 
-FILAMENT_UPCAST(VertexBuffer)
+FILAMENT_DOWNCAST(VertexBuffer)
 
 } // namespace filament
 

@@ -656,7 +656,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
         RenderPass shadowPass(pass);
         shadowPass.setVariant(shadowVariant);
-        auto shadows = view.renderShadowMaps(fg, engine, driver, shadowPass);
+        auto shadows = view.renderShadowMaps(engine, fg, cameraInfo, mShaderUserTime, shadowPass);
         blackboard["shadows"] = shadows;
     }
 
@@ -664,7 +664,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // recorded in the list of targets already rendered into -- this ensures that
     // initializeClearFlags() is called only once for the default RenderTarget.
     auto& previousRenderTargets = mPreviousRenderTargets;
-    FRenderTarget* const currentRenderTarget = upcast(view.getRenderTarget());
+    FRenderTarget* const currentRenderTarget = downcast(view.getRenderTarget());
     if (UTILS_LIKELY(
             previousRenderTargets.find(currentRenderTarget) == previousRenderTargets.end())) {
         previousRenderTargets.insert(currentRenderTarget);
@@ -740,8 +740,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // view set-ups that need to happen before rendering
     fg.addTrivialSideEffectPass("Prepare View Uniforms",
-            [=, &uniforms = view.getPerViewUniforms()](DriverApi& driver) {
-                uniforms.prepareCamera(cameraInfo);
+            [=, &view, &engine](DriverApi& driver) {
+                view.prepareCamera(engine, cameraInfo);
 
                 // The code here is a little fragile. In theory, we need to call prepareViewport()
                 // for each render pass, because the viewport parameters depend on the resolution.
@@ -761,11 +761,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 // The reason why this bug is acceptable is that the viewport parameters are
                 // currently only used for generating noise, so it's not too bad.
 
-                uniforms.prepareViewport(svp,
+                view.prepareViewport(svp,
                         xvp.left   * aoOptions.resolution,
                         xvp.bottom * aoOptions.resolution);
 
-                uniforms.commit(driver);
+                view.commitUniforms(driver);
+
+                // set uniforms and samplers for the color passes
+                view.bindPerViewUniformsAndSamplers(driver);
             });
 
     // --------------------------------------------------------------------------------------------
@@ -850,8 +853,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // This one doesn't need to be a FrameGraph pass because it always happens by construction
     // (i.e. it won't be culled, unless everything is culled), so no need to complexify things.
     pass.setVariant(variant);
-    pass.appendCommands(RenderPass::COLOR);
-    pass.sortCommands();
+    pass.appendCommands(engine, RenderPass::COLOR);
+    pass.sortCommands(engine);
 
     FrameGraphTexture::Descriptor desc = {
             .width = config.width,

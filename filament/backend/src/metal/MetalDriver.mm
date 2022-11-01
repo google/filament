@@ -92,6 +92,18 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
             mContext->highestSupportedGpuFamily.mac   >= 2;     // newer macOS GPUs
     }
 
+    // In order to support resolve store action on depth attachment, the GPU needs to support it.
+    // Note that support for depth resolve implies support for stencil resolve using .sample0 resolve filter.
+    // (Other resolve filters are supported starting .apple5 and .mac2 families).
+    mContext->supportsAutoDepthResolve =
+        mContext->highestSupportedGpuFamily.apple >= 3 ||
+        mContext->highestSupportedGpuFamily.mac   >= 2;
+
+    // In order to support memoryless render targets, an Apple GPU is needed.
+    // Available starting macOS 11.0, the first version to run on Apple GPUs.
+    // On iOS, it's available on all OS versions.
+    mContext->supportsMemorylessRenderTargets = mContext->highestSupportedGpuFamily.apple >= 1;
+
     mContext->maxColorRenderTargets = 4;
     if (mContext->highestSupportedGpuFamily.apple >= 2 ||
         mContext->highestSupportedGpuFamily.mac >= 1) {
@@ -191,6 +203,18 @@ void MetalDriver::endFrame(uint32_t frameId) {
 
     assert_invariant(mContext->groupMarkers.empty());
 
+    // If we exceeded memoryless limits, turn it off for the rest of the lifetime of the driver.
+    if (mContext->supportsMemorylessRenderTargets && mContext->memorylessLimitsReached) {
+        for (MetalTexture* texture : mContext->textures) {
+            // Release memoryless MTLTexture-s, which are currently only the MSAA sidecars.
+            // Creation of new render targets is going to trigger the re-allocation of sidecars,
+            // with private storage mode from now on. Here, at the end of the frame,
+            // all render targets that have textures with sidecars are assumed to be destroyed.
+            texture->msaaSidecar = nil;
+        }
+        mContext->supportsMemorylessRenderTargets = false;
+    }
+
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_end(mContext->log, mContext->signpostId, "Frame encoding");
 #endif
@@ -226,7 +250,7 @@ void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elem
 
 void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage) {
-    construct_handle<MetalBufferObject>(boh, *mContext, usage, byteCount);
+    construct_handle<MetalBufferObject>(boh, *mContext, bindingType, usage, byteCount);
 }
 
 void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -236,13 +260,10 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
     auto& sc = mContext->sampleCountLookup;
     samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
 
-    construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
-            width, height, depth, usage, TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
-            TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3);
-
-#ifndef NDEBUG
-    mContext->aliveTextures.insert(th.getId());
-#endif
+    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext,
+            target, levels, format, samples, width, height, depth, usage,
+            TextureSwizzle::CHANNEL_0, TextureSwizzle::CHANNEL_1,
+            TextureSwizzle::CHANNEL_2, TextureSwizzle::CHANNEL_3));
 }
 
 void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -253,12 +274,8 @@ void MetalDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targe
     auto& sc = mContext->sampleCountLookup;
     samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
 
-    construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
-            width, height, depth, usage, r, g, b, a);
-
-#ifndef NDEBUG
-    mContext->aliveTextures.insert(th.getId());
-#endif
+    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext,
+            target, levels, format, samples, width, height, depth, usage, r, g, b, a));
 }
 
 void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
@@ -279,12 +296,8 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
     ASSERT_PRECONDITION(metalTexture.textureType == filamentMetalType,
             "Imported id<MTLTexture> type (%d) != Filament texture type (%d)",
             metalTexture.textureType, filamentMetalType);
-    construct_handle<MetalTexture>(th, *mContext, target, levels, format, samples,
-        width, height, depth, usage, metalTexture);
-
-#ifndef NDEBUG
-    mContext->aliveTextures.insert(th.getId());
-#endif
+    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext,
+        target, levels, format, samples, width, height, depth, usage, metalTexture));
 }
 
 void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size) {
@@ -475,10 +488,20 @@ void MetalDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
         return;
     }
     auto* bo = handle_cast<MetalBufferObject>(boh);
-    // Unbind this buffer object from any uniform slots it's still bound to.
+    // Unbind this buffer object from any uniform / SSBO slots it's still bound to.
     bo->boundUniformBuffers.forEachSetBit([this](size_t index) {
-        mContext->uniformState[index].buffer = nullptr;
-        mContext->uniformState[index].bound = false;
+        mContext->uniformState[index] = BufferState {
+                .buffer = nullptr,
+                .offset = 0,
+                .bound = false
+        };
+    });
+    bo->boundSsbos.forEachSetBit([this](size_t index) {
+        mContext->ssboState[index] = BufferState {
+                .buffer = nullptr,
+                .offset = 0,
+                .bound = false
+        };
     });
     destruct_handle<MetalBufferObject>(boh);
 }
@@ -515,10 +538,7 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
         return;
     }
 
-#ifndef NDEBUG
-    mContext->aliveTextures.erase(th.getId());
-#endif
-
+    mContext->textures.erase(handle_cast<MetalTexture>(th));
     destruct_handle<MetalTexture>(th);
 }
 
@@ -683,7 +703,7 @@ bool MetalDriver::isFrameTimeSupported() {
 }
 
 bool MetalDriver::isAutoDepthResolveSupported() {
-    return true;
+    return mContext->supportsAutoDepthResolve;
 }
 
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
@@ -847,13 +867,13 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
         if (!samplers[s].t) {
             continue;
         }
-        auto iter = mContext->aliveTextures.find(samplers[s].t.getId());
-        if (iter == mContext->aliveTextures.end()) {
+        auto iter = mContext->textures.find(handle_cast<MetalTexture>(samplers[s].t));
+        if (iter == mContext->textures.end()) {
             utils::slog.e << "updateSamplerGroup: texture #"
                           << (int) s << " is dead, texture handle = "
                           << samplers[s].t << utils::io::endl;
         }
-        assert_invariant(iter != mContext->aliveTextures.end());
+        assert_invariant(iter != mContext->textures.end());
     }
 #endif
 
@@ -880,7 +900,7 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
     auto& encoderCache = mContext->argumentEncoderCache;
     id<MTLArgumentEncoder> encoder =
             encoderCache.getOrCreateState(ArgumentEncoderState(std::move(textureTypes)));
-    sb->reset(getPendingCommandBuffer(mContext), encoder);
+    sb->reset(getPendingCommandBuffer(mContext), encoder, mContext->device);
 
     // In a perfect world, all the MTLTexture bindings would be known at updateSamplerGroup time.
     // However, there are two special cases preventing this:
@@ -1048,7 +1068,7 @@ void MetalDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) 
         currentBo->boundUniformBuffers.unset(index);
     }
     bo->boundUniformBuffers.set(index);
-    mContext->uniformState[index] = UniformBufferState{
+    mContext->uniformState[index] = BufferState{
             .buffer = bo,
             .offset = 0,
             .bound = true
@@ -1061,24 +1081,81 @@ void MetalDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t inde
     assert_invariant(bindingType == BufferObjectBinding::SHADER_STORAGE ||
                      bindingType == BufferObjectBinding::UNIFORM);
 
-    // TODO: implement BufferObjectBinding::SHADER_STORAGE case
-
-    assert_invariant(index < Program::UNIFORM_BINDING_COUNT);
     auto* bo = handle_cast<MetalBufferObject>(boh);
-    auto* currentBo = mContext->uniformState[index].buffer;
-    if (currentBo) {
-        currentBo->boundUniformBuffers.unset(index);
+
+    switch (bindingType) {
+        default:
+        case BufferObjectBinding::UNIFORM: {
+            assert_invariant(index < Program::UNIFORM_BINDING_COUNT);
+            auto* currentBo = mContext->uniformState[index].buffer;
+            if (currentBo) {
+                currentBo->boundUniformBuffers.unset(index);
+            }
+            bo->boundUniformBuffers.set(index);
+            mContext->uniformState[index] = BufferState {
+                    .buffer = bo,
+                    .offset = offset,
+                    .bound = true
+            };
+
+            break;
+        }
+
+        case BufferObjectBinding::SHADER_STORAGE: {
+            assert_invariant(index < MAX_SSBO_COUNT);
+            auto* currentBo = mContext->ssboState[index].buffer;
+            if (currentBo) {
+                currentBo->boundSsbos.unset(index);
+            }
+            bo->boundSsbos.set(index);
+            mContext->ssboState[index] = BufferState {
+                    .buffer = bo,
+                    .offset = offset,
+                    .bound = true
+            };
+
+            break;
+        }
     }
-    bo->boundUniformBuffers.set(index);
-    mContext->uniformState[index] = UniformBufferState{
-            .buffer = bo,
-            .offset = offset,
-            .bound = true
-    };
 }
 
 void MetalDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) {
-    // TODO: implement unbindBuffer()
+
+    assert_invariant(bindingType == BufferObjectBinding::SHADER_STORAGE ||
+                     bindingType == BufferObjectBinding::UNIFORM);
+
+    switch (bindingType) {
+        default:
+        case BufferObjectBinding::UNIFORM: {
+            assert_invariant(index < Program::UNIFORM_BINDING_COUNT);
+            auto* currentBo = mContext->uniformState[index].buffer;
+            if (currentBo) {
+                currentBo->boundUniformBuffers.unset(index);
+            }
+            mContext->uniformState[index] = BufferState {
+                    .buffer = nullptr,
+                    .offset = 0,
+                    .bound = false
+            };
+
+            break;
+        }
+
+        case BufferObjectBinding::SHADER_STORAGE: {
+            assert_invariant(index < MAX_SSBO_COUNT);
+            auto* currentBo = mContext->ssboState[index].buffer;
+            if (currentBo) {
+                currentBo->boundSsbos.unset(index);
+            }
+            mContext->ssboState[index] = BufferState {
+                    .buffer = nullptr,
+                    .offset = 0,
+                    .bound = false
+            };
+
+            break;
+        }
+    }
 }
 
 void MetalDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
@@ -1311,13 +1388,13 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
         if (!handles[s]) {
             continue;
         }
-        auto iter = mContext->aliveTextures.find(handles[s].getId());
-        if (iter == mContext->aliveTextures.end()) {
+        auto iter = mContext->textures.find(handle_cast<MetalTexture>(handles[s]));
+        if (iter == mContext->textures.end()) {
             utils::slog.e << "finalizeSamplerGroup: texture #"
                           << (int) s << " is dead, texture handle = "
                           << handles[s] << utils::io::endl;
         }
-        assert_invariant(iter != mContext->aliveTextures.end());
+        assert_invariant(iter != mContext->textures.end());
     }
 #endif
 
@@ -1553,8 +1630,9 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
     NSUInteger offsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
 
-    enumerateBoundUniformBuffers([&uniformsToBind, &offsets](const UniformBufferState& state,
-            MetalBuffer* buffer, uint32_t index) {
+    enumerateBoundBuffers(BufferObjectBinding::UNIFORM,
+            [&uniformsToBind, &offsets](const BufferState& state, MetalBuffer* buffer,
+                    uint32_t index) {
         uniformsToBind[index] = buffer;
         offsets[index] = state.offset;
     });
@@ -1636,7 +1714,67 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
 }
 
 void MetalDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
-    // FIXME: implement me
+    ASSERT_PRECONDITION(!isInRenderPass(mContext),
+            "dispatchCompute must be called outside of a render pass.");
+
+    auto mtlProgram = handle_cast<MetalProgram>(program);
+
+    // If the material debugger is enabled, avoid fatal (or cascading) errors and that can occur
+    // during the draw call when the program is invalid. The shader compile error has already been
+    // dumped to the console at this point, so it's fine to simply return early.
+    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!mtlProgram->isValid)) {
+        return;
+    }
+
+    assert_invariant(mtlProgram->isValid && mtlProgram->computeFunction);
+
+    id<MTLComputeCommandEncoder> computeEncoder =
+            [getPendingCommandBuffer(mContext) computeCommandEncoder];
+
+    NSError* error = nil;
+    id<MTLComputePipelineState> computePipelineState =
+            [mContext->device newComputePipelineStateWithFunction:mtlProgram->computeFunction
+                                                            error:&error];
+    if (error) {
+        auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
+        utils::slog.e << description << utils::io::endl;
+    }
+    assert_invariant(!error);
+
+    // Bind uniform buffers.
+    MetalBuffer* uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
+    NSUInteger uniformOffsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
+    enumerateBoundBuffers(BufferObjectBinding::UNIFORM,
+            [&uniformsToBind, &uniformOffsets](const BufferState& state, MetalBuffer* buffer,
+                    uint32_t index) {
+        uniformsToBind[index] = buffer;
+        uniformOffsets[index] = state.offset;
+    });
+    MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), computeEncoder,
+            UNIFORM_BUFFER_BINDING_START, MetalBuffer::Stage::COMPUTE, uniformsToBind,
+            uniformOffsets, Program::UNIFORM_BINDING_COUNT);
+
+    // Bind SSBOs.
+    MetalBuffer* ssbosToBind[MAX_SSBO_COUNT] = { nil };
+    NSUInteger ssboOffsets[MAX_SSBO_COUNT] = { 0 };
+    enumerateBoundBuffers(BufferObjectBinding::SHADER_STORAGE,
+            [&ssbosToBind, &ssboOffsets](const BufferState& state, MetalBuffer* buffer,
+                    uint32_t index) {
+        ssbosToBind[index] = buffer;
+        ssboOffsets[index] = state.offset;
+    });
+    MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), computeEncoder, SSBO_BINDING_START,
+            MetalBuffer::Stage::COMPUTE, ssbosToBind, ssboOffsets, MAX_SSBO_COUNT);
+
+    [computeEncoder setComputePipelineState:computePipelineState];
+
+    MTLSize threadgroupsPerGrid = MTLSizeMake(workGroupCount.x, workGroupCount.y, workGroupCount.z);
+    // FIXME: the threadgroup size should be specified in the Program
+    MTLSize threadsPerThreadgroup = MTLSizeMake(16u, 1u, 1u);
+    [computeEncoder dispatchThreadgroups:threadgroupsPerGrid
+                   threadsPerThreadgroup:threadsPerThreadgroup];
+
+    [computeEncoder endEncoding];
 }
 
 void MetalDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
@@ -1653,15 +1791,33 @@ void MetalDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
     mContext->timerQueryImpl->endTimeElapsedQuery(tq);
 }
 
-void MetalDriver::enumerateBoundUniformBuffers(
-        const std::function<void(const UniformBufferState&, MetalBuffer*, uint32_t)>& f) {
-    for (uint32_t i = 0; i < Program::UNIFORM_BINDING_COUNT; i++) {
-        auto& thisUniform = mContext->uniformState[i];
-        if (!thisUniform.bound) {
-            continue;
+void MetalDriver::enumerateBoundBuffers(BufferObjectBinding bindingType,
+        const std::function<void(const BufferState&, MetalBuffer*, uint32_t)>& f) {
+    assert_invariant(bindingType == BufferObjectBinding::UNIFORM ||
+            bindingType == BufferObjectBinding::SHADER_STORAGE);
+
+    auto enumerate = [&](auto arrayType){
+        for (auto i = 0u; i < arrayType.size(); i++) {
+            const auto& thisBuffer = arrayType[i];
+            if (!thisBuffer.bound) {
+                continue;
+            }
+            f(thisBuffer, thisBuffer.buffer->getBuffer(), i);
         }
-        f(thisUniform, thisUniform.buffer->getBuffer(), i);
+    };
+
+    switch (bindingType) {
+        default:
+        case (BufferObjectBinding::UNIFORM):
+            enumerate(mContext->uniformState);
+            break;
+        case (BufferObjectBinding::SHADER_STORAGE):
+            enumerate(mContext->ssboState);
+            break;
     }
+}
+
+void MetalDriver::resetState(int) {
 }
 
 // explicit instantiation of the Dispatcher

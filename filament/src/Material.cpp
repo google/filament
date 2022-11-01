@@ -21,115 +21,115 @@ namespace filament {
 using namespace backend;
 
 MaterialInstance* Material::createInstance(const char* name) const noexcept {
-    return upcast(this)->createInstance(name);
+    return downcast(this)->createInstance(name);
 }
 
 const char* Material::getName() const noexcept {
-    return upcast(this)->getName().c_str();
+    return downcast(this)->getName().c_str();
 }
 
 Shading Material::getShading()  const noexcept {
-    return upcast(this)->getShading();
+    return downcast(this)->getShading();
 }
 
 Interpolation Material::getInterpolation() const noexcept {
-    return upcast(this)->getInterpolation();
+    return downcast(this)->getInterpolation();
 }
 
 BlendingMode Material::getBlendingMode() const noexcept {
-    return upcast(this)->getBlendingMode();
+    return downcast(this)->getBlendingMode();
 }
 
 VertexDomain Material::getVertexDomain() const noexcept {
-    return upcast(this)->getVertexDomain();
+    return downcast(this)->getVertexDomain();
 }
 
 MaterialDomain Material::getMaterialDomain() const noexcept {
-    return upcast(this)->getMaterialDomain();
+    return downcast(this)->getMaterialDomain();
 }
 
 CullingMode Material::getCullingMode() const noexcept {
-    return upcast(this)->getCullingMode();
+    return downcast(this)->getCullingMode();
 }
 
 TransparencyMode Material::getTransparencyMode() const noexcept {
-    return upcast(this)->getTransparencyMode();
+    return downcast(this)->getTransparencyMode();
 }
 
 bool Material::isColorWriteEnabled() const noexcept {
-    return upcast(this)->isColorWriteEnabled();
+    return downcast(this)->isColorWriteEnabled();
 }
 
 bool Material::isDepthWriteEnabled() const noexcept {
-    return upcast(this)->isDepthWriteEnabled();
+    return downcast(this)->isDepthWriteEnabled();
 }
 
 bool Material::isDepthCullingEnabled() const noexcept {
-    return upcast(this)->isDepthCullingEnabled();
+    return downcast(this)->isDepthCullingEnabled();
 }
 
 bool Material::isDoubleSided() const noexcept {
-    return upcast(this)->isDoubleSided();
+    return downcast(this)->isDoubleSided();
 }
 
 float Material::getMaskThreshold() const noexcept {
-    return upcast(this)->getMaskThreshold();
+    return downcast(this)->getMaskThreshold();
 }
 
 bool Material::hasShadowMultiplier() const noexcept {
-    return upcast(this)->hasShadowMultiplier();
+    return downcast(this)->hasShadowMultiplier();
 }
 
 bool Material::hasSpecularAntiAliasing() const noexcept {
-    return upcast(this)->hasSpecularAntiAliasing();
+    return downcast(this)->hasSpecularAntiAliasing();
 }
 
 float Material::getSpecularAntiAliasingVariance() const noexcept {
-    return upcast(this)->getSpecularAntiAliasingVariance();
+    return downcast(this)->getSpecularAntiAliasingVariance();
 }
 
 float Material::getSpecularAntiAliasingThreshold() const noexcept {
-    return upcast(this)->getSpecularAntiAliasingThreshold();
+    return downcast(this)->getSpecularAntiAliasingThreshold();
 }
 
 size_t Material::getParameterCount() const noexcept {
-    return upcast(this)->getParameterCount();
+    return downcast(this)->getParameterCount();
 }
 
 size_t Material::getParameters(ParameterInfo* parameters, size_t count) const noexcept {
-    return upcast(this)->getParameters(parameters, count);
+    return downcast(this)->getParameters(parameters, count);
 }
 
 AttributeBitset Material::getRequiredAttributes() const noexcept {
-    return upcast(this)->getRequiredAttributes();
+    return downcast(this)->getRequiredAttributes();
 }
 
 RefractionMode Material::getRefractionMode() const noexcept {
-    return upcast(this)->getRefractionMode();
+    return downcast(this)->getRefractionMode();
 }
 
 RefractionType Material::getRefractionType() const noexcept {
-    return upcast(this)->getRefractionType();
+    return downcast(this)->getRefractionType();
 }
 
 ReflectionMode Material::getReflectionMode() const noexcept {
-    return upcast(this)->getReflectionMode();
+    return downcast(this)->getReflectionMode();
 }
 
 bool Material::hasParameter(const char* name) const noexcept {
-    return upcast(this)->hasParameter(name);
+    return downcast(this)->hasParameter(name);
 }
 
 bool Material::isSampler(const char* name) const noexcept {
-    return upcast(this)->isSampler(name);
+    return downcast(this)->isSampler(name);
 }
 
 MaterialInstance* Material::getDefaultInstance() noexcept {
-    return upcast(this)->getDefaultInstance();
+    return downcast(this)->getDefaultInstance();
 }
 
 MaterialInstance const* Material::getDefaultInstance() const noexcept {
-    return upcast(this)->getDefaultInstance();
+    return downcast(this)->getDefaultInstance();
 }
 
 } // namespace filament

@@ -235,6 +235,9 @@ ShaderModel OpenGLDriver::getShaderModel() const noexcept {
 // ------------------------------------------------------------------------------------------------
 // Change and track GL state
 // ------------------------------------------------------------------------------------------------
+void OpenGLDriver::resetState(int) {
+    mContext.resetState();
+}
 
 void OpenGLDriver::bindSampler(GLuint unit, GLuint sampler) noexcept {
     mContext.bindSampler(unit, sampler);
@@ -3185,7 +3188,8 @@ void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGr
     useProgram(p);
 
 #if defined(GL_ES_VERSION_3_1) || defined(GL_VERSION_4_3)
-    glDispatchCompute(workGroupCount.x, workGroupCount.y, workGroupCount.z);
+    // FIXME: this line is commented-out for now due to issues switching G3 clients to API 21.
+    // glDispatchCompute(workGroupCount.x, workGroupCount.y, workGroupCount.z);
 #endif
 
 #ifdef FILAMENT_ENABLE_MATDBG

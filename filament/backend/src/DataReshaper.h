@@ -59,6 +59,21 @@ public:
         }
     }
 
+    static void copyImage(uint8_t* UTILS_RESTRICT dest,
+                          const uint8_t* UTILS_RESTRICT src,
+                          size_t srcBytesPerRow, size_t /*srcChannelCount*/,
+                          size_t dstBytesPerRow, size_t /*dstChannelCount*/,
+                          size_t /*width*/, size_t height, bool /*swizzle*/) {
+        if (srcBytesPerRow == dstBytesPerRow) {
+            std::memcpy(dest, src, height * srcBytesPerRow);
+            return;
+        }
+        const size_t minBytesPerRow = std::min(srcBytesPerRow, dstBytesPerRow);
+        for (size_t i = 0; i < height; ++i, src += srcBytesPerRow, dest += dstBytesPerRow) {
+            std::memcpy(dest, src, minBytesPerRow);
+        }
+    }
+
     // Converts a n-channel image of UBYTE, INT, UINT, or FLOAT to a different type.
     template<typename dstComponentType, typename srcComponentType>
     static void reshapeImage(uint8_t* UTILS_RESTRICT dest, const uint8_t* UTILS_RESTRICT src,
@@ -119,7 +134,13 @@ public:
         switch (dst->type) {
             case UBYTE:
                 switch (srcType) {
-                    case UBYTE: reshaper = reshapeImage<uint8_t, uint8_t>; break;
+                    case UBYTE:
+                        reshaper = reshapeImage<uint8_t, uint8_t>;
+                        if (dst->format == PixelDataFormat::RGBA &&
+                                dstChannelCount == srcChannelCount && !swizzle) {
+                            reshaper = copyImage;
+                        }
+                        break;
                     case FLOAT: reshaper = reshapeImage<uint8_t, float>; break;
                     case INT: reshaper = reshapeImage<uint8_t, int32_t>; break;
                     case UINT: reshaper = reshapeImage<uint8_t, uint32_t>; break;

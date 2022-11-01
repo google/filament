@@ -42,7 +42,7 @@ void DFG::init(FEngine& engine) noexcept {
 
     lut->setImage(engine, 0, std::move(buffer));
 
-    mLUT = upcast(lut);
+    mLUT = downcast(lut);
 }
 
 void DFG::terminate(FEngine& engine) noexcept {

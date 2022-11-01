@@ -138,7 +138,7 @@
 				};
 			};
 			buildConfigurationList = C7514DDCFDA3C5F803E239F9 /* Build configuration list for PBXProject "hello-gltf" */;
-			compatibilityVersion = "Xcode 10.0";
+			compatibilityVersion = "Xcode 11.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -328,6 +328,8 @@
 					"-limage",
 					"-lgeometry",
 					"-ldracodec",
+					"-lmeshoptimizer",
+					"-lbasis_transcoder",
 					"-lktxreader",
 					"-lstb",
 					"-lzstd",
@@ -380,6 +382,8 @@
 					"-limage",
 					"-lgeometry",
 					"-ldracodec",
+					"-lmeshoptimizer",
+					"-lbasis_transcoder",
 					"-lktxreader",
 					"-lstb",
 					"-lzstd",
@@ -604,6 +608,8 @@
 					"-limage",
 					"-lgeometry",
 					"-ldracodec",
+					"-lmeshoptimizer",
+					"-lbasis_transcoder",
 					"-lktxreader",
 					"-lstb",
 					"-lzstd",
@@ -656,6 +662,8 @@
 					"-limage",
 					"-lgeometry",
 					"-ldracodec",
+					"-lmeshoptimizer",
+					"-lbasis_transcoder",
 					"-lktxreader",
 					"-lstb",
 					"-lzstd",
