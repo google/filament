@@ -747,9 +747,38 @@ class_<ColorBuilder>("ColorGrading$Builder")
         return &builder->quality(ql);
     })
 
+    .BUILDER_FUNCTION("format", ColorBuilder, (ColorBuilder* builder,
+            ColorGrading::LutFormat format), {
+        return &builder->format(format);
+    })
+
+    .BUILDER_FUNCTION("dimensions", ColorBuilder, (ColorBuilder* builder, uint8_t dim), {
+        return &builder->dimensions(dim);
+    })
+
     .BUILDER_FUNCTION("toneMapping", ColorBuilder, (ColorBuilder* builder,
             ColorGrading::ToneMapping tm), {
         return &builder->toneMapping(tm);
+    })
+
+    .BUILDER_FUNCTION("luminanceScaling", ColorBuilder, (ColorBuilder* builder,
+            bool luminanceScaling), {
+        return &builder->luminanceScaling(luminanceScaling);
+    })
+
+    .BUILDER_FUNCTION("gamutMapping", ColorBuilder, (ColorBuilder* builder,
+            bool gamutMapping), {
+        return &builder->gamutMapping(gamutMapping);
+    })
+
+    .BUILDER_FUNCTION("exposure", ColorBuilder, (ColorBuilder* builder,
+            float exposure), {
+        return &builder->exposure(exposure);
+    })
+
+    .BUILDER_FUNCTION("nightAdaptation", ColorBuilder, (ColorBuilder* builder,
+            float adaptation), {
+        return &builder->nightAdaptation(adaptation);
     })
 
     .BUILDER_FUNCTION("whiteBalance", ColorBuilder, (ColorBuilder* builder, float temp,

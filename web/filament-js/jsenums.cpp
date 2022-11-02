@@ -147,6 +147,10 @@ enum_<ColorGrading::ToneMapping>("ColorGrading$ToneMapping")
     .value("FILMIC", ColorGrading::ToneMapping::FILMIC)
     .value("DISPLAY_RANGE", ColorGrading::ToneMapping::DISPLAY_RANGE);
 
+enum_<ColorGrading::LutFormat>("ColorGrading$LutFormat")
+    .value("INTEGER", ColorGrading::LutFormat::INTEGER)
+    .value("FLOAT", ColorGrading::LutFormat::FLOAT);
+
 enum_<Frustum::Plane>("Frustum$Plane")
     .value("LEFT", Frustum::Plane::LEFT)
     .value("RIGHT", Frustum::Plane::RIGHT)
