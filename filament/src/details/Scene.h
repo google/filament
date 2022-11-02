@@ -155,7 +155,6 @@ public:
         bool castsShadows = false;      // whether this light casts shadows
         bool contactShadows = false;    // whether this light casts contact shadows
         uint8_t index = 0;              // an index into the arrays in the Shadows uniform buffer
-        uint8_t layer = 0;              // which layer of the shadow texture array to sample from
     };
 
     enum {
@@ -179,7 +178,8 @@ public:
     LightSoa const& getLightData() const noexcept { return mLightData; }
     LightSoa& getLightData() noexcept { return mLightData; }
 
-    void updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Handle<backend::HwBufferObject> renderableUbh) noexcept;
+    void updateUBOs(utils::Range<uint32_t> visibleRenderables,
+            backend::Handle<backend::HwBufferObject> renderableUbh) noexcept;
 
     bool hasContactShadows() const noexcept;
 

@@ -158,7 +158,6 @@ Light getLight(const uint lightIndex) {
     light.type = (typeShadow & 0x1u);
 #if defined(VARIANT_HAS_SHADOWING)
     light.shadowIndex = (typeShadow >>  8u) & 0xFFu;
-    light.shadowLayer = (typeShadow >> 16u) & 0xFFu;
     light.castsShadows   = bool(channels & 0x10000u);
     if (light.type == LIGHT_TYPE_SPOT) {
         light.zLight = dot(shadowUniforms.shadows[light.shadowIndex].lightFromWorldZ, vec4(worldPosition, 1.0));
@@ -211,19 +210,20 @@ void evaluatePunctualLights(const MaterialInputs material,
 #if defined(VARIANT_HAS_SHADOWING)
         if (light.NoL > 0.0) {
             if (light.castsShadows) {
-                uint layer = light.shadowLayer;
+                uint shadowIndex = light.shadowIndex;
                 highp vec4 shadowPosition;
                 if (light.type == LIGHT_TYPE_POINT) {
                     // point-light shadows are sampled from a direction
                     highp vec3 r = getWorldPosition() - light.worldPosition;
-                    highp vec4 nf = shadowUniforms.shadows[light.shadowIndex].lightFromWorldZ;
+                    highp uint face = 0u;
                     // getShadowPosition returns zLight which is needed for PCSS/DPCF
-                    shadowPosition = getShadowPosition(r, nf, layer, light.zLight);
+                    shadowPosition = getShadowPosition(r, shadowIndex, light.zLight, face);
+                    shadowIndex += face;
                 } else {
                     // getShadowPosition needs zLight for applying the normal bias
-                    shadowPosition = getShadowPosition(false, light.shadowIndex, 0u, light.zLight);
+                    shadowPosition = getShadowPosition(false, shadowIndex, 0u, light.zLight);
                 }
-                visibility = shadow(false, light_shadowMap, layer, light.shadowIndex,
+                visibility = shadow(false, light_shadowMap, shadowIndex,
                         shadowPosition, light.zLight);
             }
             if (light.contactShadows && visibility > 0.0) {

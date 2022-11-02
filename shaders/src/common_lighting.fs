@@ -9,7 +9,6 @@ struct Light {
     bool contactShadows;
     uint type;
     uint shadowIndex;
-    uint shadowLayer;
     uint channels;
 };
 

@@ -97,8 +97,10 @@ void ShadowMapManager::setDirectionalShadowMap(size_t lightIndex,
         LightManager::ShadowOptions const* options) noexcept {
     assert_invariant(options->shadowCascades <= CONFIG_MAX_SHADOW_CASCADES);
     for (size_t c = 0; c < options->shadowCascades; c++) {
-        auto* pShadowMap = getCascadeShadowMap(c);
-        pShadowMap->initialize(lightIndex, ShadowType::DIRECTIONAL, c, 0, options);
+        const size_t i = c;
+        assert_invariant(i < CONFIG_MAX_SHADOW_CASCADES);
+        auto* pShadowMap = getCascadeShadowMap(i);
+        pShadowMap->initialize(lightIndex, ShadowType::DIRECTIONAL, i, 0, options);
         mCascadeShadowMaps.push_back(pShadowMap);
     }
 }
@@ -107,17 +109,19 @@ void ShadowMapManager::addShadowMap(size_t lightIndex, bool spotlight,
         LightManager::ShadowOptions const* options) noexcept {
     if (spotlight) {
         const size_t c = mSpotShadowMaps.size();
-        assert_invariant(c < CONFIG_MAX_SHADOWMAPS);
-        auto* pShadowMap = getPointOrSpotShadowMap(c);
-        pShadowMap->initialize(lightIndex, ShadowType::SPOT, c, 0, options);
+        const size_t i = c + CONFIG_MAX_SHADOW_CASCADES;
+        assert_invariant(i < CONFIG_MAX_SHADOWMAPS);
+        auto* pShadowMap = getPointOrSpotShadowMap(i);
+        pShadowMap->initialize(lightIndex, ShadowType::SPOT, i, 0, options);
         mSpotShadowMaps.push_back(pShadowMap);
     } else {
         // point-light, generate 6 independent shadowmaps
         for (size_t face = 0; face < 6; face++) {
             const size_t c = mSpotShadowMaps.size();
-            assert_invariant(c < CONFIG_MAX_SHADOWMAPS);
-            auto* pShadowMap = getPointOrSpotShadowMap(c);
-            pShadowMap->initialize(lightIndex, ShadowType::POINT, c, face, options);
+            const size_t i = c + CONFIG_MAX_SHADOW_CASCADES;
+            assert_invariant(i < CONFIG_MAX_SHADOWMAPS);
+            auto* pShadowMap = getPointOrSpotShadowMap(i);
+            pShadowMap->initialize(lightIndex, ShadowType::POINT, i, face, options);
             mSpotShadowMaps.push_back(pShadowMap);
         }
     }
@@ -455,7 +459,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         // entire camera frustum, as if we only had a single cascade.
         ShadowMap& shadowMap = *mCascadeShadowMaps[0];
 
-        auto shaderParameters = shadowMap.updateDirectional(mEngine,
+        shadowMap.updateDirectional(mEngine,
                 lightData, 0, cameraInfo, shadowMapInfo, *scene, sceneInfo);
 
         hasVisibleShadows = shadowMap.hasVisibleShadows();
@@ -464,18 +468,6 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             Frustum const& frustum = shadowMap.getCamera().getCullingFrustum();
             FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
                     VISIBLE_DIR_SHADOW_RENDERABLE_BIT);
-
-            // Set shadowBias, using the first directional cascade.
-            // when computing the required bias we need a half-texel size, so we multiply by 0.5 here.
-            // note: normalBias is set to zero for VSM
-            const float normalBias = shadowMapInfo.vsm ? 0.0f : 0.5f * lcm.getShadowNormalBias(0);
-            // Texel size is constant for directional light (although that's not true when LISPSM
-            // is used, but in that case we're pretending it is).
-            const float wsTexelSize = shaderParameters.texelSizeAtOneMeterWs;
-            mShadowMappingUniforms.shadowBias = normalBias * wsTexelSize;
-            mShadowMappingUniforms.shadowBulbRadiusLs =
-                    mSoftShadowOptions.penumbraScale * options.shadowBulbRadius / wsTexelSize;
-            mShadowMappingUniforms.elvsm = options.vsm.elvsm;
         }
     }
 
@@ -528,6 +520,10 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
 
         mShadowMappingUniforms.cascadeSplits = wsSplitPositionUniform;
 
+        // when computing the required bias we need a half-texel size, so we multiply by 0.5 here.
+        // note: normalBias is set to zero for VSM
+        const float normalBias = shadowMapInfo.vsm ? 0.0f : 0.5f * lcm.getShadowNormalBias(0);
+
         for (size_t i = 0, c = mCascadeShadowMaps.size(); i < c; i++) {
             assert_invariant(mCascadeShadowMaps[i]);
 
@@ -541,7 +537,22 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
                     lightData, 0, cameraInfo, shadowMapInfo, *scene, sceneInfo);
 
             if (shadowMap.hasVisibleShadows()) {
-                mShadowMappingUniforms.lightFromWorldMatrix[i] = shaderParameters.lightSpace;
+                const size_t shadowIndex = shadowMap.getShadowIndex();
+                assert_invariant(shadowIndex == i);
+
+                // Texel size is constant for directional light (although that's not true when LISPSM
+                // is used, but in that case we're pretending it is).
+                const float wsTexelSize = shaderParameters.texelSizeAtOneMeterWs;
+
+                auto& s = mShadowUb.edit();
+                s.shadows[shadowIndex].layer = shadowMap.getLayer();
+                s.shadows[shadowIndex].lightFromWorldMatrix = shaderParameters.lightSpace;
+                s.shadows[shadowIndex].normalBias = normalBias * wsTexelSize;
+                s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSize;
+                s.shadows[shadowIndex].elvsm = options.vsm.elvsm;
+                s.shadows[shadowIndex].bulbRadiusLs =
+                        mSoftShadowOptions.penumbraScale * options.shadowBulbRadius / wsTexelSize;
+
                 shadowTechnique |= ShadowTechnique::SHADOW_MAP;
                 cascadeHasVisibleShadows |= 0x1u << i;
             }
@@ -669,6 +680,7 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap,
         auto& s = mShadowUb.edit();
         const double n = shadowMap.getCamera().getNear();
         const double f = shadowMap.getCamera().getCullingFar();
+        s.shadows[shadowIndex].layer = shadowMap.getLayer();
         s.shadows[shadowIndex].lightFromWorldMatrix = shaderParameters.lightSpace;
         s.shadows[shadowIndex].direction = direction;
         s.shadows[shadowIndex].normalBias = normalBias * wsTexelSizeAtOneMeter;
@@ -679,6 +691,7 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap,
         s.shadows[shadowIndex].bulbRadiusLs =
                 mSoftShadowOptions.penumbraScale * options->shadowBulbRadius
                 / wsTexelSizeAtOneMeter;
+
     }
 }
 
@@ -740,7 +753,6 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
 
 
     // and if we need to generate it, update all the UBO data
-    // Note: this below is done for all six faces even if it sets identical values each time
     if (shadowMap.hasVisibleShadows()) {
         const size_t shadowIndex = shadowMap.getShadowIndex();
         const float wsTexelSizeAtOneMeter = shaderParameters.texelSizeAtOneMeterWs;
@@ -750,7 +762,7 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
         auto& s = mShadowUb.edit();
         const double n = shadowMap.getCamera().getNear();
         const double f = shadowMap.getCamera().getCullingFar();
-
+        s.shadows[shadowIndex].layer = shadowMap.getLayer();
         s.shadows[shadowIndex].lightFromWorldMatrix = {}; // no texture matrix for point lights
         s.shadows[shadowIndex].direction = {};  // no direction of point lights
         s.shadows[shadowIndex].normalBias = normalBias * wsTexelSizeAtOneMeter;
@@ -779,14 +791,12 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
         shadowTechnique |= ShadowTechnique::SHADOW_MAP;
         for (auto const* pShadowMap : mSpotShadowMaps) {
             const size_t lightIndex = pShadowMap->getLightIndex();
-
-            // FIXME: currently we have one slot per shadowmap in the UBO, but we now have up to
-            //        6 shadowmap per light. So for now, we only write the data of the face 0,
-            //        and the shader will figure out where to find the other face (layer+face)
+            // gather the per-light (not per shadow map) information. For point lights we will
+            // "see" 6 shadowmaps (one per face), we must use the first face one, the shader
+            // knows how to find the entry for other faces (they're guaranteed to be sequential).
             if (pShadowMap->getFace() == 0) {
                 shadowInfo[lightIndex].castsShadows = true;     // FIXME: is that set correctly?
                 shadowInfo[lightIndex].index = pShadowMap->getShadowIndex();
-                shadowInfo[lightIndex].layer = pShadowMap->getLayer();
             }
         }
     }

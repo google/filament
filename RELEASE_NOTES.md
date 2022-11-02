@@ -9,6 +9,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: recompute bounding boxes with morph targets
 - engine: add missing getters on `MaterialInstance`
 - WebGL: add missing `ColorGrading` JS bindings
+- engine: improvements/cleanup of Shadow mapping code [⚠️ **Recompile Materials**]
 
 ## v1.28.3
 
