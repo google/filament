@@ -259,7 +259,7 @@ struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
         float nearOverFarMinusNear;             //  4
         bool elvsm;                             //  4
     };
-    ShadowData shadows[CONFIG_MAX_SHADOWMAP_PUNCTUAL];
+    ShadowData shadows[CONFIG_MAX_SHADOWMAPS];
 };
 static_assert(sizeof(ShadowUib) <= CONFIG_MINSPEC_UBO_SIZE,
         "ShadowUib exceeds max UBO size");

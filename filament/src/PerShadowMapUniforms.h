@@ -73,10 +73,6 @@ public:
     static void prepareShadowMapping(Transaction const& transaction,
             bool highPrecision) noexcept;
 
-    static void prepareDirectionalLight(Transaction const& transaction,
-            FEngine& engine, float exposure,
-            math::float3 const& sceneSpaceDirection, LightManagerInstance instance) noexcept;
-
     static Transaction open(backend::DriverApi& driver) noexcept;
 
     // update local data into GPU UBO

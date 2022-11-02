@@ -103,7 +103,7 @@ public:
     }
 
     ShadowMap* getPointOrSpotShadowMap(size_t index) noexcept {
-        assert_invariant(index < CONFIG_MAX_SHADOWMAP_PUNCTUAL);
+        assert_invariant(index < CONFIG_MAX_SHADOWMAPS);
         return std::launder(reinterpret_cast<ShadowMap*>(
                 &mShadowMapCache[CONFIG_MAX_SHADOW_CASCADES + index]));
     }
@@ -215,13 +215,13 @@ private:
 
     utils::FixedCapacityVector<ShadowMap*> mSpotShadowMaps{
             utils::FixedCapacityVector<ShadowMap*>::with_capacity(
-                    CONFIG_MAX_SHADOWMAP_PUNCTUAL) };
+                    CONFIG_MAX_SHADOWMAPS) };
 
     // inline storage for all our ShadowMap objects, we can't easily use a std::array<> directly.
     // because ShadowMap doesn't have a default ctor, and we avoid out-of-line allocations.
     // Each ShadowMap is currently 40 bytes (total of 2.5KB for 64 shadow maps)
     using ShadowMapStorage = std::aligned_storage<sizeof(ShadowMap), alignof(ShadowMap)>::type;
-    std::array<ShadowMapStorage, CONFIG_MAX_SHADOW_LAYERS> mShadowMapCache;
+    std::array<ShadowMapStorage, CONFIG_MAX_SHADOW_CASCADES + CONFIG_MAX_SHADOWMAPS> mShadowMapCache;
 };
 
 } // namespace filament
