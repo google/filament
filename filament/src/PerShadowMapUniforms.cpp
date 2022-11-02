@@ -98,45 +98,6 @@ void PerShadowMapUniforms::prepareTime(Transaction const& transaction,
     s.userTime = userTime;
 }
 
-void PerShadowMapUniforms::prepareDirectionalLight(Transaction const& transaction,
-        FEngine& engine,
-        float exposure,
-        float3 const& sceneSpaceDirection,
-        PerShadowMapUniforms::LightManagerInstance directionalLight) noexcept {
-    FLightManager& lcm = engine.getLightManager();
-    auto& s = edit(transaction);
-
-    const float3 l = -sceneSpaceDirection; // guaranteed normalized
-
-    if (directionalLight.isValid()) {
-        const float4 colorIntensity = {
-                lcm.getColor(directionalLight), lcm.getIntensity(directionalLight) * exposure };
-
-        s.lightDirection = l;
-        s.lightColorIntensity = colorIntensity;
-        s.lightChannels = lcm.getLightChannels(directionalLight);
-
-        const bool isSun = lcm.isSunLight(directionalLight);
-        // The last parameter must be < 0.0f for regular directional lights
-        float4 sun{ 0.0f, 0.0f, 0.0f, -1.0f };
-        if (UTILS_UNLIKELY(isSun && colorIntensity.w > 0.0f)) {
-            // currently we have only a single directional light, so it's probably likely that it's
-            // also the Sun. However, conceptually, most directional lights won't be sun lights.
-            float radius = lcm.getSunAngularRadius(directionalLight);
-            float haloSize = lcm.getSunHaloSize(directionalLight);
-            float haloFalloff = lcm.getSunHaloFalloff(directionalLight);
-            sun.x = std::cos(radius);
-            sun.y = std::sin(radius);
-            sun.z = 1.0f / (std::cos(radius * haloSize) - sun.x);
-            sun.w = haloFalloff;
-        }
-        s.sun = sun;
-    } else {
-        // Disable the sun if there's no directional light
-        s.sun = float4{ 0.0f, 0.0f, 0.0f, -1.0f };
-    }
-}
-
 void PerShadowMapUniforms::prepareShadowMapping(Transaction const& transaction,
         bool highPrecision) noexcept {
     auto& s = edit(transaction);

@@ -145,9 +145,6 @@ public:
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset,
             ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
-    void prepareHistorySSR(backend::Handle<backend::HwTexture> ssr,
-            math::mat4f const& historyProjection, math::mat4f const& uvFromViewMatrix,
-            ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadowMapping(bool highPrecision) const noexcept;

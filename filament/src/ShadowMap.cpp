@@ -1283,13 +1283,6 @@ void ShadowMap::prepareTime(Transaction const& transaction,
     PerShadowMapUniforms::prepareTime(transaction, engine, userTime);
 }
 
-void ShadowMap::prepareDirectionalLight(Transaction const& transaction,
-        FEngine& engine, math::float3 const& sceneSpaceDirection,
-        LightManager::Instance instance) noexcept {
-    PerShadowMapUniforms::prepareDirectionalLight(transaction,
-            engine, 1.0f, sceneSpaceDirection, instance);
-}
-
 void ShadowMap::prepareShadowMapping(Transaction const& transaction,
         bool highPrecision) noexcept {
     PerShadowMapUniforms::prepareShadowMapping(transaction, highPrecision);
@@ -1304,7 +1297,7 @@ void ShadowMap::commit(Transaction& transaction,
     mPerShadowMapUniforms.commit(transaction, driver);
 }
 
-void ShadowMap::bindPerViewUniformsAndSamplers(backend::DriverApi& driver) const noexcept {
+void ShadowMap::bind(backend::DriverApi& driver) const noexcept {
     mPerShadowMapUniforms.bind(driver);
 }
 

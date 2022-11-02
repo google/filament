@@ -195,15 +195,12 @@ public:
             const filament::Viewport& viewport) noexcept;
     static void prepareTime(Transaction const& transaction,
             FEngine& engine, math::float4 const& userTime) noexcept;
-    static void prepareDirectionalLight(Transaction const& transaction,
-            FEngine& engine, math::float3 const& sceneSpaceDirection,
-            LightManager::Instance instance) noexcept;
     static void prepareShadowMapping(Transaction const& transaction,
             bool highPrecision) noexcept;
     static PerShadowMapUniforms::Transaction open(backend::DriverApi& driver) noexcept;
     void commit(Transaction& transaction,
             backend::DriverApi& driver) const noexcept;
-    void bindPerViewUniformsAndSamplers(backend::DriverApi& driver) const noexcept;
+    void bind(backend::DriverApi& driver) const noexcept;
 
 private:
     struct Segment {

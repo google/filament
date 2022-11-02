@@ -107,15 +107,15 @@ void ShadowMapManager::addShadowMap(size_t lightIndex, bool spotlight,
         LightManager::ShadowOptions const* options) noexcept {
     if (spotlight) {
         const size_t c = mSpotShadowMaps.size();
-        assert_invariant(c < CONFIG_MAX_SHADOWMAP_PUNCTUAL);
+        assert_invariant(c < CONFIG_MAX_SHADOWMAPS);
         auto* pShadowMap = getPointOrSpotShadowMap(c);
         pShadowMap->initialize(lightIndex, ShadowType::SPOT, c, 0, options);
         mSpotShadowMaps.push_back(pShadowMap);
     } else {
-        // point-light
+        // point-light, generate 6 independent shadowmaps
         for (size_t face = 0; face < 6; face++) {
             const size_t c = mSpotShadowMaps.size();
-            assert_invariant(c < CONFIG_MAX_SHADOWMAP_PUNCTUAL);
+            assert_invariant(c < CONFIG_MAX_SHADOWMAPS);
             auto* pShadowMap = getPointOrSpotShadowMap(c);
             pShadowMap->initialize(lightIndex, ShadowType::POINT, c, face, options);
             mSpotShadowMaps.push_back(pShadowMap);
@@ -157,7 +157,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 
     auto& prepareShadowPass = fg.addPass<PrepareShadowPassData>("Prepare Shadow Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
-                data.passList.reserve(CONFIG_MAX_SHADOW_LAYERS);
+                data.passList.reserve(CONFIG_MAX_SHADOWMAPS);
                 data.shadows = builder.createTexture("Shadowmap", {
                         .width = textureRequirements.size, .height = textureRequirements.size,
                         .depth = textureRequirements.layers,
@@ -229,15 +229,15 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     }
 
                     if (shadowMap.hasVisibleShadows()) {
-                        // TODO: this loop can generate a lot of commands. investigate if
-                        //       we could compact or reduce the number of commands.
-                        //       - we could move this into the execute of each pass, but
-                        //         then we would have to update the UBO each time.
-                        //       - we could also always use the same commands for all
-                        //         shadow maps, but then we'd generate a lot of
-                        //         unneeded draw call.
+                        // Note: this loop can generate a lot of commands that come out of the
+                        //       "per frame command arena". The allocation persists until the
+                        //       end of the frame.
+                        //       One way to possibly mitigate this, would be to always use the
+                        //       same command buffer for all shadow map, but then we'd generate
+                        //       a lot of unneeded draw calls.
+                        //       To do this efficiently, we'd need a way to cull draw calls already
+                        //       recorded in the command buffer, per shadow map.
 
-                        // generate and sort the commands for rendering the shadow map
 
                         // cameraInfo only valid after calling update
                         const CameraInfo cameraInfo{ shadowMap.getCamera() };
@@ -248,17 +248,13 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         ShadowMap::prepareTime(transaction, engine, userTime);
                         ShadowMap::prepareShadowMapping(transaction,
                                 view.getVsmShadowOptions().highPrecision);
-                        if (shadowMap.getShadowType() == ShadowType::DIRECTIONAL) {
-                            ShadowMap::prepareDirectionalLight(transaction, engine,
-                                    scene->getLightData().elementAt<FScene::DIRECTION>(0),
-                                    scene->getLightData().elementAt<FScene::LIGHT_INSTANCE>(0));
-                        }
                         shadowMap.commit(transaction, driver);
 
                         // updatePrimitivesLod must be run before RenderPass::appendCommands.
                         view.updatePrimitivesLod(engine,
                                 cameraInfo, scene->getRenderableData(), entry.range);
 
+                        // generate and sort the commands for rendering the shadow map
                         RenderPass pass(passTemplate);
                         pass.setCamera(cameraInfo);
                         pass.setVisibilityMask(entry.visibilityMask);
@@ -270,14 +266,10 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         entry.executor = pass.getExecutor();
 
                         if (!view.hasVSM()) {
-                            auto li = scene->getLightData().elementAt<FScene::LIGHT_INSTANCE>(
-                                    entry.shadowMap->getLightIndex());
-
-                            auto const& params = engine.getLightManager().getShadowParams(li);
-
+                            auto const* options = shadowMap.getShadowOptions();
                             const PolygonOffset polygonOffset = { // handle reversed Z
-                                    .slope    = -params.options.polygonOffsetSlope,
-                                    .constant = -params.options.polygonOffsetConstant
+                                    .slope    = -options->polygonOffsetSlope,
+                                    .constant = -options->polygonOffsetConstant
                             };
                             entry.executor.overridePolygonOffset(&polygonOffset);
                         }
@@ -393,16 +385,15 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     // `entry` lives in `PrepareShadowPassData` which is guaranteed to still
                     // be alive when we execute here (all passes stay alive until the FrameGraph
                     // is destroyed).
-                    // It wouldn't work to capture by copy because entry.pass wouldn't be
+                    // It wouldn't work to capture by copy because entry.executor wouldn't be
                     // initialized, as this happens in an `execute` block.
-
-                    entry.shadowMap->bindPerViewUniformsAndSamplers(driver);
 
                     auto rt = resources.getRenderPassInfo(data.rt);
                     rt.params.viewport = entry.shadowMap->getViewport();
 
                     engine.flush();
                     driver.beginRenderPass(rt.target, rt.params);
+                    entry.shadowMap->bind(driver);
                     entry.executor.execute(engine, "Shadow Pass");
                     driver.endRenderPass();
                 });

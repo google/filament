@@ -171,7 +171,7 @@ BufferInterfaceBlock const& UibGenerator::getLightsUib() noexcept {
 BufferInterfaceBlock const& UibGenerator::getShadowUib() noexcept {
     static BufferInterfaceBlock uib = BufferInterfaceBlock::Builder()
             .name(ShadowUib::_name)
-            .add({{ "shadows", CONFIG_MAX_SHADOWMAP_PUNCTUAL,
+            .add({{ "shadows", CONFIG_MAX_SHADOWMAPS,
                     BufferInterfaceBlock::Type::STRUCT, {},
                     "ShadowData", sizeof(ShadowUib::ShadowData) }})
             .build();

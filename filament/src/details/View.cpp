@@ -294,10 +294,11 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
     }
 
     // Find all shadow-casting spotlights.
-    size_t shadowLayerCount = 0;
+    size_t shadowMapCount = 0;
 
-    // We allow a max of CONFIG_MAX_SHADOW_CASTING_SPOTS spotlight shadows. Any additional
+    // We allow a max of CONFIG_MAX_SHADOWMAPS point/spotlight shadows. Any additional
     // shadow-casting spotlights are ignored.
+    // Note that pointlight shadows cost 6 shadowmaps, reducing the total count.
     for (size_t l = FScene::DIRECTIONAL_LIGHTS_COUNT; l < lightData.size(); l++) {
 
         // when we get here all the lights should be visible
@@ -317,12 +318,12 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         mShadowMapManager.addShadowMap(l, lcm.isSpotLight(li), &shadowOptions);
 
         if (lcm.isSpotLight(li)) {
-            shadowLayerCount += 6;
+            shadowMapCount += 6;
         } else {
-            shadowLayerCount += 1;
+            shadowMapCount += 1;
         }
 
-        if (shadowLayerCount > CONFIG_MAX_SHADOWMAP_PUNCTUAL - 1) {
+        if (shadowMapCount > CONFIG_MAX_SHADOWMAPS - 1) {
             break; // we ran out of spotlight shadow casting
         }
     }
@@ -691,13 +692,6 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
 void FView::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset,
         ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
     mPerViewUniforms.prepareSSR(ssr, refractionLodOffset, ssrOptions);
-}
-
-void FView::prepareHistorySSR(Handle<HwTexture> ssr,
-        mat4f const& historyProjection, mat4f const& uvFromViewMatrix,
-        ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
-    mPerViewUniforms.prepareHistorySSR(ssr,
-            historyProjection, uvFromViewMatrix, ssrOptions);
 }
 
 void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
