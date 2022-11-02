@@ -134,8 +134,9 @@ highp vec4 getCascadeLightSpacePosition(uint cascade) {
     }
 
     return computeLightSpacePosition(getWorldPosition(), getWorldNormalVector(),
-        frameUniforms.lightDirection, frameUniforms.shadowBias,
-        frameUniforms.lightFromWorldMatrix[cascade]);
+        frameUniforms.lightDirection,
+        shadowUniforms.shadows[cascade].normalBias,
+        shadowUniforms.shadows[cascade].lightFromWorldMatrix);
 }
 
 #endif
