@@ -154,17 +154,19 @@ Light getLight(const uint lightIndex) {
     light.worldPosition = positionFalloff.xyz;
     light.channels = channels;
     light.contactShadows = bool(typeShadow & 0x10u);
-#if defined(VARIANT_HAS_SHADOWING)
 #if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
+    light.type = (typeShadow & 0x1u);
+#if defined(VARIANT_HAS_SHADOWING)
     light.shadowIndex = (typeShadow >>  8u) & 0xFFu;
     light.shadowLayer = (typeShadow >> 16u) & 0xFFu;
     light.castsShadows   = bool(channels & 0x10000u);
-    light.type = (typeShadow & 0x1u);
     if (light.type == LIGHT_TYPE_SPOT) {
-        light.attenuation *= getAngleAttenuation(-direction, light.l, scaleOffset);
         light.zLight = dot(shadowUniforms.shadows[light.shadowIndex].lightFromWorldZ, vec4(worldPosition, 1.0));
     }
 #endif
+    if (light.type == LIGHT_TYPE_SPOT) {
+        light.attenuation *= getAngleAttenuation(-direction, light.l, scaleOffset);
+    }
 #endif
     return light;
 }
