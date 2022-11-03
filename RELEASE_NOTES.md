@@ -5,8 +5,9 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.28.3
+
 - backend: add support for GGP platform
-- gltfio: calculate primitive's AABB correctly.
 - engine: primitives with `CullingMode::FRONT_AND_BACK` are now skipped.
 
 ## v1.28.2
