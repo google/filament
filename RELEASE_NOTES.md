@@ -8,6 +8,7 @@ A new header is inserted each time a *tag* is created.
 - gltfio: calculate primitive's AABB correctly.
 - gltfio: recompute bounding boxes with morph targets
 - engine: add missing getters on `MaterialInstance`
+- WebGL: add missing `ColorGrading` JS bindings
 
 ## v1.28.3
 

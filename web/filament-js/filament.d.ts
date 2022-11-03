@@ -417,7 +417,13 @@ export class Camera {
 
 export class ColorGrading$Builder {
     public quality(qualityLevel: ColorGrading$QualityLevel): ColorGrading$Builder;
+    public format(format: ColorGrading$LutFormat): ColorGrading$Builder;
+    public dimensions(dim: number): ColorGrading$Builder;
     public toneMapping(toneMapping: ColorGrading$ToneMapping): ColorGrading$Builder;
+    public luminanceScaling(luminanceScaling: boolean): ColorGrading$Builder;
+    public gamutMapping(gamutMapping: boolean): ColorGrading$Builder;
+    public exposure(exposure: number): ColorGrading$Builder;
+    public nightAdaptation(adaptation: boolean): ColorGrading$Builder;
     public whiteBalance(temperature: number, tint: number): ColorGrading$Builder;
     public channelMixer(outRed: float3, outGreen: float3, outBlue: float3): ColorGrading$Builder;
     public shadowsMidtonesHighlights(shadows: float4, midtones: float4, highlights: float4,
@@ -671,12 +677,17 @@ export enum Camera$Projection {
     ORTHO,
 }
 
- export enum ColorGrading$QualityLevel {
+export enum ColorGrading$QualityLevel {
     LOW,
     MEDIUM,
     HIGH,
     ULTRA,
- }
+}
+
+export enum ColorGrading$LutFormat {
+    INTEGER,
+    FLOAT,
+}
 
 export enum ColorGrading$ToneMapping {
     LINEAR,
