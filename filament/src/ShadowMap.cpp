@@ -1184,6 +1184,8 @@ void ShadowMap::visitScene(const FScene& scene, uint32_t visibleLayers,
 
 void ShadowMap::initSceneInfo(ShadowMap::SceneInfo& sceneInfo,
         uint8_t visibleLayers, FScene const& scene, mat4f const& viewMatrix) {
+    sceneInfo.csNearFar = { -1.0f, 1.0f };
+    sceneInfo.lsNearFar = {};
     sceneInfo.visibleLayers = visibleLayers;
     sceneInfo.vsNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
 
