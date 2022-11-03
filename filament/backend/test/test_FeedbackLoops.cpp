@@ -133,7 +133,12 @@ TEST_F(BackendTest, FeedbackLoops) {
         // Create a program.
         ProgramHandle program;
         {
-            ShaderGenerator shaderGen(fullscreenVs, fullscreenFs, sBackend, sIsMobilePlatform);
+            SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
+                    .name("backend_test_sib")
+                    .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
+                    .add( {{"tex", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
+                    .build();
+            ShaderGenerator shaderGen(fullscreenVs, fullscreenFs, sBackend, sIsMobilePlatform, &sib);
             Program prog = shaderGen.getProgram(api);
             Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
             prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));

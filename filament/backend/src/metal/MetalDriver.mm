@@ -1183,8 +1183,12 @@ void MetalDriver::startCapture(int) {
     if (@available(iOS 13, *)) {
         MTLCaptureDescriptor* descriptor = [MTLCaptureDescriptor new];
         descriptor.captureObject = mContext->device;
+#if defined(IOS)
+        descriptor.destination = MTLCaptureDestinationDeveloperTools;
+#else
         descriptor.destination = MTLCaptureDestinationGPUTraceDocument;
         descriptor.outputURL = [[NSURL alloc] initFileURLWithPath:@"filament.gputrace"];
+#endif
         NSError* error = nil;
         [[MTLCaptureManager sharedCaptureManager] startCaptureWithDescriptor:descriptor
                                                                            error:&error];
