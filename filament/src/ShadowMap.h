@@ -214,6 +214,11 @@ private:
     // 8 corners, 12 segments w/ 2 intersection max -- all of this twice (8 + 12 * 2) * 2 (768 bytes)
     using FrustumBoxIntersection = std::array<math::float3, 64>;
 
+    ShaderParameters updateSpotOrPoint(
+            math::mat4f const& Mv, float outerConeAngle, float nearPlane, float farPlane,
+            const ShadowMapInfo& shadowMapInfo,
+            const FLightManager::ShadowParams& params) noexcept;
+
     static math::mat4f applyLISPSM(math::mat4f& Wp,
             filament::CameraInfo const& camera, FLightManager::ShadowParams const& params,
             const math::mat4f& LMpMv,

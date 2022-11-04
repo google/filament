@@ -211,18 +211,15 @@ void evaluatePunctualLights(const MaterialInputs material,
         if (light.NoL > 0.0) {
             if (light.castsShadows) {
                 uint shadowIndex = light.shadowIndex;
-                highp vec4 shadowPosition;
                 if (light.type == LIGHT_TYPE_POINT) {
                     // point-light shadows are sampled from a direction
                     highp vec3 r = getWorldPosition() - light.worldPosition;
-                    highp uint face = 0u;
-                    // getShadowPosition returns zLight which is needed for PCSS/DPCF
-                    shadowPosition = getShadowPosition(r, shadowIndex, light.zLight, face);
+                    uint face = getPointLightFace(r);
                     shadowIndex += face;
-                } else {
-                    // getShadowPosition needs zLight for applying the normal bias
-                    shadowPosition = getShadowPosition(false, shadowIndex, 0u, light.zLight);
+                    light.zLight = dot(shadowUniforms.shadows[shadowIndex].lightFromWorldZ,
+                            vec4(getWorldPosition(), 1.0));
                 }
+                highp vec4 shadowPosition = getShadowPosition(false, shadowIndex, 0u, light.zLight);
                 visibility = shadow(false, light_shadowMap, shadowIndex,
                         shadowPosition, light.zLight);
             }

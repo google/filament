@@ -690,7 +690,7 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap,
         s.shadows[shadowIndex].elvsm = options->vsm.elvsm;
         s.shadows[shadowIndex].bulbRadiusLs =
                 mSoftShadowOptions.penumbraScale * options->shadowBulbRadius
-                / wsTexelSizeAtOneMeter;
+                        / wsTexelSizeAtOneMeter;
 
     }
 }
@@ -763,15 +763,10 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
         const double n = shadowMap.getCamera().getNear();
         const double f = shadowMap.getCamera().getCullingFar();
         s.shadows[shadowIndex].layer = shadowMap.getLayer();
-        s.shadows[shadowIndex].lightFromWorldMatrix = {}; // no texture matrix for point lights
+        s.shadows[shadowIndex].lightFromWorldMatrix = shaderParameters.lightSpace;
         s.shadows[shadowIndex].direction = {};  // no direction of point lights
         s.shadows[shadowIndex].normalBias = normalBias * wsTexelSizeAtOneMeter;
-        s.shadows[shadowIndex].lightFromWorldZ = {
-                -((n + f) / (f - n)) * 0.5f + 0.5f,
-                  (f * n) / (f - n),
-                       -n / (f - n),
-                     1.0f / (f - n),
-        };
+        s.shadows[shadowIndex].lightFromWorldZ = shaderParameters.lightFromWorldZ;
         s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
         s.shadows[shadowIndex].nearOverFarMinusNear = float(n / (f - n));
         s.shadows[shadowIndex].elvsm = options->vsm.elvsm;
