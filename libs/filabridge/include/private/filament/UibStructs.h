@@ -247,10 +247,10 @@ static_assert(sizeof(LightsUib) == 64,
 struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr std::string_view _name{ "ShadowUniforms" };
     struct alignas(16) ShadowData {
-        math::mat4f lightFromWorldMatrix;       // 64 - unused for point lights
-        math::float3 direction;                 // 12 - unused for point lights
-        float normalBias;                       //  4 - unused for point lights
-        math::float4 lightFromWorldZ;           // 16 - point lights { depth reconstruction values }
+        math::mat4f lightFromWorldMatrix;       // 64
+        math::float3 direction;                 // 12
+        float normalBias;                       //  4
+        math::float4 lightFromWorldZ;           // 16
 
         float texelSizeAtOneMeter;              //  4
         float bulbRadiusLs;                     //  4
