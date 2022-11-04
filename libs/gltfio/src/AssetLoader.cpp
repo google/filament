@@ -603,7 +603,7 @@ void FAssetLoader::recurseEntities(const cgltf_data* srcAsset, const cgltf_node*
         }
     }
 
-    if (node->light ) {
+    if (node->light) {
         createLight(node->light, entity);
     }
 
