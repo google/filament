@@ -23,13 +23,14 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <unordered_map>
 
 namespace filament::fgdbg {
 class Session {
 
 public:
-    Session(const std::string& name,
-            std::shared_ptr<DebugServer> server) : name{ name }, server{ server } {}
+    Session(std::string name,
+            std::shared_ptr<DebugServer> server) : mName{ std::move(name) }, mServer{ server } {}
 
     void addPasses(const std::vector<Pass>& passes);
     void addPass(const Pass& pass);
@@ -42,16 +43,24 @@ public:
     /**
      * Send session information to server
      */
-    void update() const;
+    void update();
 
 private:
-    const std::string& name;
-    std::shared_ptr<DebugServer> server;
+    const std::string mName;
+    std::shared_ptr<DebugServer> mServer;
 
-    // TODO(@raviola) These might need to be a set/map in order to guarantee there are no two [Pass]
-    //  or [Resource] with the same id. This will also allow for updates by key.
-    std::vector<Pass> passes{};
-    std::vector<Resource> resources{};
+    std::unordered_map<size_t, Pass> mPasses{};
+    std::unordered_map<size_t, Resource> mResources{};
+
+    /**
+     * Ensures that all [Passes] read/write from existing resources.
+     * @return: true if the data should be uploaded to the server, false otherwise
+     */
+    bool verify();
+
+    [[nodiscard]] std::string serialize() const;
+
+    std::size_t mHash = 0;
 };
 }
 
