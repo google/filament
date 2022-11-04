@@ -9,12 +9,14 @@
 #include "Resource.h"
 #include "Pass.h"
 #include <memory>
+#include <string>
 
 namespace filament::fgdbg {
 class Session {
 
 public:
-    Session(std::shared_ptr<DebugServer> server) : server{ server } {}
+    Session(const std::string& name, std::shared_ptr<DebugServer> server) : name{ name },
+                                                                            server{ server } {}
 
     void addPasses(const std::vector<Pass>& passes);
     void addResources(const std::vector<Resource>& resources);
@@ -22,6 +24,7 @@ public:
 
 private:
     std::shared_ptr<DebugServer> server;
+    const std::string& name;
 };
 }
 
