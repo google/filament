@@ -96,6 +96,8 @@ struct MetalContext {
     SamplerStateCache samplerStateCache;
     ArgumentEncoderCache argumentEncoderCache;
 
+    PolygonOffset currentPolygonOffset = {0.0f, 0.0f};
+
     MetalSamplerGroup* samplerBindings[Program::SAMPLER_BINDING_COUNT] = {};
 
     // Keeps track of sampler groups we've finalized for the current render pass.
