@@ -35,6 +35,11 @@ Variant Variant::filterUserVariant(
         if (filterMask & (uint32_t)UserVariantFilterBit::FOG) {
             variant.key &= ~(filterMask & FOG);
         }
+    } else {
+        // depth variants can have their VSM bit filtered
+        if (filterMask & (uint32_t)UserVariantFilterBit::VSM) {
+            variant.key &= ~(filterMask & VSM);
+        }
     }
     if (!isSSRVariant(variant)) {
         // SSR variant needs to be handled separately
@@ -52,8 +57,6 @@ Variant Variant::filterUserVariant(
     }
     return variant;
 }
-
-
 
 namespace details {
 
