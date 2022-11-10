@@ -108,9 +108,9 @@ AtlasAllocator::NodeId AtlasAllocator::allocateInLayer(size_t maxHeight) noexcep
                 }
 
                 // We only want to find a fitting node that already has siblings, in order
-                // to accomplish a "best fit" allocation. So if we're a parent of a 'fitting'
-                // node and don't have children, we skip the children recursion.
-                if (curr.l == n - 1 && !node.hasChildren()) {
+                // to accomplish a "best fit" allocation. So if a parent (of what we're looking for)
+                // has no children, we skip the whole tree below it.
+                if (!node.hasChildren()) {
                     return QuadTree::TraversalResult::SKIP_CHILDREN;
                 }
 
@@ -121,6 +121,8 @@ AtlasAllocator::NodeId AtlasAllocator::allocateInLayer(size_t maxHeight) noexcep
     if (candidate.l >= 0) {
         const size_t i = index(candidate.l, candidate.code);
         Node& allocation = mQuadTree[i];
+        assert_invariant(!allocation.isAllocated());
+        assert_invariant(!allocation.hasChildren());
 
         if (candidate.l == n) {
             allocation.allocated = true;
@@ -132,26 +134,38 @@ AtlasAllocator::NodeId AtlasAllocator::allocateInLayer(size_t maxHeight) noexcep
                 assert_invariant(parent.hasChildren());
                 assert_invariant(!parent.hasAllChildren());
                 parent.children++;
+
+#ifndef NDEBUG
+                // check that all the parents are not allocated and have at least 1 child.
+                NodeId ppp = candidate;
+                while (ppp.l > 0) {
+                    const size_t pi = QuadTreeUtils::parent(ppp.l, ppp.code);
+                    ppp = NodeId{ int8_t(ppp.l - 1), uint8_t(ppp.code >> 2) };
+                    Node& node = mQuadTree[pi];
+                    assert_invariant(!node.isAllocated());
+                    assert_invariant(node.hasChildren());
+                }
+#endif
             }
         } else if (candidate.l < int8_t(QuadTree::height())) {
             // we need to create the hierarchy down to the level we need
-            assert_invariant(!allocation.isAllocated());
-            assert_invariant(!allocation.hasChildren());
-
-            NodeId found{};
+            NodeId found{ -1, 0 };
             QuadTree::traverse(candidate.l, candidate.code,
                     [this, n, &found](NodeId const& curr) -> QuadTree::TraversalResult {
                         size_t i = index(curr.l, curr.code);
                         Node& node = mQuadTree[i];
                         if (curr.l == n) {
                             found = curr;
+                            assert_invariant(!node.hasChildren());
                             node.allocated = true;
                             return QuadTree::TraversalResult::EXIT;
                         }
+                        assert_invariant(!node.hasAllChildren());
                         node.children++;
                         return QuadTree::TraversalResult::RECURSE;
                     });
 
+            assert_invariant(found.l != -1);
             candidate = found;
         }
     }
