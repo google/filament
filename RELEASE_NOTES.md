@@ -12,6 +12,7 @@ A new header is inserted each time a *tag* is created.
 - engine: add missing getters on `MaterialInstance`
 - WebGL: add missing `ColorGrading` JS bindings
 - engine: improvements/cleanup of Shadow mapping code [⚠️ **Recompile Materials**]
+- engine: fix potential memory corruption with larger scenes
 
 ## v1.28.3
 

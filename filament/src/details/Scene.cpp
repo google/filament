@@ -43,7 +43,7 @@ namespace filament {
 // ------------------------------------------------------------------------------------------------
 
 FScene::FScene(FEngine& engine) :
-        mEngine(engine) {
+        mEngine(engine), mSharedState(std::make_shared<SharedState>()) {
 }
 
 FScene::~FScene() noexcept = default;
@@ -268,7 +268,8 @@ void FScene::updateUBOs(
     PerRenderableData* buffer = [&]{
         if (count >= MAX_STREAM_ALLOCATION_COUNT) {
             // use the heap allocator
-            return (PerRenderableData*)mBufferPoolAllocator.get(count * sizeof(PerRenderableData));
+            auto& bufferPoolAllocator = mSharedState->mBufferPoolAllocator;
+            return (PerRenderableData*)bufferPoolAllocator.get(count * sizeof(PerRenderableData));
         } else {
             // allocate space into the command stream directly
             return driver.allocatePod<PerRenderableData>(count);
@@ -281,16 +282,24 @@ void FScene::updateUBOs(
         buffer[i] = uboData[i];
     }
 
+    // We capture state shared between Scene and the update buffer callback, because the Scene could
+    // be destroyed before the callback executes.
+    std::weak_ptr<SharedState>* const weakShared = new std::weak_ptr<SharedState>(mSharedState);
+
     // update the UBO
     driver.resetBufferObject(renderableUbh);
     driver.updateBufferObjectUnsynchronized(renderableUbh, {
             buffer, count * sizeof(PerRenderableData),
             +[](void* p, size_t s, void* user) {
                 if (s >= MAX_STREAM_ALLOCATION_COUNT * sizeof(PerRenderableData)) {
-                    FScene* const that = static_cast<FScene*>(user);
-                    that->mBufferPoolAllocator.put(p);
+                    std::weak_ptr<SharedState>* const weakShared =
+                            static_cast<std::weak_ptr<SharedState>*>(user);
+                    if (auto state = weakShared->lock()) {
+                        state->mBufferPoolAllocator.put(p);
+                    }
+                    delete weakShared;
                 }
-            }, this
+            }, weakShared
     }, 0);
 
     // update skybox

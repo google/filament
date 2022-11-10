@@ -92,7 +92,6 @@ private:
 
 template<size_t POOL_SIZE, size_t ALIGNMENT, typename AllocatorPolicy, typename LockingPolicy>
 BufferPoolAllocator<POOL_SIZE, ALIGNMENT, AllocatorPolicy, LockingPolicy>::~BufferPoolAllocator() noexcept {
-    assert_invariant(mOutstandingBuffers == mEntries.size());
     clearInternal();
 }
 
