@@ -24,7 +24,7 @@
 #include "details/Camera.h"
 #include "details/Scene.h"
 
-#include "private/backend/DriverApi.h"
+#include <backend/DriverApiForward.h>
 
 #include <filament/Viewport.h>
 
