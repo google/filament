@@ -368,8 +368,8 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
 
     // Computes St the transform to use in the shader to access the shadow map texture
     // i.e. it transforms a world-space vertex to a texture coordinate in the shadowmap
-    const mat4 MbMt = getTextureCoordsMapping(shadowMapInfo);
-    const mat4f St = mat4f(MbMt * S);
+    const auto [Mt, Mn] = ShadowMap::getTextureCoordsMapping(shadowMapInfo, getViewport());
+    const mat4f St = math::highPrecisionMultiply(Mt, S);
 
     ShadowMap::ShaderParameters shaderParameters;
 
@@ -377,7 +377,7 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
     // L * Mp * Mv is a rigid transform for directional lights, and doesn't matter.
     // if Wp[3][1] is 0, then LISPSM was cancelled.
     if (useLispsm && Wp[3][1] != 0.0f) {
-        shaderParameters.texelSizeAtOneMeterWs = texelSizeWorldSpace(Wp, mat4f(MbMt * F),
+        shaderParameters.texelSizeAtOneMeterWs = texelSizeWorldSpace(Wp, mat4f(Mt * F),
                 shadowMapInfo.shadowDimension);
     } else {
         // We know we're using an ortho projection
@@ -404,8 +404,8 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
     // The model matrix below is in fact inverted to get the view matrix and passed to the
     // shader as 'viewFromWorldMatrix', and is used in the VSM case to compute the depth metric.
     // (see depth_main.fs). Note that in the case of VSM, 'b' below is identity.
-    mCamera->setModelMatrix(mat4{ FCamera::rigidTransformInverse(Mv * b) });
-    mCamera->setCustomProjection(mat4(F * W * L * Mp), znear, zfar);
+    mCamera->setModelMatrix(FCamera::rigidTransformInverse(math::highPrecisionMultiplyd(Mv, b)));
+    mCamera->setCustomProjection(mat4(Mn * F * W * L * Mp), znear, zfar);
 
     // for the debug camera, we need to undo the world origin
     mDebugCamera->setCustomProjection(mat4(S * b * camera.worldOrigin), znear, zfar);
@@ -413,17 +413,15 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
     return shaderParameters;
 }
 
-ShadowMap::ShaderParameters ShadowMap::updateSpotOrPoint(
+ShadowMap::ShaderParameters ShadowMap::updatePunctual(
         mat4f const& Mv, float outerConeAngle, float nearPlane, float farPlane,
         const ShadowMapInfo& shadowMapInfo, const FLightManager::ShadowParams& params) noexcept {
     const mat4f Mp = mat4f::perspective(outerConeAngle * f::RAD_TO_DEG * 2.0f, 1.0f, nearPlane, farPlane);
-    const mat4f MpMv(math::highPrecisionMultiply(Mp, Mv));
 
     // Final shadow transform
-    const mat4f S = MpMv;
-
-    const mat4 MbMt = getTextureCoordsMapping(shadowMapInfo);
-    const mat4f St = mat4f(MbMt * S);
+    const mat4f S = math::highPrecisionMultiply(Mp, Mv);
+    const auto [Mt, Mn] = ShadowMap::getTextureCoordsMapping(shadowMapInfo, getViewport());
+    const mat4f St = math::highPrecisionMultiply(Mt, S);
 
     // TODO: focus projection
     //      1) focus on the casters
@@ -461,8 +459,8 @@ ShadowMap::ShaderParameters ShadowMap::updateSpotOrPoint(
     // The model matrix below is in fact inverted to get the view matrix and passed to the
     // shader as 'viewFromWorldMatrix', and is used in the VSM case to compute the depth metric.
     // (see depth_main.fs). Note that in the case of VSM, 'b' below is identity.
-    mCamera->setModelMatrix(mat4{ FCamera::rigidTransformInverse(Mv * b) });
-    mCamera->setCustomProjection(mat4(Mp), nearPlane, farPlane);
+    mCamera->setModelMatrix(FCamera::rigidTransformInverse(math::highPrecisionMultiplyd(Mv, b)));
+    mCamera->setCustomProjection(math::highPrecisionMultiplyd(Mn, Mp), nearPlane, farPlane);
 
     return shaderParameters;
 }
@@ -494,7 +492,7 @@ ShadowMap::ShaderParameters ShadowMap::updateSpot(FEngine& engine,
     float nearPlane = std::max(0.01f, -sceneInfo.lsNearFar[0]);
     float farPlane  = std::min(radius, -sceneInfo.lsNearFar[1]);
     auto outerConeAngle = lcm.getSpotLightOuterCone(li);
-    return updateSpotOrPoint(Mv, outerConeAngle, nearPlane, farPlane, shadowMapInfo, params);
+    return updatePunctual(Mv, outerConeAngle, nearPlane, farPlane, shadowMapInfo, params);
 }
 
 ShadowMap::ShaderParameters ShadowMap::updatePoint(FEngine& engine,
@@ -523,7 +521,7 @@ ShadowMap::ShaderParameters ShadowMap::updatePoint(FEngine& engine,
     auto li         = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
     const FLightManager::ShadowParams& params = lcm.getShadowParams(li);
     const mat4f Mv = getPointLightViewMatrix(TextureCubemapFace(face), position);
-    return updateSpotOrPoint(Mv, 45.0f * f::DEG_TO_RAD, 0.01f, radius, shadowMapInfo, params);
+    return updatePunctual(Mv, 45.0f * f::DEG_TO_RAD, 0.01f, radius, shadowMapInfo, params);
 }
 
 mat4f ShadowMap::applyLISPSM(mat4f& Wp,
@@ -605,7 +603,8 @@ mat4f ShadowMap::applyLISPSM(mat4f& Wp,
 
 
 // Apply these remapping in double to maintain a high precision for the depth axis
-mat4 ShadowMap::getTextureCoordsMapping(ShadowMapInfo const& info) noexcept {
+ShadowMap::TextureCoordsMapping ShadowMap::getTextureCoordsMapping(ShadowMapInfo const& info,
+        backend::Viewport const& viewport) noexcept {
     // remapping from NDC to texture coordinates (i.e. [-1,1] -> [0, 1])
     // ([1, 0] for depth mapping)
     const mat4f Mt(info.clipSpaceFlipped ? mat4f::row_major_init{
@@ -620,22 +619,12 @@ mat4 ShadowMap::getTextureCoordsMapping(ShadowMapInfo const& info) noexcept {
             0.0f,  0.0f,  0.0f, 1.0f
     });
 
-    // the shadow map texture might be larger than the shadow map dimension, so we add a scaling
-    // factor
-    const float v = float(info.textureDimension) / float(info.atlasDimension);
+    // apply the viewport transform
+    const float2 o = float2{ viewport.left, viewport.bottom } / float(info.atlasDimension);
+    const float2 s = float2{ viewport.width, viewport.height } / float(info.atlasDimension);
     const mat4f Mv(mat4f::row_major_init{
-            v,    0.0f, 0.0f, 0.0f,
-            0.0f, v,    0.0f, 0.0f,
-            0.0f, 0.0f, 1.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 1.0f
-    });
-
-    // apply the 1-texel border viewport transform
-    const float o = 1.0f / float(info.atlasDimension);
-    const float s = 1.0f - 2.0f * (1.0f / float(info.textureDimension));
-    const mat4f Mb(mat4f::row_major_init{
-             s,    0.0f, 0.0f, o,
-             0.0f, s,    0.0f, o,
+             s.x,  0.0f, 0.0f, o.x,
+             0.0f, s.y,  0.0f, o.y,
              0.0f, 0.0f, 1.0f, 0.0f,
              0.0f, 0.0f, 0.0f, 1.0f
     });
@@ -647,8 +636,8 @@ mat4 ShadowMap::getTextureCoordsMapping(ShadowMapInfo const& info) noexcept {
             0.0f,  0.0f,  0.0f,  1.0f
     }) : mat4f();
 
-    // Compute shadow-map texture access transform
-    return mat4(Mf * Mb * Mv * Mt);
+    // Compute shadow-map texture access and viewport transform
+    return { Mf * (Mv * Mt), inverse(Mt) * (Mv * Mt) };
 }
 
 mat4f ShadowMap::computeVsmLightSpaceMatrix(const mat4f& lightSpacePcf,
@@ -1204,12 +1193,9 @@ void ShadowMap::updateSceneInfoSpot(mat4f const& Mv, FScene const& scene,
     );
 }
 
-filament::Viewport ShadowMap::getViewport() const noexcept {
+backend::Viewport ShadowMap::getViewport() const noexcept {
     // We set a viewport with a 1-texel border for when we index outside the
     // texture.
-    // DON'T CHANGE this unless ShadowMap::getTextureCoordsMapping() is updated too.
-    // see: ShadowMap::getTextureCoordsMapping()
-    //
     // For floating-point depth textures, the 1-texel border could be set to
     // FLOAT_MAX to avoid clamping in the shadow shader (see sampleDepth inside
     // shadowing.fs). Unfortunately, the APIs don't seem let us clear depth
@@ -1233,7 +1219,7 @@ void ShadowMap::prepareCamera(Transaction const& transaction,
 }
 
 void ShadowMap::prepareViewport(Transaction const& transaction,
-        const filament::Viewport& viewport) noexcept {
+        backend::Viewport const& viewport) noexcept {
     PerShadowMapUniforms::prepareViewport(transaction, viewport, 0, 0);
 }
 
