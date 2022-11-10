@@ -42,6 +42,8 @@
 
 #include <tsl/robin_set.h>
 
+#include <memory>
+
 namespace filament {
 
 struct CameraInfo;
@@ -221,7 +223,12 @@ private:
     LightSoa mLightData;
     backend::Handle<backend::HwBufferObject> mRenderableViewUbh; // This is actually owned by the view.
     bool mHasContactShadows = false;
-    BufferPoolAllocator<3> mBufferPoolAllocator;
+
+    // State shared between Scene and driver callbacks.
+    struct SharedState {
+        BufferPoolAllocator<3> mBufferPoolAllocator = {};
+    };
+    std::shared_ptr<SharedState> mSharedState;
 };
 
 FILAMENT_DOWNCAST(Scene)
