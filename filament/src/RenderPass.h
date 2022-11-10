@@ -349,6 +349,7 @@ public:
 
         // if non-null, overrides the material's scissor
         void overrideScissor(backend::Viewport const* scissor) noexcept;
+        void overrideScissor(backend::Viewport const& scissor) noexcept;
 
         void execute(FEngine& engine, const char* name) const noexcept;
     };

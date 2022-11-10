@@ -393,11 +393,11 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     // initialized, as this happens in an `execute` block.
 
                     auto rt = resources.getRenderPassInfo(data.rt);
-                    rt.params.viewport = entry.shadowMap->getViewport();
 
                     engine.flush();
                     driver.beginRenderPass(rt.target, rt.params);
                     entry.shadowMap->bind(driver);
+                    entry.executor.overrideScissor(entry.shadowMap->getViewport());
                     entry.executor.execute(engine, "Shadow Pass");
                     driver.endRenderPass();
                 });
@@ -632,7 +632,7 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap,
     // compute shadow map frustum for culling
     const mat4f Mv = ShadowMap::getDirectionalLightViewMatrix(direction, position);
     const mat4f Mp = mat4f::perspective(outerConeAngle * f::RAD_TO_DEG * 2.0f, 1.0f, 0.01f, radius);
-    const mat4f MpMv(math::highPrecisionMultiply(Mp, Mv));
+    const mat4f MpMv = math::highPrecisionMultiply(Mp, Mv);
     const Frustum frustum(MpMv);
 
     // Cull shadow casters

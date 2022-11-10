@@ -79,7 +79,7 @@ void PerShadowMapUniforms::prepareLodBias(Transaction const& transaction,
 }
 
 void PerShadowMapUniforms::prepareViewport(Transaction const& transaction,
-        const filament::Viewport& viewport,
+        backend::Viewport const& viewport,
         uint32_t xoffset, uint32_t yoffset) noexcept {
     const float w = float(viewport.width);
     const float h = float(viewport.height);

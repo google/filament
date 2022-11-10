@@ -174,7 +174,7 @@ public:
     static void updateSceneInfoSpot(const math::mat4f& Mv, FScene const& scene,
             SceneInfo& sceneInfo);
 
-    filament::Viewport getViewport() const noexcept;
+    backend::Viewport getViewport() const noexcept;
 
     LightManager::ShadowOptions const* getShadowOptions() const noexcept { return mOptions; }
     size_t getLightIndex() const { return mLightIndex; }
@@ -192,7 +192,7 @@ public:
     static void prepareCamera(Transaction const& transaction,
             FEngine& engine, const CameraInfo& cameraInfo) noexcept;
     static void prepareViewport(Transaction const& transaction,
-            const filament::Viewport& viewport) noexcept;
+            backend::Viewport const& viewport) noexcept;
     static void prepareTime(Transaction const& transaction,
             FEngine& engine, math::float4 const& userTime) noexcept;
     static void prepareShadowMapping(Transaction const& transaction,
@@ -214,7 +214,7 @@ private:
     // 8 corners, 12 segments w/ 2 intersection max -- all of this twice (8 + 12 * 2) * 2 (768 bytes)
     using FrustumBoxIntersection = std::array<math::float3, 64>;
 
-    ShaderParameters updateSpotOrPoint(
+    ShaderParameters updatePunctual(
             math::mat4f const& Mv, float outerConeAngle, float nearPlane, float farPlane,
             const ShadowMapInfo& shadowMapInfo,
             const FLightManager::ShadowParams& params) noexcept;
@@ -278,7 +278,12 @@ private:
 
     static math::mat4f directionalLightFrustum(float n, float f) noexcept;
 
-    static math::mat4 getTextureCoordsMapping(ShadowMapInfo const& info) noexcept;
+    struct TextureCoordsMapping {
+        math::mat4f clipToTexture;
+        math::mat4f clipToNdc;
+    };
+    static TextureCoordsMapping getTextureCoordsMapping(ShadowMapInfo const& info,
+            backend::Viewport const& viewport) noexcept;
 
     static math::mat4f computeVsmLightSpaceMatrix(const math::mat4f& lightSpacePcf,
             const math::mat4f& Mv, float znear, float zfar) noexcept;

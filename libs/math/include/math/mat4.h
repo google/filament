@@ -588,6 +588,26 @@ constexpr mat4f highPrecisionMultiply(mat4f const& lhs, mat4f const& rhs) noexce
     };
 }
 
+// mat4 * float4, with double precision intermediates
+constexpr double4 highPrecisionMultiplyd(mat4f const& lhs, float4 const& rhs) noexcept {
+    double4 result{};
+    result += lhs[0] * rhs[0];
+    result += lhs[1] * rhs[1];
+    result += lhs[2] * rhs[2];
+    result += lhs[3] * rhs[3];
+    return result;
+}
+
+// mat4 * mat4, with double precision intermediates
+constexpr mat4 highPrecisionMultiplyd(mat4f const& lhs, mat4f const& rhs) noexcept {
+    return {
+            highPrecisionMultiplyd(lhs, rhs[0]),
+            highPrecisionMultiplyd(lhs, rhs[1]),
+            highPrecisionMultiplyd(lhs, rhs[2]),
+            highPrecisionMultiplyd(lhs, rhs[3])
+    };
+}
+
 // ----------------------------------------------------------------------------------------
 }  // namespace math
 }  // namespace filament
