@@ -750,6 +750,11 @@ void RenderPass::Executor::execute(backend::DriverApi& driver,
                 continue;
             }
 
+            // primitiveHandle may be invalid if no geometry was set on the renderable.
+            if (UTILS_UNLIKELY(!first->primitive.primitiveHandle)) {
+                continue;
+            }
+
             // per-renderable uniform
             const PrimitiveInfo info = first->primitive;
             pipeline.rasterState = info.rasterState;
