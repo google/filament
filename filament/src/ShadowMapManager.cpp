@@ -277,11 +277,6 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                             };
                             entry.executor.overridePolygonOffset(&polygonOffset);
                         }
-
-                        constexpr const backend::Viewport disabledScissor{ 0, 0,
-                                (uint32_t)std::numeric_limits<int32_t>::max(),
-                                (uint32_t)std::numeric_limits<int32_t>::max() };
-                        entry.executor.overrideScissor(&disabledScissor);
                     }
                 }
 
