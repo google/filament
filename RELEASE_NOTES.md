@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.29.0
+
 - gltfio: calculate primitive's AABB correctly.
 - gltfio: recompute bounding boxes with morph targets
 - engine: add missing getters on `MaterialInstance`
