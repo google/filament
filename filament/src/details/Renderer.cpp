@@ -656,7 +656,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
         RenderPass shadowPass(pass);
         shadowPass.setVariant(shadowVariant);
-        auto shadows = view.renderShadowMaps(fg, engine, cameraInfo, shadowPass);
+        auto shadows = view.renderShadowMaps(engine, fg, cameraInfo, mShaderUserTime, shadowPass);
         blackboard["shadows"] = shadows;
     }
 
@@ -740,8 +740,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // view set-ups that need to happen before rendering
     fg.addTrivialSideEffectPass("Prepare View Uniforms",
-            [=, &uniforms = view.getPerViewUniforms()](DriverApi& driver) {
-                uniforms.prepareCamera(cameraInfo);
+            [=, &view, &engine](DriverApi& driver) {
+                view.prepareCamera(engine, cameraInfo);
 
                 // The code here is a little fragile. In theory, we need to call prepareViewport()
                 // for each render pass, because the viewport parameters depend on the resolution.
@@ -761,11 +761,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 // The reason why this bug is acceptable is that the viewport parameters are
                 // currently only used for generating noise, so it's not too bad.
 
-                uniforms.prepareViewport(svp,
+                view.prepareViewport(svp,
                         xvp.left   * aoOptions.resolution,
                         xvp.bottom * aoOptions.resolution);
 
-                uniforms.commit(driver);
+                view.commitUniforms(driver);
+
+                // set uniforms and samplers for the color passes
+                view.bindPerViewUniformsAndSamplers(driver);
             });
 
     // --------------------------------------------------------------------------------------------

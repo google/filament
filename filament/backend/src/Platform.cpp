@@ -42,7 +42,9 @@
         #include "vulkan/PlatformVkCocoa.h"
     #endif
 #elif defined(__linux__)
-    #if defined(FILAMENT_SUPPORTS_WAYLAND)
+    #if defined(FILAMENT_SUPPORTS_GGP)
+        #include "vulkan/PlatformVkLinuxGGP.h"
+    #elif defined(FILAMENT_SUPPORTS_WAYLAND)
         #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
             #include "vulkan/PlatformVkLinuxWayland.h"
         #endif
@@ -120,7 +122,9 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
             #elif defined(IOS)
                 return new PlatformVkCocoaTouch();
             #elif defined(__linux__)
-                #if defined(FILAMENT_SUPPORTS_WAYLAND)
+                #if defined(FILAMENT_SUPPORTS_GGP)
+                    return new PlatformVkLinuxGGP();
+                #elif defined(FILAMENT_SUPPORTS_WAYLAND)
                     return new PlatformVkLinuxWayland();
                 #elif defined(FILAMENT_SUPPORTS_X11)
                     return new PlatformVkLinuxX11();

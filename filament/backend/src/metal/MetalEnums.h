@@ -337,8 +337,6 @@ constexpr inline MTLPrimitiveType getMetalPrimitiveType(PrimitiveType type) noex
         case PrimitiveType::LINE_STRIP: return MTLPrimitiveTypeLineStrip;
         case PrimitiveType::TRIANGLES: return MTLPrimitiveTypeTriangle;
         case PrimitiveType::TRIANGLE_STRIP: return MTLPrimitiveTypeTriangleStrip;
-        case PrimitiveType::NONE:
-            ASSERT_POSTCONDITION(false, "NONE is not a valid primitive type.");
     }
 }
 

@@ -92,6 +92,8 @@ public:
             filament::Viewport const& viewport, CameraInfo const& cameraInfo,
             math::float4 const& userTime, bool needsAlphaChannel) noexcept;
 
+    void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept;
+
     void setScene(FScene* scene) { mScene = scene; }
     FScene const* getScene() const noexcept { return mScene; }
     FScene* getScene() noexcept { return mScene; }
@@ -132,7 +134,7 @@ public:
     }
 
     void prepareUpscaler(math::float2 scale) const noexcept;
-    void prepareCamera(const CameraInfo& cameraInfo) const noexcept;
+    void prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) const noexcept;
     void prepareViewport(const Viewport& viewport, uint32_t xoffset, uint32_t yoffset) const noexcept;
     void prepareShadowing(FEngine& engine, backend::DriverApi& driver,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
@@ -148,7 +150,7 @@ public:
             ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
-    void prepareShadowMap(bool highPrecision) const noexcept;
+    void prepareShadowMapping(bool highPrecision) const noexcept;
 
     void cleanupRenderPasses() const noexcept;
     void froxelize(FEngine& engine, math::mat4f const& viewMatrix) const noexcept;
@@ -165,8 +167,9 @@ public:
     bool hasPCSS() const noexcept { return mShadowType == ShadowType::PCSS; }
     bool hasPicking() const noexcept { return mActivePickingQueriesList != nullptr; }
 
-    FrameGraphId<FrameGraphTexture> renderShadowMaps(FrameGraph& fg, FEngine& engine,
-            CameraInfo const& cameraInfo, RenderPass const& pass) noexcept;
+    FrameGraphId<FrameGraphTexture> renderShadowMaps(FEngine& engine, FrameGraph& fg,
+            CameraInfo const& cameraInfo, math::float4 const& userTime,
+            RenderPass const& pass) noexcept;
 
     void updatePrimitivesLod(
             FEngine& engine, const CameraInfo& camera,
@@ -450,13 +453,6 @@ private:
             FRenderableManager::Visibility const* visibility,
             Culler::result_type* visibleMask,
             size_t count);
-
-    void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
-        mPerViewUniforms.bind(driver);
-        driver.bindUniformBuffer(+UniformBindingPoints::LIGHTS, mLightUbh);
-        driver.bindUniformBuffer(+UniformBindingPoints::SHADOW, mShadowMapManager.getShadowUniformsHandle());
-        driver.bindUniformBuffer(+UniformBindingPoints::FROXEL_RECORDS, mFroxelizer.getRecordBuffer());
-    }
 
     // Clean-up the whole history, free all resources. This is typically called when the View is
     // being terminated.

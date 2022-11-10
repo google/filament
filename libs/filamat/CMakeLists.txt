@@ -57,6 +57,7 @@ set(PRIVATE_HDRS
         src/eiff/DictionarySpirvChunk.h
         src/eiff/MaterialSpirvChunk.h
         src/GLSLPostProcessor.h
+        src/MetalArgumentBuffer.h
         src/ShaderMinifier.h
         src/sca/ASTHelpers.h
         src/sca/GLSLTools.h
@@ -67,6 +68,7 @@ set(SRCS
         src/eiff/BlobDictionary.cpp
         src/eiff/DictionarySpirvChunk.cpp
         src/eiff/MaterialSpirvChunk.cpp
+        src/MetalArgumentBuffer.cpp
         src/sca/ASTHelpers.cpp
         src/sca/GLSLTools.cpp
         src/GLSLPostProcessor.cpp
@@ -163,6 +165,7 @@ project(test_filamat)
 set(TARGET test_filamat)
 set(SRCS
         tests/test_filamat.cpp
+        tests/test_argBufferFixup.cpp
         tests/test_includes.cpp)
 
 add_executable(${TARGET} ${SRCS})

@@ -90,8 +90,8 @@ public:
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
 
     // Renders all the shadow maps.
-    FrameGraphId<FrameGraphTexture> render(FrameGraph& fg, FEngine& engine,
-            RenderPass const& pass, FView& view, CameraInfo const& mainCameraInfo) noexcept;
+    FrameGraphId<FrameGraphTexture> render(FEngine& engine, FrameGraph& fg, RenderPass const& pass,
+            FView& view, CameraInfo const& mainCameraInfo, math::float4 const& userTime) noexcept;
 
     ShadowMap* getCascadeShadowMap(size_t cascade) noexcept {
         assert_invariant(cascade < CONFIG_MAX_SHADOW_CASCADES);
@@ -140,7 +140,7 @@ private:
     void preparePointShadowMap(ShadowMap& map,
             FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
-            FScene::LightSoa& lightData, uint8_t face,
+            FScene::LightSoa& lightData,
             ShadowMap::SceneInfo const& sceneInfo) noexcept;
 
     static void updateSpotVisibilityMasks(
@@ -219,7 +219,7 @@ private:
 
     // inline storage for all our ShadowMap objects, we can't easily use a std::array<> directly.
     // because ShadowMap doesn't have a default ctor, and we avoid out-of-line allocations.
-    // Each ShadowMap is currently 32 bytes.
+    // Each ShadowMap is currently 2120 bytes (total of 132KB for 64 shadow maps)
     using ShadowMapStorage = std::aligned_storage<sizeof(ShadowMap), alignof(ShadowMap)>::type;
     std::array<ShadowMapStorage, CONFIG_MAX_SHADOW_LAYERS> mShadowMapCache;
 };

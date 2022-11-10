@@ -263,7 +263,6 @@ VulkanBufferObject::VulkanBufferObject(VulkanContext& context, VulkanStagePool& 
 void VulkanRenderPrimitive::setPrimitiveType(PrimitiveType pt) {
     this->type = pt;
     switch (pt) {
-        case PrimitiveType::NONE:
         case PrimitiveType::POINTS:
             primitiveTopology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
             break;

@@ -79,23 +79,10 @@ void RenderPass::setCamera(const CameraInfo& camera) noexcept {
     mCameraForwardVector = camera.getForwardVector();
 }
 
-void RenderPass::overridePolygonOffset(backend::PolygonOffset const* polygonOffset) noexcept {
-    if ((mPolygonOffsetOverride = (polygonOffset != nullptr))) {
-        mPolygonOffset = *polygonOffset;
-    }
-}
-
-
 void RenderPass::setScissorViewport(backend::Viewport viewport) noexcept {
     assert_invariant(viewport.width  <= std::numeric_limits<int32_t>::max());
     assert_invariant(viewport.height <= std::numeric_limits<int32_t>::max());
     mScissorViewport = viewport;
-}
-
-void RenderPass::overrideScissor(backend::Viewport const* scissor) noexcept {
-    if ((mScissorOverride = (scissor != nullptr))) {
-        mScissor = *scissor;
-    }
 }
 
 void RenderPass::appendCommands(FEngine& engine, CommandTypeFlags const commandTypeFlags) noexcept {
@@ -194,6 +181,22 @@ void RenderPass::sortCommands(FEngine& engine) noexcept {
     if (engine.isAutomaticInstancingEnabled()) {
         instanceify(engine);
     }
+}
+
+void RenderPass::execute(FEngine& engine, const char* name,
+        backend::Handle<backend::HwRenderTarget> renderTarget,
+        backend::RenderPassParams params) const noexcept {
+
+    DriverApi& driver = engine.getDriverApi();
+
+    // this is a good time to flush the CommandStream, because we're about to potentially
+    // output a lot of commands. This guarantees here that we have at least
+    // FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB bytes (1MiB by default).
+    engine.flush();
+
+    driver.beginRenderPass(renderTarget, params);
+    getExecutor().execute(engine, name);
+    driver.endRenderPass();
 }
 
 void RenderPass::instanceify(FEngine& engine) noexcept {
@@ -541,11 +544,6 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
          */
         for (size_t pi = 0, c = primitives.size(); pi < c; ++pi) {
             auto const& primitive = primitives[pi];
-            // handle the case where this primitive is empty / no-op
-            if (primitive.getPrimitiveType() == PrimitiveType::NONE) {
-                continue;
-            }
-
             auto const& morphTargets = morphing.targets[pi];
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
             FMaterial const* const ma = mi->getMaterial();
@@ -608,6 +606,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
                     // cancel command if asked to filter translucent objects
                     key |= select(filterTranslucentObjects);
 
+                    // cancel command if both front and back faces are culled
+                    key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
+
                     *curr = cmdColor;
                     curr->key = key;
                     ++curr;
@@ -634,6 +635,10 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 }
 
                 *curr = cmdColor;
+
+                // cancel command if both front and back faces are culled
+                curr->key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
+
                 ++curr;
             }
 
@@ -662,7 +667,12 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
                         & !(filterTranslucentObjects & translucent)
                         & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
                             | writeDepthForShadowCasters;
+
                 *curr = cmdDepth;
+
+                // cancel command if both front and back faces are culled
+                curr->key |= select(mi->getCullingMode() == CullingMode::FRONT_AND_BACK);
+
                 ++curr;
             }
         }
@@ -685,24 +695,25 @@ void RenderPass::updateSummedPrimitiveCounts(
 
 // ------------------------------------------------------------------------------------------------
 
-void RenderPass::Executor::execute(FEngine& engine, const char* name,
-        backend::Handle<backend::HwRenderTarget> renderTarget,
-        backend::RenderPassParams const& params) const noexcept {
-    DriverApi& driver = engine.getDriverApi();
+void RenderPass::Executor::overridePolygonOffset(backend::PolygonOffset const* polygonOffset) noexcept {
+    if ((mPolygonOffsetOverride = (polygonOffset != nullptr))) {
+        mPolygonOffset = *polygonOffset;
+    }
+}
 
-    // this is a good time to flush the CommandStream, because we're about to potentially
-    // output a lot of commands. This guarantees here that we have at least
-    // FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB bytes (1MiB by default).
-    engine.flush();
+void RenderPass::Executor::overrideScissor(backend::Viewport const* scissor) noexcept {
+    if ((mScissorOverride = (scissor != nullptr))) {
+        mScissor = *scissor;
+    }
+}
 
-    driver.beginRenderPass(renderTarget, params);
-    recordDriverCommands(engine, driver, mBegin, mEnd, params.readOnlyDepthStencil);
-    driver.endRenderPass();
+void RenderPass::Executor::execute(FEngine& engine, const char* name) const noexcept {
+    execute(engine.getDriverApi(), mCommands.begin(), mCommands.end());
 }
 
 UTILS_NOINLINE // no need to be inlined
-void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::DriverApi& driver,
-        const Command* first, const Command* last, uint16_t readOnlyDepthStencil) const noexcept {
+void RenderPass::Executor::execute(backend::DriverApi& driver,
+        const Command* first, const Command* last) const noexcept {
     SYSTRACE_CALL();
 
     if (first != last) {
@@ -722,7 +733,7 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
         Handle<HwBufferObject> uboHandle = mUboHandle;
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
-        auto customCommands = mCustomCommands.data();
+        auto const* UTILS_RESTRICT pCustomCommands = mCustomCommands.data();
 
         first--;
         while (++first != last) {
@@ -735,18 +746,18 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
             if (UTILS_UNLIKELY((first->key & CUSTOM_MASK) != uint64_t(CustomCommand::PASS))) {
                 uint32_t index = (first->key & CUSTOM_INDEX_MASK) >> CUSTOM_INDEX_SHIFT;
                 assert_invariant(index < mCustomCommands.size());
-                customCommands[index]();
+                pCustomCommands[index]();
+                continue;
+            }
+
+            // primitiveHandle may be invalid if no geometry was set on the renderable.
+            if (UTILS_UNLIKELY(!first->primitive.primitiveHandle)) {
                 continue;
             }
 
             // per-renderable uniform
             const PrimitiveInfo info = first->primitive;
             pipeline.rasterState = info.rasterState;
-
-#ifndef NDEBUG
-            const bool readOnlyDepthGuaranteed = readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH;
-            assert_invariant(!readOnlyDepthGuaranteed || !pipeline.rasterState.depthWrite);
-#endif
 
             if (UTILS_UNLIKELY(mi != info.mi)) {
                 // this is always taken the first time
@@ -829,15 +840,13 @@ void RenderPass::Executor::recordDriverCommands(FEngine& engine, backend::Driver
 // ------------------------------------------------------------------------------------------------
 
 RenderPass::Executor::Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept
-        : mBegin(b), mEnd(e),
-          mCustomCommands(pass->mCustomCommands),
+        : mCommands(b, e),
+          mCustomCommands(pass->mCustomCommands.data(), pass->mCustomCommands.size()),
           mUboHandle(pass->mUboHandle),
           mInstancedUboHandle(pass->mInstancedUboHandle),
-          mPolygonOffset(pass->mPolygonOffset),
-          mScissor(pass->mScissor),
           mScissorViewport(pass->mScissorViewport),
-          mPolygonOffsetOverride(pass->mPolygonOffsetOverride),
-          mScissorOverride(pass->mScissorOverride) {
+          mPolygonOffsetOverride(false),
+          mScissorOverride(false) {
     assert_invariant(b >= pass->begin());
     assert_invariant(e <= pass->end());
 }

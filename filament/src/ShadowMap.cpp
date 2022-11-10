@@ -41,8 +41,10 @@ using namespace backend;
 static constexpr bool USE_DEPTH_CLAMP = false;
 
 ShadowMap::ShadowMap(FEngine& engine) noexcept
-        : mShadowType(ShadowType::DIRECTIONAL),
-          mHasVisibleShadows(false) {
+        : mPerViewUniforms(engine),
+          mShadowType(ShadowType::DIRECTIONAL),
+          mHasVisibleShadows(false),
+          mFace(0) {
     Entity entities[2];
     engine.getEntityManager().create(2, entities);
     mCamera = engine.createCamera(entities[0]);
@@ -60,16 +62,19 @@ void ShadowMap::terminate(FEngine& engine) {
         engine.destroyCameraComponent(e);
     }
     engine.getEntityManager().destroy(sizeof(entities) / sizeof(Entity), entities);
+    mPerViewUniforms.terminate(engine.getDriverApi());
 }
 
 ShadowMap::~ShadowMap() = default;
 
-void ShadowMap::initialize(size_t lightIndex, ShadowType shadowType, uint16_t shadowIndex,
+void ShadowMap::initialize(size_t lightIndex, ShadowType shadowType,
+        uint16_t shadowIndex, uint8_t face,
         LightManager::ShadowOptions const* options) {
     mLightIndex = lightIndex;
     mShadowIndex = shadowIndex;
     mOptions = options;
     mShadowType = shadowType;
+    mFace = face;
 }
 
 mat4f ShadowMap::getDirectionalLightViewMatrix(float3 direction, float3 position) noexcept {
@@ -1236,6 +1241,58 @@ void ShadowMap::updateSceneInfoSpot(mat4f const& Mv, FScene const& scene,
             [&](Aabb receiver, Culler::result_type) {
             }
     );
+}
+
+filament::Viewport ShadowMap::getViewport() const noexcept {
+    // We set a viewport with a 1-texel border for when we index outside the
+    // texture.
+    // DON'T CHANGE this unless ShadowMap::getTextureCoordsMapping() is updated too.
+    // see: ShadowMap::getTextureCoordsMapping()
+    //
+    // For floating-point depth textures, the 1-texel border could be set to
+    // FLOAT_MAX to avoid clamping in the shadow shader (see sampleDepth inside
+    // shadowing.fs). Unfortunately, the APIs don't seem let us clear depth
+    // attachments to anything greater than 1.0, so we'd need a way to do this other
+    // than clearing.
+    const uint32_t dim = mOptions->mapSize;
+    if (isPointShadow()) {
+        // for point-light we don't have a border
+        return { 0, 0, dim, dim };
+    } else {
+        return { 1, 1, dim - 2, dim - 2 };
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
+void ShadowMap::prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) noexcept {
+    mPerViewUniforms.prepareCamera(engine, cameraInfo);
+    mPerViewUniforms.prepareLodBias(0.0f);
+}
+
+void ShadowMap::prepareViewport(const filament::Viewport& viewport) noexcept {
+    mPerViewUniforms.prepareViewport(viewport, 0, 0);
+}
+
+void ShadowMap::prepareTime(FEngine& engine, math::float4 const& userTime) noexcept {
+    mPerViewUniforms.prepareTime(engine, userTime);
+}
+
+void ShadowMap::prepareDirectionalLight(FEngine& engine, math::float3 const& sceneSpaceDirection,
+        LightManager::Instance instance) noexcept {
+    mPerViewUniforms.prepareDirectionalLight(engine, 1.0f, sceneSpaceDirection, instance);
+}
+
+void ShadowMap::prepareShadowMapping(bool highPrecision) noexcept {
+    mPerViewUniforms.prepareShadowMapping(highPrecision);
+}
+
+void ShadowMap::commitUniforms(backend::DriverApi& driver) const noexcept {
+    mPerViewUniforms.commit(driver);
+}
+
+void ShadowMap::bindPerViewUniformsAndSamplers(backend::DriverApi& driver) const noexcept {
+    mPerViewUniforms.bind(driver);
 }
 
 } // namespace filament

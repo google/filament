@@ -48,6 +48,7 @@ set(PUBLIC_HDRS
 )
 
 set(SRCS
+        src/AtlasAllocator.cpp
         src/Box.cpp
         src/BufferObject.cpp
         src/Camera.cpp

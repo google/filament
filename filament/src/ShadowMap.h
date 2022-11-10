@@ -19,12 +19,14 @@
 
 #include "components/LightManager.h"
 
+#include "PerViewUniforms.h"
+
 #include "details/Camera.h"
 #include "details/Scene.h"
 
-#include "backend/DriverApiForward.h"
-#include "private/backend/SamplerGroup.h"
-#include "math/mat4.h"
+#include "private/backend/DriverApi.h"
+
+#include <filament/Viewport.h>
 
 #include <math/mat4.h>
 #include <math/vec4.h>
@@ -122,7 +124,7 @@ public:
     static math::mat4f getPointLightViewMatrix(backend::TextureCubemapFace face,
             math::float3 position) noexcept;
 
-    void initialize(size_t lightIndex, ShadowType shadowType, uint16_t shadowIndex,
+    void initialize(size_t lightIndex, ShadowType shadowType, uint16_t shadowIndex, uint8_t face,
             LightManager::ShadowOptions const* options);
 
     struct ShaderParameters {
@@ -172,6 +174,8 @@ public:
     static void updateSceneInfoSpot(const math::mat4f& Mv, FScene const& scene,
             SceneInfo& sceneInfo);
 
+    filament::Viewport getViewport() const noexcept;
+
     LightManager::ShadowOptions const* getShadowOptions() const noexcept { return mOptions; }
     size_t getLightIndex() const { return mLightIndex; }
     uint16_t getShadowIndex() const { return mShadowIndex; }
@@ -181,6 +185,16 @@ public:
     bool isSpotShadow() const noexcept { return mShadowType == ShadowType::SPOT; }
     bool isPointShadow() const noexcept { return mShadowType == ShadowType::POINT; }
     ShadowType getShadowType() const noexcept { return mShadowType; }
+    uint8_t getFace() const noexcept { return mFace; }
+
+    void prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) noexcept;
+    void prepareViewport(const filament::Viewport& viewport) noexcept;
+    void prepareTime(FEngine& engine, math::float4 const& userTime) noexcept;
+    void prepareDirectionalLight(FEngine& engine, math::float3 const& sceneSpaceDirection,
+            LightManager::Instance instance) noexcept;
+    void prepareShadowMapping(bool highPrecision) noexcept;
+    void commitUniforms(backend::DriverApi& driver) const noexcept;
+    void bindPerViewUniformsAndSamplers(backend::DriverApi& driver) const noexcept;
 
 private:
     struct Segment {
@@ -278,6 +292,10 @@ private:
             { 2, 6, 7, 3 },  // top
     };
 
+    // TODO: for shadow maps we don't need the whole `PerViewUniforms` which is large.
+    //       replace it with a smaller version that updates only what we need.
+    mutable PerViewUniforms mPerViewUniforms;   // 40 + 2048
+
     FCamera* mCamera = nullptr;                 //  8
     FCamera* mDebugCamera = nullptr;            //  8
 
@@ -287,8 +305,9 @@ private:
     uint32_t mLightIndex = 0;   // which light are we shadowing             // 4
     uint16_t mShadowIndex = 0;  // our index in the shadowMap vector        // 2
     uint8_t mLayer = 0;         // our layer in the shadowMap texture       // 1
-    ShadowType mShadowType : 2;
-    bool mHasVisibleShadows : 2;
+    ShadowType mShadowType  : 2;                                            // :2
+    bool mHasVisibleShadows : 2;                                            // :2
+    uint8_t mFace           : 3;                                            // :3
 };
 
 } // namespace filament

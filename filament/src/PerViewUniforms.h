@@ -63,8 +63,8 @@ public:
 
     void terminate(backend::DriverApi& driver);
 
-    void prepareCamera(const CameraInfo& camera) noexcept;
-    void prepareUpscaler(math::float2 scale, DynamicResolutionOptions const& options) noexcept;
+    void prepareCamera(FEngine& engine, const CameraInfo& camera) noexcept;
+    void prepareLodBias(float bias) noexcept;
 
     /*
      * @param viewport  viewport (should be same as RenderPassParams::viewport)
@@ -75,8 +75,8 @@ public:
      */
     void prepareViewport(const filament::Viewport& viewport, uint32_t xoffset, uint32_t yoffset) noexcept;
 
-    void prepareTime(math::float4 const& userTime) noexcept;
-    void prepareTemporalNoise(TemporalAntiAliasingOptions const& options) noexcept;
+    void prepareTime(FEngine& engine, math::float4 const& userTime) noexcept;
+    void prepareTemporalNoise(FEngine& engine, TemporalAntiAliasingOptions const& options) noexcept;
     void prepareExposure(float ev100) noexcept;
     void prepareFog(math::float3 const& cameraPosition, FogOptions const& options) noexcept;
     void prepareStructure(TextureHandle structure) noexcept;
@@ -95,10 +95,11 @@ public:
 
     void prepareShadowMapping(bool highPrecision) noexcept;
 
-    void prepareDirectionalLight(float exposure,
+    void prepareDirectionalLight(FEngine& engine, float exposure,
             math::float3 const& sceneSpaceDirection, LightManagerInstance instance) noexcept;
 
-    void prepareAmbientLight(FIndirectLight const& ibl, float intensity, float exposure) noexcept;
+    void prepareAmbientLight(FEngine& engine,
+            FIndirectLight const& ibl, float intensity, float exposure) noexcept;
 
     void prepareDynamicLights(Froxelizer& froxelizer) noexcept;
 
@@ -126,13 +127,10 @@ public:
     void unbindSamplers() noexcept;
 
 private:
-    FEngine& mEngine;
-    math::float2 mClipControl{};
     TypedUniformBuffer<PerViewUib> mUniforms;
     backend::SamplerGroup mSamplers;
     backend::Handle<backend::HwBufferObject> mUniformBufferHandle;
     backend::Handle<backend::HwSamplerGroup> mSamplerGroupHandle;
-    std::uniform_real_distribution<float> mUniformDistribution{ 0.0f, 1.0f };
     static void prepareShadowSampling(PerViewUib& uniforms,
             ShadowMappingUniforms const& shadowMappingUniforms) noexcept;
 };
