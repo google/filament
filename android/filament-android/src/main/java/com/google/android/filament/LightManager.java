@@ -350,20 +350,6 @@ public class LightManager {
          */
 
         /**
-         * The number of MSAA samples to use when rendering VSM shadow maps.
-         * Must be a power-of-two and greater than or equal to 1. A value of 1 effectively turns
-         * off MSAA.
-         * Higher values may not be available depending on the underlying hardware.
-         *
-         * <p>
-         * <strong>Warning: This API is still experimental and subject to change.</strong>
-         * </p>
-         */
-        @IntRange(from = 1)
-        public int vsmMsaaSamples = 1;
-
-
-        /**
          * When elvsm is set to true, "Exponential Layered VSM without Layers" are used. It is
          * an improvement to the default EVSM which suffers important light leaks. Enabling
          * ELVSM for a single shadowmap doubles the memory usage of all shadow maps.
@@ -519,7 +505,7 @@ public class LightManager {
                     options.shadowFarHint, options.stable, options.lispsm,
                     options.polygonOffsetConstant, options.polygonOffsetSlope,
                     options.screenSpaceContactShadows,
-                    options.stepCount, options.maxShadowDistance, options.vsmMsaaSamples,
+                    options.stepCount, options.maxShadowDistance,
                     options.elvsm, options.blurWidth, options.shadowBulbRadius);
             return this;
         }
@@ -1185,7 +1171,7 @@ public class LightManager {
              boolean stable, boolean lispsm,
              float polygonOffsetConstant, float polygonOffsetSlope,
              boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance,
-             int vsmMsaaSamples, boolean elvsm, float blurWidth, float shadowBulbRadius);
+             boolean elvsm, float blurWidth, float shadowBulbRadius);
     private static native void nBuilderCastLight(long nativeBuilder, boolean enabled);
     private static native void nBuilderPosition(long nativeBuilder, float x, float y, float z);
     private static native void nBuilderDirection(long nativeBuilder, float x, float y, float z);

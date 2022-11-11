@@ -190,6 +190,7 @@ private:
         uint16_t size = 0;
         uint8_t layers = 0;
         uint8_t levels = 0;
+        uint8_t msaaSamples = 1;
         backend::TextureFormat format = backend::TextureFormat::DEPTH16;
     } mTextureAtlasRequirements;
 

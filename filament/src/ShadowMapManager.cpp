@@ -159,6 +159,8 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
         utils::FixedCapacityVector<ShadowPass> passList;
     };
 
+    VsmShadowOptions const& vsmShadowOptions = view.getVsmShadowOptions();
+
     auto& prepareShadowPass = fg.addPass<PrepareShadowPassData>("Prepare Shadow Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.passList.reserve(CONFIG_MAX_SHADOWMAPS);
@@ -203,7 +205,8 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                 // "read" from one of its resource (only writes), so the FrameGraph culls it.
                 builder.sideEffect();
             },
-            [this, &engine, &view, scene, mainCameraInfo, userTime, passTemplate = pass](
+            [this, &engine, &view, vsmShadowOptions,
+                scene, mainCameraInfo, userTime, passTemplate = pass](
                     FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
 
                 // Note: we could almost parallel_for the loop below, the problem currently is
@@ -251,7 +254,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         ShadowMap::prepareViewport(transaction, shadowMap.getViewport());
                         ShadowMap::prepareTime(transaction, engine, userTime);
                         ShadowMap::prepareShadowMapping(transaction,
-                                view.getVsmShadowOptions().highPrecision);
+                                vsmShadowOptions.highPrecision);
                         shadowMap.commit(transaction, driver);
 
                         // updatePrimitivesLod must be run before RenderPass::appendCommands.
@@ -305,6 +308,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
         
         const uint8_t layer = entry.shadowMap->getLayer();
         const auto* options = entry.shadowMap->getShadowOptions();
+        const auto msaaSamples = textureRequirements.msaaSamples;
 
         auto& shadowPass = fg.addPass<ShadowPassData>("Shadow Pass",
                 [&](FrameGraph::Builder& builder, auto& data) {
@@ -323,7 +327,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         // We specify the sample count here because we don't need automatic resolve.
                         auto depth = builder.createTexture("Temporary VSM Depth Texture", {
                                 .width = textureRequirements.size, .height = textureRequirements.size,
-                                .samples = options->vsm.msaaSamples,
+                                .samples = msaaSamples,
                                 .format = TextureFormat::DEPTH16,
                         });
 
@@ -346,7 +350,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                                 TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
                         // we need to clear the shadow map with the max EVSM moments
                         renderTargetDesc.clearColor = vsmClearColor;
-                        renderTargetDesc.samples = options->vsm.msaaSamples;
+                        renderTargetDesc.samples = msaaSamples;
 
                         if (blur) {
                             data.tempBlurSrc = builder.write(data.tempBlurSrc,
@@ -357,7 +361,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                                             .color = { data.tempBlurSrc },
                                             .depth = depth },
                                     .clearColor = vsmClearColor,
-                                    .samples = options->vsm.msaaSamples,
+                                    .samples = msaaSamples,
                                     .clearFlags = TargetBufferFlags::COLOR
                                             | TargetBufferFlags::DEPTH
                             });
@@ -837,6 +841,8 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     const bool useMipmapping = view.hasVSM() &&
                                ((vsmShadowOptions.anisotropy > 0) || vsmShadowOptions.mipmapping);
 
+    const uint8_t msaaSamples = vsmShadowOptions.msaaSamples;
+
     TextureFormat format = TextureFormat::DEPTH16;
     if (view.hasVSM()) {
         if (vsmShadowOptions.highPrecision) {
@@ -868,6 +874,7 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
             (uint16_t)maxDimension,
             layersNeeded,
             mipLevels,
+            msaaSamples,
             format
     };
 }

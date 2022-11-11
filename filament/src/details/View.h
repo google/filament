@@ -305,9 +305,7 @@ public:
         mShadowType = shadow;
     }
 
-    void setVsmShadowOptions(VsmShadowOptions const& options) noexcept {
-        mVsmShadowOptions = options;
-    }
+    void setVsmShadowOptions(VsmShadowOptions options) noexcept;
 
     VsmShadowOptions getVsmShadowOptions() const noexcept {
         return mVsmShadowOptions;

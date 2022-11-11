@@ -994,6 +994,10 @@ void FView::setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept
     options.ssct.rayCount = math::clamp((unsigned)options.ssct.rayCount, 1u, 255u);
     mAmbientOcclusionOptions = options;
 }
+void FView::setVsmShadowOptions(VsmShadowOptions options) noexcept {
+    options.msaaSamples = std::max(uint8_t(0), options.msaaSamples);
+    mVsmShadowOptions = options;
+}
 
 void FView::setSoftShadowOptions(SoftShadowOptions options) noexcept {
     options.penumbraScale = std::max(0.0f, options.penumbraScale);
