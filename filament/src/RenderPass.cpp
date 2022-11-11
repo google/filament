@@ -708,6 +708,7 @@ void RenderPass::Executor::overrideScissor(backend::Viewport const* scissor) noe
 }
 
 void RenderPass::Executor::overrideScissor(backend::Viewport const& scissor) noexcept {
+    mScissorOverride = true;
     mScissor = scissor;
 }
 
