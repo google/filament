@@ -800,6 +800,8 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, VsmShadowOption
             i = parse(tokens, i + 1, jsonChunk, &out->anisotropy);
         } else if (compare(tok, jsonChunk, "mipmapping") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->mipmapping);
+        } else if (compare(tok, jsonChunk, "msaaSamples") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->msaaSamples);
         } else if (compare(tok, jsonChunk, "highPrecision") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->highPrecision);
         } else if (compare(tok, jsonChunk, "minVarianceScale") == 0) {
@@ -822,6 +824,7 @@ std::ostream& operator<<(std::ostream& out, const VsmShadowOptions& in) {
     return out << "{\n"
         << "\"anisotropy\": " << int(in.anisotropy) << ",\n"
         << "\"mipmapping\": " << to_string(in.mipmapping) << ",\n"
+        << "\"msaaSamples\": " << int(in.msaaSamples) << ",\n"
         << "\"highPrecision\": " << to_string(in.highPrecision) << ",\n"
         << "\"minVarianceScale\": " << (in.minVarianceScale) << ",\n"
         << "\"lightBleedReduction\": " << (in.lightBleedReduction) << "\n"

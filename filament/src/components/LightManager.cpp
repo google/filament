@@ -240,7 +240,6 @@ void FLightManager::setShadowOptions(Instance i, ShadowOptions const& options) n
     params.options.shadowFar = std::max(options.shadowFar, 0.0f);
     params.options.shadowNearHint = std::max(options.shadowNearHint, 0.0f);
     params.options.shadowFarHint = std::max(options.shadowFarHint, 0.0f);
-    params.options.vsm.msaaSamples = std::max(uint8_t(0), options.vsm.msaaSamples);
     params.options.vsm.blurWidth = std::max(0.0f, options.vsm.blurWidth);
 }
 

@@ -13,6 +13,7 @@ A new header is inserted each time a *tag* is created.
 - WebGL: add missing `ColorGrading` JS bindings
 - engine: improvements/cleanup of Shadow mapping code [⚠️ **Recompile Materials**]
 - engine: fix potential memory corruption with larger scenes
+- engine: VSM's MSAA setting is now per-view instead of per-light [⚠️ **API Change**]
 
 ## v1.28.3
 

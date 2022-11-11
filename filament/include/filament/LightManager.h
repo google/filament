@@ -341,14 +341,6 @@ public:
          */
         struct Vsm {
             /**
-             * The number of MSAA samples to use when rendering VSM shadow maps.
-             * Must be a power-of-two and greater than or equal to 1. A value of 1 effectively turns
-             * off MSAA.
-             * Higher values may not be available depending on the underlying hardware.
-             */
-            uint8_t msaaSamples = 1;
-
-            /**
              * When elvsm is set to true, "Exponential Layered VSM without Layers" are used. It is
              * an improvement to the default EVSM which suffers important light leaks. Enabling
              * ELVSM for a single shadowmap doubles the memory usage of all shadow maps.

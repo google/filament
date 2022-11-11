@@ -1818,6 +1818,13 @@ public class View {
          */
         public boolean mipmapping = false;
         /**
+         * The number of MSAA samples to use when rendering VSM shadow maps.
+         * Must be a power-of-two and greater than or equal to 1. A value of 1 effectively turns
+         * off MSAA.
+         * Higher values may not be available depending on the underlying hardware.
+         */
+        public int msaaSamples = 1;
+        /**
          * Whether to use a 32-bits or 16-bits texture format for VSM shadow maps. 32-bits
          * precision is rarely needed, but it does reduces light leaks as well as "fading"
          * of the shadows in some situations. Setting highPrecision to true for a single
