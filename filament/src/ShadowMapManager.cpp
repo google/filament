@@ -97,8 +97,10 @@ void ShadowMapManager::setDirectionalShadowMap(size_t lightIndex,
         LightManager::ShadowOptions const* options) noexcept {
     assert_invariant(options->shadowCascades <= CONFIG_MAX_SHADOW_CASCADES);
     for (size_t c = 0; c < options->shadowCascades; c++) {
-        auto* pShadowMap = getCascadeShadowMap(c);
-        pShadowMap->initialize(lightIndex, ShadowType::DIRECTIONAL, c, 0, options);
+        const size_t i = c;
+        assert_invariant(i < CONFIG_MAX_SHADOW_CASCADES);
+        auto* pShadowMap = getCascadeShadowMap(i);
+        pShadowMap->initialize(lightIndex, ShadowType::DIRECTIONAL, i, 0, options);
         mCascadeShadowMaps.push_back(pShadowMap);
     }
 }
@@ -107,17 +109,19 @@ void ShadowMapManager::addShadowMap(size_t lightIndex, bool spotlight,
         LightManager::ShadowOptions const* options) noexcept {
     if (spotlight) {
         const size_t c = mSpotShadowMaps.size();
-        assert_invariant(c < CONFIG_MAX_SHADOWMAPS);
-        auto* pShadowMap = getPointOrSpotShadowMap(c);
-        pShadowMap->initialize(lightIndex, ShadowType::SPOT, c, 0, options);
+        const size_t i = c + CONFIG_MAX_SHADOW_CASCADES;
+        assert_invariant(i < CONFIG_MAX_SHADOWMAPS);
+        auto* pShadowMap = getPointOrSpotShadowMap(i);
+        pShadowMap->initialize(lightIndex, ShadowType::SPOT, i, 0, options);
         mSpotShadowMaps.push_back(pShadowMap);
     } else {
         // point-light, generate 6 independent shadowmaps
         for (size_t face = 0; face < 6; face++) {
             const size_t c = mSpotShadowMaps.size();
-            assert_invariant(c < CONFIG_MAX_SHADOWMAPS);
-            auto* pShadowMap = getPointOrSpotShadowMap(c);
-            pShadowMap->initialize(lightIndex, ShadowType::POINT, c, face, options);
+            const size_t i = c + CONFIG_MAX_SHADOW_CASCADES;
+            assert_invariant(i < CONFIG_MAX_SHADOWMAPS);
+            auto* pShadowMap = getPointOrSpotShadowMap(i);
+            pShadowMap->initialize(lightIndex, ShadowType::POINT, i, face, options);
             mSpotShadowMaps.push_back(pShadowMap);
         }
     }
@@ -679,6 +683,7 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap,
         s.shadows[shadowIndex].bulbRadiusLs =
                 mSoftShadowOptions.penumbraScale * options->shadowBulbRadius
                 / wsTexelSizeAtOneMeter;
+
     }
 }
 
@@ -740,7 +745,6 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
 
 
     // and if we need to generate it, update all the UBO data
-    // Note: this below is done for all six faces even if it sets identical values each time
     if (shadowMap.hasVisibleShadows()) {
         const size_t shadowIndex = shadowMap.getShadowIndex();
         const float wsTexelSizeAtOneMeter = shaderParameters.texelSizeAtOneMeterWs;
