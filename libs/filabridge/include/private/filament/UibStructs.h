@@ -126,8 +126,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // bit 8-11: cascade has visible shadows
     // bit 31: elvsm
     uint32_t cascades;
-    float shadowBulbRadiusLs;           // light radius in light-space
-    float shadowBias;                   // normal bias
+    float reserved0;
+    float reserved1;                    // normal bias
     float shadowPenumbraRatioScale;     // For DPCF or PCSS, scale penumbra ratio for artistic use
 
     // --------------------------------------------------------------------------------------------

@@ -291,12 +291,9 @@ void PerViewUniforms::prepareShadowMapping(bool highPrecision) noexcept {
 void PerViewUniforms::prepareShadowSampling(PerViewUib& uniforms,
         ShadowMappingUniforms const& shadowMappingUniforms) noexcept {
     uniforms.cascadeSplits              = shadowMappingUniforms.cascadeSplits;
-    uniforms.shadowBulbRadiusLs         = shadowMappingUniforms.shadowBulbRadiusLs;
-    uniforms.shadowBias                 = shadowMappingUniforms.shadowBias;
     uniforms.ssContactShadowDistance    = shadowMappingUniforms.ssContactShadowDistance;
     uniforms.directionalShadows         = shadowMappingUniforms.directionalShadows;
     uniforms.cascades                   = shadowMappingUniforms.cascades;
-    uniforms.cascades                  |= uint32_t(shadowMappingUniforms.elvsm) << 31u;
 }
 
 void PerViewUniforms::prepareShadowVSM(Handle<HwTexture> texture,
