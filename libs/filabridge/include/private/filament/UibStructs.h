@@ -228,11 +228,11 @@ struct LightsUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float2 spotScaleOffset;     // { scale, offset }
     float reserved3;                  // 0
     float intensity;                  // float
-    uint32_t typeShadow;              // 0x00.ll.ii.ct (t: 0=point, 1=spot, c:contact, ii: index, ll: layer)
+    uint32_t typeShadow;              // 0x00.00.ii.ct (t: 0=point, 1=spot, c:contact, ii: index)
     uint32_t channels;                // 0x000c00ll (ll: light channels, c: caster)
 
-    static uint32_t packTypeShadow(uint8_t type, bool contactShadow, uint8_t index, uint8_t layer) noexcept {
-        return (type & 0xF) | (contactShadow ? 0x10 : 0x00) | (index << 8) | (layer << 16);
+    static uint32_t packTypeShadow(uint8_t type, bool contactShadow, uint8_t index) noexcept {
+        return (type & 0xF) | (contactShadow ? 0x10 : 0x00) | (index << 8);
     }
     static uint32_t packChannels(uint8_t lightChannels, bool castShadows) noexcept {
         return lightChannels | (castShadows ? 0x10000 : 0);
@@ -257,6 +257,11 @@ struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
         float bulbRadiusLs;                     //  4
         float nearOverFarMinusNear;             //  4
         bool elvsm;                             //  4
+
+        uint32_t layer;                         //  4
+        uint32_t reserved0;                     //  4
+        uint32_t reserved1;                     //  4
+        uint32_t reserved2;                     //  4
     };
     ShadowData shadows[CONFIG_MAX_SHADOWMAPS];
 };

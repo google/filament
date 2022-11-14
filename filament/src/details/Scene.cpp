@@ -343,8 +343,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
         lp[gpuIndex].typeShadow           = LightsUib::packTypeShadow(
                 lcm.isPointLight(li) ? 0u : 1u,
                 shadowInfo[i].contactShadows,
-                shadowInfo[i].index,
-                shadowInfo[i].layer);
+                shadowInfo[i].index);
         lp[gpuIndex].channels             = LightsUib::packChannels(lcm.getLightChannels(li), shadowInfo[i].castsShadows);
     }
 
