@@ -99,7 +99,7 @@ void ShadowMapManager::setDirectionalShadowMap(size_t lightIndex,
     for (size_t c = 0; c < options->shadowCascades; c++) {
         const size_t i = c;
         assert_invariant(i < CONFIG_MAX_SHADOW_CASCADES);
-        auto* pShadowMap = getCascadeShadowMap(i);
+        auto* pShadowMap = getShadowMap(i);
         pShadowMap->initialize(lightIndex, ShadowType::DIRECTIONAL, i, 0, options);
         mCascadeShadowMaps.push_back(pShadowMap);
     }
@@ -111,7 +111,7 @@ void ShadowMapManager::addShadowMap(size_t lightIndex, bool spotlight,
         const size_t c = mSpotShadowMaps.size();
         const size_t i = c + CONFIG_MAX_SHADOW_CASCADES;
         assert_invariant(i < CONFIG_MAX_SHADOWMAPS);
-        auto* pShadowMap = getPointOrSpotShadowMap(i);
+        auto* pShadowMap = getShadowMap(i);
         pShadowMap->initialize(lightIndex, ShadowType::SPOT, i, 0, options);
         mSpotShadowMaps.push_back(pShadowMap);
     } else {
@@ -120,7 +120,7 @@ void ShadowMapManager::addShadowMap(size_t lightIndex, bool spotlight,
             const size_t c = mSpotShadowMaps.size();
             const size_t i = c + CONFIG_MAX_SHADOW_CASCADES;
             assert_invariant(i < CONFIG_MAX_SHADOWMAPS);
-            auto* pShadowMap = getPointOrSpotShadowMap(i);
+            auto* pShadowMap = getShadowMap(i);
             pShadowMap->initialize(lightIndex, ShadowType::POINT, i, face, options);
             mSpotShadowMaps.push_back(pShadowMap);
         }
