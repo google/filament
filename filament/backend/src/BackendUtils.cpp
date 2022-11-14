@@ -181,6 +181,12 @@ size_t getFormatSize(TextureFormat format) noexcept {
         case TextureFormat::SIGNED_RED_GREEN_RGTC2:
             return 16;
 
+        case TextureFormat::RGB_BPTC_SIGNED_FLOAT:
+        case TextureFormat::RGB_BPTC_UNSIGNED_FLOAT:
+        case TextureFormat::RGBA_BPTC_UNORM:
+        case TextureFormat::SRGB_ALPHA_BPTC_UNORM:
+            return 16;
+
         // The block size for ASTC compression is always 16 bytes.
         case TextureFormat::RGBA_ASTC_4x4:
         case TextureFormat::RGBA_ASTC_5x4:
@@ -298,6 +304,8 @@ size_t getFormatComponentCount(TextureFormat format) noexcept {
         case TextureFormat::ETC2_SRGB8:
         case TextureFormat::DXT1_RGB:
         case TextureFormat::DXT1_SRGB:
+        case TextureFormat::RGB_BPTC_SIGNED_FLOAT:
+        case TextureFormat::RGB_BPTC_UNSIGNED_FLOAT:
             return 3;
 
         case TextureFormat::ETC2_EAC_RGBA8:
@@ -310,6 +318,8 @@ size_t getFormatComponentCount(TextureFormat format) noexcept {
         case TextureFormat::DXT3_SRGBA:
         case TextureFormat::DXT5_RGBA:
         case TextureFormat::DXT5_SRGBA:
+        case TextureFormat::RGBA_BPTC_UNORM:
+        case TextureFormat::SRGB_ALPHA_BPTC_UNORM:
         case TextureFormat::RGBA_ASTC_4x4:
         case TextureFormat::RGBA_ASTC_5x4:
         case TextureFormat::RGBA_ASTC_5x5:
@@ -372,6 +382,12 @@ size_t getBlockWidth(TextureFormat format) noexcept {
         case TextureFormat::SIGNED_RED_RGTC1:
         case TextureFormat::RED_GREEN_RGTC2:
         case TextureFormat::SIGNED_RED_GREEN_RGTC2:
+            return 4;
+
+        case TextureFormat::RGB_BPTC_SIGNED_FLOAT:
+        case TextureFormat::RGB_BPTC_UNSIGNED_FLOAT:
+        case TextureFormat::RGBA_BPTC_UNORM:
+        case TextureFormat::SRGB_ALPHA_BPTC_UNORM:
             return 4;
 
         case TextureFormat::RGBA_ASTC_4x4:

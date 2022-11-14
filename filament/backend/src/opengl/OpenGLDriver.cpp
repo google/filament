@@ -1512,6 +1512,9 @@ bool OpenGLDriver::isTextureFormatSupported(TextureFormat format) {
     if (isRGTCCompression(format)) {
         return  ext.EXT_texture_compression_rgtc;
     }
+    if (isBPTCCompression(format)) {
+        return  ext.EXT_texture_compression_bptc;
+    }
     if (isASTCCompression(format)) {
         return ext.KHR_texture_compression_astc_hdr;
     }

@@ -158,6 +158,7 @@ public:
         bool EXT_texture_compression_s3tc = false;
         bool EXT_texture_compression_s3tc_srgb = false;
         bool EXT_texture_compression_rgtc = false;
+        bool EXT_texture_compression_bptc = false;
         bool EXT_texture_cube_map_array = false;
         bool EXT_texture_filter_anisotropic = false;
         bool EXT_texture_sRGB = false;

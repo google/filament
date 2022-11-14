@@ -230,6 +230,11 @@ public:
     static constexpr uint32_t RG_RGTC_BC5_UNORM = 0x8DBD;
     static constexpr uint32_t RG_RGTC_BC5_SNORM = 0x8DBE;
 
+    static constexpr uint32_t RGBA_BPTC_BC7 = 0x8E8C;
+    static constexpr uint32_t SRGB8_ALPHA8_BPTC_BC7 = 0x8E8D;
+    static constexpr uint32_t RGB_BPTC_BC6H_SNORM = 0x8E8E;
+    static constexpr uint32_t RGB_BPTC_BC6H_UNORM = 0x8E8F;
+
     static constexpr uint32_t RGBA_ASTC_4x4 = 0x93B0;
     static constexpr uint32_t RGBA_ASTC_5x4 = 0x93B1;
     static constexpr uint32_t RGBA_ASTC_5x5 = 0x93B2;

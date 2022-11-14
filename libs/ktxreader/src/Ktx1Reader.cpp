@@ -198,6 +198,12 @@ bool isSrgbTextureFormat(TextureFormat format) {
         case Texture::InternalFormat::SIGNED_RED_GREEN_RGTC2:
             return false;
 
+        // BPTC
+        case Texture::InternalFormat::RGB_BPTC_SIGNED_FLOAT:
+        case Texture::InternalFormat::RGB_BPTC_UNSIGNED_FLOAT:
+        case Texture::InternalFormat::RGBA_BPTC_UNORM:
+            return false;
+
         default:
             return true;
     }
