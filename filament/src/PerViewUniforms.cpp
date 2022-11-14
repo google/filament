@@ -290,7 +290,6 @@ void PerViewUniforms::prepareShadowMapping(bool highPrecision) noexcept {
 
 void PerViewUniforms::prepareShadowSampling(PerViewUib& uniforms,
         ShadowMappingUniforms const& shadowMappingUniforms) noexcept {
-    uniforms.lightFromWorldMatrix       = shadowMappingUniforms.lightFromWorldMatrix;
     uniforms.cascadeSplits              = shadowMappingUniforms.cascadeSplits;
     uniforms.shadowBulbRadiusLs         = shadowMappingUniforms.shadowBulbRadiusLs;
     uniforms.shadowBias                 = shadowMappingUniforms.shadowBias;

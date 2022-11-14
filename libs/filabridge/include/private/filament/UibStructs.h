@@ -129,7 +129,6 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float shadowBulbRadiusLs;           // light radius in light-space
     float shadowBias;                   // normal bias
     float shadowPenumbraRatioScale;     // For DPCF or PCSS, scale penumbra ratio for artistic use
-    std::array<math::mat4f, CONFIG_MAX_SHADOW_CASCADES> lightFromWorldMatrix;
 
     // --------------------------------------------------------------------------------------------
     // VSM shadows [variant: VSM]
@@ -164,7 +163,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float ssrStride;                    // ssr texel stride, >= 1.0
 
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[47];
+    math::float4 reserved[63];
 };
 
 // 2 KiB == 128 float4s
