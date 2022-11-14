@@ -218,7 +218,8 @@ void evaluatePunctualLights(const MaterialInputs material,
                     highp vec3 r = getWorldPosition() - light.worldPosition;
                     highp vec4 nf = shadowUniforms.shadows[light.shadowIndex].lightFromWorldZ;
                     // getShadowPosition returns zLight which is needed for PCSS/DPCF
-                    shadowPosition = getShadowPosition(r, nf, layer, light.zLight);
+                    uint face = 0u;
+                    shadowPosition = getShadowPosition(r, light.shadowIndex, light.zLight, face);
                 } else {
                     // getShadowPosition needs zLight for applying the normal bias
                     shadowPosition = getShadowPosition(false, light.shadowIndex, 0u, light.zLight);

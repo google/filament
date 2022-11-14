@@ -161,7 +161,7 @@ float getPenumbraLs(const bool DIRECTIONAL, const uint index, const highp float 
     float penumbra;
     // This conditional is resolved at compile time
     if (DIRECTIONAL) {
-        penumbra = frameUniforms.shadowBulbRadiusLs;
+        penumbra = shadowUniforms.shadows[index].bulbRadiusLs;
     } else {
         // the penumbra radius depends on the light-space z for spotlights
         penumbra = shadowUniforms.shadows[index].bulbRadiusLs / zLight;
@@ -495,8 +495,8 @@ highp vec4 getShadowPosition(const bool DIRECTIONAL,
 }
 
 // get {texture coordinate, layer} for point shadow maps
-highp vec4 getShadowPosition(const highp vec3 r, const highp vec4 nf,
-        inout uint layer, out highp float d) {
+highp vec4 getShadowPosition(const highp vec3 r, const highp uint shadowIndex,
+        out highp float d, out highp uint face) {
     highp vec4 tc;
     highp float rx = abs(r.x);
     highp float ry = abs(r.y);
@@ -506,24 +506,25 @@ highp vec4 getShadowPosition(const highp vec3 r, const highp vec4 nf,
     if (d == rx) {
         tc.x = r.x >= 0.0 ? r.z : -r.z;
         tc.y = r.y;
-        layer += (r.x >= 0.0 ? 0u : 1u);
+        face = (r.x >= 0.0 ? 0u : 1u);
     } else if (d == ry) {
         tc.x = r.y >= 0.0 ? r.x : -r.x;
         tc.y = r.z;
-        layer += (r.y >= 0.0 ? 2u : 3u);
+        face = (r.y >= 0.0 ? 2u : 3u);
     } else {
         tc.x = r.z >= 0.0 ? -r.x : r.x;
         tc.y = r.y;
-        layer += (r.z >= 0.0 ? 4u : 5u);
+        face = (r.z >= 0.0 ? 4u : 5u);
     }
 
     // ma is guaranteed to be >= sc and tc
     tc.xy = (tc.xy * ma + vec2(1.0)) * 0.5;
 
+    highp vec4 nf = shadowUniforms.shadows[shadowIndex + face].lightFromWorldZ;
+
     // z coordinate of the normalized fragment position in light-space
     // i.e.: remap [near, far] to [0,1] : d = (d - n) / (f - n)
     d = nf[2] + nf[3] * d;
-
     if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_EVSM) {
         // for VSM, the depth metric is linear normalized in light-space
         tc.z = d;
@@ -532,9 +533,7 @@ highp vec4 getShadowPosition(const highp vec3 r, const highp vec4 nf,
         // (lightProjection * position).z
         tc.z = nf[0] + nf[1] * ma;
     }
-
     // FIXME: the normal bias is not applied
-
     tc.w = 1.0;
     return tc;
 }
