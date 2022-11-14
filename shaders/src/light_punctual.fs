@@ -223,7 +223,7 @@ void evaluatePunctualLights(const MaterialInputs material,
                     // getShadowPosition needs zLight for applying the normal bias
                     shadowPosition = getShadowPosition(false, light.shadowIndex, 0u, light.zLight);
                 }
-                visibility = shadow(false, light_shadowMap, layer, light.shadowIndex,
+                visibility = shadow(false, light_shadowMap, light.shadowIndex,
                         shadowPosition, light.zLight);
             }
             if (light.contactShadows && visibility > 0.0) {

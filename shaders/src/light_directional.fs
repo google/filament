@@ -58,7 +58,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
         if (hasDirectionalShadows && cascadeHasVisibleShadows) {
             uint layer = cascade;
             highp vec4 shadowPosition = getShadowPosition(true, 0u, cascade, 0.0f);
-            visibility = shadow(true, light_shadowMap, layer, 0u, shadowPosition, 0.0f);
+            visibility = shadow(true, light_shadowMap, cascade, shadowPosition, 0.0f);
         }
         if ((frameUniforms.directionalShadows & 0x2u) != 0u && visibility > 0.0) {
             if ((getObjectUniforms().flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {

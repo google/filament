@@ -542,7 +542,10 @@ highp vec4 getShadowPosition(const highp vec3 r, const highp vec4 nf,
 // PCF sampling
 float shadow(const bool DIRECTIONAL,
         const mediump sampler2DArrayShadow shadowMap,
-        const uint layer, const uint index, highp vec4 shadowPosition, highp float zLight) {
+        const uint index, highp vec4 shadowPosition, highp float zLight) {
+
+    uint layer = 0;
+
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
     return ShadowSample_PCF_Hard(shadowMap, layer, shadowPosition);
 #elif SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_LOW
@@ -553,7 +556,9 @@ float shadow(const bool DIRECTIONAL,
 // Shadow requiring a sampler2D sampler (VSM, DPCF and PCSS)
 float shadow(const bool DIRECTIONAL,
         const mediump sampler2DArray shadowMap,
-        const uint layer, const uint index, highp vec4 shadowPosition, highp float zLight) {
+        const uint index, highp vec4 shadowPosition, highp float zLight) {
+
+    uint layer = 0;
 
     // This conditional is resolved at compile time
     if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_EVSM) {
