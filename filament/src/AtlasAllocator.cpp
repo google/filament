@@ -35,8 +35,8 @@ AtlasAllocator::AtlasAllocator(size_t maxTextureSize) noexcept {
     mMaxTextureSizePot = (sizeof(maxTextureSize) * 8 - 1u) - utils::clz(maxTextureSize);
 }
 
-Viewport AtlasAllocator::allocate(size_t textureSize) noexcept {
-    Viewport result{};
+AtlasAllocator::Allocation AtlasAllocator::allocate(size_t textureSize) noexcept {
+    Allocation result{};
     const size_t powerOfTwo = (sizeof(textureSize) * 8 - 1u) - utils::clz(textureSize);
 
     // asked for a texture size too large
@@ -45,22 +45,24 @@ Viewport AtlasAllocator::allocate(size_t textureSize) noexcept {
     }
 
     // asked for a texture size too small
-    if (UTILS_UNLIKELY(mMaxTextureSizePot - powerOfTwo >= QuadTree::height())) {
+    if (UTILS_UNLIKELY(mMaxTextureSizePot - powerOfTwo >= QUAD_TREE_DEPTH)) {
         return result;
     }
 
-    const size_t layer = mMaxTextureSizePot - powerOfTwo;
-    const NodeId loc = allocateInLayer(layer);
+    const size_t layer = (mMaxTextureSizePot - powerOfTwo);
+    const NodeId loc = allocateInLayer(LAYERS_DEPTH + layer);
     if (loc.l >= 0) {
-        assert_invariant(loc.l == int8_t(layer));
-        size_t dimension = 1u << powerOfTwo;
+        assert_invariant(loc.l - LAYERS_DEPTH == int8_t(layer));
+        const size_t dimension = 1u << powerOfTwo;
         // find the location of in the texture from the morton code (quadtree position)
-        auto [x, y] = unmorton(loc.code);
+        const auto [x, y] = unmorton(loc.code);
         // scale to our maximum allocation size
-        result.left   = int32_t(x) << powerOfTwo;
-        result.bottom = int32_t(y) << powerOfTwo;
-        result.width  = dimension;
-        result.height = dimension;
+        const uint32_t mask = (1u << layer) - 1u;
+        result.viewport.left   = int32_t(x & mask) << powerOfTwo;
+        result.viewport.bottom = int32_t(y & mask) << powerOfTwo;
+        result.viewport.width  = dimension;
+        result.viewport.height = dimension;
+        result.layer = loc.code >> (2 * layer);
     }
     return result;
 }
