@@ -124,7 +124,6 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // bit 0-3: cascade count
     // bit 4: visualize cascades
     // bit 8-11: cascade has visible shadows
-    // bit 31: elvsm
     uint32_t cascades;
     float reserved0;
     float reserved1;                    // normal bias

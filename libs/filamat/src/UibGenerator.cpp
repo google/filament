@@ -105,10 +105,9 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
 
             { "cascadeSplits",          0, Type::FLOAT4, Precision::HIGH },
             { "cascades",               0, Type::UINT                    },
-            { "shadowBulbRadiusLs",     0, Type::FLOAT                   },
-            { "shadowBias",             0, Type::FLOAT                   },
+            { "reserved0",              0, Type::FLOAT                   },
+            { "reserved1",              0, Type::FLOAT                   },
             { "shadowPenumbraRatioScale", 0, Type::FLOAT                 },
-            { "lightFromWorldMatrix",   4, Type::MAT4,   Precision::HIGH },
 
             // ------------------------------------------------------------------------------------
             // VSM shadows [variant: VSM]

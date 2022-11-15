@@ -762,7 +762,6 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
         auto& s = mShadowUb.edit();
         const double n = shadowMap.getCamera().getNear();
         const double f = shadowMap.getCamera().getCullingFar();
-
         s.shadows[shadowIndex].layer = shadowMap.getLayer();
         s.shadows[shadowIndex].lightFromWorldMatrix = {}; // no texture matrix for point lights
         s.shadows[shadowIndex].direction = {};  // no direction of point lights
@@ -792,10 +791,9 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
         shadowTechnique |= ShadowTechnique::SHADOW_MAP;
         for (auto const* pShadowMap : mSpotShadowMaps) {
             const size_t lightIndex = pShadowMap->getLightIndex();
-
-            // FIXME: currently we have one slot per shadowmap in the UBO, but we now have up to
-            //        6 shadowmap per light. So for now, we only write the data of the face 0,
-            //        and the shader will figure out where to find the other face (layer+face)
+            // gather the per-light (not per shadow map) information. For point lights we will
+            // "see" 6 shadowmaps (one per face), we must use the first face one, the shader
+            // knows how to find the entry for other faces (they're guaranteed to be sequential).
             if (pShadowMap->getFace() == 0) {
                 shadowInfo[lightIndex].castsShadows = true;     // FIXME: is that set correctly?
                 shadowInfo[lightIndex].index = pShadowMap->getShadowIndex();
