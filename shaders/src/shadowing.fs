@@ -525,6 +525,7 @@ highp vec4 getShadowPosition(const highp vec3 r, const highp uint shadowIndex,
     // z coordinate of the normalized fragment position in light-space
     // i.e.: remap [near, far] to [0,1] : d = (d - n) / (f - n)
     d = nf[2] + nf[3] * d;
+
     if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_EVSM) {
         // for VSM, the depth metric is linear normalized in light-space
         tc.z = d;
@@ -533,7 +534,9 @@ highp vec4 getShadowPosition(const highp vec3 r, const highp uint shadowIndex,
         // (lightProjection * position).z
         tc.z = nf[0] + nf[1] * ma;
     }
+
     // FIXME: the normal bias is not applied
+
     tc.w = 1.0;
     return tc;
 }
@@ -542,9 +545,7 @@ highp vec4 getShadowPosition(const highp vec3 r, const highp uint shadowIndex,
 float shadow(const bool DIRECTIONAL,
         const mediump sampler2DArrayShadow shadowMap,
         const uint index, highp vec4 shadowPosition, highp float zLight) {
-
-    uint layer = 0u;
-
+    uint layer = shadowUniforms.shadows[index].layer;
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
     return ShadowSample_PCF_Hard(shadowMap, layer, shadowPosition);
 #elif SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_LOW
@@ -556,17 +557,10 @@ float shadow(const bool DIRECTIONAL,
 float shadow(const bool DIRECTIONAL,
         const mediump sampler2DArray shadowMap,
         const uint index, highp vec4 shadowPosition, highp float zLight) {
-
-    uint layer = 0u;
-
+    uint layer = shadowUniforms.shadows[index].layer;
     // This conditional is resolved at compile time
     if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_EVSM) {
-        bool elvsm = false;
-        if (DIRECTIONAL) {
-            elvsm = bool((frameUniforms.cascades >> 31u) & 1u);
-        } else {
-            elvsm = shadowUniforms.shadows[index].elvsm;
-        }
+        bool elvsm = shadowUniforms.shadows[index].elvsm;
         return ShadowSample_VSM(elvsm, shadowMap, layer, shadowPosition);
     }
 
