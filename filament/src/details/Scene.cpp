@@ -344,7 +344,9 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
                 lcm.isPointLight(li) ? 0u : 1u,
                 shadowInfo[i].contactShadows,
                 shadowInfo[i].index);
-        lp[gpuIndex].channels             = LightsUib::packChannels(lcm.getLightChannels(li), shadowInfo[i].castsShadows);
+        lp[gpuIndex].channels             = LightsUib::packChannels(
+                lcm.getLightChannels(li),
+                shadowInfo[i].castsShadows);
     }
 
     driver.updateBufferObject(lightUbh, { lp, positionalLightCount * sizeof(LightsUib) }, 0);
