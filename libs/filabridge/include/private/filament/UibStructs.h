@@ -248,17 +248,14 @@ struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr std::string_view _name{ "ShadowUniforms" };
     struct alignas(16) ShadowData {
         math::mat4f lightFromWorldMatrix;       // 64
-        math::float3 direction;                 // 12
-        float normalBias;                       //  4
         math::float4 lightFromWorldZ;           // 16
-
+        math::float4 reserved0;                 // 12
         float texelSizeAtOneMeter;              //  4
         float bulbRadiusLs;                     //  4
         float nearOverFarMinusNear;             //  4
+        float normalBias;                       //  4
         bool elvsm;                             //  4
-
         uint32_t layer;                         //  4
-        uint32_t reserved0;                     //  4
         uint32_t reserved1;                     //  4
         uint32_t reserved2;                     //  4
     };

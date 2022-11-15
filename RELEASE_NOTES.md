@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- engine: optimize per-shadow UBO [⚠️ **Recompile Materials**]
+
 ## v1.29.0
 
 - gltfio: calculate primitive's AABB correctly.
