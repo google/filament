@@ -3,7 +3,7 @@
 struct ShadowData {
     highp mat4 lightFromWorldMatrix;
     highp vec4 lightFromWorldZ;
-    highp vec4 reserved0;
+    highp vec4 scissorNormalized;
     float texelSizeAtOneMeter;
     float bulbRadiusLs;
     float nearOverFarMinusNear;

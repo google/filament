@@ -368,7 +368,8 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
 
     // Computes St the transform to use in the shader to access the shadow map texture
     // i.e. it transforms a world-space vertex to a texture coordinate in the shadowmap
-    const auto [Mt, Mn] = ShadowMap::getTextureCoordsMapping(shadowMapInfo, getViewport());
+    const backend::Viewport viewport = getViewport();
+    const auto [Mt, Mn] = ShadowMap::getTextureCoordsMapping(shadowMapInfo, viewport);
     const mat4f St = math::highPrecisionMultiply(Mt, S);
 
     ShadowMap::ShaderParameters shaderParameters;
@@ -389,6 +390,8 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
     } else {
         shaderParameters.lightSpace = computeVsmLightSpaceMatrix(St, Mv, znear, zfar);
     }
+
+    shaderParameters.scissorNormalized = getViewportNormalized(shadowMapInfo);
 
     // We apply the constant bias in world space (as opposed to light-space) to account
     // for perspective and lispsm shadow maps. This also allows us to do this at zero-cost
@@ -418,9 +421,12 @@ ShadowMap::ShaderParameters ShadowMap::updatePunctual(
         const ShadowMapInfo& shadowMapInfo, const FLightManager::ShadowParams& params) noexcept {
     const mat4f Mp = mat4f::perspective(outerConeAngle * f::RAD_TO_DEG * 2.0f, 1.0f, nearPlane, farPlane);
 
+    assert_invariant(shadowMapInfo.textureDimension == mOptions->mapSize);
+
     // Final shadow transform
+    const backend::Viewport viewport = getViewport();
     const mat4f S = math::highPrecisionMultiply(Mp, Mv);
-    const auto [Mt, Mn] = ShadowMap::getTextureCoordsMapping(shadowMapInfo, getViewport());
+    const auto [Mt, Mn] = ShadowMap::getTextureCoordsMapping(shadowMapInfo, viewport);
     const mat4f St = math::highPrecisionMultiply(Mt, S);
 
     // TODO: focus projection
@@ -446,6 +452,8 @@ ShadowMap::ShaderParameters ShadowMap::updatePunctual(
     } else {
         shaderParameters.lightSpace = computeVsmLightSpaceMatrix(St, Mv, nearPlane, farPlane);
     }
+
+    shaderParameters.scissorNormalized = getViewportNormalized(shadowMapInfo);
 
     const float3 direction = -transpose(Mv)[2].xyz;
     const float constantBias = shadowMapInfo.vsm ? 0.0f : params.options.constantBias;
@@ -620,7 +628,7 @@ ShadowMap::TextureCoordsMapping ShadowMap::getTextureCoordsMapping(ShadowMapInfo
     });
 
     // apply the viewport transform
-    const float2 o = float2{ viewport.left, viewport.bottom } / float(info.atlasDimension);
+    const float2 o = float2{ viewport.left,  viewport.bottom } / float(info.atlasDimension);
     const float2 s = float2{ viewport.width, viewport.height } / float(info.atlasDimension);
     const mat4f Mv(mat4f::row_major_init{
              s.x,  0.0f, 0.0f, o.x,
@@ -1197,11 +1205,34 @@ backend::Viewport ShadowMap::getViewport() const noexcept {
     // We set a viewport with a 1-texel border for when we index outside the
     // texture. This can only happen for the directional light when "focus shadow casters is used".
     const uint32_t dim = mOptions->mapSize;
-    if (isDirectionalShadow()) {
-        return { 1, 1, dim - 2, dim - 2 };
-    } else {
-        return { 0, 0, dim, dim };
+    const uint16_t border = 1u;
+    return { border, border, dim - 2u * border, dim - 2u * border };
+}
+
+backend::Viewport ShadowMap::getScissor() const noexcept {
+    // We set a viewport with a 1-texel border for when we index outside the
+    // texture. This can only happen for the directional light when "focus shadow casters is used".
+    const uint32_t dim = mOptions->mapSize;
+    const uint16_t border = 1u;
+
+    switch (mShadowType) {
+        case ShadowType::DIRECTIONAL:
+            return { border, border, dim - 2u * border, dim - 2u * border };
+        case ShadowType::SPOT:
+        case ShadowType::POINT:
+        default:
+            return { 0, 0, dim, dim };
     }
+}
+
+math::float4 ShadowMap::getViewportNormalized(ShadowMapInfo const& shadowMapInfo) const noexcept {
+    const auto [l, b, w, h] = getViewport();
+    const float texel = 1.0f / float(shadowMapInfo.atlasDimension);
+    const float4 v = float4{ l, b, l + w, b + h } * texel;
+    if (shadowMapInfo.textureSpaceFlipped) {
+        return { v.x, 1.0f - v.w, v.z, 1.0f - v.y };
+    }
+    return v;
 }
 
 // ------------------------------------------------------------------------------------------------
