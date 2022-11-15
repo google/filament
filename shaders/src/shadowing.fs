@@ -543,7 +543,7 @@ float shadow(const bool DIRECTIONAL,
         const mediump sampler2DArrayShadow shadowMap,
         const uint index, highp vec4 shadowPosition, highp float zLight) {
 
-    uint layer = 0;
+    uint layer = 0u;
 
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
     return ShadowSample_PCF_Hard(shadowMap, layer, shadowPosition);
@@ -557,7 +557,7 @@ float shadow(const bool DIRECTIONAL,
         const mediump sampler2DArray shadowMap,
         const uint index, highp vec4 shadowPosition, highp float zLight) {
 
-    uint layer = 0;
+    uint layer = 0u;
 
     // This conditional is resolved at compile time
     if (frameUniforms.shadowSamplingType == SHADOW_SAMPLING_RUNTIME_EVSM) {
