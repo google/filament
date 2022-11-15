@@ -249,7 +249,7 @@ struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     struct alignas(16) ShadowData {
         math::mat4f lightFromWorldMatrix;       // 64
         math::float4 lightFromWorldZ;           // 16
-        math::float4 reserved0;                 // 12
+        math::float4 scissorNormalized;         // 16
         float texelSizeAtOneMeter;              //  4
         float bulbRadiusLs;                     //  4
         float nearOverFarMinusNear;             //  4
