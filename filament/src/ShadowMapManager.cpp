@@ -459,7 +459,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         // entire camera frustum, as if we only had a single cascade.
         ShadowMap& shadowMap = *mCascadeShadowMaps[0];
 
-        auto shaderParameters = shadowMap.updateDirectional(mEngine,
+        shadowMap.updateDirectional(mEngine,
                 lightData, 0, cameraInfo, shadowMapInfo, *scene, sceneInfo);
 
         hasVisibleShadows = shadowMap.hasVisibleShadows();
@@ -468,18 +468,6 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             Frustum const& frustum = shadowMap.getCamera().getCullingFrustum();
             FView::cullRenderables(engine.getJobSystem(), renderableData, frustum,
                     VISIBLE_DIR_SHADOW_RENDERABLE_BIT);
-
-            // Set shadowBias, using the first directional cascade.
-            // when computing the required bias we need a half-texel size, so we multiply by 0.5 here.
-            // note: normalBias is set to zero for VSM
-            const float normalBias = shadowMapInfo.vsm ? 0.0f : 0.5f * lcm.getShadowNormalBias(0);
-            // Texel size is constant for directional light (although that's not true when LISPSM
-            // is used, but in that case we're pretending it is).
-            const float wsTexelSize = shaderParameters.texelSizeAtOneMeterWs;
-            mShadowMappingUniforms.shadowBias = normalBias * wsTexelSize;
-            mShadowMappingUniforms.shadowBulbRadiusLs =
-                    mSoftShadowOptions.penumbraScale * options.shadowBulbRadius / wsTexelSize;
-            mShadowMappingUniforms.elvsm = options.vsm.elvsm;
         }
     }
 
@@ -532,6 +520,10 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
 
         mShadowMappingUniforms.cascadeSplits = wsSplitPositionUniform;
 
+        // when computing the required bias we need a half-texel size, so we multiply by 0.5 here.
+        // note: normalBias is set to zero for VSM
+        const float normalBias = shadowMapInfo.vsm ? 0.0f : 0.5f * lcm.getShadowNormalBias(0);
+
         for (size_t i = 0, c = mCascadeShadowMaps.size(); i < c; i++) {
             assert_invariant(mCascadeShadowMaps[i]);
 
@@ -545,7 +537,22 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
                     lightData, 0, cameraInfo, shadowMapInfo, *scene, sceneInfo);
 
             if (shadowMap.hasVisibleShadows()) {
-                mShadowMappingUniforms.lightFromWorldMatrix[i] = shaderParameters.lightSpace;
+                const size_t shadowIndex = shadowMap.getShadowIndex();
+                assert_invariant(shadowIndex == i);
+
+                // Texel size is constant for directional light (although that's not true when LISPSM
+                // is used, but in that case we're pretending it is).
+                const float wsTexelSize = shaderParameters.texelSizeAtOneMeterWs;
+
+                auto& s = mShadowUb.edit();
+                s.shadows[shadowIndex].layer = shadowMap.getLayer();
+                s.shadows[shadowIndex].lightFromWorldMatrix = shaderParameters.lightSpace;
+                s.shadows[shadowIndex].normalBias = normalBias * wsTexelSize;
+                s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSize;
+                s.shadows[shadowIndex].elvsm = options.vsm.elvsm;
+                s.shadows[shadowIndex].bulbRadiusLs =
+                        mSoftShadowOptions.penumbraScale * options.shadowBulbRadius / wsTexelSize;
+
                 shadowTechnique |= ShadowTechnique::SHADOW_MAP;
                 cascadeHasVisibleShadows |= 0x1u << i;
             }
@@ -673,6 +680,7 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap,
         auto& s = mShadowUb.edit();
         const double n = shadowMap.getCamera().getNear();
         const double f = shadowMap.getCamera().getCullingFar();
+        s.shadows[shadowIndex].layer = shadowMap.getLayer();
         s.shadows[shadowIndex].lightFromWorldMatrix = shaderParameters.lightSpace;
         s.shadows[shadowIndex].direction = direction;
         s.shadows[shadowIndex].normalBias = normalBias * wsTexelSizeAtOneMeter;
@@ -755,6 +763,7 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
         const double n = shadowMap.getCamera().getNear();
         const double f = shadowMap.getCamera().getCullingFar();
 
+        s.shadows[shadowIndex].layer = shadowMap.getLayer();
         s.shadows[shadowIndex].lightFromWorldMatrix = {}; // no texture matrix for point lights
         s.shadows[shadowIndex].direction = {};  // no direction of point lights
         s.shadows[shadowIndex].normalBias = normalBias * wsTexelSizeAtOneMeter;
@@ -790,7 +799,6 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
             if (pShadowMap->getFace() == 0) {
                 shadowInfo[lightIndex].castsShadows = true;     // FIXME: is that set correctly?
                 shadowInfo[lightIndex].index = pShadowMap->getShadowIndex();
-                shadowInfo[lightIndex].layer = pShadowMap->getLayer();
             }
         }
     }
