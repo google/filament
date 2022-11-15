@@ -681,7 +681,6 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap,
         const double f = shadowMap.getCamera().getCullingFar();
         s.shadows[shadowIndex].layer = shadowMap.getLayer();
         s.shadows[shadowIndex].lightFromWorldMatrix = shaderParameters.lightSpace;
-        s.shadows[shadowIndex].direction = direction;
         s.shadows[shadowIndex].normalBias = normalBias * wsTexelSizeAtOneMeter;
         s.shadows[shadowIndex].lightFromWorldZ = shaderParameters.lightFromWorldZ;
         s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
@@ -763,7 +762,6 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
         const double f = shadowMap.getCamera().getCullingFar();
         s.shadows[shadowIndex].layer = shadowMap.getLayer();
         s.shadows[shadowIndex].lightFromWorldMatrix = shaderParameters.lightSpace;
-        s.shadows[shadowIndex].direction = {};  // no direction of point lights
         s.shadows[shadowIndex].normalBias = normalBias * wsTexelSizeAtOneMeter;
         s.shadows[shadowIndex].lightFromWorldZ = shaderParameters.lightFromWorldZ;
         s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
