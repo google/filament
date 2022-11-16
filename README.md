@@ -117,9 +117,9 @@ steps:
 - Image-based lighting
 - Physically-based camera (shutter speed, sensitivity and aperture)
 - Physical light units
-- Point lights, spot lights and directional light
+- Point lights, spot lights, and directional light
 - Specular anti-aliasing
-- Spot and directional light shadows
+- Point, spot, and directional light shadows
 - Cascaded shadows
 - EVSM, PCSS, DPCF, or PCF shadows
 - Transparent shadows
