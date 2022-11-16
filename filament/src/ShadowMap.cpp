@@ -1195,18 +1195,12 @@ void ShadowMap::updateSceneInfoSpot(mat4f const& Mv, FScene const& scene,
 
 backend::Viewport ShadowMap::getViewport() const noexcept {
     // We set a viewport with a 1-texel border for when we index outside the
-    // texture.
-    // For floating-point depth textures, the 1-texel border could be set to
-    // FLOAT_MAX to avoid clamping in the shadow shader (see sampleDepth inside
-    // shadowing.fs). Unfortunately, the APIs don't seem let us clear depth
-    // attachments to anything greater than 1.0, so we'd need a way to do this other
-    // than clearing.
+    // texture. This can only happen for the directional light when "focus shadow casters is used".
     const uint32_t dim = mOptions->mapSize;
-    if (isPointShadow()) {
-        // for point-light we don't have a border
-        return { 0, 0, dim, dim };
-    } else {
+    if (isDirectionalShadow()) {
         return { 1, 1, dim - 2, dim - 2 };
+    } else {
+        return { 0, 0, dim, dim };
     }
 }
 

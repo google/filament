@@ -19,9 +19,8 @@
 
 float sampleDepth(const mediump sampler2DArrayShadow map, const uint layer,
         const highp vec2 uv, float depth) {
-    // depth must be clamped to support floating-point depth formats. This is to avoid comparing a
-    // value from the depth texture (which is never greater than 1.0) with a greater-than-one
-    // comparison value (which is possible with floating-point formats).
+    // depth must be clamped to support floating-point depth formats which are always in
+    // the range [0, 1].
     return texture(map, vec4(uv, layer, saturate(depth)));
 }
 
