@@ -150,7 +150,7 @@ public:
     static utils::io::sstream& generateIndexedDefine(utils::io::sstream& out, const char* name,
             uint32_t index, uint32_t value);
 
-    utils::io::sstream& generateSpecificationConstant(utils::io::sstream& out,
+    utils::io::sstream& generateSpecializationConstant(utils::io::sstream& out,
             const char* name, uint32_t id, std::variant<int, float, bool> value) const;
 
     static utils::io::sstream& generatePostProcessGetters(utils::io::sstream& out, ShaderStage type);
