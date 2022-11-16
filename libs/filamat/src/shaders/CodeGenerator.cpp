@@ -123,6 +123,7 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     out << '\n';
     generateSpecificationConstant(out, "BACKEND_FEATURE_LEVEL", 0, 1);
     generateSpecificationConstant(out, "CONFIG_MAX_INSTANCES", 1, (int)CONFIG_MAX_INSTANCES);
+    generateSpecificationConstant(out, "TARGET_PLATFORM", 2, 0);
 
     out << '\n';
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;

@@ -128,7 +128,7 @@ highp vec4 getCascadeLightSpacePosition(uint cascade) {
     // For the first cascade, return the interpolated light space position.
     // This branch will be coherent (mostly) for neighboring fragments, and it's worth avoiding
     // the matrix multiply inside computeLightSpacePosition.
-    if (cascade == 0u) {
+    if (cascade == 0u && !openGlesIos) {
         // Note: this branch may cause issues with derivatives
         return vertex_lightSpacePosition;
     }

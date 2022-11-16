@@ -442,9 +442,15 @@ Program FMaterial::getProgramBuilderWithVariants(
         }
     }
 
+    int platformId = 0;
+#if defined(IOS)
+    platformId = 1;
+#endif
+
     program.specializationConstants({
             { 0, (int)mEngine.getSupportedFeatureLevel() },
-            { 1, (int)CONFIG_MAX_INSTANCES }
+            { 1, (int)CONFIG_MAX_INSTANCES },
+            { 2, platformId }
     });
 
     return program;

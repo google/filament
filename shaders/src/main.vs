@@ -141,11 +141,16 @@ void main() {
 #endif
 
 #if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
-    vertex_lightSpacePosition = computeLightSpacePosition(
-            vertex_worldPosition.xyz, vertex_worldNormal,
-            frameUniforms.lightDirection,
-            shadowUniforms.shadows[0].normalBias,
-            shadowUniforms.shadows[0].lightFromWorldMatrix);
+    if (openGlesIos) {
+        // Hack for OpenGL ES on iOS.
+        vertex_lightSpacePosition = vec4(1.0);
+    } else {
+        vertex_lightSpacePosition = computeLightSpacePosition(
+                vertex_worldPosition.xyz, vertex_worldNormal,
+                frameUniforms.lightDirection,
+                shadowUniforms.shadows[0].normalBias,
+                shadowUniforms.shadows[0].lightFromWorldMatrix);
+    }
 #endif
 
 #endif // !defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)

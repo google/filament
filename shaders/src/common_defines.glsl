@@ -22,3 +22,11 @@
 
 #define float3x3 mat3
 #define float4x4 mat4
+
+#define TARGET_PLATFORM_UNKNOWN     0
+#define TARGET_PLATFORM_IOS         1
+#if defined(TARGET_GLES_ENVIRONMENT)
+const bool openGlesIos = TARGET_PLATFORM == TARGET_PLATFORM_IOS;
+#else
+const bool openGlesIos = false;
+#endif
