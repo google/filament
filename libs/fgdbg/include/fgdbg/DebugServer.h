@@ -26,8 +26,6 @@ public:
     DebugServer();
     ~DebugServer();
 
-    void sendMessage(int number);
-
 private:
     CivetServer* mServer;
 
@@ -36,6 +34,9 @@ private:
 
     friend class RestRequestHandler;
     friend class WebSocketHandler;
+    friend class Session;
+
+    void sendMessage(int number);
 };
 }
 

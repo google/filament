@@ -22,6 +22,8 @@ void Session::addPasses(const std::vector<Pass>& passes) {}
 
 void Session::addResources(const std::vector<Resource>& resources) {}
 
-void Session::update() const {}
+void Session::update() const {
+    server->sendMessage(0);
+}
 
 }

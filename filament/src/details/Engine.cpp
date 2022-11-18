@@ -260,7 +260,8 @@ void FEngine::init() {
 
 #if FILAMENT_ENABLE_FGDBG
     if (!debug.fgdbg) {
-        debug.fgdbg = std::make_unique<fgdbg::DebugServer>();
+        auto server = std::make_shared<fgdbg::DebugServer>();
+        debug.fgdbg = std::make_unique<fgdbg::Session>("sample", server);
     }
 #endif
 
@@ -652,7 +653,7 @@ int FEngine::loop() {
             static int fgdbgMessage = 0;
             fgdbgMessage++;
             if (fgdbgMessage % 100 == 0) {
-                debug.fgdbg->sendMessage(fgdbgMessage/100);
+                debug.fgdbg->update();
             }
         }
 #endif
