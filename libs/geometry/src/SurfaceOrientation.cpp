@@ -152,6 +152,24 @@ static float3 randomPerp(const float3& n) {
     return perp / sqrlen;
 }
 
+// Computes tangent space basis, from input normal vector, based on:
+// Frisvad, Jeppe Revall: Building an Orthonormal Basis from a 3D Unit Vector Without Normalization
+// Paper: https://backend.orbit.dtu.dk/ws/portalfiles/portal/126824972/onb_frisvad_jgt2012_v2.pdf
+//
+// The paper uses a Z-up world basis, which has been converted to Y-up here
+static void frisvadTangentSpace(const float3& N, float3& T, float3& B) {
+    if (N.y < -1.0f + std::numeric_limits<float>::epsilon()) {
+        // Handle the singularity
+        T = float3{-1.0f, 0.0f, 0.0f};
+        B = float3{0.0f, 0.0f, -1.0f};
+        return;
+    }
+    const float a = 1.0f / (1.0f + N.y);
+    const float b = -N.z * N.x * a;
+    T = float3(b, -N.z, 1.0f - N.z * N.z * a);
+    B = float3(1.0f - N.x * N.x * a, -N.x, b);
+}
+
 SurfaceOrientation* OrientationBuilderImpl::buildWithNormalsOnly() {
     vector<quatf> quats(vertexCount);
 
@@ -160,8 +178,8 @@ SurfaceOrientation* OrientationBuilderImpl::buildWithNormalsOnly() {
 
     for (size_t qindex = 0; qindex < vertexCount; ++qindex) {
         float3 n = *normal;
-        float3 b = randomPerp(n);
-        float3 t = cross(n, b);
+        float3 b, t;
+        frisvadTangentSpace(n, t, b);
         quats[qindex] = mat3f::packTangentFrame({t, b, n});
         normal = (const float3*) (((const uint8_t*) normal) + nstride);
     }
