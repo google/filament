@@ -373,6 +373,12 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
     return i;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, IblOptions::IblTechnique* val) {
+    CHECK_TOKTYPE(tokens[i], JSMN_PRIMITIVE);
+    *val = static_cast<IblOptions::IblTechnique>(strtod(jsonChunk + tokens[i].start, nullptr));
+    return i + 1;
+}
+
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSettings* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -397,6 +403,28 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSet
             i = parse(tokens, i + 1, jsonChunk, &out->iblIntensity);
         } else if (compare(tok, jsonChunk, "iblRotation") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->iblRotation);
+        } else if (compare(tok, jsonChunk, "iblTechnique") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTechnique);
+        } else if (compare(tok, jsonChunk, "iblCenterX") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.x);
+        } else if (compare(tok, jsonChunk, "iblCenterY") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.y);
+        } else if (compare(tok, jsonChunk, "iblCenterZ") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.z);
+        } else if (compare(tok, jsonChunk, "iblHalfExtentsX") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.x);
+        } else if (compare(tok, jsonChunk, "iblHalfExtentsY") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.y);
+        } else if (compare(tok, jsonChunk, "iblHalfExtentsZ") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.z);
+        } else if (compare(tok, jsonChunk, "iblTintAndIntensityR") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndIntensity.x);
+        } else if (compare(tok, jsonChunk, "iblTintAndIntensityG") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndIntensity.y);
+        } else if (compare(tok, jsonChunk, "iblTintAndIntensityB") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndIntensity.z);
+        } else if (compare(tok, jsonChunk, "iblTintAndIntensityA") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndIntensity.w);            
         } else {
             slog.w << "Invalid light setting key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -738,7 +766,18 @@ static std::ostream& operator<<(std::ostream& out, const LightSettings& in) {
         << "\"sunlightDirection\": " << (in.sunlightDirection) << ",\n"
         << "\"sunlightColor\": " << (in.sunlightColor) << ",\n"
         << "\"iblIntensity\": " << (in.iblIntensity) << ",\n"
-        << "\"iblRotation\": " << (in.iblRotation) << "\n"
+        << "\"iblRotation\": " << (in.iblRotation) << ",\n"
+        << "\"iblTechnique\": " << static_cast<uint32_t>(in.iblOptions.iblTechnique) << ",\n"
+        << "\"iblCenterX\": " << in.iblOptions.iblCenter.x << ",\n"
+        << "\"iblCenterY\": " << in.iblOptions.iblCenter.y << ",\n"
+        << "\"iblCenterZ\": " << in.iblOptions.iblCenter.z << ",\n"
+        << "\"iblHalfExtentsX\": " << in.iblOptions.iblHalfExtents.x << ",\n"
+        << "\"iblHalfExtentsY\": " << in.iblOptions.iblHalfExtents.y << ",\n"
+        << "\"iblHalfExtentsZ\": " << in.iblOptions.iblHalfExtents.z << ",\n"
+        << "\"iblTintAndIntensityR\": " << to_string(in.iblOptions.iblTintAndIntensity.x) << ",\n"
+        << "\"iblTintAndIntensityG\": " << to_string(in.iblOptions.iblTintAndIntensity.y) << ",\n"
+        << "\"iblTintAndIntensityB\": " << to_string(in.iblOptions.iblTintAndIntensity.z) << ",\n"
+        << "\"iblTintAndIntensityA\": " << to_string(in.iblOptions.iblTintAndIntensity.w) << "\n"
         << "}";
 }
 

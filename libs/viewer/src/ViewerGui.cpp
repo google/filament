@@ -439,6 +439,7 @@ void ViewerGui::setIndirectLight(filament::IndirectLight* ibl,
     using namespace filament::math;
     mSettings.view.fog.color = sh3[0];
     mIndirectLight = ibl;
+
     if (ibl) {
         float3 d = filament::IndirectLight::getDirectionEstimate(sh3);
         float4 c = filament::IndirectLight::getColorEstimate(sh3, d);
@@ -471,6 +472,8 @@ void ViewerGui::updateIndirectLight() {
     if (mIndirectLight) {
         mIndirectLight->setIntensity(mSettings.lighting.iblIntensity);
         mIndirectLight->setRotation(mat3f::rotation(mSettings.lighting.iblRotation, float3{ 0, 1, 0 }));
+
+        mIndirectLight->setIblOptions(mSettings.lighting.iblOptions);
     }
 }
 
@@ -817,11 +820,37 @@ void ViewerGui::updateUserInterface() {
     }
 
     auto& light = mSettings.lighting;
+
     if (ImGui::CollapsingHeader("Light")) {
         ImGui::Indent();
         if (ImGui::CollapsingHeader("Indirect light")) {
+            auto& iblOptions = mSettings.lighting.iblOptions;
+
             ImGui::SliderFloat("IBL intensity", &light.iblIntensity, 0.0f, 100000.0f);
             ImGui::SliderAngle("IBL rotation", &light.iblRotation);
+
+            if (ImGui::RadioButton("Infinite", iblOptions.iblTechnique == IblOptions::IblTechnique::IBL_INFINITE)) {
+                iblOptions.iblTechnique = IblOptions::IblTechnique::IBL_INFINITE;
+            }
+            ImGui::SameLine();
+            if (ImGui::RadioButton("Sphere", iblOptions.iblTechnique == IblOptions::IblTechnique::IBL_FINITE_SPHERE)) {
+                iblOptions.iblTechnique = IblOptions::IblTechnique::IBL_FINITE_SPHERE;
+            }
+            ImGui::SameLine();
+            if (ImGui::RadioButton("Box", iblOptions.iblTechnique == IblOptions::IblTechnique::IBL_FINITE_BOX)) {
+                iblOptions.iblTechnique = IblOptions::IblTechnique::IBL_FINITE_BOX;
+            }
+
+            if (iblOptions.iblTechnique == IblOptions::IblTechnique::IBL_FINITE_SPHERE) {
+                ImGui::SliderFloat3("Sphere center", iblOptions.iblCenter.v, -10.0f, 10.0f);
+                ImGui::SliderFloat("Sphere radius", iblOptions.iblHalfExtents.v, 0.0f, 256.0f);
+
+                iblOptions.iblHalfExtents.y = (iblOptions.iblHalfExtents.x != 0.0f) ? 1.0f / iblOptions.iblHalfExtents.x : 1.0f;
+            }
+            else if (iblOptions.iblTechnique == IblOptions::IblTechnique::IBL_FINITE_BOX) {
+                ImGui::SliderFloat3("Box center", iblOptions.iblCenter.v, -100.0f, 100.0f);
+                ImGui::SliderFloat3("Box half extents", iblOptions.iblHalfExtents.v, 0.0f, 100.0f);
+            }
         }
         if (ImGui::CollapsingHeader("Sunlight")) {
             ImGui::Checkbox("Enable sunlight", &light.enableSunlight);
@@ -902,7 +931,10 @@ void ViewerGui::updateUserInterface() {
         ImGui::Checkbox("Automatic instancing", &mSettings.viewer.autoInstancingEnabled);
 
         ImGui::Checkbox("Show skybox", &mSettings.viewer.skyboxEnabled);
-        ImGui::ColorEdit3("Background color", &mSettings.viewer.backgroundColor.r);
+        if (ImGui::ColorEdit3("Background color", &mSettings.viewer.backgroundColor.r)) {
+            mSettings.lighting.iblOptions.iblTintAndIntensity.rgb = filament::Color::toLinear(mSettings.viewer.backgroundColor);
+        }
+        ImGui::SliderFloat("IBL tint weight", &mSettings.lighting.iblOptions.iblTintAndIntensity.a, 0.0f, 1.0f);
 
         // We do not yet support ground shadow or scene selection in remote mode.
         if (!isRemoteMode()) {
