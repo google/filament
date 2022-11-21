@@ -20,6 +20,7 @@
 #define TNT_FILAMENT_INDIRECTLIGHT_H
 
 #include <filament/FilamentAPI.h>
+#include <filament/Options.h>
 
 #include <utils/compiler.h>
 
@@ -342,6 +343,68 @@ public:
     /** @deprecated use static versions instead */
     UTILS_DEPRECATED
     math::float4 getColorEstimate(math::float3 direction) const noexcept;
+
+    /**
+     * Sets IBL lookup options.
+     *
+     * @param options Options for IBL lookup settings.
+     */
+    void setIblOptions(IblOptions const& options) noexcept;
+
+    /**
+     * Gets IBL lookup options.
+     *
+     * @return IBL lookup options.
+     */
+    IblOptions const& getIblOptions() const noexcept;
+
+    /**
+     * Sets IBL type.
+     *
+     * @param iblTechnique Determine the IBL type (infinite, or finite box/sphere)
+     */
+    void setIblTechnique(const IblOptions::IblTechnique iblTechnique) noexcept;
+
+    /**
+     * Gets IBL type.
+     */
+    IblOptions::IblTechnique getIblTechnique() const noexcept;
+
+    /**
+     * Sets the center of the finite IBL proxy geometry.
+     *
+     * @param iblCenter The center of the finite IBL proxy geometry
+     */
+    void setIblCenter(const math::float3& iblCenter) noexcept;
+
+    /**
+     * Gets IBL center.
+     */
+    const math::float3& getIblCenter() const noexcept;
+
+    /**
+     * Sets the half extents of the finite IBL proxy geometry.
+     *
+     * @param iblCenter The half extents of the finite IBL proxy geometry
+     */
+    void setIblHalfExtents(const math::float3& iblHalfExtents) noexcept;
+
+    /**
+     * Gets IBL half extents.
+     */
+    const math::float3& getIblHalfExtents() const noexcept;
+
+    /**
+     * Sets the IBL tint (.rgb) and blend intensity (.a)
+     *
+     * @param iblTintAndIntensity The tint color (.rgb) and blend weight between shaded and tinted (.a)
+     */
+    void setIblTintAndIntensity(const math::float4& iblTintAndIntensity) noexcept;
+
+    /**
+     * Gets IBL tint (.rgb) and blend intensity (.a).
+     */    
+    const math::float4& getIblTintAndIntensity() const noexcept;    
 };
 
 } // namespace filament

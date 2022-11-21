@@ -161,8 +161,19 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float ssrDistance;                  // ssr world raycast distance, 0 when ssr is off
     float ssrStride;                    // ssr texel stride, >= 1.0
 
+    // --------------------------------------------------------------------------------------------
+    // Localized, tinted IBL parameters
+    // --------------------------------------------------------------------------------------------
+    math::float3 iblCenter;           // center of the sphere or IBL AABB
+    uint32_t padding3;
+
+    math::float3 iblHalfExtents;      // sphere radius and inverse radius; box half extents along X, Y, Z axes
+    uint32_t iblTechnique;            // 0: infinite cubemap IBL, 1: (origin centered) finite sphere IBL, 2: (origin centered) finite cube IBL
+
+    math::float4 iblTintAndIntensity; // .rgb is IBL tint, .a is the intensity of the tint
+
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[63];
+    math::float4 reserved[60];
 };
 
 // 2 KiB == 128 float4s

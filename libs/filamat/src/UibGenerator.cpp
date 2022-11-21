@@ -141,6 +141,15 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "ssrDistance",             0, Type::FLOAT                  },
             { "ssrStride",               0, Type::FLOAT                  },
 
+            // ------------------------------------------------------------------------------------
+            // Localized, tinted IBL parameters
+            // ------------------------------------------------------------------------------------
+            { "iblCenter",                0, Type::FLOAT3                 },
+            { "padding3",                 0, Type::UINT                   },
+            { "iblHalfExtents",           0, Type::FLOAT3                 },
+            { "iblTechnique",             0, Type::UINT                   },
+            { "iblTintAndIntensity",      0, Type::FLOAT4                 },
+
             // bring PerViewUib to 2 KiB
             { "reserved", sizeof(PerViewUib::reserved)/16, Type::FLOAT4 }
             })
