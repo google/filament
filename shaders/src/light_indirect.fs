@@ -287,7 +287,7 @@ vec3 isEvaluateSpecularIBL(const PixelParams pixel, const vec3 n, const vec3 v, 
         }
     }
 
-    return indirectSpecular;
+    return TintIbl(indirectSpecular);
 }
 
 vec3 isEvaluateDiffuseIBL(const PixelParams pixel, vec3 n, vec3 v) {
@@ -337,7 +337,7 @@ vec3 isEvaluateDiffuseIBL(const PixelParams pixel, vec3 n, vec3 v) {
         }
     }
 
-    return indirectDiffuse * invNumSamples; // we bake 1/PI here, which cancels out
+    return TintIbl(indirectDiffuse * invNumSamples); // we bake 1/PI here, which cancels out
 }
 
 void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 Fd, inout vec3 Fr) {
@@ -354,6 +354,7 @@ void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec
     float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
     float attenuation = 1.0 - Fc;
     Fd *= attenuation;
+    Fd = TintIbl(Fd);
     Fr *= attenuation;
 
     PixelParams p;
@@ -366,6 +367,7 @@ void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec
 
     vec3 clearCoatLobe = isEvaluateSpecularIBL(p, clearCoatNormal, shading_view, clearCoatNoV);
     Fr += clearCoatLobe * (specularAO * pixel.clearCoat);
+    Fr = TintIbl(Fr);
 #endif
 }
 #endif
