@@ -5,7 +5,11 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.30.0
+
 - engine: optimize per-shadow UBO [⚠️ **Recompile Materials**]
+- engine: fix potential memory corruption with larger scenes
+- engine: VSM's MSAA setting is now per-view instead of per-light [⚠️ **API Change**]
 
 ## v1.29.0
 
@@ -14,8 +18,6 @@ A new header is inserted each time a *tag* is created.
 - engine: add missing getters on `MaterialInstance`
 - WebGL: add missing `ColorGrading` JS bindings
 - engine: improvements/cleanup of Shadow mapping code [⚠️ **Recompile Materials**]
-- engine: fix potential memory corruption with larger scenes
-- engine: VSM's MSAA setting is now per-view instead of per-light [⚠️ **API Change**]
 
 ## v1.28.3
 
