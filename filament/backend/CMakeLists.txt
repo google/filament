@@ -405,6 +405,7 @@ if (APPLE)
         backend
         getopt
         gtest
+        filamat
         SPIRV
         spirv-cross-glsl)
 

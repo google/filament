@@ -124,12 +124,10 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // bit 0-3: cascade count
     // bit 4: visualize cascades
     // bit 8-11: cascade has visible shadows
-    // bit 31: elvsm
     uint32_t cascades;
-    float shadowBulbRadiusLs;           // light radius in light-space
-    float shadowBias;                   // normal bias
+    float reserved0;
+    float reserved1;                    // normal bias
     float shadowPenumbraRatioScale;     // For DPCF or PCSS, scale penumbra ratio for artistic use
-    std::array<math::mat4f, CONFIG_MAX_SHADOW_CASCADES> lightFromWorldMatrix;
 
     // --------------------------------------------------------------------------------------------
     // VSM shadows [variant: VSM]
@@ -164,7 +162,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float ssrStride;                    // ssr texel stride, >= 1.0
 
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[47];
+    math::float4 reserved[63];
 };
 
 // 2 KiB == 128 float4s
@@ -229,11 +227,11 @@ struct LightsUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float2 spotScaleOffset;     // { scale, offset }
     float reserved3;                  // 0
     float intensity;                  // float
-    uint32_t typeShadow;              // 0x00.ll.ii.ct (t: 0=point, 1=spot, c:contact, ii: index, ll: layer)
+    uint32_t typeShadow;              // 0x00.00.ii.ct (t: 0=point, 1=spot, c:contact, ii: index)
     uint32_t channels;                // 0x000c00ll (ll: light channels, c: caster)
 
-    static uint32_t packTypeShadow(uint8_t type, bool contactShadow, uint8_t index, uint8_t layer) noexcept {
-        return (type & 0xF) | (contactShadow ? 0x10 : 0x00) | (index << 8) | (layer << 16);
+    static uint32_t packTypeShadow(uint8_t type, bool contactShadow, uint8_t index) noexcept {
+        return (type & 0xF) | (contactShadow ? 0x10 : 0x00) | (index << 8);
     }
     static uint32_t packChannels(uint8_t lightChannels, bool castShadows) noexcept {
         return lightChannels | (castShadows ? 0x10000 : 0);
@@ -249,17 +247,22 @@ static_assert(sizeof(LightsUib) == 64,
 struct ShadowUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr std::string_view _name{ "ShadowUniforms" };
     struct alignas(16) ShadowData {
-        math::mat4f lightFromWorldMatrix;       // 64 - unused for point lights
-        math::float3 direction;                 // 12 - unused for point lights
-        float normalBias;                       //  4 - unused for point lights
-        math::float4 lightFromWorldZ;           // 16 - point lights { depth reconstruction values }
+        math::mat4f lightFromWorldMatrix;       // 64
+        math::float3 direction;                 // 12
+        float normalBias;                       //  4
+        math::float4 lightFromWorldZ;           // 16
 
         float texelSizeAtOneMeter;              //  4
         float bulbRadiusLs;                     //  4
         float nearOverFarMinusNear;             //  4
         bool elvsm;                             //  4
+
+        uint32_t layer;                         //  4
+        uint32_t reserved0;                     //  4
+        uint32_t reserved1;                     //  4
+        uint32_t reserved2;                     //  4
     };
-    ShadowData shadows[CONFIG_MAX_SHADOWMAP_PUNCTUAL];
+    ShadowData shadows[CONFIG_MAX_SHADOWMAPS];
 };
 static_assert(sizeof(ShadowUib) <= CONFIG_MINSPEC_UBO_SIZE,
         "ShadowUib exceeds max UBO size");

@@ -1005,6 +1005,7 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mContext->depthStencilState.invalidate();
     mContext->cullModeState.invalidate();
     mContext->windingState.invalidate();
+    mContext->currentPolygonOffset = {0.0f, 0.0f};
 
     mContext->finalizedSamplerGroups.clear();
 }
@@ -1183,8 +1184,12 @@ void MetalDriver::startCapture(int) {
     if (@available(iOS 13, *)) {
         MTLCaptureDescriptor* descriptor = [MTLCaptureDescriptor new];
         descriptor.captureObject = mContext->device;
+#if defined(IOS)
+        descriptor.destination = MTLCaptureDestinationDeveloperTools;
+#else
         descriptor.destination = MTLCaptureDestinationGPUTraceDocument;
         descriptor.outputURL = [[NSURL alloc] initFileURLWithPath:@"filament.gputrace"];
+#endif
         NSError* error = nil;
         [[MTLCaptureManager sharedCaptureManager] startCaptureWithDescriptor:descriptor
                                                                            error:&error];
@@ -1586,10 +1591,12 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         [mContext->currentRenderPassEncoder setDepthStencilState:state];
     }
 
-    if (ps.polygonOffset.constant != 0.0 || ps.polygonOffset.slope != 0.0) {
+    if (ps.polygonOffset.constant != mContext->currentPolygonOffset.constant ||
+        ps.polygonOffset.slope != mContext->currentPolygonOffset.slope) {
         [mContext->currentRenderPassEncoder setDepthBias:ps.polygonOffset.constant
                                               slopeScale:ps.polygonOffset.slope
                                                    clamp:0.0];
+        mContext->currentPolygonOffset = ps.polygonOffset;
     }
 
     // Set scissor-rectangle.

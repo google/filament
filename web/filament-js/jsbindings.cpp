@@ -747,9 +747,38 @@ class_<ColorBuilder>("ColorGrading$Builder")
         return &builder->quality(ql);
     })
 
+    .BUILDER_FUNCTION("format", ColorBuilder, (ColorBuilder* builder,
+            ColorGrading::LutFormat format), {
+        return &builder->format(format);
+    })
+
+    .BUILDER_FUNCTION("dimensions", ColorBuilder, (ColorBuilder* builder, uint8_t dim), {
+        return &builder->dimensions(dim);
+    })
+
     .BUILDER_FUNCTION("toneMapping", ColorBuilder, (ColorBuilder* builder,
             ColorGrading::ToneMapping tm), {
         return &builder->toneMapping(tm);
+    })
+
+    .BUILDER_FUNCTION("luminanceScaling", ColorBuilder, (ColorBuilder* builder,
+            bool luminanceScaling), {
+        return &builder->luminanceScaling(luminanceScaling);
+    })
+
+    .BUILDER_FUNCTION("gamutMapping", ColorBuilder, (ColorBuilder* builder,
+            bool gamutMapping), {
+        return &builder->gamutMapping(gamutMapping);
+    })
+
+    .BUILDER_FUNCTION("exposure", ColorBuilder, (ColorBuilder* builder,
+            float exposure), {
+        return &builder->exposure(exposure);
+    })
+
+    .BUILDER_FUNCTION("nightAdaptation", ColorBuilder, (ColorBuilder* builder,
+            float adaptation), {
+        return &builder->nightAdaptation(adaptation);
     })
 
     .BUILDER_FUNCTION("whiteBalance", ColorBuilder, (ColorBuilder* builder, float temp,
@@ -1250,12 +1279,24 @@ class_<MaterialInstance>("MaterialInstance")
         self->setParameter(name.c_str(), type, value); }), allow_raw_pointers())
     .function("setPolygonOffset", &MaterialInstance::setPolygonOffset)
     .function("setMaskThreshold", &MaterialInstance::setMaskThreshold)
+    .function("getMaskThreshold", &MaterialInstance::getMaskThreshold)
+    .function("setSpecularAntiAliasingVariance", &MaterialInstance::setSpecularAntiAliasingVariance)
+    .function("getSpecularAntiAliasingVariance", &MaterialInstance::getSpecularAntiAliasingVariance)
+    .function("setSpecularAntiAliasingThreshold", &MaterialInstance::setSpecularAntiAliasingThreshold)
+    .function("getSpecularAntiAliasingThreshold", &MaterialInstance::getSpecularAntiAliasingThreshold)
     .function("setDoubleSided", &MaterialInstance::setDoubleSided)
+    .function("isDoubleSided", &MaterialInstance::isDoubleSided)
+    .function("setTransparencyMode", &MaterialInstance::setTransparencyMode)
+    .function("getTransparencyMode", &MaterialInstance::getTransparencyMode)
     .function("setCullingMode", &MaterialInstance::setCullingMode)
+    .function("getCullingMode", &MaterialInstance::getCullingMode)
     .function("setColorWrite", &MaterialInstance::setColorWrite)
+    .function("isColorWriteEnabled", &MaterialInstance::isColorWriteEnabled)
     .function("setDepthWrite", &MaterialInstance::setDepthWrite)
+    .function("isDepthWriteEnabled", &MaterialInstance::isDepthWriteEnabled)
     .function("setStencilWrite", &MaterialInstance::setStencilWrite)
     .function("setDepthCulling", &MaterialInstance::setDepthCulling)
+    .function("isDepthCullingEnabled", &MaterialInstance::isDepthCullingEnabled)
     .function("setStencilCompareFunction", &MaterialInstance::setStencilCompareFunction)
     .function("setStencilCompareFunction", EMBIND_LAMBDA(void,
             (MaterialInstance* self, MaterialInstance::StencilCompareFunc func), {

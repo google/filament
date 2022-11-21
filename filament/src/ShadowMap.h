@@ -19,7 +19,7 @@
 
 #include "components/LightManager.h"
 
-#include "PerViewUniforms.h"
+#include "PerShadowMapUniforms.h"
 
 #include "details/Camera.h"
 #include "details/Scene.h"
@@ -187,14 +187,20 @@ public:
     ShadowType getShadowType() const noexcept { return mShadowType; }
     uint8_t getFace() const noexcept { return mFace; }
 
-    void prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) noexcept;
-    void prepareViewport(const filament::Viewport& viewport) noexcept;
-    void prepareTime(FEngine& engine, math::float4 const& userTime) noexcept;
-    void prepareDirectionalLight(FEngine& engine, math::float3 const& sceneSpaceDirection,
-            LightManager::Instance instance) noexcept;
-    void prepareShadowMapping(bool highPrecision) noexcept;
-    void commitUniforms(backend::DriverApi& driver) const noexcept;
-    void bindPerViewUniformsAndSamplers(backend::DriverApi& driver) const noexcept;
+    using Transaction = PerShadowMapUniforms::Transaction;
+
+    static void prepareCamera(Transaction const& transaction,
+            FEngine& engine, const CameraInfo& cameraInfo) noexcept;
+    static void prepareViewport(Transaction const& transaction,
+            const filament::Viewport& viewport) noexcept;
+    static void prepareTime(Transaction const& transaction,
+            FEngine& engine, math::float4 const& userTime) noexcept;
+    static void prepareShadowMapping(Transaction const& transaction,
+            bool highPrecision) noexcept;
+    static PerShadowMapUniforms::Transaction open(backend::DriverApi& driver) noexcept;
+    void commit(Transaction& transaction,
+            backend::DriverApi& driver) const noexcept;
+    void bind(backend::DriverApi& driver) const noexcept;
 
 private:
     struct Segment {
@@ -207,6 +213,11 @@ private:
 
     // 8 corners, 12 segments w/ 2 intersection max -- all of this twice (8 + 12 * 2) * 2 (768 bytes)
     using FrustumBoxIntersection = std::array<math::float3, 64>;
+
+    ShaderParameters updateSpotOrPoint(
+            math::mat4f const& Mv, float outerConeAngle, float nearPlane, float farPlane,
+            const ShadowMapInfo& shadowMapInfo,
+            const FLightManager::ShadowParams& params) noexcept;
 
     static math::mat4f applyLISPSM(math::mat4f& Wp,
             filament::CameraInfo const& camera, FLightManager::ShadowParams const& params,
@@ -292,12 +303,10 @@ private:
             { 2, 6, 7, 3 },  // top
     };
 
-    // TODO: for shadow maps we don't need the whole `PerViewUniforms` which is large.
-    //       replace it with a smaller version that updates only what we need.
-    mutable PerViewUniforms mPerViewUniforms;   // 40 + 2048
+    mutable PerShadowMapUniforms mPerShadowMapUniforms;                     // 4
 
-    FCamera* mCamera = nullptr;                 //  8
-    FCamera* mDebugCamera = nullptr;            //  8
+    FCamera* mCamera = nullptr;                                             //  8
+    FCamera* mDebugCamera = nullptr;                                        //  8
 
     // The data below technically belongs to ShadowMapManager, but it simplifies allocations
     // to store it here. This data is always associated with this shadow map anyway.

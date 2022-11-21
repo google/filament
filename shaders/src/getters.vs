@@ -13,10 +13,6 @@ int getInstanceIndex() {
 // Uniforms access
 //------------------------------------------------------------------------------
 
-mat4 getLightFromWorldMatrix() {
-    return frameUniforms.lightFromWorldMatrix[0];
-}
-
 PerRenderableData getObjectUniforms() {
 #if defined(MATERIAL_HAS_INSTANCES)
     // the material manages instancing, all instances share the same uniform block.

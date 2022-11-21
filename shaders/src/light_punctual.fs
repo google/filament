@@ -154,17 +154,18 @@ Light getLight(const uint lightIndex) {
     light.worldPosition = positionFalloff.xyz;
     light.channels = channels;
     light.contactShadows = bool(typeShadow & 0x10u);
-#if defined(VARIANT_HAS_SHADOWING)
 #if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
-    light.shadowIndex = (typeShadow >>  8u) & 0xFFu;
-    light.shadowLayer = (typeShadow >> 16u) & 0xFFu;
-    light.castsShadows   = bool(channels & 0x10000u);
     light.type = (typeShadow & 0x1u);
+#if defined(VARIANT_HAS_SHADOWING)
+    light.shadowIndex = (typeShadow >>  8u) & 0xFFu;
+    light.castsShadows   = bool(channels & 0x10000u);
     if (light.type == LIGHT_TYPE_SPOT) {
-        light.attenuation *= getAngleAttenuation(-direction, light.l, scaleOffset);
         light.zLight = dot(shadowUniforms.shadows[light.shadowIndex].lightFromWorldZ, vec4(worldPosition, 1.0));
     }
 #endif
+    if (light.type == LIGHT_TYPE_SPOT) {
+        light.attenuation *= getAngleAttenuation(-direction, light.l, scaleOffset);
+    }
 #endif
     return light;
 }
@@ -209,19 +210,17 @@ void evaluatePunctualLights(const MaterialInputs material,
 #if defined(VARIANT_HAS_SHADOWING)
         if (light.NoL > 0.0) {
             if (light.castsShadows) {
-                uint layer = light.shadowLayer;
-                highp vec4 shadowPosition;
+                uint shadowIndex = light.shadowIndex;
                 if (light.type == LIGHT_TYPE_POINT) {
                     // point-light shadows are sampled from a direction
                     highp vec3 r = getWorldPosition() - light.worldPosition;
-                    highp vec4 nf = shadowUniforms.shadows[light.shadowIndex].lightFromWorldZ;
-                    // getShadowPosition returns zLight which is needed for PCSS/DPCF
-                    shadowPosition = getShadowPosition(r, nf, layer, light.zLight);
-                } else {
-                    // getShadowPosition needs zLight for applying the normal bias
-                    shadowPosition = getShadowPosition(false, light.shadowIndex, 0u, light.zLight);
+                    uint face = getPointLightFace(r);
+                    shadowIndex += face;
+                    light.zLight = dot(shadowUniforms.shadows[shadowIndex].lightFromWorldZ,
+                            vec4(getWorldPosition(), 1.0));
                 }
-                visibility = shadow(false, light_shadowMap, layer, light.shadowIndex,
+                highp vec4 shadowPosition = getShadowPosition(false, shadowIndex, 0u, light.zLight);
+                visibility = shadow(false, light_shadowMap, shadowIndex,
                         shadowPosition, light.zLight);
             }
             if (light.contactShadows && visibility > 0.0) {

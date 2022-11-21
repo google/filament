@@ -603,7 +603,7 @@ void FAssetLoader::recurseEntities(const cgltf_data* srcAsset, const cgltf_node*
         }
     }
 
-    if (node->light ) {
+    if (node->light) {
         createLight(node->light, entity);
     }
 
@@ -991,7 +991,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* out
             const float* minp = &accessor->min[0];
             const float* maxp = &accessor->max[0];
 
-            // We assume that the range of morph target weight is [-1,1].
+            // We assume that the range of morph target weight is [0, 1].
             targetAabb.min += float3(minp[0], minp[1], minp[2]);
             targetAabb.max += float3(maxp[0], maxp[1], maxp[2]);
 

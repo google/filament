@@ -41,7 +41,7 @@ using namespace backend;
 static constexpr bool USE_DEPTH_CLAMP = false;
 
 ShadowMap::ShadowMap(FEngine& engine) noexcept
-        : mPerViewUniforms(engine),
+        : mPerShadowMapUniforms(engine),
           mShadowType(ShadowType::DIRECTIONAL),
           mHasVisibleShadows(false),
           mFace(0) {
@@ -62,7 +62,7 @@ void ShadowMap::terminate(FEngine& engine) {
         engine.destroyCameraComponent(e);
     }
     engine.getEntityManager().destroy(sizeof(entities) / sizeof(Entity), entities);
-    mPerViewUniforms.terminate(engine.getDriverApi());
+    mPerShadowMapUniforms.terminate(engine.getDriverApi());
 }
 
 ShadowMap::~ShadowMap() = default;
@@ -413,41 +413,10 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
     return shaderParameters;
 }
 
-ShadowMap::ShaderParameters ShadowMap::updateSpot(FEngine& engine,
-        const FScene::LightSoa& lightData, size_t index,
-        filament::CameraInfo const& camera,
-        const ShadowMapInfo& shadowMapInfo,
-        FScene const& scene, SceneInfo sceneInfo) noexcept {
-
-    ShaderParameters shaderParameters;
-
-    auto& lcm = engine.getLightManager();
-    auto li         = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
-    auto position   = lightData.elementAt<FScene::POSITION_RADIUS>(index).xyz;
-    auto direction  = lightData.elementAt<FScene::DIRECTION>(index);
-    auto radius     = lightData.elementAt<FScene::POSITION_RADIUS>(index).w;
-    auto outerConeAngle = lcm.getSpotLightOuterCone(li);
-    const FLightManager::ShadowParams& params = lcm.getShadowParams(li);
-
-    /*
-     * Compute the light model matrix.
-     */
-
-    // Choose a reasonable value for the near plane.
-    const mat4f Mv = getDirectionalLightViewMatrix(direction, position);
-
-    // find decent near/far
-    ShadowMap::updateSceneInfoSpot(Mv, scene, sceneInfo);
-
-    // if the scene was empty, near > far
-    mHasVisibleShadows = -sceneInfo.lsNearFar[0] < -sceneInfo.lsNearFar[1];
-
-    // FIXME: we need a configuration for minimum near plane (for now hardcoded to 1cm)
-    float nearPlane = std::max(0.01f, -sceneInfo.lsNearFar[0]);
-    float farPlane  = std::min(radius, -sceneInfo.lsNearFar[1]);
-
-    float outerConeAngleDegrees = outerConeAngle * f::RAD_TO_DEG;
-    const mat4f Mp = mat4f::perspective(outerConeAngleDegrees * 2.0f, 1.0f, nearPlane, farPlane);
+ShadowMap::ShaderParameters ShadowMap::updateSpotOrPoint(
+        mat4f const& Mv, float outerConeAngle, float nearPlane, float farPlane,
+        const ShadowMapInfo& shadowMapInfo, const FLightManager::ShadowParams& params) noexcept {
+    const mat4f Mp = mat4f::perspective(outerConeAngle * f::RAD_TO_DEG * 2.0f, 1.0f, nearPlane, farPlane);
     const mat4f MpMv(math::highPrecisionMultiply(Mp, Mv));
 
     // Final shadow transform
@@ -469,7 +438,9 @@ ShadowMap::ShaderParameters ShadowMap::updateSpot(FEngine& engine,
     //                               = zInLightSpace * texelSizeAtOneMeter
     //                               = zInLightSpace * (2*tan(halfConeAngle)/dimension)
     // Note: this would not work with LISPSM, which warps the texture space.
-    shaderParameters.texelSizeAtOneMeterWs = (2.0f * std::tan(outerConeAngle) / float(shadowMapInfo.shadowDimension));
+    ShaderParameters shaderParameters;
+    shaderParameters.texelSizeAtOneMeterWs =
+            (2.0f * std::tan(outerConeAngle) / float(shadowMapInfo.shadowDimension));
     shaderParameters.lightFromWorldZ = -transpose(Mv)[2]; // negate because camera looks in -Z
 
     if (!shadowMapInfo.vsm) {
@@ -478,9 +449,9 @@ ShadowMap::ShaderParameters ShadowMap::updateSpot(FEngine& engine,
         shaderParameters.lightSpace = computeVsmLightSpaceMatrix(St, Mv, nearPlane, farPlane);
     }
 
+    const float3 direction = -transpose(Mv)[2].xyz;
     const float constantBias = shadowMapInfo.vsm ? 0.0f : params.options.constantBias;
     const mat4f b = mat4f::translation(direction * constantBias);
-    const mat4f Sb = S * b;
 
     // It's important to set the light camera's model matrix separately from its projection, so that
     // the cameraPosition uniform gets set correctly.
@@ -493,18 +464,43 @@ ShadowMap::ShaderParameters ShadowMap::updateSpot(FEngine& engine,
     mCamera->setModelMatrix(mat4{ FCamera::rigidTransformInverse(Mv * b) });
     mCamera->setCustomProjection(mat4(Mp), nearPlane, farPlane);
 
-    // for the debug camera, we need to undo the world origin
-    mDebugCamera->setCustomProjection(mat4(Sb * camera.worldOrigin), nearPlane, radius);
-
     return shaderParameters;
+}
+
+ShadowMap::ShaderParameters ShadowMap::updateSpot(FEngine& engine,
+        const FScene::LightSoa& lightData, size_t index,
+        filament::CameraInfo const& camera,
+        const ShadowMapInfo& shadowMapInfo,
+        FScene const& scene, SceneInfo sceneInfo) noexcept {
+
+    auto& lcm = engine.getLightManager();
+    auto position   = lightData.elementAt<FScene::POSITION_RADIUS>(index).xyz;
+    auto direction  = lightData.elementAt<FScene::DIRECTION>(index);
+    auto radius     = lightData.elementAt<FScene::POSITION_RADIUS>(index).w;
+    auto li         = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
+    const FLightManager::ShadowParams& params = lcm.getShadowParams(li);
+    const mat4f Mv = getDirectionalLightViewMatrix(direction, position);
+
+    // find decent near/far
+    ShadowMap::updateSceneInfoSpot(Mv, scene, sceneInfo);
+
+    // if the scene was empty, near > far
+    mHasVisibleShadows = -sceneInfo.lsNearFar[0] < -sceneInfo.lsNearFar[1];
+    if (!mHasVisibleShadows) {
+        return {};
+    }
+
+    // FIXME: we need a configuration for minimum near plane (for now hardcoded to 1cm)
+    float nearPlane = std::max(0.01f, -sceneInfo.lsNearFar[0]);
+    float farPlane  = std::min(radius, -sceneInfo.lsNearFar[1]);
+    auto outerConeAngle = lcm.getSpotLightOuterCone(li);
+    return updateSpotOrPoint(Mv, outerConeAngle, nearPlane, farPlane, shadowMapInfo, params);
 }
 
 ShadowMap::ShaderParameters ShadowMap::updatePoint(FEngine& engine,
         const FScene::LightSoa& lightData, size_t index,
         filament::CameraInfo const& camera, const ShadowMapInfo& shadowMapInfo, FScene const& scene,
         SceneInfo, uint8_t face) noexcept {
-
-    ShaderParameters shaderParameters;
 
     // check if this shadow map has anything to render
     mHasVisibleShadows = false;
@@ -518,53 +514,16 @@ ShadowMap::ShaderParameters ShadowMap::updatePoint(FEngine& engine,
         }
     }
     if (!mHasVisibleShadows) {
-        return shaderParameters;
+        return {};
     }
 
     auto& lcm = engine.getLightManager();
-
-    auto li         = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
     auto position   = lightData.elementAt<FScene::POSITION_RADIUS>(index).xyz;
     auto radius     = lightData.elementAt<FScene::POSITION_RADIUS>(index).w;
+    auto li         = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
     const FLightManager::ShadowParams& params = lcm.getShadowParams(li);
-
-    /*
-     * Compute the light model matrix.
-     */
-
     const mat4f Mv = getPointLightViewMatrix(TextureCubemapFace(face), position);
-    const float3 direction = -transpose(Mv)[2].xyz;
-
-    // TODO: don't hardcode near plane
-    // Choose a reasonable value for the near plane.
-    float nearPlane = 0.01f;
-    float farPlane  = radius;
-    const mat4f Mp = mat4f::perspective(90.0f, 1.0f, nearPlane, farPlane);
-
-    // For calculating the point light normal bias, we need the texel size in world space at the
-    // sample location. Using Thales's theorem, we find:
-    //      texelSize(zInLightSpace) = zInLightSpace * texelSizeOnTheNearPlane / near
-    //                               = zInLightSpace * texelSizeAtOneMeter
-    //                               = zInLightSpace * (2*tan(halfConeAngle)/dimension)
-    // Note: this would not work with LISPSM, which warps the texture space.
-    shaderParameters.texelSizeAtOneMeterWs =
-            (2.0f * std::tan(f::PI_4) / float(shadowMapInfo.shadowDimension));
-
-    const float constantBias = shadowMapInfo.vsm ? 0.0f : params.options.constantBias;
-    const mat4f b = mat4f::translation(direction * constantBias);
-
-    // It's important to set the light camera's model matrix separately from its projection, so that
-    // the cameraPosition uniform gets set correctly.
-    // mLightSpace is used in the shader to access the shadow map texture, and has the model matrix
-    // baked in.
-
-    // The model matrix below is in fact inverted to get the view matrix and passed to the
-    // shader as 'viewFromWorldMatrix', and is used in the VSM case to compute the depth metric.
-    // (see depth_main.fs). Note that in the case of VSM, 'b' below is identity.
-    mCamera->setModelMatrix(mat4{ FCamera::rigidTransformInverse(Mv * b) });
-    mCamera->setCustomProjection(mat4(Mp), nearPlane, farPlane);
-
-    return shaderParameters;
+    return updateSpotOrPoint(Mv, 45.0f * f::DEG_TO_RAD, 0.01f, radius, shadowMapInfo, params);
 }
 
 mat4f ShadowMap::applyLISPSM(mat4f& Wp,
@@ -1184,6 +1143,8 @@ void ShadowMap::visitScene(const FScene& scene, uint32_t visibleLayers,
 
 void ShadowMap::initSceneInfo(ShadowMap::SceneInfo& sceneInfo,
         uint8_t visibleLayers, FScene const& scene, mat4f const& viewMatrix) {
+    sceneInfo.csNearFar = { -1.0f, 1.0f };
+    sceneInfo.lsNearFar = {};
     sceneInfo.visibleLayers = visibleLayers;
     sceneInfo.vsNearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
 
@@ -1265,34 +1226,38 @@ filament::Viewport ShadowMap::getViewport() const noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-void ShadowMap::prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) noexcept {
-    mPerViewUniforms.prepareCamera(engine, cameraInfo);
-    mPerViewUniforms.prepareLodBias(0.0f);
+void ShadowMap::prepareCamera(Transaction const& transaction,
+        FEngine& engine, const CameraInfo& cameraInfo) noexcept {
+    PerShadowMapUniforms::prepareCamera(transaction, engine, cameraInfo);
+    PerShadowMapUniforms::prepareLodBias(transaction, 0.0f);
 }
 
-void ShadowMap::prepareViewport(const filament::Viewport& viewport) noexcept {
-    mPerViewUniforms.prepareViewport(viewport, 0, 0);
+void ShadowMap::prepareViewport(Transaction const& transaction,
+        const filament::Viewport& viewport) noexcept {
+    PerShadowMapUniforms::prepareViewport(transaction, viewport, 0, 0);
 }
 
-void ShadowMap::prepareTime(FEngine& engine, math::float4 const& userTime) noexcept {
-    mPerViewUniforms.prepareTime(engine, userTime);
+void ShadowMap::prepareTime(Transaction const& transaction,
+        FEngine& engine, math::float4 const& userTime) noexcept {
+    PerShadowMapUniforms::prepareTime(transaction, engine, userTime);
 }
 
-void ShadowMap::prepareDirectionalLight(FEngine& engine, math::float3 const& sceneSpaceDirection,
-        LightManager::Instance instance) noexcept {
-    mPerViewUniforms.prepareDirectionalLight(engine, 1.0f, sceneSpaceDirection, instance);
+void ShadowMap::prepareShadowMapping(Transaction const& transaction,
+        bool highPrecision) noexcept {
+    PerShadowMapUniforms::prepareShadowMapping(transaction, highPrecision);
 }
 
-void ShadowMap::prepareShadowMapping(bool highPrecision) noexcept {
-    mPerViewUniforms.prepareShadowMapping(highPrecision);
+PerShadowMapUniforms::Transaction ShadowMap::open(DriverApi& driver) noexcept {
+    return PerShadowMapUniforms::open(driver);
 }
 
-void ShadowMap::commitUniforms(backend::DriverApi& driver) const noexcept {
-    mPerViewUniforms.commit(driver);
+void ShadowMap::commit(Transaction& transaction,
+        backend::DriverApi& driver) const noexcept {
+    mPerShadowMapUniforms.commit(transaction, driver);
 }
 
-void ShadowMap::bindPerViewUniformsAndSamplers(backend::DriverApi& driver) const noexcept {
-    mPerViewUniforms.bind(driver);
+void ShadowMap::bind(backend::DriverApi& driver) const noexcept {
+    mPerShadowMapUniforms.bind(driver);
 }
 
 } // namespace filament

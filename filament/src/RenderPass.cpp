@@ -358,8 +358,8 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
 
     cmdDraw.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
     cmdDraw.primitive.rasterState.culling = mi->getCullingMode();
-    cmdDraw.primitive.rasterState.colorWrite = mi->getColorWrite();
-    cmdDraw.primitive.rasterState.depthWrite = mi->getDepthWrite();
+    cmdDraw.primitive.rasterState.colorWrite = mi->isColorWriteEnabled();
+    cmdDraw.primitive.rasterState.depthWrite = mi->isDepthWriteEnabled();
     cmdDraw.primitive.rasterState.depthFunc = mi->getDepthFunc();
     cmdDraw.primitive.mi = mi;
     cmdDraw.primitive.materialVariant = variant;
@@ -663,7 +663,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
                 cmdDepth.primitive.rasterState.depthWrite = (1 // only keep bit 0
-                        & (mi->getDepthWrite() | (mode == TransparencyMode::TWO_PASSES_ONE_SIDE))
+                        & (mi->isDepthWriteEnabled() | (mode == TransparencyMode::TWO_PASSES_ONE_SIDE))
                         & !(filterTranslucentObjects & translucent)
                         & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
                             | writeDepthForShadowCasters;

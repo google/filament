@@ -45,7 +45,7 @@ std::string fragment (R"(#version 450 core
 layout(location = 0) out vec4 fragColor;
 layout(location = 0) in vec2 uv;
 
-layout(set = 1, binding = 6) uniform sampler2D tex;
+layout(location = 0, set = 1) uniform sampler2D tex;
 
 void main() {
     fragColor = texture(tex, uv);
@@ -65,11 +65,16 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     auto swapChain = createSwapChain();
 
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
+    SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
+            .name("backend_test_sib")
+            .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
+            .add( {{"tex", SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH }} )
+            .build();
+    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
 
     // Create a program that samples a texture.
     Program p = shaderGen.getProgram(getDriverApi());
-    Program::Sampler sampler { utils::CString("tex"), 6 };
+    Program::Sampler sampler { utils::CString("tex"), 0 };
     p.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, &sampler, 1);
     backend::Handle<HwProgram> program = getDriverApi().createProgram(std::move(p));
 
@@ -139,11 +144,16 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     auto swapChain = createSwapChain();
 
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
+    SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
+            .name("backend_test_sib")
+            .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
+            .add( {{"tex", SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT, Precision::HIGH }} )
+            .build();
+    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
 
     // Create a program that samples a texture.
     Program p = shaderGen.getProgram(getDriverApi());
-    Program::Sampler sampler { utils::CString("tex"), 6 };
+    Program::Sampler sampler { utils::CString("tex"), 0 };
     p.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, &sampler, 1);
     auto program = getDriverApi().createProgram(std::move(p));
 

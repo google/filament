@@ -292,4 +292,44 @@ MaterialInstance* MaterialInstance::duplicate(MaterialInstance const* other, con
 }
 
 
+float MaterialInstance::getMaskThreshold() const noexcept {
+    return downcast(this)->getMaskThreshold();
+}
+
+float MaterialInstance::getSpecularAntiAliasingVariance() const noexcept {
+    return downcast(this)->getSpecularAntiAliasingVariance();
+}
+
+float MaterialInstance::getSpecularAntiAliasingThreshold() const noexcept {
+    return downcast(this)->getSpecularAntiAliasingThreshold();
+}
+
+bool MaterialInstance::isDoubleSided() const noexcept {
+    return downcast(this)->isDoubleSided();
+}
+
+TransparencyMode MaterialInstance::getTransparencyMode() const noexcept {
+    return downcast(this)->getTransparencyMode();
+}
+
+CullingMode MaterialInstance::getCullingMode() const noexcept {
+    return downcast(this)->getCullingMode();
+}
+
+bool MaterialInstance::isColorWriteEnabled() const noexcept {
+    return downcast(this)->isColorWriteEnabled();
+}
+
+bool MaterialInstance::isDepthWriteEnabled() const noexcept {
+    return downcast(this)->isDepthWriteEnabled();
+}
+
+bool MaterialInstance::isStencilWriteEnabled() const noexcept {
+    return downcast(this)->isStencilWriteEnabled();
+}
+
+bool MaterialInstance::isDepthCullingEnabled() const noexcept {
+    return downcast(this)->isDepthCullingEnabled();
+}
+
 } // namespace filament

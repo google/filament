@@ -9,6 +9,10 @@ struct ShadowData {
     float bulbRadiusLs;
     float nearOverFarMinusNear;
     bool elvsm;
+    uint layer;
+    uint reserved0;
+    uint reserved1;
+    uint reserved2;
 };
 
 struct BoneData {
