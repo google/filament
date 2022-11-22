@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- gltfio: fix incorrct orientation applied to entities with scale animated to near 0
+
 ## v1.30.0
 
 - engine: optimize per-shadow UBO [⚠️ **Recompile Materials**]
