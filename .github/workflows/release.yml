@@ -50,6 +50,7 @@ jobs:
         run: |
           WORKFLOW_OS=`echo \`uname\` | sed "s/Darwin/mac/" | tr [:upper:] [:lower:]`
           cd build/$WORKFLOW_OS && printf "y" | ./build.sh release
+          cd ../..
           if [ -f out/filament-release-darwin.tgz ]; then mv out/filament-release-darwin.tgz out/filament-${TAG}-mac.tgz; fi;
           if [ -f out/filament-release-linux.tgz ]; then mv out/filament-release-linux.tgz out/filament-${TAG}-linux.tgz; fi;
       - uses: actions/github-script@v6
@@ -83,6 +84,7 @@ jobs:
           TAG: ${{ steps.git_ref.outputs.tag }}
         run: |
           cd build/web && printf "y" | ./build.sh release
+          cd ../..
           mv out/filament-release-web.tgz out/filament-${TAG}-web.tgz
       - uses: actions/github-script@v6
         env:
@@ -115,6 +117,7 @@ jobs:
           TAG: ${{ steps.git_ref.outputs.tag }}
         run: |
           cd build/android && printf "y" | ./build.sh release
+          cd ../..
           mv out/filament-android-release.aar out/filament-${TAG}-android.aar
           mv out/filamat-android-release.aar out/filamat-${TAG}-android.aar
           mv out/filamat-android-lite-release.aar out/filamat-${TAG}-lite-android.aar
@@ -165,6 +168,7 @@ jobs:
           TAG: ${{ steps.git_ref.outputs.tag }}
         run: |
           cd build/ios && printf "y" | ./build.sh release
+          cd ../..
           mv out/filament-release-ios.tgz out/filament-${TAG}-ios.tgz
       - uses: actions/github-script@v6
         env:
