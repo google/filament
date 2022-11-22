@@ -10,6 +10,7 @@ A new header is inserted each time a *tag* is created.
 - engine: optimize per-shadow UBO [⚠️ **Recompile Materials**]
 - engine: fix potential memory corruption with larger scenes
 - engine: VSM's MSAA setting is now per-view instead of per-light [⚠️ **API Change**]
+- geometry: change computing tangent basis from normal vector to use Frisvad's method
 
 ## v1.29.0
 
