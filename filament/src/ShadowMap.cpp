@@ -78,7 +78,19 @@ void ShadowMap::initialize(size_t lightIndex, ShadowType shadowType,
 }
 
 mat4f ShadowMap::getDirectionalLightViewMatrix(float3 direction, float3 position) noexcept {
-    const mat4f Mm = mat4f::lookAt(position, position + direction, float3{ 0, 1, 0 });
+    auto z_axis = direction;
+    auto norm_up = float3{ 0, 1, 0 };
+    if (UTILS_UNLIKELY(std::abs(dot(z_axis, norm_up)) > 0.999f)) {
+        // Fix up vector if we're degenerate (looking straight up, basically)
+        norm_up = { norm_up.z, norm_up.x, norm_up.y };
+    }
+    auto x_axis = normalize(cross(z_axis, norm_up));
+    auto y_axis = cross(x_axis, z_axis);
+    const mat4f Mm{
+            float4{   x_axis, 0 },
+            float4{   y_axis, 0 },
+            float4{  -z_axis, 0 },
+            float4{ position, 1 }};
     return FCamera::rigidTransformInverse(Mm);
 }
 
