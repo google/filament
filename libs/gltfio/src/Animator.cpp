@@ -57,6 +57,7 @@ struct Sampler {
 struct Channel {
     const Sampler* sourceData;
     Entity targetEntity;
+    math::mat4f restTransform;  // the default transform of targetEntity, with no animation applied
     enum { TRANSLATION, ROTATION, SCALE, WEIGHTS } transformType;
 };
 
@@ -417,9 +418,11 @@ void AnimatorImpl::addChannels(const FixedCapacityVector<Entity>& nodeMap,
             }
             continue;
         }
+        TransformManager::Instance node = transformManager->getInstance(targetEntity);
         Channel dstChannel;
         dstChannel.sourceData = samplers + (srcChannel.sampler - srcSamplers);
         dstChannel.targetEntity = targetEntity;
+        dstChannel.restTransform = transformManager->getTransform(node);
         setTransformType(srcChannel, dstChannel);
         dst.channels.push_back(dstChannel);
     }
@@ -434,7 +437,7 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
     // Perform the interpolation. This is a simple but inefficient implementation; Filament
     // stores transforms as mat4's but glTF animation is based on TRS (translation rotation
     // scale).
-    mat4f xform = transformManager->getTransform(node);
+    mat4f xform = channel.restTransform;
     float3 scale;
     quatf rotation;
     float3 translation;
