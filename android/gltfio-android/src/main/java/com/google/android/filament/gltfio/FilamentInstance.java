@@ -16,9 +16,12 @@
 
 package com.google.android.filament.gltfio;
 
+import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 
+import com.google.android.filament.Engine;
 import com.google.android.filament.Entity;
+import com.google.android.filament.MaterialInstance;
 
 /**
  * Provides access to a hierarchy of entities that have been instanced from a glTF asset.
@@ -74,10 +77,7 @@ public class FilamentInstance {
     }
 
     /**
-     * Creates or retrieves the <code>Animator</code> for this instance.
-     *
-     * <p>When calling this for the first time, this must be called after
-     * {@link ResourceLoader#loadResources}.</p>
+     * Retrieves the <code>Animator</code> for this instance.
      */
     public @NonNull Animator getAnimator() {
         if (mAnimator != null) {
@@ -87,8 +87,104 @@ public class FilamentInstance {
         return mAnimator;
     }
 
-    private static native int nGetRoot(long nativeAsset);
-    private static native int nGetEntityCount(long nativeAsset);
-    private static native void nGetEntities(long nativeAsset, int[] result);
-    private static native long nGetAnimator(long nativeAsset);
+    /**
+     * Gets the skin count of this instance.
+     */
+    public int getSkinCount() {
+        return nGetSkinCount(getNativeObject());
+    }
+
+    /**
+     * Gets the skin name at skin index in this instance.
+     */
+    public @NonNull String[] getSkinNames() {
+        String[] result = new String[getSkinCount()];
+        nGetSkinNames(getNativeObject(), result);
+        return result;
+    }
+
+    /**
+     * Attaches the given skin to the given node, which must have an associated mesh with
+     * BONE_INDICES and BONE_WEIGHTS attributes.
+     *
+     * This is a no-op if the given skin index or target is invalid.
+     */
+    public void attachSkin(@IntRange(from = 0) int skinIndex, @Entity int target) {
+        nAttachSkin(getNativeObject(), skinIndex, target);
+    }
+
+    /**
+     * Attaches the given skin to the given node, which must have an associated mesh with
+     * BONE_INDICES and BONE_WEIGHTS attributes.
+     *
+     * This is a no-op if the given skin index or target is invalid.
+     */
+    public void detachSkin(@IntRange(from = 0) int skinIndex, @Entity int target) {
+        nDetachSkin(getNativeObject(), skinIndex, target);
+    }
+
+    /**
+     * Gets the joint count at skin index in this instance.
+     */
+    public int getJointCountAt(@IntRange(from = 0) int skinIndex) {
+        return nGetJointCountAt(getNativeObject(), skinIndex);
+    }
+
+    /**
+     * Gets joints at skin index in this instance.
+     */
+    public @NonNull @Entity int[] getJointsAt(@IntRange(from = 0) int skinIndex) {
+        int[] result = new int[getJointCountAt(skinIndex)];
+        nGetJointsAt(getNativeObject(), skinIndex, result);
+        return result;
+    }
+
+    /**
+     * Applies the given material variant to all primitives in this instance.
+     *
+     * Ignored if variantIndex is out of bounds.
+     */
+    void applyMaterialVariant(@IntRange(from = 0) int variantIndex) {
+        nApplyMaterialVariant(mNativeObject, variantIndex);
+    }
+
+    public @NonNull MaterialInstance[] getMaterialInstances() {
+        final int count = nGetMaterialInstanceCount(mNativeObject);
+        MaterialInstance[] result = new MaterialInstance[count];
+        long[] natives = new long[count];
+        nGetMaterialInstances(mNativeObject, natives);
+        Engine engine = mAsset.getEngine();
+        for (int i = 0; i < count; i++) {
+            result[i] = new MaterialInstance(engine, natives[i]);
+        }
+        return result;
+    }
+
+    /**
+     * Returns the names of all material variants.
+     */
+    public @NonNull String[] getMaterialVariantNames() {
+        String[] names = new String[nGetMaterialVariantCount(mNativeObject)];
+        nGetMaterialVariantNames(mNativeObject, names);
+        return names;
+    }
+
+    private static native int nGetRoot(long nativeInstance);
+    private static native int nGetEntityCount(long nativeInstance);
+    private static native void nGetEntities(long nativeInstance, int[] result);
+    private static native long nGetAnimator(long nativeInstance);
+
+    private static native int nGetMaterialInstanceCount(long nativeAsset);
+    private static native void nGetMaterialInstances(long nativeAsset, long[] nativeResults);
+
+    private static native void nApplyMaterialVariant(long nativeInstance, int variantIndex);
+    private static native int nGetMaterialVariantCount(long nativeAsset);
+    private static native void nGetMaterialVariantNames(long nativeAsset, String[] result);
+
+    private static native void nGetJointsAt(long nativeInstance, int skinIndex, int[] result);
+    private static native int nGetSkinCount(long nativeInstance);
+    private static native void nGetSkinNames(long nativeInstance, String[] result);
+    private static native int nGetJointCountAt(long nativeInstance, int skinIndex);
+    private static native void nAttachSkin(long nativeInstance, int skinIndex, int entity);
+    private static native void nDetachSkin(long nativeInstance, int skinIndex, int entity);
 }

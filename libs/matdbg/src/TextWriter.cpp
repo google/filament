@@ -95,6 +95,12 @@ static bool printMaterial(ostream& text, const ChunkContainer& container) {
         text << version << endl;
     }
 
+    uint8_t featureLevel;
+    if (read(container, MaterialFeatureLevel, &featureLevel)) {
+        text << "    " << setw(alignment) << left << "Feature level: ";
+        text << +featureLevel << endl;
+    }
+
     CString name;
     if (read(container, MaterialName, &name)) {
         text << "    " << setw(alignment) << left << "Name: ";
@@ -122,6 +128,7 @@ static bool printMaterial(ostream& text, const ChunkContainer& container) {
     printChunk<bool, bool>(text, container, MaterialColorWrite, "Color write: ");
     printChunk<bool, bool>(text, container, MaterialDepthWrite, "Depth write: ");
     printChunk<bool, bool>(text, container, MaterialDepthTest, "Depth test: ");
+    printChunk<bool, bool>(text, container, MaterialInstanced, "Instanced: ");
     printChunk<bool, bool>(text, container, MaterialDoubleSided, "Double sided: ");
     printChunk<CullingMode, uint8_t>(text, container, MaterialCullingMode, "Culling: ");
     printChunk<TransparencyMode, uint8_t>(text, container, MaterialTransparencyMode, "Transparency: ");
@@ -152,9 +159,8 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
         return true;
     }
 
-    Unflattener uib(
-            container.getChunkStart(ChunkType::MaterialUib),
-            container.getChunkEnd(ChunkType::MaterialUib));
+    auto [startUib, endUib] = container.getChunkRange(ChunkType::MaterialUib);
+    Unflattener uib(startUib, endUib);
 
     CString name;
     if (!uib.read(&name)) {
@@ -166,9 +172,8 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
         return false;
     }
 
-    Unflattener sib(
-            container.getChunkStart(ChunkType::MaterialSib),
-            container.getChunkEnd(ChunkType::MaterialSib));
+    auto [startSib, endSib] = container.getChunkRange(ChunkType::MaterialSib);
+    Unflattener sib(startSib, endSib);
 
     if (!sib.read(&name)) {
         return false;
@@ -249,11 +254,18 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
                 << endl;
     }
 
+    text << endl;
+
+    return true;
+}
+
+static bool printSubpassesInfo(ostream& text, const ChunkContainer& container) {
+
     // Subpasses are optional.
     if (container.hasChunk(ChunkType::MaterialSubpass)) {
-        Unflattener subpasses(
-                container.getChunkStart(ChunkType::MaterialSubpass),
-                container.getChunkEnd(ChunkType::MaterialSubpass));
+        text << "Sub-passes:" << endl;
+        auto [start, end] = container.getChunkRange(ChunkType::MaterialSubpass);
+        Unflattener subpasses(start, end);
 
         CString name;
         if (!subpasses.read(&name)) {
@@ -301,10 +313,8 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
                     << toString(SamplerFormat(fieldFormat))
                     << endl;
         }
+        text << endl;
     }
-
-    text << endl;
-
     return true;
 }
 
@@ -346,7 +356,7 @@ static void printShaderInfo(ostream& text, const vector<ShaderInfo>& info,
         text << setw(2) << left << toString(item.pipelineStage);
         text << " ";
         text << "0x" << hex << setfill('0') << setw(2)
-             << right << (int) item.variant;
+             << right << +item.variant.key;
         text << setfill(' ') << dec;
         text << "   ";
         text << formatVariantString(item.variant, domain);
@@ -394,6 +404,9 @@ bool TextWriter::writeMaterialInfo(const filaflat::ChunkContainer& container) {
         return false;
     }
     if (!printParametersInfo(text, container)) {
+        return false;
+    }
+    if (!printSubpassesInfo(text, container)) {
         return false;
     }
     if (!printGlslInfo(text, container)) {

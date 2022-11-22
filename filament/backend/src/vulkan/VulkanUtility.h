@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANUTILITY_H
-#define TNT_FILAMENT_DRIVER_VULKANUTILITY_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANUTILITY_H
+#define TNT_FILAMENT_BACKEND_VULKANUTILITY_H
 
 #include <backend/DriverEnums.h>
 
 #include <bluevk/BlueVK.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 struct VulkanLayoutTransition {
     VkImage image;
@@ -46,16 +45,29 @@ VkBlendFactor getBlendFactor(BlendFunction mode);
 VkCullModeFlags getCullMode(CullingMode mode);
 VkFrontFace getFrontFace(bool inverseFrontFaces);
 PixelDataType getComponentType(VkFormat format);
+uint32_t getComponentCount(VkFormat format);
 VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]);
+VkImageViewType getImageViewType(SamplerType target);
+VkImageLayout getDefaultImageLayout(TextureUsage usage);
+VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags);
+
 void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transition);
+
+// Helper function for populating barrier fields based on the desired image layout.
+// This logic is specific to blitting.
+VulkanLayoutTransition blitterTransitionHelper(VulkanLayoutTransition transition);
+
+// Helper function for populating barrier fields based on the desired image layout.
+// This logic is specific to texturing.
+VulkanLayoutTransition textureTransitionHelper(VulkanLayoutTransition transition);
+
 bool equivalent(const VkRect2D& a, const VkRect2D& b);
 bool equivalent(const VkExtent2D& a, const VkExtent2D& b);
 bool isDepthFormat(VkFormat format);
 uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
 bool operator<(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b);
 
-#endif // TNT_FILAMENT_DRIVER_VULKANUTILITY_H
+#endif // TNT_FILAMENT_BACKEND_VULKANUTILITY_H

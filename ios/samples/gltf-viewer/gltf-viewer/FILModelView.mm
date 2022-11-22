@@ -38,6 +38,8 @@
 
 #include <gltfio/AssetLoader.h>
 #include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
+#include <gltfio/materials/uberarchive.h>
 
 #include <utils/EntityManager.h>
 #include <utils/NameComponentManager.h>
@@ -46,7 +48,7 @@
 
 using namespace filament;
 using namespace utils;
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace camutils;
 
 const double kNearPlane = 0.05;   // 5 cm
@@ -78,6 +80,8 @@ const float kSensitivity = 100.0f;
     ResourceLoader* _resourceLoader;
 
     Manipulator<float>* _manipulator;
+    TextureProvider* _stbDecoder;
+    TextureProvider* _ktxDecoder;
 
     FilamentAsset* _asset;
 
@@ -123,12 +127,18 @@ const float kSensitivity = 100.0f;
 
     _swapChain = _engine->createSwapChain((__bridge void*)self.layer);
 
-    _materialProvider = createUbershaderLoader(_engine);
+    _materialProvider = createUbershaderProvider(_engine,
+            UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
     EntityManager& em = EntityManager::get();
     NameComponentManager* ncm = new NameComponentManager(em);
     _assetLoader = AssetLoader::create({_engine, _materialProvider, ncm, &em});
     _resourceLoader = new ResourceLoader(
-            {.engine = _engine, .normalizeSkinningWeights = true, .recomputeBoundingBoxes = false});
+            {.engine = _engine, .normalizeSkinningWeights = true});
+    _stbDecoder = createStbProvider(_engine);
+    _ktxDecoder = createKtx2Provider(_engine);
+    _resourceLoader->addTextureProvider("image/png", _stbDecoder);
+    _resourceLoader->addTextureProvider("image/jpeg", _stbDecoder);
+    _resourceLoader->addTextureProvider("image/ktx2", _ktxDecoder);
 
     _manipulator =
             Manipulator<float>::Builder().orbitHomePosition(0.0f, 0.0f, 4.0f).build(Mode::ORBIT);
@@ -188,7 +198,7 @@ const float kSensitivity = 100.0f;
 
 - (void)loadModelGlb:(NSData*)buffer {
     [self destroyModel];
-    _asset = _assetLoader->createAssetFromBinary(
+    _asset = _assetLoader->createAsset(
             static_cast<const uint8_t*>(buffer.bytes), static_cast<uint32_t>(buffer.length));
 
     if (!_asset) {
@@ -197,13 +207,13 @@ const float kSensitivity = 100.0f;
 
     _scene->addEntities(_asset->getEntities(), _asset->getEntityCount());
     _resourceLoader->loadResources(_asset);
-    _animator = _asset->getAnimator();
+    _animator = _asset->getInstance()->getAnimator();
     _asset->releaseSourceData();
 }
 
 - (void)loadModelGltf:(NSData*)buffer callback:(ResourceCallback)callback {
     [self destroyModel];
-    _asset = _assetLoader->createAssetFromJson(
+    _asset = _assetLoader->createAsset(
             static_cast<const uint8_t*>(buffer.bytes), static_cast<uint32_t>(buffer.length));
 
     if (!_asset) {
@@ -224,7 +234,7 @@ const float kSensitivity = 100.0f;
     }
 
     _resourceLoader->loadResources(_asset);
-    _animator = _asset->getAnimator();
+    _animator = _asset->getInstance()->getAnimator();
     _asset->releaseSourceData();
 
     _scene->addEntities(_asset->getEntities(), _asset->getEntityCount());
@@ -247,6 +257,8 @@ const float kSensitivity = 100.0f;
     [self destroyModel];
 
     delete _manipulator;
+    delete _stbDecoder;
+    delete _ktxDecoder;
 
     _materialProvider->destroyMaterials();
     delete _materialProvider;

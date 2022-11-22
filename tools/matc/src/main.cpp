@@ -14,29 +14,25 @@
  * limitations under the License.
  */
 
-#include <stdlib.h>
-
-#include <iostream>
-#include <memory>
-
-#include "matc/Compiler.h"
 #include "matc/CommandlineConfig.h"
 #include "matc/MaterialCompiler.h"
+
+#include <iostream>
+
+#include <stdlib.h>
 
 using namespace matc;
 
 int main(int argc, char** argv) {
-    CommandlineConfig parameters(argc, argv);
-    if (!parameters.isValid()) {
+    CommandlineConfig config(argc, argv);
+    if (!config.isValid()) {
         std::cerr << "Invalid parameters." << std::endl;
         return EXIT_FAILURE;
     }
 
-    const std::unique_ptr<Compiler> compiler = std::make_unique<MaterialCompiler>();
-
-    if (!compiler->start(parameters)) {
+    MaterialCompiler compiler;
+    if (!compiler.compile(config)) {
         return EXIT_FAILURE;
     }
-
     return EXIT_SUCCESS;
 }

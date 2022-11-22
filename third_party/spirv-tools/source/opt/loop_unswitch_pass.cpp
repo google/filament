@@ -118,7 +118,7 @@ class LoopUnswitch {
 
     // Find a value that can be used to select the default path.
     // If none are possible, then it will just use 0.  The value does not matter
-    // because this path will never be taken becaues the new switch outside of
+    // because this path will never be taken because the new switch outside of
     // the loop cannot select this path either.
     std::vector<uint32_t> existing_values;
     for (uint32_t i = 2; i < switch_inst->NumInOperands(); i += 2) {

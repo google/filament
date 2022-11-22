@@ -19,13 +19,12 @@
 
 #include <utils/Panic.h>
 
-#include <assert.h>
 #include <map>
-#include <stdint.h>
-#include <string.h>
 #include <vector>
 
-#include "filamat/Package.h"
+#include <assert.h>
+#include <stdint.h>
+#include <string.h>
 
 using namespace utils;
 
@@ -33,8 +32,7 @@ namespace filamat {
 
 class Flattener {
 public:
-    Flattener(Package& package) : Flattener(package.getData()) {}
-    Flattener(uint8_t* dst) : mCursor(dst), mStart(dst){}
+    explicit Flattener(uint8_t* dst) : mCursor(dst), mStart(dst){}
 
     static Flattener& getDryRunner() {
         static Flattener dryRunner = Flattener(nullptr);
@@ -106,6 +104,15 @@ public:
         mCursor += len + 1;
     }
 
+    void writeString(std::string_view str) {
+        size_t len = str.length();
+        if (mStart != nullptr) {
+            memcpy(reinterpret_cast<char*>(mCursor), str.data(), len);
+            mCursor[len] = 0;
+        }
+        mCursor += len + 1;
+    }
+
     void writeBlob(const char* blob, size_t nbytes) {
         writeUint64(nbytes);
         if (mStart != nullptr) {
@@ -123,6 +130,18 @@ public:
             mCursor[3] = 0;
         }
         mCursor += 4;
+    }
+
+    // This writes 0 to 7 (inclusive) zeroes, and the subsequent write is guaranteed to be on a
+    // 8-byte boundary. Note that the reader must perform a similar calculation to figure out
+    // how many bytes to skip.
+    void writeAlignmentPadding() {
+        const intptr_t offset = mCursor - mStart;
+        const uint8_t padSize = (8 - (offset % 8)) % 8;
+        for (uint8_t i = 0; i < padSize; i++) {
+            writeUint8(0);
+        }
+        assert_invariant(0 == ((mCursor - mStart) % 8));
     }
 
     uint32_t writeSize() {

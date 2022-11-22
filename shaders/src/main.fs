@@ -17,6 +17,8 @@ void blendPostLightingColor(const MaterialInputs material, inout vec4 color) {
 #endif
 
 void main() {
+    filament_lodBias = frameUniforms.lodBias;
+
     // See shading_parameters.fs
     // Computes global variables we need to evaluate material and lighting
     computeShadingParams();
@@ -30,19 +32,19 @@ void main() {
 
     fragColor = evaluateMaterial(inputs);
 
-#if defined(HAS_DIRECTIONAL_LIGHTING) && defined(HAS_SHADOWING)
+#if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING) && defined(VARIANT_HAS_SHADOWING)
     bool visualizeCascades = bool(frameUniforms.cascades & 0x10u);
     if (visualizeCascades) {
         fragColor.rgb *= uintToColorDebug(getShadowCascade());
     }
 #endif
 
-#if defined(HAS_FOG)
+#if defined(VARIANT_HAS_FOG)
     vec3 view = getWorldPosition() - getWorldCameraPosition();
     fragColor = fog(fragColor, view);
 #endif
 
-#if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
+#if defined(MATERIAL_HAS_POST_LIGHTING_COLOR) && !defined(MATERIAL_HAS_REFLECTIONS)
     blendPostLightingColor(inputs, fragColor);
 #endif
 }

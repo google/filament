@@ -386,7 +386,7 @@ INSTANTIATE_TEST_SUITE_P(
             ::testing::ValuesIn(std::vector<std::string>{
                 "OpExecutionModeId %1 SubgroupsPerWorkgroupId %2\n",
                 "OpExecutionModeId %1 LocalSizeId %2 %3 %4\n",
-                "OpExecutionModeId %1 LocalSizeHintId %2\n",
+                "OpExecutionModeId %1 LocalSizeHintId %2 %3 %4\n",
                 "OpDecorateId %1 AlignmentId %2\n",
                 "OpDecorateId %1 MaxByteOffsetId %2\n",
             })));

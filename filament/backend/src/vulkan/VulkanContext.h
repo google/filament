@@ -14,41 +14,36 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANCONTEXT_H
-#define TNT_FILAMENT_DRIVER_VULKANCONTEXT_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
+#define TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
 
 #include "VulkanPipelineCache.h"
 #include "VulkanCommands.h"
 #include "VulkanConstants.h"
-#include "VulkanDisposer.h"
 
-#include <backend/DriverEnums.h>
-
-#include <utils/Condition.h>
+#include <utils/bitset.h>
 #include <utils/Slice.h>
 #include <utils/Mutex.h>
 
 VK_DEFINE_HANDLE(VmaAllocator)
 VK_DEFINE_HANDLE(VmaPool)
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 struct VulkanRenderTarget;
 struct VulkanSwapChain;
 struct VulkanTexture;
 class VulkanStagePool;
 
-// TODO: make this as lean as possible, it makes VulkanRenderTarget very big (currently 880 bytes).
 struct VulkanAttachment {
-    VkFormat format;
-    VkImage image;
-    VkImageView view;
-    VkDeviceMemory memory;
     VulkanTexture* texture = nullptr;
-    VkImageLayout layout;
-    uint8_t level;
-    uint16_t layer;
+    uint8_t level = 0;
+    uint16_t layer = 0;
+    VkImage getImage() const;
+    VkFormat getFormat() const;
+    VkImageLayout getLayout() const;
+    VkExtent2D getExtent2D() const;
+    VkImageView getImageView(VkImageAspectFlags aspect) const;
 };
 
 struct VulkanTimestamps {
@@ -58,10 +53,10 @@ struct VulkanTimestamps {
 };
 
 struct VulkanRenderPass {
+    VulkanRenderTarget* renderTarget;
     VkRenderPass renderPass;
-    uint32_t subpassMask;
+    RenderPassParams params;
     int currentSubpass;
-    VulkanTexture* depthFeedback;
 };
 
 // For now we only support a single-device, single-instance scenario. Our concept of "context" is a
@@ -72,7 +67,6 @@ struct VulkanContext {
     uint32_t selectMemoryType(uint32_t flags, VkFlags reqs);
     VkFormat findSupportedFormat(utils::Slice<VkFormat> candidates, VkImageTiling tiling,
             VkFormatFeatureFlags features);
-    VkImageLayout getTextureLayout(TextureUsage usage) const;
     void createEmptyTexture(VulkanStagePool& stagePool);
 
     VkInstance instance;
@@ -88,21 +82,20 @@ struct VulkanContext {
     bool debugMarkersSupported = false;
     bool debugUtilsSupported = false;
     bool portabilitySubsetSupported = false;
+    bool portabilityEnumerationSupported = false;
     bool maintenanceSupported[3] = {};
     VulkanPipelineCache::RasterState rasterState;
-    VulkanSwapChain* currentSurface;
+    VulkanSwapChain* currentSwapChain;
+    VulkanRenderTarget* defaultRenderTarget;
     VulkanRenderPass currentRenderPass;
     VkViewport viewport;
     VkFormat finalDepthFormat;
     VmaAllocator allocator;
-    VmaPool vmaPoolGPU;
-    VmaPool vmaPoolCPU;
     VulkanTexture* emptyTexture = nullptr;
     VulkanCommands* commands = nullptr;
     std::string currentDebugMarker;
 };
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKANCONTEXT_H
+#endif // TNT_FILAMENT_BACKEND_VULKANCONTEXT_H

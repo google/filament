@@ -26,6 +26,7 @@ set(MATERIAL_SRCS
         materials/heightfield.mat
         materials/image.mat
         materials/mirror.mat
+        materials/overdraw.mat
         materials/sandboxCloth.mat
         materials/sandboxLit.mat
         materials/sandboxLitFade.mat
@@ -84,6 +85,7 @@ set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
 add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 
 add_library(sample-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
+set_target_properties(sample-resources PROPERTIES FOLDER Samples/Resources)
 
 # ==================================================================================================
 # Invoke cmgen to build KTX files for the default IBL and skybox
@@ -94,20 +96,20 @@ set(CMGEN_ARGS --quiet --format=ktx --size=256 --extract-blur=0.1)
 function(add_envmap SOURCE TARGET)
     set(source_envmap "${ROOT_DIR}/${SOURCE}")
 
-    set(target_skybox   "${PROJECT_BINARY_DIR}/${TARGET}/${TARGET}_skybox.ktx")
-    set(target_envmap   "${PROJECT_BINARY_DIR}/${TARGET}/${TARGET}_ibl.ktx")
+    set(target_skybox "${PROJECT_BINARY_DIR}/assets/ibl/${TARGET}/${TARGET}_skybox.ktx")
+    set(target_envmap "${PROJECT_BINARY_DIR}/assets/ibl/${TARGET}/${TARGET}_ibl.ktx")
 
     set(target_envmaps ${target_envmaps} ${target_skybox} PARENT_SCOPE)
     set(target_envmaps ${target_envmaps} ${target_envmap} PARENT_SCOPE)
 
     add_custom_command(OUTPUT ${target_skybox} ${target_envmap}
-        COMMAND cmgen -x ${TARGET} ${CMGEN_ARGS} ${source_envmap}
+        COMMAND cmgen -x assets/ibl/${TARGET} ${CMGEN_ARGS} ${source_envmap}
         MAIN_DEPENDENCY ${source_envmap}
         DEPENDS cmgen
         COMMENT "Generating environment map ${target_envmap}")
 endfunction()
 
-add_envmap("third_party/environments/lightroom_14b.hdr" "default_env")
+add_envmap("third_party/environments/lightroom_14b.hdr" "lightroom_14b")
 
 # ==================================================================================================
 # Build suzanne resources
@@ -148,12 +150,11 @@ endfunction()
 
 add_mesh("assets/models/monkey/monkey.obj" "suzanne.filamesh")
 
-# Use a RGBA compression format for Metal and Vulkan support.
-set (COMPRESSION "--compression=s3tc_rgba_dxt5")
-add_ktxfiles("assets/models/monkey/albedo.png" "albedo_s3tc.ktx" "${COMPRESSION}")
-add_ktxfiles("assets/models/monkey/roughness.png" "roughness.ktx" "${COMPRESSION};--grayscale")
-add_ktxfiles("assets/models/monkey/metallic.png" "metallic.ktx" "${COMPRESSION};--grayscale")
-add_ktxfiles("assets/models/monkey/ao.png" "ao.ktx" "${COMPRESSION};--grayscale")
+set (COMPRESSION "--compression=uastc")
+add_ktxfiles("assets/models/monkey/albedo.png" "albedo.ktx2" "${COMPRESSION}")
+add_ktxfiles("assets/models/monkey/roughness.png" "roughness.ktx2" "${COMPRESSION};--grayscale;--linear")
+add_ktxfiles("assets/models/monkey/metallic.png" "metallic.ktx2" "${COMPRESSION};--grayscale;--linear")
+add_ktxfiles("assets/models/monkey/ao.png" "ao.ktx2" "${COMPRESSION};--grayscale;--linear")
 
 add_pngfile("assets/models/monkey/normal.png" "normal.png")
 
@@ -171,31 +172,34 @@ if (DEFINED RESGEN_SOURCE_FLAGS)
 endif()
 
 add_library(suzanne-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
+set_target_properties(suzanne-resources PROPERTIES FOLDER Samples/Resources)
 
 # ==================================================================================================
-# Resources for gltf_viewer
+# Resources for gltf_viewer and gltf_instances
 # ==================================================================================================
 
-add_library(gltf-resources ${DUMMY_SRC})
+add_library(gltf-demo-resources ${DUMMY_SRC})
+set_target_properties(gltf-demo-resources PROPERTIES FOLDER Samples/Resources)
 
-set(GLTF_VIEWER_RESOURCE_FILES
+set(GLTF_DEMO_RESOURCES
     ${ROOT_DIR}/third_party/models/DamagedHelmet/DamagedHelmet.glb
     ${MATERIAL_DIR}/groundShadow.filamat
+    ${MATERIAL_DIR}/overdraw.filamat
 )
 
-get_resgen_vars(${RESOURCE_DIR} gltf_viewer)
+get_resgen_vars(${RESOURCE_DIR} gltf_demo)
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen ${RESGEN_FLAGS} ${GLTF_VIEWER_RESOURCE_FILES}
-        DEPENDS resgen ${GLTF_VIEWER_RESOURCE_FILES}
+        COMMAND resgen ${RESGEN_FLAGS} ${GLTF_DEMO_RESOURCES}
+        DEPENDS resgen ${GLTF_DEMO_RESOURCES}
 )
 
 if (DEFINED RESGEN_SOURCE_FLAGS)
     set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
-target_sources(gltf-resources PRIVATE ${RESGEN_SOURCE})
+target_sources(gltf-demo-resources PRIVATE ${RESGEN_SOURCE})
 
 # ==================================================================================================
 # Compiler flags
@@ -219,6 +223,7 @@ function(add_demo NAME)
     add_executable(${NAME} ${NAME}.cpp)
     target_link_libraries(${NAME} PRIVATE sample-resources filamentapp)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
+    set_target_properties(${NAME} PROPERTIES FOLDER Samples)
 endfunction()
 
 if (NOT ANDROID)
@@ -248,8 +253,8 @@ if (NOT ANDROID)
 
     # Sample app specific
     target_link_libraries(frame_generator PRIVATE imageio)
-    target_link_libraries(gltf_viewer PRIVATE gltf-resources gltfio viewer)
-    target_link_libraries(gltf_instances PRIVATE gltf-resources gltfio viewer)
+    target_link_libraries(gltf_viewer PRIVATE gltf-demo-resources uberarchive gltfio viewer)
+    target_link_libraries(gltf_instances PRIVATE gltf-demo-resources uberarchive gltfio viewer)
     target_link_libraries(hellopbr PRIVATE filameshio suzanne-resources)
     target_link_libraries(image_viewer PRIVATE viewer imageio)
     target_link_libraries(multiple_windows PRIVATE filameshio suzanne-resources)
@@ -263,28 +268,10 @@ if (NOT ANDROID)
     # ==============================================================================================
     install(TARGETS gltf_viewer RUNTIME DESTINATION bin)
     install(TARGETS material_sandbox RUNTIME DESTINATION bin)
-endif()
 
-# ==================================================================================================
-# Copy the MoltenVK dylibs and JSON on MacOS
-# ==================================================================================================
-
-if (APPLE AND NOT Vulkan_LIBRARY AND NOT FILAMENT_USE_SWIFTSHADER)
-    message(STATUS "No Vulkan SDK was found, using prebuilt MoltenVK.")
-    set(MOLTENVK_DIR "../third_party/moltenvk")
-    configure_file(
-            ${MOLTENVK_DIR}/libvulkan.1.dylib
-            ${PROJECT_BINARY_DIR}/libvulkan.1.dylib COPYONLY)
-    configure_file(
-            ${MOLTENVK_DIR}/MoltenVK_icd.json
-            ${PROJECT_BINARY_DIR}/MoltenVK_icd.json COPYONLY)
-    configure_file(
-            ${MOLTENVK_DIR}/libMoltenVK.dylib
-            ${PROJECT_BINARY_DIR}/libMoltenVK.dylib COPYONLY)
-    list(APPEND APP_SRCS
-            ${PROJECT_BINARY_DIR}/libvulkan.1.dylib
-            ${PROJECT_BINARY_DIR}/MoltenVK_icd.json
-            ${PROJECT_BINARY_DIR}/libMoltenVK.dylib)
+    # Install resources
+    install(DIRECTORY ${PROJECT_BINARY_DIR}/assets/fonts DESTINATION bin/assets)
+    install(DIRECTORY ${PROJECT_BINARY_DIR}/assets/ibl/ DESTINATION bin/assets/ibl)
 endif()
 
 # ==================================================================================================
@@ -302,12 +289,15 @@ endif()
 file(COPY ../third_party/textures DESTINATION ${PROJECT_BINARY_DIR})
 add_custom_target(textures ALL DEPENDS textures)
 add_dependencies(filament textures)
+set_target_properties(textures PROPERTIES FOLDER Samples/Assets)
 
 file(COPY ../assets DESTINATION ${PROJECT_BINARY_DIR}
         PATTERN "reference" EXCLUDE
         PATTERN "environments" EXCLUDE)
 add_custom_target(assets ALL DEPENDS assets)
 add_dependencies(filament assets)
+set_target_properties(assets PROPERTIES FOLDER Samples/Assets)
 
 add_custom_target(envs DEPENDS ${target_envmaps})
 add_dependencies(filament envs)
+set_target_properties(envs PROPERTIES FOLDER Samples/Assets)

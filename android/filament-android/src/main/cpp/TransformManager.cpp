@@ -110,6 +110,26 @@ Java_com_google_android_filament_TransformManager_nGetParent(JNIEnv*, jclass,
     return tm->getParent((TransformManager::Instance) i).getId();
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_TransformManager_nGetChildCount(JNIEnv*, jclass,
+        jlong nativeTransformManager, jint i) {
+    TransformManager* tm = (TransformManager*) nativeTransformManager;
+    return tm->getChildCount((TransformManager::Instance) i);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_TransformManager_nGetChildren(JNIEnv* env,
+        jclass, jlong nativeTransformManager, jint i,
+        jintArray outEntities_, jint count) {
+    TransformManager* tm = (TransformManager*) nativeTransformManager;
+    jint* entities = env->GetIntArrayElements(outEntities_, nullptr);
+    // This is very very gross, we just pretend Entity is just like an jint
+    // (which it is), but still.
+    tm->getChildren((TransformManager::Instance) i,
+            reinterpret_cast<Entity *>(entities), (size_t) count);
+    env->ReleaseIntArrayElements(outEntities_, entities, 0);
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_TransformManager_nSetTransform(JNIEnv* env,
         jclass, jlong nativeTransformManager, jint i,

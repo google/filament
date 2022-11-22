@@ -46,10 +46,6 @@ class DescriptorScalarReplacement : public Pass {
   }
 
  private:
-  // Returns true if |var| is an OpVariable instruction that represents a
-  // descriptor array.  These are the variables that we want to replace.
-  bool IsCandidate(Instruction* var);
-
   // Replaces all references to |var| by new variables, one for each element of
   // the array |var|.  The binding for the new variables corresponding to
   // element i will be the binding of |var| plus i.  Returns true if successful.
@@ -93,14 +89,50 @@ class DescriptorScalarReplacement : public Pass {
   // bindings used by its members.
   uint32_t GetNumBindingsUsedByType(uint32_t type_id);
 
-  // Returns true if |type| is a type that could be used for a structured buffer
-  // as opposed to a type that would be used for a structure of resource
-  // descriptors.
-  bool IsTypeOfStructuredBuffer(const Instruction* type) const;
+  // Copy all of the decorations of variable |old_var| and make them as
+  // decorations for the new variable whose id is |new_var_id|. The new variable
+  // is supposed to replace |index|th element of |old_var|.
+  // |new_var_ptr_type_id| is the id of the pointer to the type of the new
+  // variable. |is_old_var_array| is true if |old_var| has an array type.
+  // |is_old_var_struct| is true if |old_var| has a structure type.
+  // |old_var_type| is the pointee type of |old_var|.
+  void CopyDecorationsForNewVariable(Instruction* old_var, uint32_t index,
+                                     uint32_t new_var_id,
+                                     uint32_t new_var_ptr_type_id,
+                                     const bool is_old_var_array,
+                                     const bool is_old_var_struct,
+                                     Instruction* old_var_type);
+
+  // Get the new binding number for a new variable that will be replaced with an
+  // |index|th element of an old variable. The old variable has |old_binding|
+  // as its binding number. |ptr_elem_type_id| the id of the pointer to the
+  // element type. |is_old_var_array| is true if the old variable has an array
+  // type. |is_old_var_struct| is true if the old variable has a structure type.
+  // |old_var_type| is the pointee type of the old variable.
+  uint32_t GetNewBindingForElement(uint32_t old_binding, uint32_t index,
+                                   uint32_t ptr_elem_type_id,
+                                   const bool is_old_var_array,
+                                   const bool is_old_var_struct,
+                                   Instruction* old_var_type);
+
+  // Create a new OpDecorate(String) instruction by cloning |old_decoration|.
+  // The new OpDecorate(String) instruction will be used for a variable whose id
+  // is |new_var_ptr_type_id|. If |old_decoration| is a decoration for a
+  // binding, the new OpDecorate(String) instruction will have |new_binding| as
+  // its binding.
+  void CreateNewDecorationForNewVariable(Instruction* old_decoration,
+                                         uint32_t new_var_id,
+                                         uint32_t new_binding);
+
+  // Create a new OpDecorate instruction whose operand is the same as an
+  // OpMemberDecorate instruction |old_member_decoration| except Target operand.
+  // The Target operand of the new OpDecorate instruction will be |new_var_id|.
+  void CreateNewDecorationForMemberDecorate(Instruction* old_decoration,
+                                            uint32_t new_var_id);
 
   // A map from an OpVariable instruction to the set of variables that will be
   // used to replace it. The entry |replacement_variables_[var][i]| is the id of
-  // a variable that will be used in the place of the the ith element of the
+  // a variable that will be used in the place of the ith element of the
   // array |var|. If the entry is |0|, then the variable has not been
   // created yet.
   std::map<Instruction*, std::vector<uint32_t>> replacement_variables_;

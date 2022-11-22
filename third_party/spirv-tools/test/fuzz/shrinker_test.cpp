@@ -171,7 +171,7 @@ TEST(ShrinkerTest, ReduceAddedFunctions) {
   protobufs::TransformationSequence transformations;
   FuzzerPassDonateModules pass(variant_ir_context.get(),
                                &transformation_context, &fuzzer_context,
-                               &transformations, {});
+                               &transformations, false, {});
   pass.DonateSingleModule(donor_ir_context.get(), true);
 
   protobufs::FactSequence no_facts;
@@ -349,7 +349,7 @@ TEST(ShrinkerTest, HitStepLimitWhenReducingAddedFunctions) {
   protobufs::TransformationSequence transformations;
   FuzzerPassDonateModules pass(variant_ir_context.get(),
                                &transformation_context, &fuzzer_context,
-                               &transformations, {});
+                               &transformations, false, {});
   pass.DonateSingleModule(donor_ir_context.get(), true);
 
   protobufs::FactSequence no_facts;

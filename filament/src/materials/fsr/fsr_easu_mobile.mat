@@ -35,6 +35,11 @@ material {
             type : float4,
             name : EasuCon3,
             precision: high
+        },
+        {
+            type : float4,
+            name : viewport,
+            precision: high
         }
     ],
     variables : [
@@ -47,6 +52,7 @@ material {
 
 vertex {
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.normalizedUV = uvToRenderTargetUV(postProcess.normalizedUV);
         postProcess.vertex.xy = postProcess.normalizedUV * materialParams.resolution.xy;
     }
 }

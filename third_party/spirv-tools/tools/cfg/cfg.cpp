@@ -44,7 +44,7 @@ Options:
       argv0, argv0);
 }
 
-static const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_5;
+static const auto kDefaultEnvironment = SPV_ENV_UNIVERSAL_1_6;
 
 int main(int argc, char** argv) {
   const char* inFile = nullptr;
@@ -69,16 +69,16 @@ int main(int argc, char** argv) {
           if (0 == strcmp(argv[argi], "--help")) {
             print_usage(argv[0]);
             return 0;
-          } else if (0 == strcmp(argv[argi], "--version")) {
+          }
+          if (0 == strcmp(argv[argi], "--version")) {
             printf("%s EXPERIMENTAL\n", spvSoftwareVersionDetailsString());
             printf("Target: %s\n",
                    spvTargetEnvDescription(kDefaultEnvironment));
             return 0;
-          } else {
-            print_usage(argv[0]);
-            return 1;
           }
-        } break;
+          print_usage(argv[0]);
+          return 1;
+        }
         case 0: {
           // Setting a filename of "-" to indicate stdin.
           if (!inFile) {

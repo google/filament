@@ -45,6 +45,7 @@ target_include_directories(${TARGET} PUBLIC src)
 target_include_directories(${TARGET} PRIVATE ${filamat_SOURCE_DIR}/src)
 
 target_link_libraries(${TARGET} getopt filamat filabridge utils)
+set_target_properties(${TARGET} PROPERTIES FOLDER Tools)
 
 # =================================================================================================
 # Licenses
@@ -70,6 +71,7 @@ set(SRCS src/main.cpp)
 # ==================================================================================================
 add_executable(${TARGET} ${SRCS} ${HDRS})
 target_link_libraries(${TARGET} matlang)
+set_target_properties(${TARGET} PROPERTIES FOLDER Tools)
 
 # ==================================================================================================
 # Installation
@@ -84,9 +86,13 @@ set(TARGET test_matc)
 set(SRCS
     tests/test_matc.cpp
     tests/test_includer.cpp
+    tests/TestMaterialCompiler.h
+    tests/test_compute_material.cpp
     tests/MockConfig.cpp
     tests/MockConfig.h)
 
 add_executable(${TARGET} ${SRCS})
 
 target_link_libraries(${TARGET} matlang gtest)
+
+set_target_properties(test_matc PROPERTIES FOLDER Tests)

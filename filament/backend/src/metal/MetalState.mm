@@ -20,10 +20,9 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device,
-        const PipelineState& state) noexcept {
+        const MetalPipelineState& state) noexcept {
     MTLRenderPipelineDescriptor* descriptor = [MTLRenderPipelineDescriptor new];
 
     // Shader Functions
@@ -39,18 +38,18 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
         if (vertexDescription.attributes[i].format > MTLVertexFormatInvalid) {
             const auto& attribute = vertexDescription.attributes[i];
             vertex.attributes[i].format = attribute.format;
-            vertex.attributes[i].bufferIndex = VERTEX_BUFFER_START + attribute.buffer;
+            vertex.attributes[i].bufferIndex = attribute.buffer;
             vertex.attributes[i].offset = attribute.offset;
         }
     }
 
-    for (uint32_t i = 0; i < VERTEX_BUFFER_COUNT; i++) {
+    for (uint32_t i = 0; i < LOGICAL_VERTEX_BUFFER_COUNT; i++) {
         if (vertexDescription.layouts[i].stride > 0) {
             const auto& layout = vertexDescription.layouts[i];
-            vertex.layouts[VERTEX_BUFFER_START + i].stride = layout.stride;
-            vertex.layouts[VERTEX_BUFFER_START + i].stepFunction = layout.step;
+            vertex.layouts[i].stride = layout.stride;
+            vertex.layouts[i].stepFunction = layout.step;
             if (layout.step == MTLVertexStepFunctionConstant) {
-                vertex.layouts[VERTEX_BUFFER_START + i].stepRate = 0;
+                vertex.layouts[i].stepRate = 0;
             }
         }
     }
@@ -80,6 +79,9 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
     // Depth attachment
     descriptor.depthAttachmentPixelFormat = state.depthAttachmentPixelFormat;
 
+    // Stencil attachment
+    descriptor.stencilAttachmentPixelFormat = state.stencilAttachmentPixelFormat;
+
     // MSAA
     descriptor.rasterSampleCount = state.sampleCount;
 
@@ -98,14 +100,35 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
 id<MTLDepthStencilState> DepthStateCreator::operator()(id<MTLDevice> device,
         const DepthStencilState& state) noexcept {
     MTLDepthStencilDescriptor* depthStencilDescriptor = [MTLDepthStencilDescriptor new];
-    depthStencilDescriptor.depthCompareFunction = state.compareFunction;
-    depthStencilDescriptor.depthWriteEnabled = state.depthWriteEnabled;
+    depthStencilDescriptor.depthCompareFunction = state.depthCompare;
+    depthStencilDescriptor.depthWriteEnabled = BOOL(state.depthWriteEnabled);
+
+    // Front-facing stencil.
+    MTLStencilDescriptor* frontStencilDescriptor = [MTLStencilDescriptor new];
+    frontStencilDescriptor.stencilCompareFunction = state.front.stencilCompare;
+    frontStencilDescriptor.stencilFailureOperation = state.front.stencilOperationStencilFail;
+    frontStencilDescriptor.depthFailureOperation = state.front.stencilOperationDepthFail;
+    frontStencilDescriptor.depthStencilPassOperation = state.front.stencilOperationDepthStencilPass;
+    frontStencilDescriptor.readMask = state.front.readMask;
+    frontStencilDescriptor.writeMask = state.stencilWriteEnabled ? state.front.writeMask : 0x0;
+    depthStencilDescriptor.frontFaceStencil = frontStencilDescriptor;
+
+    // Back-facing stencil.
+    MTLStencilDescriptor* backStencilDescriptor = [MTLStencilDescriptor new];
+    backStencilDescriptor.stencilCompareFunction = state.back.stencilCompare;
+    backStencilDescriptor.stencilFailureOperation = state.back.stencilOperationStencilFail;
+    backStencilDescriptor.depthFailureOperation = state.back.stencilOperationDepthFail;
+    backStencilDescriptor.depthStencilPassOperation = state.back.stencilOperationDepthStencilPass;
+    backStencilDescriptor.readMask = state.back.readMask;
+    backStencilDescriptor.writeMask = state.stencilWriteEnabled ? state.back.writeMask : 0x0;
+    depthStencilDescriptor.backFaceStencil = backStencilDescriptor;
+
     return [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
 }
 
 id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
         const SamplerState& state) noexcept {
-    backend::SamplerParams params = state.samplerParams;
+    SamplerParams params = state.samplerParams;
     MTLSamplerDescriptor* samplerDescriptor = [MTLSamplerDescriptor new];
     samplerDescriptor.minFilter = getFilter(params.filterMin);
     samplerDescriptor.magFilter = getFilter(params.filterMag);
@@ -114,11 +137,10 @@ id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
     samplerDescriptor.tAddressMode = getAddressMode(params.wrapT);
     samplerDescriptor.rAddressMode = getAddressMode(params.wrapR);
     samplerDescriptor.maxAnisotropy = 1u << params.anisotropyLog2;
-    samplerDescriptor.lodMaxClamp = (float) state.maxLod;
-    samplerDescriptor.lodMinClamp = (float) state.minLod;
     samplerDescriptor.compareFunction =
             params.compareMode == SamplerCompareMode::NONE ?
                 MTLCompareFunctionNever : getCompareFunction(params.compareFunc);
+    samplerDescriptor.supportArgumentBuffers = YES;
 
 #if defined(IOS)
     // Older Apple devices (and the simulator) don't support setting a comparison function in
@@ -133,6 +155,38 @@ id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
     return [device newSamplerStateWithDescriptor:samplerDescriptor];
 }
 
-} // namespace metal
+id<MTLArgumentEncoder> ArgumentEncoderCreator::operator()(id<MTLDevice> device,
+        const ArgumentEncoderState &state) noexcept {
+    const auto& textureTypes = state.textureTypes;
+    const auto& count = textureTypes.size();
+    assert_invariant(count > 0);
+
+    // Metal has separate data types for textures versus samplers, so the argument buffer layout
+    // alternates between texture and sampler, i.e.:
+    // textureA
+    // samplerA
+    // textureB
+    // samplerB
+    // etc
+    NSMutableArray<MTLArgumentDescriptor*>* arguments =
+            [NSMutableArray arrayWithCapacity:(count * 2)];
+    for (size_t i = 0; i < count; i++) {
+        MTLArgumentDescriptor* textureArgument = [MTLArgumentDescriptor argumentDescriptor];
+        textureArgument.index = i * 2 + 0;
+        textureArgument.dataType = MTLDataTypeTexture;
+        textureArgument.textureType = textureTypes[i];
+        textureArgument.access = MTLArgumentAccessReadOnly;
+        [arguments addObject:textureArgument];
+
+        MTLArgumentDescriptor* samplerArgument = [MTLArgumentDescriptor argumentDescriptor];
+        samplerArgument.index = i * 2 + 1;
+        samplerArgument.dataType = MTLDataTypeSampler;
+        textureArgument.access = MTLArgumentAccessReadOnly;
+        [arguments addObject:samplerArgument];
+    }
+
+    return [device newArgumentEncoderWithArguments:arguments];
+}
+
 } // namespace backend
 } // namespace filament

@@ -19,7 +19,7 @@
 
 #include <filament/Box.h>
 #include <filament/Engine.h>
-#include <filament/MaterialEnums.h>
+#include <filament/VertexBuffer.h>
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
 
@@ -37,7 +37,7 @@ using namespace utils;
 
 static const auto FREE_CALLBACK = [](void* mem, size_t, void*) { free(mem); };
 
-namespace gltfio {
+namespace filament::gltfio {
 
 struct FFilamentAsset;
 

@@ -16,10 +16,8 @@
 
 #include "VulkanPlatform.h"
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 VulkanPlatform::~VulkanPlatform() = default;
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend

@@ -41,6 +41,13 @@ size_t write(unsigned char* out, const vector<T>& data) {
 }
 
 void MeshWriter::optimize(Mesh& mesh) {
+    // In debug builds, non-triangular data will assert in meshopt, but we need to have
+    // a safety check here anyway to prevent potential OOB reads in release builds.
+    if (mesh.indices.size() % 3 != 0) {
+        fprintf(stderr, "Mesh must be triangles.\n");
+        exit(1);
+    }
+
     // First, re-order triangles to improve cache locality and reduce the number of VS invocations.
     // Note that assimp already has aiProcess_ImproveCacheLocality, but MeshWriter doesn't know
     // about assimp, and it doesn't hurt to do it again here since this generally runs offline.
@@ -182,18 +189,18 @@ bool MeshWriter::serialize(ostream& out, Mesh& mesh) {
         header.strideTangents = sizeof(Vertex);
         header.strideColor    = sizeof(Vertex);
         header.strideUV0      = sizeof(Vertex);
-        header.strideUV1      = numeric_limits<uint32_t>::max();;
+        header.strideUV1      = numeric_limits<uint32_t>::max();
     } else {
         header.offsetPosition = 0;
         header.offsetTangents = mesh.vertexCount * sizeof(Vertex::position);
         header.offsetColor    = header.offsetTangents + mesh.vertexCount * sizeof(Vertex::tangents);
         header.offsetUV0      = header.offsetColor + mesh.vertexCount * sizeof(Vertex::color);
-        header.offsetUV1      = numeric_limits<uint32_t>::max();;
+        header.offsetUV1      = numeric_limits<uint32_t>::max();
         header.stridePosition = 0;
         header.strideTangents = 0;
         header.strideColor    = 0;
         header.strideUV0      = 0;
-        header.strideUV1      = numeric_limits<uint32_t>::max();;
+        header.strideUV1      = numeric_limits<uint32_t>::max();
         if (hasUV1) {
             header.offsetUV1  = header.offsetUV0 + mesh.vertexCount * sizeof(Vertex::uv0);
             header.strideUV1  = 0;

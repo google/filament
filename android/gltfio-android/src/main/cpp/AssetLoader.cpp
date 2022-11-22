@@ -30,7 +30,7 @@
 #include "MaterialKey.h"
 
 using namespace filament;
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace utils;
 
 class JavaMaterialProvider : public MaterialProvider {
@@ -42,6 +42,7 @@ class JavaMaterialProvider : public MaterialProvider {
 
     jmethodID mMaterialKeyConstructor;
     jmethodID mCreateMaterialInstance;
+    jmethodID mGetMaterial;
     jmethodID mGetMaterials;
     jmethodID mNeedsDummyData;
     jmethodID mDestroyMaterials;
@@ -69,8 +70,12 @@ public:
         jclass providerClass = env->GetObjectClass(provider);
 
         mCreateMaterialInstance = env->GetMethodID(providerClass, "createMaterialInstance",
-                "(L" JAVA_MATERIAL_KEY ";[ILjava/lang/String;)Lcom/google/android/filament/MaterialInstance;");
+                "(L" JAVA_MATERIAL_KEY ";[ILjava/lang/String;Ljava/lang/String;)Lcom/google/android/filament/MaterialInstance;");
         assert_invariant(mCreateMaterialInstance);
+
+        mGetMaterial = env->GetMethodID(providerClass, "getMaterial",
+                "(L" JAVA_MATERIAL_KEY ";[ILjava/lang/String;)Lcom/google/android/filament/Material;");
+        assert_invariant(mGetMaterial);
 
         mGetMaterials = env->GetMethodID(providerClass, "getMaterials",
                 "()[Lcom/google/android/filament/Material;");
@@ -89,7 +94,57 @@ public:
         delete mPreviousMaterials;
     }
 
-    MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap, const char* label) override {
+    MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap, const char* label, const char* extras) override {
+        // Create a Java object for the material key and copy the native fields into it.
+        jobject javaKey = mEnv->NewObject(mMaterialKeyClass, mMaterialKeyConstructor);
+
+        auto& helper = MaterialKeyHelper::get();
+        helper.copy(mEnv, javaKey, *config);
+
+        // Convert the optional label into a Java string.
+        jstring stringLabel = label ? mEnv->NewStringUTF(label) : nullptr;
+
+        // Convert the optional extras into a Java string.
+        jstring stringExtras = extras ? mEnv->NewStringUTF(extras) : nullptr;
+
+        // Allocate space for the output argument.
+        jintArray uvMapArray = mEnv->NewIntArray(uvmap->size());
+
+        // Call the Java-based material provider.
+        jobject materialInstance = mEnv->CallObjectMethod(mJavaProvider, mCreateMaterialInstance,
+                javaKey, uvMapArray, stringLabel, stringExtras);
+
+        // Copy the UvMap results from the JVM array into the native array.
+        if (uvmap) {
+            jint* elements = mEnv->GetIntArrayElements(uvMapArray, nullptr);
+            for (size_t i = 0; i < uvmap->size(); i++) {
+                (*uvmap)[i] = (UvSet) elements[i];
+            }
+            mEnv->ReleaseIntArrayElements(uvMapArray, elements, JNI_ABORT);
+        }
+
+        // The config parameter is an in-out parameter so we need to copy the results from Java.
+        helper.copy(mEnv, *config, javaKey);
+
+        mEnv->DeleteLocalRef(javaKey);
+        mEnv->DeleteLocalRef(uvMapArray);
+
+        if (stringLabel) {
+            mEnv->DeleteLocalRef(stringLabel);
+        }
+
+        if (stringExtras) {
+            mEnv->DeleteLocalRef(stringExtras);
+        }
+
+        if (materialInstance == nullptr) {
+            return nullptr;
+        }
+
+        return (MaterialInstance*) mEnv->CallLongMethod(materialInstance, mMaterialInstanceGetNativeObject);
+    }
+
+    Material* getMaterial(MaterialKey* config, UvMap* uvmap, const char* label) override {
         // Create a Java object for the material key and copy the native fields into it.
         jobject javaKey = mEnv->NewObject(mMaterialKeyClass, mMaterialKeyConstructor);
 
@@ -100,10 +155,10 @@ public:
         jstring stringLabel = label ? mEnv->NewStringUTF(label) : nullptr;
 
         // Allocate space for the output argument.
-        jintArray uvMapArray = mEnv->NewIntArray(8);
+        jintArray uvMapArray = mEnv->NewIntArray(uvmap->size());
 
         // Call the Java-based material provider.
-        jobject materialInstance = mEnv->CallObjectMethod(mJavaProvider, mCreateMaterialInstance,
+        jobject material = mEnv->CallObjectMethod(mJavaProvider, mGetMaterial,
                 javaKey, uvMapArray, stringLabel);
 
         // Copy the UvMap results from the JVM array into the native array.
@@ -125,11 +180,11 @@ public:
             mEnv->DeleteLocalRef(stringLabel);
         }
 
-        if (materialInstance == nullptr) {
+        if (material == nullptr) {
             return nullptr;
         }
 
-        return (MaterialInstance*) mEnv->CallLongMethod(materialInstance, mMaterialInstanceGetNativeObject);
+        return (Material*) mEnv->CallLongMethod(material, mMaterialGetNativeObject);
     }
 
     const Material* const* getMaterials() const noexcept override {
@@ -194,27 +249,17 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_gltfio_AssetLoader_nDestroyAssetLoader(JNIEnv*, jclass,
         jlong nativeLoader) {
     AssetLoader* loader = (AssetLoader*) nativeLoader;
-    delete loader->getMaterialProvider();
     NameComponentManager* names = loader->getNames();
     AssetLoader::destroy(&loader);
     delete names;
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_gltfio_AssetLoader_nCreateAssetFromBinary(JNIEnv* env, jclass,
+Java_com_google_android_filament_gltfio_AssetLoader_nCreateAsset(JNIEnv* env, jclass,
         jlong nativeLoader, jobject javaBuffer, jint remaining) {
     AssetLoader* loader = (AssetLoader*) nativeLoader;
     AutoBuffer buffer(env, javaBuffer, remaining);
-    return (jlong) loader->createAssetFromBinary((const uint8_t *) buffer.getData(),
-            buffer.getSize());
-}
-
-extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_gltfio_AssetLoader_nCreateAssetFromJson(JNIEnv* env, jclass,
-        jlong nativeLoader, jobject javaBuffer, jint remaining) {
-    AssetLoader* loader = (AssetLoader*) nativeLoader;
-    AutoBuffer buffer(env, javaBuffer, remaining);
-    return (jlong) loader->createAssetFromJson((const uint8_t *) buffer.getData(),
+    return (jlong) loader->createAsset((const uint8_t *) buffer.getData(),
             buffer.getSize());
 }
 
@@ -237,6 +282,14 @@ Java_com_google_android_filament_gltfio_AssetLoader_nCreateInstancedAsset(JNIEnv
     }
     delete[] ptrInstances;
     return asset;
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_gltfio_AssetLoader_nCreateInstance(JNIEnv* env, jclass,
+        jlong nativeLoader, jlong nativeAsset) {
+    AssetLoader* loader = (AssetLoader*) nativeLoader;
+    FilamentAsset* primary = (FilamentAsset*) nativeAsset;
+    return (jlong) loader->createInstance(primary);
 }
 
 extern "C" JNIEXPORT void JNICALL

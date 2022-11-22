@@ -36,18 +36,20 @@ function(add_spvtools_tool)
     ${spirv-tools_SOURCE_DIR}
     ${spirv-tools_BINARY_DIR}
   )
-  set_property(TARGET ${ARG_TARGET} PROPERTY FOLDER "SPIRV-Tools executables")
+  set_property(TARGET ${ARG_TARGET} PROPERTY FOLDER "ThirdParty/SPIRV-Tools executables")
 endfunction()
 
 if (NOT ${SPIRV_SKIP_EXECUTABLES})
   add_spvtools_tool(TARGET spirv-as SRCS as/as.cpp LIBS ${SPIRV_TOOLS_FULL_VISIBILITY})
+  add_spvtools_tool(TARGET spirv-diff SRCS diff/diff.cpp util/cli_consumer.cpp LIBS SPIRV-Tools-diff SPIRV-Tools-opt ${SPIRV_TOOLS_FULL_VISIBILITY})
   add_spvtools_tool(TARGET spirv-dis SRCS dis/dis.cpp LIBS ${SPIRV_TOOLS_FULL_VISIBILITY})
   add_spvtools_tool(TARGET spirv-val SRCS val/val.cpp util/cli_consumer.cpp LIBS ${SPIRV_TOOLS_FULL_VISIBILITY})
   add_spvtools_tool(TARGET spirv-opt SRCS opt/opt.cpp util/cli_consumer.cpp LIBS SPIRV-Tools-opt ${SPIRV_TOOLS_FULL_VISIBILITY})
-  if (NOT DEFINED IOS_PLATFORM) # iOS does not allow std::system calls which spirv-reduce requires
+  if(NOT (${CMAKE_SYSTEM_NAME} STREQUAL "iOS")) # iOS does not allow std::system calls which spirv-reduce requires
     add_spvtools_tool(TARGET spirv-reduce SRCS reduce/reduce.cpp util/cli_consumer.cpp LIBS SPIRV-Tools-reduce ${SPIRV_TOOLS_FULL_VISIBILITY})
   endif()
   add_spvtools_tool(TARGET spirv-link SRCS link/linker.cpp LIBS SPIRV-Tools-link ${SPIRV_TOOLS_FULL_VISIBILITY})
+  add_spvtools_tool(TARGET spirv-lint SRCS lint/lint.cpp util/cli_consumer.cpp LIBS SPIRV-Tools-lint SPIRV-Tools-opt ${SPIRV_TOOLS_FULL_VISIBILITY})
   add_spvtools_tool(TARGET spirv-cfg
                     SRCS cfg/cfg.cpp
                          cfg/bin_to_dot.h
@@ -56,8 +58,8 @@ if (NOT ${SPIRV_SKIP_EXECUTABLES})
   target_include_directories(spirv-cfg PRIVATE ${spirv-tools_SOURCE_DIR}
                                                ${SPIRV_HEADER_INCLUDE_DIR})
   set(SPIRV_INSTALL_TARGETS spirv-as spirv-dis spirv-val spirv-opt
-                            spirv-cfg spirv-link)
-  if(NOT DEFINED IOS_PLATFORM)
+                            spirv-cfg spirv-link spirv-lint)
+  if(NOT (${CMAKE_SYSTEM_NAME} STREQUAL "iOS"))
     set(SPIRV_INSTALL_TARGETS ${SPIRV_INSTALL_TARGETS} spirv-reduce)
   endif()
 
@@ -67,9 +69,6 @@ if (NOT ${SPIRV_SKIP_EXECUTABLES})
   endif(SPIRV_BUILD_FUZZER)
 
   if(ENABLE_SPIRV_TOOLS_INSTALL)
-    install(TARGETS ${SPIRV_INSTALL_TARGETS}
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    install(TARGETS ${SPIRV_INSTALL_TARGETS} DESTINATION ${CMAKE_INSTALL_BINDIR})
   endif(ENABLE_SPIRV_TOOLS_INSTALL)
 endif()

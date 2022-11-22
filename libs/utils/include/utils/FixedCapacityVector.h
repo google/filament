@@ -20,11 +20,12 @@
 #include <utils/compressed_pair.h>
 #include <utils/Panic.h>
 
-#include <algorithm>
+#include <initializer_list>
+#include <limits>
 #include <memory>
 #include <type_traits>
 #include <utility>
-#include <vector>
+#include <vector> // TODO: is this necessary?
 
 #include <stddef.h>
 #include <stdint.h>
@@ -89,6 +90,14 @@ public:
               mCapacityAllocator(size, allocator) {
         mData = this->allocator().allocate(this->capacity());
         construct(begin(), end());
+    }
+
+    FixedCapacityVector(std::initializer_list<T> list,
+            const allocator_type& alloc = allocator_type())
+            : mSize(list.size()),
+              mCapacityAllocator(list.size(), alloc) {
+        mData = this->allocator().allocate(this->capacity());
+        std::uninitialized_copy(list.begin(), list.end(), begin());
     }
 
     FixedCapacityVector(size_type size, const_reference value,
@@ -322,7 +331,7 @@ private:
     }
 
     void construct(iterator first, iterator last, const_reference proto) noexcept {
-        #pragma nounroll
+        UTILS_NOUNROLL
         while (first != last) {
             storage_traits::construct(allocator(), first++, proto);
         }
@@ -330,7 +339,7 @@ private:
 
     // should this be NOINLINE?
     void construct_non_trivial(iterator first, iterator last) noexcept {
-        #pragma nounroll
+        UTILS_NOUNROLL
         while (first != last) {
             storage_traits::construct(allocator(), first++);
         }
@@ -346,7 +355,7 @@ private:
 
     // should this be NOINLINE?
     void destroy_non_trivial(iterator first, iterator last) noexcept {
-        #pragma nounroll
+        UTILS_NOUNROLL
         while (first != last) {
             storage_traits::destroy(allocator(), --last);
         }
@@ -396,7 +405,8 @@ private:
         SizeTypeWrapper() noexcept = default;
         SizeTypeWrapper(SizeTypeWrapper const& rhs) noexcept = default;
         explicit  SizeTypeWrapper(TYPE value) noexcept : value(value) { }
-        SizeTypeWrapper operator=(TYPE rhs) noexcept { value = rhs; return *this; }
+        SizeTypeWrapper& operator=(TYPE rhs) noexcept { value = rhs; return *this; }
+        SizeTypeWrapper& operator=(SizeTypeWrapper& rhs) noexcept = delete;
         operator TYPE() const noexcept { return value; }
     };
 

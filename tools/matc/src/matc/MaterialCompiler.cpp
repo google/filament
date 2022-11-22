@@ -47,17 +47,20 @@ namespace matc {
 static constexpr const char* CONFIG_KEY_MATERIAL= "material";
 static constexpr const char* CONFIG_KEY_VERTEX_SHADER = "vertex";
 static constexpr const char* CONFIG_KEY_FRAGMENT_SHADER = "fragment";
+static constexpr const char* CONFIG_KEY_COMPUTE_SHADER = "compute";
 static constexpr const char* CONFIG_KEY_TOOL = "tool";
 
 MaterialCompiler::MaterialCompiler() {
     mConfigProcessor[CONFIG_KEY_MATERIAL] = &MaterialCompiler::processMaterial;
     mConfigProcessor[CONFIG_KEY_VERTEX_SHADER] = &MaterialCompiler::processVertexShader;
     mConfigProcessor[CONFIG_KEY_FRAGMENT_SHADER] = &MaterialCompiler::processFragmentShader;
+    mConfigProcessor[CONFIG_KEY_COMPUTE_SHADER] = &MaterialCompiler::processComputeShader;
     mConfigProcessor[CONFIG_KEY_TOOL] = &MaterialCompiler::ignoreLexeme;
 
     mConfigProcessorJSON[CONFIG_KEY_MATERIAL] = &MaterialCompiler::processMaterialJSON;
     mConfigProcessorJSON[CONFIG_KEY_VERTEX_SHADER] = &MaterialCompiler::processVertexShaderJSON;
     mConfigProcessorJSON[CONFIG_KEY_FRAGMENT_SHADER] = &MaterialCompiler::processFragmentShaderJSON;
+    mConfigProcessorJSON[CONFIG_KEY_COMPUTE_SHADER] = &MaterialCompiler::processComputeShaderJSON;
     mConfigProcessorJSON[CONFIG_KEY_TOOL] = &MaterialCompiler::ignoreLexemeJSON;
 }
 
@@ -107,6 +110,11 @@ bool MaterialCompiler::processFragmentShader(const MaterialLexeme& lexeme,
     // line number offset, where 0 is the first line.
     builder.material(shaderStr.c_str(), trimmedLexeme.getLine() - 1);
     return true;
+}
+
+bool MaterialCompiler::processComputeShader(const MaterialLexeme& lexeme,
+        MaterialBuilder& builder) const noexcept {
+    return MaterialCompiler::processFragmentShader(lexeme, builder);
 }
 
 bool MaterialCompiler::ignoreLexeme(const MaterialLexeme& lexeme,
@@ -170,6 +178,25 @@ bool MaterialCompiler::processFragmentShaderJSON(const JsonishValue* value,
 
     if (value->getType() != JsonishValue::STRING) {
         std::cerr << "'fragment' block has an invalid type: "
+                << JsonishValue::typeToString(value->getType())
+                << ", should be STRING."
+                << std::endl;
+        return false;
+    }
+
+    builder.material(value->toJsonString()->getString().c_str());
+    return true;
+}
+bool MaterialCompiler::processComputeShaderJSON(const JsonishValue* value,
+        filamat::MaterialBuilder& builder) const noexcept {
+
+    if (!value) {
+        std::cerr << "'compute' block does not have a value, one is required." << std::endl;
+        return false;
+    }
+
+    if (value->getType() != JsonishValue::STRING) {
+        std::cerr << "'compute' block has an invalid type: "
                 << JsonishValue::typeToString(value->getType())
                 << ", should be STRING."
                 << std::endl;
@@ -264,7 +291,67 @@ bool MaterialCompiler::run(const Config& config) {
         std::cerr << "Input file is empty" << std::endl;
         return false;
     }
-    auto buffer = input->read();
+    std::unique_ptr<const char[]> buffer = input->read();
+
+    // Perform template substitutions in two passes: the first pass determines the size of the
+    // modified buffer and checks for errors. The second pass rebuilds the buffer.
+    const auto& templateMap = config.getTemplateMap();
+    ssize_t modifiedSize = size;
+    bool modified = false;
+    if (!templateMap.empty()) {
+        for (ssize_t cursor = 0, n = size - 1; cursor < n; ++cursor) {
+            if (UTILS_LIKELY(buffer[cursor] != '$' || buffer[cursor + 1] != '{')) {
+                continue;
+            }
+            cursor += 2;
+            ssize_t endCursor = cursor;
+            while (true) {
+                if (endCursor == size) {
+                    std::cerr << "Unexpected end of file" << std::endl;
+                    return false;
+                }
+                if (buffer[endCursor] == '}') {
+                    break;
+                }
+                ++endCursor;
+            }
+            // At this point, cursor points to the F in ${FOO} and endCursor points to the }.
+            std::string_view macro(&buffer[cursor], endCursor - cursor);
+            if (auto iter = templateMap.find(macro); iter != templateMap.end()) {
+                modifiedSize -= macro.size() + 3;
+                modifiedSize += iter->second.size();
+            } else {
+                std::cerr << "Undefined template macro:" << macro << std::endl;
+                return false;
+            }
+            modified = true;
+        }
+    }
+
+    // Second pass of template substitution allocates a new buffer and performs the actual
+    // substitutions. Since the first pass did not return early, we can safely assume no errors.
+    if (modified) {
+        auto modifiedBuffer = std::make_unique<char[]>(modifiedSize);
+        for (ssize_t cursor = 0, dstCursor = 0; cursor < size; ++cursor) {
+            const ssize_t next = cursor + 1;
+            if (UTILS_LIKELY(buffer[cursor] != '$' || next >= size || buffer[next] != '{')) {
+                modifiedBuffer[dstCursor++] = buffer[cursor];
+                continue;
+            }
+            cursor += 2;
+            ssize_t endCursor = cursor;
+            while (buffer[endCursor] != '}') ++endCursor;
+            // At this point, cursor points to the F in ${FOO} and endCursor points to the }.
+            std::string_view macro(&buffer[cursor], endCursor - cursor);
+            const std::string& val = templateMap.find(macro)->second;
+            for (size_t i = 0, n = val.size(); i < n; ++i, ++dstCursor) {
+                modifiedBuffer[dstCursor] = val[i];
+            }
+            cursor = endCursor;
+        }
+        buffer.reset(modifiedBuffer.release());
+        size = modifiedSize;
+    }
 
     utils::Path materialFilePath = utils::Path(input->getName()).getAbsolutePath();
     assert(materialFilePath.isFile());

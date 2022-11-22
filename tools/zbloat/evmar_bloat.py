@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
 # Copyright 2013 Google Inc. All Rights Reserved.
 #
@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
 import operator
 import optparse
 import os
@@ -277,7 +276,7 @@ def jsonify_tree(tree, name):
     total = 0
     files = 0
 
-    for key, val in tree.iteritems():
+    for key, val in iter(tree.items()):
         if key == '$bloat_symbols':
             continue
         if isinstance(val, dict):
@@ -291,7 +290,9 @@ def jsonify_tree(tree, name):
             # TODO: Removed this assert, unsure of its meaning. (prideout)
             #assert len(symbols) == 1, symbols.values()[0] == 1
 
-            symbol = symbol_type_to_human(symbols.keys()[0])
+            keys = list(symbols.keys())
+
+            symbol = symbol_type_to_human(keys[0])
             children.append({
                     'name': key + ' ' + format_bytes(size),
                     'detail': key + ' ' + format_bytes_precise(size),
@@ -305,7 +306,7 @@ def jsonify_tree(tree, name):
     dominant_symbol = ''
     if '$bloat_symbols' in tree:
         dominant_symbol = symbol_type_to_human(
-            max(tree['$bloat_symbols'].iteritems(),
+            max(iter(tree['$bloat_symbols'].items()),
                 key=operator.itemgetter(1))[0])
     return {
         'name': name + ' ' + format_bytes(total),
@@ -420,11 +421,11 @@ if mode == 'syms':
         res = subprocess.check_output([opts.cppfilt, 'main'])
         if res.strip() != 'main':
             print(("%s failed demangling, "
-                                 "output won't be demangled." % opt.cppfilt), file=sys.stderr)
+                                 "output won't be demangled." % opts.cppfilt), file=sys.stderr)
             opts.cppfilt = None
     except:
         print(("Could not find c++filt at %s, "
-                             "output won't be demangled." % opt.cppfilt), file=sys.stderr)
+                             "output won't be demangled." % opts.cppfilt), file=sys.stderr)
         opts.cppfilt = None
     dump_nm(nmfile, strip_prefix=opts.strip_prefix, cppfilt=opts.cppfilt)
 elif mode == 'sections':

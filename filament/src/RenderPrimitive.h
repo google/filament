@@ -31,40 +31,48 @@ class FEngine;
 class FVertexBuffer;
 class FIndexBuffer;
 class FRenderer;
+class HwRenderPrimitiveFactory;
 
 class FRenderPrimitive {
 public:
     FRenderPrimitive() noexcept = default;
 
-    void init(backend::DriverApi& driver, const RenderableManager::Builder::Entry& entry) noexcept;
+    void init(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
+            const RenderableManager::Builder::Entry& entry) noexcept;
 
-    void set(FEngine& engine, RenderableManager::PrimitiveType type,
+    void set(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
+            RenderableManager::PrimitiveType type,
             FVertexBuffer* vertices, FIndexBuffer* indices, size_t offset,
             size_t minIndex, size_t maxIndex, size_t count) noexcept;
 
-    void set(FEngine& engine, RenderableManager::PrimitiveType type,
-            size_t offset, size_t minIndex, size_t maxIndex, size_t count) noexcept;
-
     // frees driver resources, object becomes invalid
-    void terminate(FEngine& engine);
+    void terminate(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver);
 
     const FMaterialInstance* getMaterialInstance() const noexcept { return mMaterialInstance; }
     backend::Handle<backend::HwRenderPrimitive> getHwHandle() const noexcept { return mHandle; }
     backend::PrimitiveType getPrimitiveType() const noexcept { return mPrimitiveType; }
     AttributeBitset getEnabledAttributes() const noexcept { return mEnabledAttributes; }
     uint16_t getBlendOrder() const noexcept { return mBlendOrder; }
+    bool isGlobalBlendOrderEnabled() const noexcept { return mGlobalBlendOrderEnabled; }
 
     void setMaterialInstance(FMaterialInstance const* mi) noexcept { mMaterialInstance = mi; }
+
     void setBlendOrder(uint16_t order) noexcept {
         mBlendOrder = static_cast<uint16_t>(order & 0x7FFF);
     }
 
+    void setGlobalBlendOrderEnabled(bool enabled) noexcept {
+        mGlobalBlendOrderEnabled = enabled;
+    }
+
 private:
     FMaterialInstance const* mMaterialInstance = nullptr;
-    backend::Handle<backend::HwRenderPrimitive> mHandle;
-    backend::PrimitiveType mPrimitiveType = backend::PrimitiveType::NONE;
-    AttributeBitset mEnabledAttributes;
+    backend::Handle<backend::HwRenderPrimitive> mHandle = {};
+    AttributeBitset mEnabledAttributes = {};
     uint16_t mBlendOrder = 0;
+    bool mGlobalBlendOrderEnabled = false;
+    backend::PrimitiveType mPrimitiveType = backend::PrimitiveType::TRIANGLES;
+    UTILS_UNUSED uint8_t reserved[4] = {};
 };
 
 } // namespace filament

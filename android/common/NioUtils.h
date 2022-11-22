@@ -38,6 +38,10 @@ public:
     AutoBuffer(AutoBuffer&& rhs) noexcept;
     ~AutoBuffer() noexcept;
 
+    void attachToJniThread(JNIEnv* env) noexcept {
+        mEnv = env;
+    }
+
     void* getData() const noexcept {
         return mUserData;
     }

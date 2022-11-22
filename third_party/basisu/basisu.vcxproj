@@ -1,0 +1,234 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{59586A07-8E7E-411D-BC3D-387E039AA423}</ProjectGuid>
+    <RootNamespace>basisu</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)\bin\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)\bin\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)\bin\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)\bin\</OutDir>
+    <TargetName>$(ProjectName)D</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <OpenMPSupport>true</OpenMPSupport>
+      <AdditionalIncludeDirectories>OpenCL</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);BASISU_SUPPORT_SSE=1;BASISU_SUPPORT_OPENCL=1</PreprocessorDefinitions>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions</EnableEnhancedInstructionSet>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>OpenCL\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opencl.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>OpenCL</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OpenMPSupport>true</OpenMPSupport>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);BASISU_SUPPORT_SSE=1;BASISU_SUPPORT_OPENCL=1</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>OpenCL\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opencl64.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <OpenMPSupport>true</OpenMPSupport>
+      <AdditionalIncludeDirectories>OpenCL</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions);BASISU_SUPPORT_SSE=1;BASISU_SUPPORT_OPENCL=1</PreprocessorDefinitions>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <ExceptionHandling>false</ExceptionHandling>
+      <OmitFramePointers>true</OmitFramePointers>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>OpenCL\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opencl.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>Full</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <AdditionalIncludeDirectories>OpenCL</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions);BASISU_SUPPORT_SSE=1;BASISU_SUPPORT_OPENCL=1</PreprocessorDefinitions>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <ExceptionHandling>false</ExceptionHandling>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <OmitFramePointers>true</OmitFramePointers>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>OpenCL\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opencl64.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="encoder\basisu_backend.cpp" />
+    <ClCompile Include="encoder\basisu_basis_file.cpp" />
+    <ClCompile Include="encoder\basisu_bc7enc.cpp" />
+    <ClCompile Include="encoder\basisu_comp.cpp" />
+    <ClCompile Include="encoder\basisu_enc.cpp" />
+    <ClCompile Include="encoder\basisu_etc.cpp" />
+    <ClCompile Include="encoder\basisu_frontend.cpp" />
+    <ClCompile Include="encoder\basisu_gpu_texture.cpp" />
+    <ClCompile Include="encoder\basisu_kernels_sse.cpp" />
+    <ClCompile Include="encoder\basisu_opencl.cpp" />
+    <ClCompile Include="encoder\basisu_pvrtc1_4.cpp" />
+    <ClCompile Include="encoder\basisu_resampler.cpp" />
+    <ClCompile Include="encoder\basisu_resample_filters.cpp" />
+    <ClCompile Include="encoder\basisu_ssim.cpp" />
+    <ClCompile Include="encoder\basisu_uastc_enc.cpp" />
+    <ClCompile Include="encoder\jpgd.cpp" />
+    <ClCompile Include="encoder\pvpngreader.cpp" />
+    <ClCompile Include="zstd\zstd.c" />
+    <ClInclude Include="encoder\basisu_ocl_kernels.h" />
+    <ClInclude Include="encoder\basisu_opencl.h" />
+    <ClInclude Include="encoder\pvpngreader.h" />
+    <ClInclude Include="transcoder\basisu_containers_impl.h" />
+    <ClCompile Include="transcoder\basisu_transcoder.cpp" />
+    <ClInclude Include="encoder\basisu_backend.h" />
+    <ClInclude Include="encoder\basisu_basis_file.h" />
+    <ClInclude Include="encoder\basisu_bc7enc.h" />
+    <ClInclude Include="encoder\basisu_comp.h" />
+    <ClInclude Include="encoder\basisu_enc.h" />
+    <ClInclude Include="encoder\basisu_etc.h" />
+    <ClInclude Include="encoder\basisu_frontend.h" />
+    <ClInclude Include="encoder\basisu_gpu_texture.h" />
+    <ClInclude Include="encoder\basisu_kernels_declares.h" />
+    <ClInclude Include="encoder\basisu_kernels_imp.h" />
+    <ClInclude Include="encoder\basisu_miniz.h" />
+    <ClInclude Include="encoder\basisu_pvrtc1_4.h" />
+    <ClInclude Include="encoder\basisu_resampler.h" />
+    <ClInclude Include="encoder\basisu_resampler_filters.h" />
+    <ClInclude Include="encoder\basisu_ssim.h" />
+    <ClInclude Include="encoder\basisu_uastc_enc.h" />
+    <ClInclude Include="encoder\cppspmd_flow.h" />
+    <ClInclude Include="encoder\cppspmd_math.h" />
+    <ClInclude Include="encoder\cppspmd_math_declares.h" />
+    <ClInclude Include="encoder\cppspmd_sse.h" />
+    <ClInclude Include="encoder\cppspmd_type_aliases.h" />
+    <ClInclude Include="encoder\jpgd.h" />
+    <ClInclude Include="transcoder\basisu.h" />
+    <ClInclude Include="transcoder\basisu_containers.h" />
+    <ClInclude Include="transcoder\basisu_file_headers.h" />
+    <ClInclude Include="transcoder\basisu_transcoder.h" />
+    <ClInclude Include="transcoder\basisu_transcoder_internal.h" />
+    <ClInclude Include="transcoder\basisu_transcoder_uastc.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="basisu_tool.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="bin\ocl_kernels.cl" />
+    <None Include="transcoder\basisu_transcoder_tables_astc.inc" />
+    <None Include="transcoder\basisu_transcoder_tables_astc_0_255.inc" />
+    <None Include="transcoder\basisu_transcoder_tables_atc_55.inc" />
+    <None Include="transcoder\basisu_transcoder_tables_atc_56.inc" />
+    <None Include="transcoder\basisu_transcoder_tables_bc7_m5_alpha.inc" />
+    <None Include="transcoder\basisu_transcoder_tables_bc7_m5_color.inc" />
+    <None Include="transcoder\basisu_transcoder_tables_dxt1_5.inc" />
+    <None Include="transcoder\basisu_transcoder_tables_dxt1_6.inc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

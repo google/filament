@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#if defined(ANDROID) || defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__)
+#include "gl_headers.h"
+
+#if defined(__ANDROID__) || defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__)
 
 #include <EGL/egl.h>
-#include <GLES3/gl3.h>
-#include <GLES2/gl2ext.h>
 #include <mutex>
 
 namespace glext {

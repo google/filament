@@ -19,7 +19,7 @@
 
 #include <gltfio/FilamentAsset.h>
 
-#include <backend/BufferDescriptor.h>
+#include <filament/VertexBuffer.h>
 
 #include <utils/compiler.h>
 
@@ -27,10 +27,11 @@ namespace filament {
     class Engine;
 }
 
-namespace gltfio {
+namespace filament::gltfio {
 
 struct FFilamentAsset;
 class AssetPool;
+class TextureProvider;
 
 /**
  * \struct ResourceConfiguration ResourceLoader.h gltfio/ResourceLoader.h
@@ -48,10 +49,6 @@ struct ResourceConfiguration {
     //! If true, adjusts skinning weights to sum to 1. Well formed glTF files do not need this,
     //! but it is useful for robustness.
     bool normalizeSkinningWeights;
-
-    //! If true, computes the bounding boxes of all \c POSITION attibutes. Well formed glTF files
-    //! do not need this, but it is useful for robustness.
-    bool recomputeBoundingBoxes;
 };
 
 /**
@@ -89,6 +86,13 @@ public:
      * need to call this method.
      */
     void addResourceData(const char* uri, BufferDescriptor&& buffer);
+
+    /**
+     * Register a plugin that can consume PNG / JPEG content and produce filament::Texture objects.
+     *
+     * Destruction of the given provider is the client's responsibility.
+     */
+    void addTextureProvider(const char* mimeType, TextureProvider* provider);
 
     /**
      * Checks if the given resource has already been added to the URI cache.
@@ -149,15 +153,13 @@ public:
 
 private:
     bool loadResources(FFilamentAsset* asset, bool async);
-    void applySparseData(FFilamentAsset* asset) const;
     void normalizeSkinningWeights(FFilamentAsset* asset) const;
-    void updateBoundingBoxes(FFilamentAsset* asset) const;
     AssetPool* mPool;
     struct Impl;
     Impl* pImpl;
 };
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_RESOURCELOADER_H
 

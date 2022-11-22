@@ -20,13 +20,14 @@
 #include <filament/IndirectLight.h>
 #include <filament/Skybox.h>
 
-#include <image/KtxUtility.h>
+#include <ktxreader/Ktx1Reader.h>
 
 #include "common/NioUtils.h"
 
 using namespace filament;
 using namespace filament::math;
 using namespace image;
+using namespace ktxreader;
 
 jlong nCreateHDRTexture(JNIEnv* env, jclass,
         jlong nativeEngine, jobject javaBuffer, jint remaining, jint internalFormat);
@@ -35,9 +36,9 @@ static jlong nCreateKTXTexture(JNIEnv* env, jclass,
         jlong nativeEngine, jobject javaBuffer, jint remaining, jboolean srgb) {
     Engine* engine = (Engine*) nativeEngine;
     AutoBuffer buffer(env, javaBuffer, remaining);
-    KtxBundle* bundle = new KtxBundle((const uint8_t*) buffer.getData(), buffer.getSize());
-    return (jlong) ktx::createTexture(engine, *bundle, srgb, [](void* userdata) {
-        KtxBundle* bundle = (KtxBundle*) userdata;
+    Ktx1Bundle* bundle = new Ktx1Bundle((const uint8_t*) buffer.getData(), buffer.getSize());
+    return (jlong) Ktx1Reader::createTexture(engine, *bundle, srgb, [](void* userdata) {
+        Ktx1Bundle* bundle = (Ktx1Bundle*) userdata;
         delete bundle;
     }, bundle);
 }
@@ -46,9 +47,9 @@ static jlong nCreateIndirectLight(JNIEnv* env, jclass,
         jlong nativeEngine, jobject javaBuffer, jint remaining, jboolean srgb) {
     Engine* engine = (Engine*) nativeEngine;
     AutoBuffer buffer(env, javaBuffer, remaining);
-    KtxBundle* bundle = new KtxBundle((const uint8_t*) buffer.getData(), buffer.getSize());
-    Texture* cubemap = ktx::createTexture(engine, *bundle, srgb,  [](void* userdata) {
-        KtxBundle* bundle = (KtxBundle*) userdata;
+    Ktx1Bundle* bundle = new Ktx1Bundle((const uint8_t*) buffer.getData(), buffer.getSize());
+    Texture* cubemap = Ktx1Reader::createTexture(engine, *bundle, srgb,  [](void* userdata) {
+        Ktx1Bundle* bundle = (Ktx1Bundle*) userdata;
         delete bundle;
     }, bundle);
 
@@ -68,9 +69,9 @@ static jlong nCreateSkybox(JNIEnv* env, jclass,
         jlong nativeEngine, jobject javaBuffer, jint remaining, jboolean srgb) {
     Engine* engine = (Engine*) nativeEngine;
     AutoBuffer buffer(env, javaBuffer, remaining);
-    KtxBundle* bundle = new KtxBundle((const uint8_t*) buffer.getData(), buffer.getSize());
-    Texture* cubemap = ktx::createTexture(engine, *bundle, srgb,  [](void* userdata) {
-        KtxBundle* bundle = (KtxBundle*) userdata;
+    Ktx1Bundle* bundle = new Ktx1Bundle((const uint8_t*) buffer.getData(), buffer.getSize());
+    Texture* cubemap = Ktx1Reader::createTexture(engine, *bundle, srgb,  [](void* userdata) {
+        Ktx1Bundle* bundle = (Ktx1Bundle*) userdata;
         delete bundle;
     }, bundle);
     return (jlong) Skybox::Builder().environment(cubemap).showSun(true).build(*engine);
@@ -79,7 +80,7 @@ static jlong nCreateSkybox(JNIEnv* env, jclass,
 static jboolean nGetSphericalHarmonics(JNIEnv* env, jclass, jobject javaBuffer, jint remaining,
         jfloatArray outSphericalHarmonics_) {
     AutoBuffer buffer(env, javaBuffer, remaining);
-    KtxBundle bundle((const uint8_t*) buffer.getData(), buffer.getSize());
+    Ktx1Bundle bundle((const uint8_t*) buffer.getData(), buffer.getSize());
 
     jfloat* outSphericalHarmonics = env->GetFloatArrayElements(outSphericalHarmonics_, nullptr);
     const auto success = bundle.getSphericalHarmonics(
@@ -98,8 +99,8 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
 
     int rc;
 
-    // KTXLoader
-    jclass ktxloaderClass = env->FindClass("com/google/android/filament/utils/KTXLoader");
+    // KTX1Loader
+    jclass ktxloaderClass = env->FindClass("com/google/android/filament/utils/KTX1Loader");
     if (ktxloaderClass == nullptr) return JNI_ERR;
     static const JNINativeMethod ktxMethods[] = {
         {(char*)"nCreateKTXTexture", (char*)"(JLjava/nio/Buffer;IZ)J", reinterpret_cast<void*>(nCreateKTXTexture)},

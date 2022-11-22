@@ -491,11 +491,22 @@ template<typename T>
 constexpr TMat44<T> TMat44<T>::frustum(T left, T right, T bottom, T top, T near, T far) noexcept {
     TMat44<T> m;
     m[0][0] = (2 * near) / (right - left);
+    // 0
+    // 0
+    // 0
+
+    // 0
     m[1][1] = (2 * near) / (top - bottom);
+    // 0
+    // 0
+
     m[2][0] = (right + left) / (right - left);
     m[2][1] = (top + bottom) / (top - bottom);
     m[2][2] = -(far + near) / (far - near);
     m[2][3] = -1;
+
+    // 0
+    // 0
     m[3][2] = -(2 * far * near) / (far - near);
     m[3][3] = 0;
     return m;
@@ -574,6 +585,26 @@ constexpr mat4f highPrecisionMultiply(mat4f const& lhs, mat4f const& rhs) noexce
             highPrecisionMultiply(lhs, rhs[1]),
             highPrecisionMultiply(lhs, rhs[2]),
             highPrecisionMultiply(lhs, rhs[3])
+    };
+}
+
+// mat4 * float4, with double precision intermediates
+constexpr double4 highPrecisionMultiplyd(mat4f const& lhs, float4 const& rhs) noexcept {
+    double4 result{};
+    result += lhs[0] * rhs[0];
+    result += lhs[1] * rhs[1];
+    result += lhs[2] * rhs[2];
+    result += lhs[3] * rhs[3];
+    return result;
+}
+
+// mat4 * mat4, with double precision intermediates
+constexpr mat4 highPrecisionMultiplyd(mat4f const& lhs, mat4f const& rhs) noexcept {
+    return {
+            highPrecisionMultiplyd(lhs, rhs[0]),
+            highPrecisionMultiplyd(lhs, rhs[1]),
+            highPrecisionMultiplyd(lhs, rhs[2]),
+            highPrecisionMultiplyd(lhs, rhs[3])
     };
 }
 

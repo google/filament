@@ -137,6 +137,86 @@ OpFunctionEnd
       true);
 }
 
+TEST_F(RelaxFloatOpsTest, RelaxFloatOpsForLinkage) {
+  const std::string defs0 =
+      R"(OpCapability Shader
+OpCapability Linkage
+OpCapability Sampled1D
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpSource HLSL 630
+OpName %main "main"
+OpName %g_tTex1df4 "g_tTex1df4"
+OpName %g_sSamp "g_sSamp"
+OpName %i_Tex0 "i.Tex0"
+OpName %i_Tex1 "i.Tex1"
+OpName %_entryPointOutput_Color "@entryPointOutput.Color"
+OpDecorate %main LinkageAttributes "main" Export
+OpDecorate %g_tTex1df4 DescriptorSet 0
+OpDecorate %g_tTex1df4 Binding 0
+OpDecorate %g_sSamp DescriptorSet 0
+OpDecorate %g_sSamp Binding 0
+OpDecorate %i_Tex0 Location 0
+OpDecorate %i_Tex1 Location 1
+OpDecorate %_entryPointOutput_Color Location 0
+)";
+
+  const std::string defs1 =
+      R"(%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%17 = OpTypeImage %float 1D 0 0 0 1 Unknown
+%_ptr_UniformConstant_17 = OpTypePointer UniformConstant %17
+%g_tTex1df4 = OpVariable %_ptr_UniformConstant_17 UniformConstant
+%21 = OpTypeSampler
+%_ptr_UniformConstant_21 = OpTypePointer UniformConstant %21
+%g_sSamp = OpVariable %_ptr_UniformConstant_21 UniformConstant
+%25 = OpTypeSampledImage %17
+%_ptr_Input_float = OpTypePointer Input %float
+%i_Tex0 = OpVariable %_ptr_Input_float Input
+%i_Tex1 = OpVariable %_ptr_Input_float Input
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%_entryPointOutput_Color = OpVariable %_ptr_Output_v4float Output
+%float_0_5 = OpConstant %float 0.5
+%116 = OpConstantComposite %v4float %float_0_5 %float_0_5 %float_0_5 %float_0_5
+)";
+
+  const std::string relax_decos =
+      R"(OpDecorate %60 RelaxedPrecision
+OpDecorate %63 RelaxedPrecision
+OpDecorate %82 RelaxedPrecision
+OpDecorate %88 RelaxedPrecision
+OpDecorate %91 RelaxedPrecision
+OpDecorate %94 RelaxedPrecision
+)";
+
+  const std::string func_orig =
+      R"(%main = OpFunction %void None %3
+%5 = OpLabel
+%60 = OpLoad %float %i_Tex0
+%63 = OpLoad %float %i_Tex1
+%77 = OpLoad %17 %g_tTex1df4
+%78 = OpLoad %21 %g_sSamp
+%79 = OpSampledImage %25 %77 %78
+%82 = OpImageSampleImplicitLod %v4float %79 %60
+%83 = OpLoad %17 %g_tTex1df4
+%84 = OpLoad %21 %g_sSamp
+%85 = OpSampledImage %25 %83 %84
+%88 = OpImageSampleImplicitLod %v4float %85 %63
+%91 = OpFAdd %v4float %82 %88
+%94 = OpFMul %v4float %91 %116
+OpStore %_entryPointOutput_Color %94
+OpReturn
+OpFunctionEnd
+)";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SinglePassRunAndCheck<RelaxFloatOpsPass>(
+      defs0 + defs1 + func_orig, defs0 + relax_decos + defs1 + func_orig, true,
+      true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

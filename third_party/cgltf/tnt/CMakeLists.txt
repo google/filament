@@ -11,6 +11,9 @@ set(PUBLIC_HDRS
 
 include_directories(${PUBLIC_HDR_DIR})
 
+add_compile_definitions($<$<CONFIG:Debug>:CGLTF_VALIDATE_ENABLE_ASSERTS=1>)
+
 add_library(${TARGET} INTERFACE)
 target_sources(${TARGET} INTERFACE ${PUBLIC_HDRS})
 target_include_directories(${TARGET} INTERFACE ${PUBLIC_HDR_DIR})
+set_target_properties(${TARGET} PROPERTIES FOLDER ThirdParty)

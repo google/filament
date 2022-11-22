@@ -150,7 +150,7 @@ template<>
 inline filament::math::float3 linearToSRGB(const filament::math::float3& color) {
     using filament::math::float3;
     float3 sRGBColor{color};
-    #pragma nounroll
+    UTILS_NOUNROLL
     for (size_t i = 0; i < sRGBColor.size(); i++) {
         sRGBColor[i] = (sRGBColor[i] <= 0.0031308f) ?
                 sRGBColor[i] * 12.92f : (powf(sRGBColor[i], 1.0f / 2.4f) * 1.055f) - 0.055f;
@@ -158,8 +158,8 @@ inline filament::math::float3 linearToSRGB(const filament::math::float3& color) 
     return sRGBColor;
 }
 
-// Creates a n-channel sRGB image from a linear floating-point image.
-// The source image can have more than N channels, but only the first N are converted to sRGB.
+// Creates a N-channel sRGB image from a linear floating-point image.
+// The source image can have more than N channels, but only the first 3 are converted to sRGB.
 template<typename T, int N = 3>
 std::unique_ptr<uint8_t[]> fromLinearTosRGB(const LinearImage& image) {
     const size_t w = image.getWidth();

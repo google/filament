@@ -14,6 +14,10 @@ add_library(image STATIC IMPORTED)
 set_target_properties(image PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libimage.a)
 
+add_library(ktxreader STATIC IMPORTED)
+set_target_properties(ktxreader PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libktxreader.a)
+
 add_library(viewer STATIC IMPORTED)
 set_target_properties(viewer PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libviewer.a)
@@ -50,6 +54,7 @@ target_compile_definitions(filament-utils-jni PUBLIC IMAGEIO_LITE=1)
 target_include_directories(filament-utils-jni PRIVATE
         ${FILAMENT_DIR}/include
         ..
+        ../../filament/backend/include
         ${IMAGEIO_DIR}/include
         ../../libs/utils/include)
 
@@ -63,5 +68,6 @@ target_link_libraries(filament-utils-jni
         camutils
         iblprefilter
         image
+        ktxreader
         viewer
 )

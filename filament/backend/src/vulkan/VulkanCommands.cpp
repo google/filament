@@ -30,8 +30,7 @@
 using namespace bluevk;
 using namespace utils;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 VulkanCmdFence::VulkanCmdFence(VkDevice device, bool signaled) : device(device) {
     VkFenceCreateInfo fenceCreateInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -52,22 +51,30 @@ VulkanCmdFence::~VulkanCmdFence() {
 
 CommandBufferObserver::~CommandBufferObserver() {}
 
-VulkanCommands::VulkanCommands(VkDevice device, uint32_t queueFamilyIndex) : mDevice(device) {
-    VkCommandPoolCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    createInfo.flags =
-            VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-    createInfo.queueFamilyIndex = queueFamilyIndex;
-    vkCreateCommandPool(device, &createInfo, VKALLOC, &mPool);
-    vkGetDeviceQueue(device, queueFamilyIndex, 0, &mQueue);
+static VkQueue getQueue(VkDevice device, uint32_t queueFamilyIndex) {
+    VkQueue queue;
+    vkGetDeviceQueue(device, queueFamilyIndex, 0, &queue);
+    return queue;
+}
 
+static VkCommandPool createPool(VkDevice device, uint32_t queueFamilyIndex) {
+    VkCommandPoolCreateInfo createInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags =
+            VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+        .queueFamilyIndex = queueFamilyIndex,
+    };
+    VkCommandPool pool;
+    vkCreateCommandPool(device, &createInfo, VKALLOC, &pool);
+    return pool;
+
+}
+
+VulkanCommands::VulkanCommands(VkDevice device, uint32_t queueFamilyIndex) : mDevice(device),
+        mQueue(getQueue(device, queueFamilyIndex)), mPool(createPool(mDevice, queueFamilyIndex)) {
     VkSemaphoreCreateInfo sci { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
     for (auto& semaphore : mSubmissionSignals) {
         vkCreateSemaphore(mDevice, &sci, nullptr, &semaphore);
-    }
-
-    for (uint32_t index = 0; index < VK_MAX_COMMAND_BUFFERS; ++index) {
-        mStorage[index].index = index;
     }
 }
 
@@ -264,8 +271,7 @@ void VulkanCommands::updateFences() {
     }
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
 #if defined(_MSC_VER)
 #pragma warning( pop )

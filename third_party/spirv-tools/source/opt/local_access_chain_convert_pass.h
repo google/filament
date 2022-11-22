@@ -81,7 +81,7 @@ class LocalAccessChainConvertPass : public MemPass {
                               std::vector<Operand>* in_opnds);
 
   // Create a load/insert/store equivalent to a store of
-  // |valId| through (constant index) access chaing |ptrInst|.
+  // |valId| through (constant index) access chain |ptrInst|.
   // Append to |newInsts|.  Returns true if successful.
   bool GenAccessChainStoreReplacement(
       const Instruction* ptrInst, uint32_t valId,
@@ -95,7 +95,8 @@ class LocalAccessChainConvertPass : public MemPass {
                               Instruction* original_load);
 
   // Return true if all indices of access chain |acp| are OpConstant integers
-  bool IsConstantIndexAccessChain(const Instruction* acp) const;
+  // whose values can fit into an unsigned 32-bit value.
+  bool Is32BitConstantIndexAccessChain(const Instruction* acp) const;
 
   // Identify all function scope variables of target type which are
   // accessed only with loads, stores and access chains with constant

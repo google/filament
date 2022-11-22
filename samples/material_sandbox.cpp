@@ -885,15 +885,12 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderFloat("Polygon Offset Scale", &params.polygonOffsetSlope, 0.0f, 10.0f);
             ImGui::SliderFloat("Polygon Offset Constant", &params.polygonOffsetConstant, 0.0f, 10.0f);
 
-            bool* lispsm;
-            if (debug.getPropertyAddress<bool>("d.shadowmap.lispsm", &lispsm)) {
-                ImGui::Checkbox("Enable LiSPSM", lispsm);
-                if (*lispsm) {
-                    ImGui::SliderFloat("dzn",
-                            debug.getPropertyAddress<float>("d.shadowmap.dzn"), 0.0f, 1.0f);
-                    ImGui::SliderFloat("dzf",
-                            debug.getPropertyAddress<float>("d.shadowmap.dzf"),-1.0f, 0.0f);
-                }
+            ImGui::Checkbox("Enable LiSPSM", &params.lispsm);
+            if (params.lispsm) {
+                ImGui::SliderFloat("dzn",
+                        debug.getPropertyAddress<float>("d.shadowmap.dzn"), 0.0f, 1.0f);
+                ImGui::SliderFloat("dzf",
+                        debug.getPropertyAddress<float>("d.shadowmap.dzf"),-1.0f, 0.0f);
             }
             ImGui::Unindent();
         }
@@ -942,6 +939,7 @@ static void gui(filament::Engine* engine, filament::View*) {
 
     LightManager::ShadowOptions options = lcm.getShadowOptions(lightInstance);
     options.stable = params.stableShadowMap;
+    options.lispsm = params.lispsm;
     options.normalBias = params.normalBias;
     options.constantBias = params.constantBias;
     options.polygonOffsetConstant = params.polygonOffsetConstant;
@@ -976,7 +974,10 @@ static void preRender(filament::Engine* engine, filament::View* view, filament::
     view->setBloomOptions(g_params.bloomOptions);
     view->setFogOptions(g_params.fogOptions);
     view->setTemporalAntiAliasingOptions(g_params.taaOptions);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     view->setSampleCount((uint8_t) (g_params.msaa ? 4 : 1));
+#pragma clang diagnostic pop
     view->setAmbientOcclusionOptions(g_params.ssaoOptions);
 
     if (g_params.colorGrading) {

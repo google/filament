@@ -119,9 +119,8 @@ cmake ..\.. ^
 :: Some resource libraries require significant heap space to compile, so first compile them serially.
 @echo on
 cmake --build . --target filagui --config %config% || exit /b
-cmake --build . --target gltfio_resources --config %config% || exit /b
-cmake --build . --target gltfio_resources_lite --config %config% || exit /b
-cmake --build . --target gltf-resources --config %config% || exit /b
+cmake --build . --target uberarchive --config %config% || exit /b
+cmake --build . --target gltf-demo-resources --config %config% || exit /b
 cmake --build . --target filamentapp-resources --config %config% || exit /b
 cmake --build . --target sample-resources --config %config% || exit /b
 cmake --build . --target suzanne-resources --config %config% || exit /b

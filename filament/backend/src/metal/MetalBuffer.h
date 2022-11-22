@@ -24,14 +24,18 @@
 
 #include <Metal/Metal.h>
 
-namespace filament {
-namespace backend {
-namespace metal {
+#include <utils/compiler.h>
+
+#include <utility>
+#include <memory>
+
+namespace filament::backend {
 
 class MetalBuffer {
 public:
 
-    MetalBuffer(MetalContext& context, BufferUsage usage, size_t size, bool forceGpuBuffer = false);
+    MetalBuffer(MetalContext& context, BufferObjectBinding bindingType, BufferUsage usage,
+         size_t size, bool forceGpuBuffer = false);
     ~MetalBuffer();
 
     MetalBuffer(const MetalBuffer& rhs) = delete;
@@ -43,7 +47,8 @@ public:
      * Update the buffer with data inside src. Potentially allocates a new buffer allocation to hold
      * the bytes which will be released when the current frame is finished.
      */
-    void copyIntoBuffer(void* src, size_t size, size_t byteOffset = 0);
+    void copyIntoBuffer(void* src, size_t size, size_t byteOffset);
+    void copyIntoBufferUnsynchronized(void* src, size_t size, size_t byteOffset);
 
     /**
      * Denotes that this buffer is used for a draw call ensuring that its allocation remains valid
@@ -52,50 +57,153 @@ public:
      * @return The MTLBuffer representing the current state of the buffer to bind, or nil if there
      * is no device allocation.
      *
-     * For STREAM buffers, getGpuBufferStreamOffset() should be called to retrieve the correct
-     * buffer offset.
-     *
      */
     id<MTLBuffer> getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) noexcept;
 
-    /**
-     * Returns the offset into the buffer returned by getGpuBufferForDraw. This is always 0 for
-     * non-STREAM buffers.
-     */
-    size_t getGpuBufferStreamOffset() noexcept { return mCurrentStreamStart; }
-
     void* getCpuBuffer() const noexcept { return mCpuBuffer; }
 
-    enum Stage {
-        VERTEX = 1,
-        FRAGMENT = 2
+    enum Stage : uint8_t {
+        VERTEX      = 1u << 0u,
+        FRAGMENT    = 1u << 1u,
+        COMPUTE     = 1u << 2u
     };
 
     /**
      * Bind multiple buffers to pipeline stages.
      *
-     * bindBuffers binds an array of buffers to the given stage(s) of a MTLRenderCommandEncoder's
-     * pipeline.
+     * bindBuffers binds an array of buffers to the given stage(s) of a MTLCommandEncoders's
+     * pipeline. The encoder must be either a MTLRenderCommandEncoder or a MTLComputeCommandEncoder.
+     * For MTLRenderCommandEncoders, only the VERTEX and FRAGMENT stages may be specified.
+     * For MTLComputeCommandEncoders, only the COMPUTE stage may be specified.
      */
-    static void bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLRenderCommandEncoder> encoder,
+    static void bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLCommandEncoder> encoder,
             size_t bufferStart, uint8_t stages, MetalBuffer* const* buffers, size_t const* offsets,
             size_t count);
 
 private:
 
-    BufferUsage mUsage;
+    id<MTLBuffer> mBuffer = nil;
     size_t mBufferSize = 0;
-    size_t mCurrentStreamStart = 0;
-    size_t mCurrentStreamEnd = 0;
-    const MetalBufferPoolEntry* mBufferPoolEntry = nullptr;
     void* mCpuBuffer = nullptr;
     MetalContext& mContext;
-
-    void copyIntoStreamBuffer(void* src, size_t size);
 };
 
-} // namespace metal
-} // namespace backend
-} // namespace filament
+template <typename TYPE>
+static inline TYPE align(TYPE p, size_t alignment) noexcept {
+    // alignment must be a power-of-two
+    assert(alignment && !(alignment & alignment-1));
+    return (TYPE)((p + alignment - 1) & ~(alignment - 1));
+}
+
+/**
+ * Manages a single id<MTLBuffer>, allowing sub-allocations in a "ring" fashion. Each slot in the
+ * buffer has a fixed size. When a new allocation is made, previous allocations become available
+ * when the current id<MTLCommandBuffer> has finished executing on the GPU.
+ *
+ * If there are no slots available when a new allocation is requested, MetalRingBuffer falls back to
+ * allocating a new id<MTLBuffer> per allocation until a slot is freed.
+ *
+ * All methods must be called from the Metal backend thread.
+ */
+class MetalRingBuffer {
+public:
+    // In practice, MetalRingBuffer is used for argument buffers, which are kept in the constant
+    // address space. Constant buffers have specific alignment requirements when specifying an
+    // offset.
+#if defined(IOS)
+#if TARGET_OS_SIMULATOR
+    // The iOS simulator has differing alignment requirements.
+    static constexpr auto METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT = 256;
+#else
+    static constexpr auto METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT = 4;
+#endif  // TARGET_OS_SIMULATOR
+#else
+    static constexpr auto METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT = 32;
+#endif
+    static inline auto computeSlotSize(MTLSizeAndAlign layout) {
+         return align(align(layout.size, layout.align), METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT);
+    }
+
+    MetalRingBuffer(id<MTLDevice> device, MTLResourceOptions options, MTLSizeAndAlign layout,
+            NSUInteger slotCount)
+        : mDevice(device),
+          mAuxBuffer(nil),
+          mBufferOptions(options),
+          mSlotSizeBytes(computeSlotSize(layout)),
+          mSlotCount(slotCount) {
+        mBuffer = [device newBufferWithLength:mSlotSizeBytes * mSlotCount options:mBufferOptions];
+        assert_invariant(mBuffer);
+    }
+
+    /**
+     * Create a new allocation in the buffer.
+     * @param cmdBuffer When this command buffer has finished executing on the GPU, the previous
+     *                  ring buffer allocation will be freed.
+     * @return the id<MTLBuffer> and offset for the new allocation
+     */
+    std::pair<id<MTLBuffer>, NSUInteger> createNewAllocation(id<MTLCommandBuffer> cmdBuffer) {
+        const auto occupiedSlots = mOccupiedSlots->load(std::memory_order_relaxed);
+        assert_invariant(occupiedSlots <= mSlotCount);
+        if (UTILS_UNLIKELY(occupiedSlots == mSlotCount)) {
+            // We don't have any room left, so we fall back to creating a one-off aux buffer.
+            // If we already have an aux buffer, it will get freed here, unless it has been retained
+            // by a MTLCommandBuffer. In that case, it will be freed when the command buffer
+            // finishes executing.
+            mAuxBuffer = [mDevice newBufferWithLength:mSlotSizeBytes options:mBufferOptions];
+            assert_invariant(mAuxBuffer);
+            return {mAuxBuffer, 0};
+        }
+        mCurrentSlot = (mCurrentSlot + 1) % mSlotCount;
+        mOccupiedSlots->fetch_add(1, std::memory_order_relaxed);
+
+        // Release the previous allocation.
+        if (UTILS_UNLIKELY(mAuxBuffer)) {
+            mAuxBuffer = nil;
+        } else {
+            // Capture the mOccupiedSlots var via a weak_ptr because the MetalRingBuffer could be
+            // destructed before the block executes.
+            std::weak_ptr<AtomicCounterType> slots = mOccupiedSlots;
+            [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer) {
+                if (auto s = slots.lock()) {
+                    s->fetch_sub(1, std::memory_order_relaxed);
+                }
+            }];
+        }
+        return getCurrentAllocation();
+    }
+
+    /**
+     * Returns an allocation (buffer and offset) that is guaranteed not to be in use by the GPU.
+     * @param cmdBuffer When this command buffer has finished executing on the GPU, the previous
+     *                  ring buffer allocation will be freed.
+     * @return the id<MTLBuffer> and offset for the current allocation
+     */
+    std::pair<id<MTLBuffer>, NSUInteger> getCurrentAllocation() const {
+        if (UTILS_UNLIKELY(mAuxBuffer)) {
+            return { mAuxBuffer, 0 };
+        }
+        return { mBuffer, mCurrentSlot * mSlotSizeBytes };
+    }
+
+    bool canAccomodateLayout(MTLSizeAndAlign layout) const {
+        return mSlotSizeBytes >= computeSlotSize(layout);
+    }
+
+private:
+    id<MTLDevice> mDevice;
+    id<MTLBuffer> mBuffer;
+    id<MTLBuffer> mAuxBuffer;
+
+    MTLResourceOptions mBufferOptions;
+
+    NSUInteger mSlotSizeBytes;
+    NSUInteger mSlotCount;
+
+    NSUInteger mCurrentSlot = 0;
+    using AtomicCounterType = std::atomic<NSUInteger>;
+    std::shared_ptr<AtomicCounterType> mOccupiedSlots = std::make_shared<AtomicCounterType>(1);
+};
+
+} // namespace filament::backend
 
 #endif

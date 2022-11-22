@@ -106,6 +106,14 @@ public class ColorGrading {
     }
 
     /**
+     * Color grading LUT format.
+     */
+    public enum LutFormat {
+        INTEGER,
+        FLOAT
+    }
+
+    /**
      * List of available tone-mapping operators.
      *
      * @deprecated Use {@link ColorGrading.Builder#toneMapper(ToneMapper)}
@@ -159,6 +167,36 @@ public class ColorGrading {
          */
         public Builder quality(QualityLevel qualityLevel) {
             nBuilderQuality(mNativeBuilder, qualityLevel.ordinal());
+            return this;
+        }
+
+        /**
+         * When color grading is implemented using a 3D LUT, this sets the texture format of
+         * of the LUT. This overrides the value set by quality().
+         *
+         * The default is INTEGER
+         *
+         * @param format The desired format of the 3D LUT.
+         *
+         * @return This Builder, for chaining calls
+         */
+        public Builder format(LutFormat format) {
+            nBuilderFormat(mNativeBuilder, format.ordinal());
+            return this;
+        }
+
+        /**
+         * When color grading is implemented using a 3D LUT, this sets the dimension of the LUT.
+         * This overrides the value set by quality().
+         *
+         * The default is 32
+         *
+         * @param dim The desired dimension of the LUT. Between 16 and 64.
+         *
+         * @return This Builder, for chaining calls
+         */
+        public Builder dimensions(int dim) {
+            nBuilderDimensions(mNativeBuilder, dim);
             return this;
         }
 
@@ -557,6 +595,8 @@ public class ColorGrading {
     private static native void nDestroyBuilder(long nativeBuilder);
 
     private static native void nBuilderQuality(long nativeBuilder, int quality);
+    private static native void nBuilderFormat(long nativeBuilder, int format);
+    private static native void nBuilderDimensions(long nativeBuilder, int dim);
     private static native void nBuilderToneMapper(long nativeBuilder, long toneMapper);
     private static native void nBuilderToneMapping(long nativeBuilder, int toneMapping);
     private static native void nBuilderLuminanceScaling(long nativeBuilder, boolean luminanceScaling);

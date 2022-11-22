@@ -17,18 +17,26 @@
 
 #include "filament/MaterialChunkType.h"
 
+#include "../SamplerBindingMap.h"
+#include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/SubpassInfo.h>
+
+#include <utility>
+
 using namespace filament;
 
 namespace filamat {
 
-MaterialUniformInterfaceBlockChunk::MaterialUniformInterfaceBlockChunk(UniformInterfaceBlock& uib) :
+MaterialUniformInterfaceBlockChunk::MaterialUniformInterfaceBlockChunk(
+        BufferInterfaceBlock const& uib) :
         Chunk(ChunkType::MaterialUib),
-        mUib(uib){
+        mUib(uib) {
 }
 
-void MaterialUniformInterfaceBlockChunk::flatten(Flattener &f) {
-    f.writeString(mUib.getName().c_str());
-    auto uibFields = mUib.getUniformInfoList();
+void MaterialUniformInterfaceBlockChunk::flatten(Flattener& f) {
+    f.writeString(mUib.getName());
+    auto uibFields = mUib.getFieldInfoList();
     f.writeUint64(uibFields.size());
     for (auto uInfo: uibFields) {
         f.writeString(uInfo.name.c_str());
@@ -38,12 +46,15 @@ void MaterialUniformInterfaceBlockChunk::flatten(Flattener &f) {
     }
 }
 
-MaterialSamplerInterfaceBlockChunk::MaterialSamplerInterfaceBlockChunk(SamplerInterfaceBlock& sib) :
+// ------------------------------------------------------------------------------------------------
+
+MaterialSamplerInterfaceBlockChunk::MaterialSamplerInterfaceBlockChunk(
+        SamplerInterfaceBlock const& sib) :
         Chunk(ChunkType::MaterialSib),
         mSib(sib) {
 }
 
-void MaterialSamplerInterfaceBlockChunk::flatten(Flattener &f) {
+void MaterialSamplerInterfaceBlockChunk::flatten(Flattener& f) {
     f.writeString(mSib.getName().c_str());
     auto sibFields = mSib.getSamplerInfoList();
     f.writeUint64(sibFields.size());
@@ -56,12 +67,14 @@ void MaterialSamplerInterfaceBlockChunk::flatten(Flattener &f) {
     }
 }
 
-MaterialSubpassInterfaceBlockChunk::MaterialSubpassInterfaceBlockChunk(SubpassInfo& subpass) :
+// ------------------------------------------------------------------------------------------------
+
+MaterialSubpassInterfaceBlockChunk::MaterialSubpassInterfaceBlockChunk(SubpassInfo const& subpass) :
         Chunk(ChunkType::MaterialSubpass),
         mSubpass(subpass) {
 }
 
-void MaterialSubpassInterfaceBlockChunk::flatten(Flattener &f) {
+void MaterialSubpassInterfaceBlockChunk::flatten(Flattener& f) {
     f.writeString(mSubpass.block.c_str());
     f.writeUint64(mSubpass.isValid ? 1 : 0);   // only ever a single subpass for now
     if (mSubpass.isValid) {
@@ -74,4 +87,52 @@ void MaterialSubpassInterfaceBlockChunk::flatten(Flattener &f) {
     }
 }
 
+// ------------------------------------------------------------------------------------------------
+
+MaterialUniformBlockBindingsChunk::MaterialUniformBlockBindingsChunk(
+        utils::FixedCapacityVector<std::pair<std::string_view, filament::UniformBindingPoints>> list)
+        : Chunk(ChunkType::MaterialUniformBindings),
+          mBindingList(std::move(list)) {
 }
+
+void MaterialUniformBlockBindingsChunk::flatten(Flattener& f) {
+    f.writeUint8(mBindingList.size());
+    for (auto const& item: mBindingList) {
+        f.writeString(item.first);
+        f.writeUint8(uint8_t(item.second));
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
+MaterialSamplerBlockBindingChunk::MaterialSamplerBlockBindingChunk(
+        SamplerBindingMap const& samplerBindings)
+        : Chunk(ChunkType::MaterialSamplerBindings),
+        mSamplerBindings(samplerBindings) {
+}
+
+void MaterialSamplerBlockBindingChunk::flatten(Flattener& f) {
+    f.writeUint8(utils::Enum::count<SamplerBindingPoints>());
+    UTILS_NOUNROLL
+    for (size_t i = 0; i < utils::Enum::count<SamplerBindingPoints>(); i++) {
+        SamplerBindingPoints bindingPoint = (SamplerBindingPoints)i;
+        auto const& bindingInfo = mSamplerBindings.getSamplerGroupBindingInfo(bindingPoint);
+        f.writeUint8(bindingInfo.bindingOffset);
+        f.writeUint8((uint8_t)bindingInfo.shaderStageFlags);
+        f.writeUint8(bindingInfo.count);
+    }
+    f.writeUint8(mSamplerBindings.getActiveSamplerCount());
+    UTILS_UNUSED_IN_RELEASE size_t c = 0;
+    UTILS_NOUNROLL
+    for (size_t i = 0; i < backend::MAX_SAMPLER_COUNT; i++) {
+        auto const& uniformName = mSamplerBindings.getSamplerName(i);
+        if (!uniformName.empty()) {
+            f.writeUint8((uint8_t)i);
+            f.writeString(uniformName.c_str());
+            c++;
+        }
+    }
+    assert_invariant(c == mSamplerBindings.getActiveSamplerCount());
+}
+
+} // namespace filamat

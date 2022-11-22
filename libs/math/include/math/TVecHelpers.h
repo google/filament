@@ -21,14 +21,10 @@
 
 #include <cmath>            // for std:: namespace
 
-#include <math.h>
 #include <stdint.h>
 #include <sys/types.h>
 
-namespace filament {
-namespace math {
-namespace details {
-// -------------------------------------------------------------------------------------
+namespace filament::math::details {
 
 template<typename U>
 inline constexpr U min(U a, U b) noexcept {
@@ -281,8 +277,6 @@ private:
     template<typename U>
     friend inline constexpr
     bool MATH_PURE operator==(const VECTOR<T>& lv, const VECTOR<U>& rv) {
-        // w/ inlining we end-up with many branches that will pollute the BPU cache
-        MATH_NOUNROLL
         for (size_t i = 0; i < lv.size(); i++) {
             if (lv[i] != rv[i]) {
                 return false;
@@ -477,6 +471,13 @@ private:
         return v;
     }
 
+    friend inline VECTOR<T> MATH_PURE sign(VECTOR<T> v) {
+        for (size_t i = 0; i < v.size(); i++) {
+            v[i] = std::copysign(T(1), v[i]);
+        }
+        return v;
+    }
+
     friend inline VECTOR<T> MATH_PURE pow(VECTOR<T> v, T p) {
         for (size_t i = 0; i < v.size(); i++) {
             v[i] = std::pow(v[i], p);
@@ -617,9 +618,6 @@ private:
     }
 };
 
-// -------------------------------------------------------------------------------------
-}  // namespace details
-}  // namespace math
-}  // namespace filament
+}  // namespace filament::math::details
 
 #endif  // TNT_MATH_TVECHELPERS_H

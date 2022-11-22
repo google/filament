@@ -28,9 +28,10 @@ namespace fuzz {
 FuzzerPassApplyIdSynonyms::FuzzerPassApplyIdSynonyms(
     opt::IRContext* ir_context, TransformationContext* transformation_context,
     FuzzerContext* fuzzer_context,
-    protobufs::TransformationSequence* transformations)
+    protobufs::TransformationSequence* transformations,
+    bool ignore_inapplicable_transformations)
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
-                 transformations) {}
+                 transformations, ignore_inapplicable_transformations) {}
 
 void FuzzerPassApplyIdSynonyms::Apply() {
   // Compute a closure of data synonym facts, to enrich the pool of synonyms
@@ -197,7 +198,7 @@ bool FuzzerPassApplyIdSynonyms::DataDescriptorsHaveCompatibleTypes(
       GetIRContext(), base_object_type_id_2, dd2.index());
   assert(type_id_1 && type_id_2 && "Data descriptors have invalid types");
 
-  return TransformationReplaceIdWithSynonym::TypesAreCompatible(
+  return fuzzerutil::TypesAreCompatible(
       GetIRContext(), opcode, use_in_operand_index, type_id_1, type_id_2);
 }
 

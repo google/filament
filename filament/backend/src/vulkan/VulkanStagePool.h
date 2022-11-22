@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANSTAGEPOOL_H
-#define TNT_FILAMENT_DRIVER_VULKANSTAGEPOOL_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANSTAGEPOOL_H
+#define TNT_FILAMENT_BACKEND_VULKANSTAGEPOOL_H
 
 #include "VulkanContext.h"
 
 #include <map>
 #include <unordered_set>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 // Immutable POD representing a shared CPU-GPU staging area.
 struct VulkanStage {
@@ -52,6 +51,7 @@ public:
     // The stage is automatically released back to the pool after TIME_BEFORE_EVICTION frames.
     VulkanStage const* acquireStage(uint32_t numBytes);
 
+    // Images have VK_IMAGE_LAYOUT_GENERAL and must not be transitioned to any other layout
     VulkanStageImage const* acquireImage(PixelDataFormat format, PixelDataType type,
             uint32_t width, uint32_t height);
 
@@ -78,7 +78,6 @@ private:
     uint64_t mCurrentFrame = 0;
 };
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKANSTAGEPOOL_H
+#endif // TNT_FILAMENT_BACKEND_VULKANSTAGEPOOL_H

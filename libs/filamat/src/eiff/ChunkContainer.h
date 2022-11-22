@@ -17,17 +17,17 @@
 #ifndef TNT_FILAMAT_CHUNK_CONTAINER_H
 #define TNT_FILAMAT_CHUNK_CONTAINER_H
 
+#include <filament/MaterialChunkType.h>
+
+#include "Chunk.h"
+#include "SimpleFieldChunk.h"
+
 #include <memory>
 #include <vector>
 
-#include "Chunk.h"
-#include "Flattener.h"
-
-#include <filament/MaterialChunkType.h>
-
-#include "SimpleFieldChunk.h"
-
 namespace filamat {
+
+class Flattener;
 
 class ChunkContainer {
 public:

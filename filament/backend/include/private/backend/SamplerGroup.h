@@ -17,141 +17,79 @@
 #ifndef TNT_FILAMENT_BACKEND_PRIVATE_SAMPLERGROUP_H
 #define TNT_FILAMENT_BACKEND_PRIVATE_SAMPLERGROUP_H
 
-#include <array>
-#include <stddef.h>
+#include "backend/DriverApiForward.h"
 
 #include <utils/compiler.h>
-#include <utils/bitset.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
+#include <backend/SamplerDescriptor.h>
 
-namespace filament {
-namespace backend {
+#include <stddef.h>
+
+namespace filament::backend {
+
+class BufferDescriptor;
+
+/*
+ * FIXME: this should eventually be moved into Filament, outside of backend.
+ *        (but it is currently used by metal/vulkan backens)
+ */
 
 class SamplerGroup {
 public:
 
     using SamplerParams = backend::SamplerParams;
 
-    struct Sampler {
-        Handle<HwTexture> t;
-        SamplerParams s{};
-    };
-
-    SamplerGroup() noexcept { } // NOLINT
+    SamplerGroup() noexcept {} // NOLINT
 
     // create a sampler group
     explicit SamplerGroup(size_t count) noexcept;
 
-    // can be copied -- this preserves dirty bits
+    // can be copied. Sets dirty flag.
     SamplerGroup(const SamplerGroup& rhs) noexcept;
     SamplerGroup& operator=(const SamplerGroup& rhs) noexcept;
 
-    // and moved -- this cleans rhs's dirty flags
-    SamplerGroup(SamplerGroup&& rhs) noexcept;
-    SamplerGroup& operator=(SamplerGroup&& rhs) noexcept;
-
-    // copy the rhs samplers into this group and sets the dirty flag
-    SamplerGroup& setSamplers(SamplerGroup const& rhs) noexcept;
+    // and moved. Leaves rhs empty, keep diry flag on new SamplerGroup.
+    SamplerGroup(SamplerGroup&& rhs) noexcept = default;
+    SamplerGroup& operator=(SamplerGroup&& rhs) = default;
 
     ~SamplerGroup() noexcept = default;
 
-    // Efficiently move a SamplerGroup to the command stream. Always use std::move() on the
-    // returned value, as in the future this might return SamplerGroup by value.
-    SamplerGroup& toCommandStream() const noexcept;
-
-    // pointer to the sampler group
-    Sampler const* getSamplers() const noexcept { return mBuffer.data(); }
+    BufferDescriptor toBufferDescriptor(DriverApi& driver) const noexcept;
 
     // sampler count
     size_t getSize() const noexcept { return mBuffer.size(); }
 
     // return if any samplers has been changed
-    bool isDirty() const noexcept { return mDirty.any(); }
+    bool isDirty() const noexcept {
+        return mDirty;
+    }
 
     // mark the whole group as clean (no modified uniforms)
-    void clean() const noexcept { mDirty.reset(); }
+    void clean() const noexcept { mDirty = false; }
 
     // set sampler at given index
-    void setSampler(size_t index, Sampler sampler) noexcept;
+    void setSampler(size_t index, backend::SamplerDescriptor sampler) noexcept;
 
-    inline void setSampler(size_t index, Handle<HwTexture> t, SamplerParams s)  {
-        setSampler(index, { t, s });
-    }
-
-    inline void clearSampler(size_t index)  {
+    inline void clearSampler(size_t index) {
         setSampler(index, {});
     }
+
+
+    // FIXME: This is now [[deprecated]]. Currently it is only used by the Vulkan/Metal backends.
+    backend::SamplerDescriptor* data() noexcept { return mBuffer.data(); }
 
 private:
 #if !defined(NDEBUG)
     friend utils::io::ostream& operator<<(utils::io::ostream& out, const SamplerGroup& rhs);
 #endif
 
-    // This could probably be cleaned-up and moved to libutils
-    template<class T, size_t N>
-    class static_vector { //NOLINT
-        typename std::aligned_storage<sizeof(T), alignof(T)>::type mData[N];
-        uint32_t mSize = 0;
-    public:
-        static_vector() = default; //NOLINT
-
-        ~static_vector() noexcept {
-            for (auto& elem : *this) {
-                elem.~T();
-            }
-        }
-
-        explicit static_vector(size_t count) noexcept : mSize(count) {
-            assert_invariant(count < N);
-            std::uninitialized_fill_n(begin(), count, T{});
-        }
-
-        static_vector(static_vector const& rhs) noexcept : mSize(rhs.mSize) {
-            std::uninitialized_copy(rhs.begin(), rhs.end(), begin());
-        }
-
-        size_t size() const noexcept { return mSize; }
-
-        T* data() noexcept { return reinterpret_cast<T*>(&mData[0]); }
-
-        T const* data() const noexcept { return reinterpret_cast<T const*>(&mData[0]); }
-
-        static_vector& operator=(static_vector const& rhs) noexcept {
-            if (this != &rhs) {
-                const size_t n = std::min(mSize, rhs.mSize);
-                std::copy_n(rhs.begin(), n, begin());
-                for (size_t pos = n, c = mSize; pos < c; ++pos) {
-                    data()[pos].~T();
-                }
-                std::uninitialized_copy(rhs.begin() + n, rhs.end(), begin() + n);
-                mSize = rhs.mSize;
-            }
-            return *this;
-        }
-
-        const T& operator[](size_t pos) const noexcept {
-            assert_invariant(pos < mSize);
-            return data()[pos];
-        }
-
-        T& operator[](size_t pos) noexcept {
-            assert_invariant(pos < mSize);
-            return data()[pos];
-        }
-
-        T* begin() { return data(); }
-        T* end() { return data() + mSize; }
-        T const* begin() const { return data(); }
-        T const* end() const { return data() + mSize; }
-    };
-
-    static_vector<Sampler, backend::MAX_SAMPLER_COUNT> mBuffer;    // 128 bytes
-    mutable utils::bitset32 mDirty;
+    utils::FixedCapacityVector<backend::SamplerDescriptor> mBuffer;
+    mutable bool mDirty = false;
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_PRIVATE_SAMPLERGROUP_H

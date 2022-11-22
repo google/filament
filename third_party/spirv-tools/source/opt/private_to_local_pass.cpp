@@ -135,7 +135,7 @@ bool PrivateToLocalPass::MoveVariable(Instruction* variable,
   // Place the variable at the start of the first basic block.
   context()->AnalyzeUses(variable);
   context()->set_instr_block(variable, &*function->begin());
-  function->begin()->begin()->InsertBefore(move(var));
+  function->begin()->begin()->InsertBefore(std::move(var));
 
   // Update uses where the type may have changed.
   return UpdateUses(variable);
@@ -157,8 +157,7 @@ uint32_t PrivateToLocalPass::GetNewType(uint32_t old_type_id) {
 bool PrivateToLocalPass::IsValidUse(const Instruction* inst) const {
   // The cases in this switch have to match the cases in |UpdateUse|.
   // If we don't know how to update it, it is not valid.
-  if (inst->GetOpenCL100DebugOpcode() ==
-      OpenCLDebugInfo100DebugGlobalVariable) {
+  if (inst->GetCommonDebugOpcode() == CommonDebugInfoDebugGlobalVariable) {
     return true;
   }
   switch (inst->opcode()) {
@@ -183,8 +182,7 @@ bool PrivateToLocalPass::UpdateUse(Instruction* inst, Instruction* user) {
   // The cases in this switch have to match the cases in |IsValidUse|.  If we
   // don't think it is valid, the optimization will not view the variable as a
   // candidate, and therefore the use will not be updated.
-  if (inst->GetOpenCL100DebugOpcode() ==
-      OpenCLDebugInfo100DebugGlobalVariable) {
+  if (inst->GetCommonDebugOpcode() == CommonDebugInfoDebugGlobalVariable) {
     context()->get_debug_info_mgr()->ConvertDebugGlobalToLocalVariable(inst,
                                                                        user);
     return true;

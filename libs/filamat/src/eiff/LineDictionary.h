@@ -17,7 +17,9 @@
 #ifndef TNT_FILAMAT_LINEDICTIONARY_H
 #define TNT_FILAMAT_LINEDICTIONARY_H
 
+#include <memory>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -27,29 +29,27 @@ namespace filamat {
 // and each line encoded into a 16 bit id.
 class LineDictionary {
 public:
-    LineDictionary();
-    ~LineDictionary() = default;
+    LineDictionary() = default;
+
+    // Due to the presence of unique_ptr, disallow copy construction but allow move construction.
+    LineDictionary(LineDictionary const&) = delete;
+    LineDictionary(LineDictionary&&) = default;
 
     void addText(const std::string& text) noexcept;
     size_t getLineCount() const;
-
-    constexpr size_t getSize() const noexcept {
-        return mStorageSize;
-    }
 
     bool isEmpty() const noexcept {
         return mStrings.empty();
     }
 
-    const std::string& getString(size_t index) const noexcept;
-    size_t getIndex(const std::string& s) const noexcept;
+    std::string_view getString(size_t index) const noexcept;
+    size_t getIndex(std::string_view s) const noexcept;
 
 private:
     void addLine(const std::string&& line) noexcept;
 
-    std::unordered_map<std::string, size_t> mLineIndices;
-    std::vector<std::string> mStrings;
-    size_t mStorageSize = 0;
+    std::unordered_map<std::string_view, size_t> mLineIndices;
+    std::vector<std::unique_ptr<std::string>> mStrings;
 };
 
 } // namespace filamat

@@ -14,6 +14,7 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 set(HDRS
         include/filamat/Enums.h
+        include/filamat/IncludeCallback.h
         include/filamat/MaterialBuilder.h
         include/filamat/Package.h)
 
@@ -43,6 +44,8 @@ set(COMMON_SRCS
         src/Includes.cpp
         src/MaterialBuilder.cpp
         src/MaterialVariants.cpp
+        src/SamplerBindingMap.cpp
+        src/SibGenerator.cpp
         src/UibGenerator.cpp
 )
 
@@ -54,6 +57,7 @@ set(PRIVATE_HDRS
         src/eiff/DictionarySpirvChunk.h
         src/eiff/MaterialSpirvChunk.h
         src/GLSLPostProcessor.h
+        src/MetalArgumentBuffer.h
         src/ShaderMinifier.h
         src/sca/ASTHelpers.h
         src/sca/GLSLTools.h
@@ -64,6 +68,7 @@ set(SRCS
         src/eiff/BlobDictionary.cpp
         src/eiff/DictionarySpirvChunk.cpp
         src/eiff/MaterialSpirvChunk.cpp
+        src/MetalArgumentBuffer.cpp
         src/sca/ASTHelpers.cpp
         src/sca/GLSLTools.cpp
         src/GLSLPostProcessor.cpp
@@ -88,11 +93,13 @@ include_directories(${CMAKE_BINARY_DIR})
 # Filamat
 add_library(${TARGET} STATIC ${HDRS} ${PRIVATE_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 target_link_libraries(${TARGET} shaders filabridge utils smol-v)
 
 # Filamat Lite
 add_library(filamat_lite STATIC ${HDRS} ${LITE_PRIVATE_HDRS} ${LITE_SRCS})
 target_include_directories(filamat_lite PUBLIC ${PUBLIC_HDR_DIR})
+set_target_properties(filamat_lite PROPERTIES FOLDER Libs)
 target_link_libraries(filamat_lite shaders filabridge utils)
 
 # We are being naughty and accessing private headers here
@@ -103,10 +110,10 @@ target_include_directories(${TARGET} PRIVATE ${spirv-tools_SOURCE_DIR}/include)
 # we need to force archive re-scan on new symbol dependencies via start/end-group.
 # Read more about this here https://eli.thegreenplace.net/2013/07/09/library-order-in-static-linking
 if (APPLE OR MSVC)
-    target_link_libraries(${TARGET} glslang SPIRV SPVRemapper SPIRV-Tools-opt spirv-cross-glsl)
+    target_link_libraries(${TARGET} glslang SPIRV SPIRV-Tools-opt spirv-cross-glsl)
 else()
     target_link_libraries(${TARGET}
-            -Wl,--start-group glslang SPIRV SPVRemapper SPIRV-Tools-opt spirv-cross-glsl -Wl,--end-group)
+            -Wl,--start-group glslang SPIRV SPIRV-Tools-opt spirv-cross-glsl -Wl,--end-group)
 endif()
 
 # ==================================================================================================
@@ -135,7 +142,6 @@ set(FILAMAT_DEPS
         SPIRV
         SPIRV-Tools
         SPIRV-Tools-opt
-        SPVRemapper
         filamat
         glslang
         spirv-cross-core
@@ -159,6 +165,7 @@ project(test_filamat)
 set(TARGET test_filamat)
 set(SRCS
         tests/test_filamat.cpp
+        tests/test_argBufferFixup.cpp
         tests/test_includes.cpp)
 
 add_executable(${TARGET} ${SRCS})
@@ -166,6 +173,8 @@ add_executable(${TARGET} ${SRCS})
 target_include_directories(${TARGET} PRIVATE src)
 
 target_link_libraries(${TARGET} filamat gtest)
+
+set_target_properties(${TARGET} PROPERTIES FOLDER Tests)
 
 set(TARGET test_filamat_lite)
 set(SRCS
@@ -176,3 +185,5 @@ add_executable(${TARGET} ${SRCS})
 target_include_directories(${TARGET} PRIVATE src)
 
 target_link_libraries(${TARGET} filamat_lite gtest)
+
+set_target_properties(${TARGET} PROPERTIES FOLDER Tests)

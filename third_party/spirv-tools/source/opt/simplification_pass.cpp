@@ -45,6 +45,10 @@ void SimplificationPass::AddNewOperands(
 }
 
 bool SimplificationPass::SimplifyFunction(Function* function) {
+  if (function->IsDeclaration()) {
+    return false;
+  }
+
   bool modified = false;
   // Phase 1: Traverse all instructions in dominance order.
   // The second phase will only be on the instructions whose inputs have changed

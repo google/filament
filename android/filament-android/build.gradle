@@ -1,3 +1,7 @@
+android {
+    namespace 'com.google.android.filament'
+}
+
 dependencies {
     implementation deps.androidx.annotations
 }

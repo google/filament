@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANCONSTANTS_H
-#define TNT_FILAMENT_DRIVER_VULKANCONSTANTS_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANCONSTANTS_H
+#define TNT_FILAMENT_BACKEND_VULKANCONSTANTS_H
 
 #include <stdint.h>
 
@@ -37,6 +37,13 @@
 //   srcDirs = ["${android.ndkDirectory}/sources/third_party/vulkan/src/build-android/jniLibs"]
 // }
 //
+// If gradle claims that your NDK is not installed, try checking what versions you have with
+// `ls $ANDROID_HOME/ndk` then direct gradle by adding something like this to the "android" section:
+//
+//     ndkVersion "23.1.7779620"
+//
+// Also consider changing the root `gradle.properties` to point to a debug build, although this is
+// not required for validation if you change the definition of VK_ENABLE_VALIDATION below.
 #if defined(NDEBUG)
 #define VK_ENABLE_VALIDATION 0
 #else
@@ -49,12 +56,8 @@
 // passing in a null pointer, and we highlight the argument by using the VKALLOC constant.
 constexpr struct VkAllocationCallbacks* VKALLOC = nullptr;
 
-// At the time of this writing, our copy of MoltenVK supports Vulkan 1.0 only.
 constexpr static const int VK_REQUIRED_VERSION_MAJOR = 1;
 constexpr static const int VK_REQUIRED_VERSION_MINOR = 0;
-
-// Controls the block size for the VkBuffer pools that we use for vertex buffers.
-constexpr static const uint64_t VMA_BUFFER_POOL_BLOCK_SIZE_IN_MB = 128;
 
 // Maximum number of VkCommandBuffer handles managed simultaneously by VulkanCommands.
 //

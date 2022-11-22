@@ -24,8 +24,7 @@
 
 static constexpr uint32_t TIME_BEFORE_EVICTION = VK_MAX_COMMAND_BUFFERS;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 VulkanStage const* VulkanStagePool::acquireStage(uint32_t numBytes) {
     // First check if a stage exists whose capacity is greater than or equal to the requested size.
@@ -51,9 +50,15 @@ VulkanStage const* VulkanStagePool::acquireStage(uint32_t numBytes) {
         .size = numBytes,
         .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
     };
-    VmaAllocationCreateInfo allocInfo { .pool = mContext.vmaPoolCPU };
-    vmaCreateBuffer(mContext.allocator, &bufferInfo, &allocInfo, &stage->buffer, &stage->memory,
-            nullptr);
+    VmaAllocationCreateInfo allocInfo { .usage = VMA_MEMORY_USAGE_CPU_ONLY };
+    UTILS_UNUSED_IN_RELEASE VkResult result = vmaCreateBuffer(mContext.allocator, &bufferInfo,
+            &allocInfo, &stage->buffer, &stage->memory, nullptr);
+
+#ifndef NDEBUG
+    if (result != VK_SUCCESS) {
+        utils::slog.e << "Allocation error: " << result << utils::io::endl;
+    }
+#endif
 
     return stage;
 }
@@ -99,6 +104,24 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
             &image->image, &image->memory, nullptr);
 
     assert_invariant(result == VK_SUCCESS);
+
+    VkImageAspectFlags aspectFlags = isDepthFormat(vkformat) ? VK_IMAGE_ASPECT_DEPTH_BIT
+                                                             : VK_IMAGE_ASPECT_COLOR_BIT;
+
+    const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
+
+    // We use VK_IMAGE_LAYOUT_GENERAL here because the spec says:
+    // "Host access to image memory is only well-defined for linear images and for image
+    // subresources of those images which are currently in either the
+    // VK_IMAGE_LAYOUT_PREINITIALIZED or VK_IMAGE_LAYOUT_GENERAL layout. Calling
+    // vkGetImageSubresourceLayout for a linear image returns a subresource layout mapping that is
+    // valid for either of those image layouts."
+    transitionImageLayout(cmdbuffer, blitterTransitionHelper({
+            .image = image->image,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+            .subresources = { aspectFlags, 0, 1, 0, 1 }
+    }));
 
     return image;
 }
@@ -185,5 +208,4 @@ void VulkanStagePool::reset() noexcept {
     mFreeStages.clear();
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend

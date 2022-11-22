@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 The Khronos Group Inc.
+// Copyright (c) 2015-2022 The Khronos Group Inc.
 // Modifications Copyright (C) 2020 Advanced Micro Devices, Inc. All rights
 // reserved.
 //
@@ -40,12 +40,12 @@ struct OpcodeDescPtrLen {
 static const spv_opcode_table_t kOpcodeTable = {ARRAY_SIZE(kOpcodeTableEntries),
                                                 kOpcodeTableEntries};
 
-// Represents a vendor tool entry in the SPIR-V XML Regsitry.
+// Represents a vendor tool entry in the SPIR-V XML Registry.
 struct VendorTool {
   uint32_t value;
   const char* vendor;
   const char* tool;         // Might be empty string.
-  const char* vendor_tool;  // Combiantion of vendor and tool.
+  const char* vendor_tool;  // Combination of vendor and tool.
 };
 
 const VendorTool vendor_tools[] = {
@@ -528,6 +528,7 @@ bool spvOpcodeIsNonUniformGroupOperation(SpvOp opcode) {
     case SpvOpGroupNonUniformLogicalXor:
     case SpvOpGroupNonUniformQuadBroadcast:
     case SpvOpGroupNonUniformQuadSwap:
+    case SpvOpGroupNonUniformRotateKHR:
       return true;
     default:
       return false;
@@ -631,6 +632,7 @@ bool spvOpcodeIsDebug(SpvOp opcode) {
     case SpvOpString:
     case SpvOpLine:
     case SpvOpNoLine:
+    case SpvOpModuleProcessed:
       return true;
     default:
       return false;

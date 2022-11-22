@@ -17,12 +17,9 @@
 #ifndef TNT_UTILS_RANGE_H
 #define TNT_UTILS_RANGE_H
 
-#include <algorithm>
-
-#include <assert.h>
 #include <stddef.h>
 
-#include <utils/compiler.h>
+#include <iterator>
 
 namespace utils {
 
@@ -30,10 +27,15 @@ template<typename T>
 struct Range {
     using value_type = T;
     T first = 0;
-    T last = 0;
+    T last = 0; // this actually refers to one past the last
 
     size_t size() const noexcept { return last - first; }
     bool empty() const noexcept { return !size(); }
+    bool contains(const T& t) const noexcept { return first <= t && t < last; }
+
+    bool overlaps(const Range<T>& that) const noexcept {
+        return that.first < this->last && that.last > this->first;
+    }
 
     class const_iterator {
         friend struct Range;

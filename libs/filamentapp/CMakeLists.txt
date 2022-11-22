@@ -33,26 +33,26 @@ set(SRCS
         src/FilamentApp.cpp
         src/IBL.cpp
         src/IcoSphere.cpp
-        src/Image.cpp
         src/MeshAssimp.cpp
         src/Sphere.cpp
 )
 
 set(LIBS
         assimp
+        camutils
+        filagui
+        filamat
         filament
         filament-iblprefilter
+        geometry
+        getopt
+        image
+        imgui
+        ktxreader
+        math
         sdl2
         stb
-        math
-        filamat
         utils
-        getopt
-        imgui
-        filagui
-        image
-        camutils
-        geometry
 )
 
 set(MATERIAL_SRCS
@@ -120,6 +120,7 @@ set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
 add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 
 add_library(filamentapp-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
+set_target_properties(filamentapp-resources PROPERTIES FOLDER Samples/Resources)
 
 # ==================================================================================================
 # Include and target definitions
@@ -132,6 +133,7 @@ add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 target_link_libraries(${TARGET} PUBLIC ${LIBS} filamentapp-resources)
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 target_include_directories(${TARGET} PRIVATE ${GENERATION_ROOT})
 
 # ==================================================================================================

@@ -24,7 +24,7 @@
 #include "common/NioUtils.h"
 #include "common/CallbackUtils.h"
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 
 #if __has_include(<android/hardware_buffer_jni.h>)
 #include <android/hardware_buffer_jni.h>
@@ -99,16 +99,6 @@ Java_com_google_android_filament_Stream_nBuilderStreamSource(JNIEnv* env,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Stream_nBuilderStream(JNIEnv*, jclass,
-        jlong nativeStreamBuilder, jlong externalTextureId) {
-    StreamBuilder* builder = (StreamBuilder*) nativeStreamBuilder;
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    builder->builder()->stream(externalTextureId);
-#pragma clang diagnostic pop
-}
-
-extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Stream_nBuilderWidth(JNIEnv*, jclass,
         jlong nativeStreamBuilder, jint width) {
     StreamBuilder* builder = (StreamBuilder*) nativeStreamBuilder;
@@ -143,40 +133,6 @@ Java_com_google_android_filament_Stream_nSetDimensions(JNIEnv*, jclass, jlong na
     stream->setDimensions((uint32_t) width, (uint32_t) height);
 }
 
-extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Stream_nReadPixels(JNIEnv *env, jclass,
-        jlong nativeStream, jlong nativeEngine,
-        jint xoffset, jint yoffset, jint width, jint height,
-        jobject storage, jint remaining,
-        jint left, jint top, jint type, jint alignment, jint stride, jint format,
-        jobject handler, jobject runnable) {
-    Stream *stream = (Stream *) nativeStream;
-    Engine *engine = (Engine *) nativeEngine;
-
-    stride = stride ? stride : width;
-    size_t sizeInBytes = PixelBufferDescriptor::computeDataSize(
-            (PixelDataFormat) format, (PixelDataType) type,
-            (size_t) stride, (size_t) (height + top), (size_t) alignment);
-
-    AutoBuffer nioBuffer(env, storage, 0);
-    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
-        // BufferOverflowException
-        return -1;
-    }
-
-    void *buffer = nioBuffer.getData();
-    auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
-
-    PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
-            (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) top,
-            (uint32_t) stride, &JniBufferCallback::invoke, callback);
-
-    stream->readPixels(uint32_t(xoffset), uint32_t(yoffset), uint32_t(width), uint32_t(height),
-            std::move(desc));
-
-    return 0;
-}
-
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Stream_nGetTimestamp(JNIEnv*, jclass, jlong nativeStream) {
     Stream *stream = (Stream *) nativeStream;
@@ -189,7 +145,7 @@ Java_com_google_android_filament_Stream_nSetAcquiredImage(JNIEnv* env, jclass, j
     Engine* engine = (Engine*) nativeEngine;
     Stream* stream = (Stream*) nativeStream;
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 
     // This function is not available before NDK 15 or before Android 8.
     if (UTILS_UNLIKELY(!AHardwareBuffer_fromHardwareBuffer_fn)) {
@@ -200,8 +156,8 @@ Java_com_google_android_filament_Stream_nSetAcquiredImage(JNIEnv* env, jclass, j
          if (!AHardwareBuffer_fromHardwareBuffer_fn) {
             __android_log_print(ANDROID_LOG_WARN, "Filament", "AHardwareBuffer_fromHardwareBuffer is not available.");
             sHardwareBufferSupported = false;
+            return;
         }
-        return;
     }
 
     AHardwareBuffer* nativeBuffer = AHardwareBuffer_fromHardwareBuffer_fn(env, hwbuffer);
@@ -221,5 +177,6 @@ Java_com_google_android_filament_Stream_nSetAcquiredImage(JNIEnv* env, jclass, j
 
 #endif
 
-    stream->setAcquiredImage((void*) nativeBuffer, &JniImageCallback::invoke, callback);
+    stream->setAcquiredImage((void*) nativeBuffer,
+            callback->getHandler(), &JniImageCallback::postToJavaAndDestroy, callback);
 }

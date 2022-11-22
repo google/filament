@@ -149,7 +149,7 @@ void DumpTransformationsJson(
   json_options.add_whitespace = true;
   auto json_generation_status = google::protobuf::util::MessageToJsonString(
       transformations, &json_string, json_options);
-  if (json_generation_status == google::protobuf::util::Status::OK) {
+  if (json_generation_status.ok()) {
     std::ofstream transformations_json_file(filename);
     transformations_json_file << json_string;
     transformations_json_file.close();

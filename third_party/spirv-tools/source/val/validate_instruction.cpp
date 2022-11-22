@@ -297,7 +297,7 @@ spv_result_t VersionCheck(ValidationState_t& _, const Instruction* inst) {
   }
 
   // OpTerminateInvocation is special because it is enabled by Shader
-  // capability, but also requries a extension and/or version check.
+  // capability, but also requires an extension and/or version check.
   const bool capability_check_is_sufficient =
       inst->opcode() != SpvOpTerminateInvocation;
 
@@ -318,10 +318,9 @@ spv_result_t VersionCheck(ValidationState_t& _, const Instruction* inst) {
 
     if (module_version < min_version) {
       return _.diag(SPV_ERROR_WRONG_VERSION, inst)
-             << spvOpcodeString(opcode) << " requires "
-             << spvTargetEnvDescription(
-                    static_cast<spv_target_env>(min_version))
-             << " at minimum.";
+             << spvOpcodeString(opcode) << " requires SPIR-V version "
+             << SPV_SPIRV_VERSION_MAJOR_PART(min_version) << "."
+             << SPV_SPIRV_VERSION_MINOR_PART(min_version) << " at minimum.";
     }
   } else if (!_.HasAnyOfExtensions(exts)) {
     // Otherwise, we only error out when no enabling extensions are
@@ -407,7 +406,7 @@ spv_result_t LimitCheckSwitch(ValidationState_t& _, const Instruction* inst) {
     // The instruction syntax is as follows:
     // OpSwitch <selector ID> <Default ID> literal label literal label ...
     // literal,label pairs come after the first 2 operands.
-    // It is guaranteed at this point that num_operands is an even numner.
+    // It is guaranteed at this point that num_operands is an even number.
     size_t num_pairs = (inst->operands().size() - 2) / 2;
     const unsigned int num_pairs_limit =
         _.options()->universal_limits_.max_switch_branches;

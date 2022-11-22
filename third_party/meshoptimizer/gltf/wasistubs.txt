@@ -1,0 +1,2 @@
+__wasi_path_open32
+__wasi_fd_seek32

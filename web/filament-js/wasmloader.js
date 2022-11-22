@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+Filament.onReadyListeners = [];
+
+Filament.isReady = false;
+
 /// init ::function:: Downloads assets, loads the Filament module, and invokes a callback when done.
 ///
 /// All JavaScript clients must call the init function, passing in a list of asset URL's and a
@@ -28,7 +32,15 @@
 /// onready ::argument:: callback that gets invoked after all assets have been downloaded and the \
 /// Filament WebAssembly module has been loaded.
 Filament.init = (assets, onready) => {
-    onready = onready || (() => {});
+    if (onready) {
+        Filament.onReadyListeners.push(onready);
+    }
+    if (Filament.initialized) {
+        console.assert(!assets || assets.length == 0, "Assets can be specified only with the first call to init.");
+        return;
+    };
+    Filament.initialized = true;
+
     Filament.assets = {};
 
     // Usage of glmatrix is optional. If it exists, then go ahead and augment it with some
@@ -41,7 +53,10 @@ Filament.init = (assets, onready) => {
     let remainingTasks = 1 + assets.length;
     const taskFinished = () => {
         if (--remainingTasks == 0) {
-            onready();
+            for (const callback of Filament.onReadyListeners) {
+                callback();
+            }
+            Filament.isReady = true;
         }
     };
 
@@ -52,6 +67,10 @@ Filament.init = (assets, onready) => {
     // resolves to a module. Here we replace the function with the module. Note that our
     // TypeScript bindings assume that Filament is a namespace, not a function.
     Filament().then(module => {
+
+        // Merge our extension functions into the emscripten module, not the other
+        // way around, because Emscripten potentially replaces the HEAPU8 views in
+        // the original module object (e.g. if it needs to grow the heap).
         Filament = Object.assign(module, Filament);
 
         // At this point, emscripten has finished compiling and instancing the WebAssembly module.

@@ -1,7 +1,108 @@
 Revision history for SPIRV-Tools
 
-v2021.3-dev 2021-06-22
- - Start v2021.3-dev
+v2022.3-dev 2022-04-07
+  - Start v2022.3-dev
+
+v2022.2 2022-04-07
+  - General
+    - Add OpModuleProcessed to debug opcode (#4694)
+  - Optimizer
+    - Complete handling of RayQueryKHR type (#4690)
+    - Have scalar replacement use undef instead of null (#4691)
+    - Optimize Instruction::Instruction (#4705)
+    - Handle propagation of arrays with decorations (#4717)
+    - spirv-opt: Add OpExecutionModeId support (#4719)
+    - Optimize Type::HashValue (#4707)
+    - Optimize DefUseManager allocations (#4709)
+    - Add pass to remove DontInline function control (#4747)
+    - Better handling of 0xFFFFFFFF when folding vector shuffle (#4743)
+    - Reset the id bound on the module in compact ids (#4744)
+    - spirv-opt: (WIP) Eliminate Dead Input Component Pass (#4720)
+    - Support SPV_KHR_uniform_group_instructions (#4734)
+    - Handle shaders without execution model in spread-volatile-semantics (#4766)
+  - Validator
+    - Fix handling of Nontemporal image operand (#4692)
+    - [spirv-val] Allow 0 Component Count for DebugTypeArray for Shader (#4706)
+    - spirv-val: Validate DebugTypeMatrix (#4732)
+    - spirv-val: Label Vulkan VUID 04734 (#4739)
+    - spirv-val: Label VUID 06491 (#4745)
+    - spirv-val: Disallow array of push constants (#4742)
+    - spirv-val: Label Vulkan RuntimeArray VUID (#4749)
+    - spirv-val: Add Vulkan Image VUID 06214 (#4750)
+    - spirv-val: Add Vulkan Dref not allowed 3D dim VUID (#4751)
+    - spirv-val: Label and add test for PSB Aligned (#4756)
+    - spirv-val: Add Vulkan 32-bit bit op Base (#4758)
+    - spirv-val: Add more Vulkan VUID labels (#4764)
+  - Diff
+    - Introduce spirv-diff (#4611)
+    - Stabilize the output of spirv-diff (#4698)
+    - spirv-diff: Handle OpSpecConstant array sizes (#4700)
+    - spirv-diff: Match OpSpecConstantComposite correctly (#4704)
+    - spirv-diff: Use GetSingleWord*Operand (#4768)
+    - spirv-diff: Basic support for OpTypeForwardPointer (#4761)
+    - spirv-diff: Fix OpTypeFunction matching w.r.t operand count (#4771)
+
+v2022.1 2022-01-26
+  - General
+    - Add SPIR-V 1.6 support to wasm build (#4674)
+    - Improvements to disassembly within PassManager (#4677)
+    - Basic support for SPIR-V 1.6 (#4663)
+    - reflect debug (#4662)
+    - Fix endianness of string literals (#4622)
+  - Optimizer
+    - spirv-opt: add pass to Spread Volatile semantics (#4667)
+    - Fix constant propagation and folding of FClamp instructions (#4651)
+    - Manually fold floating point division by zero (#4637)
+    - Allow ADCE to remove dead inputs (#4629)
+  - Linker
+    - Linker improvements (#4679)
+      * test/linker: Code factorisation and small tweaks
+      * linker: Do not fail when going over limits
+  - Validator
+    - val: interface struct with builtins must be Block (#4665)
+  - Fuzzer
+    - Avoid id bound errors during opt fuzzing (#4658)
+    - Avoid uninitialised read when parsing hex float (#4646)
+
+v2021.4 2021-11-11
+  - General
+    - Add a WebAssembly build (#3752)
+    - Make cxx exceptions controllable (#4591)
+  - Validator
+    - Improve decoration validation (#4490)
+  - Optimizer
+    - Add spirv-opt pass to replace descriptor accesses based on variable indices (#4574)
+    - Do not fold snegate feeding sdiv (#4600)
+    - Handle overflowing id in merge return (#4606)
+  - Fuzzer
+    - Add libFuzzer target for spirv-fuzz (#4434)
+  - Linter
+
+v2021.3 2021-08-24
+ - General
+    - Initial support for SPV_KHR_integer_dot_product (#4327)
+    - Add non-semantic vulkan extended instruction set (#4362)
+    - Add common enum for debug info instructions from either opencl or vulkan (#4377)
+ - Validator
+    - Add validation for SPV_EXT_shader_atomic_float16_add (#4325)
+    - Disallow loading a runtime-sized array (#4473)
+    - spirv-val: Validate vulkan debug info similarly to opencl debug info (#4466)
+ - Optimizer
+    - spirv-opt: support SPV_EXT_shader_image_int64 (#4379)
+    - spirv-opt: Add dataflow analysis framework (#4402)
+    - Add control dependence analysis to opt (#4380)
+    - Add spirv-opt convert-to-sampled-image pass (#4340)
+    - spirv-opt: Add handling of vulkan debug info to DebugInfoManager (#4423)
+ - Fuzz
+    - spirv-fuzz: support AtomicLoad (#4330)
+    - spirv-fuzz: Support AtomicStore (#4440)
+    - spirv-fuzz: TransformationWrapVectorSynonym that rewrites scalar operations using vectors (#4376)
+    - spirv-fuzz: Add minimal SPIR-V example to test shaders (#4415)
+    - spirv-fuzz: support building using gn (#4365)
+ - Linter
+    - Add new target for spirv-lint (#4446)
+    - spirv-lint: add basic CLI argument handling (#4478)
+    - Add divergence analysis to linter (#4465)
 
 v2021.2 2021-06-18
  - General

@@ -42,6 +42,7 @@ list(APPEND RESGEN_SOURCE ${DUMMY_SRC})
 # away in Release builds
 if (TNT_DEV)
     add_executable(test_${TARGET}
+            filament_AtlasAllocator_test.cpp
             filament_test_exposure.cpp
             filament_rendering_test.cpp
             filament_framegraph_test.cpp
@@ -49,6 +50,7 @@ if (TNT_DEV)
 
     target_link_libraries(test_${TARGET} PRIVATE filament gtest)
     target_compile_options(test_${TARGET} PRIVATE ${COMPILER_FLAGS})
+    set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)
 
     add_executable(test_depth depth_test.cpp)
     target_link_libraries(test_depth PRIVATE utils)
@@ -60,3 +62,4 @@ add_executable(test_material_parser
 target_link_libraries(test_material_parser PRIVATE filament gtest)
 target_compile_options(test_material_parser PRIVATE ${COMPILER_FLAGS})
 target_include_directories(test_material_parser PRIVATE ${RESOURCE_DIR})
+set_target_properties(test_material_parser PROPERTIES FOLDER Tests)

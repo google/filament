@@ -35,7 +35,7 @@ namespace opt {
 //
 // The hard part is keeping all of the types correct.  We do not want to
 // have to do too large a search to update everything, which may not be
-// possible, do we give up if we see any instruction that might be hard to
+// possible, so we give up if we see any instruction that might be hard to
 // update.
 
 class CopyPropagateArrays : public MemPass {

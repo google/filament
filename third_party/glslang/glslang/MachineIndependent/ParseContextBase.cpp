@@ -74,6 +74,9 @@ void C_DECL TParseContextBase::error(const TSourceLoc& loc, const char* szReason
 {
     if (messages & EShMsgOnlyPreprocessor)
         return;
+    // If enhanced msg readability, only print one error
+    if (messages & EShMsgEnhanced && numErrors > 0)
+        return;
     va_list args;
     va_start(args, szExtraInfoFormat);
     outputMessage(loc, szReason, szToken, szExtraInfoFormat, EPrefixError, args);
@@ -621,6 +624,19 @@ void TParseContextBase::growGlobalUniformBlock(const TSourceLoc& loc, TType& mem
     // Update with binding and set
     globalUniformBlock->getWritableType().getQualifier().layoutBinding = globalUniformBinding;
     globalUniformBlock->getWritableType().getQualifier().layoutSet = globalUniformSet;
+
+    // Check for declarations of this default uniform that already exist due to other compilation units.
+    TSymbol* symbol = symbolTable.find(memberName);
+    if (symbol) {
+        if (memberType != symbol->getType()) {
+            TString err;
+            err += "\"" + memberType.getCompleteString() + "\"";
+            err += " versus ";
+            err += "\"" + symbol->getType().getCompleteString() + "\"";
+            error(loc, "Types must match:", memberType.getFieldName().c_str(), err.c_str());
+        }
+        return;
+    }
 
     // Add the requested member as a member to the global block.
     TType* type = new TType;

@@ -22,25 +22,25 @@ converting <a href="https://github.com/google/filament/blob/main/assets/models/m
 <p>Next, let's create mipmapped KTX files using filament's <code>mipgen</code> tool. We'll create compressed and
 non-compressed variants for each texture, since not all platforms support the same compression
 formats. First copy over the PNG files from the <a href="https://github.com/google/filament/blob/main/assets/models/monkey">monkey folder</a>, then do:</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #408080; font-style: italic"># Create mipmaps for base color and two compressed variants.</span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #3D7B7B; font-style: italic"># Create mipmaps for base color and two compressed variants.</span>
 mipgen albedo.png albedo.ktx
 mipgen --compression<span style="color: #666666">=</span>astc_fast_ldr_4x4 albedo.png albedo_astc.ktx
 mipgen --compression<span style="color: #666666">=</span>s3tc_rgb_dxt1 albedo.png albedo_s3tc_srgb.ktx
 
-<span style="color: #408080; font-style: italic"># Create mipmaps for the normal map and a compressed variant.</span>
+<span style="color: #3D7B7B; font-style: italic"># Create mipmaps for the normal map and a compressed variant.</span>
 mipgen --strip-alpha --kernel<span style="color: #666666">=</span>NORMALS --linear normal.png normal.ktx
-mipgen --strip-alpha --kernel<span style="color: #666666">=</span>NORMALS --linear --compression<span style="color: #666666">=</span>etc_rgb8_normalxyz_40 <span style="color: #BB6622; font-weight: bold">\</span>
+mipgen --strip-alpha --kernel<span style="color: #666666">=</span>NORMALS --linear --compression<span style="color: #666666">=</span>etc_rgb8_normalxyz_40 <span style="color: #AA5D1F; font-weight: bold">\</span>
     normal.png normal_etc.ktx
 
-<span style="color: #408080; font-style: italic"># Create mipmaps for the single-component roughness map and a compressed variant.</span>
+<span style="color: #3D7B7B; font-style: italic"># Create mipmaps for the single-component roughness map and a compressed variant.</span>
 mipgen --grayscale roughness.png roughness.ktx
 mipgen --grayscale --compression<span style="color: #666666">=</span>etc_r11_numeric_40 roughness.png roughness_etc.ktx
 
-<span style="color: #408080; font-style: italic"># Create mipmaps for the single-component metallic map and a compressed variant.</span>
+<span style="color: #3D7B7B; font-style: italic"># Create mipmaps for the single-component metallic map and a compressed variant.</span>
 mipgen --grayscale metallic.png metallic.ktx
 mipgen --grayscale --compression<span style="color: #666666">=</span>etc_r11_numeric_40 metallic.png metallic_etc.ktx
 
-<span style="color: #408080; font-style: italic"># Create mipmaps for the single-component occlusion map and a compressed variant.</span>
+<span style="color: #3D7B7B; font-style: italic"># Create mipmaps for the single-component occlusion map and a compressed variant.</span>
 mipgen --grayscale ao.png ao.ktx
 mipgen --grayscale --compression<span style="color: #666666">=</span>etc_r11_numeric_40 ao.png ao_etc.ktx
 </pre></div>
@@ -101,7 +101,7 @@ materials, consult the official document describing the <a href="https://google.
 <p>Create a text file called <code>suzanne.html</code> and copy over the HTML that we used in the <a href="tutorial_redball.html">previous
 tutorial</a>. Change the last script tag from <code>redball.js</code> to <code>suzanne.js</code>. Next, create <code>suzanne.js</code>
 with the following content.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #408080; font-style: italic">// TODO: declare asset URLs</span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #3D7B7B; font-style: italic">// TODO: declare asset URLs</span>
 
 Filament.init([ filamat_url, filamesh_url, sky_small_url, ibl_url ], () =&gt; {
     <span style="color: #008000">window</span>.app <span style="color: #666666">=</span> <span style="color: #AA22FF; font-weight: bold">new</span> App(<span style="color: #008000">document</span>.getElementsByTagName(<span style="color: #BA2121">&#39;canvas&#39;</span>)[<span style="color: #666666">0</span>]);
@@ -119,9 +119,9 @@ Filament.init([ filamat_url, filamesh_url, sky_small_url, ibl_url ], () =&gt; {
         <span style="color: #008000; font-weight: bold">const</span> filamesh <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine.loadFilamesh(filamesh_url, <span style="color: #008000; font-weight: bold">this</span>.matinstance);
         <span style="color: #008000; font-weight: bold">this</span>.suzanne <span style="color: #666666">=</span> filamesh.renderable;
 
-        <span style="color: #408080; font-style: italic">// TODO: create sky box and IBL</span>
-        <span style="color: #408080; font-style: italic">// TODO: initialize gltumble</span>
-        <span style="color: #408080; font-style: italic">// TODO: fetch larger assets</span>
+        <span style="color: #3D7B7B; font-style: italic">// TODO: create sky box and IBL</span>
+        <span style="color: #3D7B7B; font-style: italic">// TODO: initialize gltumble</span>
+        <span style="color: #3D7B7B; font-style: italic">// TODO: fetch larger assets</span>
 
         <span style="color: #008000; font-weight: bold">this</span>.swapChain <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine.createSwapChain();
         <span style="color: #008000; font-weight: bold">this</span>.renderer <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine.createRenderer();
@@ -141,7 +141,7 @@ Filament.init([ filamat_url, filamesh_url, sky_small_url, ibl_url ], () =&gt; {
     }
 
     render() {
-        <span style="color: #408080; font-style: italic">// TODO: apply gltumble matrix</span>
+        <span style="color: #3D7B7B; font-style: italic">// TODO: apply gltumble matrix</span>
         <span style="color: #008000; font-weight: bold">this</span>.renderer.render(<span style="color: #008000; font-weight: bold">this</span>.swapChain, <span style="color: #008000; font-weight: bold">this</span>.view);
         <span style="color: #008000">window</span>.requestAnimationFrame(<span style="color: #008000; font-weight: bold">this</span>.render);
     }
@@ -176,14 +176,14 @@ last resort. Go ahead and replace the <strong>declare asset URLs</strong> commen
 <span style="color: #008000; font-weight: bold">const</span> texture_suffix <span style="color: #666666">=</span> Filament.getSupportedFormatSuffix(<span style="color: #BA2121">&#39;etc&#39;</span>);
 
 <span style="color: #008000; font-weight: bold">const</span> environ <span style="color: #666666">=</span> <span style="color: #BA2121">&#39;venetian_crossroads_2k&#39;</span>
-<span style="color: #008000; font-weight: bold">const</span> ibl_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">_ibl.ktx`</span>;
-<span style="color: #008000; font-weight: bold">const</span> sky_small_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">_skybox_tiny.ktx`</span>;
-<span style="color: #008000; font-weight: bold">const</span> sky_large_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">_skybox.ktx`</span>;
-<span style="color: #008000; font-weight: bold">const</span> albedo_url <span style="color: #666666">=</span> <span style="color: #BA2121">`albedo</span><span style="color: #BB6688; font-weight: bold">${</span>albedo_suffix<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">.ktx`</span>;
-<span style="color: #008000; font-weight: bold">const</span> ao_url <span style="color: #666666">=</span> <span style="color: #BA2121">`ao</span><span style="color: #BB6688; font-weight: bold">${</span>texture_suffix<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">.ktx`</span>;
-<span style="color: #008000; font-weight: bold">const</span> metallic_url <span style="color: #666666">=</span> <span style="color: #BA2121">`metallic</span><span style="color: #BB6688; font-weight: bold">${</span>texture_suffix<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">.ktx`</span>;
-<span style="color: #008000; font-weight: bold">const</span> normal_url <span style="color: #666666">=</span> <span style="color: #BA2121">`normal</span><span style="color: #BB6688; font-weight: bold">${</span>texture_suffix<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">.ktx`</span>;
-<span style="color: #008000; font-weight: bold">const</span> roughness_url <span style="color: #666666">=</span> <span style="color: #BA2121">`roughness</span><span style="color: #BB6688; font-weight: bold">${</span>texture_suffix<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">.ktx`</span>;
+<span style="color: #008000; font-weight: bold">const</span> ibl_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">_ibl.ktx`</span>;
+<span style="color: #008000; font-weight: bold">const</span> sky_small_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">_skybox_tiny.ktx`</span>;
+<span style="color: #008000; font-weight: bold">const</span> sky_large_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #A45A77; font-weight: bold">${</span>environ<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">_skybox.ktx`</span>;
+<span style="color: #008000; font-weight: bold">const</span> albedo_url <span style="color: #666666">=</span> <span style="color: #BA2121">`albedo</span><span style="color: #A45A77; font-weight: bold">${</span>albedo_suffix<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">.ktx`</span>;
+<span style="color: #008000; font-weight: bold">const</span> ao_url <span style="color: #666666">=</span> <span style="color: #BA2121">`ao</span><span style="color: #A45A77; font-weight: bold">${</span>texture_suffix<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">.ktx`</span>;
+<span style="color: #008000; font-weight: bold">const</span> metallic_url <span style="color: #666666">=</span> <span style="color: #BA2121">`metallic</span><span style="color: #A45A77; font-weight: bold">${</span>texture_suffix<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">.ktx`</span>;
+<span style="color: #008000; font-weight: bold">const</span> normal_url <span style="color: #666666">=</span> <span style="color: #BA2121">`normal</span><span style="color: #A45A77; font-weight: bold">${</span>texture_suffix<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">.ktx`</span>;
+<span style="color: #008000; font-weight: bold">const</span> roughness_url <span style="color: #666666">=</span> <span style="color: #BA2121">`roughness</span><span style="color: #A45A77; font-weight: bold">${</span>texture_suffix<span style="color: #A45A77; font-weight: bold">}</span><span style="color: #BA2121">.ktx`</span>;
 <span style="color: #008000; font-weight: bold">const</span> filamat_url <span style="color: #666666">=</span> <span style="color: #BA2121">&#39;textured.filamat&#39;</span>;
 <span style="color: #008000; font-weight: bold">const</span> filamesh_url <span style="color: #666666">=</span> <span style="color: #BA2121">&#39;suzanne.filamesh&#39;</span>;
 </pre></div>
@@ -224,7 +224,7 @@ was created in the app constructor.</p>
     <span style="color: #008000; font-weight: bold">this</span>.matinstance.setTextureParameter(<span style="color: #BA2121">&#39;normal&#39;</span>, normal, sampler);
     <span style="color: #008000; font-weight: bold">this</span>.matinstance.setTextureParameter(<span style="color: #BA2121">&#39;ao&#39;</span>, ao, sampler);
 
-    <span style="color: #408080; font-style: italic">// Replace low-res skybox with high-res skybox.</span>
+    <span style="color: #3D7B7B; font-style: italic">// Replace low-res skybox with high-res skybox.</span>
     <span style="color: #008000; font-weight: bold">this</span>.engine.destroySkybox(<span style="color: #008000; font-weight: bold">this</span>.skybox);
     <span style="color: #008000; font-weight: bold">this</span>.skybox <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.engine.createSkyFromKtx(sky_large_url);
     <span style="color: #008000; font-weight: bold">this</span>.scene.setSkybox(<span style="color: #008000; font-weight: bold">this</span>.skybox);
@@ -236,7 +236,7 @@ was created in the app constructor.</p>
 <h2>Introduce trackball rotation</h2>
 <p>Add the following script tag to your HTML file. This imports a small third-party library that
 listens for drag events and computes a rotation matrix.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>&lt;<span style="color: #008000; font-weight: bold">script</span> <span style="color: #7D9029">src</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;//unpkg.com/gltumble&quot;</span>&gt;&lt;/<span style="color: #008000; font-weight: bold">script</span>&gt;
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>&lt;<span style="color: #008000; font-weight: bold">script</span> <span style="color: #687822">src</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;//unpkg.com/gltumble&quot;</span>&gt;&lt;/<span style="color: #008000; font-weight: bold">script</span>&gt;
 </pre></div>
 
 <p>Next, replace the <strong>initialize gltumble</strong> and <strong>apply gltumble matrix</strong> comments with the following

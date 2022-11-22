@@ -129,6 +129,7 @@ Pass::Status IfConversion::Process() {
         Instruction* select = builder.AddSelect(phi->type_id(), condition,
                                                 true_value->result_id(),
                                                 false_value->result_id());
+        context()->get_def_use_mgr()->AnalyzeInstDefUse(select);
         select->UpdateDebugInfoFrom(phi);
         context()->ReplaceAllUsesWith(phi->result_id(), select->result_id());
         to_kill.push_back(phi);
@@ -168,6 +169,8 @@ bool IfConversion::CheckBlock(BasicBlock* block, DominatorAnalysis* dominators,
   if (branch->opcode() != SpvOpBranchConditional) return false;
   auto merge = (*common)->GetMergeInst();
   if (!merge || merge->opcode() != SpvOpSelectionMerge) return false;
+  if (merge->GetSingleWordInOperand(1) == SpvSelectionControlDontFlattenMask)
+    return false;
   if ((*common)->MergeBlockIdIfAny() != block->id()) return false;
 
   return true;

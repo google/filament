@@ -1,18 +1,14 @@
 # Filament Debugging
 
-## Debugging Vulkan on macOS
-
-See "Enabling Validation" in `third_party/moltenvk/README.md`.
-
 ## Debugging Vulkan on Linux
 
 ### Enable Validation Logs
 
 Simply install the LunarG SDK (it's fast and easy), then make sure you've got the following
-environment variables set up in your **bashrc** file:
+environment variables set up in your **bashrc** file. For example:
 
 ```
-export VULKAN_SDK='/usr/local/google/home/MY_LDAP/VulkanSDK/1.1.70.1/x86_64'
+export VULKAN_SDK='/path_to_home/VulkanSDK/1.3.216.0/x86_64'
 export VK_LAYER_PATH="$VULKAN_SDK/etc/explicit_layer.d"
 export PATH="$VULKAN_SDK/bin:$PATH"
 ```

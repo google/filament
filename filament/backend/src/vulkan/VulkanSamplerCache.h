@@ -14,29 +14,27 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANSAMPLERCACHE_H
-#define TNT_FILAMENT_DRIVER_VULKANSAMPLERCACHE_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANSAMPLERCACHE_H
+#define TNT_FILAMENT_BACKEND_VULKANSAMPLERCACHE_H
 
 #include "VulkanContext.h"
 #include "VulkanUtility.h"
 
 #include <tsl/robin_map.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 // Simple manager for VkSampler objects.
 class VulkanSamplerCache {
 public:
     explicit VulkanSamplerCache(VulkanContext&);
-    VkSampler getSampler(backend::SamplerParams params) noexcept;
+    VkSampler getSampler(SamplerParams params) noexcept;
     void reset() noexcept;
 private:
     VulkanContext& mContext;
     tsl::robin_map<uint32_t, VkSampler> mCache;
 };
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKANSAMPLERCACHE_H
+#endif // TNT_FILAMENT_BACKEND_VULKANSAMPLERCACHE_H

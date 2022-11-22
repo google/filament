@@ -26,11 +26,11 @@ namespace filament {
 using namespace math;
 
 float3 Color::sRGBToLinear(float3 color) noexcept {
-    return EOCF_sRGB(color);
+    return EOTF_sRGB(color);
 }
 
 float3 Color::linearToSRGB(float3 color) noexcept {
-    return OECF_sRGB(color);
+    return OETF_sRGB(color);
 }
 
 LinearColor Color::cct(float K) {

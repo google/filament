@@ -85,6 +85,10 @@ std::vector<uint32_t> ParseDefaultValueStr(const char* text,
 //   with 0x1, which represents a 'true'.
 //   If all words in the bit pattern are zero, returns a bit pattern with 0x0,
 //   which represents a 'false'.
+// For integer and floating point types narrower than 32 bits, the upper bits
+// in the input bit pattern are ignored.  Instead the upper bits are set
+// according to SPIR-V literal requirements: sign extend a signed integer, and
+// otherwise set the upper bits to zero.
 std::vector<uint32_t> ParseDefaultValueBitPattern(
     const std::vector<uint32_t>& input_bit_pattern,
     const analysis::Type* type) {
@@ -98,12 +102,33 @@ std::vector<uint32_t> ParseDefaultValueBitPattern(
     }
     return result;
   } else if (const auto* IT = type->AsInteger()) {
-    if (IT->width() == input_bit_pattern.size() * sizeof(uint32_t) * 8) {
-      return std::vector<uint32_t>(input_bit_pattern);
+    const auto width = IT->width();
+    assert(width > 0);
+    const auto adjusted_width = std::max(32u, width);
+    if (adjusted_width == input_bit_pattern.size() * sizeof(uint32_t) * 8) {
+      result = std::vector<uint32_t>(input_bit_pattern);
+      if (width < 32) {
+        const uint32_t high_active_bit = (1u << width) >> 1;
+        if (IT->IsSigned() && (high_active_bit & result[0])) {
+          // Sign extend.  This overwrites the sign bit again, but that's ok.
+          result[0] = result[0] | ~(high_active_bit - 1);
+        } else {
+          // Upper bits must be zero.
+          result[0] = result[0] & ((1u << width) - 1);
+        }
+      }
+      return result;
     }
   } else if (const auto* FT = type->AsFloat()) {
-    if (FT->width() == input_bit_pattern.size() * sizeof(uint32_t) * 8) {
-      return std::vector<uint32_t>(input_bit_pattern);
+    const auto width = FT->width();
+    const auto adjusted_width = std::max(32u, width);
+    if (adjusted_width == input_bit_pattern.size() * sizeof(uint32_t) * 8) {
+      result = std::vector<uint32_t>(input_bit_pattern);
+      if (width < 32) {
+        // Upper bits must be zero.
+        result[0] = result[0] & ((1u << width) - 1);
+      }
+      return result;
     }
   }
   result.clear();

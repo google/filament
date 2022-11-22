@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -35,8 +35,8 @@ static const char* const SHADER_PATH1 = "./";
 static const char* const SHADER_PATH2 = "../bin/";
 static const wchar_t* const WINDOW_CLASS_NAME = L"VULKAN_MEMORY_ALLOCATOR_SAMPLE";
 static const char* const VALIDATION_LAYER_NAME = "VK_LAYER_KHRONOS_validation";
-static const char* const APP_TITLE_A =     "Vulkan Memory Allocator Sample 2.4.0";
-static const wchar_t* const APP_TITLE_W = L"Vulkan Memory Allocator Sample 2.4.0";
+static const char* const APP_TITLE_A =     "Vulkan Memory Allocator Sample 3.0.1";
+static const wchar_t* const APP_TITLE_W = L"Vulkan Memory Allocator Sample 3.0.1";
 
 static const bool VSYNC = true;
 static const uint32_t COMMAND_BUFFER_COUNT = 2;
@@ -216,6 +216,8 @@ struct CommandLineParameters
 {
     bool m_Help = false;
     bool m_List = false;
+    bool m_Test = false;
+    bool m_TestSparseBinding = false;
     GPUSelection m_GPUSelection;
 
     bool Parse(int argc, wchar_t** argv)
@@ -239,6 +241,14 @@ struct CommandLineParameters
             {
                 m_GPUSelection.Index = _wtoi(argv[i + 1]);
                 ++i;
+            }
+            else if (_wcsicmp(argv[i], L"-t") == 0 || _wcsicmp(argv[i], L"--Test") == 0)
+            {
+                m_Test = true;
+            }
+            else if (_wcsicmp(argv[i], L"-s") == 0 || _wcsicmp(argv[i], L"--TestSparseBinding") == 0)
+            {
+                m_TestSparseBinding = true;
             }
             else
                 return false;
@@ -383,7 +393,9 @@ static VkExtent2D ChooseSwapExtent()
 
 static constexpr uint32_t GetVulkanApiVersion()
 {
-#if VMA_VULKAN_VERSION == 1002000
+#if VMA_VULKAN_VERSION == 1003000
+    return VK_API_VERSION_1_3;
+#elif VMA_VULKAN_VERSION == 1002000
     return VK_API_VERSION_1_2;
 #elif VMA_VULKAN_VERSION == 1001000
     return VK_API_VERSION_1_1;
@@ -474,8 +486,15 @@ void VulkanUsage::Init()
     switch(appInfo.apiVersion)
     {
     case VK_API_VERSION_1_0: wprintf(L"1.0\n"); break;
+#ifdef VK_VERSION_1_1
     case VK_API_VERSION_1_1: wprintf(L"1.1\n"); break;
+#endif
+#ifdef VK_VERSION_1_2
     case VK_API_VERSION_1_2: wprintf(L"1.2\n"); break;
+#endif
+#ifdef VK_VERSION_1_3
+    case VK_API_VERSION_1_3: wprintf(L"1.3\n"); break;
+#endif
     default: assert(0);
     }
 
@@ -662,8 +681,8 @@ static void CreateMesh()
     vbInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VmaAllocationCreateInfo vbAllocCreateInfo = {};
-    vbAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-    vbAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+    vbAllocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    vbAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
     VkBuffer stagingVertexBuffer = VK_NULL_HANDLE;
     VmaAllocation stagingVertexBufferAlloc = VK_NULL_HANDLE;
@@ -675,7 +694,6 @@ static void CreateMesh()
     // No need to flush stagingVertexBuffer memory because CPU_ONLY memory is always HOST_COHERENT.
 
     vbInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    vbAllocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     vbAllocCreateInfo.flags = 0;
     ERR_GUARD_VULKAN( vmaCreateBuffer(g_hAllocator, &vbInfo, &vbAllocCreateInfo, &g_hVertexBuffer, &g_hVertexBufferAlloc, nullptr) );
 
@@ -687,8 +705,8 @@ static void CreateMesh()
     ibInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     
     VmaAllocationCreateInfo ibAllocCreateInfo = {};
-    ibAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-    ibAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+    ibAllocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    ibAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
     
     VkBuffer stagingIndexBuffer = VK_NULL_HANDLE;
     VmaAllocation stagingIndexBufferAlloc = VK_NULL_HANDLE;
@@ -700,7 +718,6 @@ static void CreateMesh()
     // No need to flush stagingIndexBuffer memory because CPU_ONLY memory is always HOST_COHERENT.
 
     ibInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    ibAllocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     ibAllocCreateInfo.flags = 0;
     ERR_GUARD_VULKAN( vmaCreateBuffer(g_hAllocator, &ibInfo, &ibAllocCreateInfo, &g_hIndexBuffer, &g_hIndexBufferAlloc, nullptr) );
 
@@ -737,8 +754,8 @@ static void CreateTexture(uint32_t sizeX, uint32_t sizeY)
     stagingBufInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
     VmaAllocationCreateInfo stagingBufAllocCreateInfo = {};
-    stagingBufAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-    stagingBufAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+    stagingBufAllocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    stagingBufAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
     
     VkBuffer stagingBuf = VK_NULL_HANDLE;
     VmaAllocation stagingBufAlloc = VK_NULL_HANDLE;
@@ -782,7 +799,7 @@ static void CreateTexture(uint32_t sizeX, uint32_t sizeY)
     imageInfo.flags = 0;
 
     VmaAllocationCreateInfo imageAllocCreateInfo = {};
-    imageAllocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    imageAllocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
     
     ERR_GUARD_VULKAN( vmaCreateImage(g_hAllocator, &imageInfo, &imageAllocCreateInfo, &g_hTextureImage, &g_hTextureImageAlloc, nullptr) );
 
@@ -1011,7 +1028,7 @@ static void CreateSwapchain()
     depthImageInfo.flags = 0;
 
     VmaAllocationCreateInfo depthImageAllocCreateInfo = {};
-    depthImageAllocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    depthImageAllocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
     ERR_GUARD_VULKAN( vmaCreateImage(g_hAllocator, &depthImageInfo, &depthImageAllocCreateInfo, &g_hDepthImage, &g_hDepthImageAlloc, nullptr) );
 
@@ -1425,6 +1442,13 @@ void SetAllocatorCreateInfo(VmaAllocatorCreateInfo& outInfo)
     {
         outInfo.pAllocationCallbacks = &g_CpuAllocationCallbacks;
     }
+
+#if VMA_DYNAMIC_VULKAN_FUNCTIONS
+    static VmaVulkanFunctions vulkanFunctions = {};
+    vulkanFunctions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+    vulkanFunctions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
+    outInfo.pVulkanFunctions = &vulkanFunctions;
+#endif
 
     // Uncomment to enable recording to CSV file.
     /*
@@ -2415,17 +2439,6 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch(msg)
     {
-    case WM_CREATE:
-        // This is intentionally assigned here because we are now inside CreateWindow, before it returns.
-        g_hWnd = hWnd;
-        try
-        {
-            InitializeApplication();
-        }
-        CATCH_PRINT_ERROR(return -1;)
-        //PrintAllocatorStats();
-        return 0;
-
     case WM_DESTROY:
         try
         {
@@ -2474,24 +2487,17 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             CATCH_PRINT_ERROR(;)
             break;
         case 'S':
-            try
+            if (g_SparseBindingEnabled)
             {
-                if(g_SparseBindingEnabled)
+                try
                 {
-                    try
-                    {
-                        TestSparseBinding();
-                    }
-                    CATCH_PRINT_ERROR(;)
+                    TestSparseBinding();
                 }
-                else
-                {
-                    printf("Sparse binding not supported.\n");
-                }
+                CATCH_PRINT_ERROR(;)
             }
-            catch(const std::exception& ex)
+            else
             {
-                printf("ERROR: %s\n", ex.what());
+                printf("Sparse binding not supported.\n");
             }
             break;
         }
@@ -2517,6 +2523,8 @@ static void PrintHelp()
         L"-l, --List   Print list of GPUs\n"
         L"-g S, --GPU S   Select GPU with name containing S\n"
         L"-i N, --GPUIndex N   Select GPU index N\n"
+        L"-t, --Test   Run tests and exit\n"
+        L"-s, --TestSparseBinding   Run sparese binding tests and exit\n"
     );
 }
 
@@ -2540,10 +2548,27 @@ int MainWindow()
     RECT rect = { 0, 0, g_SizeX, g_SizeY };
     AdjustWindowRectEx(&rect, style, FALSE, exStyle);
 
-    CreateWindowEx(
+    g_hWnd = CreateWindowEx(
         exStyle, WINDOW_CLASS_NAME, APP_TITLE_W, style,
         CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
         NULL, NULL, g_hAppInstance, NULL);
+    assert(g_hWnd);
+
+    InitializeApplication();
+    //PrintAllocatorStats();
+
+    // Run tests and close program
+    if(g_CommandLineParameters.m_Test)
+        Test();
+    if(g_CommandLineParameters.m_TestSparseBinding)
+    {
+        if(g_SparseBindingEnabled)
+            TestSparseBinding();
+        else
+            printf("Sparse binding not supported.\n");
+    }
+    if(g_CommandLineParameters.m_Test || g_CommandLineParameters.m_TestSparseBinding)
+        PostMessage(g_hWnd, WM_CLOSE, 0, 0);
 
     MSG msg;
     for(;;)
@@ -2555,8 +2580,10 @@ int MainWindow()
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
-        if(g_hDevice != VK_NULL_HANDLE)
+        else
+		{
             DrawFrame();
+		}
     }
 
     return (int)msg.wParam;;
@@ -2596,12 +2623,14 @@ int Main2(int argc, wchar_t** argv)
 
 int wmain(int argc, wchar_t** argv)
 {
+    int result = 0;
     try
     {
-        return Main2(argc, argv);
+        result = Main2(argc, argv);
         TEST(g_CpuAllocCount.load() == 0);
     }
     CATCH_PRINT_ERROR(return (int)ExitCode::RuntimeError;)
+    return result;
 } 
 
 #else // #ifdef _WIN32

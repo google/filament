@@ -310,6 +310,41 @@ OpFunctionEnd
   EXPECT_THAT(disassembly, ::testing::Eq(expected));
 }
 
+TEST(CompactIds, ResetIdBound) {
+  const std::string input(R"(OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %1 "main"
+OpExecutionMode %1 OriginUpperLeft
+%void = OpTypeVoid
+%3 = OpTypeFunction %void
+%1 = OpFunction %void None %3
+%4 = OpLabel
+OpReturn
+OpFunctionEnd
+)");
+
+  spvtools::SpirvTools tools(SPV_ENV_UNIVERSAL_1_1);
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, input,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  ASSERT_NE(context, nullptr);
+
+  CompactIdsPass compact_id_pass;
+  context->module()->SetIdBound(20000);
+  const auto status = compact_id_pass.Run(context.get());
+  EXPECT_EQ(status, Pass::Status::SuccessWithChange);
+  EXPECT_EQ(context->module()->id_bound(), 5);
+
+  // Test output just in case
+  std::vector<uint32_t> binary;
+  context->module()->ToBinary(&binary, false);
+  std::string disassembly;
+  tools.Disassemble(binary, &disassembly,
+                    SpirvTools::kDefaultDisassembleOption);
+
+  EXPECT_THAT(disassembly, ::testing::Eq(input));
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

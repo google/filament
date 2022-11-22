@@ -68,6 +68,8 @@ spv_target_env MapToSpirvToolsEnv(const SpvVersion& spvVersion, spv::SpvBuildLog
         }
     case glslang::EShTargetVulkan_1_2:
         return spv_target_env::SPV_ENV_VULKAN_1_2;
+    case glslang::EShTargetVulkan_1_3:
+        return spv_target_env::SPV_ENV_VULKAN_1_3;
     default:
         break;
     }
@@ -210,6 +212,7 @@ void SpirvToolsTransform(const glslang::TIntermediate& intermediate, std::vector
     optimizer.RegisterPass(spvtools::CreateInterpolateFixupPass());
     if (options->optimizeSize) {
         optimizer.RegisterPass(spvtools::CreateRedundancyEliminationPass());
+        optimizer.RegisterPass(spvtools::CreateEliminateDeadInputComponentsPass());
     }
     optimizer.RegisterPass(spvtools::CreateAggressiveDCEPass());
     optimizer.RegisterPass(spvtools::CreateCFGCleanupPass());

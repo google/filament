@@ -618,7 +618,7 @@ INSTANTIATE_TEST_SUITE_P(
         {"", SpecIdToValueBitPatternMap{}, ""},
         // 1. Empty with non-empty values to set.
         {"", SpecIdToValueBitPatternMap{{1, {100}}, {2, {200}}}, ""},
-        // 2. Baisc bool type.
+        // 2. Basic bool type.
         {
             // code
             "OpDecorate %1 SpecId 100\n"
@@ -934,6 +934,98 @@ INSTANTIATE_TEST_SUITE_P(
             "%1 = OpSpecConstantFalse %bool\n"
             "%2 = OpSpecConstantTrue %bool\n"
             "%3 = OpSpecConstantTrue %bool\n",
+        },
+        // 19. 16-bit signed int type.
+        {
+            // code
+            "OpDecorate %1 SpecId 100\n"
+            "OpDecorate %2 SpecId 101\n"
+            "OpDecorate %3 SpecId 102\n"
+            "%short = OpTypeInt 16 1\n"
+            "%1 = OpSpecConstant %short 10\n"
+            "%2 = OpSpecConstant %short 11\n"
+            "%3 = OpSpecConstant %short 11\n",
+            // default values
+            SpecIdToValueBitPatternMap{
+                {100, {32767}}, {101, {0xffff}}, {102, {0xffffffd6}}},
+            // expected. These are sign-extended
+            "OpDecorate %1 SpecId 100\n"
+            "OpDecorate %2 SpecId 101\n"
+            "OpDecorate %3 SpecId 102\n"
+            "%short = OpTypeInt 16 1\n"
+            "%1 = OpSpecConstant %short 32767\n"
+            "%2 = OpSpecConstant %short -1\n"
+            "%3 = OpSpecConstant %short -42\n",
+        },
+        // 20. 16-bit unsigned int type.
+        {
+            // code
+            "OpDecorate %1 SpecId 100\n"
+            "OpDecorate %2 SpecId 101\n"
+            "OpDecorate %3 SpecId 102\n"
+            "%ushort = OpTypeInt 16 0\n"
+            "%1 = OpSpecConstant %ushort 10\n"
+            "%2 = OpSpecConstant %ushort 11\n"
+            "%3 = OpSpecConstant %ushort 11\n",
+            // default values
+            SpecIdToValueBitPatternMap{
+                {100, {32767}}, {101, {0xffff}}, {102, {0xffffffd6}}},
+            // expected. Upper bits are always zero.
+            "OpDecorate %1 SpecId 100\n"
+            "OpDecorate %2 SpecId 101\n"
+            "OpDecorate %3 SpecId 102\n"
+            "%ushort = OpTypeInt 16 0\n"
+            "%1 = OpSpecConstant %ushort 32767\n"
+            "%2 = OpSpecConstant %ushort 65535\n"
+            "%3 = OpSpecConstant %ushort 65494\n",
+        },
+        // 21. 8-bit signed int type.
+        {
+            // code
+            "OpDecorate %1 SpecId 100\n"
+            "OpDecorate %2 SpecId 101\n"
+            "OpDecorate %3 SpecId 102\n"
+            "%char = OpTypeInt 8 1\n"
+            "%1 = OpSpecConstant %char 10\n"
+            "%2 = OpSpecConstant %char 11\n"
+            "%3 = OpSpecConstant %char 11\n",
+            // default values
+            SpecIdToValueBitPatternMap{
+                {100, {127}}, {101, {128}}, {102, {0xd6}}},
+            // expected. These are sign extended
+            "OpDecorate %1 SpecId 100\n"
+            "OpDecorate %2 SpecId 101\n"
+            "OpDecorate %3 SpecId 102\n"
+            "%char = OpTypeInt 8 1\n"
+            "%1 = OpSpecConstant %char 127\n"
+            "%2 = OpSpecConstant %char -128\n"
+            "%3 = OpSpecConstant %char -42\n",
+        },
+        // 22. 8-bit unsigned int type.
+        {
+            // code
+            "OpDecorate %1 SpecId 100\n"
+            "OpDecorate %2 SpecId 101\n"
+            "OpDecorate %3 SpecId 102\n"
+            "OpDecorate %4 SpecId 103\n"
+            "%uchar = OpTypeInt 8 0\n"
+            "%1 = OpSpecConstant %uchar 10\n"
+            "%2 = OpSpecConstant %uchar 11\n"
+            "%3 = OpSpecConstant %uchar 11\n"
+            "%4 = OpSpecConstant %uchar 11\n",
+            // default values
+            SpecIdToValueBitPatternMap{
+                {100, {127}}, {101, {128}}, {102, {256}}, {103, {0xffffffd6}}},
+            // expected. Upper bits are always zero.
+            "OpDecorate %1 SpecId 100\n"
+            "OpDecorate %2 SpecId 101\n"
+            "OpDecorate %3 SpecId 102\n"
+            "OpDecorate %4 SpecId 103\n"
+            "%uchar = OpTypeInt 8 0\n"
+            "%1 = OpSpecConstant %uchar 127\n"
+            "%2 = OpSpecConstant %uchar 128\n"
+            "%3 = OpSpecConstant %uchar 0\n"
+            "%4 = OpSpecConstant %uchar 214\n",
         },
     }));
 

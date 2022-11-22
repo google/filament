@@ -59,6 +59,10 @@ import static com.google.android.filament.Colors.LinearColor;
  * @see RenderTarget
  */
 public class View {
+    private static final AntiAliasing[] sAntiAliasingValues = AntiAliasing.values();
+    private static final Dithering[] sDitheringValues = Dithering.values();
+    private static final AmbientOcclusion[] sAmbientOcclusionValues = AmbientOcclusion.values();
+
     private long mNativeObject;
     private String mName;
     private Scene mScene;
@@ -75,598 +79,11 @@ public class View {
     private VignetteOptions mVignetteOptions;
     private ColorGrading mColorGrading;
     private TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
+    private ScreenSpaceReflectionsOptions mScreenSpaceReflectionsOptions;
+    private MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
     private VsmShadowOptions mVsmShadowOptions;
-
-    /**
-     * Generic quality level.
-     */
-    public enum QualityLevel {
-        LOW,
-        MEDIUM,
-        HIGH,
-        ULTRA
-    }
-
-    public enum BlendMode {
-        OPAQUE,
-        TRANSLUCENT
-    }
-
-    /**
-     * Dynamic resolution can be used to either reach a desired target frame rate by lowering the
-     * resolution of a <code>View</code>, or to increase the quality when the rendering is faster
-     * than the target frame rate.
-     *
-     * <p>
-     * This structure can be used to specify the minimum scale factor used when lowering the
-     * resolution of a <code>View</code>, and the maximum scale factor used when increasing the
-     * resolution for higher quality rendering. The scale factors can be controlled on each X and Y
-     * axis independently. By default, all scale factors are set to 1.0.
-     * </p>
-     *
-     * <p>
-     * Dynamic resolution is only supported on platforms where the time to render a frame can be
-     * measured accurately. Dynamic resolution is currently only supported on Android.
-     * </p>
-     */
-    public static class DynamicResolutionOptions {
-        /**
-         * Enables or disables dynamic resolution on a View.
-         */
-        public boolean enabled = false;
-
-        /**
-         * If false, the system scales the major axis first.
-         */
-        public boolean homogeneousScaling = false;
-
-        /**
-         * The minimum scale in X and Y this View should use.
-         */
-        public float minScale = 0.5f;
-
-        /**
-         * The maximum scale in X and Y this View should use.
-         */
-        public float maxScale = 1.0f;
-
-        /**
-         * Sharpness when QualityLevel.MEDIUM or higher is used [0, 1].
-         * 0 is disabled, 1 is the sharpest setting.
-         * The default is set to 0.9
-         */
-        public float sharpness = 0.9f;
-
-        /**
-         * Upscaling quality
-         * LOW: bilinear filtered blit. Fastest, poor quality
-         * MEDIUM: AMD FidelityFX FSR1 w/ mobile optimizations no RCAS sharpening pass
-         * HIGH:   AMD FidelityFX FSR1 w/ mobile optimizations + RCAS
-         * ULTRA:  AMD FidelityFX FSR1
-         *      FSR1 require a well anti-aliased (MSAA or TAA), noise free scene.
-         *
-         * The default upscaling quality is set to LOW.
-         */
-        @NonNull
-        public QualityLevel quality = QualityLevel.LOW;
-    }
-
-    /**
-     * Options for screen space Ambient Occlusion
-     */
-    public static class AmbientOcclusionOptions {
-        /**
-         * Ambient Occlusion radius in meters, between 0 and ~10.
-         */
-        public float radius = 0.3f;
-
-        /**
-         * Self-occlusion bias in meters. Use to avoid self-occlusion. Between 0 and a few mm.
-         */
-        public float bias = 0.0005f;
-
-        /**
-         * Controls ambient occlusion's contrast. Must be positive. Default is 1.
-         * Good values are between 0.5 and 3.
-         */
-        public float power = 1.0f;
-
-        /**
-         * How each dimension of the AO buffer is scaled. Must be either 0.5 or 1.0.
-         */
-        public float resolution = 0.5f;
-
-        /**
-         * Strength of the Ambient Occlusion effect. Must be positive.
-         */
-        public float intensity = 1.0f;
-
-        /**
-         * Depth distance that constitute an edge for filtering. Must be positive.
-         * Default is 5cm.
-         * This must be adjusted with the scene's scale and/or units.
-         * A value too low will result in high frequency noise, while a value too high will
-         * result in the loss of geometry edges. For AO, it is generally better to be too
-         * blurry than not enough.
-         */
-        public float bilateralThreshold = 0.05f;
-
-        /**
-         * The quality setting controls the number of samples used for evaluating Ambient
-         * occlusion. The default is QualityLevel.LOW which is sufficient for most mobile
-         * applications.
-         */
-        @NonNull
-        public QualityLevel quality = QualityLevel.LOW;
-
-        /**
-         * The lowPassFilter setting controls the quality of the low pass filter applied to
-         * AO estimation. The default is QualityLevel.MEDIUM which is sufficient for most mobile
-         * applications. QualityLevel.LOW disables the filter entirely.
-         */
-        @NonNull
-        public QualityLevel lowPassFilter = QualityLevel.MEDIUM;
-
-        /**
-         * The upsampling setting controls the quality of the ambient occlusion buffer upsampling.
-         * The default is QualityLevel.LOW and uses bilinear filtering, a value of
-         * QualityLevel.HIGH or more enables a better bilateral filter.
-         */
-        @NonNull
-        public QualityLevel upsampling = QualityLevel.LOW;
-
-        /**
-         * enable or disable screen space ambient occlusion
-         */
-        public boolean enabled = false;
-
-        /**
-         * enables bent normals computation from AO, and specular AO
-         */
-        public boolean bentNormals = false;
-
-        /**
-         * Minimal angle to consider in radian. This is used to reduce the creases that can
-         * appear due to insufficiently tessellated geometry.
-         * For e.g. a good values to try could be around 0.2.
-         */
-        public float minHorizonAngleRad = 0.0f;
-
-
-       /**
-        * Full cone angle in radian, between 0 and pi/2. This affects the softness of the shadows,
-        * as well as how far they are cast. A smaller angle yields to sharper and shorter shadows.
-        * The default angle is about 60 degrees.
-        */
-       public float ssctLightConeRad = 1.0f;
-
-       /**
-        * Distance from where tracing starts.
-        * This affects how far shadows are cast.
-        */
-       public float ssctStartTraceDistance = 0.01f;
-
-       /**
-        * Maximum contact distance with the cone. Intersections between the traced cone and
-        * geometry samller than this distance are ignored.
-        */
-       public float ssctContactDistanceMax = 1.0f;
-
-       /**
-        * Intensity of the shadows.
-        */
-       public float ssctIntensity = 0.8f;
-
-       /**
-        * Light direction.
-        */
-       @NonNull @Size(min = 3)
-       public float[] ssctLightDirection = { 0, -1, 0 };
-
-       /**
-        * Depth bias in world units (mitigate self shadowing)
-        */
-       public float ssctDepthBias = 0.01f;
-
-       /**
-        * Depth slope bias (mitigate self shadowing)
-        */
-       public float ssctDepthSlopeBias = 0.01f;
-
-       /**
-        * Tracing sample count, between 1 and 255. This affects the quality as well as the
-        * distance of the shadows.
-        */
-       public int ssctSampleCount = 4;
-
-       /**
-        * Numbers of rays to trace, between 1 and 255. This affects the noise of the shadows.
-        * Performance degrades quickly with this value.
-        */
-       public int ssctRayCount = 1;
-
-       /**
-        * Enables or disables SSCT.
-        */
-       public boolean ssctEnabled = false;
-    }
-
-    /**
-     * Options for Temporal Anti-aliasing (TAA)
-     * @see View#setTemporalAntiAliasingOptions
-     */
-    public static class TemporalAntiAliasingOptions {
-        /** reconstruction filter width typically between 0 (sharper, aliased) and 1 (smoother) */
-        public float filterWidth = 1.0f;
-
-        /** history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA). */
-        public float feedback = 0.04f;
-
-        /** enables or disables temporal anti-aliasing */
-        public boolean enabled = false;
-    };
-
-    /**
-     * Options for controlling the Bloom effect
-     *
-     * enabled:     Enable or disable the bloom post-processing effect. Disabled by default.
-     * levels:      Number of successive blurs to achieve the blur effect, the minimum is 3 and the
-     *              maximum is 11. This value together with resolution influences the spread of the
-     *              blur effect. This value can be silently reduced to accommodate the original
-     *              image size.
-     * resolution:  Resolution of bloom's vertical axis. The minimum value is 2^levels and the
-     *              the maximum is lower of the original resolution and 2048. This parameter is
-     *              silently clamped to the minimum and maximum.
-     *              It is highly recommended that this value be smaller than the target resolution
-     *              after dynamic resolution is applied (horizontally and vertically).
-     * strength:    how much of the bloom is added to the original image. Between 0 and 1.
-     * blendMode:   Whether the bloom effect is purely additive (false) or mixed with the original
-     *              image (true).
-     * anamorphism: Bloom's aspect ratio (x/y), for artistic purposes.
-     * threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
-     *              useful for artistic reasons and is usually needed when a dirt texture is used.
-     * dirt:        A dirt/scratch/smudges texture (that can be RGB), which gets added to the
-     *              bloom effect. Smudges are visible where bloom occurs. Threshold must be
-     *              enabled for the dirt effect to work properly.
-     * dirtStrength: Strength of the dirt texture.
-     *
-     * @see View#setBloomOptions
-     */
-    public static class BloomOptions {
-
-        public enum BlendingMode {
-            ADD,
-            INTERPOLATE
-        }
-
-        /**
-         * User provided dirt texture
-         */
-        @Nullable
-        public Texture dirt = null;
-
-        /**
-         * strength of the dirt texture
-         */
-        public float dirtStrength = 0.2f;
-
-        /**
-         * Strength of the bloom effect, between 0.0 and 1.0
-         */
-        public float strength = 0.10f;
-
-        /**
-         * Resolution of minor axis (2^levels to 2048)
-         */
-        public int resolution = 360;
-
-        /**
-         * Bloom x/y aspect-ratio (1/32 to 32)
-         */
-        public float anamorphism = 1.0f;
-
-        /**
-         * Number of blur levels (3 to 11)
-         */
-        public int levels = 6;
-
-        /**
-         * How the bloom effect is applied
-         */
-        public BlendingMode blendingMode = BlendingMode.ADD;
-
-        /**
-         * Whether to threshold the source
-         */
-        public boolean threshold = true;
-
-        /**
-         * enable or disable bloom
-         */
-        public boolean enabled = false;
-
-        /**
-         * limit highlights to this value before bloom. Use +inf for no limiting.
-         * minimum value is 10.0.
-         */
-        public float highlight = 1000.0f;
-
-
-        /**
-         * enable screen-space lens flare
-         */
-        public boolean lensFlare = false;
-
-        /**
-         * enable starburst effect on lens flare
-         */
-        public boolean starburst = true;
-
-        /**
-         * amount of chromatic aberration
-         */
-        public float chromaticAberration = 0.005f;
-
-        /**
-         * number of flare "ghosts"
-         */
-        public int ghostCount = 4;
-
-        /**
-         * spacing of the ghost in screen units [0, 1[
-         */
-        public float ghostSpacing = 0.6f;
-
-        /**
-         * hdr threshold for the ghosts
-         */
-        public float ghostThreshold = 10.0f;
-
-        /**
-         * thickness of halo in vertical screen units, 0 to disable
-         */
-        public float haloThickness = 0.1f;
-
-        /**
-         * radius of halo in vertical screen units [0, 0.5]
-         */
-        public float haloRadius = 0.4f;
-
-        /**
-         * hdr threshold for the halo
-         */
-        public float haloThreshold = 10.0f;
-    }
-
-    /**
-     * Options to control fog in the scene
-     *
-     * @see View#setFogOptions
-     */
-    public static class FogOptions {
-        /**
-         * distance in world units from the camera where the fog starts ( >= 0.0 )
-         */
-        public float distance = 0.0f;
-
-        /**
-         * fog's maximum opacity between 0 and 1
-         */
-        public float maximumOpacity = 1.0f;
-
-        /**
-         * fog's floor in world units
-         */
-        public float height = 0.0f;
-
-        /**
-         * how fast fog dissipates with altitude
-         */
-        public float heightFalloff = 1.0f;
-
-        /**
-         * Fog's color as a linear RGB color.
-         */
-        @NonNull
-        @Size(min = 3)
-        public float[] color = { 0.5f, 0.5f, 0.5f };
-
-        /**
-         * fog's density at altitude given by 'height'
-         */
-        public float density = 0.1f;
-
-        /**
-         * distance in world units from the camera where in-scattering starts
-         */
-        public float inScatteringStart = 0.0f;
-
-        /**
-         * size of in-scattering (>0 to activate). Good values are >> 1 (e.g. ~10 - 100)
-         */
-        public float inScatteringSize = -1.0f;
-
-        /**
-         * fog color will be modulated by the IBL color in the view direction
-         */
-        public boolean fogColorFromIbl = false;
-
-        /**
-         * enable or disable fog
-         */
-        public boolean enabled = false;
-    }
-
-    /**
-     * Options to control Depth of Field (DoF) effect in the scene
-     *
-     * @see View#setDepthOfFieldOptions
-     */
-    public static class DepthOfFieldOptions {
-
-        public enum Filter {
-            NONE,
-            MEDIAN
-        }
-
-        /**
-         * circle of confusion scale factor (amount of blur)
-         *
-         * <p>cocScale can be used to set the depth of field blur independently from the camera
-         * aperture, e.g. for artistic reasons. This can be achieved by setting:</p>
-         * <code>
-         *      cocScale = cameraAperture / desiredDoFAperture
-         * </code>
-         *
-         */
-        public float cocScale = 1.0f;
-
-        /** maximum aperture diameter in meters (zero to disable bokeh rotation) */
-        public float maxApertureDiameter = 0.01f;
-
-        /** enable or disable Depth of field effect */
-        public boolean enabled = false;
-
-        /** filter to use for filling gaps in the kernel */
-        @NonNull
-        public Filter filter = Filter.MEDIAN;
-
-        /** perform DoF processing at native resolution */
-        public boolean nativeResolution = false;
-
-        /**
-         * <p>Number of of rings used by the foreground kernel. The number of rings affects quality
-         * and performance. The actual number of sample per pixel is defined
-         * as (ringCount * 2 - 1)^2. Here are a few commonly used values:</p>
-         *       3 rings :   25 ( 5x 5 grid)
-         *       4 rings :   49 ( 7x 7 grid)
-         *       5 rings :   81 ( 9x 9 grid)
-         *      17 rings : 1089 (33x33 grid)
-         *
-         * <p>With a maximum circle-of-confusion of 32, it is never necessary to use more than 17 rings.</p>
-         *
-         * <p>Usually all three settings below are set to the same value, however, it is often
-         * acceptable to use a lower ring count for the "fast tiles", which improves performance.
-         * Fast tiles are regions of the screen where every pixels have a similar
-         * circle-of-confusion radius.</p>
-         *
-         * <p>A value of 0 means default, which is 5 on desktop and 3 on mobile.</p>
-         */
-        public int foregroundRingCount = 0;
-
-        /**
-         * Number of of rings used by the background kernel. The number of rings affects quality
-         * and performance.
-         * @see #foregroundRingCount
-         */
-        public int backgroundRingCount = 0;
-
-        /**
-         * Number of of rings used by the fast gather kernel. The number of rings affects quality
-         * and performance.
-         * @see #foregroundRingCount
-         */
-        public int fastGatherRingCount = 0;
-
-        /**
-         * maximum circle-of-confusion in pixels for the foreground, must be in [0, 32] range.
-         * A value of 0 means default, which is 32 on desktop and 24 on mobile.
-         */
-        public int maxForegroundCOC = 0;
-
-        /**
-         * maximum circle-of-confusion in pixels for the background, must be in [0, 32] range.
-         * A value of 0 means default, which is 32 on desktop and 24 on mobile.
-         */
-        public int maxBackgroundCOC = 0;
-    };
-
-    /**
-     * Options to control the vignetting effect.
-     */
-    public static class VignetteOptions {
-        /**
-         * High values restrict the vignette closer to the corners, between 0 and 1.
-         */
-        public float midPoint = 0.5f;
-
-        /**
-         * Controls the shape of the vignette, from a rounded rectangle (0.0), to an oval (0.5),
-         * to a circle (1.0). The value must be between 0 and 1.
-         */
-        public float roundness = 0.5f;
-
-        /**
-         * Softening amount of the vignette effect, between 0 and 1.
-         */
-        public float feather = 0.5f;
-
-        /**
-         * Color of the vignette effect as a linear RGBA color. The alpha channel is currently
-         * ignored.
-         */
-        @NonNull
-        @Size(min = 4)
-        public float[] color = { 0.0f, 0.0f, 0.0f, 1.0f };
-
-        /**
-         * Enables or disables the vignette effect.
-         */
-        public boolean enabled = false;
-    }
-
-    /**
-     * Structure used to set the color precision for the rendering of a <code>View</code>.
-     *
-     * <p>
-     * This structure offers separate quality settings for different parts of the rendering
-     * pipeline.
-     * </p>
-     *
-     * @see #setRenderQuality
-     * @see #getRenderQuality
-     */
-    public static class RenderQuality {
-        /**
-          * <p>
-          * A quality of <code>HIGH</code> or <code>ULTRA</code> means using an RGB16F or RGBA16F color
-          * buffer. This means colors in the LDR range (0..1) have 10 bit precision. A quality of
-          * <code>LOW</code> or <code>MEDIUM</code> means using an R11G11B10F opaque color buffer or an
-          * RGBA16F transparent color buffer. With R11G11B10F colors in the LDR range have a precision of
-          * either 6 bits (red and green channels) or 5 bits (blue channel).
-          * </p>
-          */
-        public QualityLevel hdrColorBuffer = QualityLevel.HIGH;
-    }
-
-    /**
-     * List of available ambient occlusion techniques.
-     * @deprecated use setAmbientOcclusionOptions instead
-     * @see #setAmbientOcclusion
-     */
-    @Deprecated
-    public enum AmbientOcclusion {
-        NONE,
-        SSAO
-    }
-
-    /**
-     * List of available post-processing anti-aliasing techniques.
-     *
-     * @see #setAntiAliasing
-     * @see #getAntiAliasing
-     */
-    public enum AntiAliasing {
-        /**
-         * No anti aliasing performed as part of post-processing.
-         */
-        NONE,
-
-        /**
-         * FXAA is a low-quality but very efficient type of anti-aliasing. (default).
-         */
-        FXAA
-    }
+    private SoftShadowOptions mSoftShadowOptions;
+    private GuardBandOptions mGuardBandOptions;
 
     /**
      * List of available tone-mapping operators
@@ -684,74 +101,6 @@ public class View {
          * The Academy Color Encoding System (ACES).
          */
         ACES
-    }
-
-    /**
-     * List of available post-processing dithering techniques.
-     */
-    public enum Dithering {
-        NONE,
-        TEMPORAL
-    }
-
-    /**
-     * List of available shadow mapping techniques.
-     *
-     * @see #setShadowType
-     */
-    public enum ShadowType {
-        /**
-         * Percentage-closer filtered shadows (default).
-         */
-        PCF,
-
-        /**
-         * Variance shadows.
-         */
-        VSM
-    }
-
-    /**
-     * View-level options for VSM shadowing.
-     *
-     * <strong>Warning: This API is still experimental and subject to change.</strong>
-     *
-     * @see View#setVsmShadowOptions
-     */
-    public static class VsmShadowOptions {
-        /**
-         * Sets the number of anisotropic samples to use when sampling a VSM shadow map. If greater
-         * than 0, mipmaps will automatically be generated each frame for all lights.
-         * This implies mipmapping below.
-         *
-         * <p>
-         * The number of anisotropic samples = 2 ^ vsmAnisotropy.
-         * </p>
-         *
-         */
-        public int anisotropy = 0;
-
-        /**
-         * Whether to generate mipmaps for all VSM shadow maps.
-         */
-        public boolean mipmapping = false;
-
-        /**
-         * EVSM exponent
-         * The maximum value permissible is 5.54 for a shadow map in fp16, or 42.0 for a
-         * shadow map in fp32. Currently the shadow map bit depth is always fp16.
-         */
-        public float exponent = 5.54f;
-
-        /**
-         * VSM minimum variance scale, must be positive.
-         */
-        public float minVarianceScale = 1.0f;
-
-        /**
-         * VSM light bleeding reduction amount, between 0 and 1.
-         */
-        public float lightBleedReduction = 0.2f;
     }
 
     /**
@@ -1047,7 +396,10 @@ public class View {
      * </p>
      *
      * @param count number of samples to use for multi-sampled anti-aliasing.
+     *
+     * @deprecated use setMultiSampleAntiAliasingOptions instead
      */
+    @Deprecated
     public void setSampleCount(int count) {
         nSetSampleCount(getNativeObject(), count);
     }
@@ -1060,7 +412,10 @@ public class View {
      * </p>
      *
      * @return value set by {@link #setSampleCount}
+     *
+     * @deprecated use getMultiSampleAntiAliasingOptions instead
      */
+    @Deprecated
     public int getSampleCount() {
         return nGetSampleCount(getNativeObject());
     }
@@ -1086,7 +441,31 @@ public class View {
      */
     @NonNull
     public AntiAliasing getAntiAliasing() {
-        return AntiAliasing.values()[nGetAntiAliasing(getNativeObject())];
+        return sAntiAliasingValues[nGetAntiAliasing(getNativeObject())];
+    }
+
+    /**
+     * Enables or disable multi-sample anti-aliasing (MSAA). Disabled by default.
+     *
+     * @param options multi-sample anti-aliasing options
+     */
+    public void setMultiSampleAntiAliasingOptions(@NonNull MultiSampleAntiAliasingOptions options) {
+        mMultiSampleAntiAliasingOptions = options;
+        nSetMultiSampleAntiAliasingOptions(getNativeObject(),
+                options.enabled, options.sampleCount, options.customResolve);
+    }
+
+    /**
+     * Returns multi-sample anti-aliasing options.
+     *
+     * @return multi-sample anti-aliasing options
+     */
+    @NonNull
+    public MultiSampleAntiAliasingOptions getMultiSampleAntiAliasingOptions() {
+        if (mMultiSampleAntiAliasingOptions == null) {
+            mMultiSampleAntiAliasingOptions = new MultiSampleAntiAliasingOptions();
+        }
+        return mMultiSampleAntiAliasingOptions;
     }
 
     /**
@@ -1112,6 +491,54 @@ public class View {
         }
         return mTemporalAntiAliasingOptions;
     }
+
+    /**
+     * Enables or disable screen-space reflections. Disabled by default.
+     *
+     * @param options screen-space reflections options
+     */
+    public void setScreenSpaceReflectionsOptions(@NonNull ScreenSpaceReflectionsOptions options) {
+        mScreenSpaceReflectionsOptions = options;
+        nSetScreenSpaceReflectionsOptions(getNativeObject(), options.thickness, options.bias,
+                options.maxDistance, options.stride, options.enabled);
+    }
+
+    /**
+     * Returns screen-space reflections options.
+     *
+     * @return screen-space reflections options
+     */
+    @NonNull
+    public ScreenSpaceReflectionsOptions getScreenSpaceReflectionsOptions() {
+        if (mScreenSpaceReflectionsOptions == null) {
+            mScreenSpaceReflectionsOptions = new ScreenSpaceReflectionsOptions();
+        }
+        return mScreenSpaceReflectionsOptions;
+    }
+
+    /**
+     * Enables or disable screen-space guard band. Disabled by default.
+     *
+     * @param options guard band options
+     */
+    public void setGuardBandOptions(@NonNull GuardBandOptions options) {
+        mGuardBandOptions = options;
+        nSetGuardBandOptions(getNativeObject(), options.enabled);
+    }
+
+    /**
+     * Returns screen-space guard band options.
+     *
+     * @return guard band options
+     */
+    @NonNull
+    public GuardBandOptions getGuardBandOptions() {
+        if (mGuardBandOptions == null) {
+            mGuardBandOptions = new GuardBandOptions();
+        }
+        return mGuardBandOptions;
+    }
+
 
     /**
      * Enables or disables tone-mapping in the post-processing stage. Enabled by default.
@@ -1175,7 +602,7 @@ public class View {
      */
     @NonNull
     public Dithering getDithering() {
-        return Dithering.values()[nGetDithering(getNativeObject())];
+        return sDitheringValues[nGetDithering(getNativeObject())];
     }
 
     /**
@@ -1252,21 +679,26 @@ public class View {
      *
      * <p>Post-processing includes:</p>
      * <ul>
-     * <li>Tone-mapping & gamma encoding</li>
+     * <li>Depth-of-field</li>
+     * <li>Bloom</li>
+     * <li>Vignetting</li>
+     * <li>Temporal Anti-aliasing (TAA)</li>
+     * <li>Color grading & gamma encoding</li>
      * <li>Dithering</li>
-     * <li>MSAA</li>
      * <li>FXAA</li>
      * <li>Dynamic scaling</li>
      * </ul>
      *
      * <p>
-     * Disabling post-processing forgoes color correctness as well as anti-aliasing and
-     * should only be used experimentally (e.g., for UI overlays).
+     * Disabling post-processing forgoes color correctness as well as some anti-aliasing techniques
+     * and should only be used for debugging, UI overlays or when using custom render targets
+     * (see RenderTarget).
      * </p>
      *
      * @param enabled true enables post processing, false disables it
      *
-     * @see #setToneMapping
+     * @see #setBloomOptions
+     * @see #setColorGrading
      * @see #setAntiAliasing
      * @see #setDithering
      * @see #setSampleCount
@@ -1361,7 +793,7 @@ public class View {
     public void setVsmShadowOptions(@NonNull VsmShadowOptions options) {
         mVsmShadowOptions = options;
         nSetVsmShadowOptions(getNativeObject(), options.anisotropy, options.mipmapping,
-                options.exponent, options.minVarianceScale, options.lightBleedReduction);
+                options.highPrecision, options.minVarianceScale, options.lightBleedReduction);
     }
 
     /**
@@ -1375,6 +807,37 @@ public class View {
             mVsmShadowOptions = new VsmShadowOptions();
         }
         return mVsmShadowOptions;
+    }
+
+    /**
+     * Sets soft shadowing options that apply across the entire View.
+     *
+     * Additional light-specific VSM options can be set with
+     * {@link LightManager.Builder#shadowOptions}.
+     *
+     * Only applicable when shadow type is set to ShadowType.DPCF.
+     *
+     * <strong>Warning: This API is still experimental and subject to change.</strong>
+     *
+     * @param options Options for shadowing.
+     * @see #setShadowType
+     */
+    public void setSoftShadowOptions(@NonNull SoftShadowOptions options) {
+        mSoftShadowOptions = options;
+        nSetSoftShadowOptions(getNativeObject(), options.penumbraScale, options.penumbraRatioScale);
+    }
+
+    /**
+     * Gets soft shadowing options associated with this View.
+     * @see #setSoftShadowOptions
+     * @return soft shadow options currently set.
+     */
+    @NonNull
+    public SoftShadowOptions getSoftShadowOptions() {
+        if (mSoftShadowOptions == null) {
+            mSoftShadowOptions = new SoftShadowOptions();
+        }
+        return mSoftShadowOptions;
     }
 
     /**
@@ -1395,7 +858,7 @@ public class View {
     @Deprecated
     @NonNull
     public AmbientOcclusion getAmbientOcclusion() {
-        return AmbientOcclusion.values()[nGetAmbientOcclusion(getNativeObject())];
+        return sAmbientOcclusionValues[nGetAmbientOcclusion(getNativeObject())];
     }
 
     /**
@@ -1409,7 +872,7 @@ public class View {
                 options.resolution, options.intensity, options.bilateralThreshold,
                 options.quality.ordinal(), options.lowPassFilter.ordinal(), options.upsampling.ordinal(),
                 options.enabled, options.bentNormals, options.minHorizonAngleRad);
-        nSetSSCTOptions(getNativeObject(), options.ssctLightConeRad, options.ssctStartTraceDistance,
+        nSetSSCTOptions(getNativeObject(), options.ssctLightConeRad, options.ssctShadowDistance,
                 options.ssctContactDistanceMax,  options.ssctIntensity,
                 options.ssctLightDirection[0], options.ssctLightDirection[1], options.ssctLightDirection[2],
                 options.ssctDepthBias, options.ssctDepthSlopeBias, options.ssctSampleCount,
@@ -1439,7 +902,7 @@ public class View {
         mBloomOptions = options;
         nSetBloomOptions(getNativeObject(), options.dirt != null ? options.dirt.getNativeObject() : 0,
                 options.dirtStrength, options.strength, options.resolution,
-                options.anamorphism, options.levels, options.blendingMode.ordinal(),
+                options.anamorphism, options.levels, options.blendMode.ordinal(),
                 options.threshold, options.enabled, options.highlight,
                 options.lensFlare, options.starburst, options.chromaticAberration,
                 options.ghostCount, options.ghostSpacing, options.ghostThreshold,
@@ -1548,6 +1011,110 @@ public class View {
         return mDepthOfFieldOptions;
     }
 
+    /**
+     * Enables use of the stencil buffer.
+     *
+     * <p>
+     * The stencil buffer is an 8-bit, per-fragment unsigned integer stored alongside the depth
+     * buffer. The stencil buffer is cleared at the beginning of a frame and discarded after the
+     * color pass.
+     * </p>
+     *
+     * <p>
+     * Each fragment's stencil value is set during rasterization by specifying stencil operations on
+     * a {@link Material}. The stencil buffer can be used as a mask for later rendering by setting a
+     * {@link Material}'s stencil comparison function and reference value. Fragments that don't pass
+     * the stencil test are then discarded.
+     * </p>
+     *
+     * <p>
+     * Post-processing must be enabled in order to use the stencil buffer.
+     * </p>
+     *
+     * <p>
+     * A renderable's priority (see {@link RenderableManager#setPriority(int, int)}) is useful to
+     * control the order in which primitives are drawn.
+     * </p>
+     *
+     * @param enabled True to enable the stencil buffer, false disables it (default)
+     */
+    public void setStencilBufferEnabled(boolean enabled) {
+        nSetStencilBufferEnabled(getNativeObject(), enabled);
+    }
+
+    /**
+     * @return true if the stencil buffer is enabled.
+     * @see View#setStencilBufferEnabled(boolean)
+     */
+    public boolean isStencilBufferEnabled() {
+        return nIsStencilBufferEnabled(getNativeObject());
+    }
+
+    /**
+     * A class containing the result of a picking query
+     */
+    public static class PickingQueryResult {
+        /** The entity of the renderable at the picking query location */
+        @Entity public int renderable;
+        /** The value of the depth buffer at the picking query location */
+        public float depth;
+        /** The fragment coordinate in GL convention at the picking query location */
+        @NonNull public float[] fragCoords = new float[3];
+    };
+
+    /**
+     * An interface to implement a custom class to receive results of picking queries.
+     */
+    public interface OnPickCallback {
+        /**
+         * onPick() is called by the specified Handler in {@link View#pick} when the picking query
+         * result is available.
+         * @param result An instance of {@link PickingQueryResult}.
+         */
+        void onPick(@NonNull PickingQueryResult result);
+    }
+
+    /**
+     * Creates a picking query. Multiple queries can be created (e.g.: multi-touch).
+     * Picking queries are all executed when {@link Renderer#render} is called on this View.
+     * The provided callback is guaranteed to be called at some point in the future.
+     *
+     * Typically it takes a couple frames to receive the result of a picking query.
+     *
+     * @param x        Horizontal coordinate to query in the viewport with origin on the left.
+     * @param y        Vertical coordinate to query on the viewport with origin at the bottom.
+     * @param handler  An {@link java.util.concurrent.Executor Executor}.
+     *                 On Android this can also be a {@link android.os.Handler Handler}.
+     * @param callback User callback executed by <code>handler</code> when the picking query
+     *                 result is available.
+     */
+    public void pick(int x, int y,
+            @Nullable Object handler, @Nullable OnPickCallback callback) {
+        InternalOnPickCallback internalCallback = new InternalOnPickCallback(callback);
+        nPick(getNativeObject(), x, y, handler, internalCallback);
+    }
+
+    private static class InternalOnPickCallback implements Runnable {
+        public InternalOnPickCallback(OnPickCallback mUserCallback) {
+            this.mUserCallback = mUserCallback;
+        }
+        @Override
+        public void run() {
+            mPickingQueryResult.renderable = mRenderable;
+            mPickingQueryResult.depth = mDepth;
+            mPickingQueryResult.fragCoords[0] = mFragCoordsX;
+            mPickingQueryResult.fragCoords[1] = mFragCoordsY;
+            mPickingQueryResult.fragCoords[2] = mFragCoordsZ;
+            mUserCallback.onPick(mPickingQueryResult);
+        }
+        private final OnPickCallback mUserCallback;
+        private final PickingQueryResult mPickingQueryResult = new PickingQueryResult();
+        @Entity int mRenderable;
+        float mDepth;
+        float mFragCoordsX;
+        float mFragCoordsY;
+        float mFragCoordsZ;
+    }
 
     public long getNativeObject() {
         if (mNativeObject == 0) {
@@ -1577,7 +1144,8 @@ public class View {
     private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetShadowType(long nativeView, int type);
-    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy, boolean mipmapping, float exponent, float minVarianceScale, float lightBleedReduction);
+    private static native void nSetVsmShadowOptions(long nativeView, int anisotropy, boolean mipmapping, boolean highPrecision, float minVarianceScale, float lightBleedReduction);
+    private static native void nSetSoftShadowOptions(long nativeView, float penumbraScale, float penumbraRatioScale);
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);
@@ -1595,7 +1163,701 @@ public class View {
             boolean nativeResolution, int foregroundRingCount, int backgroundRingCount, int fastGatherRingCount, int maxForegroundCOC, int maxBackgroundCOC);
     private static native void nSetVignetteOptions(long nativeView, float midPoint, float roundness, float feather, float r, float g, float b, float a, boolean enabled);
     private static native void nSetTemporalAntiAliasingOptions(long nativeView, float feedback, float filterWidth, boolean enabled);
+    private static native void nSetScreenSpaceReflectionsOptions(long nativeView, float thickness, float bias, float maxDistance, float stride, boolean enabled);
+    private static native void nSetMultiSampleAntiAliasingOptions(long nativeView, boolean enabled, int sampleCount, boolean customResolve);
     private static native boolean nIsShadowingEnabled(long nativeView);
     private static native void nSetScreenSpaceRefractionEnabled(long nativeView, boolean enabled);
+    private static native void nSetGuardBandOptions(long nativeView, boolean enabled);
     private static native boolean nIsScreenSpaceRefractionEnabled(long nativeView);
+    private static native void nPick(long nativeView, int x, int y, Object handler, InternalOnPickCallback internalCallback);
+    private static native void nSetStencilBufferEnabled(long nativeView, boolean enabled);
+    private static native boolean nIsStencilBufferEnabled(long nativeView);
+
+    /**
+     * List of available ambient occlusion techniques.
+     * @deprecated use setAmbientOcclusionOptions instead
+     * @see #setAmbientOcclusion
+     */
+    @Deprecated
+    public enum AmbientOcclusion {
+        NONE,
+        SSAO
+    }
+
+    // The remainder of this file is generated by beamsplitter
+
+    /**
+     * Generic quality level.
+     */
+    public enum QualityLevel {
+        LOW,
+        MEDIUM,
+        HIGH,
+        ULTRA,
+    }
+
+    public enum BlendMode {
+        OPAQUE,
+        TRANSLUCENT,
+    }
+
+    /**
+     * Dynamic resolution can be used to either reach a desired target frame rate
+     * by lowering the resolution of a View, or to increase the quality when the
+     * rendering is faster than the target frame rate.
+     *
+     * This structure can be used to specify the minimum scale factor used when
+     * lowering the resolution of a View, and the maximum scale factor used when
+     * increasing the resolution for higher quality rendering. The scale factors
+     * can be controlled on each X and Y axis independently. By default, all scale
+     * factors are set to 1.0.
+     *
+     * enabled:   enable or disables dynamic resolution on a View
+     *
+     * homogeneousScaling: by default the system scales the major axis first. Set this to true
+     *                     to force homogeneous scaling.
+     *
+     * minScale:  the minimum scale in X and Y this View should use
+     *
+     * maxScale:  the maximum scale in X and Y this View should use
+     *
+     * quality:   upscaling quality.
+     *            LOW: 1 bilinear tap, Medium: 4 bilinear taps, High: 9 bilinear taps (tent)
+     *
+     * \note
+     * Dynamic resolution is only supported on platforms where the time to render
+     * a frame can be measured accurately. Dynamic resolution is currently only
+     * supported on Android.
+     *
+     * @see Renderer::FrameRateOptions
+     *
+     */
+    public static class DynamicResolutionOptions {
+        /**
+         * minimum scale factors in x and y
+         */
+        public float minScale = 0.5f;
+        /**
+         * maximum scale factors in x and y
+         */
+        public float maxScale = 1.0f;
+        /**
+         * sharpness when QualityLevel::MEDIUM or higher is used [0 (disabled), 1 (sharpest)]
+         */
+        public float sharpness = 0.9f;
+        /**
+         * enable or disable dynamic resolution
+         */
+        public boolean enabled = false;
+        /**
+         * set to true to force homogeneous scaling
+         */
+        public boolean homogeneousScaling = false;
+        /**
+         * Upscaling quality
+         * LOW:    bilinear filtered blit. Fastest, poor quality
+         * MEDIUM: AMD FidelityFX FSR1 w/ mobile optimizations
+         * HIGH:   AMD FidelityFX FSR1 w/ mobile optimizations
+         * ULTRA:  AMD FidelityFX FSR1
+         *      FSR1 require a well anti-aliased (MSAA or TAA), noise free scene.
+         *
+         * The default upscaling quality is set to LOW.
+         */
+        @NonNull
+        public QualityLevel quality = QualityLevel.LOW;
+    }
+
+    /**
+     * Options to control the bloom effect
+     *
+     * enabled:     Enable or disable the bloom post-processing effect. Disabled by default.
+     *
+     * levels:      Number of successive blurs to achieve the blur effect, the minimum is 3 and the
+     *              maximum is 12. This value together with resolution influences the spread of the
+     *              blur effect. This value can be silently reduced to accommodate the original
+     *              image size.
+     *
+     * resolution:  Resolution of bloom's minor axis. The minimum value is 2^levels and the
+     *              the maximum is lower of the original resolution and 4096. This parameter is
+     *              silently clamped to the minimum and maximum.
+     *              It is highly recommended that this value be smaller than the target resolution
+     *              after dynamic resolution is applied (horizontally and vertically).
+     *
+     * strength:    how much of the bloom is added to the original image. Between 0 and 1.
+     *
+     * blendMode:   Whether the bloom effect is purely additive (false) or mixed with the original
+     *              image (true).
+     *
+     * anamorphism: Bloom's aspect ratio (x/y), for artistic purposes.
+     *
+     * threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
+     *              useful for artistic reasons and is usually needed when a dirt texture is used.
+     *
+     * dirt:        A dirt/scratch/smudges texture (that can be RGB), which gets added to the
+     *              bloom effect. Smudges are visible where bloom occurs. Threshold must be
+     *              enabled for the dirt effect to work properly.
+     *
+     * dirtStrength: Strength of the dirt texture.
+     */
+    public static class BloomOptions {
+        public enum BlendMode {
+            /**
+             * Bloom is modulated by the strength parameter and added to the scene
+             */
+            ADD,
+            /**
+             * Bloom is interpolated with the scene using the strength parameter
+             */
+            INTERPOLATE,
+        }
+
+        /**
+         * user provided dirt texture
+         */
+        @Nullable
+        public Texture dirt = null;
+        /**
+         * strength of the dirt texture
+         */
+        public float dirtStrength = 0.2f;
+        /**
+         * bloom's strength between 0.0 and 1.0
+         */
+        public float strength = 0.10f;
+        /**
+         * resolution of vertical axis (2^levels to 2048)
+         */
+        public int resolution = 360;
+        /**
+         * bloom x/y aspect-ratio (1/32 to 32)
+         */
+        public float anamorphism = 1.0f;
+        /**
+         * number of blur levels (3 to 11)
+         */
+        public int levels = 6;
+        /**
+         * how the bloom effect is applied
+         */
+        @NonNull
+        public BloomOptions.BlendMode blendMode = BloomOptions.BlendMode.ADD;
+        /**
+         * whether to threshold the source
+         */
+        public boolean threshold = true;
+        /**
+         * enable or disable bloom
+         */
+        public boolean enabled = false;
+        /**
+         * limit highlights to this value before bloom [10, +inf]
+         */
+        public float highlight = 1000.0f;
+        /**
+         * enable screen-space lens flare
+         */
+        public boolean lensFlare = false;
+        /**
+         * enable starburst effect on lens flare
+         */
+        public boolean starburst = true;
+        /**
+         * amount of chromatic aberration
+         */
+        public float chromaticAberration = 0.005f;
+        /**
+         * number of flare "ghosts"
+         */
+        public int ghostCount = 4;
+        /**
+         * spacing of the ghost in screen units [0, 1[
+         */
+        public float ghostSpacing = 0.6f;
+        /**
+         * hdr threshold for the ghosts
+         */
+        public float ghostThreshold = 10.0f;
+        /**
+         * thickness of halo in vertical screen units, 0 to disable
+         */
+        public float haloThickness = 0.1f;
+        /**
+         * radius of halo in vertical screen units [0, 0.5]
+         */
+        public float haloRadius = 0.4f;
+        /**
+         * hdr threshold for the halo
+         */
+        public float haloThreshold = 10.0f;
+    }
+
+    /**
+     * Options to control fog in the scene
+     */
+    public static class FogOptions {
+        /**
+         * distance in world units from the camera where the fog starts ( >= 0.0 )
+         */
+        public float distance = 0.0f;
+        /**
+         * fog's maximum opacity between 0 and 1
+         */
+        public float maximumOpacity = 1.0f;
+        /**
+         * fog's floor in world units
+         */
+        public float height = 0.0f;
+        /**
+         * how fast fog dissipates with altitude
+         */
+        public float heightFalloff = 1.0f;
+        /**
+         * fog's color (linear), see fogColorFromIbl
+         */
+        @NonNull @Size(min = 3)
+        public float[] color = {0.5f, 0.5f, 0.5f};
+        /**
+         * fog's density at altitude given by 'height'
+         */
+        public float density = 0.1f;
+        /**
+         * distance in world units from the camera where in-scattering starts
+         */
+        public float inScatteringStart = 0.0f;
+        /**
+         * size of in-scattering (>0 to activate). Good values are >> 1 (e.g. ~10 - 100).
+         */
+        public float inScatteringSize = -1.0f;
+        /**
+         * Fog color will be modulated by the IBL color in the view direction.
+         */
+        public boolean fogColorFromIbl = false;
+        /**
+         * enable or disable fog
+         */
+        public boolean enabled = false;
+    }
+
+    /**
+     * Options to control Depth of Field (DoF) effect in the scene.
+     *
+     * cocScale can be used to set the depth of field blur independently from the camera
+     * aperture, e.g. for artistic reasons. This can be achieved by setting:
+     *      cocScale = cameraAperture / desiredDoFAperture
+     *
+     * @see Camera
+     */
+    public static class DepthOfFieldOptions {
+        public enum Filter {
+            NONE,
+            UNUSED,
+            MEDIAN,
+        }
+
+        /**
+         * circle of confusion scale factor (amount of blur)
+         */
+        public float cocScale = 1.0f;
+        /**
+         * maximum aperture diameter in meters (zero to disable rotation)
+         */
+        public float maxApertureDiameter = 0.01f;
+        /**
+         * enable or disable depth of field effect
+         */
+        public boolean enabled = false;
+        /**
+         * filter to use for filling gaps in the kernel
+         */
+        @NonNull
+        public DepthOfFieldOptions.Filter filter = DepthOfFieldOptions.Filter.MEDIAN;
+        /**
+         * perform DoF processing at native resolution
+         */
+        public boolean nativeResolution = false;
+        /**
+         * Number of of rings used by the gather kernels. The number of rings affects quality
+         * and performance. The actual number of sample per pixel is defined
+         * as (ringCount * 2 - 1)^2. Here are a few commonly used values:
+         *       3 rings :   25 ( 5x 5 grid)
+         *       4 rings :   49 ( 7x 7 grid)
+         *       5 rings :   81 ( 9x 9 grid)
+         *      17 rings : 1089 (33x33 grid)
+         *
+         * With a maximum circle-of-confusion of 32, it is never necessary to use more than 17 rings.
+         *
+         * Usually all three settings below are set to the same value, however, it is often
+         * acceptable to use a lower ring count for the "fast tiles", which improves performance.
+         * Fast tiles are regions of the screen where every pixels have a similar
+         * circle-of-confusion radius.
+         *
+         * A value of 0 means default, which is 5 on desktop and 3 on mobile.
+         *
+         * @{
+         */
+        public int foregroundRingCount = 0;
+        /**
+         * number of kernel rings for background tiles
+         */
+        public int backgroundRingCount = 0;
+        /**
+         * number of kernel rings for fast tiles
+         */
+        public int fastGatherRingCount = 0;
+        /**
+         * maximum circle-of-confusion in pixels for the foreground, must be in [0, 32] range.
+         * A value of 0 means default, which is 32 on desktop and 24 on mobile.
+         */
+        public int maxForegroundCOC = 0;
+        /**
+         * maximum circle-of-confusion in pixels for the background, must be in [0, 32] range.
+         * A value of 0 means default, which is 32 on desktop and 24 on mobile.
+         */
+        public int maxBackgroundCOC = 0;
+    }
+
+    /**
+     * Options to control the vignetting effect.
+     */
+    public static class VignetteOptions {
+        /**
+         * high values restrict the vignette closer to the corners, between 0 and 1
+         */
+        public float midPoint = 0.5f;
+        /**
+         * controls the shape of the vignette, from a rounded rectangle (0.0), to an oval (0.5), to a circle (1.0)
+         */
+        public float roundness = 0.5f;
+        /**
+         * softening amount of the vignette effect, between 0 and 1
+         */
+        public float feather = 0.5f;
+        /**
+         * color of the vignette effect, alpha is currently ignored
+         */
+        @NonNull @Size(min = 4)
+        public float[] color = {0.0f, 0.0f, 0.0f, 1.0f};
+        /**
+         * enables or disables the vignette effect
+         */
+        public boolean enabled = false;
+    }
+
+    /**
+     * Structure used to set the precision of the color buffer and related quality settings.
+     *
+     * @see setRenderQuality, getRenderQuality
+     */
+    public static class RenderQuality {
+        /**
+         * Sets the quality of the HDR color buffer.
+         *
+         * A quality of HIGH or ULTRA means using an RGB16F or RGBA16F color buffer. This means
+         * colors in the LDR range (0..1) have a 10 bit precision. A quality of LOW or MEDIUM means
+         * using an R11G11B10F opaque color buffer or an RGBA16F transparent color buffer. With
+         * R11G11B10F colors in the LDR range have a precision of either 6 bits (red and green
+         * channels) or 5 bits (blue channel).
+         */
+        @NonNull
+        public QualityLevel hdrColorBuffer = QualityLevel.HIGH;
+    }
+
+    /**
+     * Options for screen space Ambient Occlusion (SSAO) and Screen Space Cone Tracing (SSCT)
+     * @see setAmbientOcclusionOptions()
+     */
+    public static class AmbientOcclusionOptions {
+        /**
+         * Ambient Occlusion radius in meters, between 0 and ~10.
+         */
+        public float radius = 0.3f;
+        /**
+         * Controls ambient occlusion's contrast. Must be positive.
+         */
+        public float power = 1.0f;
+        /**
+         * Self-occlusion bias in meters. Use to avoid self-occlusion. Between 0 and a few mm.
+         */
+        public float bias = 0.0005f;
+        /**
+         * How each dimension of the AO buffer is scaled. Must be either 0.5 or 1.0.
+         */
+        public float resolution = 0.5f;
+        /**
+         * Strength of the Ambient Occlusion effect.
+         */
+        public float intensity = 1.0f;
+        /**
+         * depth distance that constitute an edge for filtering
+         */
+        public float bilateralThreshold = 0.05f;
+        /**
+         * affects # of samples used for AO.
+         */
+        @NonNull
+        public QualityLevel quality = QualityLevel.LOW;
+        /**
+         * affects AO smoothness
+         */
+        @NonNull
+        public QualityLevel lowPassFilter = QualityLevel.MEDIUM;
+        /**
+         * affects AO buffer upsampling quality
+         */
+        @NonNull
+        public QualityLevel upsampling = QualityLevel.LOW;
+        /**
+         * enables or disables screen-space ambient occlusion
+         */
+        public boolean enabled = false;
+        /**
+         * enables bent normals computation from AO, and specular AO
+         */
+        public boolean bentNormals = false;
+        /**
+         * min angle in radian to consider
+         */
+        public float minHorizonAngleRad = 0.0f;
+        /**
+         * Screen Space Cone Tracing (SSCT) options
+         * Ambient shadows from dominant light
+         */
+        public float ssctLightConeRad = 1.0f;
+        /**
+         * Screen Space Cone Tracing (SSCT) options
+         * Ambient shadows from dominant light
+         */
+        public float ssctShadowDistance = 0.3f;
+        /**
+         * Screen Space Cone Tracing (SSCT) options
+         * Ambient shadows from dominant light
+         */
+        public float ssctContactDistanceMax = 1.0f;
+        /**
+         * Screen Space Cone Tracing (SSCT) options
+         * Ambient shadows from dominant light
+         */
+        public float ssctIntensity = 0.8f;
+        /**
+         * Screen Space Cone Tracing (SSCT) options
+         * Ambient shadows from dominant light
+         */
+        @NonNull @Size(min = 3)
+        public float[] ssctLightDirection = {0f, -1f, 0f};
+        /**
+         * Screen Space Cone Tracing (SSCT) options
+         * Ambient shadows from dominant light
+         */
+        public float ssctDepthBias = 0.01f;
+        /**
+         * Screen Space Cone Tracing (SSCT) options
+         * Ambient shadows from dominant light
+         */
+        public float ssctDepthSlopeBias = 0.01f;
+        /**
+         * Screen Space Cone Tracing (SSCT) options
+         * Ambient shadows from dominant light
+         */
+        public int ssctSampleCount = 4;
+        /**
+         * Screen Space Cone Tracing (SSCT) options
+         * Ambient shadows from dominant light
+         */
+        public int ssctRayCount = 1;
+        /**
+         * Screen Space Cone Tracing (SSCT) options
+         * Ambient shadows from dominant light
+         */
+        public boolean ssctEnabled = false;
+
+    }
+
+    /**
+     * Options for Temporal Multi-Sample Anti-aliasing (MSAA)
+     * @see setMultiSampleAntiAliasingOptions()
+     */
+    public static class MultiSampleAntiAliasingOptions {
+        /**
+         * enables or disables msaa
+         */
+        public boolean enabled = false;
+        /**
+         * sampleCount number of samples to use for multi-sampled anti-aliasing.\n
+         *              0: treated as 1
+         *              1: no anti-aliasing
+         *              n: sample count. Effective sample could be different depending on the
+         *                 GPU capabilities.
+         */
+        public int sampleCount = 4;
+        /**
+         * custom resolve improves quality for HDR scenes, but may impact performance.
+         */
+        public boolean customResolve = false;
+    }
+
+    /**
+     * Options for Temporal Anti-aliasing (TAA)
+     * @see setTemporalAntiAliasingOptions()
+     */
+    public static class TemporalAntiAliasingOptions {
+        /**
+         * reconstruction filter width typically between 0 (sharper, aliased) and 1 (smoother)
+         */
+        public float filterWidth = 1.0f;
+        /**
+         * history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA).
+         */
+        public float feedback = 0.04f;
+        /**
+         * enables or disables temporal anti-aliasing
+         */
+        public boolean enabled = false;
+    }
+
+    /**
+     * Options for Screen-space Reflections.
+     * @see setScreenSpaceReflectionsOptions()
+     */
+    public static class ScreenSpaceReflectionsOptions {
+        /**
+         * ray thickness, in world units
+         */
+        public float thickness = 0.1f;
+        /**
+         * bias, in world units, to prevent self-intersections
+         */
+        public float bias = 0.01f;
+        /**
+         * maximum distance, in world units, to raycast
+         */
+        public float maxDistance = 3.0f;
+        /**
+         * stride, in texels, for samples along the ray.
+         */
+        public float stride = 2.0f;
+        public boolean enabled = false;
+    }
+
+    /**
+     * Options for the  screen-space guard band.
+     * A guard band can be enabled to avoid some artifacts towards the edge of the screen when
+     * using screen-space effects such as SSAO. Enabling the guard band reduces performance slightly.
+     * Currently the guard band can only be enabled or disabled.
+     */
+    public static class GuardBandOptions {
+        public boolean enabled = false;
+    }
+
+    /**
+     * List of available post-processing anti-aliasing techniques.
+     * @see setAntiAliasing, getAntiAliasing, setSampleCount
+     */
+    public enum AntiAliasing {
+        /**
+         * no anti aliasing performed as part of post-processing
+         */
+        NONE,
+        /**
+         * FXAA is a low-quality but very efficient type of anti-aliasing. (default).
+         */
+        FXAA,
+    }
+
+    /**
+     * List of available post-processing dithering techniques.
+     */
+    public enum Dithering {
+        /**
+         * No dithering
+         */
+        NONE,
+        /**
+         * Temporal dithering (default)
+         */
+        TEMPORAL,
+    }
+
+    /**
+     * List of available shadow mapping techniques.
+     * @see setShadowType
+     */
+    public enum ShadowType {
+        /**
+         * percentage-closer filtered shadows (default)
+         */
+        PCF,
+        /**
+         * variance shadows
+         */
+        VSM,
+        /**
+         * PCF with contact hardening simulation
+         */
+        DPCF,
+        /**
+         * PCF with soft shadows and contact hardening
+         */
+        PCSS,
+    }
+
+    /**
+     * View-level options for VSM Shadowing.
+     * @see setVsmShadowOptions()
+     * @warning This API is still experimental and subject to change.
+     */
+    public static class VsmShadowOptions {
+        /**
+         * Sets the number of anisotropic samples to use when sampling a VSM shadow map. If greater
+         * than 0, mipmaps will automatically be generated each frame for all lights.
+         *
+         * The number of anisotropic samples = 2 ^ vsmAnisotropy.
+         */
+        public int anisotropy = 0;
+        /**
+         * Whether to generate mipmaps for all VSM shadow maps.
+         */
+        public boolean mipmapping = false;
+        /**
+         * The number of MSAA samples to use when rendering VSM shadow maps.
+         * Must be a power-of-two and greater than or equal to 1. A value of 1 effectively turns
+         * off MSAA.
+         * Higher values may not be available depending on the underlying hardware.
+         */
+        public int msaaSamples = 1;
+        /**
+         * Whether to use a 32-bits or 16-bits texture format for VSM shadow maps. 32-bits
+         * precision is rarely needed, but it does reduces light leaks as well as "fading"
+         * of the shadows in some situations. Setting highPrecision to true for a single
+         * shadow map will double the memory usage of all shadow maps.
+         */
+        public boolean highPrecision = false;
+        /**
+         * VSM minimum variance scale, must be positive.
+         */
+        public float minVarianceScale = 0.5f;
+        /**
+         * VSM light bleeding reduction amount, between 0 and 1.
+         */
+        public float lightBleedReduction = 0.15f;
+    }
+
+    /**
+     * View-level options for DPCF and PCSS Shadowing.
+     * @see setSoftShadowOptions()
+     * @warning This API is still experimental and subject to change.
+     */
+    public static class SoftShadowOptions {
+        /**
+         * Globally scales the penumbra of all DPCF and PCSS shadows
+         * Acceptable values are greater than 0
+         */
+        public float penumbraScale = 1.0f;
+        /**
+         * Globally scales the computed penumbra ratio of all DPCF and PCSS shadows.
+         * This effectively controls the strength of contact hardening effect and is useful for
+         * artistic purposes. Higher values make the shadows become softer faster.
+         * Acceptable values are equal to or greater than 1.
+         */
+        public float penumbraRatioScale = 1.0f;
+    }
 }

@@ -98,7 +98,7 @@ deploy:
     auth_token:
       secure: YglcSYdl0TylEa59H4K6lylBEDr586NAt2EMgZquSo+iuPrwgZQuJLPCoihSm9y6
     release: master-tot
-    description: "Continuous build of the latest master branch by Appveyor and Travis CI"
+    description: "Continuous build of the latest master branch by Appveyor and Github"
     artifact: artifacts-zip
     draft: false
     prerelease: false

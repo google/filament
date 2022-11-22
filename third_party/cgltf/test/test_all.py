@@ -12,6 +12,9 @@ def get_executable_path(name):
     else:
         return "build/" + name
 
+def is_ascii(s):
+    return all(ord(c) < 128 for c in s)
+
 def collect_files(path, type, name):
     global num_tested
     global num_errors
@@ -21,13 +24,14 @@ def collect_files(path, type, name):
         if os.path.isfile(file_path):
             if the_file.endswith(type):
                 num_tested = num_tested +1
-                print("### " + name + " " + file_path)
-                result = os.system("{0} \"{1}\"".format(exe, file_path))
-                print("### Result: " + str(result) + "\n")
-                if result != 0:
-                    num_errors = num_errors + 1
-                    print("Error.")
-                    sys.exit(1)
+                if is_ascii(file_path):
+                    print("### " + name + " " + file_path)
+                    result = os.system("{0} \"{1}\"".format(exe, file_path))
+                    print("### Result: " + str(result) + "\n")
+                    if result != 0:
+                        num_errors = num_errors + 1
+                        print("Error.")
+                        sys.exit(1)
         elif os.path.isdir(file_path):
             collect_files(file_path, type, name)
 
@@ -55,8 +59,15 @@ if __name__ == "__main__":
     collect_files("glTF-Sample-Models/2.0/", ".glb", "test_conversion")
     collect_files("glTF-Sample-Models/2.0/", ".gltf", "test_conversion")
     collect_files("glTF-Sample-Models/2.0/", ".gltf", "test_write")
+    collect_files("glTF-Sample-Models/2.0/", ".glb", "test_write_glb")
 
     result = os.system(get_executable_path("test_math"))
+    if result != 0:
+        num_errors = num_errors + 1
+        print("Error.")
+        sys.exit(1)
+
+    result = os.system(get_executable_path("test_strings"))
     if result != 0:
         num_errors = num_errors + 1
         print("Error.")

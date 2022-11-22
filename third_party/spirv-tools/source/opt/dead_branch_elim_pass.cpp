@@ -207,7 +207,7 @@ bool DeadBranchElimPass::SimplifyBranch(BasicBlock* block,
       Instruction::OperandList new_operands;
       new_operands.push_back(terminator->GetInOperand(0));
       new_operands.push_back({SPV_OPERAND_TYPE_ID, {live_lab_id}});
-      terminator->SetInOperands(move(new_operands));
+      terminator->SetInOperands(std::move(new_operands));
       context()->UpdateDefUse(terminator);
     } else {
       // Check if the merge instruction is still needed because of a
@@ -346,6 +346,7 @@ bool DeadBranchElimPass::FixPhiNodesInLiveBlocks(
           if (operands.size() == 4) {
             // First input data operands is at index 2.
             uint32_t replId = operands[2u].words[0];
+            context()->KillNamesAndDecorates(inst->result_id());
             context()->ReplaceAllUsesWith(inst->result_id(), replId);
             iter = context()->KillInst(&*inst);
           } else {
@@ -419,6 +420,10 @@ bool DeadBranchElimPass::EraseDeadBlocks(
 }
 
 bool DeadBranchElimPass::EliminateDeadBranches(Function* func) {
+  if (func->IsDeclaration()) {
+    return false;
+  }
+
   bool modified = false;
   std::unordered_set<BasicBlock*> live_blocks;
   modified |= MarkLiveBlocks(func, &live_blocks);

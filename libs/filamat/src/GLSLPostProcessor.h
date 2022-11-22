@@ -22,7 +22,11 @@
 
 #include <backend/DriverEnums.h>
 
+#include <private/filament/Variant.h>
+
 #include "filamat/MaterialBuilder.h"    // for MaterialBuilder:: enums
+
+#include <utils/FixedCapacityVector.h>
 
 #include "ShaderMinifier.h"
 
@@ -32,9 +36,15 @@
 
 #include <memory>
 
+namespace filament {
+class SamplerInterfaceBlock;
+};
+
 namespace filamat {
 
 using SpirvBlob = std::vector<uint32_t>;
+using BindingPointAndSib = std::pair<uint8_t, const filament::SamplerInterfaceBlock*>;
+using SibVector = utils::FixedCapacityVector<BindingPointAndSib>;
 
 class GLSLPostProcessor {
 public:
@@ -48,8 +58,14 @@ public:
     ~GLSLPostProcessor();
 
     struct Config {
-        filament::backend::ShaderType shaderType;
+        filament::Variant variant;
+        MaterialBuilder::TargetApi targetApi;
+        MaterialBuilder::TargetLanguage targetLanguage;
+        filament::backend::ShaderStage shaderType;
         filament::backend::ShaderModel shaderModel;
+        filament::backend::FeatureLevel featureLevel;
+        filament::MaterialDomain domain;
+        const filamat::MaterialInfo* materialInfo;
         bool hasFramebufferFetch;
         struct {
             std::vector<std::pair<uint32_t, uint32_t>> subpassInputToColorLocation;
@@ -61,13 +77,19 @@ public:
             SpirvBlob* outputSpirv,
             std::string* outputMsl);
 
+    // public so backend_test can also use it
+    static void spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
+            filament::backend::ShaderModel shaderModel, bool useFramebufferFetch,
+            const SibVector& sibs, const ShaderMinifier* minifier);
+
 private:
     struct InternalConfig {
         std::string* glslOutput = nullptr;
         SpirvBlob* spirvOutput = nullptr;
         std::string* mslOutput = nullptr;
         EShLanguage shLang = EShLangFragment;
-        int langVersion = 0;
+        // use 100 for ES environment, 110 for desktop
+         int langVersion = 0;
         ShaderMinifier minifier;
     };
 
@@ -88,8 +110,6 @@ private:
     static void registerPerformancePasses(spvtools::Optimizer& optimizer, Config const& config);
 
     void optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) const;
-    void spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl, const Config &config,
-            ShaderMinifier& minifier) const;
 
     const MaterialBuilder::Optimization mOptimization;
     const bool mPrintShaders;

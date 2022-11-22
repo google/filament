@@ -58,6 +58,10 @@ import java.util.Set;
  */
 public class RenderableManager {
     private static final String LOG_TAG = "Filament";
+
+    private static final VertexBuffer.VertexAttribute[] sVertexAttributeValues =
+            VertexBuffer.VertexAttribute.values();
+
     private long mNativeObject;
 
     RenderableManager(long nativeRenderableManager) {
@@ -92,7 +96,9 @@ public class RenderableManager {
     public enum PrimitiveType {
         POINTS(0),
         LINES(1),
-        TRIANGLES(4);
+        LINE_STRIP(3),
+        TRIANGLES(4),
+        TRIANGLE_STRIP(5);
 
         private final int mType;
         PrimitiveType(int value) { mType = value; }
@@ -185,7 +191,9 @@ public class RenderableManager {
         }
 
         /**
-         * Sets an ordering index for blended primitives that all live at the same Z value.
+         * Sets the drawing order for blended primitives. The drawing order is either global or
+         * local (default) to this Renderable. In either case, the Renderable priority takes
+         * precedence.
          *
          * @param index the primitive of interest
          * @param blendOrder draw order number (0 by default). Only the lowest 15 bits are used.
@@ -194,6 +202,18 @@ public class RenderableManager {
         public Builder blendOrder(@IntRange(from = 0) int index,
                 @IntRange(from = 0, to = 32767) int blendOrder) {
             nBuilderBlendOrder(mNativeBuilder, index, blendOrder);
+            return this;
+        }
+
+       /**
+         * Sets whether the blend order is global or local to this Renderable (by default).
+         *
+         * @param index the primitive of interest
+         * @param enabled true for global, false for local blend ordering.
+         */
+        @NonNull
+        public Builder globalBlendOrderEnabled(@IntRange(from = 0) int index, boolean enabled) {
+            nBuilderGlobalBlendOrderEnabled(mNativeBuilder, index, enabled);
             return this;
         }
 
@@ -275,6 +295,22 @@ public class RenderableManager {
         @NonNull
         public Builder lightChannel(@IntRange(from = 0, to = 7) int channel, boolean enable) {
             nBuilderLightChannel(mNativeBuilder, channel, enable);
+            return this;
+        }
+
+        /**
+         * Specifies the number of draw instance of this renderable. The default is 1 instance and
+         * the maximum number of instances allowed is 65535. 0 is invalid.
+         * All instances are culled using the same bounding box, so care must be taken to make
+         * sure all instances render inside the specified bounding box.
+         * The material can use getInstanceIndex() in the vertex shader to get the instance index and
+         * possibly adjust the position or transform.
+         *
+         * @param instanceCount the number of instances silently clamped between 1 and 65535.
+         */
+        @NonNull
+        public Builder instances(@IntRange(from = 1, to = 65535) int instanceCount) {
+            nBuilderInstances(mNativeBuilder, instanceCount);
             return this;
         }
 
@@ -394,17 +430,67 @@ public class RenderableManager {
         }
 
         /**
-         * Controls if the renderable has vertex morphing targets, false by default.
+         * Controls if the renderable has vertex morphing targets, zero by default. This is
+         * required to enable GPU morphing.
          *
-         * <p>This is required to enable GPU morphing for up to 4 attributes. The attached VertexBuffer
-         * must provide data in the appropriate VertexAttribute slots (<code>MORPH_POSITION_0</code> etc).</p>
+         * <p>Filament supports two morphing modes: standard (default) and legacy.</p>
+         *
+         * <p>For standard morphing, A {@link MorphTargetBuffer} must be created and provided via
+         * {@link RenderableManager#setMorphTargetBufferAt}. Standard morphing supports up to
+         * <code>CONFIG_MAX_MORPH_TARGET_COUNT</code> morph targets.</p>
+         *
+         * For legacy morphing, the attached {@link VertexBuffer} must provide data in the
+         * appropriate {@link VertexBuffer.VertexAttribute} slots (<code>MORPH_POSITION_0</code> etc).
+         * Legacy morphing only supports up to 4 morph targets and will be deprecated in the future.
+         * Legacy morphing must be enabled on the material definition: either via the
+         * <code>legacyMorphing</code> material attribute or by calling
+         * {@link MaterialBuilder::useLegacyMorphing}.
          *
          * <p>See also {@link RenderableManager#setMorphWeights}, which can be called on a per-frame basis
          * to advance the animation.</p>
          */
         @NonNull
-        public Builder morphing(boolean enabled) {
-            nBuilderMorphing(mNativeBuilder, enabled);
+        public Builder morphing(@IntRange(from = 0, to = 255) int targetCount) {
+            nBuilderMorphing(mNativeBuilder, targetCount);
+            return this;
+        }
+
+        /**
+         * Specifies the morph target buffer for a primitive.
+         *
+         * The morph target buffer must have an associated renderable and geometry. Two conditions
+         * must be met:
+         * 1. The number of morph targets in the buffer must equal the renderable's morph target
+         *    count.
+         * 2. The vertex count of each morph target must equal the geometry's vertex count.
+         *
+         * @param level the level of detail (lod), only 0 can be specified
+         * @param primitiveIndex zero-based index of the primitive, must be less than the count passed to Builder constructor
+         * @param morphTargetBuffer specifies the morph target buffer
+         * @param offset specifies where in the morph target buffer to start reading (expressed as a number of vertices)
+         * @param count number of vertices in the morph target buffer to read, must equal the geometry's count (for triangles, this should be a multiple of 3)
+         */
+        @NonNull
+        public Builder morphing(@IntRange(from = 0) int level,
+                                @IntRange(from = 0) int primitiveIndex,
+                                @NonNull MorphTargetBuffer morphTargetBuffer,
+                                @IntRange(from = 0) int offset,
+                                @IntRange(from = 0) int count) {
+            nBuilderSetMorphTargetBufferAt(mNativeBuilder, level, primitiveIndex,
+                    morphTargetBuffer.getNativeObject(), offset, count);
+            return this;
+        }
+
+        /**
+         * Utility method to specify morph target buffer for a primitive.
+         * For details, see the {@link RenderableManager.Builder#morphing}.
+         */
+        @NonNull
+        public Builder morphing(@IntRange(from = 0) int level,
+                                @IntRange(from = 0) int primitiveIndex,
+                                @NonNull MorphTargetBuffer morphTargetBuffer) {
+            nBuilderSetMorphTargetBufferAt(mNativeBuilder, level, primitiveIndex,
+                    morphTargetBuffer.getNativeObject(), 0, morphTargetBuffer.getVertexCount());
             return this;
         }
 
@@ -491,15 +577,50 @@ public class RenderableManager {
     /**
      * Updates the vertex morphing weights on a renderable, all zeroes by default.
      *
-     * <p>This is specified using a 4-tuple, one float per morph target. If the renderable has fewer
-     * than 4 morph targets, then clients should fill the unused components with zeroes.</p>
+     * <p>The renderable must be built with morphing enabled. In legacy morphing mode, only the
+     * first 4 weights are considered.</p>
+     *
+     * @see Builder#morphing
+     */
+    public void setMorphWeights(@EntityInstance int i, @NonNull float[] weights, @IntRange(from = 0) int offset) {
+        nSetMorphWeights(mNativeObject, i, weights, offset);
+    }
+
+    /**
+     * Changes the morph target buffer for the given primitive.
      *
      * <p>The renderable must be built with morphing enabled.</p>
      *
      * @see Builder#morphing
      */
-    public void setMorphWeights(@EntityInstance int i, @NonNull @Size(min = 4) float[] weights) {
-        nSetMorphWeights(mNativeObject, i, weights);
+    public void setMorphTargetBufferAt(@EntityInstance int i,
+                                       @IntRange(from = 0) int level,
+                                       @IntRange(from = 0) int primitiveIndex,
+                                       @NonNull MorphTargetBuffer morphTargetBuffer,
+                                       @IntRange(from = 0) int offset,
+                                       @IntRange(from = 0) int count) {
+        nSetMorphTargetBufferAt(mNativeObject, i, level, primitiveIndex,
+                morphTargetBuffer.getNativeObject(), offset, count);
+    }
+
+    /**
+     * Utility method to change morph target buffer for the given primitive.
+     * For details, see the {@link RenderableManager#setMorphTargetBufferAt}.
+     */
+    public void setMorphTargetBufferAt(@EntityInstance int i,
+                                       @IntRange(from = 0) int level,
+                                       @IntRange(from = 0) int primitiveIndex,
+                                       @NonNull MorphTargetBuffer morphTargetBuffer) {
+        nSetMorphTargetBufferAt(mNativeObject, i, level, primitiveIndex,
+                morphTargetBuffer.getNativeObject(), 0, morphTargetBuffer.getVertexCount());
+    }
+
+    /**
+     * Gets the morph target count on a renderable.
+     */
+    @IntRange(from = 0)
+    public int getMorphTargetCount(@EntityInstance int i) {
+        return nGetMorphTargetCount(mNativeObject, i);
     }
 
     /**
@@ -685,18 +806,9 @@ public class RenderableManager {
                 0, indices.getIndexCount());
     }
 
-    /**
-     * Changes the geometry for the given primitive.
-     *
-     * @see Builder#geometry Builder.geometry
-     */
-    public void setGeometryAt(@EntityInstance int i, @IntRange(from = 0) int primitiveIndex,
-            @NonNull PrimitiveType type, @IntRange(from = 0) int offset, @IntRange(from = 0) int count) {
-        nSetGeometryAt(mNativeObject, i, primitiveIndex, type.getValue(), offset, count);
-    }
-
-    /**
-     * Changes the ordering index for blended primitives that all live at the same Z value.
+     /**
+     * Changes the drawing order for blended primitives. The drawing order is either global or
+     * local (default) to this Renderable. In either case, the Renderable priority takes precedence.
      *
      * @see Builder#blendOrder
      *
@@ -710,17 +822,35 @@ public class RenderableManager {
     }
 
     /**
+     * Changes whether the blend order is global or local to this Renderable (by default).
+     *
+     * @see Builder#globalBlendOrderEnabled
+     *
+     * @param instance the renderable of interest
+     * @param primitiveIndex the primitive of interest
+     * @param enabled true for global, false for local blend ordering.
+     */
+    public void setGlobalBlendOrderEnabledAt(@EntityInstance int instance, @IntRange(from = 0) int primitiveIndex,
+            boolean enabled) {
+        nSetGlobalBlendOrderEnabledAt(mNativeObject, instance, primitiveIndex, enabled);
+    }
+
+    /**
      * Retrieves the set of enabled attribute slots in the given primitive's VertexBuffer.
      */
-    public Set<VertexBuffer.VertexAttribute> getEnabledAttributesAt(@EntityInstance int i, @IntRange(from = 0) int primitiveIndex) {
+    public Set<VertexBuffer.VertexAttribute> getEnabledAttributesAt(
+            @EntityInstance int i, @IntRange(from = 0) int primitiveIndex) {
         int bitSet = nGetEnabledAttributesAt(mNativeObject, i, primitiveIndex);
-        Set<VertexBuffer.VertexAttribute> requiredAttributes = EnumSet.noneOf(VertexBuffer.VertexAttribute.class);
-        VertexBuffer.VertexAttribute[] values = VertexBuffer.VertexAttribute.values();
+        Set<VertexBuffer.VertexAttribute> requiredAttributes =
+                EnumSet.noneOf(VertexBuffer.VertexAttribute.class);
+        VertexBuffer.VertexAttribute[] values = sVertexAttributeValues;
+
         for (int j = 0; j < values.length; j++) {
             if ((bitSet & (1 << j)) != 0) {
                 requiredAttributes.add(values[j]);
             }
         }
+
         requiredAttributes = Collections.unmodifiableSet(requiredAttributes);
         return requiredAttributes;
     }
@@ -742,6 +872,7 @@ public class RenderableManager {
     private static native void nBuilderGeometry(long nativeBuilder, int index, int value, long nativeVertexBuffer, long nativeIndexBuffer, int offset, int minIndex, int maxIndex, int count);
     private static native void nBuilderMaterial(long nativeBuilder, int index, long nativeMaterialInstance);
     private static native void nBuilderBlendOrder(long nativeBuilder, int index, int blendOrder);
+    private static native void nBuilderGlobalBlendOrderEnabled(long nativeBuilder, int index, boolean enabled);
     private static native void nBuilderBoundingBox(long nativeBuilder, float cx, float cy, float cz, float ex, float ey, float ez);
     private static native void nBuilderLayerMask(long nativeBuilder, int select, int value);
     private static native void nBuilderPriority(long nativeBuilder, int priority);
@@ -752,14 +883,18 @@ public class RenderableManager {
     private static native void nBuilderSkinning(long nativeBuilder, int boneCount);
     private static native int nBuilderSkinningBones(long nativeBuilder, int boneCount, Buffer bones, int remaining);
     private static native void nBuilderSkinningBuffer(long nativeBuilder, long nativeSkinningBuffer, int boneCount, int offset);
-    private static native void nBuilderMorphing(long nativeBuilder, boolean enabled);
+    private static native void nBuilderMorphing(long nativeBuilder, int targetCount);
+    private static native void nBuilderSetMorphTargetBufferAt(long nativeBuilder, int level, int primitiveIndex, long nativeMorphTargetBuffer, int offset, int count);
     private static native void nEnableSkinningBuffers(long nativeBuilder, boolean enabled);
     private static native void nBuilderLightChannel(long nativeRenderableManager, int channel, boolean enable);
+    private static native void nBuilderInstances(long nativeRenderableManager, int instances);
 
     private static native void nSetSkinningBuffer(long nativeObject, int i, long nativeSkinningBuffer, int count, int offset);
     private static native int nSetBonesAsMatrices(long nativeObject, int i, Buffer matrices, int remaining, int boneCount, int offset);
     private static native int nSetBonesAsQuaternions(long nativeObject, int i, Buffer quaternions, int remaining, int boneCount, int offset);
-    private static native void nSetMorphWeights(long nativeObject, int instance, float[] weights);
+    private static native void nSetMorphWeights(long nativeObject, int instance, float[] weights, int offset);
+    private static native void nSetMorphTargetBufferAt(long nativeObject, int i, int level, int primitiveIndex, long nativeMorphTargetBuffer, int offset, int count);
+    private static native int nGetMorphTargetCount(long nativeObject, int i);
     private static native void nSetAxisAlignedBoundingBox(long nativeRenderableManager, int i, float cx, float cy, float cz, float ex, float ey, float ez);
     private static native void nSetLayerMask(long nativeRenderableManager, int i, int select, int value);
     private static native void nSetPriority(long nativeRenderableManager, int i, int priority);
@@ -776,7 +911,7 @@ public class RenderableManager {
     private static native void nSetMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex, long nativeMaterialInstance);
     private static native long nGetMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex);
     private static native void nSetGeometryAt(long nativeRenderableManager, int i, int primitiveIndex, int primitiveType, long nativeVertexBuffer, long nativeIndexBuffer, int offset, int count);
-    private static native void nSetGeometryAt(long nativeRenderableManager, int i, int primitiveIndex, int primitiveType, int offset, int count);
     private static native void nSetBlendOrderAt(long nativeRenderableManager, int i, int primitiveIndex, int blendOrder);
+    private static native void nSetGlobalBlendOrderEnabledAt(long nativeRenderableManager, int i, int primitiveIndex, boolean enabled);
     private static native int nGetEnabledAttributesAt(long nativeRenderableManager, int i, int primitiveIndex);
 }

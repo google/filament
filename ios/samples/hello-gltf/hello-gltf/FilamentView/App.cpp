@@ -20,9 +20,11 @@
 #include <filament/TransformManager.h>
 #include <filament/Viewport.h>
 
-#include <image/KtxUtility.h>
+#include <ktxreader/Ktx1Reader.h>
 #include <gltfio/AssetLoader.h>
 #include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
+#include <gltfio/materials/uberarchive.h>
 
 #include <fstream>
 #include <iostream>
@@ -31,6 +33,8 @@
 // This file is generated via the "Run Script" build phase and contains the IBL and skybox
 // textures this app uses.
 #include "resources.h"
+
+using namespace ktxreader;
 
 App::App(void* nativeLayer, uint32_t width, uint32_t height, const utils::Path& resourcePath)
         : nativeLayer(nativeLayer), width(width), height(height), resourcePath(resourcePath) {
@@ -59,7 +63,7 @@ App::~App() {
     app.assetLoader->destroyAsset(app.asset);
     app.materialProvider->destroyMaterials();
     delete app.materialProvider;
-    gltfio::AssetLoader::destroy(&app.assetLoader);
+    filament::gltfio::AssetLoader::destroy(&app.assetLoader);
 
     engine->destroy(renderer);
     engine->destroy(scene);
@@ -89,15 +93,15 @@ void App::setupFilament() {
 }
 
 void App::setupIbl() {
-    image::KtxBundle* iblBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_2K_IBL_DATA,
+    image::Ktx1Bundle* iblBundle = new image::Ktx1Bundle(RESOURCES_VENETIAN_CROSSROADS_2K_IBL_DATA,
                                                        RESOURCES_VENETIAN_CROSSROADS_2K_IBL_SIZE);
     float3 harmonics[9];
     iblBundle->getSphericalHarmonics(harmonics);
-    app.iblTexture = image::ktx::createTexture(engine, iblBundle, false);
+    app.iblTexture = Ktx1Reader::createTexture(engine, iblBundle, false);
 
-    image::KtxBundle* skyboxBundle = new image::KtxBundle(RESOURCES_VENETIAN_CROSSROADS_2K_SKYBOX_DATA,
+    image::Ktx1Bundle* skyboxBundle = new image::Ktx1Bundle(RESOURCES_VENETIAN_CROSSROADS_2K_SKYBOX_DATA,
                                                           RESOURCES_VENETIAN_CROSSROADS_2K_SKYBOX_SIZE);
-    app.skyboxTexture = image::ktx::createTexture(engine, skyboxBundle, false);
+    app.skyboxTexture = Ktx1Reader::createTexture(engine, skyboxBundle, false);
 
     app.skybox = Skybox::Builder()
         .environment(app.skyboxTexture)
@@ -120,8 +124,9 @@ void App::setupIbl() {
 }
 
 void App::setupMesh() {
-    app.materialProvider = gltfio::createUbershaderLoader(engine);
-    app.assetLoader = gltfio::AssetLoader::create({engine, app.materialProvider, nullptr});
+    app.materialProvider = filament::gltfio::createUbershaderProvider(engine,
+            UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
+    app.assetLoader = filament::gltfio::AssetLoader::create({engine, app.materialProvider, nullptr});
 
     // Load the glTF file.
     std::ifstream in(resourcePath.concat(utils::Path("DamagedHelmet.glb")), std::ifstream::in);
@@ -130,16 +135,26 @@ void App::setupMesh() {
     in.seekg(0);
     std::vector<uint8_t> buffer(size);
     if (!in.read((char*) buffer.data(), size)) {
-        std::cerr << "Unable to read scene.gltf" << std::endl;
+        std::cerr << "Unable to read glTF" << std::endl;
         exit(1);
     }
-    app.asset = app.assetLoader->createAssetFromBinary(buffer.data(), static_cast<uint32_t>(size));
+    app.asset = app.assetLoader->createAsset(buffer.data(), static_cast<uint32_t>(size));
 
-    gltfio::ResourceLoader({
+    auto resourceLoader = new filament::gltfio::ResourceLoader({
         .engine = engine,
-        .normalizeSkinningWeights = true,
-        .recomputeBoundingBoxes = false
-    }).loadResources(app.asset);
+        .normalizeSkinningWeights = true
+    });
+    auto stbDecoder = filament::gltfio::createStbProvider(engine);
+    auto ktxDecoder = filament::gltfio::createKtx2Provider(engine);
+
+    resourceLoader->addTextureProvider("image/png", stbDecoder);
+    resourceLoader->addTextureProvider("image/jpeg", stbDecoder);
+    resourceLoader->addTextureProvider("image/ktx2", ktxDecoder);
+    resourceLoader->loadResources(app.asset);
+
+    delete resourceLoader;
+    delete stbDecoder;
+    delete ktxDecoder;
 
     scene->addEntities(app.asset->getEntities(), app.asset->getEntityCount());
 }

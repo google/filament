@@ -14,21 +14,22 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_OPENGLDRIVERFACTORY_H
-#define TNT_FILAMENT_DRIVER_OPENGLDRIVERFACTORY_H
+#ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGLDRIVERFACTORY_H
+#define TNT_FILAMENT_BACKEND_OPENGL_OPENGLDRIVERFACTORY_H
 
-namespace filament {
+#include <backend/Platform.h>
 
-namespace backend {
+namespace filament::backend {
+
 class OpenGLPlatform;
 class Driver;
 
 class OpenGLDriverFactory {
 public:
-    static backend::Driver* create(backend::OpenGLPlatform* platform, void* sharedGLContext) noexcept;
+    static Driver* create(OpenGLPlatform* platform, void* sharedGLContext,
+            const Platform::DriverConfig& driverConfig) noexcept;
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
-#endif //TNT_FILAMENT_DRIVER_OPENGLDRIVERFACTORY_H
+#endif //TNT_FILAMENT_BACKEND_OPENGL_OPENGLDRIVERFACTORY_H

@@ -50,6 +50,8 @@ private:
             filamat::MaterialBuilder& builder) const noexcept;
     bool processFragmentShader(const MaterialLexeme&,
             filamat::MaterialBuilder& builder) const noexcept;
+    bool processComputeShader(const MaterialLexeme&,
+            filamat::MaterialBuilder& builder) const noexcept;
     bool ignoreLexeme(const MaterialLexeme&, filamat::MaterialBuilder& builder) const noexcept;
 
     bool parseMaterialAsJSON(const char* buffer, size_t size,
@@ -59,6 +61,8 @@ private:
     bool processVertexShaderJSON(const JsonishValue*,
             filamat::MaterialBuilder& builder) const noexcept;
     bool processFragmentShaderJSON(const JsonishValue*,
+            filamat::MaterialBuilder& builder) const noexcept;
+    bool processComputeShaderJSON(const JsonishValue*,
             filamat::MaterialBuilder& builder) const noexcept;
     bool ignoreLexemeJSON(const JsonishValue*, filamat::MaterialBuilder& builder) const noexcept;
     bool isValidJsonStart(const char* buffer, size_t size) const noexcept;

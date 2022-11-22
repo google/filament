@@ -16,10 +16,10 @@
 
 #include "BackendTest.h"
 
-#include <private/filament/EngineEnums.h>
-
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
+
+#include "private/backend/SamplerGroup.h"
 
 #include <utils/Hash.h>
 #include <utils/Log.h>
@@ -117,6 +117,9 @@ static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt) {
     dapi.readPixels(rt, 0, 0, kTexWidth, kTexHeight, std::move(pb));
 }
 
+// TODO: This test needs work to get Metal and OpenGL to agree on results.
+// The problems are caused by both uploading and rendering into the same texture, since the OpenGL
+// backend's readPixels does not work correctly with textures that have image data uploaded.
 TEST_F(BackendTest, FeedbackLoops) {
     auto& api = getDriverApi();
 
@@ -130,11 +133,16 @@ TEST_F(BackendTest, FeedbackLoops) {
         // Create a program.
         ProgramHandle program;
         {
-            ShaderGenerator shaderGen(fullscreenVs, fullscreenFs, sBackend, sIsMobilePlatform);
-            Program prog = shaderGen.getProgram();
-            Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
-            prog.setSamplerGroup(0, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
-            prog.setUniformBlock(1, utils::CString("params"));
+            SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
+                    .name("backend_test_sib")
+                    .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
+                    .add( {{"tex", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
+                    .build();
+            ShaderGenerator shaderGen(fullscreenVs, fullscreenFs, sBackend, sIsMobilePlatform, &sib);
+            Program prog = shaderGen.getProgram(api);
+            Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
+            prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
+            prog.uniformBlockBindings({{"params", 1}});
             program = api.createProgram(std::move(prog));
         }
 
@@ -167,7 +175,7 @@ TEST_F(BackendTest, FeedbackLoops) {
          }
         auto cb = [](void* buffer, size_t size, void* user) { free(buffer); };
         PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb);
-        api.update2DImage(texture, 0, 0, 0, kTexWidth, kTexHeight, std::move(pb));
+        api.update3DImage(texture, 0, 0, 0, 0, kTexWidth, kTexHeight, 1, std::move(pb));
 
         for (int frame = 0; frame < kNumFrames; frame++) {
 
@@ -184,9 +192,9 @@ TEST_F(BackendTest, FeedbackLoops) {
             SamplerParams sparams = {};
             sparams.filterMag = SamplerMagFilter::LINEAR;
             sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
-            samplers.setSampler(0, texture, sparams);
+            samplers.setSampler(0, { texture, sparams });
             auto sgroup = api.createSamplerGroup(samplers.getSize());
-            api.updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
+            api.updateSamplerGroup(sgroup, samplers.toBufferDescriptor(api));
             auto ubuffer = api.createBufferObject(sizeof(MaterialParams),
                     BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
             api.makeCurrent(swapChain, swapChain);
@@ -208,7 +216,7 @@ TEST_F(BackendTest, FeedbackLoops) {
                     .sourceLevel = float(sourceLevel),
                 });
                 api.beginRenderPass(renderTargets[targetLevel], params);
-                api.draw(state, triangle.getRenderPrimitive());
+                api.draw(state, triangle.getRenderPrimitive(), 1);
                 api.endRenderPass();
             }
 
@@ -227,7 +235,7 @@ TEST_F(BackendTest, FeedbackLoops) {
                     .sourceLevel = float(sourceLevel),
                 });
                 api.beginRenderPass(renderTargets[targetLevel], params);
-                api.draw(state, triangle.getRenderPrimitive());
+                api.draw(state, triangle.getRenderPrimitive(), 1);
                 api.endRenderPass();
             }
 

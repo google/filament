@@ -20,7 +20,7 @@
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/FilamentInstance.h>
 
-namespace gltfio {
+namespace filament::gltfio {
 
 struct FFilamentAsset;
 struct FFilamentInstance;
@@ -56,6 +56,32 @@ public:
      */
     void updateBoneMatrices();
 
+    /**
+     * Applies a blended transform to the union of nodes affected by two animations.
+     * Used for cross-fading from a previous skinning-based animation or rigid body animation.
+     *
+     * First, this stashes the current transform hierarchy into a transient memory buffer.
+     *
+     * Next, this applies previousAnimIndex / previousAnimTime to the actual asset by internally
+     * calling applyAnimation().
+     *
+     * Finally, the stashed local transforms are lerped (via the scale / translation / rotation
+     * components) with their live counterparts, and the results are pushed to the asset.
+     *
+     * To achieve a cross fade effect with skinned models, clients will typically call animator
+     * methods in this order: (1) applyAnimation (2) applyCrossFade (3) updateBoneMatrices. The
+     * animation that clients pass to applyAnimation is the "current" animation corresponding to
+     * alpha=1, while the "previous" animation passed to applyCrossFade corresponds to alpha=0.
+     */
+    void applyCrossFade(size_t previousAnimIndex, float previousAnimTime, float alpha);
+
+    /**
+     * Pass the identity matrix into all bone nodes, useful for returning to the T pose.
+     *
+     * NOTE: this operation is independent of \c animation.
+     */
+    void resetBoneMatrices();
+
     /** Returns the number of \c animation definitions in the glTF asset. */
     size_t getAnimationCount() const;
 
@@ -78,11 +104,17 @@ private:
     friend struct FFilamentInstance;
     /*! \endcond */
 
-    Animator(FFilamentAsset* asset, FFilamentInstance* instance);
+    // If "instance" is null, then this is the primary animator.
+    Animator(FFilamentAsset const* asset, FFilamentInstance* instance);
     ~Animator();
+
+    Animator(const Animator& animator) = delete;
+    Animator(Animator&& animator) = delete;
+    Animator& operator=(const Animator&) = delete;
+
     AnimatorImpl* mImpl;
 };
 
-} // namespace gltfio
+} // namespace filament::gltfio
 
 #endif // GLTFIO_ANIMATOR_H

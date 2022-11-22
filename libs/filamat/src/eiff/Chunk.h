@@ -33,23 +33,14 @@ public:
         return mType;
     }
 
-    size_t getFlattenedSize() const noexcept {
-        return mFlattenedSize;
-    }
-
-    void setFlattenedSize(size_t s) noexcept {
-        mFlattenedSize = s;
-    }
-
     virtual void flatten(Flattener &f) = 0;
 
 protected:
-    Chunk(ChunkType type) : mType(type), mFlattenedSize(0) {
+    explicit Chunk(ChunkType type) : mType(type) {
     }
 
 private:
     ChunkType mType;
-    size_t mFlattenedSize;
 };
 
 } // namespace filamat

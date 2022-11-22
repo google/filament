@@ -24,12 +24,11 @@
 
 using namespace utils;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 #ifndef NDEBUG
 
-static char const * const kOurNamespace = "filament::";
+static char const * const kOurNamespace = "filament::backend";
 
 // removes all occurrences of "what" from "str"
 UTILS_NOINLINE
@@ -53,7 +52,7 @@ static io::ostream& logHandle(io::ostream& out, std::string& typeName, T id) noe
 template <typename T>
 io::ostream& operator<<(io::ostream& out, const Handle<T>& h) noexcept {
     std::string s(CallStack::typeName<Handle<T>>().c_str());
-    return logHandle(out, s, h.object);
+    return logHandle(out, s, h.getId());
 }
 
 // Explicit Instantiation of the streaming operators (so they're not inlined)
@@ -73,5 +72,4 @@ template io::ostream& operator<<(io::ostream& out, const Handle<HwBufferObject>&
 
 #endif
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend

@@ -65,7 +65,7 @@ INSTANTIATE_TEST_SUITE_P(
         {SPV_OPERAND_TYPE_FP_FAST_MATH_MODE, 1, "NotNaN"},
         {SPV_OPERAND_TYPE_FP_FAST_MATH_MODE, 2, "NotInf"},
         {SPV_OPERAND_TYPE_FP_FAST_MATH_MODE, 3, "NotNaN|NotInf"},
-        // Mask experssions are symmetric.
+        // Mask expressions are symmetric.
         {SPV_OPERAND_TYPE_FP_FAST_MATH_MODE, 3, "NotInf|NotNaN"},
         // Repeating a value has no effect.
         {SPV_OPERAND_TYPE_FP_FAST_MATH_MODE, 3, "NotInf|NotNaN|NotInf"},
@@ -246,12 +246,6 @@ INSTANTIATE_TEST_SUITE_P(
         {"0x1.801p4", 0x00004e00},
         {"0x1.804p4", 0x00004e01},
     }));
-
-TEST(CreateContext, InvalidEnvironment) {
-  spv_target_env env;
-  std::memset(&env, 99, sizeof(env));
-  EXPECT_THAT(spvContextCreate(env), IsNull());
-}
 
 TEST(CreateContext, UniversalEnvironment) {
   auto c = spvContextCreate(SPV_ENV_UNIVERSAL_1_0);

@@ -33,6 +33,10 @@ layout(location = 0) out uvec4 indices;
 
 void main() {
     gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
+#if defined(TARGET_VULKAN_ENVIRONMENT)
+    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
+    gl_Position.y = -gl_Position.y;
+#endif
 }
 )");
 
@@ -65,7 +69,7 @@ TEST_F(BackendTest, MRT) {
 
         // Create a program.
         ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram();
+        Program p = shaderGen.getProgram(getDriverApi());
         auto program = getDriverApi().createProgram(std::move(p));
 
         TrianglePrimitive triangle(getDriverApi());
@@ -101,7 +105,7 @@ TEST_F(BackendTest, MRT) {
                 512,                                       // width
                 512,                                       // height
                 1,                                         // samples
-                { textureA, textureB }, // color
+                {{textureA },{textureB }}, // color
                 {},                                        // depth
                 {});                                       // stencil
 
@@ -126,7 +130,7 @@ TEST_F(BackendTest, MRT) {
 
         // Draw a triangle.
         getDriverApi().beginRenderPass(renderTarget, params);
-        getDriverApi().draw(state, triangle.getRenderPrimitive());
+        getDriverApi().draw(state, triangle.getRenderPrimitive(), 1);
         getDriverApi().endRenderPass();
 
         getDriverApi().flush();

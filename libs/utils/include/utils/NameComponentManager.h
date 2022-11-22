@@ -17,39 +17,18 @@
 #ifndef TNT_UTILS_NAMECOMPONENTMANAGER_H
 #define TNT_UTILS_NAMECOMPONENTMANAGER_H
 
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
-
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/Entity.h>
 #include <utils/EntityInstance.h>
 #include <utils/SingleInstanceComponentManager.h>
 
-#include <functional>
+#include <stddef.h>
+#include <stdint.h>
 
 namespace utils {
 
 class EntityManager;
-
-namespace details {
-class SafeString {
-public:
-    SafeString() noexcept = default;
-    explicit SafeString(const char* str) noexcept : mCStr(strdup(str)) { }
-    SafeString(SafeString&& rhs) noexcept : mCStr(rhs.mCStr) { rhs.mCStr = nullptr; }
-    SafeString& operator=(SafeString&& rhs) noexcept {
-        std::swap(mCStr, rhs.mCStr);
-        return *this;
-    }
-    ~SafeString() { free((void*)mCStr); }
-    const char* c_str() const noexcept { return mCStr; }
-
-private:
-    char const* mCStr = nullptr;
-};
-} // namespace details
-
 
 /**
  * \class NameComponentManager NameComponentManager.h utils/NameComponentManager.h
@@ -69,7 +48,7 @@ private:
  * printf("%s\n", names->getName(names->getInstance(myEntity));
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
-class UTILS_PUBLIC NameComponentManager : public SingleInstanceComponentManager<details::SafeString> {
+class UTILS_PUBLIC NameComponentManager : public SingleInstanceComponentManager<utils::CString> {
 public:
     using Instance = EntityInstance<NameComponentManager>;
 
@@ -93,7 +72,7 @@ public:
      * @return Non-zero handle if the entity has a name component, 0 otherwise.
      */
     Instance getInstance(Entity e) const noexcept {
-        return Instance(SingleInstanceComponentManager::getInstance(e));
+        return { SingleInstanceComponentManager::getInstance(e) };
     }
 
     /*! \cond PRIVATE */

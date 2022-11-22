@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_BUFFEROBJECT_H
 #define TNT_FILAMENT_DETAILS_BUFFEROBJECT_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <backend/Handle.h>
 
@@ -40,18 +40,17 @@ public:
 
     size_t getByteCount() const noexcept { return mByteCount; }
 
-    void setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_t byteOffset = 0);
-
     BindingType getBindingType() const noexcept { return mBindingType; }
 
 private:
     friend class BufferObject;
+    void setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_t byteOffset = 0);
     backend::Handle<backend::HwBufferObject> mHandle;
     uint32_t mByteCount;
     BindingType mBindingType;
 };
 
-FILAMENT_UPCAST(BufferObject)
+FILAMENT_DOWNCAST(BufferObject)
 
 } // namespace filament
 

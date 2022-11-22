@@ -24,8 +24,7 @@
 
 using namespace bluevk;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 static void flipVertically(VkRect2D* rect, uint32_t framebufferHeight) {
     rect->offset.y = framebufferHeight - rect->offset.y - rect->extent.height;
@@ -50,14 +49,10 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
         HwProgram(builder.getName()), context(context) {
     auto const& blobs = builder.getShadersSource();
     VkShaderModule* modules[2] = { &bundle.vertex, &bundle.fragment };
-    bool missing = false;
-    for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
+    // TODO: handle compute shaders.
+    for (size_t i = 0; i < 2; i++) {
         const auto& blob = blobs[i];
         VkShaderModule* module = modules[i];
-        if (blob.empty()) {
-            missing = true;
-            continue;
-        }
         VkShaderModuleCreateInfo moduleInfo = {};
         moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         moduleInfo.codeSize = blob.size();
@@ -66,22 +61,54 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create shader module.");
     }
 
-    // Output a warning because it's okay to encounter empty blobs, but it's not okay to use
-    // this program handle in a draw call.
-    if (missing) {
-        utils::slog.w << "Missing SPIR-V shader: " << builder.getName().c_str() << utils::io::endl;
-        return;
+    // populate the specialization constants requirements right now
+    auto const& specializationConstants = builder.getSpecializationConstants();
+    if (!specializationConstants.empty()) {
+        // Allocate a single heap block to store all the specialization constants structures
+        // our supported types are int32, float and bool, so we use 4 bytes per data. bool will
+        // just use the first byte.
+        char* pStorage = (char*)malloc(
+                sizeof(VkSpecializationInfo) +
+                specializationConstants.size() * sizeof(VkSpecializationMapEntry) +
+                specializationConstants.size() * 4);
+
+        VkSpecializationInfo* const pInfo = (VkSpecializationInfo*)pStorage;
+        VkSpecializationMapEntry* const pEntries =
+                (VkSpecializationMapEntry*)(pStorage + sizeof(VkSpecializationInfo));
+        void* pData = pStorage + sizeof(VkSpecializationInfo) +
+                      specializationConstants.size() * sizeof(VkSpecializationMapEntry);
+
+        *pInfo = {
+                .mapEntryCount = specializationConstants.size(),
+                .pMapEntries = pEntries,
+                .dataSize = specializationConstants.size() * 4,
+                .pData = pData,
+        };
+
+        for (size_t i = 0; i < specializationConstants.size(); i++) {
+            const uint32_t offset = uint32_t(i) * 4;
+            std::visit([&](auto&& arg) {
+                using T = std::decay_t<decltype(arg)>;
+                pEntries[i] = {
+                        .constantID = specializationConstants[i].id,
+                        .offset = offset,
+                        .size = sizeof(arg)
+                };
+                T* const addr = (T*)((char*)pData + offset);
+                *addr = arg;
+            }, specializationConstants[i].value);
+        }
+
+        bundle.specializationInfos = pInfo;
     }
 
     // Make a copy of the binding map
     samplerGroupInfo = builder.getSamplerGroupInfo();
-#if FILAMENT_VULKAN_VERBOSE
-    utils::slog.d << "Created VulkanProgram " << builder.getName().c_str()
-                << ", variant = (" << utils::io::hex
-                << (int) builder.getVariant() << utils::io::dec << "), "
-                << "shaders = (" << bundle.vertex << ", " << bundle.fragment << ")"
-                << utils::io::endl;
-#endif
+    if constexpr (FILAMENT_VULKAN_VERBOSE) {
+        utils::slog.d << "Created VulkanProgram " << builder
+                    << ", shaders = (" << bundle.vertex << ", " << bundle.fragment << ")"
+                    << utils::io::endl;
+    }
 }
 
 VulkanProgram::VulkanProgram(VulkanContext& context, VkShaderModule vs, VkShaderModule fs) noexcept :
@@ -93,56 +120,29 @@ VulkanProgram::VulkanProgram(VulkanContext& context, VkShaderModule vs, VkShader
 VulkanProgram::~VulkanProgram() {
     vkDestroyShaderModule(context.device, bundle.vertex, VKALLOC);
     vkDestroyShaderModule(context.device, bundle.fragment, VKALLOC);
-}
-
-static VulkanAttachment createAttachment(VulkanContext& context, VulkanAttachment spec) {
-    if (spec.texture == nullptr) {
-        return spec;
-    }
-    return {
-        .format = spec.texture->getVkFormat(),
-        .image = spec.texture->getVkImage(),
-        .view = {},
-        .memory = {},
-        .texture = spec.texture,
-        .layout = context.getTextureLayout(spec.texture->usage),
-        .level = spec.level,
-        .layer = spec.layer
-    };
+    free(bundle.specializationInfos);
 }
 
 // Creates a special "default" render target (i.e. associated with the swap chain)
-// Note that the attachment structs are unused in this case in favor of VulkanSwapChain.
-VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context) : HwRenderTarget(0, 0),
-        mOffscreen(false), mSamples(1) {}
+VulkanRenderTarget::VulkanRenderTarget() : HwRenderTarget(0, 0), mOffscreen(false), mSamples(1) {}
+
+void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
+    assert_invariant(!mOffscreen);
+    mColor[0] = { .texture = &swapChain.getColorTexture() };
+    mDepth = { .texture = &swapChain.getDepthTexture() };
+    width = swapChain.clientSize.width;
+    height = swapChain.clientSize.height;
+}
 
 VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, uint32_t height,
             uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
             VulkanAttachment depthStencil[2], VulkanStagePool& stagePool) :
             HwRenderTarget(width, height), mOffscreen(true), mSamples(samples) {
-
-    // For each color attachment, create (or fetch from cache) a VkImageView that selects a specific
-    // miplevel and array layer.
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
-        const VulkanAttachment& spec = color[index];
-        mColor[index] = createAttachment(context, spec);
-        VulkanTexture* texture = spec.texture;
-        if (texture == nullptr) {
-            continue;
-        }
-        mColor[index].view = texture->getAttachmentView(spec.level, spec.layer,
-                VK_IMAGE_ASPECT_COLOR_BIT);
+        mColor[index] = color[index];
     }
-
-    // For the depth attachment, create (or fetch from cache) a VkImageView that selects a specific
-    // miplevel and array layer.
-    const VulkanAttachment& depthSpec = depthStencil[0];
-    mDepth = createAttachment(context, depthSpec);
+    mDepth = depthStencil[0];
     VulkanTexture* depthTexture = mDepth.texture;
-    if (depthTexture) {
-        mDepth.view = depthTexture->getAttachmentView(mDepth.level, mDepth.layer,
-                VK_IMAGE_ASPECT_DEPTH_BIT);
-    }
 
     if (samples == 1) {
         return;
@@ -154,24 +154,19 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
     mSamples = samples = reduceSampleCount(samples, limits.framebufferDepthSampleCounts &
             limits.framebufferColorSampleCounts);
 
-    // The sidecar textures need to have only 1 miplevel and 1 array slice.
-    const int level = 1;
-    const int depth = 1;
-
-    // Create sidecar MSAA textures for color attachments.
+    // Create sidecar MSAA textures for color attachments if they don't already exist.
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
         const VulkanAttachment& spec = color[index];
         VulkanTexture* texture = spec.texture;
         if (texture && texture->samples == 1) {
             VulkanTexture* msTexture = texture->getSidecar();
             if (UTILS_UNLIKELY(msTexture == nullptr)) {
-                msTexture = new VulkanTexture(context, texture->target, level,
-                        texture->format, samples, width, height, depth, texture->usage, stagePool);
+                msTexture = new VulkanTexture(context, texture->target, texture->levels,
+                        texture->format, samples, texture->width, texture->height, texture->depth,
+                        texture->usage, stagePool);
                 texture->setSidecar(msTexture);
             }
-            mMsaaAttachments[index] = createAttachment(context, { .texture = msTexture });
-            mMsaaAttachments[index].view = msTexture->getAttachmentView(0, 0,
-                    VK_IMAGE_ASPECT_COLOR_BIT);
+            mMsaaAttachments[index] = { .texture = msTexture };
         }
         if (texture && texture->samples > 1) {
             mMsaaAttachments[index] = mColor[index];
@@ -188,71 +183,63 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
         return;
     }
 
-    // Create sidecar MSAA texture for the depth attachment.
+    // Create sidecar MSAA texture for the depth attachment if it does not already exist.
     VulkanTexture* msTexture = depthTexture->getSidecar();
     if (UTILS_UNLIKELY(msTexture == nullptr)) {
-        msTexture = new VulkanTexture(context, depthTexture->target, level,
-                depthTexture->format, samples, width, height, depth, depthTexture->usage, stagePool);
+        msTexture = new VulkanTexture(context, depthTexture->target, depthTexture->levels,
+                depthTexture->format, samples, depthTexture->width, depthTexture->height,
+                depthTexture->depth, depthTexture->usage, stagePool);
         depthTexture->setSidecar(msTexture);
     }
-    mMsaaDepthAttachment = createAttachment(context, {
-        .format = {},
-        .image = {},
-        .view = {},
-        .memory = {},
+
+    mMsaaDepthAttachment = {
         .texture = msTexture,
-        .layout = {},
-        .level = depthSpec.level,
-        .layer = depthSpec.layer,
-    });
-    mMsaaDepthAttachment.view = msTexture->getAttachmentView(depthSpec.level, depthSpec.layer,
-            VK_IMAGE_ASPECT_DEPTH_BIT);
+        .level = mDepth.level,
+        .layer = mDepth.layer,
+    };
 }
 
-void VulkanRenderTarget::transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkRect2D* bounds) const {
-    const auto& extent = getExtent(currentSurface);
+void VulkanRenderTarget::transformClientRectToPlatform(VkRect2D* bounds) const {
+    const auto& extent = getExtent();
     flipVertically(bounds, extent.height);
     clampToFramebuffer(bounds, extent.width, extent.height);
 }
 
-void VulkanRenderTarget::transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkViewport* bounds) const {
-    flipVertically(bounds, getExtent(currentSurface).height);
+void VulkanRenderTarget::transformClientRectToPlatform(VkViewport* bounds) const {
+    flipVertically(bounds, getExtent().height);
 }
 
-VkExtent2D VulkanRenderTarget::getExtent(VulkanSwapChain* currentSurface) const {
-    if (mOffscreen) {
-        return {width, height};
-    }
-    return currentSurface->clientSize;
+VkExtent2D VulkanRenderTarget::getExtent() const {
+    return {width, height};
 }
 
-VulkanAttachment VulkanRenderTarget::getColor(VulkanSwapChain* currentSurface, int target) const {
-    return (mOffscreen || target > 0) ? mColor[target] : currentSurface->getColor();
+VulkanAttachment VulkanRenderTarget::getColor(int target) const {
+    return mColor[target];
 }
 
 VulkanAttachment VulkanRenderTarget::getMsaaColor(int target) const {
     return mMsaaAttachments[target];
 }
 
-VulkanAttachment VulkanRenderTarget::getDepth(VulkanSwapChain* currentSurface) const {
-    return mOffscreen ? mDepth : currentSurface->depth;
+VulkanAttachment VulkanRenderTarget::getDepth() const {
+    return mDepth;
 }
 
 VulkanAttachment VulkanRenderTarget::getMsaaDepth() const {
     return mMsaaDepthAttachment;
 }
 
-int VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) const {
+uint8_t VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) const {
     if (!mOffscreen) {
         return 1;
     }
-    int count = 0;
-    for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-        if (mColor[i].format == VK_FORMAT_UNDEFINED) {
+    uint8_t count = 0;
+    for (uint8_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
+        if (!mColor[i].texture) {
             continue;
         }
         // NOTE: This must be consistent with VkRenderPass construction (see VulkanFboCache).
-        if (!(pass.subpassMask & (1 << i)) || pass.currentSubpass == 1) {
+        if (!(pass.params.subpassMask & (1 << i)) || pass.currentSubpass == 1) {
             count++;
         }
     }
@@ -273,18 +260,23 @@ VulkanBufferObject::VulkanBufferObject(VulkanContext& context, VulkanStagePool& 
           bindingType(bindingType) {
 }
 
-void VulkanRenderPrimitive::setPrimitiveType(backend::PrimitiveType pt) {
+void VulkanRenderPrimitive::setPrimitiveType(PrimitiveType pt) {
     this->type = pt;
     switch (pt) {
-        case backend::PrimitiveType::NONE:
-        case backend::PrimitiveType::POINTS:
+        case PrimitiveType::POINTS:
             primitiveTopology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
             break;
-        case backend::PrimitiveType::LINES:
+        case PrimitiveType::LINES:
             primitiveTopology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
             break;
-        case backend::PrimitiveType::TRIANGLES:
+        case PrimitiveType::LINE_STRIP:
+            primitiveTopology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+            break;
+        case PrimitiveType::TRIANGLES:
             primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            break;
+        case PrimitiveType::TRIANGLE_STRIP:
+            primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
             break;
     }
 }
@@ -318,5 +310,4 @@ VulkanTimerQuery::~VulkanTimerQuery() {
     mContext.timestamps.used.unset(startingQueryIndex / 2);
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend

@@ -23,8 +23,7 @@
 #include <filament/Skybox.h>
 #include <filament/Texture.h>
 
-#include <image/KtxBundle.h>
-#include <image/KtxUtility.h>
+#include <ktxreader/Ktx1Reader.h>
 
 #include <filament-iblprefilter/IBLPrefilterContext.h>
 
@@ -39,8 +38,8 @@
 #include <string.h>
 
 using namespace filament;
-using namespace image;
 using namespace filament::math;
+using namespace ktxreader;
 using namespace utils;
 
 static constexpr float IBL_INTENSITY = 30000.0f;
@@ -128,14 +127,14 @@ bool IBL::loadFromKtx(const std::string& prefix) {
         using namespace std;
         ifstream file(path.getPath(), ios::binary);
         vector<uint8_t> contents((istreambuf_iterator<char>(file)), {});
-        return new image::KtxBundle(contents.data(), contents.size());
+        return new image::Ktx1Bundle(contents.data(), contents.size());
     };
 
-    KtxBundle* iblKtx = createKtx(iblPath);
-    KtxBundle* skyKtx = createKtx(skyPath);
+    Ktx1Bundle* iblKtx = createKtx(iblPath);
+    Ktx1Bundle* skyKtx = createKtx(skyPath);
 
-    mSkyboxTexture = ktx::createTexture(&mEngine, skyKtx, false);
-    mTexture = ktx::createTexture(&mEngine, iblKtx, false);
+    mSkyboxTexture = Ktx1Reader::createTexture(&mEngine, skyKtx, false);
+    mTexture = Ktx1Reader::createTexture(&mEngine, iblKtx, false);
 
     if (!iblKtx->getSphericalHarmonics(mBands)) {
         return false;
@@ -197,10 +196,10 @@ bool IBL::loadFromDirectory(const utils::Path& path) {
 
 bool IBL::loadCubemapLevel(filament::Texture** texture, const utils::Path& path, size_t level,
         std::string const& levelPrefix) const {
-    Texture::FaceOffsets offsets;
+    uint32_t dim;
     Texture::PixelBufferDescriptor buffer;
-    if (loadCubemapLevel(texture, &buffer, &offsets, path, level, levelPrefix)) {
-        (*texture)->setImage(mEngine, level, std::move(buffer), offsets);
+    if (loadCubemapLevel(texture, &buffer, &dim, path, level, levelPrefix)) {
+        (*texture)->setImage(mEngine, level, 0, 0, 0, dim, dim, 6, std::move(buffer));
         return true;
     }
     return false;
@@ -209,7 +208,7 @@ bool IBL::loadCubemapLevel(filament::Texture** texture, const utils::Path& path,
 bool IBL::loadCubemapLevel(
         filament::Texture** texture,
         Texture::PixelBufferDescriptor* outBuffer,
-        Texture::FaceOffsets* outOffsets,
+        uint32_t* dim,
         const utils::Path& path, size_t level, std::string const& levelPrefix) const {
     static const char* faceSuffix[6] = { "px", "nx", "py", "ny", "pz", "nz" };
 
@@ -249,8 +248,8 @@ bool IBL::loadCubemapLevel(
 
     // RGB_10_11_11_REV encoding: 4 bytes per pixel
     const size_t faceSize = size * size * sizeof(uint32_t);
+    *dim = size;
 
-    Texture::FaceOffsets offsets;
     Texture::PixelBufferDescriptor buffer(
             malloc(faceSize * 6), faceSize * 6,
             Texture::Format::RGB, Texture::Type::UINT_10F_11F_11F_REV,
@@ -260,8 +259,6 @@ bool IBL::loadCubemapLevel(
     uint8_t* p = static_cast<uint8_t*>(buffer.buffer);
 
     for (size_t j = 0; j < 6; j++) {
-        offsets[j] = faceSize * j;
-
         std::string faceName = levelPrefix + faceSuffix[j] + ".rgb32f";
         Path facePath(Path::concat(path, faceName));
         if (!facePath.exists()) {
@@ -285,7 +282,7 @@ bool IBL::loadCubemapLevel(
             break;
         }
 
-        memcpy(p + offsets[j], data, w * h * sizeof(uint32_t));
+        memcpy(p + faceSize * j, data, w * h * sizeof(uint32_t));
 
         stbi_image_free(data);
     }
@@ -293,7 +290,6 @@ bool IBL::loadCubemapLevel(
     if (!success) return false;
 
     *outBuffer = std::move(buffer);
-    *outOffsets = offsets;
 
     return true;
 }

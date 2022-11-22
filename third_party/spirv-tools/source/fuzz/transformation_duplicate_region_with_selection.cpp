@@ -309,9 +309,9 @@ void TransformationDuplicateRegionWithSelection::Apply(
 
   // Construct the merge block.
   std::unique_ptr<opt::BasicBlock> merge_block =
-      MakeUnique<opt::BasicBlock>(MakeUnique<opt::Instruction>(opt::Instruction(
+      MakeUnique<opt::BasicBlock>(MakeUnique<opt::Instruction>(
           ir_context, SpvOpLabel, 0, message_.merge_label_fresh_id(),
-          opt::Instruction::OperandList())));
+          opt::Instruction::OperandList()));
 
   // Get the maps from the protobuf.
   std::map<uint32_t, uint32_t> original_label_to_duplicate_label =
@@ -325,7 +325,7 @@ void TransformationDuplicateRegionWithSelection::Apply(
   std::map<uint32_t, uint32_t> original_id_to_phi_id =
       fuzzerutil::RepeatedUInt32PairToMap(message_.original_id_to_phi_id());
 
-  // Use oveflow ids to fill in any required ids that are missing from these
+  // Use overflow ids to fill in any required ids that are missing from these
   // maps.
   for (auto block : region_blocks) {
     if (original_label_to_duplicate_label.count(block->id()) == 0) {

@@ -59,7 +59,7 @@ vertex {
         vec3 p1 = deformPoint(theta, apex, uv.s + e, uv.t);
         vec3 p2 = deformPoint(theta, apex, uv.s, uv.t + e);
         vec3 normal = normalize(cross(p1 - p, p2 - p));
-        material.worldNormal = objectUniforms.worldFromModelNormalMatrix * normal;
+        material.worldNormal = getWorldFromModelNormalMatrix() * normal;
         mat4 transform = getWorldFromModelMatrix();
         material.worldPosition = mulMat4x4Float3(transform, p);
     }

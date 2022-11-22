@@ -36,7 +36,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
 
     Light light = getDirectionalLight();
 
-    uint channels = objectUniforms.channels & 0xFFu;
+    uint channels = getObjectUniforms().flagsChannels & 0xFFu;
     if ((light.channels & channels) == 0u) {
         return;
     }
@@ -48,7 +48,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
 #endif
 
     float visibility = 1.0;
-#if defined(HAS_SHADOWING)
+#if defined(VARIANT_HAS_SHADOWING)
     if (light.NoL > 0.0) {
         float ssContactShadowOcclusion = 0.0;
 
@@ -56,11 +56,11 @@ void evaluateDirectionalLight(const MaterialInputs material,
         bool cascadeHasVisibleShadows = bool(frameUniforms.cascades & ((1u << cascade) << 8u));
         bool hasDirectionalShadows = bool(frameUniforms.directionalShadows & 1u);
         if (hasDirectionalShadows && cascadeHasVisibleShadows) {
-            uint layer = cascade;
-            visibility = shadow(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
+            highp vec4 shadowPosition = getShadowPosition(true, 0u, cascade, 0.0f);
+            visibility = shadow(true, light_shadowMap, cascade, shadowPosition, 0.0f);
         }
         if ((frameUniforms.directionalShadows & 0x2u) != 0u && visibility > 0.0) {
-            if ((objectUniforms.flags & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {
+            if ((getObjectUniforms().flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {
                 ssContactShadowOcclusion = screenSpaceContactShadow(light.l);
             }
         }

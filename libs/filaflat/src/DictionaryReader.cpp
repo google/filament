@@ -16,7 +16,7 @@
 
 #include <filaflat/DictionaryReader.h>
 
-#include <filaflat/BlobDictionary.h>
+#include <filaflat/ChunkContainer.h>
 #include <filaflat/Unflattener.h>
 
 #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
@@ -34,9 +34,8 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
         ChunkContainer::Type dictionaryTag,
         BlobDictionary& dictionary) {
 
-    Unflattener unflattener(
-            container.getChunkStart(dictionaryTag),
-            container.getChunkEnd(dictionaryTag));
+    auto [start, end] = container.getChunkRange(dictionaryTag);
+    Unflattener unflattener(start, end);
 
     if (dictionaryTag == ChunkType::DictionarySpirv) {
         uint32_t compressionScheme;
@@ -46,7 +45,6 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
         // For now, 1 is the only acceptable compression scheme.
         assert(compressionScheme == 1);
 
-
         uint32_t blobCount;
         if (!unflattener.read(&blobCount)) {
             return false;
@@ -54,22 +52,26 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
 
         dictionary.reserve(blobCount);
         for (uint32_t i = 0; i < blobCount; i++) {
+            unflattener.skipAlignmentPadding();
+
             const char* compressed;
             size_t compressedSize;
             if (!unflattener.read(&compressed, &compressedSize)) {
                 return false;
             }
 
+            assert_invariant((intptr_t(compressed) % 8) == 0);
+
 #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
             size_t spirvSize = smolv::GetDecodedBufferSize(compressed, compressedSize);
             if (spirvSize == 0) {
                 return false;
             }
-            BlobDictionary::Blob spirv(spirvSize);
+            ShaderContent spirv(spirvSize);
             if (!smolv::Decode(compressed, compressedSize, spirv.data(), spirvSize)) {
                 return false;
             }
-            dictionary.addBlob(std::move(spirv));
+            dictionary.emplace_back(std::move(spirv));
 #else
             return false;
 #endif
@@ -90,7 +92,8 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
             }
             // BlobDictionary hold binary chunks and does not care if the data holds text, it is
             // therefore crucial to include the trailing null.
-            dictionary.addBlob(str, strlen(str) + 1);
+            dictionary.emplace_back(strlen(str) + 1);
+            memcpy(dictionary.back().data(), str, dictionary.back().size());
         }
         return true;
     }

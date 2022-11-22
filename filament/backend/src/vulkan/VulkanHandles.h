@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
- #ifndef TNT_FILAMENT_DRIVER_VULKANHANDLES_H
- #define TNT_FILAMENT_DRIVER_VULKANHANDLES_H
+ #ifndef TNT_FILAMENT_BACKEND_VULKANHANDLES_H
+ #define TNT_FILAMENT_BACKEND_VULKANHANDLES_H
 
 #include "VulkanDriver.h"
 #include "VulkanPipelineCache.h"
@@ -24,8 +24,9 @@
 #include "VulkanTexture.h"
 #include "VulkanUtility.h"
 
-namespace filament {
-namespace backend {
+#include "private/backend/SamplerGroup.h"
+
+namespace filament::backend {
 
 struct VulkanProgram : public HwProgram {
     VulkanProgram(VulkanContext& context, const Program& builder) noexcept;
@@ -51,19 +52,20 @@ struct VulkanRenderTarget : private HwRenderTarget {
             VulkanStagePool& stagePool);
 
     // Creates a special "default" render target (i.e. associated with the swap chain)
-    explicit VulkanRenderTarget(VulkanContext& context);
+    explicit VulkanRenderTarget();
 
-    void transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkRect2D* bounds) const;
-    void transformClientRectToPlatform(VulkanSwapChain* currentSurface, VkViewport* bounds) const;
-    VkExtent2D getExtent(VulkanSwapChain* currentSurface) const;
-    VulkanAttachment getColor(VulkanSwapChain* currentSurface, int target) const;
+    void transformClientRectToPlatform(VkRect2D* bounds) const;
+    void transformClientRectToPlatform(VkViewport* bounds) const;
+    VkExtent2D getExtent() const;
+    VulkanAttachment getColor(int target) const;
     VulkanAttachment getMsaaColor(int target) const;
-    VulkanAttachment getDepth(VulkanSwapChain* currentSurface) const;
+    VulkanAttachment getDepth() const;
     VulkanAttachment getMsaaDepth() const;
-    int getColorTargetCount(const VulkanRenderPass& pass) const;
+    uint8_t getColorTargetCount(const VulkanRenderPass& pass) const;
     uint8_t getSamples() const { return mSamples; }
-    bool hasDepth() const { return mDepth.format != VK_FORMAT_UNDEFINED; }
+    bool hasDepth() const { return mDepth.texture; }
     bool isSwapChain() const { return !mOffscreen; }
+    void bindToSwapChain(VulkanSwapChain& surf);
 
 private:
     VulkanAttachment mColor[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
@@ -101,11 +103,13 @@ struct VulkanBufferObject : public HwBufferObject {
 };
 
 struct VulkanSamplerGroup : public HwSamplerGroup {
-    VulkanSamplerGroup(uint32_t count) : HwSamplerGroup(count) {}
+    // NOTE: we have to use out-of-line allocation here because the size of a Handle<> is limited
+    std::unique_ptr<SamplerGroup> sb; // FIXME: this shouldn't depend on filament::SamplerGroup
+    explicit VulkanSamplerGroup(size_t size) noexcept : sb(new SamplerGroup(size)) { }
 };
 
 struct VulkanRenderPrimitive : public HwRenderPrimitive {
-    void setPrimitiveType(backend::PrimitiveType pt);
+    void setPrimitiveType(PrimitiveType pt);
     void setBuffers(VulkanVertexBuffer* vertexBuffer, VulkanIndexBuffer* indexBuffer);
     VulkanVertexBuffer* vertexBuffer = nullptr;
     VulkanIndexBuffer* indexBuffer = nullptr;
@@ -113,18 +117,18 @@ struct VulkanRenderPrimitive : public HwRenderPrimitive {
 };
 
 struct VulkanFence : public HwFence {
-    VulkanFence(const VulkanCommandBuffer& commands) : fence(commands.fence) {}
+    explicit VulkanFence(const VulkanCommandBuffer& commands) : fence(commands.fence) {}
     std::shared_ptr<VulkanCmdFence> fence;
 };
 
 struct VulkanSync : public HwSync {
-    VulkanSync() {}
-    VulkanSync(const VulkanCommandBuffer& commands) : fence(commands.fence) {}
+    VulkanSync() = default;
+    explicit VulkanSync(const VulkanCommandBuffer& commands) : fence(commands.fence) {}
     std::shared_ptr<VulkanCmdFence> fence;
 };
 
 struct VulkanTimerQuery : public HwTimerQuery {
-    VulkanTimerQuery(VulkanContext& context);
+    explicit VulkanTimerQuery(VulkanContext& context);
     ~VulkanTimerQuery();
     uint32_t startingQueryIndex;
     uint32_t stoppingQueryIndex;
@@ -139,12 +143,13 @@ inline constexpr VkBufferUsageFlagBits getBufferObjectUsage(
             return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         case BufferObjectBinding::UNIFORM:
             return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        // when adding more buffer types here, make sure to update VulkanBuffer::loadFromCpu()
+        case BufferObjectBinding::SHADER_STORAGE:
+            return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        // when adding more buffer-types here, make sure to update VulkanBuffer::loadFromCpu()
         // if necessary.
     }
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKANHANDLES_H
+#endif // TNT_FILAMENT_BACKEND_VULKANHANDLES_H

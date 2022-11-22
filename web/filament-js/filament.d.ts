@@ -29,6 +29,9 @@ export function getSupportedFormatSuffix(desired: string): void;
 export function init(assets: string[], onready?: (() => void) | null): void;
 export function fetch(assets: string[], onDone?: (() => void) | null, onFetched?: ((name: string) => void) | null): void;
 export function clearAssetCache(): void;
+export function vectorToArray<T>(vector: Vector<T>): T[];
+export function fitIntoUnitCube(box: Aabb): mat4;
+export function multiplyMatrices(a: mat4, b: mat4): mat4;
 
 export const assets: {[url: string]: Uint8Array};
 
@@ -55,10 +58,19 @@ export interface Vector<T> {
     get(i: number): T;
 }
 
-export function vectorToArray<T>(vector: Vector<T>): T[];
-
 export class SwapChain {}
-export class ColorGrading {}
+
+export interface PickingQueryResult {
+    renderable: number;
+    depth: number;
+    fragCoords: number[];
+}
+
+export type PickCallback = (result: PickingQueryResult) => void;
+
+export class ColorGrading {
+    public static Builder(): ColorGrading$Builder;
+}
 
 export interface Box {
     center: float3;
@@ -92,59 +104,6 @@ export interface LightManager$ShadowOptions {
     maxShadowDistance?: number;
 }
 
-export interface View$AmbientOcclusionOptions {
-    radius?: number;
-    power?: number;
-    bias?: number;
-    resolution?: number;
-    intensity?: number;
-    quality?: View$QualityLevel;
-}
-
-export interface View$DepthOfFieldOptions {
-    cocScale?: number;
-    maxApertureDiameter?: number;
-    enabled?: boolean;
-    filter?: View$DepthOfFieldOptions$Filter;
-}
-
-export interface View$BloomOptions {
-    dirtStrength?: number;
-    strength?: number;
-    resolution?: number;
-    anamorphism?: number;
-    levels?: number;
-    blendMode?: View$BloomOptions$BlendMode;
-    threshold?: boolean;
-    enabled?: boolean;
-    highlight?: number;
-    // TODO: add support for dirt texture in BloomOptions.
-}
-
-export interface View$FogOptions {
-    distance?: number;
-    maximumOpacity?: number;
-    height?: number;
-    heightFalloff?: number;
-    color?: float3;
-    density?: number;
-    inScatteringStart?: number;
-    inScatteringSize?: number;
-    fogColorFromIbl?: boolean;
-    enabled?: boolean;
-}
-
-export interface View$VignetteOptions {
-    midPoint?: number;
-    roundness?: number;
-    feather?: number;
-    color?: float3;
-    enabled?: boolean;
-}
-
-export function fitIntoUnitCube(box: Aabb): mat4;
-export function multiplyMatrices(a: mat4, b: mat4): mat4;
-
 // Clients should use the [PixelBuffer/CompressedPixelBuffer] helper function to contruct PixelBufferDescriptor objects.
 export class driver$PixelBufferDescriptor {
     constructor(byteLength: number, format: PixelDataFormat, datatype: PixelDataType);
@@ -168,6 +127,10 @@ export class Texture {
     public static Builder(): Texture$Builder;
     public setImage(engine: Engine, level: number, pbd: driver$PixelBufferDescriptor): void;
     public setImageCube(engine: Engine, level: number, pbd: driver$PixelBufferDescriptor) : void;
+    public getWidth(engine: Engine, level?: number) : number;
+    public getHeight(engine: Engine, level?: number) : number;
+    public getDepth(engine: Engine, level?: number) : number;
+    public getLevels(engine: Engine) : number;
     public generateMipmaps(engine: Engine) : void;
 }
 
@@ -216,7 +179,15 @@ export class MaterialInstance {
     public setCullingMode(mode: CullingMode): void;
     public setColorWrite(enable: boolean): void;
     public setDepthWrite(enable: boolean): void;
+    public setStencilWrite(enable: boolean): void;
     public setDepthCulling(enable: boolean): void;
+    public setStencilCompareFunction(func: CompareFunc, face?: StencilFace): void;
+    public setStencilOpStencilFail(op: StencilOperation, face?: StencilFace): void;
+    public setStencilOpDepthFail(op: StencilOperation, face?: StencilFace): void;
+    public setStencilOpDepthStencilPass(op: StencilOperation, face?: StencilFace): void;
+    public setStencilReferenceValue(value: Number, face?: StencilFace): void;
+    public setStencilReadMask(readMask: Number, face?: StencilFace): void;
+    public setStencilWriteMask(writeMask: Number, face?: StencilFace): void;
 }
 
 export class EntityManager {
@@ -363,8 +334,6 @@ export class RenderableManager {
     public setGeometryAt(instance: RenderableManager$Instance, primitiveIndex: number,
             type: RenderableManager$PrimitiveType, vertices: VertexBuffer, indices: IndexBuffer,
             offset: number, count: number): void;
-    public setGeometryRangeAt(instance: RenderableManager$Instance, primitiveIndex: number,
-            type: RenderableManager$PrimitiveType, offset: number, count: number): void;
     public setBlendOrderAt(instance: RenderableManager$Instance, primitiveIndex: number,
             order: number): void;
     public getEnabledAttributesAt(instance: RenderableManager$Instance,
@@ -448,7 +417,13 @@ export class Camera {
 
 export class ColorGrading$Builder {
     public quality(qualityLevel: ColorGrading$QualityLevel): ColorGrading$Builder;
+    public format(format: ColorGrading$LutFormat): ColorGrading$Builder;
+    public dimensions(dim: number): ColorGrading$Builder;
     public toneMapping(toneMapping: ColorGrading$ToneMapping): ColorGrading$Builder;
+    public luminanceScaling(luminanceScaling: boolean): ColorGrading$Builder;
+    public gamutMapping(gamutMapping: boolean): ColorGrading$Builder;
+    public exposure(exposure: number): ColorGrading$Builder;
+    public nightAdaptation(adaptation: boolean): ColorGrading$Builder;
     public whiteBalance(temperature: number, tint: number): ColorGrading$Builder;
     public channelMixer(outRed: float3, outGreen: float3, outBlue: float3): ColorGrading$Builder;
     public shadowsMidtonesHighlights(shadows: float4, midtones: float4, highlights: float4,
@@ -463,6 +438,7 @@ export class ColorGrading$Builder {
 }
 
 export class IndirectLight {
+    public static Builder(): IndirectLight$Builder;
     public setIntensity(intensity: number): void;
     public getIntensity(): number;
     public setRotation(value: mat3): void;
@@ -510,6 +486,7 @@ export class RenderTarget {
 }
 
 export class View {
+    public pick(x: number, y: number, cb: PickCallback): void;
     public setCamera(camera: Camera): void;
     public setColorGrading(colorGrading: ColorGrading): void;
     public setScene(scene: Scene): void;
@@ -518,13 +495,21 @@ export class View {
     public setRenderTarget(renderTarget: RenderTarget): void;
     public setAmbientOcclusionOptions(options: View$AmbientOcclusionOptions): void;
     public setDepthOfFieldOptions(options: View$DepthOfFieldOptions): void;
+    public setMultiSampleAntiAliasingOptions(options: View$MultiSampleAntiAliasingOptions): void;
+    public setTemporalAntiAliasingOptions(options: View$TemporalAntiAliasingOptions): void;
+    public setScreenSpaceReflectionsOptions(options: View$ScreenSpaceReflectionsOptions): void;
     public setBloomOptions(options: View$BloomOptions): void;
     public setFogOptions(options: View$FogOptions): void;
     public setVignetteOptions(options: View$VignetteOptions): void;
+    public setGuardBandOptions(options: View$GuardBandOptions): void;
     public setAmbientOcclusion(ambientOcclusion: View$AmbientOcclusion): void;
     public getAmbientOcclusion(): View$AmbientOcclusion;
     public setBlendMode(mode: View$BlendMode): void;
     public getBlendMode(): View$BlendMode;
+    public setPostProcessingEnabled(enabled: boolean): void;
+    public setAntiAliasing(antialiasing: View$AntiAliasing): void;
+    public setStencilBufferEnabled(enabled: boolean): void;
+    public isStencilBufferEnabled(): boolean;
 }
 
 export class TransformManager {
@@ -550,15 +535,18 @@ export class Engine {
     public static create(canvas: HTMLCanvasElement, contextOptions?: object): Engine;
     public execute(): void;
     public createCamera(entity: Entity): Camera;
-    public createIblFromKtx(urlOrBuffer: BufferReference): IndirectLight;
     public createMaterial(urlOrBuffer: BufferReference): Material;
     public createRenderer(): Renderer;
     public createScene(): Scene;
-    public createSkyFromKtx(urlOrBuffer: BufferReference): Skybox;
     public createSwapChain(): SwapChain;
     public createTextureFromJpeg(urlOrBuffer: BufferReference, options?: object): Texture;
     public createTextureFromPng(urlOrBuffer: BufferReference, options?: object): Texture;
-    public createTextureFromKtx(urlOrBuffer: BufferReference, options?: object): Texture;
+
+    public createIblFromKtx1(urlOrBuffer: BufferReference): IndirectLight;
+    public createSkyFromKtx1(urlOrBuffer: BufferReference): Skybox;
+    public createTextureFromKtx1(urlOrBuffer: BufferReference, options?: object): Texture;
+    public createTextureFromKtx2(urlOrBuffer: BufferReference, options?: object): Texture;
+
     public createView(): View;
 
     public createAssetLoader(): gltfio$AssetLoader;
@@ -585,12 +573,18 @@ export class Engine {
     public getSupportedFormatSuffix(suffix: string): void;
     public getTransformManager(): TransformManager;
     public init(assets: string[], onready: () => void): void;
-    public loadFilamesh(urlOrBuffer: BufferReference, definstance: MaterialInstance, matinstances: object): Filamesh;
+    public loadFilamesh(urlOrBuffer: BufferReference, definstance?: MaterialInstance, matinstances?: object): Filamesh;
+}
+
+export class Ktx2Reader {
+    constructor(engine: Engine, quiet: boolean)
+    public requestFormat(format: Texture$InternalFormat): void;
+    public unrequestFormat(format: Texture$InternalFormat): void;
+    public load(urlOrBuffer: BufferReference, transfer: TransferFunction): Texture|null;
 }
 
 export class gltfio$AssetLoader {
-    public createAssetFromJson(urlOrBuffer: BufferReference): gltfio$FilamentAsset;
-    public createAssetFromBinary(urlOrBuffer: BufferReference): gltfio$FilamentAsset;
+    public createAsset(urlOrBuffer: BufferReference): gltfio$FilamentAsset;
     public createInstancedAsset(urlOrBuffer: BufferReference,
             instances: (gltfio$FilamentInstance | null)[]): gltfio$FilamentAsset;
     public destroyAsset(asset: gltfio$FilamentAsset): void;
@@ -606,15 +600,16 @@ export class gltfio$FilamentAsset {
     public getEntityByName(name: string): Entity;
     public getEntitiesByPrefix(name: string): Entity[];
     public getLightEntities(): Entity[];
+    public getRenderableEntities(): Entity[];
     public getCameraEntities(): Entity[];
     public getRoot(): Entity;
     public popRenderable(): Entity;
-    public getMaterialInstances(): Vector<MaterialInstance>;
-    public getResourceUris(): Vector<string>;
+    public getInstance(): gltfio$FilamentInstance;
+    public geAssetInstances(): gltfio$FilamentInstance[];
+    public getResourceUris(): string[];
     public getBoundingBox(): Aabb;
     public getName(entity: Entity): string;
     public getExtras(entity: Entity): string;
-    public getAnimator(): gltfio$Animator;
     public getWireframe(): Entity;
     public getEngine(): Engine;
     public releaseSourceData(): void;
@@ -625,11 +620,20 @@ export class gltfio$FilamentInstance {
     public getEntities(): Vector<Entity>;
     public getRoot(): Entity;
     public getAnimator(): gltfio$Animator;
+    public getSkinNames(): Vector<string>;
+    public attachSkin(skinIndex: number, entity: Entity): void;
+    public detachSkin(skinIndex: number, entity: Entity): void;
+    public getMaterialInstances(): Vector<MaterialInstance>;
+    public detachMaterialInstances(): void;
+    public getMaterialVariantNames(): string[];
+    public applyMaterialVariant(index: number): void;
 }
 
 export class gltfio$Animator {
     public applyAnimation(index: number): void;
+    public applyCrossFade(previousAnimIndex: number, previousAnimTime: number, alpha: number): void;
     public updateBoneMatrices(): void;
+    public resetBoneMatrices(): void;
     public getAnimationCount(): number;
     public getAnimationDuration(index: number): number;
     public getAnimationName(index: number): string;
@@ -649,6 +653,8 @@ export class SurfaceOrientation$Builder {
 
 export class SurfaceOrientation {
     public getQuats(quatCount: number): Int16Array;
+    public getQuatsHalf4(quatCount: number): Uint16Array;
+    public getQuatsFloat4(quatCount: number): Float32Array;
     public delete(): void;
 }
 
@@ -671,12 +677,17 @@ export enum Camera$Projection {
     ORTHO,
 }
 
- export enum ColorGrading$QualityLevel {
+export enum ColorGrading$QualityLevel {
     LOW,
     MEDIUM,
     HIGH,
     ULTRA,
- }
+}
+
+export enum ColorGrading$LutFormat {
+    INTEGER,
+    FLOAT,
+}
 
 export enum ColorGrading$ToneMapping {
     LINEAR,
@@ -703,6 +714,10 @@ export enum CompressedPixelDataType {
     DXT1_RGBA,
     DXT3_RGBA,
     DXT5_RGBA,
+    DXT1_SRGB,
+    DXT1_SRGBA,
+    DXT3_SRGBA,
+    DXT5_SRGBA,
     RGBA_ASTC_4x4,
     RGBA_ASTC_5x4,
     RGBA_ASTC_5x5,
@@ -787,6 +802,23 @@ export enum CullingMode {
     FRONT_AND_BACK,
 }
 
+export enum StencilOperation {
+    KEEP,
+    ZERO,
+    REPLACE,
+    INCR_CLAMP,
+    INCR_WRAP,
+    DECR_CLAMP,
+    DECR_WRAP,
+    INVERT,
+}
+
+export enum StencilFace {
+    FRONT,
+    BACK,
+    FRONT_AND_BACK,
+}
+
 export enum PixelDataFormat {
     R,
     R_INTEGER,
@@ -818,7 +850,9 @@ export enum PixelDataType {
 export enum RenderableManager$PrimitiveType {
     POINTS,
     LINES,
+    LINE_STRIP,
     TRIANGLES,
+    TRIANGLE_STRIP,
     NONE,
 }
 
@@ -904,6 +938,10 @@ export enum Texture$InternalFormat {
     DXT1_RGBA,
     DXT3_RGBA,
     DXT5_RGBA,
+    DXT1_SRGB,
+    DXT1_SRGBA,
+    DXT3_SRGBA,
+    DXT5_SRGBA,
     RGBA_ASTC_4x4,
     RGBA_ASTC_5x4,
     RGBA_ASTC_5x5,
@@ -967,6 +1005,11 @@ export enum RenderTarget$AttachmentPoint {
     DEPTH,
 }
 
+export enum View$AmbientOcclusion {
+    NONE,
+    SSAO,
+}
+
 export enum VertexAttribute {
     POSITION = 0,
     TANGENTS = 1,
@@ -1023,42 +1066,23 @@ export enum VertexBuffer$AttributeType {
     HALF4,
 }
 
-export enum View$AntiAliasing {
-    NONE,
-    FXAA,
-}
-
-export enum View$BlendMode {
-    OPAQUE,
-    TRANSLUCENT,
-}
-
-export enum View$QualityLevel {
-    LOW,
-    MEDIUM,
-    HIGH,
-    ULTRA,
-}
-
-export enum View$AmbientOcclusion {
-    NONE,
-    SSAO,
-}
-
-export enum View$DepthOfFieldOptions$Filter {
-    NONE,
-    MEDIAN = 2,
-}
-
-export enum View$BloomOptions$BlendMode {
-    ADD,
-    INTERPOLATE,
-}
-
 export enum WrapMode {
     CLAMP_TO_EDGE,
     REPEAT,
     MIRRORED_REPEAT,
+}
+
+export enum Ktx2Reader$TransferFunction {
+    LINEAR,
+    sRGB,
+}
+
+export enum Ktx2Reader$Result {
+    SUCCESS,
+    COMPRESSED_TRANSCODE_FAILURE,
+    UNCOMPRESSED_TRANSCODE_FAILURE,
+    FORMAT_UNSUPPORTED,
+    FORMAT_ALREADY_REQUESTED,
 }
 
 export function _malloc(size: number): number;
@@ -1070,3 +1094,630 @@ interface HeapInterface {
 }
 
 export const HEAPU8 : HeapInterface;
+
+// The remainder of this file is generated by beamsplitter
+
+/**
+ * Generic quality level.
+ */
+export enum View$QualityLevel {
+    LOW,
+    MEDIUM,
+    HIGH,
+    ULTRA,
+}
+
+export enum View$BlendMode {
+    OPAQUE,
+    TRANSLUCENT,
+}
+
+/**
+ * Dynamic resolution can be used to either reach a desired target frame rate
+ * by lowering the resolution of a View, or to increase the quality when the
+ * rendering is faster than the target frame rate.
+ *
+ * This structure can be used to specify the minimum scale factor used when
+ * lowering the resolution of a View, and the maximum scale factor used when
+ * increasing the resolution for higher quality rendering. The scale factors
+ * can be controlled on each X and Y axis independently. By default, all scale
+ * factors are set to 1.0.
+ *
+ * enabled:   enable or disables dynamic resolution on a View
+ *
+ * homogeneousScaling: by default the system scales the major axis first. Set this to true
+ *                     to force homogeneous scaling.
+ *
+ * minScale:  the minimum scale in X and Y this View should use
+ *
+ * maxScale:  the maximum scale in X and Y this View should use
+ *
+ * quality:   upscaling quality.
+ *            LOW: 1 bilinear tap, Medium: 4 bilinear taps, High: 9 bilinear taps (tent)
+ *
+ * \note
+ * Dynamic resolution is only supported on platforms where the time to render
+ * a frame can be measured accurately. Dynamic resolution is currently only
+ * supported on Android.
+ *
+ * @see Renderer::FrameRateOptions
+ *
+ */
+export interface View$DynamicResolutionOptions {
+    /**
+     * minimum scale factors in x and y
+     */
+    minScale?: float2;
+    /**
+     * maximum scale factors in x and y
+     */
+    maxScale?: float2;
+    /**
+     * sharpness when QualityLevel::MEDIUM or higher is used [0 (disabled), 1 (sharpest)]
+     */
+    sharpness?: number;
+    /**
+     * enable or disable dynamic resolution
+     */
+    enabled?: boolean;
+    /**
+     * set to true to force homogeneous scaling
+     */
+    homogeneousScaling?: boolean;
+    /**
+     * Upscaling quality
+     * LOW:    bilinear filtered blit. Fastest, poor quality
+     * MEDIUM: AMD FidelityFX FSR1 w/ mobile optimizations
+     * HIGH:   AMD FidelityFX FSR1 w/ mobile optimizations
+     * ULTRA:  AMD FidelityFX FSR1
+     *      FSR1 require a well anti-aliased (MSAA or TAA), noise free scene.
+     *
+     * The default upscaling quality is set to LOW.
+     */
+    quality?: View$QualityLevel;
+}
+
+export enum View$BloomOptions$BlendMode {
+    ADD, // Bloom is modulated by the strength parameter and added to the scene
+    INTERPOLATE, // Bloom is interpolated with the scene using the strength parameter
+}
+
+/**
+ * Options to control the bloom effect
+ *
+ * enabled:     Enable or disable the bloom post-processing effect. Disabled by default.
+ *
+ * levels:      Number of successive blurs to achieve the blur effect, the minimum is 3 and the
+ *              maximum is 12. This value together with resolution influences the spread of the
+ *              blur effect. This value can be silently reduced to accommodate the original
+ *              image size.
+ *
+ * resolution:  Resolution of bloom's minor axis. The minimum value is 2^levels and the
+ *              the maximum is lower of the original resolution and 4096. This parameter is
+ *              silently clamped to the minimum and maximum.
+ *              It is highly recommended that this value be smaller than the target resolution
+ *              after dynamic resolution is applied (horizontally and vertically).
+ *
+ * strength:    how much of the bloom is added to the original image. Between 0 and 1.
+ *
+ * blendMode:   Whether the bloom effect is purely additive (false) or mixed with the original
+ *              image (true).
+ *
+ * anamorphism: Bloom's aspect ratio (x/y), for artistic purposes.
+ *
+ * threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
+ *              useful for artistic reasons and is usually needed when a dirt texture is used.
+ *
+ * dirt:        A dirt/scratch/smudges texture (that can be RGB), which gets added to the
+ *              bloom effect. Smudges are visible where bloom occurs. Threshold must be
+ *              enabled for the dirt effect to work properly.
+ *
+ * dirtStrength: Strength of the dirt texture.
+ */
+export interface View$BloomOptions {
+    // JavaScript binding for dirt is not yet supported, must use default value.
+    // JavaScript binding for dirtStrength is not yet supported, must use default value.
+    /**
+     * bloom's strength between 0.0 and 1.0
+     */
+    strength?: number;
+    /**
+     * resolution of vertical axis (2^levels to 2048)
+     */
+    resolution?: number;
+    /**
+     * bloom x/y aspect-ratio (1/32 to 32)
+     */
+    anamorphism?: number;
+    /**
+     * number of blur levels (3 to 11)
+     */
+    levels?: number;
+    /**
+     * how the bloom effect is applied
+     */
+    blendMode?: View$BloomOptions$BlendMode;
+    /**
+     * whether to threshold the source
+     */
+    threshold?: boolean;
+    /**
+     * enable or disable bloom
+     */
+    enabled?: boolean;
+    /**
+     * limit highlights to this value before bloom [10, +inf]
+     */
+    highlight?: number;
+    /**
+     * enable screen-space lens flare
+     */
+    lensFlare?: boolean;
+    /**
+     * enable starburst effect on lens flare
+     */
+    starburst?: boolean;
+    /**
+     * amount of chromatic aberration
+     */
+    chromaticAberration?: number;
+    /**
+     * number of flare "ghosts"
+     */
+    ghostCount?: number;
+    /**
+     * spacing of the ghost in screen units [0, 1[
+     */
+    ghostSpacing?: number;
+    /**
+     * hdr threshold for the ghosts
+     */
+    ghostThreshold?: number;
+    /**
+     * thickness of halo in vertical screen units, 0 to disable
+     */
+    haloThickness?: number;
+    /**
+     * radius of halo in vertical screen units [0, 0.5]
+     */
+    haloRadius?: number;
+    /**
+     * hdr threshold for the halo
+     */
+    haloThreshold?: number;
+}
+
+/**
+ * Options to control fog in the scene
+ */
+export interface View$FogOptions {
+    /**
+     * distance in world units from the camera where the fog starts ( >= 0.0 )
+     */
+    distance?: number;
+    /**
+     * fog's maximum opacity between 0 and 1
+     */
+    maximumOpacity?: number;
+    /**
+     * fog's floor in world units
+     */
+    height?: number;
+    /**
+     * how fast fog dissipates with altitude
+     */
+    heightFalloff?: number;
+    /**
+     * fog's color (linear), see fogColorFromIbl
+     */
+    color?: float3;
+    /**
+     * fog's density at altitude given by 'height'
+     */
+    density?: number;
+    /**
+     * distance in world units from the camera where in-scattering starts
+     */
+    inScatteringStart?: number;
+    /**
+     * size of in-scattering (>0 to activate). Good values are >> 1 (e.g. ~10 - 100).
+     */
+    inScatteringSize?: number;
+    /**
+     * Fog color will be modulated by the IBL color in the view direction.
+     */
+    fogColorFromIbl?: boolean;
+    /**
+     * enable or disable fog
+     */
+    enabled?: boolean;
+}
+
+export enum View$DepthOfFieldOptions$Filter {
+    NONE,
+    UNUSED,
+    MEDIAN,
+}
+
+/**
+ * Options to control Depth of Field (DoF) effect in the scene.
+ *
+ * cocScale can be used to set the depth of field blur independently from the camera
+ * aperture, e.g. for artistic reasons. This can be achieved by setting:
+ *      cocScale = cameraAperture / desiredDoFAperture
+ *
+ * @see Camera
+ */
+export interface View$DepthOfFieldOptions {
+    /**
+     * circle of confusion scale factor (amount of blur)
+     */
+    cocScale?: number;
+    /**
+     * maximum aperture diameter in meters (zero to disable rotation)
+     */
+    maxApertureDiameter?: number;
+    /**
+     * enable or disable depth of field effect
+     */
+    enabled?: boolean;
+    /**
+     * filter to use for filling gaps in the kernel
+     */
+    filter?: View$DepthOfFieldOptions$Filter;
+    /**
+     * perform DoF processing at native resolution
+     */
+    nativeResolution?: boolean;
+    /**
+     * Number of of rings used by the gather kernels. The number of rings affects quality
+     * and performance. The actual number of sample per pixel is defined
+     * as (ringCount * 2 - 1)^2. Here are a few commonly used values:
+     *       3 rings :   25 ( 5x 5 grid)
+     *       4 rings :   49 ( 7x 7 grid)
+     *       5 rings :   81 ( 9x 9 grid)
+     *      17 rings : 1089 (33x33 grid)
+     *
+     * With a maximum circle-of-confusion of 32, it is never necessary to use more than 17 rings.
+     *
+     * Usually all three settings below are set to the same value, however, it is often
+     * acceptable to use a lower ring count for the "fast tiles", which improves performance.
+     * Fast tiles are regions of the screen where every pixels have a similar
+     * circle-of-confusion radius.
+     *
+     * A value of 0 means default, which is 5 on desktop and 3 on mobile.
+     *
+     * @{
+     */
+    foregroundRingCount?: number;
+    /**
+     * number of kernel rings for background tiles
+     */
+    backgroundRingCount?: number;
+    /**
+     * number of kernel rings for fast tiles
+     */
+    fastGatherRingCount?: number;
+    /**
+     * maximum circle-of-confusion in pixels for the foreground, must be in [0, 32] range.
+     * A value of 0 means default, which is 32 on desktop and 24 on mobile.
+     */
+    maxForegroundCOC?: number;
+    /**
+     * maximum circle-of-confusion in pixels for the background, must be in [0, 32] range.
+     * A value of 0 means default, which is 32 on desktop and 24 on mobile.
+     */
+    maxBackgroundCOC?: number;
+}
+
+/**
+ * Options to control the vignetting effect.
+ */
+export interface View$VignetteOptions {
+    /**
+     * high values restrict the vignette closer to the corners, between 0 and 1
+     */
+    midPoint?: number;
+    /**
+     * controls the shape of the vignette, from a rounded rectangle (0.0), to an oval (0.5), to a circle (1.0)
+     */
+    roundness?: number;
+    /**
+     * softening amount of the vignette effect, between 0 and 1
+     */
+    feather?: number;
+    /**
+     * color of the vignette effect, alpha is currently ignored
+     */
+    color?: float4;
+    /**
+     * enables or disables the vignette effect
+     */
+    enabled?: boolean;
+}
+
+/**
+ * Structure used to set the precision of the color buffer and related quality settings.
+ *
+ * @see setRenderQuality, getRenderQuality
+ */
+export interface View$RenderQuality {
+    /**
+     * Sets the quality of the HDR color buffer.
+     *
+     * A quality of HIGH or ULTRA means using an RGB16F or RGBA16F color buffer. This means
+     * colors in the LDR range (0..1) have a 10 bit precision. A quality of LOW or MEDIUM means
+     * using an R11G11B10F opaque color buffer or an RGBA16F transparent color buffer. With
+     * R11G11B10F colors in the LDR range have a precision of either 6 bits (red and green
+     * channels) or 5 bits (blue channel).
+     */
+    hdrColorBuffer?: View$QualityLevel;
+}
+
+/**
+ * Screen Space Cone Tracing (SSCT) options
+ * Ambient shadows from dominant light
+ */
+export interface View$AmbientOcclusionOptions$Ssct {
+    /**
+     * full cone angle in radian, between 0 and pi/2
+     */
+    lightConeRad?: number;
+    /**
+     * how far shadows can be cast
+     */
+    shadowDistance?: number;
+    /**
+     * max distance for contact
+     */
+    contactDistanceMax?: number;
+    /**
+     * intensity
+     */
+    intensity?: number;
+    /**
+     * light direction
+     */
+    lightDirection?: float3;
+    /**
+     * depth bias in world units (mitigate self shadowing)
+     */
+    depthBias?: number;
+    /**
+     * depth slope bias (mitigate self shadowing)
+     */
+    depthSlopeBias?: number;
+    /**
+     * tracing sample count, between 1 and 255
+     */
+    sampleCount?: number;
+    /**
+     * # of rays to trace, between 1 and 255
+     */
+    rayCount?: number;
+    /**
+     * enables or disables SSCT
+     */
+    enabled?: boolean;
+}
+
+/**
+ * Options for screen space Ambient Occlusion (SSAO) and Screen Space Cone Tracing (SSCT)
+ * @see setAmbientOcclusionOptions()
+ */
+export interface View$AmbientOcclusionOptions {
+    /**
+     * Ambient Occlusion radius in meters, between 0 and ~10.
+     */
+    radius?: number;
+    /**
+     * Controls ambient occlusion's contrast. Must be positive.
+     */
+    power?: number;
+    /**
+     * Self-occlusion bias in meters. Use to avoid self-occlusion. Between 0 and a few mm.
+     */
+    bias?: number;
+    /**
+     * How each dimension of the AO buffer is scaled. Must be either 0.5 or 1.0.
+     */
+    resolution?: number;
+    /**
+     * Strength of the Ambient Occlusion effect.
+     */
+    intensity?: number;
+    /**
+     * depth distance that constitute an edge for filtering
+     */
+    bilateralThreshold?: number;
+    /**
+     * affects # of samples used for AO.
+     */
+    quality?: View$QualityLevel;
+    /**
+     * affects AO smoothness
+     */
+    lowPassFilter?: View$QualityLevel;
+    /**
+     * affects AO buffer upsampling quality
+     */
+    upsampling?: View$QualityLevel;
+    /**
+     * enables or disables screen-space ambient occlusion
+     */
+    enabled?: boolean;
+    /**
+     * enables bent normals computation from AO, and specular AO
+     */
+    bentNormals?: boolean;
+    /**
+     * min angle in radian to consider
+     */
+    minHorizonAngleRad?: number;
+    // JavaScript binding for ssct is not yet supported, must use default value.
+}
+
+/**
+ * Options for Temporal Multi-Sample Anti-aliasing (MSAA)
+ * @see setMultiSampleAntiAliasingOptions()
+ */
+export interface View$MultiSampleAntiAliasingOptions {
+    /**
+     * enables or disables msaa
+     */
+    enabled?: boolean;
+    /**
+     * sampleCount number of samples to use for multi-sampled anti-aliasing.\n
+     *              0: treated as 1
+     *              1: no anti-aliasing
+     *              n: sample count. Effective sample could be different depending on the
+     *                 GPU capabilities.
+     */
+    sampleCount?: number;
+    /**
+     * custom resolve improves quality for HDR scenes, but may impact performance.
+     */
+    customResolve?: boolean;
+}
+
+/**
+ * Options for Temporal Anti-aliasing (TAA)
+ * @see setTemporalAntiAliasingOptions()
+ */
+export interface View$TemporalAntiAliasingOptions {
+    /**
+     * reconstruction filter width typically between 0 (sharper, aliased) and 1 (smoother)
+     */
+    filterWidth?: number;
+    /**
+     * history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA).
+     */
+    feedback?: number;
+    /**
+     * enables or disables temporal anti-aliasing
+     */
+    enabled?: boolean;
+}
+
+/**
+ * Options for Screen-space Reflections.
+ * @see setScreenSpaceReflectionsOptions()
+ */
+export interface View$ScreenSpaceReflectionsOptions {
+    /**
+     * ray thickness, in world units
+     */
+    thickness?: number;
+    /**
+     * bias, in world units, to prevent self-intersections
+     */
+    bias?: number;
+    /**
+     * maximum distance, in world units, to raycast
+     */
+    maxDistance?: number;
+    /**
+     * stride, in texels, for samples along the ray.
+     */
+    stride?: number;
+    enabled?: boolean;
+}
+
+/**
+ * Options for the  screen-space guard band.
+ * A guard band can be enabled to avoid some artifacts towards the edge of the screen when
+ * using screen-space effects such as SSAO. Enabling the guard band reduces performance slightly.
+ * Currently the guard band can only be enabled or disabled.
+ */
+export interface View$GuardBandOptions {
+    enabled?: boolean;
+}
+
+/**
+ * List of available post-processing anti-aliasing techniques.
+ * @see setAntiAliasing, getAntiAliasing, setSampleCount
+ */
+export enum View$AntiAliasing {
+    NONE, // no anti aliasing performed as part of post-processing
+    FXAA, // FXAA is a low-quality but very efficient type of anti-aliasing. (default).
+}
+
+/**
+ * List of available post-processing dithering techniques.
+ */
+export enum View$Dithering {
+    NONE, // No dithering
+    TEMPORAL, // Temporal dithering (default)
+}
+
+/**
+ * List of available shadow mapping techniques.
+ * @see setShadowType
+ */
+export enum View$ShadowType {
+    PCF, // percentage-closer filtered shadows (default)
+    VSM, // variance shadows
+    DPCF, // PCF with contact hardening simulation
+    PCSS, // PCF with soft shadows and contact hardening
+}
+
+/**
+ * View-level options for VSM Shadowing.
+ * @see setVsmShadowOptions()
+ * @warning This API is still experimental and subject to change.
+ */
+export interface View$VsmShadowOptions {
+    /**
+     * Sets the number of anisotropic samples to use when sampling a VSM shadow map. If greater
+     * than 0, mipmaps will automatically be generated each frame for all lights.
+     *
+     * The number of anisotropic samples = 2 ^ vsmAnisotropy.
+     */
+    anisotropy?: number;
+    /**
+     * Whether to generate mipmaps for all VSM shadow maps.
+     */
+    mipmapping?: boolean;
+    /**
+     * The number of MSAA samples to use when rendering VSM shadow maps.
+     * Must be a power-of-two and greater than or equal to 1. A value of 1 effectively turns
+     * off MSAA.
+     * Higher values may not be available depending on the underlying hardware.
+     */
+    msaaSamples?: number;
+    /**
+     * Whether to use a 32-bits or 16-bits texture format for VSM shadow maps. 32-bits
+     * precision is rarely needed, but it does reduces light leaks as well as "fading"
+     * of the shadows in some situations. Setting highPrecision to true for a single
+     * shadow map will double the memory usage of all shadow maps.
+     */
+    highPrecision?: boolean;
+    /**
+     * VSM minimum variance scale, must be positive.
+     */
+    minVarianceScale?: number;
+    /**
+     * VSM light bleeding reduction amount, between 0 and 1.
+     */
+    lightBleedReduction?: number;
+}
+
+/**
+ * View-level options for DPCF and PCSS Shadowing.
+ * @see setSoftShadowOptions()
+ * @warning This API is still experimental and subject to change.
+ */
+export interface View$SoftShadowOptions {
+    /**
+     * Globally scales the penumbra of all DPCF and PCSS shadows
+     * Acceptable values are greater than 0
+     */
+    penumbraScale?: number;
+    /**
+     * Globally scales the computed penumbra ratio of all DPCF and PCSS shadows.
+     * This effectively controls the strength of contact hardening effect and is useful for
+     * artistic purposes. Higher values make the shadows become softer faster.
+     * Acceptable values are equal to or greater than 1.
+     */
+    penumbraRatioScale?: number;
+}

@@ -19,7 +19,7 @@
 namespace filamat {
 
 DictionaryTextChunk::DictionaryTextChunk(LineDictionary&& dictionary, ChunkType chunkType) :
-        Chunk(chunkType), mDictionary(dictionary) {
+        Chunk(chunkType), mDictionary(std::move(dictionary)) {
 }
 
 void DictionaryTextChunk::flatten(Flattener& f) {
@@ -28,7 +28,7 @@ void DictionaryTextChunk::flatten(Flattener& f) {
 
     // Strings
     for (size_t i = 0 ; i < mDictionary.getLineCount() ; i++) {
-        f.writeString(mDictionary.getString(i).c_str());
+        f.writeString(mDictionary.getString(i).data());
     }
 }
 

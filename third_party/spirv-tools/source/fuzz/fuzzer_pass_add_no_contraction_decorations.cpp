@@ -22,9 +22,10 @@ namespace fuzz {
 FuzzerPassAddNoContractionDecorations::FuzzerPassAddNoContractionDecorations(
     opt::IRContext* ir_context, TransformationContext* transformation_context,
     FuzzerContext* fuzzer_context,
-    protobufs::TransformationSequence* transformations)
+    protobufs::TransformationSequence* transformations,
+    bool ignore_inapplicable_transformations)
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
-                 transformations) {}
+                 transformations, ignore_inapplicable_transformations) {}
 
 void FuzzerPassAddNoContractionDecorations::Apply() {
   // Consider every instruction in every block in every function.

@@ -28,6 +28,9 @@ bool spvIsOpenCLEnv(spv_target_env env);
 // Returns true if |env| is an OPENGL environment, false otherwise.
 bool spvIsOpenGLEnv(spv_target_env env);
 
+// Returns true if |env| is an implemented/valid environment, false otherwise.
+bool spvIsValidEnv(spv_target_env env);
+
 // Returns the version number for the given SPIR-V target environment.
 uint32_t spvVersionForTargetEnv(spv_target_env env);
 
@@ -37,7 +40,7 @@ std::string spvLogStringForEnv(spv_target_env env);
 
 // Returns a formatted list of all SPIR-V target environment names that
 // can be parsed by spvParseTargetEnv.
-// |pad| is the number of space characters that the begining of each line
+// |pad| is the number of space characters that the beginning of each line
 //       except the first one will be padded with.
 // |wrap| is the max length of lines the user desires. Word-wrapping will
 //        occur to satisfy this limit.

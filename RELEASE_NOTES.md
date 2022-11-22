@@ -3,11 +3,423 @@
 This file contains one line summaries of commits that are worthy of mentioning in release notes.
 A new header is inserted each time a *tag* is created.
 
-## v1.12.6 (currently main branch)
+## main branch
+
+## v1.29.0
+
+- gltfio: calculate primitive's AABB correctly.
+- gltfio: recompute bounding boxes with morph targets
+- engine: add missing getters on `MaterialInstance`
+- WebGL: add missing `ColorGrading` JS bindings
+- engine: improvements/cleanup of Shadow mapping code [⚠️ **Recompile Materials**]
+- engine: fix potential memory corruption with larger scenes
+- engine: VSM's MSAA setting is now per-view instead of per-light [⚠️ **API Change**]
+
+## v1.28.3
+
+- backend: add support for GGP platform
+- engine: primitives with `CullingMode::FRONT_AND_BACK` are now skipped.
+
+## v1.28.2
+
+- gltfio: support EXT_meshopt_compression
+- release packaging: fixed location of default IBL file
+
+## v1.28.1
+
+- gltfio: fix reloading crash in ubershader mode
+- Vulkan: improve performance in the readPixels path
+- engine: raise the spot shadows limit to 64, from 14.
+- engine: add experimental support for point light shadows.
+- gltfio: fix ubershader issues with assignment of dummy textures
+- gltfio: material instances and variants are now accessed via `FilamentInstance` [⚠️ **API Change**]
+- gltfio: the animator can now only be accessed via `FilamentInstance` [⚠️ **API Change**]
+- engine: fix "stable" shadows and make the default cascade splits logarithmic.
+- engine: Add new quality options to EVSM shadows + rendering fixes
+
+## v1.28.0
+
+- engine: LiSPSM is now a user settable option
+- engine: get the morph target buffer to the given primitive
+- Java: Fix TransformManager.getChildren()
+- Metal: newer devices are no longer limited to 16 samplers per Material.
+- gltfio: fix interpretation of occlusion strength
+- engine: minsdk is now 21 instead of 19. This allows the use of OpenGL ES 3.1
+- Vulkan: fix black screen regression
+
+## v1.27.2
+
+- gltfio: punctual lights are now duplicated when adding new asset instances
+- gltfio: FilamentInstance getAsset method now returns an immutable asset
+- gltfio: allow zero-instance assets
+- gltfio: fix regression with meshes that have no material
+- gltfio: fix regression with recomputeBoundingBoxes()
+- filamesh / matinfo: fix minor ASAN issues
+- engine: Added `Engine::resetBackendState()`, available only in WebGL builds
+
+## v1.27.1
+
+- Java: add methods for TransformManager.getChildCount(), TransformManager.getChildren() and Scene.hasEntity()
+- engine: Fix stencil buffer writes with OpenGL backend.
+- gltfio: add new virtual method to MaterialProvider that all plugins must implement
+- gltfio: add an assert for inconsistent sRGB flags among usages of a particular texture
+- engine: improve scissor documentation
+- backend: scissor is no longer clipped to the viewport (done on filament side)
+- samples: add debug overdraw visualization to gltf_viewer
+
+## v1.27.0
+
+- WebGL: reduce max instance count to work around Chrome issues [⚠️ **Recompile Materials**]
+- engine: rework material/shader sampler binding code [⚠️ **Recompile Materials**]
+- gltfio: move the API for `recomputeBoundingBoxes` [⚠️ **API Change**]
+- engine: add support for specialization constants [⚠️ **Recompile Materials**]
+- gltfio: fix spotlight regression
+- gltfio: clear the MaterialInstance cache when creating new instances
+
+## v1.26.0
+
+- engine: new feature level APIs, see `Engine::getSupportedFeatureLevel()`
+- engine: add new stencil API to `View` and stencil state APIs to `MaterialInstance` [**NEW API**].
+- engine: Fix guard bands and TAA with `vertexDomain:Device` [⚠️ **Recompile Materials**]
+- engine: `clipSpaceTransform` is now only available with `vertexDomain:Device` [⚠️ **API Change**]
+- gltfio: add unified `AssetLoader::createAsset()` method [⚠️ **API Change**]
+- gltfio: all assets are now "instanced" [⚠️ **API Change**]
+
+## v1.25.6
+
+- engine: Add `CONFIG_MINSPEC_UBO_SIZE` as a nicer way to allow exceeding the ES3.0 minspec.
+- gltfio: minor efficiency improvement for Android and WebGL builds.
+- gltfio: add support for concurrent texture downloading and decoding.
+
+## v1.25.5
+
+- WebGL: upgraded the JS bindings to work with emsdk 3.1.15
+- WebGL: added missing IBL builder to TypeScript annotations
+- engine: Fix incorrect precision restoration when computing accurate world translations
+- engine: make `MaterialInstance` public API friendly to `std::string_view` parameters
+- gltfio: add 'detach' methods to allow ownership transfer of entities and components
+
+## v1.25.4
+
+- backend: streamline texture upload APIs [⚠️ **API Change**]
+
+## v1.25.3
+
+- engine: Fix Adreno gpu crash introduced by gpu morph target change
+- engine: Add optional memory configuration parameters to Engine initialization
+
+## v1.25.2
+
+- engine: `Camera::getNear()` and `Camera::getCullingFar()` now return `doubles`
+- Metal: implement scissor support.
+- engine: `Renderer::getUserTime()` now returns seconds as documented (#5722) [⚠️ **API Fix**]
+
+## v1.25.1
+
+- engine: add support for automatic instancing. Must be enabled with `Engine::setAutomaticInstancingEnabled(bool)`
+
+## v1.25.0
+
+- Vulkan: smol-v blobs are now 8-byte aligned within the filamat archive. [⚠️ **Recompile Materials**]
+- backend: added support for EGL on linux (headless)
+- uberz tool: add --append and --template arguments.
+- matc tool: add --template argument.
+
+## v1.24.0
+
+- ImGuiHelper: add support for Y flip.
+- Metal: ignore `MTLTexture` formatting when importing external textures.
+- materials: add a new `instanced` material parameter that is now mandatory in order to call `getInstanceIndex()`
+- gltfio: UbershaderProvider now takes the ubershader archive in its constructor [⚠️ **API Change**]
+- gltfio: Fix morphing with sparse accessors.
+- gltfio: Fix models that use signed integers for morphing.
+- engine: Documentation improvements regarding SkinningBuffer and fix an off-by-one assert when setting a SkinningBuffer.
+- picking is now exposed to JavaScript
+- gltf_viewer: Exercise picking functionality.
+- OpenGL: add WebGL support for ReadPixels
+- Vulkan: add assert and error message for OOM (debug builds)
+- Vulkan: fix crash with picking and 2-component ReadPixels.
+- backend: workaround broken GLES timer query on some Mali-Gxx old drivers
+- backend: revert c049a1 & reenable b2cdf9 ("don't issue a flush systematically after framegraph's execute")
+- gltfio: namespace now lives under Filament [⚠️ **API Change**]
+- gltfio: UbershaderLoader renamed to UbershaderProvider [⚠️ **API Change**]
+- gltfio: MaterialGenerator renamed to JitShaderProvider [⚠️ **API Change**]
+
+## v1.23.2
+
+- gltfio: Fix morphing for un-packed accessors.
+- gltfio: Ubershaders are now packaged into flexible archives.
+- gltfio: Remove poorly maintained lite flavor.
+- engine: Disable user scissor while rendering the Shadow Maps.
+- engine: Merge identical backend `RenderPrimitives` together.
+- engine: Improve `ResourceAllocator` performance a bit by reserving 128 cache entries.
+- utils: Remove `std::hash<T>` definitions for `libutils` types. Use `T::Hasher` explicitly instead. [⚠️ **API Change**]
+- backend: Fix WGL context attributes.
+- Metal: Fix potential invalid shaders when using gltfio in Ubershader mode. [⚠️ **Recompile Materials to get the fix**]
+
+## v1.23.1
+
+- gltfio: support skinning with bones that do not belong to any scene.
+- gltfio: add `attachSkin` / `detachSkin` method to FilamentAsset.
+- gltfio: ubershader mode: set sheen to `OPAQUE`.
+- Metal: fix issues seen with dynamic resolution on M1 Macs.
+- engine: add a "global" mode for render primitive's `blendOrder`.
+- engine: remove `RenderManager::setGeometryAt(index, count)`. [⚠️ **API Change**]
+- engine: fix overallocation by about 17MB.
+- WebGL: Add JS bindings for Texture class methods.
+
+## v1.23.0
+
+- engine: Changed UBOs layout [⚠️ **Material breakage**].
+- engine: Normals on morphed models have been fixed (core Filament change).
+- Java: View has several minor changes due to generated code, such as field ordering.
+- gltfio: Fix crash when reloading glTF assets.
+- gltfio: introduce cross-fade animation API [**NEW API**].
+
+## v1.22.2
+
+- Java: Minor API change: rename `ssctStartTraceDistance` to `ssctShadowDistance`. [⚠️ **API Change**]
+- Java: Minor API change: rename `blendingMode` to `blendMode`. [⚠️ **API Change**]
+- engine: Fix some memory leaks.
+
+## v1.22.1
+
+- Metal: Shaders now use `half` floating-point arithmetic when possible for improved performance. [⚠️ **Recompile Materials**]
+- engine: add support for presentation time in `Renderer`
+- engine: added guard bands support for screen-space effects
+- gltfio: Add multi-scene support.
+- gltfio: Various glTF-related cleanup and enhancements.
+- gltfio: Add support for KHR_texture_basisu.
+
+## v1.22.0
+
+- engine: Changed UBOs layout [⚠️ **Material breakage**].
+- engine: Improve effects relying on mipmapping
+- engine: Fix assert seen with VSM shadows.
+- WebGL: Fix `isTextureFormatSupported` for ETC2 formats.
+
+## v1.21.3
+
+- Java: Renamed the `KTXLoader` Kotlin class to `KTX1Loader`.  [⚠️ **API Change**].
+- libs: Added `Ktx2Reader` and `BasisEncoder` to support Basis-encoded KTX2 files.
+- engine: Remove deprecated `Stream` APIs, see `Texture::import()` for an alternative [⚠️ **API Change**].
+- tools: Removed KTX1 compression support from mipgen.  [⚠️ **API Change**].
+- tools: Added support for KTX2 to mipgen.
+- gltfio: Added `resetBoneMatrices()` method.
+- gltfio: Introduced `TextureProvider` interface.  [⚠️ **API Change**].
+- gltfio: Fix progress indicator when error occurs.
+- samples: Desktop and Web Suzanne samples now use KTX2 instead of KTX1.
+- samples: Fix regression with sample-gltf-viewer and zip files.
+
+## v1.21.2
+
+- Java: Add Java binding to get skins in `FilamentAsset`.
+- libs: Add libs/ktxreader [⚠️ **API Change**].
+- mipgen: fixups / clarification regarding sRGB.
+- WebGL: fix intermittent 'detached ArrayBuffer' errors.
+
+## v1.21.1
+
+- engine: Allow both screen-space refraction and screen-space reflections on the same object [⚠️ **Material breakage**].
+- engine: Optimizations for screen-space reflections.
+- engine: Remove `Viewport::scale()` [⚠️ **API Change**].
+- engine: Fix 12x overallocation of memory in `MorphTargetBuffer`.
+- Metal: Fix validation error when reading from default `SwapChain`.
+
+## v1.21.0
+
+- engine: OpenGL performance improvements with some drivers.
+- engine: Fix incorrect shadows with some custom projection matrices.
+- engine: Fix low frame rates seen with a lot of morph targets.
+- gltfio: Add support for KHR_materials_variants.
+- gltfio: Add support for KHR_materials_emissive_strength.
+- gltfio: Java now exposes morph target names as an array for consistency [⚠️ **API Change**].
+
+## v1.20.5
+
+- engine: New behavior for MASKED to work with translucent views. [⚠️ **Recompile Materials** to get the fix]
+- engine: Fix screen-space reflections when post-processing and MSAA are off.
+- engine: Update MAX_MORPH_TARGETS constant to 256.
+- engine: Fix point light lighting with ortho projection.
+- libs: BlueGL symbols are now prefixed with `bluegl` on all platforms.
+- gltfio: Add skinning getters to `FilamentAsset`.
+
+## v1.20.4
+
+- gltfio: Java clients must now destroy the MaterialProvider [⚠️ **API Change**].
+- gltfio: Fix, bone pose not applied if glTF model doesn't have animations.
+- libs: Added `math::quat::fromDirectedRotation` [**NEW API**].
+- WebGL: Restore GL state when frame ends.
+
+## v1.20.3
+
+- Java: Fix URI bug in Android Viewer sample when dropping some zips.
+- Vulkan: Fix "uninitialized texture" warnings from the Vulkan backend.
+
+## v1.20.2
+
+- engine: Binary size optimizations.
+- engine: Fix, Mat4 from Quaternion was transposed.
+- Vulkan: Internal bug fixes and robustness improvements.
+- Vulkan: Reduced log spam.
+
+## v1.20.1
+
+- engine: Binary size improvements.
+- engine: Add basic support for instanced renderables [**NEW API**].
+- engine: Fix, first imaged passsed to `Stream::SetAcquiredImage` is ignored and leaked.
+- Vulkan: Robustness improvements.
+- Java: Fix, lookAt z axis negated.
+- gltfio: Be graceful when model has > 4 weights per vert.
+
+## v1.20.0
+
+- engine: Support rough screen-space reflections [⚠️ **Material breakage**].
+- engine: Added `Scene::forEach` API to iterate through a scene's entities.
+- engine: Fix incorrect normals with skinned models.
+- Vulkan: Fix segfault during shutdown.
+- WebGL: Support web apps that have multiple `FilamentViewer`s.
+- gltfio: Performance enhancements when loading models.
+
+## v1.19.0
+
+- engine: Support 256 morph targets.
+- engine: Screen-space reflection improvements.
+- engine: Morphing improvements and bug fixes.
+- gltfio: Generate morphing normals when they are missing.
+- gltfio: Support material extras.
+- Java: Add bindings for new morphing API.
+- Vulkan: Fix segfault on macOS.
+
+## v1.18.0
+
+- engine: Add support separate samplers in fragment and vertex shaders [⚠️ **Material breakage**].
+- engine: Support legacy morphing mode with vertex attributes.
+- engine: Allow more flexible quality settings for the ColorGrading LUT.
+- engine: Improve screen-space reflections quality and allow reflections and refractions together.
+- Vulkan: Bug fixes and improvements.
+
+## v1.17.0
+
+- engine: Add experimental glossy screen-space reflections.
+- engine: Add support for GPU morphing and 128 morph targets.
+- engine: Fix crash with non-shadow receiving renderables and VSM.
+- engine: Bring back the 3x3 filter for PCF shadows.
+- engine: Correct AABB calculation for skinned glTF models.
+
+## v1.16.1
+
+- engine: Added line/triangle strip support.
+
+## v1.16.0
+
+- engine: Fixes skinning calculations (#4887) [⚠️ **Material breakage**].
+- engine: Add support for the glTF extension KHR_materials_emissive_strength.
+- engine: Improvements and fixes to skinning calculations.
+- engine: Fix debug checks for compressed textures.
+- Metal: Fix `readPixels` when dimensions are greater than the render target's.
+
+## v1.15.2
+
+- engine: Add support for PCSS (Percentage Closer Soft Shadows).
+- engine: Fix spotlight shadow bias.
+- samples: Avoid leaking IBLs in Android sample-gltf-viewer.
+- libs: Fix `libibl` on mobile.
+
+## v1.15.1
+
+- engine: add support for DPCF (PCF shadows with contact hardening).
+- engine: add support for Wayland and Vulkan.
+- engine: Fade lights out when close to light far plane.
+- Java: Add missing `Engine#destroySkinningBuffer` method.
+
+## v1.15.0
+
+- engine: Fix spotlights normal bias calculation [⚠️ **Material breakage**].
+- libimage: Fix loading spherical harmonics on certain locals.
+
+## v1.14.2
+
+- Metal: Fix validation error when rendering to `RenderTarget` without depth attachment.
+- engine: Fix rendering glitch with zero-scale bone transforms.
+
+## v1.14.1
+
+- engine: Improvements to shadowing.
+
+## v1.14.0
+
+- engine: Internal materials can use structures as parameters [⚠️ **Material breakage**].
+- engine: `readPixels` on a `SwapChain` must be called within `beginFrame` / `endFrame` [⚠️ **API
+  Change**].
+- engine: Fix normal bias and improve spotlight quality.
+- Java: Fix shadow biases.
+
+## v1.13.0
+
+- Android: Gradle configuration caching is now enabled.
+- Android: Filament's Gradle properties have all been renamed to `com.google.android.filament.xxx`
+  where `xxx` is the property name. See `android/build.gradle` for a complete list [⚠️]
+- Android: The Gradle property `filament_tools_dir` (now called
+  `com.google.android.filament.tools-dir`) does not have a default value anymore. Please specify one
+  in your `gradle.properties` if you reuse the Gradle plugin in your projects [⚠️]
+- engine: Fix spotlights direction and falloff [⚠️ **Material breakage**].
+- engine: Improvements to VSM and spotlight shadows.
+
+## v1.12.11
+
+- Metal: Color grading performance improvement on M1 devices.
+- samples: Fix glitchy animation seen in gltf-viewer iOS sample.
+
+## v1.12.10
+
+- engine: rewrite dynamic resolution scaling controller for better accuracy and less jittering.
+- Java: fix missing ASTC texture enum.
+- tools: Fix normal map issues in mipgen.
+- WebGL: expose some `SurfaceOrientation` functions.
+
+## v1.12.9
+
+- engine: New API: `MultiSampleAntiAliasingOptions` and HDR-aware MSAA resolve. When `customResolve`
+  is enabled, improves anti-aliasing quality [**NEW API**].
+- engine: Fixes and improvements for FSR.
+- engine: All APIs that take a callback as argument now also take a `CallbackHandler*`, a new
+  interface that provides more flexibility around callback dispatch [**NEW API**].
+- Android: Fix JNI bindings for `DepthOfFieldOptions`.
+- Android: workarounds for Adreno-specific fraembuffer issue.
+- JavaScript: updates to JS bindings.
+
+## v1.12.8
+
+- engine: Added picking API to `View`  [⚠️ **Materials need to be rebuilt to access this new feature**].
+- engine: A new `Engine::pumpMessageQueues()` method can be used to trigger all pending user
+  callbacks right away [**NEW API**].
+- engine: new inline helpers to more easily use lambdas, functors and method callbacks with
+  `{Pixel}BufferDescriptor`.
+- Vulkan: fix vertical offset for `readPixels`.
+- Vulkan: various internal improvements.
+- Metal: support integer formats with `readPixels`.
+
+## v1.12.7
+
+- engine: Fix, apply emissive after shadowing.
+
+## v1.12.6
+
+- engine: Added concept of lod bias to materials.
+  [⚠️ **Materials need to be rebuilt to access this new feature**].
+- engine: Fix, BGRA ordering respected for external images with OpenGL on iOS.
+- engine: Use more sensible defaults for spot light inner outer cone angles.
+- engine: Fix potential race condition that caused stalls in `endFrame`.
+- gltfio: Improved handling of transparent materials.
+- Metal: Fix potential crash on earlier versions of iOS (<= 13.0).
+- Android: Fix `filament-utils-android` 'lite' flavor.
+- Java: Fix potential crash with `IBLPrefilter`.
 
 ## v1.12.5
 
-- engine: Fix, BGRA ordering respected for external images with OpenGL on iOS.
+- engine: work around a job scheduling issue in `endFrame` that caused stuttering on some Android
+devices.
 
 ## v1.12.4
 
@@ -247,7 +659,7 @@ A new header is inserted each time a *tag* is created.
 - engine: Fix RenderTarget NPE when depth is not present.
 - engine: Improvements to Camera APIs. Move focus distance from DofOptions to Camera.
 - engine: VSM shadows now support `shadowMultiplier`.
-- java: Expose severla MaterialInstance APIs (setColorWrite, setDepthWrite, setDepthCulling) that
+- java: Expose several MaterialInstance APIs (setColorWrite, setDepthWrite, setDepthCulling) that
   should have been public.
 - java: fix bug with Texture::setImage buffer size calculation.
 

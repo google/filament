@@ -157,8 +157,6 @@ public class DisplayHelper {
             info = new Renderer.DisplayInfo();
         }
         info.refreshRate = DisplayHelper.getRefreshRate(display);
-        info.presentationDeadlineNanos = DisplayHelper.getPresentationDeadlineNanos(display);
-        info.vsyncOffsetNanos = DisplayHelper.getAppVsyncOffsetNanos(display);
         return info;
     }
 

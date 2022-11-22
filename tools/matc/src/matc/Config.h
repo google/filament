@@ -22,8 +22,8 @@
 
 #include <filamat/MaterialBuilder.h>
 
+#include <map>
 #include <memory>
-#include <unordered_map>
 #include <ostream>
 
 #include <utils/compiler.h>
@@ -40,6 +40,11 @@ public:
     using Platform = filamat::MaterialBuilder::Platform;
     using TargetApi = filamat::MaterialBuilder::TargetApi;
     using Optimization = filamat::MaterialBuilder::Optimization;
+
+    // For defines and template args, we use an ordered map with a transparent comparator.
+    // Even though the key is stored using std::string, this allows you to make lookups using
+    // std::string_view. There is no need to construct a std::string object just to make a lookup.
+    using StringReplacementMap = std::map<std::string, std::string, std::less<>>;
 
     enum class Metadata {
         NONE,
@@ -110,12 +115,16 @@ public:
         return mRawShaderMode;
     }
 
-    uint8_t getVariantFilter() const noexcept {
+    filament::UserVariantFilterMask getVariantFilter() const noexcept {
         return mVariantFilter;
     }
 
-    const std::unordered_map<std::string, std::string>& getDefines() const noexcept {
+    const StringReplacementMap& getDefines() const noexcept {
         return mDefines;
+    }
+
+    const StringReplacementMap& getTemplateMap() const noexcept {
+        return mTemplateMap;
     }
 
 protected:
@@ -128,8 +137,9 @@ protected:
     Platform mPlatform = Platform::ALL;
     OutputFormat mOutputFormat = OutputFormat::BLOB;
     TargetApi mTargetApi = (TargetApi) 0;
-    std::unordered_map<std::string, std::string> mDefines;
-    uint8_t mVariantFilter = 0;
+    StringReplacementMap mDefines;
+    StringReplacementMap mTemplateMap;
+    filament::UserVariantFilterMask mVariantFilter = 0;
 };
 
 }

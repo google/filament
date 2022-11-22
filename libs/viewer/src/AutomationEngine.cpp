@@ -44,15 +44,27 @@ struct ScreenshotState {
     AutomationEngine* engine;
 };
 
+static void convertRGBAtoRGB(void* buffer, uint32_t width, uint32_t height) {
+    uint8_t* writePtr = static_cast<uint8_t*>(buffer);
+    uint8_t const* readPtr = static_cast<uint8_t const*>(buffer);
+    for (uint32_t i = 0, n = width * height; i < n; ++i) {
+        writePtr[0] = readPtr[0];
+        writePtr[1] = readPtr[1];
+        writePtr[2] = readPtr[2];
+        writePtr += 3;
+        readPtr += 4;
+    }
+}
+
 static void exportScreenshot(View* view, Renderer* renderer, std::string filename,
         bool autoclose, AutomationEngine* automationEngine) {
     const Viewport& vp = view->getViewport();
-    const size_t byteCount = vp.width * vp.height * 3;
+    const size_t byteCount = vp.width * vp.height * 4;
 
     // Create a buffer descriptor that writes the PPM after the data becomes ready on the CPU.
     backend::PixelBufferDescriptor buffer(
         new uint8_t[byteCount], byteCount,
-        backend::PixelBufferDescriptor::PixelDataFormat::RGB,
+        backend::PixelBufferDescriptor::PixelDataFormat::RGBA,
         backend::PixelBufferDescriptor::PixelDataType::UBYTE,
         [](void* buffer, size_t size, void* user) {
             ScreenshotState* state = static_cast<ScreenshotState*>(user);
@@ -62,6 +74,11 @@ static void exportScreenshot(View* view, Renderer* renderer, std::string filenam
                 return;
             }
             const Viewport& vp = state->view->getViewport();
+
+            // ReadPixels on Metal only supports RGBA, but the PPM format only supports RGB.
+            // So, manually perform a quick transformation here.
+            convertRGBAtoRGB(buffer, vp.width, vp.height);
+
             Path out(state->filename);
             std::ofstream ppmStream(out);
             ppmStream << "P6 " << vp.width << " " << vp.height << " " << 255 << std::endl;
@@ -137,7 +154,7 @@ void AutomationEngine::exportSettings(const Settings& settings, const char* file
     gStatus = "Exported to '" + std::string(filename) + "' in the current folder.";
 }
 
-void AutomationEngine::applySettings(const char* json, size_t jsonLength,
+void AutomationEngine::applySettings(Engine* engine, const char* json, size_t jsonLength,
         const ViewerContent& content) {
     JsonSerializer serializer;
     if (!serializer.readJson(json, jsonLength, mSettings)) {
@@ -145,15 +162,15 @@ void AutomationEngine::applySettings(const char* json, size_t jsonLength,
         slog.e << "Badly formed JSON:\n" << jsonWithTerminator.c_str() << io::endl;
         return;
     }
-    viewer::applySettings(mSettings->view, content.view);
+    viewer::applySettings(engine, mSettings->view, content.view);
     for (size_t i = 0; i < content.materialCount; i++) {
-        viewer::applySettings(mSettings->material, content.materials[i]);
+        viewer::applySettings(engine, mSettings->material, content.materials[i]);
     }
-    viewer::applySettings(mSettings->lighting, content.indirectLight, content.sunlight,
-            content.assetLights, content.assetLightCount, content.lightManager, content.scene);
+    viewer::applySettings(engine, mSettings->lighting, content.indirectLight, content.sunlight,
+            content.assetLights, content.assetLightCount, content.lightManager, content.scene, content.view);
     Camera* camera = &content.view->getCamera();
     Skybox* skybox = content.scene->getSkybox();
-    viewer::applySettings(mSettings->viewer, camera, skybox, content.renderer);
+    viewer::applySettings(engine, mSettings->viewer, camera, skybox, content.renderer);
 }
 
 ColorGrading* AutomationEngine::getColorGrading(Engine* engine) {
@@ -180,14 +197,14 @@ ViewerOptions AutomationEngine::getViewerOptions() const {
     return mSettings->viewer;
 }
 
-void AutomationEngine::tick(const ViewerContent& content, float deltaTime) {
-    const auto activateTest = [this, content]() {
+void AutomationEngine::tick(Engine* engine, const ViewerContent& content, float deltaTime) {
+    const auto activateTest = [this, engine, content]() {
         mElapsedTime = 0;
         mElapsedFrames = 0;
         mSpec->get(mCurrentTest, mSettings);
-        viewer::applySettings(mSettings->view, content.view);
+        viewer::applySettings(engine, mSettings->view, content.view);
         for (size_t i = 0; i < content.materialCount; i++) {
-            viewer::applySettings(mSettings->material, content.materials[i]);
+            viewer::applySettings(engine, mSettings->material, content.materials[i]);
         }
         if (mOptions.verbose) {
             utils::slog.i << "Running test " << mCurrentTest << utils::io::endl;

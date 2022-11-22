@@ -86,6 +86,7 @@ static void printStringChunk(ostream& json, const ChunkContainer& container,
 static bool printMaterial(ostream& json, const ChunkContainer& container) {
     printStringChunk(json, container, MaterialName, "name");
     printUint32Chunk(json, container, MaterialVersion, "version");
+    printUint32Chunk(json, container, MaterialFeatureLevel, "feature_level");
     json << "\"shading\": {\n";
     printChunk<Shading, uint8_t>(json, container, MaterialShading, "model");
     printChunk<MaterialDomain, uint8_t>(json, container, ChunkType::MaterialDomain, "material_domain");
@@ -103,6 +104,7 @@ static bool printMaterial(ostream& json, const ChunkContainer& container) {
     printChunk<bool, bool>(json, container, MaterialColorWrite, "color_write");
     printChunk<bool, bool>(json, container, MaterialDepthWrite, "depth_write");
     printChunk<bool, bool>(json, container, MaterialDepthTest, "depth_test");
+    printChunk<bool, bool>(json, container, MaterialInstanced, "instanced");
     printChunk<bool, bool>(json, container, MaterialDoubleSided, "double_sided");
     printChunk<CullingMode, uint8_t>(json, container, MaterialCullingMode, "culling");
     printChunk<TransparencyMode, uint8_t>(json, container, MaterialTransparencyMode, "transparency");
@@ -121,14 +123,14 @@ static void printShaderInfo(ostream& json, const vector<ShaderInfo>& info, const
     for (uint64_t i = 0; i < info.size(); ++i) {
         const auto& item = info[i];
         string variantString = formatVariantString(item.variant, domain);
-        string ps = (item.pipelineStage == backend::ShaderType::VERTEX) ? "vertex  " : "fragment";
+        string ps = (item.pipelineStage == backend::ShaderStage::VERTEX) ? "vertex  " : "fragment";
         json
-            << "    {"
-            << "\"index\": \"" << std::setw(2) << i << "\", "
-            << "\"shaderModel\": \"" << toString(item.shaderModel) << "\", "
-            << "\"pipelineStage\": \"" << ps << "\", "
-            << "\"variantString\": \"" << variantString << "\", "
-            << "\"variant\": \"" << std::hex << int(item.variant) << std::dec << "\" }"
+                << "    {"
+                << "\"index\": \"" << std::setw(2) << i << "\", "
+                << "\"shaderModel\": \"" << toString(item.shaderModel) << "\", "
+                << "\"pipelineStage\": \"" << ps << "\", "
+                << "\"variantString\": \"" << variantString << "\", "
+                << "\"variant\": " << +item.variant.key << " }"
             << ((i == info.size() - 1) ? "\n" : ",\n");
     }
 }
@@ -241,13 +243,11 @@ bool JsonWriter::writeActiveInfo(const filaflat::ChunkContainer& package,
             return false;
     }
     json << "\"";
-    json << std::hex;
     for (size_t variant = 0; variant < activeVariants.size(); variant++) {
         if (activeVariants[variant]) {
             json << ", " << variant;
         }
     }
-    json << std::dec;
     json << "]";
     mJsonString = CString(json.str().c_str());
     return true;

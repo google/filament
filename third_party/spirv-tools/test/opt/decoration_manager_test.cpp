@@ -118,7 +118,7 @@ class DecorationManagerTest : public ::testing::Test {
 TEST_F(DecorationManagerTest,
        ComparingDecorationsWithDiffOpcodesDecorateDecorateId) {
   IRContext ir_context(SPV_ENV_UNIVERSAL_1_2, GetConsumer());
-  // This parameter can be interprated both as { SpvDecorationConstant }
+  // This parameter can be interpreted both as { SpvDecorationConstant }
   // and also as a list of IDs:  { 22 }
   const std::vector<uint32_t> param{SpvDecorationConstant};
   // OpDecorate %1 Constant
@@ -137,7 +137,7 @@ TEST_F(DecorationManagerTest,
 TEST_F(DecorationManagerTest,
        ComparingDecorationsWithDiffOpcodesDecorateDecorateString) {
   IRContext ir_context(SPV_ENV_UNIVERSAL_1_2, GetConsumer());
-  // This parameter can be interprated both as { SpvDecorationConstant }
+  // This parameter can be interpreted both as { SpvDecorationConstant }
   // and also as a null-terminated string with a single character with value 22.
   const std::vector<uint32_t> param{SpvDecorationConstant};
   // OpDecorate %1 Constant

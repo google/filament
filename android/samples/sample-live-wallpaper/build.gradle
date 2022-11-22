@@ -4,15 +4,24 @@ apply plugin: 'kotlin-android'
 project.ext.isSample = true
 
 android {
+    namespace 'com.google.android.filament.livewallpaper'
+
     compileSdkVersion versions.compileSdk
     defaultConfig {
         applicationId "com.google.android.filament.livewallpaper"
         minSdkVersion versions.minSdk
         targetSdkVersion versions.targetSdk
     }
+
+    // NOTE: This is a workaround required because the AGP task collectReleaseDependencies
+    //       is not configuration-cache friendly yet; this is only useful for Play publication
+    dependenciesInfo {
+        includeInApk = false
+    }
 }
 
 dependencies {
     implementation deps.kotlin
+    implementation deps.androidx.annotations
     implementation project(':filament-android')
 }

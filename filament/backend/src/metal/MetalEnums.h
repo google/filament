@@ -27,7 +27,6 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 struct MetalContext;
 
@@ -50,6 +49,19 @@ constexpr inline MTLCompareFunction getMetalCompareFunction(RasterState::DepthFu
             return MTLCompareFunctionAlways;
         case RasterState::DepthFunc::N:
             return MTLCompareFunctionNever;
+    }
+}
+
+constexpr inline MTLStencilOperation getMetalStencilOperation(StencilOperation op) {
+    switch (op) {
+        case StencilOperation::KEEP: return MTLStencilOperationKeep;
+        case StencilOperation::ZERO: return MTLStencilOperationZero;
+        case StencilOperation::REPLACE: return MTLStencilOperationReplace;
+        case StencilOperation::INCR: return MTLStencilOperationIncrementClamp;
+        case StencilOperation::INCR_WRAP: return MTLStencilOperationIncrementWrap;
+        case StencilOperation::DECR: return MTLStencilOperationDecrementClamp;
+        case StencilOperation::DECR_WRAP: return MTLStencilOperationDecrementWrap;
+        case StencilOperation::INVERT: return MTLStencilOperationInvert;
     }
 }
 
@@ -222,6 +234,50 @@ inline MTLPixelFormat getMetalFormatLinear(MTLPixelFormat format) {
     return format;
 }
 
+constexpr inline bool isMetalFormatInteger(MTLPixelFormat format) {
+    switch (format) {
+        case MTLPixelFormatR8Uint:
+        case MTLPixelFormatR8Sint:
+        case MTLPixelFormatR16Uint:
+        case MTLPixelFormatR16Sint:
+        case MTLPixelFormatRG8Uint:
+        case MTLPixelFormatRG8Sint:
+        case MTLPixelFormatR32Uint:
+        case MTLPixelFormatR32Sint:
+        case MTLPixelFormatRG16Uint:
+        case MTLPixelFormatRG16Sint:
+        case MTLPixelFormatRGBA8Uint:
+        case MTLPixelFormatRGBA8Sint:
+        case MTLPixelFormatRGB10A2Uint:
+        case MTLPixelFormatRG32Uint:
+        case MTLPixelFormatRG32Sint:
+        case MTLPixelFormatRGBA16Uint:
+        case MTLPixelFormatRGBA16Sint:
+        case MTLPixelFormatRGBA32Uint:
+        case MTLPixelFormatRGBA32Sint:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+constexpr inline bool isMetalFormatStencil(MTLPixelFormat format) {
+    switch (format) {
+        case MTLPixelFormatStencil8:
+        case MTLPixelFormatDepth32Float_Stencil8:
+        case MTLPixelFormatX32_Stencil8:
+#if !defined(IOS)
+        case MTLPixelFormatDepth24Unorm_Stencil8:
+        case MTLPixelFormatX24_Stencil8:
+#endif
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 constexpr inline MTLTextureType getMetalType(SamplerType target) {
     switch (target) {
         case SamplerType::SAMPLER_2D:
@@ -233,6 +289,8 @@ constexpr inline MTLTextureType getMetalType(SamplerType target) {
             return MTLTextureTypeCube;
         case SamplerType::SAMPLER_3D:
             return MTLTextureType3D;
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            return MTLTextureTypeCubeArray;
     }
 }
 
@@ -276,9 +334,9 @@ constexpr inline MTLPrimitiveType getMetalPrimitiveType(PrimitiveType type) noex
     switch (type) {
         case PrimitiveType::POINTS: return MTLPrimitiveTypePoint;
         case PrimitiveType::LINES: return MTLPrimitiveTypeLine;
+        case PrimitiveType::LINE_STRIP: return MTLPrimitiveTypeLineStrip;
         case PrimitiveType::TRIANGLES: return MTLPrimitiveTypeTriangle;
-        case PrimitiveType::NONE:
-            ASSERT_POSTCONDITION(false, "NONE is not a valid primitive type.");
+        case PrimitiveType::TRIANGLE_STRIP: return MTLPrimitiveTypeTriangleStrip;
     }
 }
 
@@ -375,7 +433,6 @@ inline MTLTextureSwizzleChannels getSwizzleChannels(TextureSwizzle r, TextureSwi
             getSwizzle(a));
 }
 
-} // namespace metal
 } // namespace backend
 } // namespace filament
 

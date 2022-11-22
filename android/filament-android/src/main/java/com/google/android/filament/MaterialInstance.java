@@ -20,7 +20,11 @@ import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Size;
 
+import com.google.android.filament.proguard.UsedByNative;
+
+@UsedByNative("AssetLoader.cpp")
 public class MaterialInstance {
+    private static final Material.CullingMode[] sCullingModeValues = Material.CullingMode.values();
     private Material mMaterial;
     private String mName;
     private long mNativeObject;
@@ -48,6 +52,54 @@ public class MaterialInstance {
         MAT3,
         MAT4
     }
+
+    /**
+     * Operations that control how the stencil buffer is updated.
+     */
+    public enum StencilOperation {
+        /**
+         * Keeps the current value.
+         */
+        KEEP,
+        /**
+         * Sets the value to 0.
+         */
+        ZERO,
+        /**
+         * Sets the value to the stencil reference value.
+         */
+        REPLACE,
+        /**
+         * Increments the current value. Clamps to the maximum representable unsigned value.
+         */
+        INCR_CLAMP,
+        /**
+         * Increments the current value. Wraps value to zero when incrementing the maximum
+         * representable unsigned value.
+         */
+        INCR_WRAP,
+        /**
+         * Decrements the current value. Clamps to 0.
+         */
+        DECR_CLAMP,
+        /**
+         * Decrements the current value. Wraps value to the maximum representable unsigned value
+         * when decrementing a value of zero.
+         */
+        DECR_WRAP,
+        /**
+         * Bitwise inverts the current value.
+         */
+        INVERT,
+    }
+
+    public enum StencilFace {
+        FRONT,
+        BACK,
+        FRONT_AND_BACK
+    }
+    // Converts the StencilFace enum ordinal to Filament's equivalent bit field.
+    static final int[] sStencilFaceMapping = {0x1, 0x2, 0x3};
 
     public MaterialInstance(Engine engine, long nativeMaterialInstance) {
         mNativeObject = nativeMaterialInstance;
@@ -78,7 +130,7 @@ public class MaterialInstance {
     public static MaterialInstance duplicate(@NonNull MaterialInstance other, String name) {
         long nativeInstance = nDuplicate(other.mNativeObject, name);
         if (nativeInstance == 0) throw new IllegalStateException("Couldn't duplicate MaterialInstance");
-        return new MaterialInstance(other.mMaterial, nativeInstance);
+        return new MaterialInstance(other.getMaterial(), nativeInstance);
     }
 
     /** @return the {@link Material} associated with this instance */
@@ -239,6 +291,10 @@ public class MaterialInstance {
 
     /**
      * Sets a texture and sampler parameter on this material's default instance.
+     * <p>
+     * Note: Depth textures can't be sampled with a linear filter unless the comparison mode is set
+     *       to COMPARE_TO_TEXTURE.
+     * </p>
      *
      * @param name The name of the material texture parameter
      * @param texture The texture to set as parameter
@@ -347,19 +403,40 @@ public class MaterialInstance {
     }
 
     /**
-     * Set up a custom scissor rectangle; by default this encompasses the View.
+     * Set-up a custom scissor rectangle; by default it is disabled.
      *
-     * @param left      left coordinate of the scissor box
-     * @param bottom    bottom coordinate of the scissor box
+     * <p>
+     * The scissor rectangle gets clipped by the View's viewport, in other words, the scissor
+     * cannot affect fragments outside of the View's Viewport.
+     * </p>
+     *
+     * <p>
+     * Currently the scissor is not compatible with dynamic resolution and should always be
+     * disabled when dynamic resolution is used.
+     * </p>
+     *
+     * @param left      left coordinate of the scissor box relative to the viewport
+     * @param bottom    bottom coordinate of the scissor box relative to the viewport
      * @param width     width of the scissor box
      * @param height    height of the scissor box
+     *
+     * @see #unsetScissor
+     * @see View#setViewport
+     * @see View#setDynamicResolutionOptions
      */
     public void setScissor(@IntRange(from = 0) int left, @IntRange(from = 0) int bottom,
             @IntRange(from = 0) int width, @IntRange(from = 0) int height) {
         nSetScissor(getNativeObject(), left, bottom, width, height);
     }
 
-    /** Returns the scissor rectangle to its default setting, which encompasses the View. */
+    /**
+     * Returns the scissor rectangle to its default disabled setting.
+     * <p>
+     * Currently the scissor is not compatible with dynamic resolution and should always be
+     * disabled when dynamic resolution is used.
+     * </p>
+     * @see View#setDynamicResolutionOptions
+     */
     public void unsetScissor() {
         nUnsetScissor(getNativeObject());
     }
@@ -398,6 +475,14 @@ public class MaterialInstance {
     }
 
     /**
+     * Gets the minimum alpha value a fragment must have to not be discarded when the blend
+     * mode is MASKED
+     */
+    public float getMaskThreshold() {
+        return nGetMaskThreshold(getNativeObject());
+    }
+
+    /**
      * Sets the screen space variance of the filter kernel used when applying specular
      * anti-aliasing. The default value is set to 0.15. The specified value should be between
      * 0 and 1 and will be clamped if necessary.
@@ -408,6 +493,14 @@ public class MaterialInstance {
      */
     public void setSpecularAntiAliasingVariance(float variance) {
         nSetSpecularAntiAliasingVariance(getNativeObject(), variance);
+    }
+
+    /**
+     * Gets the screen space variance of the filter kernel used when applying specular
+     * anti-aliasing.
+     */
+    public float getSpecularAntiAliasingVariance() {
+        return nGetSpecularAntiAliasingVariance(getNativeObject());
     }
 
     /**
@@ -424,6 +517,14 @@ public class MaterialInstance {
     }
 
     /**
+     * Gets the clamping threshold used to suppress estimation errors when applying specular
+     * anti-aliasing.
+     */
+    public float getSpecularAntiAliasingThreshold() {
+        return nGetSpecularAntiAliasingThreshold(getNativeObject());
+    }
+
+    /**
      * Enables or disables double-sided lighting if the parent Material has double-sided capability,
      * otherwise prints a warning. If double-sided lighting is enabled, backface culling is
      * automatically disabled.
@@ -437,14 +538,30 @@ public class MaterialInstance {
     }
 
     /**
+     * Returns whether double-sided lighting is enabled when the parent Material has double-sided
+     * capability.
+     */
+    public boolean isDoubleSided() {
+        return nIsDoubleSided(getNativeObject());
+    }
+
+    /**
      * Overrides the default triangle culling state that was set on the material.
      *
      * @see
      * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:culling">
      * Rasterization: culling</a>
      */
-    public void setCullingMode(Material.CullingMode mode) {
+    public void setCullingMode(@NonNull Material.CullingMode mode) {
         nSetCullingMode(getNativeObject(), mode.ordinal());
+    }
+
+    /**
+     * Returns the face culling mode.
+     */
+    @NonNull
+    public Material.CullingMode getCullingMode() {
+        return sCullingModeValues[nGetCullingMode(getNativeObject())];
     }
 
     /**
@@ -459,6 +576,13 @@ public class MaterialInstance {
     }
 
     /**
+     * Returns whether color write is enabled.
+     */
+    public boolean isColorWriteEnabled() {
+        return nIsColorWriteEnabled(getNativeObject());
+    }
+
+    /**
      * Overrides the default depth-buffer write state that was set on the material.
      *
      * @see
@@ -470,6 +594,27 @@ public class MaterialInstance {
     }
 
     /**
+     * Returns whether depth write is enabled.
+     */
+    public boolean isDepthWriteEnabled() {
+        return nIsDepthWriteEnabled(getNativeObject());
+    }
+
+    /**
+     * Enables or Disable stencil writes
+     */
+    public void setStencilWrite(boolean enable) {
+        nSetStencilWrite(getNativeObject(), enable);
+    }
+
+    /**
+     * Returns whether stencil write is enabled.
+     */
+    public boolean isStencilWriteEnabled() {
+        return nIsStencilWriteEnabled(getNativeObject());
+    }
+
+    /**
      * Overrides the default depth testing state that was set on the material.
      *
      * @see
@@ -478,6 +623,215 @@ public class MaterialInstance {
      */
     public void setDepthCulling(boolean enable) {
         nSetDepthCulling(getNativeObject(), enable);
+    }
+
+    /**
+     * Returns whether depth culling is enabled.
+     */
+    public boolean isDepthCullingEnabled() {
+        return nIsDepthCullingEnabled(getNativeObject());
+    }
+
+    /**
+     * Sets the stencil comparison function (default is {@link TextureSampler.CompareFunction#ALWAYS}).
+     *
+     * <p>
+     * It's possible to set separate stencil comparison functions; one for front-facing polygons,
+     * and one for back-facing polygons. The face parameter determines the comparison function(s)
+     * updated by this call.
+     * </p>
+     *
+     * @param func the stencil comparison function
+     * @param face the faces to update the comparison function for
+     */
+    public void setStencilCompareFunction(TextureSampler.CompareFunction func, StencilFace face) {
+        nSetStencilCompareFunction(getNativeObject(), func.ordinal(),
+                sStencilFaceMapping[face.ordinal()]);
+    }
+
+    /**
+     * Sets the stencil comparison function for both front and back-facing polygons.
+     * @see #setStencilCompareFunction(TextureSampler.CompareFunction, StencilFace)
+     */
+    public void setStencilCompareFunction(TextureSampler.CompareFunction func) {
+        setStencilCompareFunction(func, StencilFace.FRONT_AND_BACK);
+    }
+
+    /**
+     * Sets the stencil fail operation (default is {@link StencilOperation#KEEP}).
+     *
+     * <p>
+     * The stencil fail operation is performed to update values in the stencil buffer when the
+     * stencil test fails.
+     * </p>
+     *
+     * <p>
+     * It's possible to set separate stencil fail operations; one for front-facing polygons, and one
+     * for back-facing polygons. The face parameter determines the stencil fail operation(s) updated
+     * by this call.
+     * </p>
+     *
+     * @param op the stencil fail operation
+     * @param face the faces to update the stencil fail operation for
+     */
+    public void setStencilOpStencilFail(StencilOperation op, StencilFace face) {
+        nSetStencilOpStencilFail(getNativeObject(), op.ordinal(),
+                sStencilFaceMapping[face.ordinal()]);
+    }
+
+    /**
+     * Sets the stencil fail operation for both front and back-facing polygons.
+     * @see #setStencilOpStencilFail(StencilOperation, StencilFace)
+     */
+    public void setStencilOpStencilFail(StencilOperation op) {
+        setStencilOpStencilFail(op, StencilFace.FRONT_AND_BACK);
+    }
+
+    /**
+     * Sets the depth fail operation (default is {@link StencilOperation#KEEP}).
+     *
+     * <p>
+     * The depth fail operation is performed to update values in the stencil buffer when the depth
+     * test fails.
+     * </p>
+     *
+     * <p>
+     * It's possible to set separate depth fail operations; one for front-facing polygons, and one
+     * for back-facing polygons. The face parameter determines the depth fail operation(s) updated
+     * by this call.
+     * </p>
+     *
+     * @param op the depth fail operation
+     * @param face the faces to update the depth fail operation for
+     */
+    public void setStencilOpDepthFail(StencilOperation op, StencilFace face) {
+        nSetStencilOpDepthFail(getNativeObject(), op.ordinal(),
+                sStencilFaceMapping[face.ordinal()]);
+    }
+
+    /**
+     * Sets the depth fail operation for both front and back-facing polygons.
+     * @see #setStencilOpDepthFail(StencilOperation, StencilFace)
+     */
+    public void setStencilOpDepthFail(StencilOperation op) {
+        setStencilOpDepthFail(op, StencilFace.FRONT_AND_BACK);
+    }
+
+    /**
+     * Sets the depth-stencil pass operation (default is {@link StencilOperation#KEEP}).
+     *
+     * <p>
+     * The depth-stencil pass operation is performed to update values in the stencil buffer when
+     * both the stencil test and depth test pass.
+     * </p>
+     *
+     * <p>
+     * It's possible to set separate depth-stencil pass operations; one for front-facing polygons,
+     * and one for back-facing polygons. The face parameter determines the depth-stencil pass
+     * operation(s) updated by this call.
+     * </p>
+     *
+     * @param op the depth-stencil pass operation
+     * @param face the faces to update the depth-stencil operation for
+     */
+    public void setStencilOpDepthStencilPass(StencilOperation op, StencilFace face) {
+        nSetStencilOpDepthStencilPass(getNativeObject(), op.ordinal(),
+                sStencilFaceMapping[face.ordinal()]);
+    }
+
+    /**
+     * Sets the depth-stencil pass operation for both front and back-facing polygons.
+     * @see #setStencilOpDepthStencilPass(StencilOperation, StencilFace)
+     */
+    public void setStencilOpDepthStencilPass(StencilOperation op) {
+        setStencilOpDepthStencilPass(op, StencilFace.FRONT_AND_BACK);
+    }
+
+    /**
+     * Sets the stencil reference value (default is 0).
+     *
+     * <p>
+     * The stencil reference value is the left-hand side for stencil comparison tests. It's also
+     * used as the replacement stencil value when {@link StencilOperation} is
+     * {@link StencilOperation#REPLACE}.
+     * </p>
+     *
+     * <p>
+     * It's possible to set separate stencil reference values; one for front-facing polygons, and
+     * one for back-facing polygons. The face parameter determines the reference value(s) updated by
+     * this call.
+     * </p>
+     *
+     * @param value the stencil reference value (only the least significant 8 bits are used)
+     * @param face the faces to update the reference value for
+     */
+    public void setStencilReferenceValue(@IntRange(from = 0, to = 255) int value, StencilFace face) {
+        nSetStencilReferenceValue(getNativeObject(), value, sStencilFaceMapping[face.ordinal()]);
+    }
+
+    /**
+     * Sets the stencil reference value for both front and back-facing polygons.
+     * @see #setStencilReferenceValue(int, StencilFace)
+     */
+    public void setStencilReferenceValue(@IntRange(from = 0, to = 255) int value) {
+        setStencilReferenceValue(value, StencilFace.FRONT_AND_BACK);
+    }
+
+    /**
+     * Sets the stencil read mask (default is 0xFF).
+     *
+     * <p>
+     * The stencil read mask masks the bits of the values participating in the stencil comparison
+     * test- both the value read from the stencil buffer and the reference value.
+     * </p>
+     *
+     * <p>
+     * It's possible to set separate stencil read masks; one for front-facing polygons, and one for
+     * back-facing polygons. The face parameter determines the stencil read mask(s) updated by this
+     * call.
+     * </p>
+     *
+     * @param readMask the read mask (only the least significant 8 bits are used)
+     * @param face the faces to update the read mask for
+     */
+    public void setStencilReadMask(@IntRange(from = 0, to = 255) int readMask, StencilFace face) {
+        nSetStencilReadMask(getNativeObject(), readMask, sStencilFaceMapping[face.ordinal()]);
+    }
+
+    /**
+     * Sets the stencil read mask for both front and back-facing polygons.
+     * @see #setStencilReadMask(int, StencilFace)
+     */
+    public void setStencilReadMask(@IntRange(from = 0, to = 255) int readMask) {
+        setStencilReadMask(readMask, StencilFace.FRONT_AND_BACK);
+    }
+
+    /**
+     * Sets the stencil write mask (default is 0xFF).
+     *
+     * <p>
+     * The stencil write mask masks the bits in the stencil buffer updated by stencil operations.
+     * </p>
+     *
+     * <p>
+     * It's possible to set separate stencil write masks; one for front-facing polygons, and one for
+     * back-facing polygons. The face parameter determines the stencil write mask(s) updated by this
+     * call.
+     * </p>
+     *
+     * @param writeMask the write mask (only the least significant 8 bits are used)
+     * @param face the faces to update the read mask for
+     */
+    public void setStencilWriteMask(@IntRange(from = 0, to = 255) int writeMask, StencilFace face) {
+        nSetStencilWriteMask(getNativeObject(), writeMask, sStencilFaceMapping[face.ordinal()]);
+    }
+
+    /**
+     * Sets the stencil write mask for both front and back-facing polygons.
+     * @see #setStencilWriteMask(int, StencilFace)
+     */
+    public void setStencilWriteMask(int writeMask) {
+        setStencilWriteMask(writeMask, StencilFace.FRONT_AND_BACK);
     }
 
     public long getNativeObject() {
@@ -552,10 +906,37 @@ public class MaterialInstance {
     private static native void nSetCullingMode(long nativeMaterialInstance, long mode);
     private static native void nSetColorWrite(long nativeMaterialInstance, boolean enable);
     private static native void nSetDepthWrite(long nativeMaterialInstance, boolean enable);
+    private static native void nSetStencilWrite(long nativeMaterialInstance, boolean enable);
     private static native void nSetDepthCulling(long nativeMaterialInstance, boolean enable);
+
+    private static native void nSetStencilCompareFunction(long nativeMaterialInstance,
+            long function, long face);
+    private static native void nSetStencilOpStencilFail(long nativeMaterialInstance, long op,
+            long face);
+    private static native void nSetStencilOpDepthFail(long nativeMaterialInstance, long op,
+            long face);
+    private static native void nSetStencilOpDepthStencilPass(long nativeMaterialInstance, long op,
+            long face);
+    private static native void nSetStencilReferenceValue(long nativeMaterialInstance, int value,
+            long face);
+    private static native void nSetStencilReadMask(long nativeMaterialInstance, int readMask,
+            long face);
+    private static native void nSetStencilWriteMask(long nativeMaterialInstance, int writeMask,
+            long face);
 
     private static native String nGetName(long nativeMaterialInstance);
     private static native long nGetMaterial(long nativeMaterialInstance);
 
     private static native long nDuplicate(long otherNativeMaterialInstance, String name);
+
+
+    private static native float nGetMaskThreshold(long nativeMaterialInstance);
+    private static native float nGetSpecularAntiAliasingVariance(long nativeMaterialInstance);
+    private static native float nGetSpecularAntiAliasingThreshold(long nativeMaterialInstance);
+    private static native boolean nIsDoubleSided(long nativeMaterialInstance);
+    private static native int nGetCullingMode(long nativeMaterialInstance);
+    private static native boolean nIsColorWriteEnabled(long nativeMaterialInstance);
+    private static native boolean nIsDepthWriteEnabled(long nativeMaterialInstance);
+    private static native boolean nIsStencilWriteEnabled(long nativeMaterialInstance);
+    private static native boolean nIsDepthCullingEnabled(long nativeMaterialInstance);
 }

@@ -16,64 +16,53 @@
 
 #include "private/backend/SamplerGroup.h"
 
-namespace filament {
-namespace backend {
+#include "private/backend/DriverApi.h"
+
+#include "backend/BufferDescriptor.h"
+
+namespace filament::backend {
 
 // create a sampler buffer
 SamplerGroup::SamplerGroup(size_t count) noexcept
         : mBuffer(count) {
 }
 
-SamplerGroup::SamplerGroup(const SamplerGroup& rhs) noexcept = default;
-
-SamplerGroup::SamplerGroup(SamplerGroup&& rhs) noexcept
-        : mBuffer(rhs.mBuffer), mDirty(rhs.mDirty) {
-    rhs.clean();
+SamplerGroup::SamplerGroup(const SamplerGroup& rhs) noexcept :
+    mBuffer(rhs.mBuffer), mDirty(true) {
 }
 
-SamplerGroup& SamplerGroup::operator=(const SamplerGroup& rhs) noexcept = default;
-
-SamplerGroup& SamplerGroup::operator=(SamplerGroup&& rhs) noexcept {
+SamplerGroup& SamplerGroup::operator=(const SamplerGroup& rhs) noexcept {
     if (this != &rhs) {
         mBuffer = rhs.mBuffer;
-        mDirty = rhs.mDirty;
-        rhs.clean();
+        mDirty = true;
     }
     return *this;
 }
 
-SamplerGroup& SamplerGroup::toCommandStream() const noexcept {
-    /*
-     * This works because our move ctor preserves the data and cleans the dirty flags.
-     * if we changed the implementation in the future to do a real move, we'd have to change
-     * this method to return SamplerGroup by value, e.g.:
-     *    SamplerGroup copy(*this);
-     *    this->clean();
-     *    return copy;
-     */
-    return const_cast<SamplerGroup&>(*this);
-}
-
-SamplerGroup& SamplerGroup::setSamplers(SamplerGroup const& rhs) noexcept {
-    if (this != &rhs) {
-        mBuffer = rhs.mBuffer;
-        mDirty.setValue((1u << rhs.mBuffer.size()) - 1u);
-    }
-    return *this;
-}
-
-void SamplerGroup::setSampler(size_t index, Sampler sampler) noexcept {
+void SamplerGroup::setSampler(size_t index, SamplerDescriptor sampler) noexcept {
     if (UTILS_LIKELY(index < mBuffer.size())) {
+        // We cannot compare two texture handles to determine if an update is needed. Texture
+        // handles are (quickly) recycled and therefore can't be used for that purpose. e.g. if a
+        // texture is destroyed, its handle could be reused quickly by another texture.
+        // TODO: find a way to avoid marking dirty if the texture does not change.
         mBuffer[index] = sampler;
-        mDirty.set(index);
+        mDirty = true;
     }
+}
+
+BufferDescriptor SamplerGroup::toBufferDescriptor(DriverApi& driver) const noexcept {
+    BufferDescriptor p;
+    p.size = mBuffer.size() * sizeof(SamplerDescriptor);
+    p.buffer = driver.allocate(p.size); // TODO: use out-of-line buffer if too large
+    memcpy(p.buffer, static_cast<const void*>(mBuffer.data()), p.size); // inlined
+    clean();
+    return p;
 }
 
 #if !defined(NDEBUG)
 utils::io::ostream& operator<<(utils::io::ostream& out, const SamplerGroup& rhs) {
-    return out << "SamplerGroup(data=" << rhs.getSamplers() << ", size=" << rhs.getSize() << ")";
+    return out << "SamplerGroup(size=" << rhs.getSize() << ")";
 }
 #endif
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend

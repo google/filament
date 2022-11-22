@@ -167,8 +167,8 @@ Returns an array with all information (except shader source) for all known mater
     "shading": { "model": "unlit", "vertex_domain": "object", ... },
     "raster":  { "blending": "transparent", "color_write": "true", ... },
     "opengl": [
-        { "index": " 0", "shaderModel": "gl41", "pipelineStage": "vertex  ", "variantString": "", "variant": "0" },
-        { "index": " 1", "shaderModel": "gl41", "pipelineStage": "fragment", "variantString": "", "variant": "0" },
+        { "index": " 0", "shaderModel": "gl41", "pipelineStage": "vertex  ", "variantString": "", "variant": 0 },
+        { "index": " 1", "shaderModel": "gl41", "pipelineStage": "fragment", "variantString": "", "variant": 0 },
     ],
     "vulkan": [],
     "metal": [],
@@ -183,6 +183,8 @@ Returns an array with all information (except shader source) for all known mater
 Some of the returned data may seem redundant (e.g. the `index` and `variantString` fields) but
 these allow the client to be very simple by passing the raw JSON into [mustache][4] templates.
 Moreover it helps prevent duplication of knowledge between C++ and JavaScript.
+
+This format of this message is also used for the in-browser "database" of materials.
 
 ---
 
@@ -259,80 +261,6 @@ not including the terminating null.
 ## Screenshot
 
 <img width="600px" src="https://user-images.githubusercontent.com/1288904/63553241-b043ba80-c4ee-11e9-816c-c6acb1d6cdf7.png">
-
-## Material Chunks
-
-This section exists only to provide a reference for the `ShaderExtractor` and `ShaderReplacer`
-features.
-
-The relevant chunk types are listed here. These types are defined in the `filabridge` lib, in
-the `filamat` namespace.
-
-```c++
-enum UTILS_PUBLIC ChunkType : uint64_t {
-    ...
-    MaterialGlsl = charTo64bitNum("MAT_GLSL"),    // MaterialTextChunk
-    MaterialSpirv = charTo64bitNum("MAT_SPIR"),   // MaterialSpirvChunk
-    MaterialMetal = charTo64bitNum("MAT_METL"),   // MaterialTextChunk
-    ...
-    DictionaryGlsl = charTo64bitNum("DIC_GLSL"),  // DictionaryTextChunk
-    DictionarySpirv = charTo64bitNum("DIC_SPIR"), // DictionarySpirvChunk
-    DictionaryMetal = charTo64bitNum("DIC_METL"), // DictionaryTextChunk
-    ...
-}
-```
-
-### MaterialTextChunk
-
-These chunks have the following layout.
-
-    [u64] ChunkType magic string
-    [u32] Remaining chunk size in bytes
-    [u64] Shader count
-    for each shader:
-        [u8]  Shader model
-        [u8]  Shader variant
-        [u8]  Shader stage
-        [u32] Offset in bytes from (and including) "Shader count" up to "Total string size"
-    for each unique shader:
-        [u32] Total string size (including null terminator)
-        [u32] Number of line indices
-        [u16 u16 u16...] Line indices
-
-### MaterialSpirvChunk
-
-These chunks have the following layout.
-
-    [u64] ChunkType magic string
-    [u32] Remaining chunk size in bytes
-    [u64] Shader count
-    for each shader:
-        [u8]  Shader model
-        [u8]  Shader variant
-        [u8]  Shader stage
-        [u32] Index into the blob list in DictionarySpirvChunk
-
-### DictionaryTextChunk
-
-These chunks have the following layout.
-
-    [u64] ChunkType magic string
-    [u32] Remaining chunk size in bytes
-    [u32] Number of strings
-    for each string:
-        [u8 u8 u8 u8...] include null terminator after each string
-
-### DictionarySpirvChunk
-
-These chunks have the following layout.
-
-    [u64] ChunkType magic string
-    [u32] Remaining chunk size in bytes
-    [u32] Compression
-    [u32] Blob count
-    for each blob:
-        [u64] Byte count
-        [u8 u8 u8 ...]
 
 [1]: https://github.com/civetweb/civetweb
 [2]: https://microsoft.github.io/monaco-editor/

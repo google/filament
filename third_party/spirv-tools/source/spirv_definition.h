@@ -27,7 +27,7 @@ typedef struct spv_header_t {
   uint32_t generator;
   uint32_t bound;
   uint32_t schema;               // NOTE: Reserved
-  const uint32_t* instructions;  // NOTE: Unfixed pointer to instruciton stream
+  const uint32_t* instructions;  // NOTE: Unfixed pointer to instruction stream
 } spv_header_t;
 
 #endif  // SOURCE_SPIRV_DEFINITION_H_

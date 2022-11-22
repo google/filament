@@ -36,6 +36,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.RandomAccessFile
+import java.net.URI
 import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
@@ -96,15 +97,36 @@ class MainActivity : Activity() {
         setStatusText("To load a new model, go to the above URL on your host machine.")
 
         val view = modelViewer.view
+
+        /*
+         * Note: The settings below are overriden when connecting to the remote UI.
+         */
+
+        // on mobile, better use lower quality color buffer
+        view.renderQuality = view.renderQuality.apply {
+            hdrColorBuffer = View.QualityLevel.MEDIUM
+        }
+
+        // dynamic resolution often helps a lot
         view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
             enabled = true
             quality = View.QualityLevel.MEDIUM
         }
 
+        // MSAA is needed with dynamic resolution MEDIUM
+        view.multiSampleAntiAliasingOptions = view.multiSampleAntiAliasingOptions.apply {
+            enabled = true
+        }
+
+        // FXAA is pretty cheap and helps a lot
+        view.antiAliasing = View.AntiAliasing.FXAA
+
+        // ambient occlusion is the cheapest effect that adds a lot of quality
         view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
             enabled = true
         }
 
+        // bloom is pretty expensive but adds a fair amount of realism
         view.bloomOptions = view.bloomOptions.apply {
             enabled = true
         }
@@ -128,12 +150,12 @@ class MainActivity : Activity() {
         val scene = modelViewer.scene
         val ibl = "default_env"
         readCompressedAsset("envs/$ibl/${ibl}_ibl.ktx").let {
-            scene.indirectLight = KTXLoader.createIndirectLight(engine, it)
+            scene.indirectLight = KTX1Loader.createIndirectLight(engine, it)
             scene.indirectLight!!.intensity = 30_000.0f
             viewerContent.indirectLight = modelViewer.scene.indirectLight
         }
         readCompressedAsset("envs/$ibl/${ibl}_skybox.ktx").let {
-            scene.skybox = KTXLoader.createSkybox(engine, it)
+            scene.skybox = KTX1Loader.createSkybox(engine, it)
         }
     }
 
@@ -196,8 +218,17 @@ class MainActivity : Activity() {
 
                 val sky = Skybox.Builder().environment(skyboxTexture).build(engine)
 
+                specularFilter.destroy()
+                equirectToCubemap.destroy()
+                context.destroy()
+
+                // destroy the previous IBl
+                engine.destroyIndirectLight(modelViewer.scene.indirectLight!!)
+                engine.destroySkybox(modelViewer.scene.skybox!!)
+
                 modelViewer.scene.skybox = sky
                 modelViewer.scene.indirectLight = ibl
+                viewerContent.indirectLight = ibl
             }
         }
     }
@@ -213,7 +244,7 @@ class MainActivity : Activity() {
         val (zipStream, zipFile) = withContext(Dispatchers.IO) {
             val file = File.createTempFile("incoming", "zip", cacheDir)
             val raf = RandomAccessFile(file, "rw")
-            raf.getChannel().write(message.buffer);
+            raf.channel.write(message.buffer)
             message.buffer = null
             raf.seek(0)
             Pair(FileInputStream(file), file)
@@ -266,21 +297,19 @@ class MainActivity : Activity() {
 
         val gltfBuffer = pathToBufferMapping[gltfPath]!!
 
-        // The gltf is often not at the root level (e.g. if a folder is zipped) so
-        // we need to extract its path in order to resolve the embedded uri strings.
-        var gltfPrefix = gltfPath!!.substringBeforeLast('/', "")
-        if (gltfPrefix.isNotEmpty()) {
-            gltfPrefix += "/"
-        }
+        // In a zip file, the gltf file might be in the same folder as resources, or in a different
+        // folder. It is crucial to test against both of these cases. In any case, the resource
+        // paths are all specified relative to the location of the gltf file.
+        var prefix = URI(gltfPath!!).resolve(".")
 
         withContext(Dispatchers.Main) {
             if (gltfPath!!.endsWith(".glb")) {
                 modelViewer.loadModelGlb(gltfBuffer)
             } else {
                 modelViewer.loadModelGltf(gltfBuffer) { uri ->
-                    val path = gltfPrefix + uri
+                    val path = prefix.resolve(uri).toString()
                     if (!pathToBufferMapping.contains(path)) {
-                        Log.e(TAG, "Could not find $path in the zip.")
+                        Log.e(TAG, "Could not find '$uri' in zip using prefix '$prefix' and base path '${gltfPath!!}'")
                         setStatusText("Zip is missing $path")
                     }
                     pathToBufferMapping[path]
@@ -313,12 +342,10 @@ class MainActivity : Activity() {
         clearStatusText()
         titlebarHint.text = message.label
         CoroutineScope(Dispatchers.IO).launch {
-            if (message.label.endsWith(".zip")) {
-                loadZip(message)
-            } else if (message.label.endsWith(".hdr")) {
-                loadHdr(message)
-            } else {
-                loadGlb(message)
+            when {
+                message.label.endsWith(".zip") -> loadZip(message)
+                message.label.endsWith(".hdr") -> loadHdr(message)
+                else -> loadGlb(message)
             }
         }
     }
@@ -326,7 +353,7 @@ class MainActivity : Activity() {
     fun loadSettings(message: RemoteServer.ReceivedMessage) {
         val json = StandardCharsets.UTF_8.decode(message.buffer).toString()
         viewerContent.assetLights = modelViewer.asset?.lightEntities
-        automation.applySettings(json, viewerContent)
+        automation.applySettings(modelViewer.engine, json, viewerContent)
         modelViewer.view.colorGrading = automation.getColorGrading(modelViewer.engine)
         modelViewer.cameraFocalLength = automation.viewerOptions.cameraFocalLength
         updateRootTransform()
@@ -390,7 +417,7 @@ class MainActivity : Activity() {
 
     // Just for testing purposes, this releases the current model and reloads the default model.
     inner class DoubleTapListener : GestureDetector.SimpleOnGestureListener() {
-        override fun onDoubleTap(e: MotionEvent?): Boolean {
+        override fun onDoubleTap(e: MotionEvent): Boolean {
             modelViewer.destroyModel()
             createDefaultRenderables()
             return super.onDoubleTap(e)

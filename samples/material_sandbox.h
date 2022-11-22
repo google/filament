@@ -169,6 +169,7 @@ struct SandboxParameters {
     bool msaa = false;
     bool dithering = true;
     bool stableShadowMap = false;
+    bool lispsm = true;
     float normalBias = 1.0;
     float constantBias = 0.001;
     float polygonOffsetConstant = 0.5;

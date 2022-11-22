@@ -68,13 +68,7 @@ vertex {
 void dummy(){ }
 
 void postProcessVertex(inout PostProcessVertexInputs postProcess) {
-    postProcess.vertex.xy = postProcess.normalizedUV;
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-    // On metal/vulkan postProcess.normalizedUV has its origin at the left-top, but we need a
-    // uniform coordinate space. So, we flip the y coordinate so we have bottom-left UV
-    // coordinates across all backends.
-    postProcess.vertex.y = 1.0 - postProcess.vertex.y;
-#endif
+    postProcess.vertex.xy = uvToRenderTargetUV(postProcess.normalizedUV);
 }
 
 }

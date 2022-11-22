@@ -17,13 +17,16 @@
 #ifndef TNT_FILAMENT_MATERIALPARSER_H
 #define TNT_FILAMENT_MATERIALPARSER_H
 
-#include <filaflat/BlobDictionary.h>
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/MaterialChunk.h>
 
 #include <filament/MaterialEnums.h>
-#include <backend/DriverEnums.h>
 #include <filament/MaterialChunkType.h>
+
+#include "../../libs/filamat/src/SamplerBindingMap.h"
+#include <private/filament/Variant.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/CString.h>
@@ -32,13 +35,12 @@
 
 namespace filaflat {
 class ChunkContainer;
-class ShaderBuilder;
 class Unflattener;
 }
 
 namespace filament {
 
-class UniformInterfaceBlock;
+class BufferInterfaceBlock;
 class SamplerInterfaceBlock;
 struct SubpassInfo;
 
@@ -59,12 +61,16 @@ public:
 
     // Accessors
     bool getMaterialVersion(uint32_t* value) const noexcept;
+    bool getFeatureLevel(uint8_t* value) const noexcept;
     bool getName(utils::CString*) const noexcept;
-    bool getUIB(UniformInterfaceBlock* uib) const noexcept;
+    bool getUIB(BufferInterfaceBlock* uib) const noexcept;
     bool getSIB(SamplerInterfaceBlock* sib) const noexcept;
     bool getSubpasses(SubpassInfo* subpass) const noexcept;
     bool getShaderModels(uint32_t* value) const noexcept;
     bool getMaterialProperties(uint64_t* value) const noexcept;
+    bool getUniformBlockBindings(utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>>* value) const noexcept;
+    bool getSamplerBlockBindings(SamplerGroupBindingInfoList* pSamplerGroupInfoList,
+            SamplerBindingToNameMap* pSamplerBindingToNameMap) const noexcept;
 
     bool getDepthWriteSet(bool* value) const noexcept;
     bool getDepthWrite(bool* value) const noexcept;
@@ -74,6 +80,7 @@ public:
     bool getTransparencyMode(TransparencyMode* value) const noexcept;
     bool getColorWrite(bool* value) const noexcept;
     bool getDepthTest(bool* value) const noexcept;
+    bool getInstanced(bool* value) const noexcept;
     bool getInterpolation(Interpolation* value) const noexcept;
     bool getVertexDomain(VertexDomain* value) const noexcept;
     bool getMaterialDomain(MaterialDomain* domain) const noexcept;
@@ -85,13 +92,14 @@ public:
     bool getRequiredAttributes(AttributeBitset*) const noexcept;
     bool getRefractionMode(RefractionMode* value) const noexcept;
     bool getRefractionType(RefractionType* value) const noexcept;
+    bool getReflectionMode(ReflectionMode* value) const noexcept;
     bool hasCustomDepthShader(bool* value) const noexcept;
     bool hasSpecularAntiAliasing(bool* value) const noexcept;
     bool getSpecularAntiAliasingVariance(float* value) const noexcept;
     bool getSpecularAntiAliasingThreshold(float* value) const noexcept;
 
-    bool getShader(filaflat::ShaderBuilder& shader, backend::ShaderModel shaderModel,
-            uint8_t variant, backend::ShaderType stage) noexcept;
+    bool getShader(filaflat::ShaderContent& shader, backend::ShaderModel shaderModel,
+            Variant variant, backend::ShaderStage stage) noexcept;
 
 private:
     struct MaterialParserDetails {
@@ -136,7 +144,7 @@ private:
 };
 
 struct ChunkUniformInterfaceBlock {
-    static bool unflatten(filaflat::Unflattener& unflattener, UniformInterfaceBlock* uib);
+    static bool unflatten(filaflat::Unflattener& unflattener, BufferInterfaceBlock* uib);
 };
 
 struct ChunkSamplerInterfaceBlock {
@@ -145,6 +153,17 @@ struct ChunkSamplerInterfaceBlock {
 
 struct ChunkSubpassInterfaceBlock {
     static bool unflatten(filaflat::Unflattener& unflattener, SubpassInfo* sib);
+};
+
+struct ChunkUniformBlockBindings {
+    static bool unflatten(filaflat::Unflattener& unflattener,
+            utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>>* uniformBlockBindings);
+};
+
+struct ChunkSamplerBlockBindings {
+    static bool unflatten(filaflat::Unflattener& unflattener,
+            SamplerGroupBindingInfoList* pSamplerGroupBindingInfoList,
+            SamplerBindingToNameMap* pSamplerBindingToNameMap);
 };
 
 } // namespace filament

@@ -60,7 +60,10 @@ spv_result_t ValidateAdjacency(ValidationState_t& _) {
         // TODO(https://gitlab.khronos.org/spirv/SPIR-V/issues/533): We need
         // to discuss the location of DebugScope, DebugNoScope, DebugDeclare,
         // and DebugValue.
-        if (!spvExtInstIsDebugInfo(inst.ext_inst_type())) {
+        // NOTE: This does not apply to the non-semantic vulkan debug info.
+        if (!spvExtInstIsDebugInfo(inst.ext_inst_type()) ||
+            inst.ext_inst_type() ==
+                SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100) {
           adjacency_status = PHI_AND_VAR_INVALID;
         }
         break;

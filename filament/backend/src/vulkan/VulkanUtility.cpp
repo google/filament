@@ -24,8 +24,7 @@
 
 using namespace bluevk;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 void createSemaphore(VkDevice device, VkSemaphore *semaphore) {
     VkSemaphoreCreateInfo createInfo = {};
@@ -333,7 +332,7 @@ uint32_t getBytesPerPixel(TextureFormat format) {
 }
 
 VkCompareOp getCompareOp(SamplerCompareFunc func) {
-    using Compare = backend::SamplerCompareFunc;
+    using Compare = SamplerCompareFunc;
     switch (func) {
         case Compare::LE: return VK_COMPARE_OP_LESS_OR_EQUAL;
         case Compare::GE: return VK_COMPARE_OP_GREATER_OR_EQUAL;
@@ -347,7 +346,6 @@ VkCompareOp getCompareOp(SamplerCompareFunc func) {
 }
 
 VkBlendFactor getBlendFactor(BlendFunction mode) {
-    using BlendFunction = filament::backend::BlendFunction;
     switch (mode) {
         case BlendFunction::ZERO:                  return VK_BLEND_FACTOR_ZERO;
         case BlendFunction::ONE:                   return VK_BLEND_FACTOR_ONE;
@@ -364,7 +362,6 @@ VkBlendFactor getBlendFactor(BlendFunction mode) {
 }
 
 VkCullModeFlags getCullMode(CullingMode mode) {
-    using CullingMode = filament::backend::CullingMode;
     switch (mode) {
         case CullingMode::NONE:           return VK_CULL_MODE_NONE;
         case CullingMode::FRONT:          return VK_CULL_MODE_FRONT_BIT;
@@ -474,6 +471,109 @@ PixelDataType getComponentType(VkFormat format) {
     return {};
 }
 
+uint32_t getComponentCount(VkFormat format) {
+    switch (format) {
+        case VK_FORMAT_R8_UNORM:
+        case VK_FORMAT_R8_SNORM:
+        case VK_FORMAT_R8_USCALED:
+        case VK_FORMAT_R8_SSCALED:
+        case VK_FORMAT_R8_UINT:
+        case VK_FORMAT_R8_SINT:
+        case VK_FORMAT_R8_SRGB:
+        case VK_FORMAT_R16_UNORM:
+        case VK_FORMAT_R16_SNORM:
+        case VK_FORMAT_R16_USCALED:
+        case VK_FORMAT_R16_SSCALED:
+        case VK_FORMAT_R16_UINT:
+        case VK_FORMAT_R16_SINT:
+        case VK_FORMAT_R16_SFLOAT:
+        case VK_FORMAT_R32_UINT:
+        case VK_FORMAT_R32_SINT:
+        case VK_FORMAT_R32_SFLOAT:
+            return 1;
+
+        case VK_FORMAT_R8G8_UNORM:
+        case VK_FORMAT_R8G8_SNORM:
+        case VK_FORMAT_R8G8_USCALED:
+        case VK_FORMAT_R8G8_SSCALED:
+        case VK_FORMAT_R8G8_UINT:
+        case VK_FORMAT_R8G8_SINT:
+        case VK_FORMAT_R8G8_SRGB:
+        case VK_FORMAT_R16G16_UNORM:
+        case VK_FORMAT_R16G16_SNORM:
+        case VK_FORMAT_R16G16_USCALED:
+        case VK_FORMAT_R16G16_SSCALED:
+        case VK_FORMAT_R16G16_UINT:
+        case VK_FORMAT_R16G16_SINT:
+        case VK_FORMAT_R16G16_SFLOAT:
+        case VK_FORMAT_R32G32_UINT:
+        case VK_FORMAT_R32G32_SINT:
+        case VK_FORMAT_R32G32_SFLOAT:
+            return 2;
+
+        case VK_FORMAT_R8G8B8_UNORM:
+        case VK_FORMAT_R8G8B8_SNORM:
+        case VK_FORMAT_R8G8B8_USCALED:
+        case VK_FORMAT_R8G8B8_SSCALED:
+        case VK_FORMAT_R8G8B8_UINT:
+        case VK_FORMAT_R8G8B8_SINT:
+        case VK_FORMAT_R8G8B8_SRGB:
+        case VK_FORMAT_B8G8R8_UNORM:
+        case VK_FORMAT_B8G8R8_SNORM:
+        case VK_FORMAT_B8G8R8_USCALED:
+        case VK_FORMAT_B8G8R8_SSCALED:
+        case VK_FORMAT_B8G8R8_UINT:
+        case VK_FORMAT_B8G8R8_SINT:
+        case VK_FORMAT_B8G8R8_SRGB:
+        case VK_FORMAT_R16G16B16_UNORM:
+        case VK_FORMAT_R16G16B16_SNORM:
+        case VK_FORMAT_R16G16B16_USCALED:
+        case VK_FORMAT_R16G16B16_SSCALED:
+        case VK_FORMAT_R16G16B16_UINT:
+        case VK_FORMAT_R16G16B16_SINT:
+        case VK_FORMAT_R16G16B16_SFLOAT:
+        case VK_FORMAT_R32G32B32_UINT:
+        case VK_FORMAT_R32G32B32_SINT:
+        case VK_FORMAT_R32G32B32_SFLOAT:
+            return 3;
+
+        case VK_FORMAT_R8G8B8A8_UNORM:
+        case VK_FORMAT_R8G8B8A8_SNORM:
+        case VK_FORMAT_R8G8B8A8_USCALED:
+        case VK_FORMAT_R8G8B8A8_SSCALED:
+        case VK_FORMAT_R8G8B8A8_UINT:
+        case VK_FORMAT_R8G8B8A8_SINT:
+        case VK_FORMAT_R8G8B8A8_SRGB:
+        case VK_FORMAT_B8G8R8A8_UNORM:
+        case VK_FORMAT_B8G8R8A8_SNORM:
+        case VK_FORMAT_B8G8R8A8_USCALED:
+        case VK_FORMAT_B8G8R8A8_SSCALED:
+        case VK_FORMAT_B8G8R8A8_UINT:
+        case VK_FORMAT_B8G8R8A8_SINT:
+        case VK_FORMAT_B8G8R8A8_SRGB:
+        case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
+        case VK_FORMAT_A8B8G8R8_SNORM_PACK32:
+        case VK_FORMAT_A8B8G8R8_USCALED_PACK32:
+        case VK_FORMAT_A8B8G8R8_SSCALED_PACK32:
+        case VK_FORMAT_A8B8G8R8_UINT_PACK32:
+        case VK_FORMAT_A8B8G8R8_SINT_PACK32:
+        case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
+        case VK_FORMAT_R16G16B16A16_UNORM:
+        case VK_FORMAT_R16G16B16A16_SNORM:
+        case VK_FORMAT_R16G16B16A16_USCALED:
+        case VK_FORMAT_R16G16B16A16_SSCALED:
+        case VK_FORMAT_R16G16B16A16_UINT:
+        case VK_FORMAT_R16G16B16A16_SINT:
+        case VK_FORMAT_R16G16B16A16_SFLOAT:
+        case VK_FORMAT_R32G32B32A32_UINT:
+        case VK_FORMAT_R32G32B32A32_SINT:
+        case VK_FORMAT_R32G32B32A32_SFLOAT:
+            return 4;
+        default: assert_invariant(false && "Unknown data type, conversion is not supported.");
+    }
+    return {};
+}
+
 VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]) {
     VkComponentMapping map;
     VkComponentSwizzle* dst = &map.r;
@@ -501,10 +601,57 @@ VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]) {
     return map;
 }
 
+VkImageViewType getImageViewType(SamplerType target) {
+    switch (target) {
+        case SamplerType::SAMPLER_CUBEMAP:
+            return VK_IMAGE_VIEW_TYPE_CUBE;
+        case SamplerType::SAMPLER_2D_ARRAY:
+            return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+        case  SamplerType::SAMPLER_3D:
+            return VK_IMAGE_VIEW_TYPE_3D;
+        default:
+            return VK_IMAGE_VIEW_TYPE_2D;
+    }
+}
+
+// Between Driver API calls, non-presentable texture images are generally kept either in the
+// UNDEFINED layout, or in the usage-specific layout specified by this function. This simple
+// convention allows the use of a bitfield to represent layout in RenderPassKey. However there are
+// exceptions for depth and for transient use of specialized layouts, which is why VulkanTexture
+// tracks actual layout at the subresource level.
+VkImageLayout getDefaultImageLayout(TextureUsage usage) {
+    // Filament sometimes samples from depth while it is bound to the current render target, (e.g.
+    // SSAO does this while depth writes are disabled) so let's keep it simple and use GENERAL for
+    // all depth textures.
+    if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
+        return VK_IMAGE_LAYOUT_GENERAL;
+    }
+
+    // Filament sometimes samples from one miplevel while writing to another level in the same
+    // texture (e.g. bloom does this). Moreover we'd like to avoid lots of expensive layout
+    // transitions. So, keep it simple and use GENERAL for all color-attachable textures.
+    if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
+        return VK_IMAGE_LAYOUT_GENERAL;
+    }
+
+    // Finally, the layout for an immutable texture is optimal read-only.
+    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+}
+
+VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags) {
+    VkShaderStageFlags flags = 0x0;
+    if (any(stageFlags & ShaderStageFlags::VERTEX))     flags |= VK_SHADER_STAGE_VERTEX_BIT;
+    if (any(stageFlags & ShaderStageFlags::FRAGMENT))   flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    return flags;
+}
+
 void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transition) {
     if (transition.oldLayout == transition.newLayout) {
         return;
     }
+    assert_invariant(transition.image != VK_NULL_HANDLE && "Please call bindToSwapChain.");
     VkImageMemoryBarrier barrier = {};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     barrier.oldLayout = transition.oldLayout;
@@ -518,6 +665,68 @@ void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition tra
     vkCmdPipelineBarrier(cmdbuffer, transition.srcStage, transition.dstStage, 0, 0, nullptr, 0,
             nullptr, 1, &barrier);
 }
+
+VulkanLayoutTransition blitterTransitionHelper(VulkanLayoutTransition transition) {
+    switch (transition.newLayout) {
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+        case VK_IMAGE_LAYOUT_GENERAL:
+            transition.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            transition.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            transition.dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            break;
+
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+        default:
+            transition.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            transition.dstAccessMask = 0;
+            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            transition.dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            break;
+    }
+    return transition;
+}
+
+VulkanLayoutTransition textureTransitionHelper(VulkanLayoutTransition transition) {
+    switch (transition.newLayout) {
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            transition.srcAccessMask = 0;
+            transition.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            transition.srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            transition.dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+            transition.srcAccessMask = 0;
+            transition.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            transition.srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            transition.dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+        case VK_IMAGE_LAYOUT_GENERAL:
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+            transition.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            transition.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            transition.dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            break;
+
+            // We support PRESENT as a target layout to allow blitting from the swap chain.
+            // See also SwapChain::makePresentable().
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+            transition.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            transition.dstAccessMask = 0;
+            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            transition.dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            break;
+
+        default:
+            PANIC_POSTCONDITION("Unsupported layout transition.");
+    }
+    return transition;
+}
+
 
 bool equivalent(const VkRect2D& a, const VkRect2D& b) {
     // These are all integers so there's no need for an epsilon.
@@ -553,8 +762,7 @@ uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask) {
     return mostSignificantBit((sampleCount - 1) & mask);
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
 bool operator<(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b) {
     if (a.aspectMask < b.aspectMask) return true;

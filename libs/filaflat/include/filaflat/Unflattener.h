@@ -20,6 +20,8 @@
 #include <utils/compiler.h>
 #include <utils/CString.h>
 
+#include <private/filament/Variant.h>
+
 #include <stdint.h>
 
 namespace filaflat {
@@ -29,13 +31,16 @@ namespace filaflat {
 // never assume a read will succeed.
 class UTILS_PUBLIC Unflattener {
 public:
+    Unflattener() noexcept = default;
+
     Unflattener(const uint8_t* src, const uint8_t* end)
             : mSrc(src), mCursor(src), mEnd(end) {
+        assert_invariant(src && end);
     }
 
-    Unflattener(Unflattener const&) = default;
+    Unflattener(Unflattener const& rhs) = default;
 
-    ~Unflattener() = default;
+    ~Unflattener() noexcept = default;
 
     bool hasData() const noexcept {
         return mCursor < mEnd;
@@ -43,6 +48,12 @@ public:
 
     inline bool willOverflow(size_t size) const noexcept {
         return (mCursor + size) > mEnd;
+    }
+
+    void skipAlignmentPadding() {
+        const uint8_t padSize = (8 - (intptr_t(mCursor) % 8)) % 8;
+        mCursor += padSize;
+        assert_invariant(0 == (intptr_t(mCursor) % 8));
     }
 
     bool read(bool* b) noexcept {
@@ -61,6 +72,10 @@ public:
         *i = mCursor[0];
         mCursor += 1;
         return true;
+    }
+
+    bool read(filament::Variant* v) noexcept {
+        return read(&v->key);
     }
 
     bool read(uint16_t* i) noexcept {
@@ -138,9 +153,9 @@ public:
     }
 
 private:
-    const uint8_t* mSrc;
-    const uint8_t* mCursor;
-    const uint8_t* mEnd;
+    const uint8_t* mSrc = nullptr;
+    const uint8_t* mCursor = nullptr;
+    const uint8_t* mEnd = nullptr;
 };
 
 } //namespace filaflat

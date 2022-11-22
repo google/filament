@@ -27,14 +27,12 @@
 
 using namespace bluevk;
 
-namespace filament {
+namespace filament::backend {
 
-using namespace backend;
-
-Driver* PlatformVkAndroid::createDriver(void* const sharedContext) noexcept {
+Driver* PlatformVkAndroid::createDriver(void* const sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     static const char* requiredInstanceExtensions[] = { "VK_KHR_android_surface" };
-    return VulkanDriverFactory::create(this, requiredInstanceExtensions, 1);
+    return VulkanDriverFactory::create(this, requiredInstanceExtensions, 1, driverConfig);
 }
 
 void* PlatformVkAndroid::createVkSurfaceKHR(void* nativeWindow, void* vkinstance, uint64_t flags) noexcept {
@@ -50,4 +48,4 @@ void* PlatformVkAndroid::createVkSurfaceKHR(void* nativeWindow, void* vkinstance
     return (void*) surface;
 }
 
-} // namespace filament
+} // namespace filament::backend

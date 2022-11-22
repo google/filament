@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.google.android.filament.gltf">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
   <uses-permission android:name="android.permission.INTERNET" />
 
@@ -12,7 +11,9 @@
       android:supportsRtl="true"
       android:largeHeap="true"
       android:theme="@android:style/Theme.NoTitleBar">
-    <activity android:name="com.google.android.filament.gltf.MainActivity"
+    <activity
+        android:exported="true"
+        android:name="com.google.android.filament.gltf.MainActivity"
         android:screenOrientation="fullSensor"
         android:configChanges="orientation|screenSize|screenLayout|keyboardHidden">
       <intent-filter>

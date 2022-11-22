@@ -14,48 +14,31 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DETAILS_RESOURCELIST_H
-#define TNT_FILAMENT_DETAILS_RESOURCELIST_H
+#ifndef TNT_FILAMENT_RESOURCELIST_H
+#define TNT_FILAMENT_RESOURCELIST_H
 
 #include <utils/compiler.h>
-#include <utils/Allocator.h>
-#include <utils/Log.h>
 
 #include <tsl/robin_set.h>
 
-#include <algorithm>
-#include <mutex>
+#include <stdint.h>
 
 namespace filament {
 
 class ResourceListBase {
 public:
-    UTILS_NOINLINE
-    explicit ResourceListBase(const char* typeName)
-#ifndef NDEBUG
-            : mTypeName(typeName)
-#endif
-    {
-    }
+    using iterator = typename tsl::robin_set<void*>::iterator;
 
-    UTILS_NOINLINE
-    ~ResourceListBase() noexcept {
-#ifndef NDEBUG
-        if (!mList.empty()) {
-            utils::slog.d << "leaked " << mList.size() << " " << mTypeName << utils::io::endl;
-        }
-#endif
-    }
+    explicit ResourceListBase(const char* typeName);
+    ResourceListBase(ResourceListBase&& rhs) noexcept = default;
 
-    UTILS_NOINLINE
-    void insert(void* item) {
-        mList.insert(item);
-    }
+    ~ResourceListBase() noexcept;
 
-    UTILS_NOINLINE
-    bool remove(void const* item) {
-        return mList.erase(const_cast<void*>(item)) > 0;
-    }
+    void insert(void* item);
+
+    bool remove(void const* item);
+
+    void clear() noexcept;
 
     bool empty() const noexcept {
         return mList.empty();
@@ -64,12 +47,6 @@ public:
     size_t size() const noexcept {
         return mList.size();
     }
-
-    tsl::robin_set<void*> getListAndClear() noexcept {
-        return std::move(mList);
-    }
-
-    using iterator = typename tsl::robin_set<void*>::iterator;
 
     iterator begin() noexcept {
         return mList.begin();
@@ -80,6 +57,7 @@ public:
     }
 
 protected:
+    void forEach(void(*f)(void* user, void *p), void* user) const noexcept;
     tsl::robin_set<void*> mList;
 #ifndef NDEBUG
 private:
@@ -91,79 +69,32 @@ private:
 // The split ResourceListBase / ResourceList allows us to reduce code size by keeping
 // common code (operating on void*) separate.
 //
-template <typename T, typename LockingPolicy = utils::LockingPolicy::NoLock>
-class ResourceList : public ResourceListBase {
-    static_assert(sizeof(tsl::robin_set<T*>) == sizeof(tsl::robin_set<void*>),
-            "robin_set<void*> and robin_set<T*> are incompatible");
-
+template<typename T>
+class ResourceList : private ResourceListBase {
 public:
-    ResourceList(const char* name) noexcept : ResourceListBase(name) { }
+    using ResourceListBase::ResourceListBase;
+    using ResourceListBase::forEach;
+    using ResourceListBase::insert;
+    using ResourceListBase::remove;
+    using ResourceListBase::empty;
+    using ResourceListBase::size;
+    using ResourceListBase::clear;
+
+    explicit ResourceList(const char* name) noexcept: ResourceListBase(name) {}
+
+    ResourceList(ResourceList&& rhs) noexcept = default;
 
     ~ResourceList() noexcept = default;
 
-    void insert(T* item) {
-        std::lock_guard<LockingPolicy> guard(mLock);
-        ResourceListBase::insert(item);
+    template<typename F>
+    inline void forEach(F func) const noexcept {
+        // turn closure into function pointer call, we do this to reduce code size.
+        this->forEach(+[](void* user, void* p) {
+            ((F*)user)->operator()((T*)p);
+        }, &func);
     }
-    bool remove(T const* item) {
-        std::lock_guard<LockingPolicy> guard(mLock);
-        return ResourceListBase::remove(item);
-    }
-    bool empty() const noexcept {
-        std::lock_guard<LockingPolicy> guard(mLock);
-        return ResourceListBase::empty();
-    }
-    size_t size() const noexcept {
-        std::lock_guard<LockingPolicy> guard(mLock);
-        return ResourceListBase::size();
-    }
-
-    tsl::robin_set<T*> getListAndClear() noexcept {
-        std::lock_guard<LockingPolicy> guard(mLock);
-        tsl::robin_set<void*> list(ResourceListBase::getListAndClear());
-        // this is pretty ugly, but this avoids a copy
-        return std::move(reinterpret_cast<tsl::robin_set<T*>&>(list));
-    }
-
-    /*
-     * the methods below are only safe when LockingPolicy is NoLock, so disable them
-     * otherwise
-     */
-
-    using iterator = typename tsl::robin_set<T*>::iterator;
-    using const_iterator = typename tsl::robin_set<T*>::const_iterator;
-
-    template<typename LP, typename U>
-    using enable_if_t = typename std::enable_if<std::is_same<utils::LockingPolicy::NoLock, LP>::value, U>::type;
-
-    template<typename LP = LockingPolicy>
-    enable_if_t<LP, iterator> begin() noexcept {
-        // this is pretty ugly, but this works
-        return reinterpret_cast<tsl::robin_set<T*>&>(mList).begin();
-    }
-
-    template<typename LP = LockingPolicy>
-    enable_if_t<LP, iterator> end() noexcept {
-        // this is pretty ugly, but this works
-        return reinterpret_cast<tsl::robin_set<T*>&>(mList).end();
-    }
-
-    template<typename LP = LockingPolicy>
-    enable_if_t<LP, const_iterator> begin() const noexcept {
-        // this is pretty ugly, but this works
-        return reinterpret_cast<tsl::robin_set<T*> const&>(mList).begin();
-    }
-
-    template<typename LP = LockingPolicy>
-    enable_if_t<LP, const_iterator> end() const noexcept {
-        // this is pretty ugly, but this works
-        return reinterpret_cast<tsl::robin_set<T*> const&>(mList).end();
-    }
-
-private:
-    mutable LockingPolicy mLock;
 };
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DETAILS_RESOURCELIST_H
+#endif // TNT_FILAMENT_RESOURCELIST_H

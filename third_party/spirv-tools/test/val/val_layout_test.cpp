@@ -538,7 +538,6 @@ TEST_F(ValidateLayout, ModuleProcessedInvalidIn10) {
            OpMemoryModel Logical GLSL450
            OpName %void "void"
            OpModuleProcessed "this is ok in 1.1 and later"
-           OpDecorate %void Volatile ; bogus, but makes the example short
 %void    = OpTypeVoid
 )";
 
@@ -558,7 +557,6 @@ TEST_F(ValidateLayout, ModuleProcessedValidIn11) {
            OpMemoryModel Logical GLSL450
            OpName %void "void"
            OpModuleProcessed "this is ok in 1.1 and later"
-           OpDecorate %void Volatile ; bogus, but makes the example short
 %void    = OpTypeVoid
 )";
 

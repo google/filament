@@ -30,7 +30,7 @@ public:
     explicit FilesystemOutput(const char* path) : mPath(path) {
     }
 
-    virtual ~FilesystemOutput() {}
+    ~FilesystemOutput() override = default;
 
     bool open() noexcept override {
         mFile.open(mPath.c_str(), std::ofstream::out | std::ofstream::binary);
@@ -60,7 +60,7 @@ public:
     explicit FilesystemInput(const char* path) : mPath(path) {
     }
 
-    virtual ~FilesystemInput() {}
+    ~FilesystemInput() override = default;
 
     ssize_t open() noexcept override {
         mFile.open(mPath.c_str(), std::ifstream::binary | std::ios::ate);
@@ -74,12 +74,12 @@ public:
     }
 
     std::unique_ptr<const char[]> read() noexcept override {
-        auto mMaterialBuffer = std::unique_ptr<const char[]>(new char[mFilesize]);
-        if (!mFile.read(const_cast<char*>(mMaterialBuffer.get()), mFilesize)) {
+        auto buffer = std::make_unique<char[]>(mFilesize);
+        if (!mFile.read(buffer.get(), mFilesize)) {
             std::cerr << "Unable to read material source file '" << mPath << "'" << std::endl;
             return nullptr;
         }
-         return mMaterialBuffer;
+        return std::unique_ptr<const char[]>(buffer.release());
     }
 
     bool close() noexcept override {
@@ -101,7 +101,7 @@ class CommandlineConfig : public Config {
 public:
 
     CommandlineConfig(int argc, char** argv);
-    virtual ~CommandlineConfig() {
+    ~CommandlineConfig() override {
         delete mInput;
         delete mOutput;
     };

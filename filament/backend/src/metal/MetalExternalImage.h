@@ -24,7 +24,6 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 struct MetalContext;
 
@@ -100,6 +99,7 @@ private:
     CVMetalTextureRef createTextureFromImage(CVPixelBufferRef image, MTLPixelFormat format,
             size_t plane);
     id<MTLTexture> createRgbTexture(size_t width, size_t height);
+    id<MTLTexture> createSwizzledTextureView(id<MTLTexture> texture) const;
     id<MTLTexture> createSwizzledTextureView(CVMetalTextureRef texture) const;
     void ensureComputePipelineState();
     id<MTLCommandBuffer> encodeColorConversionPass(id<MTLTexture> inYPlane, id<MTLTexture>
@@ -125,10 +125,9 @@ private:
 
     struct {
         TextureSwizzle r, g, b, a;
-    } swizzle;
+    } mSwizzle;
 };
 
-} // namespace metal
 } // namespace backend
 } // namespace filament
 

@@ -22,23 +22,25 @@
 
 #include <backend/Platform.h>
 
+#include <backend/BufferDescriptor.h>
 #include <backend/DriverEnums.h>
+#include <backend/CallbackHandler.h>
 
-#include "private/backend/AcquiredImage.h"
+#include "private/backend/Dispatcher.h"
 #include "private/backend/Driver.h"
-#include "private/backend/SamplerGroup.h"
 
-#include <array>
+#include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <thread>
 #include <utility>
+#include <vector>
 
 #include <stdint.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
-class Dispatcher;
+struct AcquiredImage;
 
 /*
  * Hardware handles
@@ -69,7 +71,7 @@ struct HwBufferObject : public HwBase {
     uint32_t byteCount{};
 
     HwBufferObject() noexcept = default;
-    HwBufferObject(uint32_t byteCount) noexcept : byteCount(byteCount) {}
+    explicit HwBufferObject(uint32_t byteCount) noexcept : byteCount(byteCount) {}
 };
 
 struct HwIndexBuffer : public HwBase {
@@ -95,20 +97,13 @@ struct HwRenderPrimitive : public HwBase {
 };
 
 struct HwProgram : public HwBase {
-#ifndef NDEBUG
     utils::CString name;
     explicit HwProgram(utils::CString name) noexcept : name(std::move(name)) { }
-#else
-    explicit HwProgram(const utils::CString&) noexcept { }
-#endif
     HwProgram() noexcept = default;
 };
 
 struct HwSamplerGroup : public HwBase {
-    // NOTE: we have to use out-of-line allocation here because the size of a Handle<> is limited
-    std::unique_ptr<SamplerGroup> sb; // FIXME: this shouldn't depend on filament::SamplerGroup
     HwSamplerGroup() noexcept = default;
-    explicit HwSamplerGroup(size_t size) noexcept : sb(new SamplerGroup(size)) { }
 };
 
 struct HwTexture : public HwBase {
@@ -168,20 +163,47 @@ struct HwTimerQuery : public HwBase {
 
 class DriverBase : public Driver {
 public:
-    DriverBase() = delete;
-    explicit DriverBase(Dispatcher* dispatcher) noexcept;
+    DriverBase() noexcept;
     ~DriverBase() noexcept override;
 
     void purge() noexcept final;
-
-    Dispatcher& getDispatcher() noexcept final { return *mDispatcher; }
 
     // --------------------------------------------------------------------------------------------
     // Privates
     // --------------------------------------------------------------------------------------------
 
 protected:
-    Dispatcher* mDispatcher;
+    class CallbackDataDetails;
+
+    // Helpers...
+    struct CallbackData {
+        CallbackData(CallbackData const &) = delete;
+        CallbackData(CallbackData&&) = delete;
+        CallbackData& operator=(CallbackData const &) = delete;
+        CallbackData& operator=(CallbackData&&) = delete;
+        void* storage[8] = {};
+        static CallbackData* obtain(DriverBase* allocator);
+        static void release(CallbackData* data);
+    protected:
+        CallbackData() = default;
+    };
+
+    template<typename T>
+    void scheduleCallback(CallbackHandler* handler, T&& functor) {
+        CallbackData* data = CallbackData::obtain(this);
+        static_assert(sizeof(T) <= sizeof(data->storage), "functor too large");
+        new(data->storage) T(std::forward<T>(functor));
+        scheduleCallback(handler, data, (CallbackHandler::Callback)[](void* data) {
+            CallbackData* details = static_cast<CallbackData*>(data);
+            void* user = details->storage;
+            T& functor = *static_cast<T*>(user);
+            functor();
+            functor.~T();
+            CallbackData::release(details);
+        });
+    }
+
+    void scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback);
 
     inline void scheduleDestroy(BufferDescriptor&& buffer) noexcept {
         if (buffer.hasCallback()) {
@@ -191,19 +213,23 @@ protected:
 
     void scheduleDestroySlow(BufferDescriptor&& buffer) noexcept;
 
-    void scheduleRelease(AcquiredImage&& image) noexcept;
+    void scheduleRelease(AcquiredImage const& image) noexcept;
 
     void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
     void debugCommandEnd(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
 
 private:
     std::mutex mPurgeLock;
-    std::vector<BufferDescriptor> mBufferToPurge;
-    std::vector<AcquiredImage> mImagesToPurge;
+    std::vector<std::pair<void*, CallbackHandler::Callback>> mCallbacks;
+
+    std::thread mServiceThread;
+    std::mutex mServiceThreadLock;
+    std::condition_variable mServiceThreadCondition;
+    std::vector<std::tuple<CallbackHandler*, CallbackHandler::Callback, void*>> mServiceThreadCallbackQueue;
+    bool mExitRequested = false;
 };
 
 
-} // namespace backend
-} // namespace filament
+} // namespace backend::filament
 
 #endif // TNT_FILAMENT_DRIVER_DRIVERBASE_H

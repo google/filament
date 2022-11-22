@@ -21,7 +21,7 @@
 #include <backend/Handle.h>
 #include <backend/TargetBufferInfo.h>
 
-#include "private/backend/DriverApiForward.h"
+#include "backend/DriverApiForward.h"
 
 #include <utils/Hash.h>
 
@@ -153,8 +153,7 @@ private:
     template<typename T>
     struct Hasher<backend::Handle<T>> {
         std::size_t operator()(backend::Handle<T> const& s) const noexcept {
-            std::hash<typename backend::Handle<T>::HandleId> hash{};
-            return hash(s.getId());
+            return s.getId();
         }
     };
 
@@ -163,11 +162,14 @@ private:
     template<typename Key, typename Value, typename Hasher = Hasher<Key>>
     class AssociativeContainer {
         // We use a std::vector instead of a std::multimap because we don't expect many items
-        // in the cache and std::multimap generates tons of code. Even with more items, we
-        // could improve this trivially by using a sorted std::vector.
+        // in the cache and std::multimap generates tons of code. std::multimap starts getting
+        // significantly better around 1000 items.
         using Container = std::vector<std::pair<Key, Value>>;
         Container mContainer;
+
     public:
+        AssociativeContainer();
+        ~AssociativeContainer() noexcept;
         using iterator = typename Container::iterator;
         using const_iterator = typename Container::const_iterator;
         using key_type = typename Container::value_type::first_type;
@@ -186,12 +188,13 @@ private:
     };
 
     using CacheContainer = AssociativeContainer<TextureKey, TextureCachePayload>;
+    using InUseContainer = AssociativeContainer<backend::TextureHandle, TextureKey>;
 
     CacheContainer::iterator purge(CacheContainer::iterator const& pos);
 
     backend::DriverApi& mBackend;
     CacheContainer mTextureCache;
-    AssociativeContainer<backend::TextureHandle, TextureKey> mInUseTextures;
+    InUseContainer mInUseTextures;
     size_t mAge = 0;
     uint32_t mCacheSize = 0;
     static constexpr bool mEnabled = true;

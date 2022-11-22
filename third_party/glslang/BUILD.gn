@@ -69,6 +69,32 @@ action("glslang_build_info") {
   ]
 }
 
+action("glslang_extension_headers") {
+  script = "gen_extension_headers.py"
+
+  out_file = "${target_gen_dir}/include/glslang/glsl_intrinsic_header.h"
+
+  # Fuchsia GN build rules require all GN actions to be hermetic and they
+  # should correctly and fully state their inputs and outpus (see
+  # https://fuchsia.dev/fuchsia-src/development/build/hermetic_actions
+  # for details). All input files of the script should be added to the
+  # |sources| list.
+  sources = [
+    "glslang/ExtensionHeaders/GL_EXT_shader_realtime_clock.glsl",
+  ]
+
+  inputs = [
+    script
+  ]
+  outputs = [ out_file ]
+  args = [
+    "-i",
+    rebase_path("glslang/ExtensionHeaders", root_build_dir),
+    "-o",
+    rebase_path(out_file, root_build_dir),
+  ]
+}
+
 spirv_tools_dir = glslang_spirv_tools_dir
 if (!defined(glslang_angle)) {
   glslang_angle = false
@@ -107,6 +133,7 @@ template("glslang_sources_common") {
       "SPIRV/Logger.cpp",
       "SPIRV/Logger.h",
       "SPIRV/NonSemanticDebugPrintf.h",
+      "SPIRV/NonSemanticShaderDebugInfo100.h",
       "SPIRV/SPVRemapper.cpp",
       "SPIRV/SPVRemapper.h",
       "SPIRV/SpvBuilder.cpp",
@@ -302,6 +329,7 @@ executable("glslang_validator") {
     ":glslang_build_info",
     ":glslang_default_resource_limits_sources",
     ":glslang_sources",
+    ":glslang_extension_headers",
   ]
   public_configs = [ ":glslang_hlsl" ]
 

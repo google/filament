@@ -131,8 +131,8 @@ private:
     mutable std::unordered_map<uint64_t, filament::Material*> mGltfMaterialCache;
     filament::Texture* mDefaultMap = nullptr;
     filament::Texture* mDefaultNormalMap = nullptr;
-    float mDefaultMetallic = 0.0;
-    float mDefaultRoughness = 0.4;
+    float mDefaultMetallic = 0.0f;
+    float mDefaultRoughness = 0.4f;
     filament::sRGBColor mDefaultEmissive = filament::sRGBColor({0.0f, 0.0f, 0.0f});
 
     std::vector<utils::Entity> mRenderables;

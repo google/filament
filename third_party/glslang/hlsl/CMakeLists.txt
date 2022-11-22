@@ -46,14 +46,16 @@ if(WIN32 AND BUILD_SHARED_LIBS)
 endif()
 
 if(ENABLE_GLSLANG_INSTALL)
-    if(BUILD_SHARED_LIBS)
-        install(TARGETS HLSL EXPORT HLSLTargets
-                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-    else()
-        install(TARGETS HLSL EXPORT HLSLTargets
-                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    endif()
-	install(EXPORT HLSLTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
-endif(ENABLE_GLSLANG_INSTALL)
+    install(TARGETS HLSL EXPORT glslang-targets)
+
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/HLSLTargets.cmake" "
+        message(WARNING \"Using `HLSLTargets.cmake` is deprecated: use `find_package(glslang)` to find glslang CMake targets.\")
+
+        if (NOT TARGET glslang::HLSL)
+            include(\"\${CMAKE_CURRENT_LIST_DIR}/../../${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}/glslang-targets.cmake\")
+        endif()
+
+        add_library(HLSL ALIAS glslang::HLSL)
+    ")
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/HLSLTargets.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
+endif()

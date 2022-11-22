@@ -22,15 +22,16 @@
 
 #include <string.h>
 
+#include <utils/string.h>
+
 namespace matc {
 
-static std::string resolveEscapes(const std::string&& s) {
+static std::string resolveEscapes(const std::string& s) {
     std::string out;
     out.reserve(s.length());
 
     bool inEscape = false;
-    for (size_t i = 0; i < s.length(); i++) {
-        char c = s[i];
+    for (char c : s) {
         if (inEscape) {
             switch (c) {
                 case '\\':
@@ -83,8 +84,8 @@ static std::string resolveEscapes(const std::string&& s) {
     return out;
 }
 
-JsonishString::JsonishString(const std::string&& string) : JsonishValue(STRING) {
-    mString = resolveEscapes(std::move(string));
+JsonishString::JsonishString(const std::string& string) : JsonishValue(STRING) {
+    mString = resolveEscapes(string);
 }
 
 std::unique_ptr<JsonishObject> JsonishParser::parse() noexcept {
@@ -250,12 +251,18 @@ JsonishValue* JsonishParser::parseString() noexcept {
     JsonishValue* arrValue;
     if (arrLexeme && arrLexeme->getType() == ARRAY_START && (arrValue = parseArray())) {
         delete arrValue;
-        size_t length = mLexemes[mCursor].getStart() - strLexeme->getStart();
+
+        const JsonLexeme* next = peekNextLexemeType();
+        if (!next) {
+            return nullptr;
+        }
+
+        size_t length = next->getStart() - strLexeme->getStart();
         tmp = std::string(strLexeme->getStart(), length);
     } else {
         tmp = std::string(strLexeme->getStart(), strLexeme->getSize());
     }
-    return new JsonishString(std::move(tmp));
+    return new JsonishString(tmp);
 }
 
 JsonishValue* JsonishParser::parseValue() noexcept {
@@ -269,7 +276,7 @@ JsonishValue* JsonishParser::parseValue() noexcept {
             return parseString();
         case NUMBER:
             consumeLexeme(NUMBER);
-            return new JsonishNumber(strtof(next->getStart(), nullptr));
+            return new JsonishNumber(utils::strtof_c(next->getStart(), nullptr));
         case BLOCK_START:
             return parseObject();
         case ARRAY_START:

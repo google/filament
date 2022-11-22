@@ -19,143 +19,237 @@
 // change to true to display all GL extensions in the console on start-up
 #define DEBUG_PRINT_EXTENSIONS false
 
-
 using namespace utils;
 
-namespace filament {
+namespace filament::backend {
 
-using namespace backend;
+bool OpenGLContext::queryOpenGLVersion(GLint* major, GLint* minor) noexcept {
+    if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES) {
+        char const* version = (char const*)glGetString(GL_VERSION);
+        // This works on all versions of GLES
+        int n = version ? sscanf(version, "OpenGL ES %d.%d", major, minor) : 0;
+        return n == 2;
+    } else if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
+        // OpenGL version
+        glGetIntegerv(GL_MAJOR_VERSION, major);
+        glGetIntegerv(GL_MINOR_VERSION, minor);
+        return (glGetError() == GL_NO_ERROR);
+    }
+}
 
 OpenGLContext::OpenGLContext() noexcept {
     state.vao.p = &mDefaultVAO;
-    state.enables.caps.set(getIndexForCap(GL_DITHER));
 
-    UTILS_UNUSED char const* const vendor   = (char const*) glGetString(GL_VENDOR);
-    UTILS_UNUSED char const* const renderer = (char const*) glGetString(GL_RENDERER);
-    UTILS_UNUSED char const* const version  = (char const*) glGetString(GL_VERSION);
-    UTILS_UNUSED char const* const shader   = (char const*) glGetString(GL_SHADING_LANGUAGE_VERSION);
+    // These queries work with all GL/GLES versions!
+    state.vendor   = (char const*)glGetString(GL_VENDOR);
+    state.renderer = (char const*)glGetString(GL_RENDERER);
+    state.version  = (char const*)glGetString(GL_VERSION);
+    state.shader   = (char const*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-#ifndef NDEBUG
-    slog.i << vendor << ", " << renderer << ", " << version << ", " << shader << io::endl;
-#endif
+    slog.v << "[" << state.vendor << "], [" << state.renderer << "], "
+              "[" << state.version << "], [" << state.shader << "]" << io::endl;
 
-    // OpenGL (ES) version
-    GLint major = 0;
-    GLint minor = 0;
-    glGetIntegerv(GL_MAJOR_VERSION, &major);
-    glGetIntegerv(GL_MINOR_VERSION, &minor);
+    /*
+     * Figure out GL / GLES version and available features
+     */
 
-    // Figure out if we have the extension we need
-    GLint n = 0;
-    glGetIntegerv(GL_NUM_EXTENSIONS, &n);
-    ExtentionSet exts;
-    for (GLint i = 0; i < n; i++) {
-        const char * const extension = (const char*)glGetStringi(GL_EXTENSIONS, (GLuint)i);
-        exts.insert(StaticString::make(extension, strlen(extension)));
-        if (DEBUG_PRINT_EXTENSIONS) {
-            slog.d << extension << io::endl;
-        }
-    }
-    ShaderModel shaderModel = ShaderModel::UNKNOWN;
-    if (GLES30_HEADERS) {
-        if (major == 3 && minor >= 0) {
-            shaderModel = ShaderModel::GL_ES_30;
-        }
-        if (major == 3 && minor >= 1) {
-            features.multisample_texture = true;
-        }
-        initExtensionsGLES(major, minor, exts);
-    } else if (GL41_HEADERS) {
-        if (major == 4 && minor >= 1) {
-            shaderModel = ShaderModel::GL_CORE_41;
-        }
-        initExtensionsGL(major, minor, exts);
-        features.multisample_texture = true;
-    };
-    assert_invariant(shaderModel != ShaderModel::UNKNOWN);
-    mShaderModel = shaderModel;
+    queryOpenGLVersion(&state.major, &state.minor);
 
-    // Figure out which driver bugs we need to workaround
-    if (strstr(renderer, "Adreno")) {
-        // On Adreno (As of 3/20) timer query seem to return the CPU time, not the GPU time.
-        bugs.dont_use_timer_query = true;
-        // Blits to texture arrays are failing
-        bugs.disable_sidecar_blit_into_texture_array = true;
-        // early exit condition is flattened in EASU code
-        bugs.split_easu = true;
-    } else if (strstr(renderer, "Mali")) {
-        bugs.vao_doesnt_store_element_array_buffer_binding = true;
-        if (strstr(renderer, "Mali-T")) {
-            bugs.disable_glFlush = true;
-            bugs.disable_shared_context_draws = true;
-            bugs.texture_external_needs_rebind = true;
-            // We have not verified that timer queries work on Mali-T, so we disable to be safe.
-            bugs.dont_use_timer_query = true;
-        }
-        if (strstr(renderer, "Mali-G")) {
-            // note: We have verified that timer queries work well at least on some Mali-G.
-        }
-    } else if (strstr(renderer, "Intel")) {
-        bugs.vao_doesnt_store_element_array_buffer_binding = true;
-    } else if (strstr(renderer, "PowerVR") || strstr(renderer, "Apple")) {
-    } else if (strstr(renderer, "Tegra") || strstr(renderer, "GeForce") || strstr(renderer, "NV")) {
-    } else if (strstr(renderer, "Vivante")) {
-    } else if (strstr(renderer, "AMD") || strstr(renderer, "ATI")) {
-    } else if (strstr(renderer, "Mozilla")) {
-        bugs.disable_invalidate_framebuffer = true;
-    }
-
-    // now we can query getter and features
     glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &gets.max_renderbuffer_size);
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &gets.max_uniform_block_size);
-    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
     glGetIntegerv(GL_MAX_SAMPLES, &gets.max_samples);
     glGetIntegerv(GL_MAX_DRAW_BUFFERS, &gets.max_draw_buffers);
+    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &gets.max_texture_image_units);
+    glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &gets.max_combined_texture_image_units);
+    glGetIntegerv(GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS, &gets.max_transform_feedback_separate_attribs);
+    glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &gets.max_uniform_buffer_bindings);
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
+
+    constexpr auto const caps3 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
+    constexpr GLint MAX_VERTEX_SAMPLER_COUNT = caps3.MAX_VERTEX_SAMPLER_COUNT;
+    constexpr GLint MAX_FRAGMENT_SAMPLER_COUNT = caps3.MAX_FRAGMENT_SAMPLER_COUNT;
+
+    if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES) {
+        initExtensionsGLES();
+        if (state.major == 3) {
+            assert_invariant(gets.max_texture_image_units >= 16);
+            assert_invariant(gets.max_combined_texture_image_units >= 32);
+            if (state.minor >= 1) {
+                features.multisample_texture = true;
+                // figure out our feature level
+                if (ext.EXT_texture_cube_map_array) {
+                    mFeatureLevel = FeatureLevel::FEATURE_LEVEL_2;
+                    if (gets.max_texture_image_units >= MAX_FRAGMENT_SAMPLER_COUNT &&
+                        gets.max_combined_texture_image_units >=
+                                (MAX_FRAGMENT_SAMPLER_COUNT + MAX_VERTEX_SAMPLER_COUNT)) {
+                        mFeatureLevel = FeatureLevel::FEATURE_LEVEL_3;
+                    }
+                }
+            }
+        }
+    } else if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
+        // OpenGL version
+        initExtensionsGL();
+        if (state.major == 4) {
+            assert_invariant(state.minor >= 1);
+            mShaderModel = ShaderModel::DESKTOP;
+            if (state.minor >= 3) {
+                // cubemap arrays are available as of OpenGL 4.0
+                mFeatureLevel = FeatureLevel::FEATURE_LEVEL_2;
+                // figure out our feature level
+                if (gets.max_texture_image_units >= MAX_FRAGMENT_SAMPLER_COUNT &&
+                    gets.max_combined_texture_image_units >=
+                            (MAX_FRAGMENT_SAMPLER_COUNT + MAX_VERTEX_SAMPLER_COUNT)) {
+                    mFeatureLevel = FeatureLevel::FEATURE_LEVEL_3;
+                }
+            }
+            features.multisample_texture = true;
+        }
+        // feedback loops are allowed on GL desktop as long as writes are disabled
+        bugs.allow_read_only_ancillary_feedback_loop = true;
+        assert_invariant(gets.max_texture_image_units >= 16);
+        assert_invariant(gets.max_combined_texture_image_units >= 32);
+    }
 #ifdef GL_EXT_texture_filter_anisotropic
     if (ext.EXT_texture_filter_anisotropic) {
         glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gets.max_anisotropy);
     }
 #endif
 
+    /*
+     * Figure out which driver bugs we need to workaround
+     */
+
+    const bool isAngle = strstr(state.renderer, "ANGLE");
+    if (!isAngle) {
+        if (strstr(state.renderer, "Adreno")) {
+            // Qualcomm GPU
+            bugs.invalidate_end_only_if_invalidate_start = true;
+
+            // On Adreno (As of 3/20) timer query seem to return the CPU time, not the GPU time.
+            bugs.dont_use_timer_query = true;
+
+            // Blits to texture arrays are failing
+            //   This bug continues to reproduce, though at times we've seen it appear to "go away".
+            //   The standalone sample app that was written to show this problem still reproduces.
+            //   The working hypthesis is that some other state affects this behavior.
+            bugs.disable_sidecar_blit_into_texture_array = true;
+
+            // early exit condition is flattened in EASU code
+            bugs.split_easu = true;
+
+            // initialize the non used uniform array for adreno drivers.
+            bugs.enable_initialize_non_used_uniform_array = true;
+
+            int maj, min, driverMajor, driverMinor;
+            int c = sscanf(state.version, "OpenGL ES %d.%d V@%d.%d", // NOLINT(cert-err34-c)
+                    &maj, &min, &driverMajor, &driverMinor);
+            if (c == 4) {
+                // Workarounds based on version here.
+                // notes:
+                //  bugs.invalidate_end_only_if_invalidate_start
+                //  - appeared at least in
+                //      "OpenGL ES 3.2 V@0490.0 (GIT@85da404, I46ff5fc46f, 1606794520) (Date:11/30/20)"
+                //  - wasn't present in
+                //      "OpenGL ES 3.2 V@0490.0 (GIT@0905e9f, Ia11ce2d146, 1599072951) (Date:09/02/20)"
+                //  - has been confirmed fixed in V@570.1 by Qualcomm
+                if (driverMajor < 490 || driverMajor > 570 ||
+                    (driverMajor == 570 && driverMinor >= 1)) {
+                    bugs.invalidate_end_only_if_invalidate_start = false;
+                }
+            }
+
+            // qualcomm seems to have no problem with this (which is good for us)
+            bugs.allow_read_only_ancillary_feedback_loop = true;
+        } else if (strstr(state.renderer, "Mali")) {
+            // ARM GPU
+            bugs.vao_doesnt_store_element_array_buffer_binding = true;
+            if (strstr(state.renderer, "Mali-T")) {
+                bugs.disable_glFlush = true;
+                bugs.disable_shared_context_draws = true;
+                bugs.texture_external_needs_rebind = true;
+                // We have not verified that timer queries work on Mali-T, so we disable to be safe.
+                bugs.dont_use_timer_query = true;
+            }
+            if (strstr(state.renderer, "Mali-G")) {
+                // assume we don't have working timer queries
+                bugs.dont_use_timer_query = true;
+
+                int maj, min, driverVersion, driverRevision, driverPatch;
+                int c = sscanf(state.version, "OpenGL ES %d.%d v%d.r%dp%d", // NOLINT(cert-err34-c)
+                        &maj, &min, &driverVersion, &driverRevision, &driverPatch);
+                if (c == 5) {
+                    // Workarounds based on version here.
+                    // notes:
+                    //  bugs.dont_use_timer_query : on some Mali-Gxx drivers timer query seems
+                    //  to cause memory corruptions in some cases on some devices (see b/233754398).
+                    //  - appeared at least in
+                    //      "OpenGL ES 3.2 v1.r26p0-01eac0"
+                    //  - wasn't present in
+                    //      "OpenGL ES 3.2 v1.r32p1-00pxl1"
+                    if (driverVersion >= 2 || (driverVersion == 1 && driverRevision >= 32)) {
+                        bugs.dont_use_timer_query = false;
+                    }
+                }
+            }
+            // Mali seems to have no problem with this (which is good for us)
+            bugs.allow_read_only_ancillary_feedback_loop = true;
+        } else if (strstr(state.renderer, "Intel")) {
+            // Intel GPU
+            bugs.vao_doesnt_store_element_array_buffer_binding = true;
+        } else if (strstr(state.renderer, "PowerVR")) {
+            // PowerVR GPU
+        } else if (strstr(state.renderer, "Apple")) {
+            // Apple GPU
+        } else if (strstr(state.renderer, "Tegra") ||
+                   strstr(state.renderer, "GeForce") ||
+                   strstr(state.renderer, "NV")) {
+            // NVIDIA GPU
+        } else if (strstr(state.renderer, "Vivante")) {
+            // Vivante GPU
+        } else if (strstr(state.renderer, "AMD") ||
+                   strstr(state.renderer, "ATI")) {
+            // AMD/ATI GPU
+        } else if (strstr(state.renderer, "Mozilla")) {
+            bugs.disable_invalidate_framebuffer = true;
+        }
+    } else {
+        // When running under ANGLE, it's a different set of workaround that we need.
+        if (strstr(state.renderer, "Adreno")) {
+            // Qualcomm GPU
+            // early exit condition is flattened in EASU code
+            // (that should be regardless of ANGLE, but we should double check)
+            bugs.split_easu = true;
+        }
+        // TODO: see if we could use `bugs.allow_read_only_ancillary_feedback_loop = true`
+    }
+
+    slog.v << "Feature level: " << +mFeatureLevel << '\n';
+    slog.v << "Active workarounds: " << '\n';
+    UTILS_NOUNROLL
+    for (auto [enabled, name, _] : mBugDatabase) {
+        if (enabled) {
+            slog.v << name << '\n';
+        }
+    }
+    flush(slog.v);
+
     assert_invariant(gets.max_draw_buffers >= 4); // minspec
 
-#if 0
-    // this is useful for development, but too verbose even for debug builds
-    slog.i
-            << "GL_MAX_DRAW_BUFFERS = " << gets.max_draw_buffers << '\n'
+#ifndef NDEBUG
+    // this is useful for development
+    slog.v  << "GL_MAX_DRAW_BUFFERS = " << gets.max_draw_buffers << '\n'
             << "GL_MAX_RENDERBUFFER_SIZE = " << gets.max_renderbuffer_size << '\n'
             << "GL_MAX_SAMPLES = " << gets.max_samples << '\n'
             << "GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = " << gets.max_anisotropy << '\n'
             << "GL_MAX_UNIFORM_BLOCK_SIZE = " << gets.max_uniform_block_size << '\n'
+            << "GL_MAX_TEXTURE_IMAGE_UNITS = " << gets.max_texture_image_units << '\n'
             << "GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT = " << gets.uniform_buffer_offset_alignment << '\n'
-            << io::endl;
+            ;
+    flush(slog.v);
 #endif
 
-    /*
-     * Set our default state
-     */
-
-    // We need to make sure our internal state matches the GL state when we start.
-    // (some of these calls may be unneeded as they might be the gl defaults)
-    glDisable(GL_BLEND);
-    glDisable(GL_CULL_FACE);
-    glDisable(GL_SCISSOR_TEST);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_STENCIL_TEST);
-    glDisable(GL_DITHER);
-    glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
-    glDisable(GL_SAMPLE_COVERAGE);
-    glDisable(GL_POLYGON_OFFSET_FILL);
-
-    // Point sprite size and seamless cubemap filtering are disabled by default in desktop GL.
-    // In OpenGL ES, these flags do not exist because they are always on.
-#if GL41_HEADERS
-    enable(GL_PROGRAM_POINT_SIZE);
-#endif
-
-#ifdef GL_ARB_seamless_cube_map
-    enable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-#endif
+    setDefaultState();
 
 #ifdef GL_EXT_texture_filter_anisotropic
     if (ext.EXT_texture_filter_anisotropic) {
@@ -174,63 +268,80 @@ OpenGLContext::OpenGLContext() noexcept {
     }
 #endif
 
-#ifdef GL_FRAGMENT_SHADER_DERIVATIVE_HINT
-    glHint(GL_FRAGMENT_SHADER_DERIVATIVE_HINT, GL_NICEST);
-#endif
-
 #if !defined(NDEBUG) && defined(GL_KHR_debug)
     if (ext.KHR_debug) {
         auto cb = [](GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
                 const GLchar* message, const void *userParam) {
-            io::ostream* stream = nullptr;
+            io::ostream* stream = &slog.i;
             switch (severity) {
-                case GL_DEBUG_SEVERITY_HIGH:
-                    stream = &slog.e;
-                    break;
-                case GL_DEBUG_SEVERITY_MEDIUM:
-                    stream = &slog.w;
-                    break;
-                case GL_DEBUG_SEVERITY_LOW:
-                    stream = &slog.d;
-                    break;
+                case GL_DEBUG_SEVERITY_HIGH:    stream = &slog.e;   break;
+                case GL_DEBUG_SEVERITY_MEDIUM:  stream = &slog.w;   break;
+                case GL_DEBUG_SEVERITY_LOW:     stream = &slog.d;   break;
                 case GL_DEBUG_SEVERITY_NOTIFICATION:
-                default:
-                    stream = &slog.i;
-                    break;
+                default: break;
             }
             io::ostream& out = *stream;
-            out << "KHR_debug ";
+            const char* level = ": ";
             switch (type) {
-                case GL_DEBUG_TYPE_ERROR:
-                    out << "ERROR";
-                    break;
-                case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-                    out << "DEPRECATED_BEHAVIOR";
-                    break;
-                case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-                    out << "UNDEFINED_BEHAVIOR";
-                    break;
-                case GL_DEBUG_TYPE_PORTABILITY:
-                    out << "PORTABILITY";
-                    break;
-                case GL_DEBUG_TYPE_PERFORMANCE:
-                    out << "PERFORMANCE";
-                    break;
-                case GL_DEBUG_TYPE_OTHER:
-                    out << "OTHER";
-                    break;
-                case GL_DEBUG_TYPE_MARKER:
-                    out << "MARKER";
-                    break;
-                default:
-                    break;
+                case GL_DEBUG_TYPE_ERROR:               level = "ERROR: ";               break;
+                case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: level = "DEPRECATED_BEHAVIOR: "; break;
+                case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  level = "UNDEFINED_BEHAVIOR: ";  break;
+                case GL_DEBUG_TYPE_PORTABILITY:         level = "PORTABILITY: ";         break;
+                case GL_DEBUG_TYPE_PERFORMANCE:         level = "PERFORMANCE: ";         break;
+                case GL_DEBUG_TYPE_OTHER:               level = "OTHER: ";               break;
+                case GL_DEBUG_TYPE_MARKER:              level = "MARKER: ";              break;
+                default: break;
             }
-            out << ": " << message << io::endl;
+            out << "KHR_debug " << level << message << io::endl;
         };
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         glDebugMessageCallback(cb, nullptr);
     }
+#endif
+}
+
+void OpenGLContext::setDefaultState() noexcept {
+    // We need to make sure our internal state matches the GL state when we start.
+    // (some of these calls may be unneeded as they might be the gl defaults)
+    GLenum caps[] = {
+        GL_BLEND,
+        GL_CULL_FACE,
+        GL_SCISSOR_TEST,
+        GL_DEPTH_TEST,
+        GL_STENCIL_TEST,
+        GL_DITHER,
+        GL_SAMPLE_ALPHA_TO_COVERAGE,
+        GL_SAMPLE_COVERAGE,
+        GL_POLYGON_OFFSET_FILL,  
+    };
+    size_t capsCount = sizeof(caps) / sizeof(caps[0]);
+
+    UTILS_NOUNROLL
+    for (GLenum capi = 0; capi < capsCount; ++capi) {
+        size_t capIndex = getIndexForCap(caps[capi]);
+        GLenum cap = caps[capi];
+        if (state.enables.caps[capIndex]) {
+            glEnable(cap);
+        } else {
+            glDisable(cap);
+        }
+    }
+
+    // Point sprite size and seamless cubemap filtering are disabled by default in desktop GL.
+    // In OpenGL ES, these flags do not exist because they are always on.
+#if BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL
+    glEnable(GL_PROGRAM_POINT_SIZE);
+    enable(GL_PROGRAM_POINT_SIZE);
+#endif
+
+#ifdef GL_ARB_seamless_cube_map
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+    enable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+#endif
+
+#ifdef GL_FRAGMENT_SHADER_DERIVATIVE_HINT
+    glHint(GL_FRAGMENT_SHADER_DERIVATIVE_HINT, GL_NICEST);
 #endif
 
 #if defined(GL_EXT_clip_control) || defined(GL_ARB_clip_control) || defined(GL_VERSION_4_5)
@@ -240,60 +351,87 @@ OpenGLContext::OpenGLContext() noexcept {
 #endif
 }
 
-UTILS_NOINLINE
-bool OpenGLContext::hasExtension(ExtentionSet const& map, utils::StaticString ext) noexcept {
-    return map.find(ext) != map.end();
-}
+void OpenGLContext::initExtensionsGLES() noexcept {
+    const char * const extensions = (const char*)glGetString(GL_EXTENSIONS);
+    GLUtils::unordered_string_set exts = GLUtils::split(extensions);
+    if constexpr (DEBUG_PRINT_EXTENSIONS) {
+        for (auto extension: exts) {
+            slog.d << "\"" << std::string_view(extension) << "\"\n";
+        }
+        flush(slog.d);
+    }
 
-void OpenGLContext::initExtensionsGLES(GLint major, GLint minor, ExtentionSet const& exts) {
     // figure out and initialize the extensions we need
-    ext.APPLE_color_buffer_packed_float = hasExtension(exts, "GL_APPLE_color_buffer_packed_float");
-    ext.EXT_clip_control = hasExtension(exts, "GL_EXT_clip_control");
-    ext.EXT_color_buffer_float = hasExtension(exts, "GL_EXT_color_buffer_float");
-    ext.EXT_color_buffer_half_float = hasExtension(exts, "GL_EXT_color_buffer_half_float");
-    ext.EXT_debug_marker = hasExtension(exts, "GL_EXT_debug_marker");
-    ext.EXT_disjoint_timer_query = hasExtension(exts, "GL_EXT_disjoint_timer_query");
-    ext.EXT_multisampled_render_to_texture = hasExtension(exts, "GL_EXT_multisampled_render_to_texture");
-    ext.EXT_multisampled_render_to_texture2 = hasExtension(exts, "GL_EXT_multisampled_render_to_texture2");
-    ext.EXT_shader_framebuffer_fetch = hasExtension(exts, "GL_EXT_shader_framebuffer_fetch");
+    using namespace std::literals;
+    ext.APPLE_color_buffer_packed_float = exts.has("GL_APPLE_color_buffer_packed_float"sv);
+    ext.EXT_clip_control = exts.has("GL_EXT_clip_control"sv);
+    ext.EXT_color_buffer_float = exts.has("GL_EXT_color_buffer_float"sv);
+    ext.EXT_color_buffer_half_float = exts.has("GL_EXT_color_buffer_half_float"sv);
+    ext.EXT_debug_marker = exts.has("GL_EXT_debug_marker"sv);
+    ext.EXT_disjoint_timer_query = exts.has("GL_EXT_disjoint_timer_query"sv);
+    ext.EXT_multisampled_render_to_texture = exts.has("GL_EXT_multisampled_render_to_texture"sv);
+    ext.EXT_multisampled_render_to_texture2 = exts.has("GL_EXT_multisampled_render_to_texture2"sv);
+    ext.EXT_shader_framebuffer_fetch = exts.has("GL_EXT_shader_framebuffer_fetch"sv);
+#if !defined(__EMSCRIPTEN__)
     ext.EXT_texture_compression_etc2 = true;
-    ext.EXT_texture_filter_anisotropic = hasExtension(exts, "GL_EXT_texture_filter_anisotropic");
-    ext.GOOGLE_cpp_style_line_directive = hasExtension(exts, "GL_GOOGLE_cpp_style_line_directive");
-    ext.KHR_debug = hasExtension(exts, "GL_KHR_debug");
-    ext.OES_EGL_image_external_essl3 = hasExtension(exts, "GL_OES_EGL_image_external_essl3");
-    ext.QCOM_tiled_rendering = hasExtension(exts, "GL_QCOM_tiled_rendering");
-    ext.EXT_texture_compression_s3tc = hasExtension(exts, "GL_EXT_texture_compression_s3tc");
-    ext.EXT_texture_compression_s3tc_srgb = hasExtension(exts, "GL_EXT_texture_compression_s3tc_srgb");
-    ext.WEBGL_compressed_texture_s3tc = hasExtension(exts, "WEBGL_compressed_texture_s3tc");
-    ext.WEBGL_compressed_texture_s3tc_srgb = hasExtension(exts, "WEBGL_compressed_texture_s3tc_srgb");
-    ext.WEBGL_compressed_texture_etc = hasExtension(exts, "WEBGL_compressed_texture_etc");
+#endif
+    ext.EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
+    ext.EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
+    ext.EXT_texture_cube_map_array = exts.has("GL_EXT_texture_cube_map_array"sv) || exts.has("GL_OES_texture_cube_map_array"sv);
+    ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
+    ext.KHR_debug = exts.has("GL_KHR_debug"sv);
+    ext.KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
+    ext.KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
+    ext.OES_EGL_image_external_essl3 = exts.has("GL_OES_EGL_image_external_essl3"sv);
+    ext.QCOM_tiled_rendering = exts.has("GL_QCOM_tiled_rendering"sv);
+    ext.WEBGL_compressed_texture_etc = exts.has("WEBGL_compressed_texture_etc"sv);
+    ext.WEBGL_compressed_texture_s3tc = exts.has("WEBGL_compressed_texture_s3tc"sv);
+    ext.WEBGL_compressed_texture_s3tc_srgb = exts.has("WEBGL_compressed_texture_s3tc_srgb"sv);
     // ES 3.2 implies EXT_color_buffer_float
-    if (major >= 3 && minor >= 2) {
+    if (state.major >= 3 && state.minor >= 2) {
         ext.EXT_color_buffer_float = true;
     }
 }
 
-void OpenGLContext::initExtensionsGL(GLint major, GLint minor, ExtentionSet const& exts) {
+void OpenGLContext::initExtensionsGL() noexcept {
+    GLUtils::unordered_string_set exts;
+    GLint n = 0;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &n);
+    for (GLint i = 0; i < n; i++) {
+        exts.emplace((const char*)glGetStringi(GL_EXTENSIONS, (GLuint)i));
+    }
+    if constexpr (DEBUG_PRINT_EXTENSIONS) {
+        for (auto extension: exts) {
+            slog.d << "\"" << std::string_view(extension) << "\"\n";
+        }
+        flush(slog.d);
+    }
+
+    using namespace std::literals;
+    auto major = state.major;
+    auto minor = state.minor;
     ext.APPLE_color_buffer_packed_float = true;  // Assumes core profile.
-    ext.ARB_shading_language_packing = hasExtension(exts, "GL_ARB_shading_language_packing") || (major == 4 && minor >= 2);
-    ext.EXT_clip_control = hasExtension(exts, "GL_ARB_clip_control") || (major == 4 && minor >= 5);
+    ext.ARB_shading_language_packing = exts.has("GL_ARB_shading_language_packing"sv) || (major == 4 && minor >= 2);
+    ext.EXT_clip_control = exts.has("GL_ARB_clip_control"sv) || (major == 4 && minor >= 5);
     ext.EXT_color_buffer_float = true;  // Assumes core profile.
     ext.EXT_color_buffer_half_float = true;  // Assumes core profile.
-    ext.EXT_debug_marker = hasExtension(exts, "GL_EXT_debug_marker");
-    ext.EXT_shader_framebuffer_fetch = hasExtension(exts, "GL_EXT_shader_framebuffer_fetch");
-    ext.EXT_texture_compression_etc2 = hasExtension(exts, "GL_ARB_ES3_compatibility");
-    ext.EXT_texture_filter_anisotropic = hasExtension(exts, "GL_EXT_texture_filter_anisotropic");
-    ext.EXT_texture_sRGB = hasExtension(exts, "GL_EXT_texture_sRGB");
-    ext.GOOGLE_cpp_style_line_directive = hasExtension(exts, "GL_GOOGLE_cpp_style_line_directive");
+    ext.EXT_debug_marker = exts.has("GL_EXT_debug_marker"sv);
+    ext.EXT_shader_framebuffer_fetch = exts.has("GL_EXT_shader_framebuffer_fetch"sv);
+    ext.EXT_texture_compression_etc2 = exts.has("GL_ARB_ES3_compatibility"sv);
+    ext.EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
+    ext.EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
+    ext.EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
+    ext.EXT_texture_sRGB = exts.has("GL_EXT_texture_sRGB"sv);
+    ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
     ext.KHR_debug = major >= 4 && minor >= 3;
-    ext.OES_EGL_image_external_essl3 = hasExtension(exts, "GL_OES_EGL_image_external_essl3");
-    ext.EXT_texture_compression_s3tc = hasExtension(exts, "GL_EXT_texture_compression_s3tc");
-    ext.EXT_texture_compression_s3tc_srgb = hasExtension(exts, "GL_EXT_texture_compression_s3tc_srgb");
+    ext.KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
+    ext.KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
+    ext.OES_EGL_image_external_essl3 = exts.has("GL_OES_EGL_image_external_essl3"sv);
 }
 
 void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {
-    size_t targetIndex = getIndexForBufferTarget(target);
     if (target == GL_ELEMENT_ARRAY_BUFFER) {
+        constexpr size_t targetIndex = getIndexForBufferTarget(GL_ELEMENT_ARRAY_BUFFER);
         // GL_ELEMENT_ARRAY_BUFFER is a special case, where the currently bound VAO remembers
         // the index buffer, unless there are no VAO bound (see: bindVertexArray)
         assert_invariant(state.vao.p);
@@ -306,6 +444,7 @@ void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {
             glBindBuffer(target, buffer);
         }
     } else {
+        size_t targetIndex = getIndexForBufferTarget(target);
         update_state(state.buffers.genericBinding[targetIndex], buffer, [&]() {
             glBindBuffer(target, buffer);
         });
@@ -313,33 +452,22 @@ void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {
 }
 
 void OpenGLContext::pixelStore(GLenum pname, GLint param) noexcept {
-    GLint* pcur = nullptr;
-    switch (pname) {
-        case GL_PACK_ROW_LENGTH:
-            pcur = &state.pack.row_length;
-            break;
-        case GL_PACK_SKIP_ROWS:
-            pcur = &state.pack.skip_row;
-            break;
-        case GL_PACK_SKIP_PIXELS:
-            pcur = &state.pack.skip_pixels;
-            break;
-        case GL_PACK_ALIGNMENT:
-            pcur = &state.pack.alignment;
-            break;
+    GLint* pcur;
 
-        case GL_UNPACK_ROW_LENGTH:
-            pcur = &state.unpack.row_length;
-            break;
-        case GL_UNPACK_ALIGNMENT:
-            pcur = &state.unpack.alignment;
-            break;
-        case GL_UNPACK_SKIP_PIXELS:
-            pcur = &state.unpack.skip_pixels;
-            break;
-        case GL_UNPACK_SKIP_ROWS:
-            pcur = &state.unpack.skip_row;
-            break;
+    // Note: GL_UNPACK_SKIP_PIXELS, GL_UNPACK_SKIP_ROWS and
+    //       GL_PACK_SKIP_PIXELS, GL_PACK_SKIP_ROWS
+    // are actually provided as conveniences to the programmer; they provide no functionality
+    // that cannot be duplicated at the call site (e.g. glTexImage2D or glReadPixels)
+
+    switch (pname) {
+        case GL_PACK_ALIGNMENT:     pcur = &state.pack.alignment;       break;
+        case GL_PACK_ROW_LENGTH:    pcur = &state.pack.row_length;      break;
+        case GL_PACK_SKIP_PIXELS:   pcur = &state.pack.skip_pixels;     break;  // convenience
+        case GL_PACK_SKIP_ROWS:     pcur = &state.pack.skip_row;        break;  // convenience
+        case GL_UNPACK_ALIGNMENT:   pcur = &state.unpack.alignment;     break;
+        case GL_UNPACK_ROW_LENGTH:  pcur = &state.unpack.row_length;    break;
+        case GL_UNPACK_SKIP_PIXELS: pcur = &state.unpack.skip_pixels;   break;  // convenience
+        case GL_UNPACK_SKIP_ROWS:   pcur = &state.unpack.skip_row;      break;  // convenience
         default:
             goto default_case;
     }
@@ -356,6 +484,7 @@ void OpenGLContext::unbindTexture(GLenum target, GLuint texture_id) noexcept {
     // no need unbind the texture from FBOs because we're not tracking that state (and there is
     // no need to).
     const size_t index = getIndexForTextureTarget(target);
+    UTILS_NOUNROLL
     for (GLuint unit = 0; unit < MAX_TEXTURE_UNIT_COUNT; unit++) {
         if (state.textures.units[unit].targets[index].texture_id == texture_id) {
             bindTexture(unit, target, (GLuint)0, index);
@@ -365,7 +494,7 @@ void OpenGLContext::unbindTexture(GLenum target, GLuint texture_id) noexcept {
 
 void OpenGLContext::unbindSampler(GLuint sampler) noexcept {
     // unbind this sampler from all the units it might be bound to
-#pragma nounroll    // clang generates >800B of code!!!
+    UTILS_NOUNROLL  // clang generates >800B of code!!!
     for (GLuint unit = 0; unit < MAX_TEXTURE_UNIT_COUNT; unit++) {
         if (state.textures.units[unit].sampler == sampler) {
             bindSampler(unit, 0);
@@ -378,7 +507,7 @@ void OpenGLContext::deleteBuffers(GLsizei n, const GLuint* buffers, GLenum targe
     // bindings of bound buffers are reset to 0
     const size_t targetIndex = getIndexForBufferTarget(target);
     auto& genericBuffer = state.buffers.genericBinding[targetIndex];
-    #pragma nounroll
+    UTILS_NOUNROLL
     for (GLsizei i = 0; i < n; ++i) {
         if (genericBuffer == buffers[i]) {
             genericBuffer = 0;
@@ -386,9 +515,9 @@ void OpenGLContext::deleteBuffers(GLsizei n, const GLuint* buffers, GLenum targe
     }
     if (target == GL_UNIFORM_BUFFER || target == GL_TRANSFORM_FEEDBACK_BUFFER) {
         auto& indexedBuffer = state.buffers.targets[targetIndex];
-        #pragma nounroll // clang generates >1 KiB of code!!
+        UTILS_NOUNROLL // clang generates >1 KiB of code!!
         for (GLsizei i = 0; i < n; ++i) {
-            #pragma nounroll
+            UTILS_NOUNROLL
             for (auto& buffer : indexedBuffer.buffers) {
                 if (buffer.name == buffers[i]) {
                     buffer.name = 0;
@@ -400,7 +529,7 @@ void OpenGLContext::deleteBuffers(GLsizei n, const GLuint* buffers, GLenum targe
     }
 }
 
-void OpenGLContext::deleteVextexArrays(GLsizei n, const GLuint* arrays) noexcept {
+void OpenGLContext::deleteVertexArrays(GLsizei n, const GLuint* arrays) noexcept {
     glDeleteVertexArrays(1, arrays);
     // binding of a bound VAO is reset to 0
     for (GLsizei i = 0; i < n; ++i) {
@@ -408,6 +537,163 @@ void OpenGLContext::deleteVextexArrays(GLsizei n, const GLuint* arrays) noexcept
             bindVertexArray(nullptr);
         }
     }
+}
+
+void OpenGLContext::resetState() noexcept {
+    // Force GL state to match the Filament state
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, state.draw_fbo);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, state.read_fbo);
+
+    // state.program
+    glUseProgram(state.program.use);
+
+    // state.vao
+    if (state.vao.p) {
+        glBindVertexArray(state.vao.p->vao);
+    } else {
+        bindVertexArray(nullptr);
+    }
+
+    // state.raster
+    glFrontFace(state.raster.frontFace);
+    glCullFace(state.raster.cullFace);
+    glBlendEquationSeparate(state.raster.blendEquationRGB, state.raster.blendEquationA);
+    glBlendFuncSeparate(
+        state.raster.blendFunctionSrcRGB, 
+        state.raster.blendFunctionDstRGB,
+        state.raster.blendFunctionSrcA,
+        state.raster.blendFunctionDstA
+    );
+    glColorMask(
+        state.raster.colorMask, 
+        state.raster.colorMask, 
+        state.raster.colorMask, 
+        state.raster.colorMask
+    );
+    glDepthMask(state.raster.depthMask);
+    glDepthFunc(state.raster.depthFunc);
+    
+    // state.stencil
+    glStencilFuncSeparate(
+        GL_FRONT, 
+        state.stencil.front.func.func, 
+        state.stencil.front.func.ref, 
+        state.stencil.front.func.mask
+    );
+    glStencilFuncSeparate(
+        GL_BACK, 
+        state.stencil.back.func.func, 
+        state.stencil.back.func.ref, 
+        state.stencil.back.func.mask
+    );
+    glStencilOpSeparate(
+        GL_FRONT, 
+        state.stencil.front.op.sfail,
+        state.stencil.front.op.dpfail,
+        state.stencil.front.op.dppass
+    );
+    glStencilOpSeparate(
+        GL_BACK, 
+        state.stencil.back.op.sfail,
+        state.stencil.back.op.dpfail,
+        state.stencil.back.op.dppass
+    );
+    glStencilMaskSeparate(GL_FRONT, state.stencil.front.stencilMask);
+    glStencilMaskSeparate(GL_BACK, state.stencil.back.stencilMask);
+
+    // state.polygonOffset
+    glPolygonOffset(state.polygonOffset.factor, state.polygonOffset.units);
+
+    // state.enables
+    setDefaultState();
+
+    // state.buffers
+    // Reset state.buffers to its default state to avoid the complexity and error-prone
+    // nature of resetting the GL state to its existing state
+    state.buffers = {};
+    GLenum bufferTargets[] = {
+        GL_UNIFORM_BUFFER,
+        GL_TRANSFORM_FEEDBACK_BUFFER,
+#if !defined(__EMSCRIPTEN__)
+        GL_SHADER_STORAGE_BUFFER,
+#endif
+        GL_ARRAY_BUFFER,
+        GL_COPY_READ_BUFFER,
+        GL_COPY_WRITE_BUFFER,
+        GL_ELEMENT_ARRAY_BUFFER,
+        GL_PIXEL_PACK_BUFFER,
+        GL_PIXEL_UNPACK_BUFFER,
+    };
+    size_t bufferTargetCount = sizeof(bufferTargets) / sizeof(bufferTargets[0]);
+    for (size_t targetArrayIndex = 0; targetArrayIndex < bufferTargetCount; ++targetArrayIndex) {
+        GLenum target = bufferTargets[targetArrayIndex];
+        glBindBuffer(target, 0);
+    }
+
+    for (size_t bufferIndex = 0; bufferIndex < MAX_BUFFER_BINDINGS; ++bufferIndex) {
+        if (bufferIndex < (size_t)gets.max_uniform_buffer_bindings) {
+            glBindBufferBase(GL_UNIFORM_BUFFER, bufferIndex, 0);
+        }
+
+        if (bufferIndex < (size_t)gets.max_transform_feedback_separate_attribs) {
+            glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, bufferIndex, 0);
+        }
+    }
+
+    // state.textures
+    // Reset state.textures to its default state to avoid the complexity and error-prone
+    // nature of resetting the GL state to its existing state
+    state.textures = {};
+    const GLuint textureTargets[] = {
+        GL_TEXTURE_2D,
+        GL_TEXTURE_2D_ARRAY,
+        GL_TEXTURE_CUBE_MAP,
+        GL_TEXTURE_3D,
+#if !defined(__EMSCRIPTEN__)
+        GL_TEXTURE_2D_MULTISAMPLE,
+        GL_TEXTURE_EXTERNAL_OES,
+        GL_TEXTURE_CUBE_MAP_ARRAY,
+#endif
+    };
+    const size_t textureTargetCount = sizeof(textureTargets) / sizeof(textureTargets[0]);
+    for (GLint unit = 0; unit < gets.max_combined_texture_image_units; ++unit) {
+        glActiveTexture(GL_TEXTURE0 + unit);
+        glBindSampler(unit, 0);
+
+        for (size_t textureTargetArrayIndex = 0; textureTargetArrayIndex < textureTargetCount; ++textureTargetArrayIndex) {
+            GLuint target = textureTargets[textureTargetArrayIndex];
+            glBindTexture(target, 0);
+        }
+    }
+    glActiveTexture(GL_TEXTURE0 + state.textures.active);
+
+    // state.unpack
+    glPixelStorei(GL_UNPACK_ALIGNMENT, state.unpack.alignment);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, state.unpack.row_length);
+    glPixelStorei(GL_UNPACK_SKIP_PIXELS, state.unpack.skip_pixels);
+    glPixelStorei(GL_UNPACK_SKIP_ROWS, state.unpack.skip_row);
+
+    // state.pack
+    glPixelStorei(GL_PACK_ALIGNMENT, state.pack.alignment);
+    glPixelStorei(GL_PACK_ROW_LENGTH, state.pack.row_length);
+    glPixelStorei(GL_PACK_SKIP_PIXELS, state.pack.skip_pixels);
+    glPixelStorei(GL_PACK_SKIP_ROWS, state.pack.skip_row);
+
+    // state.window
+    glScissor(
+        state.window.scissor.x, 
+        state.window.scissor.y, 
+        state.window.scissor.z, 
+        state.window.scissor.w
+    );
+    glViewport(
+        state.window.viewport.x,
+        state.window.viewport.y,
+        state.window.viewport.z,
+        state.window.viewport.w
+    );
+    glDepthRangef(state.window.depthRange.x, state.window.depthRange.y);
+    
 }
 
 } // namesapce filament

@@ -36,6 +36,17 @@ using namespace backend;
 
 template<typename K, typename V, typename H>
 UTILS_NOINLINE
+ResourceAllocator::AssociativeContainer<K, V, H>::AssociativeContainer() {
+    mContainer.reserve(128);
+}
+
+template<typename K, typename V, typename H>
+UTILS_NOINLINE
+ResourceAllocator::AssociativeContainer<K, V, H>::~AssociativeContainer() noexcept {
+}
+
+template<typename K, typename V, typename H>
+UTILS_NOINLINE
 typename ResourceAllocator::AssociativeContainer<K, V, H>::iterator
 ResourceAllocator::AssociativeContainer<K, V, H>::erase(iterator it) {
     return mContainer.erase(it);
@@ -79,7 +90,7 @@ size_t ResourceAllocator::TextureKey::getSize() const noexcept {
         size += size / 3;
     }
     // TODO: this is not taking into account the potential sidecar MS buffer
-    //  but we have not way to know about its existence at this point.
+    //  but we have no way to know about its existence at this point.
     return size;
 }
 
@@ -118,19 +129,6 @@ backend::TextureHandle ResourceAllocator::createTexture(const char* name,
         uint32_t width, uint32_t height, uint32_t depth,
         std::array<backend::TextureSwizzle, 4> swizzle,
         backend::TextureUsage usage) noexcept {
-
-    // Some WebGL implementations complain about an incomplete framebuffer when the attachment sizes
-    // are heterogeneous. This merits further investigation.
-#if !defined(__EMSCRIPTEN__)
-    if (!(usage & TextureUsage::SAMPLEABLE)) {
-        // If this texture is not going to be sampled, we can round its size up
-        // this helps prevent many reallocations for small size changes.
-        // We round to 16 pixels, which works for 720p btw.
-        width  = (width  + 15u) & ~15u;
-        height = (height + 15u) & ~15u;
-    }
-#endif
-
     // The frame graph descriptor uses "0" to mean "auto" but the sample count that is passed to the
     // backend should always be 1 or greater.
     samples = samples ? samples : uint8_t(1);

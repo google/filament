@@ -1,13 +1,15 @@
 material {
-    name : sheen_${SHADINGMODEL}_${BLENDING},
+    name : sheen_ubershader,
     requires : [ uv0, uv1, color ],
-    shadingModel : ${SHADINGMODEL},
-    blending : fade,
+    shadingModel : lit,
+    blending : opaque,
     depthWrite : true,
-    doubleSided : ${DOUBLESIDED},
+    doubleSided : false,
+    transparency : default,
     flipUV : false,
     specularAmbientOcclusion : simple,
     specularAntiAliasing : true,
+    reflections : screenspace,
     parameters : [
 
         // Base Color
@@ -38,6 +40,7 @@ material {
         // Emissive Map
         { type : int, name : emissiveIndex },
         { type : float3, name : emissiveFactor },
+        { type : float, name : emissiveStrength },
         { type : sampler2d, name : emissiveMap },
         { type : mat3, name : emissiveUvMatrix, precision: high },
 
@@ -53,7 +56,15 @@ material {
 
         // Reflectance
         { type : float, name : reflectance }
+
+        ${CUSTOM_PARAMS}
     ],
+}
+
+vertex {
+  void materialVertex(inout MaterialVertexInputs material) {
+      ${CUSTOM_VERTEX}
+    }
 }
 
 fragment {
@@ -86,10 +97,12 @@ fragment {
 
         material.roughness = materialParams.roughnessFactor;
         material.metallic = materialParams.metallicFactor;
-        material.emissive = vec4(materialParams.emissiveFactor.rgb, 0.0);
         material.sheenColor = materialParams.sheenColorFactor;
         material.sheenRoughness = materialParams.sheenRoughnessFactor;
         material.reflectance = materialParams.reflectance;
+
+        material.emissive = vec4(materialParams.emissiveStrength *
+                materialParams.emissiveFactor.rgb, 0.0);
 
         if (materialParams.sheenColorIndex > -1) {
             highp float2 uv = uvs[materialParams.sheenColorIndex];
@@ -114,13 +127,15 @@ fragment {
         if (materialParams.aoIndex > -1) {
             highp float2 uv = uvs[materialParams.aoIndex];
             uv = (vec3(uv, 1.0) * materialParams.occlusionUvMatrix).xy;
-            material.ambientOcclusion = texture(materialParams_occlusionMap, uv).r *
-                    materialParams.aoStrength;
+            float occlusion = texture(materialParams_occlusionMap, uv).r;
+            material.ambientOcclusion = 1.0 + materialParams.aoStrength * (occlusion - 1.0);
         }
         if (materialParams.emissiveIndex > -1) {
             highp float2 uv = uvs[materialParams.emissiveIndex];
             uv = (vec3(uv, 1.0) * materialParams.emissiveUvMatrix).xy;
             material.emissive.rgb *= texture(materialParams_emissiveMap, uv).rgb;
         }
+
+        ${CUSTOM_FRAGMENT}
     }
 }

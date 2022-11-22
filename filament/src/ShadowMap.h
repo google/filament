@@ -19,22 +19,52 @@
 
 #include "components/LightManager.h"
 
+#include "PerShadowMapUniforms.h"
+
 #include "details/Camera.h"
 #include "details/Scene.h"
 
-#include "private/backend/DriverApiForward.h"
-#include "private/backend/SamplerGroup.h"
+#include <backend/DriverApiForward.h>
+
+#include <filament/Viewport.h>
 
 #include <math/mat4.h>
 #include <math/vec4.h>
 
 namespace filament {
 
-class FView;
 class RenderPass;
+
+// The value of the 'VISIBLE_MASK' after culling. Each bit represents visibility in a frustum
+// (either camera or light).
+//
+//                                    1
+// bits                               5 ... 7 6 5 4 3 2 1 0
+// +------------------------------------------------------+
+// VISIBLE_RENDERABLE                                     X
+// VISIBLE_DIR_SHADOW_RENDERABLE                        X
+// VISIBLE_DYN_SHADOW_RENDERABLE                      X
+
+// A "shadow renderable" is a renderable rendered to the shadow map during a shadow pass:
+// PCF shadows: only shadow casters
+// VSM shadows: both shadow casters and shadow receivers
+
+static constexpr size_t VISIBLE_RENDERABLE_BIT              = 0u;
+static constexpr size_t VISIBLE_DIR_SHADOW_RENDERABLE_BIT   = 1u;
+static constexpr size_t VISIBLE_DYN_SHADOW_RENDERABLE_BIT   = 2u;
+
+static constexpr Culler::result_type VISIBLE_DIR_SHADOW_RENDERABLE = 1u << VISIBLE_DIR_SHADOW_RENDERABLE_BIT;
+static constexpr Culler::result_type VISIBLE_DYN_SHADOW_RENDERABLE = 1u << VISIBLE_DYN_SHADOW_RENDERABLE_BIT;
 
 class ShadowMap {
 public:
+
+    enum class ShadowType : uint8_t {
+        DIRECTIONAL,
+        SPOT,
+        POINT
+    };
+
     explicit ShadowMap(FEngine& engine) noexcept;
 
     // ShadowMap is not copyable for now
@@ -43,11 +73,9 @@ public:
 
     ~ShadowMap();
 
-    struct ShadowMapInfo {
-        // the smallest increment in depth precision
-        // e.g., for 16 bit depth textures, is this 1 / (2^16)
-        float zResolution = 0.0f;
+    void terminate(FEngine& engine);
 
+    struct ShadowMapInfo {
         // the dimension of the encompassing texture atlas
         uint16_t atlasDimension = 0;
 
@@ -59,58 +87,74 @@ public:
         // e.g., for a texture dimension of 512, shadowDimension would be 510
         uint16_t shadowDimension = 0;
 
+        // e.g. Vulkan clip-space
+        bool clipSpaceFlipped = false;
+
+        // e.g. metal textures
+        bool textureSpaceFlipped = false;
+
         // whether we're using vsm
         bool vsm = false;
     };
 
     struct SceneInfo {
-        // The near and far planes, in clip space, to use for this shadow map
+        // scratch data: The near and far planes, in clip space, to use for this shadow map
         math::float2 csNearFar = { -1.0f, 1.0f };
 
-        // The following fields are set by computeSceneCascadeParams.
+        // scratch data: light's near/far expressed in light-space, calculated from the scene's
+        // content assuming the light is at the origin.
+        math::float2 lsNearFar{};
 
-        // light's near/far expressed in light-space, calculated from the scene's content
-        // assuming the light is at the origin.
-        math::float2 lsNearFar;
-
-        // Viewing camera's near/far expressed in view-space, calculated from the scene's content
-        math::float2 vsNearFar;
+        // scratch data: Viewing camera's near/far expressed in view-space, calculated from the
+        // scene's content.
+        math::float2 vsNearFar{};
 
         // World-space shadow-casters volume
         Aabb wsShadowCastersVolume;
 
         // World-space shadow-receivers volume
         Aabb wsShadowReceiversVolume;
+
+        uint8_t visibleLayers;
     };
 
-    static math::mat4f getLightViewMatrix(
-            math::float3 position, math::float3 direction) noexcept;
+    static math::mat4f getDirectionalLightViewMatrix(
+            math::float3 direction, math::float3 position = {}) noexcept;
 
-    // Call once per frame to populate the CascadeParameters struct, then pass to update().
-    // This computes values constant across all cascades.
-    static void computeSceneInfo(math::float3 dir,
-            FScene const& scene, filament::CameraInfo const& camera, uint8_t visibleLayers,
-            SceneInfo& sceneInfo);
+    static math::mat4f getPointLightViewMatrix(backend::TextureCubemapFace face,
+            math::float3 position) noexcept;
+
+    void initialize(size_t lightIndex, ShadowType shadowType, uint16_t shadowIndex, uint8_t face,
+            LightManager::ShadowOptions const* options);
+
+    struct ShaderParameters {
+        math::mat4f lightSpace{};
+        math::float4 lightFromWorldZ{};
+        float texelSizeAtOneMeterWs{};
+    };
 
     // Call once per frame if the light, scene (or visible layers) or camera changes.
     // This computes the light's camera.
-    void update(const FScene::LightSoa& lightData, size_t index,
+    ShaderParameters updateDirectional(FEngine& engine,
+            const FScene::LightSoa& lightData, size_t index,
             filament::CameraInfo const& camera,
-            const ShadowMapInfo& shadowMapInfo, const SceneInfo& cascadeParams) noexcept;
+            ShadowMapInfo const& shadowMapInfo, FScene const& scene,
+            SceneInfo& sceneInfo) noexcept;
 
-    void render(FScene const& scene, utils::Range<uint32_t> range,
-            FScene::VisibleMaskType visibilityMask, filament::CameraInfo const& cameraInfo,
-            RenderPass* pass) noexcept;
+    ShaderParameters updateSpot(FEngine& engine,
+            const FScene::LightSoa& lightData, size_t index,
+            filament::CameraInfo const& camera,
+            const ShadowMapInfo& shadowMapInfo, FScene const& scene,
+            SceneInfo sceneInfo) noexcept;
+
+    ShaderParameters updatePoint(FEngine& engine,
+            const FScene::LightSoa& lightData, size_t index,
+            filament::CameraInfo const& camera, const ShadowMapInfo& shadowMapInfo,
+            FScene const& scene,
+            SceneInfo sceneInfo, uint8_t face) noexcept;
 
     // Do we have visible shadows. Valid after calling update().
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }
-
-    // Computes the transform to use in the shader to access the shadow map.
-    // Valid after calling update().
-    math::mat4f const& getLightSpaceMatrix() const noexcept { return mLightSpace; }
-
-    // return the size of a texel in world space (pre-warping)
-    float getTexelSizeWorldSpace() const noexcept { return mTexelSizeWs; }
 
     // Returns the light's projection. Valid after calling update().
     FCamera const& getCamera() const noexcept { return *mCamera; }
@@ -118,22 +162,47 @@ public:
     // use only for debugging
     FCamera const& getDebugCamera() const noexcept { return *mDebugCamera; }
 
-    backend::PolygonOffset getPolygonOffset() const noexcept { return mPolygonOffset; }
+    // Call once per frame to populate the SceneInfo struct, then pass to update().
+    // This computes values constant across all shadow maps.
+    static void initSceneInfo(ShadowMap::SceneInfo& sceneInfo, uint8_t visibleLayers,
+            FScene const& scene, math::mat4f const& viewMatrix);
+
+    // Update SceneInfo struct for a given light
+    static void updateSceneInfoDirectional(const math::mat4f& Mv, FScene const& scene,
+            SceneInfo& sceneInfo);
+
+    static void updateSceneInfoSpot(const math::mat4f& Mv, FScene const& scene,
+            SceneInfo& sceneInfo);
+
+    backend::Viewport getViewport() const noexcept;
+
+    LightManager::ShadowOptions const* getShadowOptions() const noexcept { return mOptions; }
+    size_t getLightIndex() const { return mLightIndex; }
+    uint16_t getShadowIndex() const { return mShadowIndex; }
+    void setLayer(uint8_t layer) noexcept { mLayer = layer; }
+    uint8_t getLayer() const noexcept { return mLayer; }
+    bool isDirectionalShadow() const noexcept { return mShadowType == ShadowType::DIRECTIONAL; }
+    bool isSpotShadow() const noexcept { return mShadowType == ShadowType::SPOT; }
+    bool isPointShadow() const noexcept { return mShadowType == ShadowType::POINT; }
+    ShadowType getShadowType() const noexcept { return mShadowType; }
+    uint8_t getFace() const noexcept { return mFace; }
+
+    using Transaction = PerShadowMapUniforms::Transaction;
+
+    static void prepareCamera(Transaction const& transaction,
+            FEngine& engine, const CameraInfo& cameraInfo) noexcept;
+    static void prepareViewport(Transaction const& transaction,
+            backend::Viewport const& viewport) noexcept;
+    static void prepareTime(Transaction const& transaction,
+            FEngine& engine, math::float4 const& userTime) noexcept;
+    static void prepareShadowMapping(Transaction const& transaction,
+            bool highPrecision) noexcept;
+    static PerShadowMapUniforms::Transaction open(backend::DriverApi& driver) noexcept;
+    void commit(Transaction& transaction,
+            backend::DriverApi& driver) const noexcept;
+    void bind(backend::DriverApi& driver) const noexcept;
 
 private:
-    struct ShadowCameraInfo {
-        math::mat4f projection;
-        math::mat4f model;
-        math::mat4f view;
-        math::mat4f worldOrigin;
-        float zn = 0;
-        float zf = 0;
-        math::float3 const& getPosition() const noexcept { return model[3].xyz; }
-        math::float3 getForwardVector() const noexcept {
-            return -normalize(model[2].xyz);   // the camera looks towards -z
-        }
-    };
-
     struct Segment {
         uint8_t v0, v1;
     };
@@ -145,16 +214,13 @@ private:
     // 8 corners, 12 segments w/ 2 intersection max -- all of this twice (8 + 12 * 2) * 2 (768 bytes)
     using FrustumBoxIntersection = std::array<math::float3, 64>;
 
-    void computeShadowCameraDirectional(
-            math::float3 const& direction,
-            ShadowCameraInfo const& camera, FLightManager::ShadowParams const& params,
-            SceneInfo cascadeParams) noexcept;
-    void computeShadowCameraSpot(math::float3 const& position, math::float3 const& dir,
-            float outerConeAngle, float radius, ShadowCameraInfo const& camera,
-            FLightManager::ShadowParams const& params) noexcept;
+    ShaderParameters updatePunctual(
+            math::mat4f const& Mv, float outerConeAngle, float nearPlane, float farPlane,
+            const ShadowMapInfo& shadowMapInfo,
+            const FLightManager::ShadowParams& params) noexcept;
 
     static math::mat4f applyLISPSM(math::mat4f& Wp,
-            ShadowCameraInfo const& camera, FLightManager::ShadowParams const& params,
+            filament::CameraInfo const& camera, FLightManager::ShadowParams const& params,
             const math::mat4f& LMpMv,
             FrustumBoxIntersection const& wsShadowReceiverVolume, size_t vertexCount,
             const math::float3& dir);
@@ -204,20 +270,29 @@ private:
 
     static size_t intersectFrustumWithBox(
             FrustumBoxIntersection& outVertices,
-            const math::float3* wsFrustumCorners,
+            Frustum const& wsFrustum,
+            math::float3 const* wsFrustumCorners,
             Aabb const& wsBox);
 
     static math::mat4f warpFrustum(float n, float f) noexcept;
 
     static math::mat4f directionalLightFrustum(float n, float f) noexcept;
 
-    math::mat4 getTextureCoordsMapping() const noexcept;
+    struct TextureCoordsMapping {
+        math::mat4f clipToTexture;
+        math::mat4f clipToNdc;
+    };
+    static TextureCoordsMapping getTextureCoordsMapping(ShadowMapInfo const& info,
+            backend::Viewport const& viewport) noexcept;
 
-    static math::mat4f computeVsmLightSpaceMatrix(const math::mat4f& lightSpace,
-            const math::mat4f& Mv, float zfar) noexcept;
+    static math::mat4f computeVsmLightSpaceMatrix(const math::mat4f& lightSpacePcf,
+            const math::mat4f& Mv, float znear, float zfar) noexcept;
 
-    float texelSizeWorldSpace(const math::mat3f& worldToShadowTexture) const noexcept;
-    float texelSizeWorldSpace(const math::mat4f& W, const math::mat4f& MbMtF) const noexcept;
+    float texelSizeWorldSpace(const math::mat3f& worldToShadowTexture,
+            uint16_t shadowDimension) const noexcept;
+
+    float texelSizeWorldSpace(const math::mat4f& W, const math::mat4f& MbMtF,
+            uint16_t shadowDimension) const noexcept;
 
     static constexpr const Segment sBoxSegments[12] = {
             { 0, 1 }, { 1, 3 }, { 3, 2 }, { 2, 0 },
@@ -233,19 +308,20 @@ private:
             { 2, 6, 7, 3 },  // top
     };
 
-    FCamera* mCamera = nullptr;                 //  8
-    FCamera* mDebugCamera = nullptr;            //  8
-    math::mat4f mLightSpace;                    // 64
-    float mTexelSizeWs = 0.0f;                  //  4
+    mutable PerShadowMapUniforms mPerShadowMapUniforms;                     // 4
 
-    // set-up in update()
-    ShadowMapInfo mShadowMapInfo;               // 12
-    bool mHasVisibleShadows = false;            //  1
-    backend::PolygonOffset mPolygonOffset{};    //  8
+    FCamera* mCamera = nullptr;                                             //  8
+    FCamera* mDebugCamera = nullptr;                                        //  8
 
-    FEngine& mEngine;                           //  8
-    const bool mClipSpaceFlipped;               //  1
-    const bool mTextureSpaceFlipped;            //  1
+    // The data below technically belongs to ShadowMapManager, but it simplifies allocations
+    // to store it here. This data is always associated with this shadow map anyway.
+    LightManager::ShadowOptions const* mOptions = nullptr;                  // 8
+    uint32_t mLightIndex = 0;   // which light are we shadowing             // 4
+    uint16_t mShadowIndex = 0;  // our index in the shadowMap vector        // 2
+    uint8_t mLayer = 0;         // our layer in the shadowMap texture       // 1
+    ShadowType mShadowType  : 2;                                            // :2
+    bool mHasVisibleShadows : 2;                                            // :2
+    uint8_t mFace           : 3;                                            // :3
 };
 
 } // namespace filament

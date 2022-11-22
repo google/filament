@@ -32,7 +32,7 @@
 #include <filament/Material.h>
 #include <filament/Engine.h>
 
-#include <private/filament/UniformInterfaceBlock.h>
+#include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/UibStructs.h>
 #include <private/backend/BackendUtils.h>
 
@@ -279,28 +279,30 @@ TEST(FilamentTest, TransformManager) {
 
 TEST(FilamentTest, UniformInterfaceBlock) {
 
-    UniformInterfaceBlock::Builder b;
+    BufferInterfaceBlock::Builder b;
 
     b.name("TestUniformInterfaceBlock");
-    b.add("a_float_0", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_float_1", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_float_2", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_float_3", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_vec4_0",  1, UniformInterfaceBlock::Type::FLOAT4);
-    b.add("a_float_4", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_float_5", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_float_6", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_vec3_0",  1, UniformInterfaceBlock::Type::FLOAT3);
-    b.add("a_float_7", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_float[3]",3, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_float_8", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_mat3_0",  1, UniformInterfaceBlock::Type::MAT3);
-    b.add("a_mat4_0",  1, UniformInterfaceBlock::Type::MAT4);
-    b.add("a_mat3[3]", 3, UniformInterfaceBlock::Type::MAT3);
+    b.add({
+            { "a_float_0",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_float_1",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_float_2",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_float_3",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_vec4_0",   0, BufferInterfaceBlock::Type::FLOAT4 },
+            { "a_float_4",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_float_5",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_float_6",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_vec3_0",   0, BufferInterfaceBlock::Type::FLOAT3 },
+            { "a_float_7",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_float[3]", 3, BufferInterfaceBlock::Type::FLOAT },
+            { "a_float_8",  0, BufferInterfaceBlock::Type::FLOAT },
+            { "a_mat3_0",   0, BufferInterfaceBlock::Type::MAT3 },
+            { "a_mat4_0",   0, BufferInterfaceBlock::Type::MAT4 },
+            { "a_mat3[3]",  3, BufferInterfaceBlock::Type::MAT3 }
+        });
 
 
-    UniformInterfaceBlock ib(b.build());
-    auto const& info = ib.getUniformInfoList();
+    BufferInterfaceBlock ib(b.build());
+    auto const& info = ib.getFieldInfoList();
 
     // test that 4 floats are packed together
     EXPECT_EQ(0, info[0].offset);
@@ -383,7 +385,7 @@ TEST(FilamentTest, UniformBuffer) {
         EXPECT_EQ((mat4f{100, 200, 300, 0, 400, 500, 600, 0, 700, 800, 900, 0, 0, 0, 0, 1}), data->m1);
     };
 
-    auto CHECK2 = [](std::vector<UniformInterfaceBlock::UniformInfo> const& info) {
+    auto CHECK2 = [](auto const& info) {
         EXPECT_EQ(offsetof(ubo, f0)/4, info[0].offset);
         EXPECT_EQ(offsetof(ubo, f1)/4, info[1].offset);
         EXPECT_EQ(offsetof(ubo, f2)/4, info[2].offset);
@@ -400,25 +402,27 @@ TEST(FilamentTest, UniformBuffer) {
         EXPECT_EQ(offsetof(ubo, m1)/4, info[13].offset);
     };
 
-    UniformInterfaceBlock::Builder b;
+    BufferInterfaceBlock::Builder b;
     b.name("TestUniformBuffer");
-    b.add("a_float_0", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_float_1", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_float_2", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_float_3", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_vec4_0",  1, UniformInterfaceBlock::Type::FLOAT4);
-    b.add("a_float_4", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_float_5", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_float_6", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_vec3_0",  1, UniformInterfaceBlock::Type::FLOAT3);
-    b.add("a_float_7", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_float[3]",3, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_float_8", 1, UniformInterfaceBlock::Type::FLOAT);
-    b.add("a_mat3_0",  1, UniformInterfaceBlock::Type::MAT3);
-    b.add("a_mat4_0",  1, UniformInterfaceBlock::Type::MAT4);
-    UniformInterfaceBlock ib(b.build());
+    b.add({
+        { "a_float_0", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_float_1", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_float_2", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_float_3", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_vec4_0",  0, BufferInterfaceBlock::Type::FLOAT4 },
+        { "a_float_4", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_float_5", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_float_6", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_vec3_0",  0, BufferInterfaceBlock::Type::FLOAT3 },
+        { "a_float_7", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_float[3]",3, BufferInterfaceBlock::Type::FLOAT },
+        { "a_float_8", 0, BufferInterfaceBlock::Type::FLOAT },
+        { "a_mat3_0",  0, BufferInterfaceBlock::Type::MAT3 },
+        { "a_mat4_0",  0, BufferInterfaceBlock::Type::MAT4 },
+    });
+    BufferInterfaceBlock ib(b.build());
 
-    CHECK2(ib.getUniformInfoList());
+    CHECK2(ib.getFieldInfoList());
 
     EXPECT_EQ(sizeof(ubo), ib.getSize());
 
@@ -448,54 +452,58 @@ TEST(FilamentTest, UniformBuffer) {
     CHECK(data);
     CHECK(&copy);
 
-    ubo move(std::move(copy));
+    ubo move(copy);
     CHECK(&move);
 
     copy = *data;
     CHECK(data);
     CHECK(&copy);
 
-    move = std::move(copy);
+    move = copy;
     CHECK(&move);
 }
 
 TEST(FilamentTest, UniformBufferSize1) {
-    UniformInterfaceBlock::Builder b;
+    BufferInterfaceBlock::Builder b;
     b.name("UniformBufferSize1");
-    b.add("f4a", 1, UniformInterfaceBlock::Type::FLOAT4); // offset = 0
-    b.add("f4b", 1, UniformInterfaceBlock::Type::FLOAT4); // offset = 16
-    b.add("f1a", 1, UniformInterfaceBlock::Type::FLOAT);  // offset = 32
-    b.add("f1b", 1, UniformInterfaceBlock::Type::FLOAT);  // offset = 36
-    UniformInterfaceBlock uib(b.build());
+    b.add({
+            { "f4a", 0, BufferInterfaceBlock::Type::FLOAT4 }, // offset = 0
+            { "f4b", 0, BufferInterfaceBlock::Type::FLOAT4 }, // offset = 16
+            { "f1a", 0, BufferInterfaceBlock::Type::FLOAT },  // offset = 32
+            { "f1b", 0, BufferInterfaceBlock::Type::FLOAT },  // offset = 36
+    });
+    BufferInterfaceBlock uib(b.build());
     UniformBuffer buffer(uib.getSize());
 
     float4 f4(1.0f);
-    ssize_t f4_offset = uib.getUniformOffset("f4a", 0);
+    ssize_t f4_offset = uib.getFieldOffset("f4a", 0);
     buffer.setUniformArray(f4_offset, &f4, 1);
 
     float f1(1.0f);
-    ssize_t f1_offset = uib.getUniformOffset("f1b", 0);
+    ssize_t f1_offset = uib.getFieldOffset("f1b", 0);
     buffer.setUniformArray(f1_offset, &f1, 1);
 
     buffer.invalidate();
 }
 
 TEST(FilamentTest, UniformBufferSize2) {
-    UniformInterfaceBlock::Builder b;
+    BufferInterfaceBlock::Builder b;
     b.name("UniformBufferSize2");
-    b.add("f4a", 1, UniformInterfaceBlock::Type::FLOAT4); // offset = 0
-    b.add("f4b", 1, UniformInterfaceBlock::Type::FLOAT4); // offset = 16
-    b.add("f1a", 1, UniformInterfaceBlock::Type::FLOAT);  // offset = 32
-    b.add("f2a", 1, UniformInterfaceBlock::Type::FLOAT2); // offset = 36
-    UniformInterfaceBlock uib(b.build());
+    b.add({
+            { "f4a", 0, BufferInterfaceBlock::Type::FLOAT4 }, // offset = 0
+            { "f4b", 0, BufferInterfaceBlock::Type::FLOAT4 }, // offset = 16
+            { "f1a", 0, BufferInterfaceBlock::Type::FLOAT },  // offset = 32
+            { "f2a", 0, BufferInterfaceBlock::Type::FLOAT2 }, // offset = 36
+    });
+    BufferInterfaceBlock uib(b.build());
     UniformBuffer buffer(uib.getSize());
 
     float4 f4(1.0f);
-    ssize_t f4_offset = uib.getUniformOffset("f4a", 0);
+    ssize_t f4_offset = uib.getFieldOffset("f4a", 0);
     buffer.setUniformArray(f4_offset, &f4, 1);
 
     float2 f2(1.0f);
-    ssize_t f2_offset = uib.getUniformOffset("f2a", 0);
+    ssize_t f2_offset = uib.getFieldOffset("f2a", 0);
     buffer.setUniformArray(f2_offset, &f2, 1);
 
     buffer.invalidate();
@@ -628,7 +636,7 @@ TEST(FilamentTest, FroxelData) {
 
     FEngine* engine = FEngine::create();
 
-    LinearAllocatorArena arena("FRenderer: per-frame allocator", FEngine::CONFIG_PER_RENDER_PASS_ARENA_SIZE);
+    LinearAllocatorArena arena("FRenderer: per-frame allocator", 3 * 1024 * 1024);
     utils::ArenaScope<LinearAllocatorArena> scope(arena);
 
 
@@ -727,149 +735,16 @@ TEST(FilamentTest, FroxelData) {
     Engine::destroy((Engine **)&engine);
 }
 
-TEST(FilamentTest, Bones) {
-
-    struct Shader {
-        static mat3f normal(PerRenderableUibBone const& bone) noexcept {
-            quatf q = bone.q;
-            float3 is = bone.ns.xyz;
-            return mat3f(mat3(q) * mat3::scaling(is));
-        }
-        static  mat4f vertice(PerRenderableUibBone const& bone) noexcept {
-            quatf q = bone.q;
-            float3 t = bone.t.xyz;
-            float3 s = bone.s.xyz;
-            return mat4f(mat4::translation(t) * mat4(q) * mat4::scaling(s));
-        }
-        static float3 normal(float3 n, PerRenderableUibBone const& bone) noexcept {
-            quatf q = bone.q;
-            float3 is = bone.ns.xyz;
-            // apply the inverse of the non-uniform scales
-            n *= is;
-            // apply the rigid transform
-            n += 2.0 * cross(q.xyz, cross(q.xyz, n) + q.w * n);
-            return n;
-        }
-        static  float3 vertice(float3 v, PerRenderableUibBone const& bone) noexcept {
-            quatf q = bone.q;
-            float3 t = bone.t.xyz;
-            float3 s = bone.s.xyz;
-            // apply the non-uniform scales
-            v *= s;
-            // apply the rigid transform
-            v += 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
-            // apply the translation
-            v += t;
-            return v;
-        }
-    };
-
-    struct Test {
-        static inline double epsilon(double x, double y) {
-            double maxXYOne = std::max({ 1.0, std::fabs(x), std::fabs(y) });
-            return 1e-5 * maxXYOne;
-        }
-
-        static void expect_eq(mat4f e, mat4f a) noexcept {
-            for (size_t j = 0; j < 4; j++) {
-                for (size_t i = 0; i < 4; i++) {
-                    EXPECT_NEAR(e[i][j], a[i][j], epsilon(e[i][j], a[i][j]));
-                }
-            }
-        }
-        static void expect_eq(mat3f e, mat3f a) noexcept {
-            for (size_t j = 0; j < 3; j++) {
-                for (size_t i = 0; i < 3; i++) {
-                    EXPECT_NEAR(e[i][j], a[i][j], epsilon(e[i][j], a[i][j]));
-                }
-            }
-        }
-        static void expect_eq(float3 e, float3 a) noexcept {
-            for (size_t i = 0; i < 3; i++) {
-                EXPECT_NEAR(e[i], a[i], epsilon(e[i], a[i]));
-            }
-        }
-
-        static void check(mat4f const& m) noexcept {
-            PerRenderableUibBone b;
-            FSkinningBuffer::makeBone(&b, m);
-
-            expect_eq(Shader::vertice(b), m);
-
-            mat3f n = transpose(inverse(m.upperLeft()));
-            n *= mat3f(1.0f / std::sqrt(max(float3{length2(n[0]), length2(n[1]), length2(n[2])})));
-            expect_eq(Shader::normal(b), n);
-        }
-
-        static void check(mat4f const& m, float3 const& v) noexcept {
-            PerRenderableUibBone b;
-            FSkinningBuffer::makeBone(&b, m);
-
-            expect_eq((m * v).xyz, Shader::vertice(v, b));
-
-            mat3f n = transpose(inverse(m.upperLeft()));
-            n *= mat3f(1.0f / std::sqrt(max(float3{length2(n[0]), length2(n[1]), length2(n[2])})));
-            expect_eq(n * normalize(v), Shader::normal(normalize(v), b));
-
-            float3 normal = n * normalize(v);
-            EXPECT_LE(max(abs(normal)), 1.0);
-        }
-    };
-
-    Test::check(mat4f{});
-    Test::check(mat4f::translation(float3{ 1, 2, 3 }));
-
-    Test::check(mat4f::scaling(float3{ 2, 2, 2 }));
-
-    Test::check(mat4f::scaling(float3{ 4, 2, 3 }));
-    Test::check(mat4f::scaling(float3{ 4, -2, -3 }));
-    Test::check(mat4f::scaling(float3{ -4, 2, -3 }));
-    Test::check(mat4f::scaling(float3{ -4, -2, 3 }));
-
-    Test::check(mat4f::scaling(float3{ -4, -2, -3 }));
-    Test::check(mat4f::scaling(float3{ -4, 2, 3 }));
-    Test::check(mat4f::scaling(float3{ 4, -2, 3 }));
-    Test::check(mat4f::scaling(float3{ 4, 2, -3 }));
-
-    Test::check(mat4f::rotation(F_PI_2, float3{ 0, 0, 1 }));
-    Test::check(mat4f::rotation(F_PI_2, float3{ 0, 1, 0 }));
-    Test::check(mat4f::rotation(F_PI_2, float3{ 1, 0, 0 }));
-    Test::check(mat4f::rotation(F_PI_2, float3{ 0, 1, 1 }));
-    Test::check(mat4f::rotation(F_PI_2, float3{ 1, 0, 1 }));
-    Test::check(mat4f::rotation(F_PI_2, float3{ 1, 1, 0 }));
-    Test::check(mat4f::rotation(-F_PI_2, float3{ 0, 0, 1 }));
-    Test::check(mat4f::rotation(-F_PI_2, float3{ 0, 1, 0 }));
-    Test::check(mat4f::rotation(-F_PI_2, float3{ 1, 0, 0 }));
-    Test::check(mat4f::rotation(-F_PI_2, float3{ 0, 1, 1 }));
-    Test::check(mat4f::rotation(-F_PI_2, float3{ 1, 0, 1 }));
-    Test::check(mat4f::rotation(-F_PI_2, float3{ 1, 1, 0 }));
-
-    mat4f m = mat4f::translation(float3{ 1, 2, 3 }) *
-                                                    mat4f::rotation(-F_PI_2, float3{ 1, 1, 0 }) *
-                                                    mat4f::scaling(float3{ -2, 3, 0.04 });
-
-    Test::check(m);
-
-    std::default_random_engine generator(82828);
-    std::uniform_real_distribution<float> distribution(-100.0f, 100.0f);
-    auto rand_gen = std::bind(distribution, generator);
-
-    for (size_t i = 0; i < 100; ++i) {
-        float3 p(rand_gen(), rand_gen(), rand_gen());
-        Test::check(m, p);
-    }
-}
-
 TEST(FilamentTest, GoogleLineDirective) {
     {
         char s[512] = "#line 10 \"foobar\"";
-        EXPECT_FALSE(filament::backend::requestsGoogleLineDirectivesExtension(&s[0], strlen(s)));
+        EXPECT_FALSE(filament::backend::requestsGoogleLineDirectivesExtension({ &s[0], strlen(s) }));
     }
     {
         char s[512] =
             "#extension GL_GOOGLE_cpp_style_line_directive : enable\n"
             "#line 10 \"foobar\"";
-        EXPECT_TRUE(filament::backend::requestsGoogleLineDirectivesExtension(&s[0], strlen(s)));
+        EXPECT_TRUE(filament::backend::requestsGoogleLineDirectivesExtension({ &s[0], strlen(s) }));
     }
     {
         char s[512] =

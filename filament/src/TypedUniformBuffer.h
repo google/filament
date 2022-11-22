@@ -46,7 +46,7 @@ public:
     // return if any uniform has been changed
     bool isDirty() const noexcept { return mSomethingDirty; }
 
-    // mark the whole buffer as clean (no modified uniforms)
+    // mark the whole buffer as "clean" (no modified uniforms)
     void clean() const noexcept { mSomethingDirty = false; }
 
     // helper functions

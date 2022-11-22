@@ -143,7 +143,7 @@ type WorkspaceFoldersServerCapabilities struct {
 			 * change notifications.
 			 *
 			 * If a strings is provided the string is treated as a ID
-			 * under which the notification is registed on the client
+			 * under which the notification is registered on the client
 			 * side. The ID can be used to unregister for these events
 			 * using the `client/unregisterCapability` request.
 			 */
@@ -162,7 +162,7 @@ type WorkspaceFolder struct {
 
 	/*Name defined:
 	 * The name of the workspace folder. Used to refer to this
-	 * workspace folder in thge user interface.
+	 * workspace folder in the user interface.
 	 */
 	Name string `json:"name"`
 }
@@ -1129,7 +1129,7 @@ type ServerCapabilities struct {
 			 * change notifications.
 			 *
 			 * If a strings is provided the string is treated as a ID
-			 * under which the notification is registed on the client
+			 * under which the notification is registered on the client
 			 * side. The ID can be used to unregister for these events
 			 * using the `client/unregisterCapability` request.
 			 */
@@ -1803,7 +1803,7 @@ type CompletionOptions struct {
 
 	/*AllCommitCharacters defined:
 	 * The list of all possible characters that commit a completion. This field can be used
-	 * if clients don't support individual commmit characters per completion item. See
+	 * if clients don't support individual commit characters per completion item. See
 	 * `ClientCapabilities.textDocument.completion.completionItem.commitCharactersSupport`
 	 *
 	 * @since 3.2.0
@@ -2844,7 +2844,7 @@ type LocationLink struct {
 
 	/*TargetSelectionRange defined:
 	 * The range that should be selected and revealed when this link is being followed, e.g the name of a function.
-	 * Must be contained by the the `targetRange`. See also `DocumentSymbol#range`
+	 * Must be contained by the `targetRange`. See also `DocumentSymbol#range`
 	 */
 	TargetSelectionRange Range `json:"targetSelectionRange"`
 }
@@ -2881,7 +2881,7 @@ type Color struct {
 type ColorInformation struct {
 
 	/*Range defined:
-	 * The range in the document where this color appers.
+	 * The range in the document where this color appears.
 	 */
 	Range Range `json:"range"`
 
@@ -3627,14 +3627,14 @@ type DocumentSymbol struct {
 
 	/*Range defined:
 	 * The range enclosing this symbol not including leading/trailing whitespace but everything else
-	 * like comments. This information is typically used to determine if the the clients cursor is
+	 * like comments. This information is typically used to determine if the clients cursor is
 	 * inside the symbol to reveal in the symbol in the UI.
 	 */
 	Range Range `json:"range"`
 
 	/*SelectionRange defined:
 	 * The range that should be selected and revealed when this symbol is being picked, e.g the name of a function.
-	 * Must be contained by the the `range`.
+	 * Must be contained by the `range`.
 	 */
 	SelectionRange Range `json:"selectionRange"`
 
@@ -3652,7 +3652,7 @@ type CodeActionContext struct {
 
 	/*Diagnostics defined:
 	 * An array of diagnostics known on the client side overlapping the range provided to the
-	 * `textDocument/codeAction` request. They are provied so that the server knows which
+	 * `textDocument/codeAction` request. They are provided so that the server knows which
 	 * errors are currently presented to the user for the given range. There is no guarantee
 	 * that these accurately reflect the error state of the resource. The primary parameter
 	 * to compute code actions is the provided range.
@@ -4081,13 +4081,13 @@ const (
 	/*TextOnlyTransactional defined:
 	 * If the workspace edit contains only textual file changes they are executed transactional.
 	 * If resource changes (create, rename or delete file) are part of the change the failure
-	 * handling startegy is abort.
+	 * handling strategy is abort.
 	 */
 	TextOnlyTransactional FailureHandlingKind = "textOnlyTransactional"
 
 	/*Undo defined:
 	 * The client tries to undo the operations already executed. But there is no
-	 * guaruntee that this is succeeding.
+	 * guarantee that this is succeeding.
 	 */
 	Undo FailureHandlingKind = "undo"
 

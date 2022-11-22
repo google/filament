@@ -68,6 +68,9 @@ class UTILS_PUBLIC Texture : public FilamentAPI {
 public:
     static constexpr const size_t BASE_LEVEL = 0;
 
+    //! Face offsets for all faces of a cubemap
+    struct FaceOffsets;
+
     using PixelBufferDescriptor = backend::PixelBufferDescriptor;    //!< Geometry of a pixel buffer
     using Sampler = backend::SamplerType;                            //!< Type of sampler
     using InternalFormat = backend::TextureFormat;                   //!< Internal texel format
@@ -75,7 +78,6 @@ public:
     using Format = backend::PixelDataFormat;                         //!< Pixel color format
     using Type = backend::PixelDataType;                             //!< Pixel data format
     using CompressedType = backend::CompressedPixelDataType;         //!< Compressed pixel data format
-    using FaceOffsets = backend::FaceOffsets;                        //!< Cube map faces offsets
     using Usage = backend::TextureUsage;                             //!< Usage affects texel layout
     using Swizzle = backend::TextureSwizzle;                         //!< Texture swizzle
 
@@ -133,7 +135,8 @@ public:
          * effectively create a 3D texture.
          * @param depth Depth of the texture in texels (default: 1).
          * @return This Builder, for chaining calls.
-         * @attention This Texture instance must use Sampler::SAMPLER_3D or Sampler::SAMPLER_2D_ARRAY or it has no effect.
+         * @attention This Texture instance must use Sampler::SAMPLER_3D or
+         *            Sampler::SAMPLER_2D_ARRAY or it has no effect.
          */
         Builder& depth(uint32_t depth) noexcept;
 
@@ -289,59 +292,8 @@ public:
     InternalFormat getFormat() const noexcept;
 
     /**
-     * Specify the image of a 2D texture for a level.
-     *
-     * @param engine    Engine this texture is associated to.
-     * @param level     Level to set the image for.
-     * @param buffer    Client-side buffer containing the image to set.
-     *
-     * @attention \p engine must be the instance passed to Builder::build()
-     * @attention \p level must be less than getLevels().
-     * @attention \p buffer's Texture::Format must match that of getFormat().
-     * @attention This Texture instance must use Sampler::SAMPLER_2D or
-     *            Sampler::SAMPLER_EXTERNAL. IF the later is specified
-     *            and external textures are supported by the driver implementation,
-     *            this method will have no effect, otherwise it will behave as if the
-     *            texture was specified with driver::SamplerType::SAMPLER_2D.
-     *
-     * @note
-     * This is equivalent to calling:
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     * setImage(engine, level, 0, 0, getWidth(level), getHeight(level), buffer);
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *
-     * @see Builder::sampler()
-     */
-    void setImage(Engine& engine, size_t level, PixelBufferDescriptor&& buffer) const;
-
-    /**
-     * Updates a sub-image of a 2D texture for a level.
-     *
-     * @param engine    Engine this texture is associated to.
-     * @param level     Level to set the image for.
-     * @param xoffset   Left offset of the sub-region to update.
-     * @param yoffset   Bottom offset of the sub-region to update.
-     * @param width     Width of the sub-region to update.
-     * @param height    Height of the sub-region to update.
-     * @param buffer    Client-side buffer containing the image to set.
-     *
-     * @attention \p engine must be the instance passed to Builder::build()
-     * @attention \p level must be less than getLevels().
-     * @attention \p buffer's Texture::Format must match that of getFormat().
-     * @attention This Texture instance must use Sampler::SAMPLER_2D or
-     *            Sampler::SAMPLER_EXTERNAL. IF the later is specified
-     *            and external textures are supported by the driver implementation,
-     *            this method will have no effect, otherwise it will behave as if the
-     *            texture was specified with Sampler::SAMPLER_2D.
-     *
-     * @see Builder::sampler()
-     */
-    void setImage(Engine& engine, size_t level,
-            uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-            PixelBufferDescriptor&& buffer) const;
-
-    /**
-     * Updates a sub-image of a 3D texture or 2D texture array for a level.
+     * Updates a sub-image of a 3D texture or 2D texture array for a level. Cubemaps are treated
+     * like a 2D array of six layers.
      *
      * @param engine    Engine this texture is associated to.
      * @param level     Level to set the image for.
@@ -356,7 +308,8 @@ public:
      * @attention \p engine must be the instance passed to Builder::build()
      * @attention \p level must be less than getLevels().
      * @attention \p buffer's Texture::Format must match that of getFormat().
-     * @attention This Texture instance must use Sampler::SAMPLER_3D or Sampler::SAMPLER_2D_array.
+     * @attention This Texture instance must use Sampler::SAMPLER_3D, Sampler::SAMPLER_2D_ARRAY
+     *             or Sampler::SAMPLER_CUBEMAP.
      *
      * @see Builder::sampler()
      */
@@ -364,6 +317,33 @@ public:
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
             PixelBufferDescriptor&& buffer) const;
+
+    /**
+     * inline helper to update a 2D texture
+     *
+     * @see setImage(Engine& engine, size_t level,
+     *              uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+     *              uint32_t width, uint32_t height, uint32_t depth,
+     *              PixelBufferDescriptor&& buffer)
+     */
+    inline void setImage(Engine& engine, size_t level, PixelBufferDescriptor&& buffer) const {
+        setImage(engine, level, 0, 0, 0,
+            uint32_t(getWidth(level)), uint32_t(getHeight(level)), 1, std::move(buffer));
+    }
+
+    /**
+     * inline helper to update a 2D texture
+     *
+     * @see setImage(Engine& engine, size_t level,
+     *              uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+     *              uint32_t width, uint32_t height, uint32_t depth,
+     *              PixelBufferDescriptor&& buffer)
+     */
+    inline void setImage(Engine& engine, size_t level,
+            uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+            PixelBufferDescriptor&& buffer) const {
+        setImage(engine, level, xoffset, yoffset, 0, width, height, 1, std::move(buffer));
+    }
 
     /**
      * Specify all six images of a cube map level.
@@ -382,7 +362,13 @@ public:
      * @attention This Texture instance must use Sampler::SAMPLER_CUBEMAP or it has no effect
      *
      * @see Texture::CubemapFace, Builder::sampler()
+     *
+     * @deprecated Instead, use setImage(Engine& engine, size_t level,
+     *              uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+     *              uint32_t width, uint32_t height, uint32_t depth,
+     *              PixelBufferDescriptor&& buffer)
      */
+    UTILS_DEPRECATED
     void setImage(Engine& engine, size_t level,
             PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const;
 
@@ -510,6 +496,51 @@ public:
     void generatePrefilterMipmap(Engine& engine,
             PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,
             PrefilterOptions const* options = nullptr);
+
+
+    /** @deprecated */
+    struct FaceOffsets {
+        using size_type = size_t;
+        union {
+            struct {
+                size_type px;   //!< +x face offset in bytes
+                size_type nx;   //!< -x face offset in bytes
+                size_type py;   //!< +y face offset in bytes
+                size_type ny;   //!< -y face offset in bytes
+                size_type pz;   //!< +z face offset in bytes
+                size_type nz;   //!< -z face offset in bytes
+            };
+            size_type offsets[6];
+        };
+        size_type  operator[](size_t n) const noexcept { return offsets[n]; }
+        size_type& operator[](size_t n) { return offsets[n]; }
+        FaceOffsets() noexcept = default;
+        explicit FaceOffsets(size_type faceSize) noexcept {
+            px = faceSize * 0;
+            nx = faceSize * 1;
+            py = faceSize * 2;
+            ny = faceSize * 3;
+            pz = faceSize * 4;
+            nz = faceSize * 5;
+        }
+        FaceOffsets(const FaceOffsets& rhs) noexcept {
+            px = rhs.px;
+            nx = rhs.nx;
+            py = rhs.py;
+            ny = rhs.ny;
+            pz = rhs.pz;
+            nz = rhs.nz;
+        }
+        FaceOffsets& operator=(const FaceOffsets& rhs) noexcept {
+            px = rhs.px;
+            nx = rhs.nx;
+            py = rhs.py;
+            ny = rhs.ny;
+            pz = rhs.pz;
+            nz = rhs.nz;
+            return *this;
+        }
+    };
 };
 
 } // namespace filament

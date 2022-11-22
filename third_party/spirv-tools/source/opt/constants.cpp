@@ -158,6 +158,7 @@ Type* ConstantManager::GetType(const Instruction* inst) const {
 std::vector<const Constant*> ConstantManager::GetOperandConstants(
     const Instruction* inst) const {
   std::vector<const Constant*> constants;
+  constants.reserve(inst->NumInOperands());
   for (uint32_t i = 0; i < inst->NumInOperands(); i++) {
     const Operand* operand = &inst->GetInOperand(i);
     if (operand->type != SPV_OPERAND_TYPE_ID) {
@@ -217,7 +218,8 @@ Instruction* ConstantManager::BuildInstructionAndAddToModule(
   auto* new_inst_ptr = new_inst.get();
   *pos = pos->InsertBefore(std::move(new_inst));
   ++(*pos);
-  context()->get_def_use_mgr()->AnalyzeInstDefUse(new_inst_ptr);
+  if (context()->AreAnalysesValid(IRContext::Analysis::kAnalysisDefUse))
+    context()->get_def_use_mgr()->AnalyzeInstDefUse(new_inst_ptr);
   MapConstantToInst(new_const, new_inst_ptr);
   return new_inst_ptr;
 }
@@ -419,16 +421,39 @@ const Constant* ConstantManager::GetNumericVectorConstantWithWords(
   return GetConstant(type, element_ids);
 }
 
-uint32_t ConstantManager::GetFloatConst(float val) {
+uint32_t ConstantManager::GetFloatConstId(float val) {
+  const Constant* c = GetFloatConst(val);
+  return GetDefiningInstruction(c)->result_id();
+}
+
+const Constant* ConstantManager::GetFloatConst(float val) {
   Type* float_type = context()->get_type_mgr()->GetFloatType();
   utils::FloatProxy<float> v(val);
   const Constant* c = GetConstant(float_type, v.GetWords());
+  return c;
+}
+
+uint32_t ConstantManager::GetDoubleConstId(double val) {
+  const Constant* c = GetDoubleConst(val);
   return GetDefiningInstruction(c)->result_id();
+}
+
+const Constant* ConstantManager::GetDoubleConst(double val) {
+  Type* float_type = context()->get_type_mgr()->GetDoubleType();
+  utils::FloatProxy<double> v(val);
+  const Constant* c = GetConstant(float_type, v.GetWords());
+  return c;
 }
 
 uint32_t ConstantManager::GetSIntConst(int32_t val) {
   Type* sint_type = context()->get_type_mgr()->GetSIntType();
   const Constant* c = GetConstant(sint_type, {static_cast<uint32_t>(val)});
+  return GetDefiningInstruction(c)->result_id();
+}
+
+uint32_t ConstantManager::GetUIntConst(uint32_t val) {
+  Type* uint_type = context()->get_type_mgr()->GetUIntType();
+  const Constant* c = GetConstant(uint_type, {val});
   return GetDefiningInstruction(c)->result_id();
 }
 

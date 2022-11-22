@@ -25,9 +25,12 @@ set(SRCS
     ${SRC_DIR}/imgui.cpp
     ${SRC_DIR}/imgui_demo.cpp
     ${SRC_DIR}/imgui_draw.cpp
+    ${SRC_DIR}/imgui_tables.cpp
     ${SRC_DIR}/imgui_widgets.cpp
 )
 
 add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR} ${PRIVATE_HDR_DIR})
+
+set_target_properties(${TARGET} PROPERTIES FOLDER ThirdParty)

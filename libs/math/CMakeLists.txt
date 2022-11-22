@@ -42,6 +42,7 @@ include_directories(${PUBLIC_HDR_DIR})
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 target_compile_options(${TARGET} PRIVATE ${OPTIMIZATION_FLAGS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 
 # ==================================================================================================
 # Installation
@@ -59,6 +60,7 @@ add_executable(test_${TARGET}
         tests/test_quat.cpp
 )
 target_link_libraries(test_${TARGET} PRIVATE math gtest)
+set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)
 
 # ==================================================================================================
 # Benchmarks
@@ -72,3 +74,5 @@ add_executable(benchmark_${TARGET} ${BENCHMARK_SRCS})
 target_compile_options(benchmark_${TARGET} PRIVATE ${OPTIMIZATION_FLAGS})
 
 target_link_libraries(benchmark_${TARGET} PRIVATE benchmark_main utils math)
+
+set_target_properties(benchmark_${TARGET} PROPERTIES FOLDER Benchmarks)

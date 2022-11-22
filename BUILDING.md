@@ -15,7 +15,7 @@ To build Filament for Android you must also install the following:
 
 - Android Studio Arctic Fox or more recent
 - Android SDK
-- Android NDK "side-by-side" 22.1 or higher
+- Android NDK 25.1 or higher
 
 ### Environment variables
 
@@ -143,6 +143,9 @@ make sure the command line tools are setup by running:
 ```
 $ xcode-select --install
 ```
+
+If you wish to run the Vulkan backend instead of the default Metal backend, you must install
+the LunarG SDK, enable "System Global Components", and reboot your machine.
 
 Then run `cmake` and `ninja` to trigger a build:
 
@@ -291,11 +294,11 @@ Alternatively you can build the AAR from the command line by executing the follo
 `android/` directory:
 
 ```
-$ ./gradlew -Pfilament_dist_dir=../../out/android-release/filament assembleRelease
+$ ./gradlew -Pcom.google.android.filament.dist-dir=../../out/android-release/filament assembleRelease
 ```
 
-The `-Pfilament_dist_dir` can be used to specify a different installation directory (it must match
-the CMake install prefix used in the previous steps).
+The `-Pcom.google.android.filament.dist-dir` can be used to specify a different installation
+directory (it must match the CMake install prefix used in the previous steps).
 
 #### Using Filament's AAR
 
@@ -349,7 +352,7 @@ same version that our continuous builds use.
 
 ```
 cd <your chosen parent folder for the emscripten SDK>
-curl -L https://github.com/emscripten-core/emsdk/archive/2.0.23.zip > emsdk.zip
+curl -L https://github.com/emscripten-core/emsdk/archive/refs/tags/3.1.15.zip > emsdk.zip
 unzip emsdk.zip ; mv emsdk-* emsdk ; cd emsdk
 python ./emsdk.py install latest
 python ./emsdk.py activate latest
@@ -365,13 +368,11 @@ export EMSDK=<your chosen home for the emscripten SDK>
 
 The EMSDK variable is required so that the build script can find the Emscripten SDK. The build
 creates a `samples` folder that can be used as the root of a simple static web server. Note that you
-cannot open the HTML directly from the filesystem due to CORS. One way to deal with this is to
-use Python to create a quick localhost server:
+cannot open the HTML directly from the filesystem due to CORS. We recommend using the emrun tool
+to create a quick localhost server:
 
 ```
-cd out/cmake-webgl-release/web/samples
-python3 -m http.server     # Python 3
-python -m SimpleHTTPServer # Python 2.7
+emrun out/cmake-webgl-release/web/samples --no_browser --port 8000
 ```
 
 You can then open http://localhost:8000/suzanne.html in your web browser.

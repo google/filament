@@ -16,6 +16,7 @@
 
 package com.google.android.filament;
 
+import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.Size;
@@ -200,6 +201,36 @@ import androidx.annotation.Size;
     }
 
     /**
+     * Returns the number of children of an {@link EntityInstance}.
+     *
+     * @param i the {@link EntityInstance} of the transform component to query.
+     * @return The number of children of the queried component.
+     */
+    public int getChildCount(@EntityInstance int i) {
+        return nGetChildCount(mNativeObject, i);
+    }
+
+    /**
+     * Gets a list of children for a transform component.
+     *
+     * @param i           the {@link EntityInstance} of the transform component to get the children
+     *                    from.
+     * @param outEntities array to receive the result sized to the maximum number of children to
+     *                    retrieve. If <code>null</code> is given, a new suitable array sized to
+     *                    {@link #getChildCount(int)} is allocated.
+     * @return Array of retrieved children {@link Entity}.
+     */
+    public @Entity @NonNull int[] getChildren(@EntityInstance int i, @Nullable int[] outEntities) {
+        if (outEntities == null) {
+            outEntities = new int[getChildCount(i)];
+        }
+        if (outEntities.length > 0) {
+            nGetChildren(mNativeObject, i, outEntities, outEntities.length);
+        }
+        return outEntities;
+    }
+
+    /**
      * Sets a local transform of a transform component.
      * <p>This operation can be slow if the hierarchy of transform is too deep, and this
      * will be particularly bad when updating a lot of transforms. In that case,
@@ -360,6 +391,8 @@ import androidx.annotation.Size;
     private static native void nDestroy(long nativeTransformManager, int entity);
     private static native void nSetParent(long nativeTransformManager, int i, int newParent);
     private static native int nGetParent(long nativeTransformManager, int i);
+    private static native int nGetChildCount(long nativeTransformManager, int i);
+    private static native void nGetChildren(long nativeEntityManager, int i, int[] outEntities, int count);
     private static native void nSetTransform(long nativeTransformManager, int i, float[] localTransform);
     private static native void nSetTransformFp64(long nativeTransformManager, int i, double[] localTransform);
     private static native void nGetTransform(long nativeTransformManager, int i, float[] outLocalTransform);

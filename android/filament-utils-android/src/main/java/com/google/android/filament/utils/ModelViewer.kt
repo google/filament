@@ -58,7 +58,10 @@ private const val kSensitivity = 100f
  *
  * See `sample-gltf-viewer` for a usage example.
  */
-class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
+class ModelViewer(
+        val engine: Engine,
+        private val uiHelper: UiHelper
+) : android.view.View.OnTouchListener {
     var asset: FilamentAsset? = null
         private set
 
@@ -70,7 +73,6 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
         get() = resourceLoader.asyncGetLoadProgress()
 
     var normalizeSkinningWeights = true
-    var recomputeBoundingBoxes = false
 
     var cameraFocalLength = 28f
         set(value) {
@@ -84,7 +86,6 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     val renderer: Renderer
     @Entity val light: Int
 
-    private val uiHelper: UiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK)
     private lateinit var displayHelper: DisplayHelper
     private lateinit var cameraManipulator: Manipulator
     private lateinit var gestureDetector: GestureDetector
@@ -95,6 +96,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
 
     private var swapChain: SwapChain? = null
     private var assetLoader: AssetLoader
+    private var materialProvider: MaterialProvider
     private var resourceLoader: ResourceLoader
     private val readyRenderables = IntArray(128) // add up to 128 entities at a time
 
@@ -110,8 +112,9 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
         view.scene = scene
         view.camera = camera
 
-        assetLoader = AssetLoader(engine, UbershaderLoader(engine), EntityManager.get())
-        resourceLoader = ResourceLoader(engine, normalizeSkinningWeights, recomputeBoundingBoxes)
+        materialProvider = UbershaderProvider(engine)
+        assetLoader = AssetLoader(engine, materialProvider, EntityManager.get())
+        resourceLoader = ResourceLoader(engine, normalizeSkinningWeights)
 
         // Always add a direct light source since it is required for shadowing.
         // We highly recommend adding an indirect light as well.
@@ -129,7 +132,12 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
         scene.addEntity(light)
     }
 
-    constructor(surfaceView: SurfaceView, engine: Engine = Engine.create(), manipulator: Manipulator? = null) : this(engine) {
+    constructor(
+            surfaceView: SurfaceView,
+            engine: Engine = Engine.create(),
+            uiHelper: UiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK),
+            manipulator: Manipulator? = null
+    ) : this(engine, uiHelper) {
         cameraManipulator = manipulator ?: Manipulator.Builder()
                 .targetPosition(kDefaultObjectPosition.x, kDefaultObjectPosition.y, kDefaultObjectPosition.z)
                 .viewport(surfaceView.width, surfaceView.height)
@@ -144,7 +152,12 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     }
 
     @Suppress("unused")
-    constructor(textureView: TextureView, engine: Engine = Engine.create(), manipulator: Manipulator? = null) : this(engine) {
+    constructor(
+            textureView: TextureView,
+            engine: Engine = Engine.create(),
+            uiHelper: UiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK),
+            manipulator: Manipulator? = null
+    ) : this(engine, uiHelper) {
         cameraManipulator = manipulator ?: Manipulator.Builder()
                 .targetPosition(kDefaultObjectPosition.x, kDefaultObjectPosition.y, kDefaultObjectPosition.z)
                 .viewport(textureView.width, textureView.height)
@@ -163,10 +176,10 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
      */
     fun loadModelGlb(buffer: Buffer) {
         destroyModel()
-        asset = assetLoader.createAssetFromBinary(buffer)
+        asset = assetLoader.createAsset(buffer)
         asset?.let { asset ->
             resourceLoader.asyncBeginLoad(asset)
-            animator = asset.animator
+            animator = asset.getInstance().animator
             asset.releaseSourceData()
         }
     }
@@ -178,7 +191,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
      */
     fun loadModelGltf(buffer: Buffer, callback: (String) -> Buffer?) {
         destroyModel()
-        asset = assetLoader.createAssetFromJson(buffer)
+        asset = assetLoader.createAsset(buffer)
         asset?.let { asset ->
             for (uri in asset.resourceUris) {
                 val resourceBuffer = callback(uri)
@@ -189,7 +202,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
                 resourceLoader.addResourceData(uri, resourceBuffer)
             }
             resourceLoader.asyncBeginLoad(asset)
-            animator = asset.animator
+            animator = asset.getInstance().animator
             asset.releaseSourceData()
         }
     }
@@ -201,7 +214,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
      */
     fun loadModelGltfAsync(buffer: Buffer, callback: (String) -> Buffer) {
         destroyModel()
-        asset = assetLoader.createAssetFromJson(buffer)
+        asset = assetLoader.createAsset(buffer)
         fetchResourcesJob = CoroutineScope(Dispatchers.IO).launch {
             fetchResources(asset!!, callback)
         }
@@ -215,8 +228,8 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     fun transformToUnitCube(centerPoint: Float3 = kDefaultObjectPosition) {
         asset?.let { asset ->
             val tm = engine.transformManager
-            var center = asset.boundingBox.center.let { v-> Float3(v[0], v[1], v[2]) }
-            val halfExtent = asset.boundingBox.halfExtent.let { v-> Float3(v[0], v[1], v[2]) }
+            var center = asset.boundingBox.center.let { v -> Float3(v[0], v[1], v[2]) }
+            val halfExtent = asset.boundingBox.halfExtent.let { v -> Float3(v[0], v[1], v[2]) }
             val maxExtent = 2.0f * max(halfExtent)
             val scaleFactor = 2.0f / maxExtent
             center -= centerPoint / scaleFactor
@@ -284,9 +297,9 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
     private fun populateScene(asset: FilamentAsset) {
         val rcm = engine.renderableManager
         var count = 0
-        val popRenderables = {count = asset.popRenderables(readyRenderables); count != 0}
+        val popRenderables = { count = asset.popRenderables(readyRenderables); count != 0 }
         while (popRenderables()) {
-            for (i in 0..count-1) {
+            for (i in 0..count - 1) {
                 val ri = rcm.getInstance(readyRenderables[i])
                 rcm.setScreenSpaceContactShadows(ri, true)
             }
@@ -297,12 +310,14 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
 
     private fun addDetachListener(view: android.view.View) {
         view.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(v: android.view.View?) {}
-            override fun onViewDetachedFromWindow(v: android.view.View?) {
+            override fun onViewAttachedToWindow(v: android.view.View) {}
+            override fun onViewDetachedFromWindow(v: android.view.View) {
                 uiHelper.detach()
 
                 destroyModel()
                 assetLoader.destroy()
+                materialProvider.destroyMaterials()
+                materialProvider.destroy()
                 resourceLoader.destroy()
 
                 engine.destroyEntity(light)
@@ -344,7 +359,7 @@ class ModelViewer(val engine: Engine) : android.view.View.OnTouchListener {
                 resourceLoader.addResourceData(uri, buffer)
             }
             resourceLoader.asyncBeginLoad(asset)
-            animator = asset.animator
+            animator = asset.getInstance().animator
             asset.releaseSourceData()
         }
     }

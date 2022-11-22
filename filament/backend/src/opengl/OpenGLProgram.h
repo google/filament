@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_OPENGLPROGRAM_H
-#define TNT_FILAMENT_DRIVER_OPENGLPROGRAM_H
+#ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGLPROGRAM_H
+#define TNT_FILAMENT_BACKEND_OPENGL_OPENGLPROGRAM_H
 
 #include "DriverBase.h"
 #include "OpenGLDriver.h"
 
 #include "private/backend/Driver.h"
-#include "private/backend/Program.h"
+#include "backend/Program.h"
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
@@ -32,18 +32,23 @@
 #include <stdint.h>
 
 
-namespace filament {
+namespace filament::backend {
 
-class OpenGLProgram : public backend::HwProgram {
+class OpenGLProgram : public HwProgram {
 public:
 
-    OpenGLProgram() noexcept = default;
-    OpenGLProgram(OpenGLDriver* gl, const backend::Program& builder) noexcept;
+    OpenGLProgram() noexcept;
+    OpenGLProgram(OpenGLDriver& gld, Program&& builder) noexcept;
     ~OpenGLProgram() noexcept;
 
-    bool isValid() const noexcept { return mIsValid; }
+    bool isValid() const noexcept { return mValid; }
 
-    void use(OpenGLDriver* const gl) noexcept {
+    void use(OpenGLDriver* const gld, OpenGLContext& context) noexcept {
+        if (UTILS_UNLIKELY(!mInitialized)) {
+            initialize(context);
+        }
+
+        context.useProgram(gl.program);
         if (UTILS_UNLIKELY(mUsedBindingsCount)) {
             // We rely on GL state tracking to avoid unnecessary glBindTexture / glBindSampler
             // calls.
@@ -55,55 +60,72 @@ public:
 
             // turns out the former might be relatively cheap to check, the later requires
             // a bit less. Compared to what updateSamplers() actually does, which is
-            // pretty little, I'm not sure we'll get ahead.
+            // pretty little, I'm not sure if we'll get ahead.
 
-            updateSamplers(gl);
+            updateSamplers(gld);
         }
     }
 
     struct {
-        GLuint shaders[backend::Program::SHADER_TYPE_COUNT];
-        GLuint program;
+        GLuint shaders[Program::SHADER_TYPE_COUNT] = {};
+        GLuint program = 0;
     } gl; // 12 bytes
 
-    static void logCompilationError(utils::io::ostream& out,
-            backend::Program::Shader shaderType, const char* name,
-            GLuint shaderId, char const* source) noexcept;
-
-    static void logProgramLinkError(utils::io::ostream& out,
-            const char* name, GLuint program) noexcept;
-
 private:
-    static constexpr uint8_t TEXTURE_UNIT_COUNT = OpenGLContext::MAX_TEXTURE_UNIT_COUNT;
-    static constexpr uint8_t VERTEX_SHADER_BIT   = uint8_t(1) << size_t(backend::Program::Shader::VERTEX);
-    static constexpr uint8_t FRAGMENT_SHADER_BIT = uint8_t(1) << size_t(backend::Program::Shader::FRAGMENT);
-
-    struct BlockInfo {
-        uint8_t binding : 3;    // binding (i.e.: index in mSamplerBindings)
-        uint8_t unused  : 1;    // padding / available
-        uint8_t count   : 4;    // number of TMUs actually used minus 1
-
-        // if TEXTURE_UNIT_COUNT > 16, the count bitfield must be increased accordingly
-        static_assert(TEXTURE_UNIT_COUNT <= 16, "TEXTURE_UNIT_COUNT must be <= 16");
-
-        // if SAMPLER_BINDING_COUNT > 8, the binding bitfield must be increased accordingly
-        static_assert(backend::Program::BINDING_COUNT <= 8, "BINDING_COUNT must be <= 8");
+    // keep these away from of other class attributes
+    struct LazyInitializationData {
+        Program::UniformBlockInfo uniformBlockInfo;
+        Program::SamplerGroupInfo samplerGroupInfo;
+        std::array<utils::CString, Program::SHADER_TYPE_COUNT> shaderSourceCode;
     };
 
-    uint8_t mUsedBindingsCount = 0;
-    uint8_t mValidShaderSet = 0;
-    bool mIsValid = false;
+    static void compileShaders(OpenGLContext& context,
+            Program::ShaderSource shadersSource,
+            utils::FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
+            GLuint shaderIds[Program::SHADER_TYPE_COUNT],
+            std::array<utils::CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept;
 
-    // information about each USED sampler buffer (no gaps)
-    std::array<BlockInfo, backend::Program::BINDING_COUNT> mBlockInfos;   // 8 bytes
+    static std::string_view process_GOOGLE_cpp_style_line_directive(OpenGLContext& context,
+            char* source, size_t len) noexcept;
 
-    // runs of indices into SamplerGroup -- run start index and size given by BlockInfo
-    std::array<uint8_t, TEXTURE_UNIT_COUNT> mIndicesRuns;    // 16 bytes
+    static std::string_view process_ARB_shading_language_packing(OpenGLContext& context) noexcept;
 
-    void updateSamplers(OpenGLDriver* gld) noexcept;
+    static std::array<std::string_view, 2> splitShaderSource(std::string_view source) noexcept;
+
+    static GLuint linkProgram(const GLuint shaderIds[Program::SHADER_TYPE_COUNT]) noexcept;
+
+    static bool checkProgramStatus(const char* name,
+            GLuint& program, GLuint shaderIds[Program::SHADER_TYPE_COUNT],
+            std::array<utils::CString, Program::SHADER_TYPE_COUNT> const& shaderSourceCode) noexcept;
+
+    void initialize(OpenGLContext& context);
+
+    void initializeProgramState(OpenGLContext& context, GLuint program,
+            LazyInitializationData const& lazyInitializationData) noexcept;
+
+    void updateSamplers(OpenGLDriver* gld) const noexcept;
+
+    // number of bindings actually used by this program
+    uint8_t mUsedBindingsCount = 0u;
+    // whether lazy initialization has been performed
+    bool mInitialized : 1;
+    // whether lazy initialization was successful
+    bool mValid : 1;
+    UTILS_UNUSED uint8_t padding[2] = {};
+
+    union {
+        // when mInitialized == true:
+        // information about each USED sampler buffer per binding (no gaps)
+        std::array<uint8_t, Program::SAMPLER_BINDING_COUNT> mUsedSamplerBindingPoints;   // 4 bytes
+        // when mInitialized == false:
+        // lazy initialization data pointer
+        LazyInitializationData* mLazyInitializationData;
+    };
 };
 
+// if OpenGLProgram is larger tha 64 bytes, it'll fall in a larger Handle bucket.
+static_assert(sizeof(OpenGLProgram) <= 64);
 
-} // namespace filament
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_OPENGLPROGRAM_H
+#endif // TNT_FILAMENT_BACKEND_OPENGL_OPENGLPROGRAM_H

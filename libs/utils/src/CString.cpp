@@ -23,16 +23,6 @@
 
 namespace utils {
 
-int StaticString::compare(const StaticString& rhs) const noexcept {
-    size_type lhs_size = size();
-    size_type rhs_size = rhs.size();
-    if (lhs_size < rhs_size) return -1;
-    if (lhs_size > rhs_size) return 1;
-    return strncmp(data(), rhs.data(), size());
-}
-
-// ------------------------------------------------------------------------------------------------
-
 UTILS_NOINLINE
 CString::CString(const char* cstr, size_t length) {
     if (length && cstr) {
@@ -41,6 +31,16 @@ CString::CString(const char* cstr, size_t length) {
         mCStr = (value_type*)(p + 1);
         // we don't use memcpy here to avoid a call to libc, the generated code is pretty good.
         std::uninitialized_copy_n(cstr, length, mCStr);
+        mCStr[length] = '\0';
+    }
+}
+
+CString::CString(size_t length) {
+    if (length) {
+        Data* p = (Data*)malloc(sizeof(Data) + length + 1);
+        p->length = (size_type)length;
+        mCStr = (value_type*)(p + 1);
+        std::fill_n(mCStr, length, 0);
         mCStr[length] = '\0';
     }
 }

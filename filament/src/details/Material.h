@@ -17,20 +17,19 @@
 #ifndef TNT_FILAMENT_DETAILS_MATERIAL_H
 #define TNT_FILAMENT_DETAILS_MATERIAL_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include "details/MaterialInstance.h"
 
 #include <filament/Material.h>
 
-#include <private/filament/SamplerBindingMap.h>
+#include <private/filament/SamplerBindingsInfo.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
 
-#include <filaflat/ShaderBuilder.h>
-
 #include <utils/compiler.h>
+#include <utils/Mutex.h>
 
 #include <atomic>
 
@@ -54,7 +53,7 @@ public:
     void terminate(FEngine& engine);
 
     // return the uniform interface block for this material
-    const UniformInterfaceBlock& getUniformInterfaceBlock() const noexcept {
+    const BufferInterfaceBlock& getUniformInterfaceBlock() const noexcept {
         return mUniformInterfaceBlock;
     }
 
@@ -70,31 +69,43 @@ public:
 
     bool isSampler(const char* name) const noexcept;
 
-    UniformInterfaceBlock::UniformInfo const* reflect(utils::StaticString const& name) const noexcept;
+    BufferInterfaceBlock::FieldInfo const* reflect(std::string_view name) const noexcept;
 
     FMaterialInstance const* getDefaultInstance() const noexcept { return &mDefaultInstance; }
     FMaterialInstance* getDefaultInstance() noexcept { return &mDefaultInstance; }
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
-    backend::Handle<backend::HwProgram> getProgram(uint8_t variantKey) const noexcept {
-#if FILAMENT_ENABLE_MATDBG
-        mActivePrograms.set(variantKey);
-        if (UTILS_UNLIKELY(mPendingEdits.load())) {
-            const_cast<FMaterial*>(this)->applyPendingEdits();
+    // prepareProgram creates the program for the material's given variant at the backend level.
+    // Must be called outside of backend render pass.
+    // Must be called before getProgram() below.
+    void prepareProgram(Variant variant) const noexcept {
+        // prepareProgram() is called for each RenderPrimitive in the scene, so it must be efficient.
+        if (UTILS_UNLIKELY(!mCachedPrograms[variant.key])) {
+            prepareProgramSlow(variant);
         }
-#endif
-        backend::Handle<backend::HwProgram> const entry = mCachedPrograms[variantKey];
-        return UTILS_LIKELY(entry) ? entry : getProgramSlow(variantKey);
     }
-    backend::Program getProgramBuilderWithVariants(uint8_t variantKey, uint8_t vertexVariantKey,
-            uint8_t fragmentVariantKey) const noexcept;
-    backend::Handle<backend::HwProgram> createAndCacheProgram(backend::Program&& p,
-            uint8_t variantKey) const noexcept;
+
+    // getProgram returns the backend program for the material's given variant.
+    // Must be called after prepareProgram().
+    [[nodiscard]] backend::Handle<backend::HwProgram> getProgram(Variant variant) const noexcept {
+#if FILAMENT_ENABLE_MATDBG
+        assert_invariant(variant.key < VARIANT_COUNT);
+        std::unique_lock<utils::Mutex> lock(mActiveProgramsLock);
+        mActivePrograms.set(variant.key);
+        lock.unlock();
+#endif
+        assert_invariant(mCachedPrograms[variant.key]);
+        return mCachedPrograms[variant.key];
+    }
+
+    backend::Program getProgramBuilderWithVariants(Variant variant, Variant vertexVariant,
+            Variant fragmentVariant) const noexcept;
 
     bool isVariantLit() const noexcept { return mIsVariantLit; }
 
     const utils::CString& getName() const noexcept { return mName; }
+    backend::FeatureLevel getFeatureLevel() const noexcept { return mFeatureLevel; }
     backend::RasterState getRasterState() const noexcept  { return mRasterState; }
     uint32_t getId() const noexcept { return mMaterialId; }
 
@@ -118,6 +129,7 @@ public:
     AttributeBitset getRequiredAttributes() const noexcept { return mRequiredAttributes; }
     RefractionMode getRefractionMode() const noexcept { return mRefractionMode; }
     RefractionType getRefractionType() const noexcept { return mRefractionType; }
+    ReflectionMode getReflectionMode() const noexcept { return mReflectionMode; }
 
     bool hasSpecularAntiAliasing() const noexcept { return mSpecularAntiAliasing; }
     float getSpecularAntiAliasingVariance() const noexcept { return mSpecularAntiAliasingVariance; }
@@ -128,9 +140,9 @@ public:
     }
 
     size_t getParameterCount() const noexcept {
-        return mUniformInterfaceBlock.getUniformInfoList().size() +
-                mSamplerInterfaceBlock.getSamplerInfoList().size() +
-                (mSubpassInfo.isValid ? 1 : 0);
+        return mUniformInterfaceBlock.getFieldInfoList().size() +
+               mSamplerInterfaceBlock.getSamplerInfoList().size() +
+               (mSubpassInfo.isValid ? 1 : 0);
     }
     size_t getParameters(ParameterInfo* parameters, size_t count) const noexcept;
 
@@ -140,6 +152,7 @@ public:
 
     void destroyPrograms(FEngine& engine);
 
+#if FILAMENT_ENABLE_MATDBG
     /**
      * Callback handlers for the debug server, potentially called from any thread. The userdata
      * argument has the same value that was passed to DebugServer::addMaterial(), which should
@@ -160,24 +173,31 @@ public:
      */
     static void onQueryCallback(void* userdata, VariantList* pActiveVariants);
 
+    void checkProgramEdits() noexcept {
+        if (UTILS_UNLIKELY(mPendingEdits.load())) {
+            applyPendingEdits();
+        }
+    }
+
     /** @}*/
+#endif
 
 private:
-    backend::Handle<backend::HwProgram> getProgramSlow(uint8_t variantKey) const noexcept;
-    backend::Handle<backend::HwProgram> getSurfaceProgramSlow(uint8_t variantKey) const noexcept;
-    backend::Handle<backend::HwProgram> getPostProcessProgramSlow(uint8_t variantKey) const noexcept;
+    void prepareProgramSlow(Variant variant) const noexcept;
+    void getSurfaceProgramSlow(Variant variant) const noexcept;
+    void getPostProcessProgramSlow(Variant variant) const noexcept;
+
+    void createAndCacheProgram(backend::Program&& p,
+            Variant variant) const noexcept;
 
     // try to order by frequency of use
     mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
-
-#if FILAMENT_ENABLE_MATDBG
-    mutable VariantList mActivePrograms;
-#endif
 
     backend::RasterState mRasterState;
     BlendingMode mRenderBlendingMode = BlendingMode::OPAQUE;
     TransparencyMode mTransparencyMode = TransparencyMode::DEFAULT;
     bool mIsVariantLit = false;
+    backend::FeatureLevel mFeatureLevel = backend::FeatureLevel::FEATURE_LEVEL_1;
     Shading mShading = Shading::UNLIT;
 
     BlendingMode mBlendingMode = BlendingMode::OPAQUE;
@@ -188,6 +208,7 @@ private:
     AttributeBitset mRequiredAttributes;
     RefractionMode mRefractionMode = RefractionMode::NONE;
     RefractionType mRefractionType = RefractionType::SOLID;
+    ReflectionMode mReflectionMode = ReflectionMode::DEFAULT;
     uint64_t mMaterialProperties = 0;
 
     float mMaskThreshold = 0.4f;
@@ -203,12 +224,16 @@ private:
 
     FMaterialInstance mDefaultInstance;
     SamplerInterfaceBlock mSamplerInterfaceBlock;
-    UniformInterfaceBlock mUniformInterfaceBlock;
+    BufferInterfaceBlock mUniformInterfaceBlock;
     SubpassInfo mSubpassInfo;
-    SamplerBindingMap mSamplerBindings;
+    utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> mUniformBlockBindings;
+    SamplerGroupBindingInfoList mSamplerGroupBindingInfoList;
+    SamplerBindingToNameMap mSamplerBindingToNameMap;
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;
+    mutable utils::Mutex mActiveProgramsLock;
+    mutable VariantList mActivePrograms;
 #endif
 
     utils::CString mName;
@@ -220,7 +245,7 @@ private:
 };
 
 
-FILAMENT_UPCAST(Material)
+FILAMENT_DOWNCAST(Material)
 
 } // namespace filament
 

@@ -80,11 +80,8 @@ public:
         // refresh-rate of the display in Hz. set to 0 for offscreen or turn off frame-pacing.
         float refreshRate = 60.0f;
 
-        // how far in advance a buffer must be queued for presentation at a given time in ns
-        uint64_t presentationDeadlineNanos = 0;
-
-        // offset by which vsyncSteadyClockTimeNano provided in beginFrame() is offset in ns
-        uint64_t vsyncOffsetNanos = 0;
+        UTILS_DEPRECATED uint64_t presentationDeadlineNanos = 0;
+        UTILS_DEPRECATED uint64_t vsyncOffsetNanos = 0;
     };
 
     /**
@@ -99,7 +96,7 @@ public:
      * headRoomRatio: additional headroom for the GPU as a ratio of the targetFrameTime.
      *                Useful for taking into account constant costs like post-processing or
      *                GPU drivers on different platforms.
-     * history:   History size. higher values, tend to filter more (clamped to 30)
+     * history:   History size. higher values, tend to filter more (clamped to 31)
      * scaleRate: rate at which the gpu load is adjusted to reach the target frame rate
      *            This value can be computed as 1 / N, where N is the number of frames
      *            needed to reach 64% of the target scale factor.
@@ -110,10 +107,10 @@ public:
      *
      */
     struct FrameRateOptions {
-        float headRoomRatio = 0.0f;    //!< additional headroom for the GPU
-        float scaleRate = 0.125f;      //!< rate at which the system reacts to load changes
-        uint8_t history = 3;           //!< history size
-        uint8_t interval = 1;          //!< desired frame interval in unit of 1.0 / DisplayInfo::refreshRate
+        float headRoomRatio = 0.0f;        //!< additional headroom for the GPU
+        float scaleRate = 1.0f / 8.0f;     //!< rate at which the system reacts to load changes
+        uint8_t history = 15;              //!< history size
+        uint8_t interval = 1;              //!< desired frame interval in unit of 1.0 / DisplayInfo::refreshRate
     };
 
     /**
@@ -122,6 +119,8 @@ public:
     struct ClearOptions {
         /** Color to use to clear the SwapChain */
         math::float4 clearColor = {};
+        /** Value to clear the stencil buffer */
+        uint8_t clearStencil = 0u;
         /**
          * Whether the SwapChain should be cleared using the clearColor. Use this if translucent
          * View will be drawn, for instance.
@@ -244,6 +243,20 @@ public:
             uint64_t vsyncSteadyClockTimeNano = 0u);
 
     /**
+     * Set the time at which the frame must be presented to the display.
+     *
+     * This must be called between beginFrame() and endFrame().
+     *
+     * @param monotonic_clock_ns  the time in nanoseconds corresponding to the system monotonic up-time clock.
+     *                            the presentation time is typically set in the middle of the period
+     *                            of interest. The presentation time cannot be too far in the
+     *                            future because it is limited by how many buffers are available in
+     *                            the display sub-system. Typically it is set to 1 or 2 vsync periods
+     *                            away.
+     */
+    void setPresentationTime(int64_t monotonic_clock_ns);
+
+    /**
      * Render a View into this renderer's window.
      *
      * This is filament main rendering method, most of the CPU-side heavy lifting is performed
@@ -252,7 +265,7 @@ public:
      *
      * render() generates commands for each of the following stages:
      *
-     * 1. Shadow map pass, if needed (currently only a single shadow map is supported).
+     * 1. Shadow map passes, if needed.
      * 2. Depth pre-pass.
      * 3. Color pass.
      * 4. Post-processing pass.
@@ -341,7 +354,7 @@ public:
      *
      *  Framebuffer as seen on User buffer (PixelBufferDescriptor&)
      *  screen
-     *  
+     *
      *      +--------------------+
      *      |                    |                .stride         .alignment
      *      |                    |         ----------------------->-->
@@ -359,7 +372,8 @@ public:
      *      O------------+-------+
      *
      *
-     * Typically readPixels() will be called after render() and before endFrame().
+     * readPixels() must be called within a frame, meaning after beginFrame() and before endFrame().
+     * Typically, readPixels() will be called after render().
      *
      * After issuing this method, the callback associated with `buffer` will be invoked on the
      * main thread, indicating that the read-back has completed. Typically, this will happen
@@ -442,6 +456,10 @@ public:
      * after multiple calls to beginFrame(), render(), endFrame().
      *
      * It is also possible to use a Fence to wait for the read-back.
+     *
+     * OpenGL only: if issuing a readPixels on a RenderTarget backed by a Texture that had data
+     * uploaded to it via setImage, the data returned from readPixels will be y-flipped with respect
+     * to the setImage call.
      *
      * @remark
      * readPixels() is intended for debugging and testing. It will impact performance significantly.

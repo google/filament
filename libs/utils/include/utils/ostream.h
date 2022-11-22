@@ -17,17 +17,22 @@
 #ifndef TNT_UTILS_OSTREAM_H
 #define TNT_UTILS_OSTREAM_H
 
-#include <string>
-
 #include <utils/bitset.h>
-#include <utils/compiler.h> // ssize_t is a POSIX type.
+#include <utils/compiler.h>
+#include <utils/PrivateImplementation.h>
 
-namespace utils {
-namespace io {
+#include <string>
+#include <string_view>
+#include <utility>
 
-class UTILS_PUBLIC  ostream {
+namespace utils::io {
+
+struct ostream_;
+
+class UTILS_PUBLIC  ostream : protected utils::PrivateImplementation<ostream_> {
+    friend struct ostream_;
+
 public:
-
     virtual ~ostream();
 
     ostream& operator<<(short value) noexcept;
@@ -56,12 +61,17 @@ public:
     ostream& operator<<(const char* string) noexcept;
     ostream& operator<<(const unsigned char* string) noexcept;
 
+    ostream& operator<<(std::string const& s) noexcept;
+    ostream& operator<<(std::string_view const& s) noexcept;
+
     ostream& operator<<(ostream& (* f)(ostream&)) noexcept { return f(*this); }
 
     ostream& dec() noexcept;
     ostream& hex() noexcept;
 
 protected:
+    ostream& print(const char* format, ...) noexcept;
+
     class Buffer {
     public:
         Buffer() noexcept;
@@ -70,18 +80,23 @@ protected:
         Buffer(const Buffer&) = delete;
         Buffer& operator=(const Buffer&) = delete;
 
+        const char* get() const noexcept { return buffer; }
+
+        std::pair<char*, size_t> grow(size_t s) noexcept;
+        void advance(ssize_t n) noexcept;
+        void reset() noexcept;
+
+    private:
+        void reserve(size_t newSize) noexcept;
+
         char* buffer = nullptr;     // buffer address
         char* curr = nullptr;       // current pointer
         size_t size = 0;            // size remaining
         size_t capacity = 0;        // total capacity of the buffer
-        const char* get() const noexcept { return buffer; }
-        void advance(ssize_t n) noexcept;
-        void reset() noexcept;
-        void reserve(size_t newSize) noexcept;
     };
 
-    Buffer mData;
-    Buffer& getBuffer() noexcept { return mData; }
+    Buffer& getBuffer() noexcept;
+    Buffer const& getBuffer() const noexcept;
 
 private:
     virtual ostream& flush() noexcept = 0;
@@ -96,17 +111,8 @@ private:
         LONG_DOUBLE
     };
 
-    bool mShowHex = false;
     const char* getFormat(type t) const noexcept;
-
-    /*
-     * Checks that the buffer has room for s additional bytes, growing the allocation if necessary.
-     */
-    void growBufferIfNeeded(size_t s) noexcept;
 };
-
-// handles std::string
-inline ostream& operator << (ostream& o, std::string const& s) noexcept { return o << s.c_str(); }
 
 // handles utils::bitset
 inline ostream& operator << (ostream& o, utils::bitset32 const& s) noexcept {
@@ -126,11 +132,9 @@ inline ostream& operator<<(ostream& stream, const VECTOR<T>& v) {
 
 inline ostream& hex(ostream& s) noexcept { return s.hex(); }
 inline ostream& dec(ostream& s) noexcept { return s.dec(); }
-inline ostream& endl(ostream& s) noexcept { s << "\n"; return s.flush(); }
+inline ostream& endl(ostream& s) noexcept { s << '\n'; return s.flush(); }
 inline ostream& flush(ostream& s) noexcept { return s.flush(); }
 
-} // namespace io
-
-} // namespace utils
+} // namespace utils::io
 
 #endif // TNT_UTILS_OSTREAM_H

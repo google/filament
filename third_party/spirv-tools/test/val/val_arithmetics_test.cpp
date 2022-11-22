@@ -656,7 +656,7 @@ TEST_F(ValidateArithmetics, DotDifferentVectorSize) {
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr(
-          "Expected operands to have the same number of componenets: Dot"));
+          "Expected operands to have the same number of components: Dot"));
 }
 
 TEST_F(ValidateArithmetics, VectorTimesScalarSuccess) {
@@ -1307,6 +1307,57 @@ TEST_F(ValidateArithmetics, CoopMatDimFail) {
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr("Cooperative matrix 'M' mismatch: CooperativeMatrixMulAddNV"));
+}
+
+TEST_F(ValidateArithmetics, CoopMatComponentTypeNotScalarNumeric) {
+  const std::string types = R"(
+%bad = OpTypeCooperativeMatrixNV %bool %subgroup %u32_8 %u32_8
+)";
+
+  CompileSuccessfully(GenerateCoopMatCode(types, "").c_str());
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("OpTypeCooperativeMatrixNV Component Type <id> "
+                        "'4[%bool]' is not a scalar numerical type."));
+}
+
+TEST_F(ValidateArithmetics, CoopMatScopeNotConstantInt) {
+  const std::string types = R"(
+%bad = OpTypeCooperativeMatrixNV %f16 %f32_1 %u32_8 %u32_8
+)";
+
+  CompileSuccessfully(GenerateCoopMatCode(types, "").c_str());
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("OpTypeCooperativeMatrixNV Scope <id> '17[%float_1]' is not a "
+                "constant instruction with scalar integer type."));
+}
+
+TEST_F(ValidateArithmetics, CoopMatRowsNotConstantInt) {
+  const std::string types = R"(
+%bad = OpTypeCooperativeMatrixNV %f16 %subgroup %f32_1 %u32_8
+)";
+
+  CompileSuccessfully(GenerateCoopMatCode(types, "").c_str());
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("OpTypeCooperativeMatrixNV Rows <id> '17[%float_1]' is not a "
+                "constant instruction with scalar integer type."));
+}
+
+TEST_F(ValidateArithmetics, CoopMatColumnsNotConstantInt) {
+  const std::string types = R"(
+%bad = OpTypeCooperativeMatrixNV %f16 %subgroup %u32_8 %f32_1
+)";
+
+  CompileSuccessfully(GenerateCoopMatCode(types, "").c_str());
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("OpTypeCooperativeMatrixNV Cols <id> '17[%float_1]' is not a "
+                "constant instruction with scalar integer type."));
 }
 
 TEST_F(ValidateArithmetics, IAddCarrySuccess) {

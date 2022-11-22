@@ -27,8 +27,9 @@
 #include <gltfio/AssetLoader.h>
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/ResourceLoader.h>
+#include <gltfio/TextureProvider.h>
 
-#include <viewer/SimpleViewer.h>
+#include <viewer/ViewerGui.h>
 
 #include <camutils/Manipulator.h>
 
@@ -42,35 +43,38 @@
 
 #include <math/mat4.h>
 
-#include "generated/resources/gltf_viewer.h"
+#include "generated/resources/gltf_demo.h"
+#include "materials/uberarchive.h"
 
 using namespace filament;
 using namespace filament::math;
 using namespace filament::viewer;
 
-using namespace gltfio;
+using namespace filament::gltfio;
 using namespace utils;
 
 enum MaterialSource {
-    GENERATE_SHADERS,
-    LOAD_UBERSHADERS,
+    JITSHADER,
+    UBERSHADER,
 };
 
 struct App {
     Engine* engine;
-    SimpleViewer* viewer;
+    ViewerGui* viewer;
     Config config;
     AssetLoader* loader;
     FilamentAsset* asset = nullptr;
     NameComponentManager* names;
     MaterialProvider* materials;
-    MaterialSource materialSource = GENERATE_SHADERS;
+    MaterialSource materialSource = JITSHADER;
     ResourceLoader* resourceLoader = nullptr;
+    gltfio::TextureProvider* stbDecoder = nullptr;
+    gltfio::TextureProvider* ktxDecoder = nullptr;
     int instanceToAnimate = -1;
     std::vector<FilamentInstance*> instances;
 };
 
-static const char* DEFAULT_IBL = "default_env";
+static const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
 
 static void printUsage(char* name) {
     std::string exec_name(Path(name).getName());
@@ -85,8 +89,8 @@ static void printUsage(char* name) {
         "       Specify the backend API: opengl (default), vulkan, or metal\n\n"
         "   --ibl=<path to cmgen IBL>, -i <path>\n"
         "       Override the built-in IBL\n\n"
-        "   --num=<number of instances>, -n <num>\n"
-        "       Number of instances (defaults to 5)\n\n"
+        "   --num=<number of initial instances>, -n <num>\n"
+        "       Number of instances to start with (defaults to 0)\n\n"
         "   --animate=<instance index>, -m <num>\n"
         "       Instance to animate (defaults to all instances)\n\n"
         "   --ubershader, -u\n"
@@ -140,12 +144,9 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 app->config.iblDirectory = arg;
                 break;
             case 'u':
-                app->materialSource = LOAD_UBERSHADERS;
+                app->materialSource = UBERSHADER;
                 break;
         }
-    }
-    if (app->instances.empty()) {
-        app->instances.resize(5);
     }
     return optind;
 }
@@ -207,16 +208,18 @@ int main(int argc, char** argv) {
         configuration.engine = app.engine;
         configuration.gltfPath = gltfPath.c_str();
         configuration.normalizeSkinningWeights = true;
-        configuration.recomputeBoundingBoxes = false;
         if (!app.resourceLoader) {
             app.resourceLoader = new gltfio::ResourceLoader(configuration);
+            app.stbDecoder = createStbProvider(app.engine);
+            app.ktxDecoder = createKtx2Provider(app.engine);
+            app.resourceLoader->addTextureProvider("image/png", app.stbDecoder);
+            app.resourceLoader->addTextureProvider("image/jpeg", app.stbDecoder);
+            app.resourceLoader->addTextureProvider("image/ktx2", app.ktxDecoder);
         }
-        app.resourceLoader->asyncBeginLoad(app.asset);
 
-        // Load animation data.
-        app.asset->getAnimator();
-        if (app.instanceToAnimate > -1) {
-            app.instances[app.instanceToAnimate]->getAnimator();
+        if (!app.resourceLoader->asyncBeginLoad(app.asset)) {
+            std::cerr << "Unable to start loading resources for " << filename << std::endl;
+            exit(1);
         }
 
         auto ibl = FilamentApp::get().getIBL();
@@ -242,20 +245,28 @@ int main(int argc, char** argv) {
     auto setup = [&](Engine* engine, View* view, Scene* scene) {
         app.engine = engine;
         app.names = new NameComponentManager(EntityManager::get());
-        app.viewer = new SimpleViewer(engine, scene, view, app.instanceToAnimate);
-        app.materials = (app.materialSource == GENERATE_SHADERS) ?
-                createMaterialGenerator(engine) : createUbershaderLoader(engine);
+        app.viewer = new ViewerGui(engine, scene, view);
+
+        app.materials = (app.materialSource == JITSHADER) ? createJitShaderProvider(engine) :
+                createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
+
         app.loader = AssetLoader::create({engine, app.materials, app.names });
         if (filename.isEmpty()) {
             app.asset = app.loader->createInstancedAsset(
-                    GLTF_VIEWER_DAMAGEDHELMET_DATA, GLTF_VIEWER_DAMAGEDHELMET_SIZE,
+                    GLTF_DEMO_DAMAGEDHELMET_DATA, GLTF_DEMO_DAMAGEDHELMET_SIZE,
                     app.instances.data(), app.instances.size());
         } else {
             loadAsset(filename);
         }
 
+        FilamentInstance* instance = nullptr;
+        if (app.instanceToAnimate > -1 && app.instanceToAnimate < app.instances.size()) {
+            instance = app.instances[app.instanceToAnimate];
+        }
+
         arrangeIntoCircle();
         loadResources(filename);
+        app.viewer->setAsset(app.asset, instance);
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
@@ -265,24 +276,37 @@ int main(int argc, char** argv) {
         delete app.viewer;
         delete app.materials;
         delete app.names;
+        delete app.resourceLoader;
+        delete app.stbDecoder;
+        delete app.ktxDecoder;
 
         AssetLoader::destroy(&app.loader);
     };
 
     auto animate = [&app, arrangeIntoCircle](Engine* engine, View* view, double now) {
         app.resourceLoader->asyncUpdateLoad();
-        FilamentInstance* instance = nullptr;
-        if (app.instanceToAnimate > -1) {
-            instance = app.instances[app.instanceToAnimate];
-        }
         app.viewer->updateRootTransform();
-        app.viewer->populateScene(app.asset, instance);
-        app.viewer->applyAnimation(now);
+        app.viewer->populateScene();
+
+        if (app.instanceToAnimate == -1) {
+            for (FilamentInstance* instance : app.instances) {
+                app.viewer->applyAnimation(now, instance);
+            }
+        } else {
+            app.viewer->applyAnimation(now);
+        }
 
         // Add a new instance every second until reaching 100 instances.
         static double previous = 0.0;
         if (now - previous > 1.0 && app.asset->getAssetInstanceCount() < 100) {
             FilamentInstance* instance = app.loader->createInstance(app.asset);
+
+            // If the asset has variants, rotate through each variant.
+            const size_t variantCount = instance->getMaterialVariantCount();
+            if (variantCount > 1) {
+                instance->applyMaterialVariant(app.instances.size() % variantCount);
+            }
+
             app.instances.push_back(instance);
             arrangeIntoCircle();
             previous = now;

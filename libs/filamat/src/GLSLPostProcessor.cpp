@@ -16,9 +16,6 @@
 
 #include "GLSLPostProcessor.h"
 
-#include <sstream>
-#include <vector>
-
 #include <GlslangToSpv.h>
 #include <SPVRemapper.h>
 #include <localintermediate.h>
@@ -28,14 +25,58 @@
 
 #include "sca/builtinResource.h"
 #include "sca/GLSLTools.h"
+#include "shaders/CodeGenerator.h"
+#include "shaders/MaterialInfo.h"
+
+#include "MetalArgumentBuffer.h"
+
+#include <filament/MaterialEnums.h>
+#include <private/filament/Variant.h>
+#include "SibGenerator.h"
 
 #include <utils/Log.h>
+
+#include <sstream>
+#include <unordered_map>
+#include <vector>
 
 using namespace glslang;
 using namespace spirv_cross;
 using namespace spvtools;
+using namespace filament;
+using namespace filament::backend;
 
 namespace filamat {
+
+using namespace utils;
+
+namespace msl {  // this is only used for MSL
+
+using BindingIndexMap = std::unordered_map<std::string, uint16_t>;
+
+static void collectSibs(const GLSLPostProcessor::Config& config, SibVector& sibs) {
+    switch (config.domain) {
+        case MaterialDomain::SURFACE:
+            UTILS_NOUNROLL
+            for (uint8_t blockIndex = 0; blockIndex < CONFIG_SAMPLER_BINDING_COUNT; blockIndex++) {
+                if (blockIndex == SamplerBindingPoints::PER_MATERIAL_INSTANCE) {
+                    continue;
+                }
+                auto const* sib =
+                        SibGenerator::getSib((SamplerBindingPoints)blockIndex, config.variant);
+                if (sib && hasShaderType(sib->getStageFlags(), config.shaderType)) {
+                    sibs.emplace_back(blockIndex, sib);
+                }
+            }
+        case MaterialDomain::POST_PROCESS:
+        case MaterialDomain::COMPUTE:
+            break;
+    }
+    sibs.emplace_back((uint8_t) SamplerBindingPoints::PER_MATERIAL_INSTANCE,
+            &config.materialInfo->sib);
+}
+
+}; // namespace msl
 
 GLSLPostProcessor::GLSLPostProcessor(MaterialBuilder::Optimization optimization, uint32_t flags)
         : mOptimization(optimization),
@@ -44,22 +85,11 @@ GLSLPostProcessor::GLSLPostProcessor(MaterialBuilder::Optimization optimization,
     // SPIRV error handler registration needs to occur only once. To avoid a race we do it up here
     // in the constructor, which gets invoked before MaterialBuilder kicks off jobs.
     spv::spirvbin_t::registerErrorHandler([](const std::string& str) {
-        utils::slog.e << str << utils::io::endl;
+        slog.e << str << io::endl;
     });
 }
 
-GLSLPostProcessor::~GLSLPostProcessor() {
-}
-
-static uint32_t shaderVersionFromModel(filament::backend::ShaderModel model) {
-    switch (model) {
-        case filament::backend::ShaderModel::UNKNOWN:
-        case filament::backend::ShaderModel::GL_ES_30:
-            return 300;
-        case filament::backend::ShaderModel::GL_CORE_41:
-            return 410;
-    }
-}
+GLSLPostProcessor::~GLSLPostProcessor() = default;
 
 static bool filterSpvOptimizerMessage(spv_message_level_t level) {
 #ifdef NDEBUG
@@ -107,81 +137,190 @@ static std::string stringifySpvOptimizerMessage(spv_message_level_t level, const
     return oss.str();
 }
 
-void GLSLPostProcessor::spirvToToMsl(const SpirvBlob *spirv, std::string *outMsl,
-        const Config &config, ShaderMinifier& minifier) const {
+void GLSLPostProcessor::spirvToMsl(const SpirvBlob *spirv, std::string *outMsl,
+        filament::backend::ShaderModel shaderModel, bool useFramebufferFetch, const SibVector& sibs,
+        const ShaderMinifier* minifier) {
+
+    using namespace msl;
 
     CompilerMSL mslCompiler(*spirv);
     CompilerGLSL::Options options;
     mslCompiler.set_common_options(options);
 
     const CompilerMSL::Options::Platform platform =
-        config.shaderModel == filament::backend::ShaderModel::GL_ES_30 ?
+        shaderModel == ShaderModel::MOBILE ?
             CompilerMSL::Options::Platform::iOS : CompilerMSL::Options::Platform::macOS;
 
     CompilerMSL::Options mslOptions = {};
     mslOptions.platform = platform,
-    mslOptions.msl_version = CompilerMSL::Options::make_msl_version(1, 1);
+    mslOptions.msl_version = shaderModel == ShaderModel::MOBILE ?
+        CompilerMSL::Options::make_msl_version(2, 0) : CompilerMSL::Options::make_msl_version(2, 2);
 
-    if (config.shaderModel == filament::backend::ShaderModel::GL_ES_30) {
+    if (useFramebufferFetch) {
         mslOptions.use_framebuffer_fetch_subpasses = true;
+        // On macOS, framebuffer fetch is only available starting with MSL 2.3. Filament will only
+        // use framebuffer fetch materials on devices that support it.
+        if (shaderModel == ShaderModel::DESKTOP) {
+            mslOptions.msl_version = CompilerMSL::Options::make_msl_version(2, 3);
+        }
     }
+
+    mslOptions.argument_buffers = true;
+
+    // We're using argument buffers for texture resources, however, we cannot rely on spirv-cross to
+    // generate the argument buffer definitions.
+    //
+    // Consider a shader with 3 textures:
+    // layout (set = 0, binding = 0) uniform sampler2D texture1;
+    // layout (set = 0, binding = 1) uniform sampler2D texture2;
+    // layout (set = 0, binding = 2) uniform sampler2D texture3;
+    //
+    // If only texture1 and texture2 are used in the material, then texture3 will be optimized away.
+    // This results in an argument buffer like the following:
+    // struct spvDescriptorSetBuffer0 {
+    //     texture2d<float> texture1 [[id(0)]];
+    //     sampler texture1Smplr [[id(1)]];
+    //     texture2d<float> texture2 [[id(2)]];
+    //     sampler texture2Smplr [[id(3)]];
+    // };
+    // Note that this happens even if "pad_argument_buffer_resources" and
+    // "force_active_argument_buffer_resources" are true.
+    //
+    // This would be fine, except older Apple devices don't like it when the argument buffer in the
+    // shader doesn't precisely match the one generated at runtime.
+    //
+    // So, we use the MetalArgumentBuffer class to replace spirv-cross' argument buffer definitions
+    // with our own that contain all the textures/samples, even those optimized away.
+    std::vector<MetalArgumentBuffer*> argumentBuffers;
 
     mslCompiler.set_msl_options(mslOptions);
 
     auto executionModel = mslCompiler.get_execution_model();
 
-    auto duplicateResourceBinding = [executionModel, &mslCompiler](const auto& resource) {
+    // Metal Descriptor Sets
+    // Descriptor set       Name                    Binding
+    // ----------------------------------------------------------------------
+    // 0                    Uniforms                Individual bindings
+    // 1-4                  Sampler groups          [[buffer(27-30)]]
+    // 5-7                  Unused
+    //
+    // Here we enumerate each sampler in each sampler group and map it to a Metal resource. Each
+    // sampler group is its own descriptor set, and each descriptor set becomes an argument buffer.
+    //
+    // For example, in GLSL, we might have the following:
+    // layout( set = 1, binding = 0 ) uniform sampler2D textureA;
+    // layout( set = 1, binding = 1 ) uniform sampler2D textureB;
+    //
+    // This becomes the following MSL argument buffer:
+    // struct spvDescriptorSetBuffer1 {
+    //     texture2d<float> textureA [[id(0)]];
+    //     sampler textureASmplr [[id(1)]];
+    //     texture2d<float> textureB [[id(2)]];
+    //     sampler textureBSmplr [[id(3)]];
+    // };
+    //
+    // Which is then bound to the vertex/fragment functions:
+    // constant spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(27)]]
+    for (auto [bindingPoint, sib] : sibs) {
+        const auto& infoList = sib->getSamplerInfoList();
+
+        // bindingPoint + 1, because the first descriptor set is for uniforms
+        auto argBufferBuilder = MetalArgumentBuffer::Builder()
+                .name("spvDescriptorSetBuffer" + std::to_string(int(bindingPoint + 1)));
+
+        for (const auto& info: infoList) {
+            const std::string name = info.uniformName.c_str();
+            argBufferBuilder
+                    .texture(info.offset * 2, name, info.type, info.format)
+                    .sampler(info.offset * 2 + 1, name + "Smplr");
+        }
+
+        argumentBuffers.push_back(argBufferBuilder.build());
+
+        // This MSLResourceBinding is how we control the [[buffer(n)]] binding of the argument
+        // buffer itself;
+        MSLResourceBinding argBufferBinding;
+        // the baseType doesn't matter, but can't be UNKNOWN
+        argBufferBinding.basetype = SPIRType::BaseType::Float;
+        argBufferBinding.stage = executionModel;
+        argBufferBinding.desc_set = bindingPoint + 1;
+        argBufferBinding.binding = kArgumentBufferBinding;
+        argBufferBinding.count = 1;
+        argBufferBinding.msl_buffer =
+                CodeGenerator::METAL_SAMPLER_GROUP_BINDING_START + bindingPoint;
+        mslCompiler.add_msl_resource_binding(argBufferBinding);
+    }
+
+    auto updateResourceBindingDefault = [executionModel, &mslCompiler]
+            (const auto& resource, const BindingIndexMap* map = nullptr) {
         auto set = mslCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
         auto binding = mslCompiler.get_decoration(resource.id, spv::DecorationBinding);
         MSLResourceBinding newBinding;
+        newBinding.basetype = SPIRType::BaseType::Void;
         newBinding.stage = executionModel;
         newBinding.desc_set = set;
         newBinding.binding = binding;
-        newBinding.msl_texture = binding;
-        newBinding.msl_sampler = binding;
+        newBinding.count = 1;
+        newBinding.msl_texture =
+        newBinding.msl_sampler =
         newBinding.msl_buffer = binding;
         mslCompiler.add_msl_resource_binding(newBinding);
     };
 
-    auto resources = mslCompiler.get_shader_resources();
-    for (const auto& resource : resources.sampled_images) {
-        duplicateResourceBinding(resource);
+    auto uniformResources = mslCompiler.get_shader_resources();
+    for (const auto& resource : uniformResources.uniform_buffers) {
+        updateResourceBindingDefault(resource);
     }
-    for (const auto& resource : resources.uniform_buffers) {
-        duplicateResourceBinding(resource);
+    auto ssboResources = mslCompiler.get_shader_resources();
+    for (const auto& resource : ssboResources.storage_buffers) {
+        updateResourceBindingDefault(resource);
     }
 
+    // Descriptor set 0 is uniforms. The add_discrete_descriptor_set call here prevents the uniforms
+    // from becoming argument buffers.
+    mslCompiler.add_discrete_descriptor_set(0);
+
     *outMsl = mslCompiler.compile();
-    *outMsl = minifier.removeWhitespace(*outMsl);
+    if (minifier) {
+        *outMsl = minifier->removeWhitespace(*outMsl);
+    }
+
+    // Replace spirv-cross' generated argument buffers with our own.
+    for (auto* argBuffer : argumentBuffers) {
+        auto argBufferMsl = argBuffer->getMsl();
+        MetalArgumentBuffer::replaceInShader(*outMsl, argBuffer->getName(), argBufferMsl);
+        MetalArgumentBuffer::destroy(&argBuffer);
+    }
 }
 
 bool GLSLPostProcessor::process(const std::string& inputShader, Config const& config,
         std::string* outputGlsl, SpirvBlob* outputSpirv, std::string* outputMsl) {
+    using TargetLanguage = MaterialBuilder::TargetLanguage;
 
-    // If TargetApi is Vulkan, then we need post-processing even if there's no optimization.
-    // If we're using framebuffer fetch, we also need to force our compilation target to Vulkan, as
-    // it is only supported in GLSL for Vulkan.
-    using TargetApi = MaterialBuilder::TargetApi;
-    const TargetApi targetApi = (outputSpirv || config.hasFramebufferFetch) ? TargetApi::VULKAN :
-        TargetApi::OPENGL;
-    if (targetApi == TargetApi::OPENGL && mOptimization == MaterialBuilder::Optimization::NONE) {
+    if (config.targetLanguage == TargetLanguage::GLSL) {
         *outputGlsl = inputShader;
         if (mPrintShaders) {
-            utils::slog.i << *outputGlsl << utils::io::endl;
+            slog.i << *outputGlsl << io::endl;
         }
         return true;
     }
 
-    InternalConfig internalConfig;
+    InternalConfig internalConfig{
+            .glslOutput = outputGlsl,
+            .spirvOutput = outputSpirv,
+            .mslOutput = outputMsl,
+    };
 
-    internalConfig.glslOutput = outputGlsl;
-    internalConfig.spirvOutput = outputSpirv;
-    internalConfig.mslOutput = outputMsl;
-
-    if (config.shaderType == filament::backend::VERTEX) {
-        internalConfig.shLang = EShLangVertex;
-    } else {
-        internalConfig.shLang = EShLangFragment;
+    switch (config.shaderType) {
+        case ShaderStage::VERTEX:
+            internalConfig.shLang = EShLangVertex;
+            break;
+        case ShaderStage::FRAGMENT:
+            internalConfig.shLang = EShLangFragment;
+            break;
+        case ShaderStage::COMPUTE:
+            internalConfig.shLang = EShLangCompute;
+            break;
     }
 
     TProgram program;
@@ -193,14 +332,29 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     const char* shaderCString = inputShader.c_str();
     tShader.setStrings(&shaderCString, 1);
 
-    internalConfig.langVersion = GLSLTools::glslangVersionFromShaderModel(config.shaderModel);
-    GLSLTools::prepareShaderParser(targetApi, tShader, internalConfig.shLang,
-            internalConfig.langVersion, mOptimization);
-    EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(targetApi);
+    internalConfig.langVersion = GLSLTools::getGlslDefaultVersion(config.shaderModel);
+    GLSLTools::prepareShaderParser(config.targetApi, config.targetLanguage, tShader,
+            internalConfig.shLang, internalConfig.langVersion);
+
+    EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(config.targetApi, config.targetLanguage);
+    if (config.hasFramebufferFetch) {
+        // FIXME: subpasses require EShMsgVulkanRules, which I think is a mistake.
+        //        SpvRules should be enough.
+        //        I think this could cause the compilation to fail on gl_VertexID.
+        using Type = std::underlying_type_t<EShMessages>;
+        msg = EShMessages(Type(msg) | Type(EShMessages::EShMsgVulkanRules));
+    }
+
     bool ok = tShader.parse(&DefaultTBuiltInResource, internalConfig.langVersion, false, msg);
     if (!ok) {
-        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
+        slog.e << tShader.getInfoLog() << io::endl;
         return false;
+    }
+
+    // add texture lod bias
+    if (config.shaderType == backend::ShaderStage::FRAGMENT &&
+        config.domain == MaterialDomain::SURFACE) {
+        GLSLTools::textureLodBias(tShader);
     }
 
     program.addShader(&tShader);
@@ -208,7 +362,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     // SPIR-V types
     bool linkOk = program.link(msg);
     if (!linkOk) {
-        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
+        slog.e << tShader.getInfoLog() << io::endl;
         return false;
     }
 
@@ -220,12 +374,15 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                 GlslangToSpv(*program.getIntermediate(internalConfig.shLang),
                         *internalConfig.spirvOutput, &options);
                 if (internalConfig.mslOutput) {
-                    spirvToToMsl(internalConfig.spirvOutput, internalConfig.mslOutput, config,
-                            internalConfig.minifier);
+                    auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
+                    msl::collectSibs(config, sibs);
+                    spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput,
+                            config.shaderModel, config.hasFramebufferFetch, sibs,
+                            &internalConfig.minifier);
                 }
             } else {
-                utils::slog.e << "GLSL post-processor invoked with optimization level NONE"
-                        << utils::io::endl;
+                slog.e << "GLSL post-processor invoked with optimization level NONE"
+                        << io::endl;
             }
             break;
         case MaterialBuilder::Optimization::PREPROCESSOR:
@@ -248,7 +405,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
         }
 
         if (mPrintShaders) {
-            utils::slog.i << *internalConfig.glslOutput << utils::io::endl;
+            slog.i << *internalConfig.glslOutput << io::endl;
         }
     }
     return true;
@@ -256,20 +413,19 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
 
 void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
         GLSLPostProcessor::Config const& config, InternalConfig& internalConfig) const {
-
     using TargetApi = MaterialBuilder::TargetApi;
+    assert_invariant(bool(internalConfig.spirvOutput) == (config.targetApi != TargetApi::OPENGL));
 
     std::string glsl;
     TShader::ForbidIncluder forbidIncluder;
 
-    int version = GLSLTools::glslangVersionFromShaderModel(config.shaderModel);
-    const TargetApi targetApi = internalConfig.spirvOutput ? TargetApi::VULKAN : TargetApi::OPENGL;
-    EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(targetApi);
+    const int version = GLSLTools::getGlslDefaultVersion(config.shaderModel);
+    EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(config.targetApi, config.targetLanguage);
     bool ok = tShader.preprocess(&DefaultTBuiltInResource, version, ENoProfile, false, false,
             msg, &glsl, forbidIncluder);
 
     if (!ok) {
-        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
+        slog.e << tShader.getInfoLog() << io::endl;
     }
 
     if (internalConfig.spirvOutput) {
@@ -282,15 +438,15 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
 
         const char* shaderCString = glsl.c_str();
         spirvShader.setStrings(&shaderCString, 1);
-        GLSLTools::prepareShaderParser(targetApi, spirvShader,
-                internalConfig.shLang, internalConfig.langVersion, mOptimization);
+        GLSLTools::prepareShaderParser(config.targetApi, config.targetLanguage, spirvShader,
+                internalConfig.shLang, internalConfig.langVersion);
         ok = spirvShader.parse(&DefaultTBuiltInResource, internalConfig.langVersion, false, msg);
         program.addShader(&spirvShader);
         // Even though we only have a single shader stage, linking is still necessary to finalize
         // SPIR-V types
         bool linkOk = program.link(msg);
         if (!ok || !linkOk) {
-            utils::slog.e << spirvShader.getInfoLog() << utils::io::endl;
+            slog.e << spirvShader.getInfoLog() << io::endl;
         } else {
             SpvOptions options;
             options.generateDebugInfo = mGenerateDebugInfo;
@@ -300,8 +456,10 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
     }
 
     if (internalConfig.mslOutput) {
-        spirvToToMsl(internalConfig.spirvOutput, internalConfig.mslOutput, config,
-                internalConfig.minifier);
+        auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
+        msl::collectSibs(config, sibs);
+        spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput, config.shaderModel,
+                config.hasFramebufferFetch, sibs, &internalConfig.minifier);
     }
 
     if (internalConfig.glslOutput) {
@@ -327,24 +485,29 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
     }
 
     if (internalConfig.mslOutput) {
-        spirvToToMsl(&spirv, internalConfig.mslOutput, config, internalConfig.minifier);
+        auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
+        msl::collectSibs(config, sibs);
+        spirvToMsl(&spirv, internalConfig.mslOutput, config.shaderModel, config.hasFramebufferFetch,
+                sibs, &internalConfig.minifier);
     }
 
     // Transpile back to GLSL
     if (internalConfig.glslOutput) {
         CompilerGLSL::Options glslOptions;
-        glslOptions.es = config.shaderModel == filament::backend::ShaderModel::GL_ES_30;
-        glslOptions.version = shaderVersionFromModel(config.shaderModel);
+        auto version = GLSLTools::getShadingLanguageVersion(
+                config.shaderModel, config.featureLevel);
+        glslOptions.es = version.second;
+        glslOptions.version = version.first;
         glslOptions.enable_420pack_extension = glslOptions.version >= 420;
         glslOptions.fragment.default_float_precision = glslOptions.es ?
                 CompilerGLSL::Options::Precision::Mediump : CompilerGLSL::Options::Precision::Highp;
         glslOptions.fragment.default_int_precision = glslOptions.es ?
                 CompilerGLSL::Options::Precision::Mediump : CompilerGLSL::Options::Precision::Highp;
 
-        CompilerGLSL glslCompiler(move(spirv));
+        CompilerGLSL glslCompiler(std::move(spirv));
         glslCompiler.set_common_options(glslOptions);
 
-        if (tShader.getStage() == EShLangFragment && !glslOptions.es) {
+        if (!glslOptions.es) {
             // enable GL_ARB_shading_language_packing if available
             glslCompiler.add_header_line("#extension GL_ARB_shading_language_packing : enable");
         }
@@ -368,14 +531,21 @@ std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
         if (!filterSpvOptimizerMessage(level)) {
             return;
         }
-        utils::slog.e << stringifySpvOptimizerMessage(level, source, position, message)
-                << utils::io::endl;
+        slog.e << stringifySpvOptimizerMessage(level, source, position, message)
+                << io::endl;
     });
 
     if (optimization == MaterialBuilder::Optimization::SIZE) {
         registerSizePasses(*optimizer, config);
     } else if (optimization == MaterialBuilder::Optimization::PERFORMANCE) {
         registerPerformancePasses(*optimizer, config);
+        // Metal doesn't support relaxed precision, but does have support for float16 math operations.
+        if (config.targetApi == MaterialBuilder::TargetApi::METAL) {
+            optimizer->RegisterPass(CreateConvertRelaxedToHalfPass());
+            optimizer->RegisterPass(CreateSimplificationPass());
+            optimizer->RegisterPass(CreateRedundancyEliminationPass());
+            optimizer->RegisterPass(CreateAggressiveDCEPass());
+        }
     }
 
     return optimizer;
@@ -383,7 +553,7 @@ std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
 
 void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) const {
     if (!optimizer->Run(spirv.data(), spirv.size(), &spirv)) {
-        utils::slog.e << "SPIR-V optimizer pass failed" << utils::io::endl;
+        slog.e << "SPIR-V optimizer pass failed" << io::endl;
         return;
     }
 
@@ -397,8 +567,10 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
             .RegisterPass(CreateWrapOpKillPass())
             .RegisterPass(CreateDeadBranchElimPass());
 
-    if (config.shaderModel != filament::backend::ShaderModel::GL_CORE_41) {
-        // this triggers a segfault with AMD drivers on MacOS
+    if (config.shaderModel != ShaderModel::DESKTOP ||
+            config.targetApi != MaterialBuilder::TargetApi::OPENGL) {
+        // this triggers a segfault with AMD OpenGL drivers on MacOS
+        // note that Metal also requires this pass in order to correctly generate half-precision MSL
         optimizer.RegisterPass(CreateMergeReturnPass());
     }
 
@@ -441,7 +613,7 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
             .RegisterPass(CreateWrapOpKillPass())
             .RegisterPass(CreateDeadBranchElimPass());
 
-    if (config.shaderModel != filament::backend::ShaderModel::GL_CORE_41) {
+    if (config.shaderModel != ShaderModel::DESKTOP) {
         // this triggers a segfault with AMD drivers on MacOS
         optimizer.RegisterPass(CreateMergeReturnPass());
     }

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2017-2021 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,9 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
-#define VK_USE_PLATFORM_WIN32_KHR
+#if !defined(VK_USE_PLATFORM_WIN32_KHR)
+    #define VK_USE_PLATFORM_WIN32_KHR
+#endif // #if !defined(VK_USE_PLATFORM_WIN32_KHR)
 
 #else  // #ifdef _WIN32
 
@@ -54,8 +56,11 @@ include all public interface declarations. Example:
 //#define VMA_DEBUG_MIN_BUFFER_IMAGE_GRANULARITY 256
 //#define VMA_USE_STL_SHARED_MUTEX 0
 //#define VMA_MEMORY_BUDGET 0
+//#define VMA_STATS_STRING_ENABLED 0
+//#define VMA_MAPPING_HYSTERESIS_ENABLED 0
 
-#define VMA_VULKAN_VERSION 1002000 // Vulkan 1.2
+//#define VMA_VULKAN_VERSION 1003000 // Vulkan 1.3
+//#define VMA_VULKAN_VERSION 1002000 // Vulkan 1.2
 //#define VMA_VULKAN_VERSION 1001000 // Vulkan 1.1
 //#define VMA_VULKAN_VERSION 1000000 // Vulkan 1.0
 

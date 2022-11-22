@@ -45,10 +45,20 @@ endif()
 
 if(WIN32)
     source_group("Source" FILES ${SOURCES})
-endif(WIN32)
+endif()
 
 if(ENABLE_GLSLANG_INSTALL)
-    install(TARGETS OSDependent EXPORT OSDependentTargets
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-	install(EXPORT OSDependentTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
-endif(ENABLE_GLSLANG_INSTALL)
+    install(TARGETS OSDependent EXPORT glslang-targets)
+
+    # Backward compatibility
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/OSDependentTargets.cmake" "
+        message(WARNING \"Using `OSDependentTargets.cmake` is deprecated: use `find_package(glslang)` to find glslang CMake targets.\")
+
+        if (NOT TARGET glslang::OSDependent)
+            include(\"\${CMAKE_CURRENT_LIST_DIR}/../../${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}/glslang-targets.cmake\")
+        endif()
+
+        add_library(OSDependent ALIAS glslang::OSDependent)
+    ")
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/OSDependentTargets.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
+endif()

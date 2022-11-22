@@ -19,15 +19,10 @@
 
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/MaterialChunk.h>
-#include <filaflat/ShaderBuilder.h>
 
 #include <backend/DriverEnums.h>
 
 #include <utils/CString.h>
-
-namespace filaflat {
-class BlobDictionary;
-}
 
 namespace filament {
 namespace matdbg {
@@ -39,7 +34,7 @@ public:
     ShaderExtractor(backend::Backend backend, const void* data, size_t size);
     bool parse() noexcept;
     bool getShader(backend::ShaderModel shaderModel,
-            uint8_t variant, backend::ShaderType stage, filaflat::ShaderBuilder& shader) noexcept;
+            Variant variant, backend::ShaderStage stage, filaflat::ShaderContent& shader) noexcept;
     bool getDictionary(filaflat::BlobDictionary& dictionary) noexcept;
 
     static utils::CString spirvToGLSL(const uint32_t* data, size_t wordCount);

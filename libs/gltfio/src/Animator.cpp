@@ -15,14 +15,13 @@
  */
 
 #include <gltfio/Animator.h>
+#include <gltfio/math.h>
 
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
-#include "MorphHelper.h"
-#include "math.h"
-#include "upcast.h"
+#include "downcast.h"
 
-#include <filament/MaterialEnums.h>
+#include <filament/VertexBuffer.h>
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
 
@@ -43,11 +42,11 @@ using namespace filament::math;
 using namespace std;
 using namespace utils;
 
-namespace gltfio {
+namespace filament::gltfio {
 
 using TimeValues = map<float, size_t>;
 using SourceValues = vector<float>;
-using BoneVector = vector<filament::math::mat4f>;
+using BoneVector = vector<mat4f>;
 
 struct Sampler {
     TimeValues times;
@@ -71,22 +70,34 @@ struct Animation {
 struct AnimatorImpl {
     vector<Animation> animations;
     BoneVector boneMatrices;
-    FFilamentAsset* asset = nullptr;
+    FFilamentAsset const* asset = nullptr;
     FFilamentInstance* instance = nullptr;
     RenderableManager* renderableManager;
     TransformManager* transformManager;
     vector<float> weights;
-    MorphHelper* morpher;
-    void addChannels(const NodeMap& nodeMap, const cgltf_animation& srcAnim, Animation& dst);
+    FixedCapacityVector<mat4f> crossFade;
+    void addChannels(const FixedCapacityVector<Entity>& nodeMap, const cgltf_animation& srcAnim,
+            Animation& dst);
     void applyAnimation(const Channel& channel, float t, size_t prevIndex, size_t nextIndex);
+    void stashCrossFade();
+    void applyCrossFade(float alpha);
+    void resetBoneMatrices(FFilamentInstance* instance);
+    void updateBoneMatrices(FFilamentInstance* instance);
 };
 
 static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
     // Copy the time values into a red-black tree.
     const cgltf_accessor* timelineAccessor = src.input;
-    const uint8_t* timelineBlob = (const uint8_t*) timelineAccessor->buffer_view->buffer->data;
-    const float* timelineFloats = (const float*) (timelineBlob + timelineAccessor->offset +
-            timelineAccessor->buffer_view->offset);
+    const uint8_t* timelineBlob = nullptr;
+    const float* timelineFloats = nullptr;
+    if (timelineAccessor->buffer_view->has_meshopt_compression) {
+        timelineBlob = (const uint8_t*) timelineAccessor->buffer_view->data;
+        timelineFloats = (const float*) (timelineBlob + timelineAccessor->offset);
+    } else {
+        timelineBlob = (const uint8_t*) timelineAccessor->buffer_view->buffer->data;
+        timelineFloats = (const float*) (timelineBlob + timelineAccessor->offset +
+                timelineAccessor->buffer_view->offset);
+    }
     for (size_t i = 0, len = timelineAccessor->count; i < len; ++i) {
         dst.times[timelineFloats[i]] = i;
     }
@@ -121,6 +132,8 @@ static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
         case cgltf_interpolation_type_cubic_spline:
             dst.interpolation = Sampler::CUBIC;
             break;
+        case cgltf_interpolation_type_max_enum:
+            break;
     }
 }
 
@@ -138,6 +151,7 @@ static void setTransformType(const cgltf_animation_channel& src, Channel& dst) {
         case cgltf_animation_path_type_weights:
             dst.transformType = Channel::WEIGHTS;
             break;
+        case cgltf_animation_path_type_max_enum:
         case cgltf_animation_path_type_invalid:
             GLTFIO_WARN("Unsupported channel path.");
             break;
@@ -169,14 +183,13 @@ static bool validateAnimation(const cgltf_animation& anim) {
     return true;
 }
 
-Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
+Animator::Animator(FFilamentAsset const* asset, FFilamentInstance* instance) {
     assert(asset->mResourcesLoaded && asset->mSourceAsset);
     mImpl = new AnimatorImpl();
     mImpl->asset = asset;
     mImpl->instance = instance;
     mImpl->renderableManager = &asset->mEngine->getRenderableManager();
     mImpl->transformManager = &asset->mEngine->getTransformManager();
-    mImpl->morpher = new MorphHelper(asset, instance);
 
     const cgltf_data* srcAsset = asset->mSourceAsset->hierarchy;
     const cgltf_animation* srcAnims = srcAsset->animations;
@@ -213,15 +226,19 @@ Animator::Animator(FFilamentAsset* asset, FFilamentInstance* instance) {
 
         // Import each glTF channel into a custom data structure.
         if (instance) {
-            mImpl->addChannels(instance->nodeMap, srcAnim, dstAnim);
-        } else if (!asset->isInstanced()) {
-            mImpl->addChannels(asset->mNodeMap, srcAnim, dstAnim);
+            mImpl->addChannels(instance->mNodeMap, srcAnim, dstAnim);
         } else {
             for (FFilamentInstance* instance : asset->mInstances) {
-                mImpl->addChannels(instance->nodeMap, srcAnim, dstAnim);
+                mImpl->addChannels(instance->mNodeMap, srcAnim, dstAnim);
             }
         }
     }
+}
+
+void Animator::applyCrossFade(size_t previousAnimIndex, float previousAnimTime, float alpha) {
+    mImpl->stashCrossFade();
+    applyAnimation(previousAnimIndex, previousAnimTime);
+    mImpl->applyCrossFade(alpha);
 }
 
 void Animator::addInstance(FFilamentInstance* instance) {
@@ -230,12 +247,11 @@ void Animator::addInstance(FFilamentInstance* instance) {
     for (cgltf_size i = 0, len = srcAsset->animations_count; i < len; ++i) {
         const cgltf_animation& srcAnim = srcAnims[i];
         Animation& dstAnim = mImpl->animations[i];
-        mImpl->addChannels(instance->nodeMap, srcAnim, dstAnim);
+        mImpl->addChannels(instance->mNodeMap, srcAnim, dstAnim);
     }
 }
 
 Animator::~Animator() {
-    delete mImpl->morpher;
     delete mImpl;
 }
 
@@ -245,9 +261,9 @@ size_t Animator::getAnimationCount() const {
 
 void Animator::applyAnimation(size_t animationIndex, float time) const {
     const Animation& anim = mImpl->animations[animationIndex];
-    TransformManager* transformManager = mImpl->transformManager;
-    RenderableManager* renderableManager = mImpl->renderableManager;
     time = fmod(time, anim.duration);
+    TransformManager& transformManager = *mImpl->transformManager;
+    transformManager.openLocalTransformTransaction();
     for (const auto& channel : anim.channels) {
         const Sampler* sampler = channel.sourceData;
         if (sampler->times.size() < 2) {
@@ -288,48 +304,32 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
 
         mImpl->applyAnimation(channel, t, prevIndex, nextIndex);
     }
+    transformManager.commitLocalTransformTransaction();
+}
+
+void Animator::resetBoneMatrices() {
+    // If this is a single-instance animator, then reset only this instance.
+    if (mImpl->instance) {
+        mImpl->resetBoneMatrices(mImpl->instance);
+        return;
+    }
+
+    // If this is a broadcast animator, then reset all instances.
+    for (FFilamentInstance* instance : mImpl->asset->mInstances) {
+        mImpl->resetBoneMatrices(instance);
+    }
 }
 
 void Animator::updateBoneMatrices() {
-    auto renderableManager = mImpl->renderableManager;
-    auto transformManager = mImpl->transformManager;
-
-    auto update = [=](const SkinVector& skins, BoneVector& boneVector) {
-        for (const auto& skin : skins) {
-            size_t njoints = skin.joints.size();
-            boneVector.resize(njoints);
-            for (const auto& entity : skin.targets) {
-                auto renderable = renderableManager->getInstance(entity);
-                if (!renderable) {
-                    continue;
-                }
-                mat4f inverseGlobalTransform;
-                auto xformable = transformManager->getInstance(entity);
-                if (xformable) {
-                    inverseGlobalTransform = inverse(transformManager->getWorldTransform(xformable));
-                }
-                for (size_t boneIndex = 0; boneIndex < njoints; ++boneIndex) {
-                    const auto& joint = skin.joints[boneIndex];
-                    TransformManager::Instance jointInstance = transformManager->getInstance(joint);
-                    mat4f globalJointTransform = transformManager->getWorldTransform(jointInstance);
-                    boneVector[boneIndex] =
-                            inverseGlobalTransform *
-                            globalJointTransform *
-                            skin.inverseBindMatrices[boneIndex];
-                }
-                renderableManager->setBones(renderable, boneVector.data(), boneVector.size());
-            }
-        }
-    };
-
+    // If this is a single-instance animator, then update only this instance.
     if (mImpl->instance) {
-        update(mImpl->instance->skins, mImpl->boneMatrices);
-    } else if (!mImpl->asset->isInstanced()) {
-        update(mImpl->asset->mSkins, mImpl->boneMatrices);
-    } else {
-        for (FFilamentInstance* instance : mImpl->asset->mInstances) {
-            update(instance->skins, mImpl->boneMatrices);
-        }
+        mImpl->updateBoneMatrices(mImpl->instance);
+        return;
+    }
+
+    // If this is a broadcast animator, then update all instances.
+    for (FFilamentInstance* instance : mImpl->asset->mInstances) {
+        mImpl->updateBoneMatrices(instance);
     }
 }
 
@@ -341,16 +341,69 @@ const char* Animator::getAnimationName(size_t animationIndex) const {
     return mImpl->animations[animationIndex].name.c_str();
 }
 
+void AnimatorImpl::stashCrossFade() {
+    using Instance = TransformManager::Instance;
+    auto& tm = *this->transformManager;
+    auto& stash = this->crossFade;
 
-void AnimatorImpl::addChannels(const NodeMap& nodeMap, const cgltf_animation& srcAnim,
-        Animation& dst) {
-    cgltf_animation_channel* srcChannels = srcAnim.channels;
-    cgltf_animation_sampler* srcSamplers = srcAnim.samplers;
+    // Count the total number of transformable nodes to preallocate the stash memory.
+    // We considered caching this count, but the cache would need to be invalidated when entities
+    // are added into the hierarchy.
+    auto recursiveCount = [&tm](Instance node, size_t count, auto& fn) -> size_t {
+        ++count;
+        for (auto iter = tm.getChildrenBegin(node); iter != tm.getChildrenEnd(node); ++iter) {
+            count = fn(*iter, count, fn);
+        }
+        return count;
+    };
+
+    auto recursiveStash = [&tm, &stash](Instance node, size_t index, auto& fn) -> size_t {
+        stash[index++] = tm.getTransform(node);
+        for (auto iter = tm.getChildrenBegin(node); iter != tm.getChildrenEnd(node); ++iter) {
+            index = fn(*iter, index, fn);
+        }
+        return index;
+    };
+
+    const Instance root = tm.getInstance(asset->mRoot);
+    const size_t count = recursiveCount(root, 0, recursiveCount);
+    crossFade.reserve(count);
+    crossFade.resize(count);
+    recursiveStash(root, 0, recursiveStash);
+}
+
+void AnimatorImpl::applyCrossFade(float alpha) {
+    using Instance = TransformManager::Instance;
+    auto& tm = *this->transformManager;
+    auto& stash = this->crossFade;
+    auto recursiveFn = [&tm, &stash, alpha](Instance node, size_t index, auto& fn) -> size_t {
+        float3 scale0, scale1;
+        quatf rotation0, rotation1;
+        float3 translation0, translation1;
+        decomposeMatrix(stash[index++], &translation1, &rotation1, &scale1);
+        decomposeMatrix(tm.getTransform(node), &translation0, &rotation0, &scale0);
+        const float3 scale = mix(scale0, scale1, alpha);
+        const quatf rotation = slerp(rotation0, rotation1, alpha);
+        const float3 translation = mix(translation0, translation1, alpha);
+        tm.setTransform(node, composeMatrix(translation, rotation, scale));
+        for (auto iter = tm.getChildrenBegin(node); iter != tm.getChildrenEnd(node); ++iter) {
+            index = fn(*iter, index, fn);
+        }
+        return index;
+    };
+    recursiveFn(tm.getInstance(asset->mRoot), 0, recursiveFn);
+}
+
+void AnimatorImpl::addChannels(const FixedCapacityVector<Entity>& nodeMap,
+        const cgltf_animation& srcAnim, Animation& dst) {
+    const cgltf_animation_channel* srcChannels = srcAnim.channels;
+    const cgltf_animation_sampler* srcSamplers = srcAnim.samplers;
+    const cgltf_node* nodes = asset->mSourceAsset->hierarchy->nodes;
     const Sampler* samplers = dst.samplers.data();
     for (cgltf_size j = 0, nchans = srcAnim.channels_count; j < nchans; ++j) {
         const cgltf_animation_channel& srcChannel = srcChannels[j];
-        auto iter = nodeMap.find(srcChannel.target_node);
-        if (UTILS_UNLIKELY(iter == nodeMap.end())) {
+        Entity targetEntity = nodeMap[srcChannel.target_node - nodes];
+        if (UTILS_UNLIKELY(!targetEntity)) {
             if (GLTFIO_VERBOSE) {
                 slog.w << "No scene root contains node ";
                 if (srcChannel.target_node->name) {
@@ -364,7 +417,6 @@ void AnimatorImpl::addChannels(const NodeMap& nodeMap, const cgltf_animation& sr
             }
             continue;
         }
-        Entity targetEntity = iter.value();
         Channel dstChannel;
         dstChannel.sourceData = samplers + (srcChannel.sampler - srcSamplers);
         dstChannel.targetEntity = targetEntity;
@@ -461,7 +513,8 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
                 }
             }
 
-            morpher->applyWeights(channel.targetEntity, weights.data(), weights.size());
+            auto ci = renderableManager->getInstance(channel.targetEntity);
+            renderableManager->setMorphWeights(ci, weights.data(), weights.size());
             return;
         }
     }
@@ -470,4 +523,52 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
     transformManager->setTransform(node, xform);
 }
 
-} // namespace gltfio
+void AnimatorImpl::resetBoneMatrices(FFilamentInstance* instance) {
+    for (const auto& skin : instance->mSkins) {
+        size_t njoints = skin.joints.size();
+        boneMatrices.resize(njoints);
+        for (const auto& entity : skin.targets) {
+            auto renderable = renderableManager->getInstance(entity);
+            if (renderable) {
+                for (size_t boneIndex = 0; boneIndex < njoints; ++boneIndex) {
+                    boneMatrices[boneIndex] = mat4f();
+                }
+                renderableManager->setBones(renderable, boneMatrices.data(), boneMatrices.size());
+            }
+        }
+    }
+}
+
+void AnimatorImpl::updateBoneMatrices(FFilamentInstance* instance) {
+    assert_invariant(instance->mSkins.size() == asset->mSkins.size());
+    size_t skinIndex = 0;
+    for (const auto& skin : instance->mSkins) {
+        const auto& assetSkin = asset->mSkins[skinIndex++];
+        size_t njoints = skin.joints.size();
+        boneMatrices.resize(njoints);
+        for (Entity entity : skin.targets) {
+            auto renderable = renderableManager->getInstance(entity);
+            if (!renderable) {
+                continue;
+            }
+            mat4f inverseGlobalTransform;
+            auto xformable = transformManager->getInstance(entity);
+            if (xformable) {
+                inverseGlobalTransform = inverse(transformManager->getWorldTransform(xformable));
+            }
+            for (size_t boneIndex = 0; boneIndex < njoints; ++boneIndex) {
+                const auto& joint = skin.joints[boneIndex];
+                const mat4f& inverseBindMatrix = assetSkin.inverseBindMatrices[boneIndex];
+                TransformManager::Instance jointInstance = transformManager->getInstance(joint);
+                mat4f globalJointTransform = transformManager->getWorldTransform(jointInstance);
+                boneMatrices[boneIndex] =
+                        inverseGlobalTransform *
+                        globalJointTransform *
+                        inverseBindMatrix;
+            }
+            renderableManager->setBones(renderable, boneMatrices.data(), boneMatrices.size());
+        }
+    }
+}
+
+} // namespace filament::gltfio

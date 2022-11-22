@@ -45,11 +45,13 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
     MaterialSpirv = charTo64bitNum("MAT_SPIR"),
     MaterialMetal = charTo64bitNum("MAT_METL"),
     MaterialShaderModels = charTo64bitNum("MAT_SMDL"),
-    MaterialSamplerBindings = charTo64bitNum("MAT_SAMP"),   // no longer used
+    MaterialSamplerBindings = charTo64bitNum("MAT_SAMP"),
+    MaterialUniformBindings = charTo64bitNum("MAT_UNIF"),
     MaterialProperties = charTo64bitNum("MAT_PROP"),
 
     MaterialName = charTo64bitNum("MAT_NAME"),
     MaterialVersion = charTo64bitNum("MAT_VERS"),
+    MaterialFeatureLevel = charTo64bitNum("MAT_FEAT"),
     MaterialShading = charTo64bitNum("MAT_SHAD"),
     MaterialBlendingMode = charTo64bitNum("MAT_BLEN"),
     MaterialTransparencyMode = charTo64bitNum("MAT_TRMD"),
@@ -62,6 +64,7 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
     MaterialDomain = charTo64bitNum("MAT_DOMN"),
     MaterialRefraction = charTo64bitNum("MAT_REFM"),
     MaterialRefractionType = charTo64bitNum("MAT_REFT"),
+    MaterialReflectionMode = charTo64bitNum("MAT_REFL"),
 
     MaterialRequiredAttributes = charTo64bitNum("MAT_REQA"),
     MaterialDepthWriteSet = charTo64bitNum("MAT_DEWS"),
@@ -71,6 +74,7 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
     MaterialColorWrite = charTo64bitNum("MAT_CWRIT"),
     MaterialDepthWrite = charTo64bitNum("MAT_DWRIT"),
     MaterialDepthTest = charTo64bitNum("MAT_DTEST"),
+    MaterialInstanced = charTo64bitNum("MAT_INSTA"),
     MaterialCullingMode = charTo64bitNum("MAT_CUMO"),
 
     MaterialHasCustomDepthShader =charTo64bitNum("MAT_CSDP"),

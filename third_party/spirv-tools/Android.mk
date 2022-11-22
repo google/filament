@@ -88,8 +88,11 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/composite.cpp \
 		source/opt/const_folding_rules.cpp \
 		source/opt/constants.cpp \
+		source/opt/control_dependence.cpp \
+		source/opt/convert_to_sampled_image_pass.cpp \
 		source/opt/convert_to_half_pass.cpp \
 		source/opt/copy_prop_arrays.cpp \
+		source/opt/dataflow.cpp \
 		source/opt/dead_branch_elim_pass.cpp \
 		source/opt/dead_insert_elim_pass.cpp \
 		source/opt/dead_variable_elimination.cpp \
@@ -97,13 +100,16 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/debug_info_manager.cpp \
 		source/opt/def_use_manager.cpp \
 		source/opt/desc_sroa.cpp \
+		source/opt/desc_sroa_util.cpp \
 		source/opt/dominator_analysis.cpp \
 		source/opt/dominator_tree.cpp \
 		source/opt/eliminate_dead_constant_pass.cpp \
 		source/opt/eliminate_dead_functions_pass.cpp \
 		source/opt/eliminate_dead_functions_util.cpp \
+		source/opt/eliminate_dead_input_components_pass.cpp \
 		source/opt/eliminate_dead_members_pass.cpp \
 		source/opt/feature_manager.cpp \
+		source/opt/fix_func_call_arguments.cpp \
 		source/opt/fix_storage_class.cpp \
 		source/opt/flatten_decoration_pass.cpp \
 		source/opt/fold.cpp \
@@ -122,6 +128,7 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/instruction.cpp \
 		source/opt/instruction_list.cpp \
 		source/opt/instrument_pass.cpp \
+		source/opt/interface_var_sroa.cpp \
 		source/opt/interp_fixup_pass.cpp \
 		source/opt/ir_context.cpp \
 		source/opt/ir_loader.cpp \
@@ -152,18 +159,21 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/redundancy_elimination.cpp \
 		source/opt/register_pressure.cpp \
 		source/opt/relax_float_ops_pass.cpp \
+		source/opt/remove_dontinline_pass.cpp \
 		source/opt/remove_duplicates_pass.cpp \
 		source/opt/remove_unused_interface_variables_pass.cpp \
+		source/opt/replace_desc_array_access_using_var_index.cpp \
 		source/opt/replace_invalid_opc.cpp \
 		source/opt/scalar_analysis.cpp \
 		source/opt/scalar_analysis_simplification.cpp \
 		source/opt/scalar_replacement_pass.cpp \
 		source/opt/set_spec_constant_default_value_pass.cpp \
 		source/opt/simplification_pass.cpp \
+		source/opt/spread_volatile_semantics.cpp \
 		source/opt/ssa_rewrite_pass.cpp \
 		source/opt/strength_reduction_pass.cpp \
 		source/opt/strip_debug_info_pass.cpp \
-		source/opt/strip_reflect_info_pass.cpp \
+		source/opt/strip_nonsemantic_info_pass.cpp \
 		source/opt/struct_cfg_analysis.cpp \
 		source/opt/type_manager.cpp \
 		source/opt/types.cpp \
@@ -181,6 +191,7 @@ SPV_GLSL_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/unified1/extinst.glsl.st
 SPV_OPENCL_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/unified1/extinst.opencl.std.100.grammar.json
 SPV_DEBUGINFO_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/unified1/extinst.debuginfo.grammar.json
 SPV_CLDEBUGINFO100_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/unified1/extinst.opencl.debuginfo.100.grammar.json
+SPV_VKDEBUGINFO100_GRAMMAR=$(SPVHEADERS_LOCAL_PATH)/include/spirv/unified1/extinst.nonsemantic.shader.debuginfo.100.grammar.json
 
 define gen_spvtools_grammar_tables
 $(call generate-file-dir,$(1)/core.insts-unified1.inc)
@@ -212,6 +223,7 @@ $(LOCAL_PATH)/source/ext_inst.cpp: \
 	$(1)/opencl.std.insts.inc \
 	$(1)/debuginfo.insts.inc \
 	$(1)/opencl.debuginfo.100.insts.inc \
+	$(1)/nonsemantic.shader.debuginfo.100.insts.inc \
 	$(1)/spv-amd-gcn-shader.insts.inc \
 	$(1)/spv-amd-shader-ballot.insts.inc \
 	$(1)/spv-amd-shader-explicit-vertex-parameter.insts.inc \
@@ -241,6 +253,7 @@ endef
 # We generate language-specific headers for DebugInfo and OpenCL.DebugInfo.100
 $(eval $(call gen_spvtools_lang_headers,$(SPVTOOLS_OUT_PATH),DebugInfo,$(SPV_DEBUGINFO_GRAMMAR)))
 $(eval $(call gen_spvtools_lang_headers,$(SPVTOOLS_OUT_PATH),OpenCLDebugInfo100,$(SPV_CLDEBUGINFO100_GRAMMAR)))
+$(eval $(call gen_spvtools_lang_headers,$(SPVTOOLS_OUT_PATH),NonSemanticShaderDebugInfo100,$(SPV_VKDEBUGINFO100_GRAMMAR)))
 
 
 define gen_spvtools_vendor_tables
@@ -258,6 +271,7 @@ endef
 # Vendor and debug extended instruction sets, with grammars from SPIRV-Tools source tree.
 $(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),debuginfo,""))
 $(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),opencl.debuginfo.100,"CLDEBUG100_"))
+$(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),nonsemantic.shader.debuginfo.100,"SHDEBUG100_"))
 $(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),spv-amd-gcn-shader,""))
 $(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),spv-amd-shader-ballot,""))
 $(eval $(call gen_spvtools_vendor_tables,$(SPVTOOLS_OUT_PATH),spv-amd-shader-explicit-vertex-parameter,""))
@@ -290,7 +304,7 @@ $(1)/build-version.inc: \
         $(LOCAL_PATH)/utils/update_build_version.py \
         $(LOCAL_PATH)/CHANGES
 		@$(HOST_PYTHON) $(LOCAL_PATH)/utils/update_build_version.py \
-		                $(LOCAL_PATH) $(1)/build-version.inc
+		                $(LOCAL_PATH)/CHANGES $(1)/build-version.inc
 		@echo "[$(TARGET_ARCH_ABI)] Generate       : build-version.inc <= CHANGES"
 $(LOCAL_PATH)/source/software_version.cpp: $(1)/build-version.inc
 endef

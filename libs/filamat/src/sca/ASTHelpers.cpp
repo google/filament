@@ -31,18 +31,18 @@ namespace ASTUtils {
 // e.g: prepareMaterial(struct-MaterialInputs-vf4-vf41;
 class FunctionDefinitionFinder : public TIntermTraverser {
 public:
-    explicit FunctionDefinitionFinder(const std::string& functionName, bool useFQN = true)
-            : mFunctionName (functionName), mUseFQN(useFQN) {
+    explicit FunctionDefinitionFinder(std::string_view functionName, bool useFQN = true)
+            : mFunctionName(functionName), mUseFQN(useFQN) {
     }
 
     bool visitAggregate(TVisit, TIntermAggregate* node) override {
         if (node->getOp() == EOpFunction) {
             bool match;
             if (mUseFQN) {
-                match = std::string(node->getName().c_str()) == mFunctionName.c_str();
+                match = node->getName() == mFunctionName;
             } else {
-                std::string prospectFunctionName = getFunctionName(node->getName().c_str());
-                std::string cleanedFunctionName = getFunctionName(mFunctionName);
+                std::string_view prospectFunctionName = getFunctionName(node->getName());
+                std::string_view cleanedFunctionName = getFunctionName(mFunctionName);
                 match = prospectFunctionName == cleanedFunctionName;
             }
             if (match) {
@@ -57,7 +57,7 @@ public:
         return mFunctionDefinitionNode;
     }
 private:
-    const std::string& mFunctionName;
+    const std::string_view mFunctionName;
     bool mUseFQN;
     TIntermAggregate* mFunctionDefinitionNode = nullptr;
 };
@@ -67,7 +67,7 @@ private:
 // child function call nodes.
 class FunctionCallFinder : public TIntermTraverser {
 public:
-    FunctionCallFinder(const std::string& functionName, TIntermNode& root) :
+    FunctionCallFinder(std::string_view functionName, TIntermNode& root) :
             mFunctionName(functionName), mRoot(root) {}
 
     bool functionWasCalled() const noexcept {
@@ -78,7 +78,7 @@ public:
         if (node->getOp() != EOpFunctionCall) {
             return true;
         }
-        std::string functionCalledName = node->getName().c_str();
+        std::string_view functionCalledName = node->getName();
         if (functionCalledName == mFunctionName) {
             mFunctionFound = true;
         } else {
@@ -95,7 +95,7 @@ public:
     }
 
 private:
-    const std::string& mFunctionName;
+    const std::string_view mFunctionName;
     TIntermNode& mRoot;
     bool mFunctionFound = false;
 };
@@ -223,8 +223,8 @@ private:
     std::deque<Symbol>& mEvents;
 };
 
-std::string getFunctionName(const std::string& functionSignature) noexcept {
-  auto indexParenthesis = functionSignature.find("(");
+std::string_view getFunctionName(std::string_view functionSignature) noexcept {
+  auto indexParenthesis = functionSignature.find('(');
   return functionSignature.substr(0, indexParenthesis);
 }
 
@@ -298,7 +298,7 @@ public:
     }
 };
 
-glslang::TIntermAggregate* getFunctionBySignature(const std::string& functionSignature,
+glslang::TIntermAggregate* getFunctionBySignature(std::string_view functionSignature,
         TIntermNode& rootNode)
         noexcept {
     FunctionDefinitionFinder functionDefinitionFinder(functionSignature);
@@ -306,14 +306,14 @@ glslang::TIntermAggregate* getFunctionBySignature(const std::string& functionSig
     return functionDefinitionFinder.getFunctionDefinitionNode();
 }
 
-glslang::TIntermAggregate* getFunctionByNameOnly(const std::string& functionName,
+glslang::TIntermAggregate* getFunctionByNameOnly(std::string_view functionName,
         TIntermNode& rootNode) noexcept {
     FunctionDefinitionFinder functionDefinitionFinder(functionName, false);
     rootNode.traverse(&functionDefinitionFinder);
     return functionDefinitionFinder.getFunctionDefinitionNode();
 }
 
-bool isFunctionCalled(const std::string& functionName, TIntermNode& functionNode,
+bool isFunctionCalled(std::string_view functionName, TIntermNode& functionNode,
         TIntermNode& rootNode) noexcept {
     FunctionCallFinder traverser(functionName, rootNode);
     functionNode.traverse(&traverser);
@@ -357,6 +357,107 @@ void getFunctionParameters(TIntermAggregate* func, std::vector<FunctionParameter
         };
         output.push_back(p);
     }
+}
+
+template <typename F>
+class TraverserAdapter: public TIntermTraverser {
+    F closure;
+public:
+    explicit TraverserAdapter(F closure)
+        : TIntermTraverser(true, false, false, false),
+          closure(closure) {
+    }
+    bool visitAggregate(TVisit visit, TIntermAggregate* node) override {
+        return closure(visit, node);
+    }
+};
+
+void textureLodBias(TIntermediate* intermediate, TIntermNode* root,
+        const char* entryPointSignatureish, const char* lodBiasSymbolName) {
+
+    // First, find the "lodBias" symbol and entry point
+    const std::string functionName{ entryPointSignatureish };
+    TIntermSymbol* pIntermSymbolLodBias = nullptr;
+    TIntermNode* pEntryPointRoot = nullptr;
+    TraverserAdapter findLodBiasSymbol(
+            [&](TVisit visit, TIntermAggregate* node) {
+                if (node->getOp() == glslang::EOpSequence) {
+                    return true;
+                }
+                if (node->getOp() == glslang::EOpFunction) {
+                    if (node->getName().rfind(functionName, 0) == 0) {
+                        pEntryPointRoot = node;
+                    }
+                    return false;
+                }
+                if (node->getOp() == glslang::EOpLinkerObjects) {
+                    for (TIntermNode* item: node->getSequence()) {
+                        TIntermSymbol* symbol = item->getAsSymbolNode();
+                        if (symbol && symbol->getBasicType() == TBasicType::EbtFloat) {
+                            if (symbol->getName() == lodBiasSymbolName) {
+                                pIntermSymbolLodBias = symbol;
+                                break;
+                            }
+                        }
+                    }
+                }
+                return true;
+            });
+    root->traverse(&findLodBiasSymbol);
+
+    if (!pEntryPointRoot) {
+        // This can happen if the material doesn't have user defined code,
+        // e.g. with the depth material. We just do nothing then.
+        return;
+    }
+
+    if (!pIntermSymbolLodBias) {
+        // something went wrong
+        utils::slog.e << "lod bias ignored because \"" << lodBiasSymbolName << "\" was not found!"
+                      << utils::io::endl;
+        return;
+    }
+
+    // add lod bias to texture calls
+    TraverserAdapter addLodBiasToTextureCalls(
+            [&](TVisit visit, TIntermAggregate* node) {
+                // skip everything that's not a texture() call
+                if (node->getOp() != glslang::EOpTexture) {
+                    return true;
+                }
+
+                TIntermSequence& sequence = node->getSequence();
+
+                // first check that we have the correct sampler
+                TIntermTyped* pTyped = sequence[0]->getAsTyped();
+                if (!pTyped) {
+                    return false;
+                }
+
+                TSampler const& sampler = pTyped->getType().getSampler();
+                if (sampler.isArrayed() && sampler.isShadow()) {
+                    // sampler2DArrayShadow is not supported
+                    return false;
+                }
+
+                // Then add the lod bias to the texture() call
+                if (sequence.size() == 2) {
+                    // we only have 2 parameters, add the 3rd one
+                    TIntermSymbol* symbol = intermediate->addSymbol(*pIntermSymbolLodBias);
+                    sequence.push_back(symbol);
+                } else if (sequence.size() == 3) {
+                    // load bias is already specified
+                    TIntermSymbol* symbol = intermediate->addSymbol(*pIntermSymbolLodBias);
+                    TIntermTyped* pAdd = intermediate->addBinaryMath(TOperator::EOpAdd,
+                            sequence[2]->getAsTyped(), symbol,
+                            node->getLoc());
+                    sequence[2] = pAdd;
+                }
+
+                return false;
+            });
+    // we need to run this only from the user's main entry point
+    pEntryPointRoot->traverse(&addLodBiasToTextureCalls);
 }
 
 } // namespace ASTHelpers

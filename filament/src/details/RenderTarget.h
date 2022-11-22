@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_RENDERTAGET_H
 #define TNT_FILAMENT_DETAILS_RENDERTAGET_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <backend/Handle.h>
 
@@ -55,9 +55,15 @@ public:
         return mAttachmentMask;
     }
 
+    backend::TargetBufferFlags getSampleableAttachmentsMask() const noexcept {
+        return mSampleableAttachmentsMask;
+    }
+
     uint8_t getSupportedColorAttachmentsCount() const noexcept {
         return mSupportedColorAttachmentsCount;
     }
+
+    bool hasSampleableDepth() const noexcept;
 
 private:
     friend class RenderTarget;
@@ -65,10 +71,11 @@ private:
     Attachment mAttachments[ATTACHMENT_COUNT];
     HwHandle mHandle{};
     backend::TargetBufferFlags mAttachmentMask = {};
+    backend::TargetBufferFlags mSampleableAttachmentsMask = {};
     const uint8_t mSupportedColorAttachmentsCount;
 };
 
-FILAMENT_UPCAST(RenderTarget)
+FILAMENT_DOWNCAST(RenderTarget)
 
 } // namespace filament
 

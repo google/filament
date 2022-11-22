@@ -25,6 +25,7 @@
 #include <QuartzCore/QuartzCore.h>
 
 #include <array>
+#include <atomic>
 #include <stack>
 
 #if defined(FILAMENT_METAL_PROFILING)
@@ -36,17 +37,17 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 class MetalDriver;
 class MetalBlitter;
 class MetalBufferPool;
 class MetalRenderTarget;
+class MetalSamplerGroup;
 class MetalSwapChain;
-class TimerQueryInterface;
+class MetalTexture;
+class MetalTimerQueryInterface;
 struct MetalUniformBuffer;
 struct MetalIndexBuffer;
-struct MetalSamplerGroup;
 struct MetalVertexBuffer;
 
 constexpr static uint8_t MAX_SAMPLE_COUNT = 8;  // Metal devices support at most 8 MSAA samples
@@ -59,8 +60,12 @@ struct MetalContext {
     id<MTLCommandBuffer> pendingCommandBuffer = nullptr;
     id<MTLRenderCommandEncoder> currentRenderPassEncoder = nullptr;
 
+    std::atomic<bool> memorylessLimitsReached = false;
+
     // Supported features.
     bool supportsTextureSwizzling = false;
+    bool supportsAutoDepthResolve = false;
+    bool supportsMemorylessRenderTargets = false;
     uint8_t maxColorRenderTargets = 4;
     struct {
         uint8_t common;
@@ -80,7 +85,8 @@ struct MetalContext {
     // State trackers.
     PipelineStateTracker pipelineState;
     DepthStencilStateTracker depthStencilState;
-    UniformBufferState uniformState[VERTEX_BUFFER_START];
+    std::array<BufferState, Program::UNIFORM_BINDING_COUNT> uniformState;
+    std::array<BufferState, MAX_SSBO_COUNT> ssboState;
     CullModeStateTracker cullModeState;
     WindingStateTracker windingState;
 
@@ -88,11 +94,18 @@ struct MetalContext {
     DepthStencilStateCache depthStencilStateCache;
     PipelineStateCache pipelineStateCache;
     SamplerStateCache samplerStateCache;
+    ArgumentEncoderCache argumentEncoderCache;
 
-    MetalSamplerGroup* samplerBindings[SAMPLER_BINDING_COUNT] = {};
+    PolygonOffset currentPolygonOffset = {0.0f, 0.0f};
 
-    // Keeps track of all alive sampler groups.
+    MetalSamplerGroup* samplerBindings[Program::SAMPLER_BINDING_COUNT] = {};
+
+    // Keeps track of sampler groups we've finalized for the current render pass.
+    tsl::robin_set<MetalSamplerGroup*> finalizedSamplerGroups;
+
+    // Keeps track of all alive sampler groups, textures.
     tsl::robin_set<MetalSamplerGroup*> samplerGroups;
+    tsl::robin_set<MetalTexture*> textures;
 
     MetalBufferPool* bufferPool;
 
@@ -113,9 +126,11 @@ struct MetalContext {
     MTLSharedEventListener* eventListener = nil;
     uint64_t signalId = 1;
 
-    TimerQueryInterface* timerQueryImpl;
+    MetalTimerQueryInterface* timerQueryImpl;
 
     std::stack<const char*> groupMarkers;
+
+    MTLViewport currentViewport;
 
 #if defined(FILAMENT_METAL_PROFILING)
     // Logging and profiling.
@@ -134,7 +149,6 @@ id<MTLTexture> getOrCreateEmptyTexture(MetalContext* context);
 
 bool isInRenderPass(MetalContext* context);
 
-} // namespace metal
 } // namespace backend
 } // namespace filament
 

@@ -30,13 +30,18 @@
 Filament.Buffer = function(typedarray) {
     console.assert(typedarray.buffer instanceof ArrayBuffer);
     console.assert(typedarray.byteLength > 0);
-    if (Filament.HEAPU32.buffer == typedarray.buffer) {
-        typedarray = new Uint8Array(typedarray);
-    }
-    const ta = typedarray;
+
+    // The only reason we need to create a copy here is that emscripten might "grow" its entire heap
+    // (i.e. destroy and recreate) during the allocation of the BufferDescriptor, which would cause
+    // detachment if the source array happens to be view into the old emscripten heap.
+    const ta = typedarray.slice();
+
     const bd = new Filament.driver$BufferDescriptor(ta.byteLength);
     const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
+
+    // getBytes() returns a view into the emscripten heap, this just does a memcpy into it.
     bd.getBytes().set(uint8array);
+
     return bd;
 };
 
@@ -49,10 +54,7 @@ Filament.Buffer = function(typedarray) {
 Filament.PixelBuffer = function(typedarray, format, datatype) {
     console.assert(typedarray.buffer instanceof ArrayBuffer);
     console.assert(typedarray.byteLength > 0);
-    if (Filament.HEAPU32.buffer == typedarray.buffer) {
-        typedarray = new Uint8Array(typedarray);
-    }
-    const ta = typedarray;
+    const ta = typedarray.slice();
     const bd = new Filament.driver$PixelBufferDescriptor(ta.byteLength, format, datatype);
     const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
     bd.getBytes().set(uint8array);
@@ -69,10 +71,7 @@ Filament.CompressedPixelBuffer = function(typedarray, cdatatype, faceSize) {
     console.assert(typedarray.buffer instanceof ArrayBuffer);
     console.assert(typedarray.byteLength > 0);
     faceSize = faceSize || typedarray.byteLength;
-    if (Filament.HEAPU32.buffer == typedarray.buffer) {
-        typedarray = new Uint8Array(typedarray);
-    }
-    const ta = typedarray;
+    const ta = typedarray.slice();
     const bd = new Filament.driver$PixelBufferDescriptor(ta.byteLength, cdatatype, faceSize, true);
     const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
     bd.getBytes().set(uint8array);
@@ -241,24 +240,25 @@ Filament.loadMathExtensions = function() {
 // Texture helpers
 // ---------------
 
-Filament._createTextureFromKtx = function(ktxdata, engine, options) {
+Filament._createTextureFromKtx1 = function(ktxdata, engine, options) {
     options = options || {};
-    const ktx = options['ktx'] || new Filament.KtxBundle(ktxdata);
+    const ktx = options['ktx'] || new Filament.Ktx1Bundle(ktxdata);
     const srgb = !!options['srgb'];
-    return Filament.ktx$createTexture(engine, ktx, srgb);
+    return Filament.ktx1reader$createTexture(engine, ktx, srgb);
 };
 
-Filament._createIblFromKtx = function(ktxdata, engine, options) {
+Filament._createIblFromKtx1 = function(ktxdata, engine, options) {
     options = options || {};
-    const iblktx = options['ktx'] = new Filament.KtxBundle(ktxdata);
+    const iblktx = options['ktx'] = new Filament.Ktx1Bundle(ktxdata);
 
     const format = iblktx.info().glInternalFormat;
-    if (format != this.ctx.R11F_G11F_B10F && format != this.ctx.RGB16F && format != this.ctx.RGB32F) {
+    //if (format != this.ctx.R11F_G11F_B10F && format != this.ctx.RGB16F && format != this.ctx.RGB32F) {
+    if (format != 35898 && format != 33327 && format != 34837) {
         console.warn('IBL texture format is 0x' + format.toString(16) +
             ' which is not an expected floating-point format. Please use cmgen to generate IBL.');
     }
 
-    const ibltex = Filament._createTextureFromKtx(ktxdata, engine, options);
+    const ibltex = Filament._createTextureFromKtx1(ktxdata, engine, options);
     const shstring = iblktx.getMetadata("sh");
     const ibl = Filament.IndirectLight.Builder()
         .reflections(ibltex)

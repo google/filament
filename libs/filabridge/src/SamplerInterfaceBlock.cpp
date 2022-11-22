@@ -27,42 +27,27 @@ using namespace utils;
 
 namespace filament {
 
-SamplerInterfaceBlock::Builder&
-SamplerInterfaceBlock::Builder::name(utils::CString const& interfaceBlockName) {
-    mName = interfaceBlockName;
-    return *this;
-}
+SamplerInterfaceBlock::Builder::Builder() = default;
+SamplerInterfaceBlock::Builder::~Builder() noexcept = default;
 
 SamplerInterfaceBlock::Builder&
-SamplerInterfaceBlock::Builder::name(utils::CString&& interfaceBlockName) {
-    interfaceBlockName.swap(mName);
+SamplerInterfaceBlock::Builder::name(std::string_view interfaceBlockName) {
+    mName = { interfaceBlockName.data(), interfaceBlockName.size() };
     return *this;
 }
 
 SamplerInterfaceBlock::Builder&
-SamplerInterfaceBlock::Builder::name(utils::StaticString const& interfaceBlockName) {
-    mName = CString{ interfaceBlockName };
+SamplerInterfaceBlock::Builder::stageFlags(backend::ShaderStageFlags stageFlags) {
+    mStageFlags = stageFlags;
     return *this;
 }
 
 SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
-        utils::CString const& samplerName, Type type, Format format,
+        std::string_view samplerName, Type type, Format format,
         Precision precision, bool multisample) noexcept {
-    mEntries.emplace_back(samplerName, type, format, precision, multisample);
-    return *this;
-}
-
-SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
-        utils::CString&& samplerName, Type type, Format format,
-        Precision precision, bool multisample) noexcept {
-    mEntries.emplace_back(std::move(samplerName), type, format, precision, multisample);
-    return *this;
-}
-
-SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
-        utils::StaticString const& samplerName, Type type, Format format,
-        Precision precision, bool multisample) noexcept {
-    mEntries.emplace_back(samplerName, type, format, precision, multisample);
+    mEntries.push_back({
+            { samplerName.data(), samplerName.size() }, { },
+            uint8_t(mEntries.size()), type, format, precision, multisample });
     return *this;
 }
 
@@ -70,50 +55,50 @@ SamplerInterfaceBlock SamplerInterfaceBlock::Builder::build() {
     return SamplerInterfaceBlock(*this);
 }
 
-SamplerInterfaceBlock::Builder::~Builder() noexcept = default;
+SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
+        std::initializer_list<ListEntry> list) noexcept {
+    for (auto& e : list) {
+        add(e.name, e.type, e.format, e.precision, e.multisample);
+    }
+    return *this;
+}
 
 // -------------------------------------------------------------------------------------------------
 
 SamplerInterfaceBlock::SamplerInterfaceBlock() = default;
-SamplerInterfaceBlock::SamplerInterfaceBlock(const SamplerInterfaceBlock& rhs) = default;
 SamplerInterfaceBlock::SamplerInterfaceBlock(SamplerInterfaceBlock&& rhs) noexcept = default;
-SamplerInterfaceBlock& SamplerInterfaceBlock::operator=(const SamplerInterfaceBlock& rhs) = default;
-SamplerInterfaceBlock& SamplerInterfaceBlock::operator=(SamplerInterfaceBlock&& rhs) /*noexcept*/ = default;
+SamplerInterfaceBlock& SamplerInterfaceBlock::operator=(SamplerInterfaceBlock&& rhs) noexcept = default;
 SamplerInterfaceBlock::~SamplerInterfaceBlock() noexcept = default;
 
 SamplerInterfaceBlock::SamplerInterfaceBlock(Builder const& builder) noexcept
-    : mName(builder.mName)
+    : mName(builder.mName), mStageFlags(builder.mStageFlags),
+    mSamplersInfoList(builder.mEntries.size())
 {
     auto& infoMap = mInfoMap;
-    auto& samplersInfoList = mSamplersInfoList;
     infoMap.reserve(builder.mEntries.size());
-    samplersInfoList.resize(builder.mEntries.size());
 
-    uint32_t i = 0;
+    auto& samplersInfoList = mSamplersInfoList;
+
+    size_t i = 0;
     for (auto const& e : builder.mEntries) {
-        SamplerInfo& info = samplersInfoList[i];
-        info = { e.name, uint8_t(i), e.type, e.format, e.precision, e.multisample };
-
-        // record this uniform info
-        infoMap[info.name.c_str()] = i;
-
-        // advance offset to next slot
-        ++i;
+        assert_invariant(i == e.offset);
+        SamplerInfo& info = samplersInfoList[i++];
+        info = e;
+        info.uniformName = generateUniformName(mName.c_str(), e.name.c_str());
+        infoMap[{ info.name.data(), info.name.size() }] = info.offset; // info.name.c_str() guaranteed constant
     }
-
-    mSize = i;
+    assert_invariant(i == samplersInfoList.size());
 }
 
 const SamplerInterfaceBlock::SamplerInfo* SamplerInterfaceBlock::getSamplerInfo(
-        const char* name) const {
-    auto const& pos = mInfoMap.find(name);
-    if (!ASSERT_PRECONDITION_NON_FATAL(pos != mInfoMap.end(), "sampler named \"%s\" not found", name)) {
-        return nullptr;
-    }
+        std::string_view name) const {
+    auto pos = mInfoMap.find(name);
+    ASSERT_PRECONDITION(pos != mInfoMap.end(), "sampler named \"%.*s\" not found",
+            name.size(), name.data());
     return &mSamplersInfoList[pos->second];
 }
 
-utils::CString SamplerInterfaceBlock::getUniformName(const char* group, const char* sampler) noexcept {
+utils::CString SamplerInterfaceBlock::generateUniformName(const char* group, const char* sampler) noexcept {
     char uniformName[256];
 
     // sampler interface block name

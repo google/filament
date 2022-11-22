@@ -19,18 +19,19 @@
 
 namespace filament {
 
-class UniformInterfaceBlock;
+class BufferInterfaceBlock;
 
 class UibGenerator {
 public:
-    static UniformInterfaceBlock const& getPerViewUib() noexcept;
-    static UniformInterfaceBlock const& getPerRenderableUib() noexcept;
-    static UniformInterfaceBlock const& getLightsUib() noexcept;
-    static UniformInterfaceBlock const& getShadowUib() noexcept;
-    static UniformInterfaceBlock const& getPerRenderableBonesUib() noexcept;
-    static UniformInterfaceBlock const& getFroxelRecordUib() noexcept;
+    static BufferInterfaceBlock const& getPerViewUib() noexcept;
+    static BufferInterfaceBlock const& getPerRenderableUib() noexcept;
+    static BufferInterfaceBlock const& getLightsUib() noexcept;
+    static BufferInterfaceBlock const& getShadowUib() noexcept;
+    static BufferInterfaceBlock const& getPerRenderableBonesUib() noexcept;
+    static BufferInterfaceBlock const& getPerRenderableMorphingUib() noexcept;
+    static BufferInterfaceBlock const& getFroxelRecordUib() noexcept;
     // When adding an UBO here, make sure to also update
-    //      FMaterial::getSurfaceProgramSlow and FMaterial::getPostProcessProgramSlow if needed
+    //      MaterialBuilder::writeCommonChunks() if needed
 };
 
 } // namespace filament

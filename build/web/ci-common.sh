@@ -1,7 +1,15 @@
 #!/bin/bash
+if [ `uname` == "Linux" ];then
+    curl -OL https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-linux.zip
+    unzip -q ninja-linux.zip
+elif [ `uname` == "Darwin" ];then
+    curl -OL https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-mac.zip
+    unzip -q ninja-mac.zip
+else
+    echo "Unsupported OS"
+    exit 1
+fi
 
-curl -OL https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-mac.zip
-unzip -q ninja-mac.zip
 chmod +x ninja
 export PATH="$PWD:$PATH"
 
@@ -9,7 +17,7 @@ export PATH="$PWD:$PATH"
 # npm install -g typescript
 
 # Install emscripten.
-curl -L https://github.com/emscripten-core/emsdk/archive/2.0.23.zip > emsdk.zip
+curl -L https://github.com/emscripten-core/emsdk/archive/refs/tags/3.1.15.zip > emsdk.zip
 unzip emsdk.zip ; mv emsdk-* emsdk ; cd emsdk
 ./emsdk install latest
 ./emsdk activate latest

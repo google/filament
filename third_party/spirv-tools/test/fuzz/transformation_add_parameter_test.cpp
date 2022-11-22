@@ -367,7 +367,7 @@ TEST(TransformationAddParameterTest, NonPointerNotApplicableTest) {
       transformation_bad_3.IsApplicable(context.get(), transformation_context));
 
   // Function with id 14 does not have any callers.
-  // Bad: Id 18 is not a vaild type.
+  // Bad: Id 18 is not a valid type.
   TransformationAddParameter transformation_bad_4(14, 50, 18, {{}}, 51);
   ASSERT_FALSE(
       transformation_bad_4.IsApplicable(context.get(), transformation_context));

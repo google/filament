@@ -64,6 +64,8 @@ Options:
   --relax-struct-store             Allow store from one struct type to a
                                    different type with compatible layout and
                                    members.
+  --allow-localsizeid              Allow use of the LocalSizeId decoration where it would otherwise not
+                                   be allowed by the target environment.
   --before-hlsl-legalization       Allows code patterns that are intended to be
                                    fixed by spirv-opt's legalization passes.
   --version                        Display validator version information.
@@ -75,7 +77,7 @@ Options:
 
 int main(int argc, char** argv) {
   const char* inFile = nullptr;
-  spv_target_env target_env = SPV_ENV_UNIVERSAL_1_5;
+  spv_target_env target_env = SPV_ENV_UNIVERSAL_1_6;
   spvtools::ValidatorOptions options;
   bool continue_processing = true;
   int return_code = 0;
@@ -109,17 +111,20 @@ int main(int argc, char** argv) {
         printf("%s\n", spvSoftwareVersionDetailsString());
         printf(
             "Targets:\n  %s\n  %s\n  %s\n  %s\n  %s\n  %s\n  %s\n  %s\n  %s\n  "
-            "%s\n",
+            "%s\n %s\n %s\n %s\n",
             spvTargetEnvDescription(SPV_ENV_UNIVERSAL_1_0),
             spvTargetEnvDescription(SPV_ENV_UNIVERSAL_1_1),
             spvTargetEnvDescription(SPV_ENV_UNIVERSAL_1_2),
             spvTargetEnvDescription(SPV_ENV_UNIVERSAL_1_3),
             spvTargetEnvDescription(SPV_ENV_UNIVERSAL_1_4),
             spvTargetEnvDescription(SPV_ENV_UNIVERSAL_1_5),
+            spvTargetEnvDescription(SPV_ENV_UNIVERSAL_1_6),
             spvTargetEnvDescription(SPV_ENV_OPENCL_2_2),
             spvTargetEnvDescription(SPV_ENV_VULKAN_1_0),
             spvTargetEnvDescription(SPV_ENV_VULKAN_1_1),
-            spvTargetEnvDescription(SPV_ENV_VULKAN_1_1_SPIRV_1_4));
+            spvTargetEnvDescription(SPV_ENV_VULKAN_1_1_SPIRV_1_4),
+            spvTargetEnvDescription(SPV_ENV_VULKAN_1_2),
+            spvTargetEnvDescription(SPV_ENV_VULKAN_1_3));
         continue_processing = false;
         return_code = 0;
       } else if (0 == strcmp(cur_arg, "--help") || 0 == strcmp(cur_arg, "-h")) {
@@ -153,6 +158,8 @@ int main(int argc, char** argv) {
         options.SetWorkgroupScalarBlockLayout(true);
       } else if (0 == strcmp(cur_arg, "--skip-block-layout")) {
         options.SetSkipBlockLayout(true);
+      } else if (0 == strcmp(cur_arg, "--allow-localsizeid")) {
+        options.SetAllowLocalSizeId(true);
       } else if (0 == strcmp(cur_arg, "--relax-struct-store")) {
         options.SetRelaxStructStore(true);
       } else if (0 == cur_arg[1]) {

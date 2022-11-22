@@ -20,7 +20,6 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 bool MetalResourceTracker::trackResource(CommandBuffer buffer, Resource resource,
         ResourceDeleter deleter) {
@@ -53,6 +52,5 @@ void MetalResourceTracker::clearResources(CommandBuffer buffer) {
     mResources.erase(found);
 }
 
-} // namespace metal
 } // namespace backend
 } // namespace filament

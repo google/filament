@@ -105,6 +105,22 @@ TEST(IrBuilder, RoundTripIncompleteFunction) {
   DoRoundTripCheck("%2 = OpFunction %1 None %3\n");
 }
 
+TEST(IrBuilder, RoundTripFunctionPointer) {
+  DoRoundTripCheck(
+      "OpCapability Linkage\n"
+      "OpCapability FunctionPointersINTEL\n"
+      "OpName %some_function \"some_function\"\n"
+      "OpName %ptr_to_function \"ptr_to_function\"\n"
+      "OpDecorate %some_function LinkageAttributes \"some_function\" Import\n"
+      "%float = OpTypeFloat 32\n"
+      "%4 = OpTypeFunction %float %float\n"
+      "%_ptr_Function_4 = OpTypePointer Function %4\n"
+      "%ptr_to_function = OpConstantFunctionPointerINTEL %_ptr_Function_4 "
+      "%some_function\n"
+      "%some_function = OpFunction %float Const %4\n"
+      "%6 = OpFunctionParameter %float\n"
+      "OpFunctionEnd\n");
+}
 TEST(IrBuilder, KeepLineDebugInfo) {
   // #version 310 es
   // void main() {}

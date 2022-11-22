@@ -17,10 +17,10 @@ set(VIMSYNTAX_PROCESSING_SCRIPT "${spirv-tools_SOURCE_DIR}/utils/generate_vim_sy
 set(XML_REGISTRY_PROCESSING_SCRIPT "${spirv-tools_SOURCE_DIR}/utils/generate_registry_tables.py")
 set(LANG_HEADER_PROCESSING_SCRIPT "${spirv-tools_SOURCE_DIR}/utils/generate_language_headers.py")
 
-# For now, assume the DebugInfo grammar file is in the current directory.
-# It might migrate to SPIRV-Headers.
+# Pull in grammar files that have migrated to SPIRV-Headers
 set(DEBUGINFO_GRAMMAR_JSON_FILE "${SPIRV_HEADER_INCLUDE_DIR}/spirv/unified1/extinst.debuginfo.grammar.json")
 set(CLDEBUGINFO100_GRAMMAR_JSON_FILE "${SPIRV_HEADER_INCLUDE_DIR}/spirv/unified1/extinst.opencl.debuginfo.100.grammar.json")
+set(VKDEBUGINFO100_GRAMMAR_JSON_FILE "${SPIRV_HEADER_INCLUDE_DIR}/spirv/unified1/extinst.nonsemantic.shader.debuginfo.100.grammar.json")
 
 # macro() definitions are used in the following because we need to append .inc
 # file paths into some global lists (*_CPP_DEPENDS). And those global lists are
@@ -113,6 +113,9 @@ endmacro(spvtools_opencl_tables)
 macro(spvtools_vendor_tables VENDOR_TABLE SHORT_NAME OPERAND_KIND_PREFIX)
   set(INSTS_FILE "${spirv-tools_BINARY_DIR}/${VENDOR_TABLE}.insts.inc")
   set(GRAMMAR_FILE "${SPIRV_HEADER_INCLUDE_DIR}/spirv/unified1/extinst.${VENDOR_TABLE}.grammar.json")
+  if(NOT EXISTS ${GRAMMAR_FILE})
+    set(GRAMMAR_FILE "${spirv-tools_SOURCE_DIR}/source/extinst.${VENDOR_TABLE}.grammar.json")
+  endif()
   add_custom_command(OUTPUT ${INSTS_FILE}
     COMMAND ${PYTHON_EXECUTABLE} ${GRAMMAR_PROCESSING_SCRIPT}
       --extinst-vendor-grammar=${GRAMMAR_FILE}
@@ -121,7 +124,7 @@ macro(spvtools_vendor_tables VENDOR_TABLE SHORT_NAME OPERAND_KIND_PREFIX)
     DEPENDS ${GRAMMAR_PROCESSING_SCRIPT} ${GRAMMAR_FILE}
     COMMENT "Generate extended instruction tables for ${VENDOR_TABLE}.")
   add_custom_target(spv-tools-${SHORT_NAME} DEPENDS ${INSTS_FILE})
-  set_property(TARGET spv-tools-${SHORT_NAME} PROPERTY FOLDER "SPIRV-Tools build")
+  set_property(TARGET spv-tools-${SHORT_NAME} PROPERTY FOLDER "ThirdParty/SPIRV-Tools build")
   list(APPEND EXTINST_CPP_DEPENDS spv-tools-${SHORT_NAME})
 endmacro(spvtools_vendor_tables)
 
@@ -134,7 +137,7 @@ macro(spvtools_extinst_lang_headers NAME GRAMMAR_FILE)
     DEPENDS ${LANG_HEADER_PROCESSING_SCRIPT} ${GRAMMAR_FILE}
     COMMENT "Generate language specific header for ${NAME}.")
   add_custom_target(spirv-tools-header-${NAME} DEPENDS ${OUT_H})
-  set_property(TARGET spirv-tools-header-${NAME} PROPERTY FOLDER "SPIRV-Tools build")
+  set_property(TARGET spirv-tools-header-${NAME} PROPERTY FOLDER "ThirdParty/SPIRV-Tools build")
   list(APPEND EXTINST_CPP_DEPENDS spirv-tools-header-${NAME})
 endmacro(spvtools_extinst_lang_headers)
 
@@ -148,13 +151,15 @@ spvtools_vendor_tables("spv-amd-gcn-shader" "spv-amd-gs" "")
 spvtools_vendor_tables("spv-amd-shader-ballot" "spv-amd-sb" "")
 spvtools_vendor_tables("debuginfo" "debuginfo" "")
 spvtools_vendor_tables("opencl.debuginfo.100" "cldi100" "CLDEBUG100_")
+spvtools_vendor_tables("nonsemantic.shader.debuginfo.100" "shdi100" "SHDEBUG100_")
 spvtools_vendor_tables("nonsemantic.clspvreflection" "clspvreflection" "")
 spvtools_extinst_lang_headers("DebugInfo" ${DEBUGINFO_GRAMMAR_JSON_FILE})
 spvtools_extinst_lang_headers("OpenCLDebugInfo100" ${CLDEBUGINFO100_GRAMMAR_JSON_FILE})
+spvtools_extinst_lang_headers("NonSemanticShaderDebugInfo100" ${VKDEBUGINFO100_GRAMMAR_JSON_FILE})
 
 spvtools_vimsyntax("unified1" "1.0")
 add_custom_target(spirv-tools-vimsyntax DEPENDS ${VIMSYNTAX_FILE})
-set_property(TARGET spirv-tools-vimsyntax PROPERTY FOLDER "SPIRV-Tools utilities")
+set_property(TARGET spirv-tools-vimsyntax PROPERTY FOLDER "ThirdParty/SPIRV-Tools utilities")
 
 # Extract the list of known generators from the SPIR-V XML registry file.
 set(GENERATOR_INC_FILE ${spirv-tools_BINARY_DIR}/generators.inc)
@@ -179,6 +184,13 @@ add_custom_target(enum_string_mapping
 add_custom_target(extinst_tables
   DEPENDS ${EXTINST_CPP_DEPENDS})
 
+set_target_properties(core_tables PROPERTIES 
+  FOLDER "ThirdParty/SPIRV-Tools libraries")
+set_target_properties(enum_string_mapping PROPERTIES 
+  FOLDER "ThirdParty/SPIRV-Tools libraries")
+set_target_properties(extinst_tables PROPERTIES 
+  FOLDER "ThirdParty/SPIRV-Tools libraries")
+
 set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/extensions.h
   PROPERTIES HEADER_FILE_ONLY TRUE)
@@ -192,7 +204,7 @@ set(SPIRV_TOOLS_CHANGES_FILE
 add_custom_command(OUTPUT ${SPIRV_TOOLS_BUILD_VERSION_INC}
    COMMAND ${PYTHON_EXECUTABLE}
            ${SPIRV_TOOLS_BUILD_VERSION_INC_GENERATOR}
-           ${spirv-tools_SOURCE_DIR} ${SPIRV_TOOLS_BUILD_VERSION_INC}
+           ${SPIRV_TOOLS_CHANGES_FILE} ${SPIRV_TOOLS_BUILD_VERSION_INC}
    DEPENDS ${SPIRV_TOOLS_BUILD_VERSION_INC_GENERATOR}
            ${SPIRV_TOOLS_CHANGES_FILE}
    COMMENT "Update build-version.inc in the SPIRV-Tools build directory (if necessary).")
@@ -200,7 +212,7 @@ add_custom_command(OUTPUT ${SPIRV_TOOLS_BUILD_VERSION_INC}
 # This is not required for any dependence chain.
 add_custom_target(spirv-tools-build-version
    DEPENDS ${SPIRV_TOOLS_BUILD_VERSION_INC})
-set_property(TARGET spirv-tools-build-version PROPERTY FOLDER "SPIRV-Tools build")
+set_property(TARGET spirv-tools-build-version PROPERTY FOLDER "ThirdParty/SPIRV-Tools build")
 
 list(APPEND PCH_DEPENDS ${ENUM_STRING_MAPPING_CPP_DEPENDS} ${OPCODE_CPP_DEPENDS} ${OPERAND_CPP_DEPENDS} ${EXTENSION_H_DEPENDS} ${EXTINST_CPP_DEPENDS} ${SPIRV_TOOLS_BUILD_VERSION_INC})
 set_source_files_properties(
@@ -211,21 +223,26 @@ add_subdirectory(opt)
 add_subdirectory(reduce)
 add_subdirectory(fuzz)
 add_subdirectory(link)
+add_subdirectory(lint)
+add_subdirectory(diff)
 
 set(SPIRV_SOURCES
   ${spirv-tools_SOURCE_DIR}/include/spirv-tools/libspirv.h
 
   ${CMAKE_CURRENT_SOURCE_DIR}/util/bitutils.h
   ${CMAKE_CURRENT_SOURCE_DIR}/util/bit_vector.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/hash_combine.h
   ${CMAKE_CURRENT_SOURCE_DIR}/util/hex_float.h
   ${CMAKE_CURRENT_SOURCE_DIR}/util/make_unique.h
   ${CMAKE_CURRENT_SOURCE_DIR}/util/parse_number.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/pooled_linked_list.h
   ${CMAKE_CURRENT_SOURCE_DIR}/util/small_vector.h
   ${CMAKE_CURRENT_SOURCE_DIR}/util/string_utils.h
   ${CMAKE_CURRENT_SOURCE_DIR}/util/timer.h
   ${CMAKE_CURRENT_SOURCE_DIR}/assembly_grammar.h
   ${CMAKE_CURRENT_SOURCE_DIR}/binary.h
   ${CMAKE_CURRENT_SOURCE_DIR}/cfa.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/common_debug_info.h
   ${CMAKE_CURRENT_SOURCE_DIR}/diagnostic.h
   ${CMAKE_CURRENT_SOURCE_DIR}/disassemble.h
   ${CMAKE_CURRENT_SOURCE_DIR}/enum_set.h
@@ -357,22 +374,13 @@ function(spirv_tools_default_target_options target)
     PRIVATE ${spirv-tools_BINARY_DIR}
     PRIVATE ${SPIRV_HEADER_INCLUDE_DIR}
   )
-  set_property(TARGET ${target} PROPERTY FOLDER "SPIRV-Tools libraries")
+  set_property(TARGET ${target} PROPERTY FOLDER "ThirdParty/SPIRV-Tools libraries")
   spvtools_check_symbol_exports(${target})
   add_dependencies(${target} spirv-tools-build-version core_tables enum_string_mapping extinst_tables)
 endfunction()
 
 # Always build ${SPIRV_TOOLS}-shared. This is expected distro packages, and
 # unlike the other SPIRV_TOOLS target, defaults to hidden symbol visibility.
-# Filament specific changes
-# add_library(${SPIRV_TOOLS}-shared SHARED ${SPIRV_SOURCES})
-# spirv_tools_default_target_options(${SPIRV_TOOLS}-shared)
-# set_target_properties(${SPIRV_TOOLS}-shared PROPERTIES CXX_VISIBILITY_PRESET hidden)
-# target_compile_definitions(${SPIRV_TOOLS}-shared
-#   PRIVATE SPIRV_TOOLS_IMPLEMENTATION
-#   PUBLIC SPIRV_TOOLS_SHAREDLIB
-# )
-# End Filament specific changes
 
 if(SPIRV_TOOLS_BUILD_STATIC)
   add_library(${SPIRV_TOOLS}-static STATIC ${SPIRV_SOURCES})
@@ -388,24 +396,18 @@ if(SPIRV_TOOLS_BUILD_STATIC)
     add_library(${SPIRV_TOOLS} ALIAS ${SPIRV_TOOLS}-static)
   endif()
 
-# Filament specific changes
-  # set(SPIRV_TOOLS_TARGETS ${SPIRV_TOOLS}-static ${SPIRV_TOOLS}-shared)
   set(SPIRV_TOOLS_TARGETS ${SPIRV_TOOLS}-static)
-# End Filament specific changes
 else()
   add_library(${SPIRV_TOOLS} ${SPIRV_TOOLS_LIBRARY_TYPE} ${SPIRV_SOURCES})
   spirv_tools_default_target_options(${SPIRV_TOOLS})
-# Filament specific changes
-  # set(SPIRV_TOOLS_TARGETS ${SPIRV_TOOLS} ${SPIRV_TOOLS}-shared)
   set(SPIRV_TOOLS_TARGETS ${SPIRV_TOOLS})
-# End Filament specific changes
 endif()
 
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   find_library(LIBRT rt)
   if(LIBRT)
     foreach(target ${SPIRV_TOOLS_TARGETS})
-      target_link_libraries(${target} ${LIBRT})
+      target_link_libraries(${target} rt)
     endforeach()
   endif()
 endif()
@@ -429,8 +431,10 @@ if(ENABLE_SPIRV_TOOLS_INSTALL)
   # Special config file for root library compared to other libs.
   file(WRITE ${CMAKE_BINARY_DIR}/${SPIRV_TOOLS}Config.cmake
     "include(\${CMAKE_CURRENT_LIST_DIR}/${SPIRV_TOOLS}Target.cmake)\n"
-    "set(${SPIRV_TOOLS}_LIBRARIES ${SPIRV_TOOLS})\n"
-    "get_target_property(${SPIRV_TOOLS}_INCLUDE_DIRS ${SPIRV_TOOLS} INTERFACE_INCLUDE_DIRECTORIES)\n")
+    "if(TARGET ${SPIRV_TOOLS})\n"
+    "    set(${SPIRV_TOOLS}_LIBRARIES ${SPIRV_TOOLS})\n"
+    "    get_target_property(${SPIRV_TOOLS}_INCLUDE_DIRS ${SPIRV_TOOLS} INTERFACE_INCLUDE_DIRECTORIES)\n"
+    "endif()\n")
   install(FILES ${CMAKE_BINARY_DIR}/${SPIRV_TOOLS}Config.cmake DESTINATION ${PACKAGE_DIR})
 endif(ENABLE_SPIRV_TOOLS_INSTALL)
 

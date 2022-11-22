@@ -117,6 +117,8 @@ import androidx.annotation.Size;
  * </ul>
  */
 public class LightManager {
+    private static final Type[] sTypeValues = Type.values();
+
     private long mNativeObject;
 
     LightManager(long nativeLightManager) {
@@ -238,19 +240,19 @@ public class LightManager {
          */
         @NonNull
         @Size(min = 3)
-        public float[] cascadeSplitPositions = { 0.25f, 0.50f, 0.75f };
+        public float[] cascadeSplitPositions = { 0.125f, 0.25f, 0.50f };
 
         /** Constant bias in world units (e.g. meters) by which shadows are moved away from the
          * light. 1mm by default.
          * This is ignored when the View's ShadowType is set to VSM.
          */
-        public float constantBias = 0.05f;
+        public float constantBias = 0.001f;
 
         /** Amount by which the maximum sampling error is scaled. The resulting value is used
          * to move the shadow away from the fragment normal. Should be 1.0.
          * This is ignored when the View's ShadowType is set to VSM.
          */
-        public float normalBias = 0.4f;
+        public float normalBias = 1.0f;
 
         /** Distance from the camera after which shadows are clipped. This is used to clip
          * shadows that are too far and wouldn't contribute to the scene much, improving
@@ -278,8 +280,41 @@ public class LightManager {
          * Controls whether the shadow map should be optimized for resolution or stability.
          * When set to true, all resolution enhancing features that can affect stability are
          * disabling, resulting in significantly lower resolution shadows, albeit stable ones.
+         *
+         * Setting this flag to true always disables LiSPSM (see below).
          */
-        public boolean stable = true;
+        public boolean stable = false;
+
+        /**
+         * LiSPSM, or light-space perspective shadow-mapping is a technique allowing to better
+         * optimize the use of the shadow-map texture. When enabled the effective resolution of
+         * shadows is greatly improved and yields result similar to using cascades without the
+         * extra cost. LiSPSM comes with some drawbacks however, in particular it is incompatible
+         * with blurring because it effectively affects the blur kernel size.
+         *
+         * Blurring is only an issue when using ShadowType.VSM with a large blur or with
+         * ShadowType.PCSS however.
+         *
+         * If these blurring artifacts become problematic, this flag can be used to disable LiSPSM.
+         */
+        public boolean lispsm = false;
+
+        /**
+         * Constant bias in depth-resolution units by which shadows are moved away from the
+         * light. The default value of 0.5 is used to round depth values up.
+         * Generally this value shouldn't be changed or at least be small and positive.
+         * This is ignored when the View's ShadowType is set to VSM.
+         */
+        float polygonOffsetConstant = 0.5f;
+
+        /**
+         * Bias based on the change in depth in depth-resolution units by which shadows are moved
+         * away from the light. The default value of 2.0 works well with SHADOW_SAMPLING_PCF_LOW.
+         * Generally this value is between 0.5 and the size in texel of the PCF filter.
+         * Setting this value correctly is essential for LISPSM shadow-maps.
+         * This is ignored when the View's ShadowType is set to VSM.
+         */
+        float polygonOffsetSlope = 2.0f;
 
         /**
          * Whether screen-space contact shadows are used. This applies regardless of whether a
@@ -315,23 +350,24 @@ public class LightManager {
          */
 
         /**
-         * The number of MSAA samples to use when rendering VSM shadow maps.
-         * Must be a power-of-two and greater than or equal to 1. A value of 1 effectively turns
-         * off MSAA.
-         * Higher values may not be available depending on the underlying hardware.
-         *
-         * <p>
-         * <strong>Warning: This API is still experimental and subject to change.</strong>
-         * </p>
+         * When elvsm is set to true, "Exponential Layered VSM without Layers" are used. It is
+         * an improvement to the default EVSM which suffers important light leaks. Enabling
+         * ELVSM for a single shadowmap doubles the memory usage of all shadow maps.
+         * ELVSM is mostly useful when large blurs are used.
          */
-        @IntRange(from = 1)
-        public int vsmMsaaSamples = 1;
+        public boolean elvsm = false;
 
         /**
          * Blur width for the VSM blur. Zero do disable.
          * The maximum value is 125.
          */
         public float blurWidth = 0.0f;
+
+        /**
+         * Light bulb radius used for soft shadows. Currently this is only used when DPCF is
+         * enabled. (2cm by default).
+         */
+        public float shadowBulbRadius = 0.02f;
     }
 
     public static class ShadowCascades {
@@ -445,11 +481,6 @@ public class LightManager {
         /**
          * Whether this Light casts shadows (disabled by default)
          *
-         * <p>
-         * <b>warning:</b>
-         *  {@link Type#POINT} lights cannot cast shadows.
-         * </p>
-         *
          * @param enable Enables or disables casting shadows from this Light.
          *
          * @return This Builder, for chaining calls.
@@ -471,9 +502,11 @@ public class LightManager {
             nBuilderShadowOptions(mNativeBuilder,
                     options.mapSize, options.shadowCascades, options.cascadeSplitPositions,
                     options.constantBias, options.normalBias, options.shadowFar, options.shadowNearHint,
-                    options.shadowFarHint, options.stable, options.screenSpaceContactShadows,
-                    options.stepCount, options.maxShadowDistance, options.vsmMsaaSamples,
-                    options.blurWidth);
+                    options.shadowFarHint, options.stable, options.lispsm,
+                    options.polygonOffsetConstant, options.polygonOffsetSlope,
+                    options.screenSpaceContactShadows,
+                    options.stepCount, options.maxShadowDistance,
+                    options.elvsm, options.blurWidth, options.shadowBulbRadius);
             return this;
         }
 
@@ -762,7 +795,7 @@ public class LightManager {
 
     @NonNull
     public Type getType(@EntityInstance int i) {
-        return Type.values()[nGetType(mNativeObject, i)];
+        return sTypeValues[nGetType(mNativeObject, i)];
     }
 
     /**
@@ -1131,7 +1164,14 @@ public class LightManager {
     private static native void nDestroyBuilder(long nativeBuilder);
     private static native boolean nBuilderBuild(long nativeBuilder, long nativeEngine, int entity);
     private static native void nBuilderCastShadows(long nativeBuilder, boolean enable);
-    private static native void nBuilderShadowOptions(long nativeBuilder, int mapSize, int cascades, float[] splitPositions, float constantBias, float normalBias, float shadowFar, float shadowNearHint, float shadowFarhint, boolean stable, boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance, int vsmMsaaSamples, float blurWidth);
+    private static native void nBuilderShadowOptions(long nativeBuilder, int mapSize,
+            int cascades, float[] splitPositions,
+             float constantBias, float normalBias,
+             float shadowFar, float shadowNearHint, float shadowFarhint,
+             boolean stable, boolean lispsm,
+             float polygonOffsetConstant, float polygonOffsetSlope,
+             boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance,
+             boolean elvsm, float blurWidth, float shadowBulbRadius);
     private static native void nBuilderCastLight(long nativeBuilder, boolean enabled);
     private static native void nBuilderPosition(long nativeBuilder, float x, float y, float z);
     private static native void nBuilderDirection(long nativeBuilder, float x, float y, float z);

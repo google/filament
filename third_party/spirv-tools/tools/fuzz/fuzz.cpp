@@ -630,7 +630,7 @@ bool Fuzz(const spv_target_env& target_env,
       std::move(ir_context), std::move(transformation_context),
       std::move(fuzzer_context), message_consumer, donor_suppliers,
       fuzzer_options->all_passes_enabled, repeated_pass_strategy,
-      fuzzer_options->fuzzer_pass_validation_enabled, validator_options);
+      fuzzer_options->fuzzer_pass_validation_enabled, validator_options, false);
   auto fuzz_result = fuzzer.Run(0);
   if (fuzz_result.status ==
       spvtools::fuzz::Fuzzer::Status::kFuzzerPassLedToInvalidModule) {
@@ -683,7 +683,7 @@ void DumpTransformationsJson(
   json_options.add_whitespace = true;
   auto json_generation_status = google::protobuf::util::MessageToJsonString(
       transformations, &json_string, json_options);
-  if (json_generation_status == google::protobuf::util::Status::OK) {
+  if (json_generation_status.ok()) {
     std::ofstream transformations_json_file(filename);
     transformations_json_file << json_string;
     transformations_json_file.close();
@@ -734,9 +734,9 @@ int main(int argc, const char** argv) {
     std::string facts_json_string((std::istreambuf_iterator<char>(facts_input)),
                                   std::istreambuf_iterator<char>());
     facts_input.close();
-    if (google::protobuf::util::Status::OK !=
-        google::protobuf::util::JsonStringToMessage(facts_json_string,
-                                                    &initial_facts)) {
+    if (!google::protobuf::util::JsonStringToMessage(facts_json_string,
+                                                     &initial_facts)
+             .ok()) {
       spvtools::Error(FuzzDiagnostic, nullptr, {}, "Error reading facts data");
       return 1;
     }
@@ -816,7 +816,7 @@ int main(int argc, const char** argv) {
     json_options.add_whitespace = true;
     auto json_generation_status = google::protobuf::util::MessageToJsonString(
         transformations_applied, &json_string, json_options);
-    if (json_generation_status != google::protobuf::util::Status::OK) {
+    if (!json_generation_status.ok()) {
       spvtools::Error(FuzzDiagnostic, nullptr, {},
                       "Error writing out transformations in JSON format");
       return 1;

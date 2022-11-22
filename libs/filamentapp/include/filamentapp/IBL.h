@@ -64,7 +64,7 @@ private:
 
     bool loadCubemapLevel(filament::Texture** texture,
             filament::Texture::PixelBufferDescriptor* outBuffer,
-            filament::Texture::FaceOffsets* outOffsets,
+            uint32_t* dim,
             const utils::Path& path,
             size_t level = 0, std::string const& levelPrefix = "") const;
 

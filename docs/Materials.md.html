@@ -86,7 +86,7 @@ in table [standardProperties].
 **clearCoat**           | Strength of the clear coat layer
 **clearCoatRoughness**  | Perceived smoothness or roughness of the clear coat layer
 **anisotropy**          | Amount of anisotropy in either the tangent or bitangent direction
-**anisotropyDirection** | Local surface direction
+**anisotropyDirection** | Local surface direction in tangent space
 **ambientOcclusion**    | Defines how much of the ambient light is accessible to a surface point. It is a per-pixel shadowing factor between 0.0 and 1.0
 **normal**              | A detail normal used to perturb the surface using _bump mapping_ (_normal mapping_)
 **bentNormal**          | A normal pointing in the average unoccluded direction. Can be used to improve indirect lighting quality
@@ -401,7 +401,8 @@ tangent direction and negative values in the bitangent direction.
 
 The `anisotropyDirection` property defines the direction of the surface at a given point and thus
 control the shape of the specular highlights. It is specified as vector of 3 values that usually
-come from a texture, encoding the directions local to the surface.
+come from a texture, encoding the directions local to the surface in tangent space. Because the
+direction is in tangent space, the Z component should be set to 0.
 
 The effect of `anisotropyDirection` on a metal is shown in figure [anisotropyDirectionProperty]
 (click on the image to see a larger version).
@@ -931,6 +932,37 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### General: featureLevel
+
+Type
+:    `number`
+
+Value
+:     An integer value, either 1, 2 or 3. Defaults to 1.
+
+      Feature Level    |        Guaranteed features
+:----------------------|:---------------------------------
+1                      | 9 textures per material
+2                      | 9 textures per material, cubemap arrays, ESSL 3.10
+3                      | 12 textures per material, cubemap arrays, ESSL 3.10
+[Table [featureLevels]: Feature levels]
+
+Description
+:     Sets the feature level of the material. Each feature level defines a set of features the
+      material can use. If the material uses a feature not supported by the selected level, `matc`
+      will generate an error during compilation. A given feature level is guaranteed to support
+      all features of lower feature levels.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    featureLevel : 2
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Bugs
+:     `matc` doesn't verify that a material is not using features above its selected feature level.
+
+
 ### General: shadingModel
 
 Type
@@ -985,6 +1017,7 @@ uint4                  | Vector of 4 unsigned integers
 float3x3               | Matrix of 3x3 floats
 float4x4               | Matrix of 4x4 floats
 sampler2d              | 2D texture
+sampler2dArray         | Array of 2D textures
 samplerExternal        | External texture (platform-specific)
 samplerCubemap         | Cubemap texture
 [Table [materialParamsTypes]: Material parameter types]
@@ -996,7 +1029,7 @@ Samplers
 Arrays
 :     A parameter can define an array of values by appending `[size]` after the type name, where
       `size` is a positive integer. For instance: `float[9]` declares an array of nine `float`
-      values. Arrays of samplers are _not_ supported at the moment.
+      values. This syntax does not apply to samplers as arrays are treated as separate types.
 
 Description
 :     Lists the parameters required by your material. These parameters can be set at runtime using
@@ -1049,7 +1082,7 @@ Type
 :    array of `string`
 
 Value
-:     Each entry must be any of `dynamicLighting`, `directionalLighting`, `shadowReceiver` or `skinning`.
+:     Each entry must be any of `dynamicLighting`, `directionalLighting`, `shadowReceiver`,`skinning` or `ssr`.
 
 Description
 :     Used to specify a list of shader variants that the application guarantees will never be
@@ -1067,6 +1100,7 @@ Description of the variants:
 - `skinning`, used when an object is animated using GPU skinning
 - `fog`, used when global fog is applied to the scene
 - `vsm`, used when VSM shadows are enabled and the object is a shadow receiver
+- `ssr`, used when screen-space reflections are enabled in the View
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
@@ -1117,13 +1151,58 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### General: instanced
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `false`.
+
+Description
+:    Allows a material to access the instance index (i.e.: **`gl_InstanceIndex`**) of instanced
+     primitives using `getInstanceIndex()` in the material's shader code. Never use
+     **`gl_InstanceIndex`** directly. This is typically used with
+     `RenderableManager::Builder::instances()`. `getInstanceIndex()` is available in both the
+     vertex and fragment shader.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    instanced : true
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### General: vertexDomainDeviceJittered
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `false`.
+
+Description
+:    Only meaningful for `vertexDomain:Device` materials, this parameter specifies whether the
+     filament clip-space transforms need to be applied or not, which affects TAA and guard bands.
+     Generally it needs to be applied because by definition `vertexDomain:Device` materials
+     vertices are not transformed and used *as is*.
+     However, if the vertex shader uses for instance `getViewFromClipMatrix()` (or other
+     matrices based on the projection), the clip-space transform is already applied.
+     Setting this parameter incorrectly can prevent TAA or the guard bands to work correctly.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    vertexDomainDeviceJittered : true
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ### Vertex and attributes: requires
 
 Type
 :    array of `string`
 
 Value
-:     Each entry must be any of `uv0`, `uv1`, `color`, `position`, `tangents`.
+:     Each entry must be any of `uv0`, `uv1`, `color`, `position`, `tangents`, `custom0`
+      through `custom7`.
 
 Description
 :     Lists the vertex attributes required by the material. The `position` attribute is always
@@ -1140,7 +1219,8 @@ material {
         },
     ],
     requires : [
-        uv0
+        uv0,
+        custom0
     ],
     shadingModel : lit,
 }
@@ -1149,6 +1229,7 @@ fragment {
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
         material.baseColor = texture(materialParams_texture, getUV0());
+        material.baseColor.rgb *= getCustom0().rgb;
     }
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1277,8 +1358,9 @@ Description
     - **Screen**: blending is enabled. Effectively the opposite of the `multiply`, the content of the
       render target is brightened.
     - **Masked**: blending is disabled. This blending mode enables alpha masking. The alpha channel
-      of the material's output defines whether a fragment is discarded or not. See the maskThreshold
-      section for more information.
+      of the material's output defines whether a fragment is discarded or not. Additionally,
+      ALPHA_TO_COVERAGE is enabled for non-translucent views. See the maskThreshold section for more
+      information.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
@@ -1362,8 +1444,9 @@ Value
 
 Description
 :     Sets the minimum alpha value a fragment must have to not be discarded when the `blending` mode
-      is set to `masked`. When the blending mode is not `masked`, this value is ignored. This value
-      can be used to controlled the appearance of alpha-masked objects.
+      is set to `masked`. If the fragment is not discarded, its source alpha is set to 1. When the
+      blending mode is not `masked`, this value is ignored. This value can be used to controlled the
+      appearance of alpha-masked objects.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
@@ -1506,7 +1589,37 @@ Description
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
+    name : "Double sided material",
+    shadingModel : lit,
     doubleSided : true
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = materialParams.albedo;
+    }
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Lighting: reflections
+
+Type
+:    `string`
+
+Value
+:     `default` or `screenspace`. Defaults to `default`.
+
+Description
+:     Controls the source of specular reflections for this material. When this property is set to
+      `default`, reflections only come image-based lights. When this property is set to
+      `screenspace`, reflections come from the screen space's color buffer in addition to
+      image-based lights.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    name : "Glossy metal",
+    reflections : screenspace
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1785,7 +1898,7 @@ struct MaterialVertexInputs {
     float3 worldNormal;        // only if the shading model is not unlit
     float4 worldPosition;      // always available (see note below about world-space)
 
-    mat4   clipSpaceTransform; // default: identity, transforms the clip-space position
+    mat4   clipSpaceTransform; // default: identity, transforms the clip-space position, only available for `vertexDomain:device`
 
     // variable* names are replaced with actual names
     float4 variable0;          // if 1 or more variables is defined
@@ -1805,13 +1918,30 @@ struct MaterialVertexInputs {
     of the current mesh: `material.uv0 = vec2(mesh_uv0.x, 1.0 - mesh_uv0.y)`. You can control
     this behavior using the `flipUV` property and setting it to `false`.
 
+### Custom vertex attributes
+
+You can use up to 8 custom vertex attributes, all of type `float4`. These attributes can be accessed
+using the vertex block shader functions `getCustom0()` to `getCustom7()`. However, before using
+custom attributes, you *must* declare those attributes as required in the `requires` property of
+the material:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    requires : [
+        custom0,
+        custom1,
+        custom2
+    ]
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ## Fragment block
 
-The fragment block must be used to control the fragment shading stage of the material. The vertex
+The fragment block must be used to control the fragment shading stage of the material. The fragment
 block must contain valid
 [ESSL 3.0](https://www.khronos.org/registry/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf)
 code (the version of GLSL supported in OpenGL ES 3.0). You are free to create multiple functions
-inside the vertex block but you **must** declare the `material` function:
+inside the fragment block but you **must** declare the `material` function:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GLSL
 fragment {
@@ -1846,7 +1976,7 @@ fragment {
 ### prepareMaterial function
 
 Note that you **must** call `prepareMaterial(material)` before exiting the  `material()` function.
-This `prepareMaterial` function sets up the internal state of the material mdoel. Some of the APIs
+This `prepareMaterial` function sets up the internal state of the material model. Some of the APIs
 described in the Fragment APIs section - like `shading_normal` for instance - can only be accessed
 _after_ invoking `prepareMaterial()`.
 
@@ -2133,7 +2263,7 @@ type aliases:
 
                  Name               |   Type   |            Description
 :-----------------------------------|:--------:|:------------------------------------
-**getResolution()**                 | float4   |  Resolution of the view in pixels: `width`, `height`, `1 / width`, `1 / height`
+**getResolution()**                 | float4   |  Dimensions of the view's effective viewport in pixels: `width`, `height`, `1 / width`, `1 / height`. This might be different from `View::getViewport()` for instance because of added rendering guard-bands. This can be used in conjunction with `getNormalizedViewportCoord()` to generate pixel coordinates.
 **getWorldCameraPosition()**        | float3   |  Position of the camera/eye in world space
 **getWorldOffset()**                | float3   |  The shift required to obtain API-level world space
 **getTime()**                       | float    |  Current time as a remainder of 1 second. Yields a value between 0 and 1
@@ -2304,6 +2434,7 @@ variants:
 - `skinning`, used when an object is animated using GPU skinning or vertex morphing
 - `fog`, used when global fog is applied to the scene
 - `vsm`, used when VSM shadows are enabled and the object is a shadow receiver
+- `ssr`, used when screen-space reflections are enabled in the View
 
 Example:
 ```

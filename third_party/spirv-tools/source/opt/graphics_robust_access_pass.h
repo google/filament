@@ -111,7 +111,7 @@ class GraphicsRobustAccessPass : public Pass {
                                    Instruction* max, Instruction* where);
 
   // Returns a new instruction which evaluates to the length the runtime array
-  // referenced by the access chain at the specfied index.  The instruction is
+  // referenced by the access chain at the specified index.  The instruction is
   // inserted before the access chain instruction.  Returns a null pointer in
   // some cases if assumptions are violated (rather than asserting out).
   opt::Instruction* MakeRuntimeArrayLengthInst(Instruction* access_chain,

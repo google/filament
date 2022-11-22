@@ -35,7 +35,9 @@ namespace filamat {
 
 // Used for symbol tracking during static code analysis.
 struct Access {
-    enum Type {Swizzling, DirectIndexForStruct, FunctionCall};
+    enum Type {
+        Swizzling, DirectIndexForStruct, FunctionCall
+    };
     Type type;
     std::string string;
     size_t parameterIdx = 0; // Only used when type == FunctionCall;
@@ -49,8 +51,8 @@ struct Access {
 // Combinations are possible. e.g: foo(material.baseColor.xyz)
 class Symbol {
 public:
-    Symbol() {}
-    Symbol(const std::string& name) {
+    Symbol() = default;
+    explicit Symbol(const std::string& name) {
         mName = name;
     }
 
@@ -72,7 +74,7 @@ public:
 
     std::string toString() const {
         std::string str(mName);
-        for (Access access: mAccesses) {
+        for (const Access& access: mAccesses) {
             str += ".";
             str += access.string;
         }
@@ -80,7 +82,7 @@ public:
     }
 
     bool hasDirectIndexForStruct() const noexcept {
-        for (Access access : mAccesses) {
+        for (const Access& access : mAccesses) {
             if (access.type == Access::Type::DirectIndexForStruct) {
                 return true;
             }
@@ -88,8 +90,8 @@ public:
         return false;
     }
 
-    const std::string getDirectIndexStructName() const noexcept {
-        for (Access access : mAccesses) {
+    std::string getDirectIndexStructName() const noexcept {
+        for (const Access& access : mAccesses) {
             if (access.type == Access::Type::DirectIndexForStruct) {
                 return access.string;
             }
@@ -121,34 +123,53 @@ public:
     // The shader features a material() function AND
     // The shader features a prepareMaterial() function AND
     // prepareMaterial() is called at some point in material() call chain.
-    bool analyzeFragmentShader(const std::string& shaderCode,
-            filament::backend::ShaderModel model,
-            MaterialBuilder::MaterialDomain materialDomain,
-            MaterialBuilder::TargetApi targetApi, bool hasCustomSurfaceShading) const noexcept;
+    static bool analyzeFragmentShader(const std::string& shaderCode,
+            filament::backend::ShaderModel model, MaterialBuilder::MaterialDomain materialDomain,
+            MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+            bool hasCustomSurfaceShading, MaterialInfo const& info) noexcept;
 
-    bool analyzeVertexShader(const std::string& shaderCode,
+    static bool analyzeVertexShader(const std::string& shaderCode,
             filament::backend::ShaderModel model,
-            MaterialBuilder::MaterialDomain materialDomain,
-            MaterialBuilder::TargetApi targetApi) const noexcept;
+            MaterialBuilder::MaterialDomain materialDomain, MaterialBuilder::TargetApi targetApi,
+            MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& info) noexcept;
 
-    // Public for unit tests.
+    static bool analyzeComputeShader(const std::string& shaderCode,
+            filament::backend::ShaderModel model, MaterialBuilder::TargetApi targetApi,
+            MaterialBuilder::TargetLanguage targetLanguage,
+            MaterialInfo const& info) noexcept;
+
+        // Public for unit tests.
     using Property = MaterialBuilder::Property;
     using ShaderModel = filament::backend::ShaderModel;
     // Use static code analysis on the fragment shader AST to guess properties used in user provided
     // glgl code. Populate properties accordingly.
     bool findProperties(
-            filament::backend::ShaderType type,
+            filament::backend::ShaderStage type,
             const std::string& shaderCode,
             MaterialBuilder::PropertyList& properties,
             MaterialBuilder::TargetApi targetApi = MaterialBuilder::TargetApi::OPENGL,
-            ShaderModel model = ShaderModel::GL_CORE_41) const noexcept;
+            MaterialBuilder::TargetLanguage targetLanguage = MaterialBuilder::TargetLanguage::GLSL,
+            ShaderModel model = ShaderModel::DESKTOP) const noexcept;
 
-    static int glslangVersionFromShaderModel(filament::backend::ShaderModel model);
+    // use 100 for ES environment, 110 for desktop; this is the GLSL version, not SPIR-V or Vulkan
+    // this is intended to be used with glslang's parse() method, which will figure out the actual
+    // version.
+    static int getGlslDefaultVersion(filament::backend::ShaderModel model);
 
-    static EShMessages glslangFlagsFromTargetApi(MaterialBuilder::TargetApi targetApi);
+    // The shading language version. Corresponds to #version $VALUE.
+    // returns the version and a boolean (true for essl, false for glsl)
+    static std::pair<int, bool> getShadingLanguageVersion(
+            filament::backend::ShaderModel model,
+            filament::backend::FeatureLevel featureLevel);
 
-    static void prepareShaderParser(MaterialBuilder::TargetApi targetApi, glslang::TShader& shader,
-            EShLanguage language, int version, MaterialBuilder::Optimization optimization);
+    static EShMessages glslangFlagsFromTargetApi(MaterialBuilder::TargetApi targetApi,
+            MaterialBuilder::TargetLanguage targetLanguage);
+
+    static void prepareShaderParser(MaterialBuilder::TargetApi targetApi,
+            MaterialBuilder::TargetLanguage targetLanguage, glslang::TShader& shader,
+            EShLanguage stage, int version);
+
+    static void textureLodBias(glslang::TShader& shader);
 
 private:
 
@@ -157,15 +178,15 @@ private:
     // in a function call.
     // Start in the function matching the signature provided and follow all out and inout calls.
     // Does NOT recurse to follow function calls.
-    bool findSymbolsUsage(const std::string& functionSignature, TIntermNode& root,
-            std::deque<Symbol>& symbols) const noexcept;
+    static bool findSymbolsUsage(std::string_view functionSignature, TIntermNode& root,
+            std::deque<Symbol>& symbols) noexcept;
 
 
     // Determine how a function affect one of its parameter by following all write and function call
     // operations on that parameter. e.g to follow material(in out  MaterialInputs), call
     // findPropertyWritesOperations("material", 0, ...);
     // Does nothing if the parameter is not marked as OUT or INOUT
-    bool findPropertyWritesOperations(const std::string& functionName, size_t parameterIdx,
+    bool findPropertyWritesOperations(std::string_view functionName, size_t parameterIdx,
             TIntermNode* rootNode, MaterialBuilder::PropertyList& properties) const noexcept;
 
     // Look at a symbol access and find out if it affects filament MaterialInput fields. Will follow

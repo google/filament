@@ -21,22 +21,19 @@ namespace filamat {
 void MaterialTextChunk::writeEntryAttributes(size_t entryIndex, Flattener& f) const noexcept {
     const TextEntry& entry = mEntries[entryIndex];
     f.writeUint8(entry.shaderModel);
-    f.writeUint8(entry.variant);
+    f.writeUint8(entry.variantKey);
     f.writeUint8(entry.stage);
 }
 
-const char* MaterialTextChunk::getShaderText(size_t entryIndex) const noexcept {
-    return mEntries[entryIndex].shader.c_str();
-}
-
-void compressShader(const char *s, Flattener &f, const LineDictionary& dictionary) {
-    f.writeUint32(static_cast<uint32_t>(strlen(s) + 1));
+void compressShader(std::string_view src, Flattener &f, const LineDictionary& dictionary) {
+    f.writeUint32(static_cast<uint32_t>(src.size() + 1));
     f.writeValuePlaceholder();
 
     size_t numLines = 0;
 
     size_t cur = 0;
 
+    const char* s = src.data();
     while (s[cur] != '\0') {
         size_t pos = cur;
         size_t len = 0;
@@ -46,11 +43,12 @@ void compressShader(const char *s, Flattener &f, const LineDictionary& dictionar
             len++;
         }
 
-        std::string newLine(s + pos, len);
+        std::string_view newLine(s + pos, len);
 
         size_t index = dictionary.getIndex(newLine);
         if (index > UINT16_MAX) {
             slog.e << "Dictionary returned line index > UINT16_MAX" << io::endl;
+            assert(false);
             continue;
         }
 
@@ -70,14 +68,14 @@ void MaterialTextChunk::flatten(Flattener& f) {
         mDuplicateMap.resize(mEntries.size());
 
         // Detect duplicate;
-        std::unordered_map<std::string, size_t> stringToIndex;
+        std::unordered_map<std::string_view, size_t> stringToIndex;
         for (size_t i = 0; i < mEntries.size(); i++) {
-            if (stringToIndex.find(getShaderText(i)) == stringToIndex.end()) { // New
-                stringToIndex[getShaderText(i)] = i;
+            const std::string& text = mEntries[i].shader;
+            if (auto iter = stringToIndex.find(text); iter != stringToIndex.end()) {
+                mDuplicateMap[i] = { true, iter->second };
+            } else {
+                stringToIndex.emplace(text, i);
                 mDuplicateMap[i].isDup = false;
-            } else { // Dup
-                mDuplicateMap[i].isDup = true;
-                mDuplicateMap[i].dupOfIndex = stringToIndex[mEntries[i].shader];
             }
         }
     }
@@ -91,21 +89,17 @@ void MaterialTextChunk::flatten(Flattener& f) {
     // Write all indexes.
     for (size_t i = 0; i < mEntries.size(); i++) {
         writeEntryAttributes(i, f);
-
-        // Try to reuse a shader if this is a dup.
-        if (mDuplicateMap[i].isDup) {
-            f.writeOffsetplaceholder(mDuplicateMap[i].dupOfIndex);
-        } else {
-            f.writeOffsetplaceholder(i);
-        }
+        const ShaderMapping& mapping = mDuplicateMap[i];
+        f.writeOffsetplaceholder(mapping.isDup ? mapping.dupOfIndex : i);
     }
 
     // Write all strings
     for (size_t i = 0; i < mEntries.size(); i++) {
-        if (mDuplicateMap[i].isDup)
+        if (mDuplicateMap[i].isDup) {
             continue;
+        }
         f.writeOffsets(i);
-        compressShader(getShaderText(i), f, mDictionary);
+        compressShader(mEntries.at(i).shader, f, mDictionary);
     }
 }
 

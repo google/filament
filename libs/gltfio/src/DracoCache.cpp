@@ -22,15 +22,19 @@
 
 #include <utils/Log.h>
 
+#if GLTFIO_DRACO_SUPPORTED
+
 #include <memory>
 #include <vector>
 
 using std::unique_ptr;
 using std::vector;
 
+#endif
+
 using namespace utils;
 
-namespace gltfio {
+namespace filament::gltfio {
 
 DracoMesh* DracoCache::findOrCreateMesh(const cgltf_buffer_view* key) {
     auto iter = mCache.find(key);
@@ -222,4 +226,4 @@ bool DracoMesh::getVertexAttributes(uint32_t attributeId, cgltf_accessor* target
 
 #endif
 
-} // namespace gltfio
+} // namespace filament::gltfio

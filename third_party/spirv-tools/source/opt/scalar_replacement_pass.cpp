@@ -24,9 +24,11 @@
 #include "source/opt/reflect.h"
 #include "source/opt/types.h"
 #include "source/util/make_unique.h"
+#include "types.h"
 
 static const uint32_t kDebugValueOperandValueIndex = 5;
 static const uint32_t kDebugValueOperandExpressionIndex = 6;
+static const uint32_t kDebugDeclareOperandVariableIndex = 5;
 
 namespace spvtools {
 namespace opt {
@@ -34,6 +36,10 @@ namespace opt {
 Pass::Status ScalarReplacementPass::Process() {
   Status status = Status::SuccessWithoutChange;
   for (auto& f : *get_module()) {
+    if (f.IsDeclaration()) {
+      continue;
+    }
+
     Status functionStatus = ProcessFunction(&f);
     if (functionStatus == Status::Failure)
       return functionStatus;
@@ -83,14 +89,14 @@ Pass::Status ScalarReplacementPass::ReplaceVariable(
   std::vector<Instruction*> dead;
   bool replaced_all_uses = get_def_use_mgr()->WhileEachUser(
       inst, [this, &replacements, &dead](Instruction* user) {
-        if (user->GetOpenCL100DebugOpcode() == OpenCLDebugInfo100DebugDeclare) {
+        if (user->GetCommonDebugOpcode() == CommonDebugInfoDebugDeclare) {
           if (ReplaceWholeDebugDeclare(user, replacements)) {
             dead.push_back(user);
             return true;
           }
           return false;
         }
-        if (user->GetOpenCL100DebugOpcode() == OpenCLDebugInfo100DebugValue) {
+        if (user->GetCommonDebugOpcode() == CommonDebugInfoDebugValue) {
           if (ReplaceWholeDebugValue(user, replacements)) {
             dead.push_back(user);
             return true;
@@ -172,10 +178,14 @@ bool ScalarReplacementPass::ReplaceWholeDebugDeclare(
   // Add DebugValue instruction with Indexes operand and Deref operation.
   int32_t idx = 0;
   for (const auto* var : replacements) {
+    Instruction* insert_before = var->NextNode();
+    while (insert_before->opcode() == SpvOpVariable)
+      insert_before = insert_before->NextNode();
+    assert(insert_before != nullptr && "unexpected end of list");
     Instruction* added_dbg_value =
         context()->get_debug_info_mgr()->AddDebugValueForDecl(
             dbg_decl, /*value_id=*/var->result_id(),
-            /*insert_before=*/var->NextNode(), /*scope_and_line=*/dbg_decl);
+            /*insert_before=*/insert_before, /*scope_and_line=*/dbg_decl);
 
     if (added_dbg_value == nullptr) return false;
     added_dbg_value->AddOperand(
@@ -386,7 +396,7 @@ bool ScalarReplacementPass::CreateReplacementVariables(
             if (!components_used || components_used->count(elem)) {
               CreateVariable(*id, inst, elem, replacements);
             } else {
-              replacements->push_back(CreateNullConstant(*id));
+              replacements->push_back(GetUndef(*id));
             }
             elem++;
           });
@@ -397,8 +407,8 @@ bool ScalarReplacementPass::CreateReplacementVariables(
           CreateVariable(type->GetSingleWordInOperand(0u), inst, i,
                          replacements);
         } else {
-          replacements->push_back(
-              CreateNullConstant(type->GetSingleWordInOperand(0u)));
+          uint32_t element_type_id = type->GetSingleWordInOperand(0);
+          replacements->push_back(GetUndef(element_type_id));
         }
       }
       break;
@@ -418,6 +428,10 @@ bool ScalarReplacementPass::CreateReplacementVariables(
   TransferAnnotations(inst, replacements);
   return std::find(replacements->begin(), replacements->end(), nullptr) ==
          replacements->end();
+}
+
+Instruction* ScalarReplacementPass::GetUndef(uint32_t type_id) {
+  return get_def_use_mgr()->GetDef(Type2Undef(type_id));
 }
 
 void ScalarReplacementPass::TransferAnnotations(
@@ -504,7 +518,7 @@ void ScalarReplacementPass::CreateVariable(
     }
   }
 
-  // Update the OpenCL.DebugInfo.100 debug information.
+  // Update the DebugInfo debug information.
   inst->UpdateDebugInfoFrom(varInst);
 
   replacements->push_back(inst);
@@ -791,8 +805,8 @@ bool ScalarReplacementPass::CheckUses(const Instruction* inst,
   get_def_use_mgr()->ForEachUse(inst, [this, max_legal_index, stats, &ok](
                                           const Instruction* user,
                                           uint32_t index) {
-    if (user->GetOpenCL100DebugOpcode() == OpenCLDebugInfo100DebugDeclare ||
-        user->GetOpenCL100DebugOpcode() == OpenCLDebugInfo100DebugValue) {
+    if (user->GetCommonDebugOpcode() == CommonDebugInfoDebugDeclare ||
+        user->GetCommonDebugOpcode() == CommonDebugInfoDebugValue) {
       // TODO: include num_partial_accesses if it uses Fragment operation or
       // DebugValue has Indexes operand.
       stats->num_full_accesses++;
@@ -864,6 +878,11 @@ bool ScalarReplacementPass::CheckUsesRelaxed(const Instruction* inst) const {
           case SpvOpImageTexelPointer:
             if (!CheckImageTexelPointer(index)) ok = false;
             break;
+          case SpvOpExtInst:
+            if (user->GetCommonDebugOpcode() != CommonDebugInfoDebugDeclare ||
+                !CheckDebugDeclare(index))
+              ok = false;
+            break;
           default:
             ok = false;
             break;
@@ -894,6 +913,12 @@ bool ScalarReplacementPass::CheckStore(const Instruction* inst,
     return false;
   return true;
 }
+
+bool ScalarReplacementPass::CheckDebugDeclare(uint32_t index) const {
+  if (index != kDebugDeclareOperandVariableIndex) return false;
+  return true;
+}
+
 bool ScalarReplacementPass::IsLargerThanSizeLimit(uint64_t length) const {
   if (max_num_elements_ == 0) {
     return false;
@@ -959,20 +984,6 @@ ScalarReplacementPass::GetUsedComponents(Instruction* inst) {
   });
 
   return result;
-}
-
-Instruction* ScalarReplacementPass::CreateNullConstant(uint32_t type_id) {
-  analysis::TypeManager* type_mgr = context()->get_type_mgr();
-  analysis::ConstantManager* const_mgr = context()->get_constant_mgr();
-
-  const analysis::Type* type = type_mgr->GetType(type_id);
-  const analysis::Constant* null_const = const_mgr->GetConstant(type, {});
-  Instruction* null_inst =
-      const_mgr->GetDefiningInstruction(null_const, type_id);
-  if (null_inst != nullptr) {
-    context()->UpdateDefUse(null_inst);
-  }
-  return null_inst;
 }
 
 uint64_t ScalarReplacementPass::GetMaxLegalIndex(

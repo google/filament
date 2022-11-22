@@ -24,12 +24,16 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.Size;
 
+import com.google.android.filament.proguard.UsedByNative;
+
+@UsedByNative("AssetLoader.cpp")
 public interface MaterialProvider {
 
     /**
      * MaterialKey specifies the requirements for a requested glTF material.
      * The provider creates Filament materials that fulfill these requirements.
      */
+    @UsedByNative("MaterialKey.cpp")
     public static class MaterialKey {
         public boolean doubleSided;
         public boolean unlit;
@@ -99,9 +103,16 @@ public interface MaterialProvider {
      * @param uvmap Output argument that gets populated with a small table that maps from a glTF uv
      *              index to a Filament uv index (0 = UNUSED, 1 = UV0, 2 = UV1).
      * @param label Optional tag that is not a part of the cache key.
+     * @param extras Optional extras as stringified JSON (not a part of the cache key).
      */
     public @Nullable MaterialInstance createMaterialInstance(MaterialKey config,
-            @NonNull @Size(min = 8) int[] uvmap, @Nullable String label);
+            @NonNull @Size(min = 8) int[] uvmap, @Nullable String label, @Nullable String extras);
+
+    /**
+     * Creates or fetches a compiled Filament material corresponding to the given config.
+     */
+    public @Nullable Material getMaterial(MaterialKey config, @NonNull @Size(min = 8) int[] uvmap,
+            @Nullable String label);
 
     /**
      * Creates and returns an array containing all cached materials.
@@ -126,4 +137,10 @@ public interface MaterialProvider {
      * clients to take ownership of the cache if desired.
      */
     public void destroyMaterials();
+
+    /**
+     * Frees memory consumed by the native <code>MaterialProvider</code>, but does not destroy
+     * cached materials.
+     */
+    public void destroy();
 }

@@ -20,6 +20,10 @@
 #include <filament/View.h>
 #include <filament/Viewport.h>
 
+#include "common/CallbackUtils.h"
+
+#include "private/backend/VirtualMachineEnv.h"
+
 using namespace filament;
 
 extern "C" JNIEXPORT void JNICALL
@@ -82,13 +86,19 @@ Java_com_google_android_filament_View_nSetRenderTarget(JNIEnv*, jclass,
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetSampleCount(JNIEnv*, jclass, jlong nativeView, jint count) {
     View* view = (View*) nativeView;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     view->setSampleCount((uint8_t) count);
+#pragma clang diagnostic pop
 }
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_View_nGetSampleCount(JNIEnv*, jclass, jlong nativeView) {
     View* view = (View*) nativeView;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return view->getSampleCount();
+#pragma clang diagnostic pop
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -139,16 +149,26 @@ Java_com_google_android_filament_View_nSetShadowType(JNIEnv*, jclass, jlong nati
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetVsmShadowOptions(JNIEnv*, jclass, jlong nativeView,
-        jint anisotropy, jboolean mipmapping, jfloat exponent, jfloat minVarianceScale,
+        jint anisotropy, jboolean mipmapping, jboolean highPrecision, jfloat minVarianceScale,
         jfloat lightBleedReduction) {
     View* view = (View*) nativeView;
     View::VsmShadowOptions options;
     options.anisotropy = (uint8_t)anisotropy;
     options.mipmapping = (bool)mipmapping;
-    options.exponent = exponent;
+    options.highPrecision = (bool)highPrecision;
     options.minVarianceScale = minVarianceScale;
     options.lightBleedReduction = lightBleedReduction;
     view->setVsmShadowOptions(options);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetSoftShadowOptions(JNIEnv*, jclass, jlong nativeView,
+        jfloat penumbraScale, jfloat penumbraRatioScale) {
+    View* view = (View*) nativeView;
+    View::SoftShadowOptions options;
+    options.penumbraScale = penumbraScale;
+    options.penumbraRatioScale = penumbraRatioScale;
+    view->setSoftShadowOptions(options);
 }
 
 extern "C"
@@ -240,14 +260,14 @@ Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclas
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetSSCTOptions(JNIEnv *, jclass, jlong nativeView,
-        jfloat ssctLightConeRad, jfloat ssctStartTraceDistance, jfloat ssctContactDistanceMax,
+        jfloat ssctLightConeRad, jfloat ssctShadowDistance, jfloat ssctContactDistanceMax,
         jfloat ssctIntensity, jfloat ssctLightDirX, jfloat ssctLightDirY, jfloat ssctLightDirZ,
         jfloat ssctDepthBias, jfloat ssctDepthSlopeBias, jint ssctSampleCount,
         jint ssctRayCount, jboolean ssctEnabled) {
     View* view = (View*) nativeView;
     View::AmbientOcclusionOptions options = view->getAmbientOcclusionOptions();
     options.ssct.lightConeRad = ssctLightConeRad;
-    options.ssct.shadowDistance = ssctStartTraceDistance;
+    options.ssct.shadowDistance = ssctShadowDistance;
     options.ssct.contactDistanceMax = ssctContactDistanceMax;
     options.ssct.intensity = ssctIntensity;
     options.ssct.lightDirection = math::float3{ ssctLightDirX, ssctLightDirY, ssctLightDirZ };
@@ -321,8 +341,8 @@ Java_com_google_android_filament_View_nSetBlendMode(JNIEnv *, jclass , jlong nat
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetDepthOfFieldOptions(JNIEnv *, jclass ,
-        jlong nativeView, jfloat focusDistance, jfloat cocScale, jfloat maxApertureDiameter, jboolean enabled, jint filter,
+Java_com_google_android_filament_View_nSetDepthOfFieldOptions(JNIEnv *, jclass,
+        jlong nativeView, jfloat cocScale, jfloat maxApertureDiameter, jboolean enabled, jint filter,
         jboolean nativeResolution, jint foregroundRingCount, jint backgroundRingCount, jint fastGatherRingCount,
         jint maxForegroundCOC, jint maxBackgroundCOC) {
     View* view = (View*) nativeView;
@@ -353,11 +373,32 @@ Java_com_google_android_filament_View_nSetVignetteOptions(JNIEnv*, jclass, jlong
 
 extern "C"
 JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetMultiSampleAntiAliasingOptions(JNIEnv* env, jclass clazz,
+        jlong nativeView, jboolean enabled, jint sampleCount, jboolean customResolve) {
+    View* view = (View*) nativeView;
+    view->setMultiSampleAntiAliasingOptions({
+            .enabled = (bool)enabled,
+            .sampleCount = (uint8_t)sampleCount,
+            .customResolve = (bool)customResolve});
+}
+
+extern "C"
+JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetTemporalAntiAliasingOptions(JNIEnv *, jclass,
         jlong nativeView, jfloat feedback, jfloat filterWidth, jboolean enabled) {
     View* view = (View*) nativeView;
     view->setTemporalAntiAliasingOptions({
             .filterWidth = filterWidth, .feedback = feedback, .enabled = (bool) enabled});
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetScreenSpaceReflectionsOptions(JNIEnv*, jclass,
+        jlong nativeView, jfloat thickness, jfloat bias, jfloat maxDistance, jfloat stride, jboolean enabled) {
+    View* view = (View*) nativeView;
+    view->setScreenSpaceReflectionsOptions({.thickness = thickness, .bias = bias,
+            .maxDistance = maxDistance, .stride = stride, .enabled = (bool) enabled
+    });
 }
 
 extern "C"
@@ -381,4 +422,66 @@ Java_com_google_android_filament_View_nIsScreenSpaceRefractionEnabled(JNIEnv *, 
         jlong nativeView) {
     View* view = (View*) nativeView;
     return (jboolean)view->isScreenSpaceRefractionEnabled();
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nPick(JNIEnv* env, jclass,
+        jlong nativeView,
+        jint x, jint y, jobject handler, jobject internalCallback) {
+
+    // jniState will be initialized the first time this method is called
+    static const struct JniState {
+        jclass internalOnPickCallbackClass;
+        jfieldID renderableFieldId;
+        jfieldID depthFieldId;
+        jfieldID fragCoordXFieldId;
+        jfieldID fragCoordYFieldId;
+        jfieldID fragCoordZFieldId;
+        explicit JniState(JNIEnv* env) noexcept {
+            internalOnPickCallbackClass = env->FindClass("com/google/android/filament/View$InternalOnPickCallback");
+            renderableFieldId = env->GetFieldID(internalOnPickCallbackClass, "mRenderable", "I");
+            depthFieldId = env->GetFieldID(internalOnPickCallbackClass, "mDepth", "F");
+            fragCoordXFieldId = env->GetFieldID(internalOnPickCallbackClass, "mFragCoordsX", "F");
+            fragCoordYFieldId = env->GetFieldID(internalOnPickCallbackClass, "mFragCoordsY", "F");
+            fragCoordZFieldId = env->GetFieldID(internalOnPickCallbackClass, "mFragCoordsZ", "F");
+        }
+    } jniState(env);
+
+    View* view = (View*) nativeView;
+    JniCallback *callback = JniCallback::make(env, handler, internalCallback);
+    view->pick(x, y, [callback](View::PickingQueryResult const& result) {
+        // this is executed on the backend/service thread
+        jobject obj = callback->getCallbackObject();
+        JNIEnv* env = filament::VirtualMachineEnv::get().getEnvironment();
+        env->SetIntField(obj, jniState.renderableFieldId, (jint)result.renderable.getId());
+        env->SetFloatField(obj, jniState.depthFieldId, result.depth);
+        env->SetFloatField(obj, jniState.fragCoordXFieldId, result.fragCoords.x);
+        env->SetFloatField(obj, jniState.fragCoordYFieldId, result.fragCoords.y);
+        env->SetFloatField(obj, jniState.fragCoordZFieldId, result.fragCoords.z);
+        JniCallback::postToJavaAndDestroy(callback);
+    }, callback->getHandler());
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetStencilBufferEnabled(JNIEnv *, jclass, jlong nativeView,
+        jboolean enabled) {
+    View* view = (View*) nativeView;
+    view->setStencilBufferEnabled(enabled);
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_View_nIsStencilBufferEnabled(JNIEnv *, jclass, jlong nativeView) {
+    View* view = (View*) nativeView;
+    return view->isStencilBufferEnabled();
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetGuardBandOptions(JNIEnv *, jclass,
+        jlong nativeView, jboolean enabled) {
+    View* view = (View*) nativeView;
+    view->setGuardBandOptions({ .enabled = (bool)enabled });
 }

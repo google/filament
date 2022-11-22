@@ -1,0 +1,27 @@
+{
+	"name": "meshoptimizer",
+	"version": "0.18.1",
+	"description": "Mesh optimizaiton library that makes meshes smaller and faster to render",
+	"author": "Arseny Kapoulkine",
+	"license": "MIT",
+	"bugs": "https://github.com/zeux/meshoptimizer/issues",
+	"homepage": "https://github.com/zeux/meshoptimizer",
+	"keywords": [
+		"compression",
+		"mesh"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/zeux/meshoptimizer"
+	},
+	"files": [
+		"*.js", "*.ts"
+	],
+	"main": "index.js",
+	"module": "index.module.js",
+	"types": "index.module.d.ts",
+	"scripts": {
+		"test": "node meshopt_encoder.test.js && node meshopt_decoder.test.js && node meshopt_simplifier.test.js",
+		"prepublishOnly": "npm test"
+	}
+}

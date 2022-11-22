@@ -192,6 +192,14 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& me
 
                 for (size_t j = 0; j < numFaces; ++j) {
                     const aiFace& face = faces[j];
+
+                    // Even though assimp triangulated the mesh, it still might have degenerate
+                    // triangles, so we need to do a check here to prevent potential OOB reads.
+                    if (UTILS_UNLIKELY(face.mNumIndices != 3)) {
+                        fprintf(stderr, "assimp error: degenerate triangle.\n");
+                        exit(1);
+                    }
+
                     for (size_t k = 0; k < face.mNumIndices; ++k) {
                         g_mesh.indices.push_back(uint32_t(face.mIndices[k] + indicesOffset));
                     }
@@ -224,6 +232,11 @@ static void printUsage(const char* name) {
     std::string execName(utils::Path(name).getName());
     std::string usage(
             "FILAMESH is a tool to convert meshes into an optimized binary format\n"
+            "\n"
+            "Caution! FILAMESH was designed to operate on trusted inputs. To minimize the risk of\n"
+            "triggering memory corruption vulnerabilities, please make sure that the files passed\n"
+            "to FILAMESH come from a trusted source, or run FILAMESH in a sandboxed environment.\n"
+            "\n"
                     "Usage:\n"
                     "    FILAMESH [options] <source mesh> <destination file>\n"
                     "\n"
@@ -359,6 +372,11 @@ int main(int argc, char* argv[]) {
         } else {
             processNode<false, false>(scene, node, g_mesh.parts);
         }
+    }
+
+    if (g_mesh.parts.empty()) {
+        std::cerr << "The mesh doesn't have any parts." << std::endl;
+        return 1;
     }
 
     uint32_t materialCount = scene->mNumMaterials;

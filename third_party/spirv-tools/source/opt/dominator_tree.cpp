@@ -48,7 +48,7 @@ namespace {
 // BBType - BasicBlock type. Will either be BasicBlock or DominatorTreeNode
 // SuccessorLambda - Lamdba matching the signature of 'const
 // std::vector<BBType>*(const BBType *A)'. Will return a vector of the nodes
-// succeding BasicBlock A.
+// succeeding BasicBlock A.
 // PostLambda - Lamdba matching the signature of 'void (const BBType*)' will be
 // called on each node traversed AFTER their children.
 // PreLambda - Lamdba matching the signature of 'void (const BBType*)' will be
@@ -69,7 +69,7 @@ static void DepthFirstSearch(const BBType* bb, SuccessorLambda successors,
 // BBType - BasicBlock type. Will either be BasicBlock or DominatorTreeNode
 // SuccessorLambda - Lamdba matching the signature of 'const
 // std::vector<BBType>*(const BBType *A)'. Will return a vector of the nodes
-// succeding BasicBlock A.
+// succeeding BasicBlock A.
 // PostLambda - Lamdba matching the signature of 'void (const BBType*)' will be
 // called on each node traversed after their children.
 template <typename BBType, typename SuccessorLambda, typename PostLambda>

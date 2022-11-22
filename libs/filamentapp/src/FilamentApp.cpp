@@ -18,9 +18,7 @@
 
 #include <filamentapp/FilamentApp.h>
 
-#if !defined(WIN32)
-#    include <unistd.h>
-#else
+#if defined(WIN32)
 #    include <SDL_syswm.h>
 #    include <utils/unwindows.h>
 #endif
@@ -41,6 +39,10 @@
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
 #include <filament/View.h>
+
+#ifndef NDEBUG
+#include <filament/DebugRegistry.h>
+#endif
 
 #include <filagui/ImGuiHelper.h>
 
@@ -270,6 +272,14 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
                     if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
                         mClosed = true;
                     }
+#ifndef NDEBUG
+                    if (event.key.keysym.scancode == SDL_SCANCODE_PRINTSCREEN) {
+                        DebugRegistry& debug = mEngine->getDebugRegistry();
+                        bool* captureFrame =
+                                debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
+                        *captureFrame = true;
+                    }
+#endif
                     window->keyDown(event.key.keysym.scancode);
                     break;
                 case SDL_KEYUP:
@@ -376,17 +386,18 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         lightmapCube->mapFrustum(*mEngine, lightmapCamera);
         cameraCube->mapFrustum(*mEngine, window->mMainCamera);
 
-        // TODO: we need better timing or use SDL_GL_SetSwapInterval
-        SDL_Delay(16);
+        // Delay rendering for roughly one monitor refresh interval
+        // TODO: Use SDL_GL_SetSwapInterval for proper vsync
+        SDL_DisplayMode Mode;
+        int refreshIntervalMS = (SDL_GetDesktopDisplayMode(
+            SDL_GetWindowDisplayIndex(window->mWindow), &Mode) == 0 && 
+            Mode.refresh_rate != 0) ? round(1000.0 / Mode.refresh_rate) : 16;
+        SDL_Delay(refreshIntervalMS);
 
         Renderer* renderer = window->getRenderer();
 
         if (preRender) {
-            for (auto const& view : window->mViews) {
-                if (view.get() != window->mUiView) {
-                    preRender(mEngine, view->getView(), mScene, renderer);
-                }
-            }
+            preRender(mEngine, window->mViews[0]->getView(), mScene, renderer);
         }
 
         if (renderer->beginFrame(window->getSwapChain())) {
@@ -396,17 +407,10 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             for (auto const& view : window->mViews) {
                 renderer->render(view->getView());
             }
-            renderer->endFrame();
-
-            // We call PostRender only when the frame has not been skipped. It might be used
-            // for taking screenshots under the assumption that a state change has taken effect.
             if (postRender) {
-                for (auto const& view : window->mViews) {
-                    if (view.get() != window->mUiView) {
-                        postRender(mEngine, view->getView(), mScene, renderer);
-                    }
-                }
+                postRender(mEngine, window->mViews[0]->getView(), mScene, renderer);
             }
+            renderer->endFrame();
 
         } else {
             ++mSkippedFrames;
@@ -510,7 +514,7 @@ void FilamentApp::initSDL() {
 
 FilamentApp::Window::Window(FilamentApp* filamentApp,
         const Config& config, std::string title, size_t w, size_t h)
-        : mFilamentApp(filamentApp) {
+        : mFilamentApp(filamentApp), mIsHeadless(config.headless) {
     const int x = SDL_WINDOWPOS_CENTERED;
     const int y = SDL_WINDOWPOS_CENTERED;
     uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
@@ -532,6 +536,9 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         mWidth = w;
         mHeight = h;
     } else {
+
+        void* nativeWindow = ::getNativeWindow(mWindow);
+
         // Create the Engine after the window in case this happens to be a single-threaded platform.
         // For single-threaded platforms, we need to ensure that Filament's OpenGL context is
         // current, rather than the one created by SDL.
@@ -540,7 +547,6 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         // get the resolved backend
         mBackend = config.backend = mFilamentApp->mEngine->getBackend();
 
-        void* nativeWindow = ::getNativeWindow(mWindow);
         void* nativeSwapChain = nativeWindow;
 
 #if defined(__APPLE__)
@@ -561,6 +567,11 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 #endif
 
 #endif
+
+        // Select the feature level to use
+        config.featureLevel = std::min(config.featureLevel,
+                mFilamentApp->mEngine->getSupportedFeatureLevel());
+        mFilamentApp->mEngine->setActiveFeatureLevel(config.featureLevel);
 
         mSwapChain = mFilamentApp->mEngine->createSwapChain(nativeSwapChain);
     }
@@ -583,7 +594,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
     if (config.splitView) {
         mViews.emplace_back(mDepthView = new CView(*mRenderer, "Depth View"));
         mViews.emplace_back(mGodView = new GodView(*mRenderer, "God View"));
-        mViews.emplace_back(mOrthoView = new CView(*mRenderer, "Ortho View"));
+        mViews.emplace_back(mOrthoView = new CView(*mRenderer, "Shadow View"));
     }
     mViews.emplace_back(mUiView = new CView(*mRenderer, "UI View"));
 
@@ -594,23 +605,23 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
             .build(config.cameraMode);
     mDebugCameraMan = CameraManipulator::Builder()
             .targetPosition(0, 0, -4)
-            .build(camutils::Mode::ORBIT);
+            .flightMoveDamping(15.0)
+            .build(config.cameraMode);
 
     mMainView->setCamera(mMainCamera);
     mMainView->setCameraManipulator(mMainCameraMan);
     if (config.splitView) {
         // Depth view always uses the main camera
         mDepthView->setCamera(mMainCamera);
+        mDepthView->setCameraManipulator(mMainCameraMan);
 
         // The god view uses the main camera for culling, but the debug camera for viewing
         mGodView->setCamera(mMainCamera);
         mGodView->setGodCamera(mDebugCamera);
+        mGodView->setCameraManipulator(mDebugCameraMan);
 
         // Ortho view obviously uses an ortho camera
         mOrthoView->setCamera( (Camera *)mMainView->getView()->getDirectionalLightCamera() );
-
-        mDepthView->setCameraManipulator(mMainCameraMan);
-        mGodView->setCameraManipulator(mDebugCameraMan);
     }
 
     // configure the cameras
@@ -755,7 +766,7 @@ void FilamentApp::Window::configureCamerasForWindow() {
     float dpiScaleY = 1.0f;
 
     // If the app is not headless, query the window for its physical & virtual sizes.
-    if (mWindow) {
+    if (!mIsHeadless) {
         uint32_t width, height;
         SDL_GL_GetDrawableSize(mWindow, (int*) &width, (int*) &height);
         mWidth = (size_t) width;
@@ -784,8 +795,6 @@ void FilamentApp::Window::configureCamerasForWindow() {
     double far = 100;
     mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, double(mainWidth) / height, near, far);
     mDebugCamera->setProjection(45.0, double(width) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
-    mOrthoCamera->setProjection(Camera::Projection::ORTHO, -3, 3, -3 * ratio, 3 * ratio, near, far);
-    mOrthoCamera->lookAt({ 0, 0, 0 }, {0, 0, -4});
 
     // We're in split view when there are more views than just the Main and UI views.
     if (splitview) {

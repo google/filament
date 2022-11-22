@@ -107,6 +107,15 @@ const TBuiltInResource DefaultTBuiltInResource = {
         /* .maxTaskWorkGroupSizeY_NV = */ 1,
         /* .maxTaskWorkGroupSizeZ_NV = */ 1,
         /* .maxMeshViewCountNV = */ 4,
+        /* .max_mesh_output_vertices_ext = */ 256,
+        /* .max_mesh_output_primitives_ext = */ 256,
+        /* .max_mesh_work_group_size_x_ext = */ 128,
+        /* .max_mesh_work_group_size_y_ext = */ 128,
+        /* .max_mesh_work_group_size_z_ext = */ 128,
+        /* .max_task_work_group_size_x_ext = */ 128,
+        /* .max_task_work_group_size_y_ext = */ 128,
+        /* .max_task_work_group_size_z_ext = */ 128,
+        /* .max_mesh_view_count_ext = */ 4,
         /* .maxDualSourceDrawBuffersEXT = */ 1,
 
         /* .limits = */ {

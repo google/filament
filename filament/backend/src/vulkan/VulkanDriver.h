@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANDRIVER_H
-#define TNT_FILAMENT_DRIVER_VULKANDRIVER_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANDRIVER_H
+#define TNT_FILAMENT_BACKEND_VULKANDRIVER_H
 
 #include "VulkanPipelineCache.h"
 #include "VulkanBlitter.h"
@@ -34,31 +34,32 @@
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 class VulkanPlatform;
-struct VulkanRenderTarget;
 struct VulkanSamplerGroup;
 
 class VulkanDriver final : public DriverBase {
 public:
-    static Driver* create(backend::VulkanPlatform* platform,
-            const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept;
+    static Driver* create(VulkanPlatform* platform,
+            const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount, const Platform::DriverConfig& driverConfig) noexcept;
 
 private:
 
     void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
 
-    inline VulkanDriver(backend::VulkanPlatform* platform,
-            const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept;
+    inline VulkanDriver(VulkanPlatform* platform,
+            const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount,
+            const Platform::DriverConfig& driverConfig) noexcept;
 
     ~VulkanDriver() noexcept override;
+
+    Dispatcher getDispatcher() const noexcept final;
 
     ShaderModel getShaderModel() const noexcept final;
 
     template<typename T>
-    friend class backend::ConcreteDispatcher;
+    friend class ConcreteDispatcher;
 
 #define DECL_DRIVER_API(methodName, paramsDecl, params) \
     UTILS_ALWAYS_INLINE inline void methodName(paramsDecl);
@@ -77,29 +78,29 @@ private:
 
 private:
 
-    backend::HandleAllocatorVK mHandleAllocator;
+    HandleAllocatorVK mHandleAllocator;
 
-    backend::VulkanPlatform& mContextManager;
+    VulkanPlatform& mContextManager;
 
     template<typename D, typename ... ARGS>
-    backend::Handle<D> initHandle(ARGS&& ... args) noexcept {
+    Handle<D> initHandle(ARGS&& ... args) noexcept {
         return mHandleAllocator.allocateAndConstruct<D>(std::forward<ARGS>(args) ...);
     }
 
     template<typename D>
-    backend::Handle<D> allocHandle() noexcept {
+    Handle<D> allocHandle() noexcept {
         return mHandleAllocator.allocate<D>();
     }
 
     template<typename D, typename B, typename ... ARGS>
     typename std::enable_if<std::is_base_of<B, D>::value, D>::type*
-    construct(backend::Handle<B> const& handle, ARGS&& ... args) noexcept {
+    construct(Handle<B> const& handle, ARGS&& ... args) noexcept {
         return mHandleAllocator.construct<D, B>(handle, std::forward<ARGS>(args) ...);
     }
 
     template<typename B, typename D,
             typename = typename std::enable_if<std::is_base_of<B, D>::value, D>::type>
-    void destruct(backend::Handle<B> handle, D const* p) noexcept {
+    void destruct(Handle<B> handle, D const* p) noexcept {
         return mHandleAllocator.deallocate(handle, p);
     }
 
@@ -107,7 +108,7 @@ private:
     typename std::enable_if_t<
             std::is_pointer_v<Dp> &&
             std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
-    handle_cast(backend::Handle<B>& handle) noexcept {
+    handle_cast(Handle<B>& handle) noexcept {
         return mHandleAllocator.handle_cast<Dp, B>(handle);
     }
 
@@ -115,7 +116,7 @@ private:
     inline typename std::enable_if_t<
             std::is_pointer_v<Dp> &&
             std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
-    handle_cast(backend::Handle<B> const& handle) noexcept {
+    handle_cast(Handle<B> const& handle) noexcept {
         return mHandleAllocator.handle_cast<Dp, B>(handle);
     }
 
@@ -133,6 +134,12 @@ private:
         mHandleAllocator.deallocate(handle, ptr);
     }
 
+    inline void setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
+            Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh);
+
+    inline void setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph, PrimitiveType pt,
+            uint32_t offset, uint32_t minIndex, uint32_t maxIndex, uint32_t count);
+
     void refreshSwapChain();
     void collectGarbage();
 
@@ -143,13 +150,11 @@ private:
     VulkanFboCache mFramebufferCache;
     VulkanSamplerCache mSamplerCache;
     VulkanBlitter mBlitter;
-    VulkanRenderTarget* mCurrentRenderTarget = nullptr;
     VulkanSamplerGroup* mSamplerBindings[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
     VkDebugReportCallbackEXT mDebugCallback = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT mDebugMessenger = VK_NULL_HANDLE;
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKANDRIVER_H
+#endif // TNT_FILAMENT_BACKEND_VULKANDRIVER_H

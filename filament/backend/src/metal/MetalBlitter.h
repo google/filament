@@ -26,7 +26,6 @@
 
 namespace filament {
 namespace backend {
-namespace metal {
 
 struct MetalContext;
 
@@ -45,7 +44,7 @@ public:
             uint32_t slice = 0;      // must be 0 on source attachment
         };
 
-        // Valid source formats:       2D, 2DMultisample, 3D
+        // Valid source formats:       2D, 2DArray, 2DMultisample, 3D
         // Valid destination formats:  2D, 2DArray, 3D, Cube
         Attachment source, destination;
         SamplerMagFilter filter;
@@ -133,7 +132,6 @@ private:
 
 };
 
-} // namespace metal
 } // namespace backend
 } // namespace filament
 

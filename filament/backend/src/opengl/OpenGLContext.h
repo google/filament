@@ -26,50 +26,54 @@
 
 #include "GLUtils.h"
 
+#include <array>
 #include <set>
+#include <tuple>
+#include <utility>
 
-namespace filament {
+namespace filament::backend {
 
 class OpenGLContext {
 public:
-    static constexpr const size_t MAX_TEXTURE_UNIT_COUNT = 16;   // All mobile GPUs as of 2016
+    static constexpr const size_t MAX_TEXTURE_UNIT_COUNT = MAX_SAMPLER_COUNT;
+    static constexpr const size_t DUMMY_TEXTURE_BINDING = 31; // highest binding less than 32
     static constexpr const size_t MAX_BUFFER_BINDINGS = 32;
     typedef math::details::TVec4<GLint> vec4gli;
     typedef math::details::TVec2<GLclampf> vec2glf;
 
-    // TODO: the footprint of this structure can be reduced. We need only 1 bit for index type, 16
-    // bits for vertexAttribArray. We can also use fewer bits for vertexBufferVersion, although
-    // this will require a corollary update in OpenGLDriver::setVertexBufferObject().
     struct RenderPrimitive {
-        GLuint vao = 0;
-        GLenum indicesType = GL_UNSIGNED_INT;
-        GLuint elementArray = 0;
-        utils::bitset32 vertexAttribArray;
+        static_assert(MAX_VERTEX_ATTRIBUTE_COUNT <= 16);
+
+        GLuint vao = 0;                                         // 4
+        GLuint elementArray = 0;                                // 4
+        utils::bitset<uint16_t> vertexAttribArray;              // 2
+
+        // If this version number does not match vertexBufferWithObjects->bufferObjectsVersion,
+        // then the VAO needs to be updated.
+        uint8_t vertexBufferVersion = 0;                        // 1
+        uint8_t indicesSize = 0;                                // 1
 
         // The optional 32-bit handle to a GLVertexBuffer is necessary only if the referenced
         // VertexBuffer supports buffer objects. If this is zero, then the VBO handles array is
         // immutable.
-        backend::Handle<backend::HwVertexBuffer> vertexBufferWithObjects = {};
+        Handle<HwVertexBuffer> vertexBufferWithObjects = {};    // 4
 
-        // If this version number does not match vertexBufferWithObjects->bufferObjectsVersion,
-        // then the VAO needs to be updated.
-        uint8_t vertexBufferVersion = 0;
+        GLenum getIndicesType() const noexcept {
+            return indicesSize == 4 ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
+        }
     } gl;
 
-    OpenGLContext() noexcept;
+    static bool queryOpenGLVersion(GLint* major, GLint* minor) noexcept;
 
-    // this is chosen to minimize code size
-    using ExtentionSet = std::set<utils::StaticString>;
-    static bool hasExtension(ExtentionSet const& exts, utils::StaticString ext) noexcept;
-    void initExtensionsGLES(GLint major, GLint minor, ExtentionSet const& extensionsMap);
-    void initExtensionsGL(GLint major, GLint minor, ExtentionSet const& extensionsMap);
+    OpenGLContext() noexcept;
 
     constexpr static inline size_t getIndexForTextureTarget(GLuint target) noexcept;
     constexpr        inline size_t getIndexForCap(GLenum cap) noexcept;
     constexpr static inline size_t getIndexForBufferTarget(GLenum target) noexcept;
 
-    backend::ShaderModel getShaderModel() const noexcept { return mShaderModel; }
+    ShaderModel getShaderModel() const noexcept { return mShaderModel; }
 
+    void resetState() noexcept;
 
     inline void useProgram(GLuint program) noexcept;
 
@@ -100,17 +104,22 @@ public:
     inline void colorMask(GLboolean flag) noexcept;
     inline void depthMask(GLboolean flag) noexcept;
     inline void depthFunc(GLenum func) noexcept;
+    inline void stencilFuncSeparate(GLenum funcFront, GLint refFront, GLuint maskFront,
+            GLenum funcBack, GLint refBack, GLuint maskBack) noexcept;
+    inline void stencilOpSeparate(GLenum sfailFront, GLenum dpfailFront, GLenum dppassFront,
+            GLenum sfailBack, GLenum dpfailBack, GLenum dppassBack) noexcept;
+    inline void stencilMaskSeparate(GLuint maskFront, GLuint maskBack) noexcept;
     inline void polygonOffset(GLfloat factor, GLfloat units) noexcept;
     inline void beginQuery(GLenum target, GLuint query) noexcept;
     inline void endQuery(GLenum target) noexcept;
-    inline GLuint getQuery(GLenum target) noexcept;
+    inline GLuint getQuery(GLenum target) const noexcept;
 
     inline void setScissor(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
     inline void viewport(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
     inline void depthRange(GLclampf near, GLclampf far) noexcept;
 
     void deleteBuffers(GLsizei n, const GLuint* buffers, GLenum target) noexcept;
-    void deleteVextexArrays(GLsizei n, const GLuint* arrays) noexcept;
+    void deleteVertexArrays(GLsizei n, const GLuint* arrays) noexcept;
 
     // glGet*() values
     struct {
@@ -119,6 +128,10 @@ public:
         GLint max_renderbuffer_size;
         GLint max_samples;
         GLint max_uniform_block_size;
+        GLint max_texture_image_units;
+        GLint max_combined_texture_image_units;
+        GLint max_transform_feedback_separate_attribs;
+        GLint max_uniform_buffer_bindings; 
         GLint uniform_buffer_offset_alignment;
     } gets = {};
 
@@ -139,9 +152,12 @@ public:
         bool EXT_multisampled_render_to_texture = false;
         bool EXT_multisampled_render_to_texture2 = false;
         bool EXT_shader_framebuffer_fetch = false;
+        bool KHR_texture_compression_astc_hdr = false;
+        bool KHR_texture_compression_astc_ldr = false;
         bool EXT_texture_compression_etc2 = false;
         bool EXT_texture_compression_s3tc = false;
         bool EXT_texture_compression_s3tc_srgb = false;
+        bool EXT_texture_cube_map_array = false;
         bool EXT_texture_filter_anisotropic = false;
         bool EXT_texture_sRGB = false;
         bool GOOGLE_cpp_style_line_directive = false;
@@ -192,10 +208,22 @@ public:
         // Some drivers incorrectly flatten the early exit condition in the EASU code, in which
         // case we need an alternative algorithm
         bool split_easu = false;
+
+        // As of Android R some qualcomm drivers invalidate buffers for the whole render pass
+        // even if glInvalidateFramebuffer() is called at the end of it.
+        bool invalidate_end_only_if_invalidate_start = false;
+
+        // GLES doesn't allow feedback loops even if writes are disabled. So take we the point of
+        // view that this is generally forbidden. However, this restriction is lifted on desktop
+        // GL and Vulkan and probably Metal.
+        bool allow_read_only_ancillary_feedback_loop = false;
+
+        // Some Adreno drivers crash in glDrawXXX() when there's an uninitialized uniform block,
+        // even when the shader doesn't access it.
+        bool enable_initialize_non_used_uniform_array = false;
     } bugs;
 
     // state getters -- as needed.
-    GLuint getDrawFbo() const noexcept { return state.draw_fbo; }
     vec4gli const& getViewport() const { return state.window.viewport; }
 
     // function to handle state changes we don't control
@@ -205,11 +233,18 @@ public:
     }
     void resetProgram() noexcept { state.program.use = 0; }
 
-private:
-    backend::ShaderModel mShaderModel;
+    FeatureLevel getFeatureLevel() const noexcept { return mFeatureLevel; }
 
     // Try to keep the State structure sorted by data-access patterns
     struct State {
+        GLint major = 0;
+        GLint minor = 0;
+
+        char const* vendor = nullptr;
+        char const* renderer = nullptr;
+        char const* version = nullptr;
+        char const* shader = nullptr;
+
         GLuint draw_fbo = 0;
         GLuint read_fbo = 0;
 
@@ -235,6 +270,30 @@ private:
             GLenum depthFunc            = GL_LESS;
         } raster;
 
+        struct {
+            struct StencilFunc {
+                GLenum func             = GL_ALWAYS;
+                GLint ref               = 0;
+                GLuint mask             = ~GLuint(0);
+                bool operator != (StencilFunc const& rhs) const noexcept {
+                    return func != rhs.func || ref != rhs.ref || mask != rhs.mask;
+                }
+            };
+            struct StencilOp {
+                GLenum sfail            = GL_KEEP;
+                GLenum dpfail           = GL_KEEP;
+                GLenum dppass           = GL_KEEP;
+                bool operator != (StencilOp const& rhs) const noexcept {
+                    return sfail != rhs.sfail || dpfail != rhs.dpfail || dppass != rhs.dppass;
+                }
+            };
+            struct {
+                StencilFunc func;
+                StencilOp op;
+                GLuint stencilMask      = ~GLuint(0);
+            } front, back;
+        } stencil;
+
         struct PolygonOffset {
             GLfloat factor = 0;
             GLfloat units = 0;
@@ -255,7 +314,7 @@ private:
                     GLsizeiptr size = 0;
                 } buffers[MAX_BUFFER_BINDINGS];
             } targets[2];   // there are only 2 indexed buffer target (uniform and transform feedback)
-            GLuint genericBinding[8] = { 0 };
+            GLuint genericBinding[9] = { 0 };
         } buffers;
 
         struct {
@@ -264,7 +323,7 @@ private:
                 GLuint sampler = 0;
                 struct {
                     GLuint texture_id = 0;
-                } targets[6];  // this must match getIndexForTextureTarget()
+                } targets[7];  // this must match getIndexForTextureTarget()
             } units[MAX_TEXTURE_UNIT_COUNT];
         } textures;
 
@@ -293,7 +352,57 @@ private:
         } queries;
     } state;
 
+private:
+    ShaderModel mShaderModel = ShaderModel::MOBILE;
+    FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
+
+    const std::array<std::tuple<bool const&, char const*, char const*>, sizeof(bugs)> mBugDatabase{{
+            {   bugs.disable_glFlush,
+                    "disable_glFlush",
+                    ""},
+            {   bugs.vao_doesnt_store_element_array_buffer_binding,
+                    "vao_doesnt_store_element_array_buffer_binding",
+                    ""},
+            {   bugs.disable_shared_context_draws,
+                    "disable_shared_context_draws",
+                    ""},
+            {   bugs.texture_external_needs_rebind,
+                    "texture_external_needs_rebind",
+                    ""},
+            {   bugs.disable_invalidate_framebuffer,
+                    "disable_invalidate_framebuffer",
+                    ""},
+            {   bugs.texture_filter_anisotropic_broken_on_sampler,
+                    "texture_filter_anisotropic_broken_on_sampler",
+                    ""},
+            {   bugs.disable_feedback_loops,
+                    "disable_feedback_loops",
+                    ""},
+            {   bugs.dont_use_timer_query,
+                    "dont_use_timer_query",
+                    ""},
+            {   bugs.disable_sidecar_blit_into_texture_array,
+                    "disable_sidecar_blit_into_texture_array",
+                    ""},
+            {   bugs.split_easu,
+                    "split_easu",
+                    ""},
+            {   bugs.invalidate_end_only_if_invalidate_start,
+                    "invalidate_end_only_if_invalidate_start",
+                    ""},
+            {   bugs.allow_read_only_ancillary_feedback_loop,
+                    "allow_read_only_ancillary_feedback_loop",
+                    ""},
+            {   bugs.enable_initialize_non_used_uniform_array,
+                    "enable_initialize_non_used_uniform_array",
+                    ""},
+    }};
+
     RenderPrimitive mDefaultVAO;
+
+    // this is chosen to minimize code size
+    void initExtensionsGLES() noexcept;
+    void initExtensionsGL() noexcept;
 
     template <typename T, typename F>
     static inline void update_state(T& state, T const& expected, F functor, bool force = false) noexcept {
@@ -302,6 +411,8 @@ private:
             functor();
         }
     }
+
+    void setDefaultState() noexcept;
 
     static constexpr const size_t TEXTURE_TARGET_COUNT =
             sizeof(state.textures.units[0].targets) / sizeof(state.textures.units[0].targets[0]);
@@ -313,13 +424,15 @@ private:
 constexpr size_t OpenGLContext::getIndexForTextureTarget(GLuint target) noexcept {
     // this must match state.textures[].targets[]
     switch (target) {
-        case GL_TEXTURE_2D:             return 0;
-        case GL_TEXTURE_2D_ARRAY:       return 1;
-        case GL_TEXTURE_CUBE_MAP:       return 2;
-        case GL_TEXTURE_2D_MULTISAMPLE: return 3;
-        case GL_TEXTURE_EXTERNAL_OES:   return 4;
-        case GL_TEXTURE_3D:             return 5;
-        default:                        return 0;
+        case GL_TEXTURE_2D:                     return 0;
+        case GL_TEXTURE_2D_ARRAY:               return 1;
+        case GL_TEXTURE_CUBE_MAP:               return 2;
+        case GL_TEXTURE_2D_MULTISAMPLE:         return 3;
+        case GL_TEXTURE_EXTERNAL_OES:           return 4;
+        case GL_TEXTURE_3D:                     return 5;
+        case GL_TEXTURE_CUBE_MAP_ARRAY:         return 6;
+        default:
+            return 0;
     }
 }
 
@@ -340,7 +453,7 @@ constexpr size_t OpenGLContext::getIndexForCap(GLenum cap) noexcept { //NOLINT
 #ifdef GL_ARB_seamless_cube_map
         case GL_TEXTURE_CUBE_MAP_SEAMLESS:      index = 11; break;
 #endif
-#if GL41_HEADERS
+#if BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL
         case GL_PROGRAM_POINT_SIZE:             index = 12; break;
 #endif
         default: index = 13; break; // should never happen
@@ -352,17 +465,18 @@ constexpr size_t OpenGLContext::getIndexForCap(GLenum cap) noexcept { //NOLINT
 constexpr size_t OpenGLContext::getIndexForBufferTarget(GLenum target) noexcept {
     size_t index = 0;
     switch (target) {
-        // The indexed buffers MUST be first in this list
+        // The indexed buffers MUST be first in this list (those usable with bindBufferRange)
         case GL_UNIFORM_BUFFER:             index = 0; break;
         case GL_TRANSFORM_FEEDBACK_BUFFER:  index = 1; break;
+        case GL_SHADER_STORAGE_BUFFER:      index = 2; break;
 
-        case GL_ARRAY_BUFFER:               index = 2; break;
-        case GL_COPY_READ_BUFFER:           index = 3; break;
-        case GL_COPY_WRITE_BUFFER:          index = 4; break;
-        case GL_ELEMENT_ARRAY_BUFFER:       index = 5; break;
-        case GL_PIXEL_PACK_BUFFER:          index = 6; break;
-        case GL_PIXEL_UNPACK_BUFFER:        index = 7; break;
-        default: index = 8; break; // should never happen
+        case GL_ARRAY_BUFFER:               index = 3; break;
+        case GL_COPY_READ_BUFFER:           index = 4; break;
+        case GL_COPY_WRITE_BUFFER:          index = 5; break;
+        case GL_ELEMENT_ARRAY_BUFFER:       index = 6; break;
+        case GL_PIXEL_PACK_BUFFER:          index = 7; break;
+        case GL_PIXEL_UNPACK_BUFFER:        index = 8; break;
+        default: index = 9; break; // should never happen
     }
     assert_invariant(index < sizeof(state.buffers.genericBinding)/sizeof(state.buffers.genericBinding[0])); // NOLINT(misc-redundant-expression)
     return index;
@@ -423,7 +537,7 @@ void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
 void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
         GLintptr offset, GLsizeiptr size) noexcept {
     size_t targetIndex = getIndexForBufferTarget(target);
-    assert_invariant(targetIndex <= 1); // validity check
+    assert_invariant(targetIndex <= 2); // validity check
 
     // this ALSO sets the generic binding
     if (   state.buffers.targets[targetIndex].buffers[index].name != buffer
@@ -516,21 +630,18 @@ void OpenGLContext::disable(GLenum cap) noexcept {
 }
 
 void OpenGLContext::frontFace(GLenum mode) noexcept {
-    // WARNING: don't call this without updating mRasterState
     update_state(state.raster.frontFace, mode, [&]() {
         glFrontFace(mode);
     });
 }
 
 void OpenGLContext::cullFace(GLenum mode) noexcept {
-    // WARNING: don't call this without updating mRasterState
     update_state(state.raster.cullFace, mode, [&]() {
         glCullFace(mode);
     });
 }
 
 void OpenGLContext::blendEquation(GLenum modeRGB, GLenum modeA) noexcept {
-    // WARNING: don't call this without updating mRasterState
     if (UTILS_UNLIKELY(
             state.raster.blendEquationRGB != modeRGB || state.raster.blendEquationA != modeA)) {
         state.raster.blendEquationRGB = modeRGB;
@@ -540,7 +651,6 @@ void OpenGLContext::blendEquation(GLenum modeRGB, GLenum modeA) noexcept {
 }
 
 void OpenGLContext::blendFunction(GLenum srcRGB, GLenum srcA, GLenum dstRGB, GLenum dstA) noexcept {
-    // WARNING: don't call this without updating mRasterState
     if (UTILS_UNLIKELY(
             state.raster.blendFunctionSrcRGB != srcRGB ||
             state.raster.blendFunctionSrcA != srcA ||
@@ -555,22 +665,48 @@ void OpenGLContext::blendFunction(GLenum srcRGB, GLenum srcA, GLenum dstRGB, GLe
 }
 
 void OpenGLContext::colorMask(GLboolean flag) noexcept {
-    // WARNING: don't call this without updating mRasterState
     update_state(state.raster.colorMask, flag, [&]() {
         glColorMask(flag, flag, flag, flag);
     });
 }
 void OpenGLContext::depthMask(GLboolean flag) noexcept {
-    // WARNING: don't call this without updating mRasterState
     update_state(state.raster.depthMask, flag, [&]() {
         glDepthMask(flag);
     });
 }
 
 void OpenGLContext::depthFunc(GLenum func) noexcept {
-    // WARNING: don't call this without updating mRasterState
     update_state(state.raster.depthFunc, func, [&]() {
         glDepthFunc(func);
+    });
+}
+
+void OpenGLContext::stencilFuncSeparate(GLenum funcFront, GLint refFront, GLuint maskFront,
+        GLenum funcBack, GLint refBack, GLuint maskBack) noexcept {
+    update_state(state.stencil.front.func, {funcFront, refFront, maskFront}, [&]() {
+        glStencilFuncSeparate(GL_FRONT, funcFront, refFront, maskFront);
+    });
+    update_state(state.stencil.back.func, {funcBack, refBack, maskBack}, [&]() {
+        glStencilFuncSeparate(GL_BACK, funcBack, refBack, maskBack);
+    });
+}
+
+void OpenGLContext::stencilOpSeparate(GLenum sfailFront, GLenum dpfailFront, GLenum dppassFront,
+        GLenum sfailBack, GLenum dpfailBack, GLenum dppassBack) noexcept {
+    update_state(state.stencil.front.op, {sfailFront, dpfailFront, dppassFront}, [&]() {
+        glStencilOpSeparate(GL_FRONT, sfailFront, dpfailFront, dppassFront);
+    });
+    update_state(state.stencil.back.op, {sfailBack, dpfailBack, dppassBack}, [&]() {
+        glStencilOpSeparate(GL_BACK, sfailBack, dpfailBack, dppassBack);
+    });
+}
+
+void OpenGLContext::stencilMaskSeparate(GLuint maskFront, GLuint maskBack) noexcept {
+    update_state(state.stencil.front.stencilMask, maskFront, [&]() {
+        glStencilMaskSeparate(GL_FRONT, maskFront);
+    });
+    update_state(state.stencil.back.stencilMask, maskBack, [&]() {
+        glStencilMaskSeparate(GL_BACK, maskBack);
     });
 }
 
@@ -611,7 +747,7 @@ void OpenGLContext::endQuery(GLenum target) noexcept {
     glEndQuery(target);
 }
 
-GLuint OpenGLContext::getQuery(GLenum target) noexcept {
+GLuint OpenGLContext::getQuery(GLenum target) const noexcept {
     switch (target) {
         case GL_TIME_ELAPSED:
             return state.queries.timer;
@@ -619,6 +755,7 @@ GLuint OpenGLContext::getQuery(GLenum target) noexcept {
             return 0;
     }
 }
-} // namesapce filament
+
+} // namespace filament
 
 #endif //TNT_FILAMENT_BACKEND_OPENGLCONTEXT_H

@@ -62,9 +62,9 @@ spv_result_t spvTextParseMaskOperand(spv_target_env env,
     end = std::find(begin, text_end, separator);
 
     spv_operand_desc entry = nullptr;
-    if (spvOperandTableNameLookup(env, operandTable, type, begin, end - begin,
-                                  &entry)) {
-      return SPV_ERROR_INVALID_TEXT;
+    if (auto error = spvOperandTableNameLookup(env, operandTable, type, begin,
+                                               end - begin, &entry)) {
+      return error;
     }
     value |= entry->value;
 

@@ -38,7 +38,7 @@ material {
 
 vertex {
     void postProcessVertex(inout PostProcessVertexInputs postProcess) {
-        postProcess.vertex.xy = postProcess.normalizedUV;
+        postProcess.vertex.xy = uvToRenderTargetUV(postProcess.normalizedUV);
     }
 }
 
@@ -204,22 +204,15 @@ void postProcess(inout PostProcessInputs postProcess) {
     float depth = textureLod(materialParams_depth, uv.xy, 0.0).r;
 
 #if HISTORY_REPROJECTION
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-    // on metal/vulkan postProcess.normalizedUV has its origin at the left-top, but
-    // our projection matrix screen-space's origin is left-bottom
-    uv.w = 1.0 - uv.w;
-#endif
+    uv.zw = uvToRenderTargetUV(uv.zw);
     // reproject history to current frame
     highp vec4 q = materialParams.reprojection * vec4(uv.zw, depth, 1.0);
     uv.zw = (q.xy * (1.0 / q.w)) * 0.5 + 0.5;
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-    // on metal/vulkan after we applied the reprojection, we need to correct our uv back
-    uv.w = 1.0 - uv.w;
-#endif
+    uv.zw = uvToRenderTargetUV(uv.zw);
 #endif
 
     // read center color and history samples
-    vec4 color = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2( 0,  0));
+    vec4 color = textureLod(materialParams_color, uv.xy, 0.0);
 #if FILTER_HISTORY
     vec4 history = sampleTextureCatmullRom(materialParams_history, uv.zw,
             vec2(textureSize(materialParams_history, 0)));

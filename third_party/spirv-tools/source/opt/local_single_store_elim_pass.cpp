@@ -19,6 +19,7 @@
 #include "source/cfa.h"
 #include "source/latest_version_glsl_std_450_header.h"
 #include "source/opt/iterator.h"
+#include "source/util/string_utils.h"
 
 namespace spvtools {
 namespace opt {
@@ -48,10 +49,21 @@ bool LocalSingleStoreElimPass::LocalSingleStoreElim(Function* func) {
 bool LocalSingleStoreElimPass::AllExtensionsSupported() const {
   // If any extension not in allowlist, return false
   for (auto& ei : get_module()->extensions()) {
-    const char* extName =
-        reinterpret_cast<const char*>(&ei.GetInOperand(0).words[0]);
+    const std::string extName = ei.GetInOperand(0).AsString();
     if (extensions_allowlist_.find(extName) == extensions_allowlist_.end())
       return false;
+  }
+  // only allow NonSemantic.Shader.DebugInfo.100, we cannot safely optimise
+  // around unknown extended
+  // instruction sets even if they are non-semantic
+  for (auto& inst : context()->module()->ext_inst_imports()) {
+    assert(inst.opcode() == SpvOpExtInstImport &&
+           "Expecting an import of an extension's instruction set.");
+    const std::string extension_name = inst.GetInOperand(0).AsString();
+    if (spvtools::utils::starts_with(extension_name, "NonSemantic.") &&
+        extension_name != "NonSemantic.Shader.DebugInfo.100") {
+      return false;
+    }
   }
   return true;
 }
@@ -67,7 +79,7 @@ Pass::Status LocalSingleStoreElimPass::ProcessImpl() {
   ProcessFunction pfn = [this](Function* fp) {
     return LocalSingleStoreElim(fp);
   };
-  bool modified = context()->ProcessEntryPointCallTree(pfn);
+  bool modified = context()->ProcessReachableCallTree(pfn);
   return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
 }
 
@@ -125,6 +137,10 @@ void LocalSingleStoreElimPass::InitExtensionAllowList() {
       "SPV_KHR_terminate_invocation",
       "SPV_KHR_subgroup_uniform_control_flow",
       "SPV_KHR_integer_dot_product",
+      "SPV_EXT_shader_image_int64",
+      "SPV_KHR_non_semantic_info",
+      "SPV_KHR_uniform_group_instructions",
+      "SPV_KHR_fragment_shader_barycentric",
   });
 }
 bool LocalSingleStoreElimPass::ProcessVariable(Instruction* var_inst) {
@@ -223,9 +239,9 @@ Instruction* LocalSingleStoreElimPass::FindSingleStoreAndCheckUses(
       case SpvOpCopyObject:
         break;
       case SpvOpExtInst: {
-        auto dbg_op = user->GetOpenCL100DebugOpcode();
-        if (dbg_op == OpenCLDebugInfo100DebugDeclare ||
-            dbg_op == OpenCLDebugInfo100DebugValue) {
+        auto dbg_op = user->GetCommonDebugOpcode();
+        if (dbg_op == CommonDebugInfoDebugDeclare ||
+            dbg_op == CommonDebugInfoDebugValue) {
           break;
         }
         return nullptr;
@@ -292,9 +308,9 @@ bool LocalSingleStoreElimPass::RewriteLoads(
   bool modified = false;
   for (Instruction* use : uses) {
     if (use->opcode() == SpvOpStore) continue;
-    auto dbg_op = use->GetOpenCL100DebugOpcode();
-    if (dbg_op == OpenCLDebugInfo100DebugDeclare ||
-        dbg_op == OpenCLDebugInfo100DebugValue)
+    auto dbg_op = use->GetCommonDebugOpcode();
+    if (dbg_op == CommonDebugInfoDebugDeclare ||
+        dbg_op == CommonDebugInfoDebugValue)
       continue;
     if (use->opcode() == SpvOpLoad &&
         dominator_analysis->Dominates(store_inst, use)) {

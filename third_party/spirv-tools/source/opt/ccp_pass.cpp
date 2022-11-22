@@ -102,6 +102,34 @@ SSAPropagator::PropStatus CCPPass::VisitPhi(Instruction* phi) {
   return SSAPropagator::kInteresting;
 }
 
+uint32_t CCPPass::ComputeLatticeMeet(Instruction* instr, uint32_t val2) {
+  // Given two values val1 and val2, the meet operation in the constant
+  // lattice uses the following rules:
+  //
+  // meet(val1, UNDEFINED) = val1
+  // meet(val1, VARYING)   = VARYING
+  // meet(val1, val2)      = val1     if val1 == val2
+  // meet(val1, val2)      = VARYING  if val1 != val2
+  //
+  // When two different values meet, the result is always varying because CCP
+  // does not allow lateral transitions in the lattice.  This prevents
+  // infinite cycles during propagation.
+  auto val1_it = values_.find(instr->result_id());
+  if (val1_it == values_.end()) {
+    return val2;
+  }
+
+  uint32_t val1 = val1_it->second;
+  if (IsVaryingValue(val1)) {
+    return val1;
+  } else if (IsVaryingValue(val2)) {
+    return val2;
+  } else if (val1 != val2) {
+    return kVaryingSSAId;
+  }
+  return val2;
+}
+
 SSAPropagator::PropStatus CCPPass::VisitAssignment(Instruction* instr) {
   assert(instr->result_id() != 0 &&
          "Expecting an instruction that produces a result");
@@ -115,8 +143,10 @@ SSAPropagator::PropStatus CCPPass::VisitAssignment(Instruction* instr) {
       if (IsVaryingValue(it->second)) {
         return MarkInstructionVarying(instr);
       } else {
-        values_[instr->result_id()] = it->second;
-        return SSAPropagator::kInteresting;
+        uint32_t new_val = ComputeLatticeMeet(instr, it->second);
+        values_[instr->result_id()] = new_val;
+        return IsVaryingValue(new_val) ? SSAPropagator::kVarying
+                                       : SSAPropagator::kInteresting;
       }
     }
     return SSAPropagator::kNotInteresting;
@@ -142,9 +172,13 @@ SSAPropagator::PropStatus CCPPass::VisitAssignment(Instruction* instr) {
   if (folded_inst != nullptr) {
     // We do not want to change the body of the function by adding new
     // instructions.  When folding we can only generate new constants.
-    assert(folded_inst->IsConstant() && "CCP is only interested in constant.");
-    values_[instr->result_id()] = folded_inst->result_id();
-    return SSAPropagator::kInteresting;
+    assert((folded_inst->IsConstant() ||
+            IsSpecConstantInst(folded_inst->opcode())) &&
+           "CCP is only interested in constant values.");
+    uint32_t new_val = ComputeLatticeMeet(instr, folded_inst->result_id());
+    values_[instr->result_id()] = new_val;
+    return IsVaryingValue(new_val) ? SSAPropagator::kVarying
+                                   : SSAPropagator::kInteresting;
   }
 
   // Conservatively mark this instruction as varying if any input id is varying.
@@ -291,6 +325,10 @@ bool CCPPass::ReplaceValues() {
 }
 
 bool CCPPass::PropagateConstants(Function* fp) {
+  if (fp->IsDeclaration()) {
+    return false;
+  }
+
   // Mark function parameters as varying.
   fp->ForEachParam([this](const Instruction* inst) {
     values_[inst->result_id()] = kVaryingSSAId;

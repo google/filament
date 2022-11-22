@@ -86,10 +86,10 @@ OpCapability Float64
 %f32mat23_121212 = OpConstantComposite %f32mat23 %f32vec2_12 %f32vec2_12 %f32vec2_12
 
 %f32vec2arr3 = OpTypeArray %f32vec2 %u32_3
-%f32vec2rarr = OpTypeRuntimeArray %f32vec2
+%f32vec2arr2 = OpTypeArray %f32vec2 %u32_2
 
 %f32u32struct = OpTypeStruct %f32 %u32
-%big_struct = OpTypeStruct %f32 %f32vec4 %f32mat23 %f32vec2arr3 %f32vec2rarr %f32u32struct
+%big_struct = OpTypeStruct %f32 %f32vec4 %f32mat23 %f32vec2arr3 %f32vec2arr2 %f32u32struct
 
 %ptr_big_struct = OpTypePointer Uniform %big_struct
 %var_big_struct = OpVariable %ptr_big_struct Uniform
@@ -150,7 +150,6 @@ OpMemoryModel Logical GLSL450
 ; uniform blockName {
 ;   S s;
 ;   bool cond;
-;   RunTimeArray arr;
 ; }
 
 %f32arr = OpTypeRuntimeArray %float
@@ -161,7 +160,7 @@ OpMemoryModel Logical GLSL450
 %_ptr_Function_vec4 = OpTypePointer Function %v4float
 %_ptr_Uniform_vec4 = OpTypePointer Uniform %v4float
 %struct_s = OpTypeStruct %int %array5_vec4 %int %array5_mat4x3
-%struct_blockName = OpTypeStruct %struct_s %int %f32arr
+%struct_blockName = OpTypeStruct %struct_s %int
 %_ptr_Uniform_blockName = OpTypePointer Uniform %struct_blockName
 %_ptr_Uniform_struct_s = OpTypePointer Uniform %struct_s
 %_ptr_Uniform_array5_mat4x3 = OpTypePointer Uniform %array5_mat4x3
@@ -644,8 +643,8 @@ TEST_F(ValidateComposites, CompositeExtractSuccess) {
 %val12 = OpCompositeExtract %f32 %struct 2 2 1
 %val13 = OpCompositeExtract %f32vec2 %struct 3 2
 %val14 = OpCompositeExtract %f32 %struct 3 2 1
-%val15 = OpCompositeExtract %f32vec2 %struct 4 100
-%val16 = OpCompositeExtract %f32 %struct 4 1000 1
+%val15 = OpCompositeExtract %f32vec2 %struct 4 1
+%val16 = OpCompositeExtract %f32 %struct 4 0 1
 %val17 = OpCompositeExtract %f32 %struct 5 0
 %val18 = OpCompositeExtract %u32 %struct 5 1
 )";
@@ -868,8 +867,8 @@ TEST_F(ValidateComposites, CompositeInsertSuccess) {
 %val12 = OpCompositeInsert %big_struct %f32_3 %struct 2 2 1
 %val13 = OpCompositeInsert %big_struct %f32vec2_01 %struct 3 2
 %val14 = OpCompositeInsert %big_struct %f32_3 %struct 3 2 1
-%val15 = OpCompositeInsert %big_struct %f32vec2_01 %struct 4 100
-%val16 = OpCompositeInsert %big_struct %f32_3 %struct 4 1000 1
+%val15 = OpCompositeInsert %big_struct %f32vec2_01 %struct 4 1
+%val16 = OpCompositeInsert %big_struct %f32_3 %struct 4 0 1
 %val17 = OpCompositeInsert %big_struct %f32_3 %struct 5 0
 %val18 = OpCompositeInsert %big_struct %u32_3 %struct 5 1
 )";
@@ -1382,8 +1381,8 @@ TEST_F(ValidateComposites, CompositeExtractStructIndexOutOfBoundBad) {
   EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("Index is out of bounds, can not find index 3 in the "
-                        "structure <id> '25'. This structure has 3 members. "
-                        "Largest valid index is 2."));
+                        "structure <id> '25'. This structure has 2 members. "
+                        "Largest valid index is 1."));
 }
 
 // Invalid. Index into a struct is larger than the number of struct members.
@@ -1403,8 +1402,8 @@ TEST_F(ValidateComposites, CompositeInsertStructIndexOutOfBoundBad) {
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr("Index is out of bounds, can not find index 3 in the structure "
-                "<id> '25'. This structure has 3 members. Largest valid index "
-                "is 2."));
+                "<id> '25'. This structure has 2 members. Largest valid index "
+                "is 1."));
 }
 
 // #1403: Ensure that the default spec constant value is not used to check the

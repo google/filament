@@ -15,6 +15,8 @@
 #ifndef SOURCE_BINARY_H_
 #define SOURCE_BINARY_H_
 
+#include <string>
+
 #include "source/spirv_definition.h"
 #include "spirv-tools/libspirv.h"
 
@@ -32,5 +34,10 @@ spv_result_t spvBinaryHeaderGet(const spv_const_binary binary,
 // first strsz characters in str.  Returns 0 if str is nullptr.  This is a
 // replacement for C11's strnlen_s which might not exist in all environments.
 size_t spv_strnlen_s(const char* str, size_t strsz);
+
+// Decode the string literal operand with index operand_index from instruction
+// inst.
+std::string spvDecodeLiteralStringOperand(const spv_parsed_instruction_t& inst,
+                                          const uint16_t operand_index);
 
 #endif  // SOURCE_BINARY_H_

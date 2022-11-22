@@ -220,7 +220,7 @@ EncodeNumberStatus ParseAndEncodeIntegerNumber(
     std::function<void(uint32_t)> emit, std::string* error_msg);
 
 // Parses a floating point value of a given |type| from the given |text| and
-// encodes the number by the given |emit| funciton. On success, returns
+// encodes the number by the given |emit| function. On success, returns
 // EncodeNumberStatus::kSuccess and the parsed number will be consumed by the
 // given |emit| function word by word (least significant word first). On
 // failure, this function returns the error code of the encoding status and

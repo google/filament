@@ -96,7 +96,7 @@ StructuredConstructToBlockReductionOpportunityFinder::GetAvailableOpportunities(
         // This also means that we don't add a region.
         continue;
       }
-      // We have a reachable header block with a rechable merge that
+      // We have a reachable header block with a reachable merge that
       // postdominates the header: this means we have a new region.
       regions.emplace(&block, std::unordered_set<opt::BasicBlock*>());
     }
@@ -128,7 +128,7 @@ bool StructuredConstructToBlockReductionOpportunityFinder::
     if (!block->WhileEachInst(
             [context, &header, &region](opt::Instruction* inst) -> bool {
               if (inst->result_id() == 0) {
-                // The instruction does not genreate a result id, thus it cannot
+                // The instruction does not generate a result id, thus it cannot
                 // be referred to outside the region - this is fine.
                 return true;
               }

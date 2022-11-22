@@ -29,10 +29,10 @@ const uint32_t kCompositeExtractObjectInOperand = 0;
 const uint32_t kTypePointerStorageClassInIdx = 0;
 const uint32_t kTypePointerPointeeInIdx = 1;
 
-bool IsOpenCL100DebugDeclareOrValue(Instruction* di) {
-  auto dbg_opcode = di->GetOpenCL100DebugOpcode();
-  return dbg_opcode == OpenCLDebugInfo100DebugDeclare ||
-         dbg_opcode == OpenCLDebugInfo100DebugValue;
+bool IsDebugDeclareOrValue(Instruction* di) {
+  auto dbg_opcode = di->GetCommonDebugOpcode();
+  return dbg_opcode == CommonDebugInfoDebugDeclare ||
+         dbg_opcode == CommonDebugInfoDebugValue;
 }
 
 }  // namespace
@@ -40,6 +40,10 @@ bool IsOpenCL100DebugDeclareOrValue(Instruction* di) {
 Pass::Status CopyPropagateArrays::Process() {
   bool modified = false;
   for (Function& function : *get_module()) {
+    if (function.IsDeclaration()) {
+      continue;
+    }
+
     BasicBlock* entry_bb = &*function.begin();
 
     for (auto var_inst = entry_bb->begin(); var_inst->opcode() == SpvOpVariable;
@@ -194,7 +198,7 @@ bool CopyPropagateArrays::HasValidReferencesOnly(Instruction* ptr_inst,
           return ptr_inst->opcode() == SpvOpVariable &&
                  store_inst->GetSingleWordInOperand(kStorePointerInOperand) ==
                      ptr_inst->result_id();
-        } else if (IsOpenCL100DebugDeclareOrValue(use)) {
+        } else if (IsDebugDeclareOrValue(use)) {
           return true;
         }
         // Some other instruction.  Be conservative.
@@ -500,7 +504,7 @@ bool CopyPropagateArrays::CanUpdateUses(Instruction* original_ptr_inst,
                                                        const_mgr,
                                                        type](Instruction* use,
                                                              uint32_t) {
-    if (IsOpenCL100DebugDeclareOrValue(use)) return true;
+    if (IsDebugDeclareOrValue(use)) return true;
 
     switch (use->opcode()) {
       case SpvOpLoad: {
@@ -592,9 +596,9 @@ void CopyPropagateArrays::UpdateUses(Instruction* original_ptr_inst,
     Instruction* use = pair.first;
     uint32_t index = pair.second;
 
-    if (use->IsOpenCL100DebugInstr()) {
-      switch (use->GetOpenCL100DebugOpcode()) {
-        case OpenCLDebugInfo100DebugDeclare: {
+    if (use->IsCommonDebugInstr()) {
+      switch (use->GetCommonDebugOpcode()) {
+        case CommonDebugInfoDebugDeclare: {
           if (new_ptr_inst->opcode() == SpvOpVariable ||
               new_ptr_inst->opcode() == SpvOpFunctionParameter) {
             context()->ForgetUses(use);
@@ -608,9 +612,8 @@ void CopyPropagateArrays::UpdateUses(Instruction* original_ptr_inst,
             context()->ForgetUses(use);
 
             // Change DebugDeclare to DebugValue.
-            use->SetOperand(
-                index - 2,
-                {static_cast<uint32_t>(OpenCLDebugInfo100DebugValue)});
+            use->SetOperand(index - 2,
+                            {static_cast<uint32_t>(CommonDebugInfoDebugValue)});
             use->SetOperand(index, {new_ptr_inst->result_id()});
 
             // Add Deref operation.
@@ -625,7 +628,7 @@ void CopyPropagateArrays::UpdateUses(Instruction* original_ptr_inst,
           }
           break;
         }
-        case OpenCLDebugInfo100DebugValue:
+        case CommonDebugInfoDebugValue:
           context()->ForgetUses(use);
           use->SetOperand(index, {new_ptr_inst->result_id()});
           context()->AnalyzeUses(use);
@@ -742,11 +745,11 @@ void CopyPropagateArrays::UpdateUses(Instruction* original_ptr_inst,
           context()->AnalyzeUses(use);
         }
         break;
+      case SpvOpDecorate:
+      // We treat an OpImageTexelPointer as a load.  The result type should
+      // always have the Image storage class, and should not need to be
+      // updated.
       case SpvOpImageTexelPointer:
-        // We treat an OpImageTexelPointer as a load.  The result type should
-        // always have the Image storage class, and should not need to be
-        // updated.
-
         // Replace the actual use.
         context()->ForgetUses(use);
         use->SetOperand(index, {new_ptr_inst->result_id()});

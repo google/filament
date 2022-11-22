@@ -12,7 +12,7 @@ set(PUBLIC_HDRS
         include/viewer/AutomationSpec.h
         include/viewer/RemoteServer.h
         include/viewer/Settings.h
-        include/viewer/SimpleViewer.h
+        include/viewer/ViewerGui.h
 )
 
 set(SRCS
@@ -21,7 +21,9 @@ set(SRCS
         src/AutomationSpec.cpp
         src/RemoteServer.cpp
         src/Settings.cpp
-        src/SimpleViewer.cpp
+        src/Settings_generated.cpp
+        src/Settings_generated.h
+        src/ViewerGui.cpp
 )
 
 # ==================================================================================================
@@ -30,6 +32,7 @@ set(SRCS
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 target_link_libraries(${TARGET} PUBLIC imgui filament gltfio_core filagui jsmn civetweb)
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 
 # ==================================================================================================
 # Compiler flags
@@ -53,4 +56,5 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/viewer DESTINATION include)
 if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_executable(test_settings tests/test_settings.cpp)
     target_link_libraries(test_settings PRIVATE ${TARGET} gtest)
+    set_target_properties(test_settings PROPERTIES FOLDER Tests)
 endif()

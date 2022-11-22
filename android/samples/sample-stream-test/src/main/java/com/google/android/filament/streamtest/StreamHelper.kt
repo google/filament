@@ -24,6 +24,7 @@ import android.view.Surface
 import android.graphics.*
 import android.media.ImageReader
 import android.opengl.Matrix
+import android.os.Looper
 import android.view.Display
 
 import com.google.android.filament.*
@@ -32,7 +33,11 @@ import com.google.android.filament.*
 /**
  * Demonstrates Filament's various texture sharing mechanisms.
  */
-class StreamHelper(private val filamentEngine: Engine, private val filamentMaterial: MaterialInstance, private val display: Display, private val externalTextureId: Int) {
+class StreamHelper(
+    private val filamentEngine: Engine,
+    private val filamentMaterial: MaterialInstance,
+    private val display: Display,
+) {
     /**
      * The StreamSource configures the source data for the texture.
      *
@@ -45,12 +50,11 @@ class StreamHelper(private val filamentEngine: Engine, private val filamentMater
      */
     enum class StreamSource {
         CANVAS_STREAM_NATIVE,     // copy-free but does not guarantee synchronization
-        CANVAS_STREAM_TEXID,      // synchronized but incurs a copy
         CANVAS_STREAM_ACQUIRED,   // synchronized and copy-free
     }
 
     private var streamSource = StreamSource.CANVAS_STREAM_NATIVE
-    private val directImageHandler = Handler()
+    private val directImageHandler = Handler(Looper.getMainLooper())
     private var resolution = Size(640, 480)
     private var surfaceTexture: SurfaceTexture? = null
     private var imageReader: ImageReader? = null
@@ -93,22 +97,40 @@ class StreamHelper(private val filamentEngine: Engine, private val filamentMater
             val canvas = surface.lockCanvas(null)
 
             val movingPaint = Paint()
-            movingPaint.shader = LinearGradient(kGradientOffset, 0.0f, kGradientOffset + kGradientScale, 0.0f, kGradientColors, kGradientStops, Shader.TileMode.REPEAT)
-            canvas.drawRect(Rect(0, resolution.height / 2, resolution.width, resolution.height), movingPaint)
+            movingPaint.shader = LinearGradient(
+                kGradientOffset,
+                0.0f,
+                kGradientOffset + kGradientScale,
+                0.0f,
+                kGradientColors,
+                kGradientStops,
+                Shader.TileMode.REPEAT
+            )
+            canvas.drawRect(
+                Rect(0, resolution.height / 2, resolution.width, resolution.height),
+                movingPaint
+            )
 
             val staticPaint = Paint()
-            staticPaint.shader = LinearGradient(0.0f, 0.0f, kGradientScale, 0.0f, kGradientColors, kGradientStops, Shader.TileMode.REPEAT)
+            staticPaint.shader = LinearGradient(
+                0.0f,
+                0.0f,
+                kGradientScale,
+                0.0f,
+                kGradientColors,
+                kGradientStops,
+                Shader.TileMode.REPEAT
+            )
             canvas.drawRect(Rect(0, 0, resolution.width, resolution.height / 2), staticPaint)
 
             surface.unlockCanvasAndPost(canvas)
 
-            if (streamSource == StreamSource.CANVAS_STREAM_TEXID) {
-                surfaceTexture!!.updateTexImage()
-            }
-
             if (streamSource == StreamSource.CANVAS_STREAM_ACQUIRED) {
                 val image = imageReader!!.acquireLatestImage()
-                filamentStream!!.setAcquiredImage(image.hardwareBuffer!!, directImageHandler) { image.close() }
+                filamentStream!!.setAcquiredImage(
+                    image.hardwareBuffer!!,
+                    directImageHandler
+                ) { image.close() }
             }
         }
 
@@ -118,7 +140,7 @@ class StreamHelper(private val filamentEngine: Engine, private val filamentMater
 
     fun nextTest() {
         stopTest()
-        streamSource = StreamSource.values()[(streamSource.ordinal + 1) % 3]
+        streamSource = StreamSource.values()[(streamSource.ordinal + 1) % StreamSource.values().size]
         startTest()
     }
 
@@ -136,7 +158,9 @@ class StreamHelper(private val filamentEngine: Engine, private val filamentMater
 
         val filamentTexture = this.filamentTexture!!
 
-        val sampler = TextureSampler(TextureSampler.MinFilter.LINEAR, TextureSampler.MagFilter.LINEAR, TextureSampler.WrapMode.REPEAT)
+        val sampler = TextureSampler(
+            TextureSampler.MinFilter.LINEAR, TextureSampler.MagFilter.LINEAR,
+            TextureSampler.WrapMode.REPEAT)
 
         // We are texturing a front-facing square shape so we need to generate a matrix that transforms (u, v, 0, 1)
         // into a new UV coordinate according to the screen rotation and the aspect ratio of the camera image.
@@ -164,7 +188,8 @@ class StreamHelper(private val filamentEngine: Engine, private val filamentMater
 
         // Connect the Stream to the Texture and the Texture to the MaterialInstance.
         filamentMaterial.setParameter("videoTexture", filamentTexture, sampler)
-        filamentMaterial.setParameter("textureTransform", MaterialInstance.FloatElement.MAT4, textureTransform, 0, 1)
+        filamentMaterial.setParameter("textureTransform",
+            MaterialInstance.FloatElement.MAT4, textureTransform, 0, 1)
 
         if (streamSource == StreamSource.CANVAS_STREAM_NATIVE) {
 
@@ -182,23 +207,6 @@ class StreamHelper(private val filamentEngine: Engine, private val filamentMater
             filamentTexture.setExternalStream(filamentEngine, filamentStream!!)
         }
 
-        if (streamSource == StreamSource.CANVAS_STREAM_TEXID) {
-
-            // Create the Android surface that will hold the canvas image.
-            surfaceTexture = SurfaceTexture(externalTextureId)
-            surfaceTexture!!.setDefaultBufferSize(resolution.width, resolution.height)
-            canvasSurface = Surface(surfaceTexture)
-
-            // Create the Filament Stream object that gets bound to the Texture.
-            filamentStream = Stream.Builder()
-                    .stream(externalTextureId.toLong())
-                    .width(resolution.width)
-                    .height(resolution.height)
-                    .build(filamentEngine)
-
-            filamentTexture.setExternalStream(filamentEngine, filamentStream!!)
-        }
-
         if (streamSource == StreamSource.CANVAS_STREAM_ACQUIRED) {
             filamentStream = Stream.Builder()
                     .width(resolution.width)
@@ -207,7 +215,9 @@ class StreamHelper(private val filamentEngine: Engine, private val filamentMater
 
             filamentTexture.setExternalStream(filamentEngine, filamentStream!!)
 
-            this.imageReader = ImageReader.newInstance(resolution.width, resolution.height, ImageFormat.RGB_565, kImageReaderMaxImages).apply {
+            this.imageReader = ImageReader.newInstance(
+                resolution.width, resolution.height, ImageFormat.RGB_565, kImageReaderMaxImages
+            ).apply {
                 canvasSurface = surface
             }
         }

@@ -16,8 +16,10 @@
 
 #include "CallbackUtils.h"
 
+#include "private/backend/VirtualMachineEnv.h"
+
 void acquireCallbackJni(JNIEnv* env, CallbackJni& callbackUtils) {
-#ifdef ANDROID
+#ifdef __ANDROID__
     callbackUtils.handlerClass = env->FindClass("android/os/Handler");
     callbackUtils.handlerClass = (jclass) env->NewGlobalRef(callbackUtils.handlerClass);
     callbackUtils.post = env->GetMethodID(callbackUtils.handlerClass,
@@ -32,7 +34,7 @@ void acquireCallbackJni(JNIEnv* env, CallbackJni& callbackUtils) {
 
 void releaseCallbackJni(JNIEnv* env, CallbackJni callbackUtils, jobject handler, jobject callback) {
     if (handler && callback) {
-#ifdef ANDROID
+#ifdef __ANDROID__
         if (env->IsInstanceOf(handler, callbackUtils.handlerClass)) {
             env->CallBooleanMethod(handler, callbackUtils.post, callback);
         }
@@ -43,57 +45,10 @@ void releaseCallbackJni(JNIEnv* env, CallbackJni callbackUtils, jobject handler,
     }
     env->DeleteGlobalRef(handler);
     env->DeleteGlobalRef(callback);
-#ifdef ANDROID
+#ifdef __ANDROID__
     env->DeleteGlobalRef(callbackUtils.handlerClass);
 #endif
     env->DeleteGlobalRef(callbackUtils.executorClass);
-}
-
-JniBufferCallback* JniBufferCallback::make(filament::Engine* engine,
-        JNIEnv* env, jobject handler, jobject callback, AutoBuffer&& buffer) {
-    return new JniBufferCallback(env, handler, callback, std::move(buffer));
-}
-
-JniBufferCallback::JniBufferCallback(JNIEnv* env, jobject handler, jobject callback,
-        AutoBuffer&& buffer)
-        : mEnv(env)
-        , mHandler(env->NewGlobalRef(handler))
-        , mCallback(env->NewGlobalRef(callback))
-        , mBuffer(std::move(buffer)) {
-    acquireCallbackJni(env, mCallbackUtils);
-}
-
-JniBufferCallback::~JniBufferCallback() {
-    releaseCallbackJni(mEnv, mCallbackUtils, mHandler, mCallback);
-}
-
-void JniBufferCallback::invoke(void*, size_t, void* user) {
-    JniBufferCallback* data = reinterpret_cast<JniBufferCallback*>(user);
-    delete data;
-}
-
-// -----------------------------------------------------------------------------------------------
-
-JniImageCallback* JniImageCallback::make(filament::Engine* engine,
-        JNIEnv* env, jobject handler, jobject callback, long image) {
-    return new JniImageCallback(env, handler, callback, image);
-}
-
-JniImageCallback::JniImageCallback(JNIEnv* env, jobject handler, jobject callback, long image)
-        : mEnv(env)
-        , mHandler(env->NewGlobalRef(handler))
-        , mCallback(env->NewGlobalRef(callback))
-        , mImage(image) {
-    acquireCallbackJni(env, mCallbackUtils);
-}
-
-JniImageCallback::~JniImageCallback() {
-    releaseCallbackJni(mEnv, mCallbackUtils, mHandler, mCallback);
-}
-
-void JniImageCallback::invoke(void*, void* user) {
-    JniImageCallback* data = reinterpret_cast<JniImageCallback*>(user);
-    delete data;
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -103,17 +58,63 @@ JniCallback* JniCallback::make(JNIEnv* env, jobject handler, jobject callback) {
 }
 
 JniCallback::JniCallback(JNIEnv* env, jobject handler, jobject callback)
-        : mEnv(env)
-        , mHandler(env->NewGlobalRef(handler))
-        , mCallback(env->NewGlobalRef(callback)) {
+        : mHandler(env->NewGlobalRef(handler)),
+          mCallback(env->NewGlobalRef(callback)) {
     acquireCallbackJni(env, mCallbackUtils);
 }
 
-JniCallback::~JniCallback() {
-    releaseCallbackJni(mEnv, mCallbackUtils, mHandler, mCallback);
+JniCallback::~JniCallback() = default;
+
+void JniCallback::post(void* user, filament::backend::CallbackHandler::Callback callback) {
+    callback(user);
 }
 
-void JniCallback::invoke(void* user) {
-    JniCallback* data = reinterpret_cast<JniCallback*>(user);
-    delete data;
+void JniCallback::postToJavaAndDestroy(JniCallback* callback) {
+    JNIEnv* env = filament::VirtualMachineEnv::get().getEnvironment();
+    releaseCallbackJni(env, callback->mCallbackUtils, callback->mHandler, callback->mCallback);
+    delete callback;
+}
+
+// -----------------------------------------------------------------------------------------------
+
+JniBufferCallback* JniBufferCallback::make(filament::Engine*,
+        JNIEnv* env, jobject handler, jobject callback, AutoBuffer&& buffer) {
+    return new JniBufferCallback(env, handler, callback, std::move(buffer));
+}
+
+JniBufferCallback::JniBufferCallback(JNIEnv* env, jobject handler, jobject callback,
+        AutoBuffer&& buffer)
+        : JniCallback(env, handler, callback),
+        mBuffer(std::move(buffer)) {
+}
+
+JniBufferCallback::~JniBufferCallback() = default;
+
+void JniBufferCallback::postToJavaAndDestroy(void*, size_t, void* user) {
+    JniBufferCallback* callback = (JniBufferCallback*)user;
+    JNIEnv* env = filament::VirtualMachineEnv::get().getEnvironment();
+    callback->mBuffer.attachToJniThread(env);
+    releaseCallbackJni(env, callback->mCallbackUtils, callback->mHandler, callback->mCallback);
+    delete callback;
+}
+
+// -----------------------------------------------------------------------------------------------
+
+JniImageCallback* JniImageCallback::make(filament::Engine*,
+        JNIEnv* env, jobject handler, jobject callback, long image) {
+    return new JniImageCallback(env, handler, callback, image);
+}
+
+JniImageCallback::JniImageCallback(JNIEnv* env, jobject handler, jobject callback, long image)
+        : JniCallback(env, handler, callback),
+        mImage(image) {
+}
+
+JniImageCallback::~JniImageCallback() = default;
+
+void JniImageCallback::postToJavaAndDestroy(void*, void* user) {
+    JniImageCallback* callback = (JniImageCallback*)user;
+    JNIEnv* env = filament::VirtualMachineEnv::get().getEnvironment();
+    releaseCallbackJni(env, callback->mCallbackUtils, callback->mHandler, callback->mCallback);
+    delete callback;
 }

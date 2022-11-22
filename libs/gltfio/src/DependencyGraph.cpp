@@ -16,10 +16,12 @@
 
 #include "DependencyGraph.h"
 
+#include <utils/Panic.h>
+
 using namespace filament;
 using namespace utils;
 
-namespace gltfio {
+namespace filament::gltfio {
 
 size_t DependencyGraph::popRenderables(Entity* result, size_t count) noexcept {
     if (result == nullptr) {
@@ -34,38 +36,29 @@ size_t DependencyGraph::popRenderables(Entity* result, size_t count) noexcept {
 }
 
 void DependencyGraph::addEdge(Entity entity, MaterialInstance* mi) {
-
-    // Permit adding an Entity-Material edge to a finalized graph as long as the material is already
-    // known. Since we already encountered this material instance, we already know what textures it
-    // is associated with.
-    assert(!mFinalized || mMaterialToEntity.find(mi) != mMaterialToEntity.end());
-
-    mMaterialToEntity[mi].insert(entity);
-    mEntityToMaterial[entity].materials.insert(mi);
+    if (mDisabled) {
+        if (mEntityToMaterial.count(entity) == 0) {
+            mEntityToMaterial[entity] = {};
+            mReadyRenderables.push(entity);
+        }
+    } else {
+        mMaterialToEntity[mi].insert(entity);
+        mEntityToMaterial[entity].materials.insert(mi);
+    }
 }
 
 void DependencyGraph::addEdge(MaterialInstance* mi, const char* parameter) {
-    assert(!mFinalized);
+    if (auto iter = mMaterialToTexture.find(mi); iter != mMaterialToTexture.end()) {
+        const tsl::robin_map<std::string, TextureNode*>& params = iter.value().params;
+        if (params.find(parameter) != params.end()) {
+            return;
+        }
+    }
     mMaterialToTexture[mi].params[parameter] = nullptr;
 }
 
-// During finalization, the structure of the glTF is known but we have not yet created texture
-// objects. Find all non-textured entities and immediately add mark them as ready.
-void DependencyGraph::finalize() {
-    assert(!mFinalized);
-    for (auto pair : mMaterialToEntity) {
-        auto mi = pair.first;
-        if (mMaterialToTexture.find(mi) == mMaterialToTexture.end()) {
-            markAsReady(mi);
-        }
-    }
-    mFinalized = true;
-}
-
-void DependencyGraph::refinalize() {
-    assert(mFinalized);
-    for (auto pair : mMaterialToEntity) {
-        auto material = pair.first;
+void DependencyGraph::commitEdges() {
+    for (const auto& [material, entities] : mMaterialToEntity) {
         if (mMaterialToTexture.find(material) == mMaterialToTexture.end()) {
             markAsReady(material);
         } else {
@@ -75,9 +68,11 @@ void DependencyGraph::refinalize() {
 }
 
 void DependencyGraph::addEdge(Texture* texture, MaterialInstance* material, const char* parameter) {
-    assert(mFinalized);
-    mTextureToMaterial[texture].insert(material);
-    mMaterialToTexture.at(material).params.at(parameter) = getStatus(texture);
+    assert_invariant(texture);
+    if (!mDisabled) {
+        mTextureToMaterial[texture].insert(material);
+        mMaterialToTexture.at(material).params.at(parameter) = getStatus(texture);
+    }
 }
 
 void DependencyGraph::checkReadiness(Material* material) {
@@ -85,8 +80,8 @@ void DependencyGraph::checkReadiness(Material* material) {
 
     // Check this material's texture parameters, there are 5 in the worst case.
     bool materialIsReady = true;
-    for (auto pair : status.params) {
-        if (!pair.second->ready) {
+    for (const auto& [name, texture] : status.params) {
+        if (!texture || !texture->ready) {
             materialIsReady = false;
             break;
         }
@@ -99,8 +94,12 @@ void DependencyGraph::checkReadiness(Material* material) {
 }
 
 void DependencyGraph::markAsReady(Texture* texture) {
-    assert(texture && mFinalized);
-    mTextureNodes.at(texture)->ready = true;
+    assert_invariant(texture);
+    auto iter = mTextureNodes.find(texture);
+    if (iter == mTextureNodes.end()) {
+        return;
+    }
+    iter.value()->ready = true;
 
     // Iterate over the materials associated with this texture to check if any have become ready.
     // This is O(n2) but the inner loop is always small.
@@ -111,10 +110,14 @@ void DependencyGraph::markAsReady(Texture* texture) {
 }
 
 void DependencyGraph::markAsReady(MaterialInstance* material) {
-    auto& entities = mMaterialToEntity.at(material);
-    for (auto entity : entities) {
+    auto iter = mMaterialToEntity.find(material);
+    if (iter == mMaterialToEntity.end()) {
+        // It's fine if no entities exist yet.
+        return;
+    }
+    for (auto entity : iter->second) {
         auto& status = mEntityToMaterial.at(entity);
-        assert(status.numReadyMaterials <= status.materials.size());
+        assert_invariant(status.numReadyMaterials <= status.materials.size());
         if (status.numReadyMaterials == status.materials.size()) {
             continue;
         }
@@ -125,6 +128,7 @@ void DependencyGraph::markAsReady(MaterialInstance* material) {
 }
 
 DependencyGraph::TextureNode* DependencyGraph::getStatus(Texture* texture) {
+    assert_invariant(texture);
     auto iter = mTextureNodes.find(texture);
     if (iter == mTextureNodes.end()) {
         TextureNode* status = (mTextureNodes[texture] = std::make_unique<TextureNode>()).get();
@@ -134,4 +138,13 @@ DependencyGraph::TextureNode* DependencyGraph::getStatus(Texture* texture) {
     return iter->second.get();
 }
 
-} // namespace gltfio
+void DependencyGraph::disableProgressiveReveal() {
+    mDisabled = true;
+    for (auto& [entity, status] : mEntityToMaterial) {
+        if (status.numReadyMaterials < status.materials.size()) {
+            mReadyRenderables.push(entity);
+        }
+    }
+}
+
+} // namespace filament::gltfio

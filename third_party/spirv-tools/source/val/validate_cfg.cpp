@@ -27,6 +27,7 @@
 
 #include "source/cfa.h"
 #include "source/opcode.h"
+#include "source/spirv_constant.h"
 #include "source/spirv_target_env.h"
 #include "source/spirv_validator_options.h"
 #include "source/val/basic_block.h"
@@ -54,8 +55,7 @@ spv_result_t ValidatePhi(ValidationState_t& _, const Instruction* inst) {
   }
   if (_.IsPointerType(inst->type_id()) &&
       _.addressing_model() == SpvAddressingModelLogical) {
-    if (!_.features().variable_pointers &&
-        !_.features().variable_pointers_storage_buffer) {
+    if (!_.features().variable_pointers) {
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << "Using pointers with OpPhi requires capability "
              << "VariablePointers or VariablePointersStorageBuffer";
@@ -191,6 +191,12 @@ spv_result_t ValidateBranchConditional(ValidationState_t& _,
               "ID of an OpLabel instruction";
   }
 
+  if (_.version() >= SPV_SPIRV_VERSION_WORD(1, 6) && true_id == false_id) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "In SPIR-V 1.6 or later, True Label and False Label must be "
+              "different labels";
+  }
+
   return SPV_SUCCESS;
 }
 
@@ -198,6 +204,18 @@ spv_result_t ValidateSwitch(ValidationState_t& _, const Instruction* inst) {
   const auto num_operands = inst->operands().size();
   // At least two operands (selector, default), any more than that are
   // literal/target.
+
+  const auto sel_type_id = _.GetOperandTypeId(inst, 0);
+  if (!_.IsIntScalarType(sel_type_id)) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Selector type must be OpTypeInt";
+  }
+
+  const auto default_label = _.FindDef(inst->GetOperandAs<uint32_t>(1));
+  if (default_label->opcode() != SpvOpLabel) {
+    return _.diag(SPV_ERROR_INVALID_ID, inst)
+           << "Default must be an OpLabel instruction";
+  }
 
   // target operands must be OpLabel
   for (size_t i = 2; i < num_operands; i += 2) {
@@ -230,13 +248,9 @@ spv_result_t ValidateReturnValue(ValidationState_t& _,
            << _.getIdName(value->type_id()) << "' is missing or void.";
   }
 
-  const bool uses_variable_pointer =
-      _.features().variable_pointers ||
-      _.features().variable_pointers_storage_buffer;
-
   if (_.addressing_model() == SpvAddressingModelLogical &&
-      SpvOpTypePointer == value_type->opcode() && !uses_variable_pointer &&
-      !_.options()->relax_logical_pointer) {
+      SpvOpTypePointer == value_type->opcode() &&
+      !_.features().variable_pointers && !_.options()->relax_logical_pointer) {
     return _.diag(SPV_ERROR_INVALID_ID, inst)
            << "OpReturnValue value's type <id> '"
            << _.getIdName(value->type_id())
@@ -647,16 +661,16 @@ spv_result_t ValidateStructuredSelections(
       // Mark the upcoming blocks as seen now, but only error out if this block
       // was missing a merge instruction and both labels hadn't been seen
       // previously.
-      const bool both_unseen =
-          seen.insert(true_label).second && seen.insert(false_label).second;
-      if (!merge && both_unseen) {
+      const bool true_label_unseen = seen.insert(true_label).second;
+      const bool false_label_unseen = seen.insert(false_label).second;
+      if (!merge && true_label_unseen && false_label_unseen) {
         return _.diag(SPV_ERROR_INVALID_CFG, terminator)
                << "Selection must be structured";
       }
     } else if (terminator->opcode() == SpvOpSwitch) {
       if (!merge) {
         return _.diag(SPV_ERROR_INVALID_CFG, terminator)
-               << "OpSwitch must be preceeded by an OpSelectionMerge "
+               << "OpSwitch must be preceded by an OpSelectionMerge "
                   "instruction";
       }
       // Mark the targets as seen.
@@ -898,7 +912,7 @@ spv_result_t PerformCfgChecks(ValidationState_t& _) {
           }
         }
       }
-      // If we have structed control flow, check that no block has a control
+      // If we have structured control flow, check that no block has a control
       // flow nesting depth larger than the limit.
       if (_.HasCapability(SpvCapabilityShader)) {
         const int control_flow_nesting_depth_limit =

@@ -27,6 +27,10 @@ namespace spvtools {
 namespace val {
 namespace {
 
+// Limit the number of checked locations to 4096. Multiplied by 4 to represent
+// all the components. This limit is set to be well beyond practical use cases.
+const uint32_t kMaxLocations = 4096 * 4;
+
 // Returns true if \c inst is an input or output variable.
 bool is_interface_variable(const Instruction* inst, bool is_spv_1_4) {
   if (is_spv_1_4) {
@@ -150,7 +154,7 @@ spv_result_t NumConsumedLocations(ValidationState_t& _, const Instruction* type,
       // Members cannot have location decorations at this point.
       if (_.HasDecoration(type->id(), SpvDecorationLocation)) {
         return _.diag(SPV_ERROR_INVALID_DATA, type)
-               << "Members cannot be assigned a location";
+               << _.VkErrorID(4918) << "Members cannot be assigned a location";
       }
 
       // Structs consume locations equal to the sum of the locations consumed
@@ -195,6 +199,10 @@ uint32_t NumConsumedComponents(ValidationState_t& _, const Instruction* type) {
           NumConsumedComponents(_, _.FindDef(type->GetOperandAs<uint32_t>(1)));
       num_components *= type->GetOperandAs<uint32_t>(2);
       break;
+    case SpvOpTypeArray:
+      // Skip the array.
+      return NumConsumedComponents(_,
+                                   _.FindDef(type->GetOperandAs<uint32_t>(1)));
     default:
       // This is an error that is validated elsewhere.
       break;
@@ -230,7 +238,7 @@ spv_result_t GetLocationsForVariable(
   uint32_t index = 0;
   bool has_patch = false;
   bool has_per_task_nv = false;
-  bool has_per_vertex_nv = false;
+  bool has_per_vertex_khr = false;
   for (auto& dec : _.id_decorations(variable->id())) {
     if (dec.dec_type() == SpvDecorationLocation) {
       if (has_location && dec.params()[0] != location) {
@@ -264,8 +272,8 @@ spv_result_t GetLocationsForVariable(
       has_patch = true;
     } else if (dec.dec_type() == SpvDecorationPerTaskNV) {
       has_per_task_nv = true;
-    } else if (dec.dec_type() == SpvDecorationPerVertexNV) {
-      has_per_vertex_nv = true;
+    } else if (dec.dec_type() == SpvDecorationPerVertexKHR) {
+      has_per_vertex_khr = true;
     }
   }
 
@@ -290,7 +298,7 @@ spv_result_t GetLocationsForVariable(
       }
       break;
     case SpvExecutionModelFragment:
-      if (!is_output && has_per_vertex_nv) {
+      if (!is_output && has_per_vertex_khr) {
         is_arrayed = true;
       }
       break;
@@ -318,8 +326,9 @@ spv_result_t GetLocationsForVariable(
   // Only block-decorated structs don't need a location on the variable.
   const bool is_block = _.HasDecoration(type_id, SpvDecorationBlock);
   if (!has_location && !is_block) {
+    const auto vuid = (type->opcode() == SpvOpTypeStruct) ? 4917 : 4916;
     return _.diag(SPV_ERROR_INVALID_DATA, variable)
-           << "Variable must be decorated with a location";
+           << _.VkErrorID(vuid) << "Variable must be decorated with a location";
   }
 
   const std::string storage_class = is_output ? "output" : "input";
@@ -347,6 +356,11 @@ spv_result_t GetLocationsForVariable(
       uint32_t num_components = NumConsumedComponents(_, sub_type);
       uint32_t array_location = location + (num_locations * array_idx);
       uint32_t start = array_location * 4;
+      if (kMaxLocations <= start) {
+        // Too many locations, give up.
+        break;
+      }
+
       uint32_t end = (array_location + num_locations) * 4;
       if (num_components != 0) {
         start += component;
@@ -398,7 +412,7 @@ spv_result_t GetLocationsForVariable(
       auto where = member_locations.find(i - 1);
       if (where == member_locations.end()) {
         return _.diag(SPV_ERROR_INVALID_DATA, type)
-               << "Member index " << i - 1
+               << _.VkErrorID(4919) << "Member index " << i - 1
                << " is missing a location assignment";
       }
 
@@ -416,17 +430,41 @@ spv_result_t GetLocationsForVariable(
       }
 
       uint32_t start = location * 4;
-      uint32_t end = (location + num_locations) * 4;
-      if (num_components != 0) {
-        start += component;
-        end = location * 4 + component + num_components;
+      if (kMaxLocations <= start) {
+        // Too many locations, give up.
+        continue;
       }
-      for (uint32_t l = start; l < end; ++l) {
-        if (!locations->insert(l).second) {
-          return _.diag(SPV_ERROR_INVALID_DATA, entry_point)
-                 << "Entry-point has conflicting " << storage_class
-                 << " location assignment at location " << l / 4
-                 << ", component " << l % 4;
+
+      if (member->opcode() == SpvOpTypeArray && num_components >= 1 &&
+          num_components < 4) {
+        // When an array has an element that takes less than a location in
+        // size, calculate the used locations in a strided manner.
+        for (uint32_t l = location; l < num_locations + location; ++l) {
+          for (uint32_t c = component; c < component + num_components; ++c) {
+            uint32_t check = 4 * l + c;
+            if (!locations->insert(check).second) {
+              return _.diag(SPV_ERROR_INVALID_DATA, entry_point)
+                     << "Entry-point has conflicting " << storage_class
+                     << " location assignment at location " << l
+                     << ", component " << c;
+            }
+          }
+        }
+      } else {
+        // TODO: There is a hole here is the member is an array of 3- or
+        // 4-element vectors of 64-bit types.
+        uint32_t end = (location + num_locations) * 4;
+        if (num_components != 0) {
+          start += component;
+          end = location * 4 + component + num_components;
+        }
+        for (uint32_t l = start; l < end; ++l) {
+          if (!locations->insert(l).second) {
+            return _.diag(SPV_ERROR_INVALID_DATA, entry_point)
+                   << "Entry-point has conflicting " << storage_class
+                   << " location assignment at location " << l / 4
+                   << ", component " << l % 4;
+          }
         }
       }
     }
@@ -439,6 +477,9 @@ spv_result_t ValidateLocations(ValidationState_t& _,
                                const Instruction* entry_point) {
   // According to Vulkan 14.1 only the following execution models have
   // locations assigned.
+  // TODO(dneto): SPV_NV_ray_tracing also uses locations on interface variables,
+  // in other shader stages. Similarly, the *provisional* version of
+  // SPV_KHR_ray_tracing did as well, but not the final version.
   switch (entry_point->GetOperandAs<SpvExecutionModel>(0)) {
     case SpvExecutionModelVertex:
     case SpvExecutionModelTessellationControl:
@@ -454,12 +495,18 @@ spv_result_t ValidateLocations(ValidationState_t& _,
   std::unordered_set<uint32_t> input_locations;
   std::unordered_set<uint32_t> output_locations_index0;
   std::unordered_set<uint32_t> output_locations_index1;
+  std::unordered_set<uint32_t> seen;
   for (uint32_t i = 3; i < entry_point->operands().size(); ++i) {
     auto interface_id = entry_point->GetOperandAs<uint32_t>(i);
     auto interface_var = _.FindDef(interface_id);
     auto storage_class = interface_var->GetOperandAs<SpvStorageClass>(2);
     if (storage_class != SpvStorageClassInput &&
         storage_class != SpvStorageClassOutput) {
+      continue;
+    }
+    if (!seen.insert(interface_id).second) {
+      // Pre-1.4 an interface variable could be listed multiple times in an
+      // entry point. Validation for 1.4 or later is done elsewhere.
       continue;
     }
 

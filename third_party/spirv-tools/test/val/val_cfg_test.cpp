@@ -65,7 +65,7 @@ class Block {
   /// Creates a Block with a given label
   ///
   /// @param[in]: label the label id of the block
-  /// @param[in]: type the branch instruciton that ends the block
+  /// @param[in]: type the branch instruction that ends the block
   explicit Block(std::string label, SpvOp type = SpvOpBranch)
       : label_(label), body_(), type_(type), successors_() {}
 
@@ -3523,7 +3523,7 @@ OpFunctionEnd
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr(
-          "OpSwitch must be preceeded by an OpSelectionMerge instruction"));
+          "OpSwitch must be preceded by an OpSelectionMerge instruction"));
 }
 
 TEST_F(ValidateCFG, MissingMergeSwitchBad2) {
@@ -3550,7 +3550,7 @@ OpFunctionEnd
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr(
-          "OpSwitch must be preceeded by an OpSelectionMerge instruction"));
+          "OpSwitch must be preceded by an OpSelectionMerge instruction"));
 }
 
 TEST_F(ValidateCFG, MissingMergeOneBranchToMergeGood) {
@@ -3622,7 +3622,7 @@ OpFunctionEnd
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr(
-          "OpSwitch must be preceeded by an OpSelectionMerge instruction"));
+          "OpSwitch must be preceded by an OpSelectionMerge instruction"));
 }
 
 TEST_F(ValidateCFG, MissingMergeOneUnseenTargetSwitchBad) {
@@ -3654,7 +3654,7 @@ OpFunctionEnd
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr(
-          "OpSwitch must be preceeded by an OpSelectionMerge instruction"));
+          "OpSwitch must be preceded by an OpSelectionMerge instruction"));
 }
 
 TEST_F(ValidateCFG, MissingMergeLoopBreakGood) {
@@ -4229,6 +4229,67 @@ OpFunctionEnd
   ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
 }
 
+TEST_F(ValidateCFG, StructuredSelections_RegisterBothTrueAndFalse) {
+  // In this test, we try to make a case where the false branches
+  // to %20 and %60 from blocks %10 and %50 must be registered
+  // during the validity check for sturctured selections.
+  // However, an error is caught earlier in the flow, that the
+  // branches from %100 to %20 and %60 violate dominance.
+  const std::string text = R"(
+    OpCapability Shader
+    OpMemoryModel Logical Simple
+    OpEntryPoint Fragment %main "main"
+    OpExecutionMode %main OriginUpperLeft
+    
+    %void    = OpTypeVoid
+    %void_fn = OpTypeFunction %void
+
+    %bool = OpTypeBool
+    %cond = OpUndef %bool
+
+    %main = OpFunction %void None %void_fn
+
+    %1 = OpLabel
+    OpSelectionMerge %999 None
+    OpBranchConditional %cond %10 %100
+
+    %10 = OpLabel
+    OpSelectionMerge %30 None  ; force registration of %30
+    OpBranchConditional %cond %30 %20 ; %20 should be registered too
+
+    %20 = OpLabel
+    OpBranch %30
+
+    %30 = OpLabel ; merge for first if
+    OpBranch %50
+
+
+    %50 = OpLabel
+    OpSelectionMerge %70 None  ; force registration of %70
+    OpBranchConditional %cond %70 %60 ; %60 should be registered
+
+    %60 = OpLabel
+    OpBranch %70
+
+    %70 = OpLabel ; merge for second if
+    OpBranch %999
+
+    %100 = OpLabel
+    OpBranchConditional %cond %20 %60 ; should require a merge
+
+    %999 = OpLabel
+    OpReturn
+
+    OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_NE(SPV_SUCCESS, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("The selection construct with the selection header "
+                        "8[%8] does not dominate the merge block 10[%10]\n"));
+}
+
 TEST_F(ValidateCFG, UnreachableIsStaticallyReachable) {
   const std::string text = R"(
 OpCapability Shader
@@ -4397,6 +4458,170 @@ OpFunctionEnd
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("block <ID> 1[%BAD] exits the continue headed by <ID> "
                         "1[%BAD], but not via a structured exit"));
+}
+
+TEST_F(ValidateCFG, SwitchSelectorNotAnInt) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+%void = OpTypeVoid
+%float = OpTypeFloat 32
+%float_1 = OpConstant %float 1
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpSelectionMerge %default None
+OpSwitch %float_1 %default
+%default = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Selector type must be OpTypeInt"));
+}
+
+TEST_F(ValidateCFG, SwitchDefaultNotALabel) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%int_1 = OpConstant %int 1
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpSelectionMerge %default None
+OpSwitch %int_1 %int_1
+%default = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Default must be an OpLabel instruction"));
+}
+
+TEST_F(ValidateCFG, BlockDepthRecursion) {
+  const std::string text = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%bool = OpTypeBool
+%undef = OpUndef %bool
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%1 = OpLabel
+OpBranch %2
+%2 = OpLabel
+OpLoopMerge %3 %4 None
+OpBranchConditional %undef %3 %4
+%4 = OpLabel
+OpBranch %2
+%3 = OpLabel
+OpBranch %5
+%5 = OpLabel
+OpSelectionMerge %2 None
+OpBranchConditional %undef %6 %7
+%6 = OpLabel
+OpReturn
+%7 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text);
+  EXPECT_EQ(SPV_ERROR_INVALID_CFG, ValidateInstructions());
+}
+
+TEST_F(ValidateCFG, BadStructuredExitBackwardsMerge) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+%void = OpTypeVoid
+%bool = OpTypeBool
+%undef = OpUndef %bool
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%1 = OpLabel
+OpBranch %2
+%2 = OpLabel
+OpLoopMerge %4 %5 None
+OpBranchConditional %undef %4 %6
+%6 = OpLabel
+OpSelectionMerge %7 None
+OpBranchConditional %undef %8 %9
+%7 = OpLabel
+OpReturn
+%8 = OpLabel
+OpBranch %5
+%9 = OpLabel
+OpSelectionMerge %6 None
+OpBranchConditional %undef %5 %5
+%5 = OpLabel
+OpBranch %2
+%4 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_ERROR_INVALID_CFG, ValidateInstructions());
+}
+
+TEST_F(ValidateCFG, BranchConditionalDifferentTargetsPre1p6) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%undef = OpUndef %bool
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%entry = OpLabel
+OpBranchConditional %undef %target %target
+%target = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_5);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_5));
+}
+
+TEST_F(ValidateCFG, BranchConditionalDifferentTargetsPost1p6) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+%void = OpTypeVoid
+%bool = OpTypeBool
+%undef = OpUndef %bool
+%void_fn = OpTypeFunction %void
+%func = OpFunction %void None %void_fn
+%entry = OpLabel
+OpBranchConditional %undef %target %target
+%target = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_6);
+  EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_6));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("In SPIR-V 1.6 or later, True Label and False Label "
+                        "must be different labels"));
 }
 
 }  // namespace

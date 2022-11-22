@@ -47,7 +47,7 @@ import com.google.android.filament.proguard.UsedByReflection;
  * <pre>
  * import com.google.android.filament.*
  *
- * Engin engine         = Engine.create();
+ * Engine engine        = Engine.create();
  * SwapChain swapChain  = engine.createSwapChain(nativeWindow);
  * Renderer renderer    = engine.createRenderer();
  * Scene scene          = engine.createScene();
@@ -106,7 +106,11 @@ import com.google.android.filament.proguard.UsedByReflection;
  * @see Renderer
  */
 public class Engine {
+    private static final Backend[] sBackendValues = Backend.values();
+    private static final FeatureLevel[] sFeatureLevelValues = FeatureLevel.values();
+
     private long mNativeObject;
+
     @NonNull private final TransformManager mTransformManager;
     @NonNull private final LightManager mLightManager;
     @NonNull private final RenderableManager mRenderableManager;
@@ -137,6 +141,18 @@ public class Engine {
          */
         NOOP,
     }
+
+    /**
+     * Defines the backend's feature levels.
+     */
+    public enum FeatureLevel {
+        /** Reserved, don't use */
+        FEATURE_LEVEL_0,
+        /** OpenGL ES 3.0 features (default) */
+        FEATURE_LEVEL_1,
+        /** OpenGL ES 3.1 features + 31 textures units + cubemap arrays */
+        FEATURE_LEVEL_2
+    };
 
     private Engine(long nativeEngine) {
         mNativeObject = nativeEngine;
@@ -252,8 +268,90 @@ public class Engine {
      */
     @NonNull
     public Backend getBackend() {
-        return Backend.values()[(int) nGetBackend(getNativeObject())];
+        return sBackendValues[(int) nGetBackend(getNativeObject())];
     }
+
+    /**
+     * Helper to enable accurate translations.
+     * If you need this Engine to handle a very large world space, one way to achieve this
+     * automatically is to enable accurate translations in the TransformManager. This helper
+     * provides a convenient way of doing that.
+     * This is typically called once just after creating the Engine.
+     */
+    public void enableAccurateTranslations() {
+        getTransformManager().setAccurateTranslationsEnabled(true);
+    }
+
+    /**
+     * Query the feature level supported by the selected backend.
+     *
+     * A specific feature level needs to be set before the corresponding features can be used.
+     *
+     * @return FeatureLevel supported the selected backend.
+     * @see #setActiveFeatureLevel
+     */
+    @NonNull
+    public FeatureLevel getSupportedFeatureLevel() {
+        return sFeatureLevelValues[(int) nGetSupportedFeatureLevel(getNativeObject())];
+    }
+
+    /**
+     * Activate all features of a given feature level. By default FeatureLevel::FEATURE_LEVEL_1 is
+     * active. The selected feature level must not be higher than the value returned by
+     * getActiveFeatureLevel() and it's not possible lower the active feature level.
+     *
+     * @param featureLevel the feature level to activate. If featureLevel is lower than
+     *                     getActiveFeatureLevel(), the current (higher) feature level is kept.
+     *                     If featureLevel is higher than getSupportedFeatureLevel(), an exception
+     *                     is thrown, or the program is terminated if exceptions are disabled.
+     *
+     * @return the active feature level.
+     *
+     * @see #getSupportedFeatureLevel
+     * @see #getActiveFeatureLevel
+     */
+    @NonNull
+    public FeatureLevel setActiveFeatureLevel(@NonNull FeatureLevel featureLevel) {
+        return sFeatureLevelValues[(int) nSetActiveFeatureLevel(getNativeObject(), featureLevel.ordinal())];
+    }
+
+    /**
+     * Returns the currently active feature level.
+     * @return currently active feature level
+     * @see #getSupportedFeatureLevel
+     * @see #setActiveFeatureLevel
+     */
+    @NonNull
+    public FeatureLevel getActiveFeatureLevel() {
+        return sFeatureLevelValues[(int) nGetActiveFeatureLevel(getNativeObject())];
+    }
+
+    /**
+     * Enables or disables automatic instancing of render primitives. Instancing of render primitive
+     * can greatly reduce CPU overhead but requires the instanced primitives to be identical
+     * (i.e. use the same geometry) and use the same MaterialInstance. If it is known that the
+     * scene doesn't contain any identical primitives, automatic instancing can have some
+     * overhead and it is then best to disable it.
+     *
+     * Disabled by default.
+     *
+     * @param enable true to enable, false to disable automatic instancing.
+     *
+     * @see RenderableManager
+     * @see MaterialInstance
+     */
+    public void setAutomaticInstancingEnabled(boolean enable) {
+        nSetAutomaticInstancingEnabled(getNativeObject(), enable);
+    }
+
+    /**
+     * @return true if automatic instancing is enabled, false otherwise.
+     * @see #setAutomaticInstancingEnabled
+     */
+    public boolean isAutomaticInstancingEnabled() {
+        return nIsAutomaticInstancingEnabled(getNativeObject());
+    }
+
 
     // SwapChain
 
@@ -514,6 +612,15 @@ public class Engine {
     }
 
     /**
+     * Destroys a {@link SkinningBuffer} and frees all its associated resources.
+     * @param skinningBuffer the {@link SkinningBuffer} to destroy
+     */
+    public void destroySkinningBuffer(@NonNull SkinningBuffer skinningBuffer) {
+        assertDestroy(nDestroySkinningBuffer(getNativeObject(), skinningBuffer.getNativeObject()));
+        skinningBuffer.clearNativeObject();
+    }
+
+    /**
      * Destroys a {@link IndirectLight} and frees all its associated resources.
      * @param ibl the {@link IndirectLight} to destroy
      */
@@ -581,8 +688,11 @@ public class Engine {
     }
 
     /**
-     * Destroys an <code>entity</code> and all its components.
+     * Destroys all Filament-known components from this <code>entity</code>.
      * <p>
+     * This method destroys Filament components only, not the <code>entity</code> itself. To destroy
+     * the <code>entity</code> use <code>EntityManager#destroy</code>.
+     *
      * It is recommended to destroy components individually before destroying their
      * <code>entity</code>, this gives more control as to when the destruction really happens.
      * Otherwise, orphaned components are garbage collected, which can happen at a later time.
@@ -631,7 +741,7 @@ public class Engine {
 
     /**
      * Kicks the hardware thread (e.g.: the OpenGL, Vulkan or Metal thread) and blocks until
-     * all commands to this point are executed. Note that this doesn't guarantee that the
+     * all commands to this point are executed. Note that this does guarantee that the
      * hardware is actually finished.
      *
      * <p>This is typically used right after destroying the <code>SwapChain</code>,
@@ -690,6 +800,7 @@ public class Engine {
     private static native boolean nDestroyStream(long nativeEngine, long nativeStream);
     private static native boolean nDestroyIndexBuffer(long nativeEngine, long nativeIndexBuffer);
     private static native boolean nDestroyVertexBuffer(long nativeEngine, long nativeVertexBuffer);
+    private static native boolean nDestroySkinningBuffer(long nativeEngine, long nativeSkinningBuffer);
     private static native boolean nDestroyIndirectLight(long nativeEngine, long nativeIndirectLight);
     private static native boolean nDestroyMaterial(long nativeEngine, long nativeMaterial);
     private static native boolean nDestroyMaterialInstance(long nativeEngine, long nativeMaterialInstance);
@@ -704,4 +815,9 @@ public class Engine {
     private static native long nGetRenderableManager(long nativeEngine);
     private static native long nGetJobSystem(long nativeEngine);
     private static native long nGetEntityManager(long nativeEngine);
+    private static native void nSetAutomaticInstancingEnabled(long nativeEngine, boolean enable);
+    private static native boolean nIsAutomaticInstancingEnabled(long nativeEngine);
+    private static native int nGetSupportedFeatureLevel(long nativeEngine);
+    private static native int nSetActiveFeatureLevel(long nativeEngine, int ordinal);
+    private static native int nGetActiveFeatureLevel(long nativeEngine);
 }

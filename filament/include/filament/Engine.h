@@ -35,9 +35,11 @@ class ColorGrading;
 class DebugRegistry;
 class Fence;
 class IndexBuffer;
+class SkinningBuffer;
 class IndirectLight;
 class Material;
 class MaterialInstance;
+class MorphTargetBuffer;
 class Renderer;
 class RenderTarget;
 class Scene;
@@ -51,6 +53,22 @@ class View;
 class LightManager;
 class RenderableManager;
 class TransformManager;
+
+#ifndef FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB
+#    define FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB 3
+#endif
+
+#ifndef FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB
+#    define FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB 2
+#endif
+
+#ifndef FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB
+#    define FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB 1
+#endif
+
+#ifndef FILAMENT_COMMAND_BUFFER_SIZE_IN_MB
+#    define FILAMENT_COMMAND_BUFFER_SIZE_IN_MB (FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB * 3)
+#endif
 
 /**
  * Engine is filament's main entry-point.
@@ -149,6 +167,103 @@ class UTILS_PUBLIC Engine {
 public:
     using Platform = backend::Platform;
     using Backend = backend::Backend;
+    using DriverConfig = backend::Platform::DriverConfig;
+
+    /**
+     * Config is used to define the memory footprint used by the engine, such as the
+     * command buffer size. Config can be used to customize engine requirements based 
+     * on the applications needs.
+     *
+     *    .perRenderPassArenaSizeMB (default: 3 MiB)
+     *   +--------------------------+
+     *   |                          |
+     *   | .perFrameCommandsSizeMB  |
+     *   |    (default 2 MiB)       |
+     *   |                          |
+     *   +--------------------------+
+     *   |  (froxel, etc...)        |
+     *   +--------------------------+
+     *
+     *
+     *      .commandBufferSizeMB (default 3MiB)
+     *   +--------------------------+
+     *   | .minCommandBufferSizeMB  |
+     *   +--------------------------+
+     *   | .minCommandBufferSizeMB  |
+     *   +--------------------------+
+     *   | .minCommandBufferSizeMB  |
+     *   +--------------------------+
+     *   :                          :
+     *   :                          :
+     *
+     */
+    struct Config {
+        /**
+         * Size in MiB of the low-level command buffer arena.
+         *
+         * Each new command buffer is allocated from here. If this buffer is too small the program
+         * might terminate or rendering errors might occur.
+         *
+         * This is typically set to minCommandBufferSizeMB * 3, so that up to 3 frames can be
+         * batched-up at once.
+         *
+         * This value affects the application's memory usage.
+         */
+        uint32_t commandBufferSizeMB = FILAMENT_COMMAND_BUFFER_SIZE_IN_MB;
+
+
+        /**
+         * Size in MiB of the per-frame data arena.
+         *
+         * This is the main arena used for allocations when preparing a frame.
+         * e.g.: Froxel data and high-level commands are allocated from this arena.
+         *
+         * If this size is too small, the program will abort on debug builds and have undefined
+         * behavior otherwise.
+         *
+         * This value affects the application's memory usage.
+         */
+        uint32_t perRenderPassArenaSizeMB = FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB;
+
+
+        /**
+         * Size in MiB of the backend's handle arena.
+         *
+         * Backends will fallback to slower heap-based allocations when running out of space and
+         * log this condition.
+         *
+         * If 0, then the default value for the given platform is used
+         *
+         * This value affects the application's memory usage.
+         */
+        uint32_t driverHandleArenaSizeMB = 0;
+
+
+        /**
+         * Minimum size in MiB of a low-level command buffer.
+         *
+         * This is how much space is guaranteed to be available for low-level commands when a new
+         * buffer is allocated. If this is too small, the engine might have to stall to wait for
+         * more space to become available, this situation is logged.
+         *
+         * This value does not affect the application's memory usage.
+         */
+        uint32_t minCommandBufferSizeMB = FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB;
+
+
+        /**
+         * Size in MiB of the per-frame high level command buffer.
+         *
+         * This buffer is related to the number of draw calls achievable within a frame, if it is
+         * too small, the program will abort on debug builds and have undefined behavior otherwise.
+         *
+         * It is allocated from the 'per-render-pass arena' above. Make sure that at least 1 MiB is
+         * left in the per-render-pass arena when deciding the size of this buffer.
+         *
+         * This value does not affect the application's memory usage.
+         */
+        uint32_t perFrameCommandsSizeMB = FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB;
+    };
 
     /**
      * Creates an instance of Engine
@@ -173,6 +288,8 @@ public:
      *                          Setting this parameter will force filament to use the OpenGL
      *                          implementation (instead of Vulkan for instance).
      *
+     * @param config            A pointer to optional parameters to specify memory size
+     *                          configuration options.  If nullptr, then defaults used.
      *
      * @return A pointer to the newly created Engine, or nullptr if the Engine couldn't be created.
      *
@@ -187,7 +304,8 @@ public:
      * This method is thread-safe.
      */
     static Engine* create(Backend backend = Backend::DEFAULT,
-            Platform* platform = nullptr, void* sharedGLContext = nullptr);
+            Platform* platform = nullptr, void* sharedGLContext = nullptr,
+            const Config* config = nullptr);
 
 #if UTILS_HAS_THREADING
     /**
@@ -229,10 +347,14 @@ public:
      *                          when creating filament's internal context.
      *                          Setting this parameter will force filament to use the OpenGL
      *                          implementation (instead of Vulkan for instance).
+     * 
+     * @param config            A pointer to optional parameters to specify memory size
+     *                          configuration options
      */
     static void createAsync(CreateCallback callback, void* user,
             Backend backend = Backend::DEFAULT,
-            Platform* platform = nullptr, void* sharedGLContext = nullptr);
+            Platform* platform = nullptr, void* sharedGLContext = nullptr,
+            const Config* config = nullptr);
 
     /**
      * Retrieve an Engine* from createAsync(). This must be called from the same thread than
@@ -304,6 +426,45 @@ public:
      */
     static void destroy(Engine* engine);
 
+    using FeatureLevel = backend::FeatureLevel;
+
+
+    /**
+     * Query the feature level supported by the selected backend.
+     *
+     * A specific feature level needs to be set before the corresponding features can be used.
+     *
+     * @return FeatureLevel supported the selected backend.
+     * @see setActiveFeatureLevel
+     */
+    FeatureLevel getSupportedFeatureLevel() const noexcept;
+
+    /**
+     * Activate all features of a given feature level. By default FeatureLevel::FEATURE_LEVEL_1 is
+     * active. The selected feature level must not be higher than the value returned by
+     * getActiveFeatureLevel() and it's not possible lower the active feature level.
+     *
+     * @param featureLevel the feature level to activate. If featureLevel is lower than
+     *                     getActiveFeatureLevel(), the current (higher) feature level is kept.
+     *                     If featureLevel is higher than getSupportedFeatureLevel(), an exception
+     *                     is thrown, or the program is terminated if exceptions are disabled.
+     *
+     * @return the active feature level.
+     *
+     * @see getSupportedFeatureLevel
+     * @see getActiveFeatureLevel
+     */
+    FeatureLevel setActiveFeatureLevel(FeatureLevel featureLevel);
+
+    /**
+     * Returns the currently active feature level.
+     * @return currently active feature level
+     * @see getSupportedFeatureLevel
+     * @see setActiveFeatureLevel
+     */
+    FeatureLevel getActiveFeatureLevel() const noexcept;
+
+
     /**
      * @return EntityManager used by filament
      */
@@ -332,6 +493,28 @@ public:
      * This is typically called once just after creating the Engine.
      */
     void enableAccurateTranslations() noexcept;
+
+    /**
+     * Enables or disables automatic instancing of render primitives. Instancing of render
+     * primitives can greatly reduce CPU overhead but requires the instanced primitives to be
+     * identical (i.e. use the same geometry) and use the same MaterialInstance. If it is known
+     * that the scene doesn't contain any identical primitives, automatic instancing can have some
+     * overhead and it is then best to disable it.
+     *
+     * Disabled by default.
+     *
+     * @param enable true to enable, false to disable automatic instancing.
+     *
+     * @see RenderableManager
+     * @see MaterialInstance
+     */
+    void setAutomaticInstancingEnabled(bool enable) noexcept;
+
+    /**
+     * @return true if automatic instancing is enabled, false otherwise.
+     * @see setAutomaticInstancingEnabled
+     */
+    bool isAutomaticInstancingEnabled() const noexcept;
 
     /**
      * Creates a SwapChain from the given Operating System's native window handle.
@@ -419,6 +602,8 @@ public:
     bool destroy(const VertexBuffer* p);        //!< Destroys an VertexBuffer object.
     bool destroy(const Fence* p);               //!< Destroys a Fence object.
     bool destroy(const IndexBuffer* p);         //!< Destroys an IndexBuffer object.
+    bool destroy(const SkinningBuffer* p);      //!< Destroys a SkinningBuffer object.
+    bool destroy(const MorphTargetBuffer* p);   //!< Destroys a MorphTargetBuffer object.
     bool destroy(const IndirectLight* p);       //!< Destroys an IndirectLight object.
 
     /**
@@ -444,7 +629,7 @@ public:
 
     /**
      * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) and blocks until
-     * all commands to this point are executed. Note that this doesn't guarantee that the
+     * all commands to this point are executed. Note that does guarantee that the
      * hardware is actually finished.
      *
      * <p>This is typically used right after destroying the <code>SwapChain</code>,
@@ -454,7 +639,24 @@ public:
      */
     void flushAndWait();
 
+    /**
+     * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) but does not wait
+     * for commands to be either executed or the hardware finished.
+     *
+     * <p>This is typically used after creating a lot of objects to start draining the command
+     * queue which has a limited size.</p>
+      */
     void flush();
+
+    /**
+     * Drains the user callback message queue and immediately execute all pending callbacks.
+     *
+     * <p> Typically this should be called once per frame right after the application's vsync tick,
+     * and typically just before computing parameters (e.g. object positions) for the next frame.
+     * This is useful because otherwise callbacks will be executed by filament at a later time,
+     * which may increase latency in certain applications.</p>
+     */
+    void pumpMessageQueues();
 
     /**
      * Returns the default Material.
@@ -522,6 +724,22 @@ public:
       * @return JobSystem used by filament
       */
     utils::JobSystem& getJobSystem() noexcept;
+
+#if defined(__EMSCRIPTEN__)
+    /**
+      * WebGL only: Tells the driver to reset any internal state tracking if necessary.
+      * 
+      * This is only useful when integrating an external renderer into Filament on platforms 
+      * like WebGL, where share contexts do not exist. Filament keeps track of the GL
+      * state it has set (like which texture is bound), and does not re-set that state if
+      * it does not think it needs to. However, if an external renderer has set different
+      * state in the mean time, Filament will use that new state unknowingly.
+      * 
+      * If you are in this situation, call this function - ideally only once per frame, 
+      * immediately after calling Engine::execute().
+      */
+    void resetBackendState() noexcept;
+#endif
 
     DebugRegistry& getDebugRegistry() noexcept;
 

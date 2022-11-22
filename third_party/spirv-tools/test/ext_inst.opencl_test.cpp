@@ -233,7 +233,7 @@ INSTANTIATE_TEST_SUITE_P(
         CASE3(UMad_hi, u_mad_hi), // enum value 204
     })));
 
-// OpenCL.std: 2.3 Common instrucitons
+// OpenCL.std: 2.3 Common instructions
 INSTANTIATE_TEST_SUITE_P(
     OpenCLCommon, ExtInstOpenCLStdRoundTripTest,
     ::testing::ValuesIn(std::vector<InstructionCase>({

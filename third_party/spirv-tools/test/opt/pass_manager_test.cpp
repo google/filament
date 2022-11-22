@@ -30,7 +30,7 @@ namespace {
 using spvtest::GetIdBound;
 using ::testing::Eq;
 
-// A null pass whose construtors accept arguments
+// A null pass whose constructors accept arguments
 class NullPassWithArgs : public NullPass {
  public:
   NullPassWithArgs(uint32_t) {}

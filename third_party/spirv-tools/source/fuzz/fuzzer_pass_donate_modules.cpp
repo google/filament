@@ -45,10 +45,11 @@ FuzzerPassDonateModules::FuzzerPassDonateModules(
     opt::IRContext* ir_context, TransformationContext* transformation_context,
     FuzzerContext* fuzzer_context,
     protobufs::TransformationSequence* transformations,
-    const std::vector<fuzzerutil::ModuleSupplier>& donor_suppliers)
+    bool ignore_inapplicable_transformations,
+    std::vector<fuzzerutil::ModuleSupplier> donor_suppliers)
     : FuzzerPass(ir_context, transformation_context, fuzzer_context,
-                 transformations),
-      donor_suppliers_(donor_suppliers) {}
+                 transformations, ignore_inapplicable_transformations),
+      donor_suppliers_(std::move(donor_suppliers)) {}
 
 void FuzzerPassDonateModules::Apply() {
   // If there are no donor suppliers, this fuzzer pass is a no-op.
@@ -478,7 +479,7 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
              "should have been donated.");
 
       // It is OK to have duplicate constant composite definitions, so add
-      // this to the module using remapped versions of all consituent ids and
+      // this to the module using remapped versions of all constituent ids and
       // the result type.
       new_result_id = GetFuzzerContext()->GetFreshId();
       std::vector<uint32_t> constituent_ids;

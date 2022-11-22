@@ -1,6 +1,6 @@
 name: hello-pbr
 options:
-    bundleIdPrefix: google.filament
+    bundleIdPrefix: ${SAMPLE_CODE_DISAMBIGUATOR}.google.filament
 include: ../app-template.yml
 targets:
     hello-pbr:
@@ -8,7 +8,7 @@ targets:
             - FilamentApp
         settings:
             base:
-                OTHER_LDFLAGS: ["-lfilameshio", "-lmeshoptimizer", "-limage"]
+                OTHER_LDFLAGS: ["-lfilameshio", "-lmeshoptimizer", "-limage", "-lktxreader"]
         preBuildScripts:
             - path: build-resources.sh
               name: Build Resources

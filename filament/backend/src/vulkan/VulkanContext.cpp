@@ -17,17 +17,43 @@
 #include "VulkanContext.h"
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
+#include "VulkanTexture.h"
 #include "VulkanUtility.h"
+
+#include <backend/PixelBufferDescriptor.h>
 
 #include <utils/Panic.h>
 #include <utils/FixedCapacityVector.h>
+
+#include <algorithm> // for std::max
 
 using namespace bluevk;
 
 using utils::FixedCapacityVector;
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
+
+VkImage VulkanAttachment::getImage() const {
+    return texture ? texture->getVkImage() : VK_NULL_HANDLE;
+}
+
+VkFormat VulkanAttachment::getFormat() const {
+    return texture ? texture->getVkFormat() : VK_FORMAT_UNDEFINED;
+}
+
+VkImageLayout VulkanAttachment::getLayout() const {
+    return texture ? texture->getVkLayout(layer, level) : VK_IMAGE_LAYOUT_UNDEFINED;
+}
+
+VkExtent2D VulkanAttachment::getExtent2D() const {
+    assert_invariant(texture);
+    return { std::max(1u, texture->width >> level), std::max(1u, texture->height >> level) };
+}
+
+VkImageView VulkanAttachment::getImageView(VkImageAspectFlags aspect) const {
+    assert_invariant(texture);
+    return texture->getAttachmentView(level, layer, aspect);
+}
 
 void VulkanContext::selectPhysicalDevice() {
     uint32_t physicalDeviceCount = 0;
@@ -54,8 +80,8 @@ void VulkanContext::selectPhysicalDevice() {
         }
 
         // Does the device have any command queues that support graphics?
-        // In theory we should also ensure that the device supports presentation of our
-        // particular VkSurface, but we don't have a VkSurface yet so we'll skip this requirement.
+        // In theory, we should also ensure that the device supports presentation of our
+        // particular VkSurface, but we don't have a VkSurface yet, so we'll skip this requirement.
         uint32_t queueFamiliesCount;
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamiliesCount, nullptr);
         if (queueFamiliesCount == 0) {
@@ -90,20 +116,15 @@ void VulkanContext::selectPhysicalDevice() {
         for (uint32_t k = 0; k < extensionCount; ++k) {
             if (!strcmp(extensions[k].extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME)) {
                 supportsSwapchain = true;
-            }
-            if (!strcmp(extensions[k].extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
+            } else if (!strcmp(extensions[k].extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
                 debugMarkersSupported = true;
-            }
-            if (!strcmp(extensions[k].extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
+            } else if (!strcmp(extensions[k].extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
                 portabilitySubsetSupported = true;
-            }
-            if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
+            } else if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
                 maintenanceSupported[0] = true;
-            }
-            if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE2_EXTENSION_NAME)) {
+            } else if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE2_EXTENSION_NAME)) {
                 maintenanceSupported[1] = true;
-            }
-            if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE3_EXTENSION_NAME)) {
+            } else if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE3_EXTENSION_NAME)) {
                 maintenanceSupported[2] = true;
             }
         }
@@ -214,8 +235,7 @@ void VulkanContext::createLogicalDevice() {
         deviceCreateInfo.pNext = &portability;
     }
 
-    VkResult result = vkCreateDevice(physicalDevice, &deviceCreateInfo, VKALLOC,
-            &device);
+    VkResult result = vkCreateDevice(physicalDevice, &deviceCreateInfo, VKALLOC, &device);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateDevice error.");
     vkGetDeviceQueue(device, graphicsQueueFamilyIndex, 0,
             &graphicsQueue);
@@ -241,6 +261,10 @@ void VulkanContext::createLogicalDevice() {
     timestamps_lock.unlock();
 
     const VmaVulkanFunctions funcs {
+#if VMA_DYNAMIC_VULKAN_FUNCTIONS
+        .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
+        .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
+#else
         .vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties,
         .vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties,
         .vkAllocateMemory = vkAllocateMemory,
@@ -260,47 +284,15 @@ void VulkanContext::createLogicalDevice() {
         .vkCmdCopyBuffer = vkCmdCopyBuffer,
         .vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2KHR,
         .vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR
+#endif
     };
     const VmaAllocatorCreateInfo allocatorInfo {
         .physicalDevice = physicalDevice,
         .device = device,
         .pVulkanFunctions = &funcs,
-        .pRecordSettings = nullptr,
         .instance = instance
     };
     vmaCreateAllocator(&allocatorInfo, &allocator);
-
-    const uint32_t memTypeBits = UINT32_MAX;
-
-    // Create a GPU memory pool for VkBuffer objects that ignores the bufferImageGranularity field
-    // in VkPhysicalDeviceLimits. We have observed that honoring bufferImageGranularity can cause
-    // the allocator to slow to a crawl.
-    uint32_t memTypeIndex = UINT32_MAX;
-    const VmaAllocationCreateInfo gpuInfo = { .usage = VMA_MEMORY_USAGE_GPU_ONLY };
-    UTILS_UNUSED_IN_RELEASE VkResult res = vmaFindMemoryTypeIndex(allocator, memTypeBits, &gpuInfo,
-            &memTypeIndex);
-    assert_invariant(res == VK_SUCCESS && memTypeIndex != UINT32_MAX);
-    const VmaPoolCreateInfo gpuPoolInfo {
-        .memoryTypeIndex = memTypeIndex,
-        .flags = VMA_POOL_CREATE_IGNORE_BUFFER_IMAGE_GRANULARITY_BIT,
-        .blockSize = VMA_BUFFER_POOL_BLOCK_SIZE_IN_MB * 1024 * 1024,
-    };
-    res = vmaCreatePool(allocator, &gpuPoolInfo, &vmaPoolGPU);
-    assert_invariant(res == VK_SUCCESS);
-
-    // Next, create a similar pool but for CPU mappable memory (typically used as a staging area).
-    memTypeIndex = UINT32_MAX;
-    const VmaAllocationCreateInfo cpuInfo = { .usage = VMA_MEMORY_USAGE_CPU_ONLY };
-    res = vmaFindMemoryTypeIndex(allocator, memTypeBits, &cpuInfo, &memTypeIndex);
-    assert_invariant(res == VK_SUCCESS && memTypeIndex != UINT32_MAX);
-    const VmaPoolCreateInfo cpuPoolInfo {
-        .memoryTypeIndex = memTypeIndex,
-        .flags = VMA_POOL_CREATE_IGNORE_BUFFER_IMAGE_GRANULARITY_BIT,
-        .blockSize = VMA_BUFFER_POOL_BLOCK_SIZE_IN_MB * 1024 * 1024,
-    };
-    res = vmaCreatePool(allocator, &cpuPoolInfo, &vmaPoolCPU);
-    assert_invariant(res == VK_SUCCESS);
-
     commands = new VulkanCommands(device, graphicsQueueFamilyIndex);
 }
 
@@ -333,25 +325,6 @@ VkFormat VulkanContext::findSupportedFormat(utils::Slice<VkFormat> candidates,
     return VK_FORMAT_UNDEFINED;
 }
 
-VkImageLayout VulkanContext::getTextureLayout(TextureUsage usage) const {
-    // Filament sometimes samples from depth while it is bound to the current render target, (e.g.
-    // SSAO does this while depth writes are disabled) so let's keep it simple and use GENERAL for
-    // all depth textures.
-    if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
-        return VK_IMAGE_LAYOUT_GENERAL;
-    }
-
-    // Filament sometimes samples from one miplevel while writing to another level in the same
-    // texture (e.g. bloom does this). Moreover we'd like to avoid lots of expensive layout
-    // transitions. So, keep it simple and use GENERAL for all color-attachable textures.
-    if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
-        return VK_IMAGE_LAYOUT_GENERAL;
-    }
-
-    // Finally, the layout for an immutable texture is optimal read-only.
-    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-}
-
 void VulkanContext::createEmptyTexture(VulkanStagePool& stagePool) {
     emptyTexture = new VulkanTexture(*this, SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1,
@@ -359,8 +332,7 @@ void VulkanContext::createEmptyTexture(VulkanStagePool& stagePool) {
             TextureUsage::SUBPASS_INPUT, stagePool);
     uint32_t black = 0;
     PixelBufferDescriptor pbd(&black, 4, PixelDataFormat::RGBA, PixelDataType::UBYTE);
-    emptyTexture->update2DImage(pbd, 1, 1, 0);
+    emptyTexture->updateImage(pbd, 1, 1, 1, 0, 0, 0, 0);
 }
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend

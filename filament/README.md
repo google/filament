@@ -44,10 +44,11 @@ To link against debug builds of Filament, you must also link against:
 
 - `matdbg`, Support library that adds an interactive web-based debugger to Filament
 
-To use the Vulkan backend on macOS you must also make the following libraries available at runtime:
-- `MoltenVK_icd.json`
-- `libMoltenVK.dylib`
-- `libvulkan.1.dylib`
+To use the Vulkan backend on macOS you must install the LunarG SDK, enable "System Global
+Components", and reboot your machine.
+
+The easiest way to install those files is to use the macOS
+[LunarG Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) installer.
 
 ## Linking against Filament
 

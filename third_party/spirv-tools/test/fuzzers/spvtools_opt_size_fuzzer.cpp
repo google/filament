@@ -12,27 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cstdint>
-#include <vector>
+#include <cinttypes>
+#include <cstddef>
+#include <functional>
 
 #include "spirv-tools/optimizer.hpp"
+#include "test/fuzzers/spvtools_opt_fuzzer_common.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  spvtools::Optimizer optimizer(SPV_ENV_UNIVERSAL_1_3);
-  optimizer.SetMessageConsumer([](spv_message_level_t, const char*,
-                                  const spv_position_t&, const char*) {});
-
-  std::vector<uint32_t> input;
-  input.resize(size >> 2);
-
-  size_t count = 0;
-  for (size_t i = 0; (i + 3) < size; i += 4) {
-    input[count++] = data[i] | (data[i + 1] << 8) | (data[i + 2] << 16) |
-                     (data[i + 3]) << 24;
-  }
-
-  optimizer.RegisterSizePasses();
-  optimizer.Run(input.data(), input.size(), &input);
-
-  return 0;
+  return spvtools::fuzzers::OptFuzzerTestOneInput(
+      data, size, [](spvtools::Optimizer& optimizer) -> void {
+        optimizer.RegisterSizePasses();
+      });
 }

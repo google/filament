@@ -130,7 +130,7 @@ TEST(FuzzerPassOutlineFunctionsTest, EntryIsAlreadySuitable) {
 
   FuzzerPassOutlineFunctions fuzzer_pass(context.get(), &transformation_context,
                                          &fuzzer_context,
-                                         &transformation_sequence);
+                                         &transformation_sequence, false);
 
   // Block 28
   auto suitable_entry_block =
@@ -173,7 +173,7 @@ TEST(FuzzerPassOutlineFunctionsTest, EntryHasOpVariable) {
 
   FuzzerPassOutlineFunctions fuzzer_pass(context.get(), &transformation_context,
                                          &fuzzer_context,
-                                         &transformation_sequence);
+                                         &transformation_sequence, false);
 
   // Block 20
   auto suitable_entry_block =
@@ -297,7 +297,7 @@ TEST(FuzzerPassOutlineFunctionsTest, EntryBlockIsHeader) {
 
   FuzzerPassOutlineFunctions fuzzer_pass(context.get(), &transformation_context,
                                          &fuzzer_context,
-                                         &transformation_sequence);
+                                         &transformation_sequence, false);
 
   // Block 21
   auto suitable_entry_block =
@@ -464,7 +464,7 @@ TEST(FuzzerPassOutlineFunctionsTest, ExitBlock) {
 
   FuzzerPassOutlineFunctions fuzzer_pass(context.get(), &transformation_context,
                                          &fuzzer_context,
-                                         &transformation_sequence);
+                                         &transformation_sequence, false);
 
   // Block 39 is not a merge block, so it is already suitable.
   auto suitable_exit_block = fuzzer_pass.MaybeGetExitBlockSuitableForOutlining(

@@ -28,7 +28,7 @@ using namespace utils;
 
 // ------------------------------------------------------------------------------------------------
 // Stream operators for all types in DriverEnums.h
-// (These must live outside of the filament namespace)
+// (These must live outside the filament namespace)
 // ------------------------------------------------------------------------------------------------
 
 #if !defined(NDEBUG)
@@ -41,9 +41,8 @@ using namespace utils;
 
 io::ostream& operator<<(io::ostream& out, ShaderModel model) {
     switch (model) {
-        CASE(ShaderModel, UNKNOWN)
-        CASE(ShaderModel, GL_ES_30)
-        CASE(ShaderModel, GL_CORE_41)
+        CASE(ShaderModel, MOBILE)
+        CASE(ShaderModel, DESKTOP)
     }
     return out;
 }
@@ -51,9 +50,10 @@ io::ostream& operator<<(io::ostream& out, ShaderModel model) {
 io::ostream& operator<<(io::ostream& out, PrimitiveType type) {
     switch (type) {
         CASE(PrimitiveType, TRIANGLES)
+        CASE(PrimitiveType, TRIANGLE_STRIP)
         CASE(PrimitiveType, LINES)
+        CASE(PrimitiveType, LINE_STRIP)
         CASE(PrimitiveType, POINTS)
-        CASE(PrimitiveType, NONE)
     }
     return out;
 }
@@ -94,7 +94,6 @@ io::ostream& operator<<(io::ostream& out, BufferUsage usage) {
     switch (usage) {
         CASE(BufferUsage, STATIC)
         CASE(BufferUsage, DYNAMIC)
-        CASE(BufferUsage, STREAM)
     }
     return out;
 }
@@ -116,6 +115,7 @@ io::ostream& operator<<(io::ostream& out, SamplerType type) {
         CASE(SamplerType, SAMPLER_2D_ARRAY)
         CASE(SamplerType, SAMPLER_3D)
         CASE(SamplerType, SAMPLER_CUBEMAP)
+        CASE(SamplerType, SAMPLER_CUBEMAP_ARRAY)
         CASE(SamplerType, SAMPLER_EXTERNAL)
     }
     return out;
@@ -366,6 +366,7 @@ io::ostream& operator<<(io::ostream& out, BufferObjectBinding binding) {
     switch (binding) {
         CASE(BufferObjectBinding, VERTEX)
         CASE(BufferObjectBinding, UNIFORM)
+        CASE(BufferObjectBinding, SHADER_STORAGE)
     }
     return out;
 }
@@ -400,16 +401,6 @@ io::ostream& operator<<(io::ostream& out, const AttributeArray& type) {
     return out << "AttributeArray[" << type.max_size() << "]{}";
 }
 
-io::ostream& operator<<(io::ostream& out, const FaceOffsets& type) {
-    return out << "FaceOffsets{"
-    << type[0] << ", "
-    << type[1] << ", "
-    << type[2] << ", "
-    << type[3] << ", "
-    << type[4] << ", "
-    << type[5] << "}";
-}
-
 io::ostream& operator<<(io::ostream& out, const RasterState& rs) {
     // TODO: implement decoding of enums
     return out << "RasterState{"
@@ -424,9 +415,9 @@ io::ostream& operator<<(io::ostream& out, const RasterState& rs) {
 
 io::ostream& operator<<(io::ostream& out, const TargetBufferInfo& tbi) {
     return out << "TargetBufferInfo{"
-    << "h=" << tbi.handle
+    << "handle=" << tbi.handle
     << ", level=" << tbi.level
-    << ", face=" << tbi.face << "}";
+    << ", layer=" << tbi.layer << "}";
 }
 
 io::ostream& operator<<(io::ostream& out, const PolygonOffset& po) {
@@ -493,6 +484,28 @@ io::ostream& operator<<(io::ostream& out, MRT const& mrt) {
     // TODO: implement decoding of enum
     out << "MRT{...}";
     return out;
+}
+
+io::ostream& operator<<(io::ostream& stream, ShaderStageFlags stageFlags) {
+    const char* str = nullptr;
+    switch (stageFlags) {
+        case ShaderStageFlags::NONE:
+            str = "{ }";
+            break;
+        case ShaderStageFlags::VERTEX:
+            str = "{ vertex }";
+            break;
+        case ShaderStageFlags::FRAGMENT:
+            str = "{ fragment }";
+            break;
+        case ShaderStageFlags::COMPUTE:
+            str = "{ compute }";
+            break;
+        case ShaderStageFlags::ALL_SHADER_STAGE_FLAGS:
+            str = "{ vertex | fragment | compute }";
+            break;
+    }
+    return stream << str;
 }
 
 #undef CASE

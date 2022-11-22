@@ -76,6 +76,7 @@ mkdir -p "${PROJECT_DIR}/generated/"
 
 # cmgen consumes an HDR environment map and generates two mipmapped KTX files (IBL and skybox)
 "${cmgen_path}" \
+    --quiet \
     --deploy="${PROJECT_DIR}/generated/venetian_crossroads_2k" \
     --format=ktx --size=256 \
     "${PROJECT_DIR}/../../../third_party/environments/venetian_crossroads_2k.hdr"

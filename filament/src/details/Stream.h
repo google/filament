@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_STREAM_H
 #define TNT_FILAMENT_DETAILS_STREAM_H
 
-#include "upcast.h"
+#include "downcast.h"
 
 #include <filament/Stream.h>
 
@@ -37,11 +37,9 @@ public:
     backend::Handle<backend::HwStream> getHandle() const noexcept { return mStreamHandle; }
 
     void setAcquiredImage(void* image, Callback callback, void* userdata) noexcept;
+    void setAcquiredImage(void* image, backend::CallbackHandler* handler, Callback callback, void* userdata) noexcept;
 
     void setDimensions(uint32_t width, uint32_t height) noexcept;
-
-    void readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-            backend::PixelBufferDescriptor&& buffer) noexcept;
 
     StreamType getStreamType() const noexcept { return mStreamType; }
 
@@ -56,12 +54,11 @@ private:
     const StreamType mStreamType;
     backend::Handle<backend::HwStream> mStreamHandle;
     void* mNativeStream = nullptr;
-    intptr_t mExternalTextureId;
     uint32_t mWidth;
     uint32_t mHeight;
 };
 
-FILAMENT_UPCAST(Stream)
+FILAMENT_DOWNCAST(Stream)
 
 } // namespace filament
 

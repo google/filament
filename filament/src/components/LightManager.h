@@ -17,9 +17,9 @@
 #ifndef TNT_FILAMENT_COMPONENTS_LIGHTMANAGER_H
 #define TNT_FILAMENT_COMPONENTS_LIGHTMANAGER_H
 
-#include "upcast.h"
+#include "downcast.h"
 
-#include "private/backend/DriverApiForward.h"
+#include "backend/DriverApiForward.h"
 
 #include <filament/LightManager.h>
 
@@ -44,6 +44,8 @@ public:
 
     void terminate() noexcept;
 
+    void gc(utils::EntityManager& em) noexcept;
+
     size_t getComponentCount() const noexcept {
         return mManager.getComponentCount();
     }
@@ -66,10 +68,6 @@ public:
 
     void prepare(backend::DriverApi& driver) const noexcept;
 
-    void gc(utils::EntityManager& em) noexcept {
-        mManager.gc(em);
-    }
-
     struct LightType {
         Type type : 3;
         bool shadowCaster : 1;
@@ -90,7 +88,7 @@ public:
         CANDELA     // intensity specified in candela (only applicable to punctual lights)
     };
 
-    struct ShadowParams {
+    struct ShadowParams { // TODO: get rid of this struct
         LightManager::ShadowOptions options;
     };
 
@@ -239,7 +237,7 @@ private:
         DIRECTION,          // direction in local-space (i.e. pre-transform)
         COLOR,              // color
         SHADOW_PARAMS,      // state needed for shadowing
-        SPOT_PARAMS,        // state needed for spot lights
+        SPOT_PARAMS,        // state needed for spotlights
         SUN_ANGULAR_RADIUS, // state for the directional light sun
         SUN_HALO_SIZE,      // state for the directional light sun
         SUN_HALO_FALLOFF,   // state for the directional light sun
@@ -302,7 +300,7 @@ private:
     FEngine& mEngine;
 };
 
-FILAMENT_UPCAST(LightManager)
+FILAMENT_DOWNCAST(LightManager)
 
 
 } // namespace filament

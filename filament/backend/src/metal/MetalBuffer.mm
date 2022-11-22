@@ -16,41 +16,31 @@
 
 #include "MetalBuffer.h"
 
-#include <utils/Panic.h>
-
-#include <array>
+#include "MetalContext.h"
 
 namespace filament {
 namespace backend {
-namespace metal {
 
-MetalBuffer::MetalBuffer(MetalContext& context, BufferUsage usage, size_t size, bool forceGpuBuffer)
-        : mBufferSize(size), mContext(context) {
+MetalBuffer::MetalBuffer(MetalContext& context, BufferObjectBinding bindingType, BufferUsage usage,
+        size_t size, bool forceGpuBuffer) : mBufferSize(size), mContext(context) {
     // If the buffer is less than 4K in size and is updated frequently, we don't use an explicit
     // buffer. Instead, we use immediate command encoder methods like setVertexBytes:length:atIndex:.
-    if (size <= 4 * 1024) {
-        // We'll take the same approach for STREAM buffers under 4K.
-        if (usage == BufferUsage::STREAM) {
-            usage = BufferUsage::DYNAMIC;
-        }
-
-        if (usage == BufferUsage::DYNAMIC && !forceGpuBuffer) {
-            mBufferPoolEntry = nullptr;
-            mCpuBuffer = malloc(size);
-        }
+    // This won't work for SSBOs, since they are read/write.
+    if (size <= 4 * 1024 && bindingType != BufferObjectBinding::SHADER_STORAGE &&
+            usage == BufferUsage::DYNAMIC && !forceGpuBuffer) {
+        mBuffer = nil;
+        mCpuBuffer = malloc(size);
+        return;
     }
 
-    mUsage = usage;
+    // Otherwise, we allocate a private GPU buffer.
+    mBuffer = [context.device newBufferWithLength:size options:MTLResourceStorageModePrivate];
+    ASSERT_POSTCONDITION(mBuffer, "Could not allocate Metal buffer of size %zu.", size);
 }
 
 MetalBuffer::~MetalBuffer() {
     if (mCpuBuffer) {
         free(mCpuBuffer);
-    }
-    // This buffer is being destroyed. If we have a buffer pool entry, release it as it is no longer
-    // needed.
-    if (mBufferPoolEntry) {
-        mContext.bufferPool->releaseBuffer(mBufferPoolEntry);
     }
 }
 
@@ -59,15 +49,8 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size, size_t byteOffset) {
         return;
     }
     ASSERT_PRECONDITION(size + byteOffset <= mBufferSize,
-            "Attempting to copy %d bytes into a buffer of size %d at offset %d",
+            "Attempting to copy %zu bytes into a buffer of size %zu at offset %zu",
             size, mBufferSize, byteOffset);
-
-    if (mUsage == BufferUsage::STREAM) {
-        // byteOffset must be 0 for STREAM buffers.
-        assert_invariant(byteOffset == 0);
-        copyIntoStreamBuffer(src, size);
-        return;
-    }
 
     // Either copy into the Metal buffer or into our cpu buffer.
     if (mCpuBuffer) {
@@ -75,75 +58,61 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size, size_t byteOffset) {
         return;
     }
 
-    // We're about to acquire a new buffer to hold the new contents. If we previously had obtained a
-    // buffer we release it, decrementing its reference count, as we no longer needs it.
-    if (mBufferPoolEntry) {
-        mContext.bufferPool->releaseBuffer(mBufferPoolEntry);
-    }
+    // Acquire a staging buffer to hold the contents of this update.
+    MetalBufferPool* bufferPool = mContext.bufferPool;
+    const MetalBufferPoolEntry* const staging = bufferPool->acquireBuffer(size);
+    memcpy(staging->buffer.contents, src, size);
 
-    mBufferPoolEntry = mContext.bufferPool->acquireBuffer(mBufferSize);
-    memcpy(static_cast<uint8_t*>(mBufferPoolEntry->buffer.contents) + byteOffset, src, size);
+    // The blit below requires that byteOffset be a multiple of 4.
+    ASSERT_PRECONDITION(!(byteOffset & 0x3u), "byteOffset must be a multiple of 4");
+
+    // Encode a blit from the staging buffer into the private GPU buffer.
+    id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(&mContext);
+    id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
+    [blitEncoder copyFromBuffer:staging->buffer
+                   sourceOffset:0
+                       toBuffer:mBuffer
+              destinationOffset:byteOffset
+                           size:size];
+    [blitEncoder endEncoding];
+    [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
+        bufferPool->releaseBuffer(staging);
+    }];
 }
 
-void MetalBuffer::copyIntoStreamBuffer(void* src, size_t size) {
-    // Stream buffers are handled a bit differently. In STREAM mode, we have a single large buffer.
-    // At each update we "advance" into the buffer, keeping track of the where we're at, and bind
-    // the buffer at that location. Effectively, "byteOffset" is managed automatically.
-
-    assert_invariant(size <= mBufferSize);
-    assert_invariant(!mCpuBuffer);
-
-    mCurrentStreamStart = mCurrentStreamEnd;
-    mCurrentStreamEnd += size;
-
-    if (mCurrentStreamEnd > mBufferSize) {
-        // Allocate a new buffer and reset the stream offset.
-        mCurrentStreamStart = 0;
-        mCurrentStreamEnd = size;
-
-        if (mBufferPoolEntry) { mContext.bufferPool->releaseBuffer(mBufferPoolEntry); }
-        mBufferPoolEntry = mContext.bufferPool->acquireBuffer(mBufferSize);
-    }
-
-    // Lazily acquire a new buffer if we haven't already.
-    if (!mBufferPoolEntry) {
-        mBufferPoolEntry = mContext.bufferPool->acquireBuffer(mBufferSize);
-    }
-
-    memcpy(static_cast<uint8_t*>(mBufferPoolEntry->buffer.contents) + mCurrentStreamStart, src, size);
+void MetalBuffer::copyIntoBufferUnsynchronized(void* src, size_t size, size_t byteOffset) {
+    // TODO: implement the unsynchronized version
+    copyIntoBuffer(src, size, byteOffset);
 }
 
 id<MTLBuffer> MetalBuffer::getGpuBufferForDraw(id<MTLCommandBuffer> cmdBuffer) noexcept {
-    if (!mBufferPoolEntry) {
-        // If there's a CPU buffer, then we return nil here, as the CPU-side buffer will be bound
-        // separately.
-        if (mCpuBuffer) {
-            return nil;
-        }
-
-        // If there isn't a CPU buffer, it means no data has been loaded into this buffer yet. To
-        // avoid an error, we'll allocate an empty buffer.
-        mBufferPoolEntry = mContext.bufferPool->acquireBuffer(mBufferSize);
+    // If there's a CPU buffer, then we return nil here, as the CPU-side buffer will be bound
+    // separately.
+    if (mCpuBuffer) {
+        return nil;
     }
-
-    // This buffer is being used in a draw call, so we retain it so it's not released back into the
-    // buffer pool until the frame has finished.
-    auto uniformDeleter = [bufferPool = mContext.bufferPool] (const void* resource) {
-        bufferPool->releaseBuffer((const MetalBufferPoolEntry*) resource);
-    };
-    if (mContext.resourceTracker.trackResource((__bridge void*) cmdBuffer, mBufferPoolEntry,
-            uniformDeleter)) {
-        // We only want to retain the buffer once per command buffer- trackResource will return
-        // true if this is the first time tracking this uniform for this command buffer.
-        mContext.bufferPool->retainBuffer(mBufferPoolEntry);
-    }
-
-    return mBufferPoolEntry->buffer;
+    assert_invariant(mBuffer);
+    return mBuffer;
 }
 
-void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLRenderCommandEncoder> encoder,
+void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLCommandEncoder> encoder,
         size_t bufferStart, uint8_t stages, MetalBuffer* const* buffers, size_t const* offsets,
         size_t count) {
+    // Ensure we were given the correct type of encoder:
+    // either a MTLRenderCommandEncoder or a MTLComputeCommandEncoder.
+    if (stages & MetalBuffer::Stage::VERTEX || stages & MetalBuffer::Stage::FRAGMENT) {
+        assert_invariant([encoder respondsToSelector:@selector(setVertexBuffers:offsets:withRange:)]);
+        assert_invariant([encoder respondsToSelector:@selector(setFragmentBuffers:offsets:withRange:)]);
+        assert_invariant([encoder respondsToSelector:@selector(setVertexBytes:length:atIndex:)]);
+        assert_invariant([encoder respondsToSelector:@selector(setFragmentBytes:length:atIndex:)]);
+        assert_invariant(!(stages & MetalBuffer::Stage::COMPUTE));
+    }
+    if (stages & MetalBuffer::Stage::COMPUTE) {
+        assert_invariant([encoder respondsToSelector:@selector(setBuffers:offsets:withRange:)]);
+        assert_invariant([encoder respondsToSelector:@selector(setBytes:length:atIndex:)]);
+        assert_invariant(!(stages & (MetalBuffer::Stage::FRAGMENT | MetalBuffer::Stage::VERTEX)));
+    }
+
     const NSRange bufferRange = NSMakeRange(bufferStart, count);
 
     constexpr size_t MAX_BUFFERS = 16;
@@ -164,18 +133,23 @@ void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLRenderComman
             continue;
         }
         metalBuffers[b] = gpuBuffer;
-        metalOffsets[b] = offsets[b] + buffer->mCurrentStreamStart;
+        metalOffsets[b] = offsets[b];
     }
 
     if (stages & Stage::VERTEX) {
-        [encoder setVertexBuffers:metalBuffers.data()
-                          offsets:metalOffsets.data()
-                        withRange:bufferRange];
+        [(id<MTLRenderCommandEncoder>) encoder setVertexBuffers:metalBuffers.data()
+                                                        offsets:metalOffsets.data()
+                                                      withRange:bufferRange];
     }
     if (stages & Stage::FRAGMENT) {
-        [encoder setFragmentBuffers:metalBuffers.data()
-                            offsets:metalOffsets.data()
-                          withRange:bufferRange];
+        [(id<MTLRenderCommandEncoder>) encoder setFragmentBuffers:metalBuffers.data()
+                                                          offsets:metalOffsets.data()
+                                                        withRange:bufferRange];
+    }
+    if (stages & Stage::COMPUTE) {
+        [(id<MTLComputeCommandEncoder>) encoder setBuffers:metalBuffers.data()
+                                                   offsets:metalOffsets.data()
+                                                 withRange:bufferRange];
     }
 
     for (size_t b = 0; b < count; b++) {
@@ -194,18 +168,25 @@ void MetalBuffer::bindBuffers(id<MTLCommandBuffer> cmdBuffer, id<MTLRenderComman
         auto* bytes = static_cast<const uint8_t*>(cpuBuffer);
 
         if (stages & Stage::VERTEX) {
-            [encoder setVertexBytes:(bytes + offset)
-                             length:(buffer->getSize() - offset)
-                            atIndex:bufferIndex];
+            [(id<MTLRenderCommandEncoder>) encoder setVertexBytes:(bytes + offset)
+                                                           length:(buffer->getSize() - offset)
+                                                          atIndex:bufferIndex];
         }
         if (stages & Stage::FRAGMENT) {
-            [encoder setFragmentBytes:(bytes + offset)
-                               length:(buffer->getSize() - offset)
-                              atIndex:bufferIndex];
+            [(id<MTLRenderCommandEncoder>) encoder setFragmentBytes:(bytes + offset)
+                                                             length:(buffer->getSize() - offset)
+                                                            atIndex:bufferIndex];
+        }
+        if (stages & Stage::COMPUTE) {
+            // TODO: using setBytes means the data is read-only, which currently isn't enforced.
+            // In practice this won't be an issue since MetalBuffer ensures all SSBOs are realized
+            // through actual id<MTLBuffer> allocations.
+            [(id<MTLComputeCommandEncoder>) encoder setBytes:(bytes + offset)
+                                                      length:(buffer->getSize() - offset)
+                                                     atIndex:bufferIndex];
         }
     }
 }
 
-} // namespace metal
 } // namespace backend
 } // namespace filament

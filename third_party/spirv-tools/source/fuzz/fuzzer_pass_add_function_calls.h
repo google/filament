@@ -24,10 +24,11 @@ namespace fuzz {
 // anywhere, and (b) any functions, from dead blocks.
 class FuzzerPassAddFunctionCalls : public FuzzerPass {
  public:
-  FuzzerPassAddFunctionCalls(
-      opt::IRContext* ir_context, TransformationContext* transformation_context,
-      FuzzerContext* fuzzer_context,
-      protobufs::TransformationSequence* transformations);
+  FuzzerPassAddFunctionCalls(opt::IRContext* ir_context,
+                             TransformationContext* transformation_context,
+                             FuzzerContext* fuzzer_context,
+                             protobufs::TransformationSequence* transformations,
+                             bool ignore_inapplicable_transformations);
 
   void Apply() override;
 

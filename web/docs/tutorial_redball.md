@@ -7,7 +7,9 @@ For starters, create a text file called `redball.html` and copy over the HTML th
 
 Next you'll need to get a couple command-line tools: `matc` and `cmgen`. You can find these in the
 appropriate [Filament release](//github.com/google/filament/releases). You should choose the
-archive that corresponds to your development machine rather than the one for web.
+archive that corresponds to your development machine rather than the one for web, and the version
+that matches the `unpkg.com/filament@x.x.x` url in the script tag of `redball.html` (you may check
+out the last available release of [filament on npm](https://www.npmjs.com/package/filament)).
 
 ## Define plastic material
 
@@ -234,7 +236,7 @@ const datatype = Filament.PixelDataType.UINT_10F_11F_11F_REV;
 
 // Create a Texture object for the mipmapped cubemap.
 const ibl_package = Filament.Buffer(Filament.assets[ibl_url]);
-const iblktx = new Filament.KtxBundle(ibl_package);
+const iblktx = new Filament.Ktx1Bundle(ibl_package);
 
 const ibltex = Filament.Texture.Builder()
   .width(iblktx.info().pixelWidth)
@@ -281,7 +283,7 @@ Here's one way to create a texture for the skybox:
 
 ```js
 const sky_package = Filament.Buffer(Filament.assets[sky_url]);
-const skyktx = new Filament.KtxBundle(sky_package);
+const skyktx = new Filament.Ktx1Bundle(sky_package);
 const skytex = Filament.Texture.Builder()
   .width(skyktx.info().pixelWidth)
   .height(skyktx.info().pixelHeight)

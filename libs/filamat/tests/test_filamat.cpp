@@ -44,13 +44,14 @@ static ::testing::AssertionResult PropertyListsMatch(const MaterialBuilder::Prop
     return ::testing::AssertionSuccess();
 }
 
-std::string shaderWithAllProperties(JobSystem& jobSystem, ShaderType type,
-        const std::string fragmentCode, const std::string vertexCode = "",
+std::string shaderWithAllProperties(JobSystem& jobSystem, ShaderStage type,
+        const std::string& fragmentCode, const std::string& vertexCode = "",
         filamat::MaterialBuilder::Shading shadingModel = filamat::MaterialBuilder::Shading::LIT,
-        filamat::MaterialBuilder::RefractionMode refractionMode = filamat::MaterialBuilder::RefractionMode::NONE) {
+        filamat::MaterialBuilder::RefractionMode refractionMode = filamat::MaterialBuilder::RefractionMode::NONE,
+        filamat::MaterialBuilder::VertexDomain vertexDomain = filamat::MaterialBuilder::VertexDomain::OBJECT) {
     MockIncluder includer;
     includer
-        .sourceForInclude("modify_normal.h", "material.normal = vec3(0.8);");
+            .sourceForInclude("modify_normal.h", "material.normal = vec3(0.8);");
 
     filamat::MaterialBuilder builder;
     builder.material(fragmentCode.c_str());
@@ -60,6 +61,7 @@ std::string shaderWithAllProperties(JobSystem& jobSystem, ShaderType type,
     builder.shading(shadingModel);
     builder.includeCallback(includer);
     builder.refractionMode(refractionMode);
+    builder.vertexDomain(vertexDomain);
 
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MaterialBuilder::MATERIAL_PROPERTIES_COUNT, true);
@@ -67,36 +69,37 @@ std::string shaderWithAllProperties(JobSystem& jobSystem, ShaderType type,
     // We need to "build" the material to resolve any includes in user code.
     builder.build(jobSystem);
 
-    return builder.peek(type,
-            {1, MaterialBuilder::TargetApi::OPENGL, MaterialBuilder::TargetLanguage::GLSL},
+    return builder.peek(type, {
+                    ShaderModel::MOBILE,
+                    MaterialBuilder::TargetApi::OPENGL,
+                    MaterialBuilder::TargetLanguage::GLSL
+            },
             allProperties);
 }
 
 TEST(StaticCodeAnalysisHelper, getFunctionName) {
-    std::string name = getFunctionName("main(");
+    auto name = getFunctionName("main(");
     EXPECT_EQ(name, "main");
 }
 
 TEST(StaticCodeAnalysisHelper, getFunctionNameNoParenthesis) {
-    std::string name = getFunctionName("main");
+    auto name = getFunctionName("main");
     EXPECT_EQ(name, "main");
 }
 
 class MaterialCompiler : public ::testing::Test {
 protected:
-    MaterialCompiler() {
-    }
+    MaterialCompiler() = default;
 
-    virtual ~MaterialCompiler() {
-    }
+    ~MaterialCompiler() override = default;
 
-    virtual void SetUp() {
+    void SetUp() override {
         jobSystem = std::make_unique<JobSystem>();
         jobSystem->adopt();
         MaterialBuilder::init();
     }
 
-    virtual void TearDown() {
+    void TearDown() override {
         jobSystem->emancipate();
         MaterialBuilder::shutdown();
     }
@@ -111,12 +114,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNothingDetected) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -131,13 +135,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNothingDetectedVertex) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::VERTEX,
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::VERTEX,
             fragmentCode, vertexCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::VERTEX, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::VERTEX, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -153,12 +157,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNotFollowingINParameters) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
@@ -170,12 +175,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssign) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -192,13 +198,16 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssignVertex) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::VERTEX,
-            fragmentCode, vertexCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::VERTEX,
+            fragmentCode, vertexCode,
+            MaterialBuilder::Shading::LIT,
+            MaterialBuilder::RefractionMode::NONE,
+            MaterialBuilder::VertexDomain::DEVICE);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::VERTEX, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::VERTEX, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::CLIP_SPACE_TRANSFORM)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -211,12 +220,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssignWithSwizzling) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -234,12 +244,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolAsOutParameterWithAliasing) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -257,12 +268,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolAsOutParameterWithAliasingAndSw
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -285,12 +297,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolInOutInChainWithDirectIndexInto
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -313,12 +326,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolInOutInChain) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -332,12 +346,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerBaseColor) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -350,12 +365,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerRoughness) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::ROUGHNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -368,12 +384,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerMetallic) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::METALLIC)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -386,12 +403,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerReflectance) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::REFLECTANCE)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -404,12 +422,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerAmbientOcclusion) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::AMBIENT_OCCLUSION)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -422,12 +441,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoat) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -442,14 +462,15 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerTransmission) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode, "",
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT, fragmentCode,
+            "",
             filamat::MaterialBuilder::Shading::LIT,
             filamat::MaterialBuilder::RefractionMode::CUBEMAP);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::ABSORPTION)] = true;
     expected[size_t(filamat::MaterialBuilder::Property::TRANSMISSION)] = true;
     expected[size_t(filamat::MaterialBuilder::Property::IOR)] = true;
@@ -464,12 +485,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatRoughness) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode, "");
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT, fragmentCode,
+            "");
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT_ROUGHNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -483,12 +505,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatNormal) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode, "");
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT, fragmentCode,
+            "");
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT)] = true;
     expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT_NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
@@ -502,13 +525,14 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerThickness) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode, "",
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT, fragmentCode,
+            "",
             filamat::MaterialBuilder::Shading::SUBSURFACE);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::THICKNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -521,13 +545,14 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSubsurfacePower) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode, "",
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT, fragmentCode,
+            "",
             filamat::MaterialBuilder::Shading::SUBSURFACE);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::SUBSURFACE_POWER)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -540,13 +565,14 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSubsurfaceColor) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode, "",
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT, fragmentCode,
+            "",
             filamat::MaterialBuilder::Shading::SUBSURFACE);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::SUBSURFACE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -559,12 +585,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerAnisotropicDirection) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::ANISOTROPY_DIRECTION)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -577,12 +604,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerAnisotropic) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::ANISOTROPY)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -595,13 +623,14 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSheenColor) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode, "",
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT, fragmentCode,
+            "",
             filamat::MaterialBuilder::Shading::CLOTH);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::SHEEN_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -614,12 +643,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSheenRoughness) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::SHEEN_ROUGHNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -632,12 +662,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNormal) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -650,12 +681,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerBentNormal) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::BENT_NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -668,12 +700,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerOutputFactor) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::POST_LIGHTING_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -686,12 +719,13 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerWithinInclude) {
         }
     )");
 
-    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderType::FRAGMENT, fragmentCode);
+    std::string shaderCode = shaderWithAllProperties(*jobSystem, ShaderStage::FRAGMENT,
+            fragmentCode);
 
     GLSLTools glslTools;
-    MaterialBuilder::PropertyList properties {false};
-    glslTools.findProperties(filament::backend::FRAGMENT, shaderCode, properties);
-    MaterialBuilder::PropertyList expected {false};
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
     expected[size_t(filamat::MaterialBuilder::Property::NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
@@ -722,8 +756,8 @@ TEST_F(MaterialCompiler, Uv0AndUv1) {
 TEST_F(MaterialCompiler, Arrays) {
     filamat::MaterialBuilder builder;
 
-    builder.parameter(UniformType::FLOAT4, 1, "f4");
-    builder.parameter(UniformType::FLOAT, 1, "f1");
+    builder.parameter("f4", 1, UniformType::FLOAT4);
+    builder.parameter("f1", 1, UniformType::FLOAT);
 
     filamat::Package result = builder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());

@@ -59,6 +59,7 @@ enum class ToneMapping : uint8_t {
 };
 
 using AmbientOcclusionOptions = filament::View::AmbientOcclusionOptions;
+using ScreenSpaceReflectionsOptions = filament::View::ScreenSpaceReflectionsOptions;
 using AntiAliasing = filament::View::AntiAliasing;
 using BloomOptions = filament::View::BloomOptions;
 using DepthOfFieldOptions = filament::View::DepthOfFieldOptions;
@@ -66,17 +67,20 @@ using Dithering = filament::View::Dithering;
 using FogOptions = filament::View::FogOptions;
 using RenderQuality = filament::View::RenderQuality;
 using ShadowType = filament::View::ShadowType;
+using DynamicResolutionOptions = filament::View::DynamicResolutionOptions;
+using MultiSampleAntiAliasingOptions = filament::View::MultiSampleAntiAliasingOptions;
 using TemporalAntiAliasingOptions = filament::View::TemporalAntiAliasingOptions;
 using VignetteOptions = filament::View::VignetteOptions;
 using VsmShadowOptions = filament::View::VsmShadowOptions;
+using GuardBandOptions = filament::View::GuardBandOptions;
 using LightManager = filament::LightManager;
 
 // These functions push all editable property values to their respective Filament objects.
-void applySettings(const ViewSettings& settings, View* dest);
-void applySettings(const MaterialSettings& settings, MaterialInstance* dest);
-void applySettings(const LightSettings& settings, IndirectLight* ibl, utils::Entity sunlight,
-        utils::Entity* sceneLights, size_t sceneLightCount, LightManager* lm, Scene* scene);
-void applySettings(const ViewerOptions& settings, Camera* camera, Skybox* skybox,
+void applySettings(Engine* engine, const ViewSettings& settings, View* dest);
+void applySettings(Engine* engine, const MaterialSettings& settings, MaterialInstance* dest);
+void applySettings(Engine* engine, const LightSettings& settings, IndirectLight* ibl, utils::Entity sunlight,
+        utils::Entity* sceneLights, size_t sceneLightCount, LightManager* lm, Scene* scene, View* view);
+void applySettings(Engine* engine, const ViewerOptions& settings, Camera* camera, Skybox* skybox,
         Renderer* renderer);
 
 // Creates a new ColorGrading object based on the given settings.
@@ -103,10 +107,9 @@ private:
 };
 
 struct GenericToneMapperSettings {
-    float contrast = 1.585f;
-    float shoulder = 0.5f;
+    float contrast = 1.55f;
     float midGrayIn = 0.18f;
-    float midGrayOut = 0.268f;
+    float midGrayOut = 0.215f;
     float hdrMax = 10.0f;
     bool operator!=(const GenericToneMapperSettings &rhs) const { return !(rhs == *this); }
     bool operator==(const GenericToneMapperSettings &rhs) const;
@@ -151,21 +154,29 @@ struct DynamicLightingSettings {
 
 // This defines fields in the same order as the setter methods in filament::View.
 struct ViewSettings {
-    uint8_t sampleCount = 1;
+    // standalone View settings
     AntiAliasing antiAliasing = AntiAliasing::FXAA;
-    TemporalAntiAliasingOptions taa;
-    ColorGradingSettings colorGrading;
-    AmbientOcclusionOptions ssao;
-    BloomOptions bloom;
-    FogOptions fog;
-    DepthOfFieldOptions dof;
-    VignetteOptions vignette;
     Dithering dithering = Dithering::TEMPORAL;
-    RenderQuality renderQuality;
-    DynamicLightingSettings dynamicLighting;
     ShadowType shadowType = ShadowType::PCF;
-    VsmShadowOptions vsmShadowOptions;
     bool postProcessingEnabled = true;
+
+    // View Options (sorted)
+    AmbientOcclusionOptions ssao;
+    ScreenSpaceReflectionsOptions screenSpaceReflections;
+    BloomOptions bloom;
+    DepthOfFieldOptions dof;
+    DynamicResolutionOptions dsr;
+    FogOptions fog;
+    MultiSampleAntiAliasingOptions msaa;
+    RenderQuality renderQuality;
+    TemporalAntiAliasingOptions taa;
+    VignetteOptions vignette;
+    VsmShadowOptions vsmShadowOptions;
+    GuardBandOptions guardBand;
+
+    // Custom View Options
+    ColorGradingSettings colorGrading;
+    DynamicLightingSettings dynamicLighting;
 };
 
 template <typename T>
@@ -183,8 +194,9 @@ struct LightSettings {
     bool enableShadows = true;
     bool enableSunlight = true;
     LightManager::ShadowOptions shadowOptions;
+    SoftShadowOptions softShadowOptions;
     float sunlightIntensity = 100000.0f;
-    math::float3 sunlightDirection = {0.6, -1.0, -0.8};;
+    math::float3 sunlightDirection = {0.6, -1.0, -0.8};
     math::float3 sunlightColor = filament::Color::toLinear<filament::ACCURATE>({ 0.98, 0.92, 0.89});
     float iblIntensity = 30000.0f;
     float iblRotation = 0.0f;
@@ -201,6 +213,7 @@ struct ViewerOptions {
     float cameraFocalLength = 28.0f;
     float cameraFocusDistance = 10.0f;
     bool autoScaleEnabled = true;
+    bool autoInstancingEnabled = false;
 };
 
 struct Settings {

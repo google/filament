@@ -22,10 +22,10 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "spirv-tools/libspirv.h"
-
+#include "source/binary.h"
 #include "source/latest_version_spirv_header.h"
 #include "source/parsed_operand.h"
+#include "spirv-tools/libspirv.h"
 
 namespace spvtools {
 namespace {
@@ -172,7 +172,7 @@ spv_result_t FriendlyNameMapper::ParseInstruction(
   const auto result_id = inst.result_id;
   switch (inst.opcode) {
     case SpvOpName:
-      SaveName(inst.words[1], reinterpret_cast<const char*>(inst.words + 2));
+      SaveName(inst.words[1], spvDecodeLiteralStringOperand(inst, 1));
       break;
     case SpvOpDecorate:
       // Decorations come after OpName.  So OpName will take precedence over
@@ -274,9 +274,8 @@ spv_result_t FriendlyNameMapper::ParseInstruction(
       SaveName(result_id, "Queue");
       break;
     case SpvOpTypeOpaque:
-      SaveName(result_id,
-               std::string("Opaque_") +
-                   Sanitize(reinterpret_cast<const char*>(inst.words + 2)));
+      SaveName(result_id, std::string("Opaque_") +
+                              Sanitize(spvDecodeLiteralStringOperand(inst, 1)));
       break;
     case SpvOpTypePipeStorage:
       SaveName(result_id, "PipeStorage");

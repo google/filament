@@ -1,27 +1,20 @@
 android {
+    namespace 'com.google.android.filament.gltfio'
+
     flavorDimensions "functionality"
     productFlavors {
         full {
             dimension "functionality"
         }
-
-        lite {
-            dimension "functionality"
-
-            externalNativeBuild {
-                cmake {
-                    arguments.add("-DGLTFIO_LITE=ON")
-                }
-            }
-        }
     }
-
-    // No need to package up the following shared libs, which arise as a side effect of our
-    // externalNativeBuild dependencies. When clients pick and choose from project-level gradle
-    // dependencies, these shared libs already get pulled in, so we need to avoid the error:
-    // "More than one file was found with OS independent path ..."
     packagingOptions {
-        exclude 'lib/*/libfilament-jni.so'
+        // No need to package up the following shared libs, which arise as a side effect of our
+        // externalNativeBuild dependencies. When clients pick and choose from project-level gradle
+        // dependencies, these shared libs already get pulled in, so we need to avoid the error:
+        // "More than one file was found with OS independent path ..."
+        jniLibs {
+            excludes += ['lib/*/libfilament-jni.so']
+        }
     }
 }
 
@@ -39,11 +32,6 @@ afterEvaluate { project ->
             fullRelease(MavenPublication) {
                 artifactId = POM_ARTIFACT_ID_FULL
                 from components.fullRelease
-            }
-
-            liteRelease(MavenPublication) {
-                artifactId = POM_ARTIFACT_ID_LITE
-                from components.liteRelease
             }
         }
     }

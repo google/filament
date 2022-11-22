@@ -26,7 +26,8 @@ class FuzzerPassAdjustSelectionControls : public FuzzerPass {
   FuzzerPassAdjustSelectionControls(
       opt::IRContext* ir_context, TransformationContext* transformation_context,
       FuzzerContext* fuzzer_context,
-      protobufs::TransformationSequence* transformations);
+      protobufs::TransformationSequence* transformations,
+      bool ignore_inapplicable_transformations);
 
   void Apply() override;
 };

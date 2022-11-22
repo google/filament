@@ -13,7 +13,6 @@ set(SRCS
         src/ChunkContainer.cpp
         src/DictionaryReader.cpp
         src/MaterialChunk.cpp
-        src/ShaderBuilder.cpp
         src/Unflattener.cpp)
 
 # ==================================================================================================
@@ -23,6 +22,7 @@ include_directories(${PUBLIC_HDR_DIR})
 
 add_library(${TARGET} ${HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 
 target_link_libraries(${TARGET} filabridge utils)
 

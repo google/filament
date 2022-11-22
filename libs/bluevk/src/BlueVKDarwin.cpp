@@ -15,44 +15,26 @@
  * limitations under the License.
  */
 
-#include <utils/Path.h>
+#include <utils/Panic.h>
 
 #include <dlfcn.h>
 
-using utils::Path;
-
 namespace bluevk {
-
-#ifdef IOS
-static const char* VKLIBRARY_PATH = "Frameworks/libMoltenVK.dylib";
-#else
-static const char* VKLIBRARY_PATH = "libvulkan.1.dylib";
-#endif
 
 static void* module = nullptr;
 
 bool loadLibrary() {
-
-#ifndef FILAMENT_VKLIBRARY_PATH
-    // Rather than looking in the working directory, look for the dylib in the same folder that the
-    // executable lives in. This allows MacOS users to run Vulkan-based Filament apps from anywhere.
-    const Path executableFolder = Path::getCurrentExecutable().getParent();
-    const Path dylibPath = executableFolder.concat(VKLIBRARY_PATH);
-
-    // Provide a value for VK_ICD_FILENAMES only if it has not already been set.
-    const char* icd = getenv("VK_ICD_FILENAMES");
-    if (icd == nullptr) {
-        const Path jsonPath = executableFolder.concat("MoltenVK_icd.json");
-        setenv("VK_ICD_FILENAMES", jsonPath.c_str(), 1);
-    }
+#ifdef FILAMENT_VKLIBRARY_PATH
+    const char* dylibPath = FILAMENT_VKLIBRARY_PATH;
 #else
-    const Path dylibPath = FILAMENT_VKLIBRARY_PATH;
+    const char* dylibPath = "libvulkan.1.dylib";
 #endif
 
-    module = dlopen(dylibPath.c_str(), RTLD_NOW | RTLD_LOCAL);
-    if (module == nullptr) {
-        printf("%s", dlerror());
-    }
+    module = dlopen(dylibPath, RTLD_NOW | RTLD_LOCAL);
+    ASSERT_POSTCONDITION(module != nullptr,
+            "BlueVK is unable to load entry points: %s.\n"
+            "Install the LunarG SDK with 'System Global Installation' and reboot.\n",
+            dlerror());
     return module != nullptr;
 }
 

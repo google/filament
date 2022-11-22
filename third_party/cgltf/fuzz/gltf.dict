@@ -180,18 +180,22 @@
 #
 # AFL dictionary for GLTF extensions
 # -----------------------
+"\"KHR_materials_unlit\""
+"\"KHR_texture_basisu\""
+
 "\"KHR_materials_pbrSpecularGlossiness\""
 "\"diffuseFactor\""
 "\"diffuseTexture\""
 "\"specularFactor\""
 "\"glossinessFactor\""
 "\"specularGlossinessTexture\""
-"\"KHR_materials_unlit\""
+
 "\"KHR_texture_transform\""
 "\"offset\""
 "\"rotation\""
 "\"scale\""
 "\"texCoord\""
+
 "\"KHR_lights_punctual\""
 "\"color\""
 "\"intensity\""
@@ -199,3 +203,22 @@
 "\"range\""
 "\"innerConeAngle\""
 "\"outerConeAngle\""
+
+"\"KHR_materials_transmission\""
+"\"transmissionFactor\""
+"\"transmissionTexture\""
+
+"\"KHR_materials_volume\""
+"\"thicknessFactor\""
+"\"thicknessTexture\""
+"\"attenuationColor\""
+"\"attenuationDistance\""
+
+"\"KHR_materials_sheen\""
+"\"sheenColorFactor\""
+"\"sheenColorTexture\""
+"\"sheenRoughnessFactor\""
+"\"sheenRoughnessTexture\""
+
+"\"KHR_materials_emissive_strength\""
+"\"emissiveStrength"\""

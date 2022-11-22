@@ -26,6 +26,14 @@ namespace test {
 /**
  * A wrapper class that manages the necessary resources for a simple triangle renderable used for
  * test cases.
+ *
+ * The default vertices orient the triangle as such:
+ * o
+ * . .
+ * .   .
+ * .     .
+ * .       .
+ * o . . . . o
  */
 class TrianglePrimitive {
 public:
@@ -35,14 +43,16 @@ public:
     using VertexHandle = filament::backend::Handle<filament::backend::HwVertexBuffer>;
     using IndexHandle = filament::backend::Handle<filament::backend::HwIndexBuffer>;
 
+    using index_type = uint32_t;
+
     TrianglePrimitive(filament::backend::DriverApi& driverApi, bool allocateLargeBuffers = false);
     ~TrianglePrimitive();
 
     PrimitiveHandle getRenderPrimitive() const noexcept;
 
     void updateVertices(const filament::math::float2 vertices[3]) noexcept;
-    void updateIndices(const short* indices) noexcept;
-    void updateIndices(const short* indices, int count, int offset) noexcept;
+    void updateIndices(const index_type* indices) noexcept;
+    void updateIndices(const index_type* indices, int count, int offset) noexcept;
 
 private:
 

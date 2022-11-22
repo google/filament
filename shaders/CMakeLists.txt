@@ -12,25 +12,27 @@ endif()
 # ==================================================================================================
 set(SHADERS
         src/ambient_occlusion.fs
+        src/attributes.vs
         src/brdf.fs
-        src/common_getters.fs
+        src/common_defines.glsl
+        src/common_getters.glsl
         src/common_graphics.fs
         src/common_lighting.fs
         src/common_material.fs
-        src/common_math.fs
+        src/common_math.glsl
         src/common_shading.fs
-        src/common_shadowing.fs
-        src/common_types.fs
+        src/common_shadowing.glsl
+        src/common_types.glsl
         src/depth_main.fs
-        src/depth_main.vs
         src/fog.fs
+        src/getters.cs
         src/getters.fs
         src/getters.vs
-        src/inputs.fs
-        src/inputs.vs
         src/light_directional.fs
         src/light_indirect.fs
+        src/light_reflections.fs
         src/light_punctual.fs
+        src/main.cs
         src/main.fs
         src/main.vs
         src/material_inputs.fs
@@ -46,8 +48,10 @@ set(SHADERS
         src/shading_model_standard.fs
         src/shading_model_subsurface.fs
         src/shading_parameters.fs
+        src/shading_reflections.fs
         src/shading_unlit.fs
         src/shadowing.fs
+        src/varyings.glsl
         src/vignette.fs
 )
 
@@ -107,6 +111,7 @@ endif()
 # ==================================================================================================
 add_library(${TARGET} STATIC ${RESGEN_SOURCE})
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+set_target_properties(${TARGET} PROPERTIES FOLDER Filament/Shaders)
 
 # ==================================================================================================
 # Installation

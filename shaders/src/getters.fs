@@ -1,3 +1,18 @@
+//------------------------------------------------------------------------------
+// Instance access
+//------------------------------------------------------------------------------
+
+#if defined(MATERIAL_HAS_INSTANCES)
+/** @public-api */
+int getInstanceIndex() {
+    return instance_index;
+}
+#endif
+
+//------------------------------------------------------------------------------
+// Attributes access
+//------------------------------------------------------------------------------
+
 #if defined(HAS_ATTRIBUTE_COLOR)
 /** @public-api */
 vec4 getColor() {
@@ -62,39 +77,6 @@ float getNdotV() {
 }
 
 /**
- * Transforms a texture UV to make it suitable for a render target attachment.
- *
- * In Vulkan and Metal, texture coords are Y-down but in OpenGL they are Y-up. This wrapper function
- * accounts for these differences. When sampling from non-render targets (i.e. uploaded textures)
- * these differences do not matter because OpenGL has a second piece of backwardness, which is that
- * the first row of texels in glTexImage2D is interpreted as the bottom row.
- *
- * To protect users from these differences, we recommend that materials in the SURFACE domain
- * leverage this wrapper function when sampling from offscreen render targets.
- *
- * @public-api
- */
-highp vec2 uvToRenderTargetUV(highp vec2 uv) {
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
-    uv.y = 1.0 - uv.y;
-#endif
-    return uv;
-}
-
-#if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
-highp vec3 getLightSpacePosition() {
-#if defined(HAS_VSM)
-    // For VSM, do not project the Z coordinate. It remains as linear Z in light space.
-    // See the computeVsmLightSpaceMatrix comments in ShadowMap.cpp.
-    return vec3(vertex_lightSpacePosition.xy * (1.0 / vertex_lightSpacePosition.w),
-            vertex_lightSpacePosition.z);
-#else
-    return vertex_lightSpacePosition.xyz * (1.0 / vertex_lightSpacePosition.w);
-#endif
-}
-#endif
-
-/**
  * Returns the normalized [0, 1] viewport coordinates with the origin at the viewport's bottom-left.
  * Z coordinate is in the [0, 1] range as well.
  *
@@ -111,20 +93,16 @@ highp vec3 getNormalizedViewportCoord2() {
     return vec3(shading_normalizedViewportCoord, gl_FragCoord.z);
 }
 
-#if defined(HAS_SHADOWING) && defined(HAS_DYNAMIC_LIGHTING)
-highp vec3 getSpotLightSpacePosition(uint index) {
-    vec3 dir = shadowUniforms.directionShadowBias[index].xyz;
-    float bias = shadowUniforms.directionShadowBias[index].w;
-    highp vec4 position = computeLightSpacePosition(vertex_worldPosition,
-            vertex_worldNormal, dir, bias, shadowUniforms.spotLightFromWorldMatrix[index]);
+#if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DYNAMIC_LIGHTING)
+highp vec4 getSpotLightSpacePosition(uint index, highp float zLight) {
+    highp mat4 lightFromWorldMatrix = shadowUniforms.shadows[index].lightFromWorldMatrix;
+    highp vec3 dir = shadowUniforms.shadows[index].direction;
 
-#if defined(HAS_VSM)
-    // For VSM, do not project the Z coordinate. It remains as linear Z in light space.
-    // See the computeVsmLightSpaceMatrix comments in ShadowMap.cpp.
-    return vec3(position.xy * (1.0 / position.w), position.z);
-#else
-    return position.xyz * (1.0 / position.w);
-#endif
+    // for spotlights, the bias depends on z
+    float bias = shadowUniforms.shadows[index].normalBias * zLight;
+
+    return computeLightSpacePosition(getWorldPosition(), getWorldNormalVector(),
+            dir, bias, lightFromWorldMatrix);
 }
 #endif
 
@@ -144,27 +122,31 @@ uint getShadowCascade() {
     return clamp(uint(dot(vec4(greaterZ), vec4(1.0))), 0u, cascadeCount - 1u);
 }
 
-#if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
+#if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
 
-highp vec3 getCascadeLightSpacePosition(uint cascade) {
+highp vec4 getCascadeLightSpacePosition(uint cascade) {
     // For the first cascade, return the interpolated light space position.
     // This branch will be coherent (mostly) for neighboring fragments, and it's worth avoiding
     // the matrix multiply inside computeLightSpacePosition.
     if (cascade == 0u) {
         // Note: this branch may cause issues with derivatives
-        return getLightSpacePosition();
+        return vertex_lightSpacePosition;
     }
 
-    highp vec4 pos = computeLightSpacePosition(getWorldPosition(), getWorldNormalVector(),
-        frameUniforms.lightDirection, frameUniforms.shadowBias.y,
-        frameUniforms.lightFromWorldMatrix[cascade]);
-#if defined(HAS_VSM)
-    // For VSM, do not project the Z coordinate. It remains as linear Z in light space.
-    // See the computeVsmLightSpaceMatrix comments in ShadowMap.cpp.
-    return vec3(pos.xy * (1.0 / pos.w), pos.z);
-#else
-    return pos.xyz * (1.0 / pos.w);
-#endif
+    return computeLightSpacePosition(getWorldPosition(), getWorldNormalVector(),
+        frameUniforms.lightDirection,
+        shadowUniforms.shadows[cascade].normalBias,
+        shadowUniforms.shadows[cascade].lightFromWorldMatrix);
 }
 
 #endif
+
+PerRenderableData getObjectUniforms() {
+#if defined(MATERIAL_HAS_INSTANCES)
+    // the material manages instancing, all instances share the same uniform block.
+    return objectUniforms.data[0];
+#else
+     // automatic instancing was used, each instance has its own uniform block.
+    return objectUniforms.data[instance_index];
+#endif
+}

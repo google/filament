@@ -71,22 +71,11 @@ function(add_rawfile SOURCE TARGET)
         MAIN_DEPENDENCY ${source_path})
 endfunction()
 
-set(ETC_R11_ARGS "--grayscale;--compression=etc_r11_numeric_40")
-
-# TODO: Instead of "rgb8" we should be using "rg11", but that causes an assertion in etc2comp.
-set(ETC_NORMALS_ARGS "--kernel=NORMALS;--linear;--compression=etc_rgb8_normalxyz_40")
-
-add_ktxfiles("assets/models/monkey/albedo.png" "albedo.ktx" "")
-add_ktxfiles("assets/models/monkey/albedo.png" "albedo_astc.ktx" "--compression=astc_fast_ldr_4x4")
-add_ktxfiles("assets/models/monkey/albedo.png" "albedo_s3tc_srgb.ktx" "--compression=s3tc_rgb_dxt1")
-add_ktxfiles("assets/models/monkey/normal.png" "normal.ktx" "--kernel=NORMALS;--linear")
-add_ktxfiles("assets/models/monkey/normal.png" "normal_etc.ktx" "${ETC_NORMALS_ARGS}")
-add_ktxfiles("assets/models/monkey/roughness.png" "roughness.ktx" "--grayscale")
-add_ktxfiles("assets/models/monkey/roughness.png" "roughness_etc.ktx" "${ETC_R11_ARGS}")
-add_ktxfiles("assets/models/monkey/metallic.png" "metallic.ktx" "--grayscale")
-add_ktxfiles("assets/models/monkey/metallic.png" "metallic_etc.ktx" "${ETC_R11_ARGS}")
-add_ktxfiles("assets/models/monkey/ao.png" "ao.ktx" "--grayscale")
-add_ktxfiles("assets/models/monkey/ao.png" "ao_etc.ktx" "${ETC_R11_ARGS}")
+add_ktxfiles("assets/models/monkey/albedo.png" "albedo.ktx2" "--compression=uastc")
+add_ktxfiles("assets/models/monkey/normal.png" "normal.ktx2" "--compression=uastc_normals;--kernel=NORMALS;--linear")
+add_ktxfiles("assets/models/monkey/roughness.png" "roughness.ktx2" "--compression=uastc;--grayscale;--linear")
+add_ktxfiles("assets/models/monkey/metallic.png" "metallic.ktx2" "--compression=uastc;--grayscale;--linear")
+add_ktxfiles("assets/models/monkey/ao.png" "ao.ktx2" "--compression=uastc;--grayscale;--linear")
 
 add_rawfile("third_party/models/FlightHelmet/FlightHelmet_baseColor.png" "FlightHelmet_baseColor.png")
 add_rawfile("third_party/models/FlightHelmet/FlightHelmet_baseColor1.png" "FlightHelmet_baseColor1.png")
@@ -148,7 +137,7 @@ function(add_envmap SOURCE TARGET)
 
         # Create a low-resolution skybox.
         COMMAND cmgen -x ${TARGET} ${CMGEN_ARGS_TINY} ${source_envmap}
-        COMMAND mv ${target_skybox} ${target_skybox_tiny}
+        COMMAND ${CMAKE_COMMAND} -E rename ${target_skybox} ${target_skybox_tiny}
 
         # Create KTX files for the full-size envmap.
         COMMAND cmgen -x ${TARGET} ${CMGEN_ARGS} ${source_envmap}
@@ -187,7 +176,19 @@ add_custom_command(
     DEPENDS ${PROJECT_BINARY_DIR}/../filament-js/filament-viewer.js
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/../filament-js/filament-viewer.js ${SERVER_DIR})
 
-add_custom_target(filamentjs_public DEPENDS ${SERVER_DIR}/filament.js ${SERVER_DIR}/filament.wasm ${SERVER_DIR}/filament-viewer.js)
+add_custom_target(filamentjs_public DEPENDS
+    ${SERVER_DIR}/filament.js
+    ${SERVER_DIR}/filament.wasm
+    ${SERVER_DIR}/filament-viewer.js)
+
+if (WEBGL_PTHREADS)
+    add_custom_command(
+        OUTPUT ${SERVER_DIR}/filament.worker.js
+        DEPENDS filament-js
+        COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/../filament-js/filament.worker.js ${SERVER_DIR})
+
+    add_dependencies(filamentjs_public ${SERVER_DIR}/filament.worker.js)
+endif()
 
 # ==================================================================================================
 # The websamples target depends on all HTML files, assets, and filament.{js,wasm}
@@ -230,6 +231,12 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/gl-matrix/gl-matrix-min.js ${SERVER_DIR}/gl-matrix-min.js
     MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/gl-matrix/gl-matrix-min.js)
 list(APPEND DEMO_ASSETS ${SERVER_DIR}/gl-matrix-min.js)
+
+add_custom_command(
+    OUTPUT ${SERVER_DIR}/gltumble.min.js
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/gltumble/gltumble.min.js ${SERVER_DIR}/gltumble.min.js
+    MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/gltumble/gltumble.min.js)
+list(APPEND DEMO_ASSETS ${SERVER_DIR}/gltumble.min.js)
 
 add_custom_target(${PROJECT_NAME} ALL DEPENDS
     ${DEMO_ASSETS}

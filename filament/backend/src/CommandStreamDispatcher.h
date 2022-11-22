@@ -23,9 +23,9 @@
 #include <utils/compiler.h>
 #include <utils/Systrace.h>
 
-#include <cstddef>
 #include <utility>
 
+#include <stddef.h>
 #include <stdint.h>
 
 #define DEBUG_LEVEL_NONE       0
@@ -43,19 +43,14 @@
 #   error "invalid debug level"
 #endif
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 template<typename ConcreteDriver>
-class ConcreteDispatcher final : public Dispatcher {
+class ConcreteDispatcher {
 public:
-    // initialize the dispatch table
-    explicit ConcreteDispatcher() noexcept : Dispatcher() {
-#define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
-#define DECL_DRIVER_API(methodName, paramsDecl, params)                 methodName##_ = &ConcreteDispatcher::methodName;
-#define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) methodName##_ = &ConcreteDispatcher::methodName;
-#include "private/backend/DriverAPI.inc"
-    }
+
+    static Dispatcher make() noexcept;
+
 private:
 #define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
 #define DECL_DRIVER_API(methodName, paramsDecl, params)                                         \
@@ -75,7 +70,22 @@ private:
 #include "private/backend/DriverAPI.inc"
 };
 
-} // namespace backend
-} // namespace filament
+template<typename ConcreteDriver>
+UTILS_NOINLINE
+Dispatcher ConcreteDispatcher<ConcreteDriver>::make() noexcept {
+    Dispatcher dispatcher;
+
+#define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
+#define DECL_DRIVER_API(methodName, paramsDecl, params)                 \
+                dispatcher.methodName##_ = &ConcreteDispatcher::methodName;
+#define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) \
+                dispatcher.methodName##_ = &ConcreteDispatcher::methodName;
+
+#include "private/backend/DriverAPI.inc"
+
+    return dispatcher;
+}
+
+} // namespace filament::backend
 
 #endif // TNT_FILAMENT_DRIVER_COMMANDSTREAM_DISPATCHER_H

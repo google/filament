@@ -28,7 +28,7 @@ NameComponentManager::~NameComponentManager() = default;
 
 void NameComponentManager::setName(Instance instance, const char* name) noexcept {
     if (instance) {
-        elementAt<NAME>(instance) = details::SafeString{ name };
+        elementAt<NAME>(instance) = CString{ name };
     }
 }
 

@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANBUFFER_H
-#define TNT_FILAMENT_DRIVER_VULKANBUFFER_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANBUFFER_H
+#define TNT_FILAMENT_BACKEND_VULKANBUFFER_H
 
 #include "VulkanContext.h"
 #include "VulkanStagePool.h"
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 // Encapsulates a Vulkan buffer, its attached DeviceMemory and a staging area.
 class VulkanBuffer {
@@ -39,7 +38,6 @@ private:
     VkBufferUsageFlags mUsage = {};
 };
 
-} // namespace filament
-} // namespace backend
+} // namespace filament::backend
 
-#endif // TNT_FILAMENT_DRIVER_VULKANBUFFER_H
+#endif // TNT_FILAMENT_BACKEND_VULKANBUFFER_H

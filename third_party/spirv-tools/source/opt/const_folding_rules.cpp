@@ -22,6 +22,45 @@ namespace {
 
 const uint32_t kExtractCompositeIdInIdx = 0;
 
+// Returns a constants with the value NaN of the given type.  Only works for
+// 32-bit and 64-bit float point types.  Returns |nullptr| if an error occurs.
+const analysis::Constant* GetNan(const analysis::Type* type,
+                                 analysis::ConstantManager* const_mgr) {
+  const analysis::Float* float_type = type->AsFloat();
+  if (float_type == nullptr) {
+    return nullptr;
+  }
+
+  switch (float_type->width()) {
+    case 32:
+      return const_mgr->GetFloatConst(std::numeric_limits<float>::quiet_NaN());
+    case 64:
+      return const_mgr->GetDoubleConst(
+          std::numeric_limits<double>::quiet_NaN());
+    default:
+      return nullptr;
+  }
+}
+
+// Returns a constants with the value INF of the given type.  Only works for
+// 32-bit and 64-bit float point types.  Returns |nullptr| if an error occurs.
+const analysis::Constant* GetInf(const analysis::Type* type,
+                                 analysis::ConstantManager* const_mgr) {
+  const analysis::Float* float_type = type->AsFloat();
+  if (float_type == nullptr) {
+    return nullptr;
+  }
+
+  switch (float_type->width()) {
+    case 32:
+      return const_mgr->GetFloatConst(std::numeric_limits<float>::infinity());
+    case 64:
+      return const_mgr->GetDoubleConst(std::numeric_limits<double>::infinity());
+    default:
+      return nullptr;
+  }
+}
+
 // Returns true if |type| is Float or a vector of Float.
 bool HasFloatingPoint(const analysis::Type* type) {
   if (type->AsFloat()) {
@@ -31,6 +70,23 @@ bool HasFloatingPoint(const analysis::Type* type) {
   }
 
   return false;
+}
+
+// Returns a constants with the value |-val| of the given type.  Only works for
+// 32-bit and 64-bit float point types.  Returns |nullptr| if an error occurs.
+const analysis::Constant* negateFPConst(const analysis::Type* result_type,
+                                        const analysis::Constant* val,
+                                        analysis::ConstantManager* const_mgr) {
+  const analysis::Float* float_type = result_type->AsFloat();
+  assert(float_type != nullptr);
+  if (float_type->width() == 32) {
+    float fa = val->GetFloat();
+    return const_mgr->GetFloatConst(-fa);
+  } else if (float_type->width() == 64) {
+    double da = val->GetDouble();
+    return const_mgr->GetDoubleConst(-da);
+  }
+  return nullptr;
 }
 
 // Folds an OpcompositeExtract where input is a composite constant.
@@ -492,7 +548,60 @@ ConstantFoldingRule FoldQuantizeToF16() {
 ConstantFoldingRule FoldFSub() { return FoldFPBinaryOp(FOLD_FPARITH_OP(-)); }
 ConstantFoldingRule FoldFAdd() { return FoldFPBinaryOp(FOLD_FPARITH_OP(+)); }
 ConstantFoldingRule FoldFMul() { return FoldFPBinaryOp(FOLD_FPARITH_OP(*)); }
-ConstantFoldingRule FoldFDiv() { return FoldFPBinaryOp(FOLD_FPARITH_OP(/)); }
+
+// Returns the constant that results from evaluating |numerator| / 0.0.  Returns
+// |nullptr| if the result could not be evaluated.
+const analysis::Constant* FoldFPScalarDivideByZero(
+    const analysis::Type* result_type, const analysis::Constant* numerator,
+    analysis::ConstantManager* const_mgr) {
+  if (numerator == nullptr) {
+    return nullptr;
+  }
+
+  if (numerator->IsZero()) {
+    return GetNan(result_type, const_mgr);
+  }
+
+  const analysis::Constant* result = GetInf(result_type, const_mgr);
+  if (result == nullptr) {
+    return nullptr;
+  }
+
+  if (numerator->AsFloatConstant()->GetValueAsDouble() < 0.0) {
+    result = negateFPConst(result_type, result, const_mgr);
+  }
+  return result;
+}
+
+// Returns the result of folding |numerator| / |denominator|.  Returns |nullptr|
+// if it cannot be folded.
+const analysis::Constant* FoldScalarFPDivide(
+    const analysis::Type* result_type, const analysis::Constant* numerator,
+    const analysis::Constant* denominator,
+    analysis::ConstantManager* const_mgr) {
+  if (denominator == nullptr) {
+    return nullptr;
+  }
+
+  if (denominator->IsZero()) {
+    return FoldFPScalarDivideByZero(result_type, numerator, const_mgr);
+  }
+
+  const analysis::FloatConstant* denominator_float =
+      denominator->AsFloatConstant();
+  if (denominator_float && denominator->GetValueAsDouble() == -0.0) {
+    const analysis::Constant* result =
+        FoldFPScalarDivideByZero(result_type, numerator, const_mgr);
+    if (result != nullptr)
+      result = negateFPConst(result_type, result, const_mgr);
+    return result;
+  } else {
+    return FOLD_FPARITH_OP(/)(result_type, numerator, denominator, const_mgr);
+  }
+}
+
+// Returns the constant folding rule to fold |OpFDiv| with two constants.
+ConstantFoldingRule FoldFDiv() { return FoldFPBinaryOp(FoldScalarFPDivide); }
 
 bool CompareFloatingPoint(bool op_result, bool op_unordered,
                           bool need_ordered) {
@@ -655,20 +764,7 @@ UnaryScalarFoldingRule FoldFNegateOp() {
             analysis::ConstantManager* const_mgr) -> const analysis::Constant* {
     assert(result_type != nullptr && a != nullptr);
     assert(result_type == a->type());
-    const analysis::Float* float_type = result_type->AsFloat();
-    assert(float_type != nullptr);
-    if (float_type->width() == 32) {
-      float fa = a->GetFloat();
-      utils::FloatProxy<float> result(-fa);
-      std::vector<uint32_t> words = result.GetWords();
-      return const_mgr->GetConstant(result_type, words);
-    } else if (float_type->width() == 64) {
-      double da = a->GetDouble();
-      utils::FloatProxy<double> result(-da);
-      std::vector<uint32_t> words = result.GetWords();
-      return const_mgr->GetConstant(result_type, words);
-    }
-    return nullptr;
+    return negateFPConst(result_type, a, const_mgr);
   };
 }
 
@@ -1002,7 +1098,7 @@ const analysis::Constant* FoldClamp1(
          "Expecting a GLSLstd450 extended instruction.");
 
   // Make sure all Clamp operands are constants.
-  for (uint32_t i = 1; i < 3; i++) {
+  for (uint32_t i = 1; i < 4; i++) {
     if (constants[i] == nullptr) {
       return nullptr;
     }
@@ -1017,7 +1113,7 @@ const analysis::Constant* FoldClamp1(
                         context);
 }
 
-// Fold a clamp instruction when |x >= min_val|.
+// Fold a clamp instruction when |x <= min_val|.
 const analysis::Constant* FoldClamp2(
     IRContext* context, Instruction* inst,
     const std::vector<const analysis::Constant*>& constants) {
@@ -1250,7 +1346,7 @@ void ConstantFoldingRules::AddFoldingRules() {
         FoldFPUnaryOp(FoldFTranscendentalUnary(std::log)));
 
 #ifdef __ANDROID__
-    // Android NDK r15c tageting ABI 15 doesn't have full support for C++11
+    // Android NDK r15c targeting ABI 15 doesn't have full support for C++11
     // (no std::exp2/log2). ::exp2 is available from C99 but ::log2 isn't
     // available up until ABI 18 so we use a shim
     auto log2_shim = [](double v) -> double { return log(v) / log(2.0); };

@@ -164,8 +164,7 @@ private:
 
 ### Strings
 
-- Never use `std::string` in the Filament core renderer. Prefer `utils::CString` or
-  `utils::StaticString`.
+- Never use `std::string` in the Filament core renderer. Prefer `utils::CString` or `std::string_view`.
 - When using `std::string` in tools, always include the `std::` qualifier to disambiguate it
   from other string types.
 

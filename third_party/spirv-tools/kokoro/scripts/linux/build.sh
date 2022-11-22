@@ -26,7 +26,9 @@ COMPILER=$2
 TOOL=$3
 BUILD_SHA=${KOKORO_GITHUB_COMMIT:-$KOKORO_GITHUB_PULL_REQUEST_COMMIT}
 
+# "--privileged" is required to run ptrace in the asan builds.
 docker run --rm -i \
+  --privileged \
   --volume "${ROOT_DIR}:${ROOT_DIR}" \
   --volume "${KOKORO_ARTIFACTS_DIR}:${KOKORO_ARTIFACTS_DIR}" \
   --workdir "${ROOT_DIR}" \

@@ -19,48 +19,56 @@
 #include <utils/Systrace.h>
 #include <utils/debug.h>
 
-#if defined(ANDROID)
+#if defined(__ANDROID__)
     #include <sys/system_properties.h>
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
-        #include "opengl/PlatformEGLAndroid.h"
+        #include "opengl/platforms/PlatformEGLAndroid.h"
     #endif
     #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkAndroid.h"
     #endif
 #elif defined(IOS)
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
-        #include "opengl/PlatformCocoaTouchGL.h"
+        #include "opengl/platforms/PlatformCocoaTouchGL.h"
     #endif
     #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkCocoaTouch.h"
     #endif
 #elif defined(__APPLE__)
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
-        #include "opengl/PlatformCocoaGL.h"
+        #include "opengl/platforms/PlatformCocoaGL.h"
     #endif
     #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkCocoa.h"
     #endif
 #elif defined(__linux__)
-    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
-        #include "opengl/PlatformGLX.h"
-    #endif
-    #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
-        #include "vulkan/PlatformVkLinux.h"
+    #if defined(FILAMENT_SUPPORTS_GGP)
+        #include "vulkan/PlatformVkLinuxGGP.h"
+    #elif defined(FILAMENT_SUPPORTS_WAYLAND)
+        #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
+            #include "vulkan/PlatformVkLinuxWayland.h"
+        #endif
+    #elif defined(FILAMENT_SUPPORTS_X11)
+        #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
+            #include "opengl/platforms/PlatformGLX.h"
+        #endif
+        #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
+            #include "vulkan/PlatformVkLinuxX11.h"
+        #endif
+    #elif defined(FILAMENT_SUPPORTS_EGL_ON_LINUX)
+        #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
+            #include "opengl/platforms/PlatformEGLHeadless.h"
+        #endif
     #endif
 #elif defined(WIN32)
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
-        #include "opengl/PlatformWGL.h"
+        #include "opengl/platforms/PlatformWGL.h"
     #endif
     #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "vulkan/PlatformVkWindows.h"
     #endif
 #elif defined(__EMSCRIPTEN__)
-    #include "opengl/PlatformWebGL.h"
-#else
-    #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
-        #include "opengl/PlatformDummyGL.h"
-    #endif
+    #include "opengl/platforms/PlatformWebGL.h"
 #endif
 
 #if defined (FILAMENT_SUPPORTS_METAL)
@@ -71,8 +79,7 @@ filament::backend::DefaultPlatform* createDefaultMetalPlatform();
 
 #include "noop/PlatformNoop.h"
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 // this generates the vtable in this translation unit
 Platform::~Platform() noexcept = default;
@@ -84,7 +91,7 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     SYSTRACE_CALL();
     assert_invariant(backend);
 
-#if defined(ANDROID)
+#if defined(__ANDROID__)
     char scratch[PROP_VALUE_MAX + 1];
     int length = __system_property_get("debug.filament.backend", scratch);
     if (length > 0) {
@@ -95,7 +102,7 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     if (*backend == Backend::DEFAULT) {
 #if defined(__EMSCRIPTEN__)
         *backend = Backend::OPENGL;
-#elif defined(ANDROID)
+#elif defined(__ANDROID__)
         *backend = Backend::OPENGL;
 #elif defined(IOS) || defined(__APPLE__)
         *backend = Backend::METAL;
@@ -110,12 +117,18 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     }
     if (*backend == Backend::VULKAN) {
         #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-            #if defined(ANDROID)
+            #if defined(__ANDROID__)
                 return new PlatformVkAndroid();
             #elif defined(IOS)
                 return new PlatformVkCocoaTouch();
             #elif defined(__linux__)
-                return new PlatformVkLinux();
+                #if defined(FILAMENT_SUPPORTS_GGP)
+                    return new PlatformVkLinuxGGP();
+                #elif defined(FILAMENT_SUPPORTS_WAYLAND)
+                    return new PlatformVkLinuxWayland();
+                #elif defined(FILAMENT_SUPPORTS_X11)
+                    return new PlatformVkLinuxX11();
+                #endif
             #elif defined(__APPLE__)
                 return new PlatformVkCocoa();
             #elif defined(WIN32)
@@ -137,28 +150,33 @@ DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     assert_invariant(*backend == Backend::OPENGL);
     #if defined(FILAMENT_SUPPORTS_OPENGL)
         #if defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(FILAMENT_USE_SWIFTSHADER)
+            // Swiftshader OpenGLES support is deprecated and incomplete
             return nullptr;
-        #elif defined(ANDROID)
+        #elif defined(__ANDROID__)
             return new PlatformEGLAndroid();
         #elif defined(IOS)
             return new PlatformCocoaTouchGL();
         #elif defined(__APPLE__)
             return new PlatformCocoaGL();
         #elif defined(__linux__)
-            return new PlatformGLX();
+            #if defined(FILAMENT_SUPPORTS_X11)
+                return new PlatformGLX();
+            #elif defined(FILAMENT_SUPPORTS_EGL_ON_LINUX)
+                return new PlatformEGLHeadless();
+            #endif
         #elif defined(WIN32)
             return new PlatformWGL();
         #elif defined(__EMSCRIPTEN__)
             return new PlatformWebGL();
         #else
-            return new PlatformDummyGL();
+            return nullptr;
         #endif
     #else
         return nullptr;
     #endif
 }
 
-// destroys an Platform create by create()
+// destroys a Platform created by create()
 void DefaultPlatform::destroy(DefaultPlatform** platform) noexcept {
     delete *platform;
     *platform = nullptr;
@@ -166,5 +184,4 @@ void DefaultPlatform::destroy(DefaultPlatform** platform) noexcept {
 
 DefaultPlatform::~DefaultPlatform() noexcept = default;
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend

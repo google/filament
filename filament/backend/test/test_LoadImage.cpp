@@ -19,15 +19,13 @@
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
 
+#include "private/filament/SamplerInterfaceBlock.h"
+#include "private/backend/SamplerGroup.h"
+
 #include <math/half.h>
 
 #include <fstream>
 #include <vector>
-
-#ifndef IOS
-#include <imageio/BlockCompression.h>
-using namespace image;
-#endif
 
 using namespace filament;
 using namespace filament::backend;
@@ -45,7 +43,7 @@ layout(location = 0) in vec4 mesh_position;
 void main() {
     gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
 #if defined(TARGET_VULKAN_ENVIRONMENT)
-    //gl_Position.y = 1.0f - gl_Position.y;
+    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
     gl_Position.y *= -1.0f;
 #endif
 }
@@ -57,7 +55,7 @@ layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
 // This parameter is ignored for other backends.
-layout(location = 0, set = 1) uniform {samplerType} tex;
+layout(location = 0, set = 1) uniform {samplerType} test_tex;
 
 void main() {
     vec2 fbsize = vec2(512);
@@ -65,7 +63,7 @@ void main() {
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
     uv.y = 1.0 - uv.y;
 #endif
-    fragColor = vec4(texture(tex, uv).rgb, 1.0f);
+    fragColor = vec4(texture(test_tex, uv).rgb, 1.0f);
 }
 
 )");
@@ -75,8 +73,7 @@ std::string fragmentUpdateImage3DTemplate (R"(#version 450 core
 layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
-// This parameter is ignored for other backends.
-layout(location = 0, set = 1) uniform {samplerType} tex;
+layout(location = 0, set = 1) uniform {samplerType} test_tex;
 
 float getLayer(in sampler3D s) { return 2.5f / 4.0f; }
 float getLayer(in sampler2DArray s) { return 2.0f; }
@@ -87,7 +84,7 @@ void main() {
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
     uv.y = 1.0 - uv.y;
 #endif
-    fragColor = vec4(texture(tex, vec3(uv, getLayer(tex))).rgb, 1.0f);
+    fragColor = vec4(texture(test_tex, vec3(uv, getLayer(test_tex))).rgb, 1.0f);
 }
 
 )");
@@ -97,8 +94,7 @@ std::string fragmentUpdateImageMip (R"(#version 450 core
 layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
-// This parameter is ignored for other backends.
-layout(location = 0, set = 1) uniform sampler2D tex;
+layout(location = 0, set = 1) uniform sampler2D test_tex;
 
 void main() {
     vec2 fbsize = vec2(512);
@@ -106,7 +102,7 @@ void main() {
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
     uv.y = 1.0 - uv.y;
 #endif
-    fragColor = vec4(textureLod(tex, uv, 1.0f).rgb, 1.0f);
+    fragColor = vec4(textureLod(test_tex, uv, 1.0f).rgb, 1.0f);
 }
 
 )");
@@ -134,87 +130,6 @@ static void fillCheckerboard(void* buffer, size_t size, size_t stride, size_t co
             p++;
         }
         row += stride * components;
-    }
-}
-
-#ifndef IOS
-static PixelBufferDescriptor compressedCheckerboardPixelBuffer(size_t size) {
-    LinearImage uncompressed(size, size, 4);
-    fillCheckerboard<float>(uncompressed.getPixelRef(), size, size, 4, 1.0f);
-
-    S3tcConfig config {
-        .format = CompressedFormat::RGBA_S3TC_DXT1,
-        .srgb = false
-    };
-    CompressedTexture compressed = s3tcCompress(uncompressed, config);
-
-    void* buffer = malloc(compressed.size);
-    memcpy(buffer, compressed.data.get(), compressed.size);
-
-    PixelBufferDescriptor descriptor(buffer, compressed.size, CompressedPixelDataType::DXT1_RGBA,
-            compressed.size, [](void* buffer, size_t size, void* user) {
-                free(buffer);
-            }, nullptr);
-    return descriptor;
-}
-#endif
-
-static void getPixelInfo(PixelDataFormat format, PixelDataType type, size_t& outComponents, int& outBpp) {
-    switch (format) {
-        case PixelDataFormat::UNUSED:
-        case PixelDataFormat::R:
-        case PixelDataFormat::R_INTEGER:
-        case PixelDataFormat::DEPTH_COMPONENT:
-        case PixelDataFormat::ALPHA:
-            outComponents = 1;
-            break;
-        case PixelDataFormat::RG:
-        case PixelDataFormat::RG_INTEGER:
-        case PixelDataFormat::DEPTH_STENCIL:
-            outComponents = 2;
-            break;
-        case PixelDataFormat::RGB:
-        case PixelDataFormat::RGB_INTEGER:
-            outComponents = 3;
-            break;
-        case PixelDataFormat::RGBA:
-        case PixelDataFormat::RGBA_INTEGER:
-            outComponents = 4;
-            break;
-    }
-
-    outBpp = outComponents;
-    switch (type) {
-        case PixelDataType::COMPRESSED:
-        case PixelDataType::UBYTE:
-        case PixelDataType::BYTE:
-            // nothing to do
-            break;
-        case PixelDataType::USHORT:
-        case PixelDataType::SHORT:
-        case PixelDataType::HALF:
-            outBpp *= 2;
-            break;
-        case PixelDataType::UINT:
-        case PixelDataType::INT:
-        case PixelDataType::FLOAT:
-            outBpp *= 4;
-            break;
-        case PixelDataType::UINT_10F_11F_11F_REV:
-            // Special case, format must be RGB and uses 4 bytes
-            assert_invariant(format == PixelDataFormat::RGB);
-            outBpp = 4;
-            break;
-        case PixelDataType::UINT_2_10_10_10_REV:
-            // Special case, format must be RGBA and uses 4 bytes
-            assert_invariant(format == PixelDataFormat::RGBA);
-            outBpp = 4;
-            break;
-        case PixelDataType::USHORT_565:
-            // Special case, format must be RGB and uses 2 bytes
-            assert_invariant(format == PixelDataFormat::RGB);
-            outBpp = 2;
-            break;
     }
 }
 
@@ -304,6 +219,8 @@ static const char* getSamplerTypeName(SamplerType samplerType) {
             return "samplerCube";
         case SamplerType::SAMPLER_3D:
             return "sampler3D";
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            return "samplerCubeArray";
     }
 }
 
@@ -395,7 +312,7 @@ TEST_F(BackendTest, UpdateImage2D) {
     testCases.emplace_back("RGB, UINT_10F_11F_11F_REV -> R11F_G11F_B10F", PixelDataFormat::RGB, PixelDataType::UINT_10F_11F_11F_REV, TextureFormat::R11F_G11F_B10F);
     testCases.emplace_back("RGB, HALF -> R11F_G11F_B10F", PixelDataFormat::RGB, PixelDataType::HALF, TextureFormat::R11F_G11F_B10F);
 
-    /* // Test integer format uploads. */
+    // Test integer format uploads.
     // TODO: These cases fail on OpenGL and Vulkan.
     testCases.emplace_back("RGB_INTEGER, UBYTE -> RGB8UI", PixelDataFormat::RGB_INTEGER, PixelDataType::UBYTE, TextureFormat::RGB8UI);
     testCases.emplace_back("RGB_INTEGER, USHORT -> RGB16UI", PixelDataFormat::RGB_INTEGER, PixelDataType::USHORT, TextureFormat::RGB16UI);
@@ -414,11 +331,6 @@ TEST_F(BackendTest, UpdateImage2D) {
     testCases.emplace_back("RGBA, UBYTE -> RGBA8 (subregions, buffer padding)", PixelDataFormat::RGBA, PixelDataType::UBYTE, TextureFormat::RGBA8, 64u, true);
     testCases.emplace_back("RGB, FLOAT -> RGB32F (subregions, buffer padding)", PixelDataFormat::RGB, PixelDataType::FLOAT, TextureFormat::RGB32F, 64u, true);
 
-    // Test compresseed format upload.
-#ifndef IOS
-    testCases.emplace_back("RGBA, DXT1_RGBA -> DXT1_RGBA", PixelDataFormat::RGBA, CompressedPixelDataType::DXT1_RGBA, TextureFormat::DXT1_RGBA);
-#endif
-
     auto& api = getDriverApi();
 
     api.startCapture();
@@ -432,13 +344,18 @@ TEST_F(BackendTest, UpdateImage2D) {
         auto defaultRenderTarget = api.createDefaultRenderTarget(0);
 
         // Create a program.
+        SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
+                .name("Test")
+                .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
+                .add( {{"tex", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
+                .build();
         ProgramHandle program;
         std::string fragment = stringReplace("{samplerType}",
                 getSamplerTypeName(t.textureFormat), fragmentTemplate);
-        ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-        Program prog = shaderGen.getProgram();
-        Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
-        prog.setSamplerGroup(0, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
+        ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
+        Program prog = shaderGen.getProgram(api);
+        Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
+        prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
         program = api.createProgram(std::move(prog));
 
         // Create a Texture.
@@ -447,40 +364,30 @@ TEST_F(BackendTest, UpdateImage2D) {
                 t.textureFormat, 1, 512, 512, 1u, usage);
 
         // Upload some pixel data.
-        if (t.compressed) {
-#ifdef IOS
-            assert_invariant(false);
-#else
-            assert_invariant(!t.uploadSubregions);
-            PixelBufferDescriptor descriptor = compressedCheckerboardPixelBuffer(512);
-            api.update2DImage(texture, 0, 0, 0, 512, 512, std::move(descriptor));
-#endif
+        if (t.uploadSubregions) {
+            const auto& pf = t.pixelFormat;
+            const auto& pt = t.pixelType;
+            PixelBufferDescriptor subregion1 = checkerboardPixelBuffer(pf, pt, 256, t.bufferPadding);
+            PixelBufferDescriptor subregion2 = checkerboardPixelBuffer(pf, pt, 256, t.bufferPadding);
+            PixelBufferDescriptor subregion3 = checkerboardPixelBuffer(pf, pt, 256, t.bufferPadding);
+            PixelBufferDescriptor subregion4 = checkerboardPixelBuffer(pf, pt, 256, t.bufferPadding);
+            api.update3DImage(texture, 0,   0,   0, 0, 256, 256, 1, std::move(subregion1));
+            api.update3DImage(texture, 0, 256,   0, 0, 256, 256, 1, std::move(subregion2));
+            api.update3DImage(texture, 0,   0, 256, 0, 256, 256, 1, std::move(subregion3));
+            api.update3DImage(texture, 0, 256, 256, 0, 256, 256, 1, std::move(subregion4));
         } else {
-            if (t.uploadSubregions) {
-                const auto& pf = t.pixelFormat;
-                const auto& pt = t.pixelType;
-                PixelBufferDescriptor subregion1 = checkerboardPixelBuffer(pf, pt, 256, t.bufferPadding);
-                PixelBufferDescriptor subregion2 = checkerboardPixelBuffer(pf, pt, 256, t.bufferPadding);
-                PixelBufferDescriptor subregion3 = checkerboardPixelBuffer(pf, pt, 256, t.bufferPadding);
-                PixelBufferDescriptor subregion4 = checkerboardPixelBuffer(pf, pt, 256, t.bufferPadding);
-                api.update2DImage(texture, 0, 0, 0, 256, 256, std::move(subregion1));
-                api.update2DImage(texture, 0, 256, 0, 256, 256, std::move(subregion2));
-                api.update2DImage(texture, 0, 0, 256, 256, 256, std::move(subregion3));
-                api.update2DImage(texture, 0, 256, 256, 256, 256, std::move(subregion4));
-            } else {
-                PixelBufferDescriptor descriptor
-                    = checkerboardPixelBuffer(t.pixelFormat, t.pixelType, 512, t.bufferPadding);
-                api.update2DImage(texture, 0, 0, 0, 512, 512, std::move(descriptor));
-            }
+            PixelBufferDescriptor descriptor
+                = checkerboardPixelBuffer(t.pixelFormat, t.pixelType, 512, t.bufferPadding);
+            api.update3DImage(texture, 0, 0, 0, 0, 512, 512, 1, std::move(descriptor));
         }
 
         SamplerGroup samplers(1);
         SamplerParams sparams = {};
         sparams.filterMag = SamplerMagFilter::LINEAR;
         sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
-        samplers.setSampler(0, texture, sparams);
+        samplers.setSampler(0, { texture, sparams });
         auto sgroup = api.createSamplerGroup(samplers.getSize());
-        api.updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
+        api.updateSamplerGroup(sgroup, samplers.toBufferDescriptor(api));
 
         api.bindSamplers(0, sgroup);
 
@@ -522,12 +429,17 @@ TEST_F(BackendTest, UpdateImageSRGB) {
     auto defaultRenderTarget = api.createDefaultRenderTarget(0);
 
     // Create a program.
+    SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
+            .name("Test")
+            .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
+            .add( {{"tex", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
+            .build();
     std::string fragment = stringReplace("{samplerType}",
             getSamplerTypeName(textureFormat), fragmentTemplate);
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-    Program prog = shaderGen.getProgram();
-    Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
-    prog.setSamplerGroup(0, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
+    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
+    Program prog = shaderGen.getProgram(api);
+    Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
+    prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
     ProgramHandle program = api.createProgram(std::move(prog));
 
     // Create a texture.
@@ -555,7 +467,7 @@ TEST_F(BackendTest, UpdateImageSRGB) {
         }
     }
 
-    api.update2DImage(texture, 0, 0, 0, 512, 512, std::move(descriptor));
+    api.update3DImage(texture, 0, 0, 0, 0, 512, 512, 1, std::move(descriptor));
 
     api.beginFrame(0, 0);
 
@@ -564,9 +476,9 @@ TEST_F(BackendTest, UpdateImageSRGB) {
     SamplerParams sparams = {};
     sparams.filterMag = SamplerMagFilter::LINEAR;
     sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
-    samplers.setSampler(0, texture, sparams);
+    samplers.setSampler(0, { texture, sparams });
     auto sgroup = api.createSamplerGroup(samplers.getSize());
-    api.updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
+    api.updateSamplerGroup(sgroup, samplers.toBufferDescriptor(api));
 
     api.bindSamplers(0, sgroup);
 
@@ -608,12 +520,17 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
     auto defaultRenderTarget = api.createDefaultRenderTarget(0);
 
     // Create a program.
+    SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
+            .name("Test")
+            .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
+            .add( {{"tex", SamplerType::SAMPLER_3D, SamplerFormat::FLOAT, Precision::HIGH }} )
+            .build();
     std::string fragment = stringReplace("{samplerType}",
             getSamplerTypeName(textureFormat), fragmentUpdateImageMip);
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-    Program prog = shaderGen.getProgram();
-    Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
-    prog.setSamplerGroup(0, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
+    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
+    Program prog = shaderGen.getProgram(api);
+    Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
+    prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
     ProgramHandle program = api.createProgram(std::move(prog));
 
     // Create a texture with 3 mip levels.
@@ -625,7 +542,7 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
 
     // Create image data.
     PixelBufferDescriptor descriptor = checkerboardPixelBuffer(pixelFormat, pixelType, 512);
-    api.update2DImage(texture, 1, 0, 0, 512, 512, std::move(descriptor));
+    api.update3DImage(texture, 1, 0, 0, 0, 512, 512, 1, std::move(descriptor));
 
     api.beginFrame(0, 0);
 
@@ -634,9 +551,9 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
     SamplerParams sparams = {};
     sparams.filterMag = SamplerMagFilter::LINEAR;
     sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
-    samplers.setSampler(0, texture, sparams);
+    samplers.setSampler(0, { texture, sparams });
     auto sgroup = api.createSamplerGroup(samplers.getSize());
-    api.updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
+    api.updateSamplerGroup(sgroup, samplers.toBufferDescriptor(api));
 
     api.bindSamplers(0, sgroup);
 
@@ -680,12 +597,17 @@ TEST_F(BackendTest, UpdateImage3D) {
     auto defaultRenderTarget = api.createDefaultRenderTarget(0);
 
     // Create a program.
+    SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
+            .name("Test")
+            .stageFlags(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS)
+            .add( {{"tex", SamplerType::SAMPLER_3D, SamplerFormat::FLOAT, Precision::HIGH }} )
+            .build();
     std::string fragment = stringReplace("{samplerType}",
             getSamplerTypeName(samplerType), fragmentUpdateImage3DTemplate);
-    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform);
-    Program prog = shaderGen.getProgram();
-    Program::Sampler psamplers[] = { utils::CString("tex"), 0, false };
-    prog.setSamplerGroup(0, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
+    ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
+    Program prog = shaderGen.getProgram(api);
+    Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
+    prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
     ProgramHandle program = api.createProgram(std::move(prog));
 
     // Create a texture.
@@ -716,9 +638,9 @@ TEST_F(BackendTest, UpdateImage3D) {
     SamplerParams sparams = {};
     sparams.filterMag = SamplerMagFilter::LINEAR;
     sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
-    samplers.setSampler(0, texture, sparams);
+    samplers.setSampler(0, { texture, sparams});
     auto sgroup = api.createSamplerGroup(samplers.getSize());
-    api.updateSamplerGroup(sgroup, std::move(samplers.toCommandStream()));
+    api.updateSamplerGroup(sgroup, samplers.toBufferDescriptor(api));
 
     api.bindSamplers(0, sgroup);
 

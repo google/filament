@@ -16,43 +16,50 @@
 
 package com.google.android.filament.gltfio;
 
+import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.filament.Box;
 import com.google.android.filament.Engine;
 import com.google.android.filament.Entity;
-import com.google.android.filament.MaterialInstance;
 
 /**
  * Owns a bundle of Filament objects that have been created by <code>AssetLoader</code>.
  *
  * <p>For usage instructions, see the documentation for {@link AssetLoader}.</p>
  *
- * <p>This class owns a hierarchy of entities that have been loaded from a glTF asset. Every entity has
- * a <code>TransformManager</code> component, and some entities also have
- * <code>NameComponentManager</code> and/or <code>RenderableManager</code> components.</p>
+ * <p>This class owns a hierarchy of entities that have been loaded from a glTF asset. Every entity
+ * has a <code>TransformManager</code> component, and some entities also have compnents managed by
+ * <code>NameComponentManager</code>, <code>RenderableManager</code>, and others.</p>
  *
  * <p>In addition to the aforementioned entities, an asset has strong ownership over a list of
- * <code>VertexBuffer</code>, <code>IndexBuffer</code>, <code>MaterialInstance</code>, and
- * <code>Texture</code>.</p>
+ * <code>VertexBuffer</code>, <code>IndexBuffer</code>, and <code>Texture</code>.</p>
  *
  * <p>Clients can use {@link ResourceLoader} to create textures, compute tangent quaternions, and
  * upload data into vertex buffers and index buffers.</p>
  *
  * @see ResourceLoader
- * @see Animator
+ * @see FilamentInstance
  * @see AssetLoader
  */
 public class FilamentAsset {
     private long mNativeObject;
-    private Animator mAnimator;
+    private FilamentInstance mPrimaryInstance;
     private Engine mEngine;
 
     FilamentAsset(Engine engine, long nativeObject) {
         mEngine = engine;
         mNativeObject = nativeObject;
-        mAnimator = null;
+    }
+
+    public FilamentInstance getInstance() {
+        if (mPrimaryInstance != null) {
+            return mPrimaryInstance;
+        }
+        long nativeInstance = nGetInstance(getNativeObject());
+        mPrimaryInstance = new FilamentInstance(this, nativeInstance);
+        return mPrimaryInstance;
     }
 
     long getNativeObject() {
@@ -113,6 +120,15 @@ public class FilamentAsset {
     }
 
     /**
+     * Gets only the entities that have renderable components.
+     */
+    public @NonNull @Entity int[] getRenderableEntities() {
+        int[] result = new int[nGetRenderableEntityCount(mNativeObject)];
+        nGetRenderableEntities(mNativeObject, result);
+        return result;
+    }
+
+    /**
      * Gets only the entities that have camera components.
      *
      * <p>
@@ -159,19 +175,11 @@ public class FilamentAsset {
         return result;
     }
 
-    public @NonNull MaterialInstance[] getMaterialInstances() {
-        final int count = nGetMaterialInstanceCount(mNativeObject);
-        MaterialInstance[] result = new MaterialInstance[count];
-        long[] natives = new long[count];
-        nGetMaterialInstances(mNativeObject, natives);
-        for (int i = 0; i < count; i++) {
-            result[i] = new MaterialInstance(mEngine, natives[i]);
-        }
-        return result;
-    }
-
     /**
      * Gets the bounding box computed from the supplied min / max values in glTF accessors.
+     *
+     * This does not return a bounding box over all FilamentInstance, it's just a straightforward
+     * AAAB that can be determined at load time from the asset data.
      */
     public @NonNull Box getBoundingBox() {
         float[] box = new float[6];
@@ -197,22 +205,12 @@ public class FilamentAsset {
     }
 
     /**
-     * Creates or retrieves the <code>Animator</code> interface for this asset.
-     *
-     * <p>When calling this for the first time, this must be called after
-     * {@link ResourceLoader#loadResources}. When the asset is destroyed, its
-     * animator becomes invalid.</p>
+     * Gets the names of all morph targets in the given entity.
      */
-    public @NonNull Animator getAnimator() {
-        if (mAnimator != null) {
-            return mAnimator;
-        }
-        long nativeAnimator = nGetAnimator(getNativeObject());
-        if (nativeAnimator == 0) {
-            throw new IllegalStateException("Unable to create animator");
-        }
-        mAnimator = new Animator(nativeAnimator);
-        return mAnimator;
+    public @NonNull String[] getMorphTargetNames(@Entity int entity) {
+        String[] names = new String[nGetMorphTargetCount(mNativeObject, entity)];
+        nGetMorphTargetNames(mNativeObject, entity, names);
+        return names;
     }
 
     /**
@@ -227,16 +225,18 @@ public class FilamentAsset {
     /**
      * Reclaims CPU-side memory for URI strings, binding lists, and raw animation data.
      *
-     * This should only be called after ResourceLoader#loadResources().
-     * If using Animator, this should be called after getAnimator().
-     * If this is an instanced asset, this prevents creation of new instances.
+     * This should only be called after ResourceLoader#loadResources() or
+     * ResourceLoader#asyncBeginLoad(). If this is an instanced asset, this prevents creation of new
+     * instances.
      */
     public void releaseSourceData() {
         nReleaseSourceData(mNativeObject);
     }
 
+    public Engine getEngine() { return mEngine; }
+
     void clearNativeObject() {
-        if (mAnimator != null) mAnimator.clearNativeObject();
+        mPrimaryInstance = null;
         mNativeObject = 0;
     }
 
@@ -254,17 +254,23 @@ public class FilamentAsset {
     private static native int nGetLightEntityCount(long nativeAsset);
     private static native void nGetLightEntities(long nativeAsset, int[] result);
 
+    private static native int nGetRenderableEntityCount(long nativeAsset);
+    private static native void nGetRenderableEntities(long nativeAsset, int[] result);
+
     private static native int nGetCameraEntityCount(long nativeAsset);
     private static native void nGetCameraEntities(long nativeAsset, int[] result);
 
-    private static native int nGetMaterialInstanceCount(long nativeAsset);
-    private static native void nGetMaterialInstances(long nativeAsset, long[] nativeResults);
+    private static native int nGetMorphTargetCount(long nativeAsset, int entity);
+    private static native void nGetMorphTargetNames(long nativeAsset, int entity, String[] result);
 
     private static native void nGetBoundingBox(long nativeAsset, float[] box);
     private static native String nGetName(long nativeAsset, int entity);
     private static native String nGetExtras(long nativeAsset, int entity);
-    private static native long nGetAnimator(long nativeAsset);
+
+    private static native long nGetInstance(long nativeAsset);
+
     private static native int nGetResourceUriCount(long nativeAsset);
     private static native void nGetResourceUris(long nativeAsset, String[] result);
+
     private static native void nReleaseSourceData(long nativeAsset);
 }

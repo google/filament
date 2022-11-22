@@ -25,7 +25,7 @@
 #include "geometry.fs"
 
 #ifndef COMPUTE_BENT_NORMAL
-#error "COMPUTE_BENT_NORMAL must be set"
+#error COMPUTE_BENT_NORMAL must be set
 #endif
 
 const float kLog2LodRate = 3.0;
@@ -107,7 +107,7 @@ void computeAmbientOcclusionSAO(inout float occlusion, inout vec3 bentNormal,
 
 void scalableAmbientObscurance(out float obscurance, out vec3 bentNormal,
         highp vec2 uv, highp vec3 origin, vec3 normal) {
-    float noise = random(getFragCoord(materialParams.resolution.xy));
+    float noise = interleavedGradientNoise(getFragCoord(materialParams.resolution.xy));
     highp vec2 tapPosition = startPosition(noise);
     highp mat2 angleStep = tapAngleStep();
 

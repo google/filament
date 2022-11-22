@@ -153,7 +153,7 @@ void RemoveStructMemberReductionOpportunity::AdjustAccessedIndices(
         next_type = type_inst->GetSingleWordInOperand(0);
         break;
       case SpvOpTypeStruct: {
-        // Struct types are special becuase (a) we may need to adjust the index
+        // Struct types are special because (a) we may need to adjust the index
         // being used, if the struct type is the one from which we are removing
         // a member, and (b) the type encountered by following the current index
         // is dependent on the value of the index.
