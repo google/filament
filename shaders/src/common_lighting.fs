@@ -2,8 +2,9 @@ struct Light {
     vec4 colorIntensity;  // rgb, pre-exposed intensity
     vec3 l;
     float attenuation;
-    vec3 worldPosition;
+    highp vec3 worldPosition;
     float NoL;
+    highp vec3 direction;
     float zLight;
     bool castsShadows;
     bool contactShadows;

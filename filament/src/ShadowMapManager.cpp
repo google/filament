@@ -396,7 +396,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     engine.flush();
                     driver.beginRenderPass(rt.target, rt.params);
                     entry.shadowMap->bind(driver);
-                    entry.executor.overrideScissor(entry.shadowMap->getViewport());
+                    entry.executor.overrideScissor(entry.shadowMap->getScissor());
                     entry.executor.execute(engine, "Shadow Pass");
                     driver.endRenderPass();
                 });
@@ -546,6 +546,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
                 auto& s = mShadowUb.edit();
                 s.shadows[shadowIndex].layer = shadowMap.getLayer();
                 s.shadows[shadowIndex].lightFromWorldMatrix = shaderParameters.lightSpace;
+                s.shadows[shadowIndex].scissorNormalized = shaderParameters.scissorNormalized;
                 s.shadows[shadowIndex].normalBias = normalBias * wsTexelSize;
                 s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSize;
                 s.shadows[shadowIndex].elvsm = options.vsm.elvsm;
@@ -681,7 +682,7 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap,
         const double f = shadowMap.getCamera().getCullingFar();
         s.shadows[shadowIndex].layer = shadowMap.getLayer();
         s.shadows[shadowIndex].lightFromWorldMatrix = shaderParameters.lightSpace;
-        s.shadows[shadowIndex].direction = direction;
+        s.shadows[shadowIndex].scissorNormalized = shaderParameters.scissorNormalized;
         s.shadows[shadowIndex].normalBias = normalBias * wsTexelSizeAtOneMeter;
         s.shadows[shadowIndex].lightFromWorldZ = shaderParameters.lightFromWorldZ;
         s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
@@ -763,7 +764,7 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
         const double f = shadowMap.getCamera().getCullingFar();
         s.shadows[shadowIndex].layer = shadowMap.getLayer();
         s.shadows[shadowIndex].lightFromWorldMatrix = shaderParameters.lightSpace;
-        s.shadows[shadowIndex].direction = {};  // no direction of point lights
+        s.shadows[shadowIndex].scissorNormalized = shaderParameters.scissorNormalized;
         s.shadows[shadowIndex].normalBias = normalBias * wsTexelSizeAtOneMeter;
         s.shadows[shadowIndex].lightFromWorldZ = shaderParameters.lightFromWorldZ;
         s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;

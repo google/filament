@@ -130,6 +130,7 @@ public:
     struct ShaderParameters {
         math::mat4f lightSpace{};
         math::float4 lightFromWorldZ{};
+        math::float4 scissorNormalized{};
         float texelSizeAtOneMeterWs{};
     };
 
@@ -174,13 +175,14 @@ public:
     static void updateSceneInfoSpot(const math::mat4f& Mv, FScene const& scene,
             SceneInfo& sceneInfo);
 
-    backend::Viewport getViewport() const noexcept;
-
     LightManager::ShadowOptions const* getShadowOptions() const noexcept { return mOptions; }
     size_t getLightIndex() const { return mLightIndex; }
     uint16_t getShadowIndex() const { return mShadowIndex; }
     void setLayer(uint8_t layer) noexcept { mLayer = layer; }
     uint8_t getLayer() const noexcept { return mLayer; }
+    backend::Viewport getViewport() const noexcept;
+    backend::Viewport getScissor() const noexcept;
+
     bool isDirectionalShadow() const noexcept { return mShadowType == ShadowType::DIRECTIONAL; }
     bool isSpotShadow() const noexcept { return mShadowType == ShadowType::SPOT; }
     bool isPointShadow() const noexcept { return mShadowType == ShadowType::POINT; }
@@ -287,6 +289,8 @@ private:
 
     static math::mat4f computeVsmLightSpaceMatrix(const math::mat4f& lightSpacePcf,
             const math::mat4f& Mv, float znear, float zfar) noexcept;
+
+    math::float4 getViewportNormalized(ShadowMapInfo const& shadowMapInfo) const noexcept;
 
     float texelSizeWorldSpace(const math::mat3f& worldToShadowTexture,
             uint16_t shadowDimension) const noexcept;

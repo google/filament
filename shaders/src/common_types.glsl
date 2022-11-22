@@ -2,15 +2,14 @@
 // UBOs, which is is the case here.
 struct ShadowData {
     highp mat4 lightFromWorldMatrix;
-    highp vec3 direction;
-    float normalBias;
     highp vec4 lightFromWorldZ;
+    highp vec4 scissorNormalized;
     float texelSizeAtOneMeter;
     float bulbRadiusLs;
     float nearOverFarMinusNear;
+    float normalBias;
     bool elvsm;
     uint layer;
-    uint reserved0;
     uint reserved1;
     uint reserved2;
 };

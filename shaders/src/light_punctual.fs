@@ -150,6 +150,7 @@ Light getLight(const uint lightIndex) {
     light.colorIntensity.w = computePreExposedIntensity(intensity, frameUniforms.exposure);
     light.l = normalize(posToLight);
     light.attenuation = getDistanceAttenuation(posToLight, positionFalloff.w);
+    light.direction = direction;
     light.NoL = saturate(dot(shading_normal, light.l));
     light.worldPosition = positionFalloff.xyz;
     light.channels = channels;
@@ -219,7 +220,7 @@ void evaluatePunctualLights(const MaterialInputs material,
                     light.zLight = dot(shadowUniforms.shadows[shadowIndex].lightFromWorldZ,
                             vec4(getWorldPosition(), 1.0));
                 }
-                highp vec4 shadowPosition = getShadowPosition(false, shadowIndex, 0u, light.zLight);
+                highp vec4 shadowPosition = getShadowPosition(shadowIndex, light.direction, light.zLight);
                 visibility = shadow(false, light_shadowMap, shadowIndex,
                         shadowPosition, light.zLight);
             }
