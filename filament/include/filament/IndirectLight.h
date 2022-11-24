@@ -349,62 +349,62 @@ public:
      *
      * @param options Options for IBL lookup settings.
      */
-    void setIblOptions(IblOptions const& options) noexcept;
+    void setOptions(IblOptions const& options) noexcept;
 
     /**
      * Gets IBL lookup options.
      *
      * @return IBL lookup options.
      */
-    IblOptions const& getIblOptions() const noexcept;
+    IblOptions const& getOptions() const noexcept;
 
     /**
      * Sets IBL type.
      *
      * @param iblTechnique Determine the IBL type (infinite, or finite box/sphere)
      */
-    void setIblTechnique(const IblOptions::IblTechnique iblTechnique) noexcept;
+    void setTechnique(const IblOptions::IblTechnique iblTechnique) noexcept;
 
     /**
      * Gets IBL type.
      */
-    IblOptions::IblTechnique getIblTechnique() const noexcept;
+    IblOptions::IblTechnique getTechnique() const noexcept;
 
     /**
      * Sets the center of the finite IBL proxy geometry.
      *
      * @param iblCenter The center of the finite IBL proxy geometry
      */
-    void setIblCenter(const math::float3& iblCenter) noexcept;
+    void setCenter(const math::float3& iblCenter) noexcept;
 
     /**
      * Gets IBL center.
      */
-    const math::float3& getIblCenter() const noexcept;
+    const math::float3& getCenter() const noexcept;
 
     /**
      * Sets the half extents of the finite IBL proxy geometry.
      *
      * @param iblCenter The half extents of the finite IBL proxy geometry
      */
-    void setIblHalfExtents(const math::float3& iblHalfExtents) noexcept;
+    void setHalfExtents(const math::float3& iblHalfExtents) noexcept;
 
     /**
      * Gets IBL half extents.
      */
-    const math::float3& getIblHalfExtents() const noexcept;
+    const math::float3& getHalfExtents() const noexcept;
 
     /**
      * Sets the IBL tint (.rgb) and blend intensity (.a)
      *
-     * @param iblTintAndIntensity The tint color (.rgb) and blend weight between shaded and tinted (.a)
+     * @param iblTintAndStrength The tint color (.rgb) and blend weight between shaded and tinted (.a)
      */
-    void setIblTintAndIntensity(const math::float4& iblTintAndIntensity) noexcept;
+    void setTintAndStrength(const math::float4& iblTintAndStrength) noexcept;
 
     /**
      * Gets IBL tint (.rgb) and blend intensity (.a).
      */    
-    const math::float4& getIblTintAndIntensity() const noexcept;    
+    const math::float4& getTintAndStrength() const noexcept;    
 };
 
 } // namespace filament

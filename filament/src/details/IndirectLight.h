@@ -60,20 +60,20 @@ public:
     static math::float3 getDirectionEstimate(const math::float3 sh[9]) noexcept;
     static math::float4 getColorEstimate(const math::float3 sh[9], math::float3 direction) noexcept;
 
-    void setIblOptions(IblOptions const& options) noexcept;
-    const IblOptions& getIblOptions() const noexcept;
+    void setOptions(IblOptions const& options) noexcept;
+    const IblOptions& getOptions() const noexcept;
 
-    void setIblTechnique(const IblOptions::IblTechnique iblTechnique) noexcept;
-    IblOptions::IblTechnique getIblTechnique() const noexcept;
+    void setTechnique(const IblOptions::IblTechnique iblTechnique) noexcept;
+    IblOptions::IblTechnique getTechnique() const noexcept;
 
-    void setIblCenter(const math::float3& iblCenter) noexcept;
-    const math::float3& getIblCenter() const noexcept;
+    void setCenter(const math::float3& iblCenter) noexcept;
+    const math::float3& getCenter() const noexcept;
 
-    void setIblHalfExtents(const math::float3& iblHalfExtents) noexcept;
-    const math::float3& getIblHalfExtents() const noexcept;
+    void setHalfExtents(const math::float3& iblHalfExtents) noexcept;
+    const math::float3& getHalfExtents() const noexcept;
 
-    void setIblTintAndIntensity(const math::float4& iblTintAndIntensity) noexcept;
-    const math::float4& getIblTintAndIntensity() const noexcept;    
+    void setTintAndStrength(const math::float4& iblTintAndStrength) noexcept;
+    const math::float4& getTintAndStrength() const noexcept;    
 
 private:
     FTexture const* mReflectionsTexture = nullptr;

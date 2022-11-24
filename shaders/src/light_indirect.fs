@@ -30,7 +30,7 @@ vec3 overlayBlend(vec3 a, vec3 b) {
 }
 
 vec3 tintIbl(vec3 color) {
-    return mix(color, overlayBlend(color, frameUniforms.iblTintAndIntensity.rgb), frameUniforms.iblTintAndIntensity.w);
+    return mix(color, overlayBlend(color, frameUniforms.iblTintAndStrength.rgb), frameUniforms.iblTintAndStrength.w);
 }
 
 //------------------------------------------------------------------------------

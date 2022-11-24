@@ -467,7 +467,7 @@ struct IblOptions {
     /**
      * The color (.rgb) and the intensity (.a) of the IBL tint.
      */
-    math::float4 iblTintAndIntensity = math::float4(0.0f);
+    math::float4 iblTintAndStrength = math::float4(0.0f);
 };
 
 } // namespace filament

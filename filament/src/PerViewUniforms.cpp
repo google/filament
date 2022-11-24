@@ -273,10 +273,10 @@ void PerViewUniforms::prepareAmbientLight(FEngine& engine, FIndirectLight const&
             }});
     
     // Setting up IBL-type related information
-    s.iblTechnique = static_cast<uint32_t>(ibl.getIblTechnique());
-    s.iblCenter = ibl.getIblCenter();
-    s.iblHalfExtents = ibl.getIblHalfExtents();
-    s.iblTintAndIntensity = ibl.getIblTintAndIntensity();
+    s.iblTechnique = static_cast<uint32_t>(ibl.getTechnique());
+    s.iblCenter = ibl.getCenter();
+    s.iblHalfExtents = ibl.getHalfExtents();
+    s.iblTintAndStrength = ibl.getTintAndStrength();
 
 }
 

@@ -417,14 +417,14 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSet
             i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.y);
         } else if (compare(tok, jsonChunk, "iblHalfExtentsZ") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.z);
-        } else if (compare(tok, jsonChunk, "iblTintAndIntensityR") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndIntensity.x);
-        } else if (compare(tok, jsonChunk, "iblTintAndIntensityG") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndIntensity.y);
-        } else if (compare(tok, jsonChunk, "iblTintAndIntensityB") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndIntensity.z);
-        } else if (compare(tok, jsonChunk, "iblTintAndIntensityA") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndIntensity.w);            
+        } else if (compare(tok, jsonChunk, "iblTintAndStrengthR") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndStrength.x);
+        } else if (compare(tok, jsonChunk, "iblTintAndStrengthG") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndStrength.y);
+        } else if (compare(tok, jsonChunk, "iblTintAndStrengthB") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndStrength.z);
+        } else if (compare(tok, jsonChunk, "iblTintAndStrengthA") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndStrength.w);            
         } else {
             slog.w << "Invalid light setting key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -774,10 +774,10 @@ static std::ostream& operator<<(std::ostream& out, const LightSettings& in) {
         << "\"iblHalfExtentsX\": " << in.iblOptions.iblHalfExtents.x << ",\n"
         << "\"iblHalfExtentsY\": " << in.iblOptions.iblHalfExtents.y << ",\n"
         << "\"iblHalfExtentsZ\": " << in.iblOptions.iblHalfExtents.z << ",\n"
-        << "\"iblTintAndIntensityR\": " << to_string(in.iblOptions.iblTintAndIntensity.x) << ",\n"
-        << "\"iblTintAndIntensityG\": " << to_string(in.iblOptions.iblTintAndIntensity.y) << ",\n"
-        << "\"iblTintAndIntensityB\": " << to_string(in.iblOptions.iblTintAndIntensity.z) << ",\n"
-        << "\"iblTintAndIntensityA\": " << to_string(in.iblOptions.iblTintAndIntensity.w) << "\n"
+        << "\"iblTintAndStrengthR\": " << to_string(in.iblOptions.iblTintAndStrength.x) << ",\n"
+        << "\"iblTintAndStrengthG\": " << to_string(in.iblOptions.iblTintAndStrength.y) << ",\n"
+        << "\"iblTintAndStrengthB\": " << to_string(in.iblOptions.iblTintAndStrength.z) << ",\n"
+        << "\"iblTintAndStrengthA\": " << to_string(in.iblOptions.iblTintAndStrength.w) << "\n"
         << "}";
 }
 

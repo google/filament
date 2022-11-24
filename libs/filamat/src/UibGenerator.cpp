@@ -148,7 +148,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "padding3",                 0, Type::UINT                   },
             { "iblHalfExtents",           0, Type::FLOAT3                 },
             { "iblTechnique",             0, Type::UINT                   },
-            { "iblTintAndIntensity",      0, Type::FLOAT4                 },
+            { "iblTintAndStrength",       0, Type::FLOAT4                 },
 
             // bring PerViewUib to 2 KiB
             { "reserved", sizeof(PerViewUib::reserved)/16, Type::FLOAT4 }

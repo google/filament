@@ -473,7 +473,7 @@ void ViewerGui::updateIndirectLight() {
         mIndirectLight->setIntensity(mSettings.lighting.iblIntensity);
         mIndirectLight->setRotation(mat3f::rotation(mSettings.lighting.iblRotation, float3{ 0, 1, 0 }));
 
-        mIndirectLight->setIblOptions(mSettings.lighting.iblOptions);
+        mIndirectLight->setOptions(mSettings.lighting.iblOptions);
     }
 }
 
@@ -932,9 +932,9 @@ void ViewerGui::updateUserInterface() {
 
         ImGui::Checkbox("Show skybox", &mSettings.viewer.skyboxEnabled);
         if (ImGui::ColorEdit3("Background color", &mSettings.viewer.backgroundColor.r)) {
-            mSettings.lighting.iblOptions.iblTintAndIntensity.rgb = filament::Color::toLinear(mSettings.viewer.backgroundColor);
+             mSettings.lighting.iblOptions.iblTintAndStrength.rgb = filament::Color::toLinear(mSettings.viewer.backgroundColor);
         }
-        ImGui::SliderFloat("IBL tint weight", &mSettings.lighting.iblOptions.iblTintAndIntensity.a, 0.0f, 1.0f);
+        ImGui::SliderFloat("IBL tint strength", &mSettings.lighting.iblOptions.iblTintAndStrength.a, 0.0f, 1.0f);
 
         // We do not yet support ground shadow or scene selection in remote mode.
         if (!isRemoteMode()) {

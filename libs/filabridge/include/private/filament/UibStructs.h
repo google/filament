@@ -170,7 +170,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float3 iblHalfExtents;      // sphere radius and inverse radius; box half extents along X, Y, Z axes
     uint32_t iblTechnique;            // 0: infinite cubemap IBL, 1: (origin centered) finite sphere IBL, 2: (origin centered) finite cube IBL
 
-    math::float4 iblTintAndIntensity; // .rgb is IBL tint, .a is the intensity of the tint
+    math::float4 iblTintAndStrength; // .rgb is IBL tint, .a is the intensity of the tint
 
     // bring PerViewUib to 2 KiB
     math::float4 reserved[60];

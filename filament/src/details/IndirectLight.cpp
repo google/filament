@@ -267,44 +267,44 @@ float4 FIndirectLight::getColorEstimate(float3 direction) const noexcept {
    return getColorEstimate(mIrradianceCoefs.data(), direction);
 }
 
-void FIndirectLight::setIblOptions(IblOptions const& options) noexcept {
+void FIndirectLight::setOptions(IblOptions const& options) noexcept {
     mIblOptions = options;
 }
 
-IblOptions const& FIndirectLight::getIblOptions() const noexcept {
+IblOptions const& FIndirectLight::getOptions() const noexcept {
     return mIblOptions;
 }
 
-void FIndirectLight::setIblTechnique(const IblOptions::IblTechnique iblTechnique) noexcept {
+void FIndirectLight::setTechnique(const IblOptions::IblTechnique iblTechnique) noexcept {
     mIblOptions.iblTechnique = iblTechnique;
 }
 
-IblOptions::IblTechnique FIndirectLight::getIblTechnique() const noexcept {
+IblOptions::IblTechnique FIndirectLight::getTechnique() const noexcept {
     return mIblOptions.iblTechnique;
 }
 
-void FIndirectLight::setIblCenter(const math::float3& iblCenter) noexcept {
+void FIndirectLight::setCenter(const math::float3& iblCenter) noexcept {
     mIblOptions.iblCenter = iblCenter;
 }
 
-const math::float3& FIndirectLight::getIblCenter() const noexcept {
+const math::float3& FIndirectLight::getCenter() const noexcept {
     return mIblOptions.iblCenter;
 }
 
-void FIndirectLight::setIblHalfExtents(const math::float3& iblHalfExtents) noexcept {
+void FIndirectLight::setHalfExtents(const math::float3& iblHalfExtents) noexcept {
     mIblOptions.iblHalfExtents = iblHalfExtents;
 }
 
-const math::float3& FIndirectLight::getIblHalfExtents() const noexcept {
+const math::float3& FIndirectLight::getHalfExtents() const noexcept {
     return mIblOptions.iblHalfExtents;
 }
 
-void FIndirectLight::setIblTintAndIntensity(const math::float4& iblTintAndIntensity) noexcept {
-    mIblOptions.iblTintAndIntensity = iblTintAndIntensity;
+void FIndirectLight::setTintAndStrength(const math::float4& iblTintAndStrength) noexcept {
+    mIblOptions.iblTintAndStrength = iblTintAndStrength;
 }
 
-const math::float4& FIndirectLight::getIblTintAndIntensity() const noexcept {
-    return mIblOptions.iblTintAndIntensity;
+const math::float4& FIndirectLight::getTintAndStrength() const noexcept {
+    return mIblOptions.iblTintAndStrength;
 }
 
 } // namespace filament
