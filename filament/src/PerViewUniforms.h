@@ -39,7 +39,6 @@ struct ScreenSpaceReflectionsOptions;
 struct SoftShadowOptions;
 struct TemporalAntiAliasingOptions;
 struct VsmShadowOptions;
-struct IblOptions;
 
 struct CameraInfo;
 struct ShadowMappingUniforms;
@@ -103,8 +102,6 @@ public:
 
     void prepareDirectionalLight(FEngine& engine, float exposure,
             math::float3 const& sceneSpaceDirection, LightManagerInstance instance) noexcept;
-
-    void prepareIblLight(const IblOptions& options) noexcept;
 
     void prepareAmbientLight(FEngine& engine,
             FIndirectLight const& ibl, float intensity, float exposure) noexcept;

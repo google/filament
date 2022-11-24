@@ -249,14 +249,6 @@ void PerViewUniforms::prepareDirectionalLight(FEngine& engine,
     }
 }
 
-void PerViewUniforms::prepareIblLight(const IblOptions& options) noexcept {
-    auto& s = mUniforms.edit();
-    s.iblTechnique = static_cast<uint32_t>(options.iblTechnique);
-    s.iblCenter = options.iblCenter;
-    s.iblHalfExtents = options.iblHalfExtents;
-    s.iblTintAndIntensity = options.iblTintAndIntensity;
-}
-
 void PerViewUniforms::prepareAmbientLight(FEngine& engine, FIndirectLight const& ibl,
         float intensity, float exposure) noexcept {
     auto& s = mUniforms.edit();
@@ -279,6 +271,13 @@ void PerViewUniforms::prepareAmbientLight(FEngine& engine, FIndirectLight const&
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
             }});
+    
+    // Setting up IBL-type related information
+    s.iblTechnique = static_cast<uint32_t>(ibl.getIblTechnique());
+    s.iblCenter = ibl.getIblCenter();
+    s.iblHalfExtents = ibl.getIblHalfExtents();
+    s.iblTintAndIntensity = ibl.getIblTintAndIntensity();
+
 }
 
 void PerViewUniforms::prepareDynamicLights(Froxelizer& froxelizer) noexcept {
