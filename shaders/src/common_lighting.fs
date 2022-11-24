@@ -80,7 +80,7 @@ float computeMicroShadowing(float NoL, float visibility) {
  * IBL utilities
  */
 
-vec2 IntersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax) {
+vec2 intersectAABB(const highp vec3 rayOrigin, const highp vec3 rayDir, const highp vec3 boxMin, const highp vec3 boxMax) {
     vec3 tMin = (boxMin - rayOrigin) / rayDir;
     vec3 tMax = (boxMax - rayOrigin) / rayDir;
     vec3 t1 = min(tMin, tMax);
@@ -90,17 +90,12 @@ vec2 IntersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax) {
     return vec2(tNear, tFar);
 }
 
-// Assume: a <= b
-float GetSmallestPositive(float a, float b) {
-    return a >= 0.0 ? a : b;
-}
-
 /**
  * This function returns an IBL lookup direction, taking into account the current IBL type (e.g. infinite spherical, 
  * finite/local sphere/box), an initial intended lookup direction (baseDir) and the particular normal we compute
  * reflections against (e.g. either the interpolated surface or clearcoat normal).
  */
-vec3 GetAdjustedReflectedDirection(const vec3 baseDir, const vec3 normal) {
+vec3 getAdjustedReflectedDirection(const highp vec3 baseDir, const highp vec3 normal) {
     vec3 defaultReflected = reflect(-baseDir, normal);    
 
     if (frameUniforms.iblTechnique == IBL_TECHNIQUE_INFINITE) return defaultReflected;
@@ -120,12 +115,12 @@ vec3 GetAdjustedReflectedDirection(const vec3 baseDir, const vec3 normal) {
         float B = 2.0 * dot(rayPosNormalized, rayDir);
         float C = dot(rayPosNormalized, rayPosNormalized) - 1.0; // 1.0 = r^2, as we are in normalized space
 
-        t0 = 0.5 * (-B + sqrt(B*B - 4.0 * C));
+        t0 = 0.5 * (-B + sqrt(B * B - 4.0 * C));
         t0 *= frameUniforms.iblHalfExtents.x;
-    }
-    else if (frameUniforms.iblTechnique == IBL_TECHNIQUE_FINITE_BOX) {
-        vec2 roots = IntersectAABB(rayPos, rayDir, -frameUniforms.iblHalfExtents, frameUniforms.iblHalfExtents);
-        t0 = GetSmallestPositive(roots.x, roots.y);
+    } else if (frameUniforms.iblTechnique == IBL_TECHNIQUE_FINITE_BOX) {
+        vec2 roots = intersectAABB(rayPos, rayDir, -frameUniforms.iblHalfExtents, frameUniforms.iblHalfExtents);
+        // Assume: roots.x <= roots.y
+        t0 = ( roots.x >= 0.0 ) ? roots.x : roots.y;
     }
 
     // translate results back to world space
@@ -142,6 +137,7 @@ vec3 GetAdjustedReflectedDirection(const vec3 baseDir, const vec3 normal) {
  *   anisotropic indirect lighting
  * - The reflected vector may be modified to point towards the dominant specular
  *   direction to match reference renderings when the roughness increases
+ * The reflected direction is further adjusted to account for finite IBL geometries.
  */
 
 vec3 getReflectedVector(const PixelParams pixel, const vec3 v, const vec3 n) {
@@ -152,9 +148,9 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 v, const vec3 n) {
     float bendFactor          = abs(pixel.anisotropy) * saturate(5.0 * pixel.perceptualRoughness);
     vec3  bentNormal          = normalize(mix(n, anisotropicNormal, bendFactor));
 
-    vec3 r = GetAdjustedReflectedDirection(-v, bentNormal);
+    vec3 r = getAdjustedReflectedDirection(-v, bentNormal);
 #else
-    vec3 r = GetAdjustedReflectedDirection(-v, n);
+    vec3 r = getAdjustedReflectedDirection(-v, n);
 #endif
     return r;
 }

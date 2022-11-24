@@ -17,19 +17,20 @@
 // IBL tinting helpers
 //------------------------------------------------------------------------------
 
-float OverlayBlend(float a, float b) {
+float overlayBlend(float a, float b) {
     // Visually almost-luminance-preserving formulation. This uses an artist-provided constant below
     // that they've found the visually most pleasing under _most_ (but not all) circumstances.
     const float kT = 0.65;
     const float kOneOverT = 1.0 / kT;
     return (a < kT) ? a * kOneOverT * b : a - kT + b;
 }
-vec3 OverlayBlend(vec3 a, vec3 b) {
-    return vec3(OverlayBlend(a.x, b.x), OverlayBlend(a.y, b.y), OverlayBlend(a.z, b.z));
+
+vec3 overlayBlend(vec3 a, vec3 b) {
+    return vec3(overlayBlend(a.x, b.x), overlayBlend(a.y, b.y), overlayBlend(a.z, b.z));
 }
 
-vec3 TintIbl(vec3 color) {
-    return mix(color, OverlayBlend(color, frameUniforms.iblTintAndIntensity.rgb), frameUniforms.iblTintAndIntensity.w);
+vec3 tintIbl(vec3 color) {
+    return mix(color, overlayBlend(color, frameUniforms.iblTintAndIntensity.rgb), frameUniforms.iblTintAndIntensity.w);
 }
 
 //------------------------------------------------------------------------------
@@ -37,7 +38,7 @@ vec3 TintIbl(vec3 color) {
 //------------------------------------------------------------------------------
 
 vec3 decodeDataForIBL(const vec4 data) {
-    return TintIbl(data.rgb);
+    return tintIbl(data.rgb);
 }
 
 //------------------------------------------------------------------------------
@@ -79,7 +80,7 @@ vec3 Irradiance_SphericalHarmonics(const vec3 n) {
 #endif
         , 0.0);
 
-    return TintIbl(rawResult);
+    return tintIbl(rawResult);
 }
 
 vec3 Irradiance_RoughnessOne(const vec3 n) {
@@ -152,7 +153,7 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
     vec3 r = getReflectedVector(pixel, shading_view, n);
 #else
-    vec3 r = GetAdjustedReflectedDirection(shading_view, n);
+    vec3 r = getAdjustedReflectedDirection(shading_view, n);
 #endif
     return getSpecularDominantDirection(n, r, pixel.roughness);
 }
@@ -287,7 +288,7 @@ vec3 isEvaluateSpecularIBL(const PixelParams pixel, const vec3 n, const vec3 v, 
         }
     }
 
-    return TintIbl(indirectSpecular);
+    return tintIbl(indirectSpecular);
 }
 
 vec3 isEvaluateDiffuseIBL(const PixelParams pixel, vec3 n, vec3 v) {
@@ -337,7 +338,7 @@ vec3 isEvaluateDiffuseIBL(const PixelParams pixel, vec3 n, vec3 v) {
         }
     }
 
-    return TintIbl(indirectDiffuse * invNumSamples); // we bake 1/PI here, which cancels out
+    return tintIbl(indirectDiffuse * invNumSamples); // we bake 1/PI here, which cancels out
 }
 
 void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 Fd, inout vec3 Fr) {
@@ -354,7 +355,7 @@ void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec
     float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
     float attenuation = 1.0 - Fc;
     Fd *= attenuation;
-    Fd = TintIbl(Fd);
+    Fd = tintIbl(Fd);
     Fr *= attenuation;
 
     PixelParams p;
@@ -367,7 +368,7 @@ void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec
 
     vec3 clearCoatLobe = isEvaluateSpecularIBL(p, clearCoatNormal, shading_view, clearCoatNoV);
     Fr += clearCoatLobe * (specularAO * pixel.clearCoat);
-    Fr = TintIbl(Fr);
+    Fr = tintIbl(Fr);
 #endif
 }
 #endif
@@ -414,10 +415,10 @@ void evaluateClearCoatIBL(const PixelParams pixel, float diffuseAO,
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
         // We want to use the geometric normal for the clear coat layer
         float clearCoatNoV = clampNoV(dot(shading_clearCoatNormal, shading_view));
-        vec3 clearCoatR = GetAdjustedReflectedDirection(shading_view, shading_clearCoatNormal);
+        vec3 clearCoatR = getAdjustedReflectedDirection(shading_view, shading_clearCoatNormal);
 #else
         float clearCoatNoV = shading_NoV;
-        vec3 clearCoatR = GetAdjustedReflectedDirection(shading_view, shading_normal);
+        vec3 clearCoatR = getAdjustedReflectedDirection(shading_view, shading_normal);
 #endif
         // The clear coat layer assumes an IOR of 1.5 (4% reflectance)
         float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
