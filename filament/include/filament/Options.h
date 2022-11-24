@@ -451,7 +451,7 @@ struct IblOptions {
     /**
      * Center of the sphere or box IBL geometry.
      */
-    math::float3 iblCenter;
+    math::float3 iblCenter = math::float3(0.0f);
 
     /**
      * If iblTechnique is IBL_INFINITE, this property is unused.
@@ -462,7 +462,7 @@ struct IblOptions {
      * 
      * If iblTechnique is IBL_FINITE_BOX, then the half extents of the box along the X, Y, Z axes.
      */
-    math::float3 iblHalfExtents;
+    math::float3 iblHalfExtents = math::float3(100.0f);
 
     /**
      * The color (.rgb) and the intensity (.a) of the IBL tint.

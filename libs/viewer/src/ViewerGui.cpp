@@ -842,14 +842,22 @@ void ViewerGui::updateUserInterface() {
             }
 
             if (iblOptions.iblTechnique == IblOptions::IblTechnique::IBL_FINITE_SPHERE) {
-                ImGui::SliderFloat3("Sphere center", iblOptions.iblCenter.v, -10.0f, 10.0f);
-                ImGui::SliderFloat("Sphere radius", iblOptions.iblHalfExtents.v, 0.0f, 256.0f);
+                static filament::math::float3 sphereHalfExtents = filament::math::float3(100.0f);
 
-                iblOptions.iblHalfExtents.y = (iblOptions.iblHalfExtents.x != 0.0f) ? 1.0f / iblOptions.iblHalfExtents.x : 1.0f;
+                ImGui::SliderFloat3("Sphere center", iblOptions.iblCenter.v, -10.0f, 10.0f);
+                ImGui::SliderFloat("Sphere radius", sphereHalfExtents.v, 0.0f, 256.0f);
+
+                sphereHalfExtents.y = (iblOptions.iblHalfExtents.x != 0.0f) ? 1.0f / iblOptions.iblHalfExtents.x : 1.0f;
+
+                iblOptions.iblHalfExtents = sphereHalfExtents;
             }
             else if (iblOptions.iblTechnique == IblOptions::IblTechnique::IBL_FINITE_BOX) {
-                ImGui::SliderFloat3("Box center", iblOptions.iblCenter.v, -100.0f, 100.0f);
-                ImGui::SliderFloat3("Box half extents", iblOptions.iblHalfExtents.v, 0.0f, 100.0f);
+                static filament::math::float3 boxHalfExtents = filament::math::float3(100.0f);
+
+                ImGui::SliderFloat3("Box center", iblOptions.iblCenter.v, -10.0f, 10.0f);
+                ImGui::SliderFloat3("Box half extents", boxHalfExtents.v, 0.0f, 256.0f);
+
+                iblOptions.iblHalfExtents = boxHalfExtents;
             }
         }
         if (ImGui::CollapsingHeader("Sunlight")) {
