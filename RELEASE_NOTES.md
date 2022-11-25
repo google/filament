@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- Java: Fix confusing typo in Camera documentation
+
 ## v1.30.0
 
 - engine: optimize per-shadow UBO [⚠️ **Recompile Materials**]
