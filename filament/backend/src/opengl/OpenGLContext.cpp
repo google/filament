@@ -377,6 +377,7 @@ void OpenGLContext::initExtensionsGLES() noexcept {
 #endif
     ext.EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
     ext.EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
+    ext.EXT_texture_compression_rgtc = hasExtension(exts, "GL_EXT_texture_compression_rgtc");
     ext.EXT_texture_cube_map_array = exts.has("GL_EXT_texture_cube_map_array"sv) || exts.has("GL_OES_texture_cube_map_array"sv);
     ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
     ext.KHR_debug = exts.has("GL_KHR_debug"sv);
@@ -420,6 +421,7 @@ void OpenGLContext::initExtensionsGL() noexcept {
     ext.EXT_texture_compression_etc2 = exts.has("GL_ARB_ES3_compatibility"sv);
     ext.EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
     ext.EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
+    ext.EXT_texture_compression_rgtc = hasExtension(exts, "GL_EXT_texture_compression_rgtc");
     ext.EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
     ext.EXT_texture_sRGB = exts.has("GL_EXT_texture_sRGB"sv);
     ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);

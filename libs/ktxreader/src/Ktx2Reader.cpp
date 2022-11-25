@@ -69,8 +69,6 @@ struct FinalFormatInfo {
 //     transcoder_texture_format::cTFPVRTC2_4_RGBA
 //     transcoder_texture_format::cTFPVRTC1_4_RGB
 //     transcoder_texture_format::cTFPVRTC1_4_RGBA
-//     transcoder_texture_format::cTFBC4_R
-//     transcoder_texture_format::cTFBC5_RG
 //     transcoder_texture_format::cTFBC7_RGBA (this format would add size bloat to the transcoder)
 //     transcoder_texture_format::cTFBGR565   (note the blue/red swap)
 //
@@ -89,6 +87,8 @@ static FinalFormatInfo getFinalFormatInfo(Texture::InternalFormat fmt) {
         case tif::DXT1_RGB: return {"DXT1_RGB", true, true, LINEAR, ttf::cTFBC1_RGB, tct::DXT1_SRGB};
         case tif::DXT5_SRGBA: return {"DXT5_SRGBA", true, true, sRGB, ttf::cTFBC3_RGBA, tct::DXT5_RGBA};
         case tif::DXT5_RGBA: return {"DXT5_RGBA", true, true, LINEAR, ttf::cTFBC3_RGBA, tct::DXT5_SRGBA};
+        case tif::RED_RGTC1: return {"RED_RGTC1", true, true, LINEAR, ttf::cTFBC4_R, tct::RED_RGTC1};
+        case tif::RED_GREEN_RGTC2: return {"RED_GREEN_RGTC2", true, true, LINEAR, ttf::cTFBC5_RG, tct::RED_GREEN_RGTC2};
         case tif::SRGB8_ALPHA8_ASTC_4x4: return {"SRGB8_ALPHA8_ASTC_4x4", true, true, sRGB, ttf::cTFASTC_4x4_RGBA, tct::RGBA_ASTC_4x4};
         case tif::RGBA_ASTC_4x4: return {"RGBA_ASTC_4x4", true, true, LINEAR, ttf::cTFASTC_4x4_RGBA, tct::SRGB8_ALPHA8_ASTC_4x4};
         case tif::EAC_R11: return {"EAC_R11", true, true, LINEAR, ttf::cTFETC2_EAC_R11, tct::EAC_R11};

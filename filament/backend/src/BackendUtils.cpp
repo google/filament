@@ -173,6 +173,14 @@ size_t getFormatSize(TextureFormat format) noexcept {
         case TextureFormat::DXT5_SRGBA:
             return 16;
 
+        case TextureFormat::RED_RGTC1:
+        case TextureFormat::SIGNED_RED_RGTC1:
+            return 8;
+
+        case TextureFormat::RED_GREEN_RGTC2:
+        case TextureFormat::SIGNED_RED_GREEN_RGTC2:
+            return 16;
+
         // The block size for ASTC compression is always 16 bytes.
         case TextureFormat::RGBA_ASTC_4x4:
         case TextureFormat::RGBA_ASTC_5x4:
@@ -276,10 +284,14 @@ size_t getFormatComponentCount(TextureFormat format) noexcept {
         // Compressed formats ---------------------------------------------------------------------
         case TextureFormat::EAC_R11:
         case TextureFormat::EAC_R11_SIGNED:
+        case TextureFormat::RED_RGTC1:
+        case TextureFormat::SIGNED_RED_RGTC1:
             return 1;
 
         case TextureFormat::EAC_RG11:
         case TextureFormat::EAC_RG11_SIGNED:
+        case TextureFormat::RED_GREEN_RGTC2:
+        case TextureFormat::SIGNED_RED_GREEN_RGTC2:
             return 2;
 
         case TextureFormat::ETC2_RGB8:
@@ -354,6 +366,12 @@ size_t getBlockWidth(TextureFormat format) noexcept {
         case TextureFormat::DXT3_SRGBA:
         case TextureFormat::DXT5_RGBA:
         case TextureFormat::DXT5_SRGBA:
+            return 4;
+
+        case TextureFormat::RED_RGTC1:
+        case TextureFormat::SIGNED_RED_RGTC1:
+        case TextureFormat::RED_GREEN_RGTC2:
+        case TextureFormat::SIGNED_RED_GREEN_RGTC2:
             return 4;
 
         case TextureFormat::RGBA_ASTC_4x4:

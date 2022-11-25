@@ -184,6 +184,11 @@ VkFormat getVkFormat(TextureFormat format) {
         case TextureFormat::DXT5_RGBA:         return VK_FORMAT_BC3_UNORM_BLOCK;
         case TextureFormat::DXT5_SRGBA:        return VK_FORMAT_BC3_SRGB_BLOCK;
 
+        case TextureFormat::RED_RGTC1:              return VK_FORMAT_BC4_UNORM_BLOCK;
+        case TextureFormat::SIGNED_RED_RGTC1:       return VK_FORMAT_BC4_SNORM_BLOCK;
+        case TextureFormat::RED_GREEN_RGTC2:        return VK_FORMAT_BC5_UNORM_BLOCK;
+        case TextureFormat::SIGNED_RED_GREEN_RGTC2: return VK_FORMAT_BC5_SNORM_BLOCK;
+
         case TextureFormat::RGBA_ASTC_4x4:     return VK_FORMAT_ASTC_4x4_UNORM_BLOCK;
         case TextureFormat::RGBA_ASTC_5x4:     return VK_FORMAT_ASTC_5x4_UNORM_BLOCK;
         case TextureFormat::RGBA_ASTC_5x5:     return VK_FORMAT_ASTC_5x5_UNORM_BLOCK;

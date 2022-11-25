@@ -198,6 +198,11 @@ MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexc
 
             case TextureFormat::DXT1_RGB: return MTLPixelFormatInvalid;
             case TextureFormat::DXT1_SRGB: return MTLPixelFormatInvalid;
+
+            case TextureFormat::RED_RGTC1:              return MTLPixelFormatBC4_RUnorm;
+            case TextureFormat::SIGNED_RED_RGTC1:       return MTLPixelFormatBC4_RSnorm;
+            case TextureFormat::RED_GREEN_RGTC2:        return MTLPixelFormatBC5_RGUnorm;
+            case TextureFormat::SIGNED_RED_GREEN_RGTC2: return MTLPixelFormatBC5_RGSnorm;
             default: break;
         }
     }

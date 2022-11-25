@@ -191,6 +191,13 @@ bool isSrgbTextureFormat(TextureFormat format) {
         case Texture::InternalFormat::DXT5_RGBA:
             return false;
 
+        // RGTC
+        case Texture::InternalFormat::RED_RGTC1:
+        case Texture::InternalFormat::SIGNED_RED_RGTC1:
+        case Texture::InternalFormat::RED_GREEN_RGTC2:
+        case Texture::InternalFormat::SIGNED_RED_GREEN_RGTC2:
+            return false;
+
         default:
             return true;
     }

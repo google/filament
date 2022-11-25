@@ -472,6 +472,20 @@ constexpr /* inline */ GLenum getInternalFormat(TextureFormat format) noexcept {
             return 0;
 #endif
 
+#if defined(GL_EXT_texture_compression_rgtc)
+        case TextureFormat::RED_RGTC1:            return GL_COMPRESSED_RED_RGTC1_EXT;
+        case TextureFormat::SIGNED_RED_RGTC1:      return GL_COMPRESSED_SIGNED_RED_RGTC1_EXT;
+        case TextureFormat::RED_GREEN_RGTC2:      return GL_COMPRESSED_RED_GREEN_RGTC2_EXT;
+        case TextureFormat::SIGNED_RED_GREEN_RGTC2:    return GL_COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT;
+#else
+        case TextureFormat::RED_RGTC1:
+        case TextureFormat::SIGNED_RED_RGTC1:
+        case TextureFormat::RED_GREEN_RGTC2:
+        case TextureFormat::SIGNED_RED_GREEN_RGTC2:
+            // this should not happen
+            return 0;
+#endif
+
 #if defined(GL_KHR_texture_compression_astc_hdr)
         case TextureFormat::RGBA_ASTC_4x4:     return GL_COMPRESSED_RGBA_ASTC_4x4_KHR;
         case TextureFormat::RGBA_ASTC_5x4:     return GL_COMPRESSED_RGBA_ASTC_5x4_KHR;
