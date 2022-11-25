@@ -51,7 +51,6 @@ namespace Ktx1Reader {
     PixelDataFormat toPixelDataFormat(const KtxInfo& info);
     bool isCompressed(const KtxInfo& info);
     TextureFormat toTextureFormat(const KtxInfo& info);
-    TextureFormat toSrgbTextureFormat(TextureFormat tex);
 
     template<typename T>
     T toCompressedFilamentEnum(uint32_t format) {
