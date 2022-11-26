@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- Support for RGTC and BPTC texture compression
+
 ## v1.30.0
 
 - engine: optimize per-shadow UBO [⚠️ **Recompile Materials**]
