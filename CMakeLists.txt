@@ -99,6 +99,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ==================================================================================================
 if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WEBGL)
     set(LINUX TRUE)
+else()
+    # since cmake 3.25 LINUX is automatically set based on CMAKE_SYSTEM_NAME, which the android
+    # cmake files are setting to "Linux".
+    set(LINUX FALSE)
 endif()
 
 if (LINUX)
