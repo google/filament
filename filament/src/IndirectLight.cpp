@@ -70,12 +70,28 @@ IblOptions const& IndirectLight::getOptions() const noexcept {
     return downcast(this)->getOptions();
 }
 
-void IndirectLight::setTechnique(const IblOptions::IblTechnique iblTechnique) noexcept {
-    downcast(this)->setTechnique(iblTechnique);
-}
-
 IblOptions::IblTechnique IndirectLight::getTechnique() const noexcept {
     return downcast(this)->getTechnique();
+}
+
+void IndirectLight::setSphereProxy(const filament::math::float4& sphere) {
+    downcast(this)->setSphereProxy(sphere);
+}
+
+filament::math::float4 IndirectLight::getSphereProxy() const {
+    return downcast(this)->getSphereProxy();
+}
+
+void IndirectLight::setBoxProxy(const filament::Box& box) {
+    downcast(this)->setBoxProxy(box);
+}
+
+filament::Box IndirectLight::getBoxProxy() const {
+    return downcast(this)->getBoxProxy();
+}
+
+void IndirectLight::clearProxy() {
+    downcast(this)->clearProxy();
 }
 
 void IndirectLight::setCenter(const math::float3& iblCenter) noexcept {

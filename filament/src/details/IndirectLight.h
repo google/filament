@@ -63,7 +63,6 @@ public:
     void setOptions(IblOptions const& options) noexcept;
     const IblOptions& getOptions() const noexcept;
 
-    void setTechnique(const IblOptions::IblTechnique iblTechnique) noexcept;
     IblOptions::IblTechnique getTechnique() const noexcept;
 
     void setCenter(const math::float3& iblCenter) noexcept;
@@ -73,7 +72,15 @@ public:
     const math::float3& getHalfExtents() const noexcept;
 
     void setTintAndStrength(const math::float4& iblTintAndStrength) noexcept;
-    const math::float4& getTintAndStrength() const noexcept;    
+    const math::float4& getTintAndStrength() const noexcept;
+
+    void setSphereProxy(const filament::math::float4& sphere);
+    filament::math::float4 getSphereProxy() const;
+
+    void setBoxProxy(const filament::Box& box);
+    filament::Box getBoxProxy() const;
+
+    void clearProxy();
 
 private:
     FTexture const* mReflectionsTexture = nullptr;

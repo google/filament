@@ -19,6 +19,7 @@
 #ifndef TNT_FILAMENT_INDIRECTLIGHT_H
 #define TNT_FILAMENT_INDIRECTLIGHT_H
 
+#include <filament/Box.h>
 #include <filament/FilamentAPI.h>
 #include <filament/Options.h>
 
@@ -359,16 +360,42 @@ public:
     IblOptions const& getOptions() const noexcept;
 
     /**
-     * Sets IBL type.
-     *
-     * @param iblTechnique Determine the IBL type (infinite, or finite box/sphere)
-     */
-    void setTechnique(const IblOptions::IblTechnique iblTechnique) noexcept;
-
-    /**
      * Gets IBL type.
      */
     IblOptions::IblTechnique getTechnique() const noexcept;
+
+    /**
+     * Sets IBL type to sphere.
+     *
+     * @param The center (.xyz) and radius (.w) of the IBL sphere proxy geometry
+     */
+    void setSphereProxy(const filament::math::float4& sphere);
+
+    /**
+     * Gets the properties of sphere IBL.
+     *
+     * @return The center (.xyz) and radius (.w) of the IBL sphere proxy geometry
+     */
+    filament::math::float4 getSphereProxy() const;
+
+    /**
+     * Sets IBL type to box.
+     *
+     * @param The IBL box proxy geometry
+     */
+    void setBoxProxy(const filament::Box& box);
+
+    /**
+     * Gets the properties of box IBL.
+     *
+     * @return The filament::Box representing the the IBL box proxy geometry
+     */
+    filament::Box getBoxProxy() const;
+
+    /**
+     * Reverts back to infinite IBLs.
+     */
+    void clearProxy();
 
     /**
      * Sets the center of the finite IBL proxy geometry.

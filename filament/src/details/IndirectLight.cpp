@@ -275,12 +275,37 @@ IblOptions const& FIndirectLight::getOptions() const noexcept {
     return mIblOptions;
 }
 
-void FIndirectLight::setTechnique(const IblOptions::IblTechnique iblTechnique) noexcept {
-    mIblOptions.iblTechnique = iblTechnique;
-}
-
 IblOptions::IblTechnique FIndirectLight::getTechnique() const noexcept {
     return mIblOptions.iblTechnique;
+}
+
+void FIndirectLight::setSphereProxy(const filament::math::float4& sphere) {
+    mIblOptions.iblTechnique = IblOptions::IblTechnique::IBL_FINITE_SPHERE;
+
+    mIblOptions.iblCenter = sphere.rgb;
+
+    mIblOptions.iblHalfExtents.r = sphere.a;
+    mIblOptions.iblHalfExtents.g = (sphere.a != 0.0f) ? 1.0f / sphere.a : 1.0f;
+}
+
+filament::math::float4 FIndirectLight::getSphereProxy() const {
+    return filament::math::float4(mIblOptions.iblCenter, mIblOptions.iblHalfExtents.r);
+}
+
+void FIndirectLight::setBoxProxy(const filament::Box& box) {
+    mIblOptions.iblTechnique = IblOptions::IblTechnique::IBL_FINITE_BOX;
+
+    mIblOptions.iblCenter = box.center;
+
+    mIblOptions.iblHalfExtents = box.halfExtent;
+}
+
+filament::Box FIndirectLight::getBoxProxy() const {
+    return {mIblOptions.iblCenter, mIblOptions.iblHalfExtents};
+}
+
+void FIndirectLight::clearProxy() {
+    mIblOptions.iblTechnique = IblOptions::IblTechnique::IBL_INFINITE;
 }
 
 void FIndirectLight::setCenter(const math::float3& iblCenter) noexcept {
