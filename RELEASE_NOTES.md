@@ -5,6 +5,7 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+- Java: Fix confusing typo in Camera documentation
 - Support for RGTC and BPTC texture compression
 
 ## v1.30.0

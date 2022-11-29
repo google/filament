@@ -365,7 +365,7 @@ public class Camera {
      * By default, this is an identity matrix.
      * </p>
      *
-     * @param scaling     diagonal of the scaling matrix to be applied after the projection matrix.
+     * @param inScaling     diagonal of the scaling matrix to be applied after the projection matrix.
      *
      * @see Camera#setProjection
      * @see Camera#setLensProjection
@@ -409,7 +409,7 @@ public class Camera {
      *
      * <pre>
      *  engine.getTransformManager().setTransform(
-     *          engine.getTransformManager().getInstance(camera->getEntity()), viewMatrix);
+     *          engine.getTransformManager().getInstance(camera->getEntity()), modelMatrix);
      * </pre>
      *
      * @param modelMatrix The camera position and orientation provided as a <b>rigid transform</b> matrix.

@@ -1004,8 +1004,6 @@ public class LightManager {
      *                      lightbulbs.
      *
      * @param efficiency    Efficiency in percent. This depends on the type of lightbulb used.
-     *
-     * @return This Builder, for chaining calls.
      */
     public void setIntensity(@EntityInstance int i, float watts, float efficiency) {
         nSetIntensity(mNativeObject, i , watts, efficiency);
