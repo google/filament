@@ -35,8 +35,6 @@ namespace filament {
 
 class FEngine;
 
-using IblOptions = filament::IblOptions;
-
 class FIndirectLight : public IndirectLight {
 public:
     static constexpr float DEFAULT_INTENSITY = 30000.0f;    // lux of the sun
@@ -60,18 +58,15 @@ public:
     static math::float3 getDirectionEstimate(const math::float3 sh[9]) noexcept;
     static math::float4 getColorEstimate(const math::float3 sh[9], math::float3 direction) noexcept;
 
-    void setOptions(IblOptions const& options) noexcept;
-    const IblOptions& getOptions() const noexcept;
+    IndirectLight::Mode getTechnique() const noexcept;
 
-    IblOptions::IblTechnique getTechnique() const noexcept;
-
-    void setCenter(const math::float3& iblCenter) noexcept;
+    void setCenter(const math::float3& inIblCenter) noexcept;
     const math::float3& getCenter() const noexcept;
 
-    void setHalfExtents(const math::float3& iblHalfExtents) noexcept;
+    void setHalfExtents(const math::float3& inIblHalfExtents) noexcept;
     const math::float3& getHalfExtents() const noexcept;
 
-    void setTintAndStrength(const math::float4& iblTintAndStrength) noexcept;
+    void setTintAndStrength(const math::float4& inIblTintAndStrength) noexcept;
     const math::float4& getTintAndStrength() const noexcept;
 
     void setSphereProxy(const filament::math::float4& sphere);
@@ -89,7 +84,25 @@ private:
     float mIntensity = DEFAULT_INTENSITY;
     math::mat3f mRotation;
     uint8_t mLevelCount = 0;
-    IblOptions mIblOptions = {};
+    IndirectLight::Mode iblTechnique = IndirectLight::Mode::IBL_INFINITE;
+
+    // Center of the sphere or box IBL geometry.
+    math::float3 iblCenter = math::float3(0.0f);
+
+    /**
+     * If iblTechnique is IBL_INFINITE, this property is unused.
+     *
+     * If iblTechnique is IBL_FINITE_SPHERE, then
+     *      .x is the radius of the sphere
+     *      .y is the reciprocal of the radius of the sphere
+     *
+     * If iblTechnique is IBL_FINITE_BOX, then the half extents of the box along the X, Y, Z axes.
+     */
+    math::float3 iblHalfExtents = math::float3(100.0f);
+
+    // The color (.rgb) and the intensity (.a) of the IBL tint.
+    math::float4 iblTintAndStrength = math::float4(0.0f);
+
 };
 
 FILAMENT_DOWNCAST(IndirectLight)

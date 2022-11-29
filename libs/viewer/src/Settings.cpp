@@ -373,9 +373,9 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
     return i;
 }
 
-static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, IblOptions::IblTechnique* val) {
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, IndirectLight::Mode* val) {
     CHECK_TOKTYPE(tokens[i], JSMN_PRIMITIVE);
-    *val = static_cast<IblOptions::IblTechnique>(strtod(jsonChunk + tokens[i].start, nullptr));
+    *val = static_cast<IndirectLight::Mode>(strtod(jsonChunk + tokens[i].start, nullptr));
     return i + 1;
 }
 
@@ -404,27 +404,27 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSet
         } else if (compare(tok, jsonChunk, "iblRotation") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->iblRotation);
         } else if (compare(tok, jsonChunk, "iblTechnique") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTechnique);
+            i = parse(tokens, i + 1, jsonChunk, &out->iblTechnique);
         } else if (compare(tok, jsonChunk, "iblCenterX") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.x);
+            i = parse(tokens, i + 1, jsonChunk, &out->iblCenter.x);
         } else if (compare(tok, jsonChunk, "iblCenterY") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.y);
+            i = parse(tokens, i + 1, jsonChunk, &out->iblCenter.y);
         } else if (compare(tok, jsonChunk, "iblCenterZ") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblCenter.z);
+            i = parse(tokens, i + 1, jsonChunk, &out->iblCenter.z);
         } else if (compare(tok, jsonChunk, "iblHalfExtentsX") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.x);
+            i = parse(tokens, i + 1, jsonChunk, &out->iblHalfExtents.x);
         } else if (compare(tok, jsonChunk, "iblHalfExtentsY") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.y);
+            i = parse(tokens, i + 1, jsonChunk, &out->iblHalfExtents.y);
         } else if (compare(tok, jsonChunk, "iblHalfExtentsZ") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblHalfExtents.z);
+            i = parse(tokens, i + 1, jsonChunk, &out->iblHalfExtents.z);
         } else if (compare(tok, jsonChunk, "iblTintAndStrengthR") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndStrength.x);
+            i = parse(tokens, i + 1, jsonChunk, &out->iblTintAndStrength.x);
         } else if (compare(tok, jsonChunk, "iblTintAndStrengthG") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndStrength.y);
+            i = parse(tokens, i + 1, jsonChunk, &out->iblTintAndStrength.y);
         } else if (compare(tok, jsonChunk, "iblTintAndStrengthB") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndStrength.z);
+            i = parse(tokens, i + 1, jsonChunk, &out->iblTintAndStrength.z);
         } else if (compare(tok, jsonChunk, "iblTintAndStrengthA") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->iblOptions.iblTintAndStrength.w);            
+            i = parse(tokens, i + 1, jsonChunk, &out->iblTintAndStrength.w);            
         } else {
             slog.w << "Invalid light setting key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -767,17 +767,17 @@ static std::ostream& operator<<(std::ostream& out, const LightSettings& in) {
         << "\"sunlightColor\": " << (in.sunlightColor) << ",\n"
         << "\"iblIntensity\": " << (in.iblIntensity) << ",\n"
         << "\"iblRotation\": " << (in.iblRotation) << ",\n"
-        << "\"iblTechnique\": " << static_cast<uint32_t>(in.iblOptions.iblTechnique) << ",\n"
-        << "\"iblCenterX\": " << in.iblOptions.iblCenter.x << ",\n"
-        << "\"iblCenterY\": " << in.iblOptions.iblCenter.y << ",\n"
-        << "\"iblCenterZ\": " << in.iblOptions.iblCenter.z << ",\n"
-        << "\"iblHalfExtentsX\": " << in.iblOptions.iblHalfExtents.x << ",\n"
-        << "\"iblHalfExtentsY\": " << in.iblOptions.iblHalfExtents.y << ",\n"
-        << "\"iblHalfExtentsZ\": " << in.iblOptions.iblHalfExtents.z << ",\n"
-        << "\"iblTintAndStrengthR\": " << to_string(in.iblOptions.iblTintAndStrength.x) << ",\n"
-        << "\"iblTintAndStrengthG\": " << to_string(in.iblOptions.iblTintAndStrength.y) << ",\n"
-        << "\"iblTintAndStrengthB\": " << to_string(in.iblOptions.iblTintAndStrength.z) << ",\n"
-        << "\"iblTintAndStrengthA\": " << to_string(in.iblOptions.iblTintAndStrength.w) << "\n"
+        << "\"iblTechnique\": " << static_cast<uint32_t>(in.iblTechnique) << ",\n"
+        << "\"iblCenterX\": " << in.iblCenter.x << ",\n"
+        << "\"iblCenterY\": " << in.iblCenter.y << ",\n"
+        << "\"iblCenterZ\": " << in.iblCenter.z << ",\n"
+        << "\"iblHalfExtentsX\": " << in.iblHalfExtents.x << ",\n"
+        << "\"iblHalfExtentsY\": " << in.iblHalfExtents.y << ",\n"
+        << "\"iblHalfExtentsZ\": " << in.iblHalfExtents.z << ",\n"
+        << "\"iblTintAndStrengthR\": " << to_string(in.iblTintAndStrength.x) << ",\n"
+        << "\"iblTintAndStrengthG\": " << to_string(in.iblTintAndStrength.y) << ",\n"
+        << "\"iblTintAndStrengthB\": " << to_string(in.iblTintAndStrength.z) << ",\n"
+        << "\"iblTintAndStrengthA\": " << to_string(in.iblTintAndStrength.w) << "\n"
         << "}";
 }
 

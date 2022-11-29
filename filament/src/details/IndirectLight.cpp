@@ -267,69 +267,61 @@ float4 FIndirectLight::getColorEstimate(float3 direction) const noexcept {
    return getColorEstimate(mIrradianceCoefs.data(), direction);
 }
 
-void FIndirectLight::setOptions(IblOptions const& options) noexcept {
-    mIblOptions = options;
-}
-
-IblOptions const& FIndirectLight::getOptions() const noexcept {
-    return mIblOptions;
-}
-
-IblOptions::IblTechnique FIndirectLight::getTechnique() const noexcept {
-    return mIblOptions.iblTechnique;
+IndirectLight::Mode FIndirectLight::getTechnique() const noexcept {
+    return iblTechnique;
 }
 
 void FIndirectLight::setSphereProxy(const filament::math::float4& sphere) {
-    mIblOptions.iblTechnique = IblOptions::IblTechnique::IBL_FINITE_SPHERE;
+    iblTechnique = IndirectLight::Mode::IBL_FINITE_SPHERE;
 
-    mIblOptions.iblCenter = sphere.rgb;
+    iblCenter = sphere.rgb;
 
-    mIblOptions.iblHalfExtents.r = sphere.a;
-    mIblOptions.iblHalfExtents.g = (sphere.a != 0.0f) ? 1.0f / sphere.a : 1.0f;
+    iblHalfExtents.r = sphere.a;
+    iblHalfExtents.g = (sphere.a != 0.0f) ? 1.0f / sphere.a : 1.0f;
 }
 
 filament::math::float4 FIndirectLight::getSphereProxy() const {
-    return filament::math::float4(mIblOptions.iblCenter, mIblOptions.iblHalfExtents.r);
+    return filament::math::float4(iblCenter, iblHalfExtents.r);
 }
 
 void FIndirectLight::setBoxProxy(const filament::Box& box) {
-    mIblOptions.iblTechnique = IblOptions::IblTechnique::IBL_FINITE_BOX;
+    iblTechnique = IndirectLight::Mode::IBL_FINITE_BOX;
 
-    mIblOptions.iblCenter = box.center;
+    iblCenter = box.center;
 
-    mIblOptions.iblHalfExtents = box.halfExtent;
+    iblHalfExtents = box.halfExtent;
 }
 
 filament::Box FIndirectLight::getBoxProxy() const {
-    return {mIblOptions.iblCenter, mIblOptions.iblHalfExtents};
+    return {iblCenter, iblHalfExtents};
 }
 
 void FIndirectLight::clearProxy() {
-    mIblOptions.iblTechnique = IblOptions::IblTechnique::IBL_INFINITE;
+    iblTechnique = IndirectLight::Mode::IBL_INFINITE;
 }
 
-void FIndirectLight::setCenter(const math::float3& iblCenter) noexcept {
-    mIblOptions.iblCenter = iblCenter;
+void FIndirectLight::setCenter(const math::float3& inIblCenter) noexcept {
+    iblCenter = inIblCenter;
 }
 
 const math::float3& FIndirectLight::getCenter() const noexcept {
-    return mIblOptions.iblCenter;
+    return iblCenter;
 }
 
-void FIndirectLight::setHalfExtents(const math::float3& iblHalfExtents) noexcept {
-    mIblOptions.iblHalfExtents = iblHalfExtents;
+void FIndirectLight::setHalfExtents(const math::float3& inIblHalfExtents) noexcept {
+    iblHalfExtents = inIblHalfExtents;
 }
 
 const math::float3& FIndirectLight::getHalfExtents() const noexcept {
-    return mIblOptions.iblHalfExtents;
+    return iblHalfExtents;
 }
 
-void FIndirectLight::setTintAndStrength(const math::float4& iblTintAndStrength) noexcept {
-    mIblOptions.iblTintAndStrength = iblTintAndStrength;
+void FIndirectLight::setTintAndStrength(const math::float4& inIblTintAndStrength) noexcept {
+    iblTintAndStrength = inIblTintAndStrength;
 }
 
 const math::float4& FIndirectLight::getTintAndStrength() const noexcept {
-    return mIblOptions.iblTintAndStrength;
+    return iblTintAndStrength;
 }
 
 } // namespace filament

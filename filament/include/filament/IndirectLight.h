@@ -96,6 +96,10 @@ class UTILS_PUBLIC IndirectLight : public FilamentAPI {
 
 public:
 
+    enum class Mode : uint32_t {
+        IBL_INFINITE, IBL_FINITE_SPHERE, IBL_FINITE_BOX
+    };
+
     //! Use Builder to construct an IndirectLight object instance
     class Builder : public BuilderBase<BuilderDetails> {
         friend struct BuilderDetails;
@@ -346,23 +350,9 @@ public:
     math::float4 getColorEstimate(math::float3 direction) const noexcept;
 
     /**
-     * Sets IBL lookup options.
-     *
-     * @param options Options for IBL lookup settings.
-     */
-    void setOptions(IblOptions const& options) noexcept;
-
-    /**
-     * Gets IBL lookup options.
-     *
-     * @return IBL lookup options.
-     */
-    IblOptions const& getOptions() const noexcept;
-
-    /**
      * Gets IBL type.
      */
-    IblOptions::IblTechnique getTechnique() const noexcept;
+    IndirectLight::Mode getTechnique() const noexcept;
 
     /**
      * Sets IBL type to sphere.
@@ -402,7 +392,7 @@ public:
      *
      * @param iblCenter The center of the finite IBL proxy geometry
      */
-    void setCenter(const math::float3& iblCenter) noexcept;
+    void setCenter(const math::float3& inIblCenter) noexcept;
 
     /**
      * Gets IBL center.
@@ -414,7 +404,7 @@ public:
      *
      * @param iblCenter The half extents of the finite IBL proxy geometry
      */
-    void setHalfExtents(const math::float3& iblHalfExtents) noexcept;
+    void setHalfExtents(const math::float3& inIblHalfExtents) noexcept;
 
     /**
      * Gets IBL half extents.
@@ -426,7 +416,7 @@ public:
      *
      * @param iblTintAndStrength The tint color (.rgb) and blend weight between shaded and tinted (.a)
      */
-    void setTintAndStrength(const math::float4& iblTintAndStrength) noexcept;
+    void setTintAndStrength(const math::float4& inIblTintAndStrength) noexcept;
 
     /**
      * Gets IBL tint (.rgb) and blend intensity (.a).

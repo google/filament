@@ -62,15 +62,7 @@ float4 IndirectLight::getColorEstimate(const float3* sh, float3 direction) noexc
     return FIndirectLight::getColorEstimate(sh, direction);
 }
 
-void IndirectLight::setOptions(IblOptions const& options) noexcept {
-    downcast(this)->setOptions(options);
-}
-
-IblOptions const& IndirectLight::getOptions() const noexcept {
-    return downcast(this)->getOptions();
-}
-
-IblOptions::IblTechnique IndirectLight::getTechnique() const noexcept {
+IndirectLight::Mode IndirectLight::getTechnique() const noexcept {
     return downcast(this)->getTechnique();
 }
 
@@ -94,24 +86,24 @@ void IndirectLight::clearProxy() {
     downcast(this)->clearProxy();
 }
 
-void IndirectLight::setCenter(const math::float3& iblCenter) noexcept {
-    downcast(this)->setCenter(iblCenter);
+void IndirectLight::setCenter(const math::float3& inIblCenter) noexcept {
+    downcast(this)->setCenter(inIblCenter);
 }
 
 const math::float3& IndirectLight::getCenter() const noexcept {
     return downcast(this)->getCenter();
 }
 
-void IndirectLight::setHalfExtents(const math::float3& iblHalfExtents) noexcept {
-    downcast(this)->setHalfExtents(iblHalfExtents);
+void IndirectLight::setHalfExtents(const math::float3& inIblHalfExtents) noexcept {
+    downcast(this)->setHalfExtents(inIblHalfExtents);
 }
 
 const math::float3& IndirectLight::getHalfExtents() const noexcept {
     return downcast(this)->getHalfExtents();
 }
 
-void IndirectLight::setTintAndStrength(const math::float4& iblTintAndStrength) noexcept {
-    downcast(this)->setTintAndStrength(iblTintAndStrength);
+void IndirectLight::setTintAndStrength(const math::float4& inIblTintAndStrength) noexcept {
+    downcast(this)->setTintAndStrength(inIblTintAndStrength);
 }
 const math::float4& IndirectLight::getTintAndStrength() const noexcept {
     return downcast(this)->getTintAndStrength();

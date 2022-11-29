@@ -200,7 +200,11 @@ struct LightSettings {
     math::float3 sunlightColor = filament::Color::toLinear<filament::ACCURATE>({ 0.98, 0.92, 0.89});
     float iblIntensity = 30000.0f;
     float iblRotation = 0.0f;
-    IblOptions iblOptions = {};
+
+    IndirectLight::Mode iblTechnique = IndirectLight::Mode::IBL_INFINITE;
+    math::float3 iblCenter = math::float3(0.0f);
+    math::float3 iblHalfExtents = math::float3(100.0f);
+    math::float4 iblTintAndStrength = math::float4(0.0f);
 };
 
 struct ViewerOptions {

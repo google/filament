@@ -438,38 +438,6 @@ struct SoftShadowOptions {
     float penumbraRatioScale = 1.0f;
 };
 
-/**
- * View-level options for local IBLs.
- */
-struct IblOptions {    
-    enum class IblTechnique : uint32_t {
-        IBL_INFINITE, IBL_FINITE_SPHERE, IBL_FINITE_BOX
-    };
-
-    IblTechnique iblTechnique = IblTechnique::IBL_INFINITE;
-
-    /**
-     * Center of the sphere or box IBL geometry.
-     */
-    math::float3 iblCenter = math::float3(0.0f);
-
-    /**
-     * If iblTechnique is IBL_INFINITE, this property is unused.
-     * 
-     * If iblTechnique is IBL_FINITE_SPHERE, then
-     *      .x is the radius of the sphere
-     *      .y is the reciprocal of the radius of the sphere
-     * 
-     * If iblTechnique is IBL_FINITE_BOX, then the half extents of the box along the X, Y, Z axes.
-     */
-    math::float3 iblHalfExtents = math::float3(100.0f);
-
-    /**
-     * The color (.rgb) and the intensity (.a) of the IBL tint.
-     */
-    math::float4 iblTintAndStrength = math::float4(0.0f);
-};
-
 } // namespace filament
 
 #endif //TNT_FILAMENT_OPTIONS_H
