@@ -286,13 +286,15 @@ bool OpenGLProgram::checkProgramStatus(const char* name,
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
         const ShaderStage type = static_cast<ShaderStage>(i);
         const GLuint shader = shaderIds[i];
-        glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-        if (status != GL_TRUE) {
-            logCompilationError(slog.e, type, name, shader, shaderSourceCode[i]);
+        if (shader) {
+            glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+            if (status != GL_TRUE) {
+                logCompilationError(slog.e, type, name, shader, shaderSourceCode[i]);
+            }
+            glDetachShader(program, shader);
+            glDeleteShader(shader);
+            shaderIds[i] = 0;
         }
-        glDetachShader(program, shader);
-        glDeleteShader(shader);
-        shaderIds[i] = 0;
     }
     // log the link error as well
     logProgramLinkError(slog.e, name, program);

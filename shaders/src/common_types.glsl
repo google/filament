@@ -3,16 +3,16 @@
 struct ShadowData {
     highp mat4 lightFromWorldMatrix;
     highp vec3 direction;
-    float normalBias;
+    mediump float normalBias;
     highp vec4 lightFromWorldZ;
-    float texelSizeAtOneMeter;
-    float bulbRadiusLs;
-    float nearOverFarMinusNear;
+    mediump float texelSizeAtOneMeter;
+    mediump float bulbRadiusLs;
+    mediump float nearOverFarMinusNear;
     bool elvsm;
-    uint layer;
-    uint reserved0;
-    uint reserved1;
-    uint reserved2;
+    mediump uint layer;
+    mediump uint reserved0;
+    mediump uint reserved1;
+    mediump uint reserved2;
 };
 
 struct BoneData {
