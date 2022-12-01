@@ -31,6 +31,10 @@ namespace filament {
 class Engine;
 class FColorGrading;
 
+namespace color {
+class ColorSpace;
+}
+
 /**
  * ColorGrading is used to transform (either to modify or correct) the colors of the HDR buffer
  * rendered by Filament. Color grading transforms are applied after lighting, and after any lens
@@ -97,6 +101,7 @@ class FColorGrading;
  * - Tone mapping: ACESLegacyToneMapper
  * - Luminance scaling: false
  * - Gamut mapping: false
+ * - Output color space: Rec709-sRGB-D65
  *
  * @see View
  */
@@ -446,6 +451,19 @@ public:
          * @return This Builder, for chaining calls
          */
         Builder& curves(math::float3 shadowGamma, math::float3 midPoint, math::float3 highlightScale) noexcept;
+
+        /**
+         * Sets the output color space for this ColorGrading object. After all color grading steps
+         * have been applied, the final color will be converted in the desired color space.
+         *
+         * NOTE: Currently the output color space must be one of Rec709-sRGB-D65 or
+         *       Rec709-Linear-D65. Only the transfer function is taken into account.
+         *
+         * @param colorSpace The output color space.
+         *
+         * @return This Builder, for chaining calls
+         */
+        Builder& outputColorSpace(const color::ColorSpace& colorSpace) noexcept;
 
         /**
          * Creates the ColorGrading object and returns a pointer to it.
