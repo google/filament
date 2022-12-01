@@ -134,21 +134,21 @@ private:
     using Epoch = clock::time_point;
     using duration = clock::duration;
 
-    void initializeClearFlags();
+    backend::TargetBufferFlags getClearFlags() const noexcept;
+    void initializeClearFlags() noexcept;
 
     backend::TextureFormat getHdrFormat(const FView& view, bool translucent) const noexcept;
     backend::TextureFormat getLdrFormat(bool translucent) const noexcept;
 
     Epoch getUserEpoch() const { return mUserEpoch; }
     double getUserTime() const noexcept {
-        duration d = clock::now() - getUserEpoch();
+        duration const d = clock::now() - getUserEpoch();
         // convert the duration (whatever it is) to a duration in seconds encoded as double
         return std::chrono::duration<double>(d).count();
     }
 
-    void getRenderTarget(FView const& view,
-            backend::TargetBufferFlags& outAttachementMask,
-            backend::Handle<backend::HwRenderTarget>& outTarget) const noexcept;
+    std::pair<backend::Handle<backend::HwRenderTarget>, backend::TargetBufferFlags>
+            getRenderTarget(FView const& view) const noexcept;
 
     void recordHighWatermark(size_t watermark) noexcept {
         mCommandsHighWatermark = std::max(mCommandsHighWatermark, watermark);
