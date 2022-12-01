@@ -29,6 +29,8 @@
 
 #include <stdint.h>
 
+#include <utility>
+
 namespace filament {
 
 class FRenderTarget;
@@ -77,7 +79,7 @@ public:
             PostProcessManager::ColorGradingConfig colorGradingConfig,
             RenderPass::Executor const& passExecutor) noexcept;
 
-    static FrameGraphId<FrameGraphTexture> refractionPass(
+    static std::pair<FrameGraphId<FrameGraphTexture>, bool> refractionPass(
             FrameGraph& fg, FEngine& engine, FView const& view,
             ColorPassConfig config,
             PostProcessManager::ScreenSpaceRefConfig const& ssrConfig,
