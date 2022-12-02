@@ -296,6 +296,10 @@ inline float3 linearAP1_to_ACEScct(float3 x) noexcept {
     return x;
 }
 
+inline float3 OETF_Linear(float3 x) noexcept {
+    return x;
+}
+
 inline float3 OETF_sRGB(float3 x) noexcept {
     constexpr float a  = 0.055f;
     constexpr float a1 = 1.055f;

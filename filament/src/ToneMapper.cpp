@@ -16,7 +16,7 @@
 
 #include <filament/ToneMapper.h>
 
-#include "ColorSpace.h"
+#include "ColorSpaceUtils.h"
 
 #include <math/vec3.h>
 #include <math/scalar.h>

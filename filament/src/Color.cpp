@@ -16,7 +16,7 @@
 
 #include <filament/Color.h>
 
-#include "ColorSpace.h"
+#include "ColorSpaceUtils.h"
 
 #include <math/mat3.h>
 #include <math/scalar.h>
