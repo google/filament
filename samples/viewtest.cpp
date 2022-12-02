@@ -20,14 +20,21 @@
 #include <filament/Skybox.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
+#include <filament/Renderer.h>
 
 #include <filamentapp/FilamentApp.h>
 
 #include <utils/EntityManager.h>
 
+#include <getopt/getopt.h>
+
+#include <iostream>
+#include <string>
+
 using namespace filament;
 
 struct App {
+    Config config;
     VertexBuffer* vb;
     IndexBuffer* ib;
     utils::Entity camera;
@@ -39,11 +46,64 @@ struct App {
 static const filament::math::float2 TRIANGLE_VERTICES[3] = { {1, 0}, {-0.5, 0.866}, {-0.5, -0.866} };
 static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
 
-int main(int argc, char** argv) {
-    Config config;
-    config.title = "viewtest";
+static void printUsage(char* name) {
+    std::string exec_name(utils::Path(name).getName());
+    std::string usage(
+            "SHOWCASE renders the specified glTF file, or a built-in file if none is specified\n"
+            "Usage:\n"
+            "    SHOWCASE [options] <gltf path>\n"
+            "Options:\n"
+            "   --help, -h\n"
+            "       Prints this message\n\n"
+            "   --api, -a\n"
+            "       Specify the backend API: opengl (default), vulkan, or metal\n\n"
+    );
+    const std::string from("SHOWCASE");
+    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
+        usage.replace(pos, from.length(), exec_name);
+    }
+    std::cout << usage;
+}
 
+static int handleCommandLineArguments(int argc, char* argv[], App* app) {
+    static constexpr const char* OPTSTR = "ha:f:i:usc:rt:b:ev";
+    static const struct option OPTIONS[] = {
+            { "help", no_argument,       nullptr, 'h' },
+            { "api",  required_argument, nullptr, 'a' },
+            { nullptr, 0,                nullptr, 0 }
+    };
+    int opt;
+    int option_index = 0;
+    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
+        std::string arg(optarg ? optarg : "");
+        switch (opt) {
+            default:
+            case 'h':
+                printUsage(argv[0]);
+                exit(0);
+            case 'a':
+                if (arg == "opengl") {
+                    app->config.backend = Engine::Backend::OPENGL;
+                } else if (arg == "vulkan") {
+                    app->config.backend = Engine::Backend::VULKAN;
+                } else if (arg == "metal") {
+                    app->config.backend = Engine::Backend::METAL;
+                } else {
+                    std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'|'metal'.\n";
+                }
+                break;
+        }
+    }
+    return optind;
+}
+
+int main(int argc, char** argv) {
     App app;
+
+    app.config.title = "viewtest";
+
+    handleCommandLineArguments(argc, argv, &app);
+
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
         app.skybox = Skybox::Builder().color({ 0, 0, 1, 1 }).build(*engine);
         scene->setSkybox(app.skybox);
@@ -79,7 +139,11 @@ int main(int argc, char** argv) {
         utils::EntityManager::get().destroy(app.camera);
     };
 
-    FilamentApp::get().run(config, setup, cleanup);
+    auto preRender = [](Engine*, View*, Scene*, Renderer* renderer) {
+        renderer->setClearOptions({ .clear = true });
+    };
+
+    FilamentApp::get().run(app.config, setup, cleanup, {}, preRender);
 
     return 0;
 }

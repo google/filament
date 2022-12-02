@@ -6,6 +6,8 @@ A new header is inserted each time a *tag* is created.
 ## main branch
 
 - Java: Fix confusing typo in Camera documentation
+- engine: the output color space can be set on `ColorGrading`. This API currently has limitations,
+  please refer to the documentation for more details.
 - Support for RGTC and BPTC texture compression
 
 ## v1.30.0
