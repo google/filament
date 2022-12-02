@@ -80,14 +80,7 @@ public:
      *
      * @return The associated Skybox, or nullptr if there is none.
      */
-    Skybox* getSkybox() noexcept;
-
-    /**
-     * Returns an immutable Skybox associated with the Scene.
-     *
-     * @return The associated Skybox, or nullptr if there is none.
-     */
-    Skybox const* getSkybox() const noexcept;
+    Skybox* getSkybox() const noexcept;
 
     /**
      * Set the IndirectLight to use when rendering the Scene.
@@ -96,8 +89,17 @@ public:
      * IndirectLight.
      *
      * @param ibl The IndirectLight to use when rendering the Scene or nullptr to unset.
+     * @see getIndirectLight
      */
-    void setIndirectLight(IndirectLight const* ibl) noexcept;
+    void setIndirectLight(IndirectLight* ibl) noexcept;
+
+    /**
+     * Get the IndirectLight or nullptr if none is set.
+     *
+     * @return the the IndirectLight or nullptr if none is set
+     * @see setIndirectLight
+     */
+    IndirectLight* getIndirectLight() const noexcept;
 
     /**
      * Adds an Entity to the Scene.
