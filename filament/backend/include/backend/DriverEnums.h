@@ -535,18 +535,6 @@ enum class TextureFormat : uint16_t {
     DXT1_RGB, DXT1_RGBA, DXT3_RGBA, DXT5_RGBA,
     DXT1_SRGB, DXT1_SRGBA, DXT3_SRGBA, DXT5_SRGBA,
 
-    // RGTC formats available with a GLES extension
-    RED_RGTC1,              // BC4 unsigned
-    SIGNED_RED_RGTC1,       // BC4 signed
-    RED_GREEN_RGTC2,        // BC5 unsigned
-    SIGNED_RED_GREEN_RGTC2, // BC5 signed
-
-    // BPTC formats available with a GLES extension
-    RGB_BPTC_SIGNED_FLOAT,  // BC6H signed
-    RGB_BPTC_UNSIGNED_FLOAT,// BC6H unsigned
-    RGBA_BPTC_UNORM,        // BC7
-    SRGB_ALPHA_BPTC_UNORM,  // BC7 sRGB
-
     // ASTC formats are available with a GLES extension
     RGBA_ASTC_4x4,
     RGBA_ASTC_5x4,
@@ -576,6 +564,18 @@ enum class TextureFormat : uint16_t {
     SRGB8_ALPHA8_ASTC_10x10,
     SRGB8_ALPHA8_ASTC_12x10,
     SRGB8_ALPHA8_ASTC_12x12,
+
+    // RGTC formats available with a GLES extension
+    RED_RGTC1,              // BC4 unsigned
+    SIGNED_RED_RGTC1,       // BC4 signed
+    RED_GREEN_RGTC2,        // BC5 unsigned
+    SIGNED_RED_GREEN_RGTC2, // BC5 signed
+
+    // BPTC formats available with a GLES extension
+    RGB_BPTC_SIGNED_FLOAT,  // BC6H signed
+    RGB_BPTC_UNSIGNED_FLOAT,// BC6H unsigned
+    RGBA_BPTC_UNORM,        // BC7
+    SRGB_ALPHA_BPTC_UNORM,  // BC7 sRGB
 };
 
 //! Bitmask describing the intended Texture Usage
