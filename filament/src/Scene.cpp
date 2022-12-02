@@ -27,16 +27,16 @@ void Scene::setSkybox(Skybox* skybox) noexcept {
     downcast(this)->setSkybox(downcast(skybox));
 }
 
-Skybox* Scene::getSkybox() noexcept {
+Skybox* Scene::getSkybox() const noexcept {
     return downcast(this)->getSkybox();
 }
 
-Skybox const* Scene::getSkybox() const noexcept {
-    return downcast(this)->getSkybox();
-}
-
-void Scene::setIndirectLight(IndirectLight const* ibl) noexcept {
+void Scene::setIndirectLight(IndirectLight* ibl) noexcept {
     downcast(this)->setIndirectLight(downcast(ibl));
+}
+
+IndirectLight* Scene::getIndirectLight() const noexcept {
+    return downcast(this)->getIndirectLight();
 }
 
 void Scene::addEntity(Entity entity) {

@@ -633,7 +633,9 @@ class_<Scene>("Scene")
     .function("hasEntity", &Scene::hasEntity)
     .function("remove", &Scene::remove)
     .function("setSkybox", &Scene::setSkybox, allow_raw_pointers())
+    .function("getSkybox", &Scene::getSkybox, allow_raw_pointers())
     .function("setIndirectLight", &Scene::setIndirectLight, allow_raw_pointers())
+    .function("getIndirectLight", &Scene::getIndirectLight, allow_raw_pointers())
     .function("getRenderableCount", &Scene::getRenderableCount)
     .function("getLightCount", &Scene::getLightCount);
 
