@@ -473,10 +473,10 @@ constexpr /* inline */ GLenum getInternalFormat(TextureFormat format) noexcept {
 #endif
 
 #if defined(GL_EXT_texture_compression_rgtc)
-        case TextureFormat::RED_RGTC1:            return GL_COMPRESSED_RED_RGTC1_EXT;
-        case TextureFormat::SIGNED_RED_RGTC1:      return GL_COMPRESSED_SIGNED_RED_RGTC1_EXT;
-        case TextureFormat::RED_GREEN_RGTC2:      return GL_COMPRESSED_RED_GREEN_RGTC2_EXT;
-        case TextureFormat::SIGNED_RED_GREEN_RGTC2:    return GL_COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT;
+        case TextureFormat::RED_RGTC1:              return GL_COMPRESSED_RED_RGTC1_EXT;
+        case TextureFormat::SIGNED_RED_RGTC1:       return GL_COMPRESSED_SIGNED_RED_RGTC1_EXT;
+        case TextureFormat::RED_GREEN_RGTC2:        return GL_COMPRESSED_RED_GREEN_RGTC2_EXT;
+        case TextureFormat::SIGNED_RED_GREEN_RGTC2: return GL_COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT;
 #else
         case TextureFormat::RED_RGTC1:
         case TextureFormat::SIGNED_RED_RGTC1:
