@@ -51,7 +51,6 @@ namespace Ktx1Reader {
     PixelDataFormat toPixelDataFormat(const KtxInfo& info);
     bool isCompressed(const KtxInfo& info);
     TextureFormat toTextureFormat(const KtxInfo& info);
-    TextureFormat toSrgbTextureFormat(TextureFormat tex);
 
     template<typename T>
     T toCompressedFilamentEnum(uint32_t format) {
@@ -60,6 +59,14 @@ namespace Ktx1Reader {
             case Ktx1Bundle::RGBA_S3TC_DXT1: return T::DXT1_RGBA;
             case Ktx1Bundle::RGBA_S3TC_DXT3: return T::DXT3_RGBA;
             case Ktx1Bundle::RGBA_S3TC_DXT5: return T::DXT5_RGBA;
+            case Ktx1Bundle::R_RGTC_BC4_UNORM: return T::RED_RGTC1;
+            case Ktx1Bundle::R_RGTC_BC4_SNORM: return T::SIGNED_RED_RGTC1;
+            case Ktx1Bundle::RG_RGTC_BC5_UNORM: return T::RED_GREEN_RGTC2;
+            case Ktx1Bundle::RG_RGTC_BC5_SNORM: return T::SIGNED_RED_GREEN_RGTC2;
+            case Ktx1Bundle::RGBA_BPTC_BC7: return T::RGBA_BPTC_UNORM;
+            case Ktx1Bundle::SRGB8_ALPHA8_BPTC_BC7: return T::SRGB_ALPHA_BPTC_UNORM;
+            case Ktx1Bundle::RGB_BPTC_BC6H_SNORM: return T::RGB_BPTC_SIGNED_FLOAT;
+            case Ktx1Bundle::RGB_BPTC_BC6H_UNORM: return T::RGB_BPTC_UNSIGNED_FLOAT;
             case Ktx1Bundle::RGBA_ASTC_4x4: return T::RGBA_ASTC_4x4;
             case Ktx1Bundle::RGBA_ASTC_5x4: return T::RGBA_ASTC_5x4;
             case Ktx1Bundle::RGBA_ASTC_5x5: return T::RGBA_ASTC_5x5;

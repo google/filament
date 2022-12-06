@@ -157,6 +157,8 @@ public:
         bool EXT_texture_compression_etc2;
         bool EXT_texture_compression_s3tc;
         bool EXT_texture_compression_s3tc_srgb;
+        bool EXT_texture_compression_rgtc;
+        bool EXT_texture_compression_bptc;
         bool EXT_texture_cube_map_array;
         bool EXT_texture_filter_anisotropic;
         bool EXT_texture_sRGB;

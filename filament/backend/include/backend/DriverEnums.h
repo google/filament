@@ -398,6 +398,18 @@ enum class CompressedPixelDataType : uint16_t {
     SRGB8_ALPHA8_ASTC_10x10,
     SRGB8_ALPHA8_ASTC_12x10,
     SRGB8_ALPHA8_ASTC_12x12,
+
+    // RGTC formats available with a GLES extension
+    RED_RGTC1,              // BC4 unsigned
+    SIGNED_RED_RGTC1,       // BC4 signed
+    RED_GREEN_RGTC2,        // BC5 unsigned
+    SIGNED_RED_GREEN_RGTC2, // BC5 signed
+
+    // BPTC formats available with a GLES extension
+    RGB_BPTC_SIGNED_FLOAT,  // BC6H signed
+    RGB_BPTC_UNSIGNED_FLOAT,// BC6H unsigned
+    RGBA_BPTC_UNORM,        // BC7
+    SRGB_ALPHA_BPTC_UNORM,  // BC7 sRGB
 };
 
 /** Supported texel formats
@@ -552,6 +564,18 @@ enum class TextureFormat : uint16_t {
     SRGB8_ALPHA8_ASTC_10x10,
     SRGB8_ALPHA8_ASTC_12x10,
     SRGB8_ALPHA8_ASTC_12x12,
+
+    // RGTC formats available with a GLES extension
+    RED_RGTC1,              // BC4 unsigned
+    SIGNED_RED_RGTC1,       // BC4 signed
+    RED_GREEN_RGTC2,        // BC5 unsigned
+    SIGNED_RED_GREEN_RGTC2, // BC5 signed
+
+    // BPTC formats available with a GLES extension
+    RGB_BPTC_SIGNED_FLOAT,  // BC6H signed
+    RGB_BPTC_UNSIGNED_FLOAT,// BC6H unsigned
+    RGBA_BPTC_UNORM,        // BC7
+    SRGB_ALPHA_BPTC_UNORM,  // BC7 sRGB
 };
 
 //! Bitmask describing the intended Texture Usage
@@ -632,7 +656,7 @@ static constexpr bool isSignedIntFormat(TextureFormat format) {
     }
 }
 
-//! returns whether this format a compressed format
+//! returns whether this format is a compressed format
 static constexpr bool isCompressedFormat(TextureFormat format) noexcept {
     return format >= TextureFormat::EAC_R11;
 }
@@ -642,13 +666,23 @@ static constexpr bool isETC2Compression(TextureFormat format) noexcept {
     return format >= TextureFormat::EAC_R11 && format <= TextureFormat::ETC2_EAC_SRGBA8;
 }
 
-//! returns whether this format is an ETC3 compressed format
+//! returns whether this format is an S3TC compressed format
 static constexpr bool isS3TCCompression(TextureFormat format) noexcept {
     return format >= TextureFormat::DXT1_RGB && format <= TextureFormat::DXT5_SRGBA;
 }
 
 static constexpr bool isS3TCSRGBCompression(TextureFormat format) noexcept {
     return format >= TextureFormat::DXT1_SRGB && format <= TextureFormat::DXT5_SRGBA;
+}
+
+//! returns whether this format is an RGTC compressed format
+static constexpr bool isRGTCCompression(TextureFormat format) noexcept {
+    return format >= TextureFormat::RED_RGTC1 && format <= TextureFormat::SIGNED_RED_GREEN_RGTC2;
+}
+
+//! returns whether this format is an BPTC compressed format
+static constexpr bool isBPTCCompression(TextureFormat format) noexcept {
+    return format >= TextureFormat::RGB_BPTC_SIGNED_FLOAT && format <= TextureFormat::SRGB_ALPHA_BPTC_UNORM;
 }
 
 static constexpr bool isASTCCompression(TextureFormat format) noexcept {

@@ -1509,6 +1509,12 @@ bool OpenGLDriver::isTextureFormatSupported(TextureFormat format) {
         return  ext.EXT_texture_compression_s3tc || // this is ES specific
                 ext.WEBGL_compressed_texture_s3tc; // this is WEBGL specific
     }
+    if (isRGTCCompression(format)) {
+        return  ext.EXT_texture_compression_rgtc;
+    }
+    if (isBPTCCompression(format)) {
+        return  ext.EXT_texture_compression_bptc;
+    }
     if (isASTCCompression(format)) {
         return ext.KHR_texture_compression_astc_hdr;
     }

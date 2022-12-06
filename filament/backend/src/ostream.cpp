@@ -252,7 +252,14 @@ io::ostream& operator<<(io::ostream& out, TextureFormat format) {
         CASE(TextureFormat, DXT3_SRGBA)
         CASE(TextureFormat, DXT5_RGBA)
         CASE(TextureFormat, DXT5_SRGBA)
-        CASE(TextureFormat, UNUSED)
+        CASE(TextureFormat, RED_RGTC1)
+        CASE(TextureFormat, SIGNED_RED_RGTC1)
+        CASE(TextureFormat, RED_GREEN_RGTC2)
+        CASE(TextureFormat, SIGNED_RED_GREEN_RGTC2)
+        CASE(TextureFormat, RGB_BPTC_SIGNED_FLOAT)
+        CASE(TextureFormat, RGB_BPTC_UNSIGNED_FLOAT)
+        CASE(TextureFormat, RGBA_BPTC_UNORM)
+        CASE(TextureFormat, SRGB_ALPHA_BPTC_UNORM)
         CASE(TextureFormat, RGBA_ASTC_4x4)
         CASE(TextureFormat, RGBA_ASTC_5x4)
         CASE(TextureFormat, RGBA_ASTC_5x5)
@@ -281,6 +288,7 @@ io::ostream& operator<<(io::ostream& out, TextureFormat format) {
         CASE(TextureFormat, SRGB8_ALPHA8_ASTC_10x10)
         CASE(TextureFormat, SRGB8_ALPHA8_ASTC_12x10)
         CASE(TextureFormat, SRGB8_ALPHA8_ASTC_12x12)
+        CASE(TextureFormat, UNUSED)
     }
     return out;
 }
