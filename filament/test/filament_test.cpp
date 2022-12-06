@@ -181,6 +181,7 @@ TEST(FilamentTest, SkinningMath) {
 
 TEST(FilamentTest, TransformManager) {
     filament::FTransformManager tcm;
+    tcm.setAccurateTranslationsEnabled(true);
     EntityManager& em = EntityManager::get();
     std::array<Entity, 3> entities;
     em.create(entities.size(), entities.data());
@@ -245,8 +246,9 @@ TEST(FilamentTest, TransformManager) {
     EXPECT_LT(tcm.getInstance(entities[1]), tcm.getInstance(entities[2]));
 
     // local transaction reorders parent/child
+    auto const t = mat4::translation(double3(1.0 / 3.0));
     tcm.openLocalTransformTransaction();
-    tcm.setTransform(newParent, mat4f{ float4{ 8 }});
+    tcm.setTransform(newParent, t);
     tcm.commitLocalTransformTransaction();
 
     // local transaction invalidates Instances
@@ -258,10 +260,14 @@ TEST(FilamentTest, TransformManager) {
     EXPECT_GT(child, newParent);
 
     // check transform propagation
-    EXPECT_EQ(tcm.getTransform(newParent), mat4f{ float4{ 8 }});
-    EXPECT_EQ(tcm.getWorldTransform(newParent), mat4f{ float4{ 8 }});
-    EXPECT_EQ(tcm.getTransform(child), mat4f{ float4{ 1 }});
-    EXPECT_EQ(tcm.getWorldTransform(child), mat4f{ float4{ 8 }});
+
+    // our "high precision" mode only preserves 48 bits of the double mantissa (out of 53).
+    // This constant loses 5 bits out of 1/3
+    const mat4 PRECISION_KILLER_5BITS = mat4::translation(double3(16.0));
+    EXPECT_EQ(tcm.getTransformAccurate(newParent)      + PRECISION_KILLER_5BITS, t + PRECISION_KILLER_5BITS);
+    EXPECT_EQ(tcm.getWorldTransformAccurate(newParent) + PRECISION_KILLER_5BITS, t + PRECISION_KILLER_5BITS);
+    EXPECT_EQ(tcm.getWorldTransformAccurate(child)     + PRECISION_KILLER_5BITS, t + PRECISION_KILLER_5BITS);
+    EXPECT_EQ(tcm.getTransformAccurate(child), mat4{ 1.0 });
 
     // check children iterators
     size_t c = 0;

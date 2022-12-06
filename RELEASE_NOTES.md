@@ -9,6 +9,7 @@ A new header is inserted each time a *tag* is created.
 - engine: the output color space can be set on `ColorGrading`. This API currently has limitations,
   please refer to the documentation for more details.
 - Support for RGTC and BPTC texture compression
+- engine: fix TransformManager high precision mode when using transactions.
 
 ## v1.30.0
 
@@ -26,6 +27,7 @@ A new header is inserted each time a *tag* is created.
 - engine: improvements/cleanup of Shadow mapping code [⚠️ **Recompile Materials**]
 
 ## v1.28.3
+
 
 - backend: add support for GGP platform
 - engine: primitives with `CullingMode::FRONT_AND_BACK` are now skipped.
