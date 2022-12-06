@@ -12,8 +12,10 @@ A new header is inserted each time a *tag* is created.
 - engine: add missing getters on `MaterialInstance`
 - WebGL: add missing `ColorGrading` JS bindings
 - engine: improvements/cleanup of Shadow mapping code [⚠️ **Recompile Materials**]
+- engine: fix TransformManager high precision mode when using transactions.
 
 ## v1.28.3
+
 
 - backend: add support for GGP platform
 - engine: primitives with `CullingMode::FRONT_AND_BACK` are now skipped.
