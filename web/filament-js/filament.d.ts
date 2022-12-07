@@ -533,6 +533,7 @@ interface Filamesh {
 
 export class Engine {
     public static create(canvas: HTMLCanvasElement, contextOptions?: object): Engine;
+    public static destroy(engine: Engine): void;
     public execute(): void;
     public createCamera(entity: Entity): Camera;
     public createMaterial(urlOrBuffer: BufferReference): Material;
