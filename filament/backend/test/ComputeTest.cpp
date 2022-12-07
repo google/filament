@@ -18,6 +18,8 @@
 #include "PlatformRunner.h"
 
 #include <backend/Platform.h>
+#include <private/backend/PlatformFactory.h>
+
 
 #include "private/backend/CommandBufferQueue.h"
 #include "private/backend/DriverApi.h"
@@ -53,7 +55,7 @@ void ComputeTest::SetUp() {
     Test::SetUp();
 
     auto backend = sBackend;
-    DefaultPlatform* platform = DefaultPlatform::create(&backend);
+    Platform* platform = PlatformFactory::create(&backend);
 
     GTEST_ASSERT_EQ(uint8_t(backend), uint8_t(sBackend));
 

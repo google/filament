@@ -20,7 +20,8 @@
 
 #include <backend/Platform.h>
 
-#include "private/backend/CommandStream.h"
+#include <private/backend/CommandStream.h>
+#include <private/backend/PlatformFactory.h>
 
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphResources.h"
@@ -71,7 +72,7 @@ protected:
 
     Backend backend = Backend::NOOP;
     CircularBuffer buffer = CircularBuffer{ 8192 };
-    DefaultPlatform* platform = DefaultPlatform::create(&backend);
+    Platform* platform = PlatformFactory::create(&backend);
     CommandStream driverApi = CommandStream{ *platform->createDriver(nullptr, {}), buffer };
     MockResourceAllocator resourceAllocator;
     FrameGraph fg{resourceAllocator};

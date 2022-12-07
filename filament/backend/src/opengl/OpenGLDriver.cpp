@@ -17,14 +17,14 @@
 #include "OpenGLDriver.h"
 
 #include "private/backend/DriverApi.h"
-#include "private/backend/OpenGLPlatform.h"
 
 #include "CommandStreamDispatcher.h"
+#include "OpenGLContext.h"
 #include "OpenGLDriverFactory.h"
 #include "OpenGLProgram.h"
 #include "OpenGLTimerQuery.h"
-#include "OpenGLContext.h"
 
+#include <backend/platforms/OpenGLPlatform.h>
 #include <backend/SamplerDescriptor.h>
 
 #include <utils/compiler.h>
@@ -171,7 +171,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
 
     // set a reasonable default value for our stream array
     mTexturesWithStreamsAttached.reserve(8);
-    mStreamsWithPendingAquiredImage.reserve(8);
+    mStreamsWithPendingAcquiredImage.reserve(8);
 
 #ifndef NDEBUG
     slog.i << "OS version: " << mPlatform.getOSVersion() << io::endl;
@@ -574,7 +574,17 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     GLTexture* t = construct<GLTexture>(th, target, levels, samples, w, h, depth, format, usage);
     if (UTILS_LIKELY(usage & TextureUsage::SAMPLEABLE)) {
         if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
-            mPlatform.createExternalImageTexture(t);
+            t->externalTexture = mPlatform.createExternalImageTexture();
+            if (t->externalTexture) {
+                t->gl.target = t->externalTexture->target;
+                t->gl.id = t->externalTexture->id;
+                t->gl.targetIndex = (uint8_t)OpenGLContext::getIndexForTextureTarget(t->gl.target);
+                // internalFormat actually depends on the external image, but it doesn't matter
+                // because it's not used anywhere for anything important.
+                t->gl.internalFormat = getInternalFormat(format);
+                t->gl.baseLevel = 0;
+                t->gl.maxLevel = 0;
+            }
         } else {
             glGenTextures(1, &t->gl.id);
 
@@ -1063,10 +1073,7 @@ void OpenGLDriver::createDefaultRenderTargetR(
 
     construct<GLRenderTarget>(rth, 0, 0);  // FIXME: we don't know the width/height
 
-    uint32_t framebuffer = 0;
-    uint32_t colorbuffer = 0;
-    uint32_t depthbuffer = 0;
-    mPlatform.createDefaultRenderTarget(framebuffer, colorbuffer, depthbuffer);
+    uint32_t framebuffer = mPlatform.createDefaultRenderTarget();
 
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
     rt->gl.fbo = framebuffer;
@@ -1317,7 +1324,7 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
                     detachStream(t);
                 }
                 if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
-                    mPlatform.destroyExternalImage(t);
+                    mPlatform.destroyExternalImage(t->externalTexture);
                 } else {
                     glDeleteTextures(1, &t->gl.id);
                 }
@@ -1451,7 +1458,7 @@ void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer,
         // If there's no pending image, do nothing. Note that GL_OES_EGL_image does not let you pass
         // NULL to glEGLImageTargetTexture2DOES, and there is no concept of "detaching" an
         // EGLimage from a texture.
-        mStreamsWithPendingAquiredImage.push_back(glstream);
+        mStreamsWithPendingAcquiredImage.push_back(glstream);
     }
 }
 
@@ -1459,8 +1466,8 @@ void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer,
 // and therefore do not require synchronization. The former is always called immediately before
 // beginFrame, the latter is called by the user from anywhere outside beginFrame / endFrame.
 void OpenGLDriver::updateStreams(DriverApi* driver) {
-    if (UTILS_UNLIKELY(!mStreamsWithPendingAquiredImage.empty())) {
-        for (GLStream* s : mStreamsWithPendingAquiredImage) {
+    if (UTILS_UNLIKELY(!mStreamsWithPendingAcquiredImage.empty())) {
+        for (GLStream* s : mStreamsWithPendingAcquiredImage) {
             assert_invariant(s);
             assert_invariant(s->streamType == StreamType::ACQUIRED);
 
@@ -1478,7 +1485,15 @@ void OpenGLDriver::updateStreams(DriverApi* driver) {
                             return t->hwStream == s;
                         });
                 if (pos != streams.end()) {
-                    setExternalTexture(*pos, image);
+                    GLTexture* t = *pos;
+                    bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+                    if (mPlatform.setExternalImage(image, t->externalTexture)) {
+                        // the target and id can be reset each time
+                        t->gl.target = t->externalTexture->target;
+                        t->gl.id = t->externalTexture->id;
+                        t->gl.targetIndex = (uint8_t)OpenGLContext::getIndexForTextureTarget(t->gl.target);
+                        bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+                    }
                 }
 
                 if (previousImage.image) {
@@ -1486,7 +1501,7 @@ void OpenGLDriver::updateStreams(DriverApi* driver) {
                 }
             });
         }
-        mStreamsWithPendingAquiredImage.clear();
+        mStreamsWithPendingAcquiredImage.clear();
     }
 }
 
@@ -2163,35 +2178,24 @@ void OpenGLDriver::setupExternalImage(void* image) {
     mPlatform.retainExternalImage(image);
 }
 
-void OpenGLDriver::cancelExternalImage(void* image) {
-    mPlatform.releaseExternalImage(image);
-}
-
 void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {
     DEBUG_MARKER()
-    mPlatform.setExternalImage(image, handle_cast<GLTexture*>(th));
-    setExternalTexture(handle_cast<GLTexture*>(th), image);
+    GLTexture* t = handle_cast<GLTexture*>(th);
+    assert_invariant(t);
+    assert_invariant(t->target == SamplerType::SAMPLER_EXTERNAL);
+
+    bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+    if (mPlatform.setExternalImage(image, t->externalTexture)) {
+        // the target and id can be reset each time
+        t->gl.target = t->externalTexture->target;
+        t->gl.id = t->externalTexture->id;
+        t->gl.targetIndex = (uint8_t)OpenGLContext::getIndexForTextureTarget(t->gl.target);
+        bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
+    }
 }
 
 void OpenGLDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint32_t plane) {
     DEBUG_MARKER()
-}
-
-void OpenGLDriver::setExternalTexture(GLTexture* t, void* image) {
-    auto& gl = mContext;
-
-    // TODO: move this logic to PlatformEGL.
-    if (gl.ext.OES_EGL_image_external_essl3) {
-        assert_invariant(t->target == SamplerType::SAMPLER_EXTERNAL);
-        assert_invariant(t->gl.target == GL_TEXTURE_EXTERNAL_OES);
-
-        bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
-        gl.activeTexture(OpenGLContext::DUMMY_TEXTURE_BINDING);
-
-#ifdef GL_OES_EGL_image
-        glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, static_cast<GLeglImageOES>(image));
-#endif
-    }
 }
 
 void OpenGLDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {

@@ -9,6 +9,7 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 # Sources and headers
 # ==================================================================================================
 set(PUBLIC_HDRS
+        include/backend/AcquiredImage.h
         include/backend/BufferDescriptor.h
         include/backend/CallbackHandler.h
         include/backend/DriverApiForward.h
@@ -36,12 +37,12 @@ set(SRCS
         src/noop/NoopDriver.cpp
         src/noop/PlatformNoop.cpp
         src/Platform.cpp
+        src/PlatformFactory.cpp
         src/Program.cpp
         src/SamplerGroup.cpp
 )
 
 set(PRIVATE_HDRS
-        include/private/backend/AcquiredImage.h
         include/private/backend/CircularBuffer.h
         include/private/backend/CommandBufferQueue.h
         include/private/backend/CommandStream.h
@@ -50,6 +51,7 @@ set(PRIVATE_HDRS
         include/private/backend/DriverApi.h
         include/private/backend/DriverAPI.inc
         include/private/backend/HandleAllocator.h
+        include/private/backend/PlatformFactory.h
         include/private/backend/SamplerGroup.h
         src/CommandStreamDispatcher.h
         src/DataReshaper.h
@@ -62,6 +64,7 @@ set(PRIVATE_HDRS
 
 if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMENT_USE_SWIFTSHADER)
     list(APPEND SRCS
+            include/backend/platforms/OpenGLPlatform.h
             src/opengl/gl_headers.cpp
             src/opengl/gl_headers.h
             src/opengl/GLUtils.cpp
@@ -76,7 +79,6 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
             src/opengl/OpenGLPlatform.cpp
             src/opengl/OpenGLTimerQuery.cpp
             src/opengl/OpenGLTimerQuery.h
-            include/private/backend/OpenGLPlatform.h
     )
     if (EGL)
         list(APPEND SRCS src/opengl/platforms/PlatformEGL.cpp)
@@ -150,6 +152,7 @@ endif()
 # See root CMakeLists.txt for platforms that support Vulkan
 if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
+            include/backend/platforms/VulkanPlatform.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
             src/vulkan/VulkanBuffer.cpp
@@ -173,7 +176,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanPipelineCache.cpp
             src/vulkan/VulkanPipelineCache.h
             src/vulkan/VulkanPlatform.cpp
-            src/vulkan/VulkanPlatform.h
             src/vulkan/VulkanSamplerCache.cpp
             src/vulkan/VulkanSamplerCache.h
             src/vulkan/VulkanStagePool.cpp

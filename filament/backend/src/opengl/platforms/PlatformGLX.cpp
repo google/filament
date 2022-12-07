@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "PlatformGLX.h"
+#include <backend/platforms/PlatformGLX.h>
 
 #include <utils/Log.h>
 #include <utils/Panic.h>
@@ -22,8 +22,6 @@
 #include <X11/Xlib.h>
 #include <GL/glx.h>
 #include <GL/glxext.h>
-
-#include "../OpenGLDriverFactory.h"
 
 #include <dlfcn.h>
 
@@ -130,7 +128,8 @@ namespace filament::backend {
 
 using namespace backend;
 
-Driver* PlatformGLX::createDriver(void* const sharedGLContext, const DriverConfig& driverConfig) noexcept {
+Driver* PlatformGLX::createDriver(void* const sharedGLContext,
+        const DriverConfig& driverConfig) noexcept {
     loadLibraries();
     // Get the display device
     mGLXDisplay = g_x11.openDisplay(NULL);
@@ -229,7 +228,7 @@ Driver* PlatformGLX::createDriver(void* const sharedGLContext, const DriverConfi
     int result = bluegl::bind();
     ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
 
-    return OpenGLDriverFactory::create(this, sharedGLContext, driverConfig);
+    return OpenGLPlatform::createDefaultDriver(this, sharedGLContext, driverConfig);
 }
 
 void PlatformGLX::terminate() noexcept {
@@ -278,20 +277,6 @@ void PlatformGLX::makeCurrent(
 
 void PlatformGLX::commit(Platform::SwapChain* swapChain) noexcept {
     g_glx.swapBuffers(mGLXDisplay, (GLXDrawable)swapChain);
-}
-
-// TODO Implement GLX fences
-Platform::Fence* PlatformGLX::createFence() noexcept {
-    Fence* f = new Fence();
-    return f;
-}
-
-void PlatformGLX::destroyFence(Fence* fence) noexcept {
-    delete fence;
-}
-
-FenceStatus PlatformGLX::waitFence(Fence* fence, uint64_t timeout) noexcept {
-    return FenceStatus::CONDITION_SATISFIED;
 }
 
 } // namespace filament::backend

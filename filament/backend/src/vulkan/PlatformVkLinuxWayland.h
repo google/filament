@@ -21,7 +21,7 @@
 
 #include <wayland-client-core.h>
 #include <backend/DriverEnums.h>
-#include "VulkanPlatform.h"
+#include <backend/platforms/VulkanPlatform.h>
 
 namespace filament::backend {
 

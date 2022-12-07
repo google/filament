@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-#include "PlatformEGL.h"
+#include <backend/platforms/PlatformEGL.h>
 
-#include "opengl/OpenGLDriver.h"
-#include "opengl/OpenGLContext.h"
-#include "opengl/OpenGLDriverFactory.h"
+#include "opengl/GLUtils.h"
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -31,7 +29,7 @@ using namespace utils;
 namespace filament::backend {
 using namespace backend;
 
-// The Android NDK doesn't exposes extensions, fake it with eglGetProcAddress
+// The Android NDK doesn't expose extensions, fake it with eglGetProcAddress
 namespace glext {
 UTILS_PRIVATE PFNEGLCREATESYNCKHRPROC eglCreateSyncKHR = {};
 UTILS_PRIVATE PFNEGLDESTROYSYNCKHRPROC eglDestroySyncKHR = {};
@@ -70,7 +68,7 @@ void PlatformEGL::logEglError(const char* name) noexcept {
 
 void PlatformEGL::clearGlError() noexcept {
     // clear GL error that may have been set by previous calls
-    GLenum error = glGetError();
+    GLenum const error = glGetError();
     if (error != GL_NO_ERROR) {
         slog.w << "Ignoring pending GL error " << io::hex << error << io::endl;
     }
@@ -80,12 +78,17 @@ void PlatformEGL::clearGlError() noexcept {
 
 PlatformEGL::PlatformEGL() noexcept = default;
 
+int PlatformEGL::getOSVersion() const noexcept {
+    return 0;
+}
+
+
 Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
     mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
 
     EGLint major, minor;
-    EGLBoolean initialized = eglInitialize(mEGLDisplay, &major, &minor);
+    EGLBoolean const initialized = eglInitialize(mEGLDisplay, &major, &minor);
     if (UTILS_UNLIKELY(!initialized)) {
         slog.e << "eglInitialize failed" << io::endl;
         return nullptr;
@@ -131,7 +134,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
     };
 
 #ifdef NDEBUG
-    // When we don't have a shared context and we're in release mode, we always activate the
+    // When we don't have a shared context, and we're in release mode, we always activate the
     // EGL_KHR_create_context_no_error extension.
     if (!sharedContext && extensions.has("EGL_KHR_create_context_no_error")) {
         contextAttribs[2] = EGL_CONTEXT_OPENGL_NO_ERROR_KHR;
@@ -223,7 +226,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
     clearGlError();
 
     // success!!
-    return OpenGLDriverFactory::create(this, sharedContext, driverConfig);
+    return OpenGLPlatform::createDefaultDriver(this, sharedContext, driverConfig);
 
 error:
     // if we're here, we've failed
@@ -322,6 +325,10 @@ void PlatformEGL::commit(Platform::SwapChain* swapChain) noexcept {
     }
 }
 
+bool PlatformEGL::canCreateFence() noexcept {
+    return true;
+}
+
 Platform::Fence* PlatformEGL::createFence() noexcept {
     Fence* f = nullptr;
 #ifdef EGL_KHR_reusable_sync
@@ -356,24 +363,34 @@ FenceStatus PlatformEGL::waitFence(
     return FenceStatus::ERROR;
 }
 
-void PlatformEGL::createExternalImageTexture(void* texture) noexcept {
-    auto* t = (OpenGLDriver::GLTexture*) texture;
-    glGenTextures(1, &t->gl.id);
+OpenGLPlatform::ExternalTexture* PlatformEGL::createExternalImageTexture() noexcept {
+    ExternalTexture* outTexture = new ExternalTexture{};
+    glGenTextures(1, &outTexture->id);
     if (UTILS_LIKELY(ext.OES_EGL_image_external_essl3)) {
-        t->gl.target = GL_TEXTURE_EXTERNAL_OES;
-        t->gl.targetIndex = (uint8_t)
-                OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_EXTERNAL_OES);
+        outTexture->target = GL_TEXTURE_EXTERNAL_OES;
     } else {
         // if texture external is not supported, revert to texture 2d
-        t->gl.target = GL_TEXTURE_2D;
-        t->gl.targetIndex = (uint8_t)
-                OpenGLContext::getIndexForTextureTarget(GL_TEXTURE_2D);
+        outTexture->target = GL_TEXTURE_2D;
     }
+    return outTexture;
 }
 
-void PlatformEGL::destroyExternalImage(void* texture) noexcept {
-    auto* t = (OpenGLDriver::GLTexture*) texture;
-    glDeleteTextures(1, &t->gl.id);
+void PlatformEGL::destroyExternalImage(ExternalTexture* texture) noexcept {
+    glDeleteTextures(1, &texture->id);
+    delete texture;
+}
+
+bool PlatformEGL::setExternalImage(void* externalImage,
+        UTILS_UNUSED_IN_RELEASE ExternalTexture* texture) noexcept {
+    if (UTILS_LIKELY(ext.OES_EGL_image_external_essl3)) {
+        assert_invariant(texture->target == GL_TEXTURE_EXTERNAL_OES);
+        // the texture is guaranteed to be bound here.
+#ifdef GL_OES_EGL_image
+        glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES,
+                static_cast<GLeglImageOES>(externalImage));
+#endif
+    }
+    return true;
 }
 
 void PlatformEGL::initializeGlExtensions() noexcept {

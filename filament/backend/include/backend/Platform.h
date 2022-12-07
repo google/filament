@@ -23,22 +23,28 @@
 
 #include <utils/compiler.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 class Driver;
 
+/**
+ * Platform is an interface that abstracts how the backend (also referred to as Driver) is
+ * created. The backend provides several common Platform concrete implementations, which are
+ * selected automatically. It is possible however to provide a custom Platform when creating
+ * the filament Engine.
+ */
 class UTILS_PUBLIC Platform {
 public:
     struct SwapChain {};
     struct Fence {};
     struct Stream {};
-    struct ExternalTexture {
-        uintptr_t image = 0;
-    };
 
     struct DriverConfig {
-        size_t handleArenaSize = 0; // size of handle arena in bytes. Setting to 0 indicates default value is to be used. Driver clamps to valid values.
+        /*
+         * size of handle arena in bytes. Setting to 0 indicates default value is to be used.
+         * Driver clamps to valid values.
+         */
+        size_t handleArenaSize = 0;
     };
 
     virtual ~Platform() noexcept;
@@ -62,7 +68,8 @@ public:
      *
      * @return nullptr on failure, or a pointer to the newly created driver.
      */
-    virtual backend::Driver* createDriver(void* sharedContext, const DriverConfig& driverConfig) noexcept = 0;
+    virtual backend::Driver* createDriver(void* sharedContext,
+            const DriverConfig& driverConfig) noexcept = 0;
 
     /**
      * Processes the platform's event queue when called from its primary event-handling thread.
@@ -71,39 +78,9 @@ public:
      * on platforms that need it, such as macOS + OpenGL. Returns false if this is not the main
      * thread, or if the platform does not need to perform any special processing.
      */
-    virtual bool pumpEvents() noexcept { return false; }
+    virtual bool pumpEvents() noexcept;
 };
 
-
-class UTILS_PUBLIC DefaultPlatform : public Platform {
-public:
-    ~DefaultPlatform() noexcept override;
-
-    /**
-     * Creates a Platform configured for the requested backend if available
-     *
-     * @param backendHint Preferred backend, if not available the backend most suitable for the
-     *                    underlying platform is returned and \p backendHint is updated
-     *                    accordingly. Can't be nullptr.
-     *
-     * @return A pointer to the Platform object.
-     *
-     * @see destroy
-     */
-    static DefaultPlatform* create(backend::Backend* backendHint) noexcept;
-
-    /**
-     * Destroys a Platform object returned by create()
-     *
-     * @param platform a reference (as a pointer) to the DefaultPlatform pointer to destroy.
-     *                 \p platform is cleared upon return.
-     *
-     * @see create
-     */
-    static void destroy(DefaultPlatform** platform) noexcept;
-};
-
-} // namespace backend
 } // namespace filament
 
 #endif // TNT_FILAMENT_BACKEND_PLATFORM_H
