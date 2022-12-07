@@ -19,11 +19,13 @@
 
 #include "../gl_headers.h"
 
+#include <backend/platforms/OpenGLPlatform.h>
+
 #include <CoreVideo/CoreVideo.h>
 
 namespace filament::backend {
 
-class CocoaTouchExternalImage final {
+class CocoaTouchExternalImage final : public OpenGLPlatform::ExternalTexture {
 public:
 
     /**

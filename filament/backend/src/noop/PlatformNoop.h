@@ -22,7 +22,7 @@
 
 namespace filament::backend {
 
-class PlatformNoop final : public DefaultPlatform {
+class PlatformNoop final : public Platform {
 public:
 
     int getOSVersion() const noexcept final { return 0; }

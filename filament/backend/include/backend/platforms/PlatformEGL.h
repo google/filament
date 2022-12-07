@@ -22,18 +22,40 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
-#include <backend/DriverEnums.h>
+#include <backend/platforms/OpenGLPlatform.h>
 
-#include "private/backend/OpenGLPlatform.h"
+#include <backend/DriverEnums.h>
 
 namespace filament::backend {
 
+/**
+ * A concrete implementation of OpenGLPlatform that supports EGL.
+ */
 class PlatformEGL : public OpenGLPlatform {
 public:
 
     PlatformEGL() noexcept;
 
-    Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept override;
+protected:
+    // --------------------------------------------------------------------------------------------
+    // Platform Interface
+
+    /**
+     * Initializes EGL, creates the OpenGL context and returns a concrete Driver implementation
+     * that supports OpenGL/OpenGL ES.
+     */
+    Driver* createDriver(void* sharedContext,
+            const Platform::DriverConfig& driverConfig) noexcept override;
+
+    /**
+     * This returns zero. This method can be overridden to return something more useful.
+     * @return zero
+     */
+    int getOSVersion() const noexcept override;
+
+    // --------------------------------------------------------------------------------------------
+    // OpenGLPlatform Interface
+
     void terminate() noexcept override;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept override;
@@ -42,33 +64,33 @@ public:
     void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept override;
     void commit(SwapChain* swapChain) noexcept override;
 
-    bool canCreateFence() noexcept override { return true; }
+    bool canCreateFence() noexcept override;
     Fence* createFence() noexcept override;
     void destroyFence(Fence* fence) noexcept override;
     FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept override;
 
-    void createExternalImageTexture(void* texture) noexcept override;
-    void destroyExternalImage(void* texture) noexcept override;
+    OpenGLPlatform::ExternalTexture* createExternalImageTexture() noexcept override;
+    void destroyExternalImage(ExternalTexture* texture) noexcept override;
+    bool setExternalImage(void* externalImage, ExternalTexture* texture) noexcept override;
 
-    /* default no-op implementations... */
-
-    int getOSVersion() const noexcept override { return 0; }
-
-    void setPresentationTime(int64_t presentationTimeInNanosecond) noexcept override {}
-
-    Stream* createStream(void* nativeStream) noexcept override { return nullptr; }
-    void destroyStream(Stream* stream) noexcept override {}
-    void attach(Stream* stream, intptr_t tname) noexcept override {}
-    void detach(Stream* stream) noexcept override {}
-    void updateTexImage(Stream* stream, int64_t* timestamp) noexcept override {}
-
-protected:
+    /**
+     * Logs glGetError() to slog.e
+     * @param name a string giving some context on the error. Typically __func__.
+     */
     static void logEglError(const char* name) noexcept;
+
+    /**
+     * Calls glGetError() to clear the current error flags. logs a warning to log.w if
+     * an error was pending.
+     */
     static void clearGlError() noexcept;
 
+    /**
+     * Always use this instead of eglMakeCurrent().
+     */
     EGLBoolean makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept;
-    void initializeGlExtensions() noexcept;
 
+    // TODO: this should probably use getters instead.
     EGLDisplay mEGLDisplay = EGL_NO_DISPLAY;
     EGLContext mEGLContext = EGL_NO_CONTEXT;
     EGLSurface mCurrentDrawSurface = EGL_NO_SURFACE;
@@ -81,6 +103,9 @@ protected:
     struct {
         bool OES_EGL_image_external_essl3 = false;
     } ext;
+
+private:
+    void initializeGlExtensions() noexcept;
 };
 
 } // namespace filament::backend

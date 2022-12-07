@@ -22,10 +22,9 @@
 
 #import <Metal/Metal.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
-class MetalPlatform : public DefaultPlatform {
+class MetalPlatform final : public Platform {
 public:
     ~MetalPlatform() override;
 
@@ -60,7 +59,6 @@ private:
 
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_PRIVATE_METALPLATFORM_H

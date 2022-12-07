@@ -27,7 +27,7 @@
 #include "MetalState.h"
 #include "MetalTimerQuery.h"
 
-#include "private/backend/MetalPlatform.h"
+#include "MetalPlatform.h"
 
 #include <CoreVideo/CVMetalTexture.h>
 #include <CoreVideo/CVPixelBuffer.h>
@@ -801,11 +801,6 @@ void MetalDriver::setupExternalImage(void* image) {
     // destroyed.
     CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
     CVPixelBufferRetain(pixelBuffer);
-}
-
-void MetalDriver::cancelExternalImage(void* image) {
-    CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
-    CVPixelBufferRelease(pixelBuffer);
 }
 
 void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {

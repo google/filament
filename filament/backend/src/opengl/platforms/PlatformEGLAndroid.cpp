@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
-#include "PlatformEGLAndroid.h"
+#include <backend/platforms/PlatformEGLAndroid.h>
 
-#include "opengl/OpenGLDriver.h"
-#include "opengl/OpenGLContext.h"
-
+#include "opengl/GLUtils.h"
 #include "ExternalStreamManagerAndroid.h"
-#include "private/backend/VirtualMachineEnv.h"
 
 #include <android/api-level.h>
 
@@ -32,10 +29,7 @@
 
 #include <sys/system_properties.h>
 
-#include <jni.h>
-
-
-// We require filament to be built with a API 19 toolchain, before that, OpenGLES 3.0 didn't exist
+// We require filament to be built with an API 19 toolchain, before that, OpenGLES 3.0 didn't exist
 // Actually, OpenGL ES 3.0 was added to API 18, but API 19 is the better target and
 // the minimum for Jetpack at the time of this comment.
 #if __ANDROID_API__ < 19
@@ -47,7 +41,7 @@ using namespace utils;
 namespace filament::backend {
 using namespace backend;
 
-// The Android NDK doesn't exposes extensions, fake it with eglGetProcAddress
+// The Android NDK doesn't expose extensions, fake it with eglGetProcAddress
 namespace glext {
 
 extern PFNEGLCREATESYNCKHRPROC eglCreateSyncKHR;
@@ -76,7 +70,7 @@ PlatformEGLAndroid::PlatformEGLAndroid() noexcept
 
     char scratch[PROP_VALUE_MAX + 1];
     int length = __system_property_get("ro.build.version.release", scratch);
-    int androidVersion = length >= 0 ? atoi(scratch) : 1;
+    int const androidVersion = length >= 0 ? atoi(scratch) : 1;
     if (!androidVersion) {
         mOSVersion = 1000; // if androidVersion is 0, it means "future"
     } else {
@@ -105,7 +99,8 @@ void PlatformEGLAndroid::terminate() noexcept {
     PlatformEGL::terminate();
 }
 
-Driver* PlatformEGLAndroid::createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
+Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
+        const Platform::DriverConfig& driverConfig) noexcept {
     Driver* driver = PlatformEGL::createDriver(sharedContext, driverConfig);
     auto extensions = GLUtils::split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
 

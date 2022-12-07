@@ -20,7 +20,7 @@
 #include <backend/DriverEnums.h>
 #include <stdint.h>
 
-#include "VulkanPlatform.h"
+#include <backend/platforms/VulkanPlatform.h>
 
 namespace filament::backend {
 
