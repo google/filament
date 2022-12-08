@@ -472,7 +472,7 @@ void refractionThinSphere(const PixelParams pixel,
     ray.d = d;
 }
 
-vec3 evaluateRefraction(
+vec4 evaluateRefraction(
     const PixelParams pixel,
     const vec3 n0, vec3 E) {
 
@@ -515,9 +515,8 @@ vec3 evaluateRefraction(
     // when reading from the cubemap, we are not pre-exposed so we apply iblLuminance
     // which is not the case when we'll read from the screen-space buffer
     vec3 Ft = prefilteredRadiance(ray.direction, perceptualRoughness) * frameUniforms.iblLuminance;
+    float at = 1.0;
 #else
-    vec3 Ft;
-
     // compute the point where the ray exits the medium, if needed
     vec4 p = vec4(getClipFromWorldMatrix() * vec4(ray.position, 1.0));
     p.xy = uvToRenderTargetUV(p.xy * (0.5 / p.w) + 0.5);
@@ -525,25 +524,32 @@ vec3 evaluateRefraction(
     // distance to camera plane
     const float invLog2sqrt5 = 0.8614;
     float lod = max(0.0, (2.0f * log2(perceptualRoughness) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
-    Ft = textureLod(light_ssr, vec3(p.xy, 0.0), lod).rgb;
+    vec4 Fat = textureLod(light_ssr, vec3(p.xy, 0.0), lod);
+
+    // if it's a transparent background, shift color components towards white
+    vec3 Ft = mix(vec3(1.0), Fat.rgb, Fat.a);
+    float at = Fat.a;
 #endif
 
     // base color changes the amount of light passing through the boundary
     Ft *= pixel.diffuseColor;
+    at += (1.0 - at) * (1.0 - luminance(pixel.diffuseColor.rgb));
 
     // fresnel from the first interface
     Ft *= 1.0 - E;
+    at += (1.0 - at) * luminance(E);
 
     // apply absorption
 #if defined(MATERIAL_HAS_ABSORPTION)
     Ft *= T;
+    at += (1.0 - at) * (1.0 - luminance(T));
 #endif
 
-    return Ft;
+    return vec4(Ft, at);
 }
 #endif
 
-void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
+void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color, inout float alpha) {
     // specular layer
     vec3 Fr = vec3(0.0f);
 
@@ -638,8 +644,9 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     Fd *= frameUniforms.iblLuminance;
 
 #if defined(MATERIAL_HAS_REFRACTION)
-    vec3 Ft = evaluateRefraction(pixel, shading_normal, E);
-    Ft *= pixel.transmission;
+    vec4 Fat = evaluateRefraction(pixel, shading_normal, E);
+    vec3 Ft = Fat.rgb * pixel.transmission;
+    float at = mix(1.0, Fat.a, pixel.transmission);
     Fd *= (1.0 - pixel.transmission);
 #endif
 
@@ -653,5 +660,6 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     color.rgb += Fr + Fd;
 #if defined(MATERIAL_HAS_REFRACTION)
     color.rgb += Ft;
+    alpha *= at;
 #endif
 }

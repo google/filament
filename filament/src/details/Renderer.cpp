@@ -842,7 +842,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     PostProcessManager::ScreenSpaceRefConfig const ssrConfig = PostProcessManager::prepareMipmapSSR(
             fg, svp.width, svp.height,
-            ssReflectionsOptions.enabled ? TextureFormat::RGBA16F : TextureFormat::R11F_G11F_B10F,
+            (ssReflectionsOptions.enabled || view.getBlendMode() == View::BlendMode::TRANSLUCENT) ? TextureFormat::RGBA16F : TextureFormat::R11F_G11F_B10F,
             view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), config.scale);
     config.ssrLodOffset = ssrConfig.lodOffset;
     blackboard["ssr"] = ssrConfig.ssr;
