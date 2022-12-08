@@ -152,8 +152,6 @@ public:
     struct GLStream : public HwStream {
         using HwStream::HwStream;
         struct Info {
-            // storage for the read/write textures below
-            Platform::ExternalTexture* ets = nullptr;
             GLuint width = 0;
             GLuint height = 0;
         };
@@ -347,7 +345,12 @@ private:
     std::array<GLSamplerGroup*, Program::SAMPLER_BINDING_COUNT> mSamplerBindings = {};   // 4 pointers
 
     mutable tsl::robin_map<uint32_t, GLuint> mSamplerMap;
-    mutable std::vector<GLTexture*> mExternalStreams;
+
+    // this must be accessed from the driver thread only
+    std::vector<GLTexture*> mTexturesWithStreamsAttached;
+
+    // the must be accessed from the user thread only
+    std::vector<GLStream*> mStreamsWithPendingAquiredImage;
 
     void attachStream(GLTexture* t, GLStream* stream) noexcept;
     void detachStream(GLTexture* t) noexcept;
@@ -355,7 +358,6 @@ private:
 
     OpenGLPlatform& mPlatform;
 
-    void updateStreamAcquired(GLTexture* t, DriverApi* driver) noexcept;
     void updateTextureLodRange(GLTexture* texture, int8_t targetLevel) noexcept;
 
     void setExternalTexture(GLTexture* t, void* image);
