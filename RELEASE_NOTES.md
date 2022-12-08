@@ -5,11 +5,12 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
-- Java: Fix confusing typo in Camera documentation
+- java: fix confusing typo in Camera documentation
 - engine: the output color space can be set on `ColorGrading`. This API currently has limitations,
-  please refer to the documentation for more details.
+  please refer to the documentation for more details
 - Support for RGTC and BPTC texture compression
-- engine: fix TransformManager high precision mode when using transactions.
+- engine: fix TransformManager high precision mode when using transactions
+- web: added TypeScript definition for Engine.destroy
 
 ## v1.30.0
 
