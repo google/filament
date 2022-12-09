@@ -118,7 +118,7 @@ public:
         // we could define more TAGS here, as we need them.
     };
 
-    Systrace(uint32_t tag) noexcept {
+    explicit Systrace(uint32_t tag) noexcept {
         if (tag) init(tag);
     }
 
@@ -167,9 +167,9 @@ private:
 
     // whether tracing is supported at all by the platform
 
-    using ATrace_isEnabled_t          = bool (*)(void);
+    using ATrace_isEnabled_t          = bool (*)();
     using ATrace_beginSection_t       = void (*)(const char* sectionName);
-    using ATrace_endSection_t         = void (*)(void);
+    using ATrace_endSection_t         = void (*)();
     using ATrace_beginAsyncSection_t  = void (*)(const char* sectionName, int32_t cookie);
     using ATrace_endAsyncSection_t    = void (*)(const char* sectionName, int32_t cookie);
     using ATrace_setCounter_t         = void (*)(const char* counterName, int64_t counterValue);

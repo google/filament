@@ -81,7 +81,7 @@ OpenGLProgram::~OpenGLProgram() noexcept {
     }
     const GLuint program = gl.program;
     UTILS_NOUNROLL
-    for (GLuint shader: gl.shaders) {
+    for (GLuint const shader: gl.shaders) {
         if (shader) {
             if (program) {
                 glDetachShader(program, shader);
@@ -103,7 +103,7 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
         Program::ShaderSource shadersSource,
         utils::FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
         GLuint shaderIds[Program::SHADER_TYPE_COUNT],
-        std::array<CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept {
+        UTILS_UNUSED_IN_RELEASE std::array<CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept {
 
     std::string specializationConstantString;
     for (auto const& sc : specializationConstants) {
@@ -132,7 +132,7 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
             Program::ShaderBlob& shader = shadersSource[i];
 
             // remove GOOGLE_cpp_style_line_directive
-            std::string_view source = process_GOOGLE_cpp_style_line_directive(context,
+            std::string_view const source = process_GOOGLE_cpp_style_line_directive(context,
                     reinterpret_cast<char*>(shader.data()), shader.size());
 
             // add support for ARB_shading_language_packing if needed
@@ -155,7 +155,7 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
                     (GLint)body.length() - 1 // null terminated
             };
 
-            GLuint shaderId = glCreateShader(glShaderType);
+            GLuint const shaderId = glCreateShader(glShaderType);
             glShaderSource(shaderId, sources.size(), sources.data(), lengths.data());
             glCompileShader(shaderId);
 
@@ -246,8 +246,8 @@ std::array<std::string_view, 2> OpenGLProgram::splitShaderSource(std::string_vie
     auto eol = source.find('\n', pos) + 1;
     assert_invariant(eol != std::string_view::npos);
 
-    std::string_view version = source.substr(start, eol - start);
-    std::string_view body = source.substr(version.length(), source.length() - version.length());
+    std::string_view const version = source.substr(start, eol - start);
+    std::string_view const body = source.substr(version.length(), source.length() - version.length());
     return { version, body };
 }
 
@@ -257,7 +257,7 @@ std::array<std::string_view, 2> OpenGLProgram::splitShaderSource(std::string_vie
  * program itself is valid).
  */
 GLuint OpenGLProgram::linkProgram(const GLuint shaderIds[Program::SHADER_TYPE_COUNT]) noexcept {
-    GLuint program = glCreateProgram();
+    GLuint const program = glCreateProgram();
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
         if (shaderIds[i]) {
             glAttachShader(program, shaderIds[i]);
@@ -342,9 +342,9 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
     for (GLuint binding = 0, n = lazyInitializationData.uniformBlockInfo.size(); binding < n; binding++) {
         auto const& name = lazyInitializationData.uniformBlockInfo[binding];
         if (!name.empty()) {
-            GLint index = glGetUniformBlockIndex(program, name.c_str());
-            if (index >= 0) {
-                glUniformBlockBinding(program, GLuint(index), binding);
+            GLuint const index = glGetUniformBlockIndex(program, name.c_str());
+            if (index != GL_INVALID_INDEX) {
+                glUniformBlockBinding(program, index, binding);
             }
             CHECK_GL_ERROR(utils::slog.e)
         }
@@ -369,7 +369,7 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
         UTILS_NOUNROLL
         for (const Program::Sampler& sampler: samplers) {
             // find its location and associate a TMU to it
-            GLint loc = glGetUniformLocation(program, sampler.name.c_str());
+            GLint const loc = glGetUniformLocation(program, sampler.name.c_str());
             if (loc >= 0) {
                 // this can fail if the program doesn't use this sampler
                 glUniform1i(loc, tmu);
@@ -404,7 +404,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) const noexcept {
         assert_invariant(sb);
         for (uint8_t j = 0, m = sb->textureUnitEntries.size(); j < m; ++j, ++tmu) { // "<=" on purpose here
             const GLTexture* const t = sb->textureUnitEntries[j].texture;
-            GLuint s = sb->textureUnitEntries[j].sampler;
+            GLuint const s = sb->textureUnitEntries[j].sampler;
             if (t) { // program may not use all samplers of sampler group
                 if (UTILS_UNLIKELY(t->gl.fence)) {
                     glWaitSync(t->gl.fence, 0, GL_TIMEOUT_IGNORED);
@@ -421,7 +421,8 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) const noexcept {
 
 UTILS_NOINLINE
 void logCompilationError(io::ostream& out, ShaderStage shaderType,
-        const char* name, GLuint shaderId, CString const& sourceCode) noexcept {
+        const char* name, GLuint shaderId,
+        UTILS_UNUSED_IN_RELEASE CString const& sourceCode) noexcept {
 
     auto to_string = [](ShaderStage type) -> const char* {
         switch (type) {

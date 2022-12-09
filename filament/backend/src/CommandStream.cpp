@@ -16,7 +16,10 @@
 
 #include "private/backend/CommandStream.h"
 
+#if DEBUG_COMMAND_STREAM
 #include <utils/CallStack.h>
+#endif
+
 #include <utils/Log.h>
 #include <utils/Profiler.h>
 #include <utils/Systrace.h>
@@ -34,7 +37,7 @@ namespace filament::backend {
 // ------------------------------------------------------------------------------------------------
 // A few utility functions for debugging...
 
-inline void printParameterPack(io::ostream& out) { }
+inline void printParameterPack(io::ostream&) { }
 
 template<typename LAST>
 static void printParameterPack(io::ostream& out, const LAST& t) { out << t; }
@@ -95,7 +98,7 @@ void CommandStream::execute(void* buffer) {
         if (UTILS_UNLIKELY(mUsePerformanceCounter)) {
             // we want to remove all this when tracing is completely disabled
             profiler.stop();
-            UTILS_UNUSED Profiler::Counters counters = profiler.readCounters();
+            UTILS_UNUSED Profiler::Counters const counters = profiler.readCounters();
             SYSTRACE_VALUE32("GLThread (I)", counters.getInstructions());
             SYSTRACE_VALUE32("GLThread (C)", counters.getCpuCycles());
             SYSTRACE_VALUE32("GLThread (CPI x10)", counters.getCPI() * 10);

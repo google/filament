@@ -48,7 +48,6 @@ class PixelBufferDescriptor;
 struct TargetBufferInfo;
 
 class OpenGLProgram;
-class OpenGLBlitter;
 class OpenGLTimerQueryInterface;
 
 class OpenGLDriver final : public DriverBase {

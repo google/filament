@@ -78,8 +78,8 @@ using namespace GLUtils;
 // ------------------------------------------------------------------------------------------------
 
 UTILS_NOINLINE
-Driver* OpenGLDriver::create(
-        OpenGLPlatform* const platform, void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
+Driver* OpenGLDriver::create(OpenGLPlatform* const platform,
+        void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
     assert_invariant(platform);
     OpenGLPlatform* const ec = platform;
 
@@ -120,7 +120,7 @@ Driver* OpenGLDriver::create(
 
     // here we check we're on a supported version of GL before initializing the driver
     GLint major = 0, minor = 0;
-    bool success = OpenGLContext::queryOpenGLVersion(&major, &minor);
+    bool const success = OpenGLContext::queryOpenGLVersion(&major, &minor);
 
     if (UTILS_UNLIKELY(!success)) {
         PANIC_LOG("Can't get OpenGL version");
@@ -142,8 +142,9 @@ Driver* OpenGLDriver::create(
         }
     }
 
-    size_t defaultSize = FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
-    Platform::DriverConfig validConfig { .handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize) };
+    size_t const defaultSize = FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
+    Platform::DriverConfig const validConfig {
+        .handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize) };
     OpenGLDriver* const driver = new OpenGLDriver(ec, validConfig);
     return driver;
 }
@@ -436,10 +437,10 @@ void OpenGLDriver::createIndexBufferR(
     DEBUG_MARKER()
 
     auto& gl = mContext;
-    uint8_t elementSize = static_cast<uint8_t>(getElementTypeSize(elementType));
+    uint8_t const elementSize = static_cast<uint8_t>(getElementTypeSize(elementType));
     GLIndexBuffer* ib = construct<GLIndexBuffer>(ibh, elementSize, indexCount);
     glGenBuffers(1, &ib->gl.buffer);
-    GLsizeiptr size = elementSize * indexCount;
+    GLsizeiptr const size = elementSize * indexCount;
     gl.bindVertexArray(nullptr);
     gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, nullptr, getBufferUsage(usage));
@@ -1039,7 +1040,8 @@ void OpenGLDriver::renderBufferStorage(GLuint rbo, GLenum internalformat, uint32
         auto& gl = mContext;
         if (gl.ext.EXT_multisampled_render_to_texture ||
             gl.ext.EXT_multisampled_render_to_texture2) {
-            glext::glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER, samples, internalformat, width, height);
+            glext::glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER,
+                    samples, internalformat, width, height);
         } else
 #endif
         {
@@ -1206,11 +1208,11 @@ void OpenGLDriver::createSyncR(Handle<HwSync> fh, int) {
     CHECK_GL_ERROR(utils::slog.e)
 
     // check the status of the sync once a frame, since we must do this from our thread
-    std::weak_ptr<GLSync::State> weak = f->result;
+    std::weak_ptr<GLSync::State> const weak = f->result;
     runEveryNowAndThen([sync = f->gl.sync, weak]() -> bool {
         auto result = weak.lock();
         if (result) {
-            GLenum status = glClientWaitSync(sync, 0, 0u);
+            GLenum const status = glClientWaitSync(sync, 0, 0u);
             result->status.store(status, std::memory_order_relaxed);
             return (status != GL_TIMEOUT_EXPIRED);
         }
@@ -1850,7 +1852,7 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
     DEBUG_MARKER()
 
 #if defined(GL_EXT_texture_filter_anisotropic)
-    OpenGLContext& context = getContext();
+    OpenGLContext const& context = getContext();
     const bool anisotropyWorkaround =
             context.ext.EXT_texture_filter_anisotropic &&
             context.bugs.texture_filter_anisotropic_broken_on_sampler;
@@ -1894,7 +1896,7 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
                 // Driver claims to support anisotropic filtering, but it fails when set on
                 // the sampler, we have to set it on the texture instead.
                 // The texture is already bound here.
-                GLfloat anisotropy = float(1u << params.anisotropyLog2);
+                GLfloat const anisotropy = float(1u << params.anisotropyLog2);
                 glTexParameterf(t->gl.target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
                         std::min(context.gets.max_anisotropy, anisotropy));
             }
@@ -1985,8 +1987,8 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
         return;
     }
 
-    GLenum glFormat = getFormat(p.format);
-    GLenum glType = getType(p.type);
+    GLenum const glFormat = getFormat(p.format);
+    GLenum const glType = getType(p.type);
 
     gl.pixelStore(GL_UNPACK_ROW_LENGTH, GLint(p.stride));
     gl.pixelStore(GL_UNPACK_ALIGNMENT, GLint(p.alignment));
@@ -1995,7 +1997,7 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
 
     switch (t->target) {
         case SamplerType::SAMPLER_EXTERNAL:
-            // if we get there, it's because the user is trying to use an external texture
+            // if we get there, it's because the user is trying to use an external texture,
             // but it's not supported, so instead, we behave like a texture2d.
             // fallthrough...
         case SamplerType::SAMPLER_2D:
@@ -2039,7 +2041,7 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
             assert_invariant(zoffset + depth <= 6);
             UTILS_NOUNROLL
             for (size_t face = 0; face < depth; face++) {
-                GLenum target = getCubemapTarget(zoffset + face);
+                GLenum const target = getCubemapTarget(zoffset + face);
                 glTexSubImage2D(target, GLint(level), GLint(xoffset), GLint(yoffset),
                         GLsizei(width), GLsizei(height), glFormat, glType,
                         static_cast<uint8_t const*>(p.buffer) + faceSize * face);
@@ -2083,13 +2085,13 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t, uint32_t level,
 
     // TODO: maybe assert that the CompressedPixelDataType is the same as the internalFormat
 
-    GLsizei imageSize = GLsizei(p.imageSize);
+    GLsizei const imageSize = GLsizei(p.imageSize);
 
     //  TODO: maybe assert the size is right (b/c we can compute it ourselves)
 
     switch (t->target) {
         case SamplerType::SAMPLER_EXTERNAL:
-            // if we get there, it's because the user is trying to use an external texture
+            // if we get there, it's because the user is trying to use an external texture,
             // but it's not supported, so instead, we behave like a texture2d.
             // fallthrough...
         case SamplerType::SAMPLER_2D:
@@ -2131,7 +2133,7 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t, uint32_t level,
 
             UTILS_NOUNROLL
             for (size_t face = 0; face < depth; face++) {
-                GLenum target = getCubemapTarget(zoffset + face);
+                GLenum const target = getCubemapTarget(zoffset + face);
                 glCompressedTexSubImage2D(target, GLint(level), GLint(xoffset), GLint(yoffset),
                         GLsizei(width), GLsizei(height), t->gl.internalFormat,
                         imageSize, static_cast<uint8_t const*>(p.buffer) + faceSize * face);
@@ -2311,7 +2313,7 @@ void OpenGLDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 
 bool OpenGLDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
-    uint64_t d = tq->elapsed.load(std::memory_order_relaxed);
+    uint64_t const d = tq->elapsed.load(std::memory_order_relaxed);
     if (!d) {
         return false;
     }
@@ -2364,7 +2366,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
             BACKEND_OPENGL_LEVEL >= BACKEND_OPENGL_LEVEL_GLES30) {
         if (!gl.bugs.disable_invalidate_framebuffer) {
             AttachmentArray attachments; // NOLINT
-            GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
+            GLsizei const attachmentCount = getAttachments(attachments, rt, discardFlags);
             if (attachmentCount) {
                 glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
             }
@@ -2454,7 +2456,7 @@ void OpenGLDriver::endRenderPass(int) {
             // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
             gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
             AttachmentArray attachments; // NOLINT
-            GLsizei attachmentCount = getAttachments(attachments, rt, effectiveDiscardFlags);
+            GLsizei const attachmentCount = getAttachments(attachments, rt, effectiveDiscardFlags);
             if (attachmentCount) {
                 glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
             }
@@ -2482,7 +2484,7 @@ void OpenGLDriver::resolvePass(ResolveAction action, GLRenderTarget const* rt,
     assert_invariant(rt->gl.fbo_read);
     auto& gl = mContext;
     const TargetBufferFlags resolve = rt->gl.resolve & ~discardFlags;
-    GLbitfield mask = getAttachmentBitfield(resolve);
+    GLbitfield const mask = getAttachmentBitfield(resolve);
     if (UTILS_UNLIKELY(mask)) {
 
         // we can only resolve COLOR0 at the moment
@@ -2596,7 +2598,7 @@ void OpenGLDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t ind
 
     GLBufferObject* ub = handle_cast<GLBufferObject *>(ubh);
 
-    GLenum target = GLUtils::getBufferBindingType(bindingType);
+    GLenum const target = GLUtils::getBufferBindingType(bindingType);
 
     assert_invariant(bindingType == BufferObjectBinding::SHADER_STORAGE ||
             ub->gl.binding == target);
@@ -2609,7 +2611,7 @@ void OpenGLDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t ind
 void OpenGLDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) {
     DEBUG_MARKER()
     auto& gl = mContext;
-    GLenum target = GLUtils::getBufferBindingType(bindingType);
+    GLenum const target = GLUtils::getBufferBindingType(bindingType);
     gl.bindBufferRange(target, GLuint(index), 0, 0, 0);
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -2640,7 +2642,7 @@ GLuint OpenGLDriver::getSamplerSlow(SamplerParams params) const noexcept {
     auto& gl = mContext;
     if (gl.ext.EXT_texture_filter_anisotropic &&
             !gl.bugs.texture_filter_anisotropic_broken_on_sampler) {
-        GLfloat anisotropy = float(1u << params.anisotropyLog2);
+        GLfloat const anisotropy = float(1u << params.anisotropyLog2);
         glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT,
                 std::min(gl.gets.max_anisotropy, anisotropy));
     }
@@ -2701,8 +2703,8 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
     DEBUG_MARKER()
     auto& gl = mContext;
 
-    GLenum glFormat = getFormat(p.format);
-    GLenum glType = getType(p.type);
+    GLenum const glFormat = getFormat(p.format);
+    GLenum const glType = getType(p.type);
 
     gl.pixelStore(GL_PACK_ROW_LENGTH,   (GLint)p.stride);
     gl.pixelStore(GL_PACK_ALIGNMENT,    (GLint)p.alignment);
@@ -2753,9 +2755,8 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
         auto& gl = mContext;
         gl.bindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
         void* vaddr = nullptr;
-        std::unique_ptr<uint8_t> clientBuffer;
 #if defined(__EMSCRIPTEN__)
-        clientBuffer.reset(new uint8_t[p.size]);
+        std::unique_ptr<uint8_t> clientBuffer = std::make_unique<uint8_t>(p.size);
         glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, p.size, clientBuffer.get());
         vaddr = clientBuffer.get();
 #else
@@ -2763,10 +2764,10 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
 #endif
         if (vaddr) {
             // now we need to flip the buffer vertically to match our API
-            size_t stride = p.stride ? p.stride : width;
-            size_t bpp = PixelBufferDescriptor::computeDataSize(
+            size_t const stride = p.stride ? p.stride : width;
+            size_t const bpp = PixelBufferDescriptor::computeDataSize(
                     p.format, p.type, 1, 1, 1);
-            size_t bpr = PixelBufferDescriptor::computeDataSize(
+            size_t const bpr = PixelBufferDescriptor::computeDataSize(
                     p.format, p.type, stride, 1, p.alignment);
             char const* head = (char const*)vaddr + p.left * bpp + bpr * p.top;
             char* tail = (char*)p.buffer + p.left * bpp + bpr * (p.top + height - 1);
@@ -2853,7 +2854,7 @@ void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
     auto& v = mGpuCommandCompleteOps;
     auto it = v.begin();
     while (it != v.end()) {
-        GLenum status = glClientWaitSync(it->first, 0, 0);
+        GLenum const status = glClientWaitSync(it->first, 0, 0);
         if (status == GL_ALREADY_SIGNALED || status == GL_CONDITION_SATISFIED) {
             it->second();
             glDeleteSync(it->first);
@@ -2910,7 +2911,9 @@ void OpenGLDriver::tick(int) {
     executeEveryNowAndThenOps();
 }
 
-void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
+void OpenGLDriver::beginFrame(
+        UTILS_UNUSED int64_t monotonic_clock_ns,
+        UTILS_UNUSED uint32_t frameId) {
     DEBUG_MARKER()
     auto& gl = mContext;
     insertEventMarker("beginFrame");
@@ -2944,7 +2947,7 @@ void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {
     mPlatform.setPresentationTime(monotonic_clock_ns);
 }
 
-void OpenGLDriver::endFrame(uint32_t frameId) {
+void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t frameId) {
     DEBUG_MARKER()
 #if defined(__EMSCRIPTEN__)
     // WebGL builds are single-threaded so users might manipulate various GL state after we're
@@ -3047,7 +3050,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
     DEBUG_MARKER()
     auto& gl = mContext;
 
-    GLbitfield mask = getAttachmentBitfield(buffers);
+    GLbitfield const mask = getAttachmentBitfield(buffers);
     if (mask) {
         GLenum glFilterMode = (filter == SamplerMagFilter::NEAREST) ? GL_NEAREST : GL_LINEAR;
         if (mask & (GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)) {
