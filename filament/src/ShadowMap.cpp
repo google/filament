@@ -627,34 +627,33 @@ ShadowMap::TextureCoordsMapping ShadowMap::getTextureCoordsMapping(ShadowMapInfo
         backend::Viewport const& viewport) noexcept {
     // remapping from NDC to texture coordinates (i.e. [-1,1] -> [0, 1])
     // ([1, 0] for depth mapping)
-    const mat4f Mt(info.clipSpaceFlipped ? mat4f::row_major_init{
-            0.5f,  0.0f,   0.0f, 0.5f,
-            0.0f, -0.5f,   0.0f, 0.5f,
-            0.0f,  0.0f,  -0.5f, 0.5f,
-            0.0f,  0.0f,   0.0f, 1.0f
-    } : mat4f::row_major_init{
-            0.5f,  0.0f,  0.0f, 0.5f,
-            0.0f,  0.5f,  0.0f, 0.5f,
-            0.0f,  0.0f, -0.5f, 0.5f,
-            0.0f,  0.0f,  0.0f, 1.0f
-    });
+    constexpr mat4f Mt{
+            mat4f::row_major_init{
+                    0.5f, 0.0f,  0.0f, 0.5f,
+                    0.0f, 0.5f,  0.0f, 0.5f,
+                    0.0f, 0.0f, -0.5f, 0.5f,
+                    0.0f, 0.0f,  0.0f, 1.0f
+            }};
 
     // apply the viewport transform
     const float2 o = float2{ viewport.left,  viewport.bottom } / float(info.atlasDimension);
     const float2 s = float2{ viewport.width, viewport.height } / float(info.atlasDimension);
-    const mat4f Mv(mat4f::row_major_init{
-             s.x,  0.0f, 0.0f, o.x,
-             0.0f, s.y,  0.0f, o.y,
-             0.0f, 0.0f, 1.0f, 0.0f,
-             0.0f, 0.0f, 0.0f, 1.0f
-    });
+    const mat4f Mv{
+            mat4f::row_major_init{
+                     s.x, 0.0f, 0.0f, o.x,
+                    0.0f,  s.y, 0.0f, o.y,
+                    0.0f, 0.0f, 1.0f, 0.0f,
+                    0.0f, 0.0f, 0.0f, 1.0f
+            }};
 
-    const mat4f Mf = info.textureSpaceFlipped ? mat4f(mat4f::row_major_init{
-            1.0f,  0.0f,  0.0f,  0.0f,
-            0.0f, -1.0f,  0.0f,  1.0f,
-            0.0f,  0.0f,  1.0f,  0.0f,
-            0.0f,  0.0f,  0.0f,  1.0f
-    }) : mat4f();
+    // this is equivalent to call uvToRenderTargetUV() in the shader in each texture access
+    const mat4f Mf = info.textureSpaceFlipped ? mat4f{
+            mat4f::row_major_init{
+                    1.0f,  0.0f, 0.0f, 0.0f,
+                    0.0f, -1.0f, 0.0f, 1.0f,
+                    0.0f,  0.0f, 1.0f, 0.0f,
+                    0.0f,  0.0f, 0.0f, 1.0f
+            }} : mat4f{};
 
     // Compute shadow-map texture access and viewport transform
     return { Mf * (Mv * Mt), inverse(Mt) * (Mv * Mt) };
@@ -1242,6 +1241,8 @@ math::float4 ShadowMap::getViewportNormalized(ShadowMapInfo const& shadowMapInfo
     const float texel = 1.0f / float(shadowMapInfo.atlasDimension);
     const float4 v = float4{ l, b, l + w, b + h } * texel;
     if (shadowMapInfo.textureSpaceFlipped) {
+        // this is equivalent to calling uvToRenderTargetUV() in the shader *after* clamping
+        // texture coordinates to this normalized viewport.
         return { v.x, 1.0f - v.w, v.z, 1.0f - v.y };
     }
     return v;
