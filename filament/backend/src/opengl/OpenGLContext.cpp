@@ -27,7 +27,7 @@ bool OpenGLContext::queryOpenGLVersion(GLint* major, GLint* minor) noexcept {
     if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES) {
         char const* version = (char const*)glGetString(GL_VERSION);
         // This works on all versions of GLES
-        int n = version ? sscanf(version, "OpenGL ES %d.%d", major, minor) : 0;
+        int const n = version ? sscanf(version, "OpenGL ES %d.%d", major, minor) : 0;
         return n == 2;
     } else if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
         // OpenGL version

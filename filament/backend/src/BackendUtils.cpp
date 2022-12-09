@@ -29,7 +29,7 @@ bool requestsGoogleLineDirectivesExtension(std::string_view source) noexcept {
 }
 
 void removeGoogleLineDirectives(char* shader, size_t length) noexcept {
-    std::string_view s(shader, length);
+    std::string_view const s{ shader, length };
 
     size_t pos = 0;
     while (true) {
@@ -489,7 +489,8 @@ bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped)
         return false;
     }
 
-    const auto freeFunc = [](void* buffer, size_t size, void* user) { free(buffer); };
+    const auto freeFunc = [](void* buffer,
+            UTILS_UNUSED size_t size, UTILS_UNUSED void* user) { free(buffer); };
     const size_t reshapedSize = 4 * data.size / 3;
     const PixelDataFormat reshapedFormat =
         data.format == PixelDataFormat::RGB ? PixelDataFormat::RGBA : PixelDataFormat::RGBA_INTEGER;

@@ -62,7 +62,7 @@ void* CircularBuffer::alloc(size_t size) noexcept {
     void* vaddr = MAP_FAILED;
     void* vaddr_shadow = MAP_FAILED;
     void* vaddr_guard = MAP_FAILED;
-    int fd = ashmem_create_region("filament::CircularBuffer", size + BLOCK_SIZE);
+    int const fd = ashmem_create_region("filament::CircularBuffer", size + BLOCK_SIZE);
     if (fd >= 0) {
         // reserve/find enough address space
         void* reserve_vaddr = mmap(nullptr, size * 2 + BLOCK_SIZE,

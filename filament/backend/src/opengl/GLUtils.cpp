@@ -57,7 +57,7 @@ const char* getGLError(GLenum error) noexcept {
 
 UTILS_NOINLINE
 GLenum checkGLError(io::ostream& out, const char* function, size_t line) noexcept {
-    GLenum error = glGetError();
+    GLenum const error = glGetError();
     if (error != GL_NO_ERROR) {
         const char* string = getGLError(error);
         out << "OpenGL error " << io::hex << error << " (" << string << ") in \""
@@ -68,7 +68,7 @@ GLenum checkGLError(io::ostream& out, const char* function, size_t line) noexcep
 
 UTILS_NOINLINE
 void assertGLError(io::ostream& out, const char* function, size_t line) noexcept {
-    GLenum err = checkGLError(out, function, line);
+    GLenum const err = checkGLError(out, function, line);
     if (err != GL_NO_ERROR) {
         debug_trap();
     }
@@ -104,7 +104,7 @@ const char* getFramebufferStatus(GLenum status) noexcept {
 
 UTILS_NOINLINE
 GLenum checkFramebufferStatus(io::ostream& out, GLenum target, const char* function, size_t line) noexcept {
-    GLenum status = glCheckFramebufferStatus(target);
+    GLenum const status = glCheckFramebufferStatus(target);
     if (status != GL_FRAMEBUFFER_COMPLETE) {
         const char* string = getFramebufferStatus(status);
         out << "OpenGL framebuffer error " << io::hex << status << " (" << string << ") in \""
@@ -115,7 +115,7 @@ GLenum checkFramebufferStatus(io::ostream& out, GLenum target, const char* funct
 
 UTILS_NOINLINE
 void assertFramebufferStatus(io::ostream& out, GLenum target, const char* function, size_t line) noexcept {
-    GLenum status = checkFramebufferStatus(out, target, function, line);
+    GLenum const status = checkFramebufferStatus(out, target, function, line);
     if (status != GL_FRAMEBUFFER_COMPLETE) {
         debug_trap();
     }
