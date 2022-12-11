@@ -68,6 +68,8 @@ FRenderer::FRenderer(FEngine& engine) :
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.renderer.doFrameCapture",
             &engine.debug.renderer.doFrameCapture);
+    debugRegistry.registerProperty("d.renderer.disable_buffer_padding",
+            &engine.debug.renderer.disable_buffer_padding);
 
     DriverApi& driver = engine.getDriverApi();
 
@@ -547,7 +549,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // a very fast rendering path -- in this case, we would need an extra blit to "resolve" the
     // buffer padding (because there are no other pass that can do it as a side effect).
     // In this case, it is better to skip the padding, which won't be helping much.
-    const bool noBufferPadding = colorGradingConfig.asSubpass && !hasFXAA && !scaled;
+    const bool noBufferPadding = (colorGradingConfig.asSubpass && !hasFXAA && !scaled)
+            || engine.debug.renderer.disable_buffer_padding;
 
     // guardBand must be a multiple of 16 to guarantee the same exact rendering up to 4 mip levels.
     float const guardBand = guardBandOptions.enabled ? 16.0f : 0.0f;
