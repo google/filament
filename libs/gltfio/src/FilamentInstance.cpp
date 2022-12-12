@@ -145,11 +145,10 @@ void FFilamentInstance::recomputeBoundingBoxes() {
                         }
 
                         const cgltf_accessor* targetAccessor = targetAttribute.data;
-                        const cgltf_size targetCount = targetAccessor->count;
-                        const cgltf_size targetDim = cgltf_num_components(targetAccessor->type);
 
-                        assert_invariant(targetCount == accessor->count);
-                        assert_invariant(targetDim == dim);
+                        assert_invariant(targetAccessor);
+                        assert_invariant(targetAccessor->count == accessor->count);
+                        assert_invariant(cgltf_num_components(targetAccessor->type) == dim);
 
                         cgltf_accessor_unpack_floats(targetAccessor, unpacked.data(), unpacked.size());
 
