@@ -100,14 +100,17 @@ void PerViewUniforms::prepareExposure(float ev100) noexcept {
     s.ev100 = ev100;
 }
 
-void PerViewUniforms::prepareViewport(const filament::Viewport& viewport,
-        uint32_t xoffset, uint32_t yoffset) noexcept {
-    const float w = float(viewport.width);
-    const float h = float(viewport.height);
+void PerViewUniforms::prepareViewport(
+        const filament::Viewport& physicalViewport,
+        const filament::Viewport& logicalViewport) noexcept {
+    float4 const physical{ physicalViewport.left, physicalViewport.bottom,
+                           physicalViewport.width, physicalViewport.height };
+    float4 const logical{ logicalViewport.left, logicalViewport.bottom,
+                          logicalViewport.width, logicalViewport.height };
     auto& s = mUniforms.edit();
-    s.resolution = float4{ w, h, 1.0f / w, 1.0f / h };
-    s.origin = float2{ viewport.left, viewport.bottom };
-    s.offset = float2{ xoffset, yoffset };
+    s.resolution = { physical.zw, 1.0f / physical.zw };
+    s.logicalViewportScale = physical.zw / logical.zw;
+    s.logicalViewportOffset = -logical.xy / logical.zw;
 }
 
 void PerViewUniforms::prepareTime(FEngine& engine, math::float4 const& userTime) noexcept {

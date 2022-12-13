@@ -135,7 +135,11 @@ public:
 
     void prepareUpscaler(math::float2 scale) const noexcept;
     void prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) const noexcept;
-    void prepareViewport(const Viewport& viewport, uint32_t xoffset, uint32_t yoffset) const noexcept;
+
+    void prepareViewport(
+            const Viewport& physicalViewport,
+            const filament::Viewport& logicalViewport) const noexcept;
+
     void prepareShadowing(FEngine& engine, backend::DriverApi& driver,
             FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
             CameraInfo const& cameraInfo) noexcept;

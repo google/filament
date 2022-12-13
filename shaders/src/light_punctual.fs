@@ -181,7 +181,7 @@ void evaluatePunctualLights(const MaterialInputs material,
 
     // Fetch the light information stored in the froxel that contains the
     // current fragment
-    FroxelParams froxel = getFroxelParams(getFroxelIndex(getNormalizedViewportCoord2()));
+    FroxelParams froxel = getFroxelParams(getFroxelIndex(getNormalizedPhysicalViewportCoord()));
 
     // Each froxel contains how many lights can influence
     // the current fragment. A froxel also contains a record offset that

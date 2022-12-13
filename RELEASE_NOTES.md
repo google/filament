@@ -10,7 +10,9 @@ A new header is inserted each time a *tag* is created.
   please refer to the documentation for more details
 - Support for RGTC and BPTC texture compression
 - engine: fix TransformManager high precision mode when using transactions
-- web: added TypeScript definition for Engine.destroy
+- web: added TypeScript definition for `Engine.destroy`
+- materials: `getNormalizedViewportCoord()` now returns the logical (i.e. user) viewport
+             normalized position and keeps z reversed [⚠️ **Recompile Materials**]
 
 ## v1.30.0
 

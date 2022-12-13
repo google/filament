@@ -1258,7 +1258,7 @@ void ShadowMap::prepareCamera(Transaction const& transaction,
 
 void ShadowMap::prepareViewport(Transaction const& transaction,
         backend::Viewport const& viewport) noexcept {
-    PerShadowMapUniforms::prepareViewport(transaction, viewport, 0, 0);
+    PerShadowMapUniforms::prepareViewport(transaction, viewport);
 }
 
 void ShadowMap::prepareTime(Transaction const& transaction,
