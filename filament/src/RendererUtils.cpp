@@ -194,7 +194,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                         out.params.viewport.height == resources.getDescriptor(data.color).height);
 
                 view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport),
-                        config.xoffset, config.yoffset);
+                        config.logicalViewport);
 
                 view.commitUniforms(driver);
 
@@ -269,8 +269,8 @@ std::pair<FrameGraphId<FrameGraphTexture>, bool> RendererUtils::refractionPass(
         input = RendererUtils::colorPass(fg, "Color Pass (opaque)", engine, view, {
                         // When rendering the opaques, we need to conserve the sample buffer,
                         // so create config that specifies the sample count.
-                        .width = config.width,
-                        .height = config.height,
+                        .width = config.physicalViewport.width,
+                        .height = config.physicalViewport.height,
                         .samples = config.msaa,
                         .format = config.hdrFormat
                 }, config, { .asSubpass = false },
@@ -292,8 +292,9 @@ std::pair<FrameGraphId<FrameGraphTexture>, bool> RendererUtils::refractionPass(
         // and we'd end up clearing the opaque pass. This scenario never happens because it is
         // prevented in Renderer.cpp's final blit.
         config.clearFlags = TargetBufferFlags::NONE;
-        output = RendererUtils::colorPass(fg, "Color Pass (transparent)", engine, view,
-                { .width = config.width, .height = config.height },
+        output = RendererUtils::colorPass(fg, "Color Pass (transparent)", engine, view, {
+                        .width = config.physicalViewport.width,
+                        .height = config.physicalViewport.height },
                 config, colorGradingConfig, pass.getExecutor(refraction, pass.end()));
 
         if (config.msaa > 1 && !colorGradingConfig.asSubpass) {

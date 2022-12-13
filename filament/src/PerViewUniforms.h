@@ -78,7 +78,9 @@ public:
      * @param yoffset   vertical rendering offset *within* the viewport.
      *                  Non-zero when we have guard bands.
      */
-    void prepareViewport(const filament::Viewport& viewport, uint32_t xoffset, uint32_t yoffset) noexcept;
+    void prepareViewport(
+            const filament::Viewport& physicalViewport,
+            const filament::Viewport& logicalViewport) noexcept;
 
     void prepareTime(FEngine& engine, math::float4 const& userTime) noexcept;
     void prepareTemporalNoise(FEngine& engine, TemporalAntiAliasingOptions const& options) noexcept;

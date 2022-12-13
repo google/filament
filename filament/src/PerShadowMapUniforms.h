@@ -65,7 +65,7 @@ public:
             float bias) noexcept;
 
     static void prepareViewport(Transaction const& transaction,
-            backend::Viewport const& viewport, uint32_t xoffset, uint32_t yoffset) noexcept;
+            backend::Viewport const& viewport) noexcept;
 
     static void prepareTime(Transaction const& transaction,
             FEngine& engine, math::float4 const& userTime) noexcept;

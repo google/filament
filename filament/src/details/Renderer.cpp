@@ -728,10 +728,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // temporary color buffer. In particular, they won't apply when rendering into the main
     // swapchain (imported render target above)
     RendererUtils::ColorPassConfig config{
-            .width = svp.width,
-            .height = svp.height,
-            .xoffset = (uint32_t)xvp.left,
-            .yoffset = (uint32_t)xvp.bottom,
+            .physicalViewport = svp,
+            .logicalViewport = xvp,
             .scale = scale,
             .hdrFormat = hdrFormat,
             .msaa = msaaSampleCount,
@@ -780,9 +778,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 // The reason why this bug is acceptable is that the viewport parameters are
                 // currently only used for generating noise, so it's not too bad.
 
+                // note: aoOptions.resolution is either 1.0 or 0.5, and the result is then
+                // guaranteed to be an integer (because xvp is a multiple of 16).
                 view.prepareViewport(svp,
-                        xvp.left   * aoOptions.resolution,
-                        xvp.bottom * aoOptions.resolution);
+                        filament::Viewport{
+                             int32_t(float(xvp.left  ) * aoOptions.resolution),
+                             int32_t(float(xvp.bottom) * aoOptions.resolution),
+                            uint32_t(float(xvp.width ) * aoOptions.resolution),
+                            uint32_t(float(xvp.height) * aoOptions.resolution)});
 
                 view.commitUniforms(driver);
 
@@ -876,8 +879,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     pass.sortCommands(engine);
 
     FrameGraphTexture::Descriptor const desc = {
-            .width = config.width,
-            .height = config.height,
+            .width = config.physicalViewport.width,
+            .height = config.physicalViewport.height,
             .format = config.hdrFormat
     };
 
@@ -888,7 +891,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 if (colorGradingConfig.asSubpass) {
                     ppm.colorGradingPrepareSubpass(driver,
                             colorGrading, colorGradingConfig, vignetteOptions,
-                            config.width, config.height);
+                            desc.width, desc.height);
                 } else if (colorGradingConfig.customResolve) {
                     ppm.customResolvePrepareSubpass(driver,
                             PostProcessManager::CustomResolveOp::COMPRESS);

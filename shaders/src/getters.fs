@@ -76,21 +76,23 @@ float getNdotV() {
     return shading_NoV;
 }
 
+highp vec3 getNormalizedPhysicalViewportCoord() {
+    // make sure to handle our reversed-z
+    return vec3(shading_normalizedViewportCoord, gl_FragCoord.z);
+}
+
 /**
- * Returns the normalized [0, 1] viewport coordinates with the origin at the viewport's bottom-left.
- * Z coordinate is in the [0, 1] range as well.
+ * Returns the normalized [0, 1] logical viewport coordinates with the origin at the viewport's
+ * bottom-left. Z coordinate is in the [1, 0] range (reversed).
  *
  * @public-api
  */
 highp vec3 getNormalizedViewportCoord() {
     // make sure to handle our reversed-z
-    return vec3(shading_normalizedViewportCoord, 1.0 - gl_FragCoord.z);
-}
-
-// This new version doesn't invert Z.
-// TODO: Should we make it public?
-highp vec3 getNormalizedViewportCoord2() {
-    return vec3(shading_normalizedViewportCoord, gl_FragCoord.z);
+    highp vec2 scale = frameUniforms.logicalViewportScale;
+    highp vec2 offset = frameUniforms.logicalViewportOffset;
+    highp vec2 logicalUv = shading_normalizedViewportCoord * scale + offset;
+    return vec3(logicalUv, gl_FragCoord.z);
 }
 
 #if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DYNAMIC_LIGHTING)
