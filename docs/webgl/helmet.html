@@ -10,7 +10,7 @@ html, body { height: 100%; }
 body       { margin: 0; overflow: hidden; }
 #container { position: relative; height: 100%; }
 canvas     { position: absolute; width: 100%; height: 100%; }
-#messages  { position: absolute; width: 100%; height: 100%; padding-left: 10px; color:white; }
+#messages  { position: absolute; width: 100%; height: 100%; padding-left: 10px; color:blue; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -20,7 +20,7 @@ canvas     { position: absolute; width: 100%; height: 100%; }
 </div>
 <script src="filament.js"></script>
 <script src="gl-matrix-min.js"></script>
-<script src="https://unpkg.com/gltumble"></script>
+<script src="gltumble.min.js"></script>
 <script>
 
 const env = 'default_env';
@@ -43,7 +43,19 @@ class App {
         const scene = this.scene = engine.createScene();
         this.trackball = new Trackball(canvas, {startSpin: 0.035});
 
-        const indirectLight = this.ibl = engine.createIblFromKtx(ibl_url);
+        const messages = document.getElementById('messages');
+
+        canvas.addEventListener('pointerdown', evt => {
+            const x = evt.clientX;
+            const y = this.canvas.getBoundingClientRect().height - 1 - evt.clientY;
+            const dpr = window.devicePixelRatio;
+            this.view.pick(x * dpr, y * dpr, (results) => {
+                const name = this.asset.getName(results.renderable);
+                messages.innerText = name ? ('Picked ' + name) : '';
+            });
+        });
+
+        const indirectLight = this.ibl = engine.createIblFromKtx1(ibl_url);
         this.scene.setIndirectLight(indirectLight);
 
         const iblDirection = IndirectLight.getDirectionEstimate(indirectLight.shfloats);
@@ -58,7 +70,7 @@ class App {
         mat3.fromRotation(mat, radians, [0, 1, 0]);
         indirectLight.setRotation(mat);
 
-        const skybox = engine.createSkyFromKtx(sky_url);
+        const skybox = engine.createSkyFromKtx1(sky_url);
         this.scene.setSkybox(skybox);
 
         const sunlight = Filament.EntityManager.get().create();
@@ -76,10 +88,8 @@ class App {
         const loader = this.loader = engine.createAssetLoader();
 
         this.allowRefresh = false;
-        const asset = this.asset = loader.createAssetFromJson(mesh_url);
+        const asset = this.asset = loader.createAsset(mesh_url);
         this.assetRoot = this.asset.getRoot();
-
-        const messages = document.getElementById('messages');
 
         // Crudely indicate progress by printing the URI of each resource as it is loaded.
         const onFetched = (uri) => messages.innerText += `Downloaded ${uri}\n`;
@@ -87,17 +97,8 @@ class App {
         const onDone = () => {
             this.allowRefresh = true;
 
-            // Enable shadows on every renderable.
-            const entities = asset.getEntities();
-            const rm = engine.getRenderableManager();
-            for (const entity of entities) {
-                const instance = rm.getInstance(entity);
-                rm.setCastShadows(instance, true);
-                instance.delete();
-            }
-
-            // Hide the HUD.
-            messages.remove();
+            // Clear the progress indication messages.
+            messages.innerText = "";
         };
         asset.loadResources(onDone, onFetched);
 
@@ -137,7 +138,7 @@ class App {
         this.allowRefresh = false;
         this.scene.removeEntities(this.asset.getEntities());
         this.loader.destroyAsset(this.asset);
-        this.asset = this.loader.createAssetFromJson(mesh_url);
+        this.asset = this.loader.createAsset(mesh_url);
         const onDone = () => { this.allowRefresh = true; }
         this.asset.loadResources(onDone);
     }
@@ -149,7 +150,7 @@ class App {
         tcm.setTransform(inst, this.trackball.getMatrix());
         inst.delete();
 
-        // Add renderable entities to the scene as they become ready.
+        // Gradually add renderables to the scene as their textures become ready.
         let entity;
         const popRenderable = () => {
             entity = this.asset.popRenderable();
