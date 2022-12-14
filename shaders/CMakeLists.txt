@@ -16,6 +16,7 @@ set(SHADERS
         src/brdf.fs
         src/common_defines.glsl
         src/common_getters.glsl
+        src/common_instancing.glsl
         src/common_graphics.fs
         src/common_lighting.fs
         src/common_material.fs

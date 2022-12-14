@@ -1,36 +1,20 @@
 //------------------------------------------------------------------------------
-// Instance access
-//------------------------------------------------------------------------------
-
-#if defined(MATERIAL_HAS_INSTANCES)
-/** @public-api */
-int getInstanceIndex() {
-    return instance_index;
-}
-#endif
-
-//------------------------------------------------------------------------------
 // Uniforms access
 //------------------------------------------------------------------------------
 
-PerRenderableData getObjectUniforms() {
-#if defined(MATERIAL_HAS_INSTANCES)
-    // the material manages instancing, all instances share the same uniform block.
-    return objectUniforms.data[0];
-#else
-    // automatic instancing was used, each instance has its own uniform block.
-    return objectUniforms.data[instance_index];
-#endif
-}
-
 /** @public-api */
 mat4 getWorldFromModelMatrix() {
-    return getObjectUniforms().worldFromModelMatrix;
+    return object_uniforms.worldFromModelMatrix;
 }
 
 /** @public-api */
 mat3 getWorldFromModelNormalMatrix() {
-    return getObjectUniforms().worldFromModelNormalMatrix;
+    return object_uniforms.worldFromModelNormalMatrix;
+}
+
+/** sort-of public */
+float getObjectUserData() {
+    return object_uniforms.userData;
 }
 
 //------------------------------------------------------------------------------
@@ -94,7 +78,7 @@ void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
 
 void morphPosition(inout vec4 p) {
     ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
-    uint c = getObjectUniforms().morphTargetCount;
+    uint c = object_uniforms.morphTargetCount;
     for (uint i = 0u; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];
         if (w != 0.0) {
@@ -107,7 +91,7 @@ void morphPosition(inout vec4 p) {
 void morphNormal(inout vec3 n) {
     vec3 baseNormal = n;
     ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
-    uint c = getObjectUniforms().morphTargetCount;
+    uint c = object_uniforms.morphTargetCount;
     for (uint i = 0u; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];
         if (w != 0.0) {
@@ -127,7 +111,7 @@ vec4 getPosition() {
 
 #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
 
-    if ((getObjectUniforms().flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
+    if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
 #if defined(LEGACY_MORPHING)
         pos += morphingUniforms.weights[0] * mesh_custom0;
         pos += morphingUniforms.weights[1] * mesh_custom1;
@@ -138,7 +122,7 @@ vec4 getPosition() {
 #endif
     }
 
-    if ((getObjectUniforms().flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
+    if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
         skinPosition(pos.xyz, mesh_bone_indices, mesh_bone_weights);
     }
 
