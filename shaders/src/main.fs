@@ -19,6 +19,8 @@ void blendPostLightingColor(const MaterialInputs material, inout vec4 color) {
 void main() {
     filament_lodBias = frameUniforms.lodBias;
 
+    initObjectUniforms(object_uniforms);
+
     // See shading_parameters.fs
     // Computes global variables we need to evaluate material and lighting
     computeShadingParams();

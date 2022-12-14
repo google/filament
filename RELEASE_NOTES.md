@@ -13,6 +13,7 @@ A new header is inserted each time a *tag* is created.
 - web: added TypeScript definition for `Engine.destroy`
 - materials: `getNormalizedViewportCoord()` now returns the logical (i.e. user) viewport
              normalized position and keeps z reversed [⚠️ **Recompile Materials**]
+- backend: workaround Adreno shader compiler bug (#6355) [⚠️ **Recompile Materials**]
 
 ## v1.30.0
 
