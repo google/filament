@@ -190,7 +190,7 @@ last resort. Go ahead and replace the <strong>declare asset URLs</strong> commen
 
 <h2>Create skybox and IBL</h2>
 <p>Next, let&#x27;s create the low-resolution skybox and IBL in the <code>App</code> constructor.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">this</span>.skybox<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.engine.createSkyFromKtx(sky_small_url);<span style="color: #bbbbbb"></span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">this</span>.skybox<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.engine.createSkyFromKtx1(sky_small_url);<span style="color: #bbbbbb"></span>
 <span style="color: #008000; font-weight: bold">this</span>.scene.setSkybox(<span style="color: #008000; font-weight: bold">this</span>.skybox);<span style="color: #bbbbbb"></span>
 <span style="color: #008000; font-weight: bold">this</span>.indirectLight<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.engine.createIblFromKtx(ibl_url);<span style="color: #bbbbbb"></span>
 <span style="color: #008000; font-weight: bold">this</span>.indirectLight.setIntensity(<span style="color: #666666">100000</span>);<span style="color: #bbbbbb"></span>
@@ -226,7 +226,7 @@ was created in the app constructor.</p>
 
 <span style="color: #bbbbbb">    </span><span style="color: #3D7B7B; font-style: italic">// Replace low-res skybox with high-res skybox.</span><span style="color: #bbbbbb"></span>
 <span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.engine.destroySkybox(<span style="color: #008000; font-weight: bold">this</span>.skybox);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.skybox<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.engine.createSkyFromKtx(sky_large_url);<span style="color: #bbbbbb"></span>
+<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.skybox<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.engine.createSkyFromKtx1(sky_large_url);<span style="color: #bbbbbb"></span>
 <span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.scene.setSkybox(<span style="color: #008000; font-weight: bold">this</span>.skybox);<span style="color: #bbbbbb"></span>
 
 <span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">this</span>.scene.addEntity(<span style="color: #008000; font-weight: bold">this</span>.suzanne);<span style="color: #bbbbbb"></span>
