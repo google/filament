@@ -270,7 +270,7 @@ Filament provides a JavaScript utility to make this simpler,
 simply replace the **create IBL** comment with the following snippet.
 
 ```js {fragment="create IBL"}
-const indirectLight = engine.createIblFromKtx(ibl_url);
+const indirectLight = engine.createIblFromKtx1(ibl_url);
 indirectLight.setIntensity(50000);
 scene.setIndirectLight(indirectLight);
 ```

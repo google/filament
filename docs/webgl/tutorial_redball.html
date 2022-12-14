@@ -245,7 +245,7 @@ scene.setIndirectLight(indirectLight);<span style="color: #bbbbbb"></span>
 
 <p>Filament provides a JavaScript utility to make this simpler,
 simply replace the <strong>create IBL</strong> comment with the following snippet.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>indirectLight<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>engine.createIblFromKtx(ibl_url);<span style="color: #bbbbbb"></span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>indirectLight<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span>engine.createIblFromKtx1(ibl_url);<span style="color: #bbbbbb"></span>
 indirectLight.setIntensity(<span style="color: #666666">50000</span>);<span style="color: #bbbbbb"></span>
 scene.setIndirectLight(indirectLight);<span style="color: #bbbbbb"></span>
 </pre></div>
