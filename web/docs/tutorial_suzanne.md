@@ -215,7 +215,7 @@ const filamesh_url = 'suzanne.filamesh';
 Next, let's create the low-resolution skybox and IBL in the `App` constructor.
 
 ```js {fragment="create sky box and IBL"}
-this.skybox = this.engine.createSkyFromKtx(sky_small_url);
+this.skybox = this.engine.createSkyFromKtx1(sky_small_url);
 this.scene.setSkybox(this.skybox);
 this.indirectLight = this.engine.createIblFromKtx(ibl_url);
 this.indirectLight.setIntensity(100000);
@@ -256,7 +256,7 @@ Filament.fetch([sky_large_url, albedo_url, roughness_url, metallic_url, normal_u
 
     // Replace low-res skybox with high-res skybox.
     this.engine.destroySkybox(this.skybox);
-    this.skybox = this.engine.createSkyFromKtx(sky_large_url);
+    this.skybox = this.engine.createSkyFromKtx1(sky_large_url);
     this.scene.setSkybox(this.skybox);
 
     this.scene.addEntity(this.suzanne);

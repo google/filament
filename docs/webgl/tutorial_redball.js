@@ -73,7 +73,7 @@ class App {
     const indirectLight = engine.createIblFromKtx(ibl_url);
     indirectLight.setIntensity(50000);
     scene.setIndirectLight(indirectLight);
-    const skybox = engine.createSkyFromKtx(sky_url);
+    const skybox = engine.createSkyFromKtx1(sky_url);
     scene.setSkybox(skybox);
     this.swapChain = engine.createSwapChain();
     this.renderer = engine.createRenderer();
