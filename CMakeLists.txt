@@ -554,7 +554,7 @@ function(list_licenses OUTPUT MODULES)
         endif()
     endforeach()
     configure_file(${FILAMENT}/build/licenses.inc.in ${OUTPUT})
-endfunction(list_licenses)
+endfunction()
 
 set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build/linux/combine-static-libs.sh")
 if (WIN32)
