@@ -563,6 +563,7 @@ void applySettings(Engine* engine, const ViewerOptions& settings, Camera* camera
 
         camera->setFocusDistance(settings.cameraFocusDistance);
     }
+    engine->setAutomaticInstancingEnabled(settings.autoInstancingEnabled);
 }
 
 constexpr ToneMapper* createToneMapper(const ColorGradingSettings& settings) noexcept {
