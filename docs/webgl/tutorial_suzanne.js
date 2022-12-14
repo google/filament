@@ -25,7 +25,7 @@ class App {
     this.suzanne = filamesh.renderable;
     this.skybox = this.engine.createSkyFromKtx1(sky_small_url);
     this.scene.setSkybox(this.skybox);
-    this.indirectLight = this.engine.createIblFromKtx(ibl_url);
+    this.indirectLight = this.engine.createIblFromKtx1(ibl_url);
     this.indirectLight.setIntensity(100000);
     this.scene.setIndirectLight(this.indirectLight);
     this.trackball = new Trackball(canvas, {
