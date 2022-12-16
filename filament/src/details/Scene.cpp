@@ -291,14 +291,14 @@ void FScene::updateUBOs(
     driver.updateBufferObjectUnsynchronized(renderableUbh, {
             buffer, count * sizeof(PerRenderableData),
             +[](void* p, size_t s, void* user) {
+                std::weak_ptr<SharedState>* const weakShared =
+                        static_cast<std::weak_ptr<SharedState>*>(user);
                 if (s >= MAX_STREAM_ALLOCATION_COUNT * sizeof(PerRenderableData)) {
-                    std::weak_ptr<SharedState>* const weakShared =
-                            static_cast<std::weak_ptr<SharedState>*>(user);
                     if (auto state = weakShared->lock()) {
                         state->mBufferPoolAllocator.put(p);
                     }
-                    delete weakShared;
                 }
+                delete weakShared;
             }, weakShared
     }, 0);
 
