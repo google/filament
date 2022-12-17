@@ -647,7 +647,7 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
         driver.queueCommand(make_copyable_function([data = image.detach()]() {}));
     }
 
-    // no need to call the user callback because buffer is a reference and it'll be destroyed
+    // no need to call the user callback because buffer is a reference, and it'll be destroyed
     // by the caller (without being move()d here).
 }
 

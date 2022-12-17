@@ -115,7 +115,7 @@ FRenderer::~FRenderer() noexcept {
 }
 
 void FRenderer::terminate(FEngine& engine) {
-    // Here we would cleanly free resources we've allocated or we own, in particular we would
+    // Here we would cleanly free resources we've allocated, or we own, in particular we would
     // shut down threads if we created any.
     DriverApi& driver = engine.getDriverApi();
 
@@ -159,12 +159,12 @@ TextureFormat FRenderer::getLdrFormat(bool translucent) const noexcept {
 std::pair<Handle<HwRenderTarget>, TargetBufferFlags>
         FRenderer::getRenderTarget(FView const& view) const noexcept {
     Handle<HwRenderTarget> outTarget = view.getRenderTargetHandle();
-    TargetBufferFlags outAttachementMask = view.getRenderTargetAttachmentMask();
+    TargetBufferFlags outAttachmentMask = view.getRenderTargetAttachmentMask();
     if (!outTarget) {
         outTarget = mRenderTargetHandle;
-        outAttachementMask = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
+        outAttachmentMask = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
     }
-    return {outTarget, outAttachementMask };
+    return { outTarget, outAttachmentMask };
 }
 
 backend::TargetBufferFlags FRenderer::getClearFlags() const noexcept {
@@ -236,7 +236,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
 
     /*
     * From this point, we can't do any more work in beginFrame() because the user could choose
-    * to ignore the return value and render the frame anyways -- which is perfectly fine.
+    * to ignore the return value and render the frame anyway -- which is perfectly fine.
     * The remaining work will be done when the first render() call is made.
     */
     auto beginFrameInternal = [this, appVsync]() {
@@ -263,7 +263,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         return true;
     }
 
-    // however, if we return false, the user is allowed to ignore us and render a frame anyways,
+    // however, if we return false, the user is allowed to ignore us and render a frame anyway,
     // so we need to delay this work until that happens.
     mBeginFrameInternal = beginFrameInternal;
 
@@ -285,7 +285,7 @@ void FRenderer::endFrame() {
     FEngine::DriverApi& driver = engine.getDriverApi();
 
     if (UTILS_HAS_THREADING) {
-        // on debug builds this helps catching cases where we're writing to
+        // on debug builds this helps to catch cases where we're writing to
         // the buffer form another thread, which is currently not allowed.
         driver.debugThreading();
     }
@@ -429,7 +429,7 @@ void FRenderer::render(FView const* view) {
 
     if (UTILS_LIKELY(view && view->getScene())) {
         if (mViewRenderedCount) {
-            // this is a good place to kick the GPU, since we've rendered a View before
+            // this is a good place to kick the GPU, since we've rendered a View before,
             // and we're about to render another one.
             mEngine.getDriverApi().flush();
         }
