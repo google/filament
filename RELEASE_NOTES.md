@@ -17,7 +17,7 @@ A new header is inserted each time a *tag* is created.
              normalized position and keeps z reversed [⚠️ **Recompile Materials**]
 - backend: workaround Adreno shader compiler bug (#6355) [⚠️ **Recompile Materials**]
 - geometry: change computing tangent basis from normal vector to use Frisvad's method
-- backend: workaround marker/label pop ordering bug (6292)
+- backend: workaround marker/label pop ordering bug (#6192)
 
 ## v1.30.0
 
