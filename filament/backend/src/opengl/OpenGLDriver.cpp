@@ -2360,8 +2360,10 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mRenderPassDepthWrite   = any(clearFlags & TargetBufferFlags::DEPTH);
     mRenderPassStencilWrite = any(clearFlags & TargetBufferFlags::STENCIL);
 
+    static_assert(sizeof(GLsizei) >= sizeof(uint32_t));
     gl.viewport(params.viewport.left, params.viewport.bottom,
-            (GLsizei)params.viewport.width, (GLsizei)params.viewport.height);
+            (GLsizei)std::min(uint32_t(std::numeric_limits<int32_t>::max()), params.viewport.width),
+            (GLsizei)std::min(uint32_t(std::numeric_limits<int32_t>::max()), params.viewport.height));
 
     gl.depthRange(params.depthRange.near, params.depthRange.far);
 

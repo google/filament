@@ -130,7 +130,7 @@ private:
 
     void computeAllWorldTransforms() noexcept;
 
-    static void computeWorldTransform(math::mat4f& outWorld, math::float3& inoutWorldTranslationLo,
+    void computeWorldTransform(math::mat4f& outWorld, math::float3& inoutWorldTranslationLo,
             math::mat4f const& pt, math::mat4f const& local,
             math::float3 const& ptTranslationLo, math::float3 const& localTranslationLo,
             bool accurate);
@@ -166,7 +166,7 @@ private:
         typename Base::SoA& getSoA() { return mData; }
 
         struct Proxy {
-            // all of these gets inlined
+            // all of this gets inlined
             UTILS_ALWAYS_INLINE
             Proxy(Base& sim, utils::EntityInstanceBase::Type i) noexcept
                     : local{ sim, i } { }

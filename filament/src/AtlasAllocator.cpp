@@ -35,8 +35,8 @@ AtlasAllocator::AtlasAllocator(size_t maxTextureSize) noexcept {
     mMaxTextureSizePot = (sizeof(maxTextureSize) * 8 - 1u) - utils::clz(maxTextureSize);
 }
 
-Viewport AtlasAllocator::allocate(size_t textureSize) noexcept {
-    Viewport result{};
+AtlasAllocator::Allocation AtlasAllocator::allocate(size_t textureSize) noexcept {
+    Allocation result{};
     const size_t powerOfTwo = (sizeof(textureSize) * 8 - 1u) - utils::clz(textureSize);
 
     // asked for a texture size too large
@@ -45,22 +45,24 @@ Viewport AtlasAllocator::allocate(size_t textureSize) noexcept {
     }
 
     // asked for a texture size too small
-    if (UTILS_UNLIKELY(mMaxTextureSizePot - powerOfTwo >= QuadTree::height())) {
+    if (UTILS_UNLIKELY(mMaxTextureSizePot - powerOfTwo >= QUAD_TREE_DEPTH)) {
         return result;
     }
 
-    const size_t layer = mMaxTextureSizePot - powerOfTwo;
-    const NodeId loc = allocateInLayer(layer);
+    const size_t layer = (mMaxTextureSizePot - powerOfTwo);
+    const NodeId loc = allocateInLayer(LAYERS_DEPTH + layer);
     if (loc.l >= 0) {
-        assert_invariant(loc.l == int8_t(layer));
-        size_t dimension = 1u << powerOfTwo;
+        assert_invariant(loc.l - LAYERS_DEPTH == int8_t(layer));
+        const size_t dimension = 1u << powerOfTwo;
         // find the location of in the texture from the morton code (quadtree position)
-        auto [x, y] = unmorton(loc.code);
+        const auto [x, y] = unmorton(loc.code);
         // scale to our maximum allocation size
-        result.left   = int32_t(x) << powerOfTwo;
-        result.bottom = int32_t(y) << powerOfTwo;
-        result.width  = dimension;
-        result.height = dimension;
+        const uint32_t mask = (1u << layer) - 1u;
+        result.viewport.left   = int32_t(x & mask) << powerOfTwo;
+        result.viewport.bottom = int32_t(y & mask) << powerOfTwo;
+        result.viewport.width  = dimension;
+        result.viewport.height = dimension;
+        result.layer = loc.code >> (2 * layer);
     }
     return result;
 }
@@ -108,9 +110,9 @@ AtlasAllocator::NodeId AtlasAllocator::allocateInLayer(size_t maxHeight) noexcep
                 }
 
                 // We only want to find a fitting node that already has siblings, in order
-                // to accomplish a "best fit" allocation. So if we're a parent of a 'fitting'
-                // node and don't have children, we skip the children recursion.
-                if (curr.l == n - 1 && !node.hasChildren()) {
+                // to accomplish a "best fit" allocation. So if a parent (of what we're looking for)
+                // has no children, we skip the whole tree below it.
+                if (!node.hasChildren()) {
                     return QuadTree::TraversalResult::SKIP_CHILDREN;
                 }
 
@@ -121,6 +123,8 @@ AtlasAllocator::NodeId AtlasAllocator::allocateInLayer(size_t maxHeight) noexcep
     if (candidate.l >= 0) {
         const size_t i = index(candidate.l, candidate.code);
         Node& allocation = mQuadTree[i];
+        assert_invariant(!allocation.isAllocated());
+        assert_invariant(!allocation.hasChildren());
 
         if (candidate.l == n) {
             allocation.allocated = true;
@@ -132,26 +136,38 @@ AtlasAllocator::NodeId AtlasAllocator::allocateInLayer(size_t maxHeight) noexcep
                 assert_invariant(parent.hasChildren());
                 assert_invariant(!parent.hasAllChildren());
                 parent.children++;
+
+#ifndef NDEBUG
+                // check that all the parents are not allocated and have at least 1 child.
+                NodeId ppp = candidate;
+                while (ppp.l > 0) {
+                    const size_t pi = QuadTreeUtils::parent(ppp.l, ppp.code);
+                    ppp = NodeId{ int8_t(ppp.l - 1), uint8_t(ppp.code >> 2) };
+                    Node& node = mQuadTree[pi];
+                    assert_invariant(!node.isAllocated());
+                    assert_invariant(node.hasChildren());
+                }
+#endif
             }
         } else if (candidate.l < int8_t(QuadTree::height())) {
             // we need to create the hierarchy down to the level we need
-            assert_invariant(!allocation.isAllocated());
-            assert_invariant(!allocation.hasChildren());
-
-            NodeId found{};
+            NodeId found{ -1, 0 };
             QuadTree::traverse(candidate.l, candidate.code,
                     [this, n, &found](NodeId const& curr) -> QuadTree::TraversalResult {
                         size_t i = index(curr.l, curr.code);
                         Node& node = mQuadTree[i];
                         if (curr.l == n) {
                             found = curr;
+                            assert_invariant(!node.hasChildren());
                             node.allocated = true;
                             return QuadTree::TraversalResult::EXIT;
                         }
+                        assert_invariant(!node.hasAllChildren());
                         node.children++;
                         return QuadTree::TraversalResult::RECURSE;
                     });
 
+            assert_invariant(found.l != -1);
             candidate = found;
         }
     }

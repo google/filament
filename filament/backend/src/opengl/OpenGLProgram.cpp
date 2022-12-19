@@ -105,16 +105,16 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
         GLuint shaderIds[Program::SHADER_TYPE_COUNT],
         std::array<CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept {
 
-    std::string specificationConstantString;
+    std::string specializationConstantString;
     for (auto const& sc : specializationConstants) {
-        specificationConstantString += "#define SPIRV_CROSS_CONSTANT_ID_" + std::to_string(sc.id) + ' ';
-        specificationConstantString += std::visit([](auto&& arg) {
+        specializationConstantString += "#define SPIRV_CROSS_CONSTANT_ID_" + std::to_string(sc.id) + ' ';
+        specializationConstantString += std::visit([](auto&& arg) {
             return std::to_string(arg);
         }, sc.value);
-        specificationConstantString += '\n';
+        specializationConstantString += '\n';
     }
-    if (!specificationConstantString.empty()) {
-        specificationConstantString += '\n';
+    if (!specializationConstantString.empty()) {
+        specializationConstantString += '\n';
     }
 
     // build all shaders
@@ -143,14 +143,14 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
 
             const std::array<const char*, 4> sources = {
                     prolog.data(),
-                    specificationConstantString.c_str(),
+                    specializationConstantString.c_str(),
                     packingFunctions.data(),
                     body.data()
             };
 
             const std::array<GLint, 4> lengths = {
                     (GLint)prolog.length(),
-                    (GLint)specificationConstantString.length(),
+                    (GLint)specializationConstantString.length(),
                     (GLint)packingFunctions.length(),
                     (GLint)body.length() - 1 // null terminated
             };

@@ -707,6 +707,11 @@ void RenderPass::Executor::overrideScissor(backend::Viewport const* scissor) noe
     }
 }
 
+void RenderPass::Executor::overrideScissor(backend::Viewport const& scissor) noexcept {
+    mScissorOverride = true;
+    mScissor = scissor;
+}
+
 void RenderPass::Executor::execute(FEngine& engine, const char* name) const noexcept {
     execute(engine.getDriverApi(), mCommands.begin(), mCommands.end());
 }

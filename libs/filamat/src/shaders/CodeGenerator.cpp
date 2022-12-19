@@ -121,8 +121,8 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
 
     // specification constants
     out << '\n';
-    generateSpecificationConstant(out, "BACKEND_FEATURE_LEVEL", 0, 1);
-    generateSpecificationConstant(out, "CONFIG_MAX_INSTANCES", 1, (int)CONFIG_MAX_INSTANCES);
+    generateSpecializationConstant(out, "BACKEND_FEATURE_LEVEL", 0, 1);
+    generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES", 1, (int)CONFIG_MAX_INSTANCES);
 
     out << '\n';
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;
@@ -597,7 +597,7 @@ io::sstream& CodeGenerator::generateIndexedDefine(io::sstream& out, const char* 
     return out;
 }
 
-utils::io::sstream& CodeGenerator::generateSpecificationConstant(utils::io::sstream& out,
+utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sstream& out,
         const char* name, uint32_t id, std::variant<int, float, bool> value) const {
     static const char* types[] = { "int", "float", "bool" };
     if (mTargetLanguage == MaterialBuilderBase::TargetLanguage::SPIRV) {

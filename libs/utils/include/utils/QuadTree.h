@@ -87,11 +87,11 @@ static_assert(size(4) == 85);
 /**
  * A Quad-tree encoded as an array.
  * @tparam T        Type of the quad-tree nodes
- * @tparam HEIGHT   Height of the quad-tree, muse be <= 4
+ * @tparam HEIGHT   Height of the quad-tree
  */
 template<typename T, size_t HEIGHT>
 class QuadTreeArray : public std::array<T, QuadTreeUtils::size(HEIGHT)> {
-    static_assert(HEIGHT <= 4, "QuadTreeArray height must be <= 4");
+    static_assert(HEIGHT <= 7, "QuadTreeArray height must be <= 7 (16-bits morton)");
 
     // Simple fixed capacity stack
     template<typename TYPE, size_t CAPACITY,

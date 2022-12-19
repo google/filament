@@ -89,23 +89,13 @@ public:
     FrameGraphId<FrameGraphTexture> render(FEngine& engine, FrameGraph& fg, RenderPass const& pass,
             FView& view, CameraInfo const& mainCameraInfo, math::float4 const& userTime) noexcept;
 
-    ShadowMap* getCascadeShadowMap(size_t cascade) noexcept {
-        assert_invariant(cascade < CONFIG_MAX_SHADOW_CASCADES);
-        return std::launder(reinterpret_cast<ShadowMap*>(&mShadowMapCache[cascade]));
-    }
-
-    ShadowMap const* getCascadeShadowMap(size_t cascade) const noexcept {
-        return const_cast<ShadowMapManager*>(this)->getCascadeShadowMap(cascade);
-    }
-
-    ShadowMap* getPointOrSpotShadowMap(size_t index) noexcept {
+    ShadowMap* getShadowMap(size_t index) noexcept {
         assert_invariant(index < CONFIG_MAX_SHADOWMAPS);
-        return std::launder(reinterpret_cast<ShadowMap*>(
-                &mShadowMapCache[index]));
+        return std::launder(reinterpret_cast<ShadowMap*>(&mShadowMapCache[index]));
     }
 
-    ShadowMap const* getPointOrSpotShadowMap(size_t spot) const noexcept {
-        return const_cast<ShadowMapManager*>(this)->getPointOrSpotShadowMap(spot);
+    ShadowMap const* getShadowMap(size_t index) const noexcept {
+        return const_cast<ShadowMapManager*>(this)->getShadowMap(index);
     }
 
     // valid after calling update() above
@@ -190,6 +180,7 @@ private:
         uint16_t size = 0;
         uint8_t layers = 0;
         uint8_t levels = 0;
+        uint8_t msaaSamples = 1;
         backend::TextureFormat format = backend::TextureFormat::DEPTH16;
     } mTextureAtlasRequirements;
 

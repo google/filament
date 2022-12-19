@@ -22,7 +22,7 @@ using namespace filament;
 
 TEST(AtlasAllocator, AllocateFirstLevel) {
 
-    AtlasAllocator allocator;
+    AtlasAllocator allocator(1024);
 
     auto a = allocator.allocateInLayer(0);
     EXPECT_TRUE(a.l == 0 && a.code == 0);
@@ -39,7 +39,7 @@ TEST(AtlasAllocator, AllocateFirstLevel) {
 
 TEST(AtlasAllocator, AllocateSecondLevel) {
 
-    AtlasAllocator allocator;
+    AtlasAllocator allocator(1024);
 
     auto d0 = allocator.allocateInLayer(1);
     EXPECT_TRUE(d0.l == 1 && d0.code == 0);
@@ -55,7 +55,7 @@ TEST(AtlasAllocator, AllocateSecondLevel) {
 }
 
 TEST(AtlasAllocator, AllocateMixed0) {
-    AtlasAllocator allocator;
+    AtlasAllocator allocator(1024);
 
     auto e0 = allocator.allocateInLayer(1);
     EXPECT_TRUE(e0.l == 1 && e0.code == 0);
@@ -74,7 +74,7 @@ TEST(AtlasAllocator, AllocateMixed0) {
 }
 
 TEST(AtlasAllocator, AllocateMixed1) {
-    AtlasAllocator allocator;
+    AtlasAllocator allocator(1024);
 
     auto e0 = allocator.allocateInLayer(1);
     EXPECT_TRUE(e0.l == 1 && e0.code == 0);
@@ -90,7 +90,7 @@ TEST(AtlasAllocator, AllocateMixed1) {
 }
 
 TEST(AtlasAllocator, AllocateMixed2) {
-    AtlasAllocator allocator;
+    AtlasAllocator allocator(1024);
 
     auto e0 = allocator.allocateInLayer(1);
     EXPECT_TRUE(e0.l == 1 && e0.code == 0);
@@ -122,10 +122,11 @@ TEST(AtlasAllocator, AllocateBySize) {
 
     Viewport vp(0,0,256,256);
     auto vp0 = allocator.allocate(256);
-    EXPECT_EQ(vp0, vp);
+    EXPECT_EQ(vp0.viewport, vp);
+    EXPECT_EQ(vp0.layer, 0);
 
     auto vp1 = allocator.allocate(128);
-    EXPECT_TRUE(vp1.empty());
+    EXPECT_EQ(vp1.layer, 1);
 }
 
 TEST(AtlasAllocator, AllocateBySizeOneOfEach) {
@@ -140,10 +141,35 @@ TEST(AtlasAllocator, AllocateBySizeOneOfEach) {
     auto vp2 = allocator.allocate(32);
     auto vp3 = allocator.allocate(16);
 
-    EXPECT_EQ(vp0, r0);
-    EXPECT_EQ(vp1, r1);
-    EXPECT_EQ(vp2, r2);
-    EXPECT_TRUE(vp3.empty());
+    EXPECT_EQ(vp0.layer, 0);
+    EXPECT_EQ(vp1.layer, 0);
+    EXPECT_EQ(vp2.layer, 0);
 
+    EXPECT_EQ(vp0.viewport, r0);
+    EXPECT_EQ(vp1.viewport, r1);
+    EXPECT_EQ(vp2.viewport, r2);
+    EXPECT_TRUE(vp3.viewport.empty());
+
+}
+
+TEST(AtlasAllocator, AllocateBySizeFullLayers) {
+    AtlasAllocator allocator(512);
+
+    Viewport r(0,0,512,512);
+
+    auto vp0 = allocator.allocate(512);
+    auto vp1 = allocator.allocate(512);
+    auto vp2 = allocator.allocate(512);
+    auto vp3 = allocator.allocate(512);
+
+    EXPECT_EQ(vp0.layer, 0);
+    EXPECT_EQ(vp1.layer, 1);
+    EXPECT_EQ(vp2.layer, 2);
+    EXPECT_EQ(vp3.layer, 3);
+
+    EXPECT_EQ(vp0.viewport, r);
+    EXPECT_EQ(vp1.viewport, r);
+    EXPECT_EQ(vp2.viewport, r);
+    EXPECT_EQ(vp3.viewport, r);
 }
 

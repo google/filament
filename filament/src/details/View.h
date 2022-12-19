@@ -187,7 +187,7 @@ public:
     bool isStencilBufferEnabled() const noexcept { return mStencilBufferEnabled; }
 
     FCamera const* getDirectionalLightCamera() const noexcept {
-        return &mShadowMapManager.getCascadeShadowMap(0)->getDebugCamera();
+        return &mShadowMapManager.getShadowMap(0)->getDebugCamera();
     }
 
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {
@@ -305,9 +305,7 @@ public:
         mShadowType = shadow;
     }
 
-    void setVsmShadowOptions(VsmShadowOptions const& options) noexcept {
-        mVsmShadowOptions = options;
-    }
+    void setVsmShadowOptions(VsmShadowOptions options) noexcept;
 
     VsmShadowOptions getVsmShadowOptions() const noexcept {
         return mVsmShadowOptions;

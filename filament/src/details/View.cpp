@@ -294,7 +294,7 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
     }
 
     // Find all shadow-casting spotlights.
-    size_t shadowMapCount = 0;
+    size_t shadowMapCount = CONFIG_MAX_SHADOW_CASCADES;
 
     // We allow a max of CONFIG_MAX_SHADOWMAPS point/spotlight shadows. Any additional
     // shadow-casting spotlights are ignored.
@@ -314,16 +314,16 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
             continue; // doesn't cast shadows
         }
 
-        const auto& shadowOptions = lcm.getShadowOptions(li);
-        mShadowMapManager.addShadowMap(l, lcm.isSpotLight(li), &shadowOptions);
+        const bool spotLight = lcm.isSpotLight(li);
 
-        if (lcm.isSpotLight(li)) {
-            shadowMapCount += 6;
-        } else {
-            shadowMapCount += 1;
+        const size_t shadowMapCountNeeded = spotLight ? 1 : 6;
+        if (shadowMapCount + shadowMapCountNeeded <= CONFIG_MAX_SHADOWMAPS) {
+            shadowMapCount += shadowMapCountNeeded;
+            const auto& shadowOptions = lcm.getShadowOptions(li);
+            mShadowMapManager.addShadowMap(l, spotLight, &shadowOptions);
         }
 
-        if (shadowMapCount > CONFIG_MAX_SHADOWMAPS - 1) {
+        if (shadowMapCount >= CONFIG_MAX_SHADOWMAPS) {
             break; // we ran out of spotlight shadow casting
         }
     }
@@ -993,6 +993,10 @@ void FView::setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept
     options.ssct.sampleCount = math::clamp((unsigned)options.ssct.sampleCount, 1u, 255u);
     options.ssct.rayCount = math::clamp((unsigned)options.ssct.rayCount, 1u, 255u);
     mAmbientOcclusionOptions = options;
+}
+void FView::setVsmShadowOptions(VsmShadowOptions options) noexcept {
+    options.msaaSamples = std::max(uint8_t(0), options.msaaSamples);
+    mVsmShadowOptions = options;
 }
 
 void FView::setSoftShadowOptions(SoftShadowOptions options) noexcept {

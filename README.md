@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.29.0'
+    implementation 'com.google.android.filament:filament-android:1.30.0'
 }
 ```
 
@@ -51,7 +51,7 @@ Here are all the libraries available in the group `com.google.android.filament`:
 iOS projects can use CocoaPods to install the latest release:
 
 ```
-pod 'Filament', '~> 1.29.0'
+pod 'Filament', '~> 1.30.0'
 ```
 
 ### Snapshots
@@ -117,9 +117,9 @@ steps:
 - Image-based lighting
 - Physically-based camera (shutter speed, sensitivity and aperture)
 - Physical light units
-- Point lights, spot lights and directional light
+- Point lights, spot lights, and directional light
 - Specular anti-aliasing
-- Spot and directional light shadows
+- Point, spot, and directional light shadows
 - Cascaded shadows
 - EVSM, PCSS, DPCF, or PCF shadows
 - Transparent shadows

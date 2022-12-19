@@ -99,7 +99,7 @@ void ShadowMapManager::setDirectionalShadowMap(size_t lightIndex,
     for (size_t c = 0; c < options->shadowCascades; c++) {
         const size_t i = c;
         assert_invariant(i < CONFIG_MAX_SHADOW_CASCADES);
-        auto* pShadowMap = getCascadeShadowMap(i);
+        auto* pShadowMap = getShadowMap(i);
         pShadowMap->initialize(lightIndex, ShadowType::DIRECTIONAL, i, 0, options);
         mCascadeShadowMaps.push_back(pShadowMap);
     }
@@ -111,7 +111,7 @@ void ShadowMapManager::addShadowMap(size_t lightIndex, bool spotlight,
         const size_t c = mSpotShadowMaps.size();
         const size_t i = c + CONFIG_MAX_SHADOW_CASCADES;
         assert_invariant(i < CONFIG_MAX_SHADOWMAPS);
-        auto* pShadowMap = getPointOrSpotShadowMap(i);
+        auto* pShadowMap = getShadowMap(i);
         pShadowMap->initialize(lightIndex, ShadowType::SPOT, i, 0, options);
         mSpotShadowMaps.push_back(pShadowMap);
     } else {
@@ -120,7 +120,7 @@ void ShadowMapManager::addShadowMap(size_t lightIndex, bool spotlight,
             const size_t c = mSpotShadowMaps.size();
             const size_t i = c + CONFIG_MAX_SHADOW_CASCADES;
             assert_invariant(i < CONFIG_MAX_SHADOWMAPS);
-            auto* pShadowMap = getPointOrSpotShadowMap(i);
+            auto* pShadowMap = getShadowMap(i);
             pShadowMap->initialize(lightIndex, ShadowType::POINT, i, face, options);
             mSpotShadowMaps.push_back(pShadowMap);
         }
@@ -158,6 +158,8 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
         // a RenderPass per shadow map
         utils::FixedCapacityVector<ShadowPass> passList;
     };
+
+    VsmShadowOptions const& vsmShadowOptions = view.getVsmShadowOptions();
 
     auto& prepareShadowPass = fg.addPass<PrepareShadowPassData>("Prepare Shadow Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
@@ -203,7 +205,8 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                 // "read" from one of its resource (only writes), so the FrameGraph culls it.
                 builder.sideEffect();
             },
-            [this, &engine, &view, scene, mainCameraInfo, userTime, passTemplate = pass](
+            [this, &engine, &view, vsmShadowOptions,
+                scene, mainCameraInfo, userTime, passTemplate = pass](
                     FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
 
                 // Note: we could almost parallel_for the loop below, the problem currently is
@@ -251,7 +254,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         ShadowMap::prepareViewport(transaction, shadowMap.getViewport());
                         ShadowMap::prepareTime(transaction, engine, userTime);
                         ShadowMap::prepareShadowMapping(transaction,
-                                view.getVsmShadowOptions().highPrecision);
+                                vsmShadowOptions.highPrecision);
                         shadowMap.commit(transaction, driver);
 
                         // updatePrimitivesLod must be run before RenderPass::appendCommands.
@@ -277,11 +280,6 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                             };
                             entry.executor.overridePolygonOffset(&polygonOffset);
                         }
-
-                        constexpr const backend::Viewport disabledScissor{ 0, 0,
-                                (uint32_t)std::numeric_limits<int32_t>::max(),
-                                (uint32_t)std::numeric_limits<int32_t>::max() };
-                        entry.executor.overrideScissor(&disabledScissor);
                     }
                 }
 
@@ -310,6 +308,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
         
         const uint8_t layer = entry.shadowMap->getLayer();
         const auto* options = entry.shadowMap->getShadowOptions();
+        const auto msaaSamples = textureRequirements.msaaSamples;
 
         auto& shadowPass = fg.addPass<ShadowPassData>("Shadow Pass",
                 [&](FrameGraph::Builder& builder, auto& data) {
@@ -328,7 +327,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         // We specify the sample count here because we don't need automatic resolve.
                         auto depth = builder.createTexture("Temporary VSM Depth Texture", {
                                 .width = textureRequirements.size, .height = textureRequirements.size,
-                                .samples = options->vsm.msaaSamples,
+                                .samples = msaaSamples,
                                 .format = TextureFormat::DEPTH16,
                         });
 
@@ -351,7 +350,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                                 TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
                         // we need to clear the shadow map with the max EVSM moments
                         renderTargetDesc.clearColor = vsmClearColor;
-                        renderTargetDesc.samples = options->vsm.msaaSamples;
+                        renderTargetDesc.samples = msaaSamples;
 
                         if (blur) {
                             data.tempBlurSrc = builder.write(data.tempBlurSrc,
@@ -362,7 +361,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                                             .color = { data.tempBlurSrc },
                                             .depth = depth },
                                     .clearColor = vsmClearColor,
-                                    .samples = options->vsm.msaaSamples,
+                                    .samples = msaaSamples,
                                     .clearFlags = TargetBufferFlags::COLOR
                                             | TargetBufferFlags::DEPTH
                             });
@@ -393,11 +392,11 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     // initialized, as this happens in an `execute` block.
 
                     auto rt = resources.getRenderPassInfo(data.rt);
-                    rt.params.viewport = entry.shadowMap->getViewport();
 
                     engine.flush();
                     driver.beginRenderPass(rt.target, rt.params);
                     entry.shadowMap->bind(driver);
+                    entry.executor.overrideScissor(entry.shadowMap->getScissor());
                     entry.executor.execute(engine, "Shadow Pass");
                     driver.endRenderPass();
                 });
@@ -547,6 +546,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
                 auto& s = mShadowUb.edit();
                 s.shadows[shadowIndex].layer = shadowMap.getLayer();
                 s.shadows[shadowIndex].lightFromWorldMatrix = shaderParameters.lightSpace;
+                s.shadows[shadowIndex].scissorNormalized = shaderParameters.scissorNormalized;
                 s.shadows[shadowIndex].normalBias = normalBias * wsTexelSize;
                 s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSize;
                 s.shadows[shadowIndex].elvsm = options.vsm.elvsm;
@@ -632,7 +632,7 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap,
     // compute shadow map frustum for culling
     const mat4f Mv = ShadowMap::getDirectionalLightViewMatrix(direction, position);
     const mat4f Mp = mat4f::perspective(outerConeAngle * f::RAD_TO_DEG * 2.0f, 1.0f, 0.01f, radius);
-    const mat4f MpMv(math::highPrecisionMultiply(Mp, Mv));
+    const mat4f MpMv = math::highPrecisionMultiply(Mp, Mv);
     const Frustum frustum(MpMv);
 
     // Cull shadow casters
@@ -682,7 +682,7 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap,
         const double f = shadowMap.getCamera().getCullingFar();
         s.shadows[shadowIndex].layer = shadowMap.getLayer();
         s.shadows[shadowIndex].lightFromWorldMatrix = shaderParameters.lightSpace;
-        s.shadows[shadowIndex].direction = direction;
+        s.shadows[shadowIndex].scissorNormalized = shaderParameters.scissorNormalized;
         s.shadows[shadowIndex].normalBias = normalBias * wsTexelSizeAtOneMeter;
         s.shadows[shadowIndex].lightFromWorldZ = shaderParameters.lightFromWorldZ;
         s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
@@ -764,7 +764,7 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
         const double f = shadowMap.getCamera().getCullingFar();
         s.shadows[shadowIndex].layer = shadowMap.getLayer();
         s.shadows[shadowIndex].lightFromWorldMatrix = shaderParameters.lightSpace;
-        s.shadows[shadowIndex].direction = {};  // no direction of point lights
+        s.shadows[shadowIndex].scissorNormalized = shaderParameters.scissorNormalized;
         s.shadows[shadowIndex].normalBias = normalBias * wsTexelSizeAtOneMeter;
         s.shadows[shadowIndex].lightFromWorldZ = shaderParameters.lightFromWorldZ;
         s.shadows[shadowIndex].texelSizeAtOneMeter = wsTexelSizeAtOneMeter;
@@ -842,6 +842,8 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     const bool useMipmapping = view.hasVSM() &&
                                ((vsmShadowOptions.anisotropy > 0) || vsmShadowOptions.mipmapping);
 
+    const uint8_t msaaSamples = vsmShadowOptions.msaaSamples;
+
     TextureFormat format = TextureFormat::DEPTH16;
     if (view.hasVSM()) {
         if (vsmShadowOptions.highPrecision) {
@@ -873,6 +875,7 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
             (uint16_t)maxDimension,
             layersNeeded,
             mipLevels,
+            msaaSamples,
             format
     };
 }
