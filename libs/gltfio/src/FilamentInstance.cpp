@@ -90,7 +90,9 @@ void FFilamentInstance::detachSkin(size_t skinIndex, Entity target) noexcept {
     mSkins[skinIndex].targets.erase(target);
 }
 
-const mat4f* FFilamentInstance::getInverseBindMatricesAt(size_t skinIndex) const noexcept {
+mat4f const* FFilamentInstance::getInverseBindMatricesAt(size_t skinIndex) const {
+    assert_invariant(mOwner);
+    ASSERT_PRECONDITION(skinIndex < mOwner->mSkins.size(), "skinIndex must be less than the number of skins in this instance.");
     return mOwner->mSkins[skinIndex].inverseBindMatrices.data();
 }
 
@@ -419,7 +421,7 @@ void FilamentInstance::detachSkin(size_t skinIndex, Entity target) noexcept {
     return downcast(this)->detachSkin(skinIndex, target);
 }
 
-const math::mat4f* FilamentInstance::getInverseBindMatricesAt(size_t skinIndex) const noexcept {
+math::mat4f const* FilamentInstance::getInverseBindMatricesAt(size_t skinIndex) const {
     return downcast(this)->getInverseBindMatricesAt(skinIndex);
 }
 

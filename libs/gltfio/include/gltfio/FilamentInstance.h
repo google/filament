@@ -131,7 +131,7 @@ public:
      *
      * See getJointCountAt for determining the number of matrices returned (i.e. the number of joints).
      */
-    const math::mat4f* getInverseBindMatricesAt(size_t skinIndex) const noexcept;
+    math::mat4f const* getInverseBindMatricesAt(size_t skinIndex) const;
 
     /**
      * Resets the AABB on all renderables by manually computing the bounding box.

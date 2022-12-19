@@ -14,6 +14,7 @@ A new header is inserted each time a *tag* is created.
 - materials: `getNormalizedViewportCoord()` now returns the logical (i.e. user) viewport
              normalized position and keeps z reversed [⚠️ **Recompile Materials**]
 - backend: workaround Adreno shader compiler bug (#6355) [⚠️ **Recompile Materials**]
+- gltfio: expose joint inverse bind matrices via method on FilamentInstance
 
 ## v1.30.0
 
