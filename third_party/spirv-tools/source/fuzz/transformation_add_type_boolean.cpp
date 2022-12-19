@@ -43,7 +43,7 @@ void TransformationAddTypeBoolean::Apply(
     opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
   opt::Instruction::OperandList empty_operands;
   auto type_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpTypeBool, 0, message_.fresh_id(), empty_operands);
+      ir_context, spv::Op::OpTypeBool, 0, message_.fresh_id(), empty_operands);
   auto type_instruction_ptr = type_instruction.get();
   ir_context->module()->AddType(std::move(type_instruction));
 

@@ -107,9 +107,9 @@ void FuzzerPassApplyIdSynonyms::Apply() {
         // which case we need to be able to add an extract instruction to get
         // that element out.
         if (synonym_to_try->index_size() > 0 &&
-            !fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpCompositeExtract,
-                                                          use_inst) &&
-            use_inst->opcode() != SpvOpPhi) {
+            !fuzzerutil::CanInsertOpcodeBeforeInstruction(
+                spv::Op::OpCompositeExtract, use_inst) &&
+            use_inst->opcode() != spv::Op::OpPhi) {
           // We cannot insert an extract before this instruction, so this
           // synonym is no good.
           continue;
@@ -132,7 +132,7 @@ void FuzzerPassApplyIdSynonyms::Apply() {
           id_with_which_to_replace_use = GetFuzzerContext()->GetFreshId();
           opt::Instruction* instruction_to_insert_before = nullptr;
 
-          if (use_inst->opcode() != SpvOpPhi) {
+          if (use_inst->opcode() != spv::Op::OpPhi) {
             instruction_to_insert_before = use_inst;
           } else {
             auto parent_block_id =
@@ -182,7 +182,7 @@ void FuzzerPassApplyIdSynonyms::Apply() {
 }
 
 bool FuzzerPassApplyIdSynonyms::DataDescriptorsHaveCompatibleTypes(
-    SpvOp opcode, uint32_t use_in_operand_index,
+    spv::Op opcode, uint32_t use_in_operand_index,
     const protobufs::DataDescriptor& dd1,
     const protobufs::DataDescriptor& dd2) {
   auto base_object_type_id_1 =

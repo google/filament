@@ -1839,6 +1839,110 @@ OpFunctionEnd
 
   SinglePassRunAndCheck<CopyPropagateArrays>(text, text, false);
 }
+
+// Since Spir-V 1.4, resources that are used by a shader must be on the
+// OpEntryPoint instruction with the inputs and outputs. This test ensures that
+// this does not stop the pass from working.
+TEST_F(CopyPropArrayPassTest, EntryPointUser) {
+  const std::string before = R"(OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main" %g_rwTexture3d
+OpExecutionMode %main LocalSize 256 1 1
+OpSource HLSL 660
+OpName %type_3d_image "type.3d.image"
+OpName %g_rwTexture3d "g_rwTexture3d"
+OpName %main "main"
+OpDecorate %g_rwTexture3d DescriptorSet 0
+OpDecorate %g_rwTexture3d Binding 0
+%uint = OpTypeInt 32 0
+%uint_0 = OpConstant %uint 0
+%uint_1 = OpConstant %uint 1
+%uint_2 = OpConstant %uint 2
+%uint_3 = OpConstant %uint 3
+%v3uint = OpTypeVector %uint 3
+%10 = OpConstantComposite %v3uint %uint_1 %uint_2 %uint_3
+%type_3d_image = OpTypeImage %uint 3D 2 0 0 2 R32ui
+%_ptr_UniformConstant_type_3d_image = OpTypePointer UniformConstant %type_3d_image
+%void = OpTypeVoid
+%13 = OpTypeFunction %void
+%_ptr_Function_type_3d_image = OpTypePointer Function %type_3d_image
+%_ptr_Image_uint = OpTypePointer Image %uint
+%g_rwTexture3d = OpVariable %_ptr_UniformConstant_type_3d_image UniformConstant
+%main = OpFunction %void None %13
+%16 = OpLabel
+%17 = OpVariable %_ptr_Function_type_3d_image Function
+%18 = OpLoad %type_3d_image %g_rwTexture3d
+OpStore %17 %18
+; CHECK: %19 = OpImageTexelPointer %_ptr_Image_uint %g_rwTexture3d %10 %uint_0
+%19 = OpImageTexelPointer %_ptr_Image_uint %17 %10 %uint_0
+%20 = OpAtomicIAdd %uint %19 %uint_1 %uint_0 %uint_1
+OpReturn
+OpFunctionEnd
+)";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SetTargetEnv(SPV_ENV_UNIVERSAL_1_4);
+  SinglePassRunAndMatch<CopyPropagateArrays>(before, false);
+}
+
+// As per SPIRV spec, struct cannot be indexed with non-constant indices
+// through OpAccessChain, only arrays.
+// The copy-propagate-array pass tries to remove superfluous copies when the
+// original array could be indexed instead of the copy.
+//
+// This test verifies we handle this case:
+//  struct SRC { int field1; ...; int fieldN }
+//  int tmp_arr[N] = { SRC.field1, ..., SRC.fieldN }
+//  return tmp_arr[index];
+//
+// In such case, we cannot optimize the access: this array was added to allow
+// dynamic indexing in the struct.
+TEST_F(CopyPropArrayPassTest, StructIndexCannotBecomeDynamic) {
+  const std::string text = R"(OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Vertex %1 "main"
+OpDecorate %2 DescriptorSet 0
+OpDecorate %2 Binding 0
+OpMemberDecorate %_struct_3 0 Offset 0
+OpDecorate %_struct_3 Block
+%int = OpTypeInt 32 1
+%int_0 = OpConstant %int 0
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%_struct_3 = OpTypeStruct %v4float
+%_ptr_Uniform__struct_3 = OpTypePointer Uniform %_struct_3
+%uint = OpTypeInt 32 0
+%void = OpTypeVoid
+%11 = OpTypeFunction %void
+%_ptr_Function_uint = OpTypePointer Function %uint
+%13 = OpTypeFunction %v4float %_ptr_Function_uint
+%uint_1 = OpConstant %uint 1
+%_arr_v4float_uint_1 = OpTypeArray %v4float %uint_1
+%_ptr_Function__arr_v4float_uint_1 = OpTypePointer Function %_arr_v4float_uint_1
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%_ptr_Uniform_v4float = OpTypePointer Uniform %v4float
+%2 = OpVariable %_ptr_Uniform__struct_3 Uniform
+%19 = OpUndef %v4float
+%1 = OpFunction %void None %11
+%20 = OpLabel
+OpReturn
+OpFunctionEnd
+%21 = OpFunction %v4float None %13
+%22 = OpFunctionParameter %_ptr_Function_uint
+%23 = OpLabel
+%24 = OpVariable %_ptr_Function__arr_v4float_uint_1 Function
+%25 = OpAccessChain %_ptr_Uniform_v4float %2 %int_0
+%26 = OpLoad %v4float %25
+%27 = OpCompositeConstruct %_arr_v4float_uint_1 %26
+OpStore %24 %27
+%28 = OpLoad %uint %22
+%29 = OpAccessChain %_ptr_Function_v4float %24 %28
+OpReturnValue %19
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<CopyPropagateArrays>(text, text, false);
+}
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

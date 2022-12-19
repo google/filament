@@ -71,7 +71,7 @@ class TransformationSetLoopControl : public Transformation {
   // Returns true if and only if |loop_single_bit_mask| is *not* set in
   // |existing_loop_control| but *is* set in |message_.loop_control|.
   bool LoopControlBitIsAddedByTransformation(
-      SpvLoopControlMask loop_control_single_bit_mask,
+      spv::LoopControlMask loop_control_single_bit_mask,
       uint32_t existing_loop_control_mask) const;
 
   protobufs::TransformationSetLoopControl message_;

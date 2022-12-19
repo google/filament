@@ -1101,6 +1101,89 @@ OpFunctionEnd
   EXPECT_THAT(SPV_SUCCESS, ValidateInstructions());
 }
 
+
+TEST_F(ValidateMode, FragmentShaderStencilRefFrontTooManyModesBad) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability StencilExportEXT
+OpExtension "SPV_AMD_shader_early_and_late_fragment_tests"
+OpExtension "SPV_EXT_shader_stencil_export"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
+OpExecutionMode %main EarlyAndLateFragmentTestsAMD
+OpExecutionMode %main StencilRefLessFrontAMD
+OpExecutionMode %main StencilRefGreaterFrontAMD
+)" + kVoidFunction;
+
+  CompileSuccessfully(spirv);
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Fragment execution model entry points can specify at most "
+                "one of StencilRefUnchangedFrontAMD, "
+                "StencilRefLessFrontAMD or StencilRefGreaterFrontAMD "
+                "execution modes."));
+}
+
+TEST_F(ValidateMode, FragmentShaderStencilRefBackTooManyModesBad) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability StencilExportEXT
+OpExtension "SPV_AMD_shader_early_and_late_fragment_tests"
+OpExtension "SPV_EXT_shader_stencil_export"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
+OpExecutionMode %main EarlyAndLateFragmentTestsAMD
+OpExecutionMode %main StencilRefLessBackAMD
+OpExecutionMode %main StencilRefGreaterBackAMD
+)" + kVoidFunction;
+
+  CompileSuccessfully(spirv);
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Fragment execution model entry points can specify at most "
+                "one of StencilRefUnchangedBackAMD, "
+                "StencilRefLessBackAMD or StencilRefGreaterBackAMD "
+                "execution modes."));
+}
+
+TEST_F(ValidateMode, FragmentShaderStencilRefFrontGood) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability StencilExportEXT
+OpExtension "SPV_AMD_shader_early_and_late_fragment_tests"
+OpExtension "SPV_EXT_shader_stencil_export"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
+OpExecutionMode %main EarlyAndLateFragmentTestsAMD
+OpExecutionMode %main StencilRefLessFrontAMD
+)" + kVoidFunction;
+
+  CompileSuccessfully(spirv);
+  EXPECT_THAT(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateMode, FragmentShaderStencilRefBackGood) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability StencilExportEXT
+OpExtension "SPV_AMD_shader_early_and_late_fragment_tests"
+OpExtension "SPV_EXT_shader_stencil_export"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
+OpExecutionMode %main EarlyAndLateFragmentTestsAMD
+OpExecutionMode %main StencilRefLessBackAMD
+)" + kVoidFunction;
+
+  CompileSuccessfully(spirv);
+  EXPECT_THAT(SPV_SUCCESS, ValidateInstructions());
+}
+
 TEST_F(ValidateMode, FragmentShaderDemoteVertexBad) {
   const std::string spirv = R"(
 OpCapability Shader

@@ -75,11 +75,11 @@ TEST(TransformationReplaceCopyMemoryWithLoadStoreTest, BasicScenarios) {
                                                kConsoleMessageConsumer));
 
   auto instruction_descriptor_invalid_1 =
-      MakeInstructionDescriptor(5, SpvOpStore, 0);
+      MakeInstructionDescriptor(5, spv::Op::OpStore, 0);
   auto instruction_descriptor_valid_1 =
-      MakeInstructionDescriptor(5, SpvOpCopyMemory, 0);
+      MakeInstructionDescriptor(5, spv::Op::OpCopyMemory, 0);
   auto instruction_descriptor_valid_2 =
-      MakeInstructionDescriptor(5, SpvOpCopyMemory, 0);
+      MakeInstructionDescriptor(5, spv::Op::OpCopyMemory, 0);
 
   // Invalid: |source_id| is not a fresh id.
   auto transformation_invalid_1 = TransformationReplaceCopyMemoryWithLoadStore(

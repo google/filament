@@ -41,7 +41,7 @@ void FuzzerPassReplaceCopyMemoriesWithLoadsStores::Apply() {
     }
 
     // The instruction must be OpCopyMemory.
-    if (instruction->opcode() != SpvOpCopyMemory) {
+    if (instruction->opcode() != spv::Op::OpCopyMemory) {
       return;
     }
 

@@ -40,8 +40,9 @@ TEST(TransformationAddEarlyTerminatorWrapperTest, NoVoidType) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
 
-  ASSERT_FALSE(TransformationAddEarlyTerminatorWrapper(100, 101, SpvOpKill)
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationAddEarlyTerminatorWrapper(100, 101, spv::Op::OpKill)
+          .IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationAddEarlyTerminatorWrapperTest, NoVoidFunctionType) {
@@ -63,8 +64,9 @@ TEST(TransformationAddEarlyTerminatorWrapperTest, NoVoidFunctionType) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
 
-  ASSERT_FALSE(TransformationAddEarlyTerminatorWrapper(100, 101, SpvOpKill)
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationAddEarlyTerminatorWrapper(100, 101, spv::Op::OpKill)
+          .IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationAddEarlyTerminatorWrapperTest, BasicTest) {
@@ -93,25 +95,27 @@ TEST(TransformationAddEarlyTerminatorWrapperTest, BasicTest) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
 
-  ASSERT_FALSE(TransformationAddEarlyTerminatorWrapper(2, 101, SpvOpKill)
+  ASSERT_FALSE(TransformationAddEarlyTerminatorWrapper(2, 101, spv::Op::OpKill)
                    .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(TransformationAddEarlyTerminatorWrapper(100, 4, SpvOpKill)
+  ASSERT_FALSE(TransformationAddEarlyTerminatorWrapper(100, 4, spv::Op::OpKill)
                    .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(TransformationAddEarlyTerminatorWrapper(100, 100, SpvOpKill)
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationAddEarlyTerminatorWrapper(100, 100, spv::Op::OpKill)
+          .IsApplicable(context.get(), transformation_context));
 
 #ifndef NDEBUG
-  ASSERT_DEATH(TransformationAddEarlyTerminatorWrapper(100, 101, SpvOpReturn)
-                   .IsApplicable(context.get(), transformation_context),
-               "Invalid opcode.");
+  ASSERT_DEATH(
+      TransformationAddEarlyTerminatorWrapper(100, 101, spv::Op::OpReturn)
+          .IsApplicable(context.get(), transformation_context),
+      "Invalid opcode.");
 #endif
 
   auto transformation1 =
-      TransformationAddEarlyTerminatorWrapper(100, 101, SpvOpKill);
+      TransformationAddEarlyTerminatorWrapper(100, 101, spv::Op::OpKill);
   auto transformation2 =
-      TransformationAddEarlyTerminatorWrapper(102, 103, SpvOpUnreachable);
+      TransformationAddEarlyTerminatorWrapper(102, 103, spv::Op::OpUnreachable);
   auto transformation3 = TransformationAddEarlyTerminatorWrapper(
-      104, 105, SpvOpTerminateInvocation);
+      104, 105, spv::Op::OpTerminateInvocation);
 
   ASSERT_TRUE(
       transformation1.IsApplicable(context.get(), transformation_context));

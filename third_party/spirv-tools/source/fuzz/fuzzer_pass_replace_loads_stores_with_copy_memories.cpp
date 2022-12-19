@@ -50,9 +50,9 @@ void FuzzerPassReplaceLoadsStoresWithCopyMemories::Apply() {
       std::unordered_map<uint32_t, opt::Instruction*> current_op_loads;
       for (auto& instruction : block) {
         // Add a potential OpLoad instruction.
-        if (instruction.opcode() == SpvOpLoad) {
+        if (instruction.opcode() == spv::Op::OpLoad) {
           current_op_loads[instruction.result_id()] = &instruction;
-        } else if (instruction.opcode() == SpvOpStore) {
+        } else if (instruction.opcode() == spv::Op::OpStore) {
           if (current_op_loads.find(instruction.GetSingleWordOperand(1)) !=
               current_op_loads.end()) {
             // We have found the matching OpLoad instruction to the current
@@ -73,7 +73,7 @@ void FuzzerPassReplaceLoadsStoresWithCopyMemories::Apply() {
             opt::Instruction* source_id =
                 GetIRContext()->get_def_use_mgr()->GetDef(
                     it->second->GetSingleWordOperand(2));
-            SpvStorageClass storage_class =
+            spv::StorageClass storage_class =
                 fuzzerutil::GetStorageClassFromPointerType(
                     GetIRContext(), source_id->type_id());
             if (!TransformationReplaceLoadStoreWithCopyMemory::

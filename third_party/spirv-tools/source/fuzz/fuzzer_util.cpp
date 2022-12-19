@@ -49,7 +49,7 @@ uint32_t MaybeGetOpConstant(opt::IRContext* ir_context,
                             const std::vector<uint32_t>& words,
                             uint32_t type_id, bool is_irrelevant) {
   for (const auto& inst : ir_context->types_values()) {
-    if (inst.opcode() == SpvOpConstant && inst.type_id() == type_id &&
+    if (inst.opcode() == spv::Op::OpConstant && inst.type_id() == type_id &&
         inst.GetInOperand(0).words == words &&
         transformation_context.GetFactManager()->IdIsIrrelevant(
             inst.result_id()) == is_irrelevant) {
@@ -112,7 +112,7 @@ opt::BasicBlock* MaybeFindBlock(opt::IRContext* context,
     // No instruction defining this id was found.
     return nullptr;
   }
-  if (inst->opcode() != SpvOpLabel) {
+  if (inst->opcode() != spv::Op::OpLabel) {
     // The instruction defining the id is not a label, so it cannot be a block
     // id.
     return nullptr;
@@ -138,7 +138,7 @@ bool PhiIdsOkForNewEdge(
   // makes sense here because we need to increment |phi_index| for each OpPhi
   // instruction.
   for (auto& inst : *bb_to) {
-    if (inst.opcode() != SpvOpPhi) {
+    if (inst.opcode() != spv::Op::OpPhi) {
       // The OpPhi instructions all occur at the start of the block; if we find
       // a non-OpPhi then we have seen them all.
       break;
@@ -189,24 +189,24 @@ opt::Instruction CreateUnreachableEdgeInstruction(opt::IRContext* ir_context,
   const auto* bb_from = MaybeFindBlock(ir_context, bb_from_id);
   assert(bb_from && "|bb_from_id| is invalid");
   assert(MaybeFindBlock(ir_context, bb_to_id) && "|bb_to_id| is invalid");
-  assert(bb_from->terminator()->opcode() == SpvOpBranch &&
+  assert(bb_from->terminator()->opcode() == spv::Op::OpBranch &&
          "Precondition on terminator of bb_from is not satisfied");
 
   // Get the id of the boolean constant to be used as the condition.
   auto condition_inst = ir_context->get_def_use_mgr()->GetDef(bool_id);
   assert(condition_inst &&
-         (condition_inst->opcode() == SpvOpConstantTrue ||
-          condition_inst->opcode() == SpvOpConstantFalse) &&
+         (condition_inst->opcode() == spv::Op::OpConstantTrue ||
+          condition_inst->opcode() == spv::Op::OpConstantFalse) &&
          "|bool_id| is invalid");
 
-  auto condition_value = condition_inst->opcode() == SpvOpConstantTrue;
+  auto condition_value = condition_inst->opcode() == spv::Op::OpConstantTrue;
   auto successor_id = bb_from->terminator()->GetSingleWordInOperand(0);
 
   // Add the dead branch, by turning OpBranch into OpBranchConditional, and
   // ordering the targets depending on whether the given boolean corresponds to
   // true or false.
   return opt::Instruction(
-      ir_context, SpvOpBranchConditional, 0, 0,
+      ir_context, spv::Op::OpBranchConditional, 0, 0,
       {{SPV_OPERAND_TYPE_ID, {bool_id}},
        {SPV_OPERAND_TYPE_ID, {condition_value ? successor_id : bb_to_id}},
        {SPV_OPERAND_TYPE_ID, {condition_value ? bb_to_id : successor_id}}});
@@ -228,7 +228,7 @@ void AddUnreachableEdgeAndUpdateOpPhis(
   if (!from_to_edge_already_exists) {
     uint32_t phi_index = 0;
     for (auto& inst : *bb_to) {
-      if (inst.opcode() != SpvOpPhi) {
+      if (inst.opcode() != spv::Op::OpPhi) {
         break;
       }
       assert(phi_index < static_cast<uint32_t>(phi_ids.size()) &&
@@ -285,28 +285,30 @@ opt::BasicBlock::iterator GetIteratorForInstruction(
 }
 
 bool CanInsertOpcodeBeforeInstruction(
-    SpvOp opcode, const opt::BasicBlock::iterator& instruction_in_block) {
+    spv::Op opcode, const opt::BasicBlock::iterator& instruction_in_block) {
   if (instruction_in_block->PreviousNode() &&
-      (instruction_in_block->PreviousNode()->opcode() == SpvOpLoopMerge ||
-       instruction_in_block->PreviousNode()->opcode() == SpvOpSelectionMerge)) {
+      (instruction_in_block->PreviousNode()->opcode() == spv::Op::OpLoopMerge ||
+       instruction_in_block->PreviousNode()->opcode() ==
+           spv::Op::OpSelectionMerge)) {
     // We cannot insert directly after a merge instruction.
     return false;
   }
-  if (opcode != SpvOpVariable &&
-      instruction_in_block->opcode() == SpvOpVariable) {
+  if (opcode != spv::Op::OpVariable &&
+      instruction_in_block->opcode() == spv::Op::OpVariable) {
     // We cannot insert a non-OpVariable instruction directly before a
     // variable; variables in a function must be contiguous in the entry block.
     return false;
   }
   // We cannot insert a non-OpPhi instruction directly before an OpPhi, because
   // OpPhi instructions need to be contiguous at the start of a block.
-  return opcode == SpvOpPhi || instruction_in_block->opcode() != SpvOpPhi;
+  return opcode == spv::Op::OpPhi ||
+         instruction_in_block->opcode() != spv::Op::OpPhi;
 }
 
 bool CanMakeSynonymOf(opt::IRContext* ir_context,
                       const TransformationContext& transformation_context,
                       const opt::Instruction& inst) {
-  if (inst.opcode() == SpvOpSampledImage) {
+  if (inst.opcode() == spv::Op::OpSampledImage) {
     // The SPIR-V data rules say that only very specific instructions may
     // may consume the result id of an OpSampledImage, and this excludes the
     // instructions that are used for making synonyms.
@@ -326,15 +328,15 @@ bool CanMakeSynonymOf(opt::IRContext* ir_context,
     return false;
   }
   auto type_inst = ir_context->get_def_use_mgr()->GetDef(inst.type_id());
-  if (type_inst->opcode() == SpvOpTypeVoid) {
+  if (type_inst->opcode() == spv::Op::OpTypeVoid) {
     // We only make synonyms of instructions that define objects, and an object
     // cannot have void type.
     return false;
   }
-  if (type_inst->opcode() == SpvOpTypePointer) {
+  if (type_inst->opcode() == spv::Op::OpTypePointer) {
     switch (inst.opcode()) {
-      case SpvOpConstantNull:
-      case SpvOpUndef:
+      case spv::Op::OpConstantNull:
+      case spv::Op::OpUndef:
         // We disallow making synonyms of null or undefined pointers.  This is
         // to provide the property that if the original shader exhibited no bad
         // pointer accesses, the transformed shader will not either.
@@ -373,22 +375,22 @@ uint32_t WalkOneCompositeTypeIndex(opt::IRContext* context,
       context->get_def_use_mgr()->GetDef(base_object_type_id);
   assert(should_be_composite_type && "The type should exist.");
   switch (should_be_composite_type->opcode()) {
-    case SpvOpTypeArray: {
+    case spv::Op::OpTypeArray: {
       auto array_length = GetArraySize(*should_be_composite_type, context);
       if (array_length == 0 || index >= array_length) {
         return 0;
       }
       return should_be_composite_type->GetSingleWordInOperand(0);
     }
-    case SpvOpTypeMatrix:
-    case SpvOpTypeVector: {
+    case spv::Op::OpTypeMatrix:
+    case spv::Op::OpTypeVector: {
       auto count = should_be_composite_type->GetSingleWordInOperand(1);
       if (index >= count) {
         return 0;
       }
       return should_be_composite_type->GetSingleWordInOperand(0);
     }
-    case SpvOpTypeStruct: {
+    case spv::Op::OpTypeStruct: {
       if (index >= GetNumberOfStructMembers(*should_be_composite_type)) {
         return 0;
       }
@@ -415,7 +417,7 @@ uint32_t WalkCompositeTypeIndices(
 
 uint32_t GetNumberOfStructMembers(
     const opt::Instruction& struct_type_instruction) {
-  assert(struct_type_instruction.opcode() == SpvOpTypeStruct &&
+  assert(struct_type_instruction.opcode() == spv::Op::OpTypeStruct &&
          "An OpTypeStruct instruction is required here.");
   return struct_type_instruction.NumInOperands();
 }
@@ -436,15 +438,15 @@ uint32_t GetArraySize(const opt::Instruction& array_type_instruction,
 uint32_t GetBoundForCompositeIndex(const opt::Instruction& composite_type_inst,
                                    opt::IRContext* ir_context) {
   switch (composite_type_inst.opcode()) {
-    case SpvOpTypeArray:
+    case spv::Op::OpTypeArray:
       return fuzzerutil::GetArraySize(composite_type_inst, ir_context);
-    case SpvOpTypeMatrix:
-    case SpvOpTypeVector:
+    case spv::Op::OpTypeMatrix:
+    case spv::Op::OpTypeVector:
       return composite_type_inst.GetSingleWordInOperand(1);
-    case SpvOpTypeStruct: {
+    case spv::Op::OpTypeStruct: {
       return fuzzerutil::GetNumberOfStructMembers(composite_type_inst);
     }
-    case SpvOpTypeRuntimeArray:
+    case spv::Op::OpTypeRuntimeArray:
       assert(false &&
              "GetBoundForCompositeIndex should not be invoked with an "
              "OpTypeRuntimeArray, which does not have a static bound.");
@@ -455,27 +457,27 @@ uint32_t GetBoundForCompositeIndex(const opt::Instruction& composite_type_inst,
   }
 }
 
-SpvMemorySemanticsMask GetMemorySemanticsForStorageClass(
-    SpvStorageClass storage_class) {
+spv::MemorySemanticsMask GetMemorySemanticsForStorageClass(
+    spv::StorageClass storage_class) {
   switch (storage_class) {
-    case SpvStorageClassWorkgroup:
-      return SpvMemorySemanticsWorkgroupMemoryMask;
+    case spv::StorageClass::Workgroup:
+      return spv::MemorySemanticsMask::WorkgroupMemory;
 
-    case SpvStorageClassStorageBuffer:
-    case SpvStorageClassPhysicalStorageBuffer:
-      return SpvMemorySemanticsUniformMemoryMask;
+    case spv::StorageClass::StorageBuffer:
+    case spv::StorageClass::PhysicalStorageBuffer:
+      return spv::MemorySemanticsMask::UniformMemory;
 
-    case SpvStorageClassCrossWorkgroup:
-      return SpvMemorySemanticsCrossWorkgroupMemoryMask;
+    case spv::StorageClass::CrossWorkgroup:
+      return spv::MemorySemanticsMask::CrossWorkgroupMemory;
 
-    case SpvStorageClassAtomicCounter:
-      return SpvMemorySemanticsAtomicCounterMemoryMask;
+    case spv::StorageClass::AtomicCounter:
+      return spv::MemorySemanticsMask::AtomicCounterMemory;
 
-    case SpvStorageClassImage:
-      return SpvMemorySemanticsImageMemoryMask;
+    case spv::StorageClass::Image:
+      return spv::MemorySemanticsMask::ImageMemory;
 
     default:
-      return SpvMemorySemanticsMaskNone;
+      return spv::MemorySemanticsMask::MaskNone;
   }
 }
 
@@ -562,8 +564,8 @@ bool IsMergeOrContinue(opt::IRContext* ir_context, uint32_t block_id) {
       [&result](const opt::Instruction* use_instruction,
                 uint32_t /*unused*/) -> bool {
         switch (use_instruction->opcode()) {
-          case SpvOpLoopMerge:
-          case SpvOpSelectionMerge:
+          case spv::Op::OpLoopMerge:
+          case spv::Op::OpSelectionMerge:
             result = true;
             return false;
           default:
@@ -581,7 +583,7 @@ uint32_t GetLoopFromMergeBlock(opt::IRContext* ir_context,
       [ir_context, &result](opt::Instruction* use_instruction,
                             uint32_t use_index) -> bool {
         switch (use_instruction->opcode()) {
-          case SpvOpLoopMerge:
+          case spv::Op::OpLoopMerge:
             // The merge block operand is the first operand in OpLoopMerge.
             if (use_index == 0) {
               result = ir_context->get_instr_block(use_instruction)->id();
@@ -599,7 +601,7 @@ uint32_t FindFunctionType(opt::IRContext* ir_context,
                           const std::vector<uint32_t>& type_ids) {
   // Look through the existing types for a match.
   for (auto& type_or_value : ir_context->types_values()) {
-    if (type_or_value.opcode() != SpvOpTypeFunction) {
+    if (type_or_value.opcode() != spv::Op::OpTypeFunction) {
       // We are only interested in function types.
       continue;
     }
@@ -641,8 +643,8 @@ opt::Function* FindFunction(opt::IRContext* ir_context, uint32_t function_id) {
 
 bool FunctionContainsOpKillOrUnreachable(const opt::Function& function) {
   for (auto& block : function) {
-    if (block.terminator()->opcode() == SpvOpKill ||
-        block.terminator()->opcode() == SpvOpUnreachable) {
+    if (block.terminator()->opcode() == spv::Op::OpKill ||
+        block.terminator()->opcode() == spv::Op::OpUnreachable) {
       return true;
     }
   }
@@ -669,7 +671,7 @@ bool IdIsAvailableAtUse(opt::IRContext* context,
       context->get_instr_block(use_instruction)->GetParent();
   // If the id a function parameter, it needs to be associated with the
   // function containing the use.
-  if (defining_instruction->opcode() == SpvOpFunctionParameter) {
+  if (defining_instruction->opcode() == spv::Op::OpFunctionParameter) {
     return InstructionIsFunctionParameter(defining_instruction,
                                           enclosing_function);
   }
@@ -687,7 +689,7 @@ bool IdIsAvailableAtUse(opt::IRContext* context,
     return false;
   }
   auto dominator_analysis = context->GetDominatorAnalysis(enclosing_function);
-  if (use_instruction->opcode() == SpvOpPhi) {
+  if (use_instruction->opcode() == spv::Op::OpPhi) {
     // In the case where the use is an operand to OpPhi, it is actually the
     // *parent* block associated with the operand that must be dominated by
     // the synonym.
@@ -710,7 +712,7 @@ bool IdIsAvailableBeforeInstruction(opt::IRContext* context,
       context->get_instr_block(instruction)->GetParent();
   // If the id a function parameter, it needs to be associated with the
   // function containing the instruction.
-  if (id_definition->opcode() == SpvOpFunctionParameter) {
+  if (id_definition->opcode() == spv::Op::OpFunctionParameter) {
     return InstructionIsFunctionParameter(id_definition,
                                           function_enclosing_instruction);
   }
@@ -732,7 +734,7 @@ bool IdIsAvailableBeforeInstruction(opt::IRContext* context,
     // the instruction.
     return true;
   }
-  if (id_definition->opcode() == SpvOpVariable &&
+  if (id_definition->opcode() == spv::Op::OpVariable &&
       function_enclosing_instruction ==
           context->get_instr_block(id)->GetParent()) {
     assert(!context->IsReachable(*context->get_instr_block(instruction)) &&
@@ -747,7 +749,7 @@ bool IdIsAvailableBeforeInstruction(opt::IRContext* context,
 
 bool InstructionIsFunctionParameter(opt::Instruction* instruction,
                                     opt::Function* function) {
-  if (instruction->opcode() != SpvOpFunctionParameter) {
+  if (instruction->opcode() != spv::Op::OpFunctionParameter) {
     return false;
   }
   bool found_parameter = false;
@@ -767,7 +769,8 @@ uint32_t GetTypeId(opt::IRContext* context, uint32_t result_id) {
 }
 
 uint32_t GetPointeeTypeIdFromPointerType(opt::Instruction* pointer_type_inst) {
-  assert(pointer_type_inst && pointer_type_inst->opcode() == SpvOpTypePointer &&
+  assert(pointer_type_inst &&
+         pointer_type_inst->opcode() == spv::Op::OpTypePointer &&
          "Precondition: |pointer_type_inst| must be OpTypePointer.");
   return pointer_type_inst->GetSingleWordInOperand(1);
 }
@@ -778,26 +781,28 @@ uint32_t GetPointeeTypeIdFromPointerType(opt::IRContext* context,
       context->get_def_use_mgr()->GetDef(pointer_type_id));
 }
 
-SpvStorageClass GetStorageClassFromPointerType(
+spv::StorageClass GetStorageClassFromPointerType(
     opt::Instruction* pointer_type_inst) {
-  assert(pointer_type_inst && pointer_type_inst->opcode() == SpvOpTypePointer &&
+  assert(pointer_type_inst &&
+         pointer_type_inst->opcode() == spv::Op::OpTypePointer &&
          "Precondition: |pointer_type_inst| must be OpTypePointer.");
-  return static_cast<SpvStorageClass>(
+  return static_cast<spv::StorageClass>(
       pointer_type_inst->GetSingleWordInOperand(0));
 }
 
-SpvStorageClass GetStorageClassFromPointerType(opt::IRContext* context,
-                                               uint32_t pointer_type_id) {
+spv::StorageClass GetStorageClassFromPointerType(opt::IRContext* context,
+                                                 uint32_t pointer_type_id) {
   return GetStorageClassFromPointerType(
       context->get_def_use_mgr()->GetDef(pointer_type_id));
 }
 
 uint32_t MaybeGetPointerType(opt::IRContext* context, uint32_t pointee_type_id,
-                             SpvStorageClass storage_class) {
+                             spv::StorageClass storage_class) {
   for (auto& inst : context->types_values()) {
     switch (inst.opcode()) {
-      case SpvOpTypePointer:
-        if (inst.GetSingleWordInOperand(0) == storage_class &&
+      case spv::Op::OpTypePointer:
+        if (spv::StorageClass(inst.GetSingleWordInOperand(0)) ==
+                storage_class &&
             inst.GetSingleWordInOperand(1) == pointee_type_id) {
           return inst.result_id();
         }
@@ -818,30 +823,30 @@ uint32_t InOperandIndexFromOperandIndex(const opt::Instruction& inst,
 bool IsNullConstantSupported(opt::IRContext* ir_context,
                              const opt::Instruction& type_inst) {
   switch (type_inst.opcode()) {
-    case SpvOpTypeArray:
-    case SpvOpTypeBool:
-    case SpvOpTypeDeviceEvent:
-    case SpvOpTypeEvent:
-    case SpvOpTypeFloat:
-    case SpvOpTypeInt:
-    case SpvOpTypeMatrix:
-    case SpvOpTypeQueue:
-    case SpvOpTypeReserveId:
-    case SpvOpTypeVector:
-    case SpvOpTypeStruct:
+    case spv::Op::OpTypeArray:
+    case spv::Op::OpTypeBool:
+    case spv::Op::OpTypeDeviceEvent:
+    case spv::Op::OpTypeEvent:
+    case spv::Op::OpTypeFloat:
+    case spv::Op::OpTypeInt:
+    case spv::Op::OpTypeMatrix:
+    case spv::Op::OpTypeQueue:
+    case spv::Op::OpTypeReserveId:
+    case spv::Op::OpTypeVector:
+    case spv::Op::OpTypeStruct:
       return true;
-    case SpvOpTypePointer:
+    case spv::Op::OpTypePointer:
       // Null pointers are allowed if the VariablePointers capability is
       // enabled, or if the VariablePointersStorageBuffer capability is enabled
       // and the pointer type has StorageBuffer as its storage class.
       if (ir_context->get_feature_mgr()->HasCapability(
-              SpvCapabilityVariablePointers)) {
+              spv::Capability::VariablePointers)) {
         return true;
       }
       if (ir_context->get_feature_mgr()->HasCapability(
-              SpvCapabilityVariablePointersStorageBuffer)) {
-        return type_inst.GetSingleWordInOperand(0) ==
-               SpvStorageClassStorageBuffer;
+              spv::Capability::VariablePointersStorageBuffer)) {
+        return spv::StorageClass(type_inst.GetSingleWordInOperand(0)) ==
+               spv::StorageClass::StorageBuffer;
       }
       return false;
     default:
@@ -885,22 +890,22 @@ void AddVariableIdToEntryPointInterfaces(opt::IRContext* context, uint32_t id) {
 
 opt::Instruction* AddGlobalVariable(opt::IRContext* context, uint32_t result_id,
                                     uint32_t type_id,
-                                    SpvStorageClass storage_class,
+                                    spv::StorageClass storage_class,
                                     uint32_t initializer_id) {
   // Check various preconditions.
   assert(result_id != 0 && "Result id can't be 0");
 
-  assert((storage_class == SpvStorageClassPrivate ||
-          storage_class == SpvStorageClassWorkgroup) &&
+  assert((storage_class == spv::StorageClass::Private ||
+          storage_class == spv::StorageClass::Workgroup) &&
          "Variable's storage class must be either Private or Workgroup");
 
   auto* type_inst = context->get_def_use_mgr()->GetDef(type_id);
   (void)type_inst;  // Variable becomes unused in release mode.
-  assert(type_inst && type_inst->opcode() == SpvOpTypePointer &&
+  assert(type_inst && type_inst->opcode() == spv::Op::OpTypePointer &&
          GetStorageClassFromPointerType(type_inst) == storage_class &&
          "Variable's type is invalid");
 
-  if (storage_class == SpvStorageClassWorkgroup) {
+  if (storage_class == spv::StorageClass::Workgroup) {
     assert(initializer_id == 0);
   }
 
@@ -922,7 +927,7 @@ opt::Instruction* AddGlobalVariable(opt::IRContext* context, uint32_t result_id,
   }
 
   auto new_instruction = MakeUnique<opt::Instruction>(
-      context, SpvOpVariable, type_id, result_id, std::move(operands));
+      context, spv::Op::OpVariable, type_id, result_id, std::move(operands));
   auto result = new_instruction.get();
   context->module()->AddGlobalValue(std::move(new_instruction));
 
@@ -940,8 +945,9 @@ opt::Instruction* AddLocalVariable(opt::IRContext* context, uint32_t result_id,
 
   auto* type_inst = context->get_def_use_mgr()->GetDef(type_id);
   (void)type_inst;  // Variable becomes unused in release mode.
-  assert(type_inst && type_inst->opcode() == SpvOpTypePointer &&
-         GetStorageClassFromPointerType(type_inst) == SpvStorageClassFunction &&
+  assert(type_inst && type_inst->opcode() == spv::Op::OpTypePointer &&
+         GetStorageClassFromPointerType(type_inst) ==
+             spv::StorageClass::Function &&
          "Variable's type is invalid");
 
   const auto* constant_inst =
@@ -956,10 +962,10 @@ opt::Instruction* AddLocalVariable(opt::IRContext* context, uint32_t result_id,
   assert(function && "Function id is invalid");
 
   auto new_instruction = MakeUnique<opt::Instruction>(
-      context, SpvOpVariable, type_id, result_id,
-      opt::Instruction::OperandList{
-          {SPV_OPERAND_TYPE_STORAGE_CLASS, {SpvStorageClassFunction}},
-          {SPV_OPERAND_TYPE_ID, {initializer_id}}});
+      context, spv::Op::OpVariable, type_id, result_id,
+      opt::Instruction::OperandList{{SPV_OPERAND_TYPE_STORAGE_CLASS,
+                                     {uint32_t(spv::StorageClass::Function)}},
+                                    {SPV_OPERAND_TYPE_ID, {initializer_id}}});
   auto result = new_instruction.get();
   function->begin()->begin()->InsertBefore(std::move(new_instruction));
 
@@ -1022,7 +1028,7 @@ std::vector<opt::Instruction*> GetCallers(opt::IRContext* ir_context,
   std::vector<opt::Instruction*> result;
   ir_context->get_def_use_mgr()->ForEachUser(
       function_id, [&result, function_id](opt::Instruction* inst) {
-        if (inst->opcode() == SpvOpFunctionCall &&
+        if (inst->opcode() == spv::Op::OpFunctionCall &&
             inst->GetSingleWordInOperand(0) == function_id) {
           result.push_back(inst);
         }
@@ -1137,7 +1143,7 @@ void AddFunctionType(opt::IRContext* ir_context, uint32_t result_id,
   }
 
   ir_context->AddType(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpTypeFunction, 0, result_id, std::move(operands)));
+      ir_context, spv::Op::OpTypeFunction, 0, result_id, std::move(operands)));
 
   UpdateModuleIdBound(ir_context, result_id);
 }
@@ -1186,7 +1192,7 @@ uint32_t MaybeGetVectorType(opt::IRContext* ir_context,
 uint32_t MaybeGetStructType(opt::IRContext* ir_context,
                             const std::vector<uint32_t>& component_type_ids) {
   for (auto& type_or_value : ir_context->types_values()) {
-    if (type_or_value.opcode() != SpvOpTypeStruct ||
+    if (type_or_value.opcode() != spv::Op::OpTypeStruct ||
         type_or_value.NumInOperands() !=
             static_cast<uint32_t>(component_type_ids.size())) {
       continue;
@@ -1219,11 +1225,11 @@ uint32_t MaybeGetZeroConstant(
   assert(type_inst && "|scalar_or_composite_type_id| is invalid");
 
   switch (type_inst->opcode()) {
-    case SpvOpTypeBool:
+    case spv::Op::OpTypeBool:
       return MaybeGetBoolConstant(ir_context, transformation_context, false,
                                   is_irrelevant);
-    case SpvOpTypeFloat:
-    case SpvOpTypeInt: {
+    case spv::Op::OpTypeFloat:
+    case spv::Op::OpTypeInt: {
       const auto width = type_inst->GetSingleWordInOperand(0);
       std::vector<uint32_t> words = {0};
       if (width > 32) {
@@ -1233,7 +1239,7 @@ uint32_t MaybeGetZeroConstant(
       return MaybeGetScalarConstant(ir_context, transformation_context, words,
                                     scalar_or_composite_type_id, is_irrelevant);
     }
-    case SpvOpTypeStruct: {
+    case spv::Op::OpTypeStruct: {
       std::vector<uint32_t> component_ids;
       for (uint32_t i = 0; i < type_inst->NumInOperands(); ++i) {
         const auto component_type_id = type_inst->GetSingleWordInOperand(i);
@@ -1260,8 +1266,8 @@ uint32_t MaybeGetZeroConstant(
           ir_context, transformation_context, component_ids,
           scalar_or_composite_type_id, is_irrelevant);
     }
-    case SpvOpTypeMatrix:
-    case SpvOpTypeVector: {
+    case spv::Op::OpTypeMatrix:
+    case spv::Op::OpTypeVector: {
       const auto component_type_id = type_inst->GetSingleWordInOperand(0);
 
       auto component_id = MaybeGetZeroConstant(
@@ -1284,7 +1290,7 @@ uint32_t MaybeGetZeroConstant(
           std::vector<uint32_t>(component_count, component_id),
           scalar_or_composite_type_id, is_irrelevant);
     }
-    case SpvOpTypeArray: {
+    case spv::Op::OpTypeArray: {
       const auto component_type_id = type_inst->GetSingleWordInOperand(0);
 
       auto component_id = MaybeGetZeroConstant(
@@ -1319,16 +1325,16 @@ bool CanCreateConstant(opt::IRContext* ir_context, uint32_t type_id) {
   assert(spvOpcodeGeneratesType(type_instr->opcode()) &&
          "A type-generating opcode was expected.");
   switch (type_instr->opcode()) {
-    case SpvOpTypeBool:
-    case SpvOpTypeInt:
-    case SpvOpTypeFloat:
-    case SpvOpTypeMatrix:
-    case SpvOpTypeVector:
+    case spv::Op::OpTypeBool:
+    case spv::Op::OpTypeInt:
+    case spv::Op::OpTypeFloat:
+    case spv::Op::OpTypeMatrix:
+    case spv::Op::OpTypeVector:
       return true;
-    case SpvOpTypeArray:
+    case spv::Op::OpTypeArray:
       return CanCreateConstant(ir_context,
                                type_instr->GetSingleWordInOperand(0));
-    case SpvOpTypeStruct:
+    case spv::Op::OpTypeStruct:
       if (HasBlockOrBufferBlockDecoration(ir_context, type_id)) {
         return false;
       }
@@ -1377,7 +1383,7 @@ uint32_t MaybeGetCompositeConstant(
   assert(IsCompositeType(type) && "|composite_type_id| is invalid");
 
   for (const auto& inst : ir_context->types_values()) {
-    if (inst.opcode() == SpvOpConstantComposite &&
+    if (inst.opcode() == spv::Op::OpConstantComposite &&
         inst.type_id() == composite_type_id &&
         transformation_context.GetFactManager()->IdIsIrrelevant(
             inst.result_id()) == is_irrelevant &&
@@ -1457,7 +1463,8 @@ uint32_t MaybeGetBoolConstant(
     bool is_irrelevant) {
   if (auto type_id = MaybeGetBoolType(ir_context)) {
     for (const auto& inst : ir_context->types_values()) {
-      if (inst.opcode() == (value ? SpvOpConstantTrue : SpvOpConstantFalse) &&
+      if (inst.opcode() ==
+              (value ? spv::Op::OpConstantTrue : spv::Op::OpConstantFalse) &&
           inst.type_id() == type_id &&
           transformation_context.GetFactManager()->IdIsIrrelevant(
               inst.result_id()) == is_irrelevant) {
@@ -1552,13 +1559,13 @@ MapToRepeatedUInt32Pair(const std::map<uint32_t, uint32_t>& data) {
 
 opt::Instruction* GetLastInsertBeforeInstruction(opt::IRContext* ir_context,
                                                  uint32_t block_id,
-                                                 SpvOp opcode) {
+                                                 spv::Op opcode) {
   // CFG::block uses std::map::at which throws an exception when |block_id| is
   // invalid. The error message is unhelpful, though. Thus, we test that
   // |block_id| is valid here.
   const auto* label_inst = ir_context->get_def_use_mgr()->GetDef(block_id);
   (void)label_inst;  // Make compilers happy in release mode.
-  assert(label_inst && label_inst->opcode() == SpvOpLabel &&
+  assert(label_inst && label_inst->opcode() == spv::Op::OpLabel &&
          "|block_id| is invalid");
 
   auto* block = ir_context->cfg()->block(block_id);
@@ -1624,7 +1631,7 @@ bool IdUseCanBeReplaced(opt::IRContext* ir_context,
         assert(composite_type_being_accessed->AsStruct());
         auto constant_index_instruction = ir_context->get_def_use_mgr()->GetDef(
             use_instruction->GetSingleWordInOperand(index_in_operand));
-        assert(constant_index_instruction->opcode() == SpvOpConstant);
+        assert(constant_index_instruction->opcode() == spv::Op::OpConstant);
         uint32_t member_index =
             constant_index_instruction->GetSingleWordInOperand(0);
         composite_type_being_accessed =
@@ -1641,7 +1648,7 @@ bool IdUseCanBeReplaced(opt::IRContext* ir_context,
     }
   }
 
-  if (use_instruction->opcode() == SpvOpFunctionCall &&
+  if (use_instruction->opcode() == spv::Op::OpFunctionCall &&
       use_in_operand_index > 0) {
     // This is a function call argument.  It is not allowed to have pointer
     // type.
@@ -1663,7 +1670,7 @@ bool IdUseCanBeReplaced(opt::IRContext* ir_context,
     }
   }
 
-  if (use_instruction->opcode() == SpvOpImageTexelPointer &&
+  if (use_instruction->opcode() == spv::Op::OpImageTexelPointer &&
       use_in_operand_index == 2) {
     // The OpImageTexelPointer instruction has a Sample parameter that in some
     // situations must be an id for the value 0.  To guard against disrupting
@@ -1671,38 +1678,38 @@ bool IdUseCanBeReplaced(opt::IRContext* ir_context,
     return false;
   }
 
-  if (ir_context->get_feature_mgr()->HasCapability(SpvCapabilityShader)) {
+  if (ir_context->get_feature_mgr()->HasCapability(spv::Capability::Shader)) {
     // With the Shader capability, memory scope and memory semantics operands
     // are required to be constants, so they cannot be replaced arbitrarily.
     switch (use_instruction->opcode()) {
-      case SpvOpAtomicLoad:
-      case SpvOpAtomicStore:
-      case SpvOpAtomicExchange:
-      case SpvOpAtomicIIncrement:
-      case SpvOpAtomicIDecrement:
-      case SpvOpAtomicIAdd:
-      case SpvOpAtomicISub:
-      case SpvOpAtomicSMin:
-      case SpvOpAtomicUMin:
-      case SpvOpAtomicSMax:
-      case SpvOpAtomicUMax:
-      case SpvOpAtomicAnd:
-      case SpvOpAtomicOr:
-      case SpvOpAtomicXor:
+      case spv::Op::OpAtomicLoad:
+      case spv::Op::OpAtomicStore:
+      case spv::Op::OpAtomicExchange:
+      case spv::Op::OpAtomicIIncrement:
+      case spv::Op::OpAtomicIDecrement:
+      case spv::Op::OpAtomicIAdd:
+      case spv::Op::OpAtomicISub:
+      case spv::Op::OpAtomicSMin:
+      case spv::Op::OpAtomicUMin:
+      case spv::Op::OpAtomicSMax:
+      case spv::Op::OpAtomicUMax:
+      case spv::Op::OpAtomicAnd:
+      case spv::Op::OpAtomicOr:
+      case spv::Op::OpAtomicXor:
         if (use_in_operand_index == 1 || use_in_operand_index == 2) {
           return false;
         }
         break;
-      case SpvOpAtomicCompareExchange:
+      case spv::Op::OpAtomicCompareExchange:
         if (use_in_operand_index == 1 || use_in_operand_index == 2 ||
             use_in_operand_index == 3) {
           return false;
         }
         break;
-      case SpvOpAtomicCompareExchangeWeak:
-      case SpvOpAtomicFlagTestAndSet:
-      case SpvOpAtomicFlagClear:
-      case SpvOpAtomicFAddEXT:
+      case spv::Op::OpAtomicCompareExchangeWeak:
+      case spv::Op::OpAtomicFlagTestAndSet:
+      case spv::Op::OpAtomicFlagClear:
+      case spv::Op::OpAtomicFAddEXT:
         assert(false && "Not allowed with the Shader capability.");
       default:
         break;
@@ -1715,17 +1722,17 @@ bool IdUseCanBeReplaced(opt::IRContext* ir_context,
 bool MembersHaveBuiltInDecoration(opt::IRContext* ir_context,
                                   uint32_t struct_type_id) {
   const auto* type_inst = ir_context->get_def_use_mgr()->GetDef(struct_type_id);
-  assert(type_inst && type_inst->opcode() == SpvOpTypeStruct &&
+  assert(type_inst && type_inst->opcode() == spv::Op::OpTypeStruct &&
          "|struct_type_id| is not a result id of an OpTypeStruct");
 
   uint32_t builtin_count = 0;
   ir_context->get_def_use_mgr()->ForEachUser(
       type_inst,
       [struct_type_id, &builtin_count](const opt::Instruction* user) {
-        if (user->opcode() == SpvOpMemberDecorate &&
+        if (user->opcode() == spv::Op::OpMemberDecorate &&
             user->GetSingleWordInOperand(0) == struct_type_id &&
-            static_cast<SpvDecoration>(user->GetSingleWordInOperand(2)) ==
-                SpvDecorationBuiltIn) {
+            static_cast<spv::Decoration>(user->GetSingleWordInOperand(2)) ==
+                spv::Decoration::BuiltIn) {
           ++builtin_count;
         }
       });
@@ -1738,9 +1745,11 @@ bool MembersHaveBuiltInDecoration(opt::IRContext* ir_context,
 }
 
 bool HasBlockOrBufferBlockDecoration(opt::IRContext* ir_context, uint32_t id) {
-  for (auto decoration : {SpvDecorationBlock, SpvDecorationBufferBlock}) {
+  for (auto decoration :
+       {spv::Decoration::Block, spv::Decoration::BufferBlock}) {
     if (!ir_context->get_decoration_mgr()->WhileEachDecoration(
-            id, decoration, [](const opt::Instruction & /*unused*/) -> bool {
+            id, uint32_t(decoration),
+            [](const opt::Instruction & /*unused*/) -> bool {
               return false;
             })) {
       return true;
@@ -1762,7 +1771,7 @@ bool SplittingBeforeInstructionSeparatesOpSampledImageDefinitionFromUse(
     if (before_split) {
       // If the instruction comes before the split and its opcode is
       // OpSampledImage, record its result id.
-      if (instruction.opcode() == SpvOpSampledImage) {
+      if (instruction.opcode() == spv::Op::OpSampledImage) {
         sampled_image_result_ids.insert(instruction.result_id());
       }
     } else {
@@ -1784,110 +1793,110 @@ bool SplittingBeforeInstructionSeparatesOpSampledImageDefinitionFromUse(
 
 bool InstructionHasNoSideEffects(const opt::Instruction& instruction) {
   switch (instruction.opcode()) {
-    case SpvOpUndef:
-    case SpvOpAccessChain:
-    case SpvOpInBoundsAccessChain:
-    case SpvOpArrayLength:
-    case SpvOpVectorExtractDynamic:
-    case SpvOpVectorInsertDynamic:
-    case SpvOpVectorShuffle:
-    case SpvOpCompositeConstruct:
-    case SpvOpCompositeExtract:
-    case SpvOpCompositeInsert:
-    case SpvOpCopyObject:
-    case SpvOpTranspose:
-    case SpvOpConvertFToU:
-    case SpvOpConvertFToS:
-    case SpvOpConvertSToF:
-    case SpvOpConvertUToF:
-    case SpvOpUConvert:
-    case SpvOpSConvert:
-    case SpvOpFConvert:
-    case SpvOpQuantizeToF16:
-    case SpvOpSatConvertSToU:
-    case SpvOpSatConvertUToS:
-    case SpvOpBitcast:
-    case SpvOpSNegate:
-    case SpvOpFNegate:
-    case SpvOpIAdd:
-    case SpvOpFAdd:
-    case SpvOpISub:
-    case SpvOpFSub:
-    case SpvOpIMul:
-    case SpvOpFMul:
-    case SpvOpUDiv:
-    case SpvOpSDiv:
-    case SpvOpFDiv:
-    case SpvOpUMod:
-    case SpvOpSRem:
-    case SpvOpSMod:
-    case SpvOpFRem:
-    case SpvOpFMod:
-    case SpvOpVectorTimesScalar:
-    case SpvOpMatrixTimesScalar:
-    case SpvOpVectorTimesMatrix:
-    case SpvOpMatrixTimesVector:
-    case SpvOpMatrixTimesMatrix:
-    case SpvOpOuterProduct:
-    case SpvOpDot:
-    case SpvOpIAddCarry:
-    case SpvOpISubBorrow:
-    case SpvOpUMulExtended:
-    case SpvOpSMulExtended:
-    case SpvOpAny:
-    case SpvOpAll:
-    case SpvOpIsNan:
-    case SpvOpIsInf:
-    case SpvOpIsFinite:
-    case SpvOpIsNormal:
-    case SpvOpSignBitSet:
-    case SpvOpLessOrGreater:
-    case SpvOpOrdered:
-    case SpvOpUnordered:
-    case SpvOpLogicalEqual:
-    case SpvOpLogicalNotEqual:
-    case SpvOpLogicalOr:
-    case SpvOpLogicalAnd:
-    case SpvOpLogicalNot:
-    case SpvOpSelect:
-    case SpvOpIEqual:
-    case SpvOpINotEqual:
-    case SpvOpUGreaterThan:
-    case SpvOpSGreaterThan:
-    case SpvOpUGreaterThanEqual:
-    case SpvOpSGreaterThanEqual:
-    case SpvOpULessThan:
-    case SpvOpSLessThan:
-    case SpvOpULessThanEqual:
-    case SpvOpSLessThanEqual:
-    case SpvOpFOrdEqual:
-    case SpvOpFUnordEqual:
-    case SpvOpFOrdNotEqual:
-    case SpvOpFUnordNotEqual:
-    case SpvOpFOrdLessThan:
-    case SpvOpFUnordLessThan:
-    case SpvOpFOrdGreaterThan:
-    case SpvOpFUnordGreaterThan:
-    case SpvOpFOrdLessThanEqual:
-    case SpvOpFUnordLessThanEqual:
-    case SpvOpFOrdGreaterThanEqual:
-    case SpvOpFUnordGreaterThanEqual:
-    case SpvOpShiftRightLogical:
-    case SpvOpShiftRightArithmetic:
-    case SpvOpShiftLeftLogical:
-    case SpvOpBitwiseOr:
-    case SpvOpBitwiseXor:
-    case SpvOpBitwiseAnd:
-    case SpvOpNot:
-    case SpvOpBitFieldInsert:
-    case SpvOpBitFieldSExtract:
-    case SpvOpBitFieldUExtract:
-    case SpvOpBitReverse:
-    case SpvOpBitCount:
-    case SpvOpCopyLogical:
-    case SpvOpPhi:
-    case SpvOpPtrEqual:
-    case SpvOpPtrNotEqual:
+    case spv::Op::OpUndef:
+    case spv::Op::OpAccessChain:
+    case spv::Op::OpInBoundsAccessChain:
+    case spv::Op::OpArrayLength:
+    case spv::Op::OpVectorExtractDynamic:
+    case spv::Op::OpVectorInsertDynamic:
+    case spv::Op::OpVectorShuffle:
+    case spv::Op::OpCompositeConstruct:
+    case spv::Op::OpCompositeExtract:
+    case spv::Op::OpCompositeInsert:
+    case spv::Op::OpCopyObject:
+    case spv::Op::OpTranspose:
+    case spv::Op::OpConvertFToU:
+    case spv::Op::OpConvertFToS:
+    case spv::Op::OpConvertSToF:
+    case spv::Op::OpConvertUToF:
+    case spv::Op::OpUConvert:
+    case spv::Op::OpSConvert:
+    case spv::Op::OpFConvert:
+    case spv::Op::OpQuantizeToF16:
+    case spv::Op::OpSatConvertSToU:
+    case spv::Op::OpSatConvertUToS:
+    case spv::Op::OpBitcast:
+    case spv::Op::OpSNegate:
+    case spv::Op::OpFNegate:
+    case spv::Op::OpIAdd:
+    case spv::Op::OpFAdd:
+    case spv::Op::OpISub:
+    case spv::Op::OpFSub:
+    case spv::Op::OpIMul:
+    case spv::Op::OpFMul:
+    case spv::Op::OpUDiv:
+    case spv::Op::OpSDiv:
+    case spv::Op::OpFDiv:
+    case spv::Op::OpUMod:
+    case spv::Op::OpSRem:
+    case spv::Op::OpSMod:
+    case spv::Op::OpFRem:
+    case spv::Op::OpFMod:
+    case spv::Op::OpVectorTimesScalar:
+    case spv::Op::OpMatrixTimesScalar:
+    case spv::Op::OpVectorTimesMatrix:
+    case spv::Op::OpMatrixTimesVector:
+    case spv::Op::OpMatrixTimesMatrix:
+    case spv::Op::OpOuterProduct:
+    case spv::Op::OpDot:
+    case spv::Op::OpIAddCarry:
+    case spv::Op::OpISubBorrow:
+    case spv::Op::OpUMulExtended:
+    case spv::Op::OpSMulExtended:
+    case spv::Op::OpAny:
+    case spv::Op::OpAll:
+    case spv::Op::OpIsNan:
+    case spv::Op::OpIsInf:
+    case spv::Op::OpIsFinite:
+    case spv::Op::OpIsNormal:
+    case spv::Op::OpSignBitSet:
+    case spv::Op::OpLessOrGreater:
+    case spv::Op::OpOrdered:
+    case spv::Op::OpUnordered:
+    case spv::Op::OpLogicalEqual:
+    case spv::Op::OpLogicalNotEqual:
+    case spv::Op::OpLogicalOr:
+    case spv::Op::OpLogicalAnd:
+    case spv::Op::OpLogicalNot:
+    case spv::Op::OpSelect:
+    case spv::Op::OpIEqual:
+    case spv::Op::OpINotEqual:
+    case spv::Op::OpUGreaterThan:
+    case spv::Op::OpSGreaterThan:
+    case spv::Op::OpUGreaterThanEqual:
+    case spv::Op::OpSGreaterThanEqual:
+    case spv::Op::OpULessThan:
+    case spv::Op::OpSLessThan:
+    case spv::Op::OpULessThanEqual:
+    case spv::Op::OpSLessThanEqual:
+    case spv::Op::OpFOrdEqual:
+    case spv::Op::OpFUnordEqual:
+    case spv::Op::OpFOrdNotEqual:
+    case spv::Op::OpFUnordNotEqual:
+    case spv::Op::OpFOrdLessThan:
+    case spv::Op::OpFUnordLessThan:
+    case spv::Op::OpFOrdGreaterThan:
+    case spv::Op::OpFUnordGreaterThan:
+    case spv::Op::OpFOrdLessThanEqual:
+    case spv::Op::OpFUnordLessThanEqual:
+    case spv::Op::OpFOrdGreaterThanEqual:
+    case spv::Op::OpFUnordGreaterThanEqual:
+    case spv::Op::OpShiftRightLogical:
+    case spv::Op::OpShiftRightArithmetic:
+    case spv::Op::OpShiftLeftLogical:
+    case spv::Op::OpBitwiseOr:
+    case spv::Op::OpBitwiseXor:
+    case spv::Op::OpBitwiseAnd:
+    case spv::Op::OpNot:
+    case spv::Op::OpBitFieldInsert:
+    case spv::Op::OpBitFieldSExtract:
+    case spv::Op::OpBitFieldUExtract:
+    case spv::Op::OpBitReverse:
+    case spv::Op::OpBitCount:
+    case spv::Op::OpCopyLogical:
+    case spv::Op::OpPhi:
+    case spv::Op::OpPtrEqual:
+    case spv::Op::OpPtrNotEqual:
       return true;
     default:
       return false;
@@ -1975,7 +1984,7 @@ bool NewTerminatorPreservesDominationRules(opt::IRContext* ir_context,
 
     for (const auto& inst : block) {
       for (uint32_t i = 0; i < inst.NumInOperands();
-           i += inst.opcode() == SpvOpPhi ? 2 : 1) {
+           i += inst.opcode() == spv::Op::OpPhi ? 2 : 1) {
         const auto& operand = inst.GetInOperand(i);
         if (!spvIsInIdType(operand.type)) {
           continue;
@@ -1994,7 +2003,7 @@ bool NewTerminatorPreservesDominationRules(opt::IRContext* ir_context,
           continue;
         }
 
-        auto domination_target_id = inst.opcode() == SpvOpPhi
+        auto domination_target_id = inst.opcode() == spv::Op::OpPhi
                                         ? inst.GetSingleWordInOperand(i + 1)
                                         : block.id();
 
@@ -2021,68 +2030,68 @@ opt::Module::iterator GetFunctionIterator(opt::IRContext* ir_context,
 // TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/3582): Add all
 //  opcodes that are agnostic to signedness of operands to function.
 //  This is not exhaustive yet.
-bool IsAgnosticToSignednessOfOperand(SpvOp opcode,
+bool IsAgnosticToSignednessOfOperand(spv::Op opcode,
                                      uint32_t use_in_operand_index) {
   switch (opcode) {
-    case SpvOpSNegate:
-    case SpvOpNot:
-    case SpvOpIAdd:
-    case SpvOpISub:
-    case SpvOpIMul:
-    case SpvOpSDiv:
-    case SpvOpSRem:
-    case SpvOpSMod:
-    case SpvOpShiftRightLogical:
-    case SpvOpShiftRightArithmetic:
-    case SpvOpShiftLeftLogical:
-    case SpvOpBitwiseOr:
-    case SpvOpBitwiseXor:
-    case SpvOpBitwiseAnd:
-    case SpvOpIEqual:
-    case SpvOpINotEqual:
-    case SpvOpULessThan:
-    case SpvOpSLessThan:
-    case SpvOpUGreaterThan:
-    case SpvOpSGreaterThan:
-    case SpvOpULessThanEqual:
-    case SpvOpSLessThanEqual:
-    case SpvOpUGreaterThanEqual:
-    case SpvOpSGreaterThanEqual:
+    case spv::Op::OpSNegate:
+    case spv::Op::OpNot:
+    case spv::Op::OpIAdd:
+    case spv::Op::OpISub:
+    case spv::Op::OpIMul:
+    case spv::Op::OpSDiv:
+    case spv::Op::OpSRem:
+    case spv::Op::OpSMod:
+    case spv::Op::OpShiftRightLogical:
+    case spv::Op::OpShiftRightArithmetic:
+    case spv::Op::OpShiftLeftLogical:
+    case spv::Op::OpBitwiseOr:
+    case spv::Op::OpBitwiseXor:
+    case spv::Op::OpBitwiseAnd:
+    case spv::Op::OpIEqual:
+    case spv::Op::OpINotEqual:
+    case spv::Op::OpULessThan:
+    case spv::Op::OpSLessThan:
+    case spv::Op::OpUGreaterThan:
+    case spv::Op::OpSGreaterThan:
+    case spv::Op::OpULessThanEqual:
+    case spv::Op::OpSLessThanEqual:
+    case spv::Op::OpUGreaterThanEqual:
+    case spv::Op::OpSGreaterThanEqual:
       return true;
 
-    case SpvOpAtomicStore:
-    case SpvOpAtomicExchange:
-    case SpvOpAtomicIAdd:
-    case SpvOpAtomicISub:
-    case SpvOpAtomicSMin:
-    case SpvOpAtomicUMin:
-    case SpvOpAtomicSMax:
-    case SpvOpAtomicUMax:
-    case SpvOpAtomicAnd:
-    case SpvOpAtomicOr:
-    case SpvOpAtomicXor:
-    case SpvOpAtomicFAddEXT:  // Capability AtomicFloat32AddEXT,
+    case spv::Op::OpAtomicStore:
+    case spv::Op::OpAtomicExchange:
+    case spv::Op::OpAtomicIAdd:
+    case spv::Op::OpAtomicISub:
+    case spv::Op::OpAtomicSMin:
+    case spv::Op::OpAtomicUMin:
+    case spv::Op::OpAtomicSMax:
+    case spv::Op::OpAtomicUMax:
+    case spv::Op::OpAtomicAnd:
+    case spv::Op::OpAtomicOr:
+    case spv::Op::OpAtomicXor:
+    case spv::Op::OpAtomicFAddEXT:  // Capability AtomicFloat32AddEXT,
       // AtomicFloat64AddEXT.
       assert(use_in_operand_index != 0 &&
              "Signedness check should not occur on a pointer operand.");
       return use_in_operand_index == 1 || use_in_operand_index == 2;
 
-    case SpvOpAtomicCompareExchange:
-    case SpvOpAtomicCompareExchangeWeak:  // Capability Kernel.
+    case spv::Op::OpAtomicCompareExchange:
+    case spv::Op::OpAtomicCompareExchangeWeak:  // Capability Kernel.
       assert(use_in_operand_index != 0 &&
              "Signedness check should not occur on a pointer operand.");
       return use_in_operand_index >= 1 && use_in_operand_index <= 3;
 
-    case SpvOpAtomicLoad:
-    case SpvOpAtomicIIncrement:
-    case SpvOpAtomicIDecrement:
-    case SpvOpAtomicFlagTestAndSet:  // Capability Kernel.
-    case SpvOpAtomicFlagClear:       // Capability Kernel.
+    case spv::Op::OpAtomicLoad:
+    case spv::Op::OpAtomicIIncrement:
+    case spv::Op::OpAtomicIDecrement:
+    case spv::Op::OpAtomicFlagTestAndSet:  // Capability Kernel.
+    case spv::Op::OpAtomicFlagClear:       // Capability Kernel.
       assert(use_in_operand_index != 0 &&
              "Signedness check should not occur on a pointer operand.");
       return use_in_operand_index >= 1;
 
-    case SpvOpAccessChain:
+    case spv::Op::OpAccessChain:
       // The signedness of indices does not matter.
       return use_in_operand_index > 0;
 
@@ -2093,7 +2102,7 @@ bool IsAgnosticToSignednessOfOperand(SpvOp opcode,
   }
 }
 
-bool TypesAreCompatible(opt::IRContext* ir_context, SpvOp opcode,
+bool TypesAreCompatible(opt::IRContext* ir_context, spv::Op opcode,
                         uint32_t use_in_operand_index, uint32_t type_id_1,
                         uint32_t type_id_2) {
   assert(ir_context->get_type_mgr()->GetType(type_id_1) &&

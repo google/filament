@@ -135,7 +135,7 @@ TEST(DependencyAnalysis, ZIV) {
   const Instruction* store[4];
   int stores_found = 0;
   for (const Instruction& inst : *spvtest::GetBasicBlock(f, 13)) {
-    if (inst.opcode() == SpvOp::SpvOpStore) {
+    if (inst.opcode() == spv::Op::OpStore) {
       store[stores_found] = &inst;
       ++stores_found;
     }
@@ -292,7 +292,7 @@ TEST(DependencyAnalysis, SymbolicZIV) {
   const Instruction* store[4];
   int stores_found = 0;
   for (const Instruction& inst : *spvtest::GetBasicBlock(f, 22)) {
-    if (inst.opcode() == SpvOp::SpvOpStore) {
+    if (inst.opcode() == spv::Op::OpStore) {
       store[stores_found] = &inst;
       ++stores_found;
     }
@@ -528,7 +528,7 @@ TEST(DependencyAnalysis, SIV) {
     const Instruction* store[4];
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 17)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store[stores_found] = &inst;
         ++stores_found;
       }
@@ -601,7 +601,7 @@ TEST(DependencyAnalysis, SIV) {
     const Instruction* store[4];
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 68)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store[stores_found] = &inst;
         ++stores_found;
       }
@@ -922,7 +922,7 @@ TEST(DependencyAnalysis, SymbolicSIV) {
     const Instruction* store[4];
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 29)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store[stores_found] = &inst;
         ++stores_found;
       }
@@ -978,7 +978,7 @@ TEST(DependencyAnalysis, SymbolicSIV) {
     const Instruction* store[4];
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 114)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store[stores_found] = &inst;
         ++stores_found;
       }
@@ -1420,7 +1420,7 @@ TEST(DependencyAnalysis, Crossing) {
 
     const Instruction* store = nullptr;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 29)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store = &inst;
       }
     }
@@ -1441,7 +1441,7 @@ TEST(DependencyAnalysis, Crossing) {
 
     const Instruction* store = nullptr;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 54)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store = &inst;
       }
     }
@@ -1463,7 +1463,7 @@ TEST(DependencyAnalysis, Crossing) {
 
     const Instruction* store = nullptr;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 75)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store = &inst;
       }
     }
@@ -1484,7 +1484,7 @@ TEST(DependencyAnalysis, Crossing) {
 
     const Instruction* store = nullptr;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 99)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store = &inst;
       }
     }
@@ -1506,7 +1506,7 @@ TEST(DependencyAnalysis, Crossing) {
 
     const Instruction* store = nullptr;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 121)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store = &inst;
       }
     }
@@ -1527,7 +1527,7 @@ TEST(DependencyAnalysis, Crossing) {
 
     const Instruction* store = nullptr;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 142)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store = &inst;
       }
     }
@@ -1549,7 +1549,7 @@ TEST(DependencyAnalysis, Crossing) {
 
     const Instruction* store = nullptr;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 162)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store = &inst;
       }
     }
@@ -1570,7 +1570,7 @@ TEST(DependencyAnalysis, Crossing) {
 
     const Instruction* store = nullptr;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 183)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store = &inst;
       }
     }
@@ -1846,7 +1846,7 @@ TEST(DependencyAnalysis, WeakZeroSIV) {
     const Instruction* store[4];
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 19)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store[stores_found] = &inst;
         ++stores_found;
       }
@@ -1914,7 +1914,7 @@ TEST(DependencyAnalysis, WeakZeroSIV) {
     const Instruction* store[4];
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 54)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store[stores_found] = &inst;
         ++stores_found;
       }
@@ -1981,7 +1981,7 @@ TEST(DependencyAnalysis, WeakZeroSIV) {
     const Instruction* store[4];
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 84)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store[stores_found] = &inst;
         ++stores_found;
       }
@@ -2049,7 +2049,7 @@ TEST(DependencyAnalysis, WeakZeroSIV) {
     const Instruction* store[4];
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 111)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store[stores_found] = &inst;
         ++stores_found;
       }
@@ -2210,7 +2210,7 @@ TEST(DependencyAnalysis, MultipleSubscriptZIVSIV) {
   const Instruction* store[6];
   int stores_found = 0;
   for (const Instruction& inst : *spvtest::GetBasicBlock(f, 11)) {
-    if (inst.opcode() == SpvOp::SpvOpStore) {
+    if (inst.opcode() == spv::Op::OpStore) {
       store[stores_found] = &inst;
       ++stores_found;
     }
@@ -2443,7 +2443,7 @@ TEST(DependencyAnalysis, IrrelevantSubscripts) {
     const Instruction* store[1];
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 25)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store[stores_found] = &inst;
         ++stores_found;
       }
@@ -2479,7 +2479,7 @@ TEST(DependencyAnalysis, IrrelevantSubscripts) {
     const Instruction* store[1];
     int stores_found = 0;
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, 56)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store[stores_found] = &inst;
         ++stores_found;
       }
@@ -2790,12 +2790,12 @@ TEST(DependencyAnalysis, MIV) {
   ASSERT_TRUE(spvtest::GetBasicBlock(f, block_id));
 
   for (const Instruction& inst : *spvtest::GetBasicBlock(f, block_id)) {
-    if (inst.opcode() == SpvOp::SpvOpStore) {
+    if (inst.opcode() == spv::Op::OpStore) {
       store[stores_found] = &inst;
       ++stores_found;
     }
 
-    if (inst.opcode() == SpvOp::SpvOpLoad) {
+    if (inst.opcode() == spv::Op::OpLoad) {
       load[loads_found] = &inst;
       ++loads_found;
     }
@@ -3080,12 +3080,12 @@ TEST(DependencyAnalysis, SubscriptPartitioning) {
   ASSERT_TRUE(spvtest::GetBasicBlock(f, block_id));
 
   for (const Instruction& inst : *spvtest::GetBasicBlock(f, block_id)) {
-    if (inst.opcode() == SpvOp::SpvOpStore) {
+    if (inst.opcode() == spv::Op::OpStore) {
       store[stores_found] = &inst;
       ++stores_found;
     }
 
-    if (inst.opcode() == SpvOp::SpvOpLoad) {
+    if (inst.opcode() == spv::Op::OpLoad) {
       load[loads_found] = &inst;
       ++loads_found;
     }
@@ -3461,11 +3461,11 @@ TEST(DependencyAnalysis, Delta) {
     ASSERT_TRUE(spvtest::GetBasicBlock(f, block_id));
 
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, block_id)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store = &inst;
       }
 
-      if (inst.opcode() == SpvOp::SpvOpLoad) {
+      if (inst.opcode() == spv::Op::OpLoad) {
         load = &inst;
       }
     }
@@ -3502,11 +3502,11 @@ TEST(DependencyAnalysis, Delta) {
     ASSERT_TRUE(spvtest::GetBasicBlock(f, block_id));
 
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, block_id)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store = &inst;
       }
 
-      if (inst.opcode() == SpvOp::SpvOpLoad) {
+      if (inst.opcode() == spv::Op::OpLoad) {
         load = &inst;
       }
     }
@@ -3534,11 +3534,11 @@ TEST(DependencyAnalysis, Delta) {
     ASSERT_TRUE(spvtest::GetBasicBlock(f, block_id));
 
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, block_id)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store = &inst;
       }
 
-      if (inst.opcode() == SpvOp::SpvOpLoad) {
+      if (inst.opcode() == spv::Op::OpLoad) {
         load = &inst;
       }
     }
@@ -3569,11 +3569,11 @@ TEST(DependencyAnalysis, Delta) {
     ASSERT_TRUE(spvtest::GetBasicBlock(f, block_id));
 
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, block_id)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store = &inst;
       }
 
-      if (inst.opcode() == SpvOp::SpvOpLoad) {
+      if (inst.opcode() == spv::Op::OpLoad) {
         load = &inst;
       }
     }
@@ -3611,11 +3611,11 @@ TEST(DependencyAnalysis, Delta) {
     ASSERT_TRUE(spvtest::GetBasicBlock(f, block_id));
 
     for (const Instruction& inst : *spvtest::GetBasicBlock(f, block_id)) {
-      if (inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         store = &inst;
       }
 
-      if (inst.opcode() == SpvOp::SpvOpLoad) {
+      if (inst.opcode() == spv::Op::OpLoad) {
         load = &inst;
       }
     }

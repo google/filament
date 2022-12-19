@@ -53,14 +53,14 @@ void TransformationWrapRegionInSelection::Apply(
     TransformationContext* transformation_context) const {
   auto* new_header_block =
       ir_context->cfg()->block(message_.region_entry_block_id());
-  assert(new_header_block->terminator()->opcode() == SpvOpBranch &&
+  assert(new_header_block->terminator()->opcode() == spv::Op::OpBranch &&
          "This condition should have been checked in the IsApplicable");
 
   const auto successor_id =
       new_header_block->terminator()->GetSingleWordInOperand(0);
 
   // Change |entry_block|'s terminator to |OpBranchConditional|.
-  new_header_block->terminator()->SetOpcode(SpvOpBranchConditional);
+  new_header_block->terminator()->SetOpcode(spv::Op::OpBranchConditional);
   new_header_block->terminator()->SetInOperands(
       {{SPV_OPERAND_TYPE_ID,
         {fuzzerutil::MaybeGetBoolConstant(ir_context, *transformation_context,
@@ -70,11 +70,11 @@ void TransformationWrapRegionInSelection::Apply(
 
   // Insert OpSelectionMerge before the terminator.
   new_header_block->terminator()->InsertBefore(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpSelectionMerge, 0, 0,
+      ir_context, spv::Op::OpSelectionMerge, 0, 0,
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {message_.region_exit_block_id()}},
           {SPV_OPERAND_TYPE_SELECTION_CONTROL,
-           {SpvSelectionControlMaskNone}}}));
+           {uint32_t(spv::SelectionControlMask::MaskNone)}}}));
 
   // We've change the module so we must invalidate analyses.
   ir_context->InvalidateAnalysesExceptFor(opt::IRContext::kAnalysisNone);
@@ -130,7 +130,7 @@ bool TransformationWrapRegionInSelection::IsApplicableToBlockRange(
   }
 
   // |header_block_candidate| must have an OpBranch terminator.
-  if (header_block_candidate->terminator()->opcode() != SpvOpBranch) {
+  if (header_block_candidate->terminator()->opcode() != spv::Op::OpBranch) {
     return false;
   }
 

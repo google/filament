@@ -72,7 +72,7 @@ TEST(TransformationAddTypeMatrixTest, BasicTest) {
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
-    ASSERT_EQ(SpvOpTypeMatrix,
+    ASSERT_EQ(spv::Op::OpTypeMatrix,
               context->get_def_use_mgr()->GetDef(100)->opcode());
     ASSERT_NE(nullptr, context->get_type_mgr()->GetType(100)->AsMatrix());
   }

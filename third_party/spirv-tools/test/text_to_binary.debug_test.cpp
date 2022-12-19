@@ -39,7 +39,7 @@ struct LanguageCase {
     return static_cast<uint32_t>(language_value);
   }
   const char* language_name;
-  SpvSourceLanguage language_value;
+  spv::SourceLanguage language_value;
   uint32_t version;
 };
 
@@ -47,7 +47,7 @@ struct LanguageCase {
 // The list of OpSource cases to use.
 const LanguageCase kLanguageCases[] = {
 #define CASE(NAME, VERSION) \
-  { #NAME, SpvSourceLanguage##NAME, VERSION }
+  { #NAME, spv::SourceLanguage::NAME, VERSION }
   CASE(Unknown, 0),
   CASE(Unknown, 999),
   CASE(ESSL, 310),
@@ -69,9 +69,10 @@ TEST_P(OpSourceTest, AnyLanguage) {
   const std::string input = std::string("OpSource ") +
                             GetParam().language_name + " " +
                             std::to_string(GetParam().version);
-  EXPECT_THAT(CompiledInstructions(input),
-              Eq(MakeInstruction(SpvOpSource, {GetParam().get_language_value(),
-                                               GetParam().version})));
+  EXPECT_THAT(
+      CompiledInstructions(input),
+      Eq(MakeInstruction(spv::Op::OpSource, {GetParam().get_language_value(),
+                                             GetParam().version})));
 }
 
 INSTANTIATE_TEST_SUITE_P(TextToBinaryTestDebug, OpSourceTest,
@@ -87,7 +88,8 @@ TEST_F(TextToBinaryTest, OpSourceAcceptsOptionalFileId) {
   const std::string input = "OpSource GLSL 450 %file_id";
   EXPECT_THAT(
       CompiledInstructions(input),
-      Eq(MakeInstruction(SpvOpSource, {SpvSourceLanguageGLSL, 450, 1})));
+      Eq(MakeInstruction(spv::Op::OpSource,
+                         {uint32_t(spv::SourceLanguage::GLSL), 450, 1})));
 }
 
 TEST_F(TextToBinaryTest, OpSourceAcceptsOptionalSourceText) {
@@ -95,7 +97,8 @@ TEST_F(TextToBinaryTest, OpSourceAcceptsOptionalSourceText) {
   const std::string input =
       "OpSource GLSL 450 %file_id \"" + fake_source + "\"";
   EXPECT_THAT(CompiledInstructions(input),
-              Eq(MakeInstruction(SpvOpSource, {SpvSourceLanguageGLSL, 450, 1},
+              Eq(MakeInstruction(spv::Op::OpSource,
+                                 {uint32_t(spv::SourceLanguage::GLSL), 450, 1},
                                  MakeVector(fake_source))));
 }
 
@@ -110,7 +113,7 @@ TEST_P(OpSourceContinuedTest, AnyExtension) {
       std::string("OpSourceContinued \"") + GetParam() + "\"";
   EXPECT_THAT(
       CompiledInstructions(input),
-      Eq(MakeInstruction(SpvOpSourceContinued, MakeVector(GetParam()))));
+      Eq(MakeInstruction(spv::Op::OpSourceContinued, MakeVector(GetParam()))));
 }
 
 // TODO(dneto): utf-8, quoting, escaping
@@ -129,7 +132,7 @@ TEST_P(OpSourceExtensionTest, AnyExtension) {
       std::string("OpSourceExtension \"") + GetParam() + "\"";
   EXPECT_THAT(
       CompiledInstructions(input),
-      Eq(MakeInstruction(SpvOpSourceExtension, MakeVector(GetParam()))));
+      Eq(MakeInstruction(spv::Op::OpSourceExtension, MakeVector(GetParam()))));
 }
 
 // TODO(dneto): utf-8, quoting, escaping
@@ -139,12 +142,12 @@ INSTANTIATE_TEST_SUITE_P(TextToBinaryTestDebug, OpSourceExtensionTest,
 
 TEST_F(TextToBinaryTest, OpLine) {
   EXPECT_THAT(CompiledInstructions("OpLine %srcfile 42 99"),
-              Eq(MakeInstruction(SpvOpLine, {1, 42, 99})));
+              Eq(MakeInstruction(spv::Op::OpLine, {1, 42, 99})));
 }
 
 TEST_F(TextToBinaryTest, OpNoLine) {
   EXPECT_THAT(CompiledInstructions("OpNoLine"),
-              Eq(MakeInstruction(SpvOpNoLine, {})));
+              Eq(MakeInstruction(spv::Op::OpNoLine, {})));
 }
 
 using OpStringTest =
@@ -154,8 +157,9 @@ TEST_P(OpStringTest, AnyString) {
   // TODO(dneto): utf-8, quoting, escaping
   const std::string input =
       std::string("%result = OpString \"") + GetParam() + "\"";
-  EXPECT_THAT(CompiledInstructions(input),
-              Eq(MakeInstruction(SpvOpString, {1}, MakeVector(GetParam()))));
+  EXPECT_THAT(
+      CompiledInstructions(input),
+      Eq(MakeInstruction(spv::Op::OpString, {1}, MakeVector(GetParam()))));
 }
 
 // TODO(dneto): utf-8, quoting, escaping
@@ -169,8 +173,9 @@ using OpNameTest =
 TEST_P(OpNameTest, AnyString) {
   const std::string input =
       std::string("OpName %target \"") + GetParam() + "\"";
-  EXPECT_THAT(CompiledInstructions(input),
-              Eq(MakeInstruction(SpvOpName, {1}, MakeVector(GetParam()))));
+  EXPECT_THAT(
+      CompiledInstructions(input),
+      Eq(MakeInstruction(spv::Op::OpName, {1}, MakeVector(GetParam()))));
 }
 
 // UTF-8, quoting, escaping, etc. are covered in the StringLiterals tests in
@@ -185,9 +190,9 @@ TEST_P(OpMemberNameTest, AnyString) {
   // TODO(dneto): utf-8, quoting, escaping
   const std::string input =
       std::string("OpMemberName %type 42 \"") + GetParam() + "\"";
-  EXPECT_THAT(
-      CompiledInstructions(input),
-      Eq(MakeInstruction(SpvOpMemberName, {1, 42}, MakeVector(GetParam()))));
+  EXPECT_THAT(CompiledInstructions(input),
+              Eq(MakeInstruction(spv::Op::OpMemberName, {1, 42},
+                                 MakeVector(GetParam()))));
 }
 
 // TODO(dneto): utf-8, quoting, escaping
@@ -205,7 +210,7 @@ TEST_P(OpModuleProcessedTest, AnyString) {
       std::string("OpModuleProcessed \"") + GetParam() + "\"";
   EXPECT_THAT(
       CompiledInstructions(input, SPV_ENV_UNIVERSAL_1_1),
-      Eq(MakeInstruction(SpvOpModuleProcessed, MakeVector(GetParam()))));
+      Eq(MakeInstruction(spv::Op::OpModuleProcessed, MakeVector(GetParam()))));
 }
 
 INSTANTIATE_TEST_SUITE_P(TextToBinaryTestDebug, OpModuleProcessedTest,

@@ -52,17 +52,17 @@ class TransformationReplaceLoadStoreWithCopyMemory : public Transformation {
 
   // Checks if the instruction that has an |op_code| might write to
   // the source operand of the OpLoad instruction.
-  static bool IsMemoryWritingOpCode(SpvOp op_code);
+  static bool IsMemoryWritingOpCode(spv::Op op_code);
 
   // Checks if the instruction that has an |op_code| is a memory barrier that
   // could interfere with the source operand of the OpLoad instruction
-  static bool IsMemoryBarrierOpCode(SpvOp op_code);
+  static bool IsMemoryBarrierOpCode(spv::Op op_code);
 
   // Checks if the |storage_class| of the source operand of the OpLoad
   // instruction implies that this variable cannot change (due to other threads)
   // across memory barriers.
   static bool IsStorageClassSafeAcrossMemoryBarriers(
-      SpvStorageClass storage_class);
+      spv::StorageClass storage_class);
 
   std::unordered_set<uint32_t> GetFreshIds() const override;
 

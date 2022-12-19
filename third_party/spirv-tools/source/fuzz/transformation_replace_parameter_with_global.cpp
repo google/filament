@@ -41,7 +41,7 @@ bool TransformationReplaceParameterWithGlobal::IsApplicable(
   // Check that |parameter_id| is valid.
   const auto* param_inst =
       ir_context->get_def_use_mgr()->GetDef(message_.parameter_id());
-  if (!param_inst || param_inst->opcode() != SpvOpFunctionParameter) {
+  if (!param_inst || param_inst->opcode() != spv::Op::OpFunctionParameter) {
     return false;
   }
 
@@ -69,7 +69,7 @@ bool TransformationReplaceParameterWithGlobal::IsApplicable(
 
   // Check that pointer type for the global variable exists in the module.
   if (!fuzzerutil::MaybeGetPointerType(ir_context, param_inst->type_id(),
-                                       SpvStorageClassPrivate)) {
+                                       spv::StorageClass::Private)) {
     return false;
   }
 
@@ -91,8 +91,8 @@ void TransformationReplaceParameterWithGlobal::Apply(
   fuzzerutil::AddGlobalVariable(
       ir_context, message_.global_variable_fresh_id(),
       fuzzerutil::MaybeGetPointerType(ir_context, param_inst->type_id(),
-                                      SpvStorageClassPrivate),
-      SpvStorageClassPrivate,
+                                      spv::StorageClass::Private),
+      spv::StorageClass::Private,
       fuzzerutil::MaybeGetZeroConstant(ir_context, *transformation_context,
                                        param_inst->type_id(), false));
 
@@ -103,16 +103,17 @@ void TransformationReplaceParameterWithGlobal::Apply(
   // Insert an OpLoad instruction right after OpVariable instructions.
   auto it = function->begin()->begin();
   while (it != function->begin()->end() &&
-         !fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpLoad, it)) {
+         !fuzzerutil::CanInsertOpcodeBeforeInstruction(spv::Op::OpLoad, it)) {
     ++it;
   }
 
-  assert(fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpLoad, it) &&
+  assert(fuzzerutil::CanInsertOpcodeBeforeInstruction(spv::Op::OpLoad, it) &&
          "Can't insert OpLoad or OpCopyMemory into the first basic block of "
          "the function");
 
   it.InsertBefore(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpLoad, param_inst->type_id(), param_inst->result_id(),
+      ir_context, spv::Op::OpLoad, param_inst->type_id(),
+      param_inst->result_id(),
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {message_.global_variable_fresh_id()}}}));
 
@@ -132,13 +133,14 @@ void TransformationReplaceParameterWithGlobal::Apply(
 
   // Update all relevant OpFunctionCall instructions.
   for (auto* inst : fuzzerutil::GetCallers(ir_context, function->result_id())) {
-    assert(fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpStore, inst) &&
-           "Can't insert OpStore right before the function call");
+    assert(
+        fuzzerutil::CanInsertOpcodeBeforeInstruction(spv::Op::OpStore, inst) &&
+        "Can't insert OpStore right before the function call");
 
     // Insert an OpStore before the OpFunctionCall. +1 since the first
     // operand of OpFunctionCall is an id of the function.
     inst->InsertBefore(MakeUnique<opt::Instruction>(
-        ir_context, SpvOpStore, 0, 0,
+        ir_context, spv::Op::OpStore, 0, 0,
         opt::Instruction::OperandList{
             {SPV_OPERAND_TYPE_ID, {message_.global_variable_fresh_id()}},
             {SPV_OPERAND_TYPE_ID,

@@ -366,7 +366,7 @@ TEST(TransformationAddOpPhiSynonymTest, VariablePointers) {
 
   // Remove the VariablePointers capability.
   context.get()->get_feature_mgr()->RemoveCapability(
-      SpvCapabilityVariablePointers);
+      spv::Capability::VariablePointers);
 
   // The VariablePointers capability is required to add an OpPhi instruction of
   // pointer type.
@@ -375,7 +375,7 @@ TEST(TransformationAddOpPhiSynonymTest, VariablePointers) {
 
   // Add the VariablePointers capability back.
   context.get()->get_feature_mgr()->AddCapability(
-      SpvCapabilityVariablePointers);
+      spv::Capability::VariablePointers);
 
   // If the ids have pointer type, the storage class must be Workgroup or
   // StorageBuffer, but it is Function in this case.

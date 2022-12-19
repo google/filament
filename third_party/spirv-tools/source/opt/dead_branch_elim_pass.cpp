@@ -29,28 +29,25 @@
 
 namespace spvtools {
 namespace opt {
-
 namespace {
-
-const uint32_t kBranchCondTrueLabIdInIdx = 1;
-const uint32_t kBranchCondFalseLabIdInIdx = 2;
-
-}  // anonymous namespace
+constexpr uint32_t kBranchCondTrueLabIdInIdx = 1;
+constexpr uint32_t kBranchCondFalseLabIdInIdx = 2;
+}  // namespace
 
 bool DeadBranchElimPass::GetConstCondition(uint32_t condId, bool* condVal) {
   bool condIsConst;
   Instruction* cInst = get_def_use_mgr()->GetDef(condId);
   switch (cInst->opcode()) {
-    case SpvOpConstantNull:
-    case SpvOpConstantFalse: {
+    case spv::Op::OpConstantNull:
+    case spv::Op::OpConstantFalse: {
       *condVal = false;
       condIsConst = true;
     } break;
-    case SpvOpConstantTrue: {
+    case spv::Op::OpConstantTrue: {
       *condVal = true;
       condIsConst = true;
     } break;
-    case SpvOpLogicalNot: {
+    case spv::Op::OpLogicalNot: {
       bool negVal;
       condIsConst =
           GetConstCondition(cInst->GetSingleWordInOperand(0), &negVal);
@@ -65,13 +62,13 @@ bool DeadBranchElimPass::GetConstInteger(uint32_t selId, uint32_t* selVal) {
   Instruction* sInst = get_def_use_mgr()->GetDef(selId);
   uint32_t typeId = sInst->type_id();
   Instruction* typeInst = get_def_use_mgr()->GetDef(typeId);
-  if (!typeInst || (typeInst->opcode() != SpvOpTypeInt)) return false;
+  if (!typeInst || (typeInst->opcode() != spv::Op::OpTypeInt)) return false;
   // TODO(greg-lunarg): Support non-32 bit ints
   if (typeInst->GetSingleWordInOperand(0) != 32) return false;
-  if (sInst->opcode() == SpvOpConstant) {
+  if (sInst->opcode() == spv::Op::OpConstant) {
     *selVal = sInst->GetSingleWordInOperand(0);
     return true;
-  } else if (sInst->opcode() == SpvOpConstantNull) {
+  } else if (sInst->opcode() == spv::Op::OpConstantNull) {
     *selVal = 0;
     return true;
   }
@@ -81,7 +78,7 @@ bool DeadBranchElimPass::GetConstInteger(uint32_t selId, uint32_t* selVal) {
 void DeadBranchElimPass::AddBranch(uint32_t labelId, BasicBlock* bp) {
   assert(get_def_use_mgr()->GetDef(labelId) != nullptr);
   std::unique_ptr<Instruction> newBranch(
-      new Instruction(context(), SpvOpBranch, 0, 0,
+      new Instruction(context(), spv::Op::OpBranch, 0, 0,
                       {{spv_operand_type_t::SPV_OPERAND_TYPE_ID, {labelId}}}));
   context()->AnalyzeDefUse(&*newBranch);
   context()->set_instr_block(&*newBranch, bp);
@@ -115,13 +112,13 @@ bool DeadBranchElimPass::MarkLiveBlocks(
     Instruction* terminator = block->terminator();
     uint32_t live_lab_id = 0;
     // Check if the terminator has a single valid successor.
-    if (terminator->opcode() == SpvOpBranchConditional) {
+    if (terminator->opcode() == spv::Op::OpBranchConditional) {
       bool condVal;
       if (GetConstCondition(terminator->GetSingleWordInOperand(0u), &condVal)) {
         live_lab_id = terminator->GetSingleWordInOperand(
             condVal ? kBranchCondTrueLabIdInIdx : kBranchCondFalseLabIdInIdx);
       }
-    } else if (terminator->opcode() == SpvOpSwitch) {
+    } else if (terminator->opcode() == spv::Op::OpSwitch) {
       uint32_t sel_val;
       if (GetConstInteger(terminator->GetSingleWordInOperand(0u), &sel_val)) {
         // Search switch operands for selector value, set live_lab_id to
@@ -194,8 +191,8 @@ bool DeadBranchElimPass::SimplifyBranch(BasicBlock* block,
                                         uint32_t live_lab_id) {
   Instruction* merge_inst = block->GetMergeInst();
   Instruction* terminator = block->terminator();
-  if (merge_inst && merge_inst->opcode() == SpvOpSelectionMerge) {
-    if (merge_inst->NextNode()->opcode() == SpvOpSwitch &&
+  if (merge_inst && merge_inst->opcode() == spv::Op::OpSelectionMerge) {
+    if (merge_inst->NextNode()->opcode() == spv::Op::OpSwitch &&
         SwitchHasNestedBreak(block->id())) {
       if (terminator->NumInOperands() == 2) {
         // We cannot remove the branch, and it already has a single case, so no
@@ -266,7 +263,7 @@ bool DeadBranchElimPass::FixPhiNodesInLiveBlocks(
   for (auto& block : *func) {
     if (live_blocks.count(&block)) {
       for (auto iter = block.begin(); iter != block.end();) {
-        if (iter->opcode() != SpvOpPhi) {
+        if (iter->opcode() != spv::Op::OpPhi) {
           break;
         }
 
@@ -292,7 +289,7 @@ bool DeadBranchElimPass::FixPhiNodesInLiveBlocks(
               cont_iter->second == &block && inst->NumInOperands() > 4) {
             if (get_def_use_mgr()
                     ->GetDef(inst->GetSingleWordInOperand(i - 1))
-                    ->opcode() == SpvOpUndef) {
+                    ->opcode() == spv::Op::OpUndef) {
               // Already undef incoming value, no change necessary.
               operands.push_back(inst->GetInOperand(i - 1));
               operands.push_back(inst->GetInOperand(i));
@@ -378,14 +375,14 @@ bool DeadBranchElimPass::EraseDeadBlocks(
     if (unreachable_continues.count(&*ebi)) {
       uint32_t cont_id = unreachable_continues.find(&*ebi)->second->id();
       if (ebi->begin() != ebi->tail() ||
-          ebi->terminator()->opcode() != SpvOpBranch ||
+          ebi->terminator()->opcode() != spv::Op::OpBranch ||
           ebi->terminator()->GetSingleWordInOperand(0u) != cont_id) {
         // Make unreachable, but leave the label.
         KillAllInsts(&*ebi, false);
         // Add unconditional branch to header.
         assert(unreachable_continues.count(&*ebi));
         ebi->AddInstruction(MakeUnique<Instruction>(
-            context(), SpvOpBranch, 0, 0,
+            context(), spv::Op::OpBranch, 0, 0,
             std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {cont_id}}}));
         get_def_use_mgr()->AnalyzeInstUse(&*ebi->tail());
         context()->set_instr_block(&*ebi->tail(), &*ebi);
@@ -394,12 +391,12 @@ bool DeadBranchElimPass::EraseDeadBlocks(
       ++ebi;
     } else if (unreachable_merges.count(&*ebi)) {
       if (ebi->begin() != ebi->tail() ||
-          ebi->terminator()->opcode() != SpvOpUnreachable) {
+          ebi->terminator()->opcode() != spv::Op::OpUnreachable) {
         // Make unreachable, but leave the label.
         KillAllInsts(&*ebi, false);
         // Add unreachable terminator.
         ebi->AddInstruction(
-            MakeUnique<Instruction>(context(), SpvOpUnreachable, 0, 0,
+            MakeUnique<Instruction>(context(), spv::Op::OpUnreachable, 0, 0,
                                     std::initializer_list<Operand>{}));
         context()->AnalyzeUses(ebi->terminator());
         context()->set_instr_block(ebi->terminator(), &*ebi);
@@ -459,22 +456,13 @@ void DeadBranchElimPass::FixBlockOrder() {
   };
 
   // Reorders blocks according to structured order.
-  ProcessFunction reorder_structured = [this](Function* function) {
-    std::list<BasicBlock*> order;
-    context()->cfg()->ComputeStructuredOrder(function, &*function->begin(),
-                                             &order);
-    std::vector<BasicBlock*> blocks;
-    for (auto block : order) {
-      blocks.push_back(block);
-    }
-    for (uint32_t i = 1; i < blocks.size(); ++i) {
-      function->MoveBasicBlockToAfter(blocks[i]->id(), blocks[i - 1]);
-    }
+  ProcessFunction reorder_structured = [](Function* function) {
+    function->ReorderBasicBlocksInStructuredOrder();
     return true;
   };
 
   // Structured order is more intuitive so use it where possible.
-  if (context()->get_feature_mgr()->HasCapability(SpvCapabilityShader)) {
+  if (context()->get_feature_mgr()->HasCapability(spv::Capability::Shader)) {
     context()->ProcessReachableCallTree(reorder_structured);
   } else {
     context()->ProcessReachableCallTree(reorder_dominators);
@@ -486,7 +474,8 @@ Pass::Status DeadBranchElimPass::Process() {
   // support required in KillNamesAndDecorates().
   // TODO(greg-lunarg): Add support for OpGroupDecorate
   for (auto& ai : get_module()->annotations())
-    if (ai.opcode() == SpvOpGroupDecorate) return Status::SuccessWithoutChange;
+    if (ai.opcode() == spv::Op::OpGroupDecorate)
+      return Status::SuccessWithoutChange;
   // Process all entry point functions
   ProcessFunction pfn = [this](Function* fp) {
     return EliminateDeadBranches(fp);
@@ -510,7 +499,7 @@ Instruction* DeadBranchElimPass::FindFirstExitFromSelectionMerge(
     Instruction* branch = start_block->terminator();
     uint32_t next_block_id = 0;
     switch (branch->opcode()) {
-      case SpvOpBranchConditional:
+      case spv::Op::OpBranchConditional:
         next_block_id = start_block->MergeBlockIdIfAny();
         if (next_block_id == 0) {
           // If a possible target is the |loop_merge_id| or |loop_continue_id|,
@@ -539,7 +528,7 @@ Instruction* DeadBranchElimPass::FindFirstExitFromSelectionMerge(
           }
         }
         break;
-      case SpvOpSwitch:
+      case spv::Op::OpSwitch:
         next_block_id = start_block->MergeBlockIdIfAny();
         if (next_block_id == 0) {
           // A switch with no merge instructions can have at most 5 targets:
@@ -587,7 +576,7 @@ Instruction* DeadBranchElimPass::FindFirstExitFromSelectionMerge(
           // The fall through is case 3.
         }
         break;
-      case SpvOpBranch:
+      case spv::Op::OpBranch:
         // Need to check if this is the header of a loop nested in the
         // selection construct.
         next_block_id = start_block->MergeBlockIdIfAny();

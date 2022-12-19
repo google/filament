@@ -33,6 +33,7 @@ SPV_AMD_shader_trinary_minmax
 SPV_KHR_non_semantic_info
 """
 
+OUTPUT_LANGUAGE = 'c'
 
 def make_path_to_file(f):
     """Makes all ancestor directories to the given file, if they don't yet
@@ -76,9 +77,14 @@ def compose_capability_list(caps):
       - caps: a sequence of capability names
 
     Returns:
-      a string containing the braced list of SpvCapability* enums named by caps.
+      a string containing the braced list of SpvCapability* or spv::Capability:: enums named by caps.
     """
-    return '{' + ', '.join(['SpvCapability{}'.format(c) for c in caps]) + '}'
+    base_string = 'SpvCapability'
+    global OUTPUT_LANGUAGE
+    if OUTPUT_LANGUAGE == 'c++':
+        base_string = 'spv::Capability::'
+
+    return '{' + ', '.join([(base_string + '{}').format(c) for c in caps]) + '}'
 
 
 def get_capability_array_name(caps):
@@ -99,8 +105,12 @@ def generate_capability_arrays(caps):
       - caps: a sequence of sequence of capability names
     """
     caps = sorted(set([tuple(c) for c in caps if c]))
+    cap_str = 'SpvCapability'
+    global OUTPUT_LANGUAGE
+    if OUTPUT_LANGUAGE == 'c++':
+        cap_str = 'spv::Capability'
     arrays = [
-        'static const SpvCapability {}[] = {};'.format(
+        'static const ' + cap_str + ' {}[] = {};'.format(
             get_capability_array_name(c), compose_capability_list(c))
         for c in caps]
     return '\n'.join(arrays)
@@ -255,7 +265,12 @@ class InstInitializer(object):
             self.operands.pop()
 
     def __str__(self):
-        template = ['{{"{opname}"', 'SpvOp{opname}',
+        global OUTPUT_LANGUAGE
+        base_str = 'SpvOp'
+        if OUTPUT_LANGUAGE == 'c++':
+            base_str = 'spv::Op::Op'
+
+        template = ['{{"{opname}"', base_str + '{opname}',
                     '{num_caps}', '{caps_mask}',
                     '{num_operands}', '{{{operands}}}',
                     '{def_result_id}', '{ref_type_id}',
@@ -634,9 +649,16 @@ def generate_capability_to_string_mapping(operand_kinds):
 
     We take care to avoid emitting duplicate values.
     """
-    function = 'const char* CapabilityToString(SpvCapability capability) {\n'
+    cap_str = 'SpvCapability'
+    cap_join = ''
+    global OUTPUT_LANGUAGE
+    if OUTPUT_LANGUAGE == 'c++':
+        cap_str = 'spv::Capability'
+        cap_join = '::'
+
+    function = 'const char* CapabilityToString(' + cap_str + ' capability) {\n'
     function += '  switch (capability) {\n'
-    template = '    case SpvCapability{capability}:\n' \
+    template = '    case ' + cap_str + cap_join + '{capability}:\n' \
         '      return "{capability}";\n'
     emitted = set()  # The values of capabilities we already have emitted
     for capability in get_capabilities(operand_kinds):
@@ -644,8 +666,8 @@ def generate_capability_to_string_mapping(operand_kinds):
         if value not in emitted:
             emitted.add(value)
             function += template.format(capability=capability.get('enumerant'))
-    function += '    case SpvCapabilityMax:\n' \
-        '      assert(0 && "Attempting to convert SpvCapabilityMax to string");\n' \
+    function += '    case ' + cap_str + cap_join + 'Max:\n' \
+        '      assert(0 && "Attempting to convert ' + cap_str + cap_join + 'Max to string");\n' \
         '      return "";\n'
     function += '  }\n\n  return "";\n}'
     return function
@@ -734,6 +756,10 @@ def main():
                         type=str, required=False, default=None,
                         help='input JSON grammar file for OpenCL extended '
                         'instruction set')
+    parser.add_argument('--output-language',
+                        type=str, required=False, default='c',
+                        choices=['c','c++'],
+                        help='specify output language type')
 
     parser.add_argument('--core-insts-output', metavar='<path>',
                         type=str, required=False, default=None,
@@ -764,6 +790,9 @@ def main():
                         type=str, required=False, default=None,
                         help='prefix for operand kinds (to disambiguate operand type enums)')
     args = parser.parse_args()
+
+    global OUTPUT_LANGUAGE
+    OUTPUT_LANGUAGE = args.output_language
 
     # The GN build system needs this because it doesn't handle quoting
     # empty string arguments well.

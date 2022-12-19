@@ -87,10 +87,10 @@ void TransformationAddBitInstructionSynonym::Apply(
   // synonym fact.  The helper function should take care of invalidating
   // analyses before adding facts.
   switch (bit_instruction->opcode()) {
-    case SpvOpBitwiseOr:
-    case SpvOpBitwiseXor:
-    case SpvOpBitwiseAnd:
-    case SpvOpNot:
+    case spv::Op::OpBitwiseOr:
+    case spv::Op::OpBitwiseXor:
+    case spv::Op::OpBitwiseAnd:
+    case spv::Op::OpNot:
       AddOpBitwiseOrOpNotSynonym(ir_context, transformation_context,
                                  bit_instruction);
       break;
@@ -106,10 +106,10 @@ bool TransformationAddBitInstructionSynonym::IsInstructionSupported(
   //  Right now we only support certain operations. When this issue is addressed
   //  the following conditional can use the function |spvOpcodeIsBit|.
   // |instruction| must be defined and must be a supported bit instruction.
-  if (!instruction || (instruction->opcode() != SpvOpBitwiseOr &&
-                       instruction->opcode() != SpvOpBitwiseXor &&
-                       instruction->opcode() != SpvOpBitwiseAnd &&
-                       instruction->opcode() != SpvOpNot)) {
+  if (!instruction || (instruction->opcode() != spv::Op::OpBitwiseOr &&
+                       instruction->opcode() != spv::Op::OpBitwiseXor &&
+                       instruction->opcode() != spv::Op::OpBitwiseAnd &&
+                       instruction->opcode() != spv::Op::OpNot)) {
     return false;
   }
 
@@ -119,7 +119,7 @@ bool TransformationAddBitInstructionSynonym::IsInstructionSupported(
     return false;
   }
 
-  if (instruction->opcode() == SpvOpNot) {
+  if (instruction->opcode() == spv::Op::OpNot) {
     auto operand = instruction->GetInOperand(0).words[0];
     auto operand_inst = ir_context->get_def_use_mgr()->GetDef(operand);
     auto operand_type =
@@ -171,10 +171,10 @@ uint32_t TransformationAddBitInstructionSynonym::GetRequiredFreshIdCount(
   // TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/3557):
   //  Right now, only certain operations are supported.
   switch (bit_instruction->opcode()) {
-    case SpvOpBitwiseOr:
-    case SpvOpBitwiseXor:
-    case SpvOpBitwiseAnd:
-    case SpvOpNot:
+    case spv::Op::OpBitwiseOr:
+    case spv::Op::OpBitwiseXor:
+    case spv::Op::OpBitwiseAnd:
+    case spv::Op::OpNot:
       return (2 + bit_instruction->NumInOperands()) *
                  ir_context->get_type_mgr()
                      ->GetType(bit_instruction->type_id())
@@ -220,7 +220,7 @@ void TransformationAddBitInstructionSynonym::AddOpBitwiseOrOpNotSynonym(
     for (auto operand = bit_instruction->begin() + 2;
          operand != bit_instruction->end(); operand++) {
       auto bit_extract =
-          opt::Instruction(ir_context, SpvOpBitFieldUExtract,
+          opt::Instruction(ir_context, spv::Op::OpBitFieldUExtract,
                            bit_instruction->type_id(), *fresh_id++,
                            {{SPV_OPERAND_TYPE_ID, operand->words},
                             {SPV_OPERAND_TYPE_ID, {offset}},
@@ -246,12 +246,13 @@ void TransformationAddBitInstructionSynonym::AddOpBitwiseOrOpNotSynonym(
   // first two bits of the result.
   uint32_t offset = fuzzerutil::MaybeGetIntegerConstant(
       ir_context, *transformation_context, {1}, 32, false, false);
-  auto bit_insert = opt::Instruction(
-      ir_context, SpvOpBitFieldInsert, bit_instruction->type_id(), *fresh_id++,
-      {{SPV_OPERAND_TYPE_ID, {extracted_bit_instructions[0]}},
-       {SPV_OPERAND_TYPE_ID, {extracted_bit_instructions[1]}},
-       {SPV_OPERAND_TYPE_ID, {offset}},
-       {SPV_OPERAND_TYPE_ID, {count}}});
+  auto bit_insert =
+      opt::Instruction(ir_context, spv::Op::OpBitFieldInsert,
+                       bit_instruction->type_id(), *fresh_id++,
+                       {{SPV_OPERAND_TYPE_ID, {extracted_bit_instructions[0]}},
+                        {SPV_OPERAND_TYPE_ID, {extracted_bit_instructions[1]}},
+                        {SPV_OPERAND_TYPE_ID, {offset}},
+                        {SPV_OPERAND_TYPE_ID, {count}}});
   bit_instruction->InsertBefore(MakeUnique<opt::Instruction>(bit_insert));
   fuzzerutil::UpdateModuleIdBound(ir_context, bit_insert.result_id());
 
@@ -260,7 +261,7 @@ void TransformationAddBitInstructionSynonym::AddOpBitwiseOrOpNotSynonym(
     offset = fuzzerutil::MaybeGetIntegerConstant(
         ir_context, *transformation_context, {i}, 32, false, false);
     bit_insert = opt::Instruction(
-        ir_context, SpvOpBitFieldInsert, bit_instruction->type_id(),
+        ir_context, spv::Op::OpBitFieldInsert, bit_instruction->type_id(),
         *fresh_id++,
         {{SPV_OPERAND_TYPE_ID, {bit_insert.result_id()}},
          {SPV_OPERAND_TYPE_ID, {extracted_bit_instructions[i]}},

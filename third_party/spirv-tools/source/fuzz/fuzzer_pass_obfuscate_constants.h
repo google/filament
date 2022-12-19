@@ -85,8 +85,8 @@ class FuzzerPassObfuscateConstants : public FuzzerPass {
   // (similar for |less_than_opcodes|).
   void ObfuscateBoolConstantViaConstantPair(
       uint32_t depth, const protobufs::IdUseDescriptor& bool_constant_use,
-      const std::vector<SpvOp>& greater_than_opcodes,
-      const std::vector<SpvOp>& less_than_opcodes, uint32_t constant_id_1,
+      const std::vector<spv::Op>& greater_than_opcodes,
+      const std::vector<spv::Op>& less_than_opcodes, uint32_t constant_id_1,
       uint32_t constant_id_2, bool first_constant_is_larger);
 
   // A helper method to determine whether input operand |in_operand_index| of
@@ -96,7 +96,7 @@ class FuzzerPassObfuscateConstants : public FuzzerPass {
   void MaybeAddConstantIdUse(
       const opt::Instruction& inst, uint32_t in_operand_index,
       uint32_t base_instruction_result_id,
-      const std::map<SpvOp, uint32_t>& skipped_opcode_count,
+      const std::map<spv::Op, uint32_t>& skipped_opcode_count,
       std::vector<protobufs::IdUseDescriptor>* constant_uses);
 
   // Returns a vector of unique words that denote constants. Every such constant

@@ -133,7 +133,7 @@ class GraphicsRobustAccessPass : public Pass {
   // Returns a new instruction inserted before |where_inst|, and created from
   // the remaining arguments. Registers the definitions and uses of the new
   // instruction and also records its block.
-  opt::Instruction* InsertInst(opt::Instruction* where_inst, SpvOp opcode,
+  opt::Instruction* InsertInst(opt::Instruction* where_inst, spv::Op opcode,
                                uint32_t type_id, uint32_t result_id,
                                const Instruction::OperandList& operands);
 

@@ -50,7 +50,7 @@ OperandToConstReductionOpportunityFinder::GetAvailableOpportunities(
                 // The argument is already a constant.
                 continue;
               }
-              if (def->opcode() == SpvOpFunction) {
+              if (def->opcode() == spv::Op::OpFunction) {
                 // The argument refers to a function, e.g. the function called
                 // by OpFunctionCall; avoid replacing this with a constant of
                 // the function's return type.

@@ -180,9 +180,10 @@ TEST_F(TextToBinaryTest, WrongOpCode) {
 TEST_F(TextToBinaryTest, CRLF) {
   const std::string input =
       "%i32 = OpTypeInt 32 1\r\n%c = OpConstant %i32 123\r\n";
-  EXPECT_THAT(CompiledInstructions(input),
-              Eq(Concatenate({MakeInstruction(SpvOpTypeInt, {1, 32, 1}),
-                              MakeInstruction(SpvOpConstant, {1, 2, 123})})));
+  EXPECT_THAT(
+      CompiledInstructions(input),
+      Eq(Concatenate({MakeInstruction(spv::Op::OpTypeInt, {1, 32, 1}),
+                      MakeInstruction(spv::Op::OpConstant, {1, 2, 123})})));
 }
 
 using TextToBinaryFloatValueTest = spvtest::TextToBinaryTestBase<
@@ -192,8 +193,8 @@ TEST_P(TextToBinaryFloatValueTest, Samples) {
   const std::string input =
       "%1 = OpTypeFloat 32\n%2 = OpConstant %1 " + GetParam().first;
   EXPECT_THAT(CompiledInstructions(input),
-              Eq(Concatenate({MakeInstruction(SpvOpTypeFloat, {1, 32}),
-                              MakeInstruction(SpvOpConstant,
+              Eq(Concatenate({MakeInstruction(spv::Op::OpTypeFloat, {1, 32}),
+                              MakeInstruction(spv::Op::OpConstant,
                                               {1, 2, GetParam().second})})));
 }
 
@@ -222,8 +223,8 @@ TEST_P(TextToBinaryHalfValueTest, Samples) {
   const std::string input =
       "%1 = OpTypeFloat 16\n%2 = OpConstant %1 " + GetParam().first;
   EXPECT_THAT(CompiledInstructions(input),
-              Eq(Concatenate({MakeInstruction(SpvOpTypeFloat, {1, 16}),
-                              MakeInstruction(SpvOpConstant,
+              Eq(Concatenate({MakeInstruction(spv::Op::OpTypeFloat, {1, 16}),
+                              MakeInstruction(spv::Op::OpConstant,
                                               {1, 2, GetParam().second})})));
 }
 

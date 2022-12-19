@@ -36,7 +36,7 @@ void FuzzerPassAddCopyMemory::Apply() {
              opt::BasicBlock::iterator inst_it,
              const protobufs::InstructionDescriptor& instruction_descriptor) {
         // Check that we can insert an OpCopyMemory before this instruction.
-        if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpCopyMemory,
+        if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(spv::Op::OpCopyMemory,
                                                           inst_it)) {
           return;
         }
@@ -61,8 +61,8 @@ void FuzzerPassAddCopyMemory::Apply() {
 
         // Decide whether to create global or local variable.
         auto storage_class = GetFuzzerContext()->ChooseEven()
-                                 ? SpvStorageClassPrivate
-                                 : SpvStorageClassFunction;
+                                 ? spv::StorageClass::Private
+                                 : spv::StorageClass::Function;
 
         auto pointee_type_id = fuzzerutil::GetPointeeTypeIdFromPointerType(
             GetIRContext(), inst->type_id());

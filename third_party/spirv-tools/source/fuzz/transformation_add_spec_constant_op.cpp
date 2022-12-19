@@ -26,11 +26,11 @@ TransformationAddSpecConstantOp::TransformationAddSpecConstantOp(
     : message_(std::move(message)) {}
 
 TransformationAddSpecConstantOp::TransformationAddSpecConstantOp(
-    uint32_t fresh_id, uint32_t type_id, SpvOp opcode,
+    uint32_t fresh_id, uint32_t type_id, spv::Op opcode,
     const opt::Instruction::OperandList& operands) {
   message_.set_fresh_id(fresh_id);
   message_.set_type_id(type_id);
-  message_.set_opcode(opcode);
+  message_.set_opcode(uint32_t(opcode));
   for (const auto& operand : operands) {
     auto* op = message_.add_operand();
     op->set_operand_type(operand.type);
@@ -70,8 +70,8 @@ void TransformationAddSpecConstantOp::ApplyImpl(
   }
 
   ir_context->AddGlobalValue(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpSpecConstantOp, message_.type_id(), message_.fresh_id(),
-      std::move(operands)));
+      ir_context, spv::Op::OpSpecConstantOp, message_.type_id(),
+      message_.fresh_id(), std::move(operands)));
 
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
 }

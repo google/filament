@@ -120,13 +120,13 @@ class ConvertToSampledImagePass : public Pass {
   const analysis::Type* GetVariableType(const Instruction& variable) const;
 
   // Returns the storage class of |variable|.
-  SpvStorageClass GetStorageClass(const Instruction& variable) const;
+  spv::StorageClass GetStorageClass(const Instruction& variable) const;
 
   // Finds |inst|'s users whose opcode is |user_opcode| or users of OpCopyObject
   // instructions of |inst| whose opcode is |user_opcode| and puts them in
   // |uses|.
   void FindUses(const Instruction* inst, std::vector<Instruction*>* uses,
-                uint32_t user_opcode) const;
+                spv::Op user_opcode) const;
 
   // Finds OpImage* instructions using |image| or OpCopyObject instructions that
   // copy |image| and puts them in |uses|.

@@ -73,7 +73,7 @@ void FuzzerPassReplaceIrrelevantIds::Apply() {
   // we cannot use these as replacements.
   for (const auto& pair : GetIRContext()->get_def_use_mgr()->id_to_defs()) {
     uint32_t type_id = pair.second->type_id();
-    if (pair.second->opcode() != SpvOpFunction && type_id &&
+    if (pair.second->opcode() != spv::Op::OpFunction && type_id &&
         types_to_ids.count(type_id)) {
       types_to_ids[type_id].push_back(pair.first);
     }

@@ -35,8 +35,10 @@ OpMemoryModel Logical Simple
   ASSERT_EQ(SPV_SUCCESS, AssembleAndLink({body1, body2}, &linked_binary));
   EXPECT_THAT(GetErrorMessage(), std::string());
 
-  EXPECT_EQ(SpvAddressingModelLogical, linked_binary[6]);
-  EXPECT_EQ(SpvMemoryModelSimple, linked_binary[7]);
+  EXPECT_EQ(spv::AddressingModel::Logical,
+            static_cast<spv::AddressingModel>(linked_binary[6]));
+  EXPECT_EQ(spv::MemoryModel::Simple,
+            static_cast<spv::MemoryModel>(linked_binary[7]));
 }
 
 TEST_F(MemoryModel, AddressingMismatch) {

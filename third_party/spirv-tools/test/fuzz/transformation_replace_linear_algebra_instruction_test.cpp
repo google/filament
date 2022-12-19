@@ -76,54 +76,56 @@ TEST(TransformationReplaceLinearAlgebraInstructionTest, IsApplicable) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   // Tests linear algebra instructions.
-  auto instruction_descriptor = MakeInstructionDescriptor(24, SpvOpDot, 0);
+  auto instruction_descriptor =
+      MakeInstructionDescriptor(24, spv::Op::OpDot, 0);
   auto transformation = TransformationReplaceLinearAlgebraInstruction(
       {33, 34, 35, 36, 37, 38}, instruction_descriptor);
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
 
   instruction_descriptor =
-      MakeInstructionDescriptor(27, SpvOpVectorTimesScalar, 0);
+      MakeInstructionDescriptor(27, spv::Op::OpVectorTimesScalar, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {33, 34, 35, 36}, instruction_descriptor);
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
 
   // Tests non-linear algebra instructions.
-  instruction_descriptor = MakeInstructionDescriptor(30, SpvOpCopyObject, 0);
+  instruction_descriptor =
+      MakeInstructionDescriptor(30, spv::Op::OpCopyObject, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {33, 34, 35, 36, 37, 38}, instruction_descriptor);
   ASSERT_FALSE(
       transformation.IsApplicable(context.get(), transformation_context));
 
-  instruction_descriptor = MakeInstructionDescriptor(31, SpvOpFAdd, 0);
+  instruction_descriptor = MakeInstructionDescriptor(31, spv::Op::OpFAdd, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {33, 34, 35, 36, 37}, instruction_descriptor);
   ASSERT_FALSE(
       transformation.IsApplicable(context.get(), transformation_context));
 
-  instruction_descriptor = MakeInstructionDescriptor(32, SpvOpFMul, 0);
+  instruction_descriptor = MakeInstructionDescriptor(32, spv::Op::OpFMul, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {33, 34, 35, 36}, instruction_descriptor);
   ASSERT_FALSE(
       transformation.IsApplicable(context.get(), transformation_context));
 
   // Tests number of fresh ids is different than necessary.
-  instruction_descriptor = MakeInstructionDescriptor(25, SpvOpDot, 0);
+  instruction_descriptor = MakeInstructionDescriptor(25, spv::Op::OpDot, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {33, 34, 35, 36}, instruction_descriptor);
   ASSERT_FALSE(
       transformation.IsApplicable(context.get(), transformation_context));
 
   instruction_descriptor =
-      MakeInstructionDescriptor(28, SpvOpVectorTimesScalar, 0);
+      MakeInstructionDescriptor(28, spv::Op::OpVectorTimesScalar, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {33, 34, 35, 36, 37, 38, 39}, instruction_descriptor);
   ASSERT_FALSE(
       transformation.IsApplicable(context.get(), transformation_context));
 
   // Tests non-fresh ids.
-  instruction_descriptor = MakeInstructionDescriptor(26, SpvOpDot, 0);
+  instruction_descriptor = MakeInstructionDescriptor(26, spv::Op::OpDot, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {33, 34, 5, 36, 37, 8, 39, 40, 1, 42, 3, 44, 45, 46},
       instruction_descriptor);
@@ -131,7 +133,7 @@ TEST(TransformationReplaceLinearAlgebraInstructionTest, IsApplicable) {
       transformation.IsApplicable(context.get(), transformation_context));
 
   instruction_descriptor =
-      MakeInstructionDescriptor(29, SpvOpVectorTimesScalar, 0);
+      MakeInstructionDescriptor(29, spv::Op::OpVectorTimesScalar, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {33, 34, 35, 36, 7, 38, 9, 40}, instruction_descriptor);
   ASSERT_FALSE(
@@ -249,32 +251,36 @@ TEST(TransformationReplaceLinearAlgebraInstructionTest, ReplaceOpTranspose) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   auto instruction_descriptor =
-      MakeInstructionDescriptor(56, SpvOpTranspose, 0);
+      MakeInstructionDescriptor(56, spv::Op::OpTranspose, 0);
   auto transformation = TransformationReplaceLinearAlgebraInstruction(
       {65, 66, 67, 68, 69, 70, 71, 72, 73, 74}, instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
-  instruction_descriptor = MakeInstructionDescriptor(57, SpvOpTranspose, 0);
+  instruction_descriptor =
+      MakeInstructionDescriptor(57, spv::Op::OpTranspose, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88},
       instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
-  instruction_descriptor = MakeInstructionDescriptor(58, SpvOpTranspose, 0);
+  instruction_descriptor =
+      MakeInstructionDescriptor(58, spv::Op::OpTranspose, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105,
        106},
       instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
-  instruction_descriptor = MakeInstructionDescriptor(59, SpvOpTranspose, 0);
+  instruction_descriptor =
+      MakeInstructionDescriptor(59, spv::Op::OpTranspose, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120,
        121},
       instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
-  instruction_descriptor = MakeInstructionDescriptor(60, SpvOpTranspose, 0);
+  instruction_descriptor =
+      MakeInstructionDescriptor(60, spv::Op::OpTranspose, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132,
        133, 134, 135, 136, 137, 138, 139, 140, 141, 142},
@@ -506,19 +512,19 @@ TEST(TransformationReplaceLinearAlgebraInstructionTest,
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   auto instruction_descriptor =
-      MakeInstructionDescriptor(17, SpvOpVectorTimesScalar, 0);
+      MakeInstructionDescriptor(17, spv::Op::OpVectorTimesScalar, 0);
   auto transformation = TransformationReplaceLinearAlgebraInstruction(
       {20, 21, 22, 23}, instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
   instruction_descriptor =
-      MakeInstructionDescriptor(18, SpvOpVectorTimesScalar, 0);
+      MakeInstructionDescriptor(18, spv::Op::OpVectorTimesScalar, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {24, 25, 26, 27, 28, 29}, instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
   instruction_descriptor =
-      MakeInstructionDescriptor(19, SpvOpVectorTimesScalar, 0);
+      MakeInstructionDescriptor(19, spv::Op::OpVectorTimesScalar, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {30, 31, 32, 33, 34, 35, 36, 37}, instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -677,20 +683,20 @@ TEST(TransformationReplaceLinearAlgebraInstructionTest,
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   auto instruction_descriptor =
-      MakeInstructionDescriptor(56, SpvOpMatrixTimesScalar, 0);
+      MakeInstructionDescriptor(56, spv::Op::OpMatrixTimesScalar, 0);
   auto transformation = TransformationReplaceLinearAlgebraInstruction(
       {65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76}, instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
   instruction_descriptor =
-      MakeInstructionDescriptor(57, SpvOpMatrixTimesScalar, 0);
+      MakeInstructionDescriptor(57, spv::Op::OpMatrixTimesScalar, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94},
       instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
   instruction_descriptor =
-      MakeInstructionDescriptor(58, SpvOpMatrixTimesScalar, 0);
+      MakeInstructionDescriptor(58, spv::Op::OpMatrixTimesScalar, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {95,  96,  97,  98,  99,  100, 101, 102, 103, 104, 105, 106,
        107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118},
@@ -964,14 +970,14 @@ TEST(TransformationReplaceLinearAlgebraInstructionTest,
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   auto instruction_descriptor =
-      MakeInstructionDescriptor(56, SpvOpVectorTimesMatrix, 0);
+      MakeInstructionDescriptor(56, spv::Op::OpVectorTimesMatrix, 0);
   auto transformation = TransformationReplaceLinearAlgebraInstruction(
       {65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78},
       instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
   instruction_descriptor =
-      MakeInstructionDescriptor(57, SpvOpVectorTimesMatrix, 0);
+      MakeInstructionDescriptor(57, spv::Op::OpVectorTimesMatrix, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
        89, 90, 91, 92, 93, 94, 95, 96, 97, 98},
@@ -979,7 +985,7 @@ TEST(TransformationReplaceLinearAlgebraInstructionTest,
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
   instruction_descriptor =
-      MakeInstructionDescriptor(58, SpvOpVectorTimesMatrix, 0);
+      MakeInstructionDescriptor(58, spv::Op::OpVectorTimesMatrix, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {99,  100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111,
        112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124},
@@ -987,7 +993,7 @@ TEST(TransformationReplaceLinearAlgebraInstructionTest,
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
   instruction_descriptor =
-      MakeInstructionDescriptor(59, SpvOpVectorTimesMatrix, 0);
+      MakeInstructionDescriptor(59, spv::Op::OpVectorTimesMatrix, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135,
        136, 137, 138, 139, 140, 141, 142, 143, 144, 145},
@@ -1298,14 +1304,14 @@ TEST(TransformationReplaceLinearAlgebraInstructionTest,
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   auto instruction_descriptor =
-      MakeInstructionDescriptor(56, SpvOpMatrixTimesVector, 0);
+      MakeInstructionDescriptor(56, spv::Op::OpMatrixTimesVector, 0);
   auto transformation = TransformationReplaceLinearAlgebraInstruction(
       {65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78},
       instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
   instruction_descriptor =
-      MakeInstructionDescriptor(57, SpvOpMatrixTimesVector, 0);
+      MakeInstructionDescriptor(57, spv::Op::OpMatrixTimesVector, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96,
        97},
@@ -1313,7 +1319,7 @@ TEST(TransformationReplaceLinearAlgebraInstructionTest,
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
   instruction_descriptor =
-      MakeInstructionDescriptor(58, SpvOpMatrixTimesVector, 0);
+      MakeInstructionDescriptor(58, spv::Op::OpMatrixTimesVector, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {98,  99,  100, 101, 102, 103, 104, 105, 106, 107, 108, 109,
        110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121},
@@ -1321,7 +1327,7 @@ TEST(TransformationReplaceLinearAlgebraInstructionTest,
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
   instruction_descriptor =
-      MakeInstructionDescriptor(59, SpvOpMatrixTimesVector, 0);
+      MakeInstructionDescriptor(59, spv::Op::OpMatrixTimesVector, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132,
        133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143},
@@ -1684,7 +1690,7 @@ TEST(TransformationReplaceLinearAlgebraInstructionTest,
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   auto instruction_descriptor =
-      MakeInstructionDescriptor(56, SpvOpMatrixTimesMatrix, 0);
+      MakeInstructionDescriptor(56, spv::Op::OpMatrixTimesMatrix, 0);
   auto transformation = TransformationReplaceLinearAlgebraInstruction(
       {83,  84,  85,  86,  87,  88,  89,  90,  91,  92,  93,  94,  95,  96,
        97,  98,  99,  100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110,
@@ -1693,7 +1699,7 @@ TEST(TransformationReplaceLinearAlgebraInstructionTest,
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
   instruction_descriptor =
-      MakeInstructionDescriptor(57, SpvOpMatrixTimesMatrix, 0);
+      MakeInstructionDescriptor(57, spv::Op::OpMatrixTimesMatrix, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134,
        135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146,
@@ -1704,7 +1710,7 @@ TEST(TransformationReplaceLinearAlgebraInstructionTest,
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
   instruction_descriptor =
-      MakeInstructionDescriptor(58, SpvOpMatrixTimesMatrix, 0);
+      MakeInstructionDescriptor(58, spv::Op::OpMatrixTimesMatrix, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196,
        197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210,
@@ -2157,25 +2163,28 @@ TEST(TransformationReplaceLinearAlgebraInstructionTest, ReplaceOpOuterProduct) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   auto instruction_descriptor =
-      MakeInstructionDescriptor(47, SpvOpOuterProduct, 0);
+      MakeInstructionDescriptor(47, spv::Op::OpOuterProduct, 0);
   auto transformation = TransformationReplaceLinearAlgebraInstruction(
       {56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67}, instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
-  instruction_descriptor = MakeInstructionDescriptor(48, SpvOpOuterProduct, 0);
+  instruction_descriptor =
+      MakeInstructionDescriptor(48, spv::Op::OpOuterProduct, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85},
       instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
-  instruction_descriptor = MakeInstructionDescriptor(49, SpvOpOuterProduct, 0);
+  instruction_descriptor =
+      MakeInstructionDescriptor(49, spv::Op::OpOuterProduct, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {86, 87, 88,  89,  90,  91,  92,  93,  94,  95,  96,  97,
        98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109},
       instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
-  instruction_descriptor = MakeInstructionDescriptor(50, SpvOpOuterProduct, 0);
+  instruction_descriptor =
+      MakeInstructionDescriptor(50, spv::Op::OpOuterProduct, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123,
        124, 125},
@@ -2393,17 +2402,18 @@ TEST(TransformationReplaceLinearAlgebraInstructionTest, ReplaceOpDot) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  auto instruction_descriptor = MakeInstructionDescriptor(24, SpvOpDot, 0);
+  auto instruction_descriptor =
+      MakeInstructionDescriptor(24, spv::Op::OpDot, 0);
   auto transformation = TransformationReplaceLinearAlgebraInstruction(
       {27, 28, 29, 30, 31, 32}, instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
-  instruction_descriptor = MakeInstructionDescriptor(25, SpvOpDot, 0);
+  instruction_descriptor = MakeInstructionDescriptor(25, spv::Op::OpDot, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {33, 34, 35, 36, 37, 38, 39, 40, 41, 42}, instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
-  instruction_descriptor = MakeInstructionDescriptor(26, SpvOpDot, 0);
+  instruction_descriptor = MakeInstructionDescriptor(26, spv::Op::OpDot, 0);
   transformation = TransformationReplaceLinearAlgebraInstruction(
       {43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56},
       instruction_descriptor);

@@ -39,7 +39,7 @@ void FuzzerPassSwapBranchConditionalOperands::Apply() {
              const protobufs::InstructionDescriptor& instruction_descriptor) {
         const auto& inst = *inst_it;
 
-        if (inst.opcode() != SpvOpBranchConditional) {
+        if (inst.opcode() != spv::Op::OpBranchConditional) {
           return;
         }
 

@@ -22,9 +22,9 @@ namespace opt {
 uint32_t InstBuffAddrCheckPass::CloneOriginalReference(
     Instruction* ref_inst, InstructionBuilder* builder) {
   // Clone original ref with new result id (if load)
-  assert(
-      (ref_inst->opcode() == SpvOpLoad || ref_inst->opcode() == SpvOpStore) &&
-      "unexpected ref");
+  assert((ref_inst->opcode() == spv::Op::OpLoad ||
+          ref_inst->opcode() == spv::Op::OpStore) &&
+         "unexpected ref");
   std::unique_ptr<Instruction> new_ref_inst(ref_inst->Clone(context()));
   uint32_t ref_result_id = ref_inst->result_id();
   uint32_t new_ref_id = 0;
@@ -41,16 +41,17 @@ uint32_t InstBuffAddrCheckPass::CloneOriginalReference(
 }
 
 bool InstBuffAddrCheckPass::IsPhysicalBuffAddrReference(Instruction* ref_inst) {
-  if (ref_inst->opcode() != SpvOpLoad && ref_inst->opcode() != SpvOpStore)
+  if (ref_inst->opcode() != spv::Op::OpLoad &&
+      ref_inst->opcode() != spv::Op::OpStore)
     return false;
   uint32_t ptr_id = ref_inst->GetSingleWordInOperand(0);
   analysis::DefUseManager* du_mgr = get_def_use_mgr();
   Instruction* ptr_inst = du_mgr->GetDef(ptr_id);
-  if (ptr_inst->opcode() != SpvOpAccessChain) return false;
+  if (ptr_inst->opcode() != spv::Op::OpAccessChain) return false;
   uint32_t ptr_ty_id = ptr_inst->type_id();
   Instruction* ptr_ty_inst = du_mgr->GetDef(ptr_ty_id);
-  if (ptr_ty_inst->GetSingleWordInOperand(0) !=
-      SpvStorageClassPhysicalStorageBufferEXT)
+  if (spv::StorageClass(ptr_ty_inst->GetSingleWordInOperand(0)) !=
+      spv::StorageClass::PhysicalStorageBufferEXT)
     return false;
   return true;
 }
@@ -72,8 +73,9 @@ void InstBuffAddrCheckPass::GenCheckCode(
   std::unique_ptr<Instruction> merge_label(NewLabel(merge_blk_id));
   std::unique_ptr<Instruction> valid_label(NewLabel(valid_blk_id));
   std::unique_ptr<Instruction> invalid_label(NewLabel(invalid_blk_id));
-  (void)builder.AddConditionalBranch(check_id, valid_blk_id, invalid_blk_id,
-                                     merge_blk_id, SpvSelectionControlMaskNone);
+  (void)builder.AddConditionalBranch(
+      check_id, valid_blk_id, invalid_blk_id, merge_blk_id,
+      uint32_t(spv::SelectionControlMask::MaskNone));
   // Gen valid branch
   std::unique_ptr<BasicBlock> new_blk_ptr(
       new BasicBlock(std::move(valid_label)));
@@ -86,12 +88,12 @@ void InstBuffAddrCheckPass::GenCheckCode(
   builder.SetInsertPoint(&*new_blk_ptr);
   // Convert uptr from uint64 to 2 uint32
   Instruction* lo_uptr_inst =
-      builder.AddUnaryOp(GetUintId(), SpvOpUConvert, ref_uptr_id);
+      builder.AddUnaryOp(GetUintId(), spv::Op::OpUConvert, ref_uptr_id);
   Instruction* rshift_uptr_inst =
-      builder.AddBinaryOp(GetUint64Id(), SpvOpShiftRightLogical, ref_uptr_id,
-                          builder.GetUintConstantId(32));
-  Instruction* hi_uptr_inst = builder.AddUnaryOp(GetUintId(), SpvOpUConvert,
-                                                 rshift_uptr_inst->result_id());
+      builder.AddBinaryOp(GetUint64Id(), spv::Op::OpShiftRightLogical,
+                          ref_uptr_id, builder.GetUintConstantId(32));
+  Instruction* hi_uptr_inst = builder.AddUnaryOp(
+      GetUintId(), spv::Op::OpUConvert, rshift_uptr_inst->result_id());
   GenDebugStreamWrite(
       uid2offset_[ref_inst->unique_id()], stage_idx,
       {error_id, lo_uptr_inst->result_id(), hi_uptr_inst->result_id()},
@@ -105,8 +107,8 @@ void InstBuffAddrCheckPass::GenCheckCode(
     analysis::Type* ref_type = type_mgr->GetType(ref_type_id);
     if (ref_type->AsPointer() != nullptr) {
       uint32_t null_u64_id = GetNullId(GetUint64Id());
-      Instruction* null_ptr_inst =
-          builder.AddUnaryOp(ref_type_id, SpvOpConvertUToPtr, null_u64_id);
+      Instruction* null_ptr_inst = builder.AddUnaryOp(
+          ref_type_id, spv::Op::OpConvertUToPtr, null_u64_id);
       null_id = null_ptr_inst->result_id();
     } else {
       null_id = GetNullId(ref_type_id);
@@ -133,16 +135,16 @@ void InstBuffAddrCheckPass::GenCheckCode(
 uint32_t InstBuffAddrCheckPass::GetTypeAlignment(uint32_t type_id) {
   Instruction* type_inst = get_def_use_mgr()->GetDef(type_id);
   switch (type_inst->opcode()) {
-    case SpvOpTypeFloat:
-    case SpvOpTypeInt:
-    case SpvOpTypeVector:
+    case spv::Op::OpTypeFloat:
+    case spv::Op::OpTypeInt:
+    case spv::Op::OpTypeVector:
       return GetTypeLength(type_id);
-    case SpvOpTypeMatrix:
+    case spv::Op::OpTypeMatrix:
       return GetTypeAlignment(type_inst->GetSingleWordInOperand(0));
-    case SpvOpTypeArray:
-    case SpvOpTypeRuntimeArray:
+    case spv::Op::OpTypeArray:
+    case spv::Op::OpTypeRuntimeArray:
       return GetTypeAlignment(type_inst->GetSingleWordInOperand(0));
-    case SpvOpTypeStruct: {
+    case spv::Op::OpTypeStruct: {
       uint32_t max = 0;
       type_inst->ForEachInId([&max, this](const uint32_t* iid) {
         uint32_t alignment = GetTypeAlignment(*iid);
@@ -150,9 +152,9 @@ uint32_t InstBuffAddrCheckPass::GetTypeAlignment(uint32_t type_id) {
       });
       return max;
     }
-    case SpvOpTypePointer:
-      assert(type_inst->GetSingleWordInOperand(0) ==
-                 SpvStorageClassPhysicalStorageBufferEXT &&
+    case spv::Op::OpTypePointer:
+      assert(spv::StorageClass(type_inst->GetSingleWordInOperand(0)) ==
+                 spv::StorageClass::PhysicalStorageBufferEXT &&
              "unexpected pointer type");
       return 8u;
     default:
@@ -164,29 +166,29 @@ uint32_t InstBuffAddrCheckPass::GetTypeAlignment(uint32_t type_id) {
 uint32_t InstBuffAddrCheckPass::GetTypeLength(uint32_t type_id) {
   Instruction* type_inst = get_def_use_mgr()->GetDef(type_id);
   switch (type_inst->opcode()) {
-    case SpvOpTypeFloat:
-    case SpvOpTypeInt:
+    case spv::Op::OpTypeFloat:
+    case spv::Op::OpTypeInt:
       return type_inst->GetSingleWordInOperand(0) / 8u;
-    case SpvOpTypeVector: {
+    case spv::Op::OpTypeVector: {
       uint32_t raw_cnt = type_inst->GetSingleWordInOperand(1);
       uint32_t adj_cnt = (raw_cnt == 3u) ? 4u : raw_cnt;
       return adj_cnt * GetTypeLength(type_inst->GetSingleWordInOperand(0));
     }
-    case SpvOpTypeMatrix:
+    case spv::Op::OpTypeMatrix:
       return type_inst->GetSingleWordInOperand(1) *
              GetTypeLength(type_inst->GetSingleWordInOperand(0));
-    case SpvOpTypePointer:
-      assert(type_inst->GetSingleWordInOperand(0) ==
-                 SpvStorageClassPhysicalStorageBufferEXT &&
+    case spv::Op::OpTypePointer:
+      assert(spv::StorageClass(type_inst->GetSingleWordInOperand(0)) ==
+                 spv::StorageClass::PhysicalStorageBufferEXT &&
              "unexpected pointer type");
       return 8u;
-    case SpvOpTypeArray: {
+    case spv::Op::OpTypeArray: {
       uint32_t const_id = type_inst->GetSingleWordInOperand(1);
       Instruction* const_inst = get_def_use_mgr()->GetDef(const_id);
       uint32_t cnt = const_inst->GetSingleWordInOperand(0);
       return cnt * GetTypeLength(type_inst->GetSingleWordInOperand(0));
     }
-    case SpvOpTypeStruct: {
+    case spv::Op::OpTypeStruct: {
       uint32_t len = 0;
       type_inst->ForEachInId([&len, this](const uint32_t* iid) {
         // Align struct length
@@ -200,7 +202,7 @@ uint32_t InstBuffAddrCheckPass::GetTypeLength(uint32_t type_id) {
       });
       return len;
     }
-    case SpvOpTypeRuntimeArray:
+    case spv::Op::OpTypeRuntimeArray:
     default:
       assert(false && "unexpected type");
       return 0;
@@ -213,7 +215,7 @@ void InstBuffAddrCheckPass::AddParam(uint32_t type_id,
   uint32_t pid = TakeNextId();
   param_vec->push_back(pid);
   std::unique_ptr<Instruction> param_inst(new Instruction(
-      get_module()->context(), SpvOpFunctionParameter, type_id, pid, {}));
+      get_module()->context(), spv::Op::OpFunctionParameter, type_id, pid, {}));
   get_def_use_mgr()->AnalyzeInstDefUse(&*param_inst);
   (*input_func)->AddParameter(std::move(param_inst));
 }
@@ -231,10 +233,10 @@ uint32_t InstBuffAddrCheckPass::GetSearchAndTestFuncId() {
     analysis::Function func_ty(type_mgr->GetType(GetBoolId()), param_types);
     analysis::Type* reg_func_ty = type_mgr->GetRegisteredType(&func_ty);
     std::unique_ptr<Instruction> func_inst(
-        new Instruction(get_module()->context(), SpvOpFunction, GetBoolId(),
-                        search_test_func_id_,
+        new Instruction(get_module()->context(), spv::Op::OpFunction,
+                        GetBoolId(), search_test_func_id_,
                         {{spv_operand_type_t::SPV_OPERAND_TYPE_LITERAL_INTEGER,
-                          {SpvFunctionControlMaskNone}},
+                          {uint32_t(spv::FunctionControlMask::MaskNone)}},
                          {spv_operand_type_t::SPV_OPERAND_TYPE_ID,
                           {type_mgr->GetTypeInstruction(reg_func_ty)}}}));
     get_def_use_mgr()->AnalyzeInstDefUse(&*func_inst);
@@ -256,7 +258,7 @@ uint32_t InstBuffAddrCheckPass::GetSearchAndTestFuncId() {
     // Branch to search loop header
     std::unique_ptr<Instruction> hdr_blk_label(NewLabel(hdr_blk_id));
     (void)builder.AddInstruction(MakeUnique<Instruction>(
-        context(), SpvOpBranch, 0, 0,
+        context(), spv::Op::OpBranch, 0, 0,
         std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {hdr_blk_id}}}));
     input_func->AddBasicBlock(std::move(first_blk_ptr));
     // Linear search loop header block
@@ -273,12 +275,12 @@ uint32_t InstBuffAddrCheckPass::GetSearchAndTestFuncId() {
     uint32_t idx_phi_id = TakeNextId();
     uint32_t idx_inc_id = TakeNextId();
     std::unique_ptr<Instruction> idx_inc_inst(new Instruction(
-        context(), SpvOpIAdd, GetUintId(), idx_inc_id,
+        context(), spv::Op::OpIAdd, GetUintId(), idx_inc_id,
         {{spv_operand_type_t::SPV_OPERAND_TYPE_ID, {idx_phi_id}},
          {spv_operand_type_t::SPV_OPERAND_TYPE_ID,
           {builder.GetUintConstantId(1u)}}}));
     std::unique_ptr<Instruction> idx_phi_inst(new Instruction(
-        context(), SpvOpPhi, GetUintId(), idx_phi_id,
+        context(), spv::Op::OpPhi, GetUintId(), idx_phi_id,
         {{spv_operand_type_t::SPV_OPERAND_TYPE_ID,
           {builder.GetUintConstantId(1u)}},
          {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {first_blk_id}},
@@ -292,14 +294,15 @@ uint32_t InstBuffAddrCheckPass::GetSearchAndTestFuncId() {
     std::unique_ptr<Instruction> bound_test_blk_label(
         NewLabel(bound_test_blk_id));
     (void)builder.AddInstruction(MakeUnique<Instruction>(
-        context(), SpvOpLoopMerge, 0, 0,
+        context(), spv::Op::OpLoopMerge, 0, 0,
         std::initializer_list<Operand>{
             {SPV_OPERAND_TYPE_ID, {bound_test_blk_id}},
             {SPV_OPERAND_TYPE_ID, {cont_blk_id}},
-            {SPV_OPERAND_TYPE_LITERAL_INTEGER, {SpvLoopControlMaskNone}}}));
+            {SPV_OPERAND_TYPE_LITERAL_INTEGER,
+             {uint32_t(spv::LoopControlMask::MaskNone)}}}));
     // Branch to continue/work block
     (void)builder.AddInstruction(MakeUnique<Instruction>(
-        context(), SpvOpBranch, 0, 0,
+        context(), spv::Op::OpBranch, 0, 0,
         std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {cont_blk_id}}}));
     input_func->AddBasicBlock(std::move(hdr_blk_ptr));
     // Continue/Work Block. Read next buffer pointer and break if greater
@@ -313,19 +316,19 @@ uint32_t InstBuffAddrCheckPass::GetSearchAndTestFuncId() {
     uint32_t ibuf_id = GetInputBufferId();
     uint32_t ibuf_ptr_id = GetInputBufferPtrId();
     Instruction* uptr_ac_inst = builder.AddTernaryOp(
-        ibuf_ptr_id, SpvOpAccessChain, ibuf_id,
+        ibuf_ptr_id, spv::Op::OpAccessChain, ibuf_id,
         builder.GetUintConstantId(kDebugInputDataOffset), idx_inc_id);
     uint32_t ibuf_type_id = GetInputBufferTypeId();
-    Instruction* uptr_load_inst =
-        builder.AddUnaryOp(ibuf_type_id, SpvOpLoad, uptr_ac_inst->result_id());
+    Instruction* uptr_load_inst = builder.AddUnaryOp(
+        ibuf_type_id, spv::Op::OpLoad, uptr_ac_inst->result_id());
     // If loaded address greater than ref_ptr arg, break, else branch back to
     // loop header
     Instruction* uptr_test_inst =
-        builder.AddBinaryOp(GetBoolId(), SpvOpUGreaterThan,
+        builder.AddBinaryOp(GetBoolId(), spv::Op::OpUGreaterThan,
                             uptr_load_inst->result_id(), param_vec[0]);
-    (void)builder.AddConditionalBranch(uptr_test_inst->result_id(),
-                                       bound_test_blk_id, hdr_blk_id,
-                                       kInvalidId, SpvSelectionControlMaskNone);
+    (void)builder.AddConditionalBranch(
+        uptr_test_inst->result_id(), bound_test_blk_id, hdr_blk_id, kInvalidId,
+        uint32_t(spv::SelectionControlMask::MaskNone));
     input_func->AddBasicBlock(std::move(cont_blk_ptr));
     // Bounds test block. Read length of selected buffer and test that
     // all len arg bytes are in buffer.
@@ -333,66 +336,70 @@ uint32_t InstBuffAddrCheckPass::GetSearchAndTestFuncId() {
         MakeUnique<BasicBlock>(std::move(bound_test_blk_label));
     builder.SetInsertPoint(&*bound_test_blk_ptr);
     // Decrement index to point to previous/candidate buffer address
-    Instruction* cand_idx_inst = builder.AddBinaryOp(
-        GetUintId(), SpvOpISub, idx_inc_id, builder.GetUintConstantId(1u));
+    Instruction* cand_idx_inst =
+        builder.AddBinaryOp(GetUintId(), spv::Op::OpISub, idx_inc_id,
+                            builder.GetUintConstantId(1u));
     // Load candidate buffer address
     Instruction* cand_ac_inst =
-        builder.AddTernaryOp(ibuf_ptr_id, SpvOpAccessChain, ibuf_id,
+        builder.AddTernaryOp(ibuf_ptr_id, spv::Op::OpAccessChain, ibuf_id,
                              builder.GetUintConstantId(kDebugInputDataOffset),
                              cand_idx_inst->result_id());
-    Instruction* cand_load_inst =
-        builder.AddUnaryOp(ibuf_type_id, SpvOpLoad, cand_ac_inst->result_id());
+    Instruction* cand_load_inst = builder.AddUnaryOp(
+        ibuf_type_id, spv::Op::OpLoad, cand_ac_inst->result_id());
     // Compute offset of ref_ptr from candidate buffer address
-    Instruction* offset_inst = builder.AddBinaryOp(
-        ibuf_type_id, SpvOpISub, param_vec[0], cand_load_inst->result_id());
+    Instruction* offset_inst =
+        builder.AddBinaryOp(ibuf_type_id, spv::Op::OpISub, param_vec[0],
+                            cand_load_inst->result_id());
     // Convert ref length to uint64
     Instruction* ref_len_64_inst =
-        builder.AddUnaryOp(ibuf_type_id, SpvOpUConvert, param_vec[1]);
+        builder.AddUnaryOp(ibuf_type_id, spv::Op::OpUConvert, param_vec[1]);
     // Add ref length to ref offset to compute end of reference
-    Instruction* ref_end_inst =
-        builder.AddBinaryOp(ibuf_type_id, SpvOpIAdd, offset_inst->result_id(),
-                            ref_len_64_inst->result_id());
+    Instruction* ref_end_inst = builder.AddBinaryOp(
+        ibuf_type_id, spv::Op::OpIAdd, offset_inst->result_id(),
+        ref_len_64_inst->result_id());
     // Load starting index of lengths in input buffer and convert to uint32
     Instruction* len_start_ac_inst =
-        builder.AddTernaryOp(ibuf_ptr_id, SpvOpAccessChain, ibuf_id,
+        builder.AddTernaryOp(ibuf_ptr_id, spv::Op::OpAccessChain, ibuf_id,
                              builder.GetUintConstantId(kDebugInputDataOffset),
                              builder.GetUintConstantId(0u));
     Instruction* len_start_load_inst = builder.AddUnaryOp(
-        ibuf_type_id, SpvOpLoad, len_start_ac_inst->result_id());
+        ibuf_type_id, spv::Op::OpLoad, len_start_ac_inst->result_id());
     Instruction* len_start_32_inst = builder.AddUnaryOp(
-        GetUintId(), SpvOpUConvert, len_start_load_inst->result_id());
+        GetUintId(), spv::Op::OpUConvert, len_start_load_inst->result_id());
     // Decrement search index to get candidate buffer length index
-    Instruction* cand_len_idx_inst =
-        builder.AddBinaryOp(GetUintId(), SpvOpISub, cand_idx_inst->result_id(),
-                            builder.GetUintConstantId(1u));
+    Instruction* cand_len_idx_inst = builder.AddBinaryOp(
+        GetUintId(), spv::Op::OpISub, cand_idx_inst->result_id(),
+        builder.GetUintConstantId(1u));
     // Add candidate length index to start index
     Instruction* len_idx_inst = builder.AddBinaryOp(
-        GetUintId(), SpvOpIAdd, cand_len_idx_inst->result_id(),
+        GetUintId(), spv::Op::OpIAdd, cand_len_idx_inst->result_id(),
         len_start_32_inst->result_id());
     // Load candidate buffer length
     Instruction* len_ac_inst =
-        builder.AddTernaryOp(ibuf_ptr_id, SpvOpAccessChain, ibuf_id,
+        builder.AddTernaryOp(ibuf_ptr_id, spv::Op::OpAccessChain, ibuf_id,
                              builder.GetUintConstantId(kDebugInputDataOffset),
                              len_idx_inst->result_id());
-    Instruction* len_load_inst =
-        builder.AddUnaryOp(ibuf_type_id, SpvOpLoad, len_ac_inst->result_id());
+    Instruction* len_load_inst = builder.AddUnaryOp(
+        ibuf_type_id, spv::Op::OpLoad, len_ac_inst->result_id());
     // Test if reference end within candidate buffer length
     Instruction* len_test_inst = builder.AddBinaryOp(
-        GetBoolId(), SpvOpULessThanEqual, ref_end_inst->result_id(),
+        GetBoolId(), spv::Op::OpULessThanEqual, ref_end_inst->result_id(),
         len_load_inst->result_id());
     // Return test result
     (void)builder.AddInstruction(MakeUnique<Instruction>(
-        context(), SpvOpReturnValue, 0, 0,
+        context(), spv::Op::OpReturnValue, 0, 0,
         std::initializer_list<Operand>{
             {SPV_OPERAND_TYPE_ID, {len_test_inst->result_id()}}}));
     // Close block
     input_func->AddBasicBlock(std::move(bound_test_blk_ptr));
     // Close function and add function to module
-    std::unique_ptr<Instruction> func_end_inst(
-        new Instruction(get_module()->context(), SpvOpFunctionEnd, 0, 0, {}));
+    std::unique_ptr<Instruction> func_end_inst(new Instruction(
+        get_module()->context(), spv::Op::OpFunctionEnd, 0, 0, {}));
     get_def_use_mgr()->AnalyzeInstDefUse(&*func_end_inst);
     input_func->SetFunctionEnd(std::move(func_end_inst));
     context()->AddFunction(std::move(input_func));
+    context()->AddDebug2Inst(
+        NewGlobalName(search_test_func_id_, "search_and_test"));
   }
   return search_test_func_id_;
 }
@@ -401,18 +408,18 @@ uint32_t InstBuffAddrCheckPass::GenSearchAndTest(Instruction* ref_inst,
                                                  InstructionBuilder* builder,
                                                  uint32_t* ref_uptr_id) {
   // Enable Int64 if necessary
-  if (!get_feature_mgr()->HasCapability(SpvCapabilityInt64)) {
+  if (!get_feature_mgr()->HasCapability(spv::Capability::Int64)) {
     std::unique_ptr<Instruction> cap_int64_inst(new Instruction(
-        context(), SpvOpCapability, 0, 0,
-        std::initializer_list<Operand>{
-            {SPV_OPERAND_TYPE_CAPABILITY, {SpvCapabilityInt64}}}));
+        context(), spv::Op::OpCapability, 0, 0,
+        std::initializer_list<Operand>{{SPV_OPERAND_TYPE_CAPABILITY,
+                                        {uint32_t(spv::Capability::Int64)}}}));
     get_def_use_mgr()->AnalyzeInstDefUse(&*cap_int64_inst);
     context()->AddCapability(std::move(cap_int64_inst));
   }
   // Convert reference pointer to uint64
   uint32_t ref_ptr_id = ref_inst->GetSingleWordInOperand(0);
   Instruction* ref_uptr_inst =
-      builder->AddUnaryOp(GetUint64Id(), SpvOpConvertPtrToU, ref_ptr_id);
+      builder->AddUnaryOp(GetUint64Id(), spv::Op::OpConvertPtrToU, ref_ptr_id);
   *ref_uptr_id = ref_uptr_inst->result_id();
   // Compute reference length in bytes
   analysis::DefUseManager* du_mgr = get_def_use_mgr();
@@ -425,7 +432,7 @@ uint32_t InstBuffAddrCheckPass::GenSearchAndTest(Instruction* ref_inst,
   const std::vector<uint32_t> args = {GetSearchAndTestFuncId(), *ref_uptr_id,
                                       ref_len_id};
   Instruction* call_inst =
-      builder->AddNaryOp(GetBoolId(), SpvOpFunctionCall, args);
+      builder->AddNaryOp(GetBoolId(), spv::Op::OpFunctionCall, args);
   uint32_t retval = call_inst->result_id();
   return retval;
 }
@@ -483,7 +490,7 @@ Pass::Status InstBuffAddrCheckPass::ProcessImpl() {
 
 Pass::Status InstBuffAddrCheckPass::Process() {
   if (!get_feature_mgr()->HasCapability(
-          SpvCapabilityPhysicalStorageBufferAddressesEXT))
+          spv::Capability::PhysicalStorageBufferAddressesEXT))
     return Status::SuccessWithoutChange;
   InitInstBuffAddrCheck();
   return ProcessImpl();

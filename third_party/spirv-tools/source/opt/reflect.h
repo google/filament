@@ -24,41 +24,49 @@ namespace opt {
 // following functions tend to be outdated and should be updated when SPIR-V
 // version bumps.
 
-inline bool IsDebug1Inst(SpvOp opcode) {
-  return (opcode >= SpvOpSourceContinued && opcode <= SpvOpSourceExtension) ||
-         opcode == SpvOpString;
+inline bool IsDebug1Inst(spv::Op opcode) {
+  return (opcode >= spv::Op::OpSourceContinued &&
+          opcode <= spv::Op::OpSourceExtension) ||
+         opcode == spv::Op::OpString;
 }
-inline bool IsDebug2Inst(SpvOp opcode) {
-  return opcode == SpvOpName || opcode == SpvOpMemberName;
+inline bool IsDebug2Inst(spv::Op opcode) {
+  return opcode == spv::Op::OpName || opcode == spv::Op::OpMemberName;
 }
-inline bool IsDebug3Inst(SpvOp opcode) {
-  return opcode == SpvOpModuleProcessed;
+inline bool IsDebug3Inst(spv::Op opcode) {
+  return opcode == spv::Op::OpModuleProcessed;
 }
-inline bool IsOpLineInst(SpvOp opcode) {
-  return opcode == SpvOpLine || opcode == SpvOpNoLine;
+inline bool IsOpLineInst(spv::Op opcode) {
+  return opcode == spv::Op::OpLine || opcode == spv::Op::OpNoLine;
 }
-inline bool IsAnnotationInst(SpvOp opcode) {
-  return (opcode >= SpvOpDecorate && opcode <= SpvOpGroupMemberDecorate) ||
-         opcode == SpvOpDecorateId || opcode == SpvOpDecorateStringGOOGLE ||
-         opcode == SpvOpMemberDecorateStringGOOGLE;
+inline bool IsAnnotationInst(spv::Op opcode) {
+  return (opcode >= spv::Op::OpDecorate &&
+          opcode <= spv::Op::OpGroupMemberDecorate) ||
+         opcode == spv::Op::OpDecorateId ||
+         opcode == spv::Op::OpDecorateStringGOOGLE ||
+         opcode == spv::Op::OpMemberDecorateStringGOOGLE;
 }
-inline bool IsTypeInst(SpvOp opcode) {
-  return (opcode >= SpvOpTypeVoid && opcode <= SpvOpTypeForwardPointer) ||
-         opcode == SpvOpTypePipeStorage || opcode == SpvOpTypeNamedBarrier ||
-         opcode == SpvOpTypeAccelerationStructureNV ||
-         opcode == SpvOpTypeAccelerationStructureKHR ||
-         opcode == SpvOpTypeRayQueryKHR ||
-         opcode == SpvOpTypeCooperativeMatrixNV;
+inline bool IsTypeInst(spv::Op opcode) {
+  return (opcode >= spv::Op::OpTypeVoid &&
+          opcode <= spv::Op::OpTypeForwardPointer) ||
+         opcode == spv::Op::OpTypePipeStorage ||
+         opcode == spv::Op::OpTypeNamedBarrier ||
+         opcode == spv::Op::OpTypeAccelerationStructureNV ||
+         opcode == spv::Op::OpTypeAccelerationStructureKHR ||
+         opcode == spv::Op::OpTypeRayQueryKHR ||
+         opcode == spv::Op::OpTypeCooperativeMatrixNV ||
+         opcode == spv::Op::OpTypeHitObjectNV;
 }
-inline bool IsConstantInst(SpvOp opcode) {
-  return (opcode >= SpvOpConstantTrue && opcode <= SpvOpSpecConstantOp) ||
-         opcode == SpvOpConstantFunctionPointerINTEL;
+inline bool IsConstantInst(spv::Op opcode) {
+  return (opcode >= spv::Op::OpConstantTrue &&
+          opcode <= spv::Op::OpSpecConstantOp) ||
+         opcode == spv::Op::OpConstantFunctionPointerINTEL;
 }
-inline bool IsCompileTimeConstantInst(SpvOp opcode) {
-  return opcode >= SpvOpConstantTrue && opcode <= SpvOpConstantNull;
+inline bool IsCompileTimeConstantInst(spv::Op opcode) {
+  return opcode >= spv::Op::OpConstantTrue && opcode <= spv::Op::OpConstantNull;
 }
-inline bool IsSpecConstantInst(SpvOp opcode) {
-  return opcode >= SpvOpSpecConstantTrue && opcode <= SpvOpSpecConstantOp;
+inline bool IsSpecConstantInst(spv::Op opcode) {
+  return opcode >= spv::Op::OpSpecConstantTrue &&
+         opcode <= spv::Op::OpSpecConstantOp;
 }
 
 }  // namespace opt

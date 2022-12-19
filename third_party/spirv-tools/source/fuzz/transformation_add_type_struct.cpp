@@ -79,8 +79,9 @@ void TransformationAddTypeStruct::Apply(
     operands.push_back({SPV_OPERAND_TYPE_ID, {type_id}});
   }
 
-  auto type_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpTypeStruct, 0, message_.fresh_id(), std::move(operands));
+  auto type_instruction =
+      MakeUnique<opt::Instruction>(ir_context, spv::Op::OpTypeStruct, 0,
+                                   message_.fresh_id(), std::move(operands));
   auto type_instruction_ptr = type_instruction.get();
   ir_context->AddType(std::move(type_instruction));
 

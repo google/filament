@@ -62,39 +62,47 @@ TEST_P(EnumCapabilityTest, Sample) {
 
 #define CASE0(TYPE, VALUE)                            \
   {                                                   \
-    SPV_OPERAND_TYPE_##TYPE, uint32_t(Spv##VALUE), {} \
+    SPV_OPERAND_TYPE_##TYPE, uint32_t(spv::VALUE), {} \
   }
 #define CASE1(TYPE, VALUE, CAP)                                    \
   {                                                                \
-    SPV_OPERAND_TYPE_##TYPE, uint32_t(Spv##VALUE), CapabilitySet { \
-      SpvCapability##CAP                                           \
+    SPV_OPERAND_TYPE_##TYPE, uint32_t(spv::VALUE), CapabilitySet { \
+      spv::Capability::CAP                                         \
     }                                                              \
   }
 #define CASE2(TYPE, VALUE, CAP1, CAP2)                             \
   {                                                                \
-    SPV_OPERAND_TYPE_##TYPE, uint32_t(Spv##VALUE), CapabilitySet { \
-      SpvCapability##CAP1, SpvCapability##CAP2                     \
+    SPV_OPERAND_TYPE_##TYPE, uint32_t(spv::VALUE), CapabilitySet { \
+      spv::Capability::CAP1, spv::Capability::CAP2                 \
     }                                                              \
   }
-#define CASE3(TYPE, VALUE, CAP1, CAP2, CAP3)                        \
-  {                                                                 \
-    SPV_OPERAND_TYPE_##TYPE, uint32_t(Spv##VALUE), CapabilitySet {  \
-      SpvCapability##CAP1, SpvCapability##CAP2, SpvCapability##CAP3 \
-    }                                                               \
+#define CASE3(TYPE, VALUE, CAP1, CAP2, CAP3)                              \
+  {                                                                       \
+    SPV_OPERAND_TYPE_##TYPE, uint32_t(spv::VALUE), CapabilitySet {        \
+      spv::Capability::CAP1, spv::Capability::CAP2, spv::Capability::CAP3 \
+    }                                                                     \
   }
-#define CASE4(TYPE, VALUE, CAP1, CAP2, CAP3, CAP4)                   \
-  {                                                                  \
-    SPV_OPERAND_TYPE_##TYPE, uint32_t(Spv##VALUE), CapabilitySet {   \
-      SpvCapability##CAP1, SpvCapability##CAP2, SpvCapability##CAP3, \
-          SpvCapability##CAP4                                        \
-    }                                                                \
+#define CASE4(TYPE, VALUE, CAP1, CAP2, CAP3, CAP4)                         \
+  {                                                                        \
+    SPV_OPERAND_TYPE_##TYPE, uint32_t(spv::VALUE), CapabilitySet {         \
+      spv::Capability::CAP1, spv::Capability::CAP2, spv::Capability::CAP3, \
+          spv::Capability::CAP4                                            \
+    }                                                                      \
   }
-#define CASE5(TYPE, VALUE, CAP1, CAP2, CAP3, CAP4, CAP5)             \
-  {                                                                  \
-    SPV_OPERAND_TYPE_##TYPE, uint32_t(Spv##VALUE), CapabilitySet {   \
-      SpvCapability##CAP1, SpvCapability##CAP2, SpvCapability##CAP3, \
-          SpvCapability##CAP4, SpvCapability##CAP5                   \
-    }                                                                \
+#define CASE5(TYPE, VALUE, CAP1, CAP2, CAP3, CAP4, CAP5)                   \
+  {                                                                        \
+    SPV_OPERAND_TYPE_##TYPE, uint32_t(spv::VALUE), CapabilitySet {         \
+      spv::Capability::CAP1, spv::Capability::CAP2, spv::Capability::CAP3, \
+          spv::Capability::CAP4, spv::Capability::CAP5                     \
+    }                                                                      \
+  }
+
+#define CASE6(TYPE, VALUE, CAP1, CAP2, CAP3, CAP4, CAP5, CAP6)                \
+  {                                                                           \
+    SPV_OPERAND_TYPE_##TYPE, uint32_t(spv::VALUE), CapabilitySet {            \
+      spv::Capability::CAP1, spv::Capability::CAP2, spv::Capability::CAP3,    \
+          spv::Capability::CAP4, spv::Capability::CAP5, spv::Capability::CAP6 \
+    }                                                                         \
   }
 
 // See SPIR-V Section 3.3 Execution Model
@@ -102,15 +110,15 @@ INSTANTIATE_TEST_SUITE_P(
     ExecutionModel, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE1(EXECUTION_MODEL, ExecutionModelVertex, Shader),
-                CASE1(EXECUTION_MODEL, ExecutionModelTessellationControl,
+                CASE1(EXECUTION_MODEL, ExecutionModel::Vertex, Shader),
+                CASE1(EXECUTION_MODEL, ExecutionModel::TessellationControl,
                       Tessellation),
-                CASE1(EXECUTION_MODEL, ExecutionModelTessellationEvaluation,
+                CASE1(EXECUTION_MODEL, ExecutionModel::TessellationEvaluation,
                       Tessellation),
-                CASE1(EXECUTION_MODEL, ExecutionModelGeometry, Geometry),
-                CASE1(EXECUTION_MODEL, ExecutionModelFragment, Shader),
-                CASE1(EXECUTION_MODEL, ExecutionModelGLCompute, Shader),
-                CASE1(EXECUTION_MODEL, ExecutionModelKernel, Kernel),
+                CASE1(EXECUTION_MODEL, ExecutionModel::Geometry, Geometry),
+                CASE1(EXECUTION_MODEL, ExecutionModel::Fragment, Shader),
+                CASE1(EXECUTION_MODEL, ExecutionModel::GLCompute, Shader),
+                CASE1(EXECUTION_MODEL, ExecutionModel::Kernel, Kernel),
             })));
 
 // See SPIR-V Section 3.4 Addressing Model
@@ -118,9 +126,9 @@ INSTANTIATE_TEST_SUITE_P(
     AddressingModel, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE0(ADDRESSING_MODEL, AddressingModelLogical),
-                CASE1(ADDRESSING_MODEL, AddressingModelPhysical32, Addresses),
-                CASE1(ADDRESSING_MODEL, AddressingModelPhysical64, Addresses),
+                CASE0(ADDRESSING_MODEL, AddressingModel::Logical),
+                CASE1(ADDRESSING_MODEL, AddressingModel::Physical32, Addresses),
+                CASE1(ADDRESSING_MODEL, AddressingModel::Physical64, Addresses),
             })));
 
 // See SPIR-V Section 3.5 Memory Model
@@ -128,9 +136,9 @@ INSTANTIATE_TEST_SUITE_P(
     MemoryModel, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE1(MEMORY_MODEL, MemoryModelSimple, Shader),
-                CASE1(MEMORY_MODEL, MemoryModelGLSL450, Shader),
-                CASE1(MEMORY_MODEL, MemoryModelOpenCL, Kernel),
+                CASE1(MEMORY_MODEL, MemoryModel::Simple, Shader),
+                CASE1(MEMORY_MODEL, MemoryModel::GLSL450, Shader),
+                CASE1(MEMORY_MODEL, MemoryModel::OpenCL, Kernel),
             })));
 
 // See SPIR-V Section 3.6 Execution Mode
@@ -139,54 +147,54 @@ INSTANTIATE_TEST_SUITE_P(
     Combine(
         Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
         ValuesIn(std::vector<EnumCapabilityCase>{
-            CASE1(EXECUTION_MODE, ExecutionModeInvocations, Geometry),
-            CASE1(EXECUTION_MODE, ExecutionModeSpacingEqual, Tessellation),
-            CASE1(EXECUTION_MODE, ExecutionModeSpacingFractionalEven,
+            CASE1(EXECUTION_MODE, ExecutionMode::Invocations, Geometry),
+            CASE1(EXECUTION_MODE, ExecutionMode::SpacingEqual, Tessellation),
+            CASE1(EXECUTION_MODE, ExecutionMode::SpacingFractionalEven,
                   Tessellation),
-            CASE1(EXECUTION_MODE, ExecutionModeSpacingFractionalOdd,
+            CASE1(EXECUTION_MODE, ExecutionMode::SpacingFractionalOdd,
                   Tessellation),
-            CASE1(EXECUTION_MODE, ExecutionModeVertexOrderCw, Tessellation),
-            CASE1(EXECUTION_MODE, ExecutionModeVertexOrderCcw, Tessellation),
-            CASE1(EXECUTION_MODE, ExecutionModePixelCenterInteger, Shader),
-            CASE1(EXECUTION_MODE, ExecutionModeOriginUpperLeft, Shader),
-            CASE1(EXECUTION_MODE, ExecutionModeOriginLowerLeft, Shader),
-            CASE1(EXECUTION_MODE, ExecutionModeEarlyFragmentTests, Shader),
-            CASE1(EXECUTION_MODE, ExecutionModePointMode, Tessellation),
-            CASE1(EXECUTION_MODE, ExecutionModeXfb, TransformFeedback),
-            CASE1(EXECUTION_MODE, ExecutionModeDepthReplacing, Shader),
-            CASE1(EXECUTION_MODE, ExecutionModeDepthGreater, Shader),
-            CASE1(EXECUTION_MODE, ExecutionModeDepthLess, Shader),
-            CASE1(EXECUTION_MODE, ExecutionModeDepthUnchanged, Shader),
-            CASE0(EXECUTION_MODE, ExecutionModeLocalSize),
-            CASE1(EXECUTION_MODE, ExecutionModeLocalSizeHint, Kernel),
-            CASE1(EXECUTION_MODE, ExecutionModeInputPoints, Geometry),
-            CASE1(EXECUTION_MODE, ExecutionModeInputLines, Geometry),
-            CASE1(EXECUTION_MODE, ExecutionModeInputLinesAdjacency, Geometry),
-            CASE2(EXECUTION_MODE, ExecutionModeTriangles, Geometry,
+            CASE1(EXECUTION_MODE, ExecutionMode::VertexOrderCw, Tessellation),
+            CASE1(EXECUTION_MODE, ExecutionMode::VertexOrderCcw, Tessellation),
+            CASE1(EXECUTION_MODE, ExecutionMode::PixelCenterInteger, Shader),
+            CASE1(EXECUTION_MODE, ExecutionMode::OriginUpperLeft, Shader),
+            CASE1(EXECUTION_MODE, ExecutionMode::OriginLowerLeft, Shader),
+            CASE1(EXECUTION_MODE, ExecutionMode::EarlyFragmentTests, Shader),
+            CASE1(EXECUTION_MODE, ExecutionMode::PointMode, Tessellation),
+            CASE1(EXECUTION_MODE, ExecutionMode::Xfb, TransformFeedback),
+            CASE1(EXECUTION_MODE, ExecutionMode::DepthReplacing, Shader),
+            CASE1(EXECUTION_MODE, ExecutionMode::DepthGreater, Shader),
+            CASE1(EXECUTION_MODE, ExecutionMode::DepthLess, Shader),
+            CASE1(EXECUTION_MODE, ExecutionMode::DepthUnchanged, Shader),
+            CASE0(EXECUTION_MODE, ExecutionMode::LocalSize),
+            CASE1(EXECUTION_MODE, ExecutionMode::LocalSizeHint, Kernel),
+            CASE1(EXECUTION_MODE, ExecutionMode::InputPoints, Geometry),
+            CASE1(EXECUTION_MODE, ExecutionMode::InputLines, Geometry),
+            CASE1(EXECUTION_MODE, ExecutionMode::InputLinesAdjacency, Geometry),
+            CASE2(EXECUTION_MODE, ExecutionMode::Triangles, Geometry,
                   Tessellation),
-            CASE1(EXECUTION_MODE, ExecutionModeInputTrianglesAdjacency,
+            CASE1(EXECUTION_MODE, ExecutionMode::InputTrianglesAdjacency,
                   Geometry),
-            CASE1(EXECUTION_MODE, ExecutionModeQuads, Tessellation),
-            CASE1(EXECUTION_MODE, ExecutionModeIsolines, Tessellation),
-            CASE3(EXECUTION_MODE, ExecutionModeOutputVertices, Geometry,
-                  Tessellation, MeshShadingNV),
-            CASE2(EXECUTION_MODE, ExecutionModeOutputPoints, Geometry,
-                  MeshShadingNV),
-            CASE1(EXECUTION_MODE, ExecutionModeOutputLineStrip, Geometry),
-            CASE1(EXECUTION_MODE, ExecutionModeOutputTriangleStrip, Geometry),
-            CASE1(EXECUTION_MODE, ExecutionModeVecTypeHint, Kernel),
-            CASE1(EXECUTION_MODE, ExecutionModeContractionOff, Kernel),
+            CASE1(EXECUTION_MODE, ExecutionMode::Quads, Tessellation),
+            CASE1(EXECUTION_MODE, ExecutionMode::Isolines, Tessellation),
+            CASE4(EXECUTION_MODE, ExecutionMode::OutputVertices, Geometry,
+                  Tessellation, MeshShadingNV, MeshShadingEXT),
+            CASE3(EXECUTION_MODE, ExecutionMode::OutputPoints, Geometry,
+                  MeshShadingNV, MeshShadingEXT),
+            CASE1(EXECUTION_MODE, ExecutionMode::OutputLineStrip, Geometry),
+            CASE1(EXECUTION_MODE, ExecutionMode::OutputTriangleStrip, Geometry),
+            CASE1(EXECUTION_MODE, ExecutionMode::VecTypeHint, Kernel),
+            CASE1(EXECUTION_MODE, ExecutionMode::ContractionOff, Kernel),
         })));
 
 INSTANTIATE_TEST_SUITE_P(
     ExecutionModeV11, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE1(EXECUTION_MODE, ExecutionModeInitializer, Kernel),
-                CASE1(EXECUTION_MODE, ExecutionModeFinalizer, Kernel),
-                CASE1(EXECUTION_MODE, ExecutionModeSubgroupSize,
+                CASE1(EXECUTION_MODE, ExecutionMode::Initializer, Kernel),
+                CASE1(EXECUTION_MODE, ExecutionMode::Finalizer, Kernel),
+                CASE1(EXECUTION_MODE, ExecutionMode::SubgroupSize,
                       SubgroupDispatch),
-                CASE1(EXECUTION_MODE, ExecutionModeSubgroupsPerWorkgroup,
+                CASE1(EXECUTION_MODE, ExecutionMode::SubgroupsPerWorkgroup,
                       SubgroupDispatch)})));
 
 // See SPIR-V Section 3.7 Storage Class
@@ -194,19 +202,20 @@ INSTANTIATE_TEST_SUITE_P(
     StorageClass, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE0(STORAGE_CLASS, StorageClassUniformConstant),
-                CASE1(STORAGE_CLASS, StorageClassUniform, Shader),
-                CASE1(STORAGE_CLASS, StorageClassOutput, Shader),
-                CASE0(STORAGE_CLASS, StorageClassWorkgroup),
-                CASE0(STORAGE_CLASS, StorageClassCrossWorkgroup),
-                CASE2(STORAGE_CLASS, StorageClassPrivate, Shader,
+                CASE0(STORAGE_CLASS, StorageClass::UniformConstant),
+                CASE1(STORAGE_CLASS, StorageClass::Uniform, Shader),
+                CASE1(STORAGE_CLASS, StorageClass::Output, Shader),
+                CASE0(STORAGE_CLASS, StorageClass::Workgroup),
+                CASE0(STORAGE_CLASS, StorageClass::CrossWorkgroup),
+                CASE2(STORAGE_CLASS, StorageClass::Private, Shader,
                       VectorComputeINTEL),
-                CASE0(STORAGE_CLASS, StorageClassFunction),
-                CASE1(STORAGE_CLASS, StorageClassGeneric,
+                CASE0(STORAGE_CLASS, StorageClass::Function),
+                CASE1(STORAGE_CLASS, StorageClass::Generic,
                       GenericPointer),  // Bug 14287
-                CASE1(STORAGE_CLASS, StorageClassPushConstant, Shader),
-                CASE1(STORAGE_CLASS, StorageClassAtomicCounter, AtomicStorage),
-                CASE0(STORAGE_CLASS, StorageClassImage),
+                CASE1(STORAGE_CLASS, StorageClass::PushConstant, Shader),
+                CASE1(STORAGE_CLASS, StorageClass::AtomicCounter,
+                      AtomicStorage),
+                CASE0(STORAGE_CLASS, StorageClass::Image),
             })));
 
 // See SPIR-V Section 3.8 Dim
@@ -214,37 +223,39 @@ INSTANTIATE_TEST_SUITE_P(
     Dim, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE2(DIMENSIONALITY, Dim1D, Sampled1D, Image1D),
-                CASE3(DIMENSIONALITY, Dim2D, Kernel, Shader, ImageMSArray),
-                CASE0(DIMENSIONALITY, Dim3D),
-                CASE2(DIMENSIONALITY, DimCube, Shader, ImageCubeArray),
-                CASE2(DIMENSIONALITY, DimRect, SampledRect, ImageRect),
-                CASE2(DIMENSIONALITY, DimBuffer, SampledBuffer, ImageBuffer),
-                CASE1(DIMENSIONALITY, DimSubpassData, InputAttachment),
+                CASE2(DIMENSIONALITY, Dim::Dim1D, Sampled1D, Image1D),
+                CASE3(DIMENSIONALITY, Dim::Dim2D, Kernel, Shader, ImageMSArray),
+                CASE0(DIMENSIONALITY, Dim::Dim3D),
+                CASE2(DIMENSIONALITY, Dim::Cube, Shader, ImageCubeArray),
+                CASE2(DIMENSIONALITY, Dim::Rect, SampledRect, ImageRect),
+                CASE2(DIMENSIONALITY, Dim::Buffer, SampledBuffer, ImageBuffer),
+                CASE1(DIMENSIONALITY, Dim::SubpassData, InputAttachment),
             })));
 
 // See SPIR-V Section 3.9 Sampler Addressing Mode
 INSTANTIATE_TEST_SUITE_P(
     SamplerAddressingMode, EnumCapabilityTest,
-    Combine(
-        Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
-        ValuesIn(std::vector<EnumCapabilityCase>{
-            CASE1(SAMPLER_ADDRESSING_MODE, SamplerAddressingModeNone, Kernel),
-            CASE1(SAMPLER_ADDRESSING_MODE, SamplerAddressingModeClampToEdge,
-                  Kernel),
-            CASE1(SAMPLER_ADDRESSING_MODE, SamplerAddressingModeClamp, Kernel),
-            CASE1(SAMPLER_ADDRESSING_MODE, SamplerAddressingModeRepeat, Kernel),
-            CASE1(SAMPLER_ADDRESSING_MODE, SamplerAddressingModeRepeatMirrored,
-                  Kernel),
-        })));
+    Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
+            ValuesIn(std::vector<EnumCapabilityCase>{
+                CASE1(SAMPLER_ADDRESSING_MODE, SamplerAddressingMode::None,
+                      Kernel),
+                CASE1(SAMPLER_ADDRESSING_MODE,
+                      SamplerAddressingMode::ClampToEdge, Kernel),
+                CASE1(SAMPLER_ADDRESSING_MODE, SamplerAddressingMode::Clamp,
+                      Kernel),
+                CASE1(SAMPLER_ADDRESSING_MODE, SamplerAddressingMode::Repeat,
+                      Kernel),
+                CASE1(SAMPLER_ADDRESSING_MODE,
+                      SamplerAddressingMode::RepeatMirrored, Kernel),
+            })));
 
 // See SPIR-V Section 3.10 Sampler Filter Mode
 INSTANTIATE_TEST_SUITE_P(
     SamplerFilterMode, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE1(SAMPLER_FILTER_MODE, SamplerFilterModeNearest, Kernel),
-                CASE1(SAMPLER_FILTER_MODE, SamplerFilterModeLinear, Kernel),
+                CASE1(SAMPLER_FILTER_MODE, SamplerFilterMode::Nearest, Kernel),
+                CASE1(SAMPLER_FILTER_MODE, SamplerFilterMode::Linear, Kernel),
             })));
 
 // See SPIR-V Section 3.11 Image Format
@@ -253,76 +264,76 @@ INSTANTIATE_TEST_SUITE_P(
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
                 // clang-format off
-        CASE0(SAMPLER_IMAGE_FORMAT, ImageFormatUnknown),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRgba32f, Shader),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRgba16f, Shader),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatR32f, Shader),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRgba8, Shader),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRgba8Snorm, Shader),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRg32f, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRg16f, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatR11fG11fB10f, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatR16f, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRgba16, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRgb10A2, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRg16, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRg8, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatR16, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatR8, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRgba16Snorm, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRg16Snorm, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRg8Snorm, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatR16Snorm, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatR8Snorm, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRgba32i, Shader),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRgba16i, Shader),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRgba8i, Shader),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatR32i, Shader),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRg32i, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRg16i, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRg8i, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatR16i, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatR8i, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRgba32ui, Shader),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRgba16ui, Shader),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRgba8ui, Shader),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRgba8ui, Shader),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRgb10a2ui, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRg32ui, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRg16ui, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatRg8ui, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatR16ui, StorageImageExtendedFormats),
-        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormatR8ui, StorageImageExtendedFormats),
+        CASE0(SAMPLER_IMAGE_FORMAT, ImageFormat::Unknown),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rgba32f, Shader),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rgba16f, Shader),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::R32f, Shader),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rgba8, Shader),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rgba8Snorm, Shader),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rg32f, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rg16f, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::R11fG11fB10f, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::R16f, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rgba16, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rgb10A2, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rg16, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rg8, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::R16, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::R8, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rgba16Snorm, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rg16Snorm, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rg8Snorm, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::R16Snorm, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::R8Snorm, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rgba32i, Shader),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rgba16i, Shader),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rgba8i, Shader),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::R32i, Shader),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rg32i, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rg16i, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rg8i, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::R16i, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::R8i, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rgba32ui, Shader),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rgba16ui, Shader),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rgba8ui, Shader),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rgba8ui, Shader),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rgb10a2ui, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rg32ui, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rg16ui, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::Rg8ui, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::R16ui, StorageImageExtendedFormats),
+        CASE1(SAMPLER_IMAGE_FORMAT, ImageFormat::R8ui, StorageImageExtendedFormats),
                 // clang-format on
             })));
 
 // See SPIR-V Section 3.12 Image Channel Order
 INSTANTIATE_TEST_SUITE_P(
     ImageChannelOrder, EnumCapabilityTest,
-    Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
-            ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderR, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderA, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderRG, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderRA, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderRGB, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderRGBA, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderBGRA, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderARGB, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderIntensity, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderLuminance, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderRx, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderRGx, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderRGBx, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderDepth, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderDepthStencil,
-                      Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrdersRGB, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrdersRGBx, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrdersRGBA, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrdersBGRA, Kernel),
-                CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrderABGR, Kernel),
-            })));
+    Combine(
+        Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
+        ValuesIn(std::vector<EnumCapabilityCase>{
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::R, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::A, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::RG, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::RA, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::RGB, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::RGBA, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::BGRA, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::ARGB, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::Intensity, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::Luminance, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::Rx, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::RGx, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::RGBx, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::Depth, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::DepthStencil, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::sRGB, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::sRGBx, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::sRGBA, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::sBGRA, Kernel),
+            CASE1(IMAGE_CHANNEL_ORDER, ImageChannelOrder::ABGR, Kernel),
+        })));
 
 // See SPIR-V Section 3.13 Image Channel Data Type
 INSTANTIATE_TEST_SUITE_P(
@@ -330,23 +341,23 @@ INSTANTIATE_TEST_SUITE_P(
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
                 // clang-format off
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeSnormInt8, Kernel),
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeSnormInt16, Kernel),
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeUnormInt8, Kernel),
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeUnormInt16, Kernel),
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeUnormShort565, Kernel),
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeUnormShort555, Kernel),
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeUnormInt101010, Kernel),
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeSignedInt8, Kernel),
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeSignedInt16, Kernel),
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeSignedInt32, Kernel),
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeUnsignedInt8, Kernel),
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeUnsignedInt16, Kernel),
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeUnsignedInt32, Kernel),
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeHalfFloat, Kernel),
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeFloat, Kernel),
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeUnormInt24, Kernel),
-                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataTypeUnormInt101010_2, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::SnormInt8, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::SnormInt16, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::UnormInt8, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::UnormInt16, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::UnormShort565, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::UnormShort555, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::UnormInt101010, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::SignedInt8, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::SignedInt16, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::SignedInt32, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::UnsignedInt8, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::UnsignedInt16, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::UnsignedInt32, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::HalfFloat, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::Float, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::UnormInt24, Kernel),
+                CASE1(IMAGE_CHANNEL_DATA_TYPE, ImageChannelDataType::UnormInt101010_2, Kernel),
                 // clang-format on
             })));
 
@@ -356,15 +367,15 @@ INSTANTIATE_TEST_SUITE_P(
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
                 // clang-format off
-                CASE0(OPTIONAL_IMAGE, ImageOperandsMaskNone),
-                CASE1(OPTIONAL_IMAGE, ImageOperandsBiasMask, Shader),
-                CASE0(OPTIONAL_IMAGE, ImageOperandsLodMask),
-                CASE0(OPTIONAL_IMAGE, ImageOperandsGradMask),
-                CASE0(OPTIONAL_IMAGE, ImageOperandsConstOffsetMask),
-                CASE1(OPTIONAL_IMAGE, ImageOperandsOffsetMask, ImageGatherExtended),
-                CASE1(OPTIONAL_IMAGE, ImageOperandsConstOffsetsMask, ImageGatherExtended),
-                CASE0(OPTIONAL_IMAGE, ImageOperandsSampleMask),
-                CASE1(OPTIONAL_IMAGE, ImageOperandsMinLodMask, MinLod),
+                CASE0(OPTIONAL_IMAGE, ImageOperandsMask::MaskNone),
+                CASE1(OPTIONAL_IMAGE, ImageOperandsMask::Bias, Shader),
+                CASE0(OPTIONAL_IMAGE, ImageOperandsMask::Lod),
+                CASE0(OPTIONAL_IMAGE, ImageOperandsMask::Grad),
+                CASE0(OPTIONAL_IMAGE, ImageOperandsMask::ConstOffset),
+                CASE1(OPTIONAL_IMAGE, ImageOperandsMask::Offset, ImageGatherExtended),
+                CASE1(OPTIONAL_IMAGE, ImageOperandsMask::ConstOffsets, ImageGatherExtended),
+                CASE0(OPTIONAL_IMAGE, ImageOperandsMask::Sample),
+                CASE1(OPTIONAL_IMAGE, ImageOperandsMask::MinLod, MinLod),
                 // clang-format on
             })));
 
@@ -373,8 +384,8 @@ INSTANTIATE_TEST_SUITE_P(
     LinkageType, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE1(LINKAGE_TYPE, LinkageTypeExport, Linkage),
-                CASE1(LINKAGE_TYPE, LinkageTypeImport, Linkage),
+                CASE1(LINKAGE_TYPE, LinkageType::Export, Linkage),
+                CASE1(LINKAGE_TYPE, LinkageType::Import, Linkage),
             })));
 
 // See SPIR-V Section 3.18 Access Qualifier
@@ -382,9 +393,9 @@ INSTANTIATE_TEST_SUITE_P(
     AccessQualifier, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE1(ACCESS_QUALIFIER, AccessQualifierReadOnly, Kernel),
-                CASE1(ACCESS_QUALIFIER, AccessQualifierWriteOnly, Kernel),
-                CASE1(ACCESS_QUALIFIER, AccessQualifierReadWrite, Kernel),
+                CASE1(ACCESS_QUALIFIER, AccessQualifier::ReadOnly, Kernel),
+                CASE1(ACCESS_QUALIFIER, AccessQualifier::WriteOnly, Kernel),
+                CASE1(ACCESS_QUALIFIER, AccessQualifier::ReadWrite, Kernel),
             })));
 
 // See SPIR-V Section 3.19 Function Parameter Attribute
@@ -393,14 +404,14 @@ INSTANTIATE_TEST_SUITE_P(
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
                 // clang-format off
-                CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttributeZext, Kernel),
-                CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttributeSext, Kernel),
-                CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttributeByVal, Kernel),
-                CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttributeSret, Kernel),
-                CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttributeNoAlias, Kernel),
-                CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttributeNoCapture, Kernel),
-                CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttributeNoWrite, Kernel),
-                CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttributeNoReadWrite, Kernel),
+                CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttribute::Zext, Kernel),
+                CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttribute::Sext, Kernel),
+                CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttribute::ByVal, Kernel),
+                CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttribute::Sret, Kernel),
+                CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttribute::NoAlias, Kernel),
+                CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttribute::NoCapture, Kernel),
+                CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttribute::NoWrite, Kernel),
+                CASE1(FUNCTION_PARAMETER_ATTRIBUTE, FunctionParameterAttribute::NoReadWrite, Kernel),
                 // clang-format on
             })));
 
@@ -409,52 +420,53 @@ INSTANTIATE_TEST_SUITE_P(
     Decoration, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE1(DECORATION, DecorationRelaxedPrecision, Shader),
+                CASE1(DECORATION, Decoration::RelaxedPrecision, Shader),
                 // DecorationSpecId handled below.
-                CASE1(DECORATION, DecorationBlock, Shader),
-                CASE1(DECORATION, DecorationBufferBlock, Shader),
-                CASE1(DECORATION, DecorationRowMajor, Matrix),
-                CASE1(DECORATION, DecorationColMajor, Matrix),
-                CASE1(DECORATION, DecorationArrayStride, Shader),
-                CASE1(DECORATION, DecorationMatrixStride, Matrix),  // Bug 15234
-                CASE1(DECORATION, DecorationGLSLShared, Shader),
-                CASE1(DECORATION, DecorationGLSLPacked, Shader),
-                CASE1(DECORATION, DecorationCPacked, Kernel),
-                CASE0(DECORATION, DecorationBuiltIn),  // Bug 15248
+                CASE1(DECORATION, Decoration::Block, Shader),
+                CASE1(DECORATION, Decoration::BufferBlock, Shader),
+                CASE1(DECORATION, Decoration::RowMajor, Matrix),
+                CASE1(DECORATION, Decoration::ColMajor, Matrix),
+                CASE1(DECORATION, Decoration::ArrayStride, Shader),
+                CASE1(DECORATION, Decoration::MatrixStride,
+                      Matrix),  // Bug 15234
+                CASE1(DECORATION, Decoration::GLSLShared, Shader),
+                CASE1(DECORATION, Decoration::GLSLPacked, Shader),
+                CASE1(DECORATION, Decoration::CPacked, Kernel),
+                CASE0(DECORATION, Decoration::BuiltIn),  // Bug 15248
                 // Value 12 placeholder
-                CASE1(DECORATION, DecorationNoPerspective, Shader),
-                CASE1(DECORATION, DecorationFlat, Shader),
-                CASE1(DECORATION, DecorationPatch, Tessellation),
-                CASE1(DECORATION, DecorationCentroid, Shader),
-                CASE1(DECORATION, DecorationSample,
+                CASE1(DECORATION, Decoration::NoPerspective, Shader),
+                CASE1(DECORATION, Decoration::Flat, Shader),
+                CASE1(DECORATION, Decoration::Patch, Tessellation),
+                CASE1(DECORATION, Decoration::Centroid, Shader),
+                CASE1(DECORATION, Decoration::Sample,
                       SampleRateShading),  // Bug 15234
-                CASE1(DECORATION, DecorationInvariant, Shader),
-                CASE0(DECORATION, DecorationRestrict),
-                CASE0(DECORATION, DecorationAliased),
-                CASE0(DECORATION, DecorationVolatile),
-                CASE1(DECORATION, DecorationConstant, Kernel),
-                CASE0(DECORATION, DecorationCoherent),
-                CASE0(DECORATION, DecorationNonWritable),
-                CASE0(DECORATION, DecorationNonReadable),
-                CASE1(DECORATION, DecorationUniform, Shader),
+                CASE1(DECORATION, Decoration::Invariant, Shader),
+                CASE0(DECORATION, Decoration::Restrict),
+                CASE0(DECORATION, Decoration::Aliased),
+                CASE0(DECORATION, Decoration::Volatile),
+                CASE1(DECORATION, Decoration::Constant, Kernel),
+                CASE0(DECORATION, Decoration::Coherent),
+                CASE0(DECORATION, Decoration::NonWritable),
+                CASE0(DECORATION, Decoration::NonReadable),
+                CASE1(DECORATION, Decoration::Uniform, Shader),
                 // Value 27 is an intentional gap in the spec numbering.
-                CASE1(DECORATION, DecorationSaturatedConversion, Kernel),
-                CASE1(DECORATION, DecorationStream, GeometryStreams),
-                CASE1(DECORATION, DecorationLocation, Shader),
-                CASE1(DECORATION, DecorationComponent, Shader),
-                CASE1(DECORATION, DecorationIndex, Shader),
-                CASE1(DECORATION, DecorationBinding, Shader),
-                CASE1(DECORATION, DecorationDescriptorSet, Shader),
-                CASE1(DECORATION, DecorationOffset, Shader),  // Bug 15268
-                CASE1(DECORATION, DecorationXfbBuffer, TransformFeedback),
-                CASE1(DECORATION, DecorationXfbStride, TransformFeedback),
-                CASE1(DECORATION, DecorationFuncParamAttr, Kernel),
-                CASE1(DECORATION, DecorationFPFastMathMode, Kernel),
-                CASE1(DECORATION, DecorationLinkageAttributes, Linkage),
-                CASE1(DECORATION, DecorationNoContraction, Shader),
-                CASE1(DECORATION, DecorationInputAttachmentIndex,
+                CASE1(DECORATION, Decoration::SaturatedConversion, Kernel),
+                CASE1(DECORATION, Decoration::Stream, GeometryStreams),
+                CASE1(DECORATION, Decoration::Location, Shader),
+                CASE1(DECORATION, Decoration::Component, Shader),
+                CASE1(DECORATION, Decoration::Index, Shader),
+                CASE1(DECORATION, Decoration::Binding, Shader),
+                CASE1(DECORATION, Decoration::DescriptorSet, Shader),
+                CASE1(DECORATION, Decoration::Offset, Shader),  // Bug 15268
+                CASE1(DECORATION, Decoration::XfbBuffer, TransformFeedback),
+                CASE1(DECORATION, Decoration::XfbStride, TransformFeedback),
+                CASE1(DECORATION, Decoration::FuncParamAttr, Kernel),
+                CASE1(DECORATION, Decoration::FPFastMathMode, Kernel),
+                CASE1(DECORATION, Decoration::LinkageAttributes, Linkage),
+                CASE1(DECORATION, Decoration::NoContraction, Shader),
+                CASE1(DECORATION, Decoration::InputAttachmentIndex,
                       InputAttachment),
-                CASE1(DECORATION, DecorationAlignment, Kernel),
+                CASE1(DECORATION, Decoration::Alignment, Kernel),
             })));
 
 #if 0
@@ -469,8 +481,8 @@ INSTANTIATE_TEST_SUITE_P(
     DecorationV11, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE2(DECORATION, DecorationSpecId, Shader, Kernel),
-                CASE1(DECORATION, DecorationMaxByteOffset, Addresses)})));
+                CASE2(DECORATION, Decoration::SpecId, Shader, Kernel),
+                CASE1(DECORATION, Decoration::MaxByteOffset, Addresses)})));
 
 // See SPIR-V Section 3.21 BuiltIn
 INSTANTIATE_TEST_SUITE_P(
@@ -479,51 +491,51 @@ INSTANTIATE_TEST_SUITE_P(
         Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
         ValuesIn(std::vector<EnumCapabilityCase>{
             // clang-format off
-            CASE1(BUILT_IN, BuiltInPosition, Shader),
-            CASE1(BUILT_IN, BuiltInPointSize, Shader),
+            CASE1(BUILT_IN, BuiltIn::Position, Shader),
+            CASE1(BUILT_IN, BuiltIn::PointSize, Shader),
             // 2 is an intentional gap in the spec numbering.
-            CASE1(BUILT_IN, BuiltInClipDistance, ClipDistance),  // Bug 1407, 15234
-            CASE1(BUILT_IN, BuiltInCullDistance, CullDistance),  // Bug 1407, 15234
-            CASE1(BUILT_IN, BuiltInVertexId, Shader),
-            CASE1(BUILT_IN, BuiltInInstanceId, Shader),
-            CASE5(BUILT_IN, BuiltInPrimitiveId, Geometry, Tessellation,
-                  RayTracingNV, RayTracingKHR, MeshShadingNV),
-            CASE2(BUILT_IN, BuiltInInvocationId, Geometry, Tessellation),
-            CASE3(BUILT_IN, BuiltInLayer, Geometry, ShaderViewportIndexLayerEXT, MeshShadingNV),
-            CASE3(BUILT_IN, BuiltInViewportIndex, MultiViewport, ShaderViewportIndexLayerEXT, MeshShadingNV),  // Bug 15234
-            CASE1(BUILT_IN, BuiltInTessLevelOuter, Tessellation),
-            CASE1(BUILT_IN, BuiltInTessLevelInner, Tessellation),
-            CASE1(BUILT_IN, BuiltInTessCoord, Tessellation),
-            CASE1(BUILT_IN, BuiltInPatchVertices, Tessellation),
-            CASE1(BUILT_IN, BuiltInFragCoord, Shader),
-            CASE1(BUILT_IN, BuiltInPointCoord, Shader),
-            CASE1(BUILT_IN, BuiltInFrontFacing, Shader),
-            CASE1(BUILT_IN, BuiltInSampleId, SampleRateShading),  // Bug 15234
-            CASE1(BUILT_IN, BuiltInSamplePosition, SampleRateShading), // Bug 15234
-            CASE1(BUILT_IN, BuiltInSampleMask, Shader),  // Bug 15234, Issue 182
+            CASE1(BUILT_IN, BuiltIn::ClipDistance, ClipDistance),  // Bug 1407, 15234
+            CASE1(BUILT_IN, BuiltIn::CullDistance, CullDistance),  // Bug 1407, 15234
+            CASE1(BUILT_IN, BuiltIn::VertexId, Shader),
+            CASE1(BUILT_IN, BuiltIn::InstanceId, Shader),
+            CASE6(BUILT_IN, BuiltIn::PrimitiveId, Geometry, Tessellation,
+                  RayTracingNV, RayTracingKHR, MeshShadingNV, MeshShadingEXT),
+            CASE2(BUILT_IN, BuiltIn::InvocationId, Geometry, Tessellation),
+            CASE4(BUILT_IN, BuiltIn::Layer, Geometry, ShaderViewportIndexLayerEXT, MeshShadingNV, MeshShadingEXT),
+            CASE4(BUILT_IN, BuiltIn::ViewportIndex, MultiViewport, ShaderViewportIndexLayerEXT, MeshShadingNV, MeshShadingEXT),  // Bug 15234
+            CASE1(BUILT_IN, BuiltIn::TessLevelOuter, Tessellation),
+            CASE1(BUILT_IN, BuiltIn::TessLevelInner, Tessellation),
+            CASE1(BUILT_IN, BuiltIn::TessCoord, Tessellation),
+            CASE1(BUILT_IN, BuiltIn::PatchVertices, Tessellation),
+            CASE1(BUILT_IN, BuiltIn::FragCoord, Shader),
+            CASE1(BUILT_IN, BuiltIn::PointCoord, Shader),
+            CASE1(BUILT_IN, BuiltIn::FrontFacing, Shader),
+            CASE1(BUILT_IN, BuiltIn::SampleId, SampleRateShading),  // Bug 15234
+            CASE1(BUILT_IN, BuiltIn::SamplePosition, SampleRateShading), // Bug 15234
+            CASE1(BUILT_IN, BuiltIn::SampleMask, Shader),  // Bug 15234, Issue 182
             // Value 21 intentionally missing
-            CASE1(BUILT_IN, BuiltInFragDepth, Shader),
-            CASE1(BUILT_IN, BuiltInHelperInvocation, Shader),
-            CASE0(BUILT_IN, BuiltInNumWorkgroups),
-            CASE0(BUILT_IN, BuiltInWorkgroupSize),
-            CASE0(BUILT_IN, BuiltInWorkgroupId),
-            CASE0(BUILT_IN, BuiltInLocalInvocationId),
-            CASE0(BUILT_IN, BuiltInGlobalInvocationId),
-            CASE0(BUILT_IN, BuiltInLocalInvocationIndex),
-            CASE1(BUILT_IN, BuiltInWorkDim, Kernel),
-            CASE1(BUILT_IN, BuiltInGlobalSize, Kernel),
-            CASE1(BUILT_IN, BuiltInEnqueuedWorkgroupSize, Kernel),
-            CASE1(BUILT_IN, BuiltInGlobalOffset, Kernel),
-            CASE1(BUILT_IN, BuiltInGlobalLinearId, Kernel),
+            CASE1(BUILT_IN, BuiltIn::FragDepth, Shader),
+            CASE1(BUILT_IN, BuiltIn::HelperInvocation, Shader),
+            CASE0(BUILT_IN, BuiltIn::NumWorkgroups),
+            CASE0(BUILT_IN, BuiltIn::WorkgroupSize),
+            CASE0(BUILT_IN, BuiltIn::WorkgroupId),
+            CASE0(BUILT_IN, BuiltIn::LocalInvocationId),
+            CASE0(BUILT_IN, BuiltIn::GlobalInvocationId),
+            CASE0(BUILT_IN, BuiltIn::LocalInvocationIndex),
+            CASE1(BUILT_IN, BuiltIn::WorkDim, Kernel),
+            CASE1(BUILT_IN, BuiltIn::GlobalSize, Kernel),
+            CASE1(BUILT_IN, BuiltIn::EnqueuedWorkgroupSize, Kernel),
+            CASE1(BUILT_IN, BuiltIn::GlobalOffset, Kernel),
+            CASE1(BUILT_IN, BuiltIn::GlobalLinearId, Kernel),
             // Value 35 intentionally missing
-            CASE2(BUILT_IN, BuiltInSubgroupSize, Kernel, SubgroupBallotKHR),
-            CASE1(BUILT_IN, BuiltInSubgroupMaxSize, Kernel),
-            CASE1(BUILT_IN, BuiltInNumSubgroups, Kernel),
-            CASE1(BUILT_IN, BuiltInNumEnqueuedSubgroups, Kernel),
-            CASE1(BUILT_IN, BuiltInSubgroupId, Kernel),
-            CASE2(BUILT_IN, BuiltInSubgroupLocalInvocationId, Kernel, SubgroupBallotKHR),
-            CASE1(BUILT_IN, BuiltInVertexIndex, Shader),
-            CASE1(BUILT_IN, BuiltInInstanceIndex, Shader),
+            CASE2(BUILT_IN, BuiltIn::SubgroupSize, Kernel, SubgroupBallotKHR),
+            CASE1(BUILT_IN, BuiltIn::SubgroupMaxSize, Kernel),
+            CASE1(BUILT_IN, BuiltIn::NumSubgroups, Kernel),
+            CASE1(BUILT_IN, BuiltIn::NumEnqueuedSubgroups, Kernel),
+            CASE1(BUILT_IN, BuiltIn::SubgroupId, Kernel),
+            CASE2(BUILT_IN, BuiltIn::SubgroupLocalInvocationId, Kernel, SubgroupBallotKHR),
+            CASE1(BUILT_IN, BuiltIn::VertexIndex, Shader),
+            CASE1(BUILT_IN, BuiltIn::InstanceIndex, Shader),
             // clang-format on
         })));
 
@@ -533,11 +545,11 @@ INSTANTIATE_TEST_SUITE_P(
         Values(SPV_ENV_UNIVERSAL_1_5),
         ValuesIn(std::vector<EnumCapabilityCase>{
             // SPIR-V 1.5 adds new capabilities to enable these two builtins.
-            CASE4(BUILT_IN, BuiltInLayer, Geometry, ShaderLayer,
-                  ShaderViewportIndexLayerEXT, MeshShadingNV),
-            CASE4(BUILT_IN, BuiltInViewportIndex, MultiViewport,
+            CASE5(BUILT_IN, BuiltIn::Layer, Geometry, ShaderLayer,
+                  ShaderViewportIndexLayerEXT, MeshShadingNV, MeshShadingEXT),
+            CASE5(BUILT_IN, BuiltIn::ViewportIndex, MultiViewport,
                   ShaderViewportIndex, ShaderViewportIndexLayerEXT,
-                  MeshShadingNV),
+                  MeshShadingNV, MeshShadingEXT),
         })));
 
 // See SPIR-V Section 3.22 Selection Control
@@ -545,9 +557,9 @@ INSTANTIATE_TEST_SUITE_P(
     SelectionControl, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE0(SELECTION_CONTROL, SelectionControlMaskNone),
-                CASE0(SELECTION_CONTROL, SelectionControlFlattenMask),
-                CASE0(SELECTION_CONTROL, SelectionControlDontFlattenMask),
+                CASE0(SELECTION_CONTROL, SelectionControlMask::MaskNone),
+                CASE0(SELECTION_CONTROL, SelectionControlMask::Flatten),
+                CASE0(SELECTION_CONTROL, SelectionControlMask::DontFlatten),
             })));
 
 // See SPIR-V Section 3.23 Loop Control
@@ -555,17 +567,17 @@ INSTANTIATE_TEST_SUITE_P(
     LoopControl, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE0(LOOP_CONTROL, LoopControlMaskNone),
-                CASE0(LOOP_CONTROL, LoopControlUnrollMask),
-                CASE0(LOOP_CONTROL, LoopControlDontUnrollMask),
+                CASE0(LOOP_CONTROL, LoopControlMask::MaskNone),
+                CASE0(LOOP_CONTROL, LoopControlMask::Unroll),
+                CASE0(LOOP_CONTROL, LoopControlMask::DontUnroll),
             })));
 
 INSTANTIATE_TEST_SUITE_P(
     LoopControlV11, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE0(LOOP_CONTROL, LoopControlDependencyInfiniteMask),
-                CASE0(LOOP_CONTROL, LoopControlDependencyLengthMask),
+                CASE0(LOOP_CONTROL, LoopControlMask::DependencyInfinite),
+                CASE0(LOOP_CONTROL, LoopControlMask::DependencyLength),
             })));
 
 // See SPIR-V Section 3.24 Function Control
@@ -573,11 +585,11 @@ INSTANTIATE_TEST_SUITE_P(
     FunctionControl, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE0(FUNCTION_CONTROL, FunctionControlMaskNone),
-                CASE0(FUNCTION_CONTROL, FunctionControlInlineMask),
-                CASE0(FUNCTION_CONTROL, FunctionControlDontInlineMask),
-                CASE0(FUNCTION_CONTROL, FunctionControlPureMask),
-                CASE0(FUNCTION_CONTROL, FunctionControlConstMask),
+                CASE0(FUNCTION_CONTROL, FunctionControlMask::MaskNone),
+                CASE0(FUNCTION_CONTROL, FunctionControlMask::Inline),
+                CASE0(FUNCTION_CONTROL, FunctionControlMask::DontInline),
+                CASE0(FUNCTION_CONTROL, FunctionControlMask::Pure),
+                CASE0(FUNCTION_CONTROL, FunctionControlMask::Const),
             })));
 
 // See SPIR-V Section 3.25 Memory Semantics <id>
@@ -586,20 +598,21 @@ INSTANTIATE_TEST_SUITE_P(
     Combine(
         Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
         ValuesIn(std::vector<EnumCapabilityCase>{
-            CASE0(MEMORY_SEMANTICS_ID, MemorySemanticsMaskNone),
-            CASE0(MEMORY_SEMANTICS_ID, MemorySemanticsAcquireMask),
-            CASE0(MEMORY_SEMANTICS_ID, MemorySemanticsReleaseMask),
-            CASE0(MEMORY_SEMANTICS_ID, MemorySemanticsAcquireReleaseMask),
+            CASE0(MEMORY_SEMANTICS_ID, MemorySemanticsMask::MaskNone),
+            CASE0(MEMORY_SEMANTICS_ID, MemorySemanticsMask::Acquire),
+            CASE0(MEMORY_SEMANTICS_ID, MemorySemanticsMask::Release),
+            CASE0(MEMORY_SEMANTICS_ID, MemorySemanticsMask::AcquireRelease),
             CASE0(MEMORY_SEMANTICS_ID,
-                  MemorySemanticsSequentiallyConsistentMask),
-            CASE1(MEMORY_SEMANTICS_ID, MemorySemanticsUniformMemoryMask,
+                  MemorySemanticsMask::SequentiallyConsistent),
+            CASE1(MEMORY_SEMANTICS_ID, MemorySemanticsMask::UniformMemory,
                   Shader),
-            CASE0(MEMORY_SEMANTICS_ID, MemorySemanticsSubgroupMemoryMask),
-            CASE0(MEMORY_SEMANTICS_ID, MemorySemanticsWorkgroupMemoryMask),
-            CASE0(MEMORY_SEMANTICS_ID, MemorySemanticsCrossWorkgroupMemoryMask),
-            CASE1(MEMORY_SEMANTICS_ID, MemorySemanticsAtomicCounterMemoryMask,
+            CASE0(MEMORY_SEMANTICS_ID, MemorySemanticsMask::SubgroupMemory),
+            CASE0(MEMORY_SEMANTICS_ID, MemorySemanticsMask::WorkgroupMemory),
+            CASE0(MEMORY_SEMANTICS_ID,
+                  MemorySemanticsMask::CrossWorkgroupMemory),
+            CASE1(MEMORY_SEMANTICS_ID, MemorySemanticsMask::AtomicCounterMemory,
                   AtomicStorage),  // Bug 15234
-            CASE0(MEMORY_SEMANTICS_ID, MemorySemanticsImageMemoryMask),
+            CASE0(MEMORY_SEMANTICS_ID, MemorySemanticsMask::ImageMemory),
         })));
 
 // See SPIR-V Section 3.26 Memory Access
@@ -607,10 +620,10 @@ INSTANTIATE_TEST_SUITE_P(
     MemoryAccess, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE0(OPTIONAL_MEMORY_ACCESS, MemoryAccessMaskNone),
-                CASE0(OPTIONAL_MEMORY_ACCESS, MemoryAccessVolatileMask),
-                CASE0(OPTIONAL_MEMORY_ACCESS, MemoryAccessAlignedMask),
-                CASE0(OPTIONAL_MEMORY_ACCESS, MemoryAccessNontemporalMask),
+                CASE0(OPTIONAL_MEMORY_ACCESS, MemoryAccessMask::MaskNone),
+                CASE0(OPTIONAL_MEMORY_ACCESS, MemoryAccessMask::Volatile),
+                CASE0(OPTIONAL_MEMORY_ACCESS, MemoryAccessMask::Aligned),
+                CASE0(OPTIONAL_MEMORY_ACCESS, MemoryAccessMask::Nontemporal),
             })));
 
 // See SPIR-V Section 3.27 Scope <id>
@@ -619,12 +632,12 @@ INSTANTIATE_TEST_SUITE_P(
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1,
                    SPV_ENV_UNIVERSAL_1_2, SPV_ENV_UNIVERSAL_1_3),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE0(SCOPE_ID, ScopeCrossDevice),
-                CASE0(SCOPE_ID, ScopeDevice),
-                CASE0(SCOPE_ID, ScopeWorkgroup),
-                CASE0(SCOPE_ID, ScopeSubgroup),
-                CASE0(SCOPE_ID, ScopeInvocation),
-                CASE1(SCOPE_ID, ScopeQueueFamilyKHR, VulkanMemoryModelKHR),
+                CASE0(SCOPE_ID, Scope::CrossDevice),
+                CASE0(SCOPE_ID, Scope::Device),
+                CASE0(SCOPE_ID, Scope::Workgroup),
+                CASE0(SCOPE_ID, Scope::Subgroup),
+                CASE0(SCOPE_ID, Scope::Invocation),
+                CASE1(SCOPE_ID, Scope::QueueFamilyKHR, VulkanMemoryModelKHR),
             })));
 
 // See SPIR-V Section 3.28 Group Operation
@@ -632,11 +645,11 @@ INSTANTIATE_TEST_SUITE_P(
     GroupOperation, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE3(GROUP_OPERATION, GroupOperationReduce, Kernel,
+                CASE3(GROUP_OPERATION, GroupOperation::Reduce, Kernel,
                       GroupNonUniformArithmetic, GroupNonUniformBallot),
-                CASE3(GROUP_OPERATION, GroupOperationInclusiveScan, Kernel,
+                CASE3(GROUP_OPERATION, GroupOperation::InclusiveScan, Kernel,
                       GroupNonUniformArithmetic, GroupNonUniformBallot),
-                CASE3(GROUP_OPERATION, GroupOperationExclusiveScan, Kernel,
+                CASE3(GROUP_OPERATION, GroupOperation::ExclusiveScan, Kernel,
                       GroupNonUniformArithmetic, GroupNonUniformBallot),
             })));
 
@@ -645,9 +658,9 @@ INSTANTIATE_TEST_SUITE_P(
     KernelEnqueueFlags, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE1(KERNEL_ENQ_FLAGS, KernelEnqueueFlagsNoWait, Kernel),
-                CASE1(KERNEL_ENQ_FLAGS, KernelEnqueueFlagsWaitKernel, Kernel),
-                CASE1(KERNEL_ENQ_FLAGS, KernelEnqueueFlagsWaitWorkGroup,
+                CASE1(KERNEL_ENQ_FLAGS, KernelEnqueueFlags::NoWait, Kernel),
+                CASE1(KERNEL_ENQ_FLAGS, KernelEnqueueFlags::WaitKernel, Kernel),
+                CASE1(KERNEL_ENQ_FLAGS, KernelEnqueueFlags::WaitWorkGroup,
                       Kernel),
             })));
 
@@ -656,9 +669,9 @@ INSTANTIATE_TEST_SUITE_P(
     KernelProfilingInfo, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE0(KERNEL_PROFILING_INFO, KernelProfilingInfoMaskNone),
-                CASE1(KERNEL_PROFILING_INFO, KernelProfilingInfoCmdExecTimeMask,
-                      Kernel),
+                CASE0(KERNEL_PROFILING_INFO, KernelProfilingInfoMask::MaskNone),
+                CASE1(KERNEL_PROFILING_INFO,
+                      KernelProfilingInfoMask::CmdExecTime, Kernel),
             })));
 
 // See SPIR-V Section 3.31 Capability
@@ -668,62 +681,62 @@ INSTANTIATE_TEST_SUITE_P(
         Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
         ValuesIn(std::vector<EnumCapabilityCase>{
             // clang-format off
-            CASE0(CAPABILITY, CapabilityMatrix),
-            CASE1(CAPABILITY, CapabilityShader, Matrix),
-            CASE1(CAPABILITY, CapabilityGeometry, Shader),
-            CASE1(CAPABILITY, CapabilityTessellation, Shader),
-            CASE0(CAPABILITY, CapabilityAddresses),
-            CASE0(CAPABILITY, CapabilityLinkage),
-            CASE0(CAPABILITY, CapabilityKernel),
-            CASE1(CAPABILITY, CapabilityVector16, Kernel),
-            CASE1(CAPABILITY, CapabilityFloat16Buffer, Kernel),
-            CASE0(CAPABILITY, CapabilityFloat16),  // Bug 15234
-            CASE0(CAPABILITY, CapabilityFloat64),
-            CASE0(CAPABILITY, CapabilityInt64),
-            CASE1(CAPABILITY, CapabilityInt64Atomics, Int64),
-            CASE1(CAPABILITY, CapabilityImageBasic, Kernel),
-            CASE1(CAPABILITY, CapabilityImageReadWrite, ImageBasic),
-            CASE1(CAPABILITY, CapabilityImageMipmap, ImageBasic),
+            CASE0(CAPABILITY, Capability::Matrix),
+            CASE1(CAPABILITY, Capability::Shader, Matrix),
+            CASE1(CAPABILITY, Capability::Geometry, Shader),
+            CASE1(CAPABILITY, Capability::Tessellation, Shader),
+            CASE0(CAPABILITY, Capability::Addresses),
+            CASE0(CAPABILITY, Capability::Linkage),
+            CASE0(CAPABILITY, Capability::Kernel),
+            CASE1(CAPABILITY, Capability::Vector16, Kernel),
+            CASE1(CAPABILITY, Capability::Float16Buffer, Kernel),
+            CASE0(CAPABILITY, Capability::Float16),  // Bug 15234
+            CASE0(CAPABILITY, Capability::Float64),
+            CASE0(CAPABILITY, Capability::Int64),
+            CASE1(CAPABILITY, Capability::Int64Atomics, Int64),
+            CASE1(CAPABILITY, Capability::ImageBasic, Kernel),
+            CASE1(CAPABILITY, Capability::ImageReadWrite, ImageBasic),
+            CASE1(CAPABILITY, Capability::ImageMipmap, ImageBasic),
             // Value 16 intentionally missing.
-            CASE1(CAPABILITY, CapabilityPipes, Kernel),
-            CASE0(CAPABILITY, CapabilityGroups),
-            CASE1(CAPABILITY, CapabilityDeviceEnqueue, Kernel),
-            CASE1(CAPABILITY, CapabilityLiteralSampler, Kernel),
-            CASE1(CAPABILITY, CapabilityAtomicStorage, Shader),
-            CASE0(CAPABILITY, CapabilityInt16),
-            CASE1(CAPABILITY, CapabilityTessellationPointSize, Tessellation),
-            CASE1(CAPABILITY, CapabilityGeometryPointSize, Geometry),
-            CASE1(CAPABILITY, CapabilityImageGatherExtended, Shader),
+            CASE1(CAPABILITY, Capability::Pipes, Kernel),
+            CASE0(CAPABILITY, Capability::Groups),
+            CASE1(CAPABILITY, Capability::DeviceEnqueue, Kernel),
+            CASE1(CAPABILITY, Capability::LiteralSampler, Kernel),
+            CASE1(CAPABILITY, Capability::AtomicStorage, Shader),
+            CASE0(CAPABILITY, Capability::Int16),
+            CASE1(CAPABILITY, Capability::TessellationPointSize, Tessellation),
+            CASE1(CAPABILITY, Capability::GeometryPointSize, Geometry),
+            CASE1(CAPABILITY, Capability::ImageGatherExtended, Shader),
             // Value 26 intentionally missing.
-            CASE1(CAPABILITY, CapabilityStorageImageMultisample, Shader),
-            CASE1(CAPABILITY, CapabilityUniformBufferArrayDynamicIndexing, Shader),
-            CASE1(CAPABILITY, CapabilitySampledImageArrayDynamicIndexing, Shader),
-            CASE1(CAPABILITY, CapabilityStorageBufferArrayDynamicIndexing, Shader),
-            CASE1(CAPABILITY, CapabilityStorageImageArrayDynamicIndexing, Shader),
-            CASE1(CAPABILITY, CapabilityClipDistance, Shader),
-            CASE1(CAPABILITY, CapabilityCullDistance, Shader),
-            CASE1(CAPABILITY, CapabilityImageCubeArray, SampledCubeArray),
-            CASE1(CAPABILITY, CapabilitySampleRateShading, Shader),
-            CASE1(CAPABILITY, CapabilityImageRect, SampledRect),
-            CASE1(CAPABILITY, CapabilitySampledRect, Shader),
-            CASE1(CAPABILITY, CapabilityGenericPointer, Addresses),
-            CASE0(CAPABILITY, CapabilityInt8),
-            CASE1(CAPABILITY, CapabilityInputAttachment, Shader),
-            CASE1(CAPABILITY, CapabilitySparseResidency, Shader),
-            CASE1(CAPABILITY, CapabilityMinLod, Shader),
-            CASE1(CAPABILITY, CapabilityImage1D, Sampled1D),
-            CASE1(CAPABILITY, CapabilitySampledCubeArray, Shader),
-            CASE1(CAPABILITY, CapabilityImageBuffer, SampledBuffer),
-            CASE1(CAPABILITY, CapabilityImageMSArray, Shader),
-            CASE1(CAPABILITY, CapabilityStorageImageExtendedFormats, Shader),
-            CASE1(CAPABILITY, CapabilityImageQuery, Shader),
-            CASE1(CAPABILITY, CapabilityDerivativeControl, Shader),
-            CASE1(CAPABILITY, CapabilityInterpolationFunction, Shader),
-            CASE1(CAPABILITY, CapabilityTransformFeedback, Shader),
-            CASE1(CAPABILITY, CapabilityGeometryStreams, Geometry),
-            CASE1(CAPABILITY, CapabilityStorageImageReadWithoutFormat, Shader),
-            CASE1(CAPABILITY, CapabilityStorageImageWriteWithoutFormat, Shader),
-            CASE1(CAPABILITY, CapabilityMultiViewport, Geometry),
+            CASE1(CAPABILITY, Capability::StorageImageMultisample, Shader),
+            CASE1(CAPABILITY, Capability::UniformBufferArrayDynamicIndexing, Shader),
+            CASE1(CAPABILITY, Capability::SampledImageArrayDynamicIndexing, Shader),
+            CASE1(CAPABILITY, Capability::StorageBufferArrayDynamicIndexing, Shader),
+            CASE1(CAPABILITY, Capability::StorageImageArrayDynamicIndexing, Shader),
+            CASE1(CAPABILITY, Capability::ClipDistance, Shader),
+            CASE1(CAPABILITY, Capability::CullDistance, Shader),
+            CASE1(CAPABILITY, Capability::ImageCubeArray, SampledCubeArray),
+            CASE1(CAPABILITY, Capability::SampleRateShading, Shader),
+            CASE1(CAPABILITY, Capability::ImageRect, SampledRect),
+            CASE1(CAPABILITY, Capability::SampledRect, Shader),
+            CASE1(CAPABILITY, Capability::GenericPointer, Addresses),
+            CASE0(CAPABILITY, Capability::Int8),
+            CASE1(CAPABILITY, Capability::InputAttachment, Shader),
+            CASE1(CAPABILITY, Capability::SparseResidency, Shader),
+            CASE1(CAPABILITY, Capability::MinLod, Shader),
+            CASE1(CAPABILITY, Capability::Image1D, Sampled1D),
+            CASE1(CAPABILITY, Capability::SampledCubeArray, Shader),
+            CASE1(CAPABILITY, Capability::ImageBuffer, SampledBuffer),
+            CASE1(CAPABILITY, Capability::ImageMSArray, Shader),
+            CASE1(CAPABILITY, Capability::StorageImageExtendedFormats, Shader),
+            CASE1(CAPABILITY, Capability::ImageQuery, Shader),
+            CASE1(CAPABILITY, Capability::DerivativeControl, Shader),
+            CASE1(CAPABILITY, Capability::InterpolationFunction, Shader),
+            CASE1(CAPABILITY, Capability::TransformFeedback, Shader),
+            CASE1(CAPABILITY, Capability::GeometryStreams, Geometry),
+            CASE1(CAPABILITY, Capability::StorageImageReadWithoutFormat, Shader),
+            CASE1(CAPABILITY, Capability::StorageImageWriteWithoutFormat, Shader),
+            CASE1(CAPABILITY, Capability::MultiViewport, Geometry),
             // clang-format on
         })));
 
@@ -731,9 +744,9 @@ INSTANTIATE_TEST_SUITE_P(
     CapabilityDependsOnV11, EnumCapabilityTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_1),
             ValuesIn(std::vector<EnumCapabilityCase>{
-                CASE1(CAPABILITY, CapabilitySubgroupDispatch, DeviceEnqueue),
-                CASE1(CAPABILITY, CapabilityNamedBarrier, Kernel),
-                CASE1(CAPABILITY, CapabilityPipeStorage, Pipes),
+                CASE1(CAPABILITY, Capability::SubgroupDispatch, DeviceEnqueue),
+                CASE1(CAPABILITY, Capability::NamedBarrier, Kernel),
+                CASE1(CAPABILITY, Capability::PipeStorage, Pipes),
             })));
 
 #undef CASE0

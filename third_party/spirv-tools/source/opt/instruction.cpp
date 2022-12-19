@@ -24,38 +24,37 @@
 
 namespace spvtools {
 namespace opt {
-
 namespace {
 // Indices used to get particular operands out of instructions using InOperand.
-const uint32_t kTypeImageDimIndex = 1;
-const uint32_t kLoadBaseIndex = 0;
-const uint32_t kPointerTypeStorageClassIndex = 0;
-const uint32_t kVariableStorageClassIndex = 0;
-const uint32_t kTypeImageSampledIndex = 5;
+constexpr uint32_t kTypeImageDimIndex = 1;
+constexpr uint32_t kLoadBaseIndex = 0;
+constexpr uint32_t kPointerTypeStorageClassIndex = 0;
+constexpr uint32_t kVariableStorageClassIndex = 0;
+constexpr uint32_t kTypeImageSampledIndex = 5;
 
 // Constants for OpenCL.DebugInfo.100 / NonSemantic.Shader.DebugInfo.100
 // extension instructions.
-const uint32_t kExtInstSetIdInIdx = 0;
-const uint32_t kExtInstInstructionInIdx = 1;
-const uint32_t kDebugScopeNumWords = 7;
-const uint32_t kDebugScopeNumWordsWithoutInlinedAt = 6;
-const uint32_t kDebugNoScopeNumWords = 5;
+constexpr uint32_t kExtInstSetIdInIdx = 0;
+constexpr uint32_t kExtInstInstructionInIdx = 1;
+constexpr uint32_t kDebugScopeNumWords = 7;
+constexpr uint32_t kDebugScopeNumWordsWithoutInlinedAt = 6;
+constexpr uint32_t kDebugNoScopeNumWords = 5;
 
 // Number of operands of an OpBranchConditional instruction
 // with weights.
-const uint32_t kOpBranchConditionalWithWeightsNumOperands = 5;
+constexpr uint32_t kOpBranchConditionalWithWeightsNumOperands = 5;
 }  // namespace
 
 Instruction::Instruction(IRContext* c)
     : utils::IntrusiveNodeBase<Instruction>(),
       context_(c),
-      opcode_(SpvOpNop),
+      opcode_(spv::Op::OpNop),
       has_type_id_(false),
       has_result_id_(false),
       unique_id_(c->TakeNextUniqueId()),
       dbg_scope_(kNoDebugScope, kNoInlinedAt) {}
 
-Instruction::Instruction(IRContext* c, SpvOp op)
+Instruction::Instruction(IRContext* c, spv::Op op)
     : utils::IntrusiveNodeBase<Instruction>(),
       context_(c),
       opcode_(op),
@@ -68,12 +67,13 @@ Instruction::Instruction(IRContext* c, const spv_parsed_instruction_t& inst,
                          std::vector<Instruction>&& dbg_line)
     : utils::IntrusiveNodeBase<Instruction>(),
       context_(c),
-      opcode_(static_cast<SpvOp>(inst.opcode)),
+      opcode_(static_cast<spv::Op>(inst.opcode)),
       has_type_id_(inst.type_id != 0),
       has_result_id_(inst.result_id != 0),
       unique_id_(c->TakeNextUniqueId()),
       dbg_line_insts_(std::move(dbg_line)),
       dbg_scope_(kNoDebugScope, kNoInlinedAt) {
+  operands_.reserve(inst.num_operands);
   for (uint32_t i = 0; i < inst.num_operands; ++i) {
     const auto& current_payload = inst.operands[i];
     operands_.emplace_back(
@@ -88,11 +88,12 @@ Instruction::Instruction(IRContext* c, const spv_parsed_instruction_t& inst,
                          const DebugScope& dbg_scope)
     : utils::IntrusiveNodeBase<Instruction>(),
       context_(c),
-      opcode_(static_cast<SpvOp>(inst.opcode)),
+      opcode_(static_cast<spv::Op>(inst.opcode)),
       has_type_id_(inst.type_id != 0),
       has_result_id_(inst.result_id != 0),
       unique_id_(c->TakeNextUniqueId()),
       dbg_scope_(dbg_scope) {
+  operands_.reserve(inst.num_operands);
   for (uint32_t i = 0; i < inst.num_operands; ++i) {
     const auto& current_payload = inst.operands[i];
     operands_.emplace_back(
@@ -101,7 +102,7 @@ Instruction::Instruction(IRContext* c, const spv_parsed_instruction_t& inst,
   }
 }
 
-Instruction::Instruction(IRContext* c, SpvOp op, uint32_t ty_id,
+Instruction::Instruction(IRContext* c, spv::Op op, uint32_t ty_id,
                          uint32_t res_id, const OperandList& in_operands)
     : utils::IntrusiveNodeBase<Instruction>(),
       context_(c),
@@ -111,6 +112,14 @@ Instruction::Instruction(IRContext* c, SpvOp op, uint32_t ty_id,
       unique_id_(c->TakeNextUniqueId()),
       operands_(),
       dbg_scope_(kNoDebugScope, kNoInlinedAt) {
+  size_t operands_size = in_operands.size();
+  if (has_type_id_) {
+    operands_size++;
+  }
+  if (has_result_id_) {
+    operands_size++;
+  }
+  operands_.reserve(operands_size);
   if (has_type_id_) {
     operands_.emplace_back(spv_operand_type_t::SPV_OPERAND_TYPE_TYPE_ID,
                            std::initializer_list<uint32_t>{ty_id});
@@ -179,7 +188,7 @@ uint32_t Instruction::NumInOperandWords() const {
 }
 
 bool Instruction::HasBranchWeights() const {
-  if (opcode_ == SpvOpBranchConditional &&
+  if (opcode_ == spv::Op::OpBranchConditional &&
       NumOperands() == kOpBranchConditionalWithWeightsNumOperands) {
     return true;
   }
@@ -208,13 +217,13 @@ bool Instruction::IsReadOnlyLoad() const {
       return false;
     }
 
-    if (address_def->opcode() == SpvOpVariable) {
+    if (address_def->opcode() == spv::Op::OpVariable) {
       if (address_def->IsReadOnlyPointer()) {
         return true;
       }
     }
 
-    if (address_def->opcode() == SpvOpLoad) {
+    if (address_def->opcode() == spv::Op::OpLoad) {
       const analysis::Type* address_type =
           context()->get_type_mgr()->GetType(address_def->type_id());
       if (address_type->AsSampledImage() != nullptr) {
@@ -235,12 +244,12 @@ Instruction* Instruction::GetBaseAddress() const {
   bool done = false;
   while (!done) {
     switch (base_inst->opcode()) {
-      case SpvOpAccessChain:
-      case SpvOpInBoundsAccessChain:
-      case SpvOpPtrAccessChain:
-      case SpvOpInBoundsPtrAccessChain:
-      case SpvOpImageTexelPointer:
-      case SpvOpCopyObject:
+      case spv::Op::OpAccessChain:
+      case spv::Op::OpInBoundsAccessChain:
+      case spv::Op::OpPtrAccessChain:
+      case spv::Op::OpInBoundsPtrAccessChain:
+      case spv::Op::OpImageTexelPointer:
+      case spv::Op::OpCopyObject:
         // All of these instructions have the base pointer use a base pointer
         // in in-operand 0.
         base = base_inst->GetSingleWordInOperand(0);
@@ -255,20 +264,20 @@ Instruction* Instruction::GetBaseAddress() const {
 }
 
 bool Instruction::IsReadOnlyPointer() const {
-  if (context()->get_feature_mgr()->HasCapability(SpvCapabilityShader))
+  if (context()->get_feature_mgr()->HasCapability(spv::Capability::Shader))
     return IsReadOnlyPointerShaders();
   else
     return IsReadOnlyPointerKernel();
 }
 
 bool Instruction::IsVulkanStorageImage() const {
-  if (opcode() != SpvOpTypePointer) {
+  if (opcode() != spv::Op::OpTypePointer) {
     return false;
   }
 
-  uint32_t storage_class =
-      GetSingleWordInOperand(kPointerTypeStorageClassIndex);
-  if (storage_class != SpvStorageClassUniformConstant) {
+  spv::StorageClass storage_class =
+      spv::StorageClass(GetSingleWordInOperand(kPointerTypeStorageClassIndex));
+  if (storage_class != spv::StorageClass::UniformConstant) {
     return false;
   }
 
@@ -276,17 +285,18 @@ bool Instruction::IsVulkanStorageImage() const {
       context()->get_def_use_mgr()->GetDef(GetSingleWordInOperand(1));
 
   // Unpack the optional layer of arraying.
-  if (base_type->opcode() == SpvOpTypeArray ||
-      base_type->opcode() == SpvOpTypeRuntimeArray) {
+  if (base_type->opcode() == spv::Op::OpTypeArray ||
+      base_type->opcode() == spv::Op::OpTypeRuntimeArray) {
     base_type = context()->get_def_use_mgr()->GetDef(
         base_type->GetSingleWordInOperand(0));
   }
 
-  if (base_type->opcode() != SpvOpTypeImage) {
+  if (base_type->opcode() != spv::Op::OpTypeImage) {
     return false;
   }
 
-  if (base_type->GetSingleWordInOperand(kTypeImageDimIndex) == SpvDimBuffer) {
+  if (spv::Dim(base_type->GetSingleWordInOperand(kTypeImageDimIndex)) ==
+      spv::Dim::Buffer) {
     return false;
   }
 
@@ -296,13 +306,13 @@ bool Instruction::IsVulkanStorageImage() const {
 }
 
 bool Instruction::IsVulkanSampledImage() const {
-  if (opcode() != SpvOpTypePointer) {
+  if (opcode() != spv::Op::OpTypePointer) {
     return false;
   }
 
-  uint32_t storage_class =
-      GetSingleWordInOperand(kPointerTypeStorageClassIndex);
-  if (storage_class != SpvStorageClassUniformConstant) {
+  spv::StorageClass storage_class =
+      spv::StorageClass(GetSingleWordInOperand(kPointerTypeStorageClassIndex));
+  if (storage_class != spv::StorageClass::UniformConstant) {
     return false;
   }
 
@@ -310,17 +320,18 @@ bool Instruction::IsVulkanSampledImage() const {
       context()->get_def_use_mgr()->GetDef(GetSingleWordInOperand(1));
 
   // Unpack the optional layer of arraying.
-  if (base_type->opcode() == SpvOpTypeArray ||
-      base_type->opcode() == SpvOpTypeRuntimeArray) {
+  if (base_type->opcode() == spv::Op::OpTypeArray ||
+      base_type->opcode() == spv::Op::OpTypeRuntimeArray) {
     base_type = context()->get_def_use_mgr()->GetDef(
         base_type->GetSingleWordInOperand(0));
   }
 
-  if (base_type->opcode() != SpvOpTypeImage) {
+  if (base_type->opcode() != spv::Op::OpTypeImage) {
     return false;
   }
 
-  if (base_type->GetSingleWordInOperand(kTypeImageDimIndex) == SpvDimBuffer) {
+  if (spv::Dim(base_type->GetSingleWordInOperand(kTypeImageDimIndex)) ==
+      spv::Dim::Buffer) {
     return false;
   }
 
@@ -330,13 +341,13 @@ bool Instruction::IsVulkanSampledImage() const {
 }
 
 bool Instruction::IsVulkanStorageTexelBuffer() const {
-  if (opcode() != SpvOpTypePointer) {
+  if (opcode() != spv::Op::OpTypePointer) {
     return false;
   }
 
-  uint32_t storage_class =
-      GetSingleWordInOperand(kPointerTypeStorageClassIndex);
-  if (storage_class != SpvStorageClassUniformConstant) {
+  spv::StorageClass storage_class =
+      spv::StorageClass(GetSingleWordInOperand(kPointerTypeStorageClassIndex));
+  if (storage_class != spv::StorageClass::UniformConstant) {
     return false;
   }
 
@@ -344,17 +355,18 @@ bool Instruction::IsVulkanStorageTexelBuffer() const {
       context()->get_def_use_mgr()->GetDef(GetSingleWordInOperand(1));
 
   // Unpack the optional layer of arraying.
-  if (base_type->opcode() == SpvOpTypeArray ||
-      base_type->opcode() == SpvOpTypeRuntimeArray) {
+  if (base_type->opcode() == spv::Op::OpTypeArray ||
+      base_type->opcode() == spv::Op::OpTypeRuntimeArray) {
     base_type = context()->get_def_use_mgr()->GetDef(
         base_type->GetSingleWordInOperand(0));
   }
 
-  if (base_type->opcode() != SpvOpTypeImage) {
+  if (base_type->opcode() != spv::Op::OpTypeImage) {
     return false;
   }
 
-  if (base_type->GetSingleWordInOperand(kTypeImageDimIndex) != SpvDimBuffer) {
+  if (spv::Dim(base_type->GetSingleWordInOperand(kTypeImageDimIndex)) !=
+      spv::Dim::Buffer) {
     return false;
   }
 
@@ -366,7 +378,7 @@ bool Instruction::IsVulkanStorageTexelBuffer() const {
 bool Instruction::IsVulkanStorageBuffer() const {
   // Is there a difference between a "Storage buffer" and a "dynamic storage
   // buffer" in SPIR-V and do we care about the difference?
-  if (opcode() != SpvOpTypePointer) {
+  if (opcode() != spv::Op::OpTypePointer) {
     return false;
   }
 
@@ -374,28 +386,28 @@ bool Instruction::IsVulkanStorageBuffer() const {
       context()->get_def_use_mgr()->GetDef(GetSingleWordInOperand(1));
 
   // Unpack the optional layer of arraying.
-  if (base_type->opcode() == SpvOpTypeArray ||
-      base_type->opcode() == SpvOpTypeRuntimeArray) {
+  if (base_type->opcode() == spv::Op::OpTypeArray ||
+      base_type->opcode() == spv::Op::OpTypeRuntimeArray) {
     base_type = context()->get_def_use_mgr()->GetDef(
         base_type->GetSingleWordInOperand(0));
   }
 
-  if (base_type->opcode() != SpvOpTypeStruct) {
+  if (base_type->opcode() != spv::Op::OpTypeStruct) {
     return false;
   }
 
-  uint32_t storage_class =
-      GetSingleWordInOperand(kPointerTypeStorageClassIndex);
-  if (storage_class == SpvStorageClassUniform) {
+  spv::StorageClass storage_class =
+      spv::StorageClass(GetSingleWordInOperand(kPointerTypeStorageClassIndex));
+  if (storage_class == spv::StorageClass::Uniform) {
     bool is_buffer_block = false;
     context()->get_decoration_mgr()->ForEachDecoration(
-        base_type->result_id(), SpvDecorationBufferBlock,
+        base_type->result_id(), uint32_t(spv::Decoration::BufferBlock),
         [&is_buffer_block](const Instruction&) { is_buffer_block = true; });
     return is_buffer_block;
-  } else if (storage_class == SpvStorageClassStorageBuffer) {
+  } else if (storage_class == spv::StorageClass::StorageBuffer) {
     bool is_block = false;
     context()->get_decoration_mgr()->ForEachDecoration(
-        base_type->result_id(), SpvDecorationBlock,
+        base_type->result_id(), uint32_t(spv::Decoration::Block),
         [&is_block](const Instruction&) { is_block = true; });
     return is_block;
   }
@@ -403,13 +415,14 @@ bool Instruction::IsVulkanStorageBuffer() const {
 }
 
 bool Instruction::IsVulkanStorageBufferVariable() const {
-  if (opcode() != SpvOpVariable) {
+  if (opcode() != spv::Op::OpVariable) {
     return false;
   }
 
-  uint32_t storage_class = GetSingleWordInOperand(kVariableStorageClassIndex);
-  if (storage_class == SpvStorageClassStorageBuffer ||
-      storage_class == SpvStorageClassUniform) {
+  spv::StorageClass storage_class =
+      spv::StorageClass(GetSingleWordInOperand(kVariableStorageClassIndex));
+  if (storage_class == spv::StorageClass::StorageBuffer ||
+      storage_class == spv::StorageClass::Uniform) {
     Instruction* var_type = context()->get_def_use_mgr()->GetDef(type_id());
     return var_type != nullptr && var_type->IsVulkanStorageBuffer();
   }
@@ -418,13 +431,13 @@ bool Instruction::IsVulkanStorageBufferVariable() const {
 }
 
 bool Instruction::IsVulkanUniformBuffer() const {
-  if (opcode() != SpvOpTypePointer) {
+  if (opcode() != spv::Op::OpTypePointer) {
     return false;
   }
 
-  uint32_t storage_class =
-      GetSingleWordInOperand(kPointerTypeStorageClassIndex);
-  if (storage_class != SpvStorageClassUniform) {
+  spv::StorageClass storage_class =
+      spv::StorageClass(GetSingleWordInOperand(kPointerTypeStorageClassIndex));
+  if (storage_class != spv::StorageClass::Uniform) {
     return false;
   }
 
@@ -432,19 +445,19 @@ bool Instruction::IsVulkanUniformBuffer() const {
       context()->get_def_use_mgr()->GetDef(GetSingleWordInOperand(1));
 
   // Unpack the optional layer of arraying.
-  if (base_type->opcode() == SpvOpTypeArray ||
-      base_type->opcode() == SpvOpTypeRuntimeArray) {
+  if (base_type->opcode() == spv::Op::OpTypeArray ||
+      base_type->opcode() == spv::Op::OpTypeRuntimeArray) {
     base_type = context()->get_def_use_mgr()->GetDef(
         base_type->GetSingleWordInOperand(0));
   }
 
-  if (base_type->opcode() != SpvOpTypeStruct) {
+  if (base_type->opcode() != spv::Op::OpTypeStruct) {
     return false;
   }
 
   bool is_block = false;
   context()->get_decoration_mgr()->ForEachDecoration(
-      base_type->result_id(), SpvDecorationBlock,
+      base_type->result_id(), uint32_t(spv::Decoration::Block),
       [&is_block](const Instruction&) { is_block = true; });
   return is_block;
 }
@@ -455,27 +468,27 @@ bool Instruction::IsReadOnlyPointerShaders() const {
   }
 
   Instruction* type_def = context()->get_def_use_mgr()->GetDef(type_id());
-  if (type_def->opcode() != SpvOpTypePointer) {
+  if (type_def->opcode() != spv::Op::OpTypePointer) {
     return false;
   }
 
-  uint32_t storage_class =
-      type_def->GetSingleWordInOperand(kPointerTypeStorageClassIndex);
+  spv::StorageClass storage_class = spv::StorageClass(
+      type_def->GetSingleWordInOperand(kPointerTypeStorageClassIndex));
 
   switch (storage_class) {
-    case SpvStorageClassUniformConstant:
+    case spv::StorageClass::UniformConstant:
       if (!type_def->IsVulkanStorageImage() &&
           !type_def->IsVulkanStorageTexelBuffer()) {
         return true;
       }
       break;
-    case SpvStorageClassUniform:
+    case spv::StorageClass::Uniform:
       if (!type_def->IsVulkanStorageBuffer()) {
         return true;
       }
       break;
-    case SpvStorageClassPushConstant:
-    case SpvStorageClassInput:
+    case spv::StorageClass::PushConstant:
+    case spv::StorageClass::Input:
       return true;
     default:
       break;
@@ -483,7 +496,7 @@ bool Instruction::IsReadOnlyPointerShaders() const {
 
   bool is_nonwritable = false;
   context()->get_decoration_mgr()->ForEachDecoration(
-      result_id(), SpvDecorationNonWritable,
+      result_id(), uint32_t(spv::Decoration::NonWritable),
       [&is_nonwritable](const Instruction&) { is_nonwritable = true; });
   return is_nonwritable;
 }
@@ -494,34 +507,14 @@ bool Instruction::IsReadOnlyPointerKernel() const {
   }
 
   Instruction* type_def = context()->get_def_use_mgr()->GetDef(type_id());
-  if (type_def->opcode() != SpvOpTypePointer) {
+  if (type_def->opcode() != spv::Op::OpTypePointer) {
     return false;
   }
 
-  uint32_t storage_class =
-      type_def->GetSingleWordInOperand(kPointerTypeStorageClassIndex);
+  spv::StorageClass storage_class = spv::StorageClass(
+      type_def->GetSingleWordInOperand(kPointerTypeStorageClassIndex));
 
-  return storage_class == SpvStorageClassUniformConstant;
-}
-
-uint32_t Instruction::GetTypeComponent(uint32_t element) const {
-  uint32_t subtype = 0;
-  switch (opcode()) {
-    case SpvOpTypeStruct:
-      subtype = GetSingleWordInOperand(element);
-      break;
-    case SpvOpTypeArray:
-    case SpvOpTypeRuntimeArray:
-    case SpvOpTypeVector:
-    case SpvOpTypeMatrix:
-      // These types all have uniform subtypes.
-      subtype = GetSingleWordInOperand(0u);
-      break;
-    default:
-      break;
-  }
-
-  return subtype;
+  return storage_class == spv::StorageClass::UniformConstant;
 }
 
 void Instruction::UpdateLexicalScope(uint32_t scope) {
@@ -584,13 +577,13 @@ bool Instruction::IsDebugLineInst() const {
 bool Instruction::IsLineInst() const { return IsLine() || IsNoLine(); }
 
 bool Instruction::IsLine() const {
-  if (opcode() == SpvOpLine) return true;
+  if (opcode() == spv::Op::OpLine) return true;
   NonSemanticShaderDebugInfo100Instructions ext_opt = GetShader100DebugOpcode();
   return ext_opt == NonSemanticShaderDebugInfo100DebugLine;
 }
 
 bool Instruction::IsNoLine() const {
-  if (opcode() == SpvOpNoLine) return true;
+  if (opcode() == spv::Op::OpNoLine) return true;
   NonSemanticShaderDebugInfo100Instructions ext_opt = GetShader100DebugOpcode();
   return ext_opt == NonSemanticShaderDebugInfo100DebugNoLine;
 }
@@ -617,33 +610,35 @@ bool Instruction::IsValidBasePointer() const {
   }
 
   Instruction* type = context()->get_def_use_mgr()->GetDef(tid);
-  if (type->opcode() != SpvOpTypePointer) {
+  if (type->opcode() != spv::Op::OpTypePointer) {
     return false;
   }
 
   auto feature_mgr = context()->get_feature_mgr();
-  if (feature_mgr->HasCapability(SpvCapabilityAddresses)) {
+  if (feature_mgr->HasCapability(spv::Capability::Addresses)) {
     // TODO: The rules here could be more restrictive.
     return true;
   }
 
-  if (opcode() == SpvOpVariable || opcode() == SpvOpFunctionParameter) {
+  if (opcode() == spv::Op::OpVariable ||
+      opcode() == spv::Op::OpFunctionParameter) {
     return true;
   }
 
   // With variable pointers, there are more valid base pointer objects.
   // Variable pointers implicitly declares Variable pointers storage buffer.
-  SpvStorageClass storage_class =
-      static_cast<SpvStorageClass>(type->GetSingleWordInOperand(0));
-  if ((feature_mgr->HasCapability(SpvCapabilityVariablePointersStorageBuffer) &&
-       storage_class == SpvStorageClassStorageBuffer) ||
-      (feature_mgr->HasCapability(SpvCapabilityVariablePointers) &&
-       storage_class == SpvStorageClassWorkgroup)) {
+  spv::StorageClass storage_class =
+      static_cast<spv::StorageClass>(type->GetSingleWordInOperand(0));
+  if ((feature_mgr->HasCapability(
+           spv::Capability::VariablePointersStorageBuffer) &&
+       storage_class == spv::StorageClass::StorageBuffer) ||
+      (feature_mgr->HasCapability(spv::Capability::VariablePointers) &&
+       storage_class == spv::StorageClass::Workgroup)) {
     switch (opcode()) {
-      case SpvOpPhi:
-      case SpvOpSelect:
-      case SpvOpFunctionCall:
-      case SpvOpConstantNull:
+      case spv::Op::OpPhi:
+      case spv::Op::OpSelect:
+      case spv::Op::OpFunctionCall:
+      case spv::Op::OpConstantNull:
         return true;
       default:
         break;
@@ -661,7 +656,7 @@ bool Instruction::IsValidBasePointer() const {
 }
 
 OpenCLDebugInfo100Instructions Instruction::GetOpenCL100DebugOpcode() const {
-  if (opcode() != SpvOpExtInst) {
+  if (opcode() != spv::Op::OpExtInst) {
     return OpenCLDebugInfo100InstructionsMax;
   }
 
@@ -680,7 +675,7 @@ OpenCLDebugInfo100Instructions Instruction::GetOpenCL100DebugOpcode() const {
 
 NonSemanticShaderDebugInfo100Instructions Instruction::GetShader100DebugOpcode()
     const {
-  if (opcode() != SpvOpExtInst) {
+  if (opcode() != spv::Op::OpExtInst) {
     return NonSemanticShaderDebugInfo100InstructionsMax;
   }
 
@@ -693,12 +688,16 @@ NonSemanticShaderDebugInfo100Instructions Instruction::GetShader100DebugOpcode()
     return NonSemanticShaderDebugInfo100InstructionsMax;
   }
 
-  return NonSemanticShaderDebugInfo100Instructions(
-      GetSingleWordInOperand(kExtInstInstructionInIdx));
+  uint32_t opcode = GetSingleWordInOperand(kExtInstInstructionInIdx);
+  if (opcode >= NonSemanticShaderDebugInfo100InstructionsMax) {
+    return NonSemanticShaderDebugInfo100InstructionsMax;
+  }
+
+  return NonSemanticShaderDebugInfo100Instructions(opcode);
 }
 
 CommonDebugInfoInstructions Instruction::GetCommonDebugOpcode() const {
-  if (opcode() != SpvOpExtInst) {
+  if (opcode() != spv::Op::OpExtInst) {
     return CommonDebugInfoInstructionsMax;
   }
 
@@ -728,25 +727,25 @@ bool Instruction::IsValidBaseImage() const {
   }
 
   Instruction* type = context()->get_def_use_mgr()->GetDef(tid);
-  return (type->opcode() == SpvOpTypeImage ||
-          type->opcode() == SpvOpTypeSampledImage);
+  return (type->opcode() == spv::Op::OpTypeImage ||
+          type->opcode() == spv::Op::OpTypeSampledImage);
 }
 
 bool Instruction::IsOpaqueType() const {
-  if (opcode() == SpvOpTypeStruct) {
+  if (opcode() == spv::Op::OpTypeStruct) {
     bool is_opaque = false;
     ForEachInOperand([&is_opaque, this](const uint32_t* op_id) {
       Instruction* type_inst = context()->get_def_use_mgr()->GetDef(*op_id);
       is_opaque |= type_inst->IsOpaqueType();
     });
     return is_opaque;
-  } else if (opcode() == SpvOpTypeArray) {
+  } else if (opcode() == spv::Op::OpTypeArray) {
     uint32_t sub_type_id = GetSingleWordInOperand(0);
     Instruction* sub_type_inst =
         context()->get_def_use_mgr()->GetDef(sub_type_id);
     return sub_type_inst->IsOpaqueType();
   } else {
-    return opcode() == SpvOpTypeRuntimeArray ||
+    return opcode() == spv::Op::OpTypeRuntimeArray ||
            spvOpcodeIsBaseOpaqueType(opcode());
   }
 }
@@ -781,22 +780,23 @@ bool Instruction::IsFoldableByFoldScalar() const {
 bool Instruction::IsFloatingPointFoldingAllowed() const {
   // TODO: Add the rules for kernels.  For now it will be pessimistic.
   // For now, do not support capabilities introduced by SPV_KHR_float_controls.
-  if (!context_->get_feature_mgr()->HasCapability(SpvCapabilityShader) ||
-      context_->get_feature_mgr()->HasCapability(SpvCapabilityDenormPreserve) ||
+  if (!context_->get_feature_mgr()->HasCapability(spv::Capability::Shader) ||
       context_->get_feature_mgr()->HasCapability(
-          SpvCapabilityDenormFlushToZero) ||
+          spv::Capability::DenormPreserve) ||
       context_->get_feature_mgr()->HasCapability(
-          SpvCapabilitySignedZeroInfNanPreserve) ||
+          spv::Capability::DenormFlushToZero) ||
       context_->get_feature_mgr()->HasCapability(
-          SpvCapabilityRoundingModeRTZ) ||
+          spv::Capability::SignedZeroInfNanPreserve) ||
       context_->get_feature_mgr()->HasCapability(
-          SpvCapabilityRoundingModeRTE)) {
+          spv::Capability::RoundingModeRTZ) ||
+      context_->get_feature_mgr()->HasCapability(
+          spv::Capability::RoundingModeRTE)) {
     return false;
   }
 
   bool is_nocontract = false;
   context_->get_decoration_mgr()->WhileEachDecoration(
-      result_id(), SpvDecorationNoContraction,
+      result_id(), uint32_t(spv::Decoration::NoContraction),
       [&is_nocontract](const Instruction&) {
         is_nocontract = true;
         return false;
@@ -832,101 +832,101 @@ void Instruction::Dump() const {
 
 bool Instruction::IsOpcodeCodeMotionSafe() const {
   switch (opcode_) {
-    case SpvOpNop:
-    case SpvOpUndef:
-    case SpvOpLoad:
-    case SpvOpAccessChain:
-    case SpvOpInBoundsAccessChain:
-    case SpvOpArrayLength:
-    case SpvOpVectorExtractDynamic:
-    case SpvOpVectorInsertDynamic:
-    case SpvOpVectorShuffle:
-    case SpvOpCompositeConstruct:
-    case SpvOpCompositeExtract:
-    case SpvOpCompositeInsert:
-    case SpvOpCopyObject:
-    case SpvOpTranspose:
-    case SpvOpConvertFToU:
-    case SpvOpConvertFToS:
-    case SpvOpConvertSToF:
-    case SpvOpConvertUToF:
-    case SpvOpUConvert:
-    case SpvOpSConvert:
-    case SpvOpFConvert:
-    case SpvOpQuantizeToF16:
-    case SpvOpBitcast:
-    case SpvOpSNegate:
-    case SpvOpFNegate:
-    case SpvOpIAdd:
-    case SpvOpFAdd:
-    case SpvOpISub:
-    case SpvOpFSub:
-    case SpvOpIMul:
-    case SpvOpFMul:
-    case SpvOpUDiv:
-    case SpvOpSDiv:
-    case SpvOpFDiv:
-    case SpvOpUMod:
-    case SpvOpSRem:
-    case SpvOpSMod:
-    case SpvOpFRem:
-    case SpvOpFMod:
-    case SpvOpVectorTimesScalar:
-    case SpvOpMatrixTimesScalar:
-    case SpvOpVectorTimesMatrix:
-    case SpvOpMatrixTimesVector:
-    case SpvOpMatrixTimesMatrix:
-    case SpvOpOuterProduct:
-    case SpvOpDot:
-    case SpvOpIAddCarry:
-    case SpvOpISubBorrow:
-    case SpvOpUMulExtended:
-    case SpvOpSMulExtended:
-    case SpvOpAny:
-    case SpvOpAll:
-    case SpvOpIsNan:
-    case SpvOpIsInf:
-    case SpvOpLogicalEqual:
-    case SpvOpLogicalNotEqual:
-    case SpvOpLogicalOr:
-    case SpvOpLogicalAnd:
-    case SpvOpLogicalNot:
-    case SpvOpSelect:
-    case SpvOpIEqual:
-    case SpvOpINotEqual:
-    case SpvOpUGreaterThan:
-    case SpvOpSGreaterThan:
-    case SpvOpUGreaterThanEqual:
-    case SpvOpSGreaterThanEqual:
-    case SpvOpULessThan:
-    case SpvOpSLessThan:
-    case SpvOpULessThanEqual:
-    case SpvOpSLessThanEqual:
-    case SpvOpFOrdEqual:
-    case SpvOpFUnordEqual:
-    case SpvOpFOrdNotEqual:
-    case SpvOpFUnordNotEqual:
-    case SpvOpFOrdLessThan:
-    case SpvOpFUnordLessThan:
-    case SpvOpFOrdGreaterThan:
-    case SpvOpFUnordGreaterThan:
-    case SpvOpFOrdLessThanEqual:
-    case SpvOpFUnordLessThanEqual:
-    case SpvOpFOrdGreaterThanEqual:
-    case SpvOpFUnordGreaterThanEqual:
-    case SpvOpShiftRightLogical:
-    case SpvOpShiftRightArithmetic:
-    case SpvOpShiftLeftLogical:
-    case SpvOpBitwiseOr:
-    case SpvOpBitwiseXor:
-    case SpvOpBitwiseAnd:
-    case SpvOpNot:
-    case SpvOpBitFieldInsert:
-    case SpvOpBitFieldSExtract:
-    case SpvOpBitFieldUExtract:
-    case SpvOpBitReverse:
-    case SpvOpBitCount:
-    case SpvOpSizeOf:
+    case spv::Op::OpNop:
+    case spv::Op::OpUndef:
+    case spv::Op::OpLoad:
+    case spv::Op::OpAccessChain:
+    case spv::Op::OpInBoundsAccessChain:
+    case spv::Op::OpArrayLength:
+    case spv::Op::OpVectorExtractDynamic:
+    case spv::Op::OpVectorInsertDynamic:
+    case spv::Op::OpVectorShuffle:
+    case spv::Op::OpCompositeConstruct:
+    case spv::Op::OpCompositeExtract:
+    case spv::Op::OpCompositeInsert:
+    case spv::Op::OpCopyObject:
+    case spv::Op::OpTranspose:
+    case spv::Op::OpConvertFToU:
+    case spv::Op::OpConvertFToS:
+    case spv::Op::OpConvertSToF:
+    case spv::Op::OpConvertUToF:
+    case spv::Op::OpUConvert:
+    case spv::Op::OpSConvert:
+    case spv::Op::OpFConvert:
+    case spv::Op::OpQuantizeToF16:
+    case spv::Op::OpBitcast:
+    case spv::Op::OpSNegate:
+    case spv::Op::OpFNegate:
+    case spv::Op::OpIAdd:
+    case spv::Op::OpFAdd:
+    case spv::Op::OpISub:
+    case spv::Op::OpFSub:
+    case spv::Op::OpIMul:
+    case spv::Op::OpFMul:
+    case spv::Op::OpUDiv:
+    case spv::Op::OpSDiv:
+    case spv::Op::OpFDiv:
+    case spv::Op::OpUMod:
+    case spv::Op::OpSRem:
+    case spv::Op::OpSMod:
+    case spv::Op::OpFRem:
+    case spv::Op::OpFMod:
+    case spv::Op::OpVectorTimesScalar:
+    case spv::Op::OpMatrixTimesScalar:
+    case spv::Op::OpVectorTimesMatrix:
+    case spv::Op::OpMatrixTimesVector:
+    case spv::Op::OpMatrixTimesMatrix:
+    case spv::Op::OpOuterProduct:
+    case spv::Op::OpDot:
+    case spv::Op::OpIAddCarry:
+    case spv::Op::OpISubBorrow:
+    case spv::Op::OpUMulExtended:
+    case spv::Op::OpSMulExtended:
+    case spv::Op::OpAny:
+    case spv::Op::OpAll:
+    case spv::Op::OpIsNan:
+    case spv::Op::OpIsInf:
+    case spv::Op::OpLogicalEqual:
+    case spv::Op::OpLogicalNotEqual:
+    case spv::Op::OpLogicalOr:
+    case spv::Op::OpLogicalAnd:
+    case spv::Op::OpLogicalNot:
+    case spv::Op::OpSelect:
+    case spv::Op::OpIEqual:
+    case spv::Op::OpINotEqual:
+    case spv::Op::OpUGreaterThan:
+    case spv::Op::OpSGreaterThan:
+    case spv::Op::OpUGreaterThanEqual:
+    case spv::Op::OpSGreaterThanEqual:
+    case spv::Op::OpULessThan:
+    case spv::Op::OpSLessThan:
+    case spv::Op::OpULessThanEqual:
+    case spv::Op::OpSLessThanEqual:
+    case spv::Op::OpFOrdEqual:
+    case spv::Op::OpFUnordEqual:
+    case spv::Op::OpFOrdNotEqual:
+    case spv::Op::OpFUnordNotEqual:
+    case spv::Op::OpFOrdLessThan:
+    case spv::Op::OpFUnordLessThan:
+    case spv::Op::OpFOrdGreaterThan:
+    case spv::Op::OpFUnordGreaterThan:
+    case spv::Op::OpFOrdLessThanEqual:
+    case spv::Op::OpFUnordLessThanEqual:
+    case spv::Op::OpFOrdGreaterThanEqual:
+    case spv::Op::OpFUnordGreaterThanEqual:
+    case spv::Op::OpShiftRightLogical:
+    case spv::Op::OpShiftRightArithmetic:
+    case spv::Op::OpShiftLeftLogical:
+    case spv::Op::OpBitwiseOr:
+    case spv::Op::OpBitwiseXor:
+    case spv::Op::OpBitwiseAnd:
+    case spv::Op::OpNot:
+    case spv::Op::OpBitFieldInsert:
+    case spv::Op::OpBitFieldSExtract:
+    case spv::Op::OpBitFieldUExtract:
+    case spv::Op::OpBitReverse:
+    case spv::Op::OpBitCount:
+    case spv::Op::OpSizeOf:
       return true;
     default:
       return false;
@@ -938,7 +938,7 @@ bool Instruction::IsScalarizable() const {
     return true;
   }
 
-  if (opcode() == SpvOpExtInst) {
+  if (opcode() == spv::Op::OpExtInst) {
     uint32_t instSetId =
         context()->get_feature_mgr()->GetExtInstImportId_GLSLstd450();
 
@@ -1013,16 +1013,16 @@ bool Instruction::IsOpcodeSafeToDelete() const {
   }
 
   switch (opcode()) {
-    case SpvOpDPdx:
-    case SpvOpDPdy:
-    case SpvOpFwidth:
-    case SpvOpDPdxFine:
-    case SpvOpDPdyFine:
-    case SpvOpFwidthFine:
-    case SpvOpDPdxCoarse:
-    case SpvOpDPdyCoarse:
-    case SpvOpFwidthCoarse:
-    case SpvOpImageQueryLod:
+    case spv::Op::OpDPdx:
+    case spv::Op::OpDPdy:
+    case spv::Op::OpFwidth:
+    case spv::Op::OpDPdxFine:
+    case spv::Op::OpDPdyFine:
+    case spv::Op::OpFwidthFine:
+    case spv::Op::OpDPdxCoarse:
+    case spv::Op::OpDPdyCoarse:
+    case spv::Op::OpFwidthCoarse:
+    case spv::Op::OpImageQueryLod:
       return true;
     default:
       return false;
@@ -1031,7 +1031,7 @@ bool Instruction::IsOpcodeSafeToDelete() const {
 
 bool Instruction::IsNonSemanticInstruction() const {
   if (!HasResultId()) return false;
-  if (opcode() != SpvOpExtInst) return false;
+  if (opcode() != spv::Op::OpExtInst) return false;
 
   auto import_inst =
       context()->get_def_use_mgr()->GetDef(GetSingleWordInOperand(0));
@@ -1051,7 +1051,7 @@ void DebugScope::ToBinary(uint32_t type_id, uint32_t result_id,
     num_words = kDebugScopeNumWordsWithoutInlinedAt;
   }
   std::vector<uint32_t> operands = {
-      (num_words << 16) | static_cast<uint16_t>(SpvOpExtInst),
+      (num_words << 16) | static_cast<uint16_t>(spv::Op::OpExtInst),
       type_id,
       result_id,
       ext_set,

@@ -24,9 +24,9 @@ TransformationAddTypePointer::TransformationAddTypePointer(
     : message_(std::move(message)) {}
 
 TransformationAddTypePointer::TransformationAddTypePointer(
-    uint32_t fresh_id, SpvStorageClass storage_class, uint32_t base_type_id) {
+    uint32_t fresh_id, spv::StorageClass storage_class, uint32_t base_type_id) {
   message_.set_fresh_id(fresh_id);
-  message_.set_storage_class(storage_class);
+  message_.set_storage_class(uint32_t(storage_class));
   message_.set_base_type_id(base_type_id);
 }
 
@@ -48,7 +48,7 @@ void TransformationAddTypePointer::Apply(
       {SPV_OPERAND_TYPE_STORAGE_CLASS, {message_.storage_class()}},
       {SPV_OPERAND_TYPE_ID, {message_.base_type_id()}}};
   auto type_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpTypePointer, 0, message_.fresh_id(), in_operands);
+      ir_context, spv::Op::OpTypePointer, 0, message_.fresh_id(), in_operands);
   auto type_instruction_ptr = type_instruction.get();
   ir_context->module()->AddType(std::move(type_instruction));
 

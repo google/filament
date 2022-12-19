@@ -50,7 +50,8 @@ bool CodeSinkingPass::SinkInstructionsInBB(BasicBlock* bb) {
 }
 
 bool CodeSinkingPass::SinkInstruction(Instruction* inst) {
-  if (inst->opcode() != SpvOpLoad && inst->opcode() != SpvOpAccessChain) {
+  if (inst->opcode() != spv::Op::OpLoad &&
+      inst->opcode() != spv::Op::OpAccessChain) {
     return false;
   }
 
@@ -60,7 +61,7 @@ bool CodeSinkingPass::SinkInstruction(Instruction* inst) {
 
   if (BasicBlock* target_bb = FindNewBasicBlockFor(inst)) {
     Instruction* pos = &*target_bb->begin();
-    while (pos->opcode() == SpvOpPhi) {
+    while (pos->opcode() == spv::Op::OpPhi) {
       pos = pos->NextNode();
     }
 
@@ -79,7 +80,7 @@ BasicBlock* CodeSinkingPass::FindNewBasicBlockFor(Instruction* inst) {
   std::unordered_set<uint32_t> bbs_with_uses;
   get_def_use_mgr()->ForEachUse(
       inst, [&bbs_with_uses, this](Instruction* use, uint32_t idx) {
-        if (use->opcode() != SpvOpPhi) {
+        if (use->opcode() != spv::Op::OpPhi) {
           BasicBlock* use_bb = context()->get_instr_block(use);
           if (use_bb) {
             bbs_with_uses.insert(use_bb->id());
@@ -99,7 +100,7 @@ BasicBlock* CodeSinkingPass::FindNewBasicBlockFor(Instruction* inst) {
     // of succ_bb, then |inst| can be moved to succ_bb.  If succ_bb, has move
     // then one predecessor, then moving |inst| into succ_bb could cause it to
     // be executed more often, so the search has to stop.
-    if (bb->terminator()->opcode() == SpvOpBranch) {
+    if (bb->terminator()->opcode() == spv::Op::OpBranch) {
       uint32_t succ_bb_id = bb->terminator()->GetSingleWordInOperand(0);
       if (cfg()->preds(succ_bb_id).size() == 1) {
         bb = context()->get_instr_block(succ_bb_id);
@@ -113,7 +114,8 @@ BasicBlock* CodeSinkingPass::FindNewBasicBlockFor(Instruction* inst) {
     // instruction or an OpLoopMerge, then it is a break or continue.  We could
     // figure it out, but not worth doing it now.
     Instruction* merge_inst = bb->GetMergeInst();
-    if (merge_inst == nullptr || merge_inst->opcode() != SpvOpSelectionMerge) {
+    if (merge_inst == nullptr ||
+        merge_inst->opcode() != spv::Op::OpSelectionMerge) {
       break;
     }
 
@@ -173,7 +175,7 @@ bool CodeSinkingPass::ReferencesMutableMemory(Instruction* inst) {
   }
 
   Instruction* base_ptr = inst->GetBaseAddress();
-  if (base_ptr->opcode() != SpvOpVariable) {
+  if (base_ptr->opcode() != spv::Op::OpVariable) {
     return true;
   }
 
@@ -185,7 +187,8 @@ bool CodeSinkingPass::ReferencesMutableMemory(Instruction* inst) {
     return true;
   }
 
-  if (base_ptr->GetSingleWordInOperand(0) != SpvStorageClassUniform) {
+  if (spv::StorageClass(base_ptr->GetSingleWordInOperand(0)) !=
+      spv::StorageClass::Uniform) {
     return true;
   }
 
@@ -200,41 +203,41 @@ bool CodeSinkingPass::HasUniformMemorySync() {
   bool has_sync = false;
   get_module()->ForEachInst([this, &has_sync](Instruction* inst) {
     switch (inst->opcode()) {
-      case SpvOpMemoryBarrier: {
+      case spv::Op::OpMemoryBarrier: {
         uint32_t mem_semantics_id = inst->GetSingleWordInOperand(1);
         if (IsSyncOnUniform(mem_semantics_id)) {
           has_sync = true;
         }
         break;
       }
-      case SpvOpControlBarrier:
-      case SpvOpAtomicLoad:
-      case SpvOpAtomicStore:
-      case SpvOpAtomicExchange:
-      case SpvOpAtomicIIncrement:
-      case SpvOpAtomicIDecrement:
-      case SpvOpAtomicIAdd:
-      case SpvOpAtomicFAddEXT:
-      case SpvOpAtomicISub:
-      case SpvOpAtomicSMin:
-      case SpvOpAtomicUMin:
-      case SpvOpAtomicFMinEXT:
-      case SpvOpAtomicSMax:
-      case SpvOpAtomicUMax:
-      case SpvOpAtomicFMaxEXT:
-      case SpvOpAtomicAnd:
-      case SpvOpAtomicOr:
-      case SpvOpAtomicXor:
-      case SpvOpAtomicFlagTestAndSet:
-      case SpvOpAtomicFlagClear: {
+      case spv::Op::OpControlBarrier:
+      case spv::Op::OpAtomicLoad:
+      case spv::Op::OpAtomicStore:
+      case spv::Op::OpAtomicExchange:
+      case spv::Op::OpAtomicIIncrement:
+      case spv::Op::OpAtomicIDecrement:
+      case spv::Op::OpAtomicIAdd:
+      case spv::Op::OpAtomicFAddEXT:
+      case spv::Op::OpAtomicISub:
+      case spv::Op::OpAtomicSMin:
+      case spv::Op::OpAtomicUMin:
+      case spv::Op::OpAtomicFMinEXT:
+      case spv::Op::OpAtomicSMax:
+      case spv::Op::OpAtomicUMax:
+      case spv::Op::OpAtomicFMaxEXT:
+      case spv::Op::OpAtomicAnd:
+      case spv::Op::OpAtomicOr:
+      case spv::Op::OpAtomicXor:
+      case spv::Op::OpAtomicFlagTestAndSet:
+      case spv::Op::OpAtomicFlagClear: {
         uint32_t mem_semantics_id = inst->GetSingleWordInOperand(2);
         if (IsSyncOnUniform(mem_semantics_id)) {
           has_sync = true;
         }
         break;
       }
-      case SpvOpAtomicCompareExchange:
-      case SpvOpAtomicCompareExchangeWeak:
+      case spv::Op::OpAtomicCompareExchange:
+      case spv::Op::OpAtomicCompareExchangeWeak:
         if (IsSyncOnUniform(inst->GetSingleWordInOperand(2)) ||
             IsSyncOnUniform(inst->GetSingleWordInOperand(3))) {
           has_sync = true;
@@ -259,28 +262,30 @@ bool CodeSinkingPass::IsSyncOnUniform(uint32_t mem_semantics_id) const {
 
   // If it does not affect uniform memory, then it is does not apply to uniform
   // memory.
-  if ((mem_semantics_int & SpvMemorySemanticsUniformMemoryMask) == 0) {
+  if ((mem_semantics_int & uint32_t(spv::MemorySemanticsMask::UniformMemory)) ==
+      0) {
     return false;
   }
 
   // Check if there is an acquire or release.  If so not, this it does not add
   // any memory constraints.
-  return (mem_semantics_int & (SpvMemorySemanticsAcquireMask |
-                               SpvMemorySemanticsAcquireReleaseMask |
-                               SpvMemorySemanticsReleaseMask)) != 0;
+  return (mem_semantics_int &
+          uint32_t(spv::MemorySemanticsMask::Acquire |
+                   spv::MemorySemanticsMask::AcquireRelease |
+                   spv::MemorySemanticsMask::Release)) != 0;
 }
 
 bool CodeSinkingPass::HasPossibleStore(Instruction* var_inst) {
-  assert(var_inst->opcode() == SpvOpVariable ||
-         var_inst->opcode() == SpvOpAccessChain ||
-         var_inst->opcode() == SpvOpPtrAccessChain);
+  assert(var_inst->opcode() == spv::Op::OpVariable ||
+         var_inst->opcode() == spv::Op::OpAccessChain ||
+         var_inst->opcode() == spv::Op::OpPtrAccessChain);
 
   return get_def_use_mgr()->WhileEachUser(var_inst, [this](Instruction* use) {
     switch (use->opcode()) {
-      case SpvOpStore:
+      case spv::Op::OpStore:
         return true;
-      case SpvOpAccessChain:
-      case SpvOpPtrAccessChain:
+      case spv::Op::OpAccessChain:
+      case spv::Op::OpPtrAccessChain:
         return HasPossibleStore(use);
       default:
         return false;

@@ -31,7 +31,7 @@ class TransformationEquationInstruction : public Transformation {
       protobufs::TransformationEquationInstruction message);
 
   TransformationEquationInstruction(
-      uint32_t fresh_id, SpvOp opcode,
+      uint32_t fresh_id, spv::Op opcode,
       const std::vector<uint32_t>& in_operand_id,
       const protobufs::InstructionDescriptor& instruction_to_insert_before);
 

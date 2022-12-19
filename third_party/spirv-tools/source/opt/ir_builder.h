@@ -30,7 +30,7 @@ namespace opt {
 
 // In SPIR-V, ids are encoded as uint16_t, this id is guaranteed to be always
 // invalid.
-const uint32_t kInvalidId = std::numeric_limits<uint32_t>::max();
+constexpr uint32_t kInvalidId = std::numeric_limits<uint32_t>::max();
 
 // Helper class to abstract instruction construction and insertion.
 // The instruction builder can preserve the following analyses (specified via
@@ -58,7 +58,7 @@ class InstructionBuilder {
       : InstructionBuilder(context, parent_block, parent_block->end(),
                            preserved_analyses) {}
 
-  Instruction* AddNullaryOp(uint32_t type_id, SpvOp opcode) {
+  Instruction* AddNullaryOp(uint32_t type_id, spv::Op opcode) {
     uint32_t result_id = 0;
     if (type_id != 0) {
       result_id = GetContext()->TakeNextId();
@@ -71,7 +71,7 @@ class InstructionBuilder {
     return AddInstruction(std::move(new_inst));
   }
 
-  Instruction* AddUnaryOp(uint32_t type_id, SpvOp opcode, uint32_t operand1) {
+  Instruction* AddUnaryOp(uint32_t type_id, spv::Op opcode, uint32_t operand1) {
     uint32_t result_id = 0;
     if (type_id != 0) {
       result_id = GetContext()->TakeNextId();
@@ -85,7 +85,7 @@ class InstructionBuilder {
     return AddInstruction(std::move(newUnOp));
   }
 
-  Instruction* AddBinaryOp(uint32_t type_id, SpvOp opcode, uint32_t operand1,
+  Instruction* AddBinaryOp(uint32_t type_id, spv::Op opcode, uint32_t operand1,
                            uint32_t operand2) {
     uint32_t result_id = 0;
     if (type_id != 0) {
@@ -95,13 +95,14 @@ class InstructionBuilder {
       }
     }
     std::unique_ptr<Instruction> newBinOp(new Instruction(
-        GetContext(), opcode, type_id, opcode == SpvOpStore ? 0 : result_id,
+        GetContext(), opcode, type_id,
+        opcode == spv::Op::OpStore ? 0 : result_id,
         {{spv_operand_type_t::SPV_OPERAND_TYPE_ID, {operand1}},
          {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {operand2}}}));
     return AddInstruction(std::move(newBinOp));
   }
 
-  Instruction* AddTernaryOp(uint32_t type_id, SpvOp opcode, uint32_t operand1,
+  Instruction* AddTernaryOp(uint32_t type_id, spv::Op opcode, uint32_t operand1,
                             uint32_t operand2, uint32_t operand3) {
     uint32_t result_id = 0;
     if (type_id != 0) {
@@ -118,7 +119,7 @@ class InstructionBuilder {
     return AddInstruction(std::move(newTernOp));
   }
 
-  Instruction* AddQuadOp(uint32_t type_id, SpvOp opcode, uint32_t operand1,
+  Instruction* AddQuadOp(uint32_t type_id, spv::Op opcode, uint32_t operand1,
                          uint32_t operand2, uint32_t operand3,
                          uint32_t operand4) {
     uint32_t result_id = 0;
@@ -137,7 +138,7 @@ class InstructionBuilder {
     return AddInstruction(std::move(newQuadOp));
   }
 
-  Instruction* AddIdLiteralOp(uint32_t type_id, SpvOp opcode, uint32_t id,
+  Instruction* AddIdLiteralOp(uint32_t type_id, spv::Op opcode, uint32_t id,
                               uint32_t uliteral) {
     uint32_t result_id = 0;
     if (type_id != 0) {
@@ -157,7 +158,7 @@ class InstructionBuilder {
   // |typid| must be the id of the instruction's type.
   // |operands| must be a sequence of operand ids.
   // Use |result| for the result id if non-zero.
-  Instruction* AddNaryOp(uint32_t type_id, SpvOp opcode,
+  Instruction* AddNaryOp(uint32_t type_id, spv::Op opcode,
                          const std::vector<uint32_t>& operands,
                          uint32_t result = 0) {
     std::vector<Operand> ops;
@@ -174,10 +175,10 @@ class InstructionBuilder {
   // Creates a new selection merge instruction.
   // The id |merge_id| is the merge basic block id.
   Instruction* AddSelectionMerge(
-      uint32_t merge_id,
-      uint32_t selection_control = SpvSelectionControlMaskNone) {
+      uint32_t merge_id, uint32_t selection_control = static_cast<uint32_t>(
+                             spv::SelectionControlMask::MaskNone)) {
     std::unique_ptr<Instruction> new_branch_merge(new Instruction(
-        GetContext(), SpvOpSelectionMerge, 0, 0,
+        GetContext(), spv::Op::OpSelectionMerge, 0, 0,
         {{spv_operand_type_t::SPV_OPERAND_TYPE_ID, {merge_id}},
          {spv_operand_type_t::SPV_OPERAND_TYPE_SELECTION_CONTROL,
           {selection_control}}}));
@@ -189,9 +190,10 @@ class InstructionBuilder {
   // |continue_id| is the id of the continue block.
   // |loop_control| are the loop control flags to be added to the instruction.
   Instruction* AddLoopMerge(uint32_t merge_id, uint32_t continue_id,
-                            uint32_t loop_control = SpvLoopControlMaskNone) {
+                            uint32_t loop_control = static_cast<uint32_t>(
+                                spv::LoopControlMask::MaskNone)) {
     std::unique_ptr<Instruction> new_branch_merge(new Instruction(
-        GetContext(), SpvOpLoopMerge, 0, 0,
+        GetContext(), spv::Op::OpLoopMerge, 0, 0,
         {{spv_operand_type_t::SPV_OPERAND_TYPE_ID, {merge_id}},
          {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {continue_id}},
          {spv_operand_type_t::SPV_OPERAND_TYPE_LOOP_CONTROL, {loop_control}}}));
@@ -203,7 +205,7 @@ class InstructionBuilder {
   // well formed.
   Instruction* AddBranch(uint32_t label_id) {
     std::unique_ptr<Instruction> new_branch(new Instruction(
-        GetContext(), SpvOpBranch, 0, 0,
+        GetContext(), spv::Op::OpBranch, 0, 0,
         {{spv_operand_type_t::SPV_OPERAND_TYPE_ID, {label_id}}}));
     return AddInstruction(std::move(new_branch));
   }
@@ -226,12 +228,13 @@ class InstructionBuilder {
   Instruction* AddConditionalBranch(
       uint32_t cond_id, uint32_t true_id, uint32_t false_id,
       uint32_t merge_id = kInvalidId,
-      uint32_t selection_control = SpvSelectionControlMaskNone) {
+      uint32_t selection_control =
+          static_cast<uint32_t>(spv::SelectionControlMask::MaskNone)) {
     if (merge_id != kInvalidId) {
       AddSelectionMerge(merge_id, selection_control);
     }
     std::unique_ptr<Instruction> new_branch(new Instruction(
-        GetContext(), SpvOpBranchConditional, 0, 0,
+        GetContext(), spv::Op::OpBranchConditional, 0, 0,
         {{spv_operand_type_t::SPV_OPERAND_TYPE_ID, {cond_id}},
          {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {true_id}},
          {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {false_id}}}));
@@ -255,7 +258,8 @@ class InstructionBuilder {
       uint32_t selector_id, uint32_t default_id,
       const std::vector<std::pair<Operand::OperandData, uint32_t>>& targets,
       uint32_t merge_id = kInvalidId,
-      uint32_t selection_control = SpvSelectionControlMaskNone) {
+      uint32_t selection_control =
+          static_cast<uint32_t>(spv::SelectionControlMask::MaskNone)) {
     if (merge_id != kInvalidId) {
       AddSelectionMerge(merge_id, selection_control);
     }
@@ -272,7 +276,7 @@ class InstructionBuilder {
           Operand{spv_operand_type_t::SPV_OPERAND_TYPE_ID, {target.second}});
     }
     std::unique_ptr<Instruction> new_switch(
-        new Instruction(GetContext(), SpvOpSwitch, 0, 0, operands));
+        new Instruction(GetContext(), spv::Op::OpSwitch, 0, 0, operands));
     return AddInstruction(std::move(new_switch));
   }
 
@@ -283,7 +287,7 @@ class InstructionBuilder {
   Instruction* AddPhi(uint32_t type, const std::vector<uint32_t>& incomings,
                       uint32_t result = 0) {
     assert(incomings.size() % 2 == 0 && "A sequence of pairs is expected");
-    return AddNaryOp(type, SpvOpPhi, incomings, result);
+    return AddNaryOp(type, spv::Op::OpPhi, incomings, result);
   }
 
   // Creates an addition instruction.
@@ -294,7 +298,7 @@ class InstructionBuilder {
   Instruction* AddIAdd(uint32_t type, uint32_t op1, uint32_t op2) {
     // TODO(1841): Handle id overflow.
     std::unique_ptr<Instruction> inst(new Instruction(
-        GetContext(), SpvOpIAdd, type, GetContext()->TakeNextId(),
+        GetContext(), spv::Op::OpIAdd, type, GetContext()->TakeNextId(),
         {{SPV_OPERAND_TYPE_ID, {op1}}, {SPV_OPERAND_TYPE_ID, {op2}}}));
     return AddInstruction(std::move(inst));
   }
@@ -308,7 +312,7 @@ class InstructionBuilder {
     uint32_t type = GetContext()->get_type_mgr()->GetId(&bool_type);
     // TODO(1841): Handle id overflow.
     std::unique_ptr<Instruction> inst(new Instruction(
-        GetContext(), SpvOpULessThan, type, GetContext()->TakeNextId(),
+        GetContext(), spv::Op::OpULessThan, type, GetContext()->TakeNextId(),
         {{SPV_OPERAND_TYPE_ID, {op1}}, {SPV_OPERAND_TYPE_ID, {op2}}}));
     return AddInstruction(std::move(inst));
   }
@@ -322,7 +326,7 @@ class InstructionBuilder {
     uint32_t type = GetContext()->get_type_mgr()->GetId(&bool_type);
     // TODO(1841): Handle id overflow.
     std::unique_ptr<Instruction> inst(new Instruction(
-        GetContext(), SpvOpSLessThan, type, GetContext()->TakeNextId(),
+        GetContext(), spv::Op::OpSLessThan, type, GetContext()->TakeNextId(),
         {{SPV_OPERAND_TYPE_ID, {op1}}, {SPV_OPERAND_TYPE_ID, {op2}}}));
     return AddInstruction(std::move(inst));
   }
@@ -352,7 +356,7 @@ class InstructionBuilder {
                          uint32_t false_value) {
     // TODO(1841): Handle id overflow.
     std::unique_ptr<Instruction> select(new Instruction(
-        GetContext(), SpvOpSelect, type, GetContext()->TakeNextId(),
+        GetContext(), spv::Op::OpSelect, type, GetContext()->TakeNextId(),
         std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {cond}},
                                        {SPV_OPERAND_TYPE_ID, {true_value}},
                                        {SPV_OPERAND_TYPE_ID, {false_value}}}));
@@ -378,7 +382,7 @@ class InstructionBuilder {
     }
     // TODO(1841): Handle id overflow.
     std::unique_ptr<Instruction> construct(
-        new Instruction(GetContext(), SpvOpCompositeConstruct, type,
+        new Instruction(GetContext(), spv::Op::OpCompositeConstruct, type,
                         GetContext()->TakeNextId(), ops));
     return AddInstruction(std::move(construct));
   }
@@ -447,7 +451,7 @@ class InstructionBuilder {
 
     // TODO(1841): Handle id overflow.
     std::unique_ptr<Instruction> new_inst(
-        new Instruction(GetContext(), SpvOpCompositeExtract, type,
+        new Instruction(GetContext(), spv::Op::OpCompositeExtract, type,
                         GetContext()->TakeNextId(), operands));
     return AddInstruction(std::move(new_inst));
   }
@@ -455,7 +459,7 @@ class InstructionBuilder {
   // Creates an unreachable instruction.
   Instruction* AddUnreachable() {
     std::unique_ptr<Instruction> select(
-        new Instruction(GetContext(), SpvOpUnreachable, 0, 0,
+        new Instruction(GetContext(), spv::Op::OpUnreachable, 0, 0,
                         std::initializer_list<Operand>{}));
     return AddInstruction(std::move(select));
   }
@@ -471,7 +475,7 @@ class InstructionBuilder {
 
     // TODO(1841): Handle id overflow.
     std::unique_ptr<Instruction> new_inst(
-        new Instruction(GetContext(), SpvOpAccessChain, type_id,
+        new Instruction(GetContext(), spv::Op::OpAccessChain, type_id,
                         GetContext()->TakeNextId(), operands));
     return AddInstruction(std::move(new_inst));
   }
@@ -482,7 +486,7 @@ class InstructionBuilder {
 
     // TODO(1841): Handle id overflow.
     std::unique_ptr<Instruction> new_inst(
-        new Instruction(GetContext(), SpvOpLoad, type_id,
+        new Instruction(GetContext(), spv::Op::OpLoad, type_id,
                         GetContext()->TakeNextId(), operands));
     return AddInstruction(std::move(new_inst));
   }
@@ -491,7 +495,7 @@ class InstructionBuilder {
     std::vector<Operand> operands;
     operands.push_back({SPV_OPERAND_TYPE_ID, {storage_class}});
     std::unique_ptr<Instruction> new_inst(
-        new Instruction(GetContext(), SpvOpVariable, type_id,
+        new Instruction(GetContext(), spv::Op::OpVariable, type_id,
                         GetContext()->TakeNextId(), operands));
     return AddInstruction(std::move(new_inst));
   }
@@ -502,7 +506,7 @@ class InstructionBuilder {
     operands.push_back({SPV_OPERAND_TYPE_ID, {obj_id}});
 
     std::unique_ptr<Instruction> new_inst(
-        new Instruction(GetContext(), SpvOpStore, 0, 0, operands));
+        new Instruction(GetContext(), spv::Op::OpStore, 0, 0, operands));
     return AddInstruction(std::move(new_inst));
   }
 
@@ -518,8 +522,9 @@ class InstructionBuilder {
     if (result_id == 0) {
       return nullptr;
     }
-    std::unique_ptr<Instruction> new_inst(new Instruction(
-        GetContext(), SpvOpFunctionCall, result_type, result_id, operands));
+    std::unique_ptr<Instruction> new_inst(
+        new Instruction(GetContext(), spv::Op::OpFunctionCall, result_type,
+                        result_id, operands));
     return AddInstruction(std::move(new_inst));
   }
 
@@ -538,8 +543,9 @@ class InstructionBuilder {
       return nullptr;
     }
 
-    std::unique_ptr<Instruction> new_inst(new Instruction(
-        GetContext(), SpvOpVectorShuffle, result_type, result_id, operands));
+    std::unique_ptr<Instruction> new_inst(
+        new Instruction(GetContext(), spv::Op::OpVectorShuffle, result_type,
+                        result_id, operands));
     return AddInstruction(std::move(new_inst));
   }
 
@@ -560,7 +566,7 @@ class InstructionBuilder {
     }
 
     std::unique_ptr<Instruction> new_inst(new Instruction(
-        GetContext(), SpvOpExtInst, result_type, result_id, operands));
+        GetContext(), spv::Op::OpExtInst, result_type, result_id, operands));
     return AddInstruction(std::move(new_inst));
   }
 

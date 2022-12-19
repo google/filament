@@ -81,7 +81,7 @@ void FuzzerPassConstructComposites::Apply() {
         // Check whether it is legitimate to insert a composite construction
         // before the instruction.
         if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(
-                SpvOpCompositeConstruct, inst_it)) {
+                spv::Op::OpCompositeConstruct, inst_it)) {
           return;
         }
 
@@ -121,19 +121,19 @@ void FuzzerPassConstructComposites::Apply() {
         auto composite_type_inst =
             GetIRContext()->get_def_use_mgr()->GetDef(chosen_composite_type);
         switch (composite_type_inst->opcode()) {
-          case SpvOpTypeArray:
+          case spv::Op::OpTypeArray:
             constructor_arguments = FindComponentsToConstructArray(
                 *composite_type_inst, type_id_to_available_instructions);
             break;
-          case SpvOpTypeMatrix:
+          case spv::Op::OpTypeMatrix:
             constructor_arguments = FindComponentsToConstructMatrix(
                 *composite_type_inst, type_id_to_available_instructions);
             break;
-          case SpvOpTypeStruct:
+          case spv::Op::OpTypeStruct:
             constructor_arguments = FindComponentsToConstructStruct(
                 *composite_type_inst, type_id_to_available_instructions);
             break;
-          case SpvOpTypeVector:
+          case spv::Op::OpTypeVector:
             constructor_arguments = FindComponentsToConstructVector(
                 *composite_type_inst, type_id_to_available_instructions);
             break;
@@ -156,7 +156,7 @@ std::vector<uint32_t>
 FuzzerPassConstructComposites::FindComponentsToConstructArray(
     const opt::Instruction& array_type_instruction,
     const TypeIdToInstructions& type_id_to_available_instructions) {
-  assert(array_type_instruction.opcode() == SpvOpTypeArray &&
+  assert(array_type_instruction.opcode() == spv::Op::OpTypeArray &&
          "Precondition: instruction must be an array type.");
 
   // Get the element type for the array.
@@ -191,7 +191,7 @@ std::vector<uint32_t>
 FuzzerPassConstructComposites::FindComponentsToConstructMatrix(
     const opt::Instruction& matrix_type_instruction,
     const TypeIdToInstructions& type_id_to_available_instructions) {
-  assert(matrix_type_instruction.opcode() == SpvOpTypeMatrix &&
+  assert(matrix_type_instruction.opcode() == spv::Op::OpTypeMatrix &&
          "Precondition: instruction must be a matrix type.");
 
   // Get the element type for the matrix.
@@ -221,7 +221,7 @@ std::vector<uint32_t>
 FuzzerPassConstructComposites::FindComponentsToConstructStruct(
     const opt::Instruction& struct_type_instruction,
     const TypeIdToInstructions& type_id_to_available_instructions) {
-  assert(struct_type_instruction.opcode() == SpvOpTypeStruct &&
+  assert(struct_type_instruction.opcode() == spv::Op::OpTypeStruct &&
          "Precondition: instruction must be a struct type.");
   std::vector<uint32_t> result;
   // Consider the type of each field of the struct.
@@ -251,7 +251,7 @@ std::vector<uint32_t>
 FuzzerPassConstructComposites::FindComponentsToConstructVector(
     const opt::Instruction& vector_type_instruction,
     const TypeIdToInstructions& type_id_to_available_instructions) {
-  assert(vector_type_instruction.opcode() == SpvOpTypeVector &&
+  assert(vector_type_instruction.opcode() == spv::Op::OpTypeVector &&
          "Precondition: instruction must be a vector type.");
 
   // Get details of the type underlying the vector, and the width of the vector,

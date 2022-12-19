@@ -118,8 +118,6 @@ class MergeReturnPass : public MemPass {
     StructuredControlState(Instruction* break_merge, Instruction* merge)
         : break_merge_(break_merge), current_merge_(merge) {}
 
-    StructuredControlState(const StructuredControlState&) = default;
-
     bool InBreakable() const { return break_merge_; }
     bool InStructuredFlow() const { return CurrentMergeId() != 0; }
 

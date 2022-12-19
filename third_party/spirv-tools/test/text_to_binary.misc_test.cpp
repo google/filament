@@ -29,7 +29,8 @@ using ::testing::Eq;
 using TextToBinaryMisc = spvtest::TextToBinaryTest;
 
 TEST_F(TextToBinaryMisc, OpNop) {
-  EXPECT_THAT(CompiledInstructions("OpNop"), Eq(MakeInstruction(SpvOpNop, {})));
+  EXPECT_THAT(CompiledInstructions("OpNop"),
+              Eq(MakeInstruction(spv::Op::OpNop, {})));
 }
 
 TEST_F(TextToBinaryMisc, OpUndef) {
@@ -37,7 +38,8 @@ TEST_F(TextToBinaryMisc, OpUndef) {
                                                    %u = OpUndef %f32)");
   const uint32_t typeID = 1;
   EXPECT_THAT(code[1], Eq(typeID));
-  EXPECT_THAT(Subvector(code, 3), Eq(MakeInstruction(SpvOpUndef, {typeID, 2})));
+  EXPECT_THAT(Subvector(code, 3),
+              Eq(MakeInstruction(spv::Op::OpUndef, {typeID, 2})));
 }
 
 TEST_F(TextToBinaryMisc, OpWrong) {

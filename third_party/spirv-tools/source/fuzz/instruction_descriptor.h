@@ -32,7 +32,7 @@ opt::Instruction* FindInstruction(
 // components.  See the protobuf definition for details of what these
 // components mean.
 protobufs::InstructionDescriptor MakeInstructionDescriptor(
-    uint32_t base_instruction_result_id, SpvOp target_instruction_opcode,
+    uint32_t base_instruction_result_id, spv::Op target_instruction_opcode,
     uint32_t num_opcodes_to_ignore);
 
 // Returns an instruction descriptor that describing the instruction at

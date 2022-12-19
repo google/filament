@@ -29,7 +29,7 @@ bool GetExtensionFromString(const char* str, Extension* extension);
 const char* ExtensionToString(Extension extension);
 
 // Returns text string corresponding to |capability|.
-const char* CapabilityToString(SpvCapability capability);
+const char* CapabilityToString(spv::Capability capability);
 
 }  // namespace spvtools
 

@@ -155,7 +155,7 @@ void main(float in_var_color : COLOR) {
   EXPECT_EQ(inlined_at->NumOperands(), kDebugInlinedAtOperandScopeIndex + 1);
 
   const uint32_t line_number = 77U;
-  Instruction line(context.get(), SpvOpLine);
+  Instruction line(context.get(), spv::Op::OpLine);
   line.SetInOperands({
       {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {5U}},
       {spv_operand_type_t::SPV_OPERAND_TYPE_LITERAL_INTEGER, {line_number}},
@@ -278,7 +278,7 @@ OpFunctionEnd
                   SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
 
   const uint32_t line_number = 7U;
-  Instruction line(context.get(), SpvOpLine);
+  Instruction line(context.get(), spv::Op::OpLine);
   line.SetInOperands({
       {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {5U}},
       {spv_operand_type_t::SPV_OPERAND_TYPE_LITERAL_INTEGER, {line_number}},

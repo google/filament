@@ -49,7 +49,7 @@ bool TransformationFunctionCall::IsApplicable(
   // The function must exist
   auto callee_inst =
       ir_context->get_def_use_mgr()->GetDef(message_.callee_id());
-  if (!callee_inst || callee_inst->opcode() != SpvOpFunction) {
+  if (!callee_inst || callee_inst->opcode() != spv::Op::OpFunction) {
     return false;
   }
 
@@ -60,7 +60,7 @@ bool TransformationFunctionCall::IsApplicable(
 
   auto callee_type_inst = ir_context->get_def_use_mgr()->GetDef(
       callee_inst->GetSingleWordInOperand(1));
-  assert(callee_type_inst->opcode() == SpvOpTypeFunction &&
+  assert(callee_type_inst->opcode() == spv::Op::OpTypeFunction &&
          "Bad function type.");
 
   // The number of expected function arguments must match the number of given
@@ -78,7 +78,7 @@ bool TransformationFunctionCall::IsApplicable(
   if (!insert_before) {
     return false;
   }
-  if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpFunctionCall,
+  if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(spv::Op::OpFunctionCall,
                                                     insert_before)) {
     return false;
   }
@@ -116,10 +116,10 @@ bool TransformationFunctionCall::IsApplicable(
     }
     opt::Instruction* arg_type_inst =
         ir_context->get_def_use_mgr()->GetDef(arg_inst->type_id());
-    if (arg_type_inst->opcode() == SpvOpTypePointer) {
+    if (arg_type_inst->opcode() == spv::Op::OpTypePointer) {
       switch (arg_inst->opcode()) {
-        case SpvOpFunctionParameter:
-        case SpvOpVariable:
+        case spv::Op::OpFunctionParameter:
+        case spv::Op::OpVariable:
           // These are OK
           break;
         default:
@@ -173,7 +173,7 @@ void TransformationFunctionCall::Apply(
   // Insert the function call before the instruction specified in the message.
   FindInstruction(message_.instruction_to_insert_before(), ir_context)
       ->InsertBefore(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpFunctionCall, return_type, message_.fresh_id(),
+          ir_context, spv::Op::OpFunctionCall, return_type, message_.fresh_id(),
           operands));
   // Invalidate all analyses since we have changed the module.
   ir_context->InvalidateAnalysesExceptFor(opt::IRContext::kAnalysisNone);

@@ -36,20 +36,20 @@ class IdsLimit : public spvtest::LinkerTest {
     // running the RemoveDuplicates pass.
     spvtest::Binary common_binary = {
         // clang-format off
-        SpvMagicNumber,
-        SpvVersion,
+        spv::MagicNumber,
+        spv::Version,
         SPV_GENERATOR_WORD(SPV_GENERATOR_KHRONOS, 0),
         id_bound,  // NOTE: Bound
         0u,        // NOTE: Schema; reserved
 
-        SpvOpCapability | 2u << SpvWordCountShift,
-        SpvCapabilityShader,
+        static_cast<uint32_t>(spv::Op::OpCapability) | 2u << spv::WordCountShift,
+        static_cast<uint32_t>(spv::Capability::Shader),
 
-        SpvOpMemoryModel | 3u << SpvWordCountShift,
-        SpvAddressingModelLogical,
-        SpvMemoryModelSimple,
+        static_cast<uint32_t>(spv::Op::OpMemoryModel) | 3u << spv::WordCountShift,
+        static_cast<uint32_t>(spv::AddressingModel::Logical),
+        static_cast<uint32_t>(spv::MemoryModel::Simple),
 
-        SpvOpTypeBool | 2u << SpvWordCountShift,
+        static_cast<uint32_t>(spv::Op::OpTypeBool) | 2u << spv::WordCountShift,
         1u    // NOTE: Result ID
         // clang-format on
     };
@@ -60,7 +60,8 @@ class IdsLimit : public spvtest::LinkerTest {
     binary.insert(binary.end(), common_binary.cbegin(), common_binary.cend());
 
     for (uint32_t i = 0u; i < constant_count; ++i) {
-      binary.push_back(SpvOpConstantTrue | 3u << SpvWordCountShift);
+      binary.push_back(static_cast<uint32_t>(spv::Op::OpConstantTrue) |
+                       3u << spv::WordCountShift);
       binary.push_back(1u);      // NOTE: Type ID
       binary.push_back(2u + i);  // NOTE: Result ID
     }
@@ -74,20 +75,20 @@ spvtest::Binary CreateBinary(uint32_t id_bound) {
   return {
       // clang-format off
       // Header
-      SpvMagicNumber,
-      SpvVersion,
+      spv::MagicNumber,
+      spv::Version,
       SPV_GENERATOR_WORD(SPV_GENERATOR_KHRONOS, 0),
       id_bound,  // NOTE: Bound
       0u,        // NOTE: Schema; reserved
 
       // OpCapability Shader
-      SpvOpCapability | 2u << SpvWordCountShift,
-      SpvCapabilityShader,
+      static_cast<uint32_t>(spv::Op::OpCapability) | 2u << spv::WordCountShift,
+      static_cast<uint32_t>(spv::Capability::Shader),
 
       // OpMemoryModel Logical Simple
-      SpvOpMemoryModel | 3u << SpvWordCountShift,
-      SpvAddressingModelLogical,
-      SpvMemoryModelSimple
+      static_cast<uint32_t>(spv::Op::OpMemoryModel) | 3u << spv::WordCountShift,
+      static_cast<uint32_t>(spv::AddressingModel::Logical),
+      static_cast<uint32_t>(spv::MemoryModel::Simple)
       // clang-format on
   };
 }
@@ -105,7 +106,8 @@ TEST_F(IdsLimit, DISABLED_OverLimit) {
   const uint32_t id_bound = binary[3];
   binary[3] = id_bound + 1u;
 
-  binary.push_back(SpvOpConstantFalse | 3u << SpvWordCountShift);
+  binary.push_back(static_cast<uint32_t>(spv::Op::OpConstantFalse) |
+                   3u << spv::WordCountShift);
   binary.push_back(1u);        // NOTE: Type ID
   binary.push_back(id_bound);  // NOTE: Result ID
 

@@ -37,10 +37,11 @@ bool RemoveDontInline::ClearDontInlineFunctionControl(Function* function) {
   uint32_t function_control =
       function_inst->GetSingleWordInOperand(kFunctionControlInOperandIdx);
 
-  if ((function_control & SpvFunctionControlDontInlineMask) == 0) {
+  if ((function_control & uint32_t(spv::FunctionControlMask::DontInline)) ==
+      0) {
     return false;
   }
-  function_control &= ~SpvFunctionControlDontInlineMask;
+  function_control &= ~uint32_t(spv::FunctionControlMask::DontInline);
   function_inst->SetInOperand(kFunctionControlInOperandIdx, {function_control});
   return true;
 }

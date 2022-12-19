@@ -98,15 +98,19 @@ std::vector<std::unique_ptr<Type>> GenerateAllTypes() {
   types.emplace_back(new Matrix(v3f32, 4));
 
   // Images
-  types.emplace_back(new Image(s32, SpvDim2D, 0, 0, 0, 0, SpvImageFormatRg8,
-                               SpvAccessQualifierReadOnly));
+  types.emplace_back(new Image(s32, spv::Dim::Dim2D, 0, 0, 0, 0,
+                               spv::ImageFormat::Rg8,
+                               spv::AccessQualifier::ReadOnly));
   auto* image1 = types.back().get();
-  types.emplace_back(new Image(s32, SpvDim2D, 0, 1, 0, 0, SpvImageFormatRg8,
-                               SpvAccessQualifierReadOnly));
-  types.emplace_back(new Image(s32, SpvDim3D, 0, 1, 0, 0, SpvImageFormatRg8,
-                               SpvAccessQualifierReadOnly));
-  types.emplace_back(new Image(voidt, SpvDim3D, 0, 1, 0, 1, SpvImageFormatRg8,
-                               SpvAccessQualifierReadWrite));
+  types.emplace_back(new Image(s32, spv::Dim::Dim2D, 0, 1, 0, 0,
+                               spv::ImageFormat::Rg8,
+                               spv::AccessQualifier::ReadOnly));
+  types.emplace_back(new Image(s32, spv::Dim::Dim3D, 0, 1, 0, 0,
+                               spv::ImageFormat::Rg8,
+                               spv::AccessQualifier::ReadOnly));
+  types.emplace_back(new Image(voidt, spv::Dim::Dim3D, 0, 1, 0, 1,
+                               spv::ImageFormat::Rg8,
+                               spv::AccessQualifier::ReadWrite));
   auto* image2 = types.back().get();
 
   // Sampler
@@ -140,9 +144,9 @@ std::vector<std::unique_ptr<Type>> GenerateAllTypes() {
   types.emplace_back(new Opaque("world"));
 
   // Pointer
-  types.emplace_back(new Pointer(f32, SpvStorageClassInput));
-  types.emplace_back(new Pointer(sts32f32, SpvStorageClassFunction));
-  types.emplace_back(new Pointer(a42f32, SpvStorageClassFunction));
+  types.emplace_back(new Pointer(f32, spv::StorageClass::Input));
+  types.emplace_back(new Pointer(sts32f32, spv::StorageClass::Function));
+  types.emplace_back(new Pointer(a42f32, spv::StorageClass::Function));
 
   // Function
   types.emplace_back(new Function(voidt, {}));
@@ -158,16 +162,17 @@ std::vector<std::unique_ptr<Type>> GenerateAllTypes() {
 
   // Pipe, Forward Pointer, PipeStorage, NamedBarrier, AccelerationStructureNV,
   // CooperativeMatrixNV
-  types.emplace_back(new Pipe(SpvAccessQualifierReadWrite));
-  types.emplace_back(new Pipe(SpvAccessQualifierReadOnly));
-  types.emplace_back(new ForwardPointer(1, SpvStorageClassInput));
-  types.emplace_back(new ForwardPointer(2, SpvStorageClassInput));
-  types.emplace_back(new ForwardPointer(2, SpvStorageClassUniform));
+  types.emplace_back(new Pipe(spv::AccessQualifier::ReadWrite));
+  types.emplace_back(new Pipe(spv::AccessQualifier::ReadOnly));
+  types.emplace_back(new ForwardPointer(1, spv::StorageClass::Input));
+  types.emplace_back(new ForwardPointer(2, spv::StorageClass::Input));
+  types.emplace_back(new ForwardPointer(2, spv::StorageClass::Uniform));
   types.emplace_back(new PipeStorage());
   types.emplace_back(new NamedBarrier());
   types.emplace_back(new AccelerationStructureNV());
   types.emplace_back(new CooperativeMatrixNV(f32, 24, 24, 24));
   types.emplace_back(new RayQueryKHR());
+  types.emplace_back(new HitObjectNV());
 
   return types;
 }
@@ -814,22 +819,22 @@ OpMemoryModel Logical GLSL450
   EXPECT_NE(context, nullptr);
 
   Integer u32(32, false);
-  Pointer u32Ptr(&u32, SpvStorageClassFunction);
+  Pointer u32Ptr(&u32, spv::StorageClass::Function);
   Struct st({&u32});
-  Pointer stPtr(&st, SpvStorageClassInput);
+  Pointer stPtr(&st, spv::StorageClass::Input);
 
   auto pair = context->get_type_mgr()->GetTypeAndPointerType(
-      3u, SpvStorageClassFunction);
+      3u, spv::StorageClass::Function);
   ASSERT_EQ(nullptr, pair.first);
   ASSERT_EQ(nullptr, pair.second);
 
   pair = context->get_type_mgr()->GetTypeAndPointerType(
-      1u, SpvStorageClassFunction);
+      1u, spv::StorageClass::Function);
   ASSERT_TRUE(pair.first->IsSame(&u32));
   ASSERT_TRUE(pair.second->IsSame(&u32Ptr));
 
-  pair =
-      context->get_type_mgr()->GetTypeAndPointerType(2u, SpvStorageClassInput);
+  pair = context->get_type_mgr()->GetTypeAndPointerType(
+      2u, spv::StorageClass::Input);
   ASSERT_TRUE(pair.first->IsSame(&st));
   ASSERT_TRUE(pair.second->IsSame(&stPtr));
 }
@@ -1081,6 +1086,7 @@ TEST(TypeManager, GetTypeInstructionAllTypes) {
 ; CHECK: OpTypeAccelerationStructureKHR
 ; CHECK: OpTypeCooperativeMatrixNV [[f32]] [[uint24]] [[uint24]] [[uint24]]
 ; CHECK: OpTypeRayQueryKHR
+; CHECK: OpTypeHitObjectNV
 OpCapability Shader
 OpCapability Int64
 OpCapability Linkage
@@ -1155,7 +1161,7 @@ OpMemoryModel Logical GLSL450
                   SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
   EXPECT_NE(context, nullptr);
 
-  context->get_type_mgr()->FindPointerToType(1, SpvStorageClassFunction);
+  context->get_type_mgr()->FindPointerToType(1, spv::StorageClass::Function);
   Match(text, context.get());
 }
 
@@ -1180,7 +1186,7 @@ OpMemoryModel Logical GLSL450
                   SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
   EXPECT_NE(context, nullptr);
 
-  context->get_type_mgr()->FindPointerToType(2, SpvStorageClassFunction);
+  context->get_type_mgr()->FindPointerToType(2, spv::StorageClass::Function);
   Match(text, context.get());
 }
 

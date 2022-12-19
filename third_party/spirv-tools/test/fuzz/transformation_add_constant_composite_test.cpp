@@ -91,7 +91,7 @@ TEST(TransformationAddConstantCompositeTest, BasicTest) {
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
-    ASSERT_EQ(SpvOpConstantComposite,
+    ASSERT_EQ(spv::Op::OpConstantComposite,
               context->get_def_use_mgr()->GetDef(100)->opcode());
     ASSERT_EQ(0.0F, context->get_constant_mgr()
                         ->FindDeclaredConstant(100)

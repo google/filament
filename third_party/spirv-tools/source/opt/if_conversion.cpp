@@ -23,7 +23,7 @@ namespace spvtools {
 namespace opt {
 
 Pass::Status IfConversion::Process() {
-  if (!context()->get_feature_mgr()->HasCapability(SpvCapabilityShader)) {
+  if (!context()->get_feature_mgr()->HasCapability(spv::Capability::Shader)) {
     return Status::SuccessWithoutChange;
   }
 
@@ -40,7 +40,7 @@ Pass::Status IfConversion::Process() {
 
       // Get an insertion point.
       auto iter = block.begin();
-      while (iter != block.end() && iter->opcode() == SpvOpPhi) {
+      while (iter != block.end() && iter->opcode() == spv::Op::OpPhi) {
         ++iter;
       }
 
@@ -160,29 +160,37 @@ bool IfConversion::CheckBlock(BasicBlock* block, DominatorAnalysis* dominators,
   BasicBlock* inc1 = context()->get_instr_block(preds[1]);
   if (dominators->Dominates(block, inc1)) return false;
 
+  if (inc0 == inc1) {
+    // If the predecessor blocks are the same, then there is only 1 value for
+    // the OpPhi.  Other transformation should be able to simplify that.
+    return false;
+  }
   // All phis will have the same common dominator, so cache the result
   // for this block. If there is no common dominator, then we cannot transform
   // any phi in this basic block.
   *common = dominators->CommonDominator(inc0, inc1);
   if (!*common || cfg()->IsPseudoEntryBlock(*common)) return false;
   Instruction* branch = (*common)->terminator();
-  if (branch->opcode() != SpvOpBranchConditional) return false;
+  if (branch->opcode() != spv::Op::OpBranchConditional) return false;
   auto merge = (*common)->GetMergeInst();
-  if (!merge || merge->opcode() != SpvOpSelectionMerge) return false;
-  if (merge->GetSingleWordInOperand(1) == SpvSelectionControlDontFlattenMask)
+  if (!merge || merge->opcode() != spv::Op::OpSelectionMerge) return false;
+  if (spv::SelectionControlMask(merge->GetSingleWordInOperand(1)) ==
+      spv::SelectionControlMask::DontFlatten) {
     return false;
+  }
   if ((*common)->MergeBlockIdIfAny() != block->id()) return false;
 
   return true;
 }
 
 bool IfConversion::CheckPhiUsers(Instruction* phi, BasicBlock* block) {
-  return get_def_use_mgr()->WhileEachUser(phi, [block,
-                                                this](Instruction* user) {
-    if (user->opcode() == SpvOpPhi && context()->get_instr_block(user) == block)
-      return false;
-    return true;
-  });
+  return get_def_use_mgr()->WhileEachUser(
+      phi, [block, this](Instruction* user) {
+        if (user->opcode() == spv::Op::OpPhi &&
+            context()->get_instr_block(user) == block)
+          return false;
+        return true;
+      });
 }
 
 uint32_t IfConversion::SplatCondition(analysis::Vector* vec_data_ty,
@@ -202,9 +210,9 @@ uint32_t IfConversion::SplatCondition(analysis::Vector* vec_data_ty,
 
 bool IfConversion::CheckType(uint32_t id) {
   Instruction* type = get_def_use_mgr()->GetDef(id);
-  SpvOp op = type->opcode();
-  if (spvOpcodeIsScalarType(op) || op == SpvOpTypePointer ||
-      op == SpvOpTypeVector)
+  spv::Op op = type->opcode();
+  if (spvOpcodeIsScalarType(op) || op == spv::Op::OpTypePointer ||
+      op == spv::Op::OpTypeVector)
     return true;
   return false;
 }
@@ -250,7 +258,7 @@ void IfConversion::HoistInstruction(Instruction* inst, BasicBlock* target_block,
       });
 
   Instruction* insertion_pos = target_block->terminator();
-  if ((insertion_pos)->PreviousNode()->opcode() == SpvOpSelectionMerge) {
+  if ((insertion_pos)->PreviousNode()->opcode() == spv::Op::OpSelectionMerge) {
     insertion_pos = insertion_pos->PreviousNode();
   }
   inst->RemoveFromList();

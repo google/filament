@@ -44,19 +44,20 @@ namespace val {
 /// of the SPIRV spec for additional details of the order. The enumerant values
 /// are in the same order as the vector returned by GetModuleOrder
 enum ModuleLayoutSection {
-  kLayoutCapabilities,          /// < Section 2.4 #1
-  kLayoutExtensions,            /// < Section 2.4 #2
-  kLayoutExtInstImport,         /// < Section 2.4 #3
-  kLayoutMemoryModel,           /// < Section 2.4 #4
-  kLayoutEntryPoint,            /// < Section 2.4 #5
-  kLayoutExecutionMode,         /// < Section 2.4 #6
-  kLayoutDebug1,                /// < Section 2.4 #7 > 1
-  kLayoutDebug2,                /// < Section 2.4 #7 > 2
-  kLayoutDebug3,                /// < Section 2.4 #7 > 3
-  kLayoutAnnotations,           /// < Section 2.4 #8
-  kLayoutTypes,                 /// < Section 2.4 #9
-  kLayoutFunctionDeclarations,  /// < Section 2.4 #10
-  kLayoutFunctionDefinitions    /// < Section 2.4 #11
+  kLayoutCapabilities,             /// < Section 2.4 #1
+  kLayoutExtensions,               /// < Section 2.4 #2
+  kLayoutExtInstImport,            /// < Section 2.4 #3
+  kLayoutMemoryModel,              /// < Section 2.4 #4
+  kLayoutSamplerImageAddressMode,  /// < Section 2.4 #5
+  kLayoutEntryPoint,               /// < Section 2.4 #6
+  kLayoutExecutionMode,            /// < Section 2.4 #7
+  kLayoutDebug1,                   /// < Section 2.4 #8 > 1
+  kLayoutDebug2,                   /// < Section 2.4 #8 > 2
+  kLayoutDebug3,                   /// < Section 2.4 #8 > 3
+  kLayoutAnnotations,              /// < Section 2.4 #9
+  kLayoutTypes,                    /// < Section 2.4 #10
+  kLayoutFunctionDeclarations,     /// < Section 2.4 #11
+  kLayoutFunctionDefinitions       /// < Section 2.4 #12
 };
 
 /// This class manages the state of the SPIR-V validation as it is being parsed.
@@ -184,10 +185,10 @@ class ValidationState_t {
   void ProgressToNextLayoutSectionOrder();
 
   /// Determines if the op instruction is in a previous layout section
-  bool IsOpcodeInPreviousLayoutSection(SpvOp op);
+  bool IsOpcodeInPreviousLayoutSection(spv::Op op);
 
   /// Determines if the op instruction is part of the current section
-  bool IsOpcodeInCurrentLayoutSection(SpvOp op);
+  bool IsOpcodeInCurrentLayoutSection(spv::Op op);
 
   DiagnosticStream diag(spv_result_t error_code, const Instruction* inst);
 
@@ -216,7 +217,8 @@ class ValidationState_t {
   };
 
   /// Registers |id| as an entry point with |execution_model| and |interfaces|.
-  void RegisterEntryPoint(const uint32_t id, SpvExecutionModel execution_model,
+  void RegisterEntryPoint(const uint32_t id,
+                          spv::ExecutionModel execution_model,
                           EntryPointDescription&& desc) {
     entry_points_.push_back(id);
     entry_point_to_execution_models_[id].insert(execution_model);
@@ -234,7 +236,7 @@ class ValidationState_t {
 
   /// Registers execution mode for the given entry point.
   void RegisterExecutionModeForEntryPoint(uint32_t entry_point,
-                                          SpvExecutionMode execution_mode) {
+                                          spv::ExecutionMode execution_mode) {
     entry_point_to_execution_modes_[entry_point].insert(execution_mode);
   }
 
@@ -246,7 +248,7 @@ class ValidationState_t {
 
   /// Returns Execution Models for the given Entry Point.
   /// Returns nullptr if none found (would trigger assertion).
-  const std::set<SpvExecutionModel>* GetExecutionModels(
+  const std::set<spv::ExecutionModel>* GetExecutionModels(
       uint32_t entry_point) const {
     const auto it = entry_point_to_execution_models_.find(entry_point);
     if (it == entry_point_to_execution_models_.end()) {
@@ -258,7 +260,7 @@ class ValidationState_t {
 
   /// Returns Execution Modes for the given Entry Point.
   /// Returns nullptr if none found.
-  const std::set<SpvExecutionMode>* GetExecutionModes(
+  const std::set<spv::ExecutionMode>* GetExecutionModes(
       uint32_t entry_point) const {
     const auto it = entry_point_to_execution_modes_.find(entry_point);
     if (it == entry_point_to_execution_modes_.end()) {
@@ -299,7 +301,7 @@ class ValidationState_t {
     return (id_to_function_.find(id) != id_to_function_.end());
   }
   /// Registers the capability and its dependent capabilities
-  void RegisterCapability(SpvCapability cap);
+  void RegisterCapability(spv::Capability cap);
 
   /// Registers the extension.
   void RegisterExtension(Extension ext);
@@ -307,14 +309,14 @@ class ValidationState_t {
   /// Registers the function in the module. Subsequent instructions will be
   /// called against this function
   spv_result_t RegisterFunction(uint32_t id, uint32_t ret_type_id,
-                                SpvFunctionControlMask function_control,
+                                spv::FunctionControlMask function_control,
                                 uint32_t function_type_id);
 
   /// Register a function end instruction
   spv_result_t RegisterFunctionEnd();
 
   /// Returns true if the capability is enabled in the module.
-  bool HasCapability(SpvCapability cap) const {
+  bool HasCapability(spv::Capability cap) const {
     return module_capabilities_.Contains(cap);
   }
 
@@ -338,16 +340,16 @@ class ValidationState_t {
   bool HasAnyOfExtensions(const ExtensionSet& extensions) const;
 
   /// Sets the addressing model of this module (logical/physical).
-  void set_addressing_model(SpvAddressingModel am);
+  void set_addressing_model(spv::AddressingModel am);
 
   /// Returns true if the OpMemoryModel was found.
   bool has_memory_model_specified() const {
-    return addressing_model_ != SpvAddressingModelMax &&
-           memory_model_ != SpvMemoryModelMax;
+    return addressing_model_ != spv::AddressingModel::Max &&
+           memory_model_ != spv::MemoryModel::Max;
   }
 
   /// Returns the addressing model of this module, or Logical if uninitialized.
-  SpvAddressingModel addressing_model() const;
+  spv::AddressingModel addressing_model() const;
 
   /// Returns the addressing model of this module, or Logical if uninitialized.
   uint32_t pointer_size_and_alignment() const {
@@ -355,10 +357,24 @@ class ValidationState_t {
   }
 
   /// Sets the memory model of this module.
-  void set_memory_model(SpvMemoryModel mm);
+  void set_memory_model(spv::MemoryModel mm);
 
   /// Returns the memory model of this module, or Simple if uninitialized.
-  SpvMemoryModel memory_model() const;
+  spv::MemoryModel memory_model() const;
+
+  /// Sets the bit width for sampler/image type variables. If not set, they are
+  /// considered opaque
+  void set_samplerimage_variable_address_mode(uint32_t bit_width);
+
+  /// Get the addressing mode currently set. If 0, it means addressing mode is
+  /// invalid Sampler/Image type variables must be considered opaque This mode
+  /// is only valid after the instruction has been read
+  uint32_t samplerimage_variable_address_mode() const;
+
+  /// Returns true if the OpSamplerImageAddressingModeNV was found.
+  bool has_samplerimage_variable_address_mode_specified() const {
+    return sampler_image_addressing_mode_ != 0;
+  }
 
   const AssemblyGrammar& grammar() const { return grammar_; }
 
@@ -375,17 +391,14 @@ class ValidationState_t {
   /// Registers the decoration for the given <id>
   void RegisterDecorationForId(uint32_t id, const Decoration& dec) {
     auto& dec_list = id_decorations_[id];
-    auto lb = std::find(dec_list.begin(), dec_list.end(), dec);
-    if (lb == dec_list.end()) {
-      dec_list.push_back(dec);
-    }
+    dec_list.insert(dec);
   }
 
   /// Registers the list of decorations for the given <id>
   template <class InputIt>
   void RegisterDecorationsForId(uint32_t id, InputIt begin, InputIt end) {
-    std::vector<Decoration>& cur_decs = id_decorations_[id];
-    cur_decs.insert(cur_decs.end(), begin, end);
+    std::set<Decoration>& cur_decs = id_decorations_[id];
+    cur_decs.insert(begin, end);
   }
 
   /// Registers the list of decorations for the given member of the given
@@ -394,27 +407,50 @@ class ValidationState_t {
   void RegisterDecorationsForStructMember(uint32_t struct_id,
                                           uint32_t member_index, InputIt begin,
                                           InputIt end) {
-    RegisterDecorationsForId(struct_id, begin, end);
-    for (auto& decoration : id_decorations_[struct_id]) {
-      decoration.set_struct_member_index(member_index);
+    std::set<Decoration>& cur_decs = id_decorations_[struct_id];
+    for (InputIt iter = begin; iter != end; ++iter) {
+      Decoration dec = *iter;
+      dec.set_struct_member_index(member_index);
+      cur_decs.insert(dec);
     }
   }
 
   /// Returns all the decorations for the given <id>. If no decorations exist
-  /// for the <id>, it registers an empty vector for it in the map and
-  /// returns the empty vector.
-  std::vector<Decoration>& id_decorations(uint32_t id) {
+  /// for the <id>, it registers an empty set for it in the map and
+  /// returns the empty set.
+  std::set<Decoration>& id_decorations(uint32_t id) {
     return id_decorations_[id];
   }
 
+  /// Returns the range of decorations for the given field of the given <id>.
+  struct FieldDecorationsIter {
+    std::set<Decoration>::const_iterator begin;
+    std::set<Decoration>::const_iterator end;
+  };
+  FieldDecorationsIter id_member_decorations(uint32_t id,
+                                             uint32_t member_index) {
+    const auto& decorations = id_decorations_[id];
+
+    // The decorations are sorted by member_index, so this look up will give the
+    // exact range of decorations for this member index.
+    Decoration min_decoration((spv::Decoration)0, {}, member_index);
+    Decoration max_decoration(spv::Decoration::Max, {}, member_index);
+
+    FieldDecorationsIter result;
+    result.begin = decorations.lower_bound(min_decoration);
+    result.end = decorations.upper_bound(max_decoration);
+
+    return result;
+  }
+
   // Returns const pointer to the internal decoration container.
-  const std::map<uint32_t, std::vector<Decoration>>& id_decorations() const {
+  const std::map<uint32_t, std::set<Decoration>>& id_decorations() const {
     return id_decorations_;
   }
 
   /// Returns true if the given id <id> has the given decoration <dec>,
   /// otherwise returns false.
-  bool HasDecoration(uint32_t id, SpvDecoration dec) {
+  bool HasDecoration(uint32_t id, spv::Decoration dec) {
     const auto& decorations = id_decorations_.find(id);
     if (decorations == id_decorations_.end()) return false;
 
@@ -450,7 +486,7 @@ class ValidationState_t {
                                     Instruction* consumer);
 
   // Record a function's storage class consumer instruction
-  void RegisterStorageClassConsumer(SpvStorageClass storage_class,
+  void RegisterStorageClassConsumer(spv::StorageClass storage_class,
                                     Instruction* consumer);
 
   /// Returns the set of Global Variables.
@@ -572,14 +608,16 @@ class ValidationState_t {
   bool IsBoolVectorType(uint32_t id) const;
   bool IsBoolScalarOrVectorType(uint32_t id) const;
   bool IsPointerType(uint32_t id) const;
+  bool IsAccelerationStructureType(uint32_t id) const;
   bool IsCooperativeMatrixType(uint32_t id) const;
   bool IsFloatCooperativeMatrixType(uint32_t id) const;
   bool IsIntCooperativeMatrixType(uint32_t id) const;
   bool IsUnsignedIntCooperativeMatrixType(uint32_t id) const;
+  bool IsUnsigned64BitHandle(uint32_t id) const;
 
   // Returns true if |id| is a type id that contains |type| (or integer or
   // floating point type) of |width| bits.
-  bool ContainsSizedIntOrFloatType(uint32_t id, SpvOp type,
+  bool ContainsSizedIntOrFloatType(uint32_t id, spv::Op type,
                                    uint32_t width) const;
   // Returns true if |id| is a type id that contains a 8- or 16-bit int or
   // 16-bit float that is not generally enabled for use.
@@ -605,7 +643,7 @@ class ValidationState_t {
 
   // Returns opcode of the instruction which issued the id or OpNop if the
   // instruction is not registered.
-  SpvOp GetIdOpcode(uint32_t id) const;
+  spv::Op GetIdOpcode(uint32_t id) const;
 
   // Returns type_id for given id operand if it has a type or zero otherwise.
   // |operand_index| is expected to be pointing towards an operand which is an
@@ -615,7 +653,7 @@ class ValidationState_t {
 
   // Provides information on pointer type. Returns false iff not pointer type.
   bool GetPointerTypeInfo(uint32_t id, uint32_t* data_type,
-                          uint32_t* storage_class) const;
+                          spv::StorageClass* storage_class) const;
 
   // Is the ID the type of a pointer to a uniform block: Block-decorated struct
   // in uniform storage class? The result is only valid after internal method
@@ -686,6 +724,19 @@ class ValidationState_t {
   // Returns the disassembly string for the given instruction.
   std::string Disassemble(const uint32_t* words, uint16_t num_words) const;
 
+  // Returns the string name for |decoration|.
+  std::string SpvDecorationString(uint32_t decoration) {
+    spv_operand_desc desc = nullptr;
+    if (grammar_.lookupOperand(SPV_OPERAND_TYPE_DECORATION, decoration,
+                               &desc) != SPV_SUCCESS) {
+      return std::string("Unknown");
+    }
+    return std::string(desc->name);
+  }
+  std::string SpvDecorationString(spv::Decoration decoration) {
+    return SpvDecorationString(uint32_t(decoration));
+  }
+
   // Returns whether type m1 and type m2 are cooperative matrices with
   // the same "shape" (matching scope, rows, cols). If any are specialization
   // constants, we assume they can match because we can't prove they don't.
@@ -717,7 +768,7 @@ class ValidationState_t {
   const Instruction* TracePointer(const Instruction* inst) const;
 
   // Validates the storage class for the target environment.
-  bool IsValidStorageClass(SpvStorageClass storage_class) const;
+  bool IsValidStorageClass(spv::StorageClass storage_class) const;
 
   // Takes a Vulkan Valid Usage ID (VUID) as |id| and optional |reference| and
   // will return a non-empty string only if ID is known and targeting Vulkan.
@@ -826,7 +877,7 @@ class ValidationState_t {
       struct_has_nested_blockorbufferblock_struct_;
 
   /// Stores the list of decorations for a given <id>
-  std::map<uint32_t, std::vector<Decoration>> id_decorations_;
+  std::map<uint32_t, std::set<Decoration>> id_decorations_;
 
   /// Stores type declarations which need to be unique (i.e. non-aggregates),
   /// in the form [opcode, operand words], result_id is not stored.
@@ -836,13 +887,16 @@ class ValidationState_t {
 
   AssemblyGrammar grammar_;
 
-  SpvAddressingModel addressing_model_;
-  SpvMemoryModel memory_model_;
+  spv::AddressingModel addressing_model_;
+  spv::MemoryModel memory_model_;
   // pointer size derived from addressing model. Assumes all storage classes
   // have the same pointer size (for physical pointer types).
   uint32_t pointer_size_and_alignment_;
 
-  /// NOTE: See corresponding getter functions
+  /// bit width of sampler/image type variables. Valid values are 32 and 64
+  uint32_t sampler_image_addressing_mode_;
+
+  /// NOTE: See correspoding getter functions
   bool in_function_;
 
   /// The state of optional features.  These are determined by capabilities
@@ -855,11 +909,11 @@ class ValidationState_t {
   /// Mapping entry point -> execution models. It is presumed that the same
   /// function could theoretically be used as 'main' by multiple OpEntryPoint
   /// instructions.
-  std::unordered_map<uint32_t, std::set<SpvExecutionModel>>
+  std::unordered_map<uint32_t, std::set<spv::ExecutionModel>>
       entry_point_to_execution_models_;
 
   /// Mapping entry point -> execution modes.
-  std::unordered_map<uint32_t, std::set<SpvExecutionMode>>
+  std::unordered_map<uint32_t, std::set<spv::ExecutionMode>>
       entry_point_to_execution_modes_;
 
   /// Mapping function -> array of entry points inside this

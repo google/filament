@@ -36,9 +36,9 @@ ConditionalBranchToSimpleConditionalBranchOpportunityFinder::
     for (auto* function : GetTargetFunctions(context, target_function)) {
       // Consider every block in the function.
       for (auto& block : *function) {
-        // The terminator must be SpvOpBranchConditional.
+        // The terminator must be spv::Op::OpBranchConditional.
         opt::Instruction* terminator = block.terminator();
-        if (terminator->opcode() != SpvOpBranchConditional) {
+        if (terminator->opcode() != spv::Op::OpBranchConditional) {
           continue;
         }
 

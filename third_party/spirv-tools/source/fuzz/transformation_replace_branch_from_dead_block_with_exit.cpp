@@ -26,10 +26,10 @@ TransformationReplaceBranchFromDeadBlockWithExit::
 
 TransformationReplaceBranchFromDeadBlockWithExit::
     TransformationReplaceBranchFromDeadBlockWithExit(uint32_t block_id,
-                                                     SpvOp opcode,
+                                                     spv::Op opcode,
                                                      uint32_t return_value_id) {
   message_.set_block_id(block_id);
-  message_.set_opcode(opcode);
+  message_.set_opcode(uint32_t(opcode));
   message_.set_return_value_id(return_value_id);
 }
 
@@ -45,11 +45,11 @@ bool TransformationReplaceBranchFromDeadBlockWithExit::IsApplicable(
     return false;
   }
   auto function_return_type_id = block->GetParent()->type_id();
-  switch (message_.opcode()) {
-    case SpvOpKill:
+  switch (spv::Op(message_.opcode())) {
+    case spv::Op::OpKill:
       for (auto& entry_point : ir_context->module()->entry_points()) {
-        if (entry_point.GetSingleWordInOperand(0) !=
-            SpvExecutionModelFragment) {
+        if (spv::ExecutionModel(entry_point.GetSingleWordInOperand(0)) !=
+            spv::ExecutionModel::Fragment) {
           // OpKill is only allowed in a fragment shader.  This is a
           // conservative check: if the module contains a non-fragment entry
           // point then adding an OpKill might lead to OpKill being used in a
@@ -58,15 +58,15 @@ bool TransformationReplaceBranchFromDeadBlockWithExit::IsApplicable(
         }
       }
       break;
-    case SpvOpReturn:
+    case spv::Op::OpReturn:
       if (ir_context->get_def_use_mgr()
               ->GetDef(function_return_type_id)
-              ->opcode() != SpvOpTypeVoid) {
+              ->opcode() != spv::Op::OpTypeVoid) {
         // OpReturn is only allowed in a function with void return type.
         return false;
       }
       break;
-    case SpvOpReturnValue: {
+    case spv::Op::OpReturnValue: {
       // If the terminator is to be changed to OpReturnValue, with
       // |message_.return_value_id| being the value that will be returned, then
       // |message_.return_value_id| must have a compatible type and be available
@@ -83,7 +83,7 @@ bool TransformationReplaceBranchFromDeadBlockWithExit::IsApplicable(
       break;
     }
     default:
-      assert(message_.opcode() == SpvOpUnreachable &&
+      assert(spv::Op(message_.opcode()) == spv::Op::OpUnreachable &&
              "Invalid early exit opcode.");
       break;
   }
@@ -95,7 +95,7 @@ void TransformationReplaceBranchFromDeadBlockWithExit::Apply(
   // If the successor block has OpPhi instructions then arguments related to
   // |message_.block_id| need to be removed from these instruction.
   auto block = ir_context->get_instr_block(message_.block_id());
-  assert(block->terminator()->opcode() == SpvOpBranch &&
+  assert(block->terminator()->opcode() == spv::Op::OpBranch &&
          "Precondition: the block must end with OpBranch.");
   auto successor = ir_context->get_instr_block(
       block->terminator()->GetSingleWordInOperand(0));
@@ -114,12 +114,12 @@ void TransformationReplaceBranchFromDeadBlockWithExit::Apply(
 
   // Rewrite the terminator of |message_.block_id|.
   opt::Instruction::OperandList new_terminator_in_operands;
-  if (message_.opcode() == SpvOpReturnValue) {
+  if (spv::Op(message_.opcode()) == spv::Op::OpReturnValue) {
     new_terminator_in_operands.push_back(
         {SPV_OPERAND_TYPE_ID, {message_.return_value_id()}});
   }
   auto terminator = block->terminator();
-  terminator->SetOpcode(static_cast<SpvOp>(message_.opcode()));
+  terminator->SetOpcode(static_cast<spv::Op>(message_.opcode()));
   terminator->SetInOperands(std::move(new_terminator_in_operands));
   ir_context->InvalidateAnalysesExceptFor(opt::IRContext::kAnalysisNone);
 }
@@ -145,7 +145,7 @@ bool TransformationReplaceBranchFromDeadBlockWithExit::BlockIsSuitable(
     return false;
   }
   // The block's terminator must be OpBranch.
-  if (block.terminator()->opcode() != SpvOpBranch) {
+  if (block.terminator()->opcode() != spv::Op::OpBranch) {
     return false;
   }
   if (ir_context->GetStructuredCFGAnalysis()->IsInContinueConstruct(
@@ -164,7 +164,7 @@ bool TransformationReplaceBranchFromDeadBlockWithExit::BlockIsSuitable(
   // Make sure that domination rules are satisfied when we remove the branch
   // from the |block| to its |successor|.
   return fuzzerutil::NewTerminatorPreservesDominationRules(
-      ir_context, block.id(), {ir_context, SpvOpUnreachable});
+      ir_context, block.id(), {ir_context, spv::Op::OpUnreachable});
 }
 
 }  // namespace fuzz

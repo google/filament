@@ -17,12 +17,11 @@
 namespace spvtools {
 namespace opt {
 namespace {
-
-const uint32_t kOpAccessChainInOperandIndexes = 1;
+constexpr uint32_t kOpAccessChainInOperandIndexes = 1;
 
 // Returns the length of array type |type|.
 uint32_t GetLengthOfArrayType(IRContext* context, Instruction* type) {
-  assert(type->opcode() == SpvOpTypeArray && "type must be array");
+  assert(type->opcode() == spv::Op::OpTypeArray && "type must be array");
   uint32_t length_id = type->GetSingleWordInOperand(1);
   const analysis::Constant* length_const =
       context->get_constant_mgr()->FindDeclaredConstant(length_id);
@@ -35,20 +34,20 @@ uint32_t GetLengthOfArrayType(IRContext* context, Instruction* type) {
 namespace descsroautil {
 
 bool IsDescriptorArray(IRContext* context, Instruction* var) {
-  if (var->opcode() != SpvOpVariable) {
+  if (var->opcode() != spv::Op::OpVariable) {
     return false;
   }
 
   uint32_t ptr_type_id = var->type_id();
   Instruction* ptr_type_inst = context->get_def_use_mgr()->GetDef(ptr_type_id);
-  if (ptr_type_inst->opcode() != SpvOpTypePointer) {
+  if (ptr_type_inst->opcode() != spv::Op::OpTypePointer) {
     return false;
   }
 
   uint32_t var_type_id = ptr_type_inst->GetSingleWordInOperand(1);
   Instruction* var_type_inst = context->get_def_use_mgr()->GetDef(var_type_id);
-  if (var_type_inst->opcode() != SpvOpTypeArray &&
-      var_type_inst->opcode() != SpvOpTypeStruct) {
+  if (var_type_inst->opcode() != spv::Op::OpTypeArray &&
+      var_type_inst->opcode() != spv::Op::OpTypeStruct) {
     return false;
   }
 
@@ -59,23 +58,23 @@ bool IsDescriptorArray(IRContext* context, Instruction* var) {
   }
 
   if (!context->get_decoration_mgr()->HasDecoration(
-          var->result_id(), SpvDecorationDescriptorSet)) {
+          var->result_id(), uint32_t(spv::Decoration::DescriptorSet))) {
     return false;
   }
 
-  return context->get_decoration_mgr()->HasDecoration(var->result_id(),
-                                                      SpvDecorationBinding);
+  return context->get_decoration_mgr()->HasDecoration(
+      var->result_id(), uint32_t(spv::Decoration::Binding));
 }
 
 bool IsTypeOfStructuredBuffer(IRContext* context, const Instruction* type) {
-  if (type->opcode() != SpvOpTypeStruct) {
+  if (type->opcode() != spv::Op::OpTypeStruct) {
     return false;
   }
 
   // All buffers have offset decorations for members of their structure types.
   // This is how we distinguish it from a structure of descriptors.
-  return context->get_decoration_mgr()->HasDecoration(type->result_id(),
-                                                      SpvDecorationOffset);
+  return context->get_decoration_mgr()->HasDecoration(
+      type->result_id(), uint32_t(spv::Decoration::Offset));
 }
 
 const analysis::Constant* GetAccessChainIndexAsConst(
@@ -99,15 +98,15 @@ uint32_t GetNumberOfElementsForArrayOrStruct(IRContext* context,
                                              Instruction* var) {
   uint32_t ptr_type_id = var->type_id();
   Instruction* ptr_type_inst = context->get_def_use_mgr()->GetDef(ptr_type_id);
-  assert(ptr_type_inst->opcode() == SpvOpTypePointer &&
+  assert(ptr_type_inst->opcode() == spv::Op::OpTypePointer &&
          "Variable should be a pointer to an array or structure.");
   uint32_t pointee_type_id = ptr_type_inst->GetSingleWordInOperand(1);
   Instruction* pointee_type_inst =
       context->get_def_use_mgr()->GetDef(pointee_type_id);
-  if (pointee_type_inst->opcode() == SpvOpTypeArray) {
+  if (pointee_type_inst->opcode() == spv::Op::OpTypeArray) {
     return GetLengthOfArrayType(context, pointee_type_inst);
   }
-  assert(pointee_type_inst->opcode() == SpvOpTypeStruct &&
+  assert(pointee_type_inst->opcode() == spv::Op::OpTypeStruct &&
          "Variable should be a pointer to an array or structure.");
   return pointee_type_inst->NumInOperands();
 }

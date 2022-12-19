@@ -129,12 +129,12 @@ void StructuredLoopToSelectionReductionOpportunity::RedirectEdge(
   // Figure out which operands of the terminator need to be considered for
   // redirection.
   std::vector<uint32_t> operand_indices;
-  if (terminator->opcode() == SpvOpBranch) {
+  if (terminator->opcode() == spv::Op::OpBranch) {
     operand_indices = {0};
-  } else if (terminator->opcode() == SpvOpBranchConditional) {
+  } else if (terminator->opcode() == spv::Op::OpBranchConditional) {
     operand_indices = {1, 2};
   } else {
-    assert(terminator->opcode() == SpvOpSwitch);
+    assert(terminator->opcode() == spv::Op::OpSwitch);
     for (uint32_t label_index = 1; label_index < terminator->NumOperands();
          label_index += 2) {
       operand_indices.push_back(label_index);
@@ -179,18 +179,19 @@ void StructuredLoopToSelectionReductionOpportunity::ChangeLoopToSelection() {
   auto loop_merge_inst = loop_construct_header_->GetLoopMergeInst();
   auto const loop_merge_block_id =
       loop_merge_inst->GetSingleWordOperand(kMergeNodeIndex);
-  loop_merge_inst->SetOpcode(SpvOpSelectionMerge);
+  loop_merge_inst->SetOpcode(spv::Op::OpSelectionMerge);
   loop_merge_inst->ReplaceOperands(
       {{loop_merge_inst->GetOperand(kMergeNodeIndex).type,
         {loop_merge_block_id}},
-       {SPV_OPERAND_TYPE_SELECTION_CONTROL, {SpvSelectionControlMaskNone}}});
+       {SPV_OPERAND_TYPE_SELECTION_CONTROL,
+        {uint32_t(spv::SelectionControlMask::MaskNone)}}});
 
   // The loop header either finishes with OpBranch or OpBranchConditional.
   // The latter is fine for a selection.  In the former case we need to turn
   // it into OpBranchConditional.  We use "true" as the condition, and make
   // the "else" branch be the merge block.
   auto terminator = loop_construct_header_->terminator();
-  if (terminator->opcode() == SpvOpBranch) {
+  if (terminator->opcode() == spv::Op::OpBranch) {
     opt::analysis::Bool temp;
     const opt::analysis::Bool* bool_type =
         context_->get_type_mgr()->GetRegisteredType(&temp)->AsBool();
@@ -199,7 +200,7 @@ void StructuredLoopToSelectionReductionOpportunity::ChangeLoopToSelection() {
     auto true_const_result_id =
         const_mgr->GetDefiningInstruction(true_const)->result_id();
     auto original_branch_id = terminator->GetSingleWordOperand(0);
-    terminator->SetOpcode(SpvOpBranchConditional);
+    terminator->SetOpcode(spv::Op::OpBranchConditional);
     terminator->ReplaceOperands({{SPV_OPERAND_TYPE_ID, {true_const_result_id}},
                                  {SPV_OPERAND_TYPE_ID, {original_branch_id}},
                                  {SPV_OPERAND_TYPE_ID, {loop_merge_block_id}}});
@@ -215,7 +216,7 @@ void StructuredLoopToSelectionReductionOpportunity::FixNonDominatedIdUses() {
   // Consider each instruction in the function.
   for (auto& block : *loop_construct_header_->GetParent()) {
     for (auto& def : block) {
-      if (def.opcode() == SpvOpVariable) {
+      if (def.opcode() == spv::Op::OpVariable) {
         // Variables are defined at the start of the function, and can be
         // accessed by all blocks, even by unreachable blocks that have no
         // dominators, so we do not need to worry about them.
@@ -233,11 +234,11 @@ void StructuredLoopToSelectionReductionOpportunity::FixNonDominatedIdUses() {
         // access chain, in which case replace it with some (possibly fresh)
         // variable (as we cannot load from / store to OpUndef).
         if (!DefinitionSufficientlyDominatesUse(&def, use, index, block)) {
-          if (def.opcode() == SpvOpAccessChain) {
+          if (def.opcode() == spv::Op::OpAccessChain) {
             auto pointer_type =
                 context_->get_type_mgr()->GetType(def.type_id())->AsPointer();
             switch (pointer_type->storage_class()) {
-              case SpvStorageClassFunction:
+              case spv::StorageClass::Function:
                 use->SetOperand(
                     index, {FindOrCreateFunctionVariable(
                                context_, loop_construct_header_->GetParent(),
@@ -270,7 +271,7 @@ bool StructuredLoopToSelectionReductionOpportunity::
                                        opt::Instruction* use,
                                        uint32_t use_index,
                                        opt::BasicBlock& def_block) {
-  if (use->opcode() == SpvOpPhi) {
+  if (use->opcode() == spv::Op::OpPhi) {
     // A use in a phi doesn't need to be dominated by its definition, but the
     // associated parent block does need to be dominated by the definition.
     return context_->GetDominatorAnalysis(loop_construct_header_->GetParent())

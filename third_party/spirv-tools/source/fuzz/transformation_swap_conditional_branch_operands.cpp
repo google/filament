@@ -38,7 +38,7 @@ bool TransformationSwapConditionalBranchOperands::IsApplicable(
   const auto* inst =
       FindInstruction(message_.instruction_descriptor(), ir_context);
   return fuzzerutil::IsFreshId(ir_context, message_.fresh_id()) && inst &&
-         inst->opcode() == SpvOpBranchConditional;
+         inst->opcode() == spv::Op::OpBranchConditional;
 }
 
 void TransformationSwapConditionalBranchOperands::Apply(
@@ -53,13 +53,15 @@ void TransformationSwapConditionalBranchOperands::Apply(
   // Compute the last instruction in the |block| that allows us to insert
   // OpLogicalNot above it.
   auto iter = fuzzerutil::GetIteratorForInstruction(block, branch_inst);
-  if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpLogicalNot, iter)) {
+  if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(spv::Op::OpLogicalNot,
+                                                    iter)) {
     // There might be a merge instruction before OpBranchConditional.
     --iter;
   }
 
-  assert(fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpLogicalNot, iter) &&
-         "We should now be able to insert SpvOpLogicalNot before |iter|");
+  assert(fuzzerutil::CanInsertOpcodeBeforeInstruction(spv::Op::OpLogicalNot,
+                                                      iter) &&
+         "We should now be able to insert spv::Op::OpLogicalNot before |iter|");
 
   // Get the instruction whose result is used as a condition for
   // OpBranchConditional.
@@ -70,7 +72,7 @@ void TransformationSwapConditionalBranchOperands::Apply(
   // We are swapping the labels in OpBranchConditional. This means that we must
   // invert the guard as well. We are using OpLogicalNot for that purpose here.
   auto new_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpLogicalNot, condition_inst->type_id(),
+      ir_context, spv::Op::OpLogicalNot, condition_inst->type_id(),
       message_.fresh_id(),
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {condition_inst->result_id()}}});

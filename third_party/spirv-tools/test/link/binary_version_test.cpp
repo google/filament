@@ -27,20 +27,20 @@ spvtest::Binary CreateBinary(uint32_t version) {
   return {
       // clang-format off
       // Header
-      SpvMagicNumber,
+      static_cast<uint32_t>(spv::MagicNumber),
       version,
       SPV_GENERATOR_WORD(SPV_GENERATOR_KHRONOS, 0),
       1u,  // NOTE: Bound
       0u,  // NOTE: Schema; reserved
 
       // OpCapability Shader
-      SpvOpCapability | 2u << SpvWordCountShift,
-      SpvCapabilityShader,
+      static_cast<uint32_t>(spv::Op::OpCapability) | 2u << spv::WordCountShift,
+      static_cast<uint32_t>(spv::Capability::Shader),
 
       // OpMemoryModel Logical Simple
-      SpvOpMemoryModel | 3u << SpvWordCountShift,
-      SpvAddressingModelLogical,
-      SpvMemoryModelSimple
+      static_cast<uint32_t>(spv::Op::OpMemoryModel) | 3u << spv::WordCountShift,
+      static_cast<uint32_t>(spv::AddressingModel::Logical),
+      static_cast<uint32_t>(spv::MemoryModel::Simple)
       // clang-format on
   };
 }

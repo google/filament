@@ -149,6 +149,7 @@ OpDecorate %input_flat_u32 Location 0
 %u32vec4 = OpTypeVector %u32 4
 %s32vec4 = OpTypeVector %s32 4
 %f32vec4 = OpTypeVector %f32 4
+%boolvec4 = OpTypeVector %bool 4
 
 %f32_0 = OpConstant %f32 0
 %f32_1 = OpConstant %f32 1
@@ -174,6 +175,8 @@ OpDecorate %input_flat_u32 Location 0
 
 %u64_0 = OpConstant %u64 0
 %u64_1 = OpConstant %u64 1
+
+%bool_t = OpConstantTrue %bool
 
 %u32vec2arr4 = OpTypeArray %u32vec2 %u32_4
 %u32vec2arr3 = OpTypeArray %u32vec2 %u32_3
@@ -216,6 +219,8 @@ OpDecorate %input_flat_u32 Location 0
 %f32vec3_hhh = OpConstantComposite %f32vec3 %f32_0_5 %f32_0_5 %f32_0_5
 
 %f32vec4_0000 = OpConstantComposite %f32vec4 %f32_0 %f32_0 %f32_0 %f32_0
+
+%boolvec4_tttt = OpConstantComposite %boolvec4 %bool_t %bool_t %bool_t %bool_t
 
 %const_offsets = OpConstantComposite %u32vec2arr4 %u32vec2_01 %u32vec2_12 %u32vec2_01 %u32vec2_12
 %const_offsets3x2 = OpConstantComposite %u32vec2arr3 %u32vec2_01 %u32vec2_12 %u32vec2_01
@@ -1120,8 +1125,9 @@ TEST_F(ValidateImage, ImageTexelPointerImageNotResultTypePointer) {
 
   CompileSuccessfully(GenerateShaderCode(body).c_str());
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(), HasSubstr("Operand 145[%145] cannot be a "
-                                               "type"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Operand '148[%148]' cannot be a "
+                        "type"));
 }
 
 TEST_F(ValidateImage, ImageTexelPointerImageNotImage) {
@@ -3746,6 +3752,17 @@ OpImageWrite %img %u32_1 %u32vec4_0123
                         "but given only 1"));
 }
 
+TEST_F(ValidateImage, WriteTexelScalarSuccess) {
+  const std::string body = R"(
+%img = OpLoad %type_image_u32_2d_0002 %uniform_image_u32_2d_0002
+OpImageWrite %img %u32vec2_01 %u32_2
+)";
+
+  const std::string extra = "\nOpCapability StorageImageWriteWithoutFormat\n";
+  CompileSuccessfully(GenerateShaderCode(body, extra).c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
 TEST_F(ValidateImage, WriteTexelWrongType) {
   const std::string body = R"(
 %img = OpLoad %type_image_u32_2d_0002 %uniform_image_u32_2d_0002
@@ -3759,17 +3776,17 @@ OpImageWrite %img %u32vec2_01 %img
               HasSubstr("Expected Texel to be int or float vector or scalar"));
 }
 
-TEST_F(ValidateImage, DISABLED_WriteTexelNotVector4) {
+TEST_F(ValidateImage, WriteTexelNonNumericalType) {
   const std::string body = R"(
 %img = OpLoad %type_image_u32_2d_0002 %uniform_image_u32_2d_0002
-OpImageWrite %img %u32vec2_01 %u32vec3_012
+OpImageWrite %img %u32vec2_01 %boolvec4_tttt
 )";
 
   const std::string extra = "\nOpCapability StorageImageWriteWithoutFormat\n";
   CompileSuccessfully(GenerateShaderCode(body, extra).c_str());
   ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Expected Texel to have 4 components"));
+              HasSubstr("Expected Texel to be int or float vector or scalar"));
 }
 
 TEST_F(ValidateImage, WriteTexelWrongComponentType) {
@@ -6246,6 +6263,138 @@ OpFunctionEnd
 
   CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_6);
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_6));
+}
+
+TEST_F(ValidateImage, NVBindlessSamplerBuiltins) {
+  const std::string text = R"(
+              OpCapability Shader
+              OpCapability Int64
+              OpCapability Image1D
+              OpCapability BindlessTextureNV
+              OpExtension "SPV_NV_bindless_texture"
+         %1 = OpExtInstImport "GLSL.std.450"
+              OpMemoryModel Logical GLSL450
+              OpSamplerImageAddressingModeNV 64
+              OpEntryPoint Fragment %main "main"
+              OpExecutionMode %main OriginUpperLeft
+              OpSource GLSL 450
+              OpName %main "main"
+              OpName %s2D "s2D"
+              OpName %textureHandle "textureHandle"
+              OpName %i1D "i1D"
+              OpName %s "s"
+              OpName %temp "temp"
+      %void = OpTypeVoid
+         %3 = OpTypeFunction %void
+     %float = OpTypeFloat 32
+         %7 = OpTypeImage %float 2D 0 0 0 1 Unknown
+         %8 = OpTypeSampledImage %7
+%_ptr_Function_8 = OpTypePointer Function %8
+     %ulong = OpTypeInt 64 0
+%_ptr_Private_ulong = OpTypePointer Private %ulong
+%textureHandle = OpVariable %_ptr_Private_ulong Private
+        %16 = OpTypeImage %float 1D 0 0 0 2 Rgba32f
+%_ptr_Function_16 = OpTypePointer Function %16
+        %21 = OpTypeSampler
+%_ptr_Function_21 = OpTypePointer Function %21
+%_ptr_Function_ulong = OpTypePointer Function %ulong
+      %main = OpFunction %void None %3
+         %5 = OpLabel
+       %s2D = OpVariable %_ptr_Function_8 Function
+       %i1D = OpVariable %_ptr_Function_16 Function
+         %s = OpVariable %_ptr_Function_21 Function
+      %temp = OpVariable %_ptr_Function_ulong Function
+        %14 = OpLoad %ulong %textureHandle
+        %15 = OpConvertUToSampledImageNV %8 %14
+              OpStore %s2D %15
+        %19 = OpLoad %ulong %textureHandle
+        %20 = OpConvertUToImageNV %16 %19
+              OpStore %i1D %20
+        %24 = OpLoad %ulong %textureHandle
+        %25 = OpConvertUToSamplerNV %21 %24
+              OpStore %s %25
+        %28 = OpLoad %8 %s2D
+        %29 = OpConvertSampledImageToUNV %ulong %28
+              OpStore %temp %29
+        %30 = OpLoad %16 %i1D
+        %31 = OpConvertImageToUNV %ulong %30
+              OpStore %temp %31
+        %32 = OpLoad %21 %s
+        %33 = OpConvertSamplerToUNV %ulong %32
+              OpStore %temp %33
+              OpReturn
+              OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+}
+
+TEST_F(ValidateImage, NVBindlessAddressingMode64) {
+  std::string text = R"(
+         OpCapability Shader
+         OpCapability BindlessTextureNV
+         OpExtension "SPV_NV_bindless_texture"
+         OpMemoryModel Logical GLSL450
+         OpSamplerImageAddressingModeNV 64
+         OpEntryPoint GLCompute %func "main"
+%voidt = OpTypeVoid
+%uintt = OpTypeInt 32 0
+%funct = OpTypeFunction %voidt
+%func  = OpFunction %voidt None %funct
+%entry = OpLabel
+%udef  = OpUndef %uintt
+         OpReturn
+         OpFunctionEnd
+)";
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+}
+
+TEST_F(ValidateImage, NVBindlessAddressingMode32) {
+  std::string text = R"(
+         OpCapability Shader
+         OpCapability BindlessTextureNV
+         OpExtension "SPV_NV_bindless_texture"
+         OpMemoryModel Logical GLSL450
+         OpSamplerImageAddressingModeNV 32
+         OpEntryPoint GLCompute %func "main"
+%voidt = OpTypeVoid
+%uintt = OpTypeInt 32 0
+%funct = OpTypeFunction %voidt
+%func  = OpFunction %voidt None %funct
+%entry = OpLabel
+%udef  = OpUndef %uintt
+         OpReturn
+         OpFunctionEnd
+)";
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+}
+
+TEST_F(ValidateImage, NVBindlessInvalidAddressingMode) {
+  std::string text = R"(
+         OpCapability Shader
+         OpCapability BindlessTextureNV
+         OpExtension "SPV_NV_bindless_texture"
+         OpMemoryModel Logical GLSL450
+         OpSamplerImageAddressingModeNV 0
+         OpEntryPoint GLCompute %func "main"
+%voidt = OpTypeVoid
+%uintt = OpTypeInt 32 0
+%funct = OpTypeFunction %voidt
+%func  = OpFunction %voidt None %funct
+%entry = OpLabel
+%udef  = OpUndef %uintt
+         OpReturn
+         OpFunctionEnd
+)";
+  CompileSuccessfully(text, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA,
+            ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("OpSamplerImageAddressingModeNV bitwidth should be 64 or 32"));
 }
 
 }  // namespace

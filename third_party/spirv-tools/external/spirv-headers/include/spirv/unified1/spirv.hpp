@@ -94,6 +94,8 @@ enum ExecutionModel {
     ExecutionModelMissNV = 5317,
     ExecutionModelCallableKHR = 5318,
     ExecutionModelCallableNV = 5318,
+    ExecutionModelTaskEXT = 5364,
+    ExecutionModelMeshEXT = 5365,
     ExecutionModelMax = 0x7fffffff,
 };
 
@@ -161,11 +163,21 @@ enum ExecutionMode {
     ExecutionModeSignedZeroInfNanPreserve = 4461,
     ExecutionModeRoundingModeRTE = 4462,
     ExecutionModeRoundingModeRTZ = 4463,
+    ExecutionModeEarlyAndLateFragmentTestsAMD = 5017,
     ExecutionModeStencilRefReplacingEXT = 5027,
+    ExecutionModeStencilRefUnchangedFrontAMD = 5079,
+    ExecutionModeStencilRefGreaterFrontAMD = 5080,
+    ExecutionModeStencilRefLessFrontAMD = 5081,
+    ExecutionModeStencilRefUnchangedBackAMD = 5082,
+    ExecutionModeStencilRefGreaterBackAMD = 5083,
+    ExecutionModeStencilRefLessBackAMD = 5084,
+    ExecutionModeOutputLinesEXT = 5269,
     ExecutionModeOutputLinesNV = 5269,
+    ExecutionModeOutputPrimitivesEXT = 5270,
     ExecutionModeOutputPrimitivesNV = 5270,
     ExecutionModeDerivativeGroupQuadsNV = 5289,
     ExecutionModeDerivativeGroupLinearNV = 5290,
+    ExecutionModeOutputTrianglesEXT = 5298,
     ExecutionModeOutputTrianglesNV = 5298,
     ExecutionModePixelInterlockOrderedEXT = 5366,
     ExecutionModePixelInterlockUnorderedEXT = 5367,
@@ -183,6 +195,7 @@ enum ExecutionMode {
     ExecutionModeNoGlobalOffsetINTEL = 5895,
     ExecutionModeNumSIMDWorkitemsINTEL = 5896,
     ExecutionModeSchedulerTargetFmaxMhzINTEL = 5903,
+    ExecutionModeStreamingInterfaceINTEL = 6154,
     ExecutionModeNamedBarrierCountINTEL = 6417,
     ExecutionModeMax = 0x7fffffff,
 };
@@ -215,6 +228,8 @@ enum StorageClass {
     StorageClassShaderRecordBufferNV = 5343,
     StorageClassPhysicalStorageBuffer = 5349,
     StorageClassPhysicalStorageBufferEXT = 5349,
+    StorageClassHitObjectAttributeNV = 5385,
+    StorageClassTaskPayloadWorkgroupEXT = 5402,
     StorageClassCodeSectionINTEL = 5605,
     StorageClassDeviceOnlyINTEL = 5936,
     StorageClassHostOnlyINTEL = 5937,
@@ -439,6 +454,7 @@ enum FunctionParameterAttribute {
     FunctionParameterAttributeNoCapture = 5,
     FunctionParameterAttributeNoWrite = 6,
     FunctionParameterAttributeNoReadWrite = 7,
+    FunctionParameterAttributeRuntimeAlignedINTEL = 5940,
     FunctionParameterAttributeMax = 0x7fffffff,
 };
 
@@ -497,6 +513,7 @@ enum Decoration {
     DecorationPassthroughNV = 5250,
     DecorationViewportRelativeNV = 5252,
     DecorationSecondaryViewportRelativeNV = 5256,
+    DecorationPerPrimitiveEXT = 5271,
     DecorationPerPrimitiveNV = 5271,
     DecorationPerViewNV = 5272,
     DecorationPerTaskNV = 5273,
@@ -508,6 +525,7 @@ enum Decoration {
     DecorationRestrictPointerEXT = 5355,
     DecorationAliasedPointer = 5356,
     DecorationAliasedPointerEXT = 5356,
+    DecorationHitObjectShaderRecordBufferNV = 5386,
     DecorationBindlessSamplerNV = 5398,
     DecorationBindlessImageNV = 5399,
     DecorationBoundSamplerNV = 5400,
@@ -546,8 +564,12 @@ enum Decoration {
     DecorationPrefetchINTEL = 5902,
     DecorationStallEnableINTEL = 5905,
     DecorationFuseLoopsInFunctionINTEL = 5907,
+    DecorationMathOpDSPModeINTEL = 5909,
     DecorationAliasScopeINTEL = 5914,
     DecorationNoAliasINTEL = 5915,
+    DecorationInitiationIntervalINTEL = 5917,
+    DecorationMaxConcurrencyINTEL = 5918,
+    DecorationPipelineEnableINTEL = 5919,
     DecorationBufferLocationINTEL = 5921,
     DecorationIOPipeStorageINTEL = 5944,
     DecorationFunctionFloatingPointModeINTEL = 6080,
@@ -599,6 +621,11 @@ enum BuiltIn {
     BuiltInSubgroupLocalInvocationId = 41,
     BuiltInVertexIndex = 42,
     BuiltInInstanceIndex = 43,
+    BuiltInCoreIDARM = 4160,
+    BuiltInCoreCountARM = 4161,
+    BuiltInCoreMaxIDARM = 4162,
+    BuiltInWarpIDARM = 4163,
+    BuiltInWarpMaxIDARM = 4164,
     BuiltInSubgroupEqMask = 4416,
     BuiltInSubgroupEqMaskKHR = 4416,
     BuiltInSubgroupGeMask = 4417,
@@ -646,6 +673,10 @@ enum BuiltIn {
     BuiltInFragmentSizeNV = 5292,
     BuiltInFragInvocationCountEXT = 5293,
     BuiltInInvocationsPerPixelNV = 5293,
+    BuiltInPrimitivePointIndicesEXT = 5294,
+    BuiltInPrimitiveLineIndicesEXT = 5295,
+    BuiltInPrimitiveTriangleIndicesEXT = 5296,
+    BuiltInCullPrimitiveEXT = 5299,
     BuiltInLaunchIdKHR = 5319,
     BuiltInLaunchIdNV = 5319,
     BuiltInLaunchSizeKHR = 5320,
@@ -713,6 +744,8 @@ enum LoopControlShift {
     LoopControlMaxInterleavingINTELShift = 21,
     LoopControlSpeculatedIterationsINTELShift = 22,
     LoopControlNoFusionINTELShift = 23,
+    LoopControlLoopCountINTELShift = 24,
+    LoopControlMaxReinvocationDelayINTELShift = 25,
     LoopControlMax = 0x7fffffff,
 };
 
@@ -735,6 +768,8 @@ enum LoopControlMask {
     LoopControlMaxInterleavingINTELMask = 0x00200000,
     LoopControlSpeculatedIterationsINTELMask = 0x00400000,
     LoopControlNoFusionINTELMask = 0x00800000,
+    LoopControlLoopCountINTELMask = 0x01000000,
+    LoopControlMaxReinvocationDelayINTELMask = 0x02000000,
 };
 
 enum FunctionControlShift {
@@ -938,6 +973,7 @@ enum Capability {
     CapabilityShaderLayer = 69,
     CapabilityShaderViewportIndex = 70,
     CapabilityUniformDecoration = 71,
+    CapabilityCoreBuiltinsARM = 4165,
     CapabilityFragmentShadingRateKHR = 4422,
     CapabilitySubgroupBallotKHR = 4423,
     CapabilityDrawParameters = 4427,
@@ -986,6 +1022,7 @@ enum Capability {
     CapabilityFragmentFullyCoveredEXT = 5265,
     CapabilityMeshShadingNV = 5266,
     CapabilityImageFootprintNV = 5282,
+    CapabilityMeshShadingEXT = 5283,
     CapabilityFragmentBarycentricKHR = 5284,
     CapabilityFragmentBarycentricNV = 5284,
     CapabilityComputeDerivativeGroupQuadsNV = 5288,
@@ -1033,6 +1070,8 @@ enum Capability {
     CapabilityFragmentShaderPixelInterlockEXT = 5378,
     CapabilityDemoteToHelperInvocation = 5379,
     CapabilityDemoteToHelperInvocationEXT = 5379,
+    CapabilityRayTracingOpacityMicromapEXT = 5381,
+    CapabilityShaderInvocationReorderNV = 5383,
     CapabilityBindlessTextureNV = 5390,
     CapabilitySubgroupShuffleINTEL = 5568,
     CapabilitySubgroupBufferBlockIOINTEL = 5569,
@@ -1066,10 +1105,13 @@ enum Capability {
     CapabilityFPGAMemoryAccessesINTEL = 5898,
     CapabilityFPGAClusterAttributesINTEL = 5904,
     CapabilityLoopFuseINTEL = 5906,
+    CapabilityFPGADSPControlINTEL = 5908,
     CapabilityMemoryAccessAliasingINTEL = 5910,
+    CapabilityFPGAInvocationPipeliningAttributesINTEL = 5916,
     CapabilityFPGABufferLocationINTEL = 5920,
     CapabilityArbitraryPrecisionFixedPointINTEL = 5922,
     CapabilityUSMStorageClassesINTEL = 5935,
+    CapabilityRuntimeAlignedAttributeINTEL = 5939,
     CapabilityIOPipesINTEL = 5943,
     CapabilityBlockingPipesINTEL = 5945,
     CapabilityFPGARegINTEL = 5948,
@@ -1106,6 +1148,7 @@ enum RayFlagsShift {
     RayFlagsCullNoOpaqueKHRShift = 7,
     RayFlagsSkipTrianglesKHRShift = 8,
     RayFlagsSkipAABBsKHRShift = 9,
+    RayFlagsForceOpacityMicromap2StateEXTShift = 10,
     RayFlagsMax = 0x7fffffff,
 };
 
@@ -1121,6 +1164,7 @@ enum RayFlagsMask {
     RayFlagsCullNoOpaqueKHRMask = 0x00000080,
     RayFlagsSkipTrianglesKHRMask = 0x00000100,
     RayFlagsSkipAABBsKHRMask = 0x00000200,
+    RayFlagsForceOpacityMicromap2StateEXTMask = 0x00000400,
 };
 
 enum RayQueryIntersection {
@@ -1584,7 +1628,42 @@ enum Op {
     OpFragmentMaskFetchAMD = 5011,
     OpFragmentFetchAMD = 5012,
     OpReadClockKHR = 5056,
+    OpHitObjectRecordHitMotionNV = 5249,
+    OpHitObjectRecordHitWithIndexMotionNV = 5250,
+    OpHitObjectRecordMissMotionNV = 5251,
+    OpHitObjectGetWorldToObjectNV = 5252,
+    OpHitObjectGetObjectToWorldNV = 5253,
+    OpHitObjectGetObjectRayDirectionNV = 5254,
+    OpHitObjectGetObjectRayOriginNV = 5255,
+    OpHitObjectTraceRayMotionNV = 5256,
+    OpHitObjectGetShaderRecordBufferHandleNV = 5257,
+    OpHitObjectGetShaderBindingTableRecordIndexNV = 5258,
+    OpHitObjectRecordEmptyNV = 5259,
+    OpHitObjectTraceRayNV = 5260,
+    OpHitObjectRecordHitNV = 5261,
+    OpHitObjectRecordHitWithIndexNV = 5262,
+    OpHitObjectRecordMissNV = 5263,
+    OpHitObjectExecuteShaderNV = 5264,
+    OpHitObjectGetCurrentTimeNV = 5265,
+    OpHitObjectGetAttributesNV = 5266,
+    OpHitObjectGetHitKindNV = 5267,
+    OpHitObjectGetPrimitiveIndexNV = 5268,
+    OpHitObjectGetGeometryIndexNV = 5269,
+    OpHitObjectGetInstanceIdNV = 5270,
+    OpHitObjectGetInstanceCustomIndexNV = 5271,
+    OpHitObjectGetWorldRayDirectionNV = 5272,
+    OpHitObjectGetWorldRayOriginNV = 5273,
+    OpHitObjectGetRayTMaxNV = 5274,
+    OpHitObjectGetRayTMinNV = 5275,
+    OpHitObjectIsEmptyNV = 5276,
+    OpHitObjectIsHitNV = 5277,
+    OpHitObjectIsMissNV = 5278,
+    OpReorderThreadWithHitObjectNV = 5279,
+    OpReorderThreadWithHintNV = 5280,
+    OpTypeHitObjectNV = 5281,
     OpImageSampleFootprintNV = 5283,
+    OpEmitMeshTasksEXT = 5294,
+    OpSetMeshOutputsEXT = 5295,
     OpGroupNonUniformPartitionNV = 5296,
     OpWritePackedPrimitiveIndices4x8NV = 5299,
     OpReportIntersectionKHR = 5334,
@@ -2257,7 +2336,42 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case OpFragmentMaskFetchAMD: *hasResult = true; *hasResultType = true; break;
     case OpFragmentFetchAMD: *hasResult = true; *hasResultType = true; break;
     case OpReadClockKHR: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectRecordHitMotionNV: *hasResult = false; *hasResultType = false; break;
+    case OpHitObjectRecordHitWithIndexMotionNV: *hasResult = false; *hasResultType = false; break;
+    case OpHitObjectRecordMissMotionNV: *hasResult = false; *hasResultType = false; break;
+    case OpHitObjectGetWorldToObjectNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectGetObjectToWorldNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectGetObjectRayDirectionNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectGetObjectRayOriginNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectTraceRayMotionNV: *hasResult = false; *hasResultType = false; break;
+    case OpHitObjectGetShaderRecordBufferHandleNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectGetShaderBindingTableRecordIndexNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectRecordEmptyNV: *hasResult = false; *hasResultType = false; break;
+    case OpHitObjectTraceRayNV: *hasResult = false; *hasResultType = false; break;
+    case OpHitObjectRecordHitNV: *hasResult = false; *hasResultType = false; break;
+    case OpHitObjectRecordHitWithIndexNV: *hasResult = false; *hasResultType = false; break;
+    case OpHitObjectRecordMissNV: *hasResult = false; *hasResultType = false; break;
+    case OpHitObjectExecuteShaderNV: *hasResult = false; *hasResultType = false; break;
+    case OpHitObjectGetCurrentTimeNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectGetAttributesNV: *hasResult = false; *hasResultType = false; break;
+    case OpHitObjectGetHitKindNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectGetPrimitiveIndexNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectGetGeometryIndexNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectGetInstanceIdNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectGetInstanceCustomIndexNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectGetWorldRayDirectionNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectGetWorldRayOriginNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectGetRayTMaxNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectGetRayTMinNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectIsEmptyNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectIsHitNV: *hasResult = true; *hasResultType = true; break;
+    case OpHitObjectIsMissNV: *hasResult = true; *hasResultType = true; break;
+    case OpReorderThreadWithHitObjectNV: *hasResult = false; *hasResultType = false; break;
+    case OpReorderThreadWithHintNV: *hasResult = false; *hasResultType = false; break;
+    case OpTypeHitObjectNV: *hasResult = true; *hasResultType = false; break;
     case OpImageSampleFootprintNV: *hasResult = true; *hasResultType = true; break;
+    case OpEmitMeshTasksEXT: *hasResult = false; *hasResultType = false; break;
+    case OpSetMeshOutputsEXT: *hasResult = false; *hasResultType = false; break;
     case OpGroupNonUniformPartitionNV: *hasResult = true; *hasResultType = true; break;
     case OpWritePackedPrimitiveIndices4x8NV: *hasResult = false; *hasResultType = false; break;
     case OpReportIntersectionNV: *hasResult = true; *hasResultType = true; break;
@@ -2537,18 +2651,48 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
 }
 #endif /* SPV_ENABLE_UTILITY_CODE */
 
-// Overload operator| for mask bit combining
+// Overload bitwise operators for mask bit combining
 
 inline ImageOperandsMask operator|(ImageOperandsMask a, ImageOperandsMask b) { return ImageOperandsMask(unsigned(a) | unsigned(b)); }
+inline ImageOperandsMask operator&(ImageOperandsMask a, ImageOperandsMask b) { return ImageOperandsMask(unsigned(a) & unsigned(b)); }
+inline ImageOperandsMask operator^(ImageOperandsMask a, ImageOperandsMask b) { return ImageOperandsMask(unsigned(a) ^ unsigned(b)); }
+inline ImageOperandsMask operator~(ImageOperandsMask a) { return ImageOperandsMask(~unsigned(a)); }
 inline FPFastMathModeMask operator|(FPFastMathModeMask a, FPFastMathModeMask b) { return FPFastMathModeMask(unsigned(a) | unsigned(b)); }
+inline FPFastMathModeMask operator&(FPFastMathModeMask a, FPFastMathModeMask b) { return FPFastMathModeMask(unsigned(a) & unsigned(b)); }
+inline FPFastMathModeMask operator^(FPFastMathModeMask a, FPFastMathModeMask b) { return FPFastMathModeMask(unsigned(a) ^ unsigned(b)); }
+inline FPFastMathModeMask operator~(FPFastMathModeMask a) { return FPFastMathModeMask(~unsigned(a)); }
 inline SelectionControlMask operator|(SelectionControlMask a, SelectionControlMask b) { return SelectionControlMask(unsigned(a) | unsigned(b)); }
+inline SelectionControlMask operator&(SelectionControlMask a, SelectionControlMask b) { return SelectionControlMask(unsigned(a) & unsigned(b)); }
+inline SelectionControlMask operator^(SelectionControlMask a, SelectionControlMask b) { return SelectionControlMask(unsigned(a) ^ unsigned(b)); }
+inline SelectionControlMask operator~(SelectionControlMask a) { return SelectionControlMask(~unsigned(a)); }
 inline LoopControlMask operator|(LoopControlMask a, LoopControlMask b) { return LoopControlMask(unsigned(a) | unsigned(b)); }
+inline LoopControlMask operator&(LoopControlMask a, LoopControlMask b) { return LoopControlMask(unsigned(a) & unsigned(b)); }
+inline LoopControlMask operator^(LoopControlMask a, LoopControlMask b) { return LoopControlMask(unsigned(a) ^ unsigned(b)); }
+inline LoopControlMask operator~(LoopControlMask a) { return LoopControlMask(~unsigned(a)); }
 inline FunctionControlMask operator|(FunctionControlMask a, FunctionControlMask b) { return FunctionControlMask(unsigned(a) | unsigned(b)); }
+inline FunctionControlMask operator&(FunctionControlMask a, FunctionControlMask b) { return FunctionControlMask(unsigned(a) & unsigned(b)); }
+inline FunctionControlMask operator^(FunctionControlMask a, FunctionControlMask b) { return FunctionControlMask(unsigned(a) ^ unsigned(b)); }
+inline FunctionControlMask operator~(FunctionControlMask a) { return FunctionControlMask(~unsigned(a)); }
 inline MemorySemanticsMask operator|(MemorySemanticsMask a, MemorySemanticsMask b) { return MemorySemanticsMask(unsigned(a) | unsigned(b)); }
+inline MemorySemanticsMask operator&(MemorySemanticsMask a, MemorySemanticsMask b) { return MemorySemanticsMask(unsigned(a) & unsigned(b)); }
+inline MemorySemanticsMask operator^(MemorySemanticsMask a, MemorySemanticsMask b) { return MemorySemanticsMask(unsigned(a) ^ unsigned(b)); }
+inline MemorySemanticsMask operator~(MemorySemanticsMask a) { return MemorySemanticsMask(~unsigned(a)); }
 inline MemoryAccessMask operator|(MemoryAccessMask a, MemoryAccessMask b) { return MemoryAccessMask(unsigned(a) | unsigned(b)); }
+inline MemoryAccessMask operator&(MemoryAccessMask a, MemoryAccessMask b) { return MemoryAccessMask(unsigned(a) & unsigned(b)); }
+inline MemoryAccessMask operator^(MemoryAccessMask a, MemoryAccessMask b) { return MemoryAccessMask(unsigned(a) ^ unsigned(b)); }
+inline MemoryAccessMask operator~(MemoryAccessMask a) { return MemoryAccessMask(~unsigned(a)); }
 inline KernelProfilingInfoMask operator|(KernelProfilingInfoMask a, KernelProfilingInfoMask b) { return KernelProfilingInfoMask(unsigned(a) | unsigned(b)); }
+inline KernelProfilingInfoMask operator&(KernelProfilingInfoMask a, KernelProfilingInfoMask b) { return KernelProfilingInfoMask(unsigned(a) & unsigned(b)); }
+inline KernelProfilingInfoMask operator^(KernelProfilingInfoMask a, KernelProfilingInfoMask b) { return KernelProfilingInfoMask(unsigned(a) ^ unsigned(b)); }
+inline KernelProfilingInfoMask operator~(KernelProfilingInfoMask a) { return KernelProfilingInfoMask(~unsigned(a)); }
 inline RayFlagsMask operator|(RayFlagsMask a, RayFlagsMask b) { return RayFlagsMask(unsigned(a) | unsigned(b)); }
+inline RayFlagsMask operator&(RayFlagsMask a, RayFlagsMask b) { return RayFlagsMask(unsigned(a) & unsigned(b)); }
+inline RayFlagsMask operator^(RayFlagsMask a, RayFlagsMask b) { return RayFlagsMask(unsigned(a) ^ unsigned(b)); }
+inline RayFlagsMask operator~(RayFlagsMask a) { return RayFlagsMask(~unsigned(a)); }
 inline FragmentShadingRateMask operator|(FragmentShadingRateMask a, FragmentShadingRateMask b) { return FragmentShadingRateMask(unsigned(a) | unsigned(b)); }
+inline FragmentShadingRateMask operator&(FragmentShadingRateMask a, FragmentShadingRateMask b) { return FragmentShadingRateMask(unsigned(a) & unsigned(b)); }
+inline FragmentShadingRateMask operator^(FragmentShadingRateMask a, FragmentShadingRateMask b) { return FragmentShadingRateMask(unsigned(a) ^ unsigned(b)); }
+inline FragmentShadingRateMask operator~(FragmentShadingRateMask a) { return FragmentShadingRateMask(~unsigned(a)); }
 
 }  // end namespace spv
 

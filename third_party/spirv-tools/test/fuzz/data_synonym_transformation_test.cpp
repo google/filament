@@ -146,12 +146,12 @@ TEST(DataSynonymTransformationTest, ArrayCompositeSynonyms) {
 
   // Replace %12 with %100[0] in '%25 = OpAccessChain %24 %20 %12'
   auto instruction_descriptor_1 =
-      MakeInstructionDescriptor(25, SpvOpAccessChain, 0);
+      MakeInstructionDescriptor(25, spv::Op::OpAccessChain, 0);
   auto good_extract_1 =
       TransformationCompositeExtract(instruction_descriptor_1, 102, 100, {0});
   // Bad: id already in use
   auto bad_extract_1 = TransformationCompositeExtract(
-      MakeInstructionDescriptor(25, SpvOpAccessChain, 0), 25, 100, {0});
+      MakeInstructionDescriptor(25, spv::Op::OpAccessChain, 0), 25, 100, {0});
   ASSERT_TRUE(
       good_extract_1.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
@@ -166,7 +166,8 @@ TEST(DataSynonymTransformationTest, ArrayCompositeSynonyms) {
                                                kConsoleMessageConsumer));
 
   // Replace %13 with %100[1] in 'OpStore %15 %13'
-  auto instruction_descriptor_2 = MakeInstructionDescriptor(100, SpvOpStore, 0);
+  auto instruction_descriptor_2 =
+      MakeInstructionDescriptor(100, spv::Op::OpStore, 0);
   auto good_extract_2 =
       TransformationCompositeExtract(instruction_descriptor_2, 103, 100, {1});
   // No bad example provided here.
@@ -183,7 +184,7 @@ TEST(DataSynonymTransformationTest, ArrayCompositeSynonyms) {
 
   // Replace %22 with %100[2] in '%23 = OpConvertSToF %16 %22'
   auto instruction_descriptor_3 =
-      MakeInstructionDescriptor(23, SpvOpConvertSToF, 0);
+      MakeInstructionDescriptor(23, spv::Op::OpConvertSToF, 0);
   auto good_extract_3 =
       TransformationCompositeExtract(instruction_descriptor_3, 104, 100, {2});
   ASSERT_TRUE(
@@ -203,12 +204,13 @@ TEST(DataSynonymTransformationTest, ArrayCompositeSynonyms) {
                                                kConsoleMessageConsumer));
 
   // Replace %28 with %101[0] in 'OpStore %33 %28'
-  auto instruction_descriptor_4 = MakeInstructionDescriptor(33, SpvOpStore, 0);
+  auto instruction_descriptor_4 =
+      MakeInstructionDescriptor(33, spv::Op::OpStore, 0);
   auto good_extract_4 =
       TransformationCompositeExtract(instruction_descriptor_4, 105, 101, {0});
   // Bad: instruction descriptor does not identify an appropriate instruction
   auto bad_extract_4 = TransformationCompositeExtract(
-      MakeInstructionDescriptor(33, SpvOpCopyObject, 0), 105, 101, {0});
+      MakeInstructionDescriptor(33, spv::Op::OpCopyObject, 0), 105, 101, {0});
   ASSERT_TRUE(
       good_extract_4.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
@@ -224,7 +226,7 @@ TEST(DataSynonymTransformationTest, ArrayCompositeSynonyms) {
 
   // Replace %23 with %101[1] in '%50 = OpCopyObject %16 %23'
   auto instruction_descriptor_5 =
-      MakeInstructionDescriptor(50, SpvOpCopyObject, 0);
+      MakeInstructionDescriptor(50, spv::Op::OpCopyObject, 0);
   auto good_extract_5 =
       TransformationCompositeExtract(instruction_descriptor_5, 106, 101, {1});
   ASSERT_TRUE(
@@ -244,7 +246,8 @@ TEST(DataSynonymTransformationTest, ArrayCompositeSynonyms) {
                                                kConsoleMessageConsumer));
 
   // Replace %32 with %101[2] in 'OpStore %33 %32'
-  auto instruction_descriptor_6 = MakeInstructionDescriptor(33, SpvOpStore, 1);
+  auto instruction_descriptor_6 =
+      MakeInstructionDescriptor(33, spv::Op::OpStore, 1);
   auto good_extract_6 =
       TransformationCompositeExtract(instruction_descriptor_6, 107, 101, {2});
   // Bad: id 1001 does not exist
@@ -265,7 +268,7 @@ TEST(DataSynonymTransformationTest, ArrayCompositeSynonyms) {
 
   // Replace %23 with %101[3] in '%51 = OpCopyObject %16 %23'
   auto instruction_descriptor_7 =
-      MakeInstructionDescriptor(51, SpvOpCopyObject, 0);
+      MakeInstructionDescriptor(51, spv::Op::OpCopyObject, 0);
   auto good_extract_7 =
       TransformationCompositeExtract(instruction_descriptor_7, 108, 101, {3});
   ASSERT_TRUE(
@@ -431,7 +434,8 @@ TEST(DataSynonymTransformationTest, MatrixCompositeSynonyms) {
       MakeSynonymFact(50, {}, 100, {2}));
 
   // Replace %23 with %100[0] in '%26 = OpFAdd %7 %23 %25'
-  auto instruction_descriptor_1 = MakeInstructionDescriptor(26, SpvOpFAdd, 0);
+  auto instruction_descriptor_1 =
+      MakeInstructionDescriptor(26, spv::Op::OpFAdd, 0);
   auto extract_1 =
       TransformationCompositeExtract(instruction_descriptor_1, 101, 100, {0});
   ASSERT_TRUE(extract_1.IsApplicable(context.get(), transformation_context));
@@ -445,7 +449,8 @@ TEST(DataSynonymTransformationTest, MatrixCompositeSynonyms) {
                                                kConsoleMessageConsumer));
 
   // Replace %25 with %100[1] in '%26 = OpFAdd %7 %23 %25'
-  auto instruction_descriptor_2 = MakeInstructionDescriptor(26, SpvOpFAdd, 0);
+  auto instruction_descriptor_2 =
+      MakeInstructionDescriptor(26, spv::Op::OpFAdd, 0);
   auto extract_2 =
       TransformationCompositeExtract(instruction_descriptor_2, 102, 100, {1});
   ASSERT_TRUE(extract_2.IsApplicable(context.get(), transformation_context));
@@ -611,7 +616,7 @@ TEST(DataSynonymTransformationTest, StructCompositeSynonyms) {
 
   // Replace %45 with %100[1] in '%46 = OpCompositeConstruct %32 %35 %45'
   auto instruction_descriptor_1 =
-      MakeInstructionDescriptor(46, SpvOpCompositeConstruct, 0);
+      MakeInstructionDescriptor(46, spv::Op::OpCompositeConstruct, 0);
   auto extract_1 =
       TransformationCompositeExtract(instruction_descriptor_1, 201, 100, {1});
   ASSERT_TRUE(extract_1.IsApplicable(context.get(), transformation_context));
@@ -627,7 +632,7 @@ TEST(DataSynonymTransformationTest, StructCompositeSynonyms) {
   // Replace second occurrence of %27 with %101[0] in '%28 =
   // OpCompositeConstruct %8 %27 %27'
   auto instruction_descriptor_2 =
-      MakeInstructionDescriptor(28, SpvOpCompositeConstruct, 0);
+      MakeInstructionDescriptor(28, spv::Op::OpCompositeConstruct, 0);
   auto extract_2 =
       TransformationCompositeExtract(instruction_descriptor_2, 202, 101, {0});
   ASSERT_TRUE(extract_2.IsApplicable(context.get(), transformation_context));
@@ -642,7 +647,7 @@ TEST(DataSynonymTransformationTest, StructCompositeSynonyms) {
 
   // Replace %36 with %101[1] in '%45 = OpCompositeConstruct %31 %36 %41 %44'
   auto instruction_descriptor_3 =
-      MakeInstructionDescriptor(45, SpvOpCompositeConstruct, 0);
+      MakeInstructionDescriptor(45, spv::Op::OpCompositeConstruct, 0);
   auto extract_3 =
       TransformationCompositeExtract(instruction_descriptor_3, 203, 101, {1});
   ASSERT_TRUE(extract_3.IsApplicable(context.get(), transformation_context));
@@ -658,7 +663,7 @@ TEST(DataSynonymTransformationTest, StructCompositeSynonyms) {
   // Replace first occurrence of %27 with %101[2] in '%28 = OpCompositeConstruct
   // %8 %27 %27'
   auto instruction_descriptor_4 =
-      MakeInstructionDescriptor(28, SpvOpCompositeConstruct, 0);
+      MakeInstructionDescriptor(28, spv::Op::OpCompositeConstruct, 0);
   auto extract_4 =
       TransformationCompositeExtract(instruction_descriptor_4, 204, 101, {2});
   ASSERT_TRUE(extract_4.IsApplicable(context.get(), transformation_context));
@@ -672,7 +677,8 @@ TEST(DataSynonymTransformationTest, StructCompositeSynonyms) {
                                                kConsoleMessageConsumer));
 
   // Replace %22 with %102[0] in 'OpStore %23 %22'
-  auto instruction_descriptor_5 = MakeInstructionDescriptor(23, SpvOpStore, 0);
+  auto instruction_descriptor_5 =
+      MakeInstructionDescriptor(23, spv::Op::OpStore, 0);
   auto extract_5 =
       TransformationCompositeExtract(instruction_descriptor_5, 205, 102, {0});
   ASSERT_TRUE(extract_5.IsApplicable(context.get(), transformation_context));
@@ -931,7 +937,7 @@ TEST(DataSynonymTransformationTest, VectorCompositeSynonyms) {
 
   // Replace %20 with %100[0:2] in '%80 = OpCopyObject %16 %20'
   auto instruction_descriptor_1 =
-      MakeInstructionDescriptor(80, SpvOpCopyObject, 0);
+      MakeInstructionDescriptor(80, spv::Op::OpCopyObject, 0);
   auto shuffle_1 = TransformationVectorShuffle(instruction_descriptor_1, 200,
                                                100, 100, {0, 1, 2});
   ASSERT_TRUE(shuffle_1.IsApplicable(context.get(), transformation_context));
@@ -948,7 +954,7 @@ TEST(DataSynonymTransformationTest, VectorCompositeSynonyms) {
 
   // Replace %54 with %100[3] in '%56 = OpFOrdNotEqual %30 %54 %55'
   auto instruction_descriptor_2 =
-      MakeInstructionDescriptor(56, SpvOpFOrdNotEqual, 0);
+      MakeInstructionDescriptor(56, spv::Op::OpFOrdNotEqual, 0);
   auto extract_2 =
       TransformationCompositeExtract(instruction_descriptor_2, 201, 100, {3});
 
@@ -963,7 +969,8 @@ TEST(DataSynonymTransformationTest, VectorCompositeSynonyms) {
                                                kConsoleMessageConsumer));
 
   // Replace %15 with %101[0:1] in 'OpStore %12 %15'
-  auto instruction_descriptor_3 = MakeInstructionDescriptor(64, SpvOpStore, 0);
+  auto instruction_descriptor_3 =
+      MakeInstructionDescriptor(64, spv::Op::OpStore, 0);
   auto shuffle_3 = TransformationVectorShuffle(instruction_descriptor_3, 202,
                                                101, 101, {0, 1});
   ASSERT_TRUE(shuffle_3.IsApplicable(context.get(), transformation_context));
@@ -980,7 +987,7 @@ TEST(DataSynonymTransformationTest, VectorCompositeSynonyms) {
 
   // Replace %19 with %101[2:3] in '%81 = OpVectorShuffle %16 %19 %19 0 0 1'
   auto instruction_descriptor_4 =
-      MakeInstructionDescriptor(81, SpvOpVectorShuffle, 0);
+      MakeInstructionDescriptor(81, spv::Op::OpVectorShuffle, 0);
   auto shuffle_4 = TransformationVectorShuffle(instruction_descriptor_4, 203,
                                                101, 101, {2, 3});
   ASSERT_TRUE(shuffle_4.IsApplicable(context.get(), transformation_context));
@@ -998,7 +1005,7 @@ TEST(DataSynonymTransformationTest, VectorCompositeSynonyms) {
   // Replace %27 with %102[0] in '%82 = OpCompositeConstruct %21 %26 %27 %28
   // %25'
   auto instruction_descriptor_5 =
-      MakeInstructionDescriptor(82, SpvOpCompositeConstruct, 0);
+      MakeInstructionDescriptor(82, spv::Op::OpCompositeConstruct, 0);
   auto extract_5 =
       TransformationCompositeExtract(instruction_descriptor_5, 204, 102, {0});
 
@@ -1014,7 +1021,7 @@ TEST(DataSynonymTransformationTest, VectorCompositeSynonyms) {
 
   // Replace %15 with %102[1:2] in '%83 = OpCopyObject %10 %15'
   auto instruction_descriptor_6 =
-      MakeInstructionDescriptor(83, SpvOpCopyObject, 0);
+      MakeInstructionDescriptor(83, spv::Op::OpCopyObject, 0);
   auto shuffle_6 = TransformationVectorShuffle(instruction_descriptor_6, 205,
                                                102, 102, {1, 2});
   ASSERT_TRUE(shuffle_6.IsApplicable(context.get(), transformation_context));
@@ -1031,7 +1038,7 @@ TEST(DataSynonymTransformationTest, VectorCompositeSynonyms) {
 
   // Replace %33 with %103[0] in '%86 = OpCopyObject %30 %33'
   auto instruction_descriptor_7 =
-      MakeInstructionDescriptor(86, SpvOpCopyObject, 0);
+      MakeInstructionDescriptor(86, spv::Op::OpCopyObject, 0);
   auto extract_7 =
       TransformationCompositeExtract(instruction_descriptor_7, 206, 103, {0});
   ASSERT_TRUE(extract_7.IsApplicable(context.get(), transformation_context));
@@ -1046,7 +1053,7 @@ TEST(DataSynonymTransformationTest, VectorCompositeSynonyms) {
 
   // Replace %47 with %103[1:3] in '%84 = OpCopyObject %39 %47'
   auto instruction_descriptor_8 =
-      MakeInstructionDescriptor(84, SpvOpCopyObject, 0);
+      MakeInstructionDescriptor(84, spv::Op::OpCopyObject, 0);
   auto shuffle_8 = TransformationVectorShuffle(instruction_descriptor_8, 207,
                                                103, 103, {1, 2, 3});
   ASSERT_TRUE(shuffle_8.IsApplicable(context.get(), transformation_context));
@@ -1063,7 +1070,7 @@ TEST(DataSynonymTransformationTest, VectorCompositeSynonyms) {
 
   // Replace %42 with %104[0] in '%85 = OpCopyObject %30 %42'
   auto instruction_descriptor_9 =
-      MakeInstructionDescriptor(85, SpvOpCopyObject, 0);
+      MakeInstructionDescriptor(85, spv::Op::OpCopyObject, 0);
   auto extract_9 =
       TransformationCompositeExtract(instruction_descriptor_9, 208, 104, {0});
   ASSERT_TRUE(extract_9.IsApplicable(context.get(), transformation_context));
@@ -1078,7 +1085,7 @@ TEST(DataSynonymTransformationTest, VectorCompositeSynonyms) {
 
   // Replace %45 with %104[1] in '%63 = OpLogicalOr %30 %45 %46'
   auto instruction_descriptor_10 =
-      MakeInstructionDescriptor(63, SpvOpLogicalOr, 0);
+      MakeInstructionDescriptor(63, spv::Op::OpLogicalOr, 0);
   auto extract_10 =
       TransformationCompositeExtract(instruction_descriptor_10, 209, 104, {1});
   ASSERT_TRUE(extract_10.IsApplicable(context.get(), transformation_context));
@@ -1092,7 +1099,8 @@ TEST(DataSynonymTransformationTest, VectorCompositeSynonyms) {
                                                kConsoleMessageConsumer));
 
   // Replace %38 with %105[0:1] in 'OpStore %36 %38'
-  auto instruction_descriptor_11 = MakeInstructionDescriptor(85, SpvOpStore, 0);
+  auto instruction_descriptor_11 =
+      MakeInstructionDescriptor(85, spv::Op::OpStore, 0);
   auto shuffle_11 = TransformationVectorShuffle(instruction_descriptor_11, 210,
                                                 105, 105, {0, 1});
   ASSERT_TRUE(shuffle_11.IsApplicable(context.get(), transformation_context));
@@ -1109,7 +1117,7 @@ TEST(DataSynonymTransformationTest, VectorCompositeSynonyms) {
 
   // Replace %46 with %105[2] in '%62 = OpLogicalAnd %30 %45 %46'
   auto instruction_descriptor_12 =
-      MakeInstructionDescriptor(62, SpvOpLogicalAnd, 0);
+      MakeInstructionDescriptor(62, spv::Op::OpLogicalAnd, 0);
   auto extract_12 =
       TransformationCompositeExtract(instruction_descriptor_12, 211, 105, {2});
   ASSERT_TRUE(extract_12.IsApplicable(context.get(), transformation_context));

@@ -39,7 +39,7 @@ Pass::Status PassManager::Run(IRContext* context) {
       t.SetMessageConsumer(consumer());
       std::string disassembly;
       std::string pass_name = (pass ? pass->name() : "");
-      if (!t.Disassemble(binary, &disassembly, 0)) {
+      if (!t.Disassemble(binary, &disassembly)) {
         std::string msg = "Disassembly failed before pass ";
         msg += pass_name + "\n";
         spv_position_t null_pos{0, 0, 0};

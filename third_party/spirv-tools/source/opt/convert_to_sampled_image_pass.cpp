@@ -70,7 +70,7 @@ uint32_t GetImageTypeOfSampledImage(analysis::TypeManager* type_mgr,
 Instruction* GetNonCopyObjectDef(analysis::DefUseManager* def_use_mgr,
                                  uint32_t inst_id) {
   Instruction* inst = def_use_mgr->GetDef(inst_id);
-  while (inst->opcode() == SpvOpCopyObject) {
+  while (inst->opcode() == spv::Op::OpCopyObject) {
     inst_id = inst->GetSingleWordInOperand(0u);
     inst = def_use_mgr->GetDef(inst_id);
   }
@@ -87,8 +87,9 @@ bool ConvertToSampledImagePass::GetDescriptorSetBinding(
   bool found_binding_to_convert = false;
   for (auto decorate :
        decoration_manager->GetDecorationsFor(inst.result_id(), false)) {
-    uint32_t decoration = decorate->GetSingleWordInOperand(1u);
-    if (decoration == SpvDecorationDescriptorSet) {
+    spv::Decoration decoration =
+        spv::Decoration(decorate->GetSingleWordInOperand(1u));
+    if (decoration == spv::Decoration::DescriptorSet) {
       if (found_descriptor_set_to_convert) {
         assert(false && "A resource has two OpDecorate for the descriptor set");
         return false;
@@ -96,7 +97,7 @@ bool ConvertToSampledImagePass::GetDescriptorSetBinding(
       descriptor_set_binding->descriptor_set =
           decorate->GetSingleWordInOperand(2u);
       found_descriptor_set_to_convert = true;
-    } else if (decoration == SpvDecorationBinding) {
+    } else if (decoration == spv::Decoration::Binding) {
       if (found_binding_to_convert) {
         assert(false && "A resource has two OpDecorate for the binding");
         return false;
@@ -116,7 +117,7 @@ bool ConvertToSampledImagePass::ShouldResourceBeConverted(
 
 const analysis::Type* ConvertToSampledImagePass::GetVariableType(
     const Instruction& variable) const {
-  if (variable.opcode() != SpvOpVariable) return nullptr;
+  if (variable.opcode() != spv::Op::OpVariable) return nullptr;
   auto* type = context()->get_type_mgr()->GetType(variable.type_id());
   auto* pointer_type = type->AsPointer();
   if (!pointer_type) return nullptr;
@@ -124,12 +125,12 @@ const analysis::Type* ConvertToSampledImagePass::GetVariableType(
   return pointer_type->pointee_type();
 }
 
-SpvStorageClass ConvertToSampledImagePass::GetStorageClass(
+spv::StorageClass ConvertToSampledImagePass::GetStorageClass(
     const Instruction& variable) const {
-  assert(variable.opcode() == SpvOpVariable);
+  assert(variable.opcode() == spv::Op::OpVariable);
   auto* type = context()->get_type_mgr()->GetType(variable.type_id());
   auto* pointer_type = type->AsPointer();
-  if (!pointer_type) return SpvStorageClassMax;
+  if (!pointer_type) return spv::StorageClass::Max;
 
   return pointer_type->storage_class();
 }
@@ -205,12 +206,12 @@ Pass::Status ConvertToSampledImagePass::Process() {
 
 void ConvertToSampledImagePass::FindUses(const Instruction* inst,
                                          std::vector<Instruction*>* uses,
-                                         uint32_t user_opcode) const {
+                                         spv::Op user_opcode) const {
   auto* def_use_mgr = context()->get_def_use_mgr();
   def_use_mgr->ForEachUser(inst, [uses, user_opcode, this](Instruction* user) {
     if (user->opcode() == user_opcode) {
       uses->push_back(user);
-    } else if (user->opcode() == SpvOpCopyObject) {
+    } else if (user->opcode() == spv::Op::OpCopyObject) {
       FindUses(user, uses, user_opcode);
     }
   });
@@ -221,21 +222,21 @@ void ConvertToSampledImagePass::FindUsesOfImage(
   auto* def_use_mgr = context()->get_def_use_mgr();
   def_use_mgr->ForEachUser(image, [uses, this](Instruction* user) {
     switch (user->opcode()) {
-      case SpvOpImageFetch:
-      case SpvOpImageRead:
-      case SpvOpImageWrite:
-      case SpvOpImageQueryFormat:
-      case SpvOpImageQueryOrder:
-      case SpvOpImageQuerySizeLod:
-      case SpvOpImageQuerySize:
-      case SpvOpImageQueryLevels:
-      case SpvOpImageQuerySamples:
-      case SpvOpImageSparseFetch:
+      case spv::Op::OpImageFetch:
+      case spv::Op::OpImageRead:
+      case spv::Op::OpImageWrite:
+      case spv::Op::OpImageQueryFormat:
+      case spv::Op::OpImageQueryOrder:
+      case spv::Op::OpImageQuerySizeLod:
+      case spv::Op::OpImageQuerySize:
+      case spv::Op::OpImageQueryLevels:
+      case spv::Op::OpImageQuerySamples:
+      case spv::Op::OpImageSparseFetch:
         uses->push_back(user);
       default:
         break;
     }
-    if (user->opcode() == SpvOpCopyObject) {
+    if (user->opcode() == spv::Op::OpCopyObject) {
       FindUsesOfImage(user, uses);
     }
   });
@@ -248,7 +249,7 @@ Instruction* ConvertToSampledImagePass::CreateImageExtraction(
       IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
   return builder.AddUnaryOp(
       GetImageTypeOfSampledImage(context()->get_type_mgr(), sampled_image),
-      SpvOpImage, sampled_image->result_id());
+      spv::Op::OpImage, sampled_image->result_id());
 }
 
 uint32_t ConvertToSampledImagePass::GetSampledImageTypeForImage(
@@ -284,7 +285,7 @@ bool ConvertToSampledImagePass::
   auto* def_use_mgr = context()->get_def_use_mgr();
   uint32_t sampler_id = sampled_image_inst->GetSingleWordInOperand(1u);
   auto* sampler_load = def_use_mgr->GetDef(sampler_id);
-  if (sampler_load->opcode() != SpvOpLoad) return false;
+  if (sampler_load->opcode() != spv::Op::OpLoad) return false;
   auto* sampler = def_use_mgr->GetDef(sampler_load->GetSingleWordInOperand(0u));
   DescriptorSetAndBinding sampler_descriptor_set_binding;
   return GetDescriptorSetBinding(*sampler, &sampler_descriptor_set_binding) &&
@@ -295,7 +296,7 @@ void ConvertToSampledImagePass::UpdateSampledImageUses(
     Instruction* image_load, Instruction* image_extraction,
     const DescriptorSetAndBinding& image_descriptor_set_binding) {
   std::vector<Instruction*> sampled_image_users;
-  FindUses(image_load, &sampled_image_users, SpvOpSampledImage);
+  FindUses(image_load, &sampled_image_users, spv::Op::OpSampledImage);
 
   auto* def_use_mgr = context()->get_def_use_mgr();
   for (auto* sampled_image_inst : sampled_image_users) {
@@ -328,7 +329,7 @@ bool ConvertToSampledImagePass::ConvertImageVariableToSampledImage(
       context()->get_type_mgr()->GetType(sampled_image_type_id);
   if (sampled_image_type == nullptr) return false;
   auto storage_class = GetStorageClass(*image_variable);
-  if (storage_class == SpvStorageClassMax) return false;
+  if (storage_class == spv::StorageClass::Max) return false;
   analysis::Pointer sampled_image_pointer(sampled_image_type, storage_class);
 
   // Make sure |image_variable| is behind its type i.e., avoid the forward
@@ -343,7 +344,7 @@ Pass::Status ConvertToSampledImagePass::UpdateImageVariableToSampledImage(
     Instruction* image_variable,
     const DescriptorSetAndBinding& descriptor_set_binding) {
   std::vector<Instruction*> image_variable_loads;
-  FindUses(image_variable, &image_variable_loads, SpvOpLoad);
+  FindUses(image_variable, &image_variable_loads, spv::Op::OpLoad);
   if (image_variable_loads.empty()) return Status::SuccessWithoutChange;
 
   const uint32_t sampled_image_type_id =
@@ -364,14 +365,14 @@ Pass::Status ConvertToSampledImagePass::UpdateImageVariableToSampledImage(
 
 bool ConvertToSampledImagePass::DoesSampledImageReferenceImage(
     Instruction* sampled_image_inst, Instruction* image_variable) {
-  if (sampled_image_inst->opcode() != SpvOpSampledImage) return false;
+  if (sampled_image_inst->opcode() != spv::Op::OpSampledImage) return false;
   auto* def_use_mgr = context()->get_def_use_mgr();
   auto* image_load = GetNonCopyObjectDef(
       def_use_mgr, sampled_image_inst->GetSingleWordInOperand(0u));
-  if (image_load->opcode() != SpvOpLoad) return false;
+  if (image_load->opcode() != spv::Op::OpLoad) return false;
   auto* image =
       GetNonCopyObjectDef(def_use_mgr, image_load->GetSingleWordInOperand(0u));
-  return image->opcode() == SpvOpVariable &&
+  return image->opcode() == spv::Op::OpVariable &&
          image->result_id() == image_variable->result_id();
 }
 
@@ -381,10 +382,10 @@ Pass::Status ConvertToSampledImagePass::CheckUsesOfSamplerVariable(
   if (image_to_be_combined_with == nullptr) return Status::Failure;
 
   std::vector<Instruction*> sampler_variable_loads;
-  FindUses(sampler_variable, &sampler_variable_loads, SpvOpLoad);
+  FindUses(sampler_variable, &sampler_variable_loads, spv::Op::OpLoad);
   for (auto* load : sampler_variable_loads) {
     std::vector<Instruction*> sampled_image_users;
-    FindUses(load, &sampled_image_users, SpvOpSampledImage);
+    FindUses(load, &sampled_image_users, spv::Op::OpSampledImage);
     for (auto* sampled_image_inst : sampled_image_users) {
       if (!DoesSampledImageReferenceImage(sampled_image_inst,
                                           image_to_be_combined_with)) {
