@@ -31,7 +31,7 @@ FuzzerPassAddLocalVariables::FuzzerPassAddLocalVariables(
 
 void FuzzerPassAddLocalVariables::Apply() {
   auto basic_type_ids_and_pointers =
-      GetAvailableBasicTypesAndPointers(SpvStorageClassFunction);
+      GetAvailableBasicTypesAndPointers(spv::StorageClass::Function);
 
   // These are the basic types that are available to this fuzzer pass.
   auto& basic_types = basic_type_ids_and_pointers.first;
@@ -64,7 +64,7 @@ void FuzzerPassAddLocalVariables::Apply() {
         // use it.
         pointer_type = GetFuzzerContext()->GetFreshId();
         ApplyTransformation(TransformationAddTypePointer(
-            pointer_type, SpvStorageClassFunction, basic_type));
+            pointer_type, spv::StorageClass::Function, basic_type));
         available_pointers_to_basic_type.push_back(pointer_type);
       } else {
         // There is - grab one.

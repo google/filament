@@ -37,12 +37,7 @@
 namespace spvtools {
 namespace opt {
 namespace {
-
-static const uint32_t kTypePointerStorageClassInIdx = 0;
-
-}  // anonymous namespace
-
-namespace {
+constexpr uint32_t kTypePointerStorageClassInIdx = 0;
 
 // This class handle the unswitch procedure for a given loop.
 // The unswitch will not happen if:
@@ -77,7 +72,7 @@ class LoopUnswitch {
       }
 
       if (bb->terminator()->IsBranch() &&
-          bb->terminator()->opcode() != SpvOpBranch) {
+          bb->terminator()->opcode() != spv::Op::OpBranch) {
         if (IsConditionNonConstantLoopInvariant(bb->terminator())) {
           switch_block_ = bb;
           break;
@@ -104,7 +99,7 @@ class LoopUnswitch {
     // TODO(1841): Handle id overflow.
     BasicBlock* bb = &*ip.InsertBefore(std::unique_ptr<BasicBlock>(
         new BasicBlock(std::unique_ptr<Instruction>(new Instruction(
-            context_, SpvOpLabel, 0, context_->TakeNextId(), {})))));
+            context_, spv::Op::OpLabel, 0, context_->TakeNextId(), {})))));
     bb->SetParent(function_);
     def_use_mgr->AnalyzeInstDef(bb->GetLabelInst());
     context_->set_instr_block(bb->GetLabelInst(), bb);
@@ -113,7 +108,7 @@ class LoopUnswitch {
   }
 
   Instruction* GetValueForDefaultPathForSwitch(Instruction* switch_inst) {
-    assert(switch_inst->opcode() == SpvOpSwitch &&
+    assert(switch_inst->opcode() == spv::Op::OpSwitch &&
            "The given instructoin must be an OpSwitch.");
 
     // Find a value that can be used to select the default path.
@@ -291,7 +286,7 @@ class LoopUnswitch {
     /////////////////////////////
 
     Instruction* iv_condition = &*switch_block_->tail();
-    SpvOp iv_opcode = iv_condition->opcode();
+    spv::Op iv_opcode = iv_condition->opcode();
     Instruction* condition =
         def_use_mgr->GetDef(iv_condition->GetOperand(0).words[0]);
 
@@ -304,7 +299,7 @@ class LoopUnswitch {
     std::vector<std::pair<Instruction*, BasicBlock*>> constant_branch;
     // Special case for the original loop
     Instruction* original_loop_constant_value;
-    if (iv_opcode == SpvOpBranchConditional) {
+    if (iv_opcode == spv::Op::OpBranchConditional) {
       constant_branch.emplace_back(
           cst_mgr->GetDefiningInstruction(cst_mgr->GetConstant(cond_type, {0})),
           nullptr);
@@ -401,7 +396,7 @@ class LoopUnswitch {
     // Delete the old jump
     context_->KillInst(&*if_block->tail());
     InstructionBuilder builder(context_, if_block);
-    if (iv_opcode == SpvOpBranchConditional) {
+    if (iv_opcode == spv::Op::OpBranchConditional) {
       assert(constant_branch.size() == 1);
       builder.AddConditionalBranch(
           condition->result_id(), original_loop_target->id(),
@@ -509,7 +504,8 @@ class LoopUnswitch {
     bool& is_uniform = dynamically_uniform_[var->result_id()];
     is_uniform = false;
 
-    dec_mgr->WhileEachDecoration(var->result_id(), SpvDecorationUniform,
+    dec_mgr->WhileEachDecoration(var->result_id(),
+                                 uint32_t(spv::Decoration::Uniform),
                                  [&is_uniform](const Instruction&) {
                                    is_uniform = true;
                                    return false;
@@ -526,14 +522,14 @@ class LoopUnswitch {
     if (!post_dom_tree.Dominates(parent->id(), entry->id())) {
       return is_uniform = false;
     }
-    if (var->opcode() == SpvOpLoad) {
+    if (var->opcode() == spv::Op::OpLoad) {
       const uint32_t PtrTypeId =
           def_use_mgr->GetDef(var->GetSingleWordInOperand(0))->type_id();
       const Instruction* PtrTypeInst = def_use_mgr->GetDef(PtrTypeId);
-      uint32_t storage_class =
-          PtrTypeInst->GetSingleWordInOperand(kTypePointerStorageClassInIdx);
-      if (storage_class != SpvStorageClassUniform &&
-          storage_class != SpvStorageClassUniformConstant) {
+      auto storage_class = spv::StorageClass(
+          PtrTypeInst->GetSingleWordInOperand(kTypePointerStorageClassInIdx));
+      if (storage_class != spv::StorageClass::Uniform &&
+          storage_class != spv::StorageClass::UniformConstant) {
         return is_uniform = false;
       }
     } else {
@@ -553,7 +549,7 @@ class LoopUnswitch {
   // dynamically uniform.
   bool IsConditionNonConstantLoopInvariant(Instruction* insn) {
     assert(insn->IsBranch());
-    assert(insn->opcode() != SpvOpBranch);
+    assert(insn->opcode() != spv::Op::OpBranch);
     analysis::DefUseManager* def_use_mgr = context_->get_def_use_mgr();
 
     Instruction* condition = def_use_mgr->GetDef(insn->GetOperand(0).words[0]);

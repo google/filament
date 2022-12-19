@@ -96,10 +96,10 @@ and in-progress work.
 
 *Note*: The validator checks some Universal Limits, from section 2.17 of the SPIR-V spec.
 The validator will fail on a module that exceeds those minimum upper bound limits.
-It is [future work](https://github.com/KhronosGroup/SPIRV-Tools/projects/1#card-1052403)
-to parameterize the validator to allow larger
-limits accepted by a more than minimally capable SPIR-V consumer.
+The validator has been parameterized to allow larger values, for use when targeting 
+a more-than-minimally-capable SPIR-V consumer.
 
+See [`tools/val/val.cpp`](tools/val/val.cpp) or run `spirv-val --help` for the command-line help.
 
 ### Optimizer
 

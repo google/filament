@@ -262,13 +262,13 @@ void TransformationAddLoopToCreateIntConstantSynonym::Apply(
   // Create the loop header block.
   std::unique_ptr<opt::BasicBlock> loop_block =
       MakeUnique<opt::BasicBlock>(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpLabel, 0, message_.loop_id(),
+          ir_context, spv::Op::OpLabel, 0, message_.loop_id(),
           opt::Instruction::OperandList{}));
 
   // Add OpPhi instructions to retrieve the current value of the counter and of
   // the temporary variable that will be decreased at each operation.
   loop_block->AddInstruction(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpPhi, const_0_def->type_id(), message_.ctr_id(),
+      ir_context, spv::Op::OpPhi, const_0_def->type_id(), message_.ctr_id(),
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {const_0_id}},
           {SPV_OPERAND_TYPE_ID, {pred_id}},
@@ -276,7 +276,8 @@ void TransformationAddLoopToCreateIntConstantSynonym::Apply(
           {SPV_OPERAND_TYPE_ID, {last_loop_block_id}}}));
 
   loop_block->AddInstruction(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpPhi, initial_val_def->type_id(), message_.temp_id(),
+      ir_context, spv::Op::OpPhi, initial_val_def->type_id(),
+      message_.temp_id(),
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {message_.initial_val_id()}},
           {SPV_OPERAND_TYPE_ID, {pred_id}},
@@ -291,7 +292,7 @@ void TransformationAddLoopToCreateIntConstantSynonym::Apply(
   // Add an instruction to subtract the step value from the temporary value.
   // The value of this id will converge to the constant in the last iteration.
   other_instructions.push_back(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpISub, initial_val_def->type_id(),
+      ir_context, spv::Op::OpISub, initial_val_def->type_id(),
       message_.eventual_syn_id(),
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {message_.temp_id()}},
@@ -299,15 +300,15 @@ void TransformationAddLoopToCreateIntConstantSynonym::Apply(
 
   // Add an instruction to increment the counter.
   other_instructions.push_back(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpIAdd, const_0_def->type_id(),
+      ir_context, spv::Op::OpIAdd, const_0_def->type_id(),
       message_.incremented_ctr_id(),
       opt::Instruction::OperandList{{SPV_OPERAND_TYPE_ID, {message_.ctr_id()}},
                                     {SPV_OPERAND_TYPE_ID, {const_1_id}}}));
 
   // Add an instruction to decide whether the condition holds.
   other_instructions.push_back(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpSLessThan, fuzzerutil::MaybeGetBoolType(ir_context),
-      message_.cond_id(),
+      ir_context, spv::Op::OpSLessThan,
+      fuzzerutil::MaybeGetBoolType(ir_context), message_.cond_id(),
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {message_.incremented_ctr_id()}},
           {SPV_OPERAND_TYPE_ID, {message_.num_iterations_id()}}}));
@@ -316,18 +317,19 @@ void TransformationAddLoopToCreateIntConstantSynonym::Apply(
   // the existing block, the continue block is the last block in the loop
   // (either the loop itself or the additional block).
   std::unique_ptr<opt::Instruction> merge_inst = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpLoopMerge, 0, 0,
+      ir_context, spv::Op::OpLoopMerge, 0, 0,
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {message_.block_after_loop_id()}},
           {SPV_OPERAND_TYPE_ID, {last_loop_block_id}},
-          {SPV_OPERAND_TYPE_LOOP_CONTROL, {SpvLoopControlMaskNone}}});
+          {SPV_OPERAND_TYPE_LOOP_CONTROL,
+           {uint32_t(spv::LoopControlMask::MaskNone)}}});
 
   // Define a conditional branch instruction, branching to the loop header if
   // the condition holds, and to the existing block otherwise. This instruction
   // will be added to the last block in the loop.
   std::unique_ptr<opt::Instruction> conditional_branch =
       MakeUnique<opt::Instruction>(
-          ir_context, SpvOpBranchConditional, 0, 0,
+          ir_context, spv::Op::OpBranchConditional, 0, 0,
           opt::Instruction::OperandList{
               {SPV_OPERAND_TYPE_ID, {message_.cond_id()}},
               {SPV_OPERAND_TYPE_ID, {message_.loop_id()}},
@@ -340,7 +342,7 @@ void TransformationAddLoopToCreateIntConstantSynonym::Apply(
 
     std::unique_ptr<opt::BasicBlock> additional_block =
         MakeUnique<opt::BasicBlock>(MakeUnique<opt::Instruction>(
-            ir_context, SpvOpLabel, 0, message_.additional_block_id(),
+            ir_context, spv::Op::OpLabel, 0, message_.additional_block_id(),
             opt::Instruction::OperandList{}));
 
     for (auto& instruction : other_instructions) {
@@ -354,7 +356,7 @@ void TransformationAddLoopToCreateIntConstantSynonym::Apply(
 
     // Add an unconditional branch from the header to the additional block.
     loop_block->AddInstruction(MakeUnique<opt::Instruction>(
-        ir_context, SpvOpBranch, 0, 0,
+        ir_context, spv::Op::OpBranch, 0, 0,
         opt::Instruction::OperandList{
             {SPV_OPERAND_TYPE_ID, {message_.additional_block_id()}}}));
 
@@ -384,14 +386,14 @@ void TransformationAddLoopToCreateIntConstantSynonym::Apply(
   ir_context->get_def_use_mgr()->ForEachUse(
       message_.block_after_loop_id(),
       [this](opt::Instruction* instruction, uint32_t operand_index) {
-        assert(instruction->opcode() != SpvOpLoopMerge &&
-               instruction->opcode() != SpvOpSelectionMerge &&
+        assert(instruction->opcode() != spv::Op::OpLoopMerge &&
+               instruction->opcode() != spv::Op::OpSelectionMerge &&
                "The block should not be referenced by OpLoopMerge or "
                "OpSelectionMerge, by construction.");
         // Replace all uses of the label inside branch instructions.
-        if (instruction->opcode() == SpvOpBranch ||
-            instruction->opcode() == SpvOpBranchConditional ||
-            instruction->opcode() == SpvOpSwitch) {
+        if (instruction->opcode() == spv::Op::OpBranch ||
+            instruction->opcode() == spv::Op::OpBranchConditional ||
+            instruction->opcode() == spv::Op::OpSwitch) {
           instruction->SetOperand(operand_index, {message_.loop_id()});
         }
       });
@@ -410,7 +412,7 @@ void TransformationAddLoopToCreateIntConstantSynonym::Apply(
   // |message_.initial_value_id|, since this is the value that is decremented in
   // the loop.
   block_after_loop->begin()->InsertBefore(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpPhi, initial_val_def->type_id(), message_.syn_id(),
+      ir_context, spv::Op::OpPhi, initial_val_def->type_id(), message_.syn_id(),
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {message_.eventual_syn_id()}},
           {SPV_OPERAND_TYPE_ID, {last_loop_block_id}}}));

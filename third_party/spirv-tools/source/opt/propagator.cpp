@@ -134,7 +134,7 @@ bool SSAPropagator::Simulate(Instruction* instr) {
   // defined at an instruction D that should be simulated again, then the output
   // of D might affect |instr|, so we should simulate |instr| again.
   bool has_operands_to_simulate = false;
-  if (instr->opcode() == SpvOpPhi) {
+  if (instr->opcode() == spv::Op::OpPhi) {
     // For Phi instructions, an operand causes the Phi to be simulated again if
     // the operand comes from an edge that has not yet been traversed or if its
     // definition should be simulated again.
@@ -189,7 +189,7 @@ bool SSAPropagator::Simulate(BasicBlock* block) {
   // statement in it.
   if (!BlockHasBeenSimulated(block)) {
     block->ForEachInst([this, &changed](Instruction* instr) {
-      if (instr->opcode() != SpvOpPhi) {
+      if (instr->opcode() != spv::Op::OpPhi) {
         changed |= Simulate(instr);
       }
     });

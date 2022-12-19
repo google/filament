@@ -186,9 +186,9 @@ TEST(ShrinkerTest, ReduceAddedFunctions) {
     for (auto& function : *temp_ir_context->module()) {
       for (auto& block : function) {
         for (auto& inst : block) {
-          if (inst.opcode() == SpvOpNot) {
+          if (inst.opcode() == spv::Op::OpNot) {
             found_op_not = true;
-          } else if (inst.opcode() == SpvOpFunctionCall) {
+          } else if (inst.opcode() == spv::Op::OpFunctionCall) {
             op_call_count++;
           }
         }
@@ -221,21 +221,21 @@ TEST(ShrinkerTest, ReduceAddedFunctions) {
         for (auto& inst : block) {
           switch (counter) {
             case 0:
-              ASSERT_EQ(SpvOpVariable, inst.opcode());
+              ASSERT_EQ(spv::Op::OpVariable, inst.opcode());
               ASSERT_EQ(11, inst.result_id());
               break;
             case 1:
-              ASSERT_EQ(SpvOpStore, inst.opcode());
+              ASSERT_EQ(spv::Op::OpStore, inst.opcode());
               break;
             case 2:
-              ASSERT_EQ(SpvOpLoad, inst.opcode());
+              ASSERT_EQ(spv::Op::OpLoad, inst.opcode());
               ASSERT_EQ(12, inst.result_id());
               break;
             case 3:
-              ASSERT_EQ(SpvOpStore, inst.opcode());
+              ASSERT_EQ(spv::Op::OpStore, inst.opcode());
               break;
             case 4:
-              ASSERT_EQ(SpvOpReturn, inst.opcode());
+              ASSERT_EQ(spv::Op::OpReturn, inst.opcode());
               break;
             default:
               FAIL();
@@ -250,11 +250,11 @@ TEST(ShrinkerTest, ReduceAddedFunctions) {
         first_block = false;
         for (auto& inst : block) {
           switch (inst.opcode()) {
-            case SpvOpVariable:
-            case SpvOpNot:
-            case SpvOpReturn:
-            case SpvOpReturnValue:
-            case SpvOpFunctionCall:
+            case spv::Op::OpVariable:
+            case spv::Op::OpNot:
+            case spv::Op::OpReturn:
+            case spv::Op::OpReturnValue:
+            case spv::Op::OpFunctionCall:
               // These are the only instructions we expect to see.
               break;
             default:
@@ -362,7 +362,7 @@ TEST(ShrinkerTest, HitStepLimitWhenReducingAddedFunctions) {
     uint32_t copy_object_count = 0;
     temp_ir_context->module()->ForEachInst(
         [&copy_object_count](opt::Instruction* inst) {
-          if (inst->opcode() == SpvOpCopyObject) {
+          if (inst->opcode() == spv::Op::OpCopyObject) {
             copy_object_count++;
           }
         });

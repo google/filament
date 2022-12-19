@@ -43,13 +43,13 @@ bool Workaround1209::RemoveOpUnreachableInLoops() {
         loop_merges.pop();
       }
 
-      if (bb->tail()->opcode() == SpvOpUnreachable) {
+      if (bb->tail()->opcode() == spv::Op::OpUnreachable) {
         if (!loop_merges.empty()) {
           // We found an OpUnreachable inside a loop.
           // Replace it with an unconditional branch to the loop merge.
           context()->KillInst(&*bb->tail());
           std::unique_ptr<Instruction> new_branch(
-              new Instruction(context(), SpvOpBranch, 0, 0,
+              new Instruction(context(), spv::Op::OpBranch, 0, 0,
                               {{spv_operand_type_t::SPV_OPERAND_TYPE_ID,
                                 {loop_merges.top()}}}));
           context()->AnalyzeDefUse(&*new_branch);

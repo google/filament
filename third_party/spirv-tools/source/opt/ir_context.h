@@ -35,6 +35,7 @@
 #include "source/opt/dominator_analysis.h"
 #include "source/opt/feature_manager.h"
 #include "source/opt/fold.h"
+#include "source/opt/liveness.h"
 #include "source/opt/loop_descriptor.h"
 #include "source/opt/module.h"
 #include "source/opt/register_pressure.h"
@@ -81,6 +82,7 @@ class IRContext {
     kAnalysisConstants = 1 << 14,
     kAnalysisTypes = 1 << 15,
     kAnalysisDebugInfo = 1 << 16,
+    kAnalysisLiveness = 1 << 17,
     kAnalysisEnd = 1 << 17
   };
 
@@ -201,7 +203,7 @@ class IRContext {
   inline IteratorRange<Module::const_inst_iterator> ext_inst_debuginfo() const;
 
   // Add |capability| to the module, if it is not already enabled.
-  inline void AddCapability(SpvCapability capability);
+  inline void AddCapability(spv::Capability capability);
 
   // Appends a capability instruction to this module.
   inline void AddCapability(std::unique_ptr<Instruction>&& c);
@@ -246,6 +248,15 @@ class IRContext {
       BuildDefUseManager();
     }
     return def_use_mgr_.get();
+  }
+
+  // Returns a pointer to a liveness manager.  If the liveness manager is
+  // invalid, it is rebuilt first.
+  analysis::LivenessManager* get_liveness_mgr() {
+    if (!AreAnalysesValid(kAnalysisLiveness)) {
+      BuildLivenessManager();
+    }
+    return liveness_mgr_.get();
   }
 
   // Returns a pointer to a value number table.  If the liveness analysis is
@@ -367,6 +378,11 @@ class IRContext {
   // having more than one name. This method returns the first one it finds.
   inline Instruction* GetMemberName(uint32_t struct_type_id, uint32_t index);
 
+  // Copy names from |old_id| to |new_id|. Only copy member name if index is
+  // less than |max_member_index|.
+  inline void CloneNames(const uint32_t old_id, const uint32_t new_id,
+                         const uint32_t max_member_index = UINT32_MAX);
+
   // Sets the message consumer to the given |consumer|. |consumer| which will be
   // invoked every time there is a message to be communicated to the outside.
   void SetMessageConsumer(MessageConsumer c) { consumer_ = std::move(c); }
@@ -475,14 +491,14 @@ class IRContext {
     if (!AreAnalysesValid(kAnalysisCombinators)) {
       InitializeCombinators();
     }
-    const uint32_t kExtInstSetIdInIndx = 0;
-    const uint32_t kExtInstInstructionInIndx = 1;
+    constexpr uint32_t kExtInstSetIdInIndx = 0;
+    constexpr uint32_t kExtInstInstructionInIndx = 1;
 
-    if (inst->opcode() != SpvOpExtInst) {
-      return combinator_ops_[0].count(inst->opcode()) != 0;
+    if (inst->opcode() != spv::Op::OpExtInst) {
+      return combinator_ops_[0].count(uint32_t(inst->opcode())) != 0;
     } else {
       uint32_t set = inst->GetSingleWordInOperand(kExtInstSetIdInIndx);
-      uint32_t op = inst->GetSingleWordInOperand(kExtInstInstructionInIndx);
+      auto op = inst->GetSingleWordInOperand(kExtInstInstructionInIndx);
       return combinator_ops_[set].count(op) != 0;
     }
   }
@@ -591,7 +607,7 @@ class IRContext {
   }
 
   Function* GetFunction(Instruction* inst) {
-    if (inst->opcode() != SpvOpFunction) {
+    if (inst->opcode() != spv::Op::OpFunction) {
       return nullptr;
     }
     return GetFunction(inst->result_id());
@@ -625,11 +641,21 @@ class IRContext {
   // the function that contains |bb|.
   bool IsReachable(const opt::BasicBlock& bb);
 
+  // Return the stage of the module. Will generate error if entry points don't
+  // all have the same stage.
+  spv::ExecutionModel GetStage();
+
  private:
   // Builds the def-use manager from scratch, even if it was already valid.
   void BuildDefUseManager() {
     def_use_mgr_ = MakeUnique<analysis::DefUseManager>(module());
     valid_analyses_ = valid_analyses_ | kAnalysisDefUse;
+  }
+
+  // Builds the liveness manager from scratch, even if it was already valid.
+  void BuildLivenessManager() {
+    liveness_mgr_ = MakeUnique<analysis::LivenessManager>(this);
+    valid_analyses_ = valid_analyses_ | kAnalysisLiveness;
   }
 
   // Builds the instruction-block map for the whole module.
@@ -852,6 +878,9 @@ class IRContext {
 
   std::unique_ptr<StructuredCFGAnalysis> struct_cfg_analysis_;
 
+  // The liveness manager for |module_|.
+  std::unique_ptr<analysis::LivenessManager> liveness_mgr_;
+
   // The maximum legal value for the id bound.
   uint32_t max_id_bound_;
 
@@ -1014,10 +1043,10 @@ IteratorRange<Module::const_inst_iterator> IRContext::ext_inst_debuginfo()
   return ((const Module*)module_.get())->ext_inst_debuginfo();
 }
 
-void IRContext::AddCapability(SpvCapability capability) {
+void IRContext::AddCapability(spv::Capability capability) {
   if (!get_feature_mgr()->HasCapability(capability)) {
     std::unique_ptr<Instruction> capability_inst(new Instruction(
-        this, SpvOpCapability, 0, 0,
+        this, spv::Op::OpCapability, 0, 0,
         {{SPV_OPERAND_TYPE_CAPABILITY, {static_cast<uint32_t>(capability)}}}));
     AddCapability(std::move(capability_inst));
   }
@@ -1027,7 +1056,7 @@ void IRContext::AddCapability(std::unique_ptr<Instruction>&& c) {
   AddCombinatorsForCapability(c->GetSingleWordInOperand(0));
   if (feature_mgr_ != nullptr) {
     feature_mgr_->AddCapability(
-        static_cast<SpvCapability>(c->GetSingleWordInOperand(0)));
+        static_cast<spv::Capability>(c->GetSingleWordInOperand(0)));
   }
   if (AreAnalysesValid(kAnalysisDefUse)) {
     get_def_use_mgr()->AnalyzeInstDefUse(c.get());
@@ -1038,7 +1067,7 @@ void IRContext::AddCapability(std::unique_ptr<Instruction>&& c) {
 void IRContext::AddExtension(const std::string& ext_name) {
   std::vector<uint32_t> ext_words = spvtools::utils::MakeVector(ext_name);
   AddExtension(std::unique_ptr<Instruction>(
-      new Instruction(this, SpvOpExtension, 0u, 0u,
+      new Instruction(this, spv::Op::OpExtension, 0u, 0u,
                       {{SPV_OPERAND_TYPE_LITERAL_STRING, ext_words}})));
 }
 
@@ -1055,7 +1084,7 @@ void IRContext::AddExtension(std::unique_ptr<Instruction>&& e) {
 void IRContext::AddExtInstImport(const std::string& name) {
   std::vector<uint32_t> ext_words = spvtools::utils::MakeVector(name);
   AddExtInstImport(std::unique_ptr<Instruction>(
-      new Instruction(this, SpvOpExtInstImport, 0u, TakeNextId(),
+      new Instruction(this, spv::Op::OpExtInstImport, 0u, TakeNextId(),
                       {{SPV_OPERAND_TYPE_LITERAL_STRING, ext_words}})));
 }
 
@@ -1088,7 +1117,8 @@ void IRContext::AddDebug1Inst(std::unique_ptr<Instruction>&& d) {
 
 void IRContext::AddDebug2Inst(std::unique_ptr<Instruction>&& d) {
   if (AreAnalysesValid(kAnalysisNameMap)) {
-    if (d->opcode() == SpvOpName || d->opcode() == SpvOpMemberName) {
+    if (d->opcode() == spv::Op::OpName ||
+        d->opcode() == spv::Op::OpMemberName) {
       // OpName and OpMemberName do not have result-ids. The target of the
       // instruction is at InOperand index 0.
       id_to_name_->insert({d->GetSingleWordInOperand(0), d.get()});
@@ -1151,8 +1181,8 @@ void IRContext::UpdateDefUse(Instruction* inst) {
 void IRContext::BuildIdToNameMap() {
   id_to_name_ = MakeUnique<std::multimap<uint32_t, Instruction*>>();
   for (Instruction& debug_inst : debugs2()) {
-    if (debug_inst.opcode() == SpvOpMemberName ||
-        debug_inst.opcode() == SpvOpName) {
+    if (debug_inst.opcode() == spv::Op::OpMemberName ||
+        debug_inst.opcode() == spv::Op::OpName) {
       id_to_name_->insert({debug_inst.GetSingleWordInOperand(0), &debug_inst});
     }
   }
@@ -1175,12 +1205,31 @@ Instruction* IRContext::GetMemberName(uint32_t struct_type_id, uint32_t index) {
   auto result = id_to_name_->equal_range(struct_type_id);
   for (auto i = result.first; i != result.second; ++i) {
     auto* name_instr = i->second;
-    if (name_instr->opcode() == SpvOpMemberName &&
+    if (name_instr->opcode() == spv::Op::OpMemberName &&
         name_instr->GetSingleWordInOperand(1) == index) {
       return name_instr;
     }
   }
   return nullptr;
+}
+
+void IRContext::CloneNames(const uint32_t old_id, const uint32_t new_id,
+                           const uint32_t max_member_index) {
+  std::vector<std::unique_ptr<Instruction>> names_to_add;
+  auto names = GetNames(old_id);
+  for (auto n : names) {
+    Instruction* old_name_inst = n.second;
+    if (old_name_inst->opcode() == spv::Op::OpMemberName) {
+      auto midx = old_name_inst->GetSingleWordInOperand(1);
+      if (midx >= max_member_index) continue;
+    }
+    std::unique_ptr<Instruction> new_name_inst(old_name_inst->Clone(this));
+    new_name_inst->SetInOperand(0, {new_id});
+    names_to_add.push_back(std::move(new_name_inst));
+  }
+  // We can't add the new names when we are iterating over name range above.
+  // We can add all the new names now.
+  for (auto& new_name : names_to_add) AddDebug2Inst(std::move(new_name));
 }
 
 }  // namespace opt

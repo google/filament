@@ -32,7 +32,7 @@ class TransformationReplaceBooleanConstantWithConstantBinary
 
   TransformationReplaceBooleanConstantWithConstantBinary(
       const protobufs::IdUseDescriptor& id_use_descriptor, uint32_t lhs_id,
-      uint32_t rhs_id, SpvOp comparison_opcode,
+      uint32_t rhs_id, spv::Op comparison_opcode,
       uint32_t fresh_id_for_binary_operation);
 
   // - |message_.fresh_id_for_binary_operation| must not already be used by the

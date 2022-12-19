@@ -148,89 +148,89 @@ TEST(TransformationAddCopyMemoryTest, BasicTest) {
       MakeUnique<FactManager>(context.get()), validator_options);
   // Target id is not fresh (59).
   ASSERT_FALSE(TransformationAddCopyMemory(
-                   MakeInstructionDescriptor(27, SpvOpFunctionCall, 0), 59, 19,
-                   SpvStorageClassPrivate, 20)
+                   MakeInstructionDescriptor(27, spv::Op::OpFunctionCall, 0),
+                   59, 19, spv::StorageClass::Private, 20)
                    .IsApplicable(context.get(), transformation_context));
 
   // Instruction descriptor is invalid (id 90 is undefined).
   ASSERT_FALSE(TransformationAddCopyMemory(
-                   MakeInstructionDescriptor(90, SpvOpVariable, 0), 90, 19,
-                   SpvStorageClassPrivate, 20)
+                   MakeInstructionDescriptor(90, spv::Op::OpVariable, 0), 90,
+                   19, spv::StorageClass::Private, 20)
                    .IsApplicable(context.get(), transformation_context));
 
   // Cannot insert OpCopyMemory before OpPhi.
-  ASSERT_FALSE(
-      TransformationAddCopyMemory(MakeInstructionDescriptor(75, SpvOpPhi, 0),
-                                  90, 19, SpvStorageClassPrivate, 20)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationAddCopyMemory(
+                   MakeInstructionDescriptor(75, spv::Op::OpPhi, 0), 90, 19,
+                   spv::StorageClass::Private, 20)
+                   .IsApplicable(context.get(), transformation_context));
 
   // Source instruction is invalid.
   ASSERT_FALSE(TransformationAddCopyMemory(
-                   MakeInstructionDescriptor(27, SpvOpFunctionCall, 0), 90, 76,
-                   SpvStorageClassPrivate, 0)
+                   MakeInstructionDescriptor(27, spv::Op::OpFunctionCall, 0),
+                   90, 76, spv::StorageClass::Private, 0)
                    .IsApplicable(context.get(), transformation_context));
 
   // Source instruction's type doesn't exist.
   ASSERT_FALSE(TransformationAddCopyMemory(
-                   MakeInstructionDescriptor(27, SpvOpFunctionCall, 0), 90, 5,
-                   SpvStorageClassPrivate, 0)
+                   MakeInstructionDescriptor(27, spv::Op::OpFunctionCall, 0),
+                   90, 5, spv::StorageClass::Private, 0)
                    .IsApplicable(context.get(), transformation_context));
 
   // Source instruction's type is invalid.
-  ASSERT_FALSE(
-      TransformationAddCopyMemory(MakeInstructionDescriptor(41, SpvOpLoad, 0),
-                                  90, 40, SpvStorageClassPrivate, 0)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationAddCopyMemory(
+                   MakeInstructionDescriptor(41, spv::Op::OpLoad, 0), 90, 40,
+                   spv::StorageClass::Private, 0)
+                   .IsApplicable(context.get(), transformation_context));
 
   // Source instruction is OpConstantNull.
-  ASSERT_FALSE(
-      TransformationAddCopyMemory(MakeInstructionDescriptor(41, SpvOpLoad, 0),
-                                  90, 88, SpvStorageClassPrivate, 0)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationAddCopyMemory(
+                   MakeInstructionDescriptor(41, spv::Op::OpLoad, 0), 90, 88,
+                   spv::StorageClass::Private, 0)
+                   .IsApplicable(context.get(), transformation_context));
 
   // Storage class is invalid.
   ASSERT_FALSE(TransformationAddCopyMemory(
-                   MakeInstructionDescriptor(27, SpvOpFunctionCall, 0), 90, 19,
-                   SpvStorageClassWorkgroup, 20)
+                   MakeInstructionDescriptor(27, spv::Op::OpFunctionCall, 0),
+                   90, 19, spv::StorageClass::Workgroup, 20)
                    .IsApplicable(context.get(), transformation_context));
 
   // Initializer is 0.
   ASSERT_FALSE(TransformationAddCopyMemory(
-                   MakeInstructionDescriptor(27, SpvOpFunctionCall, 0), 90, 19,
-                   SpvStorageClassPrivate, 0)
+                   MakeInstructionDescriptor(27, spv::Op::OpFunctionCall, 0),
+                   90, 19, spv::StorageClass::Private, 0)
                    .IsApplicable(context.get(), transformation_context));
 
   // Initializer has wrong type.
   ASSERT_FALSE(TransformationAddCopyMemory(
-                   MakeInstructionDescriptor(27, SpvOpFunctionCall, 0), 90, 19,
-                   SpvStorageClassPrivate, 25)
+                   MakeInstructionDescriptor(27, spv::Op::OpFunctionCall, 0),
+                   90, 19, spv::StorageClass::Private, 25)
                    .IsApplicable(context.get(), transformation_context));
 
   // Source and target instructions are in different functions.
-  ASSERT_FALSE(
-      TransformationAddCopyMemory(MakeInstructionDescriptor(13, SpvOpLoad, 0),
-                                  90, 19, SpvStorageClassPrivate, 20)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationAddCopyMemory(
+                   MakeInstructionDescriptor(13, spv::Op::OpLoad, 0), 90, 19,
+                   spv::StorageClass::Private, 20)
+                   .IsApplicable(context.get(), transformation_context));
 
   // Source instruction doesn't dominate the target instruction.
   ASSERT_FALSE(TransformationAddCopyMemory(
-                   MakeInstructionDescriptor(77, SpvOpLogicalEqual, 0), 90, 89,
-                   SpvStorageClassPrivate, 20)
+                   MakeInstructionDescriptor(77, spv::Op::OpLogicalEqual, 0),
+                   90, 89, spv::StorageClass::Private, 20)
                    .IsApplicable(context.get(), transformation_context));
 
   // Source and target instructions are the same.
   ASSERT_FALSE(TransformationAddCopyMemory(
-                   MakeInstructionDescriptor(19, SpvOpVariable, 0), 90, 19,
-                   SpvStorageClassPrivate, 20)
+                   MakeInstructionDescriptor(19, spv::Op::OpVariable, 0), 90,
+                   19, spv::StorageClass::Private, 20)
                    .IsApplicable(context.get(), transformation_context));
 
   // Correct transformations.
   uint32_t fresh_id = 90;
-  auto descriptor = MakeInstructionDescriptor(27, SpvOpFunctionCall, 0);
+  auto descriptor = MakeInstructionDescriptor(27, spv::Op::OpFunctionCall, 0);
   std::vector<uint32_t> source_ids = {19, 23, 26, 30, 35, 39, 68, 86};
   std::vector<uint32_t> initializers = {20, 24, 25, 25, 36, 84, 85, 20};
-  std::vector<SpvStorageClass> storage_classes = {SpvStorageClassPrivate,
-                                                  SpvStorageClassFunction};
+  std::vector<spv::StorageClass> storage_classes = {
+      spv::StorageClass::Private, spv::StorageClass::Function};
   for (size_t i = 0, n = source_ids.size(); i < n; ++i) {
     TransformationAddCopyMemory transformation(
         descriptor, fresh_id, source_ids[i],
@@ -420,10 +420,10 @@ TEST(TransformationAddCopyMemoryTest, DisallowBufferBlockDecoration) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  ASSERT_FALSE(
-      TransformationAddCopyMemory(MakeInstructionDescriptor(5, SpvOpReturn, 0),
-                                  100, 9, SpvStorageClassPrivate, 50)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationAddCopyMemory(
+                   MakeInstructionDescriptor(5, spv::Op::OpReturn, 0), 100, 9,
+                   spv::StorageClass::Private, 50)
+                   .IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationAddCopyMemoryTest, DisallowBlockDecoration) {
@@ -466,10 +466,10 @@ TEST(TransformationAddCopyMemoryTest, DisallowBlockDecoration) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  ASSERT_FALSE(
-      TransformationAddCopyMemory(MakeInstructionDescriptor(5, SpvOpReturn, 0),
-                                  100, 9, SpvStorageClassPrivate, 50)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationAddCopyMemory(
+                   MakeInstructionDescriptor(5, spv::Op::OpReturn, 0), 100, 9,
+                   spv::StorageClass::Private, 50)
+                   .IsApplicable(context.get(), transformation_context));
 }
 
 }  // namespace

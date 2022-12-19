@@ -35,9 +35,9 @@ namespace {
 // is part of the current layout section. If it is not then the next sections is
 // checked.
 spv_result_t ModuleScopedInstructions(ValidationState_t& _,
-                                      const Instruction* inst, SpvOp opcode) {
+                                      const Instruction* inst, spv::Op opcode) {
   switch (opcode) {
-    case SpvOpExtInst:
+    case spv::Op::OpExtInst:
       if (spvExtInstIsDebugInfo(inst->ext_inst_type())) {
         const uint32_t ext_inst_index = inst->word(4);
         bool local_debug_info = false;
@@ -131,7 +131,7 @@ spv_result_t ModuleScopedInstructions(ValidationState_t& _,
 
     switch (_.current_layout_section()) {
       case kLayoutMemoryModel:
-        if (opcode != SpvOpMemoryModel) {
+        if (opcode != spv::Op::OpMemoryModel) {
           return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
                  << spvOpcodeString(opcode)
                  << " cannot appear before the memory model instruction";
@@ -154,7 +154,8 @@ spv_result_t ModuleScopedInstructions(ValidationState_t& _,
 // inside of another function. This stage ends when the first label is
 // encountered inside of a function.
 spv_result_t FunctionScopedInstructions(ValidationState_t& _,
-                                        const Instruction* inst, SpvOp opcode) {
+                                        const Instruction* inst,
+                                        spv::Op opcode) {
   // Make sure we advance into the function definitions when we hit
   // non-function declaration instructions.
   if (_.current_layout_section() == kLayoutFunctionDeclarations &&
@@ -171,12 +172,12 @@ spv_result_t FunctionScopedInstructions(ValidationState_t& _,
 
   if (_.IsOpcodeInCurrentLayoutSection(opcode)) {
     switch (opcode) {
-      case SpvOpFunction: {
+      case spv::Op::OpFunction: {
         if (_.in_function_body()) {
           return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
                  << "Cannot declare a function in a function body";
         }
-        auto control_mask = inst->GetOperandAs<SpvFunctionControlMask>(2);
+        auto control_mask = inst->GetOperandAs<spv::FunctionControlMask>(2);
         if (auto error =
                 _.RegisterFunction(inst->id(), inst->type_id(), control_mask,
                                    inst->GetOperandAs<uint32_t>(3)))
@@ -188,7 +189,7 @@ spv_result_t FunctionScopedInstructions(ValidationState_t& _,
         }
       } break;
 
-      case SpvOpFunctionParameter:
+      case spv::Op::OpFunctionParameter:
         if (_.in_function_body() == false) {
           return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
                  << "Function parameter instructions must be in a "
@@ -204,7 +205,7 @@ spv_result_t FunctionScopedInstructions(ValidationState_t& _,
           return error;
         break;
 
-      case SpvOpFunctionEnd:
+      case spv::Op::OpFunctionEnd:
         if (_.in_function_body() == false) {
           return _.diag(SPV_ERROR_INVALID_LAYOUT, inst)
                  << "Function end instructions must be in a function body";
@@ -227,10 +228,10 @@ spv_result_t FunctionScopedInstructions(ValidationState_t& _,
         if (auto error = _.RegisterFunctionEnd()) return error;
         break;
 
-      case SpvOpLine:
-      case SpvOpNoLine:
+      case spv::Op::OpLine:
+      case spv::Op::OpNoLine:
         break;
-      case SpvOpLabel:
+      case spv::Op::OpLabel:
         // If the label is encountered then the current function is a
         // definition so set the function to a declaration and update the
         // module section
@@ -244,7 +245,7 @@ spv_result_t FunctionScopedInstructions(ValidationState_t& _,
         }
         break;
 
-      case SpvOpExtInst:
+      case spv::Op::OpExtInst:
         if (spvExtInstIsDebugInfo(inst->ext_inst_type())) {
           const uint32_t ext_inst_index = inst->word(4);
           bool local_debug_info = false;
@@ -356,13 +357,14 @@ spv_result_t FunctionScopedInstructions(ValidationState_t& _,
 // NOTE: This function does not handle CFG related validation
 // Performs logical layout validation. See Section 2.4
 spv_result_t ModuleLayoutPass(ValidationState_t& _, const Instruction* inst) {
-  const SpvOp opcode = inst->opcode();
+  const spv::Op opcode = inst->opcode();
 
   switch (_.current_layout_section()) {
     case kLayoutCapabilities:
     case kLayoutExtensions:
     case kLayoutExtInstImport:
     case kLayoutMemoryModel:
+    case kLayoutSamplerImageAddressMode:
     case kLayoutEntryPoint:
     case kLayoutExecutionMode:
     case kLayoutDebug1:

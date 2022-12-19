@@ -54,7 +54,7 @@ void TransformationAddRelaxedDecoration::Apply(
     opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
   // Add a RelaxedPrecision decoration targeting |message_.result_id|.
   ir_context->get_decoration_mgr()->AddDecoration(
-      message_.result_id(), SpvDecorationRelaxedPrecision);
+      message_.result_id(), uint32_t(spv::Decoration::RelaxedPrecision));
 }
 
 protobufs::Transformation TransformationAddRelaxedDecoration::ToMessage()
@@ -64,77 +64,77 @@ protobufs::Transformation TransformationAddRelaxedDecoration::ToMessage()
   return result;
 }
 
-bool TransformationAddRelaxedDecoration::IsNumeric(uint32_t opcode) {
+bool TransformationAddRelaxedDecoration::IsNumeric(spv::Op opcode) {
   switch (opcode) {
-    case SpvOpConvertFToU:
-    case SpvOpConvertFToS:
-    case SpvOpConvertSToF:
-    case SpvOpConvertUToF:
-    case SpvOpUConvert:
-    case SpvOpSConvert:
-    case SpvOpFConvert:
-    case SpvOpConvertPtrToU:
-    case SpvOpSatConvertSToU:
-    case SpvOpSatConvertUToS:
-    case SpvOpVectorExtractDynamic:
-    case SpvOpVectorInsertDynamic:
-    case SpvOpVectorShuffle:
-    case SpvOpTranspose:
-    case SpvOpSNegate:
-    case SpvOpFNegate:
-    case SpvOpIAdd:
-    case SpvOpFAdd:
-    case SpvOpISub:
-    case SpvOpFSub:
-    case SpvOpIMul:
-    case SpvOpFMul:
-    case SpvOpUDiv:
-    case SpvOpSDiv:
-    case SpvOpFDiv:
-    case SpvOpUMod:
-    case SpvOpSRem:
-    case SpvOpSMod:
-    case SpvOpFRem:
-    case SpvOpFMod:
-    case SpvOpVectorTimesScalar:
-    case SpvOpMatrixTimesScalar:
-    case SpvOpVectorTimesMatrix:
-    case SpvOpMatrixTimesVector:
-    case SpvOpMatrixTimesMatrix:
-    case SpvOpOuterProduct:
-    case SpvOpDot:
-    case SpvOpIAddCarry:
-    case SpvOpISubBorrow:
-    case SpvOpUMulExtended:
-    case SpvOpSMulExtended:
-    case SpvOpShiftRightLogical:
-    case SpvOpShiftRightArithmetic:
-    case SpvOpShiftLeftLogical:
-    case SpvOpBitwiseOr:
-    case SpvOpBitwiseXor:
-    case SpvOpBitwiseAnd:
-    case SpvOpNot:
-    case SpvOpBitFieldInsert:
-    case SpvOpBitFieldSExtract:
-    case SpvOpBitFieldUExtract:
-    case SpvOpBitReverse:
-    case SpvOpBitCount:
-    case SpvOpAtomicLoad:
-    case SpvOpAtomicStore:
-    case SpvOpAtomicExchange:
-    case SpvOpAtomicCompareExchange:
-    case SpvOpAtomicCompareExchangeWeak:
-    case SpvOpAtomicIIncrement:
-    case SpvOpAtomicIDecrement:
-    case SpvOpAtomicIAdd:
-    case SpvOpAtomicISub:
-    case SpvOpAtomicSMin:
-    case SpvOpAtomicUMin:
-    case SpvOpAtomicSMax:
-    case SpvOpAtomicUMax:
-    case SpvOpAtomicAnd:
-    case SpvOpAtomicOr:
-    case SpvOpAtomicXor:
+    case spv::Op::OpConvertFToU:
+    case spv::Op::OpConvertFToS:
+    case spv::Op::OpConvertSToF:
+    case spv::Op::OpConvertUToF:
+    case spv::Op::OpUConvert:
+    case spv::Op::OpSConvert:
+    case spv::Op::OpFConvert:
+    case spv::Op::OpConvertPtrToU:
+    case spv::Op::OpSatConvertSToU:
+    case spv::Op::OpSatConvertUToS:
+    case spv::Op::OpVectorExtractDynamic:
+    case spv::Op::OpVectorInsertDynamic:
+    case spv::Op::OpVectorShuffle:
+    case spv::Op::OpTranspose:
+    case spv::Op::OpSNegate:
+    case spv::Op::OpFNegate:
+    case spv::Op::OpIAdd:
+    case spv::Op::OpFAdd:
+    case spv::Op::OpISub:
+    case spv::Op::OpFSub:
+    case spv::Op::OpIMul:
+    case spv::Op::OpFMul:
+    case spv::Op::OpUDiv:
+    case spv::Op::OpSDiv:
+    case spv::Op::OpFDiv:
+    case spv::Op::OpUMod:
+    case spv::Op::OpSRem:
+    case spv::Op::OpSMod:
+    case spv::Op::OpFRem:
+    case spv::Op::OpFMod:
+    case spv::Op::OpVectorTimesScalar:
+    case spv::Op::OpMatrixTimesScalar:
+    case spv::Op::OpVectorTimesMatrix:
+    case spv::Op::OpMatrixTimesVector:
+    case spv::Op::OpMatrixTimesMatrix:
+    case spv::Op::OpOuterProduct:
+    case spv::Op::OpDot:
+    case spv::Op::OpIAddCarry:
+    case spv::Op::OpISubBorrow:
+    case spv::Op::OpUMulExtended:
+    case spv::Op::OpSMulExtended:
+    case spv::Op::OpShiftRightLogical:
+    case spv::Op::OpShiftRightArithmetic:
+    case spv::Op::OpShiftLeftLogical:
+    case spv::Op::OpBitwiseOr:
+    case spv::Op::OpBitwiseXor:
+    case spv::Op::OpBitwiseAnd:
+    case spv::Op::OpNot:
+    case spv::Op::OpBitFieldInsert:
+    case spv::Op::OpBitFieldSExtract:
+    case spv::Op::OpBitFieldUExtract:
+    case spv::Op::OpBitReverse:
+    case spv::Op::OpBitCount:
+    case spv::Op::OpAtomicLoad:
+    case spv::Op::OpAtomicStore:
+    case spv::Op::OpAtomicExchange:
+    case spv::Op::OpAtomicCompareExchange:
+    case spv::Op::OpAtomicCompareExchangeWeak:
+    case spv::Op::OpAtomicIIncrement:
+    case spv::Op::OpAtomicIDecrement:
+    case spv::Op::OpAtomicIAdd:
+    case spv::Op::OpAtomicISub:
+    case spv::Op::OpAtomicSMin:
+    case spv::Op::OpAtomicUMin:
+    case spv::Op::OpAtomicSMax:
+    case spv::Op::OpAtomicUMax:
+    case spv::Op::OpAtomicAnd:
+    case spv::Op::OpAtomicOr:
+    case spv::Op::OpAtomicXor:
       return true;
     default:
       return false;

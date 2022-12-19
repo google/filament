@@ -118,29 +118,29 @@ TEST(TransformationReplaceLoadStoreWithCopyMemoryTest, BasicScenarios) {
                                                kConsoleMessageConsumer));
 
   auto bad_instruction_descriptor_1 =
-      MakeInstructionDescriptor(11, SpvOpConstant, 0);
+      MakeInstructionDescriptor(11, spv::Op::OpConstant, 0);
 
   auto load_instruction_descriptor_1 =
-      MakeInstructionDescriptor(22, SpvOpLoad, 0);
+      MakeInstructionDescriptor(22, spv::Op::OpLoad, 0);
   auto load_instruction_descriptor_2 =
-      MakeInstructionDescriptor(23, SpvOpLoad, 0);
+      MakeInstructionDescriptor(23, spv::Op::OpLoad, 0);
   auto load_instruction_descriptor_3 =
-      MakeInstructionDescriptor(24, SpvOpLoad, 0);
+      MakeInstructionDescriptor(24, spv::Op::OpLoad, 0);
   auto load_instruction_descriptor_other_block =
-      MakeInstructionDescriptor(34, SpvOpLoad, 0);
+      MakeInstructionDescriptor(34, spv::Op::OpLoad, 0);
   auto load_instruction_descriptor_unsafe =
-      MakeInstructionDescriptor(29, SpvOpLoad, 0);
+      MakeInstructionDescriptor(29, spv::Op::OpLoad, 0);
 
   auto store_instruction_descriptor_1 =
-      MakeInstructionDescriptor(22, SpvOpStore, 0);
+      MakeInstructionDescriptor(22, spv::Op::OpStore, 0);
   auto store_instruction_descriptor_2 =
-      MakeInstructionDescriptor(23, SpvOpStore, 0);
+      MakeInstructionDescriptor(23, spv::Op::OpStore, 0);
   auto store_instruction_descriptor_3 =
-      MakeInstructionDescriptor(24, SpvOpStore, 0);
+      MakeInstructionDescriptor(24, spv::Op::OpStore, 0);
   auto store_instruction_descriptor_other_block =
-      MakeInstructionDescriptor(37, SpvOpStore, 0);
+      MakeInstructionDescriptor(37, spv::Op::OpStore, 0);
   auto store_instruction_descriptor_unsafe =
-      MakeInstructionDescriptor(29, SpvOpStore, 0);
+      MakeInstructionDescriptor(29, spv::Op::OpStore, 0);
 
   // Bad: |load_instruction_descriptor| is incorrect.
   auto transformation_bad_1 = TransformationReplaceLoadStoreWithCopyMemory(

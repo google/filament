@@ -35,7 +35,7 @@ void InstDebugPrintfPass::GenOutputValues(Instruction* val_inst,
       uint32_t c_ty_id = type_mgr->GetId(c_ty);
       for (uint32_t c = 0; c < v_ty->element_count(); ++c) {
         Instruction* c_inst = builder->AddIdLiteralOp(
-            c_ty_id, SpvOpCompositeExtract, val_inst->result_id(), c);
+            c_ty_id, spv::Op::OpCompositeExtract, val_inst->result_id(), c);
         GenOutputValues(c_inst, val_ids, builder);
       }
       return;
@@ -44,8 +44,9 @@ void InstDebugPrintfPass::GenOutputValues(Instruction* val_inst,
       // Select between uint32 zero or one
       uint32_t zero_id = builder->GetUintConstantId(0);
       uint32_t one_id = builder->GetUintConstantId(1);
-      Instruction* sel_inst = builder->AddTernaryOp(
-          GetUintId(), SpvOpSelect, val_inst->result_id(), one_id, zero_id);
+      Instruction* sel_inst =
+          builder->AddTernaryOp(GetUintId(), spv::Op::OpSelect,
+                                val_inst->result_id(), one_id, zero_id);
       val_ids->push_back(sel_inst->result_id());
       return;
     }
@@ -55,21 +56,21 @@ void InstDebugPrintfPass::GenOutputValues(Instruction* val_inst,
         case 16: {
           // Convert float16 to float32 and recurse
           Instruction* f32_inst = builder->AddUnaryOp(
-              GetFloatId(), SpvOpFConvert, val_inst->result_id());
+              GetFloatId(), spv::Op::OpFConvert, val_inst->result_id());
           GenOutputValues(f32_inst, val_ids, builder);
           return;
         }
         case 64: {
           // Bitcast float64 to uint64 and recurse
           Instruction* ui64_inst = builder->AddUnaryOp(
-              GetUint64Id(), SpvOpBitcast, val_inst->result_id());
+              GetUint64Id(), spv::Op::OpBitcast, val_inst->result_id());
           GenOutputValues(ui64_inst, val_ids, builder);
           return;
         }
         case 32: {
           // Bitcase float32 to uint32
-          Instruction* bc_inst = builder->AddUnaryOp(GetUintId(), SpvOpBitcast,
-                                                     val_inst->result_id());
+          Instruction* bc_inst = builder->AddUnaryOp(
+              GetUintId(), spv::Op::OpBitcast, val_inst->result_id());
           val_ids->push_back(bc_inst->result_id());
           return;
         }
@@ -85,17 +86,17 @@ void InstDebugPrintfPass::GenOutputValues(Instruction* val_inst,
           Instruction* ui64_inst = val_inst;
           if (i_ty->IsSigned()) {
             // Bitcast sint64 to uint64
-            ui64_inst = builder->AddUnaryOp(GetUint64Id(), SpvOpBitcast,
+            ui64_inst = builder->AddUnaryOp(GetUint64Id(), spv::Op::OpBitcast,
                                             val_inst->result_id());
           }
           // Break uint64 into 2x uint32
           Instruction* lo_ui64_inst = builder->AddUnaryOp(
-              GetUintId(), SpvOpUConvert, ui64_inst->result_id());
+              GetUintId(), spv::Op::OpUConvert, ui64_inst->result_id());
           Instruction* rshift_ui64_inst = builder->AddBinaryOp(
-              GetUint64Id(), SpvOpShiftRightLogical, ui64_inst->result_id(),
-              builder->GetUintConstantId(32));
+              GetUint64Id(), spv::Op::OpShiftRightLogical,
+              ui64_inst->result_id(), builder->GetUintConstantId(32));
           Instruction* hi_ui64_inst = builder->AddUnaryOp(
-              GetUintId(), SpvOpUConvert, rshift_ui64_inst->result_id());
+              GetUintId(), spv::Op::OpUConvert, rshift_ui64_inst->result_id());
           val_ids->push_back(lo_ui64_inst->result_id());
           val_ids->push_back(hi_ui64_inst->result_id());
           return;
@@ -104,12 +105,12 @@ void InstDebugPrintfPass::GenOutputValues(Instruction* val_inst,
           Instruction* ui8_inst = val_inst;
           if (i_ty->IsSigned()) {
             // Bitcast sint8 to uint8
-            ui8_inst = builder->AddUnaryOp(GetUint8Id(), SpvOpBitcast,
+            ui8_inst = builder->AddUnaryOp(GetUint8Id(), spv::Op::OpBitcast,
                                            val_inst->result_id());
           }
           // Convert uint8 to uint32
           Instruction* ui32_inst = builder->AddUnaryOp(
-              GetUintId(), SpvOpUConvert, ui8_inst->result_id());
+              GetUintId(), spv::Op::OpUConvert, ui8_inst->result_id());
           val_ids->push_back(ui32_inst->result_id());
           return;
         }
@@ -117,7 +118,7 @@ void InstDebugPrintfPass::GenOutputValues(Instruction* val_inst,
           Instruction* ui32_inst = val_inst;
           if (i_ty->IsSigned()) {
             // Bitcast sint32 to uint32
-            ui32_inst = builder->AddUnaryOp(GetUintId(), SpvOpBitcast,
+            ui32_inst = builder->AddUnaryOp(GetUintId(), spv::Op::OpBitcast,
                                             val_inst->result_id());
           }
           // uint32 needs no further processing
@@ -158,7 +159,7 @@ void InstDebugPrintfPass::GenOutputCode(
           return;
         }
         Instruction* opnd_inst = get_def_use_mgr()->GetDef(*iid);
-        if (opnd_inst->opcode() == SpvOpString) {
+        if (opnd_inst->opcode() == spv::Op::OpString) {
           uint32_t string_id_id = builder.GetUintConstantId(*iid);
           val_ids.push_back(string_id_id);
         } else {
@@ -176,7 +177,7 @@ void InstDebugPrintfPass::GenDebugPrintfCode(
     std::vector<std::unique_ptr<BasicBlock>>* new_blocks) {
   // If not DebugPrintf OpExtInst, return.
   Instruction* printf_inst = &*ref_inst_itr;
-  if (printf_inst->opcode() != SpvOpExtInst) return;
+  if (printf_inst->opcode() != spv::Op::OpExtInst) return;
   if (printf_inst->GetSingleWordInOperand(0) != ext_inst_printf_id_) return;
   if (printf_inst->GetSingleWordInOperand(1) !=
       NonSemanticDebugPrintfDebugPrintf)

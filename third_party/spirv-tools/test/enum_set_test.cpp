@@ -179,60 +179,60 @@ TEST(EnumSet, DefaultIsEmpty) {
 }
 
 TEST(CapabilitySet, ConstructSingleMemberMatrix) {
-  CapabilitySet s(SpvCapabilityMatrix);
-  EXPECT_TRUE(s.Contains(SpvCapabilityMatrix));
-  EXPECT_FALSE(s.Contains(SpvCapabilityShader));
-  EXPECT_FALSE(s.Contains(static_cast<SpvCapability>(1000)));
+  CapabilitySet s(spv::Capability::Matrix);
+  EXPECT_TRUE(s.Contains(spv::Capability::Matrix));
+  EXPECT_FALSE(s.Contains(spv::Capability::Shader));
+  EXPECT_FALSE(s.Contains(static_cast<spv::Capability>(1000)));
 }
 
 TEST(CapabilitySet, ConstructSingleMemberMaxInMask) {
-  CapabilitySet s(static_cast<SpvCapability>(63));
-  EXPECT_FALSE(s.Contains(SpvCapabilityMatrix));
-  EXPECT_FALSE(s.Contains(SpvCapabilityShader));
-  EXPECT_TRUE(s.Contains(static_cast<SpvCapability>(63)));
-  EXPECT_FALSE(s.Contains(static_cast<SpvCapability>(64)));
-  EXPECT_FALSE(s.Contains(static_cast<SpvCapability>(1000)));
+  CapabilitySet s(static_cast<spv::Capability>(63));
+  EXPECT_FALSE(s.Contains(spv::Capability::Matrix));
+  EXPECT_FALSE(s.Contains(spv::Capability::Shader));
+  EXPECT_TRUE(s.Contains(static_cast<spv::Capability>(63)));
+  EXPECT_FALSE(s.Contains(static_cast<spv::Capability>(64)));
+  EXPECT_FALSE(s.Contains(static_cast<spv::Capability>(1000)));
 }
 
 TEST(CapabilitySet, ConstructSingleMemberMinOverflow) {
   // Check the first one that forces overflow beyond the mask.
-  CapabilitySet s(static_cast<SpvCapability>(64));
-  EXPECT_FALSE(s.Contains(SpvCapabilityMatrix));
-  EXPECT_FALSE(s.Contains(SpvCapabilityShader));
-  EXPECT_FALSE(s.Contains(static_cast<SpvCapability>(63)));
-  EXPECT_TRUE(s.Contains(static_cast<SpvCapability>(64)));
-  EXPECT_FALSE(s.Contains(static_cast<SpvCapability>(1000)));
+  CapabilitySet s(static_cast<spv::Capability>(64));
+  EXPECT_FALSE(s.Contains(spv::Capability::Matrix));
+  EXPECT_FALSE(s.Contains(spv::Capability::Shader));
+  EXPECT_FALSE(s.Contains(static_cast<spv::Capability>(63)));
+  EXPECT_TRUE(s.Contains(static_cast<spv::Capability>(64)));
+  EXPECT_FALSE(s.Contains(static_cast<spv::Capability>(1000)));
 }
 
 TEST(CapabilitySet, ConstructSingleMemberMaxOverflow) {
   // Check the max 32-bit signed int.
-  CapabilitySet s(static_cast<SpvCapability>(0x7fffffffu));
-  EXPECT_FALSE(s.Contains(SpvCapabilityMatrix));
-  EXPECT_FALSE(s.Contains(SpvCapabilityShader));
-  EXPECT_FALSE(s.Contains(static_cast<SpvCapability>(1000)));
-  EXPECT_TRUE(s.Contains(static_cast<SpvCapability>(0x7fffffffu)));
+  CapabilitySet s(static_cast<spv::Capability>(0x7fffffffu));
+  EXPECT_FALSE(s.Contains(spv::Capability::Matrix));
+  EXPECT_FALSE(s.Contains(spv::Capability::Shader));
+  EXPECT_FALSE(s.Contains(static_cast<spv::Capability>(1000)));
+  EXPECT_TRUE(s.Contains(static_cast<spv::Capability>(0x7fffffffu)));
 }
 
 TEST(CapabilitySet, AddEnum) {
-  CapabilitySet s(SpvCapabilityShader);
-  s.Add(SpvCapabilityKernel);
-  s.Add(static_cast<SpvCapability>(42));
-  EXPECT_FALSE(s.Contains(SpvCapabilityMatrix));
-  EXPECT_TRUE(s.Contains(SpvCapabilityShader));
-  EXPECT_TRUE(s.Contains(SpvCapabilityKernel));
-  EXPECT_TRUE(s.Contains(static_cast<SpvCapability>(42)));
+  CapabilitySet s(spv::Capability::Shader);
+  s.Add(spv::Capability::Kernel);
+  s.Add(static_cast<spv::Capability>(42));
+  EXPECT_FALSE(s.Contains(spv::Capability::Matrix));
+  EXPECT_TRUE(s.Contains(spv::Capability::Shader));
+  EXPECT_TRUE(s.Contains(spv::Capability::Kernel));
+  EXPECT_TRUE(s.Contains(static_cast<spv::Capability>(42)));
 }
 
 TEST(CapabilitySet, InitializerListEmpty) {
   CapabilitySet s{};
   for (uint32_t i = 0; i < 1000; i++) {
-    EXPECT_FALSE(s.Contains(static_cast<SpvCapability>(i)));
+    EXPECT_FALSE(s.Contains(static_cast<spv::Capability>(i)));
   }
 }
 
 struct ForEachCase {
   CapabilitySet capabilities;
-  std::vector<SpvCapability> expected;
+  std::vector<spv::Capability> expected;
 };
 
 using CapabilitySetForEachTest = ::testing::TestWithParam<ForEachCase>;
@@ -253,7 +253,7 @@ TEST_P(CapabilitySetForEachTest, MoveConstructor) {
   EXPECT_THAT(ElementsIn(moved), Eq(GetParam().expected));
 
   // The moved-from set is empty.
-  EXPECT_THAT(ElementsIn(copy), Eq(std::vector<SpvCapability>{}));
+  EXPECT_THAT(ElementsIn(copy), Eq(std::vector<spv::Capability>{}));
 }
 
 TEST_P(CapabilitySetForEachTest, OperatorEquals) {
@@ -267,24 +267,25 @@ TEST_P(CapabilitySetForEachTest, OperatorEqualsSelfAssign) {
   EXPECT_THAT(ElementsIn(assigned), Eq(GetParam().expected));
 }
 
-INSTANTIATE_TEST_SUITE_P(Samples, CapabilitySetForEachTest,
-                         ValuesIn(std::vector<ForEachCase>{
-                             {{}, {}},
-                             {{SpvCapabilityMatrix}, {SpvCapabilityMatrix}},
-                             {{SpvCapabilityKernel, SpvCapabilityShader},
-                              {SpvCapabilityShader, SpvCapabilityKernel}},
-                             {{static_cast<SpvCapability>(999)},
-                              {static_cast<SpvCapability>(999)}},
-                             {{static_cast<SpvCapability>(0x7fffffff)},
-                              {static_cast<SpvCapability>(0x7fffffff)}},
-                             // Mixture and out of order
-                             {{static_cast<SpvCapability>(0x7fffffff),
-                               static_cast<SpvCapability>(100),
-                               SpvCapabilityShader, SpvCapabilityMatrix},
-                              {SpvCapabilityMatrix, SpvCapabilityShader,
-                               static_cast<SpvCapability>(100),
-                               static_cast<SpvCapability>(0x7fffffff)}},
-                         }));
+INSTANTIATE_TEST_SUITE_P(
+    Samples, CapabilitySetForEachTest,
+    ValuesIn(std::vector<ForEachCase>{
+        {{}, {}},
+        {{spv::Capability::Matrix}, {spv::Capability::Matrix}},
+        {{spv::Capability::Kernel, spv::Capability::Shader},
+         {spv::Capability::Shader, spv::Capability::Kernel}},
+        {{static_cast<spv::Capability>(999)},
+         {static_cast<spv::Capability>(999)}},
+        {{static_cast<spv::Capability>(0x7fffffff)},
+         {static_cast<spv::Capability>(0x7fffffff)}},
+        // Mixture and out of order
+        {{static_cast<spv::Capability>(0x7fffffff),
+          static_cast<spv::Capability>(100), spv::Capability::Shader,
+          spv::Capability::Matrix},
+         {spv::Capability::Matrix, spv::Capability::Shader,
+          static_cast<spv::Capability>(100),
+          static_cast<spv::Capability>(0x7fffffff)}},
+    }));
 
 }  // namespace
 }  // namespace spvtools

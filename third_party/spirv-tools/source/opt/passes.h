@@ -19,6 +19,7 @@
 
 #include "source/opt/aggressive_dead_code_elim_pass.h"
 #include "source/opt/amd_ext_to_khr.h"
+#include "source/opt/analyze_live_input_pass.h"
 #include "source/opt/block_merge_pass.h"
 #include "source/opt/ccp_pass.h"
 #include "source/opt/cfg_cleanup_pass.h"
@@ -34,8 +35,9 @@
 #include "source/opt/desc_sroa.h"
 #include "source/opt/eliminate_dead_constant_pass.h"
 #include "source/opt/eliminate_dead_functions_pass.h"
-#include "source/opt/eliminate_dead_input_components_pass.h"
+#include "source/opt/eliminate_dead_io_components_pass.h"
 #include "source/opt/eliminate_dead_members_pass.h"
+#include "source/opt/eliminate_dead_output_stores_pass.h"
 #include "source/opt/empty_pass.h"
 #include "source/opt/fix_func_call_arguments.h"
 #include "source/opt/fix_storage_class.h"

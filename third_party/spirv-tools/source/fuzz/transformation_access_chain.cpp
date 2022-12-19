@@ -63,7 +63,7 @@ bool TransformationAccessChain::IsApplicable(
   }
   // The type must indeed be a pointer.
   auto pointer_type = ir_context->get_def_use_mgr()->GetDef(pointer->type_id());
-  if (pointer_type->opcode() != SpvOpTypePointer) {
+  if (pointer_type->opcode() != spv::Op::OpTypePointer) {
     return false;
   }
 
@@ -75,7 +75,7 @@ bool TransformationAccessChain::IsApplicable(
     return false;
   }
   if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(
-          SpvOpAccessChain, instruction_to_insert_before)) {
+          spv::Op::OpAccessChain, instruction_to_insert_before)) {
     return false;
   }
 
@@ -83,8 +83,8 @@ bool TransformationAccessChain::IsApplicable(
   // we do not want to allow accessing such pointers.  This might be acceptable
   // in dead blocks, but we conservatively avoid it.
   switch (pointer->opcode()) {
-    case SpvOpConstantNull:
-    case SpvOpUndef:
+    case spv::Op::OpConstantNull:
+    case spv::Op::OpUndef:
       assert(
           false &&
           "Access chains should not be created from null/undefined pointers");
@@ -117,7 +117,7 @@ bool TransformationAccessChain::IsApplicable(
 
     // Check whether the object is a struct.
     if (ir_context->get_def_use_mgr()->GetDef(subobject_type_id)->opcode() ==
-        SpvOpTypeStruct) {
+        spv::Op::OpTypeStruct) {
       // It is a struct: we need to retrieve the integer value.
 
       bool successful;
@@ -202,7 +202,7 @@ bool TransformationAccessChain::IsApplicable(
   // associated with pointers to isomorphic structs being regarded as the same.
   return fuzzerutil::MaybeGetPointerType(
              ir_context, subobject_type_id,
-             static_cast<SpvStorageClass>(
+             static_cast<spv::StorageClass>(
                  pointer_type->GetSingleWordInOperand(0))) != 0;
 }
 
@@ -243,7 +243,7 @@ void TransformationAccessChain::Apply(
 
     // Check whether the object is a struct.
     if (ir_context->get_def_use_mgr()->GetDef(subobject_type_id)->opcode() ==
-        SpvOpTypeStruct) {
+        spv::Op::OpTypeStruct) {
       // It is a struct: we need to retrieve the integer value.
 
       index_value =
@@ -290,7 +290,8 @@ void TransformationAccessChain::Apply(
       //   %fresh_ids.first = OpULessThanEqual %bool %int_id %bound_minus_one.
       fuzzerutil::UpdateModuleIdBound(ir_context, fresh_ids.first());
       auto comparison_instruction = MakeUnique<opt::Instruction>(
-          ir_context, SpvOpULessThanEqual, bool_type_id, fresh_ids.first(),
+          ir_context, spv::Op::OpULessThanEqual, bool_type_id,
+          fresh_ids.first(),
           opt::Instruction::OperandList(
               {{SPV_OPERAND_TYPE_ID, {index_instruction->result_id()}},
                {SPV_OPERAND_TYPE_ID, {bound_minus_one_id}}}));
@@ -306,7 +307,7 @@ void TransformationAccessChain::Apply(
       //                           %bound_minus_one
       fuzzerutil::UpdateModuleIdBound(ir_context, fresh_ids.second());
       auto select_instruction = MakeUnique<opt::Instruction>(
-          ir_context, SpvOpSelect, int_type_inst->result_id(),
+          ir_context, spv::Op::OpSelect, int_type_inst->result_id(),
           fresh_ids.second(),
           opt::Instruction::OperandList(
               {{SPV_OPERAND_TYPE_ID, {fresh_ids.first()}},
@@ -334,13 +335,14 @@ void TransformationAccessChain::Apply(
   // of the original pointer.
   uint32_t result_type = fuzzerutil::MaybeGetPointerType(
       ir_context, subobject_type_id,
-      static_cast<SpvStorageClass>(pointer_type->GetSingleWordInOperand(0)));
+      static_cast<spv::StorageClass>(pointer_type->GetSingleWordInOperand(0)));
 
   // Add the access chain instruction to the module, and update the module's
   // id bound.
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
-  auto access_chain_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpAccessChain, result_type, message_.fresh_id(), operands);
+  auto access_chain_instruction =
+      MakeUnique<opt::Instruction>(ir_context, spv::Op::OpAccessChain,
+                                   result_type, message_.fresh_id(), operands);
   auto access_chain_instruction_ptr = access_chain_instruction.get();
   instruction_to_insert_before->InsertBefore(
       std::move(access_chain_instruction));
@@ -367,7 +369,7 @@ std::pair<bool, uint32_t> TransformationAccessChain::GetStructIndexValue(
     opt::IRContext* ir_context, uint32_t index_id,
     uint32_t object_type_id) const {
   assert(ir_context->get_def_use_mgr()->GetDef(object_type_id)->opcode() ==
-             SpvOpTypeStruct &&
+             spv::Op::OpTypeStruct &&
          "Precondition: the type must be a struct type.");
   if (!ValidIndexToComposite(ir_context, index_id, object_type_id)) {
     return {false, 0};
@@ -408,14 +410,14 @@ bool TransformationAccessChain::ValidIndexToComposite(
   // The index type must be 32-bit integer.
   auto index_type =
       ir_context->get_def_use_mgr()->GetDef(index_instruction->type_id());
-  if (index_type->opcode() != SpvOpTypeInt ||
+  if (index_type->opcode() != spv::Op::OpTypeInt ||
       index_type->GetSingleWordInOperand(0) != 32) {
     return false;
   }
 
   // If the object being traversed is a struct, the id must correspond to an
   // in-bound constant.
-  if (object_type_def->opcode() == SpvOpTypeStruct) {
+  if (object_type_def->opcode() == spv::Op::OpTypeStruct) {
     if (!spvOpcodeIsConstant(index_instruction->opcode())) {
       return false;
     }

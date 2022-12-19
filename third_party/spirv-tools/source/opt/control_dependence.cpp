@@ -24,7 +24,6 @@
 #include "source/opt/dominator_analysis.h"
 #include "source/opt/function.h"
 #include "source/opt/instruction.h"
-#include "spirv/unified1/spirv.h"
 
 // Computes the control dependence graph (CDG) using the algorithm in Cytron
 // 1991, "Efficiently Computing Static Single Assignment Form and the Control
@@ -49,8 +48,8 @@ uint32_t ControlDependence::GetConditionID(const CFG& cfg) const {
   }
   const BasicBlock* source_bb = cfg.block(source_bb_id());
   const Instruction* branch = source_bb->terminator();
-  assert((branch->opcode() == SpvOpBranchConditional ||
-          branch->opcode() == SpvOpSwitch) &&
+  assert((branch->opcode() == spv::Op::OpBranchConditional ||
+          branch->opcode() == spv::Op::OpSwitch) &&
          "invalid control dependence; last instruction must be conditional "
          "branch or switch");
   return branch->GetSingleWordInOperand(0);

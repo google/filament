@@ -29,7 +29,7 @@ class TransformationAddGlobalVariable : public Transformation {
       protobufs::TransformationAddGlobalVariable message);
 
   TransformationAddGlobalVariable(uint32_t fresh_id, uint32_t type_id,
-                                  SpvStorageClass storage_class,
+                                  spv::StorageClass storage_class,
                                   uint32_t initializer_id,
                                   bool value_is_irrelevant);
 

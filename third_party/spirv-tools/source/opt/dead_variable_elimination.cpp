@@ -33,7 +33,7 @@ Pass::Status DeadVariableElimination::Process() {
 
   // Get the reference count for all of the global OpVariable instructions.
   for (auto& inst : context()->types_values()) {
-    if (inst.opcode() != SpvOp::SpvOpVariable) {
+    if (inst.opcode() != spv::Op::OpVariable) {
       continue;
     }
 
@@ -43,11 +43,11 @@ Pass::Status DeadVariableElimination::Process() {
     // Check the linkage.  If it is exported, it could be reference somewhere
     // else, so we must keep the variable around.
     get_decoration_mgr()->ForEachDecoration(
-        result_id, SpvDecorationLinkageAttributes,
+        result_id, uint32_t(spv::Decoration::LinkageAttributes),
         [&count](const Instruction& linkage_instruction) {
           uint32_t last_operand = linkage_instruction.NumOperands() - 1;
-          if (linkage_instruction.GetSingleWordOperand(last_operand) ==
-              SpvLinkageTypeExport) {
+          if (spv::LinkageType(linkage_instruction.GetSingleWordOperand(
+                  last_operand)) == spv::LinkageType::Export) {
             count = kMustKeep;
           }
         });
@@ -57,7 +57,8 @@ Pass::Status DeadVariableElimination::Process() {
       // at the uses and count the number of real references.
       count = 0;
       get_def_use_mgr()->ForEachUser(result_id, [&count](Instruction* user) {
-        if (!IsAnnotationInst(user->opcode()) && user->opcode() != SpvOpName) {
+        if (!IsAnnotationInst(user->opcode()) &&
+            user->opcode() != spv::Op::OpName) {
           ++count;
         }
       });
@@ -81,7 +82,7 @@ Pass::Status DeadVariableElimination::Process() {
 
 void DeadVariableElimination::DeleteVariable(uint32_t result_id) {
   Instruction* inst = get_def_use_mgr()->GetDef(result_id);
-  assert(inst->opcode() == SpvOpVariable &&
+  assert(inst->opcode() == spv::Op::OpVariable &&
          "Should not be trying to delete anything other than an OpVariable.");
 
   // Look for an initializer that references another variable.  We need to know
@@ -93,7 +94,7 @@ void DeadVariableElimination::DeleteVariable(uint32_t result_id) {
     // TODO: Handle OpSpecConstantOP which might be defined in terms of other
     // variables.  Will probably require a unified dead code pass that does all
     // instruction types.  (Issue 906)
-    if (initializer->opcode() == SpvOpVariable) {
+    if (initializer->opcode() == spv::Op::OpVariable) {
       uint32_t initializer_id = initializer->result_id();
       size_t& count = reference_count_[initializer_id];
       if (count != kMustKeep) {

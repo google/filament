@@ -1,5 +1,5 @@
 {
-  "revision" : 2,
+  "revision" : 4,
   "instructions" : [
     {
       "opname" : "Kernel",
@@ -238,6 +238,114 @@
       "opcode" : 25,
       "operands" : [
         { "kind" : "IdRef", "name" : "Size" }
+      ]
+    },
+    {
+      "opname" : "ArgumentPointerPushConstant",
+      "opcode" : 26,
+      "operands": [
+        { "kind" : "IdRef", "name" : "Kernel" },
+        { "kind" : "IdRef", "name" : "Ordinal" },
+        { "kind" : "IdRef", "name" : "Offset" },
+        { "kind" : "IdRef", "name" : "Size" },
+        { "kind" : "IdRef", "name" : "ArgInfo", "quantifier" : "?" }
+      ]
+    },
+    {
+      "opname" : "ArgumentPointerUniform",
+      "opcode" : 27,
+      "operands": [
+        { "kind" : "IdRef", "name" : "Kernel" },
+        { "kind" : "IdRef", "name" : "Ordinal" },
+        { "kind" : "IdRef", "name" : "DescriptorSet" },
+        { "kind" : "IdRef", "name" : "Binding" },
+        { "kind" : "IdRef", "name" : "Offset" },
+        { "kind" : "IdRef", "name" : "Size" },
+        { "kind" : "IdRef", "name" : "ArgInfo", "quantifier" : "?" }
+      ]
+    },
+    {
+      "opname" : "ProgramScopeVariablesStorageBuffer",
+      "opcode" : 28,
+      "operands": [
+        { "kind" : "IdRef", "name" : "DescriptorSet" },
+        { "kind" : "IdRef", "name" : "Binding" },
+        { "kind" : "IdRef", "name" : "Data" }
+      ]
+    },
+    {
+      "opname" : "ProgramScopeVariablePointerRelocation",
+      "opcode" : 29,
+      "operands": [
+        { "kind" : "IdRef", "name" : "ObjectOffset" },
+        { "kind" : "IdRef", "name" : "PointerOffset" },
+        { "kind" : "IdRef", "name" : "PointerSize" }
+      ]
+    },
+    {
+      "opname" : "ImageArgumentInfoChannelOrderPushConstant",
+      "opcode" : 30,
+      "operands": [
+        { "kind" : "IdRef", "name" : "Kernel" },
+        { "kind" : "IdRef", "name" : "Ordinal" },
+        { "kind" : "IdRef", "name" : "Offset" },
+        { "kind" : "IdRef", "name" : "Size" }
+      ]
+    },
+    {
+      "opname" : "ImageArgumentInfoChannelDataTypePushConstant",
+      "opcode" : 31,
+      "operands": [
+        { "kind" : "IdRef", "name" : "Kernel" },
+        { "kind" : "IdRef", "name" : "Ordinal" },
+        { "kind" : "IdRef", "name" : "Offset" },
+        { "kind" : "IdRef", "name" : "Size" }
+      ]
+    },
+    {
+      "opname" : "ImageArgumentInfoChannelOrderUniform",
+      "opcode" : 32,
+      "operands": [
+        { "kind" : "IdRef", "name" : "Kernel" },
+        { "kind" : "IdRef", "name" : "Ordinal" },
+        { "kind" : "IdRef", "name" : "DescriptorSet" },
+        { "kind" : "IdRef", "name" : "Binding" },
+        { "kind" : "IdRef", "name" : "Offset" },
+        { "kind" : "IdRef", "name" : "Size" }
+      ]
+    },
+    {
+      "opname" : "ImageArgumentInfoChannelDataTypeUniform",
+      "opcode" : 33,
+      "operands": [
+        { "kind" : "IdRef", "name" : "Kernel" },
+        { "kind" : "IdRef", "name" : "Ordinal" },
+        { "kind" : "IdRef", "name" : "DescriptorSet" },
+        { "kind" : "IdRef", "name" : "Binding" },
+        { "kind" : "IdRef", "name" : "Offset" },
+        { "kind" : "IdRef", "name" : "Size" }
+      ]
+    },
+    {
+      "opname" : "ArgumentStorageTexelBuffer",
+      "opcode" : 34,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "Decl" },
+        { "kind" : "IdRef", "name" : "Ordinal" },
+        { "kind" : "IdRef", "name" : "DescriptorSet" },
+        { "kind" : "IdRef", "name" : "Binding" },
+        { "kind" : "IdRef", "name" : "ArgInfo", "quantifier" : "?" }
+      ]
+    },
+    {
+      "opname" : "ArgumentUniformTexelBuffer",
+      "opcode" : 35,
+      "operands" : [
+        { "kind" : "IdRef", "name" : "Decl" },
+        { "kind" : "IdRef", "name" : "Ordinal" },
+        { "kind" : "IdRef", "name" : "DescriptorSet" },
+        { "kind" : "IdRef", "name" : "Binding" },
+        { "kind" : "IdRef", "name" : "ArgInfo", "quantifier" : "?" }
       ]
     }
   ]

@@ -64,7 +64,7 @@ class FoldingRules {
   virtual ~FoldingRules() = default;
 
   const FoldingRuleSet& GetRulesForInstruction(Instruction* inst) const {
-    if (inst->opcode() != SpvOpExtInst) {
+    if (inst->opcode() != spv::Op::OpExtInst) {
       auto it = rules_.find(inst->opcode());
       if (it != rules_.end()) {
         return it->second;
@@ -86,8 +86,14 @@ class FoldingRules {
   virtual void AddFoldingRules();
 
  protected:
+  struct hasher {
+    size_t operator()(const spv::Op& op) const noexcept {
+      return std::hash<uint32_t>()(uint32_t(op));
+    }
+  };
+
   // The folding rules for core instructions.
-  std::unordered_map<uint32_t, FoldingRuleSet> rules_;
+  std::unordered_map<spv::Op, FoldingRuleSet, hasher> rules_;
 
   // The folding rules for extended instructions.
   struct Key {

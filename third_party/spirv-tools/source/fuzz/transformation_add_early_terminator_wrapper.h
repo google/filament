@@ -30,7 +30,7 @@ class TransformationAddEarlyTerminatorWrapper : public Transformation {
 
   TransformationAddEarlyTerminatorWrapper(uint32_t function_fresh_id,
                                           uint32_t label_fresh_id,
-                                          SpvOp opcode);
+                                          spv::Op opcode);
 
   // - |message_.function_fresh_id| and |message_.label_fresh_id| must be fresh
   //   and distinct.

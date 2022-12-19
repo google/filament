@@ -69,6 +69,8 @@ template("spvtools_core_tables") {
       rebase_path(cldebuginfo100_insts_file, root_build_dir),
       "--operand-kinds-output",
       rebase_path(operand_kinds_file, root_build_dir),
+      "--output-language",
+      "c++"
     ]
   }
 }
@@ -101,6 +103,8 @@ template("spvtools_core_enums") {
       rebase_path(extension_enum_file, root_build_dir),
       "--enum-string-mapping-output",
       rebase_path(extension_map_file, root_build_dir),
+      "--output-language",
+      "c++"
     ]
     inputs = [
       core_json_file,
@@ -142,6 +146,8 @@ template("spvtools_glsl_tables") {
       rebase_path(glsl_json_file, root_build_dir),
       "--glsl-insts-output",
       rebase_path(glsl_insts_file, root_build_dir),
+      "--output-language",
+      "c++"
     ]
     inputs = [
       core_json_file,
@@ -466,7 +472,6 @@ static_library("spvtools") {
     "source/util/make_unique.h",
     "source/util/parse_number.cpp",
     "source/util/parse_number.h",
-    "source/util/pooled_linked_list.h",
     "source/util/small_vector.h",
     "source/util/string_utils.cpp",
     "source/util/string_utils.h",
@@ -527,10 +532,14 @@ static_library("spvtools_val") {
     "source/val/validate_memory.cpp",
     "source/val/validate_memory_semantics.cpp",
     "source/val/validate_memory_semantics.h",
+    "source/val/validate_mesh_shading.cpp",
     "source/val/validate_misc.cpp",
     "source/val/validate_mode_setting.cpp",
     "source/val/validate_non_uniform.cpp",
     "source/val/validate_primitives.cpp",
+    "source/val/validate_ray_query.cpp",
+    "source/val/validate_ray_tracing.cpp",
+    "source/val/validate_ray_tracing_reorder.cpp",
     "source/val/validate_scopes.cpp",
     "source/val/validate_scopes.h",
     "source/val/validate_small_type_uses.cpp",
@@ -560,6 +569,8 @@ static_library("spvtools_opt") {
     "source/opt/aggressive_dead_code_elim_pass.h",
     "source/opt/amd_ext_to_khr.cpp",
     "source/opt/amd_ext_to_khr.h",
+    "source/opt/analyze_live_input_pass.cpp",
+    "source/opt/analyze_live_input_pass.h",
     "source/opt/basic_block.cpp",
     "source/opt/basic_block.h",
     "source/opt/block_merge_pass.cpp",
@@ -622,10 +633,12 @@ static_library("spvtools_opt") {
     "source/opt/eliminate_dead_functions_pass.h",
     "source/opt/eliminate_dead_functions_util.cpp",
     "source/opt/eliminate_dead_functions_util.h",
-    "source/opt/eliminate_dead_input_components_pass.cpp",
-    "source/opt/eliminate_dead_input_components_pass.h",
+    "source/opt/eliminate_dead_io_components_pass.cpp",
+    "source/opt/eliminate_dead_io_components_pass.h",
     "source/opt/eliminate_dead_members_pass.cpp",
     "source/opt/eliminate_dead_members_pass.h",
+    "source/opt/eliminate_dead_output_stores_pass.cpp",
+    "source/opt/eliminate_dead_output_stores_pass.h",
     "source/opt/empty_pass.h",
     "source/opt/feature_manager.cpp",
     "source/opt/feature_manager.h",
@@ -679,6 +692,8 @@ static_library("spvtools_opt") {
     "source/opt/iterator.h",
     "source/opt/licm_pass.cpp",
     "source/opt/licm_pass.h",
+    "source/opt/liveness.cpp",
+    "source/opt/liveness.h",
     "source/opt/local_access_chain_convert_pass.cpp",
     "source/opt/local_access_chain_convert_pass.h",
     "source/opt/local_redundancy_elimination.cpp",

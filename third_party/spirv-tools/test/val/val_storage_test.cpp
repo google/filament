@@ -251,30 +251,46 @@ TEST_F(ValidateStorage, RelaxedLogicalPointerFunctionParamBad) {
               HasSubstr("OpFunctionCall Argument <id> '"));
 }
 
-TEST_P(ValidateStorageExecutionModel, VulkanOutsideStoreFailure) {
-  std::stringstream ss;
+std::string GenerateExecutionModelCode(const std::string& execution_model,
+                                       const std::string& storage_class,
+                                       bool store) {
+  const std::string mode = (execution_model.compare("GLCompute") == 0)
+                               ? "OpExecutionMode %func LocalSize 1 1 1"
+                               : "";
+  const std::string operation =
+      (store) ? "OpStore %var %int0" : "%load = OpLoad %intt %var";
+  std::ostringstream ss;
   ss << R"(
               OpCapability Shader
               OpCapability RayTracingKHR
               OpExtension "SPV_KHR_ray_tracing"
               OpMemoryModel Logical GLSL450
               OpEntryPoint )"
-     << GetParam() << R"(  %func "func" %output
-              OpDecorate %output Location 0
+     << execution_model << R"( %func "func" %var
+              )" << mode << R"(
+              OpDecorate %var Location 0
 %intt       = OpTypeInt 32 0
 %int0       = OpConstant %intt 0
 %voidt      = OpTypeVoid
 %vfunct     = OpTypeFunction %voidt
-%outputptrt = OpTypePointer Output %intt
-%output     = OpVariable %outputptrt Output
+%ptr        = OpTypePointer )"
+     << storage_class << R"( %intt
+%var        = OpVariable %ptr )" << storage_class << R"(
 %func       = OpFunction %voidt None %vfunct
 %funcl      = OpLabel
-              OpStore %output %int0
+              )" << operation << R"(
               OpReturn
               OpFunctionEnd
 )";
 
-  CompileSuccessfully(ss.str(), SPV_ENV_VULKAN_1_0);
+  return ss.str();
+}
+
+TEST_P(ValidateStorageExecutionModel, VulkanOutsideStoreFailure) {
+  std::string execution_model = GetParam();
+  CompileSuccessfully(
+      GenerateExecutionModelCode(execution_model, "Output", true).c_str(),
+      SPV_ENV_VULKAN_1_0);
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_0));
   EXPECT_THAT(getDiagnosticString(),
               AnyVUID("VUID-StandaloneSpirv-None-04644"));
@@ -285,11 +301,264 @@ TEST_P(ValidateStorageExecutionModel, VulkanOutsideStoreFailure) {
                 "ClosestHitKHR, MissKHR, or CallableKHR execution models"));
 }
 
+TEST_P(ValidateStorageExecutionModel, CallableDataStore) {
+  std::string execution_model = GetParam();
+  CompileSuccessfully(
+      GenerateExecutionModelCode(execution_model, "CallableDataKHR", true)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  if (execution_model.compare("RayGenerationKHR") == 0 ||
+      execution_model.compare("ClosestHitKHR") == 0 ||
+      execution_model.compare("CallableKHR") == 0 ||
+      execution_model.compare("MissKHR") == 0) {
+    ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  } else {
+    ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+    EXPECT_THAT(getDiagnosticString(),
+                AnyVUID("VUID-StandaloneSpirv-CallableDataKHR-04704"));
+    EXPECT_THAT(
+        getDiagnosticString(),
+        HasSubstr(
+            "CallableDataKHR Storage Class is limited to RayGenerationKHR, "
+            "ClosestHitKHR, CallableKHR, and MissKHR execution model"));
+  }
+}
+
+TEST_P(ValidateStorageExecutionModel, CallableDataLoad) {
+  std::string execution_model = GetParam();
+  CompileSuccessfully(
+      GenerateExecutionModelCode(execution_model, "CallableDataKHR", false)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  if (execution_model.compare("RayGenerationKHR") == 0 ||
+      execution_model.compare("ClosestHitKHR") == 0 ||
+      execution_model.compare("CallableKHR") == 0 ||
+      execution_model.compare("MissKHR") == 0) {
+    ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  } else {
+    ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+    EXPECT_THAT(getDiagnosticString(),
+                AnyVUID("VUID-StandaloneSpirv-CallableDataKHR-04704"));
+    EXPECT_THAT(
+        getDiagnosticString(),
+        HasSubstr(
+            "CallableDataKHR Storage Class is limited to RayGenerationKHR, "
+            "ClosestHitKHR, CallableKHR, and MissKHR execution model"));
+  }
+}
+
+TEST_P(ValidateStorageExecutionModel, IncomingCallableDataStore) {
+  std::string execution_model = GetParam();
+  CompileSuccessfully(GenerateExecutionModelCode(
+                          execution_model, "IncomingCallableDataKHR", true)
+                          .c_str(),
+                      SPV_ENV_VULKAN_1_2);
+  if (execution_model.compare("CallableKHR") == 0) {
+    ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  } else {
+    ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+    EXPECT_THAT(getDiagnosticString(),
+                AnyVUID("VUID-StandaloneSpirv-IncomingCallableDataKHR-04705"));
+    EXPECT_THAT(getDiagnosticString(),
+                HasSubstr("IncomingCallableDataKHR Storage Class is limited to "
+                          "CallableKHR execution model"));
+  }
+}
+
+TEST_P(ValidateStorageExecutionModel, IncomingCallableDataLoad) {
+  std::string execution_model = GetParam();
+  CompileSuccessfully(GenerateExecutionModelCode(
+                          execution_model, "IncomingCallableDataKHR", false)
+                          .c_str(),
+                      SPV_ENV_VULKAN_1_2);
+  if (execution_model.compare("CallableKHR") == 0) {
+    ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  } else {
+    ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+    EXPECT_THAT(getDiagnosticString(),
+                AnyVUID("VUID-StandaloneSpirv-IncomingCallableDataKHR-04705"));
+    EXPECT_THAT(getDiagnosticString(),
+                HasSubstr("IncomingCallableDataKHR Storage Class is limited to "
+                          "CallableKHR execution model"));
+  }
+}
+
+TEST_P(ValidateStorageExecutionModel, RayPayloadStore) {
+  std::string execution_model = GetParam();
+  CompileSuccessfully(
+      GenerateExecutionModelCode(execution_model, "RayPayloadKHR", true)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  if (execution_model.compare("RayGenerationKHR") == 0 ||
+      execution_model.compare("ClosestHitKHR") == 0 ||
+      execution_model.compare("MissKHR") == 0) {
+    ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  } else {
+    ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+    EXPECT_THAT(getDiagnosticString(),
+                AnyVUID("VUID-StandaloneSpirv-RayPayloadKHR-04698"));
+    EXPECT_THAT(
+        getDiagnosticString(),
+        HasSubstr("RayPayloadKHR Storage Class is limited to RayGenerationKHR, "
+                  "ClosestHitKHR, and MissKHR execution model"));
+  }
+}
+
+TEST_P(ValidateStorageExecutionModel, RayPayloadLoad) {
+  std::string execution_model = GetParam();
+  CompileSuccessfully(
+      GenerateExecutionModelCode(execution_model, "RayPayloadKHR", false)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  if (execution_model.compare("RayGenerationKHR") == 0 ||
+      execution_model.compare("ClosestHitKHR") == 0 ||
+      execution_model.compare("MissKHR") == 0) {
+    ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  } else {
+    ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+    EXPECT_THAT(getDiagnosticString(),
+                AnyVUID("VUID-StandaloneSpirv-RayPayloadKHR-04698"));
+    EXPECT_THAT(
+        getDiagnosticString(),
+        HasSubstr("RayPayloadKHR Storage Class is limited to RayGenerationKHR, "
+                  "ClosestHitKHR, and MissKHR execution model"));
+  }
+}
+
+TEST_P(ValidateStorageExecutionModel, HitAttributeStore) {
+  std::string execution_model = GetParam();
+  CompileSuccessfully(
+      GenerateExecutionModelCode(execution_model, "HitAttributeKHR", true)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  if (execution_model.compare("IntersectionKHR") == 0) {
+    ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  } else if (execution_model.compare("AnyHitKHR") == 0 ||
+             execution_model.compare("ClosestHitKHR") == 0) {
+    ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+    EXPECT_THAT(getDiagnosticString(),
+                AnyVUID("VUID-StandaloneSpirv-HitAttributeKHR-04703"));
+    EXPECT_THAT(getDiagnosticString(),
+                HasSubstr("HitAttributeKHR Storage Class variables are read "
+                          "only with AnyHitKHR and ClosestHitKHR"));
+  } else {
+    ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+    EXPECT_THAT(getDiagnosticString(),
+                AnyVUID("VUID-StandaloneSpirv-HitAttributeKHR-04701"));
+    EXPECT_THAT(
+        getDiagnosticString(),
+        HasSubstr(
+            "HitAttributeKHR Storage Class is limited to IntersectionKHR, "
+            "AnyHitKHR, sand ClosestHitKHR execution model"));
+  }
+}
+
+TEST_P(ValidateStorageExecutionModel, HitAttributeLoad) {
+  std::string execution_model = GetParam();
+  CompileSuccessfully(
+      GenerateExecutionModelCode(execution_model, "HitAttributeKHR", false)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  if (execution_model.compare("IntersectionKHR") == 0 ||
+      execution_model.compare("AnyHitKHR") == 0 ||
+      execution_model.compare("ClosestHitKHR") == 0) {
+    ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  } else {
+    ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+    EXPECT_THAT(getDiagnosticString(),
+                AnyVUID("VUID-StandaloneSpirv-HitAttributeKHR-04701"));
+    EXPECT_THAT(
+        getDiagnosticString(),
+        HasSubstr(
+            "HitAttributeKHR Storage Class is limited to IntersectionKHR, "
+            "AnyHitKHR, sand ClosestHitKHR execution model"));
+  }
+}
+
+TEST_P(ValidateStorageExecutionModel, IncomingRayPayloadStore) {
+  std::string execution_model = GetParam();
+  CompileSuccessfully(
+      GenerateExecutionModelCode(execution_model, "IncomingRayPayloadKHR", true)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  if (execution_model.compare("AnyHitKHR") == 0 ||
+      execution_model.compare("ClosestHitKHR") == 0 ||
+      execution_model.compare("MissKHR") == 0) {
+    ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  } else {
+    ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+    EXPECT_THAT(getDiagnosticString(),
+                AnyVUID("VUID-StandaloneSpirv-IncomingRayPayloadKHR-04699"));
+    EXPECT_THAT(
+        getDiagnosticString(),
+        HasSubstr("IncomingRayPayloadKHR Storage Class is limited to "
+                  "AnyHitKHR, ClosestHitKHR, and MissKHR execution model"));
+  }
+}
+
+TEST_P(ValidateStorageExecutionModel, IncomingRayPayloadLoad) {
+  std::string execution_model = GetParam();
+  CompileSuccessfully(GenerateExecutionModelCode(execution_model,
+                                                 "IncomingRayPayloadKHR", false)
+                          .c_str(),
+                      SPV_ENV_VULKAN_1_2);
+  if (execution_model.compare("AnyHitKHR") == 0 ||
+      execution_model.compare("ClosestHitKHR") == 0 ||
+      execution_model.compare("MissKHR") == 0) {
+    ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  } else {
+    ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+    EXPECT_THAT(getDiagnosticString(),
+                AnyVUID("VUID-StandaloneSpirv-IncomingRayPayloadKHR-04699"));
+    EXPECT_THAT(
+        getDiagnosticString(),
+        HasSubstr("IncomingRayPayloadKHR Storage Class is limited to "
+                  "AnyHitKHR, ClosestHitKHR, and MissKHR execution model"));
+  }
+}
+
+TEST_P(ValidateStorageExecutionModel, ShaderRecordBufferStore) {
+  std::string execution_model = GetParam();
+  CompileSuccessfully(
+      GenerateExecutionModelCode(execution_model, "ShaderRecordBufferKHR", true)
+          .c_str(),
+      SPV_ENV_VULKAN_1_2);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("ShaderRecordBufferKHR Storage Class variables are read only"));
+}
+
+TEST_P(ValidateStorageExecutionModel, ShaderRecordBufferLoad) {
+  std::string execution_model = GetParam();
+  CompileSuccessfully(GenerateExecutionModelCode(execution_model,
+                                                 "ShaderRecordBufferKHR", false)
+                          .c_str(),
+                      SPV_ENV_VULKAN_1_2);
+  if (execution_model.compare("RayGenerationKHR") == 0 ||
+      execution_model.compare("IntersectionKHR") == 0 ||
+      execution_model.compare("AnyHitKHR") == 0 ||
+      execution_model.compare("ClosestHitKHR") == 0 ||
+      execution_model.compare("CallableKHR") == 0 ||
+      execution_model.compare("MissKHR") == 0) {
+    ASSERT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+  } else {
+    ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_2));
+    EXPECT_THAT(getDiagnosticString(),
+                AnyVUID("VUID-StandaloneSpirv-ShaderRecordBufferKHR-07119"));
+    EXPECT_THAT(
+        getDiagnosticString(),
+        HasSubstr("ShaderRecordBufferKHR Storage Class is limited to "
+                  "RayGenerationKHR, IntersectionKHR, AnyHitKHR, "
+                  "ClosestHitKHR, CallableKHR, and MissKHR execution model"));
+  }
+}
+
 INSTANTIATE_TEST_SUITE_P(MatrixExecutionModel, ValidateStorageExecutionModel,
                          ::testing::Values("RayGenerationKHR",
                                            "IntersectionKHR", "AnyHitKHR",
                                            "ClosestHitKHR", "MissKHR",
-                                           "CallableKHR"));
+                                           "CallableKHR", "GLCompute"));
 
 }  // namespace
 }  // namespace val

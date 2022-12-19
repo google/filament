@@ -172,80 +172,82 @@ TEST(TransformationVectorShuffleTest, BasicTest) {
 
   // %103 does not dominate the return instruction.
   ASSERT_FALSE(TransformationVectorShuffle(
-                   MakeInstructionDescriptor(100, SpvOpReturn, 0), 200, 103, 65,
-                   {3, 5, 7})
+                   MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 200,
+                   103, 65, {3, 5, 7})
                    .IsApplicable(context.get(), transformation_context));
 
   // Illegal to shuffle a bvec2 and a vec3
   ASSERT_FALSE(TransformationVectorShuffle(
-                   MakeInstructionDescriptor(100, SpvOpReturn, 0), 200, 112, 61,
-                   {0, 2, 4})
+                   MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 200,
+                   112, 61, {0, 2, 4})
                    .IsApplicable(context.get(), transformation_context));
 
   // Illegal to shuffle an ivec2 and a uvec4
   ASSERT_FALSE(TransformationVectorShuffle(
-                   MakeInstructionDescriptor(100, SpvOpReturn, 0), 200, 27, 50,
-                   {1, 3, 5})
+                   MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 200,
+                   27, 50, {1, 3, 5})
                    .IsApplicable(context.get(), transformation_context));
 
   // Vector 1 does not exist
   ASSERT_FALSE(TransformationVectorShuffle(
-                   MakeInstructionDescriptor(100, SpvOpReturn, 0), 200, 300, 50,
-                   {1, 3, 5})
+                   MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 200,
+                   300, 50, {1, 3, 5})
                    .IsApplicable(context.get(), transformation_context));
 
   // Vector 2 does not exist
   ASSERT_FALSE(TransformationVectorShuffle(
-                   MakeInstructionDescriptor(100, SpvOpReturn, 0), 200, 27, 300,
-                   {1, 3, 5})
+                   MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 200,
+                   27, 300, {1, 3, 5})
                    .IsApplicable(context.get(), transformation_context));
 
   // Index out of range
-  ASSERT_FALSE(
-      TransformationVectorShuffle(
-          MakeInstructionDescriptor(100, SpvOpReturn, 0), 200, 12, 112, {0, 20})
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationVectorShuffle(
+                   MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 200,
+                   12, 112, {0, 20})
+                   .IsApplicable(context.get(), transformation_context));
 
   // Too many indices
   ASSERT_FALSE(TransformationVectorShuffle(
-                   MakeInstructionDescriptor(100, SpvOpReturn, 0), 200, 12, 112,
-                   {0, 1, 0, 1, 0, 1, 0, 1})
+                   MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 200,
+                   12, 112, {0, 1, 0, 1, 0, 1, 0, 1})
                    .IsApplicable(context.get(), transformation_context));
 
   // Too few indices
-  ASSERT_FALSE(
-      TransformationVectorShuffle(
-          MakeInstructionDescriptor(100, SpvOpReturn, 0), 200, 12, 112, {})
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationVectorShuffle(
+                   MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 200,
+                   12, 112, {})
+                   .IsApplicable(context.get(), transformation_context));
 
   // Too few indices again
-  ASSERT_FALSE(
-      TransformationVectorShuffle(
-          MakeInstructionDescriptor(100, SpvOpReturn, 0), 200, 12, 112, {0})
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationVectorShuffle(
+                   MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 200,
+                   12, 112, {0})
+                   .IsApplicable(context.get(), transformation_context));
 
   // Indices define unknown type: we do not have vec2
-  ASSERT_FALSE(
-      TransformationVectorShuffle(
-          MakeInstructionDescriptor(100, SpvOpReturn, 0), 200, 65, 65, {0, 1})
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationVectorShuffle(
+                   MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 200,
+                   65, 65, {0, 1})
+                   .IsApplicable(context.get(), transformation_context));
 
   // The instruction to insert before does not exist
-  ASSERT_FALSE(TransformationVectorShuffle(
-                   MakeInstructionDescriptor(100, SpvOpCompositeConstruct, 1),
-                   201, 20, 12, {0xFFFFFFFF, 3, 5})
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationVectorShuffle(
+          MakeInstructionDescriptor(100, spv::Op::OpCompositeConstruct, 1), 201,
+          20, 12, {0xFFFFFFFF, 3, 5})
+          .IsApplicable(context.get(), transformation_context));
 
   // The 'fresh' id is already in use
   ASSERT_FALSE(
       TransformationVectorShuffle(
-          MakeInstructionDescriptor(100, SpvOpReturn, 0), 12, 12, 112, {})
+          MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 12, 12, 112, {})
           .IsApplicable(context.get(), transformation_context));
 
   protobufs::DataDescriptor temp_dd;
 
   TransformationVectorShuffle transformation1(
-      MakeInstructionDescriptor(100, SpvOpReturn, 0), 200, 12, 112, {1, 0});
+      MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 200, 12, 112,
+      {1, 0});
   ASSERT_TRUE(
       transformation1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation1, context.get(),
@@ -258,7 +260,7 @@ TEST(TransformationVectorShuffleTest, BasicTest) {
       MakeDataDescriptor(10, {}), temp_dd));
 
   TransformationVectorShuffle transformation2(
-      MakeInstructionDescriptor(100, SpvOpReturn, 0), 201, 20, 12,
+      MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 201, 20, 12,
       {0xFFFFFFFF, 3, 5});
   ASSERT_TRUE(
       transformation2.IsApplicable(context.get(), transformation_context));
@@ -272,7 +274,8 @@ TEST(TransformationVectorShuffleTest, BasicTest) {
       MakeDataDescriptor(11, {}), temp_dd));
 
   TransformationVectorShuffle transformation3(
-      MakeInstructionDescriptor(100, SpvOpReturn, 0), 202, 27, 35, {5, 4, 1});
+      MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 202, 27, 35,
+      {5, 4, 1});
   ASSERT_TRUE(
       transformation3.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation3, context.get(),
@@ -288,7 +291,8 @@ TEST(TransformationVectorShuffleTest, BasicTest) {
       MakeDataDescriptor(26, {}), temp_dd));
 
   TransformationVectorShuffle transformation4(
-      MakeInstructionDescriptor(100, SpvOpReturn, 0), 203, 42, 46, {0, 1});
+      MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 203, 42, 46,
+      {0, 1});
   ASSERT_TRUE(
       transformation4.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation4, context.get(),
@@ -301,7 +305,8 @@ TEST(TransformationVectorShuffleTest, BasicTest) {
       MakeDataDescriptor(41, {}), temp_dd));
 
   TransformationVectorShuffle transformation5(
-      MakeInstructionDescriptor(100, SpvOpReturn, 0), 204, 42, 46, {2, 3, 4});
+      MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 204, 42, 46,
+      {2, 3, 4});
   ASSERT_TRUE(
       transformation5.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation5, context.get(),
@@ -317,7 +322,7 @@ TEST(TransformationVectorShuffleTest, BasicTest) {
       MakeDataDescriptor(40, {}), temp_dd));
 
   TransformationVectorShuffle transformation6(
-      MakeInstructionDescriptor(100, SpvOpReturn, 0), 205, 42, 42,
+      MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 205, 42, 42,
       {0, 1, 2, 3});
   ASSERT_TRUE(
       transformation6.IsApplicable(context.get(), transformation_context));
@@ -338,7 +343,7 @@ TEST(TransformationVectorShuffleTest, BasicTest) {
 
   // swizzle vec4 from vec4 and vec4 using some undefs
   TransformationVectorShuffle transformation7(
-      MakeInstructionDescriptor(100, SpvOpReturn, 0), 206, 65, 65,
+      MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 206, 65, 65,
       {0xFFFFFFFF, 3, 6, 0xFFFFFFFF});
   ASSERT_TRUE(
       transformation7.IsApplicable(context.get(), transformation_context));
@@ -500,50 +505,52 @@ TEST(TransformationVectorShuffleTest, IllegalInsertionPoints) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   // Cannot insert before the OpVariables of a function.
-  ASSERT_FALSE(
-      TransformationVectorShuffle(
-          MakeInstructionDescriptor(101, SpvOpVariable, 0), 200, 14, 14, {0, 1})
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationVectorShuffle(
-          MakeInstructionDescriptor(101, SpvOpVariable, 1), 200, 14, 14, {1, 2})
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationVectorShuffle(
-          MakeInstructionDescriptor(102, SpvOpVariable, 0), 200, 14, 14, {1, 2})
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationVectorShuffle(
+                   MakeInstructionDescriptor(101, spv::Op::OpVariable, 0), 200,
+                   14, 14, {0, 1})
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationVectorShuffle(
+                   MakeInstructionDescriptor(101, spv::Op::OpVariable, 1), 200,
+                   14, 14, {1, 2})
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationVectorShuffle(
+                   MakeInstructionDescriptor(102, spv::Op::OpVariable, 0), 200,
+                   14, 14, {1, 2})
+                   .IsApplicable(context.get(), transformation_context));
   // OK to insert right after the OpVariables.
-  ASSERT_FALSE(
-      TransformationVectorShuffle(
-          MakeInstructionDescriptor(102, SpvOpBranch, 1), 200, 14, 14, {1, 1})
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationVectorShuffle(
+                   MakeInstructionDescriptor(102, spv::Op::OpBranch, 1), 200,
+                   14, 14, {1, 1})
+                   .IsApplicable(context.get(), transformation_context));
 
   // Cannot insert before the OpPhis of a block.
   ASSERT_FALSE(
-      TransformationVectorShuffle(MakeInstructionDescriptor(60, SpvOpPhi, 0),
-                                  200, 14, 14, {2, 0})
+      TransformationVectorShuffle(
+          MakeInstructionDescriptor(60, spv::Op::OpPhi, 0), 200, 14, 14, {2, 0})
           .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
-      TransformationVectorShuffle(MakeInstructionDescriptor(59, SpvOpPhi, 0),
-                                  200, 14, 14, {3, 0})
+      TransformationVectorShuffle(
+          MakeInstructionDescriptor(59, spv::Op::OpPhi, 0), 200, 14, 14, {3, 0})
           .IsApplicable(context.get(), transformation_context));
   // OK to insert after the OpPhis.
   ASSERT_TRUE(TransformationVectorShuffle(
-                  MakeInstructionDescriptor(59, SpvOpAccessChain, 0), 200, 14,
-                  14, {3, 4})
+                  MakeInstructionDescriptor(59, spv::Op::OpAccessChain, 0), 200,
+                  14, 14, {3, 4})
                   .IsApplicable(context.get(), transformation_context));
 
   // Cannot insert before OpLoopMerge
-  ASSERT_FALSE(TransformationVectorShuffle(
-                   MakeInstructionDescriptor(33, SpvOpBranchConditional, 0),
-                   200, 14, 14, {3})
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationVectorShuffle(
+          MakeInstructionDescriptor(33, spv::Op::OpBranchConditional, 0), 200,
+          14, 14, {3})
+          .IsApplicable(context.get(), transformation_context));
 
   // Cannot insert before OpSelectionMerge
-  ASSERT_FALSE(TransformationVectorShuffle(
-                   MakeInstructionDescriptor(21, SpvOpBranchConditional, 0),
-                   200, 14, 14, {2})
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationVectorShuffle(
+          MakeInstructionDescriptor(21, spv::Op::OpBranchConditional, 0), 200,
+          14, 14, {2})
+          .IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationVectorShuffleTest, HandlesIrrelevantIds1) {
@@ -615,7 +622,8 @@ TEST(TransformationVectorShuffleTest, HandlesIrrelevantIds1) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   TransformationVectorShuffle transformation(
-      MakeInstructionDescriptor(100, SpvOpReturn, 0), 200, 12, 112, {2, 0});
+      MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 200, 12, 112,
+      {2, 0});
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -697,7 +705,8 @@ TEST(TransformationVectorShuffleTest, HandlesIrrelevantIds2) {
       MakeUnique<FactManager>(context.get()), validator_options);
   transformation_context.GetFactManager()->AddFactIdIsIrrelevant(112);
   TransformationVectorShuffle transformation(
-      MakeInstructionDescriptor(100, SpvOpReturn, 0), 200, 12, 112, {2, 0});
+      MakeInstructionDescriptor(100, spv::Op::OpReturn, 0), 200, 12, 112,
+      {2, 0});
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -755,7 +764,7 @@ TEST(TransformationVectorShuffleTest, HandlesIrrelevantIds3) {
   transformation_context.GetFactManager()->AddFactBlockIsDead(15);
 
   TransformationVectorShuffle transformation1(
-      MakeInstructionDescriptor(15, SpvOpBranch, 0), 200, 12, 12, {0, 3});
+      MakeInstructionDescriptor(15, spv::Op::OpBranch, 0), 200, 12, 12, {0, 3});
   ASSERT_TRUE(
       transformation1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation1, context.get(),
@@ -766,7 +775,7 @@ TEST(TransformationVectorShuffleTest, HandlesIrrelevantIds3) {
       MakeDataDescriptor(200, {1}), MakeDataDescriptor(12, {1})));
 
   TransformationVectorShuffle transformation2(
-      MakeInstructionDescriptor(16, SpvOpReturn, 0), 201, 12, 40, {0, 1});
+      MakeInstructionDescriptor(16, spv::Op::OpReturn, 0), 201, 12, 40, {0, 1});
   ASSERT_TRUE(
       transformation2.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation2, context.get(),
@@ -777,7 +786,7 @@ TEST(TransformationVectorShuffleTest, HandlesIrrelevantIds3) {
       MakeDataDescriptor(201, {1}), MakeDataDescriptor(12, {1})));
 
   TransformationVectorShuffle transformation3(
-      MakeInstructionDescriptor(16, SpvOpReturn, 0), 202, 40, 12, {2, 3});
+      MakeInstructionDescriptor(16, spv::Op::OpReturn, 0), 202, 40, 12, {2, 3});
   ASSERT_TRUE(
       transformation3.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation3, context.get(),
@@ -788,7 +797,7 @@ TEST(TransformationVectorShuffleTest, HandlesIrrelevantIds3) {
       MakeDataDescriptor(202, {1}), MakeDataDescriptor(12, {1})));
 
   TransformationVectorShuffle transformation4(
-      MakeInstructionDescriptor(16, SpvOpReturn, 0), 203, 40, 12, {0, 3});
+      MakeInstructionDescriptor(16, spv::Op::OpReturn, 0), 203, 40, 12, {0, 3});
   ASSERT_TRUE(
       transformation4.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation4, context.get(),

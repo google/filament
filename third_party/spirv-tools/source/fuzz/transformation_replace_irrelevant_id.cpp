@@ -65,7 +65,7 @@ bool TransformationReplaceIrrelevantId::IsApplicable(
   }
 
   // The replacement id must not be the result of an OpFunction instruction.
-  if (replacement_id_def->opcode() == SpvOpFunction) {
+  if (replacement_id_def->opcode() == spv::Op::OpFunction) {
     return false;
   }
 
@@ -130,7 +130,7 @@ bool TransformationReplaceIrrelevantId::
     AttemptsToReplaceVariableInitializerWithNonConstant(
         const opt::Instruction& use_instruction,
         const opt::Instruction& replacement_for_use) {
-  return use_instruction.opcode() == SpvOpVariable &&
+  return use_instruction.opcode() == spv::Op::OpVariable &&
          !spvOpcodeIsConstant(replacement_for_use.opcode());
 }
 

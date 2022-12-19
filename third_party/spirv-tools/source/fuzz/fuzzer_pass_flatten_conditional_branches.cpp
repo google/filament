@@ -48,8 +48,8 @@ void FuzzerPassFlattenConditionalBranches::Apply() {
       // Only consider this block if it is the header of a conditional, with a
       // non-irrelevant condition.
       if (block.GetMergeInst() &&
-          block.GetMergeInst()->opcode() == SpvOpSelectionMerge &&
-          block.terminator()->opcode() == SpvOpBranchConditional &&
+          block.GetMergeInst()->opcode() == spv::Op::OpSelectionMerge &&
+          block.terminator()->opcode() == spv::Op::OpBranchConditional &&
           !GetTransformationContext()->GetFactManager()->IdIsIrrelevant(
               block.terminator()->GetSingleWordInOperand(0))) {
         selection_headers.emplace_back(&block);
@@ -94,11 +94,11 @@ void FuzzerPassFlattenConditionalBranches::Apply() {
                                    ->get_def_use_mgr()
                                    ->GetDef(phi_instruction->type_id())
                                    ->opcode()) {
-                         case SpvOpTypeBool:
-                         case SpvOpTypeInt:
-                         case SpvOpTypeFloat:
-                         case SpvOpTypePointer:
-                         case SpvOpTypeVector:
+                         case spv::Op::OpTypeBool:
+                         case spv::Op::OpTypeInt:
+                         case spv::Op::OpTypeFloat:
+                         case spv::Op::OpTypePointer:
+                         case spv::Op::OpTypeVector:
                            return true;
                          default:
                            return false;
@@ -143,7 +143,7 @@ void FuzzerPassFlattenConditionalBranches::Apply() {
                 GetIRContext()->get_def_use_mgr()->GetDef(
                     phi_instruction->type_id());
             switch (type_instruction->opcode()) {
-              case SpvOpTypeVector: {
+              case spv::Op::OpTypeVector: {
                 uint32_t dimension =
                     type_instruction->GetSingleWordInOperand(1);
                 switch (dimension) {

@@ -23,29 +23,28 @@
 #include "source/opt/type_manager.h"
 #include "source/util/make_unique.h"
 
-const static uint32_t kOpDecorateDecorationInOperandIndex = 1;
-const static uint32_t kOpDecorateLiteralInOperandIndex = 2;
-const static uint32_t kOpEntryPointInOperandInterface = 3;
-const static uint32_t kOpVariableStorageClassInOperandIndex = 0;
-const static uint32_t kOpTypeArrayElemTypeInOperandIndex = 0;
-const static uint32_t kOpTypeArrayLengthInOperandIndex = 1;
-const static uint32_t kOpTypeMatrixColCountInOperandIndex = 1;
-const static uint32_t kOpTypeMatrixColTypeInOperandIndex = 0;
-const static uint32_t kOpTypePtrTypeInOperandIndex = 1;
-const static uint32_t kOpConstantValueInOperandIndex = 0;
-
 namespace spvtools {
 namespace opt {
 namespace {
+constexpr uint32_t kOpDecorateDecorationInOperandIndex = 1;
+constexpr uint32_t kOpDecorateLiteralInOperandIndex = 2;
+constexpr uint32_t kOpEntryPointInOperandInterface = 3;
+constexpr uint32_t kOpVariableStorageClassInOperandIndex = 0;
+constexpr uint32_t kOpTypeArrayElemTypeInOperandIndex = 0;
+constexpr uint32_t kOpTypeArrayLengthInOperandIndex = 1;
+constexpr uint32_t kOpTypeMatrixColCountInOperandIndex = 1;
+constexpr uint32_t kOpTypeMatrixColTypeInOperandIndex = 0;
+constexpr uint32_t kOpTypePtrTypeInOperandIndex = 1;
+constexpr uint32_t kOpConstantValueInOperandIndex = 0;
 
 // Get the length of the OpTypeArray |array_type|.
 uint32_t GetArrayLength(analysis::DefUseManager* def_use_mgr,
                         Instruction* array_type) {
-  assert(array_type->opcode() == SpvOpTypeArray);
+  assert(array_type->opcode() == spv::Op::OpTypeArray);
   uint32_t const_int_id =
       array_type->GetSingleWordInOperand(kOpTypeArrayLengthInOperandIndex);
   Instruction* array_length_inst = def_use_mgr->GetDef(const_int_id);
-  assert(array_length_inst->opcode() == SpvOpConstant);
+  assert(array_length_inst->opcode() == spv::Op::OpConstant);
   return array_length_inst->GetSingleWordInOperand(
       kOpConstantValueInOperandIndex);
 }
@@ -53,7 +52,7 @@ uint32_t GetArrayLength(analysis::DefUseManager* def_use_mgr,
 // Get the element type instruction of the OpTypeArray |array_type|.
 Instruction* GetArrayElementType(analysis::DefUseManager* def_use_mgr,
                                  Instruction* array_type) {
-  assert(array_type->opcode() == SpvOpTypeArray);
+  assert(array_type->opcode() == spv::Op::OpTypeArray);
   uint32_t elem_type_id =
       array_type->GetSingleWordInOperand(kOpTypeArrayElemTypeInOperandIndex);
   return def_use_mgr->GetDef(elem_type_id);
@@ -62,7 +61,7 @@ Instruction* GetArrayElementType(analysis::DefUseManager* def_use_mgr,
 // Get the column type instruction of the OpTypeMatrix |matrix_type|.
 Instruction* GetMatrixColumnType(analysis::DefUseManager* def_use_mgr,
                                  Instruction* matrix_type) {
-  assert(matrix_type->opcode() == SpvOpTypeMatrix);
+  assert(matrix_type->opcode() == spv::Op::OpTypeMatrix);
   uint32_t column_type_id =
       matrix_type->GetSingleWordInOperand(kOpTypeMatrixColTypeInOperandIndex);
   return def_use_mgr->GetDef(column_type_id);
@@ -77,14 +76,14 @@ uint32_t GetComponentTypeOfArrayMatrix(analysis::DefUseManager* def_use_mgr,
   if (depth_to_component == 0) return type_id;
 
   Instruction* type_inst = def_use_mgr->GetDef(type_id);
-  if (type_inst->opcode() == SpvOpTypeArray) {
+  if (type_inst->opcode() == spv::Op::OpTypeArray) {
     uint32_t elem_type_id =
         type_inst->GetSingleWordInOperand(kOpTypeArrayElemTypeInOperandIndex);
     return GetComponentTypeOfArrayMatrix(def_use_mgr, elem_type_id,
                                          depth_to_component - 1);
   }
 
-  assert(type_inst->opcode() == SpvOpTypeMatrix);
+  assert(type_inst->opcode() == spv::Op::OpTypeMatrix);
   uint32_t column_type_id =
       type_inst->GetSingleWordInOperand(kOpTypeMatrixColTypeInOperandIndex);
   return GetComponentTypeOfArrayMatrix(def_use_mgr, column_type_id,
@@ -94,7 +93,7 @@ uint32_t GetComponentTypeOfArrayMatrix(analysis::DefUseManager* def_use_mgr,
 // Creates an OpDecorate instruction whose Target is |var_id| and Decoration is
 // |decoration|. Adds |literal| as an extra operand of the instruction.
 void CreateDecoration(analysis::DecorationManager* decoration_mgr,
-                      uint32_t var_id, SpvDecoration decoration,
+                      uint32_t var_id, spv::Decoration decoration,
                       uint32_t literal) {
   std::vector<Operand> operands({
       {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {var_id}},
@@ -102,7 +101,7 @@ void CreateDecoration(analysis::DecorationManager* decoration_mgr,
        {static_cast<uint32_t>(decoration)}},
       {spv_operand_type_t::SPV_OPERAND_TYPE_LITERAL_INTEGER, {literal}},
   });
-  decoration_mgr->AddDecoration(SpvOpDecorate, std::move(operands));
+  decoration_mgr->AddDecoration(spv::Op::OpDecorate, std::move(operands));
 }
 
 // Replaces load instructions with composite construct instructions in all the
@@ -128,8 +127,8 @@ void ReplaceLoadWithCompositeConstruct(
 }
 
 // Returns the storage class of the instruction |var|.
-SpvStorageClass GetStorageClass(Instruction* var) {
-  return static_cast<SpvStorageClass>(
+spv::StorageClass GetStorageClass(Instruction* var) {
+  return static_cast<spv::StorageClass>(
       var->GetSingleWordInOperand(kOpVariableStorageClassInOperandIndex));
 }
 
@@ -137,16 +136,17 @@ SpvStorageClass GetStorageClass(Instruction* var) {
 
 bool InterfaceVariableScalarReplacement::HasExtraArrayness(
     Instruction& entry_point, Instruction* var) {
-  SpvExecutionModel execution_model =
-      static_cast<SpvExecutionModel>(entry_point.GetSingleWordInOperand(0));
-  if (execution_model != SpvExecutionModelTessellationEvaluation &&
-      execution_model != SpvExecutionModelTessellationControl) {
+  spv::ExecutionModel execution_model =
+      static_cast<spv::ExecutionModel>(entry_point.GetSingleWordInOperand(0));
+  if (execution_model != spv::ExecutionModel::TessellationEvaluation &&
+      execution_model != spv::ExecutionModel::TessellationControl) {
     return false;
   }
-  if (!context()->get_decoration_mgr()->HasDecoration(var->result_id(),
-                                                      SpvDecorationPatch)) {
-    if (execution_model == SpvExecutionModelTessellationControl) return true;
-    return GetStorageClass(var) != SpvStorageClassOutput;
+  if (!context()->get_decoration_mgr()->HasDecoration(
+          var->result_id(), uint32_t(spv::Decoration::Patch))) {
+    if (execution_model == spv::ExecutionModel::TessellationControl)
+      return true;
+    return GetStorageClass(var) != spv::StorageClass::Output;
   }
   return false;
 }
@@ -163,7 +163,7 @@ bool InterfaceVariableScalarReplacement::
 bool InterfaceVariableScalarReplacement::GetVariableLocation(
     Instruction* var, uint32_t* location) {
   return !context()->get_decoration_mgr()->WhileEachDecoration(
-      var->result_id(), SpvDecorationLocation,
+      var->result_id(), uint32_t(spv::Decoration::Location),
       [location](const Instruction& inst) {
         *location =
             inst.GetSingleWordInOperand(kOpDecorateLiteralInOperandIndex);
@@ -174,7 +174,7 @@ bool InterfaceVariableScalarReplacement::GetVariableLocation(
 bool InterfaceVariableScalarReplacement::GetVariableComponent(
     Instruction* var, uint32_t* component) {
   return !context()->get_decoration_mgr()->WhileEachDecoration(
-      var->result_id(), SpvDecorationComponent,
+      var->result_id(), uint32_t(spv::Decoration::Component),
       [component](const Instruction& inst) {
         *component =
             inst.GetSingleWordInOperand(kOpDecorateLiteralInOperandIndex);
@@ -190,11 +190,11 @@ InterfaceVariableScalarReplacement::CollectInterfaceVariables(
        i < entry_point.NumInOperands(); ++i) {
     Instruction* interface_var = context()->get_def_use_mgr()->GetDef(
         entry_point.GetSingleWordInOperand(i));
-    assert(interface_var->opcode() == SpvOpVariable);
+    assert(interface_var->opcode() == spv::Op::OpVariable);
 
-    SpvStorageClass storage_class = GetStorageClass(interface_var);
-    if (storage_class != SpvStorageClassInput &&
-        storage_class != SpvStorageClassOutput) {
+    spv::StorageClass storage_class = GetStorageClass(interface_var);
+    if (storage_class != spv::StorageClass::Input &&
+        storage_class != spv::StorageClass::Output) {
       continue;
     }
 
@@ -205,15 +205,19 @@ InterfaceVariableScalarReplacement::CollectInterfaceVariables(
 
 void InterfaceVariableScalarReplacement::KillInstructionAndUsers(
     Instruction* inst) {
-  if (inst->opcode() == SpvOpEntryPoint) {
+  if (inst->opcode() == spv::Op::OpEntryPoint) {
     return;
   }
-  if (inst->opcode() != SpvOpAccessChain) {
+  if (inst->opcode() != spv::Op::OpAccessChain) {
     context()->KillInst(inst);
     return;
   }
+  std::vector<Instruction*> users;
   context()->get_def_use_mgr()->ForEachUser(
-      inst, [this](Instruction* user) { KillInstructionAndUsers(user); });
+      inst, [&users](Instruction* user) { users.push_back(user); });
+  for (auto user : users) {
+    context()->KillInst(user);
+  }
   context()->KillInst(inst);
 }
 
@@ -228,10 +232,10 @@ void InterfaceVariableScalarReplacement::KillLocationAndComponentDecorations(
     uint32_t var_id) {
   context()->get_decoration_mgr()->RemoveDecorationsFrom(
       var_id, [](const Instruction& inst) {
-        uint32_t decoration =
-            inst.GetSingleWordInOperand(kOpDecorateDecorationInOperandIndex);
-        return decoration == SpvDecorationLocation ||
-               decoration == SpvDecorationComponent;
+        spv::Decoration decoration = spv::Decoration(
+            inst.GetSingleWordInOperand(kOpDecorateDecorationInOperandIndex));
+        return decoration == spv::Decoration::Location ||
+               decoration == spv::Decoration::Component;
       });
 }
 
@@ -303,9 +307,9 @@ void InterfaceVariableScalarReplacement::AddLocationAndComponentDecorations(
   if (!vars.HasMultipleComponents()) {
     uint32_t var_id = vars.GetComponentVariable()->result_id();
     CreateDecoration(context()->get_decoration_mgr(), var_id,
-                     SpvDecorationLocation, *location);
+                     spv::Decoration::Location, *location);
     CreateDecoration(context()->get_decoration_mgr(), var_id,
-                     SpvDecorationComponent, component);
+                     spv::Decoration::Component, component);
     ++(*location);
     return;
   }
@@ -385,15 +389,15 @@ bool InterfaceVariableScalarReplacement::ReplaceComponentOfInterfaceVarWith(
     std::unordered_map<Instruction*, Instruction*>* loads_to_component_values,
     std::unordered_map<Instruction*, Instruction*>*
         loads_for_access_chain_to_component_values) {
-  SpvOp opcode = interface_var_user->opcode();
-  if (opcode == SpvOpStore) {
+  spv::Op opcode = interface_var_user->opcode();
+  if (opcode == spv::Op::OpStore) {
     uint32_t value_id = interface_var_user->GetSingleWordInOperand(1);
     StoreComponentOfValueToScalarVar(value_id, interface_var_component_indices,
                                      scalar_var, extra_array_index,
                                      interface_var_user);
     return true;
   }
-  if (opcode == SpvOpLoad) {
+  if (opcode == spv::Op::OpLoad) {
     Instruction* scalar_load =
         LoadScalarVar(scalar_var, extra_array_index, interface_var_user);
     loads_to_component_values->insert({interface_var_user, scalar_load});
@@ -404,25 +408,25 @@ bool InterfaceVariableScalarReplacement::ReplaceComponentOfInterfaceVarWith(
   // them only for the first element of the extra array.
   if (extra_array_index && *extra_array_index != 0) return true;
 
-  if (opcode == SpvOpDecorateId || opcode == SpvOpDecorateString ||
-      opcode == SpvOpDecorate) {
+  if (opcode == spv::Op::OpDecorateId || opcode == spv::Op::OpDecorateString ||
+      opcode == spv::Op::OpDecorate) {
     CloneAnnotationForVariable(interface_var_user, scalar_var->result_id());
     return true;
   }
 
-  if (opcode == SpvOpName) {
+  if (opcode == spv::Op::OpName) {
     std::unique_ptr<Instruction> new_inst(interface_var_user->Clone(context()));
     new_inst->SetInOperand(0, {scalar_var->result_id()});
     context()->AddDebug2Inst(std::move(new_inst));
     return true;
   }
 
-  if (opcode == SpvOpEntryPoint) {
+  if (opcode == spv::Op::OpEntryPoint) {
     return ReplaceInterfaceVarInEntryPoint(interface_var, interface_var_user,
                                            scalar_var->result_id());
   }
 
-  if (opcode == SpvOpAccessChain) {
+  if (opcode == spv::Op::OpAccessChain) {
     ReplaceAccessChainWith(interface_var_user, interface_var_component_indices,
                            scalar_var,
                            loads_for_access_chain_to_component_values);
@@ -441,8 +445,8 @@ bool InterfaceVariableScalarReplacement::ReplaceComponentOfInterfaceVarWith(
 
 void InterfaceVariableScalarReplacement::UseBaseAccessChainForAccessChain(
     Instruction* access_chain, Instruction* base_access_chain) {
-  assert(base_access_chain->opcode() == SpvOpAccessChain &&
-         access_chain->opcode() == SpvOpAccessChain &&
+  assert(base_access_chain->opcode() == spv::Op::OpAccessChain &&
+         access_chain->opcode() == spv::Op::OpAccessChain &&
          access_chain->GetSingleWordInOperand(0) ==
              base_access_chain->result_id());
   Instruction::OperandList new_operands;
@@ -466,10 +470,10 @@ Instruction* InterfaceVariableScalarReplacement::CreateAccessChainToVar(
   uint32_t ptr_type_id =
       GetPointerType(*component_type_id, GetStorageClass(var));
 
-  std::unique_ptr<Instruction> new_access_chain(
-      new Instruction(context(), SpvOpAccessChain, ptr_type_id, TakeNextId(),
-                      std::initializer_list<Operand>{
-                          {SPV_OPERAND_TYPE_ID, {var->result_id()}}}));
+  std::unique_ptr<Instruction> new_access_chain(new Instruction(
+      context(), spv::Op::OpAccessChain, ptr_type_id, TakeNextId(),
+      std::initializer_list<Operand>{
+          {SPV_OPERAND_TYPE_ID, {var->result_id()}}}));
   for (uint32_t index_id : index_ids) {
     new_access_chain->AddOperand({SPV_OPERAND_TYPE_ID, {index_id}});
   }
@@ -485,13 +489,13 @@ Instruction* InterfaceVariableScalarReplacement::CreateAccessChainWithIndex(
     Instruction* insert_before) {
   uint32_t ptr_type_id =
       GetPointerType(component_type_id, GetStorageClass(var));
-  uint32_t index_id = context()->get_constant_mgr()->GetUIntConst(index);
-  std::unique_ptr<Instruction> new_access_chain(
-      new Instruction(context(), SpvOpAccessChain, ptr_type_id, TakeNextId(),
-                      std::initializer_list<Operand>{
-                          {SPV_OPERAND_TYPE_ID, {var->result_id()}},
-                          {SPV_OPERAND_TYPE_ID, {index_id}},
-                      }));
+  uint32_t index_id = context()->get_constant_mgr()->GetUIntConstId(index);
+  std::unique_ptr<Instruction> new_access_chain(new Instruction(
+      context(), spv::Op::OpAccessChain, ptr_type_id, TakeNextId(),
+      std::initializer_list<Operand>{
+          {SPV_OPERAND_TYPE_ID, {var->result_id()}},
+          {SPV_OPERAND_TYPE_ID, {index_id}},
+      }));
   Instruction* inst = new_access_chain.get();
   context()->get_def_use_mgr()->AnalyzeInstDefUse(inst);
   insert_before->InsertBefore(std::move(new_access_chain));
@@ -515,20 +519,20 @@ void InterfaceVariableScalarReplacement::ReplaceAccessChainWith(
       [this, access_chain, &indexes, &interface_var_component_indices,
        scalar_var, loads_to_component_values](Instruction* user) {
         switch (user->opcode()) {
-          case SpvOpAccessChain: {
+          case spv::Op::OpAccessChain: {
             UseBaseAccessChainForAccessChain(user, access_chain);
             ReplaceAccessChainWith(user, interface_var_component_indices,
                                    scalar_var, loads_to_component_values);
             return;
           }
-          case SpvOpStore: {
+          case spv::Op::OpStore: {
             uint32_t value_id = user->GetSingleWordInOperand(1);
             StoreComponentOfValueToAccessChainToScalarVar(
                 value_id, interface_var_component_indices, scalar_var, indexes,
                 user);
             return;
           }
-          case SpvOpLoad: {
+          case spv::Op::OpLoad: {
             Instruction* value =
                 LoadAccessChainToVar(scalar_var, indexes, user);
             loads_to_component_values->insert({user, value});
@@ -542,9 +546,9 @@ void InterfaceVariableScalarReplacement::ReplaceAccessChainWith(
 
 void InterfaceVariableScalarReplacement::CloneAnnotationForVariable(
     Instruction* annotation_inst, uint32_t var_id) {
-  assert(annotation_inst->opcode() == SpvOpDecorate ||
-         annotation_inst->opcode() == SpvOpDecorateId ||
-         annotation_inst->opcode() == SpvOpDecorateString);
+  assert(annotation_inst->opcode() == spv::Op::OpDecorate ||
+         annotation_inst->opcode() == spv::Op::OpDecorateId ||
+         annotation_inst->opcode() == spv::Op::OpDecorateString);
   std::unique_ptr<Instruction> new_inst(annotation_inst->Clone(context()));
   new_inst->SetInOperand(0, {var_id});
   context()->AddAnnotationInst(std::move(new_inst));
@@ -589,13 +593,13 @@ bool InterfaceVariableScalarReplacement::ReplaceInterfaceVarInEntryPoint(
 
 uint32_t InterfaceVariableScalarReplacement::GetPointeeTypeIdOfVar(
     Instruction* var) {
-  assert(var->opcode() == SpvOpVariable);
+  assert(var->opcode() == spv::Op::OpVariable);
 
   uint32_t ptr_type_id = var->type_id();
   analysis::DefUseManager* def_use_mgr = context()->get_def_use_mgr();
   Instruction* ptr_type_inst = def_use_mgr->GetDef(ptr_type_id);
 
-  assert(ptr_type_inst->opcode() == SpvOpTypePointer &&
+  assert(ptr_type_inst->opcode() == spv::Op::OpTypePointer &&
          "Variable must have a pointer type.");
   return ptr_type_inst->GetSingleWordInOperand(kOpTypePtrTypeInOperandIndex);
 }
@@ -639,7 +643,7 @@ Instruction* InterfaceVariableScalarReplacement::LoadScalarVar(
 Instruction* InterfaceVariableScalarReplacement::CreateLoad(
     uint32_t type_id, Instruction* ptr, Instruction* insert_before) {
   std::unique_ptr<Instruction> load(
-      new Instruction(context(), SpvOpLoad, type_id, TakeNextId(),
+      new Instruction(context(), spv::Op::OpLoad, type_id, TakeNextId(),
                       std::initializer_list<Operand>{
                           {SPV_OPERAND_TYPE_ID, {ptr->result_id()}}}));
   Instruction* load_inst = load.get();
@@ -656,7 +660,7 @@ void InterfaceVariableScalarReplacement::StoreComponentOfValueTo(
       component_type_id, value_id, component_indices, extra_array_index));
 
   std::unique_ptr<Instruction> new_store(
-      new Instruction(context(), SpvOpStore));
+      new Instruction(context(), spv::Op::OpStore));
   new_store->AddOperand({SPV_OPERAND_TYPE_ID, {ptr->result_id()}});
   new_store->AddOperand(
       {SPV_OPERAND_TYPE_ID, {composite_extract->result_id()}});
@@ -674,7 +678,7 @@ Instruction* InterfaceVariableScalarReplacement::CreateCompositeExtract(
     const std::vector<uint32_t>& indexes, const uint32_t* extra_first_index) {
   uint32_t component_id = TakeNextId();
   Instruction* composite_extract = new Instruction(
-      context(), SpvOpCompositeExtract, type_id, component_id,
+      context(), spv::Op::OpCompositeExtract, type_id, component_id,
       std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {composite_id}}});
   if (extra_first_index) {
     composite_extract->AddOperand(
@@ -727,8 +731,8 @@ InterfaceVariableScalarReplacement::CreateCompositeConstructForComponentOfLoad(
                                             depth_to_component);
   }
   uint32_t new_id = context()->TakeNextId();
-  std::unique_ptr<Instruction> new_composite_construct(
-      new Instruction(context(), SpvOpCompositeConstruct, type_id, new_id, {}));
+  std::unique_ptr<Instruction> new_composite_construct(new Instruction(
+      context(), spv::Op::OpCompositeConstruct, type_id, new_id, {}));
   Instruction* composite_construct = new_composite_construct.get();
   def_use_mgr->AnalyzeInstDefUse(composite_construct);
 
@@ -777,7 +781,7 @@ uint32_t InterfaceVariableScalarReplacement::GetArrayType(
     uint32_t elem_type_id, uint32_t array_length) {
   analysis::Type* elem_type = context()->get_type_mgr()->GetType(elem_type_id);
   uint32_t array_length_id =
-      context()->get_constant_mgr()->GetUIntConst(array_length);
+      context()->get_constant_mgr()->GetUIntConstId(array_length);
   analysis::Array array_type(
       elem_type,
       analysis::Array::LengthInfo{array_length_id, {0, array_length}});
@@ -785,7 +789,7 @@ uint32_t InterfaceVariableScalarReplacement::GetArrayType(
 }
 
 uint32_t InterfaceVariableScalarReplacement::GetPointerType(
-    uint32_t type_id, SpvStorageClass storage_class) {
+    uint32_t type_id, spv::StorageClass storage_class) {
   analysis::Type* type = context()->get_type_mgr()->GetType(type_id);
   analysis::Pointer ptr_type(type, storage_class);
   return context()->get_type_mgr()->GetTypeInstruction(&ptr_type);
@@ -793,9 +797,9 @@ uint32_t InterfaceVariableScalarReplacement::GetPointerType(
 
 InterfaceVariableScalarReplacement::NestedCompositeComponents
 InterfaceVariableScalarReplacement::CreateScalarInterfaceVarsForArray(
-    Instruction* interface_var_type, SpvStorageClass storage_class,
+    Instruction* interface_var_type, spv::StorageClass storage_class,
     uint32_t extra_array_length) {
-  assert(interface_var_type->opcode() == SpvOpTypeArray);
+  assert(interface_var_type->opcode() == spv::Op::OpTypeArray);
 
   analysis::DefUseManager* def_use_mgr = context()->get_def_use_mgr();
   uint32_t array_length = GetArrayLength(def_use_mgr, interface_var_type);
@@ -814,9 +818,9 @@ InterfaceVariableScalarReplacement::CreateScalarInterfaceVarsForArray(
 
 InterfaceVariableScalarReplacement::NestedCompositeComponents
 InterfaceVariableScalarReplacement::CreateScalarInterfaceVarsForMatrix(
-    Instruction* interface_var_type, SpvStorageClass storage_class,
+    Instruction* interface_var_type, spv::StorageClass storage_class,
     uint32_t extra_array_length) {
-  assert(interface_var_type->opcode() == SpvOpTypeMatrix);
+  assert(interface_var_type->opcode() == spv::Op::OpTypeMatrix);
 
   analysis::DefUseManager* def_use_mgr = context()->get_def_use_mgr();
   uint32_t column_count = interface_var_type->GetSingleWordInOperand(
@@ -837,16 +841,16 @@ InterfaceVariableScalarReplacement::CreateScalarInterfaceVarsForMatrix(
 
 InterfaceVariableScalarReplacement::NestedCompositeComponents
 InterfaceVariableScalarReplacement::CreateScalarInterfaceVarsForReplacement(
-    Instruction* interface_var_type, SpvStorageClass storage_class,
+    Instruction* interface_var_type, spv::StorageClass storage_class,
     uint32_t extra_array_length) {
   // Handle array case.
-  if (interface_var_type->opcode() == SpvOpTypeArray) {
+  if (interface_var_type->opcode() == spv::Op::OpTypeArray) {
     return CreateScalarInterfaceVarsForArray(interface_var_type, storage_class,
                                              extra_array_length);
   }
 
   // Handle matrix case.
-  if (interface_var_type->opcode() == SpvOpTypeMatrix) {
+  if (interface_var_type->opcode() == spv::Op::OpTypeMatrix) {
     return CreateScalarInterfaceVarsForMatrix(interface_var_type, storage_class,
                                               extra_array_length);
   }
@@ -861,7 +865,7 @@ InterfaceVariableScalarReplacement::CreateScalarInterfaceVarsForReplacement(
       context()->get_type_mgr()->FindPointerToType(type_id, storage_class);
   uint32_t id = TakeNextId();
   std::unique_ptr<Instruction> variable(
-      new Instruction(context(), SpvOpVariable, ptr_type_id, id,
+      new Instruction(context(), spv::Op::OpVariable, ptr_type_id, id,
                       std::initializer_list<Operand>{
                           {SPV_OPERAND_TYPE_STORAGE_CLASS,
                            {static_cast<uint32_t>(storage_class)}}}));
@@ -944,8 +948,8 @@ InterfaceVariableScalarReplacement::ReplaceInterfaceVarsWithScalars(
       return Pass::Status::Failure;
     }
 
-    if (interface_var_type->opcode() != SpvOpTypeArray &&
-        interface_var_type->opcode() != SpvOpTypeMatrix) {
+    if (interface_var_type->opcode() != spv::Op::OpTypeArray &&
+        interface_var_type->opcode() != spv::Op::OpTypeMatrix) {
       continue;
     }
 

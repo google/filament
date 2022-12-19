@@ -53,7 +53,7 @@ bool TransformationAddConstantComposite::IsApplicable(
   // struct - whether its decorations are OK.
   std::vector<uint32_t> constituent_type_ids;
   switch (composite_type_instruction->opcode()) {
-    case SpvOpTypeArray:
+    case spv::Op::OpTypeArray:
       for (uint32_t index = 0;
            index <
            fuzzerutil::GetArraySize(*composite_type_instruction, ir_context);
@@ -62,8 +62,8 @@ bool TransformationAddConstantComposite::IsApplicable(
             composite_type_instruction->GetSingleWordInOperand(0));
       }
       break;
-    case SpvOpTypeMatrix:
-    case SpvOpTypeVector:
+    case spv::Op::OpTypeMatrix:
+    case spv::Op::OpTypeVector:
       for (uint32_t index = 0;
            index < composite_type_instruction->GetSingleWordInOperand(1);
            index++) {
@@ -71,7 +71,7 @@ bool TransformationAddConstantComposite::IsApplicable(
             composite_type_instruction->GetSingleWordInOperand(0));
       }
       break;
-    case SpvOpTypeStruct:
+    case spv::Op::OpTypeStruct:
       // We do not create constants of structs decorated with Block nor
       // BufferBlock.  The SPIR-V spec does not explicitly disallow this, but it
       // seems like a strange thing to do, so we disallow it to avoid triggering
@@ -120,7 +120,7 @@ void TransformationAddConstantComposite::Apply(
     in_operands.push_back({SPV_OPERAND_TYPE_ID, {constituent_id}});
   }
   auto new_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpConstantComposite, message_.type_id(),
+      ir_context, spv::Op::OpConstantComposite, message_.type_id(),
       message_.fresh_id(), in_operands);
   auto new_instruction_ptr = new_instruction.get();
   ir_context->module()->AddGlobalValue(std::move(new_instruction));

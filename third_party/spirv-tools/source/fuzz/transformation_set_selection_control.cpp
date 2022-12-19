@@ -29,14 +29,17 @@ TransformationSetSelectionControl::TransformationSetSelectionControl(
 
 bool TransformationSetSelectionControl::IsApplicable(
     opt::IRContext* ir_context, const TransformationContext& /*unused*/) const {
-  assert((message_.selection_control() == SpvSelectionControlMaskNone ||
-          message_.selection_control() == SpvSelectionControlFlattenMask ||
-          message_.selection_control() == SpvSelectionControlDontFlattenMask) &&
+  assert((spv::SelectionControlMask(message_.selection_control()) ==
+              spv::SelectionControlMask::MaskNone ||
+          spv::SelectionControlMask(message_.selection_control()) ==
+              spv::SelectionControlMask::Flatten ||
+          spv::SelectionControlMask(message_.selection_control()) ==
+              spv::SelectionControlMask::DontFlatten) &&
          "Selection control should never be set to something other than "
          "'None', 'Flatten' or 'DontFlatten'");
   if (auto block = ir_context->get_instr_block(message_.block_id())) {
     if (auto merge_inst = block->GetMergeInst()) {
-      return merge_inst->opcode() == SpvOpSelectionMerge;
+      return merge_inst->opcode() == spv::Op::OpSelectionMerge;
     }
   }
   // Either the block did not exit, or did not end with OpSelectionMerge.

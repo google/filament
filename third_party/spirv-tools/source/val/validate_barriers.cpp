@@ -32,25 +32,26 @@ namespace val {
 
 // Validates correctness of barrier instructions.
 spv_result_t BarriersPass(ValidationState_t& _, const Instruction* inst) {
-  const SpvOp opcode = inst->opcode();
+  const spv::Op opcode = inst->opcode();
   const uint32_t result_type = inst->type_id();
 
   switch (opcode) {
-    case SpvOpControlBarrier: {
+    case spv::Op::OpControlBarrier: {
       if (_.version() < SPV_SPIRV_VERSION_WORD(1, 3)) {
         _.function(inst->function()->id())
             ->RegisterExecutionModelLimitation(
-                [](SpvExecutionModel model, std::string* message) {
-                  if (model != SpvExecutionModelTessellationControl &&
-                      model != SpvExecutionModelGLCompute &&
-                      model != SpvExecutionModelKernel &&
-                      model != SpvExecutionModelTaskNV &&
-                      model != SpvExecutionModelMeshNV) {
+                [](spv::ExecutionModel model, std::string* message) {
+                  if (model != spv::ExecutionModel::TessellationControl &&
+                      model != spv::ExecutionModel::GLCompute &&
+                      model != spv::ExecutionModel::Kernel &&
+                      model != spv::ExecutionModel::TaskNV &&
+                      model != spv::ExecutionModel::MeshNV) {
                     if (message) {
                       *message =
                           "OpControlBarrier requires one of the following "
                           "Execution "
-                          "Models: TessellationControl, GLCompute or Kernel";
+                          "Models: TessellationControl, GLCompute, Kernel, "
+                          "MeshNV or TaskNV";
                     }
                     return false;
                   }
@@ -75,7 +76,7 @@ spv_result_t BarriersPass(ValidationState_t& _, const Instruction* inst) {
       break;
     }
 
-    case SpvOpMemoryBarrier: {
+    case spv::Op::OpMemoryBarrier: {
       const uint32_t memory_scope = inst->word(1);
 
       if (auto error = ValidateMemoryScope(_, inst, memory_scope)) {
@@ -88,8 +89,8 @@ spv_result_t BarriersPass(ValidationState_t& _, const Instruction* inst) {
       break;
     }
 
-    case SpvOpNamedBarrierInitialize: {
-      if (_.GetIdOpcode(result_type) != SpvOpTypeNamedBarrier) {
+    case spv::Op::OpNamedBarrierInitialize: {
+      if (_.GetIdOpcode(result_type) != spv::Op::OpTypeNamedBarrier) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << spvOpcodeString(opcode)
                << ": expected Result Type to be OpTypeNamedBarrier";
@@ -105,9 +106,9 @@ spv_result_t BarriersPass(ValidationState_t& _, const Instruction* inst) {
       break;
     }
 
-    case SpvOpMemoryNamedBarrier: {
+    case spv::Op::OpMemoryNamedBarrier: {
       const uint32_t named_barrier_type = _.GetOperandTypeId(inst, 0);
-      if (_.GetIdOpcode(named_barrier_type) != SpvOpTypeNamedBarrier) {
+      if (_.GetIdOpcode(named_barrier_type) != spv::Op::OpTypeNamedBarrier) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << spvOpcodeString(opcode)
                << ": expected Named Barrier to be of type OpTypeNamedBarrier";

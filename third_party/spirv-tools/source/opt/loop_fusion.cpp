@@ -23,7 +23,6 @@
 
 namespace spvtools {
 namespace opt {
-
 namespace {
 
 // Append all the loops nested in |loop| to |loops|.
@@ -193,14 +192,15 @@ bool LoopFusion::AreCompatible() {
   // in LCSSA form.
   for (auto block : block_to_check) {
     for (auto& inst : *block) {
-      if (inst.opcode() == SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpStore) {
         // Get the definition of the target to check it's function scope so
         // there are no observable side effects.
         auto variable =
             context_->get_def_use_mgr()->GetDef(inst.GetSingleWordInOperand(0));
 
-        if (variable->opcode() != SpvOpVariable ||
-            variable->GetSingleWordInOperand(0) != SpvStorageClassFunction) {
+        if (variable->opcode() != spv::Op::OpVariable ||
+            spv::StorageClass(variable->GetSingleWordInOperand(0)) !=
+                spv::StorageClass::Function) {
           return false;
         }
 
@@ -209,7 +209,7 @@ bool LoopFusion::AreCompatible() {
         context_->get_def_use_mgr()->ForEachUse(
             inst.GetSingleWordInOperand(0),
             [&is_used](Instruction* use_inst, uint32_t) {
-              if (use_inst->opcode() == SpvOpLoad) {
+              if (use_inst->opcode() == spv::Op::OpLoad) {
                 is_used = true;
               }
             });
@@ -217,11 +217,11 @@ bool LoopFusion::AreCompatible() {
         if (is_used) {
           return false;
         }
-      } else if (inst.opcode() == SpvOpPhi) {
+      } else if (inst.opcode() == spv::Op::OpPhi) {
         if (inst.NumInOperands() != 2) {
           return false;
         }
-      } else if (inst.opcode() != SpvOpBranch) {
+      } else if (inst.opcode() != spv::Op::OpBranch) {
         return false;
       }
     }
@@ -234,10 +234,12 @@ bool LoopFusion::ContainsBarriersOrFunctionCalls(Loop* loop) {
   for (const auto& block : loop->GetBlocks()) {
     for (const auto& inst : *containing_function_->FindBlock(block)) {
       auto opcode = inst.opcode();
-      if (opcode == SpvOpFunctionCall || opcode == SpvOpControlBarrier ||
-          opcode == SpvOpMemoryBarrier || opcode == SpvOpTypeNamedBarrier ||
-          opcode == SpvOpNamedBarrierInitialize ||
-          opcode == SpvOpMemoryNamedBarrier) {
+      if (opcode == spv::Op::OpFunctionCall ||
+          opcode == spv::Op::OpControlBarrier ||
+          opcode == spv::Op::OpMemoryBarrier ||
+          opcode == spv::Op::OpTypeNamedBarrier ||
+          opcode == spv::Op::OpNamedBarrierInitialize ||
+          opcode == spv::Op::OpMemoryNamedBarrier) {
         return true;
       }
     }
@@ -344,7 +346,7 @@ std::map<Instruction*, std::vector<Instruction*>> LoopFusion::LocationToMemOps(
     auto access_location = context_->get_def_use_mgr()->GetDef(
         instruction->GetSingleWordInOperand(0));
 
-    while (access_location->opcode() == SpvOpAccessChain) {
+    while (access_location->opcode() == spv::Op::OpAccessChain) {
       access_location = context_->get_def_use_mgr()->GetDef(
           access_location->GetSingleWordInOperand(0));
     }
@@ -366,9 +368,9 @@ LoopFusion::GetLoadsAndStoresInLoop(Loop* loop) {
     }
 
     for (auto& instruction : *containing_function_->FindBlock(block_id)) {
-      if (instruction.opcode() == SpvOpLoad) {
+      if (instruction.opcode() == spv::Op::OpLoad) {
         loads.push_back(&instruction);
-      } else if (instruction.opcode() == SpvOpStore) {
+      } else if (instruction.opcode() == spv::Op::OpStore) {
         stores.push_back(&instruction);
       }
     }
@@ -556,7 +558,7 @@ void LoopFusion::Fuse() {
   // Update merge block id in the header of |loop_0_| to the merge block of
   // |loop_1_|.
   loop_0_->GetHeaderBlock()->ForEachInst([this](Instruction* inst) {
-    if (inst->opcode() == SpvOpLoopMerge) {
+    if (inst->opcode() == spv::Op::OpLoopMerge) {
       inst->SetInOperand(0, {loop_1_->GetMergeBlock()->id()});
     }
   });
@@ -564,7 +566,7 @@ void LoopFusion::Fuse() {
   // Update condition branch target in |loop_0_| to the merge block of
   // |loop_1_|.
   condition_block_of_0->ForEachInst([this](Instruction* inst) {
-    if (inst->opcode() == SpvOpBranchConditional) {
+    if (inst->opcode() == spv::Op::OpBranchConditional) {
       auto loop_0_merge_block_id = loop_0_->GetMergeBlock()->id();
 
       if (inst->GetSingleWordInOperand(1) == loop_0_merge_block_id) {
@@ -579,7 +581,8 @@ void LoopFusion::Fuse() {
   // the header of |loop_1_| to the header of |loop_0_|.
   std::vector<Instruction*> instructions_to_move{};
   for (auto& instruction : *loop_1_->GetHeaderBlock()) {
-    if (instruction.opcode() == SpvOpPhi && &instruction != induction_1_) {
+    if (instruction.opcode() == spv::Op::OpPhi &&
+        &instruction != induction_1_) {
       instructions_to_move.push_back(&instruction);
     }
   }

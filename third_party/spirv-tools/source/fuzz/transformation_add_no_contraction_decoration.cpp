@@ -43,8 +43,8 @@ bool TransformationAddNoContractionDecoration::IsApplicable(
 void TransformationAddNoContractionDecoration::Apply(
     opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
   // Add a NoContraction decoration targeting |message_.result_id|.
-  ir_context->get_decoration_mgr()->AddDecoration(message_.result_id(),
-                                                  SpvDecorationNoContraction);
+  ir_context->get_decoration_mgr()->AddDecoration(
+      message_.result_id(), uint32_t(spv::Decoration::NoContraction));
 }
 
 protobufs::Transformation TransformationAddNoContractionDecoration::ToMessage()
@@ -54,50 +54,50 @@ protobufs::Transformation TransformationAddNoContractionDecoration::ToMessage()
   return result;
 }
 
-bool TransformationAddNoContractionDecoration::IsArithmetic(uint32_t opcode) {
+bool TransformationAddNoContractionDecoration::IsArithmetic(spv::Op opcode) {
   switch (opcode) {
-    case SpvOpSNegate:
-    case SpvOpFNegate:
-    case SpvOpIAdd:
-    case SpvOpFAdd:
-    case SpvOpISub:
-    case SpvOpFSub:
-    case SpvOpIMul:
-    case SpvOpFMul:
-    case SpvOpUDiv:
-    case SpvOpSDiv:
-    case SpvOpFDiv:
-    case SpvOpUMod:
-    case SpvOpSRem:
-    case SpvOpSMod:
-    case SpvOpFRem:
-    case SpvOpFMod:
-    case SpvOpVectorTimesScalar:
-    case SpvOpMatrixTimesScalar:
-    case SpvOpVectorTimesMatrix:
-    case SpvOpMatrixTimesVector:
-    case SpvOpMatrixTimesMatrix:
-    case SpvOpOuterProduct:
-    case SpvOpDot:
-    case SpvOpIAddCarry:
-    case SpvOpISubBorrow:
-    case SpvOpUMulExtended:
-    case SpvOpSMulExtended:
-    case SpvOpAny:
-    case SpvOpAll:
-    case SpvOpIsNan:
-    case SpvOpIsInf:
-    case SpvOpIsFinite:
-    case SpvOpIsNormal:
-    case SpvOpSignBitSet:
-    case SpvOpLessOrGreater:
-    case SpvOpOrdered:
-    case SpvOpUnordered:
-    case SpvOpLogicalEqual:
-    case SpvOpLogicalNotEqual:
-    case SpvOpLogicalOr:
-    case SpvOpLogicalAnd:
-    case SpvOpLogicalNot:
+    case spv::Op::OpSNegate:
+    case spv::Op::OpFNegate:
+    case spv::Op::OpIAdd:
+    case spv::Op::OpFAdd:
+    case spv::Op::OpISub:
+    case spv::Op::OpFSub:
+    case spv::Op::OpIMul:
+    case spv::Op::OpFMul:
+    case spv::Op::OpUDiv:
+    case spv::Op::OpSDiv:
+    case spv::Op::OpFDiv:
+    case spv::Op::OpUMod:
+    case spv::Op::OpSRem:
+    case spv::Op::OpSMod:
+    case spv::Op::OpFRem:
+    case spv::Op::OpFMod:
+    case spv::Op::OpVectorTimesScalar:
+    case spv::Op::OpMatrixTimesScalar:
+    case spv::Op::OpVectorTimesMatrix:
+    case spv::Op::OpMatrixTimesVector:
+    case spv::Op::OpMatrixTimesMatrix:
+    case spv::Op::OpOuterProduct:
+    case spv::Op::OpDot:
+    case spv::Op::OpIAddCarry:
+    case spv::Op::OpISubBorrow:
+    case spv::Op::OpUMulExtended:
+    case spv::Op::OpSMulExtended:
+    case spv::Op::OpAny:
+    case spv::Op::OpAll:
+    case spv::Op::OpIsNan:
+    case spv::Op::OpIsInf:
+    case spv::Op::OpIsFinite:
+    case spv::Op::OpIsNormal:
+    case spv::Op::OpSignBitSet:
+    case spv::Op::OpLessOrGreater:
+    case spv::Op::OpOrdered:
+    case spv::Op::OpUnordered:
+    case spv::Op::OpLogicalEqual:
+    case spv::Op::OpLogicalNotEqual:
+    case spv::Op::OpLogicalOr:
+    case spv::Op::OpLogicalAnd:
+    case spv::Op::OpLogicalNot:
       return true;
     default:
       return false;

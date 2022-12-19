@@ -24,7 +24,6 @@
 
 namespace spvtools {
 namespace opt {
-
 namespace {
 
 enum AmdShaderBallotExtOpcodes {
@@ -136,19 +135,19 @@ bool ReplaceTrinaryMid(IRContext* ctx, Instruction* inst,
 // Returns a folding rule that will replace the opcode with |opcode| and add
 // the capabilities required.  The folding rule assumes it is folding an
 // OpGroup*NonUniformAMD instruction from the SPV_AMD_shader_ballot extension.
-template <SpvOp new_opcode>
+template <spv::Op new_opcode>
 bool ReplaceGroupNonuniformOperationOpCode(
     IRContext* ctx, Instruction* inst,
     const std::vector<const analysis::Constant*>&) {
   switch (new_opcode) {
-    case SpvOpGroupNonUniformIAdd:
-    case SpvOpGroupNonUniformFAdd:
-    case SpvOpGroupNonUniformUMin:
-    case SpvOpGroupNonUniformSMin:
-    case SpvOpGroupNonUniformFMin:
-    case SpvOpGroupNonUniformUMax:
-    case SpvOpGroupNonUniformSMax:
-    case SpvOpGroupNonUniformFMax:
+    case spv::Op::OpGroupNonUniformIAdd:
+    case spv::Op::OpGroupNonUniformFAdd:
+    case spv::Op::OpGroupNonUniformUMin:
+    case spv::Op::OpGroupNonUniformSMin:
+    case spv::Op::OpGroupNonUniformFMin:
+    case spv::Op::OpGroupNonUniformUMax:
+    case spv::Op::OpGroupNonUniformSMax:
+    case spv::Op::OpGroupNonUniformFMax:
       break;
     default:
       assert(
@@ -157,21 +156,21 @@ bool ReplaceGroupNonuniformOperationOpCode(
   }
 
   switch (inst->opcode()) {
-    case SpvOpGroupIAddNonUniformAMD:
-    case SpvOpGroupFAddNonUniformAMD:
-    case SpvOpGroupUMinNonUniformAMD:
-    case SpvOpGroupSMinNonUniformAMD:
-    case SpvOpGroupFMinNonUniformAMD:
-    case SpvOpGroupUMaxNonUniformAMD:
-    case SpvOpGroupSMaxNonUniformAMD:
-    case SpvOpGroupFMaxNonUniformAMD:
+    case spv::Op::OpGroupIAddNonUniformAMD:
+    case spv::Op::OpGroupFAddNonUniformAMD:
+    case spv::Op::OpGroupUMinNonUniformAMD:
+    case spv::Op::OpGroupSMinNonUniformAMD:
+    case spv::Op::OpGroupFMinNonUniformAMD:
+    case spv::Op::OpGroupUMaxNonUniformAMD:
+    case spv::Op::OpGroupSMaxNonUniformAMD:
+    case spv::Op::OpGroupFMaxNonUniformAMD:
       break;
     default:
       assert(false &&
              "Should be replacing a group non uniform arithmetic operation.");
   }
 
-  ctx->AddCapability(SpvCapabilityGroupNonUniformArithmetic);
+  ctx->AddCapability(spv::Capability::GroupNonUniformArithmetic);
   inst->SetOpcode(new_opcode);
   return true;
 }
@@ -215,8 +214,8 @@ bool ReplaceSwizzleInvocations(IRContext* ctx, Instruction* inst,
   analysis::ConstantManager* const_mgr = ctx->get_constant_mgr();
 
   ctx->AddExtension("SPV_KHR_shader_ballot");
-  ctx->AddCapability(SpvCapabilityGroupNonUniformBallot);
-  ctx->AddCapability(SpvCapabilityGroupNonUniformShuffle);
+  ctx->AddCapability(spv::Capability::GroupNonUniformBallot);
+  ctx->AddCapability(spv::Capability::GroupNonUniformShuffle);
 
   InstructionBuilder ir_builder(
       ctx, inst,
@@ -226,8 +225,8 @@ bool ReplaceSwizzleInvocations(IRContext* ctx, Instruction* inst,
   uint32_t offset_id = inst->GetSingleWordInOperand(3);
 
   // Get the subgroup invocation id.
-  uint32_t var_id =
-      ctx->GetBuiltinInputVarId(SpvBuiltInSubgroupLocalInvocationId);
+  uint32_t var_id = ctx->GetBuiltinInputVarId(
+      uint32_t(spv::BuiltIn::SubgroupLocalInvocationId));
   assert(var_id != 0 && "Could not get SubgroupLocalInvocationId variable.");
   Instruction* var_inst = ctx->get_def_use_mgr()->GetDef(var_id);
   Instruction* var_ptr_type =
@@ -239,35 +238,38 @@ bool ReplaceSwizzleInvocations(IRContext* ctx, Instruction* inst,
   uint32_t quad_mask = ir_builder.GetUintConstantId(3);
 
   // This gives the offset in the group of 4 of this invocation.
-  Instruction* quad_idx = ir_builder.AddBinaryOp(uint_type_id, SpvOpBitwiseAnd,
-                                                 id->result_id(), quad_mask);
+  Instruction* quad_idx = ir_builder.AddBinaryOp(
+      uint_type_id, spv::Op::OpBitwiseAnd, id->result_id(), quad_mask);
 
   // Get the invocation id of the first invocation in the group of 4.
-  Instruction* quad_ldr = ir_builder.AddBinaryOp(
-      uint_type_id, SpvOpBitwiseXor, id->result_id(), quad_idx->result_id());
+  Instruction* quad_ldr =
+      ir_builder.AddBinaryOp(uint_type_id, spv::Op::OpBitwiseXor,
+                             id->result_id(), quad_idx->result_id());
 
   // Get the offset of the target invocation from the offset vector.
   Instruction* my_offset =
-      ir_builder.AddBinaryOp(uint_type_id, SpvOpVectorExtractDynamic, offset_id,
-                             quad_idx->result_id());
+      ir_builder.AddBinaryOp(uint_type_id, spv::Op::OpVectorExtractDynamic,
+                             offset_id, quad_idx->result_id());
 
   // Determine the index of the invocation to read from.
-  Instruction* target_inv = ir_builder.AddBinaryOp(
-      uint_type_id, SpvOpIAdd, quad_ldr->result_id(), my_offset->result_id());
+  Instruction* target_inv =
+      ir_builder.AddBinaryOp(uint_type_id, spv::Op::OpIAdd,
+                             quad_ldr->result_id(), my_offset->result_id());
 
   // Do the group operations
   uint32_t uint_max_id = ir_builder.GetUintConstantId(0xFFFFFFFF);
-  uint32_t subgroup_scope = ir_builder.GetUintConstantId(SpvScopeSubgroup);
+  uint32_t subgroup_scope =
+      ir_builder.GetUintConstantId(uint32_t(spv::Scope::Subgroup));
   const auto* ballot_value_const = const_mgr->GetConstant(
       type_mgr->GetUIntVectorType(4),
       {uint_max_id, uint_max_id, uint_max_id, uint_max_id});
   Instruction* ballot_value =
       const_mgr->GetDefiningInstruction(ballot_value_const);
   Instruction* is_active = ir_builder.AddNaryOp(
-      type_mgr->GetBoolTypeId(), SpvOpGroupNonUniformBallotBitExtract,
+      type_mgr->GetBoolTypeId(), spv::Op::OpGroupNonUniformBallotBitExtract,
       {subgroup_scope, ballot_value->result_id(), target_inv->result_id()});
   Instruction* shuffle =
-      ir_builder.AddNaryOp(inst->type_id(), SpvOpGroupNonUniformShuffle,
+      ir_builder.AddNaryOp(inst->type_id(), spv::Op::OpGroupNonUniformShuffle,
                            {subgroup_scope, data_id, target_inv->result_id()});
 
   // Create the null constant to use in the select.
@@ -276,7 +278,7 @@ bool ReplaceSwizzleInvocations(IRContext* ctx, Instruction* inst,
   Instruction* null_inst = const_mgr->GetDefiningInstruction(null);
 
   // Build the select.
-  inst->SetOpcode(SpvOpSelect);
+  inst->SetOpcode(spv::Op::OpSelect);
   Instruction::OperandList new_operands;
   new_operands.push_back({SPV_OPERAND_TYPE_ID, {is_active->result_id()}});
   new_operands.push_back({SPV_OPERAND_TYPE_ID, {shuffle->result_id()}});
@@ -327,8 +329,8 @@ bool ReplaceSwizzleInvocationsMasked(
   analysis::DefUseManager* def_use_mgr = ctx->get_def_use_mgr();
   analysis::ConstantManager* const_mgr = ctx->get_constant_mgr();
 
-  ctx->AddCapability(SpvCapabilityGroupNonUniformBallot);
-  ctx->AddCapability(SpvCapabilityGroupNonUniformShuffle);
+  ctx->AddCapability(spv::Capability::GroupNonUniformBallot);
+  ctx->AddCapability(spv::Capability::GroupNonUniformShuffle);
 
   InstructionBuilder ir_builder(
       ctx, inst,
@@ -338,7 +340,7 @@ bool ReplaceSwizzleInvocationsMasked(
   uint32_t data_id = inst->GetSingleWordInOperand(2);
 
   Instruction* mask_inst = def_use_mgr->GetDef(inst->GetSingleWordInOperand(3));
-  assert(mask_inst->opcode() == SpvOpConstantComposite &&
+  assert(mask_inst->opcode() == spv::Op::OpConstantComposite &&
          "The mask is suppose to be a vector constant.");
   assert(mask_inst->NumInOperands() == 3 &&
          "The mask is suppose to have 3 components.");
@@ -348,8 +350,8 @@ bool ReplaceSwizzleInvocationsMasked(
   uint32_t uint_z = mask_inst->GetSingleWordInOperand(2);
 
   // Get the subgroup invocation id.
-  uint32_t var_id =
-      ctx->GetBuiltinInputVarId(SpvBuiltInSubgroupLocalInvocationId);
+  uint32_t var_id = ctx->GetBuiltinInputVarId(
+      uint32_t(spv::BuiltIn::SubgroupLocalInvocationId));
   ctx->AddExtension("SPV_KHR_shader_ballot");
   assert(var_id != 0 && "Could not get SubgroupLocalInvocationId variable.");
   Instruction* var_inst = ctx->get_def_use_mgr()->GetDef(var_id);
@@ -361,28 +363,30 @@ bool ReplaceSwizzleInvocationsMasked(
 
   // Do the bitwise operations.
   uint32_t mask_extended = ir_builder.GetUintConstantId(0xFFFFFFE0);
-  Instruction* and_mask = ir_builder.AddBinaryOp(uint_type_id, SpvOpBitwiseOr,
-                                                 uint_x, mask_extended);
-  Instruction* and_result = ir_builder.AddBinaryOp(
-      uint_type_id, SpvOpBitwiseAnd, id->result_id(), and_mask->result_id());
+  Instruction* and_mask = ir_builder.AddBinaryOp(
+      uint_type_id, spv::Op::OpBitwiseOr, uint_x, mask_extended);
+  Instruction* and_result =
+      ir_builder.AddBinaryOp(uint_type_id, spv::Op::OpBitwiseAnd,
+                             id->result_id(), and_mask->result_id());
   Instruction* or_result = ir_builder.AddBinaryOp(
-      uint_type_id, SpvOpBitwiseOr, and_result->result_id(), uint_y);
+      uint_type_id, spv::Op::OpBitwiseOr, and_result->result_id(), uint_y);
   Instruction* target_inv = ir_builder.AddBinaryOp(
-      uint_type_id, SpvOpBitwiseXor, or_result->result_id(), uint_z);
+      uint_type_id, spv::Op::OpBitwiseXor, or_result->result_id(), uint_z);
 
   // Do the group operations
   uint32_t uint_max_id = ir_builder.GetUintConstantId(0xFFFFFFFF);
-  uint32_t subgroup_scope = ir_builder.GetUintConstantId(SpvScopeSubgroup);
+  uint32_t subgroup_scope =
+      ir_builder.GetUintConstantId(uint32_t(spv::Scope::Subgroup));
   const auto* ballot_value_const = const_mgr->GetConstant(
       type_mgr->GetUIntVectorType(4),
       {uint_max_id, uint_max_id, uint_max_id, uint_max_id});
   Instruction* ballot_value =
       const_mgr->GetDefiningInstruction(ballot_value_const);
   Instruction* is_active = ir_builder.AddNaryOp(
-      type_mgr->GetBoolTypeId(), SpvOpGroupNonUniformBallotBitExtract,
+      type_mgr->GetBoolTypeId(), spv::Op::OpGroupNonUniformBallotBitExtract,
       {subgroup_scope, ballot_value->result_id(), target_inv->result_id()});
   Instruction* shuffle =
-      ir_builder.AddNaryOp(inst->type_id(), SpvOpGroupNonUniformShuffle,
+      ir_builder.AddNaryOp(inst->type_id(), spv::Op::OpGroupNonUniformShuffle,
                            {subgroup_scope, data_id, target_inv->result_id()});
 
   // Create the null constant to use in the select.
@@ -391,7 +395,7 @@ bool ReplaceSwizzleInvocationsMasked(
   Instruction* null_inst = const_mgr->GetDefiningInstruction(null);
 
   // Build the select.
-  inst->SetOpcode(SpvOpSelect);
+  inst->SetOpcode(spv::Op::OpSelect);
   Instruction::OperandList new_operands;
   new_operands.push_back({SPV_OPERAND_TYPE_ID, {is_active->result_id()}});
   new_operands.push_back({SPV_OPERAND_TYPE_ID, {shuffle->result_id()}});
@@ -420,9 +424,9 @@ bool ReplaceSwizzleInvocationsMasked(
 // Also adding the capabilities and builtins that are needed.
 bool ReplaceWriteInvocation(IRContext* ctx, Instruction* inst,
                             const std::vector<const analysis::Constant*>&) {
-  uint32_t var_id =
-      ctx->GetBuiltinInputVarId(SpvBuiltInSubgroupLocalInvocationId);
-  ctx->AddCapability(SpvCapabilitySubgroupBallotKHR);
+  uint32_t var_id = ctx->GetBuiltinInputVarId(
+      uint32_t(spv::BuiltIn::SubgroupLocalInvocationId));
+  ctx->AddCapability(spv::Capability::SubgroupBallotKHR);
   ctx->AddExtension("SPV_KHR_shader_ballot");
   assert(var_id != 0 && "Could not get SubgroupLocalInvocationId variable.");
   Instruction* var_inst = ctx->get_def_use_mgr()->GetDef(var_id);
@@ -437,11 +441,11 @@ bool ReplaceWriteInvocation(IRContext* ctx, Instruction* inst,
   analysis::Bool bool_type;
   uint32_t bool_type_id = ctx->get_type_mgr()->GetTypeInstruction(&bool_type);
   Instruction* cmp =
-      ir_builder.AddBinaryOp(bool_type_id, SpvOpIEqual, t->result_id(),
+      ir_builder.AddBinaryOp(bool_type_id, spv::Op::OpIEqual, t->result_id(),
                              inst->GetSingleWordInOperand(4));
 
   // Build a select.
-  inst->SetOpcode(SpvOpSelect);
+  inst->SetOpcode(spv::Op::OpSelect);
   Instruction::OperandList new_operands;
   new_operands.push_back({SPV_OPERAND_TYPE_ID, {cmp->result_id()}});
   new_operands.push_back(inst->GetInOperand(3));
@@ -479,14 +483,15 @@ bool ReplaceMbcnt(IRContext* context, Instruction* inst,
   analysis::TypeManager* type_mgr = context->get_type_mgr();
   analysis::DefUseManager* def_use_mgr = context->get_def_use_mgr();
 
-  uint32_t var_id = context->GetBuiltinInputVarId(SpvBuiltInSubgroupLtMask);
+  uint32_t var_id =
+      context->GetBuiltinInputVarId(uint32_t(spv::BuiltIn::SubgroupLtMask));
   assert(var_id != 0 && "Could not get SubgroupLtMask variable.");
-  context->AddCapability(SpvCapabilityGroupNonUniformBallot);
+  context->AddCapability(spv::Capability::GroupNonUniformBallot);
   Instruction* var_inst = def_use_mgr->GetDef(var_id);
   Instruction* var_ptr_type = def_use_mgr->GetDef(var_inst->type_id());
   Instruction* var_type =
       def_use_mgr->GetDef(var_ptr_type->GetSingleWordInOperand(1));
-  assert(var_type->opcode() == SpvOpTypeVector &&
+  assert(var_type->opcode() == spv::Op::OpTypeVector &&
          "Variable is suppose to be a vector of 4 ints");
 
   // Get the type for the shuffle.
@@ -509,11 +514,12 @@ bool ReplaceMbcnt(IRContext* context, Instruction* inst,
   Instruction* shuffle = ir_builder.AddVectorShuffle(
       shuffle_type_id, load->result_id(), load->result_id(), {0, 1});
   Instruction* bitcast = ir_builder.AddUnaryOp(
-      mask_inst->type_id(), SpvOpBitcast, shuffle->result_id());
-  Instruction* t = ir_builder.AddBinaryOp(mask_inst->type_id(), SpvOpBitwiseAnd,
-                                          bitcast->result_id(), mask_id);
+      mask_inst->type_id(), spv::Op::OpBitcast, shuffle->result_id());
+  Instruction* t =
+      ir_builder.AddBinaryOp(mask_inst->type_id(), spv::Op::OpBitwiseAnd,
+                             bitcast->result_id(), mask_id);
 
-  inst->SetOpcode(SpvOpBitCount);
+  inst->SetOpcode(spv::Op::OpBitCount);
   inst->SetInOperands({{SPV_OPERAND_TYPE_ID, {t->result_id()}}});
   context->UpdateDefUse(inst);
   return true;
@@ -599,11 +605,11 @@ bool ReplaceCubeFaceCoord(IRContext* ctx, Instruction* inst,
 
   // Negate the input values.
   Instruction* nx =
-      ir_builder.AddUnaryOp(float_type_id, SpvOpFNegate, x->result_id());
+      ir_builder.AddUnaryOp(float_type_id, spv::Op::OpFNegate, x->result_id());
   Instruction* ny =
-      ir_builder.AddUnaryOp(float_type_id, SpvOpFNegate, y->result_id());
+      ir_builder.AddUnaryOp(float_type_id, spv::Op::OpFNegate, y->result_id());
   Instruction* nz =
-      ir_builder.AddUnaryOp(float_type_id, SpvOpFNegate, z->result_id());
+      ir_builder.AddUnaryOp(float_type_id, spv::Op::OpFNegate, z->result_id());
 
   // Get the abolsute values of the inputs.
   Instruction* ax = ir_builder.AddNaryExtendedInstruction(
@@ -614,12 +620,12 @@ bool ReplaceCubeFaceCoord(IRContext* ctx, Instruction* inst,
       float_type_id, glsl405_ext_inst_id, GLSLstd450FAbs, {z->result_id()});
 
   // Find which values are negative.  Used in later computations.
-  Instruction* is_z_neg = ir_builder.AddBinaryOp(bool_id, SpvOpFOrdLessThan,
-                                                 z->result_id(), f0_const_id);
-  Instruction* is_y_neg = ir_builder.AddBinaryOp(bool_id, SpvOpFOrdLessThan,
-                                                 y->result_id(), f0_const_id);
-  Instruction* is_x_neg = ir_builder.AddBinaryOp(bool_id, SpvOpFOrdLessThan,
-                                                 x->result_id(), f0_const_id);
+  Instruction* is_z_neg = ir_builder.AddBinaryOp(
+      bool_id, spv::Op::OpFOrdLessThan, z->result_id(), f0_const_id);
+  Instruction* is_y_neg = ir_builder.AddBinaryOp(
+      bool_id, spv::Op::OpFOrdLessThan, y->result_id(), f0_const_id);
+  Instruction* is_x_neg = ir_builder.AddBinaryOp(
+      bool_id, spv::Op::OpFOrdLessThan, x->result_id(), f0_const_id);
 
   // Compute cubema
   Instruction* amax_x_y = ir_builder.AddNaryExtendedInstruction(
@@ -628,19 +634,21 @@ bool ReplaceCubeFaceCoord(IRContext* ctx, Instruction* inst,
   Instruction* amax = ir_builder.AddNaryExtendedInstruction(
       float_type_id, glsl405_ext_inst_id, GLSLstd450FMax,
       {az->result_id(), amax_x_y->result_id()});
-  Instruction* cubema = ir_builder.AddBinaryOp(float_type_id, SpvOpFMul,
+  Instruction* cubema = ir_builder.AddBinaryOp(float_type_id, spv::Op::OpFMul,
                                                f2_const_id, amax->result_id());
 
   // Do the comparisons needed for computing cubesc and cubetc.
   Instruction* is_z_max =
-      ir_builder.AddBinaryOp(bool_id, SpvOpFOrdGreaterThanEqual,
+      ir_builder.AddBinaryOp(bool_id, spv::Op::OpFOrdGreaterThanEqual,
                              az->result_id(), amax_x_y->result_id());
-  Instruction* not_is_z_max =
-      ir_builder.AddUnaryOp(bool_id, SpvOpLogicalNot, is_z_max->result_id());
-  Instruction* y_gr_x = ir_builder.AddBinaryOp(
-      bool_id, SpvOpFOrdGreaterThanEqual, ay->result_id(), ax->result_id());
-  Instruction* is_y_max = ir_builder.AddBinaryOp(
-      bool_id, SpvOpLogicalAnd, not_is_z_max->result_id(), y_gr_x->result_id());
+  Instruction* not_is_z_max = ir_builder.AddUnaryOp(
+      bool_id, spv::Op::OpLogicalNot, is_z_max->result_id());
+  Instruction* y_gr_x =
+      ir_builder.AddBinaryOp(bool_id, spv::Op::OpFOrdGreaterThanEqual,
+                             ay->result_id(), ax->result_id());
+  Instruction* is_y_max =
+      ir_builder.AddBinaryOp(bool_id, spv::Op::OpLogicalAnd,
+                             not_is_z_max->result_id(), y_gr_x->result_id());
 
   // Select the correct value for cubesc.
   Instruction* cubesc_case_1 = ir_builder.AddSelect(
@@ -667,10 +675,10 @@ bool ReplaceCubeFaceCoord(IRContext* ctx, Instruction* inst,
   Instruction* denom = ir_builder.AddCompositeConstruct(
       v2_float_type_id, {cubema->result_id(), cubema->result_id()});
   Instruction* div = ir_builder.AddBinaryOp(
-      v2_float_type_id, SpvOpFDiv, cube->result_id(), denom->result_id());
+      v2_float_type_id, spv::Op::OpFDiv, cube->result_id(), denom->result_id());
 
   // Get the final result by adding 0.5 to |div|.
-  inst->SetOpcode(SpvOpFAdd);
+  inst->SetOpcode(spv::Op::OpFAdd);
   Instruction::OperandList new_operands;
   new_operands.push_back({SPV_OPERAND_TYPE_ID, {div->result_id()}});
   new_operands.push_back({SPV_OPERAND_TYPE_ID, {vec_const_id}});
@@ -752,22 +760,23 @@ bool ReplaceCubeFaceIndex(IRContext* ctx, Instruction* inst,
       float_type_id, glsl405_ext_inst_id, GLSLstd450FAbs, {z->result_id()});
 
   // Find which values are negative.  Used in later computations.
-  Instruction* is_z_neg = ir_builder.AddBinaryOp(bool_id, SpvOpFOrdLessThan,
-                                                 z->result_id(), f0_const_id);
-  Instruction* is_y_neg = ir_builder.AddBinaryOp(bool_id, SpvOpFOrdLessThan,
-                                                 y->result_id(), f0_const_id);
-  Instruction* is_x_neg = ir_builder.AddBinaryOp(bool_id, SpvOpFOrdLessThan,
-                                                 x->result_id(), f0_const_id);
+  Instruction* is_z_neg = ir_builder.AddBinaryOp(
+      bool_id, spv::Op::OpFOrdLessThan, z->result_id(), f0_const_id);
+  Instruction* is_y_neg = ir_builder.AddBinaryOp(
+      bool_id, spv::Op::OpFOrdLessThan, y->result_id(), f0_const_id);
+  Instruction* is_x_neg = ir_builder.AddBinaryOp(
+      bool_id, spv::Op::OpFOrdLessThan, x->result_id(), f0_const_id);
 
   // Find the max value.
   Instruction* amax_x_y = ir_builder.AddNaryExtendedInstruction(
       float_type_id, glsl405_ext_inst_id, GLSLstd450FMax,
       {ax->result_id(), ay->result_id()});
   Instruction* is_z_max =
-      ir_builder.AddBinaryOp(bool_id, SpvOpFOrdGreaterThanEqual,
+      ir_builder.AddBinaryOp(bool_id, spv::Op::OpFOrdGreaterThanEqual,
                              az->result_id(), amax_x_y->result_id());
-  Instruction* y_gr_x = ir_builder.AddBinaryOp(
-      bool_id, SpvOpFOrdGreaterThanEqual, ay->result_id(), ax->result_id());
+  Instruction* y_gr_x =
+      ir_builder.AddBinaryOp(bool_id, spv::Op::OpFOrdGreaterThanEqual,
+                             ay->result_id(), ax->result_id());
 
   // Get the value for each case.
   Instruction* case_z = ir_builder.AddSelect(
@@ -783,7 +792,7 @@ bool ReplaceCubeFaceIndex(IRContext* ctx, Instruction* inst,
                            case_y->result_id(), case_x->result_id());
 
   // Get the final result by adding 0.5 to |div|.
-  inst->SetOpcode(SpvOpSelect);
+  inst->SetOpcode(spv::Op::OpSelect);
   Instruction::OperandList new_operands;
   new_operands.push_back({SPV_OPERAND_TYPE_ID, {is_z_max->result_id()}});
   new_operands.push_back({SPV_OPERAND_TYPE_ID, {case_z->result_id()}});
@@ -813,11 +822,12 @@ bool ReplaceTimeAMD(IRContext* ctx, Instruction* inst,
       ctx, inst,
       IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
   ctx->AddExtension("SPV_KHR_shader_clock");
-  ctx->AddCapability(SpvCapabilityShaderClockKHR);
+  ctx->AddCapability(spv::Capability::ShaderClockKHR);
 
-  inst->SetOpcode(SpvOpReadClockKHR);
+  inst->SetOpcode(spv::Op::OpReadClockKHR);
   Instruction::OperandList args;
-  uint32_t subgroup_scope_id = ir_builder.GetUintConstantId(SpvScopeSubgroup);
+  uint32_t subgroup_scope_id =
+      ir_builder.GetUintConstantId(uint32_t(spv::Scope::Subgroup));
   args.push_back({SPV_OPERAND_TYPE_ID, {subgroup_scope_id}});
   inst->SetInOperands(std::move(args));
   ctx->UpdateDefUse(inst);
@@ -831,22 +841,22 @@ class AmdExtFoldingRules : public FoldingRules {
 
  protected:
   virtual void AddFoldingRules() override {
-    rules_[SpvOpGroupIAddNonUniformAMD].push_back(
-        ReplaceGroupNonuniformOperationOpCode<SpvOpGroupNonUniformIAdd>);
-    rules_[SpvOpGroupFAddNonUniformAMD].push_back(
-        ReplaceGroupNonuniformOperationOpCode<SpvOpGroupNonUniformFAdd>);
-    rules_[SpvOpGroupUMinNonUniformAMD].push_back(
-        ReplaceGroupNonuniformOperationOpCode<SpvOpGroupNonUniformUMin>);
-    rules_[SpvOpGroupSMinNonUniformAMD].push_back(
-        ReplaceGroupNonuniformOperationOpCode<SpvOpGroupNonUniformSMin>);
-    rules_[SpvOpGroupFMinNonUniformAMD].push_back(
-        ReplaceGroupNonuniformOperationOpCode<SpvOpGroupNonUniformFMin>);
-    rules_[SpvOpGroupUMaxNonUniformAMD].push_back(
-        ReplaceGroupNonuniformOperationOpCode<SpvOpGroupNonUniformUMax>);
-    rules_[SpvOpGroupSMaxNonUniformAMD].push_back(
-        ReplaceGroupNonuniformOperationOpCode<SpvOpGroupNonUniformSMax>);
-    rules_[SpvOpGroupFMaxNonUniformAMD].push_back(
-        ReplaceGroupNonuniformOperationOpCode<SpvOpGroupNonUniformFMax>);
+    rules_[spv::Op::OpGroupIAddNonUniformAMD].push_back(
+        ReplaceGroupNonuniformOperationOpCode<spv::Op::OpGroupNonUniformIAdd>);
+    rules_[spv::Op::OpGroupFAddNonUniformAMD].push_back(
+        ReplaceGroupNonuniformOperationOpCode<spv::Op::OpGroupNonUniformFAdd>);
+    rules_[spv::Op::OpGroupUMinNonUniformAMD].push_back(
+        ReplaceGroupNonuniformOperationOpCode<spv::Op::OpGroupNonUniformUMin>);
+    rules_[spv::Op::OpGroupSMinNonUniformAMD].push_back(
+        ReplaceGroupNonuniformOperationOpCode<spv::Op::OpGroupNonUniformSMin>);
+    rules_[spv::Op::OpGroupFMinNonUniformAMD].push_back(
+        ReplaceGroupNonuniformOperationOpCode<spv::Op::OpGroupNonUniformFMin>);
+    rules_[spv::Op::OpGroupUMaxNonUniformAMD].push_back(
+        ReplaceGroupNonuniformOperationOpCode<spv::Op::OpGroupNonUniformUMax>);
+    rules_[spv::Op::OpGroupSMaxNonUniformAMD].push_back(
+        ReplaceGroupNonuniformOperationOpCode<spv::Op::OpGroupNonUniformSMax>);
+    rules_[spv::Op::OpGroupFMaxNonUniformAMD].push_back(
+        ReplaceGroupNonuniformOperationOpCode<spv::Op::OpGroupNonUniformFMax>);
 
     uint32_t extension_id =
         context()->module()->GetExtInstImportId("SPV_AMD_shader_ballot");
@@ -934,7 +944,7 @@ Pass::Status AmdExtensionToKhrPass::Process() {
 
   std::vector<Instruction*> to_be_killed;
   for (Instruction& inst : context()->module()->extensions()) {
-    if (inst.opcode() == SpvOpExtension) {
+    if (inst.opcode() == spv::Op::OpExtension) {
       if (ext_to_remove.count(inst.GetInOperand(0).AsString()) != 0) {
         to_be_killed.push_back(&inst);
       }
@@ -942,7 +952,7 @@ Pass::Status AmdExtensionToKhrPass::Process() {
   }
 
   for (Instruction& inst : context()->ext_inst_imports()) {
-    if (inst.opcode() == SpvOpExtInstImport) {
+    if (inst.opcode() == spv::Op::OpExtInstImport) {
       if (ext_to_remove.count(inst.GetInOperand(0).AsString()) != 0) {
         to_be_killed.push_back(&inst);
       }

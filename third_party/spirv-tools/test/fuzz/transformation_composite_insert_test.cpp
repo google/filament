@@ -103,65 +103,69 @@ TEST(TransformationCompositeInsertTest, NotApplicableScenarios) {
       MakeUnique<FactManager>(context.get()), validator_options);
   // Bad: |fresh_id| is not fresh.
   auto transformation_bad_1 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(29, SpvOpStore, 0), 20, 29, 11, {1, 0, 0});
+      MakeInstructionDescriptor(29, spv::Op::OpStore, 0), 20, 29, 11,
+      {1, 0, 0});
   ASSERT_FALSE(
       transformation_bad_1.IsApplicable(context.get(), transformation_context));
 
   // Bad: |composite_id| does not refer to a existing instruction.
   auto transformation_bad_2 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(29, SpvOpStore, 0), 50, 40, 11, {1, 0, 0});
+      MakeInstructionDescriptor(29, spv::Op::OpStore, 0), 50, 40, 11,
+      {1, 0, 0});
   ASSERT_FALSE(
       transformation_bad_2.IsApplicable(context.get(), transformation_context));
 
   // Bad: |composite_id| does not refer to a composite value.
   auto transformation_bad_3 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(29, SpvOpStore, 0), 50, 9, 11, {1, 0, 0});
+      MakeInstructionDescriptor(29, spv::Op::OpStore, 0), 50, 9, 11, {1, 0, 0});
   ASSERT_FALSE(
       transformation_bad_3.IsApplicable(context.get(), transformation_context));
 
   // Bad: |object_id| does not refer to a defined instruction.
   auto transformation_bad_4 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(29, SpvOpStore, 0), 50, 29, 40, {1, 0, 0});
+      MakeInstructionDescriptor(29, spv::Op::OpStore, 0), 50, 29, 40,
+      {1, 0, 0});
   ASSERT_FALSE(
       transformation_bad_4.IsApplicable(context.get(), transformation_context));
 
   // Bad: |object_id| cannot refer to a pointer.
   auto transformation_bad_5 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(29, SpvOpStore, 0), 50, 29, 8, {1, 0, 0});
+      MakeInstructionDescriptor(29, spv::Op::OpStore, 0), 50, 29, 8, {1, 0, 0});
   ASSERT_FALSE(
       transformation_bad_5.IsApplicable(context.get(), transformation_context));
 
   // Bad: |index| is not a correct index.
   auto transformation_bad_6 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(29, SpvOpStore, 0), 50, 29, 11, {2, 0, 0});
+      MakeInstructionDescriptor(29, spv::Op::OpStore, 0), 50, 29, 11,
+      {2, 0, 0});
   ASSERT_FALSE(
       transformation_bad_6.IsApplicable(context.get(), transformation_context));
 
   // Bad: Type id of the object to be inserted and the type id of the
   // component at |index| are not the same.
   auto transformation_bad_7 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(29, SpvOpStore, 0), 50, 29, 11, {1, 0});
+      MakeInstructionDescriptor(29, spv::Op::OpStore, 0), 50, 29, 11, {1, 0});
   ASSERT_FALSE(
       transformation_bad_7.IsApplicable(context.get(), transformation_context));
 
   // Bad: |instruction_to_insert_before| does not refer to a defined
   // instruction.
   auto transformation_bad_8 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(29, SpvOpIMul, 0), 50, 29, 11, {1, 0, 0});
+      MakeInstructionDescriptor(29, spv::Op::OpIMul, 0), 50, 29, 11, {1, 0, 0});
   ASSERT_FALSE(
       transformation_bad_8.IsApplicable(context.get(), transformation_context));
 
   // Bad: OpCompositeInsert cannot be inserted before OpBranchConditional with
   // OpSelectionMerge above it.
   auto transformation_bad_9 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(29, SpvOpBranchConditional, 0), 50, 29, 11,
-      {1, 0, 0});
+      MakeInstructionDescriptor(29, spv::Op::OpBranchConditional, 0), 50, 29,
+      11, {1, 0, 0});
   ASSERT_FALSE(
       transformation_bad_9.IsApplicable(context.get(), transformation_context));
 
   // Bad: |composite_id| does not have a type_id.
   auto transformation_bad_10 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(29, SpvOpStore, 0), 50, 1, 11, {1, 0, 0});
+      MakeInstructionDescriptor(29, spv::Op::OpStore, 0), 50, 1, 11, {1, 0, 0});
   ASSERT_FALSE(transformation_bad_10.IsApplicable(context.get(),
                                                   transformation_context));
 }
@@ -222,14 +226,14 @@ TEST(TransformationCompositeInsertTest, EmptyCompositeScenarios) {
       MakeUnique<FactManager>(context.get()), validator_options);
   // Bad: The composite with |composite_id| cannot be empty.
   auto transformation_bad_1 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(64, SpvOpStore, 0), 50, 61, 62, {1});
+      MakeInstructionDescriptor(64, spv::Op::OpStore, 0), 50, 61, 62, {1});
   ASSERT_FALSE(
       transformation_bad_1.IsApplicable(context.get(), transformation_context));
 
   // Good: It is possible to insert into a composite an element which is an
   // empty composite.
   auto transformation_good_1 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(64, SpvOpStore, 0), 50, 64, 62, {1});
+      MakeInstructionDescriptor(64, spv::Op::OpStore, 0), 50, 64, 62, {1});
   ASSERT_TRUE(transformation_good_1.IsApplicable(context.get(),
                                                  transformation_context));
   ApplyAndCheckFreshIds(transformation_good_1, context.get(),
@@ -368,7 +372,8 @@ TEST(TransformationCompositeInsertTest, IrrelevantCompositeNoSynonyms) {
   transformation_context.GetFactManager()->AddFactIdIsIrrelevant(30);
 
   auto transformation_good_1 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(30, SpvOpStore, 0), 50, 30, 11, {1, 0, 0});
+      MakeInstructionDescriptor(30, spv::Op::OpStore, 0), 50, 30, 11,
+      {1, 0, 0});
   ASSERT_TRUE(transformation_good_1.IsApplicable(context.get(),
                                                  transformation_context));
   ApplyAndCheckFreshIds(transformation_good_1, context.get(),
@@ -473,7 +478,8 @@ TEST(TransformationCompositeInsertTest, IrrelevantObjectNoSynonyms) {
   transformation_context.GetFactManager()->AddFactIdIsIrrelevant(11);
 
   auto transformation_good_1 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(30, SpvOpStore, 0), 50, 30, 11, {1, 0, 0});
+      MakeInstructionDescriptor(30, spv::Op::OpStore, 0), 50, 30, 11,
+      {1, 0, 0});
   ASSERT_TRUE(transformation_good_1.IsApplicable(context.get(),
                                                  transformation_context));
   ApplyAndCheckFreshIds(transformation_good_1, context.get(),
@@ -580,7 +586,8 @@ TEST(TransformationCompositeInsertTest, ApplicableCreatedSynonyms) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   auto transformation_good_1 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(30, SpvOpStore, 0), 50, 30, 11, {1, 0, 0});
+      MakeInstructionDescriptor(30, spv::Op::OpStore, 0), 50, 30, 11,
+      {1, 0, 0});
   ASSERT_TRUE(transformation_good_1.IsApplicable(context.get(),
                                                  transformation_context));
   ApplyAndCheckFreshIds(transformation_good_1, context.get(),
@@ -609,7 +616,8 @@ TEST(TransformationCompositeInsertTest, ApplicableCreatedSynonyms) {
       MakeDataDescriptor(30, {1, 0, 0}), MakeDataDescriptor(50, {1, 0, 0})));
 
   auto transformation_good_2 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(50, SpvOpStore, 0), 51, 50, 11, {0, 1, 1});
+      MakeInstructionDescriptor(50, spv::Op::OpStore, 0), 51, 50, 11,
+      {0, 1, 1});
   ASSERT_TRUE(transformation_good_2.IsApplicable(context.get(),
                                                  transformation_context));
   ApplyAndCheckFreshIds(transformation_good_2, context.get(),
@@ -787,30 +795,30 @@ TEST(TransformationCompositeInsertTest, IdNotAvailableScenarios) {
   // Bad: The object with |object_id| is not available at
   // |instruction_to_insert_before|.
   auto transformation_bad_1 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(31, SpvOpIMul, 0), 50, 27, 60, {1});
+      MakeInstructionDescriptor(31, spv::Op::OpIMul, 0), 50, 27, 60, {1});
   ASSERT_FALSE(
       transformation_bad_1.IsApplicable(context.get(), transformation_context));
 
   // Bad: The composite with |composite_id| is not available at
   // |instruction_to_insert_before|.
   auto transformation_bad_2 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(31, SpvOpIMul, 0), 50, 61, 21, {1});
+      MakeInstructionDescriptor(31, spv::Op::OpIMul, 0), 50, 61, 21, {1});
   ASSERT_FALSE(
       transformation_bad_2.IsApplicable(context.get(), transformation_context));
 
   // Bad: The |instruction_to_insert_before| is the composite itself and is
   // available.
   auto transformation_bad_3 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(61, SpvOpCompositeConstruct, 0), 50, 61, 21,
-      {1});
+      MakeInstructionDescriptor(61, spv::Op::OpCompositeConstruct, 0), 50, 61,
+      21, {1});
   ASSERT_FALSE(
       transformation_bad_3.IsApplicable(context.get(), transformation_context));
 
   // Bad: The |instruction_to_insert_before| is the object itself and is not
   // available.
   auto transformation_bad_4 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(60, SpvOpCompositeConstruct, 0), 50, 27, 60,
-      {1});
+      MakeInstructionDescriptor(60, spv::Op::OpCompositeConstruct, 0), 50, 27,
+      60, {1});
   ASSERT_FALSE(
       transformation_bad_4.IsApplicable(context.get(), transformation_context));
 }
@@ -863,7 +871,8 @@ TEST(TransformationCompositeInsertTest, CompositeInsertionWithIrrelevantIds) {
 
   // Leads to synonyms - nothing is irrelevant.
   auto transformation1 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(13, SpvOpSelectionMerge, 0), 100, 9, 17, {0});
+      MakeInstructionDescriptor(13, spv::Op::OpSelectionMerge, 0), 100, 9, 17,
+      {0});
   ASSERT_TRUE(
       transformation1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation1, context.get(),
@@ -876,7 +885,8 @@ TEST(TransformationCompositeInsertTest, CompositeInsertionWithIrrelevantIds) {
   // Because %16 is irrelevant, we don't get a synonym with the component to
   // which it has been inserted (but we do for the other component).
   auto transformation2 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(13, SpvOpSelectionMerge, 0), 101, 9, 16, {0});
+      MakeInstructionDescriptor(13, spv::Op::OpSelectionMerge, 0), 101, 9, 16,
+      {0});
   ASSERT_TRUE(
       transformation2.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation2, context.get(),
@@ -889,7 +899,8 @@ TEST(TransformationCompositeInsertTest, CompositeInsertionWithIrrelevantIds) {
   // Because %18 is irrelevant we only get a synonym for the component into
   // which insertion has taken place.
   auto transformation3 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(13, SpvOpSelectionMerge, 0), 102, 18, 17, {0});
+      MakeInstructionDescriptor(13, spv::Op::OpSelectionMerge, 0), 102, 18, 17,
+      {0});
   ASSERT_TRUE(
       transformation3.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation3, context.get(),
@@ -901,7 +912,7 @@ TEST(TransformationCompositeInsertTest, CompositeInsertionWithIrrelevantIds) {
 
   // Does not lead to synonyms as block %14 is dead.
   auto transformation4 = TransformationCompositeInsert(
-      MakeInstructionDescriptor(14, SpvOpBranch, 0), 103, 9, 17, {0});
+      MakeInstructionDescriptor(14, spv::Op::OpBranch, 0), 103, 9, 17, {0});
   ASSERT_TRUE(
       transformation4.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation4, context.get(),

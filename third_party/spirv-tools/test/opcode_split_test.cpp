@@ -18,7 +18,7 @@ namespace spvtools {
 namespace {
 
 TEST(OpcodeSplit, Default) {
-  uint32_t word = spvOpcodeMake(42, (SpvOp)23);
+  uint32_t word = spvOpcodeMake(42, (spv::Op)23);
   uint16_t wordCount = 0;
   uint16_t opcode;
   spvOpcodeSplit(word, &wordCount, &opcode);

@@ -1201,6 +1201,125 @@ OpFunctionEnd
   SinglePassRunAndMatch<BlockMergePass>(text, true);
 }
 
+TEST_F(BlockMergeTest, DontLoseCaseConstruct) {
+  const std::string text = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %func "func"
+OpExecutionMode %func LocalSize 1 1 1
+OpName %entry "entry";
+OpName %loop "loop"
+OpName %loop_merge "loop_merge"
+OpName %loop_cont "loop_cont"
+OpName %switch "switch"
+OpName %switch_merge "switch_merge"
+%void = OpTypeVoid
+%bool = OpTypeBool
+%int = OpTypeInt 32 0
+%void_fn = OpTypeFunction %void
+%bool_undef = OpUndef %bool
+%int_undef = OpUndef %int
+%func = OpFunction %void None %void_fn
+%entry = OpLabel
+OpBranch %loop
+%loop = OpLabel
+OpLoopMerge %loop_merge %loop_cont None
+OpBranch %switch
+%switch = OpLabel
+OpSelectionMerge %switch_merge None
+OpSwitch %int_undef %switch_merge 0 %break 1 %break
+%break = OpLabel
+OpBranch %loop_merge
+%switch_merge = OpLabel
+OpBranch %loop_cont
+%loop_cont = OpLabel
+OpBranch %loop
+%loop_merge = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  auto result = SinglePassRunAndDisassemble<opt::BlockMergePass>(
+      text, /* skip_nop = */ true, /* do_validation = */ true);
+  EXPECT_EQ(opt::Pass::Status::SuccessWithoutChange, std::get<1>(result));
+}
+
+TEST_F(BlockMergeTest, DontLoseDefaultCaseConstruct) {
+  const std::string text = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %func "func"
+OpExecutionMode %func LocalSize 1 1 1
+OpName %entry "entry";
+OpName %loop "loop"
+OpName %loop_merge "loop_merge"
+OpName %loop_cont "loop_cont"
+OpName %switch "switch"
+OpName %switch_merge "switch_merge"
+%void = OpTypeVoid
+%bool = OpTypeBool
+%int = OpTypeInt 32 0
+%void_fn = OpTypeFunction %void
+%bool_undef = OpUndef %bool
+%int_undef = OpUndef %int
+%func = OpFunction %void None %void_fn
+%entry = OpLabel
+OpBranch %loop
+%loop = OpLabel
+OpLoopMerge %loop_merge %loop_cont None
+OpBranch %switch
+%switch = OpLabel
+OpSelectionMerge %switch_merge None
+OpSwitch %int_undef %cont 0 %switch_merge 1 %switch_merge
+%cont = OpLabel
+OpBranch %loop_cont
+%switch_merge = OpLabel
+OpBranch %loop_merge
+%loop_cont = OpLabel
+OpBranch %loop
+%loop_merge = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  auto result = SinglePassRunAndDisassemble<opt::BlockMergePass>(
+      text, /* skip_nop = */ true, /* do_validation = */ true);
+  EXPECT_EQ(opt::Pass::Status::SuccessWithoutChange, std::get<1>(result));
+}
+
+TEST_F(BlockMergeTest, RebuildStructuredCFG) {
+  const std::string text = R"(
+; CHECK: = OpFunction
+; CHECK-NEXT: [[entry:%\w+]] = OpLabel
+; CHECK-NEXT: OpSelectionMerge [[merge:%\w+]] None
+; CHECK-NEXT: OpSwitch {{%\w+}} [[merge]] 0 [[other:%\w+]]
+; CHECK [[other]] = OpLabel
+; CHECK: OpBranch [[merge]]
+; CHECK [[merge]] = OpLabel
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+%void = OpTypeVoid
+%int = OpTypeInt 32 0
+%int_1 = OpConstant %int 1
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpBranch %switch
+%switch = OpLabel
+OpSelectionMerge %merge None
+OpSwitch %int_1 %merge 0 %other
+%other = OpLabel
+OpBranch %merge
+%merge = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<BlockMergePass>(text, true);
+}
+
 // TODO(greg-lunarg): Add tests to verify handling of these cases:
 //
 //    More complex control flow

@@ -29,7 +29,7 @@
 const char* spvGeneratorStr(uint32_t generator);
 
 // Combines word_count and opcode enumerant in single word.
-uint32_t spvOpcodeMake(uint16_t word_count, SpvOp opcode);
+uint32_t spvOpcodeMake(uint16_t word_count, spv::Op opcode);
 
 // Splits word into into two constituent parts: word_count and opcode.
 void spvOpcodeSplit(const uint32_t word, uint16_t* word_count,
@@ -45,117 +45,118 @@ spv_result_t spvOpcodeTableNameLookup(spv_target_env,
 // SPV_SUCCESS and writes a handle of the table entry into *entry.
 spv_result_t spvOpcodeTableValueLookup(spv_target_env,
                                        const spv_opcode_table table,
-                                       const SpvOp opcode,
+                                       const spv::Op opcode,
                                        spv_opcode_desc* entry);
 
 // Copies an instruction's word and fixes the endianness to host native. The
 // source instruction's stream/opcode/endianness is in the words/opcode/endian
 // parameter. The word_count parameter specifies the number of words to copy.
 // Writes copied instruction into *inst.
-void spvInstructionCopy(const uint32_t* words, const SpvOp opcode,
+void spvInstructionCopy(const uint32_t* words, const spv::Op opcode,
                         const uint16_t word_count,
                         const spv_endianness_t endian, spv_instruction_t* inst);
 
 // Determine if the given opcode is a scalar type. Returns zero if false,
 // non-zero otherwise.
-int32_t spvOpcodeIsScalarType(const SpvOp opcode);
+int32_t spvOpcodeIsScalarType(const spv::Op opcode);
 
 // Determines if the given opcode is a specialization constant. Returns zero if
 // false, non-zero otherwise.
-int32_t spvOpcodeIsSpecConstant(const SpvOp opcode);
+int32_t spvOpcodeIsSpecConstant(const spv::Op opcode);
 
 // Determines if the given opcode is a constant. Returns zero if false, non-zero
 // otherwise.
-int32_t spvOpcodeIsConstant(const SpvOp opcode);
+int32_t spvOpcodeIsConstant(const spv::Op opcode);
 
 // Returns true if the given opcode is a constant or undef.
-bool spvOpcodeIsConstantOrUndef(const SpvOp opcode);
+bool spvOpcodeIsConstantOrUndef(const spv::Op opcode);
 
 // Returns true if the given opcode is a scalar specialization constant.
-bool spvOpcodeIsScalarSpecConstant(const SpvOp opcode);
+bool spvOpcodeIsScalarSpecConstant(const spv::Op opcode);
 
 // Determines if the given opcode is a composite type. Returns zero if false,
 // non-zero otherwise.
-int32_t spvOpcodeIsComposite(const SpvOp opcode);
+int32_t spvOpcodeIsComposite(const spv::Op opcode);
 
 // Determines if the given opcode results in a pointer when using the logical
 // addressing model. Returns zero if false, non-zero otherwise.
-int32_t spvOpcodeReturnsLogicalPointer(const SpvOp opcode);
+int32_t spvOpcodeReturnsLogicalPointer(const spv::Op opcode);
 
 // Returns whether the given opcode could result in a pointer or a variable
 // pointer when using the logical addressing model.
-bool spvOpcodeReturnsLogicalVariablePointer(const SpvOp opcode);
+bool spvOpcodeReturnsLogicalVariablePointer(const spv::Op opcode);
 
 // Determines if the given opcode generates a type. Returns zero if false,
 // non-zero otherwise.
-int32_t spvOpcodeGeneratesType(SpvOp opcode);
+int32_t spvOpcodeGeneratesType(spv::Op opcode);
 
 // Returns true if the opcode adds a decoration to an id.
-bool spvOpcodeIsDecoration(const SpvOp opcode);
+bool spvOpcodeIsDecoration(const spv::Op opcode);
 
 // Returns true if the opcode is a load from memory into a result id.  This
 // function only considers core instructions.
-bool spvOpcodeIsLoad(const SpvOp opcode);
+bool spvOpcodeIsLoad(const spv::Op opcode);
 
 // Returns true if the opcode is an atomic operation that uses the original
 // value.
-bool spvOpcodeIsAtomicWithLoad(const SpvOp opcode);
+bool spvOpcodeIsAtomicWithLoad(const spv::Op opcode);
 
 // Returns true if the opcode is an atomic operation.
-bool spvOpcodeIsAtomicOp(const SpvOp opcode);
+bool spvOpcodeIsAtomicOp(const spv::Op opcode);
 
 // Returns true if the given opcode is a branch instruction.
-bool spvOpcodeIsBranch(SpvOp opcode);
+bool spvOpcodeIsBranch(spv::Op opcode);
 
 // Returns true if the given opcode is a return instruction.
-bool spvOpcodeIsReturn(SpvOp opcode);
+bool spvOpcodeIsReturn(spv::Op opcode);
 
-// Returns true if the given opcode aborts execution.
-bool spvOpcodeIsAbort(SpvOp opcode);
+// Returns true if the given opcode aborts execution.  To abort means that after
+// executing that instruction, no other instructions will be executed regardless
+// of the context in which the instruction appears.  Note that `OpUnreachable`
+// is considered an abort even if its behaviour is undefined.
+bool spvOpcodeIsAbort(spv::Op opcode);
 
 // Returns true if the given opcode is a return instruction or it aborts
 // execution.
-bool spvOpcodeIsReturnOrAbort(SpvOp opcode);
-
-// Returns true if the given opcode is a kill instruction or it terminates
-// execution. Note that branches, returns, and unreachables do not terminate
-// execution.
-bool spvOpcodeTerminatesExecution(SpvOp opcode);
+bool spvOpcodeIsReturnOrAbort(spv::Op opcode);
 
 // Returns true if the given opcode is a basic block terminator.
-bool spvOpcodeIsBlockTerminator(SpvOp opcode);
+bool spvOpcodeIsBlockTerminator(spv::Op opcode);
 
 // Returns true if the given opcode always defines an opaque type.
-bool spvOpcodeIsBaseOpaqueType(SpvOp opcode);
+bool spvOpcodeIsBaseOpaqueType(spv::Op opcode);
 
 // Returns true if the given opcode is a non-uniform group operation.
-bool spvOpcodeIsNonUniformGroupOperation(SpvOp opcode);
+bool spvOpcodeIsNonUniformGroupOperation(spv::Op opcode);
 
 // Returns true if the opcode with vector inputs could be divided into a series
 // of independent scalar operations that would give the same result.
-bool spvOpcodeIsScalarizable(SpvOp opcode);
+bool spvOpcodeIsScalarizable(spv::Op opcode);
 
 // Returns true if the given opcode is a debug instruction.
-bool spvOpcodeIsDebug(SpvOp opcode);
+bool spvOpcodeIsDebug(spv::Op opcode);
 
 // Returns true for opcodes that are binary operators,
 // where the order of the operands is irrelevant.
-bool spvOpcodeIsCommutativeBinaryOperator(SpvOp opcode);
+bool spvOpcodeIsCommutativeBinaryOperator(spv::Op opcode);
 
 // Returns true for opcodes that represent linear algebra instructions.
-bool spvOpcodeIsLinearAlgebra(SpvOp opcode);
+bool spvOpcodeIsLinearAlgebra(spv::Op opcode);
 
 // Returns true for opcodes that represent image sample instructions.
-bool spvOpcodeIsImageSample(SpvOp opcode);
+bool spvOpcodeIsImageSample(spv::Op opcode);
 
 // Returns a vector containing the indices of the memory semantics <id>
 // operands for |opcode|.
-std::vector<uint32_t> spvOpcodeMemorySemanticsOperandIndices(SpvOp opcode);
+std::vector<uint32_t> spvOpcodeMemorySemanticsOperandIndices(spv::Op opcode);
 
 // Returns true for opcodes that represent access chain instructions.
-bool spvOpcodeIsAccessChain(SpvOp opcode);
+bool spvOpcodeIsAccessChain(spv::Op opcode);
 
 // Returns true for opcodes that represent bit instructions.
-bool spvOpcodeIsBit(SpvOp opcode);
+bool spvOpcodeIsBit(spv::Op opcode);
+
+// Gets the name of an instruction, without the "Op" prefix.
+const char* spvOpcodeString(const spv::Op opcode);
 
 #endif  // SOURCE_OPCODE_H_

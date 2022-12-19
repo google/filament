@@ -181,13 +181,14 @@ TEST_P(ValidateFunctionCall, VariableNoVariablePointers) {
   } else {
     EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
     if (storage_class == "StorageBuffer") {
-      EXPECT_THAT(getDiagnosticString(),
-                  HasSubstr("StorageBuffer pointer operand 1[%var] requires a "
-                            "variable pointers capability"));
+      EXPECT_THAT(
+          getDiagnosticString(),
+          HasSubstr("StorageBuffer pointer operand '1[%var]' requires a "
+                    "variable pointers capability"));
     } else {
       EXPECT_THAT(
           getDiagnosticString(),
-          HasSubstr("Invalid storage class for pointer operand 1[%var]"));
+          HasSubstr("Invalid storage class for pointer operand '1[%var]'"));
     }
   }
 }
@@ -211,8 +212,9 @@ TEST_P(ValidateFunctionCall, VariableVariablePointersStorageClass) {
     EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
   } else {
     EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-    EXPECT_THAT(getDiagnosticString(),
-                HasSubstr("Invalid storage class for pointer operand 1[%var]"));
+    EXPECT_THAT(
+        getDiagnosticString(),
+        HasSubstr("Invalid storage class for pointer operand '1[%var]'"));
   }
 }
 
@@ -235,8 +237,9 @@ TEST_P(ValidateFunctionCall, VariableVariablePointers) {
     EXPECT_EQ(SPV_SUCCESS, ValidateInstructions());
   } else {
     EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-    EXPECT_THAT(getDiagnosticString(),
-                HasSubstr("Invalid storage class for pointer operand 1[%var]"));
+    EXPECT_THAT(
+        getDiagnosticString(),
+        HasSubstr("Invalid storage class for pointer operand '1[%var]'"));
   }
 }
 
@@ -258,11 +261,12 @@ TEST_P(ValidateFunctionCall, ParameterNoVariablePointers) {
     EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
     if (storage_class == "StorageBuffer") {
       EXPECT_THAT(getDiagnosticString(),
-                  HasSubstr("StorageBuffer pointer operand 1[%p] requires a "
+                  HasSubstr("StorageBuffer pointer operand '1[%p]' requires a "
                             "variable pointers capability"));
     } else {
-      EXPECT_THAT(getDiagnosticString(),
-                  HasSubstr("Invalid storage class for pointer operand 1[%p]"));
+      EXPECT_THAT(
+          getDiagnosticString(),
+          HasSubstr("Invalid storage class for pointer operand '1[%p]'"));
     }
   }
 }
@@ -287,7 +291,7 @@ TEST_P(ValidateFunctionCall, ParameterVariablePointersStorageBuffer) {
   } else {
     EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
     EXPECT_THAT(getDiagnosticString(),
-                HasSubstr("Invalid storage class for pointer operand 1[%p]"));
+                HasSubstr("Invalid storage class for pointer operand '1[%p]'"));
   }
 }
 
@@ -311,7 +315,7 @@ TEST_P(ValidateFunctionCall, ParameterVariablePointers) {
   } else {
     EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
     EXPECT_THAT(getDiagnosticString(),
-                HasSubstr("Invalid storage class for pointer operand 1[%p]"));
+                HasSubstr("Invalid storage class for pointer operand '1[%p]'"));
   }
 }
 
@@ -334,16 +338,17 @@ TEST_P(ValidateFunctionCall, NonMemoryObjectDeclarationNoVariablePointers) {
     EXPECT_THAT(
         getDiagnosticString(),
         HasSubstr(
-            "Pointer operand 2[%gep] must be a memory object declaration"));
+            "Pointer operand '2[%gep]' must be a memory object declaration"));
   } else {
     if (storage_class == "StorageBuffer") {
-      EXPECT_THAT(getDiagnosticString(),
-                  HasSubstr("StorageBuffer pointer operand 2[%gep] requires a "
-                            "variable pointers capability"));
+      EXPECT_THAT(
+          getDiagnosticString(),
+          HasSubstr("StorageBuffer pointer operand '2[%gep]' requires a "
+                    "variable pointers capability"));
     } else if (storage_class != "UniformConstant") {
       EXPECT_THAT(
           getDiagnosticString(),
-          HasSubstr("Invalid storage class for pointer operand 2[%gep]"));
+          HasSubstr("Invalid storage class for pointer operand '2[%gep]'"));
     }
   }
 }
@@ -373,11 +378,11 @@ TEST_P(ValidateFunctionCall,
       EXPECT_THAT(
           getDiagnosticString(),
           HasSubstr(
-              "Pointer operand 2[%gep] must be a memory object declaration"));
+              "Pointer operand '2[%gep]' must be a memory object declaration"));
     } else {
       EXPECT_THAT(
           getDiagnosticString(),
-          HasSubstr("Invalid storage class for pointer operand 2[%gep]"));
+          HasSubstr("Invalid storage class for pointer operand '2[%gep]'"));
     }
   }
 }
@@ -407,11 +412,11 @@ TEST_P(ValidateFunctionCall, NonMemoryObjectDeclarationVariablePointers) {
       EXPECT_THAT(
           getDiagnosticString(),
           HasSubstr(
-              "Pointer operand 2[%gep] must be a memory object declaration"));
+              "Pointer operand '2[%gep]' must be a memory object declaration"));
     } else {
       EXPECT_THAT(
           getDiagnosticString(),
-          HasSubstr("Invalid storage class for pointer operand 2[%gep]"));
+          HasSubstr("Invalid storage class for pointer operand '2[%gep]'"));
     }
   }
 }

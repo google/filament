@@ -57,9 +57,9 @@ uint32_t ValueNumberTable::AssignValueNumber(Instruction* inst) {
   }
 
   switch (inst->opcode()) {
-    case SpvOpSampledImage:
-    case SpvOpImage:
-    case SpvOpVariable:
+    case spv::Op::OpSampledImage:
+    case spv::Op::OpImage:
+    case spv::Op::OpVariable:
       value = TakeNextValueNumber();
       id_to_value_[inst->result_id()] = value;
       return value;
@@ -82,7 +82,7 @@ uint32_t ValueNumberTable::AssignValueNumber(Instruction* inst) {
   analysis::DecorationManager* dec_mgr = context()->get_decoration_mgr();
 
   // When we copy an object, the value numbers should be the same.
-  if (inst->opcode() == SpvOpCopyObject &&
+  if (inst->opcode() == spv::Op::OpCopyObject &&
       dec_mgr->HaveTheSameDecorations(inst->result_id(),
                                       inst->GetSingleWordInOperand(0))) {
     value = GetValueNumber(inst->GetSingleWordInOperand(0));
@@ -94,7 +94,7 @@ uint32_t ValueNumberTable::AssignValueNumber(Instruction* inst) {
 
   // Phi nodes are a type of copy.  If all of the inputs have the same value
   // number, then we can assign the result of the phi the same value number.
-  if (inst->opcode() == SpvOpPhi && inst->NumInOperands() > 0 &&
+  if (inst->opcode() == spv::Op::OpPhi && inst->NumInOperands() > 0 &&
       dec_mgr->HaveTheSameDecorations(inst->result_id(),
                                       inst->GetSingleWordInOperand(0))) {
     value = GetValueNumber(inst->GetSingleWordInOperand(0));
@@ -226,7 +226,7 @@ std::size_t ValueTableHash::operator()(const Instruction& inst) const {
   // instructions that are the same except for the result to hash to the
   // same value.
   std::u32string h;
-  h.push_back(inst.opcode());
+  h.push_back(uint32_t(inst.opcode()));
   h.push_back(inst.type_id());
   for (uint32_t i = 0; i < inst.NumInOperands(); ++i) {
     const auto& opnd = inst.GetInOperand(i);

@@ -26,7 +26,7 @@ struct spv_instruction_t {
   // Normally, both opcode and extInstType contain valid data.
   // However, when the assembler parses !<number> as the first word in
   // an instruction and opcode and extInstType are invalid.
-  SpvOp opcode;
+  spv::Op opcode;
   spv_ext_inst_type_t extInstType;
 
   // The Id of the result type, if this instruction has one.  Zero otherwise.

@@ -76,27 +76,29 @@ TEST(TransformationSwapConditionalBranchOperandsTest, BasicTest) {
       MakeUnique<FactManager>(context.get()), validator_options);
   // Invalid instruction descriptor.
   ASSERT_FALSE(TransformationSwapConditionalBranchOperands(
-                   MakeInstructionDescriptor(26, SpvOpPhi, 0), 26)
+                   MakeInstructionDescriptor(26, spv::Op::OpPhi, 0), 26)
                    .IsApplicable(context.get(), transformation_context));
 
   // Descriptor for a wrong instruction.
   ASSERT_FALSE(TransformationSwapConditionalBranchOperands(
-                   MakeInstructionDescriptor(25, SpvOpPhi, 0), 26)
+                   MakeInstructionDescriptor(25, spv::Op::OpPhi, 0), 26)
                    .IsApplicable(context.get(), transformation_context));
 
   // Fresh id is not fresh.
-  ASSERT_FALSE(TransformationSwapConditionalBranchOperands(
-                   MakeInstructionDescriptor(15, SpvOpBranchConditional, 0), 25)
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationSwapConditionalBranchOperands(
+          MakeInstructionDescriptor(15, spv::Op::OpBranchConditional, 0), 25)
+          .IsApplicable(context.get(), transformation_context));
 
   TransformationSwapConditionalBranchOperands transformation(
-      MakeInstructionDescriptor(15, SpvOpBranchConditional, 0), 26);
+      MakeInstructionDescriptor(15, spv::Op::OpBranchConditional, 0), 26);
   ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(26));
   ASSERT_EQ(nullptr, context->get_instr_block(26));
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
-  ASSERT_EQ(SpvOpLogicalNot, context->get_def_use_mgr()->GetDef(26)->opcode());
+  ASSERT_EQ(spv::Op::OpLogicalNot,
+            context->get_def_use_mgr()->GetDef(26)->opcode());
   ASSERT_EQ(5, context->get_instr_block(26)->id());
   ASSERT_EQ(1, context->get_def_use_mgr()->NumUses(26));
 
@@ -109,7 +111,7 @@ TEST(TransformationSwapConditionalBranchOperandsTest, BasicTest) {
     context->get_def_use_mgr()->WhileEachUse(
         entry.first,
         [&entry](opt::Instruction* inst, uint32_t operand_index) -> bool {
-          if (inst->opcode() == SpvOpBranchConditional) {
+          if (inst->opcode() == spv::Op::OpBranchConditional) {
             EXPECT_EQ(entry.second, operand_index);
             return false;
           }

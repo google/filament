@@ -15,6 +15,6 @@
 #ifndef SOURCE_LATEST_VERSION_SPIRV_HEADER_H_
 #define SOURCE_LATEST_VERSION_SPIRV_HEADER_H_
 
-#include "spirv/unified1/spirv.h"
+#include "spirv/unified1/spirv.hpp11"
 
 #endif  // SOURCE_LATEST_VERSION_SPIRV_HEADER_H_

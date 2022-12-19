@@ -30,33 +30,36 @@ using ReservedSamplingInstTest = RoundTripTest;
 
 TEST_F(ReservedSamplingInstTest, OpImageSparseSampleProjImplicitLod) {
   std::string input = "%2 = OpImageSparseSampleProjImplicitLod %1 %3 %4\n";
-  EXPECT_THAT(
-      CompiledInstructions(input, SPV_ENV_UNIVERSAL_1_0),
-      Eq(MakeInstruction(SpvOpImageSparseSampleProjImplicitLod, {1, 2, 3, 4})));
+  EXPECT_THAT(CompiledInstructions(input, SPV_ENV_UNIVERSAL_1_0),
+              Eq(MakeInstruction(spv::Op::OpImageSparseSampleProjImplicitLod,
+                                 {1, 2, 3, 4})));
 }
 
 TEST_F(ReservedSamplingInstTest, OpImageSparseSampleProjExplicitLod) {
   std::string input =
       "%2 = OpImageSparseSampleProjExplicitLod %1 %3 %4 Lod %5\n";
   EXPECT_THAT(CompiledInstructions(input, SPV_ENV_UNIVERSAL_1_0),
-              Eq(MakeInstruction(SpvOpImageSparseSampleProjExplicitLod,
-                                 {1, 2, 3, 4, SpvImageOperandsLodMask, 5})));
+              Eq(MakeInstruction(
+                  spv::Op::OpImageSparseSampleProjExplicitLod,
+                  {1, 2, 3, 4, (uint32_t)spv::ImageOperandsMask::Lod, 5})));
 }
 
 TEST_F(ReservedSamplingInstTest, OpImageSparseSampleProjDrefImplicitLod) {
   std::string input =
       "%2 = OpImageSparseSampleProjDrefImplicitLod %1 %3 %4 %5\n";
-  EXPECT_THAT(CompiledInstructions(input, SPV_ENV_UNIVERSAL_1_0),
-              Eq(MakeInstruction(SpvOpImageSparseSampleProjDrefImplicitLod,
-                                 {1, 2, 3, 4, 5})));
+  EXPECT_THAT(
+      CompiledInstructions(input, SPV_ENV_UNIVERSAL_1_0),
+      Eq(MakeInstruction(spv::Op::OpImageSparseSampleProjDrefImplicitLod,
+                         {1, 2, 3, 4, 5})));
 }
 
 TEST_F(ReservedSamplingInstTest, OpImageSparseSampleProjDrefExplicitLod) {
   std::string input =
       "%2 = OpImageSparseSampleProjDrefExplicitLod %1 %3 %4 %5 Lod %6\n";
   EXPECT_THAT(CompiledInstructions(input, SPV_ENV_UNIVERSAL_1_0),
-              Eq(MakeInstruction(SpvOpImageSparseSampleProjDrefExplicitLod,
-                                 {1, 2, 3, 4, 5, SpvImageOperandsLodMask, 6})));
+              Eq(MakeInstruction(
+                  spv::Op::OpImageSparseSampleProjDrefExplicitLod,
+                  {1, 2, 3, 4, 5, (uint32_t)spv::ImageOperandsMask::Lod, 6})));
 }
 
 }  // namespace

@@ -2231,7 +2231,7 @@ TEST_F(MergeReturnPassTest, ReturnsInSwitch) {
 
 TEST_F(MergeReturnPassTest, UnreachableMergeAndContinue) {
   // Make sure that the pass can handle a single block that is both a merge and
-  // a continue.
+  // a continue. Note that this is invalid SPIR-V.
   const std::string text =
       R"(
                OpCapability Shader
@@ -2265,7 +2265,7 @@ TEST_F(MergeReturnPassTest, UnreachableMergeAndContinue) {
 )";
 
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
-  auto result = SinglePassRunAndDisassemble<MergeReturnPass>(text, true, true);
+  auto result = SinglePassRunAndDisassemble<MergeReturnPass>(text, true, false);
 
   // Not looking for any particular output.  Other tests do that.
   // Just want to make sure the check for unreachable blocks does not emit an

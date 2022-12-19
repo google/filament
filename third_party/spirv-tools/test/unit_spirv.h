@@ -105,7 +105,7 @@ inline void PrintTo(const WordVector& words, ::std::ostream* os) {
 // Returns a vector of words representing a single instruction with the
 // given opcode and operand words as a vector.
 inline std::vector<uint32_t> MakeInstruction(
-    SpvOp opcode, const std::vector<uint32_t>& args) {
+    spv::Op opcode, const std::vector<uint32_t>& args) {
   std::vector<uint32_t> result{
       spvOpcodeMake(uint16_t(args.size() + 1), opcode)};
   result.insert(result.end(), args.begin(), args.end());
@@ -116,7 +116,7 @@ inline std::vector<uint32_t> MakeInstruction(
 // given opcode and whose operands are the concatenation of the two given
 // argument lists.
 inline std::vector<uint32_t> MakeInstruction(
-    SpvOp opcode, std::vector<uint32_t> args,
+    spv::Op opcode, std::vector<uint32_t> args,
     const std::vector<uint32_t>& extra_args) {
   args.insert(args.end(), extra_args.begin(), extra_args.end());
   return MakeInstruction(opcode, args);
@@ -200,10 +200,10 @@ inline std::vector<spv_target_env> AllTargetEnvironments() {
 }
 
 // Returns the capabilities in a CapabilitySet as an ordered vector.
-inline std::vector<SpvCapability> ElementsIn(
+inline std::vector<spv::Capability> ElementsIn(
     const spvtools::CapabilitySet& capabilities) {
-  std::vector<SpvCapability> result;
-  capabilities.ForEach([&result](SpvCapability c) { result.push_back(c); });
+  std::vector<spv::Capability> result;
+  capabilities.ForEach([&result](spv::Capability c) { result.push_back(c); });
   return result;
 }
 

@@ -28,7 +28,7 @@ using OpTypePipeStorageTest = spvtest::TextToBinaryTest;
 TEST_F(OpTypePipeStorageTest, OpcodeAssemblesInV10) {
   EXPECT_THAT(
       CompiledInstructions("%res = OpTypePipeStorage", SPV_ENV_UNIVERSAL_1_0),
-      Eq(MakeInstruction(SpvOpTypePipeStorage, {1})));
+      Eq(MakeInstruction(spv::Op::OpTypePipeStorage, {1})));
 }
 
 TEST_F(OpTypePipeStorageTest, ArgumentCount) {
@@ -38,7 +38,7 @@ TEST_F(OpTypePipeStorageTest, ArgumentCount) {
          "'OpTypePipeStorage'."));
   EXPECT_THAT(
       CompiledInstructions("%res = OpTypePipeStorage", SPV_ENV_UNIVERSAL_1_1),
-      Eq(MakeInstruction(SpvOpTypePipeStorage, {1})));
+      Eq(MakeInstruction(spv::Op::OpTypePipeStorage, {1})));
   EXPECT_THAT(CompileFailure("%res = OpTypePipeStorage %1 %2 %3 %4 %5",
                              SPV_ENV_UNIVERSAL_1_1),
               Eq("'=' expected after result id."));
@@ -47,9 +47,10 @@ TEST_F(OpTypePipeStorageTest, ArgumentCount) {
 using OpConstantPipeStorageTest = spvtest::TextToBinaryTest;
 
 TEST_F(OpConstantPipeStorageTest, OpcodeAssemblesInV10) {
-  EXPECT_THAT(CompiledInstructions("%1 = OpConstantPipeStorage %2 3 4 5",
-                                   SPV_ENV_UNIVERSAL_1_0),
-              Eq(MakeInstruction(SpvOpConstantPipeStorage, {1, 2, 3, 4, 5})));
+  EXPECT_THAT(
+      CompiledInstructions("%1 = OpConstantPipeStorage %2 3 4 5",
+                           SPV_ENV_UNIVERSAL_1_0),
+      Eq(MakeInstruction(spv::Op::OpConstantPipeStorage, {1, 2, 3, 4, 5})));
 }
 
 TEST_F(OpConstantPipeStorageTest, ArgumentCount) {
@@ -65,9 +66,10 @@ TEST_F(OpConstantPipeStorageTest, ArgumentCount) {
                              SPV_ENV_UNIVERSAL_1_1),
               Eq("Expected operand for OpConstantPipeStorage instruction, but "
                  "found the end of the stream."));
-  EXPECT_THAT(CompiledInstructions("%1 = OpConstantPipeStorage %2 3 4 5",
-                                   SPV_ENV_UNIVERSAL_1_1),
-              Eq(MakeInstruction(SpvOpConstantPipeStorage, {1, 2, 3, 4, 5})));
+  EXPECT_THAT(
+      CompiledInstructions("%1 = OpConstantPipeStorage %2 3 4 5",
+                           SPV_ENV_UNIVERSAL_1_1),
+      Eq(MakeInstruction(spv::Op::OpConstantPipeStorage, {1, 2, 3, 4, 5})));
   EXPECT_THAT(CompileFailure("%1 = OpConstantPipeStorage %2 3 4 5 %6 %7",
                              SPV_ENV_UNIVERSAL_1_1),
               Eq("'=' expected after result id."));
@@ -91,9 +93,10 @@ TEST_F(OpConstantPipeStorageTest, ArgumentTypes) {
 using OpCreatePipeFromPipeStorageTest = spvtest::TextToBinaryTest;
 
 TEST_F(OpCreatePipeFromPipeStorageTest, OpcodeAssemblesInV10) {
-  EXPECT_THAT(CompiledInstructions("%1 = OpCreatePipeFromPipeStorage %2 %3",
-                                   SPV_ENV_UNIVERSAL_1_0),
-              Eq(MakeInstruction(SpvOpCreatePipeFromPipeStorage, {1, 2, 3})));
+  EXPECT_THAT(
+      CompiledInstructions("%1 = OpCreatePipeFromPipeStorage %2 %3",
+                           SPV_ENV_UNIVERSAL_1_0),
+      Eq(MakeInstruction(spv::Op::OpCreatePipeFromPipeStorage, {1, 2, 3})));
 }
 
 TEST_F(OpCreatePipeFromPipeStorageTest, ArgumentCount) {
@@ -109,9 +112,10 @@ TEST_F(OpCreatePipeFromPipeStorageTest, ArgumentCount) {
                              SPV_ENV_UNIVERSAL_1_1),
               Eq("Expected operand for OpCreatePipeFromPipeStorage "
                  "instruction, but found the next instruction instead."));
-  EXPECT_THAT(CompiledInstructions("%1 = OpCreatePipeFromPipeStorage %2 %3",
-                                   SPV_ENV_UNIVERSAL_1_1),
-              Eq(MakeInstruction(SpvOpCreatePipeFromPipeStorage, {1, 2, 3})));
+  EXPECT_THAT(
+      CompiledInstructions("%1 = OpCreatePipeFromPipeStorage %2 %3",
+                           SPV_ENV_UNIVERSAL_1_1),
+      Eq(MakeInstruction(spv::Op::OpCreatePipeFromPipeStorage, {1, 2, 3})));
   EXPECT_THAT(CompileFailure("%1 = OpCreatePipeFromPipeStorage %2 %3 %4 %5",
                              SPV_ENV_UNIVERSAL_1_1),
               Eq("'=' expected after result id."));

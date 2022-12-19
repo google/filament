@@ -66,94 +66,95 @@ TEST(TransformationAddGlobalVariableTest, BasicTest) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   // Id already in use
-  ASSERT_FALSE(
-      TransformationAddGlobalVariable(4, 10, SpvStorageClassPrivate, 0, true)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationAddGlobalVariable(
+                   4, 10, spv::StorageClass::Private, 0, true)
+                   .IsApplicable(context.get(), transformation_context));
   // %1 is not a type
-  ASSERT_FALSE(
-      TransformationAddGlobalVariable(100, 1, SpvStorageClassPrivate, 0, false)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationAddGlobalVariable(
+                   100, 1, spv::StorageClass::Private, 0, false)
+                   .IsApplicable(context.get(), transformation_context));
 
   // %7 is not a pointer type
-  ASSERT_FALSE(
-      TransformationAddGlobalVariable(100, 7, SpvStorageClassPrivate, 0, true)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationAddGlobalVariable(
+                   100, 7, spv::StorageClass::Private, 0, true)
+                   .IsApplicable(context.get(), transformation_context));
 
   // %9 does not have Private storage class
-  ASSERT_FALSE(
-      TransformationAddGlobalVariable(100, 9, SpvStorageClassPrivate, 0, false)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationAddGlobalVariable(
+                   100, 9, spv::StorageClass::Private, 0, false)
+                   .IsApplicable(context.get(), transformation_context));
 
   // %15 does not have Private storage class
-  ASSERT_FALSE(
-      TransformationAddGlobalVariable(100, 15, SpvStorageClassPrivate, 0, true)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationAddGlobalVariable(
+                   100, 15, spv::StorageClass::Private, 0, true)
+                   .IsApplicable(context.get(), transformation_context));
 
   // %10 is a pointer to float, while %16 is an int constant
-  ASSERT_FALSE(TransformationAddGlobalVariable(100, 10, SpvStorageClassPrivate,
-                                               16, false)
+  ASSERT_FALSE(TransformationAddGlobalVariable(
+                   100, 10, spv::StorageClass::Private, 16, false)
                    .IsApplicable(context.get(), transformation_context));
 
   // %10 is a Private pointer to float, while %15 is a variable with type
   // Uniform float pointer
-  ASSERT_FALSE(
-      TransformationAddGlobalVariable(100, 10, SpvStorageClassPrivate, 15, true)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationAddGlobalVariable(
+                   100, 10, spv::StorageClass::Private, 15, true)
+                   .IsApplicable(context.get(), transformation_context));
 
   // %12 is a Private pointer to int, while %10 is a variable with type
   // Private float pointer
-  ASSERT_FALSE(TransformationAddGlobalVariable(100, 12, SpvStorageClassPrivate,
-                                               10, false)
+  ASSERT_FALSE(TransformationAddGlobalVariable(
+                   100, 12, spv::StorageClass::Private, 10, false)
                    .IsApplicable(context.get(), transformation_context));
 
   // %10 is pointer-to-float, and %14 has type pointer-to-float; that's not OK
   // since the initializer's type should be the *pointee* type.
-  ASSERT_FALSE(
-      TransformationAddGlobalVariable(104, 10, SpvStorageClassPrivate, 14, true)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationAddGlobalVariable(
+                   104, 10, spv::StorageClass::Private, 14, true)
+                   .IsApplicable(context.get(), transformation_context));
 
   // This would work in principle, but logical addressing does not allow
   // a pointer to a pointer.
-  ASSERT_FALSE(TransformationAddGlobalVariable(104, 17, SpvStorageClassPrivate,
-                                               14, false)
+  ASSERT_FALSE(TransformationAddGlobalVariable(
+                   104, 17, spv::StorageClass::Private, 14, false)
                    .IsApplicable(context.get(), transformation_context));
 
   {
     // %100 = OpVariable %12 Private
     ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(100));
     TransformationAddGlobalVariable transformation(
-        100, 12, SpvStorageClassPrivate, 16, true);
+        100, 12, spv::StorageClass::Private, 16, true);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
-    ASSERT_EQ(SpvOpVariable, context->get_def_use_mgr()->GetDef(100)->opcode());
+    ASSERT_EQ(spv::Op::OpVariable,
+              context->get_def_use_mgr()->GetDef(100)->opcode());
     ASSERT_EQ(
-        SpvStorageClassPrivate,
-        static_cast<SpvStorageClass>(
+        spv::StorageClass::Private,
+        static_cast<spv::StorageClass>(
             context->get_def_use_mgr()->GetDef(100)->GetSingleWordInOperand(
                 0)));
   }
 
   TransformationAddGlobalVariable transformations[] = {
       // %101 = OpVariable %10 Private
-      TransformationAddGlobalVariable(101, 10, SpvStorageClassPrivate, 40,
+      TransformationAddGlobalVariable(101, 10, spv::StorageClass::Private, 40,
                                       false),
 
       // %102 = OpVariable %13 Private
-      TransformationAddGlobalVariable(102, 13, SpvStorageClassPrivate, 41,
+      TransformationAddGlobalVariable(102, 13, spv::StorageClass::Private, 41,
                                       true),
 
       // %103 = OpVariable %12 Private %16
-      TransformationAddGlobalVariable(103, 12, SpvStorageClassPrivate, 16,
+      TransformationAddGlobalVariable(103, 12, spv::StorageClass::Private, 16,
                                       false),
 
       // %104 = OpVariable %19 Private %21
-      TransformationAddGlobalVariable(104, 19, SpvStorageClassPrivate, 21,
+      TransformationAddGlobalVariable(104, 19, spv::StorageClass::Private, 21,
                                       true),
 
       // %105 = OpVariable %19 Private %22
-      TransformationAddGlobalVariable(105, 19, SpvStorageClassPrivate, 22,
+      TransformationAddGlobalVariable(105, 19, spv::StorageClass::Private, 22,
                                       false)};
 
   for (auto& transformation : transformations) {
@@ -269,15 +270,15 @@ TEST(TransformationAddGlobalVariableTest, TestEntryPointInterfaceEnlargement) {
         MakeUnique<FactManager>(context.get()), validator_options);
     TransformationAddGlobalVariable transformations[] = {
         // %100 = OpVariable %12 Private
-        TransformationAddGlobalVariable(100, 12, SpvStorageClassPrivate, 16,
+        TransformationAddGlobalVariable(100, 12, spv::StorageClass::Private, 16,
                                         true),
 
         // %101 = OpVariable %12 Private %16
-        TransformationAddGlobalVariable(101, 12, SpvStorageClassPrivate, 16,
+        TransformationAddGlobalVariable(101, 12, spv::StorageClass::Private, 16,
                                         false),
 
         // %102 = OpVariable %19 Private %21
-        TransformationAddGlobalVariable(102, 19, SpvStorageClassPrivate, 21,
+        TransformationAddGlobalVariable(102, 19, spv::StorageClass::Private, 21,
                                         true)};
 
     for (auto& transformation : transformations) {
@@ -388,15 +389,15 @@ TEST(TransformationAddGlobalVariableTest,
         MakeUnique<FactManager>(context.get()), validator_options);
     TransformationAddGlobalVariable transformations[] = {
         // %100 = OpVariable %12 Private
-        TransformationAddGlobalVariable(100, 12, SpvStorageClassPrivate, 16,
+        TransformationAddGlobalVariable(100, 12, spv::StorageClass::Private, 16,
                                         true),
 
         // %101 = OpVariable %12 Private %16
-        TransformationAddGlobalVariable(101, 12, SpvStorageClassPrivate, 16,
+        TransformationAddGlobalVariable(101, 12, spv::StorageClass::Private, 16,
                                         false),
 
         // %102 = OpVariable %19 Private %21
-        TransformationAddGlobalVariable(102, 19, SpvStorageClassPrivate, 21,
+        TransformationAddGlobalVariable(102, 19, spv::StorageClass::Private, 21,
                                         true)};
 
     for (auto& transformation : transformations) {
@@ -486,7 +487,8 @@ TEST(TransformationAddGlobalVariableTest, TestAddingWorkgroupGlobals) {
       MakeUnique<FactManager>(context.get()), validator_options);
 #ifndef NDEBUG
   ASSERT_DEATH(
-      TransformationAddGlobalVariable(8, 7, SpvStorageClassWorkgroup, 50, true)
+      TransformationAddGlobalVariable(8, 7, spv::StorageClass::Workgroup, 50,
+                                      true)
           .IsApplicable(context.get(), transformation_context),
       "By construction this transformation should not have an.*initializer "
       "when Workgroup storage class is used");
@@ -494,10 +496,11 @@ TEST(TransformationAddGlobalVariableTest, TestAddingWorkgroupGlobals) {
 
   TransformationAddGlobalVariable transformations[] = {
       // %8 = OpVariable %7 Workgroup
-      TransformationAddGlobalVariable(8, 7, SpvStorageClassWorkgroup, 0, true),
+      TransformationAddGlobalVariable(8, 7, spv::StorageClass::Workgroup, 0,
+                                      true),
 
       // %10 = OpVariable %7 Workgroup
-      TransformationAddGlobalVariable(10, 7, SpvStorageClassWorkgroup, 0,
+      TransformationAddGlobalVariable(10, 7, spv::StorageClass::Workgroup, 0,
                                       false)};
 
   for (auto& transformation : transformations) {

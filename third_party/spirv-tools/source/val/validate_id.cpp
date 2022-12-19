@@ -71,7 +71,7 @@ spv_result_t CheckIdDefinitionDominateUse(ValidationState_t& _) {
           const Instruction* use = use_index_pair.first;
           if (const BasicBlock* use_block = use->block()) {
             if (use_block->reachable() == false) continue;
-            if (use->opcode() == SpvOpPhi) {
+            if (use->opcode() == spv::Op::OpPhi) {
               if (phi_ids.insert(use->id()).second) {
                 phi_instructions.push_back(use);
               }
@@ -131,7 +131,7 @@ spv_result_t CheckIdDefinitionDominateUse(ValidationState_t& _) {
 // instruction operand's ID can be forward referenced.
 spv_result_t IdPass(ValidationState_t& _, Instruction* inst) {
   auto can_have_forward_declared_ids =
-      inst->opcode() == SpvOpExtInst &&
+      inst->opcode() == spv::Op::OpExtInst &&
               spvExtInstIsDebugInfo(inst->ext_inst_type())
           ? spvDbgInfoExtOperandCanBeForwardDeclaredFunction(
                 inst->ext_inst_type(), inst->word(4))
@@ -172,23 +172,27 @@ spv_result_t IdPass(ValidationState_t& _, Instruction* inst) {
           if (spvOpcodeGeneratesType(def->opcode()) &&
               !spvOpcodeGeneratesType(opcode) && !spvOpcodeIsDebug(opcode) &&
               !inst->IsDebugInfo() && !inst->IsNonSemantic() &&
-              !spvOpcodeIsDecoration(opcode) && opcode != SpvOpFunction &&
-              opcode != SpvOpCooperativeMatrixLengthNV &&
-              !(opcode == SpvOpSpecConstantOp &&
-                inst->word(3) == SpvOpCooperativeMatrixLengthNV)) {
+              !spvOpcodeIsDecoration(opcode) && opcode != spv::Op::OpFunction &&
+              opcode != spv::Op::OpCooperativeMatrixLengthNV &&
+              !(opcode == spv::Op::OpSpecConstantOp &&
+                spv::Op(inst->word(3)) ==
+                    spv::Op::OpCooperativeMatrixLengthNV)) {
             return _.diag(SPV_ERROR_INVALID_ID, inst)
                    << "Operand " << _.getIdName(operand_word)
                    << " cannot be a type";
           } else if (def->type_id() == 0 && !spvOpcodeGeneratesType(opcode) &&
                      !spvOpcodeIsDebug(opcode) && !inst->IsDebugInfo() &&
                      !inst->IsNonSemantic() && !spvOpcodeIsDecoration(opcode) &&
-                     !spvOpcodeIsBranch(opcode) && opcode != SpvOpPhi &&
-                     opcode != SpvOpExtInst && opcode != SpvOpExtInstImport &&
-                     opcode != SpvOpSelectionMerge &&
-                     opcode != SpvOpLoopMerge && opcode != SpvOpFunction &&
-                     opcode != SpvOpCooperativeMatrixLengthNV &&
-                     !(opcode == SpvOpSpecConstantOp &&
-                       inst->word(3) == SpvOpCooperativeMatrixLengthNV)) {
+                     !spvOpcodeIsBranch(opcode) && opcode != spv::Op::OpPhi &&
+                     opcode != spv::Op::OpExtInst &&
+                     opcode != spv::Op::OpExtInstImport &&
+                     opcode != spv::Op::OpSelectionMerge &&
+                     opcode != spv::Op::OpLoopMerge &&
+                     opcode != spv::Op::OpFunction &&
+                     opcode != spv::Op::OpCooperativeMatrixLengthNV &&
+                     !(opcode == spv::Op::OpSpecConstantOp &&
+                       spv::Op(inst->word(3)) ==
+                           spv::Op::OpCooperativeMatrixLengthNV)) {
             return _.diag(SPV_ERROR_INVALID_ID, inst)
                    << "Operand " << _.getIdName(operand_word)
                    << " requires a type";

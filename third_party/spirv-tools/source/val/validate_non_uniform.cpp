@@ -48,11 +48,11 @@ spv_result_t ValidateGroupNonUniformBallotBitCount(ValidationState_t& _,
                                                    "of integer type scalar";
   }
 
-  const auto group = inst->GetOperandAs<uint32_t>(3);
+  const auto group = inst->GetOperandAs<spv::GroupOperation>(3);
   if (spvIsVulkanEnv(_.context()->target_env)) {
-    if ((group != SpvGroupOperationReduce) &&
-        (group != SpvGroupOperationInclusiveScan) &&
-        (group != SpvGroupOperationExclusiveScan)) {
+    if ((group != spv::GroupOperation::Reduce) &&
+        (group != spv::GroupOperation::InclusiveScan) &&
+        (group != spv::GroupOperation::ExclusiveScan)) {
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << _.VkErrorID(4685)
              << "In Vulkan: The OpGroupNonUniformBallotBitCount group "
@@ -120,7 +120,7 @@ spv_result_t ValidateGroupNonUniformRotateKHR(ValidationState_t& _,
 
 // Validates correctness of non-uniform group instructions.
 spv_result_t NonUniformPass(ValidationState_t& _, const Instruction* inst) {
-  const SpvOp opcode = inst->opcode();
+  const spv::Op opcode = inst->opcode();
 
   if (spvOpcodeIsNonUniformGroupOperation(opcode)) {
     const uint32_t execution_scope = inst->word(3);
@@ -130,9 +130,9 @@ spv_result_t NonUniformPass(ValidationState_t& _, const Instruction* inst) {
   }
 
   switch (opcode) {
-    case SpvOpGroupNonUniformBallotBitCount:
+    case spv::Op::OpGroupNonUniformBallotBitCount:
       return ValidateGroupNonUniformBallotBitCount(_, inst);
-    case SpvOpGroupNonUniformRotateKHR:
+    case spv::Op::OpGroupNonUniformRotateKHR:
       return ValidateGroupNonUniformRotateKHR(_, inst);
     default:
       break;

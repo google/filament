@@ -44,14 +44,11 @@ project(SPIRV-Headers VERSION 1.5.5)
 #   2. cmake ..
 #   3. cmake --build . --target install
 
-# legacy
-add_custom_target(install-headers
-    COMMAND cmake -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/include/spirv
-        $ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/include/spirv)
+option(SPIRV_HEADERS_SKIP_EXAMPLES "Skip building examples"
+      ${SPIRV_HEADERS_SKIP_EXAMPLES})
 
-option(SPIRV_HEADERS_SKIP_EXAMPLES "Skip building examples" ON)
-
-option(SPIRV_HEADERS_SKIP_INSTALL "Skip install" ON)
+option(SPIRV_HEADERS_SKIP_INSTALL "Skip install"
+      ${SPIRV_HEADERS_SKIP_INSTALL})
 
 if(NOT ${SPIRV_HEADERS_SKIP_EXAMPLES})
   set(SPIRV_HEADERS_ENABLE_EXAMPLES ON)
@@ -59,6 +56,10 @@ endif()
 
 if(NOT ${SPIRV_HEADERS_SKIP_INSTALL})
   set(SPIRV_HEADERS_ENABLE_INSTALL ON)
+  # legacy
+  add_custom_target(install-headers
+      COMMAND cmake -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/include/spirv
+          $ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/include/spirv)
 endif()
 
 if (SPIRV_HEADERS_ENABLE_EXAMPLES)

@@ -90,8 +90,8 @@ TEST(ReplayerTest, PartialReplay) {
   protobufs::TransformationSequence transformations;
   for (uint32_t id = 12; id <= 22; id++) {
     *transformations.add_transformation() =
-        TransformationSplitBlock(MakeInstructionDescriptor(id, SpvOpLoad, 0),
-                                 id + 100)
+        TransformationSplitBlock(
+            MakeInstructionDescriptor(id, spv::Op::OpLoad, 0), id + 100)
             .ToMessage();
   }
 
@@ -335,7 +335,7 @@ TEST(ReplayerTest, CheckFactsAfterReplay) {
   *transformations.add_transformation() =
       TransformationAddConstantScalar(100, 8, {42}, true).ToMessage();
   *transformations.add_transformation() =
-      TransformationAddGlobalVariable(101, 50, SpvStorageClassPrivate, 100,
+      TransformationAddGlobalVariable(101, 50, spv::StorageClass::Private, 100,
                                       true)
           .ToMessage();
   *transformations.add_transformation() =
@@ -345,7 +345,7 @@ TEST(ReplayerTest, CheckFactsAfterReplay) {
           11,
           protobufs::TransformationAddSynonym::SynonymType::
               TransformationAddSynonym_SynonymType_COPY_OBJECT,
-          104, MakeInstructionDescriptor(12, SpvOpFunctionCall, 0))
+          104, MakeInstructionDescriptor(12, spv::Op::OpFunctionCall, 0))
           .ToMessage();
 
   // Full replay
@@ -455,7 +455,8 @@ TEST(ReplayerTest, ReplayWithOverflowIds) {
   *transformations.add_transformation() =
       TransformationFlattenConditionalBranch(5, true, 0, 0, 0, {}).ToMessage();
   *transformations.add_transformation() =
-      TransformationAddGlobalVariable(101, 50, SpvStorageClassPrivate, 11, true)
+      TransformationAddGlobalVariable(101, 50, spv::StorageClass::Private, 11,
+                                      true)
           .ToMessage();
 
   protobufs::FactSequence empty_facts;

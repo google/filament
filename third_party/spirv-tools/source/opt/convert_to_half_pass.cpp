@@ -18,19 +18,16 @@
 
 #include "source/opt/ir_builder.h"
 
-namespace {
-
-// Indices of operands in SPIR-V instructions
-static const int kImageSampleDrefIdInIdx = 2;
-
-}  // anonymous namespace
-
 namespace spvtools {
 namespace opt {
+namespace {
+// Indices of operands in SPIR-V instructions
+constexpr int kImageSampleDrefIdInIdx = 2;
+}  // namespace
 
 bool ConvertToHalfPass::IsArithmetic(Instruction* inst) {
   return target_ops_core_.count(inst->opcode()) != 0 ||
-         (inst->opcode() == SpvOpExtInst &&
+         (inst->opcode() == spv::Op::OpExtInst &&
           inst->GetSingleWordInOperand(0) ==
               context()->get_feature_mgr()->GetExtInstImportId_GLSLstd450() &&
           target_ops_450_.count(inst->GetSingleWordInOperand(1)) != 0);
@@ -45,9 +42,11 @@ bool ConvertToHalfPass::IsFloat(Instruction* inst, uint32_t width) {
 bool ConvertToHalfPass::IsDecoratedRelaxed(Instruction* inst) {
   uint32_t r_id = inst->result_id();
   for (auto r_inst : get_decoration_mgr()->GetDecorationsFor(r_id, false))
-    if (r_inst->opcode() == SpvOpDecorate &&
-        r_inst->GetSingleWordInOperand(1) == SpvDecorationRelaxedPrecision)
+    if (r_inst->opcode() == spv::Op::OpDecorate &&
+        spv::Decoration(r_inst->GetSingleWordInOperand(1)) ==
+            spv::Decoration::RelaxedPrecision) {
       return true;
+    }
   return false;
 }
 
@@ -82,12 +81,12 @@ analysis::Type* ConvertToHalfPass::FloatMatrixType(uint32_t v_cnt,
 uint32_t ConvertToHalfPass::EquivFloatTypeId(uint32_t ty_id, uint32_t width) {
   analysis::Type* reg_equiv_ty;
   Instruction* ty_inst = get_def_use_mgr()->GetDef(ty_id);
-  if (ty_inst->opcode() == SpvOpTypeMatrix)
+  if (ty_inst->opcode() == spv::Op::OpTypeMatrix)
     reg_equiv_ty = FloatMatrixType(ty_inst->GetSingleWordInOperand(1),
                                    ty_inst->GetSingleWordInOperand(0), width);
-  else if (ty_inst->opcode() == SpvOpTypeVector)
+  else if (ty_inst->opcode() == spv::Op::OpTypeVector)
     reg_equiv_ty = FloatVectorType(ty_inst->GetSingleWordInOperand(1), width);
-  else  // SpvOpTypeFloat
+  else  // spv::Op::OpTypeFloat
     reg_equiv_ty = FloatScalarType(width);
   return context()->get_type_mgr()->GetTypeInstruction(reg_equiv_ty);
 }
@@ -102,18 +101,18 @@ void ConvertToHalfPass::GenConvert(uint32_t* val_idp, uint32_t width,
   InstructionBuilder builder(
       context(), inst,
       IRContext::kAnalysisDefUse | IRContext::kAnalysisInstrToBlockMapping);
-  if (val_inst->opcode() == SpvOpUndef)
-    cvt_inst = builder.AddNullaryOp(nty_id, SpvOpUndef);
+  if (val_inst->opcode() == spv::Op::OpUndef)
+    cvt_inst = builder.AddNullaryOp(nty_id, spv::Op::OpUndef);
   else
-    cvt_inst = builder.AddUnaryOp(nty_id, SpvOpFConvert, *val_idp);
+    cvt_inst = builder.AddUnaryOp(nty_id, spv::Op::OpFConvert, *val_idp);
   *val_idp = cvt_inst->result_id();
 }
 
 bool ConvertToHalfPass::MatConvertCleanup(Instruction* inst) {
-  if (inst->opcode() != SpvOpFConvert) return false;
+  if (inst->opcode() != spv::Op::OpFConvert) return false;
   uint32_t mty_id = inst->type_id();
   Instruction* mty_inst = get_def_use_mgr()->GetDef(mty_id);
-  if (mty_inst->opcode() != SpvOpTypeMatrix) return false;
+  if (mty_inst->opcode() != spv::Op::OpTypeMatrix) return false;
   uint32_t vty_id = mty_inst->GetSingleWordInOperand(0);
   uint32_t v_cnt = mty_inst->GetSingleWordInOperand(1);
   Instruction* vty_inst = get_def_use_mgr()->GetDef(vty_id);
@@ -130,18 +129,18 @@ bool ConvertToHalfPass::MatConvertCleanup(Instruction* inst) {
   std::vector<Operand> opnds = {};
   for (uint32_t vidx = 0; vidx < v_cnt; ++vidx) {
     Instruction* ext_inst = builder.AddIdLiteralOp(
-        orig_vty_id, SpvOpCompositeExtract, orig_mat_id, vidx);
+        orig_vty_id, spv::Op::OpCompositeExtract, orig_mat_id, vidx);
     Instruction* cvt_inst =
-        builder.AddUnaryOp(vty_id, SpvOpFConvert, ext_inst->result_id());
+        builder.AddUnaryOp(vty_id, spv::Op::OpFConvert, ext_inst->result_id());
     opnds.push_back({SPV_OPERAND_TYPE_ID, {cvt_inst->result_id()}});
   }
   uint32_t mat_id = TakeNextId();
   std::unique_ptr<Instruction> mat_inst(new Instruction(
-      context(), SpvOpCompositeConstruct, mty_id, mat_id, opnds));
+      context(), spv::Op::OpCompositeConstruct, mty_id, mat_id, opnds));
   (void)builder.AddInstruction(std::move(mat_inst));
   context()->ReplaceAllUsesWith(inst->result_id(), mat_id);
   // Turn original instruction into copy so it is valid.
-  inst->SetOpcode(SpvOpCopyObject);
+  inst->SetOpcode(spv::Op::OpCopyObject);
   inst->SetResultType(EquivFloatTypeId(mty_id, orig_width));
   get_def_use_mgr()->AnalyzeInstUse(inst);
   return true;
@@ -150,10 +149,11 @@ bool ConvertToHalfPass::MatConvertCleanup(Instruction* inst) {
 bool ConvertToHalfPass::RemoveRelaxedDecoration(uint32_t id) {
   return context()->get_decoration_mgr()->RemoveDecorationsFrom(
       id, [](const Instruction& dec) {
-        if (dec.opcode() == SpvOpDecorate &&
-            dec.GetSingleWordInOperand(1u) == SpvDecorationRelaxedPrecision)
+        if (dec.opcode() == spv::Op::OpDecorate &&
+            spv::Decoration(dec.GetSingleWordInOperand(1u)) ==
+                spv::Decoration::RelaxedPrecision) {
           return true;
-        else
+        } else
           return false;
       });
 }
@@ -196,8 +196,8 @@ bool ConvertToHalfPass::ProcessPhi(Instruction* inst, uint32_t from_width,
         auto insert_before = bp->tail();
         if (insert_before != bp->begin()) {
           --insert_before;
-          if (insert_before->opcode() != SpvOpSelectionMerge &&
-              insert_before->opcode() != SpvOpLoopMerge)
+          if (insert_before->opcode() != spv::Op::OpSelectionMerge &&
+              insert_before->opcode() != spv::Op::OpLoopMerge)
             ++insert_before;
         }
         GenConvert(prev_idp, to_width, &*insert_before);
@@ -229,7 +229,8 @@ bool ConvertToHalfPass::ProcessConvert(Instruction* inst) {
   // changed to half.
   uint32_t val_id = inst->GetSingleWordInOperand(0);
   Instruction* val_inst = get_def_use_mgr()->GetDef(val_id);
-  if (inst->type_id() == val_inst->type_id()) inst->SetOpcode(SpvOpCopyObject);
+  if (inst->type_id() == val_inst->type_id())
+    inst->SetOpcode(spv::Op::OpCopyObject);
   return true;  // modified
 }
 
@@ -251,7 +252,7 @@ bool ConvertToHalfPass::ProcessImageRef(Instruction* inst) {
 bool ConvertToHalfPass::ProcessDefault(Instruction* inst) {
   // If non-relaxed instruction has changed operands, need to convert
   // them back to float32
-  if (inst->opcode() == SpvOpPhi) return ProcessPhi(inst, 16u, 32u);
+  if (inst->opcode() == spv::Op::OpPhi) return ProcessPhi(inst, 16u, 32u);
   bool modified = false;
   inst->ForEachInId([&inst, &modified, this](uint32_t* idp) {
     if (converted_ids_.count(*idp) == 0) return;
@@ -269,9 +270,9 @@ bool ConvertToHalfPass::GenHalfInst(Instruction* inst) {
   bool inst_relaxed = IsRelaxed(inst->result_id());
   if (IsArithmetic(inst) && inst_relaxed)
     modified = GenHalfArith(inst);
-  else if (inst->opcode() == SpvOpPhi && inst_relaxed)
+  else if (inst->opcode() == spv::Op::OpPhi && inst_relaxed)
     modified = ProcessPhi(inst, 32u, 16u);
-  else if (inst->opcode() == SpvOpFConvert)
+  else if (inst->opcode() == spv::Op::OpFConvert)
     modified = ProcessConvert(inst);
   else if (image_ops_.count(inst->opcode()) != 0)
     modified = ProcessImageRef(inst);
@@ -350,7 +351,7 @@ Pass::Status ConvertToHalfPass::ProcessImpl() {
   };
   bool modified = context()->ProcessReachableCallTree(pfn);
   // If modified, make sure module has Float16 capability
-  if (modified) context()->AddCapability(SpvCapabilityFloat16);
+  if (modified) context()->AddCapability(spv::Capability::Float16);
   // Remove all RelaxedPrecision decorations from instructions and globals
   for (auto c_id : relaxed_ids_set_) {
     modified |= RemoveRelaxedDecoration(c_id);
@@ -371,44 +372,44 @@ Pass::Status ConvertToHalfPass::Process() {
 
 void ConvertToHalfPass::Initialize() {
   target_ops_core_ = {
-      SpvOpVectorExtractDynamic,
-      SpvOpVectorInsertDynamic,
-      SpvOpVectorShuffle,
-      SpvOpCompositeConstruct,
-      SpvOpCompositeInsert,
-      SpvOpCompositeExtract,
-      SpvOpCopyObject,
-      SpvOpTranspose,
-      SpvOpConvertSToF,
-      SpvOpConvertUToF,
-      // SpvOpFConvert,
-      // SpvOpQuantizeToF16,
-      SpvOpFNegate,
-      SpvOpFAdd,
-      SpvOpFSub,
-      SpvOpFMul,
-      SpvOpFDiv,
-      SpvOpFMod,
-      SpvOpVectorTimesScalar,
-      SpvOpMatrixTimesScalar,
-      SpvOpVectorTimesMatrix,
-      SpvOpMatrixTimesVector,
-      SpvOpMatrixTimesMatrix,
-      SpvOpOuterProduct,
-      SpvOpDot,
-      SpvOpSelect,
-      SpvOpFOrdEqual,
-      SpvOpFUnordEqual,
-      SpvOpFOrdNotEqual,
-      SpvOpFUnordNotEqual,
-      SpvOpFOrdLessThan,
-      SpvOpFUnordLessThan,
-      SpvOpFOrdGreaterThan,
-      SpvOpFUnordGreaterThan,
-      SpvOpFOrdLessThanEqual,
-      SpvOpFUnordLessThanEqual,
-      SpvOpFOrdGreaterThanEqual,
-      SpvOpFUnordGreaterThanEqual,
+      spv::Op::OpVectorExtractDynamic,
+      spv::Op::OpVectorInsertDynamic,
+      spv::Op::OpVectorShuffle,
+      spv::Op::OpCompositeConstruct,
+      spv::Op::OpCompositeInsert,
+      spv::Op::OpCompositeExtract,
+      spv::Op::OpCopyObject,
+      spv::Op::OpTranspose,
+      spv::Op::OpConvertSToF,
+      spv::Op::OpConvertUToF,
+      // spv::Op::OpFConvert,
+      // spv::Op::OpQuantizeToF16,
+      spv::Op::OpFNegate,
+      spv::Op::OpFAdd,
+      spv::Op::OpFSub,
+      spv::Op::OpFMul,
+      spv::Op::OpFDiv,
+      spv::Op::OpFMod,
+      spv::Op::OpVectorTimesScalar,
+      spv::Op::OpMatrixTimesScalar,
+      spv::Op::OpVectorTimesMatrix,
+      spv::Op::OpMatrixTimesVector,
+      spv::Op::OpMatrixTimesMatrix,
+      spv::Op::OpOuterProduct,
+      spv::Op::OpDot,
+      spv::Op::OpSelect,
+      spv::Op::OpFOrdEqual,
+      spv::Op::OpFUnordEqual,
+      spv::Op::OpFOrdNotEqual,
+      spv::Op::OpFUnordNotEqual,
+      spv::Op::OpFOrdLessThan,
+      spv::Op::OpFUnordLessThan,
+      spv::Op::OpFOrdGreaterThan,
+      spv::Op::OpFUnordGreaterThan,
+      spv::Op::OpFOrdLessThanEqual,
+      spv::Op::OpFUnordLessThanEqual,
+      spv::Op::OpFOrdGreaterThanEqual,
+      spv::Op::OpFUnordGreaterThanEqual,
   };
   target_ops_450_ = {
       GLSLstd450Round, GLSLstd450RoundEven, GLSLstd450Trunc, GLSLstd450FAbs,
@@ -427,53 +428,53 @@ void ConvertToHalfPass::Initialize() {
       GLSLstd450Ldexp, GLSLstd450Length, GLSLstd450Distance, GLSLstd450Cross,
       GLSLstd450Normalize, GLSLstd450FaceForward, GLSLstd450Reflect,
       GLSLstd450Refract, GLSLstd450NMin, GLSLstd450NMax, GLSLstd450NClamp};
-  image_ops_ = {SpvOpImageSampleImplicitLod,
-                SpvOpImageSampleExplicitLod,
-                SpvOpImageSampleDrefImplicitLod,
-                SpvOpImageSampleDrefExplicitLod,
-                SpvOpImageSampleProjImplicitLod,
-                SpvOpImageSampleProjExplicitLod,
-                SpvOpImageSampleProjDrefImplicitLod,
-                SpvOpImageSampleProjDrefExplicitLod,
-                SpvOpImageFetch,
-                SpvOpImageGather,
-                SpvOpImageDrefGather,
-                SpvOpImageRead,
-                SpvOpImageSparseSampleImplicitLod,
-                SpvOpImageSparseSampleExplicitLod,
-                SpvOpImageSparseSampleDrefImplicitLod,
-                SpvOpImageSparseSampleDrefExplicitLod,
-                SpvOpImageSparseSampleProjImplicitLod,
-                SpvOpImageSparseSampleProjExplicitLod,
-                SpvOpImageSparseSampleProjDrefImplicitLod,
-                SpvOpImageSparseSampleProjDrefExplicitLod,
-                SpvOpImageSparseFetch,
-                SpvOpImageSparseGather,
-                SpvOpImageSparseDrefGather,
-                SpvOpImageSparseTexelsResident,
-                SpvOpImageSparseRead};
+  image_ops_ = {spv::Op::OpImageSampleImplicitLod,
+                spv::Op::OpImageSampleExplicitLod,
+                spv::Op::OpImageSampleDrefImplicitLod,
+                spv::Op::OpImageSampleDrefExplicitLod,
+                spv::Op::OpImageSampleProjImplicitLod,
+                spv::Op::OpImageSampleProjExplicitLod,
+                spv::Op::OpImageSampleProjDrefImplicitLod,
+                spv::Op::OpImageSampleProjDrefExplicitLod,
+                spv::Op::OpImageFetch,
+                spv::Op::OpImageGather,
+                spv::Op::OpImageDrefGather,
+                spv::Op::OpImageRead,
+                spv::Op::OpImageSparseSampleImplicitLod,
+                spv::Op::OpImageSparseSampleExplicitLod,
+                spv::Op::OpImageSparseSampleDrefImplicitLod,
+                spv::Op::OpImageSparseSampleDrefExplicitLod,
+                spv::Op::OpImageSparseSampleProjImplicitLod,
+                spv::Op::OpImageSparseSampleProjExplicitLod,
+                spv::Op::OpImageSparseSampleProjDrefImplicitLod,
+                spv::Op::OpImageSparseSampleProjDrefExplicitLod,
+                spv::Op::OpImageSparseFetch,
+                spv::Op::OpImageSparseGather,
+                spv::Op::OpImageSparseDrefGather,
+                spv::Op::OpImageSparseTexelsResident,
+                spv::Op::OpImageSparseRead};
   dref_image_ops_ = {
-      SpvOpImageSampleDrefImplicitLod,
-      SpvOpImageSampleDrefExplicitLod,
-      SpvOpImageSampleProjDrefImplicitLod,
-      SpvOpImageSampleProjDrefExplicitLod,
-      SpvOpImageDrefGather,
-      SpvOpImageSparseSampleDrefImplicitLod,
-      SpvOpImageSparseSampleDrefExplicitLod,
-      SpvOpImageSparseSampleProjDrefImplicitLod,
-      SpvOpImageSparseSampleProjDrefExplicitLod,
-      SpvOpImageSparseDrefGather,
+      spv::Op::OpImageSampleDrefImplicitLod,
+      spv::Op::OpImageSampleDrefExplicitLod,
+      spv::Op::OpImageSampleProjDrefImplicitLod,
+      spv::Op::OpImageSampleProjDrefExplicitLod,
+      spv::Op::OpImageDrefGather,
+      spv::Op::OpImageSparseSampleDrefImplicitLod,
+      spv::Op::OpImageSparseSampleDrefExplicitLod,
+      spv::Op::OpImageSparseSampleProjDrefImplicitLod,
+      spv::Op::OpImageSparseSampleProjDrefExplicitLod,
+      spv::Op::OpImageSparseDrefGather,
   };
   closure_ops_ = {
-      SpvOpVectorExtractDynamic,
-      SpvOpVectorInsertDynamic,
-      SpvOpVectorShuffle,
-      SpvOpCompositeConstruct,
-      SpvOpCompositeInsert,
-      SpvOpCompositeExtract,
-      SpvOpCopyObject,
-      SpvOpTranspose,
-      SpvOpPhi,
+      spv::Op::OpVectorExtractDynamic,
+      spv::Op::OpVectorInsertDynamic,
+      spv::Op::OpVectorShuffle,
+      spv::Op::OpCompositeConstruct,
+      spv::Op::OpCompositeInsert,
+      spv::Op::OpCompositeExtract,
+      spv::Op::OpCopyObject,
+      spv::Op::OpTranspose,
+      spv::Op::OpPhi,
   };
   relaxed_ids_set_.clear();
   converted_ids_.clear();

@@ -62,19 +62,19 @@ void TransformationMakeVectorOperationDynamic::Apply(
   // The OpVectorInsertDynamic instruction has the vector and component operands
   // in reverse order in relation to the OpCompositeInsert corresponding
   // operands.
-  if (instruction->opcode() == SpvOpCompositeInsert) {
+  if (instruction->opcode() == spv::Op::OpCompositeInsert) {
     std::swap(instruction->GetInOperand(0), instruction->GetInOperand(1));
   }
 
   // Sets the literal operand to the equivalent constant.
   instruction->SetInOperand(
-      instruction->opcode() == SpvOpCompositeExtract ? 1 : 2,
+      instruction->opcode() == spv::Op::OpCompositeExtract ? 1 : 2,
       {message_.constant_index_id()});
 
   // Sets the |instruction| opcode to the corresponding vector dynamic opcode.
-  instruction->SetOpcode(instruction->opcode() == SpvOpCompositeExtract
-                             ? SpvOpVectorExtractDynamic
-                             : SpvOpVectorInsertDynamic);
+  instruction->SetOpcode(instruction->opcode() == spv::Op::OpCompositeExtract
+                             ? spv::Op::OpVectorExtractDynamic
+                             : spv::Op::OpVectorInsertDynamic);
 }
 
 protobufs::Transformation TransformationMakeVectorOperationDynamic::ToMessage()
@@ -88,15 +88,15 @@ bool TransformationMakeVectorOperationDynamic::IsVectorOperation(
     opt::IRContext* ir_context, opt::Instruction* instruction) {
   // |instruction| must be defined and must be an OpCompositeExtract/Insert
   // instruction.
-  if (!instruction || (instruction->opcode() != SpvOpCompositeExtract &&
-                       instruction->opcode() != SpvOpCompositeInsert)) {
+  if (!instruction || (instruction->opcode() != spv::Op::OpCompositeExtract &&
+                       instruction->opcode() != spv::Op::OpCompositeInsert)) {
     return false;
   }
 
   // The composite must be a vector.
   auto composite_instruction =
       ir_context->get_def_use_mgr()->GetDef(instruction->GetSingleWordInOperand(
-          instruction->opcode() == SpvOpCompositeExtract ? 0 : 1));
+          instruction->opcode() == spv::Op::OpCompositeExtract ? 0 : 1));
   if (!ir_context->get_type_mgr()
            ->GetType(composite_instruction->type_id())
            ->AsVector()) {

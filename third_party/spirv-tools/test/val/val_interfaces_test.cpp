@@ -217,7 +217,7 @@ OpFunctionEnd
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_UNIVERSAL_1_4));
   EXPECT_THAT(
       getDiagnosticString(),
-      HasSubstr("Non-unique OpEntryPoint interface 2[%var] is disallowed"));
+      HasSubstr("Non-unique OpEntryPoint interface '2[%var]' is disallowed"));
 }
 
 TEST_F(ValidateInterfacesTest, MissingGlobalVarSPV1p3) {
@@ -711,7 +711,9 @@ OpMemoryModel Logical GLSL450
 OpEntryPoint Fragment %main "main" %var1 %var2
 OpExecutionMode %main OriginUpperLeft
 OpDecorate %var1 Location 0
+OpDecorate %var1 Flat
 OpDecorate %var2 Location 1
+OpDecorate %var2 Flat
 %void = OpTypeVoid
 %void_fn = OpTypeFunction %void
 %float = OpTypeFloat 32
@@ -1454,7 +1456,7 @@ OpDecorate %struct Block
 OpMemberDecorate %struct 0 Location 0
 OpMemberDecorate %struct 0 Component 0
 OpMemberDecorate %struct 1 Location 0
-OpMemberDecorate %struct 1 Component 1
+OpMemberDecorate %struct 1 Component 2
 %void = OpTypeVoid
 %void_fn = OpTypeFunction %void
 %float = OpTypeFloat 32

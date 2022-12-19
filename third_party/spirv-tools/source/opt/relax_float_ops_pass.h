@@ -61,17 +61,23 @@ class RelaxFloatOpsPass : public Pass {
   // Initialize state for converting to half
   void Initialize();
 
+  struct hasher {
+    size_t operator()(const spv::Op& op) const noexcept {
+      return std::hash<uint32_t>()(uint32_t(op));
+    }
+  };
+
   // Set of float result core operations to be processed
-  std::unordered_set<uint32_t> target_ops_core_f_rslt_;
+  std::unordered_set<spv::Op, hasher> target_ops_core_f_rslt_;
 
   // Set of float operand core operations to be processed
-  std::unordered_set<uint32_t> target_ops_core_f_opnd_;
+  std::unordered_set<spv::Op, hasher> target_ops_core_f_opnd_;
 
   // Set of 450 extension operations to be processed
   std::unordered_set<uint32_t> target_ops_450_;
 
   // Set of sample operations
-  std::unordered_set<uint32_t> sample_ops_;
+  std::unordered_set<spv::Op, hasher> sample_ops_;
 };
 
 }  // namespace opt

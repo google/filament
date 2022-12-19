@@ -62,28 +62,29 @@ spv_result_t advanceLine(spv_text text, spv_position position) {
 // parameters, its the users responsibility to ensure these are non null.
 spv_result_t advance(spv_text text, spv_position position) {
   // NOTE: Consume white space, otherwise don't advance.
-  if (position->index >= text->length) return SPV_END_OF_STREAM;
-  switch (text->str[position->index]) {
-    case '\0':
-      return SPV_END_OF_STREAM;
-    case ';':
-      if (spv_result_t error = advanceLine(text, position)) return error;
-      return advance(text, position);
-    case ' ':
-    case '\t':
-    case '\r':
-      position->column++;
-      position->index++;
-      return advance(text, position);
-    case '\n':
-      position->column = 0;
-      position->line++;
-      position->index++;
-      return advance(text, position);
-    default:
-      break;
+  while (true) {
+    if (position->index >= text->length) return SPV_END_OF_STREAM;
+    switch (text->str[position->index]) {
+      case '\0':
+        return SPV_END_OF_STREAM;
+      case ';':
+        if (spv_result_t error = advanceLine(text, position)) return error;
+        continue;
+      case ' ':
+      case '\t':
+      case '\r':
+        position->column++;
+        position->index++;
+        continue;
+      case '\n':
+        position->column = 0;
+        position->line++;
+        position->index++;
+        continue;
+      default:
+        return SPV_SUCCESS;
+    }
   }
-  return SPV_SUCCESS;
 }
 
 // Fetches the next word from the given text stream starting from the given
@@ -322,12 +323,12 @@ spv_result_t AssemblyContext::recordTypeDefinition(
                         << " has already been used to generate a type";
   }
 
-  if (pInst->opcode == SpvOpTypeInt) {
+  if (pInst->opcode == spv::Op::OpTypeInt) {
     if (pInst->words.size() != 4)
       return diagnostic() << "Invalid OpTypeInt instruction";
     types_[value] = {pInst->words[2], pInst->words[3] != 0,
                      IdTypeClass::kScalarIntegerType};
-  } else if (pInst->opcode == SpvOpTypeFloat) {
+  } else if (pInst->opcode == spv::Op::OpTypeFloat) {
     if (pInst->words.size() != 3)
       return diagnostic() << "Invalid OpTypeFloat instruction";
     types_[value] = {pInst->words[2], false, IdTypeClass::kScalarFloatType};

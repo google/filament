@@ -222,7 +222,7 @@ TEST(ReducerTest, ExprToConstantAndRemoveUnreferenced) {
 }
 
 bool InterestingWhileOpcodeExists(const std::vector<uint32_t>& binary,
-                                  uint32_t opcode, uint32_t count, bool dump) {
+                                  spv::Op opcode, uint32_t count, bool dump) {
   if (dump) {
     std::stringstream ss;
     ss << "temp_" << count << ".spv";
@@ -238,7 +238,7 @@ bool InterestingWhileOpcodeExists(const std::vector<uint32_t>& binary,
         &*function.begin(),
         [opcode, &interesting](opt::BasicBlock* block) -> void {
           for (auto& inst : *block) {
-            if (inst.opcode() == opcode) {
+            if (inst.opcode() == spv::Op(opcode)) {
               interesting = true;
               break;
             }
@@ -253,12 +253,12 @@ bool InterestingWhileOpcodeExists(const std::vector<uint32_t>& binary,
 
 bool InterestingWhileIMulReachable(const std::vector<uint32_t>& binary,
                                    uint32_t count) {
-  return InterestingWhileOpcodeExists(binary, SpvOpIMul, count, false);
+  return InterestingWhileOpcodeExists(binary, spv::Op::OpIMul, count, false);
 }
 
 bool InterestingWhileSDivReachable(const std::vector<uint32_t>& binary,
                                    uint32_t count) {
-  return InterestingWhileOpcodeExists(binary, SpvOpSDiv, count, false);
+  return InterestingWhileOpcodeExists(binary, spv::Op::OpSDiv, count, false);
 }
 
 // The shader below was derived from the following GLSL, and optimized.

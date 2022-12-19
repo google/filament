@@ -139,7 +139,7 @@ bool spvIsInIdType(spv_operand_type_t type);
 // of the operand can be forward declared. This function will
 // used in the SSA validation stage of the pipeline
 std::function<bool(unsigned)> spvOperandCanBeForwardDeclaredFunction(
-    SpvOp opcode);
+    spv::Op opcode);
 
 // Takes the instruction key of a debug info extension instruction
 // and returns a function object that will return true if the index

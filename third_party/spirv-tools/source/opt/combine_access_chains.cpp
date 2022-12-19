@@ -44,10 +44,10 @@ bool CombineAccessChains::ProcessFunction(Function& function) {
       function.entry().get(), [&modified, this](BasicBlock* block) {
         block->ForEachInst([&modified, this](Instruction* inst) {
           switch (inst->opcode()) {
-            case SpvOpAccessChain:
-            case SpvOpInBoundsAccessChain:
-            case SpvOpPtrAccessChain:
-            case SpvOpInBoundsPtrAccessChain:
+            case spv::Op::OpAccessChain:
+            case spv::Op::OpInBoundsAccessChain:
+            case spv::Op::OpPtrAccessChain:
+            case spv::Op::OpInBoundsPtrAccessChain:
               modified |= CombineAccessChain(inst);
               break;
             default:
@@ -76,10 +76,10 @@ uint32_t CombineAccessChains::GetConstantValue(
 uint32_t CombineAccessChains::GetArrayStride(const Instruction* inst) {
   uint32_t array_stride = 0;
   context()->get_decoration_mgr()->WhileEachDecoration(
-      inst->type_id(), SpvDecorationArrayStride,
+      inst->type_id(), uint32_t(spv::Decoration::ArrayStride),
       [&array_stride](const Instruction& decoration) {
-        assert(decoration.opcode() != SpvOpDecorateId);
-        if (decoration.opcode() == SpvOpDecorate) {
+        assert(decoration.opcode() != spv::Op::OpDecorateId);
+        if (decoration.opcode() == spv::Op::OpDecorate) {
           array_stride = decoration.GetSingleWordInOperand(1);
         } else {
           array_stride = decoration.GetSingleWordInOperand(2);
@@ -200,18 +200,18 @@ bool CombineAccessChains::CreateNewInputOperands(
 }
 
 bool CombineAccessChains::CombineAccessChain(Instruction* inst) {
-  assert((inst->opcode() == SpvOpPtrAccessChain ||
-          inst->opcode() == SpvOpAccessChain ||
-          inst->opcode() == SpvOpInBoundsAccessChain ||
-          inst->opcode() == SpvOpInBoundsPtrAccessChain) &&
+  assert((inst->opcode() == spv::Op::OpPtrAccessChain ||
+          inst->opcode() == spv::Op::OpAccessChain ||
+          inst->opcode() == spv::Op::OpInBoundsAccessChain ||
+          inst->opcode() == spv::Op::OpInBoundsPtrAccessChain) &&
          "Wrong opcode. Expected an access chain.");
 
   Instruction* ptr_input =
       context()->get_def_use_mgr()->GetDef(inst->GetSingleWordInOperand(0));
-  if (ptr_input->opcode() != SpvOpAccessChain &&
-      ptr_input->opcode() != SpvOpInBoundsAccessChain &&
-      ptr_input->opcode() != SpvOpPtrAccessChain &&
-      ptr_input->opcode() != SpvOpInBoundsPtrAccessChain) {
+  if (ptr_input->opcode() != spv::Op::OpAccessChain &&
+      ptr_input->opcode() != spv::Op::OpInBoundsAccessChain &&
+      ptr_input->opcode() != spv::Op::OpPtrAccessChain &&
+      ptr_input->opcode() != spv::Op::OpInBoundsPtrAccessChain) {
     return false;
   }
 
@@ -246,7 +246,7 @@ bool CombineAccessChains::CombineAccessChain(Instruction* inst) {
   } else if (inst->NumInOperands() == 1) {
     // |inst| is a no-op, change it to a copy. Instruction simplification will
     // clean it up.
-    inst->SetOpcode(SpvOpCopyObject);
+    inst->SetOpcode(spv::Op::OpCopyObject);
   } else {
     std::vector<Operand> new_operands;
     if (!CreateNewInputOperands(ptr_input, inst, &new_operands)) return false;
@@ -259,23 +259,25 @@ bool CombineAccessChains::CombineAccessChain(Instruction* inst) {
   return true;
 }
 
-SpvOp CombineAccessChains::UpdateOpcode(SpvOp base_opcode, SpvOp input_opcode) {
-  auto IsInBounds = [](SpvOp opcode) {
-    return opcode == SpvOpInBoundsPtrAccessChain ||
-           opcode == SpvOpInBoundsAccessChain;
+spv::Op CombineAccessChains::UpdateOpcode(spv::Op base_opcode,
+                                          spv::Op input_opcode) {
+  auto IsInBounds = [](spv::Op opcode) {
+    return opcode == spv::Op::OpInBoundsPtrAccessChain ||
+           opcode == spv::Op::OpInBoundsAccessChain;
   };
 
-  if (input_opcode == SpvOpInBoundsPtrAccessChain) {
-    if (!IsInBounds(base_opcode)) return SpvOpPtrAccessChain;
-  } else if (input_opcode == SpvOpInBoundsAccessChain) {
-    if (!IsInBounds(base_opcode)) return SpvOpAccessChain;
+  if (input_opcode == spv::Op::OpInBoundsPtrAccessChain) {
+    if (!IsInBounds(base_opcode)) return spv::Op::OpPtrAccessChain;
+  } else if (input_opcode == spv::Op::OpInBoundsAccessChain) {
+    if (!IsInBounds(base_opcode)) return spv::Op::OpAccessChain;
   }
 
   return input_opcode;
 }
 
-bool CombineAccessChains::IsPtrAccessChain(SpvOp opcode) {
-  return opcode == SpvOpPtrAccessChain || opcode == SpvOpInBoundsPtrAccessChain;
+bool CombineAccessChains::IsPtrAccessChain(spv::Op opcode) {
+  return opcode == spv::Op::OpPtrAccessChain ||
+         opcode == spv::Op::OpInBoundsPtrAccessChain;
 }
 
 bool CombineAccessChains::Has64BitIndices(Instruction* inst) {

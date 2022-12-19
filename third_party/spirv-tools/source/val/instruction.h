@@ -42,7 +42,7 @@ class Instruction {
 
   uint32_t id() const { return inst_.result_id; }
   uint32_t type_id() const { return inst_.type_id; }
-  SpvOp opcode() const { return static_cast<SpvOp>(inst_.opcode); }
+  spv::Op opcode() const { return static_cast<spv::Op>(inst_.opcode); }
 
   /// Returns the Function where the instruction was defined. nullptr if it was
   /// defined outside of a Function
@@ -87,13 +87,13 @@ class Instruction {
   }
 
   bool IsNonSemantic() const {
-    return opcode() == SpvOp::SpvOpExtInst &&
+    return opcode() == spv::Op::OpExtInst &&
            spvExtInstIsNonSemantic(inst_.ext_inst_type);
   }
 
   /// True if this is an OpExtInst for debug info extension.
   bool IsDebugInfo() const {
-    return opcode() == SpvOp::SpvOpExtInst &&
+    return opcode() == spv::Op::OpExtInst &&
            spvExtInstIsDebugInfo(inst_.ext_inst_type);
   }
 

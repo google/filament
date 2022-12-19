@@ -39,7 +39,8 @@ class SpreadVolatileSemantics : public Pass {
   // have an execution model.
   bool HasNoExecutionModel() {
     return get_module()->entry_points().empty() &&
-           context()->get_feature_mgr()->HasCapability(SpvCapabilityLinkage);
+           context()->get_feature_mgr()->HasCapability(
+               spv::Capability::Linkage);
   }
 
   // Iterates interface variables and spreads the Volatile semantics if it has
@@ -52,7 +53,7 @@ class SpreadVolatileSemantics : public Pass {
   // VUID-StandaloneSpirv-VulkanMemoryModel-04678 or
   // VUID-StandaloneSpirv-VulkanMemoryModel-04679.
   bool IsTargetForVolatileSemantics(uint32_t var_id,
-                                    SpvExecutionModel execution_model);
+                                    spv::ExecutionModel execution_model);
 
   // Collects interface variables that need the volatile semantics.
   // |is_vk_memory_model_enabled| is true if VulkanMemoryModel capability is

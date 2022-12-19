@@ -59,40 +59,41 @@ using ValidationState_HasAnyOfCapabilities = ValidationStateTest;
 
 TEST_F(ValidationState_HasAnyOfCapabilities, EmptyMask) {
   EXPECT_TRUE(state_.HasAnyOfCapabilities({}));
-  state_.RegisterCapability(SpvCapabilityMatrix);
+  state_.RegisterCapability(spv::Capability::Matrix);
   EXPECT_TRUE(state_.HasAnyOfCapabilities({}));
-  state_.RegisterCapability(SpvCapabilityImageMipmap);
+  state_.RegisterCapability(spv::Capability::ImageMipmap);
   EXPECT_TRUE(state_.HasAnyOfCapabilities({}));
-  state_.RegisterCapability(SpvCapabilityPipes);
+  state_.RegisterCapability(spv::Capability::Pipes);
   EXPECT_TRUE(state_.HasAnyOfCapabilities({}));
-  state_.RegisterCapability(SpvCapabilityStorageImageArrayDynamicIndexing);
+  state_.RegisterCapability(spv::Capability::StorageImageArrayDynamicIndexing);
   EXPECT_TRUE(state_.HasAnyOfCapabilities({}));
-  state_.RegisterCapability(SpvCapabilityClipDistance);
+  state_.RegisterCapability(spv::Capability::ClipDistance);
   EXPECT_TRUE(state_.HasAnyOfCapabilities({}));
-  state_.RegisterCapability(SpvCapabilityStorageImageWriteWithoutFormat);
+  state_.RegisterCapability(spv::Capability::StorageImageWriteWithoutFormat);
   EXPECT_TRUE(state_.HasAnyOfCapabilities({}));
 }
 
 TEST_F(ValidationState_HasAnyOfCapabilities, SingleCapMask) {
-  EXPECT_FALSE(state_.HasAnyOfCapabilities({SpvCapabilityMatrix}));
-  EXPECT_FALSE(state_.HasAnyOfCapabilities({SpvCapabilityImageMipmap}));
-  state_.RegisterCapability(SpvCapabilityMatrix);
-  EXPECT_TRUE(state_.HasAnyOfCapabilities({SpvCapabilityMatrix}));
-  EXPECT_FALSE(state_.HasAnyOfCapabilities({SpvCapabilityImageMipmap}));
-  state_.RegisterCapability(SpvCapabilityImageMipmap);
-  EXPECT_TRUE(state_.HasAnyOfCapabilities({SpvCapabilityMatrix}));
-  EXPECT_TRUE(state_.HasAnyOfCapabilities({SpvCapabilityImageMipmap}));
+  EXPECT_FALSE(state_.HasAnyOfCapabilities({spv::Capability::Matrix}));
+  EXPECT_FALSE(state_.HasAnyOfCapabilities({spv::Capability::ImageMipmap}));
+  state_.RegisterCapability(spv::Capability::Matrix);
+  EXPECT_TRUE(state_.HasAnyOfCapabilities({spv::Capability::Matrix}));
+  EXPECT_FALSE(state_.HasAnyOfCapabilities({spv::Capability::ImageMipmap}));
+  state_.RegisterCapability(spv::Capability::ImageMipmap);
+  EXPECT_TRUE(state_.HasAnyOfCapabilities({spv::Capability::Matrix}));
+  EXPECT_TRUE(state_.HasAnyOfCapabilities({spv::Capability::ImageMipmap}));
 }
 
 TEST_F(ValidationState_HasAnyOfCapabilities, MultiCapMask) {
   const auto set1 =
-      CapabilitySet{SpvCapabilitySampledRect, SpvCapabilityImageBuffer};
-  const auto set2 = CapabilitySet{SpvCapabilityStorageImageWriteWithoutFormat,
-                                  SpvCapabilityStorageImageReadWithoutFormat,
-                                  SpvCapabilityGeometryStreams};
+      CapabilitySet{spv::Capability::SampledRect, spv::Capability::ImageBuffer};
+  const auto set2 =
+      CapabilitySet{spv::Capability::StorageImageWriteWithoutFormat,
+                    spv::Capability::StorageImageReadWithoutFormat,
+                    spv::Capability::GeometryStreams};
   EXPECT_FALSE(state_.HasAnyOfCapabilities(set1));
   EXPECT_FALSE(state_.HasAnyOfCapabilities(set2));
-  state_.RegisterCapability(SpvCapabilityImageBuffer);
+  state_.RegisterCapability(spv::Capability::ImageBuffer);
   EXPECT_TRUE(state_.HasAnyOfCapabilities(set1));
   EXPECT_FALSE(state_.HasAnyOfCapabilities(set2));
 }
@@ -139,50 +140,52 @@ using ValidationState_InLayoutState = ValidationStateTest;
 
 TEST_F(ValidationState_InLayoutState, Variable) {
   state_.SetCurrentLayoutSectionForTesting(kLayoutTypes);
-  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpVariable));
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(spv::Op::OpVariable));
 
   state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDefinitions);
-  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpVariable));
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(spv::Op::OpVariable));
 }
 
 TEST_F(ValidationState_InLayoutState, ExtInst) {
   state_.SetCurrentLayoutSectionForTesting(kLayoutTypes);
-  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpExtInst));
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(spv::Op::OpExtInst));
 
   state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDefinitions);
-  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpExtInst));
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(spv::Op::OpExtInst));
 }
 
 TEST_F(ValidationState_InLayoutState, Undef) {
   state_.SetCurrentLayoutSectionForTesting(kLayoutTypes);
-  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpUndef));
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(spv::Op::OpUndef));
 
   state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDefinitions);
-  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpUndef));
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(spv::Op::OpUndef));
 }
 
 TEST_F(ValidationState_InLayoutState, Function) {
   state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDeclarations);
-  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpFunction));
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(spv::Op::OpFunction));
 
   state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDefinitions);
-  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpFunction));
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(spv::Op::OpFunction));
 }
 
 TEST_F(ValidationState_InLayoutState, FunctionParameter) {
   state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDeclarations);
-  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpFunctionParameter));
+  EXPECT_TRUE(
+      state_.IsOpcodeInCurrentLayoutSection(spv::Op::OpFunctionParameter));
 
   state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDefinitions);
-  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpFunctionParameter));
+  EXPECT_TRUE(
+      state_.IsOpcodeInCurrentLayoutSection(spv::Op::OpFunctionParameter));
 }
 
 TEST_F(ValidationState_InLayoutState, FunctionEnd) {
   state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDeclarations);
-  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpFunctionEnd));
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(spv::Op::OpFunctionEnd));
 
   state_.SetCurrentLayoutSectionForTesting(kLayoutFunctionDefinitions);
-  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(SpvOpFunctionEnd));
+  EXPECT_TRUE(state_.IsOpcodeInCurrentLayoutSection(spv::Op::OpFunctionEnd));
 }
 
 }  // namespace

@@ -54,65 +54,66 @@ TEST(TransformationEquationInstructionTest, SignedNegate) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   protobufs::InstructionDescriptor return_instruction =
-      MakeInstructionDescriptor(13, SpvOpReturn, 0);
+      MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   // Bad: id already in use.
-  ASSERT_FALSE(TransformationEquationInstruction(7, SpvOpSNegate, {7},
+  ASSERT_FALSE(TransformationEquationInstruction(7, spv::Op::OpSNegate, {7},
                                                  return_instruction)
                    .IsApplicable(context.get(), transformation_context));
 
   // Bad: identified instruction does not exist.
-  ASSERT_FALSE(
-      TransformationEquationInstruction(
-          14, SpvOpSNegate, {7}, MakeInstructionDescriptor(13, SpvOpLoad, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationEquationInstruction(
+                   14, spv::Op::OpSNegate, {7},
+                   MakeInstructionDescriptor(13, spv::Op::OpLoad, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: id 100 does not exist
-  ASSERT_FALSE(TransformationEquationInstruction(14, SpvOpSNegate, {100},
+  ASSERT_FALSE(TransformationEquationInstruction(14, spv::Op::OpSNegate, {100},
                                                  return_instruction)
                    .IsApplicable(context.get(), transformation_context));
 
   // Bad: id 20 is an OpUndef
-  ASSERT_FALSE(TransformationEquationInstruction(14, SpvOpSNegate, {20},
+  ASSERT_FALSE(TransformationEquationInstruction(14, spv::Op::OpSNegate, {20},
                                                  return_instruction)
                    .IsApplicable(context.get(), transformation_context));
 
   // Bad: id 30 is not available right before its definition
   ASSERT_FALSE(TransformationEquationInstruction(
-                   14, SpvOpSNegate, {30},
-                   MakeInstructionDescriptor(30, SpvOpCopyObject, 0))
+                   14, spv::Op::OpSNegate, {30},
+                   MakeInstructionDescriptor(30, spv::Op::OpCopyObject, 0))
                    .IsApplicable(context.get(), transformation_context));
 
   // Bad: too many arguments to OpSNegate.
-  ASSERT_FALSE(TransformationEquationInstruction(14, SpvOpSNegate, {7, 7},
+  ASSERT_FALSE(TransformationEquationInstruction(14, spv::Op::OpSNegate, {7, 7},
                                                  return_instruction)
                    .IsApplicable(context.get(), transformation_context));
 
   // Bad: 40 is a type id.
-  ASSERT_FALSE(TransformationEquationInstruction(14, SpvOpSNegate, {40},
+  ASSERT_FALSE(TransformationEquationInstruction(14, spv::Op::OpSNegate, {40},
                                                  return_instruction)
                    .IsApplicable(context.get(), transformation_context));
 
   // Bad: wrong type of argument to OpSNegate.
-  ASSERT_FALSE(TransformationEquationInstruction(14, SpvOpSNegate, {41},
+  ASSERT_FALSE(TransformationEquationInstruction(14, spv::Op::OpSNegate, {41},
                                                  return_instruction)
                    .IsApplicable(context.get(), transformation_context));
 
   auto transformation1 = TransformationEquationInstruction(
-      14, SpvOpSNegate, {7}, return_instruction);
+      14, spv::Op::OpSNegate, {7}, return_instruction);
   ASSERT_TRUE(
       transformation1.IsApplicable(context.get(), transformation_context));
   ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(14));
   ASSERT_EQ(nullptr, context->get_instr_block(14));
   ApplyAndCheckFreshIds(transformation1, context.get(),
                         &transformation_context);
-  ASSERT_EQ(SpvOpSNegate, context->get_def_use_mgr()->GetDef(14)->opcode());
+  ASSERT_EQ(spv::Op::OpSNegate,
+            context->get_def_use_mgr()->GetDef(14)->opcode());
   ASSERT_EQ(13, context->get_instr_block(14)->id());
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
                                                kConsoleMessageConsumer));
 
   auto transformation2 = TransformationEquationInstruction(
-      15, SpvOpSNegate, {14}, return_instruction);
+      15, spv::Op::OpSNegate, {14}, return_instruction);
   ASSERT_TRUE(
       transformation2.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation2, context.get(),
@@ -178,25 +179,25 @@ TEST(TransformationEquationInstructionTest, LogicalNot) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   protobufs::InstructionDescriptor return_instruction =
-      MakeInstructionDescriptor(13, SpvOpReturn, 0);
+      MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   // Bad: too few arguments to OpLogicalNot.
-  ASSERT_FALSE(TransformationEquationInstruction(14, SpvOpLogicalNot, {},
+  ASSERT_FALSE(TransformationEquationInstruction(14, spv::Op::OpLogicalNot, {},
                                                  return_instruction)
                    .IsApplicable(context.get(), transformation_context));
 
   // Bad: 6 is a type id.
-  ASSERT_FALSE(TransformationEquationInstruction(14, SpvOpLogicalNot, {6},
+  ASSERT_FALSE(TransformationEquationInstruction(14, spv::Op::OpLogicalNot, {6},
                                                  return_instruction)
                    .IsApplicable(context.get(), transformation_context));
 
   // Bad: wrong type of argument to OpLogicalNot.
-  ASSERT_FALSE(TransformationEquationInstruction(14, SpvOpLogicalNot, {21},
-                                                 return_instruction)
+  ASSERT_FALSE(TransformationEquationInstruction(14, spv::Op::OpLogicalNot,
+                                                 {21}, return_instruction)
                    .IsApplicable(context.get(), transformation_context));
 
   auto transformation1 = TransformationEquationInstruction(
-      14, SpvOpLogicalNot, {7}, return_instruction);
+      14, spv::Op::OpLogicalNot, {7}, return_instruction);
   ASSERT_TRUE(
       transformation1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation1, context.get(),
@@ -205,7 +206,7 @@ TEST(TransformationEquationInstructionTest, LogicalNot) {
                                                kConsoleMessageConsumer));
 
   auto transformation2 = TransformationEquationInstruction(
-      15, SpvOpLogicalNot, {14}, return_instruction);
+      15, spv::Op::OpLogicalNot, {14}, return_instruction);
   ASSERT_TRUE(
       transformation2.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation2, context.get(),
@@ -272,31 +273,31 @@ TEST(TransformationEquationInstructionTest, AddSubNegate1) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   protobufs::InstructionDescriptor return_instruction =
-      MakeInstructionDescriptor(13, SpvOpReturn, 0);
+      MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   // Bad: too many arguments to OpIAdd.
-  ASSERT_FALSE(TransformationEquationInstruction(14, SpvOpIAdd, {15, 16, 16},
-                                                 return_instruction)
+  ASSERT_FALSE(TransformationEquationInstruction(
+                   14, spv::Op::OpIAdd, {15, 16, 16}, return_instruction)
                    .IsApplicable(context.get(), transformation_context));
   // Bad: boolean argument to OpIAdd.
-  ASSERT_FALSE(TransformationEquationInstruction(14, SpvOpIAdd, {15, 32},
+  ASSERT_FALSE(TransformationEquationInstruction(14, spv::Op::OpIAdd, {15, 32},
                                                  return_instruction)
                    .IsApplicable(context.get(), transformation_context));
   // Bad: type as argument to OpIAdd.
-  ASSERT_FALSE(TransformationEquationInstruction(14, SpvOpIAdd, {33, 16},
+  ASSERT_FALSE(TransformationEquationInstruction(14, spv::Op::OpIAdd, {33, 16},
                                                  return_instruction)
                    .IsApplicable(context.get(), transformation_context));
   // Bad: arguments of mismatched widths
-  ASSERT_FALSE(TransformationEquationInstruction(14, SpvOpIAdd, {15, 31},
+  ASSERT_FALSE(TransformationEquationInstruction(14, spv::Op::OpIAdd, {15, 31},
                                                  return_instruction)
                    .IsApplicable(context.get(), transformation_context));
   // Bad: arguments of mismatched widths
-  ASSERT_FALSE(TransformationEquationInstruction(14, SpvOpIAdd, {31, 15},
+  ASSERT_FALSE(TransformationEquationInstruction(14, spv::Op::OpIAdd, {31, 15},
                                                  return_instruction)
                    .IsApplicable(context.get(), transformation_context));
 
   auto transformation1 = TransformationEquationInstruction(
-      14, SpvOpIAdd, {15, 16}, return_instruction);
+      14, spv::Op::OpIAdd, {15, 16}, return_instruction);
   ASSERT_TRUE(
       transformation1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation1, context.get(),
@@ -305,7 +306,7 @@ TEST(TransformationEquationInstructionTest, AddSubNegate1) {
                                                kConsoleMessageConsumer));
 
   auto transformation2 = TransformationEquationInstruction(
-      19, SpvOpISub, {14, 16}, return_instruction);
+      19, spv::Op::OpISub, {14, 16}, return_instruction);
   ASSERT_TRUE(
       transformation2.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation2, context.get(),
@@ -316,7 +317,7 @@ TEST(TransformationEquationInstructionTest, AddSubNegate1) {
       MakeDataDescriptor(15, {}), MakeDataDescriptor(19, {})));
 
   auto transformation3 = TransformationEquationInstruction(
-      20, SpvOpISub, {14, 15}, return_instruction);
+      20, spv::Op::OpISub, {14, 15}, return_instruction);
   ASSERT_TRUE(
       transformation3.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation3, context.get(),
@@ -327,7 +328,7 @@ TEST(TransformationEquationInstructionTest, AddSubNegate1) {
       MakeDataDescriptor(20, {}), MakeDataDescriptor(16, {})));
 
   auto transformation4 = TransformationEquationInstruction(
-      22, SpvOpISub, {16, 14}, return_instruction);
+      22, spv::Op::OpISub, {16, 14}, return_instruction);
   ASSERT_TRUE(
       transformation4.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation4, context.get(),
@@ -336,7 +337,7 @@ TEST(TransformationEquationInstructionTest, AddSubNegate1) {
                                                kConsoleMessageConsumer));
 
   auto transformation5 = TransformationEquationInstruction(
-      24, SpvOpSNegate, {22}, return_instruction);
+      24, spv::Op::OpSNegate, {22}, return_instruction);
   ASSERT_TRUE(
       transformation5.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation5, context.get(),
@@ -404,10 +405,10 @@ TEST(TransformationEquationInstructionTest, AddSubNegate2) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   protobufs::InstructionDescriptor return_instruction =
-      MakeInstructionDescriptor(13, SpvOpReturn, 0);
+      MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   auto transformation1 = TransformationEquationInstruction(
-      14, SpvOpISub, {15, 16}, return_instruction);
+      14, spv::Op::OpISub, {15, 16}, return_instruction);
   ASSERT_TRUE(
       transformation1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation1, context.get(),
@@ -416,7 +417,7 @@ TEST(TransformationEquationInstructionTest, AddSubNegate2) {
                                                kConsoleMessageConsumer));
 
   auto transformation2 = TransformationEquationInstruction(
-      17, SpvOpIAdd, {14, 16}, return_instruction);
+      17, spv::Op::OpIAdd, {14, 16}, return_instruction);
   ASSERT_TRUE(
       transformation2.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation2, context.get(),
@@ -427,7 +428,7 @@ TEST(TransformationEquationInstructionTest, AddSubNegate2) {
       MakeDataDescriptor(17, {}), MakeDataDescriptor(15, {})));
 
   auto transformation3 = TransformationEquationInstruction(
-      18, SpvOpIAdd, {16, 14}, return_instruction);
+      18, spv::Op::OpIAdd, {16, 14}, return_instruction);
   ASSERT_TRUE(
       transformation3.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation3, context.get(),
@@ -440,7 +441,7 @@ TEST(TransformationEquationInstructionTest, AddSubNegate2) {
       MakeDataDescriptor(18, {}), MakeDataDescriptor(15, {})));
 
   auto transformation4 = TransformationEquationInstruction(
-      19, SpvOpISub, {14, 15}, return_instruction);
+      19, spv::Op::OpISub, {14, 15}, return_instruction);
   ASSERT_TRUE(
       transformation4.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation4, context.get(),
@@ -449,7 +450,7 @@ TEST(TransformationEquationInstructionTest, AddSubNegate2) {
                                                kConsoleMessageConsumer));
 
   auto transformation5 = TransformationEquationInstruction(
-      20, SpvOpSNegate, {19}, return_instruction);
+      20, spv::Op::OpSNegate, {19}, return_instruction);
   ASSERT_TRUE(
       transformation5.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation5, context.get(),
@@ -460,7 +461,7 @@ TEST(TransformationEquationInstructionTest, AddSubNegate2) {
       MakeDataDescriptor(20, {}), MakeDataDescriptor(16, {})));
 
   auto transformation6 = TransformationEquationInstruction(
-      21, SpvOpISub, {14, 19}, return_instruction);
+      21, spv::Op::OpISub, {14, 19}, return_instruction);
   ASSERT_TRUE(
       transformation6.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation6, context.get(),
@@ -471,7 +472,7 @@ TEST(TransformationEquationInstructionTest, AddSubNegate2) {
       MakeDataDescriptor(21, {}), MakeDataDescriptor(15, {})));
 
   auto transformation7 = TransformationEquationInstruction(
-      22, SpvOpISub, {14, 18}, return_instruction);
+      22, spv::Op::OpISub, {14, 18}, return_instruction);
   ASSERT_TRUE(
       transformation7.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation7, context.get(),
@@ -480,7 +481,7 @@ TEST(TransformationEquationInstructionTest, AddSubNegate2) {
                                                kConsoleMessageConsumer));
 
   auto transformation8 = TransformationEquationInstruction(
-      23, SpvOpSNegate, {22}, return_instruction);
+      23, spv::Op::OpSNegate, {22}, return_instruction);
   ASSERT_TRUE(
       transformation8.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation8, context.get(),
@@ -559,51 +560,51 @@ TEST(TransformationEquationInstructionTest, Bitcast) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  auto insert_before = MakeInstructionDescriptor(13, SpvOpReturn, 0);
+  auto insert_before = MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   // Too many operands.
-  ASSERT_FALSE(TransformationEquationInstruction(50, SpvOpBitcast, {15, 16},
-                                                 insert_before)
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpBitcast,
+                                                 {15, 16}, insert_before)
                    .IsApplicable(context.get(), transformation_context));
 
   // Too few operands.
-  ASSERT_FALSE(
-      TransformationEquationInstruction(50, SpvOpBitcast, {}, insert_before)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpBitcast, {},
+                                                 insert_before)
+                   .IsApplicable(context.get(), transformation_context));
 
   // Operand's id is invalid.
-  ASSERT_FALSE(
-      TransformationEquationInstruction(50, SpvOpBitcast, {50}, insert_before)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpBitcast, {50},
+                                                 insert_before)
+                   .IsApplicable(context.get(), transformation_context));
 
   // Operand's type is invalid
-  ASSERT_FALSE(
-      TransformationEquationInstruction(50, SpvOpBitcast, {13}, insert_before)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpBitcast, {13},
+                                                 insert_before)
+                   .IsApplicable(context.get(), transformation_context));
 
   // Operand must be a scalar or a vector of numerical type.
 #ifndef NDEBUG
-  ASSERT_DEATH(
-      TransformationEquationInstruction(50, SpvOpBitcast, {23}, insert_before)
-          .IsApplicable(context.get(), transformation_context),
-      "Operand is not a scalar or a vector of numerical type");
-  ASSERT_DEATH(
-      TransformationEquationInstruction(50, SpvOpBitcast, {24}, insert_before)
-          .IsApplicable(context.get(), transformation_context),
-      "Only vectors of numerical components are supported");
+  ASSERT_DEATH(TransformationEquationInstruction(50, spv::Op::OpBitcast, {23},
+                                                 insert_before)
+                   .IsApplicable(context.get(), transformation_context),
+               "Operand is not a scalar or a vector of numerical type");
+  ASSERT_DEATH(TransformationEquationInstruction(50, spv::Op::OpBitcast, {24},
+                                                 insert_before)
+                   .IsApplicable(context.get(), transformation_context),
+               "Only vectors of numerical components are supported");
 #else
-  ASSERT_FALSE(
-      TransformationEquationInstruction(50, SpvOpBitcast, {23}, insert_before)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationEquationInstruction(50, SpvOpBitcast, {24}, insert_before)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpBitcast, {23},
+                                                 insert_before)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpBitcast, {24},
+                                                 insert_before)
+                   .IsApplicable(context.get(), transformation_context));
 #endif
 
   for (uint32_t operand_id = 15, fresh_id = 50; operand_id <= 20;
        ++operand_id, ++fresh_id) {
     TransformationEquationInstruction transformation(
-        fresh_id, SpvOpBitcast, {operand_id}, insert_before);
+        fresh_id, spv::Op::OpBitcast, {operand_id}, insert_before);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -683,23 +684,23 @@ TEST(TransformationEquationInstructionTest,
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  auto insert_before = MakeInstructionDescriptor(13, SpvOpReturn, 0);
+  auto insert_before = MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   // Scalar floating-point type does not exist.
-  ASSERT_FALSE(
-      TransformationEquationInstruction(50, SpvOpBitcast, {15}, insert_before)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationEquationInstruction(50, SpvOpBitcast, {16}, insert_before)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpBitcast, {15},
+                                                 insert_before)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpBitcast, {16},
+                                                 insert_before)
+                   .IsApplicable(context.get(), transformation_context));
 
   // Vector of floating-point components does not exist.
-  ASSERT_FALSE(
-      TransformationEquationInstruction(50, SpvOpBitcast, {18}, insert_before)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationEquationInstruction(50, SpvOpBitcast, {19}, insert_before)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpBitcast, {18},
+                                                 insert_before)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpBitcast, {19},
+                                                 insert_before)
+                   .IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationEquationInstructionTest, BitcastResultTypeIntDoesNotExist1) {
@@ -730,17 +731,17 @@ TEST(TransformationEquationInstructionTest, BitcastResultTypeIntDoesNotExist1) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  auto insert_before = MakeInstructionDescriptor(13, SpvOpReturn, 0);
+  auto insert_before = MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   // Scalar integral type does not exist.
-  ASSERT_FALSE(
-      TransformationEquationInstruction(50, SpvOpBitcast, {17}, insert_before)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpBitcast, {17},
+                                                 insert_before)
+                   .IsApplicable(context.get(), transformation_context));
 
   // Vector of integral components does not exist.
-  ASSERT_FALSE(
-      TransformationEquationInstruction(50, SpvOpBitcast, {20}, insert_before)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpBitcast, {20},
+                                                 insert_before)
+                   .IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationEquationInstructionTest, BitcastResultTypeIntDoesNotExist2) {
@@ -773,19 +774,19 @@ TEST(TransformationEquationInstructionTest, BitcastResultTypeIntDoesNotExist2) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  auto insert_before = MakeInstructionDescriptor(13, SpvOpReturn, 0);
+  auto insert_before = MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   {
-    TransformationEquationInstruction transformation(50, SpvOpBitcast, {17},
-                                                     insert_before);
+    TransformationEquationInstruction transformation(50, spv::Op::OpBitcast,
+                                                     {17}, insert_before);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
   }
   {
-    TransformationEquationInstruction transformation(51, SpvOpBitcast, {20},
-                                                     insert_before);
+    TransformationEquationInstruction transformation(51, spv::Op::OpBitcast,
+                                                     {20}, insert_before);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -848,19 +849,19 @@ TEST(TransformationEquationInstructionTest, BitcastResultTypeIntDoesNotExist3) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  auto insert_before = MakeInstructionDescriptor(13, SpvOpReturn, 0);
+  auto insert_before = MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   {
-    TransformationEquationInstruction transformation(50, SpvOpBitcast, {17},
-                                                     insert_before);
+    TransformationEquationInstruction transformation(50, spv::Op::OpBitcast,
+                                                     {17}, insert_before);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
   }
   {
-    TransformationEquationInstruction transformation(51, SpvOpBitcast, {20},
-                                                     insert_before);
+    TransformationEquationInstruction transformation(51, spv::Op::OpBitcast,
+                                                     {20}, insert_before);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -922,20 +923,20 @@ TEST(TransformationEquationInstructionTest, BitcastResultTypeIntDoesNotExist4) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  auto insert_before = MakeInstructionDescriptor(13, SpvOpReturn, 0);
+  auto insert_before = MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   {
-    TransformationEquationInstruction transformation(50, SpvOpBitcast, {17},
-                                                     insert_before);
+    TransformationEquationInstruction transformation(50, spv::Op::OpBitcast,
+                                                     {17}, insert_before);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
   }
 
-  ASSERT_FALSE(
-      TransformationEquationInstruction(51, SpvOpBitcast, {20}, insert_before)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationEquationInstruction(51, spv::Op::OpBitcast, {20},
+                                                 insert_before)
+                   .IsApplicable(context.get(), transformation_context));
 
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
                                                kConsoleMessageConsumer));
@@ -993,20 +994,20 @@ TEST(TransformationEquationInstructionTest, BitcastResultTypeIntDoesNotExist5) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  auto insert_before = MakeInstructionDescriptor(13, SpvOpReturn, 0);
+  auto insert_before = MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   {
-    TransformationEquationInstruction transformation(50, SpvOpBitcast, {17},
-                                                     insert_before);
+    TransformationEquationInstruction transformation(50, spv::Op::OpBitcast,
+                                                     {17}, insert_before);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
   }
 
-  ASSERT_FALSE(
-      TransformationEquationInstruction(51, SpvOpBitcast, {20}, insert_before)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationEquationInstruction(51, spv::Op::OpBitcast, {20},
+                                                 insert_before)
+                   .IsApplicable(context.get(), transformation_context));
 
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
                                                kConsoleMessageConsumer));
@@ -1066,19 +1067,19 @@ TEST(TransformationEquationInstructionTest, BitcastResultTypeIntDoesNotExist6) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  auto insert_before = MakeInstructionDescriptor(13, SpvOpReturn, 0);
+  auto insert_before = MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   {
-    TransformationEquationInstruction transformation(50, SpvOpBitcast, {17},
-                                                     insert_before);
+    TransformationEquationInstruction transformation(50, spv::Op::OpBitcast,
+                                                     {17}, insert_before);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
   }
   {
-    TransformationEquationInstruction transformation(51, SpvOpBitcast, {20},
-                                                     insert_before);
+    TransformationEquationInstruction transformation(51, spv::Op::OpBitcast,
+                                                     {20}, insert_before);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -1146,19 +1147,19 @@ TEST(TransformationEquationInstructionTest, BitcastResultTypeIntDoesNotExist7) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  auto insert_before = MakeInstructionDescriptor(13, SpvOpReturn, 0);
+  auto insert_before = MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   {
-    TransformationEquationInstruction transformation(50, SpvOpBitcast, {17},
-                                                     insert_before);
+    TransformationEquationInstruction transformation(50, spv::Op::OpBitcast,
+                                                     {17}, insert_before);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
   }
   {
-    TransformationEquationInstruction transformation(51, SpvOpBitcast, {20},
-                                                     insert_before);
+    TransformationEquationInstruction transformation(51, spv::Op::OpBitcast,
+                                                     {20}, insert_before);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -1222,10 +1223,10 @@ TEST(TransformationEquationInstructionTest, Miscellaneous1) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   protobufs::InstructionDescriptor return_instruction =
-      MakeInstructionDescriptor(13, SpvOpReturn, 0);
+      MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   auto transformation1 = TransformationEquationInstruction(
-      522, SpvOpISub, {113, 113}, return_instruction);
+      522, spv::Op::OpISub, {113, 113}, return_instruction);
   ASSERT_TRUE(
       transformation1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation1, context.get(),
@@ -1234,7 +1235,7 @@ TEST(TransformationEquationInstructionTest, Miscellaneous1) {
                                                kConsoleMessageConsumer));
 
   auto transformation2 = TransformationEquationInstruction(
-      570, SpvOpIAdd, {522, 113}, return_instruction);
+      570, spv::Op::OpIAdd, {522, 113}, return_instruction);
   ASSERT_TRUE(
       transformation2.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation2, context.get(),
@@ -1294,10 +1295,10 @@ TEST(TransformationEquationInstructionTest, Miscellaneous2) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   protobufs::InstructionDescriptor return_instruction =
-      MakeInstructionDescriptor(13, SpvOpReturn, 0);
+      MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   auto transformation1 = TransformationEquationInstruction(
-      522, SpvOpISub, {113, 113}, return_instruction);
+      522, spv::Op::OpISub, {113, 113}, return_instruction);
   ASSERT_TRUE(
       transformation1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation1, context.get(),
@@ -1306,7 +1307,7 @@ TEST(TransformationEquationInstructionTest, Miscellaneous2) {
                                                kConsoleMessageConsumer));
 
   auto transformation2 = TransformationEquationInstruction(
-      570, SpvOpIAdd, {522, 113}, return_instruction);
+      570, spv::Op::OpIAdd, {522, 113}, return_instruction);
   ASSERT_TRUE(
       transformation2.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation2, context.get(),
@@ -1380,97 +1381,97 @@ TEST(TransformationEquationInstructionTest, ConversionInstructions) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   protobufs::InstructionDescriptor return_instruction =
-      MakeInstructionDescriptor(13, SpvOpReturn, 0);
+      MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   // Too few instruction operands.
-  ASSERT_FALSE(TransformationEquationInstruction(50, SpvOpConvertSToF, {},
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpConvertSToF, {},
                                                  return_instruction)
                    .IsApplicable(context.get(), transformation_context));
 
   // Too many instruction operands.
-  ASSERT_FALSE(TransformationEquationInstruction(50, SpvOpConvertSToF, {15, 16},
-                                                 return_instruction)
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpConvertSToF,
+                                                 {15, 16}, return_instruction)
                    .IsApplicable(context.get(), transformation_context));
 
   // Operand has no type id.
-  ASSERT_FALSE(TransformationEquationInstruction(50, SpvOpConvertSToF, {7},
-                                                 return_instruction)
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpConvertSToF,
+                                                 {7}, return_instruction)
                    .IsApplicable(context.get(), transformation_context));
 
   // OpConvertSToF and OpConvertUToF require an operand to have scalar or vector
   // of integral components type.
-  ASSERT_FALSE(TransformationEquationInstruction(50, SpvOpConvertSToF, {17},
-                                                 return_instruction)
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpConvertSToF,
+                                                 {17}, return_instruction)
                    .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(TransformationEquationInstruction(50, SpvOpConvertSToF, {14},
-                                                 return_instruction)
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpConvertSToF,
+                                                 {14}, return_instruction)
                    .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(TransformationEquationInstruction(50, SpvOpConvertUToF, {17},
-                                                 return_instruction)
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpConvertUToF,
+                                                 {17}, return_instruction)
                    .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(TransformationEquationInstruction(50, SpvOpConvertUToF, {14},
-                                                 return_instruction)
+  ASSERT_FALSE(TransformationEquationInstruction(50, spv::Op::OpConvertUToF,
+                                                 {14}, return_instruction)
                    .IsApplicable(context.get(), transformation_context));
 
   {
-    TransformationEquationInstruction transformation(50, SpvOpConvertSToF, {15},
-                                                     return_instruction);
+    TransformationEquationInstruction transformation(50, spv::Op::OpConvertSToF,
+                                                     {15}, return_instruction);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
   }
   {
-    TransformationEquationInstruction transformation(51, SpvOpConvertSToF, {10},
-                                                     return_instruction);
+    TransformationEquationInstruction transformation(51, spv::Op::OpConvertSToF,
+                                                     {10}, return_instruction);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
   }
   {
-    TransformationEquationInstruction transformation(52, SpvOpConvertUToF, {16},
-                                                     return_instruction);
+    TransformationEquationInstruction transformation(52, spv::Op::OpConvertUToF,
+                                                     {16}, return_instruction);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
   }
   {
-    TransformationEquationInstruction transformation(53, SpvOpConvertUToF, {11},
-                                                     return_instruction);
+    TransformationEquationInstruction transformation(53, spv::Op::OpConvertUToF,
+                                                     {11}, return_instruction);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
   }
   {
-    TransformationEquationInstruction transformation(58, SpvOpConvertSToF, {18},
-                                                     return_instruction);
+    TransformationEquationInstruction transformation(58, spv::Op::OpConvertSToF,
+                                                     {18}, return_instruction);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
   }
   {
-    TransformationEquationInstruction transformation(59, SpvOpConvertUToF, {19},
-                                                     return_instruction);
+    TransformationEquationInstruction transformation(59, spv::Op::OpConvertUToF,
+                                                     {19}, return_instruction);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
   }
   {
-    TransformationEquationInstruction transformation(60, SpvOpConvertSToF, {20},
-                                                     return_instruction);
+    TransformationEquationInstruction transformation(60, spv::Op::OpConvertSToF,
+                                                     {20}, return_instruction);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
   }
   {
-    TransformationEquationInstruction transformation(61, SpvOpConvertUToF, {21},
-                                                     return_instruction);
+    TransformationEquationInstruction transformation(61, spv::Op::OpConvertUToF,
+                                                     {21}, return_instruction);
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -1555,22 +1556,22 @@ TEST(TransformationEquationInstructionTest, FloatResultTypeDoesNotExist) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   protobufs::InstructionDescriptor return_instruction =
-      MakeInstructionDescriptor(13, SpvOpReturn, 0);
+      MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   // Scalar float type doesn't exist.
-  ASSERT_FALSE(TransformationEquationInstruction(16, SpvOpConvertUToF, {10},
-                                                 return_instruction)
+  ASSERT_FALSE(TransformationEquationInstruction(16, spv::Op::OpConvertUToF,
+                                                 {10}, return_instruction)
                    .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(TransformationEquationInstruction(16, SpvOpConvertSToF, {11},
-                                                 return_instruction)
+  ASSERT_FALSE(TransformationEquationInstruction(16, spv::Op::OpConvertSToF,
+                                                 {11}, return_instruction)
                    .IsApplicable(context.get(), transformation_context));
 
   // Vector float type doesn't exist.
-  ASSERT_FALSE(TransformationEquationInstruction(16, SpvOpConvertUToF, {14},
-                                                 return_instruction)
+  ASSERT_FALSE(TransformationEquationInstruction(16, spv::Op::OpConvertUToF,
+                                                 {14}, return_instruction)
                    .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(TransformationEquationInstruction(16, SpvOpConvertSToF, {15},
-                                                 return_instruction)
+  ASSERT_FALSE(TransformationEquationInstruction(16, spv::Op::OpConvertSToF,
+                                                 {15}, return_instruction)
                    .IsApplicable(context.get(), transformation_context));
 }
 
@@ -1605,11 +1606,11 @@ TEST(TransformationEquationInstructionTest, HandlesIrrelevantIds) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  auto return_instruction = MakeInstructionDescriptor(13, SpvOpReturn, 0);
+  auto return_instruction = MakeInstructionDescriptor(13, spv::Op::OpReturn, 0);
 
   // Applicable.
-  TransformationEquationInstruction transformation(14, SpvOpIAdd, {15, 16},
-                                                   return_instruction);
+  TransformationEquationInstruction transformation(
+      14, spv::Op::OpIAdd, {15, 16}, return_instruction);
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
 
@@ -1662,11 +1663,12 @@ TEST(TransformationEquationInstructionTest, HandlesDeadBlock) {
   transformation_context.GetFactManager()->AddFactBlockIsDead(41);
 
   TransformationEquationInstruction transformation1(
-      14, SpvOpIAdd, {15, 16},
-      MakeInstructionDescriptor(13, SpvOpSelectionMerge, 0));
+      14, spv::Op::OpIAdd, {15, 16},
+      MakeInstructionDescriptor(13, spv::Op::OpSelectionMerge, 0));
   // No synonym is created since block is dead.
   TransformationEquationInstruction transformation2(
-      100, SpvOpISub, {14, 16}, MakeInstructionDescriptor(41, SpvOpBranch, 0));
+      100, spv::Op::OpISub, {14, 16},
+      MakeInstructionDescriptor(41, spv::Op::OpBranch, 0));
   ASSERT_TRUE(
       transformation1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation1, context.get(),

@@ -130,7 +130,7 @@ TEST_F(ValidateDerivatives, OpDPdxWrongResultType) {
 
   CompileSuccessfully(GenerateShaderCode(body).c_str());
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(), HasSubstr("Operand 10[%v4float] cannot "
+  EXPECT_THAT(getDiagnosticString(), HasSubstr("Operand '10[%v4float]' cannot "
                                                "be a type"));
 }
 

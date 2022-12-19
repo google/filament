@@ -39,7 +39,7 @@ bool TransformationPermutePhiOperands::IsApplicable(
   // Check that |message_.result_id| is valid.
   const auto* inst =
       ir_context->get_def_use_mgr()->GetDef(message_.result_id());
-  if (!inst || inst->opcode() != SpvOpPhi) {
+  if (!inst || inst->opcode() != spv::Op::OpPhi) {
     return false;
   }
 

@@ -38,7 +38,7 @@ bool TransformationReplaceOpPhiIdFromDeadPredecessor::IsApplicable(
     const TransformationContext& transformation_context) const {
   // |opphi_id| must be the id of an OpPhi instruction.
   auto opphi_def = ir_context->get_def_use_mgr()->GetDef(message_.opphi_id());
-  if (!opphi_def || opphi_def->opcode() != SpvOpPhi) {
+  if (!opphi_def || opphi_def->opcode() != spv::Op::OpPhi) {
     return false;
   }
 

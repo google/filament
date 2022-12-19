@@ -37,7 +37,7 @@ class TransformationLoad : public Transformation {
   // - |message_.is_atomic| must be true if want to work with OpAtomicLoad
   // - If |is_atomic| is true then |message_memory_scope_id| must be the id of
   //   an OpConstant 32 bit integer instruction with the value
-  //   SpvScopeInvocation.
+  //   spv::Scope::Invocation.
   // - If |is_atomic| is true then |message_.memory_semantics_id| must be the id
   //   of an OpConstant 32 bit integer instruction with the values
   //   SpvMemorySemanticsWorkgroupMemoryMask or

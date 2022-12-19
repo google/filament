@@ -57,7 +57,7 @@ void TransformationAddTypeVector::Apply(
          "Precondition: component count must be in range [2, 4].");
 
   auto type_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpTypeVector, 0, message_.fresh_id(),
+      ir_context, spv::Op::OpTypeVector, 0, message_.fresh_id(),
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {message_.component_type_id()}},
           {SPV_OPERAND_TYPE_LITERAL_INTEGER, {message_.component_count()}}});

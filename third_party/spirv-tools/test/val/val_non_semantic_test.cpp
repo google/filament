@@ -187,7 +187,7 @@ OpEntryPoint Vertex %main "main"
   // there's no specific error for using an OpExtInst too early, it requires a
   // type so by definition any use of a type in it will be an undefined ID
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("ID 2[%2] has not been defined"));
+              HasSubstr("ID '2[%2]' has not been defined"));
 }
 
 TEST_F(ValidateNonSemanticString, MissingOpExtensionPost1p6) {

@@ -40,9 +40,9 @@ bool TransformationSetFunctionControl::IsApplicable(
 
   // Check (via an assertion) that function control mask doesn't have any bad
   // bits set.
-  uint32_t acceptable_function_control_bits =
-      SpvFunctionControlInlineMask | SpvFunctionControlDontInlineMask |
-      SpvFunctionControlPureMask | SpvFunctionControlConstMask;
+  uint32_t acceptable_function_control_bits = uint32_t(
+      spv::FunctionControlMask::Inline | spv::FunctionControlMask::DontInline |
+      spv::FunctionControlMask::Pure | spv::FunctionControlMask::Const);
   // The following is to keep release-mode compilers happy as this variable is
   // only used in an assertion.
   (void)(acceptable_function_control_bits);
@@ -51,17 +51,19 @@ bool TransformationSetFunctionControl::IsApplicable(
 
   // Check (via an assertion) that function control mask does not have both
   // Inline and DontInline bits set.
-  assert(!((message_.function_control() & SpvFunctionControlInlineMask) &&
-           (message_.function_control() & SpvFunctionControlDontInlineMask)) &&
+  assert(!((message_.function_control() &
+            (uint32_t)spv::FunctionControlMask::Inline) &&
+           (message_.function_control() &
+            (uint32_t)spv::FunctionControlMask::DontInline)) &&
          "It is not OK to set both the 'Inline' and 'DontInline' bits of a "
          "function control mask");
 
   // Check that Const and Pure are only present if they were present on the
   // original function
   for (auto mask_bit :
-       {SpvFunctionControlPureMask, SpvFunctionControlConstMask}) {
-    if ((message_.function_control() & mask_bit) &&
-        !(existing_function_control_mask & mask_bit)) {
+       {spv::FunctionControlMask::Pure, spv::FunctionControlMask::Const}) {
+    if ((message_.function_control() & uint32_t(mask_bit)) &&
+        !(existing_function_control_mask & uint32_t(mask_bit))) {
       return false;
     }
   }

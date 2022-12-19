@@ -65,7 +65,7 @@ void TransformationAddConstantScalar::Apply(
     opt::IRContext* ir_context,
     TransformationContext* transformation_context) const {
   auto new_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpConstant, message_.type_id(), message_.fresh_id(),
+      ir_context, spv::Op::OpConstant, message_.type_id(), message_.fresh_id(),
       opt::Instruction::OperandList(
           {{SPV_OPERAND_TYPE_LITERAL_INTEGER,
             std::vector<uint32_t>(message_.word().begin(),

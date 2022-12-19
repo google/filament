@@ -31,13 +31,14 @@ class RemoveUnusedInterfaceVariablesContext {
         instruction.ForEachInId([&](const uint32_t* id) {
           if (used_variables_.count(*id)) return;
           auto* var = parent_.get_def_use_mgr()->GetDef(*id);
-          if (!var || var->opcode() != SpvOpVariable) return;
-          auto storage_class = var->GetSingleWordInOperand(0);
-          if (storage_class != SpvStorageClassFunction &&
+          if (!var || var->opcode() != spv::Op::OpVariable) return;
+          auto storage_class =
+              spv::StorageClass(var->GetSingleWordInOperand(0));
+          if (storage_class != spv::StorageClass::Function &&
               (parent_.get_module()->version() >=
                    SPV_SPIRV_VERSION_WORD(1, 4) ||
-               storage_class == SpvStorageClassInput ||
-               storage_class == SpvStorageClassOutput))
+               storage_class == spv::StorageClass::Input ||
+               storage_class == spv::StorageClass::Output))
             used_variables_.insert(*id);
         });
     return false;

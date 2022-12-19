@@ -64,19 +64,19 @@ bool TransformationSplitBlock::IsApplicable(
          " block split point exists.");
 
   if (split_before->PreviousNode() &&
-      split_before->PreviousNode()->opcode() == SpvOpSelectionMerge) {
+      split_before->PreviousNode()->opcode() == spv::Op::OpSelectionMerge) {
     // We cannot split directly after a selection merge: this would separate
     // the merge from its associated branch or switch operation.
     return false;
   }
-  if (split_before->opcode() == SpvOpVariable) {
+  if (split_before->opcode() == spv::Op::OpVariable) {
     // We cannot split directly after a variable; variables in a function
     // must be contiguous in the entry block.
     return false;
   }
   // We cannot split before an OpPhi unless the OpPhi has exactly one
   // associated incoming edge.
-  if (split_before->opcode() == SpvOpPhi &&
+  if (split_before->opcode() == spv::Op::OpPhi &&
       split_before->NumInOperands() != 2) {
     return false;
   }
@@ -110,7 +110,7 @@ void TransformationSplitBlock::Apply(
   // The split does not automatically add a branch between the two parts of
   // the original block, so we add one.
   auto branch_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpBranch, 0, 0,
+      ir_context, spv::Op::OpBranch, 0, 0,
       std::initializer_list<opt::Operand>{opt::Operand(
           spv_operand_type_t::SPV_OPERAND_TYPE_ID, {message_.fresh_id()})});
   auto branch_instruction_ptr = branch_instruction.get();

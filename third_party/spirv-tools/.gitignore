@@ -5,6 +5,8 @@ compile_commands.json
 /build*/
 /buildtools/
 /external/googletest
+/external/SPIRV-Headers
+/external/spirv-headers
 /external/effcee
 /external/re2
 /external/protobuf

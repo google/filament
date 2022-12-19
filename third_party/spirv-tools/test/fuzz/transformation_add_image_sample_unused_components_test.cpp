@@ -73,14 +73,14 @@ TEST(TransformationAddImageSampleUnusedComponentsTest, IsApplicable) {
       MakeUnique<FactManager>(context.get()), validator_options);
   // Tests applicable image instruction.
   auto instruction_descriptor =
-      MakeInstructionDescriptor(25, SpvOpImageSampleImplicitLod, 0);
+      MakeInstructionDescriptor(25, spv::Op::OpImageSampleImplicitLod, 0);
   auto transformation =
       TransformationAddImageSampleUnusedComponents(23, instruction_descriptor);
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
 
   instruction_descriptor =
-      MakeInstructionDescriptor(26, SpvOpImageSampleExplicitLod, 0);
+      MakeInstructionDescriptor(26, spv::Op::OpImageSampleExplicitLod, 0);
   transformation =
       TransformationAddImageSampleUnusedComponents(24, instruction_descriptor);
   ASSERT_TRUE(
@@ -88,27 +88,27 @@ TEST(TransformationAddImageSampleUnusedComponentsTest, IsApplicable) {
 
   // Tests undefined image instructions.
   instruction_descriptor =
-      MakeInstructionDescriptor(27, SpvOpImageSampleImplicitLod, 0);
+      MakeInstructionDescriptor(27, spv::Op::OpImageSampleImplicitLod, 0);
   transformation =
       TransformationAddImageSampleUnusedComponents(23, instruction_descriptor);
   ASSERT_FALSE(
       transformation.IsApplicable(context.get(), transformation_context));
 
   instruction_descriptor =
-      MakeInstructionDescriptor(28, SpvOpImageSampleExplicitLod, 0);
+      MakeInstructionDescriptor(28, spv::Op::OpImageSampleExplicitLod, 0);
   transformation =
       TransformationAddImageSampleUnusedComponents(23, instruction_descriptor);
   ASSERT_FALSE(
       transformation.IsApplicable(context.get(), transformation_context));
 
   // Tests non-image instructions.
-  instruction_descriptor = MakeInstructionDescriptor(19, SpvOpLabel, 0);
+  instruction_descriptor = MakeInstructionDescriptor(19, spv::Op::OpLabel, 0);
   transformation =
       TransformationAddImageSampleUnusedComponents(24, instruction_descriptor);
   ASSERT_FALSE(
       transformation.IsApplicable(context.get(), transformation_context));
 
-  instruction_descriptor = MakeInstructionDescriptor(20, SpvOpLoad, 0);
+  instruction_descriptor = MakeInstructionDescriptor(20, spv::Op::OpLoad, 0);
   transformation =
       TransformationAddImageSampleUnusedComponents(24, instruction_descriptor);
   ASSERT_FALSE(
@@ -116,7 +116,7 @@ TEST(TransformationAddImageSampleUnusedComponentsTest, IsApplicable) {
 
   // Tests coordinate operand being a vec4.
   instruction_descriptor =
-      MakeInstructionDescriptor(27, SpvOpImageSampleExplicitLod, 0);
+      MakeInstructionDescriptor(27, spv::Op::OpImageSampleExplicitLod, 0);
   transformation =
       TransformationAddImageSampleUnusedComponents(22, instruction_descriptor);
   ASSERT_FALSE(
@@ -124,7 +124,7 @@ TEST(TransformationAddImageSampleUnusedComponentsTest, IsApplicable) {
 
   // Tests undefined coordinate with unused operands.
   instruction_descriptor =
-      MakeInstructionDescriptor(25, SpvOpImageSampleImplicitLod, 0);
+      MakeInstructionDescriptor(25, spv::Op::OpImageSampleImplicitLod, 0);
   transformation =
       TransformationAddImageSampleUnusedComponents(27, instruction_descriptor);
   ASSERT_FALSE(
@@ -133,7 +133,7 @@ TEST(TransformationAddImageSampleUnusedComponentsTest, IsApplicable) {
   // Tests coordinate with unused operands being a non-OpCompositeConstruct
   // instruction.
   instruction_descriptor =
-      MakeInstructionDescriptor(25, SpvOpImageSampleImplicitLod, 0);
+      MakeInstructionDescriptor(25, spv::Op::OpImageSampleImplicitLod, 0);
   transformation =
       TransformationAddImageSampleUnusedComponents(21, instruction_descriptor);
   ASSERT_FALSE(
@@ -142,7 +142,7 @@ TEST(TransformationAddImageSampleUnusedComponentsTest, IsApplicable) {
   // Tests the first OpCompositeConstruct constituent not being the original
   // coordinate.
   instruction_descriptor =
-      MakeInstructionDescriptor(25, SpvOpImageSampleImplicitLod, 0);
+      MakeInstructionDescriptor(25, spv::Op::OpImageSampleImplicitLod, 0);
   transformation =
       TransformationAddImageSampleUnusedComponents(22, instruction_descriptor);
   ASSERT_FALSE(
@@ -198,13 +198,13 @@ TEST(TransformationAddImageSampleUnusedComponentsTest, Apply) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   auto instruction_descriptor =
-      MakeInstructionDescriptor(25, SpvOpImageSampleImplicitLod, 0);
+      MakeInstructionDescriptor(25, spv::Op::OpImageSampleImplicitLod, 0);
   auto transformation =
       TransformationAddImageSampleUnusedComponents(23, instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
   instruction_descriptor =
-      MakeInstructionDescriptor(26, SpvOpImageSampleExplicitLod, 0);
+      MakeInstructionDescriptor(26, spv::Op::OpImageSampleExplicitLod, 0);
   transformation =
       TransformationAddImageSampleUnusedComponents(24, instruction_descriptor);
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);

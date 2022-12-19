@@ -39,7 +39,7 @@ namespace opt {
 Instruction* Loop::GetInductionStepOperation(
     const Instruction* induction) const {
   // Induction must be a phi instruction.
-  assert(induction->opcode() == SpvOpPhi);
+  assert(induction->opcode() == spv::Op::OpPhi);
 
   Instruction* step = nullptr;
 
@@ -75,8 +75,8 @@ Instruction* Loop::GetInductionStepOperation(
     return nullptr;
   }
 
-  if (def_use_manager->GetDef(lhs)->opcode() != SpvOp::SpvOpConstant &&
-      def_use_manager->GetDef(rhs)->opcode() != SpvOp::SpvOpConstant) {
+  if (def_use_manager->GetDef(lhs)->opcode() != spv::Op::OpConstant &&
+      def_use_manager->GetDef(rhs)->opcode() != spv::Op::OpConstant) {
     return nullptr;
   }
 
@@ -85,31 +85,31 @@ Instruction* Loop::GetInductionStepOperation(
 
 // Returns true if the |step| operation is an induction variable step operation
 // which is currently handled.
-bool Loop::IsSupportedStepOp(SpvOp step) const {
+bool Loop::IsSupportedStepOp(spv::Op step) const {
   switch (step) {
-    case SpvOp::SpvOpISub:
-    case SpvOp::SpvOpIAdd:
+    case spv::Op::OpISub:
+    case spv::Op::OpIAdd:
       return true;
     default:
       return false;
   }
 }
 
-bool Loop::IsSupportedCondition(SpvOp condition) const {
+bool Loop::IsSupportedCondition(spv::Op condition) const {
   switch (condition) {
     // <
-    case SpvOp::SpvOpULessThan:
-    case SpvOp::SpvOpSLessThan:
+    case spv::Op::OpULessThan:
+    case spv::Op::OpSLessThan:
     // >
-    case SpvOp::SpvOpUGreaterThan:
-    case SpvOp::SpvOpSGreaterThan:
+    case spv::Op::OpUGreaterThan:
+    case spv::Op::OpSGreaterThan:
 
     // >=
-    case SpvOp::SpvOpSGreaterThanEqual:
-    case SpvOp::SpvOpUGreaterThanEqual:
+    case spv::Op::OpSGreaterThanEqual:
+    case spv::Op::OpUGreaterThanEqual:
     // <=
-    case SpvOp::SpvOpSLessThanEqual:
-    case SpvOp::SpvOpULessThanEqual:
+    case spv::Op::OpSLessThanEqual:
+    case spv::Op::OpULessThanEqual:
 
       return true;
     default:
@@ -117,7 +117,8 @@ bool Loop::IsSupportedCondition(SpvOp condition) const {
   }
 }
 
-int64_t Loop::GetResidualConditionValue(SpvOp condition, int64_t initial_value,
+int64_t Loop::GetResidualConditionValue(spv::Op condition,
+                                        int64_t initial_value,
                                         int64_t step_value,
                                         size_t number_of_iterations,
                                         size_t factor) {
@@ -128,13 +129,13 @@ int64_t Loop::GetResidualConditionValue(SpvOp condition, int64_t initial_value,
   // loop where just less than or greater than. Adding or subtracting one should
   // give a functionally equivalent value.
   switch (condition) {
-    case SpvOp::SpvOpSGreaterThanEqual:
-    case SpvOp::SpvOpUGreaterThanEqual: {
+    case spv::Op::OpSGreaterThanEqual:
+    case spv::Op::OpUGreaterThanEqual: {
       remainder -= 1;
       break;
     }
-    case SpvOp::SpvOpSLessThanEqual:
-    case SpvOp::SpvOpULessThanEqual: {
+    case spv::Op::OpSLessThanEqual:
+    case spv::Op::OpULessThanEqual: {
       remainder += 1;
       break;
     }
@@ -152,7 +153,7 @@ Instruction* Loop::GetConditionInst() const {
   }
   Instruction* branch_conditional = &*condition_block->tail();
   if (!branch_conditional ||
-      branch_conditional->opcode() != SpvOpBranchConditional) {
+      branch_conditional->opcode() != spv::Op::OpBranchConditional) {
     return nullptr;
   }
   Instruction* condition_inst = context_->get_def_use_mgr()->GetDef(
@@ -318,7 +319,7 @@ void Loop::SetMergeBlock(BasicBlock* merge) {
 void Loop::SetPreHeaderBlock(BasicBlock* preheader) {
   if (preheader) {
     assert(!IsInsideLoop(preheader) && "The preheader block is in the loop");
-    assert(preheader->tail()->opcode() == SpvOpBranch &&
+    assert(preheader->tail()->opcode() == spv::Op::OpBranch &&
            "The preheader block does not unconditionally branch to the header "
            "block");
     assert(preheader->tail()->GetSingleWordOperand(0) ==
@@ -387,7 +388,7 @@ void Loop::GetMergingBlocks(
 
 namespace {
 
-static inline bool IsBasicBlockSafeToClone(IRContext* context, BasicBlock* bb) {
+inline bool IsBasicBlockSafeToClone(IRContext* context, BasicBlock* bb) {
   for (Instruction& inst : *bb) {
     if (!inst.IsBranch() && !context->IsCombinatorInstruction(&inst))
       return false;
@@ -443,7 +444,7 @@ bool Loop::IsLCSSA() const {
                 BasicBlock* parent = ir_context->get_instr_block(use);
                 assert(parent && "Invalid analysis");
                 if (IsInsideLoop(parent)) return true;
-                if (use->opcode() != SpvOpPhi) return false;
+                if (use->opcode() != spv::Op::OpPhi) return false;
                 return exit_blocks.count(parent->id());
               }))
         return false;
@@ -486,7 +487,7 @@ void Loop::ComputeLoopStructuredOrder(
     ordered_loop_blocks->push_back(loop_preheader_);
 
   bool is_shader =
-      context_->get_feature_mgr()->HasCapability(SpvCapabilityShader);
+      context_->get_feature_mgr()->HasCapability(spv::Capability::Shader);
   if (!is_shader) {
     cfg.ForEachBlockInReversePostOrder(
         loop_header_, [ordered_loop_blocks, this](BasicBlock* bb) {
@@ -497,7 +498,8 @@ void Loop::ComputeLoopStructuredOrder(
     // continue blocks that must be copied to retain the structured order.
     // The structured order will include these.
     std::list<BasicBlock*> order;
-    cfg.ComputeStructuredOrder(loop_header_->GetParent(), loop_header_, &order);
+    cfg.ComputeStructuredOrder(loop_header_->GetParent(), loop_header_,
+                               loop_merge_, &order);
     for (BasicBlock* bb : order) {
       if (bb == GetMergeBlock()) {
         break;
@@ -646,7 +648,7 @@ BasicBlock* Loop::FindConditionBlock() const {
   const Instruction& branch = *bb->ctail();
 
   // Make sure the branch is a conditional branch.
-  if (branch.opcode() != SpvOpBranchConditional) return nullptr;
+  if (branch.opcode() != spv::Op::OpBranchConditional) return nullptr;
 
   // Make sure one of the two possible branches is to the merge block.
   if (branch.GetSingleWordInOperand(1) == loop_merge_->id() ||
@@ -715,7 +717,7 @@ bool Loop::FindNumberOfIterations(const Instruction* induction,
   }
 
   // If this is a subtraction step we should negate the step value.
-  if (step_inst->opcode() == SpvOp::SpvOpISub) {
+  if (step_inst->opcode() == spv::Op::OpISub) {
     step_value = -step_value;
   }
 
@@ -752,7 +754,7 @@ bool Loop::FindNumberOfIterations(const Instruction* induction,
 // |step_value| where diff is calculated differently according to the
 // |condition| and uses the |condition_value| and |init_value|. If diff /
 // |step_value| is NOT cleanly divisible then we add one to the sum.
-int64_t Loop::GetIterations(SpvOp condition, int64_t condition_value,
+int64_t Loop::GetIterations(spv::Op condition, int64_t condition_value,
                             int64_t init_value, int64_t step_value) const {
   if (step_value == 0) {
     return 0;
@@ -761,8 +763,8 @@ int64_t Loop::GetIterations(SpvOp condition, int64_t condition_value,
   int64_t diff = 0;
 
   switch (condition) {
-    case SpvOp::SpvOpSLessThan:
-    case SpvOp::SpvOpULessThan: {
+    case spv::Op::OpSLessThan:
+    case spv::Op::OpULessThan: {
       // If the condition is not met to begin with the loop will never iterate.
       if (!(init_value < condition_value)) return 0;
 
@@ -777,8 +779,8 @@ int64_t Loop::GetIterations(SpvOp condition, int64_t condition_value,
 
       break;
     }
-    case SpvOp::SpvOpSGreaterThan:
-    case SpvOp::SpvOpUGreaterThan: {
+    case spv::Op::OpSGreaterThan:
+    case spv::Op::OpUGreaterThan: {
       // If the condition is not met to begin with the loop will never iterate.
       if (!(init_value > condition_value)) return 0;
 
@@ -794,12 +796,12 @@ int64_t Loop::GetIterations(SpvOp condition, int64_t condition_value,
       break;
     }
 
-    case SpvOp::SpvOpSGreaterThanEqual:
-    case SpvOp::SpvOpUGreaterThanEqual: {
+    case spv::Op::OpSGreaterThanEqual:
+    case spv::Op::OpUGreaterThanEqual: {
       // If the condition is not met to begin with the loop will never iterate.
       if (!(init_value >= condition_value)) return 0;
 
-      // We subtract one to make it the same as SpvOpGreaterThan as it is
+      // We subtract one to make it the same as spv::Op::OpGreaterThan as it is
       // functionally equivalent.
       diff = init_value - (condition_value - 1);
 
@@ -813,13 +815,13 @@ int64_t Loop::GetIterations(SpvOp condition, int64_t condition_value,
       break;
     }
 
-    case SpvOp::SpvOpSLessThanEqual:
-    case SpvOp::SpvOpULessThanEqual: {
+    case spv::Op::OpSLessThanEqual:
+    case spv::Op::OpULessThanEqual: {
       // If the condition is not met to begin with the loop will never iterate.
       if (!(init_value <= condition_value)) return 0;
 
-      // We add one to make it the same as SpvOpLessThan as it is functionally
-      // equivalent.
+      // We add one to make it the same as spv::Op::OpLessThan as it is
+      // functionally equivalent.
       diff = (condition_value + 1) - init_value;
 
       // If the operation is a less than operation then the diff and step must
@@ -853,7 +855,7 @@ int64_t Loop::GetIterations(SpvOp condition, int64_t condition_value,
 void Loop::GetInductionVariables(
     std::vector<Instruction*>& induction_variables) const {
   for (Instruction& inst : *loop_header_) {
-    if (inst.opcode() == SpvOp::SpvOpPhi) {
+    if (inst.opcode() == spv::Op::OpPhi) {
       induction_variables.push_back(&inst);
     }
   }
@@ -866,7 +868,7 @@ Instruction* Loop::FindConditionVariable(
 
   Instruction* induction = nullptr;
   // Verify that the branch instruction is a conditional branch.
-  if (branch_inst.opcode() == SpvOp::SpvOpBranchConditional) {
+  if (branch_inst.opcode() == spv::Op::OpBranchConditional) {
     // From the branch instruction find the branch condition.
     analysis::DefUseManager* def_use_manager = context_->get_def_use_mgr();
 
@@ -882,7 +884,8 @@ Instruction* Loop::FindConditionVariable(
           def_use_manager->GetDef(condition->GetSingleWordOperand(2));
 
       // Make sure the variable instruction used is a phi.
-      if (!variable_inst || variable_inst->opcode() != SpvOpPhi) return nullptr;
+      if (!variable_inst || variable_inst->opcode() != spv::Op::OpPhi)
+        return nullptr;
 
       // Make sure the phi instruction only has two incoming blocks. Each
       // incoming block will be represented by two in operands in the phi
