@@ -1207,13 +1207,14 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
 
     // Assign a label to the framebuffer for debugging purposes.
-    if (UTILS_UNLIKELY(mContext.debugUtilsSupported) && !mContext.currentDebugMarker.empty()) {
+    const std::string& debugLabel = mContext.commands->getCurrentDebugLabel();
+    if (UTILS_UNLIKELY(mContext.debugUtilsSupported) && !debugLabel.empty()) {
         const VkDebugUtilsObjectNameInfoEXT info = {
             VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             nullptr,
             VK_OBJECT_TYPE_FRAMEBUFFER,
             reinterpret_cast<uint64_t>(vkfb),
-            mContext.currentDebugMarker.c_str(),
+            debugLabel.c_str(),
         };
         vkSetDebugUtilsObjectNameEXT(mContext.device, &info);
     }
@@ -1492,52 +1493,26 @@ void VulkanDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
 }
 
 void VulkanDriver::insertEventMarker(char const* string, uint32_t len) {
-    constexpr float MARKER_COLOR[] = { 0.0f, 1.0f, 0.0f, 1.0f };
-    const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
     if (mContext.debugUtilsSupported) {
-        VkDebugUtilsLabelEXT labelInfo = {
-            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-            .pLabelName = string,
-            .color = {1, 1, 0, 1},
-        };
-        vkCmdInsertDebugUtilsLabelEXT(cmdbuffer, &labelInfo);
+        mContext.commands->insertDebugUtilsLabel(string);
     } else if (mContext.debugMarkersSupported) {
-        VkDebugMarkerMarkerInfoEXT markerInfo = {};
-        markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-        memcpy(markerInfo.color, &MARKER_COLOR[0], sizeof(MARKER_COLOR));
-        markerInfo.pMarkerName = string;
-        vkCmdDebugMarkerInsertEXT(cmdbuffer, &markerInfo);
+        mContext.commands->insertDebugMarker(string);
     }
 }
 
 void VulkanDriver::pushGroupMarker(char const* string, uint32_t len) {
-    // TODO: Add group marker color to the Driver API
-    constexpr float MARKER_COLOR[] = { 0.0f, 1.0f, 0.0f, 1.0f };
-    const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
     if (mContext.debugUtilsSupported) {
-        VkDebugUtilsLabelEXT labelInfo = {
-            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-            .pLabelName = string,
-            .color = {0, 1, 0, 1},
-        };
-        vkCmdBeginDebugUtilsLabelEXT(cmdbuffer, &labelInfo);
-        mContext.currentDebugMarker = string;
+        mContext.commands->beginDebugUtilsLabel(string);
     } else if (mContext.debugMarkersSupported) {
-        VkDebugMarkerMarkerInfoEXT markerInfo = {};
-        markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-        memcpy(markerInfo.color, &MARKER_COLOR[0], sizeof(MARKER_COLOR));
-        markerInfo.pMarkerName = string;
-        vkCmdDebugMarkerBeginEXT(cmdbuffer, &markerInfo);
+        mContext.commands->beginDebugMarker(string);
     }
 }
 
 void VulkanDriver::popGroupMarker(int) {
-    const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
     if (mContext.debugUtilsSupported) {
-        vkCmdEndDebugUtilsLabelEXT(cmdbuffer);
-        mContext.currentDebugMarker.clear();
+        mContext.commands->endDebugUtilsLabel();
     } else if (mContext.debugMarkersSupported) {
-        vkCmdDebugMarkerEndEXT(cmdbuffer);
+        mContext.commands->endDebugMarker();
     }
 }
 

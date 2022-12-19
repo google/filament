@@ -93,7 +93,6 @@ struct VulkanContext {
     VmaAllocator allocator;
     VulkanTexture* emptyTexture = nullptr;
     VulkanCommands* commands = nullptr;
-    std::string currentDebugMarker;
 };
 
 } // namespace filament::backend

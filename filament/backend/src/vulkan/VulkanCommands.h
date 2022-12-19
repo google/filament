@@ -115,6 +115,26 @@ class VulkanCommands {
         // The observer's event handler can only be called during get().
         void setObserver(CommandBufferObserver* observer) { mObserver = observer; }
 
+        const std::string& getCurrentDebugLabel() { return mCurrentDebugLabel; }
+
+        // Calls vkCmdBeginDebugUtilsLabelEXT for the current command buffer.
+        void beginDebugUtilsLabel(char const* string);
+
+        // Calls vkCmdInsertDebugUtilsLabelEXT for the current command buffer.
+        void insertDebugUtilsLabel(char const* string);
+
+        // Calls vkCmdEndDebugUtilsLabelEXT for the current command buffer.
+        void endDebugUtilsLabel();
+
+        // Calls vkCmdDebugMarkerBeginEXT for the current command buffer.
+        void beginDebugMarker(char const* string);
+
+        // Calls vkCmdDebugMarkerInsertEXT for the current command buffer.
+        void insertDebugMarker(char const* string);
+
+        // Calls vkCmdDebugMarkerEndEXT for the current command buffer.
+        void endDebugMarker();
+
     private:
         static constexpr int CAPACITY = VK_MAX_COMMAND_BUFFERS;
         const VkDevice mDevice;
@@ -127,6 +147,8 @@ class VulkanCommands {
         VkSemaphore mSubmissionSignals[CAPACITY] = {};
         size_t mAvailableCount = CAPACITY;
         CommandBufferObserver* mObserver = nullptr;
+        std::string mCurrentDebugLabel;
+        std::string mCurrentDebugMarker;
 };
 
 } // namespace filament::backend

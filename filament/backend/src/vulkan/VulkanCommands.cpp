@@ -154,6 +154,17 @@ bool VulkanCommands::flush() {
     const int64_t index = mCurrent - &mStorage[0];
     VkSemaphore renderingFinished = mSubmissionSignals[index];
 
+    // VUID-vkEndCommandBuffer-commandBuffer-01815
+    // TODO: We need to order calls so that there is no outstanding label or markers.
+    if (!mCurrentDebugLabel.empty()) {
+      endDebugUtilsLabel();
+    }
+
+    // VUID-vkEndCommandBuffer-commandBuffer-00062
+    if (!mCurrentDebugMarker.empty()) {
+      endDebugMarker();
+    }
+
     vkEndCommandBuffer(mCurrent->cmdbuffer);
 
     // If the injected semaphore is an "image available" semaphore that has not yet been signaled,
@@ -269,6 +280,93 @@ void VulkanCommands::updateFences() {
             }
         }
     }
+}
+
+void VulkanCommands::beginDebugUtilsLabel(char const* string) {
+    const VkCommandBuffer cmdbuffer = get().cmdbuffer;
+    VkDebugUtilsLabelEXT labelInfo = {
+	.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+	.pLabelName = string,
+	.color = {0, 1, 0, 1},
+    };
+    vkCmdBeginDebugUtilsLabelEXT(cmdbuffer, &labelInfo);
+    mCurrentDebugLabel = string;
+}
+
+void VulkanCommands::insertDebugUtilsLabel(char const* string) {
+    assert_invariant(mCurrent);
+    assert_invariant(mCurrent->cmdbuffer);
+
+    const VkCommandBuffer cmdbuffer = mCurrent->cmdbuffer;
+
+    VkDebugUtilsLabelEXT labelInfo = {
+	.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+	.pLabelName = string,
+	.color = {1, 1, 0, 1},
+    };
+    vkCmdInsertDebugUtilsLabelEXT(cmdbuffer, &labelInfo);
+}
+
+void VulkanCommands::endDebugUtilsLabel() {
+    // TODO: the following should be turned into asserts after refactoring the push/pop
+    // label flow.
+    if (!mCurrent) {
+	return;
+    }
+    if (!mCurrent->cmdbuffer) {
+	return;
+    }
+    if (!mCurrentDebugLabel.empty()) {
+	return;
+    }
+
+    const VkCommandBuffer cmdbuffer = mCurrent->cmdbuffer;
+    vkCmdEndDebugUtilsLabelEXT(cmdbuffer);
+    mCurrentDebugLabel.clear();
+}
+
+void VulkanCommands::beginDebugMarker(char const* string) {
+    const VkCommandBuffer cmdbuffer = get().cmdbuffer;
+    constexpr float MARKER_COLOR[] = { 0.0f, 1.0f, 0.0f, 1.0f };
+
+    VkDebugMarkerMarkerInfoEXT markerInfo = {};
+    markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+    memcpy(markerInfo.color, &MARKER_COLOR[0], sizeof(MARKER_COLOR));
+    markerInfo.pMarkerName = string;
+    vkCmdDebugMarkerBeginEXT(cmdbuffer, &markerInfo);
+    mCurrentDebugMarker = string;
+}
+
+void VulkanCommands::insertDebugMarker(char const* string) {
+    assert_invariant(mCurrent);
+    assert_invariant(mCurrent->cmdbuffer);
+
+    constexpr float MARKER_COLOR[] = { 0.0f, 1.0f, 0.0f, 1.0f };
+    const VkCommandBuffer cmdbuffer = mCurrent->cmdbuffer;
+    VkDebugMarkerMarkerInfoEXT markerInfo = {};
+    markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+    memcpy(markerInfo.color, &MARKER_COLOR[0], sizeof(MARKER_COLOR));
+    markerInfo.pMarkerName = string;
+    vkCmdDebugMarkerInsertEXT(cmdbuffer, &markerInfo);
+}
+
+
+void VulkanCommands::endDebugMarker() {
+    // TODO: the following should be turned into asserts after refactoring the push/pop
+    // label flow.
+    if (!mCurrent) {
+	return;
+    }
+    if (!mCurrent->cmdbuffer) {
+	return;
+    }
+    if (!mCurrentDebugMarker.empty()) {
+        return;
+    }
+
+    const VkCommandBuffer cmdbuffer = mCurrent->cmdbuffer;
+    vkCmdDebugMarkerEndEXT(cmdbuffer);
+    mCurrentDebugMarker.clear();
 }
 
 } // namespace filament::backend
