@@ -35,10 +35,11 @@ void FuzzerPassCopyObjects::Apply() {
              opt::BasicBlock::iterator inst_it,
              const protobufs::InstructionDescriptor& instruction_descriptor)
           -> void {
-        assert(inst_it->opcode() ==
-                   instruction_descriptor.target_instruction_opcode() &&
-               "The opcode of the instruction we might insert before must be "
-               "the same as the opcode in the descriptor for the instruction");
+        assert(
+            inst_it->opcode() ==
+                spv::Op(instruction_descriptor.target_instruction_opcode()) &&
+            "The opcode of the instruction we might insert before must be "
+            "the same as the opcode in the descriptor for the instruction");
 
         if (GetTransformationContext()->GetFactManager()->BlockIsDead(
                 block->id())) {
@@ -48,7 +49,7 @@ void FuzzerPassCopyObjects::Apply() {
 
         // Check whether it is legitimate to insert a copy before this
         // instruction.
-        if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpCopyObject,
+        if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(spv::Op::OpCopyObject,
                                                           inst_it)) {
           return;
         }

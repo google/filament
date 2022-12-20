@@ -55,7 +55,8 @@ enum class FunctionDecl {
 class Function {
  public:
   Function(uint32_t id, uint32_t result_type_id,
-           SpvFunctionControlMask function_control, uint32_t function_type_id);
+           spv::FunctionControlMask function_control,
+           uint32_t function_type_id);
 
   /// Registers a function parameter in the current function
   /// @return Returns SPV_SUCCESS if the call was successful
@@ -80,7 +81,8 @@ class Function {
   ///
   /// @return Returns SPV_SUCCESS if the call was successful
   spv_result_t RegisterBlockVariable(uint32_t type_id, uint32_t id,
-                                     SpvStorageClass storage, uint32_t init_id);
+                                     spv::StorageClass storage,
+                                     uint32_t init_id);
 
   /// Registers a loop merge construct in the function
   ///
@@ -184,12 +186,12 @@ class Function {
       std::function<const std::vector<BasicBlock*>*(const BasicBlock*)>;
   /// Returns the block successors function for the augmented CFG.
   GetBlocksFunction AugmentedCFGSuccessorsFunction() const;
-  /// Like AugmentedCFGSuccessorsFunction, but also includes a forward edge from
-  /// a loop header block to its continue target, if they are different blocks.
-  GetBlocksFunction
-  AugmentedCFGSuccessorsFunctionIncludingHeaderToContinueEdge() const;
   /// Returns the block predecessors function for the augmented CFG.
   GetBlocksFunction AugmentedCFGPredecessorsFunction() const;
+  /// Returns the block structural successors function for the augmented CFG.
+  GetBlocksFunction AugmentedStructuralCFGSuccessorsFunction() const;
+  /// Returns the block structural predecessors function for the augmented CFG.
+  GetBlocksFunction AugmentedStructuralCFGPredecessorsFunction() const;
 
   /// Returns the control flow nesting depth of the given basic block.
   /// This function only works when you have structured control flow.
@@ -205,12 +207,12 @@ class Function {
 
   /// Registers execution model limitation such as "Feature X is only available
   /// with Execution Model Y".
-  void RegisterExecutionModelLimitation(SpvExecutionModel model,
+  void RegisterExecutionModelLimitation(spv::ExecutionModel model,
                                         const std::string& message);
 
   /// Registers execution model limitation with an |is_compatible| functor.
   void RegisterExecutionModelLimitation(
-      std::function<bool(SpvExecutionModel, std::string*)> is_compatible) {
+      std::function<bool(spv::ExecutionModel, std::string*)> is_compatible) {
     execution_model_limitations_.push_back(is_compatible);
   }
 
@@ -227,7 +229,7 @@ class Function {
   /// Returns true if the given execution model passes the limitations stored in
   /// execution_model_limitations_. Returns false otherwise and fills optional
   /// |reason| parameter.
-  bool IsCompatibleWithExecutionModel(SpvExecutionModel model,
+  bool IsCompatibleWithExecutionModel(spv::ExecutionModel model,
                                       std::string* reason = nullptr) const;
 
   // Inserts id to the set of functions called from this function.
@@ -286,7 +288,7 @@ class Function {
   uint32_t result_type_id_;
 
   /// The control fo the function
-  SpvFunctionControlMask function_control_;
+  spv::FunctionControlMask function_control_;
 
   /// The type of declaration of each function
   FunctionDecl declaration_type_;
@@ -381,7 +383,7 @@ class Function {
   /// function. The functor stored in the list return true if execution model
   /// is compatible, false otherwise. If the functor returns false, it can also
   /// optionally fill the string parameter with the reason for incompatibility.
-  std::list<std::function<bool(SpvExecutionModel, std::string*)>>
+  std::list<std::function<bool(spv::ExecutionModel, std::string*)>>
       execution_model_limitations_;
 
   /// Stores limitations imposed by instructions used within the function.

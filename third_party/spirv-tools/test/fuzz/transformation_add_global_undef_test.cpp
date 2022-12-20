@@ -71,7 +71,8 @@ TEST(TransformationAddGlobalUndefTest, BasicTest) {
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
-    ASSERT_EQ(SpvOpUndef, context->get_def_use_mgr()->GetDef(100)->opcode());
+    ASSERT_EQ(spv::Op::OpUndef,
+              context->get_def_use_mgr()->GetDef(100)->opcode());
   }
 
   TransformationAddGlobalUndef transformations[] = {

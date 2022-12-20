@@ -40,8 +40,8 @@ void FuzzerPassExpandVectorReductions::Apply() {
         }
 
         // |instruction| must be OpAny or OpAll.
-        if (instruction.opcode() != SpvOpAny &&
-            instruction.opcode() != SpvOpAll) {
+        if (instruction.opcode() != spv::Op::OpAny &&
+            instruction.opcode() != spv::Op::OpAll) {
           continue;
         }
 

@@ -29,12 +29,14 @@ bool IsBitWidthSupported(opt::IRContext* ir_context, uint32_t bit_width) {
       return true;
     case 64:
       return ir_context->get_feature_mgr()->HasCapability(
-                 SpvCapabilityFloat64) &&
-             ir_context->get_feature_mgr()->HasCapability(SpvCapabilityInt64);
+                 spv::Capability::Float64) &&
+             ir_context->get_feature_mgr()->HasCapability(
+                 spv::Capability::Int64);
     case 16:
       return ir_context->get_feature_mgr()->HasCapability(
-                 SpvCapabilityFloat16) &&
-             ir_context->get_feature_mgr()->HasCapability(SpvCapabilityInt16);
+                 spv::Capability::Float16) &&
+             ir_context->get_feature_mgr()->HasCapability(
+                 spv::Capability::Int16);
     default:
       return false;
   }
@@ -66,7 +68,8 @@ void FuzzerPassAddEquationInstructions::Apply() {
         // as an example opcode for this check, to be representative of *some*
         // opcode that defines an equation, even though we may choose a
         // different opcode below.
-        if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpIAdd, inst_it)) {
+        if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(spv::Op::OpIAdd,
+                                                          inst_it)) {
           return;
         }
 
@@ -78,7 +81,7 @@ void FuzzerPassAddEquationInstructions::Apply() {
                 [this](opt::IRContext* /*unused*/,
                        opt::Instruction* instruction) -> bool {
                   return instruction->result_id() && instruction->type_id() &&
-                         instruction->opcode() != SpvOpUndef &&
+                         instruction->opcode() != spv::Op::OpUndef &&
                          !GetTransformationContext()
                               ->GetFactManager()
                               ->IdIsIrrelevant(instruction->result_id());
@@ -86,15 +89,16 @@ void FuzzerPassAddEquationInstructions::Apply() {
 
         // Try the opcodes for which we know how to make ids at random until
         // something works.
-        std::vector<SpvOp> candidate_opcodes = {
-            SpvOpIAdd,        SpvOpISub,        SpvOpLogicalNot, SpvOpSNegate,
-            SpvOpConvertUToF, SpvOpConvertSToF, SpvOpBitcast};
+        std::vector<spv::Op> candidate_opcodes = {
+            spv::Op::OpIAdd,    spv::Op::OpISub,        spv::Op::OpLogicalNot,
+            spv::Op::OpSNegate, spv::Op::OpConvertUToF, spv::Op::OpConvertSToF,
+            spv::Op::OpBitcast};
         do {
           auto opcode =
               GetFuzzerContext()->RemoveAtRandomIndex(&candidate_opcodes);
           switch (opcode) {
-            case SpvOpConvertSToF:
-            case SpvOpConvertUToF: {
+            case spv::Op::OpConvertSToF:
+            case spv::Op::OpConvertUToF: {
               std::vector<const opt::Instruction*> candidate_instructions;
               for (const auto* inst :
                    GetIntegerInstructions(available_instructions)) {
@@ -144,7 +148,7 @@ void FuzzerPassAddEquationInstructions::Apply() {
                   {operand->result_id()}, instruction_descriptor));
               return;
             }
-            case SpvOpBitcast: {
+            case spv::Op::OpBitcast: {
               const auto candidate_instructions =
                   GetNumericalInstructions(available_instructions);
 
@@ -197,8 +201,8 @@ void FuzzerPassAddEquationInstructions::Apply() {
                 return;
               }
             } break;
-            case SpvOpIAdd:
-            case SpvOpISub: {
+            case spv::Op::OpIAdd:
+            case spv::Op::OpISub: {
               // Instructions of integer (scalar or vector) result type are
               // suitable for these opcodes.
               auto integer_instructions =
@@ -251,7 +255,7 @@ void FuzzerPassAddEquationInstructions::Apply() {
               }
               break;
             }
-            case SpvOpLogicalNot: {
+            case spv::Op::OpLogicalNot: {
               // Choose any available instruction of boolean scalar/vector
               // result type and equate its negation with a fresh id.
               auto boolean_instructions =
@@ -268,7 +272,7 @@ void FuzzerPassAddEquationInstructions::Apply() {
               }
               break;
             }
-            case SpvOpSNegate: {
+            case spv::Op::OpSNegate: {
               // Similar to OpLogicalNot, but for signed integer negation.
               auto integer_instructions =
                   GetIntegerInstructions(available_instructions);

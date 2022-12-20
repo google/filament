@@ -27,7 +27,6 @@
 #include "source/opt/instruction.h"
 #include "source/opt/ir_context.h"
 #include "spirv-tools/libspirv.h"
-#include "spirv/unified1/spirv.h"
 
 namespace spvtools {
 namespace lint {
@@ -43,7 +42,7 @@ std::string GetFriendlyName(opt::IRContext* context, uint32_t id) {
     ss << id;
   } else {
     opt::Instruction* inst_name = names.begin()->second;
-    if (inst_name->opcode() == SpvOpName) {
+    if (inst_name->opcode() == spv::Op::OpName) {
       ss << names.begin()->second->GetInOperand(0).AsString();
       ss << "[" << id << "]";
     } else {
@@ -54,26 +53,26 @@ std::string GetFriendlyName(opt::IRContext* context, uint32_t id) {
 }
 
 bool InstructionHasDerivative(const opt::Instruction& inst) {
-  static const SpvOp derivative_opcodes[] = {
+  static const spv::Op derivative_opcodes[] = {
       // Implicit derivatives.
-      SpvOpImageSampleImplicitLod,
-      SpvOpImageSampleDrefImplicitLod,
-      SpvOpImageSampleProjImplicitLod,
-      SpvOpImageSampleProjDrefImplicitLod,
-      SpvOpImageSparseSampleImplicitLod,
-      SpvOpImageSparseSampleDrefImplicitLod,
-      SpvOpImageSparseSampleProjImplicitLod,
-      SpvOpImageSparseSampleProjDrefImplicitLod,
+      spv::Op::OpImageSampleImplicitLod,
+      spv::Op::OpImageSampleDrefImplicitLod,
+      spv::Op::OpImageSampleProjImplicitLod,
+      spv::Op::OpImageSampleProjDrefImplicitLod,
+      spv::Op::OpImageSparseSampleImplicitLod,
+      spv::Op::OpImageSparseSampleDrefImplicitLod,
+      spv::Op::OpImageSparseSampleProjImplicitLod,
+      spv::Op::OpImageSparseSampleProjDrefImplicitLod,
       // Explicit derivatives.
-      SpvOpDPdx,
-      SpvOpDPdy,
-      SpvOpFwidth,
-      SpvOpDPdxFine,
-      SpvOpDPdyFine,
-      SpvOpFwidthFine,
-      SpvOpDPdxCoarse,
-      SpvOpDPdyCoarse,
-      SpvOpFwidthCoarse,
+      spv::Op::OpDPdx,
+      spv::Op::OpDPdy,
+      spv::Op::OpFwidth,
+      spv::Op::OpDPdxFine,
+      spv::Op::OpDPdyFine,
+      spv::Op::OpFwidthFine,
+      spv::Op::OpDPdxCoarse,
+      spv::Op::OpDPdyCoarse,
+      spv::Op::OpFwidthCoarse,
   };
   return std::find(std::begin(derivative_opcodes), std::end(derivative_opcodes),
                    inst.opcode()) != std::end(derivative_opcodes);
@@ -97,13 +96,14 @@ void PrintDivergenceFlow(opt::IRContext* context, DivergenceAnalysis div,
   opt::analysis::DefUseManager* def_use = context->get_def_use_mgr();
   opt::CFG* cfg = context->cfg();
   while (id != 0) {
-    bool is_block = def_use->GetDef(id)->opcode() == SpvOpLabel;
+    bool is_block = def_use->GetDef(id)->opcode() == spv::Op::OpLabel;
     if (is_block) {
       Warn(context, nullptr)
           << "block " << GetFriendlyName(context, id) << " is divergent";
       uint32_t source = div.GetDivergenceSource(id);
       // Skip intermediate blocks.
-      while (source != 0 && def_use->GetDef(source)->opcode() == SpvOpLabel) {
+      while (source != 0 &&
+             def_use->GetDef(source)->opcode() == spv::Op::OpLabel) {
         id = source;
         source = div.GetDivergenceSource(id);
       }
@@ -122,7 +122,7 @@ void PrintDivergenceFlow(opt::IRContext* context, DivergenceAnalysis div,
       opt::Instruction* source_def =
           source == 0 ? nullptr : def_use->GetDef(source);
       // First print data -> data dependencies.
-      while (source != 0 && source_def->opcode() != SpvOpLabel) {
+      while (source != 0 && source_def->opcode() != spv::Op::OpLabel) {
         Warn(context, def_use->GetDef(id))
             << "because " << GetFriendlyName(context, id) << " uses value "
             << GetFriendlyName(context, source)

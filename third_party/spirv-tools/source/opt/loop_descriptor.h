@@ -316,12 +316,12 @@ class Loop {
   // Returns true if we can deduce the number of loop iterations in the step
   // operation |step|. IsSupportedCondition must also be true for the condition
   // instruction.
-  bool IsSupportedStepOp(SpvOp step) const;
+  bool IsSupportedStepOp(spv::Op step) const;
 
   // Returns true if we can deduce the number of loop iterations in the
   // condition operation |condition|. IsSupportedStepOp must also be true for
   // the step instruction.
-  bool IsSupportedCondition(SpvOp condition) const;
+  bool IsSupportedCondition(spv::Op condition) const;
 
   // Creates the list of the loop's basic block in structured order and store
   // the result in |ordered_loop_blocks|. If |include_pre_header| is true, the
@@ -335,7 +335,7 @@ class Loop {
   // Given the loop |condition|, |initial_value|, |step_value|, the trip count
   // |number_of_iterations|, and the |unroll_factor| requested, get the new
   // condition value for the residual loop.
-  static int64_t GetResidualConditionValue(SpvOp condition,
+  static int64_t GetResidualConditionValue(spv::Op condition,
                                            int64_t initial_value,
                                            int64_t step_value,
                                            size_t number_of_iterations,
@@ -400,7 +400,7 @@ class Loop {
   // the induction variable. This method will return the number of iterations in
   // a loop with those values for a given |condition|.  Returns 0 if the number
   // of iterations could not be computed.
-  int64_t GetIterations(SpvOp condition, int64_t condition_value,
+  int64_t GetIterations(spv::Op condition, int64_t condition_value,
                         int64_t init_value, int64_t step_value) const;
 
   // This is to allow for loops to be removed mid iteration without invalidating

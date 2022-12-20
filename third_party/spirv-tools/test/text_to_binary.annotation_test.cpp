@@ -41,7 +41,7 @@ using ::testing::ValuesIn;
 
 using OpDecorateSimpleTest =
     spvtest::TextToBinaryTestBase<::testing::TestWithParam<
-        std::tuple<spv_target_env, EnumCase<SpvDecoration>>>>;
+        std::tuple<spv_target_env, EnumCase<spv::Decoration>>>>;
 
 TEST_P(OpDecorateSimpleTest, AnySimpleDecoration) {
   // This string should assemble, but should not validate.
@@ -51,7 +51,7 @@ TEST_P(OpDecorateSimpleTest, AnySimpleDecoration) {
     input << " " << operand;
   input << std::endl;
   EXPECT_THAT(CompiledInstructions(input.str(), std::get<0>(GetParam())),
-              Eq(MakeInstruction(SpvOpDecorate,
+              Eq(MakeInstruction(spv::Op::OpDecorate,
                                  {1, uint32_t(std::get<1>(GetParam()).value())},
                                  std::get<1>(GetParam()).operands())));
   // Also check disassembly.
@@ -64,7 +64,7 @@ TEST_P(OpDecorateSimpleTest, AnySimpleDecoration) {
 // Like above, but parameters to the decoration are IDs.
 using OpDecorateSimpleIdTest =
     spvtest::TextToBinaryTestBase<::testing::TestWithParam<
-        std::tuple<spv_target_env, EnumCase<SpvDecoration>>>>;
+        std::tuple<spv_target_env, EnumCase<spv::Decoration>>>>;
 
 TEST_P(OpDecorateSimpleIdTest, AnySimpleDecoration) {
   // This string should assemble, but should not validate.
@@ -74,7 +74,7 @@ TEST_P(OpDecorateSimpleIdTest, AnySimpleDecoration) {
     input << " %" << operand;
   input << std::endl;
   EXPECT_THAT(CompiledInstructions(input.str(), std::get<0>(GetParam())),
-              Eq(MakeInstruction(SpvOpDecorateId,
+              Eq(MakeInstruction(spv::Op::OpDecorateId,
                                  {1, uint32_t(std::get<1>(GetParam()).value())},
                                  std::get<1>(GetParam()).operands())));
   // Also check disassembly.
@@ -84,11 +84,11 @@ TEST_P(OpDecorateSimpleIdTest, AnySimpleDecoration) {
       Eq(input.str()));
 }
 
-#define CASE(NAME) SpvDecoration##NAME, #NAME
+#define CASE(NAME) spv::Decoration::NAME, #NAME
 INSTANTIATE_TEST_SUITE_P(
     TextToBinaryDecorateSimple, OpDecorateSimpleTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
-            ValuesIn(std::vector<EnumCase<SpvDecoration>>{
+            ValuesIn(std::vector<EnumCase<spv::Decoration>>{
                 // The operand literal values are arbitrarily chosen,
                 // but there are the right number of them.
                 {CASE(RelaxedPrecision), {}},
@@ -134,23 +134,24 @@ INSTANTIATE_TEST_SUITE_P(
 
 INSTANTIATE_TEST_SUITE_P(TextToBinaryDecorateSimpleV11, OpDecorateSimpleTest,
                          Combine(Values(SPV_ENV_UNIVERSAL_1_1),
-                                 Values(EnumCase<SpvDecoration>{
+                                 Values(EnumCase<spv::Decoration>{
                                      CASE(MaxByteOffset), {128}})));
 
-INSTANTIATE_TEST_SUITE_P(TextToBinaryDecorateSimpleV14, OpDecorateSimpleTest,
-                         Combine(Values(SPV_ENV_UNIVERSAL_1_4),
-                                 ValuesIn(std::vector<EnumCase<SpvDecoration>>{
-                                     {CASE(Uniform), {}},
-                                 })));
+INSTANTIATE_TEST_SUITE_P(
+    TextToBinaryDecorateSimpleV14, OpDecorateSimpleTest,
+    Combine(Values(SPV_ENV_UNIVERSAL_1_4),
+            ValuesIn(std::vector<EnumCase<spv::Decoration>>{
+                {CASE(Uniform), {}},
+            })));
 
-INSTANTIATE_TEST_SUITE_P(TextToBinaryDecorateSimpleIdV14,
-                         OpDecorateSimpleIdTest,
-                         Combine(Values(SPV_ENV_UNIVERSAL_1_4),
-                                 ValuesIn(std::vector<EnumCase<SpvDecoration>>{
-                                     // In 1.4, UniformId decoration takes a
-                                     // scope Id.
-                                     {CASE(UniformId), {1}},
-                                 })));
+INSTANTIATE_TEST_SUITE_P(
+    TextToBinaryDecorateSimpleIdV14, OpDecorateSimpleIdTest,
+    Combine(Values(SPV_ENV_UNIVERSAL_1_4),
+            ValuesIn(std::vector<EnumCase<spv::Decoration>>{
+                // In 1.4, UniformId decoration takes a
+                // scope Id.
+                {CASE(UniformId), {1}},
+            })));
 #undef CASE
 
 TEST_F(OpDecorateSimpleTest, WrongDecoration) {
@@ -195,14 +196,14 @@ TEST_P(OpDecorateEnumTest, AnyEnumDecoration) {
   const std::string input =
       "OpDecorate %1 " + GetParam().enum_name + " " + GetParam().name;
   EXPECT_THAT(CompiledInstructions(input),
-              Eq(MakeInstruction(SpvOpDecorate, {1, GetParam().enum_value,
-                                                 GetParam().value})));
+              Eq(MakeInstruction(spv::Op::OpDecorate, {1, GetParam().enum_value,
+                                                       GetParam().value})));
 }
 
 // Test OpDecorate BuiltIn.
 // clang-format off
 #define CASE(NAME) \
-  { SpvBuiltIn##NAME, #NAME, SpvDecorationBuiltIn, "BuiltIn" }
+  { uint32_t(spv::BuiltIn::NAME), #NAME, uint32_t(spv::Decoration::BuiltIn), "BuiltIn" }
 INSTANTIATE_TEST_SUITE_P(TextToBinaryDecorateBuiltIn, OpDecorateEnumTest,
                         ::testing::ValuesIn(std::vector<DecorateEnumCase>{
                             CASE(Position),
@@ -260,7 +261,7 @@ TEST_F(OpDecorateEnumTest, WrongBuiltIn) {
 // Test OpDecorate FuncParamAttr
 // clang-format off
 #define CASE(NAME) \
-  { SpvFunctionParameterAttribute##NAME, #NAME, SpvDecorationFuncParamAttr, "FuncParamAttr" }
+  { uint32_t(spv::FunctionParameterAttribute::NAME), #NAME, uint32_t(spv::Decoration::FuncParamAttr), "FuncParamAttr" }
 INSTANTIATE_TEST_SUITE_P(TextToBinaryDecorateFuncParamAttr, OpDecorateEnumTest,
                         ::testing::ValuesIn(std::vector<DecorateEnumCase>{
                             CASE(Zext),
@@ -283,7 +284,7 @@ TEST_F(OpDecorateEnumTest, WrongFuncParamAttr) {
 // Test OpDecorate FPRoundingMode
 // clang-format off
 #define CASE(NAME) \
-  { SpvFPRoundingMode##NAME, #NAME, SpvDecorationFPRoundingMode, "FPRoundingMode" }
+  { uint32_t(spv::FPRoundingMode::NAME), #NAME, uint32_t(spv::Decoration::FPRoundingMode), "FPRoundingMode" }
 INSTANTIATE_TEST_SUITE_P(TextToBinaryDecorateFPRoundingMode, OpDecorateEnumTest,
                         ::testing::ValuesIn(std::vector<DecorateEnumCase>{
                             CASE(RTE),
@@ -306,15 +307,15 @@ TEST_F(OpDecorateEnumTest, WrongFPRoundingMode) {
 
 // clang-format off
 #define CASE(ENUM,NAME) \
-  { SpvFPFastMathMode##ENUM, #NAME, SpvDecorationFPFastMathMode, "FPFastMathMode" }
+  { uint32_t(spv::FPFastMathModeMask::ENUM), #NAME, uint32_t(spv::Decoration::FPFastMathMode), "FPFastMathMode" }
 INSTANTIATE_TEST_SUITE_P(TextToBinaryDecorateFPFastMathMode, OpDecorateEnumTest,
                         ::testing::ValuesIn(std::vector<DecorateEnumCase>{
                             CASE(MaskNone, None),
-                            CASE(NotNaNMask, NotNaN),
-                            CASE(NotInfMask, NotInf),
-                            CASE(NSZMask, NSZ),
-                            CASE(AllowRecipMask, AllowRecip),
-                            CASE(FastMask, Fast),
+                            CASE(NotNaN, NotNaN),
+                            CASE(NotInf, NotInf),
+                            CASE(NSZ, NSZ),
+                            CASE(AllowRecip, AllowRecip),
+                            CASE(Fast, Fast),
                       }));
 #undef CASE
 // clang-format on
@@ -323,13 +324,13 @@ TEST_F(OpDecorateEnumTest, CombinedFPFastMathMask) {
   // Sample a single combination.  This ensures we've integrated
   // the instruction parsing logic with spvTextParseMask.
   const std::string input = "OpDecorate %1 FPFastMathMode NotNaN|NotInf|NSZ";
-  const uint32_t expected_enum = SpvDecorationFPFastMathMode;
-  const uint32_t expected_mask = SpvFPFastMathModeNotNaNMask |
-                                 SpvFPFastMathModeNotInfMask |
-                                 SpvFPFastMathModeNSZMask;
-  EXPECT_THAT(
-      CompiledInstructions(input),
-      Eq(MakeInstruction(SpvOpDecorate, {1, expected_enum, expected_mask})));
+  const uint32_t expected_enum = uint32_t(spv::Decoration::FPFastMathMode);
+  const uint32_t expected_mask = uint32_t(spv::FPFastMathModeMask::NotNaN) |
+                                 uint32_t(spv::FPFastMathModeMask::NotInf) |
+                                 uint32_t(spv::FPFastMathModeMask::NSZ);
+  EXPECT_THAT(CompiledInstructions(input),
+              Eq(MakeInstruction(spv::Op::OpDecorate,
+                                 {1, expected_enum, expected_mask})));
 }
 
 TEST_F(OpDecorateEnumTest, WrongFPFastMathMode) {
@@ -355,7 +356,8 @@ TEST_P(OpDecorateLinkageTest, AnyLinkageDecoration) {
   const std::string input = "OpDecorate %1 LinkageAttributes \"" +
                             GetParam().external_name + "\" " +
                             GetParam().linkage_type_name;
-  std::vector<uint32_t> expected_operands{1, SpvDecorationLinkageAttributes};
+  std::vector<uint32_t> expected_operands{
+      1, uint32_t(spv::Decoration::LinkageAttributes)};
   std::vector<uint32_t> encoded_external_name =
       MakeVector(GetParam().external_name);
   expected_operands.insert(expected_operands.end(),
@@ -363,11 +365,11 @@ TEST_P(OpDecorateLinkageTest, AnyLinkageDecoration) {
                            encoded_external_name.end());
   expected_operands.push_back(GetParam().linkage_type_value);
   EXPECT_THAT(CompiledInstructions(input),
-              Eq(MakeInstruction(SpvOpDecorate, expected_operands)));
+              Eq(MakeInstruction(spv::Op::OpDecorate, expected_operands)));
 }
 
 // clang-format off
-#define CASE(ENUM) SpvLinkageType##ENUM, #ENUM
+#define CASE(ENUM) uint32_t(spv::LinkageType::ENUM), #ENUM
 INSTANTIATE_TEST_SUITE_P(TextToBinaryDecorateLinkage, OpDecorateLinkageTest,
                         ::testing::ValuesIn(std::vector<DecorateLinkageCase>{
                             { CASE(Import), "a" },
@@ -387,13 +389,13 @@ TEST_F(OpDecorateLinkageTest, WrongType) {
 
 TEST_F(TextToBinaryTest, GroupMemberDecorateGoodOneTarget) {
   EXPECT_THAT(CompiledInstructions("OpGroupMemberDecorate %group %id0 42"),
-              Eq(MakeInstruction(SpvOpGroupMemberDecorate, {1, 2, 42})));
+              Eq(MakeInstruction(spv::Op::OpGroupMemberDecorate, {1, 2, 42})));
 }
 
 TEST_F(TextToBinaryTest, GroupMemberDecorateGoodTwoTargets) {
   EXPECT_THAT(
       CompiledInstructions("OpGroupMemberDecorate %group %id0 96 %id1 42"),
-      Eq(MakeInstruction(SpvOpGroupMemberDecorate, {1, 2, 96, 3, 42})));
+      Eq(MakeInstruction(spv::Op::OpGroupMemberDecorate, {1, 2, 96, 3, 42})));
 }
 
 TEST_F(TextToBinaryTest, GroupMemberDecorateMissingGroupId) {
@@ -443,7 +445,7 @@ TEST_F(TextToBinaryTest, GroupMemberDecorateInvalidSecondTargetMemberNumber) {
 
 using OpMemberDecorateSimpleTest =
     spvtest::TextToBinaryTestBase<::testing::TestWithParam<
-        std::tuple<spv_target_env, EnumCase<SpvDecoration>>>>;
+        std::tuple<spv_target_env, EnumCase<spv::Decoration>>>>;
 
 TEST_P(OpMemberDecorateSimpleTest, AnySimpleDecoration) {
   // This string should assemble, but should not validate.
@@ -454,7 +456,7 @@ TEST_P(OpMemberDecorateSimpleTest, AnySimpleDecoration) {
   input << std::endl;
   EXPECT_THAT(
       CompiledInstructions(input.str(), std::get<0>(GetParam())),
-      Eq(MakeInstruction(SpvOpMemberDecorate,
+      Eq(MakeInstruction(spv::Op::OpMemberDecorate,
                          {1, 42, uint32_t(std::get<1>(GetParam()).value())},
                          std::get<1>(GetParam()).operands())));
   // Also check disassembly.
@@ -464,11 +466,11 @@ TEST_P(OpMemberDecorateSimpleTest, AnySimpleDecoration) {
       Eq(input.str()));
 }
 
-#define CASE(NAME) SpvDecoration##NAME, #NAME
+#define CASE(NAME) spv::Decoration::NAME, #NAME
 INSTANTIATE_TEST_SUITE_P(
     TextToBinaryDecorateSimple, OpMemberDecorateSimpleTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1),
-            ValuesIn(std::vector<EnumCase<SpvDecoration>>{
+            ValuesIn(std::vector<EnumCase<spv::Decoration>>{
                 // The operand literal values are arbitrarily chosen,
                 // but there are the right number of them.
                 {CASE(RelaxedPrecision), {}},
@@ -515,7 +517,7 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     TextToBinaryDecorateSimpleV11, OpMemberDecorateSimpleTest,
     Combine(Values(SPV_ENV_UNIVERSAL_1_1),
-            Values(EnumCase<SpvDecoration>{CASE(MaxByteOffset), {128}})));
+            Values(EnumCase<spv::Decoration>{CASE(MaxByteOffset), {128}})));
 #undef CASE
 
 TEST_F(OpMemberDecorateSimpleTest, WrongDecoration) {

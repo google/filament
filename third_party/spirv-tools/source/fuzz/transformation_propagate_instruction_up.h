@@ -80,7 +80,7 @@ class TransformationPropagateInstructionUp : public Transformation {
                                                      uint32_t block_id);
 
   // Returns true if |opcode| is supported by this transformation.
-  static bool IsOpcodeSupported(SpvOp opcode);
+  static bool IsOpcodeSupported(spv::Op opcode);
 
   protobufs::TransformationPropagateInstructionUp message_;
 };

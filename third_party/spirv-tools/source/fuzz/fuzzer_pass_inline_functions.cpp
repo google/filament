@@ -64,7 +64,7 @@ void FuzzerPassInlineFunctions::Apply() {
     auto* function_call_block =
         GetIRContext()->get_instr_block(function_call_instruction);
     if ((function_call_instruction != &*--function_call_block->tail() ||
-         function_call_block->terminator()->opcode() != SpvOpBranch) &&
+         function_call_block->terminator()->opcode() != spv::Op::OpBranch) &&
         !MaybeApplyTransformation(TransformationSplitBlock(
             MakeInstructionDescriptor(GetIRContext(),
                                       function_call_instruction->NextNode()),

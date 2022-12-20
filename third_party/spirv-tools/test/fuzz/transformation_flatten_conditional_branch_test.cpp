@@ -441,8 +441,8 @@ TEST(TransformationFlattenConditionalBranchTest, LoadStoreFunctionCall) {
   ASSERT_DEATH(TransformationFlattenConditionalBranch(
                    31, true, 0, 0, 0,
                    {{MakeSideEffectWrapperInfo(
-                       MakeInstructionDescriptor(6, SpvOpLoad, 0), 100, 101,
-                       102, 103, 104, 14)}})
+                       MakeInstructionDescriptor(6, spv::Op::OpLoad, 0), 100,
+                       101, 102, 103, 104, 14)}})
                    .IsApplicable(context.get(), transformation_context),
                "Bad attempt to query whether overflow ids are available.");
 #endif
@@ -451,52 +451,55 @@ TEST(TransformationFlattenConditionalBranchTest, LoadStoreFunctionCall) {
   ASSERT_FALSE(TransformationFlattenConditionalBranch(
                    31, true, 0, 0, 0,
                    {{MakeSideEffectWrapperInfo(
-                       MakeInstructionDescriptor(6, SpvOpLoad, 0), 100, 101,
-                       102, 103, 0, 0)}})
+                       MakeInstructionDescriptor(6, spv::Op::OpLoad, 0), 100,
+                       101, 102, 103, 0, 0)}})
                    .IsApplicable(context.get(), transformation_context));
 
   // Not all fresh ids given are distinct.
   ASSERT_FALSE(TransformationFlattenConditionalBranch(
                    31, true, 0, 0, 0,
                    {{MakeSideEffectWrapperInfo(
-                       MakeInstructionDescriptor(6, SpvOpLoad, 0), 100, 100,
-                       102, 103, 104, 0)}})
+                       MakeInstructionDescriptor(6, spv::Op::OpLoad, 0), 100,
+                       100, 102, 103, 104, 0)}})
                    .IsApplicable(context.get(), transformation_context));
 
   // %48 heads a construct containing an OpSampledImage instruction.
   ASSERT_FALSE(TransformationFlattenConditionalBranch(
                    48, true, 0, 0, 0,
                    {{MakeSideEffectWrapperInfo(
-                       MakeInstructionDescriptor(53, SpvOpLoad, 0), 100, 101,
-                       102, 103, 104, 0)}})
+                       MakeInstructionDescriptor(53, spv::Op::OpLoad, 0), 100,
+                       101, 102, 103, 104, 0)}})
                    .IsApplicable(context.get(), transformation_context));
 
   // %0 is not a valid id.
   ASSERT_FALSE(
       TransformationFlattenConditionalBranch(
           31, true, 0, 0, 0,
-          {MakeSideEffectWrapperInfo(MakeInstructionDescriptor(6, SpvOpLoad, 0),
-                                     104, 100, 101, 102, 103, 0),
+          {MakeSideEffectWrapperInfo(
+               MakeInstructionDescriptor(6, spv::Op::OpLoad, 0), 104, 100, 101,
+               102, 103, 0),
            MakeSideEffectWrapperInfo(
-               MakeInstructionDescriptor(6, SpvOpStore, 0), 106, 105)})
+               MakeInstructionDescriptor(6, spv::Op::OpStore, 0), 106, 105)})
           .IsApplicable(context.get(), transformation_context));
 
   // %17 is a float constant, while %6 has int type.
   ASSERT_FALSE(
       TransformationFlattenConditionalBranch(
           31, true, 0, 0, 0,
-          {MakeSideEffectWrapperInfo(MakeInstructionDescriptor(6, SpvOpLoad, 0),
-                                     104, 100, 101, 102, 103, 17),
+          {MakeSideEffectWrapperInfo(
+               MakeInstructionDescriptor(6, spv::Op::OpLoad, 0), 104, 100, 101,
+               102, 103, 17),
            MakeSideEffectWrapperInfo(
-               MakeInstructionDescriptor(6, SpvOpStore, 0), 106, 105)})
+               MakeInstructionDescriptor(6, spv::Op::OpStore, 0), 106, 105)})
           .IsApplicable(context.get(), transformation_context));
 
   auto transformation1 = TransformationFlattenConditionalBranch(
       31, true, 0, 0, 0,
-      {MakeSideEffectWrapperInfo(MakeInstructionDescriptor(6, SpvOpLoad, 0),
-                                 104, 100, 101, 102, 103, 70),
-       MakeSideEffectWrapperInfo(MakeInstructionDescriptor(6, SpvOpStore, 0),
-                                 106, 105)});
+      {MakeSideEffectWrapperInfo(
+           MakeInstructionDescriptor(6, spv::Op::OpLoad, 0), 104, 100, 101, 102,
+           103, 70),
+       MakeSideEffectWrapperInfo(
+           MakeInstructionDescriptor(6, spv::Op::OpStore, 0), 106, 105)});
   ASSERT_TRUE(
       transformation1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation1, context.get(),
@@ -514,8 +517,8 @@ TEST(TransformationFlattenConditionalBranchTest, LoadStoreFunctionCall) {
 
   auto transformation2 = TransformationFlattenConditionalBranch(
       36, false, 0, 0, 0,
-      {MakeSideEffectWrapperInfo(MakeInstructionDescriptor(8, SpvOpStore, 0),
-                                 114, 113)});
+      {MakeSideEffectWrapperInfo(
+          MakeInstructionDescriptor(8, spv::Op::OpStore, 0), 114, 113)});
   ASSERT_TRUE(
       transformation2.IsApplicable(context.get(), new_transformation_context));
   ApplyAndCheckFreshIds(transformation2, context.get(),
@@ -717,7 +720,8 @@ TEST(TransformationFlattenConditionalBranchTest, EdgeCases) {
   auto transformation1 = TransformationFlattenConditionalBranch(
       7, true, 0, 0, 0,
       {{MakeSideEffectWrapperInfo(
-          MakeInstructionDescriptor(10, SpvOpFunctionCall, 0), 100, 101)}});
+          MakeInstructionDescriptor(10, spv::Op::OpFunctionCall, 0), 100,
+          101)}});
   ASSERT_TRUE(
       transformation1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation1, context.get(),
@@ -729,7 +733,8 @@ TEST(TransformationFlattenConditionalBranchTest, EdgeCases) {
       TransformationFlattenConditionalBranch(
           7, true, 0, 0, 0,
           {{MakeSideEffectWrapperInfo(
-              MakeInstructionDescriptor(14, SpvOpFunctionCall, 0), 102, 103)}})
+              MakeInstructionDescriptor(14, spv::Op::OpFunctionCall, 0), 102,
+              103)}})
           .IsApplicable(context.get(), transformation_context));
 
   // Block %16 is unreachable.
@@ -1126,10 +1131,12 @@ TEST(TransformationFlattenConditionalBranchTest, PhiToSelect5) {
 
   auto transformation = TransformationFlattenConditionalBranch(
       7, true, 0, 0, 0,
-      {MakeSideEffectWrapperInfo(MakeInstructionDescriptor(522, SpvOpLoad, 0),
-                                 200, 201, 202, 203, 204, 5),
-       MakeSideEffectWrapperInfo(MakeInstructionDescriptor(466, SpvOpLoad, 0),
-                                 300, 301, 302, 303, 304, 5)});
+      {MakeSideEffectWrapperInfo(
+           MakeInstructionDescriptor(522, spv::Op::OpLoad, 0), 200, 201, 202,
+           203, 204, 5),
+       MakeSideEffectWrapperInfo(
+           MakeInstructionDescriptor(466, spv::Op::OpLoad, 0), 300, 301, 302,
+           303, 304, 5)});
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -1231,8 +1238,9 @@ TEST(TransformationFlattenConditionalBranchTest,
 
   auto transformation = TransformationFlattenConditionalBranch(
       5, true, 0, 0, 0,
-      {MakeSideEffectWrapperInfo(MakeInstructionDescriptor(20, SpvOpLoad, 0),
-                                 100, 101, 102, 103, 104, 21)});
+      {MakeSideEffectWrapperInfo(
+          MakeInstructionDescriptor(20, spv::Op::OpLoad, 0), 100, 101, 102, 103,
+          104, 21)});
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -1299,8 +1307,8 @@ TEST(TransformationFlattenConditionalBranchTest, InapplicableSampledImageLoad) {
   ASSERT_FALSE(TransformationFlattenConditionalBranch(
                    28, true, 0, 0, 0,
                    {MakeSideEffectWrapperInfo(
-                       MakeInstructionDescriptor(40, SpvOpLoad, 0), 100, 101,
-                       102, 103, 104, 200)})
+                       MakeInstructionDescriptor(40, spv::Op::OpLoad, 0), 100,
+                       101, 102, 103, 104, 200)})
                    .IsApplicable(context.get(), transformation_context));
 }
 
@@ -1730,7 +1738,7 @@ TEST(TransformationFlattenConditionalBranchTest, ApplicablePhiToSelectVector3) {
   // Check that the in operands of any OpSelect instructions all have the
   // appropriate operand type.
   context->module()->ForEachInst([](opt::Instruction* inst) {
-    if (inst->opcode() == SpvOpSelect) {
+    if (inst->opcode() == spv::Op::OpSelect) {
       ASSERT_EQ(SPV_OPERAND_TYPE_ID, inst->GetInOperand(0).type);
       ASSERT_EQ(SPV_OPERAND_TYPE_ID, inst->GetInOperand(1).type);
       ASSERT_EQ(SPV_OPERAND_TYPE_ID, inst->GetInOperand(2).type);
@@ -2183,14 +2191,15 @@ TEST(TransformationFlattenConditionalBranchTest, ContainsSynonymCreation) {
 
   transformation_context.GetFactManager()->AddFactDataSynonym(
       MakeDataDescriptor(10, {}), MakeDataDescriptor(21, {}));
-  ASSERT_FALSE(TransformationFlattenConditionalBranch(
-                   12, true, 0, 0, 0,
-                   {MakeSideEffectWrapperInfo(
-                        MakeInstructionDescriptor(30, SpvOpStore, 0), 100, 101),
-                    MakeSideEffectWrapperInfo(
-                        MakeInstructionDescriptor(21, SpvOpLoad, 0), 102, 103,
-                        104, 105, 106, 80)})
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationFlattenConditionalBranch(
+          12, true, 0, 0, 0,
+          {MakeSideEffectWrapperInfo(
+               MakeInstructionDescriptor(30, spv::Op::OpStore, 0), 100, 101),
+           MakeSideEffectWrapperInfo(
+               MakeInstructionDescriptor(21, spv::Op::OpLoad, 0), 102, 103, 104,
+               105, 106, 80)})
+          .IsApplicable(context.get(), transformation_context));
 }
 
 }  // namespace

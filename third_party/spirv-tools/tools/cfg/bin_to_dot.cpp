@@ -81,26 +81,26 @@ class DotConverter {
 
 spv_result_t DotConverter::HandleInstruction(
     const spv_parsed_instruction_t& inst) {
-  switch (inst.opcode) {
-    case SpvOpFunction:
+  switch (spv::Op(inst.opcode)) {
+    case spv::Op::OpFunction:
       current_function_id_ = inst.result_id;
       seen_function_entry_block_ = false;
       break;
-    case SpvOpFunctionEnd:
+    case spv::Op::OpFunctionEnd:
       current_function_id_ = 0;
       break;
 
-    case SpvOpLabel:
+    case spv::Op::OpLabel:
       current_block_id_ = inst.result_id;
       break;
 
-    case SpvOpBranch:
+    case spv::Op::OpBranch:
       FlushBlock({inst.words[1]});
       break;
-    case SpvOpBranchConditional:
+    case spv::Op::OpBranchConditional:
       FlushBlock({inst.words[2], inst.words[3]});
       break;
-    case SpvOpSwitch: {
+    case spv::Op::OpSwitch: {
       std::vector<uint32_t> successors{inst.words[2]};
       for (size_t i = 3; i < inst.num_operands; i += 2) {
         successors.push_back(inst.words[inst.operands[i].offset]);
@@ -108,18 +108,18 @@ spv_result_t DotConverter::HandleInstruction(
       FlushBlock(successors);
     } break;
 
-    case SpvOpKill:
-    case SpvOpReturn:
-    case SpvOpUnreachable:
-    case SpvOpReturnValue:
+    case spv::Op::OpKill:
+    case spv::Op::OpReturn:
+    case spv::Op::OpUnreachable:
+    case spv::Op::OpReturnValue:
       FlushBlock({});
       break;
 
-    case SpvOpLoopMerge:
+    case spv::Op::OpLoopMerge:
       merge_ = inst.words[1];
       continue_target_ = inst.words[2];
       break;
-    case SpvOpSelectionMerge:
+    case spv::Op::OpSelectionMerge:
       merge_ = inst.words[1];
       break;
     default:

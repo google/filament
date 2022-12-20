@@ -50,7 +50,7 @@ class TransformationAddNoContractionDecoration : public Transformation {
 
   // Returns true if and only if |opcode| is the opcode of an arithmetic
   // instruction, as defined by the SPIR-V specification.
-  static bool IsArithmetic(uint32_t opcode);
+  static bool IsArithmetic(spv::Op opcode);
 
  private:
   protobufs::TransformationAddNoContractionDecoration message_;

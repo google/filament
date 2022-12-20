@@ -40,10 +40,10 @@ TEST_F(TextToBinaryTest, Whitespace) {
 
   EXPECT_THAT(
       CompiledInstructions(input),
-      Eq(Concatenate({MakeInstruction(SpvOpMemoryModel,
-                                      {uint32_t(SpvAddressingModelLogical),
-                                       uint32_t(SpvMemoryModelSimple)}),
-                      MakeInstruction(SpvOpExtInstImport, {1},
+      Eq(Concatenate({MakeInstruction(spv::Op::OpMemoryModel,
+                                      {uint32_t(spv::AddressingModel::Logical),
+                                       uint32_t(spv::MemoryModel::Simple)}),
+                      MakeInstruction(spv::Op::OpExtInstImport, {1},
                                       MakeVector("GLSL.std.450"))})));
 }
 

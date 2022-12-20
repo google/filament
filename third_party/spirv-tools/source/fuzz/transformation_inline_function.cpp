@@ -62,7 +62,8 @@ bool TransformationInlineFunction::IsApplicable(
       ir_context->get_instr_block(function_call_instruction);
   if (function_call_instruction !=
           &*--function_call_instruction_block->tail() ||
-      function_call_instruction_block->terminator()->opcode() != SpvOpBranch) {
+      function_call_instruction_block->terminator()->opcode() !=
+          spv::Op::OpBranch) {
     return false;
   }
 
@@ -143,7 +144,7 @@ void TransformationInlineFunction::Apply(
   for (auto& entry_block_instruction : *called_function->entry()) {
     opt::Instruction* inlined_instruction;
 
-    if (entry_block_instruction.opcode() == SpvOpVariable) {
+    if (entry_block_instruction.opcode() == spv::Op::OpVariable) {
       // All OpVariable instructions in a function must be in the first block
       // in the function.
       inlined_instruction = caller_function->begin()->begin()->InsertBefore(
@@ -206,7 +207,7 @@ void TransformationInlineFunction::Apply(
         block_containing_function_call->id(),
         [ir_context, new_return_block_id, successor_block](
             opt::Instruction* use_instruction, uint32_t operand_index) {
-          if (use_instruction->opcode() == SpvOpPhi &&
+          if (use_instruction->opcode() == spv::Op::OpPhi &&
               ir_context->get_instr_block(use_instruction) == successor_block) {
             use_instruction->SetOperand(operand_index, {new_return_block_id});
           }
@@ -234,7 +235,7 @@ bool TransformationInlineFunction::IsSuitableForInlining(
   // |function_call_instruction| must be defined and must be an OpFunctionCall
   // instruction.
   if (!function_call_instruction ||
-      function_call_instruction->opcode() != SpvOpFunctionCall) {
+      function_call_instruction->opcode() != spv::Op::OpFunctionCall) {
     return false;
   }
 
@@ -331,13 +332,14 @@ void TransformationInlineFunction::AdaptInlinedInstruction(
             ->terminator()
             ->GetSingleWordInOperand(0);
     switch (instruction_to_be_inlined->opcode()) {
-      case SpvOpReturn:
+      case spv::Op::OpReturn:
         instruction_to_be_inlined->AddOperand(
             {SPV_OPERAND_TYPE_ID, {successor_block_id}});
         break;
-      case SpvOpReturnValue: {
+      case spv::Op::OpReturnValue: {
         instruction_to_be_inlined->InsertBefore(MakeUnique<opt::Instruction>(
-            ir_context, SpvOpCopyObject, function_call_instruction->type_id(),
+            ir_context, spv::Op::OpCopyObject,
+            function_call_instruction->type_id(),
             function_call_instruction->result_id(),
             opt::Instruction::OperandList(
                 {{SPV_OPERAND_TYPE_ID,
@@ -348,7 +350,7 @@ void TransformationInlineFunction::AdaptInlinedInstruction(
       default:
         break;
     }
-    instruction_to_be_inlined->SetOpcode(SpvOpBranch);
+    instruction_to_be_inlined->SetOpcode(spv::Op::OpBranch);
   }
 }
 

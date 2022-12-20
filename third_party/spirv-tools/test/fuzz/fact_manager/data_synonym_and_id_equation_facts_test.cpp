@@ -136,15 +136,15 @@ TEST(DataSynonymAndIdEquationFactsTest, CorollaryConversionFacts) {
   FactManager fact_manager(context.get());
 
   // Add equation facts
-  fact_manager.AddFactIdEquation(24, SpvOpConvertSToF, {15});
-  fact_manager.AddFactIdEquation(25, SpvOpConvertSToF, {16});
-  fact_manager.AddFactIdEquation(26, SpvOpConvertUToF, {17});
-  fact_manager.AddFactIdEquation(27, SpvOpConvertSToF, {18});
-  fact_manager.AddFactIdEquation(28, SpvOpConvertUToF, {19});
-  fact_manager.AddFactIdEquation(29, SpvOpConvertUToF, {20});
-  fact_manager.AddFactIdEquation(30, SpvOpConvertSToF, {21});
-  fact_manager.AddFactIdEquation(31, SpvOpConvertUToF, {22});
-  fact_manager.AddFactIdEquation(32, SpvOpConvertUToF, {23});
+  fact_manager.AddFactIdEquation(24, spv::Op::OpConvertSToF, {15});
+  fact_manager.AddFactIdEquation(25, spv::Op::OpConvertSToF, {16});
+  fact_manager.AddFactIdEquation(26, spv::Op::OpConvertUToF, {17});
+  fact_manager.AddFactIdEquation(27, spv::Op::OpConvertSToF, {18});
+  fact_manager.AddFactIdEquation(28, spv::Op::OpConvertUToF, {19});
+  fact_manager.AddFactIdEquation(29, spv::Op::OpConvertUToF, {20});
+  fact_manager.AddFactIdEquation(30, spv::Op::OpConvertSToF, {21});
+  fact_manager.AddFactIdEquation(31, spv::Op::OpConvertUToF, {22});
+  fact_manager.AddFactIdEquation(32, spv::Op::OpConvertUToF, {23});
 
   fact_manager.AddFactDataSynonym(MakeDataDescriptor(15, {}),
                                   MakeDataDescriptor(16, {}));
@@ -212,7 +212,7 @@ TEST(DataSynonymAndIdEquationFactsTest, HandlesCorollariesWithInvalidIds) {
 
   // Add required facts.
   transformation_context.GetFactManager()->AddFactIdEquation(
-      14, SpvOpConvertSToF, {9});
+      14, spv::Op::OpConvertSToF, {9});
   transformation_context.GetFactManager()->AddFactDataSynonym(
       MakeDataDescriptor(14, {}), MakeDataDescriptor(17, {}));
 
@@ -232,7 +232,7 @@ TEST(DataSynonymAndIdEquationFactsTest, HandlesCorollariesWithInvalidIds) {
 
   // Add another equation.
   transformation_context.GetFactManager()->AddFactIdEquation(
-      15, SpvOpConvertSToF, {9});
+      15, spv::Op::OpConvertSToF, {9});
 
   // Check that two ids are synonymous even though one of them doesn't exist in
   // the module (%17).
@@ -249,7 +249,7 @@ TEST(DataSynonymAndIdEquationFactsTest, HandlesCorollariesWithInvalidIds) {
   ASSERT_TRUE(context->KillDef(15));
 
   transformation_context.GetFactManager()->AddFactIdEquation(
-      18, SpvOpConvertSToF, {9});
+      18, spv::Op::OpConvertSToF, {9});
 
   CheckConsistencyOfSynonymFacts(context.get(), transformation_context);
 
@@ -294,8 +294,8 @@ TEST(DataSynonymAndIdEquationFactsTest, LogicalNotEquationFacts) {
                                   MakeDataDescriptor(7, {}));
   fact_manager.AddFactDataSynonym(MakeDataDescriptor(16, {}),
                                   MakeDataDescriptor(14, {}));
-  fact_manager.AddFactIdEquation(14, SpvOpLogicalNot, {7});
-  fact_manager.AddFactIdEquation(17, SpvOpLogicalNot, {16});
+  fact_manager.AddFactIdEquation(14, spv::Op::OpLogicalNot, {7});
+  fact_manager.AddFactIdEquation(17, spv::Op::OpLogicalNot, {16});
 
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(15, {}),
                                         MakeDataDescriptor(7, {})));
@@ -336,8 +336,8 @@ TEST(DataSynonymAndIdEquationFactsTest, SignedNegateEquationFacts) {
 
   FactManager fact_manager(context.get());
 
-  fact_manager.AddFactIdEquation(14, SpvOpSNegate, {7});
-  fact_manager.AddFactIdEquation(15, SpvOpSNegate, {14});
+  fact_manager.AddFactIdEquation(14, spv::Op::OpSNegate, {7});
+  fact_manager.AddFactIdEquation(15, spv::Op::OpSNegate, {14});
 
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(7, {}),
                                         MakeDataDescriptor(15, {})));
@@ -380,19 +380,19 @@ TEST(DataSynonymAndIdEquationFactsTest, AddSubNegateFacts1) {
 
   FactManager fact_manager(context.get());
 
-  fact_manager.AddFactIdEquation(14, SpvOpIAdd, {15, 16});
+  fact_manager.AddFactIdEquation(14, spv::Op::OpIAdd, {15, 16});
   fact_manager.AddFactDataSynonym(MakeDataDescriptor(17, {}),
                                   MakeDataDescriptor(15, {}));
   fact_manager.AddFactDataSynonym(MakeDataDescriptor(18, {}),
                                   MakeDataDescriptor(16, {}));
-  fact_manager.AddFactIdEquation(19, SpvOpISub, {14, 18});
-  fact_manager.AddFactIdEquation(20, SpvOpISub, {14, 17});
+  fact_manager.AddFactIdEquation(19, spv::Op::OpISub, {14, 18});
+  fact_manager.AddFactIdEquation(20, spv::Op::OpISub, {14, 17});
   fact_manager.AddFactDataSynonym(MakeDataDescriptor(21, {}),
                                   MakeDataDescriptor(14, {}));
-  fact_manager.AddFactIdEquation(22, SpvOpISub, {16, 21});
+  fact_manager.AddFactIdEquation(22, spv::Op::OpISub, {16, 21});
   fact_manager.AddFactDataSynonym(MakeDataDescriptor(23, {}),
                                   MakeDataDescriptor(22, {}));
-  fact_manager.AddFactIdEquation(24, SpvOpSNegate, {23});
+  fact_manager.AddFactIdEquation(24, spv::Op::OpSNegate, {23});
 
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(19, {}),
                                         MakeDataDescriptor(15, {})));
@@ -438,31 +438,31 @@ TEST(DataSynonymAndIdEquationFactsTest, AddSubNegateFacts2) {
 
   FactManager fact_manager(context.get());
 
-  fact_manager.AddFactIdEquation(14, SpvOpISub, {15, 16});
-  fact_manager.AddFactIdEquation(17, SpvOpIAdd, {14, 16});
+  fact_manager.AddFactIdEquation(14, spv::Op::OpISub, {15, 16});
+  fact_manager.AddFactIdEquation(17, spv::Op::OpIAdd, {14, 16});
 
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(17, {}),
                                         MakeDataDescriptor(15, {})));
 
-  fact_manager.AddFactIdEquation(18, SpvOpIAdd, {16, 14});
+  fact_manager.AddFactIdEquation(18, spv::Op::OpIAdd, {16, 14});
 
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(18, {}),
                                         MakeDataDescriptor(15, {})));
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(17, {}),
                                         MakeDataDescriptor(18, {})));
 
-  fact_manager.AddFactIdEquation(19, SpvOpISub, {14, 15});
-  fact_manager.AddFactIdEquation(20, SpvOpSNegate, {19});
+  fact_manager.AddFactIdEquation(19, spv::Op::OpISub, {14, 15});
+  fact_manager.AddFactIdEquation(20, spv::Op::OpSNegate, {19});
 
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(20, {}),
                                         MakeDataDescriptor(16, {})));
 
-  fact_manager.AddFactIdEquation(21, SpvOpISub, {14, 19});
+  fact_manager.AddFactIdEquation(21, spv::Op::OpISub, {14, 19});
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(21, {}),
                                         MakeDataDescriptor(15, {})));
 
-  fact_manager.AddFactIdEquation(22, SpvOpISub, {14, 18});
-  fact_manager.AddFactIdEquation(23, SpvOpSNegate, {22});
+  fact_manager.AddFactIdEquation(22, spv::Op::OpISub, {14, 18});
+  fact_manager.AddFactIdEquation(23, spv::Op::OpSNegate, {22});
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(23, {}),
                                         MakeDataDescriptor(16, {})));
 }
@@ -525,31 +525,31 @@ TEST(DataSynonymAndIdEquationFactsTest, ConversionEquations) {
   fact_manager.AddFactDataSynonym(MakeDataDescriptor(22, {}),
                                   MakeDataDescriptor(23, {}));
 
-  fact_manager.AddFactIdEquation(25, SpvOpConvertUToF, {16});
-  fact_manager.AddFactIdEquation(26, SpvOpConvertUToF, {17});
+  fact_manager.AddFactIdEquation(25, spv::Op::OpConvertUToF, {16});
+  fact_manager.AddFactIdEquation(26, spv::Op::OpConvertUToF, {17});
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(25, {}),
                                         MakeDataDescriptor(26, {})));
 
-  fact_manager.AddFactIdEquation(27, SpvOpConvertSToF, {20});
-  fact_manager.AddFactIdEquation(28, SpvOpConvertUToF, {21});
+  fact_manager.AddFactIdEquation(27, spv::Op::OpConvertSToF, {20});
+  fact_manager.AddFactIdEquation(28, spv::Op::OpConvertUToF, {21});
   ASSERT_FALSE(fact_manager.IsSynonymous(MakeDataDescriptor(27, {}),
                                          MakeDataDescriptor(28, {})));
 
-  fact_manager.AddFactIdEquation(29, SpvOpConvertSToF, {18});
-  fact_manager.AddFactIdEquation(30, SpvOpConvertUToF, {19});
+  fact_manager.AddFactIdEquation(29, spv::Op::OpConvertSToF, {18});
+  fact_manager.AddFactIdEquation(30, spv::Op::OpConvertUToF, {19});
   ASSERT_FALSE(fact_manager.IsSynonymous(MakeDataDescriptor(29, {}),
                                          MakeDataDescriptor(30, {})));
 
-  fact_manager.AddFactIdEquation(31, SpvOpConvertSToF, {22});
-  fact_manager.AddFactIdEquation(32, SpvOpConvertSToF, {23});
+  fact_manager.AddFactIdEquation(31, spv::Op::OpConvertSToF, {22});
+  fact_manager.AddFactIdEquation(32, spv::Op::OpConvertSToF, {23});
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(31, {}),
                                         MakeDataDescriptor(32, {})));
 
-  fact_manager.AddFactIdEquation(33, SpvOpConvertUToF, {17});
+  fact_manager.AddFactIdEquation(33, spv::Op::OpConvertUToF, {17});
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(33, {}),
                                         MakeDataDescriptor(26, {})));
 
-  fact_manager.AddFactIdEquation(34, SpvOpConvertSToF, {23});
+  fact_manager.AddFactIdEquation(34, spv::Op::OpConvertSToF, {23});
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(32, {}),
                                         MakeDataDescriptor(34, {})));
 }
@@ -605,7 +605,7 @@ TEST(DataSynonymAndIdEquationFactsTest, BitcastEquationFacts) {
 
   uint32_t lhs_id = 30;
   for (uint32_t rhs_id : {6, 6, 7, 7, 19, 19, 20, 20, 21, 21, 22, 22}) {
-    fact_manager.AddFactIdEquation(lhs_id, SpvOpBitcast, {rhs_id});
+    fact_manager.AddFactIdEquation(lhs_id, spv::Op::OpBitcast, {rhs_id});
     ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(lhs_id, {}),
                                           MakeDataDescriptor(rhs_id, {})));
     ++lhs_id;
@@ -651,37 +651,37 @@ TEST(DataSynonymAndIdEquationFactsTest, EquationAndEquivalenceFacts) {
 
   FactManager fact_manager(context.get());
 
-  fact_manager.AddFactIdEquation(14, SpvOpISub, {15, 16});
+  fact_manager.AddFactIdEquation(14, spv::Op::OpISub, {15, 16});
   fact_manager.AddFactDataSynonym(MakeDataDescriptor(114, {}),
                                   MakeDataDescriptor(14, {}));
-  fact_manager.AddFactIdEquation(17, SpvOpIAdd, {114, 16});
+  fact_manager.AddFactIdEquation(17, spv::Op::OpIAdd, {114, 16});
 
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(17, {}),
                                         MakeDataDescriptor(15, {})));
 
-  fact_manager.AddFactIdEquation(18, SpvOpIAdd, {16, 114});
+  fact_manager.AddFactIdEquation(18, spv::Op::OpIAdd, {16, 114});
 
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(18, {}),
                                         MakeDataDescriptor(15, {})));
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(17, {}),
                                         MakeDataDescriptor(18, {})));
 
-  fact_manager.AddFactIdEquation(19, SpvOpISub, {14, 15});
+  fact_manager.AddFactIdEquation(19, spv::Op::OpISub, {14, 15});
   fact_manager.AddFactDataSynonym(MakeDataDescriptor(119, {}),
                                   MakeDataDescriptor(19, {}));
-  fact_manager.AddFactIdEquation(20, SpvOpSNegate, {119});
+  fact_manager.AddFactIdEquation(20, spv::Op::OpSNegate, {119});
 
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(20, {}),
                                         MakeDataDescriptor(16, {})));
 
-  fact_manager.AddFactIdEquation(21, SpvOpISub, {14, 19});
+  fact_manager.AddFactIdEquation(21, spv::Op::OpISub, {14, 19});
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(21, {}),
                                         MakeDataDescriptor(15, {})));
 
-  fact_manager.AddFactIdEquation(22, SpvOpISub, {14, 18});
+  fact_manager.AddFactIdEquation(22, spv::Op::OpISub, {14, 18});
   fact_manager.AddFactDataSynonym(MakeDataDescriptor(22, {}),
                                   MakeDataDescriptor(220, {}));
-  fact_manager.AddFactIdEquation(23, SpvOpSNegate, {220});
+  fact_manager.AddFactIdEquation(23, spv::Op::OpSNegate, {220});
   ASSERT_TRUE(fact_manager.IsSynonymous(MakeDataDescriptor(23, {}),
                                         MakeDataDescriptor(16, {})));
 }

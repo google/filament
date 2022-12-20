@@ -142,7 +142,7 @@ void TransformationReplaceParamsWithStruct::Apply(
 
   // Add new parameter to the function.
   function->AddParameter(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpFunctionParameter, struct_type_id,
+      ir_context, spv::Op::OpFunctionParameter, struct_type_id,
       message_.fresh_parameter_id(), opt::Instruction::OperandList()));
 
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_parameter_id());
@@ -182,8 +182,8 @@ void TransformationReplaceParamsWithStruct::Apply(
     auto fresh_composite_id =
         caller_id_to_fresh_composite_id.at(inst->result_id());
     inst->InsertBefore(MakeUnique<opt::Instruction>(
-        ir_context, SpvOpCompositeConstruct, struct_type_id, fresh_composite_id,
-        std::move(composite_components)));
+        ir_context, spv::Op::OpCompositeConstruct, struct_type_id,
+        fresh_composite_id, std::move(composite_components)));
 
     // Add a new operand to the OpFunctionCall instruction.
     inst->AddOperand({SPV_OPERAND_TYPE_ID, {fresh_composite_id}});
@@ -200,19 +200,19 @@ void TransformationReplaceParamsWithStruct::Apply(
     // Skip all OpVariable instructions.
     auto iter = function->begin()->begin();
     while (iter != function->begin()->end() &&
-           !fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpCompositeExtract,
-                                                         iter)) {
+           !fuzzerutil::CanInsertOpcodeBeforeInstruction(
+               spv::Op::OpCompositeExtract, iter)) {
       ++iter;
     }
 
-    assert(fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpCompositeExtract,
-                                                        iter) &&
+    assert(fuzzerutil::CanInsertOpcodeBeforeInstruction(
+               spv::Op::OpCompositeExtract, iter) &&
            "Can't extract parameter's value from the structure");
 
     // Insert OpCompositeExtract instructions to unpack parameters' values from
     // the struct type.
     iter.InsertBefore(MakeUnique<opt::Instruction>(
-        ir_context, SpvOpCompositeExtract, param_inst->type_id(),
+        ir_context, spv::Op::OpCompositeExtract, param_inst->type_id(),
         param_inst->result_id(),
         opt::Instruction::OperandList{
             {SPV_OPERAND_TYPE_ID, {message_.fresh_parameter_id()}},

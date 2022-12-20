@@ -40,21 +40,21 @@ void FuzzerPassAdjustFunctionControls::Apply() {
       // For the new mask, we first randomly select one of three basic masks:
       // None, Inline or DontInline.  These are always valid (and are mutually
       // exclusive).
-      std::vector<uint32_t> basic_function_control_masks = {
-          SpvFunctionControlMaskNone, SpvFunctionControlInlineMask,
-          SpvFunctionControlDontInlineMask};
+      std::vector<spv::FunctionControlMask> basic_function_control_masks = {
+          spv::FunctionControlMask::MaskNone, spv::FunctionControlMask::Inline,
+          spv::FunctionControlMask::DontInline};
       uint32_t new_function_control_mask =
-          basic_function_control_masks[GetFuzzerContext()->RandomIndex(
-              basic_function_control_masks)];
+          uint32_t(basic_function_control_masks[GetFuzzerContext()->RandomIndex(
+              basic_function_control_masks)]);
 
       // We now consider the Pure and Const mask bits.  If these are already
       // set on the function then it's OK to keep them, but also interesting
       // to consider dropping them, so we decide randomly in each case.
       for (auto mask_bit :
-           {SpvFunctionControlPureMask, SpvFunctionControlConstMask}) {
-        if ((existing_function_control_mask & mask_bit) &&
+           {spv::FunctionControlMask::Pure, spv::FunctionControlMask::Const}) {
+        if ((existing_function_control_mask & uint32_t(mask_bit)) &&
             GetFuzzerContext()->ChooseEven()) {
-          new_function_control_mask |= mask_bit;
+          new_function_control_mask |= uint32_t(mask_bit);
         }
       }
 

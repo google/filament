@@ -66,7 +66,8 @@ def generate_core_tables(version = None):
             "--extinst-debuginfo-grammar=$(location {1}) " +
             "--extinst-cldebuginfo100-grammar=$(location {2}) " +
             "--core-insts-output=$(location {3}) " +
-            "--operand-kinds-output=$(location {4})"
+            "--operand-kinds-output=$(location {4}) " +
+            "--output-language=c++"
         ).format(*fmtargs),
         cmd_bat = (
             "$(location :generate_grammar_tables) " +
@@ -74,9 +75,10 @@ def generate_core_tables(version = None):
             "--extinst-debuginfo-grammar=$(location {1}) " +
             "--extinst-cldebuginfo100-grammar=$(location {2}) " +
             "--core-insts-output=$(location {3}) " +
-            "--operand-kinds-output=$(location {4})"
+            "--operand-kinds-output=$(location {4}) " +
+            "--output-language=c++"
         ).format(*fmtargs),
-        tools = [":generate_grammar_tables"],
+        exec_tools = [":generate_grammar_tables"],
         visibility = ["//visibility:private"],
     )
 
@@ -103,7 +105,8 @@ def generate_enum_string_mapping(version = None):
             "--extinst-debuginfo-grammar=$(location {1}) " +
             "--extinst-cldebuginfo100-grammar=$(location {2}) " +
             "--extension-enum-output=$(location {3}) " +
-            "--enum-string-mapping-output=$(location {4})"
+            "--enum-string-mapping-output=$(location {4}) " +
+            "--output-language=c++"
         ).format(*fmtargs),
         cmd_bat = (
             "$(location :generate_grammar_tables) " +
@@ -111,9 +114,10 @@ def generate_enum_string_mapping(version = None):
             "--extinst-debuginfo-grammar=$(location {1}) " +
             "--extinst-cldebuginfo100-grammar=$(location {2}) " +
             "--extension-enum-output=$(location {3}) " +
-            "--enum-string-mapping-output=$(location {4})"
+            "--enum-string-mapping-output=$(location {4}) " +
+            "--output-language=c++"
         ).format(*fmtargs),
-        tools = [":generate_grammar_tables"],
+        exec_tools = [":generate_grammar_tables"],
         visibility = ["//visibility:private"],
     )
 
@@ -139,7 +143,7 @@ def generate_opencl_tables(version = None):
             "--extinst-opencl-grammar=$(location {0}) " +
             "--opencl-insts-output=$(location {1})"
         ).format(*fmtargs),
-        tools = [":generate_grammar_tables"],
+        exec_tools = [":generate_grammar_tables"],
         visibility = ["//visibility:private"],
     )
 
@@ -158,14 +162,16 @@ def generate_glsl_tables(version = None):
         cmd = (
             "$(location :generate_grammar_tables) " +
             "--extinst-glsl-grammar=$(location {0}) " +
-            "--glsl-insts-output=$(location {1})"
+            "--glsl-insts-output=$(location {1}) " +
+            "--output-language=c++"
         ).format(*fmtargs),
         cmd_bat = (
             "$(location :generate_grammar_tables) " +
             "--extinst-glsl-grammar=$(location {0}) " +
-            "--glsl-insts-output=$(location {1})"
+            "--glsl-insts-output=$(location {1}) " +
+            "--output-language=c++"
         ).format(*fmtargs),
-        tools = [":generate_grammar_tables"],
+        exec_tools = [":generate_grammar_tables"],
         visibility = ["//visibility:private"],
     )
 
@@ -193,7 +199,7 @@ def generate_vendor_tables(extension, operand_kind_prefix = ""):
             "--vendor-insts-output=$(location {1}) " +
             "--vendor-operand-kind-prefix={2}"
         ).format(*fmtargs),
-        tools = [":generate_grammar_tables"],
+        exec_tools = [":generate_grammar_tables"],
         visibility = ["//visibility:private"],
     )
 
@@ -216,7 +222,7 @@ def generate_extinst_lang_headers(name, grammar = None):
             "--extinst-grammar=$< " +
             "--extinst-output-path=$(location {0})"
         ).format(*fmtargs),
-        tools = [":generate_language_headers"],
+        exec_tools = [":generate_language_headers"],
         visibility = ["//visibility:private"],
     )
 

@@ -102,7 +102,7 @@ bool TransformationCompositeInsert::IsApplicable(
   // It must be possible to insert an OpCompositeInsert before this
   // instruction.
   return fuzzerutil::CanInsertOpcodeBeforeInstruction(
-      SpvOpCompositeInsert, instruction_to_insert_before);
+      spv::Op::OpCompositeInsert, instruction_to_insert_before);
 }
 
 void TransformationCompositeInsert::Apply(
@@ -126,8 +126,8 @@ void TransformationCompositeInsert::Apply(
   auto insert_before =
       FindInstruction(message_.instruction_to_insert_before(), ir_context);
   auto new_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpCompositeInsert, composite_type_id, message_.fresh_id(),
-      std::move(in_operands));
+      ir_context, spv::Op::OpCompositeInsert, composite_type_id,
+      message_.fresh_id(), std::move(in_operands));
   auto new_instruction_ptr = new_instruction.get();
   insert_before->InsertBefore(std::move(new_instruction));
 

@@ -39,8 +39,8 @@ void FuzzerPassAddFunctionCalls::Apply() {
           -> void {
         // Check whether it is legitimate to insert a function call before the
         // instruction.
-        if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpFunctionCall,
-                                                          inst_it)) {
+        if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(
+                spv::Op::OpFunctionCall, inst_it)) {
           return;
         }
 
@@ -112,8 +112,8 @@ std::vector<uint32_t> FuzzerPassAddFunctionCalls::ChooseFunctionCallArguments(
   auto available_pointers = FindAvailableInstructions(
       caller_function, caller_block, caller_inst_it,
       [this, caller_block](opt::IRContext* /*unused*/, opt::Instruction* inst) {
-        if (inst->opcode() != SpvOpVariable ||
-            inst->opcode() != SpvOpFunctionParameter) {
+        if (inst->opcode() != spv::Op::OpVariable ||
+            inst->opcode() != spv::Op::OpFunctionParameter) {
           // Function parameters and variables are the only
           // kinds of pointer that can be used as actual
           // parameters.
@@ -172,15 +172,15 @@ std::vector<uint32_t> FuzzerPassAddFunctionCalls::ChooseFunctionCallArguments(
     auto storage_class = param_type->AsPointer()->storage_class();
     auto pointee_type_id = fuzzerutil::GetPointeeTypeIdFromPointerType(
         GetIRContext(), param->type_id());
-    if (storage_class == SpvStorageClassFunction) {
+    if (storage_class == spv::StorageClass::Function) {
       // Add a new zero-initialized local variable to the current
       // function, noting that its pointee value is irrelevant.
       ApplyTransformation(TransformationAddLocalVariable(
           fresh_variable_id, param->type_id(), caller_function->result_id(),
           FindOrCreateZeroConstant(pointee_type_id, false), true));
     } else {
-      assert((storage_class == SpvStorageClassPrivate ||
-              storage_class == SpvStorageClassWorkgroup) &&
+      assert((storage_class == spv::StorageClass::Private ||
+              storage_class == spv::StorageClass::Workgroup) &&
              "Only Function, Private and Workgroup storage classes are "
              "supported at present.");
       // Add a new global variable to the module, zero-initializing it if
@@ -188,7 +188,7 @@ std::vector<uint32_t> FuzzerPassAddFunctionCalls::ChooseFunctionCallArguments(
       // irrelevant.
       ApplyTransformation(TransformationAddGlobalVariable(
           fresh_variable_id, param->type_id(), storage_class,
-          storage_class == SpvStorageClassPrivate
+          storage_class == spv::StorageClass::Private
               ? FindOrCreateZeroConstant(pointee_type_id, false)
               : 0,
           true));

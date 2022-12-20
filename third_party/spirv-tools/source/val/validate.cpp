@@ -66,15 +66,15 @@ void RegisterExtension(ValidationState_t& _,
 
 // Parses the beginning of the module searching for OpExtension instructions.
 // Registers extensions if recognized. Returns SPV_REQUESTED_TERMINATION
-// once an instruction which is not SpvOpCapability and SpvOpExtension is
-// encountered. According to the SPIR-V spec extensions are declared after
-// capabilities and before everything else.
+// once an instruction which is not spv::Op::OpCapability and
+// spv::Op::OpExtension is encountered. According to the SPIR-V spec extensions
+// are declared after capabilities and before everything else.
 spv_result_t ProcessExtensions(void* user_data,
                                const spv_parsed_instruction_t* inst) {
-  const SpvOp opcode = static_cast<SpvOp>(inst->opcode);
-  if (opcode == SpvOpCapability) return SPV_SUCCESS;
+  const spv::Op opcode = static_cast<spv::Op>(inst->opcode);
+  if (opcode == spv::Op::OpCapability) return SPV_SUCCESS;
 
-  if (opcode == SpvOpExtension) {
+  if (opcode == spv::Op::OpExtension) {
     ValidationState_t& _ = *(reinterpret_cast<ValidationState_t*>(user_data));
     RegisterExtension(_, inst);
     return SPV_SUCCESS;
@@ -123,7 +123,7 @@ spv_result_t ValidateEntryPoints(ValidationState_t& _) {
   _.ComputeFunctionToEntryPointMapping();
   _.ComputeRecursiveEntryPoints();
 
-  if (_.entry_points().empty() && !_.HasCapability(SpvCapabilityLinkage)) {
+  if (_.entry_points().empty() && !_.HasCapability(spv::Capability::Linkage)) {
     return _.diag(SPV_ERROR_INVALID_BINARY, nullptr)
            << "No OpEntryPoint instruction was found. This is only allowed if "
               "the Linkage capability is being used.";
@@ -209,6 +209,8 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
     return error;
   }
 
+  bool has_mask_task_nv = false;
+  bool has_mask_task_ext = false;
   std::vector<Instruction*> visited_entry_points;
   for (auto& instruction : vstate->ordered_instructions()) {
     {
@@ -216,9 +218,9 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
       // able to, briefly, de-const the instruction.
       Instruction* inst = const_cast<Instruction*>(&instruction);
 
-      if (inst->opcode() == SpvOpEntryPoint) {
+      if (inst->opcode() == spv::Op::OpEntryPoint) {
         const auto entry_point = inst->GetOperandAs<uint32_t>(1);
-        const auto execution_model = inst->GetOperandAs<SpvExecutionModel>(0);
+        const auto execution_model = inst->GetOperandAs<spv::ExecutionModel>(0);
         const std::string desc_name = inst->GetOperandAs<std::string>(2);
 
         ValidationState_t::EntryPointDescription desc;
@@ -234,7 +236,7 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
         if (visited_entry_points.size() > 0) {
           for (const Instruction* check_inst : visited_entry_points) {
             const auto check_execution_model =
-                check_inst->GetOperandAs<SpvExecutionModel>(0);
+                check_inst->GetOperandAs<spv::ExecutionModel>(0);
             const std::string check_name =
                 check_inst->GetOperandAs<std::string>(2);
 
@@ -247,8 +249,13 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
           }
         }
         visited_entry_points.push_back(inst);
+
+        has_mask_task_nv |= (execution_model == spv::ExecutionModel::TaskNV ||
+                             execution_model == spv::ExecutionModel::MeshNV);
+        has_mask_task_ext |= (execution_model == spv::ExecutionModel::TaskEXT ||
+                              execution_model == spv::ExecutionModel::MeshEXT);
       }
-      if (inst->opcode() == SpvOpFunctionCall) {
+      if (inst->opcode() == spv::Op::OpFunctionCall) {
         if (!vstate->in_function_body()) {
           return vstate->diag(SPV_ERROR_INVALID_LAYOUT, &instruction)
                  << "A FunctionCall must happen within a function body.";
@@ -279,7 +286,7 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
     {
       Instruction* inst = const_cast<Instruction*>(&instruction);
       vstate->RegisterInstruction(inst);
-      if (inst->opcode() == SpvOpTypeForwardPointer) {
+      if (inst->opcode() == spv::Op::OpTypeForwardPointer) {
         vstate->RegisterForwardPointer(inst->GetOperandAs<uint32_t>(0));
       }
     }
@@ -292,6 +299,17 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
   if (vstate->in_function_body())
     return vstate->diag(SPV_ERROR_INVALID_LAYOUT, nullptr)
            << "Missing OpFunctionEnd at end of module.";
+
+  if (vstate->HasCapability(spv::Capability::BindlessTextureNV) &&
+      !vstate->has_samplerimage_variable_address_mode_specified())
+    return vstate->diag(SPV_ERROR_INVALID_LAYOUT, nullptr)
+           << "Missing required OpSamplerImageAddressingModeNV instruction.";
+
+  if (has_mask_task_ext && has_mask_task_nv)
+    return vstate->diag(SPV_ERROR_INVALID_LAYOUT, nullptr)
+           << vstate->VkErrorID(7102)
+           << "Module can't mix MeshEXT/TaskEXT with MeshNV/TaskNV Execution "
+              "Model.";
 
   // Catch undefined forward references before performing further checks.
   if (auto error = ValidateForwardDecls(*vstate)) return error;
@@ -345,10 +363,15 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
     if (auto error = NonUniformPass(*vstate, &instruction)) return error;
 
     if (auto error = LiteralsPass(*vstate, &instruction)) return error;
+    if (auto error = RayQueryPass(*vstate, &instruction)) return error;
+    if (auto error = RayTracingPass(*vstate, &instruction)) return error;
+    if (auto error = RayReorderNVPass(*vstate, &instruction)) return error;
+    if (auto error = MeshShadingPass(*vstate, &instruction)) return error;
   }
 
-  // Validate the preconditions involving adjacent instructions. e.g. SpvOpPhi
-  // must only be preceded by SpvOpLabel, SpvOpPhi, or SpvOpLine.
+  // Validate the preconditions involving adjacent instructions. e.g.
+  // spv::Op::OpPhi must only be preceded by spv::Op::OpLabel, spv::Op::OpPhi,
+  // or spv::Op::OpLine.
   if (auto error = ValidateAdjacency(*vstate)) return error;
 
   if (auto error = ValidateEntryPoints(*vstate)) return error;

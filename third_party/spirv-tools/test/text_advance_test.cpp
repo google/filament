@@ -130,5 +130,14 @@ TEST(TextAdvance, SkipOverCRLFs) {
   EXPECT_EQ(2u, pos.line);
   EXPECT_EQ(4u, pos.index);
 }
+
+TEST(TextAdvance, HandleLotsOfWhitespace) {
+  std::string lots_of_spaces(10000, ' ');
+  lots_of_spaces += "Word";
+  const auto pos = PositionAfterAdvance(lots_of_spaces.c_str());
+  EXPECT_EQ(10000u, pos.column);
+  EXPECT_EQ(0u, pos.line);
+  EXPECT_EQ(10000u, pos.index);
+}
 }  // namespace
 }  // namespace spvtools

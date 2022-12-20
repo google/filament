@@ -48,8 +48,8 @@ bool TransformationAddConstantNull::IsApplicable(
 void TransformationAddConstantNull::Apply(
     opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
   auto new_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpConstantNull, message_.type_id(), message_.fresh_id(),
-      opt::Instruction::OperandList());
+      ir_context, spv::Op::OpConstantNull, message_.type_id(),
+      message_.fresh_id(), opt::Instruction::OperandList());
   auto new_instruction_ptr = new_instruction.get();
   ir_context->module()->AddGlobalValue(std::move(new_instruction));
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());

@@ -41,7 +41,7 @@ class AssemblyGrammar {
 
   // Removes capabilities not available in the current target environment and
   // returns the rest.
-  CapabilitySet filterCapsAgainstTargetEnv(const SpvCapability* cap_array,
+  CapabilitySet filterCapsAgainstTargetEnv(const spv::Capability* cap_array,
                                            uint32_t count) const;
 
   // Fills in the desc parameter with the information about the opcode
@@ -52,7 +52,7 @@ class AssemblyGrammar {
   // Fills in the desc parameter with the information about the opcode
   // of the valid. Returns SPV_SUCCESS if the opcode was found, and
   // SPV_ERROR_INVALID_LOOKUP if the opcode does not exist.
-  spv_result_t lookupOpcode(SpvOp opcode, spv_opcode_desc* desc) const;
+  spv_result_t lookupOpcode(spv::Op opcode, spv_opcode_desc* desc) const;
 
   // Fills in the desc parameter with the information about the given
   // operand. Returns SPV_SUCCESS if the operand was found, and
@@ -82,11 +82,12 @@ class AssemblyGrammar {
   // the integer add opcode for OpSpecConstantOp.  On success, returns
   // SPV_SUCCESS and sends the discovered operation code through the opcode
   // parameter.  On failure, returns SPV_ERROR_INVALID_LOOKUP.
-  spv_result_t lookupSpecConstantOpcode(const char* name, SpvOp* opcode) const;
+  spv_result_t lookupSpecConstantOpcode(const char* name,
+                                        spv::Op* opcode) const;
 
   // Returns SPV_SUCCESS if the given opcode is valid as the opcode operand
   // to OpSpecConstantOp.
-  spv_result_t lookupSpecConstantOpcode(SpvOp opcode) const;
+  spv_result_t lookupSpecConstantOpcode(spv::Op opcode) const;
 
   // Parses a mask expression string for the given operand type.
   //

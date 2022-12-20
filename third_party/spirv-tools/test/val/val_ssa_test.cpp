@@ -118,7 +118,7 @@ TEST_F(ValidateSSA, DominateUsageWithinBlockBad) {
   CompileSuccessfully(str);
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              MatchesRegex("ID .\\[%bad\\] has not been defined\n"
+              MatchesRegex("ID '.\\[%bad\\]' has not been defined\n"
                            "  %8 = OpIAdd %uint %uint_1 %bad\n"));
 }
 
@@ -141,7 +141,7 @@ TEST_F(ValidateSSA, DominateUsageSameInstructionBad) {
   CompileSuccessfully(str);
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              MatchesRegex("ID .\\[%sum\\] has not been defined\n"
+              MatchesRegex("ID '.\\[%sum\\]' has not been defined\n"
                            "  %sum = OpIAdd %uint %uint_1 %sum\n"));
 }
 
@@ -204,7 +204,7 @@ TEST_F(ValidateSSA, ForwardMemberNameMissingTargetBad) {
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
               HasSubstr("The following forward referenced IDs have not been "
-                        "defined:\n2[%2]"));
+                        "defined:\n'2[%2]'"));
 }
 
 TEST_F(ValidateSSA, ForwardDecorateGood) {
@@ -1126,8 +1126,8 @@ TEST_F(ValidateSSA, IdDoesNotDominateItsUseBad) {
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(
       getDiagnosticString(),
-      MatchesRegex("ID .\\[%eleven\\] defined in block .\\[%true_block\\] "
-                   "does not dominate its use in block .\\[%false_block\\]\n"
+      MatchesRegex("ID '.\\[%eleven\\]' defined in block '.\\[%true_block\\]' "
+                   "does not dominate its use in block '.\\[%false_block\\]'\n"
                    "  %false_block = OpLabel\n"));
 }
 
@@ -1187,7 +1187,7 @@ TEST_F(ValidateSSA,
   CompileSuccessfully(str);
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              MatchesRegex("ID .\\[%inew\\] has not been defined\n"
+              MatchesRegex("ID '.\\[%inew\\]' has not been defined\n"
                            "  %19 = OpIAdd %uint %inew %uint_1\n"));
 }
 
@@ -1268,12 +1268,12 @@ TEST_F(ValidateSSA, PhiVariableDefNotDominatedByParentBlockBad) {
 
   CompileSuccessfully(str);
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-  EXPECT_THAT(
-      getDiagnosticString(),
-      MatchesRegex("In OpPhi instruction .\\[%phi\\], ID .\\[%true_copy\\] "
-                   "definition does not dominate its parent .\\[%if_false\\]\n"
-                   "  %phi = OpPhi %bool %true_copy %if_false %false_copy "
-                   "%if_true\n"));
+  EXPECT_THAT(getDiagnosticString(),
+              MatchesRegex(
+                  "In OpPhi instruction '.\\[%phi\\]', ID '.\\[%true_copy\\]' "
+                  "definition does not dominate its parent '.\\[%if_false\\]'\n"
+                  "  %phi = OpPhi %bool %true_copy %if_false %false_copy "
+                  "%if_true\n"));
 }
 
 TEST_F(ValidateSSA, PhiVariableDefDominatesButNotDefinedInParentBlock) {
@@ -1396,11 +1396,11 @@ TEST_F(ValidateSSA, UseFunctionParameterFromOtherFunctionBad) {
 
   CompileSuccessfully(str);
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-  EXPECT_THAT(
-      getDiagnosticString(),
-      MatchesRegex("ID .\\[%first\\] used in function .\\[%func2\\] is used "
-                   "outside of it's defining function .\\[%func\\]\n"
-                   "  %func = OpFunction %void None %14\n"));
+  EXPECT_THAT(getDiagnosticString(),
+              MatchesRegex(
+                  "ID '.\\[%first\\]' used in function '.\\[%func2\\]' is used "
+                  "outside of it's defining function '.\\[%func\\]'\n"
+                  "  %func = OpFunction %void None %14\n"));
 }
 
 TEST_F(ValidateSSA, TypeForwardPointerForwardReference) {

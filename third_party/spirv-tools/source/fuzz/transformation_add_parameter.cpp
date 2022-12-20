@@ -112,7 +112,7 @@ void TransformationAddParameter::Apply(
 
   // Add new parameters to the function.
   function->AddParameter(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpFunctionParameter, new_parameter_type_id,
+      ir_context, spv::Op::OpFunctionParameter, new_parameter_type_id,
       message_.parameter_fresh_id(), opt::Instruction::OperandList()));
 
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.parameter_fresh_id());
@@ -178,16 +178,16 @@ bool TransformationAddParameter::IsParameterTypeSupported(
   //  Think about other type instructions we can add here.
   opt::Instruction* type_inst = ir_context->get_def_use_mgr()->GetDef(type_id);
   switch (type_inst->opcode()) {
-    case SpvOpTypeBool:
-    case SpvOpTypeInt:
-    case SpvOpTypeFloat:
-    case SpvOpTypeMatrix:
-    case SpvOpTypeVector:
+    case spv::Op::OpTypeBool:
+    case spv::Op::OpTypeInt:
+    case spv::Op::OpTypeFloat:
+    case spv::Op::OpTypeMatrix:
+    case spv::Op::OpTypeVector:
       return true;
-    case SpvOpTypeArray:
+    case spv::Op::OpTypeArray:
       return IsParameterTypeSupported(ir_context,
                                       type_inst->GetSingleWordInOperand(0));
-    case SpvOpTypeStruct:
+    case spv::Op::OpTypeStruct:
       if (fuzzerutil::HasBlockOrBufferBlockDecoration(ir_context, type_id)) {
         return false;
       }
@@ -198,13 +198,13 @@ bool TransformationAddParameter::IsParameterTypeSupported(
         }
       }
       return true;
-    case SpvOpTypePointer: {
-      SpvStorageClass storage_class =
-          static_cast<SpvStorageClass>(type_inst->GetSingleWordInOperand(0));
+    case spv::Op::OpTypePointer: {
+      spv::StorageClass storage_class =
+          static_cast<spv::StorageClass>(type_inst->GetSingleWordInOperand(0));
       switch (storage_class) {
-        case SpvStorageClassPrivate:
-        case SpvStorageClassFunction:
-        case SpvStorageClassWorkgroup: {
+        case spv::StorageClass::Private:
+        case spv::StorageClass::Function:
+        case spv::StorageClass::Workgroup: {
           return IsParameterTypeSupported(ir_context,
                                           type_inst->GetSingleWordInOperand(1));
         }

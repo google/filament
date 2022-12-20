@@ -142,7 +142,7 @@ bool TransformationAddDeadBreak::IsApplicable(
   }
 
   // Check that |message_.from_block| ends with an unconditional branch.
-  if (bb_from->terminator()->opcode() != SpvOpBranch) {
+  if (bb_from->terminator()->opcode() != spv::Op::OpBranch) {
     // The block associated with the id does not end with an unconditional
     // branch.
     return false;

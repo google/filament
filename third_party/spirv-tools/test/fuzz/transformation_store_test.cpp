@@ -148,107 +148,107 @@ TEST(TransformationStoreTest, BasicTest) {
   //  61 - undefined
 
   // Bad: attempt to store to 11 from outside its function
-  ASSERT_FALSE(
-      TransformationStore(11, false, 0, 0, 80,
-                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   11, false, 0, 0, 80,
+                   MakeInstructionDescriptor(38, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: pointer is not available
-  ASSERT_FALSE(
-      TransformationStore(81, false, 0, 0, 80,
-                          MakeInstructionDescriptor(45, SpvOpCopyObject, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   81, false, 0, 0, 80,
+                   MakeInstructionDescriptor(45, spv::Op::OpCopyObject, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: attempt to insert before OpVariable
   ASSERT_FALSE(
       TransformationStore(52, false, 0, 0, 24,
-                          MakeInstructionDescriptor(27, SpvOpVariable, 0))
+                          MakeInstructionDescriptor(27, spv::Op::OpVariable, 0))
           .IsApplicable(context.get(), transformation_context));
 
   // Bad: pointer id does not exist
-  ASSERT_FALSE(
-      TransformationStore(1000, false, 0, 0, 24,
-                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   1000, false, 0, 0, 24,
+                   MakeInstructionDescriptor(38, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: pointer id exists but does not have a type
-  ASSERT_FALSE(
-      TransformationStore(5, false, 0, 0, 24,
-                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   5, false, 0, 0, 24,
+                   MakeInstructionDescriptor(38, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: pointer id exists and has a type, but is not a pointer
-  ASSERT_FALSE(
-      TransformationStore(24, false, 0, 0, 24,
-                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   24, false, 0, 0, 24,
+                   MakeInstructionDescriptor(38, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: attempt to store to a null pointer
-  ASSERT_FALSE(
-      TransformationStore(60, false, 0, 0, 24,
-                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   60, false, 0, 0, 24,
+                   MakeInstructionDescriptor(38, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: attempt to store to an undefined pointer
-  ASSERT_FALSE(
-      TransformationStore(61, false, 0, 0, 21,
-                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   61, false, 0, 0, 21,
+                   MakeInstructionDescriptor(38, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: %82 is not available at the program point
   ASSERT_FALSE(
       TransformationStore(82, false, 0, 0, 80,
-                          MakeInstructionDescriptor(37, SpvOpReturn, 0))
+                          MakeInstructionDescriptor(37, spv::Op::OpReturn, 0))
           .IsApplicable(context.get(), transformation_context));
 
   // Bad: value id does not exist
-  ASSERT_FALSE(
-      TransformationStore(27, false, 0, 0, 1000,
-                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   27, false, 0, 0, 1000,
+                   MakeInstructionDescriptor(38, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: value id exists but does not have a type
-  ASSERT_FALSE(
-      TransformationStore(27, false, 0, 0, 15,
-                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   27, false, 0, 0, 15,
+                   MakeInstructionDescriptor(38, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: value id exists but has the wrong type
-  ASSERT_FALSE(
-      TransformationStore(27, false, 0, 0, 14,
-                          MakeInstructionDescriptor(38, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   27, false, 0, 0, 14,
+                   MakeInstructionDescriptor(38, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: attempt to store to read-only variable
-  ASSERT_FALSE(
-      TransformationStore(92, false, 0, 0, 93,
-                          MakeInstructionDescriptor(40, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   92, false, 0, 0, 93,
+                   MakeInstructionDescriptor(40, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: value is not available
-  ASSERT_FALSE(
-      TransformationStore(27, false, 0, 0, 95,
-                          MakeInstructionDescriptor(40, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   27, false, 0, 0, 95,
+                   MakeInstructionDescriptor(40, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: variable being stored to does not have an irrelevant pointee value,
   // and the store is not in a dead block.
-  ASSERT_FALSE(
-      TransformationStore(20, false, 0, 0, 95,
-                          MakeInstructionDescriptor(45, SpvOpCopyObject, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   20, false, 0, 0, 95,
+                   MakeInstructionDescriptor(45, spv::Op::OpCopyObject, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // The described instruction does not exist.
-  ASSERT_FALSE(
-      TransformationStore(27, false, 0, 0, 80,
-                          MakeInstructionDescriptor(1000, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   27, false, 0, 0, 80,
+                   MakeInstructionDescriptor(1000, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   {
     // Store to irrelevant variable from dead block.
     TransformationStore transformation(
         27, false, 0, 0, 80,
-        MakeInstructionDescriptor(38, SpvOpAccessChain, 0));
+        MakeInstructionDescriptor(38, spv::Op::OpAccessChain, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -261,7 +261,7 @@ TEST(TransformationStoreTest, BasicTest) {
     // Store to irrelevant variable from live block.
     TransformationStore transformation(
         11, false, 0, 0, 95,
-        MakeInstructionDescriptor(95, SpvOpReturnValue, 0));
+        MakeInstructionDescriptor(95, spv::Op::OpReturnValue, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -274,7 +274,7 @@ TEST(TransformationStoreTest, BasicTest) {
     // Store to irrelevant variable from live block.
     TransformationStore transformation(
         46, false, 0, 0, 80,
-        MakeInstructionDescriptor(95, SpvOpReturnValue, 0));
+        MakeInstructionDescriptor(95, spv::Op::OpReturnValue, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -287,7 +287,7 @@ TEST(TransformationStoreTest, BasicTest) {
     // Store to irrelevant variable from live block.
     TransformationStore transformation(
         16, false, 0, 0, 21,
-        MakeInstructionDescriptor(95, SpvOpReturnValue, 0));
+        MakeInstructionDescriptor(95, spv::Op::OpReturnValue, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -300,7 +300,7 @@ TEST(TransformationStoreTest, BasicTest) {
     // Store to non-irrelevant variable from dead block.
     TransformationStore transformation(
         53, false, 0, 0, 21,
-        MakeInstructionDescriptor(38, SpvOpAccessChain, 0));
+        MakeInstructionDescriptor(38, spv::Op::OpAccessChain, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -436,15 +436,15 @@ TEST(TransformationStoreTest, DoNotAllowStoresToReadOnlyMemory) {
 
   ASSERT_FALSE(
       TransformationStore(15, false, 0, 0, 13,
-                          MakeInstructionDescriptor(27, SpvOpReturn, 0))
+                          MakeInstructionDescriptor(27, spv::Op::OpReturn, 0))
           .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       TransformationStore(19, false, 0, 0, 50,
-                          MakeInstructionDescriptor(27, SpvOpReturn, 0))
+                          MakeInstructionDescriptor(27, spv::Op::OpReturn, 0))
           .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       TransformationStore(27, false, 0, 0, 50,
-                          MakeInstructionDescriptor(27, SpvOpReturn, 0))
+                          MakeInstructionDescriptor(27, spv::Op::OpReturn, 0))
           .IsApplicable(context.get(), transformation_context));
 }
 
@@ -495,84 +495,85 @@ TEST(TransformationStoreTest, SupportAtomicStore) {
       14);
 
   // Bad: id 100 of memory scope instruction does not exist.
-  ASSERT_FALSE(
-      TransformationStore(14, true, 100, 20, 21,
-                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   14, true, 100, 20, 21,
+                   MakeInstructionDescriptor(24, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
   // Bad: id 100 of memory semantics instruction does not exist.
-  ASSERT_FALSE(
-      TransformationStore(14, true, 15, 100, 21,
-                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   14, true, 15, 100, 21,
+                   MakeInstructionDescriptor(24, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
   // Bad: memory scope should be |OpConstant| opcode.
-  ASSERT_FALSE(
-      TransformationStore(14, true, 5, 20, 21,
-                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   14, true, 5, 20, 21,
+                   MakeInstructionDescriptor(24, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
   // Bad: memory semantics should be |OpConstant| opcode.
-  ASSERT_FALSE(
-      TransformationStore(14, true, 15, 5, 21,
-                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   14, true, 15, 5, 21,
+                   MakeInstructionDescriptor(24, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: The memory scope instruction must have an Integer operand.
-  ASSERT_FALSE(
-      TransformationStore(14, true, 15, 19, 21,
-                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   14, true, 15, 19, 21,
+                   MakeInstructionDescriptor(24, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
   // Bad: The memory memory semantics instruction must have an Integer operand.
-  ASSERT_FALSE(
-      TransformationStore(14, true, 19, 20, 21,
-                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   14, true, 19, 20, 21,
+                   MakeInstructionDescriptor(24, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: Integer size of the memory scope must be equal to 32 bits.
-  ASSERT_FALSE(
-      TransformationStore(14, true, 17, 20, 21,
-                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   14, true, 17, 20, 21,
+                   MakeInstructionDescriptor(24, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: Integer size of memory semantics must be equal to 32 bits.
-  ASSERT_FALSE(
-      TransformationStore(14, true, 15, 17, 21,
-                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   14, true, 15, 17, 21,
+                   MakeInstructionDescriptor(24, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
-  // Bad: memory scope value must be 4 (SpvScopeInvocation).
-  ASSERT_FALSE(
-      TransformationStore(14, true, 16, 20, 21,
-                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  // Bad: memory scope value must be 4 (spv::Scope::Invocation).
+  ASSERT_FALSE(TransformationStore(
+                   14, true, 16, 20, 21,
+                   MakeInstructionDescriptor(24, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: memory semantics value must be either:
   // 64 (SpvMemorySemanticsUniformMemoryMask)
   // 256 (SpvMemorySemanticsWorkgroupMemoryMask)
-  ASSERT_FALSE(
-      TransformationStore(14, true, 15, 16, 21,
-                          MakeInstructionDescriptor(24, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   14, true, 15, 16, 21,
+                   MakeInstructionDescriptor(24, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
   // Bad: The described instruction does not exist
-  ASSERT_FALSE(
-      TransformationStore(14, true, 15, 20, 21,
-                          MakeInstructionDescriptor(150, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   14, true, 15, 20, 21,
+                   MakeInstructionDescriptor(150, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: Can't insert OpAccessChain before the id 15 of memory scope.
-  ASSERT_FALSE(
-      TransformationStore(14, true, 15, 20, 21,
-                          MakeInstructionDescriptor(15, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   14, true, 15, 20, 21,
+                   MakeInstructionDescriptor(15, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Bad: Can't insert OpAccessChain before the id 20 of memory semantics.
-  ASSERT_FALSE(
-      TransformationStore(14, true, 15, 20, 21,
-                          MakeInstructionDescriptor(20, SpvOpAccessChain, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationStore(
+                   14, true, 15, 20, 21,
+                   MakeInstructionDescriptor(20, spv::Op::OpAccessChain, 0))
+                   .IsApplicable(context.get(), transformation_context));
 
   // Successful transformations.
   {
     TransformationStore transformation(
-        14, true, 15, 20, 21, MakeInstructionDescriptor(24, SpvOpReturn, 0));
+        14, true, 15, 20, 21,
+        MakeInstructionDescriptor(24, spv::Op::OpReturn, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),

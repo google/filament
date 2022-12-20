@@ -63,7 +63,7 @@ std::vector<uint32_t> ConstantUniformFacts::GetConstantWords(
 bool ConstantUniformFacts::DataMatches(
     const opt::Instruction& constant_instruction,
     const protobufs::FactConstantUniform& constant_uniform_fact) {
-  assert(constant_instruction.opcode() == SpvOpConstant);
+  assert(constant_instruction.opcode() == spv::Op::OpConstant);
   std::vector<uint32_t> data_in_constant;
   for (uint32_t i = 0; i < constant_instruction.NumInOperands(); i++) {
     data_in_constant.push_back(constant_instruction.GetSingleWordInOperand(i));
@@ -95,7 +95,7 @@ ConstantUniformFacts::GetUniformDescriptorsForConstant(
     uint32_t constant_id) const {
   std::vector<protobufs::UniformBufferElementDescriptor> result;
   auto constant_inst = ir_context_->get_def_use_mgr()->GetDef(constant_id);
-  assert(constant_inst->opcode() == SpvOpConstant &&
+  assert(constant_inst->opcode() == spv::Op::OpConstant &&
          "The given id must be that of a constant");
   auto type_id = constant_inst->type_id();
   for (auto& fact_and_type_id : facts_and_type_ids_) {
@@ -175,8 +175,9 @@ bool ConstantUniformFacts::MaybeAddFact(
     return false;
   }
 
-  assert(SpvOpVariable == uniform_variable->opcode());
-  assert(SpvStorageClassUniform == uniform_variable->GetSingleWordInOperand(0));
+  assert(spv::Op::OpVariable == uniform_variable->opcode());
+  assert(spv::StorageClass::Uniform ==
+         spv::StorageClass(uniform_variable->GetSingleWordInOperand(0)));
 
   auto should_be_uniform_pointer_type =
       ir_context_->get_type_mgr()->GetType(uniform_variable->type_id());
@@ -184,7 +185,7 @@ bool ConstantUniformFacts::MaybeAddFact(
     return false;
   }
   if (should_be_uniform_pointer_type->AsPointer()->storage_class() !=
-      SpvStorageClassUniform) {
+      spv::StorageClass::Uniform) {
     return false;
   }
   auto should_be_uniform_pointer_instruction =

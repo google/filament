@@ -115,7 +115,7 @@ class InterfaceVariableScalarReplacement : public Pass {
   // |extra_array_length| is not zero, adds the extra arrayness to the created
   // scalar variables.
   NestedCompositeComponents CreateScalarInterfaceVarsForReplacement(
-      Instruction* interface_var_type, SpvStorageClass storage_class,
+      Instruction* interface_var_type, spv::StorageClass storage_class,
       uint32_t extra_array_length);
 
   // Creates scalar variables with the storage classe |storage_class| to replace
@@ -123,7 +123,7 @@ class InterfaceVariableScalarReplacement : public Pass {
   // If |extra_array_length| is not zero, adds the extra arrayness to all the
   // scalar variables.
   NestedCompositeComponents CreateScalarInterfaceVarsForArray(
-      Instruction* interface_var_type, SpvStorageClass storage_class,
+      Instruction* interface_var_type, spv::StorageClass storage_class,
       uint32_t extra_array_length);
 
   // Creates scalar variables with the storage classe |storage_class| to replace
@@ -131,7 +131,7 @@ class InterfaceVariableScalarReplacement : public Pass {
   // with. If |extra_array_length| is not zero, adds the extra arrayness to all
   // the scalar variables.
   NestedCompositeComponents CreateScalarInterfaceVarsForMatrix(
-      Instruction* interface_var_type, SpvStorageClass storage_class,
+      Instruction* interface_var_type, spv::StorageClass storage_class,
       uint32_t extra_array_length);
 
   // Recursively adds Location and Component decorations to variables in
@@ -345,7 +345,7 @@ class InterfaceVariableScalarReplacement : public Pass {
 
   // Returns the result id of OpTypePointer instrunction whose Type
   // operand is |type_id| and Storage Class operand is |storage_class|.
-  uint32_t GetPointerType(uint32_t type_id, SpvStorageClass storage_class);
+  uint32_t GetPointerType(uint32_t type_id, spv::StorageClass storage_class);
 
   // Kills an instrunction |inst| and its users.
   void KillInstructionAndUsers(Instruction* inst);

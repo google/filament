@@ -19,7 +19,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "spirv-tools/optimizer.hpp"
-#include "spirv/1.1/spirv.h"
+#include "spirv/unified1/spirv.hpp11"
 
 namespace spvtools {
 namespace {
@@ -47,7 +47,7 @@ TEST(CppInterface, SuccessfulRoundTrip) {
   std::vector<uint32_t> binary;
   EXPECT_TRUE(t.Assemble(input_text, &binary));
   EXPECT_TRUE(binary.size() > 5u);
-  EXPECT_EQ(SpvMagicNumber, binary[0]);
+  EXPECT_EQ(spv::MagicNumber, binary[0]);
   EXPECT_EQ(kExpectedSpvVersion, binary[1]);
 
   // This cannot pass validation since %1 is not defined.
@@ -58,7 +58,7 @@ TEST(CppInterface, SuccessfulRoundTrip) {
     EXPECT_EQ(0u, position.line);
     EXPECT_EQ(0u, position.column);
     EXPECT_EQ(1u, position.index);
-    EXPECT_STREQ("ID 1[%1] has not been defined\n  %2 = OpSizeOf %1 %3\n",
+    EXPECT_STREQ("ID '1[%1]' has not been defined\n  %2 = OpSizeOf %1 %3\n",
                  message);
   });
   EXPECT_FALSE(t.Validate(binary));
@@ -74,7 +74,7 @@ TEST(CppInterface, AssembleEmptyModule) {
   EXPECT_TRUE(t.Assemble("", &binary));
   // We only have the header.
   EXPECT_EQ(5u, binary.size());
-  EXPECT_EQ(SpvMagicNumber, binary[0]);
+  EXPECT_EQ(spv::MagicNumber, binary[0]);
   EXPECT_EQ(kExpectedSpvVersion, binary[1]);
 }
 
@@ -85,21 +85,21 @@ TEST(CppInterface, AssembleOverloads) {
     std::vector<uint32_t> binary;
     EXPECT_TRUE(t.Assemble(input_text, &binary));
     EXPECT_TRUE(binary.size() > 5u);
-    EXPECT_EQ(SpvMagicNumber, binary[0]);
+    EXPECT_EQ(spv::MagicNumber, binary[0]);
     EXPECT_EQ(kExpectedSpvVersion, binary[1]);
   }
   {
     std::vector<uint32_t> binary;
     EXPECT_TRUE(t.Assemble(input_text.data(), input_text.size(), &binary));
     EXPECT_TRUE(binary.size() > 5u);
-    EXPECT_EQ(SpvMagicNumber, binary[0]);
+    EXPECT_EQ(spv::MagicNumber, binary[0]);
     EXPECT_EQ(kExpectedSpvVersion, binary[1]);
   }
   {  // Ignore the last newline.
     std::vector<uint32_t> binary;
     EXPECT_TRUE(t.Assemble(input_text.data(), input_text.size() - 1, &binary));
     EXPECT_TRUE(binary.size() > 5u);
-    EXPECT_EQ(SpvMagicNumber, binary[0]);
+    EXPECT_EQ(spv::MagicNumber, binary[0]);
     EXPECT_EQ(kExpectedSpvVersion, binary[1]);
   }
 }
@@ -320,6 +320,36 @@ TEST(CppInterface, OptimizeSameAddressForOriginalOptimizedBinary) {
   std::string optimized_text;
   EXPECT_TRUE(t.Disassemble(binary, &optimized_text));
   EXPECT_EQ(Header(), optimized_text);
+}
+
+TEST(SpirvHeadersCpp, BitwiseOrMemoryAccessMask) {
+  EXPECT_EQ(spv::MemoryAccessMask(6), spv::MemoryAccessMask::Aligned |
+                                          spv::MemoryAccessMask::Nontemporal);
+}
+
+TEST(SpirvHeadersCpp, BitwiseAndMemoryAccessMask) {
+  EXPECT_EQ(spv::MemoryAccessMask::Aligned,
+            spv::MemoryAccessMask::Aligned & spv::MemoryAccessMask(6));
+  EXPECT_EQ(spv::MemoryAccessMask::Nontemporal,
+            spv::MemoryAccessMask::Nontemporal & spv::MemoryAccessMask(6));
+  EXPECT_EQ(spv::MemoryAccessMask(0), spv::MemoryAccessMask::Nontemporal &
+                                          spv::MemoryAccessMask::Aligned);
+}
+
+TEST(SpirvHeadersCpp, BitwiseXorMemoryAccessMask) {
+  EXPECT_EQ(spv::MemoryAccessMask::Nontemporal,
+            spv::MemoryAccessMask::Aligned ^ spv::MemoryAccessMask(6));
+  EXPECT_EQ(spv::MemoryAccessMask::Aligned,
+            spv::MemoryAccessMask::Nontemporal ^ spv::MemoryAccessMask(6));
+  EXPECT_EQ(spv::MemoryAccessMask(6), spv::MemoryAccessMask::Nontemporal ^
+                                          spv::MemoryAccessMask::Aligned);
+  EXPECT_EQ(spv::MemoryAccessMask(0), spv::MemoryAccessMask::Nontemporal ^
+                                          spv::MemoryAccessMask::Nontemporal);
+}
+
+TEST(SpirvHeadersCpp, BitwiseNegateMemoryAccessMask) {
+  EXPECT_EQ(spv::MemoryAccessMask(~(uint32_t(4))),
+            ~spv::MemoryAccessMask::Nontemporal);
 }
 
 // TODO(antiagainst): tests for SetMessageConsumer().

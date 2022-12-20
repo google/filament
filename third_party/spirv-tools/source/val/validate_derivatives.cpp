@@ -28,25 +28,26 @@ namespace val {
 
 // Validates correctness of derivative instructions.
 spv_result_t DerivativesPass(ValidationState_t& _, const Instruction* inst) {
-  const SpvOp opcode = inst->opcode();
+  const spv::Op opcode = inst->opcode();
   const uint32_t result_type = inst->type_id();
 
   switch (opcode) {
-    case SpvOpDPdx:
-    case SpvOpDPdy:
-    case SpvOpFwidth:
-    case SpvOpDPdxFine:
-    case SpvOpDPdyFine:
-    case SpvOpFwidthFine:
-    case SpvOpDPdxCoarse:
-    case SpvOpDPdyCoarse:
-    case SpvOpFwidthCoarse: {
+    case spv::Op::OpDPdx:
+    case spv::Op::OpDPdy:
+    case spv::Op::OpFwidth:
+    case spv::Op::OpDPdxFine:
+    case spv::Op::OpDPdyFine:
+    case spv::Op::OpFwidthFine:
+    case spv::Op::OpDPdxCoarse:
+    case spv::Op::OpDPdyCoarse:
+    case spv::Op::OpFwidthCoarse: {
       if (!_.IsFloatScalarOrVectorType(result_type)) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected Result Type to be float scalar or vector type: "
                << spvOpcodeString(opcode);
       }
-      if (!_.ContainsSizedIntOrFloatType(result_type, SpvOpTypeFloat, 32)) {
+      if (!_.ContainsSizedIntOrFloatType(result_type, spv::Op::OpTypeFloat,
+                                         32)) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Result type component width must be 32 bits";
       }
@@ -58,10 +59,10 @@ spv_result_t DerivativesPass(ValidationState_t& _, const Instruction* inst) {
                << spvOpcodeString(opcode);
       }
       _.function(inst->function()->id())
-          ->RegisterExecutionModelLimitation([opcode](SpvExecutionModel model,
+          ->RegisterExecutionModelLimitation([opcode](spv::ExecutionModel model,
                                                       std::string* message) {
-            if (model != SpvExecutionModelFragment &&
-                model != SpvExecutionModelGLCompute) {
+            if (model != spv::ExecutionModel::Fragment &&
+                model != spv::ExecutionModel::GLCompute) {
               if (message) {
                 *message =
                     std::string(
@@ -80,11 +81,11 @@ spv_result_t DerivativesPass(ValidationState_t& _, const Instruction* inst) {
             const auto* models = state.GetExecutionModels(entry_point->id());
             const auto* modes = state.GetExecutionModes(entry_point->id());
             if (models &&
-                models->find(SpvExecutionModelGLCompute) != models->end() &&
+                models->find(spv::ExecutionModel::GLCompute) != models->end() &&
                 (!modes ||
-                 (modes->find(SpvExecutionModeDerivativeGroupLinearNV) ==
+                 (modes->find(spv::ExecutionMode::DerivativeGroupLinearNV) ==
                       modes->end() &&
-                  modes->find(SpvExecutionModeDerivativeGroupQuadsNV) ==
+                  modes->find(spv::ExecutionMode::DerivativeGroupQuadsNV) ==
                       modes->end()))) {
               if (message) {
                 *message = std::string(

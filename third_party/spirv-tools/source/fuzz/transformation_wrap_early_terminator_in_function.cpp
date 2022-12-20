@@ -52,9 +52,9 @@ bool TransformationWrapEarlyTerminatorInFunction::IsApplicable(
     return false;
   }
   switch (early_terminator->opcode()) {
-    case SpvOpKill:
-    case SpvOpUnreachable:
-    case SpvOpTerminateInvocation:
+    case spv::Op::OpKill:
+    case spv::Op::OpUnreachable:
+    case spv::Op::OpTerminateInvocation:
       break;
     default:
       return false;
@@ -119,7 +119,7 @@ void TransformationWrapEarlyTerminatorInFunction::Apply(
       MaybeGetWrapperFunction(ir_context, early_terminator->opcode());
 
   iterator->InsertBefore(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpFunctionCall, wrapper_function->type_id(),
+      ir_context, spv::Op::OpFunctionCall, wrapper_function->type_id(),
       message_.fresh_id(),
       opt::Instruction::OperandList(
           {{SPV_OPERAND_TYPE_ID, {wrapper_function->result_id()}}})));
@@ -130,9 +130,9 @@ void TransformationWrapEarlyTerminatorInFunction::Apply(
            ->AsVoid()) {
     new_in_operands.push_back(
         {SPV_OPERAND_TYPE_ID, {message_.returned_value_id()}});
-    early_terminator->SetOpcode(SpvOpReturnValue);
+    early_terminator->SetOpcode(spv::Op::OpReturnValue);
   } else {
-    early_terminator->SetOpcode(SpvOpReturn);
+    early_terminator->SetOpcode(spv::Op::OpReturn);
   }
   early_terminator->SetInOperands(std::move(new_in_operands));
 
@@ -153,10 +153,10 @@ TransformationWrapEarlyTerminatorInFunction::ToMessage() const {
 
 opt::Function*
 TransformationWrapEarlyTerminatorInFunction::MaybeGetWrapperFunction(
-    opt::IRContext* ir_context, SpvOp early_terminator_opcode) {
-  assert((early_terminator_opcode == SpvOpKill ||
-          early_terminator_opcode == SpvOpUnreachable ||
-          early_terminator_opcode == SpvOpTerminateInvocation) &&
+    opt::IRContext* ir_context, spv::Op early_terminator_opcode) {
+  assert((early_terminator_opcode == spv::Op::OpKill ||
+          early_terminator_opcode == spv::Op::OpUnreachable ||
+          early_terminator_opcode == spv::Op::OpTerminateInvocation) &&
          "Invalid opcode.");
   auto void_type_id = fuzzerutil::MaybeGetVoidType(ir_context);
   if (!void_type_id) {

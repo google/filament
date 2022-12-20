@@ -25,11 +25,10 @@
 
 namespace spvtools {
 namespace opt {
-
 namespace {
 
 // Input Operand Indices
-static const int kSpvVariableStorageClassInIdx = 0;
+constexpr int kSpvVariableStorageClassInIdx = 0;
 
 // Folding rule function which attempts to replace |op(OpLoad(a),...)|
 // by |op(a,...)|, where |op| is one of the GLSLstd450 InterpolateAt*
@@ -45,12 +44,12 @@ bool ReplaceInternalInterpolate(IRContext* ctx, Instruction* inst,
   uint32_t op1_id = inst->GetSingleWordInOperand(2);
 
   Instruction* load_inst = ctx->get_def_use_mgr()->GetDef(op1_id);
-  if (load_inst->opcode() != SpvOpLoad) return false;
+  if (load_inst->opcode() != spv::Op::OpLoad) return false;
 
   Instruction* base_inst = load_inst->GetBaseAddress();
-  USE_ASSERT(base_inst->opcode() == SpvOpVariable &&
-             base_inst->GetSingleWordInOperand(kSpvVariableStorageClassInIdx) ==
-                 SpvStorageClassInput &&
+  USE_ASSERT(base_inst->opcode() == spv::Op::OpVariable &&
+             spv::StorageClass(base_inst->GetSingleWordInOperand(
+                 kSpvVariableStorageClassInIdx)) == spv::StorageClass::Input &&
              "unexpected interpolant in InterpolateAt*");
 
   uint32_t ptr_id = load_inst->GetSingleWordInOperand(0);

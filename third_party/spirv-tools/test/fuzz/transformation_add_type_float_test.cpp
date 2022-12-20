@@ -74,7 +74,7 @@ TEST(TransformationAddTypeFloatTest, IsApplicable) {
 
   // By default, SPIR-V does not support 64-bit float types.
   // Below we add such capability, so the test should now pass.
-  context.get()->get_feature_mgr()->AddCapability(SpvCapabilityFloat64);
+  context.get()->get_feature_mgr()->AddCapability(spv::Capability::Float64);
   ASSERT_TRUE(TransformationAddTypeFloat(7, 64).IsApplicable(
       context.get(), transformation_context));
 
@@ -120,7 +120,8 @@ TEST(TransformationAddTypeFloatTest, Apply) {
   ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(6));
   ASSERT_EQ(nullptr, context->get_type_mgr()->GetType(6));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
-  ASSERT_EQ(SpvOpTypeFloat, context->get_def_use_mgr()->GetDef(6)->opcode());
+  ASSERT_EQ(spv::Op::OpTypeFloat,
+            context->get_def_use_mgr()->GetDef(6)->opcode());
   ASSERT_NE(nullptr, context->get_type_mgr()->GetType(6)->AsFloat());
 
   // Adds 32-bit float type.
@@ -128,7 +129,8 @@ TEST(TransformationAddTypeFloatTest, Apply) {
   ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(7));
   ASSERT_EQ(nullptr, context->get_type_mgr()->GetType(7));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
-  ASSERT_EQ(SpvOpTypeFloat, context->get_def_use_mgr()->GetDef(7)->opcode());
+  ASSERT_EQ(spv::Op::OpTypeFloat,
+            context->get_def_use_mgr()->GetDef(7)->opcode());
   ASSERT_NE(nullptr, context->get_type_mgr()->GetType(7)->AsFloat());
 
   // Adds 64-bit float type.
@@ -136,7 +138,8 @@ TEST(TransformationAddTypeFloatTest, Apply) {
   ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(8));
   ASSERT_EQ(nullptr, context->get_type_mgr()->GetType(8));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
-  ASSERT_EQ(SpvOpTypeFloat, context->get_def_use_mgr()->GetDef(8)->opcode());
+  ASSERT_EQ(spv::Op::OpTypeFloat,
+            context->get_def_use_mgr()->GetDef(8)->opcode());
   ASSERT_NE(nullptr, context->get_type_mgr()->GetType(8)->AsFloat());
 
   std::string variant_shader = R"(

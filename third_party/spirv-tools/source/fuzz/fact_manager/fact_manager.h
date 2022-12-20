@@ -83,7 +83,7 @@ class FactManager {
   //   |lhs_id| = |opcode| |rhs_id[0]| ... |rhs_id[N-1]|
   //
   // Neither |lhs_id| nor any of |rhs_id| may be irrelevant.
-  void AddFactIdEquation(uint32_t lhs_id, SpvOp opcode,
+  void AddFactIdEquation(uint32_t lhs_id, spv::Op opcode,
                          const std::vector<uint32_t>& rhs_id);
 
   // Inspects all known facts and adds corollary facts; e.g. if we know that

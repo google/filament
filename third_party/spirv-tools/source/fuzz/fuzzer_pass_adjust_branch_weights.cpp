@@ -33,7 +33,7 @@ void FuzzerPassAdjustBranchWeights::Apply() {
   // For all OpBranchConditional instructions,
   // randomly applies the transformation.
   GetIRContext()->module()->ForEachInst([this](opt::Instruction* instruction) {
-    if (instruction->opcode() == SpvOpBranchConditional &&
+    if (instruction->opcode() == spv::Op::OpBranchConditional &&
         GetFuzzerContext()->ChoosePercentage(
             GetFuzzerContext()->GetChanceOfAdjustingBranchWeights())) {
       ApplyTransformation(TransformationAdjustBranchWeights(

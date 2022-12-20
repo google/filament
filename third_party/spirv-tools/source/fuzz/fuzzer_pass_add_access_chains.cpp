@@ -34,15 +34,16 @@ void FuzzerPassAddAccessChains::Apply() {
              opt::BasicBlock::iterator inst_it,
              const protobufs::InstructionDescriptor& instruction_descriptor)
           -> void {
-        assert(inst_it->opcode() ==
-                   instruction_descriptor.target_instruction_opcode() &&
-               "The opcode of the instruction we might insert before must be "
-               "the same as the opcode in the descriptor for the instruction");
+        assert(
+            inst_it->opcode() ==
+                spv::Op(instruction_descriptor.target_instruction_opcode()) &&
+            "The opcode of the instruction we might insert before must be "
+            "the same as the opcode in the descriptor for the instruction");
 
         // Check whether it is legitimate to insert an access chain
         // instruction before this instruction.
-        if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpAccessChain,
-                                                          inst_it)) {
+        if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(
+                spv::Op::OpAccessChain, inst_it)) {
           return;
         }
 
@@ -64,8 +65,8 @@ void FuzzerPassAddAccessChains::Apply() {
                     return false;
                   }
                   switch (instruction->opcode()) {
-                    case SpvOpConstantNull:
-                    case SpvOpUndef:
+                    case spv::Op::OpConstantNull:
+                    case spv::Op::OpUndef:
                       // Do not allow making an access chain from a null or
                       // undefined pointer.  (We can eliminate these cases
                       // before actually checking that the instruction is a
@@ -78,7 +79,7 @@ void FuzzerPassAddAccessChains::Apply() {
                   // make an access chain from it.
                   return context->get_def_use_mgr()
                              ->GetDef(instruction->type_id())
-                             ->opcode() == SpvOpTypePointer;
+                             ->opcode() == spv::Op::OpTypePointer;
                 });
 
         // At this point, |relevant_instructions| contains all the pointers
@@ -112,14 +113,14 @@ void FuzzerPassAddAccessChains::Apply() {
           }
           uint32_t bound;
           switch (subobject_type->opcode()) {
-            case SpvOpTypeArray:
+            case spv::Op::OpTypeArray:
               bound = fuzzerutil::GetArraySize(*subobject_type, GetIRContext());
               break;
-            case SpvOpTypeMatrix:
-            case SpvOpTypeVector:
+            case spv::Op::OpTypeMatrix:
+            case spv::Op::OpTypeVector:
               bound = subobject_type->GetSingleWordInOperand(1);
               break;
-            case SpvOpTypeStruct:
+            case spv::Op::OpTypeStruct:
               bound = fuzzerutil::GetNumberOfStructMembers(*subobject_type);
               break;
             default:
@@ -140,9 +141,9 @@ void FuzzerPassAddAccessChains::Apply() {
               GetFuzzerContext()->GetRandomIndexForAccessChain(bound);
 
           switch (subobject_type->opcode()) {
-            case SpvOpTypeArray:
-            case SpvOpTypeMatrix:
-            case SpvOpTypeVector: {
+            case spv::Op::OpTypeArray:
+            case spv::Op::OpTypeMatrix:
+            case spv::Op::OpTypeVector: {
               // The index will be clamped
 
               bool is_signed = GetFuzzerContext()->ChooseEven();
@@ -164,7 +165,7 @@ void FuzzerPassAddAccessChains::Apply() {
               subobject_type_id = subobject_type->GetSingleWordInOperand(0);
 
             } break;
-            case SpvOpTypeStruct:
+            case spv::Op::OpTypeStruct:
               index_ids.push_back(FindOrCreateIntegerConstant(
                   {index_value}, 32, GetFuzzerContext()->ChooseEven(), false));
               subobject_type_id =
@@ -178,7 +179,7 @@ void FuzzerPassAddAccessChains::Apply() {
         // pointer suitable for the access chain's result type exists, so we
         // create one if it does not.
         FindOrCreatePointerType(subobject_type_id,
-                                static_cast<SpvStorageClass>(
+                                static_cast<spv::StorageClass>(
                                     pointer_type->GetSingleWordInOperand(0)));
         // Apply the transformation to add an access chain.
         ApplyTransformation(TransformationAccessChain(

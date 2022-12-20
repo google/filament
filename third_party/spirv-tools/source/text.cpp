@@ -227,7 +227,8 @@ spv_result_t spvTextEncodeOperand(const spvtools::AssemblyGrammar& grammar,
 
       // Set the extended instruction type.
       // The import set id is the 3rd operand of OpExtInst.
-      if (pInst->opcode == SpvOpExtInst && pInst->words.size() == 4) {
+      if (spv::Op(pInst->opcode) == spv::Op::OpExtInst &&
+          pInst->words.size() == 4) {
         auto ext_inst_type = context->getExtInstTypeForId(pInst->words[3]);
         if (ext_inst_type == SPV_EXT_INST_TYPE_NONE) {
           return context->diagnostic()
@@ -279,7 +280,7 @@ spv_result_t spvTextEncodeOperand(const spvtools::AssemblyGrammar& grammar,
       // The assembler accepts the symbolic name for the opcode, but without
       // the "Op" prefix.  For example, "IAdd" is accepted.  The number
       // of the opcode is emitted.
-      SpvOp opcode;
+      spv::Op opcode;
       if (grammar.lookupSpecConstantOpcode(textValue, &opcode)) {
         return context->diagnostic() << "Invalid " << spvOperandTypeStr(type)
                                      << " '" << textValue << "'.";
@@ -327,8 +328,8 @@ spv_result_t spvTextEncodeOperand(const spvtools::AssemblyGrammar& grammar,
       // The encoding for OpConstant, OpSpecConstant and OpSwitch all
       // depend on either their own result-id or the result-id of
       // one of their parameters.
-      if (SpvOpConstant == pInst->opcode ||
-          SpvOpSpecConstant == pInst->opcode) {
+      if (spv::Op::OpConstant == pInst->opcode ||
+          spv::Op::OpSpecConstant == pInst->opcode) {
         // The type of the literal is determined by the type Id of the
         // instruction.
         expected_type =
@@ -344,7 +345,7 @@ spv_result_t spvTextEncodeOperand(const spvtools::AssemblyGrammar& grammar,
                  << "Type for " << opcode_name
                  << " must be a scalar floating point or integer type";
         }
-      } else if (pInst->opcode == SpvOpSwitch) {
+      } else if (pInst->opcode == spv::Op::OpSwitch) {
         // The type of the literal is the same as the type of the selector.
         expected_type = context->getTypeOfValueInstruction(pInst->words[1]);
         if (!spvtools::isScalarIntegral(expected_type)) {
@@ -375,7 +376,7 @@ spv_result_t spvTextEncodeOperand(const spvtools::AssemblyGrammar& grammar,
       }
 
       // NOTE: Special case for extended instruction library import
-      if (SpvOpExtInstImport == pInst->opcode) {
+      if (spv::Op::OpExtInstImport == pInst->opcode) {
         const spv_ext_inst_type_t ext_inst_type =
             spvExtInstImportTypeGet(literal.str.c_str());
         if (SPV_EXT_INST_TYPE_NONE == ext_inst_type) {
@@ -688,7 +689,7 @@ spv_result_t SetHeader(spv_target_env env, const uint32_t bound,
                        uint32_t* header) {
   if (!header) return SPV_ERROR_INVALID_BINARY;
 
-  header[SPV_INDEX_MAGIC_NUMBER] = SpvMagicNumber;
+  header[SPV_INDEX_MAGIC_NUMBER] = spv::MagicNumber;
   header[SPV_INDEX_VERSION_NUMBER] = spvVersionForTargetEnv(env);
   header[SPV_INDEX_GENERATOR_NUMBER] =
       SPV_GENERATOR_WORD(SPV_GENERATOR_KHRONOS_ASSEMBLER, kAssemblerVersion);
@@ -722,7 +723,7 @@ spv_result_t GetNumericIds(const spvtools::AssemblyGrammar& grammar,
     // being parsed. A malformed input might feature such an operand *before*
     // the opcode is known. To guard against accessing an uninitialized opcode,
     // the instruction's opcode is initialized to a default value.
-    inst.opcode = SpvOpMax;
+    inst.opcode = spv::Op::Max;
 
     if (spvTextEncodeOpcode(grammar, &context, &inst)) {
       return SPV_ERROR_INVALID_TEXT;

@@ -167,34 +167,38 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   std::vector<protobufs::IdUseDescriptor> uses_of_true = {
-      MakeIdUseDescriptor(41, MakeInstructionDescriptor(44, SpvOpStore, 12), 1),
-      MakeIdUseDescriptor(41, MakeInstructionDescriptor(46, SpvOpLogicalOr, 0),
-                          0)};
+      MakeIdUseDescriptor(
+          41, MakeInstructionDescriptor(44, spv::Op::OpStore, 12), 1),
+      MakeIdUseDescriptor(
+          41, MakeInstructionDescriptor(46, spv::Op::OpLogicalOr, 0), 0)};
 
   std::vector<protobufs::IdUseDescriptor> uses_of_false = {
-      MakeIdUseDescriptor(43, MakeInstructionDescriptor(44, SpvOpStore, 13), 1),
-      MakeIdUseDescriptor(43, MakeInstructionDescriptor(48, SpvOpLogicalAnd, 0),
-                          1)};
+      MakeIdUseDescriptor(
+          43, MakeInstructionDescriptor(44, spv::Op::OpStore, 13), 1),
+      MakeIdUseDescriptor(
+          43, MakeInstructionDescriptor(48, spv::Op::OpLogicalAnd, 0), 1)};
 
   const uint32_t fresh_id = 100;
 
-  std::vector<SpvOp> fp_gt_opcodes = {
-      SpvOpFOrdGreaterThan, SpvOpFOrdGreaterThanEqual, SpvOpFUnordGreaterThan,
-      SpvOpFUnordGreaterThanEqual};
+  std::vector<spv::Op> fp_gt_opcodes = {
+      spv::Op::OpFOrdGreaterThan, spv::Op::OpFOrdGreaterThanEqual,
+      spv::Op::OpFUnordGreaterThan, spv::Op::OpFUnordGreaterThanEqual};
 
-  std::vector<SpvOp> fp_lt_opcodes = {SpvOpFOrdLessThan, SpvOpFOrdLessThanEqual,
-                                      SpvOpFUnordLessThan,
-                                      SpvOpFUnordLessThanEqual};
+  std::vector<spv::Op> fp_lt_opcodes = {
+      spv::Op::OpFOrdLessThan, spv::Op::OpFOrdLessThanEqual,
+      spv::Op::OpFUnordLessThan, spv::Op::OpFUnordLessThanEqual};
 
-  std::vector<SpvOp> int_gt_opcodes = {SpvOpSGreaterThan,
-                                       SpvOpSGreaterThanEqual};
+  std::vector<spv::Op> int_gt_opcodes = {spv::Op::OpSGreaterThan,
+                                         spv::Op::OpSGreaterThanEqual};
 
-  std::vector<SpvOp> int_lt_opcodes = {SpvOpSLessThan, SpvOpSLessThanEqual};
+  std::vector<spv::Op> int_lt_opcodes = {spv::Op::OpSLessThan,
+                                         spv::Op::OpSLessThanEqual};
 
-  std::vector<SpvOp> uint_gt_opcodes = {SpvOpUGreaterThan,
-                                        SpvOpUGreaterThanEqual};
+  std::vector<spv::Op> uint_gt_opcodes = {spv::Op::OpUGreaterThan,
+                                          spv::Op::OpUGreaterThanEqual};
 
-  std::vector<SpvOp> uint_lt_opcodes = {SpvOpULessThan, SpvOpULessThanEqual};
+  std::vector<spv::Op> uint_lt_opcodes = {spv::Op::OpULessThan,
+                                          spv::Op::OpULessThanEqual};
 
 #define CHECK_OPERATOR(USE_DESCRIPTOR, LHS_ID, RHS_ID, OPCODE, FRESH_ID) \
   ASSERT_TRUE(TransformationReplaceBooleanConstantWithConstantBinary(    \
@@ -253,41 +257,41 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
 
   // Target id is not fresh
   ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
-                   uses_of_true[0], 15, 17, SpvOpFOrdLessThan, 15)
+                   uses_of_true[0], 15, 17, spv::Op::OpFOrdLessThan, 15)
                    .IsApplicable(context.get(), transformation_context));
 
   // LHS id does not exist
   ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
-                   uses_of_true[0], 300, 17, SpvOpFOrdLessThan, 200)
+                   uses_of_true[0], 300, 17, spv::Op::OpFOrdLessThan, 200)
                    .IsApplicable(context.get(), transformation_context));
 
   // RHS id does not exist
   ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
-                   uses_of_true[0], 15, 300, SpvOpFOrdLessThan, 200)
+                   uses_of_true[0], 15, 300, spv::Op::OpFOrdLessThan, 200)
                    .IsApplicable(context.get(), transformation_context));
 
   // LHS and RHS ids do not match type
   ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
-                   uses_of_true[0], 11, 17, SpvOpFOrdLessThan, 200)
+                   uses_of_true[0], 11, 17, spv::Op::OpFOrdLessThan, 200)
                    .IsApplicable(context.get(), transformation_context));
 
   // Opcode not appropriate
   ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
-                   uses_of_true[0], 15, 17, SpvOpFDiv, 200)
+                   uses_of_true[0], 15, 17, spv::Op::OpFDiv, 200)
                    .IsApplicable(context.get(), transformation_context));
 
   auto replace_true_with_double_comparison =
       TransformationReplaceBooleanConstantWithConstantBinary(
-          uses_of_true[0], 11, 9, SpvOpFUnordGreaterThan, 100);
+          uses_of_true[0], 11, 9, spv::Op::OpFUnordGreaterThan, 100);
   auto replace_true_with_uint32_comparison =
       TransformationReplaceBooleanConstantWithConstantBinary(
-          uses_of_true[1], 27, 29, SpvOpULessThanEqual, 101);
+          uses_of_true[1], 27, 29, spv::Op::OpULessThanEqual, 101);
   auto replace_false_with_float_comparison =
       TransformationReplaceBooleanConstantWithConstantBinary(
-          uses_of_false[0], 17, 15, SpvOpFOrdLessThan, 102);
+          uses_of_false[0], 17, 15, spv::Op::OpFOrdLessThan, 102);
   auto replace_false_with_sint64_comparison =
       TransformationReplaceBooleanConstantWithConstantBinary(
-          uses_of_false[1], 33, 31, SpvOpSLessThan, 103);
+          uses_of_false[1], 33, 31, spv::Op::OpSLessThan, 103);
 
   ASSERT_TRUE(replace_true_with_double_comparison.IsApplicable(
       context.get(), transformation_context));
@@ -423,13 +427,13 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
         {SPV_OPERAND_TYPE_LITERAL_INTEGER, {words[0]}},
         {SPV_OPERAND_TYPE_LITERAL_INTEGER, {words[1]}}};
     context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-        context.get(), SpvOpConstant, 6, 200, operands));
+        context.get(), spv::Op::OpConstant, 6, 200, operands));
     fuzzerutil::UpdateModuleIdBound(context.get(), 200);
     ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
         context.get(), validator_options, kConsoleMessageConsumer));
     // The transformation is not applicable because %200 is NaN.
     ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
-                     uses_of_true[0], 11, 200, SpvOpFOrdLessThan, 300)
+                     uses_of_true[0], 11, 200, spv::Op::OpFOrdLessThan, 300)
                      .IsApplicable(context.get(), transformation_context));
   }
   if (std::numeric_limits<double>::has_infinity) {
@@ -440,14 +444,14 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
         {SPV_OPERAND_TYPE_LITERAL_INTEGER, {words[0]}},
         {SPV_OPERAND_TYPE_LITERAL_INTEGER, {words[1]}}};
     context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-        context.get(), SpvOpConstant, 6, 201, operands));
+        context.get(), spv::Op::OpConstant, 6, 201, operands));
     fuzzerutil::UpdateModuleIdBound(context.get(), 201);
     ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
         context.get(), validator_options, kConsoleMessageConsumer));
     // Even though the double constant %11 is less than the infinity %201, the
     // transformation is restricted to only apply to finite values.
     ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
-                     uses_of_true[0], 11, 201, SpvOpFOrdLessThan, 300)
+                     uses_of_true[0], 11, 201, spv::Op::OpFOrdLessThan, 300)
                      .IsApplicable(context.get(), transformation_context));
   }
   if (std::numeric_limits<float>::has_infinity) {
@@ -459,13 +463,14 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
     memcpy(words_negative_infinity, &negative_infinity_float, sizeof(float));
     opt::Instruction::OperandList operands_positive_infinity = {
         {SPV_OPERAND_TYPE_LITERAL_INTEGER, {words_positive_infinity[0]}}};
-    context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-        context.get(), SpvOpConstant, 12, 202, operands_positive_infinity));
+    context->module()->AddGlobalValue(
+        MakeUnique<opt::Instruction>(context.get(), spv::Op::OpConstant, 12,
+                                     202, operands_positive_infinity));
     fuzzerutil::UpdateModuleIdBound(context.get(), 202);
     opt::Instruction::OperandList operands = {
         {SPV_OPERAND_TYPE_LITERAL_INTEGER, {words_negative_infinity[0]}}};
     context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-        context.get(), SpvOpConstant, 12, 203, operands));
+        context.get(), spv::Op::OpConstant, 12, 203, operands));
     fuzzerutil::UpdateModuleIdBound(context.get(), 203);
     ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(
         context.get(), validator_options, kConsoleMessageConsumer));
@@ -473,7 +478,7 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
     // infinity %202, the transformation is restricted to only apply to finite
     // values.
     ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
-                     uses_of_true[0], 203, 202, SpvOpFOrdLessThan, 300)
+                     uses_of_true[0], 203, 202, spv::Op::OpFOrdLessThan, 300)
                      .IsApplicable(context.get(), transformation_context));
   }
 }
@@ -547,14 +552,14 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   auto use_of_true_in_if = MakeIdUseDescriptor(
-      13, MakeInstructionDescriptor(10, SpvOpBranchConditional, 0), 0);
+      13, MakeInstructionDescriptor(10, spv::Op::OpBranchConditional, 0), 0);
   auto use_of_false_in_while = MakeIdUseDescriptor(
-      21, MakeInstructionDescriptor(16, SpvOpBranchConditional, 0), 0);
+      21, MakeInstructionDescriptor(16, spv::Op::OpBranchConditional, 0), 0);
 
   auto replacement_1 = TransformationReplaceBooleanConstantWithConstantBinary(
-      use_of_true_in_if, 9, 11, SpvOpSLessThan, 100);
+      use_of_true_in_if, 9, 11, spv::Op::OpSLessThan, 100);
   auto replacement_2 = TransformationReplaceBooleanConstantWithConstantBinary(
-      use_of_false_in_while, 9, 11, SpvOpSGreaterThanEqual, 101);
+      use_of_false_in_while, 9, 11, spv::Op::OpSGreaterThanEqual, 101);
 
   ASSERT_TRUE(
       replacement_1.IsApplicable(context.get(), transformation_context));
@@ -662,10 +667,11 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest, OpPhi) {
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  auto instruction_descriptor = MakeInstructionDescriptor(14, SpvOpPhi, 0);
+  auto instruction_descriptor =
+      MakeInstructionDescriptor(14, spv::Op::OpPhi, 0);
   auto id_use_descriptor = MakeIdUseDescriptor(8, instruction_descriptor, 0);
   auto transformation = TransformationReplaceBooleanConstantWithConstantBinary(
-      id_use_descriptor, 6, 7, SpvOpULessThan, 15);
+      id_use_descriptor, 6, 7, spv::Op::OpULessThan, 15);
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -740,11 +746,12 @@ TEST(TransformationReplaceBooleanConstantWithConstantBinaryTest,
                                                kConsoleMessageConsumer));
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  ASSERT_FALSE(TransformationReplaceBooleanConstantWithConstantBinary(
-                   MakeIdUseDescriptor(
-                       9, MakeInstructionDescriptor(50, SpvOpVariable, 0), 1),
-                   13, 15, SpvOpSLessThan, 100)
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationReplaceBooleanConstantWithConstantBinary(
+          MakeIdUseDescriptor(
+              9, MakeInstructionDescriptor(50, spv::Op::OpVariable, 0), 1),
+          13, 15, spv::Op::OpSLessThan, 100)
+          .IsApplicable(context.get(), transformation_context));
 }
 
 }  // namespace

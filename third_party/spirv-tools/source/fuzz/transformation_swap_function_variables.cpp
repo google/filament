@@ -43,8 +43,8 @@ bool TransformationSwapFunctionVariables::IsApplicable(
     return false;
   }
   // Both instructions must be variables.
-  if (instruction1->opcode() != SpvOpVariable ||
-      instruction2->opcode() != SpvOpVariable) {
+  if (instruction1->opcode() != spv::Op::OpVariable ||
+      instruction2->opcode() != spv::Op::OpVariable) {
     return false;
   }
 

@@ -1159,6 +1159,61 @@ OpFunctionEnd
                         "condition to be equal: Select"));
 }
 
+TEST_F(ValidateLogicals, SelectNVBindlessSamplers) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpCapability BindlessTextureNV
+               OpExtension "SPV_NV_bindless_texture"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpSamplerImageAddressingModeNV 64
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 450
+               OpSourceExtension "GL_NV_bindless_texture"
+               OpName %main "main"
+               OpName %s2D "s2D"
+               OpName %pickhandle "pickhandle"
+               OpName %Sampler1 "Sampler1"
+               OpName %Sampler2 "Sampler2"
+               OpDecorate %pickhandle Flat
+               OpDecorate %Sampler1 DescriptorSet 0
+               OpDecorate %Sampler1 Binding 0
+               OpDecorate %Sampler1 BindlessSamplerNV
+               OpDecorate %Sampler2 DescriptorSet 0
+               OpDecorate %Sampler2 Binding 1
+               OpDecorate %Sampler2 BindlessSamplerNV
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+          %7 = OpTypeImage %float 2D 0 0 0 1 Unknown
+          %8 = OpTypeSampledImage %7
+%_ptr_Function_8 = OpTypePointer Function %8
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_0 = OpConstant %int 0
+       %bool = OpTypeBool
+%_ptr_UniformConstant_8 = OpTypePointer UniformConstant %8
+   %Sampler1 = OpVariable %_ptr_UniformConstant_8 UniformConstant
+   %Sampler2 = OpVariable %_ptr_UniformConstant_8 UniformConstant
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+        %s2D = OpVariable %_ptr_Function_8 Function
+ %pickhandle = OpVariable %_ptr_Function_int Function
+         %14 = OpLoad %int %pickhandle
+         %17 = OpIEqual %bool %14 %int_0
+         %20 = OpLoad %8 %Sampler1
+         %22 = OpLoad %8 %Sampler2
+         %23 = OpSelect %8 %17 %20 %22
+               OpStore %s2D %23
+               OpReturn
+               OpFunctionEnd
+)";
+
+  CompileSuccessfully(spirv, SPV_ENV_UNIVERSAL_1_3);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_UNIVERSAL_1_3));
+}
+
 }  // namespace
 }  // namespace val
 }  // namespace spvtools

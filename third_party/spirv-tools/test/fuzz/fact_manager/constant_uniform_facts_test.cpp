@@ -366,41 +366,41 @@ TEST(ConstantUniformFactsTest, ConstantsAvailableViaUniforms) {
   opt::Instruction::OperandList operands = {
       {SPV_OPERAND_TYPE_LITERAL_INTEGER, {1}}};
   context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-      context.get(), SpvOpConstant, type_int32_id, 50, operands));
+      context.get(), spv::Op::OpConstant, type_int32_id, 50, operands));
   operands = {{SPV_OPERAND_TYPE_LITERAL_INTEGER, {buffer_int32_min[0]}}};
   context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-      context.get(), SpvOpConstant, type_int32_id, 51, operands));
+      context.get(), spv::Op::OpConstant, type_int32_id, 51, operands));
   operands = {{SPV_OPERAND_TYPE_LITERAL_INTEGER, {buffer_int64_max[0]}},
               {SPV_OPERAND_TYPE_LITERAL_INTEGER, {buffer_int64_max[1]}}};
   context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-      context.get(), SpvOpConstant, type_int64_id, 52, operands));
+      context.get(), spv::Op::OpConstant, type_int64_id, 52, operands));
   operands = {{SPV_OPERAND_TYPE_LITERAL_INTEGER, {1}}};
   context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-      context.get(), SpvOpConstant, type_uint32_id, 53, operands));
+      context.get(), spv::Op::OpConstant, type_uint32_id, 53, operands));
   operands = {{SPV_OPERAND_TYPE_LITERAL_INTEGER, {buffer_uint64_1[0]}},
               {SPV_OPERAND_TYPE_LITERAL_INTEGER, {buffer_uint64_1[1]}}};
   context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-      context.get(), SpvOpConstant, type_uint64_id, 54, operands));
+      context.get(), spv::Op::OpConstant, type_uint64_id, 54, operands));
   operands = {{SPV_OPERAND_TYPE_LITERAL_INTEGER, {buffer_uint64_max[0]}},
               {SPV_OPERAND_TYPE_LITERAL_INTEGER, {buffer_uint64_max[1]}}};
   context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-      context.get(), SpvOpConstant, type_uint64_id, 55, operands));
+      context.get(), spv::Op::OpConstant, type_uint64_id, 55, operands));
   operands = {{SPV_OPERAND_TYPE_LITERAL_INTEGER, {buffer_float_10[0]}}};
   context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-      context.get(), SpvOpConstant, type_float_id, 56, operands));
+      context.get(), spv::Op::OpConstant, type_float_id, 56, operands));
   operands = {{SPV_OPERAND_TYPE_LITERAL_INTEGER, {buffer_double_10[0]}},
               {SPV_OPERAND_TYPE_LITERAL_INTEGER, {buffer_double_10[1]}}};
   context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-      context.get(), SpvOpConstant, type_double_id, 57, operands));
+      context.get(), spv::Op::OpConstant, type_double_id, 57, operands));
   operands = {{SPV_OPERAND_TYPE_LITERAL_INTEGER, {buffer_double_20[0]}},
               {SPV_OPERAND_TYPE_LITERAL_INTEGER, {buffer_double_20[1]}}};
   context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-      context.get(), SpvOpConstant, type_double_id, 58, operands));
+      context.get(), spv::Op::OpConstant, type_double_id, 58, operands));
 
   // A duplicate of the constant with id 59.
   operands = {{SPV_OPERAND_TYPE_LITERAL_INTEGER, {1}}};
   context->module()->AddGlobalValue(MakeUnique<opt::Instruction>(
-      context.get(), SpvOpConstant, type_int32_id, 59, operands));
+      context.get(), spv::Op::OpConstant, type_int32_id, 59, operands));
 
   context->InvalidateAnalysesExceptFor(opt::IRContext::Analysis::kAnalysisNone);
 

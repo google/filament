@@ -82,8 +82,9 @@ TEST(TransformationReplaceIrrelevantIdTest, Inapplicable) {
   SetUpIrrelevantIdFacts(transformation_context.GetFactManager());
 
   auto instruction_21_descriptor =
-      MakeInstructionDescriptor(21, SpvOpAccessChain, 0);
-  auto instruction_24_descriptor = MakeInstructionDescriptor(24, SpvOpIAdd, 0);
+      MakeInstructionDescriptor(21, spv::Op::OpAccessChain, 0);
+  auto instruction_24_descriptor =
+      MakeInstructionDescriptor(24, spv::Op::OpIAdd, 0);
 
   // %20 has not been declared as irrelevant.
   ASSERT_FALSE(TransformationReplaceIrrelevantId(
@@ -132,7 +133,8 @@ TEST(TransformationReplaceIrrelevantIdTest, Apply) {
       MakeUnique<FactManager>(context.get()), validator_options);
   SetUpIrrelevantIdFacts(transformation_context.GetFactManager());
 
-  auto instruction_24_descriptor = MakeInstructionDescriptor(24, SpvOpIAdd, 0);
+  auto instruction_24_descriptor =
+      MakeInstructionDescriptor(24, spv::Op::OpIAdd, 0);
 
   // Replace the use of %23 in %24 with %22.
   auto transformation = TransformationReplaceIrrelevantId(
@@ -229,11 +231,12 @@ TEST(TransformationReplaceIrrelevantIdTest,
 
   // We cannot replace the use of %13 in the initializer of %12 with %9 because
   // %9 is not a constant.
-  ASSERT_FALSE(TransformationReplaceIrrelevantId(
-                   MakeIdUseDescriptor(
-                       13, MakeInstructionDescriptor(12, SpvOpVariable, 0), 1),
-                   9)
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationReplaceIrrelevantId(
+          MakeIdUseDescriptor(
+              13, MakeInstructionDescriptor(12, spv::Op::OpVariable, 0), 1),
+          9)
+          .IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationReplaceIrrelevantIdTest,
@@ -280,7 +283,7 @@ TEST(TransformationReplaceIrrelevantIdTest,
   ASSERT_FALSE(
       TransformationReplaceIrrelevantId(
           MakeIdUseDescriptor(
-              20, MakeInstructionDescriptor(21, SpvOpCopyObject, 0), 0),
+              20, MakeInstructionDescriptor(21, spv::Op::OpCopyObject, 0), 0),
           10)
           .IsApplicable(context.get(), transformation_context));
 }
@@ -326,7 +329,7 @@ TEST(TransformationReplaceIrrelevantIdTest, OpAccessChainIrrelevantIndex) {
   ASSERT_FALSE(
       TransformationReplaceIrrelevantId(
           MakeIdUseDescriptor(
-              10, MakeInstructionDescriptor(12, SpvOpAccessChain, 0), 1),
+              10, MakeInstructionDescriptor(12, spv::Op::OpAccessChain, 0), 1),
           11)
           .IsApplicable(context.get(), transformation_context));
 }

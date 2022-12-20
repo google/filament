@@ -19,6 +19,7 @@
 #include <ostream>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -520,8 +521,12 @@ Optimizer::PassToken CreateDeadInsertElimPass();
 // interface are considered live and are not eliminated. This mode is needed
 // by GPU-Assisted validation instrumentation, where a change in the interface
 // is not allowed.
-Optimizer::PassToken CreateAggressiveDCEPass();
-Optimizer::PassToken CreateAggressiveDCEPass(bool preserve_interface);
+//
+// If |remove_outputs| is true, allow outputs to be removed from the interface.
+// This is only safe if the caller knows that there is no corresponding input
+// variable in the following shader. It is false by default.
+Optimizer::PassToken CreateAggressiveDCEPass(bool preserve_interface = false,
+                                             bool remove_outputs = false);
 
 // Creates a remove-unused-interface-variables pass.
 // Removes variables referenced on the |OpEntryPoint| instruction that are not
@@ -887,11 +892,58 @@ Optimizer::PassToken CreateAmdExtToKhrPass();
 Optimizer::PassToken CreateInterpolateFixupPass();
 
 // Removes unused components from composite input variables. Current
-// implementation just removes trailing unused components from input arrays.
-// The pass performs best after maximizing dead code removal. A subsequent dead
-// code elimination pass would be beneficial in removing newly unused component
-// types.
+// implementation just removes trailing unused components from input arrays
+// and structs. The pass performs best after maximizing dead code removal.
+// A subsequent dead code elimination pass would be beneficial in removing
+// newly unused component types.
+//
+// WARNING: This pass can only be safely applied standalone to vertex shaders
+// as it can otherwise cause interface incompatibilities with the preceding
+// shader in the pipeline. If applied to non-vertex shaders, the user should
+// follow by applying EliminateDeadOutputStores and
+// EliminateDeadOutputComponents to the preceding shader.
 Optimizer::PassToken CreateEliminateDeadInputComponentsPass();
+
+// Removes unused components from composite output variables. Current
+// implementation just removes trailing unused components from output arrays
+// and structs. The pass performs best after eliminating dead output stores.
+// A subsequent dead code elimination pass would be beneficial in removing
+// newly unused component types. Currently only supports vertex and fragment
+// shaders.
+//
+// WARNING: This pass cannot be safely applied standalone as it can cause
+// interface incompatibility with the following shader in the pipeline. The
+// user should first apply EliminateDeadInputComponents to the following
+// shader, then apply EliminateDeadOutputStores to this shader.
+Optimizer::PassToken CreateEliminateDeadOutputComponentsPass();
+
+// Removes unused components from composite input variables. This safe
+// version will not cause interface incompatibilities since it only changes
+// vertex shaders. The current implementation just removes trailing unused
+// components from input structs and input arrays. The pass performs best
+// after maximizing dead code removal. A subsequent dead code elimination
+// pass would be beneficial in removing newly unused component types.
+Optimizer::PassToken CreateEliminateDeadInputComponentsSafePass();
+
+// Analyzes shader and populates |live_locs| and |live_builtins|. Best results
+// will be obtained if shader has all dead code eliminated first. |live_locs|
+// and |live_builtins| are subsequently used when calling
+// CreateEliminateDeadOutputStoresPass on the preceding shader. Currently only
+// supports tesc, tese, geom, and frag shaders.
+Optimizer::PassToken CreateAnalyzeLiveInputPass(
+    std::unordered_set<uint32_t>* live_locs,
+    std::unordered_set<uint32_t>* live_builtins);
+
+// Removes stores to output locations not listed in |live_locs| or
+// |live_builtins|. Best results are obtained if constant propagation is
+// performed first. A subsequent call to ADCE will eliminate any dead code
+// created by the removal of the stores. A subsequent call to
+// CreateEliminateDeadOutputComponentsPass will eliminate any dead output
+// components created by the elimination of the stores. Currently only supports
+// vert, tesc, tese, and geom shaders.
+Optimizer::PassToken CreateEliminateDeadOutputStoresPass(
+    std::unordered_set<uint32_t>* live_locs,
+    std::unordered_set<uint32_t>* live_builtins);
 
 // Creates a convert-to-sampled-image pass to convert images and/or
 // samplers with given pairs of descriptor set and binding to sampled image.

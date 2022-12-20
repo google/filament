@@ -52,12 +52,12 @@ TEST_P(ExtInstDebugInfoRoundTripTest, ParameterizedExtInst) {
       "%3 = OpExtInst %2 %1 " +
       GetParam().name + GetParam().operands + "\n";
   // First make sure it assembles correctly.
-  EXPECT_THAT(
-      CompiledInstructions(input),
-      Eq(Concatenate(
-          {MakeInstruction(SpvOpExtInstImport, {1}, MakeVector("DebugInfo")),
-           MakeInstruction(SpvOpExtInst, {2, 3, 1, GetParam().opcode},
-                           GetParam().expected_operands)})))
+  EXPECT_THAT(CompiledInstructions(input),
+              Eq(Concatenate({MakeInstruction(spv::Op::OpExtInstImport, {1},
+                                              MakeVector("DebugInfo")),
+                              MakeInstruction(spv::Op::OpExtInst,
+                                              {2, 3, 1, GetParam().opcode},
+                                              GetParam().expected_operands)})))
       << input;
   // Now check the round trip through the disassembler.
   EXPECT_THAT(EncodeAndDecodeSuccessfully(input), input) << input;
@@ -156,7 +156,7 @@ TEST_P(ExtInstDebugInfoRoundTripTest, ParameterizedExtInst) {
 #define CASE_ISF(Enum, S0, Fstr, Fnum)                                    \
   {                                                                       \
     uint32_t(DebugInfoDebug##Enum), "Debug" #Enum, " %4 " #S0 " " Fstr, { \
-      4, uint32_t(SpvStorageClass##S0), Fnum                              \
+      4, uint32_t(spv::StorageClass::S0), Fnum                            \
     }                                                                     \
   }
 
@@ -408,11 +408,12 @@ TEST_F(ExtInstDebugInfoRoundTripTestExplicit, FlagIsPublic) {
   // First make sure it assembles correctly.
   EXPECT_THAT(
       CompiledInstructions(input),
-      Eq(Concatenate(
-          {MakeInstruction(SpvOpExtInstImport, {1}, MakeVector("DebugInfo")),
-           MakeInstruction(SpvOpExtInst, {2, 3, 1, DebugInfoDebugTypePointer, 4,
-                                          uint32_t(SpvStorageClassPrivate),
-                                          DebugInfoFlagIsPublic})})))
+      Eq(Concatenate({MakeInstruction(spv::Op::OpExtInstImport, {1},
+                                      MakeVector("DebugInfo")),
+                      MakeInstruction(spv::Op::OpExtInst,
+                                      {2, 3, 1, DebugInfoDebugTypePointer, 4,
+                                       uint32_t(spv::StorageClass::Private),
+                                       DebugInfoFlagIsPublic})})))
       << input;
   // Now check the round trip through the disassembler.
   EXPECT_THAT(EncodeAndDecodeSuccessfully(input), Eq(expected)) << input;

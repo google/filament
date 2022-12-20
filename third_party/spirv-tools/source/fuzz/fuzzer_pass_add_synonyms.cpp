@@ -44,7 +44,8 @@ void FuzzerPassAddSynonyms::Apply() {
         // Skip |inst_it| if we can't insert anything above it. OpIAdd is just
         // a representative of some instruction that might be produced by the
         // transformation.
-        if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpIAdd, inst_it)) {
+        if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(spv::Op::OpIAdd,
+                                                          inst_it)) {
           return;
         }
 

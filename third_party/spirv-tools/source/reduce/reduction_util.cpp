@@ -26,7 +26,7 @@ const uint32_t kFalseBranchOperandIndex = 2;
 uint32_t FindOrCreateGlobalVariable(opt::IRContext* context,
                                     uint32_t pointer_type_id) {
   for (auto& inst : context->module()->types_values()) {
-    if (inst.opcode() != SpvOpVariable) {
+    if (inst.opcode() != spv::Op::OpVariable) {
       continue;
     }
     if (inst.type_id() == pointer_type_id) {
@@ -35,7 +35,7 @@ uint32_t FindOrCreateGlobalVariable(opt::IRContext* context,
   }
   const uint32_t variable_id = context->TakeNextId();
   auto variable_inst = MakeUnique<opt::Instruction>(
-      context, SpvOpVariable, pointer_type_id, variable_id,
+      context, spv::Op::OpVariable, pointer_type_id, variable_id,
       opt::Instruction::OperandList(
           {{SPV_OPERAND_TYPE_STORAGE_CLASS,
             {static_cast<uint32_t>(context->get_type_mgr()
@@ -53,7 +53,7 @@ uint32_t FindOrCreateFunctionVariable(opt::IRContext* context,
   assert(context->get_type_mgr()
              ->GetType(pointer_type_id)
              ->AsPointer()
-             ->storage_class() == SpvStorageClassFunction);
+             ->storage_class() == spv::StorageClass::Function);
 
   // Go through the instructions in the function's first block until we find a
   // suitable variable, or go past all the variables.
@@ -62,7 +62,7 @@ uint32_t FindOrCreateFunctionVariable(opt::IRContext* context,
     // We will either find a suitable variable, or find a non-variable
     // instruction; we won't exhaust all instructions.
     assert(iter != function->begin()->end());
-    if (iter->opcode() != SpvOpVariable) {
+    if (iter->opcode() != spv::Op::OpVariable) {
       // If we see a non-variable, we have gone through all the variables.
       break;
     }
@@ -74,16 +74,17 @@ uint32_t FindOrCreateFunctionVariable(opt::IRContext* context,
   // function's entry block.
   const uint32_t variable_id = context->TakeNextId();
   auto variable_inst = MakeUnique<opt::Instruction>(
-      context, SpvOpVariable, pointer_type_id, variable_id,
+      context, spv::Op::OpVariable, pointer_type_id, variable_id,
       opt::Instruction::OperandList(
-          {{SPV_OPERAND_TYPE_STORAGE_CLASS, {SpvStorageClassFunction}}}));
+          {{SPV_OPERAND_TYPE_STORAGE_CLASS,
+            {uint32_t(spv::StorageClass::Function)}}}));
   iter->InsertBefore(std::move(variable_inst));
   return variable_id;
 }
 
 uint32_t FindOrCreateGlobalUndef(opt::IRContext* context, uint32_t type_id) {
   for (auto& inst : context->module()->types_values()) {
-    if (inst.opcode() != SpvOpUndef) {
+    if (inst.opcode() != spv::Op::OpUndef) {
       continue;
     }
     if (inst.type_id() == type_id) {
@@ -91,8 +92,9 @@ uint32_t FindOrCreateGlobalUndef(opt::IRContext* context, uint32_t type_id) {
     }
   }
   const uint32_t undef_id = context->TakeNextId();
-  auto undef_inst = MakeUnique<opt::Instruction>(
-      context, SpvOpUndef, type_id, undef_id, opt::Instruction::OperandList());
+  auto undef_inst =
+      MakeUnique<opt::Instruction>(context, spv::Op::OpUndef, type_id, undef_id,
+                                   opt::Instruction::OperandList());
   assert(undef_id == undef_inst->result_id());
   context->module()->AddGlobalValue(std::move(undef_inst));
   return undef_id;

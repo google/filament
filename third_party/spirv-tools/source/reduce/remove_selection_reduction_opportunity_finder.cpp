@@ -36,7 +36,7 @@ RemoveSelectionReductionOpportunityFinder::GetAvailableOpportunities(
   for (auto* function : GetTargetFunctions(context, target_function)) {
     for (auto& block : *function) {
       if (auto merge_instruction = block.GetMergeInst()) {
-        if (merge_instruction->opcode() == SpvOpLoopMerge) {
+        if (merge_instruction->opcode() == spv::Op::OpLoopMerge) {
           uint32_t merge_block_id =
               merge_instruction->GetSingleWordOperand(kMergeNodeIndex);
           uint32_t continue_block_id =
@@ -54,7 +54,7 @@ RemoveSelectionReductionOpportunityFinder::GetAvailableOpportunities(
   for (auto& function : *context->module()) {
     for (auto& block : function) {
       if (auto merge_instruction = block.GetMergeInst()) {
-        if (merge_instruction->opcode() == SpvOpSelectionMerge) {
+        if (merge_instruction->opcode() == spv::Op::OpSelectionMerge) {
           if (CanOpSelectionMergeBeRemoved(
                   context, block, merge_instruction,
                   merge_and_continue_blocks_from_loops)) {

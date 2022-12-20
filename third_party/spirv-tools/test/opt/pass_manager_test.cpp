@@ -144,8 +144,8 @@ class AppendTypeVoidInstPass : public Pass {
 
   const char* name() const override { return "AppendTypeVoidInstPass"; }
   Status Process() override {
-    auto inst = MakeUnique<Instruction>(context(), SpvOpTypeVoid, 0, result_id_,
-                                        std::vector<Operand>{});
+    auto inst = MakeUnique<Instruction>(context(), spv::Op::OpTypeVoid, 0,
+                                        result_id_, std::vector<Operand>{});
     context()->AddType(std::move(inst));
     return Status::SuccessWithChange;
   }

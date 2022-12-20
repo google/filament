@@ -45,7 +45,7 @@ bool TransformationReplaceCopyMemoryWithLoadStore::IsApplicable(
   auto copy_memory_instruction = FindInstruction(
       message_.copy_memory_instruction_descriptor(), ir_context);
   if (!copy_memory_instruction ||
-      copy_memory_instruction->opcode() != SpvOpCopyMemory) {
+      copy_memory_instruction->opcode() != spv::Op::OpCopyMemory) {
     return false;
   }
   return true;
@@ -57,7 +57,7 @@ void TransformationReplaceCopyMemoryWithLoadStore::Apply(
       message_.copy_memory_instruction_descriptor(), ir_context);
   // |copy_memory_instruction| must be defined.
   assert(copy_memory_instruction &&
-         copy_memory_instruction->opcode() == SpvOpCopyMemory &&
+         copy_memory_instruction->opcode() == spv::Op::OpCopyMemory &&
          "The required OpCopyMemory instruction must be defined.");
 
   // Integrity check: Both operands must be pointers.
@@ -78,8 +78,8 @@ void TransformationReplaceCopyMemoryWithLoadStore::Apply(
   (void)target_type_opcode;
   (void)source_type_opcode;
 
-  assert(target_type_opcode == SpvOpTypePointer &&
-         source_type_opcode == SpvOpTypePointer &&
+  assert(target_type_opcode == spv::Op::OpTypePointer &&
+         source_type_opcode == spv::Op::OpTypePointer &&
          "Operands must be of type OpTypePointer");
 
   // Integrity check: |source| and |target| must point to the same type.
@@ -100,12 +100,12 @@ void TransformationReplaceCopyMemoryWithLoadStore::Apply(
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_id());
   FindInstruction(message_.copy_memory_instruction_descriptor(), ir_context)
       ->InsertBefore(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpStore, 0, 0,
+          ir_context, spv::Op::OpStore, 0, 0,
           opt::Instruction::OperandList(
               {{SPV_OPERAND_TYPE_ID, {target->result_id()}},
                {SPV_OPERAND_TYPE_ID, {message_.fresh_id()}}})))
       ->InsertBefore(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpLoad, target_pointee_type, message_.fresh_id(),
+          ir_context, spv::Op::OpLoad, target_pointee_type, message_.fresh_id(),
           opt::Instruction::OperandList(
               {{SPV_OPERAND_TYPE_ID, {source->result_id()}}})));
 

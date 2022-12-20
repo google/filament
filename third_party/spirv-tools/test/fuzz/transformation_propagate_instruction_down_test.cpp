@@ -499,13 +499,13 @@ TEST(TransformationPropagateInstructionDownTest, VariablePointersCapability) {
     TransformationPropagateInstructionDown transformation(
         5, 200, {{{15, 203}, {16, 204}}});
     ASSERT_FALSE(context->get_feature_mgr()->HasCapability(
-        SpvCapabilityVariablePointersStorageBuffer));
+        spv::Capability::VariablePointersStorageBuffer));
     ASSERT_FALSE(
         transformation.IsApplicable(context.get(), transformation_context));
 
-    context->AddCapability(SpvCapabilityVariablePointers);
+    context->AddCapability(spv::Capability::VariablePointers);
     ASSERT_TRUE(context->get_feature_mgr()->HasCapability(
-        SpvCapabilityVariablePointersStorageBuffer));
+        spv::Capability::VariablePointersStorageBuffer));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),

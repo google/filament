@@ -38,7 +38,7 @@ class FuzzerPassApplyIdSynonyms : public FuzzerPass {
   // with respect to the type. Concretely, returns true if |dd1| and |dd2| have
   // the same type or both |dd1| and |dd2| are either a numerical or a vector
   // type of integral components with possibly different signedness.
-  bool DataDescriptorsHaveCompatibleTypes(SpvOp opcode,
+  bool DataDescriptorsHaveCompatibleTypes(spv::Op opcode,
                                           uint32_t use_in_operand_index,
                                           const protobufs::DataDescriptor& dd1,
                                           const protobufs::DataDescriptor& dd2);

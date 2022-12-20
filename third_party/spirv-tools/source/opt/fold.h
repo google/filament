@@ -55,7 +55,7 @@ class InstructionFolder {
   // IsFoldableOpcode test. If any error occurs during folding, the folder will
   // fail with a call to assert.
   uint32_t FoldScalars(
-      SpvOp opcode,
+      spv::Op opcode,
       const std::vector<const analysis::Constant*>& operands) const;
 
   // Returns the result of performing an operation with the given |opcode| over
@@ -72,12 +72,12 @@ class InstructionFolder {
   // IsFoldableOpcode test. If any error occurs during folding, the folder will
   // fail with a call to assert.
   std::vector<uint32_t> FoldVectors(
-      SpvOp opcode, uint32_t num_dims,
+      spv::Op opcode, uint32_t num_dims,
       const std::vector<const analysis::Constant*>& operands) const;
 
   // Returns true if |opcode| represents an operation handled by FoldScalars or
   // FoldVectors.
-  bool IsFoldableOpcode(SpvOp opcode) const;
+  bool IsFoldableOpcode(spv::Op opcode) const;
 
   // Returns true if |cst| is supported by FoldScalars and FoldVectors.
   bool IsFoldableConstant(const analysis::Constant* cst) const;
@@ -126,22 +126,22 @@ class InstructionFolder {
 
   // Returns the single-word result from performing the given unary operation on
   // the operand value which is passed in as a 32-bit word.
-  uint32_t UnaryOperate(SpvOp opcode, uint32_t operand) const;
+  uint32_t UnaryOperate(spv::Op opcode, uint32_t operand) const;
 
   // Returns the single-word result from performing the given binary operation
   // on the operand values which are passed in as two 32-bit word.
-  uint32_t BinaryOperate(SpvOp opcode, uint32_t a, uint32_t b) const;
+  uint32_t BinaryOperate(spv::Op opcode, uint32_t a, uint32_t b) const;
 
   // Returns the single-word result from performing the given ternary operation
   // on the operand values which are passed in as three 32-bit word.
-  uint32_t TernaryOperate(SpvOp opcode, uint32_t a, uint32_t b,
+  uint32_t TernaryOperate(spv::Op opcode, uint32_t a, uint32_t b,
                           uint32_t c) const;
 
   // Returns the single-word result from performing the given operation on the
   // operand words. This only works with 32-bit operations and uses boolean
   // convention that 0u is false, and anything else is boolean true.
   // TODO(qining): Support operands other than 32-bit wide.
-  uint32_t OperateWords(SpvOp opcode,
+  uint32_t OperateWords(spv::Op opcode,
                         const std::vector<uint32_t>& operand_words) const;
 
   bool FoldInstructionInternal(Instruction* inst) const;

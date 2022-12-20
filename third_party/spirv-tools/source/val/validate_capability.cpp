@@ -29,74 +29,82 @@ namespace val {
 namespace {
 
 bool IsSupportGuaranteedVulkan_1_0(uint32_t capability) {
-  switch (capability) {
-    case SpvCapabilityMatrix:
-    case SpvCapabilityShader:
-    case SpvCapabilityInputAttachment:
-    case SpvCapabilitySampled1D:
-    case SpvCapabilityImage1D:
-    case SpvCapabilitySampledBuffer:
-    case SpvCapabilityImageBuffer:
-    case SpvCapabilityImageQuery:
-    case SpvCapabilityDerivativeControl:
+  switch (spv::Capability(capability)) {
+    case spv::Capability::Matrix:
+    case spv::Capability::Shader:
+    case spv::Capability::InputAttachment:
+    case spv::Capability::Sampled1D:
+    case spv::Capability::Image1D:
+    case spv::Capability::SampledBuffer:
+    case spv::Capability::ImageBuffer:
+    case spv::Capability::ImageQuery:
+    case spv::Capability::DerivativeControl:
       return true;
+    default:
+      break;
   }
   return false;
 }
 
 bool IsSupportGuaranteedVulkan_1_1(uint32_t capability) {
   if (IsSupportGuaranteedVulkan_1_0(capability)) return true;
-  switch (capability) {
-    case SpvCapabilityDeviceGroup:
-    case SpvCapabilityMultiView:
+  switch (spv::Capability(capability)) {
+    case spv::Capability::DeviceGroup:
+    case spv::Capability::MultiView:
       return true;
+    default:
+      break;
   }
   return false;
 }
 
 bool IsSupportGuaranteedVulkan_1_2(uint32_t capability) {
   if (IsSupportGuaranteedVulkan_1_1(capability)) return true;
-  switch (capability) {
-    case SpvCapabilityShaderNonUniform:
+  switch (spv::Capability(capability)) {
+    case spv::Capability::ShaderNonUniform:
       return true;
+    default:
+      break;
   }
   return false;
 }
 
 bool IsSupportOptionalVulkan_1_0(uint32_t capability) {
-  switch (capability) {
-    case SpvCapabilityGeometry:
-    case SpvCapabilityTessellation:
-    case SpvCapabilityFloat64:
-    case SpvCapabilityInt64:
-    case SpvCapabilityInt16:
-    case SpvCapabilityTessellationPointSize:
-    case SpvCapabilityGeometryPointSize:
-    case SpvCapabilityImageGatherExtended:
-    case SpvCapabilityStorageImageMultisample:
-    case SpvCapabilityUniformBufferArrayDynamicIndexing:
-    case SpvCapabilitySampledImageArrayDynamicIndexing:
-    case SpvCapabilityStorageBufferArrayDynamicIndexing:
-    case SpvCapabilityStorageImageArrayDynamicIndexing:
-    case SpvCapabilityClipDistance:
-    case SpvCapabilityCullDistance:
-    case SpvCapabilityImageCubeArray:
-    case SpvCapabilitySampleRateShading:
-    case SpvCapabilitySparseResidency:
-    case SpvCapabilityMinLod:
-    case SpvCapabilitySampledCubeArray:
-    case SpvCapabilityImageMSArray:
-    case SpvCapabilityStorageImageExtendedFormats:
-    case SpvCapabilityInterpolationFunction:
-    case SpvCapabilityStorageImageReadWithoutFormat:
-    case SpvCapabilityStorageImageWriteWithoutFormat:
-    case SpvCapabilityMultiViewport:
-    case SpvCapabilityInt64Atomics:
-    case SpvCapabilityTransformFeedback:
-    case SpvCapabilityGeometryStreams:
-    case SpvCapabilityFloat16:
-    case SpvCapabilityInt8:
+  switch (spv::Capability(capability)) {
+    case spv::Capability::Geometry:
+    case spv::Capability::Tessellation:
+    case spv::Capability::Float64:
+    case spv::Capability::Int64:
+    case spv::Capability::Int16:
+    case spv::Capability::TessellationPointSize:
+    case spv::Capability::GeometryPointSize:
+    case spv::Capability::ImageGatherExtended:
+    case spv::Capability::StorageImageMultisample:
+    case spv::Capability::UniformBufferArrayDynamicIndexing:
+    case spv::Capability::SampledImageArrayDynamicIndexing:
+    case spv::Capability::StorageBufferArrayDynamicIndexing:
+    case spv::Capability::StorageImageArrayDynamicIndexing:
+    case spv::Capability::ClipDistance:
+    case spv::Capability::CullDistance:
+    case spv::Capability::ImageCubeArray:
+    case spv::Capability::SampleRateShading:
+    case spv::Capability::SparseResidency:
+    case spv::Capability::MinLod:
+    case spv::Capability::SampledCubeArray:
+    case spv::Capability::ImageMSArray:
+    case spv::Capability::StorageImageExtendedFormats:
+    case spv::Capability::InterpolationFunction:
+    case spv::Capability::StorageImageReadWithoutFormat:
+    case spv::Capability::StorageImageWriteWithoutFormat:
+    case spv::Capability::MultiViewport:
+    case spv::Capability::Int64Atomics:
+    case spv::Capability::TransformFeedback:
+    case spv::Capability::GeometryStreams:
+    case spv::Capability::Float16:
+    case spv::Capability::Int8:
       return true;
+    default:
+      break;
   }
   return false;
 }
@@ -104,27 +112,29 @@ bool IsSupportOptionalVulkan_1_0(uint32_t capability) {
 bool IsSupportOptionalVulkan_1_1(uint32_t capability) {
   if (IsSupportOptionalVulkan_1_0(capability)) return true;
 
-  switch (capability) {
-    case SpvCapabilityGroupNonUniform:
-    case SpvCapabilityGroupNonUniformVote:
-    case SpvCapabilityGroupNonUniformArithmetic:
-    case SpvCapabilityGroupNonUniformBallot:
-    case SpvCapabilityGroupNonUniformShuffle:
-    case SpvCapabilityGroupNonUniformShuffleRelative:
-    case SpvCapabilityGroupNonUniformClustered:
-    case SpvCapabilityGroupNonUniformQuad:
-    case SpvCapabilityDrawParameters:
-    // Alias SpvCapabilityStorageBuffer16BitAccess.
-    case SpvCapabilityStorageUniformBufferBlock16:
-    // Alias SpvCapabilityUniformAndStorageBuffer16BitAccess.
-    case SpvCapabilityStorageUniform16:
-    case SpvCapabilityStoragePushConstant16:
-    case SpvCapabilityStorageInputOutput16:
-    case SpvCapabilityDeviceGroup:
-    case SpvCapabilityMultiView:
-    case SpvCapabilityVariablePointersStorageBuffer:
-    case SpvCapabilityVariablePointers:
+  switch (spv::Capability(capability)) {
+    case spv::Capability::GroupNonUniform:
+    case spv::Capability::GroupNonUniformVote:
+    case spv::Capability::GroupNonUniformArithmetic:
+    case spv::Capability::GroupNonUniformBallot:
+    case spv::Capability::GroupNonUniformShuffle:
+    case spv::Capability::GroupNonUniformShuffleRelative:
+    case spv::Capability::GroupNonUniformClustered:
+    case spv::Capability::GroupNonUniformQuad:
+    case spv::Capability::DrawParameters:
+    // Alias spv::Capability::StorageBuffer16BitAccess.
+    case spv::Capability::StorageUniformBufferBlock16:
+    // Alias spv::Capability::UniformAndStorageBuffer16BitAccess.
+    case spv::Capability::StorageUniform16:
+    case spv::Capability::StoragePushConstant16:
+    case spv::Capability::StorageInputOutput16:
+    case spv::Capability::DeviceGroup:
+    case spv::Capability::MultiView:
+    case spv::Capability::VariablePointersStorageBuffer:
+    case spv::Capability::VariablePointers:
       return true;
+    default:
+      break;
   }
   return false;
 }
@@ -132,47 +142,51 @@ bool IsSupportOptionalVulkan_1_1(uint32_t capability) {
 bool IsSupportOptionalVulkan_1_2(uint32_t capability) {
   if (IsSupportOptionalVulkan_1_1(capability)) return true;
 
-  switch (capability) {
-    case SpvCapabilityDenormPreserve:
-    case SpvCapabilityDenormFlushToZero:
-    case SpvCapabilitySignedZeroInfNanPreserve:
-    case SpvCapabilityRoundingModeRTE:
-    case SpvCapabilityRoundingModeRTZ:
-    case SpvCapabilityVulkanMemoryModel:
-    case SpvCapabilityVulkanMemoryModelDeviceScope:
-    case SpvCapabilityStorageBuffer8BitAccess:
-    case SpvCapabilityUniformAndStorageBuffer8BitAccess:
-    case SpvCapabilityStoragePushConstant8:
-    case SpvCapabilityShaderViewportIndex:
-    case SpvCapabilityShaderLayer:
-    case SpvCapabilityPhysicalStorageBufferAddresses:
-    case SpvCapabilityRuntimeDescriptorArray:
-    case SpvCapabilityUniformTexelBufferArrayDynamicIndexing:
-    case SpvCapabilityStorageTexelBufferArrayDynamicIndexing:
-    case SpvCapabilityUniformBufferArrayNonUniformIndexing:
-    case SpvCapabilitySampledImageArrayNonUniformIndexing:
-    case SpvCapabilityStorageBufferArrayNonUniformIndexing:
-    case SpvCapabilityStorageImageArrayNonUniformIndexing:
-    case SpvCapabilityInputAttachmentArrayNonUniformIndexing:
-    case SpvCapabilityUniformTexelBufferArrayNonUniformIndexing:
-    case SpvCapabilityStorageTexelBufferArrayNonUniformIndexing:
+  switch (spv::Capability(capability)) {
+    case spv::Capability::DenormPreserve:
+    case spv::Capability::DenormFlushToZero:
+    case spv::Capability::SignedZeroInfNanPreserve:
+    case spv::Capability::RoundingModeRTE:
+    case spv::Capability::RoundingModeRTZ:
+    case spv::Capability::VulkanMemoryModel:
+    case spv::Capability::VulkanMemoryModelDeviceScope:
+    case spv::Capability::StorageBuffer8BitAccess:
+    case spv::Capability::UniformAndStorageBuffer8BitAccess:
+    case spv::Capability::StoragePushConstant8:
+    case spv::Capability::ShaderViewportIndex:
+    case spv::Capability::ShaderLayer:
+    case spv::Capability::PhysicalStorageBufferAddresses:
+    case spv::Capability::RuntimeDescriptorArray:
+    case spv::Capability::UniformTexelBufferArrayDynamicIndexing:
+    case spv::Capability::StorageTexelBufferArrayDynamicIndexing:
+    case spv::Capability::UniformBufferArrayNonUniformIndexing:
+    case spv::Capability::SampledImageArrayNonUniformIndexing:
+    case spv::Capability::StorageBufferArrayNonUniformIndexing:
+    case spv::Capability::StorageImageArrayNonUniformIndexing:
+    case spv::Capability::InputAttachmentArrayNonUniformIndexing:
+    case spv::Capability::UniformTexelBufferArrayNonUniformIndexing:
+    case spv::Capability::StorageTexelBufferArrayNonUniformIndexing:
       return true;
+    default:
+      break;
   }
   return false;
 }
 
 bool IsSupportGuaranteedOpenCL_1_2(uint32_t capability, bool embedded_profile) {
-  switch (capability) {
-    case SpvCapabilityAddresses:
-    case SpvCapabilityFloat16Buffer:
-    case SpvCapabilityInt16:
-    case SpvCapabilityInt8:
-    case SpvCapabilityKernel:
-    case SpvCapabilityLinkage:
-    case SpvCapabilityVector16:
+  switch (spv::Capability(capability)) {
+    case spv::Capability::Addresses:
+    case spv::Capability::Float16Buffer:
+    case spv::Capability::Int16:
+    case spv::Capability::Int8:
+    case spv::Capability::Kernel:
+    case spv::Capability::Linkage:
+    case spv::Capability::Vector16:
       return true;
-    case SpvCapabilityInt64:
+    case spv::Capability::Int64:
       return !embedded_profile;
+    default:
+      break;
   }
   return false;
 }
@@ -180,12 +194,14 @@ bool IsSupportGuaranteedOpenCL_1_2(uint32_t capability, bool embedded_profile) {
 bool IsSupportGuaranteedOpenCL_2_0(uint32_t capability, bool embedded_profile) {
   if (IsSupportGuaranteedOpenCL_1_2(capability, embedded_profile)) return true;
 
-  switch (capability) {
-    case SpvCapabilityDeviceEnqueue:
-    case SpvCapabilityGenericPointer:
-    case SpvCapabilityGroups:
-    case SpvCapabilityPipes:
+  switch (spv::Capability(capability)) {
+    case spv::Capability::DeviceEnqueue:
+    case spv::Capability::GenericPointer:
+    case spv::Capability::Groups:
+    case spv::Capability::Pipes:
       return true;
+    default:
+      break;
   }
   return false;
 }
@@ -193,19 +209,23 @@ bool IsSupportGuaranteedOpenCL_2_0(uint32_t capability, bool embedded_profile) {
 bool IsSupportGuaranteedOpenCL_2_2(uint32_t capability, bool embedded_profile) {
   if (IsSupportGuaranteedOpenCL_2_0(capability, embedded_profile)) return true;
 
-  switch (capability) {
-    case SpvCapabilitySubgroupDispatch:
-    case SpvCapabilityPipeStorage:
+  switch (spv::Capability(capability)) {
+    case spv::Capability::SubgroupDispatch:
+    case spv::Capability::PipeStorage:
       return true;
+    default:
+      break;
   }
   return false;
 }
 
 bool IsSupportOptionalOpenCL_1_2(uint32_t capability) {
-  switch (capability) {
-    case SpvCapabilityImageBasic:
-    case SpvCapabilityFloat64:
+  switch (spv::Capability(capability)) {
+    case spv::Capability::ImageBasic:
+    case spv::Capability::Float64:
       return true;
+    default:
+      break;
   }
   return false;
 }
@@ -229,14 +249,16 @@ bool IsEnabledByExtension(ValidationState_t& _, uint32_t capability) {
 
 bool IsEnabledByCapabilityOpenCL_1_2(ValidationState_t& _,
                                      uint32_t capability) {
-  if (_.HasCapability(SpvCapabilityImageBasic)) {
-    switch (capability) {
-      case SpvCapabilityLiteralSampler:
-      case SpvCapabilitySampled1D:
-      case SpvCapabilityImage1D:
-      case SpvCapabilitySampledBuffer:
-      case SpvCapabilityImageBuffer:
+  if (_.HasCapability(spv::Capability::ImageBasic)) {
+    switch (spv::Capability(capability)) {
+      case spv::Capability::LiteralSampler:
+      case spv::Capability::Sampled1D:
+      case spv::Capability::Image1D:
+      case spv::Capability::SampledBuffer:
+      case spv::Capability::ImageBuffer:
         return true;
+      default:
+        break;
     }
     return false;
   }
@@ -245,15 +267,17 @@ bool IsEnabledByCapabilityOpenCL_1_2(ValidationState_t& _,
 
 bool IsEnabledByCapabilityOpenCL_2_0(ValidationState_t& _,
                                      uint32_t capability) {
-  if (_.HasCapability(SpvCapabilityImageBasic)) {
-    switch (capability) {
-      case SpvCapabilityImageReadWrite:
-      case SpvCapabilityLiteralSampler:
-      case SpvCapabilitySampled1D:
-      case SpvCapabilityImage1D:
-      case SpvCapabilitySampledBuffer:
-      case SpvCapabilityImageBuffer:
+  if (_.HasCapability(spv::Capability::ImageBasic)) {
+    switch (spv::Capability(capability)) {
+      case spv::Capability::ImageReadWrite:
+      case spv::Capability::LiteralSampler:
+      case spv::Capability::Sampled1D:
+      case spv::Capability::Image1D:
+      case spv::Capability::SampledBuffer:
+      case spv::Capability::ImageBuffer:
         return true;
+      default:
+        break;
     }
     return false;
   }
@@ -265,7 +289,7 @@ bool IsEnabledByCapabilityOpenCL_2_0(ValidationState_t& _,
 // Validates that capability declarations use operands allowed in the current
 // context.
 spv_result_t CapabilityPass(ValidationState_t& _, const Instruction* inst) {
-  if (inst->opcode() != SpvOpCapability) return SPV_SUCCESS;
+  if (inst->opcode() != spv::Op::OpCapability) return SPV_SUCCESS;
 
   assert(inst->operands().size() == 1);
 

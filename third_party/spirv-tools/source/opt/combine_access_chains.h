@@ -68,10 +68,10 @@ class CombineAccessChains : public Pass {
                       std::vector<Operand>* new_operands);
 
   // Returns the opcode to use for the combined access chain.
-  SpvOp UpdateOpcode(SpvOp base_opcode, SpvOp input_opcode);
+  spv::Op UpdateOpcode(spv::Op base_opcode, spv::Op input_opcode);
 
   // Returns true if |opcode| is a pointer access chain.
-  bool IsPtrAccessChain(SpvOp opcode);
+  bool IsPtrAccessChain(spv::Op opcode);
 
   // Returns true if |inst| (an access chain) has 64-bit indices.
   bool Has64BitIndices(Instruction* inst);

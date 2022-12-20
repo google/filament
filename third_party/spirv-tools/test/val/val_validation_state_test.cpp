@@ -180,7 +180,7 @@ TEST_F(ValidationStateTest, CheckEntryPoints) {
   CompileSuccessfully(spirv);
   EXPECT_EQ(SPV_SUCCESS, ValidateAndRetrieveValidationState());
   EXPECT_EQ(size_t(1), vstate_->entry_points().size());
-  EXPECT_EQ(SpvOpFunction,
+  EXPECT_EQ(spv::Op::OpFunction,
             vstate_->FindDef(vstate_->entry_points()[0])->opcode());
 }
 

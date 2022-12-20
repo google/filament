@@ -42,13 +42,15 @@ bool TransformationAddTypeInt::IsApplicable(
   switch (message_.width()) {
     case 8:
       // The Int8 capability must be present.
-      if (!ir_context->get_feature_mgr()->HasCapability(SpvCapabilityInt8)) {
+      if (!ir_context->get_feature_mgr()->HasCapability(
+              spv::Capability::Int8)) {
         return false;
       }
       break;
     case 16:
       // The Int16 capability must be present.
-      if (!ir_context->get_feature_mgr()->HasCapability(SpvCapabilityInt16)) {
+      if (!ir_context->get_feature_mgr()->HasCapability(
+              spv::Capability::Int16)) {
         return false;
       }
       break;
@@ -57,7 +59,8 @@ bool TransformationAddTypeInt::IsApplicable(
       break;
     case 64:
       // The Int64 capability must be present.
-      if (!ir_context->get_feature_mgr()->HasCapability(SpvCapabilityInt64)) {
+      if (!ir_context->get_feature_mgr()->HasCapability(
+              spv::Capability::Int64)) {
         return false;
       }
       break;
@@ -75,7 +78,7 @@ bool TransformationAddTypeInt::IsApplicable(
 void TransformationAddTypeInt::Apply(opt::IRContext* ir_context,
                                      TransformationContext* /*unused*/) const {
   auto type_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpTypeInt, 0, message_.fresh_id(),
+      ir_context, spv::Op::OpTypeInt, 0, message_.fresh_id(),
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_LITERAL_INTEGER, {message_.width()}},
           {SPV_OPERAND_TYPE_LITERAL_INTEGER,

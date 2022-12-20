@@ -22,6 +22,10 @@ $ filamesh source_mesh destination_mesh
 
 Note: the UV1 attribute cannot be used in interleaved mode
 
+> **Note**
+> If you use the hex editor for macOS called [Hex Fiend](https://hexfiend.com/), you can use the
+> template found in `ide/hexfiend/Templates` to inspect filamesh files.
+
 ### Header
 
     char[8] : magic identifier "FILAMESH"

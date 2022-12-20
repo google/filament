@@ -29,7 +29,7 @@ class TransformationAddSpecConstantOp : public Transformation {
       protobufs::TransformationAddSpecConstantOp message);
 
   TransformationAddSpecConstantOp(
-      uint32_t fresh_id, uint32_t type_id, SpvOp opcode,
+      uint32_t fresh_id, uint32_t type_id, spv::Op opcode,
       const opt::Instruction::OperandList& operands);
 
   // - |fresh_id| is a fresh result id in the module.

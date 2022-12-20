@@ -34,13 +34,13 @@ class ReplaceInvalidOpcodePass : public Pass {
  private:
   // Returns the execution model that is used by every entry point in the
   // module. If more than one execution model is used in the module, then the
-  // return value is SpvExecutionModelMax.
-  SpvExecutionModel GetExecutionModel();
+  // return value is spv::ExecutionModel::Max.
+  spv::ExecutionModel GetExecutionModel();
 
   // Replaces all instructions in |function| that are invalid with execution
   // model |mode|, but valid for another shader model, with a special constant
   // value.  See |GetSpecialConstant|.
-  bool RewriteFunction(Function* function, SpvExecutionModel mode);
+  bool RewriteFunction(Function* function, spv::ExecutionModel mode);
 
   // Returns true if |inst| is valid for fragment shaders only.
   bool IsFragmentShaderOnlyInstruction(Instruction* inst);
@@ -58,7 +58,7 @@ class ReplaceInvalidOpcodePass : public Pass {
   // width of the type has been reached. For a vector, each element of the
   // constant will be constructed the same way.
   uint32_t GetSpecialConstant(uint32_t type_id);
-  std::string BuildWarningMessage(SpvOp opcode);
+  std::string BuildWarningMessage(spv::Op opcode);
 };
 
 }  // namespace opt

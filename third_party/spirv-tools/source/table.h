@@ -21,9 +21,9 @@
 
 typedef struct spv_opcode_desc_t {
   const char* name;
-  const SpvOp opcode;
+  const spv::Op opcode;
   const uint32_t numCapabilities;
-  const SpvCapability* capabilities;
+  const spv::Capability* capabilities;
   // operandTypes[0..numTypes-1] describe logical operands for the instruction.
   // The operand types include result id and result-type id, followed by
   // the types of arguments.
@@ -48,7 +48,7 @@ typedef struct spv_operand_desc_t {
   const char* name;
   const uint32_t value;
   const uint32_t numCapabilities;
-  const SpvCapability* capabilities;
+  const spv::Capability* capabilities;
   // A set of extensions that enable this feature. If empty then this operand
   // value is in core and its availability is subject to minVersion. The
   // assembler, binary parser, and disassembler ignore this rule, so you can
@@ -73,7 +73,7 @@ typedef struct spv_ext_inst_desc_t {
   const char* name;
   const uint32_t ext_inst;
   const uint32_t numCapabilities;
-  const SpvCapability* capabilities;
+  const spv::Capability* capabilities;
   const spv_operand_type_t operandTypes[16];  // TODO: Smaller/larger?
 } spv_ext_inst_desc_t;
 

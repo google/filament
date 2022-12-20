@@ -163,6 +163,21 @@ class ScalarConstant : public Constant {
     return is_zero;
   }
 
+  uint32_t GetU32BitValue() const {
+    // Relies on unsigned values smaller than 32-bit being zero extended.  See
+    // section 2.2.1 of the SPIR-V spec.
+    assert(words().size() == 1);
+    return words()[0];
+  }
+
+  uint64_t GetU64BitValue() const {
+    // Relies on unsigned values smaller than 64-bit being zero extended.  See
+    // section 2.2.1 of the SPIR-V spec.
+    assert(words().size() == 2);
+    return static_cast<uint64_t>(words()[1]) << 32 |
+           static_cast<uint64_t>(words()[0]);
+  }
+
  protected:
   ScalarConstant(const Type* ty, const std::vector<uint32_t>& w)
       : Constant(ty), words_(w) {}
@@ -189,23 +204,8 @@ class IntConstant : public ScalarConstant {
     return words()[0];
   }
 
-  uint32_t GetU32BitValue() const {
-    // Relies on unsigned values smaller than 32-bit being zero extended.  See
-    // section 2.2.1 of the SPIR-V spec.
-    assert(words().size() == 1);
-    return words()[0];
-  }
-
   int64_t GetS64BitValue() const {
     // Relies on unsigned values smaller than 64-bit being sign extended.  See
-    // section 2.2.1 of the SPIR-V spec.
-    assert(words().size() == 2);
-    return static_cast<uint64_t>(words()[1]) << 32 |
-           static_cast<uint64_t>(words()[0]);
-  }
-
-  uint64_t GetU64BitValue() const {
-    // Relies on unsigned values smaller than 64-bit being zero extended.  See
     // section 2.2.1 of the SPIR-V spec.
     assert(words().size() == 2);
     return static_cast<uint64_t>(words()[1]) << 32 |
@@ -520,6 +520,14 @@ class ConstantManager {
                                                    literal_words_or_ids.end()));
   }
 
+  // Takes a type and creates a OpConstantComposite
+  // This allows a
+  // OpConstantNull %composite_type
+  // to become a
+  // OpConstantComposite %composite_type %null %null ... etc
+  // Assumes type is a Composite already, otherwise returns null
+  const Constant* GetNullCompositeConstant(const Type* type);
+
   // Gets or creates a unique Constant instance of Vector type |type| with
   // numeric elements and a vector of constant defining words |literal_words|.
   // If a Constant instance existed already in the constant pool, it returns a
@@ -649,10 +657,13 @@ class ConstantManager {
   const Constant* GetDoubleConst(double val);
 
   // Returns the id of a 32-bit signed integer constant with value |val|.
-  uint32_t GetSIntConst(int32_t val);
+  uint32_t GetSIntConstId(int32_t val);
 
   // Returns the id of a 32-bit unsigned integer constant with value |val|.
-  uint32_t GetUIntConst(uint32_t val);
+  uint32_t GetUIntConstId(uint32_t val);
+
+  // Returns the id of a OpConstantNull with type of |type|.
+  uint32_t GetNullConstId(const Type* type);
 
  private:
   // Creates a Constant instance with the given type and a vector of constant

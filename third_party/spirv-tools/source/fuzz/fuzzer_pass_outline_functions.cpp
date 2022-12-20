@@ -137,12 +137,12 @@ FuzzerPassOutlineFunctions::MaybeGetEntryBlockSuitableForOutlining(
          "The entry block cannot be a loop header at this point.");
 
   // If the entry block starts with OpPhi or OpVariable, try to split it.
-  if (entry_block->begin()->opcode() == SpvOpPhi ||
-      entry_block->begin()->opcode() == SpvOpVariable) {
+  if (entry_block->begin()->opcode() == spv::Op::OpPhi ||
+      entry_block->begin()->opcode() == spv::Op::OpVariable) {
     // Find the first non-OpPhi and non-OpVariable instruction.
     auto non_phi_or_var_inst = &*entry_block->begin();
-    while (non_phi_or_var_inst->opcode() == SpvOpPhi ||
-           non_phi_or_var_inst->opcode() == SpvOpVariable) {
+    while (non_phi_or_var_inst->opcode() == spv::Op::OpPhi ||
+           non_phi_or_var_inst->opcode() == spv::Op::OpVariable) {
       non_phi_or_var_inst = non_phi_or_var_inst->NextNode();
     }
 
@@ -175,7 +175,7 @@ FuzzerPassOutlineFunctions::MaybeGetExitBlockSuitableForOutlining(
 
     // Find the first non-OpPhi instruction, after which to split.
     auto split_before = &*exit_block->begin();
-    while (split_before->opcode() == SpvOpPhi) {
+    while (split_before->opcode() == spv::Op::OpPhi) {
       split_before = split_before->NextNode();
     }
 

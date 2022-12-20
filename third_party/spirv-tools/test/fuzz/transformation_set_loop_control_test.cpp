@@ -278,398 +278,458 @@ TEST(TransformationSetLoopControlTest, VariousScenarios) {
   // DependencyLength|MinIterations|MaxIterations|IterationMultiple|PeelCount|PartialCount
   // 2 5 90 4 7 14
 
-  ASSERT_TRUE(TransformationSetLoopControl(10, SpvLoopControlMaskNone, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  10, (uint32_t)spv::LoopControlMask::MaskNone, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(10, SpvLoopControlUnrollMask, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  10, (uint32_t)spv::LoopControlMask::Unroll, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(10, SpvLoopControlDontUnrollMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  10, (uint32_t)spv::LoopControlMask::DontUnroll, 0, 0)
+                  .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(TransformationSetLoopControl(
-                   10, SpvLoopControlDependencyInfiniteMask, 0, 0)
+                   10, (uint32_t)spv::LoopControlMask::DependencyInfinite, 0, 0)
                    .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSetLoopControl(10, SpvLoopControlDependencyLengthMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSetLoopControl(10, SpvLoopControlMinIterationsMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSetLoopControl(10, SpvLoopControlMaxIterationsMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(TransformationSetLoopControl(
-                   10, SpvLoopControlIterationMultipleMask, 0, 0)
+                   10, (uint32_t)spv::LoopControlMask::DependencyLength, 0, 0)
                    .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(10, SpvLoopControlPeelCountMask, 3, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSetLoopControl(10, SpvLoopControlPeelCountMask, 3, 3)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(10, SpvLoopControlPartialCountMask, 0, 3)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSetLoopControl(10, SpvLoopControlPartialCountMask, 3, 3)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   10, (uint32_t)spv::LoopControlMask::MinIterations, 0, 0)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   10, (uint32_t)spv::LoopControlMask::MaxIterations, 0, 0)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   10, (uint32_t)spv::LoopControlMask::IterationMultiple, 0, 0)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  10, (uint32_t)spv::LoopControlMask::PeelCount, 3, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   10, (uint32_t)spv::LoopControlMask::PeelCount, 3, 3)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  10, (uint32_t)spv::LoopControlMask::PartialCount, 0, 3)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   10, (uint32_t)spv::LoopControlMask::PartialCount, 3, 3)
+                   .IsApplicable(context.get(), transformation_context));
   ASSERT_TRUE(TransformationSetLoopControl(
                   10,
-                  SpvLoopControlPeelCountMask | SpvLoopControlPartialCountMask,
+                  (uint32_t)spv::LoopControlMask::PeelCount |
+                      (uint32_t)spv::LoopControlMask::PartialCount,
                   3, 3)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(10,
-                                           SpvLoopControlUnrollMask |
-                                               SpvLoopControlPeelCountMask |
-                                               SpvLoopControlPartialCountMask,
-                                           3, 3)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  10,
+                  (uint32_t)spv::LoopControlMask::Unroll |
+                      (uint32_t)spv::LoopControlMask::PeelCount |
+                      (uint32_t)spv::LoopControlMask::PartialCount,
+                  3, 3)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(TransformationSetLoopControl(10,
-                                            SpvLoopControlDontUnrollMask |
-                                                SpvLoopControlPeelCountMask |
-                                                SpvLoopControlPartialCountMask,
-                                            3, 3)
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   10,
+                   (uint32_t)spv::LoopControlMask::DontUnroll |
+                       (uint32_t)spv::LoopControlMask::PeelCount |
+                       (uint32_t)spv::LoopControlMask::PartialCount,
+                   3, 3)
                    .IsApplicable(context.get(), transformation_context));
 
-  ASSERT_TRUE(TransformationSetLoopControl(23, SpvLoopControlMaskNone, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  23, (uint32_t)spv::LoopControlMask::MaskNone, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(23, SpvLoopControlUnrollMask, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  23, (uint32_t)spv::LoopControlMask::Unroll, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(23, SpvLoopControlDontUnrollMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  23, (uint32_t)spv::LoopControlMask::DontUnroll, 0, 0)
+                  .IsApplicable(context.get(), transformation_context));
   ASSERT_TRUE(TransformationSetLoopControl(
                   23,
-                  SpvLoopControlPeelCountMask | SpvLoopControlPartialCountMask,
+                  (uint32_t)spv::LoopControlMask::PeelCount |
+                      (uint32_t)spv::LoopControlMask::PartialCount,
                   3, 3)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSetLoopControl(23, SpvLoopControlMaxIterationsMask, 2, 3)
-          .IsApplicable(context.get(), transformation_context));
-
-  ASSERT_TRUE(TransformationSetLoopControl(33, SpvLoopControlMaskNone, 0, 0)
-                  .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(33, SpvLoopControlUnrollMask, 0, 0)
-                  .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(33, SpvLoopControlDontUnrollMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSetLoopControl(33, SpvLoopControlMinIterationsMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(
-          33, SpvLoopControlUnrollMask | SpvLoopControlPeelCountMask, 5, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(TransformationSetLoopControl(33,
-                                            SpvLoopControlDontUnrollMask |
-                                                SpvLoopControlPartialCountMask,
-                                            0, 10)
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   23, (uint32_t)spv::LoopControlMask::MaxIterations, 2, 3)
                    .IsApplicable(context.get(), transformation_context));
 
-  ASSERT_TRUE(TransformationSetLoopControl(43, SpvLoopControlMaskNone, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  33, (uint32_t)spv::LoopControlMask::MaskNone, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(43, SpvLoopControlUnrollMask, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  33, (uint32_t)spv::LoopControlMask::Unroll, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(43, SpvLoopControlDontUnrollMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  33, (uint32_t)spv::LoopControlMask::DontUnroll, 0, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   33, (uint32_t)spv::LoopControlMask::MinIterations, 0, 0)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  33,
+                  (uint32_t)spv::LoopControlMask::Unroll |
+                      (uint32_t)spv::LoopControlMask::PeelCount,
+                  5, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   33,
+                   (uint32_t)spv::LoopControlMask::DontUnroll |
+                       (uint32_t)spv::LoopControlMask::PartialCount,
+                   0, 10)
+                   .IsApplicable(context.get(), transformation_context));
+
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  43, (uint32_t)spv::LoopControlMask::MaskNone, 0, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  43, (uint32_t)spv::LoopControlMask::Unroll, 0, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  43, (uint32_t)spv::LoopControlMask::DontUnroll, 0, 0)
+                  .IsApplicable(context.get(), transformation_context));
   ASSERT_TRUE(TransformationSetLoopControl(
                   43,
-                  SpvLoopControlMaskNone | SpvLoopControlDependencyInfiniteMask,
+                  (uint32_t)spv::LoopControlMask::MaskNone |
+                      (uint32_t)spv::LoopControlMask::DependencyInfinite,
                   0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(
-          43, SpvLoopControlUnrollMask | SpvLoopControlDependencyInfiniteMask,
-          0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(
-          43,
-          SpvLoopControlDontUnrollMask | SpvLoopControlDependencyInfiniteMask,
-          0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSetLoopControl(43,
-                                   SpvLoopControlDependencyInfiniteMask |
-                                       SpvLoopControlDependencyLengthMask,
-                                   0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(
-          43, SpvLoopControlUnrollMask | SpvLoopControlPeelCountMask, 5, 0)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  43,
+                  (uint32_t)spv::LoopControlMask::Unroll |
+                      (uint32_t)spv::LoopControlMask::DependencyInfinite,
+                  0, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  43,
+                  (uint32_t)spv::LoopControlMask::DontUnroll |
+                      (uint32_t)spv::LoopControlMask::DependencyInfinite,
+                  0, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   43,
+                   (uint32_t)spv::LoopControlMask::DependencyInfinite |
+                       (uint32_t)spv::LoopControlMask::DependencyLength,
+                   0, 0)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  43,
+                  (uint32_t)spv::LoopControlMask::Unroll |
+                      (uint32_t)spv::LoopControlMask::PeelCount,
+                  5, 0)
+                  .IsApplicable(context.get(), transformation_context));
 
-  ASSERT_TRUE(TransformationSetLoopControl(53, SpvLoopControlMaskNone, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  53, (uint32_t)spv::LoopControlMask::MaskNone, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(53, SpvLoopControlUnrollMask, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  53, (uint32_t)spv::LoopControlMask::Unroll, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(53, SpvLoopControlDontUnrollMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSetLoopControl(53, SpvLoopControlMaxIterationsMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(
-          53, SpvLoopControlMaskNone | SpvLoopControlDependencyLengthMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSetLoopControl(
-          53, SpvLoopControlUnrollMask | SpvLoopControlDependencyInfiniteMask,
-          0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(
-          53, SpvLoopControlDontUnrollMask | SpvLoopControlDependencyLengthMask,
-          0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSetLoopControl(53,
-                                   SpvLoopControlDependencyInfiniteMask |
-                                       SpvLoopControlDependencyLengthMask,
-                                   0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(
-          53,
-          SpvLoopControlUnrollMask | SpvLoopControlDependencyLengthMask |
-              SpvLoopControlPeelCountMask | SpvLoopControlPartialCountMask,
-          5, 3)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  53, (uint32_t)spv::LoopControlMask::DontUnroll, 0, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   53, (uint32_t)spv::LoopControlMask::MaxIterations, 0, 0)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  53,
+                  (uint32_t)spv::LoopControlMask::MaskNone |
+                      (uint32_t)spv::LoopControlMask::DependencyLength,
+                  0, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   53,
+                   (uint32_t)spv::LoopControlMask::Unroll |
+                       (uint32_t)spv::LoopControlMask::DependencyInfinite,
+                   0, 0)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  53,
+                  (uint32_t)spv::LoopControlMask::DontUnroll |
+                      (uint32_t)spv::LoopControlMask::DependencyLength,
+                  0, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   53,
+                   (uint32_t)spv::LoopControlMask::DependencyInfinite |
+                       (uint32_t)spv::LoopControlMask::DependencyLength,
+                   0, 0)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  53,
+                  (uint32_t)spv::LoopControlMask::Unroll |
+                      (uint32_t)spv::LoopControlMask::DependencyLength |
+                      (uint32_t)spv::LoopControlMask::PeelCount |
+                      (uint32_t)spv::LoopControlMask::PartialCount,
+                  5, 3)
+                  .IsApplicable(context.get(), transformation_context));
 
-  ASSERT_TRUE(TransformationSetLoopControl(63, SpvLoopControlMaskNone, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  63, (uint32_t)spv::LoopControlMask::MaskNone, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(63, SpvLoopControlUnrollMask, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  63, (uint32_t)spv::LoopControlMask::Unroll, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(63, SpvLoopControlDontUnrollMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(63,
-                                           SpvLoopControlUnrollMask |
-                                               SpvLoopControlMinIterationsMask |
-                                               SpvLoopControlPeelCountMask |
-                                               SpvLoopControlPartialCountMask,
-                                           5, 3)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  63, (uint32_t)spv::LoopControlMask::DontUnroll, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(63,
-                                           SpvLoopControlUnrollMask |
-                                               SpvLoopControlMinIterationsMask |
-                                               SpvLoopControlPeelCountMask,
-                                           23, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  63,
+                  (uint32_t)spv::LoopControlMask::Unroll |
+                      (uint32_t)spv::LoopControlMask::MinIterations |
+                      (uint32_t)spv::LoopControlMask::PeelCount |
+                      (uint32_t)spv::LoopControlMask::PartialCount,
+                  5, 3)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  63,
+                  (uint32_t)spv::LoopControlMask::Unroll |
+                      (uint32_t)spv::LoopControlMask::MinIterations |
+                      (uint32_t)spv::LoopControlMask::PeelCount,
+                  23, 0)
                   .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(TransformationSetLoopControl(
                    63,
-                   SpvLoopControlUnrollMask | SpvLoopControlMinIterationsMask |
-                       SpvLoopControlPeelCountMask,
+                   (uint32_t)spv::LoopControlMask::Unroll |
+                       (uint32_t)spv::LoopControlMask::MinIterations |
+                       (uint32_t)spv::LoopControlMask::PeelCount,
                    2, 23)
                    .IsApplicable(context.get(), transformation_context));
 
-  ASSERT_TRUE(TransformationSetLoopControl(73, SpvLoopControlMaskNone, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  73, (uint32_t)spv::LoopControlMask::MaskNone, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(73, SpvLoopControlUnrollMask, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  73, (uint32_t)spv::LoopControlMask::Unroll, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(73, SpvLoopControlDontUnrollMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  73, (uint32_t)spv::LoopControlMask::DontUnroll, 0, 0)
+                  .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(TransformationSetLoopControl(
                    73,
-                   SpvLoopControlUnrollMask | SpvLoopControlMinIterationsMask |
-                       SpvLoopControlPeelCountMask |
-                       SpvLoopControlPartialCountMask,
+                   (uint32_t)spv::LoopControlMask::Unroll |
+                       (uint32_t)spv::LoopControlMask::MinIterations |
+                       (uint32_t)spv::LoopControlMask::PeelCount |
+                       (uint32_t)spv::LoopControlMask::PartialCount,
                    5, 3)
                    .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(73,
-                                           SpvLoopControlUnrollMask |
-                                               SpvLoopControlMaxIterationsMask |
-                                               SpvLoopControlPeelCountMask,
-                                           23, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  73,
+                  (uint32_t)spv::LoopControlMask::Unroll |
+                      (uint32_t)spv::LoopControlMask::MaxIterations |
+                      (uint32_t)spv::LoopControlMask::PeelCount,
+                  23, 0)
                   .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(TransformationSetLoopControl(
                    73,
-                   SpvLoopControlUnrollMask | SpvLoopControlMaxIterationsMask |
-                       SpvLoopControlPeelCountMask,
+                   (uint32_t)spv::LoopControlMask::Unroll |
+                       (uint32_t)spv::LoopControlMask::MaxIterations |
+                       (uint32_t)spv::LoopControlMask::PeelCount,
                    2, 23)
                    .IsApplicable(context.get(), transformation_context));
 
-  ASSERT_TRUE(TransformationSetLoopControl(83, SpvLoopControlMaskNone, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  83, (uint32_t)spv::LoopControlMask::MaskNone, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(83, SpvLoopControlUnrollMask, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  83, (uint32_t)spv::LoopControlMask::Unroll, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(83, SpvLoopControlDontUnrollMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  83, (uint32_t)spv::LoopControlMask::DontUnroll, 0, 0)
+                  .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(TransformationSetLoopControl(
                    83,
-                   SpvLoopControlUnrollMask | SpvLoopControlMinIterationsMask |
-                       SpvLoopControlPeelCountMask |
-                       SpvLoopControlPartialCountMask,
+                   (uint32_t)spv::LoopControlMask::Unroll |
+                       (uint32_t)spv::LoopControlMask::MinIterations |
+                       (uint32_t)spv::LoopControlMask::PeelCount |
+                       (uint32_t)spv::LoopControlMask::PartialCount,
                    5, 3)
                    .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(83,
-                                   SpvLoopControlUnrollMask |
-                                       SpvLoopControlIterationMultipleMask |
-                                       SpvLoopControlPeelCountMask,
-                                   23, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSetLoopControl(83,
-                                   SpvLoopControlUnrollMask |
-                                       SpvLoopControlIterationMultipleMask |
-                                       SpvLoopControlPeelCountMask,
-                                   2, 23)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  83,
+                  (uint32_t)spv::LoopControlMask::Unroll |
+                      (uint32_t)spv::LoopControlMask::IterationMultiple |
+                      (uint32_t)spv::LoopControlMask::PeelCount,
+                  23, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   83,
+                   (uint32_t)spv::LoopControlMask::Unroll |
+                       (uint32_t)spv::LoopControlMask::IterationMultiple |
+                       (uint32_t)spv::LoopControlMask::PeelCount,
+                   2, 23)
+                   .IsApplicable(context.get(), transformation_context));
 
-  ASSERT_TRUE(TransformationSetLoopControl(93, SpvLoopControlMaskNone, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  93, (uint32_t)spv::LoopControlMask::MaskNone, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(93, SpvLoopControlUnrollMask, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  93, (uint32_t)spv::LoopControlMask::Unroll, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(93, SpvLoopControlDontUnrollMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(93, SpvLoopControlPeelCountMask, 8, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSetLoopControl(93, SpvLoopControlPeelCountMask, 8, 8)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(93, SpvLoopControlPartialCountMask, 0, 8)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  93, (uint32_t)spv::LoopControlMask::DontUnroll, 0, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  93, (uint32_t)spv::LoopControlMask::PeelCount, 8, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   93, (uint32_t)spv::LoopControlMask::PeelCount, 8, 8)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  93, (uint32_t)spv::LoopControlMask::PartialCount, 0, 8)
+                  .IsApplicable(context.get(), transformation_context));
   ASSERT_TRUE(TransformationSetLoopControl(
                   93,
-                  SpvLoopControlPeelCountMask | SpvLoopControlPartialCountMask,
+                  (uint32_t)spv::LoopControlMask::PeelCount |
+                      (uint32_t)spv::LoopControlMask::PartialCount,
                   16, 8)
                   .IsApplicable(context.get(), transformation_context));
 
-  ASSERT_TRUE(TransformationSetLoopControl(103, SpvLoopControlMaskNone, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  103, (uint32_t)spv::LoopControlMask::MaskNone, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(103, SpvLoopControlUnrollMask, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  103, (uint32_t)spv::LoopControlMask::Unroll, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(103, SpvLoopControlDontUnrollMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(103, SpvLoopControlPartialCountMask, 0, 60)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(TransformationSetLoopControl(103,
-                                            SpvLoopControlDontUnrollMask |
-                                                SpvLoopControlPartialCountMask,
-                                            0, 60)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  103, (uint32_t)spv::LoopControlMask::DontUnroll, 0, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  103, (uint32_t)spv::LoopControlMask::PartialCount, 0, 60)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   103,
+                   (uint32_t)spv::LoopControlMask::DontUnroll |
+                       (uint32_t)spv::LoopControlMask::PartialCount,
+                   0, 60)
                    .IsApplicable(context.get(), transformation_context));
 
-  ASSERT_TRUE(TransformationSetLoopControl(113, SpvLoopControlMaskNone, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  113, (uint32_t)spv::LoopControlMask::MaskNone, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(113, SpvLoopControlUnrollMask, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  113, (uint32_t)spv::LoopControlMask::Unroll, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(113, SpvLoopControlDontUnrollMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(113, SpvLoopControlPeelCountMask, 12, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSetLoopControl(
-          113,
-          SpvLoopControlIterationMultipleMask | SpvLoopControlPeelCountMask, 12,
-          0)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  113, (uint32_t)spv::LoopControlMask::DontUnroll, 0, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  113, (uint32_t)spv::LoopControlMask::PeelCount, 12, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   113,
+                   (uint32_t)spv::LoopControlMask::IterationMultiple |
+                       (uint32_t)spv::LoopControlMask::PeelCount,
+                   12, 0)
+                   .IsApplicable(context.get(), transformation_context));
 
-  ASSERT_TRUE(TransformationSetLoopControl(123, SpvLoopControlMaskNone, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  123, (uint32_t)spv::LoopControlMask::MaskNone, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(123, SpvLoopControlUnrollMask, 0, 0)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  123, (uint32_t)spv::LoopControlMask::Unroll, 0, 0)
                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(123, SpvLoopControlDontUnrollMask, 0, 0)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(
-      TransformationSetLoopControl(
-          123,
-          SpvLoopControlMinIterationsMask | SpvLoopControlMaxIterationsMask |
-              SpvLoopControlIterationMultipleMask |
-              SpvLoopControlPeelCountMask | SpvLoopControlPartialCountMask,
-          7, 8)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_TRUE(TransformationSetLoopControl(123,
-                                           SpvLoopControlUnrollMask |
-                                               SpvLoopControlMinIterationsMask |
-                                               SpvLoopControlMaxIterationsMask |
-                                               SpvLoopControlPartialCountMask,
-                                           0, 9)
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  123, (uint32_t)spv::LoopControlMask::DontUnroll, 0, 0)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  123,
+                  (uint32_t)spv::LoopControlMask::MinIterations |
+                      (uint32_t)spv::LoopControlMask::MaxIterations |
+                      (uint32_t)spv::LoopControlMask::IterationMultiple |
+                      (uint32_t)spv::LoopControlMask::PeelCount |
+                      (uint32_t)spv::LoopControlMask::PartialCount,
+                  7, 8)
+                  .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSetLoopControl(
+                  123,
+                  (uint32_t)spv::LoopControlMask::Unroll |
+                      (uint32_t)spv::LoopControlMask::MinIterations |
+                      (uint32_t)spv::LoopControlMask::MaxIterations |
+                      (uint32_t)spv::LoopControlMask::PartialCount,
+                  0, 9)
                   .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(TransformationSetLoopControl(
                    123,
-                   SpvLoopControlUnrollMask | SpvLoopControlMinIterationsMask |
-                       SpvLoopControlMaxIterationsMask |
-                       SpvLoopControlPartialCountMask,
+                   (uint32_t)spv::LoopControlMask::Unroll |
+                       (uint32_t)spv::LoopControlMask::MinIterations |
+                       (uint32_t)spv::LoopControlMask::MaxIterations |
+                       (uint32_t)spv::LoopControlMask::PartialCount,
                    7, 9)
                    .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSetLoopControl(
-          123,
-          SpvLoopControlDontUnrollMask | SpvLoopControlMinIterationsMask |
-              SpvLoopControlMaxIterationsMask | SpvLoopControlPartialCountMask,
-          7, 9)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSetLoopControl(
+                   123,
+                   (uint32_t)spv::LoopControlMask::DontUnroll |
+                       (uint32_t)spv::LoopControlMask::MinIterations |
+                       (uint32_t)spv::LoopControlMask::MaxIterations |
+                       (uint32_t)spv::LoopControlMask::PartialCount,
+                   7, 9)
+                   .IsApplicable(context.get(), transformation_context));
 
+  ApplyAndCheckFreshIds(TransformationSetLoopControl(
+                            10,
+                            (uint32_t)spv::LoopControlMask::Unroll |
+                                (uint32_t)spv::LoopControlMask::PeelCount |
+                                (uint32_t)spv::LoopControlMask::PartialCount,
+                            3, 3),
+                        context.get(), &transformation_context);
   ApplyAndCheckFreshIds(
-      TransformationSetLoopControl(10,
-                                   SpvLoopControlUnrollMask |
-                                       SpvLoopControlPeelCountMask |
-                                       SpvLoopControlPartialCountMask,
-                                   3, 3),
+      TransformationSetLoopControl(
+          23, (uint32_t)spv::LoopControlMask::DontUnroll, 0, 0),
       context.get(), &transformation_context);
-  ApplyAndCheckFreshIds(
-      TransformationSetLoopControl(23, SpvLoopControlDontUnrollMask, 0, 0),
-      context.get(), &transformation_context);
-  ApplyAndCheckFreshIds(
-      TransformationSetLoopControl(33, SpvLoopControlUnrollMask, 0, 0),
-      context.get(), &transformation_context);
+  ApplyAndCheckFreshIds(TransformationSetLoopControl(
+                            33, (uint32_t)spv::LoopControlMask::Unroll, 0, 0),
+                        context.get(), &transformation_context);
   ApplyAndCheckFreshIds(
       TransformationSetLoopControl(
           43,
-          SpvLoopControlDontUnrollMask | SpvLoopControlDependencyInfiniteMask,
+          (uint32_t)spv::LoopControlMask::DontUnroll |
+              (uint32_t)spv::LoopControlMask::DependencyInfinite,
           0, 0),
       context.get(), &transformation_context);
+  ApplyAndCheckFreshIds(TransformationSetLoopControl(
+                            53, (uint32_t)spv::LoopControlMask::MaskNone, 0, 0),
+                        context.get(), &transformation_context);
+  ApplyAndCheckFreshIds(TransformationSetLoopControl(
+                            63,
+                            (uint32_t)spv::LoopControlMask::Unroll |
+                                (uint32_t)spv::LoopControlMask::MinIterations |
+                                (uint32_t)spv::LoopControlMask::PeelCount,
+                            23, 0),
+                        context.get(), &transformation_context);
+  ApplyAndCheckFreshIds(TransformationSetLoopControl(
+                            73,
+                            (uint32_t)spv::LoopControlMask::Unroll |
+                                (uint32_t)spv::LoopControlMask::MaxIterations |
+                                (uint32_t)spv::LoopControlMask::PeelCount,
+                            23, 0),
+                        context.get(), &transformation_context);
   ApplyAndCheckFreshIds(
-      TransformationSetLoopControl(53, SpvLoopControlMaskNone, 0, 0),
+      TransformationSetLoopControl(
+          83, (uint32_t)spv::LoopControlMask::DontUnroll, 0, 0),
       context.get(), &transformation_context);
+  ApplyAndCheckFreshIds(TransformationSetLoopControl(
+                            93,
+                            (uint32_t)spv::LoopControlMask::PeelCount |
+                                (uint32_t)spv::LoopControlMask::PartialCount,
+                            16, 8),
+                        context.get(), &transformation_context);
   ApplyAndCheckFreshIds(
-      TransformationSetLoopControl(63,
-                                   SpvLoopControlUnrollMask |
-                                       SpvLoopControlMinIterationsMask |
-                                       SpvLoopControlPeelCountMask,
-                                   23, 0),
-      context.get(), &transformation_context);
-  ApplyAndCheckFreshIds(
-      TransformationSetLoopControl(73,
-                                   SpvLoopControlUnrollMask |
-                                       SpvLoopControlMaxIterationsMask |
-                                       SpvLoopControlPeelCountMask,
-                                   23, 0),
-      context.get(), &transformation_context);
-  ApplyAndCheckFreshIds(
-      TransformationSetLoopControl(83, SpvLoopControlDontUnrollMask, 0, 0),
+      TransformationSetLoopControl(
+          103, (uint32_t)spv::LoopControlMask::PartialCount, 0, 60),
       context.get(), &transformation_context);
   ApplyAndCheckFreshIds(
       TransformationSetLoopControl(
-          93, SpvLoopControlPeelCountMask | SpvLoopControlPartialCountMask, 16,
-          8),
+          113, (uint32_t)spv::LoopControlMask::PeelCount, 12, 0),
       context.get(), &transformation_context);
-  ApplyAndCheckFreshIds(
-      TransformationSetLoopControl(103, SpvLoopControlPartialCountMask, 0, 60),
-      context.get(), &transformation_context);
-  ApplyAndCheckFreshIds(
-      TransformationSetLoopControl(113, SpvLoopControlPeelCountMask, 12, 0),
-      context.get(), &transformation_context);
-  ApplyAndCheckFreshIds(
-      TransformationSetLoopControl(
-          123,
-          SpvLoopControlUnrollMask | SpvLoopControlMinIterationsMask |
-              SpvLoopControlMaxIterationsMask | SpvLoopControlPartialCountMask,
-          0, 9),
-      context.get(), &transformation_context);
+  ApplyAndCheckFreshIds(TransformationSetLoopControl(
+                            123,
+                            (uint32_t)spv::LoopControlMask::Unroll |
+                                (uint32_t)spv::LoopControlMask::MinIterations |
+                                (uint32_t)spv::LoopControlMask::MaxIterations |
+                                (uint32_t)spv::LoopControlMask::PartialCount,
+                            0, 9),
+                        context.get(), &transformation_context);
 
   std::string after_transformation = R"(
                OpCapability Shader
@@ -958,10 +1018,10 @@ TEST(TransformationSetLoopControlTest, CheckSPIRVVersionsRespected) {
         context.get(), validator_options, kConsoleMessageConsumer));
     TransformationContext transformation_context(
         MakeUnique<FactManager>(context.get()), validator_options);
-    TransformationSetLoopControl peel_count(10, SpvLoopControlPeelCountMask, 4,
-                                            0);
+    TransformationSetLoopControl peel_count(
+        10, (uint32_t)spv::LoopControlMask::PeelCount, 4, 0);
     TransformationSetLoopControl partial_count(
-        10, SpvLoopControlPartialCountMask, 0, 4);
+        10, (uint32_t)spv::LoopControlMask::PartialCount, 0, 4);
 
     switch (env) {
       case SPV_ENV_UNIVERSAL_1_0:

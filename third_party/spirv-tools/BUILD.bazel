@@ -82,7 +82,7 @@ genrule(
     outs = ["generators.inc"],
     cmd = "$(location generate_registry_tables) --xml=$(location @spirv_headers//:spirv_xml_registry) --generator-output=$(location generators.inc)",
     cmd_bat = "$(location //:generate_registry_tables) --xml=$(location @spirv_headers//:spirv_xml_registry) --generator-output=$(location generators.inc)",
-    tools = [":generate_registry_tables"],
+    exec_tools = [":generate_registry_tables"],
 )
 
 py_binary(
@@ -96,7 +96,7 @@ genrule(
     outs = ["build-version.inc"],
     cmd = "SOURCE_DATE_EPOCH=0 $(location update_build_version) $(location CHANGES) $(location build-version.inc)",
     cmd_bat = "set SOURCE_DATE_EPOCH=0  && $(location //:update_build_version) $(location CHANGES) $(location build-version.inc)",
-    tools = [":update_build_version"],
+    exec_tools = [":update_build_version"],
 )
 
 # Libraries
@@ -137,7 +137,7 @@ cc_library(
     copts = COMMON_COPTS,
     includes = ["source"],
     deps = [
-        "@spirv_headers//:spirv_c_headers",
+        "@spirv_headers//:spirv_cpp11_headers",
     ],
 )
 
@@ -162,7 +162,7 @@ cc_library(
     deps = [
         ":generated_headers",
         ":spirv_tools_headers",
-        "@spirv_headers//:spirv_c_headers",
+        "@spirv_headers//:spirv_cpp11_headers",
         "@spirv_headers//:spirv_common_headers",
     ],
 )

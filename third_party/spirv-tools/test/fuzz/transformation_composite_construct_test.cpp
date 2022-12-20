@@ -136,16 +136,17 @@ TEST(TransformationCompositeConstructTest, ConstructArrays) {
       MakeUnique<FactManager>(context.get()), validator_options);
   // Make a vec2[3]
   TransformationCompositeConstruct make_vec2_array_length_3(
-      37, {41, 45, 27}, MakeInstructionDescriptor(46, SpvOpAccessChain, 0),
-      200);
+      37, {41, 45, 27},
+      MakeInstructionDescriptor(46, spv::Op::OpAccessChain, 0), 200);
   // Bad: there are too many components
   TransformationCompositeConstruct make_vec2_array_length_3_bad(
-      37, {41, 45, 27, 27}, MakeInstructionDescriptor(46, SpvOpAccessChain, 0),
-      200);
+      37, {41, 45, 27, 27},
+      MakeInstructionDescriptor(46, spv::Op::OpAccessChain, 0), 200);
   // The first component does not correspond to an instruction with a result
   // type so this check should return false.
   TransformationCompositeConstruct make_vec2_array_length_3_nores(
-      37, {2, 45, 27}, MakeInstructionDescriptor(46, SpvOpAccessChain, 0), 200);
+      37, {2, 45, 27}, MakeInstructionDescriptor(46, spv::Op::OpAccessChain, 0),
+      200);
   ASSERT_TRUE(make_vec2_array_length_3.IsApplicable(context.get(),
                                                     transformation_context));
   ASSERT_FALSE(make_vec2_array_length_3_bad.IsApplicable(
@@ -159,7 +160,7 @@ TEST(TransformationCompositeConstructTest, ConstructArrays) {
   uint32_t num_uses_of_27_before = context->get_def_use_mgr()->NumUses(27);
   ApplyAndCheckFreshIds(make_vec2_array_length_3, context.get(),
                         &transformation_context);
-  ASSERT_EQ(SpvOpCompositeConstruct,
+  ASSERT_EQ(spv::Op::OpCompositeConstruct,
             context->get_def_use_mgr()->GetDef(200)->opcode());
   ASSERT_EQ(34, context->get_instr_block(200)->id());
   ASSERT_EQ(num_uses_of_41_before + 1, context->get_def_use_mgr()->NumUses(41));
@@ -176,10 +177,10 @@ TEST(TransformationCompositeConstructTest, ConstructArrays) {
 
   // Make a float[2]
   TransformationCompositeConstruct make_float_array_length_2(
-      9, {24, 40}, MakeInstructionDescriptor(71, SpvOpStore, 0), 201);
+      9, {24, 40}, MakeInstructionDescriptor(71, spv::Op::OpStore, 0), 201);
   // Bad: %41 does not have type float
   TransformationCompositeConstruct make_float_array_length_2_bad(
-      9, {41, 40}, MakeInstructionDescriptor(71, SpvOpStore, 0), 201);
+      9, {41, 40}, MakeInstructionDescriptor(71, spv::Op::OpStore, 0), 201);
   ASSERT_TRUE(make_float_array_length_2.IsApplicable(context.get(),
                                                      transformation_context));
   ASSERT_FALSE(make_float_array_length_2_bad.IsApplicable(
@@ -195,12 +196,12 @@ TEST(TransformationCompositeConstructTest, ConstructArrays) {
 
   // Make a bool[3]
   TransformationCompositeConstruct make_bool_array_length_3(
-      47, {33, 50, 50}, MakeInstructionDescriptor(33, SpvOpSelectionMerge, 0),
-      202);
+      47, {33, 50, 50},
+      MakeInstructionDescriptor(33, spv::Op::OpSelectionMerge, 0), 202);
   // Bad: %54 is not available at the desired program point.
   TransformationCompositeConstruct make_bool_array_length_3_bad(
-      47, {33, 54, 50}, MakeInstructionDescriptor(33, SpvOpSelectionMerge, 0),
-      202);
+      47, {33, 54, 50},
+      MakeInstructionDescriptor(33, spv::Op::OpSelectionMerge, 0), 202);
   ASSERT_TRUE(make_bool_array_length_3.IsApplicable(context.get(),
                                                     transformation_context));
   ASSERT_FALSE(make_bool_array_length_3_bad.IsApplicable(
@@ -218,10 +219,10 @@ TEST(TransformationCompositeConstructTest, ConstructArrays) {
 
   // make a uvec3[2][2]
   TransformationCompositeConstruct make_uvec3_array_length_2_2(
-      58, {69, 100}, MakeInstructionDescriptor(64, SpvOpStore, 0), 203);
+      58, {69, 100}, MakeInstructionDescriptor(64, spv::Op::OpStore, 0), 203);
   // Bad: Skip count 100 is too large.
   TransformationCompositeConstruct make_uvec3_array_length_2_2_bad(
-      58, {33, 54}, MakeInstructionDescriptor(64, SpvOpStore, 100), 203);
+      58, {33, 54}, MakeInstructionDescriptor(64, spv::Op::OpStore, 100), 203);
   ASSERT_TRUE(make_uvec3_array_length_2_2.IsApplicable(context.get(),
                                                        transformation_context));
   ASSERT_FALSE(make_uvec3_array_length_2_2_bad.IsApplicable(
@@ -425,14 +426,17 @@ TEST(TransformationCompositeConstructTest, ConstructMatrices) {
       MakeUnique<FactManager>(context.get()), validator_options);
   // make a mat3x4
   TransformationCompositeConstruct make_mat34(
-      32, {25, 28, 31}, MakeInstructionDescriptor(31, SpvOpReturn, 0), 200);
+      32, {25, 28, 31}, MakeInstructionDescriptor(31, spv::Op::OpReturn, 0),
+      200);
   // Bad: %35 is mat4x3, not mat3x4.
   TransformationCompositeConstruct make_mat34_bad(
-      35, {25, 28, 31}, MakeInstructionDescriptor(31, SpvOpReturn, 0), 200);
+      35, {25, 28, 31}, MakeInstructionDescriptor(31, spv::Op::OpReturn, 0),
+      200);
   // The first component does not correspond to an instruction with a result
   // type so this check should return false.
   TransformationCompositeConstruct make_mat34_nores(
-      32, {2, 28, 31}, MakeInstructionDescriptor(31, SpvOpReturn, 0), 200);
+      32, {2, 28, 31}, MakeInstructionDescriptor(31, spv::Op::OpReturn, 0),
+      200);
   ASSERT_TRUE(make_mat34.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_mat34_bad.IsApplicable(context.get(), transformation_context));
@@ -450,10 +454,12 @@ TEST(TransformationCompositeConstructTest, ConstructMatrices) {
 
   // make a mat4x3
   TransformationCompositeConstruct make_mat43(
-      35, {11, 13, 16, 100}, MakeInstructionDescriptor(31, SpvOpStore, 0), 201);
+      35, {11, 13, 16, 100}, MakeInstructionDescriptor(31, spv::Op::OpStore, 0),
+      201);
   // Bad: %25 does not match the matrix's column type.
   TransformationCompositeConstruct make_mat43_bad(
-      35, {25, 13, 16, 100}, MakeInstructionDescriptor(31, SpvOpStore, 0), 201);
+      35, {25, 13, 16, 100}, MakeInstructionDescriptor(31, spv::Op::OpStore, 0),
+      201);
   ASSERT_TRUE(make_mat43.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_mat43_bad.IsApplicable(context.get(), transformation_context));
@@ -644,14 +650,16 @@ TEST(TransformationCompositeConstructTest, ConstructStructs) {
       MakeUnique<FactManager>(context.get()), validator_options);
   // make an Inner
   TransformationCompositeConstruct make_inner(
-      9, {25, 19}, MakeInstructionDescriptor(57, SpvOpAccessChain, 0), 200);
+      9, {25, 19}, MakeInstructionDescriptor(57, spv::Op::OpAccessChain, 0),
+      200);
   // Bad: Too few fields to make the struct.
   TransformationCompositeConstruct make_inner_bad(
-      9, {25}, MakeInstructionDescriptor(57, SpvOpAccessChain, 0), 200);
+      9, {25}, MakeInstructionDescriptor(57, spv::Op::OpAccessChain, 0), 200);
   // The first component does not correspond to an instruction with a result
   // type so this check should return false.
   TransformationCompositeConstruct make_inner_nores(
-      9, {2, 19}, MakeInstructionDescriptor(57, SpvOpAccessChain, 0), 200);
+      9, {2, 19}, MakeInstructionDescriptor(57, spv::Op::OpAccessChain, 0),
+      200);
   ASSERT_TRUE(make_inner.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_inner_bad.IsApplicable(context.get(), transformation_context));
@@ -667,12 +675,12 @@ TEST(TransformationCompositeConstructTest, ConstructStructs) {
 
   // make an Outer
   TransformationCompositeConstruct make_outer(
-      33, {46, 200, 56}, MakeInstructionDescriptor(200, SpvOpAccessChain, 0),
-      201);
+      33, {46, 200, 56},
+      MakeInstructionDescriptor(200, spv::Op::OpAccessChain, 0), 201);
   // Bad: %200 is not available at the desired program point.
   TransformationCompositeConstruct make_outer_bad(
       33, {46, 200, 56},
-      MakeInstructionDescriptor(200, SpvOpCompositeConstruct, 0), 201);
+      MakeInstructionDescriptor(200, spv::Op::OpCompositeConstruct, 0), 201);
   ASSERT_TRUE(make_outer.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_outer_bad.IsApplicable(context.get(), transformation_context));
@@ -973,10 +981,10 @@ TEST(TransformationCompositeConstructTest, ConstructVectors) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   TransformationCompositeConstruct make_vec2(
-      7, {17, 11}, MakeInstructionDescriptor(100, SpvOpStore, 0), 200);
+      7, {17, 11}, MakeInstructionDescriptor(100, spv::Op::OpStore, 0), 200);
   // Bad: not enough data for a vec2
   TransformationCompositeConstruct make_vec2_bad(
-      7, {11}, MakeInstructionDescriptor(100, SpvOpStore, 0), 200);
+      7, {11}, MakeInstructionDescriptor(100, spv::Op::OpStore, 0), 200);
   ASSERT_TRUE(make_vec2.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_vec2_bad.IsApplicable(context.get(), transformation_context));
@@ -989,12 +997,12 @@ TEST(TransformationCompositeConstructTest, ConstructVectors) {
       MakeDataDescriptor(11, {}), MakeDataDescriptor(200, {1})));
 
   TransformationCompositeConstruct make_vec3(
-      25, {12, 32}, MakeInstructionDescriptor(35, SpvOpCompositeConstruct, 0),
-      201);
+      25, {12, 32},
+      MakeInstructionDescriptor(35, spv::Op::OpCompositeConstruct, 0), 201);
   // Bad: too much data for a vec3
   TransformationCompositeConstruct make_vec3_bad(
       25, {12, 32, 32},
-      MakeInstructionDescriptor(35, SpvOpCompositeConstruct, 0), 201);
+      MakeInstructionDescriptor(35, spv::Op::OpCompositeConstruct, 0), 201);
   ASSERT_TRUE(make_vec3.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_vec3_bad.IsApplicable(context.get(), transformation_context));
@@ -1009,12 +1017,12 @@ TEST(TransformationCompositeConstructTest, ConstructVectors) {
       MakeDataDescriptor(32, {}), MakeDataDescriptor(201, {2})));
 
   TransformationCompositeConstruct make_vec4(
-      44, {32, 32, 10, 11}, MakeInstructionDescriptor(75, SpvOpAccessChain, 0),
-      202);
+      44, {32, 32, 10, 11},
+      MakeInstructionDescriptor(75, spv::Op::OpAccessChain, 0), 202);
   // Bad: id 48 is not available at the insertion points
   TransformationCompositeConstruct make_vec4_bad(
-      44, {48, 32, 10, 11}, MakeInstructionDescriptor(75, SpvOpAccessChain, 0),
-      202);
+      44, {48, 32, 10, 11},
+      MakeInstructionDescriptor(75, spv::Op::OpAccessChain, 0), 202);
   ASSERT_TRUE(make_vec4.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_vec4_bad.IsApplicable(context.get(), transformation_context));
@@ -1031,10 +1039,10 @@ TEST(TransformationCompositeConstructTest, ConstructVectors) {
       MakeDataDescriptor(11, {}), MakeDataDescriptor(202, {3})));
 
   TransformationCompositeConstruct make_ivec2(
-      51, {126, 120}, MakeInstructionDescriptor(128, SpvOpLoad, 0), 203);
+      51, {126, 120}, MakeInstructionDescriptor(128, spv::Op::OpLoad, 0), 203);
   // Bad: if 128 is not available at the instruction that defines 128
   TransformationCompositeConstruct make_ivec2_bad(
-      51, {128, 120}, MakeInstructionDescriptor(128, SpvOpLoad, 0), 203);
+      51, {128, 120}, MakeInstructionDescriptor(128, spv::Op::OpLoad, 0), 203);
   ASSERT_TRUE(make_ivec2.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_ivec2_bad.IsApplicable(context.get(), transformation_context));
@@ -1047,12 +1055,12 @@ TEST(TransformationCompositeConstructTest, ConstructVectors) {
       MakeDataDescriptor(120, {}), MakeDataDescriptor(203, {1})));
 
   TransformationCompositeConstruct make_ivec3(
-      114, {56, 117, 56}, MakeInstructionDescriptor(66, SpvOpAccessChain, 0),
-      204);
+      114, {56, 117, 56},
+      MakeInstructionDescriptor(66, spv::Op::OpAccessChain, 0), 204);
   // Bad because 1300 is not an id
   TransformationCompositeConstruct make_ivec3_bad(
-      114, {56, 117, 1300}, MakeInstructionDescriptor(66, SpvOpAccessChain, 0),
-      204);
+      114, {56, 117, 1300},
+      MakeInstructionDescriptor(66, spv::Op::OpAccessChain, 0), 204);
   ASSERT_TRUE(make_ivec3.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_ivec3_bad.IsApplicable(context.get(), transformation_context));
@@ -1067,12 +1075,12 @@ TEST(TransformationCompositeConstructTest, ConstructVectors) {
       MakeDataDescriptor(56, {}), MakeDataDescriptor(204, {2})));
 
   TransformationCompositeConstruct make_ivec4(
-      122, {56, 117, 117, 117}, MakeInstructionDescriptor(66, SpvOpIAdd, 0),
-      205);
+      122, {56, 117, 117, 117},
+      MakeInstructionDescriptor(66, spv::Op::OpIAdd, 0), 205);
   // Bad because 86 is the wrong type.
   TransformationCompositeConstruct make_ivec4_bad(
-      86, {56, 117, 117, 117}, MakeInstructionDescriptor(66, SpvOpIAdd, 0),
-      205);
+      86, {56, 117, 117, 117},
+      MakeInstructionDescriptor(66, spv::Op::OpIAdd, 0), 205);
   ASSERT_TRUE(make_ivec4.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_ivec4_bad.IsApplicable(context.get(), transformation_context));
@@ -1089,9 +1097,11 @@ TEST(TransformationCompositeConstructTest, ConstructVectors) {
       MakeDataDescriptor(117, {}), MakeDataDescriptor(205, {3})));
 
   TransformationCompositeConstruct make_uvec2(
-      86, {18, 38}, MakeInstructionDescriptor(133, SpvOpAccessChain, 0), 206);
+      86, {18, 38}, MakeInstructionDescriptor(133, spv::Op::OpAccessChain, 0),
+      206);
   TransformationCompositeConstruct make_uvec2_bad(
-      86, {18, 38}, MakeInstructionDescriptor(133, SpvOpAccessChain, 200), 206);
+      86, {18, 38}, MakeInstructionDescriptor(133, spv::Op::OpAccessChain, 200),
+      206);
   ASSERT_TRUE(make_uvec2.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_uvec2_bad.IsApplicable(context.get(), transformation_context));
@@ -1104,10 +1114,12 @@ TEST(TransformationCompositeConstructTest, ConstructVectors) {
       MakeDataDescriptor(38, {}), MakeDataDescriptor(206, {1})));
 
   TransformationCompositeConstruct make_uvec3(
-      59, {14, 18, 136}, MakeInstructionDescriptor(137, SpvOpReturn, 0), 207);
+      59, {14, 18, 136}, MakeInstructionDescriptor(137, spv::Op::OpReturn, 0),
+      207);
   // Bad because 1300 is not an id
   TransformationCompositeConstruct make_uvec3_bad(
-      59, {14, 18, 1300}, MakeInstructionDescriptor(137, SpvOpReturn, 0), 207);
+      59, {14, 18, 1300}, MakeInstructionDescriptor(137, spv::Op::OpReturn, 0),
+      207);
   ASSERT_TRUE(make_uvec3.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_uvec3_bad.IsApplicable(context.get(), transformation_context));
@@ -1123,11 +1135,11 @@ TEST(TransformationCompositeConstructTest, ConstructVectors) {
 
   TransformationCompositeConstruct make_uvec4(
       131, {14, 18, 136, 136},
-      MakeInstructionDescriptor(137, SpvOpAccessChain, 0), 208);
+      MakeInstructionDescriptor(137, spv::Op::OpAccessChain, 0), 208);
   // Bad because 86 is the wrong type.
   TransformationCompositeConstruct make_uvec4_bad(
       86, {14, 18, 136, 136},
-      MakeInstructionDescriptor(137, SpvOpAccessChain, 0), 208);
+      MakeInstructionDescriptor(137, spv::Op::OpAccessChain, 0), 208);
   ASSERT_TRUE(make_uvec4.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_uvec4_bad.IsApplicable(context.get(), transformation_context));
@@ -1149,7 +1161,7 @@ TEST(TransformationCompositeConstructTest, ConstructVectors) {
           111,
           41,
       },
-      MakeInstructionDescriptor(75, SpvOpAccessChain, 0), 209);
+      MakeInstructionDescriptor(75, spv::Op::OpAccessChain, 0), 209);
   // Bad because 0 is not a valid base instruction id
   TransformationCompositeConstruct make_bvec2_bad(
       102,
@@ -1157,7 +1169,7 @@ TEST(TransformationCompositeConstructTest, ConstructVectors) {
           111,
           41,
       },
-      MakeInstructionDescriptor(0, SpvOpExtInstImport, 0), 209);
+      MakeInstructionDescriptor(0, spv::Op::OpExtInstImport, 0), 209);
   ASSERT_TRUE(make_bvec2.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_bvec2_bad.IsApplicable(context.get(), transformation_context));
@@ -1170,10 +1182,10 @@ TEST(TransformationCompositeConstructTest, ConstructVectors) {
       MakeDataDescriptor(41, {}), MakeDataDescriptor(209, {1})));
 
   TransformationCompositeConstruct make_bvec3(
-      93, {108, 73}, MakeInstructionDescriptor(108, SpvOpStore, 0), 210);
+      93, {108, 73}, MakeInstructionDescriptor(108, spv::Op::OpStore, 0), 210);
   // Bad because there are too many components for a bvec3
   TransformationCompositeConstruct make_bvec3_bad(
-      93, {108, 108}, MakeInstructionDescriptor(108, SpvOpStore, 0), 210);
+      93, {108, 108}, MakeInstructionDescriptor(108, spv::Op::OpStore, 0), 210);
   ASSERT_TRUE(make_bvec3.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_bvec3_bad.IsApplicable(context.get(), transformation_context));
@@ -1188,10 +1200,11 @@ TEST(TransformationCompositeConstructTest, ConstructVectors) {
       MakeDataDescriptor(73, {}), MakeDataDescriptor(210, {2})));
 
   TransformationCompositeConstruct make_bvec4(
-      70, {108, 108}, MakeInstructionDescriptor(108, SpvOpBranch, 0), 211);
+      70, {108, 108}, MakeInstructionDescriptor(108, spv::Op::OpBranch, 0),
+      211);
   // Bad because 21 is a type, not a result id
   TransformationCompositeConstruct make_bvec4_bad(
-      70, {21, 108}, MakeInstructionDescriptor(108, SpvOpBranch, 0), 211);
+      70, {21, 108}, MakeInstructionDescriptor(108, spv::Op::OpBranch, 0), 211);
   ASSERT_TRUE(make_bvec4.IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       make_bvec4_bad.IsApplicable(context.get(), transformation_context));
@@ -1477,7 +1490,8 @@ TEST(TransformationCompositeConstructTest, AddSynonymsForRelevantIds) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   TransformationCompositeConstruct transformation(
-      32, {25, 28, 31}, MakeInstructionDescriptor(31, SpvOpReturn, 0), 200);
+      32, {25, 28, 31}, MakeInstructionDescriptor(31, spv::Op::OpReturn, 0),
+      200);
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -1562,7 +1576,8 @@ TEST(TransformationCompositeConstructTest, DontAddSynonymsForIrrelevantIds) {
   transformation_context.GetFactManager()->AddFactIdIsIrrelevant(25);
 
   TransformationCompositeConstruct transformation(
-      32, {25, 28, 31}, MakeInstructionDescriptor(31, SpvOpReturn, 0), 200);
+      32, {25, 28, 31}, MakeInstructionDescriptor(31, spv::Op::OpReturn, 0),
+      200);
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -1618,7 +1633,7 @@ TEST(TransformationCompositeConstructTest, DontAddSynonymsInDeadBlock) {
   transformation_context.GetFactManager()->AddFactBlockIsDead(15);
 
   TransformationCompositeConstruct transformation(
-      7, {10, 11}, MakeInstructionDescriptor(15, SpvOpBranch, 0), 100);
+      7, {10, 11}, MakeInstructionDescriptor(15, spv::Op::OpBranch, 0), 100);
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -1660,7 +1675,7 @@ TEST(TransformationCompositeConstructTest, OneIrrelevantComponent) {
   transformation_context.GetFactManager()->AddFactIdIsIrrelevant(8);
 
   TransformationCompositeConstruct transformation(
-      7, {8, 9, 10}, MakeInstructionDescriptor(5, SpvOpReturn, 0), 100);
+      7, {8, 9, 10}, MakeInstructionDescriptor(5, spv::Op::OpReturn, 0), 100);
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -1707,7 +1722,7 @@ TEST(TransformationCompositeConstructTest, IrrelevantVec2ThenFloat) {
   transformation_context.GetFactManager()->AddFactIdIsIrrelevant(10);
 
   TransformationCompositeConstruct transformation(
-      8, {10, 9}, MakeInstructionDescriptor(5, SpvOpReturn, 0), 100);
+      8, {10, 9}, MakeInstructionDescriptor(5, spv::Op::OpReturn, 0), 100);
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);

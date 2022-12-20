@@ -121,7 +121,7 @@ void TransformationCompositeConstruct::Apply(
 
   // Insert an OpCompositeConstruct instruction.
   auto new_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpCompositeConstruct, message_.composite_type_id(),
+      ir_context, spv::Op::OpCompositeConstruct, message_.composite_type_id(),
       message_.fresh_id(), in_operands);
   auto new_instruction_ptr = new_instruction.get();
   insert_before.InsertBefore(std::move(new_instruction));

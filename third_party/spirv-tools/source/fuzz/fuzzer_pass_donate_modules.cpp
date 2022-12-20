@@ -88,7 +88,7 @@ void FuzzerPassDonateModules::DonateSingleModule(
   // module.
   for (const auto& capability_inst : donor_ir_context->capabilities()) {
     auto capability =
-        static_cast<SpvCapability>(capability_inst.GetSingleWordInOperand(0));
+        static_cast<spv::Capability>(capability_inst.GetSingleWordInOperand(0));
     if (!GetIRContext()->get_feature_mgr()->HasCapability(capability)) {
       return;
     }
@@ -122,27 +122,27 @@ void FuzzerPassDonateModules::DonateSingleModule(
   //  kinds of decoration.
 }
 
-SpvStorageClass FuzzerPassDonateModules::AdaptStorageClass(
-    SpvStorageClass donor_storage_class) {
+spv::StorageClass FuzzerPassDonateModules::AdaptStorageClass(
+    spv::StorageClass donor_storage_class) {
   switch (donor_storage_class) {
-    case SpvStorageClassFunction:
-    case SpvStorageClassPrivate:
-    case SpvStorageClassWorkgroup:
+    case spv::StorageClass::Function:
+    case spv::StorageClass::Private:
+    case spv::StorageClass::Workgroup:
       // We leave these alone
       return donor_storage_class;
-    case SpvStorageClassInput:
-    case SpvStorageClassOutput:
-    case SpvStorageClassUniform:
-    case SpvStorageClassUniformConstant:
-    case SpvStorageClassPushConstant:
-    case SpvStorageClassImage:
-    case SpvStorageClassStorageBuffer:
+    case spv::StorageClass::Input:
+    case spv::StorageClass::Output:
+    case spv::StorageClass::Uniform:
+    case spv::StorageClass::UniformConstant:
+    case spv::StorageClass::PushConstant:
+    case spv::StorageClass::Image:
+    case spv::StorageClass::StorageBuffer:
       // We change these to Private
-      return SpvStorageClassPrivate;
+      return spv::StorageClass::Private;
     default:
       // Handle other cases on demand.
       assert(false && "Currently unsupported storage class.");
-      return SpvStorageClassMax;
+      return spv::StorageClass::Max;
   }
 }
 
@@ -200,14 +200,14 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
   // that its component types will have been considered previously, and that
   // |original_id_to_donated_id| will already contain an entry for them.
   switch (type_or_value.opcode()) {
-    case SpvOpTypeImage:
-    case SpvOpTypeSampledImage:
-    case SpvOpTypeSampler:
+    case spv::Op::OpTypeImage:
+    case spv::Op::OpTypeSampledImage:
+    case spv::Op::OpTypeSampler:
       // We do not donate types and variables that relate to images and
       // samplers, so we skip these types and subsequently skip anything that
       // depends on them.
       return;
-    case SpvOpTypeVoid: {
+    case spv::Op::OpTypeVoid: {
       // Void has to exist already in order for us to have an entry point.
       // Get the existing id of void.
       opt::analysis::Void void_type;
@@ -216,7 +216,7 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
              "The module being transformed will always have 'void' type "
              "declared.");
     } break;
-    case SpvOpTypeBool: {
+    case spv::Op::OpTypeBool: {
       // Bool cannot be declared multiple times, so use its existing id if
       // present, or add a declaration of Bool with a fresh id if not.
       opt::analysis::Bool bool_type;
@@ -228,7 +228,7 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
         ApplyTransformation(TransformationAddTypeBoolean(new_result_id));
       }
     } break;
-    case SpvOpTypeInt: {
+    case spv::Op::OpTypeInt: {
       // Int cannot be declared multiple times with the same width and
       // signedness, so check whether an existing identical Int type is
       // present and use its id if so.  Otherwise add a declaration of the
@@ -246,8 +246,8 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
             TransformationAddTypeInt(new_result_id, width, is_signed));
       }
     } break;
-    case SpvOpTypeFloat: {
-      // Similar to SpvOpTypeInt.
+    case spv::Op::OpTypeFloat: {
+      // Similar to spv::Op::OpTypeInt.
       const uint32_t width = type_or_value.GetSingleWordInOperand(0);
       opt::analysis::Float float_type(width);
       auto float_type_id = GetIRContext()->get_type_mgr()->GetId(&float_type);
@@ -258,7 +258,7 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
         ApplyTransformation(TransformationAddTypeFloat(new_result_id, width));
       }
     } break;
-    case SpvOpTypeVector: {
+    case spv::Op::OpTypeVector: {
       // It is not legal to have two Vector type declarations with identical
       // element types and element counts, so check whether an existing
       // identical Vector type is present and use its id if so.  Otherwise add
@@ -282,8 +282,8 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
             new_result_id, component_type_id, component_count));
       }
     } break;
-    case SpvOpTypeMatrix: {
-      // Similar to SpvOpTypeVector.
+    case spv::Op::OpTypeMatrix: {
+      // Similar to spv::Op::OpTypeVector.
       uint32_t column_type_id = original_id_to_donated_id->at(
           type_or_value.GetSingleWordInOperand(0));
       auto column_type =
@@ -302,7 +302,7 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
       }
 
     } break;
-    case SpvOpTypeArray: {
+    case spv::Op::OpTypeArray: {
       // It is OK to have multiple structurally identical array types, so
       // we go ahead and add a remapped version of the type declared by the
       // donor.
@@ -318,7 +318,7 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
           original_id_to_donated_id->at(
               type_or_value.GetSingleWordInOperand(1))));
     } break;
-    case SpvOpTypeRuntimeArray: {
+    case spv::Op::OpTypeRuntimeArray: {
       // A runtime array is allowed as the final member of an SSBO.  During
       // donation we turn runtime arrays into fixed-size arrays.  For dead
       // code donations this is OK because the array is never indexed into at
@@ -341,8 +341,8 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
               {GetFuzzerContext()->GetRandomSizeForNewArray()}, 32, false,
               false)));
     } break;
-    case SpvOpTypeStruct: {
-      // Similar to SpvOpTypeArray.
+    case spv::Op::OpTypeStruct: {
+      // Similar to spv::Op::OpTypeArray.
       std::vector<uint32_t> member_type_ids;
       for (uint32_t i = 0; i < type_or_value.NumInOperands(); i++) {
         auto component_type_id = type_or_value.GetSingleWordInOperand(i);
@@ -358,8 +358,8 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
       ApplyTransformation(
           TransformationAddTypeStruct(new_result_id, member_type_ids));
     } break;
-    case SpvOpTypePointer: {
-      // Similar to SpvOpTypeArray.
+    case spv::Op::OpTypePointer: {
+      // Similar to spv::Op::OpTypeArray.
       uint32_t pointee_type_id = type_or_value.GetSingleWordInOperand(1);
       if (!original_id_to_donated_id->count(pointee_type_id)) {
         // We did not donate the pointee type for this pointer type, so we
@@ -369,11 +369,11 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
       new_result_id = GetFuzzerContext()->GetFreshId();
       ApplyTransformation(TransformationAddTypePointer(
           new_result_id,
-          AdaptStorageClass(static_cast<SpvStorageClass>(
+          AdaptStorageClass(static_cast<spv::StorageClass>(
               type_or_value.GetSingleWordInOperand(0))),
           original_id_to_donated_id->at(pointee_type_id)));
     } break;
-    case SpvOpTypeFunction: {
+    case spv::Op::OpTypeFunction: {
       // It is not OK to have multiple function types that use identical ids
       // for their return and parameter types.  We thus go through all
       // existing function types to look for a match.  We do not use the
@@ -425,10 +425,11 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
             argument_type_ids));
       }
     } break;
-    case SpvOpSpecConstantOp: {
+    case spv::Op::OpSpecConstantOp: {
       new_result_id = GetFuzzerContext()->GetFreshId();
       auto type_id = original_id_to_donated_id->at(type_or_value.type_id());
-      auto opcode = static_cast<SpvOp>(type_or_value.GetSingleWordInOperand(0));
+      auto opcode =
+          static_cast<spv::Op>(type_or_value.GetSingleWordInOperand(0));
 
       // Make sure we take into account |original_id_to_donated_id| when
       // computing operands for OpSpecConstantOp.
@@ -447,20 +448,20 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
       ApplyTransformation(TransformationAddSpecConstantOp(
           new_result_id, type_id, opcode, std::move(operands)));
     } break;
-    case SpvOpSpecConstantTrue:
-    case SpvOpSpecConstantFalse:
-    case SpvOpConstantTrue:
-    case SpvOpConstantFalse: {
+    case spv::Op::OpSpecConstantTrue:
+    case spv::Op::OpSpecConstantFalse:
+    case spv::Op::OpConstantTrue:
+    case spv::Op::OpConstantFalse: {
       // It is OK to have duplicate definitions of True and False, so add
       // these to the module, using a remapped Bool type.
       new_result_id = GetFuzzerContext()->GetFreshId();
-      auto value = type_or_value.opcode() == SpvOpConstantTrue ||
-                   type_or_value.opcode() == SpvOpSpecConstantTrue;
+      auto value = type_or_value.opcode() == spv::Op::OpConstantTrue ||
+                   type_or_value.opcode() == spv::Op::OpSpecConstantTrue;
       ApplyTransformation(
           TransformationAddConstantBoolean(new_result_id, value, false));
     } break;
-    case SpvOpSpecConstant:
-    case SpvOpConstant: {
+    case spv::Op::OpSpecConstant:
+    case spv::Op::OpConstant: {
       // It is OK to have duplicate constant definitions, so add this to the
       // module using a remapped result type.
       new_result_id = GetFuzzerContext()->GetFreshId();
@@ -472,8 +473,8 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
           new_result_id, original_id_to_donated_id->at(type_or_value.type_id()),
           data_words, false));
     } break;
-    case SpvOpSpecConstantComposite:
-    case SpvOpConstantComposite: {
+    case spv::Op::OpSpecConstantComposite:
+    case spv::Op::OpConstantComposite: {
       assert(original_id_to_donated_id->count(type_or_value.type_id()) &&
              "Composite types for which it is possible to create a constant "
              "should have been donated.");
@@ -495,7 +496,7 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
           new_result_id, original_id_to_donated_id->at(type_or_value.type_id()),
           constituent_ids, false));
     } break;
-    case SpvOpConstantNull: {
+    case spv::Op::OpConstantNull: {
       if (!original_id_to_donated_id->count(type_or_value.type_id())) {
         // We did not donate the type associated with this null constant, so
         // we cannot donate the null constant.
@@ -509,7 +510,7 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
           new_result_id,
           original_id_to_donated_id->at(type_or_value.type_id())));
     } break;
-    case SpvOpVariable: {
+    case spv::Op::OpVariable: {
       if (!original_id_to_donated_id->count(type_or_value.type_id())) {
         // We did not donate the pointer type associated with this variable,
         // so we cannot donate the variable.
@@ -536,11 +537,11 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
       uint32_t remapped_pointer_type =
           original_id_to_donated_id->at(type_or_value.type_id());
       uint32_t initializer_id;
-      SpvStorageClass storage_class =
-          static_cast<SpvStorageClass>(type_or_value.GetSingleWordInOperand(
-              0)) == SpvStorageClassWorkgroup
-              ? SpvStorageClassWorkgroup
-              : SpvStorageClassPrivate;
+      spv::StorageClass storage_class =
+          static_cast<spv::StorageClass>(type_or_value.GetSingleWordInOperand(
+              0)) == spv::StorageClass::Workgroup
+              ? spv::StorageClass::Workgroup
+              : spv::StorageClass::Private;
       if (type_or_value.NumInOperands() == 1) {
         // The variable did not have an initializer.  Initialize it to zero
         // if it has Private storage class (to limit problems associated with
@@ -551,7 +552,7 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
         //  could initialize Workgroup variables at the start of an entry
         //  point, and should do so if their uninitialized nature proves
         //  problematic.
-        initializer_id = storage_class == SpvStorageClassWorkgroup
+        initializer_id = storage_class == spv::StorageClass::Workgroup
                              ? 0
                              : FindOrCreateZeroConstant(
                                    fuzzerutil::GetPointeeTypeIdFromPointerType(
@@ -566,7 +567,7 @@ void FuzzerPassDonateModules::HandleTypeOrValue(
           TransformationAddGlobalVariable(new_result_id, remapped_pointer_type,
                                           storage_class, initializer_id, true));
     } break;
-    case SpvOpUndef: {
+    case spv::Op::OpUndef: {
       if (!original_id_to_donated_id->count(type_or_value.type_id())) {
         // We did not donate the type associated with this undef, so we cannot
         // donate the undef.
@@ -638,7 +639,7 @@ void FuzzerPassDonateModules::HandleFunctions(
         [this, &donated_instructions, donor_ir_context,
          &original_id_to_donated_id,
          &skipped_instructions](const opt::Instruction* instruction) {
-          if (instruction->opcode() == SpvOpArrayLength) {
+          if (instruction->opcode() == spv::Op::OpArrayLength) {
             // We treat OpArrayLength specially.
             HandleOpArrayLength(*instruction, original_id_to_donated_id,
                                 &donated_instructions);
@@ -682,70 +683,70 @@ bool FuzzerPassDonateModules::CanDonateInstruction(
   // Now consider instructions we specifically want to skip because we do not
   // yet support them.
   switch (instruction.opcode()) {
-    case SpvOpAtomicLoad:
-    case SpvOpAtomicStore:
-    case SpvOpAtomicExchange:
-    case SpvOpAtomicCompareExchange:
-    case SpvOpAtomicCompareExchangeWeak:
-    case SpvOpAtomicIIncrement:
-    case SpvOpAtomicIDecrement:
-    case SpvOpAtomicIAdd:
-    case SpvOpAtomicISub:
-    case SpvOpAtomicSMin:
-    case SpvOpAtomicUMin:
-    case SpvOpAtomicSMax:
-    case SpvOpAtomicUMax:
-    case SpvOpAtomicAnd:
-    case SpvOpAtomicOr:
-    case SpvOpAtomicXor:
+    case spv::Op::OpAtomicLoad:
+    case spv::Op::OpAtomicStore:
+    case spv::Op::OpAtomicExchange:
+    case spv::Op::OpAtomicCompareExchange:
+    case spv::Op::OpAtomicCompareExchangeWeak:
+    case spv::Op::OpAtomicIIncrement:
+    case spv::Op::OpAtomicIDecrement:
+    case spv::Op::OpAtomicIAdd:
+    case spv::Op::OpAtomicISub:
+    case spv::Op::OpAtomicSMin:
+    case spv::Op::OpAtomicUMin:
+    case spv::Op::OpAtomicSMax:
+    case spv::Op::OpAtomicUMax:
+    case spv::Op::OpAtomicAnd:
+    case spv::Op::OpAtomicOr:
+    case spv::Op::OpAtomicXor:
       // We conservatively ignore all atomic instructions at present.
       // TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/3276): Consider
       //  being less conservative here.
-    case SpvOpImageSampleImplicitLod:
-    case SpvOpImageSampleExplicitLod:
-    case SpvOpImageSampleDrefImplicitLod:
-    case SpvOpImageSampleDrefExplicitLod:
-    case SpvOpImageSampleProjImplicitLod:
-    case SpvOpImageSampleProjExplicitLod:
-    case SpvOpImageSampleProjDrefImplicitLod:
-    case SpvOpImageSampleProjDrefExplicitLod:
-    case SpvOpImageFetch:
-    case SpvOpImageGather:
-    case SpvOpImageDrefGather:
-    case SpvOpImageRead:
-    case SpvOpImageWrite:
-    case SpvOpImageSparseSampleImplicitLod:
-    case SpvOpImageSparseSampleExplicitLod:
-    case SpvOpImageSparseSampleDrefImplicitLod:
-    case SpvOpImageSparseSampleDrefExplicitLod:
-    case SpvOpImageSparseSampleProjImplicitLod:
-    case SpvOpImageSparseSampleProjExplicitLod:
-    case SpvOpImageSparseSampleProjDrefImplicitLod:
-    case SpvOpImageSparseSampleProjDrefExplicitLod:
-    case SpvOpImageSparseFetch:
-    case SpvOpImageSparseGather:
-    case SpvOpImageSparseDrefGather:
-    case SpvOpImageSparseRead:
-    case SpvOpImageSampleFootprintNV:
-    case SpvOpImage:
-    case SpvOpImageQueryFormat:
-    case SpvOpImageQueryLevels:
-    case SpvOpImageQueryLod:
-    case SpvOpImageQueryOrder:
-    case SpvOpImageQuerySamples:
-    case SpvOpImageQuerySize:
-    case SpvOpImageQuerySizeLod:
-    case SpvOpSampledImage:
+    case spv::Op::OpImageSampleImplicitLod:
+    case spv::Op::OpImageSampleExplicitLod:
+    case spv::Op::OpImageSampleDrefImplicitLod:
+    case spv::Op::OpImageSampleDrefExplicitLod:
+    case spv::Op::OpImageSampleProjImplicitLod:
+    case spv::Op::OpImageSampleProjExplicitLod:
+    case spv::Op::OpImageSampleProjDrefImplicitLod:
+    case spv::Op::OpImageSampleProjDrefExplicitLod:
+    case spv::Op::OpImageFetch:
+    case spv::Op::OpImageGather:
+    case spv::Op::OpImageDrefGather:
+    case spv::Op::OpImageRead:
+    case spv::Op::OpImageWrite:
+    case spv::Op::OpImageSparseSampleImplicitLod:
+    case spv::Op::OpImageSparseSampleExplicitLod:
+    case spv::Op::OpImageSparseSampleDrefImplicitLod:
+    case spv::Op::OpImageSparseSampleDrefExplicitLod:
+    case spv::Op::OpImageSparseSampleProjImplicitLod:
+    case spv::Op::OpImageSparseSampleProjExplicitLod:
+    case spv::Op::OpImageSparseSampleProjDrefImplicitLod:
+    case spv::Op::OpImageSparseSampleProjDrefExplicitLod:
+    case spv::Op::OpImageSparseFetch:
+    case spv::Op::OpImageSparseGather:
+    case spv::Op::OpImageSparseDrefGather:
+    case spv::Op::OpImageSparseRead:
+    case spv::Op::OpImageSampleFootprintNV:
+    case spv::Op::OpImage:
+    case spv::Op::OpImageQueryFormat:
+    case spv::Op::OpImageQueryLevels:
+    case spv::Op::OpImageQueryLod:
+    case spv::Op::OpImageQueryOrder:
+    case spv::Op::OpImageQuerySamples:
+    case spv::Op::OpImageQuerySize:
+    case spv::Op::OpImageQuerySizeLod:
+    case spv::Op::OpSampledImage:
       // We ignore all instructions related to accessing images, since we do not
       // donate images.
       return false;
-    case SpvOpLoad:
+    case spv::Op::OpLoad:
       switch (donor_ir_context->get_def_use_mgr()
                   ->GetDef(instruction.type_id())
                   ->opcode()) {
-        case SpvOpTypeImage:
-        case SpvOpTypeSampledImage:
-        case SpvOpTypeSampler:
+        case spv::Op::OpTypeImage:
+        case spv::Op::OpTypeSampledImage:
+        case spv::Op::OpTypeSampler:
           // Again, we ignore instructions that relate to accessing images.
           return false;
         default:
@@ -783,13 +784,13 @@ bool FuzzerPassDonateModules::CanDonateInstruction(
 bool FuzzerPassDonateModules::IsBasicType(
     const opt::Instruction& instruction) const {
   switch (instruction.opcode()) {
-    case SpvOpTypeArray:
-    case SpvOpTypeBool:
-    case SpvOpTypeFloat:
-    case SpvOpTypeInt:
-    case SpvOpTypeMatrix:
-    case SpvOpTypeStruct:
-    case SpvOpTypeVector:
+    case spv::Op::OpTypeArray:
+    case spv::Op::OpTypeBool:
+    case spv::Op::OpTypeFloat:
+    case spv::Op::OpTypeInt:
+    case spv::Op::OpTypeMatrix:
+    case spv::Op::OpTypeStruct:
+    case spv::Op::OpTypeVector:
       return true;
     default:
       return false;
@@ -800,7 +801,7 @@ void FuzzerPassDonateModules::HandleOpArrayLength(
     const opt::Instruction& instruction,
     std::map<uint32_t, uint32_t>* original_id_to_donated_id,
     std::vector<protobufs::Instruction>* donated_instructions) const {
-  assert(instruction.opcode() == SpvOpArrayLength &&
+  assert(instruction.opcode() == spv::Op::OpArrayLength &&
          "Precondition: instruction must be OpArrayLength.");
   uint32_t donated_variable_id =
       original_id_to_donated_id->at(instruction.GetSingleWordInOperand(0));
@@ -809,12 +810,12 @@ void FuzzerPassDonateModules::HandleOpArrayLength(
   auto pointer_to_struct_instruction =
       GetIRContext()->get_def_use_mgr()->GetDef(
           donated_variable_instruction->type_id());
-  assert(pointer_to_struct_instruction->opcode() == SpvOpTypePointer &&
+  assert(pointer_to_struct_instruction->opcode() == spv::Op::OpTypePointer &&
          "Type of variable must be pointer.");
   auto donated_struct_type_instruction =
       GetIRContext()->get_def_use_mgr()->GetDef(
           pointer_to_struct_instruction->GetSingleWordInOperand(1));
-  assert(donated_struct_type_instruction->opcode() == SpvOpTypeStruct &&
+  assert(donated_struct_type_instruction->opcode() == spv::Op::OpTypeStruct &&
          "Pointee type of pointer used by OpArrayLength must be struct.");
   assert(donated_struct_type_instruction->NumInOperands() ==
              instruction.GetSingleWordInOperand(1) + 1 &&
@@ -825,7 +826,7 @@ void FuzzerPassDonateModules::HandleOpArrayLength(
           donated_struct_type_instruction->NumInOperands() - 1);
   auto fixed_size_array_type_instruction =
       GetIRContext()->get_def_use_mgr()->GetDef(fixed_size_array_type_id);
-  assert(fixed_size_array_type_instruction->opcode() == SpvOpTypeArray &&
+  assert(fixed_size_array_type_instruction->opcode() == spv::Op::OpTypeArray &&
          "The donated array type must be fixed-size.");
   auto array_size_id =
       fixed_size_array_type_instruction->GetSingleWordInOperand(1);
@@ -837,7 +838,8 @@ void FuzzerPassDonateModules::HandleOpArrayLength(
   }
 
   donated_instructions->push_back(MakeInstructionMessage(
-      SpvOpCopyObject, original_id_to_donated_id->at(instruction.type_id()),
+      spv::Op::OpCopyObject,
+      original_id_to_donated_id->at(instruction.type_id()),
       original_id_to_donated_id->at(instruction.result_id()),
       opt::Instruction::OperandList({{SPV_OPERAND_TYPE_ID, {array_size_id}}})));
 }
@@ -892,7 +894,7 @@ void FuzzerPassDonateModules::HandleDifficultInstruction(
   // more interesting value later.
   auto zero_constant = FindOrCreateZeroConstant(remapped_type_id, true);
   donated_instructions->push_back(MakeInstructionMessage(
-      SpvOpCopyObject, remapped_type_id,
+      spv::Op::OpCopyObject, remapped_type_id,
       original_id_to_donated_id->at(instruction.result_id()),
       opt::Instruction::OperandList({{SPV_OPERAND_TYPE_ID, {zero_constant}}})));
 }
@@ -926,8 +928,8 @@ void FuzzerPassDonateModules::PrepareInstructionForDonation(
         (void)(donor_ir_context);
         assert((donor_ir_context->get_def_use_mgr()
                         ->GetDef(operand_id)
-                        ->opcode() == SpvOpLabel ||
-                instruction.opcode() == SpvOpPhi) &&
+                        ->opcode() == spv::Op::OpLabel ||
+                instruction.opcode() == spv::Op::OpPhi) &&
                "Unsupported forward reference.");
         original_id_to_donated_id->insert(
             {operand_id, GetFuzzerContext()->GetFreshId()});
@@ -942,7 +944,7 @@ void FuzzerPassDonateModules::PrepareInstructionForDonation(
     input_operands.push_back({in_operand.type, operand_data});
   }
 
-  if (instruction.opcode() == SpvOpVariable &&
+  if (instruction.opcode() == spv::Op::OpVariable &&
       instruction.NumInOperands() == 1) {
     // This is an uninitialized local variable.  Initialize it to zero.
     input_operands.push_back(
@@ -1017,7 +1019,7 @@ bool FuzzerPassDonateModules::CreateLoopLimiterInfo(
 
   // Adjust OpPhi instructions in the |merge_block|.
   for (const auto& inst : *merge_block) {
-    if (inst.opcode() != SpvOpPhi) {
+    if (inst.opcode() != spv::Op::OpPhi) {
       break;
     }
 
@@ -1070,7 +1072,8 @@ bool FuzzerPassDonateModules::MaybeAddLivesafeFunction(
   // live-safe.  Add them if not already present.
   FindOrCreateBoolType();  // Needed for comparisons
   FindOrCreatePointerToIntegerType(
-      32, false, SpvStorageClassFunction);  // Needed for adding loop limiters
+      32, false,
+      spv::StorageClass::Function);  // Needed for adding loop limiters
   FindOrCreateIntegerConstant({0}, 32, false,
                               false);  // Needed for initializing loop limiters
   FindOrCreateIntegerConstant({1}, 32, false,
@@ -1107,8 +1110,8 @@ bool FuzzerPassDonateModules::MaybeAddLivesafeFunction(
   for (auto& block : function_to_donate) {
     for (auto& inst : block) {
       switch (inst.opcode()) {
-        case SpvOpAccessChain:
-        case SpvOpInBoundsAccessChain: {
+        case spv::Op::OpAccessChain:
+        case spv::Op::OpInBoundsAccessChain: {
           protobufs::AccessChainClampingInfo clamping_info;
           clamping_info.set_access_chain_id(
               original_id_to_donated_id.at(inst.result_id()));
@@ -1118,7 +1121,8 @@ bool FuzzerPassDonateModules::MaybeAddLivesafeFunction(
           assert(base_object && "The base object must exist.");
           auto pointer_type = donor_ir_context->get_def_use_mgr()->GetDef(
               base_object->type_id());
-          assert(pointer_type && pointer_type->opcode() == SpvOpTypePointer &&
+          assert(pointer_type &&
+                 pointer_type->opcode() == spv::Op::OpTypePointer &&
                  "The base object must have pointer type.");
 
           auto should_be_composite_type =
@@ -1138,7 +1142,8 @@ bool FuzzerPassDonateModules::MaybeAddLivesafeFunction(
 
             // Get the bound for the component being indexed into.
             uint32_t bound;
-            if (should_be_composite_type->opcode() == SpvOpTypeRuntimeArray) {
+            if (should_be_composite_type->opcode() ==
+                spv::Op::OpTypeRuntimeArray) {
               // The donor is indexing into a runtime array.  We do not
               // donate runtime arrays.  Instead, we donate a corresponding
               // fixed-size array for every runtime array.  We should thus
@@ -1148,7 +1153,7 @@ bool FuzzerPassDonateModules::MaybeAddLivesafeFunction(
                   GetIRContext()->get_def_use_mgr()->GetDef(
                       original_id_to_donated_id.at(
                           should_be_composite_type->result_id()));
-              assert(fixed_size_array_type->opcode() == SpvOpTypeArray &&
+              assert(fixed_size_array_type->opcode() == spv::Op::OpTypeArray &&
                      "A runtime array type in the donor should have been "
                      "replaced by a fixed-sized array in the recipient.");
               // The size of this fixed-size array is a suitable bound.
@@ -1163,12 +1168,12 @@ bool FuzzerPassDonateModules::MaybeAddLivesafeFunction(
                 donor_ir_context->get_def_use_mgr()->GetDef(index_id);
             auto index_type_inst = donor_ir_context->get_def_use_mgr()->GetDef(
                 index_inst->type_id());
-            assert(index_type_inst->opcode() == SpvOpTypeInt);
+            assert(index_type_inst->opcode() == spv::Op::OpTypeInt);
             opt::analysis::Integer* index_int_type =
                 donor_ir_context->get_type_mgr()
                     ->GetType(index_type_inst->result_id())
                     ->AsInteger();
-            if (index_inst->opcode() != SpvOpConstant) {
+            if (index_inst->opcode() != spv::Op::OpConstant) {
               // We will have to clamp this index, so we need a constant
               // whose value is one less than the bound, to compare
               // against and to use as the clamped value.
@@ -1194,7 +1199,7 @@ bool FuzzerPassDonateModules::MaybeAddLivesafeFunction(
   uint32_t kill_unreachable_return_value_id = 0;
   auto function_return_type_inst =
       donor_ir_context->get_def_use_mgr()->GetDef(function_to_donate.type_id());
-  if (function_return_type_inst->opcode() != SpvOpTypeVoid &&
+  if (function_return_type_inst->opcode() != spv::Op::OpTypeVoid &&
       fuzzerutil::FunctionContainsOpKillOrUnreachable(function_to_donate)) {
     kill_unreachable_return_value_id = FindOrCreateZeroConstant(
         original_id_to_donated_id.at(function_return_type_inst->result_id()),

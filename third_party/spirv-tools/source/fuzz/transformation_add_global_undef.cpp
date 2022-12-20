@@ -39,14 +39,14 @@ bool TransformationAddGlobalUndef::IsApplicable(
   auto type = ir_context->get_def_use_mgr()->GetDef(message_.type_id());
   // The type must exist, and must not be a function or pointer type.
   return type != nullptr && opt::IsTypeInst(type->opcode()) &&
-         type->opcode() != SpvOpTypeFunction &&
-         type->opcode() != SpvOpTypePointer;
+         type->opcode() != spv::Op::OpTypeFunction &&
+         type->opcode() != spv::Op::OpTypePointer;
 }
 
 void TransformationAddGlobalUndef::Apply(
     opt::IRContext* ir_context, TransformationContext* /*unused*/) const {
   auto new_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpUndef, message_.type_id(), message_.fresh_id(),
+      ir_context, spv::Op::OpUndef, message_.type_id(), message_.fresh_id(),
       opt::Instruction::OperandList());
   auto new_instruction_ptr = new_instruction.get();
   ir_context->module()->AddGlobalValue(std::move(new_instruction));

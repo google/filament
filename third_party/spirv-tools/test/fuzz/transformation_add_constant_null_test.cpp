@@ -87,7 +87,7 @@ TEST(TransformationAddConstantNullTest, BasicTest) {
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
-    ASSERT_EQ(SpvOpConstantNull,
+    ASSERT_EQ(spv::Op::OpConstantNull,
               context->get_def_use_mgr()->GetDef(100)->opcode());
     ASSERT_EQ(
         0.0F,

@@ -16,31 +16,29 @@
 
 #include "inst_bindless_check_pass.h"
 
-namespace {
-
-// Input Operand Indices
-static const int kSpvImageSampleImageIdInIdx = 0;
-static const int kSpvSampledImageImageIdInIdx = 0;
-static const int kSpvSampledImageSamplerIdInIdx = 1;
-static const int kSpvImageSampledImageIdInIdx = 0;
-static const int kSpvCopyObjectOperandIdInIdx = 0;
-static const int kSpvLoadPtrIdInIdx = 0;
-static const int kSpvAccessChainBaseIdInIdx = 0;
-static const int kSpvAccessChainIndex0IdInIdx = 1;
-static const int kSpvTypeArrayTypeIdInIdx = 0;
-static const int kSpvTypeArrayLengthIdInIdx = 1;
-static const int kSpvConstantValueInIdx = 0;
-static const int kSpvVariableStorageClassInIdx = 0;
-static const int kSpvTypePtrTypeIdInIdx = 1;
-static const int kSpvTypeImageDim = 1;
-static const int kSpvTypeImageDepth = 2;
-static const int kSpvTypeImageArrayed = 3;
-static const int kSpvTypeImageMS = 4;
-static const int kSpvTypeImageSampled = 5;
-}  // anonymous namespace
-
 namespace spvtools {
 namespace opt {
+namespace {
+// Input Operand Indices
+constexpr int kSpvImageSampleImageIdInIdx = 0;
+constexpr int kSpvSampledImageImageIdInIdx = 0;
+constexpr int kSpvSampledImageSamplerIdInIdx = 1;
+constexpr int kSpvImageSampledImageIdInIdx = 0;
+constexpr int kSpvCopyObjectOperandIdInIdx = 0;
+constexpr int kSpvLoadPtrIdInIdx = 0;
+constexpr int kSpvAccessChainBaseIdInIdx = 0;
+constexpr int kSpvAccessChainIndex0IdInIdx = 1;
+constexpr int kSpvTypeArrayTypeIdInIdx = 0;
+constexpr int kSpvTypeArrayLengthIdInIdx = 1;
+constexpr int kSpvConstantValueInIdx = 0;
+constexpr int kSpvVariableStorageClassInIdx = 0;
+constexpr int kSpvTypePtrTypeIdInIdx = 1;
+constexpr int kSpvTypeImageDim = 1;
+constexpr int kSpvTypeImageDepth = 2;
+constexpr int kSpvTypeImageArrayed = 3;
+constexpr int kSpvTypeImageMS = 4;
+constexpr int kSpvTypeImageSampled = 5;
+}  // namespace
 
 uint32_t InstBindlessCheckPass::GenDebugReadLength(
     uint32_t var_id, InstructionBuilder* builder) {
@@ -79,25 +77,25 @@ uint32_t InstBindlessCheckPass::CloneOriginalImage(
     uint32_t old_image_id, InstructionBuilder* builder) {
   Instruction* new_image_inst;
   Instruction* old_image_inst = get_def_use_mgr()->GetDef(old_image_id);
-  if (old_image_inst->opcode() == SpvOpLoad) {
+  if (old_image_inst->opcode() == spv::Op::OpLoad) {
     new_image_inst = builder->AddLoad(
         old_image_inst->type_id(),
         old_image_inst->GetSingleWordInOperand(kSpvLoadPtrIdInIdx));
-  } else if (old_image_inst->opcode() == SpvOp::SpvOpSampledImage) {
+  } else if (old_image_inst->opcode() == spv::Op::OpSampledImage) {
     uint32_t clone_id = CloneOriginalImage(
         old_image_inst->GetSingleWordInOperand(kSpvSampledImageImageIdInIdx),
         builder);
     new_image_inst = builder->AddBinaryOp(
-        old_image_inst->type_id(), SpvOpSampledImage, clone_id,
+        old_image_inst->type_id(), spv::Op::OpSampledImage, clone_id,
         old_image_inst->GetSingleWordInOperand(kSpvSampledImageSamplerIdInIdx));
-  } else if (old_image_inst->opcode() == SpvOp::SpvOpImage) {
+  } else if (old_image_inst->opcode() == spv::Op::OpImage) {
     uint32_t clone_id = CloneOriginalImage(
         old_image_inst->GetSingleWordInOperand(kSpvImageSampledImageIdInIdx),
         builder);
-    new_image_inst =
-        builder->AddUnaryOp(old_image_inst->type_id(), SpvOpImage, clone_id);
+    new_image_inst = builder->AddUnaryOp(old_image_inst->type_id(),
+                                         spv::Op::OpImage, clone_id);
   } else {
-    assert(old_image_inst->opcode() == SpvOp::SpvOpCopyObject &&
+    assert(old_image_inst->opcode() == spv::Op::OpCopyObject &&
            "expecting OpCopyObject");
     uint32_t clone_id = CloneOriginalImage(
         old_image_inst->GetSingleWordInOperand(kSpvCopyObjectOperandIdInIdx),
@@ -143,38 +141,38 @@ uint32_t InstBindlessCheckPass::CloneOriginalReference(
 
 uint32_t InstBindlessCheckPass::GetImageId(Instruction* inst) {
   switch (inst->opcode()) {
-    case SpvOp::SpvOpImageSampleImplicitLod:
-    case SpvOp::SpvOpImageSampleExplicitLod:
-    case SpvOp::SpvOpImageSampleDrefImplicitLod:
-    case SpvOp::SpvOpImageSampleDrefExplicitLod:
-    case SpvOp::SpvOpImageSampleProjImplicitLod:
-    case SpvOp::SpvOpImageSampleProjExplicitLod:
-    case SpvOp::SpvOpImageSampleProjDrefImplicitLod:
-    case SpvOp::SpvOpImageSampleProjDrefExplicitLod:
-    case SpvOp::SpvOpImageGather:
-    case SpvOp::SpvOpImageDrefGather:
-    case SpvOp::SpvOpImageQueryLod:
-    case SpvOp::SpvOpImageSparseSampleImplicitLod:
-    case SpvOp::SpvOpImageSparseSampleExplicitLod:
-    case SpvOp::SpvOpImageSparseSampleDrefImplicitLod:
-    case SpvOp::SpvOpImageSparseSampleDrefExplicitLod:
-    case SpvOp::SpvOpImageSparseSampleProjImplicitLod:
-    case SpvOp::SpvOpImageSparseSampleProjExplicitLod:
-    case SpvOp::SpvOpImageSparseSampleProjDrefImplicitLod:
-    case SpvOp::SpvOpImageSparseSampleProjDrefExplicitLod:
-    case SpvOp::SpvOpImageSparseGather:
-    case SpvOp::SpvOpImageSparseDrefGather:
-    case SpvOp::SpvOpImageFetch:
-    case SpvOp::SpvOpImageRead:
-    case SpvOp::SpvOpImageQueryFormat:
-    case SpvOp::SpvOpImageQueryOrder:
-    case SpvOp::SpvOpImageQuerySizeLod:
-    case SpvOp::SpvOpImageQuerySize:
-    case SpvOp::SpvOpImageQueryLevels:
-    case SpvOp::SpvOpImageQuerySamples:
-    case SpvOp::SpvOpImageSparseFetch:
-    case SpvOp::SpvOpImageSparseRead:
-    case SpvOp::SpvOpImageWrite:
+    case spv::Op::OpImageSampleImplicitLod:
+    case spv::Op::OpImageSampleExplicitLod:
+    case spv::Op::OpImageSampleDrefImplicitLod:
+    case spv::Op::OpImageSampleDrefExplicitLod:
+    case spv::Op::OpImageSampleProjImplicitLod:
+    case spv::Op::OpImageSampleProjExplicitLod:
+    case spv::Op::OpImageSampleProjDrefImplicitLod:
+    case spv::Op::OpImageSampleProjDrefExplicitLod:
+    case spv::Op::OpImageGather:
+    case spv::Op::OpImageDrefGather:
+    case spv::Op::OpImageQueryLod:
+    case spv::Op::OpImageSparseSampleImplicitLod:
+    case spv::Op::OpImageSparseSampleExplicitLod:
+    case spv::Op::OpImageSparseSampleDrefImplicitLod:
+    case spv::Op::OpImageSparseSampleDrefExplicitLod:
+    case spv::Op::OpImageSparseSampleProjImplicitLod:
+    case spv::Op::OpImageSparseSampleProjExplicitLod:
+    case spv::Op::OpImageSparseSampleProjDrefImplicitLod:
+    case spv::Op::OpImageSparseSampleProjDrefExplicitLod:
+    case spv::Op::OpImageSparseGather:
+    case spv::Op::OpImageSparseDrefGather:
+    case spv::Op::OpImageFetch:
+    case spv::Op::OpImageRead:
+    case spv::Op::OpImageQueryFormat:
+    case spv::Op::OpImageQueryOrder:
+    case spv::Op::OpImageQuerySizeLod:
+    case spv::Op::OpImageQuerySize:
+    case spv::Op::OpImageQueryLevels:
+    case spv::Op::OpImageQuerySamples:
+    case spv::Op::OpImageSparseFetch:
+    case spv::Op::OpImageSparseRead:
+    case spv::Op::OpImageWrite:
       return inst->GetSingleWordInOperand(kSpvImageSampleImageIdInIdx);
     default:
       break;
@@ -190,56 +188,58 @@ Instruction* InstBindlessCheckPass::GetPointeeTypeInst(Instruction* ptr_inst) {
 bool InstBindlessCheckPass::AnalyzeDescriptorReference(Instruction* ref_inst,
                                                        RefAnalysis* ref) {
   ref->ref_inst = ref_inst;
-  if (ref_inst->opcode() == SpvOpLoad || ref_inst->opcode() == SpvOpStore) {
+  if (ref_inst->opcode() == spv::Op::OpLoad ||
+      ref_inst->opcode() == spv::Op::OpStore) {
     ref->desc_load_id = 0;
     ref->ptr_id = ref_inst->GetSingleWordInOperand(kSpvLoadPtrIdInIdx);
     Instruction* ptr_inst = get_def_use_mgr()->GetDef(ref->ptr_id);
-    if (ptr_inst->opcode() != SpvOp::SpvOpAccessChain) return false;
+    if (ptr_inst->opcode() != spv::Op::OpAccessChain) return false;
     ref->var_id = ptr_inst->GetSingleWordInOperand(kSpvAccessChainBaseIdInIdx);
     Instruction* var_inst = get_def_use_mgr()->GetDef(ref->var_id);
-    if (var_inst->opcode() != SpvOp::SpvOpVariable) return false;
-    uint32_t storage_class =
-        var_inst->GetSingleWordInOperand(kSpvVariableStorageClassInIdx);
+    if (var_inst->opcode() != spv::Op::OpVariable) return false;
+    spv::StorageClass storage_class = spv::StorageClass(
+        var_inst->GetSingleWordInOperand(kSpvVariableStorageClassInIdx));
     switch (storage_class) {
-      case SpvStorageClassUniform:
-      case SpvStorageClassStorageBuffer:
+      case spv::StorageClass::Uniform:
+      case spv::StorageClass::StorageBuffer:
         break;
       default:
         return false;
         break;
     }
     // Check for deprecated storage block form
-    if (storage_class == SpvStorageClassUniform) {
+    if (storage_class == spv::StorageClass::Uniform) {
       uint32_t var_ty_id = var_inst->type_id();
       Instruction* var_ty_inst = get_def_use_mgr()->GetDef(var_ty_id);
       uint32_t ptr_ty_id =
           var_ty_inst->GetSingleWordInOperand(kSpvTypePtrTypeIdInIdx);
       Instruction* ptr_ty_inst = get_def_use_mgr()->GetDef(ptr_ty_id);
-      SpvOp ptr_ty_op = ptr_ty_inst->opcode();
+      spv::Op ptr_ty_op = ptr_ty_inst->opcode();
       uint32_t block_ty_id =
-          (ptr_ty_op == SpvOpTypeArray || ptr_ty_op == SpvOpTypeRuntimeArray)
+          (ptr_ty_op == spv::Op::OpTypeArray ||
+           ptr_ty_op == spv::Op::OpTypeRuntimeArray)
               ? ptr_ty_inst->GetSingleWordInOperand(kSpvTypeArrayTypeIdInIdx)
               : ptr_ty_id;
       assert(get_def_use_mgr()->GetDef(block_ty_id)->opcode() ==
-                 SpvOpTypeStruct &&
+                 spv::Op::OpTypeStruct &&
              "unexpected block type");
       bool block_found = get_decoration_mgr()->FindDecoration(
-          block_ty_id, SpvDecorationBlock,
+          block_ty_id, uint32_t(spv::Decoration::Block),
           [](const Instruction&) { return true; });
       if (!block_found) {
         // If block decoration not found, verify deprecated form of SSBO
         bool buffer_block_found = get_decoration_mgr()->FindDecoration(
-            block_ty_id, SpvDecorationBufferBlock,
+            block_ty_id, uint32_t(spv::Decoration::BufferBlock),
             [](const Instruction&) { return true; });
         USE_ASSERT(buffer_block_found && "block decoration not found");
-        storage_class = SpvStorageClassStorageBuffer;
+        storage_class = spv::StorageClass::StorageBuffer;
       }
     }
-    ref->strg_class = storage_class;
+    ref->strg_class = uint32_t(storage_class);
     Instruction* desc_type_inst = GetPointeeTypeInst(var_inst);
     switch (desc_type_inst->opcode()) {
-      case SpvOpTypeArray:
-      case SpvOpTypeRuntimeArray:
+      case spv::Op::OpTypeArray:
+      case spv::Op::OpTypeRuntimeArray:
         // A load through a descriptor array will have at least 3 operands. We
         // do not want to instrument loads of descriptors here which are part of
         // an image-based reference.
@@ -261,29 +261,29 @@ bool InstBindlessCheckPass::AnalyzeDescriptorReference(Instruction* ref_inst,
   Instruction* desc_load_inst;
   for (;;) {
     desc_load_inst = get_def_use_mgr()->GetDef(desc_load_id);
-    if (desc_load_inst->opcode() == SpvOp::SpvOpSampledImage)
+    if (desc_load_inst->opcode() == spv::Op::OpSampledImage)
       desc_load_id =
           desc_load_inst->GetSingleWordInOperand(kSpvSampledImageImageIdInIdx);
-    else if (desc_load_inst->opcode() == SpvOp::SpvOpImage)
+    else if (desc_load_inst->opcode() == spv::Op::OpImage)
       desc_load_id =
           desc_load_inst->GetSingleWordInOperand(kSpvImageSampledImageIdInIdx);
-    else if (desc_load_inst->opcode() == SpvOp::SpvOpCopyObject)
+    else if (desc_load_inst->opcode() == spv::Op::OpCopyObject)
       desc_load_id =
           desc_load_inst->GetSingleWordInOperand(kSpvCopyObjectOperandIdInIdx);
     else
       break;
   }
-  if (desc_load_inst->opcode() != SpvOp::SpvOpLoad) {
+  if (desc_load_inst->opcode() != spv::Op::OpLoad) {
     // TODO(greg-lunarg): Handle additional possibilities?
     return false;
   }
   ref->desc_load_id = desc_load_id;
   ref->ptr_id = desc_load_inst->GetSingleWordInOperand(kSpvLoadPtrIdInIdx);
   Instruction* ptr_inst = get_def_use_mgr()->GetDef(ref->ptr_id);
-  if (ptr_inst->opcode() == SpvOp::SpvOpVariable) {
+  if (ptr_inst->opcode() == spv::Op::OpVariable) {
     ref->desc_idx_id = 0;
     ref->var_id = ref->ptr_id;
-  } else if (ptr_inst->opcode() == SpvOp::SpvOpAccessChain) {
+  } else if (ptr_inst->opcode() == spv::Op::OpAccessChain) {
     if (ptr_inst->NumInOperands() != 2) {
       assert(false && "unexpected bindless index number");
       return false;
@@ -292,7 +292,7 @@ bool InstBindlessCheckPass::AnalyzeDescriptorReference(Instruction* ref_inst,
         ptr_inst->GetSingleWordInOperand(kSpvAccessChainIndex0IdInIdx);
     ref->var_id = ptr_inst->GetSingleWordInOperand(kSpvAccessChainBaseIdInIdx);
     Instruction* var_inst = get_def_use_mgr()->GetDef(ref->var_id);
-    if (var_inst->opcode() != SpvOpVariable) {
+    if (var_inst->opcode() != spv::Op::OpVariable) {
       assert(false && "unexpected bindless base");
       return false;
     }
@@ -369,13 +369,13 @@ uint32_t InstBindlessCheckPass::GenLastByteIdx(RefAnalysis* ref,
   uint32_t buff_ty_id;
   uint32_t ac_in_idx = 1;
   switch (desc_ty_inst->opcode()) {
-    case SpvOpTypeArray:
-    case SpvOpTypeRuntimeArray:
+    case spv::Op::OpTypeArray:
+    case spv::Op::OpTypeRuntimeArray:
       buff_ty_id = desc_ty_inst->GetSingleWordInOperand(0);
       ++ac_in_idx;
       break;
     default:
-      assert(desc_ty_inst->opcode() == SpvOpTypeStruct &&
+      assert(desc_ty_inst->opcode() == spv::Op::OpTypeStruct &&
              "unexpected descriptor type");
       buff_ty_id = desc_ty_inst->result_id();
       break;
@@ -393,19 +393,20 @@ uint32_t InstBindlessCheckPass::GenLastByteIdx(RefAnalysis* ref,
     Instruction* curr_ty_inst = get_def_use_mgr()->GetDef(curr_ty_id);
     uint32_t curr_offset_id = 0;
     switch (curr_ty_inst->opcode()) {
-      case SpvOpTypeArray:
-      case SpvOpTypeRuntimeArray: {
+      case spv::Op::OpTypeArray:
+      case spv::Op::OpTypeRuntimeArray: {
         // Get array stride and multiply by current index
-        uint32_t arr_stride = FindStride(curr_ty_id, SpvDecorationArrayStride);
+        uint32_t arr_stride =
+            FindStride(curr_ty_id, uint32_t(spv::Decoration::ArrayStride));
         uint32_t arr_stride_id = builder->GetUintConstantId(arr_stride);
         uint32_t curr_idx_32b_id = Gen32BitCvtCode(curr_idx_id, builder);
         Instruction* curr_offset_inst = builder->AddBinaryOp(
-            GetUintId(), SpvOpIMul, arr_stride_id, curr_idx_32b_id);
+            GetUintId(), spv::Op::OpIMul, arr_stride_id, curr_idx_32b_id);
         curr_offset_id = curr_offset_inst->result_id();
         // Get element type for next step
         curr_ty_id = curr_ty_inst->GetSingleWordInOperand(0);
       } break;
-      case SpvOpTypeMatrix: {
+      case spv::Op::OpTypeMatrix: {
         assert(matrix_stride != 0 && "missing matrix stride");
         matrix_stride_id = builder->GetUintConstantId(matrix_stride);
         uint32_t vec_ty_id = curr_ty_inst->GetSingleWordInOperand(0);
@@ -423,40 +424,40 @@ uint32_t InstBindlessCheckPass::GenLastByteIdx(RefAnalysis* ref,
         }
         uint32_t curr_idx_32b_id = Gen32BitCvtCode(curr_idx_id, builder);
         Instruction* curr_offset_inst = builder->AddBinaryOp(
-            GetUintId(), SpvOpIMul, col_stride_id, curr_idx_32b_id);
+            GetUintId(), spv::Op::OpIMul, col_stride_id, curr_idx_32b_id);
         curr_offset_id = curr_offset_inst->result_id();
         // Get element type for next step
         curr_ty_id = vec_ty_id;
         in_matrix = true;
       } break;
-      case SpvOpTypeVector: {
+      case spv::Op::OpTypeVector: {
         // If inside a row major matrix type, multiply index by matrix stride,
         // else multiply by component size
         uint32_t comp_ty_id = curr_ty_inst->GetSingleWordInOperand(0u);
         uint32_t curr_idx_32b_id = Gen32BitCvtCode(curr_idx_id, builder);
         if (in_matrix && !col_major) {
           Instruction* curr_offset_inst = builder->AddBinaryOp(
-              GetUintId(), SpvOpIMul, matrix_stride_id, curr_idx_32b_id);
+              GetUintId(), spv::Op::OpIMul, matrix_stride_id, curr_idx_32b_id);
           curr_offset_id = curr_offset_inst->result_id();
         } else {
           uint32_t comp_ty_sz = ByteSize(comp_ty_id, 0u, false, false);
           uint32_t comp_ty_sz_id = builder->GetUintConstantId(comp_ty_sz);
           Instruction* curr_offset_inst = builder->AddBinaryOp(
-              GetUintId(), SpvOpIMul, comp_ty_sz_id, curr_idx_32b_id);
+              GetUintId(), spv::Op::OpIMul, comp_ty_sz_id, curr_idx_32b_id);
           curr_offset_id = curr_offset_inst->result_id();
         }
         // Get element type for next step
         curr_ty_id = comp_ty_id;
       } break;
-      case SpvOpTypeStruct: {
+      case spv::Op::OpTypeStruct: {
         // Get buffer byte offset for the referenced member
         Instruction* curr_idx_inst = get_def_use_mgr()->GetDef(curr_idx_id);
-        assert(curr_idx_inst->opcode() == SpvOpConstant &&
+        assert(curr_idx_inst->opcode() == spv::Op::OpConstant &&
                "unexpected struct index");
         uint32_t member_idx = curr_idx_inst->GetSingleWordInOperand(0);
         uint32_t member_offset = 0xdeadbeef;
         bool found = get_decoration_mgr()->FindDecoration(
-            curr_ty_id, SpvDecorationOffset,
+            curr_ty_id, uint32_t(spv::Decoration::Offset),
             [&member_idx, &member_offset](const Instruction& deco_inst) {
               if (deco_inst.GetSingleWordInOperand(1u) != member_idx)
                 return false;
@@ -470,7 +471,7 @@ uint32_t InstBindlessCheckPass::GenLastByteIdx(RefAnalysis* ref,
         // enclosing struct type at the member index. If none found, reset
         // stride to 0.
         found = get_decoration_mgr()->FindDecoration(
-            curr_ty_id, SpvDecorationMatrixStride,
+            curr_ty_id, uint32_t(spv::Decoration::MatrixStride),
             [&member_idx, &matrix_stride](const Instruction& deco_inst) {
               if (deco_inst.GetSingleWordInOperand(1u) != member_idx)
                 return false;
@@ -480,7 +481,7 @@ uint32_t InstBindlessCheckPass::GenLastByteIdx(RefAnalysis* ref,
         if (!found) matrix_stride = 0;
         // Look for column major decoration
         found = get_decoration_mgr()->FindDecoration(
-            curr_ty_id, SpvDecorationColMajor,
+            curr_ty_id, uint32_t(spv::Decoration::ColMajor),
             [&member_idx, &col_major](const Instruction& deco_inst) {
               if (deco_inst.GetSingleWordInOperand(1u) != member_idx)
                 return false;
@@ -496,8 +497,8 @@ uint32_t InstBindlessCheckPass::GenLastByteIdx(RefAnalysis* ref,
     if (sum_id == 0)
       sum_id = curr_offset_id;
     else {
-      Instruction* sum_inst =
-          builder->AddBinaryOp(GetUintId(), SpvOpIAdd, sum_id, curr_offset_id);
+      Instruction* sum_inst = builder->AddBinaryOp(GetUintId(), spv::Op::OpIAdd,
+                                                   sum_id, curr_offset_id);
       sum_id = sum_inst->result_id();
     }
     ++ac_in_idx;
@@ -507,7 +508,7 @@ uint32_t InstBindlessCheckPass::GenLastByteIdx(RefAnalysis* ref,
   uint32_t last = bsize - 1;
   uint32_t last_id = builder->GetUintConstantId(last);
   Instruction* sum_inst =
-      builder->AddBinaryOp(GetUintId(), SpvOpIAdd, sum_id, last_id);
+      builder->AddBinaryOp(GetUintId(), spv::Op::OpIAdd, sum_id, last_id);
   return sum_inst->result_id();
 }
 
@@ -527,8 +528,9 @@ void InstBindlessCheckPass::GenCheckCode(
   std::unique_ptr<Instruction> merge_label(NewLabel(merge_blk_id));
   std::unique_ptr<Instruction> valid_label(NewLabel(valid_blk_id));
   std::unique_ptr<Instruction> invalid_label(NewLabel(invalid_blk_id));
-  (void)builder.AddConditionalBranch(check_id, valid_blk_id, invalid_blk_id,
-                                     merge_blk_id, SpvSelectionControlMaskNone);
+  (void)builder.AddConditionalBranch(
+      check_id, valid_blk_id, invalid_blk_id, merge_blk_id,
+      uint32_t(spv::SelectionControlMask::MaskNone));
   // Gen valid bounds branch
   std::unique_ptr<BasicBlock> new_blk_ptr(
       new BasicBlock(std::move(valid_label)));
@@ -593,24 +595,24 @@ void InstBindlessCheckPass::GenDescIdxCheckCode(
   RefAnalysis ref;
   if (!AnalyzeDescriptorReference(&*ref_inst_itr, &ref)) return;
   Instruction* ptr_inst = get_def_use_mgr()->GetDef(ref.ptr_id);
-  if (ptr_inst->opcode() != SpvOp::SpvOpAccessChain) return;
+  if (ptr_inst->opcode() != spv::Op::OpAccessChain) return;
   // If index and bound both compile-time constants and index < bound,
   // return without changing
   Instruction* var_inst = get_def_use_mgr()->GetDef(ref.var_id);
   Instruction* desc_type_inst = GetPointeeTypeInst(var_inst);
   uint32_t length_id = 0;
-  if (desc_type_inst->opcode() == SpvOpTypeArray) {
+  if (desc_type_inst->opcode() == spv::Op::OpTypeArray) {
     length_id =
         desc_type_inst->GetSingleWordInOperand(kSpvTypeArrayLengthIdInIdx);
     Instruction* index_inst = get_def_use_mgr()->GetDef(ref.desc_idx_id);
     Instruction* length_inst = get_def_use_mgr()->GetDef(length_id);
-    if (index_inst->opcode() == SpvOpConstant &&
-        length_inst->opcode() == SpvOpConstant &&
+    if (index_inst->opcode() == spv::Op::OpConstant &&
+        length_inst->opcode() == spv::Op::OpConstant &&
         index_inst->GetSingleWordInOperand(kSpvConstantValueInIdx) <
             length_inst->GetSingleWordInOperand(kSpvConstantValueInIdx))
       return;
   } else if (!desc_idx_enabled_ ||
-             desc_type_inst->opcode() != SpvOpTypeRuntimeArray) {
+             desc_type_inst->opcode() != spv::Op::OpTypeRuntimeArray) {
     return;
   }
   // Move original block's preceding instructions into first new block
@@ -624,7 +626,7 @@ void InstBindlessCheckPass::GenDescIdxCheckCode(
   // If length id not yet set, descriptor array is runtime size so
   // generate load of length from stage's debug input buffer.
   if (length_id == 0) {
-    assert(desc_type_inst->opcode() == SpvOpTypeRuntimeArray &&
+    assert(desc_type_inst->opcode() == spv::Op::OpTypeRuntimeArray &&
            "unexpected bindless type");
     length_id = GenDebugReadLength(ref.var_id, &builder);
   }
@@ -633,7 +635,7 @@ void InstBindlessCheckPass::GenDescIdxCheckCode(
   // for the referenced value.
   uint32_t desc_idx_32b_id = Gen32BitCvtCode(ref.desc_idx_id, &builder);
   uint32_t length_32b_id = Gen32BitCvtCode(length_id, &builder);
-  Instruction* ult_inst = builder.AddBinaryOp(GetBoolId(), SpvOpULessThan,
+  Instruction* ult_inst = builder.AddBinaryOp(GetBoolId(), spv::Op::OpULessThan,
                                               desc_idx_32b_id, length_32b_id);
   ref.desc_idx_id = desc_idx_32b_id;
   GenCheckCode(ult_inst->result_id(), error_id, 0u, length_id, stage_idx, &ref,
@@ -661,9 +663,10 @@ void InstBindlessCheckPass::GenDescInitCheckCode(
     // TODO(greg-lunarg): Do bounds check for aggregate loads and stores
     Instruction* ref_ptr_inst = get_def_use_mgr()->GetDef(ref.ptr_id);
     Instruction* pte_type_inst = GetPointeeTypeInst(ref_ptr_inst);
-    uint32_t pte_type_op = pte_type_inst->opcode();
-    if (pte_type_op == SpvOpTypeArray || pte_type_op == SpvOpTypeRuntimeArray ||
-        pte_type_op == SpvOpTypeStruct)
+    spv::Op pte_type_op = pte_type_inst->opcode();
+    if (pte_type_op == spv::Op::OpTypeArray ||
+        pte_type_op == spv::Op::OpTypeRuntimeArray ||
+        pte_type_op == spv::Op::OpTypeStruct)
       init_check = true;
   }
   // If initialization check and not enabled, return
@@ -687,11 +690,13 @@ void InstBindlessCheckPass::GenDescInitCheckCode(
   // being full reference and false branch being debug output and zero
   // for the referenced value.
   Instruction* ult_inst =
-      builder.AddBinaryOp(GetBoolId(), SpvOpULessThan, ref_id, init_id);
-  uint32_t error = init_check ? kInstErrorBindlessUninit
-                              : (ref.strg_class == SpvStorageClassUniform
-                                     ? kInstErrorBuffOOBUniform
-                                     : kInstErrorBuffOOBStorage);
+      builder.AddBinaryOp(GetBoolId(), spv::Op::OpULessThan, ref_id, init_id);
+  uint32_t error =
+      init_check
+          ? kInstErrorBindlessUninit
+          : (spv::StorageClass(ref.strg_class) == spv::StorageClass::Uniform
+                 ? kInstErrorBuffOOBUniform
+                 : kInstErrorBuffOOBStorage);
   uint32_t error_id = builder.GetUintConstantId(error);
   GenCheckCode(ult_inst->result_id(), error_id, init_check ? 0 : ref_id,
                init_check ? builder.GetUintConstantId(0u) : init_id, stage_idx,
@@ -708,11 +713,11 @@ void InstBindlessCheckPass::GenTexBuffCheckCode(
     std::vector<std::unique_ptr<BasicBlock>>* new_blocks) {
   // Only process OpImageRead and OpImageWrite with no optional operands
   Instruction* ref_inst = &*ref_inst_itr;
-  SpvOp op = ref_inst->opcode();
+  spv::Op op = ref_inst->opcode();
   uint32_t num_in_oprnds = ref_inst->NumInOperands();
-  if (!((op == SpvOpImageRead && num_in_oprnds == 2) ||
-        (op == SpvOpImageFetch && num_in_oprnds == 2) ||
-        (op == SpvOpImageWrite && num_in_oprnds == 3)))
+  if (!((op == spv::Op::OpImageRead && num_in_oprnds == 2) ||
+        (op == spv::Op::OpImageFetch && num_in_oprnds == 2) ||
+        (op == spv::Op::OpImageWrite && num_in_oprnds == 3)))
     return;
   // Pull components from descriptor reference
   RefAnalysis ref;
@@ -721,17 +726,20 @@ void InstBindlessCheckPass::GenTexBuffCheckCode(
   Instruction* image_inst = get_def_use_mgr()->GetDef(ref.image_id);
   uint32_t image_ty_id = image_inst->type_id();
   Instruction* image_ty_inst = get_def_use_mgr()->GetDef(image_ty_id);
-  if (image_ty_inst->GetSingleWordInOperand(kSpvTypeImageDim) != SpvDimBuffer)
+  if (spv::Dim(image_ty_inst->GetSingleWordInOperand(kSpvTypeImageDim)) !=
+      spv::Dim::Buffer) {
     return;
+  }
   if (image_ty_inst->GetSingleWordInOperand(kSpvTypeImageDepth) != 0) return;
   if (image_ty_inst->GetSingleWordInOperand(kSpvTypeImageArrayed) != 0) return;
   if (image_ty_inst->GetSingleWordInOperand(kSpvTypeImageMS) != 0) return;
   // Enable ImageQuery Capability if not yet enabled
-  if (!get_feature_mgr()->HasCapability(SpvCapabilityImageQuery)) {
-    std::unique_ptr<Instruction> cap_image_query_inst(new Instruction(
-        context(), SpvOpCapability, 0, 0,
-        std::initializer_list<Operand>{
-            {SPV_OPERAND_TYPE_CAPABILITY, {SpvCapabilityImageQuery}}}));
+  if (!get_feature_mgr()->HasCapability(spv::Capability::ImageQuery)) {
+    std::unique_ptr<Instruction> cap_image_query_inst(
+        new Instruction(context(), spv::Op::OpCapability, 0, 0,
+                        std::initializer_list<Operand>{
+                            {SPV_OPERAND_TYPE_CAPABILITY,
+                             {uint32_t(spv::Capability::ImageQuery)}}}));
     get_def_use_mgr()->AnalyzeInstDefUse(&*cap_image_query_inst);
     context()->AddCapability(std::move(cap_image_query_inst));
   }
@@ -750,13 +758,13 @@ void InstBindlessCheckPass::GenTexBuffCheckCode(
   if (ref.desc_idx_id == 0) ref.desc_idx_id = builder.GetUintConstantId(0u);
   // Get texel buffer size.
   Instruction* size_inst =
-      builder.AddUnaryOp(GetUintId(), SpvOpImageQuerySize, ref.image_id);
+      builder.AddUnaryOp(GetUintId(), spv::Op::OpImageQuerySize, ref.image_id);
   uint32_t size_id = size_inst->result_id();
   // Generate runtime initialization/bounds test code with true branch
   // being full reference and false branch being debug output and zero
   // for the referenced value.
   Instruction* ult_inst =
-      builder.AddBinaryOp(GetBoolId(), SpvOpULessThan, coord_id, size_id);
+      builder.AddBinaryOp(GetBoolId(), spv::Op::OpULessThan, coord_id, size_id);
   uint32_t error =
       (image_ty_inst->GetSingleWordInOperand(kSpvTypeImageSampled) == 2)
           ? kInstErrorBuffOOBStorageTexel
@@ -778,13 +786,16 @@ void InstBindlessCheckPass::InitializeInstBindlessCheck() {
   // init check is enabled.
   if (desc_idx_enabled_ || buffer_bounds_enabled_ || texel_buffer_enabled_)
     for (auto& anno : get_module()->annotations())
-      if (anno.opcode() == SpvOpDecorate) {
-        if (anno.GetSingleWordInOperand(1u) == SpvDecorationDescriptorSet)
+      if (anno.opcode() == spv::Op::OpDecorate) {
+        if (spv::Decoration(anno.GetSingleWordInOperand(1u)) ==
+            spv::Decoration::DescriptorSet) {
           var2desc_set_[anno.GetSingleWordInOperand(0u)] =
               anno.GetSingleWordInOperand(2u);
-        else if (anno.GetSingleWordInOperand(1u) == SpvDecorationBinding)
+        } else if (spv::Decoration(anno.GetSingleWordInOperand(1u)) ==
+                   spv::Decoration::Binding) {
           var2binding_[anno.GetSingleWordInOperand(0u)] =
               anno.GetSingleWordInOperand(2u);
+        }
       }
 }
 

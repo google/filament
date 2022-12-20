@@ -52,15 +52,15 @@ bool TransformationLoad::IsApplicable(
   // The type must indeed be a pointer type.
   auto pointer_type = ir_context->get_def_use_mgr()->GetDef(pointer->type_id());
   assert(pointer_type && "Type id must be defined.");
-  if (pointer_type->opcode() != SpvOpTypePointer) {
+  if (pointer_type->opcode() != spv::Op::OpTypePointer) {
     return false;
   }
   // We do not want to allow loading from null or undefined pointers, as it is
   // not clear how punishing the consequences of doing so are from a semantics
   // point of view.
   switch (pointer->opcode()) {
-    case SpvOpConstantNull:
-    case SpvOpUndef:
+    case spv::Op::OpConstantNull:
+    case spv::Op::OpUndef:
       return false;
     default:
       break;
@@ -74,13 +74,13 @@ bool TransformationLoad::IsApplicable(
     return false;
   }
   // ... and it must be legitimate to insert a load before it.
-  if (!message_.is_atomic() &&
-      !fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpLoad, insert_before)) {
+  if (!message_.is_atomic() && !fuzzerutil::CanInsertOpcodeBeforeInstruction(
+                                   spv::Op::OpLoad, insert_before)) {
     return false;
   }
 
   if (message_.is_atomic() && !fuzzerutil::CanInsertOpcodeBeforeInstruction(
-                                  SpvOpAtomicLoad, insert_before)) {
+                                  spv::Op::OpAtomicLoad, insert_before)) {
     return false;
   }
 
@@ -99,10 +99,10 @@ bool TransformationLoad::IsApplicable(
     }
     // The memory scope and memory semantics instructions must have the
     // 'OpConstant' opcode.
-    if (memory_scope_instruction->opcode() != SpvOpConstant) {
+    if (memory_scope_instruction->opcode() != spv::Op::OpConstant) {
       return false;
     }
-    if (memory_semantics_instruction->opcode() != SpvOpConstant) {
+    if (memory_semantics_instruction->opcode() != spv::Op::OpConstant) {
       return false;
     }
     // The memory scope and memory semantics need to be available before
@@ -119,12 +119,12 @@ bool TransformationLoad::IsApplicable(
     // operand type with signedness does not matters.
     if (ir_context->get_def_use_mgr()
             ->GetDef(memory_scope_instruction->type_id())
-            ->opcode() != SpvOpTypeInt) {
+            ->opcode() != spv::Op::OpTypeInt) {
       return false;
     }
     if (ir_context->get_def_use_mgr()
             ->GetDef(memory_semantics_instruction->type_id())
-            ->opcode() != SpvOpTypeInt) {
+            ->opcode() != spv::Op::OpTypeInt) {
       return false;
     }
 
@@ -146,20 +146,20 @@ bool TransformationLoad::IsApplicable(
       return false;
     }
 
-    // The memory scope constant value must be that of SpvScopeInvocation.
+    // The memory scope constant value must be that of spv::Scope::Invocation.
     auto memory_scope_const_value =
-        memory_scope_instruction->GetSingleWordInOperand(0);
-    if (memory_scope_const_value != SpvScopeInvocation) {
+        spv::Scope(memory_scope_instruction->GetSingleWordInOperand(0));
+    if (memory_scope_const_value != spv::Scope::Invocation) {
       return false;
     }
 
     // The memory semantics constant value must match the storage class of the
     // pointer being loaded from.
-    auto memory_semantics_const_value = static_cast<SpvMemorySemanticsMask>(
+    auto memory_semantics_const_value = static_cast<spv::MemorySemanticsMask>(
         memory_semantics_instruction->GetSingleWordInOperand(0));
     if (memory_semantics_const_value !=
         fuzzerutil::GetMemorySemanticsForStorageClass(
-            static_cast<SpvStorageClass>(
+            static_cast<spv::StorageClass>(
                 pointer_type->GetSingleWordInOperand(0)))) {
       return false;
     }
@@ -180,7 +180,7 @@ void TransformationLoad::Apply(opt::IRContext* ir_context,
     auto insert_before =
         FindInstruction(message_.instruction_to_insert_before(), ir_context);
     auto new_instruction = MakeUnique<opt::Instruction>(
-        ir_context, SpvOpAtomicLoad, result_type, message_.fresh_id(),
+        ir_context, spv::Op::OpAtomicLoad, result_type, message_.fresh_id(),
         opt::Instruction::OperandList(
             {{SPV_OPERAND_TYPE_ID, {message_.pointer_id()}},
              {SPV_OPERAND_TYPE_SCOPE_ID, {message_.memory_scope_id()}},
@@ -201,7 +201,7 @@ void TransformationLoad::Apply(opt::IRContext* ir_context,
     auto insert_before =
         FindInstruction(message_.instruction_to_insert_before(), ir_context);
     auto new_instruction = MakeUnique<opt::Instruction>(
-        ir_context, SpvOpLoad, result_type, message_.fresh_id(),
+        ir_context, spv::Op::OpLoad, result_type, message_.fresh_id(),
         opt::Instruction::OperandList(
             {{SPV_OPERAND_TYPE_ID, {message_.pointer_id()}}}));
     auto new_instruction_ptr = new_instruction.get();

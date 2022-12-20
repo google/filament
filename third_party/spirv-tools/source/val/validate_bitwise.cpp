@@ -27,7 +27,7 @@ namespace val {
 // Validates when base and result need to be the same type
 spv_result_t ValidateBaseType(ValidationState_t& _, const Instruction* inst,
                               const uint32_t base_type) {
-  const SpvOp opcode = inst->opcode();
+  const spv::Op opcode = inst->opcode();
 
   if (!_.IsIntScalarType(base_type) && !_.IsIntVectorType(base_type)) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
@@ -47,7 +47,7 @@ spv_result_t ValidateBaseType(ValidationState_t& _, const Instruction* inst,
   }
 
   // OpBitCount just needs same number of components
-  if (base_type != inst->type_id() && opcode != SpvOpBitCount) {
+  if (base_type != inst->type_id() && opcode != spv::Op::OpBitCount) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << "Expected Base Type to be equal to Result Type: "
            << spvOpcodeString(opcode);
@@ -58,13 +58,13 @@ spv_result_t ValidateBaseType(ValidationState_t& _, const Instruction* inst,
 
 // Validates correctness of bitwise instructions.
 spv_result_t BitwisePass(ValidationState_t& _, const Instruction* inst) {
-  const SpvOp opcode = inst->opcode();
+  const spv::Op opcode = inst->opcode();
   const uint32_t result_type = inst->type_id();
 
   switch (opcode) {
-    case SpvOpShiftRightLogical:
-    case SpvOpShiftRightArithmetic:
-    case SpvOpShiftLeftLogical: {
+    case spv::Op::OpShiftRightLogical:
+    case spv::Op::OpShiftRightArithmetic:
+    case spv::Op::OpShiftLeftLogical: {
       if (!_.IsIntScalarType(result_type) && !_.IsIntVectorType(result_type))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected int scalar or vector type as Result Type: "
@@ -103,10 +103,10 @@ spv_result_t BitwisePass(ValidationState_t& _, const Instruction* inst) {
       break;
     }
 
-    case SpvOpBitwiseOr:
-    case SpvOpBitwiseXor:
-    case SpvOpBitwiseAnd:
-    case SpvOpNot: {
+    case spv::Op::OpBitwiseOr:
+    case spv::Op::OpBitwiseXor:
+    case spv::Op::OpBitwiseAnd:
+    case spv::Op::OpNot: {
       if (!_.IsIntScalarType(result_type) && !_.IsIntVectorType(result_type))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected int scalar or vector type as Result Type: "
@@ -140,7 +140,7 @@ spv_result_t BitwisePass(ValidationState_t& _, const Instruction* inst) {
       break;
     }
 
-    case SpvOpBitFieldInsert: {
+    case spv::Op::OpBitFieldInsert: {
       const uint32_t base_type = _.GetOperandTypeId(inst, 2);
       const uint32_t insert_type = _.GetOperandTypeId(inst, 3);
       const uint32_t offset_type = _.GetOperandTypeId(inst, 4);
@@ -167,8 +167,8 @@ spv_result_t BitwisePass(ValidationState_t& _, const Instruction* inst) {
       break;
     }
 
-    case SpvOpBitFieldSExtract:
-    case SpvOpBitFieldUExtract: {
+    case spv::Op::OpBitFieldSExtract:
+    case spv::Op::OpBitFieldUExtract: {
       const uint32_t base_type = _.GetOperandTypeId(inst, 2);
       const uint32_t offset_type = _.GetOperandTypeId(inst, 3);
       const uint32_t count_type = _.GetOperandTypeId(inst, 4);
@@ -189,7 +189,7 @@ spv_result_t BitwisePass(ValidationState_t& _, const Instruction* inst) {
       break;
     }
 
-    case SpvOpBitReverse: {
+    case spv::Op::OpBitReverse: {
       const uint32_t base_type = _.GetOperandTypeId(inst, 2);
 
       if (spv_result_t error = ValidateBaseType(_, inst, base_type)) {
@@ -199,7 +199,7 @@ spv_result_t BitwisePass(ValidationState_t& _, const Instruction* inst) {
       break;
     }
 
-    case SpvOpBitCount: {
+    case spv::Op::OpBitCount: {
       if (!_.IsIntScalarType(result_type) && !_.IsIntVectorType(result_type))
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << "Expected int scalar or vector type as Result Type: "

@@ -61,7 +61,7 @@ bool TransformationAddDeadBlock::IsApplicable(
   }
 
   // It must end with OpBranch.
-  if (existing_block->terminator()->opcode() != SpvOpBranch) {
+  if (existing_block->terminator()->opcode() != spv::Op::OpBranch) {
     return false;
   }
 
@@ -122,27 +122,27 @@ void TransformationAddDeadBlock::Apply(
   auto enclosing_function = existing_block->GetParent();
   std::unique_ptr<opt::BasicBlock> new_block =
       MakeUnique<opt::BasicBlock>(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpLabel, 0, message_.fresh_id(),
+          ir_context, spv::Op::OpLabel, 0, message_.fresh_id(),
           opt::Instruction::OperandList()));
   new_block->AddInstruction(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpBranch, 0, 0,
+      ir_context, spv::Op::OpBranch, 0, 0,
       opt::Instruction::OperandList(
           {{SPV_OPERAND_TYPE_ID, {successor_block_id}}})));
 
   // Turn the original block into a selection merge, with its original successor
   // as the merge block.
   existing_block->terminator()->InsertBefore(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpSelectionMerge, 0, 0,
+      ir_context, spv::Op::OpSelectionMerge, 0, 0,
       opt::Instruction::OperandList(
           {{SPV_OPERAND_TYPE_ID, {successor_block_id}},
            {SPV_OPERAND_TYPE_SELECTION_CONTROL,
-            {SpvSelectionControlMaskNone}}})));
+            {uint32_t(spv::SelectionControlMask::MaskNone)}}})));
 
   // Change the original block's terminator to be a conditional branch on the
   // given boolean, with the original successor and the new successor as branch
   // targets, and such that at runtime control will always transfer to the
   // original successor.
-  existing_block->terminator()->SetOpcode(SpvOpBranchConditional);
+  existing_block->terminator()->SetOpcode(spv::Op::OpBranchConditional);
   existing_block->terminator()->SetInOperands(
       {{SPV_OPERAND_TYPE_ID, {bool_id}},
        {SPV_OPERAND_TYPE_ID,

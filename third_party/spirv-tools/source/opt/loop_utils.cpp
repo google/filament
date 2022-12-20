@@ -28,12 +28,11 @@
 
 namespace spvtools {
 namespace opt {
-
 namespace {
 // Return true if |bb| is dominated by at least one block in |exits|
-static inline bool DominatesAnExit(BasicBlock* bb,
-                                   const std::unordered_set<BasicBlock*>& exits,
-                                   const DominatorTree& dom_tree) {
+inline bool DominatesAnExit(BasicBlock* bb,
+                            const std::unordered_set<BasicBlock*>& exits,
+                            const DominatorTree& dom_tree) {
   for (BasicBlock* e_bb : exits)
     if (dom_tree.Dominates(bb, e_bb)) return true;
   return false;
@@ -71,10 +70,10 @@ class LCSSARewriter {
     // UpdateManagers.
     void RewriteUse(BasicBlock* bb, Instruction* user, uint32_t operand_index) {
       assert(
-          (user->opcode() != SpvOpPhi || bb != GetParent(user)) &&
+          (user->opcode() != spv::Op::OpPhi || bb != GetParent(user)) &&
           "The root basic block must be the incoming edge if |user| is a phi "
           "instruction");
-      assert((user->opcode() == SpvOpPhi || bb == GetParent(user)) &&
+      assert((user->opcode() == spv::Op::OpPhi || bb == GetParent(user)) &&
              "The root basic block must be the instruction parent if |user| is "
              "not "
              "phi instruction");
@@ -293,7 +292,7 @@ inline void MakeSetClosedSSA(IRContext* context, Function* function,
             assert(use_parent);
             if (blocks.count(use_parent->id())) return;
 
-            if (use->opcode() == SpvOpPhi) {
+            if (use->opcode() == spv::Op::OpPhi) {
               // If the use is a Phi instruction and the incoming block is
               // coming from the loop, then that's consistent with LCSSA form.
               if (exit_bb.count(use_parent)) {
@@ -355,7 +354,7 @@ void LoopUtils::CreateLoopDedicatedExits() {
     // TODO(1841): Handle id overflow.
     BasicBlock& exit = *insert_pt.InsertBefore(std::unique_ptr<BasicBlock>(
         new BasicBlock(std::unique_ptr<Instruction>(new Instruction(
-            context_, SpvOpLabel, 0, context_->TakeNextId(), {})))));
+            context_, spv::Op::OpLabel, 0, context_->TakeNextId(), {})))));
     exit.SetParent(function);
 
     // Redirect in loop predecessors to |exit| block.
@@ -494,7 +493,7 @@ Loop* LoopUtils::CloneAndAttachLoopToHeader(LoopCloningResult* cloning_result) {
   // Create a new exit block/label for the new loop.
   // TODO(1841): Handle id overflow.
   std::unique_ptr<Instruction> new_label{new Instruction(
-      context_, SpvOp::SpvOpLabel, 0, context_->TakeNextId(), {})};
+      context_, spv::Op::OpLabel, 0, context_->TakeNextId(), {})};
   std::unique_ptr<BasicBlock> new_exit_bb{new BasicBlock(std::move(new_label))};
   new_exit_bb->SetParent(loop_->GetMergeBlock()->GetParent());
 
@@ -680,9 +679,9 @@ void CodeMetrics::Analyze(const Loop& loop) {
     const BasicBlock* bb = cfg.block(id);
     size_t bb_size = 0;
     bb->ForEachInst([&bb_size](const Instruction* insn) {
-      if (insn->opcode() == SpvOpLabel) return;
+      if (insn->opcode() == spv::Op::OpLabel) return;
       if (insn->IsNop()) return;
-      if (insn->opcode() == SpvOpPhi) return;
+      if (insn->opcode() == spv::Op::OpPhi) return;
       bb_size++;
     });
     block_sizes_[bb->id()] = bb_size;

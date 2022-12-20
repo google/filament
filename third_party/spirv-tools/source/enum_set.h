@@ -200,8 +200,8 @@ class EnumSet {
   std::unique_ptr<OverflowSetType> overflow_ = {};
 };
 
-// A set of SpvCapability, optimized for small capability values.
-using CapabilitySet = EnumSet<SpvCapability>;
+// A set of spv::Capability, optimized for small capability values.
+using CapabilitySet = EnumSet<spv::Capability>;
 
 }  // namespace spvtools
 

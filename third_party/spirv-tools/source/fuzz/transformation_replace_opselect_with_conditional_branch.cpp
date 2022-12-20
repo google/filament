@@ -50,7 +50,7 @@ bool TransformationReplaceOpSelectWithConditionalBranch::IsApplicable(
       ir_context->get_def_use_mgr()->GetDef(message_.select_id());
 
   // The instruction must exist and it must be an OpSelect instruction.
-  if (!instruction || instruction->opcode() != SpvOpSelect) {
+  if (!instruction || instruction->opcode() != spv::Op::OpSelect) {
     return false;
   }
 
@@ -90,7 +90,7 @@ bool TransformationReplaceOpSelectWithConditionalBranch::IsApplicable(
   // The predecessor must not be the header of a construct and it must end with
   // OpBranch.
   if (predecessor->GetMergeInst() != nullptr ||
-      predecessor->terminator()->opcode() != SpvOpBranch) {
+      predecessor->terminator()->opcode() != spv::Op::OpBranch) {
     return false;
   }
 
@@ -115,13 +115,14 @@ void TransformationReplaceOpSelectWithConditionalBranch::Apply(
       fuzzerutil::UpdateModuleIdBound(ir_context, id);
 
       // Create the new block.
-      auto new_block = MakeUnique<opt::BasicBlock>(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpLabel, 0, id, opt::Instruction::OperandList{}));
+      auto new_block = MakeUnique<opt::BasicBlock>(
+          MakeUnique<opt::Instruction>(ir_context, spv::Op::OpLabel, 0, id,
+                                       opt::Instruction::OperandList{}));
 
       // Add an unconditional branch from the new block to the instruction
       // block.
       new_block->AddInstruction(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpBranch, 0, 0,
+          ir_context, spv::Op::OpBranch, 0, 0,
           opt::Instruction::OperandList{{SPV_OPERAND_TYPE_ID, {block->id()}}}));
 
       // Insert the new block right after the predecessor of the instruction
@@ -136,10 +137,11 @@ void TransformationReplaceOpSelectWithConditionalBranch::Apply(
   // Add an OpSelectionMerge instruction to the predecessor block, where the
   // merge block is the instruction block.
   predecessor->AddInstruction(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpSelectionMerge, 0, 0,
-      opt::Instruction::OperandList{{SPV_OPERAND_TYPE_ID, {block->id()}},
-                                    {SPV_OPERAND_TYPE_SELECTION_CONTROL,
-                                     {SpvSelectionControlMaskNone}}}));
+      ir_context, spv::Op::OpSelectionMerge, 0, 0,
+      opt::Instruction::OperandList{
+          {SPV_OPERAND_TYPE_ID, {block->id()}},
+          {SPV_OPERAND_TYPE_SELECTION_CONTROL,
+           {uint32_t(spv::SelectionControlMask::MaskNone)}}}));
 
   // |if_block| will be the true block, if it has been created, the instruction
   // block otherwise.
@@ -158,7 +160,7 @@ void TransformationReplaceOpSelectWithConditionalBranch::Apply(
   // Add a conditional branching instruction to the predecessor, branching to
   // |if_block| if the condition is true and to |if_false| otherwise.
   predecessor->AddInstruction(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpBranchConditional, 0, 0,
+      ir_context, spv::Op::OpBranchConditional, 0, 0,
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {instruction->GetSingleWordInOperand(0)}},
           {SPV_OPERAND_TYPE_ID, {if_block}},
@@ -177,7 +179,7 @@ void TransformationReplaceOpSelectWithConditionalBranch::Apply(
   // Replace the OpSelect instruction in the merge block with an OpPhi.
   // This:          OpSelect %type %cond %if %else
   // will become:   OpPhi %type %if %if_pred %else %else_pred
-  instruction->SetOpcode(SpvOpPhi);
+  instruction->SetOpcode(spv::Op::OpPhi);
   std::vector<opt::Operand> operands;
 
   operands.emplace_back(instruction->GetInOperand(1));

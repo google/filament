@@ -88,7 +88,7 @@ class ConstantFoldingRules {
   // Returns true if there is at least 1 folding rule for |inst|.
   const std::vector<ConstantFoldingRule>& GetRulesForInstruction(
       const Instruction* inst) const {
-    if (inst->opcode() != SpvOpExtInst) {
+    if (inst->opcode() != spv::Op::OpExtInst) {
       auto it = rules_.find(inst->opcode());
       if (it != rules_.end()) {
         return it->second.value;
@@ -108,9 +108,15 @@ class ConstantFoldingRules {
   virtual void AddFoldingRules();
 
  protected:
+  struct hasher {
+    size_t operator()(const spv::Op& op) const noexcept {
+      return std::hash<uint32_t>()(uint32_t(op));
+    }
+  };
+
   // |rules[opcode]| is the set of rules that can be applied to instructions
   // with |opcode| as the opcode.
-  std::unordered_map<uint32_t, Value> rules_;
+  std::unordered_map<spv::Op, Value, hasher> rules_;
 
   // The folding rules for extended instructions.
   std::map<Key, Value> ext_rules_;
