@@ -157,12 +157,12 @@ bool VulkanCommands::flush() {
     // VUID-vkEndCommandBuffer-commandBuffer-01815
     // TODO: We need to order calls so that there is no outstanding label or markers.
     if (!mCurrentDebugLabel.empty()) {
-      endDebugUtilsLabel();
+        endDebugUtilsLabel();
     }
 
     // VUID-vkEndCommandBuffer-commandBuffer-00062
     if (!mCurrentDebugMarker.empty()) {
-      endDebugMarker();
+        endDebugMarker();
     }
 
     vkEndCommandBuffer(mCurrent->cmdbuffer);
@@ -316,7 +316,7 @@ void VulkanCommands::endDebugUtilsLabel() {
     if (!mCurrent->cmdbuffer) {
 	return;
     }
-    if (!mCurrentDebugLabel.empty()) {
+    if (mCurrentDebugLabel.empty()) {
 	return;
     }
 
@@ -360,7 +360,7 @@ void VulkanCommands::endDebugMarker() {
     if (!mCurrent->cmdbuffer) {
 	return;
     }
-    if (!mCurrentDebugMarker.empty()) {
+    if (mCurrentDebugMarker.empty()) {
         return;
     }
 
