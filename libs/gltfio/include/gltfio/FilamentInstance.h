@@ -127,6 +127,13 @@ public:
     void detachSkin(size_t skinIndex, utils::Entity target) noexcept;
 
     /**
+     * Gets inverse bind matrices for all joints at the given skin index.
+     *
+     * See getJointCountAt for determining the number of matrices returned (i.e. the number of joints).
+     */
+    math::mat4f const* getInverseBindMatricesAt(size_t skinIndex) const;
+
+    /**
      * Resets the AABB on all renderables by manually computing the bounding box.
      *
      * THIS IS ONLY USEFUL FOR MALFORMED ASSETS THAT DO NOT HAVE MIN/MAX SET UP CORRECTLY.
