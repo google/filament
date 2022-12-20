@@ -17,6 +17,7 @@ A new header is inserted each time a *tag* is created.
              normalized position and keeps z reversed [⚠️ **Recompile Materials**]
 - backend: workaround Adreno shader compiler bug (#6355) [⚠️ **Recompile Materials**]
 - geometry: change computing tangent basis from normal vector to use Frisvad's method
+- filamesh: add error when uv coords size does not match num of vertices. (#6351)
 
 ## v1.30.0
 
