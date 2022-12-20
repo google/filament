@@ -97,24 +97,25 @@ OpFunctionEnd)";
   return ss.str();
 }
 
-SpvScope scopes[] = {SpvScopeCrossDevice, SpvScopeDevice, SpvScopeWorkgroup,
-                     SpvScopeSubgroup, SpvScopeInvocation};
+spv::Scope scopes[] = {spv::Scope::CrossDevice, spv::Scope::Device,
+                       spv::Scope::Workgroup, spv::Scope::Subgroup,
+                       spv::Scope::Invocation};
 
 using ValidateGroupNonUniform = spvtest::ValidateBase<bool>;
 using GroupNonUniform = spvtest::ValidateBase<
-    std::tuple<std::string, std::string, SpvScope, std::string, std::string>>;
+    std::tuple<std::string, std::string, spv::Scope, std::string, std::string>>;
 
-std::string ConvertScope(SpvScope scope) {
+std::string ConvertScope(spv::Scope scope) {
   switch (scope) {
-    case SpvScopeCrossDevice:
+    case spv::Scope::CrossDevice:
       return "%cross_device";
-    case SpvScopeDevice:
+    case spv::Scope::Device:
       return "%device";
-    case SpvScopeWorkgroup:
+    case spv::Scope::Workgroup:
       return "%workgroup";
-    case SpvScopeSubgroup:
+    case spv::Scope::Subgroup:
       return "%subgroup";
-    case SpvScopeInvocation:
+    case spv::Scope::Invocation:
       return "%invocation";
     default:
       return "";
@@ -124,7 +125,7 @@ std::string ConvertScope(SpvScope scope) {
 TEST_P(GroupNonUniform, Vulkan1p1) {
   std::string opcode = std::get<0>(GetParam());
   std::string type = std::get<1>(GetParam());
-  SpvScope execution_scope = std::get<2>(GetParam());
+  spv::Scope execution_scope = std::get<2>(GetParam());
   std::string args = std::get<3>(GetParam());
   std::string error = std::get<4>(GetParam());
 
@@ -137,7 +138,7 @@ TEST_P(GroupNonUniform, Vulkan1p1) {
   CompileSuccessfully(GenerateShaderCode(sstr.str()), SPV_ENV_VULKAN_1_1);
   spv_result_t result = ValidateInstructions(SPV_ENV_VULKAN_1_1);
   if (error == "") {
-    if (execution_scope == SpvScopeSubgroup) {
+    if (execution_scope == spv::Scope::Subgroup) {
       EXPECT_EQ(SPV_SUCCESS, result);
     } else {
       EXPECT_EQ(SPV_ERROR_INVALID_DATA, result);
@@ -157,7 +158,7 @@ TEST_P(GroupNonUniform, Vulkan1p1) {
 TEST_P(GroupNonUniform, Spirv1p3) {
   std::string opcode = std::get<0>(GetParam());
   std::string type = std::get<1>(GetParam());
-  SpvScope execution_scope = std::get<2>(GetParam());
+  spv::Scope execution_scope = std::get<2>(GetParam());
   std::string args = std::get<3>(GetParam());
   std::string error = std::get<4>(GetParam());
 
@@ -170,8 +171,8 @@ TEST_P(GroupNonUniform, Spirv1p3) {
   CompileSuccessfully(GenerateShaderCode(sstr.str()), SPV_ENV_UNIVERSAL_1_3);
   spv_result_t result = ValidateInstructions(SPV_ENV_UNIVERSAL_1_3);
   if (error == "") {
-    if (execution_scope == SpvScopeSubgroup ||
-        execution_scope == SpvScopeWorkgroup) {
+    if (execution_scope == spv::Scope::Subgroup ||
+        execution_scope == spv::Scope::Workgroup) {
       EXPECT_EQ(SPV_SUCCESS, result);
     } else {
       EXPECT_EQ(SPV_ERROR_INVALID_DATA, result);
@@ -280,12 +281,12 @@ INSTANTIATE_TEST_SUITE_P(
     GroupNonUniformBallotBitCountBadResultType, GroupNonUniform,
     Combine(
         Values("OpGroupNonUniformBallotBitCount"), Values("%float", "%int"),
-        Values(SpvScopeSubgroup), Values("Reduce %u32vec4_null"),
+        Values(spv::Scope::Subgroup), Values("Reduce %u32vec4_null"),
         Values("Expected Result Type to be an unsigned integer type scalar.")));
 
 INSTANTIATE_TEST_SUITE_P(GroupNonUniformBallotBitCountBadValue, GroupNonUniform,
                          Combine(Values("OpGroupNonUniformBallotBitCount"),
-                                 Values("%u32"), Values(SpvScopeSubgroup),
+                                 Values("%u32"), Values(spv::Scope::Subgroup),
                                  Values("Reduce %u32vec3_null", "Reduce %u32_0",
                                         "Reduce %float_0"),
                                  Values("Expected Value to be a vector of four "

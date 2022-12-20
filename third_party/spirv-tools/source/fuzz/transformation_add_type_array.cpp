@@ -72,7 +72,7 @@ void TransformationAddTypeArray::Apply(
   in_operands.push_back({SPV_OPERAND_TYPE_ID, {message_.element_type_id()}});
   in_operands.push_back({SPV_OPERAND_TYPE_ID, {message_.size_id()}});
   auto type_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpTypeArray, 0, message_.fresh_id(), in_operands);
+      ir_context, spv::Op::OpTypeArray, 0, message_.fresh_id(), in_operands);
   auto type_instruction_ptr = type_instruction.get();
   ir_context->module()->AddType(std::move(type_instruction));
 

@@ -22,8 +22,9 @@ namespace opt {
 namespace {
 
 bool IsDecorationBinding(Instruction* inst) {
-  if (inst->opcode() != SpvOpDecorate) return false;
-  return inst->GetSingleWordInOperand(1u) == SpvDecorationBinding;
+  if (inst->opcode() != spv::Op::OpDecorate) return false;
+  return spv::Decoration(inst->GetSingleWordInOperand(1u)) ==
+         spv::Decoration::Binding;
 }
 
 }  // namespace
@@ -56,7 +57,7 @@ bool DescriptorScalarReplacement::ReplaceCandidate(Instruction* var) {
   bool failed = !get_def_use_mgr()->WhileEachUser(
       var->result_id(),
       [this, &access_chain_work_list, &load_work_list](Instruction* use) {
-        if (use->opcode() == SpvOpName) {
+        if (use->opcode() == spv::Op::OpName) {
           return true;
         }
 
@@ -65,11 +66,11 @@ bool DescriptorScalarReplacement::ReplaceCandidate(Instruction* var) {
         }
 
         switch (use->opcode()) {
-          case SpvOpAccessChain:
-          case SpvOpInBoundsAccessChain:
+          case spv::Op::OpAccessChain:
+          case spv::Op::OpInBoundsAccessChain:
             access_chain_work_list.push_back(use);
             return true;
-          case SpvOpLoad:
+          case spv::Op::OpLoad:
             load_work_list.push_back(use);
             return true;
           default:
@@ -184,7 +185,7 @@ void DescriptorScalarReplacement::CopyDecorationsForNewVariable(
   // Handle OpMemberDecorate instructions.
   for (auto old_decoration : get_decoration_mgr()->GetDecorationsFor(
            old_var_type->result_id(), true)) {
-    assert(old_decoration->opcode() == SpvOpMemberDecorate);
+    assert(old_decoration->opcode() == spv::Op::OpMemberDecorate);
     if (old_decoration->GetSingleWordInOperand(1u) != index) continue;
     CreateNewDecorationForMemberDecorate(old_decoration, new_var_id);
   }
@@ -212,8 +213,8 @@ uint32_t DescriptorScalarReplacement::GetNewBindingForElement(
 
 void DescriptorScalarReplacement::CreateNewDecorationForNewVariable(
     Instruction* old_decoration, uint32_t new_var_id, uint32_t new_binding) {
-  assert(old_decoration->opcode() == SpvOpDecorate ||
-         old_decoration->opcode() == SpvOpDecorateString);
+  assert(old_decoration->opcode() == spv::Op::OpDecorate ||
+         old_decoration->opcode() == spv::Op::OpDecorateString);
   std::unique_ptr<Instruction> new_decoration(old_decoration->Clone(context()));
   new_decoration->SetInOperand(0, {new_var_id});
 
@@ -231,25 +232,25 @@ void DescriptorScalarReplacement::CreateNewDecorationForMemberDecorate(
   auto new_decorate_operand_end = old_member_decoration->end();
   operands.insert(operands.end(), new_decorate_operand_begin,
                   new_decorate_operand_end);
-  get_decoration_mgr()->AddDecoration(SpvOpDecorate, std::move(operands));
+  get_decoration_mgr()->AddDecoration(spv::Op::OpDecorate, std::move(operands));
 }
 
 uint32_t DescriptorScalarReplacement::CreateReplacementVariable(
     Instruction* var, uint32_t idx) {
   // The storage class for the new variable is the same as the original.
-  SpvStorageClass storage_class =
-      static_cast<SpvStorageClass>(var->GetSingleWordInOperand(0));
+  spv::StorageClass storage_class =
+      static_cast<spv::StorageClass>(var->GetSingleWordInOperand(0));
 
   // The type for the new variable will be a pointer to type of the elements of
   // the array.
   uint32_t ptr_type_id = var->type_id();
   Instruction* ptr_type_inst = get_def_use_mgr()->GetDef(ptr_type_id);
-  assert(ptr_type_inst->opcode() == SpvOpTypePointer &&
+  assert(ptr_type_inst->opcode() == spv::Op::OpTypePointer &&
          "Variable should be a pointer to an array or structure.");
   uint32_t pointee_type_id = ptr_type_inst->GetSingleWordInOperand(1);
   Instruction* pointee_type_inst = get_def_use_mgr()->GetDef(pointee_type_id);
-  const bool is_array = pointee_type_inst->opcode() == SpvOpTypeArray;
-  const bool is_struct = pointee_type_inst->opcode() == SpvOpTypeStruct;
+  const bool is_array = pointee_type_inst->opcode() == spv::Op::OpTypeArray;
+  const bool is_struct = pointee_type_inst->opcode() == spv::Op::OpTypeStruct;
   assert((is_array || is_struct) &&
          "Variable should be a pointer to an array or structure.");
 
@@ -263,7 +264,7 @@ uint32_t DescriptorScalarReplacement::CreateReplacementVariable(
   // Create the variable.
   uint32_t id = TakeNextId();
   std::unique_ptr<Instruction> variable(
-      new Instruction(context(), SpvOpVariable, ptr_element_type_id, id,
+      new Instruction(context(), spv::Op::OpVariable, ptr_element_type_id, id,
                       std::initializer_list<Operand>{
                           {SPV_OPERAND_TYPE_STORAGE_CLASS,
                            {static_cast<uint32_t>(storage_class)}}}));
@@ -293,7 +294,7 @@ uint32_t DescriptorScalarReplacement::CreateReplacementVariable(
     }
 
     std::unique_ptr<Instruction> new_name(new Instruction(
-        context(), SpvOpName, 0, 0,
+        context(), spv::Op::OpName, 0, 0,
         std::initializer_list<Operand>{
             {SPV_OPERAND_TYPE_ID, {id}},
             {SPV_OPERAND_TYPE_LITERAL_STRING, utils::MakeVector(name_str)}}));
@@ -315,14 +316,14 @@ uint32_t DescriptorScalarReplacement::GetNumBindingsUsedByType(
   Instruction* type_inst = get_def_use_mgr()->GetDef(type_id);
 
   // If it's a pointer, look at the underlying type.
-  if (type_inst->opcode() == SpvOpTypePointer) {
+  if (type_inst->opcode() == spv::Op::OpTypePointer) {
     type_id = type_inst->GetSingleWordInOperand(1);
     type_inst = get_def_use_mgr()->GetDef(type_id);
   }
 
   // Arrays consume N*M binding numbers where N is the array length, and M is
   // the number of bindings used by each array element.
-  if (type_inst->opcode() == SpvOpTypeArray) {
+  if (type_inst->opcode() == spv::Op::OpTypeArray) {
     uint32_t element_type_id = type_inst->GetSingleWordInOperand(0);
     uint32_t length_id = type_inst->GetSingleWordInOperand(1);
     const analysis::Constant* length_const =
@@ -335,7 +336,7 @@ uint32_t DescriptorScalarReplacement::GetNumBindingsUsedByType(
 
   // The number of bindings consumed by a structure is the sum of the bindings
   // used by its members.
-  if (type_inst->opcode() == SpvOpTypeStruct &&
+  if (type_inst->opcode() == spv::Op::OpTypeStruct &&
       !descsroautil::IsTypeOfStructuredBuffer(context(), type_inst)) {
     uint32_t sum = 0;
     for (uint32_t i = 0; i < type_inst->NumInOperands(); i++)
@@ -353,12 +354,12 @@ bool DescriptorScalarReplacement::ReplaceLoadedValue(Instruction* var,
   // |value| is the OpLoad instruction that has loaded |var|.
   // The function expects all users of |value| to be OpCompositeExtract
   // instructions. Otherwise the function returns false with an error message.
-  assert(value->opcode() == SpvOpLoad);
+  assert(value->opcode() == spv::Op::OpLoad);
   assert(value->GetSingleWordInOperand(0) == var->result_id());
   std::vector<Instruction*> work_list;
   bool failed = !get_def_use_mgr()->WhileEachUser(
       value->result_id(), [this, &work_list](Instruction* use) {
-        if (use->opcode() != SpvOpCompositeExtract) {
+        if (use->opcode() != spv::Op::OpCompositeExtract) {
           context()->EmitErrorMessage(
               "Variable cannot be replaced: invalid instruction", use);
           return false;
@@ -384,7 +385,7 @@ bool DescriptorScalarReplacement::ReplaceLoadedValue(Instruction* var,
 
 bool DescriptorScalarReplacement::ReplaceCompositeExtract(
     Instruction* var, Instruction* extract) {
-  assert(extract->opcode() == SpvOpCompositeExtract);
+  assert(extract->opcode() == spv::Op::OpCompositeExtract);
   // We're currently only supporting extractions of one index at a time. If we
   // need to, we can handle cases with multiple indexes in the future.
   if (extract->NumInOperands() != 2) {
@@ -400,7 +401,7 @@ bool DescriptorScalarReplacement::ReplaceCompositeExtract(
   // OpCompositeExtract.
   uint32_t load_id = TakeNextId();
   std::unique_ptr<Instruction> load(
-      new Instruction(context(), SpvOpLoad, extract->type_id(), load_id,
+      new Instruction(context(), spv::Op::OpLoad, extract->type_id(), load_id,
                       std::initializer_list<Operand>{
                           {SPV_OPERAND_TYPE_ID, {replacement_var}}}));
   Instruction* load_instr = load.get();

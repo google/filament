@@ -583,8 +583,7 @@ namespace {
         void printEpilogue(std::ostream& out) const override {
             const Json::Value& enums = spvRoot["spv"]["enum"];
 
-            // Create overloaded operator| for mask types
-            out << "// Overload operator| for mask bit combining\n\n";
+            out << "// Overload bitwise operators for mask bit combining\n\n";
 
             for (auto opClass = enums.begin(); opClass != enums.end(); ++opClass) {
                 const bool isMask   = (*opClass)["Type"].asString() == "Bit";
@@ -593,8 +592,18 @@ namespace {
                 if (isMask) {
                     const auto typeName = opName + styleStr(enumMask);
 
-                    out << "inline " + typeName + " operator|(" + typeName + " a, " + typeName + " b) { return " +
-                        typeName + "(unsigned(a) | unsigned(b)); }\n";
+                    // Overload operator|
+                    out << "inline " << typeName << " operator|(" << typeName << " a, " << typeName << " b) { return " <<
+                        typeName << "(unsigned(a) | unsigned(b)); }\n";
+                    // Overload operator&
+                    out << "inline " << typeName << " operator&(" << typeName << " a, " << typeName << " b) { return " <<
+                        typeName << "(unsigned(a) & unsigned(b)); }\n";
+                    // Overload operator^
+                    out << "inline " << typeName << " operator^(" << typeName << " a, " << typeName << " b) { return " <<
+                        typeName << "(unsigned(a) ^ unsigned(b)); }\n";
+                    // Overload operator~
+                    out << "inline " << typeName << " operator~(" << typeName << " a) { return " <<
+                        typeName << "(~unsigned(a)); }\n";
                 }
             }
 

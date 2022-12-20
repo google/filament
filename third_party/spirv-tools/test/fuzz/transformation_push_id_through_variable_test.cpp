@@ -110,9 +110,9 @@ TEST(TransformationPushIdThroughVariableTest, IsApplicable) {
   uint32_t value_synonym_id = 62;
   uint32_t variable_id = 63;
   uint32_t initializer_id = 23;
-  uint32_t variable_storage_class = SpvStorageClassPrivate;
+  uint32_t variable_storage_class = (uint32_t)spv::StorageClass::Private;
   auto instruction_descriptor =
-      MakeInstructionDescriptor(95, SpvOpReturnValue, 0);
+      MakeInstructionDescriptor(95, spv::Op::OpReturnValue, 0);
   auto transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -124,8 +124,9 @@ TEST(TransformationPushIdThroughVariableTest, IsApplicable) {
   value_synonym_id = 60;
   variable_id = 61;
   initializer_id = 80;
-  variable_storage_class = SpvStorageClassFunction;
-  instruction_descriptor = MakeInstructionDescriptor(38, SpvOpAccessChain, 0);
+  variable_storage_class = (uint32_t)spv::StorageClass::Function;
+  instruction_descriptor =
+      MakeInstructionDescriptor(38, spv::Op::OpAccessChain, 0);
   transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -137,8 +138,9 @@ TEST(TransformationPushIdThroughVariableTest, IsApplicable) {
   value_synonym_id = 62;
   variable_id = 63;
   initializer_id = 80;
-  variable_storage_class = SpvStorageClassFunction;
-  instruction_descriptor = MakeInstructionDescriptor(64, SpvOpAccessChain, 0);
+  variable_storage_class = (uint32_t)spv::StorageClass::Function;
+  instruction_descriptor =
+      MakeInstructionDescriptor(64, spv::Op::OpAccessChain, 0);
   transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -151,8 +153,9 @@ TEST(TransformationPushIdThroughVariableTest, IsApplicable) {
   value_synonym_id = 62;
   variable_id = 63;
   initializer_id = 24;
-  variable_storage_class = SpvStorageClassFunction;
-  instruction_descriptor = MakeInstructionDescriptor(27, SpvOpVariable, 0);
+  variable_storage_class = (uint32_t)spv::StorageClass::Function;
+  instruction_descriptor =
+      MakeInstructionDescriptor(27, spv::Op::OpVariable, 0);
   transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -164,8 +167,9 @@ TEST(TransformationPushIdThroughVariableTest, IsApplicable) {
   value_synonym_id = 62;
   variable_id = 63;
   initializer_id = 80;
-  variable_storage_class = SpvStorageClassFunction;
-  instruction_descriptor = MakeInstructionDescriptor(100, SpvOpUnreachable, 0);
+  variable_storage_class = (uint32_t)spv::StorageClass::Function;
+  instruction_descriptor =
+      MakeInstructionDescriptor(100, spv::Op::OpUnreachable, 0);
   transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -177,8 +181,9 @@ TEST(TransformationPushIdThroughVariableTest, IsApplicable) {
   value_synonym_id = 62;
   variable_id = 63;
   initializer_id = 23;
-  variable_storage_class = SpvStorageClassFunction;
-  instruction_descriptor = MakeInstructionDescriptor(95, SpvOpReturnValue, 0);
+  variable_storage_class = (uint32_t)spv::StorageClass::Function;
+  instruction_descriptor =
+      MakeInstructionDescriptor(95, spv::Op::OpReturnValue, 0);
   transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -190,8 +195,9 @@ TEST(TransformationPushIdThroughVariableTest, IsApplicable) {
   value_synonym_id = 62;
   variable_id = 63;
   initializer_id = 80;
-  variable_storage_class = SpvStorageClassPrivate;
-  instruction_descriptor = MakeInstructionDescriptor(95, SpvOpReturnValue, 0);
+  variable_storage_class = (uint32_t)spv::StorageClass::Private;
+  instruction_descriptor =
+      MakeInstructionDescriptor(95, spv::Op::OpReturnValue, 0);
   transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -203,8 +209,9 @@ TEST(TransformationPushIdThroughVariableTest, IsApplicable) {
   value_synonym_id = 62;
   variable_id = 63;
   initializer_id = 93;
-  variable_storage_class = SpvStorageClassInput;
-  instruction_descriptor = MakeInstructionDescriptor(95, SpvOpReturnValue, 0);
+  variable_storage_class = (uint32_t)spv::StorageClass::Input;
+  instruction_descriptor =
+      MakeInstructionDescriptor(95, spv::Op::OpReturnValue, 0);
   transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -219,8 +226,9 @@ TEST(TransformationPushIdThroughVariableTest, IsApplicable) {
   value_synonym_id = 62;
   variable_id = 63;
   initializer_id = 80;
-  variable_storage_class = SpvStorageClassFunction;
-  instruction_descriptor = MakeInstructionDescriptor(40, SpvOpAccessChain, 0);
+  variable_storage_class = (uint32_t)spv::StorageClass::Function;
+  instruction_descriptor =
+      MakeInstructionDescriptor(40, spv::Op::OpAccessChain, 0);
   transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -232,8 +240,9 @@ TEST(TransformationPushIdThroughVariableTest, IsApplicable) {
   value_synonym_id = 62;
   variable_id = 63;
   initializer_id = 95;
-  variable_storage_class = SpvStorageClassFunction;
-  instruction_descriptor = MakeInstructionDescriptor(40, SpvOpAccessChain, 0);
+  variable_storage_class = (uint32_t)spv::StorageClass::Function;
+  instruction_descriptor =
+      MakeInstructionDescriptor(40, spv::Op::OpAccessChain, 0);
   transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -245,8 +254,9 @@ TEST(TransformationPushIdThroughVariableTest, IsApplicable) {
   value_synonym_id = 62;
   variable_id = 63;
   initializer_id = 93;
-  variable_storage_class = SpvStorageClassFunction;
-  instruction_descriptor = MakeInstructionDescriptor(40, SpvOpAccessChain, 0);
+  variable_storage_class = (uint32_t)spv::StorageClass::Function;
+  instruction_descriptor =
+      MakeInstructionDescriptor(40, spv::Op::OpAccessChain, 0);
   transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -335,9 +345,9 @@ TEST(TransformationPushIdThroughVariableTest, Apply) {
   uint32_t value_synonym_id = 100;
   uint32_t variable_id = 101;
   uint32_t initializer_id = 80;
-  uint32_t variable_storage_class = SpvStorageClassFunction;
+  uint32_t variable_storage_class = (uint32_t)spv::StorageClass::Function;
   auto instruction_descriptor =
-      MakeInstructionDescriptor(38, SpvOpAccessChain, 0);
+      MakeInstructionDescriptor(38, spv::Op::OpAccessChain, 0);
   auto transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -346,18 +356,18 @@ TEST(TransformationPushIdThroughVariableTest, Apply) {
   ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(variable_id));
   ASSERT_EQ(nullptr, context->get_instr_block(variable_id));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
-  ASSERT_EQ(SpvOpLoad,
+  ASSERT_EQ(spv::Op::OpLoad,
             context->get_def_use_mgr()->GetDef(value_synonym_id)->opcode());
   ASSERT_EQ(36, context->get_instr_block(value_synonym_id)->id());
-  ASSERT_EQ(SpvOpVariable,
+  ASSERT_EQ(spv::Op::OpVariable,
             context->get_def_use_mgr()->GetDef(variable_id)->opcode());
   ASSERT_EQ(5, context->get_instr_block(variable_id)->id());
   uint32_t variable_use_count = 0;
   context->get_def_use_mgr()->ForEachUse(
       variable_id,
       [&variable_use_count](opt::Instruction* inst, uint32_t /*unused*/) {
-        ASSERT_TRUE(inst->opcode() == SpvOpLoad ||
-                    inst->opcode() == SpvOpStore);
+        ASSERT_TRUE(inst->opcode() == spv::Op::OpLoad ||
+                    inst->opcode() == spv::Op::OpStore);
         variable_use_count++;
       });
   ASSERT_EQ(2, variable_use_count);
@@ -366,8 +376,9 @@ TEST(TransformationPushIdThroughVariableTest, Apply) {
   value_synonym_id = 102;
   variable_id = 103;
   initializer_id = 21;
-  variable_storage_class = SpvStorageClassFunction;
-  instruction_descriptor = MakeInstructionDescriptor(38, SpvOpAccessChain, 0);
+  variable_storage_class = (uint32_t)spv::StorageClass::Function;
+  instruction_descriptor =
+      MakeInstructionDescriptor(38, spv::Op::OpAccessChain, 0);
   transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -377,8 +388,9 @@ TEST(TransformationPushIdThroughVariableTest, Apply) {
   value_synonym_id = 104;
   variable_id = 105;
   initializer_id = 80;
-  variable_storage_class = SpvStorageClassFunction;
-  instruction_descriptor = MakeInstructionDescriptor(95, SpvOpReturnValue, 0);
+  variable_storage_class = (uint32_t)spv::StorageClass::Function;
+  instruction_descriptor =
+      MakeInstructionDescriptor(95, spv::Op::OpReturnValue, 0);
   transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -388,8 +400,9 @@ TEST(TransformationPushIdThroughVariableTest, Apply) {
   value_synonym_id = 106;
   variable_id = 107;
   initializer_id = 80;
-  variable_storage_class = SpvStorageClassFunction;
-  instruction_descriptor = MakeInstructionDescriptor(95, SpvOpReturnValue, 0);
+  variable_storage_class = (uint32_t)spv::StorageClass::Function;
+  instruction_descriptor =
+      MakeInstructionDescriptor(95, spv::Op::OpReturnValue, 0);
   transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -399,8 +412,9 @@ TEST(TransformationPushIdThroughVariableTest, Apply) {
   value_synonym_id = 108;
   variable_id = 109;
   initializer_id = 21;
-  variable_storage_class = SpvStorageClassPrivate;
-  instruction_descriptor = MakeInstructionDescriptor(95, SpvOpReturnValue, 0);
+  variable_storage_class = (uint32_t)spv::StorageClass::Private;
+  instruction_descriptor =
+      MakeInstructionDescriptor(95, spv::Op::OpReturnValue, 0);
   transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -410,8 +424,8 @@ TEST(TransformationPushIdThroughVariableTest, Apply) {
   value_synonym_id = 110;
   variable_id = 111;
   initializer_id = 21;
-  variable_storage_class = SpvStorageClassPrivate;
-  instruction_descriptor = MakeInstructionDescriptor(27, SpvOpStore, 0);
+  variable_storage_class = (uint32_t)spv::StorageClass::Private;
+  instruction_descriptor = MakeInstructionDescriptor(27, spv::Op::OpStore, 0);
   transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -602,9 +616,9 @@ TEST(TransformationPushIdThroughVariableTest, AddSynonymsForRelevantIds) {
   uint32_t value_synonym_id = 62;
   uint32_t variable_id = 63;
   uint32_t initializer_id = 23;
-  uint32_t variable_storage_class = SpvStorageClassPrivate;
+  uint32_t variable_storage_class = (uint32_t)spv::StorageClass::Private;
   auto instruction_descriptor =
-      MakeInstructionDescriptor(95, SpvOpReturnValue, 0);
+      MakeInstructionDescriptor(95, spv::Op::OpReturnValue, 0);
   auto transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -705,9 +719,9 @@ TEST(TransformationPushIdThroughVariableTest, DontAddSynonymsForIrrelevantIds) {
   uint32_t value_synonym_id = 62;
   uint32_t variable_id = 63;
   uint32_t initializer_id = 23;
-  uint32_t variable_storage_class = SpvStorageClassPrivate;
+  uint32_t variable_storage_class = (uint32_t)spv::StorageClass::Private;
   auto instruction_descriptor =
-      MakeInstructionDescriptor(95, SpvOpReturnValue, 0);
+      MakeInstructionDescriptor(95, spv::Op::OpReturnValue, 0);
   auto transformation = TransformationPushIdThroughVariable(
       value_id, value_synonym_id, variable_id, variable_storage_class,
       initializer_id, instruction_descriptor);
@@ -766,8 +780,8 @@ TEST(TransformationPushIdThroughVariableTest, DontAddSynonymsInDeadBlocks) {
 
   transformation_context.GetFactManager()->AddFactBlockIsDead(15);
   auto transformation = TransformationPushIdThroughVariable(
-      14, 100, 101, SpvStorageClassFunction, 14,
-      MakeInstructionDescriptor(15, SpvOpBranch, 0));
+      14, 100, 101, uint32_t(spv::StorageClass::Function), 14,
+      MakeInstructionDescriptor(15, spv::Op::OpBranch, 0));
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);

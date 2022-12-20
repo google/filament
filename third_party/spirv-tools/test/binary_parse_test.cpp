@@ -54,14 +54,14 @@ using ::testing::Return;
 struct ParsedInstruction {
   explicit ParsedInstruction(const spv_parsed_instruction_t& inst)
       : words(inst.words, inst.words + inst.num_words),
-        opcode(static_cast<SpvOp>(inst.opcode)),
+        opcode(static_cast<spv::Op>(inst.opcode)),
         ext_inst_type(inst.ext_inst_type),
         type_id(inst.type_id),
         result_id(inst.result_id),
         operands(inst.operands, inst.operands + inst.num_operands) {}
 
   std::vector<uint32_t> words;
-  SpvOp opcode;
+  spv::Op opcode;
   spv_ext_inst_type_t ext_inst_type;
   uint32_t type_id;
   uint32_t result_id;
@@ -127,14 +127,14 @@ spv_result_t invoke_instruction(
 // The SPIR-V module header words for the Khronos Assembler generator,
 // for a module with an ID bound of 1.
 const uint32_t kHeaderForBound1[] = {
-    SpvMagicNumber, SpvVersion,
+    spv::MagicNumber, spv::Version,
     SPV_GENERATOR_WORD(SPV_GENERATOR_KHRONOS_ASSEMBLER, 0), 1 /*bound*/,
     0 /*schema*/};
 
 // Returns the expected SPIR-V module header words for the Khronos
 // Assembler generator, and with a given Id bound.
 std::vector<uint32_t> ExpectedHeaderForBound(uint32_t bound) {
-  return {SpvMagicNumber, 0x10000,
+  return {spv::MagicNumber, 0x10000,
           SPV_GENERATOR_WORD(SPV_GENERATOR_KHRONOS_ASSEMBLER, 0), bound, 0};
 }
 
@@ -162,13 +162,13 @@ spv_parsed_operand_t MakeLiteralStringOperand(uint16_t offset,
 // Returns a ParsedInstruction for an OpTypeVoid instruction that would
 // generate the given result Id.
 ParsedInstruction MakeParsedVoidTypeInstruction(uint32_t result_id) {
-  const auto void_inst = MakeInstruction(SpvOpTypeVoid, {result_id});
+  const auto void_inst = MakeInstruction(spv::Op::OpTypeVoid, {result_id});
   const auto void_operands = std::vector<spv_parsed_operand_t>{
       MakeSimpleOperand(1, SPV_OPERAND_TYPE_RESULT_ID)};
   const spv_parsed_instruction_t parsed_void_inst = {
       void_inst.data(),
       static_cast<uint16_t>(void_inst.size()),
-      SpvOpTypeVoid,
+      uint16_t(spv::Op::OpTypeVoid),
       SPV_EXT_INST_TYPE_NONE,
       0,  // type id
       result_id,
@@ -180,14 +180,14 @@ ParsedInstruction MakeParsedVoidTypeInstruction(uint32_t result_id) {
 // Returns a ParsedInstruction for an OpTypeInt instruction that generates
 // the given result Id for a 32-bit signed integer scalar type.
 ParsedInstruction MakeParsedInt32TypeInstruction(uint32_t result_id) {
-  const auto i32_inst = MakeInstruction(SpvOpTypeInt, {result_id, 32, 1});
+  const auto i32_inst = MakeInstruction(spv::Op::OpTypeInt, {result_id, 32, 1});
   const auto i32_operands = std::vector<spv_parsed_operand_t>{
       MakeSimpleOperand(1, SPV_OPERAND_TYPE_RESULT_ID),
       MakeLiteralNumberOperand(2), MakeLiteralNumberOperand(3)};
   spv_parsed_instruction_t parsed_i32_inst = {
       i32_inst.data(),
       static_cast<uint16_t>(i32_inst.size()),
-      SpvOpTypeInt,
+      uint16_t(spv::Op::OpTypeInt),
       SPV_EXT_INST_TYPE_NONE,
       0,  // type id
       result_id,
@@ -216,12 +216,12 @@ class BinaryParseTest : public spvtest::TextToBinaryTestBase<::testing::Test> {
 
 // Adds an EXPECT_CALL to client_->Header() with appropriate parameters,
 // including bound.  Returns the EXPECT_CALL result.
-#define EXPECT_HEADER(bound)                                                   \
-  EXPECT_CALL(                                                                 \
-      client_,                                                                 \
-      Header(AnyOf(SPV_ENDIANNESS_LITTLE, SPV_ENDIANNESS_BIG), SpvMagicNumber, \
-             0x10000, SPV_GENERATOR_WORD(SPV_GENERATOR_KHRONOS_ASSEMBLER, 0),  \
-             bound, 0 /*reserved*/))
+#define EXPECT_HEADER(bound)                                                 \
+  EXPECT_CALL(client_,                                                       \
+              Header(AnyOf(SPV_ENDIANNESS_LITTLE, SPV_ENDIANNESS_BIG),       \
+                     spv::MagicNumber, 0x10000,                              \
+                     SPV_GENERATOR_WORD(SPV_GENERATOR_KHRONOS_ASSEMBLER, 0), \
+                     bound, 0 /*reserved*/))
 
 static const bool kSwapEndians[] = {false, true};
 
@@ -481,19 +481,20 @@ TEST_F(BinaryParseTest, InstructionWithStringOperand) {
     const std::string str =
         "the future is already here, it's just not evenly distributed";
     const auto str_words = MakeVector(str);
-    const auto instruction = MakeInstruction(SpvOpName, {99}, str_words);
+    const auto instruction = MakeInstruction(spv::Op::OpName, {99}, str_words);
     const auto words = Concatenate({ExpectedHeaderForBound(100), instruction});
     InSequence calls_expected_in_specific_order;
     EXPECT_HEADER(100).WillOnce(Return(SPV_SUCCESS));
     const auto operands = std::vector<spv_parsed_operand_t>{
         MakeSimpleOperand(1, SPV_OPERAND_TYPE_ID),
         MakeLiteralStringOperand(2, static_cast<uint16_t>(str_words.size()))};
-    EXPECT_CALL(client_, Instruction(ParsedInstruction(spv_parsed_instruction_t{
-                             instruction.data(),
-                             static_cast<uint16_t>(instruction.size()),
-                             SpvOpName, SPV_EXT_INST_TYPE_NONE, 0 /*type id*/,
-                             0 /* No result id for OpName*/, operands.data(),
-                             static_cast<uint16_t>(operands.size())})))
+    EXPECT_CALL(
+        client_,
+        Instruction(ParsedInstruction(spv_parsed_instruction_t{
+            instruction.data(), static_cast<uint16_t>(instruction.size()),
+            uint16_t(spv::Op::OpName), SPV_EXT_INST_TYPE_NONE, 0 /*type id*/,
+            0 /* No result id for OpName*/, operands.data(),
+            static_cast<uint16_t>(operands.size())})))
         .WillOnce(Return(SPV_SUCCESS));
     Parse(words, SPV_SUCCESS, endian_swap);
     EXPECT_EQ(nullptr, diagnostic_);
@@ -518,13 +519,13 @@ TEST_F(BinaryParseTest, ExtendedInstruction) {
       MakeSimpleOperand(5, SPV_OPERAND_TYPE_ID),  // Id of the argument
   };
   const auto instruction = MakeInstruction(
-      SpvOpExtInst,
+      spv::Op::OpExtInst,
       {2, 3, 1, static_cast<uint32_t>(OpenCLLIB::Entrypoints::Sqrt), 4});
   EXPECT_CALL(client_,
               Instruction(ParsedInstruction(spv_parsed_instruction_t{
                   instruction.data(), static_cast<uint16_t>(instruction.size()),
-                  SpvOpExtInst, SPV_EXT_INST_TYPE_OPENCL_STD, 2 /*type id*/,
-                  3 /*result id*/, operands.data(),
+                  uint16_t(spv::Op::OpExtInst), SPV_EXT_INST_TYPE_OPENCL_STD,
+                  2 /*type id*/, 3 /*result id*/, operands.data(),
                   static_cast<uint16_t>(operands.size())})))
       .WillOnce(Return(SPV_SUCCESS));
   // Since we are actually checking the output, don't test the
@@ -593,36 +594,38 @@ TEST_P(BinaryParseWordVectorDiagnosticTest, WordVectorCases) {
 INSTANTIATE_TEST_SUITE_P(
     BinaryParseDiagnostic, BinaryParseWordVectorDiagnosticTest,
     ::testing::ValuesIn(std::vector<WordVectorDiagnosticCase>{
-        {Concatenate({ExpectedHeaderForBound(1), {spvOpcodeMake(0, SpvOpNop)}}),
+        {Concatenate({ExpectedHeaderForBound(1),
+                      {spvOpcodeMake(0, spv::Op::OpNop)}}),
          "Invalid instruction word count: 0"},
         {Concatenate(
              {ExpectedHeaderForBound(1),
-              {spvOpcodeMake(1, static_cast<SpvOp>(
+              {spvOpcodeMake(1, static_cast<spv::Op>(
                                     std::numeric_limits<uint16_t>::max()))}}),
          "Invalid opcode: 65535"},
         {Concatenate({ExpectedHeaderForBound(1),
-                      MakeInstruction(SpvOpNop, {42})}),
+                      MakeInstruction(spv::Op::OpNop, {42})}),
          "Invalid instruction OpNop starting at word 5: expected "
          "no more operands after 1 words, but stated word count is 2."},
         // Supply several more unexpected words.
         {Concatenate({ExpectedHeaderForBound(1),
-                      MakeInstruction(SpvOpNop, {42, 43, 44, 45, 46, 47})}),
+                      MakeInstruction(spv::Op::OpNop,
+                                      {42, 43, 44, 45, 46, 47})}),
          "Invalid instruction OpNop starting at word 5: expected "
          "no more operands after 1 words, but stated word count is 7."},
         {Concatenate({ExpectedHeaderForBound(1),
-                      MakeInstruction(SpvOpTypeVoid, {1, 2})}),
+                      MakeInstruction(spv::Op::OpTypeVoid, {1, 2})}),
          "Invalid instruction OpTypeVoid starting at word 5: expected "
          "no more operands after 2 words, but stated word count is 3."},
         {Concatenate({ExpectedHeaderForBound(1),
-                      MakeInstruction(SpvOpTypeVoid, {1, 2, 5, 9, 10})}),
+                      MakeInstruction(spv::Op::OpTypeVoid, {1, 2, 5, 9, 10})}),
          "Invalid instruction OpTypeVoid starting at word 5: expected "
          "no more operands after 2 words, but stated word count is 6."},
         {Concatenate({ExpectedHeaderForBound(1),
-                      MakeInstruction(SpvOpTypeInt, {1, 32, 1, 9})}),
+                      MakeInstruction(spv::Op::OpTypeInt, {1, 32, 1, 9})}),
          "Invalid instruction OpTypeInt starting at word 5: expected "
          "no more operands after 4 words, but stated word count is 5."},
         {Concatenate({ExpectedHeaderForBound(1),
-                      MakeInstruction(SpvOpTypeInt, {1})}),
+                      MakeInstruction(spv::Op::OpTypeInt, {1})}),
          "End of input reached while decoding OpTypeInt starting at word 5:"
          " expected more operands after 2 words."},
 
@@ -630,7 +633,7 @@ INSTANTIATE_TEST_SUITE_P(
 
         // Detect a missing single word operand.
         {Concatenate({ExpectedHeaderForBound(1),
-                      {spvOpcodeMake(2, SpvOpTypeStruct)}}),
+                      {spvOpcodeMake(2, spv::Op::OpTypeStruct)}}),
          "End of input reached while decoding OpTypeStruct starting at word"
          " 5: missing result ID operand at word offset 1."},
         // Detect this a missing a multi-word operand to OpConstant.
@@ -639,29 +642,29 @@ INSTANTIATE_TEST_SUITE_P(
         //    %1 = OpTypeInt 64 0
         //    %2 = OpConstant %1 <missing>
         {Concatenate({ExpectedHeaderForBound(3),
-                      {MakeInstruction(SpvOpTypeInt, {1, 64, 0})},
-                      {spvOpcodeMake(5, SpvOpConstant), 1, 2}}),
+                      {MakeInstruction(spv::Op::OpTypeInt, {1, 64, 0})},
+                      {spvOpcodeMake(5, spv::Op::OpConstant), 1, 2}}),
          "End of input reached while decoding OpConstant starting at word"
          " 9: missing possibly multi-word literal number operand at word "
          "offset 3."},
         // Detect when we provide only one word from the 64-bit literal,
         // and again lie about the number of words in the instruction.
         {Concatenate({ExpectedHeaderForBound(3),
-                      {MakeInstruction(SpvOpTypeInt, {1, 64, 0})},
-                      {spvOpcodeMake(5, SpvOpConstant), 1, 2, 42}}),
+                      {MakeInstruction(spv::Op::OpTypeInt, {1, 64, 0})},
+                      {spvOpcodeMake(5, spv::Op::OpConstant), 1, 2, 42}}),
          "End of input reached while decoding OpConstant starting at word"
          " 9: truncated possibly multi-word literal number operand at word "
          "offset 3."},
         // Detect when a required string operand is missing.
         // Also, lie about the length of the instruction.
         {Concatenate({ExpectedHeaderForBound(3),
-                      {spvOpcodeMake(3, SpvOpString), 1}}),
+                      {spvOpcodeMake(3, spv::Op::OpString), 1}}),
          "End of input reached while decoding OpString starting at word"
          " 5: missing literal string operand at word offset 2."},
         // Detect when a required string operand is truncated: it's missing
         // a null terminator.  Catching the error avoids a buffer overrun.
         {Concatenate({ExpectedHeaderForBound(3),
-                      {spvOpcodeMake(4, SpvOpString), 1, 0x41414141,
+                      {spvOpcodeMake(4, spv::Op::OpString), 1, 0x41414141,
                        0x41414141}}),
          "End of input reached while decoding OpString starting at word"
          " 5: truncated literal string operand at word offset 2."},
@@ -669,9 +672,9 @@ INSTANTIATE_TEST_SUITE_P(
         // a null terminator.  Catching the error avoids a buffer overrun.
         // (It is valid for an optional string operand to be absent.)
         {Concatenate({ExpectedHeaderForBound(3),
-                      {spvOpcodeMake(6, SpvOpSource),
-                       static_cast<uint32_t>(SpvSourceLanguageOpenCL_C), 210,
-                       1 /* file id */,
+                      {spvOpcodeMake(6, spv::Op::OpSource),
+                       static_cast<uint32_t>(spv::SourceLanguage::OpenCL_C),
+                       210, 1 /* file id */,
                        /*start of string*/ 0x41414141, 0x41414141}}),
          "End of input reached while decoding OpSource starting at word"
          " 5: truncated literal string operand at word offset 4."},
@@ -681,19 +684,19 @@ INSTANTIATE_TEST_SUITE_P(
         // In this case the instruction word count is too small, where
         // it would truncate a multi-word operand to OpConstant.
         {Concatenate({ExpectedHeaderForBound(3),
-                      {MakeInstruction(SpvOpTypeInt, {1, 64, 0})},
-                      {spvOpcodeMake(4, SpvOpConstant), 1, 2, 44, 44}}),
+                      {MakeInstruction(spv::Op::OpTypeInt, {1, 64, 0})},
+                      {spvOpcodeMake(4, spv::Op::OpConstant), 1, 2, 44, 44}}),
          "Invalid word count: OpConstant starting at word 9 says it has 4"
          " words, but found 5 words instead."},
         // Word count is to small, where it would truncate a literal string.
         {Concatenate({ExpectedHeaderForBound(2),
-                      {spvOpcodeMake(3, SpvOpString), 1, 0x41414141, 0}}),
+                      {spvOpcodeMake(3, spv::Op::OpString), 1, 0x41414141, 0}}),
          "Invalid word count: OpString starting at word 5 says it has 3"
          " words, but found 4 words instead."},
         // Word count is too large.  The string terminates before the last
         // word.
         {Concatenate({ExpectedHeaderForBound(2),
-                      {spvOpcodeMake(4, SpvOpString), 1 /* result id */},
+                      {spvOpcodeMake(4, spv::Op::OpString), 1 /* result id */},
                       MakeVector("abc"),
                       {0 /* this word does not belong*/}}),
          "Invalid instruction OpString starting at word 5: expected no more"
@@ -701,111 +704,116 @@ INSTANTIATE_TEST_SUITE_P(
         // Word count is too large.  There are too many words after the string
         // literal.  A linkage attribute decoration is the only case in SPIR-V
         // where a string operand is followed by another operand.
-        {Concatenate({ExpectedHeaderForBound(2),
-                      {spvOpcodeMake(6, SpvOpDecorate), 1 /* target id */,
-                       static_cast<uint32_t>(SpvDecorationLinkageAttributes)},
-                      MakeVector("abc"),
-                      {static_cast<uint32_t>(SpvLinkageTypeImport),
-                       0 /* does not belong */}}),
+        {Concatenate(
+             {ExpectedHeaderForBound(2),
+              {spvOpcodeMake(6, spv::Op::OpDecorate), 1 /* target id */,
+               static_cast<uint32_t>(spv::Decoration::LinkageAttributes)},
+              MakeVector("abc"),
+              {static_cast<uint32_t>(spv::LinkageType::Import),
+               0 /* does not belong */}}),
          "Invalid instruction OpDecorate starting at word 5: expected no more"
          " operands after 5 words, but stated word count is 6."},
         // Like the previous case, but with 5 extra words.
-        {Concatenate({ExpectedHeaderForBound(2),
-                      {spvOpcodeMake(10, SpvOpDecorate), 1 /* target id */,
-                       static_cast<uint32_t>(SpvDecorationLinkageAttributes)},
-                      MakeVector("abc"),
-                      {static_cast<uint32_t>(SpvLinkageTypeImport),
-                       /* don't belong */ 0, 1, 2, 3, 4}}),
+        {Concatenate(
+             {ExpectedHeaderForBound(2),
+              {spvOpcodeMake(10, spv::Op::OpDecorate), 1 /* target id */,
+               static_cast<uint32_t>(spv::Decoration::LinkageAttributes)},
+              MakeVector("abc"),
+              {static_cast<uint32_t>(spv::LinkageType::Import),
+               /* don't belong */ 0, 1, 2, 3, 4}}),
          "Invalid instruction OpDecorate starting at word 5: expected no more"
          " operands after 5 words, but stated word count is 10."},
         // Like the previous two cases, but with OpMemberDecorate.
-        {Concatenate({ExpectedHeaderForBound(2),
-                      {spvOpcodeMake(7, SpvOpMemberDecorate), 1 /* target id */,
-                       42 /* member index */,
-                       static_cast<uint32_t>(SpvDecorationLinkageAttributes)},
-                      MakeVector("abc"),
-                      {static_cast<uint32_t>(SpvLinkageTypeImport),
-                       0 /* does not belong */}}),
+        {Concatenate(
+             {ExpectedHeaderForBound(2),
+              {spvOpcodeMake(7, spv::Op::OpMemberDecorate), 1 /* target id */,
+               42 /* member index */,
+               static_cast<uint32_t>(spv::Decoration::LinkageAttributes)},
+              MakeVector("abc"),
+              {static_cast<uint32_t>(spv::LinkageType::Import),
+               0 /* does not belong */}}),
          "Invalid instruction OpMemberDecorate starting at word 5: expected no"
          " more operands after 6 words, but stated word count is 7."},
-        {Concatenate({ExpectedHeaderForBound(2),
-                      {spvOpcodeMake(11, SpvOpMemberDecorate),
-                       1 /* target id */, 42 /* member index */,
-                       static_cast<uint32_t>(SpvDecorationLinkageAttributes)},
-                      MakeVector("abc"),
-                      {static_cast<uint32_t>(SpvLinkageTypeImport),
-                       /* don't belong */ 0, 1, 2, 3, 4}}),
+        {Concatenate(
+             {ExpectedHeaderForBound(2),
+              {spvOpcodeMake(11, spv::Op::OpMemberDecorate), 1 /* target id */,
+               42 /* member index */,
+               static_cast<uint32_t>(spv::Decoration::LinkageAttributes)},
+              MakeVector("abc"),
+              {static_cast<uint32_t>(spv::LinkageType::Import),
+               /* don't belong */ 0, 1, 2, 3, 4}}),
          "Invalid instruction OpMemberDecorate starting at word 5: expected no"
          " more operands after 6 words, but stated word count is 11."},
         // Word count is too large.  There should be no more words
         // after the RelaxedPrecision decoration.
         {Concatenate({ExpectedHeaderForBound(2),
-                      {spvOpcodeMake(4, SpvOpDecorate), 1 /* target id */,
-                       static_cast<uint32_t>(SpvDecorationRelaxedPrecision),
+                      {spvOpcodeMake(4, spv::Op::OpDecorate), 1 /* target id */,
+                       static_cast<uint32_t>(spv::Decoration::RelaxedPrecision),
                        0 /* does not belong */}}),
          "Invalid instruction OpDecorate starting at word 5: expected no"
          " more operands after 3 words, but stated word count is 4."},
         // Word count is too large.  There should be only one word after
         // the SpecId decoration enum word.
         {Concatenate({ExpectedHeaderForBound(2),
-                      {spvOpcodeMake(5, SpvOpDecorate), 1 /* target id */,
-                       static_cast<uint32_t>(SpvDecorationSpecId),
+                      {spvOpcodeMake(5, spv::Op::OpDecorate), 1 /* target id */,
+                       static_cast<uint32_t>(spv::Decoration::SpecId),
                        42 /* the spec id */, 0 /* does not belong */}}),
          "Invalid instruction OpDecorate starting at word 5: expected no"
          " more operands after 4 words, but stated word count is 5."},
         {Concatenate({ExpectedHeaderForBound(2),
-                      {spvOpcodeMake(2, SpvOpTypeVoid), 0}}),
+                      {spvOpcodeMake(2, spv::Op::OpTypeVoid), 0}}),
          "Error: Result Id is 0"},
         {Concatenate({
              ExpectedHeaderForBound(2),
-             {spvOpcodeMake(2, SpvOpTypeVoid), 1},
-             {spvOpcodeMake(2, SpvOpTypeBool), 1},
+             {spvOpcodeMake(2, spv::Op::OpTypeVoid), 1},
+             {spvOpcodeMake(2, spv::Op::OpTypeBool), 1},
          }),
          "Id 1 is defined more than once"},
         {Concatenate({ExpectedHeaderForBound(3),
-                      MakeInstruction(SpvOpExtInst, {2, 3, 100, 4, 5})}),
+                      MakeInstruction(spv::Op::OpExtInst, {2, 3, 100, 4, 5})}),
          "OpExtInst set Id 100 does not reference an OpExtInstImport result "
          "Id"},
         {Concatenate({ExpectedHeaderForBound(101),
-                      MakeInstruction(SpvOpExtInstImport, {100},
+                      MakeInstruction(spv::Op::OpExtInstImport, {100},
                                       MakeVector("OpenCL.std")),
                       // OpenCL cos is #14
-                      MakeInstruction(SpvOpExtInst, {2, 3, 100, 14, 5, 999})}),
+                      MakeInstruction(spv::Op::OpExtInst,
+                                      {2, 3, 100, 14, 5, 999})}),
          "Invalid instruction OpExtInst starting at word 10: expected no "
          "more operands after 6 words, but stated word count is 7."},
         // In this case, the OpSwitch selector refers to an invalid ID.
         {Concatenate({ExpectedHeaderForBound(3),
-                      MakeInstruction(SpvOpSwitch, {1, 2, 42, 3})}),
+                      MakeInstruction(spv::Op::OpSwitch, {1, 2, 42, 3})}),
          "Invalid OpSwitch: selector id 1 has no type"},
         // In this case, the OpSwitch selector refers to an ID that has
         // no type.
         {Concatenate({ExpectedHeaderForBound(3),
-                      MakeInstruction(SpvOpLabel, {1}),
-                      MakeInstruction(SpvOpSwitch, {1, 2, 42, 3})}),
+                      MakeInstruction(spv::Op::OpLabel, {1}),
+                      MakeInstruction(spv::Op::OpSwitch, {1, 2, 42, 3})}),
          "Invalid OpSwitch: selector id 1 has no type"},
         {Concatenate({ExpectedHeaderForBound(3),
-                      MakeInstruction(SpvOpTypeInt, {1, 32, 0}),
-                      MakeInstruction(SpvOpSwitch, {1, 3, 42, 3})}),
+                      MakeInstruction(spv::Op::OpTypeInt, {1, 32, 0}),
+                      MakeInstruction(spv::Op::OpSwitch, {1, 3, 42, 3})}),
          "Invalid OpSwitch: selector id 1 is a type, not a value"},
         {Concatenate({ExpectedHeaderForBound(3),
-                      MakeInstruction(SpvOpTypeFloat, {1, 32}),
-                      MakeInstruction(SpvOpConstant, {1, 2, 0x78f00000}),
-                      MakeInstruction(SpvOpSwitch, {2, 3, 42, 3})}),
+                      MakeInstruction(spv::Op::OpTypeFloat, {1, 32}),
+                      MakeInstruction(spv::Op::OpConstant, {1, 2, 0x78f00000}),
+                      MakeInstruction(spv::Op::OpSwitch, {2, 3, 42, 3})}),
          "Invalid OpSwitch: selector id 2 is not a scalar integer"},
         {Concatenate({ExpectedHeaderForBound(3),
-                      MakeInstruction(SpvOpExtInstImport, {1},
+                      MakeInstruction(spv::Op::OpExtInstImport, {1},
                                       MakeVector("invalid-import"))}),
          "Invalid extended instruction import 'invalid-import'"},
         {Concatenate({
              ExpectedHeaderForBound(3),
-             MakeInstruction(SpvOpTypeInt, {1, 32, 0}),
-             MakeInstruction(SpvOpConstant, {2, 2, 42}),
+             MakeInstruction(spv::Op::OpTypeInt, {1, 32, 0}),
+             MakeInstruction(spv::Op::OpConstant, {2, 2, 42}),
          }),
          "Type Id 2 is not a type"},
         {Concatenate({
              ExpectedHeaderForBound(3),
-             MakeInstruction(SpvOpTypeBool, {1}),
-             MakeInstruction(SpvOpConstant, {1, 2, 42}),
+             MakeInstruction(spv::Op::OpTypeBool, {1}),
+             MakeInstruction(spv::Op::OpConstant, {1, 2, 42}),
          }),
          "Type Id 1 is not a scalar numeric type"},
     }));

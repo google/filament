@@ -36,8 +36,9 @@ opt::Function* FindFragmentShaderEntryPoint(opt::IRContext* ir_context,
   // Check that this is a fragment shader
   bool found_capability_shader = false;
   for (auto& capability : ir_context->capabilities()) {
-    assert(capability.opcode() == SpvOpCapability);
-    if (capability.GetSingleWordInOperand(0) == SpvCapabilityShader) {
+    assert(capability.opcode() == spv::Op::OpCapability);
+    if (spv::Capability(capability.GetSingleWordInOperand(0)) ==
+        spv::Capability::Shader) {
       found_capability_shader = true;
       break;
     }
@@ -51,7 +52,8 @@ opt::Function* FindFragmentShaderEntryPoint(opt::IRContext* ir_context,
 
   opt::Instruction* fragment_entry_point = nullptr;
   for (auto& entry_point : ir_context->module()->entry_points()) {
-    if (entry_point.GetSingleWordInOperand(0) == SpvExecutionModelFragment) {
+    if (spv::ExecutionModel(entry_point.GetSingleWordInOperand(0)) ==
+        spv::ExecutionModel::Fragment) {
       fragment_entry_point = &entry_point;
       break;
     }
@@ -81,8 +83,9 @@ opt::Instruction* FindVec4OutputVariable(opt::IRContext* ir_context,
                                          MessageConsumer message_consumer) {
   opt::Instruction* output_variable = nullptr;
   for (auto& inst : ir_context->types_values()) {
-    if (inst.opcode() == SpvOpVariable &&
-        inst.GetSingleWordInOperand(0) == SpvStorageClassOutput) {
+    if (inst.opcode() == spv::Op::OpVariable &&
+        spv::StorageClass(inst.GetSingleWordInOperand(0)) ==
+            spv::StorageClass::Output) {
       if (output_variable != nullptr) {
         message_consumer(SPV_MSG_ERROR, nullptr, {},
                          "Only one output variable can be handled at present; "
@@ -144,10 +147,11 @@ MakeConstantUniformReplacement(opt::IRContext* ir_context,
                                uint32_t greater_than_instruction,
                                uint32_t in_operand_index) {
   return MakeUnique<TransformationReplaceConstantWithUniform>(
-      MakeIdUseDescriptor(constant_id,
-                          MakeInstructionDescriptor(greater_than_instruction,
-                                                    SpvOpFOrdGreaterThan, 0),
-                          in_operand_index),
+      MakeIdUseDescriptor(
+          constant_id,
+          MakeInstructionDescriptor(greater_than_instruction,
+                                    spv::Op::OpFOrdGreaterThan, 0),
+          in_operand_index),
       fact_manager.GetUniformDescriptorsForConstant(constant_id)[0],
       ir_context->TakeNextId(), ir_context->TakeNextId());
 }
@@ -204,20 +208,21 @@ bool ForceRenderRed(
   // Make the new exit block
   auto new_exit_block_id = ir_context->TakeNextId();
   {
-    auto label = MakeUnique<opt::Instruction>(ir_context.get(), SpvOpLabel, 0,
-                                              new_exit_block_id,
-                                              opt::Instruction::OperandList());
+    auto label = MakeUnique<opt::Instruction>(
+        ir_context.get(), spv::Op::OpLabel, 0, new_exit_block_id,
+        opt::Instruction::OperandList());
     auto new_exit_block = MakeUnique<opt::BasicBlock>(std::move(label));
-    new_exit_block->AddInstruction(MakeUnique<opt::Instruction>(
-        ir_context.get(), SpvOpReturn, 0, 0, opt::Instruction::OperandList()));
+    new_exit_block->AddInstruction(
+        MakeUnique<opt::Instruction>(ir_context.get(), spv::Op::OpReturn, 0, 0,
+                                     opt::Instruction::OperandList()));
     entry_point_function->AddBasicBlock(std::move(new_exit_block));
   }
 
   // Make the new entry block
   {
-    auto label = MakeUnique<opt::Instruction>(ir_context.get(), SpvOpLabel, 0,
-                                              ir_context->TakeNextId(),
-                                              opt::Instruction::OperandList());
+    auto label = MakeUnique<opt::Instruction>(
+        ir_context.get(), spv::Op::OpLabel, 0, ir_context->TakeNextId(),
+        opt::Instruction::OperandList());
     auto new_entry_block = MakeUnique<opt::BasicBlock>(std::move(label));
 
     // Make an instruction to construct vec4(1.0, 0.0, 0.0, 1.0), representing
@@ -229,7 +234,7 @@ bool ForceRenderRed(
     auto temp_vec4 = opt::analysis::Vector(float_type, 4);
     auto vec4_id = ir_context->get_type_mgr()->GetId(&temp_vec4);
     auto red = MakeUnique<opt::Instruction>(
-        ir_context.get(), SpvOpCompositeConstruct, vec4_id,
+        ir_context.get(), spv::Op::OpCompositeConstruct, vec4_id,
         ir_context->TakeNextId(), op_composite_construct_operands);
     auto red_id = red->result_id();
     new_entry_block->AddInstruction(std::move(red));
@@ -241,7 +246,7 @@ bool ForceRenderRed(
     opt::Instruction::OperandList op_store_operands = {variable_to_store_into,
                                                        value_to_be_stored};
     new_entry_block->AddInstruction(MakeUnique<opt::Instruction>(
-        ir_context.get(), SpvOpStore, 0, 0, op_store_operands));
+        ir_context.get(), spv::Op::OpStore, 0, 0, op_store_operands));
 
     // We are going to attempt to construct 'false' as an expression of the form
     // 'literal1 > literal2'. If we succeed, we will later replace each literal
@@ -313,7 +318,7 @@ bool ForceRenderRed(
               {SPV_OPERAND_TYPE_ID, {smaller_constant}},
               {SPV_OPERAND_TYPE_ID, {larger_constant}}};
           new_entry_block->AddInstruction(MakeUnique<opt::Instruction>(
-              ir_context.get(), SpvOpFOrdGreaterThan,
+              ir_context.get(), spv::Op::OpFOrdGreaterThan,
               ir_context->get_type_mgr()->GetId(registered_bool_type),
               id_guaranteed_to_be_false, greater_than_operands));
 
@@ -344,9 +349,9 @@ bool ForceRenderRed(
     opt::Operand else_block = {SPV_OPERAND_TYPE_ID, {new_exit_block_id}};
     opt::Instruction::OperandList op_branch_conditional_operands = {
         false_condition, then_block, else_block};
-    new_entry_block->AddInstruction(
-        MakeUnique<opt::Instruction>(ir_context.get(), SpvOpBranchConditional,
-                                     0, 0, op_branch_conditional_operands));
+    new_entry_block->AddInstruction(MakeUnique<opt::Instruction>(
+        ir_context.get(), spv::Op::OpBranchConditional, 0, 0,
+        op_branch_conditional_operands));
 
     entry_point_function->InsertBasicBlockBefore(
         std::move(new_entry_block), entry_point_function->entry().get());

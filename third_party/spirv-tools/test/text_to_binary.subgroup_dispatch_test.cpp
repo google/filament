@@ -35,7 +35,7 @@ TEST_F(OpGetKernelLocalSizeForSubgroupCountTest, OpcodeAssemblesInV10) {
       CompiledInstructions("%res = OpGetKernelLocalSizeForSubgroupCount %type "
                            "%sgcount %invoke %param %param_size %param_align",
                            SPV_ENV_UNIVERSAL_1_0),
-      Eq(MakeInstruction(SpvOpGetKernelLocalSizeForSubgroupCount,
+      Eq(MakeInstruction(spv::Op::OpGetKernelLocalSizeForSubgroupCount,
                          {1, 2, 3, 4, 5, 6, 7})));
 }
 
@@ -57,7 +57,7 @@ TEST_F(OpGetKernelLocalSizeForSubgroupCountTest, ArgumentCount) {
       CompiledInstructions("%res = OpGetKernelLocalSizeForSubgroupCount %type "
                            "%sgcount %invoke %param %param_size %param_align",
                            SPV_ENV_UNIVERSAL_1_1),
-      Eq(MakeInstruction(SpvOpGetKernelLocalSizeForSubgroupCount,
+      Eq(MakeInstruction(spv::Op::OpGetKernelLocalSizeForSubgroupCount,
                          {1, 2, 3, 4, 5, 6, 7})));
   EXPECT_THAT(
       CompileFailure("%res = OpGetKernelLocalSizeForSubgroupCount %type "
@@ -81,11 +81,11 @@ TEST_F(OpGetKernelLocalSizeForSubgroupCountTest, ArgumentTypes) {
 using OpGetKernelMaxNumSubgroupsTest = spvtest::TextToBinaryTest;
 
 TEST_F(OpGetKernelMaxNumSubgroupsTest, OpcodeAssemblesInV10) {
-  EXPECT_THAT(
-      CompiledInstructions("%res = OpGetKernelMaxNumSubgroups %type "
-                           "%invoke %param %param_size %param_align",
-                           SPV_ENV_UNIVERSAL_1_0),
-      Eq(MakeInstruction(SpvOpGetKernelMaxNumSubgroups, {1, 2, 3, 4, 5, 6})));
+  EXPECT_THAT(CompiledInstructions("%res = OpGetKernelMaxNumSubgroups %type "
+                                   "%invoke %param %param_size %param_align",
+                                   SPV_ENV_UNIVERSAL_1_0),
+              Eq(MakeInstruction(spv::Op::OpGetKernelMaxNumSubgroups,
+                                 {1, 2, 3, 4, 5, 6})));
 }
 
 TEST_F(OpGetKernelMaxNumSubgroupsTest, ArgumentCount) {
@@ -101,11 +101,11 @@ TEST_F(OpGetKernelMaxNumSubgroupsTest, ArgumentCount) {
                              SPV_ENV_UNIVERSAL_1_1),
               Eq("Expected operand for OpGetKernelMaxNumSubgroups instruction, "
                  "but found the end of the stream."));
-  EXPECT_THAT(
-      CompiledInstructions("%res = OpGetKernelMaxNumSubgroups %type "
-                           "%invoke %param %param_size %param_align",
-                           SPV_ENV_UNIVERSAL_1_1),
-      Eq(MakeInstruction(SpvOpGetKernelMaxNumSubgroups, {1, 2, 3, 4, 5, 6})));
+  EXPECT_THAT(CompiledInstructions("%res = OpGetKernelMaxNumSubgroups %type "
+                                   "%invoke %param %param_size %param_align",
+                                   SPV_ENV_UNIVERSAL_1_1),
+              Eq(MakeInstruction(spv::Op::OpGetKernelMaxNumSubgroups,
+                                 {1, 2, 3, 4, 5, 6})));
   EXPECT_THAT(CompileFailure("%res = OpGetKernelMaxNumSubgroups %type %invoke "
                              "%param %param_size %param_align %extra",
                              SPV_ENV_UNIVERSAL_1_1),

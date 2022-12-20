@@ -28,7 +28,8 @@ class TransformationAddTypePointer : public Transformation {
   explicit TransformationAddTypePointer(
       protobufs::TransformationAddTypePointer message);
 
-  TransformationAddTypePointer(uint32_t fresh_id, SpvStorageClass storage_class,
+  TransformationAddTypePointer(uint32_t fresh_id,
+                               spv::StorageClass storage_class,
                                uint32_t base_type_id);
 
   // - |message_.fresh_id| must not be used by the module

@@ -102,7 +102,7 @@ void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCa
             continue;
         }
 
-        // getInstance() always returns null if the entity is the Null entity
+        // getInstance() always returns null if the entity is the Null entity,
         // so we don't need to check for that, but we need to check it's alive
         auto ri = rcm.getInstance(e);
         auto li = lcm.getInstance(e);
@@ -291,14 +291,14 @@ void FScene::updateUBOs(
     driver.updateBufferObjectUnsynchronized(renderableUbh, {
             buffer, count * sizeof(PerRenderableData),
             +[](void* p, size_t s, void* user) {
+                std::weak_ptr<SharedState>* const weakShared =
+                        static_cast<std::weak_ptr<SharedState>*>(user);
                 if (s >= MAX_STREAM_ALLOCATION_COUNT * sizeof(PerRenderableData)) {
-                    std::weak_ptr<SharedState>* const weakShared =
-                            static_cast<std::weak_ptr<SharedState>*>(user);
                     if (auto state = weakShared->lock()) {
                         state->mBufferPoolAllocator.put(p);
                     }
-                    delete weakShared;
                 }
+                delete weakShared;
             }, weakShared
     }, 0);
 
@@ -324,7 +324,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
      */
 
     size_t const size = lightData.size();
-    // number of point/spot lights
+    // number of point-light/spotlights
     size_t positionalLightCount = size - DIRECTIONAL_LIGHTS_COUNT;
     assert_invariant(positionalLightCount);
 

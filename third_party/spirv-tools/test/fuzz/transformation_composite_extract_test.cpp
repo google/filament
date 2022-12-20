@@ -102,47 +102,49 @@ TEST(TransformationCompositeExtractTest, BasicTest) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   // Instruction does not exist.
-  ASSERT_FALSE(TransformationCompositeExtract(
-                   MakeInstructionDescriptor(36, SpvOpIAdd, 0), 200, 101, {0})
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationCompositeExtract(
+          MakeInstructionDescriptor(36, spv::Op::OpIAdd, 0), 200, 101, {0})
+          .IsApplicable(context.get(), transformation_context));
 
   // Id for composite is not a composite.
   ASSERT_FALSE(
       TransformationCompositeExtract(
-          MakeInstructionDescriptor(37, SpvOpAccessChain, 0), 200, 32, {})
+          MakeInstructionDescriptor(37, spv::Op::OpAccessChain, 0), 200, 32, {})
           .IsApplicable(context.get(), transformation_context));
 
   // Composite does not dominate instruction being inserted before.
-  ASSERT_FALSE(
-      TransformationCompositeExtract(
-          MakeInstructionDescriptor(37, SpvOpAccessChain, 0), 200, 101, {0})
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationCompositeExtract(
+                   MakeInstructionDescriptor(37, spv::Op::OpAccessChain, 0),
+                   200, 101, {0})
+                   .IsApplicable(context.get(), transformation_context));
 
   // Too many indices for extraction from struct composite.
-  ASSERT_FALSE(
-      TransformationCompositeExtract(
-          MakeInstructionDescriptor(24, SpvOpAccessChain, 0), 200, 101, {0, 0})
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationCompositeExtract(
+                   MakeInstructionDescriptor(24, spv::Op::OpAccessChain, 0),
+                   200, 101, {0, 0})
+                   .IsApplicable(context.get(), transformation_context));
 
   // Too many indices for extraction from struct composite.
-  ASSERT_FALSE(
-      TransformationCompositeExtract(
-          MakeInstructionDescriptor(13, SpvOpIEqual, 0), 200, 104, {0, 0, 0})
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationCompositeExtract(
+                   MakeInstructionDescriptor(13, spv::Op::OpIEqual, 0), 200,
+                   104, {0, 0, 0})
+                   .IsApplicable(context.get(), transformation_context));
 
   // Out of bounds index for extraction from struct composite.
   ASSERT_FALSE(
       TransformationCompositeExtract(
-          MakeInstructionDescriptor(13, SpvOpIEqual, 0), 200, 104, {0, 3})
+          MakeInstructionDescriptor(13, spv::Op::OpIEqual, 0), 200, 104, {0, 3})
           .IsApplicable(context.get(), transformation_context));
 
   // Result id already used.
-  ASSERT_FALSE(TransformationCompositeExtract(
-                   MakeInstructionDescriptor(35, SpvOpFAdd, 0), 80, 103, {0})
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationCompositeExtract(
+          MakeInstructionDescriptor(35, spv::Op::OpFAdd, 0), 80, 103, {0})
+          .IsApplicable(context.get(), transformation_context));
 
   TransformationCompositeExtract transformation_1(
-      MakeInstructionDescriptor(36, SpvOpConvertFToS, 0), 201, 100, {2});
+      MakeInstructionDescriptor(36, spv::Op::OpConvertFToS, 0), 201, 100, {2});
   ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(201));
   ASSERT_EQ(nullptr, context->get_instr_block(201));
   uint32_t num_uses_of_100_before = context->get_def_use_mgr()->NumUses(100);
@@ -150,7 +152,7 @@ TEST(TransformationCompositeExtractTest, BasicTest) {
       transformation_1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation_1, context.get(),
                         &transformation_context);
-  ASSERT_EQ(SpvOpCompositeExtract,
+  ASSERT_EQ(spv::Op::OpCompositeExtract,
             context->get_def_use_mgr()->GetDef(201)->opcode());
   ASSERT_EQ(15, context->get_instr_block(201)->id());
   ASSERT_EQ(num_uses_of_100_before + 1,
@@ -159,7 +161,8 @@ TEST(TransformationCompositeExtractTest, BasicTest) {
                                                kConsoleMessageConsumer));
 
   TransformationCompositeExtract transformation_2(
-      MakeInstructionDescriptor(37, SpvOpAccessChain, 0), 202, 104, {0, 2});
+      MakeInstructionDescriptor(37, spv::Op::OpAccessChain, 0), 202, 104,
+      {0, 2});
   ASSERT_TRUE(
       transformation_2.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation_2, context.get(),
@@ -168,7 +171,7 @@ TEST(TransformationCompositeExtractTest, BasicTest) {
                                                kConsoleMessageConsumer));
 
   TransformationCompositeExtract transformation_3(
-      MakeInstructionDescriptor(29, SpvOpAccessChain, 0), 203, 104, {0});
+      MakeInstructionDescriptor(29, spv::Op::OpAccessChain, 0), 203, 104, {0});
   ASSERT_TRUE(
       transformation_3.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation_3, context.get(),
@@ -177,7 +180,7 @@ TEST(TransformationCompositeExtractTest, BasicTest) {
                                                kConsoleMessageConsumer));
 
   TransformationCompositeExtract transformation_4(
-      MakeInstructionDescriptor(24, SpvOpStore, 0), 204, 101, {0});
+      MakeInstructionDescriptor(24, spv::Op::OpStore, 0), 204, 101, {0});
   ASSERT_TRUE(
       transformation_4.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation_4, context.get(),
@@ -186,7 +189,7 @@ TEST(TransformationCompositeExtractTest, BasicTest) {
                                                kConsoleMessageConsumer));
 
   TransformationCompositeExtract transformation_5(
-      MakeInstructionDescriptor(29, SpvOpBranch, 0), 205, 102, {2});
+      MakeInstructionDescriptor(29, spv::Op::OpBranch, 0), 205, 102, {2});
   ASSERT_TRUE(
       transformation_5.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation_5, context.get(),
@@ -195,7 +198,7 @@ TEST(TransformationCompositeExtractTest, BasicTest) {
                                                kConsoleMessageConsumer));
 
   TransformationCompositeExtract transformation_6(
-      MakeInstructionDescriptor(37, SpvOpReturn, 0), 206, 103, {1});
+      MakeInstructionDescriptor(37, spv::Op::OpReturn, 0), 206, 103, {1});
   ASSERT_TRUE(
       transformation_6.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation_6, context.get(),
@@ -378,45 +381,50 @@ TEST(TransformationCompositeExtractTest, IllegalInsertionPoints) {
   // Cannot insert before the OpVariables of a function.
   ASSERT_FALSE(
       TransformationCompositeExtract(
-          MakeInstructionDescriptor(101, SpvOpVariable, 0), 200, 14, {0})
+          MakeInstructionDescriptor(101, spv::Op::OpVariable, 0), 200, 14, {0})
           .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       TransformationCompositeExtract(
-          MakeInstructionDescriptor(101, SpvOpVariable, 1), 200, 14, {1})
+          MakeInstructionDescriptor(101, spv::Op::OpVariable, 1), 200, 14, {1})
           .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       TransformationCompositeExtract(
-          MakeInstructionDescriptor(102, SpvOpVariable, 0), 200, 14, {1})
+          MakeInstructionDescriptor(102, spv::Op::OpVariable, 0), 200, 14, {1})
           .IsApplicable(context.get(), transformation_context));
   // OK to insert right after the OpVariables.
-  ASSERT_FALSE(TransformationCompositeExtract(
-                   MakeInstructionDescriptor(102, SpvOpBranch, 1), 200, 14, {1})
-                   .IsApplicable(context.get(), transformation_context));
-
-  // Cannot insert before the OpPhis of a block.
-  ASSERT_FALSE(TransformationCompositeExtract(
-                   MakeInstructionDescriptor(60, SpvOpPhi, 0), 200, 14, {2})
-                   .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(TransformationCompositeExtract(
-                   MakeInstructionDescriptor(59, SpvOpPhi, 0), 200, 14, {3})
-                   .IsApplicable(context.get(), transformation_context));
-  // OK to insert after the OpPhis.
-  ASSERT_TRUE(
+  ASSERT_FALSE(
       TransformationCompositeExtract(
-          MakeInstructionDescriptor(59, SpvOpAccessChain, 0), 200, 14, {3})
+          MakeInstructionDescriptor(102, spv::Op::OpBranch, 1), 200, 14, {1})
           .IsApplicable(context.get(), transformation_context));
 
+  // Cannot insert before the OpPhis of a block.
+  ASSERT_FALSE(
+      TransformationCompositeExtract(
+          MakeInstructionDescriptor(60, spv::Op::OpPhi, 0), 200, 14, {2})
+          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationCompositeExtract(
+          MakeInstructionDescriptor(59, spv::Op::OpPhi, 0), 200, 14, {3})
+          .IsApplicable(context.get(), transformation_context));
+  // OK to insert after the OpPhis.
+  ASSERT_TRUE(TransformationCompositeExtract(
+                  MakeInstructionDescriptor(59, spv::Op::OpAccessChain, 0), 200,
+                  14, {3})
+                  .IsApplicable(context.get(), transformation_context));
+
   // Cannot insert before OpLoopMerge
-  ASSERT_FALSE(TransformationCompositeExtract(
-                   MakeInstructionDescriptor(33, SpvOpBranchConditional, 0),
-                   200, 14, {3})
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationCompositeExtract(
+          MakeInstructionDescriptor(33, spv::Op::OpBranchConditional, 0), 200,
+          14, {3})
+          .IsApplicable(context.get(), transformation_context));
 
   // Cannot insert before OpSelectionMerge
-  ASSERT_FALSE(TransformationCompositeExtract(
-                   MakeInstructionDescriptor(21, SpvOpBranchConditional, 0),
-                   200, 14, {2})
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationCompositeExtract(
+          MakeInstructionDescriptor(21, spv::Op::OpBranchConditional, 0), 200,
+          14, {2})
+          .IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationCompositeExtractTest, AddSynonymsForRelevantIds) {
@@ -498,7 +506,7 @@ TEST(TransformationCompositeExtractTest, AddSynonymsForRelevantIds) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   TransformationCompositeExtract transformation(
-      MakeInstructionDescriptor(36, SpvOpConvertFToS, 0), 201, 100, {2});
+      MakeInstructionDescriptor(36, spv::Op::OpConvertFToS, 0), 201, 100, {2});
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -586,7 +594,7 @@ TEST(TransformationCompositeExtractTest, DontAddSynonymsForIrrelevantIds) {
       MakeUnique<FactManager>(context.get()), validator_options);
   transformation_context.GetFactManager()->AddFactIdIsIrrelevant(100);
   TransformationCompositeExtract transformation(
-      MakeInstructionDescriptor(36, SpvOpConvertFToS, 0), 201, 100, {2});
+      MakeInstructionDescriptor(36, spv::Op::OpConvertFToS, 0), 201, 100, {2});
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -635,7 +643,7 @@ TEST(TransformationCompositeExtractTest, DontAddSynonymInDeadBlock) {
       MakeUnique<FactManager>(context.get()), validator_options);
   transformation_context.GetFactManager()->AddFactBlockIsDead(15);
   TransformationCompositeExtract transformation(
-      MakeInstructionDescriptor(15, SpvOpBranch, 0), 100, 12, {0});
+      MakeInstructionDescriptor(15, spv::Op::OpBranch, 0), 100, 12, {0});
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);

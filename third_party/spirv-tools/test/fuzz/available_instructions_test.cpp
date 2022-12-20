@@ -176,41 +176,41 @@ TEST(AvailableInstructionsTest, BasicTest) {
       auto available = all_instructions.GetAvailableBeforeInstruction(i1);
       ASSERT_FALSE(available.empty());
       ASSERT_EQ(30, available.size());
-      ASSERT_EQ(SpvOpTypeVoid, available[0]->opcode());
-      ASSERT_EQ(SpvOpVariable, available[15]->opcode());
+      ASSERT_EQ(spv::Op::OpTypeVoid, available[0]->opcode());
+      ASSERT_EQ(spv::Op::OpVariable, available[15]->opcode());
     }
     {
       auto available = all_instructions.GetAvailableBeforeInstruction(i2);
       ASSERT_FALSE(available.empty());
       ASSERT_EQ(46, available.size());
-      ASSERT_EQ(SpvOpTypeVoid, available[0]->opcode());
-      ASSERT_EQ(SpvOpTypePointer, available[3]->opcode());
-      ASSERT_EQ(SpvOpVariable, available[15]->opcode());
-      ASSERT_EQ(SpvOpFunctionCall, available[40]->opcode());
-      ASSERT_EQ(SpvOpStore, available[45]->opcode());
+      ASSERT_EQ(spv::Op::OpTypeVoid, available[0]->opcode());
+      ASSERT_EQ(spv::Op::OpTypePointer, available[3]->opcode());
+      ASSERT_EQ(spv::Op::OpVariable, available[15]->opcode());
+      ASSERT_EQ(spv::Op::OpFunctionCall, available[40]->opcode());
+      ASSERT_EQ(spv::Op::OpStore, available[45]->opcode());
     }
     {
       auto available = all_instructions.GetAvailableBeforeInstruction(i3);
       ASSERT_FALSE(available.empty());
       ASSERT_EQ(45, available.size());
-      ASSERT_EQ(SpvOpTypeVoid, available[0]->opcode());
-      ASSERT_EQ(SpvOpTypePointer, available[3]->opcode());
-      ASSERT_EQ(SpvOpVariable, available[15]->opcode());
-      ASSERT_EQ(SpvOpFunctionCall, available[40]->opcode());
-      ASSERT_EQ(SpvOpBranchConditional, available[44]->opcode());
+      ASSERT_EQ(spv::Op::OpTypeVoid, available[0]->opcode());
+      ASSERT_EQ(spv::Op::OpTypePointer, available[3]->opcode());
+      ASSERT_EQ(spv::Op::OpVariable, available[15]->opcode());
+      ASSERT_EQ(spv::Op::OpFunctionCall, available[40]->opcode());
+      ASSERT_EQ(spv::Op::OpBranchConditional, available[44]->opcode());
     }
     {
       auto available = all_instructions.GetAvailableBeforeInstruction(i6);
       ASSERT_FALSE(available.empty());
       ASSERT_EQ(33, available.size());
-      ASSERT_EQ(SpvOpTypeVoid, available[0]->opcode());
-      ASSERT_EQ(SpvOpTypeFloat, available[4]->opcode());
-      ASSERT_EQ(SpvOpTypePointer, available[8]->opcode());
-      ASSERT_EQ(SpvOpConstantComposite, available[12]->opcode());
-      ASSERT_EQ(SpvOpConstant, available[16]->opcode());
-      ASSERT_EQ(SpvOpFunctionParameter, available[30]->opcode());
-      ASSERT_EQ(SpvOpFunctionParameter, available[31]->opcode());
-      ASSERT_EQ(SpvOpVariable, available[32]->opcode());
+      ASSERT_EQ(spv::Op::OpTypeVoid, available[0]->opcode());
+      ASSERT_EQ(spv::Op::OpTypeFloat, available[4]->opcode());
+      ASSERT_EQ(spv::Op::OpTypePointer, available[8]->opcode());
+      ASSERT_EQ(spv::Op::OpConstantComposite, available[12]->opcode());
+      ASSERT_EQ(spv::Op::OpConstant, available[16]->opcode());
+      ASSERT_EQ(spv::Op::OpFunctionParameter, available[30]->opcode());
+      ASSERT_EQ(spv::Op::OpFunctionParameter, available[31]->opcode());
+      ASSERT_EQ(spv::Op::OpVariable, available[32]->opcode());
     }
   }
   {
@@ -225,51 +225,51 @@ TEST(AvailableInstructionsTest, BasicTest) {
       auto available = vector_instructions.GetAvailableBeforeInstruction(i4);
       ASSERT_FALSE(available.empty());
       ASSERT_EQ(3, available.size());
-      ASSERT_EQ(SpvOpConstantComposite, available[0]->opcode());
-      ASSERT_EQ(SpvOpConstantComposite, available[1]->opcode());
-      ASSERT_EQ(SpvOpCopyObject, available[2]->opcode());
+      ASSERT_EQ(spv::Op::OpConstantComposite, available[0]->opcode());
+      ASSERT_EQ(spv::Op::OpConstantComposite, available[1]->opcode());
+      ASSERT_EQ(spv::Op::OpCopyObject, available[2]->opcode());
     }
     {
       auto available = vector_instructions.GetAvailableBeforeInstruction(i5);
       ASSERT_FALSE(available.empty());
       ASSERT_EQ(3, available.size());
-      ASSERT_EQ(SpvOpConstantComposite, available[0]->opcode());
-      ASSERT_EQ(SpvOpConstantComposite, available[1]->opcode());
-      ASSERT_EQ(SpvOpCopyObject, available[2]->opcode());
+      ASSERT_EQ(spv::Op::OpConstantComposite, available[0]->opcode());
+      ASSERT_EQ(spv::Op::OpConstantComposite, available[1]->opcode());
+      ASSERT_EQ(spv::Op::OpCopyObject, available[2]->opcode());
     }
     {
       auto available = vector_instructions.GetAvailableBeforeInstruction(i6);
       ASSERT_FALSE(available.empty());
       ASSERT_EQ(2, available.size());
-      ASSERT_EQ(SpvOpConstantComposite, available[0]->opcode());
-      ASSERT_EQ(SpvOpConstantComposite, available[1]->opcode());
+      ASSERT_EQ(spv::Op::OpConstantComposite, available[0]->opcode());
+      ASSERT_EQ(spv::Op::OpConstantComposite, available[1]->opcode());
     }
   }
   {
     AvailableInstructions integer_add_instructions(
         context.get(), [](opt::IRContext*, opt::Instruction* inst) -> bool {
-          return inst->opcode() == SpvOpIAdd;
+          return inst->opcode() == spv::Op::OpIAdd;
         });
     {
       auto available =
           integer_add_instructions.GetAvailableBeforeInstruction(i7);
       ASSERT_FALSE(available.empty());
       ASSERT_EQ(1, available.size());
-      ASSERT_EQ(SpvOpIAdd, available[0]->opcode());
+      ASSERT_EQ(spv::Op::OpIAdd, available[0]->opcode());
     }
     {
       auto available =
           integer_add_instructions.GetAvailableBeforeInstruction(i8);
       ASSERT_FALSE(available.empty());
       ASSERT_EQ(1, available.size());
-      ASSERT_EQ(SpvOpIAdd, available[0]->opcode());
+      ASSERT_EQ(spv::Op::OpIAdd, available[0]->opcode());
     }
     {
       auto available =
           integer_add_instructions.GetAvailableBeforeInstruction(i9);
       ASSERT_FALSE(available.empty());
       ASSERT_EQ(1, available.size());
-      ASSERT_EQ(SpvOpIAdd, available[0]->opcode());
+      ASSERT_EQ(spv::Op::OpIAdd, available[0]->opcode());
     }
   }
 }

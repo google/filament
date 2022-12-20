@@ -83,6 +83,9 @@ class Module {
   // Set the memory model for this module.
   inline void SetMemoryModel(std::unique_ptr<Instruction> m);
 
+  // Set the sampled image addressing mode for this module.
+  inline void SetSampledImageAddressMode(std::unique_ptr<Instruction> m);
+
   // Appends an entry point instruction to this module.
   inline void AddEntryPoint(std::unique_ptr<Instruction> e);
 
@@ -133,10 +136,10 @@ class Module {
   std::vector<const Instruction*> GetConstants() const;
 
   // Return result id of global value with |opcode|, 0 if not present.
-  uint32_t GetGlobalValue(SpvOp opcode) const;
+  uint32_t GetGlobalValue(spv::Op opcode) const;
 
   // Add global value with |opcode|, |result_id| and |type_id|
-  void AddGlobalValue(SpvOp opcode, uint32_t result_id, uint32_t type_id);
+  void AddGlobalValue(spv::Op opcode, uint32_t result_id, uint32_t type_id);
 
   inline uint32_t id_bound() const { return header_.bound; }
 
@@ -158,10 +161,18 @@ class Module {
   inline IteratorRange<inst_iterator> ext_inst_imports();
   inline IteratorRange<const_inst_iterator> ext_inst_imports() const;
 
-  // Return the memory model instruction contained inthis module.
+  // Return the memory model instruction contained in this module.
   inline Instruction* GetMemoryModel() { return memory_model_.get(); }
   inline const Instruction* GetMemoryModel() const {
     return memory_model_.get();
+  }
+
+  // Return the sampled image address mode instruction contained in this module.
+  inline Instruction* GetSampledImageAddressMode() {
+    return sampled_image_address_mode_.get();
+  }
+  inline const Instruction* GetSampledImageAddressMode() const {
+    return sampled_image_address_mode_.get();
   }
 
   // There are several kinds of debug instructions, according to where they can
@@ -288,6 +299,8 @@ class Module {
   InstructionList ext_inst_imports_;
   // A module only has one memory model instruction.
   std::unique_ptr<Instruction> memory_model_;
+  // A module can only have one optional sampled image addressing mode
+  std::unique_ptr<Instruction> sampled_image_address_mode_;
   InstructionList entry_points_;
   InstructionList execution_modes_;
   InstructionList debugs1_;
@@ -324,6 +337,10 @@ inline void Module::AddExtInstImport(std::unique_ptr<Instruction> e) {
 
 inline void Module::SetMemoryModel(std::unique_ptr<Instruction> m) {
   memory_model_ = std::move(m);
+}
+
+inline void Module::SetSampledImageAddressMode(std::unique_ptr<Instruction> m) {
+  sampled_image_address_mode_ = std::move(m);
 }
 
 inline void Module::AddEntryPoint(std::unique_ptr<Instruction> e) {

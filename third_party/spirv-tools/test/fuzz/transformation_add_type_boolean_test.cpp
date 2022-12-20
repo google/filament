@@ -57,7 +57,8 @@ TEST(TransformationAddTypeBooleanTest, BasicTest) {
   ASSERT_TRUE(
       add_type_bool.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(add_type_bool, context.get(), &transformation_context);
-  ASSERT_EQ(SpvOpTypeBool, context->get_def_use_mgr()->GetDef(100)->opcode());
+  ASSERT_EQ(spv::Op::OpTypeBool,
+            context->get_def_use_mgr()->GetDef(100)->opcode());
   ASSERT_NE(nullptr, context->get_type_mgr()->GetType(100)->AsBool());
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
                                                kConsoleMessageConsumer));

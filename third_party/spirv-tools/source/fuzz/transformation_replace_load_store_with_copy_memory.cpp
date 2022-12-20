@@ -48,14 +48,14 @@ bool TransformationReplaceLoadStoreWithCopyMemory::IsApplicable(
   // The OpLoad instruction must be defined.
   auto load_instruction =
       FindInstruction(message_.load_instruction_descriptor(), ir_context);
-  if (!load_instruction || load_instruction->opcode() != SpvOpLoad) {
+  if (!load_instruction || load_instruction->opcode() != spv::Op::OpLoad) {
     return false;
   }
 
   // The OpStore instruction must be defined.
   auto store_instruction =
       FindInstruction(message_.store_instruction_descriptor(), ir_context);
-  if (!store_instruction || store_instruction->opcode() != SpvOpStore) {
+  if (!store_instruction || store_instruction->opcode() != spv::Op::OpStore) {
     return false;
   }
 
@@ -69,7 +69,7 @@ bool TransformationReplaceLoadStoreWithCopyMemory::IsApplicable(
   // Get storage class of the variable pointed by the source operand in OpLoad.
   opt::Instruction* source_id = ir_context->get_def_use_mgr()->GetDef(
       load_instruction->GetSingleWordOperand(2));
-  SpvStorageClass storage_class = fuzzerutil::GetStorageClassFromPointerType(
+  spv::StorageClass storage_class = fuzzerutil::GetStorageClassFromPointerType(
       ir_context, source_id->type_id());
 
   // Iterate over all instructions between |load_instruction| and
@@ -99,11 +99,11 @@ void TransformationReplaceLoadStoreWithCopyMemory::Apply(
   // OpLoad and OpStore instructions must be defined.
   auto load_instruction =
       FindInstruction(message_.load_instruction_descriptor(), ir_context);
-  assert(load_instruction && load_instruction->opcode() == SpvOpLoad &&
+  assert(load_instruction && load_instruction->opcode() == spv::Op::OpLoad &&
          "The required OpLoad instruction must be defined.");
   auto store_instruction =
       FindInstruction(message_.store_instruction_descriptor(), ir_context);
-  assert(store_instruction && store_instruction->opcode() == SpvOpStore &&
+  assert(store_instruction && store_instruction->opcode() == spv::Op::OpStore &&
          "The required OpStore instruction must be defined.");
 
   // Intermediate values of the OpLoad and the OpStore must match.
@@ -121,7 +121,7 @@ void TransformationReplaceLoadStoreWithCopyMemory::Apply(
 
   // Insert the OpCopyMemory instruction before the OpStore instruction.
   store_instruction->InsertBefore(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpCopyMemory, 0, 0,
+      ir_context, spv::Op::OpCopyMemory, 0, 0,
       opt::Instruction::OperandList(
           {{SPV_OPERAND_TYPE_ID, {target_variable_id}},
            {SPV_OPERAND_TYPE_ID, {source_variable_id}}})));
@@ -133,14 +133,14 @@ void TransformationReplaceLoadStoreWithCopyMemory::Apply(
 }
 
 bool TransformationReplaceLoadStoreWithCopyMemory::IsMemoryWritingOpCode(
-    SpvOp op_code) {
+    spv::Op op_code) {
   if (spvOpcodeIsAtomicOp(op_code)) {
-    return op_code != SpvOpAtomicLoad;
+    return op_code != spv::Op::OpAtomicLoad;
   }
   switch (op_code) {
-    case SpvOpStore:
-    case SpvOpCopyMemory:
-    case SpvOpCopyMemorySized:
+    case spv::Op::OpStore:
+    case spv::Op::OpCopyMemory:
+    case spv::Op::OpCopyMemorySized:
       return true;
     default:
       return false;
@@ -148,10 +148,10 @@ bool TransformationReplaceLoadStoreWithCopyMemory::IsMemoryWritingOpCode(
 }
 
 bool TransformationReplaceLoadStoreWithCopyMemory::IsMemoryBarrierOpCode(
-    SpvOp op_code) {
+    spv::Op op_code) {
   switch (op_code) {
-    case SpvOpMemoryBarrier:
-    case SpvOpMemoryNamedBarrier:
+    case spv::Op::OpMemoryBarrier:
+    case spv::Op::OpMemoryNamedBarrier:
       return true;
     default:
       return false;
@@ -159,13 +159,13 @@ bool TransformationReplaceLoadStoreWithCopyMemory::IsMemoryBarrierOpCode(
 }
 
 bool TransformationReplaceLoadStoreWithCopyMemory::
-    IsStorageClassSafeAcrossMemoryBarriers(SpvStorageClass storage_class) {
+    IsStorageClassSafeAcrossMemoryBarriers(spv::StorageClass storage_class) {
   switch (storage_class) {
-    case SpvStorageClassUniformConstant:
-    case SpvStorageClassInput:
-    case SpvStorageClassUniform:
-    case SpvStorageClassPrivate:
-    case SpvStorageClassFunction:
+    case spv::StorageClass::UniformConstant:
+    case spv::StorageClass::Input:
+    case spv::StorageClass::Uniform:
+    case spv::StorageClass::Private:
+    case spv::StorageClass::Function:
       return true;
     default:
       return false;

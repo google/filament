@@ -18,6 +18,7 @@ add_subdirectory(loop_optimizations)
 add_spvtools_unittest(TARGET opt
   SRCS aggressive_dead_code_elim_test.cpp
        amd_ext_to_khr.cpp
+       analyze_live_input_test.cpp
        assembly_builder_test.cpp
        block_merge_test.cpp
        ccp_test.cpp
@@ -42,8 +43,9 @@ add_spvtools_unittest(TARGET opt
        desc_sroa_test.cpp
        eliminate_dead_const_test.cpp
        eliminate_dead_functions_test.cpp
-       eliminate_dead_input_components_test.cpp
+       eliminate_dead_io_components_test.cpp
        eliminate_dead_member_test.cpp
+       eliminate_dead_output_stores_test.cpp
        feature_manager_test.cpp
        fix_func_call_arguments_test.cpp
        fix_storage_class_test.cpp

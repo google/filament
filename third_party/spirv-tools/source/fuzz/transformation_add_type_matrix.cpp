@@ -53,7 +53,7 @@ void TransformationAddTypeMatrix::Apply(
   in_operands.push_back(
       {SPV_OPERAND_TYPE_LITERAL_INTEGER, {message_.column_count()}});
   auto type_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpTypeMatrix, 0, message_.fresh_id(), in_operands);
+      ir_context, spv::Op::OpTypeMatrix, 0, message_.fresh_id(), in_operands);
   auto type_instruction_ptr = type_instruction.get();
   ir_context->module()->AddType(std::move(type_instruction));
 

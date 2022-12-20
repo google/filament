@@ -40,7 +40,7 @@ void FuzzerPassPermutePhiOperands::Apply() {
              const protobufs::InstructionDescriptor& /*unused*/) {
         const auto& inst = *inst_it;
 
-        if (inst.opcode() != SpvOpPhi) {
+        if (inst.opcode() != spv::Op::OpPhi) {
           return;
         }
 

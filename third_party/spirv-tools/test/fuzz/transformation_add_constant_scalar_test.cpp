@@ -179,7 +179,8 @@ TEST(TransformationAddConstantScalarTest, Apply) {
   ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(19));
   ASSERT_EQ(nullptr, context->get_constant_mgr()->FindDeclaredConstant(19));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
-  ASSERT_EQ(SpvOpConstant, context->get_def_use_mgr()->GetDef(19)->opcode());
+  ASSERT_EQ(spv::Op::OpConstant,
+            context->get_def_use_mgr()->GetDef(19)->opcode());
   ASSERT_EQ(4, context->get_constant_mgr()->FindDeclaredConstant(19)->GetU32());
   auto* constant_instruction = context->get_def_use_mgr()->GetDef(19);
   EXPECT_EQ(constant_instruction->NumInOperands(), 1);

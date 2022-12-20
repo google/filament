@@ -2025,9 +2025,9 @@ TEST(FuzzerPassDonateModulesTest, HandlesCapabilities) {
                                       &transformation_sequence, false, {});
 
   ASSERT_TRUE(donor_context->get_feature_mgr()->HasCapability(
-      SpvCapabilityVariablePointersStorageBuffer));
+      spv::Capability::VariablePointersStorageBuffer));
   ASSERT_FALSE(recipient_context->get_feature_mgr()->HasCapability(
-      SpvCapabilityVariablePointersStorageBuffer));
+      spv::Capability::VariablePointersStorageBuffer));
 
   fuzzer_pass.DonateSingleModule(donor_context.get(), false);
 
@@ -2040,12 +2040,12 @@ TEST(FuzzerPassDonateModulesTest, HandlesCapabilities) {
   // have different OpCapability instructions but the same capabilities. In our
   // example, VariablePointers implicitly declares
   // VariablePointersStorageBuffer. Thus, two modules must be compatible.
-  recipient_context->AddCapability(SpvCapabilityVariablePointers);
+  recipient_context->AddCapability(spv::Capability::VariablePointers);
 
   ASSERT_TRUE(donor_context->get_feature_mgr()->HasCapability(
-      SpvCapabilityVariablePointersStorageBuffer));
+      spv::Capability::VariablePointersStorageBuffer));
   ASSERT_TRUE(recipient_context->get_feature_mgr()->HasCapability(
-      SpvCapabilityVariablePointersStorageBuffer));
+      spv::Capability::VariablePointersStorageBuffer));
 
   fuzzer_pass.DonateSingleModule(donor_context.get(), false);
 

@@ -47,18 +47,20 @@ void FuzzerPassMakeVectorOperationsDynamic::Apply() {
         }
 
         // Make sure |instruction| has only one indexing operand.
-        assert(instruction.NumInOperands() ==
-                   (instruction.opcode() == SpvOpCompositeExtract ? 2 : 3) &&
-               "FuzzerPassMakeVectorOperationsDynamic: the composite "
-               "instruction must have "
-               "only one indexing operand.");
+        assert(
+            instruction.NumInOperands() ==
+                (instruction.opcode() == spv::Op::OpCompositeExtract ? 2 : 3) &&
+            "FuzzerPassMakeVectorOperationsDynamic: the composite "
+            "instruction must have "
+            "only one indexing operand.");
 
         // Applies the make vector operation dynamic transformation.
         ApplyTransformation(TransformationMakeVectorOperationDynamic(
             instruction.result_id(),
             FindOrCreateIntegerConstant(
                 {instruction.GetSingleWordInOperand(
-                    instruction.opcode() == SpvOpCompositeExtract ? 1 : 2)},
+                    instruction.opcode() == spv::Op::OpCompositeExtract ? 1
+                                                                        : 2)},
                 32, GetFuzzerContext()->ChooseEven(), false)));
       }
     }

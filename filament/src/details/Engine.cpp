@@ -469,7 +469,7 @@ void FEngine::shutdown() {
      * Shutdown the backend...
      */
 
-    // There might be commands added by the terminate() calls, so we need to flush all commands
+    // There might be commands added by the `terminate()` calls, so we need to flush all commands
     // up to this point. After flushCommandBuffer() is called, all pending commands are guaranteed
     // to be executed before the driver thread exits.
     flushCommandBuffer(mCommandBufferQueue);
@@ -636,7 +636,7 @@ int FEngine::loop() {
     // We use the highest affinity bit, assuming this is a Big core in a  big.little
     // configuration. This is also a core not used by the JobSystem.
     // Either way the main reason to do this is to avoid this thread jumping from core to core
-    // and loose its caches in the process.
+    // and lose its caches in the process.
     uint32_t id = std::thread::hardware_concurrency() - 1;
 
     while (true) {

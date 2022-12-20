@@ -120,8 +120,8 @@ void TransformationAddLoopPreheader::Apply(
         // If |use_inst| is not a branch or merge instruction, it should not be
         // changed.
         if (!use_inst->IsBranch() &&
-            use_inst->opcode() != SpvOpSelectionMerge &&
-            use_inst->opcode() != SpvOpLoopMerge) {
+            use_inst->opcode() != spv::Op::OpSelectionMerge &&
+            use_inst->opcode() != spv::Op::OpLoopMerge) {
           return;
         }
 
@@ -134,7 +134,7 @@ void TransformationAddLoopPreheader::Apply(
   // Make a new block for the preheader.
   std::unique_ptr<opt::BasicBlock> preheader = MakeUnique<opt::BasicBlock>(
       std::unique_ptr<opt::Instruction>(new opt::Instruction(
-          ir_context, SpvOpLabel, 0, message_.fresh_id(), {})));
+          ir_context, spv::Op::OpLabel, 0, message_.fresh_id(), {})));
 
   uint32_t phi_ids_used = 0;
 
@@ -183,7 +183,7 @@ void TransformationAddLoopPreheader::Apply(
       fuzzerutil::UpdateModuleIdBound(ir_context, fresh_phi_id);
 
       preheader->AddInstruction(std::unique_ptr<opt::Instruction>(
-          new opt::Instruction(ir_context, SpvOpPhi, phi_inst->type_id(),
+          new opt::Instruction(ir_context, spv::Op::OpPhi, phi_inst->type_id(),
                                fresh_phi_id, preheader_in_operands)));
 
       // Update the OpPhi instruction in the header so that it refers to the
@@ -202,7 +202,7 @@ void TransformationAddLoopPreheader::Apply(
   // Add an unconditional branch from the preheader to the header.
   preheader->AddInstruction(
       std::unique_ptr<opt::Instruction>(new opt::Instruction(
-          ir_context, SpvOpBranch, 0, 0,
+          ir_context, spv::Op::OpBranch, 0, 0,
           std::initializer_list<opt::Operand>{opt::Operand(
               spv_operand_type_t::SPV_OPERAND_TYPE_ID, {loop_header->id()})})));
 

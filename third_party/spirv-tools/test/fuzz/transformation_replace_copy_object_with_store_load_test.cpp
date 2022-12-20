@@ -88,44 +88,45 @@ TEST(TransformationReplaceCopyObjectWithStoreLoad, BasicScenarios) {
 
   // Invalid: fresh_variable_id=10 is not fresh.
   auto transformation_invalid_1 = TransformationReplaceCopyObjectWithStoreLoad(
-      27, 10, SpvStorageClassFunction, 9);
+      27, 10, (uint32_t)spv::StorageClass::Function, 9);
   ASSERT_FALSE(transformation_invalid_1.IsApplicable(context.get(),
                                                      transformation_context));
 
   // Invalid: copy_object_result_id=26 is not a CopyObject instruction.
   auto transformation_invalid_2 = TransformationReplaceCopyObjectWithStoreLoad(
-      26, 30, SpvStorageClassFunction, 9);
+      26, 30, (uint32_t)spv::StorageClass::Function, 9);
   ASSERT_FALSE(transformation_invalid_2.IsApplicable(context.get(),
                                                      transformation_context));
 
   // Invalid: copy_object_result_id=40 is of type pointer.
   auto transformation_invalid_3 = TransformationReplaceCopyObjectWithStoreLoad(
-      40, 30, SpvStorageClassFunction, 9);
+      40, 30, (uint32_t)spv::StorageClass::Function, 9);
   ASSERT_FALSE(transformation_invalid_3.IsApplicable(context.get(),
                                                      transformation_context));
 
   // Invalid: Pointer type instruction in this storage class pointing to the
   // value type is not defined.
   auto transformation_invalid_4 = TransformationReplaceCopyObjectWithStoreLoad(
-      40, 30, SpvStorageClassPrivate, 9);
+      40, 30, (uint32_t)spv::StorageClass::Private, 9);
   ASSERT_FALSE(transformation_invalid_4.IsApplicable(context.get(),
                                                      transformation_context));
 
   // Invalid: initializer_id=15 has the wrong type relative to the OpCopyObject
   // instruction.
   auto transformation_invalid_5 = TransformationReplaceCopyObjectWithStoreLoad(
-      27, 30, SpvStorageClassFunction, 15);
+      27, 30, (uint32_t)spv::StorageClass::Function, 15);
   ASSERT_FALSE(transformation_invalid_5.IsApplicable(context.get(),
                                                      transformation_context));
 
-  // Invalid: SpvStorageClassUniform is not applicable to the transformation.
+  // Invalid: spv::StorageClass::Uniform is not applicable to the
+  // transformation.
   auto transformation_invalid_6 = TransformationReplaceCopyObjectWithStoreLoad(
-      27, 30, SpvStorageClassUniform, 9);
+      27, 30, (uint32_t)spv::StorageClass::Uniform, 9);
   ASSERT_FALSE(transformation_invalid_6.IsApplicable(context.get(),
                                                      transformation_context));
 
   auto transformation_valid_1 = TransformationReplaceCopyObjectWithStoreLoad(
-      27, 30, SpvStorageClassFunction, 9);
+      27, 30, (uint32_t)spv::StorageClass::Function, 9);
   ASSERT_TRUE(transformation_valid_1.IsApplicable(context.get(),
                                                   transformation_context));
   ApplyAndCheckFreshIds(transformation_valid_1, context.get(),
@@ -134,7 +135,7 @@ TEST(TransformationReplaceCopyObjectWithStoreLoad, BasicScenarios) {
                                                kConsoleMessageConsumer));
 
   auto transformation_valid_2 = TransformationReplaceCopyObjectWithStoreLoad(
-      28, 32, SpvStorageClassPrivate, 15);
+      28, 32, (uint32_t)spv::StorageClass::Private, 15);
   ASSERT_TRUE(transformation_valid_2.IsApplicable(context.get(),
                                                   transformation_context));
   ApplyAndCheckFreshIds(transformation_valid_2, context.get(),
@@ -244,7 +245,7 @@ TEST(TransformationReplaceCopyObjectWithStoreLoad, IrrelevantIdsAndDeadBlocks) {
   transformation_context.GetFactManager()->AddFactIdIsIrrelevant(11);
 
   auto transformation_1 = TransformationReplaceCopyObjectWithStoreLoad(
-      50, 100, SpvStorageClassFunction, 10);
+      50, 100, (uint32_t)spv::StorageClass::Function, 10);
   ASSERT_TRUE(
       transformation_1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation_1, context.get(),
@@ -253,7 +254,7 @@ TEST(TransformationReplaceCopyObjectWithStoreLoad, IrrelevantIdsAndDeadBlocks) {
       MakeDataDescriptor(100, {}), MakeDataDescriptor(50, {})));
 
   auto transformation_2 = TransformationReplaceCopyObjectWithStoreLoad(
-      51, 101, SpvStorageClassFunction, 10);
+      51, 101, (uint32_t)spv::StorageClass::Function, 10);
   ASSERT_TRUE(
       transformation_2.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation_2, context.get(),

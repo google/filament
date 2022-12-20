@@ -79,7 +79,7 @@ class DataSynonymAndIdEquationFacts {
   // This helper struct represents the right hand side of an equation as an
   // operator applied to a number of data descriptor operands.
   struct Operation {
-    SpvOp opcode;
+    spv::Op opcode;
     std::vector<const protobufs::DataDescriptor*> operands;
   };
 
@@ -144,7 +144,7 @@ class DataSynonymAndIdEquationFacts {
   // corollaries, in the form of data synonym or equation facts, that follow
   // from this and other known facts.
   void AddEquationFactRecursive(
-      const protobufs::DataDescriptor& lhs_dd, SpvOp opcode,
+      const protobufs::DataDescriptor& lhs_dd, spv::Op opcode,
       const std::vector<const protobufs::DataDescriptor*>& rhs_dds);
 
   // Returns true if and only if |dd.object()| still exists in the module.

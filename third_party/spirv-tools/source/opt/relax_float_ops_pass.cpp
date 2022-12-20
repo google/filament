@@ -25,7 +25,7 @@ bool RelaxFloatOpsPass::IsRelaxable(Instruction* inst) {
   return target_ops_core_f_rslt_.count(inst->opcode()) != 0 ||
          target_ops_core_f_opnd_.count(inst->opcode()) != 0 ||
          sample_ops_.count(inst->opcode()) != 0 ||
-         (inst->opcode() == SpvOpExtInst &&
+         (inst->opcode() == spv::Op::OpExtInst &&
           inst->GetSingleWordInOperand(0) ==
               context()->get_feature_mgr()->GetExtInstImportId_GLSLstd450() &&
           target_ops_450_.count(inst->GetSingleWordInOperand(1)) != 0);
@@ -46,8 +46,9 @@ bool RelaxFloatOpsPass::IsFloat32(Instruction* inst) {
 
 bool RelaxFloatOpsPass::IsRelaxed(uint32_t r_id) {
   for (auto r_inst : get_decoration_mgr()->GetDecorationsFor(r_id, false))
-    if (r_inst->opcode() == SpvOpDecorate &&
-        r_inst->GetSingleWordInOperand(1) == SpvDecorationRelaxedPrecision)
+    if (r_inst->opcode() == spv::Op::OpDecorate &&
+        spv::Decoration(r_inst->GetSingleWordInOperand(1)) ==
+            spv::Decoration::RelaxedPrecision)
       return true;
   return false;
 }
@@ -58,7 +59,8 @@ bool RelaxFloatOpsPass::ProcessInst(Instruction* r_inst) {
   if (!IsFloat32(r_inst)) return false;
   if (IsRelaxed(r_id)) return false;
   if (!IsRelaxable(r_inst)) return false;
-  get_decoration_mgr()->AddDecoration(r_id, SpvDecorationRelaxedPrecision);
+  get_decoration_mgr()->AddDecoration(
+      r_id, uint32_t(spv::Decoration::RelaxedPrecision));
   return true;
 }
 
@@ -87,48 +89,48 @@ Pass::Status RelaxFloatOpsPass::Process() {
 
 void RelaxFloatOpsPass::Initialize() {
   target_ops_core_f_rslt_ = {
-      SpvOpLoad,
-      SpvOpPhi,
-      SpvOpVectorExtractDynamic,
-      SpvOpVectorInsertDynamic,
-      SpvOpVectorShuffle,
-      SpvOpCompositeExtract,
-      SpvOpCompositeConstruct,
-      SpvOpCompositeInsert,
-      SpvOpCopyObject,
-      SpvOpTranspose,
-      SpvOpConvertSToF,
-      SpvOpConvertUToF,
-      SpvOpFConvert,
-      // SpvOpQuantizeToF16,
-      SpvOpFNegate,
-      SpvOpFAdd,
-      SpvOpFSub,
-      SpvOpFMul,
-      SpvOpFDiv,
-      SpvOpFMod,
-      SpvOpVectorTimesScalar,
-      SpvOpMatrixTimesScalar,
-      SpvOpVectorTimesMatrix,
-      SpvOpMatrixTimesVector,
-      SpvOpMatrixTimesMatrix,
-      SpvOpOuterProduct,
-      SpvOpDot,
-      SpvOpSelect,
+      spv::Op::OpLoad,
+      spv::Op::OpPhi,
+      spv::Op::OpVectorExtractDynamic,
+      spv::Op::OpVectorInsertDynamic,
+      spv::Op::OpVectorShuffle,
+      spv::Op::OpCompositeExtract,
+      spv::Op::OpCompositeConstruct,
+      spv::Op::OpCompositeInsert,
+      spv::Op::OpCopyObject,
+      spv::Op::OpTranspose,
+      spv::Op::OpConvertSToF,
+      spv::Op::OpConvertUToF,
+      spv::Op::OpFConvert,
+      // spv::Op::OpQuantizeToF16,
+      spv::Op::OpFNegate,
+      spv::Op::OpFAdd,
+      spv::Op::OpFSub,
+      spv::Op::OpFMul,
+      spv::Op::OpFDiv,
+      spv::Op::OpFMod,
+      spv::Op::OpVectorTimesScalar,
+      spv::Op::OpMatrixTimesScalar,
+      spv::Op::OpVectorTimesMatrix,
+      spv::Op::OpMatrixTimesVector,
+      spv::Op::OpMatrixTimesMatrix,
+      spv::Op::OpOuterProduct,
+      spv::Op::OpDot,
+      spv::Op::OpSelect,
   };
   target_ops_core_f_opnd_ = {
-      SpvOpFOrdEqual,
-      SpvOpFUnordEqual,
-      SpvOpFOrdNotEqual,
-      SpvOpFUnordNotEqual,
-      SpvOpFOrdLessThan,
-      SpvOpFUnordLessThan,
-      SpvOpFOrdGreaterThan,
-      SpvOpFUnordGreaterThan,
-      SpvOpFOrdLessThanEqual,
-      SpvOpFUnordLessThanEqual,
-      SpvOpFOrdGreaterThanEqual,
-      SpvOpFUnordGreaterThanEqual,
+      spv::Op::OpFOrdEqual,
+      spv::Op::OpFUnordEqual,
+      spv::Op::OpFOrdNotEqual,
+      spv::Op::OpFUnordNotEqual,
+      spv::Op::OpFOrdLessThan,
+      spv::Op::OpFUnordLessThan,
+      spv::Op::OpFOrdGreaterThan,
+      spv::Op::OpFUnordGreaterThan,
+      spv::Op::OpFOrdLessThanEqual,
+      spv::Op::OpFUnordLessThanEqual,
+      spv::Op::OpFOrdGreaterThanEqual,
+      spv::Op::OpFUnordGreaterThanEqual,
   };
   target_ops_450_ = {
       GLSLstd450Round, GLSLstd450RoundEven, GLSLstd450Trunc, GLSLstd450FAbs,
@@ -147,31 +149,31 @@ void RelaxFloatOpsPass::Initialize() {
       GLSLstd450Ldexp, GLSLstd450Length, GLSLstd450Distance, GLSLstd450Cross,
       GLSLstd450Normalize, GLSLstd450FaceForward, GLSLstd450Reflect,
       GLSLstd450Refract, GLSLstd450NMin, GLSLstd450NMax, GLSLstd450NClamp};
-  sample_ops_ = {SpvOpImageSampleImplicitLod,
-                 SpvOpImageSampleExplicitLod,
-                 SpvOpImageSampleDrefImplicitLod,
-                 SpvOpImageSampleDrefExplicitLod,
-                 SpvOpImageSampleProjImplicitLod,
-                 SpvOpImageSampleProjExplicitLod,
-                 SpvOpImageSampleProjDrefImplicitLod,
-                 SpvOpImageSampleProjDrefExplicitLod,
-                 SpvOpImageFetch,
-                 SpvOpImageGather,
-                 SpvOpImageDrefGather,
-                 SpvOpImageRead,
-                 SpvOpImageSparseSampleImplicitLod,
-                 SpvOpImageSparseSampleExplicitLod,
-                 SpvOpImageSparseSampleDrefImplicitLod,
-                 SpvOpImageSparseSampleDrefExplicitLod,
-                 SpvOpImageSparseSampleProjImplicitLod,
-                 SpvOpImageSparseSampleProjExplicitLod,
-                 SpvOpImageSparseSampleProjDrefImplicitLod,
-                 SpvOpImageSparseSampleProjDrefExplicitLod,
-                 SpvOpImageSparseFetch,
-                 SpvOpImageSparseGather,
-                 SpvOpImageSparseDrefGather,
-                 SpvOpImageSparseTexelsResident,
-                 SpvOpImageSparseRead};
+  sample_ops_ = {spv::Op::OpImageSampleImplicitLod,
+                 spv::Op::OpImageSampleExplicitLod,
+                 spv::Op::OpImageSampleDrefImplicitLod,
+                 spv::Op::OpImageSampleDrefExplicitLod,
+                 spv::Op::OpImageSampleProjImplicitLod,
+                 spv::Op::OpImageSampleProjExplicitLod,
+                 spv::Op::OpImageSampleProjDrefImplicitLod,
+                 spv::Op::OpImageSampleProjDrefExplicitLod,
+                 spv::Op::OpImageFetch,
+                 spv::Op::OpImageGather,
+                 spv::Op::OpImageDrefGather,
+                 spv::Op::OpImageRead,
+                 spv::Op::OpImageSparseSampleImplicitLod,
+                 spv::Op::OpImageSparseSampleExplicitLod,
+                 spv::Op::OpImageSparseSampleDrefImplicitLod,
+                 spv::Op::OpImageSparseSampleDrefExplicitLod,
+                 spv::Op::OpImageSparseSampleProjImplicitLod,
+                 spv::Op::OpImageSparseSampleProjExplicitLod,
+                 spv::Op::OpImageSparseSampleProjDrefImplicitLod,
+                 spv::Op::OpImageSparseSampleProjDrefExplicitLod,
+                 spv::Op::OpImageSparseFetch,
+                 spv::Op::OpImageSparseGather,
+                 spv::Op::OpImageSparseDrefGather,
+                 spv::Op::OpImageSparseTexelsResident,
+                 spv::Op::OpImageSparseRead};
 }
 
 }  // namespace opt

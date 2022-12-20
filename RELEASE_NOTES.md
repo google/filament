@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.31.0
+
 - java: fix confusing typo in Camera documentation
 - engine: the output color space can be set on `ColorGrading`. This API currently has limitations,
   please refer to the documentation for more details
@@ -15,13 +17,13 @@ A new header is inserted each time a *tag* is created.
              normalized position and keeps z reversed [⚠️ **Recompile Materials**]
 - backend: workaround Adreno shader compiler bug (#6355) [⚠️ **Recompile Materials**]
 - gltfio: expose joint inverse bind matrices via method on FilamentInstance
+- geometry: change computing tangent basis from normal vector to use Frisvad's method
 
 ## v1.30.0
 
 - engine: optimize per-shadow UBO [⚠️ **Recompile Materials**]
 - engine: fix potential memory corruption with larger scenes
 - engine: VSM's MSAA setting is now per-view instead of per-light [⚠️ **API Change**]
-- geometry: change computing tangent basis from normal vector to use Frisvad's method
 
 ## v1.29.0
 

@@ -29,7 +29,7 @@ Pass::Status FixFuncCallArgumentsPass::Process() {
   if (ModuleHasASingleFunction()) return Status::SuccessWithoutChange;
   for (auto& func : *get_module()) {
     func.ForEachInst([this, &modified](Instruction* inst) {
-      if (inst->opcode() == SpvOpFunctionCall) {
+      if (inst->opcode() == spv::Op::OpFunctionCall) {
         modified |= FixFuncCallArguments(inst);
       }
     });
@@ -44,7 +44,7 @@ bool FixFuncCallArgumentsPass::FixFuncCallArguments(
     Operand& op = func_call_inst->GetInOperand(i);
     if (op.type != SPV_OPERAND_TYPE_ID) continue;
     Instruction* operand_inst = get_def_use_mgr()->GetDef(op.AsId());
-    if (operand_inst->opcode() == SpvOpAccessChain) {
+    if (operand_inst->opcode() == spv::Op::OpAccessChain) {
       uint32_t var_id =
           ReplaceAccessChainFuncCallArguments(func_call_inst, operand_inst);
       func_call_inst->SetInOperand(i, {var_id});
@@ -71,10 +71,11 @@ uint32_t FixFuncCallArgumentsPass::ReplaceAccessChainFuncCallArguments(
   Instruction* op_type =
       get_def_use_mgr()->GetDef(op_ptr_type->GetSingleWordInOperand(1));
   uint32_t varType = context()->get_type_mgr()->FindPointerToType(
-      op_type->result_id(), SpvStorageClassFunction);
+      op_type->result_id(), spv::StorageClass::Function);
   // Create new variable
   builder.SetInsertPoint(variable_insertion_point);
-  Instruction* var = builder.AddVariable(varType, SpvStorageClassFunction);
+  Instruction* var =
+      builder.AddVariable(varType, uint32_t(spv::StorageClass::Function));
   // Load access chain to the new variable before function call
   builder.SetInsertPoint(func_call_inst);
 

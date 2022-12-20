@@ -48,12 +48,12 @@ bool TransformationFlattenConditionalBranch::IsApplicable(
 
   // The block must have been found and it must be a selection header.
   if (!header_block || !header_block->GetMergeInst() ||
-      header_block->GetMergeInst()->opcode() != SpvOpSelectionMerge) {
+      header_block->GetMergeInst()->opcode() != spv::Op::OpSelectionMerge) {
     return false;
   }
 
   // The header block must end with an OpBranchConditional instruction.
-  if (header_block->terminator()->opcode() != SpvOpBranchConditional) {
+  if (header_block->terminator()->opcode() != spv::Op::OpBranchConditional) {
     return false;
   }
 
@@ -164,14 +164,14 @@ bool TransformationFlattenConditionalBranch::IsApplicable(
                opt::Instruction* phi_result_type =
                    ir_context->get_def_use_mgr()->GetDef(inst->type_id());
                switch (phi_result_type->opcode()) {
-                 case SpvOpTypeBool:
-                 case SpvOpTypeInt:
-                 case SpvOpTypeFloat:
-                 case SpvOpTypePointer:
+                 case spv::Op::OpTypeBool:
+                 case spv::Op::OpTypeInt:
+                 case spv::Op::OpTypeFloat:
+                 case spv::Op::OpTypePointer:
                    // Fine: OpSelect can work directly on scalar and pointer
                    // types.
                    return true;
-                 case SpvOpTypeVector: {
+                 case spv::Op::OpTypeVector: {
                    // In its restricted form, OpSelect can only select between
                    // vectors if the condition of the select is a boolean
                    // boolean vector.  We thus require the appropriate boolean
@@ -288,8 +288,8 @@ void TransformationFlattenConditionalBranch::Apply(
 
       current_block->ForEachInst(
           [&problematic_instructions](opt::Instruction* instruction) {
-            if (instruction->opcode() != SpvOpLabel &&
-                instruction->opcode() != SpvOpBranch &&
+            if (instruction->opcode() != spv::Op::OpLabel &&
+                instruction->opcode() != spv::Op::OpBranch &&
                 !fuzzerutil::InstructionHasNoSideEffects(*instruction)) {
               problematic_instructions.push_back(instruction);
             }
@@ -381,7 +381,7 @@ void TransformationFlattenConditionalBranch::Apply(
   // Add a new, unconditional, branch instruction from the current header to
   // |after_header|.
   header_block->AddInstruction(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpBranch, 0, 0,
+      ir_context, spv::Op::OpBranch, 0, 0,
       opt::Instruction::OperandList{{SPV_OPERAND_TYPE_ID, {after_header}}}));
 
   // If the first branch to be laid out exists, change the branch instruction so
@@ -437,8 +437,8 @@ bool TransformationFlattenConditionalBranch::
         std::set<opt::Instruction*>* instructions_that_need_ids) {
   uint32_t merge_block_id = header->MergeBlockIdIfAny();
   assert(merge_block_id &&
-         header->GetMergeInst()->opcode() == SpvOpSelectionMerge &&
-         header->terminator()->opcode() == SpvOpBranchConditional &&
+         header->GetMergeInst()->opcode() == spv::Op::OpSelectionMerge &&
+         header->terminator()->opcode() == spv::Op::OpBranchConditional &&
          "|header| must be the header of a conditional.");
 
   // |header| must be reachable.
@@ -508,7 +508,7 @@ bool TransformationFlattenConditionalBranch::
     }
 
     // The terminator instruction for the block must be OpBranch.
-    if (block->terminator()->opcode() != SpvOpBranch) {
+    if (block->terminator()->opcode() != spv::Op::OpBranch) {
       return false;
     }
 
@@ -524,7 +524,7 @@ bool TransformationFlattenConditionalBranch::
         [ir_context, instructions_that_need_ids,
          &synonym_base_objects](opt::Instruction* instruction) {
           // We can ignore OpLabel instructions.
-          if (instruction->opcode() == SpvOpLabel) {
+          if (instruction->opcode() == spv::Op::OpLabel) {
             return true;
           }
 
@@ -539,7 +539,7 @@ bool TransformationFlattenConditionalBranch::
 
           // If the instruction is a branch, it must be an unconditional branch.
           if (instruction->IsBranch()) {
-            return instruction->opcode() == SpvOpBranch;
+            return instruction->opcode() == spv::Op::OpBranch;
           }
 
           // We cannot go ahead if we encounter an instruction that cannot be
@@ -644,7 +644,7 @@ TransformationFlattenConditionalBranch::EncloseInstructionInConditional(
 
   // Add an unconditional branch from |execute_block| to |merge_block|.
   execute_block->AddInstruction(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpBranch, 0, 0,
+      ir_context, spv::Op::OpBranch, 0, 0,
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {merge_block->id()}}}));
 
@@ -668,10 +668,10 @@ TransformationFlattenConditionalBranch::EncloseInstructionInConditional(
     }
 
     // Create a new block using |fresh_ids.alternative_block_id| for its label.
-    auto alternative_block_temp =
-        MakeUnique<opt::BasicBlock>(MakeUnique<opt::Instruction>(
-            ir_context, SpvOpLabel, 0, wrapper_info.alternative_block_id(),
-            opt::Instruction::OperandList{}));
+    auto alternative_block_temp = MakeUnique<opt::BasicBlock>(
+        MakeUnique<opt::Instruction>(ir_context, spv::Op::OpLabel, 0,
+                                     wrapper_info.alternative_block_id(),
+                                     opt::Instruction::OperandList{}));
 
     // Keep the original result id of the instruction in a variable.
     uint32_t original_result_id = instruction->result_id();
@@ -685,14 +685,14 @@ TransformationFlattenConditionalBranch::EncloseInstructionInConditional(
       // If there is an available id to copy from, the placeholder instruction
       // will be %placeholder_result_id = OpCopyObject %type %value_to_copy_id
       alternative_block_temp->AddInstruction(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpCopyObject, instruction->type_id(),
+          ir_context, spv::Op::OpCopyObject, instruction->type_id(),
           wrapper_info.placeholder_result_id(),
           opt::Instruction::OperandList{
               {SPV_OPERAND_TYPE_ID, {wrapper_info.value_to_copy_id()}}}));
     } else {
       // If there is no such id, use an OpUndef instruction.
       alternative_block_temp->AddInstruction(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpUndef, instruction->type_id(),
+          ir_context, spv::Op::OpUndef, instruction->type_id(),
           wrapper_info.placeholder_result_id(),
           opt::Instruction::OperandList{}));
     }
@@ -702,7 +702,7 @@ TransformationFlattenConditionalBranch::EncloseInstructionInConditional(
 
     // Add an unconditional branch from the new block to the merge block.
     alternative_block_temp->AddInstruction(MakeUnique<opt::Instruction>(
-        ir_context, SpvOpBranch, 0, 0,
+        ir_context, spv::Op::OpBranch, 0, 0,
         opt::Instruction::OperandList{
             {SPV_OPERAND_TYPE_ID, {merge_block->id()}}}));
 
@@ -714,7 +714,7 @@ TransformationFlattenConditionalBranch::EncloseInstructionInConditional(
     // merge block, which will either take the value of the result of the
     // instruction or the placeholder value defined in the alternative block.
     merge_block->begin().InsertBefore(MakeUnique<opt::Instruction>(
-        ir_context, SpvOpPhi, instruction->type_id(), original_result_id,
+        ir_context, spv::Op::OpPhi, instruction->type_id(), original_result_id,
         opt::Instruction::OperandList{
             {SPV_OPERAND_TYPE_ID, {instruction->result_id()}},
             {SPV_OPERAND_TYPE_ID, {execute_block->id()}},
@@ -738,16 +738,17 @@ TransformationFlattenConditionalBranch::EncloseInstructionInConditional(
 
   // Add an OpSelectionMerge instruction to the block.
   block->AddInstruction(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpSelectionMerge, 0, 0,
-      opt::Instruction::OperandList{{SPV_OPERAND_TYPE_ID, {merge_block->id()}},
-                                    {SPV_OPERAND_TYPE_SELECTION_CONTROL,
-                                     {SpvSelectionControlMaskNone}}}));
+      ir_context, spv::Op::OpSelectionMerge, 0, 0,
+      opt::Instruction::OperandList{
+          {SPV_OPERAND_TYPE_ID, {merge_block->id()}},
+          {SPV_OPERAND_TYPE_SELECTION_CONTROL,
+           {uint32_t(spv::SelectionControlMask::MaskNone)}}}));
 
   // Add an OpBranchConditional, to the block, using |condition_id| as the
   // condition and branching to |if_block_id| if the condition is true and to
   // |else_block_id| if the condition is false.
   block->AddInstruction(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpBranchConditional, 0, 0,
+      ir_context, spv::Op::OpBranchConditional, 0, 0,
       opt::Instruction::OperandList{{SPV_OPERAND_TYPE_ID, {condition_id}},
                                     {SPV_OPERAND_TYPE_ID, {if_block_id}},
                                     {SPV_OPERAND_TYPE_ID, {else_block_id}}}));
@@ -764,26 +765,26 @@ bool TransformationFlattenConditionalBranch::InstructionCanBeHandled(
 
   // We cannot handle barrier instructions, while we should be able to handle
   // all other instructions by enclosing them inside a conditional.
-  if (instruction.opcode() == SpvOpControlBarrier ||
-      instruction.opcode() == SpvOpMemoryBarrier ||
-      instruction.opcode() == SpvOpNamedBarrierInitialize ||
-      instruction.opcode() == SpvOpMemoryNamedBarrier ||
-      instruction.opcode() == SpvOpTypeNamedBarrier) {
+  if (instruction.opcode() == spv::Op::OpControlBarrier ||
+      instruction.opcode() == spv::Op::OpMemoryBarrier ||
+      instruction.opcode() == spv::Op::OpNamedBarrierInitialize ||
+      instruction.opcode() == spv::Op::OpMemoryNamedBarrier ||
+      instruction.opcode() == spv::Op::OpTypeNamedBarrier) {
     return false;
   }
 
   // We cannot handle OpSampledImage instructions, as they need to be in the
   // same block as their use.
-  if (instruction.opcode() == SpvOpSampledImage) {
+  if (instruction.opcode() == spv::Op::OpSampledImage) {
     return false;
   }
 
   // We cannot handle a sampled image load, because we re-work loads using
   // conditional branches and OpPhi instructions, and the result type of OpPhi
   // cannot be OpTypeSampledImage.
-  if (instruction.opcode() == SpvOpLoad &&
+  if (instruction.opcode() == spv::Op::OpLoad &&
       ir_context->get_def_use_mgr()->GetDef(instruction.type_id())->opcode() ==
-          SpvOpTypeSampledImage) {
+          spv::Op::OpTypeSampledImage) {
     return false;
   }
 
@@ -863,7 +864,7 @@ void TransformationFlattenConditionalBranch::AddBooleanVectorConstructorToBlock(
     in_operands.emplace_back(branch_condition_operand);
   }
   block->begin()->InsertBefore(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpCompositeConstruct,
+      ir_context, spv::Op::OpCompositeConstruct,
       fuzzerutil::MaybeGetVectorType(
           ir_context, fuzzerutil::MaybeGetBoolType(ir_context), dimension),
       fresh_id, in_operands));
@@ -906,7 +907,7 @@ void TransformationFlattenConditionalBranch::
         opt::Operand selector_operand = branch_condition_operand;
         opt::Instruction* type_inst =
             ir_context->get_def_use_mgr()->GetDef(phi_inst->type_id());
-        if (type_inst->opcode() == SpvOpTypeVector) {
+        if (type_inst->opcode() == spv::Op::OpTypeVector) {
           uint32_t dimension = type_inst->GetSingleWordInOperand(1);
           switch (dimension) {
             case 2:
@@ -1012,7 +1013,7 @@ void TransformationFlattenConditionalBranch::
           operands.emplace_back(phi_inst->GetInOperand(2));
           operands.emplace_back(phi_inst->GetInOperand(0));
         }
-        phi_inst->SetOpcode(SpvOpSelect);
+        phi_inst->SetOpcode(spv::Op::OpSelect);
         phi_inst->SetInOperands(std::move(operands));
       });
 

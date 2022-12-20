@@ -37,7 +37,7 @@ using OpMemoryBarrier = spvtest::TextToBinaryTest;
 TEST_F(OpMemoryBarrier, Good) {
   const std::string input = "OpMemoryBarrier %1 %2\n";
   EXPECT_THAT(CompiledInstructions(input),
-              Eq(MakeInstruction(SpvOpMemoryBarrier, {1, 2})));
+              Eq(MakeInstruction(spv::Op::OpMemoryBarrier, {1, 2})));
   EXPECT_THAT(EncodeAndDecodeSuccessfully(input), Eq(input));
 }
 
@@ -89,7 +89,7 @@ TEST_F(NamedMemoryBarrierTest, OpcodeAssemblesInV10) {
   EXPECT_THAT(
       CompiledInstructions("OpMemoryNamedBarrier %bar %scope %semantics",
                            SPV_ENV_UNIVERSAL_1_0),
-      ElementsAre(spvOpcodeMake(4, SpvOpMemoryNamedBarrier), _, _, _));
+      ElementsAre(spvOpcodeMake(4, spv::Op::OpMemoryNamedBarrier), _, _, _));
 }
 
 TEST_F(NamedMemoryBarrierTest, ArgumentCount) {
@@ -107,7 +107,7 @@ TEST_F(NamedMemoryBarrierTest, ArgumentCount) {
   EXPECT_THAT(
       CompiledInstructions("OpMemoryNamedBarrier %bar %scope %semantics",
                            SPV_ENV_UNIVERSAL_1_1),
-      ElementsAre(spvOpcodeMake(4, SpvOpMemoryNamedBarrier), _, _, _));
+      ElementsAre(spvOpcodeMake(4, spv::Op::OpMemoryNamedBarrier), _, _, _));
   EXPECT_THAT(
       CompileFailure("OpMemoryNamedBarrier %bar %scope %semantics %extra",
                      SPV_ENV_UNIVERSAL_1_1),
@@ -128,7 +128,7 @@ using TypeNamedBarrierTest = spvtest::TextToBinaryTest;
 TEST_F(TypeNamedBarrierTest, OpcodeAssemblesInV10) {
   EXPECT_THAT(
       CompiledInstructions("%t = OpTypeNamedBarrier", SPV_ENV_UNIVERSAL_1_0),
-      ElementsAre(spvOpcodeMake(2, SpvOpTypeNamedBarrier), _));
+      ElementsAre(spvOpcodeMake(2, spv::Op::OpTypeNamedBarrier), _));
 }
 
 TEST_F(TypeNamedBarrierTest, ArgumentCount) {
@@ -137,7 +137,7 @@ TEST_F(TypeNamedBarrierTest, ArgumentCount) {
                  "found 'OpTypeNamedBarrier'."));
   EXPECT_THAT(
       CompiledInstructions("%t = OpTypeNamedBarrier", SPV_ENV_UNIVERSAL_1_1),
-      ElementsAre(spvOpcodeMake(2, SpvOpTypeNamedBarrier), _));
+      ElementsAre(spvOpcodeMake(2, spv::Op::OpTypeNamedBarrier), _));
   EXPECT_THAT(
       CompileFailure("%t = OpTypeNamedBarrier 1 2 3", SPV_ENV_UNIVERSAL_1_1),
       Eq("Expected <opcode> or <result-id> at the beginning of an instruction, "
@@ -150,7 +150,8 @@ TEST_F(NamedBarrierInitializeTest, OpcodeAssemblesInV10) {
   EXPECT_THAT(
       CompiledInstructions("%bar = OpNamedBarrierInitialize %type %count",
                            SPV_ENV_UNIVERSAL_1_0),
-      ElementsAre(spvOpcodeMake(4, SpvOpNamedBarrierInitialize), _, _, _));
+      ElementsAre(spvOpcodeMake(4, spv::Op::OpNamedBarrierInitialize), _, _,
+                  _));
 }
 
 TEST_F(NamedBarrierInitializeTest, ArgumentCount) {
@@ -165,7 +166,8 @@ TEST_F(NamedBarrierInitializeTest, ArgumentCount) {
   EXPECT_THAT(
       CompiledInstructions("%bar = OpNamedBarrierInitialize %type %count",
                            SPV_ENV_UNIVERSAL_1_1),
-      ElementsAre(spvOpcodeMake(4, SpvOpNamedBarrierInitialize), _, _, _));
+      ElementsAre(spvOpcodeMake(4, spv::Op::OpNamedBarrierInitialize), _, _,
+                  _));
   EXPECT_THAT(
       CompileFailure("%bar = OpNamedBarrierInitialize %type %count \"extra\"",
                      SPV_ENV_UNIVERSAL_1_1),

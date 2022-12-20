@@ -131,14 +131,15 @@ void FuzzerPass::ForEachInstructionWithInstructionDescriptor(
     // should skip when searching from 'base' for the desired instruction.
     // (An instruction that has a result id is represented by its own opcode,
     // itself as 'base', and a skip-count of 0.)
-    std::vector<std::tuple<uint32_t, SpvOp, uint32_t>> base_opcode_skip_triples;
+    std::vector<std::tuple<uint32_t, spv::Op, uint32_t>>
+        base_opcode_skip_triples;
 
     // The initial base instruction is the block label.
     uint32_t base = block->id();
 
     // Counts the number of times we have seen each opcode since we reset the
     // base instruction.
-    std::map<SpvOp, uint32_t> skip_count;
+    std::map<spv::Op, uint32_t> skip_count;
 
     // Consider every instruction in the block.  The label is excluded: it is
     // only necessary to consider it as a base in case the first instruction
@@ -151,7 +152,7 @@ void FuzzerPass::ForEachInstructionWithInstructionDescriptor(
         base = inst_it->result_id();
         skip_count.clear();
       }
-      const SpvOp opcode = inst_it->opcode();
+      const spv::Op opcode = inst_it->opcode();
 
       // Invoke the provided function, which might apply a transformation.
       action(block, inst_it,
@@ -330,7 +331,7 @@ uint32_t FuzzerPass::FindOrCreateStructType(
 }
 
 uint32_t FuzzerPass::FindOrCreatePointerType(uint32_t base_type_id,
-                                             SpvStorageClass storage_class) {
+                                             spv::StorageClass storage_class) {
   // We do not use the type manager here, due to problems related to isomorphic
   // but distinct structs not being regarded as different.
   auto existing_id = fuzzerutil::MaybeGetPointerType(
@@ -345,7 +346,7 @@ uint32_t FuzzerPass::FindOrCreatePointerType(uint32_t base_type_id,
 }
 
 uint32_t FuzzerPass::FindOrCreatePointerToIntegerType(
-    uint32_t width, bool is_signed, SpvStorageClass storage_class) {
+    uint32_t width, bool is_signed, spv::StorageClass storage_class) {
   return FindOrCreatePointerType(FindOrCreateIntegerType(width, is_signed),
                                  storage_class);
 }
@@ -432,7 +433,7 @@ uint32_t FuzzerPass::FindOrCreateCompositeConstant(
 
 uint32_t FuzzerPass::FindOrCreateGlobalUndef(uint32_t type_id) {
   for (auto& inst : GetIRContext()->types_values()) {
-    if (inst.opcode() == SpvOpUndef && inst.type_id() == type_id) {
+    if (inst.opcode() == spv::Op::OpUndef && inst.type_id() == type_id) {
       return inst.result_id();
     }
   }
@@ -464,7 +465,7 @@ uint32_t FuzzerPass::FindOrCreateNullConstant(uint32_t type_id) {
 
 std::pair<std::vector<uint32_t>, std::map<uint32_t, std::vector<uint32_t>>>
 FuzzerPass::GetAvailableBasicTypesAndPointers(
-    SpvStorageClass storage_class) const {
+    spv::StorageClass storage_class) const {
   // Records all of the basic types available in the module.
   std::set<uint32_t> basic_types;
 
@@ -480,23 +481,23 @@ FuzzerPass::GetAvailableBasicTypesAndPointers(
     // For pointer types with basic pointee types, associate the pointer type
     // with the basic type.
     switch (inst.opcode()) {
-      case SpvOpTypeBool:
-      case SpvOpTypeFloat:
-      case SpvOpTypeInt:
-      case SpvOpTypeMatrix:
-      case SpvOpTypeVector:
+      case spv::Op::OpTypeBool:
+      case spv::Op::OpTypeFloat:
+      case spv::Op::OpTypeInt:
+      case spv::Op::OpTypeMatrix:
+      case spv::Op::OpTypeVector:
         // These are all basic types.
         basic_types.insert(inst.result_id());
         basic_type_to_pointers.insert({inst.result_id(), {}});
         break;
-      case SpvOpTypeArray:
+      case spv::Op::OpTypeArray:
         // An array type is basic if its base type is basic.
         if (basic_types.count(inst.GetSingleWordInOperand(0))) {
           basic_types.insert(inst.result_id());
           basic_type_to_pointers.insert({inst.result_id(), {}});
         }
         break;
-      case SpvOpTypeStruct: {
+      case spv::Op::OpTypeStruct: {
         // A struct type is basic if it does not have the Block/BufferBlock
         // decoration, and if all of its members are basic.
         if (!fuzzerutil::HasBlockOrBufferBlockDecoration(GetIRContext(),
@@ -515,11 +516,12 @@ FuzzerPass::GetAvailableBasicTypesAndPointers(
         }
         break;
       }
-      case SpvOpTypePointer: {
+      case spv::Op::OpTypePointer: {
         // We are interested in the pointer if its pointee type is basic and it
         // has the right storage class.
         auto pointee_type = inst.GetSingleWordInOperand(1);
-        if (inst.GetSingleWordInOperand(0) == storage_class &&
+        if (spv::StorageClass(inst.GetSingleWordInOperand(0)) ==
+                storage_class &&
             basic_types.count(pointee_type)) {
           // The pointer has the desired storage class, and its pointee type is
           // a basic type, so we are interested in it.  Associate it with its
@@ -541,22 +543,22 @@ uint32_t FuzzerPass::FindOrCreateZeroConstant(
       GetIRContext()->get_def_use_mgr()->GetDef(scalar_or_composite_type_id);
   assert(type_instruction && "The type instruction must exist.");
   switch (type_instruction->opcode()) {
-    case SpvOpTypeBool:
+    case spv::Op::OpTypeBool:
       return FindOrCreateBoolConstant(false, is_irrelevant);
-    case SpvOpTypeFloat: {
+    case spv::Op::OpTypeFloat: {
       auto width = type_instruction->GetSingleWordInOperand(0);
       auto num_words = (width + 32 - 1) / 32;
       return FindOrCreateFloatConstant(std::vector<uint32_t>(num_words, 0),
                                        width, is_irrelevant);
     }
-    case SpvOpTypeInt: {
+    case spv::Op::OpTypeInt: {
       auto width = type_instruction->GetSingleWordInOperand(0);
       auto num_words = (width + 32 - 1) / 32;
       return FindOrCreateIntegerConstant(
           std::vector<uint32_t>(num_words, 0), width,
           type_instruction->GetSingleWordInOperand(1), is_irrelevant);
     }
-    case SpvOpTypeArray: {
+    case spv::Op::OpTypeArray: {
       auto component_type_id = type_instruction->GetSingleWordInOperand(0);
       auto num_components =
           fuzzerutil::GetArraySize(*type_instruction, GetIRContext());
@@ -566,8 +568,8 @@ uint32_t FuzzerPass::FindOrCreateZeroConstant(
               FindOrCreateZeroConstant(component_type_id, is_irrelevant)),
           scalar_or_composite_type_id, is_irrelevant);
     }
-    case SpvOpTypeMatrix:
-    case SpvOpTypeVector: {
+    case spv::Op::OpTypeMatrix:
+    case spv::Op::OpTypeVector: {
       auto component_type_id = type_instruction->GetSingleWordInOperand(0);
       auto num_components = type_instruction->GetSingleWordInOperand(1);
       return FindOrCreateCompositeConstant(
@@ -576,7 +578,7 @@ uint32_t FuzzerPass::FindOrCreateZeroConstant(
               FindOrCreateZeroConstant(component_type_id, is_irrelevant)),
           scalar_or_composite_type_id, is_irrelevant);
     }
-    case SpvOpTypeStruct: {
+    case spv::Op::OpTypeStruct: {
       assert(!fuzzerutil::HasBlockOrBufferBlockDecoration(
                  GetIRContext(), scalar_or_composite_type_id) &&
              "We do not construct constants of struct types decorated with "
@@ -646,7 +648,7 @@ opt::BasicBlock* FuzzerPass::GetOrCreateSimpleLoopPreheader(
 
     // |maybe_preheader| is a preheader if it branches unconditionally to
     // the header. We also require it not to be a loop header.
-    if (maybe_preheader->terminator()->opcode() == SpvOpBranch &&
+    if (maybe_preheader->terminator()->opcode() == spv::Op::OpBranch &&
         !maybe_preheader->IsLoopHeader()) {
       return maybe_preheader;
     }
@@ -683,8 +685,8 @@ opt::BasicBlock* FuzzerPass::SplitBlockAfterOpPhiOrOpVariable(
 
   // Find the first non-OpPhi and non-OpVariable instruction.
   auto non_phi_or_var_inst = &*block->begin();
-  while (non_phi_or_var_inst->opcode() == SpvOpPhi ||
-         non_phi_or_var_inst->opcode() == SpvOpVariable) {
+  while (non_phi_or_var_inst->opcode() == spv::Op::OpPhi ||
+         non_phi_or_var_inst->opcode() == spv::Op::OpVariable) {
     non_phi_or_var_inst = non_phi_or_var_inst->NextNode();
   }
 
@@ -706,7 +708,7 @@ uint32_t FuzzerPass::FindOrCreateLocalVariable(
   (void)pointer_type;
   assert(pointer_type && pointer_type->AsPointer() &&
          pointer_type->AsPointer()->storage_class() ==
-             SpvStorageClassFunction &&
+             spv::StorageClass::Function &&
          "The pointer_type_id must refer to a defined pointer type with "
          "storage class Function");
   auto function = fuzzerutil::FindFunction(GetIRContext(), function_id);
@@ -715,7 +717,7 @@ uint32_t FuzzerPass::FindOrCreateLocalVariable(
   // First we try to find a suitable existing variable.
   // All of the local variable declarations are located in the first block.
   for (auto& instruction : *function->begin()) {
-    if (instruction.opcode() != SpvOpVariable) {
+    if (instruction.opcode() != spv::Op::OpVariable) {
       continue;
     }
     // The existing OpVariable must have type |pointer_type_id|.
@@ -749,15 +751,16 @@ uint32_t FuzzerPass::FindOrCreateGlobalVariable(
   (void)pointer_type;
   assert(
       pointer_type && pointer_type->AsPointer() &&
-      (pointer_type->AsPointer()->storage_class() == SpvStorageClassPrivate ||
+      (pointer_type->AsPointer()->storage_class() ==
+           spv::StorageClass::Private ||
        pointer_type->AsPointer()->storage_class() ==
-           SpvStorageClassWorkgroup) &&
+           spv::StorageClass::Workgroup) &&
       "The pointer_type_id must refer to a defined pointer type with storage "
       "class Private or Workgroup");
 
   // First we try to find a suitable existing variable.
   for (auto& instruction : GetIRContext()->module()->types_values()) {
-    if (instruction.opcode() != SpvOpVariable) {
+    if (instruction.opcode() != spv::Op::OpVariable) {
       continue;
     }
     // The existing OpVariable must have type |pointer_type_id|.
@@ -781,13 +784,13 @@ uint32_t FuzzerPass::FindOrCreateGlobalVariable(
   uint32_t result_id = GetFuzzerContext()->GetFreshId();
 
   // A variable with storage class Workgroup shouldn't have an initializer.
-  if (storage_class == SpvStorageClassWorkgroup) {
+  if (storage_class == spv::StorageClass::Workgroup) {
     ApplyTransformation(TransformationAddGlobalVariable(
-        result_id, pointer_type_id, SpvStorageClassWorkgroup, 0,
+        result_id, pointer_type_id, spv::StorageClass::Workgroup, 0,
         pointee_value_is_irrelevant));
   } else {
     ApplyTransformation(TransformationAddGlobalVariable(
-        result_id, pointer_type_id, SpvStorageClassPrivate,
+        result_id, pointer_type_id, spv::StorageClass::Private,
         FindOrCreateZeroConstant(pointee_type_id, pointee_value_is_irrelevant),
         pointee_value_is_irrelevant));
   }

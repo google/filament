@@ -978,6 +978,7 @@ TEST_F(EliminateDeadMemberTest, RemoveMemberPtrAccessChain) {
                OpMemberDecorate %type__Globals 1 Offset 4
                OpMemberDecorate %type__Globals 2 Offset 16
                OpDecorate %type__Globals Block
+               OpDecorate %_ptr_Uniform_type__Globals ArrayStride 8
        %uint = OpTypeInt 32 0
      %uint_0 = OpConstant %uint 0
      %uint_1 = OpConstant %uint 1

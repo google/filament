@@ -124,19 +124,22 @@ TEST(TransformationSetFunctionControlTest, VariousScenarios) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   // %36 is not a function
-  ASSERT_FALSE(TransformationSetFunctionControl(36, SpvFunctionControlMaskNone)
+  ASSERT_FALSE(TransformationSetFunctionControl(
+                   36, uint32_t(spv::FunctionControlMask::MaskNone))
                    .IsApplicable(context.get(), transformation_context));
   // Cannot add the Pure function control to %4 as it did not already have it
-  ASSERT_FALSE(TransformationSetFunctionControl(4, SpvFunctionControlPureMask)
+  ASSERT_FALSE(TransformationSetFunctionControl(
+                   4, uint32_t(spv::FunctionControlMask::Pure))
                    .IsApplicable(context.get(), transformation_context));
   // Cannot add the Const function control to %21 as it did not already
   // have it
-  ASSERT_FALSE(TransformationSetFunctionControl(21, SpvFunctionControlConstMask)
+  ASSERT_FALSE(TransformationSetFunctionControl(
+                   21, uint32_t(spv::FunctionControlMask::Const))
                    .IsApplicable(context.get(), transformation_context));
 
   // Set to None, removing Const
-  TransformationSetFunctionControl transformation1(11,
-                                                   SpvFunctionControlMaskNone);
+  TransformationSetFunctionControl transformation1(
+      11, uint32_t(spv::FunctionControlMask::MaskNone));
   ASSERT_TRUE(
       transformation1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation1, context.get(),
@@ -144,15 +147,15 @@ TEST(TransformationSetFunctionControlTest, VariousScenarios) {
 
   // Set to Inline; silly to do it on an entry point, but it is allowed
   TransformationSetFunctionControl transformation2(
-      4, SpvFunctionControlInlineMask);
+      4, uint32_t(spv::FunctionControlMask::Inline));
   ASSERT_TRUE(
       transformation2.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation2, context.get(),
                         &transformation_context);
 
   // Set to Pure, removing DontInline
-  TransformationSetFunctionControl transformation3(17,
-                                                   SpvFunctionControlPureMask);
+  TransformationSetFunctionControl transformation3(
+      17, uint32_t(spv::FunctionControlMask::Pure));
   ASSERT_TRUE(
       transformation3.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation3, context.get(),
@@ -160,7 +163,7 @@ TEST(TransformationSetFunctionControlTest, VariousScenarios) {
 
   // Change from Inline to DontInline
   TransformationSetFunctionControl transformation4(
-      13, SpvFunctionControlDontInlineMask);
+      13, uint32_t(spv::FunctionControlMask::DontInline));
   ASSERT_TRUE(
       transformation4.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation4, context.get(),

@@ -670,6 +670,10 @@ SPIRV_TOOLS_EXPORT void spvValidatorOptionsSetSkipBlockLayout(
 SPIRV_TOOLS_EXPORT void spvValidatorOptionsSetAllowLocalSizeId(
     spv_validator_options options, bool val);
 
+// Whether friendly names should be used in validation error messages.
+SPIRV_TOOLS_EXPORT void spvValidatorOptionsSetFriendlyNames(
+    spv_validator_options options, bool val);
+
 // Creates an optimizer options object with default options. Returns a valid
 // options object. The object remains valid until it is passed into
 // |spvOptimizerOptionsDestroy|.

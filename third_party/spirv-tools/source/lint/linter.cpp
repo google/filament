@@ -19,7 +19,6 @@
 #include "source/opt/ir_context.h"
 #include "spirv-tools/libspirv.h"
 #include "spirv-tools/libspirv.hpp"
-#include "spirv/unified1/spirv.h"
 
 namespace spvtools {
 

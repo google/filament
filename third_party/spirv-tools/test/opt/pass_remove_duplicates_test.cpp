@@ -91,7 +91,7 @@ class RemoveDuplicatesTest : public ::testing::Test {
   std::string GetErrorMessage() const { return error_message_; }
 
   std::string ToText(const std::vector<Instruction*>& inst) {
-    std::vector<uint32_t> binary = {SpvMagicNumber, 0x10200, 0u, 2u, 0u};
+    std::vector<uint32_t> binary = {spv::MagicNumber, 0x10200, 0u, 2u, 0u};
     for (const Instruction* i : inst)
       i->ToBinaryWithoutAttachedDebugInsts(&binary);
     std::string text;

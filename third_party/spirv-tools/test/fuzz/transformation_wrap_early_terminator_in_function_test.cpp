@@ -98,48 +98,50 @@ TEST(TransformationWrapEarlyTerminatorInFunctionTest, IsApplicable) {
 
   // Bad: id is not fresh
   ASSERT_FALSE(TransformationWrapEarlyTerminatorInFunction(
-                   61, MakeInstructionDescriptor(8, SpvOpKill, 0), 0)
+                   61, MakeInstructionDescriptor(8, spv::Op::OpKill, 0), 0)
                    .IsApplicable(context.get(), transformation_context));
 
   // Bad: early terminator instruction descriptor does not exist
   ASSERT_FALSE(TransformationWrapEarlyTerminatorInFunction(
-                   100, MakeInstructionDescriptor(82, SpvOpKill, 0), 0)
+                   100, MakeInstructionDescriptor(82, spv::Op::OpKill, 0), 0)
                    .IsApplicable(context.get(), transformation_context));
 
   // Bad: early terminator instruction does not identify an early terminator
-  ASSERT_FALSE(TransformationWrapEarlyTerminatorInFunction(
-                   100, MakeInstructionDescriptor(5, SpvOpSelectionMerge, 0), 0)
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationWrapEarlyTerminatorInFunction(
+          100, MakeInstructionDescriptor(5, spv::Op::OpSelectionMerge, 0), 0)
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: no wrapper function is available
-  ASSERT_FALSE(TransformationWrapEarlyTerminatorInFunction(
-                   100, MakeInstructionDescriptor(9, SpvOpUnreachable, 0), 0)
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationWrapEarlyTerminatorInFunction(
+          100, MakeInstructionDescriptor(9, spv::Op::OpUnreachable, 0), 0)
+          .IsApplicable(context.get(), transformation_context));
 
   // Bad: returned value does not exist
   ASSERT_FALSE(TransformationWrapEarlyTerminatorInFunction(
-                   100, MakeInstructionDescriptor(62, SpvOpKill, 0), 1000)
+                   100, MakeInstructionDescriptor(62, spv::Op::OpKill, 0), 1000)
                    .IsApplicable(context.get(), transformation_context));
 
   // Bad: returned value does not have a type
   ASSERT_FALSE(TransformationWrapEarlyTerminatorInFunction(
-                   100, MakeInstructionDescriptor(62, SpvOpKill, 0), 61)
+                   100, MakeInstructionDescriptor(62, spv::Op::OpKill, 0), 61)
                    .IsApplicable(context.get(), transformation_context));
 
   // Bad: returned value type does not match
   ASSERT_FALSE(TransformationWrapEarlyTerminatorInFunction(
-                   100, MakeInstructionDescriptor(62, SpvOpKill, 0), 91)
+                   100, MakeInstructionDescriptor(62, spv::Op::OpKill, 0), 91)
                    .IsApplicable(context.get(), transformation_context));
 
   // Bad: returned value is not available
   ASSERT_FALSE(TransformationWrapEarlyTerminatorInFunction(
-                   100, MakeInstructionDescriptor(62, SpvOpKill, 0), 81)
+                   100, MakeInstructionDescriptor(62, spv::Op::OpKill, 0), 81)
                    .IsApplicable(context.get(), transformation_context));
 
   // Bad: the OpKill being targeted is in the only available wrapper; we cannot
   // have the wrapper call itself.
   ASSERT_FALSE(TransformationWrapEarlyTerminatorInFunction(
-                   100, MakeInstructionDescriptor(31, SpvOpKill, 0), 0)
+                   100, MakeInstructionDescriptor(31, spv::Op::OpKill, 0), 0)
                    .IsApplicable(context.get(), transformation_context));
 }
 
@@ -220,17 +222,20 @@ TEST(TransformationWrapEarlyTerminatorInFunctionTest, Apply) {
 
   for (auto& transformation :
        {TransformationWrapEarlyTerminatorInFunction(
-            100, MakeInstructionDescriptor(8, SpvOpKill, 0), 0),
+            100, MakeInstructionDescriptor(8, spv::Op::OpKill, 0), 0),
         TransformationWrapEarlyTerminatorInFunction(
-            101, MakeInstructionDescriptor(9, SpvOpUnreachable, 0), 0),
+            101, MakeInstructionDescriptor(9, spv::Op::OpUnreachable, 0), 0),
         TransformationWrapEarlyTerminatorInFunction(
-            102, MakeInstructionDescriptor(10, SpvOpTerminateInvocation, 0), 0),
+            102,
+            MakeInstructionDescriptor(10, spv::Op::OpTerminateInvocation, 0),
+            0),
         TransformationWrapEarlyTerminatorInFunction(
-            103, MakeInstructionDescriptor(62, SpvOpKill, 0), 0),
+            103, MakeInstructionDescriptor(62, spv::Op::OpKill, 0), 0),
         TransformationWrapEarlyTerminatorInFunction(
-            104, MakeInstructionDescriptor(71, SpvOpUnreachable, 0), 7),
+            104, MakeInstructionDescriptor(71, spv::Op::OpUnreachable, 0), 7),
         TransformationWrapEarlyTerminatorInFunction(
-            105, MakeInstructionDescriptor(82, SpvOpTerminateInvocation, 0),
+            105,
+            MakeInstructionDescriptor(82, spv::Op::OpTerminateInvocation, 0),
             0)}) {
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));

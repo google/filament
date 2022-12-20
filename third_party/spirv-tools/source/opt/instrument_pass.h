@@ -55,13 +55,14 @@
 
 namespace spvtools {
 namespace opt {
-
+namespace {
 // Validation Ids
 // These are used to identify the general validation being done and map to
 // its output buffers.
-static const uint32_t kInstValidationIdBindless = 0;
-static const uint32_t kInstValidationIdBuffAddr = 1;
-static const uint32_t kInstValidationIdDebugPrintf = 2;
+constexpr uint32_t kInstValidationIdBindless = 0;
+constexpr uint32_t kInstValidationIdBuffAddr = 1;
+constexpr uint32_t kInstValidationIdDebugPrintf = 2;
+}  // namespace
 
 class InstrumentPass : public Pass {
   using cbb_ptr = const BasicBlock*;
@@ -223,6 +224,19 @@ class InstrumentPass : public Pass {
 
   // Return new label.
   std::unique_ptr<Instruction> NewLabel(uint32_t label_id);
+
+  // Set the name function parameter or local variable
+  std::unique_ptr<Instruction> NewName(uint32_t id,
+                                       const std::string& name_str);
+
+  // Set the name for a function or global variable, names will be
+  // prefixed to identify which instrumentation pass generated them.
+  std::unique_ptr<Instruction> NewGlobalName(uint32_t id,
+                                             const std::string& name_str);
+
+  // Set the name for a structure member
+  std::unique_ptr<Instruction> NewMemberName(uint32_t id, uint32_t member_index,
+                                             const std::string& name_str);
 
   // Return id for 32-bit unsigned type
   uint32_t GetUintId();

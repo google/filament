@@ -30,7 +30,7 @@ class TransformationAddCopyMemory : public Transformation {
 
   TransformationAddCopyMemory(
       const protobufs::InstructionDescriptor& instruction_descriptor,
-      uint32_t fresh_id, uint32_t source_id, SpvStorageClass storage_class,
+      uint32_t fresh_id, uint32_t source_id, spv::StorageClass storage_class,
       uint32_t initializer_id);
 
   // - |instruction_descriptor| must point to a valid instruction in the module.

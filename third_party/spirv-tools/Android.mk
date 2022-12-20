@@ -61,6 +61,7 @@ SPVTOOLS_SRC_FILES := \
 		source/val/validate_instruction.cpp \
 		source/val/validate_memory.cpp \
 		source/val/validate_memory_semantics.cpp \
+		source/val/validate_mesh_shading.cpp \
 		source/val/validate_misc.cpp \
 		source/val/validate_mode_setting.cpp \
 		source/val/validate_layout.cpp \
@@ -68,6 +69,9 @@ SPVTOOLS_SRC_FILES := \
 		source/val/validate_logicals.cpp \
 		source/val/validate_non_uniform.cpp \
 		source/val/validate_primitives.cpp \
+		source/val/validate_ray_query.cpp \
+		source/val/validate_ray_tracing.cpp \
+		source/val/validate_ray_tracing_reorder.cpp \
 		source/val/validate_scopes.cpp \
 		source/val/validate_small_type_uses.cpp \
 		source/val/validate_type.cpp
@@ -75,6 +79,7 @@ SPVTOOLS_SRC_FILES := \
 SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/aggressive_dead_code_elim_pass.cpp \
 		source/opt/amd_ext_to_khr.cpp \
+		source/opt/analyze_live_input_pass.cpp \
 		source/opt/basic_block.cpp \
 		source/opt/block_merge_pass.cpp \
 		source/opt/block_merge_util.cpp \
@@ -106,8 +111,9 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/eliminate_dead_constant_pass.cpp \
 		source/opt/eliminate_dead_functions_pass.cpp \
 		source/opt/eliminate_dead_functions_util.cpp \
-		source/opt/eliminate_dead_input_components_pass.cpp \
+		source/opt/eliminate_dead_io_components_pass.cpp \
 		source/opt/eliminate_dead_members_pass.cpp \
+		source/opt/eliminate_dead_output_stores_pass.cpp \
 		source/opt/feature_manager.cpp \
 		source/opt/fix_func_call_arguments.cpp \
 		source/opt/fix_storage_class.cpp \
@@ -133,6 +139,7 @@ SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/ir_context.cpp \
 		source/opt/ir_loader.cpp \
 		source/opt/licm_pass.cpp \
+		source/opt/liveness.cpp \
 		source/opt/local_access_chain_convert_pass.cpp \
 		source/opt/local_redundancy_elimination.cpp \
 		source/opt/local_single_block_elim_pass.cpp \
@@ -214,7 +221,8 @@ $(1)/opencl.std.insts.inc \
 		                --core-insts-output=$(1)/core.insts-unified1.inc \
 		                --glsl-insts-output=$(1)/glsl.std.450.insts.inc \
 		                --opencl-insts-output=$(1)/opencl.std.insts.inc \
-		                --operand-kinds-output=$(1)/operand.kinds-unified1.inc
+		                --operand-kinds-output=$(1)/operand.kinds-unified1.inc \
+										--output-language=c++
 		@echo "[$(TARGET_ARCH_ABI)] Grammar (from unified1)  : instructions & operands <= grammar JSON files"
 $(LOCAL_PATH)/source/opcode.cpp: $(1)/core.insts-unified1.inc
 $(LOCAL_PATH)/source/operand.cpp: $(1)/operand.kinds-unified1.inc
@@ -288,7 +296,8 @@ $(1)/extension_enum.inc $(1)/enum_string_mapping.inc: \
 		                --extinst-debuginfo-grammar=$(SPV_DEBUGINFO_GRAMMAR) \
 		                --extinst-cldebuginfo100-grammar=$(SPV_CLDEBUGINFO100_GRAMMAR) \
 		                --extension-enum-output=$(1)/extension_enum.inc \
-		                --enum-string-mapping-output=$(1)/enum_string_mapping.inc
+		                --enum-string-mapping-output=$(1)/enum_string_mapping.inc \
+										--output-language=c++
 		@echo "[$(TARGET_ARCH_ABI)] Generate enum<->string mapping <= grammar JSON files"
 # Generated header extension_enum.inc is transitively included by table.h, which is
 # used pervasively.  Capture the pervasive dependency.

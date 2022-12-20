@@ -28,14 +28,16 @@ namespace opt {
 Pass::Status UpgradeMemoryModel::Process() {
   // TODO: This pass needs changes to support cooperative matrices.
   if (context()->get_feature_mgr()->HasCapability(
-          SpvCapabilityCooperativeMatrixNV)) {
+          spv::Capability::CooperativeMatrixNV)) {
     return Pass::Status::SuccessWithoutChange;
   }
 
   // Only update Logical GLSL450 to Logical VulkanKHR.
   Instruction* memory_model = get_module()->GetMemoryModel();
-  if (memory_model->GetSingleWordInOperand(0u) != SpvAddressingModelLogical ||
-      memory_model->GetSingleWordInOperand(1u) != SpvMemoryModelGLSL450) {
+  if (memory_model->GetSingleWordInOperand(0u) !=
+          uint32_t(spv::AddressingModel::Logical) ||
+      memory_model->GetSingleWordInOperand(1u) !=
+          uint32_t(spv::MemoryModel::GLSL450)) {
     return Pass::Status::SuccessWithoutChange;
   }
 
@@ -55,16 +57,17 @@ void UpgradeMemoryModel::UpgradeMemoryModelInstruction() {
   // 3. Modify the memory model.
   Instruction* memory_model = get_module()->GetMemoryModel();
   context()->AddCapability(MakeUnique<Instruction>(
-      context(), SpvOpCapability, 0, 0,
+      context(), spv::Op::OpCapability, 0, 0,
       std::initializer_list<Operand>{
-          {SPV_OPERAND_TYPE_CAPABILITY, {SpvCapabilityVulkanMemoryModelKHR}}}));
+          {SPV_OPERAND_TYPE_CAPABILITY,
+           {uint32_t(spv::Capability::VulkanMemoryModelKHR)}}}));
   const std::string extension = "SPV_KHR_vulkan_memory_model";
   std::vector<uint32_t> words = spvtools::utils::MakeVector(extension);
   context()->AddExtension(
-      MakeUnique<Instruction>(context(), SpvOpExtension, 0, 0,
+      MakeUnique<Instruction>(context(), spv::Op::OpExtension, 0, 0,
                               std::initializer_list<Operand>{
                                   {SPV_OPERAND_TYPE_LITERAL_STRING, words}}));
-  memory_model->SetInOperand(1u, {SpvMemoryModelVulkanKHR});
+  memory_model->SetInOperand(1u, {uint32_t(spv::MemoryModel::VulkanKHR)});
 }
 
 void UpgradeMemoryModel::UpgradeInstructions() {
@@ -79,7 +82,7 @@ void UpgradeMemoryModel::UpgradeInstructions() {
   // In SPIR-V 1.4 or later, normalize OpCopyMemory* access operands.
   for (auto& func : *get_module()) {
     func.ForEachInst([this](Instruction* inst) {
-      if (inst->opcode() == SpvOpExtInst) {
+      if (inst->opcode() == spv::Op::OpExtInst) {
         auto ext_inst = inst->GetSingleWordInOperand(1u);
         if (ext_inst == GLSLstd450Modf || ext_inst == GLSLstd450Frexp) {
           auto import =
@@ -89,9 +92,10 @@ void UpgradeMemoryModel::UpgradeInstructions() {
           }
         }
       } else if (get_module()->version() >= SPV_SPIRV_VERSION_WORD(1, 4)) {
-        if (inst->opcode() == SpvOpCopyMemory ||
-            inst->opcode() == SpvOpCopyMemorySized) {
-          uint32_t start_operand = inst->opcode() == SpvOpCopyMemory ? 2u : 3u;
+        if (inst->opcode() == spv::Op::OpCopyMemory ||
+            inst->opcode() == spv::Op::OpCopyMemorySized) {
+          uint32_t start_operand =
+              inst->opcode() == spv::Op::OpCopyMemory ? 2u : 3u;
           if (inst->NumInOperands() > start_operand) {
             auto num_access_words = MemoryAccessNumWords(
                 inst->GetSingleWordInOperand(start_operand));
@@ -105,10 +109,10 @@ void UpgradeMemoryModel::UpgradeInstructions() {
             }
           } else {
             // Add two memory access operands.
-            inst->AddOperand(
-                {SPV_OPERAND_TYPE_MEMORY_ACCESS, {SpvMemoryAccessMaskNone}});
-            inst->AddOperand(
-                {SPV_OPERAND_TYPE_MEMORY_ACCESS, {SpvMemoryAccessMaskNone}});
+            inst->AddOperand({SPV_OPERAND_TYPE_MEMORY_ACCESS,
+                              {uint32_t(spv::MemoryAccessMask::MaskNone)}});
+            inst->AddOperand({SPV_OPERAND_TYPE_MEMORY_ACCESS,
+                              {uint32_t(spv::MemoryAccessMask::MaskNone)}});
           }
         }
       }
@@ -129,23 +133,23 @@ void UpgradeMemoryModel::UpgradeMemoryAndImages() {
       bool dst_coherent = false;
       bool dst_volatile = false;
       uint32_t start_operand = 0u;
-      SpvScope scope = SpvScopeQueueFamilyKHR;
-      SpvScope src_scope = SpvScopeQueueFamilyKHR;
-      SpvScope dst_scope = SpvScopeQueueFamilyKHR;
+      spv::Scope scope = spv::Scope::QueueFamilyKHR;
+      spv::Scope src_scope = spv::Scope::QueueFamilyKHR;
+      spv::Scope dst_scope = spv::Scope::QueueFamilyKHR;
       switch (inst->opcode()) {
-        case SpvOpLoad:
-        case SpvOpStore:
+        case spv::Op::OpLoad:
+        case spv::Op::OpStore:
           std::tie(is_coherent, is_volatile, scope) =
               GetInstructionAttributes(inst->GetSingleWordInOperand(0u));
           break;
-        case SpvOpImageRead:
-        case SpvOpImageSparseRead:
-        case SpvOpImageWrite:
+        case spv::Op::OpImageRead:
+        case spv::Op::OpImageSparseRead:
+        case spv::Op::OpImageWrite:
           std::tie(is_coherent, is_volatile, scope) =
               GetInstructionAttributes(inst->GetSingleWordInOperand(0u));
           break;
-        case SpvOpCopyMemory:
-        case SpvOpCopyMemorySized:
+        case spv::Op::OpCopyMemory:
+        case spv::Op::OpCopyMemorySized:
           std::tie(dst_coherent, dst_volatile, dst_scope) =
               GetInstructionAttributes(inst->GetSingleWordInOperand(0u));
           std::tie(src_coherent, src_volatile, src_scope) =
@@ -156,17 +160,17 @@ void UpgradeMemoryModel::UpgradeMemoryAndImages() {
       }
 
       switch (inst->opcode()) {
-        case SpvOpLoad:
+        case spv::Op::OpLoad:
           UpgradeFlags(inst, 1u, is_coherent, is_volatile, kVisibility,
                        kMemory);
           break;
-        case SpvOpStore:
+        case spv::Op::OpStore:
           UpgradeFlags(inst, 2u, is_coherent, is_volatile, kAvailability,
                        kMemory);
           break;
-        case SpvOpCopyMemory:
-        case SpvOpCopyMemorySized:
-          start_operand = inst->opcode() == SpvOpCopyMemory ? 2u : 3u;
+        case spv::Op::OpCopyMemory:
+        case spv::Op::OpCopyMemorySized:
+          start_operand = inst->opcode() == spv::Op::OpCopyMemory ? 2u : 3u;
           if (get_module()->version() >= SPV_SPIRV_VERSION_WORD(1, 4)) {
             // There are guaranteed to be two memory access operands at this
             // point so treat source and target separately.
@@ -183,11 +187,11 @@ void UpgradeMemoryModel::UpgradeMemoryAndImages() {
                          kVisibility, kMemory);
           }
           break;
-        case SpvOpImageRead:
-        case SpvOpImageSparseRead:
+        case spv::Op::OpImageRead:
+        case spv::Op::OpImageSparseRead:
           UpgradeFlags(inst, 2u, is_coherent, is_volatile, kVisibility, kImage);
           break;
-        case SpvOpImageWrite:
+        case spv::Op::OpImageWrite:
           UpgradeFlags(inst, 3u, is_coherent, is_volatile, kAvailability,
                        kImage);
           break;
@@ -205,7 +209,7 @@ void UpgradeMemoryModel::UpgradeMemoryAndImages() {
         // There are two memory access operands. The first is for the target and
         // the second is for the source.
         if (dst_coherent || src_coherent) {
-          start_operand = inst->opcode() == SpvOpCopyMemory ? 2u : 3u;
+          start_operand = inst->opcode() == spv::Op::OpCopyMemory ? 2u : 3u;
           std::vector<Operand> new_operands;
           uint32_t num_access_words =
               MemoryAccessNumWords(inst->GetSingleWordInOperand(start_operand));
@@ -255,13 +259,13 @@ void UpgradeMemoryModel::UpgradeAtomics() {
       if (spvOpcodeIsAtomicOp(inst->opcode())) {
         bool unused_coherent = false;
         bool is_volatile = false;
-        SpvScope unused_scope = SpvScopeQueueFamilyKHR;
+        spv::Scope unused_scope = spv::Scope::QueueFamilyKHR;
         std::tie(unused_coherent, is_volatile, unused_scope) =
             GetInstructionAttributes(inst->GetSingleWordInOperand(0));
 
         UpgradeSemantics(inst, 2u, is_volatile);
-        if (inst->opcode() == SpvOpAtomicCompareExchange ||
-            inst->opcode() == SpvOpAtomicCompareExchangeWeak) {
+        if (inst->opcode() == spv::Op::OpAtomicCompareExchange ||
+            inst->opcode() == spv::Op::OpAtomicCompareExchangeWeak) {
           UpgradeSemantics(inst, 3u, is_volatile);
         }
       }
@@ -286,14 +290,14 @@ void UpgradeMemoryModel::UpgradeSemantics(Instruction* inst,
     value = constant->GetU32();
   }
 
-  value |= SpvMemorySemanticsVolatileMask;
+  value |= uint32_t(spv::MemorySemanticsMask::Volatile);
   auto new_constant = context()->get_constant_mgr()->GetConstant(type, {value});
   auto new_semantics =
       context()->get_constant_mgr()->GetDefiningInstruction(new_constant);
   inst->SetInOperand(in_operand, {new_semantics->result_id()});
 }
 
-std::tuple<bool, bool, SpvScope> UpgradeMemoryModel::GetInstructionAttributes(
+std::tuple<bool, bool, spv::Scope> UpgradeMemoryModel::GetInstructionAttributes(
     uint32_t id) {
   // |id| is a pointer used in a memory/image instruction. Need to determine if
   // that pointer points to volatile or coherent memory. Workgroup storage
@@ -302,8 +306,8 @@ std::tuple<bool, bool, SpvScope> UpgradeMemoryModel::GetInstructionAttributes(
   Instruction* inst = context()->get_def_use_mgr()->GetDef(id);
   analysis::Type* type = context()->get_type_mgr()->GetType(inst->type_id());
   if (type->AsPointer() &&
-      type->AsPointer()->storage_class() == SpvStorageClassWorkgroup) {
-    return std::make_tuple(true, false, SpvScopeWorkgroup);
+      type->AsPointer()->storage_class() == spv::StorageClass::Workgroup) {
+    return std::make_tuple(true, false, spv::Scope::Workgroup);
   }
 
   bool is_coherent = false;
@@ -313,7 +317,7 @@ std::tuple<bool, bool, SpvScope> UpgradeMemoryModel::GetInstructionAttributes(
       TraceInstruction(context()->get_def_use_mgr()->GetDef(id),
                        std::vector<uint32_t>(), &visited);
 
-  return std::make_tuple(is_coherent, is_volatile, SpvScopeQueueFamilyKHR);
+  return std::make_tuple(is_coherent, is_volatile, spv::Scope::QueueFamilyKHR);
 }
 
 std::pair<bool, bool> UpgradeMemoryModel::TraceInstruction(
@@ -336,10 +340,10 @@ std::pair<bool, bool> UpgradeMemoryModel::TraceInstruction(
   bool is_coherent = false;
   bool is_volatile = false;
   switch (inst->opcode()) {
-    case SpvOpVariable:
-    case SpvOpFunctionParameter:
-      is_coherent |= HasDecoration(inst, 0, SpvDecorationCoherent);
-      is_volatile |= HasDecoration(inst, 0, SpvDecorationVolatile);
+    case spv::Op::OpVariable:
+    case spv::Op::OpFunctionParameter:
+      is_coherent |= HasDecoration(inst, 0, spv::Decoration::Coherent);
+      is_volatile |= HasDecoration(inst, 0, spv::Decoration::Volatile);
       if (!is_coherent || !is_volatile) {
         bool type_coherent = false;
         bool type_volatile = false;
@@ -349,14 +353,14 @@ std::pair<bool, bool> UpgradeMemoryModel::TraceInstruction(
         is_volatile |= type_volatile;
       }
       break;
-    case SpvOpAccessChain:
-    case SpvOpInBoundsAccessChain:
+    case spv::Op::OpAccessChain:
+    case spv::Op::OpInBoundsAccessChain:
       // Store indices in reverse order.
       for (uint32_t i = inst->NumInOperands() - 1; i > 0; --i) {
         indices.push_back(inst->GetSingleWordInOperand(i));
       }
       break;
-    case SpvOpPtrAccessChain:
+    case spv::Op::OpPtrAccessChain:
       // Store indices in reverse order. Skip the |Element| operand.
       for (uint32_t i = inst->NumInOperands() - 1; i > 1; --i) {
         indices.push_back(inst->GetSingleWordInOperand(i));
@@ -375,8 +379,8 @@ std::pair<bool, bool> UpgradeMemoryModel::TraceInstruction(
 
   // Variables and function parameters are sources. Continue searching until we
   // reach them.
-  if (inst->opcode() != SpvOpVariable &&
-      inst->opcode() != SpvOpFunctionParameter) {
+  if (inst->opcode() != spv::Op::OpVariable &&
+      inst->opcode() != spv::Op::OpFunctionParameter) {
     inst->ForEachInId([this, &is_coherent, &is_volatile, &indices,
                        &visited](const uint32_t* id_ptr) {
       Instruction* op_inst = context()->get_def_use_mgr()->GetDef(*id_ptr);
@@ -404,24 +408,24 @@ std::pair<bool, bool> UpgradeMemoryModel::CheckType(
   bool is_coherent = false;
   bool is_volatile = false;
   Instruction* type_inst = context()->get_def_use_mgr()->GetDef(type_id);
-  assert(type_inst->opcode() == SpvOpTypePointer);
+  assert(type_inst->opcode() == spv::Op::OpTypePointer);
   Instruction* element_inst = context()->get_def_use_mgr()->GetDef(
       type_inst->GetSingleWordInOperand(1u));
   for (int i = (int)indices.size() - 1; i >= 0; --i) {
     if (is_coherent && is_volatile) break;
 
-    if (element_inst->opcode() == SpvOpTypePointer) {
+    if (element_inst->opcode() == spv::Op::OpTypePointer) {
       element_inst = context()->get_def_use_mgr()->GetDef(
           element_inst->GetSingleWordInOperand(1u));
-    } else if (element_inst->opcode() == SpvOpTypeStruct) {
+    } else if (element_inst->opcode() == spv::Op::OpTypeStruct) {
       uint32_t index = indices.at(i);
       Instruction* index_inst = context()->get_def_use_mgr()->GetDef(index);
-      assert(index_inst->opcode() == SpvOpConstant);
+      assert(index_inst->opcode() == spv::Op::OpConstant);
       uint64_t value = GetIndexValue(index_inst);
       is_coherent |= HasDecoration(element_inst, static_cast<uint32_t>(value),
-                                   SpvDecorationCoherent);
+                                   spv::Decoration::Coherent);
       is_volatile |= HasDecoration(element_inst, static_cast<uint32_t>(value),
-                                   SpvDecorationVolatile);
+                                   spv::Decoration::Volatile);
       element_inst = context()->get_def_use_mgr()->GetDef(
           element_inst->GetSingleWordInOperand(static_cast<uint32_t>(value)));
     } else {
@@ -457,13 +461,13 @@ std::pair<bool, bool> UpgradeMemoryModel::CheckAllTypes(
 
     if (!visited.insert(def).second) continue;
 
-    if (def->opcode() == SpvOpTypeStruct) {
+    if (def->opcode() == spv::Op::OpTypeStruct) {
       // Any member decorated with coherent and/or volatile is enough to have
       // the related operation be flagged as coherent and/or volatile.
       is_coherent |= HasDecoration(def, std::numeric_limits<uint32_t>::max(),
-                                   SpvDecorationCoherent);
+                                   spv::Decoration::Coherent);
       is_volatile |= HasDecoration(def, std::numeric_limits<uint32_t>::max(),
-                                   SpvDecorationVolatile);
+                                   spv::Decoration::Volatile);
       if (is_coherent && is_volatile)
         return std::make_pair(is_coherent, is_volatile);
 
@@ -475,7 +479,7 @@ std::pair<bool, bool> UpgradeMemoryModel::CheckAllTypes(
     } else if (spvOpcodeIsComposite(def->opcode())) {
       stack.push_back(context()->get_def_use_mgr()->GetDef(
           def->GetSingleWordInOperand(0u)));
-    } else if (def->opcode() == SpvOpTypePointer) {
+    } else if (def->opcode() == spv::Op::OpTypePointer) {
       stack.push_back(context()->get_def_use_mgr()->GetDef(
           def->GetSingleWordInOperand(1u)));
     }
@@ -504,14 +508,15 @@ uint64_t UpgradeMemoryModel::GetIndexValue(Instruction* index_inst) {
 }
 
 bool UpgradeMemoryModel::HasDecoration(const Instruction* inst, uint32_t value,
-                                       SpvDecoration decoration) {
+                                       spv::Decoration decoration) {
   // If the iteration was terminated early then an appropriate decoration was
   // found.
   return !context()->get_decoration_mgr()->WhileEachDecoration(
-      inst->result_id(), decoration, [value](const Instruction& i) {
-        if (i.opcode() == SpvOpDecorate || i.opcode() == SpvOpDecorateId) {
+      inst->result_id(), (uint32_t)decoration, [value](const Instruction& i) {
+        if (i.opcode() == spv::Op::OpDecorate ||
+            i.opcode() == spv::Op::OpDecorateId) {
           return false;
-        } else if (i.opcode() == SpvOpMemberDecorate) {
+        } else if (i.opcode() == spv::Op::OpMemberDecorate) {
           if (value == i.GetSingleWordInOperand(1u) ||
               value == std::numeric_limits<uint32_t>::max())
             return false;
@@ -533,27 +538,27 @@ void UpgradeMemoryModel::UpgradeFlags(Instruction* inst, uint32_t in_operand,
   }
   if (is_coherent) {
     if (inst_type == kMemory) {
-      flags |= SpvMemoryAccessNonPrivatePointerKHRMask;
+      flags |= uint32_t(spv::MemoryAccessMask::NonPrivatePointerKHR);
       if (operation_type == kVisibility) {
-        flags |= SpvMemoryAccessMakePointerVisibleKHRMask;
+        flags |= uint32_t(spv::MemoryAccessMask::MakePointerVisibleKHR);
       } else {
-        flags |= SpvMemoryAccessMakePointerAvailableKHRMask;
+        flags |= uint32_t(spv::MemoryAccessMask::MakePointerAvailableKHR);
       }
     } else {
-      flags |= SpvImageOperandsNonPrivateTexelKHRMask;
+      flags |= uint32_t(spv::ImageOperandsMask::NonPrivateTexelKHR);
       if (operation_type == kVisibility) {
-        flags |= SpvImageOperandsMakeTexelVisibleKHRMask;
+        flags |= uint32_t(spv::ImageOperandsMask::MakeTexelVisibleKHR);
       } else {
-        flags |= SpvImageOperandsMakeTexelAvailableKHRMask;
+        flags |= uint32_t(spv::ImageOperandsMask::MakeTexelAvailableKHR);
       }
     }
   }
 
   if (is_volatile) {
     if (inst_type == kMemory) {
-      flags |= SpvMemoryAccessVolatileMask;
+      flags |= uint32_t(spv::MemoryAccessMask::Volatile);
     } else {
-      flags |= SpvImageOperandsVolatileTexelKHRMask;
+      flags |= uint32_t(spv::ImageOperandsMask::VolatileTexelKHR);
     }
   }
 
@@ -566,7 +571,7 @@ void UpgradeMemoryModel::UpgradeFlags(Instruction* inst, uint32_t in_operand,
   }
 }
 
-uint32_t UpgradeMemoryModel::GetScopeConstant(SpvScope scope) {
+uint32_t UpgradeMemoryModel::GetScopeConstant(spv::Scope scope) {
   analysis::Integer int_ty(32, false);
   uint32_t int_id = context()->get_type_mgr()->GetTypeInstruction(&int_ty);
   const analysis::Constant* constant =
@@ -587,15 +592,19 @@ void UpgradeMemoryModel::CleanupDecorations() {
       context()->get_decoration_mgr()->RemoveDecorationsFrom(
           inst->result_id(), [](const Instruction& dec) {
             switch (dec.opcode()) {
-              case SpvOpDecorate:
-              case SpvOpDecorateId:
-                if (dec.GetSingleWordInOperand(1u) == SpvDecorationCoherent ||
-                    dec.GetSingleWordInOperand(1u) == SpvDecorationVolatile)
+              case spv::Op::OpDecorate:
+              case spv::Op::OpDecorateId:
+                if (spv::Decoration(dec.GetSingleWordInOperand(1u)) ==
+                        spv::Decoration::Coherent ||
+                    spv::Decoration(dec.GetSingleWordInOperand(1u)) ==
+                        spv::Decoration::Volatile)
                   return true;
                 break;
-              case SpvOpMemberDecorate:
-                if (dec.GetSingleWordInOperand(2u) == SpvDecorationCoherent ||
-                    dec.GetSingleWordInOperand(2u) == SpvDecorationVolatile)
+              case spv::Op::OpMemberDecorate:
+                if (spv::Decoration(dec.GetSingleWordInOperand(2u)) ==
+                        spv::Decoration::Coherent ||
+                    spv::Decoration(dec.GetSingleWordInOperand(2u)) ==
+                        spv::Decoration::Volatile)
                   return true;
                 break;
               default:
@@ -616,7 +625,7 @@ void UpgradeMemoryModel::UpgradeBarriers() {
     for (auto& block : *function) {
       block.ForEachInst([this, &barriers,
                          &operates_on_output](Instruction* inst) {
-        if (inst->opcode() == SpvOpControlBarrier) {
+        if (inst->opcode() == spv::Op::OpControlBarrier) {
           barriers.push_back(inst);
         } else if (!operates_on_output) {
           // This instruction operates on output storage class if it is a
@@ -625,7 +634,7 @@ void UpgradeMemoryModel::UpgradeBarriers() {
           analysis::Type* type =
               context()->get_type_mgr()->GetType(inst->type_id());
           if (type && type->AsPointer() &&
-              type->AsPointer()->storage_class() == SpvStorageClassOutput) {
+              type->AsPointer()->storage_class() == spv::StorageClass::Output) {
             operates_on_output = true;
             return;
           }
@@ -635,7 +644,8 @@ void UpgradeMemoryModel::UpgradeBarriers() {
             analysis::Type* op_type =
                 context()->get_type_mgr()->GetType(op_inst->type_id());
             if (op_type && op_type->AsPointer() &&
-                op_type->AsPointer()->storage_class() == SpvStorageClassOutput)
+                op_type->AsPointer()->storage_class() ==
+                    spv::StorageClass::Output)
               operates_on_output = true;
           });
         }
@@ -646,7 +656,8 @@ void UpgradeMemoryModel::UpgradeBarriers() {
 
   std::queue<uint32_t> roots;
   for (auto& e : get_module()->entry_points())
-    if (e.GetSingleWordInOperand(0u) == SpvExecutionModelTessellationControl) {
+    if (spv::ExecutionModel(e.GetSingleWordInOperand(0u)) ==
+        spv::ExecutionModel::TessellationControl) {
       roots.push(e.GetSingleWordInOperand(1u));
       if (context()->ProcessCallTreeFromRoots(CollectBarriers, &roots)) {
         for (auto barrier : barriers) {
@@ -659,8 +670,9 @@ void UpgradeMemoryModel::UpgradeBarriers() {
           uint64_t semantics_value = GetIndexValue(semantics_inst);
           const analysis::Constant* constant =
               context()->get_constant_mgr()->GetConstant(
-                  semantics_type, {static_cast<uint32_t>(semantics_value) |
-                                   SpvMemorySemanticsOutputMemoryKHRMask});
+                  semantics_type,
+                  {static_cast<uint32_t>(semantics_value) |
+                   uint32_t(spv::MemorySemanticsMask::OutputMemoryKHR)});
           barrier->SetInOperand(2u, {context()
                                          ->get_constant_mgr()
                                          ->GetDefiningInstruction(constant)
@@ -680,15 +692,15 @@ void UpgradeMemoryModel::UpgradeMemoryScope() {
     // * Workgroup ops (e.g. async_copy) have at most workgroup scope.
     if (spvOpcodeIsAtomicOp(inst->opcode())) {
       if (IsDeviceScope(inst->GetSingleWordInOperand(1))) {
-        inst->SetInOperand(1, {GetScopeConstant(SpvScopeQueueFamilyKHR)});
+        inst->SetInOperand(1, {GetScopeConstant(spv::Scope::QueueFamilyKHR)});
       }
-    } else if (inst->opcode() == SpvOpControlBarrier) {
+    } else if (inst->opcode() == spv::Op::OpControlBarrier) {
       if (IsDeviceScope(inst->GetSingleWordInOperand(1))) {
-        inst->SetInOperand(1, {GetScopeConstant(SpvScopeQueueFamilyKHR)});
+        inst->SetInOperand(1, {GetScopeConstant(spv::Scope::QueueFamilyKHR)});
       }
-    } else if (inst->opcode() == SpvOpMemoryBarrier) {
+    } else if (inst->opcode() == spv::Op::OpMemoryBarrier) {
       if (IsDeviceScope(inst->GetSingleWordInOperand(0))) {
-        inst->SetInOperand(0, {GetScopeConstant(SpvScopeQueueFamilyKHR)});
+        inst->SetInOperand(0, {GetScopeConstant(spv::Scope::QueueFamilyKHR)});
       }
     }
   });
@@ -704,14 +716,14 @@ bool UpgradeMemoryModel::IsDeviceScope(uint32_t scope_id) {
   assert(type->width() == 32 || type->width() == 64);
   if (type->width() == 32) {
     if (type->IsSigned())
-      return static_cast<uint32_t>(constant->GetS32()) == SpvScopeDevice;
+      return static_cast<spv::Scope>(constant->GetS32()) == spv::Scope::Device;
     else
-      return static_cast<uint32_t>(constant->GetU32()) == SpvScopeDevice;
+      return static_cast<spv::Scope>(constant->GetU32()) == spv::Scope::Device;
   } else {
     if (type->IsSigned())
-      return static_cast<uint32_t>(constant->GetS64()) == SpvScopeDevice;
+      return static_cast<spv::Scope>(constant->GetS64()) == spv::Scope::Device;
     else
-      return static_cast<uint32_t>(constant->GetU64()) == SpvScopeDevice;
+      return static_cast<spv::Scope>(constant->GetU64()) == spv::Scope::Device;
   }
 
   assert(false);
@@ -758,9 +770,9 @@ void UpgradeMemoryModel::UpgradeExtInst(Instruction* ext_inst) {
 
 uint32_t UpgradeMemoryModel::MemoryAccessNumWords(uint32_t mask) {
   uint32_t result = 1;
-  if (mask & SpvMemoryAccessAlignedMask) ++result;
-  if (mask & SpvMemoryAccessMakePointerAvailableKHRMask) ++result;
-  if (mask & SpvMemoryAccessMakePointerVisibleKHRMask) ++result;
+  if (mask & uint32_t(spv::MemoryAccessMask::Aligned)) ++result;
+  if (mask & uint32_t(spv::MemoryAccessMask::MakePointerAvailableKHR)) ++result;
+  if (mask & uint32_t(spv::MemoryAccessMask::MakePointerVisibleKHR)) ++result;
   return result;
 }
 

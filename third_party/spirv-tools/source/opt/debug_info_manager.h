@@ -15,6 +15,7 @@
 #ifndef SOURCE_OPT_DEBUG_INFO_MANAGER_H_
 #define SOURCE_OPT_DEBUG_INFO_MANAGER_H_
 
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -144,12 +145,10 @@ class DebugInfoManager {
   // Generates a DebugValue instruction with value |value_id| for every local
   // variable that is in the scope of |scope_and_line| and whose memory is
   // |variable_id| and inserts it after the instruction |insert_pos|.
-  // Returns whether a DebugValue is added or not. |invisible_decls| returns
-  // DebugDeclares invisible to |scope_and_line|.
-  bool AddDebugValueIfVarDeclIsVisible(
-      Instruction* scope_and_line, uint32_t variable_id, uint32_t value_id,
-      Instruction* insert_pos,
-      std::unordered_set<Instruction*>* invisible_decls);
+  // Returns whether a DebugValue is added or not.
+  bool AddDebugValueForVariable(Instruction* scope_and_line,
+                                uint32_t variable_id, uint32_t value_id,
+                                Instruction* insert_pos);
 
   // Creates a DebugValue for DebugDeclare |dbg_decl| and inserts it before
   // |insert_before|. The new DebugValue has the same line and scope as
@@ -244,9 +243,18 @@ class DebugInfoManager {
   // operand is the function.
   std::unordered_map<uint32_t, Instruction*> fn_id_to_dbg_fn_;
 
+  // Orders Instruction* for use in associative containers (i.e. less than
+  // ordering). Unique Id is used.
+  typedef Instruction* InstPtr;
+  struct InstPtrLess {
+    bool operator()(const InstPtr& lhs, const InstPtr& rhs) const {
+      return lhs->unique_id() < rhs->unique_id();
+    }
+  };
+
   // Mapping from variable or value ids to DebugDeclare or DebugValue
   // instructions whose operand is the variable or value.
-  std::unordered_map<uint32_t, std::unordered_set<Instruction*>>
+  std::unordered_map<uint32_t, std::set<InstPtr, InstPtrLess>>
       var_id_to_dbg_decl_;
 
   // Mapping from DebugScope ids to users.

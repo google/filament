@@ -1395,6 +1395,47 @@ INSTANTIATE_TEST_SUITE_P(
         {"0x1.0p1+", true, "+", 2.0f},
         {"0x1.0p1-", true, "-", 2.0f}}));
 
+INSTANTIATE_TEST_SUITE_P(
+    HexFloatPositiveExponentOverflow, FloatStreamParseTest,
+    ::testing::ValuesIn(std::vector<StreamParseCase<float>>{
+        // Positive exponents
+        {"0x1.0p1", true, "", 2.0f},       // fine, a normal number
+        {"0x1.0p15", true, "", 32768.0f},  // fine, a normal number
+        {"0x1.0p127", true, "", float(ldexp(1.0f, 127))},   // good large number
+        {"0x0.8p128", true, "", float(ldexp(1.0f, 127))},   // good large number
+        {"0x0.1p131", true, "", float(ldexp(1.0f, 127))},   // good large number
+        {"0x0.01p135", true, "", float(ldexp(1.0f, 127))},  // good large number
+        {"0x1.0p128", true, "", float(ldexp(1.0f, 128))},   // infinity
+        {"0x1.0p4294967295", true, "", float(ldexp(1.0f, 128))},  // infinity
+        {"0x1.0p5000000000", true, "", float(ldexp(1.0f, 128))},  // infinity
+        {"0x0.0p5000000000", true, "", 0.0f},  // zero mantissa, zero result
+    }));
+
+INSTANTIATE_TEST_SUITE_P(
+    HexFloatNegativeExponentOverflow, FloatStreamParseTest,
+    ::testing::ValuesIn(std::vector<StreamParseCase<float>>{
+        // Positive results, digits before '.'
+        {"0x1.0p-126", true, "",
+         float(ldexp(1.0f, -126))},  // fine, a small normal number
+        {"0x1.0p-127", true, "", float(ldexp(1.0f, -127))},  // denorm number
+        {"0x1.0p-149", true, "",
+         float(ldexp(1.0f, -149))},  // smallest positive denormal
+        {"0x0.8p-148", true, "",
+         float(ldexp(1.0f, -149))},  // smallest positive denormal
+        {"0x0.1p-145", true, "",
+         float(ldexp(1.0f, -149))},  // smallest positive denormal
+        {"0x0.01p-141", true, "",
+         float(ldexp(1.0f, -149))},  // smallest positive denormal
+
+        // underflow rounds down to zero
+        {"0x1.0p-150", true, "", 0.0f},
+        {"0x1.0p-4294967296", true, "",
+         0.0f},  // avoid exponent overflow in parser
+        {"0x1.0p-5000000000", true, "",
+         0.0f},  // avoid exponent overflow in parser
+        {"0x0.0p-5000000000", true, "", 0.0f},  // zero mantissa, zero result
+    }));
+
 // TODO(awoloszyn): Add fp16 tests and HexFloatTraits.
 }  // namespace
 }  // namespace utils

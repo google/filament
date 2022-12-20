@@ -32,7 +32,7 @@ OperandToUndefReductionOpportunityFinder::GetAvailableOpportunities(
         auto type_id = inst.type_id();
         if (type_id) {
           auto type_id_def = context->get_def_use_mgr()->GetDef(type_id);
-          if (type_id_def->opcode() == SpvOpTypePointer) {
+          if (type_id_def->opcode() == spv::Op::OpTypePointer) {
             continue;
           }
         }
@@ -57,7 +57,7 @@ OperandToUndefReductionOpportunityFinder::GetAvailableOpportunities(
             }
 
             // Don't replace function operands with undef.
-            if (operand_id_def->opcode() == SpvOpFunction) {
+            if (operand_id_def->opcode() == spv::Op::OpFunction) {
               continue;
             }
 
@@ -68,7 +68,7 @@ OperandToUndefReductionOpportunityFinder::GetAvailableOpportunities(
                   context->get_def_use_mgr()->GetDef(operand_type_id);
 
               // Skip pointer operands.
-              if (operand_type_id_def->opcode() == SpvOpTypePointer) {
+              if (operand_type_id_def->opcode() == spv::Op::OpTypePointer) {
                 continue;
               }
 

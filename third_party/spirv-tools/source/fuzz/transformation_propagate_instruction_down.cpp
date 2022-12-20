@@ -144,7 +144,7 @@ void TransformationPropagateInstructionDown::Apply(
         ->block(merge_block_id)
         ->begin()
         ->InsertBefore(MakeUnique<opt::Instruction>(
-            ir_context, SpvOpPhi, inst_to_propagate->type_id(),
+            ir_context, spv::Op::OpPhi, inst_to_propagate->type_id(),
             message_.phi_fresh_id(), std::move(in_operands)));
 
     fuzzerutil::UpdateModuleIdBound(ir_context, message_.phi_fresh_id());
@@ -234,115 +234,115 @@ protobufs::Transformation TransformationPropagateInstructionDown::ToMessage()
   return result;
 }
 
-bool TransformationPropagateInstructionDown::IsOpcodeSupported(SpvOp opcode) {
+bool TransformationPropagateInstructionDown::IsOpcodeSupported(spv::Op opcode) {
   // TODO(https://github.com/KhronosGroup/SPIRV-Tools/issues/3605):
   //  We only support "simple" instructions that don't work with memory.
   //  We should extend this so that we support the ones that modify the memory
   //  too.
   switch (opcode) {
-    case SpvOpUndef:
-    case SpvOpAccessChain:
-    case SpvOpInBoundsAccessChain:
-    case SpvOpArrayLength:
-    case SpvOpVectorExtractDynamic:
-    case SpvOpVectorInsertDynamic:
-    case SpvOpVectorShuffle:
-    case SpvOpCompositeConstruct:
-    case SpvOpCompositeExtract:
-    case SpvOpCompositeInsert:
-    case SpvOpCopyObject:
-    case SpvOpTranspose:
-    case SpvOpConvertFToU:
-    case SpvOpConvertFToS:
-    case SpvOpConvertSToF:
-    case SpvOpConvertUToF:
-    case SpvOpUConvert:
-    case SpvOpSConvert:
-    case SpvOpFConvert:
-    case SpvOpQuantizeToF16:
-    case SpvOpSatConvertSToU:
-    case SpvOpSatConvertUToS:
-    case SpvOpBitcast:
-    case SpvOpSNegate:
-    case SpvOpFNegate:
-    case SpvOpIAdd:
-    case SpvOpFAdd:
-    case SpvOpISub:
-    case SpvOpFSub:
-    case SpvOpIMul:
-    case SpvOpFMul:
-    case SpvOpUDiv:
-    case SpvOpSDiv:
-    case SpvOpFDiv:
-    case SpvOpUMod:
-    case SpvOpSRem:
-    case SpvOpSMod:
-    case SpvOpFRem:
-    case SpvOpFMod:
-    case SpvOpVectorTimesScalar:
-    case SpvOpMatrixTimesScalar:
-    case SpvOpVectorTimesMatrix:
-    case SpvOpMatrixTimesVector:
-    case SpvOpMatrixTimesMatrix:
-    case SpvOpOuterProduct:
-    case SpvOpDot:
-    case SpvOpIAddCarry:
-    case SpvOpISubBorrow:
-    case SpvOpUMulExtended:
-    case SpvOpSMulExtended:
-    case SpvOpAny:
-    case SpvOpAll:
-    case SpvOpIsNan:
-    case SpvOpIsInf:
-    case SpvOpIsFinite:
-    case SpvOpIsNormal:
-    case SpvOpSignBitSet:
-    case SpvOpLessOrGreater:
-    case SpvOpOrdered:
-    case SpvOpUnordered:
-    case SpvOpLogicalEqual:
-    case SpvOpLogicalNotEqual:
-    case SpvOpLogicalOr:
-    case SpvOpLogicalAnd:
-    case SpvOpLogicalNot:
-    case SpvOpSelect:
-    case SpvOpIEqual:
-    case SpvOpINotEqual:
-    case SpvOpUGreaterThan:
-    case SpvOpSGreaterThan:
-    case SpvOpUGreaterThanEqual:
-    case SpvOpSGreaterThanEqual:
-    case SpvOpULessThan:
-    case SpvOpSLessThan:
-    case SpvOpULessThanEqual:
-    case SpvOpSLessThanEqual:
-    case SpvOpFOrdEqual:
-    case SpvOpFUnordEqual:
-    case SpvOpFOrdNotEqual:
-    case SpvOpFUnordNotEqual:
-    case SpvOpFOrdLessThan:
-    case SpvOpFUnordLessThan:
-    case SpvOpFOrdGreaterThan:
-    case SpvOpFUnordGreaterThan:
-    case SpvOpFOrdLessThanEqual:
-    case SpvOpFUnordLessThanEqual:
-    case SpvOpFOrdGreaterThanEqual:
-    case SpvOpFUnordGreaterThanEqual:
-    case SpvOpShiftRightLogical:
-    case SpvOpShiftRightArithmetic:
-    case SpvOpShiftLeftLogical:
-    case SpvOpBitwiseOr:
-    case SpvOpBitwiseXor:
-    case SpvOpBitwiseAnd:
-    case SpvOpNot:
-    case SpvOpBitFieldInsert:
-    case SpvOpBitFieldSExtract:
-    case SpvOpBitFieldUExtract:
-    case SpvOpBitReverse:
-    case SpvOpBitCount:
-    case SpvOpCopyLogical:
-    case SpvOpPtrEqual:
-    case SpvOpPtrNotEqual:
+    case spv::Op::OpUndef:
+    case spv::Op::OpAccessChain:
+    case spv::Op::OpInBoundsAccessChain:
+    case spv::Op::OpArrayLength:
+    case spv::Op::OpVectorExtractDynamic:
+    case spv::Op::OpVectorInsertDynamic:
+    case spv::Op::OpVectorShuffle:
+    case spv::Op::OpCompositeConstruct:
+    case spv::Op::OpCompositeExtract:
+    case spv::Op::OpCompositeInsert:
+    case spv::Op::OpCopyObject:
+    case spv::Op::OpTranspose:
+    case spv::Op::OpConvertFToU:
+    case spv::Op::OpConvertFToS:
+    case spv::Op::OpConvertSToF:
+    case spv::Op::OpConvertUToF:
+    case spv::Op::OpUConvert:
+    case spv::Op::OpSConvert:
+    case spv::Op::OpFConvert:
+    case spv::Op::OpQuantizeToF16:
+    case spv::Op::OpSatConvertSToU:
+    case spv::Op::OpSatConvertUToS:
+    case spv::Op::OpBitcast:
+    case spv::Op::OpSNegate:
+    case spv::Op::OpFNegate:
+    case spv::Op::OpIAdd:
+    case spv::Op::OpFAdd:
+    case spv::Op::OpISub:
+    case spv::Op::OpFSub:
+    case spv::Op::OpIMul:
+    case spv::Op::OpFMul:
+    case spv::Op::OpUDiv:
+    case spv::Op::OpSDiv:
+    case spv::Op::OpFDiv:
+    case spv::Op::OpUMod:
+    case spv::Op::OpSRem:
+    case spv::Op::OpSMod:
+    case spv::Op::OpFRem:
+    case spv::Op::OpFMod:
+    case spv::Op::OpVectorTimesScalar:
+    case spv::Op::OpMatrixTimesScalar:
+    case spv::Op::OpVectorTimesMatrix:
+    case spv::Op::OpMatrixTimesVector:
+    case spv::Op::OpMatrixTimesMatrix:
+    case spv::Op::OpOuterProduct:
+    case spv::Op::OpDot:
+    case spv::Op::OpIAddCarry:
+    case spv::Op::OpISubBorrow:
+    case spv::Op::OpUMulExtended:
+    case spv::Op::OpSMulExtended:
+    case spv::Op::OpAny:
+    case spv::Op::OpAll:
+    case spv::Op::OpIsNan:
+    case spv::Op::OpIsInf:
+    case spv::Op::OpIsFinite:
+    case spv::Op::OpIsNormal:
+    case spv::Op::OpSignBitSet:
+    case spv::Op::OpLessOrGreater:
+    case spv::Op::OpOrdered:
+    case spv::Op::OpUnordered:
+    case spv::Op::OpLogicalEqual:
+    case spv::Op::OpLogicalNotEqual:
+    case spv::Op::OpLogicalOr:
+    case spv::Op::OpLogicalAnd:
+    case spv::Op::OpLogicalNot:
+    case spv::Op::OpSelect:
+    case spv::Op::OpIEqual:
+    case spv::Op::OpINotEqual:
+    case spv::Op::OpUGreaterThan:
+    case spv::Op::OpSGreaterThan:
+    case spv::Op::OpUGreaterThanEqual:
+    case spv::Op::OpSGreaterThanEqual:
+    case spv::Op::OpULessThan:
+    case spv::Op::OpSLessThan:
+    case spv::Op::OpULessThanEqual:
+    case spv::Op::OpSLessThanEqual:
+    case spv::Op::OpFOrdEqual:
+    case spv::Op::OpFUnordEqual:
+    case spv::Op::OpFOrdNotEqual:
+    case spv::Op::OpFUnordNotEqual:
+    case spv::Op::OpFOrdLessThan:
+    case spv::Op::OpFUnordLessThan:
+    case spv::Op::OpFOrdGreaterThan:
+    case spv::Op::OpFUnordGreaterThan:
+    case spv::Op::OpFOrdLessThanEqual:
+    case spv::Op::OpFUnordLessThanEqual:
+    case spv::Op::OpFOrdGreaterThanEqual:
+    case spv::Op::OpFUnordGreaterThanEqual:
+    case spv::Op::OpShiftRightLogical:
+    case spv::Op::OpShiftRightArithmetic:
+    case spv::Op::OpShiftLeftLogical:
+    case spv::Op::OpBitwiseOr:
+    case spv::Op::OpBitwiseXor:
+    case spv::Op::OpBitwiseAnd:
+    case spv::Op::OpNot:
+    case spv::Op::OpBitFieldInsert:
+    case spv::Op::OpBitFieldSExtract:
+    case spv::Op::OpBitFieldUExtract:
+    case spv::Op::OpBitReverse:
+    case spv::Op::OpBitCount:
+    case spv::Op::OpCopyLogical:
+    case spv::Op::OpPtrEqual:
+    case spv::Op::OpPtrNotEqual:
       return true;
     default:
       return false;
@@ -408,7 +408,7 @@ bool TransformationPropagateInstructionDown::IsApplicableToBlock(
   // use |inst|.
   for (auto successor_id : successor_ids) {
     for (const auto& maybe_phi_inst : *ir_context->cfg()->block(successor_id)) {
-      if (maybe_phi_inst.opcode() != SpvOpPhi) {
+      if (maybe_phi_inst.opcode() != spv::Op::OpPhi) {
         // OpPhis can be intermixed with OpLine and OpNoLine.
         continue;
       }
@@ -446,7 +446,7 @@ bool TransformationPropagateInstructionDown::IsApplicableToBlock(
         // |phi_block_id| dominates |user|'s block (or its predecessor if the
         // user is an OpPhi). We can't use fuzzerutil::IdIsAvailableAtUse since
         // the id in question hasn't yet been created in the module.
-        auto block_id_to_dominate = user->opcode() == SpvOpPhi
+        auto block_id_to_dominate = user->opcode() == spv::Op::OpPhi
                                         ? user->GetSingleWordOperand(index + 1)
                                         : user_block->id();
 
@@ -465,7 +465,7 @@ bool TransformationPropagateInstructionDown::IsApplicableToBlock(
 
 opt::Instruction*
 TransformationPropagateInstructionDown::GetFirstInsertBeforeInstruction(
-    opt::IRContext* ir_context, uint32_t block_id, SpvOp opcode) {
+    opt::IRContext* ir_context, uint32_t block_id, spv::Op opcode) {
   auto* block = ir_context->cfg()->block(block_id);
 
   auto it = block->begin();
@@ -572,7 +572,7 @@ uint32_t TransformationPropagateInstructionDown::GetOpPhiBlockId(
   // OpPhi instructions cannot have operands of pointer types.
   if (propagate_type->AsPointer() &&
       !ir_context->get_feature_mgr()->HasCapability(
-          SpvCapabilityVariablePointersStorageBuffer)) {
+          spv::Capability::VariablePointersStorageBuffer)) {
     return 0;
   }
 

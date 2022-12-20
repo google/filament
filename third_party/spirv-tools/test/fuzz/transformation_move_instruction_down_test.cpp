@@ -73,44 +73,45 @@ TEST(TransformationMoveInstructionDownTest, BasicTest) {
       MakeUnique<FactManager>(context.get()), validator_options);
   // Instruction descriptor is invalid.
   ASSERT_FALSE(TransformationMoveInstructionDown(
-                   MakeInstructionDescriptor(30, SpvOpNop, 0))
+                   MakeInstructionDescriptor(30, spv::Op::OpNop, 0))
                    .IsApplicable(context.get(), transformation_context));
 
   // Opcode is not supported.
   ASSERT_FALSE(TransformationMoveInstructionDown(
-                   MakeInstructionDescriptor(5, SpvOpLabel, 0))
+                   MakeInstructionDescriptor(5, spv::Op::OpLabel, 0))
                    .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(TransformationMoveInstructionDown(
-                   MakeInstructionDescriptor(12, SpvOpVariable, 0))
+                   MakeInstructionDescriptor(12, spv::Op::OpVariable, 0))
                    .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(TransformationMoveInstructionDown(
-                   MakeInstructionDescriptor(42, SpvOpFunctionCall, 0))
+                   MakeInstructionDescriptor(42, spv::Op::OpFunctionCall, 0))
                    .IsApplicable(context.get(), transformation_context));
 
   // Can't move the last instruction in the block.
-  ASSERT_FALSE(TransformationMoveInstructionDown(
-                   MakeInstructionDescriptor(15, SpvOpBranchConditional, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationMoveInstructionDown(
+          MakeInstructionDescriptor(15, spv::Op::OpBranchConditional, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // Can't move the instruction if the next instruction is the last one in the
   // block.
   ASSERT_FALSE(TransformationMoveInstructionDown(
-                   MakeInstructionDescriptor(21, SpvOpIAdd, 0))
+                   MakeInstructionDescriptor(21, spv::Op::OpIAdd, 0))
                    .IsApplicable(context.get(), transformation_context));
 
   // Can't insert instruction's opcode after its successor.
   ASSERT_FALSE(TransformationMoveInstructionDown(
-                   MakeInstructionDescriptor(15, SpvOpIMul, 0))
+                   MakeInstructionDescriptor(15, spv::Op::OpIMul, 0))
                    .IsApplicable(context.get(), transformation_context));
 
   // Instruction's successor depends on the instruction.
   ASSERT_FALSE(TransformationMoveInstructionDown(
-                   MakeInstructionDescriptor(10, SpvOpIAdd, 0))
+                   MakeInstructionDescriptor(10, spv::Op::OpIAdd, 0))
                    .IsApplicable(context.get(), transformation_context));
 
   {
     TransformationMoveInstructionDown transformation(
-        MakeInstructionDescriptor(11, SpvOpISub, 0));
+        MakeInstructionDescriptor(11, spv::Op::OpISub, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -120,7 +121,7 @@ TEST(TransformationMoveInstructionDownTest, BasicTest) {
   }
   {
     TransformationMoveInstructionDown transformation(
-        MakeInstructionDescriptor(22, SpvOpIAdd, 0));
+        MakeInstructionDescriptor(22, spv::Op::OpIAdd, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -218,17 +219,17 @@ TEST(TransformationMoveInstructionDownTest, HandlesUnsupportedInstructions) {
       MakeUnique<FactManager>(context.get()), validator_options);
   // Swap memory instruction with an unsupported one.
   ASSERT_FALSE(TransformationMoveInstructionDown(
-                   MakeInstructionDescriptor(22, SpvOpLoad, 0))
+                   MakeInstructionDescriptor(22, spv::Op::OpLoad, 0))
                    .IsApplicable(context.get(), transformation_context));
 
   // Swap memory barrier with an unsupported one.
   ASSERT_FALSE(TransformationMoveInstructionDown(
-                   MakeInstructionDescriptor(23, SpvOpMemoryBarrier, 0))
+                   MakeInstructionDescriptor(23, spv::Op::OpMemoryBarrier, 0))
                    .IsApplicable(context.get(), transformation_context));
 
   // Swap simple instruction with an unsupported one.
   TransformationMoveInstructionDown transformation(
-      MakeInstructionDescriptor(8, SpvOpCopyObject, 0));
+      MakeInstructionDescriptor(8, spv::Op::OpCopyObject, 0));
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
@@ -322,21 +323,21 @@ TEST(TransformationMoveInstructionDownTest, HandlesBarrierInstructions) {
       MakeUnique<FactManager>(context.get()), validator_options);
   // Swap two barrier instructions.
   ASSERT_FALSE(TransformationMoveInstructionDown(
-                   MakeInstructionDescriptor(21, SpvOpMemoryBarrier, 0))
+                   MakeInstructionDescriptor(21, spv::Op::OpMemoryBarrier, 0))
                    .IsApplicable(context.get(), transformation_context));
 
   // Swap barrier and memory instructions.
   ASSERT_FALSE(TransformationMoveInstructionDown(
-                   MakeInstructionDescriptor(21, SpvOpMemoryBarrier, 2))
+                   MakeInstructionDescriptor(21, spv::Op::OpMemoryBarrier, 2))
                    .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(TransformationMoveInstructionDown(
-                   MakeInstructionDescriptor(22, SpvOpLoad, 0))
+                   MakeInstructionDescriptor(22, spv::Op::OpLoad, 0))
                    .IsApplicable(context.get(), transformation_context));
 
   // Swap barrier and simple instructions.
   {
     TransformationMoveInstructionDown transformation(
-        MakeInstructionDescriptor(23, SpvOpCopyObject, 0));
+        MakeInstructionDescriptor(23, spv::Op::OpCopyObject, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -346,7 +347,7 @@ TEST(TransformationMoveInstructionDownTest, HandlesBarrierInstructions) {
   }
   {
     TransformationMoveInstructionDown transformation(
-        MakeInstructionDescriptor(22, SpvOpMemoryBarrier, 1));
+        MakeInstructionDescriptor(22, spv::Op::OpMemoryBarrier, 1));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -406,7 +407,7 @@ TEST(TransformationMoveInstructionDownTest, HandlesSimpleInstructions) {
   // Swap simple and barrier instructions.
   {
     TransformationMoveInstructionDown transformation(
-        MakeInstructionDescriptor(40, SpvOpCopyObject, 0));
+        MakeInstructionDescriptor(40, spv::Op::OpCopyObject, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -416,7 +417,7 @@ TEST(TransformationMoveInstructionDownTest, HandlesSimpleInstructions) {
   }
   {
     TransformationMoveInstructionDown transformation(
-        MakeInstructionDescriptor(21, SpvOpMemoryBarrier, 0));
+        MakeInstructionDescriptor(21, spv::Op::OpMemoryBarrier, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -428,7 +429,7 @@ TEST(TransformationMoveInstructionDownTest, HandlesSimpleInstructions) {
   // Swap simple and memory instructions.
   {
     TransformationMoveInstructionDown transformation(
-        MakeInstructionDescriptor(41, SpvOpCopyObject, 0));
+        MakeInstructionDescriptor(41, spv::Op::OpCopyObject, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -438,7 +439,7 @@ TEST(TransformationMoveInstructionDownTest, HandlesSimpleInstructions) {
   }
   {
     TransformationMoveInstructionDown transformation(
-        MakeInstructionDescriptor(22, SpvOpLoad, 0));
+        MakeInstructionDescriptor(22, spv::Op::OpLoad, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -450,7 +451,7 @@ TEST(TransformationMoveInstructionDownTest, HandlesSimpleInstructions) {
   // Swap two simple instructions.
   {
     TransformationMoveInstructionDown transformation(
-        MakeInstructionDescriptor(23, SpvOpCopyObject, 0));
+        MakeInstructionDescriptor(23, spv::Op::OpCopyObject, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -625,22 +626,22 @@ TEST(TransformationMoveInstructionDownTest, HandlesMemoryInstructions) {
 
   protobufs::InstructionDescriptor invalid_swaps[] = {
       // R and RW
-      MakeInstructionDescriptor(25, SpvOpLoad, 0),
+      MakeInstructionDescriptor(25, spv::Op::OpLoad, 0),
 
       // R and W
-      MakeInstructionDescriptor(29, SpvOpLoad, 0),
+      MakeInstructionDescriptor(29, spv::Op::OpLoad, 0),
 
       // RW and RW
-      MakeInstructionDescriptor(32, SpvOpCopyMemory, 0),
-      MakeInstructionDescriptor(32, SpvOpCopyMemory, 2),
-      MakeInstructionDescriptor(32, SpvOpCopyMemory, 4),
+      MakeInstructionDescriptor(32, spv::Op::OpCopyMemory, 0),
+      MakeInstructionDescriptor(32, spv::Op::OpCopyMemory, 2),
+      MakeInstructionDescriptor(32, spv::Op::OpCopyMemory, 4),
 
       // RW and W
-      MakeInstructionDescriptor(32, SpvOpCopyMemory, 12),
-      MakeInstructionDescriptor(32, SpvOpStore, 1),
+      MakeInstructionDescriptor(32, spv::Op::OpCopyMemory, 12),
+      MakeInstructionDescriptor(32, spv::Op::OpStore, 1),
 
       // W and W
-      MakeInstructionDescriptor(32, SpvOpStore, 6),
+      MakeInstructionDescriptor(32, spv::Op::OpStore, 6),
   };
 
   for (const auto& descriptor : invalid_swaps) {
@@ -651,55 +652,55 @@ TEST(TransformationMoveInstructionDownTest, HandlesMemoryInstructions) {
   // Valid swaps.
   protobufs::InstructionDescriptor valid_swaps[] = {
       // R and R
-      MakeInstructionDescriptor(23, SpvOpLoad, 0),
-      MakeInstructionDescriptor(24, SpvOpLoad, 0),
+      MakeInstructionDescriptor(23, spv::Op::OpLoad, 0),
+      MakeInstructionDescriptor(24, spv::Op::OpLoad, 0),
 
       // R and RW
-      MakeInstructionDescriptor(26, SpvOpLoad, 0),
-      MakeInstructionDescriptor(25, SpvOpCopyMemory, 1),
+      MakeInstructionDescriptor(26, spv::Op::OpLoad, 0),
+      MakeInstructionDescriptor(25, spv::Op::OpCopyMemory, 1),
 
-      MakeInstructionDescriptor(27, SpvOpLoad, 0),
-      MakeInstructionDescriptor(26, SpvOpCopyMemory, 1),
+      MakeInstructionDescriptor(27, spv::Op::OpLoad, 0),
+      MakeInstructionDescriptor(26, spv::Op::OpCopyMemory, 1),
 
-      MakeInstructionDescriptor(28, SpvOpLoad, 0),
-      MakeInstructionDescriptor(27, SpvOpCopyMemory, 1),
+      MakeInstructionDescriptor(28, spv::Op::OpLoad, 0),
+      MakeInstructionDescriptor(27, spv::Op::OpCopyMemory, 1),
 
       // R and W
-      MakeInstructionDescriptor(30, SpvOpLoad, 0),
-      MakeInstructionDescriptor(29, SpvOpStore, 1),
+      MakeInstructionDescriptor(30, spv::Op::OpLoad, 0),
+      MakeInstructionDescriptor(29, spv::Op::OpStore, 1),
 
-      MakeInstructionDescriptor(31, SpvOpLoad, 0),
-      MakeInstructionDescriptor(30, SpvOpStore, 1),
+      MakeInstructionDescriptor(31, spv::Op::OpLoad, 0),
+      MakeInstructionDescriptor(30, spv::Op::OpStore, 1),
 
-      MakeInstructionDescriptor(32, SpvOpLoad, 0),
-      MakeInstructionDescriptor(31, SpvOpStore, 1),
+      MakeInstructionDescriptor(32, spv::Op::OpLoad, 0),
+      MakeInstructionDescriptor(31, spv::Op::OpStore, 1),
 
       // RW and RW
-      MakeInstructionDescriptor(32, SpvOpCopyMemory, 6),
-      MakeInstructionDescriptor(32, SpvOpCopyMemory, 6),
+      MakeInstructionDescriptor(32, spv::Op::OpCopyMemory, 6),
+      MakeInstructionDescriptor(32, spv::Op::OpCopyMemory, 6),
 
-      MakeInstructionDescriptor(32, SpvOpCopyMemory, 8),
-      MakeInstructionDescriptor(32, SpvOpCopyMemory, 8),
+      MakeInstructionDescriptor(32, spv::Op::OpCopyMemory, 8),
+      MakeInstructionDescriptor(32, spv::Op::OpCopyMemory, 8),
 
-      MakeInstructionDescriptor(32, SpvOpCopyMemory, 10),
-      MakeInstructionDescriptor(32, SpvOpCopyMemory, 10),
+      MakeInstructionDescriptor(32, spv::Op::OpCopyMemory, 10),
+      MakeInstructionDescriptor(32, spv::Op::OpCopyMemory, 10),
 
       // RW and W
-      MakeInstructionDescriptor(32, SpvOpCopyMemory, 14),
-      MakeInstructionDescriptor(32, SpvOpStore, 3),
+      MakeInstructionDescriptor(32, spv::Op::OpCopyMemory, 14),
+      MakeInstructionDescriptor(32, spv::Op::OpStore, 3),
 
-      MakeInstructionDescriptor(32, SpvOpCopyMemory, 15),
-      MakeInstructionDescriptor(32, SpvOpStore, 4),
+      MakeInstructionDescriptor(32, spv::Op::OpCopyMemory, 15),
+      MakeInstructionDescriptor(32, spv::Op::OpStore, 4),
 
-      MakeInstructionDescriptor(32, SpvOpCopyMemory, 16),
-      MakeInstructionDescriptor(32, SpvOpStore, 5),
+      MakeInstructionDescriptor(32, spv::Op::OpCopyMemory, 16),
+      MakeInstructionDescriptor(32, spv::Op::OpStore, 5),
 
       // W and W
-      MakeInstructionDescriptor(32, SpvOpStore, 8),
-      MakeInstructionDescriptor(32, SpvOpStore, 8),
+      MakeInstructionDescriptor(32, spv::Op::OpStore, 8),
+      MakeInstructionDescriptor(32, spv::Op::OpStore, 8),
 
-      MakeInstructionDescriptor(32, SpvOpStore, 10),
-      MakeInstructionDescriptor(32, SpvOpStore, 10),
+      MakeInstructionDescriptor(32, spv::Op::OpStore, 10),
+      MakeInstructionDescriptor(32, spv::Op::OpStore, 10),
   };
 
   for (const auto& descriptor : valid_swaps) {

@@ -24,10 +24,8 @@
 namespace spvtools {
 namespace opt {
 namespace {
-
-const uint32_t kVariableStorageClassInIdx = 0;
-const uint32_t kSpvTypePointerTypeIdInIdx = 1;
-
+constexpr uint32_t kVariableStorageClassInIdx = 0;
+constexpr uint32_t kSpvTypePointerTypeIdInIdx = 1;
 }  // namespace
 
 Pass::Status PrivateToLocalPass::Process() {
@@ -35,18 +33,18 @@ Pass::Status PrivateToLocalPass::Process() {
 
   // Private variables require the shader capability.  If this is not a shader,
   // there is no work to do.
-  if (context()->get_feature_mgr()->HasCapability(SpvCapabilityAddresses))
+  if (context()->get_feature_mgr()->HasCapability(spv::Capability::Addresses))
     return Status::SuccessWithoutChange;
 
   std::vector<std::pair<Instruction*, Function*>> variables_to_move;
   std::unordered_set<uint32_t> localized_variables;
   for (auto& inst : context()->types_values()) {
-    if (inst.opcode() != SpvOpVariable) {
+    if (inst.opcode() != spv::Op::OpVariable) {
       continue;
     }
 
-    if (inst.GetSingleWordInOperand(kVariableStorageClassInIdx) !=
-        SpvStorageClassPrivate) {
+    if (spv::StorageClass(inst.GetSingleWordInOperand(
+            kVariableStorageClassInIdx)) != spv::StorageClass::Private) {
       continue;
     }
 
@@ -123,7 +121,8 @@ bool PrivateToLocalPass::MoveVariable(Instruction* variable,
   context()->ForgetUses(variable);
 
   // Update the storage class of the variable.
-  variable->SetInOperand(kVariableStorageClassInIdx, {SpvStorageClassFunction});
+  variable->SetInOperand(kVariableStorageClassInIdx,
+                         {uint32_t(spv::StorageClass::Function)});
 
   // Update the type as well.
   uint32_t new_type_id = GetNewType(variable->type_id());
@@ -147,7 +146,7 @@ uint32_t PrivateToLocalPass::GetNewType(uint32_t old_type_id) {
   uint32_t pointee_type_id =
       old_type_inst->GetSingleWordInOperand(kSpvTypePointerTypeIdInIdx);
   uint32_t new_type_id =
-      type_mgr->FindPointerToType(pointee_type_id, SpvStorageClassFunction);
+      type_mgr->FindPointerToType(pointee_type_id, spv::StorageClass::Function);
   if (new_type_id != 0) {
     context()->UpdateDefUse(context()->get_def_use_mgr()->GetDef(new_type_id));
   }
@@ -161,17 +160,17 @@ bool PrivateToLocalPass::IsValidUse(const Instruction* inst) const {
     return true;
   }
   switch (inst->opcode()) {
-    case SpvOpLoad:
-    case SpvOpStore:
-    case SpvOpImageTexelPointer:  // Treat like a load
+    case spv::Op::OpLoad:
+    case spv::Op::OpStore:
+    case spv::Op::OpImageTexelPointer:  // Treat like a load
       return true;
-    case SpvOpAccessChain:
+    case spv::Op::OpAccessChain:
       return context()->get_def_use_mgr()->WhileEachUser(
           inst, [this](const Instruction* user) {
             if (!IsValidUse(user)) return false;
             return true;
           });
-    case SpvOpName:
+    case spv::Op::OpName:
       return true;
     default:
       return spvOpcodeIsDecoration(inst->opcode());
@@ -188,13 +187,13 @@ bool PrivateToLocalPass::UpdateUse(Instruction* inst, Instruction* user) {
     return true;
   }
   switch (inst->opcode()) {
-    case SpvOpLoad:
-    case SpvOpStore:
-    case SpvOpImageTexelPointer:  // Treat like a load
+    case spv::Op::OpLoad:
+    case spv::Op::OpStore:
+    case spv::Op::OpImageTexelPointer:  // Treat like a load
       // The type is fine because it is the type pointed to, and that does not
       // change.
       break;
-    case SpvOpAccessChain: {
+    case spv::Op::OpAccessChain: {
       context()->ForgetUses(inst);
       uint32_t new_type_id = GetNewType(inst->type_id());
       if (new_type_id == 0) {
@@ -208,8 +207,8 @@ bool PrivateToLocalPass::UpdateUse(Instruction* inst, Instruction* user) {
         return false;
       }
     } break;
-    case SpvOpName:
-    case SpvOpEntryPoint:  // entry points will be updated separately.
+    case spv::Op::OpName:
+    case spv::Op::OpEntryPoint:  // entry points will be updated separately.
       break;
     default:
       assert(spvOpcodeIsDecoration(inst->opcode()) &&

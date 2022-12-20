@@ -48,7 +48,7 @@ class FixStorageClass : public Pass {
   // appropriate, and propagates the change to the users of |inst| as well.
   // Returns true of any changes were made.
   // |seen| is used to track OpPhi instructions that should not be processed.
-  bool PropagateStorageClass(Instruction* inst, SpvStorageClass storage_class,
+  bool PropagateStorageClass(Instruction* inst, spv::StorageClass storage_class,
                              std::set<uint32_t>* seen);
 
   // Changes the storage class of the result of |inst| to |storage_class|.
@@ -58,13 +58,13 @@ class FixStorageClass : public Pass {
   // |seen| is used to track OpPhi instructions that should not be processed by
   // |PropagateStorageClass|
   void FixInstructionStorageClass(Instruction* inst,
-                                  SpvStorageClass storage_class,
+                                  spv::StorageClass storage_class,
                                   std::set<uint32_t>* seen);
 
   // Changes the storage class of the result of |inst| to |storage_class|.  The
   // result type of |inst| must be a pointer.
   void ChangeResultStorageClass(Instruction* inst,
-                                SpvStorageClass storage_class) const;
+                                spv::StorageClass storage_class) const;
 
   // Returns true if the result type of |inst| is a pointer.
   bool IsPointerResultType(Instruction* inst);
@@ -72,7 +72,7 @@ class FixStorageClass : public Pass {
   // Returns true if the result of |inst| is a pointer to storage class
   // |storage_class|.
   bool IsPointerToStorageClass(Instruction* inst,
-                               SpvStorageClass storage_class);
+                               spv::StorageClass storage_class);
 
   // Change |inst| to match that operand |op_idx| now has type |type_id|, and
   // adjust any uses of |inst| accordingly. Returns true if the code changed.

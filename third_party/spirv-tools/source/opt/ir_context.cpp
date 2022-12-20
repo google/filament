@@ -22,23 +22,21 @@
 #include "source/opt/mem_pass.h"
 #include "source/opt/reflect.h"
 
+namespace spvtools {
+namespace opt {
 namespace {
-
-static const int kSpvDecorateTargetIdInIdx = 0;
-static const int kSpvDecorateDecorationInIdx = 1;
-static const int kSpvDecorateBuiltinInIdx = 2;
-static const int kEntryPointInterfaceInIdx = 3;
-static const int kEntryPointFunctionIdInIdx = 1;
+constexpr int kSpvDecorateTargetIdInIdx = 0;
+constexpr int kSpvDecorateDecorationInIdx = 1;
+constexpr int kSpvDecorateBuiltinInIdx = 2;
+constexpr int kEntryPointInterfaceInIdx = 3;
+constexpr int kEntryPointFunctionIdInIdx = 1;
+constexpr int kEntryPointExecutionModelInIdx = 0;
 
 // Constants for OpenCL.DebugInfo.100 / NonSemantic.Shader.DebugInfo.100
 // extension instructions.
-static const uint32_t kDebugFunctionOperandFunctionIndex = 13;
-static const uint32_t kDebugGlobalVariableOperandVariableIndex = 11;
-
-}  // anonymous namespace
-
-namespace spvtools {
-namespace opt {
+constexpr uint32_t kDebugFunctionOperandFunctionIndex = 13;
+constexpr uint32_t kDebugGlobalVariableOperandVariableIndex = 11;
+}  // namespace
 
 void IRContext::BuildInvalidAnalyses(IRContext::Analysis set) {
   set = Analysis(set & ~valid_analyses_);
@@ -152,6 +150,9 @@ void IRContext::InvalidateAnalyses(IRContext::Analysis analyses_to_invalidate) {
   if (analyses_to_invalidate & kAnalysisConstants) {
     constant_mgr_.reset(nullptr);
   }
+  if (analyses_to_invalidate & kAnalysisLiveness) {
+    liveness_mgr_.reset(nullptr);
+  }
   if (analyses_to_invalidate & kAnalysisTypes) {
     type_mgr_.reset(nullptr);
   }
@@ -195,7 +196,8 @@ Instruction* IRContext::KillInst(Instruction* inst) {
   if (constant_mgr_ && IsConstantInst(inst->opcode())) {
     constant_mgr_->RemoveId(inst->result_id());
   }
-  if (inst->opcode() == SpvOpCapability || inst->opcode() == SpvOpExtension) {
+  if (inst->opcode() == spv::Op::OpCapability ||
+      inst->opcode() == spv::Op::OpExtension) {
     // We reset the feature manager, instead of updating it, because it is just
     // as much work.  We would have to remove all capabilities implied by this
     // capability that are not also implied by the remaining OpCapability
@@ -398,8 +400,8 @@ void IRContext::AnalyzeUses(Instruction* inst) {
   if (AreAnalysesValid(kAnalysisDebugInfo)) {
     get_debug_info_mgr()->AnalyzeDebugInst(inst);
   }
-  if (id_to_name_ &&
-      (inst->opcode() == SpvOpName || inst->opcode() == SpvOpMemberName)) {
+  if (id_to_name_ && (inst->opcode() == spv::Op::OpName ||
+                      inst->opcode() == spv::Op::OpMemberName)) {
     id_to_name_->insert({inst->GetSingleWordInOperand(0), inst});
   }
 }
@@ -427,7 +429,7 @@ void IRContext::KillOperandFromDebugInstructions(Instruction* inst) {
   const auto opcode = inst->opcode();
   const uint32_t id = inst->result_id();
   // Kill id of OpFunction from DebugFunction.
-  if (opcode == SpvOpFunction) {
+  if (opcode == spv::Op::OpFunction) {
     for (auto it = module()->ext_inst_debuginfo_begin();
          it != module()->ext_inst_debuginfo_end(); ++it) {
       if (it->GetOpenCL100DebugOpcode() != OpenCLDebugInfo100DebugFunction)
@@ -441,7 +443,7 @@ void IRContext::KillOperandFromDebugInstructions(Instruction* inst) {
     }
   }
   // Kill id of OpVariable for global variable from DebugGlobalVariable.
-  if (opcode == SpvOpVariable || IsConstantInst(opcode)) {
+  if (opcode == spv::Op::OpVariable || IsConstantInst(opcode)) {
     for (auto it = module()->ext_inst_debuginfo_begin();
          it != module()->ext_inst_debuginfo_end(); ++it) {
       if (it->GetCommonDebugOpcode() != CommonDebugInfoDebugGlobalVariable)
@@ -457,255 +459,259 @@ void IRContext::KillOperandFromDebugInstructions(Instruction* inst) {
 }
 
 void IRContext::AddCombinatorsForCapability(uint32_t capability) {
-  if (capability == SpvCapabilityShader) {
-    combinator_ops_[0].insert({SpvOpNop,
-                               SpvOpUndef,
-                               SpvOpConstant,
-                               SpvOpConstantTrue,
-                               SpvOpConstantFalse,
-                               SpvOpConstantComposite,
-                               SpvOpConstantSampler,
-                               SpvOpConstantNull,
-                               SpvOpTypeVoid,
-                               SpvOpTypeBool,
-                               SpvOpTypeInt,
-                               SpvOpTypeFloat,
-                               SpvOpTypeVector,
-                               SpvOpTypeMatrix,
-                               SpvOpTypeImage,
-                               SpvOpTypeSampler,
-                               SpvOpTypeSampledImage,
-                               SpvOpTypeAccelerationStructureNV,
-                               SpvOpTypeAccelerationStructureKHR,
-                               SpvOpTypeRayQueryKHR,
-                               SpvOpTypeArray,
-                               SpvOpTypeRuntimeArray,
-                               SpvOpTypeStruct,
-                               SpvOpTypeOpaque,
-                               SpvOpTypePointer,
-                               SpvOpTypeFunction,
-                               SpvOpTypeEvent,
-                               SpvOpTypeDeviceEvent,
-                               SpvOpTypeReserveId,
-                               SpvOpTypeQueue,
-                               SpvOpTypePipe,
-                               SpvOpTypeForwardPointer,
-                               SpvOpVariable,
-                               SpvOpImageTexelPointer,
-                               SpvOpLoad,
-                               SpvOpAccessChain,
-                               SpvOpInBoundsAccessChain,
-                               SpvOpArrayLength,
-                               SpvOpVectorExtractDynamic,
-                               SpvOpVectorInsertDynamic,
-                               SpvOpVectorShuffle,
-                               SpvOpCompositeConstruct,
-                               SpvOpCompositeExtract,
-                               SpvOpCompositeInsert,
-                               SpvOpCopyObject,
-                               SpvOpTranspose,
-                               SpvOpSampledImage,
-                               SpvOpImageSampleImplicitLod,
-                               SpvOpImageSampleExplicitLod,
-                               SpvOpImageSampleDrefImplicitLod,
-                               SpvOpImageSampleDrefExplicitLod,
-                               SpvOpImageSampleProjImplicitLod,
-                               SpvOpImageSampleProjExplicitLod,
-                               SpvOpImageSampleProjDrefImplicitLod,
-                               SpvOpImageSampleProjDrefExplicitLod,
-                               SpvOpImageFetch,
-                               SpvOpImageGather,
-                               SpvOpImageDrefGather,
-                               SpvOpImageRead,
-                               SpvOpImage,
-                               SpvOpImageQueryFormat,
-                               SpvOpImageQueryOrder,
-                               SpvOpImageQuerySizeLod,
-                               SpvOpImageQuerySize,
-                               SpvOpImageQueryLevels,
-                               SpvOpImageQuerySamples,
-                               SpvOpConvertFToU,
-                               SpvOpConvertFToS,
-                               SpvOpConvertSToF,
-                               SpvOpConvertUToF,
-                               SpvOpUConvert,
-                               SpvOpSConvert,
-                               SpvOpFConvert,
-                               SpvOpQuantizeToF16,
-                               SpvOpBitcast,
-                               SpvOpSNegate,
-                               SpvOpFNegate,
-                               SpvOpIAdd,
-                               SpvOpFAdd,
-                               SpvOpISub,
-                               SpvOpFSub,
-                               SpvOpIMul,
-                               SpvOpFMul,
-                               SpvOpUDiv,
-                               SpvOpSDiv,
-                               SpvOpFDiv,
-                               SpvOpUMod,
-                               SpvOpSRem,
-                               SpvOpSMod,
-                               SpvOpFRem,
-                               SpvOpFMod,
-                               SpvOpVectorTimesScalar,
-                               SpvOpMatrixTimesScalar,
-                               SpvOpVectorTimesMatrix,
-                               SpvOpMatrixTimesVector,
-                               SpvOpMatrixTimesMatrix,
-                               SpvOpOuterProduct,
-                               SpvOpDot,
-                               SpvOpIAddCarry,
-                               SpvOpISubBorrow,
-                               SpvOpUMulExtended,
-                               SpvOpSMulExtended,
-                               SpvOpAny,
-                               SpvOpAll,
-                               SpvOpIsNan,
-                               SpvOpIsInf,
-                               SpvOpLogicalEqual,
-                               SpvOpLogicalNotEqual,
-                               SpvOpLogicalOr,
-                               SpvOpLogicalAnd,
-                               SpvOpLogicalNot,
-                               SpvOpSelect,
-                               SpvOpIEqual,
-                               SpvOpINotEqual,
-                               SpvOpUGreaterThan,
-                               SpvOpSGreaterThan,
-                               SpvOpUGreaterThanEqual,
-                               SpvOpSGreaterThanEqual,
-                               SpvOpULessThan,
-                               SpvOpSLessThan,
-                               SpvOpULessThanEqual,
-                               SpvOpSLessThanEqual,
-                               SpvOpFOrdEqual,
-                               SpvOpFUnordEqual,
-                               SpvOpFOrdNotEqual,
-                               SpvOpFUnordNotEqual,
-                               SpvOpFOrdLessThan,
-                               SpvOpFUnordLessThan,
-                               SpvOpFOrdGreaterThan,
-                               SpvOpFUnordGreaterThan,
-                               SpvOpFOrdLessThanEqual,
-                               SpvOpFUnordLessThanEqual,
-                               SpvOpFOrdGreaterThanEqual,
-                               SpvOpFUnordGreaterThanEqual,
-                               SpvOpShiftRightLogical,
-                               SpvOpShiftRightArithmetic,
-                               SpvOpShiftLeftLogical,
-                               SpvOpBitwiseOr,
-                               SpvOpBitwiseXor,
-                               SpvOpBitwiseAnd,
-                               SpvOpNot,
-                               SpvOpBitFieldInsert,
-                               SpvOpBitFieldSExtract,
-                               SpvOpBitFieldUExtract,
-                               SpvOpBitReverse,
-                               SpvOpBitCount,
-                               SpvOpPhi,
-                               SpvOpImageSparseSampleImplicitLod,
-                               SpvOpImageSparseSampleExplicitLod,
-                               SpvOpImageSparseSampleDrefImplicitLod,
-                               SpvOpImageSparseSampleDrefExplicitLod,
-                               SpvOpImageSparseSampleProjImplicitLod,
-                               SpvOpImageSparseSampleProjExplicitLod,
-                               SpvOpImageSparseSampleProjDrefImplicitLod,
-                               SpvOpImageSparseSampleProjDrefExplicitLod,
-                               SpvOpImageSparseFetch,
-                               SpvOpImageSparseGather,
-                               SpvOpImageSparseDrefGather,
-                               SpvOpImageSparseTexelsResident,
-                               SpvOpImageSparseRead,
-                               SpvOpSizeOf});
+  spv::Capability cap = spv::Capability(capability);
+  if (cap == spv::Capability::Shader) {
+    combinator_ops_[0].insert(
+        {(uint32_t)spv::Op::OpNop,
+         (uint32_t)spv::Op::OpUndef,
+         (uint32_t)spv::Op::OpConstant,
+         (uint32_t)spv::Op::OpConstantTrue,
+         (uint32_t)spv::Op::OpConstantFalse,
+         (uint32_t)spv::Op::OpConstantComposite,
+         (uint32_t)spv::Op::OpConstantSampler,
+         (uint32_t)spv::Op::OpConstantNull,
+         (uint32_t)spv::Op::OpTypeVoid,
+         (uint32_t)spv::Op::OpTypeBool,
+         (uint32_t)spv::Op::OpTypeInt,
+         (uint32_t)spv::Op::OpTypeFloat,
+         (uint32_t)spv::Op::OpTypeVector,
+         (uint32_t)spv::Op::OpTypeMatrix,
+         (uint32_t)spv::Op::OpTypeImage,
+         (uint32_t)spv::Op::OpTypeSampler,
+         (uint32_t)spv::Op::OpTypeSampledImage,
+         (uint32_t)spv::Op::OpTypeAccelerationStructureNV,
+         (uint32_t)spv::Op::OpTypeAccelerationStructureKHR,
+         (uint32_t)spv::Op::OpTypeRayQueryKHR,
+         (uint32_t)spv::Op::OpTypeHitObjectNV,
+         (uint32_t)spv::Op::OpTypeArray,
+         (uint32_t)spv::Op::OpTypeRuntimeArray,
+         (uint32_t)spv::Op::OpTypeStruct,
+         (uint32_t)spv::Op::OpTypeOpaque,
+         (uint32_t)spv::Op::OpTypePointer,
+         (uint32_t)spv::Op::OpTypeFunction,
+         (uint32_t)spv::Op::OpTypeEvent,
+         (uint32_t)spv::Op::OpTypeDeviceEvent,
+         (uint32_t)spv::Op::OpTypeReserveId,
+         (uint32_t)spv::Op::OpTypeQueue,
+         (uint32_t)spv::Op::OpTypePipe,
+         (uint32_t)spv::Op::OpTypeForwardPointer,
+         (uint32_t)spv::Op::OpVariable,
+         (uint32_t)spv::Op::OpImageTexelPointer,
+         (uint32_t)spv::Op::OpLoad,
+         (uint32_t)spv::Op::OpAccessChain,
+         (uint32_t)spv::Op::OpInBoundsAccessChain,
+         (uint32_t)spv::Op::OpArrayLength,
+         (uint32_t)spv::Op::OpVectorExtractDynamic,
+         (uint32_t)spv::Op::OpVectorInsertDynamic,
+         (uint32_t)spv::Op::OpVectorShuffle,
+         (uint32_t)spv::Op::OpCompositeConstruct,
+         (uint32_t)spv::Op::OpCompositeExtract,
+         (uint32_t)spv::Op::OpCompositeInsert,
+         (uint32_t)spv::Op::OpCopyObject,
+         (uint32_t)spv::Op::OpTranspose,
+         (uint32_t)spv::Op::OpSampledImage,
+         (uint32_t)spv::Op::OpImageSampleImplicitLod,
+         (uint32_t)spv::Op::OpImageSampleExplicitLod,
+         (uint32_t)spv::Op::OpImageSampleDrefImplicitLod,
+         (uint32_t)spv::Op::OpImageSampleDrefExplicitLod,
+         (uint32_t)spv::Op::OpImageSampleProjImplicitLod,
+         (uint32_t)spv::Op::OpImageSampleProjExplicitLod,
+         (uint32_t)spv::Op::OpImageSampleProjDrefImplicitLod,
+         (uint32_t)spv::Op::OpImageSampleProjDrefExplicitLod,
+         (uint32_t)spv::Op::OpImageFetch,
+         (uint32_t)spv::Op::OpImageGather,
+         (uint32_t)spv::Op::OpImageDrefGather,
+         (uint32_t)spv::Op::OpImageRead,
+         (uint32_t)spv::Op::OpImage,
+         (uint32_t)spv::Op::OpImageQueryFormat,
+         (uint32_t)spv::Op::OpImageQueryOrder,
+         (uint32_t)spv::Op::OpImageQuerySizeLod,
+         (uint32_t)spv::Op::OpImageQuerySize,
+         (uint32_t)spv::Op::OpImageQueryLevels,
+         (uint32_t)spv::Op::OpImageQuerySamples,
+         (uint32_t)spv::Op::OpConvertFToU,
+         (uint32_t)spv::Op::OpConvertFToS,
+         (uint32_t)spv::Op::OpConvertSToF,
+         (uint32_t)spv::Op::OpConvertUToF,
+         (uint32_t)spv::Op::OpUConvert,
+         (uint32_t)spv::Op::OpSConvert,
+         (uint32_t)spv::Op::OpFConvert,
+         (uint32_t)spv::Op::OpQuantizeToF16,
+         (uint32_t)spv::Op::OpBitcast,
+         (uint32_t)spv::Op::OpSNegate,
+         (uint32_t)spv::Op::OpFNegate,
+         (uint32_t)spv::Op::OpIAdd,
+         (uint32_t)spv::Op::OpFAdd,
+         (uint32_t)spv::Op::OpISub,
+         (uint32_t)spv::Op::OpFSub,
+         (uint32_t)spv::Op::OpIMul,
+         (uint32_t)spv::Op::OpFMul,
+         (uint32_t)spv::Op::OpUDiv,
+         (uint32_t)spv::Op::OpSDiv,
+         (uint32_t)spv::Op::OpFDiv,
+         (uint32_t)spv::Op::OpUMod,
+         (uint32_t)spv::Op::OpSRem,
+         (uint32_t)spv::Op::OpSMod,
+         (uint32_t)spv::Op::OpFRem,
+         (uint32_t)spv::Op::OpFMod,
+         (uint32_t)spv::Op::OpVectorTimesScalar,
+         (uint32_t)spv::Op::OpMatrixTimesScalar,
+         (uint32_t)spv::Op::OpVectorTimesMatrix,
+         (uint32_t)spv::Op::OpMatrixTimesVector,
+         (uint32_t)spv::Op::OpMatrixTimesMatrix,
+         (uint32_t)spv::Op::OpOuterProduct,
+         (uint32_t)spv::Op::OpDot,
+         (uint32_t)spv::Op::OpIAddCarry,
+         (uint32_t)spv::Op::OpISubBorrow,
+         (uint32_t)spv::Op::OpUMulExtended,
+         (uint32_t)spv::Op::OpSMulExtended,
+         (uint32_t)spv::Op::OpAny,
+         (uint32_t)spv::Op::OpAll,
+         (uint32_t)spv::Op::OpIsNan,
+         (uint32_t)spv::Op::OpIsInf,
+         (uint32_t)spv::Op::OpLogicalEqual,
+         (uint32_t)spv::Op::OpLogicalNotEqual,
+         (uint32_t)spv::Op::OpLogicalOr,
+         (uint32_t)spv::Op::OpLogicalAnd,
+         (uint32_t)spv::Op::OpLogicalNot,
+         (uint32_t)spv::Op::OpSelect,
+         (uint32_t)spv::Op::OpIEqual,
+         (uint32_t)spv::Op::OpINotEqual,
+         (uint32_t)spv::Op::OpUGreaterThan,
+         (uint32_t)spv::Op::OpSGreaterThan,
+         (uint32_t)spv::Op::OpUGreaterThanEqual,
+         (uint32_t)spv::Op::OpSGreaterThanEqual,
+         (uint32_t)spv::Op::OpULessThan,
+         (uint32_t)spv::Op::OpSLessThan,
+         (uint32_t)spv::Op::OpULessThanEqual,
+         (uint32_t)spv::Op::OpSLessThanEqual,
+         (uint32_t)spv::Op::OpFOrdEqual,
+         (uint32_t)spv::Op::OpFUnordEqual,
+         (uint32_t)spv::Op::OpFOrdNotEqual,
+         (uint32_t)spv::Op::OpFUnordNotEqual,
+         (uint32_t)spv::Op::OpFOrdLessThan,
+         (uint32_t)spv::Op::OpFUnordLessThan,
+         (uint32_t)spv::Op::OpFOrdGreaterThan,
+         (uint32_t)spv::Op::OpFUnordGreaterThan,
+         (uint32_t)spv::Op::OpFOrdLessThanEqual,
+         (uint32_t)spv::Op::OpFUnordLessThanEqual,
+         (uint32_t)spv::Op::OpFOrdGreaterThanEqual,
+         (uint32_t)spv::Op::OpFUnordGreaterThanEqual,
+         (uint32_t)spv::Op::OpShiftRightLogical,
+         (uint32_t)spv::Op::OpShiftRightArithmetic,
+         (uint32_t)spv::Op::OpShiftLeftLogical,
+         (uint32_t)spv::Op::OpBitwiseOr,
+         (uint32_t)spv::Op::OpBitwiseXor,
+         (uint32_t)spv::Op::OpBitwiseAnd,
+         (uint32_t)spv::Op::OpNot,
+         (uint32_t)spv::Op::OpBitFieldInsert,
+         (uint32_t)spv::Op::OpBitFieldSExtract,
+         (uint32_t)spv::Op::OpBitFieldUExtract,
+         (uint32_t)spv::Op::OpBitReverse,
+         (uint32_t)spv::Op::OpBitCount,
+         (uint32_t)spv::Op::OpPhi,
+         (uint32_t)spv::Op::OpImageSparseSampleImplicitLod,
+         (uint32_t)spv::Op::OpImageSparseSampleExplicitLod,
+         (uint32_t)spv::Op::OpImageSparseSampleDrefImplicitLod,
+         (uint32_t)spv::Op::OpImageSparseSampleDrefExplicitLod,
+         (uint32_t)spv::Op::OpImageSparseSampleProjImplicitLod,
+         (uint32_t)spv::Op::OpImageSparseSampleProjExplicitLod,
+         (uint32_t)spv::Op::OpImageSparseSampleProjDrefImplicitLod,
+         (uint32_t)spv::Op::OpImageSparseSampleProjDrefExplicitLod,
+         (uint32_t)spv::Op::OpImageSparseFetch,
+         (uint32_t)spv::Op::OpImageSparseGather,
+         (uint32_t)spv::Op::OpImageSparseDrefGather,
+         (uint32_t)spv::Op::OpImageSparseTexelsResident,
+         (uint32_t)spv::Op::OpImageSparseRead,
+         (uint32_t)spv::Op::OpSizeOf});
   }
 }
 
 void IRContext::AddCombinatorsForExtension(Instruction* extension) {
-  assert(extension->opcode() == SpvOpExtInstImport &&
+  assert(extension->opcode() == spv::Op::OpExtInstImport &&
          "Expecting an import of an extension's instruction set.");
   const std::string extension_name = extension->GetInOperand(0).AsString();
   if (extension_name == "GLSL.std.450") {
-    combinator_ops_[extension->result_id()] = {GLSLstd450Round,
-                                               GLSLstd450RoundEven,
-                                               GLSLstd450Trunc,
-                                               GLSLstd450FAbs,
-                                               GLSLstd450SAbs,
-                                               GLSLstd450FSign,
-                                               GLSLstd450SSign,
-                                               GLSLstd450Floor,
-                                               GLSLstd450Ceil,
-                                               GLSLstd450Fract,
-                                               GLSLstd450Radians,
-                                               GLSLstd450Degrees,
-                                               GLSLstd450Sin,
-                                               GLSLstd450Cos,
-                                               GLSLstd450Tan,
-                                               GLSLstd450Asin,
-                                               GLSLstd450Acos,
-                                               GLSLstd450Atan,
-                                               GLSLstd450Sinh,
-                                               GLSLstd450Cosh,
-                                               GLSLstd450Tanh,
-                                               GLSLstd450Asinh,
-                                               GLSLstd450Acosh,
-                                               GLSLstd450Atanh,
-                                               GLSLstd450Atan2,
-                                               GLSLstd450Pow,
-                                               GLSLstd450Exp,
-                                               GLSLstd450Log,
-                                               GLSLstd450Exp2,
-                                               GLSLstd450Log2,
-                                               GLSLstd450Sqrt,
-                                               GLSLstd450InverseSqrt,
-                                               GLSLstd450Determinant,
-                                               GLSLstd450MatrixInverse,
-                                               GLSLstd450ModfStruct,
-                                               GLSLstd450FMin,
-                                               GLSLstd450UMin,
-                                               GLSLstd450SMin,
-                                               GLSLstd450FMax,
-                                               GLSLstd450UMax,
-                                               GLSLstd450SMax,
-                                               GLSLstd450FClamp,
-                                               GLSLstd450UClamp,
-                                               GLSLstd450SClamp,
-                                               GLSLstd450FMix,
-                                               GLSLstd450IMix,
-                                               GLSLstd450Step,
-                                               GLSLstd450SmoothStep,
-                                               GLSLstd450Fma,
-                                               GLSLstd450FrexpStruct,
-                                               GLSLstd450Ldexp,
-                                               GLSLstd450PackSnorm4x8,
-                                               GLSLstd450PackUnorm4x8,
-                                               GLSLstd450PackSnorm2x16,
-                                               GLSLstd450PackUnorm2x16,
-                                               GLSLstd450PackHalf2x16,
-                                               GLSLstd450PackDouble2x32,
-                                               GLSLstd450UnpackSnorm2x16,
-                                               GLSLstd450UnpackUnorm2x16,
-                                               GLSLstd450UnpackHalf2x16,
-                                               GLSLstd450UnpackSnorm4x8,
-                                               GLSLstd450UnpackUnorm4x8,
-                                               GLSLstd450UnpackDouble2x32,
-                                               GLSLstd450Length,
-                                               GLSLstd450Distance,
-                                               GLSLstd450Cross,
-                                               GLSLstd450Normalize,
-                                               GLSLstd450FaceForward,
-                                               GLSLstd450Reflect,
-                                               GLSLstd450Refract,
-                                               GLSLstd450FindILsb,
-                                               GLSLstd450FindSMsb,
-                                               GLSLstd450FindUMsb,
-                                               GLSLstd450InterpolateAtCentroid,
-                                               GLSLstd450InterpolateAtSample,
-                                               GLSLstd450InterpolateAtOffset,
-                                               GLSLstd450NMin,
-                                               GLSLstd450NMax,
-                                               GLSLstd450NClamp};
+    combinator_ops_[extension->result_id()] = {
+        (uint32_t)GLSLstd450Round,
+        (uint32_t)GLSLstd450RoundEven,
+        (uint32_t)GLSLstd450Trunc,
+        (uint32_t)GLSLstd450FAbs,
+        (uint32_t)GLSLstd450SAbs,
+        (uint32_t)GLSLstd450FSign,
+        (uint32_t)GLSLstd450SSign,
+        (uint32_t)GLSLstd450Floor,
+        (uint32_t)GLSLstd450Ceil,
+        (uint32_t)GLSLstd450Fract,
+        (uint32_t)GLSLstd450Radians,
+        (uint32_t)GLSLstd450Degrees,
+        (uint32_t)GLSLstd450Sin,
+        (uint32_t)GLSLstd450Cos,
+        (uint32_t)GLSLstd450Tan,
+        (uint32_t)GLSLstd450Asin,
+        (uint32_t)GLSLstd450Acos,
+        (uint32_t)GLSLstd450Atan,
+        (uint32_t)GLSLstd450Sinh,
+        (uint32_t)GLSLstd450Cosh,
+        (uint32_t)GLSLstd450Tanh,
+        (uint32_t)GLSLstd450Asinh,
+        (uint32_t)GLSLstd450Acosh,
+        (uint32_t)GLSLstd450Atanh,
+        (uint32_t)GLSLstd450Atan2,
+        (uint32_t)GLSLstd450Pow,
+        (uint32_t)GLSLstd450Exp,
+        (uint32_t)GLSLstd450Log,
+        (uint32_t)GLSLstd450Exp2,
+        (uint32_t)GLSLstd450Log2,
+        (uint32_t)GLSLstd450Sqrt,
+        (uint32_t)GLSLstd450InverseSqrt,
+        (uint32_t)GLSLstd450Determinant,
+        (uint32_t)GLSLstd450MatrixInverse,
+        (uint32_t)GLSLstd450ModfStruct,
+        (uint32_t)GLSLstd450FMin,
+        (uint32_t)GLSLstd450UMin,
+        (uint32_t)GLSLstd450SMin,
+        (uint32_t)GLSLstd450FMax,
+        (uint32_t)GLSLstd450UMax,
+        (uint32_t)GLSLstd450SMax,
+        (uint32_t)GLSLstd450FClamp,
+        (uint32_t)GLSLstd450UClamp,
+        (uint32_t)GLSLstd450SClamp,
+        (uint32_t)GLSLstd450FMix,
+        (uint32_t)GLSLstd450IMix,
+        (uint32_t)GLSLstd450Step,
+        (uint32_t)GLSLstd450SmoothStep,
+        (uint32_t)GLSLstd450Fma,
+        (uint32_t)GLSLstd450FrexpStruct,
+        (uint32_t)GLSLstd450Ldexp,
+        (uint32_t)GLSLstd450PackSnorm4x8,
+        (uint32_t)GLSLstd450PackUnorm4x8,
+        (uint32_t)GLSLstd450PackSnorm2x16,
+        (uint32_t)GLSLstd450PackUnorm2x16,
+        (uint32_t)GLSLstd450PackHalf2x16,
+        (uint32_t)GLSLstd450PackDouble2x32,
+        (uint32_t)GLSLstd450UnpackSnorm2x16,
+        (uint32_t)GLSLstd450UnpackUnorm2x16,
+        (uint32_t)GLSLstd450UnpackHalf2x16,
+        (uint32_t)GLSLstd450UnpackSnorm4x8,
+        (uint32_t)GLSLstd450UnpackUnorm4x8,
+        (uint32_t)GLSLstd450UnpackDouble2x32,
+        (uint32_t)GLSLstd450Length,
+        (uint32_t)GLSLstd450Distance,
+        (uint32_t)GLSLstd450Cross,
+        (uint32_t)GLSLstd450Normalize,
+        (uint32_t)GLSLstd450FaceForward,
+        (uint32_t)GLSLstd450Reflect,
+        (uint32_t)GLSLstd450Refract,
+        (uint32_t)GLSLstd450FindILsb,
+        (uint32_t)GLSLstd450FindSMsb,
+        (uint32_t)GLSLstd450FindUMsb,
+        (uint32_t)GLSLstd450InterpolateAtCentroid,
+        (uint32_t)GLSLstd450InterpolateAtSample,
+        (uint32_t)GLSLstd450InterpolateAtOffset,
+        (uint32_t)GLSLstd450NMin,
+        (uint32_t)GLSLstd450NMax,
+        (uint32_t)GLSLstd450NClamp};
   } else {
     // Map the result id to the empty set.
     combinator_ops_[extension->result_id()];
@@ -713,8 +719,9 @@ void IRContext::AddCombinatorsForExtension(Instruction* extension) {
 }
 
 void IRContext::InitializeCombinators() {
-  get_feature_mgr()->GetCapabilities()->ForEach(
-      [this](SpvCapability cap) { AddCombinatorsForCapability(cap); });
+  get_feature_mgr()->GetCapabilities()->ForEach([this](spv::Capability cap) {
+    AddCombinatorsForCapability(uint32_t(cap));
+  });
 
   for (auto& extension : module()->ext_inst_imports()) {
     AddCombinatorsForExtension(&extension);
@@ -724,8 +731,8 @@ void IRContext::InitializeCombinators() {
 }
 
 void IRContext::RemoveFromIdToName(const Instruction* inst) {
-  if (id_to_name_ &&
-      (inst->opcode() == SpvOpName || inst->opcode() == SpvOpMemberName)) {
+  if (id_to_name_ && (inst->opcode() == spv::Op::OpName ||
+                      inst->opcode() == spv::Op::OpMemberName)) {
     auto range = id_to_name_->equal_range(inst->GetSingleWordInOperand(0));
     for (auto it = range.first; it != range.second; ++it) {
       if (it->second == inst) {
@@ -754,15 +761,17 @@ LoopDescriptor* IRContext::GetLoopDescriptor(const Function* f) {
 
 uint32_t IRContext::FindBuiltinInputVar(uint32_t builtin) {
   for (auto& a : module_->annotations()) {
-    if (a.opcode() != SpvOpDecorate) continue;
-    if (a.GetSingleWordInOperand(kSpvDecorateDecorationInIdx) !=
-        SpvDecorationBuiltIn)
+    if (spv::Op(a.opcode()) != spv::Op::OpDecorate) continue;
+    if (spv::Decoration(a.GetSingleWordInOperand(
+            kSpvDecorateDecorationInIdx)) != spv::Decoration::BuiltIn)
       continue;
     if (a.GetSingleWordInOperand(kSpvDecorateBuiltinInIdx) != builtin) continue;
     uint32_t target_id = a.GetSingleWordInOperand(kSpvDecorateTargetIdInIdx);
     Instruction* b_var = get_def_use_mgr()->GetDef(target_id);
-    if (b_var->opcode() != SpvOpVariable) continue;
-    if (b_var->GetSingleWordInOperand(0) != SpvStorageClassInput) continue;
+    if (b_var->opcode() != spv::Op::OpVariable) continue;
+    if (spv::StorageClass(b_var->GetSingleWordInOperand(0)) !=
+        spv::StorageClass::Input)
+      continue;
     return target_id;
   }
   return 0;
@@ -798,39 +807,39 @@ uint32_t IRContext::GetBuiltinInputVarId(uint32_t builtin) {
     // TODO(greg-lunarg): Add support for all builtins
     analysis::TypeManager* type_mgr = get_type_mgr();
     analysis::Type* reg_type;
-    switch (builtin) {
-      case SpvBuiltInFragCoord: {
+    switch (spv::BuiltIn(builtin)) {
+      case spv::BuiltIn::FragCoord: {
         analysis::Float float_ty(32);
         analysis::Type* reg_float_ty = type_mgr->GetRegisteredType(&float_ty);
         analysis::Vector v4float_ty(reg_float_ty, 4);
         reg_type = type_mgr->GetRegisteredType(&v4float_ty);
         break;
       }
-      case SpvBuiltInVertexIndex:
-      case SpvBuiltInInstanceIndex:
-      case SpvBuiltInPrimitiveId:
-      case SpvBuiltInInvocationId:
-      case SpvBuiltInSubgroupLocalInvocationId: {
+      case spv::BuiltIn::VertexIndex:
+      case spv::BuiltIn::InstanceIndex:
+      case spv::BuiltIn::PrimitiveId:
+      case spv::BuiltIn::InvocationId:
+      case spv::BuiltIn::SubgroupLocalInvocationId: {
         analysis::Integer uint_ty(32, false);
         reg_type = type_mgr->GetRegisteredType(&uint_ty);
         break;
       }
-      case SpvBuiltInGlobalInvocationId:
-      case SpvBuiltInLaunchIdNV: {
+      case spv::BuiltIn::GlobalInvocationId:
+      case spv::BuiltIn::LaunchIdNV: {
         analysis::Integer uint_ty(32, false);
         analysis::Type* reg_uint_ty = type_mgr->GetRegisteredType(&uint_ty);
         analysis::Vector v3uint_ty(reg_uint_ty, 3);
         reg_type = type_mgr->GetRegisteredType(&v3uint_ty);
         break;
       }
-      case SpvBuiltInTessCoord: {
+      case spv::BuiltIn::TessCoord: {
         analysis::Float float_ty(32);
         analysis::Type* reg_float_ty = type_mgr->GetRegisteredType(&float_ty);
         analysis::Vector v3float_ty(reg_float_ty, 3);
         reg_type = type_mgr->GetRegisteredType(&v3float_ty);
         break;
       }
-      case SpvBuiltInSubgroupLtMask: {
+      case spv::BuiltIn::SubgroupLtMask: {
         analysis::Integer uint_ty(32, false);
         analysis::Type* reg_uint_ty = type_mgr->GetRegisteredType(&uint_ty);
         analysis::Vector v4uint_ty(reg_uint_ty, 4);
@@ -844,17 +853,17 @@ uint32_t IRContext::GetBuiltinInputVarId(uint32_t builtin) {
     }
     uint32_t type_id = type_mgr->GetTypeInstruction(reg_type);
     uint32_t varTyPtrId =
-        type_mgr->FindPointerToType(type_id, SpvStorageClassInput);
+        type_mgr->FindPointerToType(type_id, spv::StorageClass::Input);
     // TODO(1841): Handle id overflow.
     var_id = TakeNextId();
     std::unique_ptr<Instruction> newVarOp(
-        new Instruction(this, SpvOpVariable, varTyPtrId, var_id,
+        new Instruction(this, spv::Op::OpVariable, varTyPtrId, var_id,
                         {{spv_operand_type_t::SPV_OPERAND_TYPE_LITERAL_INTEGER,
-                          {SpvStorageClassInput}}}));
+                          {uint32_t(spv::StorageClass::Input)}}}));
     get_def_use_mgr()->AnalyzeInstDefUse(&*newVarOp);
     module()->AddGlobalValue(std::move(newVarOp));
-    get_decoration_mgr()->AddDecorationVal(var_id, SpvDecorationBuiltIn,
-                                           builtin);
+    get_decoration_mgr()->AddDecorationVal(
+        var_id, uint32_t(spv::Decoration::BuiltIn), builtin);
     AddVarToEntryPoints(var_id);
   }
   builtin_var_id_map_[builtin] = var_id;
@@ -864,7 +873,7 @@ uint32_t IRContext::GetBuiltinInputVarId(uint32_t builtin) {
 void IRContext::AddCalls(const Function* func, std::queue<uint32_t>* todo) {
   for (auto bi = func->begin(); bi != func->end(); ++bi)
     for (auto ii = bi->begin(); ii != bi->end(); ++ii)
-      if (ii->opcode() == SpvOpFunctionCall)
+      if (ii->opcode() == spv::Op::OpFunctionCall)
         todo->push(ii->GetSingleWordInOperand(0));
 }
 
@@ -889,12 +898,12 @@ bool IRContext::ProcessReachableCallTree(ProcessFunction& pfn) {
   for (auto& a : annotations()) {
     // TODO: Handle group decorations as well.  Currently not generate by any
     // front-end, but could be coming.
-    if (a.opcode() == SpvOp::SpvOpDecorate) {
-      if (a.GetSingleWordOperand(1) ==
-          SpvDecoration::SpvDecorationLinkageAttributes) {
+    if (a.opcode() == spv::Op::OpDecorate) {
+      if (spv::Decoration(a.GetSingleWordOperand(1)) ==
+          spv::Decoration::LinkageAttributes) {
         uint32_t lastOperand = a.NumOperands() - 1;
-        if (a.GetSingleWordOperand(lastOperand) ==
-            SpvLinkageType::SpvLinkageTypeExport) {
+        if (spv::LinkageType(a.GetSingleWordOperand(lastOperand)) ==
+            spv::LinkageType::Export) {
           uint32_t id = a.GetSingleWordOperand(0);
           if (GetFunction(id)) {
             roots.push(id);
@@ -1058,5 +1067,26 @@ bool IRContext::IsReachable(const opt::BasicBlock& bb) {
   return GetDominatorAnalysis(enclosing_function)
       ->Dominates(enclosing_function->entry().get(), &bb);
 }
+
+spv::ExecutionModel IRContext::GetStage() {
+  const auto& entry_points = module()->entry_points();
+  if (entry_points.empty()) {
+    return spv::ExecutionModel::Max;
+  }
+
+  uint32_t stage = entry_points.begin()->GetSingleWordInOperand(
+      kEntryPointExecutionModelInIdx);
+  auto it = std::find_if(
+      entry_points.begin(), entry_points.end(), [stage](const Instruction& x) {
+        return x.GetSingleWordInOperand(kEntryPointExecutionModelInIdx) !=
+               stage;
+      });
+  if (it != entry_points.end()) {
+    EmitErrorMessage("Mixed stage shader module not supported", &(*it));
+  }
+
+  return static_cast<spv::ExecutionModel>(stage);
+}
+
 }  // namespace opt
 }  // namespace spvtools

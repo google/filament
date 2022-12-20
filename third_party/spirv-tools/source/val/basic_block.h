@@ -64,8 +64,31 @@ class BasicBlock {
   /// Returns the successors of the BasicBlock
   std::vector<BasicBlock*>* successors() { return &successors_; }
 
-  /// Returns true if the block is reachable in the CFG
+  /// Returns the structural successors of the BasicBlock
+  std::vector<BasicBlock*>* structural_predecessors() {
+    return &structural_predecessors_;
+  }
+
+  /// Returns the structural predecessors of the BasicBlock
+  const std::vector<BasicBlock*>* structural_predecessors() const {
+    return &structural_predecessors_;
+  }
+
+  /// Returns the structural successors of the BasicBlock
+  std::vector<BasicBlock*>* structural_successors() {
+    return &structural_successors_;
+  }
+
+  /// Returns the structural predecessors of the BasicBlock
+  const std::vector<BasicBlock*>* structural_successors() const {
+    return &structural_successors_;
+  }
+
+  /// Returns true if the block is reachable in the CFG.
   bool reachable() const { return reachable_; }
+
+  /// Returns true if the block is structurally reachable in the CFG.
+  bool structurally_reachable() const { return structurally_reachable_; }
 
   /// Returns true if BasicBlock is of the given type
   bool is_type(BlockType type) const {
@@ -75,6 +98,11 @@ class BasicBlock {
 
   /// Sets the reachability of the basic block in the CFG
   void set_reachable(bool reachability) { reachable_ = reachability; }
+
+  /// Sets the structural reachability of the basic block in the CFG
+  void set_structurally_reachable(bool reachability) {
+    structurally_reachable_ = reachability;
+  }
 
   /// Sets the type of the BasicBlock
   void set_type(BlockType type) {
@@ -89,10 +117,15 @@ class BasicBlock {
   /// @param[in] dom_block The dominator block
   void SetImmediateDominator(BasicBlock* dom_block);
 
+  /// Sets the immediate dominator of this basic block
+  ///
+  /// @param[in] dom_block The dominator block
+  void SetImmediateStructuralDominator(BasicBlock* dom_block);
+
   /// Sets the immediate post dominator of this basic block
   ///
   /// @param[in] pdom_block The post dominator block
-  void SetImmediatePostDominator(BasicBlock* pdom_block);
+  void SetImmediateStructuralPostDominator(BasicBlock* pdom_block);
 
   /// Returns the immediate dominator of this basic block
   BasicBlock* immediate_dominator();
@@ -100,11 +133,17 @@ class BasicBlock {
   /// Returns the immediate dominator of this basic block
   const BasicBlock* immediate_dominator() const;
 
-  /// Returns the immediate post dominator of this basic block
-  BasicBlock* immediate_post_dominator();
+  /// Returns the immediate dominator of this basic block
+  BasicBlock* immediate_structural_dominator();
+
+  /// Returns the immediate dominator of this basic block
+  const BasicBlock* immediate_structural_dominator() const;
 
   /// Returns the immediate post dominator of this basic block
-  const BasicBlock* immediate_post_dominator() const;
+  BasicBlock* immediate_structural_post_dominator();
+
+  /// Returns the immediate post dominator of this basic block
+  const BasicBlock* immediate_structural_post_dominator() const;
 
   /// Returns the label instruction for the block, or nullptr if not set.
   const Instruction* label() const { return label_; }
@@ -132,9 +171,18 @@ class BasicBlock {
   /// Assumes dominators have been computed.
   bool dominates(const BasicBlock& other) const;
 
-  /// Returns true if this block postdominates the other block.
-  /// Assumes dominators have been computed.
-  bool postdominates(const BasicBlock& other) const;
+  /// Returns true if this block structurally dominates the other block.
+  /// Assumes structural dominators have been computed.
+  bool structurally_dominates(const BasicBlock& other) const;
+
+  /// Returns true if this block structurally postdominates the other block.
+  /// Assumes structural dominators have been computed.
+  bool structurally_postdominates(const BasicBlock& other) const;
+
+  void RegisterStructuralSuccessor(BasicBlock* block) {
+    block->structural_predecessors_.push_back(this);
+    structural_successors_.push_back(block);
+  }
 
   /// @brief A BasicBlock dominator iterator class
   ///
@@ -191,18 +239,32 @@ class BasicBlock {
   /// block
   DominatorIterator dom_end();
 
+  /// Returns a dominator iterator which points to the current block
+  const DominatorIterator structural_dom_begin() const;
+
+  /// Returns a dominator iterator which points to the current block
+  DominatorIterator structural_dom_begin();
+
+  /// Returns a dominator iterator which points to one element past the first
+  /// block
+  const DominatorIterator structural_dom_end() const;
+
+  /// Returns a dominator iterator which points to one element past the first
+  /// block
+  DominatorIterator structural_dom_end();
+
   /// Returns a post dominator iterator which points to the current block
-  const DominatorIterator pdom_begin() const;
+  const DominatorIterator structural_pdom_begin() const;
   /// Returns a post dominator iterator which points to the current block
-  DominatorIterator pdom_begin();
+  DominatorIterator structural_pdom_begin();
 
   /// Returns a post dominator iterator which points to one element past the
   /// last block
-  const DominatorIterator pdom_end() const;
+  const DominatorIterator structural_pdom_end() const;
 
   /// Returns a post dominator iterator which points to one element past the
   /// last block
-  DominatorIterator pdom_end();
+  DominatorIterator structural_pdom_end();
 
  private:
   /// Id of the BasicBlock
@@ -211,8 +273,11 @@ class BasicBlock {
   /// Pointer to the immediate dominator of the BasicBlock
   BasicBlock* immediate_dominator_;
 
-  /// Pointer to the immediate dominator of the BasicBlock
-  BasicBlock* immediate_post_dominator_;
+  /// Pointer to the immediate structural dominator of the BasicBlock
+  BasicBlock* immediate_structural_dominator_;
+
+  /// Pointer to the immediate structural post dominator of the BasicBlock
+  BasicBlock* immediate_structural_post_dominator_;
 
   /// The set of predecessors of the BasicBlock
   std::vector<BasicBlock*> predecessors_;
@@ -226,11 +291,17 @@ class BasicBlock {
   /// True if the block is reachable in the CFG
   bool reachable_;
 
+  /// True if the block is structurally reachable in the CFG
+  bool structurally_reachable_;
+
   /// label of this block, if any.
   const Instruction* label_;
 
   /// Terminator of this block.
   const Instruction* terminator_;
+
+  std::vector<BasicBlock*> structural_predecessors_;
+  std::vector<BasicBlock*> structural_successors_;
 };
 
 /// @brief Returns true if the iterators point to the same element or if both

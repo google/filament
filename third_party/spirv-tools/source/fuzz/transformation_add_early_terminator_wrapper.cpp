@@ -28,17 +28,17 @@ TransformationAddEarlyTerminatorWrapper::
 TransformationAddEarlyTerminatorWrapper::
     TransformationAddEarlyTerminatorWrapper(uint32_t function_fresh_id,
                                             uint32_t label_fresh_id,
-                                            SpvOp opcode) {
+                                            spv::Op opcode) {
   message_.set_function_fresh_id(function_fresh_id);
   message_.set_label_fresh_id(label_fresh_id);
-  message_.set_opcode(opcode);
+  message_.set_opcode(uint32_t(opcode));
 }
 
 bool TransformationAddEarlyTerminatorWrapper::IsApplicable(
     opt::IRContext* ir_context, const TransformationContext& /*unused*/) const {
-  assert((message_.opcode() == SpvOpKill ||
-          message_.opcode() == SpvOpUnreachable ||
-          message_.opcode() == SpvOpTerminateInvocation) &&
+  assert((spv::Op(message_.opcode()) == spv::Op::OpKill ||
+          spv::Op(message_.opcode()) == spv::Op::OpUnreachable ||
+          spv::Op(message_.opcode()) == spv::Op::OpTerminateInvocation) &&
          "Invalid opcode.");
 
   if (!fuzzerutil::IsFreshId(ir_context, message_.function_fresh_id())) {
@@ -66,26 +66,29 @@ void TransformationAddEarlyTerminatorWrapper::Apply(
   // %label_fresh_id = OpLabel
   //                   OpKill|Unreachable|TerminateInvocation
   auto basic_block = MakeUnique<opt::BasicBlock>(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpLabel, 0, message_.label_fresh_id(),
+      ir_context, spv::Op::OpLabel, 0, message_.label_fresh_id(),
       opt::Instruction::OperandList()));
   basic_block->AddInstruction(MakeUnique<opt::Instruction>(
-      ir_context, static_cast<SpvOp>(message_.opcode()), 0, 0,
+      ir_context, static_cast<spv::Op>(message_.opcode()), 0, 0,
       opt::Instruction::OperandList()));
 
   // Create a zero-argument void function.
   auto void_type_id = fuzzerutil::MaybeGetVoidType(ir_context);
   auto function = MakeUnique<opt::Function>(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpFunction, void_type_id, message_.function_fresh_id(),
+      ir_context, spv::Op::OpFunction, void_type_id,
+      message_.function_fresh_id(),
       opt::Instruction::OperandList(
-          {{SPV_OPERAND_TYPE_FUNCTION_CONTROL, {SpvFunctionControlMaskNone}},
+          {{SPV_OPERAND_TYPE_FUNCTION_CONTROL,
+            {uint32_t(spv::FunctionControlMask::MaskNone)}},
            {SPV_OPERAND_TYPE_TYPE_ID,
             {fuzzerutil::FindFunctionType(ir_context, {void_type_id})}}})));
 
   // Add the basic block to the function as the sole block, and add the function
   // to the module.
   function->AddBasicBlock(std::move(basic_block));
-  function->SetFunctionEnd(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpFunctionEnd, 0, 0, opt::Instruction::OperandList()));
+  function->SetFunctionEnd(
+      MakeUnique<opt::Instruction>(ir_context, spv::Op::OpFunctionEnd, 0, 0,
+                                   opt::Instruction::OperandList()));
   ir_context->module()->AddFunction(std::move(function));
 
   ir_context->InvalidateAnalysesExceptFor(opt::IRContext::kAnalysisNone);

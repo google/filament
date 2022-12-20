@@ -4321,7 +4321,7 @@ TEST_P(ValidateOpenCLStdVStoreHalfLike, PNotPointer) {
   CompileSuccessfully(GenerateKernelCode(ss.str()));
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Operand 89[%_ptr_Workgroup_half] cannot be a type"));
+              HasSubstr("Operand '89[%_ptr_Workgroup_half]' cannot be a type"));
 }
 
 TEST_P(ValidateOpenCLStdVStoreHalfLike, ConstPointer) {
@@ -4493,7 +4493,7 @@ TEST_P(ValidateOpenCLStdVLoadHalfLike, PNotPointer) {
   CompileSuccessfully(GenerateKernelCode(ss.str()));
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Operand 89[%_ptr_Workgroup_half] cannot be a type"));
+              HasSubstr("Operand '89[%_ptr_Workgroup_half]' cannot be a type"));
 }
 
 TEST_P(ValidateOpenCLStdVLoadHalfLike, OffsetWrongStorageType) {
@@ -4664,9 +4664,10 @@ TEST_F(ValidateExtInst, VLoadNPNotPointer) {
 
   CompileSuccessfully(GenerateKernelCode(ss.str()));
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Operand 120[%_ptr_UniformConstant_float] cannot be a "
-                        "type"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Operand '120[%_ptr_UniformConstant_float]' cannot be a "
+                "type"));
 }
 
 TEST_F(ValidateExtInst, VLoadNWrongStorageClass) {
@@ -4779,7 +4780,7 @@ TEST_F(ValidateExtInst, VLoadHalfPNotPointer) {
   CompileSuccessfully(GenerateKernelCode(ss.str()));
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Operand 114[%_ptr_UniformConstant_half] cannot be a "
+              HasSubstr("Operand '114[%_ptr_UniformConstant_half]' cannot be a "
                         "type"));
 }
 
@@ -4933,7 +4934,7 @@ TEST_F(ValidateExtInst, VStoreNPNotPointer) {
   CompileSuccessfully(GenerateKernelCode(ss.str()));
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Operand 127[%_ptr_Generic_float] cannot be a type"));
+              HasSubstr("Operand '127[%_ptr_Generic_float]' cannot be a type"));
 }
 
 TEST_F(ValidateExtInst, VStoreNWrongStorageClass) {
@@ -5248,9 +5249,10 @@ TEST_F(ValidateExtInst, OpenCLStdPrintfFormatNotPointer) {
 
   CompileSuccessfully(GenerateKernelCode(body));
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Operand 137[%_ptr_UniformConstant_uchar] cannot be a "
-                        "type"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Operand '137[%_ptr_UniformConstant_uchar]' cannot be a "
+                "type"));
 }
 
 TEST_F(ValidateExtInst, OpenCLStdPrintfFormatNotUniformConstStorageClass) {
@@ -5342,7 +5344,7 @@ TEST_F(ValidateExtInst, OpenCLStdPrefetchPtrNotPointer) {
   CompileSuccessfully(GenerateKernelCode(body));
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Operand 99[%_ptr_CrossWorkgroup_uint] cannot be a "
+              HasSubstr("Operand '99[%_ptr_CrossWorkgroup_uint]' cannot be a "
                         "type"));
 }
 

@@ -148,6 +148,11 @@ class ValidatorOptions {
     spvValidatorOptionsSetBeforeHlslLegalization(options_, val);
   }
 
+  // Whether friendly names should be used in validation error messages.
+  void SetFriendlyNames(bool val) {
+    spvValidatorOptionsSetFriendlyNames(options_, val);
+  }
+
  private:
   spv_validator_options options_;
 };

@@ -32,27 +32,31 @@ Pass::Status StripNonSemanticInfoPass::Process() {
   bool other_uses_for_decorate_string = false;
   for (auto& inst : context()->module()->annotations()) {
     switch (inst.opcode()) {
-      case SpvOpDecorateStringGOOGLE:
-        if (inst.GetSingleWordInOperand(1) == SpvDecorationHlslSemanticGOOGLE ||
-            inst.GetSingleWordInOperand(1) == SpvDecorationUserTypeGOOGLE) {
+      case spv::Op::OpDecorateStringGOOGLE:
+        if (spv::Decoration(inst.GetSingleWordInOperand(1)) ==
+                spv::Decoration::HlslSemanticGOOGLE ||
+            spv::Decoration(inst.GetSingleWordInOperand(1)) ==
+                spv::Decoration::UserTypeGOOGLE) {
           to_remove.push_back(&inst);
         } else {
           other_uses_for_decorate_string = true;
         }
         break;
 
-      case SpvOpMemberDecorateStringGOOGLE:
-        if (inst.GetSingleWordInOperand(2) == SpvDecorationHlslSemanticGOOGLE ||
-            inst.GetSingleWordInOperand(2) == SpvDecorationUserTypeGOOGLE) {
+      case spv::Op::OpMemberDecorateStringGOOGLE:
+        if (spv::Decoration(inst.GetSingleWordInOperand(2)) ==
+                spv::Decoration::HlslSemanticGOOGLE ||
+            spv::Decoration(inst.GetSingleWordInOperand(2)) ==
+                spv::Decoration::UserTypeGOOGLE) {
           to_remove.push_back(&inst);
         } else {
           other_uses_for_decorate_string = true;
         }
         break;
 
-      case SpvOpDecorateId:
-        if (inst.GetSingleWordInOperand(1) ==
-            SpvDecorationHlslCounterBufferGOOGLE) {
+      case spv::Op::OpDecorateId:
+        if (spv::Decoration(inst.GetSingleWordInOperand(1)) ==
+            spv::Decoration::HlslCounterBufferGOOGLE) {
           to_remove.push_back(&inst);
         }
         break;
@@ -79,7 +83,7 @@ Pass::Status StripNonSemanticInfoPass::Process() {
   // remove any extended inst imports that are non semantic
   std::unordered_set<uint32_t> non_semantic_sets;
   for (auto& inst : context()->module()->ext_inst_imports()) {
-    assert(inst.opcode() == SpvOpExtInstImport &&
+    assert(inst.opcode() == spv::Op::OpExtInstImport &&
            "Expecting an import of an extension's instruction set.");
     const std::string extension_name = inst.GetInOperand(0).AsString();
     if (spvtools::utils::starts_with(extension_name, "NonSemantic.")) {
@@ -93,7 +97,7 @@ Pass::Status StripNonSemanticInfoPass::Process() {
   if (!non_semantic_sets.empty()) {
     context()->module()->ForEachInst(
         [&non_semantic_sets, &to_remove](Instruction* inst) {
-          if (inst->opcode() == SpvOpExtInst) {
+          if (inst->opcode() == spv::Op::OpExtInst) {
             if (non_semantic_sets.find(inst->GetSingleWordInOperand(0)) !=
                 non_semantic_sets.end()) {
               to_remove.push_back(inst);

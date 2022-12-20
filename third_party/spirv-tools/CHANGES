@@ -1,7 +1,57 @@
 Revision history for SPIRV-Tools
 
-v2022.3-dev 2022-04-07
-  - Start v2022.3-dev
+v2022.5-dev 2022-10-12
+   - Start v2022.5-dev
+
+v2022.4 2022-10-12
+  - General
+    - Support Narrow Types in BitCast Folding Rule (#4941)
+    - spirv-diff: Allow no SpecId (#4904)
+    - build: cmake: Add support for GNU/Hurd (#4895)
+    - Implement tool changes for SPV_EXT_mesh_shader. (#4915)
+  - Validator
+    - spirv-val: Add SPV_ARM_core_builtins validation (#4958)
+    - spirv-val: Add an option to use friendly names or not (#4951)
+    - spirv-val: Consistently quote ids in messages (#4950)
+    - spirv-val: Add initial SPV_EXT_mesh_shader validation (#4924)
+    - spirv-val: Make it legal to use arrays of ray queries (#4938)
+    - spirv-val: Better message for using OpTypeBool in input/output (#4901)
+    - spirv-val: Add SPV_KHR_ray_tracing storage class (#4868)
+  - Optimizer
+    - spirv-opt: Fix stacked CompositeExtract constant folds (#4932)
+    - Improve time to build dominators (#4916)
+    - Fix ADCE to mark scope and inlined_at of line instructions as live. (#4910)
+    - Improve algorithm to reorder blocks in a function (#4911)
+    - Add structs to eliminate dead input components (#4894)
+    - spirv-opt: fix copy-propagate-arrays index opti on structs. (#4891)
+    - Fix ADCE to not eliminate top level DebugInfo instructions (#4889)
+    - Fix array copy propagation (#4890)
+
+v2022.3 2022-08-08
+  - General
+    - Add SPV_KHR_fragment_shader_barycentric support (#4805)
+    - Add support for SPV_KHR_subgroup_rotate (#4786)
+    - use exec_tools instead of tools for better RBE compatibility (#4837)
+    - Write binary files to stdout in binary on windows. (#4834)
+    - Allow spirv-opt print-all to show pretty IDs (#4888)
+  - Validator
+    - spirv-val: Add PerVertexKHR (#4807)
+    - spirv-opt : Add FixFuncCallArgumentsPass (#4775)
+    - spirv-val: Add CullMaskKHR support (#4792)
+    - Require ColMajor or RowMajor for matrices (#4878)
+    - spirv-val: Add SPV_KHR_ray_query (#4848)
+    - spirv-val: Add SPV_KHR_ray_tracing instructions (#4871)
+    - Implement SPV_NV_bindless_texture related changes (#4847)
+    - spirv-val: Add OpConvertUToAccelerationStructureKHR (#4838)
+    - spirv-val: Add support for SPV_AMD_shader_early_and_late_fragment_tests (#4812)
+  - Optimizer
+    - Fold multiply and subtraction into FMA with negation (#4808)
+    - Add more folding for composite instructions (#4802)
+    - spirv-opt: add pass for interface variable scalar replacement (#4779)
+    - Don't try to unroll loop with step count 0. (#4769)
+    - spirv-opt: SPV_NV_bindless_texture related changes (#4870)
+  - Linker
+    - linker: Recalculate interface variables (#4784)
 
 v2022.2 2022-04-07
   - General

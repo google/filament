@@ -30,7 +30,7 @@ class TransformationReplaceBranchFromDeadBlockWithExit : public Transformation {
       protobufs::TransformationReplaceBranchFromDeadBlockWithExit message);
 
   TransformationReplaceBranchFromDeadBlockWithExit(uint32_t block_id,
-                                                   SpvOp opcode,
+                                                   spv::Op opcode,
                                                    uint32_t return_value_id);
 
   // - |message_.block_id| must be the id of a dead block that is not part of

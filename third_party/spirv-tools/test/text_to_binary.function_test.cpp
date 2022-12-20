@@ -33,25 +33,25 @@ using ::testing::Eq;
 // Test OpFunction
 
 using OpFunctionControlTest = spvtest::TextToBinaryTestBase<
-    ::testing::TestWithParam<EnumCase<SpvFunctionControlMask>>>;
+    ::testing::TestWithParam<EnumCase<spv::FunctionControlMask>>>;
 
 TEST_P(OpFunctionControlTest, AnySingleFunctionControlMask) {
   const std::string input = "%result_id = OpFunction %result_type " +
                             GetParam().name() + " %function_type ";
-  EXPECT_THAT(
-      CompiledInstructions(input),
-      Eq(MakeInstruction(SpvOpFunction, {1, 2, GetParam().value(), 3})));
+  EXPECT_THAT(CompiledInstructions(input),
+              Eq(MakeInstruction(spv::Op::OpFunction,
+                                 {1, 2, (uint32_t)GetParam().value(), 3})));
 }
 
 // clang-format off
-#define CASE(VALUE,NAME) { SpvFunctionControl##VALUE, NAME }
+#define CASE(VALUE,NAME) { spv::FunctionControlMask::VALUE, NAME }
 INSTANTIATE_TEST_SUITE_P(TextToBinaryFunctionTest, OpFunctionControlTest,
-                        ::testing::ValuesIn(std::vector<EnumCase<SpvFunctionControlMask>>{
+                        ::testing::ValuesIn(std::vector<EnumCase<spv::FunctionControlMask>>{
                             CASE(MaskNone, "None"),
-                            CASE(InlineMask, "Inline"),
-                            CASE(DontInlineMask, "DontInline"),
-                            CASE(PureMask, "Pure"),
-                            CASE(ConstMask, "Const"),
+                            CASE(Inline, "Inline"),
+                            CASE(DontInline, "DontInline"),
+                            CASE(Pure, "Pure"),
+                            CASE(Const, "Const"),
                         }));
 #undef CASE
 // clang-format on
@@ -61,11 +61,12 @@ TEST_F(OpFunctionControlTest, CombinedFunctionControlMask) {
   // the instruction parsing logic with spvTextParseMask.
   const std::string input =
       "%result_id = OpFunction %result_type Inline|Pure|Const %function_type";
-  const uint32_t expected_mask = SpvFunctionControlInlineMask |
-                                 SpvFunctionControlPureMask |
-                                 SpvFunctionControlConstMask;
-  EXPECT_THAT(CompiledInstructions(input),
-              Eq(MakeInstruction(SpvOpFunction, {1, 2, expected_mask, 3})));
+  const uint32_t expected_mask = uint32_t(spv::FunctionControlMask::Inline |
+                                          spv::FunctionControlMask::Pure |
+                                          spv::FunctionControlMask::Const);
+  EXPECT_THAT(
+      CompiledInstructions(input),
+      Eq(MakeInstruction(spv::Op::OpFunction, {1, 2, expected_mask, 3})));
 }
 
 TEST_F(OpFunctionControlTest, WrongFunctionControl) {

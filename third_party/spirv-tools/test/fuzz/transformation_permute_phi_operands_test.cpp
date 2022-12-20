@@ -128,11 +128,11 @@ TEST(TransformationPermutePhiOperandsTest, BasicTest) {
   context->get_def_use_mgr()->ForEachUse(
       25, [&found_use_in_store, &found_use_in_add_lhs, &found_use_in_add_rhs](
               opt::Instruction* inst, uint32_t operand_index) {
-        if (inst->opcode() == SpvOpStore) {
+        if (inst->opcode() == spv::Op::OpStore) {
           ASSERT_FALSE(found_use_in_store);
           found_use_in_store = true;
         } else {
-          ASSERT_EQ(SpvOpIAdd, inst->opcode());
+          ASSERT_EQ(spv::Op::OpIAdd, inst->opcode());
           if (operand_index == 2) {
             ASSERT_FALSE(found_use_in_add_lhs);
             found_use_in_add_lhs = true;

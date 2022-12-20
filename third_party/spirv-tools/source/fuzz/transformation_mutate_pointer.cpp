@@ -51,7 +51,7 @@ bool TransformationMutatePointer::IsApplicable(
   // Check that it is possible to insert OpLoad and OpStore before
   // |insert_before_inst|. We are only using OpLoad here since the result does
   // not depend on the opcode.
-  if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpLoad,
+  if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(spv::Op::OpLoad,
                                                     insert_before_inst)) {
     return false;
   }
@@ -100,7 +100,7 @@ void TransformationMutatePointer::Apply(
 
   // Back up the original value.
   auto backup_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpLoad, pointee_type_id, message_.fresh_id(),
+      ir_context, spv::Op::OpLoad, pointee_type_id, message_.fresh_id(),
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {message_.pointer_id()}}});
   auto backup_instruction_ptr = backup_instruction.get();
@@ -110,7 +110,7 @@ void TransformationMutatePointer::Apply(
 
   // Insert a new value.
   auto new_value_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpStore, 0, 0,
+      ir_context, spv::Op::OpStore, 0, 0,
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {message_.pointer_id()}},
           {SPV_OPERAND_TYPE_ID,
@@ -123,7 +123,7 @@ void TransformationMutatePointer::Apply(
 
   // Restore the original value.
   auto restore_instruction = MakeUnique<opt::Instruction>(
-      ir_context, SpvOpStore, 0, 0,
+      ir_context, spv::Op::OpStore, 0, 0,
       opt::Instruction::OperandList{
           {SPV_OPERAND_TYPE_ID, {message_.pointer_id()}},
           {SPV_OPERAND_TYPE_ID, {message_.fresh_id()}}});
@@ -145,8 +145,9 @@ bool TransformationMutatePointer::IsValidPointerInstruction(
     opt::IRContext* ir_context, const opt::Instruction& inst) {
   // |inst| must have both result id and type id and it may not cause undefined
   // behaviour.
-  if (!inst.result_id() || !inst.type_id() || inst.opcode() == SpvOpUndef ||
-      inst.opcode() == SpvOpConstantNull) {
+  if (!inst.result_id() || !inst.type_id() ||
+      inst.opcode() == spv::Op::OpUndef ||
+      inst.opcode() == spv::Op::OpConstantNull) {
     return false;
   }
 
@@ -155,15 +156,16 @@ bool TransformationMutatePointer::IsValidPointerInstruction(
   assert(type_inst != nullptr && "|inst| has invalid type id");
 
   // |inst| must be a pointer.
-  if (type_inst->opcode() != SpvOpTypePointer) {
+  if (type_inst->opcode() != spv::Op::OpTypePointer) {
     return false;
   }
 
   // |inst| must have a supported storage class.
-  switch (static_cast<SpvStorageClass>(type_inst->GetSingleWordInOperand(0))) {
-    case SpvStorageClassFunction:
-    case SpvStorageClassPrivate:
-    case SpvStorageClassWorkgroup:
+  switch (
+      static_cast<spv::StorageClass>(type_inst->GetSingleWordInOperand(0))) {
+    case spv::StorageClass::Function:
+    case spv::StorageClass::Private:
+    case spv::StorageClass::Workgroup:
       break;
     default:
       return false;

@@ -34,12 +34,12 @@ class FeatureManager {
   void RemoveExtension(Extension extension);
 
   // Returns true if |cap| is an enabled capability in the module.
-  bool HasCapability(SpvCapability cap) const {
+  bool HasCapability(spv::Capability cap) const {
     return capabilities_.Contains(cap);
   }
 
   // Removes the given |capability| from the current FeatureManager.
-  void RemoveCapability(SpvCapability capability);
+  void RemoveCapability(spv::Capability capability);
 
   // Analyzes |module| and records enabled extensions and capabilities.
   void Analyze(Module* module);
@@ -66,7 +66,7 @@ class FeatureManager {
 
   // Adds the given |capability| and all implied capabilities into the current
   // FeatureManager.
-  void AddCapability(SpvCapability capability);
+  void AddCapability(spv::Capability capability);
 
   // Add the extension |ext| to the feature manager.
   void AddExtension(Instruction* ext);

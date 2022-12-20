@@ -70,7 +70,7 @@ bool RemoveDuplicatesPass::RemoveDuplicatesExtInstImports() const {
     return modified;
   }
 
-  std::unordered_map<std::string, SpvId> ext_inst_imports;
+  std::unordered_map<std::string, spv::Id> ext_inst_imports;
   for (auto* i = &*context()->ext_inst_import_begin(); i;) {
     auto res = ext_inst_imports.emplace(i->GetInOperand(0u).AsString(),
                                         i->result_id());
@@ -101,7 +101,8 @@ bool RemoveDuplicatesPass::RemoveDuplicateTypes() const {
   std::vector<analysis::ForwardPointer> visited_forward_pointers;
   std::vector<Instruction*> to_delete;
   for (auto* i = &*context()->types_values_begin(); i; i = i->NextNode()) {
-    const bool is_i_forward_pointer = i->opcode() == SpvOpTypeForwardPointer;
+    const bool is_i_forward_pointer =
+        i->opcode() == spv::Op::OpTypeForwardPointer;
 
     // We only care about types.
     if (!spvOpcodeGeneratesType(i->opcode()) && !is_i_forward_pointer) {
@@ -110,7 +111,7 @@ bool RemoveDuplicatesPass::RemoveDuplicateTypes() const {
 
     if (!is_i_forward_pointer) {
       // Is the current type equal to one of the types we have already visited?
-      SpvId id_to_keep = 0u;
+      spv::Id id_to_keep = 0u;
       analysis::Type* i_type = type_manager.GetType(i->result_id());
       assert(i_type);
       // TODO(dneto0): Use a trie to avoid quadratic behaviour? Extract the
@@ -137,7 +138,7 @@ bool RemoveDuplicatesPass::RemoveDuplicateTypes() const {
     } else {
       analysis::ForwardPointer i_type(
           i->GetSingleWordInOperand(0u),
-          (SpvStorageClass)i->GetSingleWordInOperand(1u));
+          (spv::StorageClass)i->GetSingleWordInOperand(1u));
       i_type.SetTargetPointer(
           type_manager.GetType(i_type.target_id())->AsPointer());
 

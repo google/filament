@@ -21,32 +21,32 @@
 namespace spvtools {
 namespace opt {
 namespace {
-
-const uint32_t kOpDecorateInOperandBuiltinDecoration = 2u;
-const uint32_t kOpLoadInOperandMemoryOperands = 1u;
-const uint32_t kOpEntryPointInOperandEntryPoint = 1u;
-const uint32_t kOpEntryPointInOperandInterface = 3u;
+constexpr uint32_t kOpDecorateInOperandBuiltinDecoration = 2u;
+constexpr uint32_t kOpLoadInOperandMemoryOperands = 1u;
+constexpr uint32_t kOpEntryPointInOperandEntryPoint = 1u;
+constexpr uint32_t kOpEntryPointInOperandInterface = 3u;
 
 bool HasBuiltinDecoration(analysis::DecorationManager* decoration_manager,
                           uint32_t var_id, uint32_t built_in) {
   return decoration_manager->FindDecoration(
-      var_id, SpvDecorationBuiltIn, [built_in](const Instruction& inst) {
+      var_id, uint32_t(spv::Decoration::BuiltIn),
+      [built_in](const Instruction& inst) {
         return built_in == inst.GetSingleWordInOperand(
                                kOpDecorateInOperandBuiltinDecoration);
       });
 }
 
-bool IsBuiltInForRayTracingVolatileSemantics(uint32_t built_in) {
+bool IsBuiltInForRayTracingVolatileSemantics(spv::BuiltIn built_in) {
   switch (built_in) {
-    case SpvBuiltInSMIDNV:
-    case SpvBuiltInWarpIDNV:
-    case SpvBuiltInSubgroupSize:
-    case SpvBuiltInSubgroupLocalInvocationId:
-    case SpvBuiltInSubgroupEqMask:
-    case SpvBuiltInSubgroupGeMask:
-    case SpvBuiltInSubgroupGtMask:
-    case SpvBuiltInSubgroupLeMask:
-    case SpvBuiltInSubgroupLtMask:
+    case spv::BuiltIn::SMIDNV:
+    case spv::BuiltIn::WarpIDNV:
+    case spv::BuiltIn::SubgroupSize:
+    case spv::BuiltIn::SubgroupLocalInvocationId:
+    case spv::BuiltIn::SubgroupEqMask:
+    case spv::BuiltIn::SubgroupGeMask:
+    case spv::BuiltIn::SubgroupGtMask:
+    case spv::BuiltIn::SubgroupLeMask:
+    case spv::BuiltIn::SubgroupLtMask:
       return true;
     default:
       return false;
@@ -56,16 +56,17 @@ bool IsBuiltInForRayTracingVolatileSemantics(uint32_t built_in) {
 bool HasBuiltinForRayTracingVolatileSemantics(
     analysis::DecorationManager* decoration_manager, uint32_t var_id) {
   return decoration_manager->FindDecoration(
-      var_id, SpvDecorationBuiltIn, [](const Instruction& inst) {
-        uint32_t built_in =
-            inst.GetSingleWordInOperand(kOpDecorateInOperandBuiltinDecoration);
+      var_id, uint32_t(spv::Decoration::BuiltIn), [](const Instruction& inst) {
+        spv::BuiltIn built_in = spv::BuiltIn(
+            inst.GetSingleWordInOperand(kOpDecorateInOperandBuiltinDecoration));
         return IsBuiltInForRayTracingVolatileSemantics(built_in);
       });
 }
 
 bool HasVolatileDecoration(analysis::DecorationManager* decoration_manager,
                            uint32_t var_id) {
-  return decoration_manager->HasDecoration(var_id, SpvDecorationVolatile);
+  return decoration_manager->HasDecoration(var_id,
+                                           uint32_t(spv::Decoration::Volatile));
 }
 
 }  // namespace
@@ -76,7 +77,7 @@ Pass::Status SpreadVolatileSemantics::Process() {
   }
   const bool is_vk_memory_model_enabled =
       context()->get_feature_mgr()->HasCapability(
-          SpvCapabilityVulkanMemoryModel);
+          spv::Capability::VulkanMemoryModel);
   CollectTargetsForVolatileSemantics(is_vk_memory_model_enabled);
 
   // If VulkanMemoryModel capability is not enabled, we have to set Volatile
@@ -128,15 +129,16 @@ bool SpreadVolatileSemantics::IsTargetUsedByNonVolatileLoadInEntryPoint(
         }
         uint32_t memory_operands =
             load->GetSingleWordInOperand(kOpLoadInOperandMemoryOperands);
-        return (memory_operands & SpvMemoryAccessVolatileMask) != 0;
+        return (memory_operands & uint32_t(spv::MemoryAccessMask::Volatile)) !=
+               0;
       },
       funcs);
 }
 
 bool SpreadVolatileSemantics::HasInterfaceInConflictOfVolatileSemantics() {
   for (Instruction& entry_point : get_module()->entry_points()) {
-    SpvExecutionModel execution_model =
-        static_cast<SpvExecutionModel>(entry_point.GetSingleWordInOperand(0));
+    spv::ExecutionModel execution_model =
+        static_cast<spv::ExecutionModel>(entry_point.GetSingleWordInOperand(0));
     for (uint32_t operand_index = kOpEntryPointInOperandInterface;
          operand_index < entry_point.NumInOperands(); ++operand_index) {
       uint32_t var_id = entry_point.GetSingleWordInOperand(operand_index);
@@ -170,8 +172,8 @@ void SpreadVolatileSemantics::MarkVolatileSemanticsForVariable(
 void SpreadVolatileSemantics::CollectTargetsForVolatileSemantics(
     const bool is_vk_memory_model_enabled) {
   for (Instruction& entry_point : get_module()->entry_points()) {
-    SpvExecutionModel execution_model =
-        static_cast<SpvExecutionModel>(entry_point.GetSingleWordInOperand(0));
+    spv::ExecutionModel execution_model =
+        static_cast<spv::ExecutionModel>(entry_point.GetSingleWordInOperand(0));
     for (uint32_t operand_index = kOpEntryPointInOperandInterface;
          operand_index < entry_point.NumInOperands(); ++operand_index) {
       uint32_t var_id = entry_point.GetSingleWordInOperand(operand_index);
@@ -194,9 +196,10 @@ void SpreadVolatileSemantics::DecorateVarWithVolatile(Instruction* var) {
     return;
   }
   get_decoration_mgr()->AddDecoration(
-      SpvOpDecorate, {{spv_operand_type_t::SPV_OPERAND_TYPE_ID, {var_id}},
-                      {spv_operand_type_t::SPV_OPERAND_TYPE_LITERAL_INTEGER,
-                       {SpvDecorationVolatile}}});
+      spv::Op::OpDecorate,
+      {{spv_operand_type_t::SPV_OPERAND_TYPE_ID, {var_id}},
+       {spv_operand_type_t::SPV_OPERAND_TYPE_LITERAL_INTEGER,
+        {uint32_t(spv::Decoration::Volatile)}}});
 }
 
 bool SpreadVolatileSemantics::VisitLoadsOfPointersToVariableInEntries(
@@ -217,17 +220,17 @@ bool SpreadVolatileSemantics::VisitLoadsOfPointersToVariableInEntries(
             return true;
           }
 
-          if (user->opcode() == SpvOpAccessChain ||
-              user->opcode() == SpvOpInBoundsAccessChain ||
-              user->opcode() == SpvOpPtrAccessChain ||
-              user->opcode() == SpvOpInBoundsPtrAccessChain ||
-              user->opcode() == SpvOpCopyObject) {
+          if (user->opcode() == spv::Op::OpAccessChain ||
+              user->opcode() == spv::Op::OpInBoundsAccessChain ||
+              user->opcode() == spv::Op::OpPtrAccessChain ||
+              user->opcode() == spv::Op::OpInBoundsPtrAccessChain ||
+              user->opcode() == spv::Op::OpCopyObject) {
             if (ptr_id == user->GetSingleWordInOperand(0))
               worklist.push_back(user->result_id());
             return true;
           }
 
-          if (user->opcode() != SpvOpLoad) {
+          if (user->opcode() != spv::Op::OpLoad) {
             return true;
           }
 
@@ -250,12 +253,12 @@ void SpreadVolatileSemantics::SetVolatileForLoadsInEntries(
         [](Instruction* load) {
           if (load->NumInOperands() <= kOpLoadInOperandMemoryOperands) {
             load->AddOperand({SPV_OPERAND_TYPE_MEMORY_ACCESS,
-                              {SpvMemoryAccessVolatileMask}});
+                              {uint32_t(spv::MemoryAccessMask::Volatile)}});
             return true;
           }
           uint32_t memory_operands =
               load->GetSingleWordInOperand(kOpLoadInOperandMemoryOperands);
-          memory_operands |= SpvMemoryAccessVolatileMask;
+          memory_operands |= uint32_t(spv::MemoryAccessMask::Volatile);
           load->SetInOperand(kOpLoadInOperandMemoryOperands, {memory_operands});
           return true;
         },
@@ -264,29 +267,29 @@ void SpreadVolatileSemantics::SetVolatileForLoadsInEntries(
 }
 
 bool SpreadVolatileSemantics::IsTargetForVolatileSemantics(
-    uint32_t var_id, SpvExecutionModel execution_model) {
+    uint32_t var_id, spv::ExecutionModel execution_model) {
   analysis::DecorationManager* decoration_manager =
       context()->get_decoration_mgr();
-  if (execution_model == SpvExecutionModelFragment) {
+  if (execution_model == spv::ExecutionModel::Fragment) {
     return get_module()->version() >= SPV_SPIRV_VERSION_WORD(1, 6) &&
            HasBuiltinDecoration(decoration_manager, var_id,
-                                SpvBuiltInHelperInvocation);
+                                uint32_t(spv::BuiltIn::HelperInvocation));
   }
 
-  if (execution_model == SpvExecutionModelIntersectionKHR ||
-      execution_model == SpvExecutionModelIntersectionNV) {
+  if (execution_model == spv::ExecutionModel::IntersectionKHR ||
+      execution_model == spv::ExecutionModel::IntersectionNV) {
     if (HasBuiltinDecoration(decoration_manager, var_id,
-                             SpvBuiltInRayTmaxKHR)) {
+                             uint32_t(spv::BuiltIn::RayTmaxKHR))) {
       return true;
     }
   }
 
   switch (execution_model) {
-    case SpvExecutionModelRayGenerationKHR:
-    case SpvExecutionModelClosestHitKHR:
-    case SpvExecutionModelMissKHR:
-    case SpvExecutionModelCallableKHR:
-    case SpvExecutionModelIntersectionKHR:
+    case spv::ExecutionModel::RayGenerationKHR:
+    case spv::ExecutionModel::ClosestHitKHR:
+    case spv::ExecutionModel::MissKHR:
+    case spv::ExecutionModel::CallableKHR:
+    case spv::ExecutionModel::IntersectionKHR:
       return HasBuiltinForRayTracingVolatileSemantics(decoration_manager,
                                                       var_id);
     default:

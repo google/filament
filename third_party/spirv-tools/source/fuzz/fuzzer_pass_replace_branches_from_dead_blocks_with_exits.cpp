@@ -38,13 +38,13 @@ void FuzzerPassReplaceBranchesFromDeadBlocksWithExits::Apply() {
   // to be executed with the Fragment execution model.  We conservatively only
   // allow OpKill if every entry point in the module has the Fragment execution
   // model.
-  auto fragment_execution_model_guaranteed =
-      std::all_of(GetIRContext()->module()->entry_points().begin(),
-                  GetIRContext()->module()->entry_points().end(),
-                  [](const opt::Instruction& entry_point) -> bool {
-                    return entry_point.GetSingleWordInOperand(0) ==
-                           SpvExecutionModelFragment;
-                  });
+  auto fragment_execution_model_guaranteed = std::all_of(
+      GetIRContext()->module()->entry_points().begin(),
+      GetIRContext()->module()->entry_points().end(),
+      [](const opt::Instruction& entry_point) -> bool {
+        return spv::ExecutionModel(entry_point.GetSingleWordInOperand(0)) ==
+               spv::ExecutionModel::Fragment;
+      });
 
   // Transformations of this type can disable one another.  To avoid ordering
   // bias, we therefore build a set of candidate transformations to apply, and
@@ -71,20 +71,20 @@ void FuzzerPassReplaceBranchesFromDeadBlocksWithExits::Apply() {
       // Whether we can use OpKill depends on the execution model, and which of
       // OpReturn and OpReturnValue we can use depends on the return type of the
       // enclosing function.
-      std::vector<SpvOp> opcodes = {SpvOpUnreachable};
+      std::vector<spv::Op> opcodes = {spv::Op::OpUnreachable};
       if (fragment_execution_model_guaranteed) {
-        opcodes.emplace_back(SpvOpKill);
+        opcodes.emplace_back(spv::Op::OpKill);
       }
       auto function_return_type =
           GetIRContext()->get_type_mgr()->GetType(function.type_id());
       if (function_return_type->AsVoid()) {
-        opcodes.emplace_back(SpvOpReturn);
+        opcodes.emplace_back(spv::Op::OpReturn);
       } else if (fuzzerutil::CanCreateConstant(GetIRContext(),
                                                function.type_id())) {
         // For simplicity we only allow OpReturnValue if the function return
         // type is a type for which we can create a constant.  This allows us a
         // zero of the given type as a default return value.
-        opcodes.emplace_back(SpvOpReturnValue);
+        opcodes.emplace_back(spv::Op::OpReturnValue);
       }
       // Choose one of the available terminator opcodes at random and create a
       // candidate transformation.
@@ -92,7 +92,7 @@ void FuzzerPassReplaceBranchesFromDeadBlocksWithExits::Apply() {
       candidate_transformations.emplace_back(
           TransformationReplaceBranchFromDeadBlockWithExit(
               block.id(), opcode,
-              opcode == SpvOpReturnValue
+              opcode == spv::Op::OpReturnValue
                   ? FindOrCreateZeroConstant(function.type_id(), true)
                   : 0));
     }

@@ -67,7 +67,7 @@ bool TransformationCompositeExtract::IsApplicable(
   }
 
   if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(
-          SpvOpCompositeExtract, instruction_to_insert_before)) {
+          spv::Op::OpCompositeExtract, instruction_to_insert_before)) {
     return false;
   }
 
@@ -93,7 +93,7 @@ void TransformationCompositeExtract::Apply(
       FindInstruction(message_.instruction_to_insert_before(), ir_context);
   opt::Instruction* new_instruction =
       insert_before->InsertBefore(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpCompositeExtract, extracted_type,
+          ir_context, spv::Op::OpCompositeExtract, extracted_type,
           message_.fresh_id(), extract_operands));
   ir_context->get_def_use_mgr()->AnalyzeInstDefUse(new_instruction);
   ir_context->set_instr_block(new_instruction,

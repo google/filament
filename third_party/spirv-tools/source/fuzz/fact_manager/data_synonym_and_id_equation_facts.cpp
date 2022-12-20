@@ -23,7 +23,7 @@ namespace fact_manager {
 size_t DataSynonymAndIdEquationFacts::OperationHash::operator()(
     const Operation& operation) const {
   std::u32string hash;
-  hash.push_back(operation.opcode);
+  hash.push_back(uint32_t(operation.opcode));
   for (auto operand : operation.operands) {
     hash.push_back(static_cast<uint32_t>(DataDescriptorHash()(operand)));
   }
@@ -104,7 +104,8 @@ bool DataSynonymAndIdEquationFacts::MaybeAddFact(
   }
 
   // Now add the fact.
-  AddEquationFactRecursive(lhs_dd, static_cast<SpvOp>(fact.opcode()), rhs_dds);
+  AddEquationFactRecursive(lhs_dd, static_cast<spv::Op>(fact.opcode()),
+                           rhs_dds);
   return true;
 }
 
@@ -119,7 +120,7 @@ DataSynonymAndIdEquationFacts::GetEquations(
 }
 
 void DataSynonymAndIdEquationFacts::AddEquationFactRecursive(
-    const protobufs::DataDescriptor& lhs_dd, SpvOp opcode,
+    const protobufs::DataDescriptor& lhs_dd, spv::Op opcode,
     const std::vector<const protobufs::DataDescriptor*>& rhs_dds) {
   assert(synonymous_.Exists(lhs_dd) &&
          "The LHS must be known to the equivalence relation.");
@@ -155,21 +156,21 @@ void DataSynonymAndIdEquationFacts::AddEquationFactRecursive(
   // Now try to work out corollaries implied by the new equation and existing
   // facts.
   switch (opcode) {
-    case SpvOpConvertSToF:
-    case SpvOpConvertUToF:
+    case spv::Op::OpConvertSToF:
+    case spv::Op::OpConvertUToF:
       ComputeConversionDataSynonymFacts(*rhs_dds[0]);
       break;
-    case SpvOpBitcast: {
+    case spv::Op::OpBitcast: {
       assert(DataDescriptorsAreWellFormedAndComparable(lhs_dd, *rhs_dds[0]) &&
              "Operands of OpBitcast equation fact must have compatible types");
       if (!synonymous_.IsEquivalent(lhs_dd, *rhs_dds[0])) {
         AddDataSynonymFactRecursive(lhs_dd, *rhs_dds[0]);
       }
     } break;
-    case SpvOpIAdd: {
+    case spv::Op::OpIAdd: {
       // Equation form: "a = b + c"
       for (const auto& equation : GetEquations(rhs_dds[0])) {
-        if (equation.opcode == SpvOpISub) {
+        if (equation.opcode == spv::Op::OpISub) {
           // Equation form: "a = (d - e) + c"
           if (synonymous_.IsEquivalent(*equation.operands[1], *rhs_dds[1])) {
             // Equation form: "a = (d - c) + c"
@@ -179,7 +180,7 @@ void DataSynonymAndIdEquationFacts::AddEquationFactRecursive(
         }
       }
       for (const auto& equation : GetEquations(rhs_dds[1])) {
-        if (equation.opcode == SpvOpISub) {
+        if (equation.opcode == spv::Op::OpISub) {
           // Equation form: "a = b + (d - e)"
           if (synonymous_.IsEquivalent(*equation.operands[1], *rhs_dds[0])) {
             // Equation form: "a = b + (d - b)"
@@ -190,10 +191,10 @@ void DataSynonymAndIdEquationFacts::AddEquationFactRecursive(
       }
       break;
     }
-    case SpvOpISub: {
+    case spv::Op::OpISub: {
       // Equation form: "a = b - c"
       for (const auto& equation : GetEquations(rhs_dds[0])) {
-        if (equation.opcode == SpvOpIAdd) {
+        if (equation.opcode == spv::Op::OpIAdd) {
           // Equation form: "a = (d + e) - c"
           if (synonymous_.IsEquivalent(*equation.operands[0], *rhs_dds[1])) {
             // Equation form: "a = (c + e) - c"
@@ -207,34 +208,34 @@ void DataSynonymAndIdEquationFacts::AddEquationFactRecursive(
           }
         }
 
-        if (equation.opcode == SpvOpISub) {
+        if (equation.opcode == spv::Op::OpISub) {
           // Equation form: "a = (d - e) - c"
           if (synonymous_.IsEquivalent(*equation.operands[0], *rhs_dds[1])) {
             // Equation form: "a = (c - e) - c"
             // We can thus infer "a = -e"
-            AddEquationFactRecursive(lhs_dd, SpvOpSNegate,
+            AddEquationFactRecursive(lhs_dd, spv::Op::OpSNegate,
                                      {equation.operands[1]});
           }
         }
       }
 
       for (const auto& equation : GetEquations(rhs_dds[1])) {
-        if (equation.opcode == SpvOpIAdd) {
+        if (equation.opcode == spv::Op::OpIAdd) {
           // Equation form: "a = b - (d + e)"
           if (synonymous_.IsEquivalent(*equation.operands[0], *rhs_dds[0])) {
             // Equation form: "a = b - (b + e)"
             // We can thus infer "a = -e"
-            AddEquationFactRecursive(lhs_dd, SpvOpSNegate,
+            AddEquationFactRecursive(lhs_dd, spv::Op::OpSNegate,
                                      {equation.operands[1]});
           }
           if (synonymous_.IsEquivalent(*equation.operands[1], *rhs_dds[0])) {
             // Equation form: "a = b - (d + b)"
             // We can thus infer "a = -d"
-            AddEquationFactRecursive(lhs_dd, SpvOpSNegate,
+            AddEquationFactRecursive(lhs_dd, spv::Op::OpSNegate,
                                      {equation.operands[0]});
           }
         }
-        if (equation.opcode == SpvOpISub) {
+        if (equation.opcode == spv::Op::OpISub) {
           // Equation form: "a = b - (d - e)"
           if (synonymous_.IsEquivalent(*equation.operands[0], *rhs_dds[0])) {
             // Equation form: "a = b - (b - e)"
@@ -245,8 +246,8 @@ void DataSynonymAndIdEquationFacts::AddEquationFactRecursive(
       }
       break;
     }
-    case SpvOpLogicalNot:
-    case SpvOpSNegate: {
+    case spv::Op::OpLogicalNot:
+    case spv::Op::OpSNegate: {
       // Equation form: "a = !b" or "a = -b"
       for (const auto& equation : GetEquations(rhs_dds[0])) {
         if (equation.opcode == opcode) {
@@ -321,9 +322,9 @@ void DataSynonymAndIdEquationFacts::ComputeConversionDataSynonymFacts(
 
       for (const auto& equation : fact.second) {
         if (synonymous_.IsEquivalent(*equation.operands[0], dd)) {
-          if (equation.opcode == SpvOpConvertSToF) {
+          if (equation.opcode == spv::Op::OpConvertSToF) {
             convert_s_to_f_lhs.push_back(*dd_it);
-          } else if (equation.opcode == SpvOpConvertUToF) {
+          } else if (equation.opcode == spv::Op::OpConvertUToF) {
             convert_u_to_f_lhs.push_back(*dd_it);
           }
         }
@@ -808,9 +809,9 @@ bool DataSynonymAndIdEquationFacts::DataDescriptorsAreWellFormedAndComparable(
   }
   // Neither end type is allowed to be void.
   if (ir_context_->get_def_use_mgr()->GetDef(end_type_id_1)->opcode() ==
-          SpvOpTypeVoid ||
+          spv::Op::OpTypeVoid ||
       ir_context_->get_def_use_mgr()->GetDef(end_type_id_2)->opcode() ==
-          SpvOpTypeVoid) {
+          spv::Op::OpTypeVoid) {
     return false;
   }
   // If the end types are the same, the data descriptors are comparable.
