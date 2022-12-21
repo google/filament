@@ -148,6 +148,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
             const std::string_view availableLayer(layer.layerName);
             if (availableLayer == desired) {
                 enabledLayers.push_back(desired.data());
+                break;
             }
         }
     }
