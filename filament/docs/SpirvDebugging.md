@@ -113,7 +113,7 @@ glslangValidator -V -o unoptimized.spv in.frag
 spirv-opt -Oconfig=optimizations.cfg unoptimized.spv -o optimized.spv
 ```
 
-See optimizations.cfg for a template. This file should contain the same list of optimizations that
+See [optimizations.cfg](optimizations.cfg) for a template. This file should contain the same list of optimizations that
 Filament employs. This should match the same optimizations specified in `GLSLPostProcessor`, for
 example, `GLSLPostProcessor::registerPerformancePasses` or `GLSLPostProcessor::registerSizePasses`.
 
