@@ -46,6 +46,13 @@ public:
     /**
      * Creates a new path with the specified pathname.
      *
+     * @param pathname a pathname string view
+     */
+    Path(std::string_view pathname);
+
+    /**
+     * Creates a new path with the specified pathname.
+     *
      * @param pathname a pathname string
      */
     Path(const std::string& pathname);

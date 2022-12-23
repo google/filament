@@ -41,6 +41,10 @@ Path::Path(const char* path)
     : Path(std::string(path)) {
 }
 
+Path::Path(std::string_view pathname)
+    : Path(std::string(pathname)) {
+}
+
 Path::Path(const std::string& path)
     : m_path(getCanonicalPath(path)) {
 }
