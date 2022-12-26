@@ -14,30 +14,21 @@
  * limitations under the License.
  */
 
-#ifndef FGDBG_DEBUGSERVER_H
-#define FGDBG_DEBUGSERVER_H
+#ifndef FGDBG_PASS_H
+#define FGDBG_PASS_H
 
-class CivetServer;
+#include <string>
+#include <vector>
 
 namespace filament::fgdbg {
+using ResourceId = int;
 
-class DebugServer {
-public:
-    DebugServer();
-    ~DebugServer();
-
-private:
-    CivetServer* mServer;
-
-    class RestRequestHandler *mRestRequestHandler = nullptr;
-    class WebSocketHandler* mWebSocketHandler = nullptr;
-
-    friend class RestRequestHandler;
-    friend class WebSocketHandler;
-    friend class Session;
-
-    void sendMessage(int number);
+struct Pass {
+    std::string name;
+    int id;
+    std::vector<ResourceId> reads;
+    std::vector<ResourceId> writes;
 };
 }
 
-#endif  // FGDBG_DEBUGSERVER_H
+#endif //FGDBG_PASS_H

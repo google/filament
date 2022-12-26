@@ -59,7 +59,7 @@
 #include <filament/VertexBuffer.h>
 
 #if FILAMENT_ENABLE_FGDBG
-#include <fgdbg/DebugServer.h>
+#include <fgdbg/Session.h>
 #else
 namespace filament::fgdbg {
 class DebugServer;
@@ -528,7 +528,7 @@ public:
             bool disable_buffer_padding = false;
         } renderer;
         std::unique_ptr<matdbg::DebugServer> matdbg = nullptr;
-        std::unique_ptr<fgdbg::DebugServer> fgdbg = nullptr;
+        std::unique_ptr<fgdbg::Session> fgdbg = nullptr;
     } debug;
 };
 
