@@ -8,9 +8,9 @@ set(PUBLIC_HDR_DIR include)
 # Sources and headers
 # ==================================================================================================
 
-set(PUBLIC_HDRS include/fgdbg/DebugServer.h)
+set(PUBLIC_HDRS include/fgdbg/DebugServer.h include/fgdbg/Session.h)
 
-set(SRCS src/DebugServer.cpp)
+set(SRCS src/DebugServer.cpp src/Session.cpp)
 
 # ==================================================================================================
 # Include and target definitions
