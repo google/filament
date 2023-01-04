@@ -109,9 +109,10 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 
     // Determine if the VK_EXT_debug_utils instance extension is available.
     mContext.debugUtilsSupported = false;
-    const FixedCapacityVector<VkExtensionProperties> availableExts = enumerate(
-            vkEnumerateInstanceExtensionProperties,
-            static_cast<const char*>(nullptr) /* pLayerName */);
+    uint32_t availableExtsCount = 0;
+    vkEnumerateInstanceExtensionProperties(nullptr, &availableExtsCount, nullptr);
+    utils::FixedCapacityVector<VkExtensionProperties> availableExts(availableExtsCount);
+    vkEnumerateInstanceExtensionProperties(nullptr, &availableExtsCount, availableExts.data());
     for  (const auto& extProps : availableExts) {
         if (!strcmp(extProps.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
             mContext.debugUtilsSupported = true;
@@ -137,9 +138,10 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 
     constexpr size_t kMaxEnabledLayersCount = sizeof(DESIRED_LAYERS) / sizeof(DESIRED_LAYERS[0]);
 
-    const FixedCapacityVector<VkLayerProperties> availableLayers = enumerate(
-            vkEnumerateInstanceLayerProperties);
-
+    uint32_t layerCount;
+    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+    FixedCapacityVector<VkLayerProperties> availableLayers(layerCount);
+    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
     auto enabledLayers = FixedCapacityVector<const char*>::with_capacity(kMaxEnabledLayersCount);
     for (const auto& desired : DESIRED_LAYERS) {
         for (const VkLayerProperties& layer : availableLayers) {
@@ -156,8 +158,10 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
 
         // Check if VK_EXT_validation_features is supported.
-        const FixedCapacityVector<VkExtensionProperties> availableExts = enumerate(
-                vkEnumerateInstanceExtensionProperties, "VK_LAYER_KHRONOS_validation");
+        uint32_t availableExtsCount = 0;
+        vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, nullptr);
+        utils::FixedCapacityVector<VkExtensionProperties> availableExts(availableExtsCount);
+        vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, availableExts.data());
         for  (const auto& extProps : availableExts) {
             if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
                 validationFeaturesSupported = true;
