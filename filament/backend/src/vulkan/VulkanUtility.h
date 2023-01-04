@@ -76,7 +76,7 @@ uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
 // considered, but because the "variadic" part of the vk methods (i.e. the inputs) are before the
 // non-variadic parts, this breaks the template type matching logic. Hence, we use a macro approach
 // here.
-#define EXPAND_ENUM(dummy_param, ...)\
+#define EXPAND_ENUM(...)\
     uint32_t size = 0;\
     VkResult result = func(__VA_ARGS__, nullptr);\
     ASSERT_POSTCONDITION(result == VK_SUCCESS && size > 0, "enumerate size error");\
@@ -85,11 +85,12 @@ uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "enumerate error");\
     return move(ret);
 
-#define EXPAND_ENUM_ARGS(...) EXPAND_ENUM(, ##__VA_ARGS__, &size)
+#define EXPAND_ENUM_NO_ARGS() EXPAND_ENUM(&size)
+#define EXPAND_ENUM_ARGS(...) EXPAND_ENUM(__VA_ARGS__, &size)
 
 template <typename OutType>
 utils::FixedCapacityVector<OutType> enumerate(VkResult (*func)(uint32_t*, OutType*)) {
-    EXPAND_ENUM_ARGS();
+    EXPAND_ENUM_NO_ARGS();
 }
 
 template <typename InType, typename OutType>
@@ -104,6 +105,7 @@ utils::FixedCapacityVector<OutType> enumerate(
 }
 
 #undef EXPAND_ENUM
+#undef EXPAND_ENUM_NO_ARGS    
 #undef EXPAND_ENUM_ARGS
 
 } // namespace filament::backend
