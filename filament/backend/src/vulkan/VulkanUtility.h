@@ -83,7 +83,7 @@ uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
     utils::FixedCapacityVector<OutType> ret(size);\
     result = func(__VA_ARGS__, ret.data());\
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "enumerate error");\
-    return move(ret);
+    return std::move(ret);
 
 #define EXPAND_ENUM_NO_ARGS() EXPAND_ENUM(&size)
 #define EXPAND_ENUM_ARGS(...) EXPAND_ENUM(__VA_ARGS__, &size)
@@ -105,7 +105,7 @@ utils::FixedCapacityVector<OutType> enumerate(
 }
 
 #undef EXPAND_ENUM
-#undef EXPAND_ENUM_NO_ARGS    
+#undef EXPAND_ENUM_NO_ARGS
 #undef EXPAND_ENUM_ARGS
 
 } // namespace filament::backend
