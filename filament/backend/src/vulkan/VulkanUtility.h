@@ -19,8 +19,6 @@
 
 #include <backend/DriverEnums.h>
 
-#include <utils/FixedCapacityVector.h>
-
 #include <bluevk/BlueVK.h>
 
 namespace filament::backend {
@@ -67,46 +65,6 @@ bool equivalent(const VkRect2D& a, const VkRect2D& b);
 bool equivalent(const VkExtent2D& a, const VkExtent2D& b);
 bool isDepthFormat(VkFormat format);
 uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
-
-
-// Helper function for the vkEnumerateX methods. These methods have the format of
-// VkResult vkEnumerateX(InputType1 arg1, InputTyp2 arg2, ..., uint32_t* size,
-//         OutputType* output_arg)
-// Instead of macros and explicitly listing the template params, Variadic Template was also
-// considered, but because the "variadic" part of the vk methods (i.e. the inputs) are before the
-// non-variadic parts, this breaks the template type matching logic. Hence, we use a macro approach
-// here.
-#define EXPAND_ENUM(...)\
-    uint32_t size = 0;\
-    VkResult result = func(__VA_ARGS__, nullptr);\
-    ASSERT_POSTCONDITION(result == VK_SUCCESS && size > 0, "enumerate size error");\
-    utils::FixedCapacityVector<OutType> ret(size);\
-    result = func(__VA_ARGS__, ret.data());\
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "enumerate error");\
-    return std::move(ret);
-
-#define EXPAND_ENUM_NO_ARGS() EXPAND_ENUM(&size)
-#define EXPAND_ENUM_ARGS(...) EXPAND_ENUM(__VA_ARGS__, &size)
-
-template <typename OutType>
-utils::FixedCapacityVector<OutType> enumerate(VkResult (*func)(uint32_t*, OutType*)) {
-    EXPAND_ENUM_NO_ARGS();
-}
-
-template <typename InType, typename OutType>
-utils::FixedCapacityVector<OutType> enumerate(VkResult (*func)(InType, uint32_t*, OutType*), InType inData) {
-    EXPAND_ENUM_ARGS(inData);
-}
-
-template <typename InTypeA, typename InTypeB, typename OutType>
-utils::FixedCapacityVector<OutType> enumerate(
-        VkResult (*func)(InTypeA, InTypeB, uint32_t*, OutType*), InTypeA inDataA, InTypeB inDataB) {
-    EXPAND_ENUM_ARGS(inDataA, inDataB);
-}
-
-#undef EXPAND_ENUM
-#undef EXPAND_ENUM_NO_ARGS
-#undef EXPAND_ENUM_ARGS
 
 } // namespace filament::backend
 

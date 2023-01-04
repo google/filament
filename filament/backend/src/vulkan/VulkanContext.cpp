@@ -56,10 +56,16 @@ VkImageView VulkanAttachment::getImageView(VkImageAspectFlags aspect) const {
 }
 
 void VulkanContext::selectPhysicalDevice() {
-    const FixedCapacityVector<VkPhysicalDevice> physicalDevices = enumerate(
-            vkEnumeratePhysicalDevices, instance);
-    for (const auto& candidateDevice : physicalDevices) {
-        physicalDevice = candidateDevice;
+    uint32_t physicalDeviceCount = 0;
+    VkResult result = vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, nullptr);
+    ASSERT_POSTCONDITION(result == VK_SUCCESS && physicalDeviceCount > 0,
+            "vkEnumeratePhysicalDevices count error.");
+    FixedCapacityVector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
+    result = vkEnumeratePhysicalDevices(instance, &physicalDeviceCount,
+            physicalDevices.data());
+    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkEnumeratePhysicalDevices error.");
+    for (uint32_t i = 0; i < physicalDeviceCount; ++i) {
+        physicalDevice = physicalDevices[i];
         vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
 
         const int major = VK_VERSION_MAJOR(physicalDeviceProperties.apiVersion);
@@ -97,23 +103,28 @@ void VulkanContext::selectPhysicalDevice() {
         if (graphicsQueueFamilyIndex == 0xffff) continue;
 
         // Does the device support the VK_KHR_swapchain extension?
-        const FixedCapacityVector<VkExtensionProperties> extensions = enumerate(
-                vkEnumerateDeviceExtensionProperties, physicalDevice,
-                static_cast<const char*>(nullptr) /* pLayerName */);
-
+        uint32_t extensionCount;
+        result = vkEnumerateDeviceExtensionProperties(physicalDevice, /*pLayerName = */ nullptr,
+                &extensionCount, nullptr);
+        ASSERT_POSTCONDITION(result == VK_SUCCESS,
+                "vkEnumerateDeviceExtensionProperties count error.");
+        FixedCapacityVector<VkExtensionProperties> extensions(extensionCount);
+        result = vkEnumerateDeviceExtensionProperties(physicalDevice, /*pLayerName = */ nullptr,
+                &extensionCount, extensions.data());
+        ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkEnumerateDeviceExtensionProperties error.");
         bool supportsSwapchain = false;
-        for (const auto& extension : extensions) {
-            if (!strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME)) {
+        for (uint32_t k = 0; k < extensionCount; ++k) {
+            if (!strcmp(extensions[k].extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME)) {
                 supportsSwapchain = true;
-            } else if (!strcmp(extension.extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
+            } else if (!strcmp(extensions[k].extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
                 debugMarkersSupported = true;
-            } else if (!strcmp(extension.extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
+            } else if (!strcmp(extensions[k].extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
                 portabilitySubsetSupported = true;
-            } else if (!strcmp(extension.extensionName, VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
+            } else if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE1_EXTENSION_NAME)) {
                 maintenanceSupported[0] = true;
-            } else if (!strcmp(extension.extensionName, VK_KHR_MAINTENANCE2_EXTENSION_NAME)) {
+            } else if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE2_EXTENSION_NAME)) {
                 maintenanceSupported[1] = true;
-            } else if (!strcmp(extension.extensionName, VK_KHR_MAINTENANCE3_EXTENSION_NAME)) {
+            } else if (!strcmp(extensions[k].extensionName, VK_KHR_MAINTENANCE3_EXTENSION_NAME)) {
                 maintenanceSupported[2] = true;
             }
         }
@@ -160,7 +171,7 @@ void VulkanContext::selectPhysicalDevice() {
         const uint32_t deviceID = physicalDeviceProperties.deviceID;
         utils::slog.i << "Selected physical device '"
                 << physicalDeviceProperties.deviceName
-                << "' from " << physicalDevices.size() << " physical devices. "
+                << "' from " << physicalDeviceCount << " physical devices. "
                 << "(vendor " << utils::io::hex << vendorID << ", "
                 << "device " << deviceID << ", "
                 << "driver " << driverVersion << ", "
