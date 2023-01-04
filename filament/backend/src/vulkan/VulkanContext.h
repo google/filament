@@ -62,13 +62,17 @@ struct VulkanRenderPass {
 // For now we only support a single-device, single-instance scenario. Our concept of "context" is a
 // bundle of state containing the Device, the Instance, and various globally-useful Vulkan objects.
 struct VulkanContext {
-    void selectPhysicalDevice();
-    void createLogicalDevice();
-    uint32_t selectMemoryType(uint32_t flags, VkFlags reqs);
-    VkFormat findSupportedFormat(utils::Slice<VkFormat> candidates, VkImageTiling tiling,
-            VkFormatFeatureFlags features);
+public:
+    void initialize(const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount);
     void createEmptyTexture(VulkanStagePool& stagePool);
+    uint32_t selectMemoryType(uint32_t flags, VkFlags reqs);    
 
+private:
+    void afterSelectPhysicalDevice();
+    void afterCreateLogicalDevice();
+    void afterCreateInstance();
+    
+public: 
     VkInstance instance;
     VkPhysicalDevice physicalDevice;
     VkPhysicalDeviceProperties physicalDeviceProperties;
@@ -93,6 +97,9 @@ struct VulkanContext {
     VmaAllocator allocator;
     VulkanTexture* emptyTexture = nullptr;
     VulkanCommands* commands = nullptr;
+    VkDebugReportCallbackEXT debugCallback = VK_NULL_HANDLE;
+    VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
+    
     std::string currentDebugMarker;
 };
 
