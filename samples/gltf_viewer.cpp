@@ -923,7 +923,7 @@ int main(int argc, char** argv) {
     filamentApp.animate(animate);
     filamentApp.resize(resize);
 
-    filamentApp.setDropHandler([&] (std::string path) {
+    filamentApp.setDropHandler([&] (std::string_view path) {
         app.resourceLoader->asyncCancelLoad();
         app.resourceLoader->evictResourceData();
         app.viewer->removeAsset();

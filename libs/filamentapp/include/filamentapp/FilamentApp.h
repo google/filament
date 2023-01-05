@@ -61,7 +61,7 @@ public:
     using ImGuiCallback = std::function<void(filament::Engine*, filament::View*)>;
     using AnimCallback = std::function<void(filament::Engine*, filament::View*, double now)>;
     using ResizeCallback = std::function<void(filament::Engine*, filament::View*)>;
-    using DropCallback = std::function<void(std::string)>;
+    using DropCallback = std::function<void(std::string_view)>;
 
     static FilamentApp& get();
 
