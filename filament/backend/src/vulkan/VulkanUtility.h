@@ -89,19 +89,21 @@ uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
 #define EXPAND_ENUM_ARGS(...) EXPAND_ENUM(__VA_ARGS__, &size)
 
 template <typename OutType>
-utils::FixedCapacityVector<OutType> enumerate(VKAPI_ATTR VkResult (*func)(uint32_t*, OutType*)) {
+utils::FixedCapacityVector<OutType> enumerate(
+        VKAPI_ATTR VkResult VKAPI_CALL (*func)(uint32_t*, OutType*)) {
     EXPAND_ENUM_NO_ARGS();
 }
 
 template <typename InType, typename OutType>
 utils::FixedCapacityVector<OutType> enumerate(
-        VKAPI_ATTR VkResult (*func)(InType, uint32_t*, OutType*), InType inData) {
+        VKAPI_ATTR VkResult VKAPI_CALL (*func)(InType, uint32_t*, OutType*), InType inData) {
     EXPAND_ENUM_ARGS(inData);
 }
 
 template <typename InTypeA, typename InTypeB, typename OutType>
 utils::FixedCapacityVector<OutType> enumerate(
-        VKAPI_ATTR VkResult (*func)(InTypeA, InTypeB, uint32_t*, OutType*), InTypeA inDataA, InTypeB inDataB) {
+        VKAPI_ATTR VkResult VKAPI_CALL (*func)(InTypeA, InTypeB, uint32_t*, OutType*),
+        InTypeA inDataA, InTypeB inDataB) {
     EXPAND_ENUM_ARGS(inDataA, inDataB);
 }
 
