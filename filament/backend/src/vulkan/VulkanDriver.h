@@ -151,8 +151,6 @@ private:
     VulkanSamplerCache mSamplerCache;
     VulkanBlitter mBlitter;
     VulkanSamplerGroup* mSamplerBindings[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
-    VkDebugReportCallbackEXT mDebugCallback = VK_NULL_HANDLE;
-    VkDebugUtilsMessengerEXT mDebugMessenger = VK_NULL_HANDLE;
 };
 
 } // namespace filament::backend
