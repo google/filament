@@ -65,14 +65,14 @@ struct VulkanContext {
 public:
     void initialize(const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount);
     void createEmptyTexture(VulkanStagePool& stagePool);
-    uint32_t selectMemoryType(uint32_t flags, VkFlags reqs);    
+    uint32_t selectMemoryType(uint32_t flags, VkFlags reqs);
 
 private:
     void afterSelectPhysicalDevice();
     void afterCreateLogicalDevice();
     void afterCreateInstance();
-    
-public: 
+
+public:
     VkInstance instance;
     VkPhysicalDevice physicalDevice;
     VkPhysicalDeviceProperties physicalDeviceProperties;
@@ -99,7 +99,7 @@ public:
     VulkanCommands* commands = nullptr;
     VkDebugReportCallbackEXT debugCallback = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
-    
+
     std::string currentDebugMarker;
 };
 
