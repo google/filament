@@ -78,8 +78,8 @@ using namespace GLUtils;
 // ------------------------------------------------------------------------------------------------
 
 UTILS_NOINLINE
-Driver* OpenGLDriver::create(
-        OpenGLPlatform* const platform, void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
+Driver* OpenGLDriver::create(OpenGLPlatform* const platform,
+        void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
     assert_invariant(platform);
     OpenGLPlatform* const ec = platform;
 
@@ -120,7 +120,7 @@ Driver* OpenGLDriver::create(
 
     // here we check we're on a supported version of GL before initializing the driver
     GLint major = 0, minor = 0;
-    bool success = OpenGLContext::queryOpenGLVersion(&major, &minor);
+    bool const success = OpenGLContext::queryOpenGLVersion(&major, &minor);
 
     if (UTILS_UNLIKELY(!success)) {
         PANIC_LOG("Can't get OpenGL version");
@@ -142,8 +142,9 @@ Driver* OpenGLDriver::create(
         }
     }
 
-    size_t defaultSize = FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
-    Platform::DriverConfig validConfig { .handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize) };
+    size_t const defaultSize = FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
+    Platform::DriverConfig const validConfig {
+        .handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize) };
     OpenGLDriver* const driver = new OpenGLDriver(ec, validConfig);
     return driver;
 }
@@ -169,7 +170,8 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
     std::fill(mSamplerBindings.begin(), mSamplerBindings.end(), nullptr);
 
     // set a reasonable default value for our stream array
-    mExternalStreams.reserve(8);
+    mTexturesWithStreamsAttached.reserve(8);
+    mStreamsWithPendingAquiredImage.reserve(8);
 
 #ifndef NDEBUG
     slog.i << "OS version: " << mPlatform.getOSVersion() << io::endl;
@@ -435,10 +437,10 @@ void OpenGLDriver::createIndexBufferR(
     DEBUG_MARKER()
 
     auto& gl = mContext;
-    uint8_t elementSize = static_cast<uint8_t>(getElementTypeSize(elementType));
+    uint8_t const elementSize = static_cast<uint8_t>(getElementTypeSize(elementType));
     GLIndexBuffer* ib = construct<GLIndexBuffer>(ibh, elementSize, indexCount);
     glGenBuffers(1, &ib->gl.buffer);
-    GLsizeiptr size = elementSize * indexCount;
+    GLsizeiptr const size = elementSize * indexCount;
     gl.bindVertexArray(nullptr);
     gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, nullptr, getBufferUsage(usage));
@@ -1038,7 +1040,8 @@ void OpenGLDriver::renderBufferStorage(GLuint rbo, GLenum internalformat, uint32
         auto& gl = mContext;
         if (gl.ext.EXT_multisampled_render_to_texture ||
             gl.ext.EXT_multisampled_render_to_texture2) {
-            glext::glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER, samples, internalformat, width, height);
+            glext::glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER,
+                    samples, internalformat, width, height);
         } else
 #endif
         {
@@ -1205,11 +1208,11 @@ void OpenGLDriver::createSyncR(Handle<HwSync> fh, int) {
     CHECK_GL_ERROR(utils::slog.e)
 
     // check the status of the sync once a frame, since we must do this from our thread
-    std::weak_ptr<GLSync::State> weak = f->result;
+    std::weak_ptr<GLSync::State> const weak = f->result;
     runEveryNowAndThen([sync = f->gl.sync, weak]() -> bool {
         auto result = weak.lock();
         if (result) {
-            GLenum status = glClientWaitSync(sync, 0, 0u);
+            GLenum const status = glClientWaitSync(sync, 0, 0u);
             result->status.store(status, std::memory_order_relaxed);
             return (status != GL_TIMEOUT_EXPIRED);
         }
@@ -1370,15 +1373,23 @@ void OpenGLDriver::destroyStream(Handle<HwStream> sh) {
         GLStream* s = handle_cast<GLStream*>(sh);
 
         // if this stream is still attached to a texture, detach it first
-        auto& externalStreams = mExternalStreams;
-        auto pos = std::find_if(externalStreams.begin(), externalStreams.end(),
-                [s](GLTexture const* t) { return t->hwStream == s; });
-        if (pos != externalStreams.end()) {
+        auto& texturesWithStreamsAttached = mTexturesWithStreamsAttached;
+        auto pos = std::find_if(
+                texturesWithStreamsAttached.begin(), texturesWithStreamsAttached.end(),
+                [s](GLTexture const* t) {
+                    return t->hwStream == s;
+                });
+
+        if (pos != texturesWithStreamsAttached.end()) {
             detachStream(*pos);
         }
+
+        // and then destroy the stream. Only NATIVE streams have Platform::Stream associated.
         if (s->streamType == StreamType::NATIVE) {
             mPlatform.destroyStream(s->stream);
         }
+
+        // finally destroy the HwStream handle
         destruct(sh, s);
     }
 }
@@ -1426,30 +1437,56 @@ Handle<HwStream> OpenGLDriver::createStreamAcquired() {
 void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer,
         CallbackHandler* handler, StreamCallback cb, void* userData) {
     GLStream* glstream = handle_cast<GLStream*>(sh);
-    if (glstream->user_thread.pending.image) {
+    assert_invariant(glstream->streamType == StreamType::ACQUIRED);
+
+    if (UTILS_UNLIKELY(glstream->user_thread.pending.image)) {
         scheduleRelease(glstream->user_thread.pending);
         slog.w << "Acquired image is set more than once per frame." << io::endl;
     }
+
     glstream->user_thread.pending = mPlatform.transformAcquiredImage({
             hwbuffer, cb, userData, handler });
+
+    if (glstream->user_thread.pending.image != nullptr) {
+        // If there's no pending image, do nothing. Note that GL_OES_EGL_image does not let you pass
+        // NULL to glEGLImageTargetTexture2DOES, and there is no concept of "detaching" an
+        // EGLimage from a texture.
+        mStreamsWithPendingAquiredImage.push_back(glstream);
+    }
 }
 
+// updateStreams() and setAcquiredImage() are both called from on the application's thread
+// and therefore do not require synchronization. The former is always called immediately before
+// beginFrame, the latter is called by the user from anywhere outside beginFrame / endFrame.
 void OpenGLDriver::updateStreams(DriverApi* driver) {
-    if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
-        for (GLTexture* t : mExternalStreams) {
-            assert_invariant(t);
+    if (UTILS_UNLIKELY(!mStreamsWithPendingAquiredImage.empty())) {
+        for (GLStream* s : mStreamsWithPendingAquiredImage) {
+            assert_invariant(s);
+            assert_invariant(s->streamType == StreamType::ACQUIRED);
 
-            GLStream* s = static_cast<GLStream*>(t->hwStream); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
-            if (UTILS_UNLIKELY(s == nullptr)) {
-                // this can happen because we're called synchronously and the setExternalStream()
-                // call may not have been processed yet.
-                continue;
-            }
+            AcquiredImage const previousImage = s->user_thread.acquired;
+            s->user_thread.acquired = s->user_thread.pending;
+            s->user_thread.pending = { nullptr };
 
-            if (s->streamType == StreamType::ACQUIRED) {
-                updateStreamAcquired(t, driver);
-            }
+            // Bind the stashed EGLImage to its corresponding GL texture as soon as we start
+            // making the GL calls for the upcoming frame.
+            driver->queueCommand([this, s, image = s->user_thread.acquired.image, previousImage]() {
+
+                auto& streams = mTexturesWithStreamsAttached;
+                auto pos = std::find_if(streams.begin(), streams.end(),
+                        [s](GLTexture const* t) {
+                            return t->hwStream == s;
+                        });
+                if (pos != streams.end()) {
+                    setExternalTexture(*pos, image);
+                }
+
+                if (previousImage.image) {
+                    scheduleRelease(AcquiredImage(previousImage));
+                }
+            });
         }
+        mStreamsWithPendingAquiredImage.clear();
     }
 }
 
@@ -1508,6 +1545,12 @@ bool OpenGLDriver::isTextureFormatSupported(TextureFormat format) {
     if (isS3TCCompression(format)) {
         return  ext.EXT_texture_compression_s3tc || // this is ES specific
                 ext.WEBGL_compressed_texture_s3tc; // this is WEBGL specific
+    }
+    if (isRGTCCompression(format)) {
+        return  ext.EXT_texture_compression_rgtc;
+    }
+    if (isBPTCCompression(format)) {
+        return  ext.EXT_texture_compression_bptc;
     }
     if (isASTCCompression(format)) {
         return ext.KHR_texture_compression_astc_hdr;
@@ -1809,7 +1852,7 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
     DEBUG_MARKER()
 
 #if defined(GL_EXT_texture_filter_anisotropic)
-    OpenGLContext& context = getContext();
+    OpenGLContext const& context = getContext();
     const bool anisotropyWorkaround =
             context.ext.EXT_texture_filter_anisotropic &&
             context.bugs.texture_filter_anisotropic_broken_on_sampler;
@@ -1853,7 +1896,7 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
                 // Driver claims to support anisotropic filtering, but it fails when set on
                 // the sampler, we have to set it on the texture instead.
                 // The texture is already bound here.
-                GLfloat anisotropy = float(1u << params.anisotropyLog2);
+                GLfloat const anisotropy = float(1u << params.anisotropyLog2);
                 glTexParameterf(t->gl.target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
                         std::min(context.gets.max_anisotropy, anisotropy));
             }
@@ -1944,8 +1987,8 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
         return;
     }
 
-    GLenum glFormat = getFormat(p.format);
-    GLenum glType = getType(p.type);
+    GLenum const glFormat = getFormat(p.format);
+    GLenum const glType = getType(p.type);
 
     gl.pixelStore(GL_UNPACK_ROW_LENGTH, GLint(p.stride));
     gl.pixelStore(GL_UNPACK_ALIGNMENT, GLint(p.alignment));
@@ -1954,7 +1997,7 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
 
     switch (t->target) {
         case SamplerType::SAMPLER_EXTERNAL:
-            // if we get there, it's because the user is trying to use an external texture
+            // if we get there, it's because the user is trying to use an external texture,
             // but it's not supported, so instead, we behave like a texture2d.
             // fallthrough...
         case SamplerType::SAMPLER_2D:
@@ -1998,7 +2041,7 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
             assert_invariant(zoffset + depth <= 6);
             UTILS_NOUNROLL
             for (size_t face = 0; face < depth; face++) {
-                GLenum target = getCubemapTarget(zoffset + face);
+                GLenum const target = getCubemapTarget(zoffset + face);
                 glTexSubImage2D(target, GLint(level), GLint(xoffset), GLint(yoffset),
                         GLsizei(width), GLsizei(height), glFormat, glType,
                         static_cast<uint8_t const*>(p.buffer) + faceSize * face);
@@ -2042,13 +2085,13 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t, uint32_t level,
 
     // TODO: maybe assert that the CompressedPixelDataType is the same as the internalFormat
 
-    GLsizei imageSize = GLsizei(p.imageSize);
+    GLsizei const imageSize = GLsizei(p.imageSize);
 
     //  TODO: maybe assert the size is right (b/c we can compute it ourselves)
 
     switch (t->target) {
         case SamplerType::SAMPLER_EXTERNAL:
-            // if we get there, it's because the user is trying to use an external texture
+            // if we get there, it's because the user is trying to use an external texture,
             // but it's not supported, so instead, we behave like a texture2d.
             // fallthrough...
         case SamplerType::SAMPLER_2D:
@@ -2090,7 +2133,7 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t, uint32_t level,
 
             UTILS_NOUNROLL
             for (size_t face = 0; face < depth; face++) {
-                GLenum target = getCubemapTarget(zoffset + face);
+                GLenum const target = getCubemapTarget(zoffset + face);
                 glCompressedTexSubImage2D(target, GLint(level), GLint(xoffset), GLint(yoffset),
                         GLsizei(width), GLsizei(height), t->gl.internalFormat,
                         imageSize, static_cast<uint8_t const*>(p.buffer) + faceSize * face);
@@ -2177,7 +2220,7 @@ void OpenGLDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) 
 
 UTILS_NOINLINE
 void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) noexcept {
-    mExternalStreams.push_back(t);
+    mTexturesWithStreamsAttached.push_back(t);
 
     switch (hwStream->streamType) {
         case StreamType::NATIVE:
@@ -2192,10 +2235,10 @@ void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) noexcept {
 UTILS_NOINLINE
 void OpenGLDriver::detachStream(GLTexture* t) noexcept {
     auto& gl = mContext;
-    auto& streams = mExternalStreams;
-    auto pos = std::find(streams.begin(), streams.end(), t);
-    if (pos != streams.end()) {
-        streams.erase(pos);
+    auto& texturesWithStreamsAttached = mTexturesWithStreamsAttached;
+    auto pos = std::find(texturesWithStreamsAttached.begin(), texturesWithStreamsAttached.end(), t);
+    if (pos != texturesWithStreamsAttached.end()) {
+        texturesWithStreamsAttached.erase(pos);
     }
 
     GLStream* s = static_cast<GLStream*>(t->hwStream); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
@@ -2270,7 +2313,7 @@ void OpenGLDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 
 bool OpenGLDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
-    uint64_t d = tq->elapsed.load(std::memory_order_relaxed);
+    uint64_t const d = tq->elapsed.load(std::memory_order_relaxed);
     if (!d) {
         return false;
     }
@@ -2323,7 +2366,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
             BACKEND_OPENGL_LEVEL >= BACKEND_OPENGL_LEVEL_GLES30) {
         if (!gl.bugs.disable_invalidate_framebuffer) {
             AttachmentArray attachments; // NOLINT
-            GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
+            GLsizei const attachmentCount = getAttachments(attachments, rt, discardFlags);
             if (attachmentCount) {
                 glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
             }
@@ -2413,7 +2456,7 @@ void OpenGLDriver::endRenderPass(int) {
             // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
             gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
             AttachmentArray attachments; // NOLINT
-            GLsizei attachmentCount = getAttachments(attachments, rt, effectiveDiscardFlags);
+            GLsizei const attachmentCount = getAttachments(attachments, rt, effectiveDiscardFlags);
             if (attachmentCount) {
                 glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
             }
@@ -2441,7 +2484,7 @@ void OpenGLDriver::resolvePass(ResolveAction action, GLRenderTarget const* rt,
     assert_invariant(rt->gl.fbo_read);
     auto& gl = mContext;
     const TargetBufferFlags resolve = rt->gl.resolve & ~discardFlags;
-    GLbitfield mask = getAttachmentBitfield(resolve);
+    GLbitfield const mask = getAttachmentBitfield(resolve);
     if (UTILS_UNLIKELY(mask)) {
 
         // we can only resolve COLOR0 at the moment
@@ -2532,40 +2575,6 @@ void OpenGLDriver::setScissor(Viewport const& scissor) noexcept {
     gl.enable(GL_SCISSOR_TEST);
 }
 
-// Binds the external image stashed in the associated stream.
-//
-// updateStreamAcquired() and setAcquiredImage() are both called from on the application's thread
-// and therefore do not require synchronization. The former is always called immediately before
-// beginFrame, the latter is called by the user from anywhere outside beginFrame / endFrame.
-void OpenGLDriver::updateStreamAcquired(GLTexture* gltexture, DriverApi* driver) noexcept {
-    SYSTRACE_CALL();
-
-    GLStream* glstream = static_cast<GLStream*>(gltexture->hwStream); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
-    assert_invariant(glstream);
-    assert_invariant(glstream->streamType == StreamType::ACQUIRED);
-
-    // If there's no pending image, do nothing. Note that GL_OES_EGL_image does not let you pass
-    // NULL to glEGLImageTargetTexture2DOES, and there is no concept of "detaching" an EGLimage from
-    // a texture.
-    if (glstream->user_thread.pending.image == nullptr) {
-        return;
-    }
-
-    AcquiredImage previousImage = glstream->user_thread.acquired;
-    glstream->user_thread.acquired = glstream->user_thread.pending;
-    glstream->user_thread.pending = { nullptr };
-
-    // Bind the stashed EGLImage to its corresponding GL texture as soon as we start making the GL
-    // calls for the upcoming frame.
-    void* image = glstream->user_thread.acquired.image;
-    driver->queueCommand([this, gltexture, image, previousImage]() {
-        setExternalTexture(gltexture, image);
-        if (previousImage.image) {
-            scheduleRelease(AcquiredImage(previousImage));
-        }
-    });
-}
-
 // ------------------------------------------------------------------------------------------------
 // Setting rendering state
 // ------------------------------------------------------------------------------------------------
@@ -2589,7 +2598,7 @@ void OpenGLDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t ind
 
     GLBufferObject* ub = handle_cast<GLBufferObject *>(ubh);
 
-    GLenum target = GLUtils::getBufferBindingType(bindingType);
+    GLenum const target = GLUtils::getBufferBindingType(bindingType);
 
     assert_invariant(bindingType == BufferObjectBinding::SHADER_STORAGE ||
             ub->gl.binding == target);
@@ -2602,7 +2611,7 @@ void OpenGLDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t ind
 void OpenGLDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) {
     DEBUG_MARKER()
     auto& gl = mContext;
-    GLenum target = GLUtils::getBufferBindingType(bindingType);
+    GLenum const target = GLUtils::getBufferBindingType(bindingType);
     gl.bindBufferRange(target, GLuint(index), 0, 0, 0);
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -2633,7 +2642,7 @@ GLuint OpenGLDriver::getSamplerSlow(SamplerParams params) const noexcept {
     auto& gl = mContext;
     if (gl.ext.EXT_texture_filter_anisotropic &&
             !gl.bugs.texture_filter_anisotropic_broken_on_sampler) {
-        GLfloat anisotropy = float(1u << params.anisotropyLog2);
+        GLfloat const anisotropy = float(1u << params.anisotropyLog2);
         glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT,
                 std::min(gl.gets.max_anisotropy, anisotropy));
     }
@@ -2694,8 +2703,8 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
     DEBUG_MARKER()
     auto& gl = mContext;
 
-    GLenum glFormat = getFormat(p.format);
-    GLenum glType = getType(p.type);
+    GLenum const glFormat = getFormat(p.format);
+    GLenum const glType = getType(p.type);
 
     gl.pixelStore(GL_PACK_ROW_LENGTH,   (GLint)p.stride);
     gl.pixelStore(GL_PACK_ALIGNMENT,    (GLint)p.alignment);
@@ -2746,9 +2755,8 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
         auto& gl = mContext;
         gl.bindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
         void* vaddr = nullptr;
-        std::unique_ptr<uint8_t> clientBuffer;
 #if defined(__EMSCRIPTEN__)
-        clientBuffer.reset(new uint8_t(p.size));
+        std::unique_ptr<uint8_t> clientBuffer = std::make_unique<uint8_t>(p.size);
         glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, p.size, clientBuffer.get());
         vaddr = clientBuffer.get();
 #else
@@ -2756,10 +2764,10 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
 #endif
         if (vaddr) {
             // now we need to flip the buffer vertically to match our API
-            size_t stride = p.stride ? p.stride : width;
-            size_t bpp = PixelBufferDescriptor::computeDataSize(
+            size_t const stride = p.stride ? p.stride : width;
+            size_t const bpp = PixelBufferDescriptor::computeDataSize(
                     p.format, p.type, 1, 1, 1);
-            size_t bpr = PixelBufferDescriptor::computeDataSize(
+            size_t const bpr = PixelBufferDescriptor::computeDataSize(
                     p.format, p.type, stride, 1, p.alignment);
             char const* head = (char const*)vaddr + p.left * bpp + bpr * p.top;
             char* tail = (char*)p.buffer + p.left * bpp + bpr * (p.top + height - 1);
@@ -2846,7 +2854,7 @@ void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
     auto& v = mGpuCommandCompleteOps;
     auto it = v.begin();
     while (it != v.end()) {
-        GLenum status = glClientWaitSync(it->first, 0, 0);
+        GLenum const status = glClientWaitSync(it->first, 0, 0);
         if (status == GL_ALREADY_SIGNALED || status == GL_CONDITION_SATISFIED) {
             it->second();
             glDeleteSync(it->first);
@@ -2903,13 +2911,15 @@ void OpenGLDriver::tick(int) {
     executeEveryNowAndThenOps();
 }
 
-void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
+void OpenGLDriver::beginFrame(
+        UTILS_UNUSED int64_t monotonic_clock_ns,
+        UTILS_UNUSED uint32_t frameId) {
     DEBUG_MARKER()
     auto& gl = mContext;
     insertEventMarker("beginFrame");
-    if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
+    if (UTILS_UNLIKELY(!mTexturesWithStreamsAttached.empty())) {
         OpenGLPlatform& platform = mPlatform;
-        for (GLTexture const* t : mExternalStreams) {
+        for (GLTexture const* t : mTexturesWithStreamsAttached) {
             assert_invariant(t && t->hwStream);
             if (t->hwStream->streamType == StreamType::NATIVE) {
                 assert_invariant(t->hwStream->stream);
@@ -2937,7 +2947,7 @@ void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {
     mPlatform.setPresentationTime(monotonic_clock_ns);
 }
 
-void OpenGLDriver::endFrame(uint32_t frameId) {
+void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t frameId) {
     DEBUG_MARKER()
 #if defined(__EMSCRIPTEN__)
     // WebGL builds are single-threaded so users might manipulate various GL state after we're
@@ -3040,7 +3050,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
     DEBUG_MARKER()
     auto& gl = mContext;
 
-    GLbitfield mask = getAttachmentBitfield(buffers);
+    GLbitfield const mask = getAttachmentBitfield(buffers);
     if (mask) {
         GLenum glFilterMode = (filter == SamplerMagFilter::NEAREST) ? GL_NEAREST : GL_LINEAR;
         if (mask & (GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)) {

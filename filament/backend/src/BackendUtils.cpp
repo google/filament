@@ -29,7 +29,7 @@ bool requestsGoogleLineDirectivesExtension(std::string_view source) noexcept {
 }
 
 void removeGoogleLineDirectives(char* shader, size_t length) noexcept {
-    std::string_view s(shader, length);
+    std::string_view const s{ shader, length };
 
     size_t pos = 0;
     while (true) {
@@ -173,6 +173,20 @@ size_t getFormatSize(TextureFormat format) noexcept {
         case TextureFormat::DXT5_SRGBA:
             return 16;
 
+        case TextureFormat::RED_RGTC1:
+        case TextureFormat::SIGNED_RED_RGTC1:
+            return 8;
+
+        case TextureFormat::RED_GREEN_RGTC2:
+        case TextureFormat::SIGNED_RED_GREEN_RGTC2:
+            return 16;
+
+        case TextureFormat::RGB_BPTC_SIGNED_FLOAT:
+        case TextureFormat::RGB_BPTC_UNSIGNED_FLOAT:
+        case TextureFormat::RGBA_BPTC_UNORM:
+        case TextureFormat::SRGB_ALPHA_BPTC_UNORM:
+            return 16;
+
         // The block size for ASTC compression is always 16 bytes.
         case TextureFormat::RGBA_ASTC_4x4:
         case TextureFormat::RGBA_ASTC_5x4:
@@ -276,16 +290,22 @@ size_t getFormatComponentCount(TextureFormat format) noexcept {
         // Compressed formats ---------------------------------------------------------------------
         case TextureFormat::EAC_R11:
         case TextureFormat::EAC_R11_SIGNED:
+        case TextureFormat::RED_RGTC1:
+        case TextureFormat::SIGNED_RED_RGTC1:
             return 1;
 
         case TextureFormat::EAC_RG11:
         case TextureFormat::EAC_RG11_SIGNED:
+        case TextureFormat::RED_GREEN_RGTC2:
+        case TextureFormat::SIGNED_RED_GREEN_RGTC2:
             return 2;
 
         case TextureFormat::ETC2_RGB8:
         case TextureFormat::ETC2_SRGB8:
         case TextureFormat::DXT1_RGB:
         case TextureFormat::DXT1_SRGB:
+        case TextureFormat::RGB_BPTC_SIGNED_FLOAT:
+        case TextureFormat::RGB_BPTC_UNSIGNED_FLOAT:
             return 3;
 
         case TextureFormat::ETC2_EAC_RGBA8:
@@ -298,6 +318,8 @@ size_t getFormatComponentCount(TextureFormat format) noexcept {
         case TextureFormat::DXT3_SRGBA:
         case TextureFormat::DXT5_RGBA:
         case TextureFormat::DXT5_SRGBA:
+        case TextureFormat::RGBA_BPTC_UNORM:
+        case TextureFormat::SRGB_ALPHA_BPTC_UNORM:
         case TextureFormat::RGBA_ASTC_4x4:
         case TextureFormat::RGBA_ASTC_5x4:
         case TextureFormat::RGBA_ASTC_5x5:
@@ -354,6 +376,18 @@ size_t getBlockWidth(TextureFormat format) noexcept {
         case TextureFormat::DXT3_SRGBA:
         case TextureFormat::DXT5_RGBA:
         case TextureFormat::DXT5_SRGBA:
+            return 4;
+
+        case TextureFormat::RED_RGTC1:
+        case TextureFormat::SIGNED_RED_RGTC1:
+        case TextureFormat::RED_GREEN_RGTC2:
+        case TextureFormat::SIGNED_RED_GREEN_RGTC2:
+            return 4;
+
+        case TextureFormat::RGB_BPTC_SIGNED_FLOAT:
+        case TextureFormat::RGB_BPTC_UNSIGNED_FLOAT:
+        case TextureFormat::RGBA_BPTC_UNORM:
+        case TextureFormat::SRGB_ALPHA_BPTC_UNORM:
             return 4;
 
         case TextureFormat::RGBA_ASTC_4x4:
@@ -455,7 +489,8 @@ bool reshape(const PixelBufferDescriptor& data, PixelBufferDescriptor& reshaped)
         return false;
     }
 
-    const auto freeFunc = [](void* buffer, size_t size, void* user) { free(buffer); };
+    const auto freeFunc = [](void* buffer,
+            UTILS_UNUSED size_t size, UTILS_UNUSED void* user) { free(buffer); };
     const size_t reshapedSize = 4 * data.size / 3;
     const PixelDataFormat reshapedFormat =
         data.format == PixelDataFormat::RGB ? PixelDataFormat::RGBA : PixelDataFormat::RGBA_INTEGER;

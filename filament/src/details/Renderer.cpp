@@ -68,6 +68,8 @@ FRenderer::FRenderer(FEngine& engine) :
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.renderer.doFrameCapture",
             &engine.debug.renderer.doFrameCapture);
+    debugRegistry.registerProperty("d.renderer.disable_buffer_padding",
+            &engine.debug.renderer.disable_buffer_padding);
 
     DriverApi& driver = engine.getDriverApi();
 
@@ -103,8 +105,8 @@ FRenderer::~FRenderer() noexcept {
     // There shouldn't be any resource left when we get here, but if there is, make sure
     // to free what we can (it would probably mean something when wrong).
 #ifndef NDEBUG
-    size_t wm = getCommandsHighWatermark();
-    size_t wmpct = wm / (mEngine.getPerFrameCommandsSize() / 100);
+    size_t const wm = getCommandsHighWatermark();
+    size_t const wmpct = wm / (mEngine.getPerFrameCommandsSize() / 100);
     slog.d << "Renderer: Commands High watermark "
     << wm / 1024 << " KiB (" << wmpct << "%), "
     << wm / sizeof(Command) << " commands, " << sizeof(Command) << " bytes/command"
@@ -154,25 +156,30 @@ TextureFormat FRenderer::getLdrFormat(bool translucent) const noexcept {
     return (translucent || !mIsRGB8Supported) ? TextureFormat::RGBA8 : TextureFormat::RGB8;
 }
 
-void FRenderer::getRenderTarget(FView const& view,
-        TargetBufferFlags& outAttachementMask, Handle<HwRenderTarget>& outTarget) const noexcept {
-    outTarget = view.getRenderTargetHandle();
-    outAttachementMask = view.getRenderTargetAttachmentMask();
+std::pair<Handle<HwRenderTarget>, TargetBufferFlags>
+        FRenderer::getRenderTarget(FView const& view) const noexcept {
+    Handle<HwRenderTarget> outTarget = view.getRenderTargetHandle();
+    TargetBufferFlags outAttachementMask = view.getRenderTargetAttachmentMask();
     if (!outTarget) {
         outTarget = mRenderTargetHandle;
         outAttachementMask = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
     }
+    return {outTarget, outAttachementMask };
 }
 
-void FRenderer::initializeClearFlags() {
+backend::TargetBufferFlags FRenderer::getClearFlags() const noexcept {
+    return (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
+           | TargetBufferFlags::DEPTH_AND_STENCIL;
+}
+
+void FRenderer::initializeClearFlags() noexcept {
     // We always discard and clear the depth+stencil buffers -- we don't allow sharing these
     // across views (clear implies discard)
     mDiscardStartFlags = ((mClearOptions.discard || mClearOptions.clear) ?
                           TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
                          | TargetBufferFlags::DEPTH_AND_STENCIL;
 
-    mClearFlags = (mClearOptions.clear ? TargetBufferFlags::COLOR : TargetBufferFlags::NONE)
-                  | TargetBufferFlags::DEPTH_AND_STENCIL;
+    mClearFlags = getClearFlags();
 }
 
 void FRenderer::setPresentationTime(int64_t monotonic_clock_ns) {
@@ -209,9 +216,9 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     }
 
     // latch the frame time
-    std::chrono::duration<double> time(appVsync - mUserEpoch);
-    float h = float(time.count());
-    float l = float(time.count() - h);
+    std::chrono::duration<double> const time(appVsync - mUserEpoch);
+    float const h = float(time.count());
+    float const l = float(time.count() - h);
     mShaderUserTime = { h, l, 0, 0 };
 
     mPreviousRenderTargets.clear();
@@ -461,6 +468,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     driver.debugThreading();
 
     const bool hasPostProcess = view.hasPostProcessPass();
+    bool hasScreenSpaceRefraction = false;
     bool hasColorGrading = hasPostProcess;
     bool hasDithering = view.getDithering() == Dithering::TEMPORAL;
     bool hasFXAA = view.getAntiAliasing() == AntiAliasing::FXAA;
@@ -541,10 +549,11 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // a very fast rendering path -- in this case, we would need an extra blit to "resolve" the
     // buffer padding (because there are no other pass that can do it as a side effect).
     // In this case, it is better to skip the padding, which won't be helping much.
-    const bool noBufferPadding = colorGradingConfig.asSubpass && !hasFXAA && !scaled;
+    const bool noBufferPadding = (colorGradingConfig.asSubpass && !hasFXAA && !scaled)
+            || engine.debug.renderer.disable_buffer_padding;
 
     // guardBand must be a multiple of 16 to guarantee the same exact rendering up to 4 mip levels.
-    float guardBand = guardBandOptions.enabled ? 16.0f : 0.0f;
+    float const guardBand = guardBandOptions.enabled ? 16.0f : 0.0f;
 
     if (hasPostProcess && !noBufferPadding) {
         // We always pad the rendering viewport to dimensions multiple of 16, this guarantees
@@ -621,7 +630,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // Allocate some space for our commands in the per-frame Arena, and use that space as
     // an Arena for commands. All this space is released when we exit this method.
-    size_t perFrameCommandsSize = engine.getPerFrameCommandsSize();
+    size_t const perFrameCommandsSize = engine.getPerFrameCommandsSize();
     void* const arenaBegin = arena.allocate(perFrameCommandsSize, CACHELINE_SIZE);
     void* const arenaEnd = pointermath::add(arenaBegin, perFrameCommandsSize);
     RenderPass::Arena commandArena("Command Arena", { arenaBegin, arenaEnd });
@@ -671,11 +680,17 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         initializeClearFlags();
     }
 
+    // Note:  it is not well-defined what colorspace this clearColor is defined into. This leads
+    //        to inconsistent colors depending on enabled features. When the clear is performed
+    //        into a temporary buffer (common case), the clearColor is color-graded. A problem
+    //        arises when transparent views are used, in this case the clear color is not
+    //        color-graded.
     const float4 clearColor = mClearOptions.clearColor;
+
     const uint8_t clearStencil = mClearOptions.clearStencil;
     const TargetBufferFlags clearFlags = mClearFlags;
     const TargetBufferFlags discardStartFlags = mDiscardStartFlags;
-    TargetBufferFlags keepOverrideStartFlags = TargetBufferFlags::ALL & ~discardStartFlags;
+    const TargetBufferFlags keepOverrideStartFlags = TargetBufferFlags::ALL & ~discardStartFlags;
     TargetBufferFlags keepOverrideEndFlags = TargetBufferFlags::NONE;
 
     if (currentRenderTarget) {
@@ -691,32 +706,34 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     mDiscardStartFlags &= ~TargetBufferFlags::COLOR;
     mClearFlags &= ~TargetBufferFlags::COLOR;
 
-    Handle<HwRenderTarget> viewRenderTarget;
-    TargetBufferFlags attachmentMask;
-    getRenderTarget(view, attachmentMask, viewRenderTarget);
-    FrameGraphId<FrameGraphTexture> fgViewRenderTarget = fg.import("viewRenderTarget",
-            {
-                    .attachments = attachmentMask,
-                    .viewport = DEBUG_DYNAMIC_SCALING ? svp : vp,
-                    .clearColor = clearColor,
-                    .samples = 0,
-                    .clearFlags = clearFlags,
-                    .keepOverrideStart = keepOverrideStartFlags,
-                    .keepOverrideEnd = keepOverrideEndFlags
-            }, viewRenderTarget);
+    // the clearFlags and clearColor set below are "sticky" to the imported target, meaning
+    // they will apply anytime we render into this target, THIS INCLUDES when this target
+    // is "replacing" another one. E.g. typically when the color pass ends-up drawing directly
+    // here.
+    auto [viewRenderTarget, attachmentMask] = getRenderTarget(view);
+    FrameGraphId<FrameGraphTexture> const fgViewRenderTarget = fg.import("viewRenderTarget", {
+            .attachments = attachmentMask,
+            .viewport = DEBUG_DYNAMIC_SCALING ? svp : vp,
+            .clearColor = clearColor,
+            .samples = 0,
+            .clearFlags = clearFlags,
+            .keepOverrideStart = keepOverrideStartFlags,
+            .keepOverrideEnd = keepOverrideEndFlags
+    }, viewRenderTarget);
 
     const bool blending = blendModeTranslucent;
     const TextureFormat hdrFormat = getHdrFormat(view, needsAlphaChannel);
 
+    // the clearFlags and clearColor specified below will only apply when rendering into the
+    // temporary color buffer. In particular, they won't apply when rendering into the main
+    // swapchain (imported render target above)
     RendererUtils::ColorPassConfig config{
-            .width = svp.width,
-            .height = svp.height,
-            .xoffset = (uint32_t)xvp.left,
-            .yoffset = (uint32_t)xvp.bottom,
+            .physicalViewport = svp,
+            .logicalViewport = xvp,
             .scale = scale,
             .hdrFormat = hdrFormat,
             .msaa = msaaSampleCount,
-            .clearFlags = clearFlags,
+            .clearFlags = getClearFlags(),
             .clearColor = clearColor,
             .clearStencil = clearStencil,
             .ssrLodOffset = 0.0f,
@@ -761,9 +778,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 // The reason why this bug is acceptable is that the viewport parameters are
                 // currently only used for generating noise, so it's not too bad.
 
+                // note: aoOptions.resolution is either 1.0 or 0.5, and the result is then
+                // guaranteed to be an integer (because xvp is a multiple of 16).
                 view.prepareViewport(svp,
-                        xvp.left   * aoOptions.resolution,
-                        xvp.bottom * aoOptions.resolution);
+                        filament::Viewport{
+                             int32_t(float(xvp.left  ) * aoOptions.resolution),
+                             int32_t(float(xvp.bottom) * aoOptions.resolution),
+                            uint32_t(float(xvp.width ) * aoOptions.resolution),
+                            uint32_t(float(xvp.height) * aoOptions.resolution)});
 
                 view.commitUniforms(driver);
 
@@ -799,7 +821,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     builder.sideEffect();
                 },
                 [=, &view](FrameGraphResources const& resources,
-                        auto const& data, DriverApi& driver) mutable {
+                        auto const&, DriverApi& driver) mutable {
                     auto out = resources.getRenderPassInfo();
                     view.executePickingQueries(driver, out.target, aoOptions.resolution);
                 });
@@ -824,7 +846,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // --------------------------------------------------------------------------------------------
     // prepare screen-space reflection/refraction passes
 
-    PostProcessManager::ScreenSpaceRefConfig ssrConfig = PostProcessManager::prepareMipmapSSR(
+    PostProcessManager::ScreenSpaceRefConfig const ssrConfig = PostProcessManager::prepareMipmapSSR(
             fg, svp.width, svp.height,
             ssReflectionsOptions.enabled ? TextureFormat::RGBA16F : TextureFormat::R11F_G11F_B10F,
             view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), config.scale);
@@ -843,7 +865,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 { .width = svp.width, .height = svp.height });
 
         // generate the mipchain
-        reflections = PostProcessManager::generateMipmapSSR(ppm, fg,
+        PostProcessManager::generateMipmapSSR(ppm, fg,
                 reflections, ssrConfig.reflection, false, ssrConfig);
     }
 
@@ -856,9 +878,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     pass.appendCommands(engine, RenderPass::COLOR);
     pass.sortCommands(engine);
 
-    FrameGraphTexture::Descriptor desc = {
-            .width = config.width,
-            .height = config.height,
+    FrameGraphTexture::Descriptor const desc = {
+            .width = config.physicalViewport.width,
+            .height = config.physicalViewport.height,
             .format = config.hdrFormat
     };
 
@@ -869,7 +891,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 if (colorGradingConfig.asSubpass) {
                     ppm.colorGradingPrepareSubpass(driver,
                             colorGrading, colorGradingConfig, vignetteOptions,
-                            config.width, config.height);
+                            desc.width, desc.height);
                 } else if (colorGradingConfig.customResolve) {
                     ppm.customResolvePrepareSubpass(driver,
                             PostProcessManager::CustomResolveOp::COMPRESS);
@@ -920,8 +942,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (view.isScreenSpaceRefractionEnabled() && !pass.empty()) {
         // this cancels the colorPass() call above if refraction is active.
         // the color pass + refraction + color-grading as subpass if needed
-        colorPassOutput = RendererUtils::refractionPass(fg, mEngine, view,
+        const auto [output, enabled] = RendererUtils::refractionPass(fg, mEngine, view,
                 config, ssrConfig, colorGradingConfigForColor, pass);
+        colorPassOutput = output;
+        hasScreenSpaceRefraction = enabled;
     }
 
     if (colorGradingConfig.customResolve) {
@@ -992,7 +1016,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             // The bokeh height is always correct regardless of the dynamic resolution scaling.
             // (because the CoC is calculated w.r.t. the height), so we only need to adjust
             // the width.
-            float bokehAspectRatio = scale.x / scale.y;
+            float const bokehAspectRatio = scale.x / scale.y;
             input = ppm.dof(fg, input, depth, cameraInfo, needsAlphaChannel,
                     bokehAspectRatio, dofOptions);
         }
@@ -1047,6 +1071,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     //   as a subpass)
     // * And we also can't use the default rendertarget if frame history is needed (e.g. with
     //   screen-space reflections)
+    // * And we also can't use the default rendertarget with refractions, which need to reuse
+    //   the rendertarget due to how the clear flags work.
     // * We also need an extra blit if we haven't yet handled "xvp"
     //   TODO: in that specific scenario it would be better to just not use xvp
     // The intermediate buffer is accomplished with a "fake" opaqueBlit (i.e. blit) operation.
@@ -1058,6 +1084,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             (outputIsSwapChain &&
                     (msaaSampleCount > 1 ||
                     colorGradingConfig.asSubpass ||
+                    hasScreenSpaceRefraction ||
                     ssReflectionsOptions.enabled))) {
             assert_invariant(!scaled);
             input = ppm.blit(fg, blending, input, xvp, {

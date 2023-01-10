@@ -47,8 +47,6 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
         FrameGraphId<FrameGraphTexture> ssao;
         FrameGraphId<FrameGraphTexture> ssr;    // either screen-space reflections or refractions
         FrameGraphId<FrameGraphTexture> structure;
-        float4 clearColor{};
-        TargetBufferFlags clearFlags{};
     };
 
     Blackboard& blackboard = fg.getBlackboard();
@@ -56,8 +54,8 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
     auto& colorPass = fg.addPass<ColorPassData>(name,
             [&](FrameGraph::Builder& builder, ColorPassData& data) {
 
+                TargetBufferFlags const clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
                 TargetBufferFlags clearDepthFlags = config.clearFlags & TargetBufferFlags::DEPTH;
-                TargetBufferFlags clearColorFlags = config.clearFlags & TargetBufferFlags::COLOR;
                 TargetBufferFlags clearStencilFlags = config.clearFlags & TargetBufferFlags::STENCIL;
 
                 data.shadows = blackboard.get<FrameGraphTexture>("shadows");
@@ -100,7 +98,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                             TargetBufferFlags::STENCIL : TargetBufferFlags::NONE;
                     const char* const name = config.enabledStencilBuffer ?
                              "Depth/Stencil Buffer" : "Depth Buffer";
-                    TextureFormat format = config.enabledStencilBuffer ?
+                    TextureFormat const format = config.enabledStencilBuffer ?
                             TextureFormat::DEPTH32F_STENCIL8 : TextureFormat::DEPTH32F;
                     data.depth = builder.createTexture(name, {
                             .width = colorBufferDesc.width,
@@ -155,14 +153,11 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                  */
                 builder.declareRenderPass("Color Pass Target", {
                         .attachments = { .color = { data.color, data.output },
-                                .depth = data.depth,
-                                .stencil = data.stencil },
-                                .samples = config.msaa,
+                        .depth = data.depth,
+                        .stencil = data.stencil },
+                        .clearColor = config.clearColor,
+                        .samples = config.msaa,
                         .clearFlags = clearColorFlags | clearDepthFlags | clearStencilFlags });
-
-                data.clearColor = config.clearColor;
-                data.clearFlags = clearColorFlags | clearDepthFlags | clearStencilFlags;
-
                 blackboard["depth"] = data.depth;
             },
             [=, &view, &engine](FrameGraphResources const& resources,
@@ -184,7 +179,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                         resources.getTexture(data.structure) : engine.getOneTexture());
 
                 // set screen-space reflections and screen-space refractions
-                TextureHandle ssr = data.ssr ?
+                TextureHandle const ssr = data.ssr ?
                         resources.getTexture(data.ssr) : engine.getOneTextureArray();
 
                 view.prepareSSR(ssr, config.ssrLodOffset,
@@ -199,13 +194,12 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                         out.params.viewport.height == resources.getDescriptor(data.color).height);
 
                 view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport),
-                        config.xoffset, config.yoffset);
+                        config.logicalViewport);
 
                 view.commitUniforms(driver);
 
-                out.params.clearColor = data.clearColor;
+                // TODO: this should be a parameter of FrameGraphRenderPass::Descriptor
                 out.params.clearStencil = config.clearStencil;
-                out.params.flags.clear = data.clearFlags;
                 if (view.getBlendMode() == BlendMode::TRANSLUCENT) {
                     if (any(out.params.flags.discardStart & TargetBufferFlags::COLOR0)) {
                         // if the buffer is discarded (e.g. it's new) and we're blending,
@@ -241,7 +235,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
     return output;
 }
 
-FrameGraphId<FrameGraphTexture> RendererUtils::refractionPass(
+std::pair<FrameGraphId<FrameGraphTexture>, bool> RendererUtils::refractionPass(
         FrameGraph& fg, FEngine& engine, FView const& view,
         ColorPassConfig config,
         PostProcessManager::ScreenSpaceRefConfig const& ssrConfig,
@@ -275,8 +269,8 @@ FrameGraphId<FrameGraphTexture> RendererUtils::refractionPass(
         input = RendererUtils::colorPass(fg, "Color Pass (opaque)", engine, view, {
                         // When rendering the opaques, we need to conserve the sample buffer,
                         // so create config that specifies the sample count.
-                        .width = config.width,
-                        .height = config.height,
+                        .width = config.physicalViewport.width,
+                        .height = config.physicalViewport.height,
                         .samples = config.msaa,
                         .format = config.hdrFormat
                 }, config, { .asSubpass = false },
@@ -291,9 +285,16 @@ FrameGraphId<FrameGraphTexture> RendererUtils::refractionPass(
         // automatically because these are set in the Blackboard (they were set by the opaque
         // pass). For this reason, `desc` below is only used in colorPass() for the width and
         // height.
+
+        // Since we're reusing the existing target we don't want to clear any of its buffer.
+        // Important: if this target ended up being an imported target, then the clearFlags
+        // specified here wouldn't apply (the clearFlags of the imported target take precedence),
+        // and we'd end up clearing the opaque pass. This scenario never happens because it is
+        // prevented in Renderer.cpp's final blit.
         config.clearFlags = TargetBufferFlags::NONE;
-        output = RendererUtils::colorPass(fg, "Color Pass (transparent)", engine, view,
-                { .width = config.width, .height = config.height },
+        output = RendererUtils::colorPass(fg, "Color Pass (transparent)", engine, view, {
+                        .width = config.physicalViewport.width,
+                        .height = config.physicalViewport.height },
                 config, colorGradingConfig, pass.getExecutor(refraction, pass.end()));
 
         if (config.msaa > 1 && !colorGradingConfig.asSubpass) {
@@ -306,7 +307,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::refractionPass(
     } else {
         output = input;
     }
-    return output;
+    return { output, hasScreenSpaceRefraction };
 }
 
 UTILS_NOINLINE

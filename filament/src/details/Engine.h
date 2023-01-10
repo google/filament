@@ -518,6 +518,7 @@ public:
             // When set to true, the backend will attempt to capture the next frame and write the
             // capture to file. At the moment, only supported by the Metal backend.
             bool doFrameCapture = false;
+            bool disable_buffer_padding = false;
         } renderer;
         matdbg::DebugServer* server = nullptr;
     } debug;

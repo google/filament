@@ -111,7 +111,7 @@ export class driver$PixelBufferDescriptor {
     getBytes(): ArrayBuffer;
 }
 
-// Clients should use createTextureFromKtx/ImageFile helper functions if low level control is not needed
+// Clients should use createTextureFromKtx1/ImageFile helper functions if low level control is not needed
 export class Texture$Builder {
     public width(width: number): Texture$Builder;
     public height(height: number): Texture$Builder;
@@ -533,6 +533,7 @@ interface Filamesh {
 
 export class Engine {
     public static create(canvas: HTMLCanvasElement, contextOptions?: object): Engine;
+    public static destroy(engine: Engine): void;
     public execute(): void;
     public createCamera(entity: Entity): Camera;
     public createMaterial(urlOrBuffer: BufferReference): Material;

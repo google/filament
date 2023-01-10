@@ -250,7 +250,19 @@ public class Texture {
         SRGB8_ALPHA8_ASTC_10x8,
         SRGB8_ALPHA8_ASTC_10x10,
         SRGB8_ALPHA8_ASTC_12x10,
-        SRGB8_ALPHA8_ASTC_12x12
+        SRGB8_ALPHA8_ASTC_12x12,
+
+        // RGTC formats available with a GLES extension
+        RED_RGTC1,              // BC4 unsigned
+        SIGNED_RED_RGTC1,       // BC4 signed
+        RED_GREEN_RGTC2,        // BC5 unsigned
+        SIGNED_RED_GREEN_RGTC2, // BC5 signed
+
+        // BPTC formats available with a GLES extension
+        RGB_BPTC_SIGNED_FLOAT,  // BC6H signed
+        RGB_BPTC_UNSIGNED_FLOAT,// BC6H unsigned
+        RGBA_BPTC_UNORM,        // BC7
+        SRGB_ALPHA_BPTC_UNORM   // BC7 sRGB
     }
 
     /**
@@ -296,7 +308,19 @@ public class Texture {
         SRGB8_ALPHA8_ASTC_10x8,
         SRGB8_ALPHA8_ASTC_10x10,
         SRGB8_ALPHA8_ASTC_12x10,
-        SRGB8_ALPHA8_ASTC_12x12
+        SRGB8_ALPHA8_ASTC_12x12,
+
+        // RGTC formats available with a GLES extension
+        RED_RGTC1,              // BC4 unsigned
+        SIGNED_RED_RGTC1,       // BC4 signed
+        RED_GREEN_RGTC2,        // BC5 unsigned
+        SIGNED_RED_GREEN_RGTC2, // BC5 signed
+
+        // BPTC formats available with a GLES extension
+        RGB_BPTC_SIGNED_FLOAT,  // BC6H signed
+        RGB_BPTC_UNSIGNED_FLOAT,// BC6H unsigned
+        RGBA_BPTC_UNORM,        // BC7
+        SRGB_ALPHA_BPTC_UNORM   // BC7 sRGB
     }
 
     /**

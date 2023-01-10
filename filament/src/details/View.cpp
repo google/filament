@@ -677,12 +677,13 @@ void FView::prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) const n
     mPerViewUniforms.prepareCamera(engine, cameraInfo);
 }
 
-void FView::prepareViewport(const filament::Viewport& viewport,
-        uint32_t xoffset, uint32_t yoffset) const noexcept {
+void FView::prepareViewport(
+        const filament::Viewport& physicalViewport,
+        const filament::Viewport& logicalViewport) const noexcept {
     SYSTRACE_CALL();
     // TODO: we should pass viewport.{left|bottom} to the backend, so it can offset the
     //       scissor properly.
-    mPerViewUniforms.prepareViewport(viewport, xoffset, yoffset);
+    mPerViewUniforms.prepareViewport(physicalViewport, logicalViewport);
 }
 
 void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {

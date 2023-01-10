@@ -54,14 +54,14 @@ class App {
             .build(engine, sunlight);
         this.scene.addEntity(sunlight);
 
-        const indirectLight = this.ibl = engine.createIblFromKtx(iblfile);
+        const indirectLight = this.ibl = engine.createIblFromKtx1(iblfile);
         this.scene.setIndirectLight(indirectLight);
 
         const radians = 1.0;
         indirectLight.setRotation(mat3.fromRotation(mat3.create(), radians, [0, 1, 0]))
         indirectLight.setIntensity(10000);
 
-        const skybox = engine.createSkyFromKtx(skyfile);
+        const skybox = engine.createSkyFromKtx1(skyfile);
         this.scene.setSkybox(skybox);
 
         const material = engine.createMaterial('parquet.filamat');

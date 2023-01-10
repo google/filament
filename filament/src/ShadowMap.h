@@ -87,10 +87,7 @@ public:
         // e.g., for a texture dimension of 512, shadowDimension would be 510
         uint16_t shadowDimension = 0;
 
-        // e.g. Vulkan clip-space
-        bool clipSpaceFlipped = false;
-
-        // e.g. metal textures
+        // e.g. metal and vulkan textures
         bool textureSpaceFlipped = false;
 
         // whether we're using vsm

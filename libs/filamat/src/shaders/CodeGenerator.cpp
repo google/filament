@@ -662,9 +662,11 @@ io::sstream& CodeGenerator::generateCommon(io::sstream& out, ShaderStage stage) 
 
     switch (stage) {
         case ShaderStage::VERTEX:
+            out << SHADERS_COMMON_INSTANCING_GLSL_DATA;
             out << SHADERS_COMMON_SHADOWING_GLSL_DATA;
             break;
         case ShaderStage::FRAGMENT:
+            out << SHADERS_COMMON_INSTANCING_GLSL_DATA;
             out << SHADERS_COMMON_SHADOWING_GLSL_DATA;
             out << SHADERS_COMMON_SHADING_FS_DATA;
             out << SHADERS_COMMON_GRAPHICS_FS_DATA;

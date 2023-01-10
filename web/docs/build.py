@@ -72,7 +72,8 @@ import re
 import shutil
 
 from itertools import chain
-from mistletoe import HTMLRenderer, BaseRenderer
+from mistletoe import HTMLRenderer
+from mistletoe.base_renderer import BaseRenderer
 from mistletoe import span_token
 from mistletoe.block_token import CodeFence as CF
 from pygments import highlight

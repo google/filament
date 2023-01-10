@@ -47,7 +47,7 @@ void main() {
     fragColor.xy = computeDepthMomentsVSM(depth);
     fragColor.zw = computeDepthMomentsVSM(-1.0 / depth); // requires at least RGBA16F
 #elif defined(VARIANT_HAS_PICKING)
-    outPicking.x = getObjectUniforms().objectId;
+    outPicking.x = object_uniforms.objectId;
     outPicking.y = floatBitsToUint(vertex_position.z / vertex_position.w);
 #else
     // that's it

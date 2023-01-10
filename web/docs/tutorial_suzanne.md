@@ -215,9 +215,9 @@ const filamesh_url = 'suzanne.filamesh';
 Next, let's create the low-resolution skybox and IBL in the `App` constructor.
 
 ```js {fragment="create sky box and IBL"}
-this.skybox = this.engine.createSkyFromKtx(sky_small_url);
+this.skybox = this.engine.createSkyFromKtx1(sky_small_url);
 this.scene.setSkybox(this.skybox);
-this.indirectLight = this.engine.createIblFromKtx(ibl_url);
+this.indirectLight = this.engine.createIblFromKtx1(ibl_url);
 this.indirectLight.setIntensity(100000);
 this.scene.setIndirectLight(this.indirectLight);
 ```
@@ -237,11 +237,11 @@ was created in the app constructor.
 
 ```js {fragment="fetch larger assets"}
 Filament.fetch([sky_large_url, albedo_url, roughness_url, metallic_url, normal_url, ao_url], () => {
-    const albedo = this.engine.createTextureFromKtx(albedo_url, {srgb: true});
-    const roughness = this.engine.createTextureFromKtx(roughness_url);
-    const metallic = this.engine.createTextureFromKtx(metallic_url);
-    const normal = this.engine.createTextureFromKtx(normal_url);
-    const ao = this.engine.createTextureFromKtx(ao_url);
+    const albedo = this.engine.createTextureFromKtx1(albedo_url, {srgb: true});
+    const roughness = this.engine.createTextureFromKtx1(roughness_url);
+    const metallic = this.engine.createTextureFromKtx1(metallic_url);
+    const normal = this.engine.createTextureFromKtx1(normal_url);
+    const ao = this.engine.createTextureFromKtx1(ao_url);
 
     const sampler = new Filament.TextureSampler(
         Filament.MinFilter.LINEAR_MIPMAP_LINEAR,
@@ -256,7 +256,7 @@ Filament.fetch([sky_large_url, albedo_url, roughness_url, metallic_url, normal_u
 
     // Replace low-res skybox with high-res skybox.
     this.engine.destroySkybox(this.skybox);
-    this.skybox = this.engine.createSkyFromKtx(sky_large_url);
+    this.skybox = this.engine.createSkyFromKtx1(sky_large_url);
     this.scene.setSkybox(this.skybox);
 
     this.scene.addEntity(this.suzanne);

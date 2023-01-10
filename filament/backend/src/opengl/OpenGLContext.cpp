@@ -27,7 +27,7 @@ bool OpenGLContext::queryOpenGLVersion(GLint* major, GLint* minor) noexcept {
     if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES) {
         char const* version = (char const*)glGetString(GL_VERSION);
         // This works on all versions of GLES
-        int n = version ? sscanf(version, "OpenGL ES %d.%d", major, minor) : 0;
+        int const n = version ? sscanf(version, "OpenGL ES %d.%d", major, minor) : 0;
         return n == 2;
     } else if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
         // OpenGL version
@@ -142,7 +142,7 @@ OpenGLContext::OpenGLContext() noexcept {
             bugs.enable_initialize_non_used_uniform_array = true;
 
             int maj, min, driverMajor, driverMinor;
-            int c = sscanf(state.version, "OpenGL ES %d.%d V@%d.%d", // NOLINT(cert-err34-c)
+            int const c = sscanf(state.version, "OpenGL ES %d.%d V@%d.%d", // NOLINT(cert-err34-c)
                     &maj, &min, &driverMajor, &driverMinor);
             if (c == 4) {
                 // Workarounds based on version here.
@@ -176,7 +176,7 @@ OpenGLContext::OpenGLContext() noexcept {
                 bugs.dont_use_timer_query = true;
 
                 int maj, min, driverVersion, driverRevision, driverPatch;
-                int c = sscanf(state.version, "OpenGL ES %d.%d v%d.r%dp%d", // NOLINT(cert-err34-c)
+                int const c = sscanf(state.version, "OpenGL ES %d.%d v%d.r%dp%d", // NOLINT(cert-err34-c)
                         &maj, &min, &driverVersion, &driverRevision, &driverPatch);
                 if (c == 5) {
                     // Workarounds based on version here.
@@ -218,7 +218,7 @@ OpenGLContext::OpenGLContext() noexcept {
         if (strstr(state.renderer, "Adreno")) {
             // Qualcomm GPU
             // early exit condition is flattened in EASU code
-            // (that should be regardless of ANGLE, but we should double check)
+            // (that should be regardless of ANGLE, but we should double-check)
             bugs.split_easu = true;
         }
         // TODO: see if we could use `bugs.allow_read_only_ancillary_feedback_loop = true`
@@ -270,8 +270,8 @@ OpenGLContext::OpenGLContext() noexcept {
 
 #if !defined(NDEBUG) && defined(GL_KHR_debug)
     if (ext.KHR_debug) {
-        auto cb = [](GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
-                const GLchar* message, const void *userParam) {
+        auto cb = +[](GLenum, GLenum type, GLuint, GLenum severity, GLsizei length,
+                const GLchar* message, const void *) {
             io::ostream* stream = &slog.i;
             switch (severity) {
                 case GL_DEBUG_SEVERITY_HIGH:    stream = &slog.e;   break;
@@ -292,7 +292,7 @@ OpenGLContext::OpenGLContext() noexcept {
                 case GL_DEBUG_TYPE_MARKER:              level = "MARKER: ";              break;
                 default: break;
             }
-            out << "KHR_debug " << level << message << io::endl;
+            out << "KHR_debug " << level << std::string_view{ message, size_t(length) } << io::endl;
         };
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -304,7 +304,7 @@ OpenGLContext::OpenGLContext() noexcept {
 void OpenGLContext::setDefaultState() noexcept {
     // We need to make sure our internal state matches the GL state when we start.
     // (some of these calls may be unneeded as they might be the gl defaults)
-    GLenum caps[] = {
+    GLenum const caps[] = {
         GL_BLEND,
         GL_CULL_FACE,
         GL_SCISSOR_TEST,
@@ -315,16 +315,14 @@ void OpenGLContext::setDefaultState() noexcept {
         GL_SAMPLE_COVERAGE,
         GL_POLYGON_OFFSET_FILL,  
     };
-    size_t capsCount = sizeof(caps) / sizeof(caps[0]);
 
     UTILS_NOUNROLL
-    for (GLenum capi = 0; capi < capsCount; ++capi) {
-        size_t capIndex = getIndexForCap(caps[capi]);
-        GLenum cap = caps[capi];
+    for (auto const capi : caps) {
+        size_t const capIndex = getIndexForCap(capi);
         if (state.enables.caps[capIndex]) {
-            glEnable(cap);
+            glEnable(capi);
         } else {
-            glDisable(cap);
+            glDisable(capi);
         }
     }
 
@@ -353,7 +351,7 @@ void OpenGLContext::setDefaultState() noexcept {
 
 void OpenGLContext::initExtensionsGLES() noexcept {
     const char * const extensions = (const char*)glGetString(GL_EXTENSIONS);
-    GLUtils::unordered_string_set exts = GLUtils::split(extensions);
+    GLUtils::unordered_string_set const exts = GLUtils::split(extensions);
     if constexpr (DEBUG_PRINT_EXTENSIONS) {
         for (auto extension: exts) {
             slog.d << "\"" << std::string_view(extension) << "\"\n";
@@ -377,6 +375,8 @@ void OpenGLContext::initExtensionsGLES() noexcept {
 #endif
     ext.EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
     ext.EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
+    ext.EXT_texture_compression_rgtc = exts.has("GL_EXT_texture_compression_rgtc"sv);
+    ext.EXT_texture_compression_bptc = exts.has("GL_EXT_texture_compression_bptc"sv);
     ext.EXT_texture_cube_map_array = exts.has("GL_EXT_texture_cube_map_array"sv) || exts.has("GL_OES_texture_cube_map_array"sv);
     ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
     ext.KHR_debug = exts.has("GL_KHR_debug"sv);
@@ -420,6 +420,8 @@ void OpenGLContext::initExtensionsGL() noexcept {
     ext.EXT_texture_compression_etc2 = exts.has("GL_ARB_ES3_compatibility"sv);
     ext.EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
     ext.EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
+    ext.EXT_texture_compression_rgtc = exts.has("GL_EXT_texture_compression_rgtc"sv);
+    ext.EXT_texture_compression_bptc = exts.has("GL_EXT_texture_compression_bptc"sv);
     ext.EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
     ext.EXT_texture_sRGB = exts.has("GL_EXT_texture_sRGB"sv);
     ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
@@ -444,7 +446,7 @@ void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {
             glBindBuffer(target, buffer);
         }
     } else {
-        size_t targetIndex = getIndexForBufferTarget(target);
+        size_t const targetIndex = getIndexForBufferTarget(target);
         update_state(state.buffers.genericBinding[targetIndex], buffer, [&]() {
             glBindBuffer(target, buffer);
         });
@@ -611,7 +613,7 @@ void OpenGLContext::resetState() noexcept {
     // Reset state.buffers to its default state to avoid the complexity and error-prone
     // nature of resetting the GL state to its existing state
     state.buffers = {};
-    GLenum bufferTargets[] = {
+    GLenum const bufferTargets[] = {
         GL_UNIFORM_BUFFER,
         GL_TRANSFORM_FEEDBACK_BUFFER,
 #if !defined(__EMSCRIPTEN__)
@@ -624,9 +626,7 @@ void OpenGLContext::resetState() noexcept {
         GL_PIXEL_PACK_BUFFER,
         GL_PIXEL_UNPACK_BUFFER,
     };
-    size_t bufferTargetCount = sizeof(bufferTargets) / sizeof(bufferTargets[0]);
-    for (size_t targetArrayIndex = 0; targetArrayIndex < bufferTargetCount; ++targetArrayIndex) {
-        GLenum target = bufferTargets[targetArrayIndex];
+    for (auto const target : bufferTargets) {
         glBindBuffer(target, 0);
     }
 
@@ -655,13 +655,11 @@ void OpenGLContext::resetState() noexcept {
         GL_TEXTURE_CUBE_MAP_ARRAY,
 #endif
     };
-    const size_t textureTargetCount = sizeof(textureTargets) / sizeof(textureTargets[0]);
     for (GLint unit = 0; unit < gets.max_combined_texture_image_units; ++unit) {
         glActiveTexture(GL_TEXTURE0 + unit);
         glBindSampler(unit, 0);
 
-        for (size_t textureTargetArrayIndex = 0; textureTargetArrayIndex < textureTargetCount; ++textureTargetArrayIndex) {
-            GLuint target = textureTargets[textureTargetArrayIndex];
+        for (auto const target : textureTargets) {
             glBindTexture(target, 0);
         }
     }

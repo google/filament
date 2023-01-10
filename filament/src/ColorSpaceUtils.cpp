@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ColorSpace.h"
+#include "ColorSpaceUtils.h"
 
 namespace filament {
 

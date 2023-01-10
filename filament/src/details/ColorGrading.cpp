@@ -21,7 +21,9 @@
 
 #include "FilamentAPI-impl.h"
 
-#include "ColorSpace.h"
+#include "ColorSpaceUtils.h"
+
+#include <filament/ColorSpace.h>
 
 #include <math/vec2.h>
 #include <math/vec3.h>
@@ -31,13 +33,14 @@
 #include <utils/SpinLock.h>
 #include <utils/Systrace.h>
 
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 
 namespace filament {
 
 using namespace utils;
 using namespace math;
+using namespace color;
 using namespace backend;
 
 //------------------------------------------------------------------------------
@@ -89,6 +92,9 @@ struct ColorGrading::BuilderDetails {
     float3 midPoint         = {1.0f};
     float3 highlightScale   = {1.0f};
 
+    // Output color space
+    ColorSpace outputColorSpace = Rec709-sRGB-D65;
+
     bool operator!=(const BuilderDetails &rhs) const {
         return !(rhs == *this);
     }
@@ -117,7 +123,8 @@ struct ColorGrading::BuilderDetails {
                saturation == rhs.saturation &&
                shadowGamma == rhs.shadowGamma &&
                midPoint == rhs.midPoint &&
-               highlightScale == rhs.highlightScale;
+               highlightScale == rhs.highlightScale &&
+               outputColorSpace == rhs.outputColorSpace;
     }
 };
 
@@ -250,6 +257,12 @@ ColorGrading::Builder& ColorGrading::Builder::curves(
     mImpl->shadowGamma = max(1e-5f, shadowGamma);
     mImpl->midPoint = max(1e-5f, midPoint);
     mImpl->highlightScale = highlightScale;
+    return *this;
+}
+
+ColorGrading::Builder& ColorGrading::Builder::outputColorSpace(
+        const ColorSpace& colorSpace) noexcept {
+    mImpl->outputColorSpace = colorSpace;
     return *this;
 }
 
@@ -605,16 +618,27 @@ static float3 selectColorGradingLuminance(ColorGrading::ToneMapping toneMapping)
 }
 #pragma clang diagnostic pop
 
+using ColorTransform = float3(*)(float3);
+
+static ColorTransform selectOETF(const ColorSpace& colorSpace) noexcept {
+    if (colorSpace.getTransferFunction() == Linear) {
+        return OETF_Linear;
+    }
+    return OETF_sRGB;
+}
+
 //------------------------------------------------------------------------------
 // Color grading implementation
 //------------------------------------------------------------------------------
 
 struct Config {
-    size_t lutDimension;
+    size_t lutDimension{};
     mat3f  adaptationTransform;
     mat3f  colorGradingIn;
     mat3f  colorGradingOut;
-    float3 colorGradingLuminance;
+    float3 colorGradingLuminance{};
+
+    ColorTransform oetf;
 };
 
 // Inside the FColorGrading constructor, TSAN sporadically detects a data race on the config struct;
@@ -637,6 +661,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
         c.colorGradingIn        = selectColorGradingTransformIn(builder->toneMapping);
         c.colorGradingOut       = selectColorGradingTransformOut(builder->toneMapping);
         c.colorGradingLuminance = selectColorGradingLuminance(builder->toneMapping);
+        c.oetf                  = selectOETF(builder->outputColorSpace);
     }
 
     mDimension = c.lutDimension;
@@ -759,7 +784,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                     v = saturate(v);
 
                     // Apply OETF
-                    v = OETF_sRGB(v);
+                    v = c.oetf(v);
 
                     *p++ = half4{v, 0.0f};
                 }

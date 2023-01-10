@@ -17,6 +17,7 @@ set(PUBLIC_HDRS
         include/filament/Camera.h
         include/filament/Color.h
         include/filament/ColorGrading.h
+        include/filament/ColorSpace.h
         include/filament/DebugRegistry.h
         include/filament/Engine.h
         include/filament/Exposure.h
@@ -53,7 +54,7 @@ set(SRCS
         src/BufferObject.cpp
         src/Camera.cpp
         src/Color.cpp
-        src/ColorSpace.cpp
+        src/ColorSpaceUtils.cpp
         src/Culler.cpp
         src/DFG.cpp
         src/DebugRegistry.cpp
@@ -135,7 +136,7 @@ set(SRCS
 set(PRIVATE_HDRS
         src/Allocators.h
         src/BufferPoolAllocator.h
-        src/ColorSpace.h
+        src/ColorSpaceUtils.h
         src/Culler.h
         src/DFG.h
         src/FilamentAPI-impl.h

@@ -137,91 +137,93 @@ public:
 
     // features supported by this version of GL or GLES
     struct {
-        bool multisample_texture = false;
-    } features;
+        bool multisample_texture;
+    } features = {};
 
     // supported extensions detected at runtime
     struct {
-        bool APPLE_color_buffer_packed_float = false;
-        bool ARB_shading_language_packing = false;
-        bool EXT_clip_control = false;
-        bool EXT_color_buffer_float = false;
-        bool EXT_color_buffer_half_float = false;
-        bool EXT_debug_marker = false;
-        bool EXT_disjoint_timer_query = false;
-        bool EXT_multisampled_render_to_texture = false;
-        bool EXT_multisampled_render_to_texture2 = false;
-        bool EXT_shader_framebuffer_fetch = false;
-        bool KHR_texture_compression_astc_hdr = false;
-        bool KHR_texture_compression_astc_ldr = false;
-        bool EXT_texture_compression_etc2 = false;
-        bool EXT_texture_compression_s3tc = false;
-        bool EXT_texture_compression_s3tc_srgb = false;
-        bool EXT_texture_cube_map_array = false;
-        bool EXT_texture_filter_anisotropic = false;
-        bool EXT_texture_sRGB = false;
-        bool GOOGLE_cpp_style_line_directive = false;
-        bool KHR_debug = false;
-        bool OES_EGL_image_external_essl3 = false;
-        bool QCOM_tiled_rendering = false;
-        bool WEBGL_compressed_texture_etc = false;
-        bool WEBGL_compressed_texture_s3tc = false;
-        bool WEBGL_compressed_texture_s3tc_srgb = false;
-    } ext;
+        bool APPLE_color_buffer_packed_float;
+        bool ARB_shading_language_packing;
+        bool EXT_clip_control;
+        bool EXT_color_buffer_float;
+        bool EXT_color_buffer_half_float;
+        bool EXT_debug_marker;
+        bool EXT_disjoint_timer_query;
+        bool EXT_multisampled_render_to_texture;
+        bool EXT_multisampled_render_to_texture2;
+        bool EXT_shader_framebuffer_fetch;
+        bool KHR_texture_compression_astc_hdr;
+        bool KHR_texture_compression_astc_ldr;
+        bool EXT_texture_compression_etc2;
+        bool EXT_texture_compression_s3tc;
+        bool EXT_texture_compression_s3tc_srgb;
+        bool EXT_texture_compression_rgtc;
+        bool EXT_texture_compression_bptc;
+        bool EXT_texture_cube_map_array;
+        bool EXT_texture_filter_anisotropic;
+        bool EXT_texture_sRGB;
+        bool GOOGLE_cpp_style_line_directive;
+        bool KHR_debug;
+        bool OES_EGL_image_external_essl3;
+        bool QCOM_tiled_rendering;
+        bool WEBGL_compressed_texture_etc;
+        bool WEBGL_compressed_texture_s3tc;
+        bool WEBGL_compressed_texture_s3tc_srgb;
+    } ext = {};
 
     struct {
         // Some drivers have issues with UBOs in the fragment shader when
         // glFlush() is called between draw calls.
-        bool disable_glFlush = false;
+        bool disable_glFlush;
 
         // Some drivers seem to not store the GL_ELEMENT_ARRAY_BUFFER binding
         // in the VAO state.
-        bool vao_doesnt_store_element_array_buffer_binding = false;
+        bool vao_doesnt_store_element_array_buffer_binding;
 
         // Some drivers have gl state issues when drawing from shared contexts
-        bool disable_shared_context_draws = false;
+        bool disable_shared_context_draws;
 
         // Some drivers require the GL_TEXTURE_EXTERNAL_OES target to be bound when
         // the texture image changes, even if it's already bound to that texture
-        bool texture_external_needs_rebind = false;
+        bool texture_external_needs_rebind;
 
         // Some web browsers seem to immediately clear the default framebuffer when calling
         // glInvalidateFramebuffer with WebGL 2.0
-        bool disable_invalidate_framebuffer = false;
+        bool disable_invalidate_framebuffer;
 
         // Some drivers declare GL_EXT_texture_filter_anisotropic but don't support
         // calling glSamplerParameter() with GL_TEXTURE_MAX_ANISOTROPY_EXT
-        bool texture_filter_anisotropic_broken_on_sampler = false;
+        bool texture_filter_anisotropic_broken_on_sampler;
 
         // Some drivers have issues when reading from a mip while writing to a different mip.
         // In the OpenGL ES 3.0 specification this is covered in section 4.4.3,
         // "Feedback Loops Between Textures and the Framebuffer".
-        bool disable_feedback_loops = false;
+        bool disable_feedback_loops;
 
         // Some drivers don't implement timer queries correctly
-        bool dont_use_timer_query = false;
+        bool dont_use_timer_query;
 
         // Some drivers can't blit from a sidecar renderbuffer into a layer of a texture array.
         // This technique is used for VSM with MSAA turned on.
-        bool disable_sidecar_blit_into_texture_array = false;
+        bool disable_sidecar_blit_into_texture_array;
 
         // Some drivers incorrectly flatten the early exit condition in the EASU code, in which
         // case we need an alternative algorithm
-        bool split_easu = false;
+        bool split_easu;
 
         // As of Android R some qualcomm drivers invalidate buffers for the whole render pass
         // even if glInvalidateFramebuffer() is called at the end of it.
-        bool invalidate_end_only_if_invalidate_start = false;
+        bool invalidate_end_only_if_invalidate_start;
 
         // GLES doesn't allow feedback loops even if writes are disabled. So take we the point of
         // view that this is generally forbidden. However, this restriction is lifted on desktop
         // GL and Vulkan and probably Metal.
-        bool allow_read_only_ancillary_feedback_loop = false;
+        bool allow_read_only_ancillary_feedback_loop;
 
         // Some Adreno drivers crash in glDrawXXX() when there's an uninitialized uniform block,
         // even when the shader doesn't access it.
-        bool enable_initialize_non_used_uniform_array = false;
-    } bugs;
+        bool enable_initialize_non_used_uniform_array;
+    } bugs = {};
 
     // state getters -- as needed.
     vec4gli const& getViewport() const { return state.window.viewport; }

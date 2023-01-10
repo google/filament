@@ -29,6 +29,8 @@
 
 #include <stdint.h>
 
+#include <utility>
+
 namespace filament {
 
 class FRenderTarget;
@@ -40,14 +42,11 @@ class RendererUtils {
 public:
 
     struct ColorPassConfig {
-        // Rendering viewport width (e.g. scaled down viewport from dynamic resolution)
-        uint32_t width;
-        // Rendering viewport height (e.g. scaled down viewport from dynamic resolution)
-        uint32_t height;
-        // Rendering offset within the viewport (e.g. non-zero when we have guard bands)
-        uint32_t xoffset;
-        // Rendering offset within the viewport (e.g. non-zero when we have guard bands)
-        uint32_t yoffset;
+        // Rendering viewport (e.g. scaled down viewport from dynamic resolution)
+        Viewport physicalViewport;
+        // Logical viewport (e.g. left-bottom non-zero when we have guard bands), origin
+        // relative to physicalViewport
+        Viewport logicalViewport;
         // dynamic resolution scale
         math::float2 scale;
         // HDR format
@@ -77,7 +76,7 @@ public:
             PostProcessManager::ColorGradingConfig colorGradingConfig,
             RenderPass::Executor const& passExecutor) noexcept;
 
-    static FrameGraphId<FrameGraphTexture> refractionPass(
+    static std::pair<FrameGraphId<FrameGraphTexture>, bool> refractionPass(
             FrameGraph& fg, FEngine& engine, FView const& view,
             ColorPassConfig config,
             PostProcessManager::ScreenSpaceRefConfig const& ssrConfig,

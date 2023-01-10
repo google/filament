@@ -32,7 +32,7 @@ static_assert(CONFIG_MAX_SHADOW_CASCADES == 4,
 BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
     using Type = BufferInterfaceBlock::Type;
 
-    static BufferInterfaceBlock uib = BufferInterfaceBlock::Builder()
+    static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
             .name(PerViewUib::_name)
             .add({
             { "viewFromWorldMatrix",    0, Type::MAT4,   Precision::HIGH },
@@ -52,9 +52,9 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // values below should only be accessed in surface materials
             // ------------------------------------------------------------------------------------
 
-            { "origin",                 0, Type::FLOAT2, Precision::HIGH },
-            { "offset",                 0, Type::FLOAT2, Precision::HIGH },
             { "resolution",             0, Type::FLOAT4, Precision::HIGH },
+            { "logicalViewportScale",   0, Type::FLOAT2, Precision::HIGH },
+            { "logicalViewportOffset",  0, Type::FLOAT2, Precision::HIGH },
 
             { "lodBias",                0, Type::FLOAT                   },
             { "refractionLodOffset",    0, Type::FLOAT                   },
@@ -150,7 +150,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
 }
 
 BufferInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
-    static BufferInterfaceBlock uib =  BufferInterfaceBlock::Builder()
+    static BufferInterfaceBlock const uib =  BufferInterfaceBlock::Builder()
             .name(PerRenderableUib::_name)
             .add({{ "data", CONFIG_MAX_INSTANCES, BufferInterfaceBlock::Type::STRUCT, {},
                     "PerRenderableData", sizeof(PerRenderableData), "CONFIG_MAX_INSTANCES" }})
@@ -159,7 +159,7 @@ BufferInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
 }
 
 BufferInterfaceBlock const& UibGenerator::getLightsUib() noexcept {
-    static BufferInterfaceBlock uib = BufferInterfaceBlock::Builder()
+    static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
             .name(LightsUib::_name)
             .add({{ "lights", CONFIG_MAX_LIGHT_COUNT,
                     BufferInterfaceBlock::Type::MAT4, Precision::HIGH }})
@@ -168,7 +168,7 @@ BufferInterfaceBlock const& UibGenerator::getLightsUib() noexcept {
 }
 
 BufferInterfaceBlock const& UibGenerator::getShadowUib() noexcept {
-    static BufferInterfaceBlock uib = BufferInterfaceBlock::Builder()
+    static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
             .name(ShadowUib::_name)
             .add({{ "shadows", CONFIG_MAX_SHADOWMAPS,
                     BufferInterfaceBlock::Type::STRUCT, {},
@@ -178,7 +178,7 @@ BufferInterfaceBlock const& UibGenerator::getShadowUib() noexcept {
 }
 
 BufferInterfaceBlock const& UibGenerator::getPerRenderableBonesUib() noexcept {
-    static BufferInterfaceBlock uib = BufferInterfaceBlock::Builder()
+    static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
             .name(PerRenderableBoneUib::_name)
             .add({{ "bones", CONFIG_MAX_BONE_COUNT,
                     BufferInterfaceBlock::Type::STRUCT, {},
@@ -188,7 +188,7 @@ BufferInterfaceBlock const& UibGenerator::getPerRenderableBonesUib() noexcept {
 }
 
 BufferInterfaceBlock const& UibGenerator::getPerRenderableMorphingUib() noexcept {
-    static BufferInterfaceBlock uib = BufferInterfaceBlock::Builder()
+    static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
             .name(PerRenderableMorphingUib::_name)
             .add({{ "weights", CONFIG_MAX_MORPH_TARGET_COUNT,
                     BufferInterfaceBlock::Type::FLOAT4 }})
@@ -197,7 +197,7 @@ BufferInterfaceBlock const& UibGenerator::getPerRenderableMorphingUib() noexcept
 }
 
 BufferInterfaceBlock const& UibGenerator::getFroxelRecordUib() noexcept {
-    static BufferInterfaceBlock uib = BufferInterfaceBlock::Builder()
+    static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
             .name(FroxelRecordUib::_name)
             .add({{ "records", 1024, BufferInterfaceBlock::Type::UINT4, Precision::HIGH }})
             .build();

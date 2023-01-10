@@ -19,8 +19,7 @@
 #include <utils/Panic.h>
 #include <utils/debug.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 PresentCallable::PresentCallable(PresentFn fn, void* user) noexcept
     : mPresentFn(fn), mUser(user) {
@@ -35,5 +34,4 @@ void PresentCallable::operator()(bool presentFrame) noexcept {
     mPresentFn = nullptr;
 }
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend

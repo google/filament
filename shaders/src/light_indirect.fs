@@ -549,7 +549,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 
     SSAOInterpolationCache interpolationCache;
 #if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED) || defined(MATERIAL_HAS_REFLECTIONS)
-    interpolationCache.uv = uvToRenderTargetUV(getNormalizedViewportCoord().xy);
+    interpolationCache.uv = uvToRenderTargetUV(getNormalizedPhysicalViewportCoord().xy);
 #endif
 
     // screen-space reflections

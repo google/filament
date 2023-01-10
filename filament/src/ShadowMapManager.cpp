@@ -447,8 +447,8 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             .atlasDimension      = mTextureAtlasRequirements.size,
             .textureDimension    = uint16_t(options.mapSize),
             .shadowDimension     = uint16_t(options.mapSize - 2u),
-            .clipSpaceFlipped    = engine.getBackend() == Backend::VULKAN,
-            .textureSpaceFlipped = engine.getBackend() == Backend::METAL,
+            .textureSpaceFlipped = engine.getBackend() == Backend::METAL ||
+                                   engine.getBackend() == Backend::VULKAN,
             .vsm                 = view.hasVSM()
     };
 
@@ -662,8 +662,8 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap,
             .atlasDimension      = mTextureAtlasRequirements.size,
             .textureDimension    = uint16_t(options->mapSize),
             .shadowDimension     = uint16_t(options->mapSize - 2u),
-            .clipSpaceFlipped    = engine.getBackend() == Backend::VULKAN,
-            .textureSpaceFlipped = engine.getBackend() == Backend::METAL,
+            .textureSpaceFlipped = engine.getBackend() == Backend::METAL ||
+                                   engine.getBackend() == Backend::VULKAN,
             .vsm                 = view.hasVSM()
     };
 
@@ -743,8 +743,8 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
             .atlasDimension      = mTextureAtlasRequirements.size,
             .textureDimension    = uint16_t(options->mapSize),
             .shadowDimension     = uint16_t(options->mapSize), // point-lights don't have a border
-            .clipSpaceFlipped    = engine.getBackend() == Backend::VULKAN,
-            .textureSpaceFlipped = engine.getBackend() == Backend::METAL,
+            .textureSpaceFlipped = engine.getBackend() == Backend::METAL ||
+                                   engine.getBackend() == Backend::VULKAN,
             .vsm                 = view.hasVSM()
     };
 

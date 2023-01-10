@@ -58,10 +58,9 @@ public:
      * Filaments-scope Public API
      */
 
-    FSkybox* getSkybox() noexcept { return mSkybox; }
-    FSkybox const* getSkybox() const noexcept { return mSkybox; }
+    FSkybox* getSkybox() const noexcept { return mSkybox; }
 
-    FIndirectLight const* getIndirectLight() const noexcept { return mIndirectLight; }
+    FIndirectLight* getIndirectLight() const noexcept { return mIndirectLight; }
 
     // the directional light is always stored first in the LightSoA, so we need to account
     // for that in a few places.
@@ -188,7 +187,7 @@ public:
 private:
     friend class Scene;
     void setSkybox(FSkybox* skybox) noexcept;
-    void setIndirectLight(FIndirectLight const* ibl) noexcept { mIndirectLight = ibl; }
+    void setIndirectLight(FIndirectLight* ibl) noexcept { mIndirectLight = ibl; }
     void addEntity(utils::Entity entity);
     void addEntities(const utils::Entity* entities, size_t count);
     void remove(utils::Entity entity);
@@ -203,7 +202,7 @@ private:
 
     FEngine& mEngine;
     FSkybox* mSkybox = nullptr;
-    FIndirectLight const* mIndirectLight = nullptr;
+    FIndirectLight* mIndirectLight = nullptr;
 
     /*
      * list of Entities in the scene. We use a robin_set<> so we can do efficient removes

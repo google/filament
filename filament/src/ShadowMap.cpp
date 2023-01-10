@@ -78,7 +78,19 @@ void ShadowMap::initialize(size_t lightIndex, ShadowType shadowType,
 }
 
 mat4f ShadowMap::getDirectionalLightViewMatrix(float3 direction, float3 position) noexcept {
-    const mat4f Mm = mat4f::lookAt(position, position + direction, float3{ 0, 1, 0 });
+    auto z_axis = direction;
+    auto norm_up = float3{ 0, 1, 0 };
+    if (UTILS_UNLIKELY(std::abs(dot(z_axis, norm_up)) > 0.999f)) {
+        // Fix up vector if we're degenerate (looking straight up, basically)
+        norm_up = { norm_up.z, norm_up.x, norm_up.y };
+    }
+    auto x_axis = normalize(cross(z_axis, norm_up));
+    auto y_axis = cross(x_axis, z_axis);
+    const mat4f Mm{
+            float4{   x_axis, 0 },
+            float4{   y_axis, 0 },
+            float4{  -z_axis, 0 },
+            float4{ position, 1 }};
     return FCamera::rigidTransformInverse(Mm);
 }
 
@@ -615,34 +627,33 @@ ShadowMap::TextureCoordsMapping ShadowMap::getTextureCoordsMapping(ShadowMapInfo
         backend::Viewport const& viewport) noexcept {
     // remapping from NDC to texture coordinates (i.e. [-1,1] -> [0, 1])
     // ([1, 0] for depth mapping)
-    const mat4f Mt(info.clipSpaceFlipped ? mat4f::row_major_init{
-            0.5f,  0.0f,   0.0f, 0.5f,
-            0.0f, -0.5f,   0.0f, 0.5f,
-            0.0f,  0.0f,  -0.5f, 0.5f,
-            0.0f,  0.0f,   0.0f, 1.0f
-    } : mat4f::row_major_init{
-            0.5f,  0.0f,  0.0f, 0.5f,
-            0.0f,  0.5f,  0.0f, 0.5f,
-            0.0f,  0.0f, -0.5f, 0.5f,
-            0.0f,  0.0f,  0.0f, 1.0f
-    });
+    constexpr mat4f Mt{
+            mat4f::row_major_init{
+                    0.5f, 0.0f,  0.0f, 0.5f,
+                    0.0f, 0.5f,  0.0f, 0.5f,
+                    0.0f, 0.0f, -0.5f, 0.5f,
+                    0.0f, 0.0f,  0.0f, 1.0f
+            }};
 
     // apply the viewport transform
     const float2 o = float2{ viewport.left,  viewport.bottom } / float(info.atlasDimension);
     const float2 s = float2{ viewport.width, viewport.height } / float(info.atlasDimension);
-    const mat4f Mv(mat4f::row_major_init{
-             s.x,  0.0f, 0.0f, o.x,
-             0.0f, s.y,  0.0f, o.y,
-             0.0f, 0.0f, 1.0f, 0.0f,
-             0.0f, 0.0f, 0.0f, 1.0f
-    });
+    const mat4f Mv{
+            mat4f::row_major_init{
+                     s.x, 0.0f, 0.0f, o.x,
+                    0.0f,  s.y, 0.0f, o.y,
+                    0.0f, 0.0f, 1.0f, 0.0f,
+                    0.0f, 0.0f, 0.0f, 1.0f
+            }};
 
-    const mat4f Mf = info.textureSpaceFlipped ? mat4f(mat4f::row_major_init{
-            1.0f,  0.0f,  0.0f,  0.0f,
-            0.0f, -1.0f,  0.0f,  1.0f,
-            0.0f,  0.0f,  1.0f,  0.0f,
-            0.0f,  0.0f,  0.0f,  1.0f
-    }) : mat4f();
+    // this is equivalent to call uvToRenderTargetUV() in the shader in each texture access
+    const mat4f Mf = info.textureSpaceFlipped ? mat4f{
+            mat4f::row_major_init{
+                    1.0f,  0.0f, 0.0f, 0.0f,
+                    0.0f, -1.0f, 0.0f, 1.0f,
+                    0.0f,  0.0f, 1.0f, 0.0f,
+                    0.0f,  0.0f, 0.0f, 1.0f
+            }} : mat4f{};
 
     // Compute shadow-map texture access and viewport transform
     return { Mf * (Mv * Mt), inverse(Mt) * (Mv * Mt) };
@@ -1230,6 +1241,8 @@ math::float4 ShadowMap::getViewportNormalized(ShadowMapInfo const& shadowMapInfo
     const float texel = 1.0f / float(shadowMapInfo.atlasDimension);
     const float4 v = float4{ l, b, l + w, b + h } * texel;
     if (shadowMapInfo.textureSpaceFlipped) {
+        // this is equivalent to calling uvToRenderTargetUV() in the shader *after* clamping
+        // texture coordinates to this normalized viewport.
         return { v.x, 1.0f - v.w, v.z, 1.0f - v.y };
     }
     return v;
@@ -1245,7 +1258,7 @@ void ShadowMap::prepareCamera(Transaction const& transaction,
 
 void ShadowMap::prepareViewport(Transaction const& transaction,
         backend::Viewport const& viewport) noexcept {
-    PerShadowMapUniforms::prepareViewport(transaction, viewport, 0, 0);
+    PerShadowMapUniforms::prepareViewport(transaction, viewport);
 }
 
 void ShadowMap::prepareTime(Transaction const& transaction,

@@ -270,7 +270,7 @@ Filament provides a JavaScript utility to make this simpler,
 simply replace the **create IBL** comment with the following snippet.
 
 ```js {fragment="create IBL"}
-const indirectLight = engine.createIblFromKtx(ibl_url);
+const indirectLight = engine.createIblFromKtx1(ibl_url);
 indirectLight.setIntensity(50000);
 scene.setIndirectLight(indirectLight);
 ```
@@ -301,7 +301,7 @@ Filament provides a Javascript utility to make this easier.
 Replace **create skybox** with the following.
 
 ```js {fragment="create skybox"}
-const skybox = engine.createSkyFromKtx(sky_url);
+const skybox = engine.createSkyFromKtx1(sky_url);
 scene.setSkybox(skybox);
 ```
 

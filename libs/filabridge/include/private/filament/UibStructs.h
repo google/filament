@@ -61,9 +61,9 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // (i.e.: not in the post-processing materials)
     // --------------------------------------------------------------------------------------------
 
-    math::float2 origin;            // viewport left, bottom (in pixels)
-    math::float2 offset;            // rendering offset left, bottom (in pixels)
-    math::float4 resolution;        // viewport width, height, 1/width, 1/height
+    math::float4 resolution;        // physical viewport width, height, 1/width, 1/height
+    math::float2 logicalViewportScale;  // scale-factor to go from physical to logical viewport
+    math::float2 logicalViewportOffset; // offset to go from physical to logical viewport
 
     float lodBias;                  // load bias to apply to user materials
     float refractionLodOffset;

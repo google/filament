@@ -79,14 +79,12 @@ void PerShadowMapUniforms::prepareLodBias(Transaction const& transaction,
 }
 
 void PerShadowMapUniforms::prepareViewport(Transaction const& transaction,
-        backend::Viewport const& viewport,
-        uint32_t xoffset, uint32_t yoffset) noexcept {
-    const float w = float(viewport.width);
-    const float h = float(viewport.height);
+        backend::Viewport const& viewport) noexcept {
+    float2 const dimensions{ viewport.width, viewport.height };
     auto& s = edit(transaction);
-    s.resolution = float4{ w, h, 1.0f / w, 1.0f / h };
-    s.origin = float2{ viewport.left, viewport.bottom };
-    s.offset = float2{ xoffset, yoffset };
+    s.resolution = { dimensions, 1.0f / dimensions };
+    s.logicalViewportScale = 1.0f;
+    s.logicalViewportOffset = 0.0f;
 }
 
 void PerShadowMapUniforms::prepareTime(Transaction const& transaction,
