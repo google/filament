@@ -5,6 +5,11 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.31.1
+
+- gltfio: expose joint inverse bind matrices via method on FilamentInstance
+- filamesh: add error when uv coords size does not match num of vertices. (#6351)
+
 ## v1.31.0
 
 - java: fix confusing typo in Camera documentation
@@ -16,9 +21,7 @@ A new header is inserted each time a *tag* is created.
 - materials: `getNormalizedViewportCoord()` now returns the logical (i.e. user) viewport
              normalized position and keeps z reversed [⚠️ **Recompile Materials**]
 - backend: workaround Adreno shader compiler bug (#6355) [⚠️ **Recompile Materials**]
-- gltfio: expose joint inverse bind matrices via method on FilamentInstance
 - geometry: change computing tangent basis from normal vector to use Frisvad's method
-- filamesh: add error when uv coords size does not match num of vertices. (#6351)
 
 ## v1.30.0
 
