@@ -92,6 +92,8 @@ Make sure you've installed the following dependencies:
 - `libc++abi-7-dev` (`libcxxabi-static` on Fedora) or higher
 - `ninja-build`
 - `libxi-dev`
+- `libxcomposite-dev` (`libXcomposite-devel` on Fedora)
+- `libxxf86vm-dev` (`libXxf86vm-devel` on Fedora)
 
 After dependencies have been installed, we highly recommend using the [easy build](#easy-build)
 script.
