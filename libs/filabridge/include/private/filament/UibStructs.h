@@ -67,7 +67,10 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     float lodBias;                  // load bias to apply to user materials
     float refractionLodOffset;
+    float padding0;
     float padding1;
+
+    math::float3 cameraForward;
     float padding2;
 
     // camera position in view space (when camera_at_origin is enabled), i.e. it's (0,0,0).
@@ -104,7 +107,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // Directional Lighting [variant: DIR]
     // --------------------------------------------------------------------------------------------
     math::float3 lightDirection;                // directional light direction
-    float padding0;
+    float padding3;
     math::float4 lightColorIntensity;           // directional light
     math::float4 sun;                           // cos(sunAngle), sin(sunAngle), 1/(sunAngle*HALO_SIZE-sunAngle), HALO_EXP
     math::float2 lightFarAttenuationParams;     // a, a/far (a=1/pct-of-far)
@@ -162,7 +165,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float ssrStride;                    // ssr texel stride, >= 1.0
 
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[63];
+    math::float4 reserved[62];
 };
 
 // 2 KiB == 128 float4s

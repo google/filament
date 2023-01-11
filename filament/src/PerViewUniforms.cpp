@@ -78,6 +78,7 @@ void PerViewUniforms::prepareCamera(FEngine& engine, const CameraInfo& camera) n
     s.worldFromClipMatrix = worldFromClip;    // 1/(projection * view)
     s.clipTransform = camera.clipTransfrom;
     s.cameraPosition = float3{ camera.getPosition() };
+    s.cameraForward = float3{ camera.getForwardVector() };
     s.worldOffset = camera.getWorldOffset();
     s.cameraFar = camera.zf;
     s.oneOverFarMinusNear = 1.0f / (camera.zf - camera.zn);
