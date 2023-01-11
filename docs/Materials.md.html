@@ -2264,18 +2264,12 @@ type aliases:
                  Name               |   Type   |            Description
 :-----------------------------------|:--------:|:------------------------------------
 **getResolution()**                 | float4   |  Dimensions of the view's effective (physical) viewport in pixels: `width`, `height`, `1 / width`, `1 / height`. This might be different from `View::getViewport()` for instance because of added rendering guard-bands.
-**getWorldCameraPosition()**        | float3   |  Position of the camera/eye in world space
 **getWorldOffset()**                | float3   |  The shift required to obtain API-level world space
 **getTime()**                       | float    |  Current time as a remainder of 1 second. Yields a value between 0 and 1
 **getUserTime()**                   | float4   |  Current time in seconds: `time`, `(double)time - time`, `0`, `0`
 **getUserTimeMode(float m)**        | float    |  Current time modulo m in seconds
 **getExposure()**                   | float    |  Photometric exposure of the camera
 **getEV100()**                      | float    |  [Exposure value at ISO 100](https://en.wikipedia.org/wiki/Exposure_value) of the camera
-
-!!! TIP: world space
-    To achieve good precision, the "world space" in Filament's shading system does not necessarily
-    match the API-level world space. To obtain the position of the API-level camera, custom
-    materials can add `getWorldOffset()` to `getWorldCameraPosition()`.
 
 ### Vertex only
 
@@ -2298,7 +2292,7 @@ The following APIs are only available from the fragment block:
 **getWorldTangentFrame()**              | float3x3 |  Matrix containing in each column the `tangent` (`frame[0]`), `bi-tangent` (`frame[1]`) and `normal` (`frame[2]`) of the vertex in world space. If the material does not compute a tangent space normal for bump mapping or if the shading is not anisotropic, only the `normal` is valid in this matrix.
 **getWorldPosition()**                  | float3   |  Position of the fragment in world space (see note below about world-space)
 **getWorldViewVector()**                | float3   |  Normalized vector in world space from the fragment position to the eye
-**getWorldNormalVector()**              | float3   |  Normalized normal in world space, after bump mapping (must be used after `prepareMaterial()`)
+**getWorldViewVectorWithMagnitude()**   | float3   |  Vector in world space from the fragment position to the eye**getWorldNormalVector()**              | float3   |  Normalized normal in world space, after bump mapping (must be used after `prepareMaterial()`)
 **getWorldGeometricNormalVector()**     | float3   |  Normalized normal in world space, before bump mapping (can be used before `prepareMaterial()`)
 **getWorldReflectedVector()**           | float3   |  Reflection of the view vector about the normal (must be used after `prepareMaterial()`)
 **getNormalizedViewportCoord()**        | float3   |  Normalized user viewport position (i.e. NDC coordinates normalized to [0, 1] for the position, [1, 0] for the depth), can be used before `prepareMaterial()`). Because the user viewport is smaller than the actual physical viewport, these coordinates can be negative or superior to 1 in the non-visible area of the physical viewport.
@@ -2314,8 +2308,9 @@ The following APIs are only available from the fragment block:
 **uvToRenderTargetUV(float2)**          | float2   |  Transforms a UV coordinate to allow sampling from a `RenderTarget` attachment
 
 !!! TIP: world space
-    To obtain API-level world space coordinates, custom materials should add `getWorldOffset()` to
-    `getWorldPosition()` (et al).
+    To achieve good precision, the "world space" in Filament's shading system does not necessarily
+    match the API-level world space. To obtain API-level world space coordinates, custom materials
+    should add `getWorldOffset()` to `getWorldPosition()` (et al).
 
 !!! TIP: sampling from render targets
     When sampling from a `filament::Texture` that is attached to a `filament::RenderTarget` for

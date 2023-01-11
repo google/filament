@@ -80,11 +80,6 @@ highp vec4 getResolution() {
 }
 
 /** @public-api */
-highp vec3 getWorldCameraPosition() {
-    return frameUniforms.cameraPosition;
-}
-
-/** @public-api */
 highp vec3 getWorldOffset() {
     return frameUniforms.worldOffset;
 }
