@@ -79,7 +79,7 @@ uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
 #define EXPAND_ENUM(...)\
     uint32_t size = 0;\
     VkResult result = func(__VA_ARGS__, nullptr);\
-    ASSERT_POSTCONDITION(result == VK_SUCCESS && size > 0, "enumerate size error");\
+    ASSERT_POSTCONDITION(result == VK_SUCCESS, "enumerate size error");\
     utils::FixedCapacityVector<OutType> ret(size);\
     result = func(__VA_ARGS__, ret.data());\
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "enumerate error");\
