@@ -391,6 +391,7 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
         id<MTLFunction> function = [library newFunctionWithName:@"main0"
                                                  constantValues:constants
                                                           error:&error];
+        function.label = @(program.getName().c_str());
         assert_invariant(function);
         *shaderFunctions[i] = function;
     }
@@ -720,6 +721,7 @@ void MetalTexture::loadWithCopyBuffer(uint32_t level, uint32_t slice, MTLRegion 
             stagingBufferSize);
     id<MTLCommandBuffer> blitCommandBuffer = getPendingCommandBuffer(&context);
     id<MTLBlitCommandEncoder> blitCommandEncoder = [blitCommandBuffer blitCommandEncoder];
+    blitCommandEncoder.label = @"Texture upload buffer blit";
     [blitCommandEncoder copyFromBuffer:entry->buffer
                           sourceOffset:0
                      sourceBytesPerRow:shape.bytesPerRow
@@ -792,7 +794,7 @@ void MetalTexture::loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region
     args.destination.region = region;
     args.source.color = stagingTexture;
     args.destination.color = destinationTexture;
-    context.blitter->blit(getPendingCommandBuffer(&context), args);
+    context.blitter->blit(getPendingCommandBuffer(&context), args, "Texture upload blit");
 }
 
 void MetalTexture::updateLodRange(uint32_t level) {

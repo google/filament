@@ -143,7 +143,7 @@ MetalBlitter::MetalBlitter(MetalContext& context) noexcept : mContext(context) {
 
 #define MTLSizeEqual(a, b) (a.width == b.width && a.height == b.height && a.depth == b.depth)
 
-void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
+void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args, const char* label) {
     bool blitColor = args.blitColor();
     bool blitDepth = args.blitDepth();
 
@@ -164,7 +164,7 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
     // Determine if the blit for color or depth are eligible to use a MTLBlitCommandEncoder.
     // blitColor and / or blitDepth are set to false upon success, to indicate that no more work is
     // necessary for that attachment.
-    blitFastPath(cmdBuffer, blitColor, blitDepth, args);
+    blitFastPath(cmdBuffer, blitColor, blitDepth, args, label);
 
     if (!blitColor && !blitDepth) {
         return;
@@ -207,21 +207,22 @@ void MetalBlitter::blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args) {
         slowBlit.destination.region = finalBlit.source.region = sourceRegionNoOffset;
     }
 
-    blitSlowPath(cmdBuffer, blitColor, blitDepth, slowBlit);
+    blitSlowPath(cmdBuffer, blitColor, blitDepth, slowBlit, label);
 
     bool finalBlitColor = intermediateColor != nil;
     bool finalBlitDepth = intermediateDepth != nil;
-    blitFastPath(cmdBuffer, finalBlitColor, finalBlitDepth, finalBlit);
+    blitFastPath(cmdBuffer, finalBlitColor, finalBlitDepth, finalBlit, label);
 }
 
 void MetalBlitter::blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
-        const BlitArgs& args) {
+        const BlitArgs& args, const char* label) {
     if (blitColor) {
         if (args.source.color.sampleCount == args.destination.color.sampleCount &&
             args.source.color.pixelFormat == args.destination.color.pixelFormat &&
             MTLSizeEqual(args.source.region.size, args.destination.region.size)) {
 
             id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
+            blitEncoder.label = @(label);
             [blitEncoder copyFromTexture:args.source.color
                              sourceSlice:args.source.slice
                              sourceLevel:args.source.level
@@ -243,6 +244,7 @@ void MetalBlitter::blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor,
             MTLSizeEqual(args.source.region.size, args.destination.region.size)) {
 
             id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
+            blitEncoder.label = @(label);
             [blitEncoder copyFromTexture:args.source.depth
                              sourceSlice:args.source.slice
                              sourceLevel:args.source.level
@@ -260,7 +262,7 @@ void MetalBlitter::blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor,
 }
 
 void MetalBlitter::blitSlowPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
-        const BlitArgs& args) {
+        const BlitArgs& args, const char* label) {
 
     uint32_t depthPlaneSource = args.source.region.origin.z;
     uint32_t depthPlaneDest = args.destination.region.origin.z;
@@ -268,7 +270,8 @@ void MetalBlitter::blitSlowPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor,
     assert_invariant(args.source.region.size.depth == args.destination.region.size.depth);
     uint32_t depthPlaneCount = args.source.region.size.depth;
     for (NSUInteger d = 0; d < depthPlaneCount; d++) {
-        blitDepthPlane(cmdBuffer, blitColor, blitDepth, args, depthPlaneSource++, depthPlaneDest++);
+        blitDepthPlane(cmdBuffer, blitColor, blitDepth, args, depthPlaneSource++, depthPlaneDest++,
+                label);
     }
 
     blitColor = false;
@@ -276,7 +279,8 @@ void MetalBlitter::blitSlowPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor,
 }
 
 void MetalBlitter::blitDepthPlane(id<MTLCommandBuffer> cmdBuffer, bool blitColor, bool blitDepth,
-        const BlitArgs& args, uint32_t depthPlaneSource, uint32_t depthPlaneDest) {
+        const BlitArgs& args, uint32_t depthPlaneSource, uint32_t depthPlaneDest,
+        const char* label) {
     MTLRenderPassDescriptor* descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
     if (blitColor) {
@@ -288,7 +292,7 @@ void MetalBlitter::blitDepthPlane(id<MTLCommandBuffer> cmdBuffer, bool blitColor
     }
 
     id<MTLRenderCommandEncoder> encoder = [cmdBuffer renderCommandEncoderWithDescriptor:descriptor];
-    encoder.label = @"Blit";
+    encoder.label = @(label);
 
     BlitFunctionKey key;
     key.blitColor = blitColor;
