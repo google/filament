@@ -75,9 +75,9 @@ buildscript {
         'minSdk': 19,
         'targetSdk': 33,
         'compileSdk': 33,
-        'kotlin': '1.7.10',
-        'kotlin_coroutines': '1.6.1',
-        'buildTools': '33.0.0',
+        'kotlin': '1.8.0',
+        'kotlin_coroutines': '1.6.4',
+        'buildTools': '33.0.1',
         'ndk': '25.1.8937393',
         'androidx_core': '1.9.0',
         'androidx_annotations': '1.3.0'
@@ -97,7 +97,7 @@ buildscript {
 
     dependencies {
         // NOTE: See TODO in gradle.properties once we move to Gradle 7.4
-        classpath 'com.android.tools.build:gradle:7.3.0'
+        classpath 'com.android.tools.build:gradle:7.3.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
     }
 
