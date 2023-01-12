@@ -1263,7 +1263,7 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
     args.source.color = srcTexture;
     args.destination.color = readPixelsTexture;
 
-    mContext->blitter->blit(getPendingCommandBuffer(mContext), args);
+    mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "readPixels blit");
 
 #if !defined(IOS)
     // Managed textures on macOS require explicit synchronization between GPU / CPU.
@@ -1347,7 +1347,7 @@ void MetalDriver::blit(TargetBufferFlags buffers,
             args.destination.level = dstColorAttachment.level;
             args.source.slice = srcColorAttachment.layer;
             args.destination.slice = dstColorAttachment.layer;
-            mContext->blitter->blit(getPendingCommandBuffer(mContext), args);
+            mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "Color blit");
         }
     }
 
@@ -1370,7 +1370,7 @@ void MetalDriver::blit(TargetBufferFlags buffers,
             args.destination.level = dstDepthAttachment.level;
             args.source.slice = srcDepthAttachment.layer;
             args.destination.slice = dstDepthAttachment.layer;
-            mContext->blitter->blit(getPendingCommandBuffer(mContext), args);
+            mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "Depth blit");
         }
     }
 }
