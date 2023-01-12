@@ -68,7 +68,7 @@ public:
         }
     };
 
-    void blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args);
+    void blit(id<MTLCommandBuffer> cmdBuffer, const BlitArgs& args, const char* label);
 
     /**
      * Free resources. Should be called at least once per process when no further calls to blit will
@@ -112,11 +112,12 @@ private:
     };
 
     void blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
-            const BlitArgs& args);
+            const BlitArgs& args, const char* label);
     void blitSlowPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
-            const BlitArgs& args);
+            const BlitArgs& args, const char* label);
     void blitDepthPlane(id<MTLCommandBuffer> cmdBuffer, bool blitColor, bool blitDepth,
-            const BlitArgs& args, uint32_t depthPlaneSource, uint32_t depthPlaneDest);
+            const BlitArgs& args, uint32_t depthPlaneSource, uint32_t depthPlaneDest,
+            const char* label);
     id<MTLTexture> createIntermediateTexture(id<MTLTexture> t, MTLSize size);
     id<MTLFunction> compileFragmentFunction(BlitFunctionKey key);
     id<MTLFunction> getBlitVertexFunction();
