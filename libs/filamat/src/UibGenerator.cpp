@@ -58,10 +58,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
 
             { "lodBias",                0, Type::FLOAT                   },
             { "refractionLodOffset",    0, Type::FLOAT                   },
-            { "padding0",               0, Type::FLOAT                   },
             { "padding1",               0, Type::FLOAT                   },
-
-            { "cameraForward",          0, Type::FLOAT3, Precision::HIGH },
             { "padding2",               0, Type::FLOAT                   },
 
             { "cameraPosition",         0, Type::FLOAT3, Precision::HIGH },
@@ -95,7 +92,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // Directional Lighting [variant: DIR]
             // ------------------------------------------------------------------------------------
             { "lightDirection",         0, Type::FLOAT3                  },
-            { "padding3",               0, Type::FLOAT                   },
+            { "padding0",               0, Type::FLOAT                   },
             { "lightColorIntensity",    0, Type::FLOAT4                  },
             { "sun",                    0, Type::FLOAT4                  },
             { "lightFarAttenuationParams", 0, Type::FLOAT2               },
