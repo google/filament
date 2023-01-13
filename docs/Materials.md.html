@@ -2264,12 +2264,18 @@ type aliases:
                  Name               |   Type   |            Description
 :-----------------------------------|:--------:|:------------------------------------
 **getResolution()**                 | float4   |  Dimensions of the view's effective (physical) viewport in pixels: `width`, `height`, `1 / width`, `1 / height`. This might be different from `View::getViewport()` for instance because of added rendering guard-bands.
+**getWorldCameraPosition()**        | float3   |  Position of the camera/eye in world space
 **getWorldOffset()**                | float3   |  The shift required to obtain API-level world space
 **getTime()**                       | float    |  Current time as a remainder of 1 second. Yields a value between 0 and 1
 **getUserTime()**                   | float4   |  Current time in seconds: `time`, `(double)time - time`, `0`, `0`
 **getUserTimeMode(float m)**        | float    |  Current time modulo m in seconds
 **getExposure()**                   | float    |  Photometric exposure of the camera
 **getEV100()**                      | float    |  [Exposure value at ISO 100](https://en.wikipedia.org/wiki/Exposure_value) of the camera
+
+!!! TIP: world space
+    To achieve good precision, the "world space" in Filament's shading system does not necessarily
+    match the API-level world space. To obtain the position of the API-level camera, custom
+    materials can add `getWorldOffset()` to `getWorldCameraPosition()`.
 
 ### Vertex only
 
@@ -2308,9 +2314,8 @@ The following APIs are only available from the fragment block:
 **uvToRenderTargetUV(float2)**          | float2   |  Transforms a UV coordinate to allow sampling from a `RenderTarget` attachment
 
 !!! TIP: world space
-    To achieve good precision, the "world space" in Filament's shading system does not necessarily
-    match the API-level world space. To obtain API-level world space coordinates, custom materials
-    should add `getWorldOffset()` to `getWorldPosition()` (et al).
+    To obtain API-level world space coordinates, custom materials should add `getWorldOffset()` to
+    `getWorldPosition()` (et al).
 
 !!! TIP: sampling from render targets
     When sampling from a `filament::Texture` that is attached to a `filament::RenderTarget` for
