@@ -37,7 +37,7 @@ void computeShadingParams() {
     // Perspective or orthographic:
     shading_view = isPerspectiveProjection() ?
         (frameUniforms.cameraPosition - shading_position) :
-        -frameUniforms.worldFromViewMatrix[2].xyz; // ortho camera forward dir
+        frameUniforms.worldFromViewMatrix[2].xyz; // ortho camera backward dir
     shading_view = normalize(shading_view);
 
     // we do this so we avoid doing (matrix multiply), but we burn 4 varyings:
