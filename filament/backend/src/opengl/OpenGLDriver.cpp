@@ -3200,8 +3200,14 @@ void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGr
     useProgram(p);
 
 #if defined(GL_ES_VERSION_3_1) || defined(GL_VERSION_4_3)
-    // FIXME: this line is commented-out for now due to issues switching G3 clients to API 21.
-    // glDispatchCompute(workGroupCount.x, workGroupCount.y, workGroupCount.z);
+
+#if defined(__ANDROID__)
+    // on Android, GLES3.1 and above entry-points are defined in glext
+    // (this is temporary, until we phase-out API < 21)
+    using glext::glDispatchCompute;
+#endif
+
+    glDispatchCompute(workGroupCount.x, workGroupCount.y, workGroupCount.z);
 #endif
 
 #ifdef FILAMENT_ENABLE_MATDBG
