@@ -41,7 +41,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v2.0.0
+      - uses: actions/checkout@v3.3.0
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - name: Run build script
@@ -76,7 +76,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v2.0.0
+      - uses: actions/checkout@v3.3.0
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - name: Run build script
@@ -109,7 +109,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v2.0.0
+      - uses: actions/checkout@v3.3.0
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - name: Run build script
@@ -160,7 +160,7 @@ jobs:
           TAG=${REF##*/}
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
-      - uses: actions/checkout@v2.0.0
+      - uses: actions/checkout@v3.3.0
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - name: Run build script
@@ -194,7 +194,7 @@ jobs:
           echo "ref=${REF}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
         shell: bash
-      - uses: actions/checkout@v2.0.0
+      - uses: actions/checkout@v3.3.0
         with:
           ref: ${{ steps.git_ref.outputs.ref }}
       - name: Run build script
