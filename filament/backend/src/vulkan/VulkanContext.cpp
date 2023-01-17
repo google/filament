@@ -396,12 +396,12 @@ void pruneExtensions(VkPhysicalDevice device, InstanceExtensions* instExtensions
         };
         vkGetPhysicalDeviceProperties2KHR(device, &physicalDeviceProperties2);
         driverInfo = driverProperties.driverInfo;
-    }
 
-    if (instExtensions->debugUtilsSupported) {
-        // Workaround for Mesa drivers. See issue #6192
-        if (driverInfo && strstr(driverInfo, "Mesa")) {
-            instExtensions->debugUtilsSupported = false;
+        if (instExtensions->debugUtilsSupported) {
+            // Workaround for Mesa drivers. See issue #6192
+            if (driverInfo && strstr(driverInfo, "Mesa")) {
+                instExtensions->debugUtilsSupported = false;
+            }
         }
     }
 
