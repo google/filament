@@ -1453,11 +1453,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     }
 
     vkUnmapMemory(device, stagingMemory);
-
-    mDisposer.createDisposable((void*)stagingImage, [=] () {
-        vkDestroyImage(device, stagingImage, nullptr);
-        vkFreeMemory(device, stagingMemory, nullptr);
-    });
+    vkDestroyImage(device, stagingImage, nullptr);
+    vkFreeMemory(device, stagingMemory, nullptr);
 
     scheduleDestroy(std::move(pbd));
 }
