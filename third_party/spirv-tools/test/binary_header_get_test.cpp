@@ -23,8 +23,8 @@ class BinaryHeaderGet : public ::testing::Test {
   BinaryHeaderGet() { memset(code, 0, sizeof(code)); }
 
   virtual void SetUp() {
-    code[0] = SpvMagicNumber;
-    code[1] = SpvVersion;
+    code[0] = static_cast<uint32_t>(spv::MagicNumber);
+    code[1] = static_cast<uint32_t>(spv::Version);
     code[2] = SPV_GENERATOR_CODEPLAY;
     code[3] = 1;  // NOTE: Bound
     code[4] = 0;  // NOTE: Schema; reserved
@@ -50,7 +50,7 @@ TEST_F(BinaryHeaderGet, Default) {
   spv_header_t header;
   ASSERT_EQ(SPV_SUCCESS, spvBinaryHeaderGet(&const_bin, endian, &header));
 
-  ASSERT_EQ(static_cast<uint32_t>(SpvMagicNumber), header.magic);
+  ASSERT_EQ(static_cast<uint32_t>(spv::MagicNumber), header.magic);
   // Expect SPIRV-Headers updated to SPIR-V 1.6.
   ASSERT_EQ(0x00010600u, header.version);
   ASSERT_EQ(static_cast<uint32_t>(SPV_GENERATOR_CODEPLAY), header.generator);

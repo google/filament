@@ -43,45 +43,6 @@ using utils::FixedCapacityVector;
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 #pragma clang diagnostic ignored "-Wunused-parameter"
 
-#if VK_ENABLE_VALIDATION
-
-namespace {
-
-VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
-        VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location,
-        int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData) {
-    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        utils::slog.e << "VULKAN ERROR: (" << pLayerPrefix << ") " << pMessage << utils::io::endl;
-    } else {
-        utils::slog.w << "VULKAN WARNING: (" << pLayerPrefix << ") "
-                << pMessage << utils::io::endl;
-    }
-    utils::slog.e << utils::io::endl;
-    return VK_FALSE;
-}
-
-VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
-        VkDebugUtilsMessageTypeFlagsEXT types, const VkDebugUtilsMessengerCallbackDataEXT* cbdata,
-        void* pUserData) {
-    if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-        utils::slog.e << "VULKAN ERROR: (" << cbdata->pMessageIdName << ") "
-                << cbdata->pMessage << utils::io::endl;
-    } else {
-        // TODO: emit best practices warnings about aggressive pipeline barriers.
-        if (strstr(cbdata->pMessage, "ALL_GRAPHICS_BIT") || strstr(cbdata->pMessage, "ALL_COMMANDS_BIT")) {
-           return VK_FALSE;
-        }
-        utils::slog.w << "VULKAN WARNING: (" << cbdata->pMessageIdName << ") "
-                << cbdata->pMessage << utils::io::endl;
-    }
-    utils::slog.e << utils::io::endl;
-    return VK_FALSE;
-}
-
-}
-
-#endif
-
 namespace filament::backend {
 
 Driver* VulkanDriverFactory::create(VulkanPlatform* const platform,
@@ -107,209 +68,12 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     // Load Vulkan entry points.
     ASSERT_POSTCONDITION(bluevk::initialize(), "BlueVK is unable to load entry points.");
 
-    // Determine if the VK_EXT_debug_utils instance extension is available.
-    mContext.debugUtilsSupported = false;
-    uint32_t availableExtsCount = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &availableExtsCount, nullptr);
-    utils::FixedCapacityVector<VkExtensionProperties> availableExts(availableExtsCount);
-    vkEnumerateInstanceExtensionProperties(nullptr, &availableExtsCount, availableExts.data());
-    for  (const auto& extProps : availableExts) {
-        if (!strcmp(extProps.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
-            mContext.debugUtilsSupported = true;
-        } else if (!strcmp(extProps.extensionName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
-            mContext.portabilityEnumerationSupported = true;
-        }
-    }
-
-    VkInstanceCreateInfo instanceCreateInfo = {};
-
-    bool validationFeaturesSupported = false;
-
-#if VK_ENABLE_VALIDATION
-    const std::string_view DESIRED_LAYERS[] = {
-        "VK_LAYER_KHRONOS_validation",
-#if FILAMENT_VULKAN_DUMP_API
-        "VK_LAYER_LUNARG_api_dump",
-#endif
-#if defined(ENABLE_RENDERDOC)
-        "VK_LAYER_RENDERDOC_Capture",
-#endif
-    };
-
-    constexpr size_t kMaxEnabledLayersCount = sizeof(DESIRED_LAYERS) / sizeof(DESIRED_LAYERS[0]);
-
-    uint32_t layerCount;
-    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-    FixedCapacityVector<VkLayerProperties> availableLayers(layerCount);
-    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-    auto enabledLayers = FixedCapacityVector<const char*>::with_capacity(kMaxEnabledLayersCount);
-    for (const auto& desired : DESIRED_LAYERS) {
-        for (const VkLayerProperties& layer : availableLayers) {
-            const std::string_view availableLayer(layer.layerName);
-            if (availableLayer == desired) {
-                enabledLayers.push_back(desired.data());
-            }
-        }
-    }
-
-    if (!enabledLayers.empty()) {
-        instanceCreateInfo.enabledLayerCount = (uint32_t) enabledLayers.size();
-        instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
-
-        // Check if VK_EXT_validation_features is supported.
-        uint32_t availableExtsCount = 0;
-        vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, nullptr);
-        utils::FixedCapacityVector<VkExtensionProperties> availableExts(availableExtsCount);
-        vkEnumerateInstanceExtensionProperties("VK_LAYER_KHRONOS_validation", &availableExtsCount, availableExts.data());
-        for  (const auto& extProps : availableExts) {
-            if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
-                validationFeaturesSupported = true;
-                break;
-            }
-        }
-
-    } else {
-#if defined(__ANDROID__)
-        utils::slog.d << "Validation layers are not available; did you set jniLibs in your "
-                << "gradle file?" << utils::io::endl;
-#else
-        utils::slog.d << "Validation layer not available; did you install the Vulkan SDK?\n"
-                << "Please ensure that VK_LAYER_PATH is set correctly." << utils::io::endl;
-#endif
-    }
-#endif // VK_ENABLE_VALIDATION
-
-    // The Platform class can require 1 or 2 instance extensions, plus we'll request at most 5
-    // instance extensions here in the common code. So that's a max of 7.
-    static constexpr uint32_t MAX_INSTANCE_EXTENSION_COUNT = 7;
-    const char* ppEnabledExtensions[MAX_INSTANCE_EXTENSION_COUNT];
-    uint32_t enabledExtensionCount = 0;
-
-    // Request all cross-platform extensions.
-    ppEnabledExtensions[enabledExtensionCount++] = VK_KHR_SURFACE_EXTENSION_NAME;
-    ppEnabledExtensions[enabledExtensionCount++] = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME;
-#if VK_ENABLE_VALIDATION
-#if defined(__ANDROID__)
-    ppEnabledExtensions[enabledExtensionCount++] = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
-#endif
-    if (validationFeaturesSupported) {
-        ppEnabledExtensions[enabledExtensionCount++] = VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME;
-    }
-#endif
-    if (mContext.debugUtilsSupported) {
-        ppEnabledExtensions[enabledExtensionCount++] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
-    }
-    if (mContext.portabilityEnumerationSupported) {
-        ppEnabledExtensions[enabledExtensionCount++] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
-    }
-
-    // Request platform-specific extensions.
-    for (uint32_t i = 0; i < requiredExtensionCount; ++i) {
-        assert_invariant(enabledExtensionCount < MAX_INSTANCE_EXTENSION_COUNT);
-        ppEnabledExtensions[enabledExtensionCount++] = ppRequiredExtensions[i];
-    }
-
-    // Create the Vulkan instance.
-    VkApplicationInfo appInfo = {};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.apiVersion = VK_MAKE_API_VERSION(0,
-            VK_REQUIRED_VERSION_MAJOR, VK_REQUIRED_VERSION_MINOR, 0);
-    instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    instanceCreateInfo.pApplicationInfo = &appInfo;
-    instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
-    instanceCreateInfo.ppEnabledExtensionNames = ppEnabledExtensions;
-    if (mContext.portabilityEnumerationSupported) {
-        instanceCreateInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-    }
-
-    VkValidationFeaturesEXT features = {};
-    VkValidationFeatureEnableEXT enables[] = {
-        VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
-        // TODO: Enable synchronization validation.
-        // VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
-    };
-    if (validationFeaturesSupported) {
-        features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-        features.enabledValidationFeatureCount = sizeof(enables) / sizeof(enables[0]);
-        features.pEnabledValidationFeatures = enables;
-        instanceCreateInfo.pNext = &features;
-    }
-
-    VkResult result = vkCreateInstance(&instanceCreateInfo, VKALLOC, &mContext.instance);
-#ifndef NDEBUG
-    if (result != VK_SUCCESS) {
-        utils::slog.e << "Unable to create instance: " << result << utils::io::endl;
-    }
-#endif
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan instance.");
-    bluevk::bindInstance(mContext.instance);
-    UTILS_UNUSED const PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback =
-            vkCreateDebugReportCallbackEXT;
-
-#if VK_ENABLE_VALIDATION
-    if (mContext.debugUtilsSupported) {
-        VkDebugUtilsMessengerCreateInfoEXT createInfo = {
-            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
-            .pNext = nullptr,
-            .flags = 0,
-            .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
-            .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
-            .pfnUserCallback = debugUtilsCallback
-        };
-        result = vkCreateDebugUtilsMessengerEXT(mContext.instance, &createInfo, VKALLOC, &mDebugMessenger);
-        ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan debug messenger.");
-    } else if (createDebugReportCallback) {
-        const VkDebugReportCallbackCreateInfoEXT cbinfo = {
-            VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
-            nullptr,
-            VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT,
-            debugReportCallback,
-            nullptr
-        };
-        result = createDebugReportCallback(mContext.instance, &cbinfo, VKALLOC, &mDebugCallback);
-        ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan debug callback.");
-    }
-#endif
-
-    // Initialize the following fields: physicalDevice, physicalDeviceProperties,
-    // physicalDeviceFeatures, graphicsQueueFamilyIndex.
-    mContext.selectPhysicalDevice();
-
-    // Initialize device, graphicsQueue, and command buffer manager.
-    mContext.createLogicalDevice();
-
+    mContext.initialize(ppRequiredExtensions, requiredExtensionCount);
     mContext.createEmptyTexture(mStagePool);
 
     mContext.commands->setObserver(&mPipelineCache);
     mPipelineCache.setDevice(mContext.device, mContext.allocator);
     mPipelineCache.setDummyTexture(mContext.emptyTexture->getPrimaryImageView());
-
-    // Choose a depth format that meets our requirements. Take care not to include stencil formats
-    // just yet, since that would require a corollary change to the "aspect" flags for the VkImage.
-    const VkFormat formats[] = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_X8_D24_UNORM_PACK32 };
-    mContext.finalDepthFormat = mContext.findSupportedFormat(
-        utils::Slice<VkFormat>(formats, formats + 2),
-        VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-
-    // For diagnostic purposes, print useful information about available depth formats.
-    // Note that Vulkan is more constrained than OpenGL ES 3.1 in this area.
-    if constexpr (VK_ENABLE_VALIDATION && FILAMENT_VULKAN_VERBOSE) {
-        const VkFormatFeatureFlags required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
-                VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
-        utils::slog.i << "Sampleable depth formats: ";
-        for (VkFormat format = (VkFormat) 1;;) {
-            VkFormatProperties props;
-            vkGetPhysicalDeviceFormatProperties(mContext.physicalDevice, format, &props);
-            if ((props.optimalTilingFeatures & required) == required) {
-                utils::slog.i << format << " ";
-            }
-            if (format == VK_FORMAT_ASTC_12x12_SRGB_BLOCK) {
-                utils::slog.i << utils::io::endl;
-                break;
-            }
-            format = (VkFormat) (1 + (int) format);
-        }
-    }
 }
 
 VulkanDriver::~VulkanDriver() noexcept = default;
@@ -356,11 +120,11 @@ void VulkanDriver::terminate() {
     vkDestroyQueryPool(mContext.device, mContext.timestamps.pool, VKALLOC);
     vkDestroyCommandPool(mContext.device, mContext.commandPool, VKALLOC);
     vkDestroyDevice(mContext.device, VKALLOC);
-    if (mDebugCallback) {
-        vkDestroyDebugReportCallbackEXT(mContext.instance, mDebugCallback, VKALLOC);
+    if (mContext.debugCallback) {
+        vkDestroyDebugReportCallbackEXT(mContext.instance, mContext.debugCallback, VKALLOC);
     }
-    if (mDebugMessenger) {
-        vkDestroyDebugUtilsMessengerEXT(mContext.instance, mDebugMessenger, VKALLOC);
+    if (mContext.debugMessenger) {
+        vkDestroyDebugUtilsMessengerEXT(mContext.instance, mContext.debugMessenger, VKALLOC);
     }
     vkDestroyInstance(mContext.instance, VKALLOC);
     mContext.device = nullptr;

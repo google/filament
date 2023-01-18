@@ -120,20 +120,26 @@ class ConvertToHalfPass : public Pass {
   // Initialize state for converting to half
   void Initialize();
 
+  struct hasher {
+    size_t operator()(const spv::Op& op) const noexcept {
+      return std::hash<uint32_t>()(uint32_t(op));
+    }
+  };
+
   // Set of core operations to be processed
-  std::unordered_set<uint32_t> target_ops_core_;
+  std::unordered_set<spv::Op, hasher> target_ops_core_;
 
   // Set of 450 extension operations to be processed
   std::unordered_set<uint32_t> target_ops_450_;
 
   // Set of sample operations
-  std::unordered_set<uint32_t> image_ops_;
+  std::unordered_set<spv::Op, hasher> image_ops_;
 
   // Set of dref sample operations
-  std::unordered_set<uint32_t> dref_image_ops_;
+  std::unordered_set<spv::Op, hasher> dref_image_ops_;
 
   // Set of dref sample operations
-  std::unordered_set<uint32_t> closure_ops_;
+  std::unordered_set<spv::Op, hasher> closure_ops_;
 
   // Set of ids of all relaxed instructions
   std::unordered_set<uint32_t> relaxed_ids_set_;

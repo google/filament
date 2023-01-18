@@ -102,7 +102,7 @@ void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCa
             continue;
         }
 
-        // getInstance() always returns null if the entity is the Null entity
+        // getInstance() always returns null if the entity is the Null entity,
         // so we don't need to check for that, but we need to check it's alive
         auto ri = rcm.getInstance(e);
         auto li = lcm.getInstance(e);
@@ -324,7 +324,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
      */
 
     size_t const size = lightData.size();
-    // number of point/spot lights
+    // number of point-light/spotlights
     size_t positionalLightCount = size - DIRECTIONAL_LIGHTS_COUNT;
     assert_invariant(positionalLightCount);
 

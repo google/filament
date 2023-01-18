@@ -67,15 +67,15 @@ TransformationReplaceConstantWithUniform::MakeAccessChainInstruction(
   // The type id for the access chain is a uniform pointer with base type
   // matching the given constant id type.
   auto type_and_pointer_type =
-      ir_context->get_type_mgr()->GetTypeAndPointerType(constant_type_id,
-                                                        SpvStorageClassUniform);
+      ir_context->get_type_mgr()->GetTypeAndPointerType(
+          constant_type_id, spv::StorageClass::Uniform);
   assert(type_and_pointer_type.first != nullptr);
   assert(type_and_pointer_type.second != nullptr);
   auto pointer_to_uniform_constant_type_id =
       ir_context->get_type_mgr()->GetId(type_and_pointer_type.second.get());
 
   return MakeUnique<opt::Instruction>(
-      ir_context, SpvOpAccessChain, pointer_to_uniform_constant_type_id,
+      ir_context, spv::Op::OpAccessChain, pointer_to_uniform_constant_type_id,
       message_.fresh_id_for_access_chain(), operands_for_access_chain);
 }
 
@@ -84,9 +84,9 @@ TransformationReplaceConstantWithUniform::MakeLoadInstruction(
     spvtools::opt::IRContext* ir_context, uint32_t constant_type_id) const {
   opt::Instruction::OperandList operands_for_load = {
       {SPV_OPERAND_TYPE_ID, {message_.fresh_id_for_access_chain()}}};
-  return MakeUnique<opt::Instruction>(ir_context, SpvOpLoad, constant_type_id,
-                                      message_.fresh_id_for_load(),
-                                      operands_for_load);
+  return MakeUnique<opt::Instruction>(
+      ir_context, spv::Op::OpLoad, constant_type_id,
+      message_.fresh_id_for_load(), operands_for_load);
 }
 
 opt::Instruction*
@@ -99,7 +99,7 @@ TransformationReplaceConstantWithUniform::GetInsertBeforeInstruction(
   }
 
   // The use might be in an OpPhi instruction.
-  if (result->opcode() == SpvOpPhi) {
+  if (result->opcode() == spv::Op::OpPhi) {
     // OpPhi instructions must be the first instructions in a block. Thus, we
     // can't insert above the OpPhi instruction. Given the predecessor block
     // that corresponds to the id use, get the last instruction in that block
@@ -108,18 +108,19 @@ TransformationReplaceConstantWithUniform::GetInsertBeforeInstruction(
         ir_context,
         result->GetSingleWordInOperand(
             message_.id_use_descriptor().in_operand_index() + 1),
-        SpvOpLoad);
+        spv::Op::OpLoad);
   }
 
   // The only operand that we could've replaced in the OpBranchConditional is
   // the condition id. But that operand has a boolean type and uniform variables
   // can't store booleans (see the spec on OpTypeBool). Thus, |result| can't be
   // an OpBranchConditional.
-  assert(result->opcode() != SpvOpBranchConditional &&
+  assert(result->opcode() != spv::Op::OpBranchConditional &&
          "OpBranchConditional has no operands to replace");
 
-  assert(fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpLoad, result) &&
-         "We should be able to insert OpLoad and OpAccessChain at this point");
+  assert(
+      fuzzerutil::CanInsertOpcodeBeforeInstruction(spv::Op::OpLoad, result) &&
+      "We should be able to insert OpLoad and OpAccessChain at this point");
   return result;
 }
 
@@ -191,15 +192,15 @@ bool TransformationReplaceConstantWithUniform::IsApplicable(
 
   // The use must not be a variable initializer; these are required to be
   // constants, so it would be illegal to replace one with a uniform access.
-  if (instruction_using_constant->opcode() == SpvOpVariable) {
+  if (instruction_using_constant->opcode() == spv::Op::OpVariable) {
     return false;
   }
 
   // The module needs to have a uniform pointer type suitable for indexing into
   // the uniform variable, i.e. matching the type of the constant we wish to
   // replace with a uniform.
-  opt::analysis::Pointer pointer_to_type_of_constant(declared_constant->type(),
-                                                     SpvStorageClassUniform);
+  opt::analysis::Pointer pointer_to_type_of_constant(
+      declared_constant->type(), spv::StorageClass::Uniform);
   if (!ir_context->get_type_mgr()->GetId(&pointer_to_type_of_constant)) {
     return false;
   }

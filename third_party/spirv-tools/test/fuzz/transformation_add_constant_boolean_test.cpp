@@ -72,7 +72,8 @@ TEST(TransformationAddConstantBooleanTest, NeitherPresentInitiallyAddBoth) {
   ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(7));
   ASSERT_EQ(nullptr, context->get_constant_mgr()->FindDeclaredConstant(7));
   ApplyAndCheckFreshIds(add_true, context.get(), &transformation_context);
-  ASSERT_EQ(SpvOpConstantTrue, context->get_def_use_mgr()->GetDef(7)->opcode());
+  ASSERT_EQ(spv::Op::OpConstantTrue,
+            context->get_def_use_mgr()->GetDef(7)->opcode());
   ASSERT_TRUE(context->get_constant_mgr()
                   ->FindDeclaredConstant(7)
                   ->AsBoolConstant()

@@ -44,7 +44,7 @@ TEST_P(OpEnqueueKernelGood, Sample) {
       " %wait_events %ret_event %invoke %param %param_size %param_align " +
       GetParam().local_size_source;
   EXPECT_THAT(CompiledInstructions(input),
-              Eq(MakeInstruction(SpvOpEnqueueKernel,
+              Eq(MakeInstruction(spv::Op::OpEnqueueKernel,
                                  {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
                                  GetParam().local_size_operands)));
 }

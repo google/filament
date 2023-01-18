@@ -55,7 +55,7 @@ void StructuredConstructToBlockReductionOpportunity::Apply() {
 
   // The terminator for the header block is changed to be an unconditional
   // branch to the merge block.
-  header_block->terminator()->SetOpcode(SpvOpBranch);
+  header_block->terminator()->SetOpcode(spv::Op::OpBranch);
   header_block->terminator()->SetInOperands(
       {{SPV_OPERAND_TYPE_ID, {merge_block->id()}}});
 

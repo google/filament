@@ -47,12 +47,12 @@ TEST_P(ExtInstOpenCLStdRoundTripTest, ParameterizedExtInst) {
       "%3 = OpExtInst %2 %1 " +
       GetParam().name + " " + GetParam().operands + "\n";
   // First make sure it assembles correctly.
-  EXPECT_THAT(
-      CompiledInstructions(input),
-      Eq(Concatenate(
-          {MakeInstruction(SpvOpExtInstImport, {1}, MakeVector("OpenCL.std")),
-           MakeInstruction(SpvOpExtInst, {2, 3, 1, GetParam().opcode},
-                           GetParam().expected_operands)})))
+  EXPECT_THAT(CompiledInstructions(input),
+              Eq(Concatenate({MakeInstruction(spv::Op::OpExtInstImport, {1},
+                                              MakeVector("OpenCL.std")),
+                              MakeInstruction(spv::Op::OpExtInst,
+                                              {2, 3, 1, GetParam().opcode},
+                                              GetParam().expected_operands)})))
       << input;
   // Now check the round trip through the disassembler.
   EXPECT_THAT(EncodeAndDecodeSuccessfully(input), input) << input;
@@ -85,7 +85,7 @@ TEST_P(ExtInstOpenCLStdRoundTripTest, ParameterizedExtInst) {
 #define CASE3Round(Enum, Name, Mode)                                    \
   {                                                                     \
     uint32_t(OpenCLLIB::Entrypoints::Enum), #Name, "%4 %5 %6 " #Mode, { \
-      4, 5, 6, uint32_t(SpvFPRoundingMode##Mode)                        \
+      4, 5, 6, uint32_t(spv::FPRoundingMode::Mode)                      \
     }                                                                   \
   }
 

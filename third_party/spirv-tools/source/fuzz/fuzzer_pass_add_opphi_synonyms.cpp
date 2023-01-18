@@ -176,8 +176,8 @@ FuzzerPassAddOpPhiSynonyms::GetIdEquivalenceClasses() {
     // - OpFunction does not yield a value;
     // - OpUndef yields an undefined value at each use, so it should never be a
     //   synonym of another id.
-    if (pair.second->opcode() == SpvOpFunction ||
-        pair.second->opcode() == SpvOpUndef) {
+    if (pair.second->opcode() == spv::Op::OpFunction ||
+        pair.second->opcode() == spv::Op::OpUndef) {
       continue;
     }
 

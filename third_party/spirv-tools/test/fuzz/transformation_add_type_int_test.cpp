@@ -88,13 +88,13 @@ TEST(TransformationAddTypeIntTest, IsApplicable) {
 
   // By default SPIR-V does not support 16-bit integers.
   // Below we add such capability, so the test should now be successful.
-  context.get()->get_feature_mgr()->AddCapability(SpvCapabilityInt16);
+  context.get()->get_feature_mgr()->AddCapability(spv::Capability::Int16);
   ASSERT_TRUE(TransformationAddTypeInt(7, 16, true)
                   .IsApplicable(context.get(), transformation_context));
 
   // By default SPIR-V does not support 64-bit integers.
   // Below we add such capability, so the test should now pass.
-  context.get()->get_feature_mgr()->AddCapability(SpvCapabilityInt64);
+  context.get()->get_feature_mgr()->AddCapability(spv::Capability::Int64);
   ASSERT_TRUE(TransformationAddTypeInt(7, 64, true)
                   .IsApplicable(context.get(), transformation_context));
 
@@ -147,7 +147,8 @@ TEST(TransformationAddTypeIntTest, Apply) {
   ASSERT_EQ(nullptr, context->get_def_use_mgr()->GetDef(6));
   ASSERT_EQ(nullptr, context->get_type_mgr()->GetType(6));
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
-  ASSERT_EQ(SpvOpTypeInt, context->get_def_use_mgr()->GetDef(6)->opcode());
+  ASSERT_EQ(spv::Op::OpTypeInt,
+            context->get_def_use_mgr()->GetDef(6)->opcode());
   ASSERT_NE(nullptr, context->get_type_mgr()->GetType(6)->AsInteger());
 
   // Adds signed 16-bit integer type.

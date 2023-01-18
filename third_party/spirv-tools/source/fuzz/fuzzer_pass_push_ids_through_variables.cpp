@@ -35,10 +35,11 @@ void FuzzerPassPushIdsThroughVariables::Apply() {
              opt::BasicBlock::iterator instruction_iterator,
              const protobufs::InstructionDescriptor& instruction_descriptor)
           -> void {
-        assert(instruction_iterator->opcode() ==
-                   instruction_descriptor.target_instruction_opcode() &&
-               "The opcode of the instruction we might insert before must be "
-               "the same as the opcode in the descriptor for the instruction");
+        assert(
+            instruction_iterator->opcode() ==
+                spv::Op(instruction_descriptor.target_instruction_opcode()) &&
+            "The opcode of the instruction we might insert before must be "
+            "the same as the opcode in the descriptor for the instruction");
 
         // Randomly decide whether to try pushing an id through a variable.
         if (!GetFuzzerContext()->ChoosePercentage(
@@ -55,16 +56,16 @@ void FuzzerPassPushIdsThroughVariables::Apply() {
         // It must be valid to insert OpStore and OpLoad instructions
         // before the instruction to insert before.
         if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(
-                SpvOpStore, instruction_iterator) ||
+                spv::Op::OpStore, instruction_iterator) ||
             !fuzzerutil::CanInsertOpcodeBeforeInstruction(
-                SpvOpLoad, instruction_iterator)) {
+                spv::Op::OpLoad, instruction_iterator)) {
           return;
         }
 
         // Randomly decides whether a global or local variable will be added.
         auto variable_storage_class = GetFuzzerContext()->ChooseEven()
-                                          ? SpvStorageClassPrivate
-                                          : SpvStorageClassFunction;
+                                          ? spv::StorageClass::Private
+                                          : spv::StorageClass::Function;
 
         // Gets the available basic and pointer types.
         auto basic_type_ids_and_pointers =
@@ -127,13 +128,13 @@ void FuzzerPassPushIdsThroughVariables::Apply() {
             GetIRContext()->get_def_use_mgr()->GetDef(basic_type_id);
         assert(type_inst);
         switch (type_inst->opcode()) {
-          case SpvOpTypeBool:
-          case SpvOpTypeFloat:
-          case SpvOpTypeInt:
-          case SpvOpTypeArray:
-          case SpvOpTypeMatrix:
-          case SpvOpTypeVector:
-          case SpvOpTypeStruct:
+          case spv::Op::OpTypeBool:
+          case spv::Op::OpTypeFloat:
+          case spv::Op::OpTypeInt:
+          case spv::Op::OpTypeArray:
+          case spv::Op::OpTypeMatrix:
+          case spv::Op::OpTypeVector:
+          case spv::Op::OpTypeStruct:
             break;
           default:
             return;
@@ -150,7 +151,8 @@ void FuzzerPassPushIdsThroughVariables::Apply() {
                                    value_instructions)]
                 ->result_id(),
             GetFuzzerContext()->GetFreshId(), GetFuzzerContext()->GetFreshId(),
-            variable_storage_class, initializer_id, instruction_descriptor));
+            uint32_t(variable_storage_class), initializer_id,
+            instruction_descriptor));
       });
 }
 

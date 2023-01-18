@@ -200,6 +200,125 @@ OpFunctionEnd
                            ContainerEq(expected_result2)));
 }
 
+TEST_F(CFGTest, SplitLoopHeaderForSingleBlockLoop) {
+  const std::string test = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %2 "main"
+               OpExecutionMode %2 OriginUpperLeft
+       %void = OpTypeVoid
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+          %6 = OpTypeFunction %void
+          %2 = OpFunction %void None %6
+          %7 = OpLabel
+               OpBranch %8
+          %8 = OpLabel
+          %9 = OpPhi %uint %uint_0 %7 %9 %8
+               OpLoopMerge %10 %8 None
+               OpBranch %8
+         %10 = OpLabel
+               OpUnreachable
+               OpFunctionEnd
+)";
+
+  const std::string expected_result = R"(OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %2 "main"
+OpExecutionMode %2 OriginUpperLeft
+%void = OpTypeVoid
+%uint = OpTypeInt 32 0
+%uint_0 = OpConstant %uint 0
+%6 = OpTypeFunction %void
+%2 = OpFunction %void None %6
+%7 = OpLabel
+OpBranch %8
+%8 = OpLabel
+OpBranch %11
+%11 = OpLabel
+%9 = OpPhi %uint %9 %11 %uint_0 %8
+OpLoopMerge %10 %11 None
+OpBranch %11
+%10 = OpLabel
+OpUnreachable
+OpFunctionEnd
+)";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, test,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  ASSERT_NE(nullptr, context);
+
+  BasicBlock* loop_header = context->get_instr_block(8);
+  ASSERT_TRUE(loop_header->GetLoopMergeInst() != nullptr);
+
+  CFG* cfg = context->cfg();
+  cfg->SplitLoopHeader(loop_header);
+
+  std::vector<uint32_t> binary;
+  bool skip_nop = false;
+  context->module()->ToBinary(&binary, skip_nop);
+
+  std::string optimized_asm;
+  SpirvTools tools(SPV_ENV_UNIVERSAL_1_1);
+  EXPECT_TRUE(tools.Disassemble(binary, &optimized_asm,
+                                SpirvTools::kDefaultDisassembleOption))
+      << "Disassembling failed for shader\n"
+      << std::endl;
+
+  EXPECT_EQ(optimized_asm, expected_result);
+}
+
+TEST_F(CFGTest, ComputeStructedOrderForLoop) {
+  const std::string test = R"(
+OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Vertex %main "main"
+OpName %main "main"
+%bool = OpTypeBool
+%true = OpConstantTrue %bool
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%uint = OpTypeInt 32 0
+%5 = OpConstant %uint 5
+%main = OpFunction %void None %4
+%8 = OpLabel
+OpBranch %9
+%9 = OpLabel
+OpLoopMerge %11 %10 None
+OpBranchConditional %true %11 %10
+%10 = OpLabel
+OpBranch %9
+%11 = OpLabel
+OpBranch %12
+%12 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, test,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  ASSERT_NE(nullptr, context);
+
+  CFG* cfg = context->cfg();
+  Module* module = context->module();
+  Function* function = &*module->begin();
+  std::list<BasicBlock*> order;
+  cfg->ComputeStructuredOrder(function, context->get_instr_block(9),
+                              context->get_instr_block(11), &order);
+
+  // Order should contain the loop header, the continue target, and the merge
+  // node.
+  std::list<BasicBlock*> expected_result = {context->get_instr_block(9),
+                                            context->get_instr_block(10),
+                                            context->get_instr_block(11)};
+  EXPECT_THAT(order, ContainerEq(expected_result));
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

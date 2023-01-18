@@ -46,7 +46,7 @@ bool TransformationReplaceCopyObjectWithStoreLoad::IsApplicable(
 
   // This must be a defined OpCopyObject instruction.
   if (!copy_object_instruction ||
-      copy_object_instruction->opcode() != SpvOpCopyObject) {
+      copy_object_instruction->opcode() != spv::Op::OpCopyObject) {
     return false;
   }
 
@@ -54,14 +54,14 @@ bool TransformationReplaceCopyObjectWithStoreLoad::IsApplicable(
   // because we cannot define a pointer to pointer.
   if (ir_context->get_def_use_mgr()
           ->GetDef(copy_object_instruction->type_id())
-          ->opcode() == SpvOpTypePointer) {
+          ->opcode() == spv::Op::OpTypePointer) {
     return false;
   }
 
   // A pointer type instruction pointing to the value type must be defined.
   auto pointer_type_id = fuzzerutil::MaybeGetPointerType(
       ir_context, copy_object_instruction->type_id(),
-      static_cast<SpvStorageClass>(message_.variable_storage_class()));
+      static_cast<spv::StorageClass>(message_.variable_storage_class()));
   if (!pointer_type_id) {
     return false;
   }
@@ -74,8 +74,10 @@ bool TransformationReplaceCopyObjectWithStoreLoad::IsApplicable(
     return false;
   }
   // |message_.variable_storage_class| must be Private or Function.
-  return message_.variable_storage_class() == SpvStorageClassPrivate ||
-         message_.variable_storage_class() == SpvStorageClassFunction;
+  return spv::StorageClass(message_.variable_storage_class()) ==
+             spv::StorageClass::Private ||
+         spv::StorageClass(message_.variable_storage_class()) ==
+             spv::StorageClass::Function;
 }
 
 void TransformationReplaceCopyObjectWithStoreLoad::Apply(
@@ -85,7 +87,7 @@ void TransformationReplaceCopyObjectWithStoreLoad::Apply(
       ir_context->get_def_use_mgr()->GetDef(message_.copy_object_result_id());
   // |copy_object_instruction| must be defined.
   assert(copy_object_instruction &&
-         copy_object_instruction->opcode() == SpvOpCopyObject &&
+         copy_object_instruction->opcode() == spv::Op::OpCopyObject &&
          "The required OpCopyObject instruction must be defined.");
 
   opt::BasicBlock* enclosing_block =
@@ -96,14 +98,15 @@ void TransformationReplaceCopyObjectWithStoreLoad::Apply(
   // A pointer type instruction pointing to the value type must be defined.
   auto pointer_type_id = fuzzerutil::MaybeGetPointerType(
       ir_context, copy_object_instruction->type_id(),
-      static_cast<SpvStorageClass>(message_.variable_storage_class()));
+      static_cast<spv::StorageClass>(message_.variable_storage_class()));
   assert(pointer_type_id && "The required pointer type must be available.");
 
   // Adds a global or local variable (according to the storage class).
-  if (message_.variable_storage_class() == SpvStorageClassPrivate) {
+  if (spv::StorageClass(message_.variable_storage_class()) ==
+      spv::StorageClass::Private) {
     opt::Instruction* new_global = fuzzerutil::AddGlobalVariable(
         ir_context, message_.fresh_variable_id(), pointer_type_id,
-        SpvStorageClassPrivate, message_.variable_initializer_id());
+        spv::StorageClass::Private, message_.variable_initializer_id());
     ir_context->get_def_use_mgr()->AnalyzeInstDefUse(new_global);
   } else {
     opt::Function* function =
@@ -120,13 +123,13 @@ void TransformationReplaceCopyObjectWithStoreLoad::Apply(
   fuzzerutil::UpdateModuleIdBound(ir_context, message_.fresh_variable_id());
   opt::Instruction* load_instruction =
       copy_object_instruction->InsertBefore(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpLoad, copy_object_instruction->type_id(),
+          ir_context, spv::Op::OpLoad, copy_object_instruction->type_id(),
           message_.copy_object_result_id(),
           opt::Instruction::OperandList(
               {{SPV_OPERAND_TYPE_ID, {message_.fresh_variable_id()}}})));
   opt::Instruction* store_instruction =
       load_instruction->InsertBefore(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpStore, 0, 0,
+          ir_context, spv::Op::OpStore, 0, 0,
           opt::Instruction::OperandList(
               {{SPV_OPERAND_TYPE_ID, {message_.fresh_variable_id()}},
                {SPV_OPERAND_TYPE_ID, {src_operand}}})));

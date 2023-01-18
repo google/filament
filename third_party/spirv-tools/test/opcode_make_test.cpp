@@ -35,7 +35,7 @@ TEST(OpcodeMake, Samples) {
       uint32_t word = 0;
       word |= uint32_t(opcode);
       word |= uint32_t(wordCount) << 16;
-      EXPECT_EQ(word, spvOpcodeMake(wordCount, SpvOp(opcode)));
+      EXPECT_EQ(word, spvOpcodeMake(wordCount, spv::Op(opcode)));
     }
   }
 }

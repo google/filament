@@ -47,6 +47,7 @@ using Assimp::Importer;
 bool g_interleaved = false;
 bool g_snormUVs = false;
 bool g_compression = false;
+bool g_ignore_uv1 = false;
 
 Mesh g_mesh;
 float2 g_minUV = float2(std::numeric_limits<float>::max());
@@ -136,7 +137,7 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& me
         if (!mesh->HasTextureCoords(0)) {
             uv0 = nullptr;
         }
-        if (!mesh->HasTextureCoords(1)) {
+        if (!mesh->HasTextureCoords(1) || g_ignore_uv1) {
             uv1 = nullptr;
         }
 
@@ -156,6 +157,9 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& me
                     g_mesh.positions.reserve(g_mesh.vertexCount);
                     g_mesh.tangents.reserve(g_mesh.vertexCount);
                     g_mesh.uv0.reserve(g_mesh.vertexCount);
+                    if (uv1 != nullptr) {
+                        g_mesh.uv1.reserve(g_mesh.vertexCount);
+                    }
                 }
 
                 for (size_t j = 0; j < numVertices; j++) {
@@ -223,6 +227,19 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& me
         }
     }
 
+    if (g_mesh.vertexCount != g_mesh.uv0.size()) {
+        std::cerr << "Node \"" << node->mName.C_Str()
+            << "\" has a mismatch in # of verts and # of primary texcoords" << std::endl;
+        exit(1);
+    }
+
+    if (g_mesh.uv1.size() > 0 && g_mesh.vertexCount != g_mesh.uv1.size()) {
+        std::cerr << "Node \"" << node->mName.C_Str()
+                  << "\" has a mismatch in # of verts and # of secondary texcoords."
+                  << " Use the --ignore-uv1 flag to ignore all secondary texcoords." << std::endl;
+        exit(1);
+    }
+
     for (size_t i = 0 ; i < node->mNumChildren ; ++i) {
         processNode<INTERLEAVED, SNORMUVS>(scene, node->mChildren[i], meshes);
     }
@@ -254,6 +271,9 @@ static void printUsage(const char* name) {
                     "       interleaves mesh attributes\n\n"
                     "   --compress, -c\n"
                     "       enable compression\n\n"
+                    "   --ignore-uv1, -g\n"
+                    "       Ignore the second set of UV coordinates\n\n"
+
     );
 
     const std::string from("FILAMESH");
@@ -275,12 +295,13 @@ static void license() {
 }
 
 static int handleArguments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hilc";
+    static constexpr const char* OPTSTR = "hilcg";
     static const struct option OPTIONS[] = {
             { "help",        no_argument, 0, 'h' },
             { "license",     no_argument, 0, 'l' },
             { "interleaved", no_argument, 0, 'i' },
             { "compress",    no_argument, 0, 'c' },
+            { "ignore-uv1",  no_argument, 0, 'g' },
             { 0, 0, 0, 0 }  // termination of the option list
     };
 
@@ -304,6 +325,9 @@ static int handleArguments(int argc, char* argv[]) {
                 break;
             case 'c':
                 g_compression = true;
+        break;
+            case 'g':
+                g_ignore_uv1 = true;
                 break;
         }
     }

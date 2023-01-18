@@ -64,7 +64,7 @@ std::string ToString(const protobufs::FactDataSynonym& fact) {
 std::string ToString(const protobufs::FactIdEquation& fact) {
   std::stringstream stream;
   stream << fact.lhs_id();
-  stream << " " << static_cast<SpvOp>(fact.opcode());
+  stream << " " << fact.opcode();
   for (auto rhs_id : fact.rhs_id()) {
     stream << " " << rhs_id;
   }
@@ -255,11 +255,11 @@ void FactManager::AddFactIdIsIrrelevant(uint32_t result_id) {
   assert(success && "|result_id| is invalid");
 }
 
-void FactManager::AddFactIdEquation(uint32_t lhs_id, SpvOp opcode,
+void FactManager::AddFactIdEquation(uint32_t lhs_id, spv::Op opcode,
                                     const std::vector<uint32_t>& rhs_id) {
   protobufs::FactIdEquation fact;
   fact.set_lhs_id(lhs_id);
-  fact.set_opcode(opcode);
+  fact.set_opcode(uint32_t(opcode));
   for (auto an_rhs_id : rhs_id) {
     fact.add_rhs_id(an_rhs_id);
   }

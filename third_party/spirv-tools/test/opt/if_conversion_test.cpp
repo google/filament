@@ -591,6 +591,33 @@ OpFunctionEnd
   SinglePassRunAndMatch<IfConversion>(text, true);
 }
 
+TEST_F(IfConversionTest, MultipleEdgesFromSameBlock) {
+  // If a block has two out going edges that go to the same block, then there
+  // can be an OpPhi instruction with fewer entries than the number of incoming
+  // edges.  This must be handled.
+  const std::string text = R"(OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %2 "main"
+OpExecutionMode %2 OriginUpperLeft
+%void = OpTypeVoid
+%4 = OpTypeFunction %void
+%bool = OpTypeBool
+%true = OpConstantTrue %bool
+%true_0 = OpConstantTrue %bool
+%2 = OpFunction %void None %4
+%8 = OpLabel
+OpSelectionMerge %9 None
+OpBranchConditional %true_0 %9 %9
+%9 = OpLabel
+%10 = OpPhi %bool %true %8
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndCheck<IfConversion>(text, text, true, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

@@ -29,17 +29,18 @@
 
 namespace {
 
-bool IsStorageClassAllowedByUniversalRules(uint32_t storage_class) {
+bool IsStorageClassAllowedByUniversalRules(spv::StorageClass storage_class) {
   switch (storage_class) {
-    case SpvStorageClassUniform:
-    case SpvStorageClassStorageBuffer:
-    case SpvStorageClassWorkgroup:
-    case SpvStorageClassCrossWorkgroup:
-    case SpvStorageClassGeneric:
-    case SpvStorageClassAtomicCounter:
-    case SpvStorageClassImage:
-    case SpvStorageClassFunction:
-    case SpvStorageClassPhysicalStorageBuffer:
+    case spv::StorageClass::Uniform:
+    case spv::StorageClass::StorageBuffer:
+    case spv::StorageClass::Workgroup:
+    case spv::StorageClass::CrossWorkgroup:
+    case spv::StorageClass::Generic:
+    case spv::StorageClass::AtomicCounter:
+    case spv::StorageClass::Image:
+    case spv::StorageClass::Function:
+    case spv::StorageClass::PhysicalStorageBuffer:
+    case spv::StorageClass::TaskPayloadWorkgroupEXT:
       return true;
       break;
     default:
@@ -47,10 +48,10 @@ bool IsStorageClassAllowedByUniversalRules(uint32_t storage_class) {
   }
 }
 
-bool HasReturnType(uint32_t opcode) {
+bool HasReturnType(spv::Op opcode) {
   switch (opcode) {
-    case SpvOpAtomicStore:
-    case SpvOpAtomicFlagClear:
+    case spv::Op::OpAtomicStore:
+    case spv::Op::OpAtomicFlagClear:
       return false;
       break;
     default:
@@ -58,11 +59,11 @@ bool HasReturnType(uint32_t opcode) {
   }
 }
 
-bool HasOnlyFloatReturnType(uint32_t opcode) {
+bool HasOnlyFloatReturnType(spv::Op opcode) {
   switch (opcode) {
-    case SpvOpAtomicFAddEXT:
-    case SpvOpAtomicFMinEXT:
-    case SpvOpAtomicFMaxEXT:
+    case spv::Op::OpAtomicFAddEXT:
+    case spv::Op::OpAtomicFMinEXT:
+    case spv::Op::OpAtomicFMaxEXT:
       return true;
       break;
     default:
@@ -70,21 +71,21 @@ bool HasOnlyFloatReturnType(uint32_t opcode) {
   }
 }
 
-bool HasOnlyIntReturnType(uint32_t opcode) {
+bool HasOnlyIntReturnType(spv::Op opcode) {
   switch (opcode) {
-    case SpvOpAtomicCompareExchange:
-    case SpvOpAtomicCompareExchangeWeak:
-    case SpvOpAtomicIIncrement:
-    case SpvOpAtomicIDecrement:
-    case SpvOpAtomicIAdd:
-    case SpvOpAtomicISub:
-    case SpvOpAtomicSMin:
-    case SpvOpAtomicUMin:
-    case SpvOpAtomicSMax:
-    case SpvOpAtomicUMax:
-    case SpvOpAtomicAnd:
-    case SpvOpAtomicOr:
-    case SpvOpAtomicXor:
+    case spv::Op::OpAtomicCompareExchange:
+    case spv::Op::OpAtomicCompareExchangeWeak:
+    case spv::Op::OpAtomicIIncrement:
+    case spv::Op::OpAtomicIDecrement:
+    case spv::Op::OpAtomicIAdd:
+    case spv::Op::OpAtomicISub:
+    case spv::Op::OpAtomicSMin:
+    case spv::Op::OpAtomicUMin:
+    case spv::Op::OpAtomicSMax:
+    case spv::Op::OpAtomicUMax:
+    case spv::Op::OpAtomicAnd:
+    case spv::Op::OpAtomicOr:
+    case spv::Op::OpAtomicXor:
       return true;
       break;
     default:
@@ -92,10 +93,10 @@ bool HasOnlyIntReturnType(uint32_t opcode) {
   }
 }
 
-bool HasIntOrFloatReturnType(uint32_t opcode) {
+bool HasIntOrFloatReturnType(spv::Op opcode) {
   switch (opcode) {
-    case SpvOpAtomicLoad:
-    case SpvOpAtomicExchange:
+    case spv::Op::OpAtomicLoad:
+    case spv::Op::OpAtomicExchange:
       return true;
       break;
     default:
@@ -103,9 +104,9 @@ bool HasIntOrFloatReturnType(uint32_t opcode) {
   }
 }
 
-bool HasOnlyBoolReturnType(uint32_t opcode) {
+bool HasOnlyBoolReturnType(spv::Op opcode) {
   switch (opcode) {
-    case SpvOpAtomicFlagTestAndSet:
+    case spv::Op::OpAtomicFlagTestAndSet:
       return true;
       break;
     default:
@@ -120,29 +121,29 @@ namespace val {
 
 // Validates correctness of atomic instructions.
 spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
-  const SpvOp opcode = inst->opcode();
+  const spv::Op opcode = inst->opcode();
   switch (opcode) {
-    case SpvOpAtomicLoad:
-    case SpvOpAtomicStore:
-    case SpvOpAtomicExchange:
-    case SpvOpAtomicFAddEXT:
-    case SpvOpAtomicCompareExchange:
-    case SpvOpAtomicCompareExchangeWeak:
-    case SpvOpAtomicIIncrement:
-    case SpvOpAtomicIDecrement:
-    case SpvOpAtomicIAdd:
-    case SpvOpAtomicISub:
-    case SpvOpAtomicSMin:
-    case SpvOpAtomicUMin:
-    case SpvOpAtomicFMinEXT:
-    case SpvOpAtomicSMax:
-    case SpvOpAtomicUMax:
-    case SpvOpAtomicFMaxEXT:
-    case SpvOpAtomicAnd:
-    case SpvOpAtomicOr:
-    case SpvOpAtomicXor:
-    case SpvOpAtomicFlagTestAndSet:
-    case SpvOpAtomicFlagClear: {
+    case spv::Op::OpAtomicLoad:
+    case spv::Op::OpAtomicStore:
+    case spv::Op::OpAtomicExchange:
+    case spv::Op::OpAtomicFAddEXT:
+    case spv::Op::OpAtomicCompareExchange:
+    case spv::Op::OpAtomicCompareExchangeWeak:
+    case spv::Op::OpAtomicIIncrement:
+    case spv::Op::OpAtomicIDecrement:
+    case spv::Op::OpAtomicIAdd:
+    case spv::Op::OpAtomicISub:
+    case spv::Op::OpAtomicSMin:
+    case spv::Op::OpAtomicUMin:
+    case spv::Op::OpAtomicFMinEXT:
+    case spv::Op::OpAtomicSMax:
+    case spv::Op::OpAtomicUMax:
+    case spv::Op::OpAtomicFMaxEXT:
+    case spv::Op::OpAtomicAnd:
+    case spv::Op::OpAtomicOr:
+    case spv::Op::OpAtomicXor:
+    case spv::Op::OpAtomicFlagTestAndSet:
+    case spv::Op::OpAtomicFlagClear: {
       const uint32_t result_type = inst->type_id();
 
       // All current atomics only are scalar result
@@ -176,7 +177,7 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
       uint32_t operand_index = HasReturnType(opcode) ? 2 : 0;
       const uint32_t pointer_type = _.GetOperandTypeId(inst, operand_index++);
       uint32_t data_type = 0;
-      uint32_t storage_class = 0;
+      spv::StorageClass storage_class;
       if (!_.GetPointerTypeInfo(pointer_type, &data_type, &storage_class)) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << spvOpcodeString(opcode)
@@ -184,8 +185,8 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
       }
 
       // Can't use result_type because OpAtomicStore doesn't have a result
-      if ( _.IsIntScalarType(data_type) &&_.GetBitWidth(data_type) == 64 &&
-          !_.HasCapability(SpvCapabilityInt64Atomics)) {
+      if (_.IsIntScalarType(data_type) && _.GetBitWidth(data_type) == 64 &&
+          !_.HasCapability(spv::Capability::Int64Atomics)) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
                << spvOpcodeString(opcode)
                << ": 64-bit atomics require the Int64Atomics capability";
@@ -199,68 +200,69 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
       }
 
       // Then Shader rules
-      if (_.HasCapability(SpvCapabilityShader)) {
+      if (_.HasCapability(spv::Capability::Shader)) {
         // Vulkan environment rule
         if (spvIsVulkanEnv(_.context()->target_env)) {
-          if ((storage_class != SpvStorageClassUniform) &&
-              (storage_class != SpvStorageClassStorageBuffer) &&
-              (storage_class != SpvStorageClassWorkgroup) &&
-              (storage_class != SpvStorageClassImage) &&
-              (storage_class != SpvStorageClassPhysicalStorageBuffer)) {
+          if ((storage_class != spv::StorageClass::Uniform) &&
+              (storage_class != spv::StorageClass::StorageBuffer) &&
+              (storage_class != spv::StorageClass::Workgroup) &&
+              (storage_class != spv::StorageClass::Image) &&
+              (storage_class != spv::StorageClass::PhysicalStorageBuffer) &&
+              (storage_class != spv::StorageClass::TaskPayloadWorkgroupEXT)) {
             return _.diag(SPV_ERROR_INVALID_DATA, inst)
                    << _.VkErrorID(4686) << spvOpcodeString(opcode)
                    << ": Vulkan spec only allows storage classes for atomic to "
-                      "be: Uniform, Workgroup, Image, StorageBuffer, or "
-                      "PhysicalStorageBuffer.";
+                      "be: Uniform, Workgroup, Image, StorageBuffer, "
+                      "PhysicalStorageBuffer or TaskPayloadWorkgroupEXT.";
           }
-        } else if (storage_class == SpvStorageClassFunction) {
+        } else if (storage_class == spv::StorageClass::Function) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
                  << spvOpcodeString(opcode)
                  << ": Function storage class forbidden when the Shader "
                     "capability is declared.";
         }
 
-        if (opcode == SpvOpAtomicFAddEXT) {
+        if (opcode == spv::Op::OpAtomicFAddEXT) {
           // result type being float checked already
           if ((_.GetBitWidth(result_type) == 16) &&
-              (!_.HasCapability(SpvCapabilityAtomicFloat16AddEXT))) {
+              (!_.HasCapability(spv::Capability::AtomicFloat16AddEXT))) {
             return _.diag(SPV_ERROR_INVALID_DATA, inst)
                    << spvOpcodeString(opcode)
                    << ": float add atomics require the AtomicFloat32AddEXT "
                       "capability";
           }
           if ((_.GetBitWidth(result_type) == 32) &&
-              (!_.HasCapability(SpvCapabilityAtomicFloat32AddEXT))) {
+              (!_.HasCapability(spv::Capability::AtomicFloat32AddEXT))) {
             return _.diag(SPV_ERROR_INVALID_DATA, inst)
                    << spvOpcodeString(opcode)
                    << ": float add atomics require the AtomicFloat32AddEXT "
                       "capability";
           }
           if ((_.GetBitWidth(result_type) == 64) &&
-              (!_.HasCapability(SpvCapabilityAtomicFloat64AddEXT))) {
+              (!_.HasCapability(spv::Capability::AtomicFloat64AddEXT))) {
             return _.diag(SPV_ERROR_INVALID_DATA, inst)
                    << spvOpcodeString(opcode)
                    << ": float add atomics require the AtomicFloat64AddEXT "
                       "capability";
           }
-        } else if (opcode == SpvOpAtomicFMinEXT ||
-                   opcode == SpvOpAtomicFMaxEXT) {
+        } else if (opcode == spv::Op::OpAtomicFMinEXT ||
+                   opcode == spv::Op::OpAtomicFMaxEXT) {
           if ((_.GetBitWidth(result_type) == 16) &&
-              (!_.HasCapability(SpvCapabilityAtomicFloat16MinMaxEXT))) {
+              (!_.HasCapability(spv::Capability::AtomicFloat16MinMaxEXT))) {
             return _.diag(SPV_ERROR_INVALID_DATA, inst)
                    << spvOpcodeString(opcode)
                    << ": float min/max atomics require the "
                       "AtomicFloat16MinMaxEXT capability";
           }
           if ((_.GetBitWidth(result_type) == 32) &&
-              (!_.HasCapability(SpvCapabilityAtomicFloat32MinMaxEXT))) {
+              (!_.HasCapability(spv::Capability::AtomicFloat32MinMaxEXT))) {
             return _.diag(SPV_ERROR_INVALID_DATA, inst)
                    << spvOpcodeString(opcode)
                    << ": float min/max atomics require the "
                       "AtomicFloat32MinMaxEXT capability";
           }
           if ((_.GetBitWidth(result_type) == 64) &&
-              (!_.HasCapability(SpvCapabilityAtomicFloat64MinMaxEXT))) {
+              (!_.HasCapability(spv::Capability::AtomicFloat64MinMaxEXT))) {
             return _.diag(SPV_ERROR_INVALID_DATA, inst)
                    << spvOpcodeString(opcode)
                    << ": float min/max atomics require the "
@@ -271,10 +273,10 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
 
       // And finally OpenCL environment rules
       if (spvIsOpenCLEnv(_.context()->target_env)) {
-        if ((storage_class != SpvStorageClassFunction) &&
-            (storage_class != SpvStorageClassWorkgroup) &&
-            (storage_class != SpvStorageClassCrossWorkgroup) &&
-            (storage_class != SpvStorageClassGeneric)) {
+        if ((storage_class != spv::StorageClass::Function) &&
+            (storage_class != spv::StorageClass::Workgroup) &&
+            (storage_class != spv::StorageClass::CrossWorkgroup) &&
+            (storage_class != spv::StorageClass::Generic)) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
                  << spvOpcodeString(opcode)
                  << ": storage class must be Function, Workgroup, "
@@ -282,7 +284,7 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
         }
 
         if (_.context()->target_env == SPV_ENV_OPENCL_1_2) {
-          if (storage_class == SpvStorageClassGeneric) {
+          if (storage_class == spv::StorageClass::Generic) {
             return _.diag(SPV_ERROR_INVALID_DATA, inst)
                    << "Storage class cannot be Generic in OpenCL 1.2 "
                       "environment";
@@ -291,15 +293,15 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
       }
 
       // If result and pointer type are different, need to do special check here
-      if (opcode == SpvOpAtomicFlagTestAndSet ||
-          opcode == SpvOpAtomicFlagClear) {
+      if (opcode == spv::Op::OpAtomicFlagTestAndSet ||
+          opcode == spv::Op::OpAtomicFlagClear) {
         if (!_.IsIntScalarType(data_type) || _.GetBitWidth(data_type) != 32) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
                  << spvOpcodeString(opcode)
                  << ": expected Pointer to point to a value of 32-bit integer "
                     "type";
         }
-      } else if (opcode == SpvOpAtomicStore) {
+      } else if (opcode == spv::Op::OpAtomicStore) {
         if (!_.IsFloatScalarType(data_type) && !_.IsIntScalarType(data_type)) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
                  << spvOpcodeString(opcode)
@@ -323,8 +325,8 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
                                                memory_scope))
         return error;
 
-      if (opcode == SpvOpAtomicCompareExchange ||
-          opcode == SpvOpAtomicCompareExchangeWeak) {
+      if (opcode == spv::Op::OpAtomicCompareExchange ||
+          opcode == spv::Op::OpAtomicCompareExchangeWeak) {
         const auto unequal_semantics_index = operand_index++;
         if (auto error = ValidateMemorySemantics(
                 _, inst, unequal_semantics_index, memory_scope))
@@ -344,15 +346,15 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
             _.EvalInt32IfConst(
                 inst->GetOperandAs<uint32_t>(unequal_semantics_index));
         if (is_equal_const && is_unequal_const &&
-            ((equal_value & SpvMemorySemanticsVolatileMask) ^
-             (unequal_value & SpvMemorySemanticsVolatileMask))) {
+            ((equal_value & uint32_t(spv::MemorySemanticsMask::Volatile)) ^
+             (unequal_value & uint32_t(spv::MemorySemanticsMask::Volatile)))) {
           return _.diag(SPV_ERROR_INVALID_ID, inst)
                  << "Volatile mask setting must match for Equal and Unequal "
                     "memory semantics";
         }
       }
 
-      if (opcode == SpvOpAtomicStore) {
+      if (opcode == spv::Op::OpAtomicStore) {
         const uint32_t value_type = _.GetOperandTypeId(inst, 3);
         if (value_type != data_type) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
@@ -360,10 +362,11 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
                  << ": expected Value type and the type pointed to by "
                     "Pointer to be the same";
         }
-      } else if (opcode != SpvOpAtomicLoad && opcode != SpvOpAtomicIIncrement &&
-                 opcode != SpvOpAtomicIDecrement &&
-                 opcode != SpvOpAtomicFlagTestAndSet &&
-                 opcode != SpvOpAtomicFlagClear) {
+      } else if (opcode != spv::Op::OpAtomicLoad &&
+                 opcode != spv::Op::OpAtomicIIncrement &&
+                 opcode != spv::Op::OpAtomicIDecrement &&
+                 opcode != spv::Op::OpAtomicFlagTestAndSet &&
+                 opcode != spv::Op::OpAtomicFlagClear) {
         const uint32_t value_type = _.GetOperandTypeId(inst, operand_index++);
         if (value_type != result_type) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
@@ -372,8 +375,8 @@ spv_result_t AtomicsPass(ValidationState_t& _, const Instruction* inst) {
         }
       }
 
-      if (opcode == SpvOpAtomicCompareExchange ||
-          opcode == SpvOpAtomicCompareExchangeWeak) {
+      if (opcode == spv::Op::OpAtomicCompareExchange ||
+          opcode == spv::Op::OpAtomicCompareExchangeWeak) {
         const uint32_t comparator_type =
             _.GetOperandTypeId(inst, operand_index++);
         if (comparator_type != result_type) {

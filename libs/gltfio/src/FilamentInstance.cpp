@@ -90,6 +90,12 @@ void FFilamentInstance::detachSkin(size_t skinIndex, Entity target) noexcept {
     mSkins[skinIndex].targets.erase(target);
 }
 
+mat4f const* FFilamentInstance::getInverseBindMatricesAt(size_t skinIndex) const {
+    assert_invariant(mOwner);
+    ASSERT_PRECONDITION(skinIndex < mOwner->mSkins.size(), "skinIndex must be less than the number of skins in this instance.");
+    return mOwner->mSkins[skinIndex].inverseBindMatrices.data();
+}
+
 void FFilamentInstance::recomputeBoundingBoxes() {
     ASSERT_PRECONDITION(mOwner->mSourceAsset,
             "Do not call releaseSourceData before recomputeBoundingBoxes");
@@ -413,6 +419,10 @@ void FilamentInstance::attachSkin(size_t skinIndex, Entity target) noexcept {
 
 void FilamentInstance::detachSkin(size_t skinIndex, Entity target) noexcept {
     return downcast(this)->detachSkin(skinIndex, target);
+}
+
+math::mat4f const* FilamentInstance::getInverseBindMatricesAt(size_t skinIndex) const {
+    return downcast(this)->getInverseBindMatricesAt(skinIndex);
 }
 
 void FilamentInstance::recomputeBoundingBoxes() {

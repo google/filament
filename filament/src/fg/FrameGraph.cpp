@@ -137,8 +137,8 @@ FrameGraph& FrameGraph::compile() noexcept {
 
         auto const& writes = dependencyGraph.getOutgoingEdges(passNode);
         for (auto const& edge : writes) {
-            // an outgoing edge might be invalid if the node it points to has been culled
-            // but, because we are not culled and we're a pass, we add a reference to
+            // An outgoing edge might be invalid if the node it points to has been culled
+            // but because we are not culled, and we're a pass we add a reference to
             // the resource we are writing to.
             auto pNode = static_cast<ResourceNode*>(dependencyGraph.getNode(edge->to));
             passNode->registerResource(pNode->resourceHandle);
@@ -436,7 +436,7 @@ FrameGraphId<FrameGraphTexture> FrameGraph::import(char const* name,
 }
 
 bool FrameGraph::isValid(FrameGraphHandle handle) const {
-    // Code below is written this way so we can set breakpoints easily.
+    // Code below is written this way so that we can set breakpoints easily.
     if (!handle.isInitialized()) {
         return false;
     }
@@ -468,7 +468,7 @@ void FrameGraph::export_graphviz(utils::io::ostream& out, char const* name) {
 // ------------------------------------------------------------------------------------------------
 
 /*
- * Explicit template instantiation for for FrameGraphTexture which is a known type,
+ * Explicit template instantiation for FrameGraphTexture which is a known type,
  * to reduce compile time and code size.
  */
 

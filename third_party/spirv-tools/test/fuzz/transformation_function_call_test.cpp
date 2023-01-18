@@ -174,88 +174,91 @@ TEST(TransformationFunctionCallTest, BasicTest) {
 
   // Bad transformations
   // Too many arguments
-  ASSERT_FALSE(
-      TransformationFunctionCall(100, 21, {71, 72, 71},
-                                 MakeInstructionDescriptor(59, SpvOpBranch, 0))
-          .IsApplicable(context.get(), transformation_context));
-  // Too few arguments
   ASSERT_FALSE(TransformationFunctionCall(
-                   100, 21, {71}, MakeInstructionDescriptor(59, SpvOpBranch, 0))
+                   100, 21, {71, 72, 71},
+                   MakeInstructionDescriptor(59, spv::Op::OpBranch, 0))
                    .IsApplicable(context.get(), transformation_context));
+  // Too few arguments
+  ASSERT_FALSE(
+      TransformationFunctionCall(
+          100, 21, {71}, MakeInstructionDescriptor(59, spv::Op::OpBranch, 0))
+          .IsApplicable(context.get(), transformation_context));
   // Arguments are the wrong way around (types do not match)
-  ASSERT_FALSE(
-      TransformationFunctionCall(100, 21, {72, 71},
-                                 MakeInstructionDescriptor(59, SpvOpBranch, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationFunctionCall(
+                   100, 21, {72, 71},
+                   MakeInstructionDescriptor(59, spv::Op::OpBranch, 0))
+                   .IsApplicable(context.get(), transformation_context));
   // 21 is not an appropriate argument
-  ASSERT_FALSE(
-      TransformationFunctionCall(100, 21, {21, 72},
-                                 MakeInstructionDescriptor(59, SpvOpBranch, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationFunctionCall(
+                   100, 21, {21, 72},
+                   MakeInstructionDescriptor(59, spv::Op::OpBranch, 0))
+                   .IsApplicable(context.get(), transformation_context));
   // 300 does not exist
-  ASSERT_FALSE(
-      TransformationFunctionCall(100, 21, {300, 72},
-                                 MakeInstructionDescriptor(59, SpvOpBranch, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationFunctionCall(
+                   100, 21, {300, 72},
+                   MakeInstructionDescriptor(59, spv::Op::OpBranch, 0))
+                   .IsApplicable(context.get(), transformation_context));
   // 71 is not a function
-  ASSERT_FALSE(
-      TransformationFunctionCall(100, 71, {71, 72},
-                                 MakeInstructionDescriptor(59, SpvOpBranch, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationFunctionCall(
+                   100, 71, {71, 72},
+                   MakeInstructionDescriptor(59, spv::Op::OpBranch, 0))
+                   .IsApplicable(context.get(), transformation_context));
   // 500 does not exist
-  ASSERT_FALSE(
-      TransformationFunctionCall(100, 500, {71, 72},
-                                 MakeInstructionDescriptor(59, SpvOpBranch, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationFunctionCall(
+                   100, 500, {71, 72},
+                   MakeInstructionDescriptor(59, spv::Op::OpBranch, 0))
+                   .IsApplicable(context.get(), transformation_context));
   // Id is not fresh
   ASSERT_FALSE(
-      TransformationFunctionCall(21, 21, {71, 72},
-                                 MakeInstructionDescriptor(59, SpvOpBranch, 0))
+      TransformationFunctionCall(
+          21, 21, {71, 72}, MakeInstructionDescriptor(59, spv::Op::OpBranch, 0))
           .IsApplicable(context.get(), transformation_context));
   // Access chain as pointer parameter
-  ASSERT_FALSE(
-      TransformationFunctionCall(100, 21, {98, 72},
-                                 MakeInstructionDescriptor(59, SpvOpBranch, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationFunctionCall(
+                   100, 21, {98, 72},
+                   MakeInstructionDescriptor(59, spv::Op::OpBranch, 0))
+                   .IsApplicable(context.get(), transformation_context));
   // Copied object as pointer parameter
-  ASSERT_FALSE(
-      TransformationFunctionCall(100, 21, {99, 72},
-                                 MakeInstructionDescriptor(59, SpvOpBranch, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationFunctionCall(
+                   100, 21, {99, 72},
+                   MakeInstructionDescriptor(59, spv::Op::OpBranch, 0))
+                   .IsApplicable(context.get(), transformation_context));
   // Non-livesafe called from original live block
-  ASSERT_FALSE(
-      TransformationFunctionCall(
-          100, 10, {71}, MakeInstructionDescriptor(99, SpvOpSelectionMerge, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationFunctionCall(
+                   100, 10, {71},
+                   MakeInstructionDescriptor(99, spv::Op::OpSelectionMerge, 0))
+                   .IsApplicable(context.get(), transformation_context));
   // Non-livesafe called from livesafe function
-  ASSERT_FALSE(
-      TransformationFunctionCall(
-          100, 10, {19}, MakeInstructionDescriptor(38, SpvOpConvertFToS, 0))
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationFunctionCall(
+                   100, 10, {19},
+                   MakeInstructionDescriptor(38, spv::Op::OpConvertFToS, 0))
+                   .IsApplicable(context.get(), transformation_context));
   // Livesafe function called with pointer to non-arbitrary local variable
+  ASSERT_FALSE(TransformationFunctionCall(
+                   100, 21, {61, 72},
+                   MakeInstructionDescriptor(38, spv::Op::OpConvertFToS, 0))
+                   .IsApplicable(context.get(), transformation_context));
+  // Direct recursion
   ASSERT_FALSE(
       TransformationFunctionCall(
-          100, 21, {61, 72}, MakeInstructionDescriptor(38, SpvOpConvertFToS, 0))
+          100, 4, {}, MakeInstructionDescriptor(59, spv::Op::OpBranch, 0))
           .IsApplicable(context.get(), transformation_context));
-  // Direct recursion
-  ASSERT_FALSE(TransformationFunctionCall(
-                   100, 4, {}, MakeInstructionDescriptor(59, SpvOpBranch, 0))
-                   .IsApplicable(context.get(), transformation_context));
   // Indirect recursion
-  ASSERT_FALSE(TransformationFunctionCall(
-                   100, 24, {9}, MakeInstructionDescriptor(96, SpvOpBranch, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationFunctionCall(
+          100, 24, {9}, MakeInstructionDescriptor(96, spv::Op::OpBranch, 0))
+          .IsApplicable(context.get(), transformation_context));
   // Parameter 23 is not available at the call site
   ASSERT_FALSE(
-      TransformationFunctionCall(104, 10, {23},
-                                 MakeInstructionDescriptor(205, SpvOpBranch, 0))
+      TransformationFunctionCall(
+          104, 10, {23}, MakeInstructionDescriptor(205, spv::Op::OpBranch, 0))
           .IsApplicable(context.get(), transformation_context));
 
   // Good transformations
   {
     // Livesafe called from dead block: fine
     TransformationFunctionCall transformation(
-        100, 21, {71, 72}, MakeInstructionDescriptor(59, SpvOpBranch, 0));
+        100, 21, {71, 72}, MakeInstructionDescriptor(59, spv::Op::OpBranch, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -266,7 +269,8 @@ TEST(TransformationFunctionCallTest, BasicTest) {
   {
     // Livesafe called from original live block: fine
     TransformationFunctionCall transformation(
-        101, 21, {71, 72}, MakeInstructionDescriptor(98, SpvOpAccessChain, 0));
+        101, 21, {71, 72},
+        MakeInstructionDescriptor(98, spv::Op::OpAccessChain, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -277,7 +281,7 @@ TEST(TransformationFunctionCallTest, BasicTest) {
   {
     // Livesafe called from livesafe function: fine
     TransformationFunctionCall transformation(
-        102, 200, {19, 20}, MakeInstructionDescriptor(36, SpvOpLoad, 0));
+        102, 200, {19, 20}, MakeInstructionDescriptor(36, spv::Op::OpLoad, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -288,7 +292,7 @@ TEST(TransformationFunctionCallTest, BasicTest) {
   {
     // Dead called from dead block in injected function: fine
     TransformationFunctionCall transformation(
-        103, 10, {23}, MakeInstructionDescriptor(45, SpvOpLoad, 0));
+        103, 10, {23}, MakeInstructionDescriptor(45, spv::Op::OpLoad, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -299,7 +303,7 @@ TEST(TransformationFunctionCallTest, BasicTest) {
   {
     // Non-livesafe called from dead block in livesafe function: OK
     TransformationFunctionCall transformation(
-        104, 10, {201}, MakeInstructionDescriptor(205, SpvOpBranch, 0));
+        104, 10, {201}, MakeInstructionDescriptor(205, spv::Op::OpBranch, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -310,7 +314,7 @@ TEST(TransformationFunctionCallTest, BasicTest) {
   {
     // Livesafe called from dead block with non-arbitrary parameter
     TransformationFunctionCall transformation(
-        105, 21, {62, 65}, MakeInstructionDescriptor(59, SpvOpBranch, 0));
+        105, 21, {62, 65}, MakeInstructionDescriptor(59, spv::Op::OpBranch, 0));
     ASSERT_TRUE(
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
@@ -465,9 +469,10 @@ TEST(TransformationFunctionCallTest, DoNotInvokeEntryPoint) {
   transformation_context.GetFactManager()->AddFactBlockIsDead(11);
 
   // 4 is an entry point, so it is not legal for it to be the target of a call.
-  ASSERT_FALSE(TransformationFunctionCall(
-                   100, 4, {}, MakeInstructionDescriptor(11, SpvOpReturn, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationFunctionCall(
+          100, 4, {}, MakeInstructionDescriptor(11, spv::Op::OpReturn, 0))
+          .IsApplicable(context.get(), transformation_context));
 }
 
 }  // namespace

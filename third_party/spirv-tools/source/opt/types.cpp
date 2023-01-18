@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <climits>
 #include <cstdint>
 #include <sstream>
 #include <string>
@@ -23,7 +24,6 @@
 
 #include "source/util/hash_combine.h"
 #include "source/util/make_unique.h"
-#include "spirv/unified1/spirv.h"
 
 namespace spvtools {
 namespace opt {
@@ -64,7 +64,7 @@ bool CompareTwoVectors(const U32VecVec a, const U32VecVec b) {
   return true;
 }
 
-}  // anonymous namespace
+}  // namespace
 
 std::string Type::GetDecorationStr() const {
   std::ostringstream oss;
@@ -131,6 +131,7 @@ std::unique_ptr<Type> Type::Clone() const {
     DeclareKindCase(AccelerationStructureNV);
     DeclareKindCase(CooperativeMatrixNV);
     DeclareKindCase(RayQueryKHR);
+    DeclareKindCase(HitObjectNV);
 #undef DeclareKindCase
     default:
       assert(false && "Unhandled type");
@@ -177,6 +178,7 @@ bool Type::operator==(const Type& other) const {
     DeclareKindCase(AccelerationStructureNV);
     DeclareKindCase(CooperativeMatrixNV);
     DeclareKindCase(RayQueryKHR);
+    DeclareKindCase(HitObjectNV);
 #undef DeclareKindCase
     default:
       assert(false && "Unhandled type");
@@ -231,6 +233,7 @@ size_t Type::ComputeHashValue(size_t hash, SeenTypes* seen) const {
     DeclareKindCase(AccelerationStructureNV);
     DeclareKindCase(CooperativeMatrixNV);
     DeclareKindCase(RayQueryKHR);
+    DeclareKindCase(HitObjectNV);
 #undef DeclareKindCase
     default:
       assert(false && "Unhandled type");
@@ -244,6 +247,35 @@ size_t Type::ComputeHashValue(size_t hash, SeenTypes* seen) const {
 size_t Type::HashValue() const {
   SeenTypes seen;
   return ComputeHashValue(0, &seen);
+}
+
+uint64_t Type::NumberOfComponents() const {
+  switch (kind()) {
+    case kVector:
+      return AsVector()->element_count();
+    case kMatrix:
+      return AsMatrix()->element_count();
+    case kArray: {
+      Array::LengthInfo length_info = AsArray()->length_info();
+      if (length_info.words[0] != Array::LengthInfo::kConstant) {
+        return UINT64_MAX;
+      }
+      assert(length_info.words.size() <= 3 &&
+             "The size of the array could not fit size_t.");
+      uint64_t length = 0;
+      length |= length_info.words[1];
+      if (length_info.words.size() > 2) {
+        length |= static_cast<uint64_t>(length_info.words[2]) << 32;
+      }
+      return length;
+    }
+    case kRuntimeArray:
+      return UINT64_MAX;
+    case kStruct:
+      return AsStruct()->element_types().size();
+    default:
+      return 0;
+  }
 }
 
 bool Integer::IsSameImpl(const Type* that, IsSameCache*) const {
@@ -327,8 +359,9 @@ size_t Matrix::ComputeExtraStateHash(size_t hash, SeenTypes* seen) const {
   return element_type_->ComputeHashValue(hash, seen);
 }
 
-Image::Image(Type* type, SpvDim dimen, uint32_t d, bool array, bool multisample,
-             uint32_t sampling, SpvImageFormat f, SpvAccessQualifier qualifier)
+Image::Image(Type* type, spv::Dim dimen, uint32_t d, bool array,
+             bool multisample, uint32_t sampling, spv::ImageFormat f,
+             spv::AccessQualifier qualifier)
     : Type(kImage),
       sampled_type_(type),
       dim_(dimen),
@@ -353,9 +386,9 @@ bool Image::IsSameImpl(const Type* that, IsSameCache* seen) const {
 
 std::string Image::str() const {
   std::ostringstream oss;
-  oss << "image(" << sampled_type_->str() << ", " << dim_ << ", " << depth_
-      << ", " << arrayed_ << ", " << ms_ << ", " << sampled_ << ", " << format_
-      << ", " << access_qualifier_ << ")";
+  oss << "image(" << sampled_type_->str() << ", " << uint32_t(dim_) << ", "
+      << depth_ << ", " << arrayed_ << ", " << ms_ << ", " << sampled_ << ", "
+      << uint32_t(format_) << ", " << uint32_t(access_qualifier_) << ")";
   return oss.str();
 }
 
@@ -527,7 +560,7 @@ size_t Opaque::ComputeExtraStateHash(size_t hash, SeenTypes*) const {
   return hash_combine(hash, name_);
 }
 
-Pointer::Pointer(const Type* type, SpvStorageClass sc)
+Pointer::Pointer(const Type* type, spv::StorageClass sc)
     : Type(kPointer), pointee_type_(type), storage_class_(sc) {}
 
 bool Pointer::IsSameImpl(const Type* that, IsSameCache* seen) const {
@@ -606,7 +639,7 @@ bool Pipe::IsSameImpl(const Type* that, IsSameCache*) const {
 
 std::string Pipe::str() const {
   std::ostringstream oss;
-  oss << "pipe(" << access_qualifier_ << ")";
+  oss << "pipe(" << uint32_t(access_qualifier_) << ")";
   return oss.str();
 }
 

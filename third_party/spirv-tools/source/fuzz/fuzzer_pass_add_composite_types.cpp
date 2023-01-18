@@ -114,15 +114,15 @@ uint32_t FuzzerPassAddCompositeTypes::ChooseScalarOrCompositeType() {
   std::vector<uint32_t> candidates;
   for (auto& inst : GetIRContext()->types_values()) {
     switch (inst.opcode()) {
-      case SpvOpTypeArray:
-      case SpvOpTypeBool:
-      case SpvOpTypeFloat:
-      case SpvOpTypeInt:
-      case SpvOpTypeMatrix:
-      case SpvOpTypeVector:
+      case spv::Op::OpTypeArray:
+      case spv::Op::OpTypeBool:
+      case spv::Op::OpTypeFloat:
+      case spv::Op::OpTypeInt:
+      case spv::Op::OpTypeMatrix:
+      case spv::Op::OpTypeVector:
         candidates.push_back(inst.result_id());
         break;
-      case SpvOpTypeStruct: {
+      case spv::Op::OpTypeStruct: {
         if (!fuzzerutil::MembersHaveBuiltInDecoration(GetIRContext(),
                                                       inst.result_id()) &&
             !fuzzerutil::HasBlockOrBufferBlockDecoration(GetIRContext(),

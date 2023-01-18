@@ -71,7 +71,7 @@ class UpgradeMemoryModel : public Pass {
   void UpgradeAtomics();
 
   // Returns whether |id| is coherent and/or volatile.
-  std::tuple<bool, bool, SpvScope> GetInstructionAttributes(uint32_t id);
+  std::tuple<bool, bool, spv::Scope> GetInstructionAttributes(uint32_t id);
 
   // Traces |inst| to determine if it is coherent and/or volatile.
   // |indices| tracks the access chain indices seen so far.
@@ -84,7 +84,7 @@ class UpgradeMemoryModel : public Pass {
   // match the index or |value| must be a maximum allowable value. The max
   // value allows any element to match.
   bool HasDecoration(const Instruction* inst, uint32_t value,
-                     SpvDecoration decoration);
+                     spv::Decoration decoration);
 
   // Returns whether |type_id| indexed via |indices| is coherent and/or
   // volatile.
@@ -108,7 +108,7 @@ class UpgradeMemoryModel : public Pass {
                         bool is_volatile);
 
   // Returns the result id for a constant for |scope|.
-  uint32_t GetScopeConstant(SpvScope scope);
+  uint32_t GetScopeConstant(spv::Scope scope);
 
   // Returns the value of |index_inst|. |index_inst| must be an OpConstant of
   // integer type.g
@@ -127,7 +127,7 @@ class UpgradeMemoryModel : public Pass {
   // scope.
   void UpgradeMemoryScope();
 
-  // Returns true if |scope_id| is SpvScopeDevice.
+  // Returns true if |scope_id| is spv::Scope::Device.
   bool IsDeviceScope(uint32_t scope_id);
 
   // Upgrades GLSL.std.450 modf and frexp. Both instructions are replaced with

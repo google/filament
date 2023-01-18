@@ -130,7 +130,7 @@ bool AddedFunctionReducer::InterestingnessFunctionForReducingAddedFunction(
                   binary_under_reduction.size());
   assert(ir_context != nullptr && "The binary should be parsable.");
   for (auto& type_or_value : ir_context->module()->types_values()) {
-    if (type_or_value.opcode() != SpvOpVariable) {
+    if (type_or_value.opcode() != spv::Op::OpVariable) {
       continue;
     }
     if (irrelevant_pointee_global_variables.count(type_or_value.result_id())) {
@@ -202,7 +202,7 @@ void AddedFunctionReducer::ReplayPrefixAndAddFunction(
   auto* ir_context = replay_result.transformed_module.get();
 
   for (auto& type_or_value : ir_context->module()->types_values()) {
-    if (type_or_value.opcode() != SpvOpVariable) {
+    if (type_or_value.opcode() != spv::Op::OpVariable) {
       continue;
     }
     if (replay_result.transformation_context->GetFactManager()

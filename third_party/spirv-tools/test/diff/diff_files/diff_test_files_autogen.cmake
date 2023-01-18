@@ -41,5 +41,7 @@ list(APPEND DIFF_TEST_FILES
 "diff_files/small_functions_small_diffs_autogen.cpp"
 "diff_files/spec_constant_array_size_autogen.cpp"
 "diff_files/spec_constant_composite_autogen.cpp"
+"diff_files/spec_constant_op_autogen.cpp"
+"diff_files/spec_constant_specid_autogen.cpp"
 "diff_files/unrelated_shaders_autogen.cpp"
 )

@@ -96,53 +96,54 @@ TEST(TransformationSplitBlockTest, NotApplicable) {
       MakeUnique<FactManager>(context.get()), validator_options);
   // No split before OpVariable
   ASSERT_FALSE(TransformationSplitBlock(
-                   MakeInstructionDescriptor(8, SpvOpVariable, 0), 100)
+                   MakeInstructionDescriptor(8, spv::Op::OpVariable, 0), 100)
                    .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(TransformationSplitBlock(
-                   MakeInstructionDescriptor(8, SpvOpVariable, 1), 100)
+                   MakeInstructionDescriptor(8, spv::Op::OpVariable, 1), 100)
                    .IsApplicable(context.get(), transformation_context));
 
   // No split before OpLabel
   ASSERT_FALSE(TransformationSplitBlock(
-                   MakeInstructionDescriptor(14, SpvOpLabel, 0), 100)
+                   MakeInstructionDescriptor(14, spv::Op::OpLabel, 0), 100)
                    .IsApplicable(context.get(), transformation_context));
 
   // No split if base instruction is outside a function
-  ASSERT_FALSE(
-      TransformationSplitBlock(MakeInstructionDescriptor(1, SpvOpLabel, 0), 100)
-          .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(TransformationSplitBlock(
-                   MakeInstructionDescriptor(1, SpvOpExecutionMode, 0), 100)
+                   MakeInstructionDescriptor(1, spv::Op::OpLabel, 0), 100)
                    .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationSplitBlock(
+          MakeInstructionDescriptor(1, spv::Op::OpExecutionMode, 0), 100)
+          .IsApplicable(context.get(), transformation_context));
 
   // No split if block is loop header
-  ASSERT_FALSE(
-      TransformationSplitBlock(MakeInstructionDescriptor(27, SpvOpPhi, 0), 100)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSplitBlock(MakeInstructionDescriptor(27, SpvOpPhi, 1), 100)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSplitBlock(
+                   MakeInstructionDescriptor(27, spv::Op::OpPhi, 0), 100)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSplitBlock(
+                   MakeInstructionDescriptor(27, spv::Op::OpPhi, 1), 100)
+                   .IsApplicable(context.get(), transformation_context));
 
   // No split if base instruction does not exist
-  ASSERT_FALSE(
-      TransformationSplitBlock(MakeInstructionDescriptor(88, SpvOpIAdd, 0), 100)
-          .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(TransformationSplitBlock(
-                   MakeInstructionDescriptor(88, SpvOpIMul, 22), 100)
+                   MakeInstructionDescriptor(88, spv::Op::OpIAdd, 0), 100)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSplitBlock(
+                   MakeInstructionDescriptor(88, spv::Op::OpIMul, 22), 100)
                    .IsApplicable(context.get(), transformation_context));
 
   // No split if too many instructions with the desired opcode are skipped
   ASSERT_FALSE(
       TransformationSplitBlock(
-          MakeInstructionDescriptor(18, SpvOpBranchConditional, 1), 100)
+          MakeInstructionDescriptor(18, spv::Op::OpBranchConditional, 1), 100)
           .IsApplicable(context.get(), transformation_context));
 
   // No split if id in use
   ASSERT_FALSE(TransformationSplitBlock(
-                   MakeInstructionDescriptor(18, SpvOpSLessThan, 0), 27)
+                   MakeInstructionDescriptor(18, spv::Op::OpSLessThan, 0), 27)
                    .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(TransformationSplitBlock(
-                   MakeInstructionDescriptor(18, SpvOpSLessThan, 0), 14)
+                   MakeInstructionDescriptor(18, spv::Op::OpSLessThan, 0), 14)
                    .IsApplicable(context.get(), transformation_context));
 }
 
@@ -206,7 +207,7 @@ TEST(TransformationSplitBlockTest, SplitBlockSeveralTimes) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   auto split_1 = TransformationSplitBlock(
-      MakeInstructionDescriptor(5, SpvOpStore, 0), 100);
+      MakeInstructionDescriptor(5, spv::Op::OpStore, 0), 100);
   ASSERT_TRUE(split_1.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(split_1, context.get(), &transformation_context);
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
@@ -255,7 +256,7 @@ TEST(TransformationSplitBlockTest, SplitBlockSeveralTimes) {
   ASSERT_TRUE(IsEqual(env, after_split_1, context.get()));
 
   auto split_2 = TransformationSplitBlock(
-      MakeInstructionDescriptor(11, SpvOpStore, 0), 101);
+      MakeInstructionDescriptor(11, spv::Op::OpStore, 0), 101);
   ASSERT_TRUE(split_2.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(split_2, context.get(), &transformation_context);
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
@@ -306,7 +307,7 @@ TEST(TransformationSplitBlockTest, SplitBlockSeveralTimes) {
   ASSERT_TRUE(IsEqual(env, after_split_2, context.get()));
 
   auto split_3 = TransformationSplitBlock(
-      MakeInstructionDescriptor(14, SpvOpLoad, 0), 102);
+      MakeInstructionDescriptor(14, spv::Op::OpLoad, 0), 102);
   ASSERT_TRUE(split_3.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(split_3, context.get(), &transformation_context);
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
@@ -425,15 +426,15 @@ TEST(TransformationSplitBlockTest, SplitBlockBeforeSelectBranch) {
   // Illegal to split between the merge and the conditional branch.
   ASSERT_FALSE(
       TransformationSplitBlock(
-          MakeInstructionDescriptor(14, SpvOpBranchConditional, 0), 100)
+          MakeInstructionDescriptor(14, spv::Op::OpBranchConditional, 0), 100)
           .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(
       TransformationSplitBlock(
-          MakeInstructionDescriptor(12, SpvOpBranchConditional, 0), 100)
+          MakeInstructionDescriptor(12, spv::Op::OpBranchConditional, 0), 100)
           .IsApplicable(context.get(), transformation_context));
 
   auto split = TransformationSplitBlock(
-      MakeInstructionDescriptor(14, SpvOpSelectionMerge, 0), 100);
+      MakeInstructionDescriptor(14, spv::Op::OpSelectionMerge, 0), 100);
   ASSERT_TRUE(split.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(split, context.get(), &transformation_context);
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
@@ -555,14 +556,14 @@ TEST(TransformationSplitBlockTest, SplitBlockBeforeSwitchBranch) {
       MakeUnique<FactManager>(context.get()), validator_options);
   // Illegal to split between the merge and the conditional branch.
   ASSERT_FALSE(TransformationSplitBlock(
-                   MakeInstructionDescriptor(9, SpvOpSwitch, 0), 100)
+                   MakeInstructionDescriptor(9, spv::Op::OpSwitch, 0), 100)
                    .IsApplicable(context.get(), transformation_context));
   ASSERT_FALSE(TransformationSplitBlock(
-                   MakeInstructionDescriptor(15, SpvOpSwitch, 0), 100)
+                   MakeInstructionDescriptor(15, spv::Op::OpSwitch, 0), 100)
                    .IsApplicable(context.get(), transformation_context));
 
   auto split = TransformationSplitBlock(
-      MakeInstructionDescriptor(9, SpvOpSelectionMerge, 0), 100);
+      MakeInstructionDescriptor(9, spv::Op::OpSelectionMerge, 0), 100);
   ASSERT_TRUE(split.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(split, context.get(), &transformation_context);
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
@@ -690,15 +691,15 @@ TEST(TransformationSplitBlockTest, NoSplitDuringOpPhis) {
       MakeUnique<FactManager>(context.get()), validator_options);
   // We cannot split before OpPhi instructions, since the number of incoming
   // blocks may not appropriately match after splitting.
-  ASSERT_FALSE(
-      TransformationSplitBlock(MakeInstructionDescriptor(26, SpvOpPhi, 0), 100)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSplitBlock(MakeInstructionDescriptor(27, SpvOpPhi, 0), 100)
-          .IsApplicable(context.get(), transformation_context));
-  ASSERT_FALSE(
-      TransformationSplitBlock(MakeInstructionDescriptor(27, SpvOpPhi, 1), 100)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSplitBlock(
+                   MakeInstructionDescriptor(26, spv::Op::OpPhi, 0), 100)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSplitBlock(
+                   MakeInstructionDescriptor(27, spv::Op::OpPhi, 0), 100)
+                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(TransformationSplitBlock(
+                   MakeInstructionDescriptor(27, spv::Op::OpPhi, 1), 100)
+                   .IsApplicable(context.get(), transformation_context));
 }
 
 TEST(TransformationSplitBlockTest, SplitOpPhiWithSinglePredecessor) {
@@ -741,13 +742,13 @@ TEST(TransformationSplitBlockTest, SplitOpPhiWithSinglePredecessor) {
   spvtools::ValidatorOptions validator_options;
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
-  ASSERT_TRUE(
-      TransformationSplitBlock(MakeInstructionDescriptor(21, SpvOpPhi, 0), 100)
-          .IsApplicable(context.get(), transformation_context));
+  ASSERT_TRUE(TransformationSplitBlock(
+                  MakeInstructionDescriptor(21, spv::Op::OpPhi, 0), 100)
+                  .IsApplicable(context.get(), transformation_context));
   // An equivalent transformation to the above, just described with respect to a
   // different base instruction.
-  auto split =
-      TransformationSplitBlock(MakeInstructionDescriptor(20, SpvOpPhi, 0), 100);
+  auto split = TransformationSplitBlock(
+      MakeInstructionDescriptor(20, spv::Op::OpPhi, 0), 100);
   ASSERT_TRUE(split.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(split, context.get(), &transformation_context);
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
@@ -826,7 +827,7 @@ TEST(TransformationSplitBlockTest, DeadBlockShouldSplitToTwoDeadBlocks) {
   transformation_context.GetFactManager()->AddFactBlockIsDead(8);
 
   auto split = TransformationSplitBlock(
-      MakeInstructionDescriptor(8, SpvOpBranch, 0), 100);
+      MakeInstructionDescriptor(8, spv::Op::OpBranch, 0), 100);
   ASSERT_TRUE(split.IsApplicable(context.get(), transformation_context));
   ApplyAndCheckFreshIds(split, context.get(), &transformation_context);
   ASSERT_TRUE(fuzzerutil::IsValidAndWellFormed(context.get(), validator_options,
@@ -912,7 +913,8 @@ TEST(TransformationSplitBlockTest, DoNotSplitUseOfOpSampledImage) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   auto split = TransformationSplitBlock(
-      MakeInstructionDescriptor(217, SpvOpImageSampleImplicitLod, 0), 500);
+      MakeInstructionDescriptor(217, spv::Op::OpImageSampleImplicitLod, 0),
+      500);
   ASSERT_FALSE(split.IsApplicable(context.get(), transformation_context));
 }
 

@@ -62,7 +62,7 @@
         <id value="9"   vendor="Qualcomm"   comment="Contact weifengz@qti.qualcomm.com"/>
         <id value="10"  vendor="AMD"        comment="Contact Daniel Rakos, daniel.rakos@amd.com"/>
         <id value="11"  vendor="Intel"      comment="Contact Alexey, alexey.bader@intel.com"/>
-        <id value="12"  vendor="Imagination" comment="Contact James Jones"/>
+        <id value="12"  vendor="Imagination" comment="Contact Stephen Clarke, stephen.clarke@imgtec.com"/>
         <id value="13"  vendor="Google" tool="Shaderc over Glslang" comment="Contact David Neto, dneto@google.com"/>
         <id value="14"  vendor="Google" tool="spiregg" comment="Contact Lei Zhang, antiagainst@google.com"/>
         <id value="15"  vendor="Google" tool="rspirv" comment="Contact Lei Zhang, antiagainst@gmail.com"/>
@@ -85,7 +85,9 @@
         <id value="32"  vendor="TornadoVM" tool="SPIRV Beehive Toolkit" comment="https://github.com/beehive-lab/spirv-beehive-toolkit"/>
         <id value="33"  vendor="DragonJoker" tool="ShaderWriter" comment="Contact Sylvain Doremus, https://github.com/DragonJoker/ShaderWriter"/>
         <id value="34"  vendor="Rayan Hatout" tool="SPIRVSmith" comment="Contact Rayan Hatout rayan.hatout@gmail.com, Repo https://github.com/rayanht/SPIRVSmith"/>
-        <unused start="35" end="0xFFFF" comment="Tool ID range reservable for future use by vendors"/>
+        <id value="35"  vendor="Saarland University" tool="Shady" comment="Contact Hugo Devillers devillers@uni-saarland.de, Repo https://github.com/Hugobros3/shady"/>
+        <id value="36"  vendor="Taichi Graphics" tool="Taichi" comment="Contact Rendong Liang rendongliang@taichi.graphics, Repo https://github.com/taichi-dev/taichi"/>
+        <unused start="37" end="0xFFFF" comment="Tool ID range reservable for future use by vendors"/>
     </ids>
 
     <!-- SECTION: SPIR-V Opcodes and Enumerants -->

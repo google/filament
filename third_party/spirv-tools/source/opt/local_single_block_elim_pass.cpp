@@ -24,10 +24,8 @@
 namespace spvtools {
 namespace opt {
 namespace {
-
-const uint32_t kStoreValIdInIdx = 1;
-
-}  // anonymous namespace
+constexpr uint32_t kStoreValIdInIdx = 1;
+}  // namespace
 
 bool LocalSingleBlockLoadStoreElimPass::HasOnlySupportedRefs(uint32_t ptrId) {
   if (supported_ref_ptrs_.find(ptrId) != supported_ref_ptrs_.end()) return true;
@@ -37,13 +35,13 @@ bool LocalSingleBlockLoadStoreElimPass::HasOnlySupportedRefs(uint32_t ptrId) {
             dbg_op == CommonDebugInfoDebugValue) {
           return true;
         }
-        SpvOp op = user->opcode();
-        if (IsNonPtrAccessChain(op) || op == SpvOpCopyObject) {
+        spv::Op op = user->opcode();
+        if (IsNonPtrAccessChain(op) || op == spv::Op::OpCopyObject) {
           if (!HasOnlySupportedRefs(user->result_id())) {
             return false;
           }
-        } else if (op != SpvOpStore && op != SpvOpLoad && op != SpvOpName &&
-                   !IsNonTypeDecorate(op)) {
+        } else if (op != spv::Op::OpStore && op != spv::Op::OpLoad &&
+                   op != spv::Op::OpName && !IsNonTypeDecorate(op)) {
           return false;
         }
         return true;
@@ -68,7 +66,7 @@ bool LocalSingleBlockLoadStoreElimPass::LocalSingleBlockLoadStoreElim(
     for (auto ii = next; ii != bi->end(); ii = next) {
       ++next;
       switch (ii->opcode()) {
-        case SpvOpStore: {
+        case spv::Op::OpStore: {
           // Verify store variable is target type
           uint32_t varId;
           Instruction* ptrInst = GetPtr(&*ii, &varId);
@@ -77,7 +75,7 @@ bool LocalSingleBlockLoadStoreElimPass::LocalSingleBlockLoadStoreElim(
           // If a store to the whole variable, remember it for succeeding
           // loads and stores. Otherwise forget any previous store to that
           // variable.
-          if (ptrInst->opcode() == SpvOpVariable) {
+          if (ptrInst->opcode() == spv::Op::OpVariable) {
             // If a previous store to same variable, mark the store
             // for deletion if not still used. Don't delete store
             // if debugging; let ssa-rewrite and DCE handle it
@@ -114,14 +112,14 @@ bool LocalSingleBlockLoadStoreElimPass::LocalSingleBlockLoadStoreElim(
             var2load_.erase(varId);
           }
         } break;
-        case SpvOpLoad: {
+        case spv::Op::OpLoad: {
           // Verify store variable is target type
           uint32_t varId;
           Instruction* ptrInst = GetPtr(&*ii, &varId);
           if (!IsTargetVar(varId)) continue;
           if (!HasOnlySupportedRefs(varId)) continue;
           uint32_t replId = 0;
-          if (ptrInst->opcode() == SpvOpVariable) {
+          if (ptrInst->opcode() == spv::Op::OpVariable) {
             // If a load from a variable, look for a previous store or
             // load from that variable and use its value.
             auto si = var2store_.find(varId);
@@ -146,11 +144,11 @@ bool LocalSingleBlockLoadStoreElimPass::LocalSingleBlockLoadStoreElim(
             instructions_to_kill.push_back(&*ii);
             modified = true;
           } else {
-            if (ptrInst->opcode() == SpvOpVariable)
+            if (ptrInst->opcode() == spv::Op::OpVariable)
               var2load_[varId] = &*ii;  // register load
           }
         } break;
-        case SpvOpFunctionCall: {
+        case spv::Op::OpFunctionCall: {
           // Conservatively assume all locals are redefined for now.
           // TODO(): Handle more optimally
           var2store_.clear();
@@ -192,7 +190,7 @@ bool LocalSingleBlockLoadStoreElimPass::AllExtensionsSupported() const {
   // around unknown extended
   // instruction sets even if they are non-semantic
   for (auto& inst : context()->module()->ext_inst_imports()) {
-    assert(inst.opcode() == SpvOpExtInstImport &&
+    assert(inst.opcode() == spv::Op::OpExtInstImport &&
            "Expecting an import of an extension's instruction set.");
     const std::string extension_name = inst.GetInOperand(0).AsString();
     if (spvtools::utils::starts_with(extension_name, "NonSemantic.") &&
@@ -205,14 +203,15 @@ bool LocalSingleBlockLoadStoreElimPass::AllExtensionsSupported() const {
 
 Pass::Status LocalSingleBlockLoadStoreElimPass::ProcessImpl() {
   // Assumes relaxed logical addressing only (see instruction.h).
-  if (context()->get_feature_mgr()->HasCapability(SpvCapabilityAddresses))
+  if (context()->get_feature_mgr()->HasCapability(spv::Capability::Addresses))
     return Status::SuccessWithoutChange;
 
   // Do not process if module contains OpGroupDecorate. Additional
   // support required in KillNamesAndDecorates().
   // TODO(greg-lunarg): Add support for OpGroupDecorate
   for (auto& ai : get_module()->annotations())
-    if (ai.opcode() == SpvOpGroupDecorate) return Status::SuccessWithoutChange;
+    if (ai.opcode() == spv::Op::OpGroupDecorate)
+      return Status::SuccessWithoutChange;
   // If any extensions in the module are not explicitly supported,
   // return unmodified.
   if (!AllExtensionsSupported()) return Status::SuccessWithoutChange;

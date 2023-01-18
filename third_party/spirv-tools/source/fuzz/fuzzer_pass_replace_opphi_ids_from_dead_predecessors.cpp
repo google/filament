@@ -50,7 +50,7 @@ void FuzzerPassReplaceOpPhiIdsFromDeadPredecessors::Apply() {
               block->id(), [this, &function, block, &transformations](
                                opt::Instruction* instruction, uint32_t) {
                 // Only consider OpPhi instructions.
-                if (instruction->opcode() != SpvOpPhi) {
+                if (instruction->opcode() != spv::Op::OpPhi) {
                   return;
                 }
 

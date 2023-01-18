@@ -44,7 +44,8 @@ bool TransformationExpandVectorReduction::IsApplicable(
   }
 
   // |instruction| must be OpAny or OpAll.
-  if (instruction->opcode() != SpvOpAny && instruction->opcode() != SpvOpAll) {
+  if (instruction->opcode() != spv::Op::OpAny &&
+      instruction->opcode() != spv::Op::OpAll) {
     return false;
   }
 
@@ -92,10 +93,11 @@ void TransformationExpandVectorReduction::Apply(
 
   for (uint32_t i = 0; i < vector_component_count; i++) {
     // Extracts the i-th |vector| component.
-    auto vector_component = opt::Instruction(
-        ir_context, SpvOpCompositeExtract, instruction->type_id(), *fresh_id++,
-        {{SPV_OPERAND_TYPE_ID, {vector->result_id()}},
-         {SPV_OPERAND_TYPE_LITERAL_INTEGER, {i}}});
+    auto vector_component =
+        opt::Instruction(ir_context, spv::Op::OpCompositeExtract,
+                         instruction->type_id(), *fresh_id++,
+                         {{SPV_OPERAND_TYPE_ID, {vector->result_id()}},
+                          {SPV_OPERAND_TYPE_LITERAL_INTEGER, {i}}});
     instruction->InsertBefore(MakeUnique<opt::Instruction>(vector_component));
     fuzzerutil::UpdateModuleIdBound(ir_context, vector_component.result_id());
     vector_components.push_back(vector_component.result_id());
@@ -104,7 +106,8 @@ void TransformationExpandVectorReduction::Apply(
   // The first two |vector| components are used in the first logical operation.
   auto logical_instruction = opt::Instruction(
       ir_context,
-      instruction->opcode() == SpvOpAny ? SpvOpLogicalOr : SpvOpLogicalAnd,
+      instruction->opcode() == spv::Op::OpAny ? spv::Op::OpLogicalOr
+                                              : spv::Op::OpLogicalAnd,
       instruction->type_id(), *fresh_id++,
       {{SPV_OPERAND_TYPE_ID, {vector_components[0]}},
        {SPV_OPERAND_TYPE_ID, {vector_components[1]}}});

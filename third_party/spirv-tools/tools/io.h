@@ -26,9 +26,15 @@
 
 #define SET_STDIN_TO_BINARY_MODE() _setmode(_fileno(stdin), O_BINARY);
 #define SET_STDIN_TO_TEXT_MODE() _setmode(_fileno(stdin), O_TEXT);
+#define SET_STDOUT_TO_BINARY_MODE() _setmode(_fileno(stdout), O_BINARY);
+#define SET_STDOUT_TO_TEXT_MODE() _setmode(_fileno(stdout), O_TEXT);
+#define SET_STDOUT_MODE(mode) _setmode(_fileno(stdout), mode);
 #else
 #define SET_STDIN_TO_BINARY_MODE()
 #define SET_STDIN_TO_TEXT_MODE()
+#define SET_STDOUT_TO_BINARY_MODE() 0
+#define SET_STDOUT_TO_TEXT_MODE() 0
+#define SET_STDOUT_MODE(mode)
 #endif
 
 // Appends the contents of the |file| to |data|, assuming each element in the
@@ -115,6 +121,44 @@ bool ReadTextFile(const char* filename, std::vector<T>* data) {
   return succeeded;
 }
 
+namespace {
+// A class to create and manage a file for outputting data.
+class OutputFile {
+ public:
+  // Opens |filename| in the given mode.  If |filename| is nullptr, the empty
+  // string or "-", stdout will be set to the given mode.
+  OutputFile(const char* filename, const char* mode) {
+    const bool use_stdout =
+        !filename || (filename[0] == '-' && filename[1] == '\0');
+    if (use_stdout) {
+      if (strchr(mode, 'b')) {
+        old_mode_ = SET_STDOUT_TO_BINARY_MODE();
+      } else {
+        old_mode_ = SET_STDOUT_TO_TEXT_MODE();
+      }
+      fp_ = stdout;
+    } else {
+      fp_ = fopen(filename, mode);
+    }
+  }
+
+  ~OutputFile() {
+    if (fp_ == stdout) {
+      SET_STDOUT_MODE(old_mode_);
+    } else if (fp_ != nullptr) {
+      fclose(fp_);
+    }
+  }
+
+  // Returns a file handle to the file.
+  FILE* GetFileHandle() const { return fp_; }
+
+ private:
+  FILE* fp_;
+  int old_mode_;
+};
+}  // namespace
+
 // Writes the given |data| into the file named as |filename| using the given
 // |mode|, assuming |data| is an array of |count| elements of type |T|. If
 // |filename| is nullptr or "-", writes to standard output. If any error occurs,
@@ -122,20 +166,19 @@ bool ReadTextFile(const char* filename, std::vector<T>* data) {
 template <typename T>
 bool WriteFile(const char* filename, const char* mode, const T* data,
                size_t count) {
-  const bool use_stdout =
-      !filename || (filename[0] == '-' && filename[1] == '\0');
-  if (FILE* fp = (use_stdout ? stdout : fopen(filename, mode))) {
-    size_t written = fwrite(data, sizeof(T), count, fp);
-    if (count != written) {
-      fprintf(stderr, "error: could not write to file '%s'\n", filename);
-      if (!use_stdout) fclose(fp);
-      return false;
-    }
-    if (!use_stdout) fclose(fp);
-  } else {
+  OutputFile file(filename, mode);
+  FILE* fp = file.GetFileHandle();
+  if (fp == nullptr) {
     fprintf(stderr, "error: could not open file '%s'\n", filename);
     return false;
   }
+
+  size_t written = fwrite(data, sizeof(T), count, fp);
+  if (count != written) {
+    fprintf(stderr, "error: could not write to file '%s'\n", filename);
+    return false;
+  }
+
   return true;
 }
 

@@ -40,7 +40,7 @@ void FuzzerPassReplaceCopyObjectsWithStoresLoads::Apply() {
       return;
     }
     // The instruction must be OpCopyObject.
-    if (instruction->opcode() != SpvOpCopyObject) {
+    if (instruction->opcode() != spv::Op::OpCopyObject) {
       return;
     }
     // The opcode of the type_id instruction cannot be a OpTypePointer,
@@ -48,21 +48,22 @@ void FuzzerPassReplaceCopyObjectsWithStoresLoads::Apply() {
     if (GetIRContext()
             ->get_def_use_mgr()
             ->GetDef(instruction->type_id())
-            ->opcode() == SpvOpTypePointer) {
+            ->opcode() == spv::Op::OpTypePointer) {
       return;
     }
     // It must be valid to insert OpStore and OpLoad instructions
     // before the instruction OpCopyObject.
-    if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpStore,
+    if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(spv::Op::OpStore,
                                                       instruction) ||
-        !fuzzerutil::CanInsertOpcodeBeforeInstruction(SpvOpLoad, instruction)) {
+        !fuzzerutil::CanInsertOpcodeBeforeInstruction(spv::Op::OpLoad,
+                                                      instruction)) {
       return;
     }
 
     // Randomly decides whether a global or local variable will be added.
     auto variable_storage_class = GetFuzzerContext()->ChooseEven()
-                                      ? SpvStorageClassPrivate
-                                      : SpvStorageClassFunction;
+                                      ? spv::StorageClass::Private
+                                      : spv::StorageClass::Function;
 
     // Find or create a constant to initialize the variable from. The type of
     // |instruction| must be such that the function FindOrCreateConstant can be
@@ -79,7 +80,7 @@ void FuzzerPassReplaceCopyObjectsWithStoresLoads::Apply() {
     // Apply the transformation replacing OpCopyObject with Store and Load.
     ApplyTransformation(TransformationReplaceCopyObjectWithStoreLoad(
         instruction->result_id(), GetFuzzerContext()->GetFreshId(),
-        variable_storage_class, variable_initializer_id));
+        uint32_t(variable_storage_class), variable_initializer_id));
   });
 }
 

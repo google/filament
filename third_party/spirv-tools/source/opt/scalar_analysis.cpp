@@ -97,7 +97,7 @@ SENode* ScalarEvolutionAnalysis::CreateRecurrentExpression(
 
 SENode* ScalarEvolutionAnalysis::AnalyzeMultiplyOp(
     const Instruction* multiply) {
-  assert(multiply->opcode() == SpvOp::SpvOpIMul &&
+  assert(multiply->opcode() == spv::Op::OpIMul &&
          "Multiply node did not come from a multiply instruction");
   analysis::DefUseManager* def_use = context_->get_def_use_mgr();
 
@@ -168,21 +168,21 @@ SENode* ScalarEvolutionAnalysis::AnalyzeInstruction(const Instruction* inst) {
 
   SENode* output = nullptr;
   switch (inst->opcode()) {
-    case SpvOp::SpvOpPhi: {
+    case spv::Op::OpPhi: {
       output = AnalyzePhiInstruction(inst);
       break;
     }
-    case SpvOp::SpvOpConstant:
-    case SpvOp::SpvOpConstantNull: {
+    case spv::Op::OpConstant:
+    case spv::Op::OpConstantNull: {
       output = AnalyzeConstant(inst);
       break;
     }
-    case SpvOp::SpvOpISub:
-    case SpvOp::SpvOpIAdd: {
+    case spv::Op::OpISub:
+    case spv::Op::OpIAdd: {
       output = AnalyzeAddOp(inst);
       break;
     }
-    case SpvOp::SpvOpIMul: {
+    case spv::Op::OpIMul: {
       output = AnalyzeMultiplyOp(inst);
       break;
     }
@@ -196,9 +196,9 @@ SENode* ScalarEvolutionAnalysis::AnalyzeInstruction(const Instruction* inst) {
 }
 
 SENode* ScalarEvolutionAnalysis::AnalyzeConstant(const Instruction* inst) {
-  if (inst->opcode() == SpvOp::SpvOpConstantNull) return CreateConstant(0);
+  if (inst->opcode() == spv::Op::OpConstantNull) return CreateConstant(0);
 
-  assert(inst->opcode() == SpvOp::SpvOpConstant);
+  assert(inst->opcode() == spv::Op::OpConstant);
   assert(inst->NumInOperands() == 1);
   int64_t value = 0;
 
@@ -226,8 +226,8 @@ SENode* ScalarEvolutionAnalysis::AnalyzeConstant(const Instruction* inst) {
 // Handles both addition and subtraction. If the |sub| flag is set then the
 // addition will be op1+(-op2) otherwise op1+op2.
 SENode* ScalarEvolutionAnalysis::AnalyzeAddOp(const Instruction* inst) {
-  assert((inst->opcode() == SpvOp::SpvOpIAdd ||
-          inst->opcode() == SpvOp::SpvOpISub) &&
+  assert((inst->opcode() == spv::Op::OpIAdd ||
+          inst->opcode() == spv::Op::OpISub) &&
          "Add node must be created from a OpIAdd or OpISub instruction");
 
   analysis::DefUseManager* def_use = context_->get_def_use_mgr();
@@ -239,7 +239,7 @@ SENode* ScalarEvolutionAnalysis::AnalyzeAddOp(const Instruction* inst) {
       AnalyzeInstruction(def_use->GetDef(inst->GetSingleWordInOperand(1)));
 
   // To handle subtraction we wrap the second operand in a unary negation node.
-  if (inst->opcode() == SpvOp::SpvOpISub) {
+  if (inst->opcode() == spv::Op::OpISub) {
     op2 = CreateNegation(op2);
   }
 
@@ -573,7 +573,7 @@ struct PushToStringImpl<T, 4> {
 };
 
 template <typename T>
-static void PushToString(T id, std::u32string* str) {
+void PushToString(T id, std::u32string* str) {
   PushToStringImpl<T, sizeof(T)>{}(id, str);
 }
 
@@ -928,8 +928,8 @@ namespace {
 
 // Remove |node| from the |mul| chain (of the form A * ... * |node| * ... * Z),
 // if |node| is not in the chain, returns the original chain.
-static SENode* RemoveOneNodeFromMultiplyChain(SEMultiplyNode* mul,
-                                              const SENode* node) {
+SENode* RemoveOneNodeFromMultiplyChain(SEMultiplyNode* mul,
+                                       const SENode* node) {
   SENode* lhs = mul->GetChildren()[0];
   SENode* rhs = mul->GetChildren()[1];
   if (lhs == node) {

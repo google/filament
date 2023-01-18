@@ -19,11 +19,9 @@
 namespace spvtools {
 namespace opt {
 namespace {
-
-const uint32_t kExtractCompositeIdInIdx = 0;
-const uint32_t kInsertObjectIdInIdx = 0;
-const uint32_t kInsertCompositeIdInIdx = 1;
-
+constexpr uint32_t kExtractCompositeIdInIdx = 0;
+constexpr uint32_t kInsertObjectIdInIdx = 0;
+constexpr uint32_t kInsertCompositeIdInIdx = 1;
 }  // namespace
 
 Pass::Status VectorDCE::Process() {
@@ -68,17 +66,17 @@ void VectorDCE::FindLiveComponents(Function* function,
     Instruction* current_inst = current_item.instruction;
 
     switch (current_inst->opcode()) {
-      case SpvOpCompositeExtract:
+      case spv::Op::OpCompositeExtract:
         MarkExtractUseAsLive(current_inst, current_item.components,
                              live_components, &work_list);
         break;
-      case SpvOpCompositeInsert:
+      case spv::Op::OpCompositeInsert:
         MarkInsertUsesAsLive(current_item, live_components, &work_list);
         break;
-      case SpvOpVectorShuffle:
+      case spv::Op::OpVectorShuffle:
         MarkVectorShuffleUsesAsLive(current_item, live_components, &work_list);
         break;
-      case SpvOpCompositeConstruct:
+      case spv::Op::OpCompositeConstruct:
         MarkCompositeContructUsesAsLive(current_item, live_components,
                                         &work_list);
         break;
@@ -347,11 +345,11 @@ bool VectorDCE::RewriteInstructions(
     }
 
     switch (current_inst->opcode()) {
-      case SpvOpCompositeInsert:
+      case spv::Op::OpCompositeInsert:
         modified |= RewriteInsertInstruction(
             current_inst, live_component->second, &dead_dbg_value);
         break;
-      case SpvOpCompositeConstruct:
+      case spv::Op::OpCompositeConstruct:
         // TODO: The members that are not live can be replaced by an undef
         // or constant. This will remove uses of those values, and possibly
         // create opportunities for ADCE.

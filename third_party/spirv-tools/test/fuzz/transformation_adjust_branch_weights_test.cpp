@@ -108,7 +108,7 @@ TEST(TransformationAdjustBranchWeightsTest, IsApplicableTest) {
       MakeUnique<FactManager>(context.get()), validator_options);
   // Tests OpBranchConditional instruction with weights.
   auto instruction_descriptor =
-      MakeInstructionDescriptor(33, SpvOpBranchConditional, 0);
+      MakeInstructionDescriptor(33, spv::Op::OpBranchConditional, 0);
   auto transformation =
       TransformationAdjustBranchWeights(instruction_descriptor, {0, 1});
   ASSERT_TRUE(
@@ -116,7 +116,7 @@ TEST(TransformationAdjustBranchWeightsTest, IsApplicableTest) {
 
   // Tests the two branch weights equal to 0.
   instruction_descriptor =
-      MakeInstructionDescriptor(33, SpvOpBranchConditional, 0);
+      MakeInstructionDescriptor(33, spv::Op::OpBranchConditional, 0);
   transformation =
       TransformationAdjustBranchWeights(instruction_descriptor, {0, 0});
 #ifndef NDEBUG
@@ -127,14 +127,14 @@ TEST(TransformationAdjustBranchWeightsTest, IsApplicableTest) {
 
   // Tests 32-bit unsigned integer overflow.
   instruction_descriptor =
-      MakeInstructionDescriptor(33, SpvOpBranchConditional, 0);
+      MakeInstructionDescriptor(33, spv::Op::OpBranchConditional, 0);
   transformation = TransformationAdjustBranchWeights(instruction_descriptor,
                                                      {UINT32_MAX, 0});
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
 
   instruction_descriptor =
-      MakeInstructionDescriptor(33, SpvOpBranchConditional, 0);
+      MakeInstructionDescriptor(33, spv::Op::OpBranchConditional, 0);
   transformation = TransformationAdjustBranchWeights(instruction_descriptor,
                                                      {1, UINT32_MAX});
 #ifndef NDEBUG
@@ -145,26 +145,26 @@ TEST(TransformationAdjustBranchWeightsTest, IsApplicableTest) {
 
   // Tests OpBranchConditional instruction with no weights.
   instruction_descriptor =
-      MakeInstructionDescriptor(21, SpvOpBranchConditional, 0);
+      MakeInstructionDescriptor(21, spv::Op::OpBranchConditional, 0);
   transformation =
       TransformationAdjustBranchWeights(instruction_descriptor, {0, 1});
   ASSERT_TRUE(
       transformation.IsApplicable(context.get(), transformation_context));
 
   // Tests non-OpBranchConditional instructions.
-  instruction_descriptor = MakeInstructionDescriptor(2, SpvOpTypeVoid, 0);
+  instruction_descriptor = MakeInstructionDescriptor(2, spv::Op::OpTypeVoid, 0);
   transformation =
       TransformationAdjustBranchWeights(instruction_descriptor, {5, 6});
   ASSERT_FALSE(
       transformation.IsApplicable(context.get(), transformation_context));
 
-  instruction_descriptor = MakeInstructionDescriptor(20, SpvOpLabel, 0);
+  instruction_descriptor = MakeInstructionDescriptor(20, spv::Op::OpLabel, 0);
   transformation =
       TransformationAdjustBranchWeights(instruction_descriptor, {1, 2});
   ASSERT_FALSE(
       transformation.IsApplicable(context.get(), transformation_context));
 
-  instruction_descriptor = MakeInstructionDescriptor(49, SpvOpIAdd, 0);
+  instruction_descriptor = MakeInstructionDescriptor(49, spv::Op::OpIAdd, 0);
   transformation =
       TransformationAdjustBranchWeights(instruction_descriptor, {1, 2});
   ASSERT_FALSE(
@@ -255,13 +255,13 @@ TEST(TransformationAdjustBranchWeightsTest, ApplyTest) {
   TransformationContext transformation_context(
       MakeUnique<FactManager>(context.get()), validator_options);
   auto instruction_descriptor =
-      MakeInstructionDescriptor(33, SpvOpBranchConditional, 0);
+      MakeInstructionDescriptor(33, spv::Op::OpBranchConditional, 0);
   auto transformation =
       TransformationAdjustBranchWeights(instruction_descriptor, {5, 6});
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);
 
   instruction_descriptor =
-      MakeInstructionDescriptor(21, SpvOpBranchConditional, 0);
+      MakeInstructionDescriptor(21, spv::Op::OpBranchConditional, 0);
   transformation =
       TransformationAdjustBranchWeights(instruction_descriptor, {7, 8});
   ApplyAndCheckFreshIds(transformation, context.get(), &transformation_context);

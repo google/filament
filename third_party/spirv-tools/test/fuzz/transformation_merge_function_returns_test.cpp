@@ -1884,7 +1884,7 @@ TEST(TransformationMergeFunctionReturnsTest, OpPhiAfterFirstBlock) {
   // Ensure that all input operands of OpBranchConditional instructions have
   // the right operand type.
   context->module()->ForEachInst([](opt::Instruction* inst) {
-    if (inst->opcode() == SpvOpBranchConditional) {
+    if (inst->opcode() == spv::Op::OpBranchConditional) {
       ASSERT_EQ(inst->GetInOperand(0).type, SPV_OPERAND_TYPE_ID);
       ASSERT_EQ(inst->GetInOperand(1).type, SPV_OPERAND_TYPE_ID);
       ASSERT_EQ(inst->GetInOperand(2).type, SPV_OPERAND_TYPE_ID);

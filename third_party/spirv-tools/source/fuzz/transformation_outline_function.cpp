@@ -107,7 +107,7 @@ bool TransformationOutlineFunction::IsApplicable(
   // The entry and exit block ids must indeed refer to blocks.
   for (auto block_id : {message_.entry_block(), message_.exit_block()}) {
     auto block_label = ir_context->get_def_use_mgr()->GetDef(block_id);
-    if (!block_label || block_label->opcode() != SpvOpLabel) {
+    if (!block_label || block_label->opcode() != spv::Op::OpLabel) {
       return false;
     }
   }
@@ -118,7 +118,7 @@ bool TransformationOutlineFunction::IsApplicable(
   // The entry block cannot start with OpVariable - this would mean that
   // outlining would remove a variable from the function containing the region
   // being outlined.
-  if (entry_block->begin()->opcode() == SpvOpVariable) {
+  if (entry_block->begin()->opcode() == spv::Op::OpVariable) {
     return false;
   }
 
@@ -136,7 +136,7 @@ bool TransformationOutlineFunction::IsApplicable(
   // The entry block cannot start with OpPhi.  This is to keep the
   // transformation logic simple.  (Another transformation to split the OpPhis
   // from a block could be applied to avoid this scenario.)
-  if (entry_block->begin()->opcode() == SpvOpPhi) {
+  if (entry_block->begin()->opcode() == spv::Op::OpPhi) {
     return false;
   }
 
@@ -257,10 +257,10 @@ bool TransformationOutlineFunction::IsApplicable(
     auto input_id_inst = ir_context->get_def_use_mgr()->GetDef(id);
     if (ir_context->get_def_use_mgr()
             ->GetDef(input_id_inst->type_id())
-            ->opcode() == SpvOpTypePointer) {
+            ->opcode() == spv::Op::OpTypePointer) {
       switch (input_id_inst->opcode()) {
-        case SpvOpFunctionParameter:
-        case SpvOpVariable:
+        case spv::Op::OpFunctionParameter:
+        case spv::Op::OpVariable:
           // These are OK.
           break;
         default:
@@ -286,7 +286,7 @@ bool TransformationOutlineFunction::IsApplicable(
         // function)
         || ir_context->get_def_use_mgr()
                    ->GetDef(fuzzerutil::GetTypeId(ir_context, id))
-                   ->opcode() == SpvOpTypePointer) {
+                   ->opcode() == spv::Op::OpTypePointer) {
       return false;
     }
   }
@@ -608,7 +608,7 @@ TransformationOutlineFunction::PrepareFunctionPrototype(
         auto output_id_type =
             ir_context->get_def_use_mgr()->GetDef(output_id)->type_id();
         if (ir_context->get_def_use_mgr()->GetDef(output_id_type)->opcode() ==
-            SpvOpTypeVoid) {
+            spv::Op::OpTypeVoid) {
           // We cannot add a void field to a struct.  We instead use OpUndef to
           // handle void output ids.
           continue;
@@ -617,7 +617,7 @@ TransformationOutlineFunction::PrepareFunctionPrototype(
       }
       // Add a new struct type to the module.
       ir_context->module()->AddType(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpTypeStruct, 0,
+          ir_context, spv::Op::OpTypeStruct, 0,
           message_.new_function_struct_return_type_id(),
           std::move(struct_member_types)));
       // The return type for the function is the newly-created struct.
@@ -638,7 +638,7 @@ TransformationOutlineFunction::PrepareFunctionPrototype(
     // Add a new function type to the module, and record that this is the type
     // id for the new function.
     ir_context->module()->AddType(MakeUnique<opt::Instruction>(
-        ir_context, SpvOpTypeFunction, 0, message_.new_function_type_id(),
+        ir_context, spv::Op::OpTypeFunction, 0, message_.new_function_type_id(),
         function_type_operands));
     function_type_id = message_.new_function_type_id();
   }
@@ -647,10 +647,11 @@ TransformationOutlineFunction::PrepareFunctionPrototype(
   // and the return type and function type prepared above.
   std::unique_ptr<opt::Function> outlined_function =
       MakeUnique<opt::Function>(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpFunction, return_type_id, message_.new_function_id(),
+          ir_context, spv::Op::OpFunction, return_type_id,
+          message_.new_function_id(),
           opt::Instruction::OperandList(
               {{spv_operand_type_t ::SPV_OPERAND_TYPE_LITERAL_INTEGER,
-                {SpvFunctionControlMaskNone}},
+                {uint32_t(spv::FunctionControlMask::MaskNone)}},
                {spv_operand_type_t::SPV_OPERAND_TYPE_ID,
                 {function_type_id}}})));
 
@@ -659,7 +660,7 @@ TransformationOutlineFunction::PrepareFunctionPrototype(
   for (auto id : region_input_ids) {
     uint32_t fresh_id = input_id_to_fresh_id_map.at(id);
     outlined_function->AddParameter(MakeUnique<opt::Instruction>(
-        ir_context, SpvOpFunctionParameter,
+        ir_context, spv::Op::OpFunctionParameter,
         ir_context->get_def_use_mgr()->GetDef(id)->type_id(), fresh_id,
         opt::Instruction::OperandList()));
 
@@ -788,7 +789,8 @@ void TransformationOutlineFunction::PopulateOutlinedFunction(
   // |message_.new_function_region_entry_block| as its id.
   std::unique_ptr<opt::BasicBlock> outlined_region_entry_block =
       MakeUnique<opt::BasicBlock>(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpLabel, 0, message_.new_function_region_entry_block(),
+          ir_context, spv::Op::OpLabel, 0,
+          message_.new_function_region_entry_block(),
           opt::Instruction::OperandList()));
 
   if (&original_region_entry_block == &original_region_exit_block) {
@@ -854,8 +856,8 @@ void TransformationOutlineFunction::PopulateOutlinedFunction(
   // the cloned exit block.
   for (auto inst_it = outlined_region_exit_block->begin();
        inst_it != outlined_region_exit_block->end();) {
-    if (inst_it->opcode() == SpvOpLoopMerge ||
-        inst_it->opcode() == SpvOpSelectionMerge) {
+    if (inst_it->opcode() == spv::Op::OpLoopMerge ||
+        inst_it->opcode() == spv::Op::OpSelectionMerge) {
       inst_it = inst_it.Erase();
     } else if (inst_it->IsBlockTerminator()) {
       inst_it = inst_it.Erase();
@@ -870,7 +872,7 @@ void TransformationOutlineFunction::PopulateOutlinedFunction(
     // The case where there are no region output ids is simple: we just add
     // OpReturn.
     outlined_region_exit_block->AddInstruction(MakeUnique<opt::Instruction>(
-        ir_context, SpvOpReturn, 0, 0, opt::Instruction::OperandList()));
+        ir_context, spv::Op::OpReturn, 0, 0, opt::Instruction::OperandList()));
   } else {
     // In the case where there are output ids, we add an OpCompositeConstruct
     // instruction to pack all the non-void output values into a struct, and
@@ -879,23 +881,24 @@ void TransformationOutlineFunction::PopulateOutlinedFunction(
     for (uint32_t id : region_output_ids) {
       if (ir_context->get_def_use_mgr()
               ->GetDef(output_id_to_type_id.at(id))
-              ->opcode() != SpvOpTypeVoid) {
+              ->opcode() != spv::Op::OpTypeVoid) {
         struct_member_operands.push_back(
             {SPV_OPERAND_TYPE_ID, {output_id_to_fresh_id_map.at(id)}});
       }
     }
     outlined_region_exit_block->AddInstruction(MakeUnique<opt::Instruction>(
-        ir_context, SpvOpCompositeConstruct,
+        ir_context, spv::Op::OpCompositeConstruct,
         message_.new_function_struct_return_type_id(),
         message_.new_callee_result_id(), struct_member_operands));
     outlined_region_exit_block->AddInstruction(MakeUnique<opt::Instruction>(
-        ir_context, SpvOpReturnValue, 0, 0,
+        ir_context, spv::Op::OpReturnValue, 0, 0,
         opt::Instruction::OperandList(
             {{SPV_OPERAND_TYPE_ID, {message_.new_callee_result_id()}}})));
   }
 
-  outlined_function->SetFunctionEnd(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpFunctionEnd, 0, 0, opt::Instruction::OperandList()));
+  outlined_function->SetFunctionEnd(
+      MakeUnique<opt::Instruction>(ir_context, spv::Op::OpFunctionEnd, 0, 0,
+                                   opt::Instruction::OperandList()));
 }
 
 void TransformationOutlineFunction::ShrinkOriginalRegion(
@@ -963,7 +966,7 @@ void TransformationOutlineFunction::ShrinkOriginalRegion(
   }
 
   original_region_entry_block->AddInstruction(MakeUnique<opt::Instruction>(
-      ir_context, SpvOpFunctionCall, return_type_id,
+      ir_context, spv::Op::OpFunctionCall, return_type_id,
       message_.new_caller_result_id(), function_call_operands));
 
   // If there are output ids, the function call will return a struct.  For each
@@ -975,15 +978,15 @@ void TransformationOutlineFunction::ShrinkOriginalRegion(
   for (uint32_t output_id : region_output_ids) {
     uint32_t output_type_id = output_id_to_type_id.at(output_id);
     if (ir_context->get_def_use_mgr()->GetDef(output_type_id)->opcode() ==
-        SpvOpTypeVoid) {
+        spv::Op::OpTypeVoid) {
       original_region_entry_block->AddInstruction(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpUndef, output_type_id, output_id,
+          ir_context, spv::Op::OpUndef, output_type_id, output_id,
           opt::Instruction::OperandList()));
       // struct_member_index is not incremented since there was no struct member
       // associated with this void-typed output id.
     } else {
       original_region_entry_block->AddInstruction(MakeUnique<opt::Instruction>(
-          ir_context, SpvOpCompositeExtract, output_type_id, output_id,
+          ir_context, spv::Op::OpCompositeExtract, output_type_id, output_id,
           opt::Instruction::OperandList(
               {{SPV_OPERAND_TYPE_ID, {message_.new_caller_result_id()}},
                {SPV_OPERAND_TYPE_LITERAL_INTEGER, {struct_member_index}}})));

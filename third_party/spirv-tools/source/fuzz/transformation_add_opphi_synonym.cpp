@@ -142,8 +142,8 @@ void TransformationAddOpPhiSynonym::Apply(
   // Add a new OpPhi instructions at the beginning of the block.
   ir_context->get_instr_block(message_.block_id())
       ->begin()
-      .InsertBefore(MakeUnique<opt::Instruction>(ir_context, SpvOpPhi, type_id,
-                                                 message_.fresh_id(),
+      .InsertBefore(MakeUnique<opt::Instruction>(ir_context, spv::Op::OpPhi,
+                                                 type_id, message_.fresh_id(),
                                                  std::move(operand_list)));
 
   // Update the module id bound.
@@ -186,9 +186,9 @@ bool TransformationAddOpPhiSynonym::CheckTypeIsAllowed(
   if (type->AsPointer()) {
     auto storage_class = type->AsPointer()->storage_class();
     return ir_context->get_feature_mgr()->HasCapability(
-               SpvCapabilityVariablePointers) &&
-           (storage_class == SpvStorageClassWorkgroup ||
-            storage_class == SpvStorageClassStorageBuffer);
+               spv::Capability::VariablePointers) &&
+           (storage_class == spv::StorageClass::Workgroup ||
+            storage_class == spv::StorageClass::StorageBuffer);
   }
 
   // We do not allow other types.

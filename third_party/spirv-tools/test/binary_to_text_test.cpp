@@ -101,6 +101,17 @@ TEST_F(BinaryToText, Default) {
   spvTextDestroy(text);
 }
 
+TEST_F(BinaryToText, Print) {
+  spv_text text = nullptr;
+  spv_diagnostic diagnostic = nullptr;
+  ASSERT_EQ(
+      SPV_SUCCESS,
+      spvBinaryToText(context, binary->code, binary->wordCount,
+                      SPV_BINARY_TO_TEXT_OPTION_PRINT, &text, &diagnostic));
+  ASSERT_EQ(text, nullptr);
+  spvTextDestroy(text);
+}
+
 TEST_F(BinaryToText, MissingModule) {
   spv_text text;
   spv_diagnostic diagnostic = nullptr;
@@ -174,43 +185,43 @@ TEST_P(BinaryToTextFail, EncodeSuccessfullyDecodeFailed) {
 INSTANTIATE_TEST_SUITE_P(
     InvalidIds, BinaryToTextFail,
     ::testing::ValuesIn(std::vector<FailedDecodeCase>{
-        {"", spvtest::MakeInstruction(SpvOpTypeVoid, {0}),
+        {"", spvtest::MakeInstruction(spv::Op::OpTypeVoid, {0}),
          "Error: Result Id is 0"},
-        {"", spvtest::MakeInstruction(SpvOpConstant, {0, 1, 42}),
+        {"", spvtest::MakeInstruction(spv::Op::OpConstant, {0, 1, 42}),
          "Error: Type Id is 0"},
-        {"%1 = OpTypeVoid", spvtest::MakeInstruction(SpvOpTypeVoid, {1}),
+        {"%1 = OpTypeVoid", spvtest::MakeInstruction(spv::Op::OpTypeVoid, {1}),
          "Id 1 is defined more than once"},
         {"%1 = OpTypeVoid\n"
          "%2 = OpNot %1 %foo",
-         spvtest::MakeInstruction(SpvOpNot, {1, 2, 3}),
+         spvtest::MakeInstruction(spv::Op::OpNot, {1, 2, 3}),
          "Id 2 is defined more than once"},
         {"%1 = OpTypeVoid\n"
          "%2 = OpNot %1 %foo",
-         spvtest::MakeInstruction(SpvOpNot, {1, 1, 3}),
+         spvtest::MakeInstruction(spv::Op::OpNot, {1, 1, 3}),
          "Id 1 is defined more than once"},
         // The following are the two failure cases for
         // Parser::setNumericTypeInfoForType.
-        {"", spvtest::MakeInstruction(SpvOpConstant, {500, 1, 42}),
+        {"", spvtest::MakeInstruction(spv::Op::OpConstant, {500, 1, 42}),
          "Type Id 500 is not a type"},
         {"%1 = OpTypeInt 32 0\n"
          "%2 = OpTypeVector %1 4",
-         spvtest::MakeInstruction(SpvOpConstant, {2, 3, 999}),
+         spvtest::MakeInstruction(spv::Op::OpConstant, {2, 3, 999}),
          "Type Id 2 is not a scalar numeric type"},
     }));
 
 INSTANTIATE_TEST_SUITE_P(
     InvalidIdsCheckedDuringLiteralCaseParsing, BinaryToTextFail,
     ::testing::ValuesIn(std::vector<FailedDecodeCase>{
-        {"", spvtest::MakeInstruction(SpvOpSwitch, {1, 2, 3, 4}),
+        {"", spvtest::MakeInstruction(spv::Op::OpSwitch, {1, 2, 3, 4}),
          "Invalid OpSwitch: selector id 1 has no type"},
         {"%1 = OpTypeVoid\n",
-         spvtest::MakeInstruction(SpvOpSwitch, {1, 2, 3, 4}),
+         spvtest::MakeInstruction(spv::Op::OpSwitch, {1, 2, 3, 4}),
          "Invalid OpSwitch: selector id 1 is a type, not a value"},
         {"%1 = OpConstantTrue !500",
-         spvtest::MakeInstruction(SpvOpSwitch, {1, 2, 3, 4}),
+         spvtest::MakeInstruction(spv::Op::OpSwitch, {1, 2, 3, 4}),
          "Type Id 500 is not a type"},
         {"%1 = OpTypeFloat 32\n%2 = OpConstant %1 1.5",
-         spvtest::MakeInstruction(SpvOpSwitch, {2, 3, 4, 5}),
+         spvtest::MakeInstruction(spv::Op::OpSwitch, {2, 3, 4, 5}),
          "Invalid OpSwitch: selector id 2 is not a scalar integer"},
     }));
 

@@ -36,10 +36,11 @@ void FuzzerPassAddCompositeInserts::Apply() {
              opt::BasicBlock::iterator instruction_iterator,
              const protobufs::InstructionDescriptor& instruction_descriptor)
           -> void {
-        assert(instruction_iterator->opcode() ==
-                   instruction_descriptor.target_instruction_opcode() &&
-               "The opcode of the instruction we might insert before must be "
-               "the same as the opcode in the descriptor for the instruction");
+        assert(
+            instruction_iterator->opcode() ==
+                spv::Op(instruction_descriptor.target_instruction_opcode()) &&
+            "The opcode of the instruction we might insert before must be "
+            "the same as the opcode in the descriptor for the instruction");
 
         // Randomly decide whether to try adding an OpCompositeInsert
         // instruction.
@@ -51,7 +52,7 @@ void FuzzerPassAddCompositeInserts::Apply() {
         // It must be possible to insert an OpCompositeInsert instruction
         // before |instruction_iterator|.
         if (!fuzzerutil::CanInsertOpcodeBeforeInstruction(
-                SpvOpCompositeInsert, instruction_iterator)) {
+                spv::Op::OpCompositeInsert, instruction_iterator)) {
           return;
         }
 

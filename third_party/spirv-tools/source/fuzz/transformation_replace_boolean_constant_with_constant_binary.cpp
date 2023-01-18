@@ -28,7 +28,8 @@ namespace {
 // operator |binop|, returns true if it is certain that 'lhs binop rhs'
 // evaluates to |required_value|.
 template <typename T>
-bool float_binop_evaluates_to(T lhs, T rhs, SpvOp binop, bool required_value) {
+bool float_binop_evaluates_to(T lhs, T rhs, spv::Op binop,
+                              bool required_value) {
   // Infinity and NaN values are conservatively treated as out of scope.
   if (!std::isfinite(lhs) || !std::isfinite(rhs)) {
     return false;
@@ -37,20 +38,20 @@ bool float_binop_evaluates_to(T lhs, T rhs, SpvOp binop, bool required_value) {
   // The following captures the binary operators that spirv-fuzz can actually
   // generate when turning a boolean constant into a binary expression.
   switch (binop) {
-    case SpvOpFOrdGreaterThanEqual:
-    case SpvOpFUnordGreaterThanEqual:
+    case spv::Op::OpFOrdGreaterThanEqual:
+    case spv::Op::OpFUnordGreaterThanEqual:
       binop_result = (lhs >= rhs);
       break;
-    case SpvOpFOrdGreaterThan:
-    case SpvOpFUnordGreaterThan:
+    case spv::Op::OpFOrdGreaterThan:
+    case spv::Op::OpFUnordGreaterThan:
       binop_result = (lhs > rhs);
       break;
-    case SpvOpFOrdLessThanEqual:
-    case SpvOpFUnordLessThanEqual:
+    case spv::Op::OpFOrdLessThanEqual:
+    case spv::Op::OpFUnordLessThanEqual:
       binop_result = (lhs <= rhs);
       break;
-    case SpvOpFOrdLessThan:
-    case SpvOpFUnordLessThan:
+    case spv::Op::OpFOrdLessThan:
+    case spv::Op::OpFUnordLessThan:
       binop_result = (lhs < rhs);
       break;
     default:
@@ -61,20 +62,20 @@ bool float_binop_evaluates_to(T lhs, T rhs, SpvOp binop, bool required_value) {
 
 // Analogous to 'float_binop_evaluates_to', but for signed int values.
 template <typename T>
-bool signed_int_binop_evaluates_to(T lhs, T rhs, SpvOp binop,
+bool signed_int_binop_evaluates_to(T lhs, T rhs, spv::Op binop,
                                    bool required_value) {
   bool binop_result;
   switch (binop) {
-    case SpvOpSGreaterThanEqual:
+    case spv::Op::OpSGreaterThanEqual:
       binop_result = (lhs >= rhs);
       break;
-    case SpvOpSGreaterThan:
+    case spv::Op::OpSGreaterThan:
       binop_result = (lhs > rhs);
       break;
-    case SpvOpSLessThanEqual:
+    case spv::Op::OpSLessThanEqual:
       binop_result = (lhs <= rhs);
       break;
-    case SpvOpSLessThan:
+    case spv::Op::OpSLessThan:
       binop_result = (lhs < rhs);
       break;
     default:
@@ -85,20 +86,20 @@ bool signed_int_binop_evaluates_to(T lhs, T rhs, SpvOp binop,
 
 // Analogous to 'float_binop_evaluates_to', but for unsigned int values.
 template <typename T>
-bool unsigned_int_binop_evaluates_to(T lhs, T rhs, SpvOp binop,
+bool unsigned_int_binop_evaluates_to(T lhs, T rhs, spv::Op binop,
                                      bool required_value) {
   bool binop_result;
   switch (binop) {
-    case SpvOpUGreaterThanEqual:
+    case spv::Op::OpUGreaterThanEqual:
       binop_result = (lhs >= rhs);
       break;
-    case SpvOpUGreaterThan:
+    case spv::Op::OpUGreaterThan:
       binop_result = (lhs > rhs);
       break;
-    case SpvOpULessThanEqual:
+    case spv::Op::OpULessThanEqual:
       binop_result = (lhs <= rhs);
       break;
-    case SpvOpULessThan:
+    case spv::Op::OpULessThan:
       binop_result = (lhs < rhs);
       break;
     default:
@@ -118,12 +119,12 @@ TransformationReplaceBooleanConstantWithConstantBinary::
 TransformationReplaceBooleanConstantWithConstantBinary::
     TransformationReplaceBooleanConstantWithConstantBinary(
         const protobufs::IdUseDescriptor& id_use_descriptor, uint32_t lhs_id,
-        uint32_t rhs_id, SpvOp comparison_opcode,
+        uint32_t rhs_id, spv::Op comparison_opcode,
         uint32_t fresh_id_for_binary_operation) {
   *message_.mutable_id_use_descriptor() = id_use_descriptor;
   message_.set_lhs_id(lhs_id);
   message_.set_rhs_id(rhs_id);
-  message_.set_opcode(comparison_opcode);
+  message_.set_opcode(uint32_t(comparison_opcode));
   message_.set_fresh_id_for_binary_operation(fresh_id_for_binary_operation);
 }
 
@@ -141,8 +142,8 @@ bool TransformationReplaceBooleanConstantWithConstantBinary::IsApplicable(
   if (!boolean_constant) {
     return false;
   }
-  if (!(boolean_constant->opcode() == SpvOpConstantFalse ||
-        boolean_constant->opcode() == SpvOpConstantTrue)) {
+  if (!(boolean_constant->opcode() == spv::Op::OpConstantFalse ||
+        boolean_constant->opcode() == spv::Op::OpConstantTrue)) {
     return false;
   }
 
@@ -152,7 +153,7 @@ bool TransformationReplaceBooleanConstantWithConstantBinary::IsApplicable(
   if (!lhs_constant_inst) {
     return false;
   }
-  if (lhs_constant_inst->opcode() != SpvOpConstant) {
+  if (lhs_constant_inst->opcode() != spv::Op::OpConstant) {
     return false;
   }
 
@@ -162,7 +163,7 @@ bool TransformationReplaceBooleanConstantWithConstantBinary::IsApplicable(
   if (!rhs_constant_inst) {
     return false;
   }
-  if (rhs_constant_inst->opcode() != SpvOpConstant) {
+  if (rhs_constant_inst->opcode() != spv::Op::OpConstant) {
     return false;
   }
 
@@ -176,9 +177,10 @@ bool TransformationReplaceBooleanConstantWithConstantBinary::IsApplicable(
       ir_context->get_constant_mgr()->FindDeclaredConstant(message_.lhs_id());
   auto rhs_constant =
       ir_context->get_constant_mgr()->FindDeclaredConstant(message_.rhs_id());
-  bool expected_result = (boolean_constant->opcode() == SpvOpConstantTrue);
+  bool expected_result =
+      (boolean_constant->opcode() == spv::Op::OpConstantTrue);
 
-  const auto binary_opcode = static_cast<SpvOp>(message_.opcode());
+  const auto binary_opcode = static_cast<spv::Op>(message_.opcode());
 
   // We consider the floating point, signed and unsigned integer cases
   // separately.  In each case the logic is very similar.
@@ -247,7 +249,7 @@ bool TransformationReplaceBooleanConstantWithConstantBinary::IsApplicable(
   // a binary operator before an OpVariable, but in any case (b) the
   // constant we would be replacing is the initializer constant of the
   // OpVariable, and this cannot be the result of a binary operation.
-  if (instruction->opcode() == SpvOpVariable) {
+  if (instruction->opcode() == spv::Op::OpVariable) {
     return false;
   }
 
@@ -268,7 +270,7 @@ TransformationReplaceBooleanConstantWithConstantBinary::ApplyWithResult(
       {SPV_OPERAND_TYPE_ID, {message_.lhs_id()}},
       {SPV_OPERAND_TYPE_ID, {message_.rhs_id()}}};
   auto binary_instruction = MakeUnique<opt::Instruction>(
-      ir_context, static_cast<SpvOp>(message_.opcode()),
+      ir_context, static_cast<spv::Op>(message_.opcode()),
       ir_context->get_type_mgr()->GetId(&bool_type),
       message_.fresh_id_for_binary_operation(), operands);
   opt::Instruction* result = binary_instruction.get();
@@ -279,7 +281,7 @@ TransformationReplaceBooleanConstantWithConstantBinary::ApplyWithResult(
   // If |instruction_before_which_to_insert| is an OpPhi instruction,
   // then |binary_instruction| will be inserted into the parent block associated
   // with the OpPhi variable operand.
-  if (instruction_containing_constant_use->opcode() == SpvOpPhi) {
+  if (instruction_containing_constant_use->opcode() == spv::Op::OpPhi) {
     instruction_before_which_to_insert =
         ir_context->cfg()
             ->block(instruction_containing_constant_use->GetSingleWordInOperand(
@@ -293,8 +295,9 @@ TransformationReplaceBooleanConstantWithConstantBinary::ApplyWithResult(
   {
     opt::Instruction* previous_node =
         instruction_before_which_to_insert->PreviousNode();
-    if (previous_node && (previous_node->opcode() == SpvOpLoopMerge ||
-                          previous_node->opcode() == SpvOpSelectionMerge)) {
+    if (previous_node &&
+        (previous_node->opcode() == spv::Op::OpLoopMerge ||
+         previous_node->opcode() == spv::Op::OpSelectionMerge)) {
       instruction_before_which_to_insert = previous_node;
     }
   }

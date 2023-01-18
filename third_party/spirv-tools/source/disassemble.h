@@ -25,9 +25,10 @@ namespace spvtools {
 
 // Decodes the given SPIR-V instruction binary representation to its assembly
 // text. The context is inferred from the provided module binary. The options
-// parameter is a bit field of spv_binary_to_text_options_t. Decoded text will
-// be stored into *text. Any error will be written into *diagnostic if
-// diagnostic is non-null.
+// parameter is a bit field of spv_binary_to_text_options_t (note: the option
+// SPV_BINARY_TO_TEXT_OPTION_PRINT will be ignored). Decoded text will be
+// stored into *text. Any error will be written into *diagnostic if diagnostic
+// is non-null.
 std::string spvInstructionBinaryToText(const spv_target_env env,
                                        const uint32_t* inst_binary,
                                        const size_t inst_word_count,

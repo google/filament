@@ -37,7 +37,15 @@ set(SPIRV_TOOLS "SPIRV-Tools")
 include(GNUInstallDirs)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_STANDARD 11)
+
+# Require at least C++11
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 11)
+endif()
+if(${CMAKE_CXX_STANDARD} LESS 11)
+  message(FATAL_ERROR "SPIRV-Tools requires C++11 or later, but is configured for C++${CMAKE_CXX_STANDARD})")
+endif()
+
 
 option(ENABLE_RTTI "Enables RTTI" OFF)
 option(SPIRV_ALLOW_TIMERS "Allow timers via clock_gettime on supported platforms" ON)
@@ -62,8 +70,12 @@ elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
   set(SPIRV_TIMER_ENABLED ${SPIRV_ALLOW_TIMERS})
 elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD")
   add_definitions(-DSPIRV_FREEBSD)
+elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "OpenBSD")
+  add_definitions(-DSPIRV_OPENBSD)
 elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
   add_definitions(-DSPIRV_FUCHSIA)
+elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "GNU")
+  add_definitions(-DSPIRV_GNU)
 else()
   message(FATAL_ERROR "Your platform '${CMAKE_SYSTEM_NAME}' is not supported!")
 endif()
@@ -94,7 +106,6 @@ set(SPIRV_LIB_FUZZING_ENGINE_LINK_OPTIONS "" CACHE STRING "Used by OSS-Fuzz to c
 option(SPIRV_BUILD_LIBFUZZER_TARGETS "Build libFuzzer targets" OFF)
 
 set(SPIRV_WERROR OFF)
-
 if(("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR (("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang") AND (NOT CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")))
   set(COMPILER_IS_LIKE_GNU TRUE)
 endif()
@@ -202,7 +213,7 @@ function(spvtools_default_compile_options TARGET)
     if(NOT "${SPIRV_PERF}" STREQUAL "")
       target_compile_options(${TARGET} PRIVATE -fno-omit-frame-pointer)
     endif()
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
       set(SPIRV_USE_SANITIZER "" CACHE STRING
         "Use the clang sanitizer [address|memory|thread|...]")
       if(NOT "${SPIRV_USE_SANITIZER}" STREQUAL "")
@@ -297,11 +308,11 @@ if(ENABLE_SPIRV_TOOLS_INSTALL)
 endif()
 
 # Defaults to OFF if the user didn't set it.
- option(SPIRV_SKIP_EXECUTABLES
-   "Skip building the executable and tests along with the library"
-  ${SPIRV_SKIP_EXECUTABLES_OPTION})
- option(SPIRV_SKIP_TESTS
-  "Skip building tests along with the library" ${SPIRV_SKIP_TESTS_OPTION})
+option(SPIRV_SKIP_EXECUTABLES
+  "Skip building the executable and tests along with the library"
+ ${SPIRV_SKIP_EXECUTABLES_OPTION})
+option(SPIRV_SKIP_TESTS
+ "Skip building tests along with the library" ${SPIRV_SKIP_TESTS_OPTION})
 
 
 if ("${SPIRV_SKIP_EXECUTABLES}")
@@ -367,3 +378,4 @@ endif()
 
 set(SPIRV_LIBRARIES "-lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link")
 set(SPIRV_SHARED_LIBRARIES "-lSPIRV-Tools-shared")
+

@@ -21,7 +21,6 @@
 
 #include "source/opt/instruction.h"
 #include "source/opt/module.h"
-#include "source/util/pooled_linked_list.h"
 #include "spirv-tools/libspirv.hpp"
 
 namespace spvtools {
@@ -50,6 +49,50 @@ inline bool operator<(const Use& lhs, const Use& rhs) {
   return lhs.operand_index < rhs.operand_index;
 }
 
+// Definition should never be null. User can be null, however, such an entry
+// should be used only for searching (e.g. all users of a particular definition)
+// and never stored in a container.
+struct UserEntry {
+  Instruction* def;
+  Instruction* user;
+};
+
+inline bool operator==(const UserEntry& lhs, const UserEntry& rhs) {
+  return lhs.def == rhs.def && lhs.user == rhs.user;
+}
+
+// Orders UserEntry for use in associative containers (i.e. less than ordering).
+//
+// The definition of an UserEntry is treated as the major key and the users as
+// the minor key so that all the users of a particular definition are
+// consecutive in a container.
+//
+// A null user always compares less than a real user. This is done to provide
+// easy values to search for the beginning of the users of a particular
+// definition (i.e. using {def, nullptr}).
+struct UserEntryLess {
+  bool operator()(const UserEntry& lhs, const UserEntry& rhs) const {
+    // If lhs.def and rhs.def are both null, fall through to checking the
+    // second entries.
+    if (!lhs.def && rhs.def) return true;
+    if (lhs.def && !rhs.def) return false;
+
+    // If neither definition is null, then compare unique ids.
+    if (lhs.def && rhs.def) {
+      if (lhs.def->unique_id() < rhs.def->unique_id()) return true;
+      if (rhs.def->unique_id() < lhs.def->unique_id()) return false;
+    }
+
+    // Return false on equality.
+    if (!lhs.user && !rhs.user) return false;
+    if (!lhs.user) return true;
+    if (!rhs.user) return false;
+
+    // If neither user is null then compare unique ids.
+    return lhs.user->unique_id() < rhs.user->unique_id();
+  }
+};
+
 // A class for analyzing and managing defs and uses in an Module.
 class DefUseManager {
  public:
@@ -59,7 +102,7 @@ class DefUseManager {
   // will be communicated to the outside via the given message |consumer|. This
   // instance only keeps a reference to the |consumer|, so the |consumer| should
   // outlive this instance.
-  DefUseManager(Module* module) : DefUseManager() { AnalyzeDefUse(module); }
+  DefUseManager(Module* module) { AnalyzeDefUse(module); }
 
   DefUseManager(const DefUseManager&) = delete;
   DefUseManager(DefUseManager&&) = delete;
@@ -171,36 +214,35 @@ class DefUseManager {
   // uses.
   void UpdateDefUse(Instruction* inst);
 
-  // Compacts any internal storage to save memory.
-  void CompactStorage();
-
  private:
-  using UseList = spvtools::utils::PooledLinkedList<Instruction*>;
-  using UseListPool = spvtools::utils::PooledLinkedListNodes<Instruction*>;
-  // Stores linked lists of Instructions using a def.
-  using InstToUsersMap = std::unordered_map<const Instruction*, UseList>;
+  using IdToUsersMap = std::set<UserEntry, UserEntryLess>;
+  using InstToUsedIdsMap =
+      std::unordered_map<const Instruction*, std::vector<uint32_t>>;
 
-  using UsedIdList = spvtools::utils::PooledLinkedList<uint32_t>;
-  using UsedIdListPool = spvtools::utils::PooledLinkedListNodes<uint32_t>;
-  // Stores mapping from instruction to their UsedIdRange.
-  using InstToUsedIdMap = std::unordered_map<const Instruction*, UsedIdList>;
+  // Returns the first location that {|def|, nullptr} could be inserted into the
+  // users map without violating ordering.
+  IdToUsersMap::const_iterator UsersBegin(const Instruction* def) const;
 
-  DefUseManager();
+  // Returns true if |iter| has not reached the end of |def|'s users.
+  //
+  // In the first version |iter| is compared against the end of the map for
+  // validity before other checks. In the second version, |iter| is compared
+  // against |cached_end| for validity before other checks. This allows caching
+  // the map's end which is a performance improvement on some platforms.
+  bool UsersNotEnd(const IdToUsersMap::const_iterator& iter,
+                   const Instruction* def) const;
+  bool UsersNotEnd(const IdToUsersMap::const_iterator& iter,
+                   const IdToUsersMap::const_iterator& cached_end,
+                   const Instruction* def) const;
 
   // Analyzes the defs and uses in the given |module| and populates data
   // structures in this class. Does nothing if |module| is nullptr.
   void AnalyzeDefUse(Module* module);
 
-  // Removes unused entries in used_records_ and used_ids_.
-  void CompactUseRecords();
-  void CompactUsedIds();
-
-  IdToDefMap id_to_def_;          // Mapping from ids to their definitions
-  InstToUsersMap inst_to_users_;  // Map from def to uses.
-  std::unique_ptr<UseListPool> use_pool_;
-
-  std::unique_ptr<UsedIdListPool> used_id_pool_;
-  InstToUsedIdMap inst_to_used_id_;  // Map from instruction to used ids.
+  IdToDefMap id_to_def_;      // Mapping from ids to their definitions
+  IdToUsersMap id_to_users_;  // Mapping from ids to their users
+  // Mapping from instructions to the ids used in the instruction.
+  InstToUsedIdsMap inst_to_used_ids_;
 };
 
 }  // namespace analysis

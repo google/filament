@@ -43,8 +43,10 @@ bool TransformationAddLocalVariable::IsApplicable(
   // function storage class.
   auto type_instruction =
       ir_context->get_def_use_mgr()->GetDef(message_.type_id());
-  if (!type_instruction || type_instruction->opcode() != SpvOpTypePointer ||
-      type_instruction->GetSingleWordInOperand(0) != SpvStorageClassFunction) {
+  if (!type_instruction ||
+      type_instruction->opcode() != spv::Op::OpTypePointer ||
+      spv::StorageClass(type_instruction->GetSingleWordInOperand(0)) !=
+          spv::StorageClass::Function) {
     return false;
   }
   // The initializer must...

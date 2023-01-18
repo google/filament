@@ -48,10 +48,13 @@ bool TransformationSetMemoryOperandsMask::IsApplicable(
     // which they were applied during fuzzing, hence why these are assertions
     // rather than applicability checks.
     assert(message_.memory_operands_mask_index() == 1);
-    assert(message_.memory_access_instruction().target_instruction_opcode() ==
-               SpvOpCopyMemory ||
-           message_.memory_access_instruction().target_instruction_opcode() ==
-               SpvOpCopyMemorySized);
+    assert(
+        spv::Op(
+            message_.memory_access_instruction().target_instruction_opcode()) ==
+            spv::Op::OpCopyMemory ||
+        spv::Op(
+            message_.memory_access_instruction().target_instruction_opcode()) ==
+            spv::Op::OpCopyMemorySized);
     assert(MultipleMemoryOperandMasksAreSupported(ir_context) &&
            "Multiple memory operand masks are not supported for this SPIR-V "
            "version.");
@@ -73,12 +76,12 @@ bool TransformationSetMemoryOperandsMask::IsApplicable(
   uint32_t original_mask =
       original_mask_in_operand_index < instruction->NumInOperands()
           ? instruction->GetSingleWordInOperand(original_mask_in_operand_index)
-          : static_cast<uint32_t>(SpvMemoryAccessMaskNone);
+          : static_cast<uint32_t>(spv::MemoryAccessMask::MaskNone);
   uint32_t new_mask = message_.memory_operands_mask();
 
   // Volatile must not be removed
-  if ((original_mask & SpvMemoryAccessVolatileMask) &&
-      !(new_mask & SpvMemoryAccessVolatileMask)) {
+  if ((original_mask & uint32_t(spv::MemoryAccessMask::Volatile)) &&
+      !(new_mask & uint32_t(spv::MemoryAccessMask::Volatile))) {
     return false;
   }
 
@@ -87,10 +90,10 @@ bool TransformationSetMemoryOperandsMask::IsApplicable(
   // their Volatile and Nontemporal flags to the same value (this works
   // because valid manipulation of Volatile is checked above, and the manner
   // in which Nontemporal is manipulated does not matter).
-  return (original_mask | SpvMemoryAccessVolatileMask |
-          SpvMemoryAccessNontemporalMask) ==
-         (new_mask | SpvMemoryAccessVolatileMask |
-          SpvMemoryAccessNontemporalMask);
+  return (original_mask | uint32_t(spv::MemoryAccessMask::Volatile) |
+          uint32_t(spv::MemoryAccessMask::Nontemporal)) ==
+         (new_mask | uint32_t(spv::MemoryAccessMask::Volatile) |
+          uint32_t(spv::MemoryAccessMask::Nontemporal));
 }
 
 void TransformationSetMemoryOperandsMask::Apply(
@@ -106,8 +109,8 @@ void TransformationSetMemoryOperandsMask::Apply(
     if (message_.memory_operands_mask_index() == 1 &&
         GetInOperandIndexForMask(*instruction, 0) >=
             instruction->NumInOperands()) {
-      instruction->AddOperand(
-          {SPV_OPERAND_TYPE_MEMORY_ACCESS, {SpvMemoryAccessMaskNone}});
+      instruction->AddOperand({SPV_OPERAND_TYPE_MEMORY_ACCESS,
+                               {uint32_t(spv::MemoryAccessMask::MaskNone)}});
     }
 
     instruction->AddOperand(
@@ -129,10 +132,10 @@ protobufs::Transformation TransformationSetMemoryOperandsMask::ToMessage()
 bool TransformationSetMemoryOperandsMask::IsMemoryAccess(
     const opt::Instruction& instruction) {
   switch (instruction.opcode()) {
-    case SpvOpLoad:
-    case SpvOpStore:
-    case SpvOpCopyMemory:
-    case SpvOpCopyMemorySized:
+    case spv::Op::OpLoad:
+    case spv::Op::OpStore:
+    case spv::Op::OpCopyMemory:
+    case spv::Op::OpCopyMemorySized:
       return true;
     default:
       return false;
@@ -145,16 +148,16 @@ uint32_t TransformationSetMemoryOperandsMask::GetInOperandIndexForMask(
   // for the instruction.
   uint32_t first_mask_in_operand_index = 0;
   switch (instruction.opcode()) {
-    case SpvOpLoad:
+    case spv::Op::OpLoad:
       first_mask_in_operand_index = kOpLoadMemoryOperandsMaskIndex;
       break;
-    case SpvOpStore:
+    case spv::Op::OpStore:
       first_mask_in_operand_index = kOpStoreMemoryOperandsMaskIndex;
       break;
-    case SpvOpCopyMemory:
+    case spv::Op::OpCopyMemory:
       first_mask_in_operand_index = kOpCopyMemoryFirstMemoryOperandsMaskIndex;
       break;
-    case SpvOpCopyMemorySized:
+    case spv::Op::OpCopyMemorySized:
       first_mask_in_operand_index =
           kOpCopyMemorySizedFirstMemoryOperandsMaskIndex;
       break;
@@ -192,12 +195,12 @@ uint32_t TransformationSetMemoryOperandsMask::GetInOperandIndexForMask(
   // Consider each bit that might have an associated extra input operand, and
   // count how many there are expected to be.
   uint32_t first_mask_extra_operand_count = 0;
-  for (auto mask_bit :
-       {SpvMemoryAccessAlignedMask, SpvMemoryAccessMakePointerAvailableMask,
-        SpvMemoryAccessMakePointerAvailableKHRMask,
-        SpvMemoryAccessMakePointerVisibleMask,
-        SpvMemoryAccessMakePointerVisibleKHRMask}) {
-    if (first_mask & mask_bit) {
+  for (auto mask_bit : {spv::MemoryAccessMask::Aligned,
+                        spv::MemoryAccessMask::MakePointerAvailable,
+                        spv::MemoryAccessMask::MakePointerAvailableKHR,
+                        spv::MemoryAccessMask::MakePointerVisible,
+                        spv::MemoryAccessMask::MakePointerVisibleKHR}) {
+    if (first_mask & uint32_t(mask_bit)) {
       first_mask_extra_operand_count++;
     }
   }

@@ -26,7 +26,7 @@ const char* const kExtensionSetName = "GLSL.std.450";
 
 std::string GetExtensionSet(opt::IRContext* ir_context,
                             const opt::Instruction& op_ext_inst) {
-  assert(op_ext_inst.opcode() == SpvOpExtInst && "Wrong opcode");
+  assert(op_ext_inst.opcode() == spv::Op::OpExtInst && "Wrong opcode");
 
   const auto* ext_inst_import = ir_context->get_def_use_mgr()->GetDef(
       op_ext_inst.GetSingleWordInOperand(0));
@@ -142,112 +142,112 @@ bool TransformationMoveInstructionDown::IsInstructionSupported(
 bool TransformationMoveInstructionDown::IsSimpleInstruction(
     opt::IRContext* ir_context, const opt::Instruction& inst) {
   switch (inst.opcode()) {
-    case SpvOpNop:
-    case SpvOpUndef:
-    case SpvOpAccessChain:
-    case SpvOpInBoundsAccessChain:
+    case spv::Op::OpNop:
+    case spv::Op::OpUndef:
+    case spv::Op::OpAccessChain:
+    case spv::Op::OpInBoundsAccessChain:
       // OpAccessChain and OpInBoundsAccessChain are considered simple
       // instructions since they result in a pointer to the object in memory,
       // not the object itself.
-    case SpvOpVectorExtractDynamic:
-    case SpvOpVectorInsertDynamic:
-    case SpvOpVectorShuffle:
-    case SpvOpCompositeConstruct:
-    case SpvOpCompositeExtract:
-    case SpvOpCompositeInsert:
-    case SpvOpCopyObject:
-    case SpvOpTranspose:
-    case SpvOpConvertFToU:
-    case SpvOpConvertFToS:
-    case SpvOpConvertSToF:
-    case SpvOpConvertUToF:
-    case SpvOpUConvert:
-    case SpvOpSConvert:
-    case SpvOpFConvert:
-    case SpvOpQuantizeToF16:
-    case SpvOpSatConvertSToU:
-    case SpvOpSatConvertUToS:
-    case SpvOpBitcast:
-    case SpvOpSNegate:
-    case SpvOpFNegate:
-    case SpvOpIAdd:
-    case SpvOpFAdd:
-    case SpvOpISub:
-    case SpvOpFSub:
-    case SpvOpIMul:
-    case SpvOpFMul:
-    case SpvOpUDiv:
-    case SpvOpSDiv:
-    case SpvOpFDiv:
-    case SpvOpUMod:
-    case SpvOpSRem:
-    case SpvOpSMod:
-    case SpvOpFRem:
-    case SpvOpFMod:
-    case SpvOpVectorTimesScalar:
-    case SpvOpMatrixTimesScalar:
-    case SpvOpVectorTimesMatrix:
-    case SpvOpMatrixTimesVector:
-    case SpvOpMatrixTimesMatrix:
-    case SpvOpOuterProduct:
-    case SpvOpDot:
-    case SpvOpIAddCarry:
-    case SpvOpISubBorrow:
-    case SpvOpUMulExtended:
-    case SpvOpSMulExtended:
-    case SpvOpAny:
-    case SpvOpAll:
-    case SpvOpIsNan:
-    case SpvOpIsInf:
-    case SpvOpIsFinite:
-    case SpvOpIsNormal:
-    case SpvOpSignBitSet:
-    case SpvOpLessOrGreater:
-    case SpvOpOrdered:
-    case SpvOpUnordered:
-    case SpvOpLogicalEqual:
-    case SpvOpLogicalNotEqual:
-    case SpvOpLogicalOr:
-    case SpvOpLogicalAnd:
-    case SpvOpLogicalNot:
-    case SpvOpSelect:
-    case SpvOpIEqual:
-    case SpvOpINotEqual:
-    case SpvOpUGreaterThan:
-    case SpvOpSGreaterThan:
-    case SpvOpUGreaterThanEqual:
-    case SpvOpSGreaterThanEqual:
-    case SpvOpULessThan:
-    case SpvOpSLessThan:
-    case SpvOpULessThanEqual:
-    case SpvOpSLessThanEqual:
-    case SpvOpFOrdEqual:
-    case SpvOpFUnordEqual:
-    case SpvOpFOrdNotEqual:
-    case SpvOpFUnordNotEqual:
-    case SpvOpFOrdLessThan:
-    case SpvOpFUnordLessThan:
-    case SpvOpFOrdGreaterThan:
-    case SpvOpFUnordGreaterThan:
-    case SpvOpFOrdLessThanEqual:
-    case SpvOpFUnordLessThanEqual:
-    case SpvOpFOrdGreaterThanEqual:
-    case SpvOpFUnordGreaterThanEqual:
-    case SpvOpShiftRightLogical:
-    case SpvOpShiftRightArithmetic:
-    case SpvOpShiftLeftLogical:
-    case SpvOpBitwiseOr:
-    case SpvOpBitwiseXor:
-    case SpvOpBitwiseAnd:
-    case SpvOpNot:
-    case SpvOpBitFieldInsert:
-    case SpvOpBitFieldSExtract:
-    case SpvOpBitFieldUExtract:
-    case SpvOpBitReverse:
-    case SpvOpBitCount:
-    case SpvOpCopyLogical:
+    case spv::Op::OpVectorExtractDynamic:
+    case spv::Op::OpVectorInsertDynamic:
+    case spv::Op::OpVectorShuffle:
+    case spv::Op::OpCompositeConstruct:
+    case spv::Op::OpCompositeExtract:
+    case spv::Op::OpCompositeInsert:
+    case spv::Op::OpCopyObject:
+    case spv::Op::OpTranspose:
+    case spv::Op::OpConvertFToU:
+    case spv::Op::OpConvertFToS:
+    case spv::Op::OpConvertSToF:
+    case spv::Op::OpConvertUToF:
+    case spv::Op::OpUConvert:
+    case spv::Op::OpSConvert:
+    case spv::Op::OpFConvert:
+    case spv::Op::OpQuantizeToF16:
+    case spv::Op::OpSatConvertSToU:
+    case spv::Op::OpSatConvertUToS:
+    case spv::Op::OpBitcast:
+    case spv::Op::OpSNegate:
+    case spv::Op::OpFNegate:
+    case spv::Op::OpIAdd:
+    case spv::Op::OpFAdd:
+    case spv::Op::OpISub:
+    case spv::Op::OpFSub:
+    case spv::Op::OpIMul:
+    case spv::Op::OpFMul:
+    case spv::Op::OpUDiv:
+    case spv::Op::OpSDiv:
+    case spv::Op::OpFDiv:
+    case spv::Op::OpUMod:
+    case spv::Op::OpSRem:
+    case spv::Op::OpSMod:
+    case spv::Op::OpFRem:
+    case spv::Op::OpFMod:
+    case spv::Op::OpVectorTimesScalar:
+    case spv::Op::OpMatrixTimesScalar:
+    case spv::Op::OpVectorTimesMatrix:
+    case spv::Op::OpMatrixTimesVector:
+    case spv::Op::OpMatrixTimesMatrix:
+    case spv::Op::OpOuterProduct:
+    case spv::Op::OpDot:
+    case spv::Op::OpIAddCarry:
+    case spv::Op::OpISubBorrow:
+    case spv::Op::OpUMulExtended:
+    case spv::Op::OpSMulExtended:
+    case spv::Op::OpAny:
+    case spv::Op::OpAll:
+    case spv::Op::OpIsNan:
+    case spv::Op::OpIsInf:
+    case spv::Op::OpIsFinite:
+    case spv::Op::OpIsNormal:
+    case spv::Op::OpSignBitSet:
+    case spv::Op::OpLessOrGreater:
+    case spv::Op::OpOrdered:
+    case spv::Op::OpUnordered:
+    case spv::Op::OpLogicalEqual:
+    case spv::Op::OpLogicalNotEqual:
+    case spv::Op::OpLogicalOr:
+    case spv::Op::OpLogicalAnd:
+    case spv::Op::OpLogicalNot:
+    case spv::Op::OpSelect:
+    case spv::Op::OpIEqual:
+    case spv::Op::OpINotEqual:
+    case spv::Op::OpUGreaterThan:
+    case spv::Op::OpSGreaterThan:
+    case spv::Op::OpUGreaterThanEqual:
+    case spv::Op::OpSGreaterThanEqual:
+    case spv::Op::OpULessThan:
+    case spv::Op::OpSLessThan:
+    case spv::Op::OpULessThanEqual:
+    case spv::Op::OpSLessThanEqual:
+    case spv::Op::OpFOrdEqual:
+    case spv::Op::OpFUnordEqual:
+    case spv::Op::OpFOrdNotEqual:
+    case spv::Op::OpFUnordNotEqual:
+    case spv::Op::OpFOrdLessThan:
+    case spv::Op::OpFUnordLessThan:
+    case spv::Op::OpFOrdGreaterThan:
+    case spv::Op::OpFUnordGreaterThan:
+    case spv::Op::OpFOrdLessThanEqual:
+    case spv::Op::OpFUnordLessThanEqual:
+    case spv::Op::OpFOrdGreaterThanEqual:
+    case spv::Op::OpFUnordGreaterThanEqual:
+    case spv::Op::OpShiftRightLogical:
+    case spv::Op::OpShiftRightArithmetic:
+    case spv::Op::OpShiftLeftLogical:
+    case spv::Op::OpBitwiseOr:
+    case spv::Op::OpBitwiseXor:
+    case spv::Op::OpBitwiseAnd:
+    case spv::Op::OpNot:
+    case spv::Op::OpBitFieldInsert:
+    case spv::Op::OpBitFieldSExtract:
+    case spv::Op::OpBitFieldUExtract:
+    case spv::Op::OpBitReverse:
+    case spv::Op::OpBitCount:
+    case spv::Op::OpCopyLogical:
       return true;
-    case SpvOpExtInst: {
+    case spv::Op::OpExtInst: {
       const auto* ext_inst_import =
           ir_context->get_def_use_mgr()->GetDef(inst.GetSingleWordInOperand(0));
 
@@ -346,53 +346,53 @@ bool TransformationMoveInstructionDown::IsMemoryReadInstruction(
     opt::IRContext* ir_context, const opt::Instruction& inst) {
   switch (inst.opcode()) {
       // Some simple instructions.
-    case SpvOpLoad:
-    case SpvOpCopyMemory:
+    case spv::Op::OpLoad:
+    case spv::Op::OpCopyMemory:
       // Image instructions.
-    case SpvOpImageSampleImplicitLod:
-    case SpvOpImageSampleExplicitLod:
-    case SpvOpImageSampleDrefImplicitLod:
-    case SpvOpImageSampleDrefExplicitLod:
-    case SpvOpImageSampleProjImplicitLod:
-    case SpvOpImageSampleProjExplicitLod:
-    case SpvOpImageSampleProjDrefImplicitLod:
-    case SpvOpImageSampleProjDrefExplicitLod:
-    case SpvOpImageFetch:
-    case SpvOpImageGather:
-    case SpvOpImageDrefGather:
-    case SpvOpImageRead:
-    case SpvOpImageSparseSampleImplicitLod:
-    case SpvOpImageSparseSampleExplicitLod:
-    case SpvOpImageSparseSampleDrefImplicitLod:
-    case SpvOpImageSparseSampleDrefExplicitLod:
-    case SpvOpImageSparseSampleProjImplicitLod:
-    case SpvOpImageSparseSampleProjExplicitLod:
-    case SpvOpImageSparseSampleProjDrefImplicitLod:
-    case SpvOpImageSparseSampleProjDrefExplicitLod:
-    case SpvOpImageSparseFetch:
-    case SpvOpImageSparseGather:
-    case SpvOpImageSparseDrefGather:
-    case SpvOpImageSparseRead:
+    case spv::Op::OpImageSampleImplicitLod:
+    case spv::Op::OpImageSampleExplicitLod:
+    case spv::Op::OpImageSampleDrefImplicitLod:
+    case spv::Op::OpImageSampleDrefExplicitLod:
+    case spv::Op::OpImageSampleProjImplicitLod:
+    case spv::Op::OpImageSampleProjExplicitLod:
+    case spv::Op::OpImageSampleProjDrefImplicitLod:
+    case spv::Op::OpImageSampleProjDrefExplicitLod:
+    case spv::Op::OpImageFetch:
+    case spv::Op::OpImageGather:
+    case spv::Op::OpImageDrefGather:
+    case spv::Op::OpImageRead:
+    case spv::Op::OpImageSparseSampleImplicitLod:
+    case spv::Op::OpImageSparseSampleExplicitLod:
+    case spv::Op::OpImageSparseSampleDrefImplicitLod:
+    case spv::Op::OpImageSparseSampleDrefExplicitLod:
+    case spv::Op::OpImageSparseSampleProjImplicitLod:
+    case spv::Op::OpImageSparseSampleProjExplicitLod:
+    case spv::Op::OpImageSparseSampleProjDrefImplicitLod:
+    case spv::Op::OpImageSparseSampleProjDrefExplicitLod:
+    case spv::Op::OpImageSparseFetch:
+    case spv::Op::OpImageSparseGather:
+    case spv::Op::OpImageSparseDrefGather:
+    case spv::Op::OpImageSparseRead:
       // Atomic instructions.
-    case SpvOpAtomicLoad:
-    case SpvOpAtomicExchange:
-    case SpvOpAtomicCompareExchange:
-    case SpvOpAtomicCompareExchangeWeak:
-    case SpvOpAtomicIIncrement:
-    case SpvOpAtomicIDecrement:
-    case SpvOpAtomicIAdd:
-    case SpvOpAtomicISub:
-    case SpvOpAtomicSMin:
-    case SpvOpAtomicUMin:
-    case SpvOpAtomicSMax:
-    case SpvOpAtomicUMax:
-    case SpvOpAtomicAnd:
-    case SpvOpAtomicOr:
-    case SpvOpAtomicXor:
-    case SpvOpAtomicFlagTestAndSet:
+    case spv::Op::OpAtomicLoad:
+    case spv::Op::OpAtomicExchange:
+    case spv::Op::OpAtomicCompareExchange:
+    case spv::Op::OpAtomicCompareExchangeWeak:
+    case spv::Op::OpAtomicIIncrement:
+    case spv::Op::OpAtomicIDecrement:
+    case spv::Op::OpAtomicIAdd:
+    case spv::Op::OpAtomicISub:
+    case spv::Op::OpAtomicSMin:
+    case spv::Op::OpAtomicUMin:
+    case spv::Op::OpAtomicSMax:
+    case spv::Op::OpAtomicUMax:
+    case spv::Op::OpAtomicAnd:
+    case spv::Op::OpAtomicOr:
+    case spv::Op::OpAtomicXor:
+    case spv::Op::OpAtomicFlagTestAndSet:
       return true;
       // Extensions.
-    case SpvOpExtInst: {
+    case spv::Op::OpExtInst: {
       if (GetExtensionSet(ir_context, inst) != kExtensionSetName) {
         return false;
       }
@@ -419,53 +419,53 @@ uint32_t TransformationMoveInstructionDown::GetMemoryReadTarget(
 
   switch (inst.opcode()) {
       // Simple instructions.
-    case SpvOpLoad:
+    case spv::Op::OpLoad:
       // Image instructions.
-    case SpvOpImageSampleImplicitLod:
-    case SpvOpImageSampleExplicitLod:
-    case SpvOpImageSampleDrefImplicitLod:
-    case SpvOpImageSampleDrefExplicitLod:
-    case SpvOpImageSampleProjImplicitLod:
-    case SpvOpImageSampleProjExplicitLod:
-    case SpvOpImageSampleProjDrefImplicitLod:
-    case SpvOpImageSampleProjDrefExplicitLod:
-    case SpvOpImageFetch:
-    case SpvOpImageGather:
-    case SpvOpImageDrefGather:
-    case SpvOpImageRead:
-    case SpvOpImageSparseSampleImplicitLod:
-    case SpvOpImageSparseSampleExplicitLod:
-    case SpvOpImageSparseSampleDrefImplicitLod:
-    case SpvOpImageSparseSampleDrefExplicitLod:
-    case SpvOpImageSparseSampleProjImplicitLod:
-    case SpvOpImageSparseSampleProjExplicitLod:
-    case SpvOpImageSparseSampleProjDrefImplicitLod:
-    case SpvOpImageSparseSampleProjDrefExplicitLod:
-    case SpvOpImageSparseFetch:
-    case SpvOpImageSparseGather:
-    case SpvOpImageSparseDrefGather:
-    case SpvOpImageSparseRead:
+    case spv::Op::OpImageSampleImplicitLod:
+    case spv::Op::OpImageSampleExplicitLod:
+    case spv::Op::OpImageSampleDrefImplicitLod:
+    case spv::Op::OpImageSampleDrefExplicitLod:
+    case spv::Op::OpImageSampleProjImplicitLod:
+    case spv::Op::OpImageSampleProjExplicitLod:
+    case spv::Op::OpImageSampleProjDrefImplicitLod:
+    case spv::Op::OpImageSampleProjDrefExplicitLod:
+    case spv::Op::OpImageFetch:
+    case spv::Op::OpImageGather:
+    case spv::Op::OpImageDrefGather:
+    case spv::Op::OpImageRead:
+    case spv::Op::OpImageSparseSampleImplicitLod:
+    case spv::Op::OpImageSparseSampleExplicitLod:
+    case spv::Op::OpImageSparseSampleDrefImplicitLod:
+    case spv::Op::OpImageSparseSampleDrefExplicitLod:
+    case spv::Op::OpImageSparseSampleProjImplicitLod:
+    case spv::Op::OpImageSparseSampleProjExplicitLod:
+    case spv::Op::OpImageSparseSampleProjDrefImplicitLod:
+    case spv::Op::OpImageSparseSampleProjDrefExplicitLod:
+    case spv::Op::OpImageSparseFetch:
+    case spv::Op::OpImageSparseGather:
+    case spv::Op::OpImageSparseDrefGather:
+    case spv::Op::OpImageSparseRead:
       // Atomic instructions.
-    case SpvOpAtomicLoad:
-    case SpvOpAtomicExchange:
-    case SpvOpAtomicCompareExchange:
-    case SpvOpAtomicCompareExchangeWeak:
-    case SpvOpAtomicIIncrement:
-    case SpvOpAtomicIDecrement:
-    case SpvOpAtomicIAdd:
-    case SpvOpAtomicISub:
-    case SpvOpAtomicSMin:
-    case SpvOpAtomicUMin:
-    case SpvOpAtomicSMax:
-    case SpvOpAtomicUMax:
-    case SpvOpAtomicAnd:
-    case SpvOpAtomicOr:
-    case SpvOpAtomicXor:
-    case SpvOpAtomicFlagTestAndSet:
+    case spv::Op::OpAtomicLoad:
+    case spv::Op::OpAtomicExchange:
+    case spv::Op::OpAtomicCompareExchange:
+    case spv::Op::OpAtomicCompareExchangeWeak:
+    case spv::Op::OpAtomicIIncrement:
+    case spv::Op::OpAtomicIDecrement:
+    case spv::Op::OpAtomicIAdd:
+    case spv::Op::OpAtomicISub:
+    case spv::Op::OpAtomicSMin:
+    case spv::Op::OpAtomicUMin:
+    case spv::Op::OpAtomicSMax:
+    case spv::Op::OpAtomicUMax:
+    case spv::Op::OpAtomicAnd:
+    case spv::Op::OpAtomicOr:
+    case spv::Op::OpAtomicXor:
+    case spv::Op::OpAtomicFlagTestAndSet:
       return inst.GetSingleWordInOperand(0);
-    case SpvOpCopyMemory:
+    case spv::Op::OpCopyMemory:
       return inst.GetSingleWordInOperand(1);
-    case SpvOpExtInst: {
+    case spv::Op::OpExtInst: {
       assert(GetExtensionSet(ir_context, inst) == kExtensionSetName &&
              "Extension set is not supported");
 
@@ -493,31 +493,31 @@ bool TransformationMoveInstructionDown::IsMemoryWriteInstruction(
     opt::IRContext* ir_context, const opt::Instruction& inst) {
   switch (inst.opcode()) {
       // Simple Instructions.
-    case SpvOpStore:
-    case SpvOpCopyMemory:
+    case spv::Op::OpStore:
+    case spv::Op::OpCopyMemory:
       // Image instructions.
-    case SpvOpImageWrite:
+    case spv::Op::OpImageWrite:
       // Atomic instructions.
-    case SpvOpAtomicStore:
-    case SpvOpAtomicExchange:
-    case SpvOpAtomicCompareExchange:
-    case SpvOpAtomicCompareExchangeWeak:
-    case SpvOpAtomicIIncrement:
-    case SpvOpAtomicIDecrement:
-    case SpvOpAtomicIAdd:
-    case SpvOpAtomicISub:
-    case SpvOpAtomicSMin:
-    case SpvOpAtomicUMin:
-    case SpvOpAtomicSMax:
-    case SpvOpAtomicUMax:
-    case SpvOpAtomicAnd:
-    case SpvOpAtomicOr:
-    case SpvOpAtomicXor:
-    case SpvOpAtomicFlagTestAndSet:
-    case SpvOpAtomicFlagClear:
+    case spv::Op::OpAtomicStore:
+    case spv::Op::OpAtomicExchange:
+    case spv::Op::OpAtomicCompareExchange:
+    case spv::Op::OpAtomicCompareExchangeWeak:
+    case spv::Op::OpAtomicIIncrement:
+    case spv::Op::OpAtomicIDecrement:
+    case spv::Op::OpAtomicIAdd:
+    case spv::Op::OpAtomicISub:
+    case spv::Op::OpAtomicSMin:
+    case spv::Op::OpAtomicUMin:
+    case spv::Op::OpAtomicSMax:
+    case spv::Op::OpAtomicUMax:
+    case spv::Op::OpAtomicAnd:
+    case spv::Op::OpAtomicOr:
+    case spv::Op::OpAtomicXor:
+    case spv::Op::OpAtomicFlagTestAndSet:
+    case spv::Op::OpAtomicFlagClear:
       return true;
       // Extensions.
-    case SpvOpExtInst: {
+    case spv::Op::OpExtInst: {
       if (GetExtensionSet(ir_context, inst) != kExtensionSetName) {
         return false;
       }
@@ -537,28 +537,28 @@ uint32_t TransformationMoveInstructionDown::GetMemoryWriteTarget(
          "|inst| is not a memory write instruction");
 
   switch (inst.opcode()) {
-    case SpvOpStore:
-    case SpvOpCopyMemory:
-    case SpvOpImageWrite:
-    case SpvOpAtomicStore:
-    case SpvOpAtomicExchange:
-    case SpvOpAtomicCompareExchange:
-    case SpvOpAtomicCompareExchangeWeak:
-    case SpvOpAtomicIIncrement:
-    case SpvOpAtomicIDecrement:
-    case SpvOpAtomicIAdd:
-    case SpvOpAtomicISub:
-    case SpvOpAtomicSMin:
-    case SpvOpAtomicUMin:
-    case SpvOpAtomicSMax:
-    case SpvOpAtomicUMax:
-    case SpvOpAtomicAnd:
-    case SpvOpAtomicOr:
-    case SpvOpAtomicXor:
-    case SpvOpAtomicFlagTestAndSet:
-    case SpvOpAtomicFlagClear:
+    case spv::Op::OpStore:
+    case spv::Op::OpCopyMemory:
+    case spv::Op::OpImageWrite:
+    case spv::Op::OpAtomicStore:
+    case spv::Op::OpAtomicExchange:
+    case spv::Op::OpAtomicCompareExchange:
+    case spv::Op::OpAtomicCompareExchangeWeak:
+    case spv::Op::OpAtomicIIncrement:
+    case spv::Op::OpAtomicIDecrement:
+    case spv::Op::OpAtomicIAdd:
+    case spv::Op::OpAtomicISub:
+    case spv::Op::OpAtomicSMin:
+    case spv::Op::OpAtomicUMin:
+    case spv::Op::OpAtomicSMax:
+    case spv::Op::OpAtomicUMax:
+    case spv::Op::OpAtomicAnd:
+    case spv::Op::OpAtomicOr:
+    case spv::Op::OpAtomicXor:
+    case spv::Op::OpAtomicFlagTestAndSet:
+    case spv::Op::OpAtomicFlagClear:
       return inst.GetSingleWordInOperand(0);
-    case SpvOpExtInst: {
+    case spv::Op::OpExtInst: {
       assert(GetExtensionSet(ir_context, inst) == kExtensionSetName &&
              "Extension set is not supported");
 
@@ -590,9 +590,9 @@ bool TransformationMoveInstructionDown::IsMemoryInstruction(
 bool TransformationMoveInstructionDown::IsBarrierInstruction(
     const opt::Instruction& inst) {
   switch (inst.opcode()) {
-    case SpvOpMemoryBarrier:
-    case SpvOpControlBarrier:
-    case SpvOpMemoryNamedBarrier:
+    case spv::Op::OpMemoryBarrier:
+    case spv::Op::OpControlBarrier:
+    case spv::Op::OpMemoryNamedBarrier:
       return true;
     default:
       return false;

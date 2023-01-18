@@ -44,7 +44,7 @@ class InlinePass : public Pass {
 
   // Add pointer to type to module and return resultId.  Returns 0 if the type
   // could not be created.
-  uint32_t AddPointerToType(uint32_t type_id, SpvStorageClass storage_class);
+  uint32_t AddPointerToType(uint32_t type_id, spv::StorageClass storage_class);
 
   // Add unconditional branch to labelId to end of block block_ptr.
   void AddBranch(uint32_t labelId, std::unique_ptr<BasicBlock>* block_ptr);
@@ -139,9 +139,9 @@ class InlinePass : public Pass {
   // Return true if |func| is a function that can be inlined.
   bool IsInlinableFunction(Function* func);
 
-  // Returns true if |func| contains an OpKill or OpTerminateInvocation
-  // instruction.
-  bool ContainsKillOrTerminateInvocation(Function* func) const;
+  // Returns true if |func| contains an abort instruction that is not an
+  // `OpUnreachable` instruction.
+  bool ContainsAbortOtherThanUnreachable(Function* func) const;
 
   // Update phis in succeeding blocks to point to new last block
   void UpdateSucceedingPhis(
@@ -235,6 +235,12 @@ class InlinePass : public Pass {
   // Move the OpLoopMerge from the last block back to the first.
   void MoveLoopMergeInstToFirstBlock(
       std::vector<std::unique_ptr<BasicBlock>>* new_blocks);
+
+  // Update the structure of single block loops so that the inlined code ends
+  // up in the loop construct and a new continue target is added to satisfy
+  // structural dominance.
+  void UpdateSingleBlockLoopContinueTarget(
+      uint32_t new_id, std::vector<std::unique_ptr<BasicBlock>>* new_blocks);
 };
 
 }  // namespace opt

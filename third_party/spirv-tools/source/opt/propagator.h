@@ -153,10 +153,10 @@ struct Edge {
 //   std::map<uint32_t, uint32_t> values;
 //   const auto visit_fn = [&ctx, &values](Instruction* instr,
 //                                         BasicBlock** dest_bb) {
-//     if (instr->opcode() == SpvOpStore) {
+//     if (instr->opcode() == spv::Op::OpStore) {
 //       uint32_t rhs_id = instr->GetSingleWordOperand(1);
 //       Instruction* rhs_def = ctx->get_def_use_mgr()->GetDef(rhs_id);
-//       if (rhs_def->opcode() == SpvOpConstant) {
+//       if (rhs_def->opcode() == spv::Op::OpConstant) {
 //         uint32_t val = rhs_def->GetSingleWordOperand(2);
 //         values[rhs_id] = val;
 //         return SSAPropagator::kInteresting;

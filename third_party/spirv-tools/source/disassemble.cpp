@@ -244,7 +244,7 @@ void InstructionDisassembler::EmitHeaderSchema(uint32_t schema) {
 
 void InstructionDisassembler::EmitInstruction(
     const spv_parsed_instruction_t& inst, size_t inst_byte_offset) {
-  auto opcode = static_cast<SpvOp>(inst.opcode);
+  auto opcode = static_cast<spv::Op>(inst.opcode);
 
   if (inst.result_id) {
     SetBlue();
@@ -268,7 +268,7 @@ void InstructionDisassembler::EmitInstruction(
     EmitOperand(inst, i);
   }
 
-  if (comment_ && opcode == SpvOpName) {
+  if (comment_ && opcode == spv::Op::OpName) {
     const spv_parsed_operand_t& operand = inst.operands[0];
     const uint32_t word = inst.words[operand.offset];
     stream_ << "  ; id %" << word;
@@ -290,8 +290,8 @@ void InstructionDisassembler::EmitInstruction(
 void InstructionDisassembler::EmitSectionComment(
     const spv_parsed_instruction_t& inst, bool& inserted_decoration_space,
     bool& inserted_debug_space, bool& inserted_type_space) {
-  auto opcode = static_cast<SpvOp>(inst.opcode);
-  if (comment_ && opcode == SpvOpFunction) {
+  auto opcode = static_cast<spv::Op>(inst.opcode);
+  if (comment_ && opcode == spv::Op::OpFunction) {
     stream_ << std::endl;
     stream_ << std::string(indent_, ' ');
     stream_ << "; Function " << name_mapper_(inst.result_id) << std::endl;
@@ -351,7 +351,7 @@ void InstructionDisassembler::EmitOperand(const spv_parsed_instruction_t& inst,
     } break;
     case SPV_OPERAND_TYPE_SPEC_CONSTANT_OP_NUMBER: {
       spv_opcode_desc opcode_desc;
-      if (grammar_.lookupOpcode(SpvOp(word), &opcode_desc))
+      if (grammar_.lookupOpcode(spv::Op(word), &opcode_desc))
         assert(false && "should have caught this earlier");
       SetRed();
       stream_ << opcode_desc->name;

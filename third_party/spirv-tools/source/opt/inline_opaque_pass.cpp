@@ -21,26 +21,24 @@
 namespace spvtools {
 namespace opt {
 namespace {
-
-const uint32_t kTypePointerTypeIdInIdx = 1;
-
-}  // anonymous namespace
+constexpr uint32_t kTypePointerTypeIdInIdx = 1;
+}  // namespace
 
 bool InlineOpaquePass::IsOpaqueType(uint32_t typeId) {
   const Instruction* typeInst = get_def_use_mgr()->GetDef(typeId);
   switch (typeInst->opcode()) {
-    case SpvOpTypeSampler:
-    case SpvOpTypeImage:
-    case SpvOpTypeSampledImage:
+    case spv::Op::OpTypeSampler:
+    case spv::Op::OpTypeImage:
+    case spv::Op::OpTypeSampledImage:
       return true;
-    case SpvOpTypePointer:
+    case spv::Op::OpTypePointer:
       return IsOpaqueType(
           typeInst->GetSingleWordInOperand(kTypePointerTypeIdInIdx));
     default:
       break;
   }
   // TODO(greg-lunarg): Handle arrays containing opaque type
-  if (typeInst->opcode() != SpvOpTypeStruct) return false;
+  if (typeInst->opcode() != spv::Op::OpTypeStruct) return false;
   // Return true if any member is opaque
   return !typeInst->WhileEachInId([this](const uint32_t* tid) {
     if (IsOpaqueType(*tid)) return false;

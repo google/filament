@@ -22,7 +22,7 @@ namespace val {
 
 spv_result_t ValidateSmallTypeUses(ValidationState_t& _,
                                    const Instruction* inst) {
-  if (!_.HasCapability(SpvCapabilityShader) || inst->type_id() == 0 ||
+  if (!_.HasCapability(spv::Capability::Shader) || inst->type_id() == 0 ||
       !_.ContainsLimitedUseIntOrFloatType(inst->type_id())) {
     return SPV_SUCCESS;
   }
@@ -36,13 +36,13 @@ spv_result_t ValidateSmallTypeUses(ValidationState_t& _,
   for (auto use : inst->uses()) {
     const auto* user = use.first;
     switch (user->opcode()) {
-      case SpvOpDecorate:
-      case SpvOpDecorateId:
-      case SpvOpCopyObject:
-      case SpvOpStore:
-      case SpvOpFConvert:
-      case SpvOpUConvert:
-      case SpvOpSConvert:
+      case spv::Op::OpDecorate:
+      case spv::Op::OpDecorateId:
+      case spv::Op::OpCopyObject:
+      case spv::Op::OpStore:
+      case spv::Op::OpFConvert:
+      case spv::Op::OpUConvert:
+      case spv::Op::OpSConvert:
         break;
       default:
         return _.diag(SPV_ERROR_INVALID_ID, user)

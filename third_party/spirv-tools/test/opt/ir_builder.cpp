@@ -201,7 +201,7 @@ TEST_F(IRBuilderTest, TestCondBranchAddition) {
     // TODO(1841): Handle id overflow.
     fn.begin().InsertBefore(std::unique_ptr<BasicBlock>(
         new BasicBlock(std::unique_ptr<Instruction>(new Instruction(
-            context.get(), SpvOpLabel, 0, context->TakeNextId(), {})))));
+            context.get(), spv::Op::OpLabel, 0, context->TakeNextId(), {})))));
     BasicBlock& bb_true = *fn.begin();
     {
       InstructionBuilder builder(context.get(), &*bb_true.begin());
@@ -211,7 +211,7 @@ TEST_F(IRBuilderTest, TestCondBranchAddition) {
     // TODO(1841): Handle id overflow.
     fn.begin().InsertBefore(std::unique_ptr<BasicBlock>(
         new BasicBlock(std::unique_ptr<Instruction>(new Instruction(
-            context.get(), SpvOpLabel, 0, context->TakeNextId(), {})))));
+            context.get(), spv::Op::OpLabel, 0, context->TakeNextId(), {})))));
     BasicBlock& bb_cond = *fn.begin();
 
     InstructionBuilder builder(context.get(), &bb_cond);

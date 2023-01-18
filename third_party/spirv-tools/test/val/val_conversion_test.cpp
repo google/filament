@@ -813,8 +813,9 @@ TEST_F(ValidateConversion, PtrCastToGenericWrongInputType) {
 
   CompileSuccessfully(GenerateKernelCode(body).c_str());
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(), HasSubstr("Operand 4[%float] cannot be a "
-                                               "type"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Operand '4[%float]' cannot be a "
+                        "type"));
 }
 
 TEST_F(ValidateConversion, PtrCastToGenericWrongInputStorageClass) {
@@ -1258,8 +1259,9 @@ TEST_F(ValidateConversion, BitcastInputHasNoType) {
 
   CompileSuccessfully(GenerateKernelCode(body).c_str());
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(), HasSubstr("Operand 4[%float] cannot be a "
-                                               "type"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Operand '4[%float]' cannot be a "
+                        "type"));
 }
 
 TEST_F(ValidateConversion, BitcastWrongResultType) {
@@ -1458,7 +1460,7 @@ OpFunctionEnd
 
   CompileSuccessfully(spirv);
   EXPECT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(), HasSubstr("Operand 1[%uint] cannot be a "
+  EXPECT_THAT(getDiagnosticString(), HasSubstr("Operand '1[%uint]' cannot be a "
                                                "type"));
 }
 
@@ -1639,6 +1641,131 @@ OpFunctionEnd
       getDiagnosticString(),
       HasSubstr("PhysicalStorageBuffer64 addressing mode requires the result "
                 "integer type to have a 64-bit width for Vulkan environment."));
+}
+
+TEST_F(ValidateConversion, ConvertUToAccelerationStructureU32Vec2) {
+  const std::string extensions = R"(
+OpCapability RayQueryKHR
+OpExtension "SPV_KHR_ray_query"
+)";
+  const std::string types = R"(
+%u32vec2ptr_func = OpTypePointer Function %u32vec2
+%typeAS = OpTypeAccelerationStructureKHR
+)";
+  const std::string body = R"(
+%asHandle = OpVariable %u32vec2ptr_func Function
+%load = OpLoad %u32vec2 %asHandle
+%val = OpConvertUToAccelerationStructureKHR %typeAS %load
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateConversion, ConvertUToAccelerationStructureSuccessU64) {
+  const std::string extensions = R"(
+OpCapability RayQueryKHR
+OpExtension "SPV_KHR_ray_query"
+)";
+  const std::string types = R"(
+%u64_func = OpTypePointer Function %u64
+%typeAS = OpTypeAccelerationStructureKHR
+)";
+  const std::string body = R"(
+%asHandle = OpVariable %u64_func Function
+%load = OpLoad %u64 %asHandle
+%val = OpConvertUToAccelerationStructureKHR %typeAS %load
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
+TEST_F(ValidateConversion, ConvertUToAccelerationStructureResult) {
+  const std::string extensions = R"(
+OpCapability RayQueryKHR
+OpExtension "SPV_KHR_ray_query"
+)";
+  const std::string types = R"(
+%u32vec2ptr_func = OpTypePointer Function %u32vec2
+%typeRQ = OpTypeRayQueryKHR
+)";
+  const std::string body = R"(
+%asHandle = OpVariable %u32vec2ptr_func Function
+%load = OpLoad %u32vec2 %asHandle
+%val = OpConvertUToAccelerationStructureKHR %typeRQ %load
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected Result Type to be a Acceleration Structure"));
+}
+
+TEST_F(ValidateConversion, ConvertUToAccelerationStructureU32) {
+  const std::string extensions = R"(
+OpCapability RayQueryKHR
+OpExtension "SPV_KHR_ray_query"
+)";
+  const std::string types = R"(
+%u32ptr_func = OpTypePointer Function %u32
+%typeAS = OpTypeAccelerationStructureKHR
+)";
+  const std::string body = R"(
+%asHandle = OpVariable %u32ptr_func Function
+%load = OpLoad %u32 %asHandle
+%val = OpConvertUToAccelerationStructureKHR %typeAS %load
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected 64-bit uint scalar or 2-component 32-bit "
+                        "uint vector as input"));
+}
+
+TEST_F(ValidateConversion, ConvertUToAccelerationStructureS64) {
+  const std::string extensions = R"(
+OpCapability RayQueryKHR
+OpExtension "SPV_KHR_ray_query"
+)";
+  const std::string types = R"(
+%s64ptr_func = OpTypePointer Function %s64
+%typeAS = OpTypeAccelerationStructureKHR
+)";
+  const std::string body = R"(
+%asHandle = OpVariable %s64ptr_func Function
+%load = OpLoad %s64 %asHandle
+%val = OpConvertUToAccelerationStructureKHR %typeAS %load
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected 64-bit uint scalar or 2-component 32-bit "
+                        "uint vector as input"));
+}
+
+TEST_F(ValidateConversion, ConvertUToAccelerationStructureS32Vec2) {
+  const std::string extensions = R"(
+OpCapability RayQueryKHR
+OpExtension "SPV_KHR_ray_query"
+)";
+  const std::string types = R"(
+%s32vec2ptr_func = OpTypePointer Function %s32vec2
+%typeAS = OpTypeAccelerationStructureKHR
+)";
+  const std::string body = R"(
+%asHandle = OpVariable %s32vec2ptr_func Function
+%load = OpLoad %s32vec2 %asHandle
+%val = OpConvertUToAccelerationStructureKHR %typeAS %load
+)";
+
+  CompileSuccessfully(GenerateShaderCode(body, extensions, "", types).c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Expected 64-bit uint scalar or 2-component 32-bit "
+                        "uint vector as input"));
 }
 
 using ValidateSmallConversions = spvtest::ValidateBase<std::string>;

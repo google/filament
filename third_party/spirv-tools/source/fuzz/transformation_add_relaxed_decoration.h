@@ -52,7 +52,7 @@ class TransformationAddRelaxedDecoration : public Transformation {
   // Returns true if and only if |opcode| is the opcode of an instruction
   // that operates on 32-bit integers and 32-bit floats
   // as defined by the SPIR-V specification.
-  static bool IsNumeric(uint32_t opcode);
+  static bool IsNumeric(spv::Op opcode);
 
  private:
   protobufs::TransformationAddRelaxedDecoration message_;

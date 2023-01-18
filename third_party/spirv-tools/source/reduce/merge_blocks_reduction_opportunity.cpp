@@ -23,7 +23,7 @@ namespace reduce {
 MergeBlocksReductionOpportunity::MergeBlocksReductionOpportunity(
     opt::IRContext* context, opt::Function* function, opt::BasicBlock* block) {
   // Precondition: the terminator has to be OpBranch.
-  assert(block->terminator()->opcode() == SpvOpBranch);
+  assert(block->terminator()->opcode() == spv::Op::OpBranch);
   context_ = context;
   function_ = function;
   // Get the successor block associated with the OpBranch.

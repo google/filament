@@ -585,7 +585,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
             // getIndexForTextureTarget() is constexpr -- so all of this disappears at compile time.
             switch (target) {
                 case SamplerType::SAMPLER_EXTERNAL:
-                    // we can't be here -- doesn't mater what we do
+                    // we can't be here -- doesn't matter what we do
                 case SamplerType::SAMPLER_2D:
                     t->gl.target = GL_TEXTURE_2D;
                     t->gl.targetIndex = (uint8_t)gl.getIndexForTextureTarget(GL_TEXTURE_2D);
@@ -1117,7 +1117,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
      * About the size of the attachments:
      *
      *  If the attachment sizes are not all identical, the results of rendering are defined only
-     *  within the largest area that can fit in all of the attachments. This area is defined as
+     *  within the largest area that can fit in all the attachments. This area is defined as
      *  the intersection of rectangles having a lower left of (0, 0) and an upper right of
      *  (width, height) for each attachment. Contents of attachments outside this area are
      *  undefined after execution of a rendering command.
@@ -1872,7 +1872,7 @@ void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
             SamplerParams params = pSamplers[i].s;
             if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
                 // From OES_EGL_image_external spec:
-                // "The default s and t wrap modes are CLAMP_TO_EDGE and it is an INVALID_ENUM
+                // "The default s and t wrap modes are CLAMP_TO_EDGE, and it is an INVALID_ENUM
                 //  error to set the wrap mode to any other value."
                 params.wrapS = SamplerWrapMode::CLAMP_TO_EDGE;
                 params.wrapT = SamplerWrapMode::CLAMP_TO_EDGE;
@@ -2050,7 +2050,7 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
         }
     }
 
-    // update the base/max LOD so we don't access undefined LOD. this allows the app to
+    // update the base/max LOD, so we don't access undefined LOD. this allows the app to
     // specify levels as they become available.
 
     if (int8_t(level) < t->gl.baseLevel) {
@@ -2142,7 +2142,7 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t, uint32_t level,
         }
     }
 
-    // update the base/max LOD so we don't access undefined LOD. this allows the app to
+    // update the base/max LOD, so we don't access undefined LOD. this allows the app to
     // specify levels as they become available.
 
     if (uint8_t(level) < t->gl.baseLevel) {
@@ -2719,7 +2719,7 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
      *  +--------------------+
      *  |                    |                stride         alignment
      *  |                    |         ----------------------->-->
-     *  |                    |         +----------------------+--+   low adresses
+     *  |                    |         +----------------------+--+   low addresses
      *  |                    |         |          |           |  |
      *  |             w      |         |          | bottom    |  |
      *  |       <--------->  |         |          V           |  |
@@ -2729,7 +2729,7 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
      *  +------>|     v   |  |         +---->|         |      |  |
      *  |       +.........+  |         |     +---------+      |  |
      *  |            ^       |         |                      |  |
-     *  |          y |       |         +----------------------+--+  high adresses
+     *  |          y |       |         +----------------------+--+  high addresses
      *  +------------+-------+
      *                                  Image is "flipped" vertically
      *                                  "bottom" is from the "top" (low addresses)
@@ -2861,7 +2861,7 @@ void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
             it = v.erase(it);
         } else if (UTILS_UNLIKELY(status == GL_WAIT_FAILED)) {
             // This should never happen, but is very problematic if it does, as we might leak
-            // some data depending on what the callback does. However, we clean-up our own state.
+            // some data depending on what the callback does. However, we clean up our own state.
             glDeleteSync(it->first);
             it = v.erase(it);
         } else {
@@ -3063,7 +3063,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
         // buffer -- this should produce the same output that if we copied from the resolved
         // texture. EXT_multisampled_render_to_texture seems to allow both behaviours, and this
         // is an emulation of that.  We cannot use the resolved texture easily because it's not
-        // actually attached to the this RenderTarget. Another implementation would be to do a
+        // actually attached to the RenderTarget. Another implementation would be to do a
         // reverse-resolve, but that wouldn't buy us anything.
         GLRenderTarget const* s = handle_cast<GLRenderTarget const*>(src);
         GLRenderTarget const* d = handle_cast<GLRenderTarget const*>(dst);

@@ -126,8 +126,8 @@ bool LICMPass::HoistInstruction(Loop* loop, Instruction* inst) {
   }
   Instruction* insertion_point = &*pre_header_bb->tail();
   Instruction* previous_node = insertion_point->PreviousNode();
-  if (previous_node && (previous_node->opcode() == SpvOpLoopMerge ||
-                        previous_node->opcode() == SpvOpSelectionMerge)) {
+  if (previous_node && (previous_node->opcode() == spv::Op::OpLoopMerge ||
+                        previous_node->opcode() == spv::Op::OpSelectionMerge)) {
     insertion_point = previous_node;
   }
 

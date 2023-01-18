@@ -2957,7 +2957,7 @@ TEST(StructuredLoopToSelectionReductionPassTest,
                OpLoopMerge %12 %13 None
                OpBranch %12
          %13 = OpLabel
-               OpBranchConditional %6 %9 %11
+               OpBranch %11
          %12 = OpLabel
                OpBranch %10
          %10 = OpLabel
@@ -2999,7 +2999,7 @@ TEST(StructuredLoopToSelectionReductionPassTest,
                OpLoopMerge %12 %13 None
                OpBranch %12
          %13 = OpLabel
-               OpBranchConditional %6 %9 %11
+               OpBranch %11
          %12 = OpLabel
                OpBranch %9
          %10 = OpLabel
@@ -3036,7 +3036,7 @@ TEST(StructuredLoopToSelectionReductionPassTest,
                OpSelectionMerge %12 None
                OpBranchConditional %6 %12 %12
          %13 = OpLabel
-               OpBranchConditional %6 %9 %11
+               OpBranch %11
          %12 = OpLabel
                OpBranch %9
          %10 = OpLabel
@@ -3050,8 +3050,7 @@ TEST(StructuredLoopToSelectionReductionPassTest,
 
 TEST(StructuredLoopToSelectionReductionPassTest,
      UnreachableInnerLoopContinueBranchingToOuterLoopMerge2) {
-  // In this test, the branch to the outer loop merge from the inner loop's
-  // continue is part of a structured selection.
+  // In this test, the unreachable continue is composed of multiple blocks.
   std::string shader = R"(
                OpCapability Shader
           %1 = OpExtInstImport "GLSL.std.450"
@@ -3073,8 +3072,7 @@ TEST(StructuredLoopToSelectionReductionPassTest,
                OpLoopMerge %12 %13 None
                OpBranch %12
          %13 = OpLabel
-               OpSelectionMerge %14 None
-               OpBranchConditional %6 %9 %14
+               OpBranch %14
          %14 = OpLabel
                OpBranch %11
          %12 = OpLabel
@@ -3118,8 +3116,7 @@ TEST(StructuredLoopToSelectionReductionPassTest,
                OpLoopMerge %12 %13 None
                OpBranch %12
          %13 = OpLabel
-               OpSelectionMerge %14 None
-               OpBranchConditional %6 %9 %14
+               OpBranch %14
          %14 = OpLabel
                OpBranch %11
          %12 = OpLabel
@@ -3158,8 +3155,7 @@ TEST(StructuredLoopToSelectionReductionPassTest,
                OpSelectionMerge %12 None
                OpBranchConditional %6 %12 %12
          %13 = OpLabel
-               OpSelectionMerge %14 None
-               OpBranchConditional %6 %9 %14
+               OpBranch %14
          %14 = OpLabel
                OpBranch %11
          %12 = OpLabel

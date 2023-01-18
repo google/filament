@@ -396,7 +396,7 @@ int main(int argc, char** argv) {
 
     FilamentApp& filamentApp = FilamentApp::get();
 
-    filamentApp.setDropHandler([&] (std::string path) {
+    filamentApp.setDropHandler([&] (std::string_view path) {
         loadImage(app, app.engine, Path(path));
     });
 

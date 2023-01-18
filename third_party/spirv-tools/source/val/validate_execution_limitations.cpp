@@ -22,7 +22,7 @@ namespace val {
 
 spv_result_t ValidateExecutionLimitations(ValidationState_t& _,
                                           const Instruction* inst) {
-  if (inst->opcode() != SpvOpFunction) {
+  if (inst->opcode() != spv::Op::OpFunction) {
     return SPV_SUCCESS;
   }
 
@@ -44,8 +44,8 @@ spv_result_t ValidateExecutionLimitations(ValidationState_t& _,
         std::string reason;
         if (!func->IsCompatibleWithExecutionModel(model, &reason)) {
           return _.diag(SPV_ERROR_INVALID_ID, inst)
-                 << "OpEntryPoint Entry Point <id> '" << _.getIdName(entry_id)
-                 << "'s callgraph contains function <id> "
+                 << "OpEntryPoint Entry Point <id> " << _.getIdName(entry_id)
+                 << "s callgraph contains function <id> "
                  << _.getIdName(inst->id())
                  << ", which cannot be used with the current execution "
                     "model:\n"
@@ -57,9 +57,8 @@ spv_result_t ValidateExecutionLimitations(ValidationState_t& _,
     std::string reason;
     if (!func->CheckLimitations(_, _.function(entry_id), &reason)) {
       return _.diag(SPV_ERROR_INVALID_ID, inst)
-             << "OpEntryPoint Entry Point <id> '" << _.getIdName(entry_id)
-             << "'s callgraph contains function <id> "
-             << _.getIdName(inst->id())
+             << "OpEntryPoint Entry Point <id> " << _.getIdName(entry_id)
+             << "s callgraph contains function <id> " << _.getIdName(inst->id())
              << ", which cannot be used with the current execution "
                 "modes:\n"
              << reason;

@@ -100,8 +100,10 @@ OpMemoryModel Logical GLSL450
       BuildModule(SPV_ENV_UNIVERSAL_1_2, nullptr, text);
   ASSERT_NE(context, nullptr);
 
-  EXPECT_TRUE(context->get_feature_mgr()->HasCapability(SpvCapabilityShader));
-  EXPECT_FALSE(context->get_feature_mgr()->HasCapability(SpvCapabilityKernel));
+  EXPECT_TRUE(
+      context->get_feature_mgr()->HasCapability(spv::Capability::Shader));
+  EXPECT_FALSE(
+      context->get_feature_mgr()->HasCapability(spv::Capability::Kernel));
 }
 
 TEST_F(FeatureManagerTest, ExplicitlyPresent2) {
@@ -114,8 +116,10 @@ OpMemoryModel Logical GLSL450
       BuildModule(SPV_ENV_UNIVERSAL_1_2, nullptr, text);
   ASSERT_NE(context, nullptr);
 
-  EXPECT_FALSE(context->get_feature_mgr()->HasCapability(SpvCapabilityShader));
-  EXPECT_TRUE(context->get_feature_mgr()->HasCapability(SpvCapabilityKernel));
+  EXPECT_FALSE(
+      context->get_feature_mgr()->HasCapability(spv::Capability::Shader));
+  EXPECT_TRUE(
+      context->get_feature_mgr()->HasCapability(spv::Capability::Kernel));
 }
 
 TEST_F(FeatureManagerTest, ImplicitlyPresent) {
@@ -131,10 +135,13 @@ OpMemoryModel Logical GLSL450
   // Check multiple levels of indirection.  Tessellation implies Shader, which
   // implies Matrix.
   EXPECT_TRUE(
-      context->get_feature_mgr()->HasCapability(SpvCapabilityTessellation));
-  EXPECT_TRUE(context->get_feature_mgr()->HasCapability(SpvCapabilityShader));
-  EXPECT_TRUE(context->get_feature_mgr()->HasCapability(SpvCapabilityMatrix));
-  EXPECT_FALSE(context->get_feature_mgr()->HasCapability(SpvCapabilityKernel));
+      context->get_feature_mgr()->HasCapability(spv::Capability::Tessellation));
+  EXPECT_TRUE(
+      context->get_feature_mgr()->HasCapability(spv::Capability::Shader));
+  EXPECT_TRUE(
+      context->get_feature_mgr()->HasCapability(spv::Capability::Matrix));
+  EXPECT_FALSE(
+      context->get_feature_mgr()->HasCapability(spv::Capability::Kernel));
 }
 
 }  // namespace

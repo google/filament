@@ -117,6 +117,8 @@ struct FFilamentInstance : public FilamentInstance {
     const utils::Entity* getJointsAt(size_t skinIndex) const noexcept;
     void attachSkin(size_t skinIndex, utils::Entity target) noexcept;
     void detachSkin(size_t skinIndex, utils::Entity target) noexcept;
+    math::mat4f const* getInverseBindMatricesAt(size_t skinIndex) const;
+
     void recomputeBoundingBoxes();
 };
 

@@ -86,7 +86,8 @@ TEST(TransformationMutatePointerTest, BasicTest) {
   transformation_context.GetFactManager()->AddFactIdIsIrrelevant(35);
   transformation_context.GetFactManager()->AddFactIdIsIrrelevant(39);
 
-  const auto insert_before = MakeInstructionDescriptor(26, SpvOpReturn, 0);
+  const auto insert_before =
+      MakeInstructionDescriptor(26, spv::Op::OpReturn, 0);
 
   // 20 is not a fresh id.
   ASSERT_FALSE(TransformationMutatePointer(20, 20, insert_before)
@@ -94,13 +95,14 @@ TEST(TransformationMutatePointerTest, BasicTest) {
 
   // |insert_before| instruction descriptor is invalid.
   ASSERT_FALSE(TransformationMutatePointer(
-                   20, 70, MakeInstructionDescriptor(26, SpvOpStore, 0))
+                   20, 70, MakeInstructionDescriptor(26, spv::Op::OpStore, 0))
                    .IsApplicable(context.get(), transformation_context));
 
   // Can't insert OpLoad before OpVariable.
-  ASSERT_FALSE(TransformationMutatePointer(
-                   20, 70, MakeInstructionDescriptor(26, SpvOpVariable, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationMutatePointer(
+          20, 70, MakeInstructionDescriptor(26, spv::Op::OpVariable, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   // |pointer_id| doesn't exist in the module.
   ASSERT_FALSE(TransformationMutatePointer(70, 70, insert_before)
@@ -131,9 +133,10 @@ TEST(TransformationMutatePointerTest, BasicTest) {
                    .IsApplicable(context.get(), transformation_context));
 
   // |pointer_id| is not available before |insert_before|.
-  ASSERT_FALSE(TransformationMutatePointer(
-                   26, 70, MakeInstructionDescriptor(26, SpvOpAccessChain, 0))
-                   .IsApplicable(context.get(), transformation_context));
+  ASSERT_FALSE(
+      TransformationMutatePointer(
+          26, 70, MakeInstructionDescriptor(26, spv::Op::OpAccessChain, 0))
+          .IsApplicable(context.get(), transformation_context));
 
   transformation_context.GetFactManager()->AddFactIdIsIrrelevant(40);
 
@@ -274,7 +277,8 @@ TEST(TransformationMutatePointerTest, HandlesUnreachableBlocks) {
   ASSERT_FALSE(
       context->GetDominatorAnalysis(context->GetFunction(4))->IsReachable(10));
 
-  const auto insert_before = MakeInstructionDescriptor(10, SpvOpReturn, 0);
+  const auto insert_before =
+      MakeInstructionDescriptor(10, spv::Op::OpReturn, 0);
 
   // Can mutate a global variable in an unreachable block.
   TransformationMutatePointer transformation(12, 50, insert_before);

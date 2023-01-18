@@ -110,10 +110,10 @@ class LoopFissionImpl {
 };
 
 bool LoopFissionImpl::MovableInstruction(const Instruction& inst) const {
-  return inst.opcode() == SpvOp::SpvOpLoad ||
-         inst.opcode() == SpvOp::SpvOpStore ||
-         inst.opcode() == SpvOp::SpvOpSelectionMerge ||
-         inst.opcode() == SpvOp::SpvOpPhi || inst.IsOpcodeCodeMotionSafe();
+  return inst.opcode() == spv::Op::OpLoad ||
+         inst.opcode() == spv::Op::OpStore ||
+         inst.opcode() == spv::Op::OpSelectionMerge ||
+         inst.opcode() == spv::Op::OpPhi || inst.IsOpcodeCodeMotionSafe();
 }
 
 void LoopFissionImpl::TraverseUseDef(Instruction* inst,
@@ -143,14 +143,14 @@ void LoopFissionImpl::TraverseUseDef(Instruction* inst,
     // same labels (i.e phis). We already preempt the inclusion of
     // OpSelectionMerge by adding related instructions to the seen_instructions_
     // set.
-    if (user->opcode() == SpvOp::SpvOpLoopMerge ||
-        user->opcode() == SpvOp::SpvOpLabel)
+    if (user->opcode() == spv::Op::OpLoopMerge ||
+        user->opcode() == spv::Op::OpLabel)
       return;
 
     // If the |report_loads| flag is set, set the class field
     // load_used_in_condition_ to false. This is used to check that none of the
     // condition checks in the loop rely on loads.
-    if (user->opcode() == SpvOp::SpvOpLoad && report_loads) {
+    if (user->opcode() == spv::Op::OpLoad && report_loads) {
       load_used_in_condition_ = true;
     }
 
@@ -167,7 +167,7 @@ void LoopFissionImpl::TraverseUseDef(Instruction* inst,
     user->ForEachInOperand(traverse_operand);
 
     // For the first traversal we want to ignore the users of the phi.
-    if (ignore_phi_users && user->opcode() == SpvOp::SpvOpPhi) return;
+    if (ignore_phi_users && user->opcode() == spv::Op::OpPhi) return;
 
     // Traverse each user with this lambda.
     def_use->ForEachUser(user, traverser_functor);
@@ -214,7 +214,7 @@ bool LoopFissionImpl::GroupInstructionsByUseDef() {
 
     for (Instruction& inst : block) {
       // Ignore all instructions related to control flow.
-      if (inst.opcode() == SpvOp::SpvOpSelectionMerge || inst.IsBranch()) {
+      if (inst.opcode() == spv::Op::OpSelectionMerge || inst.IsBranch()) {
         TraverseUseDef(&inst, &instructions_to_ignore, true, true);
       }
     }
@@ -229,8 +229,8 @@ bool LoopFissionImpl::GroupInstructionsByUseDef() {
 
     for (Instruction& inst : block) {
       // Record the order that each load/store is seen.
-      if (inst.opcode() == SpvOp::SpvOpLoad ||
-          inst.opcode() == SpvOp::SpvOpStore) {
+      if (inst.opcode() == spv::Op::OpLoad ||
+          inst.opcode() == spv::Op::OpStore) {
         instruction_order_[&inst] = instruction_order_.size();
       }
 
@@ -292,9 +292,9 @@ bool LoopFissionImpl::CanPerformSplit() {
 
   // Populate the above lists.
   for (Instruction* inst : cloned_loop_instructions_) {
-    if (inst->opcode() == SpvOp::SpvOpStore) {
+    if (inst->opcode() == spv::Op::OpStore) {
       set_one_stores.push_back(inst);
-    } else if (inst->opcode() == SpvOp::SpvOpLoad) {
+    } else if (inst->opcode() == spv::Op::OpLoad) {
       set_one_loads.push_back(inst);
     }
 
@@ -316,7 +316,7 @@ bool LoopFissionImpl::CanPerformSplit() {
 
     // Look at the dependency between the loads in the original and stores in
     // the cloned loops.
-    if (inst->opcode() == SpvOp::SpvOpLoad) {
+    if (inst->opcode() == spv::Op::OpLoad) {
       for (Instruction* store : set_one_stores) {
         DistanceVector vec{loop_depth};
 
@@ -334,7 +334,7 @@ bool LoopFissionImpl::CanPerformSplit() {
           }
         }
       }
-    } else if (inst->opcode() == SpvOp::SpvOpStore) {
+    } else if (inst->opcode() == spv::Op::OpStore) {
       for (Instruction* load : set_one_loads) {
         DistanceVector vec{loop_depth};
 
@@ -387,7 +387,7 @@ Loop* LoopFissionImpl::SplitLoop() {
       if (cloned_loop_instructions_.count(&inst) == 1 &&
           original_loop_instructions_.count(&inst) == 0) {
         instructions_to_kill.push_back(&inst);
-        if (inst.opcode() == SpvOp::SpvOpPhi) {
+        if (inst.opcode() == spv::Op::OpPhi) {
           context_->ReplaceAllUsesWith(
               inst.result_id(), clone_results.value_map_[inst.result_id()]);
         }

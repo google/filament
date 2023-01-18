@@ -530,7 +530,7 @@ void FMaterial::onEditCallback(void* userdata, const utils::CString& name, const
     FMaterial* material = downcast((Material*) userdata);
     FEngine& engine = material->mEngine;
 
-    // This is called on a web server thread so we defer clearing the program cache
+    // This is called on a web server thread, so we defer clearing the program cache
     // and swapping out the MaterialParser until the next getProgram call.
     material->mPendingEdits = createParser(engine.getBackend(), packageData, packageSize);
 }

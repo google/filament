@@ -52,6 +52,22 @@ class CopyPropagateArrays : public MemPass {
   }
 
  private:
+  // Represents one index in the OpAccessChain instruction. It can be either
+  // an instruction's result_id (OpConstant by ex), or a immediate value.
+  // Immediate values are used to prepare the final access chain without
+  // creating OpConstant instructions until done.
+  struct AccessChainEntry {
+    bool is_result_id;
+    union {
+      uint32_t result_id;
+      uint32_t immediate;
+    };
+
+    bool operator!=(const AccessChainEntry& other) const {
+      return other.is_result_id != is_result_id || other.result_id != result_id;
+    }
+  };
+
   // The class used to identify a particular memory object.  This memory object
   // will be owned by a particular variable, meaning that the memory is part of
   // that variable.  It could be the entire variable or a member of the
@@ -70,12 +86,12 @@ class CopyPropagateArrays : public MemPass {
     // (starting from the current member).  The elements in |access_chain| are
     // interpreted the same as the indices in the |OpAccessChain|
     // instruction.
-    void GetMember(const std::vector<uint32_t>& access_chain);
+    void PushIndirection(const std::vector<AccessChainEntry>& access_chain);
 
     // Change |this| to now represent the first enclosing object to which it
     // belongs.  (Remove the last element off the access_chain). It is invalid
     // to call this function if |this| does not represent a member of its owner.
-    void GetParent() {
+    void PopIndirection() {
       assert(IsMember());
       access_chain_.pop_back();
     }
@@ -95,7 +111,13 @@ class CopyPropagateArrays : public MemPass {
     // member that |this| represents starting from the owning variable.  These
     // values are to be interpreted the same way the indices are in an
     // |OpAccessChain| instruction.
-    const std::vector<uint32_t>& AccessChain() const { return access_chain_; }
+    const std::vector<AccessChainEntry>& AccessChain() const {
+      return access_chain_;
+    }
+
+    // Converts all immediate values in the AccessChain their OpConstant
+    // equivalent.
+    void BuildConstants();
 
     // Returns the type id of the pointer type that can be used to point to this
     // memory object.
@@ -112,13 +134,13 @@ class CopyPropagateArrays : public MemPass {
           var_pointer_inst->GetSingleWordInOperand(1), GetAccessIds());
 
       uint32_t member_pointer_type_id = type_mgr->FindPointerToType(
-          member_type_id, static_cast<SpvStorageClass>(
+          member_type_id, static_cast<spv::StorageClass>(
                               var_pointer_inst->GetSingleWordInOperand(0)));
       return member_pointer_type_id;
     }
 
     // Returns the storage class of the memory object.
-    SpvStorageClass GetStorageClass() const {
+    spv::StorageClass GetStorageClass() const {
       analysis::TypeManager* type_mgr =
           GetVariable()->context()->get_type_mgr();
       const analysis::Pointer* pointer_type =
@@ -137,7 +159,7 @@ class CopyPropagateArrays : public MemPass {
     // The access chain to reach the particular member the memory object
     // represents.  It should be interpreted the same way the indices in an
     // |OpAccessChain| are interpreted.
-    std::vector<uint32_t> access_chain_;
+    std::vector<AccessChainEntry> access_chain_;
     std::vector<uint32_t> GetAccessIds() const;
   };
 
@@ -192,10 +214,14 @@ class CopyPropagateArrays : public MemPass {
   std::unique_ptr<MemoryObject> BuildMemoryObjectFromInsert(
       Instruction* insert_inst);
 
+  // Return true if the given entry can represent the given value.
+  bool IsAccessChainIndexValidAndEqualTo(const AccessChainEntry& entry,
+                                         uint32_t value) const;
+
   // Return true if |type_id| is a pointer type whose pointee type is an array.
   bool IsPointerToArrayType(uint32_t type_id);
 
-  // Returns true of there are not stores using |ptr_inst| or something derived
+  // Returns true if there are not stores using |ptr_inst| or something derived
   // from it.
   bool HasNoStores(Instruction* ptr_inst);
 

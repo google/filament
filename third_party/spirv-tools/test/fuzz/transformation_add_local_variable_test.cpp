@@ -104,7 +104,8 @@ TEST(TransformationAddLocalVariableTest, BasicTest) {
         transformation.IsApplicable(context.get(), transformation_context));
     ApplyAndCheckFreshIds(transformation, context.get(),
                           &transformation_context);
-    ASSERT_EQ(SpvOpVariable, context->get_def_use_mgr()->GetDef(105)->opcode());
+    ASSERT_EQ(spv::Op::OpVariable,
+              context->get_def_use_mgr()->GetDef(105)->opcode());
     ASSERT_EQ(5, context->get_instr_block(105)->id());
   }
 

@@ -778,8 +778,8 @@ OpAtomicStore %f32_var_function %device %relaxed %f32_1
   EXPECT_THAT(
       getDiagnosticString(),
       HasSubstr("AtomicStore: Vulkan spec only allows storage classes for "
-                "atomic to be: Uniform, Workgroup, Image, StorageBuffer, or "
-                "PhysicalStorageBuffer."));
+                "atomic to be: Uniform, Workgroup, Image, StorageBuffer, "
+                "PhysicalStorageBuffer or TaskPayloadWorkgroupEXT."));
 }
 
 TEST_F(ValidateAtomics, AtomicStoreFunctionPointerStorageType) {
@@ -1000,8 +1000,9 @@ TEST_F(ValidateAtomics, AtomicLoadWrongPointerType) {
 
   CompileSuccessfully(GenerateKernelCode(body));
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Operand 27[%_ptr_Workgroup_float] cannot be a type"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Operand '27[%_ptr_Workgroup_float]' cannot be a type"));
 }
 
 TEST_F(ValidateAtomics, AtomicLoadWrongPointerDataType) {
@@ -1273,7 +1274,7 @@ TEST_F(ValidateAtomics, AtomicExchangeWrongPointerType) {
   CompileSuccessfully(GenerateKernelCode(body));
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Operand 33[%_ptr_Workgroup_v4float] cannot be a "
+              HasSubstr("Operand '33[%_ptr_Workgroup_v4float]' cannot be a "
                         "type"));
 }
 
@@ -1400,7 +1401,7 @@ TEST_F(ValidateAtomics, AtomicCompareExchangeWrongPointerType) {
   CompileSuccessfully(GenerateKernelCode(body));
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
   EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Operand 33[%_ptr_Workgroup_v4float] cannot be a "
+              HasSubstr("Operand '33[%_ptr_Workgroup_v4float]' cannot be a "
                         "type"));
 }
 

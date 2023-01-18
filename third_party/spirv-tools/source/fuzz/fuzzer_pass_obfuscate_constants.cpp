@@ -37,21 +37,21 @@ FuzzerPassObfuscateConstants::FuzzerPassObfuscateConstants(
 
 void FuzzerPassObfuscateConstants::ObfuscateBoolConstantViaConstantPair(
     uint32_t depth, const protobufs::IdUseDescriptor& bool_constant_use,
-    const std::vector<SpvOp>& greater_than_opcodes,
-    const std::vector<SpvOp>& less_than_opcodes, uint32_t constant_id_1,
+    const std::vector<spv::Op>& greater_than_opcodes,
+    const std::vector<spv::Op>& less_than_opcodes, uint32_t constant_id_1,
     uint32_t constant_id_2, bool first_constant_is_larger) {
   auto bool_constant_opcode = GetIRContext()
                                   ->get_def_use_mgr()
                                   ->GetDef(bool_constant_use.id_of_interest())
                                   ->opcode();
-  assert((bool_constant_opcode == SpvOpConstantFalse ||
-          bool_constant_opcode == SpvOpConstantTrue) &&
+  assert((bool_constant_opcode == spv::Op::OpConstantFalse ||
+          bool_constant_opcode == spv::Op::OpConstantTrue) &&
          "Precondition: this must be a usage of a boolean constant.");
 
   // Pick an opcode at random.  First randomly decide whether to generate
   // a 'greater than' or 'less than' kind of opcode, and then select a
   // random opcode from the resulting subset.
-  SpvOp comparison_opcode;
+  spv::Op comparison_opcode;
   if (GetFuzzerContext()->ChooseEven()) {
     comparison_opcode = greater_than_opcodes[GetFuzzerContext()->RandomIndex(
         greater_than_opcodes)];
@@ -68,9 +68,9 @@ void FuzzerPassObfuscateConstants::ObfuscateBoolConstantViaConstantPair(
                 comparison_opcode) != greater_than_opcodes.end();
   uint32_t lhs_id;
   uint32_t rhs_id;
-  if ((bool_constant_opcode == SpvOpConstantTrue &&
+  if ((bool_constant_opcode == spv::Op::OpConstantTrue &&
        first_constant_is_larger == is_greater_than_opcode) ||
-      (bool_constant_opcode == SpvOpConstantFalse &&
+      (bool_constant_opcode == spv::Op::OpConstantFalse &&
        first_constant_is_larger != is_greater_than_opcode)) {
     lhs_id = constant_id_1;
     rhs_id = constant_id_2;
@@ -147,12 +147,12 @@ void FuzzerPassObfuscateConstants::ObfuscateBoolConstantViaFloatConstantPair(
     first_constant_is_larger =
         float_constant_1->GetDouble() > float_constant_2->GetDouble();
   }
-  std::vector<SpvOp> greater_than_opcodes{
-      SpvOpFOrdGreaterThan, SpvOpFOrdGreaterThanEqual, SpvOpFUnordGreaterThan,
-      SpvOpFUnordGreaterThanEqual};
-  std::vector<SpvOp> less_than_opcodes{
-      SpvOpFOrdGreaterThan, SpvOpFOrdGreaterThanEqual, SpvOpFUnordGreaterThan,
-      SpvOpFUnordGreaterThanEqual};
+  std::vector<spv::Op> greater_than_opcodes{
+      spv::Op::OpFOrdGreaterThan, spv::Op::OpFOrdGreaterThanEqual,
+      spv::Op::OpFUnordGreaterThan, spv::Op::OpFUnordGreaterThanEqual};
+  std::vector<spv::Op> less_than_opcodes{
+      spv::Op::OpFOrdGreaterThan, spv::Op::OpFOrdGreaterThanEqual,
+      spv::Op::OpFUnordGreaterThan, spv::Op::OpFUnordGreaterThanEqual};
 
   ObfuscateBoolConstantViaConstantPair(
       depth, bool_constant_use, greater_than_opcodes, less_than_opcodes,
@@ -190,9 +190,10 @@ void FuzzerPassObfuscateConstants::
     first_constant_is_larger =
         signed_int_constant_1->GetS64() > signed_int_constant_2->GetS64();
   }
-  std::vector<SpvOp> greater_than_opcodes{SpvOpSGreaterThan,
-                                          SpvOpSGreaterThanEqual};
-  std::vector<SpvOp> less_than_opcodes{SpvOpSLessThan, SpvOpSLessThanEqual};
+  std::vector<spv::Op> greater_than_opcodes{spv::Op::OpSGreaterThan,
+                                            spv::Op::OpSGreaterThanEqual};
+  std::vector<spv::Op> less_than_opcodes{spv::Op::OpSLessThan,
+                                         spv::Op::OpSLessThanEqual};
 
   ObfuscateBoolConstantViaConstantPair(
       depth, bool_constant_use, greater_than_opcodes, less_than_opcodes,
@@ -232,9 +233,10 @@ void FuzzerPassObfuscateConstants::
     first_constant_is_larger =
         unsigned_int_constant_1->GetU64() > unsigned_int_constant_2->GetU64();
   }
-  std::vector<SpvOp> greater_than_opcodes{SpvOpUGreaterThan,
-                                          SpvOpUGreaterThanEqual};
-  std::vector<SpvOp> less_than_opcodes{SpvOpULessThan, SpvOpULessThanEqual};
+  std::vector<spv::Op> greater_than_opcodes{spv::Op::OpUGreaterThan,
+                                            spv::Op::OpUGreaterThanEqual};
+  std::vector<spv::Op> less_than_opcodes{spv::Op::OpULessThan,
+                                         spv::Op::OpULessThanEqual};
 
   ObfuscateBoolConstantViaConstantPair(
       depth, bool_constant_use, greater_than_opcodes, less_than_opcodes,
@@ -379,7 +381,7 @@ void FuzzerPassObfuscateConstants::ObfuscateScalarConstant(
       uniform_descriptor.index());
   assert(element_type_id && "Type of uniform variable is invalid");
 
-  FindOrCreatePointerType(element_type_id, SpvStorageClassUniform);
+  FindOrCreatePointerType(element_type_id, spv::StorageClass::Uniform);
 
   // Create, apply and record a transformation to replace the constant use with
   // the result of a load from the chosen uniform.
@@ -394,11 +396,11 @@ void FuzzerPassObfuscateConstants::ObfuscateConstant(
               ->get_def_use_mgr()
               ->GetDef(constant_use.id_of_interest())
               ->opcode()) {
-    case SpvOpConstantTrue:
-    case SpvOpConstantFalse:
+    case spv::Op::OpConstantTrue:
+    case spv::Op::OpConstantFalse:
       ObfuscateBoolConstant(depth, constant_use);
       break;
-    case SpvOpConstant:
+    case spv::Op::OpConstant:
       ObfuscateScalarConstant(depth, constant_use);
       break;
     default:
@@ -410,7 +412,7 @@ void FuzzerPassObfuscateConstants::ObfuscateConstant(
 void FuzzerPassObfuscateConstants::MaybeAddConstantIdUse(
     const opt::Instruction& inst, uint32_t in_operand_index,
     uint32_t base_instruction_result_id,
-    const std::map<SpvOp, uint32_t>& skipped_opcode_count,
+    const std::map<spv::Op, uint32_t>& skipped_opcode_count,
     std::vector<protobufs::IdUseDescriptor>* constant_uses) {
   if (inst.GetInOperand(in_operand_index).type != SPV_OPERAND_TYPE_ID) {
     // The operand is not an id, so it cannot be a constant id.
@@ -420,15 +422,15 @@ void FuzzerPassObfuscateConstants::MaybeAddConstantIdUse(
   auto operand_definition =
       GetIRContext()->get_def_use_mgr()->GetDef(operand_id);
   switch (operand_definition->opcode()) {
-    case SpvOpConstantFalse:
-    case SpvOpConstantTrue:
-    case SpvOpConstant: {
+    case spv::Op::OpConstantFalse:
+    case spv::Op::OpConstantTrue:
+    case spv::Op::OpConstant: {
       // The operand is a constant id, so make an id use descriptor and record
       // it.
       protobufs::IdUseDescriptor id_use_descriptor;
       id_use_descriptor.set_id_of_interest(operand_id);
       id_use_descriptor.mutable_enclosing_instruction()
-          ->set_target_instruction_opcode(inst.opcode());
+          ->set_target_instruction_opcode(uint32_t(inst.opcode()));
       id_use_descriptor.mutable_enclosing_instruction()
           ->set_base_instruction_result_id(base_instruction_result_id);
       id_use_descriptor.mutable_enclosing_instruction()
@@ -461,7 +463,7 @@ void FuzzerPassObfuscateConstants::Apply() {
       // opcode need to be skipped in order to find the instruction of interest
       // from the base instruction. We maintain a mapping that records a skip
       // count for each relevant opcode.
-      std::map<SpvOp, uint32_t> skipped_opcode_count;
+      std::map<spv::Op, uint32_t> skipped_opcode_count;
 
       // Go through each instruction in the block.
       for (auto& inst : block) {
@@ -478,7 +480,7 @@ void FuzzerPassObfuscateConstants::Apply() {
         // The instruction must not be an OpVariable, the only id that an
         // OpVariable uses is an initializer id, which has to remain
         // constant.
-        if (inst.opcode() != SpvOpVariable) {
+        if (inst.opcode() != spv::Op::OpVariable) {
           // Consider each operand of the instruction, and add a constant id
           // use for the operand if relevant.
           for (uint32_t in_operand_index = 0;

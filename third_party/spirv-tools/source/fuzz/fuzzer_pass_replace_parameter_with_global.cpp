@@ -72,7 +72,8 @@ void FuzzerPassReplaceParameterWithGlobal::Apply() {
     assert(replaced_param && "Unable to find a parameter to replace");
 
     // Make sure type id for the global variable exists in the module.
-    FindOrCreatePointerType(replaced_param->type_id(), SpvStorageClassPrivate);
+    FindOrCreatePointerType(replaced_param->type_id(),
+                            spv::StorageClass::Private);
 
     // Make sure initializer for the global variable exists in the module.
     FindOrCreateZeroConstant(replaced_param->type_id(), false);

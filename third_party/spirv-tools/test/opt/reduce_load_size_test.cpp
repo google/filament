@@ -498,6 +498,45 @@ TEST_F(ReduceLoadSizeTest, replace_cbuffer_load_fully_used) {
   SinglePassRunAndMatch<ReduceLoadSize>(test, false, 1.1);
 }
 
+TEST_F(ReduceLoadSizeTest, replace_array_with_spec_constant_size) {
+  const std::string test =
+      R"(
+               OpCapability ClipDistance
+               OpExtension "   "
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %1 "       "
+               OpExecutionMode %1 OriginUpperLeft
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+       %uint = OpTypeInt 32 0
+          %6 = OpSpecConstant %uint 538976288
+ %_arr_int_6 = OpTypeArray %int %6
+  %_struct_8 = OpTypeStruct %_arr_int_6
+  %_struct_9 = OpTypeStruct %_struct_8
+%_ptr_Uniform__struct_9 = OpTypePointer Uniform %_struct_9
+; CHECK: [[var:%\w+]] = OpVariable %_ptr_Uniform__struct_9 Uniform
+         %11 = OpVariable %_ptr_Uniform__struct_9 Uniform
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform__arr_int_6 = OpTypePointer Uniform %_arr_int_6
+          %1 = OpFunction %void None %3
+         %14 = OpLabel
+; CHECK: [[ac:%\w+]] = OpAccessChain %_ptr_Uniform__arr_int_6 [[var]] %int_0 %int_0
+; CHECK: [[new_ac:%\w+]] = OpAccessChain %_ptr_Uniform_int [[ac]] %uint_538976288
+; CHECK: [[ld:%\w+]] = OpLoad %int [[new_ac]]
+; CHECK: %18 = OpIAdd %int [[ld]] [[ld]]
+         %15 = OpAccessChain %_ptr_Uniform__arr_int_6 %11 %int_0 %int_0
+         %16 = OpLoad %_arr_int_6 %15
+         %17 = OpCompositeExtract %int %16 538976288
+         %18 = OpIAdd %int %17 %17
+               OpUnreachable
+               OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<ReduceLoadSize>(test, false,
+                                        kDefaultLoadReductionThreshold);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

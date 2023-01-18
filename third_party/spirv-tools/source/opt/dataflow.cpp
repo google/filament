@@ -78,7 +78,7 @@ void ForwardDataFlowAnalysis::EnqueueUsers(Instruction* inst) {
 }
 
 void ForwardDataFlowAnalysis::EnqueueBlockSuccessors(Instruction* inst) {
-  if (inst->opcode() != SpvOpLabel) return;
+  if (inst->opcode() != spv::Op::OpLabel) return;
   context()
       .cfg()
       ->block(inst->result_id())

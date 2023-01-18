@@ -18,7 +18,6 @@
 #include "OpenCLDebugInfo100.h"
 #include "gmock/gmock.h"
 #include "source/util/string_utils.h"
-#include "spirv/unified1/spirv.h"
 #include "test/test_fixture.h"
 #include "test/unit_spirv.h"
 
@@ -158,12 +157,13 @@ TEST_P(ExtInstCLDebugInfo100RoundTripTest, ParameterizedExtInst) {
       GetParam().name + GetParam().operands + "\n";
   // First make sure it assembles correctly.
   std::cout << input << std::endl;
-  EXPECT_THAT(CompiledInstructions(input),
-              Eq(Concatenate(
-                  {MakeInstruction(SpvOpExtInstImport, {1},
-                                   MakeVector("OpenCL.DebugInfo.100")),
-                   MakeInstruction(SpvOpExtInst, {2, 3, 1, GetParam().opcode},
-                                   GetParam().expected_operands)})))
+  EXPECT_THAT(
+      CompiledInstructions(input),
+      Eq(Concatenate(
+          {MakeInstruction(spv::Op::OpExtInstImport, {1},
+                           MakeVector("OpenCL.DebugInfo.100")),
+           MakeInstruction(spv::Op::OpExtInst, {2, 3, 1, GetParam().opcode},
+                           GetParam().expected_operands)})))
       << input;
   // Now check the round trip through the disassembler.
   EXPECT_THAT(EncodeAndDecodeSuccessfully(input), input) << input;
@@ -297,7 +297,7 @@ TEST_P(ExtInstCLDebugInfo100RoundTripTest, ParameterizedExtInst) {
   {                                                         \
     uint32_t(OpenCLDebugInfo100Debug##Enum), EPREFIX #Enum, \
         " %4 " #S0 " " Fstr, {                              \
-      4, uint32_t(SpvStorageClass##S0), Fnum                \
+      4, uint32_t(spv::StorageClass::S0), Fnum              \
     }                                                       \
   }
 
@@ -313,7 +313,7 @@ TEST_P(ExtInstCLDebugInfo100RoundTripTest, ParameterizedExtInst) {
   {                                                         \
     uint32_t(OpenCLDebugInfo100Debug##Enum), EPREFIX #Enum, \
         " " #L0 " " #L1 " %4 " RawEnumName, {               \
-      L0, L1, 4, RawEnumValue                               \
+      L0, L1, 4, (uint32_t)RawEnumValue                     \
     }                                                       \
   }
 
@@ -574,7 +574,7 @@ INSTANTIATE_TEST_SUITE_P(OpenCLDebugInfo100DebugInfoNone,
 INSTANTIATE_TEST_SUITE_P(
     OpenCLDebugInfo100DebugCompilationUnit, ExtInstCLDebugInfo100RoundTripTest,
     ::testing::ValuesIn(std::vector<InstructionCase>({
-        CASE_LLIe(CompilationUnit, 100, 42, "HLSL", SpvSourceLanguageHLSL),
+        CASE_LLIe(CompilationUnit, 100, 42, "HLSL", spv::SourceLanguage::HLSL),
     })));
 
 INSTANTIATE_TEST_SUITE_P(
@@ -612,14 +612,14 @@ TEST_F(ExtInstCLDebugInfo100RoundTripTestExplicit, FlagIsPublic) {
   const std::string input = prefix + "FlagIsPublic\n";
   const std::string expected = prefix + "FlagIsProtected|FlagIsPrivate\n";
   // First make sure it assembles correctly.
-  EXPECT_THAT(
-      CompiledInstructions(input),
-      Eq(Concatenate(
-          {MakeInstruction(SpvOpExtInstImport, {1}, MakeVector("DebugInfo")),
-           MakeInstruction(SpvOpExtInst,
-                           {2, 3, 1, OpenCLDebugInfo100DebugTypePointer, 4,
-                            uint32_t(SpvStorageClassPrivate),
-                            OpenCLDebugInfo100FlagIsPublic})})))
+  EXPECT_THAT(CompiledInstructions(input),
+              Eq(Concatenate(
+                  {MakeInstruction(spv::Op::OpExtInstImport, {1},
+                                   MakeVector("DebugInfo")),
+                   MakeInstruction(spv::Op::OpExtInst,
+                                   {2, 3, 1, OpenCLDebugInfo100DebugTypePointer,
+                                    4, uint32_t(spv::StorageClass::Private),
+                                    OpenCLDebugInfo100FlagIsPublic})})))
       << input;
   // Now check the round trip through the disassembler.
   EXPECT_THAT(EncodeAndDecodeSuccessfully(input), Eq(expected)) << input;
