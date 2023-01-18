@@ -44,6 +44,10 @@ FILAMENT_HEADERS="$1"
 includes=()
 pushd "$FILAMENT_HEADERS" >/dev/null
 for f in $(find . -name '*.h'); do
+    # Ignore platform headers. These may contain platform-specific includes.
+    if [[ "$f" == *backend/platforms/* ]]; then
+        continue
+    fi
     include_path="${f#./}"    # strip leading ./
     includes+=("${include_path}")
 done
