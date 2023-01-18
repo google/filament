@@ -227,7 +227,7 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
     while (curr != last) {
 
         // we can't have nice things! No more than maxInstanceCount due to UBO size limits
-        Command const* const e = std::find_if_not(curr, std::min(last, last + maxInstanceCount),
+        Command const* const e = std::find_if_not(curr, std::min(last, curr + maxInstanceCount),
                 [lhs = *curr](Command const& rhs) {
             // primitives must be identical to be instanced. Currently, instancing doesn't support
             // skinning/morphing.
@@ -242,6 +242,7 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
 
         uint32_t instanceCount = e - curr;
         assert_invariant(instanceCount > 0);
+        assert_invariant(instanceCount <= CONFIG_MAX_INSTANCES);
 
         if (UTILS_UNLIKELY(instanceCount > 1)) {
             drawCallsSavedCount += instanceCount - 1;
