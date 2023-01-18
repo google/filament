@@ -385,8 +385,8 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, const VkPhysicalDe
 // driver/device workarounds).
 void pruneExtensions(VkPhysicalDevice device, InstanceExtensions* instExtensions,
         DeviceExtensions* deviceExtensions) {
-    char* driverInfo = nullptr;
     if (vkGetPhysicalDeviceProperties2KHR) {
+        char* driverInfo = nullptr;
         VkPhysicalDeviceDriverProperties driverProperties = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES,
         };
