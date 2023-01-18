@@ -144,17 +144,18 @@ void printDepthFormats(VkPhysicalDevice device) {
     }
 }
 
-bool enableLayers(VkInstanceCreateInfo* instanceCreateInfo) {
-    const std::string_view DESIRED_LAYERS[] = {
-        "VK_LAYER_KHRONOS_validation",
+// These strings need to be allocated outside a function stack
+const std::string_view DESIRED_LAYERS[] = {
+  "VK_LAYER_KHRONOS_validation",
 #if FILAMENT_VULKAN_DUMP_API
-        "VK_LAYER_LUNARG_api_dump",
+  "VK_LAYER_LUNARG_api_dump",
 #endif
 #if defined(ENABLE_RENDERDOC)
-        "VK_LAYER_RENDERDOC_Capture",
+  "VK_LAYER_RENDERDOC_Capture",
 #endif
-    };
+};
 
+FixedCapacityVector<const char*> getEnabledLayers() {
     constexpr size_t kMaxEnabledLayersCount = sizeof(DESIRED_LAYERS) / sizeof(DESIRED_LAYERS[0]);
 
     const FixedCapacityVector<VkLayerProperties> availableLayers = filament::backend::enumerate(
@@ -171,20 +172,7 @@ bool enableLayers(VkInstanceCreateInfo* instanceCreateInfo) {
         }
     }
 
-    if (!enabledLayers.empty()) {
-        instanceCreateInfo->enabledLayerCount = (uint32_t) enabledLayers.size();
-        instanceCreateInfo->ppEnabledLayerNames = enabledLayers.data();
-        return true;
-    }
-
-#if defined(__ANDROID__)
-    utils::slog.d << "Validation layers are not available; did you set jniLibs in your "
-            << "gradle file?" << utils::io::endl;
-#else
-    utils::slog.d << "Validation layer not available; did you install the Vulkan SDK?\n"
-            << "Please ensure that VK_LAYER_PATH is set correctly." << utils::io::endl;
-#endif
-    return false;
+    return enabledLayers;
 }
 
 struct InstanceExtensions {
@@ -244,16 +232,28 @@ VkInstance createInstance(const char* const* ppRequiredExtensions, uint32_t requ
     bool validationFeaturesSupported = false;
 
 #if VK_ENABLE_VALIDATION
-    if (enableLayers(&instanceCreateInfo)) {
+    const auto enabledLayers = getEnabledLayers();
+    if (!enabledLayers.empty()) {
         // If layers are supported, Check if VK_EXT_validation_features is supported.
-        const FixedCapacityVector<VkExtensionProperties> availableExts = filament::backend::enumerate(
-                vkEnumerateInstanceExtensionProperties, "VK_LAYER_KHRONOS_validation");
+        const FixedCapacityVector<VkExtensionProperties> availableExts =
+	        filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
+		        "VK_LAYER_KHRONOS_validation");
         for (const auto& extProps : availableExts) {
             if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
                 validationFeaturesSupported = true;
                 break;
             }
         }
+        instanceCreateInfo.enabledLayerCount = (uint32_t) enabledLayers.size();
+        instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
+    } else {
+#if defined(__ANDROID__)
+      utils::slog.d << "Validation layers are not available; did you set jniLibs in your "
+              << "gradle file?" << utils::io::endl;
+#else
+      utils::slog.d << "Validation layer not available; did you install the Vulkan SDK?\n"
+              << "Please ensure that VK_LAYER_PATH is set correctly." << utils::io::endl;
+#endif
     }
 #endif // VK_ENABLE_VALIDATION
 
