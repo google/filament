@@ -122,7 +122,18 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     // specification constants
     out << '\n';
     generateSpecializationConstant(out, "BACKEND_FEATURE_LEVEL", 0, 1);
-    generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES", 1, (int)CONFIG_MAX_INSTANCES);
+
+    if (mTargetApi == TargetApi::VULKAN) {
+        // Note: This is a hack for a hack.
+        // Vulkan doesn't fully support sizing arrays within a block with specialization constants,
+        // and since we only need to do this for a hack for WebGL, it's fine to replace it with
+        // regular constant here.
+        // We *could* leave it as a specialization constant, but this triggers a crashing bug with
+        // some Adreno drivers on Android. see: https://github.com/google/filament/issues/6444
+        out << "const int CONFIG_MAX_INSTANCES = " << (int)CONFIG_MAX_INSTANCES << ";\n";
+    } else {
+        generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES", 1, (int)CONFIG_MAX_INSTANCES);
+    }
 
     out << '\n';
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;
