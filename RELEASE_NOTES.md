@@ -5,6 +5,9 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.31.2
+- vulkan: fix memory leak in readPixels
+
 ## v1.31.1
 
 - gltfio: expose joint inverse bind matrices via method on FilamentInstance
