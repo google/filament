@@ -16,7 +16,7 @@
 
 #include "OpenGLTimerQuery.h"
 
-#include "private/backend/OpenGLPlatform.h"
+#include <backend/platforms/OpenGLPlatform.h>
 
 #include <utils/compiler.h>
 #include <utils/Log.h>

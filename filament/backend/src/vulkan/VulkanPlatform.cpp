@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "VulkanPlatform.h"
+#include <backend/platforms/VulkanPlatform.h>
 
 namespace filament::backend {
 

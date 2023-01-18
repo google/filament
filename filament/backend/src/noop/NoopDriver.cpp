@@ -224,9 +224,6 @@ void NoopDriver::update3DImage(Handle<HwTexture> th,
 void NoopDriver::setupExternalImage(void* image) {
 }
 
-void NoopDriver::cancelExternalImage(void* image) {
-}
-
 bool NoopDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     return false;
 }

@@ -21,12 +21,14 @@
 #include "GLUtils.h"
 #include "OpenGLContext.h"
 
-#include "private/backend/AcquiredImage.h"
 #include "private/backend/Driver.h"
 #include "private/backend/HandleAllocator.h"
-#include "backend/Program.h"
 
-#include "backend/TargetBufferInfo.h"
+#include <backend/platforms/OpenGLPlatform.h>
+
+#include <backend/AcquiredImage.h>
+#include <backend/Program.h>
+#include <backend/TargetBufferInfo.h>
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
@@ -132,7 +134,7 @@ public:
             uint8_t reserved        : 3;
         } gl;
 
-        void* platformPImpl = nullptr;
+        OpenGLPlatform::ExternalTexture* externalTexture = nullptr;
     };
 
     struct GLTimerQuery : public HwTimerQuery {
@@ -349,7 +351,7 @@ private:
     std::vector<GLTexture*> mTexturesWithStreamsAttached;
 
     // the must be accessed from the user thread only
-    std::vector<GLStream*> mStreamsWithPendingAquiredImage;
+    std::vector<GLStream*> mStreamsWithPendingAcquiredImage;
 
     void attachStream(GLTexture* t, GLStream* stream) noexcept;
     void detachStream(GLTexture* t) noexcept;
@@ -358,8 +360,6 @@ private:
     OpenGLPlatform& mPlatform;
 
     void updateTextureLodRange(GLTexture* texture, int8_t targetLevel) noexcept;
-
-    void setExternalTexture(GLTexture* t, void* image);
 
     // tasks executed on the main thread after the fence signaled
     void whenGpuCommandsComplete(std::function<void()> fn) noexcept;
