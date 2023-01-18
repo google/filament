@@ -385,8 +385,8 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, const VkPhysicalDe
 // driver/device workarounds).
 void pruneExtensions(VkPhysicalDevice device, InstanceExtensions* instExtensions,
         DeviceExtensions* deviceExtensions) {
-    char* driverInfo = nullptr;
     if (vkGetPhysicalDeviceProperties2KHR) {
+        char* driverInfo = nullptr;
         VkPhysicalDeviceDriverProperties driverProperties = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES,
         };
@@ -396,12 +396,12 @@ void pruneExtensions(VkPhysicalDevice device, InstanceExtensions* instExtensions
         };
         vkGetPhysicalDeviceProperties2KHR(device, &physicalDeviceProperties2);
         driverInfo = driverProperties.driverInfo;
-    }
 
-    if (instExtensions->debugUtilsSupported) {
-        // Workaround for Mesa drivers. See issue #6192
-        if (driverInfo && strstr(driverInfo, "Mesa")) {
-            instExtensions->debugUtilsSupported = false;
+        if (instExtensions->debugUtilsSupported) {
+            // Workaround for Mesa drivers. See issue #6192
+            if (driverInfo && strstr(driverInfo, "Mesa")) {
+                instExtensions->debugUtilsSupported = false;
+            }
         }
     }
 
