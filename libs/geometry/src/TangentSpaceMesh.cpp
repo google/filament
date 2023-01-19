@@ -247,7 +247,8 @@ Builder& Builder::algorithmHint(AlgorithmHint hint) noexcept {
 
 TangentSpaceMesh* Builder::build() {
     mMesh->mOutput->hint = selectAlgorithm(mMesh->mInput);
-    PANIC_POSTCONDITION("Working in progress. Not for use");
+    // "Working in progress. Not for use"
+    return NULL;
 }
 
 TangentSpaceMesh::TangentSpaceMesh() noexcept
