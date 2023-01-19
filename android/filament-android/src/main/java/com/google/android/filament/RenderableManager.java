@@ -257,20 +257,71 @@ public class RenderableManager {
          * Provides coarse-grained control over draw order.
          *
          * <p>In general Filament reserves the right to re-order renderables to allow for efficient
-         * rendering. However clients can control ordering at a coarse level using <em>priority</em>.</p>
+         * rendering. However clients can control ordering at a coarse level using \em priority.
+         * The priority is applied separately for opaque and translucent objects, that is, opaque
+         * objects are always drawn before translucent objects regardless of the priority.</p>
          *
          * <p>For example, this could be used to draw a semitransparent HUD, if a client wishes to
          * avoid using a separate View for the HUD. Note that priority is completely orthogonal to
          * {@link Builder#layerMask}, which merely controls visibility.</p>
+
+         * <p>The Skybox always using the lowest priority, so it's drawn last, which may improve
+         * performance.</p>
          *
          * <p>The priority is clamped to the range [0..7], defaults to 4; 7 is lowest priority
          * (rendered last).</p>
          *
          * @see Builder#blendOrder
          */
+
+        /**
+         * Provides coarse-grained control over draw order.
+         *
+         * <p>In general Filament reserves the right to re-order renderables to allow for efficient
+         * rendering. However clients can control ordering at a coarse level using priority.
+         * The priority is applied separately for opaque and translucent objects, that is, opaque
+         * objects are always drawn before translucent objects regardless of the priority.</p>
+         *
+         * <p>For example, this could be used to draw a semitransparent HUD, if a client wishes to
+         * avoid using a separate View for the HUD. Note that priority is completely orthogonal to
+         * {@link Builder#layerMask}, which merely controls visibility.</p>
+
+         * <p>The Skybox always using the lowest priority, so it's drawn last, which may improve
+         * performance.</p>
+         *
+         * @param priority clamped to the range [0..7], defaults to 4; 7 is lowest priority
+         *                 (rendered last).
+         *
+         * @return Builder reference for chaining calls.
+         *
+         * @see Builder#channel
+         * @see Builder#blendOrder
+         * @see #setPriority
+         * @see #setBlendOrderAt
+         */
         @NonNull
         public Builder priority(@IntRange(from = 0, to = 7) int priority) {
             nBuilderPriority(mNativeBuilder, priority);
+            return this;
+        }
+
+        /**
+         * Set the channel this renderable is associated to. There can be 4 channels.
+         * All renderables in a given channel are rendered together, regardless of anything else.
+         * They are sorted as usual withing a channel.
+         * Channels work similarly to priorities, except that they enforce the strongest ordering.
+         *
+         * @param channel clamped to the range [0..3], defaults to 0.
+         *
+         * @return Builder reference for chaining calls.
+         *
+         * @see Builder::blendOrder()
+         * @see Builder::priority()
+         * @see RenderableManager::setBlendOrderAt()
+         */
+        @NonNull
+        public Builder channel(@IntRange(from = 0, to = 3) int channel) {
+            nBuilderChannel(mNativeBuilder, channel);
             return this;
         }
 
@@ -656,6 +707,15 @@ public class RenderableManager {
     }
 
     /**
+     * Changes the channel of a renderable
+     *
+     * @see Builder#channel
+     */
+    public void setChannel(@EntityInstance int i, @IntRange(from = 0, to = 3) int channel) {
+        nSetChannel(mNativeObject, i, channel);
+    }
+
+    /**
      * Changes whether or not frustum culling is on.
      *
      * @see Builder#culling
@@ -876,6 +936,7 @@ public class RenderableManager {
     private static native void nBuilderBoundingBox(long nativeBuilder, float cx, float cy, float cz, float ex, float ey, float ez);
     private static native void nBuilderLayerMask(long nativeBuilder, int select, int value);
     private static native void nBuilderPriority(long nativeBuilder, int priority);
+    private static native void nBuilderChannel(long nativeBuilder, int channel);
     private static native void nBuilderCulling(long nativeBuilder, boolean enabled);
     private static native void nBuilderCastShadows(long nativeBuilder, boolean enabled);
     private static native void nBuilderReceiveShadows(long nativeBuilder, boolean enabled);
@@ -898,6 +959,7 @@ public class RenderableManager {
     private static native void nSetAxisAlignedBoundingBox(long nativeRenderableManager, int i, float cx, float cy, float cz, float ex, float ey, float ez);
     private static native void nSetLayerMask(long nativeRenderableManager, int i, int select, int value);
     private static native void nSetPriority(long nativeRenderableManager, int i, int priority);
+    private static native void nSetChannel(long nativeRenderableManager, int i, int channel);
     private static native void nSetCulling(long nativeRenderableManager, int i, boolean enabled);
     private static native void nSetLightChannel(long nativeRenderableManager, int i, int channel, boolean enable);
     private static native boolean nGetLightChannel(long nativeRenderableManager, int i, int channel);

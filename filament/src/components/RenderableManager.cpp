@@ -51,7 +51,8 @@ struct RenderableManager::BuilderDetails {
     Box mAABB;
     uint8_t mLayerMask = 0x1;
     uint8_t mPriority = 0x4;
-    uint8_t mChannels = 1;
+    uint8_t mCommandChannel = 0x0;
+    uint8_t mLightChannels = 1;
     uint16_t mInstanceCount = 1;
     bool mCulling : 1;
     bool mCastShadows : 1;
@@ -135,6 +136,11 @@ RenderableManager::Builder& RenderableManager::Builder::priority(uint8_t priorit
     return *this;
 }
 
+RenderableManager::Builder& RenderableManager::Builder::channel(uint8_t channel) noexcept {
+    mImpl->mCommandChannel = std::min(channel, uint8_t(0x3));
+    return *this;
+}
+
 RenderableManager::Builder& RenderableManager::Builder::culling(bool enable) noexcept {
     mImpl->mCulling = enable;
     return *this;
@@ -143,8 +149,8 @@ RenderableManager::Builder& RenderableManager::Builder::culling(bool enable) noe
 RenderableManager::Builder& RenderableManager::Builder::lightChannel(unsigned int channel, bool enable) noexcept {
     if (channel < 8) {
         const uint8_t mask = 1u << channel;
-        mImpl->mChannels &= ~mask;
-        mImpl->mChannels |= enable ? mask : 0u;
+        mImpl->mLightChannels &= ~mask;
+        mImpl->mLightChannels |= enable ? mask : 0u;
     }
     return *this;
 }
@@ -338,13 +344,14 @@ void FRenderableManager::create(
         setAxisAlignedBoundingBox(ci, builder->mAABB);
         setLayerMask(ci, builder->mLayerMask);
         setPriority(ci, builder->mPriority);
+        setChannel(ci, builder->mCommandChannel);
         setCastShadows(ci, builder->mCastShadows);
         setReceiveShadows(ci, builder->mReceiveShadows);
         setScreenSpaceContactShadows(ci, builder->mScreenSpaceContactShadows);
         setCulling(ci, builder->mCulling);
         setSkinning(ci, false);
         setMorphing(ci, builder->mMorphTargetCount);
-        mManager[ci].channels = builder->mChannels;
+        mManager[ci].channels = builder->mLightChannels;
         mManager[ci].instanceCount = builder->mInstanceCount;
 
         const uint32_t boneCount = builder->mSkinningBoneCount;
