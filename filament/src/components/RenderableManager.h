@@ -54,6 +54,7 @@ public:
     // TODO: consider renaming, this pertains to material variants, not strictly visibility.
     struct Visibility {
         uint8_t priority                : 3;
+        uint8_t channel                 : 2;
         bool castShadows                : 1;
         bool receiveShadows             : 1;
         bool culling                    : 1;
@@ -101,6 +102,9 @@ public:
 
     // The priority is clamped to the range [0..7]
     inline void setPriority(Instance instance, uint8_t priority) noexcept;
+
+    // The channel is clamped to the range [0..3]
+    inline void setChannel(Instance instance, uint8_t channel) noexcept;
 
     inline void setCastShadows(Instance instance, bool enable) noexcept;
 
@@ -159,7 +163,7 @@ public:
         return mManager.getEntity(instance);
     }
 
-    inline size_t getLevelCount(Instance) const noexcept { return 1; }
+    inline size_t getLevelCount(Instance) const noexcept { return 1u; }
     size_t getPrimitiveCount(Instance instance, uint8_t level) const noexcept;
     void setMaterialInstanceAt(Instance instance, uint8_t level,
             size_t primitiveIndex, FMaterialInstance const* materialInstance);
@@ -283,7 +287,14 @@ void FRenderableManager::setLayerMask(Instance instance, uint8_t layerMask) noex
 void FRenderableManager::setPriority(Instance instance, uint8_t priority) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
-        visibility.priority = priority;
+        visibility.priority = std::min(priority, uint8_t(0x7));
+    }
+}
+
+void FRenderableManager::setChannel(Instance instance, uint8_t channel) noexcept {
+    if (instance) {
+        Visibility& visibility = mManager[instance].visibility;
+        visibility.channel = std::min(channel, uint8_t(0x3));
     }
 }
 
