@@ -23,12 +23,20 @@
 #define SYSTRACE_TAG_FILAMENT       (1<<1)  // don't change, used in makefiles
 #define SYSTRACE_TAG_JOBSYSTEM      (1<<2)
 
+/*
+ * The SYSTRACE_ macros use SYSTRACE_TAG as a the TAG, which should be defined
+ * before this file is included. If not, the SYSTRACE_TAG_ALWAYS tag will be used.
+ */
+
+#ifndef SYSTRACE_TAG
+#define SYSTRACE_TAG (SYSTRACE_TAG_ALWAYS)
+#endif
 
 #if defined(__ANDROID__)
-
 #include <utils/android/Systrace.h>
-
-#else // !ANDROID
+#elif defined(__APPLE__)
+#include <utils/darwin/Systrace.h>
+#else
 
 #define SYSTRACE_ENABLE()
 #define SYSTRACE_DISABLE()

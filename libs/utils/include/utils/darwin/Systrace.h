@@ -1,21 +1,21 @@
 /*
-* Copyright (C) 2023 The Android Open Source Project
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*      http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Copyright (C) 2023 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-#ifndef TNT_UTILS_ANDROID_SYSTRACE_H
-#define TNT_UTILS_ANDROID_SYSTRACE_H
+#ifndef TNT_UTILS_DARWIN_SYSTRACE_H
+#define TNT_UTILS_DARWIN_SYSTRACE_H
 
 #include <atomic>
 
@@ -23,7 +23,11 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <os/log.h>
+#include <os/signpost.h>
+
 #include <utils/compiler.h>
+#include <stack>
 
 // enable tracing
 #define SYSTRACE_ENABLE() ::utils::details::Systrace::enable(SYSTRACE_TAG)
@@ -45,15 +49,22 @@
 // It also automatically creates a Systrace context
 #define SYSTRACE_NAME(name) ::utils::details::ScopedTrace ___tracer(SYSTRACE_TAG, name)
 
+#define SYSTRACE_FRAME_ID(frame) \
+    SYSTRACE_CONTEXT();         \
+    ___tracer.frameId(SYSTRACE_TAG, frame)
+
+extern thread_local std::stack<const char*> ___tracerSections;
+
 // SYSTRACE_CALL is an SYSTRACE_NAME that uses the current function name.
-#define SYSTRACE_CALL() SYSTRACE_NAME(__FUNCTION__)
+#define SYSTRACE_CALL() SYSTRACE_NAME(__PRETTY_FUNCTION__)
 
 #define SYSTRACE_NAME_BEGIN(name) \
+        ___tracerSections.push(name) , \
         ___tracer.traceBegin(SYSTRACE_TAG, name)
 
 #define SYSTRACE_NAME_END() \
-        ___tracer.traceEnd(SYSTRACE_TAG)
-
+        ___tracer.traceEnd(SYSTRACE_TAG, ___tracerSections.top()) , \
+        ___tracerSections.pop()
 
 /**
  * Trace the beginning of an asynchronous event. Unlike ATRACE_BEGIN/ATRACE_END
@@ -86,6 +97,23 @@
 // No user serviceable code below...
 // ------------------------------------------------------------------------------------------------
 
+// This is an alternative to os_signpost_emit_with_type that allows non-compile time strings (namely
+// for us, __FUNCTION__).
+// The trade-off is that this doesn't allow messages to have printf-style formatting.
+// It's fine to pass an empty string to __builtin_os_log_format_buffer_size and
+// __builtin_os_log_format, because they return the same value for strings without any format
+// specifiers.
+// This is fragile, so should only be used to assist debugging and never in production.
+#define APPLE_SIGNPOST_EMIT(log, type, spid, name, message) \
+    if (os_signpost_enabled(log)) { \
+        uint8_t _os_fmt_buf[__builtin_os_log_format_buffer_size("")]; \
+        _os_signpost_emit_with_name_impl( \
+                &__dso_handle, log, type, spid, \
+                name, message, \
+                (uint8_t *)__builtin_os_log_format(_os_fmt_buf, ""), \
+                (uint32_t)sizeof(_os_fmt_buf)); \
+    }
+
 namespace utils {
 namespace details {
 
@@ -107,107 +135,77 @@ class Systrace {
     static void enable(uint32_t tags) noexcept;
     static void disable(uint32_t tags) noexcept;
 
-
     inline void traceBegin(uint32_t tag, const char* name) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
-            beginSection(this, name);
+            APPLE_SIGNPOST_EMIT(sGlobalState.systraceLog, OS_SIGNPOST_INTERVAL_BEGIN,
+                    OS_SIGNPOST_ID_EXCLUSIVE, name, name)
         }
     }
 
-    inline void traceEnd(uint32_t tag) noexcept {
+    inline void traceEnd(uint32_t tag, const char* name) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
-            endSection(this);
+            APPLE_SIGNPOST_EMIT(sGlobalState.systraceLog, OS_SIGNPOST_INTERVAL_END,
+                    OS_SIGNPOST_ID_EXCLUSIVE, name, "")
         }
     }
 
     inline void asyncBegin(uint32_t tag, const char* name, int32_t cookie) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
-            beginAsyncSection(this, name, cookie);
+            // TODO
         }
     }
 
     inline void asyncEnd(uint32_t tag, const char* name, int32_t cookie) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
-            endAsyncSection(this, name, cookie);
+            // TODO
         }
     }
 
     inline void value(uint32_t tag, const char* name, int32_t value) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
-            setCounter(this, name, value);
+            char buf[64];
+            snprintf(buf, 64, "%s - %d", name, value);
+            APPLE_SIGNPOST_EMIT(sGlobalState.systraceLog, OS_SIGNPOST_EVENT,
+                    OS_SIGNPOST_ID_EXCLUSIVE, name, buf)
         }
     }
 
     inline void value(uint32_t tag, const char* name, int64_t value) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
-            setCounter(this, name, value);
+            char buf[64];
+            snprintf(buf, 64, "%s - %lld", name, value);
+            APPLE_SIGNPOST_EMIT(sGlobalState.systraceLog, OS_SIGNPOST_EVENT,
+                    OS_SIGNPOST_ID_EXCLUSIVE, name, buf)
+        }
+    }
+
+    inline void frameId(uint32_t tag, const char* message) noexcept {
+        if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
+            APPLE_SIGNPOST_EMIT(sGlobalState.frameIdLog, OS_SIGNPOST_EVENT,
+                    OS_SIGNPOST_ID_EXCLUSIVE, "frame", message)
         }
     }
 
    private:
     friend class ScopedTrace;
 
-    // whether tracing is supported at all by the platform
-
-    using ATrace_isEnabled_t          = bool (*)();
-    using ATrace_beginSection_t       = void (*)(const char* sectionName);
-    using ATrace_endSection_t         = void (*)();
-    using ATrace_beginAsyncSection_t  = void (*)(const char* sectionName, int32_t cookie);
-    using ATrace_endAsyncSection_t    = void (*)(const char* sectionName, int32_t cookie);
-    using ATrace_setCounter_t         = void (*)(const char* counterName, int64_t counterValue);
-
     struct GlobalState {
-        bool isTracingAvailable;
         std::atomic<uint32_t> isTracingEnabled;
-        int markerFd;
 
-        ATrace_isEnabled_t ATrace_isEnabled;
-        ATrace_beginSection_t ATrace_beginSection;
-        ATrace_endSection_t ATrace_endSection;
-        ATrace_beginAsyncSection_t ATrace_beginAsyncSection;
-        ATrace_endAsyncSection_t ATrace_endAsyncSection;
-        ATrace_setCounter_t ATrace_setCounter;
-
-        void (*beginSection)(Systrace* that, const char* name);
-        void (*endSection)(Systrace* that);
-        void (*beginAsyncSection)(Systrace* that, const char* name, int32_t cookie);
-        void (*endAsyncSection)(Systrace* that, const char* name, int32_t cookie);
-        void (*setCounter)(Systrace* that, const char* name, int64_t value);
+        os_log_t systraceLog;
+        os_log_t frameIdLog;
     };
 
     static GlobalState sGlobalState;
-
-
-    // per-instance versions for better performance
-    ATrace_isEnabled_t ATrace_isEnabled;
-    ATrace_beginSection_t ATrace_beginSection;
-    ATrace_endSection_t ATrace_endSection;
-    ATrace_beginAsyncSection_t ATrace_beginAsyncSection;
-    ATrace_endAsyncSection_t ATrace_endAsyncSection;
-    ATrace_setCounter_t ATrace_setCounter;
-
-    void (*beginSection)(Systrace* that, const char* name);
-    void (*endSection)(Systrace* that);
-    void (*beginAsyncSection)(Systrace* that, const char* name, int32_t cookie);
-    void (*endAsyncSection)(Systrace* that, const char* name, int32_t cookie);
-    void (*setCounter)(Systrace* that, const char* name, int64_t value);
 
     void init(uint32_t tag) noexcept;
 
     // cached values for faster access, no need to be initialized
     bool mIsTracingEnabled;
-    int mMarkerFd = -1;
-    pid_t mPid;
 
     static void setup() noexcept;
     static void init_once() noexcept;
     static bool isTracingEnabled(uint32_t tag) noexcept;
-
-    static void begin_body(int fd, int pid, const char* name) noexcept;
-    static void end_body(int fd, int pid) noexcept;
-    static void async_begin_body(int fd, int pid, const char* name, int32_t cookie) noexcept;
-    static void async_end_body(int fd, int pid, const char* name, int32_t cookie) noexcept;
-    static void int64_body(int fd, int pid, const char* name, int64_t value) noexcept;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -215,12 +213,12 @@ class Systrace {
 class ScopedTrace {
    public:
     // we don't inline this because it's relatively heavy due to a global check
-    ScopedTrace(uint32_t tag, const char* name) noexcept : mTrace(tag), mTag(tag) {
+    ScopedTrace(uint32_t tag, const char* name) noexcept : mTrace(tag), mName(name), mTag(tag) {
         mTrace.traceBegin(tag, name);
     }
 
     inline ~ScopedTrace() noexcept {
-        mTrace.traceEnd(mTag);
+        mTrace.traceEnd(mTag, mName);
     }
 
     inline void value(uint32_t tag, const char* name, int32_t v) noexcept {
@@ -233,10 +231,27 @@ class ScopedTrace {
 
    private:
     Systrace mTrace;
+    const char* mName;
     const uint32_t mTag;
 };
 
 } // namespace details
 } // namespace utils
 
-#endif // TNT_UTILS_ANDROID_SYSTRACE_H
+// ------------------------------------------------------------------------------------------------
+#else // !ANDROID && !__APPLE__
+// ------------------------------------------------------------------------------------------------
+
+#define SYSTRACE_ENABLE()
+#define SYSTRACE_DISABLE()
+#define SYSTRACE_CONTEXT()
+#define SYSTRACE_NAME(name)
+#define SYSTRACE_NAME_BEGIN(name)
+#define SYSTRACE_NAME_END()
+#define SYSTRACE_CALL()
+#define SYSTRACE_ASYNC_BEGIN(name, cookie)
+#define SYSTRACE_ASYNC_END(name, cookie)
+#define SYSTRACE_VALUE32(name, val)
+#define SYSTRACE_VALUE64(name, val)
+
+#endif // TNT_UTILS_DARWIN_SYSTRACE_H
