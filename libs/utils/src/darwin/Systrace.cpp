@@ -17,6 +17,8 @@
 #include <utils/Systrace.h>
 #include <utils/Log.h>
 
+#if FILAMENT_APPLE_SYSTRACE
+
 #include <pthread.h>
 
 static pthread_once_t atrace_once_control = PTHREAD_ONCE_INIT;
@@ -67,3 +69,5 @@ void Systrace::init(uint32_t tag) noexcept {
 
 } // namespace details
 } // namespace utils
+
+#endif // FILAMENT_APPLE_SYSTRACE
