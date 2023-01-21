@@ -49,9 +49,9 @@
 // It also automatically creates a Systrace context
 #define SYSTRACE_NAME(name) ::utils::details::ScopedTrace ___tracer(SYSTRACE_TAG, name)
 
+// Denotes that a new frame has started processing.
 #define SYSTRACE_FRAME_ID(frame) \
-    SYSTRACE_CONTEXT();         \
-    ___tracer.frameId(SYSTRACE_TAG, frame)
+    ::utils::details::Systrace(SYSTRACE_TAG).frameId(SYSTRACE_TAG, frame)
 
 extern thread_local std::stack<const char*> ___tracerSections;
 
@@ -179,10 +179,12 @@ class Systrace {
         }
     }
 
-    inline void frameId(uint32_t tag, const char* message) noexcept {
+    inline void frameId(uint32_t tag, uint32_t frame) noexcept {
         if (tag && UTILS_UNLIKELY(mIsTracingEnabled)) {
+            char buf[64]; \
+            snprintf(buf, 64, "frame %u", frame); \
             APPLE_SIGNPOST_EMIT(sGlobalState.frameIdLog, OS_SIGNPOST_EVENT,
-                    OS_SIGNPOST_ID_EXCLUSIVE, "frame", message)
+                    OS_SIGNPOST_ID_EXCLUSIVE, "frame", buf)
         }
     }
 

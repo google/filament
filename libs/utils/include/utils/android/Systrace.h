@@ -45,6 +45,14 @@
 // It also automatically creates a Systrace context
 #define SYSTRACE_NAME(name) ::utils::details::ScopedTrace ___tracer(SYSTRACE_TAG, name)
 
+// Denotes that a new frame has started processing.
+#define SYSTRACE_FRAME_ID(frame) \
+    { /* scope for frame id trace */ \
+        char buf[64]; \
+        snprintf(buf, 64, "frame %u", frame); \
+        SYSTRACE_NAME(buf); \
+    }
+
 // SYSTRACE_CALL is an SYSTRACE_NAME that uses the current function name.
 #define SYSTRACE_CALL() SYSTRACE_NAME(__FUNCTION__)
 
