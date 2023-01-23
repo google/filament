@@ -201,11 +201,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     mFrameId++;
     mViewRenderedCount = 0;
 
-    { // scope for frame id trace
-        char buf[64];
-        snprintf(buf, 64, "frame %u", mFrameId);
-        SYSTRACE_NAME(buf);
-    }
+    SYSTRACE_FRAME_ID(mFrameId);
 
     FEngine& engine = mEngine;
     FEngine::DriverApi& driver = engine.getDriverApi();
