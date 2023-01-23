@@ -56,7 +56,6 @@ public:
          *   -----------------------------------------------------------
          *   normals                                FRISVAD
          *   positions + indices                    FLAT_SHADING
-         *   normals + tangents                     SIGN_OF_W
          *   normals + uvs + positions + indices    MIKKTSPACE
          * </pre>
          */
@@ -88,8 +87,14 @@ public:
          * Hughes-Moller method
          *
          * **Requires**: `normals` <br/>
-         * **Reference**: Möller, T. and Hughes, J.F., 1999. Efficiently building a matrix to rotate one
-         *     vector to another. Journal of graphics tools, 4(4), pp.1-4.
+         * **Reference**:
+         *     - Hughes, J.F. and Moller, T., 1999. Building an orthonormal basis from a unit
+         *       vector. journal of graphics tools, 4(4), pp.33-35.
+         *     - Parker, S.G., Bigler, J., Dietrich, A., Friedrich, H., Hoberock, J., Luebke, D.,
+         *       McAllister, D., McGuire, M., Morley, K., Robison, A. and Stich, M., 2010.
+         *       Optix: a general purpose ray tracing engine. Acm transactions on graphics (tog),
+         *       29(4), pp.1-13.
+         * **Note**: We implement the Optix variant, which is documented in the second reference above.
          */
         HUGHES_MOLLER = 3,
 
@@ -110,15 +115,7 @@ public:
          * **Requires**: `positions + indices` <br/>
          * **Note**: Will remesh
          */
-        FLAT_SHADING = 5,
-
-        /**
-         * Sign of W
-         *
-         * **Requires**: `normals + tangents` <br/>
-         * **Note**: The sign of W determines the orientation of the bitangent.
-         */
-        SIGN_OF_W = 6
+        FLAT_SHADING = 5
     };
 
     /**
