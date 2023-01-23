@@ -110,6 +110,8 @@ AlgorithmHint selectBestDefaultAlgorithm(uint8_t inputType) {
     return outHint;
 }
 
+#define IS_INPUT_TYPE(inputType, TYPE) ((inputType & TYPE) == TYPE)
+
 AlgorithmHint selectAlgorithm(TangentSpaceMeshInput *input) {
     uint8_t inputType = 0;
     if (input->normals) {
@@ -136,37 +138,37 @@ AlgorithmHint selectAlgorithm(TangentSpaceMeshInput *input) {
             foundHint = true;
             break;
         case AlgorithmHint::MIKKTSPACE:
-            if (inputType & NORMALS_UVS_POSITIONS_INDICES) {
+            if (IS_INPUT_TYPE(inputType, NORMALS_UVS_POSITIONS_INDICES)) {
                 outHint = AlgorithmHint::MIKKTSPACE;
                 foundHint = true;
             }
             break;
         case AlgorithmHint::LENGYEL:
-            if (inputType & NORMALS_UVS_POSITIONS_INDICES) {
+            if (IS_INPUT_TYPE(inputType, NORMALS_UVS_POSITIONS_INDICES)) {
                 outHint = AlgorithmHint::LENGYEL;
                 foundHint = true;
             }
             break;
         case AlgorithmHint::HUGHES_MOLLER:
-            if (inputType & NORMALS) {
+            if (IS_INPUT_TYPE(inputType, NORMALS)) {
                 outHint = AlgorithmHint::HUGHES_MOLLER;
                 foundHint = true;
             }
             break;
         case AlgorithmHint::FRISVAD:
-            if (inputType & NORMALS) {
+            if (IS_INPUT_TYPE(inputType, NORMALS)) {
                 outHint = AlgorithmHint::FRISVAD;
                 foundHint = true;
             }
             break;
         case AlgorithmHint::FLAT_SHADING:
-            if (inputType & POSITIONS_INDICES) {
+            if (IS_INPUT_TYPE(inputType, POSITIONS_INDICES)) {
                 outHint = AlgorithmHint::FLAT_SHADING;
                 foundHint = true;
             }
             break;
         case AlgorithmHint::SIGN_OF_W:
-            if (inputType & NORMALS_TANGENTS) {
+            if (IS_INPUT_TYPE(inputType, NORMALS_TANGENTS)) {
                 outHint = AlgorithmHint::SIGN_OF_W;
                 foundHint = true;
             }
@@ -185,6 +187,8 @@ AlgorithmHint selectAlgorithm(TangentSpaceMeshInput *input) {
     return outHint;
 }
 
+#undef IS_INPUT_TYPE
+
 } // anonymous namespace
 
 Builder::Builder() noexcept
@@ -198,6 +202,11 @@ Builder::Builder(Builder&& that) noexcept {
 
 Builder& Builder::operator=(Builder&& that) noexcept {
     std::swap(mMesh, that.mMesh);
+    return *this;
+}
+
+Builder& Builder::vertexCount(size_t vertexCount) noexcept {
+    mMesh->mInput->vertexCount = vertexCount;
     return *this;
 }
 

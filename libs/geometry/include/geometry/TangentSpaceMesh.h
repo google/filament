@@ -30,8 +30,9 @@ struct TangentSpaceMeshOutput;
 
 /**
  * For building Filament-style TANGENTS buffers given an input mesh.
- * Supercedes the implementation in SurfaceOrientation.h
+ * Supersedes the implementation in SurfaceOrientation.h
  */
+ /* WARNING: WORK-IN-PROGRESS, PLEASE DO NOT USE */
 class UTILS_PUBLIC TangentSpaceMesh {
 public:
     enum class AlgorithmHint : uint8_t {
@@ -71,7 +72,7 @@ public:
          * Reference: Möller, T. and Hughes, J.F., 1999. Efficiently building a matrix to rotate one
          *     vector to another. Journal of graphics tools, 4(4), pp.1-4.
          */
-        HUGHES_MOLLER =3,
+        HUGHES_MOLLER = 3,
 
         /*
          * --- Frisvad's method ---
