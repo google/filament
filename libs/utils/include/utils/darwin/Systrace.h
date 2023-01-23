@@ -240,20 +240,4 @@ class ScopedTrace {
 } // namespace details
 } // namespace utils
 
-// ------------------------------------------------------------------------------------------------
-#else // !ANDROID && !__APPLE__
-// ------------------------------------------------------------------------------------------------
-
-#define SYSTRACE_ENABLE()
-#define SYSTRACE_DISABLE()
-#define SYSTRACE_CONTEXT()
-#define SYSTRACE_NAME(name)
-#define SYSTRACE_NAME_BEGIN(name)
-#define SYSTRACE_NAME_END()
-#define SYSTRACE_CALL()
-#define SYSTRACE_ASYNC_BEGIN(name, cookie)
-#define SYSTRACE_ASYNC_END(name, cookie)
-#define SYSTRACE_VALUE32(name, val)
-#define SYSTRACE_VALUE64(name, val)
-
 #endif // TNT_UTILS_DARWIN_SYSTRACE_H
