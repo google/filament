@@ -264,7 +264,7 @@ void PlatformEGL::terminate() noexcept {
 }
 
 Platform::SwapChain* PlatformEGL::createSwapChain(
-        void* nativeWindow, uint64_t& flags) noexcept {
+        void* nativeWindow, uint64_t flags) noexcept {
     EGLSurface sur = eglCreateWindowSurface(mEGLDisplay,
             (flags & SWAP_CHAIN_CONFIG_TRANSPARENT) ?
             mEGLTransparentConfig : mEGLConfig,
@@ -282,7 +282,7 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
 }
 
 Platform::SwapChain* PlatformEGL::createSwapChain(
-        uint32_t width, uint32_t height, uint64_t& flags) noexcept {
+        uint32_t width, uint32_t height, uint64_t flags) noexcept {
 
     EGLint attribs[] = {
             EGL_WIDTH, EGLint(width),

@@ -171,9 +171,7 @@ void PlatformCocoaGL::terminate() noexcept {
     bluegl::unbind();
 }
 
-Platform::SwapChain* PlatformCocoaGL::createSwapChain(void* nativewindow, uint64_t& flags) noexcept {
-    // Transparent SwapChain is not supported
-    flags &= ~SWAP_CHAIN_CONFIG_TRANSPARENT;
+Platform::SwapChain* PlatformCocoaGL::createSwapChain(void* nativewindow, uint64_t flags) noexcept {
     NSView* nsView = (__bridge NSView*)nativewindow;
 
     CocoaGLSwapChain* swapChain = new CocoaGLSwapChain( nsView );
@@ -188,7 +186,7 @@ Platform::SwapChain* PlatformCocoaGL::createSwapChain(void* nativewindow, uint64
     return swapChain;
 }
 
-Platform::SwapChain* PlatformCocoaGL::createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept {
+Platform::SwapChain* PlatformCocoaGL::createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept {
     NSView* nsView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, width, height)];
 
     // adding the pointer to the array retains the NSView

@@ -239,16 +239,12 @@ void PlatformGLX::terminate() noexcept {
     bluegl::unbind();
 }
 
-Platform::SwapChain* PlatformGLX::createSwapChain(void* nativeWindow, uint64_t& flags) noexcept {
-    // Transparent swap chain is not supported
-    flags &= ~SWAP_CHAIN_CONFIG_TRANSPARENT;
+Platform::SwapChain* PlatformGLX::createSwapChain(void* nativeWindow, uint64_t flags) noexcept {
     return (SwapChain*)nativeWindow;
 }
 
 Platform::SwapChain* PlatformGLX::createSwapChain(
-        uint32_t width, uint32_t height, uint64_t& flags) noexcept {
-    // Transparent swap chain is not supported
-    flags &= ~SWAP_CHAIN_CONFIG_TRANSPARENT;
+        uint32_t width, uint32_t height, uint64_t flags) noexcept {
     int pbufferAttribs[] = {
             GLX_PBUFFER_WIDTH, int(width),
             GLX_PBUFFER_HEIGHT, int(height),

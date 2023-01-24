@@ -175,7 +175,7 @@ void PlatformWGL::terminate() noexcept {
     bluegl::unbind();
 }
 
-Platform::SwapChain* PlatformWGL::createSwapChain(void* nativeWindow, uint64_t& flags) noexcept {
+Platform::SwapChain* PlatformWGL::createSwapChain(void* nativeWindow, uint64_t flags) noexcept {
     auto* swapChain = new WGLSwapChain();
     swapChain->isHeadless = false;
 
@@ -194,7 +194,7 @@ Platform::SwapChain* PlatformWGL::createSwapChain(void* nativeWindow, uint64_t& 
     return (Platform::SwapChain*) swapChain;
 }
 
-Platform::SwapChain* PlatformWGL::createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept {
+Platform::SwapChain* PlatformWGL::createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept {
     auto* swapChain = new WGLSwapChain();
     swapChain->isHeadless = true;
 
