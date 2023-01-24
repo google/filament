@@ -97,15 +97,20 @@ protected:
     EGLSurface mCurrentReadSurface = EGL_NO_SURFACE;
     EGLSurface mEGLDummySurface = EGL_NO_SURFACE;
     EGLConfig mEGLConfig = EGL_NO_CONFIG_KHR;
-    EGLConfig mEGLTransparentConfig = EGL_NO_CONFIG_KHR;
 
     // supported extensions detected at runtime
     struct {
-        bool OES_EGL_image_external_essl3 = false;
+        struct {
+            bool OES_EGL_image_external_essl3 = false;
+        } gl;
+        struct {
+            bool KHR_no_config_context = false;
+        } egl;
     } ext;
 
 private:
     void initializeGlExtensions() noexcept;
+    EGLConfig findSwapChainConfig(uint64_t flags) const;
 };
 
 } // namespace filament::backend
