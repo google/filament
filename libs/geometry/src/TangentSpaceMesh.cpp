@@ -26,7 +26,7 @@ namespace geometry {
 
 using namespace filament::math;
 using Builder = TangentSpaceMesh::Builder;
-using AlgorithmHint = TangentSpaceMesh::AlgorithmHint;
+using Algorithm = TangentSpaceMesh::Algorithm;
 
 struct TangentSpaceMeshInput {
     size_t vertexCount = 0;
@@ -43,11 +43,11 @@ struct TangentSpaceMeshInput {
     size_t positionStride = 0;
     size_t triangleCount = 0;
 
-    TangentSpaceMesh::AlgorithmHint hint;
+    Algorithm algorithm;
 };
 
 struct TangentSpaceMeshOutput {
-    TangentSpaceMesh::AlgorithmHint hint;
+    Algorithm algorithm;
 
     size_t triangleCount = 0;
     size_t vertexCount = 0;
@@ -73,46 +73,46 @@ const uint8_t NORMALS_TANGENTS = NORMALS_BIT | TANGENTS_BIT;
 const uint8_t POSITIONS_INDICES = POSITIONS_BIT | INDICES_BIT;
 const uint8_t NORMALS_UVS_POSITIONS_INDICES = NORMALS_BIT | UVS_BIT | POSITIONS_BIT | INDICES_BIT;
 
-const char* HintToString(AlgorithmHint hint) {
-    switch (hint) {
-        case AlgorithmHint::DEFAULT:
+std::string_view to_string(Algorithm algorithm) {
+    switch (algorithm) {
+        case Algorithm::DEFAULT:
             return "DEFAULT";
-        case AlgorithmHint::MIKKTSPACE:
+        case Algorithm::MIKKTSPACE:
             return "MIKKTSPACE";
-        case AlgorithmHint::LENGYEL:
+        case Algorithm::LENGYEL:
             return "LENGYEL";
-        case AlgorithmHint::HUGHES_MOLLER:
+        case Algorithm::HUGHES_MOLLER:
             return "HUGHES_MOLLER";
-        case AlgorithmHint::FRISVAD:
+        case Algorithm::FRISVAD:
             return "FRISVAD";
-        case AlgorithmHint::FLAT_SHADING:
+        case Algorithm::FLAT_SHADING:
             return "FLAT_SHADING";
-        case AlgorithmHint::SIGN_OF_W:
+        case Algorithm::SIGN_OF_W:
             return "SIGN_OF_W";
         default:
-            PANIC_POSTCONDITION("Unknown hint %u", static_cast<uint8_t>(hint));
+            PANIC_POSTCONDITION("Unknown algorithm %u", static_cast<uint8_t>(algorithm));
     }
 }
 
-AlgorithmHint selectBestDefaultAlgorithm(uint8_t inputType) {
-    AlgorithmHint outHint;
+Algorithm selectBestDefaultAlgorithm(uint8_t inputType) {
+    Algorithm outAlgo;
     if (inputType & NORMALS_UVS_POSITIONS_INDICES) {
-        outHint = AlgorithmHint::MIKKTSPACE;
+        outAlgo = Algorithm::MIKKTSPACE;
     } else if (inputType & POSITIONS_INDICES) {
-        outHint = AlgorithmHint::FLAT_SHADING;
+        outAlgo = Algorithm::FLAT_SHADING;
     } else if (inputType & NORMALS_TANGENTS) {
-        outHint = AlgorithmHint::SIGN_OF_W;
+        outAlgo = Algorithm::SIGN_OF_W;
     } else {
         ASSERT_PRECONDITION(inputType & NORMALS,
                 "Must at least have normals or (positions + indices) as input");
-        outHint = AlgorithmHint::FRISVAD;
+        outAlgo = Algorithm::FRISVAD;
     }
-    return outHint;
+    return outAlgo;
 }
 
 #define IS_INPUT_TYPE(inputType, TYPE) ((inputType & TYPE) == TYPE)
 
-AlgorithmHint selectAlgorithm(TangentSpaceMeshInput *input) {
+Algorithm selectAlgorithm(TangentSpaceMeshInput *input) {
     uint8_t inputType = 0;
     if (input->normals) {
         inputType |= NORMALS_BIT;
@@ -130,61 +130,61 @@ AlgorithmHint selectAlgorithm(TangentSpaceMeshInput *input) {
         inputType |= INDICES_BIT;
     }
 
-    bool foundHint = false;
-    AlgorithmHint outHint = AlgorithmHint::DEFAULT;
-    switch (input->hint) {
-        case AlgorithmHint::DEFAULT:
-            outHint = selectBestDefaultAlgorithm(inputType);
-            foundHint = true;
+    bool foundAlgo = false;
+    Algorithm outAlgo = Algorithm::DEFAULT;
+    switch (input->algorithm) {
+        case Algorithm::DEFAULT:
+            outAlgo = selectBestDefaultAlgorithm(inputType);
+            foundAlgo = true;
             break;
-        case AlgorithmHint::MIKKTSPACE:
+        case Algorithm::MIKKTSPACE:
             if (IS_INPUT_TYPE(inputType, NORMALS_UVS_POSITIONS_INDICES)) {
-                outHint = AlgorithmHint::MIKKTSPACE;
-                foundHint = true;
+                outAlgo = Algorithm::MIKKTSPACE;
+                foundAlgo = true;
             }
             break;
-        case AlgorithmHint::LENGYEL:
+        case Algorithm::LENGYEL:
             if (IS_INPUT_TYPE(inputType, NORMALS_UVS_POSITIONS_INDICES)) {
-                outHint = AlgorithmHint::LENGYEL;
-                foundHint = true;
+                outAlgo = Algorithm::LENGYEL;
+                foundAlgo = true;
             }
             break;
-        case AlgorithmHint::HUGHES_MOLLER:
+        case Algorithm::HUGHES_MOLLER:
             if (IS_INPUT_TYPE(inputType, NORMALS)) {
-                outHint = AlgorithmHint::HUGHES_MOLLER;
-                foundHint = true;
+                outAlgo = Algorithm::HUGHES_MOLLER;
+                foundAlgo = true;
             }
             break;
-        case AlgorithmHint::FRISVAD:
+        case Algorithm::FRISVAD:
             if (IS_INPUT_TYPE(inputType, NORMALS)) {
-                outHint = AlgorithmHint::FRISVAD;
-                foundHint = true;
+                outAlgo = Algorithm::FRISVAD;
+                foundAlgo = true;
             }
             break;
-        case AlgorithmHint::FLAT_SHADING:
+        case Algorithm::FLAT_SHADING:
             if (IS_INPUT_TYPE(inputType, POSITIONS_INDICES)) {
-                outHint = AlgorithmHint::FLAT_SHADING;
-                foundHint = true;
+                outAlgo = Algorithm::FLAT_SHADING;
+                foundAlgo = true;
             }
             break;
-        case AlgorithmHint::SIGN_OF_W:
+        case Algorithm::SIGN_OF_W:
             if (IS_INPUT_TYPE(inputType, NORMALS_TANGENTS)) {
-                outHint = AlgorithmHint::SIGN_OF_W;
-                foundHint = true;
+                outAlgo = Algorithm::SIGN_OF_W;
+                foundAlgo = true;
             }
             break;
         default:
-            PANIC_POSTCONDITION("Unknown hint %u", static_cast<uint8_t>(input->hint));
+            PANIC_POSTCONDITION("Unknown algo %u", static_cast<uint8_t>(input->algorithm));
     }
 
-    if (!foundHint) {
-        outHint = selectBestDefaultAlgorithm(inputType);
-        utils::slog.w << "Cannot satisfy hint=" << HintToString(input->hint)
-            << ". Selected hint=" << HintToString(input->hint) << " instead"
+    if (!foundAlgo) {
+        outAlgo = selectBestDefaultAlgorithm(inputType);
+        utils::slog.w << "Cannot satisfy algorithm=" << to_string(input->algorithm)
+            << ". Selected algorithm=" << to_string(input->algorithm) << " instead"
             << utils::io::endl;
     }
 
-    return outHint;
+    return outAlgo;
 }
 
 #undef IS_INPUT_TYPE
@@ -249,13 +249,13 @@ Builder& Builder::triangles(const ushort3* triangle16) noexcept {
     return *this;
 }
 
-Builder& Builder::algorithmHint(AlgorithmHint hint) noexcept {
-    mMesh->mInput->hint = hint;
+Builder& Builder::algorithm(Algorithm algo) noexcept {
+    mMesh->mInput->algorithm = algo;
     return *this;
 }
 
 TangentSpaceMesh* Builder::build() {
-    mMesh->mOutput->hint = selectAlgorithm(mMesh->mInput);
+    mMesh->mOutput->algorithm = selectAlgorithm(mMesh->mInput);
     // "Working in progress. Not for use"
     return NULL;
 }
@@ -308,6 +308,10 @@ void TangentSpaceMesh::getQuats(short4*, size_t) const noexcept {
 }
 
 void TangentSpaceMesh::getQuats(quath*, size_t) const noexcept {
+}
+
+Algorithm TangentSpaceMesh::getAlgorithm() const {
+    return mOutput->algorithm;
 }
 
 }

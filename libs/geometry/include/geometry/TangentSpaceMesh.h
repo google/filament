@@ -28,78 +28,102 @@ namespace geometry {
 struct TangentSpaceMeshInput;
 struct TangentSpaceMeshOutput;
 
-/**
- * For building Filament-style TANGENTS buffers given an input mesh.
- * Supersedes the implementation in SurfaceOrientation.h
- */
  /* WARNING: WORK-IN-PROGRESS, PLEASE DO NOT USE */
+/**
+ * This class builds Filament-style TANGENTS buffers given an input mesh.
+ *
+ * This class enables the client to chose between several algorithms. The client can retrieve the
+ * result through the `get` methods on the class. If the chosen algorithm did not remesh the input,
+ * the client is advised to just use the data they provided instead of querying.  For example, if
+ * the chosen method is Algorithm::FRISVAD, then the client should not need to call getPositions().
+ * We will simply copy from the input `positions` in that case.
+ *
+ * If the client calls getPositions() and positions were not provided as input, we will throw
+ * and exception. Similar behavior will apply to UVs.
+ *
+ * This class supersedes the implementation in SurfaceOrientation.h
+ */
 class UTILS_PUBLIC TangentSpaceMesh {
 public:
-    enum class AlgorithmHint : uint8_t {
-        /*
+    enum class Algorithm : uint8_t {
+        /**
+         * default
+         *
          * Tries to select the best possible algorithm given the input. The corresponding algorithms
          * are detailed in the corresponding enums.
+         * <pre>
          *   INPUT                                  ALGORITHM
          *   -----------------------------------------------------------
          *   normals                                FRISVAD
          *   positions + indices                    FLAT_SHADING
          *   normals + tangents                     SIGN_OF_W
          *   normals + uvs + positions + indices    MIKKTSPACE
+         * </pre>
          */
         DEFAULT = 0,
 
-        /*
-         * --- mikktspace ---
-         * Requires: normals + uvs + positions + indices
-         * Reference: Mikkelsen, M., 2008. Simulation of wrinkled surfaces revisited.
-         *            https://github.com/mmikk/MikkTSpace
-         *            https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#meshes-overview
-         * Note: Will remesh
+        /**
+         * mikktspace
+         *
+         * **Requires**: `normals + uvs + positions + indices` <br/>
+         * **Reference**:
+         *    - Mikkelsen, M., 2008. Simulation of wrinkled surfaces revisited.
+         *    - https://github.com/mmikk/MikkTSpace
+         *    - https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#meshes-overview
+         *
+         * **Note**: Will remesh
          */
         MIKKTSPACE = 1,
 
-        /*
-         * --- Lengyel's method ---
-         * Requires: normals + uvs + positions + indices
-         * Reference: Lengyel, E., 2019. Foundations of Game Engine Development: Rendering. Terathon
+        /**
+         * Lengyel's method
+         *
+         * **Requires**: `normals + uvs + positions + indices` <br/>
+         * **Reference**: Lengyel, E., 2019. Foundations of Game Engine Development: Rendering. Terathon
          *     Software LLC.. (Chapter 7)
          */
         LENGYEL = 2,
 
-        /*
-         * --- Hughes-Moller method ---
-         * Requires: normals
-         * Reference: Möller, T. and Hughes, J.F., 1999. Efficiently building a matrix to rotate one
+        /**
+         * Hughes-Moller method
+         *
+         * **Requires**: `normals` <br/>
+         * **Reference**: Möller, T. and Hughes, J.F., 1999. Efficiently building a matrix to rotate one
          *     vector to another. Journal of graphics tools, 4(4), pp.1-4.
          */
         HUGHES_MOLLER = 3,
 
-        /*
-         * --- Frisvad's method ---
-         * Requires: normals
-         * Reference: Frisvad, J.R., 2012. Building an orthonormal basis from a 3D unit vector
-         *     without normalization. Journal of Graphics Tools, 16(3), pp.151-159.
-         *     http://people.compute.dtu.dk/jerf/code/hairy/
+        /**
+         * Frisvad's method
+         *
+         * **Requires**: `normals` <br/>
+         * **Reference**:
+         *     - Frisvad, J.R., 2012. Building an orthonormal basis from a 3D unit vector without
+         *       normalization. Journal of Graphics Tools, 16(3), pp.151-159.
+         *     - http://people.compute.dtu.dk/jerf/code/hairy/
          */
         FRISVAD = 4,
 
-        /*
-         * --- Flat Shading ---
-         * Requires: positions + indices
-         * Note: Will remesh
+        /**
+         * Flat Shading
+         *
+         * **Requires**: `positions + indices` <br/>
+         * **Note**: Will remesh
          */
         FLAT_SHADING = 5,
 
-        /*
-         * --- Sign of W ---
-         * Requires: normals + tangents
-         * Note: The sign of W determines the orientation of the bitangent.
+        /**
+         * Sign of W
+         *
+         * **Requires**: `normals + tangents` <br/>
+         * **Note**: The sign of W determines the orientation of the bitangent.
          */
         SIGN_OF_W = 6
     };
 
-    /*
-     * Computation of the tangent space is intended to be synchronous (worked on the same thread).
+    /**
+     * Use this class to provide input to the TangentSpaceMesh computation. **Important**:
+     * Computation of the tangent space is intended to be synchronous (working on the same thread).
      * Client is expected to keep the input immutable and in a good state for the duration of both
      * computation *and* query. That is, when querying the result of the tangent spaces, part of the
      * result might depend on the input data.
@@ -108,70 +132,185 @@ public:
     public:
         Builder() noexcept;
         ~Builder() noexcept;
+
+        /**
+         * Move constructor
+         */
         Builder(Builder&& that) noexcept;
+
+        /**
+         * Move constructor
+         */
         Builder& operator=(Builder&& that) noexcept;
 
-        Builder& vertexCount(size_t vertexCount) noexcept;
-
-        Builder& normals(const filament::math::float3*, size_t stride = 0) noexcept;
-        Builder& tangents(const filament::math::float4*, size_t stride = 0) noexcept;
-        Builder& uvs(const filament::math::float2*, size_t stride = 0) noexcept;
-        Builder& positions(const filament::math::float3*, size_t stride = 0) noexcept;
-
-        Builder& triangleCount(size_t triangleCount) noexcept;
-        Builder& triangles(const filament::math::uint3*) noexcept;
-        Builder& triangles(const filament::math::ushort3*) noexcept;
-
-        Builder& algorithmHint(AlgorithmHint) noexcept;
-
-        TangentSpaceMesh* build();
-
-    private:
         Builder(const Builder&) = delete;
         Builder& operator=(const Builder&) = delete;
 
-        TangentSpaceMesh* mMesh;
+        /**
+         * Client must provide this parameter
+         *
+         * @param vertexCount The input number of vertcies
+         */
+        Builder& vertexCount(size_t vertexCount) noexcept;
+
+        /**
+         * @param normals The input normals
+         * @param stride The stride for iterating through `normals`
+         * @return Builder
+         */
+        Builder& normals(const filament::math::float3* normals, size_t stride = 0) noexcept;
+
+        /**
+         * @param tangents The input tangents. The `w` component is for use with
+         *     Algorithm::SIGN_OF_W.
+         * @param stride The stride for iterating through `tangents`
+         * @return Builder
+         */
+        Builder& tangents(const filament::math::float4* tangents, size_t stride = 0) noexcept;
+
+        /**
+         * @param uvs The input uvs
+         * @param stride The stride for iterating through `uvs`
+         * @return Builder
+         */
+        Builder& uvs(const filament::math::float2* uvs, size_t stride = 0) noexcept;
+
+        /**
+         * @param positions The input positions
+         * @param stride The stride for iterating through `positions`
+         * @return Builder
+         */
+        Builder& positions(const filament::math::float3* positions, size_t stride = 0) noexcept;
+
+        Builder& triangleCount(size_t triangleCount) noexcept;
+        Builder& triangles(const filament::math::uint3* triangles) noexcept;
+        Builder& triangles(const filament::math::ushort3* triangles) noexcept;
+
+        Builder& algorithm(Algorithm algorithm) noexcept;
+
+        /**
+         * Computes the tangent space mesh.
+         * @return A TangentSpaceMesh
+         */
+        TangentSpaceMesh* build();
+
+    private:
+        TangentSpaceMesh* mMesh = nullptr;
     };
 
     ~TangentSpaceMesh() noexcept;
+
+    /**
+     * Move constructor
+     */
     TangentSpaceMesh(TangentSpaceMesh&& that) noexcept;
+
+    /**
+     * Move constructor
+     */
     TangentSpaceMesh& operator=(TangentSpaceMesh&& that) noexcept;
 
+    /**
+     * Number of output vertices
+     *
+     * The number of output vertices can be the same as the input if the selected algorithm did not
+     * "remesh" the input.
+     *
+     * @return The number of vertices
+     */
     size_t getVertexCount() const noexcept;
 
-    /*
-     * The following methods for retrieving vertex-correlated data assumes that the *out* param
-     * provided by the client is at least of *getVertexCount()* length (accounting for stride).
+    /**
+     * Get output vertex positions.
+     * Assumes the `out` param is at least of getVertexCount() length (while accounting for
+     * `stride`). The output vertices can be the same as the input if the selected algorithm did
+     * not "remesh" the input. The remeshed vertices are not guarranteed to have correlation in
+     * order with the input mesh.
      *
-     * If the chosen algorithm did not remesh the input, the client is advised to just use the
-     * data they provided instead of querying.  For example, if the chosen method is FRISVAD, then
-     * the client should not need to call "getPositions". We will simply copy from the input
-     * *positions* in that case.
-     *
-     * If the client calls getPositions and positions were not provided as input, we will throw
-     * and exception. Similar behavior will apply to UVs.
+     * @param  out    Client-allocated array that will be used for copying out positions.
+     * @param  stride Stride for iterating through `out`
      */
     void getPositions(filament::math::float3* out, size_t stride = 0) const;
+
+    /**
+     * Get output UVs.
+     * Assumes the `out` param is at least of getVertexCount() length (while accounting for
+     * `stride`). The output uvs can be the same as the input if the selected algorithm did
+     * not "remesh" the input. The remeshed UVs are not guarranteed to have correlation in order
+     * with the input mesh.
+     *
+     * @param  out    Client-allocated array that will be used for copying out UVs.
+     * @param  stride Stride for iterating through `out`
+     */
     void getUVs(filament::math::float2* out, size_t stride = 0) const;
+
+    /**
+     * Get output tangent space.
+     * Assumes the `out` param is at least of getVertexCount() length (while accounting for
+     * `stride`).
+     *
+     * @param  out    Client-allocated array that will be used for copying out tangent space in
+     *                32-bit floating points.
+     * @param  stride Stride for iterating through `out`
+     */
     void getQuats(filament::math::quatf* out, size_t stride = 0) const noexcept;
+
+    /**
+     * Get output tangent space.
+     * Assumes the `out` param is at least of getVertexCount() length (while accounting for
+     * `stride`).
+     *
+     * @param  out    Client-allocated array that will be used for copying out tangent space in
+     *                16-bit signed integers.
+     * @param  stride Stride for iterating through `out`
+     */
     void getQuats(filament::math::short4* out, size_t stride = 0) const noexcept;
+
+    /**
+     * Get output tangent space.
+     * Assumes the `out` param is at least of getVertexCount() length (while accounting for
+     * `stride`).
+     *
+     * @param  out    Client-allocated array that will be used for copying out tangent space in
+     *                16-bit floating points.
+     * @param  stride Stride for iterating through `out`
+     */
     void getQuats(filament::math::quath* out, size_t stride = 0) const noexcept;
 
+    /**
+     * Get number of output triangles.
+     * The number of output triangles is the same as the number of input triangles. However, when a
+     * "remesh" is carried out the output triangles are not guarranteed to have any correlation with
+     * the input.
+     *
+     * @return The number of vertices
+     */
     size_t getTriangleCount() const;
 
-    /*
-     * The following methods for retrieving triangles assumes that the *out* param provided by the
-     * client is at least of *getTriangleCount()* length.
+    /**
+     * Get output triangles.
+     * This method assumes that the `out` param provided by the client is at least of
+     * getTriangleCount() length. If the client calls getTriangles() and triangles were not
+     * provided as input, we will throw and exception.
      *
-     * If the chosen algorithm did not remesh the input, the client is advised to just use the
-     * indices they provided instead of querying.  For example, if the chosen method is FRISVAD,
-     * then calling *getTriangles()* will be simply copying from the input *triangles*.
-     *
-     * If the client calls getTriangles() and triangles were not provided as input, we will throw
-     * and exception.
+     * @param out Client's array for the output triangles in unsigned 32-bit indices.
      */
     void getTriangles(filament::math::uint3* out) const;
+
+    /**
+     * Get output triangles.
+     * This method assumes that the `out` param provided by the client is at least of
+     * getTriangleCount() length. If the client calls getTriangles() and triangles were not
+     * provided as input, we will throw and exception.
+     *
+     * @param out Client's array for the output triangles in unsigned 16-bit indices.
+     */
     void getTriangles(filament::math::ushort3* out) const;
+
+    /**
+     * @return The algorithm used to compute the output mesh.
+     */
+    Algorithm getAlgorithm() const;
 
 private:
     TangentSpaceMesh() noexcept;
