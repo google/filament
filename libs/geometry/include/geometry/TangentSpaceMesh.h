@@ -43,7 +43,7 @@ struct TangentSpaceMeshOutput;
  *
  * This class supersedes the implementation in SurfaceOrientation.h
  */
-class UTILS_PUBLIC TangentSpaceMesh {
+class TangentSpaceMesh {
 public:
     enum class Algorithm : uint8_t {
         /**
