@@ -16,6 +16,8 @@
 
 #include "details/SwapChain.h"
 
+#include "details/Engine.h"
+
 namespace filament {
 
 void* SwapChain::getNativeWindow() const noexcept {
@@ -28,6 +30,10 @@ void SwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, void*
 
 void SwapChain::setFrameCompletedCallback(FrameCompletedCallback callback, void* user) {
     return downcast(this)->setFrameCompletedCallback(callback, user);
+}
+
+bool SwapChain::isSRGBSwapChainSupported(Engine& engine) noexcept {
+    return FSwapChain::isSRGBSwapChainSupported(downcast(engine));
 }
 
 } // namespace filament

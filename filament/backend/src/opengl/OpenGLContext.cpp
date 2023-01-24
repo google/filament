@@ -328,6 +328,12 @@ void OpenGLContext::setDefaultState() noexcept {
         }
     }
 
+#if BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL
+    // we enable GL_FRAMEBUFFER_SRGB to match GLES. This enables sRGB conversion when the
+    // framebuffer has an sRGB attachment. GLES doesn't have an enable for this by default.
+    glEnable(GL_FRAMEBUFFER_SRGB);
+#endif
+
     // Point sprite size and seamless cubemap filtering are disabled by default in desktop GL.
     // In OpenGL ES, these flags do not exist because they are always on.
 #if BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL
