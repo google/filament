@@ -9,6 +9,7 @@ A new header is inserted each time a *tag* is created.
 
 - vulkan: fix memory leak in readPixels
 - engine: added support for draw-commands channels (stronger ordering of commands/renderables)
+- engine: added support for sRGB swapchains. See `SwapChain.h`
 
 ## v1.31.1
 

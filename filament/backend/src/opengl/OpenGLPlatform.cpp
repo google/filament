@@ -27,6 +27,10 @@ Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform,
 
 OpenGLPlatform::~OpenGLPlatform() noexcept = default;
 
+bool OpenGLPlatform::isSRGBSwapChainSupported() const noexcept {
+    return false;
+}
+
 uint32_t OpenGLPlatform::createDefaultRenderTarget() noexcept {
     return 0;
 }
