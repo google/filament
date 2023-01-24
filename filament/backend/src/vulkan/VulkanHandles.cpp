@@ -18,7 +18,8 @@
 
 #include "VulkanConstants.h"
 #include "VulkanMemory.h"
-#include "VulkanPlatform.h"
+
+#include <backend/platforms/VulkanPlatform.h>
 
 #include <utils/Panic.h>
 

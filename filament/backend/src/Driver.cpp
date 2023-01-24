@@ -14,21 +14,20 @@
  * limitations under the License.
  */
 
-#include "private/backend/Driver.h"
+#include "DriverBase.h"
 
-#include "private/backend/AcquiredImage.h"
+#include "private/backend/Driver.h"
 #include "private/backend/CommandStream.h"
 
-#include "DriverBase.h"
+#include <backend/AcquiredImage.h>
+#include <backend/BufferDescriptor.h>
+
+#include <utils/Systrace.h>
 
 #include <math/half.h>
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
-
-#include <backend/BufferDescriptor.h>
-
-#include <utils/Systrace.h>
 
 using namespace utils;
 using namespace filament::math;

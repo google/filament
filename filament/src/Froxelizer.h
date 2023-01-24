@@ -195,8 +195,20 @@ private:
             utils::Slice<RecordBufferType> const& lightList,
             const FScene::LightSoa& lightData, size_t lightRecordsOffset) noexcept;
 
+    static void updateBoundingSpheres(
+            math::float4* UTILS_RESTRICT boundingSpheres,
+            size_t froxelCountX, size_t froxelCountY, size_t froxelCountZ,
+            math::float4 const* UTILS_RESTRICT planesX,
+            math::float4 const* UTILS_RESTRICT planesY,
+            float const* UTILS_RESTRICT planesZ) noexcept;
+
+    static size_t getFroxelIndex(size_t ix, size_t iy, size_t iz,
+            size_t froxelCountX, size_t froxelCountY) noexcept {
+        return ix + (iy * froxelCountX) + (iz * froxelCountX * froxelCountY);
+    }
+
     size_t getFroxelIndex(size_t ix, size_t iy, size_t iz) const noexcept {
-        return ix + (iy * mFroxelCountX) + (iz * mFroxelCountX * mFroxelCountY);
+        return getFroxelIndex(ix, iy, iz, mFroxelCountX, mFroxelCountY);
     }
 
     size_t findSliceZ(float viewSpaceZ) const noexcept UTILS_PURE;

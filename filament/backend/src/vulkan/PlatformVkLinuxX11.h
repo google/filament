@@ -20,7 +20,7 @@
 #include <stdint.h>
 
 #include <backend/DriverEnums.h>
-#include "VulkanPlatform.h"
+#include <backend/platforms/VulkanPlatform.h>
 
 #ifdef FILAMENT_SUPPORTS_XCB
 #include <xcb/xcb.h>

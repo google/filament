@@ -27,7 +27,7 @@
 #include "MetalState.h"
 #include "MetalTimerQuery.h"
 
-#include "private/backend/MetalPlatform.h"
+#include "MetalPlatform.h"
 
 #include <CoreVideo/CVMetalTexture.h>
 #include <CoreVideo/CVPixelBuffer.h>
@@ -803,11 +803,6 @@ void MetalDriver::setupExternalImage(void* image) {
     CVPixelBufferRetain(pixelBuffer);
 }
 
-void MetalDriver::cancelExternalImage(void* image) {
-    CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
-    CVPixelBufferRelease(pixelBuffer);
-}
-
 void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {
     ASSERT_PRECONDITION(!isInRenderPass(mContext),
             "setExternalImage must be called outside of a render pass.");
@@ -1263,7 +1258,7 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
     args.source.color = srcTexture;
     args.destination.color = readPixelsTexture;
 
-    mContext->blitter->blit(getPendingCommandBuffer(mContext), args);
+    mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "readPixels blit");
 
 #if !defined(IOS)
     // Managed textures on macOS require explicit synchronization between GPU / CPU.
@@ -1347,7 +1342,7 @@ void MetalDriver::blit(TargetBufferFlags buffers,
             args.destination.level = dstColorAttachment.level;
             args.source.slice = srcColorAttachment.layer;
             args.destination.slice = dstColorAttachment.layer;
-            mContext->blitter->blit(getPendingCommandBuffer(mContext), args);
+            mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "Color blit");
         }
     }
 
@@ -1370,7 +1365,7 @@ void MetalDriver::blit(TargetBufferFlags buffers,
             args.destination.level = dstDepthAttachment.level;
             args.source.slice = srcDepthAttachment.layer;
             args.destination.slice = dstDepthAttachment.layer;
-            mContext->blitter->blit(getPendingCommandBuffer(mContext), args);
+            mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "Depth blit");
         }
     }
 }

@@ -69,6 +69,7 @@ void MetalBuffer::copyIntoBuffer(void* src, size_t size, size_t byteOffset) {
     // Encode a blit from the staging buffer into the private GPU buffer.
     id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(&mContext);
     id<MTLBlitCommandEncoder> blitEncoder = [cmdBuffer blitCommandEncoder];
+    blitEncoder.label = @"Buffer upload blit";
     [blitEncoder copyFromBuffer:staging->buffer
                    sourceOffset:0
                        toBuffer:mBuffer

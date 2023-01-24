@@ -20,17 +20,30 @@
 #include <stdint.h>
 
 #include <windows.h>
-#include <utils/unwindows.h>
+#include "utils/unwindows.h"
+
+#include <backend/platforms/OpenGLPlatform.h>
 
 #include <backend/DriverEnums.h>
 
-#include "private/backend/OpenGLPlatform.h"
-
 namespace filament::backend {
 
-class PlatformWGL final : public OpenGLPlatform {
-public:
-    Driver* createDriver(void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept override;
+/**
+ * A concrete implementation of OpenGLPlatform that supports WGL.
+ */
+class PlatformWGL : public OpenGLPlatform {
+protected:
+    // --------------------------------------------------------------------------------------------
+    // Platform Interface
+
+    Driver* createDriver(void* sharedGLContext,
+            const Platform::DriverConfig& driverConfig) noexcept override;
+
+    int getOSVersion() const noexcept final override { return 0; }
+
+    // --------------------------------------------------------------------------------------------
+    // OpenGLPlatform Interface
+
     void terminate() noexcept override;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept override;
@@ -39,21 +52,7 @@ public:
     void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept override;
     void commit(SwapChain* swapChain) noexcept override;
 
-    Fence* createFence() noexcept override;
-    void destroyFence(Fence* fence) noexcept override;
-    FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept override;
-
-    void setPresentationTime(int64_t time) noexcept final override {}
-
-    Stream* createStream(void* nativeStream) noexcept final override { return nullptr; }
-    void destroyStream(Stream* stream) noexcept final override {}
-    void attach(Stream* stream, intptr_t tname) noexcept final override {}
-    void detach(Stream* stream) noexcept final override {}
-    void updateTexImage(Stream* stream, int64_t* timestamp) noexcept final override {}
-
-    int getOSVersion() const noexcept final override { return 0; }
-
-private:
+protected:
     HGLRC mContext = NULL;
     HWND mHWnd = NULL;
     HDC mWhdc = NULL;

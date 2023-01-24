@@ -40,6 +40,8 @@
 
 #include <filament/MaterialEnums.h>
 
+#include <private/backend/PlatformFactory.h>
+
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
@@ -77,7 +79,7 @@ FEngine* FEngine::create(Backend backend, Platform* platform,
     // In the single-threaded case, we do so in the here and now.
     if (!UTILS_HAS_THREADING) {
         if (platform == nullptr) {
-            platform = DefaultPlatform::create(&instance->mBackend);
+            platform = PlatformFactory::create(&instance->mBackend);
             instance->mPlatform = platform;
             instance->mOwnPlatform = true;
         }
@@ -383,7 +385,7 @@ FEngine::~FEngine() noexcept {
     delete mResourceAllocator;
     delete mDriver;
     if (mOwnPlatform) {
-        DefaultPlatform::destroy((DefaultPlatform**)&mPlatform);
+        PlatformFactory::destroy(&mPlatform);
     }
 }
 
@@ -587,7 +589,7 @@ void FEngine::flushAndWait() {
 
 int FEngine::loop() {
     if (mPlatform == nullptr) {
-        mPlatform = DefaultPlatform::create(&mBackend);
+        mPlatform = PlatformFactory::create(&mBackend);
         mOwnPlatform = true;
         const char* const backend = backendToString(mBackend);
         slog.i << "FEngine resolved backend: " << backend << io::endl;

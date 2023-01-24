@@ -58,6 +58,9 @@
 #ifdef GL_EXT_clip_control
         extern PFNGLCLIPCONTROLEXTPROC glClipControl;
 #endif
+#if defined(__ANDROID__)
+        extern PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
+#endif
     }
 
     using namespace glext;

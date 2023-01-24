@@ -49,6 +49,12 @@ PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64v;
 PFNGLCLIPCONTROLEXTPROC glClipControl;
 #endif
 
+#if defined(__ANDROID__)
+// On Android, If we want to support a build system less than ANDROID_API 21, we need to
+// use getProcAddress for ES3.1 and above entry points.
+PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
+#endif
+
 static std::once_flag sGlExtInitialized;
 
 void importGLESExtensionsEntryPoints() {
@@ -108,6 +114,12 @@ void importGLESExtensionsEntryPoints() {
     glClipControl =
             (PFNGLCLIPCONTROLEXTPROC)eglGetProcAddress(
                     "glClipControlEXT");
+#endif
+
+#if defined(__ANDROID__)
+    glDispatchCompute =
+            (PFNGLDISPATCHCOMPUTEPROC)eglGetProcAddress(
+                    "glDispatchCompute");
 #endif
 }
 

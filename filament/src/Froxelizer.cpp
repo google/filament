@@ -152,7 +152,9 @@ void Froxelizer::setViewport(filament::Viewport const& viewport) noexcept {
     }
 }
 
-void Froxelizer::setProjection(const mat4f& projection, float near, float far) noexcept {
+void Froxelizer::setProjection(const mat4f& projection,
+        float near,
+        UTILS_UNUSED float far) noexcept {
     if (UTILS_UNLIKELY(mat4f::fuzzyEqual(mProjection, projection))) {
         mProjection = projection;
         mNear = near;
@@ -223,20 +225,20 @@ void Froxelizer::computeFroxelLayout(
 
     // calculate froxel dimension from FROXEL_BUFFER_ENTRY_COUNT_MAX and viewport
     // - Start from the maximum number of froxels we can use in the x-y plane
-    size_t froxelSliceCount = FROXEL_SLICE_COUNT;
-    size_t froxelPlaneCount = FROXEL_BUFFER_ENTRY_COUNT / froxelSliceCount;
+    size_t const froxelSliceCount = FROXEL_SLICE_COUNT;
+    size_t const froxelPlaneCount = FROXEL_BUFFER_ENTRY_COUNT / froxelSliceCount;
     // - compute the number of square froxels we need in width and height, rounded down
     //   solving: |  froxelCountX * froxelCountY == froxelPlaneCount
     //            |  froxelCountX / froxelCountY == width / height
     size_t froxelCountX = size_t(std::sqrt(froxelPlaneCount * width  / height));
     size_t froxelCountY = size_t(std::sqrt(froxelPlaneCount * height / width));
     // - compute the froxels dimensions, rounded up
-    size_t froxelSizeX = (width  + froxelCountX - 1) / froxelCountX;
-    size_t froxelSizeY = (height + froxelCountY - 1) / froxelCountY;
+    size_t const froxelSizeX = (width  + froxelCountX - 1) / froxelCountX;
+    size_t const froxelSizeY = (height + froxelCountY - 1) / froxelCountY;
     // - and since our froxels must be square, only keep the largest dimension
 
     //  make sure we're at lease multiple of 8 to improve performance in the shader
-    size_t froxelDimension = roundTo8((roundTo8(froxelSizeX) >= froxelSizeY) ? froxelSizeX : froxelSizeY);
+    size_t const froxelDimension = roundTo8((roundTo8(froxelSizeX) >= froxelSizeY) ? froxelSizeX : froxelSizeY);
 
     // Here we recompute the froxel counts which may have changed a little due to the rounding
     // and the squareness requirement of froxels
@@ -251,6 +253,66 @@ void Froxelizer::computeFroxelLayout(
     *countX = uint16_t(froxelCountX);
     *countY = uint16_t(froxelCountY);
     *countZ = uint16_t(froxelSliceCount);
+}
+
+UTILS_NOINLINE
+void Froxelizer::updateBoundingSpheres(
+        math::float4* const UTILS_RESTRICT boundingSpheres,
+        size_t froxelCountX, size_t froxelCountY, size_t froxelCountZ,
+        math::float4 const* UTILS_RESTRICT planesX,
+        math::float4 const* UTILS_RESTRICT planesY,
+        float const* UTILS_RESTRICT planesZ) noexcept {
+
+    SYSTRACE_CALL();
+
+    // TODO: this could potentially be parallel_for'ized
+
+    /*
+     * Now compute the bounding sphere of each froxel, which is needed for spotlights
+     * We intersect 3 planes of the frustum to find each 8 corners.
+     */
+
+    UTILS_ASSUME(froxelCountX > 0);
+    UTILS_ASSUME(froxelCountY > 0);
+
+    for (size_t iz = 0, fi = 0, nz = froxelCountZ; iz < nz; ++iz) {
+        float4 planes[6];
+        planes[4] =  float4{ 0, 0, 1, planesZ[iz + 0] };
+        planes[5] = -float4{ 0, 0, 1, planesZ[iz + 1] };
+        for (size_t iy = 0, ny = froxelCountY; iy < ny; ++iy) {
+            planes[2] =  planesY[iy];
+            planes[3] = -planesY[iy + 1];
+            for (size_t ix = 0, nx = froxelCountX; ix < nx; ++ix) {
+                planes[0] =  planesX[ix];
+                planes[1] = -planesX[ix + 1];
+
+                float3 const p0 = planeIntersection(planes[0], planes[2], planes[4]);
+                float3 const p1 = planeIntersection(planes[1], planes[2], planes[4]);
+                float3 const p2 = planeIntersection(planes[0], planes[3], planes[4]);
+                float3 const p3 = planeIntersection(planes[1], planes[3], planes[4]);
+                float3 const p4 = planeIntersection(planes[0], planes[2], planes[5]);
+                float3 const p5 = planeIntersection(planes[1], planes[2], planes[5]);
+                float3 const p6 = planeIntersection(planes[0], planes[3], planes[5]);
+                float3 const p7 = planeIntersection(planes[1], planes[3], planes[5]);
+
+                float3 const c = (p0 + p1 + p2 + p3 + p4 + p5 + p6 + p7) * 0.125f;
+
+                float const d0 = length2(p0 - c);
+                float const d1 = length2(p1 - c);
+                float const d2 = length2(p2 - c);
+                float const d3 = length2(p3 - c);
+                float const d4 = length2(p4 - c);
+                float const d5 = length2(p5 - c);
+                float const d6 = length2(p6 - c);
+                float const d7 = length2(p7 - c);
+
+                float const r = std::sqrt(std::max({ d0, d1, d2, d3, d4, d5, d6, d7 }));
+
+                assert_invariant(getFroxelIndex(ix, iy, iz, froxelCountX, froxelCountY) == fi);
+                boundingSpheres[fi++] = { c, r };
+            }
+        }
+    }
 }
 
 UTILS_NOINLINE
@@ -287,11 +349,6 @@ bool Froxelizer::update() noexcept {
         if (mDistancesZ) {
             // this is a LinearAllocator arena, use rewind() instead of free (which is a no op).
             mArena.rewind(mDistancesZ);
-
-            mBoundingSpheres = nullptr;
-            mPlanesY = nullptr;
-            mPlanesX = nullptr;
-            mDistancesZ = nullptr;
         }
 
         mDistancesZ      = mArena.alloc<float>(froxelCountZ + 1);
@@ -335,115 +392,37 @@ bool Froxelizer::update() noexcept {
         assert_invariant(mBoundingSpheres);
 
         // clip-space dimensions
-        const float froxelWidthInClipSpace  = (2.0f * mFroxelDimension.x) / mViewport.width;
-        const float froxelHeightInClipSpace = (2.0f * mFroxelDimension.y) / mViewport.height;
+        const float froxelWidthInClipSpace  = float(2 * mFroxelDimension.x) / float(mViewport.width);
+        const float froxelHeightInClipSpace = float(2 * mFroxelDimension.y) / float(mViewport.height);
         float4 * const UTILS_RESTRICT planesX = mPlanesX;
         float4 * const UTILS_RESTRICT planesY = mPlanesY;
 
-        // Planes are transformed from clip to camera space by using the transpose of the
-        // projection matrix
+        // Planes are transformed by the inverse-transpose of the transform matrix.
+        // So to transform a plane in clip-space to view-space, we need to apply
+        // the transpose(inverse(viewFromClipMatrix)), i.e.: transpose(projection)
         const mat4f trProjection(transpose(mProjection));
 
         // generate the horizontal planes from their clip-space equation
         for (size_t i = 0, n = mFroxelCountX; i <= n; ++i) {
-            float x = (i * froxelWidthInClipSpace) - 1.0f;
-            float4 p = trProjection * float4{ -1, 0, 0, x };
-            planesX[i] = float4{ normalize(p.xyz), 0 };
+            float const x = (float(i) * froxelWidthInClipSpace) - 1.0f;
+            float4 const p = trProjection * float4{ -1, 0, 0, x };
+            planesX[i] = float4{ normalize(p.xyz), 0 };  // p.w is guaranteed to be 0
         }
 
         // generate the vertical planes from their clip-space equation
         for (size_t i = 0, n = mFroxelCountY; i <= n; ++i) {
-            float y = (i * froxelHeightInClipSpace) - 1.0f;
-            float4 p = trProjection * float4{ 0, 1, 0, -y };
-            planesY[i] = float4{ normalize(p.xyz), 0 };
+            float const y = (float(i) * froxelHeightInClipSpace) - 1.0f;
+            float4 const p = trProjection * float4{ 0, 1, 0, -y };
+            planesY[i] = float4{ normalize(p.xyz), 0 };  // p.w is guaranteed to be 0
         }
 
+        updateBoundingSpheres(mBoundingSpheres,
+                mFroxelCountX, mFroxelCountY, mFroxelCountZ,
+                planesX, planesY, mDistancesZ);
 
-        /*
-         * Now compute the bounding sphere of each froxel, which is needed for spotlights
-         * We intersect 3 planes of the frustum to find each 8 corners.
-         * Currently the bounding sphere is computed from the bounding-box, which is probably,
-         * not the best.
-         */
-
-        // 3-planes intersection:
-        //      -d0.(n1 x n2) - d1.(n2 x n0) - d2.(n0 x n1)
-        // P = ---------------------------------------------
-        //                      n0.(n1 x n2)
-
-        // use stack memory here, it's only 16 KiB max
-        assert_invariant(mFroxelCountX <= 2048);
-        typename std::aligned_storage<sizeof(float2), alignof(float2)>::type stack[2048];
-        float2* const UTILS_RESTRICT minMaxX = reinterpret_cast<float2*>(stack);
-
-        float4* const        UTILS_RESTRICT boundingSpheres = mBoundingSpheres;
-        float   const* const UTILS_RESTRICT planesZ = mDistancesZ;
-        const size_t froxelCountX = mFroxelCountX;
-        const size_t froxelCountY = mFroxelCountY;
-        UTILS_ASSUME(froxelCountX > 0);
-        UTILS_ASSUME(froxelCountY > 0);
-
-        for (size_t iz = 0, fi = 0, nz = mFroxelCountZ; iz < nz; ++iz) {
-            float4 planes[6];
-            float3 minp;
-            float3 maxp;
-
-            // near/far planes for all froxels at iz
-            planes[4] =  float4{ 0, 0, 1, planesZ[iz + 0] };
-            planes[5] = -float4{ 0, 0, 1, planesZ[iz + 1] };
-
-            // min/max for z is calculated trivially because near/far planes are parallel to
-            // the camera.
-            minp.z = -planesZ[iz+1];
-            maxp.z = -planesZ[iz];
-            assert_invariant(minp.z <= maxp.z);
-
-            for (size_t ix = 0, nx = froxelCountX; ix < nx; ++ix) {
-                // left, right planes for all froxels at ix
-                planes[0] =  planesX[ix];
-                planes[1] = -planesX[ix + 1];
-                minp.x = std::numeric_limits<float>::max();
-                maxp.x = std::numeric_limits<float>::lowest();
-                // min/max for x is calculated by intersecting the near/far and left/right planes
-                for (size_t c = 0; c < 4; ++c) {
-                    float4 const p0 = planes[0 + (c  & 1u)];    // {x,0,z,0}
-                    float4 const p2 = planes[4 + (c >> 1u)];    // {0,0,+/-1,d}
-                    float px = (p2.z * p2.w * p0.z) / p0.x;
-                    minp.x = std::min(minp.x, px);
-                    maxp.x = std::max(maxp.x, px);
-                }
-                assert_invariant(minp.x <= maxp.x);
-                minMaxX[ix] = float2{ minp.x, maxp.x };
-            }
-
-            for (size_t iy = 0, ny = froxelCountY; iy < ny; ++iy) {
-                // bottom, top planes for all froxels at iy
-                planes[2] =  planesY[iy];
-                planes[3] = -planesY[iy + 1];
-                minp.y = std::numeric_limits<float>::max();
-                maxp.y = std::numeric_limits<float>::lowest();
-                // min/max for y is calculated by intersecting the near/far and bottom/top planes
-                for (size_t c = 0; c < 4; ++c) {
-                    float4 const p1 = planes[2 + (c &  1u)];    // {0,y,z,0}
-                    float4 const p2 = planes[4 + (c >> 1u)];    // {0,0,+/-1,d}
-                    float py = (p2.z * p2.w * p1.z) / p1.y;
-                    minp.y = std::min(minp.y, py);
-                    maxp.y = std::max(maxp.y, py);
-                }
-                assert_invariant(minp.y <= maxp.y);
-
-                for (size_t ix = 0, nx = froxelCountX; ix < nx; ++ix) {
-                    // note: clang vectorizes this loop!
-                    assert_invariant(getFroxelIndex(ix, iy, iz) == fi);
-                    minp.x = minMaxX[ix][0];
-                    maxp.x = minMaxX[ix][1];
-                    boundingSpheres[fi++] = { (maxp + minp) * 0.5f, length((maxp - minp) * 0.5f) };
-                }
-            }
-        }
-
-        float Pz = mProjection[2][2];
-        float Pw = mProjection[3][2];
+        // note: none of the values below are affected by the projection offset, scale or rotation.
+        float const Pz = mProjection[2][2];
+        float const Pw = mProjection[3][2];
         if (mProjection[2][3] != 0) {
             // With our inverted DX convention, we have the simple relation:
             // z_view = -near / z_screen
@@ -493,13 +472,13 @@ size_t Froxelizer::findSliceZ(float z) const noexcept {
 
     // This whole function is now branch-less.
 
-    int s = int( fast::log2(-z / mZLightFar) * mLinearizer + mFroxelCountZ );
+    int s = int( fast::log2(-z / mZLightFar) * mLinearizer + float(mFroxelCountZ) );
 
     // there are cases where z can be negative here, e.g.:
     // - the light is visible, but its center is behind the camera
     // - the camera's near is behind the camera (e.g. with shadowmap cameras)
     // in that case just return the first slice
-    s = z<0 ? s : 0;
+    s = z < 0 ? s : 0;
 
     // clamp between [0, mFroxelCountZ)
     return size_t(clamp(s, 0, mFroxelCountZ - 1));
@@ -548,12 +527,12 @@ void Froxelizer::froxelizeLights(FEngine& engine,
         gpuFroxelEntries.set(gpuFroxelEntries.begin(),
                 mFroxelCountX * mFroxelCountY * mFroxelCountZ);
         for (auto const& entry : gpuFroxelEntries) {
-            // go through every lights for that froxel
+            // go through every light for that froxel
             for (size_t i = 0; i < entry.count; i++) {
                 // get the light index
                 assert_invariant(entry.offset + i < RECORD_BUFFER_ENTRY_COUNT);
 
-                size_t lightIndex = recordBufferUser[entry.offset + i];
+                size_t const lightIndex = recordBufferUser[entry.offset + i];
                 assert_invariant(lightIndex <= CONFIG_MAX_LIGHT_INDEX);
 
                 // make sure it corresponds to an existing light
@@ -591,7 +570,7 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
 
         for (size_t i = offset; i < count; i += stride) {
             const size_t j = i + FScene::DIRECTIONAL_LIGHTS_COUNT;
-            FLightManager::Instance li = instances[j];
+            FLightManager::Instance const li = instances[j];
             LightParams light = {
                     .position = (viewMatrix * float4{ spheres[j].xyz, 1 }).xyz,     // to view-space
                     .cosSqr = std::min(maxCosSquared, lcm.getCosOuterSquared(li)),  // spot only
@@ -599,7 +578,7 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
                     .invSin = lcm.getSinInverse(li),                                // spot only
                     .radius = spheres[j].w,
             };
-            // infinity means "pointlight"
+            // infinity means "point-light"
             if (light.invSin != std::numeric_limits<float>::infinity()) {
                 light.invSin = std::min(maxInvSin, light.invSin);
             }
@@ -677,7 +656,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
         const size_t bit  = l % LIGHT_PER_GROUP;
         l = (bit * GROUP_COUNT) | (word % GROUP_COUNT);
         *point = (RecordBufferType)l;
-        // we need to "cancel" the write if we have more than 255 spot or point lights
+        // we need to "cancel" the write operation if we have more than 255 spot or point lights
         // (this is a limitation of the data type used to store the light counts per froxel)
         point += (point - froxelRecords < 255) ? 1 : 0;
     });
@@ -723,7 +702,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
             const size_t bit  = l % LIGHT_PER_GROUP;
             l = (bit * GROUP_COUNT) | (word % GROUP_COUNT);
             *point = (RecordBufferType)l;
-            // we need to "cancel" the write if we have more than 255 spot or point lights
+            // we need to "cancel" the write operation if we have more than 255 spot or point lights
             // (this is a limitation of the data type used to store the light counts per froxel)
             point += (point - beginPoint < 255) ? 1 : 0;
         });
@@ -758,22 +737,10 @@ static inline float2 project(mat4f const& p, float3 const& v) noexcept {
     const float vx = v[0];
     const float vy = v[1];
     const float vz = v[2];
-
-#ifdef DEBUG_PROJECTION
-    const float x = p[0].x*vx + p[1].x*vy + p[2].x*vz + p[3].x;
-    const float y = p[0].y*vx + p[1].y*vy + p[2].y*vz + p[3].y;
-    const float w = p[0].w*vx + p[1].w*vy + p[2].w*vz + p[3].w;
-#else
-    // We know we're using a projection matrix (which has a bunch of zeros)
-    // But we need to handle asymmetric frustums and orthographic projections.
-    //       orthographic ------------------------+
-    //  asymmetric frustum ---------+             |
-    //                              v             v
-    const float x = p[0].x * vx + p[2].x * vz + p[3].x;
-    const float y = p[1].y * vy + p[2].y * vz + p[3].y;
-    const float w = p[2].w * vz               + p[3].w;
-#endif
-    return float2{ x, y } * (1 / w);
+    const float x = p[0].x * vx + p[1].x * vy + p[2].x * vz + p[3].x;
+    const float y = p[0].y * vx + p[1].y * vy + p[2].y * vz + p[3].y;
+    const float w = p[0].w * vx + p[1].w * vy + p[2].w * vz + p[3].w;
+    return float2{ x, y } * (1.0f / w);
 }
 
 void Froxelizer::froxelizePointAndSpotLight(
@@ -793,40 +760,46 @@ void Froxelizer::froxelizePointAndSpotLight(
 
 #ifdef DEBUG_FROXEL
     const size_t x0 = 0;
-    const size_t x1 = mFroxelCountX;
+    const size_t x1 = mFroxelCountX - 1;
     const size_t y0 = 0;
     const size_t y1 = mFroxelCountY - 1;
     const size_t z0 = 0;
     const size_t z1 = mFroxelCountZ - 1;
 #else
     // find a reasonable bounding-box in froxel space for the sphere by projecting
-    // it's (clipped) bounding-box to clip-space and converting to froxel indices.
-    Box aabb = { light.position, light.radius };
+    // its (clipped) bounding-box to clip-space and converting to froxel indices.
+    Box const aabb = { light.position, light.radius };
     const float znear = std::min(-mNear, aabb.center.z + aabb.halfExtent.z); // z values are negative
     const float zfar  =                  aabb.center.z - aabb.halfExtent.z;
 
-    float2 xyLeftNear  = project(p, { aabb.center.xy - aabb.halfExtent.xy, znear });
-    float2 xyLeftFar   = project(p, { aabb.center.xy - aabb.halfExtent.xy, zfar  });
-    float2 xyRightNear = project(p, { aabb.center.xy + aabb.halfExtent.xy, znear });
-    float2 xyRightFar  = project(p, { aabb.center.xy + aabb.halfExtent.xy, zfar  });
+    // TODO: we need to investigate if doing all this actually saves time
+    //       e.g.: we could only do the z-min/max which is much easier to compute.
 
-    // handle inverted frustums (e.g. x or y symmetries)
-    if (xyLeftNear.x > xyRightNear.x)   std::swap(xyLeftNear.x, xyRightNear.x);
-    if (xyLeftNear.y > xyRightNear.y)   std::swap(xyLeftNear.y, xyRightNear.y);
-    if (xyLeftFar.x  > xyRightFar.x)    std::swap(xyLeftFar.x, xyRightFar.x);
-    if (xyLeftFar.y  > xyRightFar.y)    std::swap(xyLeftFar.y, xyRightFar.y);
+    const float2 pts[8] = {
+        project(p, { aabb.center.xy + aabb.halfExtent.xy * float2{ 1, 1 }, znear }),
+        project(p, { aabb.center.xy + aabb.halfExtent.xy * float2{ 1,-1 }, znear }),
+        project(p, { aabb.center.xy + aabb.halfExtent.xy * float2{-1, 1 }, znear }),
+        project(p, { aabb.center.xy + aabb.halfExtent.xy * float2{-1,-1 }, znear }),
+        project(p, { aabb.center.xy + aabb.halfExtent.xy * float2{ 1, 1 }, zfar  }),
+        project(p, { aabb.center.xy + aabb.halfExtent.xy * float2{ 1,-1 }, zfar  }),
+        project(p, { aabb.center.xy + aabb.halfExtent.xy * float2{-1, 1 }, zfar  }),
+        project(p, { aabb.center.xy + aabb.halfExtent.xy * float2{-1,-1 }, zfar  }),
+    };
 
-    const auto imin = clipToIndices(min(xyLeftNear, xyLeftFar));
-    const size_t x0 = imin.first;
-    const size_t y0 = imin.second;
+    float2 pmin = std::numeric_limits<float>::max();
+    float2 pmax = 0;
+    for (auto pt: pts) {
+        pmin = min(pmin, pt);
+        pmax = max(pmax, pt);
+    }
+
+    const auto [x0, y0] = clipToIndices(pmin);
     const size_t z0 = findSliceZ(znear);
 
-    const auto imax = clipToIndices(max(xyRightNear, xyRightFar));
-    const size_t x1 = imax.first  + 1;  // x1 points to 1 past the last value (like end() does
-    const size_t y1 = imax.second;      // y1 points to the last value
-    const size_t z1 = findSliceZ(zfar); // z1 points to the last value
+    const auto [x1, y1] = clipToIndices(pmax);
+    const size_t z1 = findSliceZ(zfar);
 
-    assert_invariant(x0 < x1);
+    assert_invariant(x0 <= x1);
     assert_invariant(y0 <= y1);
     assert_invariant(z0 <= z1);
 #endif
@@ -838,43 +811,41 @@ void Froxelizer::froxelizePointAndSpotLight(
     float4 const * const UTILS_RESTRICT boundingSpheres = mBoundingSpheres;
     for (size_t iz = z0 ; iz <= z1; ++iz) {
         float4 cz(s);
-        // froxel that contain the center if ths sphere is special, we don't even need to do the
+        // froxel that contain the center of the sphere is special, we don't even need to do the
         // intersection check, it's always true.
         if (UTILS_LIKELY(iz != zcenter)) {
             cz = spherePlaneIntersection(s, (iz < zcenter) ? planesZ[iz + 1] : planesZ[iz]);
         }
 
         if (cz.w > 0) { // intersection of light with this plane (slice)
-            // the sphere (light) intersects this slice's plane and we now have a new, smaller
+            // the sphere (light) intersects this slice's plane, and we now have a new smaller
             // sphere centered there. Now, find x & y slices that contain the sphere's center
             // (note: this changes with the Z slices)
             const float2 clip = project(p, cz.xyz);
-            const auto indices = clipToIndices(clip);
-            const size_t xcenter = indices.first;
-            const size_t ycenter = indices.second;
+            auto const [xcenter, ycenter] = clipToIndices(clip);
 
             for (size_t iy = y0; iy <= y1; ++iy) {
                 float4 cy(cz);
-                // froxel that contain the center if ths sphere is special, we don't even need to
+                // froxel that contain the center of the sphere is special, we don't even need to
                 // do the intersection check, it's always true.
                 if (UTILS_LIKELY(iy != ycenter)) {
                     float4 const& plane = iy < ycenter ? planesY[iy + 1] : planesY[iy];
-                    cy = spherePlaneIntersection(cz, plane.y, plane.z);
+                    cy = spherePlaneIntersection(cz, plane);
                 }
 
                 if (cy.w > 0) {
-                    // The reduced sphere from the previous stage intersects this horizontal plane
+                    // The reduced sphere from the previous stage intersects this horizontal plane,
                     // and we now have new smaller sphere centered on these two previous planes
                     size_t bx = std::numeric_limits<size_t>::max(); // horizontal begin index
                     size_t ex = 0; // horizontal end index
 
-                    // find the begin index (left side)
-                    for (size_t ix = x0; ix < x1; ++ix) {
+                    // find the "begin" index (left side)
+                    for (size_t ix = x0; ix < x1 + 1; ++ix) {
                         // The froxel that contains the center of the sphere is special,
                         // we don't even need to do the intersection check, it's always true.
                         if (UTILS_LIKELY(ix != xcenter)) {
                             float4 const& plane = ix < xcenter ? planesX[ix + 1] : planesX[ix];
-                            if (spherePlaneDistanceSquared(cy, plane.x, plane.z) > 0) {
+                            if (spherePlaneIntersection(cy, plane).w > 0) {
                                 // The reduced sphere from the previous stage intersects this
                                 // vertical plane, we record the min/max froxel indices
                                 bx = std::min(bx, ix);
@@ -902,7 +873,7 @@ void Froxelizer::froxelizePointAndSpotLight(
                         // this loops gets vectorized (on arm64) w/ clang
                         while (bx++ != ex) {
                             // see if this froxel intersects the cone
-                            bool intersect = sphereConeIntersectionFast(boundingSpheres[fi],
+                            bool const intersect = sphereConeIntersectionFast(boundingSpheres[fi],
                                     light.position, light.axis, light.invSin, light.cosSqr);
                             froxelThread[fi++] |= LightGroupType(intersect) << bit;
                         }

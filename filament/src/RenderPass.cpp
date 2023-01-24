@@ -210,7 +210,7 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
     // sorting key (e.g. raster state, primitive handle, etc...), the key could even use a small
     // hash of those parameters.
 
-    UTILS_UNUSED_IN_RELEASE uint32_t drawCallsSavedCount = 0;
+    UTILS_UNUSED uint32_t drawCallsSavedCount = 0;
 
     Command* curr = mCommandBegin;
     Command* const last = mCommandEnd;
@@ -227,7 +227,7 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
     while (curr != last) {
 
         // we can't have nice things! No more than maxInstanceCount due to UBO size limits
-        Command const* const e = std::find_if_not(curr, std::min(last, last + maxInstanceCount),
+        Command const* const e = std::find_if_not(curr, std::min(last, curr + maxInstanceCount),
                 [lhs = *curr](Command const& rhs) {
             // primitives must be identical to be instanced. Currently, instancing doesn't support
             // skinning/morphing.
@@ -240,8 +240,9 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
                     lhs.primitive.morphTargetBuffer == rhs.primitive.morphTargetBuffer;
         });
 
-        uint32_t instanceCount = e - curr;
+        uint32_t const instanceCount = e - curr;
         assert_invariant(instanceCount > 0);
+        assert_invariant(instanceCount <= CONFIG_MAX_INSTANCES);
 
         if (UTILS_UNLIKELY(instanceCount > 1)) {
             drawCallsSavedCount += instanceCount - 1;
@@ -279,11 +280,8 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
     }
 
     if (UTILS_UNLIKELY(firstSentinel)) {
-#ifndef NDEBUG
-        // TODO: remove this eventually
-        slog.d << "auto-instancing, saving " << drawCallsSavedCount << " draw calls, out of "
-               << mCommandEnd - mCommandBegin << io::endl;
-#endif
+        //slog.d << "auto-instancing, saving " << drawCallsSavedCount << " draw calls, out of "
+        //       << mCommandEnd - mCommandBegin << io::endl;
 
         // we have instanced primitives
         DriverApi& driver = engine.getDriverApi();
@@ -297,7 +295,7 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
         // copy our instanced ubo data
         driver.updateBufferObjectUnsynchronized(mInstancedUboHandle, {
                 stagingBuffer, sizeof(PerRenderableData) * instancedPrimitiveOffset,
-                +[](void* buffer, size_t size, void* user) {
+                +[](void* buffer, size_t, void*) {
                     ::free(buffer);
                 }
         }, 0);

@@ -268,7 +268,9 @@ OpenGLContext::OpenGLContext() noexcept {
     }
 #endif
 
-#if !defined(NDEBUG) && defined(GL_KHR_debug)
+    // in practice KHR_Debug has never been useful, and actually is confusing. We keep this
+    // only for our own debugging, in case we need it some day.
+#if false && !defined(NDEBUG) && defined(GL_KHR_debug)
     if (ext.KHR_debug) {
         auto cb = +[](GLenum, GLenum type, GLuint, GLenum severity, GLsizei length,
                 const GLchar* message, const void *) {

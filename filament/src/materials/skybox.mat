@@ -54,8 +54,6 @@ fragment {
 
 vertex {
     void materialVertex(inout MaterialVertexInputs material) {
-        float3 p = getPosition().xyz;
-        float3 unprojected = mulMat4x4Float3(getViewFromClipMatrix(), p).xyz;
-        material.eyeDirection.xyz = mulMat3x3Float3(getWorldFromViewMatrix(), unprojected);
+        material.eyeDirection.xyz = material.worldPosition.xyz;
     }
 }
