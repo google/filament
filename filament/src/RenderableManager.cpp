@@ -52,6 +52,10 @@ void RenderableManager::setPriority(Instance instance, uint8_t priority) noexcep
     downcast(this)->setPriority(instance, priority);
 }
 
+void RenderableManager::setChannel(Instance instance, uint8_t channel) noexcept{
+    downcast(this)->setChannel(instance, channel);
+}
+
 void RenderableManager::setCulling(Instance instance, bool enable) noexcept {
     downcast(this)->setCulling(instance, enable);
 }
