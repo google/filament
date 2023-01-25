@@ -443,7 +443,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             .direction({0.6, -1, -0.8})
             .castShadows(true)
             .build(*engine, g_light);
-    //scene->addEntity(g_light);
+    scene->addEntity(g_light);
 }
 
 int main(int argc, char* argv[]) {
