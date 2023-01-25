@@ -23,7 +23,8 @@
 #include "VulkanDriverFactory.h"
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
-#include "VulkanPlatform.h"
+
+#include <backend/platforms/VulkanPlatform.h>
 
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
@@ -743,9 +744,6 @@ void VulkanDriver::update3DImage(
 void VulkanDriver::setupExternalImage(void* image) {
 }
 
-void VulkanDriver::cancelExternalImage(void* image) {
-}
-
 bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     VulkanTimerQuery* vtq = handle_cast<VulkanTimerQuery*>(tqh);
 
@@ -1455,11 +1453,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     }
 
     vkUnmapMemory(device, stagingMemory);
-
-    mDisposer.createDisposable((void*)stagingImage, [=] () {
-        vkDestroyImage(device, stagingImage, nullptr);
-        vkFreeMemory(device, stagingMemory, nullptr);
-    });
+    vkDestroyImage(device, stagingImage, nullptr);
+    vkFreeMemory(device, stagingMemory, nullptr);
 
     scheduleDestroy(std::move(pbd));
 }

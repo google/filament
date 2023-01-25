@@ -71,7 +71,6 @@ set(SRCS
         src/Profiler.cpp
         src/sstream.cpp
         src/string.cpp
-        src/Systrace.cpp
         src/ThreadUtils.cpp
 )
 
@@ -80,6 +79,7 @@ if (WIN32)
 endif()
 if (ANDROID)
     list(APPEND SRCS src/android/ThermalManager.cpp)
+    list(APPEND SRCS src/android/Systrace.cpp)
 endif()
 if (LINUX OR ANDROID)
     list(APPEND SRCS src/linux/Condition.cpp)
@@ -88,6 +88,7 @@ if (LINUX OR ANDROID)
 endif()
 if (APPLE)
     list(APPEND SRCS src/darwin/Path.mm)
+    list(APPEND SRCS src/darwin/Systrace.cpp)
 endif()
 
 # ==================================================================================================

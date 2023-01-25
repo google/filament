@@ -16,6 +16,8 @@
 
 #include <gtest/gtest.h>
 
+#include <private/backend/PlatformFactory.h>
+
 #include "BackendTest.h"
 
 #include <utils/Hash.h>
@@ -65,9 +67,9 @@ BackendTest::~BackendTest() {
 
 void BackendTest::initializeDriver() {
     auto backend = static_cast<filament::backend::Backend>(sBackend);
-    DefaultPlatform* platform = DefaultPlatform::create(&backend);
+    Platform* platform = PlatformFactory::create(&backend);
     assert_invariant(static_cast<uint8_t>(backend) == static_cast<uint8_t>(sBackend));
-    Platform::DriverConfig driverConfig;
+    Platform::DriverConfig const driverConfig;
     driver = platform->createDriver(nullptr, driverConfig);
     commandStream = std::make_unique<CommandStream>(*driver, commandBufferQueue.getCircularBuffer());
 }

@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_BACKEND_VULKANPLATFORM_H
-#define TNT_FILAMENT_BACKEND_VULKANPLATFORM_H
+#ifndef TNT_FILAMENT_BACKEND_PLATFORMS_VULKANPLATFORM_H
+#define TNT_FILAMENT_BACKEND_PLATFORMS_VULKANPLATFORM_H
 
 #include <backend/Platform.h>
 
 namespace filament::backend {
 
-class VulkanPlatform : public DefaultPlatform {
+/**
+ * A Platform interface that creates a Vulkan backend.
+ */
+
+class VulkanPlatform : public Platform {
 public:
     // Given a Vulkan instance and native window handle, creates the platform-specific surface.
     virtual void* createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept = 0;
@@ -31,4 +35,4 @@ public:
 
 } // namespace filament::backend
 
-#endif //TNT_FILAMENT_BACKEND_VULKANPLATFORM_H
+#endif //TNT_FILAMENT_BACKEND_PLATFORMS_VULKANPLATFORM_H

@@ -19,21 +19,32 @@
 
 #include <stdint.h>
 
-#include <bluegl/BlueGL.h>
+#include "bluegl/BlueGL.h"
 #include <GL/glx.h>
 
-#include <backend/DriverEnums.h>
+#include <backend/platforms/OpenGLPlatform.h>
 
-#include "private/backend/OpenGLPlatform.h"
+#include <backend/DriverEnums.h>
 
 #include <vector>
 
 namespace filament::backend {
 
-class PlatformGLX final : public OpenGLPlatform {
-public:
+/**
+ * A concrete implementation of OpenGLPlatform that supports GLX.
+ */
+class PlatformGLX : public OpenGLPlatform {
+protected:
+    // --------------------------------------------------------------------------------------------
+    // Platform Interface
 
-    Driver* createDriver(void* const sharedGLContext, const DriverConfig& driverConfig) noexcept override;
+    Driver* createDriver(void* sharedGLContext,
+            const DriverConfig& driverConfig) noexcept override;
+
+    int getOSVersion() const noexcept final override { return 0; }
+
+    // --------------------------------------------------------------------------------------------
+    // OpenGLPlatform Interface
 
     void terminate() noexcept override;
 
@@ -42,20 +53,6 @@ public:
     void destroySwapChain(SwapChain* swapChain) noexcept override;
     void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept override;
     void commit(SwapChain* swapChain) noexcept override;
-
-    Fence* createFence() noexcept override;
-    void destroyFence(Fence* fence) noexcept override;
-    FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept override;
-
-    void setPresentationTime(int64_t time) noexcept final override {}
-
-    Stream* createStream(void* nativeStream) noexcept final override { return nullptr; }
-    void destroyStream(Stream* stream) noexcept final override {}
-    void attach(Stream* stream, intptr_t tname) noexcept final override {}
-    void detach(Stream* stream) noexcept final override {}
-    void updateTexImage(Stream* stream, int64_t* timestamp) noexcept final override {}
-
-    int getOSVersion() const noexcept final override { return 0; }
 
 private:
     Display *mGLXDisplay;

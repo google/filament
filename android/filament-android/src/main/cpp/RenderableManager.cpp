@@ -151,6 +151,13 @@ Java_com_google_android_filament_RenderableManager_nBuilderPriority(JNIEnv*, jcl
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nBuilderChannel(JNIEnv*, jclass,
+        jlong nativeBuilder, jint channel) {
+    RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
+    builder->channel((uint8_t) channel);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nBuilderCulling(JNIEnv*, jclass,
         jlong nativeBuilder, jboolean enabled) {
     RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
@@ -337,6 +344,13 @@ Java_com_google_android_filament_RenderableManager_nSetPriority(JNIEnv*, jclass,
         jlong nativeRenderableManager, jint i, jint priority) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     rm->setPriority((RenderableManager::Instance) i, (uint8_t) priority);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nSetChannel(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i, jint channel) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    rm->setChannel((RenderableManager::Instance) i, (uint8_t) channel);
 }
 
 extern "C" JNIEXPORT void JNICALL

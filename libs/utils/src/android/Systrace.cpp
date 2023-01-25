@@ -17,8 +17,6 @@
 #include <utils/Systrace.h>
 #include <utils/Log.h>
 
-#if defined(__ANDROID__)
-
 #include <cinttypes>
 
 #include <string.h>
@@ -219,5 +217,3 @@ void Systrace::int64_body(int fd, int pid, const char* name, int64_t value) noex
 
 } // namespace details
 } // namespace utils
-
-#endif // ANDROID

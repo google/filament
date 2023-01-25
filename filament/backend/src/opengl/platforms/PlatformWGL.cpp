@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-#include "PlatformWGL.h"
+#include <backend/platforms/PlatformWGL.h>
 
 #include <Wingdi.h>
-
-#include "../OpenGLDriverFactory.h"
 
 #ifdef _MSC_VER
     // this variable is checked in BlueGL.h (included from "gl_headers.h" right after this), 
@@ -76,7 +74,8 @@ struct WGLSwapChain {
     bool isHeadless = false;
 };
 
-Driver* PlatformWGL::createDriver(void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
+Driver* PlatformWGL::createDriver(void* const sharedGLContext,
+        const Platform::DriverConfig& driverConfig) noexcept {
     int result = 0;
     PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs = nullptr;
     int pixelFormat = 0;
@@ -146,7 +145,8 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext, const Platform::D
 
     result = bluegl::bind();
     ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
-    return OpenGLDriverFactory::create(this, sharedGLContext, driverConfig);
+
+    return OpenGLPlatform::createDefaultDriver(this, sharedGLContext, driverConfig);
 
 error:
     if (tempContext) {
@@ -254,18 +254,6 @@ void PlatformWGL::commit(Platform::SwapChain* swapChain) noexcept {
     if (hdc != NULL) {
         SwapBuffers(hdc);
     }
-}
-
-//TODO Implement WGL fences
-Platform::Fence* PlatformWGL::createFence() noexcept {
-    return nullptr;
-}
-
-void PlatformWGL::destroyFence(Fence* fence) noexcept {
-}
-
-FenceStatus PlatformWGL::waitFence(Fence* fence, uint64_t timeout) noexcept {
-    return FenceStatus::ERROR;
 }
 
 } // namespace filament::backend

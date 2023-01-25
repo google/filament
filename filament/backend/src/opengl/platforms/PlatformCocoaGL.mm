@@ -17,9 +17,8 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
-#include "PlatformCocoaGL.h"
+#include <backend/platforms/PlatformCocoaGL.h>
 
-#include "opengl/OpenGLDriverFactory.h"
 #include "opengl/gl_headers.h"
 
 #include <utils/compiler.h>
@@ -35,7 +34,7 @@ namespace filament::backend {
 using namespace backend;
 
 struct CocoaGLSwapChain : public Platform::SwapChain {
-    CocoaGLSwapChain(NSView* inView);
+    explicit CocoaGLSwapChain(NSView* inView);
     ~CocoaGLSwapChain() noexcept;
 
     NSView* view;
@@ -160,7 +159,11 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext, const Platform::Drive
 
     int result = bluegl::bind();
     ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
-    return OpenGLDriverFactory::create(this, sharedContext, driverConfig);
+    return OpenGLPlatform::createDefaultDriver(this, sharedContext, driverConfig);
+}
+
+int PlatformCocoaGL::getOSVersion() const noexcept {
+    return 0;
 }
 
 void PlatformCocoaGL::terminate() noexcept {

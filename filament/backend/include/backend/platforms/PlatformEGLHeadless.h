@@ -21,16 +21,15 @@
 
 namespace filament::backend {
 
-class PlatformEGLHeadless final : public PlatformEGL {
+/**
+ * A concrete implementation of OpenGLPlatform that supports EGL with only headless swapchains.
+ */
+class PlatformEGLHeadless : public PlatformEGL {
 public:
-
     PlatformEGLHeadless() noexcept;
 
-    Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept final;
-
-
-    void createExternalImageTexture(void* texture) noexcept final {}
-    void destroyExternalImage(void* texture) noexcept final {}
+    Driver* createDriver(void* sharedContext,
+            const Platform::DriverConfig& driverConfig) noexcept override;
 };
 
 } // namespace filament

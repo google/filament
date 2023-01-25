@@ -49,6 +49,8 @@ public:
      *   Command key encoding
      *   --------------------
      *
+     *   CC    = Channel
+     *   PP    = Pass
      *   a     = alpha masking
      *   ppp   = priority
      *   t     = two-pass transparency ordering
@@ -58,45 +60,45 @@ public:
      * TODO: we need to add a "primitive id" in the low-bits of material-id, so that
      *       auto-instancing can work better
      *
-     *   DEPTH command
-     *   |   6  | 2| 2|1| 3 | 2|  6   |   10     |               32               |
-     *   +------+--+--+-+---+--+------+----------+--------------------------------+
-     *   |000000|01|00|0|ppp|00|000000| Z-bucket |          material-id           |
-     *   +------+--+--+-+---+--+------+----------+--------------------------------+
-     *   | correctness      |      optimizations (truncation allowed)             |
+     *   DEPTH command (b00)
+     *   |  |  | 2| 2| 2|1| 3 | 2|  6   |   10     |               32               |
+     *   +--+--+--+--+--+-+---+--+------+----------+--------------------------------+
+     *   |CC|00|00|01|00|0|ppp|00|000000| Z-bucket |          material-id           |
+     *   +--+--+--+--+--+-+---+--+------+----------+--------------------------------+
+     *   | correctness        |      optimizations (truncation allowed)             |
      *
      *
-     *   COLOR command
-     *   |   6  | 2| 2|1| 3 | 2|  6   |   10     |               32               |
-     *   +------+--+--+-+---+--+------+----------+--------------------------------+
-     *   |000001|01|00|a|ppp|00|000000| Z-bucket |          material-id           |
-     *   |000010|01|00|a|ppp|00|000000| Z-bucket |          material-id           | refraction
-     *   +------+--+--+-+---+--+------+----------+--------------------------------+
-     *   | correctness      |      optimizations (truncation allowed)             |
+     *   COLOR (b01) and REFRACT (b10) commands
+     *   |  | 2| 2| 2| 2|1| 3 | 2|  6   |   10     |               32               |
+     *   +--+--+--+--+--+-+---+--+------+----------+--------------------------------+
+     *   |CC|00|01|01|00|a|ppp|00|000000| Z-bucket |          material-id           |
+     *   |CC|00|10|01|00|a|ppp|00|000000| Z-bucket |          material-id           | refraction
+     *   +--+--+--+--+--+-+---+--+------+----------+--------------------------------+
+     *   | correctness        |      optimizations (truncation allowed)             |
      *
      *
-     *   BLENDED command
-     *   |   6  | 2| 2|1| 3 | 2|              32                |         15    |1|
-     *   +------+--+--+-+---+--+--------------------------------+---------------+-+
-     *   |000011|01|00|0|ppp|00|         ~distanceBits          |   blendOrder  |t|
-     *   +------+--+--+-+---+--+--------------------------------+---------------+-+
-     *   | correctness                                                            |
+     *   BLENDED command (b11)
+     *   | 2| 2| 2| 2| 2|1| 3 | 2|              32                |         15    |1|
+     *   +--+--+--+--+--+-+---+--+--------------------------------+---------------+-+
+     *   |CC|00|11|01|00|0|ppp|00|         ~distanceBits          |   blendOrder  |t|
+     *   +--+--+--+--+--+-+---+--+--------------------------------+---------------+-+
+     *   | correctness                                                              |
      *
      *
      *   pre-CUSTOM command
-     *   |   6  | 2| 2|         22           |               32               |
-     *   +------+--+--+----------------------+--------------------------------+
-     *   | pass |00|00|        order         |      custom command index      |
-     *   +------+--+--+----------------------+--------------------------------+
-     *   | correctness                                                        |
+     *   | 2| 2| 2| 2| 2|         22           |               32               |
+     *   +--+--+--+--+--+----------------------+--------------------------------+
+     *   |CC|00|PP|00|00|        order         |      custom command index      |
+     *   +--+--+--+--+--+----------------------+--------------------------------+
+     *   | correctness                                                          |
      *
      *
      *   post-CUSTOM command
-     *   |   6  | 2| 2|         22           |               32               |
-     *   +------+--+--+----------------------+--------------------------------+
-     *   | pass |11|00|        order         |      custom command index      |
-     *   +------+--+--+----------------------+--------------------------------+
-     *   | correctness                                                        |
+     *   | 2| 2| 2| 2| 2|         22           |               32               |
+     *   +--+--+--+--+--+----------------------+--------------------------------+
+     *   |CC|00|PP|11|00|        order         |      custom command index      |
+     *   +--+--+--+--+--+----------------------+--------------------------------+
+     *   | correctness                                                          |
      *
      *
      *   SENTINEL command
@@ -137,11 +139,14 @@ public:
     static constexpr uint64_t BLENDING_MASK                 = 0x0020000000000000llu;
     static constexpr unsigned BLENDING_SHIFT                = 53;
 
-    static constexpr uint64_t PASS_MASK                     = 0xFC00000000000000llu;
-    static constexpr unsigned PASS_SHIFT                    = 58;
-
     static constexpr uint64_t CUSTOM_MASK                   = 0x0300000000000000llu;
     static constexpr unsigned CUSTOM_SHIFT                  = 56;
+
+    static constexpr uint64_t PASS_MASK                     = 0x0C00000000000000llu;
+    static constexpr unsigned PASS_SHIFT                    = 58;
+
+    static constexpr uint64_t CHANNEL_MASK                  = 0xC000000000000000llu;
+    static constexpr unsigned CHANNEL_SHIFT                 = 62;
 
     static constexpr uint64_t CUSTOM_ORDER_MASK             = 0x003FFFFF00000000llu;
     static constexpr unsigned CUSTOM_ORDER_SHIFT            = 32;
@@ -373,7 +378,7 @@ public:
     }
 
     // Appends a custom command.
-    void appendCustomCommand(Pass pass, CustomCommand custom, uint32_t order,
+    void appendCustomCommand(uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
             Executor::CustomCommandFn command);
 
 

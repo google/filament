@@ -65,7 +65,38 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
     utils::slog.e << utils::io::endl;
     return VK_FALSE;
 }
+
+// These strings need to be allocated outside a function stack
+const std::string_view DESIRED_LAYERS[] = {
+  "VK_LAYER_KHRONOS_validation",
+#if FILAMENT_VULKAN_DUMP_API
+  "VK_LAYER_LUNARG_api_dump",
 #endif
+#if defined(ENABLE_RENDERDOC)
+  "VK_LAYER_RENDERDOC_Capture",
+#endif
+};
+
+FixedCapacityVector<const char*> getEnabledLayers() {
+    constexpr size_t kMaxEnabledLayersCount = sizeof(DESIRED_LAYERS) / sizeof(DESIRED_LAYERS[0]);
+
+    const FixedCapacityVector<VkLayerProperties> availableLayers = filament::backend::enumerate(
+            vkEnumerateInstanceLayerProperties);
+
+    auto enabledLayers = FixedCapacityVector<const char*>::with_capacity(kMaxEnabledLayersCount);
+    for (const auto& desired : DESIRED_LAYERS) {
+        for (const VkLayerProperties& layer : availableLayers) {
+            const std::string_view availableLayer(layer.layerName);
+            if (availableLayer == desired) {
+                enabledLayers.push_back(desired.data());
+                break;
+            }
+        }
+    }
+    return enabledLayers;
+}
+
+#endif // VK_ENABLE_VALIDATION
 
 void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
     // Print some driver or MoltenVK information if it is available.
@@ -144,49 +175,6 @@ void printDepthFormats(VkPhysicalDevice device) {
     }
 }
 
-bool enableLayers(VkInstanceCreateInfo* instanceCreateInfo) {
-    const std::string_view DESIRED_LAYERS[] = {
-        "VK_LAYER_KHRONOS_validation",
-#if FILAMENT_VULKAN_DUMP_API
-        "VK_LAYER_LUNARG_api_dump",
-#endif
-#if defined(ENABLE_RENDERDOC)
-        "VK_LAYER_RENDERDOC_Capture",
-#endif
-    };
-
-    constexpr size_t kMaxEnabledLayersCount = sizeof(DESIRED_LAYERS) / sizeof(DESIRED_LAYERS[0]);
-
-    const FixedCapacityVector<VkLayerProperties> availableLayers = filament::backend::enumerate(
-            vkEnumerateInstanceLayerProperties);
-
-    auto enabledLayers = FixedCapacityVector<const char*>::with_capacity(kMaxEnabledLayersCount);
-    for (const auto& desired : DESIRED_LAYERS) {
-        for (const VkLayerProperties& layer : availableLayers) {
-            const std::string_view availableLayer(layer.layerName);
-            if (availableLayer == desired) {
-                enabledLayers.push_back(desired.data());
-                break;
-            }
-        }
-    }
-
-    if (!enabledLayers.empty()) {
-        instanceCreateInfo->enabledLayerCount = (uint32_t) enabledLayers.size();
-        instanceCreateInfo->ppEnabledLayerNames = enabledLayers.data();
-        return true;
-    }
-
-#if defined(__ANDROID__)
-    utils::slog.d << "Validation layers are not available; did you set jniLibs in your "
-            << "gradle file?" << utils::io::endl;
-#else
-    utils::slog.d << "Validation layer not available; did you install the Vulkan SDK?\n"
-            << "Please ensure that VK_LAYER_PATH is set correctly." << utils::io::endl;
-#endif
-    return false;
-}
-
 struct InstanceExtensions {
     bool debugUtilsSupported = false;
     bool portabilityEnumerationSupported = false;
@@ -244,16 +232,28 @@ VkInstance createInstance(const char* const* ppRequiredExtensions, uint32_t requ
     bool validationFeaturesSupported = false;
 
 #if VK_ENABLE_VALIDATION
-    if (enableLayers(&instanceCreateInfo)) {
+    const auto enabledLayers = getEnabledLayers();
+    if (!enabledLayers.empty()) {
         // If layers are supported, Check if VK_EXT_validation_features is supported.
-        const FixedCapacityVector<VkExtensionProperties> availableExts = filament::backend::enumerate(
-                vkEnumerateInstanceExtensionProperties, "VK_LAYER_KHRONOS_validation");
+        const FixedCapacityVector<VkExtensionProperties> availableExts =
+	        filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
+		        "VK_LAYER_KHRONOS_validation");
         for (const auto& extProps : availableExts) {
             if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
                 validationFeaturesSupported = true;
                 break;
             }
         }
+        instanceCreateInfo.enabledLayerCount = (uint32_t) enabledLayers.size();
+        instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
+    } else {
+#if defined(__ANDROID__)
+      utils::slog.d << "Validation layers are not available; did you set jniLibs in your "
+              << "gradle file?" << utils::io::endl;
+#else
+      utils::slog.d << "Validation layer not available; did you install the Vulkan SDK?\n"
+              << "Please ensure that VK_LAYER_PATH is set correctly." << utils::io::endl;
+#endif
     }
 #endif // VK_ENABLE_VALIDATION
 
@@ -385,8 +385,8 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice, const VkPhysicalDe
 // driver/device workarounds).
 void pruneExtensions(VkPhysicalDevice device, InstanceExtensions* instExtensions,
         DeviceExtensions* deviceExtensions) {
-    char* driverInfo = nullptr;
     if (vkGetPhysicalDeviceProperties2KHR) {
+        char* driverInfo = nullptr;
         VkPhysicalDeviceDriverProperties driverProperties = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES,
         };
@@ -396,12 +396,12 @@ void pruneExtensions(VkPhysicalDevice device, InstanceExtensions* instExtensions
         };
         vkGetPhysicalDeviceProperties2KHR(device, &physicalDeviceProperties2);
         driverInfo = driverProperties.driverInfo;
-    }
 
-    if (instExtensions->debugUtilsSupported) {
-        // Workaround for Mesa drivers. See issue #6192
-        if (driverInfo && strstr(driverInfo, "Mesa")) {
-            instExtensions->debugUtilsSupported = false;
+        if (instExtensions->debugUtilsSupported) {
+            // Workaround for Mesa drivers. See issue #6192
+            if (driverInfo && strstr(driverInfo, "Mesa")) {
+                instExtensions->debugUtilsSupported = false;
+            }
         }
     }
 

@@ -14,16 +14,92 @@
  * limitations under the License.
  */
 
-#include "private/backend/OpenGLPlatform.h"
+#include <backend/platforms/OpenGLPlatform.h>
 
 #include "OpenGLDriverFactory.h"
 
 namespace filament::backend {
 
-OpenGLPlatform::~OpenGLPlatform() noexcept = default;
-
-Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform, void* sharedContext, const Platform::DriverConfig& driverConfig) {
+Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform,
+        void* sharedContext, const Platform::DriverConfig& driverConfig) {
     return OpenGLDriverFactory::create(platform, sharedContext, driverConfig);
 }
+
+OpenGLPlatform::~OpenGLPlatform() noexcept = default;
+
+uint32_t OpenGLPlatform::createDefaultRenderTarget() noexcept {
+    return 0;
+}
+
+void OpenGLPlatform::setPresentationTime(
+        UTILS_UNUSED int64_t presentationTimeInNanosecond) noexcept {
+}
+
+
+bool OpenGLPlatform::canCreateFence() noexcept {
+    return false;
+}
+
+Platform::Fence* OpenGLPlatform::createFence() noexcept {
+    return nullptr;
+}
+
+void OpenGLPlatform::destroyFence(
+        UTILS_UNUSED Fence* fence) noexcept {
+}
+
+FenceStatus OpenGLPlatform::waitFence(
+        UTILS_UNUSED Fence* fence,
+        UTILS_UNUSED uint64_t timeout) noexcept {
+    return FenceStatus::ERROR;
+}
+
+
+Platform::Stream* OpenGLPlatform::createStream(
+        UTILS_UNUSED void* nativeStream) noexcept {
+    return nullptr;
+}
+
+void OpenGLPlatform::destroyStream(
+        UTILS_UNUSED Stream* stream) noexcept {
+}
+
+void OpenGLPlatform::attach(
+        UTILS_UNUSED Stream* stream,
+        UTILS_UNUSED intptr_t tname) noexcept {
+}
+
+void OpenGLPlatform::detach(
+        UTILS_UNUSED Stream* stream) noexcept {
+}
+
+void OpenGLPlatform::updateTexImage(
+        UTILS_UNUSED Stream* stream,
+        UTILS_UNUSED int64_t* timestamp) noexcept {
+}
+
+
+OpenGLPlatform::ExternalTexture* OpenGLPlatform::createExternalImageTexture() noexcept {
+    return nullptr;
+}
+
+void OpenGLPlatform::destroyExternalImage(
+        UTILS_UNUSED ExternalTexture* texture) noexcept {
+}
+
+void OpenGLPlatform::retainExternalImage(
+        UTILS_UNUSED void* externalImage) noexcept {
+}
+
+bool OpenGLPlatform::setExternalImage(
+        UTILS_UNUSED void* externalImage,
+        UTILS_UNUSED ExternalTexture* texture) noexcept {
+    return false;
+}
+
+AcquiredImage OpenGLPlatform::transformAcquiredImage(AcquiredImage source) noexcept {
+    return source;
+}
+
 
 } // namespace filament::backend

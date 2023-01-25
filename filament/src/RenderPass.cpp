@@ -148,15 +148,18 @@ void RenderPass::appendCommands(FEngine& engine, CommandTypeFlags const commandT
     }
 }
 
-void RenderPass::appendCustomCommand(Pass pass, CustomCommand custom, uint32_t order,
+void RenderPass::appendCustomCommand(uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
         Executor::CustomCommandFn command) {
 
-    assert((uint64_t(order) << CUSTOM_ORDER_SHIFT) <=  CUSTOM_ORDER_MASK);
+    assert_invariant((uint64_t(order) << CUSTOM_ORDER_SHIFT) <=  CUSTOM_ORDER_MASK);
 
-    uint32_t index = mCustomCommands.size();
+    channel = std::min(channel, uint8_t(0x3));
+
+    uint32_t const index = mCustomCommands.size();
     mCustomCommands.push_back(std::move(command));
 
     uint64_t cmd = uint64_t(pass);
+    cmd |= uint64_t(channel) << CHANNEL_SHIFT;
     cmd |= uint64_t(custom);
     cmd |= uint64_t(order) << CUSTOM_ORDER_SHIFT;
     cmd |= uint64_t(index);
@@ -210,7 +213,7 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
     // sorting key (e.g. raster state, primitive handle, etc...), the key could even use a small
     // hash of those parameters.
 
-    UTILS_UNUSED_IN_RELEASE uint32_t drawCallsSavedCount = 0;
+    UTILS_UNUSED uint32_t drawCallsSavedCount = 0;
 
     Command* curr = mCommandBegin;
     Command* const last = mCommandEnd;
@@ -227,7 +230,7 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
     while (curr != last) {
 
         // we can't have nice things! No more than maxInstanceCount due to UBO size limits
-        Command const* const e = std::find_if_not(curr, std::min(last, last + maxInstanceCount),
+        Command const* const e = std::find_if_not(curr, std::min(last, curr + maxInstanceCount),
                 [lhs = *curr](Command const& rhs) {
             // primitives must be identical to be instanced. Currently, instancing doesn't support
             // skinning/morphing.
@@ -240,8 +243,9 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
                     lhs.primitive.morphTargetBuffer == rhs.primitive.morphTargetBuffer;
         });
 
-        uint32_t instanceCount = e - curr;
+        uint32_t const instanceCount = e - curr;
         assert_invariant(instanceCount > 0);
+        assert_invariant(instanceCount <= CONFIG_MAX_INSTANCES);
 
         if (UTILS_UNLIKELY(instanceCount > 1)) {
             drawCallsSavedCount += instanceCount - 1;
@@ -279,11 +283,8 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
     }
 
     if (UTILS_UNLIKELY(firstSentinel)) {
-#ifndef NDEBUG
-        // TODO: remove this eventually
-        slog.d << "auto-instancing, saving " << drawCallsSavedCount << " draw calls, out of "
-               << mCommandEnd - mCommandBegin << io::endl;
-#endif
+        //slog.d << "auto-instancing, saving " << drawCallsSavedCount << " draw calls, out of "
+        //       << mCommandEnd - mCommandBegin << io::endl;
 
         // we have instanced primitives
         DriverApi& driver = engine.getDriverApi();
@@ -297,7 +298,7 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
         // copy our instanced ubo data
         driver.updateBufferObjectUnsynchronized(mInstancedUboHandle, {
                 stagingBuffer, sizeof(PerRenderableData) * instancedPrimitiveOffset,
-                +[](void* buffer, size_t size, void* user) {
+                +[](void* buffer, size_t, void*) {
                     ::free(buffer);
                 }
         }, 0);
@@ -510,6 +511,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
         const bool hasSkinningOrMorphing = soaVisibility[i].skinning || hasMorphing;
 
         cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
+        cmdColor.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
         cmdColor.primitive.index = (uint16_t)i;
         cmdColor.primitive.instanceCount = soaInstanceCount[i];
 
@@ -524,6 +526,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
             cmdDepth.key = uint64_t(Pass::DEPTH);
             cmdDepth.key |= uint64_t(CustomCommand::PASS);
             cmdDepth.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
+            cmdDepth.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
             cmdDepth.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK, Z_BUCKET_SHIFT);
             cmdDepth.primitive.index = (uint16_t)i;
             cmdDepth.primitive.instanceCount = soaInstanceCount[i];

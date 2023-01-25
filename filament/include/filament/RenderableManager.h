@@ -206,19 +206,43 @@ public:
          *
          * In general Filament reserves the right to re-order renderables to allow for efficient
          * rendering. However clients can control ordering at a coarse level using \em priority.
+         * The priority is applied separately for opaque and translucent objects, that is, opaque
+         * objects are always drawn before translucent objects regardless of the priority.
          *
-         * For example, this could be used to draw a semitransparent HUD, if a client wishes to
-         * avoid using a separate View for the HUD. Note that priority is completely orthogonal to
+         * For example, this could be used to draw a semitransparent HUD on top of everything,
+         * without using a separate View. Note that priority is completely orthogonal to
          * Builder::layerMask, which merely controls visibility.
+         *
+         * The Skybox always using the lowest priority, so it's drawn last, which may improve
+         * performance.
          *
          * @param priority clamped to the range [0..7], defaults to 4; 7 is lowest priority
          *                 (rendered last).
          *
          * @return Builder reference for chaining calls.
          *
-         * @see Builder::blendOrder(), RenderableManager::setBlendOrderAt()
+         * @see Builder::blendOrder()
+         * @see Builder::channel()
+         * @see RenderableManager::setPriority()
+         * @see RenderableManager::setBlendOrderAt()
          */
         Builder& priority(uint8_t priority) noexcept;
+
+        /**
+         * Set the channel this renderable is associated to. There can be 4 channels.
+         * All renderables in a given channel are rendered together, regardless of anything else.
+         * They are sorted as usual withing a channel.
+         * Channels work similarly to priorities, except that they enforce the strongest ordering.
+         *
+         * @param channel clamped to the range [0..3], defaults to 0.
+         *
+         * @return Builder reference for chaining calls.
+         *
+         * @see Builder::blendOrder()
+         * @see Builder::priority()
+         * @see RenderableManager::setBlendOrderAt()
+         */
+        Builder& channel(uint8_t channel) noexcept;
 
         /**
          * Controls frustum culling, true by default.
@@ -460,6 +484,13 @@ public:
      * \see Builder::priority().
      */
     void setPriority(Instance instance, uint8_t priority) noexcept;
+
+    /**
+     * Changes the channel a renderable is associated to.
+     *
+     * \see Builder::channel().
+     */
+    void setChannel(Instance instance, uint8_t channel) noexcept;
 
     /**
      * Changes whether or not frustum culling is on.

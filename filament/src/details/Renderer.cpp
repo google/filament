@@ -201,11 +201,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     mFrameId++;
     mViewRenderedCount = 0;
 
-    { // scope for frame id trace
-        char buf[64];
-        snprintf(buf, 64, "frame %u", mFrameId);
-        SYSTRACE_NAME(buf);
-    }
+    SYSTRACE_FRAME_ID(mFrameId);
 
     FEngine& engine = mEngine;
     FEngine::DriverApi& driver = engine.getDriverApi();
@@ -913,7 +909,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     if (colorGradingConfigForColor.asSubpass) {
         // append color grading subpass after all other passes
-        pass.appendCustomCommand(
+        pass.appendCustomCommand(3,
                 RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,
                 0, [&ppm, &driver, colorGradingConfigForColor]() {
@@ -921,7 +917,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 });
     } if (colorGradingConfig.customResolve) {
         // append custom resolve subpass after all other passes
-        pass.appendCustomCommand(
+        pass.appendCustomCommand(3,
                 RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,
                 0, [&ppm, &driver]() {
