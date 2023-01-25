@@ -295,7 +295,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             vec2 deltaUV = v.xy * heightScale / (v.z * numLayers);
             vec2 currUV = uv0;
             float height = 1.0 - textureGrad(materialParams_heightMap, currUV, uvDx, uvDy).r;
-            for (int i = 0; i < numLayers; i++) {
+            for (int i = 0; i < int(numLayers); i++) {
                 currLayerDepth += layerDepth;
                 currUV -= deltaUV;
                 height = 1.0 - textureGrad(materialParams_heightMap, currUV, uvDx, uvDy).r;
