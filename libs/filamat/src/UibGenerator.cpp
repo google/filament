@@ -142,7 +142,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "ssrStride",               0, Type::FLOAT                  },
 
             // bring PerViewUib to 2 KiB
-            { "reserved", sizeof(PerViewUib::reserved)/16, Type::FLOAT4  }
+            { "reserved", sizeof(PerViewUib::reserved)/16, Type::FLOAT4 }
             })
             .build();
 
