@@ -281,7 +281,9 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             vec2 uvDy = dFdy(uv0);
 
             mat3 tangentFromWorld = transpose(getWorldTangentFrame());
-            vec3 v = tangentFromWorld * getWorldViewVector();
+            vec3 tangentCameraPosition = tangentFromWorld * getWorldCameraPosition();
+            vec3 tangentFragPosition = tangentFromWorld * getWorldPosition();
+            vec3 v = normalize(tangentCameraPosition - tangentFragPosition);
 
             float minLayers = 8.0;
             float maxLayers = 48.0;
