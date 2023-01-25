@@ -27,6 +27,15 @@
 
 using namespace bluevk;
 
+namespace {
+typedef struct _wl {
+    struct wl_display *display;
+    struct wl_surface *surface;
+    uint32_t width;
+    uint32_t height;
+} wl;
+} // anonymous namespace
+
 namespace filament::backend {
 
 Driver* PlatformVkLinuxWayland::createDriver(void* const sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
@@ -39,11 +48,6 @@ Driver* PlatformVkLinuxWayland::createDriver(void* const sharedContext, const Pl
 }
 
 void* PlatformVkLinuxWayland::createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept {
-
-    typedef struct _wl {
-        struct wl_display *display;
-        struct wl_surface *surface;
-    } wl;
 
     VkSurfaceKHR surface = nullptr;
 
@@ -61,6 +65,13 @@ void* PlatformVkLinuxWayland::createVkSurfaceKHR(void* nativeWindow, void* insta
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateWaylandSurfaceKHR error.");
 
     return surface;
+}
+
+void PlatformVkLinuxWayland::getSwapChainFallbackExtent(void* nativeWindow, uint32_t* width,
+        uint32_t* height) noexcept {
+    wl* ptrval = reinterpret_cast<wl*>(nativeWindow);
+    *width = ptrval->width;
+    *height = ptrval->height;
 }
 
 } // namespace filament::backend

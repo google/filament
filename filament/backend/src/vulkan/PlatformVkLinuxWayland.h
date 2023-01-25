@@ -32,6 +32,8 @@ public:
 
     void* createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept override;
 
+    void getSwapChainFallbackExtent(void* nativeWindow, uint32_t* width, uint32_t* height) noexcept override;
+
     int getOSVersion() const noexcept override { return 0; }
 };
 
