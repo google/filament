@@ -210,8 +210,9 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 }
 
 // Consumes SPIRV binary and produces a GLSL-ES string.
-static void transpileSpirv(const std::vector<uint32_t>& spirv) {
-    std::cout << ShaderExtractor::spirvToGLSL(spirv.data(), spirv.size()).c_str();
+static void transpileSpirv(filament::backend::ShaderModel shaderModel,
+        const std::vector<uint32_t>& spirv) {
+    std::cout << ShaderExtractor::spirvToGLSL(shaderModel, spirv.data(), spirv.size()).c_str();
 }
 
 // Consumes SPIRV binary and produces an ordered map from "line number" to "GLSL string" where
@@ -464,7 +465,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
             const std::vector<uint32_t> spirv(words, words + content.size() / 4);
 
             if (config.transpile) {
-                transpileSpirv(spirv);
+                transpileSpirv(item.shaderModel, spirv);
             } else if (config.binary) {
                 dumpSpirvBinary(spirv, "out.spv");
             } else {
