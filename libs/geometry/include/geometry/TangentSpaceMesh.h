@@ -310,7 +310,7 @@ public:
     /**
      * @return The algorithm used to compute the output mesh.
      */
-    Algorithm getAlgorithm() const;
+    Algorithm getAlgorithm() const noexcept;
 
 private:
     TangentSpaceMesh() noexcept;
