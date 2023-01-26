@@ -395,16 +395,13 @@ void VulkanDriver::createSyncR(Handle<HwSync> sh, int) {
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     const VkInstance instance = mContext.instance;
-    auto vksurface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow, instance,
-            flags);
-
-    VkExtent2D fallback{0, 0};
-    mContextManager.getSwapChainFallbackExtent(nativeWindow, &fallback.width, &fallback.height);
-
+    auto bundle = mContextManager.createVkSurfaceKHR(nativeWindow, instance, flags);
+    VkSurfaceKHR surface = (VkSurfaceKHR) bundle.surface;
+    VkExtent2D fallback{bundle.width, bundle.height};
     if (fallback.width > 0 && fallback.height > 0) {
-        construct<VulkanSwapChain>(sch, mContext, mStagePool, vksurface, fallback);
+        construct<VulkanSwapChain>(sch, mContext, mStagePool, surface, fallback);
     } else {
-        construct<VulkanSwapChain>(sch, mContext, mStagePool, vksurface);
+        construct<VulkanSwapChain>(sch, mContext, mStagePool, surface);
     }
 }
 

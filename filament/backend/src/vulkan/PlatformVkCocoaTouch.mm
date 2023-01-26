@@ -39,13 +39,21 @@ using namespace bluevk;
 
 namespace filament::backend {
 
+using SurfaceBundle = VulkanPlatform::SurfaceBundle;
+
 Driver* PlatformVkCocoaTouch::createDriver(void* const sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     static const char* requestedExtensions[] = {"VK_MVK_ios_surface"};
     return VulkanDriverFactory::create(this, requestedExtensions, 1, driverConfig);
 }
 
-void* PlatformVkCocoaTouch::createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept {
+SurfaceBundle PlatformVkCocoaTouch::createVkSurfaceKHR(void* nativeWindow, void* instance,
+        uint64_t flags) noexcept {
+    SurfaceBundle bundle {
+        .surface = nullptr,
+        .width = 0,
+        .height = 0
+    };
 #if METAL_AVAILABLE
     CAMetalLayer* metalLayer = (CAMetalLayer*) nativeWindow;
 
@@ -57,13 +65,12 @@ void* PlatformVkCocoaTouch::createVkSurfaceKHR(void* nativeWindow, void* instanc
     createInfo.pNext = NULL;
     createInfo.flags = 0;
     createInfo.pView = metalLayer;
-    VkResult result = vkCreateIOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC, &surface);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateIOSSurfaceMVK error.");
 
-    return surface;
-#else
-    return nullptr;
+    VkResult result = vkCreateIOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC,
+            (VkSurfaceKHR*) &bundle.surface);
+    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateIOSSurfaceMVK error.");
 #endif
+    return bundle;
 }
 
 } // namespace filament::backend

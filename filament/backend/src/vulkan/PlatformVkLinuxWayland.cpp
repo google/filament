@@ -38,6 +38,8 @@ typedef struct _wl {
 
 namespace filament::backend {
 
+using SurfaceBundle = VulkanPlatform::SurfaceBundle;
+
 Driver* PlatformVkLinuxWayland::createDriver(void* const sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     const char* requiredInstanceExtensions[] = {
@@ -47,10 +49,8 @@ Driver* PlatformVkLinuxWayland::createDriver(void* const sharedContext, const Pl
             sizeof(requiredInstanceExtensions) / sizeof(requiredInstanceExtensions[0]), driverConfig);
 }
 
-void* PlatformVkLinuxWayland::createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept {
-
-    VkSurfaceKHR surface = nullptr;
-
+SurfaceBundle PlatformVkLinuxWayland::createVkSurfaceKHR(void* nativeWindow, void* instance,
+        uint64_t flags) noexcept {
     wl* ptrval = reinterpret_cast<wl*>(nativeWindow);
 
     VkWaylandSurfaceCreateInfoKHR createInfo = {
@@ -60,18 +60,15 @@ void* PlatformVkLinuxWayland::createVkSurfaceKHR(void* nativeWindow, void* insta
        .display = ptrval->display,
        .surface = ptrval->surface
     };
-
-    VkResult result = vkCreateWaylandSurfaceKHR((VkInstance) instance, &createInfo, VKALLOC, &surface);
+    SurfaceBundle bundle {
+        .surface = VK_NULL_HANDLE,
+        .width = ptrval->width,
+        .height = ptrval->height
+    };
+    VkResult result = vkCreateWaylandSurfaceKHR((VkInstance) instance, &createInfo, VKALLOC,
+            (VkSurfaceKHR*) &bundle.surface);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateWaylandSurfaceKHR error.");
-
-    return surface;
-}
-
-void PlatformVkLinuxWayland::getSwapChainFallbackExtent(void* nativeWindow, uint32_t* width,
-        uint32_t* height) noexcept {
-    wl* ptrval = reinterpret_cast<wl*>(nativeWindow);
-    *width = ptrval->width;
-    *height = ptrval->height;
+    return bundle;
 }
 
 } // namespace filament::backend
