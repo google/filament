@@ -285,7 +285,7 @@ public:
      *
      * @return The number of vertices
      */
-    size_t getTriangleCount() const;
+    size_t getTriangleCount() const noexcept;
 
     /**
      * Get output triangles.
