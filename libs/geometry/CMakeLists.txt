@@ -9,11 +9,13 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 set(PUBLIC_HDRS
         include/geometry/SurfaceOrientation.h
+        include/geometry/TangentSpaceMesh.h
         include/geometry/Transcoder.h
 )
 
 set(SRCS
         src/SurfaceOrientation.cpp
+        src/TangentSpaceMesh.cpp
         src/Transcoder.cpp
 )
 
