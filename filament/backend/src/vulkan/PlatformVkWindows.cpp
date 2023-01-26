@@ -40,8 +40,8 @@ SurfaceBundle PlatformVkWindows::createVkSurfaceKHR(void* nativeWindow, void* in
         uint64_t flags) noexcept {
     SurfaceBundle bundle {
         .surface = nullptr,
-        .width = ptrval->width,
-        .height = ptrval->height
+        .width = 0,
+        .height = 0
     };
     HWND window = (HWND) nativeWindow;
 
