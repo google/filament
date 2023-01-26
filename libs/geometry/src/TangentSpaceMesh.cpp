@@ -289,7 +289,7 @@ void TangentSpaceMesh::getUVs(float2*, size_t) const {
     ASSERT_PRECONDITION(mInput->uvs, "Must provide input UVs");
 }
 
-size_t TangentSpaceMesh::getTriangleCount() const {
+size_t TangentSpaceMesh::getTriangleCount() const noexcept {
     return 0;
 }
 
@@ -310,7 +310,7 @@ void TangentSpaceMesh::getQuats(short4*, size_t) const noexcept {
 void TangentSpaceMesh::getQuats(quath*, size_t) const noexcept {
 }
 
-Algorithm TangentSpaceMesh::getAlgorithm() const {
+Algorithm TangentSpaceMesh::getAlgorithm() const noexcept {
     return mOutput->algorithm;
 }
 
