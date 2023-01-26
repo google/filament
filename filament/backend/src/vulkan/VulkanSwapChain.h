@@ -31,11 +31,11 @@ struct VulkanSwapChain : public HwSwapChain {
     // The *fallbackExtent* parameter is for the case where the extent returned by the physical
     // surface is 0xFFFFFFFF.
     VulkanSwapChain(VulkanContext& context, VulkanStagePool& stagePool, VkSurfaceKHR vksurface,
-        VkExtent2D fallbackExtent={.width=640, .height=320});
+            VkExtent2D fallbackExtent={.width=640, .height=320});
 
     // Headless constructor.
     VulkanSwapChain(VulkanContext& context, VulkanStagePool& stagePool, uint32_t width,
-        uint32_t height);
+            uint32_t height);
 
     bool acquire();
     void create(VulkanStagePool& stagePool);

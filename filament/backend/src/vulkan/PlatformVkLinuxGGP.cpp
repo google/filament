@@ -49,7 +49,7 @@ Driver* PlatformVkLinuxGGP::createDriver(
 }
 
 SurfaceBundle PlatformVkLinuxGGP::createVkSurfaceKHR(void* nativeWindow, void* instance,
-                                             uint64_t flags) noexcept {
+        uint64_t flags) noexcept {
     SurfaceBundle bundle {
         .surface = nullptr,
         .width = 0,

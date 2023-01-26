@@ -31,7 +31,7 @@ class PlatformVkLinuxGGP final : public VulkanPlatform {
       const Platform::DriverConfig& driverConfig) noexcept override;
 
   VulkanPlatform::SurfaceBundle createVkSurfaceKHR(void* nativeWindow, void* instance,
-      uint64_t flags) noexcept override;
+          uint64_t flags) noexcept override;
 
   int getOSVersion() const noexcept override { return 0; }
 };
