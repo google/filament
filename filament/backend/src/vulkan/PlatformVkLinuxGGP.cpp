@@ -66,7 +66,6 @@ SurfaceBundle PlatformVkLinuxGGP::createVkSurfaceKHR(void* nativeWindow, void* i
   ASSERT_PRECONDITION(fpCreateStreamDescriptorSurfaceGGP != nullptr,
                       "Error getting VkInstance "
                       "function vkCreateStreamDescriptorSurfaceGGP");
-  VkSurfaceKHR surface = nullptr;
   VkResult res = fpCreateStreamDescriptorSurfaceGGP(
       static_cast<VkInstance>(instance), &surface_create_info, nullptr,
       (VkSurfaceKHR*) &bundle.surface);

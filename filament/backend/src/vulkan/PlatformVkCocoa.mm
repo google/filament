@@ -52,7 +52,6 @@ SurfaceBundle PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* inst
 
     // Create the VkSurface.
     ASSERT_POSTCONDITION(vkCreateMacOSSurfaceMVK, "Unable to load vkCreateMacOSSurfaceMVK.");
-    VkSurfaceKHR surface = nullptr;
     VkMacOSSurfaceCreateInfoMVK createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
     createInfo.pView = (__bridge void*) nsview;

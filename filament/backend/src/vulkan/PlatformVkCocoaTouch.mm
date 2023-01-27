@@ -59,7 +59,6 @@ SurfaceBundle PlatformVkCocoaTouch::createVkSurfaceKHR(void* nativeWindow, void*
 
     // Create the VkSurface.
     ASSERT_POSTCONDITION(vkCreateIOSSurfaceMVK, "Unable to load vkCreateIOSSurfaceMVK function.");
-    VkSurfaceKHR surface = nullptr;
     VkIOSSurfaceCreateInfoMVK createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK;
     createInfo.pNext = NULL;

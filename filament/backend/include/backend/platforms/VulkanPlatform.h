@@ -31,7 +31,8 @@ public:
         void* surface;
         // On certain platforms, the extent of the surface cannot be queried from Vulkan. In those
         // situations, we allow the frontend to pass in the extent to use in creating the swap
-        // chains.
+        // chains. Platform implementation should set extent to 0 if they do not expect to set the
+        // swap chain extent.
         uint32_t width;
         uint32_t height;
     };
