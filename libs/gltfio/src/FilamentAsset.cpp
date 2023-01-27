@@ -38,8 +38,10 @@ FFilamentAsset::~FFilamentAsset() {
     releaseSourceData();
 
     // Destroy all instance objects. Instance entities / components are
-    // destroyed later in this method because they are owned by the asset.
+    // destroyed later in this method because they are owned by the asset
+    // (except for the root of the instance).
     for (FFilamentInstance* instance : mInstances) {
+        mEntityManager->destroy(instance->mRoot);
         delete instance;
     }
 
