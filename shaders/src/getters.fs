@@ -54,6 +54,10 @@ vec3 getWorldViewVector() {
     return shading_view;
 }
 
+bool isPerspectiveProjection() {
+    return frameUniforms.clipFromViewMatrix[2].w != 0.0;
+}
+
 /** @public-api */
 vec3 getWorldNormalVector() {
     return shading_normal;
