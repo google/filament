@@ -61,11 +61,6 @@ static constexpr uint64_t SWAP_CHAIN_CONFIG_READABLE            = 0x2;
 static constexpr uint64_t SWAP_CHAIN_CONFIG_ENABLE_XCB          = 0x4;
 
 /**
- * Indicates that the SwapChain must automatically perform linear to srgb encoding.
- */
-static constexpr uint64_t SWAP_CHAIN_CONFIG_SRGB_COLORSPACE     = 0x8;
-
-/**
  * Indicates that the native window is a CVPixelBufferRef.
  *
  * This is only supported by the Metal backend. The CVPixelBuffer must be in the

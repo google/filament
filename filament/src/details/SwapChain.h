@@ -63,8 +63,6 @@ public:
 
     void setFrameCompletedCallback(FrameCompletedCallback callback, void* user);
 
-    static bool isSRGBSwapChainSupported(FEngine& engine) noexcept;
-
 private:
     FEngine& mEngine;
     backend::Handle<backend::HwSwapChain> mSwapChain;
