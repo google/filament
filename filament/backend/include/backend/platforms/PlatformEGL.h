@@ -58,7 +58,6 @@ protected:
 
     void terminate() noexcept override;
 
-    bool isSRGBSwapChainSupported() const noexcept override;
     SwapChain* createSwapChain(void* nativewindow, uint64_t flags) noexcept override;
     SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept override;
     void destroySwapChain(SwapChain* swapChain) noexcept override;
@@ -106,7 +105,6 @@ protected:
         } gl;
         struct {
             bool KHR_no_config_context = false;
-            bool KHR_gl_colorspace = false;
         } egl;
     } ext;
 

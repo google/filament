@@ -173,11 +173,7 @@ bool NoopDriver::isAutoDepthResolveSupported() {
     return true;
 }
 
-bool NoopDriver::isSRGBSwapChainSupported() {
-    return false;
-}
-
-bool NoopDriver::isWorkaroundNeeded(Workaround) {
+bool NoopDriver::isWorkaroundNeeded(Workaround workaround) {
     return false;
 }
 
