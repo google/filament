@@ -38,6 +38,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <memory>
 
 #include <stddef.h>
 #include <stdint.h>
