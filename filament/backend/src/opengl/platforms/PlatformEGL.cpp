@@ -103,6 +103,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
     auto extensions = GLUtils::split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
 
     ext.egl.KHR_no_config_context = extensions.has("EGL_KHR_no_config_context");
+    ext.egl.KHR_gl_colorspace = extensions.has("EGL_KHR_gl_colorspace");
 
     eglCreateSyncKHR = (PFNEGLCREATESYNCKHRPROC) eglGetProcAddress("eglCreateSyncKHR");
     eglDestroySyncKHR = (PFNEGLDESTROYSYNCKHRPROC) eglGetProcAddress("eglDestroySyncKHR");
@@ -281,6 +282,10 @@ EGLConfig PlatformEGL::findSwapChainConfig(uint64_t flags) const {
     return config;
 }
 
+bool PlatformEGL::isSRGBSwapChainSupported() const noexcept {
+    return ext.egl.KHR_gl_colorspace;
+}
+
 Platform::SwapChain* PlatformEGL::createSwapChain(
         void* nativeWindow, uint64_t flags) noexcept {
 
@@ -295,8 +300,20 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
         return nullptr;
     }
 
+    EGLint attribs[] = {
+            EGL_NONE, EGL_NONE,
+            EGL_NONE
+    };
+
+    if (ext.egl.KHR_gl_colorspace) {
+        if (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) {
+            attribs[0] = EGL_GL_COLORSPACE_KHR;
+            attribs[1] = EGL_GL_COLORSPACE_SRGB_KHR;
+        }
+    }
+
     EGLSurface sur = eglCreateWindowSurface(mEGLDisplay, config,
-            (EGLNativeWindowType)nativeWindow, nullptr);
+            (EGLNativeWindowType)nativeWindow, attribs);
 
     if (UTILS_UNLIKELY(sur == EGL_NO_SURFACE)) {
         logEglError("eglCreateWindowSurface");
@@ -323,11 +340,19 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
         return nullptr;
     }
 
-    const EGLint attribs[] = {
+    EGLint attribs[] = {
             EGL_WIDTH, EGLint(width),
             EGL_HEIGHT, EGLint(height),
+            EGL_NONE, EGL_NONE,
             EGL_NONE
     };
+
+    if (ext.egl.KHR_gl_colorspace) {
+        if (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) {
+            attribs[4] = EGL_GL_COLORSPACE_KHR;
+            attribs[5] = EGL_GL_COLORSPACE_SRGB_KHR;
+        }
+    }
 
     EGLSurface sur = eglCreatePbufferSurface(mEGLDisplay, config, attribs);
 

@@ -69,6 +69,14 @@ public:
     virtual SwapChain* createSwapChain(void* nativeWindow, uint64_t flags) noexcept = 0;
 
     /**
+     * Return whether createSwapChain supports the SWAP_CHAIN_CONFIG_SRGB_COLORSPACE flag.
+     * The default implementation returns false.
+     *
+     * @return true if SWAP_CHAIN_CONFIG_SRGB_COLORSPACE is supported, false otherwise.
+     */
+    virtual bool isSRGBSwapChainSupported() const noexcept;
+
+    /**
      * Called by the driver create a headless SwapChain.
      *
      * @param width     width of the buffer

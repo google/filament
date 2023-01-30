@@ -16,6 +16,7 @@
 
 #include <jni.h>
 
+#include <filament/Engine.h>
 #include <filament/SwapChain.h>
 
 #include "common/CallbackUtils.h"
@@ -31,4 +32,10 @@ Java_com_google_android_filament_SwapChain_nSetFrameCompletedCallback(JNIEnv* en
         JniCallback* callback = (JniCallback*)user;
         JniCallback::postToJavaAndDestroy(callback);
     }, callback);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_SwapChain_nIsSRGBSwapChainSupported(JNIEnv *, jclass, jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (bool)SwapChain::isSRGBSwapChainSupported(*engine);
 }

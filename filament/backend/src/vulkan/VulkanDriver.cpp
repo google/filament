@@ -640,6 +640,11 @@ bool VulkanDriver::isAutoDepthResolveSupported() {
     return false;
 }
 
+bool VulkanDriver::isSRGBSwapChainSupported() {
+    // TODO: implement SWAP_CHAIN_CONFIG_SRGB_COLORSPACE
+    return false;
+}
+
 bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
     VkPhysicalDeviceProperties const& deviceProperties = mContext.physicalDeviceProperties;
     switch (workaround) {
