@@ -66,7 +66,7 @@ public:
      * @return              The driver's SwapChain object.
      *
      */
-    virtual SwapChain* createSwapChain(void* nativeWindow, uint64_t& flags) noexcept = 0;
+    virtual SwapChain* createSwapChain(void* nativeWindow, uint64_t flags) noexcept = 0;
 
     /**
      * Called by the driver create a headless SwapChain.
@@ -79,7 +79,7 @@ public:
      * TODO: we need a more generic way of passing construction parameters
      *       A void* might be enough.
      */
-    virtual SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept = 0;
+    virtual SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept = 0;
 
     /**
      * Called by the driver to destroys the SwapChain

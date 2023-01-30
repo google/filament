@@ -148,7 +148,11 @@ public:
     using FrameScheduledCallback = backend::FrameScheduledCallback;
     using FrameCompletedCallback = backend::FrameCompletedCallback;
 
+    /**
+     * Requests a SwapChain with an alpha channel.
+     */
     static const uint64_t CONFIG_TRANSPARENT = backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
+
     /**
      * This flag indicates that the swap chain may be used as a source surface
      * for reading back render results.  This config must be set when creating

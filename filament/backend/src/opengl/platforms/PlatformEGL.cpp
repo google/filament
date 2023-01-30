@@ -102,6 +102,8 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
 
     auto extensions = GLUtils::split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
 
+    ext.egl.KHR_no_config_context = extensions.has("EGL_KHR_no_config_context");
+
     eglCreateSyncKHR = (PFNEGLCREATESYNCKHRPROC) eglGetProcAddress("eglCreateSyncKHR");
     eglDestroySyncKHR = (PFNEGLDESTROYSYNCKHRPROC) eglGetProcAddress("eglDestroySyncKHR");
     eglClientWaitSyncKHR = (PFNEGLCLIENTWAITSYNCKHRPROC) eglGetProcAddress("eglClientWaitSyncKHR");
@@ -115,7 +117,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
             EGL_RED_SIZE,    8,                                 //  2
             EGL_GREEN_SIZE,  8,                                 //  4
             EGL_BLUE_SIZE,   8,                                 //  6
-            EGL_ALPHA_SIZE,  0,                                 //  8 : reserved to set ALPHA_SIZE below
+            EGL_ALPHA_SIZE,  8,                                 //  8
             EGL_DEPTH_SIZE, 24,                                 // 10
             EGL_RECORDABLE_ANDROID, 1,                          // 12
             EGL_NONE                                            // 14
@@ -142,66 +144,46 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
     }
 #endif
 
-    EGLConfig eglConfig = nullptr;
+    // config use for creating the context
+    EGLConfig eglConfig = EGL_NO_CONFIG_KHR;
 
-    // find an opaque config
+    // find a config we can use if we don't have "EGL_KHR_no_config_context" and that we can use
+    // for the dummy pbuffer surface.
     if (!eglChooseConfig(mEGLDisplay, configAttribs, &mEGLConfig, 1, &configsCount)) {
         logEglError("eglChooseConfig");
         goto error;
     }
 
     if (configsCount == 0) {
-      // warn and retry without EGL_RECORDABLE_ANDROID
-      logEglError("eglChooseConfig(..., EGL_RECORDABLE_ANDROID) failed. Continuing without it.");
-      configAttribs[12] = EGL_RECORDABLE_ANDROID;
-      configAttribs[13] = EGL_DONT_CARE;
-      if (!eglChooseConfig(mEGLDisplay, configAttribs, &mEGLConfig, 1, &configsCount) ||
-              configsCount == 0) {
-          logEglError("eglChooseConfig");
-          goto error;
-      }
-    }
-
-    // find a transparent config
-    configAttribs[8] = EGL_ALPHA_SIZE;
-    configAttribs[9] = 8;
-    if (!eglChooseConfig(mEGLDisplay, configAttribs, &mEGLTransparentConfig, 1, &configsCount) ||
-            (configAttribs[13] == EGL_DONT_CARE && configsCount == 0)) {
-        logEglError("eglChooseConfig");
-        goto error;
-    }
-
-    if (configsCount == 0) {
-      // warn and retry without EGL_RECORDABLE_ANDROID
+        // warn and retry without EGL_RECORDABLE_ANDROID
         logEglError("eglChooseConfig(..., EGL_RECORDABLE_ANDROID) failed. Continuing without it.");
-      // this is not fatal
-      configAttribs[12] = EGL_RECORDABLE_ANDROID;
-      configAttribs[13] = EGL_DONT_CARE;
-      if (!eglChooseConfig(mEGLDisplay, configAttribs, &mEGLTransparentConfig, 1, &configsCount) ||
-              configsCount == 0) {
-          logEglError("eglChooseConfig");
-          goto error;
-      }
+        // this is not fatal
+        configAttribs[12] = EGL_RECORDABLE_ANDROID;
+        configAttribs[13] = EGL_DONT_CARE;
+        if (!eglChooseConfig(mEGLDisplay, configAttribs, &mEGLConfig, 1, &configsCount) ||
+            configsCount == 0) {
+            logEglError("eglChooseConfig");
+            goto error;
+        }
     }
 
-    if (!extensions.has("EGL_KHR_no_config_context")) {
-        // if we have the EGL_KHR_no_config_context, we don't need to worry about the config
-        // when creating the context, otherwise, we must always pick a transparent config.
-        eglConfig = mEGLConfig = mEGLTransparentConfig;
+    if (UTILS_UNLIKELY(!ext.egl.KHR_no_config_context)) {
+        // if we don't have the EGL_KHR_no_config_context the context must be created with
+        // the same config as the swapchain, so we have no choice but to create a
+        // transparent config.
+        eglConfig = mEGLConfig;
     }
 
-    // the pbuffer dummy surface is always created with a transparent surface because
-    // either we have EGL_KHR_no_config_context and it doesn't matter, or we don't and
-    // we must use a transparent surface
-    mEGLDummySurface = eglCreatePbufferSurface(mEGLDisplay, mEGLTransparentConfig, pbufferAttribs);
-    if (mEGLDummySurface == EGL_NO_SURFACE) {
+    // create the dummy surface, just for being able to make the context current.
+    mEGLDummySurface = eglCreatePbufferSurface(mEGLDisplay, mEGLConfig, pbufferAttribs);
+    if (UTILS_UNLIKELY(mEGLDummySurface == EGL_NO_SURFACE)) {
         logEglError("eglCreatePbufferSurface");
         goto error;
     }
 
     mEGLContext = eglCreateContext(mEGLDisplay, eglConfig, (EGLContext)sharedContext, contextAttribs);
-    if (mEGLContext == EGL_NO_CONTEXT && sharedContext &&
-        extensions.has("EGL_KHR_create_context_no_error")) {
+    if (UTILS_UNLIKELY(mEGLContext == EGL_NO_CONTEXT && sharedContext &&
+        extensions.has("EGL_KHR_create_context_no_error"))) {
         // context creation could fail because of EGL_CONTEXT_OPENGL_NO_ERROR_KHR
         // not matching the sharedContext. Try with it.
         contextAttribs[2] = EGL_CONTEXT_OPENGL_NO_ERROR_KHR;
@@ -214,7 +196,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
         goto error;
     }
 
-    if (!makeCurrent(mEGLDummySurface, mEGLDummySurface)) {
+    if (UTILS_UNLIKELY(!makeCurrent(mEGLDummySurface, mEGLDummySurface))) {
         // eglMakeCurrent failed
         logEglError("eglMakeCurrent");
         goto error;
@@ -263,36 +245,91 @@ void PlatformEGL::terminate() noexcept {
     eglReleaseThread();
 }
 
+EGLConfig PlatformEGL::findSwapChainConfig(uint64_t flags) const {
+    EGLConfig config = EGL_NO_CONFIG_KHR;
+    EGLint configsCount;
+    EGLint configAttribs[] = {
+            EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,
+            EGL_RED_SIZE, 8,
+            EGL_GREEN_SIZE, 8,
+            EGL_BLUE_SIZE, 8,
+            EGL_ALPHA_SIZE, (flags & SWAP_CHAIN_CONFIG_TRANSPARENT) ? 8 : 0,
+            EGL_DEPTH_SIZE, 24,
+            EGL_RECORDABLE_ANDROID, 1,
+            EGL_NONE
+    };
+
+    if (UTILS_UNLIKELY(
+            !eglChooseConfig(mEGLDisplay, configAttribs, &config, 1, &configsCount))) {
+        logEglError("eglChooseConfig");
+            return EGL_NO_CONFIG_KHR;
+    }
+
+    if (UTILS_UNLIKELY(configsCount == 0)) {
+        // warn and retry without EGL_RECORDABLE_ANDROID
+        logEglError(
+                "eglChooseConfig(..., EGL_RECORDABLE_ANDROID) failed. Continuing without it.");
+        configAttribs[12] = EGL_RECORDABLE_ANDROID;
+        configAttribs[13] = EGL_DONT_CARE;
+        if (UTILS_UNLIKELY(
+                !eglChooseConfig(mEGLDisplay, configAttribs, &config, 1, &configsCount) ||
+                configsCount == 0)) {
+            logEglError("eglChooseConfig");
+                return EGL_NO_CONFIG_KHR;
+        }
+    }
+    return config;
+}
+
 Platform::SwapChain* PlatformEGL::createSwapChain(
-        void* nativeWindow, uint64_t& flags) noexcept {
-    EGLSurface sur = eglCreateWindowSurface(mEGLDisplay,
-            (flags & SWAP_CHAIN_CONFIG_TRANSPARENT) ?
-            mEGLTransparentConfig : mEGLConfig,
+        void* nativeWindow, uint64_t flags) noexcept {
+
+    EGLConfig config = EGL_NO_CONFIG_KHR;
+    if (UTILS_LIKELY(ext.egl.KHR_no_config_context)) {
+        config = findSwapChainConfig(flags);
+    } else {
+        config = mEGLConfig;
+    }
+
+    if (UTILS_UNLIKELY(config == EGL_NO_CONFIG_KHR)) {
+        return nullptr;
+    }
+
+    EGLSurface sur = eglCreateWindowSurface(mEGLDisplay, config,
             (EGLNativeWindowType)nativeWindow, nullptr);
 
     if (UTILS_UNLIKELY(sur == EGL_NO_SURFACE)) {
         logEglError("eglCreateWindowSurface");
         return nullptr;
     }
-    if (!eglSurfaceAttrib(mEGLDisplay, sur, EGL_SWAP_BEHAVIOR, EGL_BUFFER_DESTROYED)) {
-        logEglError("eglSurfaceAttrib(..., EGL_SWAP_BEHAVIOR, EGL_BUFFER_DESTROYED)");
-        // this is not fatal
-    }
+
+    // this is not fatal
+    eglSurfaceAttrib(mEGLDisplay, sur, EGL_SWAP_BEHAVIOR, EGL_BUFFER_DESTROYED);
+
     return (SwapChain*)sur;
 }
 
 Platform::SwapChain* PlatformEGL::createSwapChain(
-        uint32_t width, uint32_t height, uint64_t& flags) noexcept {
+        uint32_t width, uint32_t height, uint64_t flags) noexcept {
 
-    EGLint attribs[] = {
+    EGLConfig config = EGL_NO_CONFIG_KHR;
+    if (UTILS_LIKELY(ext.egl.KHR_no_config_context)) {
+        config = findSwapChainConfig(flags);
+    } else {
+        config = mEGLConfig;
+    }
+
+    if (UTILS_UNLIKELY(config == EGL_NO_CONFIG_KHR)) {
+        return nullptr;
+    }
+
+    const EGLint attribs[] = {
             EGL_WIDTH, EGLint(width),
             EGL_HEIGHT, EGLint(height),
             EGL_NONE
     };
 
-    EGLSurface sur = eglCreatePbufferSurface(mEGLDisplay,
-                (flags & SWAP_CHAIN_CONFIG_TRANSPARENT) ?
-                mEGLTransparentConfig : mEGLConfig, attribs);
+    EGLSurface sur = eglCreatePbufferSurface(mEGLDisplay, config, attribs);
 
     if (UTILS_UNLIKELY(sur == EGL_NO_SURFACE)) {
         logEglError("eglCreatePbufferSurface");
@@ -366,7 +403,7 @@ FenceStatus PlatformEGL::waitFence(
 OpenGLPlatform::ExternalTexture* PlatformEGL::createExternalImageTexture() noexcept {
     ExternalTexture* outTexture = new ExternalTexture{};
     glGenTextures(1, &outTexture->id);
-    if (UTILS_LIKELY(ext.OES_EGL_image_external_essl3)) {
+    if (UTILS_LIKELY(ext.gl.OES_EGL_image_external_essl3)) {
         outTexture->target = GL_TEXTURE_EXTERNAL_OES;
     } else {
         // if texture external is not supported, revert to texture 2d
@@ -382,7 +419,7 @@ void PlatformEGL::destroyExternalImage(ExternalTexture* texture) noexcept {
 
 bool PlatformEGL::setExternalImage(void* externalImage,
         UTILS_UNUSED_IN_RELEASE ExternalTexture* texture) noexcept {
-    if (UTILS_LIKELY(ext.OES_EGL_image_external_essl3)) {
+    if (UTILS_LIKELY(ext.gl.OES_EGL_image_external_essl3)) {
         assert_invariant(texture->target == GL_TEXTURE_EXTERNAL_OES);
         // the texture is guaranteed to be bound here.
 #ifdef GL_OES_EGL_image
@@ -401,7 +438,7 @@ void PlatformEGL::initializeGlExtensions() noexcept {
         const char * const extension = (const char*) glGetStringi(GL_EXTENSIONS, (GLuint)i);
         glExtensions.insert(extension);
     }
-    ext.OES_EGL_image_external_essl3 = glExtensions.has("GL_OES_EGL_image_external_essl3");
+    ext.gl.OES_EGL_image_external_essl3 = glExtensions.has("GL_OES_EGL_image_external_essl3");
 }
 
 } // namespace filament::backend

@@ -42,9 +42,34 @@
  */
 namespace filament::backend {
 
+/**
+ * Requests a SwapChain with an alpha channel.
+ */
 static constexpr uint64_t SWAP_CHAIN_CONFIG_TRANSPARENT         = 0x1;
+
+/**
+ * This flag indicates that the swap chain may be used as a source surface
+ * for reading back render results.  This config flag must be set when creating
+ * any SwapChain that will be used as the source for a blit operation.
+ */
 static constexpr uint64_t SWAP_CHAIN_CONFIG_READABLE            = 0x2;
+
+/**
+ * Indicates that the native X11 window is an XCB window rather than an XLIB window.
+ * This is ignored on non-Linux platforms and in builds that support only one X11 API.
+ */
 static constexpr uint64_t SWAP_CHAIN_CONFIG_ENABLE_XCB          = 0x4;
+
+/**
+ * Indicates that the native window is a CVPixelBufferRef.
+ *
+ * This is only supported by the Metal backend. The CVPixelBuffer must be in the
+ * kCVPixelFormatType_32BGRA format.
+ *
+ * It is not necessary to add an additional retain call before passing the pixel buffer to
+ * Filament. Filament will call CVPixelBufferRetain during Engine::createSwapChain, and
+ * CVPixelBufferRelease when the swap chain is destroyed.
+ */
 static constexpr uint64_t SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER = 0x8;
 
 static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT  = 16;   // This is guaranteed by OpenGL ES.
