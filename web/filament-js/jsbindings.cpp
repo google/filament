@@ -544,7 +544,8 @@ class_<Engine>("Engine")
 
 /// SwapChain ::core class:: Represents the platform's native rendering surface.
 /// See also the [Engine] methods `createSwapChain` and `destroySwapChain`.
-class_<SwapChain>("SwapChain");
+class_<SwapChain>("SwapChain")
+        .class_function("isSRGBSwapChainSupported", &SwapChain::isSRGBSwapChainSupported);
 
 /// Renderer ::core class:: Represents the platform's native window.
 /// See also the [Engine] methods `createRenderer` and `destroyRenderer`.
@@ -572,7 +573,6 @@ class_<Renderer>("Renderer")
 /// A view is associated with a particular [Scene], [Camera], and viewport.
 /// See also the [Engine] methods `createView` and `destroyView`.
 class_<View>("View")
-
     .function("pick", EMBIND_LAMBDA(void, (View* self, uint32_t x, uint32_t y, val cb), {
         self->pick(x, y, [cb](const View::PickingQueryResult& result) {
             EM_ASM_ARGS({

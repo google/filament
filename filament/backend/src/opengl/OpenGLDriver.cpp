@@ -1691,6 +1691,10 @@ bool OpenGLDriver::isAutoDepthResolveSupported() {
     return true;
 }
 
+bool OpenGLDriver::isSRGBSwapChainSupported() {
+    return mPlatform.isSRGBSwapChainSupported();
+}
+
 bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:

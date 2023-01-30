@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 ## main branch
 
 - engine: fix broken picking [⚠️ **Recompile Materials to get the fix**]
+- engine: added support for sRGB swapchains. See `SwapChain.h`
 - bluegl: support Windows32
 
 ## v1.31.3
