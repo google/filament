@@ -151,7 +151,7 @@ endfunction()
 add_mesh("assets/models/monkey/monkey.obj" "suzanne.filamesh")
 
 set (COMPRESSION "--compression=uastc")
-add_ktxfiles("assets/models/monkey/albedo.png" "albedo.ktx2" "${COMPRESSION}")
+add_ktxfiles("assets/models/monkey/color.png" "albedo.ktx2" "${COMPRESSION}")
 add_ktxfiles("assets/models/monkey/roughness.png" "roughness.ktx2" "${COMPRESSION};--grayscale;--linear")
 add_ktxfiles("assets/models/monkey/metallic.png" "metallic.ktx2" "${COMPRESSION};--grayscale;--linear")
 add_ktxfiles("assets/models/monkey/ao.png" "ao.ktx2" "${COMPRESSION};--grayscale;--linear")

@@ -71,7 +71,7 @@ function(add_rawfile SOURCE TARGET)
         MAIN_DEPENDENCY ${source_path})
 endfunction()
 
-add_ktxfiles("assets/models/monkey/albedo.png" "albedo.ktx2" "--compression=uastc")
+add_ktxfiles("assets/models/monkey/color.png" "albedo.ktx2" "--compression=uastc")
 add_ktxfiles("assets/models/monkey/normal.png" "normal.ktx2" "--compression=uastc_normals;--kernel=NORMALS;--linear")
 add_ktxfiles("assets/models/monkey/roughness.png" "roughness.ktx2" "--compression=uastc;--grayscale;--linear")
 add_ktxfiles("assets/models/monkey/metallic.png" "metallic.ktx2" "--compression=uastc;--grayscale;--linear")

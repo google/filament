@@ -22,6 +22,7 @@
 #include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
+#include <filament/Renderer.h>
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
 #include <filament/Scene.h>
@@ -76,13 +77,13 @@ struct PbrMap {
 };
 
 static std::array<PbrMap, MAP_COUNT> g_maps = {
-    PbrMap { "_color",      "baseColorMap",  true,  nullptr },
-    PbrMap { "_ao",         "aoMap",         false, nullptr },
-    PbrMap { "_roughness",  "roughnessMap",  false, nullptr },
-    PbrMap { "_metallic",   "metallicMap",   false, nullptr },
-    PbrMap { "_normal",     "normalMap",     false, nullptr },
-    PbrMap { "_bentNormal", "bentNormalMap", false, nullptr },
-    PbrMap { "_height",     "heightMap",     false, nullptr },
+    PbrMap { "color",      "baseColorMap",  true,  nullptr },
+    PbrMap { "ao",         "aoMap",         false, nullptr },
+    PbrMap { "roughness",  "roughnessMap",  false, nullptr },
+    PbrMap { "metallic",   "metallicMap",   false, nullptr },
+    PbrMap { "normal",     "normalMap",     false, nullptr },
+    PbrMap { "bentNormal", "bentNormalMap", false, nullptr },
+    PbrMap { "height",     "heightMap",     false, nullptr },
 };
 
 static Config g_config;
@@ -93,7 +94,7 @@ static struct PbrConfig {
 } g_pbrConfig;
 
 static void printUsage(char* name) {
-    std::string exec_name(Path(name).getName());
+    std::string const exec_name(Path(name).getName());
     std::string usage(
             "SAMPLE_PBR is an example of loading PBR assets with base color + packed metallic/roughness\n"
             "Usage:\n"
@@ -143,12 +144,12 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
             { "material",       required_argument, nullptr, 'm' },
             { "clear-coat",     no_argument,       nullptr, 'c' },
             { "anisotropy",     no_argument,       nullptr, 'A' },
-            { 0, 0, 0, 0 }  // termination of the option list
+            { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
     int opt;
     int option_index = 0;
     while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+        std::string const arg(optarg ? optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -210,9 +211,9 @@ static void cleanup(Engine* engine, View*, Scene*) {
     em.destroy(g_light);
 }
 
-void loadTexture(Engine* engine, const std::string& filePath, Texture** map, bool sRGB = true) {
+bool loadTexture(Engine* engine, const std::string& filePath, Texture** map, bool sRGB = true) {
     if (!filePath.empty()) {
-        Path path(filePath);
+        Path const path(filePath);
         if (path.exists()) {
             int w, h, n;
             unsigned char* data = stbi_load(path.getAbsolutePath().c_str(), &w, &h, &n, 3);
@@ -228,18 +229,18 @@ void loadTexture(Engine* engine, const std::string& filePath, Texture** map, boo
                         (Texture::PixelBufferDescriptor::Callback) &stbi_image_free);
                 (*map)->setImage(*engine, 0, std::move(buffer));
                 (*map)->generateMipmaps(*engine);
+                return true;
             } else {
                 std::cout << "The texture " << path << " could not be loaded" << std::endl;
             }
-        } else {
-            std::cout << "The texture " << path << " does not exist" << std::endl;
         }
     }
+    return false;
 }
 
 static void setup(Engine* engine, View* view, Scene* scene) {
-    Path path(g_pbrConfig.materialDir);
-    std::string name(path.getName());
+    Path const path(g_pbrConfig.materialDir);
+    std::string const name(path.getName());
 
     view->setAmbientOcclusionOptions({
         .radius = 0.01f,
@@ -252,17 +253,21 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 
     bool hasUV = false;
     for (auto& map: g_maps) {
-        loadTexture(engine, path.concat(name + map.suffix + ".png"), &map.texture, map.sRGB);
+        if (!loadTexture(engine, path.concat(name + "_" + map.suffix + ".png"), &map.texture, map.sRGB)) {
+            if (!loadTexture(engine, path.concat(std::string(map.suffix) + ".png"), &map.texture, map.sRGB)) {
+                std::cout << "The texture " << map.suffix << " does not exist" << std::endl;
+            }
+        }
         if (map.texture != nullptr) hasUV = true;
     }
 
-    bool hasBaseColorMap  = g_maps[MAP_COLOR].texture != nullptr;
-    bool hasMetallicMap   = g_maps[MAP_METALLIC].texture != nullptr;
-    bool hasRoughnessMap  = g_maps[MAP_ROUGHNESS].texture != nullptr;
-    bool hasAOMap         = g_maps[MAP_AO].texture != nullptr;
-    bool hasNormalMap     = g_maps[MAP_NORMAL].texture != nullptr;
-    bool hasBentNormalMap = g_maps[MAP_BENT_NORMAL].texture != nullptr;
-    bool hasHeightMap     = g_maps[MAP_HEIGHT].texture != nullptr;
+    bool const hasBaseColorMap  = g_maps[MAP_COLOR].texture != nullptr;
+    bool const hasMetallicMap   = g_maps[MAP_METALLIC].texture != nullptr;
+    bool const hasRoughnessMap  = g_maps[MAP_ROUGHNESS].texture != nullptr;
+    bool const hasAOMap         = g_maps[MAP_AO].texture != nullptr;
+    bool const hasNormalMap     = g_maps[MAP_NORMAL].texture != nullptr;
+    bool const hasBentNormalMap = g_maps[MAP_BENT_NORMAL].texture != nullptr;
+    bool const hasHeightMap     = g_maps[MAP_HEIGHT].texture != nullptr;
 
     std::string shader = R"SHADER(
         void material(inout MaterialInputs material) {
@@ -402,7 +407,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         }
     }
 
-    Package pkg = builder.build(engine->getJobSystem());
+    Package const pkg = builder.build(engine->getJobSystem());
 
     g_material = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
     g_materialInstances["DefaultMaterial"] = g_material->createInstance();
@@ -446,16 +451,26 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     scene->addEntity(g_light);
 }
 
+static void preRender(filament::Engine*, filament::View*, filament::Scene*,
+        filament::Renderer* renderer) {
+
+    // Without an IBL, we must clear the swapchain to black before each frame.
+    renderer->setClearOptions({
+            .clearColor = { 0.5f, 0.5f, 0.5f, 1.0f },
+            .clear = !FilamentApp::get().getIBL()  });
+
+}
+
 int main(int argc, char* argv[]) {
-    int option_index = handleCommandLineArgments(argc, argv, &g_config);
-    int num_args = argc - option_index;
+    int const option_index = handleCommandLineArgments(argc, argv, &g_config);
+    int const num_args = argc - option_index;
     if (num_args < 1) {
         printUsage(argv[0]);
         return 1;
     }
 
     for (int i = option_index; i < argc; i++) {
-        utils::Path filename = argv[i];
+        utils::Path const filename = argv[i];
         if (!filename.exists()) {
             std::cerr << "file " << argv[i] << " not found!" << std::endl;
             return 1;
@@ -465,7 +480,7 @@ int main(int argc, char* argv[]) {
 
     g_config.title = "PBR";
     FilamentApp& filamentApp = FilamentApp::get();
-    filamentApp.run(g_config, setup, cleanup);
+    filamentApp.run(g_config, setup, cleanup, FilamentApp::ImGuiCallback(), preRender);
 
     return 0;
 }
