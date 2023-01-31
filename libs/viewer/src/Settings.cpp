@@ -38,6 +38,17 @@ using namespace utils;
 
 namespace filament::viewer {
 
+std::string_view to_string(color::ColorSpace const& colorspace) noexcept {
+    using namespace color;
+    if (colorspace == Rec709-Linear-D65) {
+        return "Rec709-Linear-D65";
+    }
+    if (colorspace == Rec709-sRGB-D65) {
+        return "Rec709-sRGB-D65";
+    }
+    return "unknown";
+}
+
 // Skips over an unused token.
 int parse(jsmntok_t const* tokens, int i) {
     int end = i + 1;
@@ -83,6 +94,16 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ToneMapp
     return i + 1;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, color::ColorSpace* out) {
+    using namespace filament::color;
+    if (0 == compare(tokens[i], jsonChunk, "Rec709-Linear-D65")) { *out = Rec709-Linear-D65; }
+    else if (0 == compare(tokens[i], jsonChunk, "Rec709-sRGB-D65")) { *out = Rec709-sRGB-D65; }
+    else {
+        slog.w << "Invalid ColorSpace: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
+    }
+    return i + 1;
+}
+
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, GenericToneMapperSettings* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -117,6 +138,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ColorGra
         CHECK_KEY(tok);
         if (compare(tok, jsonChunk, "enabled") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (compare(tok, jsonChunk, "colorspace") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->colorspace);
         } else if (compare(tok, jsonChunk, "quality") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->quality);
         } else if (compare(tok, jsonChunk, "toneMapping") == 0) {
@@ -604,6 +627,7 @@ ColorGrading* createColorGrading(const ColorGradingSettings& settings, Engine* e
             .toneMapper(toneMapper)
             .luminanceScaling(settings.luminanceScaling)
             .gamutMapping(settings.gamutMapping)
+            .outputColorSpace(settings.colorspace)
             .build(*engine);
     delete toneMapper;
     return colorGrading;
@@ -643,6 +667,7 @@ static std::ostream& operator<<(std::ostream& out, const GenericToneMapperSettin
 static std::ostream& operator<<(std::ostream& out, const ColorGradingSettings& in) {
     return out << "{\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
+        << "\"colorspace\": " << to_string(in.colorspace) << ",\n"
         << "\"quality\": " << (in.quality) << ",\n"
         << "\"toneMapping\": " << (in.toneMapping) << ",\n"
         << "\"genericToneMapper\": " << (in.genericToneMapper) << ",\n"
@@ -809,8 +834,9 @@ bool GenericToneMapperSettings::operator==(const GenericToneMapperSettings &rhs)
 bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
     // If you had to fix the following codeline, then you likely also need to update the
     // implementation of operator==.
-    static_assert(sizeof(ColorGradingSettings) == 228, "Please update Settings.cpp");
+    static_assert(sizeof(ColorGradingSettings) == 312, "Please update Settings.cpp");
     return enabled == rhs.enabled &&
+            colorspace == rhs.colorspace &&
             quality == rhs.quality &&
             toneMapping == rhs.toneMapping &&
             genericToneMapper == rhs.genericToneMapper &&
