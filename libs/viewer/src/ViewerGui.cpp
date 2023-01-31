@@ -187,6 +187,10 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
         ImGui::Combo("Quality##colorGradingQuality", &quality, "Low\0Medium\0High\0Ultra\0\0");
         colorGrading.quality = (decltype(colorGrading.quality)) quality;
 
+        int colorspace = (colorGrading.colorspace == Rec709-Linear-D65) ? 0 : 1;
+        ImGui::Combo("Output color space", &colorspace, "Rec709-Linear-D65\0Rec709-sRGB-D65\0\0");
+        colorGrading.colorspace = (colorspace == 0) ? Rec709-Linear-D65 : Rec709-sRGB-D65;
+
         int toneMapping = (int) colorGrading.toneMapping;
         ImGui::Combo("Tone-mapping", &toneMapping,
                 "Linear\0ACES (legacy)\0ACES\0Filmic\0Generic\0Display Range\0\0");

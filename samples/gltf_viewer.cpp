@@ -110,8 +110,7 @@ struct App {
         IndexBuffer* fullScreenTriangleIndexBuffer;
     } scene;
 
-    // zero-initialized so that the first time through is always dirty.
-    ColorGradingSettings lastColorGradingOptions = { 0 };
+    ColorGradingSettings lastColorGradingOptions = { .enabled = false };
 
     ColorGrading* colorGrading = nullptr;
 
