@@ -35,7 +35,7 @@ struct Primaries {
     float2 b;
 
     bool operator==(const Primaries& rhs) const noexcept {
-        return r == rhs.r && b == rhs.b && g == rhs.b;
+        return r == rhs.r && b == rhs.b && g == rhs.g;
     }
 };
 
