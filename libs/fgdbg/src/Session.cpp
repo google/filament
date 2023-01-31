@@ -37,42 +37,54 @@ void Session::addResource(const Resource& resource) {
     this->resources.push_back(resource);
 }
 
+/**
+ * Uploads the session info to the server, format (YAML):
+ passes:
+  6:                        <-- pass id
+    name: foo
+    reads: [4, 9]
+    writes: [9, 4]
+  3:                        <-- pass id
+    name: foo
+    reads: [9, 4]
+    writes: []
+resources:
+  9:                        <-- resource id
+    name: foo
+    size: 100
+  4:                        <-- resource id
+    name: foo
+    size: 30
+**/
 void Session::update() const {
-    // TODO(@raviola): Temporary format
-    //  <---------------passes------------------->|<----------resources----------------->
-    //  id:name:readId-readId:writeId-writeId, ...|id:name:size,id:name:size,id:name:size
     std::stringstream ss;
-
-    // Passes
-    bool first = true;
+    ss << "passes:";
     for (const auto& pass: passes) {
-        if (!first) ss << ",";
-        first = false;
-        ss << pass.id;
-        ss << ":";
-        ss << pass.name;
-        ss << ":";
+        ss << "\n ";
+        ss << pass.id << ":\n  ";
+        ss << "name: " << pass.name << "\n  ";
+        ss << "reads: " << "[";
         for (int i = 0; i < pass.reads.size(); i++) {
-            if (i != 0) ss << "-";
+            if (i != 0) ss << ",";
             ss << pass.reads[i];
         }
-        ss << ":";
+        ss << "]";
+        ss << "\n  ";
+        ss << "writes: " << "[";
         for (int i = 0; i < pass.writes.size(); i++) {
-            if (i != 0) ss << "-";
+            if (i != 0) ss << ",";
             ss << pass.writes[i];
         }
+        ss << "]";
     }
-    ss << "|";
-    // Resources
-    first = true;
+    ss << "\n";
+
+    ss << "resources:";
     for (const auto& resource: resources) {
-        if (!first) ss << ",";
-        first = false;
-        ss << resource.id;
-        ss << ":";
-        ss << resource.name;
-        ss << ":";
-        ss << resource.size;
+        ss << "\n ";
+        ss << resource.id << ":\n  ";
+        ss << "name: " << resource.name << "\n  ";
+        ss << "size: " << resource.size;
     }
 
     server->sendMessage(ss.str());

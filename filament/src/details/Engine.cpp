@@ -656,7 +656,7 @@ int FEngine::loop() {
             debug.fgdbg->addPass({ "Pass 1", 1, { 1, 3 }, { 1 }});
             debug.fgdbg->addPass({ "Pass 2", 2, { 4 }, { 1, 2 }});
             debug.fgdbg->addPass({ "Pass 3", 3, { 2 }, { 4 }});
-            debug.fgdbg->addPass({ "Pass 4", 5, {}, { 4 }});
+            debug.fgdbg->addPass({ "Pass 4", 4, {}, { 4 }});
             debug.fgdbg->addPass({ "Pass 5", 5, {1, 3}, { 1 }});
             debug.fgdbg->addResource({ "resource 1", 1, 100 });
             debug.fgdbg->addResource({ "resource 2", 2, 100 });

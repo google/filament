@@ -29,7 +29,7 @@ class Session {
 
 public:
     Session(const std::string& name,
-            std::shared_ptr<DebugServer> server) : name{ name }, server{ std::move(server) } {}
+            std::shared_ptr<DebugServer> server) : name{ name }, server{ server } {}
 
     void addPasses(const std::vector<Pass>& passes);
     void addPass(const Pass& pass);
