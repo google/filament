@@ -27,15 +27,22 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-Driver* PlatformVkWindows::createDriver(void* const sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
+using SurfaceBundle = VulkanPlatform::SurfaceBundle;
+
+Driver* PlatformVkWindows::createDriver(void* const sharedContext,
+        const Platform::DriverConfig& driverConfig) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     const char* requiredInstanceExtensions[] = { "VK_KHR_win32_surface" };
     return VulkanDriverFactory::create(this, requiredInstanceExtensions, 1, driverConfig);
 }
 
-void* PlatformVkWindows::createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept {
-    VkSurfaceKHR surface = nullptr;
-
+SurfaceBundle PlatformVkWindows::createVkSurfaceKHR(void* nativeWindow, void* instance,
+        uint64_t flags) noexcept {
+    SurfaceBundle bundle {
+        .surface = nullptr,
+        .width = 0,
+        .height = 0
+    };
     HWND window = (HWND) nativeWindow;
 
     VkWin32SurfaceCreateInfoKHR createInfo = {};
@@ -43,10 +50,11 @@ void* PlatformVkWindows::createVkSurfaceKHR(void* nativeWindow, void* instance, 
     createInfo.hwnd = window;
     createInfo.hinstance = GetModuleHandle(nullptr);
 
-    VkResult result = vkCreateWin32SurfaceKHR((VkInstance) instance, &createInfo, nullptr, &surface);
+    VkResult result = vkCreateWin32SurfaceKHR((VkInstance) instance, &createInfo, nullptr,
+            (VkSurfaceKHR*) &bundle.surface);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateWin32SurfaceKHR error.");
 
-    return surface;
+    return bundle;
 }
 
 } // namespace filament::backend

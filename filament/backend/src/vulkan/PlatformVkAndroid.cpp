@@ -29,23 +29,32 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-Driver* PlatformVkAndroid::createDriver(void* const sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
+using SurfaceBundle = VulkanPlatform::SurfaceBundle;
+
+Driver* PlatformVkAndroid::createDriver(void* const sharedContext,
+        const Platform::DriverConfig& driverConfig) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     static const char* requiredInstanceExtensions[] = { "VK_KHR_android_surface" };
     return VulkanDriverFactory::create(this, requiredInstanceExtensions, 1, driverConfig);
 }
 
-void* PlatformVkAndroid::createVkSurfaceKHR(void* nativeWindow, void* vkinstance, uint64_t flags) noexcept {
+SurfaceBundle PlatformVkAndroid::createVkSurfaceKHR(void* nativeWindow, void* vkinstance,
+        uint64_t flags) noexcept {
     const VkInstance instance = (VkInstance) vkinstance;
     ANativeWindow* aNativeWindow = (ANativeWindow*) nativeWindow;
     VkAndroidSurfaceCreateInfoKHR createInfo {
         .sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR,
         .window = aNativeWindow
     };
-    VkSurfaceKHR surface = VK_NULL_HANDLE;
-    VkResult result = vkCreateAndroidSurfaceKHR(instance, &createInfo, VKALLOC, &surface);
+    SurfaceBundle bundle {
+        .surface = VK_NULL_HANDLE,
+        .width = 0,
+        .height = 0
+    };
+    VkResult result = vkCreateAndroidSurfaceKHR(instance, &createInfo, VKALLOC,
+            (VkSurfaceKHR*) &bundle.surface);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateAndroidSurfaceKHR error.");
-    return (void*) surface;
+    return bundle;
 }
 
 } // namespace filament::backend

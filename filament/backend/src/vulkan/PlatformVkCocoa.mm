@@ -34,6 +34,8 @@ using namespace bluevk;
 
 namespace filament::backend {
 
+using SurfaceBundle = VulkanPlatform::SurfaceBundle;
+
 Driver* PlatformVkCocoa::createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     static const char* requiredInstanceExtensions[] = {
@@ -42,21 +44,28 @@ Driver* PlatformVkCocoa::createDriver(void* sharedContext, const Platform::Drive
     return VulkanDriverFactory::create(this, requiredInstanceExtensions, 1, driverConfig);
 }
 
-void* PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept {
+SurfaceBundle PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance,
+        uint64_t flags) noexcept {
     // Obtain the CAMetalLayer-backed view.
     NSView* nsview = (__bridge NSView*) nativeWindow;
     ASSERT_POSTCONDITION(nsview, "Unable to obtain Metal-backed NSView.");
 
     // Create the VkSurface.
     ASSERT_POSTCONDITION(vkCreateMacOSSurfaceMVK, "Unable to load vkCreateMacOSSurfaceMVK.");
-    VkSurfaceKHR surface = nullptr;
     VkMacOSSurfaceCreateInfoMVK createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
     createInfo.pView = (__bridge void*) nsview;
-    VkResult result = vkCreateMacOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC, &surface);
+
+    SurfaceBundle bundle {
+        .surface = nullptr,
+        .width = 0,
+        .height = 0
+    };
+    VkResult result = vkCreateMacOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC,
+            (VkSurfaceKHR*) &bundle.surface);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateMacOSSurfaceMVK error.");
 
-    return surface;
+    return bundle;
 }
 
 } // namespace filament::backend

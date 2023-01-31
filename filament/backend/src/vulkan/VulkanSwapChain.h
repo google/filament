@@ -28,10 +28,14 @@ namespace filament::backend {
 
 
 struct VulkanSwapChain : public HwSwapChain {
-    VulkanSwapChain(VulkanContext& context, VulkanStagePool& stagePool, VkSurfaceKHR vksurface);
+    // The *fallbackExtent* parameter is for the case where the extent returned by the physical
+    // surface is 0xFFFFFFFF.
+    VulkanSwapChain(VulkanContext& context, VulkanStagePool& stagePool, VkSurfaceKHR vksurface,
+            VkExtent2D fallbackExtent={.width=640, .height=320});
 
     // Headless constructor.
-    VulkanSwapChain(VulkanContext& context, VulkanStagePool& stagePool, uint32_t width, uint32_t height);
+    VulkanSwapChain(VulkanContext& context, VulkanStagePool& stagePool, uint32_t width,
+            uint32_t height);
 
     bool acquire();
     void create(VulkanStagePool& stagePool);
@@ -63,6 +67,7 @@ struct VulkanSwapChain : public HwSwapChain {
 private:
     VulkanContext& mContext;
     uint32_t mCurrentSwapIndex = 0u;
+    const VkExtent2D mFallbackExtent = {};
 
     // Color attachments are swapped, but depth is not. Typically there are 2 or 3 color attachments
     // in a swap chain.
