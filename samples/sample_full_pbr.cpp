@@ -281,9 +281,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             vec2 uvDy = dFdy(uv0);
 
             mat3 tangentFromWorld = transpose(getWorldTangentFrame());
-            vec3 tangentCameraPosition = tangentFromWorld * getWorldCameraPosition();
-            vec3 tangentFragPosition = tangentFromWorld * getWorldPosition();
-            vec3 v = normalize(tangentCameraPosition - tangentFragPosition);
+            vec3 v = tangentFromWorld * getWorldViewVector();
 
             float minLayers = 8.0;
             float maxLayers = 48.0;
@@ -297,7 +295,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             vec2 deltaUV = v.xy * heightScale / (v.z * numLayers);
             vec2 currUV = uv0;
             float height = 1.0 - textureGrad(materialParams_heightMap, currUV, uvDx, uvDy).r;
-            for (int i = 0; i < numLayers; i++) {
+            for (int i = 0; i < int(numLayers); i++) {
                 currLayerDepth += layerDepth;
                 currUV -= deltaUV;
                 height = 1.0 - textureGrad(materialParams_heightMap, currUV, uvDx, uvDy).r;
@@ -445,7 +443,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             .direction({0.6, -1, -0.8})
             .castShadows(true)
             .build(*engine, g_light);
-    //scene->addEntity(g_light);
+    scene->addEntity(g_light);
 }
 
 int main(int argc, char* argv[]) {
