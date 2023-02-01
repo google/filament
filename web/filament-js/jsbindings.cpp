@@ -896,6 +896,9 @@ class_<RenderableBuilder>("RenderableManager$Builder")
     .BUILDER_FUNCTION("priority", RenderableBuilder, (RenderableBuilder* builder, uint8_t value), {
         return &builder->priority(value); })
 
+    .BUILDER_FUNCTION("channel", RenderableBuilder, (RenderableBuilder* builder, uint8_t value), {
+        return &builder->channel(value); })
+
     .BUILDER_FUNCTION("culling", RenderableBuilder, (RenderableBuilder* builder, bool enable), {
         return &builder->culling(enable); })
 
@@ -965,6 +968,7 @@ class_<RenderableManager>("RenderableManager")
     .function("setAxisAlignedBoundingBox", &RenderableManager::setAxisAlignedBoundingBox)
     .function("setLayerMask", &RenderableManager::setLayerMask)
     .function("setPriority", &RenderableManager::setPriority)
+    .function("setChannel", &RenderableManager::setChannel)
     .function("setCastShadows", &RenderableManager::setCastShadows)
     .function("setReceiveShadows", &RenderableManager::setReceiveShadows)
     .function("isShadowCaster", &RenderableManager::isShadowCaster)

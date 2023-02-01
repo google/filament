@@ -148,15 +148,18 @@ void RenderPass::appendCommands(FEngine& engine, CommandTypeFlags const commandT
     }
 }
 
-void RenderPass::appendCustomCommand(Pass pass, CustomCommand custom, uint32_t order,
+void RenderPass::appendCustomCommand(uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
         Executor::CustomCommandFn command) {
 
-    assert((uint64_t(order) << CUSTOM_ORDER_SHIFT) <=  CUSTOM_ORDER_MASK);
+    assert_invariant((uint64_t(order) << CUSTOM_ORDER_SHIFT) <=  CUSTOM_ORDER_MASK);
 
-    uint32_t index = mCustomCommands.size();
+    channel = std::min(channel, uint8_t(0x3));
+
+    uint32_t const index = mCustomCommands.size();
     mCustomCommands.push_back(std::move(command));
 
     uint64_t cmd = uint64_t(pass);
+    cmd |= uint64_t(channel) << CHANNEL_SHIFT;
     cmd |= uint64_t(custom);
     cmd |= uint64_t(order) << CUSTOM_ORDER_SHIFT;
     cmd |= uint64_t(index);
@@ -508,6 +511,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
         const bool hasSkinningOrMorphing = soaVisibility[i].skinning || hasMorphing;
 
         cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
+        cmdColor.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
         cmdColor.primitive.index = (uint16_t)i;
         cmdColor.primitive.instanceCount = soaInstanceCount[i];
 
@@ -522,6 +526,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
             cmdDepth.key = uint64_t(Pass::DEPTH);
             cmdDepth.key |= uint64_t(CustomCommand::PASS);
             cmdDepth.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
+            cmdDepth.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
             cmdDepth.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK, Z_BUCKET_SHIFT);
             cmdDepth.primitive.index = (uint16_t)i;
             cmdDepth.primitive.instanceCount = soaInstanceCount[i];

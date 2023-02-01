@@ -65,7 +65,38 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
     utils::slog.e << utils::io::endl;
     return VK_FALSE;
 }
+
+// These strings need to be allocated outside a function stack
+const std::string_view DESIRED_LAYERS[] = {
+  "VK_LAYER_KHRONOS_validation",
+#if FILAMENT_VULKAN_DUMP_API
+  "VK_LAYER_LUNARG_api_dump",
 #endif
+#if defined(ENABLE_RENDERDOC)
+  "VK_LAYER_RENDERDOC_Capture",
+#endif
+};
+
+FixedCapacityVector<const char*> getEnabledLayers() {
+    constexpr size_t kMaxEnabledLayersCount = sizeof(DESIRED_LAYERS) / sizeof(DESIRED_LAYERS[0]);
+
+    const FixedCapacityVector<VkLayerProperties> availableLayers = filament::backend::enumerate(
+            vkEnumerateInstanceLayerProperties);
+
+    auto enabledLayers = FixedCapacityVector<const char*>::with_capacity(kMaxEnabledLayersCount);
+    for (const auto& desired : DESIRED_LAYERS) {
+        for (const VkLayerProperties& layer : availableLayers) {
+            const std::string_view availableLayer(layer.layerName);
+            if (availableLayer == desired) {
+                enabledLayers.push_back(desired.data());
+                break;
+            }
+        }
+    }
+    return enabledLayers;
+}
+
+#endif // VK_ENABLE_VALIDATION
 
 void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
     // Print some driver or MoltenVK information if it is available.
@@ -142,37 +173,6 @@ void printDepthFormats(VkPhysicalDevice device) {
             format = (VkFormat) (1 + (int) format);
         }
     }
-}
-
-// These strings need to be allocated outside a function stack
-const std::string_view DESIRED_LAYERS[] = {
-  "VK_LAYER_KHRONOS_validation",
-#if FILAMENT_VULKAN_DUMP_API
-  "VK_LAYER_LUNARG_api_dump",
-#endif
-#if defined(ENABLE_RENDERDOC)
-  "VK_LAYER_RENDERDOC_Capture",
-#endif
-};
-
-FixedCapacityVector<const char*> getEnabledLayers() {
-    constexpr size_t kMaxEnabledLayersCount = sizeof(DESIRED_LAYERS) / sizeof(DESIRED_LAYERS[0]);
-
-    const FixedCapacityVector<VkLayerProperties> availableLayers = filament::backend::enumerate(
-            vkEnumerateInstanceLayerProperties);
-
-    auto enabledLayers = FixedCapacityVector<const char*>::with_capacity(kMaxEnabledLayersCount);
-    for (const auto& desired : DESIRED_LAYERS) {
-        for (const VkLayerProperties& layer : availableLayers) {
-            const std::string_view availableLayer(layer.layerName);
-            if (availableLayer == desired) {
-                enabledLayers.push_back(desired.data());
-                break;
-            }
-        }
-    }
-
-    return enabledLayers;
 }
 
 struct InstanceExtensions {
