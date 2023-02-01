@@ -158,7 +158,6 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     assert_invariant(success);
 
     // read the uniform binding list
-    utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> uniformBlockBindings;
     success = parser->getUniformBlockBindings(&mUniformBlockBindings);
     assert_invariant(success || mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2);
 
@@ -525,10 +524,10 @@ void FMaterial::applyPendingEdits() noexcept {
 
 #if FILAMENT_ENABLE_MATDBG
 
-void FMaterial::onEditCallback(void* userdata, const utils::CString& name, const void* packageData,
+void FMaterial::onEditCallback(void* userdata, const utils::CString&, const void* packageData,
         size_t packageSize) {
     FMaterial* material = downcast((Material*) userdata);
-    FEngine& engine = material->mEngine;
+    FEngine const& engine = material->mEngine;
 
     // This is called on a web server thread, so we defer clearing the program cache
     // and swapping out the MaterialParser until the next getProgram call.
@@ -537,7 +536,7 @@ void FMaterial::onEditCallback(void* userdata, const utils::CString& name, const
 
 void FMaterial::onQueryCallback(void* userdata, VariantList* pVariants) {
     FMaterial* material = downcast((Material*) userdata);
-    std::lock_guard<utils::Mutex> lock(material->mActiveProgramsLock);
+    std::lock_guard<utils::Mutex> const lock(material->mActiveProgramsLock);
     *pVariants = material->mActivePrograms;
     material->mActivePrograms.reset();
 }
@@ -554,7 +553,7 @@ void FMaterial::destroyPrograms(FEngine& engine) {
         if (!mIsDefaultMaterial) {
             // The depth variants may be shared with the default material, in which case
             // we should not free it now.
-            bool isSharedVariant = Variant::isValidDepthVariant(variant) && !mHasCustomDepthShader;
+            bool const isSharedVariant = Variant::isValidDepthVariant(variant) && !mHasCustomDepthShader;
             if (isSharedVariant) {
                 // we don't own this variant, skip.
                 continue;
