@@ -505,7 +505,7 @@ void FEngine::prepare() {
     SYSTRACE_CALL();
     // prepare() is called once per Renderer frame. Ideally we would upload the content of
     // UBOs that are visible only. It's not such a big issue because the actual upload() is
-    // skipped is the UBO hasn't changed. Still we could have a lot of these.
+    // skipped if the UBO hasn't changed. Still we could have a lot of these.
     FEngine::DriverApi& driver = getDriverApi();
 
     for (auto& materialInstanceList: mMaterialInstances) {
