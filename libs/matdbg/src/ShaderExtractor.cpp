@@ -114,7 +114,7 @@ CString ShaderExtractor::spirvToGLSL(ShaderModel shaderModel, const uint32_t* da
 // but please do not submit. We prefer to use the syntax that the standalone "spirv-dis" tool
 // uses, which lets us easily generate test cases for the spirv-cross project.
 CString ShaderExtractor::spirvToText(const uint32_t* begin, size_t wordCount) {
-    spv_context context = spvContextCreate(SPV_ENV_UNIVERSAL_1_0);
+    spv_context context = spvContextCreate(SPV_ENV_UNIVERSAL_1_3);
     if (SPV_SUCCESS != spvValidateBinary(context, begin, wordCount, nullptr)) {
         spvContextDestroy(context);
         return CString("Validation failure.");

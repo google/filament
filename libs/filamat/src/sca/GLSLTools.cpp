@@ -429,13 +429,13 @@ void GLSLTools::prepareShaderParser(MaterialBuilder::TargetApi targetApi,
             case MaterialBuilderBase::TargetApi::VULKAN:
             case MaterialBuilderBase::TargetApi::METAL:
                 shader.setEnvInput(EShSourceGlsl, stage, EShClientVulkan, version);
-                shader.setEnvClient(EShClientVulkan, EShTargetVulkan_1_0);
+                shader.setEnvClient(EShClientVulkan, EShTargetVulkan_1_1);
                 break;
             case MaterialBuilderBase::TargetApi::ALL:
                 // can't happen
                 break;
         }
-        shader.setEnvTarget(EShTargetSpv, EShTargetSpv_1_0);
+        shader.setEnvTarget(EShTargetSpv, EShTargetSpv_1_3);
     }
 }
 

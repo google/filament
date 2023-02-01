@@ -524,7 +524,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
 
 std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
         MaterialBuilder::Optimization optimization, Config const& config) {
-    auto optimizer = std::make_shared<spvtools::Optimizer>(SPV_ENV_UNIVERSAL_1_0);
+    auto optimizer = std::make_shared<spvtools::Optimizer>(SPV_ENV_UNIVERSAL_1_3);
 
     optimizer->SetMessageConsumer([](spv_message_level_t level,
             const char* source, const spv_position_t& position, const char* message) {
