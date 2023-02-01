@@ -70,7 +70,7 @@ static const std::string_view kErrorHeader =
         "Connection: close\r\n\r\n";
 
 static void spirvToAsm(struct mg_connection *conn, const uint32_t* spirv, size_t size) {
-    auto context = spvContextCreate(SPV_ENV_UNIVERSAL_1_0);
+    auto context = spvContextCreate(SPV_ENV_UNIVERSAL_1_3);
     spv_text text = nullptr;
     const uint32_t options = SPV_BINARY_TO_TEXT_OPTION_INDENT |
             SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES;
