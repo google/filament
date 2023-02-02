@@ -101,7 +101,6 @@ CString ShaderExtractor::spirvToGLSL(ShaderModel shaderModel, const uint32_t* da
         emitOptions.version = 450;
     }
     emitOptions.vulkan_semantics = true;
-    //emitOptions.emit_line_directives = true;
 
     std::vector<uint32_t> spirv(data, data + wordCount);
     CompilerGLSL glslCompiler(std::move(spirv));
@@ -115,7 +114,8 @@ CString ShaderExtractor::spirvToGLSL(ShaderModel shaderModel, const uint32_t* da
 // uses, which lets us easily generate test cases for the spirv-cross project.
 CString ShaderExtractor::spirvToText(const uint32_t* begin, size_t wordCount) {
     spv_context context = spvContextCreate(SPV_ENV_UNIVERSAL_1_3);
-    if (SPV_SUCCESS != spvValidateBinary(context, begin, wordCount, nullptr)) {
+
+    if (spvValidateBinary(context, begin, wordCount, nullptr) != SPV_SUCCESS) {
         spvContextDestroy(context);
         return CString("Validation failure.");
     }
