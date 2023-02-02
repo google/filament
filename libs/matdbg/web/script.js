@@ -64,12 +64,16 @@ function rebuildMaterial() {
         console.error("SPIR-V editing is not supported.");
         return;
     }
+
+    const shader = getShaderRecord(gCurrentShader);
+
     switch (getShaderAPI()) {
         case "opengl": api = 1; index = gCurrentShader.glindex; break;
-        case "vulkan": api = 2; index = gCurrentShader.vkindex; break;
+        case "vulkan": api = 2; index = gCurrentShader.vkindex; delete shader["spirv"]; break;
         case "metal":  api = 3; index = gCurrentShader.metalindex; break;
     }
-    const editedText = getShaderRecord(gCurrentShader)[gCurrentLanguage];
+
+    const editedText = shader[gCurrentLanguage];
     const byteCount = new Blob([editedText]).size;
     gSocket.send(`EDIT ${gCurrentShader.matid} ${api} ${index} ${byteCount} ${editedText}`);
 }
@@ -400,17 +404,17 @@ function selectShader(selection) {
     // Change the current language selection if necessary.
     switch (getShaderAPI(selection)) {
         case "opengl":
-            if (gCurrentLanguage != "glsl") {
+            if (gCurrentLanguage !== "glsl") {
                 gCurrentLanguage = "glsl";
             }
             break;
         case "vulkan":
-            if (gCurrentLanguage != "spirv" && gCurrentLanguage != "glsl") {
+            if (gCurrentLanguage !== "spirv" && gCurrentLanguage !== "glsl") {
                 gCurrentLanguage = "spirv";
             }
             break;
         case "metal":
-            if (gCurrentLanguage != "msl") {
+            if (gCurrentLanguage !== "msl") {
                 gCurrentLanguage = "msl";
             }
             break;
