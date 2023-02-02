@@ -16,7 +16,7 @@
 
 #include "SamplerBindingMap.h"
 
-#include "SibGenerator.h"
+#include "shaders/SibGenerator.h"
 
 #include <filament/MaterialEnums.h>
 

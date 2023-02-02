@@ -17,24 +17,23 @@
 #ifndef TNT_GLSLPOSTPROCESSOR_H
 #define TNT_GLSLPOSTPROCESSOR_H
 
-#include <string>
-#include <vector>
-
-#include <backend/DriverEnums.h>
+#include <filamat/MaterialBuilder.h>    // for MaterialBuilder:: enums
 
 #include <private/filament/Variant.h>
 
-#include "filamat/MaterialBuilder.h"    // for MaterialBuilder:: enums
-
-#include <utils/FixedCapacityVector.h>
-
 #include "ShaderMinifier.h"
-
-#include <ShaderLang.h>
 
 #include <spirv-tools/optimizer.hpp>
 
+#include <ShaderLang.h>
+
+#include <backend/DriverEnums.h>
+
+#include <utils/FixedCapacityVector.h>
+
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace filament {
 class SamplerInterfaceBlock;
@@ -95,6 +94,7 @@ private:
 
     void fullOptimization(const glslang::TShader& tShader,
             GLSLPostProcessor::Config const& config, InternalConfig& internalConfig) const;
+
     void preprocessOptimization(glslang::TShader& tShader,
             GLSLPostProcessor::Config const& config, InternalConfig& internalConfig) const;
 
