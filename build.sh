@@ -22,9 +22,11 @@ function print_help {
     echo "        All (and only) git-ignored files under android/ are deleted."
     echo "        This is sometimes needed instead of -c (which still misses some clean steps)."
     echo "    -d"
-    echo "        Enable matdbg and disable material optimization."
+    echo "        Enable matdbg."
     echo "    -f"
     echo "        Always invoke CMake before incremental builds."
+    echo "    -g"
+    echo "        Disable material optimization."
     echo "    -i"
     echo "        Install build output"
     echo "    -m"
@@ -162,6 +164,9 @@ EGL_ON_LINUX_OPTION="-DFILAMENT_SUPPORTS_EGL_ON_LINUX=OFF"
 MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=OFF"
 MATDBG_GRADLE_OPTION=""
 
+MATOPT_OPTION=""
+MATOPT_GRADLE_OPTION=""
+
 IOS_BUILD_SIMULATOR=false
 BUILD_UNIVERSAL_LIBRARIES=false
 
@@ -221,6 +226,7 @@ function build_desktop_target {
             ${SWIFTSHADER_OPTION} \
             ${EGL_ON_LINUX_OPTION} \
             ${MATDBG_OPTION} \
+            ${MATOPT_OPTION} \
             ${deployment_target} \
             ${architectures} \
             ../..
@@ -347,6 +353,7 @@ function build_android_target {
             -DCMAKE_INSTALL_PREFIX="../android-${lc_target}/filament" \
             -DCMAKE_TOOLCHAIN_FILE="../../build/toolchain-${arch}-linux-android.cmake" \
             ${MATDBG_OPTION} \
+            ${MATOPT_OPTION} \
             ${VULKAN_ANDROID_OPTION} \
             ../..
     fi
@@ -463,6 +470,7 @@ function build_android {
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
             ${MATDBG_GRADLE_OPTION} \
+            ${MATOPT_GRADLE_OPTION} \
             :filament-android:assembleDebug \
             :gltfio-android:assembleDebug \
             :filament-utils-android:assembleDebug
@@ -510,6 +518,7 @@ function build_android {
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
             ${MATDBG_GRADLE_OPTION} \
+            ${MATOPT_GRADLE_OPTION} \
             :filament-android:assembleRelease \
             :gltfio-android:assembleRelease \
             :filament-utils-android:assembleRelease
@@ -576,6 +585,7 @@ function build_ios_target {
             -DIOS=1 \
             -DCMAKE_TOOLCHAIN_FILE=../../third_party/clang/iOS.cmake \
             ${MATDBG_OPTION} \
+            ${MATOPT_OPTION} \
             ../..
     fi
 
@@ -758,11 +768,15 @@ while getopts ":hacCfijmp:q:uvslwtedk:" opt; do
             ;;
         d)
             PRINT_MATDBG_HELP=true
-            MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=ON, -DFILAMENT_DISABLE_MATOPT=ON, -DFILAMENT_BUILD_FILAMAT=ON"
+            MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=ON, -DFILAMENT_BUILD_FILAMAT=ON"
             MATDBG_GRADLE_OPTION="-Pcom.google.android.filament.matdbg"
             ;;
         f)
             ISSUE_CMAKE_ALWAYS=true
+            ;;
+        g)
+            MATOPT_OPTION="-DFILAMENT_DISABLE_MATOPT=ON"
+            MATOPT_GRADLE_OPTION="-Pcom.google.android.filament.matnopt"
             ;;
         i)
             INSTALL_COMMAND=install
