@@ -565,14 +565,8 @@ void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) 
 void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config const& config) {
     optimizer
             .RegisterPass(CreateWrapOpKillPass())
-            .RegisterPass(CreateDeadBranchElimPass());
-
-    if (config.shaderModel != ShaderModel::DESKTOP ||
-            config.targetApi != MaterialBuilder::TargetApi::OPENGL) {
-        // this triggers a segfault with AMD OpenGL drivers on MacOS
-        // note that Metal also requires this pass in order to correctly generate half-precision MSL
-        optimizer.RegisterPass(CreateMergeReturnPass());
-    }
+            .RegisterPass(CreateDeadBranchElimPass())
+            .RegisterPass(CreateMergeReturnPass());
 
     optimizer
             .RegisterPass(CreateInlineExhaustivePass())
