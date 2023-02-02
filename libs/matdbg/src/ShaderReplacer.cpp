@@ -196,6 +196,10 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
     const int version = GLSLTools::getGlslDefaultVersion(shaderModel);
     const EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(targetApi,
             MaterialBuilder::TargetLanguage::SPIRV);
+
+    GLSLTools::prepareShaderParser(targetApi,
+            MaterialBuilder::TargetLanguage::SPIRV, tShader, shLang, version);
+
     const bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
         slog.e << "ShaderReplacer parse:\n" << tShader.getInfoLog() << io::endl;
