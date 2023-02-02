@@ -18,21 +18,20 @@
 
 #include <GlslangToSpv.h>
 #include <SPVRemapper.h>
-#include <localintermediate.h>
 
 #include <spirv_glsl.hpp>
 #include <spirv_msl.hpp>
 
 #include "sca/builtinResource.h"
 #include "sca/GLSLTools.h"
+
 #include "shaders/CodeGenerator.h"
 #include "shaders/MaterialInfo.h"
+#include "shaders/SibGenerator.h"
 
 #include "MetalArgumentBuffer.h"
 
 #include <filament/MaterialEnums.h>
-#include <private/filament/Variant.h>
-#include "SibGenerator.h"
 
 #include <utils/Log.h>
 

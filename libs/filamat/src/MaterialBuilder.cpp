@@ -20,7 +20,7 @@
 
 #include "Includes.h"
 #include "MaterialVariants.h"
-#include "SibGenerator.h"
+#include "shaders/SibGenerator.h"
 
 #ifndef FILAMAT_LITE
 #   include "GLSLPostProcessor.h"
