@@ -60,17 +60,22 @@ function getShaderAPI(selection) {
 
 function rebuildMaterial() {
     let api = 0, index = -1;
-    if (gCurrentLanguage === "spirv") {
-        console.error("SPIR-V editing is not supported.");
-        return;
-    }
 
     const shader = getShaderRecord(gCurrentShader);
+    const shaderApi = getShaderAPI();
 
-    switch (getShaderAPI()) {
+    switch (shaderApi) {
         case "opengl": api = 1; index = gCurrentShader.glindex; break;
-        case "vulkan": api = 2; index = gCurrentShader.vkindex; delete shader["spirv"]; break;
+        case "vulkan": api = 2; index = gCurrentShader.vkindex; break;
         case "metal":  api = 3; index = gCurrentShader.metalindex; break;
+    }
+
+    if (shaderApi === "vulkan") {
+        if (gCurrentLanguage === "glsl") {
+            delete shader["spirv"];
+        } else if (gCurrentLanguage === "spirv") {
+            delete shader["glsl"];
+        }
     }
 
     const editedText = shader[gCurrentLanguage];
