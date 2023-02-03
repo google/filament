@@ -258,7 +258,7 @@ void flatShadingMethod(const TangentSpaceMeshInput* input, TangentSpaceMeshOutpu
         const float3 pb = STRIDE_HELPER(positions, tri.y, pstride, float3);
         const float3 pc = STRIDE_HELPER(positions, tri.z, pstride, float3);
 
-        uint i0 = vindex++, i1 = vindex++, i2 = vindex++;
+        uint32_t i0 = vindex++, i1 = vindex++, i2 = vindex++;
         outTriangles[tindex] = uint3(i0, i1, i2);
 
         outPositions[i0] = pa;
