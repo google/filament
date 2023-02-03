@@ -39,6 +39,8 @@
 #include "eiff/MaterialTextChunk.h"
 #include "eiff/LineDictionary.h"
 
+#include "spirv-tools/libspirv.h"
+
 namespace filament::matdbg {
 
 using namespace backend;
@@ -182,44 +184,65 @@ bool ShaderReplacer::replaceSpirv(ShaderModel shaderModel, Variant variant,
         }
     };
 
-    const EShLanguage shLang = getShaderStage(stage);
-
-    std::string nullTerminated(source, sourceLength);
-    source = nullTerminated.c_str();
-
-    TShader tShader(shLang);
-    tShader.setStrings(&source, 1);
-
-    MaterialBuilder::TargetApi targetApi = targetApiFromBackend(mBackend);
+    MaterialBuilder::TargetApi const targetApi = targetApiFromBackend(mBackend);
     assert_invariant(targetApi == MaterialBuilder::TargetApi::VULKAN);
-
-    const int version = GLSLTools::getGlslDefaultVersion(shaderModel);
-    const EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(targetApi,
-            MaterialBuilder::TargetLanguage::SPIRV);
-
-    GLSLTools::prepareShaderParser(targetApi,
-            MaterialBuilder::TargetLanguage::SPIRV, tShader, shLang, version);
-
-    const bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
-    if (!ok) {
-        slog.e << "ShaderReplacer parse:\n" << tShader.getInfoLog() << io::endl;
-        return false;
-    }
-
-    TProgram program;
-    program.addShader(&tShader);
-    const bool linkOk = program.link(msg);
-    if (!linkOk) {
-        slog.e << "ShaderReplacer link:\n" << program.getInfoLog() << io::endl;
-        return false;
-    }
 
     // Unfortunately we need to use std::vector to interface with glslang.
     vector<unsigned int> spirv;
 
-    SpvOptions options;
-    options.generateDebugInfo = true;
-    GlslangToSpv(*tShader.getIntermediate(), spirv, &options);
+    const std::string_view src{ source, sourceLength };
+    if (!src.compare(0, 8, "; SPIR-V")) {
+        // we're receiving disassembled spirv
+        spv_binary binary;
+        spv_diagnostic diagnostic = nullptr;
+        spv_context context = spvContextCreate(SPV_ENV_VULKAN_1_1);
+        spv_result_t const error = spvTextToBinaryWithOptions(context, source, sourceLength,
+                SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS, &binary, &diagnostic);
+        spvContextDestroy(context);
+        if (error) {
+            slog.e << "ShaderReplacer spirv-as failed (spv_result_t: " << error << ")" << io::endl;
+            spvDiagnosticPrint(diagnostic);
+            spvDiagnosticDestroy(diagnostic);
+            return false;
+        }
+        spirv.insert(spirv.end(), binary->code, binary->code + binary->wordCount);
+        spvBinaryDestroy(binary);
+
+    } else {
+        // we're receiving glsl
+
+        std::string const nullTerminated(source, sourceLength);
+        source = nullTerminated.c_str();
+
+        const EShLanguage shLang = getShaderStage(stage);
+        TShader tShader(shLang);
+        tShader.setStrings(&source, 1);
+
+        const int version = GLSLTools::getGlslDefaultVersion(shaderModel);
+        const EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(targetApi,
+                MaterialBuilder::TargetLanguage::SPIRV);
+
+        GLSLTools::prepareShaderParser(targetApi,
+                MaterialBuilder::TargetLanguage::SPIRV, tShader, shLang, version);
+
+        const bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
+        if (!ok) {
+            slog.e << "ShaderReplacer parse:\n" << tShader.getInfoLog() << io::endl;
+            return false;
+        }
+
+        TProgram program;
+        program.addShader(&tShader);
+        const bool linkOk = program.link(msg);
+        if (!linkOk) {
+            slog.e << "ShaderReplacer link:\n" << program.getInfoLog() << io::endl;
+            return false;
+        }
+
+        SpvOptions options;
+        options.generateDebugInfo = true;
+        GlslangToSpv(*tShader.getIntermediate(), spirv, &options);
+    }
 
     source = (const char*) spirv.data();
     sourceLength = spirv.size() * 4;
