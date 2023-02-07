@@ -471,7 +471,7 @@ void TangentSpaceMesh::getTriangles(ushort3* out) const {
 
     const bool is16 = mOutput->triangles16 != nullptr;
     const size_t stride = sizeof(decltype(*out));
-    for (size_t i = 0; i < mOutput->triangleCount; ++i) {
+    for (size_t i = 0, c = mOutput->triangleCount; i < c; ++i) {
         if (is16) {
             *out = mOutput->triangles16[i];
         } else {
