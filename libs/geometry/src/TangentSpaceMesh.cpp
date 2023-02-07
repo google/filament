@@ -416,6 +416,9 @@ TangentSpaceMesh::~TangentSpaceMesh() noexcept {
     cleanOutputPointer(mOutput->positions, mInput->positions);
     cleanOutputPointer(mOutput->triangles16, mInput->triangles16);
     cleanOutputPointer(mOutput->triangles32, mInput->triangles32);
+
+    delete mOutput;
+    delete mInput;
 }
 
 TangentSpaceMesh::TangentSpaceMesh(TangentSpaceMesh&& that) noexcept {
