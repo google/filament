@@ -19,6 +19,8 @@
 
 class CivetServer;
 
+#include <string>
+
 namespace filament::fgdbg {
 
 class DebugServer {
@@ -29,14 +31,17 @@ public:
 private:
     CivetServer* mServer;
 
-    class RestRequestHandler *mRestRequestHandler = nullptr;
+    class RestRequestHandler* mRestRequestHandler = nullptr;
+
     class WebSocketHandler* mWebSocketHandler = nullptr;
 
     friend class RestRequestHandler;
+
     friend class WebSocketHandler;
+
     friend class Session;
 
-    void sendMessage(int number);
+    void sendMessage(const std::string& message);
 };
 }
 

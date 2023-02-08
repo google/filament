@@ -32,7 +32,7 @@ class RestRequestHandler : public CivetHandler {
 public:
     RestRequestHandler() = default;
 
-    bool handleGet(CivetServer *server, struct mg_connection *conn) override {
+    bool handleGet(CivetServer* server, struct mg_connection* conn) override {
         mg_printf(conn, kSuccessHeader.data(), "application/json");
         mg_printf(conn, "{ RestRequestHandler is working! }");
         return true;
@@ -44,26 +44,25 @@ class WebSocketHandler : public CivetWebSocketHandler {
 public:
     WebSocketHandler() = default;
 
-    bool handleConnection(CivetServer *server, const struct mg_connection *conn) override {
+    bool handleConnection(CivetServer* server, const struct mg_connection* conn) override {
         return true;
     }
 
-    void handleReadyState(CivetServer *server, struct mg_connection *conn) override {
+    void handleReadyState(CivetServer* server, struct mg_connection* conn) override {
         mConnections.insert(conn);
     }
 
-    void handleClose(CivetServer *server, const struct mg_connection *conn) override {
-        auto *key = const_cast<struct mg_connection *>(conn);
+    void handleClose(CivetServer* server, const struct mg_connection* conn) override {
+        auto* key = const_cast<struct mg_connection*>(conn);
         mConnections.erase(key);
     }
 
-    void send(int number) {
-        auto string = std::to_string(number);
-        for (auto connection : mConnections) {
+    void send(const std::string& message) {
+        for (auto connection: mConnections) {
             mg_websocket_write(connection,
                     MG_WEBSOCKET_OPCODE_TEXT,
-                    string.c_str(),
-                    string.length());
+                    message.c_str(),
+                    message.length());
         }
     }
 
@@ -98,8 +97,8 @@ DebugServer::DebugServer() {
     mServer->addWebSocketHandler("", mWebSocketHandler);
 }
 
-void DebugServer::sendMessage(int number) {
-    mWebSocketHandler->send(number);
+void DebugServer::sendMessage(const std::string& message) {
+    mWebSocketHandler->send(message);
 }
 
 DebugServer::~DebugServer() {

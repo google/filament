@@ -32,12 +32,26 @@ public:
             std::shared_ptr<DebugServer> server) : name{ name }, server{ server } {}
 
     void addPasses(const std::vector<Pass>& passes);
+    void addPass(const Pass& pass);
+
     void addResources(const std::vector<Resource>& resources);
+    void addResource(const Resource& resource);
+
+    void clear();
+
+    /**
+     * Send session information to server
+     */
     void update() const;
 
 private:
     const std::string& name;
     std::shared_ptr<DebugServer> server;
+
+    // TODO(@raviola) These might need to be a set/map in order to guarantee there are no two [Pass]
+    //  or [Resource] with the same id. This will also allow for updates by key.
+    std::vector<Pass> passes{};
+    std::vector<Resource> resources{};
 };
 }
 

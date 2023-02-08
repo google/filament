@@ -3,8 +3,9 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.6.10"
-    id("org.jetbrains.compose") version "1.1.1"
+    kotlin("jvm") version "1.8.0"
+    id("org.jetbrains.compose") version "1.3.0"
+    kotlin("plugin.serialization") version "1.4.20"
 }
 
 group = "com.google.filament"
@@ -27,6 +28,7 @@ dependencies {
         implementation("io.ktor:ktor-client-core:$ktorVersion")
         implementation("io.ktor:ktor-client-cio:$ktorVersion")
         implementation("io.ktor:ktor-client-websockets:$ktorVersion")
+        implementation("com.charleskorn.kaml:kaml:0.51.0")
     }
 }
 
