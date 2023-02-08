@@ -186,7 +186,12 @@ public:
         Builder& algorithm(Algorithm algorithm) noexcept;
 
         /**
-         * Computes the tangent space mesh.
+         * Computes the tangent space mesh. The resulting mesh object is owned by the callee. The
+         * callee must call TangentSpaceMesh::destroy on the object once they are finished with it.
+         *
+         * The state of the Builder will be reset after each call to build(). The client needs to
+         * populate the builder with parameters again if they choose to re-use it.
+         *
          * @return A TangentSpaceMesh
          */
         TangentSpaceMesh* build();
@@ -195,7 +200,11 @@ public:
         TangentSpaceMesh* mMesh = nullptr;
     };
 
-    ~TangentSpaceMesh() noexcept;
+    /**
+     * Destory the mesh object
+     * @param mesh A pointer to a TangentSpaceMesh ready to be destroyed
+     */
+     static void destroy(TangentSpaceMesh* mesh) noexcept;
 
     /**
      * Move constructor
@@ -310,6 +319,7 @@ public:
     Algorithm getAlgorithm() const noexcept;
 
 private:
+    ~TangentSpaceMesh() noexcept;
     TangentSpaceMesh() noexcept;
     TangentSpaceMesh(const TangentSpaceMesh&) = delete;
     TangentSpaceMesh& operator=(const TangentSpaceMesh&) = delete;

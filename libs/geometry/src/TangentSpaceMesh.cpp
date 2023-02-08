@@ -86,16 +86,14 @@ std::string_view to_string(Algorithm algorithm) noexcept {
             return "FRISVAD";
         case Algorithm::FLAT_SHADING:
             return "FLAT_SHADING";
-        default:
-            PANIC_POSTCONDITION("Unknown algorithm %u", static_cast<uint8_t>(algorithm));
     }
 }
 
-inline bool isInputType(const uint8_t inputType, const uint8_t checkType) {
+inline bool isInputType(const uint8_t inputType, const uint8_t checkType) noexcept {
     return ((inputType & checkType) == checkType);
 }
 
-Algorithm selectBestDefaultAlgorithm(uint8_t inputType) noexcept {
+inline Algorithm selectBestDefaultAlgorithm(uint8_t inputType) {
     Algorithm outAlgo;
     if (isInputType(inputType, NORMALS_UVS_POSITIONS_INDICES)) {
         outAlgo = Algorithm::MIKKTSPACE;
@@ -161,8 +159,6 @@ Algorithm selectAlgorithm(TangentSpaceMeshInput *input) noexcept {
                 foundAlgo = true;
             }
             break;
-        default:
-            PANIC_POSTCONDITION("Unknown algo %u", static_cast<uint8_t>(input->algorithm));
     }
 
     if (!foundAlgo) {
@@ -223,9 +219,9 @@ void normalsOnlyMethod(const TangentSpaceMeshInput* input, TangentSpaceMeshOutpu
     output->triangles16 = input->triangles16;
 }
 
-template<typename CastType, typename InputType>
-inline CastType pointerAdd(const InputType* ptr, size_t index, size_t stride) {
-    return (*((CastType*) (((const uint8_t*) ptr) + index * stride)));
+template<typename InputType>
+inline const InputType* pointerAdd(const InputType* ptr, size_t index, size_t stride) noexcept {
+    return (InputType*) (((const uint8_t*) ptr) + (index * stride));
 }
 
 void flatShadingMethod(const TangentSpaceMeshInput* input, TangentSpaceMeshOutput* output)
@@ -254,12 +250,12 @@ void flatShadingMethod(const TangentSpaceMeshInput* input, TangentSpaceMeshOutpu
     size_t vindex = 0;
     for (size_t tindex = 0; tindex < triangleCount; ++tindex) {
         uint3 tri = isTriangle16 ?
-                uint3(pointerAdd<ushort3, uint8_t>(triangles, tindex, tstride)) :
-                pointerAdd<uint3, uint8_t>(triangles, tindex, tstride);
+                uint3(*(ushort3*)(pointerAdd(triangles, tindex, tstride))) :
+                *(uint3*)(pointerAdd(triangles, tindex, tstride));
 
-        const float3 pa = pointerAdd<float3, float3>(positions, tri.x, pstride);
-        const float3 pb = pointerAdd<float3, float3>(positions, tri.y, pstride);
-        const float3 pc = pointerAdd<float3, float3>(positions, tri.z, pstride);
+        const float3 pa = *pointerAdd(positions, tri.x, pstride);
+        const float3 pb = *pointerAdd(positions, tri.y, pstride);
+        const float3 pc = *pointerAdd(positions, tri.z, pstride);
 
         uint32_t i0 = vindex++, i1 = vindex++, i2 = vindex++;
         outTriangles[tindex] = uint3{i0, i1, i2};
@@ -278,9 +274,9 @@ void flatShadingMethod(const TangentSpaceMeshInput* input, TangentSpaceMeshOutpu
         quats[i2] = tspace;
 
         if (outUvs) {
-            outUvs[i0] = pointerAdd<float2, float2>(uvs, tri.x, uvstride);
-            outUvs[i1] = pointerAdd<float2, float2>(uvs, tri.y, uvstride);
-            outUvs[i2] = pointerAdd<float2, float2>(uvs, tri.z, uvstride);
+            outUvs[i0] = *pointerAdd(uvs, tri.x, uvstride);
+            outUvs[i1] = *pointerAdd(uvs, tri.y, uvstride);
+            outUvs[i2] = *pointerAdd(uvs, tri.z, uvstride);
         }
     }
 
@@ -293,7 +289,7 @@ void flatShadingMethod(const TangentSpaceMeshInput* input, TangentSpaceMeshOutpu
 }
 
 template<typename DataType, typename InputType>
-inline void cleanOutputPointer(DataType*& ptr, InputType inputPtr) {
+inline void cleanOutputPointer(DataType*& ptr, InputType inputPtr) noexcept {
     if (ptr && ptr != (const DataType*) inputPtr) {
         delete[] ptr;
     }
@@ -301,7 +297,7 @@ inline void cleanOutputPointer(DataType*& ptr, InputType inputPtr) {
 }
 
 template <typename DataType>
-inline void takeStride(DataType*& out, size_t stride) {
+inline void takeStride(DataType*& out, size_t stride) noexcept {
     out = (DataType*) (((uint8_t*) out) + stride);
 }
 
@@ -310,7 +306,7 @@ using QuatConversionFunc = OutputType(*)(const quatf&);
 
 template<typename OutputType>
 inline void getQuatsImpl(OutputType* UTILS_RESTRICT out, const quatf* UTILS_RESTRICT tangentSpace,
-        size_t vertexCount, size_t stride, QuatConversionFunc<OutputType> conversion) {
+        size_t vertexCount, size_t stride, QuatConversionFunc<OutputType> conversion) noexcept {
     stride = stride ? stride : sizeof(OutputType);
     for (size_t i = 0; i < vertexCount; ++i) {
         *out = conversion(tangentSpace[i]);
@@ -323,7 +319,9 @@ inline void getQuatsImpl(OutputType* UTILS_RESTRICT out, const quatf* UTILS_REST
 Builder::Builder() noexcept
         :mMesh(new TangentSpaceMesh()) {}
 
-Builder::~Builder() noexcept { }
+Builder::~Builder() noexcept {
+    delete mMesh;
+}
 
 Builder::Builder(Builder&& that) noexcept {
     std::swap(mMesh, that.mMesh);
@@ -363,14 +361,11 @@ Builder& Builder::triangleCount(size_t triangleCount) noexcept {
 }
 
 Builder& Builder::triangles(const uint3* triangle32) noexcept {
-    ASSERT_PRECONDITION(!mMesh->mInput->triangles16,
-            "Triangles already provided in unsigned shorts");
     mMesh->mInput->triangles32 = triangle32;
     return *this;
 }
 
 Builder& Builder::triangles(const ushort3* triangle16) noexcept {
-    ASSERT_PRECONDITION(!mMesh->mInput->triangles32, "Triangles already provided in unsigned ints");
     mMesh->mInput->triangles16 = triangle16;
     return *this;
 }
@@ -381,6 +376,9 @@ Builder& Builder::algorithm(Algorithm algo) noexcept {
 }
 
 TangentSpaceMesh* Builder::build() {
+    ASSERT_PRECONDITION(!mMesh->mInput->triangles32 || !mMesh->mInput->triangles16,
+            "Cannot provide both uint32 triangles and uint16 triangles");
+
     // Work in progress. Not for use.
     Algorithm algo = selectAlgorithm(mMesh->mInput);
     MethodPtr method = nullptr;
@@ -403,7 +401,16 @@ TangentSpaceMesh* Builder::build() {
     }
     assert_invariant(method);
     method(mMesh->mInput, mMesh->mOutput);
-    return mMesh;
+
+    auto meshPtr = mMesh;
+    // Reset the state.
+    mMesh = new TangentSpaceMesh();
+
+    return meshPtr;
+}
+
+void TangentSpaceMesh::destroy(TangentSpaceMesh* mesh) noexcept {
+    delete mesh;
 }
 
 TangentSpaceMesh::TangentSpaceMesh() noexcept
