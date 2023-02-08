@@ -45,129 +45,126 @@ import io.ktor.http.HttpMethod
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
 import kotlinx.coroutines.delay
+import kotlinx.serialization.Serializable
 
 private enum class ConnectionState { UNKNOWN, CONNECTED, CONNECTING, ERROR }
 
 private data class Connection(
-  val host: String = "localhost",
-  val port: Int = 8082,
-  val path: String = "/",
-  val state: MutableState<ConnectionState> = mutableStateOf(ConnectionState.UNKNOWN),
-  val reconnectDelay: Int = 5,
+    val host: String = "localhost",
+    val port: Int = 8082,
+    val path: String = "/",
+    val state: MutableState<ConnectionState> = mutableStateOf(ConnectionState.UNKNOWN),
+    val reconnectDelay: Int = 5,
 )
 
-@kotlinx.serialization.Serializable
+@Serializable
 data class Payload(
-  val passes: Map<Int, Pass>,
-  val resources: Map<Int, Resource>,
+    val passes: Map<Int, Pass>,
+    val resources: Map<Int, Resource>,
 )
 
-@kotlinx.serialization.Serializable
+@Serializable
 data class Pass(
-  val name: String,
-  val reads: Set<Int>,
-  val writes: Set<Int>,
+    val name: String,
+    val reads: Set<Int>,
+    val writes: Set<Int>,
 )
 
-@kotlinx.serialization.Serializable
+@Serializable
 data class Resource(
-  val name: String,
-  val size: Int,
+    val name: String,
+    val size: Int,
 )
 
 fun parseMessage(message: String): Payload {
-  println("Received payload: $message")
-  try {
-    return Yaml.default.decodeFromString(Payload.serializer(), message)
-  } catch (e: Exception) {
-    // TODO(@raviola): Better error handling
-    println("Error parsing server payload: ${e.message}")
-    throw e
-  }
+    println("Received payload: $message")
+    try {
+        return Yaml.default.decodeFromString(Payload.serializer(), message)
+    } catch (e: Exception) {
+        // TODO(@raviola): Better error handling
+        println("Error parsing server payload: ${e.message}")
+        throw e
+    }
 }
 
 @Composable
 @Preview
 fun App() {
-  val connection = remember { Connection() }
-  val client = remember { HttpClient { install(WebSockets) } }
-  var message by remember { mutableStateOf("") }
-  val payload = remember { mutableStateOf(Payload(emptyMap(), emptyMap())) }
+    val connection = remember { Connection() }
+    val client = remember { HttpClient { install(WebSockets) } }
+    var message by remember { mutableStateOf("") }
+    val payload = remember { mutableStateOf(Payload(emptyMap(), emptyMap())) }
 
-  LaunchedEffect(Unit) {
-    while (true) {
-      connection.state.value = ConnectionState.CONNECTING
-      try {
-        client.webSocket(
-          HttpMethod.Get, connection.host, connection.port, connection.path
-        ) {
-          message = "Connected!"
-          connection.state.value = ConnectionState.CONNECTED
-          while (true) {
-            val frame = incoming.receive() as? Frame.Text ?: continue
-            payload.value = parseMessage(frame.readText())
-          }
+    LaunchedEffect(Unit) {
+        while (true) {
+            connection.state.value = ConnectionState.CONNECTING
+            try {
+                client.webSocket(HttpMethod.Get, connection.host, connection.port, connection.path) {
+                    message = "Connected!"
+                    connection.state.value = ConnectionState.CONNECTED
+                    while (true) {
+                        val frame = incoming.receive() as? Frame.Text ?: continue
+                        payload.value = parseMessage(frame.readText())
+                    }
+                }
+            } catch (e: Exception) {
+                connection.state.value = ConnectionState.ERROR
+                repeat(connection.reconnectDelay) {
+                    val remaining = connection.reconnectDelay - it
+                    message = "Connection interrupted, will re-connect in $remaining seconds..."
+                    delay(1000)
+                }
+            }
         }
-      } catch (e: Exception) {
-        connection.state.value = ConnectionState.ERROR
-        repeat(connection.reconnectDelay) {
-          val remaining = connection.reconnectDelay - it
-          message = "Connection interrupted, will re-connect in $remaining seconds..."
-          delay(1000)
-        }
-      }
     }
-  }
 
-  DisposableEffect(Unit) { onDispose { client.close() } }
+    DisposableEffect(Unit) { onDispose { client.close() } }
 
-  MaterialTheme {
-    when (connection.state.value) {
-      ConnectionState.CONNECTED -> {
-        Column {
-          Text(text = "Listening on ${connection.host}:${connection.port} ")
-          Grid(payload.value)
+    MaterialTheme {
+        when (connection.state.value) {
+            ConnectionState.CONNECTED -> {
+                Column {
+                    Text(text = "Listening on ${connection.host}:${connection.port} ")
+                    Grid(payload.value)
+                }
+            }
+            ConnectionState.ERROR -> Text(text = message, color = Color.Red)
+            else -> Text(connection.state.value.name)
         }
-      }
-      ConnectionState.ERROR -> Text(text = message, color = Color.Red)
-      else -> Text(connection.state.value.name)
     }
-  }
 }
 
 @Composable
 fun Grid(payload: Payload) {
-  val width = 120.dp
-  val height = 40.dp
-  Column {
-    // HEADER
-    Row(Modifier.height(height)) {
-      Spacer(modifier = Modifier.width(width))
-      for (pass in payload.passes.values) Button(modifier = Modifier.width(width), onClick = {}) {
-        Text(pass.name)
-      }
-    }
-    // ROWS
-    for (resource in payload.resources) {
-      Row(Modifier.height(height)) {
-        Button(modifier = Modifier.width(width), onClick = {}) { Text(resource.value.name) }
-        // INTERSECTIONS
-        for (pass in payload.passes) {
-          val writes = pass.value.writes.contains(resource.key)
-          val reads = pass.value.reads.contains(resource.key)
-          val color = when {
-            writes && reads -> Color.Magenta
-            writes -> Color.Red
-            reads -> Color.Green
-            else -> Color.LightGray
-          }
-          Button(modifier = Modifier.width(width),
-                 colors = ButtonDefaults.buttonColors(backgroundColor = color),
-                 onClick = {}) {}
+    val width = 120.dp
+    val height = 40.dp
+    Column {
+        // HEADER
+        Row(Modifier.height(height)) {
+            Spacer(modifier = Modifier.width(width))
+            for (pass in payload.passes.values) Button(modifier = Modifier.width(width), onClick = {}) {
+                Text(pass.name)
+            }
         }
-      }
+        // ROWS
+        for (resource in payload.resources) {
+            Row(Modifier.height(height)) {
+                Button(modifier = Modifier.width(width), onClick = {}) { Text(resource.value.name) }
+                // INTERSECTIONS
+                for (pass in payload.passes) {
+                    val writes = pass.value.writes.contains(resource.key)
+                    val reads = pass.value.reads.contains(resource.key)
+                    val color = when {
+                        writes && reads -> Color.Magenta
+                        writes -> Color.Red
+                        reads -> Color.Green
+                        else -> Color.LightGray
+                    }
+                    Button(modifier = Modifier.width(width), colors = ButtonDefaults.buttonColors(backgroundColor = color), onClick = {}) {}
+                }
+            }
+        }
     }
-  }
 }
 
 fun main() = application { Window(onCloseRequest = ::exitApplication) { App() } }
