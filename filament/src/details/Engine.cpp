@@ -652,11 +652,17 @@ int FEngine::loop() {
 #if FILAMENT_ENABLE_FGDBG
         // TODO (@feresr): Only for testing purposes, remove
         if (debug.fgdbg) {
-            static int fgdbgMessage = 0;
-            fgdbgMessage++;
-            if (fgdbgMessage % 100 == 0) {
-                debug.fgdbg->update();
-            }
+            debug.fgdbg->clear();
+            debug.fgdbg->addPass({ "Pass 1", 1, { 1, 3 }, { 1 }});
+            debug.fgdbg->addPass({ "Pass 2", 2, { 4 }, { 1, 2 }});
+            debug.fgdbg->addPass({ "Pass 3", 3, { 2 }, { 4 }});
+            debug.fgdbg->addPass({ "Pass 4", 4, {}, { 4 }});
+            debug.fgdbg->addPass({ "Pass 5", 5, {1, 3}, { 1 }});
+            debug.fgdbg->addResource({ "resource 1", 1, 100 });
+            debug.fgdbg->addResource({ "resource 2", 2, 100 });
+            debug.fgdbg->addResource({ "resource 3", 3, 100 });
+            debug.fgdbg->addResource({ "resource 4", 4, 100 });
+            debug.fgdbg->update();
         }
 #endif
         // looks like thread affinity needs to be reset regularly (on Android)
