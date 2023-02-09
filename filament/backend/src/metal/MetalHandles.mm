@@ -391,7 +391,9 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
         id<MTLFunction> function = [library newFunctionWithName:@"main0"
                                                  constantValues:constants
                                                           error:&error];
-        function.label = @(program.getName().c_str());
+        if (!program.getName().empty()) {
+            function.label = @(program.getName().c_str());
+        }
         assert_invariant(function);
         *shaderFunctions[i] = function;
     }
