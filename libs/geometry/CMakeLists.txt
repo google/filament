@@ -51,7 +51,13 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/geometry DESTINATION include)
 # Tests
 # ==================================================================================================
 if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
-    add_executable(test_transcoder tests/test_transcoder.cpp)
-    target_link_libraries(test_transcoder PRIVATE ${TARGET} gtest)
-    set_target_properties(test_transcoder PROPERTIES FOLDER Tests)
+    set(TARGET test_transcoder)
+    add_executable(${TARGET} tests/test_transcoder.cpp)
+    target_link_libraries(${TARGET} PRIVATE geometry gtest)
+    set_target_properties(${TARGET} PROPERTIES FOLDER Tests)
+
+    set(TARGET test_tangent_space_mesh)
+    add_executable(${TARGET} tests/test_tangent_space_mesh.cpp)
+    target_link_libraries(${TARGET} PRIVATE geometry gtest)
+    set_target_properties(${TARGET} PROPERTIES FOLDER Tests)
 endif()

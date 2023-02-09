@@ -93,6 +93,16 @@ inline bool isInputType(const uint8_t inputType, const uint8_t checkType) noexce
     return ((inputType & checkType) == checkType);
 }
 
+template<typename InputType>
+inline const InputType* pointerAdd(const InputType* ptr, size_t index, size_t stride) noexcept {
+    return (InputType*) (((const uint8_t*) ptr) + (index * stride));
+}
+
+template<typename InputType>
+inline InputType* pointerAdd(InputType* ptr, size_t index, size_t stride) noexcept {
+    return (InputType*) (((uint8_t*) ptr) + (index * stride));
+}
+
 inline Algorithm selectBestDefaultAlgorithm(uint8_t inputType) {
     Algorithm outAlgo;
     if (isInputType(inputType, NORMALS_UVS_POSITIONS_INDICES)) {
@@ -172,43 +182,34 @@ Algorithm selectAlgorithm(TangentSpaceMeshInput *input) noexcept {
 }
 
 // The paper uses a Z-up world basis, which has been converted to Y-up here
-void frisvadKernel(const float3& N, float3& T, float3& B) noexcept {
-    if (N.y < -1.0f + std::numeric_limits<float>::epsilon()) {
+inline std::pair<float3, float3> frisvadKernel(const float3& n) {
+    float3 b, t;
+    if (n.y < -1.0f + std::numeric_limits<float>::epsilon()) {
         // Handle the singularity
-        T = float3{-1.0f, 0.0f, 0.0f};
-        B = float3{0.0f, 0.0f, -1.0f};
-        return;
-    }
-    const float a = 1.0f / (1.0f + N.y);
-    const float b = -N.z * N.x * a;
-    T = float3{b, -N.z, 1.0f - N.z * N.z * a};
-    B = float3{1.0f - N.x * N.x * a, -N.x, b};
-}
-
-void hughesMollerKernel(const float3& N, float3& T, float3& B) noexcept {
-    if (abs(N.x) > abs(N.z) + std::numeric_limits<float>::epsilon()) {
-        T = float3{-N.y, N.x, 0.0f};
+        t = float3{-1.0f, 0.0f, 0.0f};
+        b = float3{0.0f, 0.0f, -1.0f};
     } else {
-        T = float3{0.0f, -N.z, N.y};
+        const float va = 1.0f / (1.0f + n.y);
+        const float vb = -n.z * n.x * va;
+        t = float3{vb, -n.z, 1.0f - n.z * n.z * va};
+        b = float3{1.0f - n.x * n.x * va, -n.x, vb};
     }
-    T = normalize(T);
-    B = cross(N, T);
+    return {b, t};
 }
 
-void normalsOnlyMethod(const TangentSpaceMeshInput* input, TangentSpaceMeshOutput* output,
-    NormalsOnlyKernelPtr kernel) noexcept {
+void frisvadMethod(const TangentSpaceMeshInput* input, TangentSpaceMeshOutput* output)
+        noexcept {
     const size_t vertexCount = input->vertexCount;
     quatf* quats = new quatf[vertexCount];
 
-    const float3* normal = input->normals;
+    const float3* UTILS_RESTRICT normals = input->normals;
     size_t nstride = input->normalStride ? input->normalStride : sizeof(float3);
 
     for (size_t qindex = 0; qindex < vertexCount; ++qindex) {
-        float3 n = *normal;
-        float3 b, t;
-        kernel(n, t, b);
-        quats[qindex] = mat3f::packTangentFrame({t, b, n});
-        normal = (const float3*) (((const uint8_t*) normal) + nstride);
+        const float3 n = *normals;
+        const auto [b, t] = frisvadKernel(n);
+        quats[qindex] = mat3f::packTangentFrame({t, b, n}, sizeof(int32_t));
+        normals = pointerAdd(normals, 1, nstride);
     }
     output->tangentSpace = quats;
     output->vertexCount = input->vertexCount;
@@ -219,9 +220,37 @@ void normalsOnlyMethod(const TangentSpaceMeshInput* input, TangentSpaceMeshOutpu
     output->triangles16 = input->triangles16;
 }
 
-template<typename InputType>
-inline const InputType* pointerAdd(const InputType* ptr, size_t index, size_t stride) noexcept {
-    return (InputType*) (((const uint8_t*) ptr) + (index * stride));
+
+void hughesMollerMethod(const TangentSpaceMeshInput* input, TangentSpaceMeshOutput* output)
+        noexcept {
+    const size_t vertexCount = input->vertexCount;
+    quatf* quats = new quatf[vertexCount];
+
+    const float3* UTILS_RESTRICT normals = input->normals;
+    size_t nstride = input->normalStride ? input->normalStride : sizeof(float3);
+
+    for (size_t qindex = 0; qindex < vertexCount; ++qindex) {
+        const float3 n = *normals;
+        float3 b, t;
+
+        if (abs(n.x) > abs(n.z) + std::numeric_limits<float>::epsilon()) {
+            t = float3{-n.y, n.x, 0.0f};
+        } else {
+            t = float3{0.0f, -n.z, n.y};
+        }
+        t = normalize(t);
+        b = cross(n, t);
+
+        quats[qindex] = mat3f::packTangentFrame({t, b, n}, sizeof(int32_t));
+        normals = pointerAdd(normals, 1, nstride);
+    }
+    output->tangentSpace = quats;
+    output->vertexCount = input->vertexCount;
+    output->triangleCount = input->triangleCount;
+    output->uvs = input->uvs;
+    output->positions = input->positions;
+    output->triangles32 = input->triangles32;
+    output->triangles16 = input->triangles16;
 }
 
 void flatShadingMethod(const TangentSpaceMeshInput* input, TangentSpaceMeshOutput* output)
@@ -265,10 +294,9 @@ void flatShadingMethod(const TangentSpaceMeshInput* input, TangentSpaceMeshOutpu
         outPositions[i2] = pc;
 
         const float3 n = normalize(cross(pc - pb, pa - pb));
-        float3 t, b;
-        frisvadKernel(n, t, b);
+        const auto [t, b] = frisvadKernel(n);
 
-        const quatf tspace = mat3f::packTangentFrame({t, b, n});
+        const quatf tspace = mat3f::packTangentFrame({t, b, n}, sizeof(int32_t));
         quats[i0] = tspace;
         quats[i1] = tspace;
         quats[i2] = tspace;
@@ -307,11 +335,6 @@ using QuatConversionFunc = OutputType(*)(const quatf&);
 template<typename OutputType>
 inline void getQuatsImpl(OutputType* UTILS_RESTRICT out, const quatf* UTILS_RESTRICT tangentSpace,
         size_t vertexCount, size_t stride, QuatConversionFunc<OutputType> conversion) noexcept {
-    stride = stride ? stride : sizeof(OutputType);
-    for (size_t i = 0; i < vertexCount; ++i) {
-        *out = conversion(tangentSpace[i]);
-        out = (OutputType*) (((uint8_t*) out) + stride);
-    }
 }
 
 } // anonymous namespace
@@ -380,18 +403,14 @@ TangentSpaceMesh* Builder::build() {
             "Cannot provide both uint32 triangles and uint16 triangles");
 
     // Work in progress. Not for use.
-    Algorithm algo = selectAlgorithm(mMesh->mInput);
+    mMesh->mOutput->algorithm = selectAlgorithm(mMesh->mInput);
     MethodPtr method = nullptr;
-    switch (algo) {
+    switch (mMesh->mOutput->algorithm) {
         case Algorithm::FRISVAD:
-            method = [](const TangentSpaceMeshInput* input, TangentSpaceMeshOutput* output) {
-                normalsOnlyMethod(input, output, frisvadKernel);
-            };
+            method = frisvadMethod;
             break;
         case Algorithm::HUGHES_MOLLER:
-            method = [](const TangentSpaceMeshInput* input, TangentSpaceMeshOutput* output) {
-                normalsOnlyMethod(input, output, hughesMollerKernel);
-            };
+            method = hughesMollerMethod;
             break;
         case Algorithm::FLAT_SHADING:
             method = flatShadingMethod;
@@ -498,18 +517,33 @@ void TangentSpaceMesh::getTriangles(ushort3* out) const {
 }
 
 void TangentSpaceMesh::getQuats(quatf* out, size_t stride) const noexcept {
-    QuatConversionFunc<quatf> func = [](const quatf& in) { return in; };
-    getQuatsImpl(out, mOutput->tangentSpace, mOutput->vertexCount, stride, func);
+    stride = stride ? stride : sizeof(decltype((*out)));
+    const quatf* tangentSpace = mOutput->tangentSpace;
+    const size_t vertexCount = mOutput->vertexCount;
+    for (size_t i = 0; i < vertexCount; ++i) {
+        *out = tangentSpace[i];
+        out = pointerAdd(out, 1, stride);
+    }
 }
 
 void TangentSpaceMesh::getQuats(short4* out, size_t stride) const noexcept {
-    QuatConversionFunc<short4> func = [](const quatf& in) { return packSnorm16(in.xyzw); };
-    getQuatsImpl(out, mOutput->tangentSpace, mOutput->vertexCount, stride, func);
+    stride = stride ? stride : sizeof(decltype((*out)));
+    const quatf* tangentSpace = mOutput->tangentSpace;
+    const size_t vertexCount = mOutput->vertexCount;
+    for (size_t i = 0; i < vertexCount; ++i) {
+        *out = packSnorm16(tangentSpace[i].xyzw);
+        out = pointerAdd(out, 1, stride);
+    }
 }
 
 void TangentSpaceMesh::getQuats(quath* out, size_t stride) const noexcept {
-    QuatConversionFunc<quath> func = [](const quatf& in) { return quath(in); };
-    getQuatsImpl(out, mOutput->tangentSpace, mOutput->vertexCount, stride, func);
+    stride = stride ? stride : sizeof(decltype((*out)));
+    const quatf* tangentSpace = mOutput->tangentSpace;
+    const size_t vertexCount = mOutput->vertexCount;
+    for (size_t i = 0; i < vertexCount; ++i) {
+        *out = quath(tangentSpace[i].xyzw);
+        out = pointerAdd(out, 1, stride);
+    }
 }
 
 Algorithm TangentSpaceMesh::getAlgorithm() const noexcept {
