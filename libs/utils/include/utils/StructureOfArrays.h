@@ -30,6 +30,7 @@
 #include <array>        // note: this is safe, see how std::array is used below (inline / private)
 #include <cstddef>
 #include <iterator>     // for std::random_access_iterator_tag
+#include <tuple>
 #include <utility>
 
 namespace utils {
@@ -44,7 +45,7 @@ public:
 
     // Type of the Nth array
     template<size_t N>
-    using TypeAt = typename std::tuple_element<N, std::tuple<Elements...>>::type;
+    using TypeAt = typename std::tuple_element_t<N, std::tuple<Elements...>>;
 
     // Number of arrays
     static constexpr size_t getArrayCount() noexcept { return kArrayCount; }
@@ -230,7 +231,7 @@ public:
         using std::swap;
         swap(mCapacity, rhs.mCapacity);
         swap(mSize, rhs.mSize);
-        swap(mArrayOffset, rhs.mArrayOffset);
+        swap(mArrays, rhs.mArrays);
         swap(mAllocator, rhs.mAllocator);
     }
 
@@ -239,7 +240,7 @@ public:
             using std::swap;
             swap(mCapacity, rhs.mCapacity);
             swap(mSize, rhs.mSize);
-            swap(mArrayOffset, rhs.mArrayOffset);
+            swap(mArrays, rhs.mArrays);
             swap(mAllocator, rhs.mAllocator);
         }
         return *this;
@@ -247,7 +248,7 @@ public:
 
     ~StructureOfArraysBase() {
         destroy_each(0, mSize);
-        mAllocator.free(mArrayOffset[0]);
+        mAllocator.free(std::get<0>(mArrays));
     }
 
     // --------------------------------------------------------------------------------------------
@@ -273,14 +274,14 @@ public:
             constexpr size_t align = std::max({ std::max(alignof(std::max_align_t), alignof(Elements))... });
             const size_t sizeNeeded = getNeededSize(capacity);
             void* buffer = mAllocator.alloc(sizeNeeded, align);
+            auto const oldBuffer = std::get<0>(mArrays);
 
             // move all the items (one array at a time) from the old allocation to the new
             // this also update the array pointers
             move_each(buffer, capacity);
 
             // free the old buffer
-            std::swap(buffer, mArrayOffset[0]);
-            mAllocator.free(buffer);
+            mAllocator.free(oldBuffer);
 
             // and make sure to update the capacity
             mCapacity = capacity;
@@ -344,58 +345,66 @@ public:
         return push_back_unsafe(std::forward<Elements>(args)...);
     }
 
+    // in C++20 we could use a lambda with explicit template parameter instead
+    struct PushBackUnsafeClosure {
+        size_t last;
+        std::tuple<Elements...> args;
+        inline explicit PushBackUnsafeClosure(size_t last, Elements&& ... args)
+                : last(last), args(std::forward<Elements>(args)...) {}
+        inline explicit PushBackUnsafeClosure(size_t last, Elements const& ... args)
+                : last(last), args(args...) {}
+        template<size_t I>
+        inline void operator()(TypeAt<I>* p) {
+            new(p + last) TypeAt<I>{ std::get<I>(args) };
+        }
+    };
+
     StructureOfArraysBase& push_back_unsafe(Elements const& ... args) noexcept {
-        const size_t last = mSize++;
-        size_t i = 0;
-        int UTILS_UNUSED dummy[] = {
-                (new(getArray<Elements>(i) + last)Elements(args), i++, 0)... };
+        for_each_index(mArrays, PushBackUnsafeClosure{ mSize++, args... });
         return *this;
     }
 
     StructureOfArraysBase& push_back_unsafe(Elements&& ... args) noexcept {
-        const size_t last = mSize++;
-        size_t i = 0;
-        int UTILS_UNUSED dummy[] = {
-                (new(getArray<Elements>(i) + last)Elements(std::forward<Elements>(args)), i++, 0)... };
+        for_each_index(mArrays, PushBackUnsafeClosure{ mSize++, std::forward<Elements>(args)... });
         return *this;
     }
 
     template<typename F, typename ... ARGS>
     void forEach(F&& f, ARGS&& ... args) {
-        size_t i = 0;
-        int UTILS_UNUSED dummy[] = {
-                (f(getArray<Elements>(i), std::forward<ARGS>(args)...), i++, 0)... };
+        for_each(mArrays, [&](size_t, auto* p) {
+            f(p, std::forward<ARGS>(args)...);
+        });
     }
 
     // return a pointer to the first element of the ElementIndex]th array
     template<size_t ElementIndex>
     TypeAt<ElementIndex>* data() noexcept {
-        return getArray<TypeAt<ElementIndex>>(ElementIndex);
+        return std::get<ElementIndex>(mArrays);
     }
 
     template<size_t ElementIndex>
     TypeAt<ElementIndex> const* data() const noexcept {
-        return getArray<TypeAt<ElementIndex>>(ElementIndex);
+        return std::get<ElementIndex>(mArrays);
     }
 
     template<size_t ElementIndex>
     TypeAt<ElementIndex>* begin() noexcept {
-        return getArray<TypeAt<ElementIndex>>(ElementIndex);
+        return std::get<ElementIndex>(mArrays);
     }
 
     template<size_t ElementIndex>
     TypeAt<ElementIndex> const* begin() const noexcept {
-        return getArray<TypeAt<ElementIndex>>(ElementIndex);
+        return std::get<ElementIndex>(mArrays);
     }
 
     template<size_t ElementIndex>
     TypeAt<ElementIndex>* end() noexcept {
-        return getArray<TypeAt<ElementIndex>>(ElementIndex) + size();
+        return std::get<ElementIndex>(mArrays) + size();
     }
 
     template<size_t ElementIndex>
     TypeAt<ElementIndex> const* end() const noexcept {
-        return getArray<TypeAt<ElementIndex>>(ElementIndex) + size();
+        return std::get<ElementIndex>(mArrays) + size();
     }
 
     template<size_t ElementIndex>
@@ -488,14 +497,26 @@ public:
     };
 
 private:
-    template<typename T>
-    T const* getArray(size_t arrayIndex) const {
-        return static_cast<T const*>(mArrayOffset[arrayIndex]);
+    template<std::size_t I = 0, typename FuncT, typename... Tp>
+    inline typename std::enable_if<I == sizeof...(Tp), void>::type
+    for_each(std::tuple<Tp...>&, FuncT) {}
+
+    template<std::size_t I = 0, typename FuncT, typename... Tp>
+    inline typename std::enable_if<I < sizeof...(Tp), void>::type
+    for_each(std::tuple<Tp...>& t, FuncT f) {
+        f(I, std::get<I>(t));
+        for_each<I + 1, FuncT, Tp...>(t, f);
     }
 
-    template<typename T>
-    T* getArray(size_t arrayIndex) {
-        return static_cast<T*>(mArrayOffset[arrayIndex]);
+    template<std::size_t I = 0, typename FuncT, typename... Tp>
+    inline typename std::enable_if<I == sizeof...(Tp), void>::type
+    for_each_index(std::tuple<Tp...>&, FuncT) {}
+
+    template<std::size_t I = 0, typename FuncT, typename... Tp>
+    inline typename std::enable_if<I < sizeof...(Tp), void>::type
+    for_each_index(std::tuple<Tp...>& t, FuncT f) {
+        f.template operator()<I>(std::get<I>(t));
+        for_each_index<I + 1, FuncT, Tp...>(t, f);
     }
 
     inline void resizeNoCheck(size_t needed) noexcept {
@@ -586,10 +607,11 @@ private:
             });
         }
 
-        // update the pointers (the first offset will be filled later
-        for (size_t i = 1; i < kArrayCount; i++) {
-            mArrayOffset[i] = (char*)buffer + offsets[i];
-        }
+        // update the pointers
+        for_each(mArrays, [buffer, &offsets](size_t i, auto&& p) {
+            using Type = std::remove_reference_t<decltype(p)>;
+            p = Type((char*)buffer + offsets[i]);
+        });
     }
 
     // capacity in array elements
@@ -597,9 +619,10 @@ private:
     // size in array elements
     size_t mSize = 0;
     // N pointers to each arrays
-    void *mArrayOffset[kArrayCount] = { nullptr };
+    std::tuple<std::add_pointer_t<Elements>...> mArrays{};
     Allocator mAllocator;
 };
+
 
 template<typename Allocator, typename... Elements>
 inline
