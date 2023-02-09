@@ -1290,7 +1290,8 @@ Material* FAssetLoader::getMaterial(const cgltf_data* srcAsset,
     }
     MaterialKey matkey = getMaterialKey(srcAsset, inputMat, uvmap, vertexColor,
             &baseColorTexture, &metallicRoughnessTexture);
-    Material* material = mMaterials.getMaterial(&matkey, uvmap, inputMat->name);
+    const char* label = inputMat->name ? inputMat->name : "material";
+    Material* material = mMaterials.getMaterial(&matkey, uvmap, label);
     assert_invariant(material);
     return material;
 }
