@@ -216,6 +216,9 @@ public:
      */
     TangentSpaceMesh& operator=(TangentSpaceMesh&& that) noexcept;
 
+    TangentSpaceMesh(const TangentSpaceMesh&) = delete;
+    TangentSpaceMesh& operator=(const TangentSpaceMesh&) = delete;
+
     /**
      * Number of output vertices
      *
@@ -321,8 +324,6 @@ public:
 private:
     ~TangentSpaceMesh() noexcept;
     TangentSpaceMesh() noexcept;
-    TangentSpaceMesh(const TangentSpaceMesh&) = delete;
-    TangentSpaceMesh& operator=(const TangentSpaceMesh&) = delete;
     TangentSpaceMeshInput* mInput;
     TangentSpaceMeshOutput* mOutput;
 

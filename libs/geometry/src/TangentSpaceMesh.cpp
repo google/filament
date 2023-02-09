@@ -103,6 +103,11 @@ inline InputType* pointerAdd(InputType* ptr, size_t index, size_t stride) noexce
     return (InputType*) (((uint8_t*) ptr) + (index * stride));
 }
 
+template <typename InputType>
+inline void takeStride(InputType*& out, size_t stride) noexcept {
+    out = pointerAdd(out, 1, stride);
+}
+
 inline Algorithm selectBestDefaultAlgorithm(uint8_t inputType) {
     Algorithm outAlgo;
     if (isInputType(inputType, NORMALS_UVS_POSITIONS_INDICES)) {
@@ -323,20 +328,6 @@ inline void cleanOutputPointer(DataType*& ptr, InputType inputPtr) noexcept {
     }
     ptr = nullptr;
 }
-
-template <typename DataType>
-inline void takeStride(DataType*& out, size_t stride) noexcept {
-    out = (DataType*) (((uint8_t*) out) + stride);
-}
-
-template <typename OutputType>
-using QuatConversionFunc = OutputType(*)(const quatf&);
-
-template<typename OutputType>
-inline void getQuatsImpl(OutputType* UTILS_RESTRICT out, const quatf* UTILS_RESTRICT tangentSpace,
-        size_t vertexCount, size_t stride, QuatConversionFunc<OutputType> conversion) noexcept {
-}
-
 } // anonymous namespace
 
 Builder::Builder() noexcept
@@ -522,7 +513,7 @@ void TangentSpaceMesh::getQuats(quatf* out, size_t stride) const noexcept {
     const size_t vertexCount = mOutput->vertexCount;
     for (size_t i = 0; i < vertexCount; ++i) {
         *out = tangentSpace[i];
-        out = pointerAdd(out, 1, stride);
+        takeStride(out, stride);
     }
 }
 
@@ -532,7 +523,7 @@ void TangentSpaceMesh::getQuats(short4* out, size_t stride) const noexcept {
     const size_t vertexCount = mOutput->vertexCount;
     for (size_t i = 0; i < vertexCount; ++i) {
         *out = packSnorm16(tangentSpace[i].xyzw);
-        out = pointerAdd(out, 1, stride);
+        takeStride(out, stride);
     }
 }
 
@@ -542,7 +533,7 @@ void TangentSpaceMesh::getQuats(quath* out, size_t stride) const noexcept {
     const size_t vertexCount = mOutput->vertexCount;
     for (size_t i = 0; i < vertexCount; ++i) {
         *out = quath(tangentSpace[i].xyzw);
-        out = pointerAdd(out, 1, stride);
+        takeStride(out, stride);
     }
 }
 
