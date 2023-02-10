@@ -88,6 +88,9 @@ Driver* PlatformCocoaTouchGL::createDriver(void* const sharedGLContext, const Pl
             pImpl->mGLContext, nullptr, &pImpl->mTextureCache);
     assert_invariant(success == kCVReturnSuccess);
 
+    // Necessary to avoid unused-variable warning in release build.
+    (void)success;
+
     pImpl->mExternalImageSharedGl = new CocoaTouchExternalImage::SharedGl();
 
     return OpenGLPlatform::createDefaultDriver(this, sharedGLContext, driverConfig);

@@ -17,6 +17,10 @@
 #include <bluevk/BlueVK.h> // must be included before vk_mem_alloc
 
 #pragma clang diagnostic push
+
+// Needed because not all clang versions have the warning -Wdeprecated-copy.
+#pragma clang diagnostic ignored "-Wunknown-warning-option"
+
 #pragma clang diagnostic ignored "-Wdeprecated-copy"
 #pragma clang diagnostic ignored "-Wimplicit-fallthrough"
 #pragma clang diagnostic ignored "-Wmissing-field-initializers"
