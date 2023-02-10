@@ -9,6 +9,7 @@ A new header is inserted each time a *tag* is created.
 
 - engine: fix broken picking [⚠️ **Recompile Materials to get the fix**]
 - engine: added support for sRGB swapchains. See `SwapChain.h`
+- engine: the default render channel is now 2 instead of 0
 - bluegl: support Windows32
 
 ## v1.31.3

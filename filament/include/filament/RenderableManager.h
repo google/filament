@@ -120,6 +120,12 @@ public:
         enum Result { Error = -1, Success = 0  };
 
         /**
+         * Default render channel
+         * @see Builder::channel()
+         */
+        static constexpr uint8_t DEFAULT_CHANNEL = 2u;
+
+        /**
          * Creates a builder for renderable components.
          *
          * @param count the number of primitives that will be supplied to the builder
@@ -231,10 +237,13 @@ public:
         /**
          * Set the channel this renderable is associated to. There can be 4 channels.
          * All renderables in a given channel are rendered together, regardless of anything else.
-         * They are sorted as usual withing a channel.
+         * They are sorted as usual within a channel.
          * Channels work similarly to priorities, except that they enforce the strongest ordering.
          *
-         * @param channel clamped to the range [0..3], defaults to 0.
+         * Channels 0 and 1 may not have render primitives using a material with `refractionType`
+         * set to `screenspace`.
+         *
+         * @param channel clamped to the range [0..3], defaults to 2.
          *
          * @return Builder reference for chaining calls.
          *
