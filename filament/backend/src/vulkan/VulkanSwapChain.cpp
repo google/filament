@@ -259,7 +259,6 @@ static void getPresentationQueue(VulkanContext& mContext, VulkanSwapChain& sc) {
     FixedCapacityVector<VkQueueFamilyProperties> queueFamiliesProperties(queueFamiliesCount);
     vkGetPhysicalDeviceQueueFamilyProperties(mContext.physicalDevice, &queueFamiliesCount,
             queueFamiliesProperties.data());
-    uint32_t presentQueueFamilyIndex = 0xffff;
 
     // We prefer the graphics and presentation queues to be the same, so first check if that works.
     // On most platforms they must be the same anyway, and this avoids issues with MoltenVK.
@@ -271,7 +270,6 @@ static void getPresentationQueue(VulkanContext& mContext, VulkanSwapChain& sc) {
     // https://github.com/google/filament/issues/1532
     ASSERT_POSTCONDITION(supported, "Graphics queues do not support presentation.");
 
-    presentQueueFamilyIndex = mContext.graphicsQueueFamilyIndex;
     sc.presentQueue = mContext.graphicsQueue;
     sc.headlessQueue = VK_NULL_HANDLE;
 }
