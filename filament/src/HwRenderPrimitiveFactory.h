@@ -74,9 +74,6 @@ private:
         mutable uint32_t refs;                      //  4
     };
 
-    struct EntryComparator {
-        bool operator()(const Entry& a, const Entry& b) const;
-    };
 
     // Size of the arena used for the "set" part of the bimap
     static constexpr size_t SET_ARENA_SIZE = 4 * 1024 * 1024;
@@ -94,7 +91,7 @@ private:
 
     using Set = std::set<
             Entry,
-            EntryComparator,
+            std::less<>,
             utils::STLAllocator<Entry, Arena>>;
 
     using Map = tsl::robin_map<
@@ -111,6 +108,8 @@ private:
     Map mMap;
 
     friend bool operator<(Key const& lhs, Key const& rhs) noexcept;
+    friend bool operator<(Key const& lhs, Entry const& rhs) noexcept;
+    friend bool operator<(Entry const& lhs, Key const& rhs) noexcept;
     friend bool operator<(Entry const& lhs, Entry const& rhs) noexcept;
 };
 

@@ -23,7 +23,7 @@ namespace filament {
 using namespace utils;
 using namespace backend;
 
-inline bool operator<(HwRenderPrimitiveFactory::Key const& lhs,
+bool operator<(HwRenderPrimitiveFactory::Key const& lhs,
         HwRenderPrimitiveFactory::Key const& rhs) noexcept {
     if (lhs.vbh == rhs.vbh) {
         if (lhs.ibh == rhs.ibh) {
@@ -49,10 +49,14 @@ inline bool operator<(HwRenderPrimitiveFactory::Entry const& lhs,
     return lhs.key < rhs.key;
 }
 
-bool HwRenderPrimitiveFactory::EntryComparator::operator()(
-        HwRenderPrimitiveFactory::Entry const& a,
-        HwRenderPrimitiveFactory::Entry const& b) const {
-    return a < b;
+inline bool operator<(HwRenderPrimitiveFactory::Key const& lhs,
+        HwRenderPrimitiveFactory::Entry const& rhs) noexcept {
+    return lhs < rhs.key;
+}
+
+inline bool operator<(HwRenderPrimitiveFactory::Entry const& lhs,
+        HwRenderPrimitiveFactory::Key const& rhs) noexcept {
+    return lhs.key < rhs;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -78,7 +82,7 @@ RenderPrimitiveHandle HwRenderPrimitiveFactory::create(DriverApi& driver,
     const Key key = { vbh, ibh, offset, count, type };
 
     // see if we already have seen this RenderPrimitive
-    auto pos = mSet.find(Entry{key, RenderPrimitiveHandle(), 0});
+    auto pos = mSet.find(key);
 
     // the common case is that we've never seen it (i.e.: no reuse)
     if (UTILS_LIKELY(pos == mSet.end())) {
