@@ -5,6 +5,8 @@ A new header is inserted each time a *tag* is created.
 
 ## main branch
 
+## v1.31.5
+
 - gltfio: fix potential early freeing of data provided with `ResourceLoader::addResourceData`.
 
 ## v1.31.4
