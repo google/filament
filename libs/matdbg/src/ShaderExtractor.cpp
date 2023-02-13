@@ -86,13 +86,22 @@ bool ShaderExtractor::getShader(ShaderModel shaderModel,
             uint8_t(shaderModel), variant, uint8_t(stage));
 }
 
-CString ShaderExtractor::spirvToGLSL(const uint32_t* data, size_t wordCount) {
+CString ShaderExtractor::spirvToGLSL(ShaderModel shaderModel, const uint32_t* data,
+        size_t wordCount) {
     using namespace spirv_cross;
 
     CompilerGLSL::Options emitOptions;
-    emitOptions.es = false;
-    emitOptions.version = 410;
+    if (shaderModel == ShaderModel::MOBILE) {
+        emitOptions.es = true;
+        emitOptions.version = 310;
+        emitOptions.fragment.default_float_precision = CompilerGLSL::Options::Precision::Mediump;
+        emitOptions.fragment.default_int_precision = CompilerGLSL::Options::Precision::Mediump;
+    } else if (shaderModel == ShaderModel::DESKTOP) {
+        emitOptions.es = false;
+        emitOptions.version = 450;
+    }
     emitOptions.vulkan_semantics = true;
+    //emitOptions.emit_line_directives = true;
 
     std::vector<uint32_t> spirv(data, data + wordCount);
     CompilerGLSL glslCompiler(std::move(spirv));

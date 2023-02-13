@@ -26,8 +26,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <algorithm>
 #include <array>        // note: this is safe, see how std::array is used below (inline / private)
 #include <cstddef>
+#include <iterator>     // for std::random_access_iterator_tag
 #include <utility>
 
 namespace utils {

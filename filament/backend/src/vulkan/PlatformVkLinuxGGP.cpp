@@ -28,6 +28,8 @@ using namespace bluevk;
 
 namespace filament::backend {
 
+using SurfaceBundle = VulkanPlatform::SurfaceBundle;
+
 Driver* PlatformVkLinuxGGP::createDriver(
     void* const sharedContext,
     const Platform::DriverConfig& driverConfig) noexcept {
@@ -46,8 +48,13 @@ Driver* PlatformVkLinuxGGP::createDriver(
 #endif
 }
 
-void* PlatformVkLinuxGGP::createVkSurfaceKHR(void* nativeWindow, void* instance,
-                                             uint64_t flags) noexcept {
+SurfaceBundle PlatformVkLinuxGGP::createVkSurfaceKHR(void* nativeWindow, void* instance,
+        uint64_t flags) noexcept {
+    SurfaceBundle bundle {
+        .surface = nullptr,
+        .width = 0,
+        .height = 0
+    };
 #if defined(FILAMENT_SUPPORTS_GGP)
   VkStreamDescriptorSurfaceCreateInfoGGP surface_create_info = {
       VK_STRUCTURE_TYPE_STREAM_DESCRIPTOR_SURFACE_CREATE_INFO_GGP};
@@ -59,16 +66,14 @@ void* PlatformVkLinuxGGP::createVkSurfaceKHR(void* nativeWindow, void* instance,
   ASSERT_PRECONDITION(fpCreateStreamDescriptorSurfaceGGP != nullptr,
                       "Error getting VkInstance "
                       "function vkCreateStreamDescriptorSurfaceGGP");
-  VkSurfaceKHR surface = nullptr;
   VkResult res = fpCreateStreamDescriptorSurfaceGGP(
       static_cast<VkInstance>(instance), &surface_create_info, nullptr,
-      &surface);
+      (VkSurfaceKHR*) &bundle.surface);
   ASSERT_PRECONDITION(res == VK_SUCCESS, "Error in vulkan: %d", res);
-  return surface;
 #else
   PANIC_PRECONDITION("Filament does not support GGP.");
-  return nullptr;
 #endif
+  return bundle;
 }
 
 }  // namespace filament::backend

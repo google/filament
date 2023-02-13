@@ -23,6 +23,10 @@
 using namespace bluevk;
 using namespace utils;
 
+namespace {
+constexpr uint32_t VULKAN_UNDEFINED_EXTENT = 0xFFFFFFFF;
+} // anonymous namespace
+
 namespace filament::backend {
 
 bool VulkanSwapChain::acquire() {
@@ -127,8 +131,12 @@ void VulkanSwapChain::create(VulkanStagePool& stagePool) {
     ASSERT_POSTCONDITION(foundSuitablePresentMode, "Desired present mode is not supported by this device.");
 
     // Create the low-level swap chain.
-
-    clientSize = caps.currentExtent;
+    if (caps.currentExtent.width == VULKAN_UNDEFINED_EXTENT ||
+        caps.currentExtent.height == VULKAN_UNDEFINED_EXTENT) {
+        clientSize = mFallbackExtent;
+    } else {
+        clientSize = caps.currentExtent;
+    }
 
     const VkCompositeAlphaFlagBitsKHR compositeAlpha = (caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) ?
             VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR : VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -297,8 +305,10 @@ static void getPresentationQueue(VulkanContext& mContext, VulkanSwapChain& sc) {
 }
 
 // Primary SwapChain constructor. (not headless)
-VulkanSwapChain::VulkanSwapChain(VulkanContext& context, VulkanStagePool& stagePool, VkSurfaceKHR vksurface) :
-        mContext(context) {
+VulkanSwapChain::VulkanSwapChain(VulkanContext& context, VulkanStagePool& stagePool, VkSurfaceKHR vksurface,
+        VkExtent2D fallbackExtent) :
+        mContext(context),
+        mFallbackExtent(fallbackExtent) {
     suboptimal = false;
     surface = vksurface;
     firstRenderPass = true;
@@ -341,9 +351,15 @@ bool VulkanSwapChain::hasResized() const {
     if (surface == VK_NULL_HANDLE) {
         return false;
     }
-    VkSurfaceCapabilitiesKHR surfaceCapabilities;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mContext.physicalDevice, surface, &surfaceCapabilities);
-    return !equivalent(clientSize, surfaceCapabilities.currentExtent);
+    VkSurfaceCapabilitiesKHR caps;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mContext.physicalDevice, surface, &caps);
+    VkExtent2D perceivedExtent = caps.currentExtent;
+    // Create the low-level swap chain.
+    if (caps.currentExtent.width == VULKAN_UNDEFINED_EXTENT ||
+        caps.currentExtent.height == VULKAN_UNDEFINED_EXTENT) {
+        perceivedExtent = mFallbackExtent;
+    }
+    return !equivalent(clientSize, perceivedExtent);
 }
 
 VulkanTexture& VulkanSwapChain::getColorTexture() {

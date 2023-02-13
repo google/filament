@@ -42,4 +42,8 @@ void FSwapChain::setFrameCompletedCallback(FrameCompletedCallback callback, void
     mEngine.getDriverApi().setFrameCompletedCallback(mSwapChain, callback, user);
 }
 
+bool FSwapChain::isSRGBSwapChainSupported(FEngine& engine) noexcept {
+    return engine.getDriverApi().isSRGBSwapChainSupported();
+}
+
 } // namespace filament

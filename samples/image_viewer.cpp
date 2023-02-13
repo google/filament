@@ -80,8 +80,7 @@ struct App {
     bool showImage = false;
     float3 backgroundColor = float3(0.0f);
 
-    // zero-initialized so that the first time through is always dirty.
-    ColorGradingSettings lastColorGradingOptions = { 0 };
+    ColorGradingSettings lastColorGradingOptions = { .enabled = false };
 
     ColorGrading* colorGrading = nullptr;
 };

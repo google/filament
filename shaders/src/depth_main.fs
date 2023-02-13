@@ -17,6 +17,8 @@ highp vec2 computeDepthMomentsVSM(const highp float depth);
 void main() {
     filament_lodBias = frameUniforms.lodBias;
 
+    initObjectUniforms(object_uniforms);
+
 #if defined(BLEND_MODE_MASKED) || ((defined(BLEND_MODE_TRANSPARENT) || defined(BLEND_MODE_FADE)) && defined(MATERIAL_HAS_TRANSPARENT_SHADOW))
     MaterialInputs inputs;
     initMaterial(inputs);

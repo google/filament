@@ -99,13 +99,11 @@ void PlatformCocoaTouchGL::terminate() noexcept {
     delete pImpl->mExternalImageSharedGl;
 }
 
-Platform::SwapChain* PlatformCocoaTouchGL::createSwapChain(void* nativewindow, uint64_t& flags) noexcept {
-    // Transparent swap chain is not supported
-    flags &= ~SWAP_CHAIN_CONFIG_TRANSPARENT;
+Platform::SwapChain* PlatformCocoaTouchGL::createSwapChain(void* nativewindow, uint64_t flags) noexcept {
     return (SwapChain*) nativewindow;
 }
 
-Platform::SwapChain* PlatformCocoaTouchGL::createSwapChain(uint32_t width, uint32_t height, uint64_t& flags) noexcept {
+Platform::SwapChain* PlatformCocoaTouchGL::createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept {
     CAEAGLLayer* glLayer = [CAEAGLLayer layer];
     glLayer.frame = CGRectMake(0, 0, width, height);
 

@@ -37,7 +37,8 @@ public:
             Variant variant, backend::ShaderStage stage, filaflat::ShaderContent& shader) noexcept;
     bool getDictionary(filaflat::BlobDictionary& dictionary) noexcept;
 
-    static utils::CString spirvToGLSL(const uint32_t* data, size_t wordCount);
+    static utils::CString spirvToGLSL(backend::ShaderModel shaderModel, const uint32_t* data,
+            size_t wordCount);
     static utils::CString spirvToText(const uint32_t* data, size_t wordCount);
 
 private:

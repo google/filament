@@ -706,6 +706,11 @@ bool MetalDriver::isAutoDepthResolveSupported() {
     return mContext->supportsAutoDepthResolve;
 }
 
+bool MetalDriver::isSRGBSwapChainSupported() {
+    // the SWAP_CHAIN_CONFIG_SRGB_COLORSPACE flag is not supported
+    return false;
+}
+
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:

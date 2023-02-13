@@ -33,12 +33,12 @@ void PlatformWebGL::terminate() noexcept {
 }
 
 Platform::SwapChain* PlatformWebGL::createSwapChain(
-        void* nativeWindow, uint64_t& flags) noexcept {
+        void* nativeWindow, uint64_t flags) noexcept {
     return (SwapChain*)nativeWindow;
 }
 
 Platform::SwapChain* PlatformWebGL::createSwapChain(
-        uint32_t width, uint32_t height, uint64_t& flags) noexcept {
+        uint32_t width, uint32_t height, uint64_t flags) noexcept {
     // TODO: implement headless SwapChain
     return nullptr;
 }

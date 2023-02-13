@@ -395,9 +395,14 @@ void VulkanDriver::createSyncR(Handle<HwSync> sh, int) {
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     const VkInstance instance = mContext.instance;
-    auto vksurface = (VkSurfaceKHR) mContextManager.createVkSurfaceKHR(nativeWindow, instance,
-            flags);
-    construct<VulkanSwapChain>(sch, mContext, mStagePool, vksurface);
+    auto bundle = mContextManager.createVkSurfaceKHR(nativeWindow, instance, flags);
+    VkSurfaceKHR surface = (VkSurfaceKHR) bundle.surface;
+    VkExtent2D fallback{bundle.width, bundle.height};
+    if (fallback.width > 0 && fallback.height > 0) {
+        construct<VulkanSwapChain>(sch, mContext, mStagePool, surface, fallback);
+    } else {
+        construct<VulkanSwapChain>(sch, mContext, mStagePool, surface);
+    }
 }
 
 void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
@@ -632,6 +637,11 @@ bool VulkanDriver::isFrameTimeSupported() {
 }
 
 bool VulkanDriver::isAutoDepthResolveSupported() {
+    return false;
+}
+
+bool VulkanDriver::isSRGBSwapChainSupported() {
+    // TODO: implement SWAP_CHAIN_CONFIG_SRGB_COLORSPACE
     return false;
 }
 

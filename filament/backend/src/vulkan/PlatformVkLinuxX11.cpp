@@ -29,6 +29,8 @@ using namespace bluevk;
 
 namespace filament::backend {
 
+using SurfaceBundle = VulkanPlatform::SurfaceBundle;
+
 static constexpr const char* LIBRARY_X11 = "libX11.so.6";
 
 #ifdef FILAMENT_SUPPORTS_XCB
@@ -50,7 +52,8 @@ struct X11Functions {
     void* library = nullptr;
 } g_x11;
 
-Driver* PlatformVkLinuxX11::createDriver(void* const sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
+Driver* PlatformVkLinuxX11::createDriver(void* const sharedContext,
+        const Platform::DriverConfig& driverConfig) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     const char* requiredInstanceExtensions[] = {
 #ifdef FILAMENT_SUPPORTS_XCB
@@ -64,7 +67,8 @@ Driver* PlatformVkLinuxX11::createDriver(void* const sharedContext, const Platfo
             sizeof(requiredInstanceExtensions) / sizeof(requiredInstanceExtensions[0]), driverConfig);
 }
 
-void* PlatformVkLinuxX11::createVkSurfaceKHR(void* nativeWindow, void* instance, uint64_t flags) noexcept {
+SurfaceBundle PlatformVkLinuxX11::createVkSurfaceKHR(void* nativeWindow, void* instance,
+        uint64_t flags) noexcept {
     if (g_x11.library == nullptr) {
         g_x11.library = dlopen(LIBRARY_X11, RTLD_LOCAL | RTLD_NOW);
         ASSERT_PRECONDITION(g_x11.library, "Unable to open X11 library.");
@@ -85,7 +89,11 @@ void* PlatformVkLinuxX11::createVkSurfaceKHR(void* nativeWindow, void* instance,
 
     }
 
-    VkSurfaceKHR surface = nullptr;
+    SurfaceBundle bundle {
+        .surface = nullptr,
+        .width = 0,
+        .height = 0
+    };
 
 #ifdef FILAMENT_SUPPORTS_XCB
 #ifdef FILAMENT_SUPPORTS_XLIB
@@ -101,8 +109,9 @@ const bool windowIsXCB = true;
             .connection = mConnection,
             .window = (xcb_window_t) ptrval,
         };
-        vkCreateXcbSurfaceKHR((VkInstance) instance, &createInfo, VKALLOC, &surface);
-        return surface;
+        vkCreateXcbSurfaceKHR((VkInstance) instance, &createInfo, VKALLOC,
+                (VkSurfaceKHR*) &bundle.surface);
+        return bundle;
     }
 #endif
 
@@ -112,10 +121,11 @@ const bool windowIsXCB = true;
         .dpy = mDisplay,
         .window = (Window) nativeWindow,
     };
-    vkCreateXlibSurfaceKHR((VkInstance) instance, &createInfo, VKALLOC, &surface);
+    vkCreateXlibSurfaceKHR((VkInstance) instance, &createInfo, VKALLOC,
+            (VkSurfaceKHR*) &bundle.surface);
 #endif
 
-    return surface;
+    return bundle;
 }
 
 } // namespace filament::backend

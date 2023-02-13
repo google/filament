@@ -20,8 +20,7 @@
 #include <math/vec2.h>
 #include <math/vec3.h>
 
-namespace filament {
-namespace color {
+namespace filament::color {
 
 using namespace math;
 
@@ -35,7 +34,7 @@ struct Primaries {
     float2 b;
 
     bool operator==(const Primaries& rhs) const noexcept {
-        return r == rhs.r && b == rhs.b && g == rhs.b;
+        return r == rhs.r && b == rhs.b && g == rhs.g;
     }
 };
 
@@ -197,8 +196,8 @@ private:
  */
 class PartialColorSpace {
 public:
-    constexpr ColorSpace operator-(const WhitePoint whitePoint) const {
-        return ColorSpace(mPrimaries, mTransferFunction, whitePoint);
+    constexpr ColorSpace operator-(const WhitePoint& whitePoint) const {
+        return { mPrimaries, mTransferFunction, whitePoint };
     }
 
 private:
@@ -222,14 +221,14 @@ private:
  */
 class Gamut {
 public:
-    constexpr Gamut(const Primaries primaries) : mPrimaries(primaries) {
+    constexpr explicit Gamut(const Primaries primaries) : mPrimaries(primaries) {
     }
 
-    constexpr Gamut(float2 r, float2 g, float2 b) : Gamut(Primaries{r, g, b}) {
+    constexpr Gamut(float2 r, float2 g, float2 b) : Gamut(Primaries{ r, g, b }) {
     }
 
-    constexpr PartialColorSpace operator-(const TransferFunction transferFunction) const {
-        return PartialColorSpace(mPrimaries, transferFunction);
+    constexpr PartialColorSpace operator-(const TransferFunction& transferFunction) const {
+        return { mPrimaries, transferFunction };
     }
 
     constexpr const Primaries& getPrimaries() const { return mPrimaries; }
@@ -239,18 +238,19 @@ private:
 };
 
 //! Rec.709 color gamut, used in the sRGB and DisplayP3 color spaces.
-constexpr Gamut Rec709 = Gamut({0.640f, 0.330f}, {0.300f, 0.600f}, {0.150f, 0.060f});
+constexpr Gamut Rec709 = {{ 0.640f, 0.330f },
+                          { 0.300f, 0.600f },
+                          { 0.150f, 0.060f }};
 
 //! Linear transfer function.
-constexpr TransferFunction Linear = TransferFunction(1.0, 0.0, 0.0, 0.0, 1.0);
+constexpr TransferFunction Linear = { 1.0, 0.0, 0.0, 0.0, 1.0 };
+
 //! sRGB transfer function.
-constexpr TransferFunction sRGB =
-        TransferFunction(1.0 / 1.055, 0.055 / 1.055, 1.0 / 12.92, 0.04045, 2.4);
+constexpr TransferFunction sRGB = { 1.0 / 1.055, 0.055 / 1.055, 1.0 / 12.92, 0.04045, 2.4 };
 
 //! Standard CIE 1931 2° illuminant D65. This illuminant has a color temperature of 6504K.
-constexpr WhitePoint D65 = WhitePoint({0.31271f, 0.32902f});
+constexpr WhitePoint D65 = { 0.31271f, 0.32902f };
 
-} // namespace color
-} // namespace filament
+} // namespace filament::color
 
 #endif // TNT_FILAMENT_COLOR_SPACE_H

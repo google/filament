@@ -25,6 +25,8 @@
 
 namespace filament {
 
+class Engine;
+
 /**
  * A swap chain represents an Operating System's *native* renderable surface.
  *
@@ -148,7 +150,11 @@ public:
     using FrameScheduledCallback = backend::FrameScheduledCallback;
     using FrameCompletedCallback = backend::FrameCompletedCallback;
 
+    /**
+     * Requests a SwapChain with an alpha channel.
+     */
     static const uint64_t CONFIG_TRANSPARENT = backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
+
     /**
      * This flag indicates that the swap chain may be used as a source surface
      * for reading back render results.  This config must be set when creating
@@ -177,6 +183,29 @@ public:
      */
     static const uint64_t CONFIG_APPLE_CVPIXELBUFFER =
             backend::SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER;
+
+    /**
+     * Indicates that the SwapChain must automatically perform linear to sRGB encoding.
+     *
+     * This flag is ignored if isSRGBSwapChainSupported() is false.
+     *
+     * When using this flag, the output colorspace in ColorGrading should be set to
+     * Rec709-Linear-D65, or post-processing should be disabled.
+     *
+     * @see isSRGBSwapChainSupported()
+     * @see ColorGrading.outputColorSpace()
+     * @see View.setPostProcessingEnabled()
+     */
+    static constexpr uint64_t CONFIG_SRGB_COLORSPACE = backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE;
+
+    /**
+     * Return whether createSwapChain supports the SWAP_CHAIN_CONFIG_SRGB_COLORSPACE flag.
+     * The default implementation returns false.
+     *
+     * @param engine A pointer to the filament Engine
+     * @return true if SWAP_CHAIN_CONFIG_SRGB_COLORSPACE is supported, false otherwise.
+     */
+    static bool isSRGBSwapChainSupported(Engine& engine) noexcept;
 
     void* getNativeWindow() const noexcept;
 

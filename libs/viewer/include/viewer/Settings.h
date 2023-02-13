@@ -18,6 +18,7 @@
 #define VIEWER_SETTINGS_H
 
 #include <filament/ColorGrading.h>
+#include <filament/ColorSpace.h>
 #include <filament/IndirectLight.h>
 #include <filament/LightManager.h>
 #include <filament/MaterialInstance.h>
@@ -35,6 +36,8 @@
 #include <string>
 
 namespace filament {
+
+using namespace color;
 
 class Skybox;
 class Renderer;
@@ -116,33 +119,38 @@ struct GenericToneMapperSettings {
 };
 
 struct ColorGradingSettings {
+    // fields are ordered to avoid padding
     bool enabled = true;
-    filament::ColorGrading::QualityLevel quality = filament::ColorGrading::QualityLevel::MEDIUM;
-    ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
-    GenericToneMapperSettings genericToneMapper;
+    bool linkedCurves = false;
     bool luminanceScaling = false;
     bool gamutMapping = false;
-    float exposure = 0.0f;
-    float nightAdaptation = 0.0f;
-    float temperature = 0.0f;
-    float tint = 0.0f;
-    math::float3 outRed{1.0f, 0.0f, 0.0f};
-    math::float3 outGreen{0.0f, 1.0f, 0.0f};
-    math::float3 outBlue{0.0f, 0.0f, 1.0f};
+    filament::ColorGrading::QualityLevel quality = filament::ColorGrading::QualityLevel::MEDIUM;
+    ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
+    bool padding0{};
+    bool padding1{};
+    color::ColorSpace colorspace = Rec709-sRGB-D65;
+    GenericToneMapperSettings genericToneMapper;
     math::float4 shadows{1.0f, 1.0f, 1.0f, 0.0f};
     math::float4 midtones{1.0f, 1.0f, 1.0f, 0.0f};
     math::float4 highlights{1.0f, 1.0f, 1.0f, 0.0f};
     math::float4 ranges{0.0f, 0.333f, 0.550f, 1.0f};
-    float contrast = 1.0f;
-    float vibrance = 1.0f;
-    float saturation = 1.0f;
+    math::float3 outRed{1.0f, 0.0f, 0.0f};
+    math::float3 outGreen{0.0f, 1.0f, 0.0f};
+    math::float3 outBlue{0.0f, 0.0f, 1.0f};
     math::float3 slope{1.0f};
     math::float3 offset{0.0f};
     math::float3 power{1.0f};
     math::float3 gamma{1.0f};
     math::float3 midPoint{1.0f};
     math::float3 scale{1.0f};
-    bool linkedCurves = false;
+    float exposure = 0.0f;
+    float nightAdaptation = 0.0f;
+    float temperature = 0.0f;
+    float tint = 0.0f;
+    float contrast = 1.0f;
+    float vibrance = 1.0f;
+    float saturation = 1.0f;
+
     bool operator!=(const ColorGradingSettings &rhs) const { return !(rhs == *this); }
     bool operator==(const ColorGradingSettings &rhs) const;
 };
