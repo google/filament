@@ -438,15 +438,27 @@ void ViewerGui::removeAsset() {
     }
 }
 
+UTILS_NOINLINE
+static bool notequal(float a, float b) noexcept {
+    return a != b;
+}
+
+// we do this to circumvent -ffast-math ignoring NaNs
+static bool is_not_a_number(float v) noexcept {
+    return notequal(v, v);
+}
+
 void ViewerGui::setIndirectLight(filament::IndirectLight* ibl,
         filament::math::float3 const* sh3) {
     using namespace filament::math;
     mSettings.view.fog.color = sh3[0];
     mIndirectLight = ibl;
     if (ibl) {
-        float3 d = filament::IndirectLight::getDirectionEstimate(sh3);
-        float4 c = filament::IndirectLight::getColorEstimate(sh3, d);
-        if (!std::isnan(d.x * d.y * d.z)) {
+        float3 const d = filament::IndirectLight::getDirectionEstimate(sh3);
+        float4 const c = filament::IndirectLight::getColorEstimate(sh3, d);
+        bool const dIsValid = std::none_of(std::begin(d.v), std::end(d.v), is_not_a_number);
+        bool const cIsValid = std::none_of(std::begin(c.v), std::end(c.v), is_not_a_number);
+        if (dIsValid && cIsValid) {
             mSettings.lighting.sunlightDirection = d;
             mSettings.lighting.sunlightColor = c.rgb;
             mSettings.lighting.sunlightIntensity = c[3] * ibl->getIntensity();
