@@ -56,10 +56,10 @@ void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCa
     SYSTRACE_CALL();
 
     FEngine& engine = mEngine;
-    EntityManager& em = engine.getEntityManager();
-    FRenderableManager& rcm = engine.getRenderableManager();
-    FTransformManager& tcm = engine.getTransformManager();
-    FLightManager& lcm = engine.getLightManager();
+    EntityManager const& em = engine.getEntityManager();
+    FRenderableManager const& rcm = engine.getRenderableManager();
+    FTransformManager const& tcm = engine.getTransformManager();
+    FLightManager const& lcm = engine.getLightManager();
     // go through the list of entities, and gather the data of those that are renderables
     auto& sceneData = mRenderableData;
     auto& lightData = mLightData;
@@ -97,7 +97,7 @@ void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCa
     // find the max intensity directional light index in our local array
     float maxIntensity = 0.0f;
 
-    for (Entity e : entities) {
+    for (Entity const e : entities) {
         if (!em.isAlive(e)) {
             continue;
         }
@@ -131,7 +131,7 @@ void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCa
             // FIXME: We compute and store the local scale because it's needed for glTF but
             //        we need a better way to handle this
             const mat4f& transform = tcm.getTransform(ti);
-            float scale = (length(transform[0].xyz) + length(transform[1].xyz) +
+            float const scale = (length(transform[0].xyz) + length(transform[1].xyz) +
                     length(transform[2].xyz)) / 3.0f;
 
             // we know there is enough space in the array
@@ -202,10 +202,10 @@ void FScene::prepare(const mat4& worldOriginTransform, bool shadowReceiversAreCa
 
 void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexcept {
     RenderableSoa& sceneData = mRenderableData;
-    FRenderableManager& rcm = mEngine.getRenderableManager();
+    FRenderableManager const& rcm = mEngine.getRenderableManager();
 
     mHasContactShadows = false;
-    for (uint32_t i : visibleRenderables) {
+    for (uint32_t const i : visibleRenderables) {
         PerRenderableData& uboData = sceneData.elementAt<UBO>(i);
 
         auto const visibility = sceneData.elementAt<VISIBILITY_STATE>(i);
@@ -278,7 +278,7 @@ void FScene::updateUBOs(
 
     // copy our data into the UBO for each visible renderable
     PerRenderableData const* const uboData = mRenderableData.data<UBO>();
-    for (uint32_t i : visibleRenderables) {
+    for (uint32_t const i : visibleRenderables) {
         buffer[i] = uboData[i];
     }
 
@@ -308,15 +308,15 @@ void FScene::updateUBOs(
     }
 }
 
-void FScene::terminate(FEngine& engine) {
+void FScene::terminate(FEngine&) {
     // DO NOT destroy this UBO, it's owned by the View
     mRenderableViewUbh.clear();
 }
 
-void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootArena,
+void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope&,
         Handle<HwBufferObject> lightUbh) noexcept {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
-    FLightManager& lcm = mEngine.getLightManager();
+    FLightManager const& lcm = mEngine.getLightManager();
     FScene::LightSoa& lightData = getLightData();
 
     /*
@@ -325,7 +325,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
 
     size_t const size = lightData.size();
     // number of point-light/spotlights
-    size_t positionalLightCount = size - DIRECTIONAL_LIGHTS_COUNT;
+    size_t const positionalLightCount = size - DIRECTIONAL_LIGHTS_COUNT;
     assert_invariant(positionalLightCount);
 
     float4 const* const UTILS_RESTRICT spheres = lightData.data<FScene::POSITION_RADIUS>();
@@ -418,11 +418,11 @@ void FScene::removeEntities(const Entity* entities, size_t count) {
 UTILS_NOINLINE
 size_t FScene::getRenderableCount() const noexcept {
     FEngine& engine = mEngine;
-    EntityManager& em = engine.getEntityManager();
-    FRenderableManager& rcm = engine.getRenderableManager();
+    EntityManager const& em = engine.getEntityManager();
+    FRenderableManager const& rcm = engine.getRenderableManager();
     size_t count = 0;
     auto const& entities = mEntities;
-    for (Entity e : entities) {
+    for (Entity const e : entities) {
         count += em.isAlive(e) && rcm.getInstance(e) ? 1 : 0;
     }
     return count;
@@ -431,11 +431,11 @@ size_t FScene::getRenderableCount() const noexcept {
 UTILS_NOINLINE
 size_t FScene::getLightCount() const noexcept {
     FEngine& engine = mEngine;
-    EntityManager& em = engine.getEntityManager();
-    FLightManager& lcm = engine.getLightManager();
+    EntityManager const& em = engine.getEntityManager();
+    FLightManager const& lcm = engine.getLightManager();
     size_t count = 0;
     auto const& entities = mEntities;
-    for (Entity e : entities) {
+    for (Entity const e : entities) {
         count += em.isAlive(e) && lcm.getInstance(e) ? 1 : 0;
     }
     return count;
