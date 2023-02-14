@@ -307,11 +307,16 @@ public class RenderableManager {
 
         /**
          * Set the channel this renderable is associated to. There can be 4 channels.
-         * All renderables in a given channel are rendered together, regardless of anything else.
-         * They are sorted as usual withing a channel.
-         * Channels work similarly to priorities, except that they enforce the strongest ordering.
          *
-         * @param channel clamped to the range [0..3], defaults to 0.
+         * <p>All renderables in a given channel are rendered together, regardless of anything else.
+         * They are sorted as usual within a channel.</p>
+         * <p>Channels work similarly to priorities, except that they enforce the strongest
+         * ordering.</p>
+         *
+         * <p>Channels 0 and 1 may not have render primitives using a material with `refractionType`
+         * set to `screenspace`.</p>
+         *
+         * @param channel clamped to the range [0..3], defaults to 2.
          *
          * @return Builder reference for chaining calls.
          *
