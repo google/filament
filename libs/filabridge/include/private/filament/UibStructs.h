@@ -175,6 +175,7 @@ static_assert(sizeof(PerViewUib) == sizeof(math::float4) * 128,
 struct PerRenderableData {
 
     struct alignas(16) vec3_std140 : public std::array<float, 3> { };
+    struct alignas(16) vec4_std140 : public std::array<float, 4> { };
     struct mat33_std140 : public std::array<vec3_std140, 3> {
         mat33_std140& operator=(math::mat3f const& rhs) noexcept {
             for (int i = 0; i < 3; i++) {
@@ -185,8 +186,19 @@ struct PerRenderableData {
             return *this;
         }
     };
+    struct mat44_std140 : public std::array<vec4_std140, 4> {
+        mat44_std140& operator=(math::mat4f const& rhs) noexcept {
+            for (int i = 0; i < 4; i++) {
+                (*this)[i][0] = rhs[i][0];
+                (*this)[i][1] = rhs[i][1];
+                (*this)[i][2] = rhs[i][2];
+                (*this)[i][3] = rhs[i][3];
+            }
+            return *this;
+        }
+    };
 
-    math::mat4f worldFromModelMatrix;
+    mat44_std140 worldFromModelMatrix;
     mat33_std140 worldFromModelNormalMatrix;
     uint32_t morphTargetCount;
     uint32_t flagsChannels;                   // see packFlags() below (0x00000fll)
@@ -204,6 +216,13 @@ struct PerRenderableData {
                channels;
     }
 };
+
+#ifndef _MSC_VER
+// not sure why this static_assert fails on MSVC
+static_assert(std::is_trivially_default_constructible_v<PerRenderableData>,
+        "make sure PerRenderableData stays trivially_default_constructible");
+#endif
+
 static_assert(sizeof(PerRenderableData) == 256,
         "sizeof(PerRenderableData) must be 256 bytes");
 
