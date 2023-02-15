@@ -95,16 +95,20 @@ public:
     };
 
     struct SceneInfo {
+
+        SceneInfo() noexcept = default;
+        SceneInfo(FScene const& scene, uint8_t visibleLayers, math::mat4f const& viewMatrix) noexcept;
+
         // scratch data: The near and far planes, in clip space, to use for this shadow map
         math::float2 csNearFar = { -1.0f, 1.0f };
 
         // scratch data: light's near/far expressed in light-space, calculated from the scene's
         // content assuming the light is at the origin.
-        math::float2 lsNearFar{};
+        math::float2 lsNearFar;
 
-        // scratch data: Viewing camera's near/far expressed in view-space, calculated from the
+        // Viewing camera's near/far expressed in view-space, calculated from the
         // scene's content.
-        math::float2 vsNearFar{};
+        math::float2 vsNearFar;
 
         // World-space shadow-casters volume
         Aabb wsShadowCastersVolume;
@@ -136,8 +140,8 @@ public:
     ShaderParameters updateDirectional(FEngine& engine,
             const FScene::LightSoa& lightData, size_t index,
             filament::CameraInfo const& camera,
-            ShadowMapInfo const& shadowMapInfo, FScene const& scene,
-            SceneInfo& sceneInfo) noexcept;
+            ShadowMapInfo const& shadowMapInfo,
+            SceneInfo const& sceneInfo) noexcept;
 
     ShaderParameters updateSpot(FEngine& engine,
             const FScene::LightSoa& lightData, size_t index,
@@ -145,11 +149,9 @@ public:
             const ShadowMapInfo& shadowMapInfo, FScene const& scene,
             SceneInfo sceneInfo) noexcept;
 
-    ShaderParameters updatePoint(FEngine& engine,
-            const FScene::LightSoa& lightData, size_t index,
-            filament::CameraInfo const& camera, const ShadowMapInfo& shadowMapInfo,
-            FScene const& scene,
-            SceneInfo sceneInfo, uint8_t face) noexcept;
+    ShadowMap::ShaderParameters updatePoint(FEngine& engine,
+            const FScene::LightSoa& lightData, size_t index, filament::CameraInfo const& camera,
+            const ShadowMapInfo& shadowMapInfo, FScene const& scene, uint8_t face) noexcept;
 
     // Do we have visible shadows. Valid after calling update().
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }
@@ -159,11 +161,6 @@ public:
 
     // use only for debugging
     FCamera const& getDebugCamera() const noexcept { return *mDebugCamera; }
-
-    // Call once per frame to populate the SceneInfo struct, then pass to update().
-    // This computes values constant across all shadow maps.
-    static void initSceneInfo(ShadowMap::SceneInfo& sceneInfo, uint8_t visibleLayers,
-            FScene const& scene, math::mat4f const& viewMatrix);
 
     // Update SceneInfo struct for a given light
     static void updateSceneInfoDirectional(const math::mat4f& Mv, FScene const& scene,
@@ -229,9 +226,6 @@ private:
 
     static inline void computeFrustumCorners(math::float3* out,
             const math::mat4f& projectionViewInverse, math::float2 csNearFar = { -1.0f, 1.0f }) noexcept;
-
-    static inline math::float2 computeNearFar(math::mat4f const& view,
-            Aabb const& wsShadowCastersVolume) noexcept;
 
     static inline math::float2 computeNearFar(math::mat4f const& view,
             math::float3 const* wsVertices, size_t count) noexcept;
