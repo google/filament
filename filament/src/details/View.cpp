@@ -338,6 +338,7 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
 void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena,
         filament::Viewport const& viewport, CameraInfo const& cameraInfo) noexcept {
     SYSTRACE_CALL();
+    SYSTRACE_CONTEXT();
 
     FScene* const scene = mScene;
     auto const& lightData = scene->getLightData();
@@ -432,6 +433,9 @@ CameraInfo FView::computeCameraInfo(FEngine& engine) const noexcept {
 void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
         filament::Viewport const& viewport, CameraInfo const& cameraInfo,
         float4 const& userTime, bool needsAlphaChannel) noexcept {
+
+        SYSTRACE_CALL();
+        SYSTRACE_CONTEXT();
 
     JobSystem& js = engine.getJobSystem();
 
@@ -528,6 +532,8 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
         // TODO: we need to compare performance of doing this partitioning vs not doing it.
         //       and rely on checking visibility in the loops
 
+        SYSTRACE_NAME_BEGIN("Partitioning");
+
         // calculate the sorting key for all elements, based on their visibility
         uint8_t const* layers = renderableData.data<FScene::LAYERS>();
         auto const* visibility = renderableData.data<FScene::VISIBILITY_STATE>();
@@ -567,6 +573,8 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
         }
 
         mSpotLightShadowCasters = merged;
+
+        SYSTRACE_NAME_END();
 
         // TODO: when any spotlight is used, `merged` ends-up being the whole list. However,
         //       some of the items will end-up not being visible by any light. Can we do better?
