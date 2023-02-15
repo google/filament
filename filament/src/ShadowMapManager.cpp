@@ -76,14 +76,15 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::update(FEngine& engine, FVie
     calculateTextureRequirements(engine, view, lightData);
 
     // Compute scene-dependent values shared across all shadow maps
-    ShadowMap::initSceneInfo(mSceneInfo,
-            view.getVisibleLayers(), *view.getScene(), cameraInfo.view);
+    ShadowMap::SceneInfo const info{ *view.getScene(), view.getVisibleLayers(), cameraInfo.view };
 
     shadowTechnique |= updateCascadeShadowMaps(
-            engine, view, cameraInfo, renderableData, lightData, mSceneInfo);
+            engine, view, cameraInfo, renderableData, lightData, info);
 
     shadowTechnique |= updateSpotShadowMaps(
             engine, lightData);
+
+    mSceneInfo = info;
 
     return shadowTechnique;
 }
@@ -207,7 +208,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
             },
             [this, &engine, &view, vsmShadowOptions,
                 scene, mainCameraInfo, userTime, passTemplate = pass](
-                    FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                    FrameGraphResources const&, auto const& data, DriverApi& driver) {
 
                 // Note: we could almost parallel_for the loop below, the problem currently is
                 // that updatePrimitivesLod() updates temporary global state.
@@ -435,11 +436,11 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEngine& engine,
         FView& view, CameraInfo const& cameraInfo, FScene::RenderableSoa& renderableData,
-        FScene::LightSoa& lightData, ShadowMap::SceneInfo& sceneInfo) noexcept {
+        FScene::LightSoa& lightData, ShadowMap::SceneInfo sceneInfo) noexcept {
     FScene* scene = view.getScene();
     auto& lcm = engine.getLightManager();
 
-    FLightManager::Instance directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
+    FLightManager::Instance const directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
     FLightManager::ShadowOptions const& options = lcm.getShadowOptions(directionalLight);
     FLightManager::ShadowParams const& params = lcm.getShadowParams(directionalLight);
 
@@ -458,8 +459,18 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         // entire camera frustum, as if we only had a single cascade.
         ShadowMap& shadowMap = *mCascadeShadowMaps[0];
 
+        const auto direction = lightData.elementAt<FScene::DIRECTION>(0);
+
+        // We compute the directional light's model matrix using the origin's as the light position.
+        // The choice of the light's origin initially doesn't matter for a directional light.
+        // This will be adjusted later because of how we compute the depth metric for VSM.
+        const mat4f MvAtOrigin = ShadowMap::getDirectionalLightViewMatrix(direction);
+
+        // Compute scene-dependent values shared across all cascades
+        ShadowMap::updateSceneInfoDirectional(MvAtOrigin, *scene, sceneInfo);
+
         shadowMap.updateDirectional(mEngine,
-                lightData, 0, cameraInfo, shadowMapInfo, *scene, sceneInfo);
+                lightData, 0, cameraInfo, shadowMapInfo, sceneInfo);
 
         hasVisibleShadows = shadowMap.hasVisibleShadows();
 
@@ -533,7 +544,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             sceneInfo.csNearFar = { csSplitPosition[i], csSplitPosition[i + 1] };
 
             auto shaderParameters = shadowMap.updateDirectional(mEngine,
-                    lightData, 0, cameraInfo, shadowMapInfo, *scene, sceneInfo);
+                    lightData, 0, cameraInfo, shadowMapInfo, sceneInfo);
 
             if (shadowMap.hasVisibleShadows()) {
                 const size_t shadowIndex = shadowMap.getShadowIndex();
@@ -560,7 +571,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
     }
 
     // screen-space contact shadows for the directional light
-    float screenSpaceShadowDistance = options.maxShadowDistance;
+    float const screenSpaceShadowDistance = options.maxShadowDistance;
     if (options.screenSpaceContactShadows) {
         shadowTechnique |= ShadowTechnique::SCREEN_SPACE;
     }
@@ -749,7 +760,7 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
     };
 
     auto shaderParameters = shadowMap.updatePoint(mEngine, lightData, lightIndex,
-            mainCameraInfo, shadowMapInfo, *view.getScene(), sceneInfo, face);
+            mainCameraInfo, shadowMapInfo, *view.getScene(), face);
 
 
     // and if we need to generate it, update all the UBO data
@@ -812,8 +823,8 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
     return shadowTechnique;
 }
 
-void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view,
-        FScene::LightSoa& lightData) noexcept {
+void ShadowMapManager::calculateTextureRequirements(FEngine&, FView& view,
+        FScene::LightSoa&) noexcept {
 
     // Lay out the shadow maps. For now, we take the largest requested dimension and allocate a
     // texture of that size. Each cascade / shadow map gets its own layer in the array texture.
@@ -867,7 +878,7 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     if (useMipmapping) {
         // Limit the lowest mipmap level to 256x256.
         // This avoids artifacts on high derivative tangent surfaces.
-        int lowMipmapLevel = 7;    // log2(256) - 1
+        int const lowMipmapLevel = 7;    // log2(256) - 1
         mipLevels = std::max(1, FTexture::maxLevelCount(maxDimension) - lowMipmapLevel);
     }
 

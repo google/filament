@@ -110,7 +110,7 @@ public:
 private:
     ShadowMapManager::ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
             FView& view, CameraInfo const& cameraInfo, FScene::RenderableSoa& renderableData,
-            FScene::LightSoa& lightData, ShadowMap::SceneInfo& sceneInfo) noexcept;
+            FScene::LightSoa& lightData, ShadowMap::SceneInfo sceneInfo) noexcept;
 
     ShadowMapManager::ShadowTechnique updateSpotShadowMaps(FEngine& engine,
             FScene::LightSoa& lightData) noexcept;
