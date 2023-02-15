@@ -36,7 +36,7 @@
  * Creates a Systrace context in the current scope. needed for calling all other systrace
  * commands below.
  */
-#define SYSTRACE_CONTEXT() ::utils::details::Systrace ___tracer(SYSTRACE_TAG)
+#define SYSTRACE_CONTEXT() ::utils::details::Systrace ___trctx(SYSTRACE_TAG)
 
 
 // SYSTRACE_NAME traces the beginning and end of the current scope.  To trace
@@ -57,10 +57,10 @@
 #define SYSTRACE_CALL() SYSTRACE_NAME(__FUNCTION__)
 
 #define SYSTRACE_NAME_BEGIN(name) \
-        ___tracer.traceBegin(SYSTRACE_TAG, name)
+        ___trctx.traceBegin(SYSTRACE_TAG, name)
 
 #define SYSTRACE_NAME_END() \
-        ___tracer.traceEnd(SYSTRACE_TAG)
+        ___trctx.traceEnd(SYSTRACE_TAG)
 
 
 /**
@@ -71,24 +71,24 @@
  * used to end it.
  */
 #define SYSTRACE_ASYNC_BEGIN(name, cookie) \
-        ___tracer.asyncBegin(SYSTRACE_TAG, name, cookie)
+        ___trctx.asyncBegin(SYSTRACE_TAG, name, cookie)
 
 /**
  * Trace the end of an asynchronous event.
  * This should have a corresponding SYSTRACE_ASYNC_BEGIN.
  */
 #define SYSTRACE_ASYNC_END(name, cookie) \
-        ___tracer.asyncEnd(SYSTRACE_TAG, name, cookie)
+        ___trctx.asyncEnd(SYSTRACE_TAG, name, cookie)
 
 /**
  * Traces an integer counter value.  name is used to identify the counter.
  * This can be used to track how a value changes over time.
  */
 #define SYSTRACE_VALUE32(name, val) \
-        ___tracer.value(SYSTRACE_TAG, name, int32_t(val))
+        ___trctx.value(SYSTRACE_TAG, name, int32_t(val))
 
 #define SYSTRACE_VALUE64(name, val) \
-        ___tracer.value(SYSTRACE_TAG, name, int64_t(val))
+        ___trctx.value(SYSTRACE_TAG, name, int64_t(val))
 
 // ------------------------------------------------------------------------------------------------
 // No user serviceable code below...
@@ -221,9 +221,9 @@ class Systrace {
 // ------------------------------------------------------------------------------------------------
 
 class ScopedTrace {
-   public:
+public:
     // we don't inline this because it's relatively heavy due to a global check
-    ScopedTrace(uint32_t tag, const char* name) noexcept : mTrace(tag), mTag(tag) {
+    ScopedTrace(uint32_t tag, const char* name) noexcept: mTrace(tag), mTag(tag) {
         mTrace.traceBegin(tag, name);
     }
 
@@ -231,15 +231,7 @@ class ScopedTrace {
         mTrace.traceEnd(mTag);
     }
 
-    inline void value(uint32_t tag, const char* name, int32_t v) noexcept {
-        mTrace.value(tag, name, v);
-    }
-
-    inline void value(uint32_t tag, const char* name, int64_t v) noexcept {
-        mTrace.value(tag, name, v);
-    }
-
-   private:
+private:
     Systrace mTrace;
     const uint32_t mTag;
 };
