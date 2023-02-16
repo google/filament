@@ -58,6 +58,9 @@ function print_help {
     echo "        When building for Android, also build select sample APKs."
     echo "        sampleN is an Android sample, e.g., sample-gltf-viewer."
     echo "        This automatically performs a partial desktop build and install."
+    echo "    -b"
+    echo "        Enable Address and Undefined Behavior Sanitizers (asan/ubsan) for debugging."
+    echo "        This is only for the desktop build."
     echo ""
     echo "Build types:"
     echo "    release"
@@ -167,6 +170,8 @@ MATDBG_GRADLE_OPTION=""
 MATOPT_OPTION=""
 MATOPT_GRADLE_OPTION=""
 
+ASAN_UBSAN_OPTION=""
+
 IOS_BUILD_SIMULATOR=false
 BUILD_UNIVERSAL_LIBRARIES=false
 
@@ -227,6 +232,7 @@ function build_desktop_target {
             ${EGL_ON_LINUX_OPTION} \
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
+            ${ASAN_UBSAN_OPTION} \
             ${deployment_target} \
             ${architectures} \
             ../..
@@ -750,7 +756,7 @@ function run_tests {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfijmp:q:uvslwtedk:" opt; do
+while getopts ":hacCfijmp:q:uvslwtedk:b" opt; do
     case ${opt} in
         h)
             print_help
@@ -876,6 +882,9 @@ while getopts ":hacCfijmp:q:uvslwtedk:" opt; do
         k)
             BUILD_ANDROID_SAMPLES=true
             ANDROID_SAMPLES=$(echo "${OPTARG}" | tr ',' '\n')
+            ;;
+        b)  ASAN_UBSAN_OPTION="-DFILAMENT_ENABLE_ASAN_UBSAN=ON"
+            echo "Enabled ASAN/UBSAN"
             ;;
         \?)
             echo "Invalid option: -${OPTARG}" >&2
