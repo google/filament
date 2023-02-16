@@ -268,9 +268,8 @@ bool FView::isSkyboxVisible() const noexcept {
     return skybox != nullptr && (skybox->getLayerMask() & mVisibleLayers);
 }
 
-void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
-        FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
-        CameraInfo const& cameraInfo) noexcept {
+void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableData,
+        FScene::LightSoa& lightData, CameraInfo const& cameraInfo) noexcept {
     SYSTRACE_CALL();
 
     mHasShadowing = false;
@@ -284,7 +283,7 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
     auto& lcm = engine.getLightManager();
 
     // dominant directional light is always as index 0
-    FLightManager::Instance directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
+    FLightManager::Instance const directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
     const bool hasDirectionalShadows = directionalLight && lcm.isShadowCaster(directionalLight);
     if (UTILS_UNLIKELY(hasDirectionalShadows)) {
         const auto& shadowOptions = lcm.getShadowOptions(directionalLight);
@@ -468,7 +467,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * Gather all information needed to render this scene. Apply the world origin to all
      * objects in the scene.
      */
-    scene->prepare(cameraInfo.worldOrigin, hasVSM());
+    scene->prepare(js, arena.getAllocator(), cameraInfo.worldOrigin, hasVSM());
 
     /*
      * Light culling: runs in parallel with Renderable culling (below)
@@ -508,7 +507,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
         if (prepareVisibleLightsJob) {
             js.waitAndRelease(prepareVisibleLightsJob);
         }
-        prepareShadowing(engine, driver, renderableData, scene->getLightData(), cameraInfo);
+        prepareShadowing(engine, renderableData, scene->getLightData(), cameraInfo);
 
         /*
          * Partition the SoA so that renderables are partitioned w.r.t their visibility into the

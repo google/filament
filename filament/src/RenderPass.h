@@ -389,9 +389,9 @@ private:
     void resize(size_t count) noexcept;
     void instanceify(FEngine& engine) noexcept;
 
-    // on 64-bits systems, we process batches of 256 (64 bytes) cache-lines, or 512 (32 bytes) commands
-    // on 32-bits systems, we process batches of 512 (32 bytes) cache-lines, or 512 (32 bytes) commands
-    static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_COUNT = 512;
+    // we choose the command count per job to minimize JobSystem overhead.
+    // on a Pixel 4, 2048 commands is about half a millisecond of processing.
+    static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_COUNT = 2048;
     static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_SIZE  =
             sizeof(Command) * JOBS_PARALLEL_FOR_COMMANDS_COUNT;
 
