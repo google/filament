@@ -140,9 +140,8 @@ public:
             const Viewport& physicalViewport,
             const filament::Viewport& logicalViewport) const noexcept;
 
-    void prepareShadowing(FEngine& engine, backend::DriverApi& driver,
-            FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData,
-            CameraInfo const& cameraInfo) noexcept;
+    void prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableData,
+            FScene::LightSoa& lightData, CameraInfo const& cameraInfo) noexcept;
     void prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena,
             filament::Viewport const& viewport, CameraInfo const &cameraInfo) noexcept;
 
