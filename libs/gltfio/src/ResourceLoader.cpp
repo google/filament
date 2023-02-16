@@ -670,11 +670,13 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
         mime = extension == "jpg" ? "image/jpeg" : "image/" + extension;
     }
 
-    TextureProvider* provider = mTextureProviders[mime];
-    if (!provider) {
+    auto foundProvider = mTextureProviders.find(mime);
+    if (foundProvider == mTextureProviders.end()) {
         slog.e << "Missing texture provider for " << mime << io::endl;
         return {};
     }
+    TextureProvider* provider = foundProvider->second;
+    assert_invariant(provider);
 
     // Check if the texture slot uses BufferView data.
     if (void** bufferViewData = bv ? &bv->buffer->data : nullptr; bufferViewData) {
