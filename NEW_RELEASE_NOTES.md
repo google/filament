@@ -9,3 +9,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 ## Release notes for next branch cut
 
 - engine: the default render channel is now 2 instead of 0
+- gltfio: Fix crash when a MIME type has no texture provider
