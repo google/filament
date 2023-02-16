@@ -31,6 +31,8 @@ option(FILAMENT_SKIP_SDL2 "Skip dependencies of SDL2, and SDL2" OFF)
 
 option(FILAMENT_LINUX_IS_MOBILE "Treat Linux as Mobile" OFF)
 
+option(FILAMENT_ENABLE_ASAN_UBSAN "Enable Address and Undefined Behavior Sanitizers" OFF)
+
 set(FILAMENT_NDK_VERSION "" CACHE STRING
     "Android NDK version or version prefix to be used when building for Android."
 )
@@ -374,10 +376,10 @@ endif()
 # ==================================================================================================
 # Debug compiler flags
 # ==================================================================================================
-# ASAN is deactivated for now because:
-#  -fsanitize=undefined causes extremely long link times
-#  -fsanitize=address causes a crash with assimp, which we can't explain for now
-#set(EXTRA_SANITIZE_OPTIONS "-fsanitize=undefined -fsanitize=address")
+if (FILAMENT_ENABLE_ASAN_UBSAN)
+   set(EXTRA_SANITIZE_OPTIONS "-fsanitize=address -fsanitize=undefined")
+endif()
+
 if (NOT MSVC AND NOT WEBGL)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fstack-protector")
 endif()
