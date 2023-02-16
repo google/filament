@@ -214,6 +214,8 @@ struct ViewerOptions {
     float cameraAperture = 16.0f;
     float cameraSpeed = 125.0f;
     float cameraISO = 100.0f;
+    float cameraNear = 0.1f;
+    float cameraFar = 100.0f;
     float groundShadowStrength = 0.75f;
     bool groundPlaneEnabled = false;
     bool skyboxEnabled = true;

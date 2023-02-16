@@ -444,6 +444,10 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewerOp
              i = parse(tokens, i + 1, jsonChunk, &out->cameraSpeed);
         } else if (compare(tok, jsonChunk, "cameraISO") == 0) {
              i = parse(tokens, i + 1, jsonChunk, &out->cameraISO);
+        } else if (compare(tok, jsonChunk, "cameraNear") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->cameraNear);
+        } else if (compare(tok, jsonChunk, "cameraFar") == 0) {
+             i = parse(tokens, i + 1, jsonChunk, &out->cameraFar);
         } else if (compare(tok, jsonChunk, "groundShadowStrength") == 0) {
              i = parse(tokens, i + 1, jsonChunk, &out->groundShadowStrength);
         } else if (compare(tok, jsonChunk, "groundPlaneEnabled") == 0) {
@@ -773,6 +777,8 @@ static std::ostream& operator<<(std::ostream& out, const ViewerOptions& in) {
         << "\"cameraAperture\": " << (in.cameraAperture) << ",\n"
         << "\"cameraSpeed\": " << (in.cameraSpeed) << ",\n"
         << "\"cameraISO\": " << (in.cameraISO) << ",\n"
+        << "\"cameraNear\": " << (in.cameraNear) << ",\n"
+        << "\"cameraFar\": " << (in.cameraFar) << ",\n"
         << "\"groundShadowStrength\": " << (in.groundShadowStrength) << ",\n"
         << "\"groundPlaneEnabled\": " << to_string(in.groundPlaneEnabled) << ",\n"
         << "\"skyboxEnabled\": " << to_string(in.skyboxEnabled) << ",\n"

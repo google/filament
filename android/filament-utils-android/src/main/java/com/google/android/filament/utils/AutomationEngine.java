@@ -97,6 +97,8 @@ public class AutomationEngine {
         public float cameraAperture = 16.0f;
         public float cameraSpeed = 125.0f;
         public float cameraISO = 100.0f;
+        public float cameraNear = 0.1f;
+        public float cameraFar = 100.0f;
         public float groundShadowStrength = 0.75f;
         public boolean groundPlaneEnabled = false;
         public boolean skyboxEnabled = true;
