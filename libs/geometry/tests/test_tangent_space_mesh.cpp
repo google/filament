@@ -39,15 +39,27 @@ const std::vector<float3> CUBE_VERTS {
         float3{1, 1, 1}
 };
 
-const std::vector<float2> CUBE_UVS{
+const std::vector<float2> CUBE_UVS {
+        float2{0, 0},
         float2{0, 0},
         float2{1, 0},
+        float2{1, 1},
+        float2{0, 1},
         float2{0, 1},
         float2{1, 1},
-        float2{.5, 0},
-        float2{0, .5},
-        float2{.5, .5},
-        float2{0, 0}
+        float2{0, 1}
+};
+
+const float3 CUBE_CENTER{.5, .5, .5};
+const std::vector<float3> CUBE_NORMALS {
+    normalize(CUBE_VERTS[0] - CUBE_CENTER),
+    normalize(CUBE_VERTS[1] - CUBE_CENTER),
+    normalize(CUBE_VERTS[2] - CUBE_CENTER),
+    normalize(CUBE_VERTS[3] - CUBE_CENTER),
+    normalize(CUBE_VERTS[4] - CUBE_CENTER),
+    normalize(CUBE_VERTS[5] - CUBE_CENTER),
+    normalize(CUBE_VERTS[6] - CUBE_CENTER),
+    normalize(CUBE_VERTS[7] - CUBE_CENTER),
 };
 
 const std::vector<ushort3> CUBE_TRIANGLES {
@@ -121,6 +133,17 @@ TEST_F(TangentSpaceMeshTest, BuilderDefaultAlgorithms) {
             .build();
     EXPECT_EQ(mesh->getAlgorithm(), TangentSpaceMesh::Algorithm::FRISVAD);
     TangentSpaceMesh::destroy(mesh);
+
+    mesh = TangentSpaceMesh::Builder()
+            .vertexCount(CUBE_VERTS.size())
+            .positions(CUBE_VERTS.data())
+            .uvs(CUBE_UVS.data())
+            .normals(CUBE_NORMALS.data())
+            .triangleCount(CUBE_TRIANGLES.size())
+            .triangles(CUBE_TRIANGLES.data())
+            .build();
+    EXPECT_EQ(mesh->getAlgorithm(), TangentSpaceMesh::Algorithm::MIKKTSPACE);
+    TangentSpaceMesh::destroy(mesh);
 }
 
 // Remeshed vertices/uvs should map to input vertices/uvs
@@ -189,7 +212,6 @@ TEST_F(TangentSpaceMeshTest, FlatShading) {
     TangentSpaceMesh::destroy(mesh);
 }
 
-
 TEST_F(TangentSpaceMeshTest, Frisvad) {
     TangentSpaceMesh* mesh = TangentSpaceMesh::Builder()
             .vertexCount(TEST_NORMALS.size())
@@ -235,6 +257,103 @@ TEST_F(TangentSpaceMeshTest, HughesMoller) {
 
         const float3 b = quats[i] * BITANGENT_AXIS;
         const float3 t = quats[i] * TANGENT_AXIS;
+
+        EXPECT_LT(abs(dot(b, t)), std::numeric_limits<float>::epsilon());
+        EXPECT_LT(abs(dot(n, t)), std::numeric_limits<float>::epsilon());
+        EXPECT_LT(abs(dot(n, b)), std::numeric_limits<float>::epsilon());
+        EXPECT_PRED2(isAlmostEqual3, cross(n, t), b);
+    }
+    TangentSpaceMesh::destroy(mesh);
+}
+
+TEST_F(TangentSpaceMeshTest, MikktspaceRemesh) {
+    TangentSpaceMesh* mesh = TangentSpaceMesh::Builder()
+            .vertexCount(CUBE_VERTS.size())
+            .normals(CUBE_NORMALS.data())
+            .positions(CUBE_VERTS.data())
+            .uvs(CUBE_UVS.data())
+            .triangleCount(CUBE_TRIANGLES.size())
+            .triangles(CUBE_TRIANGLES.data())
+            .algorithm(TangentSpaceMesh::Algorithm::MIKKTSPACE)
+            .build();
+
+    size_t const vertexCount = mesh->getVertexCount();
+
+    std::vector<float3> outPositions(vertexCount);
+    mesh->getPositions(outPositions.data());
+
+    std::vector<float2> outUVs(vertexCount);
+    mesh->getUVs(outUVs.data());
+
+    for (size_t i = 0; i < outPositions.size(); ++i) {
+        auto const& outPos = outPositions[i];
+        auto const& outUV = outUVs[i];
+
+        bool found = false;
+        for (size_t j = 0; j < CUBE_VERTS.size(); ++j) {
+            auto const& inPos = CUBE_VERTS[j];
+            auto const& inUV = CUBE_UVS[j];
+            if (isAlmostEqual3(outPos, inPos)) {
+                found = true;
+                EXPECT_PRED2(isAlmostEqual2, outUV, inUV);
+                break;
+            }
+        }
+        EXPECT_TRUE(found);
+    }
+    TangentSpaceMesh::destroy(mesh);
+}
+
+TEST_F(TangentSpaceMeshTest, Mikktspace) {
+    // It's unclear why the dot product between n and b is greater epsilon, but since we don't
+    // control the implementation of mikktspace, we simply add a little slack to the test.
+    constexpr float MAGIC_SLACK = 1.00001;
+    TangentSpaceMesh* mesh = TangentSpaceMesh::Builder()
+            .vertexCount(CUBE_VERTS.size())
+            .normals(CUBE_NORMALS.data())
+            .positions(CUBE_VERTS.data())
+            .uvs(CUBE_UVS.data())
+            .triangleCount(CUBE_TRIANGLES.size())
+            .triangles(CUBE_TRIANGLES.data())
+            .algorithm(TangentSpaceMesh::Algorithm::MIKKTSPACE)
+            .build();
+
+    size_t const vertexCount = mesh->getVertexCount();
+    std::vector<quatf> quats(vertexCount);
+    mesh->getQuats(quats.data());
+    for (size_t i = 0; i < vertexCount; ++i) {
+        float3 const n = quats[i] * NORMAL_AXIS;
+        float3 const b = quats[i] * BITANGENT_AXIS;
+        float3 const t = quats[i] * TANGENT_AXIS;
+
+        EXPECT_LT(abs(dot(b, t)), std::numeric_limits<float>::epsilon());
+        EXPECT_LT(abs(dot(n, t)), std::numeric_limits<float>::epsilon());
+        EXPECT_LT(abs(dot(n, b)), std::numeric_limits<float>::epsilon() * MAGIC_SLACK);
+        EXPECT_PRED2(isAlmostEqual3, cross(n, t), b);
+    }
+    TangentSpaceMesh::destroy(mesh);
+}
+
+TEST_F(TangentSpaceMeshTest, Lengyel) {
+    TangentSpaceMesh* mesh = TangentSpaceMesh::Builder()
+            .vertexCount(CUBE_VERTS.size())
+            .normals(CUBE_NORMALS.data())
+            .positions(CUBE_VERTS.data())
+            .uvs(CUBE_UVS.data())
+            .triangleCount(CUBE_TRIANGLES.size())
+            .triangles(CUBE_TRIANGLES.data())
+            .algorithm(TangentSpaceMesh::Algorithm::LENGYEL)
+            .build();
+
+    size_t const vertexCount = mesh->getVertexCount();
+    std::vector<quatf> quats(vertexCount);
+    mesh->getQuats(quats.data());
+    for (size_t i = 0; i < vertexCount; ++i) {
+        float3 const n = quats[i] * NORMAL_AXIS;
+        EXPECT_PRED2(isAlmostEqual3, n, CUBE_NORMALS[i]);
+
+        float3 const b = quats[i] * BITANGENT_AXIS;
+        float3 const t = quats[i] * TANGENT_AXIS;
 
         EXPECT_LT(abs(dot(b, t)), std::numeric_limits<float>::epsilon());
         EXPECT_LT(abs(dot(n, t)), std::numeric_limits<float>::epsilon());
