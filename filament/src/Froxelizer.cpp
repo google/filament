@@ -560,6 +560,8 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
                      spheres, directions, instances, &viewMatrix, &lcm ]
             (size_t count, size_t offset, size_t stride) {
 
+        SYSTRACE_NAME("FroxelizeLoop Job");
+
         const mat4f& projection = mProjection;
         const mat3f& vn = viewMatrix.upperLeft();
 

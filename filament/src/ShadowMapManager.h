@@ -83,7 +83,7 @@ public:
     // Returns true if any of the shadow maps have visible shadows.
     ShadowMapManager::ShadowTechnique update(FEngine& engine, FView& view,
             CameraInfo const& cameraInfo,
-            FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept;
+            FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept;
 
     // Renders all the shadow maps.
     FrameGraphId<FrameGraphTexture> render(FEngine& engine, FrameGraph& fg, RenderPass const& pass,
@@ -110,13 +110,13 @@ public:
 private:
     ShadowMapManager::ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
             FView& view, CameraInfo const& cameraInfo, FScene::RenderableSoa& renderableData,
-            FScene::LightSoa& lightData, ShadowMap::SceneInfo sceneInfo) noexcept;
+            FScene::LightSoa const& lightData, ShadowMap::SceneInfo sceneInfo) noexcept;
 
     ShadowMapManager::ShadowTechnique updateSpotShadowMaps(FEngine& engine,
-            FScene::LightSoa& lightData) noexcept;
+            FScene::LightSoa const& lightData) noexcept;
 
-    void calculateTextureRequirements(FEngine& engine, FView& view,
-            FScene::LightSoa& lightData) noexcept;
+    void calculateTextureRequirements(FEngine&, FView& view,
+            FScene::LightSoa const&) noexcept;
 
     void prepareSpotShadowMap(ShadowMap& shadowMap,
             FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
