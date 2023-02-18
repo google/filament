@@ -610,14 +610,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     view.prepareUpscaler(scale);
 
-    // start froxelization immediately, it has no dependencies
-    JobSystem::Job* jobFroxelize = nullptr;
-    if (view.hasDynamicLighting()) {
-        jobFroxelize = js.runAndRetain(js.createJob(nullptr,
-                [&engine, &view, &viewMatrix = cameraInfo.view](JobSystem&, JobSystem::Job*) {
-                    view.froxelize(engine, viewMatrix); }));
-    }
-
     /*
      * Allocate command buffer
      */
@@ -895,8 +887,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
                 // We use a framegraph pass to wait for froxelization to finish (so it can be done
                 // in parallel with .compile()
-                if (jobFroxelize) {
-                    auto *sync = jobFroxelize;
+                auto sync = view.getFroxelizerSync();
+                if (sync) {
                     js.waitAndRelease(sync);
                     view.commitFroxels(driver);
                 }
