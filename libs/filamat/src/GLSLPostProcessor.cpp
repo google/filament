@@ -18,21 +18,20 @@
 
 #include <GlslangToSpv.h>
 #include <SPVRemapper.h>
-#include <localintermediate.h>
 
 #include <spirv_glsl.hpp>
 #include <spirv_msl.hpp>
 
 #include "sca/builtinResource.h"
 #include "sca/GLSLTools.h"
+
 #include "shaders/CodeGenerator.h"
 #include "shaders/MaterialInfo.h"
+#include "shaders/SibGenerator.h"
 
 #include "MetalArgumentBuffer.h"
 
 #include <filament/MaterialEnums.h>
-#include <private/filament/Variant.h>
-#include "SibGenerator.h"
 
 #include <utils/Log.h>
 
@@ -524,7 +523,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
 
 std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
         MaterialBuilder::Optimization optimization, Config const& config) {
-    auto optimizer = std::make_shared<spvtools::Optimizer>(SPV_ENV_UNIVERSAL_1_0);
+    auto optimizer = std::make_shared<spvtools::Optimizer>(SPV_ENV_UNIVERSAL_1_3);
 
     optimizer->SetMessageConsumer([](spv_message_level_t level,
             const char* source, const spv_position_t& position, const char* message) {

@@ -25,16 +25,13 @@
 #include <math/vec4.h>
 
 #include <math/quat.h>
-
 #include <math/half.h>
 
 #include <iomanip>
 #include <ostream>
 #include <string>
 
-namespace filament {
-namespace math {
-namespace details {
+namespace filament::math::details {
 
 template<typename T>
 std::ostream& printVector(std::ostream& stream, const T* data, size_t count) {
@@ -78,90 +75,85 @@ std::ostream& printQuat(std::ostream& stream, const BASE<T>& q) {
     return stream << "< " << q.w << " + " << q.x << "i + " << q.y << "j + " << q.z << "k >";
 }
 
-}  // namespace details
-
-using namespace details;
-
 template<typename T>
-std::ostream& operator<<(std::ostream& out, const details::TVec2<T>& v) noexcept {
+std::ostream& operator<<(std::ostream& out, const TVec2<T>& v) noexcept {
     return printVector(out, v.v, 2);
 }
 
 template<typename T>
-std::ostream& operator<<(std::ostream& out, const details::TVec3<T>& v) noexcept {
+std::ostream& operator<<(std::ostream& out, const TVec3<T>& v) noexcept {
     return printVector(out, v.v, 3);
 }
 
 template<typename T>
-std::ostream& operator<<(std::ostream& out, const details::TVec4<T>& v) noexcept {
+std::ostream& operator<<(std::ostream& out, const TVec4<T>& v) noexcept {
     return printVector(out, v.v, 4);
 }
 
 template<typename T>
-std::ostream& operator<<(std::ostream& out, const details::TMat22<T>& v) noexcept {
+std::ostream& operator<<(std::ostream& out, const TMat22<T>& v) noexcept {
     return printMatrix(out, v.asArray(), 2, 2);
 }
 
 template<typename T>
-std::ostream& operator<<(std::ostream& out, const details::TMat33<T>& v) noexcept {
+std::ostream& operator<<(std::ostream& out, const TMat33<T>& v) noexcept {
     return printMatrix(out, v.asArray(), 3, 3);
 }
 
 template<typename T>
-std::ostream& operator<<(std::ostream& out, const details::TMat44<T>& v) noexcept {
+std::ostream& operator<<(std::ostream& out, const TMat44<T>& v) noexcept {
     return printMatrix(out, v.asArray(), 4, 4);
 }
 
 template<typename T>
-std::ostream& operator<<(std::ostream& out, const details::TQuaternion<T>& v) noexcept {
+std::ostream& operator<<(std::ostream& out, const TQuaternion<T>& v) noexcept {
     return printQuat(out, v);
 }
 
-template std::ostream& operator<<(std::ostream& out, const details::TVec2<double>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec2<float>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec2<half>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec2<uint32_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec2<int32_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec2<uint16_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec2<int16_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec2<uint8_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec2<int8_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec2<bool>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec2<double>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec2<float>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec2<half>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec2<uint32_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec2<int32_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec2<uint16_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec2<int16_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec2<uint8_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec2<int8_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec2<bool>& v) noexcept;
 
-template std::ostream& operator<<(std::ostream& out, const details::TVec3<double>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec3<float>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec3<half>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec3<uint32_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec3<int32_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec3<uint16_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec3<int16_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec3<uint8_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec3<int8_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec3<bool>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec3<double>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec3<float>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec3<half>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec3<uint32_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec3<int32_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec3<uint16_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec3<int16_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec3<uint8_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec3<int8_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec3<bool>& v) noexcept;
 
-template std::ostream& operator<<(std::ostream& out, const details::TVec4<double>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec4<float>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec4<half>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec4<uint32_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec4<int32_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec4<uint16_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec4<int16_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec4<uint8_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec4<int8_t>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TVec4<bool>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec4<double>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec4<float>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec4<half>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec4<uint32_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec4<int32_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec4<uint16_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec4<int16_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec4<uint8_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec4<int8_t>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TVec4<bool>& v) noexcept;
 
-template std::ostream& operator<<(std::ostream& out, const details::TMat22<double>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TMat22<float>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TMat22<double>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TMat22<float>& v) noexcept;
 
-template std::ostream& operator<<(std::ostream& out, const details::TMat33<double>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TMat33<float>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TMat33<double>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TMat33<float>& v) noexcept;
 
-template std::ostream& operator<<(std::ostream& out, const details::TMat44<double>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TMat44<float>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TMat44<double>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TMat44<float>& v) noexcept;
 
-template std::ostream& operator<<(std::ostream& out, const details::TQuaternion<double>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TQuaternion<float>& v) noexcept;
-template std::ostream& operator<<(std::ostream& out, const details::TQuaternion<half>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TQuaternion<double>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TQuaternion<float>& v) noexcept;
+template std::ostream& operator<<(std::ostream& out, const TQuaternion<half>& v) noexcept;
 
-}  // namespace math
-}  // namespace filament
+}  // namespace filament::math::details

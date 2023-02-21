@@ -20,6 +20,7 @@ import com.google.android.filament.Engine;
 import com.google.android.filament.MaterialInstance;
 import com.google.android.filament.Material;
 import com.google.android.filament.VertexBuffer;
+import com.google.android.filament.proguard.UsedByNative;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -94,6 +95,7 @@ public class UbershaderProvider implements MaterialProvider {
         nDestroyMaterials(mNativeObject);
     }
 
+    @UsedByNative("AssetLoader.cpp")
     public long getNativeObject() {
         return mNativeObject;
     }

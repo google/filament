@@ -172,8 +172,6 @@ public:
     static void textureLodBias(glslang::TShader& shader);
 
 private:
-
-
     // Traverse a function definition and retrieve all symbol written to and all symbol passed down
     // in a function call.
     // Start in the function matching the signature provided and follow all out and inout calls.

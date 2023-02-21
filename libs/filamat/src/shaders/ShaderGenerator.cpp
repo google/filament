@@ -25,8 +25,8 @@
 
 #include "filamat/MaterialBuilder.h"
 #include "CodeGenerator.h"
-#include "../SibGenerator.h"
-#include "../UibGenerator.h"
+#include "SibGenerator.h"
+#include "UibGenerator.h"
 
 #include <iterator>
 

@@ -57,7 +57,7 @@
 constexpr struct VkAllocationCallbacks* VKALLOC = nullptr;
 
 constexpr static const int VK_REQUIRED_VERSION_MAJOR = 1;
-constexpr static const int VK_REQUIRED_VERSION_MINOR = 0;
+constexpr static const int VK_REQUIRED_VERSION_MINOR = 1;
 
 // Maximum number of VkCommandBuffer handles managed simultaneously by VulkanCommands.
 //

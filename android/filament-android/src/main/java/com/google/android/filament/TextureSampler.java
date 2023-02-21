@@ -276,7 +276,7 @@ public class TextureSampler {
     }
 
     /**
-     * Sets the wrapping mode in the t (depth) direction.
+     * Sets the wrapping mode in the r (depth) direction.
      * @param mode wrapping mode
      */
     public void setWrapModeR(WrapMode mode) {

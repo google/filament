@@ -28,47 +28,81 @@ import com.google.android.filament.proguard.UsedByNative;
 
 @UsedByNative("AssetLoader.cpp")
 public interface MaterialProvider {
-
     /**
      * MaterialKey specifies the requirements for a requested glTF material.
      * The provider creates Filament materials that fulfill these requirements.
      */
     @UsedByNative("MaterialKey.cpp")
     public static class MaterialKey {
+        @UsedByNative("MaterialKey.cpp")
         public boolean doubleSided;
+        @UsedByNative("MaterialKey.cpp")
         public boolean unlit;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasVertexColors;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasBaseColorTexture;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasNormalTexture;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasOcclusionTexture;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasEmissiveTexture;
+        @UsedByNative("MaterialKey.cpp")
         public boolean useSpecularGlossiness;
+        @UsedByNative("MaterialKey.cpp")
         public int alphaMode;                       // 0 = OPAQUE, 1 = MASK, 2 = BLEND
+        @UsedByNative("MaterialKey.cpp")
         public boolean enableDiagnostics;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasMetallicRoughnessTexture; // piggybacks with specularRoughness
+        @UsedByNative("MaterialKey.cpp")
         public int metallicRoughnessUV;             // piggybacks with specularRoughness
+        @UsedByNative("MaterialKey.cpp")
         public int baseColorUV;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasClearCoatTexture;
+        @UsedByNative("MaterialKey.cpp")
         public int clearCoatUV;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasClearCoatRoughnessTexture;
+        @UsedByNative("MaterialKey.cpp")
         public int clearCoatRoughnessUV;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasClearCoatNormalTexture;
+        @UsedByNative("MaterialKey.cpp")
         public int clearCoatNormalUV;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasClearCoat;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasTransmission;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasTextureTransforms;
+        @UsedByNative("MaterialKey.cpp")
         public int emissiveUV;
+        @UsedByNative("MaterialKey.cpp")
         public int aoUV;
+        @UsedByNative("MaterialKey.cpp")
         public int normalUV;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasTransmissionTexture;
+        @UsedByNative("MaterialKey.cpp")
         public int transmissionUV;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasSheenColorTexture;
+        @UsedByNative("MaterialKey.cpp")
         public int sheenColorUV;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasSheenRoughnessTexture;
+        @UsedByNative("MaterialKey.cpp")
         public int sheenRoughnessUV;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasVolumeThicknessTexture;
+        @UsedByNative("MaterialKey.cpp")
         public int volumeThicknessUV;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasSheen;
+        @UsedByNative("MaterialKey.cpp")
         public boolean hasIOR;
 
         public MaterialKey() {}

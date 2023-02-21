@@ -12,7 +12,10 @@
 //     When set, support for Vulkan will be excluded.
 //
 // com.google.android.filament.matdbg
-//     When set, enables matdbg, disables shader optimizations
+//     When set, enables matdbg
+//
+// com.google.android.filament.matnopt
+//     When set, disable shader optimizations.
 //
 // com.google.android.filament.skip-samples
 //     Exclude samples from the project. Useful to speed up compilation.
@@ -62,6 +65,10 @@ buildscript {
             .gradleProperty("com.google.android.filament.matdbg")
             .isPresent()
 
+    def matnopt = providers
+            .gradleProperty("com.google.android.filament.matnopt")
+            .isPresent()
+
     def abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
     def newAbis = providers
             .gradleProperty("com.google.android.filament.abis")
@@ -108,7 +115,7 @@ buildscript {
         "-DFILAMENT_DIST_DIR=${filamentPath}".toString(),
         "-DFILAMENT_SUPPORTS_VULKAN=${excludeVulkan ? 'OFF' : 'ON'}".toString(),
         "-DFILAMENT_ENABLE_MATDBG=${matdbg ? 'ON' : 'OFF'}".toString(),
-        "-DFILAMENT_DISABLE_MATOPT=${matdbg ? 'ON' : 'OFF'}".toString()
+        "-DFILAMENT_DISABLE_MATOPT=${matnopt ? 'ON' : 'OFF'}".toString()
     ]
 
     ext.cppFlags = [

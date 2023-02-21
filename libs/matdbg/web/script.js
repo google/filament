@@ -60,16 +60,25 @@ function getShaderAPI(selection) {
 
 function rebuildMaterial() {
     let api = 0, index = -1;
-    if (gCurrentLanguage === "spirv") {
-        console.error("SPIR-V editing is not supported.");
-        return;
-    }
-    switch (getShaderAPI()) {
+
+    const shader = getShaderRecord(gCurrentShader);
+    const shaderApi = getShaderAPI();
+
+    switch (shaderApi) {
         case "opengl": api = 1; index = gCurrentShader.glindex; break;
         case "vulkan": api = 2; index = gCurrentShader.vkindex; break;
         case "metal":  api = 3; index = gCurrentShader.metalindex; break;
     }
-    const editedText = getShaderRecord(gCurrentShader)[gCurrentLanguage];
+
+    if (shaderApi === "vulkan") {
+        if (gCurrentLanguage === "glsl") {
+            delete shader["spirv"];
+        } else if (gCurrentLanguage === "spirv") {
+            delete shader["glsl"];
+        }
+    }
+
+    const editedText = shader[gCurrentLanguage];
     const byteCount = new Blob([editedText]).size;
     gSocket.send(`EDIT ${gCurrentShader.matid} ${api} ${index} ${byteCount} ${editedText}`);
 }
@@ -400,17 +409,17 @@ function selectShader(selection) {
     // Change the current language selection if necessary.
     switch (getShaderAPI(selection)) {
         case "opengl":
-            if (gCurrentLanguage != "glsl") {
+            if (gCurrentLanguage !== "glsl") {
                 gCurrentLanguage = "glsl";
             }
             break;
         case "vulkan":
-            if (gCurrentLanguage != "spirv" && gCurrentLanguage != "glsl") {
+            if (gCurrentLanguage !== "spirv" && gCurrentLanguage !== "glsl") {
                 gCurrentLanguage = "spirv";
             }
             break;
         case "metal":
-            if (gCurrentLanguage != "msl") {
+            if (gCurrentLanguage !== "msl") {
                 gCurrentLanguage = "msl";
             }
             break;

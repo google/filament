@@ -59,6 +59,7 @@ endif()
 set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
 add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 
+
 add_library(matdbg_resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 set_target_properties(matdbg_resources PROPERTIES FOLDER Libs)
 
@@ -81,7 +82,6 @@ target_link_libraries(${TARGET} PUBLIC
         SPIRV
         spirv-cross-glsl
         SPIRV-Tools
-        utils
         utils
 )
 

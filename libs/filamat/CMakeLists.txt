@@ -40,13 +40,13 @@ set(COMMON_SRCS
         src/eiff/SimpleFieldChunk.cpp
         src/shaders/CodeGenerator.cpp
         src/shaders/ShaderGenerator.cpp
+        src/shaders/SibGenerator.cpp
+        src/shaders/UibGenerator.cpp
         src/Enums.cpp
         src/Includes.cpp
         src/MaterialBuilder.cpp
         src/MaterialVariants.cpp
         src/SamplerBindingMap.cpp
-        src/SibGenerator.cpp
-        src/UibGenerator.cpp
 )
 
 # Sources and headers for filamat
