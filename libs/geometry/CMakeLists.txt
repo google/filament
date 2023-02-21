@@ -14,6 +14,7 @@ set(PUBLIC_HDRS
 )
 
 set(SRCS
+        src/MikktspaceImpl.cpp
         src/SurfaceOrientation.cpp
         src/TangentSpaceMesh.cpp
         src/Transcoder.cpp
@@ -26,7 +27,12 @@ include_directories(${PUBLIC_HDR_DIR})
 
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
-target_link_libraries(${TARGET} PUBLIC math meshoptimizer mikktspace utils)
+set(GEOMETRY_DEPS
+    meshoptimizer
+    mikktspace
+)
+
+target_link_libraries(${TARGET} PUBLIC math utils ${GEOMETRY_DEPS})
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
@@ -46,6 +52,20 @@ endif()
 # ==================================================================================================
 install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/geometry DESTINATION include)
+
+
+set(COMBINED_DEPS
+    ${TARGET}
+    ${GEOMETRY_DEPS}
+)
+
+# Combine the deps into a single static lib so that client only have to link this lib and not have
+# to link its dependencies.
+set(GEOMETRY_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libgeometry_combined.a")
+combine_static_libs(${TARGET} "${GEOMETRY_COMBINED_OUTPUT}" "${COMBINED_DEPS}")
+
+set(GEOMETRY_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}geometry${CMAKE_STATIC_LIBRARY_SUFFIX})
+install(FILES "${GEOMETRY_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${GEOMETRY_LIB_NAME})
 
 # ==================================================================================================
 # Tests

@@ -16,10 +16,11 @@
 
 #include <geometry/TangentSpaceMesh.h>
 
+#include "MikktspaceImpl.h"
+#include "TangentSpaceMeshInternal.h"
+
 #include <math/mat3.h>
 #include <math/norm.h>
-#include <meshoptimizer.h>
-#include <mikktspace/mikktspace.h>
 
 #include <utils/Log.h>
 #include <utils/Panic.h>
@@ -33,35 +34,6 @@ using namespace filament::math;
 using Builder = TangentSpaceMesh::Builder;
 using Algorithm = TangentSpaceMesh::Algorithm;
 using MethodPtr = void(*)(TangentSpaceMeshInput const*, TangentSpaceMeshOutput*);
-
-struct TangentSpaceMeshInput {
-    size_t vertexCount = 0;
-    float3 const* normals = nullptr;
-    float2 const* uvs = nullptr;
-    float3 const* positions = nullptr;
-    ushort3 const* triangles16 = nullptr;
-    uint3 const* triangles32 = nullptr;
-
-    size_t normalStride = 0;
-    size_t uvStride = 0;
-    size_t positionStride = 0;
-    size_t triangleCount = 0;
-
-    Algorithm algorithm;
-};
-
-struct TangentSpaceMeshOutput {
-    Algorithm algorithm;
-
-    size_t triangleCount = 0;
-    size_t vertexCount = 0;
-
-    quatf const* tangentSpace = nullptr;
-    float2 const* uvs = nullptr;
-    float3 const* positions = nullptr;
-    uint3 const* triangles32 = nullptr;
-    ushort3 const* triangles16 = nullptr;
-};
 
 namespace {
 
@@ -94,16 +66,6 @@ std::string_view to_string(Algorithm algorithm) noexcept {
 
 inline bool isInputType(uint8_t const inputType, uint8_t const checkType) noexcept {
     return ((inputType & checkType) == checkType);
-}
-
-template<typename InputType>
-inline const InputType* pointerAdd(InputType const* ptr, size_t index, size_t stride) noexcept {
-    return (InputType*) (((uint8_t const*) ptr) + (index * stride));
-}
-
-template<typename InputType>
-inline InputType* pointerAdd(InputType* ptr, size_t index, size_t stride) noexcept {
-    return (InputType*) (((uint8_t*) ptr) + (index * stride));
 }
 
 template <typename InputType>
@@ -323,160 +285,12 @@ void flatShadingMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutpu
     output->triangleCount = outTriangleCount;
 }
 
-class MikktspaceImpl {
-public:
-    struct IOVertex {
-        float3 position;
-        float2 uv;
-        quatf tangentSpace;
-    };
-
-    MikktspaceImpl(const TangentSpaceMeshInput* input)
-            noexcept
-            : mFaceCount((int) input->triangleCount),
-              mPositions(input->positions),
-              mPositionStride(input->positionStride ? input->positionStride : sizeof(float3)),
-              mNormals(input->normals),
-              mNormalStride(input->normalStride ? input->normalStride : sizeof(float3)),
-              mUVs(input->uvs),
-              mUVStride(input->uvStride ? input->uvStride : sizeof(float2)),
-              mIsTriangle16(input->triangles16),
-              mTriangles(input->triangles16 ?
-                      (uint8_t*) input->triangles16 :
-                      (uint8_t*) input->triangles32) {
-        mOutVertices.reserve(mFaceCount * 3);
-    }
-
-    static int getNumFaces(SMikkTSpaceContext const* context) noexcept {
-        auto const wrapper = MikktspaceImpl::getThis(context);
-        return wrapper->mFaceCount;
-    }
-
-    static int getNumVerticesOfFace(SMikkTSpaceContext const* context, int const iFace) noexcept {
-        return 3;
-    }
-
-    static void getPosition(SMikkTSpaceContext const* context, float fvPosOut[], const int iFace,
-            const int iVert) noexcept {
-        auto const wrapper = MikktspaceImpl::getThis(context);
-        float3 const pos = *pointerAdd(wrapper->mPositions, wrapper->getTriangle(iFace)[iVert],
-                wrapper->mPositionStride);
-        fvPosOut[0] = pos.x;
-        fvPosOut[1] = pos.y;
-        fvPosOut[2] = pos.z;
-    }
-
-    static void getNormal(SMikkTSpaceContext const* context, float fvNormOut[], int const iFace,
-            int const iVert) noexcept {
-        auto const wrapper = MikktspaceImpl::getThis(context);
-        float3 const normal = *pointerAdd(wrapper->mNormals, wrapper->getTriangle(iFace)[iVert],
-                wrapper->mNormalStride);
-        fvNormOut[0] = normal.x;
-        fvNormOut[1] = normal.y;
-        fvNormOut[2] = normal.z;
-    }
-
-    static void getTexCoord(SMikkTSpaceContext const* context, float fvTexcOut[], const int iFace,
-            const int iVert) noexcept {
-        auto const wrapper = MikktspaceImpl::getThis(context);
-        float2 const texc = *pointerAdd(wrapper->mUVs, wrapper->getTriangle(iFace)[iVert],
-                wrapper->mUVStride);
-        fvTexcOut[0] = texc.x;
-        fvTexcOut[1] = texc.y;
-    }
-
-    static void setTSpaceBasic(SMikkTSpaceContext const* context, float const fvTangent[],
-            float const fSign, int const iFace, int const iVert) noexcept {
-        auto const wrapper = MikktspaceImpl::getThis(context);
-        uint32_t const vertInd = wrapper->getTriangle(iFace)[iVert];
-        float3 const pos = *pointerAdd(wrapper->mPositions, vertInd, wrapper->mPositionStride);
-        float3 const n = normalize(*pointerAdd(wrapper->mNormals, vertInd, wrapper->mNormalStride));
-        float2 const uv = *pointerAdd(wrapper->mUVs, vertInd, wrapper->mUVStride);
-        float3 const t {fvTangent[0], fvTangent[1], fvTangent[2]};
-        float3 const b = fSign * normalize(cross(n, t));
-
-        // TODO: packTangentFrame actually changes the orientation of b.
-        quatf const quat = mat3f::packTangentFrame({t, b, n}, sizeof(int32_t));
-
-        wrapper->mOutVertices.push_back({pos, uv, quat});
-    }
-
-    void run(TangentSpaceMeshOutput* output) noexcept {
-        SMikkTSpaceInterface interface {
-                .m_getNumFaces = getNumFaces,
-                .m_getNumVerticesOfFace = getNumVerticesOfFace,
-                .m_getPosition = getPosition,
-                .m_getNormal = getNormal,
-                .m_getTexCoord = getTexCoord,
-                .m_setTSpaceBasic = setTSpaceBasic
-        };
-        SMikkTSpaceContext context {
-                .m_pInterface = &interface,
-                .m_pUserData = this
-        };
-        genTangSpaceDefault(&context);
-
-        std::vector<unsigned int> remap(mOutVertices.size());
-        size_t vertexCount = meshopt_generateVertexRemap(remap.data(), NULL, mOutVertices.size(),
-                mOutVertices.data(), mOutVertices.size(), sizeof(IOVertex));
-
-        std::vector<IOVertex> newVertices(vertexCount);
-        meshopt_remapVertexBuffer((void*) newVertices.data(), mOutVertices.data(),
-                mOutVertices.size(), sizeof(IOVertex), remap.data());
-
-        uint3* triangles32 = new uint3[mFaceCount];
-        meshopt_remapIndexBuffer((uint32_t*) triangles32, NULL,  mOutVertices.size(), remap.data());
-
-        float3* outPositions = new float3[vertexCount];
-        float2* outUVs = new float2[vertexCount];
-        quatf* outQuats = new quatf[vertexCount];
-
-        for (size_t i = 0; i < vertexCount; ++i) {
-            outPositions[i] = newVertices[i].position;
-            outUVs[i] = newVertices[i].uv;
-            outQuats[i] = newVertices[i].tangentSpace;
-        }
-
-        output->vertexCount = vertexCount;
-        output->positions = outPositions;
-        output->uvs = outUVs;
-        output->tangentSpace = outQuats;
-        output->triangles32 = triangles32;
-        output->triangleCount = mFaceCount;
-    }
-
-private:
-    static MikktspaceImpl* getThis(SMikkTSpaceContext const* context) noexcept {
-        return (MikktspaceImpl*) context->m_pUserData;
-    }
-
-    inline const uint3 getTriangle(int triangleIndex) const noexcept {
-        const size_t tstride = mIsTriangle16 ? sizeof(ushort3) : sizeof(uint3);
-        return mIsTriangle16 ?
-               uint3(*(ushort3*)(pointerAdd(mTriangles, triangleIndex, tstride))) :
-               *(uint3*)(pointerAdd(mTriangles, triangleIndex, tstride));
-    }
-
-    TangentSpaceMeshOutput* mOutput;
-    int const mFaceCount;
-    float3 const* mPositions;
-    size_t const mPositionStride;
-    float3 const* mNormals;
-    size_t const mNormalStride;
-    float2 const* mUVs;
-    size_t const mUVStride;
-    uint8_t const* mTriangles;
-    bool mIsTriangle16;
-
-    std::vector<IOVertex> mOutVertices;
-};
-
 void mikktspaceMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutput* output) {
     MikktspaceImpl impl(input);
     impl.run(output);
 }
 
-static float3 randomPerp(const float3& n) {
+inline float3 randomPerp(const float3& n) {
     float3 perp = cross(n, float3{1, 0, 0});
     float sqrlen = dot(perp, perp);
     if (sqrlen <= std::numeric_limits<float>::epsilon()) {
@@ -498,10 +312,8 @@ void lengyelMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutput* o
     auto const* uvs = input->uvs;
     auto const* normals = input->normals;
 
-    std::vector<float3> tan1(vertexCount);
-    std::vector<float3> tan2(vertexCount);
-    memset(tan1.data(), 0, sizeof(float3) * vertexCount);
-    memset(tan2.data(), 0, sizeof(float3) * vertexCount);
+    std::vector<float3> tan1(vertexCount, float3{0.0f});
+    std::vector<float3> tan2(vertexCount, float3{0.0f});
     for (size_t a = 0; a < triangleCount; ++a) {
         uint3 tri = triangles16 ? uint3(triangles16[a]) : triangles32[a];
         assert_invariant(tri.x < vertexCount && tri.y < vertexCount && tri.z < vertexCount);
