@@ -7,6 +7,11 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.31.6
+
+- engine: the default render channel is now 2 instead of 0
+- gltfio: Fix crash when a MIME type has no texture provider
+
 ## v1.31.5
 
 - gltfio: fix potential early freeing of data provided with `ResourceLoader::addResourceData`.
