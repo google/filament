@@ -882,13 +882,16 @@ void MetalSamplerGroup::useResources(id<MTLRenderCommandEncoder> renderPassEncod
         // TODO: pass only the appropriate stages to useResources.
         [renderPassEncoder useResources:textures.data()
                                   count:textures.size()
-                                  usage:MTLResourceUsageRead | MTLResourceUsageSample
+                                  usage:MTLResourceUsageRead
                                  stages:MTLRenderStageFragment | MTLRenderStageVertex];
-    } else {
+    }
+#if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_VERSION_13_0
+    else {
         [renderPassEncoder useResources:textures.data()
                                   count:textures.size()
                                   usage:MTLResourceUsageRead | MTLResourceUsageSample];
     }
+#endif
 }
 
 MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,

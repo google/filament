@@ -63,9 +63,12 @@ void initializeSupportedGpuFamilies(MetalContext* context) {
 
         if ([device supportsFamily:MTLGPUFamilyMac2]) {
             highestSupportedFamily.mac = 2;
-        } else if ([device supportsFamily:MTLGPUFamilyMac1]) {
+        }
+#if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_VERSION_13_0
+        else if ([device supportsFamily:MTLGPUFamilyMac1]) {
             highestSupportedFamily.mac = 1;
         }
+#endif
     } else {
 #if TARGET_OS_IOS
         using FeatureSet = std::pair<MTLFeatureSet, uint8_t>;
