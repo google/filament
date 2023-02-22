@@ -2011,8 +2011,13 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
 
     gl.pixelStore(GL_UNPACK_ROW_LENGTH, GLint(p.stride));
     gl.pixelStore(GL_UNPACK_ALIGNMENT, GLint(p.alignment));
-    gl.pixelStore(GL_UNPACK_SKIP_PIXELS, GLint(p.left));
-    gl.pixelStore(GL_UNPACK_SKIP_ROWS, GLint(p.top));
+
+    // This is equivalent to using GL_UNPACK_SKIP_PIXELS and GL_UNPACK_SKIP_ROWS
+    using PBD = PixelBufferDescriptor;
+    size_t const stride = p.stride ? p.stride : width;
+    size_t const bpp = PBD::computeDataSize(p.format, p.type, 1, 1, 1);
+    size_t const bpr = PBD::computeDataSize(p.format, p.type, stride, 1, p.alignment);
+    void const* const buffer = static_cast<char const*>(p.buffer) + p.left * bpp + bpr * p.top;
 
     switch (t->target) {
         case SamplerType::SAMPLER_EXTERNAL:
@@ -2026,7 +2031,7 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
             assert_invariant(t->gl.target == GL_TEXTURE_2D);
             glTexSubImage2D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset),
-                    GLsizei(width), GLsizei(height), glFormat, glType, p.buffer);
+                    GLsizei(width), GLsizei(height), glFormat, glType, buffer);
             break;
         case SamplerType::SAMPLER_3D:
             assert_invariant(zoffset + depth <= std::max(1u, t->depth >> level));
@@ -2035,7 +2040,7 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
             assert_invariant(t->gl.target == GL_TEXTURE_3D);
             glTexSubImage3D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset), GLint(zoffset),
-                    GLsizei(width), GLsizei(height), GLsizei(depth), glFormat, glType, p.buffer);
+                    GLsizei(width), GLsizei(height), GLsizei(depth), glFormat, glType, buffer);
             break;
         case SamplerType::SAMPLER_2D_ARRAY:
         case SamplerType::SAMPLER_CUBEMAP_ARRAY:
@@ -2047,7 +2052,7 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
                     t->gl.target == GL_TEXTURE_CUBE_MAP_ARRAY);
             glTexSubImage3D(t->gl.target, GLint(level),
                     GLint(xoffset), GLint(yoffset), GLint(zoffset),
-                    GLsizei(width), GLsizei(height), GLsizei(depth), glFormat, glType, p.buffer);
+                    GLsizei(width), GLsizei(height), GLsizei(depth), glFormat, glType, buffer);
             break;
         case SamplerType::SAMPLER_CUBEMAP: {
             assert_invariant(t->gl.target == GL_TEXTURE_CUBE_MAP);
@@ -2063,7 +2068,7 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
                 GLenum const target = getCubemapTarget(zoffset + face);
                 glTexSubImage2D(target, GLint(level), GLint(xoffset), GLint(yoffset),
                         GLsizei(width), GLsizei(height), glFormat, glType,
-                        static_cast<uint8_t const*>(p.buffer) + faceSize * face);
+                        static_cast<uint8_t const*>(buffer) + faceSize * face);
             }
             break;
         }
@@ -2714,10 +2719,7 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
     GLenum const glFormat = getFormat(p.format);
     GLenum const glType = getType(p.type);
 
-    gl.pixelStore(GL_PACK_ROW_LENGTH,   (GLint)p.stride);
-    gl.pixelStore(GL_PACK_ALIGNMENT,    (GLint)p.alignment);
-    gl.pixelStore(GL_PACK_SKIP_PIXELS,  (GLint)p.left);
-    gl.pixelStore(GL_PACK_SKIP_ROWS,    (GLint)p.top);
+    gl.pixelStore(GL_PACK_ALIGNMENT, (GLint)p.alignment);
 
     /*
      * glReadPixel() operation...
@@ -2747,42 +2749,49 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
     GLRenderTarget const* s = handle_cast<GLRenderTarget const*>(src);
     gl.bindFramebuffer(GL_READ_FRAMEBUFFER, s->gl.fbo);
 
+    using PBD = PixelBufferDescriptor;
+
+    // The PBO only needs to accommodate the area we're reading, with alignment.
+    auto const pboSize = (GLsizeiptr)PBD::computeDataSize(
+            p.format, p.type, width, height, p.alignment);
+
     GLuint pbo;
     glGenBuffers(1, &pbo);
     gl.bindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
-    glBufferData(GL_PIXEL_PACK_BUFFER, (GLsizeiptr)p.size, nullptr, GL_STATIC_DRAW);
+    glBufferData(GL_PIXEL_PACK_BUFFER, pboSize, nullptr, GL_STATIC_DRAW);
     glReadPixels(GLint(x), GLint(y), GLint(width), GLint(height), glFormat, glType, nullptr);
     gl.bindBuffer(GL_PIXEL_PACK_BUFFER, 0);
     CHECK_GL_ERROR(utils::slog.e)
 
     // we're forced to make a copy on the heap because otherwise it deletes std::function<> copy
     // constructor.
-    auto* pUserBuffer = new PixelBufferDescriptor(std::move(p));
-    whenGpuCommandsComplete([this, width, height, pbo, pUserBuffer]() mutable {
+    auto* const pUserBuffer = new PixelBufferDescriptor(std::move(p));
+    whenGpuCommandsComplete([this, width, height, pbo, pboSize, pUserBuffer]() mutable {
         PixelBufferDescriptor& p = *pUserBuffer;
         auto& gl = mContext;
         gl.bindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
         void* vaddr = nullptr;
 #if defined(__EMSCRIPTEN__)
-        std::unique_ptr<uint8_t> clientBuffer = std::make_unique<uint8_t>(p.size);
-        glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, p.size, clientBuffer.get());
+        std::unique_ptr<uint8_t> clientBuffer = std::make_unique<uint8_t>(pboSize);
+        glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, pboSize, clientBuffer.get());
         vaddr = clientBuffer.get();
 #else
-        vaddr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0,  (GLsizeiptr)p.size, GL_MAP_READ_BIT);
+        vaddr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, pboSize, GL_MAP_READ_BIT);
 #endif
         if (vaddr) {
             // now we need to flip the buffer vertically to match our API
             size_t const stride = p.stride ? p.stride : width;
-            size_t const bpp = PixelBufferDescriptor::computeDataSize(
-                    p.format, p.type, 1, 1, 1);
-            size_t const bpr = PixelBufferDescriptor::computeDataSize(
-                    p.format, p.type, stride, 1, p.alignment);
-            char const* head = (char const*)vaddr + p.left * bpp + bpr * p.top;
-            char* tail = (char*)p.buffer + p.left * bpp + bpr * (p.top + height - 1);
+            size_t const bpp = PBD::computeDataSize(p.format, p.type, 1, 1, 1);
+            size_t const dstBpr = PBD::computeDataSize(p.format, p.type, stride, 1, p.alignment);
+            char* pDst = (char*)p.buffer + p.left * bpp + dstBpr * (p.top + height - 1);
+
+            size_t const srcBpr = PBD::computeDataSize(p.format, p.type, width, 1, p.alignment);
+            char const* pSrc = (char const*)vaddr;
+
             for (size_t i = 0; i < height; ++i) {
-                memcpy(tail, head, bpp * width);
-                head += bpr;
-                tail -= bpr;
+                memcpy(pDst, pSrc, bpp * width);
+                pSrc += srcBpr;
+                pDst -= dstBpr;
             }
 #if !defined(__EMSCRIPTEN__)
             glUnmapBuffer(GL_PIXEL_PACK_BUFFER);

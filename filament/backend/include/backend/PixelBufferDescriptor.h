@@ -279,8 +279,8 @@ public:
                 break;
         }
 
-        size_t bpr = bpp * stride;
-        size_t bprAligned = (bpr + (alignment - 1)) & (~alignment + 1);
+        size_t const bpr = bpp * stride;
+        size_t const bprAligned = (bpr + (alignment - 1)) & (~alignment + 1);
         return bprAligned * height;
     }
 

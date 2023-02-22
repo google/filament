@@ -465,13 +465,8 @@ void OpenGLContext::pixelStore(GLenum pname, GLint param) noexcept {
 
     switch (pname) {
         case GL_PACK_ALIGNMENT:     pcur = &state.pack.alignment;       break;
-        case GL_PACK_ROW_LENGTH:    pcur = &state.pack.row_length;      break;
-        case GL_PACK_SKIP_PIXELS:   pcur = &state.pack.skip_pixels;     break;  // convenience
-        case GL_PACK_SKIP_ROWS:     pcur = &state.pack.skip_row;        break;  // convenience
         case GL_UNPACK_ALIGNMENT:   pcur = &state.unpack.alignment;     break;
         case GL_UNPACK_ROW_LENGTH:  pcur = &state.unpack.row_length;    break;
-        case GL_UNPACK_SKIP_PIXELS: pcur = &state.unpack.skip_pixels;   break;  // convenience
-        case GL_UNPACK_SKIP_ROWS:   pcur = &state.unpack.skip_row;      break;  // convenience
         default:
             goto default_case;
     }
@@ -670,14 +665,10 @@ void OpenGLContext::resetState() noexcept {
     // state.unpack
     glPixelStorei(GL_UNPACK_ALIGNMENT, state.unpack.alignment);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, state.unpack.row_length);
-    glPixelStorei(GL_UNPACK_SKIP_PIXELS, state.unpack.skip_pixels);
-    glPixelStorei(GL_UNPACK_SKIP_ROWS, state.unpack.skip_row);
 
     // state.pack
     glPixelStorei(GL_PACK_ALIGNMENT, state.pack.alignment);
-    glPixelStorei(GL_PACK_ROW_LENGTH, state.pack.row_length);
-    glPixelStorei(GL_PACK_SKIP_PIXELS, state.pack.skip_pixels);
-    glPixelStorei(GL_PACK_SKIP_ROWS, state.pack.skip_row);
+    glPixelStorei(GL_PACK_ROW_LENGTH, 0); // we rely on GL_PACK_ROW_LENGTH being zero
 
     // state.window
     glScissor(
