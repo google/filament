@@ -262,7 +262,7 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     api.stopCapture(0);
     api.endFrame(0);
 
-    readPixelsAndAssertHash("StencilBufferAutoResolve", 512, 512, renderTarget1, 0xC7E34C43, true);
+    readPixelsAndAssertHash("StencilBufferAutoResolve", 512, 512, renderTarget1, 0x6CEFAC8F, true);
 
     flushAndWait();
     getDriver().purge();
