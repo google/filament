@@ -20,7 +20,6 @@
 #include <math/quat.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
-#include <utils/compiler.h>
 
 namespace filament {
 namespace geometry {

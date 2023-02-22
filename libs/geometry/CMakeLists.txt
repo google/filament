@@ -32,7 +32,8 @@ set(GEOMETRY_DEPS
     mikktspace
 )
 
-target_link_libraries(${TARGET} PUBLIC math utils ${GEOMETRY_DEPS})
+target_link_libraries(${TARGET} PUBLIC math utils)
+target_link_libraries(${TARGET} PRIVATE ${GEOMETRY_DEPS})
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
@@ -52,7 +53,6 @@ endif()
 # ==================================================================================================
 install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/geometry DESTINATION include)
-
 
 set(COMBINED_DEPS
     ${TARGET}
