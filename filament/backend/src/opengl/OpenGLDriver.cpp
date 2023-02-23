@@ -800,6 +800,7 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
 
     GLTexture* t = handle_cast<GLTexture*>(binfo.handle);
 
+    assert_invariant(t);
     assert_invariant(t->target != SamplerType::SAMPLER_EXTERNAL);
     assert_invariant(rt->width  <= valueForLevel(binfo.level, t->width) &&
            rt->height <= valueForLevel(binfo.level, t->height));
@@ -1135,21 +1136,26 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     rt->gl.samples = samples;
     rt->targets = targets;
 
-    UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmin = {std::numeric_limits<uint32_t>::max()};
-    UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmax = {0};
+    UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmin = { std::numeric_limits<uint32_t>::max() };
+    UTILS_UNUSED_IN_RELEASE math::vec2<uint32_t> tmax = { 0 };
+    auto checkDimensions = [&tmin, &tmax](GLTexture* t, uint8_t level) {
+        const auto twidth = std::max(1u, t->width >> level);
+        const auto theight = std::max(1u, t->height >> level);
+        tmin = { std::min(tmin.x, twidth), std::min(tmin.y, theight) };
+        tmax = { std::max(tmax.x, twidth), std::max(tmax.y, theight) };
+    };
+
 
     if (any(targets & TargetBufferFlags::COLOR_ALL)) {
         GLenum bufs[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { GL_NONE };
         const size_t maxDrawBuffers = getMaxDrawBuffers();
         for (size_t i = 0; i < maxDrawBuffers; i++) {
             if (any(targets & getTargetBufferFlagsAt(i))) {
-                auto t = rt->gl.color[i] = handle_cast<GLTexture*>(color[i].handle);
-                const auto twidth = std::max(1u, t->width >> color[i].level);
-                const auto theight = std::max(1u, t->height >> color[i].level);
-                tmin = { std::min(tmin.x, twidth), std::min(tmin.y, theight) };
-                tmax = { std::max(tmax.x, twidth), std::max(tmax.y, theight) };
+                assert_invariant(color[i].handle);
+                rt->gl.color[i] = handle_cast<GLTexture*>(color[i].handle);
                 framebufferTexture(color[i], rt, GL_COLOR_ATTACHMENT0 + i);
                 bufs[i] = GL_COLOR_ATTACHMENT0 + i;
+                checkDimensions(rt->gl.color[i], color[i].level);
             }
         }
         glDrawBuffers((GLsizei)maxDrawBuffers, bufs);
@@ -1159,37 +1165,28 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     // handle special cases first (where depth/stencil are packed)
     bool specialCased = false;
     if ((targets & TargetBufferFlags::DEPTH_AND_STENCIL) == TargetBufferFlags::DEPTH_AND_STENCIL) {
-        assert_invariant(!stencil.handle || stencil.handle == depth.handle);
-        auto t = rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
-        const auto twidth = std::max(1u, t->width >> depth.level);
-        const auto theight = std::max(1u, t->height >> depth.level);
-        tmin = { std::min(tmin.x, twidth), std::min(tmin.y, theight) };
-        tmax = { std::max(tmax.x, twidth), std::max(tmax.y, theight) };
-        if (any(rt->gl.depth->usage & TextureUsage::SAMPLEABLE) ||
-            (!depth.handle && !stencil.handle)) {
-            // special case: depth & stencil requested, and both provided as the same texture
-            // special case: depth & stencil requested, but both not provided
-            specialCased = true;
+        assert_invariant(depth.handle);
+        // either we supplied only the depth handle or both depth/stencil are identical and not null
+        if (depth.handle && (stencil.handle == depth.handle || !stencil.handle)) {
+            rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
             framebufferTexture(depth, rt, GL_DEPTH_STENCIL_ATTACHMENT);
+            specialCased = true;
+            checkDimensions(rt->gl.depth, depth.level);
         }
     }
 
     if (!specialCased) {
         if (any(targets & TargetBufferFlags::DEPTH)) {
-            auto t = rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
-            const auto twidth = std::max(1u, t->width >> depth.level);
-            const auto theight = std::max(1u, t->height >> depth.level);
-            tmin = { std::min(tmin.x, twidth), std::min(tmin.y, theight) };
-            tmax = { std::max(tmax.x, twidth), std::max(tmax.y, theight) };
+            assert_invariant(depth.handle);
+            rt->gl.depth = handle_cast<GLTexture*>(depth.handle);
             framebufferTexture(depth, rt, GL_DEPTH_ATTACHMENT);
+            checkDimensions(rt->gl.depth, depth.level);
         }
         if (any(targets & TargetBufferFlags::STENCIL)) {
-            auto t = rt->gl.stencil = handle_cast<GLTexture*>(stencil.handle);
-            const auto twidth = std::max(1u, t->width >> stencil.level);
-            const auto theight = std::max(1u, t->height >> stencil.level);
-            tmin = { std::min(tmin.x, twidth), std::min(tmin.y, theight) };
-            tmax = { std::max(tmax.x, twidth), std::max(tmax.y, theight) };
+            assert_invariant(stencil.handle);
+            rt->gl.stencil = handle_cast<GLTexture*>(stencil.handle);
             framebufferTexture(stencil, rt, GL_STENCIL_ATTACHMENT);
+            checkDimensions(rt->gl.stencil, stencil.level);
         }
     }
 
