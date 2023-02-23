@@ -69,7 +69,9 @@ using namespace utils;
 namespace filament::backend {
 
 Driver* OpenGLDriverFactory::create(
-        OpenGLPlatform* const platform, void* const sharedGLContext, const Platform::DriverConfig& driverConfig) noexcept {
+        OpenGLPlatform* const platform,
+        void* const sharedGLContext,
+        const Platform::DriverConfig& driverConfig) noexcept {
     return OpenGLDriver::create(platform, sharedGLContext, driverConfig);
 }
 
@@ -177,6 +179,10 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
     slog.i << "OS version: " << mPlatform.getOSVersion() << io::endl;
 #endif
 
+    // Timer queries are core in GL 3.3, otherwise we need EXT_disjoint_timer_query
+    // iOS headers don't define GL_EXT_disjoint_timer_query, so make aboslutely sure
+    // we won't use it.
+#if defined(GL_VERSION_3_3) || defined(GL_EXT_disjoint_timer_query)
     if (mContext.ext.EXT_disjoint_timer_query ||
             BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
         // timer queries are available
@@ -187,7 +193,9 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
             mTimerQueryImpl = new TimerQueryNative(mContext);
         }
         mFrameTimeSupported = true;
-    } else if (mPlatform.canCreateFence()) {
+    } else
+#endif
+    if (mPlatform.canCreateFence()) {
         // no timer queries, but we can use fences
         mTimerQueryImpl = new OpenGLTimerQueryFence(mPlatform);
         mFrameTimeSupported = true;
@@ -1245,6 +1253,11 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     DEBUG_MARKER()
 
+#if defined(GL_EXT_disjoint_timer_query) && defined(FILAMENT_IMPORT_ENTRY_POINTS)
+    // glGenQueries exists in core ES 3.0 and since GL 3.3
+    using glext::glGenQueries;
+#endif
+
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
     glGenQueries(1u, &tq->gl.query);
     CHECK_GL_ERROR(utils::slog.e)
@@ -1403,6 +1416,11 @@ void OpenGLDriver::destroyStream(Handle<HwStream> sh) {
 
 void OpenGLDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
     DEBUG_MARKER()
+
+#if defined(GL_EXT_disjoint_timer_query) && defined(FILAMENT_IMPORT_ENTRY_POINTS)
+    // glDeleteQueries exists in core ES 3.0 and since GL 3.3
+    using glext::glDeleteQueries;
+#endif
 
     if (tqh) {
         GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);

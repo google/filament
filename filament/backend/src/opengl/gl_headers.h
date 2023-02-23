@@ -26,45 +26,6 @@
     #endif
     #include <GLES2/gl2ext.h>
 
-    /* The Android NDK doesn't expose extensions, fake it with eglGetProcAddress */
-    namespace glext {
-        // importGLESExtensionsEntryPoints is thread-safe and can be called multiple times.
-        // it is currently called from PlatformEGL.
-        void importGLESExtensionsEntryPoints();
-
-#ifdef GL_QCOM_tiled_rendering
-        extern PFNGLSTARTTILINGQCOMPROC glStartTilingQCOM;
-        extern PFNGLENDTILINGQCOMPROC glEndTilingQCOM;
-#endif
-#ifdef GL_OES_EGL_image
-        extern PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
-#endif
-#ifdef GL_EXT_debug_marker
-        extern PFNGLINSERTEVENTMARKEREXTPROC glInsertEventMarkerEXT;
-        extern PFNGLPUSHGROUPMARKEREXTPROC glPushGroupMarkerEXT;
-        extern PFNGLPOPGROUPMARKEREXTPROC glPopGroupMarkerEXT;
-#endif
-#ifdef GL_EXT_multisampled_render_to_texture
-        extern PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC glRenderbufferStorageMultisampleEXT;
-        extern PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT;
-#endif
-#ifdef GL_KHR_debug
-        extern PFNGLDEBUGMESSAGECALLBACKKHRPROC glDebugMessageCallbackKHR;
-        extern PFNGLGETDEBUGMESSAGELOGKHRPROC glGetDebugMessageLogKHR;
-#endif
-#ifdef GL_EXT_disjoint_timer_query
-        extern PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64v;
-#endif
-#ifdef GL_EXT_clip_control
-        extern PFNGLCLIPCONTROLEXTPROC glClipControl;
-#endif
-#if defined(__ANDROID__)
-        extern PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
-#endif
-    }
-
-    using namespace glext;
-
 #elif defined(IOS)
 
     #define GLES_SILENCE_DEPRECATION
@@ -85,17 +46,71 @@
 
 #endif
 
+
 #if (!defined(GL_ES_VERSION_2_0) && !defined(GL_VERSION_4_1))
 #error "Minimum header version must be OpenGL ES 2.0 or OpenGL 4.1"
 #endif
 
 
 /*
- * Since we need ES3.1 headers and iOS only has ES3.0, we also define the constants we
- * need to avoid many #ifdef in the actual code.
+ * GLES extensions
  */
 
-#if defined(GL_ES_VERSION_2_0)
+#if defined(GL_ES_VERSION_2_0)  // this basically means all versions of GLES
+
+#if defined(IOS)
+
+// iOS headers only provide prototypes, nothing to do.
+
+#else
+
+#define FILAMENT_IMPORT_ENTRY_POINTS
+
+/* The Android NDK doesn't expose extensions, fake it with eglGetProcAddress */
+namespace glext {
+// importGLESExtensionsEntryPoints is thread-safe and can be called multiple times.
+// it is currently called from PlatformEGL.
+void importGLESExtensionsEntryPoints();
+
+#ifdef GL_QCOM_tiled_rendering
+extern PFNGLSTARTTILINGQCOMPROC glStartTilingQCOM;
+extern PFNGLENDTILINGQCOMPROC glEndTilingQCOM;
+#endif
+#ifdef GL_OES_EGL_image
+extern PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
+#endif
+#ifdef GL_EXT_debug_marker
+extern PFNGLINSERTEVENTMARKEREXTPROC glInsertEventMarkerEXT;
+extern PFNGLPUSHGROUPMARKEREXTPROC glPushGroupMarkerEXT;
+extern PFNGLPOPGROUPMARKEREXTPROC glPopGroupMarkerEXT;
+#endif
+#ifdef GL_EXT_multisampled_render_to_texture
+extern PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC glRenderbufferStorageMultisampleEXT;
+extern PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT;
+#endif
+#ifdef GL_KHR_debug
+extern PFNGLDEBUGMESSAGECALLBACKKHRPROC glDebugMessageCallbackKHR;
+extern PFNGLGETDEBUGMESSAGELOGKHRPROC glGetDebugMessageLogKHR;
+#endif
+#ifdef GL_EXT_clip_control
+extern PFNGLCLIPCONTROLEXTPROC glClipControl;
+#endif
+#ifdef GL_EXT_disjoint_timer_query
+extern PFNGLGENQUERIESEXTPROC glGenQueries;
+extern PFNGLDELETEQUERIESEXTPROC glDeleteQueries;
+extern PFNGLBEGINQUERYEXTPROC glBeginQuery;
+extern PFNGLENDQUERYEXTPROC glEndQuery;
+extern PFNGLGETQUERYOBJECTUIVEXTPROC glGetQueryObjectuiv;
+extern PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64v;
+#endif
+#if defined(__ANDROID__)
+extern PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
+#endif
+} // namespace glext
+
+using namespace glext;
+
+#endif
 
 #ifdef GL_EXT_disjoint_timer_query
 #    ifndef GL_TIME_ELAPSED
