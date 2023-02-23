@@ -854,7 +854,6 @@ int main(int argc, char** argv) {
         auto& rcm = engine->getRenderableManager();
         auto instance = rcm.getInstance(app.scene.groundPlane);
         const auto viewerOptions = app.automationEngine->getViewerOptions();
-        const auto& dofOptions = app.viewer->getSettings().view.dof;
         rcm.setLayerMask(instance,
                 0xff, viewerOptions.groundPlaneEnabled ? 0xff : 0x00);
 
@@ -862,7 +861,8 @@ int main(int argc, char** argv) {
 
         // Note that this focal length might be different from the slider value because the
         // automation engine applies Camera::computeEffectiveFocalLength when DoF is enabled.
-        FilamentApp::get().getCameraFocalLength() = viewerOptions.cameraFocalLength;
+        FilamentApp::get().setCameraFocalLength(viewerOptions.cameraFocalLength);
+        FilamentApp::get().setCameraNearFar(viewerOptions.cameraNear, viewerOptions.cameraFar);
 
         const size_t cameraCount = app.asset->getCameraEntityCount();
         view->setCamera(app.mainCamera);

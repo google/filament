@@ -166,6 +166,8 @@ Java_com_google_android_filament_utils_AutomationEngine_nGetViewerOptions(JNIEnv
     const jfieldID cameraAperture = env->GetFieldID(klass, "cameraAperture", "F");
     const jfieldID cameraSpeed = env->GetFieldID(klass, "cameraSpeed", "F");
     const jfieldID cameraISO = env->GetFieldID(klass, "cameraISO", "F");
+    const jfieldID cameraNear = env->GetFieldID(klass, "cameraNear", "F");
+    const jfieldID cameraFar = env->GetFieldID(klass, "cameraFar", "F");
     const jfieldID groundShadowStrength = env->GetFieldID(klass, "groundShadowStrength", "F");
     const jfieldID groundPlaneEnabled = env->GetFieldID(klass, "groundPlaneEnabled", "Z");
     const jfieldID skyboxEnabled = env->GetFieldID(klass, "skyboxEnabled", "Z");
@@ -177,6 +179,8 @@ Java_com_google_android_filament_utils_AutomationEngine_nGetViewerOptions(JNIEnv
     env->SetFloatField(result, cameraAperture, options.cameraAperture);
     env->SetFloatField(result, cameraSpeed, options.cameraSpeed);
     env->SetFloatField(result, cameraISO, options.cameraISO);
+    env->SetFloatField(result, cameraNear, options.cameraNear);
+    env->SetFloatField(result, cameraFar, options.cameraFar);
     env->SetFloatField(result, groundShadowStrength, options.groundShadowStrength);
     env->SetBooleanField(result, groundPlaneEnabled, options.groundPlaneEnabled);
     env->SetBooleanField(result, skyboxEnabled, options.skyboxEnabled);

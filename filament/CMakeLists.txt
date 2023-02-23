@@ -50,7 +50,6 @@ set(PUBLIC_HDRS
 
 set(SRCS
         src/AtlasAllocator.cpp
-        src/Box.cpp
         src/BufferObject.cpp
         src/Camera.cpp
         src/Color.cpp
@@ -589,6 +588,7 @@ else()
             -Wgnu-conditional-omitted-operand
             -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
             -Wover-aligned
+            -Werror
     )
 endif()
 

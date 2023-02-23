@@ -596,11 +596,16 @@ static void gui(filament::Engine* engine, filament::View*) {
 
         if (ImGui::CollapsingHeader("Camera")) {
             ImGui::Indent();
-            ImGui::SliderFloat("Focal length", &FilamentApp::get().getCameraFocalLength(), 16.0f, 90.0f);
+            ImGui::SliderFloat("Focal length", &params.cameraFocalLength, 16.0f, 90.0f);
             ImGui::SliderFloat("Aperture", &params.cameraAperture, 1.0f, 32.0f);
             ImGui::SliderFloat("Speed", &params.cameraSpeed, 800.0f, 1.0f);
             ImGui::SliderFloat("ISO", &params.cameraISO, 25.0f, 6400.0f);
+            ImGui::SliderFloat("Near", &params.cameraNear, 0.01f, 1.0f);
+            ImGui::SliderFloat("Far", &params.cameraFar, 1.0f, 10000.0f);
             ImGui::Unindent();
+
+            FilamentApp::get().setCameraFocalLength(params.cameraFocalLength);
+            FilamentApp::get().setCameraNearFar(params.cameraNear, params.cameraFar);
         }
 
         if (ImGui::CollapsingHeader("Indirect Light")) {

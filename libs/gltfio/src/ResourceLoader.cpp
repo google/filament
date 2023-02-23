@@ -46,8 +46,9 @@
 
 #include <tsl/robin_map.h>
 
-#include <string>
 #include <fstream>
+#include <memory>
+#include <string>
 
 using namespace filament;
 using namespace filament::math;
@@ -62,6 +63,7 @@ namespace filament::gltfio {
 using BufferTextureCache = tsl::robin_map<const void*, Texture*>;
 using FilepathTextureCache = tsl::robin_map<std::string, Texture*>;
 using UriDataCache = tsl::robin_map<std::string, gltfio::ResourceLoader::BufferDescriptor>;
+using UriDataCacheHandle = std::shared_ptr<UriDataCache>;
 using TextureProviderList = tsl::robin_map<std::string, TextureProvider*>;
 
 enum class CacheResult {
@@ -75,7 +77,8 @@ struct ResourceLoader::Impl {
     Impl(const ResourceConfiguration& config) :
         mEngine(config.engine),
         mNormalizeSkinningWeights(config.normalizeSkinningWeights),
-        mGltfPath(config.gltfPath ? config.gltfPath : "") {}
+        mGltfPath(config.gltfPath ? config.gltfPath : ""),
+        mUriDataCache(std::make_shared<UriDataCache>()) {}
 
     Engine* const mEngine;
     const bool mNormalizeSkinningWeights;
@@ -83,7 +86,7 @@ struct ResourceLoader::Impl {
 
     // User-provided resource data with URI string keys, populated with addResourceData().
     // This is used on platforms without traditional file systems, such as Android, iOS, and WebGL.
-    UriDataCache mUriDataCache;
+    UriDataCacheHandle mUriDataCache;
 
     // User-provided mapping from mime types to texture providers.
     TextureProviderList mTextureProviders;
@@ -111,10 +114,11 @@ uint32_t computeBindingOffset(const cgltf_accessor* accessor);
 // uploading vertex buffer data to the GPU.
 struct UploadEvent {
     FFilamentAsset::SourceHandle handle;
+    UriDataCacheHandle dataCacheHandle;
 };
 
-UploadEvent* uploadUserdata(FFilamentAsset* asset) {
-    return new UploadEvent({ asset->mSourceAsset });
+UploadEvent* uploadUserdata(FFilamentAsset* asset, UriDataCacheHandle dataCache) {
+    return new UploadEvent({ asset->mSourceAsset, dataCache });
 }
 
 static void uploadCallback(void* buffer, size_t size, void* user) {
@@ -349,17 +353,17 @@ void ResourceLoader::Impl::addResourceData(const char* uri, BufferDescriptor&& b
     // Start an async marker the first time this is called and end it when
     // finalization begins. This marker provides a rough indicator of how long
     // the client is taking to load raw data blobs from storage.
-    if (mUriDataCache.empty()) {
+    if (mUriDataCache->empty()) {
         SYSTRACE_CONTEXT();
         SYSTRACE_ASYNC_BEGIN("addResourceData", 1);
     }
     // NOTE: replacing an existing item in a robin map does not seem to behave as expected.
     // To work around this, we explicitly erase the old element if it already exists.
-    auto iter = mUriDataCache.find(uri);
-    if (iter != mUriDataCache.end()) {
-        mUriDataCache.erase(iter);
+    auto iter = mUriDataCache->find(uri);
+    if (iter != mUriDataCache->end()) {
+        mUriDataCache->erase(iter);
     }
-    mUriDataCache.emplace(uri, std::move(buffer));
+    mUriDataCache->emplace(uri, std::move(buffer));
 
     // If this is a texture and async loading has already started, add a new decoder job.
     if (isTexture(uri) && mAsyncAsset && mRemainingTextureDownloads > 0) {
@@ -368,12 +372,12 @@ void ResourceLoader::Impl::addResourceData(const char* uri, BufferDescriptor&& b
 }
 
 bool ResourceLoader::hasResourceData(const char* uri) const {
-    return pImpl->mUriDataCache.find(uri) != pImpl->mUriDataCache.end();
+    return pImpl->mUriDataCache->find(uri) != pImpl->mUriDataCache->end();
 }
 
 void ResourceLoader::evictResourceData() {
     // Note that this triggers BufferDescriptor callbacks.
-    pImpl->mUriDataCache.clear();
+    pImpl->mUriDataCache->clear();
 }
 
 bool ResourceLoader::loadResources(FilamentAsset* asset) {
@@ -423,7 +427,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
         Closure* closure = (Closure*) fileOpts->user_data;
         auto& uriDataCache = closure->impl->mUriDataCache;
 
-        if (auto iter = uriDataCache.find(path); iter != uriDataCache.end()) {
+        if (auto iter = uriDataCache->find(path); iter != uriDataCache->end()) {
             *size = iter->second.size;
             *data = iter->second.buffer;
         } else {
@@ -528,7 +532,7 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             BufferObject* bo = BufferObject::Builder().size(size).build(engine);
             asset->mBufferObjects.push_back(bo);
             bo->setBuffer(engine, BufferDescriptor(data, size,
-                    uploadCallback, uploadUserdata(asset)));
+                    uploadCallback, uploadUserdata(asset, pImpl->mUriDataCache)));
             slot.vertexBuffer->setBufferObjectAt(engine, slot.bufferIndex, bo);
             continue;
         } else if (slot.indexBuffer) {
@@ -540,7 +544,8 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
                 slot.indexBuffer->setBuffer(engine, std::move(bd));
                 continue;
             }
-            IndexBuffer::BufferDescriptor bd(data, size, uploadCallback, uploadUserdata(asset));
+            IndexBuffer::BufferDescriptor bd(data, size, uploadCallback,
+                    uploadUserdata(asset, pImpl->mUriDataCache));
             slot.indexBuffer->setBuffer(engine, std::move(bd));
             continue;
         }
@@ -665,11 +670,13 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
         mime = extension == "jpg" ? "image/jpeg" : "image/" + extension;
     }
 
-    TextureProvider* provider = mTextureProviders[mime];
-    if (!provider) {
+    auto foundProvider = mTextureProviders.find(mime);
+    if (foundProvider == mTextureProviders.end()) {
         slog.e << "Missing texture provider for " << mime << io::endl;
         return {};
     }
+    TextureProvider* provider = foundProvider->second;
+    assert_invariant(provider);
 
     // Check if the texture slot uses BufferView data.
     if (void** bufferViewData = bv ? &bv->buffer->data : nullptr; bufferViewData) {
@@ -703,7 +710,7 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
     }
 
     // Check the user-supplied resource cache for this URI.
-    else if (auto iter = mUriDataCache.find(uri); iter != mUriDataCache.end()) {
+    else if (auto iter = mUriDataCache->find(uri); iter != mUriDataCache->end()) {
         const uint8_t* sourceData = (const uint8_t*) iter->second.buffer;
         if (auto iter = mBufferTextureCache.find(sourceData); iter != mBufferTextureCache.end()) {
             return {iter->second, CacheResult::FOUND};

@@ -332,15 +332,10 @@ public:
         struct {
             GLint row_length = 0;
             GLint alignment = 4;
-            GLint skip_pixels = 0;
-            GLint skip_row = 0;
         } unpack;
 
         struct {
-            GLint row_length = 0;
             GLint alignment = 4;
-            GLint skip_pixels = 0;
-            GLint skip_row = 0;
         } pack;
 
         struct {

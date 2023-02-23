@@ -27,8 +27,8 @@ import com.google.android.filament.gltfio.*
 import kotlinx.coroutines.*
 import java.nio.Buffer
 
-private const val kNearPlane = 0.05     // 5 cm
-private const val kFarPlane = 1000.0    // 1 km
+private const val kNearPlane = 0.05f     // 5 cm
+private const val kFarPlane = 1000.0f    // 1 km
 private const val kAperture = 16f
 private const val kShutterSpeed = 1f / 125f
 private const val kSensitivity = 100f
@@ -75,6 +75,18 @@ class ModelViewer(
     var normalizeSkinningWeights = true
 
     var cameraFocalLength = 28f
+        set(value) {
+            field = value
+            updateCameraProjection()
+        }
+
+    var cameraNear = kNearPlane
+        set(value) {
+            field = value
+            updateCameraProjection()
+        }
+
+    var cameraFar = kFarPlane
         set(value) {
             field = value
             updateCameraProjection()
@@ -368,7 +380,8 @@ class ModelViewer(
         val width = view.viewport.width
         val height = view.viewport.height
         val aspect = width.toDouble() / height.toDouble()
-        camera.setLensProjection(cameraFocalLength.toDouble(), aspect, kNearPlane, kFarPlane)
+        camera.setLensProjection(cameraFocalLength.toDouble(), aspect,
+            cameraNear.toDouble(), cameraFar.toDouble())
     }
 
     inner class SurfaceCallback : UiHelper.RendererCallback {

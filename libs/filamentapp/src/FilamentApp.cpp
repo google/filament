@@ -191,6 +191,8 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
     int sidebarWidth = mSidebarWidth;
     float cameraFocalLength = mCameraFocalLength;
+    float cameraNear = mCameraNear;
+    float cameraFar = mCameraFar;
 
     SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
     SDL_Window* sdlWindow = window->getSDLWindow();
@@ -200,10 +202,15 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             SDL_SetWindowTitle(sdlWindow, mWindowTitle.c_str());
         }
 
-        if (mSidebarWidth != sidebarWidth || mCameraFocalLength != cameraFocalLength) {
+        if (mSidebarWidth != sidebarWidth ||
+            mCameraFocalLength != cameraFocalLength ||
+            mCameraNear != cameraNear ||
+            mCameraFar != cameraFar) {
             window->configureCamerasForWindow();
             sidebarWidth = mSidebarWidth;
             cameraFocalLength = mCameraFocalLength;
+            cameraNear = mCameraNear;
+            cameraFar = mCameraFar;
         }
 
         if (!UTILS_HAS_THREADING) {
@@ -791,8 +798,8 @@ void FilamentApp::Window::configureCamerasForWindow() {
     // the sidebar. To prevent this we simply clamp the width of the main viewport.
     const uint32_t mainWidth = splitview ? width : std::max(1, (int) width - sidebar);
 
-    double near = 0.1;
-    double far = 100;
+    double near = mFilamentApp->mCameraNear;
+    double far = mFilamentApp->mCameraFar;
     mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, double(mainWidth) / height, near, far);
     mDebugCamera->setProjection(45.0, double(width) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
 

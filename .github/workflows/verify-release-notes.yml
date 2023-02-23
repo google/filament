@@ -24,3 +24,4 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           pull-request-number: ${{ github.event.pull_request.number }}
+          release-notes-file: 'NEW_RELEASE_NOTES.md'

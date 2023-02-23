@@ -438,15 +438,27 @@ void ViewerGui::removeAsset() {
     }
 }
 
+UTILS_NOINLINE
+static bool notequal(float a, float b) noexcept {
+    return a != b;
+}
+
+// we do this to circumvent -ffast-math ignoring NaNs
+static bool is_not_a_number(float v) noexcept {
+    return notequal(v, v);
+}
+
 void ViewerGui::setIndirectLight(filament::IndirectLight* ibl,
         filament::math::float3 const* sh3) {
     using namespace filament::math;
     mSettings.view.fog.color = sh3[0];
     mIndirectLight = ibl;
     if (ibl) {
-        float3 d = filament::IndirectLight::getDirectionEstimate(sh3);
-        float4 c = filament::IndirectLight::getColorEstimate(sh3, d);
-        if (!std::isnan(d.x * d.y * d.z)) {
+        float3 const d = filament::IndirectLight::getDirectionEstimate(sh3);
+        float4 const c = filament::IndirectLight::getColorEstimate(sh3, d);
+        bool const dIsValid = std::none_of(std::begin(d.v), std::end(d.v), is_not_a_number);
+        bool const cIsValid = std::none_of(std::begin(c.v), std::end(c.v), is_not_a_number);
+        if (dIsValid && cIsValid) {
             mSettings.lighting.sunlightDirection = d;
             mSettings.lighting.sunlightColor = c.rgb;
             mSettings.lighting.sunlightIntensity = c[3] * ibl->getIntensity();
@@ -927,34 +939,35 @@ void ViewerGui::updateUserInterface() {
     if (ImGui::CollapsingHeader("Camera")) {
         ImGui::Indent();
 
-        ImGui::SliderFloat("Focal length (mm)", &mSettings.viewer.cameraFocalLength,
-                16.0f, 90.0f);
-
-        bool dofMedian = mSettings.view.dof.filter == View::DepthOfFieldOptions::Filter::MEDIAN;
-        int dofRingCount = mSettings.view.dof.fastGatherRingCount;
-        int dofMaxCoC = mSettings.view.dof.maxForegroundCOC;
-        if (!dofRingCount) dofRingCount = 5;
-        if (!dofMaxCoC) dofMaxCoC = 32;
-
+        ImGui::SliderFloat("Focal length (mm)", &mSettings.viewer.cameraFocalLength, 16.0f, 90.0f);
         ImGui::SliderFloat("Aperture", &mSettings.viewer.cameraAperture, 1.0f, 32.0f);
         ImGui::SliderFloat("Speed (1/s)", &mSettings.viewer.cameraSpeed, 1000.0f, 1.0f);
         ImGui::SliderFloat("ISO", &mSettings.viewer.cameraISO, 25.0f, 6400.0f);
-        ImGui::Checkbox("DoF", &mSettings.view.dof.enabled);
-        ImGui::SliderFloat("Focus distance", &mSettings.viewer.cameraFocusDistance, 0.0f, 30.0f);
-        ImGui::SliderFloat("Blur scale", &mSettings.view.dof.cocScale, 0.1f, 10.0f);
-        ImGui::SliderInt("Ring count", &dofRingCount, 1, 17);
-        ImGui::SliderInt("Max CoC", &dofMaxCoC, 1, 32);
-        ImGui::Checkbox("Native Resolution", &mSettings.view.dof.nativeResolution);
-        ImGui::Checkbox("Median Filter", &dofMedian);
+        ImGui::SliderFloat("Near", &mSettings.viewer.cameraNear, 0.001f, 1.0f);
+        ImGui::SliderFloat("Far", &mSettings.viewer.cameraFar, 1.0f, 10000.0f);
 
-        mSettings.view.dof.filter = dofMedian ?
-                                    View::DepthOfFieldOptions::Filter::MEDIAN :
-                                    View::DepthOfFieldOptions::Filter::NONE;
-        mSettings.view.dof.backgroundRingCount = dofRingCount;
-        mSettings.view.dof.foregroundRingCount = dofRingCount;
-        mSettings.view.dof.fastGatherRingCount = dofRingCount;
-        mSettings.view.dof.maxForegroundCOC = dofMaxCoC;
-        mSettings.view.dof.maxBackgroundCOC = dofMaxCoC;
+        if (ImGui::CollapsingHeader("DoF")) {
+            bool dofMedian = mSettings.view.dof.filter == View::DepthOfFieldOptions::Filter::MEDIAN;
+            int dofRingCount = mSettings.view.dof.fastGatherRingCount;
+            int dofMaxCoC = mSettings.view.dof.maxForegroundCOC;
+            if (!dofRingCount) dofRingCount = 5;
+            if (!dofMaxCoC) dofMaxCoC = 32;
+            ImGui::Checkbox("Enabled##dofEnabled", &mSettings.view.dof.enabled);
+            ImGui::SliderFloat("Focus distance", &mSettings.viewer.cameraFocusDistance, 0.0f, 30.0f);
+            ImGui::SliderFloat("Blur scale", &mSettings.view.dof.cocScale, 0.1f, 10.0f);
+            ImGui::SliderInt("Ring count", &dofRingCount, 1, 17);
+            ImGui::SliderInt("Max CoC", &dofMaxCoC, 1, 32);
+            ImGui::Checkbox("Native Resolution", &mSettings.view.dof.nativeResolution);
+            ImGui::Checkbox("Median Filter", &dofMedian);
+            mSettings.view.dof.filter = dofMedian ?
+                                        View::DepthOfFieldOptions::Filter::MEDIAN :
+                                        View::DepthOfFieldOptions::Filter::NONE;
+            mSettings.view.dof.backgroundRingCount = dofRingCount;
+            mSettings.view.dof.foregroundRingCount = dofRingCount;
+            mSettings.view.dof.fastGatherRingCount = dofRingCount;
+            mSettings.view.dof.maxForegroundCOC = dofMaxCoC;
+            mSettings.view.dof.maxBackgroundCOC = dofMaxCoC;
+        }
 
         if (ImGui::CollapsingHeader("Vignette")) {
             ImGui::Checkbox("Enabled##vignetteEnabled", &mSettings.view.vignette.enabled);

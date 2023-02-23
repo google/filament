@@ -75,6 +75,7 @@ CommandStream::CommandStream(Driver& driver, CircularBuffer& buffer) noexcept
 
 void CommandStream::execute(void* buffer) {
     SYSTRACE_CALL();
+    SYSTRACE_CONTEXT();
 
     Profiler profiler;
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # version of clang we want to use
-GITHUB_CLANG_VERSION=8
+GITHUB_CLANG_VERSION=14
 # version of CMake to use instead of the default one
 CMAKE_VERSION=3.19.5
 # version of ninja to use
