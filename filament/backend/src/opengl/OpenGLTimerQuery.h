@@ -48,6 +48,8 @@ public:
     virtual uint64_t queryResult(GLTimerQuery* query) = 0;
 };
 
+#if defined(GL_VERSION_3_3) || defined(GL_EXT_disjoint_timer_query)
+
 class TimerQueryNative : public OpenGLTimerQueryInterface {
 public:
     explicit TimerQueryNative(OpenGLContext& context);
@@ -58,8 +60,9 @@ private:
     void endTimeElapsedQuery(GLTimerQuery* query) override;
     bool queryResultAvailable(GLTimerQuery* query) override;
     uint64_t queryResult(GLTimerQuery* query) override;
-    OpenGLContext& gl;
 };
+
+#endif
 
 class OpenGLTimerQueryFence : public OpenGLTimerQueryInterface {
 public:

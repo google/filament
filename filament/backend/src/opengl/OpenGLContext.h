@@ -110,9 +110,6 @@ public:
             GLenum sfailBack, GLenum dpfailBack, GLenum dppassBack) noexcept;
     inline void stencilMaskSeparate(GLuint maskFront, GLuint maskBack) noexcept;
     inline void polygonOffset(GLfloat factor, GLfloat units) noexcept;
-    inline void beginQuery(GLenum target, GLuint query) noexcept;
-    inline void endQuery(GLenum target) noexcept;
-    inline GLuint getQuery(GLenum target) const noexcept;
 
     inline void setScissor(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
     inline void viewport(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept;
@@ -343,10 +340,6 @@ public:
             vec4gli viewport { 0 };
             vec2glf depthRange { 0.0f, 1.0f };
         } window;
-
-        struct {
-            GLuint timer = -1u;
-        } queries;
     } state;
 
 private:
@@ -716,41 +709,6 @@ void OpenGLContext::polygonOffset(GLfloat factor, GLfloat units) noexcept {
             disable(GL_POLYGON_OFFSET_FILL);
         }
     });
-}
-
-void OpenGLContext::beginQuery(GLenum target, GLuint query) noexcept {
-    switch (target) {
-        case GL_TIME_ELAPSED:
-            if (state.queries.timer != -1u) {
-                // this is an error
-                break;
-            }
-            state.queries.timer = query;
-            break;
-        default:
-            return;
-    }
-    glBeginQuery(target, query);
-}
-
-void OpenGLContext::endQuery(GLenum target) noexcept {
-    switch (target) {
-        case GL_TIME_ELAPSED:
-            state.queries.timer = -1u;
-            break;
-        default:
-            return;
-    }
-    glEndQuery(target);
-}
-
-GLuint OpenGLContext::getQuery(GLenum target) const noexcept {
-    switch (target) {
-        case GL_TIME_ELAPSED:
-            return state.queries.timer;
-        default:
-            return 0;
-    }
 }
 
 } // namespace filament
