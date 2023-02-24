@@ -1224,19 +1224,19 @@ void OpenGLDriver::createSyncR(Handle<HwSync> fh, int) {
     DEBUG_MARKER()
 
     GLSync* f = handle_cast<GLSync *>(fh);
-    f->gl.sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-    CHECK_GL_ERROR(utils::slog.e)
+    f->handle = mContext.createFenceSync(mPlatform);
 
     // check the status of the sync once a frame, since we must do this from our thread
     std::weak_ptr<GLSync::State> const weak = f->result;
-    runEveryNowAndThen([sync = f->gl.sync, weak]() -> bool {
+    runEveryNowAndThen(
+            [&platform = mPlatform, context = mContext, handle = f->handle, weak]() -> bool {
         auto result = weak.lock();
         if (result) {
-            GLenum const status = glClientWaitSync(sync, 0, 0u);
+            auto const status = context.clientWaitSync(platform, handle);
             result->status.store(status, std::memory_order_relaxed);
-            return (status != GL_TIMEOUT_EXPIRED);
+            return (status != OpenGLContext::FenceSync::Status::TIMEOUT_EXPIRED);
         }
-        return true; // we're done
+        return true;
     });
 }
 
@@ -1433,10 +1433,9 @@ void OpenGLDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 
 void OpenGLDriver::destroySync(Handle<HwSync> sh) {
     DEBUG_MARKER()
-
     if (sh) {
         GLSync* s = handle_cast<GLSync*>(sh);
-        glDeleteSync(s->gl.sync);
+        mContext.destroyFenceSync(mPlatform, s->handle);
         destruct(sh, s);
     }
 }
@@ -2364,13 +2363,14 @@ SyncStatus OpenGLDriver::getSyncStatus(Handle<HwSync> sh) {
         return SyncStatus::NOT_SIGNALED;
     }
     auto status = s->result->status.load(std::memory_order_relaxed);
+    using Status = OpenGLContext::FenceSync::Status;
     switch (status) {
-        case GL_CONDITION_SATISFIED:
-        case GL_ALREADY_SIGNALED:
+        case Status::CONDITION_SATISFIED:
+        case Status::ALREADY_SIGNALED:
             return SyncStatus::SIGNALED;
-        case GL_TIMEOUT_EXPIRED:
+        case Status::TIMEOUT_EXPIRED:
             return SyncStatus::NOT_SIGNALED;
-        case GL_WAIT_FAILED:
+        case Status::FAILURE:
         default:
             return SyncStatus::ERROR;
     }
@@ -2883,7 +2883,7 @@ void OpenGLDriver::readBufferSubData(backend::BufferObjectHandle boh,
 }
 
 void OpenGLDriver::whenGpuCommandsComplete(std::function<void()> fn) noexcept {
-    GLsync sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    OpenGLContext::FenceSync sync = mContext.createFenceSync(mPlatform);
     mGpuCommandCompleteOps.emplace_back(sync, std::move(fn));
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -2896,15 +2896,16 @@ void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
     auto& v = mGpuCommandCompleteOps;
     auto it = v.begin();
     while (it != v.end()) {
-        GLenum const status = glClientWaitSync(it->first, 0, 0);
-        if (status == GL_ALREADY_SIGNALED || status == GL_CONDITION_SATISFIED) {
+        using Status = OpenGLContext::FenceSync::Status;
+        auto const status = mContext.clientWaitSync(mPlatform, it->first);
+        if (status == Status::ALREADY_SIGNALED || status == Status::CONDITION_SATISFIED) {
             it->second();
-            glDeleteSync(it->first);
+            mContext.destroyFenceSync(mPlatform, it->first);
             it = v.erase(it);
-        } else if (UTILS_UNLIKELY(status == GL_WAIT_FAILED)) {
+        } else if (UTILS_UNLIKELY(status == Status::FAILURE)) {
             // This should never happen, but is very problematic if it does, as we might leak
             // some data depending on what the callback does. However, we clean up our own state.
-            glDeleteSync(it->first);
+            mContext.destroyFenceSync(mPlatform, it->first);
             it = v.erase(it);
         } else {
             ++it;

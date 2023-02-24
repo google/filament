@@ -16,6 +16,8 @@
 
 #include "OpenGLContext.h"
 
+#include <backend/platforms/OpenGLPlatform.h>
+
 #include <utility>
 
 // change to true to display all GL extensions in the console on start-up
@@ -711,6 +713,32 @@ void OpenGLContext::resetState() noexcept {
     );
     glDepthRangef(state.window.depthRange.x, state.window.depthRange.y);
     
+}
+
+OpenGLContext::FenceSync OpenGLContext::createFenceSync(
+        OpenGLPlatform&) noexcept {
+    auto sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    CHECK_GL_ERROR(utils::slog.e)
+    return { .sync = sync };
+}
+
+void OpenGLContext::destroyFenceSync(
+        OpenGLPlatform&, FenceSync sync) noexcept {
+    glDeleteSync(sync.sync);
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
+OpenGLContext::FenceSync::Status OpenGLContext::clientWaitSync(
+        OpenGLPlatform&, FenceSync sync) const noexcept {
+    GLenum const status = glClientWaitSync(sync.sync, 0, 0u);
+    CHECK_GL_ERROR(utils::slog.e)
+    using Status = OpenGLContext::FenceSync::Status;
+    switch (status) {
+        case GL_ALREADY_SIGNALED:       return Status::ALREADY_SIGNALED;
+        case GL_TIMEOUT_EXPIRED:        return Status::TIMEOUT_EXPIRED;
+        case GL_CONDITION_SATISFIED:    return Status::CONDITION_SATISFIED;
+        default:                        return Status::FAILURE;
+    }
 }
 
 } // namesapce filament

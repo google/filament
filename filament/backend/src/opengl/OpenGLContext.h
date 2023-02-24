@@ -33,6 +33,8 @@
 
 namespace filament::backend {
 
+class OpenGLPlatform;
+
 class OpenGLContext {
 public:
     static constexpr const size_t MAX_TEXTURE_UNIT_COUNT = MAX_SAMPLER_COUNT;
@@ -117,6 +119,26 @@ public:
 
     void deleteBuffers(GLsizei n, const GLuint* buffers, GLenum target) noexcept;
     void deleteVertexArrays(GLsizei n, const GLuint* arrays) noexcept;
+
+    // we abstract GL's sync because it's not available in ES2, but we can use EGL's sync
+    // instead, if available.
+    struct FenceSync {
+        enum class Status {
+            ALREADY_SIGNALED,
+            TIMEOUT_EXPIRED,
+            CONDITION_SATISFIED,
+            FAILURE
+        };
+        union {
+            void* fence;
+            GLsync sync;
+        };
+    };
+
+    FenceSync createFenceSync(OpenGLPlatform& platform) noexcept;
+    void destroyFenceSync(OpenGLPlatform& platform, FenceSync sync) noexcept;
+    FenceSync::Status clientWaitSync(OpenGLPlatform& platform, FenceSync sync) const noexcept;
+
 
     // glGet*() values
     struct {
