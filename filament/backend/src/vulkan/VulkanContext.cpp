@@ -671,7 +671,7 @@ void VulkanContext::afterCreateInstance() {
         VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
-uint32_t VulkanContext::selectMemoryType(uint32_t flags, VkFlags reqs) {
+uint32_t VulkanContext::selectMemoryType(uint32_t flags, VkFlags reqs) const {
     for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
         if (flags & 1) {
             if ((memoryProperties.memoryTypes[i].propertyFlags & reqs) == reqs) {

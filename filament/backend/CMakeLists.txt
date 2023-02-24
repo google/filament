@@ -179,6 +179,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanPipelineCache.cpp
             src/vulkan/VulkanPipelineCache.h
             src/vulkan/VulkanPlatform.cpp
+            src/vulkan/VulkanReadPixels.cpp
+            src/vulkan/VulkanReadPixels.h
             src/vulkan/VulkanSamplerCache.cpp
             src/vulkan/VulkanSamplerCache.h
             src/vulkan/VulkanStagePool.cpp

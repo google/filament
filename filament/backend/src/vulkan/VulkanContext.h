@@ -65,7 +65,7 @@ struct VulkanContext {
 public:
     void initialize(const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount);
     void createEmptyTexture(VulkanStagePool& stagePool);
-    uint32_t selectMemoryType(uint32_t flags, VkFlags reqs);
+    uint32_t selectMemoryType(uint32_t flags, VkFlags reqs) const;
 
 private:
     void afterSelectPhysicalDevice();
