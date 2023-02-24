@@ -84,13 +84,13 @@ private:
             uint32_t depthPlane);
 
     struct BlitFunctionKey {
-        bool blitColor;
-        bool blitDepth;
-        bool msaaColorSource;
-        bool msaaDepthSource;
-        bool sources3D;
+        bool blitColor = false;
+        bool blitDepth = false;
+        bool msaaColorSource = false;
+        bool msaaDepthSource = false;
+        bool sources3D = false;
 
-        char padding[3];
+        char padding[3] = {0, 0, 0};
 
         bool isValid() const noexcept {
             // MSAA 3D textures do not exist.
@@ -104,10 +104,6 @@ private:
                    msaaColorSource == rhs.msaaColorSource &&
                    msaaDepthSource == rhs.msaaDepthSource &&
                    sources3D == rhs.sources3D;
-        }
-
-        BlitFunctionKey() {
-            std::memset(this, 0, sizeof(BlitFunctionKey));
         }
     };
 
