@@ -1342,9 +1342,6 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
                 assert_invariant(t->gl.target == GL_RENDERBUFFER);
                 glDeleteRenderbuffers(1, &t->gl.id);
             }
-            if (t->gl.fence) {
-                glDeleteSync(t->gl.fence);
-            }
             if (t->gl.sidecarRenderBufferMS) {
                 glDeleteRenderbuffers(1, &t->gl.sidecarRenderBufferMS);
             }

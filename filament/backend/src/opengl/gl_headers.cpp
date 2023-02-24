@@ -21,7 +21,7 @@
 #include <EGL/egl.h>
 #include <mutex>
 
-// for non EGL platforms, we'd need to implement this differently. Currently it's not a problem.
+// for non EGL platforms, we'd need to implement this differently. Currently, it's not a problem.
 template<typename T>
 static void getProcAddress(T& pfn, const char* name) noexcept {
     pfn = (T)eglGetProcAddress(name);
