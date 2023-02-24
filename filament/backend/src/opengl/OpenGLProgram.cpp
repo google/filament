@@ -406,11 +406,6 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) const noexcept {
             const GLTexture* const t = sb->textureUnitEntries[j].texture;
             GLuint const s = sb->textureUnitEntries[j].sampler;
             if (t) { // program may not use all samplers of sampler group
-                if (UTILS_UNLIKELY(t->gl.fence)) {
-                    glWaitSync(t->gl.fence, 0, GL_TIMEOUT_IGNORED);
-                    glDeleteSync(t->gl.fence);
-                    t->gl.fence = nullptr;
-                }
                 gld->bindTexture(tmu, t);
                 gld->bindSampler(tmu, s);
             }

@@ -313,7 +313,7 @@ public:
                     GLsizeiptr size = 0;
                 } buffers[MAX_BUFFER_BINDINGS];
             } targets[2];   // there are only 2 indexed buffer target (uniform and transform feedback)
-            GLuint genericBinding[9] = { 0 };
+            GLuint genericBinding[7] = {};
         } buffers;
 
         struct {
@@ -438,13 +438,11 @@ constexpr size_t OpenGLContext::getIndexForCap(GLenum cap) noexcept { //NOLINT
         case GL_SAMPLE_ALPHA_TO_COVERAGE:       index =  6; break;
         case GL_SAMPLE_COVERAGE:                index =  7; break;
         case GL_POLYGON_OFFSET_FILL:            index =  8; break;
-        case GL_PRIMITIVE_RESTART_FIXED_INDEX:  index =  9; break;
-        case GL_RASTERIZER_DISCARD:             index = 10; break;
 #ifdef GL_ARB_seamless_cube_map
-        case GL_TEXTURE_CUBE_MAP_SEAMLESS:      index = 11; break;
+        case GL_TEXTURE_CUBE_MAP_SEAMLESS:      index =  9; break;
 #endif
 #if BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL
-        case GL_PROGRAM_POINT_SIZE:             index = 12; break;
+        case GL_PROGRAM_POINT_SIZE:             index = 10; break;
 #endif
         default: index = 13; break; // should never happen
     }
@@ -459,14 +457,11 @@ constexpr size_t OpenGLContext::getIndexForBufferTarget(GLenum target) noexcept 
         case GL_UNIFORM_BUFFER:             index = 0; break;
         case GL_TRANSFORM_FEEDBACK_BUFFER:  index = 1; break;
         case GL_SHADER_STORAGE_BUFFER:      index = 2; break;
-
         case GL_ARRAY_BUFFER:               index = 3; break;
-        case GL_COPY_READ_BUFFER:           index = 4; break;
-        case GL_COPY_WRITE_BUFFER:          index = 5; break;
-        case GL_ELEMENT_ARRAY_BUFFER:       index = 6; break;
-        case GL_PIXEL_PACK_BUFFER:          index = 7; break;
-        case GL_PIXEL_UNPACK_BUFFER:        index = 8; break;
-        default: index = 9; break; // should never happen
+        case GL_ELEMENT_ARRAY_BUFFER:       index = 4; break;
+        case GL_PIXEL_PACK_BUFFER:          index = 5; break;
+        case GL_PIXEL_UNPACK_BUFFER:        index = 6; break;
+        default: index = 7; break; // should never happen
     }
     assert_invariant(index < sizeof(state.buffers.genericBinding)/sizeof(state.buffers.genericBinding[0])); // NOLINT(misc-redundant-expression)
     return index;
@@ -526,7 +521,7 @@ void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
 
 void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
         GLintptr offset, GLsizeiptr size) noexcept {
-    size_t targetIndex = getIndexForBufferTarget(target);
+    size_t const targetIndex = getIndexForBufferTarget(target);
     assert_invariant(targetIndex <= 2); // validity check
 
     // this ALSO sets the generic binding
