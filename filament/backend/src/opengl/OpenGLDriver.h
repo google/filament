@@ -185,11 +185,10 @@ public:
     struct GLSync : public HwSync {
         using HwSync::HwSync;
         struct State {
-            std::atomic<GLenum> status{ GL_TIMEOUT_EXPIRED };
+            std::atomic<OpenGLContext::FenceSync::Status> status{
+                OpenGLContext::FenceSync::Status::TIMEOUT_EXPIRED };
         };
-        struct {
-            GLsync sync;
-        } gl;
+        OpenGLContext::FenceSync handle{};
         std::shared_ptr<State> result{ std::make_shared<GLSync::State>() };
     };
 
@@ -363,7 +362,7 @@ private:
     // tasks executed on the main thread after the fence signaled
     void whenGpuCommandsComplete(std::function<void()> fn) noexcept;
     void executeGpuCommandsCompleteOps() noexcept;
-    std::vector<std::pair<GLsync, std::function<void()>>> mGpuCommandCompleteOps;
+    std::vector<std::pair<OpenGLContext::FenceSync, std::function<void()>>> mGpuCommandCompleteOps;
 
     // tasks regularly executed on the main thread at until they return true
     void runEveryNowAndThen(std::function<bool()> fn) noexcept;
