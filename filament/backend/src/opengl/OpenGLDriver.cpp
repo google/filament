@@ -180,7 +180,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
 #endif
 
     // Timer queries are core in GL 3.3, otherwise we need EXT_disjoint_timer_query
-    // iOS headers don't define GL_EXT_disjoint_timer_query, so make aboslutely sure
+    // iOS headers don't define GL_EXT_disjoint_timer_query, so make absolutely sure
     // we won't use it.
 #if defined(GL_VERSION_3_3) || defined(GL_EXT_disjoint_timer_query)
     if (mContext.ext.EXT_disjoint_timer_query ||
@@ -545,6 +545,7 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
                     GLsizei(width), GLsizei(height), GLsizei(depth) * 6);
             break;
         }
+#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
         case GL_TEXTURE_2D_MULTISAMPLE:
             if constexpr (TEXTURE_2D_MULTISAMPLE_SUPPORTED) {
                 // NOTE: if there is a mix of texture and renderbuffers, "fixed_sample_locations" must be true
@@ -562,6 +563,7 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
                 PANIC_LOG("GL_TEXTURE_2D_MULTISAMPLE is not supported");
             }
             break;
+#endif
         default: // cannot happen
             break;
     }
@@ -629,6 +631,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
             if (t->samples > 1) {
                 // Note: we can't be here in practice because filament's user API doesn't
                 // allow the creation of multi-sampled textures.
+#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
                 if (gl.features.multisample_texture) {
                     // multi-sample texture on GL 3.2 / GLES 3.1 and above
                     t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
@@ -637,6 +640,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
                 } else {
                     // Turn off multi-sampling for that texture. It's just not supported.
                 }
+#endif
             }
             textureStorage(t, w, h, depth);
         }
@@ -729,6 +733,7 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
     if (t->samples > 1) {
         // Note: we can't be here in practice because filament's user API doesn't
         // allow the creation of multi-sampled textures.
+#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
         if (gl.features.multisample_texture) {
             // multi-sample texture on GL 3.2 / GLES 3.1 and above
             t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
@@ -736,6 +741,7 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
         } else {
             // Turn off multi-sampling for that texture. It's just not supported.
         }
+#endif
     }
 
     CHECK_GL_ERROR(utils::slog.e)
@@ -916,7 +922,9 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
             case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
             case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
             case GL_TEXTURE_2D:
+#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
             case GL_TEXTURE_2D_MULTISAMPLE:
+#endif
                 if (any(t->usage & TextureUsage::SAMPLEABLE)) {
                     glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
                             target, t->gl.id, binfo.level);
@@ -1985,7 +1993,9 @@ void OpenGLDriver::generateMipmaps(Handle<HwTexture> th) {
 
     auto& gl = mContext;
     GLTexture* t = handle_cast<GLTexture *>(th);
+#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
     assert_invariant(t->gl.target != GL_TEXTURE_2D_MULTISAMPLE);
+#endif
     // Note: glGenerateMimap can also fail if the internal format is not both
     // color-renderable and filterable (i.e.: doesn't work for depth)
     bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);

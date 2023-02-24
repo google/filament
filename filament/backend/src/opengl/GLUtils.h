@@ -120,7 +120,12 @@ constexpr inline GLenum getBufferBindingType(BufferObjectBinding bindingType) no
         case BufferObjectBinding::UNIFORM:
             return GL_UNIFORM_BUFFER;
         case BufferObjectBinding::SHADER_STORAGE:
+#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
             return GL_SHADER_STORAGE_BUFFER;
+#else
+            utils::panic(__func__, __FILE__, __LINE__, "SHADER_STORAGE not supported");
+            return 0x90D2; // just to return something
+#endif
     }
 }
 
