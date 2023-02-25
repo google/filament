@@ -146,21 +146,21 @@ public:
         bool EXT_color_buffer_half_float;
         bool EXT_debug_marker;
         bool EXT_disjoint_timer_query;
-        bool EXT_multisampled_render_to_texture;
         bool EXT_multisampled_render_to_texture2;
+        bool EXT_multisampled_render_to_texture;
         bool EXT_shader_framebuffer_fetch;
-        bool KHR_texture_compression_astc_hdr;
-        bool KHR_texture_compression_astc_ldr;
+        bool EXT_texture_compression_bptc;
         bool EXT_texture_compression_etc2;
+        bool EXT_texture_compression_rgtc;
         bool EXT_texture_compression_s3tc;
         bool EXT_texture_compression_s3tc_srgb;
-        bool EXT_texture_compression_rgtc;
-        bool EXT_texture_compression_bptc;
         bool EXT_texture_cube_map_array;
         bool EXT_texture_filter_anisotropic;
         bool EXT_texture_sRGB;
         bool GOOGLE_cpp_style_line_directive;
         bool KHR_debug;
+        bool KHR_texture_compression_astc_hdr;
+        bool KHR_texture_compression_astc_ldr;
         bool OES_EGL_image_external_essl3;
         bool QCOM_tiled_rendering;
         bool WEBGL_compressed_texture_etc;
@@ -391,8 +391,12 @@ private:
     RenderPrimitive mDefaultVAO;
 
     // this is chosen to minimize code size
+#if defined(GL_ES_VERSION_2_0)
     void initExtensionsGLES() noexcept;
+#endif
+#if defined(GL_VERSION_4_1)
     void initExtensionsGL() noexcept;
+#endif
 
     template <typename T, typename F>
     static inline void update_state(T& state, T const& expected, F functor, bool force = false) noexcept {
@@ -417,7 +421,9 @@ constexpr size_t OpenGLContext::getIndexForTextureTarget(GLuint target) noexcept
         case GL_TEXTURE_2D:                     return 0;
         case GL_TEXTURE_2D_ARRAY:               return 1;
         case GL_TEXTURE_CUBE_MAP:               return 2;
+#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
         case GL_TEXTURE_2D_MULTISAMPLE:         return 3;
+#endif
         case GL_TEXTURE_EXTERNAL_OES:           return 4;
         case GL_TEXTURE_3D:                     return 5;
         case GL_TEXTURE_CUBE_MAP_ARRAY:         return 6;
@@ -444,9 +450,9 @@ constexpr size_t OpenGLContext::getIndexForCap(GLenum cap) noexcept { //NOLINT
 #if BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL
         case GL_PROGRAM_POINT_SIZE:             index = 10; break;
 #endif
-        default: index = 13; break; // should never happen
+        default: break;
     }
-    assert_invariant(index < 13 && index < state.enables.caps.size());
+    assert_invariant(index < state.enables.caps.size());
     return index;
 }
 
@@ -456,12 +462,14 @@ constexpr size_t OpenGLContext::getIndexForBufferTarget(GLenum target) noexcept 
         // The indexed buffers MUST be first in this list (those usable with bindBufferRange)
         case GL_UNIFORM_BUFFER:             index = 0; break;
         case GL_TRANSFORM_FEEDBACK_BUFFER:  index = 1; break;
+#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
         case GL_SHADER_STORAGE_BUFFER:      index = 2; break;
+#endif
         case GL_ARRAY_BUFFER:               index = 3; break;
         case GL_ELEMENT_ARRAY_BUFFER:       index = 4; break;
         case GL_PIXEL_PACK_BUFFER:          index = 5; break;
         case GL_PIXEL_UNPACK_BUFFER:        index = 6; break;
-        default: index = 7; break; // should never happen
+        default: break;
     }
     assert_invariant(index < sizeof(state.buffers.genericBinding)/sizeof(state.buffers.genericBinding[0])); // NOLINT(misc-redundant-expression)
     return index;
@@ -484,21 +492,21 @@ void OpenGLContext::bindSampler(GLuint unit, GLuint sampler) noexcept {
 }
 
 void OpenGLContext::setScissor(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept {
-    vec4gli scissor(left, bottom, width, height);
+    vec4gli const scissor(left, bottom, width, height);
     update_state(state.window.scissor, scissor, [&]() {
         glScissor(left, bottom, width, height);
     });
 }
 
 void OpenGLContext::viewport(GLint left, GLint bottom, GLsizei width, GLsizei height) noexcept {
-    vec4gli viewport(left, bottom, width, height);
+    vec4gli const viewport(left, bottom, width, height);
     update_state(state.window.viewport, viewport, [&]() {
         glViewport(left, bottom, width, height);
     });
 }
 
 void OpenGLContext::depthRange(GLclampf near, GLclampf far) noexcept {
-    vec2glf depthRange(near, far);
+    vec2glf const depthRange(near, far);
     update_state(state.window.depthRange, depthRange, [&]() {
         glDepthRangef(near, far);
     });
@@ -509,7 +517,7 @@ void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
     update_state(state.vao.p, vao, [&]() {
         glBindVertexArray(vao->vao);
         // update GL_ELEMENT_ARRAY_BUFFER, which is updated by glBindVertexArray
-        size_t targetIndex = getIndexForBufferTarget(GL_ELEMENT_ARRAY_BUFFER);
+        size_t const targetIndex = getIndexForBufferTarget(GL_ELEMENT_ARRAY_BUFFER);
         state.buffers.genericBinding[targetIndex] = vao->elementArray;
         if (UTILS_UNLIKELY(bugs.vao_doesnt_store_element_array_buffer_binding)) {
             // This shouldn't be needed, but it looks like some drivers don't do the implicit
@@ -599,7 +607,7 @@ void OpenGLContext::disableVertexAttribArray(GLuint index) noexcept {
 }
 
 void OpenGLContext::enable(GLenum cap) noexcept {
-    size_t index = getIndexForCap(cap);
+    size_t const index = getIndexForCap(cap);
     if (UTILS_UNLIKELY(!state.enables.caps[index])) {
         state.enables.caps.set(index);
         glEnable(cap);
@@ -607,7 +615,7 @@ void OpenGLContext::enable(GLenum cap) noexcept {
 }
 
 void OpenGLContext::disable(GLenum cap) noexcept {
-    size_t index = getIndexForCap(cap);
+    size_t const index = getIndexForCap(cap);
     if (UTILS_UNLIKELY(state.enables.caps[index])) {
         state.enables.caps.unset(index);
         glDisable(cap);
