@@ -122,7 +122,6 @@ public:
             GLenum target = 0;
             GLenum internalFormat = 0;
             GLuint sidecarRenderBufferMS = 0;  // multi-sample sidecar renderbuffer
-            mutable GLsync fence = {};
 
             // texture parameters go here too
             GLfloat anisotropy = 1.0;
