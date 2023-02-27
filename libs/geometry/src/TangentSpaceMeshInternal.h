@@ -22,6 +22,8 @@
 #include <math/mat3.h>
 #include <math/norm.h>
 
+#include <utils/Panic.h>
+
 #include <vector>
 
 namespace filament::geometry {
@@ -32,21 +34,24 @@ using Algorithm = TangentSpaceMesh::Algorithm;
 template<typename T>
 class InternalArray {
 public:
-    void borrow(const T* ptr) noexcept {
+    void borrow(T const* ptr) {
+        assert_invariant(mAllocated.empty());
         mBorrowed = ptr;
     }
 
-    T* allocate(size_t size) noexcept {
+    T* allocate(size_t size) {
+        assert_invariant(!mBorrowed);
         mAllocated.resize(size);
         mAllocated.shrink_to_fit();
         return mAllocated.data();
     }
 
     explicit operator bool() const noexcept {
-        return !mBorrowed && mAllocated.size() > 0;
+        return !mBorrowed && !mAllocated.empty();
     }
 
     const T* get() {
+        assert_invariant((bool) this);
         if (mBorrowed) {
             return mBorrowed;
         }
@@ -55,7 +60,7 @@ public:
 
 private:
     std::vector<T> mAllocated;
-    const T* mBorrowed = nullptr;
+    T const* mBorrowed = nullptr;
 };
 
 struct TangentSpaceMeshInput {
