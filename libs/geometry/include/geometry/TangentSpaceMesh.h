@@ -27,8 +27,7 @@ namespace geometry {
 struct TangentSpaceMeshInput;
 struct TangentSpaceMeshOutput;
 
- /* WARNING: WORK-IN-PROGRESS, PLEASE DO NOT USE */
-/**
+ /**
  * This class builds Filament-style TANGENTS buffers given an input mesh.
  *
  * This class enables the client to chose between several algorithms. The client can retrieve the
@@ -139,8 +138,8 @@ public:
          */
         Builder& operator=(Builder&& that) noexcept;
 
-        Builder(const Builder&) = delete;
-        Builder& operator=(const Builder&) = delete;
+        Builder(Builder const&) = delete;
+        Builder& operator=(Builder const&) = delete;
 
         /**
          * Client must provide this parameter
@@ -154,7 +153,7 @@ public:
          * @param stride The stride for iterating through `normals`
          * @return Builder
          */
-        Builder& normals(const filament::math::float3* normals, size_t stride = 0) noexcept;
+        Builder& normals(filament::math::float3 const* normals, size_t stride = 0) noexcept;
 
         /**
          * @param tangents The input tangents. The `w` component is for use with
@@ -162,25 +161,25 @@ public:
          * @param stride The stride for iterating through `tangents`
          * @return Builder
          */
-        Builder& tangents(const filament::math::float4* tangents, size_t stride = 0) noexcept;
+        Builder& tangents(filament::math::float4 const* tangents, size_t stride = 0) noexcept;
 
         /**
          * @param uvs The input uvs
          * @param stride The stride for iterating through `uvs`
          * @return Builder
          */
-        Builder& uvs(const filament::math::float2* uvs, size_t stride = 0) noexcept;
+        Builder& uvs(filament::math::float2 const* uvs, size_t stride = 0) noexcept;
 
         /**
          * @param positions The input positions
          * @param stride The stride for iterating through `positions`
          * @return Builder
          */
-        Builder& positions(const filament::math::float3* positions, size_t stride = 0) noexcept;
+        Builder& positions(filament::math::float3 const* positions, size_t stride = 0) noexcept;
 
         Builder& triangleCount(size_t triangleCount) noexcept;
-        Builder& triangles(const filament::math::uint3* triangles) noexcept;
-        Builder& triangles(const filament::math::ushort3* triangles) noexcept;
+        Builder& triangles(filament::math::uint3 const* triangles) noexcept;
+        Builder& triangles(filament::math::ushort3 const* triangles) noexcept;
 
         Builder& algorithm(Algorithm algorithm) noexcept;
 
@@ -215,8 +214,8 @@ public:
      */
     TangentSpaceMesh& operator=(TangentSpaceMesh&& that) noexcept;
 
-    TangentSpaceMesh(const TangentSpaceMesh&) = delete;
-    TangentSpaceMesh& operator=(const TangentSpaceMesh&) = delete;
+    TangentSpaceMesh(TangentSpaceMesh const&) = delete;
+    TangentSpaceMesh& operator=(TangentSpaceMesh const&) = delete;
 
     /**
      * Number of output vertices
