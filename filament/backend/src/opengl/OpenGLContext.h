@@ -334,7 +334,7 @@ public:
                     GLintptr offset = 0;
                     GLsizeiptr size = 0;
                 } buffers[MAX_BUFFER_BINDINGS];
-            } targets[2];   // there are only 2 indexed buffer target (uniform and transform feedback)
+            } targets[3];   // there are only 3 indexed buffer targets
             GLuint genericBinding[7] = {};
         } buffers;
 
@@ -552,7 +552,9 @@ void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
 void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
         GLintptr offset, GLsizeiptr size) noexcept {
     size_t const targetIndex = getIndexForBufferTarget(target);
-    assert_invariant(targetIndex <= 2); // validity check
+
+    // validity check
+    assert_invariant(targetIndex < sizeof(state.buffers.targets) / sizeof(*state.buffers.targets));
 
     // this ALSO sets the generic binding
     if (   state.buffers.targets[targetIndex].buffers[index].name != buffer
