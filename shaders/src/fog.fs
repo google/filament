@@ -1,5 +1,6 @@
 //------------------------------------------------------------------------------
 // Fog
+// see: Real-time Atmospheric Effects in Games (Carsten Wenzel)
 //------------------------------------------------------------------------------
 
 vec4 fog(vec4 color, highp vec3 view) {
@@ -9,11 +10,11 @@ vec4 fog(vec4 color, highp vec3 view) {
 
         highp float d = length(view);
 
-        highp float h = max(0.001, view.y);
+        highp float h = max(0.001, B * view.y);
         // The function below is continuous at h=0, so to avoid a divide-by-zero, we just clamp h
-        highp float fogIntegralFunctionOfDistance = A * ((1.0 - exp(-B * h)) / h);
+        highp float fogIntegralFunctionOfDistance = A * ((1.0 - exp(-h)) / h);
         highp float fogIntegral = fogIntegralFunctionOfDistance * max(d - frameUniforms.fogStart, 0.0);
-        float fogOpacity = max(1.0 - exp2(-fogIntegral), 0.0);
+        float fogOpacity = max(1.0 - exp(-fogIntegral), 0.0);
 
         // don't go above requested max opacity
         fogOpacity = min(fogOpacity, frameUniforms.fogMaxOpacity);
