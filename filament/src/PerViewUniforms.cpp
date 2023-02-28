@@ -136,9 +136,8 @@ void PerViewUniforms::prepareFog(float3 const& cameraPosition, FogOptions const&
     const float heightFalloff = std::max(epsilon, options.heightFalloff);
 
     // precalculate the constant part of density  integral and correct for exp2() in the shader
-    const float density = ((options.density / heightFalloff) *
-            std::exp(-heightFalloff * (cameraPosition.y - options.height)))
-                    * float(1.0f / F_LN2);
+    const float density = (options.density *
+            std::exp(-heightFalloff * (cameraPosition.y - options.height)));
 
     auto& s = mUniforms.edit();
     s.fogStart             = options.distance;
