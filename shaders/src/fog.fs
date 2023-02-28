@@ -2,17 +2,17 @@
 // Fog
 //------------------------------------------------------------------------------
 
-vec4 fog(vec4 color, vec3 view) {
+vec4 fog(vec4 color, highp vec3 view) {
     if (frameUniforms.fogDensity > 0.0) {
         float A = frameUniforms.fogDensity;
         float B = frameUniforms.fogHeightFalloff;
 
-        float d = length(view);
+        highp float d = length(view);
 
-        float h = max(0.001, view.y);
+        highp float h = max(0.001, view.y);
         // The function below is continuous at h=0, so to avoid a divide-by-zero, we just clamp h
-        float fogIntegralFunctionOfDistance = A * ((1.0 - exp(-B * h)) / h);
-        float fogIntegral = fogIntegralFunctionOfDistance * max(d - frameUniforms.fogStart, 0.0);
+        highp float fogIntegralFunctionOfDistance = A * ((1.0 - exp(-B * h)) / h);
+        highp float fogIntegral = fogIntegralFunctionOfDistance * max(d - frameUniforms.fogStart, 0.0);
         float fogOpacity = max(1.0 - exp2(-fogIntegral), 0.0);
 
         // don't go above requested max opacity
@@ -30,7 +30,7 @@ vec4 fog(vec4 color, vec3 view) {
         fogColor *= fogOpacity;
         if (frameUniforms.fogInscatteringSize > 0.0) {
             // compute a new line-integral for a different start distance
-            float inscatteringIntegral = fogIntegralFunctionOfDistance *
+            highp float inscatteringIntegral = fogIntegralFunctionOfDistance *
                     max(d - frameUniforms.fogInscatteringStart, 0.0);
             float inscatteringOpacity = max(1.0 - exp2(-inscatteringIntegral), 0.0);
 
