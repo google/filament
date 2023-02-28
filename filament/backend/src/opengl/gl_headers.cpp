@@ -57,7 +57,7 @@ PFNGLGETQUERYOBJECTUIVEXTPROC glGetQueryObjectuiv;
 PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64v;
 #endif
 #ifdef GL_EXT_clip_control
-PFNGLCLIPCONTROLEXTPROC glClipControl;
+PFNGLCLIPCONTROLEXTPROC glClipControlEXT;
 #endif
 
 #if defined(__ANDROID__)
@@ -99,7 +99,7 @@ void importGLESExtensionsEntryPoints() {
         getProcAddress(glGetQueryObjectui64v, "glGetQueryObjectui64vEXT");
 #endif
 #ifdef GL_EXT_clip_control
-        getProcAddress(glClipControl, "glClipControlEXT");
+        getProcAddress(glClipControlEXT, "glClipControlEXT");
 #endif
 #if defined(__ANDROID__)
         getProcAddress(glDispatchCompute, "glDispatchCompute");
