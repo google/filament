@@ -72,10 +72,6 @@ namespace glext {
 // it is currently called from PlatformEGL.
 void importGLESExtensionsEntryPoints();
 
-#ifdef GL_QCOM_tiled_rendering
-extern PFNGLSTARTTILINGQCOMPROC glStartTilingQCOM;
-extern PFNGLENDTILINGQCOMPROC glEndTilingQCOM;
-#endif
 #ifdef GL_OES_EGL_image
 extern PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
 #endif
