@@ -351,11 +351,13 @@ void OpenGLContext::setDefaultState() noexcept {
     glHint(GL_FRAGMENT_SHADER_DERIVATIVE_HINT, GL_NICEST);
 #endif
 
-#if defined(GL_EXT_clip_control) || defined(GL_ARB_clip_control) || defined(GL_VERSION_4_5)
     if (ext.EXT_clip_control) {
+#if defined(GL_VERSION_4_5)
         glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
-    }
+#elif defined(GL_EXT_clip_control)
+        glClipControlEXT(GL_LOWER_LEFT_EXT, GL_ZERO_TO_ONE_EXT);
 #endif
+    }
 }
 
 #if defined(GL_ES_VERSION_2_0)
@@ -426,7 +428,7 @@ void OpenGLContext::initExtensionsGL() noexcept {
     auto minor = state.minor;
     ext.APPLE_color_buffer_packed_float = true;  // Assumes core profile.
     ext.ARB_shading_language_packing = exts.has("GL_ARB_shading_language_packing"sv) || (major == 4 && minor >= 2);
-    ext.EXT_clip_control = exts.has("GL_ARB_clip_control"sv) || (major == 4 && minor >= 5);
+    ext.EXT_clip_control = (major == 4 && minor >= 5);
     ext.EXT_color_buffer_float = true;  // Assumes core profile.
     ext.EXT_color_buffer_half_float = true;  // Assumes core profile.
     ext.EXT_debug_marker = exts.has("GL_EXT_debug_marker"sv);

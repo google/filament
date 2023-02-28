@@ -89,7 +89,7 @@ extern PFNGLDEBUGMESSAGECALLBACKKHRPROC glDebugMessageCallbackKHR;
 extern PFNGLGETDEBUGMESSAGELOGKHRPROC glGetDebugMessageLogKHR;
 #endif
 #ifdef GL_EXT_clip_control
-extern PFNGLCLIPCONTROLEXTPROC glClipControl;
+extern PFNGLCLIPCONTROLEXTPROC glClipControlEXT;
 #endif
 #ifdef GL_EXT_disjoint_timer_query
 extern PFNGLGENQUERIESEXTPROC glGenQueries;
