@@ -394,7 +394,6 @@ void OpenGLContext::initExtensionsGLES() noexcept {
     ext.KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
     ext.KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
     ext.OES_EGL_image_external_essl3 = exts.has("GL_OES_EGL_image_external_essl3"sv);
-    ext.QCOM_tiled_rendering = exts.has("GL_QCOM_tiled_rendering"sv);
     ext.WEBGL_compressed_texture_etc = exts.has("WEBGL_compressed_texture_etc"sv);
     ext.WEBGL_compressed_texture_s3tc = exts.has("WEBGL_compressed_texture_s3tc"sv);
     ext.WEBGL_compressed_texture_s3tc_srgb = exts.has("WEBGL_compressed_texture_s3tc_srgb"sv);
@@ -448,7 +447,6 @@ void OpenGLContext::initExtensionsGL() noexcept {
     ext.KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
     ext.KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
     ext.OES_EGL_image_external_essl3 = false;
-    ext.QCOM_tiled_rendering = false;
     ext.WEBGL_compressed_texture_etc = false;
     ext.WEBGL_compressed_texture_s3tc = false;
     ext.WEBGL_compressed_texture_s3tc_srgb = false;

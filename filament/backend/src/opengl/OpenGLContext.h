@@ -184,7 +184,6 @@ public:
         bool KHR_texture_compression_astc_hdr;
         bool KHR_texture_compression_astc_ldr;
         bool OES_EGL_image_external_essl3;
-        bool QCOM_tiled_rendering;
         bool WEBGL_compressed_texture_etc;
         bool WEBGL_compressed_texture_s3tc;
         bool WEBGL_compressed_texture_s3tc_srgb;
