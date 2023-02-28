@@ -34,7 +34,7 @@ OpenGLTimerQueryInterface::~OpenGLTimerQueryInterface() = default;
 
 // ------------------------------------------------------------------------------------------------
 
-#if defined(GL_VERSION_3_3) || defined(GL_EXT_disjoint_timer_query)
+#if defined(BACKEND_OPENGL_VERSION_GL) || defined(GL_EXT_disjoint_timer_query)
 
 TimerQueryNative::TimerQueryNative(OpenGLContext&) {
 }

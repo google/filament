@@ -17,6 +17,26 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_GL_HEADERS_H
 #define TNT_FILAMENT_BACKEND_OPENGL_GL_HEADERS_H
 
+/*
+ * Configuration we aim to support:
+ *
+ * GL 4.5 headers
+ *      - GL 4.1 runtime (for macOS)
+ *      - GL 4.5 runtime
+ *
+ * GLES 2.0 headers
+ *      - GLES 2.0 runtime Android only
+ *
+ * GLES 3.0 headers
+ *      - GLES 3.0 runtime iOS and WebGL2 only
+ *
+ * GLES 3.1 headers
+ *      - GLES 2.0 runtime
+ *      - GLES 3.0 runtime
+ *      - GLES 3.1 runtime
+ */
+
+
 #if defined(__ANDROID__) || defined(FILAMENT_USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__)
 
     #if defined(__EMSCRIPTEN__)
@@ -46,11 +66,21 @@
 
 #endif
 
+/* Validate the header configurations we aim to support */
 
-#if (!defined(GL_ES_VERSION_2_0) && !defined(GL_VERSION_4_1))
-#error "Minimum header version must be OpenGL ES 2.0 or OpenGL 4.1"
+#if defined(GL_VERSION_4_5)
+#elif defined(GL_ES_VERSION_3_1)
+#elif defined(GL_ES_VERSION_3_0)
+#   if !defined(IOS) && !defined(__EMSCRIPTEN__)
+#       error "GLES 3.0 headers only supported on iOS and WebGL2"
+#   endif
+#elif defined(GL_ES_VERSION_2_0)
+#   if !defined(__ANDROID__)
+#       error "GLES 2.0 headers only supported on Android"
+#   endif
+#else
+#   error "Minimum header version must be OpenGL ES 2.0 or OpenGL 4.5"
 #endif
-
 
 /*
  * GLES extensions
@@ -158,29 +188,25 @@ void glGetBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, void *d
 }
 #endif
 
-
-#define BACKEND_OPENGL_VERSION_GLES     0
-#define BACKEND_OPENGL_VERSION_GL       1
 #if defined(GL_ES_VERSION_2_0)
-#   define BACKEND_OPENGL_VERSION      BACKEND_OPENGL_VERSION_GLES
-#elif defined(GL_VERSION_4_1)
-#   define BACKEND_OPENGL_VERSION      BACKEND_OPENGL_VERSION_GL
+#   define BACKEND_OPENGL_VERSION_GLES
+#elif defined(GL_VERSION_4_5)
+#   define BACKEND_OPENGL_VERSION_GL
+#else
+#   error "Unsupported header version"
 #endif
 
-#define BACKEND_OPENGL_LEVEL_GLES20     0
-#define BACKEND_OPENGL_LEVEL_GLES30     1
-#define BACKEND_OPENGL_LEVEL_GLES31     2
-
-#if defined(GL_VERSION_4_1)
-#   define BACKEND_OPENGL_LEVEL        BACKEND_OPENGL_LEVEL_GLES30
+#if defined(GL_VERSION_4_5) || defined(GL_ES_VERSION_3_1)
+#   define BACKEND_OPENGL_LEVEL_GLES31
+#   ifdef __EMSCRIPTEN__
+#       error "WebGL shouldn't be defined with with GLES 3.1 headers"
+#   endif
 #endif
-
-#if defined(GL_ES_VERSION_3_1)
-#   define BACKEND_OPENGL_LEVEL        BACKEND_OPENGL_LEVEL_GLES31
-#elif defined(GL_ES_VERSION_3_0)
-#   define BACKEND_OPENGL_LEVEL        BACKEND_OPENGL_LEVEL_GLES30
-#elif defined(GL_ES_VERSION_2_0)
-#   define BACKEND_OPENGL_LEVEL        BACKEND_OPENGL_LEVEL_GLES20
+#if defined(GL_ES_VERSION_3_0)
+#   define BACKEND_OPENGL_LEVEL_GLES30
+#endif
+#if defined(GL_ES_VERSION_2_0)
+#   define BACKEND_OPENGL_LEVEL_GLES20
 #endif
 
 #include "NullGLES.h"

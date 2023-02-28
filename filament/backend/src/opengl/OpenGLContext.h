@@ -69,6 +69,24 @@ public:
 
     OpenGLContext() noexcept;
 
+    constexpr bool isAtLeastGL(int major, int minor) const noexcept {
+#ifdef BACKEND_OPENGL_VERSION_GL
+        return state.major > major || (state.major == major && state.minor >= minor);
+#else
+        (void)major, (void)minor;
+        return false;
+#endif
+    }
+
+    constexpr bool isAtLeastGLES(int major, int minor) const noexcept {
+#ifdef BACKEND_OPENGL_VERSION_GLES
+        return state.major > major || (state.major == major && state.minor >= minor);
+#else
+        (void)major, (void)minor;
+        return false;
+#endif
+    }
+
     constexpr static inline size_t getIndexForTextureTarget(GLuint target) noexcept;
     constexpr        inline size_t getIndexForCap(GLenum cap) noexcept;
     constexpr static inline size_t getIndexForBufferTarget(GLenum target) noexcept;
@@ -412,10 +430,10 @@ private:
     RenderPrimitive mDefaultVAO;
 
     // this is chosen to minimize code size
-#if defined(GL_ES_VERSION_2_0)
+#if defined(BACKEND_OPENGL_VERSION_GLES)
     void initExtensionsGLES() noexcept;
 #endif
-#if defined(GL_VERSION_4_1)
+#if defined(BACKEND_OPENGL_VERSION_GL)
     void initExtensionsGL() noexcept;
 #endif
 
@@ -442,7 +460,7 @@ constexpr size_t OpenGLContext::getIndexForTextureTarget(GLuint target) noexcept
         case GL_TEXTURE_2D:                     return 0;
         case GL_TEXTURE_2D_ARRAY:               return 1;
         case GL_TEXTURE_CUBE_MAP:               return 2;
-#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
+#if defined(BACKEND_OPENGL_LEVEL_GLES31)
         case GL_TEXTURE_2D_MULTISAMPLE:         return 3;
 #endif
         case GL_TEXTURE_EXTERNAL_OES:           return 4;
@@ -468,7 +486,7 @@ constexpr size_t OpenGLContext::getIndexForCap(GLenum cap) noexcept { //NOLINT
 #ifdef GL_ARB_seamless_cube_map
         case GL_TEXTURE_CUBE_MAP_SEAMLESS:      index =  9; break;
 #endif
-#if BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL
+#ifdef BACKEND_OPENGL_VERSION_GL
         case GL_PROGRAM_POINT_SIZE:             index = 10; break;
 #endif
         default: break;
@@ -483,7 +501,7 @@ constexpr size_t OpenGLContext::getIndexForBufferTarget(GLenum target) noexcept 
         // The indexed buffers MUST be first in this list (those usable with bindBufferRange)
         case GL_UNIFORM_BUFFER:             index = 0; break;
         case GL_TRANSFORM_FEEDBACK_BUFFER:  index = 1; break;
-#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
+#if defined(BACKEND_OPENGL_LEVEL_GLES31)
         case GL_SHADER_STORAGE_BUFFER:      index = 2; break;
 #endif
         case GL_ARRAY_BUFFER:               index = 3; break;
