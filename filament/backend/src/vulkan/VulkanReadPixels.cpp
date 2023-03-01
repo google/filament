@@ -222,6 +222,7 @@ void VulkanReadPixels::run(VulkanRenderTarget const* srcTarget, uint32_t const x
 
                     // Try to free the pbd anyway
                     readCompleteFunc(std::move(p));
+                    delete pUserBuffer;
                     return;
                 }
 
