@@ -120,16 +120,18 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // ------------------------------------------------------------------------------------
             // Fog [variant: FOG]
             // ------------------------------------------------------------------------------------
+            { "fogDensity",              0, Type::FLOAT3,Precision::HIGH },
             { "fogStart",                0, Type::FLOAT, Precision::HIGH },
             { "fogMaxOpacity",           0, Type::FLOAT                  },
             { "fogHeight",               0, Type::FLOAT, Precision::HIGH },
             { "fogHeightFalloff",        0, Type::FLOAT                  },
+            { "fogReserved0",            0, Type::FLOAT                  },
             { "fogColor",                0, Type::FLOAT3                 },
-            { "fogDensity",              0, Type::FLOAT                  },
+            { "fogColorFromIbl",         0, Type::FLOAT                  },
             { "fogInscatteringStart",    0, Type::FLOAT, Precision::HIGH },
             { "fogInscatteringSize",     0, Type::FLOAT                  },
-            { "fogColorFromIbl",         0, Type::FLOAT                  },
-            { "fogReserved0",            0, Type::FLOAT                  },
+            { "fogReserved1",            0, Type::FLOAT                  },
+            { "fogReserved2",            0, Type::FLOAT                  },
 
             // ------------------------------------------------------------------------------------
             // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
