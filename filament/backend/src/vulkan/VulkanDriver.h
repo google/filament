@@ -23,8 +23,10 @@
 #include "VulkanConstants.h"
 #include "VulkanContext.h"
 #include "VulkanFboCache.h"
+#include "VulkanReadPixels.h"
 #include "VulkanSamplerCache.h"
 #include "VulkanStagePool.h"
+#include "VulkanTaskHandler.h"
 #include "VulkanUtility.h"
 
 #include "private/backend/Driver.h"
@@ -39,10 +41,13 @@ namespace filament::backend {
 class VulkanPlatform;
 struct VulkanSamplerGroup;
 
-class VulkanDriver final : public DriverBase {
+class VulkanDriver final : public DriverBase, private VulkanTaskHandler::Host {
 public:
     static Driver* create(VulkanPlatform* platform,
             const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount, const Platform::DriverConfig& driverConfig) noexcept;
+
+    VulkanDriver(VulkanDriver const&) = delete;
+    VulkanDriver& operator = (VulkanDriver const&) = delete;
 
 private:
 
@@ -72,9 +77,6 @@ private:
     UTILS_ALWAYS_INLINE inline void methodName##R(RetType, paramsDecl);
 
 #include "private/backend/DriverAPI.inc"
-
-    VulkanDriver(VulkanDriver const&) = delete;
-    VulkanDriver& operator = (VulkanDriver const&) = delete;
 
 private:
 
@@ -151,6 +153,7 @@ private:
     VulkanSamplerCache mSamplerCache;
     VulkanBlitter mBlitter;
     VulkanSamplerGroup* mSamplerBindings[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
+    VulkanReadPixels mReadPixels;
 };
 
 } // namespace filament::backend
