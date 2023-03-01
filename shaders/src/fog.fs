@@ -5,19 +5,22 @@
 
 vec4 fog(vec4 color, highp vec3 view) {
     if (frameUniforms.fogDensity > 0.0) {
-        float A = frameUniforms.fogDensity;
-        float B = frameUniforms.fogHeightFalloff;
+        // density * exp(-falloff * height)
+        float densityAtViewerHeight = frameUniforms.fogDensity;
+        float falloff = frameUniforms.fogHeightFalloff;
 
+        highp float fogIntegralFunctionOfDistance = densityAtViewerHeight;
+        highp float h = falloff * view.y;
+        if (abs(h) > 0.01) {
+            // The function below is continuous at h=0, so to avoid a divide-by-zero, we just clamp h
+            fogIntegralFunctionOfDistance *= (1.0 - exp(-h)) / h;
+        }
         highp float d = length(view);
-
-        highp float h = max(0.001, B * view.y);
-        // The function below is continuous at h=0, so to avoid a divide-by-zero, we just clamp h
-        highp float fogIntegralFunctionOfDistance = A * ((1.0 - exp(-h)) / h);
         highp float fogIntegral = fogIntegralFunctionOfDistance * max(d - frameUniforms.fogStart, 0.0);
-        float fogOpacity = max(1.0 - exp(-fogIntegral), 0.0);
+        float fogDensity = exp(-fogIntegral);
 
         // don't go above requested max opacity
-        fogOpacity = min(fogOpacity, frameUniforms.fogMaxOpacity);
+        float fogOpacity = min(1.0 - fogDensity, frameUniforms.fogMaxOpacity);
 
         // compute fog color
         vec3 fogColor = frameUniforms.fogColor;
@@ -33,7 +36,8 @@ vec4 fog(vec4 color, highp vec3 view) {
             // compute a new line-integral for a different start distance
             highp float inscatteringIntegral = fogIntegralFunctionOfDistance *
                     max(d - frameUniforms.fogInscatteringStart, 0.0);
-            float inscatteringOpacity = max(1.0 - exp2(-inscatteringIntegral), 0.0);
+            float inscatteringDensity = exp(-inscatteringIntegral);
+            float inscatteringOpacity = 1.0 - inscatteringDensity;
 
             // Add sun colored fog when looking towards the sun
             vec3 sunColor = frameUniforms.lightColorIntensity.rgb * frameUniforms.lightColorIntensity.w;
