@@ -121,11 +121,21 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
     UTILS_NOUNROLL
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
         const ShaderStage stage = static_cast<ShaderStage>(i);
-        GLenum glShaderType;
+        GLenum glShaderType{};
         switch (stage) {
-            case ShaderStage::VERTEX:    glShaderType = GL_VERTEX_SHADER;    break;
-            case ShaderStage::FRAGMENT:  glShaderType = GL_FRAGMENT_SHADER;  break;
-            case ShaderStage::COMPUTE:   glShaderType = GL_COMPUTE_SHADER;   break;
+            case ShaderStage::VERTEX:
+                glShaderType = GL_VERTEX_SHADER;
+                break;
+            case ShaderStage::FRAGMENT:
+                glShaderType = GL_FRAGMENT_SHADER;
+                break;
+            case ShaderStage::COMPUTE:
+#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
+                glShaderType = GL_COMPUTE_SHADER;
+#else
+                utils::panic(__func__, __FILE__, __LINE__, "ShaderStage::COMPUTE not supported");
+#endif
+                break;
         }
 
         if (UTILS_LIKELY(!shadersSource[i].empty())) {
@@ -406,11 +416,6 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gld) const noexcept {
             const GLTexture* const t = sb->textureUnitEntries[j].texture;
             GLuint const s = sb->textureUnitEntries[j].sampler;
             if (t) { // program may not use all samplers of sampler group
-                if (UTILS_UNLIKELY(t->gl.fence)) {
-                    glWaitSync(t->gl.fence, 0, GL_TIMEOUT_IGNORED);
-                    glDeleteSync(t->gl.fence);
-                    t->gl.fence = nullptr;
-                }
                 gld->bindTexture(tmu, t);
                 gld->bindSampler(tmu, s);
             }

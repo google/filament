@@ -180,7 +180,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
 #endif
 
     // Timer queries are core in GL 3.3, otherwise we need EXT_disjoint_timer_query
-    // iOS headers don't define GL_EXT_disjoint_timer_query, so make aboslutely sure
+    // iOS headers don't define GL_EXT_disjoint_timer_query, so make absolutely sure
     // we won't use it.
 #if defined(GL_VERSION_3_3) || defined(GL_EXT_disjoint_timer_query)
     if (mContext.ext.EXT_disjoint_timer_query ||
@@ -545,6 +545,7 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
                     GLsizei(width), GLsizei(height), GLsizei(depth) * 6);
             break;
         }
+#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
         case GL_TEXTURE_2D_MULTISAMPLE:
             if constexpr (TEXTURE_2D_MULTISAMPLE_SUPPORTED) {
                 // NOTE: if there is a mix of texture and renderbuffers, "fixed_sample_locations" must be true
@@ -562,6 +563,7 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
                 PANIC_LOG("GL_TEXTURE_2D_MULTISAMPLE is not supported");
             }
             break;
+#endif
         default: // cannot happen
             break;
     }
@@ -629,6 +631,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
             if (t->samples > 1) {
                 // Note: we can't be here in practice because filament's user API doesn't
                 // allow the creation of multi-sampled textures.
+#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
                 if (gl.features.multisample_texture) {
                     // multi-sample texture on GL 3.2 / GLES 3.1 and above
                     t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
@@ -637,6 +640,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
                 } else {
                     // Turn off multi-sampling for that texture. It's just not supported.
                 }
+#endif
             }
             textureStorage(t, w, h, depth);
         }
@@ -729,6 +733,7 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
     if (t->samples > 1) {
         // Note: we can't be here in practice because filament's user API doesn't
         // allow the creation of multi-sampled textures.
+#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
         if (gl.features.multisample_texture) {
             // multi-sample texture on GL 3.2 / GLES 3.1 and above
             t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
@@ -736,6 +741,7 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
         } else {
             // Turn off multi-sampling for that texture. It's just not supported.
         }
+#endif
     }
 
     CHECK_GL_ERROR(utils::slog.e)
@@ -916,7 +922,9 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
             case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
             case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
             case GL_TEXTURE_2D:
+#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
             case GL_TEXTURE_2D_MULTISAMPLE:
+#endif
                 if (any(t->usage & TextureUsage::SAMPLEABLE)) {
                     glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
                             target, t->gl.id, binfo.level);
@@ -1216,19 +1224,19 @@ void OpenGLDriver::createSyncR(Handle<HwSync> fh, int) {
     DEBUG_MARKER()
 
     GLSync* f = handle_cast<GLSync *>(fh);
-    f->gl.sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-    CHECK_GL_ERROR(utils::slog.e)
+    f->handle = mContext.createFenceSync(mPlatform);
 
     // check the status of the sync once a frame, since we must do this from our thread
     std::weak_ptr<GLSync::State> const weak = f->result;
-    runEveryNowAndThen([sync = f->gl.sync, weak]() -> bool {
+    runEveryNowAndThen(
+            [&platform = mPlatform, context = mContext, handle = f->handle, weak]() -> bool {
         auto result = weak.lock();
         if (result) {
-            GLenum const status = glClientWaitSync(sync, 0, 0u);
+            auto const status = context.clientWaitSync(platform, handle);
             result->status.store(status, std::memory_order_relaxed);
-            return (status != GL_TIMEOUT_EXPIRED);
+            return (status != OpenGLContext::FenceSync::Status::TIMEOUT_EXPIRED);
         }
-        return true; // we're done
+        return true;
     });
 }
 
@@ -1342,9 +1350,6 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
                 assert_invariant(t->gl.target == GL_RENDERBUFFER);
                 glDeleteRenderbuffers(1, &t->gl.id);
             }
-            if (t->gl.fence) {
-                glDeleteSync(t->gl.fence);
-            }
             if (t->gl.sidecarRenderBufferMS) {
                 glDeleteRenderbuffers(1, &t->gl.sidecarRenderBufferMS);
             }
@@ -1428,10 +1433,9 @@ void OpenGLDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 
 void OpenGLDriver::destroySync(Handle<HwSync> sh) {
     DEBUG_MARKER()
-
     if (sh) {
         GLSync* s = handle_cast<GLSync*>(sh);
-        glDeleteSync(s->gl.sync);
+        mContext.destroyFenceSync(mPlatform, s->handle);
         destruct(sh, s);
     }
 }
@@ -1985,7 +1989,9 @@ void OpenGLDriver::generateMipmaps(Handle<HwTexture> th) {
 
     auto& gl = mContext;
     GLTexture* t = handle_cast<GLTexture *>(th);
+#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
     assert_invariant(t->gl.target != GL_TEXTURE_2D_MULTISAMPLE);
+#endif
     // Note: glGenerateMimap can also fail if the internal format is not both
     // color-renderable and filterable (i.e.: doesn't work for depth)
     bindTexture(OpenGLContext::DUMMY_TEXTURE_BINDING, t);
@@ -2357,13 +2363,14 @@ SyncStatus OpenGLDriver::getSyncStatus(Handle<HwSync> sh) {
         return SyncStatus::NOT_SIGNALED;
     }
     auto status = s->result->status.load(std::memory_order_relaxed);
+    using Status = OpenGLContext::FenceSync::Status;
     switch (status) {
-        case GL_CONDITION_SATISFIED:
-        case GL_ALREADY_SIGNALED:
+        case Status::CONDITION_SATISFIED:
+        case Status::ALREADY_SIGNALED:
             return SyncStatus::SIGNALED;
-        case GL_TIMEOUT_EXPIRED:
+        case Status::TIMEOUT_EXPIRED:
             return SyncStatus::NOT_SIGNALED;
-        case GL_WAIT_FAILED:
+        case Status::FAILURE:
         default:
             return SyncStatus::ERROR;
     }
@@ -2876,7 +2883,7 @@ void OpenGLDriver::readBufferSubData(backend::BufferObjectHandle boh,
 }
 
 void OpenGLDriver::whenGpuCommandsComplete(std::function<void()> fn) noexcept {
-    GLsync sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    OpenGLContext::FenceSync sync = mContext.createFenceSync(mPlatform);
     mGpuCommandCompleteOps.emplace_back(sync, std::move(fn));
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -2889,15 +2896,16 @@ void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
     auto& v = mGpuCommandCompleteOps;
     auto it = v.begin();
     while (it != v.end()) {
-        GLenum const status = glClientWaitSync(it->first, 0, 0);
-        if (status == GL_ALREADY_SIGNALED || status == GL_CONDITION_SATISFIED) {
+        using Status = OpenGLContext::FenceSync::Status;
+        auto const status = mContext.clientWaitSync(mPlatform, it->first);
+        if (status == Status::ALREADY_SIGNALED || status == Status::CONDITION_SATISFIED) {
             it->second();
-            glDeleteSync(it->first);
+            mContext.destroyFenceSync(mPlatform, it->first);
             it = v.erase(it);
-        } else if (UTILS_UNLIKELY(status == GL_WAIT_FAILED)) {
+        } else if (UTILS_UNLIKELY(status == Status::FAILURE)) {
             // This should never happen, but is very problematic if it does, as we might leak
             // some data depending on what the callback does. However, we clean up our own state.
-            glDeleteSync(it->first);
+            mContext.destroyFenceSync(mPlatform, it->first);
             it = v.erase(it);
         } else {
             ++it;

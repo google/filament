@@ -16,6 +16,10 @@
 
 #include "OpenGLContext.h"
 
+#include <backend/platforms/OpenGLPlatform.h>
+
+#include <utility>
+
 // change to true to display all GL extensions in the console on start-up
 #define DEBUG_PRINT_EXTENSIONS false
 
@@ -70,7 +74,9 @@ OpenGLContext::OpenGLContext() noexcept {
     constexpr GLint MAX_FRAGMENT_SAMPLER_COUNT = caps3.MAX_FRAGMENT_SAMPLER_COUNT;
 
     if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES) {
+#if defined(GL_ES_VERSION_2_0)
         initExtensionsGLES();
+#endif
         if (state.major == 3) {
             assert_invariant(gets.max_texture_image_units >= 16);
             assert_invariant(gets.max_combined_texture_image_units >= 32);
@@ -88,8 +94,9 @@ OpenGLContext::OpenGLContext() noexcept {
             }
         }
     } else if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
-        // OpenGL version
+#if defined(GL_VERSION_4_1)
         initExtensionsGL();
+#endif
         if (state.major == 4) {
             assert_invariant(state.minor >= 1);
             mShaderModel = ShaderModel::DESKTOP;
@@ -351,6 +358,8 @@ void OpenGLContext::setDefaultState() noexcept {
 #endif
 }
 
+#if defined(GL_ES_VERSION_2_0)
+
 void OpenGLContext::initExtensionsGLES() noexcept {
     const char * const extensions = (const char*)glGetString(GL_EXTENSIONS);
     GLUtils::unordered_string_set const exts = GLUtils::split(extensions);
@@ -395,6 +404,10 @@ void OpenGLContext::initExtensionsGLES() noexcept {
     }
 }
 
+#endif // defined(GL_ES_VERSION_2_0)
+
+#if defined(GL_VERSION_4_1)
+
 void OpenGLContext::initExtensionsGL() noexcept {
     GLUtils::unordered_string_set exts;
     GLint n = 0;
@@ -418,20 +431,30 @@ void OpenGLContext::initExtensionsGL() noexcept {
     ext.EXT_color_buffer_float = true;  // Assumes core profile.
     ext.EXT_color_buffer_half_float = true;  // Assumes core profile.
     ext.EXT_debug_marker = exts.has("GL_EXT_debug_marker"sv);
+    ext.EXT_disjoint_timer_query = true;
+    ext.EXT_multisampled_render_to_texture = false;
+    ext.EXT_multisampled_render_to_texture2 = false;
     ext.EXT_shader_framebuffer_fetch = exts.has("GL_EXT_shader_framebuffer_fetch"sv);
+    ext.EXT_texture_compression_bptc = exts.has("GL_EXT_texture_compression_bptc"sv);
     ext.EXT_texture_compression_etc2 = exts.has("GL_ARB_ES3_compatibility"sv);
+    ext.EXT_texture_compression_rgtc = exts.has("GL_EXT_texture_compression_rgtc"sv);
     ext.EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
     ext.EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
-    ext.EXT_texture_compression_rgtc = exts.has("GL_EXT_texture_compression_rgtc"sv);
-    ext.EXT_texture_compression_bptc = exts.has("GL_EXT_texture_compression_bptc"sv);
+    ext.EXT_texture_cube_map_array = true;
     ext.EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
     ext.EXT_texture_sRGB = exts.has("GL_EXT_texture_sRGB"sv);
     ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
     ext.KHR_debug = major >= 4 && minor >= 3;
     ext.KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
     ext.KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
-    ext.OES_EGL_image_external_essl3 = exts.has("GL_OES_EGL_image_external_essl3"sv);
+    ext.OES_EGL_image_external_essl3 = false;
+    ext.QCOM_tiled_rendering = false;
+    ext.WEBGL_compressed_texture_etc = false;
+    ext.WEBGL_compressed_texture_s3tc = false;
+    ext.WEBGL_compressed_texture_s3tc_srgb = false;
 }
+
+#endif // defined(GL_VERSION_4_1)
 
 void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {
     if (target == GL_ELEMENT_ARRAY_BUFFER) {
@@ -613,12 +636,10 @@ void OpenGLContext::resetState() noexcept {
     GLenum const bufferTargets[] = {
         GL_UNIFORM_BUFFER,
         GL_TRANSFORM_FEEDBACK_BUFFER,
-#if !defined(__EMSCRIPTEN__)
+#if !defined(__EMSCRIPTEN__) && (defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1))
         GL_SHADER_STORAGE_BUFFER,
 #endif
         GL_ARRAY_BUFFER,
-        GL_COPY_READ_BUFFER,
-        GL_COPY_WRITE_BUFFER,
         GL_ELEMENT_ARRAY_BUFFER,
         GL_PIXEL_PACK_BUFFER,
         GL_PIXEL_UNPACK_BUFFER,
@@ -641,23 +662,30 @@ void OpenGLContext::resetState() noexcept {
     // Reset state.textures to its default state to avoid the complexity and error-prone
     // nature of resetting the GL state to its existing state
     state.textures = {};
-    const GLuint textureTargets[] = {
-        GL_TEXTURE_2D,
-        GL_TEXTURE_2D_ARRAY,
-        GL_TEXTURE_CUBE_MAP,
-        GL_TEXTURE_3D,
+    const std::pair<GLuint, bool> textureTargets[] = {
+            { GL_TEXTURE_2D,                true },
+            { GL_TEXTURE_2D_ARRAY,          true },
+            { GL_TEXTURE_CUBE_MAP,          true },
+            { GL_TEXTURE_3D,                true },
 #if !defined(__EMSCRIPTEN__)
-        GL_TEXTURE_2D_MULTISAMPLE,
-        GL_TEXTURE_EXTERNAL_OES,
-        GL_TEXTURE_CUBE_MAP_ARRAY,
+#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
+            { GL_TEXTURE_2D_MULTISAMPLE,    true },
+#endif
+#if defined(GL_OES_EGL_image_external)
+            { GL_TEXTURE_EXTERNAL_OES,      ext.OES_EGL_image_external_essl3 },
+#endif
+#if defined(GL_VERSION_4_1) || defined(GL_EXT_texture_cube_map_array)
+            { GL_TEXTURE_CUBE_MAP_ARRAY,    ext.EXT_texture_cube_map_array },
+#endif
 #endif
     };
     for (GLint unit = 0; unit < gets.max_combined_texture_image_units; ++unit) {
         glActiveTexture(GL_TEXTURE0 + unit);
         glBindSampler(unit, 0);
-
-        for (auto const target : textureTargets) {
-            glBindTexture(target, 0);
+        for (auto [target, available] : textureTargets) {
+            if (available) {
+                glBindTexture(target, 0);
+            }
         }
     }
     glActiveTexture(GL_TEXTURE0 + state.textures.active);
@@ -685,6 +713,32 @@ void OpenGLContext::resetState() noexcept {
     );
     glDepthRangef(state.window.depthRange.x, state.window.depthRange.y);
     
+}
+
+OpenGLContext::FenceSync OpenGLContext::createFenceSync(
+        OpenGLPlatform&) noexcept {
+    auto sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    CHECK_GL_ERROR(utils::slog.e)
+    return { .sync = sync };
+}
+
+void OpenGLContext::destroyFenceSync(
+        OpenGLPlatform&, FenceSync sync) noexcept {
+    glDeleteSync(sync.sync);
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
+OpenGLContext::FenceSync::Status OpenGLContext::clientWaitSync(
+        OpenGLPlatform&, FenceSync sync) const noexcept {
+    GLenum const status = glClientWaitSync(sync.sync, 0, 0u);
+    CHECK_GL_ERROR(utils::slog.e)
+    using Status = OpenGLContext::FenceSync::Status;
+    switch (status) {
+        case GL_ALREADY_SIGNALED:       return Status::ALREADY_SIGNALED;
+        case GL_TIMEOUT_EXPIRED:        return Status::TIMEOUT_EXPIRED;
+        case GL_CONDITION_SATISFIED:    return Status::CONDITION_SATISFIED;
+        default:                        return Status::FAILURE;
+    }
 }
 
 } // namesapce filament
