@@ -5,7 +5,7 @@
 
 vec4 fog(vec4 color, highp vec3 view) {
     if (frameUniforms.fogDensity > 0.0) {
-        // density * exp(-falloff * height)
+        // densityAtViewerHeight == density * exp(-height_falloff * camera_height)
         float densityAtViewerHeight = frameUniforms.fogDensity;
         float falloff = frameUniforms.fogHeightFalloff;
 

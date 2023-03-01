@@ -120,13 +120,13 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // ------------------------------------------------------------------------------------
             // Fog [variant: FOG]
             // ------------------------------------------------------------------------------------
-            { "fogStart",                0, Type::FLOAT                  },
+            { "fogStart",                0, Type::FLOAT, Precision::HIGH },
             { "fogMaxOpacity",           0, Type::FLOAT                  },
-            { "fogHeight",               0, Type::FLOAT                  },
+            { "fogHeight",               0, Type::FLOAT, Precision::HIGH },
             { "fogHeightFalloff",        0, Type::FLOAT                  },
             { "fogColor",                0, Type::FLOAT3                 },
             { "fogDensity",              0, Type::FLOAT                  },
-            { "fogInscatteringStart",    0, Type::FLOAT                  },
+            { "fogInscatteringStart",    0, Type::FLOAT, Precision::HIGH },
             { "fogInscatteringSize",     0, Type::FLOAT                  },
             { "fogColorFromIbl",         0, Type::FLOAT                  },
             { "fogReserved0",            0, Type::FLOAT                  },
