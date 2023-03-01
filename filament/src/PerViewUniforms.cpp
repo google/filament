@@ -130,10 +130,7 @@ void PerViewUniforms::prepareTemporalNoise(FEngine& engine,
 }
 
 void PerViewUniforms::prepareFog(float3 const& cameraPosition, FogOptions const& options) noexcept {
-    // this can't be too high because we need density / heightFalloff to produce something
-    // close to fogOptions.density in the fragment shader which use 16-bits floats.
-    constexpr float epsilon = 0.001f;
-    const float heightFalloff = std::max(epsilon, options.heightFalloff);
+    const float heightFalloff = std::max(0.0f, options.heightFalloff);
 
     // precalculate the constant part of density  integral and correct for exp2() in the shader
     const float density = (options.density *
