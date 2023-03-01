@@ -132,9 +132,8 @@ void PerViewUniforms::prepareTemporalNoise(FEngine& engine,
 void PerViewUniforms::prepareFog(float3 const& cameraPosition, FogOptions const& options) noexcept {
     const float heightFalloff = std::max(0.0f, options.heightFalloff);
 
-    // precalculate the constant part of density  integral and correct for exp2() in the shader
-    const float density = (options.density *
-            std::exp(-heightFalloff * (cameraPosition.y - options.height)));
+    // precalculate the constant part of density integral
+    const float density = -heightFalloff * (cameraPosition.y - options.height);
 
     auto& s = mUniforms.edit();
     s.fogStart             = options.distance;
@@ -142,7 +141,7 @@ void PerViewUniforms::prepareFog(float3 const& cameraPosition, FogOptions const&
     s.fogHeight            = options.height;
     s.fogHeightFalloff     = heightFalloff;
     s.fogColor             = options.color;
-    s.fogDensity           = density;
+    s.fogDensity           = { options.density, density, options.density * std::exp(density) };
     s.fogInscatteringStart = options.inScatteringStart;
     s.fogInscatteringSize  = options.inScatteringSize;
     s.fogColorFromIbl      = options.fogColorFromIbl ? 1.0f : 0.0f;

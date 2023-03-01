@@ -140,16 +140,18 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // --------------------------------------------------------------------------------------------
     // Fog [variant: FOG]
     // --------------------------------------------------------------------------------------------
+    math::float3 fogDensity;        // { density, -falloff * yc, density * exp(-fallof * yc) }
     float fogStart;
     float fogMaxOpacity;
     float fogHeight;
-    float fogHeightFalloff;         // falloff * 1.44269
+    float fogHeightFalloff;
+    float fogReserved0;
     math::float3 fogColor;
-    float fogDensity;               // (density/falloff)*exp(-falloff*(camera.y - fogHeight))
+    float fogColorFromIbl;
     float fogInscatteringStart;
     float fogInscatteringSize;
-    float fogColorFromIbl;
-    float fogReserved0;
+    float fogReserved1;
+    float fogReserved2;
 
     // --------------------------------------------------------------------------------------------
     // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
@@ -162,7 +164,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float ssrStride;                    // ssr texel stride, >= 1.0
 
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[63];
+    math::float4 reserved[62];
 };
 
 // 2 KiB == 128 float4s
