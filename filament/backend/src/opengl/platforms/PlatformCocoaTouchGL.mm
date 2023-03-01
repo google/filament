@@ -84,8 +84,8 @@ Driver* PlatformCocoaTouchGL::createDriver(void* const sharedGLContext, const Pl
     pImpl->mDefaultColorbuffer = renderbuffer[0];
     pImpl->mDefaultDepthbuffer = renderbuffer[1];
 
-    CVReturn success = CVOpenGLESTextureCacheCreate(kCFAllocatorDefault, nullptr,
-            pImpl->mGLContext, nullptr, &pImpl->mTextureCache);
+    UTILS_UNUSED_IN_RELEASE CVReturn success = CVOpenGLESTextureCacheCreate(kCFAllocatorDefault,
+            nullptr, pImpl->mGLContext, nullptr, &pImpl->mTextureCache);
     assert_invariant(success == kCVReturnSuccess);
 
     pImpl->mExternalImageSharedGl = new CocoaTouchExternalImage::SharedGl();

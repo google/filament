@@ -444,7 +444,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
         if (UTILS_LIKELY(mViewingCamera == nullptr)) {
             // In the common case when we don't have a viewing camera, cameraInfo.view is
             // already the culling view matrix
-            return Frustum{ mat4f{ highPrecisionMultiply(cameraInfo.projection, cameraInfo.view) }};
+            return Frustum{ mat4f{ highPrecisionMultiply(cameraInfo.cullingProjection, cameraInfo.view) }};
         } else {
             // Otherwise, we need to recalculate it from the culling camera.
             // Note: it is correct to always do the math from mCullingCamera, but it hides the

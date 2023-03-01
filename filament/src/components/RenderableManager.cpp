@@ -51,7 +51,7 @@ struct RenderableManager::BuilderDetails {
     Box mAABB;
     uint8_t mLayerMask = 0x1;
     uint8_t mPriority = 0x4;
-    uint8_t mCommandChannel = 0x0;
+    uint8_t mCommandChannel = RenderableManager::Builder::DEFAULT_CHANNEL;
     uint8_t mLightChannels = 1;
     uint16_t mInstanceCount = 1;
     bool mCulling : 1;

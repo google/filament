@@ -356,6 +356,8 @@ class MainActivity : Activity() {
         automation.applySettings(modelViewer.engine, json, viewerContent)
         modelViewer.view.colorGrading = automation.getColorGrading(modelViewer.engine)
         modelViewer.cameraFocalLength = automation.viewerOptions.cameraFocalLength
+        modelViewer.cameraNear = automation.viewerOptions.cameraNear
+        modelViewer.cameraFar = automation.viewerOptions.cameraFar
         updateRootTransform()
     }
 
