@@ -41,6 +41,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "viewFromClipMatrix",     0, Type::MAT4,   Precision::HIGH },
             { "clipFromWorldMatrix",    0, Type::MAT4,   Precision::HIGH },
             { "worldFromClipMatrix",    0, Type::MAT4,   Precision::HIGH },
+            { "userWorldFromWorldMatrix",0,Type::MAT4,   Precision::HIGH },
             { "clipTransform",          0, Type::FLOAT4, Precision::HIGH },
 
             { "clipControl",            0, Type::FLOAT2                  },
@@ -58,12 +59,8 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
 
             { "lodBias",                0, Type::FLOAT                   },
             { "refractionLodOffset",    0, Type::FLOAT                   },
-            { "padding1",               0, Type::FLOAT                   },
-            { "padding2",               0, Type::FLOAT                   },
 
-            { "cameraPosition",         0, Type::FLOAT3, Precision::HIGH },
             { "oneOverFarMinusNear",    0, Type::FLOAT,  Precision::HIGH },
-            { "worldOffset",            0, Type::FLOAT3                  },
             { "nearOverFarMinusNear",   0, Type::FLOAT,  Precision::HIGH },
             { "cameraFar",              0, Type::FLOAT                   },
             { "exposure",               0, Type::FLOAT,  Precision::HIGH }, // high precision to work around #3602 (qualcom),

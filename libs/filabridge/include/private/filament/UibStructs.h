@@ -43,16 +43,17 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // Values that can be accessed in both surface and post-process materials
     // --------------------------------------------------------------------------------------------
 
-    math::mat4f viewFromWorldMatrix;
-    math::mat4f worldFromViewMatrix;
-    math::mat4f clipFromViewMatrix;
-    math::mat4f viewFromClipMatrix;
-    math::mat4f clipFromWorldMatrix;
-    math::mat4f worldFromClipMatrix;
-    math::float4 clipTransform;     // [sx, sy, tx, ty] only used by VERTEX_DOMAIN_DEVICE
+    math::mat4f viewFromWorldMatrix;    // clip    view <- world    : view matrix
+    math::mat4f worldFromViewMatrix;    // clip    view -> world    : model matrix
+    math::mat4f clipFromViewMatrix;     // clip <- view    world    : projection matrix
+    math::mat4f viewFromClipMatrix;     // clip -> view    world    : inverse projection matrix
+    math::mat4f clipFromWorldMatrix;    // clip <- view <- world
+    math::mat4f worldFromClipMatrix;    // clip -> view -> world
+    math::mat4f userWorldFromWorldMatrix;   // userWorld <- world
+    math::float4 clipTransform;             // [sx, sy, tx, ty] only used by VERTEX_DOMAIN_DEVICE
 
     math::float2 clipControl;       // clip control
-    float time;                     // time in seconds, with a 1 second period
+    float time;                     // time in seconds, with a 1-second period
     float temporalNoise;            // noise [0,1] when TAA is used, 0 otherwise
     math::float4 userTime;          // time(s), (double)time - (float)time, 0, 0
 
@@ -67,14 +68,9 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     float lodBias;                  // load bias to apply to user materials
     float refractionLodOffset;
-    float padding1;
-    float padding2;
 
     // camera position in view space (when camera_at_origin is enabled), i.e. it's (0,0,0).
-    // Always add worldOffset in the shader to get the true world-space position of the camera.
-    math::float3 cameraPosition;
     float oneOverFarMinusNear;      // 1 / (f-n), always positive
-    math::float3 worldOffset;       // this is (0,0,0) when camera_at_origin is disabled
     float nearOverFarMinusNear;     // n / (f-n), always positive
     float cameraFar;                // camera *culling* far-plane distance, always positive (projection far is at +inf)
     float exposure;
@@ -164,7 +160,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float ssrStride;                    // ssr texel stride, >= 1.0
 
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[62];
+    math::float4 reserved[60];
 };
 
 // 2 KiB == 128 float4s
