@@ -120,7 +120,7 @@ constexpr inline GLenum getBufferBindingType(BufferObjectBinding bindingType) no
         case BufferObjectBinding::UNIFORM:
             return GL_UNIFORM_BUFFER;
         case BufferObjectBinding::SHADER_STORAGE:
-#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
+#if defined(BACKEND_OPENGL_LEVEL_GLES31)
             return GL_SHADER_STORAGE_BUFFER;
 #else
             utils::panic(__func__, __FILE__, __LINE__, "SHADER_STORAGE not supported");
@@ -423,7 +423,7 @@ constexpr /* inline */ GLenum getInternalFormat(TextureFormat format) noexcept {
         case TextureFormat::RGBA32I:           return GL_RGBA32I;
 
         // compressed formats
-#if defined(GL_ES_VERSION_3_0) || defined(GL_VERSION_4_3) || defined(GL_ARB_ES3_compatibility)
+#if defined(GL_ES_VERSION_3_0) || defined(BACKEND_OPENGL_VERSION_GL) || defined(GL_ARB_ES3_compatibility)
         case TextureFormat::EAC_R11:           return GL_COMPRESSED_R11_EAC;
         case TextureFormat::EAC_R11_SIGNED:    return GL_COMPRESSED_SIGNED_R11_EAC;
         case TextureFormat::EAC_RG11:          return GL_COMPRESSED_RG11_EAC;

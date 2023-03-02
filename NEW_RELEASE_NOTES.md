@@ -8,3 +8,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
+fog: fixed fog height falloff and computation precision on mobile [⚠️ **Recompile Materials**]
