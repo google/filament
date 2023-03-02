@@ -298,7 +298,16 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     parser->getColorWrite(&colorWrite);
     mRasterState.colorWrite = colorWrite;
     mRasterState.depthFunc = depthTest ? DepthFunc::GE : DepthFunc::A;
-    mRasterState.alphaToCoverage = mBlendingMode == BlendingMode::MASKED;
+
+    bool alphaToCoverageSet = false;
+    parser->getAlphaToCoverageSet(&alphaToCoverageSet);
+    if (alphaToCoverageSet) {
+        bool alphaToCoverage = false;
+        parser->getAlphaToCoverage(&alphaToCoverage);
+        mRasterState.alphaToCoverage = alphaToCoverage;
+    } else {
+        mRasterState.alphaToCoverage = mBlendingMode == BlendingMode::MASKED;
+    }
 
     parser->hasSpecularAntiAliasing(&mSpecularAntiAliasing);
     if (mSpecularAntiAliasing) {

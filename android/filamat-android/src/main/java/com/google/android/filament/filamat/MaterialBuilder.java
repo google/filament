@@ -361,6 +361,12 @@ public class MaterialBuilder {
     }
 
     @NonNull
+    public MaterialBuilder alphaToCoverage(boolean enable) {
+        nMaterialBuilderAlphaToCoverage(mNativeObject, enable);
+        return this;
+    }
+
+    @NonNull
     public MaterialBuilder shadowMultiplier(boolean shadowMultiplier) {
         nMaterialBuilderShadowMultiplier(mNativeObject, shadowMultiplier);
         return this;
@@ -584,6 +590,7 @@ public class MaterialBuilder {
     private static native void nMaterialBuilderDepthCulling(long nativeBuilder, boolean enable);
     private static native void nMaterialBuilderDoubleSided(long nativeBuilder, boolean doubleSided);
     private static native void nMaterialBuilderMaskThreshold(long nativeBuilder, float mode);
+    private static native void nMaterialBuilderAlphaToCoverage(long nativeBuilder, boolean enable);
 
     private static native void nMaterialBuilderShadowMultiplier(long mNativeObject,
             boolean shadowMultiplier);

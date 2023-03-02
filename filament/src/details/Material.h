@@ -124,6 +124,7 @@ public:
     }
     bool isDoubleSided() const noexcept { return mDoubleSided; }
     bool hasDoubleSidedCapability() const noexcept { return mDoubleSidedCapability; }
+    bool isAlphaToCoverageEnabled() const noexcept { return mRasterState.alphaToCoverage; }
     float getMaskThreshold() const noexcept { return mMaskThreshold; }
     bool hasShadowMultiplier() const noexcept { return mHasShadowMultiplier; }
     AttributeBitset getRequiredAttributes() const noexcept { return mRequiredAttributes; }

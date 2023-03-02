@@ -504,6 +504,17 @@ public class Material {
     }
 
     /**
+     * Indicates whether instances of this material will use alpha to coverage.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/rasterization:alphatocoverage">
+     * Rasterization: alphaToCoverage</a>
+     */
+    public boolean isAlphaToCoverageEnabled() {
+        return nIsAlphaToCoverageEnabled(getNativeObject());
+    }
+
+    /**
      * Returns the alpha mask threshold used when the blending mode is set to masked.
      *
      * @see
@@ -915,6 +926,7 @@ public class Material {
     private static native boolean nIsDepthWriteEnabled(long nativeMaterial);
     private static native boolean nIsDepthCullingEnabled(long nativeMaterial);
     private static native boolean nIsDoubleSided(long nativeMaterial);
+    private static native boolean nIsAlphaToCoverageEnabled(long nativeMaterial);
     private static native float nGetMaskThreshold(long nativeMaterial);
     private static native float nGetSpecularAntiAliasingVariance(long nativeMaterial);
     private static native float nGetSpecularAntiAliasingThreshold(long nativeMaterial);

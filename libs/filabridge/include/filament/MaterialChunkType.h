@@ -67,15 +67,17 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
     MaterialReflectionMode = charTo64bitNum("MAT_REFL"),
 
     MaterialRequiredAttributes = charTo64bitNum("MAT_REQA"),
-    MaterialDepthWriteSet = charTo64bitNum("MAT_DEWS"),
     MaterialDoubleSidedSet = charTo64bitNum("MAT_DOSS"),
     MaterialDoubleSided = charTo64bitNum("MAT_DOSI"),
 
     MaterialColorWrite = charTo64bitNum("MAT_CWRIT"),
+    MaterialDepthWriteSet = charTo64bitNum("MAT_DEWS"),
     MaterialDepthWrite = charTo64bitNum("MAT_DWRIT"),
     MaterialDepthTest = charTo64bitNum("MAT_DTEST"),
     MaterialInstanced = charTo64bitNum("MAT_INSTA"),
     MaterialCullingMode = charTo64bitNum("MAT_CUMO"),
+    MaterialAlphaToCoverageSet = charTo64bitNum("MAT_A2CS"),
+    MaterialAlphaToCoverage = charTo64bitNum("MAT_A2CO"),
 
     MaterialHasCustomDepthShader =charTo64bitNum("MAT_CSDP"),
 

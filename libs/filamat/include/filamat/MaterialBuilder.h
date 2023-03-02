@@ -390,7 +390,10 @@ public:
 
     MaterialBuilder& featureLevel(FeatureLevel featureLevel) noexcept;
 
-    //! Set the blending mode for this material.
+    /**
+     * Set the blending mode for this material. When set to MASKED, alpha to coverage is turned on.
+     * You can override this behavior using alphaToCoverage(false).
+     */
     MaterialBuilder& blending(BlendingMode blending) noexcept;
 
     /**
@@ -435,6 +438,14 @@ public:
      * @ref filament::MaterialInstance::setMaskThreshold "MaterialInstance::setMaskThreshold".
      */
     MaterialBuilder& maskThreshold(float threshold) noexcept;
+
+    /**
+     * Enables or disables alpha-to-coverage. When enabled, the coverage of a fragment is based
+     * on its alpha value. This parameter is only useful when MSAA is in use. Alpha to coverage
+     * is enabled automatically when the blend mode is set to MASKED; this behavior can be
+     * overridden by calling alphaToCoverage(false).
+     */
+    MaterialBuilder& alphaToCoverage(bool enable) noexcept;
 
     //! The material output is multiplied by the shadowing factor (UNLIT model only).
     MaterialBuilder& shadowMultiplier(bool shadowMultiplier) noexcept;
@@ -791,6 +802,8 @@ private:
     bool mInstanced = false;
     bool mDepthWrite = true;
     bool mDepthWriteSet = false;
+    bool mAlphaToCoverage = false;
+    bool mAlphaToCoverageSet = false;
 
     bool mSpecularAntiAliasing = false;
     bool mClearCoatIorChange = true;
