@@ -251,6 +251,13 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderMaskThr
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderAlphaToCoverage(JNIEnv*,
+        jclass, jlong nativeBuilder, jboolean enable) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->alphaToCoverage(enable);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderShadowMultiplier(
         JNIEnv*, jclass, jlong nativeBuilder, jboolean shadowMultiplier) {
     auto builder = (MaterialBuilder*) nativeBuilder;

@@ -336,6 +336,12 @@ MaterialBuilder& MaterialBuilder::maskThreshold(float threshold) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::alphaToCoverage(bool enable) noexcept {
+    mAlphaToCoverage = enable;
+    mAlphaToCoverageSet = true;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::shadowMultiplier(bool shadowMultiplier) noexcept {
     mShadowMultiplier = shadowMultiplier;
     return *this;
@@ -1226,11 +1232,13 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
         container.addSimpleChild<uint8_t>(ChunkType::MaterialBlendingMode, static_cast<uint8_t>(mBlendingMode));
         container.addSimpleChild<uint8_t>(ChunkType::MaterialTransparencyMode, static_cast<uint8_t>(mTransparencyMode));
         container.addSimpleChild<uint8_t>(ChunkType::MaterialReflectionMode, static_cast<uint8_t>(mReflectionMode));
-        container.addSimpleChild<bool>(ChunkType::MaterialDepthWriteSet, mDepthWriteSet);
         container.addSimpleChild<bool>(ChunkType::MaterialColorWrite, mColorWrite);
+        container.addSimpleChild<bool>(ChunkType::MaterialDepthWriteSet, mDepthWriteSet);
         container.addSimpleChild<bool>(ChunkType::MaterialDepthWrite, mDepthWrite);
         container.addSimpleChild<bool>(ChunkType::MaterialDepthTest, mDepthTest);
         container.addSimpleChild<bool>(ChunkType::MaterialInstanced, mInstanced);
+        container.addSimpleChild<bool>(ChunkType::MaterialAlphaToCoverageSet, mAlphaToCoverageSet);
+        container.addSimpleChild<bool>(ChunkType::MaterialAlphaToCoverage, mAlphaToCoverage);
         container.addSimpleChild<uint8_t>(ChunkType::MaterialCullingMode, static_cast<uint8_t>(mCullingMode));
 
         uint64_t properties = 0;
