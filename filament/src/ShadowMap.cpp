@@ -357,7 +357,7 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
 
     if (params.options.stable) {
         // Use the world origin as reference point, fixed w.r.t. the camera
-        snapLightFrustum(s, o, Mv, -camera.getWorldOffsetDeprecated(),
+        snapLightFrustum(s, o, Mv, camera.worldOrigin[3].xyz,
                 1.0f / float(shadowMapInfo.shadowDimension));
     }
 

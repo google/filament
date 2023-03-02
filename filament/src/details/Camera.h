@@ -220,9 +220,6 @@ struct CameraInfo {
     math::float3 const& getPosition() const noexcept { return model[3].xyz; }
     math::float3 getForwardVector() const noexcept { return normalize(-model[2].xyz); }
     math::mat4 getUserViewMatrix() const noexcept { return view * worldOrigin; }
-
-    // FIXME: this shouldn't be used, use worldOrigin transform instead
-    math::float3 getWorldOffsetDeprecated() const noexcept { return -worldOrigin[3].xyz; }
 };
 
 FILAMENT_DOWNCAST(Camera)
