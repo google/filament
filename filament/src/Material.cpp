@@ -72,6 +72,10 @@ bool Material::isDoubleSided() const noexcept {
     return downcast(this)->isDoubleSided();
 }
 
+bool Material::isAlphaToCoverageEnabled() const noexcept {
+    return downcast(this)->isAlphaToCoverageEnabled();
+}
+
 float Material::getMaskThreshold() const noexcept {
     return downcast(this)->getMaskThreshold();
 }

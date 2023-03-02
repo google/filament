@@ -1362,6 +1362,11 @@ Description
       ALPHA_TO_COVERAGE is enabled for non-translucent views. See the maskThreshold section for more
       information.
 
+!!! Note
+    When `blending` is set to `masked`, alpha to coverage is automatically enabled for the material.
+    If this behavior is undesirable, refer to the Rasterization: alphaToCoverage section to turn
+    alpha to coverage off using the `alphaToCoverage` property.
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
     blending : transparent
@@ -1592,6 +1597,37 @@ material {
     name : "Double sided material",
     shadingModel : lit,
     doubleSided : true
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = materialParams.albedo;
+    }
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Rasterization: alphaToCoverage
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `false`.
+
+Description
+:     Enables or disables alpha to coverage. When alpha to coverage is enabled, the coverage of
+      fragment is derived from its alpha. This property is only meaningful when MSAA is enabled.
+      Note: setting `blending` to `masked` automatically enables alpha to coverage. If this is not
+      desired, you can override this behavior by setting alpha to coverage to false as in the
+      example below.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    name : "Alpha to coverage",
+    shadingModel : lit,
+    blending : masked,
+    alphaToCoverage : false
 }
 
 fragment {

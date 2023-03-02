@@ -88,6 +88,8 @@ public:
     bool getShading(Shading*) const noexcept;
     bool getBlendingMode(BlendingMode*) const noexcept;
     bool getMaskThreshold(float*) const noexcept;
+    bool getAlphaToCoverageSet(bool*) const noexcept;
+    bool getAlphaToCoverage(bool*) const noexcept;
     bool hasShadowMultiplier(bool*) const noexcept;
     bool getRequiredAttributes(AttributeBitset*) const noexcept;
     bool getRefractionMode(RefractionMode* value) const noexcept;
