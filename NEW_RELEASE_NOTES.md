@@ -12,3 +12,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - materials: new alphaToCoverage property can be used to control alpha to coverage behavior
 - materials: added `getUserWorldFromWorldMatrix()` and `getUserWorldPosition()` to retrieve the 
            API-level (user) world position in materials. Deprecated `getWorldOffset()`. [⚠️ **Recompile Materials**]
+- engine: fix precision issue with `shading_view` in large scenes

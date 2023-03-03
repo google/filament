@@ -1011,31 +1011,35 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     rt->transformClientRectToPlatform(&renderPassInfo.renderArea);
 
-    VkClearValue clearValues[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1] = {};
+    if (params.flags.clear != TargetBufferFlags::NONE) {
+        VkClearValue clearValues[
+                MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT +
+                1] = {};
 
-    // NOTE: clearValues must be populated in the same order as the attachments array in
-    // VulkanFboCache::getFramebuffer. Values must be provided regardless of whether Vulkan is
-    // actually clearing that particular target.
-    for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-        if (fbkey.color[i]) {
-            VkClearValue& clearValue = clearValues[renderPassInfo.clearValueCount++];
-            clearValue.color.float32[0] = params.clearColor.r;
-            clearValue.color.float32[1] = params.clearColor.g;
-            clearValue.color.float32[2] = params.clearColor.b;
-            clearValue.color.float32[3] = params.clearColor.a;
+        // NOTE: clearValues must be populated in the same order as the attachments array in
+        // VulkanFboCache::getFramebuffer. Values must be provided regardless of whether Vulkan is
+        // actually clearing that particular target.
+        for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
+            if (fbkey.color[i]) {
+                VkClearValue &clearValue = clearValues[renderPassInfo.clearValueCount++];
+                clearValue.color.float32[0] = params.clearColor.r;
+                clearValue.color.float32[1] = params.clearColor.g;
+                clearValue.color.float32[2] = params.clearColor.b;
+                clearValue.color.float32[3] = params.clearColor.a;
+            }
         }
-    }
-    // Resolve attachments are not cleared but still have entries in the list, so skip over them.
-    for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-        if (rpkey.needsResolveMask & (1u << i)) {
-            renderPassInfo.clearValueCount++;
+        // Resolve attachments are not cleared but still have entries in the list, so skip over them.
+        for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
+            if (rpkey.needsResolveMask & (1u << i)) {
+                renderPassInfo.clearValueCount++;
+            }
         }
+        if (fbkey.depth) {
+            VkClearValue &clearValue = clearValues[renderPassInfo.clearValueCount++];
+            clearValue.depthStencil = {(float) params.clearDepth, 0};
+        }
+        renderPassInfo.pClearValues = &clearValues[0];
     }
-    if (fbkey.depth) {
-        VkClearValue& clearValue = clearValues[renderPassInfo.clearValueCount++];
-        clearValue.depthStencil = {(float) params.clearDepth, 0};
-    }
-    renderPassInfo.pClearValues = &clearValues[0];
 
     vkCmdBeginRenderPass(cmdbuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
