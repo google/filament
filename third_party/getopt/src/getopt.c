@@ -1,5 +1,8 @@
 #ifdef _WIN32
 #include <windows.h>
+# define weak_alias(name, aliasname) _weak_alias (name, aliasname)
+# define _weak_alias(name, aliasname) \
+	extern __typeof (name) aliasname __attribute__ ((weak, alias (#name)));
 #else
 #include <unistd.h>
 #endif
