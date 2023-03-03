@@ -10,3 +10,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 fog: fixed fog height falloff and computation precision on mobile [⚠️ **Recompile Materials**]
 materials: new alphaToCoverage property can be used to control alpha to coverage behavior
+engine: fix precision issue with `shading_view` in large scenes
