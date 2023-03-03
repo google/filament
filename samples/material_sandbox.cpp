@@ -333,10 +333,16 @@ static void setup(Engine* engine, View*, Scene* scene) {
     if (ibl) {
         auto& params = g_params;
         IndirectLight* const pIndirectLight = ibl->getIndirectLight();
-        params.lightDirection = IndirectLight::getDirectionEstimate(ibl->getSphericalHarmonics());
-        float4 c = pIndirectLight->getColorEstimate(ibl->getSphericalHarmonics(), params.lightDirection);
-        params.lightIntensity = c.w * pIndirectLight->getIntensity();
-        params.lightColor = c.rgb;
+        // If we loaded an equirectangular IBL, we don't have spherical harmonics. In that case,
+        // simply skip the estimates.
+        if (ibl->hasSphericalHarmonics()) {
+            params.lightDirection =
+                    IndirectLight::getDirectionEstimate(ibl->getSphericalHarmonics());
+            float4 c = pIndirectLight->getColorEstimate(
+                    ibl->getSphericalHarmonics(), params.lightDirection);
+            params.lightIntensity = c.w * pIndirectLight->getIntensity();
+            params.lightColor = c.rgb;
+        }
     }
 
     g_params.bloomOptions.dirt = FilamentApp::get().getDirtTexture();

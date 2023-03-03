@@ -139,6 +139,7 @@ bool IBL::loadFromKtx(const std::string& prefix) {
     if (!iblKtx->getSphericalHarmonics(mBands)) {
         return false;
     }
+    mHasSphericalHarmonics = true;
 
     mIndirectLight = IndirectLight::Builder()
             .reflections(mTexture)
@@ -170,6 +171,7 @@ bool IBL::loadFromDirectory(const utils::Path& path) {
     } else {
         return false;
     }
+    mHasSphericalHarmonics = true;
 
     // Read mip-mapped cubemap
     const std::string prefix = "m";
