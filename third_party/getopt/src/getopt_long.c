@@ -1,6 +1,6 @@
 #define _GNU_SOURCE
 #include <stddef.h>
-#include <getopt.h>
+#include <getopt/getopt.h>
 #include <stdio.h>
 
 extern int __optpos, __optreset;
