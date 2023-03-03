@@ -1,8 +1,5 @@
 #ifdef _WIN32
 #include <windows.h>
-# define weak_alias(name, aliasname) _weak_alias (name, aliasname)
-# define _weak_alias(name, aliasname) \
-	extern __typeof (name) aliasname __attribute__ ((weak, alias (#name)));
 #else
 #include <unistd.h>
 #endif
@@ -16,7 +13,9 @@ char *optarg;
 int optind=1, opterr=1, optopt, __optpos, __optreset=0;
 
 #define optpos __optpos
+#ifndef _WIN32
 weak_alias(__optreset, optreset);
+#endif
 
 int getopt(int argc, char * const argv[], const char *optstring)
 {
@@ -78,4 +77,6 @@ int getopt(int argc, char * const argv[], const char *optstring)
 	return c;
 }
 
+#ifndef _WIN32
 weak_alias(getopt, __posix_getopt);
+#endif
