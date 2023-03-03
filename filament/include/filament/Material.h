@@ -171,6 +171,9 @@ public:
     //! Indicates whether this material is double-sided.
     bool isDoubleSided() const noexcept;
 
+    //! Indicates whether this material uses alpha to coverage.
+    bool isAlphaToCoverageEnabled() const noexcept;
+
     //! Returns the alpha mask threshold used when the blending mode is set to masked.
     float getMaskThreshold() const noexcept;
 

@@ -610,8 +610,10 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * Update driver state
      */
 
+    auto const userModelMatrix = inverse(cameraInfo.getUserViewMatrix());
+    auto const userCameraPosition = userModelMatrix[3].xyz;
     mPerViewUniforms.prepareTime(engine, userTime);
-    mPerViewUniforms.prepareFog(cameraInfo.getPosition(), mFogOptions);
+    mPerViewUniforms.prepareFog(userCameraPosition, mFogOptions);
     mPerViewUniforms.prepareTemporalNoise(engine, mTemporalAntiAliasingOptions);
     mPerViewUniforms.prepareBlending(needsAlphaChannel);
 }

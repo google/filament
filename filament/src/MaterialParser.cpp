@@ -246,6 +246,14 @@ bool MaterialParser::getMaskThreshold(float* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialMaskThreshold, value);
 }
 
+bool MaterialParser::getAlphaToCoverageSet(bool* value) const noexcept {
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialAlphaToCoverageSet, value);
+}
+
+bool MaterialParser::getAlphaToCoverage(bool* value) const noexcept {
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialAlphaToCoverage, value);
+}
+
 bool MaterialParser::hasShadowMultiplier(bool* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialShadowMultiplier, value);
 }
