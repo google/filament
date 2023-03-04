@@ -37,8 +37,8 @@ void computeShadingParams() {
     // With perspective camera, the view vector is cast from the fragment pos to the eye position,
     // With ortho camera, however, the view vector is the same for all fragments:
     highp vec3 sv = isPerspectiveProjection() ?
-        (frameUniforms.cameraPosition - shading_position) :
-        frameUniforms.worldFromViewMatrix[2].xyz; // ortho camera backward dir
+        (frameUniforms.worldFromViewMatrix[3].xyz - shading_position) :
+         frameUniforms.worldFromViewMatrix[2].xyz; // ortho camera backward dir
     shading_view = normalize(sv);
 
     // we do this so we avoid doing (matrix multiply), but we burn 4 varyings:

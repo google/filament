@@ -1946,8 +1946,9 @@ struct MaterialVertexInputs {
 
 !!! TIP: worldPosition
     To achieve good precision, the `worldPosition` coordinate in the vertex shader is shifted by the
-    camera position. To get the true world-space position, users can add this to
-    `getWorldOffset()`.
+    camera position. To get the true world-space position, users can use
+    `getUserWorldPosition()`, however be aware that the true world-position might not
+    be able to fit in a `float` or might be represented with severely reduced precision.
 
 !!! TIP: UV attributes
     By default the vertex shader of a material will flip the Y coordinate of the UV attributes
@@ -2300,8 +2301,9 @@ type aliases:
                  Name               |   Type   |            Description
 :-----------------------------------|:--------:|:------------------------------------
 **getResolution()**                 | float4   |  Dimensions of the view's effective (physical) viewport in pixels: `width`, `height`, `1 / width`, `1 / height`. This might be different from `View::getViewport()` for instance because of added rendering guard-bands.
-**getWorldCameraPosition()**        | float3   |  Position of the camera/eye in world space
-**getWorldOffset()**                | float3   |  The shift required to obtain API-level world space
+**getWorldCameraPosition()**        | float3   |  Position of the camera/eye in world space (see note below)
+**getWorldOffset()**                | float3   |  [deprecated] The shift required to obtain API-level world space. Use getUserWorldPosition() instead
+**getUserWorldFromWorldMatrix()**   | float4x4 |  Matrix that converts from world space to API-level (user) world space.
 **getTime()**                       | float    |  Current time as a remainder of 1 second. Yields a value between 0 and 1
 **getUserTime()**                   | float4   |  Current time in seconds: `time`, `(double)time - time`, `0`, `0`
 **getUserTimeMode(float m)**        | float    |  Current time modulo m in seconds
@@ -2311,7 +2313,7 @@ type aliases:
 !!! TIP: world space
     To achieve good precision, the "world space" in Filament's shading system does not necessarily
     match the API-level world space. To obtain the position of the API-level camera, custom
-    materials can add `getWorldOffset()` to `getWorldCameraPosition()`.
+    materials can use `getUserWorldFromWorldMatrix()` to transform `getWorldCameraPosition()`.
 
 ### Vertex only
 
@@ -2333,6 +2335,7 @@ The following APIs are only available from the fragment block:
 :---------------------------------------|:--------:|:------------------------------------
 **getWorldTangentFrame()**              | float3x3 |  Matrix containing in each column the `tangent` (`frame[0]`), `bi-tangent` (`frame[1]`) and `normal` (`frame[2]`) of the vertex in world space. If the material does not compute a tangent space normal for bump mapping or if the shading is not anisotropic, only the `normal` is valid in this matrix.
 **getWorldPosition()**                  | float3   |  Position of the fragment in world space (see note below about world-space)
+**getUserWorldPosition()**              | float3   |  Position of the fragment in API-level (user) world-space (see note below about world-space)
 **getWorldViewVector()**                | float3   |  Normalized vector in world space from the fragment position to the eye
 **getWorldNormalVector()**              | float3   |  Normalized normal in world space, after bump mapping (must be used after `prepareMaterial()`)
 **getWorldGeometricNormalVector()**     | float3   |  Normalized normal in world space, before bump mapping (can be used before `prepareMaterial()`)
@@ -2349,9 +2352,10 @@ The following APIs are only available from the fragment block:
 **ycbcrToRgb(float, float2)**           | float3   |  Converts a luminance and CbCr pair to a sRGB color
 **uvToRenderTargetUV(float2)**          | float2   |  Transforms a UV coordinate to allow sampling from a `RenderTarget` attachment
 
-!!! TIP: world space
-    To obtain API-level world space coordinates, custom materials should add `getWorldOffset()` to
-    `getWorldPosition()` (et al).
+!!! TIP: world-space
+    To obtain API-level world-space coordinates, custom materials should use `getUserWorldPosition()`
+    or use `getUserWorldFromWorldMatrix()`. Note that API-level world-space coordinates should
+    never or rarely be used because they may not fit in a float3 or have severely reduced precision.
 
 !!! TIP: sampling from render targets
     When sampling from a `filament::Texture` that is attached to a `filament::RenderTarget` for
