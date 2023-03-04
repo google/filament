@@ -10,18 +10,24 @@ vec4 fog(vec4 color, highp vec3 view) {
     highp vec3 density = frameUniforms.fogDensity;
     float falloff = frameUniforms.fogHeightFalloff;
 
-    highp float fogIntegralFunctionOfDistance = density.z;
+    // Compute the integral of the fog density at a distance of 1m at a given height.
+    highp float fogDensityIntegralAtOneMeter = density.z;
     highp float h = falloff * view.y;
     if (abs(h) > 0.01) {
         // The function below is continuous at h=0, so to avoid a divide-by-zero, we just clamp h
-        fogIntegralFunctionOfDistance = (fogIntegralFunctionOfDistance - density.x * exp(density.y - h)) / h;
+        fogDensityIntegralAtOneMeter = (fogDensityIntegralAtOneMeter - density.x * exp(density.y - h)) / h;
     }
-    highp float d = length(view);
-    highp float fogIntegral = fogIntegralFunctionOfDistance * max(d - frameUniforms.fogStart, 0.0);
-    float fogDensity = exp(-fogIntegral);
 
-    // don't go above requested max opacity
-    float fogOpacity = min(1.0 - fogDensity, frameUniforms.fogMaxOpacity);
+    // Compute the integral of the fog density at a given height from fogStart to the fragment
+    highp float d = length(view);
+    highp float fogDensityIntegral =
+            fogDensityIntegralAtOneMeter * max(d - frameUniforms.fogStart, 0.0);
+
+    // Compute the transmittance using the Beer-Lambert Law
+    float fogTransmittance = exp(-fogDensityIntegral);
+
+    // Compute the opacity from the transmittance
+    float fogOpacity = min(1.0 - fogTransmittance, frameUniforms.fogMaxOpacity);
 
     // compute fog color
     vec3 fogColor = frameUniforms.fogColor;
@@ -33,15 +39,21 @@ vec4 fog(vec4 color, highp vec3 view) {
     }
 
     fogColor *= fogOpacity;
+
     if (frameUniforms.fogInscatteringSize > 0.0) {
         // compute a new line-integral for a different start distance
-        highp float inscatteringIntegral = fogIntegralFunctionOfDistance *
-                max(d - frameUniforms.fogInscatteringStart, 0.0);
-        float inscatteringDensity = exp(-inscatteringIntegral);
+        highp float inscatteringDensityIntegral =
+                fogDensityIntegralAtOneMeter * max(d - frameUniforms.fogInscatteringStart, 0.0);
+
+        // Compute the transmittance using the Beer-Lambert Law
+        float inscatteringDensity = exp(-inscatteringDensityIntegral);
+
+        // Compute the opacity from the transmittance
         float inscatteringOpacity = 1.0 - inscatteringDensity;
 
         // Add sun colored fog when looking towards the sun
         vec3 sunColor = frameUniforms.lightColorIntensity.rgb * frameUniforms.lightColorIntensity.w;
+
         float sunAmount = max(dot(view, frameUniforms.lightDirection) / d, 0.0); // between 0 and 1
         float sunInscattering = pow(sunAmount, frameUniforms.fogInscatteringSize);
 
