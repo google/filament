@@ -48,7 +48,7 @@ public:
     virtual uint64_t queryResult(GLTimerQuery* query) = 0;
 };
 
-#if defined(GL_VERSION_3_3) || defined(GL_EXT_disjoint_timer_query)
+#if defined(BACKEND_OPENGL_VERSION_GL) || defined(GL_EXT_disjoint_timer_query)
 
 class TimerQueryNative : public OpenGLTimerQueryInterface {
 public:

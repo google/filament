@@ -55,6 +55,7 @@ public:
         return mSkybox;
     }
 
+    bool hasSphericalHarmonics() const { return mHasSphericalHarmonics; }
     filament::math::float3 const* getSphericalHarmonics() const { return mBands; }
 
 private:
@@ -71,6 +72,7 @@ private:
     filament::Engine& mEngine;
 
     filament::math::float3 mBands[9] = {};
+    bool mHasSphericalHarmonics = false;
 
     filament::Texture* mTexture = nullptr;
     filament::IndirectLight* mIndirectLight = nullptr;

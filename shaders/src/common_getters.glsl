@@ -33,6 +33,11 @@ highp mat4 getWorldFromClipMatrix() {
 }
 
 /** @public-api */
+highp mat4 getUserWorldFromWorldMatrix() {
+    return frameUniforms.userWorldFromWorldMatrix;
+}
+
+/** @public-api */
 float getTime() {
     return frameUniforms.time;
 }
@@ -81,12 +86,12 @@ highp vec4 getResolution() {
 
 /** @public-api */
 highp vec3 getWorldCameraPosition() {
-    return frameUniforms.cameraPosition;
+    return frameUniforms.worldFromViewMatrix[3].xyz;
 }
 
-/** @public-api */
+/** @public-api, @deprecated use getUserWorldPosition() or getUserWorldFromWorldMatrix() instead  */
 highp vec3 getWorldOffset() {
-    return frameUniforms.worldOffset;
+    return getUserWorldFromWorldMatrix()[3].xyz;
 }
 
 /** @public-api */

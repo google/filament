@@ -50,6 +50,11 @@ highp vec3 getWorldPosition() {
 }
 
 /** @public-api */
+highp vec3 getUserWorldPosition() {
+    return mulMat4x4Float3(getUserWorldFromWorldMatrix(), getWorldPosition()).xyz;
+}
+
+/** @public-api */
 vec3 getWorldViewVector() {
     return shading_view;
 }

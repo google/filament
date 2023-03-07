@@ -390,7 +390,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
      * Directional light (always at index 0)
      */
 
-    FLightManager::Instance directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
+    FLightManager::Instance const directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
     const float3 sceneSpaceDirection = lightData.elementAt<FScene::DIRECTION>(0); // guaranteed normalized
     mPerViewUniforms.prepareDirectionalLight(engine, exposure, sceneSpaceDirection, directionalLight);
     mHasDirectionalLight = directionalLight.isValid();
@@ -401,32 +401,31 @@ CameraInfo FView::computeCameraInfo(FEngine& engine) const noexcept {
 
     /*
      * We apply a "world origin" to "everything" in order to implement the IBL rotation.
-     * The "world origin" could also be useful for other things, like keeping the origin
-     * close to the camera position to improve fp precision in the shader for large scenes.
+     * The "world origin" is also be used to kee the origin close to the camera position to
+     * improve fp precision in the shader for large scenes.
      */
-    mat4 worldOriginScene;
-    FIndirectLight const* const ibl = scene->getIndirectLight();
-    if (ibl) {
-        // the IBL transformation must be a rigid transform
-        mat3f rotation{ scene->getIndirectLight()->getRotation() };
-        // for a rigid-body transform, the inverse is the transpose
-        worldOriginScene = mat4{ transpose(rotation) };
-    }
+    mat4 translation;
+    mat4 rotation;
 
     /*
      * Calculate all camera parameters needed to render this View for this frame.
      */
     FCamera const* const camera = mViewingCamera ? mViewingCamera : mCullingCamera;
-
     if (engine.debug.view.camera_at_origin) {
         // this moves the camera to the origin, effectively doing all shader computations in
         // view-space, which improves floating point precision in the shader by staying around
         // zero, where fp precision is highest. This also ensures that when the camera is placed
         // very far from the origin, objects are still rendered and lit properly.
-        worldOriginScene[3].xyz -= camera->getPosition();
+        translation = mat4::translation( -camera->getPosition() );
     }
 
-    return { *camera, worldOriginScene };
+    FIndirectLight const* const ibl = scene->getIndirectLight();
+    if (ibl) {
+        // the IBL transformation must be a rigid transform
+        rotation = mat4{ transpose(scene->getIndirectLight()->getRotation()) };
+    }
+
+    return { *camera, rotation * translation };
 }
 
 void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
@@ -610,8 +609,10 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * Update driver state
      */
 
+    auto const userModelMatrix = inverse(cameraInfo.getUserViewMatrix());
+    auto const userCameraPosition = userModelMatrix[3].xyz;
     mPerViewUniforms.prepareTime(engine, userTime);
-    mPerViewUniforms.prepareFog(cameraInfo.getPosition(), mFogOptions);
+    mPerViewUniforms.prepareFog(userCameraPosition, mFogOptions);
     mPerViewUniforms.prepareTemporalNoise(engine, mTemporalAntiAliasingOptions);
     mPerViewUniforms.prepareBlending(needsAlphaChannel);
 }

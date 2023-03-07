@@ -154,6 +154,14 @@ Java_com_google_android_filament_Material_nIsDoubleSided(JNIEnv*, jclass,
 }
 
 extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Material_nIsAlphaToCoverageEnabled(JNIEnv*, jclass,
+        jlong nativeMaterial) {
+    Material* material = (Material*) nativeMaterial;
+    return (jboolean) material->isAlphaToCoverageEnabled();
+}
+
+extern "C"
 JNIEXPORT jfloat JNICALL
 Java_com_google_android_filament_Material_nGetMaskThreshold(JNIEnv*, jclass,
         jlong nativeMaterial) {

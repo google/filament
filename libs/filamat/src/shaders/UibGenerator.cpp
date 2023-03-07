@@ -41,6 +41,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "viewFromClipMatrix",     0, Type::MAT4,   Precision::HIGH },
             { "clipFromWorldMatrix",    0, Type::MAT4,   Precision::HIGH },
             { "worldFromClipMatrix",    0, Type::MAT4,   Precision::HIGH },
+            { "userWorldFromWorldMatrix",0,Type::MAT4,   Precision::HIGH },
             { "clipTransform",          0, Type::FLOAT4, Precision::HIGH },
 
             { "clipControl",            0, Type::FLOAT2                  },
@@ -58,12 +59,8 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
 
             { "lodBias",                0, Type::FLOAT                   },
             { "refractionLodOffset",    0, Type::FLOAT                   },
-            { "padding1",               0, Type::FLOAT                   },
-            { "padding2",               0, Type::FLOAT                   },
 
-            { "cameraPosition",         0, Type::FLOAT3, Precision::HIGH },
             { "oneOverFarMinusNear",    0, Type::FLOAT,  Precision::HIGH },
-            { "worldOffset",            0, Type::FLOAT3                  },
             { "nearOverFarMinusNear",   0, Type::FLOAT,  Precision::HIGH },
             { "cameraFar",              0, Type::FLOAT                   },
             { "exposure",               0, Type::FLOAT,  Precision::HIGH }, // high precision to work around #3602 (qualcom),
@@ -120,16 +117,18 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // ------------------------------------------------------------------------------------
             // Fog [variant: FOG]
             // ------------------------------------------------------------------------------------
-            { "fogStart",                0, Type::FLOAT                  },
+            { "fogDensity",              0, Type::FLOAT3,Precision::HIGH },
+            { "fogStart",                0, Type::FLOAT, Precision::HIGH },
             { "fogMaxOpacity",           0, Type::FLOAT                  },
-            { "fogHeight",               0, Type::FLOAT                  },
+            { "fogHeight",               0, Type::FLOAT, Precision::HIGH },
             { "fogHeightFalloff",        0, Type::FLOAT                  },
-            { "fogColor",                0, Type::FLOAT3                 },
-            { "fogDensity",              0, Type::FLOAT                  },
-            { "fogInscatteringStart",    0, Type::FLOAT                  },
-            { "fogInscatteringSize",     0, Type::FLOAT                  },
-            { "fogColorFromIbl",         0, Type::FLOAT                  },
             { "fogReserved0",            0, Type::FLOAT                  },
+            { "fogColor",                0, Type::FLOAT3                 },
+            { "fogColorFromIbl",         0, Type::FLOAT                  },
+            { "fogInscatteringStart",    0, Type::FLOAT, Precision::HIGH },
+            { "fogInscatteringSize",     0, Type::FLOAT                  },
+            { "fogReserved1",            0, Type::FLOAT                  },
+            { "fogReserved2",            0, Type::FLOAT                  },
 
             // ------------------------------------------------------------------------------------
             // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
