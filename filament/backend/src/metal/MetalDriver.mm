@@ -1287,6 +1287,7 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
                          fromRegion:srcRegion
                         mipmapLevel:0];
         scheduleDestroy(std::move(*p));
+        delete p;
     }];
 }
 
