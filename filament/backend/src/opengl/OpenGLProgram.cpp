@@ -133,7 +133,7 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
 #if defined(BACKEND_OPENGL_LEVEL_GLES31)
                 glShaderType = GL_COMPUTE_SHADER;
 #else
-                utils::panic(__func__, __FILE__, __LINE__, "ShaderStage::COMPUTE not supported");
+                continue;
 #endif
                 break;
         }
