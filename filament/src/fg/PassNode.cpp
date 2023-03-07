@@ -151,7 +151,12 @@ void RenderPassNode::resolve() noexcept {
 
                 rt.targetBufferFlags |= target;
 
-                if (!rt.outgoing[i] || !rt.outgoing[i]->hasActiveReaders()) {
+                // Discard at the end only if we are writing to this attachment AND later reading
+                // from it. (in particular, don't discard if we're not writing at all, because this
+                // attachment might have other readers after us).
+                // TODO: we could set the discard flag if we are the last reader, i.e.
+                //       if rt->incoming[i] last reader is us.
+                if (rt.outgoing[i] && !rt.outgoing[i]->hasActiveReaders()) {
                     rt.backend.params.flags.discardEnd |= target;
                 }
                 if (!rt.outgoing[i] || !rt.outgoing[i]->hasWriterPass()) {
@@ -161,10 +166,10 @@ void RenderPassNode::resolve() noexcept {
                         rt.backend.params.readOnlyDepthStencil |= RenderPassParams::READONLY_STENCIL;
                     }
                 }
+                // Discard at the start if this attachment has no prior writer
                 if (!rt.incoming[i] || !rt.incoming[i]->hasActiveWriters()) {
                     rt.backend.params.flags.discardStart |= target;
                 }
-
                 VirtualResource* pResource = mFrameGraph.getResource(rt.descriptor.attachments.array[i]);
                 Resource<FrameGraphTexture>* pTextureResource = static_cast<Resource<FrameGraphTexture>*>(pResource);
 

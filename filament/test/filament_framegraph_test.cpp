@@ -890,3 +890,55 @@ TEST_F(FrameGraphTest, SubResourcesWriteRead) {
 
     fg.execute(driverApi);
 }
+
+TEST_F(FrameGraphTest, WriteResourceReadAsAttachment) {
+
+    // this check s that using a resources as a read-only attachment doesn't set the
+    // discard flag on that resource. i.e. that the mere fact of reading a resource as an
+    // attachment doesn't make it invalid.
+    // see: https://github.com/google/filament/issues/5005
+
+    struct PassData {
+        FrameGraphId<FrameGraphTexture> input;
+    };
+    auto& writePass = fg.addPass<PassData>("Write Pass", [&](FrameGraph::Builder& builder, auto& data) {
+                data.input = builder.create<FrameGraphTexture>("Output buffer", {.width=16, .height=32});
+                data.input = builder.write(data.input, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                builder.declareRenderPass("Output target", { .attachments = {
+                        .color = { data.input }
+                }});
+                builder.sideEffect();
+            },
+            [=](FrameGraphResources const& resources, auto const&, backend::DriverApi&) {
+                auto rt = resources.getRenderPassInfo();
+                EXPECT_EQ(rt.params.flags.discardStart, TargetBufferFlags::COLOR0);
+                EXPECT_EQ(rt.params.flags.discardEnd, TargetBufferFlags::NONE);
+            });
+
+    fg.addPass<PassData>("Read Pass", [&](FrameGraph::Builder& builder, auto& data) {
+                data.input = builder.read(writePass->input, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                builder.declareRenderPass("Input target", { .attachments = {
+                        .color = { data.input }
+                }});
+                builder.sideEffect();
+            },
+            [=](FrameGraphResources const& resources, auto const&, backend::DriverApi&) {
+                auto rt = resources.getRenderPassInfo();
+                EXPECT_EQ(rt.params.flags.discardStart, TargetBufferFlags::NONE);
+                EXPECT_EQ(rt.params.flags.discardEnd, TargetBufferFlags::NONE);
+            });
+
+    fg.addPass<PassData>("Sample Pass", [&](FrameGraph::Builder& builder, auto& data) {
+                data.input = builder.sample(writePass->input);
+                builder.sideEffect();
+            },
+            [=](FrameGraphResources const& resources, auto const&, backend::DriverApi&) {
+            });
+
+
+    EXPECT_TRUE(fg.isAcyclic());
+
+    fg.compile();
+
+    fg.execute(driverApi);
+}
