@@ -122,11 +122,6 @@ extern PFNGLGETDEBUGMESSAGELOGKHRPROC glGetDebugMessageLogKHR;
 extern PFNGLCLIPCONTROLEXTPROC glClipControlEXT;
 #endif
 #ifdef GL_EXT_disjoint_timer_query
-extern PFNGLGENQUERIESEXTPROC glGenQueries;
-extern PFNGLDELETEQUERIESEXTPROC glDeleteQueries;
-extern PFNGLBEGINQUERYEXTPROC glBeginQuery;
-extern PFNGLENDQUERYEXTPROC glEndQuery;
-extern PFNGLGETQUERYOBJECTUIVEXTPROC glGetQueryObjectuiv;
 extern PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64v;
 #endif
 #if defined(__ANDROID__)
@@ -199,13 +194,13 @@ void glGetBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, void *d
 #if defined(GL_VERSION_4_5) || defined(GL_ES_VERSION_3_1)
 #   define BACKEND_OPENGL_LEVEL_GLES31
 #   ifdef __EMSCRIPTEN__
-#       error "WebGL shouldn't be defined with with GLES 3.1 headers"
+#       error "__EMSCRIPTEN__ shouldn't be defined with GLES 3.1 headers"
 #   endif
 #endif
-#if defined(GL_ES_VERSION_3_0)
+#if defined(GL_VERSION_4_5) || defined(GL_ES_VERSION_3_0)
 #   define BACKEND_OPENGL_LEVEL_GLES30
 #endif
-#if defined(GL_ES_VERSION_2_0)
+#if defined(GL_VERSION_4_5) || defined(GL_ES_VERSION_2_0)
 #   define BACKEND_OPENGL_LEVEL_GLES20
 #endif
 

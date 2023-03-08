@@ -76,6 +76,7 @@ OpenGLContext::OpenGLContext() noexcept {
 #ifdef BACKEND_OPENGL_VERSION_GLES
     initExtensionsGLES();
     if (state.major == 3) {
+        // Runtime OpenGL version is ES 3.x
         assert_invariant(gets.max_texture_image_units >= 16);
         assert_invariant(gets.max_combined_texture_image_units >= 32);
         if (state.minor >= 1) {
