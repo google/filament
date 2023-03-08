@@ -424,6 +424,8 @@ Texture* Ktx2Reader::createTexture(ktx2_transcoder* transcoder, const void* data
     return texture;
 }
 
+Async::~Async() = default;
+
 Texture* Async::getTexture() const noexcept {
     return static_cast<FAsync const*>(this)->getTexture();
 }

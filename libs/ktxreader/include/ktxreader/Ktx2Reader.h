@@ -142,7 +142,7 @@ class Ktx2Reader {
 
         protected:
             Async() noexcept = default;
-            virtual ~Async() = default;
+            virtual ~Async();
 
         public:
             Async(Async const&) = delete;

@@ -226,6 +226,10 @@ void StbProvider::cancelDecoding() {
         if (info->state != TextureState::DECODING) {
             continue;
         }
+        // Deleting data here should be safe thread-wise as the only other place where
+        // decodedTexelsBaseMipmap is loaded is in the job threads, and we have waited them to
+        // completion above. We also expect the TextureProvider API calls to be made only from one
+        // thread.
         if (intptr_t data = info->decodedTexelsBaseMipmap.load()) {
             delete [] (uint8_t*) data;
         }
