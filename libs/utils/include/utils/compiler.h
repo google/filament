@@ -54,6 +54,12 @@
 #    define UTILS_NORETURN
 #endif
 
+#if __has_attribute(fallthrough)
+#   define UTILS_FALLTHROUGH [[fallthrough]]
+#else
+#   define UTILS_FALLTHROUGH
+#endif
+
 #if __has_attribute(visibility)
 #    ifndef TNT_DEV
 #        define UTILS_PRIVATE __attribute__((visibility("hidden")))
