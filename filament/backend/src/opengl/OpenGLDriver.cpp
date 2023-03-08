@@ -1258,11 +1258,6 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     DEBUG_MARKER()
 
-#if defined(GL_EXT_disjoint_timer_query) && defined(FILAMENT_IMPORT_ENTRY_POINTS)
-    // glGenQueries exists in core ES 3.0 and since GL 3.3
-    using glext::glGenQueries;
-#endif
-
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
     glGenQueries(1u, &tq->gl.query);
     CHECK_GL_ERROR(utils::slog.e)
@@ -1418,11 +1413,6 @@ void OpenGLDriver::destroyStream(Handle<HwStream> sh) {
 
 void OpenGLDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
     DEBUG_MARKER()
-
-#if defined(GL_EXT_disjoint_timer_query) && defined(FILAMENT_IMPORT_ENTRY_POINTS)
-    // glDeleteQueries exists in core ES 3.0 and since GL 3.3
-    using glext::glDeleteQueries;
-#endif
 
     if (tqh) {
         GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
