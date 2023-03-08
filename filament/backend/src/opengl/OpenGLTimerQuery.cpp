@@ -45,29 +45,17 @@ void TimerQueryNative::flush() {
 }
 
 void TimerQueryNative::beginTimeElapsedQuery(GLTimerQuery* query) {
-#if defined(GL_EXT_disjoint_timer_query) && defined(FILAMENT_IMPORT_ENTRY_POINTS)
-    // glBeginQuery exists in core ES 3.0 and since GL 3.3
-    using glext::glBeginQuery;
-#endif
     glBeginQuery(GL_TIME_ELAPSED, query->gl.query);
+    CHECK_GL_ERROR(utils::slog.e)
 }
 
 void TimerQueryNative::endTimeElapsedQuery(GLTimerQuery*) {
-#if defined(GL_EXT_disjoint_timer_query) && defined(FILAMENT_IMPORT_ENTRY_POINTS)
-    // glEndQuery exists in core ES 3.0 and since GL 3.3
-    using glext::glEndQuery;
-#endif
     glEndQuery(GL_TIME_ELAPSED);
+    CHECK_GL_ERROR(utils::slog.e)
 }
 
 bool TimerQueryNative::queryResultAvailable(GLTimerQuery* query) {
     GLuint available = 0;
-
-#if defined(GL_EXT_disjoint_timer_query) && defined(FILAMENT_IMPORT_ENTRY_POINTS)
-    // glGetQueryObjectuiv exists in core ES 3.0 and since GL 3.3
-    using glext::glGetQueryObjectuiv;
-#endif
-
     glGetQueryObjectuiv(query->gl.query, GL_QUERY_RESULT_AVAILABLE, &available);
     CHECK_GL_ERROR(utils::slog.e)
     return available != 0;
