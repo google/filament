@@ -122,11 +122,6 @@ extern PFNGLGETDEBUGMESSAGELOGKHRPROC glGetDebugMessageLogKHR;
 extern PFNGLCLIPCONTROLEXTPROC glClipControlEXT;
 #endif
 #ifdef GL_EXT_disjoint_timer_query
-extern PFNGLGENQUERIESEXTPROC glGenQueries;
-extern PFNGLDELETEQUERIESEXTPROC glDeleteQueries;
-extern PFNGLBEGINQUERYEXTPROC glBeginQuery;
-extern PFNGLENDQUERYEXTPROC glEndQuery;
-extern PFNGLGETQUERYOBJECTUIVEXTPROC glGetQueryObjectuiv;
 extern PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64v;
 #endif
 #if defined(__ANDROID__)

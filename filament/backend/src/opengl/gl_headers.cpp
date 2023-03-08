@@ -49,11 +49,6 @@ PFNGLDEBUGMESSAGECALLBACKKHRPROC glDebugMessageCallbackKHR;
 PFNGLGETDEBUGMESSAGELOGKHRPROC glGetDebugMessageLogKHR;
 #endif
 #ifdef GL_EXT_disjoint_timer_query
-PFNGLGENQUERIESEXTPROC glGenQueries;
-PFNGLDELETEQUERIESEXTPROC glDeleteQueries;
-PFNGLBEGINQUERYEXTPROC glBeginQuery;
-PFNGLENDQUERYEXTPROC glEndQuery;
-PFNGLGETQUERYOBJECTUIVEXTPROC glGetQueryObjectuiv;
 PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64v;
 #endif
 #ifdef GL_EXT_clip_control
@@ -91,11 +86,6 @@ void importGLESExtensionsEntryPoints() {
         getProcAddress(glGetDebugMessageLogKHR, "glGetDebugMessageLogKHR");
 #endif
 #ifdef GL_EXT_disjoint_timer_query
-        getProcAddress(glGenQueries, "glGenQueriesEXT");
-        getProcAddress(glDeleteQueries, "glDeleteQueriesEXT");
-        getProcAddress(glBeginQuery, "glBeginQueryEXT");
-        getProcAddress(glEndQuery, "glEndQueryEXT");
-        getProcAddress(glGetQueryObjectuiv, "glGetQueryObjectuivEXT");
         getProcAddress(glGetQueryObjectui64v, "glGetQueryObjectui64vEXT");
 #endif
 #ifdef GL_EXT_clip_control
