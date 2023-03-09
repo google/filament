@@ -70,7 +70,8 @@ public:
     ~FScene() noexcept;
     void terminate(FEngine& engine);
 
-    void prepare(const math::mat4& worldOriginTransform, bool shadowReceiversAreCasters) noexcept;
+    void prepare(utils::JobSystem& js, LinearAllocatorArena& allocator,
+            math::mat4 const& worldOriginTransform, bool shadowReceiversAreCasters) noexcept;
 
     void prepareVisibleRenderables(utils::Range<uint32_t> visibleRenderables) noexcept;
 

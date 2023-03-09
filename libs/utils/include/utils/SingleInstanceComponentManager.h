@@ -60,8 +60,11 @@ private:
 protected:
     static constexpr size_t ENTITY_INDEX = sizeof ... (Elements);
 
+
 public:
     using SoA = StructureOfArrays<Elements ..., Entity>;
+
+    using Structure = typename SoA::Structure;
 
     using Instance = EntityInstanceBase::Type;
 
@@ -69,7 +72,7 @@ public:
         // We always start with a dummy entry because index=0 is reserved. The component
         // at index = 0, is guaranteed to be default-initialized.
         // Sub-classes can use this to their advantage.
-        mData.push_back();
+        mData.push_back(Structure{});
     }
 
     SingleInstanceComponentManager(SingleInstanceComponentManager&&) noexcept {/* = default */}
@@ -269,7 +272,7 @@ SingleInstanceComponentManager<Elements ...>::addComponent(Entity e) {
     if (!e.isNull()) {
         if (!hasComponent(e)) {
             // this is like a push_back(e);
-            mData.push_back().template back<ENTITY_INDEX>() = e;
+            mData.push_back(Structure{}).template back<ENTITY_INDEX>() = e;
             // index 0 is used when the component doesn't exist
             ci = Instance(mData.size() - 1);
             mInstanceMap[e] = ci;

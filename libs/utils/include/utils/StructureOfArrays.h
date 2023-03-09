@@ -41,11 +41,13 @@ class StructureOfArraysBase {
     static constexpr const size_t kArrayCount = sizeof...(Elements);
 
 public:
-    using SoA = StructureOfArraysBase<Allocator, Elements ...>;
+    using SoA = StructureOfArraysBase<Allocator, Elements...>;
+
+    using Structure = std::tuple<Elements...>;
 
     // Type of the Nth array
     template<size_t N>
-    using TypeAt = typename std::tuple_element_t<N, std::tuple<Elements...>>;
+    using TypeAt = typename std::tuple_element_t<N, Structure>;
 
     // Number of arrays
     static constexpr size_t getArrayCount() noexcept { return kArrayCount; }
@@ -57,7 +59,7 @@ public:
 
     // --------------------------------------------------------------------------------------------
 
-    class Structure;
+    class IteratorValue;
     template<typename T> class Iterator;
     using iterator = Iterator<StructureOfArraysBase*>;
     using const_iterator = Iterator<StructureOfArraysBase const*>;
@@ -69,45 +71,45 @@ public:
      * In other words, it's the return type of iterator::operator*(), and since it
      * cannot be a C++ reference (&), it's an object that acts like it.
      */
-    class StructureRef {
-        friend class Structure;
+    class IteratorValueRef {
+        friend class IteratorValue;
         friend iterator;
         friend const_iterator;
         StructureOfArraysBase* const UTILS_RESTRICT soa;
         size_t const index;
 
-        StructureRef(StructureOfArraysBase* soa, size_t index) : soa(soa), index(index) { }
+        IteratorValueRef(StructureOfArraysBase* soa, size_t index) : soa(soa), index(index) { }
 
         // assigns a value_type to a reference (i.e. assigns to what's pointed to by the reference)
         template<size_t ... Is>
-        StructureRef& assign(Structure const& rhs, std::index_sequence<Is...>);
+        IteratorValueRef& assign(IteratorValue const& rhs, std::index_sequence<Is...>);
 
         // assigns a value_type to a reference (i.e. assigns to what's pointed to by the reference)
         template<size_t ... Is>
-        StructureRef& assign(Structure&& rhs, std::index_sequence<Is...>) noexcept;
+        IteratorValueRef& assign(IteratorValue&& rhs, std::index_sequence<Is...>) noexcept;
 
         // objects pointed to by reference can be swapped, so provide the special swap() function.
-        friend void swap(StructureRef lhs, StructureRef rhs) {
+        friend void swap(IteratorValueRef lhs, IteratorValueRef rhs) {
             lhs.soa->swap(lhs.index, rhs.index);
         }
 
     public:
         // references can be created by copy-assignment only
-        StructureRef(StructureRef const& rhs) noexcept : soa(rhs.soa), index(rhs.index) { }
+        IteratorValueRef(IteratorValueRef const& rhs) noexcept : soa(rhs.soa), index(rhs.index) { }
 
         // copy the content of a reference to the content of this one
-        StructureRef& operator=(StructureRef const& rhs);
+        IteratorValueRef& operator=(IteratorValueRef const& rhs);
 
         // move the content of a reference to the content of this one
-        StructureRef& operator=(StructureRef&& rhs) noexcept;
+        IteratorValueRef& operator=(IteratorValueRef&& rhs) noexcept;
 
         // copy a value_type to the content of this reference
-        StructureRef& operator=(Structure const& rhs) {
+        IteratorValueRef& operator=(IteratorValue const& rhs) {
             return assign(rhs, std::make_index_sequence<kArrayCount>());
         }
 
         // move a value_type to the content of this reference
-        StructureRef& operator=(Structure&& rhs) noexcept {
+        IteratorValueRef& operator=(IteratorValue&& rhs) noexcept {
             return assign(rhs, std::make_index_sequence<kArrayCount>());
         }
 
@@ -122,36 +124,36 @@ public:
      * Internally we're using a tuple<> to store the data.
      * This object is not trivial to construct, as it copies an entry of the SoA.
      */
-    class Structure {
-        friend class StructureRef;
+    class IteratorValue {
+        friend class IteratorValueRef;
         friend iterator;
         friend const_iterator;
         using Type = std::tuple<typename std::decay<Elements>::type...>;
         Type elements;
 
         template<size_t ... Is>
-        static Type init(StructureRef const& rhs, std::index_sequence<Is...>) {
+        static Type init(IteratorValueRef const& rhs, std::index_sequence<Is...>) {
             return Type{ rhs.soa->template elementAt<Is>(rhs.index)... };
         }
 
         template<size_t ... Is>
-        static Type init(StructureRef&& rhs, std::index_sequence<Is...>) noexcept {
+        static Type init(IteratorValueRef&& rhs, std::index_sequence<Is...>) noexcept {
             return Type{ std::move(rhs.soa->template elementAt<Is>(rhs.index))... };
         }
 
     public:
-        Structure(Structure const& rhs) = default;
-        Structure(Structure&& rhs) noexcept = default;
-        Structure& operator=(Structure const& rhs) = default;
-        Structure& operator=(Structure&& rhs) noexcept = default;
+        IteratorValue(IteratorValue const& rhs) = default;
+        IteratorValue(IteratorValue&& rhs) noexcept = default;
+        IteratorValue& operator=(IteratorValue const& rhs) = default;
+        IteratorValue& operator=(IteratorValue&& rhs) noexcept = default;
 
         // initialize and assign from a StructureRef
-        Structure(StructureRef const& rhs)
+        IteratorValue(IteratorValueRef const& rhs)
                 : elements(init(rhs, std::make_index_sequence<kArrayCount>())) {}
-        Structure(StructureRef&& rhs) noexcept
+        IteratorValue(IteratorValueRef&& rhs) noexcept
                 : elements(init(rhs, std::make_index_sequence<kArrayCount>())) {}
-        Structure& operator=(StructureRef const& rhs) { return operator=(Structure(rhs)); }
-        Structure& operator=(StructureRef&& rhs) noexcept { return operator=(Structure(rhs)); }
+        IteratorValue& operator=(IteratorValueRef const& rhs) { return operator=(IteratorValue(rhs)); }
+        IteratorValue& operator=(IteratorValueRef&& rhs) noexcept { return operator=(IteratorValue(rhs)); }
 
         // access the elements of this value_Type (i.e. the "fields" of the structure)
         template<size_t I> TypeAt<I> const& get() const { return std::get<I>(elements); }
@@ -174,9 +176,9 @@ public:
         Iterator(CVQualifiedSOAPointer soa, size_t index) : soa(soa), index(index) {}
 
     public:
-        using value_type = Structure;
-        using reference = StructureRef;
-        using pointer = StructureRef*;    // FIXME: this should be a StructurePtr type
+        using value_type = IteratorValue;
+        using reference = IteratorValueRef;
+        using pointer = IteratorValueRef*;    // FIXME: this should be a StructurePtr type
         using difference_type = ptrdiff_t;
         using iterator_category = std::random_access_iterator_tag;
 
@@ -335,6 +337,11 @@ public:
         return *this;
     }
 
+    StructureOfArraysBase& push_back(Structure&& args) noexcept {
+        ensureCapacity(mSize + 1);
+        return push_back_unsafe(std::forward<Structure>(args));
+    }
+
     StructureOfArraysBase& push_back(Elements const& ... args) noexcept {
         ensureCapacity(mSize + 1);
         return push_back_unsafe(args...);
@@ -349,23 +356,29 @@ public:
     struct PushBackUnsafeClosure {
         size_t last;
         std::tuple<Elements...> args;
-        inline explicit PushBackUnsafeClosure(size_t last, Elements&& ... args)
-                : last(last), args(std::forward<Elements>(args)...) {}
-        inline explicit PushBackUnsafeClosure(size_t last, Elements const& ... args)
-                : last(last), args(args...) {}
+        inline explicit PushBackUnsafeClosure(size_t last, Structure&& args)
+                : last(last), args(std::forward<Structure>(args)) {}
         template<size_t I>
         inline void operator()(TypeAt<I>* p) {
             new(p + last) TypeAt<I>{ std::get<I>(args) };
         }
     };
 
+    StructureOfArraysBase& push_back_unsafe(Structure&& args) noexcept {
+        for_each_index(mArrays,
+                PushBackUnsafeClosure{ mSize++, std::forward<Structure>(args) });
+        return *this;
+    }
+
     StructureOfArraysBase& push_back_unsafe(Elements const& ... args) noexcept {
-        for_each_index(mArrays, PushBackUnsafeClosure{ mSize++, args... });
+        for_each_index(mArrays,
+                PushBackUnsafeClosure{ mSize++, { args... } });
         return *this;
     }
 
     StructureOfArraysBase& push_back_unsafe(Elements&& ... args) noexcept {
-        for_each_index(mArrays, PushBackUnsafeClosure{ mSize++, std::forward<Elements>(args)... });
+        for_each_index(mArrays,
+                PushBackUnsafeClosure{ mSize++, { std::forward<Elements>(args)... }});
         return *this;
     }
 
@@ -562,8 +575,10 @@ private:
         forEach([from, to](auto p) {
             using T = typename std::decay<decltype(*p)>::type;
             // note: scalar types like int/float get initialized to zero
-            for (size_t i = from; i < to; i++) {
-                new(p + i) T();
+            if constexpr (!std::is_trivially_default_constructible_v<T>) {
+                for (size_t i = from; i < to; i++) {
+                    new(p + i) T();
+                }
             }
         });
     }
@@ -571,8 +586,10 @@ private:
     void destroy_each(size_t from, size_t to) noexcept {
         forEach([from, to](auto p) {
             using T = typename std::decay<decltype(*p)>::type;
-            for (size_t i = from; i < to; i++) {
-                p[i].~T();
+            if constexpr (!std::is_trivially_destructible_v<T>) {
+                for (size_t i = from; i < to; i++) {
+                    p[i].~T();
+                }
             }
         });
     }
@@ -592,15 +609,17 @@ private:
                         reinterpret_cast<T*>(uintptr_t(b) + offsets[index]);
 
                 // for trivial cases, just call memcpy()
-                if (std::is_trivially_copyable<T>::value &&
-                    std::is_trivially_destructible<T>::value) {
+                if constexpr (std::is_trivially_copyable_v<T> &&
+                              std::is_trivially_destructible_v<T>) {
                     memcpy(arrayPointer, p, size * sizeof(T));
                 } else {
                     for (size_t i = 0; i < size; i++) {
                         // we move an element by using the in-place move-constructor
                         new(arrayPointer + i) T(std::move(p[i]));
-                        // and delete them by calling the destructor directly
-                        p[i].~T();
+                        if constexpr (!std::is_trivially_destructible_v<T>) {
+                            // and delete them by calling the destructor directly
+                            p[i].~T();
+                        }
                     }
                 }
                 index++;
@@ -626,27 +645,27 @@ private:
 
 template<typename Allocator, typename... Elements>
 inline
-typename StructureOfArraysBase<Allocator, Elements...>::StructureRef&
-StructureOfArraysBase<Allocator, Elements...>::StructureRef::operator=(
-        StructureOfArraysBase::StructureRef const& rhs) {
-    return operator=(Structure(rhs));
+typename StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef&
+StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef::operator=(
+        StructureOfArraysBase::IteratorValueRef const& rhs) {
+    return operator=(IteratorValue(rhs));
 }
 
 template<typename Allocator, typename... Elements>
 inline
-typename StructureOfArraysBase<Allocator, Elements...>::StructureRef&
-StructureOfArraysBase<Allocator, Elements...>::StructureRef::operator=(
-        StructureOfArraysBase::StructureRef&& rhs) noexcept {
-    return operator=(Structure(rhs));
+typename StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef&
+StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef::operator=(
+        StructureOfArraysBase::IteratorValueRef&& rhs) noexcept {
+    return operator=(IteratorValue(rhs));
 }
 
 template<typename Allocator, typename... Elements>
 template<size_t... Is>
 inline
-typename StructureOfArraysBase<Allocator, Elements...>::StructureRef&
-StructureOfArraysBase<Allocator, Elements...>::StructureRef::assign(
-        StructureOfArraysBase::Structure const& rhs, std::index_sequence<Is...>) {
-    // implements StructureRef& StructureRef::operator=(Structure const& rhs)
+typename StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef&
+StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef::assign(
+        StructureOfArraysBase::IteratorValue const& rhs, std::index_sequence<Is...>) {
+    // implements IteratorValueRef& IteratorValueRef::operator=(IteratorValue const& rhs)
     auto UTILS_UNUSED l = { (soa->elementAt<Is>(index) = std::get<Is>(rhs.elements), 0)... };
     return *this;
 }
@@ -654,10 +673,10 @@ StructureOfArraysBase<Allocator, Elements...>::StructureRef::assign(
 template<typename Allocator, typename... Elements>
 template<size_t... Is>
 inline
-typename StructureOfArraysBase<Allocator, Elements...>::StructureRef&
-StructureOfArraysBase<Allocator, Elements...>::StructureRef::assign(
-        StructureOfArraysBase::Structure&& rhs, std::index_sequence<Is...>) noexcept {
-    // implements StructureRef& StructureRef::operator=(Structure&& rhs) noexcept
+typename StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef&
+StructureOfArraysBase<Allocator, Elements...>::IteratorValueRef::assign(
+        StructureOfArraysBase::IteratorValue&& rhs, std::index_sequence<Is...>) noexcept {
+    // implements IteratorValueRef& IteratorValueRef::operator=(IteratorValue&& rhs) noexcept
     auto UTILS_UNUSED l = {
             (soa->elementAt<Is>(index) = std::move(std::get<Is>(rhs.elements)), 0)... };
     return *this;

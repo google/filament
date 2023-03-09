@@ -34,8 +34,9 @@ OpenGLTimerQueryInterface::~OpenGLTimerQueryInterface() = default;
 
 // ------------------------------------------------------------------------------------------------
 
-TimerQueryNative::TimerQueryNative(OpenGLContext& context)
-        : gl(context) {
+#if defined(GL_VERSION_3_3) || defined(GL_EXT_disjoint_timer_query)
+
+TimerQueryNative::TimerQueryNative(OpenGLContext&) {
 }
 
 TimerQueryNative::~TimerQueryNative() = default;
@@ -44,12 +45,12 @@ void TimerQueryNative::flush() {
 }
 
 void TimerQueryNative::beginTimeElapsedQuery(GLTimerQuery* query) {
-    gl.beginQuery(GL_TIME_ELAPSED, query->gl.query);
+    glBeginQuery(GL_TIME_ELAPSED, query->gl.query);
     CHECK_GL_ERROR(utils::slog.e)
 }
 
 void TimerQueryNative::endTimeElapsedQuery(GLTimerQuery*) {
-    gl.endQuery(GL_TIME_ELAPSED);
+    glEndQuery(GL_TIME_ELAPSED);
     CHECK_GL_ERROR(utils::slog.e)
 }
 
@@ -62,13 +63,13 @@ bool TimerQueryNative::queryResultAvailable(GLTimerQuery* query) {
 
 uint64_t TimerQueryNative::queryResult(GLTimerQuery* query) {
     GLuint64 elapsedTime = 0;
-    // IOS doesn't have glGetQueryObjectui64v, we'll never end-up here on ios anyways
-#ifndef IOS
+    // we won't end-up here if we're on ES and don't have GL_EXT_disjoint_timer_query
     glGetQueryObjectui64v(query->gl.query, GL_QUERY_RESULT, &elapsedTime);
-#endif
     CHECK_GL_ERROR(utils::slog.e)
     return elapsedTime;
 }
+
+#endif
 
 // ------------------------------------------------------------------------------------------------
 
@@ -85,7 +86,7 @@ OpenGLTimerQueryFence::OpenGLTimerQueryFence(OpenGLPlatform& platform)
             });
             exitRequested = mExitRequested;
             if (!queue.empty()) {
-                Job job(queue.front());
+                Job const job(queue.front());
                 queue.erase(queue.begin());
                 lock.unlock();
                 job();
@@ -105,7 +106,7 @@ OpenGLTimerQueryFence::~OpenGLTimerQueryFence() {
 }
 
 void OpenGLTimerQueryFence::enqueue(OpenGLTimerQueryFence::Job&& job) {
-    std::unique_lock<utils::Mutex> lock(mLock);
+    std::unique_lock<utils::Mutex> const lock(mLock);
     mQueue.push_back(std::forward<Job>(job));
     mCondition.notify_one();
 }
@@ -114,9 +115,9 @@ void OpenGLTimerQueryFence::flush() {
     // Use calls to flush() as a proxy for when the GPU work started.
     GLTimerQuery* query = mActiveQuery;
     if (query) {
-        uint64_t elapsed = query->gl.emulation->elapsed.load(std::memory_order_relaxed);
+        uint64_t const elapsed = query->gl.emulation->elapsed.load(std::memory_order_relaxed);
         if (!elapsed) {
-            uint64_t now = clock::now().time_since_epoch().count();
+            uint64_t const now = clock::now().time_since_epoch().count();
             query->gl.emulation->elapsed.store(now, std::memory_order_relaxed);
             //SYSTRACE_CONTEXT();
             //SYSTRACE_ASYNC_BEGIN("gpu", query->gl.query);
@@ -139,7 +140,7 @@ void OpenGLTimerQueryFence::beginTimeElapsedQuery(GLTimerQuery* query) {
 void OpenGLTimerQueryFence::endTimeElapsedQuery(GLTimerQuery* query) {
     assert_invariant(mActiveQuery);
     Platform::Fence* fence = mPlatform.createFence();
-    std::weak_ptr<GLTimerQuery::State> weak = query->gl.emulation;
+    std::weak_ptr<GLTimerQuery::State> const weak = query->gl.emulation;
     mActiveQuery = nullptr;
     //uint32_t cookie = cookie = query->gl.query;
     push([&platform = mPlatform, fence, weak]() {

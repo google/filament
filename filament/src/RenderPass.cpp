@@ -86,11 +86,12 @@ void RenderPass::setScissorViewport(backend::Viewport viewport) noexcept {
 }
 
 void RenderPass::appendCommands(FEngine& engine, CommandTypeFlags const commandTypeFlags) noexcept {
+    SYSTRACE_CALL();
     SYSTRACE_CONTEXT();
 
     assert_invariant(mRenderableSoa);
 
-    utils::Range<uint32_t> vr = mVisibleRenderables;
+    utils::Range<uint32_t> const vr = mVisibleRenderables;
     // trace the number of visible renderables
     SYSTRACE_VALUE32("visibleRenderables", vr.size());
     if (UTILS_UNLIKELY(vr.empty())) {
@@ -129,7 +130,7 @@ void RenderPass::appendCommands(FEngine& engine, CommandTypeFlags const commandT
         work(vr.first, vr.size());
     } else {
         auto* jobCommandsParallel = jobs::parallel_for(js, nullptr, vr.first, (uint32_t)vr.size(),
-                std::cref(work), jobs::CountSplitter<JOBS_PARALLEL_FOR_COMMANDS_COUNT, 4>());
+                std::cref(work), jobs::CountSplitter<JOBS_PARALLEL_FOR_COMMANDS_COUNT, 5>());
         js.runAndWait(jobCommandsParallel);
     }
 
@@ -374,6 +375,8 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
         Variant variant, RenderFlags renderFlags,
         FScene::VisibleMaskType visibilityMask,
         float3 cameraPosition, float3 cameraForward) noexcept {
+
+    SYSTRACE_CALL();
 
     // generateCommands() writes both the draw and depth commands simultaneously such that
     // we go throw the list of renderables just once.
@@ -723,6 +726,7 @@ UTILS_NOINLINE // no need to be inlined
 void RenderPass::Executor::execute(backend::DriverApi& driver,
         const Command* first, const Command* last) const noexcept {
     SYSTRACE_CALL();
+    SYSTRACE_CONTEXT();
 
     if (first != last) {
         SYSTRACE_VALUE32("commandCount", last - first);
