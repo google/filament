@@ -16,25 +16,43 @@
 
 #include "fgdbg/Session.h"
 #include <sstream>
+#include <set>
+#include <iostream>
 
 namespace filament::fgdbg {
 
 void Session::addPasses(const std::vector<Pass>& passes) {
-    this->passes.insert(this->passes.end(), passes.begin(), passes.end());
+    for (auto& pass: passes) {
+        addPass(pass);
+    }
 }
 
 void Session::addPass(const Pass& pass) {
-    this->passes.push_back(pass);
+    mPasses.insert({ pass.id, pass });
 }
 
 void Session::addResources(const std::vector<Resource>& resources) {
-    this->resources.insert(this->resources.end(),
-            resources.begin(),
-            resources.end());
+    for (auto& resource: resources) {
+        addResource(resource);
+    }
 }
 
 void Session::addResource(const Resource& resource) {
-    this->resources.push_back(resource);
+    mResources.insert({ resource.id, resource });
+}
+
+void Session::update() {
+    if (!verify()) return;
+    std::string payload = serialize();
+    std::size_t currentHash = std::hash<std::string>{}(payload);
+    if (mHash == currentHash) return;
+    mHash = currentHash;
+    mServer->sendMessage(payload);
+}
+
+void Session::clear() {
+    mPasses.clear();
+    mResources.clear();
 }
 
 /**
@@ -56,12 +74,12 @@ resources:
     name: foo
     size: 30
 **/
-void Session::update() const {
+std::string Session::serialize() const {
     std::stringstream ss;
     ss << "passes:";
-    for (const auto& pass: passes) {
+    for (const auto& [id, pass]: mPasses) {
         ss << "\n ";
-        ss << pass.id << ":\n  ";
+        ss << id << ":\n  ";
         ss << "name: " << pass.name << "\n  ";
         ss << "reads: " << "[";
         for (int i = 0; i < pass.reads.size(); i++) {
@@ -80,19 +98,31 @@ void Session::update() const {
     ss << "\n";
 
     ss << "resources:";
-    for (const auto& resource: resources) {
+    for (const auto& [id, resource]: mResources) {
         ss << "\n ";
-        ss << resource.id << ":\n  ";
+        ss << id << ":\n  ";
         ss << "name: " << resource.name << "\n  ";
         ss << "size: " << resource.size;
     }
-
-    server->sendMessage(ss.str());
+    return ss.str();
 }
 
-void Session::clear() {
-    this->passes.clear();
-    this->resources.clear();
+bool Session::verify() {
+    std::set<size_t> rw;
+    for (auto& [id, pass]: mPasses) {
+        rw.insert(pass.reads.begin(), pass.reads.end());
+        rw.insert(pass.writes.begin(), pass.writes.end());
+    }
+    for (const auto& resource_id: rw) {
+        if (mResources.count(resource_id) == 0) {
+            std::cout << "fgdbg: Error verifying data before sever upload - "
+                      << "Trying to read/write from non-existing resource id: " << resource_id
+                      << std::endl;
+            return false;
+        }
+    }
+
+    return true;
 }
 
 }
