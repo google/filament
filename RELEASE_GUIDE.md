@@ -61,7 +61,7 @@ git push origin release
 Use the GitHub UI to create a GitHub release corresponding to $RELEASE version.
 Make sure the target is set to the release branch.
 
-## 7. Delete the old rc branch (optional).
+## 6. Delete the old rc branch (optional).
 
 This step is optional. The old rc branch may be left alive for a few weeks for posterity.
 
@@ -69,7 +69,7 @@ This step is optional. The old rc branch may be left alive for a few weeks for p
 git push origin --delete rc/$RELEASE
 ```
 
-## 6. Bump the version on the new rc branch to $NEXT_RELEASE.
+## 7. Bump the version on the new rc branch to $NEXT_RELEASE.
 
 ```
 git checkout rc/$NEXT_RELEASE
@@ -82,19 +82,19 @@ Commit the changes to rc/$NEXT_RELEASE with the title:
 Bump version to $NEXT_RELEASE
 ```
 
-## 7. Push main.
+## 8. Push main.
 
 ```
 git push origin main
 ```
 
-## 8. Push the new rc branch.
+## 9. Push the new rc branch.
 
 ```
 git push origin -u rc/$NEXT_RELEASE
 ```
 
-## 9. Rebuild the GitHub release (if failed).
+## 10. Rebuild the GitHub release (if failed).
 
 Sometimes the GitHub release job will fail. In this case, you can manually re-run the release job.
 
