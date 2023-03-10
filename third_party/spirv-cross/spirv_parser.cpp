@@ -31,7 +31,7 @@ namespace SPIRV_CROSS_NAMESPACE
 {
 Parser::Parser(vector<uint32_t> spirv)
 {
-	ir.spirv = move(spirv);
+	ir.spirv = std::move(spirv);
 }
 
 Parser::Parser(const uint32_t *spirv_data, size_t word_count)
@@ -258,7 +258,7 @@ void Parser::parse(const Instruction &instruction)
 	case OpExtension:
 	{
 		auto ext = extract_string(ir.spirv, instruction.offset);
-		ir.declared_extensions.push_back(move(ext));
+		ir.declared_extensions.push_back(std::move(ext));
 		break;
 	}
 

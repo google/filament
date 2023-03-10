@@ -36,16 +36,16 @@ using namespace SPIRV_CROSS_NAMESPACE;
 
 Compiler::Compiler(vector<uint32_t> ir_)
 {
-	Parser parser(move(ir_));
+	Parser parser(std::move(ir_));
 	parser.parse();
-	set_ir(move(parser.get_parsed_ir()));
+	set_ir(std::move(parser.get_parsed_ir()));
 }
 
 Compiler::Compiler(const uint32_t *ir_, size_t word_count)
 {
 	Parser parser(ir_, word_count);
 	parser.parse();
-	set_ir(move(parser.get_parsed_ir()));
+	set_ir(std::move(parser.get_parsed_ir()));
 }
 
 Compiler::Compiler(const ParsedIR &ir_)
@@ -55,12 +55,12 @@ Compiler::Compiler(const ParsedIR &ir_)
 
 Compiler::Compiler(ParsedIR &&ir_)
 {
-	set_ir(move(ir_));
+	set_ir(std::move(ir_));
 }
 
 void Compiler::set_ir(ParsedIR &&ir_)
 {
-	ir = move(ir_);
+	ir = std::move(ir_);
 	parse_fixup();
 }
 
@@ -813,7 +813,7 @@ unordered_set<VariableID> Compiler::get_active_interface_variables() const
 
 void Compiler::set_enabled_interface_variables(std::unordered_set<VariableID> active_variables)
 {
-	active_interface_variables = move(active_variables);
+	active_interface_variables = std::move(active_variables);
 	check_active_interface_variables = true;
 }
 
@@ -2362,7 +2362,7 @@ void Compiler::CombinedImageSamplerHandler::push_remap_parameters(const SPIRFunc
 	unordered_map<uint32_t, uint32_t> remapping;
 	for (uint32_t i = 0; i < length; i++)
 		remapping[func.arguments[i].id] = remap_parameter(args[i]);
-	parameter_remapping.push(move(remapping));
+	parameter_remapping.push(std::move(remapping));
 }
 
 void Compiler::CombinedImageSamplerHandler::pop_remap_parameters()
@@ -4161,7 +4161,7 @@ void Compiler::analyze_image_and_sampler_usage()
 	handler.dependency_hierarchy.clear();
 	traverse_all_reachable_opcodes(get<SPIRFunction>(ir.default_entry_point), handler);
 
-	comparison_ids = move(handler.comparison_ids);
+	comparison_ids = std::move(handler.comparison_ids);
 	need_subpass_input = handler.need_subpass_input;
 
 	// Forward information from separate images and samplers into combined image samplers.
@@ -4214,7 +4214,7 @@ void Compiler::build_function_control_flow_graphs_and_analyze()
 	CFGBuilder handler(*this);
 	handler.function_cfgs[ir.default_entry_point].reset(new CFG(*this, get<SPIRFunction>(ir.default_entry_point)));
 	traverse_all_reachable_opcodes(get<SPIRFunction>(ir.default_entry_point), handler);
-	function_cfgs = move(handler.function_cfgs);
+	function_cfgs = std::move(handler.function_cfgs);
 	bool single_function = function_cfgs.size() <= 1;
 
 	for (auto &f : function_cfgs)

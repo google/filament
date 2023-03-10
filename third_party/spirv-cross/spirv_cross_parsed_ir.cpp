@@ -54,26 +54,26 @@ ParsedIR::ParsedIR()
 // Should have been default-implemented, but need this on MSVC 2013.
 ParsedIR::ParsedIR(ParsedIR &&other) SPIRV_CROSS_NOEXCEPT
 {
-	*this = move(other);
+	*this = std::move(other);
 }
 
 ParsedIR &ParsedIR::operator=(ParsedIR &&other) SPIRV_CROSS_NOEXCEPT
 {
 	if (this != &other)
 	{
-		pool_group = move(other.pool_group);
-		spirv = move(other.spirv);
-		meta = move(other.meta);
+		pool_group = std::move(other.pool_group);
+		spirv = std::move(other.spirv);
+		meta = std::move(other.meta);
 		for (int i = 0; i < TypeCount; i++)
-			ids_for_type[i] = move(other.ids_for_type[i]);
-		ids_for_constant_or_type = move(other.ids_for_constant_or_type);
-		ids_for_constant_or_variable = move(other.ids_for_constant_or_variable);
-		declared_capabilities = move(other.declared_capabilities);
-		declared_extensions = move(other.declared_extensions);
-		block_meta = move(other.block_meta);
-		continue_block_to_loop_header = move(other.continue_block_to_loop_header);
-		entry_points = move(other.entry_points);
-		ids = move(other.ids);
+			ids_for_type[i] = std::move(other.ids_for_type[i]);
+		ids_for_constant_or_type = std::move(other.ids_for_constant_or_type);
+		ids_for_constant_or_variable = std::move(other.ids_for_constant_or_variable);
+		declared_capabilities = std::move(other.declared_capabilities);
+		declared_extensions = std::move(other.declared_extensions);
+		block_meta = std::move(other.block_meta);
+		continue_block_to_loop_header = std::move(other.continue_block_to_loop_header);
+		entry_points = std::move(other.entry_points);
+		ids = std::move(other.ids);
 		addressing_model = other.addressing_model;
 		memory_model = other.memory_model;
 
@@ -996,7 +996,7 @@ ParsedIR::LoopLock::LoopLock(uint32_t *lock_)
 
 ParsedIR::LoopLock::LoopLock(LoopLock &&other) SPIRV_CROSS_NOEXCEPT
 {
-	*this = move(other);
+	*this = std::move(other);
 }
 
 ParsedIR::LoopLock &ParsedIR::LoopLock::operator=(LoopLock &&other) SPIRV_CROSS_NOEXCEPT

@@ -10041,7 +10041,7 @@ void CompilerGLSL::emit_instruction(const Instruction &instruction)
 		bool ptr_chain = opcode == OpPtrAccessChain;
 		auto e = access_chain(ops[2], &ops[3], length - 3, get<SPIRType>(ops[0]), &meta, ptr_chain);
 
-		auto &expr = set<SPIRExpression>(ops[1], move(e), ops[0], should_forward(ops[2]));
+		auto &expr = set<SPIRExpression>(ops[1], std::move(e), ops[0], should_forward(ops[2]));
 
 		auto *backing_variable = maybe_get_backing_variable(ops[2]);
 		expr.loaded_from = backing_variable ? backing_variable->self : ID(ops[2]);
@@ -15213,7 +15213,7 @@ void CompilerGLSL::unroll_array_from_complex_load(uint32_t target_id, uint32_t s
 			statement(new_expr, "[i] = ", expr, "[i];");
 		end_scope();
 
-		expr = move(new_expr);
+		expr = std::move(new_expr);
 	}
 }
 
@@ -15524,7 +15524,7 @@ void CompilerGLSL::emit_copy_logical_type(uint32_t lhs_id, uint32_t lhs_type_id,
 		rhs_id = id + 1;
 
 		{
-			auto &lhs_expr = set<SPIRExpression>(lhs_id, move(lhs), lhs_type_id, true);
+			auto &lhs_expr = set<SPIRExpression>(lhs_id, std::move(lhs), lhs_type_id, true);
 			lhs_expr.need_transpose = lhs_meta.need_transpose;
 
 			if (lhs_meta.storage_is_packed)
@@ -15537,7 +15537,7 @@ void CompilerGLSL::emit_copy_logical_type(uint32_t lhs_id, uint32_t lhs_type_id,
 		}
 
 		{
-			auto &rhs_expr = set<SPIRExpression>(rhs_id, move(rhs), rhs_type_id, true);
+			auto &rhs_expr = set<SPIRExpression>(rhs_id, std::move(rhs), rhs_type_id, true);
 			rhs_expr.need_transpose = rhs_meta.need_transpose;
 
 			if (rhs_meta.storage_is_packed)
