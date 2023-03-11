@@ -795,21 +795,59 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // This is normally used by SSAO and contact-shadows
 
     // TODO: the scaling should depends on all passes that need the structure pass
-    const auto [structure, picking_] = ppm.structure(fg, pass, renderFlags, svp.width, svp.height, {
-            .scale = aoOptions.resolution,
-            .picking = view.hasPicking()
+    const auto [structure] = ppm.structure(fg, pass, renderFlags, svp.width, svp.height, {
+            .scale = aoOptions.resolution
     });
     blackboard["structure"] = structure;
-    const auto picking = picking_;
 
 
     if (view.hasPicking()) {
+        struct PickingRenderPassData {
+            FrameGraphId<FrameGraphTexture> depth;
+            FrameGraphId<FrameGraphTexture> picking;
+        };
+        auto& pickingRenderPass = fg.addPass<PickingRenderPassData>("Picking Render Pass",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    data.depth = builder.createTexture("Depth Buffer", {
+                            .width = svp.width, .height = svp.height,
+                            .format = TextureFormat::DEPTH32F});
+
+                    data.depth = builder.write(data.depth,
+                            FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+
+                    data.picking = builder.createTexture("Picking Buffer", {
+                            .width = svp.width, .height = svp.height,
+                            .format = TextureFormat::RG32UI});
+
+                    data.picking = builder.write(data.picking,
+                            FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+
+                    builder.declareRenderPass("Picking Render Target", {
+                            .attachments = { .color = { data.picking }, .depth = data.depth },
+                            .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH
+                    });
+                },
+                [=, renderPass = pass](FrameGraphResources const& resources,
+                        auto const& data, DriverApi& driver) mutable {
+                    Variant pickingVariant(Variant::DEPTH_VARIANT);
+                    pickingVariant.setPicking(true);
+
+                    auto out = resources.getRenderPassInfo();
+                    renderPass.setRenderFlags(renderFlags);
+                    renderPass.setVariant(pickingVariant);
+                    renderPass.appendCommands(mEngine,
+                            RenderPass::CommandTypeFlags::DEPTH);
+                    renderPass.sortCommands(mEngine);
+                    renderPass.execute(mEngine, resources.getPassName(),
+                            out.target, out.params);
+                });
+
         struct PickingResolvePassData {
             FrameGraphId<FrameGraphTexture> picking;
         };
         fg.addPass<PickingResolvePassData>("Picking Resolve Pass",
                 [&](FrameGraph::Builder& builder, auto& data) {
-                    data.picking = builder.read(picking,
+                    data.picking = builder.read(pickingRenderPass->picking,
                             FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                     builder.declareRenderPass("Picking Resolve Target", {
                             .attachments = { .color = { data.picking }}
@@ -819,7 +857,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 [=, &view](FrameGraphResources const& resources,
                         auto const&, DriverApi& driver) mutable {
                     auto out = resources.getRenderPassInfo();
-                    view.executePickingQueries(driver, out.target, aoOptions.resolution);
+                    view.executePickingQueries(driver, out.target);
                 });
     }
 

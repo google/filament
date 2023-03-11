@@ -352,7 +352,6 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
     // It consists of a mipmapped depth pass, tuned for SSAO
     struct StructurePassData {
         FrameGraphId<FrameGraphTexture> depth;
-        FrameGraphId<FrameGraphTexture> picking;
     };
 
     // sanitize a bit the user provided scaling factor
@@ -377,24 +376,14 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 data.depth = builder.write(data.depth,
                         FrameGraphTexture::Usage::DEPTH_ATTACHMENT | FrameGraphTexture::Usage::SAMPLEABLE);
 
-                if (config.picking) {
-                    data.picking = builder.createTexture("Picking Buffer", {
-                            .width = width, .height = height,
-                            .format = TextureFormat::RG32UI });
-
-                    data.picking = builder.write(data.picking,
-                            FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                }
-
                 builder.declareRenderPass("Structure Target", {
-                        .attachments = { .color = { data.picking }, .depth = data.depth },
-                        .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH
+                        .attachments = { .depth = data.depth },
+                        .clearFlags = TargetBufferFlags::DEPTH
                 });
             },
             [=, renderPass = pass](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) mutable {
                 Variant structureVariant(Variant::DEPTH_VARIANT);
-                structureVariant.setPicking(config.picking);
 
                 auto out = resources.getRenderPassInfo();
                 renderPass.setRenderFlags(structureRenderFlags);
@@ -443,7 +432,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 driver.setMinMaxLevels(in, 0, levelCount - 1);
             });
 
-    return { depth, structurePass->picking };
+    return { depth };
 }
 
 // ------------------------------------------------------------------------------------------------

@@ -61,7 +61,6 @@ public:
 
     struct StructurePassConfig {
         float scale = 0.5f;
-        bool picking{};
     };
 
     explicit PostProcessManager(FEngine& engine) noexcept;
@@ -75,7 +74,6 @@ public:
     // structure (depth) pass
     struct StructurePassOutput {
         FrameGraphId<FrameGraphTexture> structure;
-        FrameGraphId<FrameGraphTexture> picking;
     };
     StructurePassOutput structure(FrameGraph& fg,
             RenderPass const& pass, uint8_t structureRenderFlags,

@@ -934,15 +934,15 @@ void FView::drainFrameHistory(FEngine& engine) noexcept {
 }
 
 void FView::executePickingQueries(backend::DriverApi& driver,
-        backend::RenderTargetHandle handle, float scale) noexcept {
+        backend::RenderTargetHandle handle) noexcept {
 
     while (mActivePickingQueriesList) {
         FPickingQuery* const pQuery = mActivePickingQueriesList;
         mActivePickingQueriesList = pQuery->next;
 
-        // adjust for dynamic resolution and structure buffer scale
-        const uint32_t x = uint32_t(float(pQuery->x) * (scale * mScale.x));
-        const uint32_t y = uint32_t(float(pQuery->y) * (scale * mScale.y));
+        // adjust for dynamic resolution scale
+        const uint32_t x = uint32_t(float(pQuery->x) * mScale.x);
+        const uint32_t y = uint32_t(float(pQuery->y) * mScale.y);
         driver.readPixels(handle, x, y, 1, 1, {
                 &pQuery->result.renderable, 4*4, // 4*uint
                 // FIXME: RGBA_INTEGER is guaranteed to work. R_INTEGER must be queried.

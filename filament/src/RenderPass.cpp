@@ -669,7 +669,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?
                 cmdDepth.primitive.rasterState.depthWrite = (1 // only keep bit 0
-                        & (mi->isDepthWriteEnabled() | (mode == TransparencyMode::TWO_PASSES_ONE_SIDE))
+                        & (mi->isDepthWriteEnabled()
+                            || (mode == TransparencyMode::TWO_PASSES_ONE_SIDE)
+                            || Variant::isPickingVariant(variant))
                         & !(filterTranslucentObjects & translucent)
                         & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
                             | writeDepthForShadowCasters;
