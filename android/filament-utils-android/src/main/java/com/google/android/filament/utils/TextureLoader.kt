@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.textured
+package com.google.android.filament.utils
 
 import android.content.res.Resources
 import android.graphics.Bitmap
