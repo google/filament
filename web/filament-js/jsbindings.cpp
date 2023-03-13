@@ -1072,7 +1072,7 @@ class_<TransformManager>("TransformManager")
 
     .function("getWorldTransform", EMBIND_LAMBDA(flatmat4,
             (TransformManager* self, TransformManager::Instance instance), {
-        return flatmat4 { self->getTransform(instance) } ; }), allow_raw_pointers())
+        return flatmat4 { self->getWorldTransform(instance) } ; }), allow_raw_pointers())
 
     .function("openLocalTransformTransaction", &TransformManager::openLocalTransformTransaction)
     .function("commitLocalTransformTransaction",
