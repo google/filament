@@ -23,6 +23,9 @@
 #include <bluevk/BlueVK.h>
 #include <math/vec4.h>
 
+#include <functional>
+#include <vector>
+
 namespace filament::backend {
 
 struct VulkanContext;
@@ -32,14 +35,18 @@ class VulkanReadPixels {
 public:
     using OnReadCompleteFunction = std::function<void(PixelBufferDescriptor&&)>;
     using SelecteMemoryFunction = std::function<uint32_t(uint32_t, VkFlags)>;
+    using IsValidFenceFunction = std::function<bool(VkFence)>;
+    using FenceList = std::vector<VkFence>;
 
-    ~VulkanReadPixels() noexcept;
+    void initialize(VkDevice device) noexcept;
 
-    void initialize(VkDevice device);
+    void shutdown() noexcept;
 
     void run(VulkanRenderTarget const* srcTarget, uint32_t x, uint32_t y, uint32_t width,
             uint32_t height, uint32_t graphicsQueueFamilyIndex, PixelBufferDescriptor&& pbd,
-            VulkanTaskHandler& taskHandler, SelecteMemoryFunction const& selectMemoryFunc,
+            const FenceList& fences, VulkanTaskHandler& taskHandler,
+            SelecteMemoryFunction const& selectMemoryFunc,
+            IsValidFenceFunction const& isValidFenceFunc,
             OnReadCompleteFunction const& readCompleteFunc);
 
 private:
@@ -47,6 +54,6 @@ private:
     VkCommandPool mCommandPool = VK_NULL_HANDLE;
 };
 
-}// namespace filament::backend
+}  // namespace filament::backend
 
-#endif//TNT_FILAMENT_BACKEND_VULKANREADPIXELS_H
+#endif  // TNT_FILAMENT_BACKEND_VULKANREADPIXELS_H

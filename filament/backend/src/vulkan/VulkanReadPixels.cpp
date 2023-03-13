@@ -27,7 +27,7 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-VulkanReadPixels::~VulkanReadPixels() noexcept {
+void VulkanReadPixels::shutdown() noexcept {
     assert_invariant(mDevice != VK_NULL_HANDLE);
     if (mCommandPool == VK_NULL_HANDLE) {
         return;
@@ -35,14 +35,14 @@ VulkanReadPixels::~VulkanReadPixels() noexcept {
     vkDestroyCommandPool(mDevice, mCommandPool, VKALLOC);
 }
 
-void VulkanReadPixels::initialize(VkDevice device) {
+void VulkanReadPixels::initialize(VkDevice device) noexcept {
     mDevice = device;
 }
 
 void VulkanReadPixels::run(VulkanRenderTarget const* srcTarget, uint32_t const x, uint32_t const y,
         uint32_t const width, uint32_t const height, uint32_t const graphicsQueueFamilyIndex,
-        PixelBufferDescriptor&& pbd, VulkanTaskHandler& taskHandler,
-        SelecteMemoryFunction const& selectMemoryFunc,
+        PixelBufferDescriptor&& pbd, const FenceList& fences, VulkanTaskHandler& taskHandler,
+        SelecteMemoryFunction const& selectMemoryFunc, IsValidFenceFunction const& isValidFenceFunc,
         OnReadCompleteFunction const& readCompleteFunc) {
     assert_invariant(mDevice != VK_NULL_HANDLE);
 
@@ -58,7 +58,7 @@ void VulkanReadPixels::run(VulkanRenderTarget const* srcTarget, uint32_t const x
         };
         vkCreateCommandPool(device, &createInfo, VKALLOC, &mCommandPool);
     }
-    VkCommandPool cmdpool = mCommandPool;
+    VkCommandPool& cmdpool = mCommandPool;
 
     VulkanTexture* srcTexture = srcTarget->getColor(0).texture;
     assert_invariant(srcTexture);
@@ -86,11 +86,13 @@ void VulkanReadPixels::run(VulkanRenderTarget const* srcTarget, uint32_t const x
     VkMemoryRequirements memReqs;
     VkDeviceMemory stagingMemory;
     vkGetImageMemoryRequirements(device, stagingImage, &memReqs);
-    VkMemoryAllocateInfo const allocInfo = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    VkMemoryAllocateInfo const allocInfo = {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
             .allocationSize = memReqs.size,
             .memoryTypeIndex = selectMemoryFunc(memReqs.memoryTypeBits,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-                            | VK_MEMORY_PROPERTY_HOST_CACHED_BIT)};
+                            | VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
+    };
 
     vkAllocateMemory(device, &allocInfo, VKALLOC, &stagingMemory);
     vkBindImageMemory(device, stagingImage, stagingMemory, 0);
@@ -115,40 +117,40 @@ void VulkanReadPixels::run(VulkanRenderTarget const* srcTarget, uint32_t const x
             .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
             .newLayout = VK_IMAGE_LAYOUT_GENERAL,
             .subresources = {
-                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                    .baseMipLevel = 0,
-                    .levelCount = 1,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1,
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
             },
             .srcStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
             .srcAccessMask = 0,
             .dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
             .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-    });
+        });
 
     VulkanAttachment const srcAttachment = srcTarget->getColor(0);
 
     VkImageCopy const imageCopyRegion = {
-            .srcSubresource = {
-                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                    .mipLevel = srcAttachment.level,
-                    .baseArrayLayer = srcAttachment.layer,
-                    .layerCount = 1,
-            },
-            .srcOffset = {
-                    .x = (int32_t) x,
-                    .y = (int32_t) (srcTarget->getExtent().height - (height + y)),
-            },
-            .dstSubresource = {
-                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                    .layerCount = 1,
-            },
-            .extent = {
-                    .width = width,
-                    .height = height,
-                    .depth = 1,
-            },
+        .srcSubresource = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevel = srcAttachment.level,
+            .baseArrayLayer = srcAttachment.layer,
+            .layerCount = 1,
+        },
+        .srcOffset = {
+            .x = (int32_t)x,
+            .y = (int32_t)(srcTarget->getExtent().height - (height + y)),
+        },
+        .dstSubresource = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .layerCount = 1,
+        },
+        .extent = {
+            .width = width,
+            .height = height,
+            .depth = 1,
+        },
     };
 
     // Transition the source image layout (which might be the swap chain)
@@ -162,8 +164,8 @@ void VulkanReadPixels::run(VulkanRenderTarget const* srcTarget, uint32_t const x
 
     srcTexture->transitionLayout(cmdbuffer, srcRange, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-    // Perform the copy into the staging area. At this point we know that the src layout is
-    // TRANSFER_SRC_OPTIMAL and the staging area is GENERAL.
+    // Perform the copy into the staging area. At this point we know that the src
+    // layout is TRANSFER_SRC_OPTIMAL and the staging area is GENERAL.
     UTILS_UNUSED_IN_RELEASE VkExtent2D srcExtent = srcAttachment.getExtent2D();
     assert_invariant(imageCopyRegion.srcOffset.x + imageCopyRegion.extent.width <= srcExtent.width);
     assert_invariant(
@@ -179,53 +181,35 @@ void VulkanReadPixels::run(VulkanRenderTarget const* srcTarget, uint32_t const x
 
     vkEndCommandBuffer(cmdbuffer);
 
-    VkQueue queue;
-    vkGetDeviceQueue(device, graphicsQueueFamilyIndex, 0, &queue);
-
-    VkSubmitInfo const submitInfo{
-            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            .waitSemaphoreCount = 0,
-            .pWaitSemaphores = VK_NULL_HANDLE,
-            .pWaitDstStageMask = VK_NULL_HANDLE,
-            .commandBufferCount = 1,
-            .pCommandBuffers = &cmdbuffer,
-            .signalSemaphoreCount = 0,
-            .pSignalSemaphores = VK_NULL_HANDLE,
-    };
-    VkFence fence;
-    VkFenceCreateInfo const fenceCreateInfo{
-            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-    };
-    vkCreateFence(device, &fenceCreateInfo, VKALLOC, &fence);
-    vkQueueSubmit(queue, 1, &submitInfo, fence);
-
     auto* const pUserBuffer = new PixelBufferDescriptor(std::move(pbd));
-    auto const waitTaskId = taskHandler.createTask(
-            [device, width, height, swizzle, srcFormat, fence, stagingImage, stagingMemory, cmdpool,
-                    cmdbuffer, pUserBuffer, readCompleteFunc,
-                    &taskHandler](VulkanTaskHandler::TaskId taskId, void* data) mutable {
-                PixelBufferDescriptor& p = *pUserBuffer;
-                vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
-                VkResult status = vkGetFenceStatus(device, fence);
+    auto cleanPbdFunc = [pUserBuffer, readCompleteFunc]() {
+        PixelBufferDescriptor& p = *pUserBuffer;
+        readCompleteFunc(std::move(p));
+        delete pUserBuffer;
+    };
 
+    auto const readCopyId = taskHandler.createTask(
+            [device, width, height, swizzle, srcFormat, stagingImage, stagingMemory, cmdpool,
+                    cmdbuffer, pUserBuffer, readCompleteFunc, isValidFenceFunc, cleanPbdFunc,
+                    &taskHandler](VulkanTaskHandler::TaskId taskId, void* data) mutable {
+                VkFence* fencePtr = (VkFence*) data;
+                VkResult status = vkGetFenceStatus(device, *fencePtr);
                 // Fence hasn't been reached. Try waiting again.
                 if (status == VK_NOT_READY) {
-                    taskHandler.post(taskId);
+                    taskHandler.post(taskId, fencePtr);
                     return;
                 }
-
                 // Need to abort the readPixels if the device is lost.
                 if (status == VK_ERROR_DEVICE_LOST) {
                     utils::slog.e << "Device lost while in VulkanReadPixels::run"
                                   << utils::io::endl;
                     taskHandler.completed(taskId);
-
-                    // Try to free the pbd anyway
-                    readCompleteFunc(std::move(p));
-                    delete pUserBuffer;
+                    cleanPbdFunc();
+                    delete fencePtr;
                     return;
                 }
 
+                PixelBufferDescriptor& p = *pUserBuffer;
                 VkImageSubresource subResource{.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT};
                 VkSubresourceLayout subResourceLayout;
                 vkGetImageSubresourceLayout(device, stagingImage, &subResource, &subResourceLayout);
@@ -246,16 +230,60 @@ void VulkanReadPixels::run(VulkanRenderTarget const* srcTarget, uint32_t const x
                 vkUnmapMemory(device, stagingMemory);
                 vkDestroyImage(device, stagingImage, VKALLOC);
                 vkFreeMemory(device, stagingMemory, VKALLOC);
-                vkDestroyFence(device, fence, VKALLOC);
+                vkDestroyFence(device, *fencePtr, VKALLOC);
                 vkFreeCommandBuffers(device, cmdpool, 1, &cmdbuffer);
-                readCompleteFunc(std::move(p));
-                delete pUserBuffer;
-
+                cleanPbdFunc();
+                delete fencePtr;
                 taskHandler.completed(taskId);
-            },
-            nullptr);
+            });
 
-    taskHandler.post(waitTaskId);
+    auto const waitForPreviousFencesId = taskHandler.createTask(
+            [device, fences, cmdbuffer, readCopyId, graphicsQueueFamilyIndex, isValidFenceFunc,
+                    cleanPbdFunc,
+                    &taskHandler](VulkanTaskHandler::TaskId taskId, void* data) mutable {
+                // TODO: instead of fences, we should use semaphores here so that synchronization
+                // stays on the device.
+                for (auto fence: fences) {
+                    if (!isValidFenceFunc(fence)) {
+                        continue;
+                    }
+                    VkResult status = vkGetFenceStatus(device, fence);
+                    // Fence hasn't been reached. Try waiting again.
+                    if (status == VK_NOT_READY || status == VK_INCOMPLETE) {
+                        taskHandler.post(taskId, data);
+                        return;
+                    }
+                    // Need to abort the readPixels if the device is lost.
+                    if (status == VK_ERROR_DEVICE_LOST) {
+                        utils::slog.e << "Device lost while in VulkanReadPixels::run"
+                                      << utils::io::endl;
+                        taskHandler.completed(taskId);
+                        cleanPbdFunc();
+                        return;
+                    }
+                }
+                VkQueue queue;
+                vkGetDeviceQueue(device, graphicsQueueFamilyIndex, 0, &queue);
+                VkFence* readCompleteFencePtr = new VkFence();
+                VkFenceCreateInfo const fenceCreateInfo{
+                        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+                };
+                vkCreateFence(device, &fenceCreateInfo, VKALLOC, readCompleteFencePtr);
+                VkSubmitInfo const submitInfo{
+                        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                        .waitSemaphoreCount = 0,
+                        .pWaitSemaphores = VK_NULL_HANDLE,
+                        .pWaitDstStageMask = VK_NULL_HANDLE,
+                        .commandBufferCount = 1,
+                        .pCommandBuffers = &cmdbuffer,
+                        .signalSemaphoreCount = 0,
+                        .pSignalSemaphores = VK_NULL_HANDLE,
+                };
+                vkQueueSubmit(queue, 1, &submitInfo, *readCompleteFencePtr);
+                taskHandler.post(readCopyId, readCompleteFencePtr);
+            });
+
+    taskHandler.post(waitForPreviousFencesId, nullptr);
 }
 
 }// namespace filament::backend

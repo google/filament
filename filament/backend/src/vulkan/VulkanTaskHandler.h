@@ -21,7 +21,6 @@
 
 #include <functional>
 #include <map>
-#include <memory>
 #include <queue>
 
 namespace filament::backend {
@@ -34,6 +33,7 @@ public:
     public:
         Host(Host const&) = delete;
         Host& operator=(Host const&) = delete;
+
     protected:
         Host()
             : mHandler(std::make_unique<VulkanTaskHandler>()) {}
@@ -45,30 +45,31 @@ public:
         VulkanTaskHandler& getTaskHandler() noexcept {
             return *mHandler;
         }
+
     private:
         std::unique_ptr<VulkanTaskHandler> mHandler;
     };
 
     using TaskId = uint32_t;
     using TaskFunc = std::function<void(TaskId, void*)>;
-    using Task = std::pair<TaskFunc, void*>;
+    using Task = std::pair<TaskId, void*>;
 
-    TaskId createTask(TaskFunc const& func, void* data) noexcept {
+    TaskId createTask(TaskFunc const& func) noexcept {
         TaskId const id = mNextTaskId++;
-        mTasks[id] = std::pair(func, data);
+        mTasks[id] = func;
         return id;
     }
 
     // Task that will never be put on the queue again should be marked as completed by calling this
-    // function.
+    // function. Caller must have freed their data.
     void completed(TaskId taskId) noexcept {
         assert_invariant(mTasks.find(taskId) != mTasks.end());
         mTasks.erase(taskId);
     }
 
-    void post(TaskId taskId) noexcept {
+    void post(TaskId taskId, void* data) noexcept {
         assert_invariant(mTasks.find(taskId) != mTasks.end());
-        mTaskQueue.push(taskId);
+        mTaskQueue.push(std::pair(taskId, data));
     }
 
     VulkanTaskHandler() = default;
@@ -79,21 +80,20 @@ public:
 private:
     inline void handle() {
         while (!mTaskQueue.empty()) {
-            auto taskId = mTaskQueue.front();
+            auto& [taskId, data] = mTaskQueue.front();
             mTaskQueue.pop();
             // It is possible for taskIds in the queue to refer to a task that has already been
-            // completed. Just ignore.
+            // completed. *data* is an invalid pointer at this point. Just ignore.
             if (mTasks.find(taskId) == mTasks.end()) {
                 continue;
             }
-
-            auto& [func, data] = mTasks[taskId];
+            auto func = mTasks[taskId];
             func(taskId, data);
         }
     }
 
-    std::queue<TaskId> mTaskQueue;
-    std::map<TaskId, Task> mTasks;
+    std::queue<Task> mTaskQueue;
+    std::map<TaskId, TaskFunc> mTasks;
     uint32_t mNextTaskId = 0;
 
     friend class Host;

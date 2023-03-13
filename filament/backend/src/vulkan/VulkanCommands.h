@@ -24,6 +24,8 @@
 #include <utils/Condition.h>
 #include <utils/Mutex.h>
 
+#include <vector>
+
 namespace filament::backend {
 
 // Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
@@ -114,6 +116,12 @@ class VulkanCommands {
         // Sets an observer who is notified every time a new command buffer has been made "current".
         // The observer's event handler can only be called during get().
         void setObserver(CommandBufferObserver* observer) { mObserver = observer; }
+
+        // Expose the fences to external waiters (e.g. ReadPixels).
+        std::vector<VkFence> getFences() const;
+
+        // Whether a fence provided via getFences() is still valid.
+        bool isValidFence(VkFence fence) const;
 
     private:
         static constexpr int CAPACITY = VK_MAX_COMMAND_BUFFERS;

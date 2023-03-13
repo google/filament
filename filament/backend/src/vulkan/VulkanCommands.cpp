@@ -271,7 +271,42 @@ void VulkanCommands::updateFences() {
     }
 }
 
-} // namespace filament::backend
+bool VulkanCommands::isValidFence(VkFence inFence) const {
+    for (auto& wrapper: mStorage) {
+        if (wrapper.cmdbuffer == VK_NULL_HANDLE) {
+            continue;
+        }
+        VulkanCmdFence const* fence = wrapper.fence.get();
+        if (!fence) {
+            continue;
+        }
+        VkResult const result = fence->status.load(std::memory_order_relaxed);
+        if (fence->fence == inFence && (result == VK_INCOMPLETE || result == VK_NOT_READY)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::vector<VkFence> VulkanCommands::getFences() const {
+    std::vector<VkFence> fences;
+    for (auto& wrapper: mStorage) {
+        if (wrapper.cmdbuffer == VK_NULL_HANDLE) {
+            continue;
+        }
+        VulkanCmdFence const* fence = wrapper.fence.get();
+        if (!fence) {
+            continue;
+        }
+        VkResult const status = vkGetFenceStatus(mDevice, fence->fence);
+        if (status == VK_NOT_READY || status == VK_INCOMPLETE) {
+            fences.push_back(fence->fence);
+        }
+    }
+    return fences;
+}
+
+}// namespace filament::backend
 
 #if defined(_MSC_VER)
 #pragma warning( pop )

@@ -107,6 +107,7 @@ void VulkanDriver::terminate() {
     delete mContext.commands;
     delete mContext.emptyTexture;
 
+    mReadPixels.shutdown();
     mBlitter.shutdown();
 
     // Allow the stage pool and disposer to clean up.
@@ -1016,17 +1017,17 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     rt->transformClientRectToPlatform(&renderPassInfo.renderArea);
 
-    if (params.flags.clear != TargetBufferFlags::NONE) {
-        VkClearValue clearValues[
-                MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT +
-                1] = {};
 
+    VkClearValue clearValues[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT
+                             + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1]
+            = {};
+    if (params.flags.clear != TargetBufferFlags::NONE) {
         // NOTE: clearValues must be populated in the same order as the attachments array in
         // VulkanFboCache::getFramebuffer. Values must be provided regardless of whether Vulkan is
         // actually clearing that particular target.
         for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
             if (fbkey.color[i]) {
-                VkClearValue &clearValue = clearValues[renderPassInfo.clearValueCount++];
+                VkClearValue& clearValue = clearValues[renderPassInfo.clearValueCount++];
                 clearValue.color.float32[0] = params.clearColor.r;
                 clearValue.color.float32[1] = params.clearColor.g;
                 clearValue.color.float32[2] = params.clearColor.b;
@@ -1040,12 +1041,11 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             }
         }
         if (fbkey.depth) {
-            VkClearValue &clearValue = clearValues[renderPassInfo.clearValueCount++];
+            VkClearValue& clearValue = clearValues[renderPassInfo.clearValueCount++];
             clearValue.depthStencil = {(float) params.clearDepth, 0};
         }
         renderPassInfo.pClearValues = &clearValues[0];
     }
-
     vkCmdBeginRenderPass(cmdbuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     VkViewport viewport = mContext.viewport = {
@@ -1335,13 +1335,12 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget*>(src);
     mReadPixels.run(
             srcTarget, x, y, width, height, mContext.graphicsQueueFamilyIndex, std::move(pbd),
-            getTaskHandler(),
+            std::move(mContext.commands->getFences()), getTaskHandler(),
             [&context = mContext](uint32_t reqs, VkFlags flags) {
                 return context.selectMemoryType(reqs, flags);
             },
-            [this](PixelBufferDescriptor&& pbd) {
-                this->scheduleDestroy(std::move(pbd));
-            });
+            [&context = mContext](VkFence fence) { return context.commands->isValidFence(fence); },
+            [this](PixelBufferDescriptor&& pbd) { this->scheduleDestroy(std::move(pbd)); });
 }
 
 void VulkanDriver::readBufferSubData(backend::BufferObjectHandle boh,
