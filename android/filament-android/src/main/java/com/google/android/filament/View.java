@@ -962,7 +962,8 @@ public class View {
         assertFloat3In(options.color);
         mFogOptions = options;
         nSetFogOptions(getNativeObject(), options.distance, options.maximumOpacity, options.height,
-                options.heightFalloff, options.color[0], options.color[1], options.color[2],
+                options.heightFalloff, options.cutOffDistance,
+                options.color[0], options.color[1], options.color[2],
                 options.density, options.inScatteringStart, options.inScatteringSize,
                 options.fogColorFromIbl,
                 options.enabled);
@@ -1157,7 +1158,7 @@ public class View {
     private static native void nSetSSCTOptions(long nativeView, float ssctLightConeRad, float ssctStartTraceDistance, float ssctContactDistanceMax, float ssctIntensity, float v, float v1, float v2, float ssctDepthBias, float ssctDepthSlopeBias, int ssctSampleCount, int ssctRayCount, boolean ssctEnabled);
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled, float highlight,
             boolean lensFlare, boolean starburst, float chromaticAberration, int ghostCount, float ghostSpacing, float ghostThreshold, float haloThickness, float haloRadius, float haloThreshold);
-    private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
+    private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float cutOffDistance, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);
     private static native void nSetDepthOfFieldOptions(long nativeView, float cocScale, float maxApertureDiameter, boolean enabled, int filter,
             boolean nativeResolution, int foregroundRingCount, int backgroundRingCount, int fastGatherRingCount, int maxForegroundCOC, int maxBackgroundCOC);
@@ -1392,48 +1393,87 @@ public class View {
     }
 
     /**
-     * Options to control fog in the scene
+     * Options to control large-scale fog in the scene
      */
     public static class FogOptions {
         /**
-         * distance in world units from the camera where the fog starts ( >= 0.0 )
+         * Distance in world units [m] from the camera to where the fog starts ( >= 0.0 )
          */
         public float distance = 0.0f;
+        /**
+         * Distance in world units [m] after which the fog calculation is disabled.
+         * This can be used to exclude the skybox, which is desirable if it already contains clouds or
+         * fog. The default value is +infinity which applies the fog to everything.
+         *
+         * Note: The SkyBox is typically at a distance of 1e19 in world space (depending on the near
+         * plane distance and projection used though).
+         */
+        public float cutOffDistance = Float.POSITIVE_INFINITY;
         /**
          * fog's maximum opacity between 0 and 1
          */
         public float maximumOpacity = 1.0f;
         /**
-         * fog's floor in world units
+         * Fog's floor in world units [m]. This sets the "sea level".
          */
         public float height = 0.0f;
         /**
-         * how fast fog dissipates with altitude
+         * How fast the fog dissipates with altitude. heightFalloff has a unit of [1/m].
+         * It can be expressed as 1/H, where H is the altitude change in world units [m] that causes a
+         * factor 2.78 (e) change in fog density.
+         *
+         * A falloff of 0 means the fog density is constant everywhere and may result is slightly
+         * faster computations.
          */
         public float heightFalloff = 1.0f;
         /**
-         * fog's color (linear), see fogColorFromIbl
+         *  Fog's color is used for ambient light in-scattering, a good value is
+         *  to use the average of the ambient light, possibly tinted towards blue
+         *  for outdoors environments. Color component's values should be between 0 and 1, values
+         *  above one are allowed but could create a non energy-conservative fog (this is dependant
+         *  on the IBL's intensity as well).
+         *
+         *  We assume that our fog has no absorption and therefore all the light it scatters out
+         *  becomes ambient light in-scattering and has lost all directionality, i.e.: scattering is
+         *  isotropic. This somewhat simulates Rayleigh scattering.
+         *
+         *  This value is used as a tint instead, when fogColorFromIbl is enabled.
+         *
+         *  @see fogColorFromIbl
          */
         @NonNull @Size(min = 3)
-        public float[] color = {0.5f, 0.5f, 0.5f};
+        public float[] color = {1.0f, 1.0f, 1.0f};
         /**
-         * fog's density at altitude given by 'height'
+         * Extinction factor in [1/m] at altitude 'height'. The extinction factor controls how much
+         * light is absorbed and out-scattered per unit of distance. Each unit of extinction reduces
+         * the incoming light to 37% of its original value.
+         *
+         * Note: The extinction factor is related to the fog density, it's usually some constant K times
+         * the density at sea level (more specifically at fog height). The constant K depends on
+         * the composition of the fog/atmosphere.
+         *
+         * For historical reason this parameter is called `density`.
          */
         public float density = 0.1f;
         /**
-         * distance in world units from the camera where in-scattering starts
+         * Distance in world units [m] from the camera where the Sun in-scattering starts.
          */
         public float inScatteringStart = 0.0f;
         /**
-         * size of in-scattering (>0 to activate). Good values are >> 1 (e.g. ~10 - 100).
+         * Very inaccurately simulates the Sun's in-scattering. That is, the light from the sun that
+         * is scattered (by the fog) towards the camera.
+         * Size of the Sun in-scattering (>0 to activate). Good values are >> 1 (e.g. ~10 - 100).
+         * Smaller values result is a larger scattering size.
          */
         public float inScatteringSize = -1.0f;
         /**
-         * Fog color will be modulated by the IBL color in the view direction.
+         * The fog color will be sampled from the IBL in the view direction and tinted by `color`.
+         * Depending on the scene this can produce very convincing results.
+         * This simulate a more anisotropic phase-function.
          */
         public boolean fogColorFromIbl = false;
         /**
-         * enable or disable fog
+         * Enable or disable large-scale fog
          */
         public boolean enabled = false;
     }

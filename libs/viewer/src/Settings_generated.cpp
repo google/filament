@@ -311,6 +311,8 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, FogOptions* out
         CHECK_KEY(tok);
         if (compare(tok, jsonChunk, "distance") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->distance);
+        } else if (compare(tok, jsonChunk, "cutOffDistance") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->cutOffDistance);
         } else if (compare(tok, jsonChunk, "maximumOpacity") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->maximumOpacity);
         } else if (compare(tok, jsonChunk, "height") == 0) {
@@ -344,6 +346,7 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, FogOptions* out
 std::ostream& operator<<(std::ostream& out, const FogOptions& in) {
     return out << "{\n"
         << "\"distance\": " << (in.distance) << ",\n"
+        << "\"cutOffDistance\": " << (in.cutOffDistance) << ",\n"
         << "\"maximumOpacity\": " << (in.maximumOpacity) << ",\n"
         << "\"height\": " << (in.height) << ",\n"
         << "\"heightFalloff\": " << (in.heightFalloff) << ",\n"

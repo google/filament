@@ -141,7 +141,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float fogMaxOpacity;
     float fogHeight;
     float fogHeightFalloff;
-    float fogReserved0;
+    float fogCutOffDistance;
     math::float3 fogColor;
     float fogColorFromIbl;
     float fogInscatteringStart;

@@ -889,17 +889,21 @@ void ViewerGui::updateUserInterface() {
     }
 
     if (ImGui::CollapsingHeader("Fog")) {
+        bool excludeSkybox = !std::isinf(mSettings.view.fog.cutOffDistance);
         ImGui::Indent();
-        ImGui::Checkbox("Enable fog", &mSettings.view.fog.enabled);
-        ImGui::SliderFloat("Start", &mSettings.view.fog.distance, 0.0f, 100.0f);
-        ImGui::SliderFloat("Density", &mSettings.view.fog.density, 0.0f, 1.0f);
-        ImGui::SliderFloat("Height", &mSettings.view.fog.height, 0.0f, 100.0f);
-        ImGui::SliderFloat("Height falloff", &mSettings.view.fog.heightFalloff, 0.0f, 10.0f);
-        ImGui::SliderFloat("Scattering start", &mSettings.view.fog.inScatteringStart, 0.0f, 100.0f);
-        ImGui::SliderFloat("Scattering size", &mSettings.view.fog.inScatteringSize, 0.1f, 100.0f);
+        ImGui::Checkbox("Enable large-scale fog", &mSettings.view.fog.enabled);
+        ImGui::SliderFloat("Start [m]", &mSettings.view.fog.distance, 0.0f, 100.0f);
+        ImGui::SliderFloat("Extinction [1/m]", &mSettings.view.fog.density, 0.0f, 1.0f);
+        ImGui::SliderFloat("Floor [m]", &mSettings.view.fog.height, 0.0f, 100.0f);
+        ImGui::SliderFloat("Height falloff [1/m]", &mSettings.view.fog.heightFalloff, 0.0f, 4.0f);
+        ImGui::SliderFloat("Sun Scattering start [m]", &mSettings.view.fog.inScatteringStart, 0.0f, 100.0f);
+        ImGui::SliderFloat("Sun Scattering size", &mSettings.view.fog.inScatteringSize, 0.1f, 100.0f);
+        ImGui::Checkbox("Exclude Skybox", &excludeSkybox);
         ImGui::Checkbox("Color from IBL", &mSettings.view.fog.fogColorFromIbl);
         ImGui::ColorPicker3("Color", mSettings.view.fog.color.v);
         ImGui::Unindent();
+        mSettings.view.fog.cutOffDistance =
+                excludeSkybox ? 1e6f : std::numeric_limits<float>::infinity();
     }
 
     if (ImGui::CollapsingHeader("Scene")) {

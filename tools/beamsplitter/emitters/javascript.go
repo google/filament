@@ -167,6 +167,7 @@ func createJsCodeGenerator(namespace string) func(*os.File, string, db.TypeDefin
 			return exists
 		},
 		"qualifiedvalue": func(name string) string {
+			name = strings.Replace(name, "INFINITY", "Infinity", 1)
 			count := strings.Count(name, "::")
 			if count > 0 {
 				name = "Filament." + jsPrefix + name
