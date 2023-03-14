@@ -135,7 +135,18 @@ static void printUsage(char* name) {
         "   --help, -h\n"
         "       Prints this message\n\n"
         "   --api, -a\n"
-        "       Specify the backend API: opengl (default), vulkan, or metal\n\n"
+        "       Specify the backend API: "
+
+// Matches logic in filament/backend/src/PlatformFactory.cpp for Backend::DEFAULT
+#if defined(IOS) || defined(__APPLE__)
+        "opengl, vulkan, or metal (default)"
+#elif defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+        "opengl, vulkan (default), or metal"
+#else
+        "opengl (default), vulkan, or metal"
+#endif
+        "\n\n"
+
         "   --feature-level=<1|2|3>, -f <1|2|3>\n"
         "       Specify the feature level to use. The default is the highest supported feature level.\n\n"
         "   --batch=<path to JSON file or 'default'>, -b\n"
