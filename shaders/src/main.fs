@@ -42,7 +42,7 @@ void main() {
 #endif
 
 #if defined(VARIANT_HAS_FOG)
-    vec3 view = getWorldPosition() - getWorldCameraPosition();
+    highp vec3 view = getWorldPosition() - getWorldCameraPosition();
     fragColor = fog(fragColor, view);
 #endif
 

@@ -109,8 +109,11 @@ func EditJava(definitions []db.TypeDefinition, classname string, folder string) 
 
 		// Add "f" suffix for scalars
 		if field.TypeString == "float" {
-			value += "f"
-
+			if field.DefaultValue == "INFINITY" {
+				return " Float.POSITIVE_INFINITY"
+			} else {
+				value += "f"
+			}
 		} else if c := len(value); c > 1 && value[0] == '[' && value[c-1] == ']' {
 			// For vector types, replace [] with {} and add "f" suffix to components.
 			switch field.TypeString {
