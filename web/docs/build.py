@@ -523,11 +523,18 @@ if __name__ == "__main__":
 
     copy_built_file('web/samples/suzanne.html')
     copy_built_file('web/samples/suzanne.filamesh')
+
     copy_built_file('web/samples/metallic*.ktx')
     copy_built_file('web/samples/normal*.ktx')
     copy_built_file('web/samples/roughness*.ktx')
     copy_built_file('web/samples/ao*.ktx')
     copy_built_file('web/samples/albedo*.ktx')
+
+    copy_built_file('web/samples/metallic*.ktx2')
+    copy_built_file('web/samples/normal*.ktx2')
+    copy_built_file('web/samples/roughness*.ktx2')
+    copy_built_file('web/samples/ao*.ktx2')
+    copy_built_file('web/samples/albedo*.ktx2')
 
     copy_built_file('web/samples/default_env/default_env*.ktx', 'default_env')
 

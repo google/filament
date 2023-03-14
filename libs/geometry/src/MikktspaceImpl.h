@@ -39,28 +39,28 @@ public:
         quatf tangentSpace;
     };
 
-    MikktspaceImpl(const TangentSpaceMeshInput* input) noexcept;
+    MikktspaceImpl(TangentSpaceMeshInput const* input) noexcept;
 
-    MikktspaceImpl(const MikktspaceImpl&) = delete;
-    MikktspaceImpl& operator=(const MikktspaceImpl&) = delete;
+    MikktspaceImpl(MikktspaceImpl const&) = delete;
+    MikktspaceImpl& operator=(MikktspaceImpl const&) = delete;
 
     void run(TangentSpaceMeshOutput* output) noexcept;
 
 private:
     static int getNumFaces(SMikkTSpaceContext const* context) noexcept;
     static int getNumVerticesOfFace(SMikkTSpaceContext const* context, int const iFace) noexcept;
-    static void getPosition(SMikkTSpaceContext const* context, float fvPosOut[], const int iFace,
-            const int iVert) noexcept;
+    static void getPosition(SMikkTSpaceContext const* context, float fvPosOut[], int const iFace,
+            int const iVert) noexcept;
     static void getNormal(SMikkTSpaceContext const* context, float fvNormOut[], int const iFace,
             int const iVert) noexcept;
-    static void getTexCoord(SMikkTSpaceContext const* context, float fvTexcOut[], const int iFace,
-            const int iVert) noexcept;
+    static void getTexCoord(SMikkTSpaceContext const* context, float fvTexcOut[], int const iFace,
+            int const iVert) noexcept;
     static void setTSpaceBasic(SMikkTSpaceContext const* context, float const fvTangent[],
             float const fSign, int const iFace, int const iVert) noexcept;
 
     static MikktspaceImpl* getThis(SMikkTSpaceContext const* context) noexcept;
 
-    inline const uint3 getTriangle(int triangleIndex) const noexcept;
+    inline const uint3 getTriangle(int const triangleIndex) const noexcept;
 
     int const mFaceCount;
     float3 const* mPositions;

@@ -40,7 +40,7 @@ int MikktspaceImpl::getNumVerticesOfFace(SMikkTSpaceContext const* context,
 }
 
 void MikktspaceImpl::getPosition(SMikkTSpaceContext const* context, float fvPosOut[],
-        const int iFace, const int iVert) noexcept {
+        int const iFace, int const iVert) noexcept {
     auto const wrapper = MikktspaceImpl::getThis(context);
     float3 const pos = *pointerAdd(wrapper->mPositions, wrapper->getTriangle(iFace)[iVert],
             wrapper->mPositionStride);
@@ -60,10 +60,10 @@ void MikktspaceImpl::getNormal(SMikkTSpaceContext const* context, float fvNormOu
 }
 
 void MikktspaceImpl::getTexCoord(SMikkTSpaceContext const* context, float fvTexcOut[],
-        const int iFace, const int iVert) noexcept {
+        int const iFace, int const iVert) noexcept {
     auto const wrapper = MikktspaceImpl::getThis(context);
-    float2 const texc =
-            *pointerAdd(wrapper->mUVs, wrapper->getTriangle(iFace)[iVert], wrapper->mUVStride);
+    float2 const texc
+            = *pointerAdd(wrapper->mUVs, wrapper->getTriangle(iFace)[iVert], wrapper->mUVStride);
     fvTexcOut[0] = texc.x;
     fvTexcOut[1] = texc.y;
 }
@@ -102,7 +102,7 @@ MikktspaceImpl* MikktspaceImpl::getThis(SMikkTSpaceContext const* context) noexc
     return (MikktspaceImpl*) context->m_pUserData;
 }
 
-inline const uint3 MikktspaceImpl::getTriangle(int triangleIndex) const noexcept {
+inline const uint3 MikktspaceImpl::getTriangle(int const triangleIndex) const noexcept {
     const size_t tstride = mIsTriangle16 ? sizeof(ushort3) : sizeof(uint3);
     return mIsTriangle16 ? uint3(*(ushort3*) (pointerAdd(mTriangles, triangleIndex, tstride)))
                          : *(uint3*) (pointerAdd(mTriangles, triangleIndex, tstride));
@@ -115,7 +115,7 @@ void MikktspaceImpl::run(TangentSpaceMeshOutput* output) noexcept {
         .m_getPosition = MikktspaceImpl::getPosition,
         .m_getNormal = MikktspaceImpl::getNormal,
         .m_getTexCoord = MikktspaceImpl::getTexCoord,
-        .m_setTSpaceBasic = MikktspaceImpl::setTSpaceBasic
+        .m_setTSpaceBasic = MikktspaceImpl::setTSpaceBasic,
     };
     SMikkTSpaceContext context{.m_pInterface = &interface, .m_pUserData = this};
     genTangSpaceDefault(&context);
@@ -128,12 +128,12 @@ void MikktspaceImpl::run(TangentSpaceMeshOutput* output) noexcept {
     meshopt_remapVertexBuffer((void*) newVertices.data(), mOutVertices.data(), mOutVertices.size(),
             sizeof(IOVertex), remap.data());
 
-    uint3* triangles32 = new uint3[mFaceCount];
+    uint3* triangles32 = output->triangles32.allocate(mFaceCount);
     meshopt_remapIndexBuffer((uint32_t*) triangles32, NULL, mOutVertices.size(), remap.data());
 
-    float3* outPositions = new float3[vertexCount];
-    float2* outUVs = new float2[vertexCount];
-    quatf* outQuats = new quatf[vertexCount];
+    float3* outPositions = output->positions.allocate(vertexCount);
+    float2* outUVs = output->uvs.allocate(vertexCount);
+    quatf* outQuats = output->tangentSpace.allocate(vertexCount);
 
     for (size_t i = 0; i < vertexCount; ++i) {
         outPositions[i] = newVertices[i].position;
@@ -142,10 +142,6 @@ void MikktspaceImpl::run(TangentSpaceMeshOutput* output) noexcept {
     }
 
     output->vertexCount = vertexCount;
-    output->positions = outPositions;
-    output->uvs = outUVs;
-    output->tangentSpace = outQuats;
-    output->triangles32 = triangles32;
     output->triangleCount = mFaceCount;
 }
 

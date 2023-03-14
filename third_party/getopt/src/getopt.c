@@ -1,139 +1,82 @@
-/*
- * Copyright (c) 1987, 1993, 1994, 1995
- *	The Regents of the University of California.  All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the names of the copyright holders nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS
- * IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
-#include <assert.h>
-#include <errno.h>
-#include <stdio.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+#include <wchar.h>
 #include <string.h>
+#include <limits.h>
+#include <stdlib.h>
+#include "libc.h"
 
-#ifndef __P
-#define __P(x) x
+char *optarg;
+int optind=1, opterr=1, optopt, __optpos, __optreset=0;
+
+#define optpos __optpos
+#ifndef _WIN32
+weak_alias(__optreset, optreset);
 #endif
-#define _DIAGASSERT(x) assert(x)
 
-#ifdef __weak_alias
-__weak_alias(getopt, _getopt);
-#endif
-
-int opterr = 1, /* if error message should be printed */
-    optind = 1, /* index into parent argv vector */
-    optopt,     /* character checked for validity */
-    optreset;   /* reset getopt */
-char *optarg;   /* argument associated with option */
-
-static char *_progname __P((char *));
-
-int getopt_internal __P((int, char *const *, const char *));
-
-static char *_progname(nargv0)
-
-    char *nargv0;
+int getopt(int argc, char * const argv[], const char *optstring)
 {
-  char *tmp;
+	int i;
+	wchar_t c, d;
+	int k, l;
+	char *optchar;
 
-  _DIAGASSERT(nargv0 != NULL);
+	if (!optind || __optreset) {
+		__optreset = 0;
+		__optpos = 0;
+		optind = 1;
+	}
 
-  tmp = strrchr(nargv0, '/');
-  if (tmp)
-    tmp++;
-  else
-    tmp = nargv0;
-  return (tmp);
+	if (optind >= argc || !argv[optind] || argv[optind][0] != '-' || !argv[optind][1])
+		return -1;
+	if (argv[optind][1] == '-' && !argv[optind][2])
+		return optind++, -1;
+
+	if (!optpos) optpos++;
+	if ((k = mbtowc(&c, argv[optind]+optpos, MB_LEN_MAX)) < 0) {
+		k = 1;
+		c = 0xfffd; /* replacement char */
+	}
+	optchar = argv[optind]+optpos;
+	optopt = c;
+	optpos += k;
+
+	if (!argv[optind][optpos]) {
+		optind++;
+		optpos = 0;
+	}
+
+	for (i=0; (l = mbtowc(&d, optstring+i, MB_LEN_MAX)) && d!=c; i+=l>0?l:1);
+
+	if (d != c) {
+		if (optstring[0] != ':' && opterr) {
+			write(2, argv[0], strlen(argv[0]));
+			write(2, ": illegal option: ", 18);
+			write(2, optchar, k);
+			write(2, "\n", 1);
+		}
+		return '?';
+	}
+	if (optstring[i+1] == ':') {
+		if (optind >= argc) {
+			if (optstring[0] == ':') return ':';
+			if (opterr) {
+				write(2, argv[0], strlen(argv[0]));
+				write(2, ": option requires an argument: ", 31);
+				write(2, optchar, k);
+				write(2, "\n", 1);
+			}
+			return '?';
+		}
+		optarg = argv[optind++] + optpos;
+		optpos = 0;
+	}
+	return c;
 }
 
-#define BADCH (int)'?'
-#define BADARG (int)':'
-#define EMSG ""
-
-/*
- * getopt --
- *	Parse argc/argv argument vector.
- */
-int getopt(nargc, nargv, ostr)
-
-    int nargc;
-char *const nargv[];
-const char *ostr;
-{
-  static char *__progname = 0;
-  static char *place = EMSG; /* option letter processing */
-  char *oli;                 /* option letter list index */
-  __progname = __progname ? __progname : _progname(*nargv);
-
-  _DIAGASSERT(nargv != NULL);
-  _DIAGASSERT(ostr != NULL);
-
-  if (optreset || !*place) { /* update scanning pointer */
-    optreset = 0;
-    if (optind >= nargc || *(place = nargv[optind]) != '-') {
-      place = EMSG;
-      return (-1);
-    }
-    if (place[1] && *++place == '-' /* found "--" */
-        && place[1] == '\0') {
-      ++optind;
-      place = EMSG;
-      return (-1);
-    }
-  } /* option letter okay? */
-  if ((optopt = (int)*place++) == (int)':' || !(oli = strchr(ostr, optopt))) {
-    /*
-     * if the user didn't specify '-' as an option,
-     * assume it means -1.
-     */
-    if (optopt == (int)'-')
-      return (-1);
-    if (!*place)
-      ++optind;
-    if (opterr && *ostr != ':')
-      (void)fprintf(stderr, "%s: illegal option -- %c\n", __progname, optopt);
-    return (BADCH);
-  }
-  if (*++oli != ':') { /* don't need argument */
-    optarg = NULL;
-    if (!*place)
-      ++optind;
-  } else {      /* need an argument */
-    if (*place) /* no white space */
-      optarg = place;
-    else if (nargc <= ++optind) { /* no arg */
-      place = EMSG;
-      if (*ostr == ':')
-        return (BADARG);
-      if (opterr)
-        (void)fprintf(stderr, "%s: option requires an argument -- %c\n",
-                      __progname, optopt);
-      return (BADCH);
-    } else /* white space */
-      optarg = nargv[optind];
-    place = EMSG;
-    ++optind;
-  }
-  return (optopt); /* dump back option letter */
-}
+#ifndef _WIN32
+weak_alias(getopt, __posix_getopt);
+#endif

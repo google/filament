@@ -7,6 +7,16 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.32.0
+
+- fog: fixed fog height falloff and computation precision on mobile [⚠️ **Recompile Materials**]
+- materials: new alphaToCoverage property can be used to control alpha to coverage behavior
+- materials: added `getUserWorldFromWorldMatrix()` and `getUserWorldPosition()` to retrieve the
+  API-level (user) world position in materials. Deprecated `getWorldOffset()`. [⚠️ **Recompile
+  Materials**]
+- engine: fix precision issue with `shading_view` in large scenes
+- vulkan: readPixels is now async (#6560)
+
 ## v1.31.7
 
 ## v1.31.6

@@ -28,10 +28,6 @@ static void getProcAddress(T& pfn, const char* name) noexcept {
 }
 
 namespace glext {
-#ifdef GL_QCOM_tiled_rendering
-PFNGLSTARTTILINGQCOMPROC glStartTilingQCOM;
-PFNGLENDTILINGQCOMPROC glEndTilingQCOM;
-#endif
 #ifdef GL_OES_EGL_image
 PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
 #endif
@@ -52,7 +48,7 @@ PFNGLGETDEBUGMESSAGELOGKHRPROC glGetDebugMessageLogKHR;
 PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64v;
 #endif
 #ifdef GL_EXT_clip_control
-PFNGLCLIPCONTROLEXTPROC glClipControl;
+PFNGLCLIPCONTROLEXTPROC glClipControlEXT;
 #endif
 
 #if defined(__ANDROID__)
@@ -65,31 +61,27 @@ static std::once_flag sGlExtInitialized;
 
 void importGLESExtensionsEntryPoints() {
     std::call_once(sGlExtInitialized, +[]() {
-#ifdef GL_QCOM_tiled_rendering
-        getProcAddress(glStartTilingQCOM, "glStartTilingQCOM");
-        getProcAddress(glEndTilingQCOM, "glEndTilingQCOM");
-#endif
 #ifdef GL_OES_EGL_image
-        getProcAddress(glEGLImageTargetTexture2DOES, "glEGLImageTargetTexture2DOES");
+    getProcAddress(glEGLImageTargetTexture2DOES, "glEGLImageTargetTexture2DOES");
 #endif
 #if GL_EXT_debug_marker
-        getProcAddress(glInsertEventMarkerEXT, "glInsertEventMarkerEXT");
-        getProcAddress(glPushGroupMarkerEXT, "glPushGroupMarkerEXT");
-        getProcAddress(glPopGroupMarkerEXT, "glPopGroupMarkerEXT");
+    getProcAddress(glInsertEventMarkerEXT, "glInsertEventMarkerEXT");
+    getProcAddress(glPushGroupMarkerEXT, "glPushGroupMarkerEXT");
+    getProcAddress(glPopGroupMarkerEXT, "glPopGroupMarkerEXT");
 #endif
 #if GL_EXT_multisampled_render_to_texture
-        getProcAddress(glFramebufferTexture2DMultisampleEXT, "glFramebufferTexture2DMultisampleEXT");
-        getProcAddress(glRenderbufferStorageMultisampleEXT, "glRenderbufferStorageMultisampleEXT");
+    getProcAddress(glFramebufferTexture2DMultisampleEXT, "glFramebufferTexture2DMultisampleEXT");
+    getProcAddress(glRenderbufferStorageMultisampleEXT, "glRenderbufferStorageMultisampleEXT");
 #endif
 #ifdef GL_KHR_debug
-        getProcAddress(glDebugMessageCallbackKHR, "glDebugMessageCallbackKHR");
-        getProcAddress(glGetDebugMessageLogKHR, "glGetDebugMessageLogKHR");
+    getProcAddress(glDebugMessageCallbackKHR, "glDebugMessageCallbackKHR");
+    getProcAddress(glGetDebugMessageLogKHR, "glGetDebugMessageLogKHR");
 #endif
 #ifdef GL_EXT_disjoint_timer_query
-        getProcAddress(glGetQueryObjectui64v, "glGetQueryObjectui64vEXT");
+    getProcAddress(glGetQueryObjectui64v, "glGetQueryObjectui64vEXT");
 #endif
 #ifdef GL_EXT_clip_control
-        getProcAddress(glClipControl, "glClipControlEXT");
+    getProcAddress(glClipControlEXT, "glClipControlEXT");
 #endif
 #if defined(__ANDROID__)
         getProcAddress(glDispatchCompute, "glDispatchCompute");

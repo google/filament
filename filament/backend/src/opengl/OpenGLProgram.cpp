@@ -130,7 +130,7 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
                 glShaderType = GL_FRAGMENT_SHADER;
                 break;
             case ShaderStage::COMPUTE:
-#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
+#if defined(BACKEND_OPENGL_LEVEL_GLES31)
                 glShaderType = GL_COMPUTE_SHADER;
 #else
                 continue;
@@ -192,13 +192,12 @@ std::string_view OpenGLProgram::process_GOOGLE_cpp_style_line_directive(OpenGLCo
     return { source, len };
 }
 
-// Tragically, OpenGL 4.1 doesn't support unpackHalf2x16 and
+// Tragically, OpenGL 4.1 doesn't support unpackHalf2x16 (appeared in 4.2) and
 // macOS doesn't support GL_ARB_shading_language_packing
 std::string_view OpenGLProgram::process_ARB_shading_language_packing(OpenGLContext& context) noexcept {
     using namespace std::literals;
-    if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
-        if (context.state.major == 4 && context.state.minor == 1 &&
-            !context.ext.ARB_shading_language_packing) {
+#ifdef BACKEND_OPENGL_VERSION_GL
+        if (!context.isAtLeastGL(4, 2) && !context.ext.ARB_shading_language_packing) {
             return R"(
 
 // these don't handle denormals, NaNs or inf
@@ -236,7 +235,7 @@ highp uint packHalf2x16(vec2 v) {
 }
 )"sv;
         }
-    }
+#endif // BACKEND_OPENGL_VERSION_GL
     return ""sv;
 }
 

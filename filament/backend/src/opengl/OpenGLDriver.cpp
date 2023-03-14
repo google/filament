@@ -131,18 +131,18 @@ Driver* OpenGLDriver::create(OpenGLPlatform* const platform,
         return {};
     }
 
-    if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES) {
-        if (UTILS_UNLIKELY(!(major >= 3 && minor >= 0))) {
-            PANIC_LOG("OpenGL ES 3.0 minimum needed (current %d.%d)", major, minor);
-            goto cleanup;
-        }
-    } else if constexpr (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
-        // we require GL 4.1 headers and minimum version
-        if (UTILS_UNLIKELY(!((major == 4 && minor >= 1) || major > 4))) {
-            PANIC_LOG("OpenGL 4.1 minimum needed (current %d.%d)", major, minor);
-            goto cleanup;
-        }
+#if defined(BACKEND_OPENGL_VERSION_GLES)
+    if (UTILS_UNLIKELY(!(major >= 3 && minor >= 0))) {
+        PANIC_LOG("OpenGL ES 3.0 minimum needed (current %d.%d)", major, minor);
+        goto cleanup;
     }
+#else
+    // we require GL 4.1 headers and minimum version
+    if (UTILS_UNLIKELY(!((major == 4 && minor >= 1) || major > 4))) {
+        PANIC_LOG("OpenGL 4.1 minimum needed (current %d.%d)", major, minor);
+        goto cleanup;
+    }
+#endif
 
     size_t const defaultSize = FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
     Platform::DriverConfig const validConfig {
@@ -182,9 +182,13 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
     // Timer queries are core in GL 3.3, otherwise we need EXT_disjoint_timer_query
     // iOS headers don't define GL_EXT_disjoint_timer_query, so make absolutely sure
     // we won't use it.
-#if defined(GL_VERSION_3_3) || defined(GL_EXT_disjoint_timer_query)
-    if (mContext.ext.EXT_disjoint_timer_query ||
-            BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL) {
+
+#if defined(BACKEND_OPENGL_VERSION_GL)
+    assert_invariant(mContext.ext.EXT_disjoint_timer_query);
+#endif
+
+#if defined(BACKEND_OPENGL_VERSION_GL) || defined(GL_EXT_disjoint_timer_query)
+    if (mContext.ext.EXT_disjoint_timer_query) {
         // timer queries are available
         if (mContext.bugs.dont_use_timer_query && mPlatform.canCreateFence()) {
             // however, they don't work well, revert to using fences if we can.
@@ -545,25 +549,29 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
                     GLsizei(width), GLsizei(height), GLsizei(depth) * 6);
             break;
         }
-#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
+#ifdef BACKEND_OPENGL_LEVEL_GLES31
         case GL_TEXTURE_2D_MULTISAMPLE:
             if constexpr (TEXTURE_2D_MULTISAMPLE_SUPPORTED) {
                 // NOTE: if there is a mix of texture and renderbuffers, "fixed_sample_locations" must be true
                 // NOTE: what's the benefit of setting "fixed_sample_locations" to false?
-#if BACKEND_OPENGL_LEVEL >= BACKEND_OPENGL_LEVEL_GLES31
-                // only supported from GL 4.3 and GLES 3.1 headers
-                glTexStorage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
-                        GLsizei(width), GLsizei(height), GL_TRUE);
-#elif defined(GL_VERSION_4_1)
-                // only supported in GL (GL4.1 doesn't support glTexStorage2DMultisample)
-                glTexImage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
-                        GLsizei(width), GLsizei(height), GL_TRUE);
+
+                if (mContext.isAtLeastGL(4, 3) || mContext.isAtLeastGLES(3, 1)) {
+                    // only supported from GL 4.3 and GLES 3.1 headers
+                    glTexStorage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
+                            GLsizei(width), GLsizei(height), GL_TRUE);
+                }
+#ifdef BACKEND_OPENGL_VERSION_GL
+                else {
+                    // only supported in GL (GL4.1 doesn't support glTexStorage2DMultisample)
+                    glTexImage2DMultisample(t->gl.target, t->samples, t->gl.internalFormat,
+                            GLsizei(width), GLsizei(height), GL_TRUE);
+                }
 #endif
             } else {
                 PANIC_LOG("GL_TEXTURE_2D_MULTISAMPLE is not supported");
             }
             break;
-#endif
+#endif // BACKEND_OPENGL_LEVEL_GLES31
         default: // cannot happen
             break;
     }
@@ -631,7 +639,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
             if (t->samples > 1) {
                 // Note: we can't be here in practice because filament's user API doesn't
                 // allow the creation of multi-sampled textures.
-#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
+#if defined(BACKEND_OPENGL_LEVEL_GLES31)
                 if (gl.features.multisample_texture) {
                     // multi-sample texture on GL 3.2 / GLES 3.1 and above
                     t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
@@ -733,7 +741,7 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
     if (t->samples > 1) {
         // Note: we can't be here in practice because filament's user API doesn't
         // allow the creation of multi-sampled textures.
-#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
+#if defined(BACKEND_OPENGL_LEVEL_GLES31)
         if (gl.features.multisample_texture) {
             // multi-sample texture on GL 3.2 / GLES 3.1 and above
             t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
@@ -922,7 +930,7 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
             case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
             case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
             case GL_TEXTURE_2D:
-#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
+#if defined(BACKEND_OPENGL_LEVEL_GLES31)
             case GL_TEXTURE_2D_MULTISAMPLE:
 #endif
                 if (any(t->usage & TextureUsage::SAMPLEABLE)) {
@@ -1649,7 +1657,7 @@ bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat format) {
 
         // Three-component SRGB is a color-renderable texture format in core OpenGL on desktop.
         case TextureFormat::SRGB8:
-            return BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GL;
+            return mContext.isAtLeastGL(4, 5);
 
         // Half-float formats, requires extension.
         case TextureFormat::R16F:
@@ -1979,7 +1987,7 @@ void OpenGLDriver::generateMipmaps(Handle<HwTexture> th) {
 
     auto& gl = mContext;
     GLTexture* t = handle_cast<GLTexture *>(th);
-#if defined(GL_VERSION_4_1) || defined(GL_ES_VERSION_3_1)
+#if defined(BACKEND_OPENGL_LEVEL_GLES31)
     assert_invariant(t->gl.target != GL_TEXTURE_2D_MULTISAMPLE);
 #endif
     // Note: glGenerateMimap can also fail if the internal format is not both
@@ -2385,21 +2393,20 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
     CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_FRAMEBUFFER)
 
-    // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
-    // ignore it on GL (rather than having to do a runtime check).
-    if (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES &&
-            BACKEND_OPENGL_LEVEL >= BACKEND_OPENGL_LEVEL_GLES30) {
-        if (!gl.bugs.disable_invalidate_framebuffer) {
-            AttachmentArray attachments; // NOLINT
-            GLsizei const attachmentCount = getAttachments(attachments, rt, discardFlags);
-            if (attachmentCount) {
-                glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
-            }
-            CHECK_GL_ERROR(utils::slog.e)
+    // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3
+#if defined(BACKEND_OPENGL_LEVEL_GLES30) || defined(BACKEND_OPENGL_VERSION_GL)
+    if ((mContext.isAtLeastGLES(3, 0) || mContext.isAtLeastGL(4, 3))
+            && !gl.bugs.disable_invalidate_framebuffer) {
+        AttachmentArray attachments; // NOLINT
+        GLsizei const attachmentCount = getAttachments(attachments, rt, discardFlags);
+        if (attachmentCount) {
+            glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
         }
-    } else {
-        // on GL desktop we assume we don't have glInvalidateFramebuffer, but even if the GPU is
-        // not a tiler, it's important to clear the framebuffer before drawing, as it resets
+        CHECK_GL_ERROR(utils::slog.e)
+    } else
+#endif
+    {
+        // It's important to clear the framebuffer before drawing, as it resets
         // the fb to a known state (resets fb compression and possibly other things).
         // So we use glClear instead of glInvalidateFramebuffer
         gl.disable(GL_SCISSOR_TEST);
@@ -2471,8 +2478,8 @@ void OpenGLDriver::endRenderPass(int) {
 
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
-    if (BACKEND_OPENGL_VERSION == BACKEND_OPENGL_VERSION_GLES &&
-            BACKEND_OPENGL_LEVEL >= BACKEND_OPENGL_LEVEL_GLES30) {
+#if defined(BACKEND_OPENGL_LEVEL_GLES30) || defined(BACKEND_OPENGL_VERSION_GL)
+    if (mContext.isAtLeastGLES(3, 0) || mContext.isAtLeastGL(4, 3)) {
         auto effectiveDiscardFlags = discardFlags;
         if (gl.bugs.invalidate_end_only_if_invalidate_start) {
             effectiveDiscardFlags &= mRenderPassParams.flags.discardStart;
@@ -2488,6 +2495,7 @@ void OpenGLDriver::endRenderPass(int) {
            CHECK_GL_ERROR(utils::slog.e)
         }
     }
+#endif
 
 #ifndef NDEBUG
     // clear the discarded buffers in debug builds
@@ -3232,7 +3240,7 @@ void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGr
 
     useProgram(p);
 
-#if defined(GL_ES_VERSION_3_1) || defined(GL_VERSION_4_3)
+#if defined(BACKEND_OPENGL_LEVEL_GLES31)
 
 #if defined(__ANDROID__)
     // on Android, GLES3.1 and above entry-points are defined in glext
@@ -3241,7 +3249,7 @@ void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGr
 #endif
 
     glDispatchCompute(workGroupCount.x, workGroupCount.y, workGroupCount.z);
-#endif
+#endif // BACKEND_OPENGL_LEVEL_GLES31
 
 #ifdef FILAMENT_ENABLE_MATDBG
     CHECK_GL_ERROR_NON_FATAL(utils::slog.e)

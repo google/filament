@@ -850,6 +850,11 @@ static bool processMaskThreshold(MaterialBuilder& builder, const JsonishValue& v
     return true;
 }
 
+static bool processAlphaToCoverage(MaterialBuilder& builder, const JsonishValue& value) {
+    builder.alphaToCoverage(value.toJsonBool()->getBool());
+    return true;
+}
+
 static bool processShadowMultiplier(MaterialBuilder& builder, const JsonishValue& value) {
     builder.shadowMultiplier(value.toJsonBool()->getBool());
     return true;
@@ -1070,6 +1075,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["transparency"]                  = { &processTransparencyMode, Type::STRING };
     mParameters["reflections"]                   = { &processReflectionMode, Type::STRING };
     mParameters["maskThreshold"]                 = { &processMaskThreshold, Type::NUMBER };
+    mParameters["alphaToCoverage"]               = { &processAlphaToCoverage, Type::BOOL };
     mParameters["shadowMultiplier"]              = { &processShadowMultiplier, Type::BOOL };
     mParameters["transparentShadow"]             = { &processTransparentShadow, Type::BOOL };
     mParameters["shadingModel"]                  = { &processShading, Type::STRING };
