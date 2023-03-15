@@ -24,6 +24,8 @@
 #include <utils/Condition.h>
 #include <utils/Mutex.h>
 
+#include <atomic>
+
 namespace filament::backend {
 
 // Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
