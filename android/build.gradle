@@ -34,6 +34,9 @@
 //   - Build and upload artifacts with ./gradlew publish
 //   - Close and release staging repo on Nexus with ./gradlew closeAndReleaseStagingRepository
 //
+//   These commands must both be run in the same Gradle invocation:
+//   ./gradlew publish closeAndReleaseStagingRepository
+//
 // The following is needed in ~/gradle/gradle.properties:
 //
 //     sonatypeUsername=nexus_user
