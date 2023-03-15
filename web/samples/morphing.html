@@ -38,7 +38,7 @@ class App {
         const onDone = () => {
             loader.delete();
             scene.addEntities(asset.getEntities());
-            this.animator = asset.getAnimator();
+            this.animator = asset.getInstance().getAnimator();
             this.animationStartTime = Date.now();
         };
         asset.loadResources(onDone);
