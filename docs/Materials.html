@@ -109,16 +109,17 @@ counter-increment: h6;margin-right:10px}
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/rasterization:depthwrite" class="level3"><span class="tocNumber">4.2.22&nbsp; </span>Rasterization: depthWrite</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/rasterization:depthculling" class="level3"><span class="tocNumber">4.2.23&nbsp; </span>Rasterization: depthCulling</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/rasterization:doublesided" class="level3"><span class="tocNumber">4.2.24&nbsp; </span>Rasterization: doubleSided</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:reflections" class="level3"><span class="tocNumber">4.2.25&nbsp; </span>Lighting: reflections</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:shadowmultiplier" class="level3"><span class="tocNumber">4.2.26&nbsp; </span>Lighting: shadowMultiplier</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:transparentshadow" class="level3"><span class="tocNumber">4.2.27&nbsp; </span>Lighting: transparentShadow</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:clearcoatiorchange" class="level3"><span class="tocNumber">4.2.28&nbsp; </span>Lighting: clearCoatIorChange</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:multibounceambientocclusion" class="level3"><span class="tocNumber">4.2.29&nbsp; </span>Lighting: multiBounceAmbientOcclusion</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:specularambientocclusion" class="level3"><span class="tocNumber">4.2.30&nbsp; </span>Lighting: specularAmbientOcclusion</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasing" class="level3"><span class="tocNumber">4.2.31&nbsp; </span>Anti-aliasing: specularAntiAliasing</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance" class="level3"><span class="tocNumber">4.2.32&nbsp; </span>Anti-aliasing: specularAntiAliasingVariance</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold" class="level3"><span class="tocNumber">4.2.33&nbsp; </span>Anti-aliasing: specularAntiAliasingThreshold</a><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/shading:customsurfaceshading" class="level3"><span class="tocNumber">4.2.34&nbsp; </span>Shading: customSurfaceShading</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/rasterization:alphatocoverage" class="level3"><span class="tocNumber">4.2.25&nbsp; </span>Rasterization: alphaToCoverage</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:reflections" class="level3"><span class="tocNumber">4.2.26&nbsp; </span>Lighting: reflections</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:shadowmultiplier" class="level3"><span class="tocNumber">4.2.27&nbsp; </span>Lighting: shadowMultiplier</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:transparentshadow" class="level3"><span class="tocNumber">4.2.28&nbsp; </span>Lighting: transparentShadow</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:clearcoatiorchange" class="level3"><span class="tocNumber">4.2.29&nbsp; </span>Lighting: clearCoatIorChange</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:multibounceambientocclusion" class="level3"><span class="tocNumber">4.2.30&nbsp; </span>Lighting: multiBounceAmbientOcclusion</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/lighting:specularambientocclusion" class="level3"><span class="tocNumber">4.2.31&nbsp; </span>Lighting: specularAmbientOcclusion</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasing" class="level3"><span class="tocNumber">4.2.32&nbsp; </span>Anti-aliasing: specularAntiAliasing</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance" class="level3"><span class="tocNumber">4.2.33&nbsp; </span>Anti-aliasing: specularAntiAliasingVariance</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold" class="level3"><span class="tocNumber">4.2.34&nbsp; </span>Anti-aliasing: specularAntiAliasingThreshold</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/materialblock/shading:customsurfaceshading" class="level3"><span class="tocNumber">4.2.35&nbsp; </span>Shading: customSurfaceShading</a><br>
 &nbsp;&nbsp;<a href="#materialdefinitions/vertexblock" class="level2"><span class="tocNumber">4.3&nbsp; </span>Vertex block</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/materialvertexinputs" class="level3"><span class="tocNumber">4.3.1&nbsp; </span>Material vertex inputs</a><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#materialdefinitions/vertexblock/customvertexattributes" class="level3"><span class="tocNumber">4.3.2&nbsp; </span>Custom vertex attributes</a><br>
@@ -778,7 +779,7 @@ and with (right)</span></center></div></center>
 
 The <code>bentNormal</code> property defines the average unoccluded direction at a point on the surface. It is
 used to improve the accuracy of indirect lighting. Bent normals can also improve the quality of
-specular ambient occlusion (see section  <a href="#toc4.2.30">4.2.30</a> about
+specular ambient occlusion (see section  <a href="#toc4.2.31">4.2.31</a> about
 <code>specularAmbientOcclusion</code>).
 
 </p><p>
@@ -1838,7 +1839,11 @@ non-shader data.
           ALPHA_TO_COVERAGE is enabled for non-translucent views. See the maskThreshold section for more
           information.</li></ul>
 
-<p></p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
+<p></p></dd></dl><div class="admonition note">When <code>blending</code> is set to <code>masked</code>, alpha to coverage is automatically enabled for the material.
+    If this behavior is undesirable, refer to the <a href="#rasterization:alphatocoverage">Rasterization: alphaToCoverage</a> section to turn
+    alpha to coverage off using the <code>alphaToCoverage</code> property.</div>
+
+<p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    blending : transparent</span>
 <span class="line">}</span></code></pre>
 <a class="target" name="blendingandtransparency:postlightingblending">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/blendingandtransparency:postlightingblending">&nbsp;</a><a class="target" name="toc4.2.15">&nbsp;</a><h3>Blending and transparency: postLightingBlending</h3>
@@ -2054,7 +2059,34 @@ and sorting issues are minimized or eliminated</span></center></div></center>
 <span class="line">        material.baseColor = materialParams.albedo;</span>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="lighting:reflections">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:reflections">&nbsp;</a><a class="target" name="toc4.2.25">&nbsp;</a><h3>Lighting: reflections</h3>
+<a class="target" name="rasterization:alphatocoverage">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/rasterization:alphatocoverage">&nbsp;</a><a class="target" name="toc4.2.25">&nbsp;</a><h3>Rasterization: alphaToCoverage</h3>
+<p>
+
+
+</p><dl><dt>Type</dt><dd><p>     <code>boolean</code>
+
+</p></dd><dt>Value</dt><dd><p>      <code>true</code> or <code>false</code>. Defaults to <code>false</code>.
+
+</p></dd><dt>Description</dt><dd><p>      Enables or disables alpha to coverage. When alpha to coverage is enabled, the coverage of
+      fragment is derived from its alpha. This property is only meaningful when MSAA is enabled.
+      Note: setting <code>blending</code> to <code>masked</code> automatically enables alpha to coverage. If this is not
+      desired, you can override this behavior by setting alpha to coverage to false as in the
+      example below.
+
+</p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
+<span class="line">    name : <span class="hljs-string">"Alpha to coverage"</span>,</span>
+<span class="line">    shadingModel : lit,</span>
+<span class="line">    blending : masked,</span>
+<span class="line">    alphaToCoverage : <span class="hljs-literal">false</span></span>
+<span class="line">}</span>
+<span class="line"></span>
+<span class="line">fragment {</span>
+<span class="line">    void material(inout MaterialInputs material) {</span>
+<span class="line">        prepareMaterial(material);</span>
+<span class="line">        material.baseColor = materialParams.albedo;</span>
+<span class="line">    }</span>
+<span class="line">}</span></code></pre>
+<a class="target" name="lighting:reflections">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:reflections">&nbsp;</a><a class="target" name="toc4.2.26">&nbsp;</a><h3>Lighting: reflections</h3>
 <p>
 
 
@@ -2071,7 +2103,7 @@ and sorting issues are minimized or eliminated</span></center></div></center>
 <span class="line">    name : <span class="hljs-string">"Glossy metal"</span>,</span>
 <span class="line">    reflections : screenspace</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="lighting:shadowmultiplier">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:shadowmultiplier">&nbsp;</a><a class="target" name="toc4.2.26">&nbsp;</a><h3>Lighting: shadowMultiplier</h3>
+<a class="target" name="lighting:shadowmultiplier">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:shadowmultiplier">&nbsp;</a><a class="target" name="toc4.2.27">&nbsp;</a><h3>Lighting: shadowMultiplier</h3>
 <p>
 
 
@@ -2098,7 +2130,7 @@ and sorting issues are minimized or eliminated</span></center></div></center>
 <span class="line">        material.baseColor = vec4(0.0, 0.0, 0.0, 0.7);</span>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="lighting:transparentshadow">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:transparentshadow">&nbsp;</a><a class="target" name="toc4.2.27">&nbsp;</a><h3>Lighting: transparentShadow</h3>
+<a class="target" name="lighting:transparentshadow">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:transparentshadow">&nbsp;</a><a class="target" name="toc4.2.28">&nbsp;</a><h3>Lighting: transparentShadow</h3>
 <p>
 
 
@@ -2132,7 +2164,7 @@ radius of 4. Model <a href="https://sketchfab.com/3d-models/bottle-of-water-48fd
 by <a href="https://sketchfab.com/person-x">T-Art</a>.</span></center></div></center>
 
 <p></p>
-<a class="target" name="lighting:clearcoatiorchange">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:clearcoatiorchange">&nbsp;</a><a class="target" name="toc4.2.28">&nbsp;</a><h3>Lighting: clearCoatIorChange</h3>
+<a class="target" name="lighting:clearcoatiorchange">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:clearcoatiorchange">&nbsp;</a><a class="target" name="toc4.2.29">&nbsp;</a><h3>Lighting: clearCoatIorChange</h3>
 <p>
 
 
@@ -2154,7 +2186,7 @@ with <code>clearCoatIorChange</code> enabled (left) and disabled
 (right).</span></center></div></center>
 
 <p></p>
-<a class="target" name="lighting:multibounceambientocclusion">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:multibounceambientocclusion">&nbsp;</a><a class="target" name="toc4.2.29">&nbsp;</a><h3>Lighting: multiBounceAmbientOcclusion</h3>
+<a class="target" name="lighting:multibounceambientocclusion">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:multibounceambientocclusion">&nbsp;</a><a class="target" name="toc4.2.30">&nbsp;</a><h3>Lighting: multiBounceAmbientOcclusion</h3>
 <p>
 
 
@@ -2183,7 +2215,7 @@ occclusion enabled (left) and disabled (right).</span></center></div></center>
 occclusion enabled and disabled.</span></center></div></center>
 
 <p></p>
-<a class="target" name="lighting:specularambientocclusion">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:specularambientocclusion">&nbsp;</a><a class="target" name="toc4.2.30">&nbsp;</a><h3>Lighting: specularAmbientOcclusion</h3>
+<a class="target" name="lighting:specularambientocclusion">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/lighting:specularambientocclusion">&nbsp;</a><a class="target" name="toc4.2.31">&nbsp;</a><h3>Lighting: specularAmbientOcclusion</h3>
 <p>
 
 
@@ -2209,7 +2241,7 @@ occclusion enabled and disabled.</span></center></div></center>
 particularly visible under the hose.</span></center></div></center>
 
 <p></p>
-<a class="target" name="anti-aliasing:specularantialiasing">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasing">&nbsp;</a><a class="target" name="toc4.2.31">&nbsp;</a><h3>Anti-aliasing: specularAntiAliasing</h3>
+<a class="target" name="anti-aliasing:specularantialiasing">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasing">&nbsp;</a><a class="target" name="toc4.2.32">&nbsp;</a><h3>Anti-aliasing: specularAntiAliasing</h3>
 <p>
 
 
@@ -2226,7 +2258,7 @@ particularly visible under the hose.</span></center></div></center>
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    specularAntiAliasing : <span class="hljs-literal">true</span></span>
 <span class="line">}</span></code></pre>
-<a class="target" name="anti-aliasing:specularantialiasingvariance">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance">&nbsp;</a><a class="target" name="toc4.2.32">&nbsp;</a><h3>Anti-aliasing: specularAntiAliasingVariance</h3>
+<a class="target" name="anti-aliasing:specularantialiasingvariance">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance">&nbsp;</a><a class="target" name="toc4.2.33">&nbsp;</a><h3>Anti-aliasing: specularAntiAliasingVariance</h3>
 <p>
 
 
@@ -2241,7 +2273,7 @@ particularly visible under the hose.</span></center></div></center>
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    specularAntiAliasingVariance : <span class="hljs-number">0.2</span></span>
 <span class="line">}</span></code></pre>
-<a class="target" name="anti-aliasing:specularantialiasingthreshold">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold">&nbsp;</a><a class="target" name="toc4.2.33">&nbsp;</a><h3>Anti-aliasing: specularAntiAliasingThreshold</h3>
+<a class="target" name="anti-aliasing:specularantialiasingthreshold">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold">&nbsp;</a><a class="target" name="toc4.2.34">&nbsp;</a><h3>Anti-aliasing: specularAntiAliasingThreshold</h3>
 <p>
 
 
@@ -2255,7 +2287,7 @@ particularly visible under the hose.</span></center></div></center>
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    specularAntiAliasingThreshold : <span class="hljs-number">0.1</span></span>
 <span class="line">}</span></code></pre>
-<a class="target" name="shading:customsurfaceshading">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/shading:customsurfaceshading">&nbsp;</a><a class="target" name="toc4.2.34">&nbsp;</a><h3>Shading: customSurfaceShading</h3>
+<a class="target" name="shading:customsurfaceshading">&nbsp;</a><a class="target" name="materialdefinitions/materialblock/shading:customsurfaceshading">&nbsp;</a><a class="target" name="toc4.2.35">&nbsp;</a><h3>Shading: customSurfaceShading</h3>
 <p>
 
 
@@ -2335,8 +2367,9 @@ APIs listed in the <a href="#shaderpublicapis">Shader public APIs</a> section.
 <p></p><p>
 
     To achieve good precision, the <code>worldPosition</code> coordinate in the vertex shader is shifted by the
-    camera position. To get the true world-space position, users can add this to
-    <code>getWorldOffset()</code>.</p></div>
+    camera position. To get the true world-space position, users can use
+    <code>getUserWorldPosition()</code>, however be aware that the true world-position might not
+    be able to fit in a <code>float</code> or might be represented with severely reduced precision.</p></div>
 
 <p></p><p>
 
@@ -2707,9 +2740,10 @@ type aliases:
 <p>
 
 </p><div class="table"><table class="table"><tbody><tr><th style="text-align:left"> Name </th><th style="text-align:center"> Type </th><th style="text-align:left"> Description </th></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getResolution()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Dimensions of the view's effective viewport in pixels: <code>width</code>, <code>height</code>, <code>1 / width</code>, <code>1 / height</code>. This might be different from <code>View::getViewport()</code> for instance because of added rendering guard-bands. This can be used in conjunction with <code>getNormalizedViewportCoord()</code> to generate pixel coordinates. </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getWorldCameraPosition()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Position of the camera/eye in world space </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getWorldOffset()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> The shift required to obtain API-level world space </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getResolution()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Dimensions of the view's effective (physical) viewport in pixels: <code>width</code>, <code>height</code>, <code>1 / width</code>, <code>1 / height</code>. This might be different from <code>View::getViewport()</code> for instance because of added rendering guard-bands. </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getWorldCameraPosition()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Position of the camera/eye in world space (see note below) </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getWorldOffset()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> [deprecated] The shift required to obtain API-level world space. Use getUserWorldPosition() instead </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getUserWorldFromWorldMatrix()</strong> </td><td style="text-align:center"> float4×4 </td><td style="text-align:left"> Matrix that converts from world space to API-level (user) world space. </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getTime()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Current time as a remainder of 1 second. Yields a value between 0 and 1 </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getUserTime()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Current time in seconds: <code>time</code>, <code>(double)time - time</code>, <code>0</code>, <code>0</code> </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getUserTimeMode(float m)</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Current time modulo m in seconds </td></tr>
@@ -2725,7 +2759,7 @@ type aliases:
 
     To achieve good precision, the “world space” in Filament's shading system does not necessarily
     match the API-level world space. To obtain the position of the API-level camera, custom
-    materials can add <code>getWorldOffset()</code> to <code>getWorldCameraPosition()</code>.</p></div>
+    materials can use <code>getUserWorldFromWorldMatrix()</code> to transform <code>getWorldCameraPosition()</code>.</p></div>
 
 <p></p>
 <a class="target" name="vertexonly">&nbsp;</a><a class="target" name="materialdefinitions/shaderpublicapis/vertexonly">&nbsp;</a><a class="target" name="toc4.5.5">&nbsp;</a><h3>Vertex only</h3>
@@ -2750,11 +2784,12 @@ The following APIs are only available from the fragment block:
 </p><div class="table"><table class="table"><tbody><tr><th style="text-align:left"> Name </th><th style="text-align:center"> Type </th><th style="text-align:left"> Description </th></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldTangentFrame()</strong> </td><td style="text-align:center"> float3×3 </td><td style="text-align:left"> Matrix containing in each column the <code>tangent</code> (<code>frame[0]</code>), <code>bi-tangent</code> (<code>frame[1]</code>) and <code>normal</code> (<code>frame[2]</code>) of the vertex in world space. If the material does not compute a tangent space normal for bump mapping or if the shading is not anisotropic, only the <code>normal</code> is valid in this matrix. </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldPosition()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Position of the fragment in world space (see note below about world-space) </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getUserWorldPosition()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Position of the fragment in API-level (user) world-space (see note below about world-space) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldViewVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized vector in world space from the fragment position to the eye </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldNormalVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized normal in world space, after bump mapping (must be used after <code>prepareMaterial()</code>) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldGeometricNormalVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized normal in world space, before bump mapping (can be used before <code>prepareMaterial()</code>) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldReflectedVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Reflection of the view vector about the normal (must be used after <code>prepareMaterial()</code>) </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getNormalizedViewportCoord()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized viewport position (i.e. NDC coordinates normalized to [0, 1], can be used before <code>prepareMaterial()</code>) </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getNormalizedViewportCoord()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized user viewport position (i.e. NDC coordinates normalized to [0, 1] for the position, [1, 0] for the depth), can be used before <code>prepareMaterial()</code>). Because the user viewport is smaller than the actual physical viewport, these coordinates can be negative or superior to 1 in the non-visible area of the physical viewport. </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getNdotV()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> The result of <code>dot(normal, view)</code>, always strictly greater than 0 (must be used after <code>prepareMaterial()</code>) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getColor()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Interpolated color of the fragment, if the color attribute is required </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getUV0()</strong> </td><td style="text-align:center"> float2 </td><td style="text-align:left"> First interpolated set of UV coordinates, only available if the uv0 attribute is required </td></tr>
@@ -2769,12 +2804,13 @@ The following APIs are only available from the fragment block:
 
 <p></p><p>
 
-</p><div class="admonition tip"><div class="admonition-title"> world space</div>
+</p><div class="admonition tip"><div class="admonition-title"> world-space</div>
 
 <p></p><p>
 
-    To obtain API-level world space coordinates, custom materials should add <code>getWorldOffset()</code> to
-    <code>getWorldPosition()</code> (et al).</p></div>
+    To obtain API-level world-space coordinates, custom materials should use <code>getUserWorldPosition()</code>
+    or use <code>getUserWorldFromWorldMatrix()</code>. Note that API-level world-space coordinates should
+    never or rarely be used because they may not fit in a float3 or have severely reduced precision.</p></div>
 
 <p></p><p>
 
