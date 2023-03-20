@@ -219,6 +219,22 @@ void StbProvider::cancelDecoding() {
     // in-flight jobs. We should consider throttling the number of simultaneous decoder jobs, which
     // would allow for actual cancellation.
     waitForCompletion();
+
+    // For cancelled jobs, we need to set the TextureInfo to the popped state and free the decoded
+    // data.
+    for (auto& info : mTextures) {
+        if (info->state != TextureState::DECODING) {
+            continue;
+        }
+        // Deleting data here should be safe thread-wise as the only other place where
+        // decodedTexelsBaseMipmap is loaded is in the job threads, and we have waited them to
+        // completion above. We also expect the TextureProvider API calls to be made only from one
+        // thread.
+        if (intptr_t data = info->decodedTexelsBaseMipmap.load()) {
+            delete [] (uint8_t*) data;
+        }
+        info->state = TextureState::POPPED;
+    }
 }
 
 const char* StbProvider::getPushMessage() const {
