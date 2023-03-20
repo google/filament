@@ -126,11 +126,35 @@ static void appendShader(io::sstream& ss,
     }
 }
 
+static void generateUserSpecConstants(
+        const CodeGenerator& cg, io::sstream& fs, MaterialBuilder::ConstantList constants) {
+    size_t index = 2;
+    for (const auto& constant : constants) {
+        std::string fullName = std::string("materialConstants_") + constant.name.c_str();
+        switch (constant.type) {
+            case ConstantType::INT:
+                cg.generateSpecializationConstant(
+                        fs, fullName.c_str(), index++, constant.defaultValue.i);
+                break;
+            case ConstantType::FLOAT:
+                cg.generateSpecializationConstant(
+                        fs, fullName.c_str(), index++, constant.defaultValue.f);
+                break;
+            case ConstantType::BOOL:
+                cg.generateSpecializationConstant(
+                        fs, fullName.c_str(), index++, constant.defaultValue.b);
+                break;
+        }
+    }
+}
+
+
 ShaderGenerator::ShaderGenerator(
         MaterialBuilder::PropertyList const& properties,
         MaterialBuilder::VariableList const& variables,
         MaterialBuilder::OutputList const& outputs,
         MaterialBuilder::PreprocessorDefineList const& defines,
+        MaterialBuilder::ConstantList const& constants,
         CString const& materialCode, size_t lineOffset,
         CString const& materialVertexCode, size_t vertexLineOffset,
         MaterialBuilder::MaterialDomain materialDomain) noexcept {
@@ -151,6 +175,7 @@ ShaderGenerator::ShaderGenerator(
     mMaterialVertexLineOffset = vertexLineOffset;
     mMaterialDomain = materialDomain;
     mDefines = defines;
+    mConstants = constants;
 
     if (mMaterialFragmentCode.empty()) {
         if (mMaterialDomain == MaterialBuilder::MaterialDomain::SURFACE) {
@@ -202,6 +227,8 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
     const bool lit = material.isLit;
 
     cg.generateProlog(vs, ShaderStage::VERTEX, material);
+
+    generateUserSpecConstants(cg, vs, mConstants);
 
     cg.generateQualityDefine(vs, material.quality);
 
@@ -341,6 +368,8 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
 
     io::sstream fs;
     cg.generateProlog(fs, ShaderStage::FRAGMENT, material);
+
+    generateUserSpecConstants(cg, fs, mConstants);
 
     cg.generateQualityDefine(fs, material.quality);
 
@@ -553,6 +582,8 @@ std::string ShaderGenerator::createComputeProgram(filament::backend::ShaderModel
     io::sstream s;
 
     cg.generateProlog(s, ShaderStage::COMPUTE, material);
+
+    generateUserSpecConstants(cg, s, mConstants);
 
     cg.generateQualityDefine(s, material.quality);
 

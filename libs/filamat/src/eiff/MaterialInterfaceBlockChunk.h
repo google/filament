@@ -28,6 +28,7 @@ class SamplerBindingMap;
 class SamplerInterfaceBlock;
 class BufferInterfaceBlock;
 struct SubpassInfo;
+struct MaterialConstant;
 } // namespace filament
 
 namespace filamat {
@@ -67,6 +68,20 @@ private:
     void flatten(Flattener&) final;
 
     filament::SubpassInfo const& mSubpass;
+};
+
+// ------------------------------------------------------------------------------------------------
+
+class MaterialConstantParametersChunk final : public Chunk {
+public:
+    explicit MaterialConstantParametersChunk(
+            utils::FixedCapacityVector<filament::MaterialConstant> constants);
+    ~MaterialConstantParametersChunk() final = default;
+
+private:
+    void flatten(Flattener&) final;
+
+    utils::FixedCapacityVector<filament::MaterialConstant> mConstants;
 };
 
 // ------------------------------------------------------------------------------------------------

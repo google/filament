@@ -27,11 +27,13 @@
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
+#include <private/filament/ConstantInfo.h>
 
 #include <utils/compiler.h>
 #include <utils/Mutex.h>
 
 #include <atomic>
+#include <unordered_map>
 
 namespace filament {
 
@@ -230,6 +232,7 @@ private:
     utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> mUniformBlockBindings;
     SamplerGroupBindingInfoList mSamplerGroupBindingInfoList;
     SamplerBindingToNameMap mSamplerBindingToNameMap;
+    utils::FixedCapacityVector<backend::Program::SpecializationConstant> mSpecializationConstants;
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;

@@ -7,3 +7,5 @@ for next branch cut* header.
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+
+- engine: Add support for _constant parameters_, which are constants that can be specialized after material compilation.

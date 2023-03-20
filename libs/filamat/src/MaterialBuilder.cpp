@@ -45,6 +45,7 @@
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UibStructs.h>
+#include <private/filament/ConstantInfo.h>
 
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
@@ -211,6 +212,53 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType sample
         ParameterPrecision precision) noexcept {
     return parameter(name, samplerType, SamplerFormat::FLOAT, precision);
 }
+
+template<typename T, typename>
+MaterialBuilder& MaterialBuilder::constant(const char* name, ConstantType type, T defaultValue) {
+    auto result = std::find_if(mConstants.begin(), mConstants.end(), [name](const Constant& c) {
+        return c.name == utils::CString(name);
+    });
+    ASSERT_POSTCONDITION(result == mConstants.end(),
+            "There is already a constant parameter present with the name %s.", name);
+    Constant constant {
+            .name = CString(name),
+            .type = type,
+    };
+    auto toString = [](ConstantType t) {
+        switch (t) {
+            case ConstantType::INT: return "INT";
+            case ConstantType::FLOAT: return "FLOAT";
+            case ConstantType::BOOL: return "BOOL";
+        }
+    };
+
+    const char* const errMessage =
+            "Constant %s was declared with type %s but given %s default value.";
+    if constexpr (std::is_same_v<T, int32_t>) {
+        ASSERT_POSTCONDITION(
+                type == ConstantType::INT, errMessage, name, toString(type), "an int");
+        constant.defaultValue.i = defaultValue;
+    } else if constexpr (std::is_same_v<T, float>) {
+        ASSERT_POSTCONDITION(
+                type == ConstantType::FLOAT, errMessage, name, toString(type), "a float");
+        constant.defaultValue.f = defaultValue;
+    } else if constexpr (std::is_same_v<T, bool>) {
+        ASSERT_POSTCONDITION(
+                type == ConstantType::BOOL, errMessage, name, toString(type), "a bool");
+        constant.defaultValue.b = defaultValue;
+    } else {
+        assert_invariant(false);
+    }
+
+    mConstants.push_back(constant);
+    return *this;
+}
+template MaterialBuilder& MaterialBuilder::constant<int32_t>(
+        const char* name, ConstantType type, int32_t defaultValue);
+template MaterialBuilder& MaterialBuilder::constant<float>(
+        const char* name, ConstantType type, float defaultValue);
+template MaterialBuilder& MaterialBuilder::constant<bool>(
+        const char* name, ConstantType type, bool defaultValue);
 
 MaterialBuilder& MaterialBuilder::buffer(BufferInterfaceBlock bib) noexcept {
     ASSERT_POSTCONDITION(mBuffers.size() < MAX_BUFFERS_COUNT, "Too many buffers");
@@ -696,10 +744,10 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 #endif
     // End: must be protected by lock
 
-    ShaderGenerator sg(
-            mProperties, mVariables, mOutputs, mDefines, mMaterialFragmentCode.getResolved(),
-            mMaterialFragmentCode.getLineOffset(), mMaterialVertexCode.getResolved(),
-            mMaterialVertexCode.getLineOffset(), mMaterialDomain);
+    ShaderGenerator sg(mProperties, mVariables, mOutputs, mDefines, mConstants,
+            mMaterialFragmentCode.getResolved(), mMaterialFragmentCode.getLineOffset(),
+            mMaterialVertexCode.getResolved(), mMaterialVertexCode.getLineOffset(),
+            mMaterialDomain);
 
     container.addSimpleChild<bool>(ChunkType::MaterialHasCustomDepthShader, needsStandardDepthProgram());
 
@@ -1160,7 +1208,7 @@ bool MaterialBuilder::needsStandardDepthProgram() const noexcept {
 std::string MaterialBuilder::peek(backend::ShaderStage stage,
         const CodeGenParams& params, const PropertyList& properties) noexcept {
 
-    ShaderGenerator sg(properties, mVariables, mOutputs, mDefines,
+    ShaderGenerator sg(properties, mVariables, mOutputs, mDefines, mConstants,
             mMaterialFragmentCode.getResolved(), mMaterialFragmentCode.getLineOffset(),
             mMaterialVertexCode.getResolved(), mMaterialVertexCode.getLineOffset(),
             mMaterialDomain);
@@ -1218,6 +1266,12 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
 
     // User Material SIB
     container.addChild<MaterialSamplerInterfaceBlockChunk>(info.sib);
+
+    // User constant parameters
+    utils::FixedCapacityVector<MaterialConstant> constantsEntry(mConstants.size());
+    std::transform(mConstants.begin(), mConstants.end(), constantsEntry.begin(),
+            [](Constant const& c) { return MaterialConstant(c.name.c_str(), c.type); });
+    container.addChild<MaterialConstantParametersChunk>(std::move(constantsEntry));
 
     // TODO: should we write the SSBO info? this would only be needed if we wanted to provide
     //       an interface to set [get?] values in the buffer. But we can do that easily

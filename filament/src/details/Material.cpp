@@ -32,7 +32,10 @@
 #include <backend/Program.h>
 
 #include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
+
+#include <unordered_map>
 
 namespace filament {
 
@@ -71,6 +74,7 @@ struct Material::BuilderDetails {
     size_t mSize = 0;
     MaterialParser* mMaterialParser = nullptr;
     bool mDefaultMaterial = false;
+    std::unordered_map<const char*, std::variant<int32_t, float, bool>> mConstantSpecializations;
 };
 
 FMaterial::DefaultMaterialBuilder::DefaultMaterialBuilder() : Material::Builder() {
@@ -90,6 +94,17 @@ Material::Builder& Material::Builder::package(const void* payload, size_t size) 
     mImpl->mSize = size;
     return *this;
 }
+
+template<typename T, typename>
+Material::Builder& Material::Builder::constant(const char* name, T value) {
+    ASSERT_PRECONDITION(name != nullptr, "name cannot be null");
+    mImpl->mConstantSpecializations[name] = value;
+    return *this;
+}
+
+template Material::Builder& Material::Builder::constant<int32_t>(const char* name, int32_t value);
+template Material::Builder& Material::Builder::constant<float>(const char* name, float value);
+template Material::Builder& Material::Builder::constant<bool>(const char* name, bool value);
 
 Material* Material::Builder::build(Engine& engine) {
     std::unique_ptr<MaterialParser> materialParser{ createParser(
@@ -177,6 +192,45 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     // Older materials will not have a subpass chunk; this should not be an error.
     if (!parser->getSubpasses(&mSubpassInfo)) {
         mSubpassInfo.isValid = false;
+    }
+
+    utils::FixedCapacityVector<MaterialConstant> constants;
+    // Older materials won't have a constants chunk, but that's okay.
+    parser->getConstants(&constants);
+
+    // Verify that all the constant specializations exist in the material and that their types match.
+    // The first two specialization constants are defined internally by Filament.
+    // Constants #2 onwards are user-defined in the material.
+    mSpecializationConstants.reserve(constants.size() + 2);
+    mSpecializationConstants.push_back({0, (int)mEngine.getSupportedFeatureLevel()});
+    mSpecializationConstants.push_back({1, (int)CONFIG_MAX_INSTANCES});
+    for (const auto& [name, value] : builder->mConstantSpecializations) {
+        auto found = std::find_if(
+                constants.begin(), constants.end(), [name = name](const auto& constant) {
+                    return constant.name == utils::CString(name);
+                });
+        ASSERT_PRECONDITION(found != constants.end(),
+                "The material %s does not have a constant parameter named %s.", mName.c_str_safe(), name);
+        const char* const types[3] = {"an int", "a float", "a bool"};
+        const char* const errorMessage =
+                "The constant parameter %s on material %s is of type %s, but %s was "
+                "provided.";
+        switch (found->type) {
+            case ConstantType::INT:
+                ASSERT_PRECONDITION(std::holds_alternative<int32_t>(value), errorMessage,
+                        name, mName.c_str_safe(), "int", types[value.index()]);
+                break;
+            case ConstantType::FLOAT:
+                ASSERT_PRECONDITION(std::holds_alternative<float>(value), errorMessage,
+                        name, mName.c_str_safe(), "float", types[value.index()]);
+                break;
+            case ConstantType::BOOL:
+                ASSERT_PRECONDITION(std::holds_alternative<bool>(value), errorMessage,
+                        name, mName.c_str_safe(), "bool", types[value.index()]);
+                break;
+        }
+        uint32_t index = std::distance(constants.begin(), found);
+        mSpecializationConstants.push_back({index + 2, value});
     }
 
     parser->getShading(&mShading);
@@ -450,10 +504,7 @@ Program FMaterial::getProgramBuilderWithVariants(
         }
     }
 
-    program.specializationConstants({
-            { 0, (int)mEngine.getSupportedFeatureLevel() },
-            { 1, (int)CONFIG_MAX_INSTANCES }
-    });
+    program.specializationConstants(mSpecializationConstants);
 
     return program;
 }

@@ -279,6 +279,15 @@ enum class UniformType : uint8_t {
     STRUCT
 };
 
+/**
+ * Supported constant parameter types
+ */
+ enum class ConstantType : uint8_t {
+  INT,
+  FLOAT,
+  BOOL
+};
+
 enum class Precision : uint8_t {
     LOW,
     MEDIUM,

@@ -246,6 +246,98 @@ static bool processParameters(MaterialBuilder& builder, const JsonishValue& v) {
     return ok;
 }
 
+static bool processConstant(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
+    const JsonishValue* typeValue = jsonObject.getValue("type");
+    if (!typeValue) {
+        std::cerr << "constants: entry without key 'type'." << std::endl;
+        return false;
+    }
+    if (typeValue->getType() != JsonishValue::STRING) {
+        std::cerr << "constants: type value must be STRING." << std::endl;
+        return false;
+    }
+
+    const JsonishValue* nameValue = jsonObject.getValue("name");
+    if (!nameValue) {
+        std::cerr << "constants: entry without 'name' key." << std::endl;
+        return false;
+    }
+    if (nameValue->getType() != JsonishValue::STRING) {
+        std::cerr << "constants: name value must be STRING." << std::endl;
+        return false;
+    }
+
+    auto typeString = typeValue->toJsonString()->getString();
+    auto nameString = nameValue->toJsonString()->getString();
+    const JsonishValue* defaultValue = jsonObject.getValue("default");
+
+    if (Enums::isValid<ConstantType>(typeString)) {
+        auto type = Enums::toEnum<ConstantType>(typeString);
+        switch (type) {
+            case ConstantType::INT: {
+                int32_t intDefault = 0;
+                if (defaultValue) {
+                    if (defaultValue->getType() != JsonishValue::NUMBER) {
+                        std::cerr << "constants: INT constants must have NUMBER default value"
+                                  << std::endl;
+                        return false;
+                    }
+                    // FIXME: Jsonish doesn't distinguish between integers and floats.
+                    intDefault = (int32_t)defaultValue->toJsonNumber()->getFloat();
+                }
+                builder.constant(nameString.c_str(), type, intDefault);
+                break;
+            }
+            case ConstantType::FLOAT: {
+                float floatDefault = 0.0f;
+                if (defaultValue) {
+                    if (defaultValue->getType() != JsonishValue::NUMBER) {
+                        std::cerr << "constants: FLOAT constants must have NUMBER default value"
+                                  << std::endl;
+                        return false;
+                    }
+                    floatDefault = defaultValue->toJsonNumber()->getFloat();
+                }
+                builder.constant(nameString.c_str(), type, floatDefault);
+                break;
+            }
+            case ConstantType::BOOL:
+                bool boolDefault = false;
+                if (defaultValue) {
+                    if (defaultValue->getType() != JsonishValue::BOOL) {
+                        std::cerr << "constants: BOOL constants must have BOOL default value"
+                                  << std::endl;
+                        return false;
+                    }
+                    boolDefault = defaultValue->toJsonBool()->getBool();
+                }
+                builder.constant(nameString.c_str(), type, boolDefault);
+                break;
+        }
+    } else {
+        std::cerr << "constants: the type '" << typeString
+                  << "' for constant with name '" << nameString << "' is not a valid constant "
+                  << "parameter type." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+static bool processConstants(MaterialBuilder& builder, const JsonishValue& v) {
+    auto jsonArray = v.toJsonArray();
+
+    bool ok = true;
+    for (auto value : jsonArray->getElements()) {
+        if (value->getType() == JsonishValue::Type::OBJECT) {
+            ok &= processConstant(builder, *value->toJsonObject());
+            continue;
+        }
+        std::cerr << "constants must be an array of OBJECTs." << std::endl;
+        return false;
+    }
+    return ok;
+}
 
 static bool processBufferField(filament::BufferInterfaceBlock::Builder& builder,
         const JsonishObject& jsonObject) noexcept {
@@ -1059,6 +1151,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["name"]                          = { &processName, Type::STRING };
     mParameters["interpolation"]                 = { &processInterpolation, Type::STRING };
     mParameters["parameters"]                    = { &processParameters, Type::ARRAY };
+    mParameters["constants"]                     = { &processConstants, Type::ARRAY };
     mParameters["buffers"]                       = { &processBuffers, Type::ARRAY };
     mParameters["subpasses"]                     = { &processSubpasses, Type::ARRAY };
     mParameters["variables"]                     = { &processVariables, Type::ARRAY };
