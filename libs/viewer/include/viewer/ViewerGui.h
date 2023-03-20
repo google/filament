@@ -234,8 +234,6 @@ public:
 private:
     using SceneMask = gltfio::NodeManager::SceneMask;
 
-    void updateIndirectLight();
-
     bool isRemoteMode() const { return mAsset == nullptr; }
 
     void sceneSelectionUI();
