@@ -68,7 +68,7 @@ class App {
 
         if (this.animator) {
             const ms = Date.now() - this.animationStartTime;
-            this.animator.applyAnimation(0, (ms / 1000) % 1.0);
+            this.animator.applyAnimation(0, ms / 1000);
             this.animator.updateBoneMatrices();
         }
 

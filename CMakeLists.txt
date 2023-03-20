@@ -124,11 +124,16 @@ if (LINUX)
             add_definitions(-DFILAMENT_SUPPORTS_XCB)
         endif()
 
+        # Default Swiftshader build does not enable the xlib extension
+        if (FILAMENT_SUPPORTS_XLIB AND FILAMENT_USE_SWIFTSHADER)
+            set(FILAMENT_SUPPORTS_XLIB OFF)
+        endif()
+
         if (FILAMENT_SUPPORTS_XLIB)
             add_definitions(-DFILAMENT_SUPPORTS_XLIB)
         endif()
 
-        if (FILAMENT_SUPPORTS_XCB OR FILAMENT_SUPORTS_XLIB)
+        if (FILAMENT_SUPPORTS_XCB OR FILAMENT_SUPPORTS_XLIB)
             add_definitions(-DFILAMENT_SUPPORTS_X11)
             set(FILAMENT_SUPPORTS_X11 TRUE)
         endif()

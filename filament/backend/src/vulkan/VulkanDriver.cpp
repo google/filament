@@ -75,8 +75,6 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     mContext.commands->setObserver(&mPipelineCache);
     mPipelineCache.setDevice(mContext.device, mContext.allocator);
     mPipelineCache.setDummyTexture(mContext.emptyTexture->getPrimaryImageView());
-
-    mReadPixels.initialize(mContext.device);
 }
 
 VulkanDriver::~VulkanDriver() noexcept = default;
@@ -136,9 +134,6 @@ void VulkanDriver::terminate() {
 
 void VulkanDriver::tick(int) {
     mContext.commands->updateFences();
-
-    // Handle any posted tasks
-    runTaskHandler();
 }
 
 // Garbage collection should not occur too frequently, only about once per frame. Internally, the
@@ -1016,10 +1011,10 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     rt->transformClientRectToPlatform(&renderPassInfo.renderArea);
 
+    VkClearValue clearValues[
+            MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT +
+            1] = {};
     if (params.flags.clear != TargetBufferFlags::NONE) {
-        VkClearValue clearValues[
-                MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT +
-                1] = {};
 
         // NOTE: clearValues must be populated in the same order as the attachments array in
         // VulkanFboCache::getFramebuffer. Values must be provided regardless of whether Vulkan is
@@ -1330,18 +1325,152 @@ void VulkanDriver::stopCapture(int) {
 
 }
 
-void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y, uint32_t width,
-        uint32_t height, PixelBufferDescriptor&& pbd) {
+void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
+        uint32_t width, uint32_t height, PixelBufferDescriptor&& pbd) {
+    const VkDevice device = mContext.device;
     VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget*>(src);
-    mReadPixels.run(
-            srcTarget, x, y, width, height, mContext.graphicsQueueFamilyIndex, std::move(pbd),
-            getTaskHandler(),
-            [&context = mContext](uint32_t reqs, VkFlags flags) {
-                return context.selectMemoryType(reqs, flags);
-            },
-            [this](PixelBufferDescriptor&& pbd) {
-                this->scheduleDestroy(std::move(pbd));
-            });
+    VulkanTexture* srcTexture = srcTarget->getColor(0).texture;
+    assert_invariant(srcTexture);
+    const VkFormat srcFormat = srcTexture->getVkFormat();
+    const bool swizzle = srcFormat == VK_FORMAT_B8G8R8A8_UNORM;
+
+    // Create a host visible, linearly tiled image as a staging area.
+
+    VkImageCreateInfo imageInfo {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = srcFormat,
+        .extent = { width, height, 1 },
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_LINEAR,
+        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+
+    VkImage stagingImage;
+    vkCreateImage(device, &imageInfo, VKALLOC, &stagingImage);
+
+    VkMemoryRequirements memReqs;
+    VkDeviceMemory stagingMemory;
+    vkGetImageMemoryRequirements(device, stagingImage, &memReqs);
+    VkMemoryAllocateInfo allocInfo = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memReqs.size,
+        .memoryTypeIndex = mContext.selectMemoryType(memReqs.memoryTypeBits,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+                VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
+    };
+
+    vkAllocateMemory(device, &allocInfo, nullptr, &stagingMemory);
+    vkBindImageMemory(device, stagingImage, stagingMemory, 0);
+
+    // TODO: don't flush/wait here, this should be asynchronous
+
+    mContext.commands->flush();
+    mContext.commands->wait();
+
+    // Transition the staging image layout.
+
+    const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
+
+    transitionImageLayout(cmdbuffer, {
+        .image = stagingImage,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .subresources = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+        .srcStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+        .srcAccessMask = 0,
+        .dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+        .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+    });
+
+    const VulkanAttachment srcAttachment = srcTarget->getColor(0);
+
+    VkImageCopy imageCopyRegion = {
+        .srcSubresource = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevel = srcAttachment.level,
+            .baseArrayLayer = srcAttachment.layer,
+            .layerCount = 1,
+        },
+        .srcOffset = {
+            .x = (int32_t) x,
+            .y = (int32_t) (srcTarget->getExtent().height - (height + y)),
+        },
+        .dstSubresource = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .layerCount = 1,
+        },
+        .extent = {
+            .width = width,
+            .height = height,
+            .depth = 1,
+        },
+    };
+
+    // Transition the source image layout (which might be the swap chain)
+
+    const VkImageSubresourceRange srcRange = {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = srcAttachment.level,
+        .levelCount = 1,
+        .baseArrayLayer = srcAttachment.layer,
+        .layerCount = 1,
+    };
+
+    srcTexture->transitionLayout(cmdbuffer, srcRange, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+    // Perform the copy into the staging area. At this point we know that the src layout is
+    // TRANSFER_SRC_OPTIMAL and the staging area is GENERAL.
+
+    UTILS_UNUSED_IN_RELEASE VkExtent2D srcExtent = srcAttachment.getExtent2D();
+    assert_invariant(imageCopyRegion.srcOffset.x + imageCopyRegion.extent.width <= srcExtent.width);
+    assert_invariant(imageCopyRegion.srcOffset.y + imageCopyRegion.extent.height <= srcExtent.height);
+
+    vkCmdCopyImage(cmdbuffer, srcAttachment.getImage(),
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, stagingImage, VK_IMAGE_LAYOUT_GENERAL,
+            1, &imageCopyRegion);
+
+    // Restore the source image layout. Between driver API calls, color images are always kept in
+    // UNDEFINED layout or in their "usage default" layout (see comment for getDefaultImageLayout).
+
+    srcTexture->transitionLayout(cmdbuffer, srcRange,
+            getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT));
+
+    // TODO: don't flush/wait here -- we should do this asynchronously
+
+    // Flush and wait.
+    mContext.commands->flush();
+    mContext.commands->wait();
+
+    VkImageSubresource subResource { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT };
+    VkSubresourceLayout subResourceLayout;
+    vkGetImageSubresourceLayout(device, stagingImage, &subResource, &subResourceLayout);
+
+    // Map image memory so we can start copying from it.
+
+    const uint8_t* srcPixels;
+    vkMapMemory(device, stagingMemory, 0, VK_WHOLE_SIZE, 0, (void**) &srcPixels);
+    srcPixels += subResourceLayout.offset;
+
+    if (!DataReshaper::reshapeImage(&pbd, getComponentType(srcFormat), getComponentCount(srcFormat),
+                srcPixels, subResourceLayout.rowPitch, width, height, swizzle)) {
+        utils::slog.e << "Unsupported PixelDataFormat or PixelDataType" << utils::io::endl;
+    }
+
+    vkUnmapMemory(device, stagingMemory);
+    vkDestroyImage(device, stagingImage, nullptr);
+    vkFreeMemory(device, stagingMemory, nullptr);
+
+    scheduleDestroy(std::move(pbd));
 }
 
 void VulkanDriver::readBufferSubData(backend::BufferObjectHandle boh,
