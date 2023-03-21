@@ -26,6 +26,8 @@
 
 #include <tsl/robin_map.h>
 
+#include <utils/Invocable.h>
+
 namespace filaflat {
 
 class MaterialChunk {
@@ -42,6 +44,9 @@ public:
     // populates "shaderContent" with the requested shader, or returns false on failure.
     bool getShader(ShaderContent& shaderContent, BlobDictionary const& dictionary,
             uint8_t shaderModel, Variant variant, uint8_t stage);
+
+    void visitTextShaders(
+            utils::Invocable<void(uint8_t, Variant::type_t, uint8_t)>&& visitor) const;
 
     // These methods are for debugging purposes only (matdbg)
     // @{
