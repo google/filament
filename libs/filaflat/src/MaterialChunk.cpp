@@ -175,5 +175,34 @@ bool MaterialChunk::getShader(ShaderContent& shaderContent,
     }
 }
 
+void MaterialChunk::visitTextShaders(
+        utils::Invocable<void(uint8_t, Variant::type_t, uint8_t)>&& visitor) const {
+    assert_invariant(mMaterialTag != filamat::ChunkType::MaterialSpirv);
+
+    Unflattener unflattener{ mUnflattener }; // make a copy
+
+    // read() calls below cannot fail by construction, because we've already run through them
+    // in the constructore.
+
+    // Read how many shaders we have in the chunk.
+    uint64_t numShaders;
+    unflattener.read(&numShaders);
+
+    // Read all index entries.
+    for (uint64_t i = 0; i < numShaders; i++) {
+        uint8_t shaderModelValue;
+        filament::Variant variant;
+        uint8_t pipelineStageValue;
+        uint32_t offsetValue;
+
+        unflattener.read(&shaderModelValue);
+        unflattener.read(&variant);
+        unflattener.read(&pipelineStageValue);
+        unflattener.read(&offsetValue);
+
+        visitor(shaderModelValue, variant.key, pipelineStageValue);
+    }
+}
+
 } // namespace filaflat
 
