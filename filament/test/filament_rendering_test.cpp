@@ -22,7 +22,6 @@
 #include <filament/Scene.h>
 #include <filament/View.h>
 #include <filament/Viewport.h>
-#include <filament/ColorGrading.h>
 
 #include <utils/EntityManager.h>
 
@@ -41,7 +40,6 @@ protected:
     Scene* mScene = nullptr;
     Camera* mCamera = nullptr;
     utils::Entity mCameraEntity;
-    ColorGrading* mColorGrading = nullptr;
 
     using closure_t = std::function<void(uint8_t const* rgba, uint32_t width, uint32_t height)>;
 
@@ -59,20 +57,13 @@ protected:
         mView->setViewport({0, 0, 16, 16});
         mView->setScene(mScene);
         mView->setCamera(mCamera);
-
-        LinearToneMapper linearToneMapper;
-        mColorGrading = ColorGrading::Builder()
-                .toneMapper(&linearToneMapper)
-                .build(*mEngine);
-        mView->setColorGrading(mColorGrading);
+        mView->setPostProcessingEnabled(false);
 
         mSkybox = Skybox::Builder().build(*mEngine);
         mScene->setSkybox(mSkybox);
     }
 
     void TearDown() override {
-        mEngine->destroy(mColorGrading);
-
         mEngine->destroyCameraComponent(mCameraEntity);
         utils::EntityManager::get().destroy(mCameraEntity);
 
@@ -115,27 +106,29 @@ private:
 };
 
 TEST_F(RenderingTest, ClearRed) {
-    // We need to clear red to >1 here to ensure a tonemapped value of 255 regardless of LUT
-    // precision.
-    mSkybox->setColor({ 2.0f, 0.0f, 0.0f, 1.0f });
+    mSkybox->setColor({ 1.0f, 0.0f, 0.0f, 1.0f });
     mView->setDithering(View::Dithering::NONE);
-    runTest([this](uint8_t const* rgba, uint32_t width, uint32_t height) {
+    bool callbackCalled = false;
+    runTest([this, &callbackCalled](uint8_t const* rgba, uint32_t width, uint32_t height) {
         EXPECT_EQ(rgba[0], 0xff);
         EXPECT_EQ(rgba[1], 0);
         EXPECT_EQ(rgba[2], 0);
         EXPECT_EQ(rgba[3], 0xff);
+        callbackCalled = true;
     });
+    EXPECT_TRUE(callbackCalled);
 }
 
 TEST_F(RenderingTest, ClearGreen) {
-    // We need to clear green to >1 here to ensure a tonemapped value of 255 regardless of LUT
-    // precision.
-    mSkybox->setColor({ 0.0f, 2.0f, 0.0f, 1.0f });
+    mSkybox->setColor({ 0.0f, 1.0f, 0.0f, 1.0f });
     mView->setDithering(View::Dithering::NONE);
-    runTest([this](uint8_t const* rgba, uint32_t width, uint32_t height) {
+    bool callbackCalled = false;
+    runTest([this, &callbackCalled](uint8_t const* rgba, uint32_t width, uint32_t height) {
         EXPECT_EQ(rgba[0], 0);
         EXPECT_EQ(rgba[1], 0xff);
         EXPECT_EQ(rgba[2], 0);
         EXPECT_EQ(rgba[3], 0xff);
+        callbackCalled = true;
     });
+    EXPECT_TRUE(callbackCalled);
 }
