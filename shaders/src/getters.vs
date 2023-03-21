@@ -185,8 +185,12 @@ vec4 computeWorldPosition() {
     // GL convention to inverted DX convention
     p.z = p.z * -0.5 + 0.5;
     vec4 position = transform * p;
-    if (abs(position.w) < MEDIUMP_FLT_MIN) {
-        position.w = position.w < 0.0 ? -MEDIUMP_FLT_MIN : MEDIUMP_FLT_MIN;
+    // w could be zero (e.g.: with the skybox) which corresponds to an infinite distance in
+    // world-space. However, we want to avoid infinites and divides-by-zero, so we use a very
+    // small number instead in that case (2^-63 seem to work well).
+    const highp float ALMOST_ZERO_FLT = 1.08420217249e-19f;
+    if (abs(position.w) < ALMOST_ZERO_FLT) {
+        position.w = position.w < 0.0 ? -ALMOST_ZERO_FLT : ALMOST_ZERO_FLT;
     }
     return position * (1.0 / position.w);
 #else
