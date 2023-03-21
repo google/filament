@@ -645,9 +645,9 @@ io::sstream& CodeGenerator::generateQualityDefine(io::sstream& out, ShaderQualit
     switch (quality) {
         case ShaderQuality::DEFAULT:
             switch (mShaderModel) {
-                default:                        goto quality_normal;
-                case ShaderModel::DESKTOP:   goto quality_high;
-                case ShaderModel::MOBILE:     goto quality_low;
+                default:                   goto quality_normal;
+                case ShaderModel::DESKTOP: goto quality_high;
+                case ShaderModel::MOBILE:  goto quality_low;
             }
         case ShaderQuality::LOW:
         quality_low:
