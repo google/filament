@@ -182,7 +182,7 @@ void MaterialChunk::visitTextShaders(
     Unflattener unflattener{ mUnflattener }; // make a copy
 
     // read() calls below cannot fail by construction, because we've already run through them
-    // in the constructore.
+    // in the constructor.
 
     // Read how many shaders we have in the chunk.
     uint64_t numShaders;
