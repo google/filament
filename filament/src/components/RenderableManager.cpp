@@ -301,7 +301,7 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
 }
 
 RenderableManager::Builder& RenderableManager::Builder::instances(size_t instanceCount) noexcept {
-    mImpl->mInstanceCount = clamp((unsigned int)instanceCount, 1u, 65535u);
+    mImpl->mInstanceCount = clamp((unsigned int)instanceCount, 1u, 32767u);
     return *this;
 }
 
