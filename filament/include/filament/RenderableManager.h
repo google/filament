@@ -411,14 +411,16 @@ public:
 
         /**
          * Specifies the number of draw instance of this renderable. The default is 1 instance and
-         * the maximum number of instances allowed is 65535. 0 is invalid.
+         * the maximum number of instances allowed is 32767. 0 is invalid.
          * All instances are culled using the same bounding box, so care must be taken to make
          * sure all instances render inside the specified bounding box.
          * The material must set its `instanced` parameter to `true` in order to use
          * getInstanceIndex() in the vertex or fragment shader to get the instance index and
          * possibly adjust the position or transform.
+         * It generally doesn't make sense to use VERTEX_DOMAIN_OBJECT in the material, since it
+         * would pull the same transform for all instances.
          *
-         * @param instanceCount the number of instances silently clamped between 1 and 65535.
+         * @param instanceCount the number of instances silently clamped between 1 and 32767.
          */
         Builder& instances(size_t instanceCount) noexcept;
 
