@@ -33,7 +33,6 @@
 #include <utils/Mutex.h>
 
 #include <atomic>
-#include <unordered_map>
 
 namespace filament {
 

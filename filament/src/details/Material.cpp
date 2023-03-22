@@ -199,9 +199,9 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     parser->getConstants(&constants);
 
     // Verify that all the constant specializations exist in the material and that their types match.
-    // The first two specialization constants are defined internally by Filament.
-    // Constants #2 onwards are user-defined in the material.
-    mSpecializationConstants.reserve(constants.size() + 2);
+    // The first specialization constants are defined internally by Filament.
+    // The subsequent constants are user-defined in the material.
+    mSpecializationConstants.reserve(constants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
     mSpecializationConstants.push_back({0, (int)mEngine.getSupportedFeatureLevel()});
     mSpecializationConstants.push_back({1, (int)CONFIG_MAX_INSTANCES});
     for (const auto& [name, value] : builder->mConstantSpecializations) {
@@ -229,8 +229,8 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
                         name, mName.c_str_safe(), "bool", types[value.index()]);
                 break;
         }
-        uint32_t index = std::distance(constants.begin(), found);
-        mSpecializationConstants.push_back({index + 2, value});
+        uint32_t index = std::distance(constants.begin(), found) + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+        mSpecializationConstants.push_back({index, value});
     }
 
     parser->getShading(&mShading);

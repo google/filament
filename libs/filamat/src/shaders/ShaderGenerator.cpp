@@ -128,7 +128,8 @@ static void appendShader(io::sstream& ss,
 
 static void generateUserSpecConstants(
         const CodeGenerator& cg, io::sstream& fs, MaterialBuilder::ConstantList constants) {
-    size_t index = 2;
+    // Constants 0 to CONFIG_MAX_RESERVED_SPEC_CONSTANTS - 1 are reserved by Filament.
+    size_t index = CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
     for (const auto& constant : constants) {
         std::string fullName = std::string("materialConstants_") + constant.name.c_str();
         switch (constant.type) {

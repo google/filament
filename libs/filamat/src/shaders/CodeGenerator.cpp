@@ -119,7 +119,7 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         out << "precision lowp sampler3D;\n";
     }
 
-    // specification constants
+    // Filament-reserved specification constants (limited by CONFIG_MAX_RESERVED_SPEC_CONSTANTS)
     out << '\n';
     generateSpecializationConstant(out, "BACKEND_FEATURE_LEVEL", 0, 1);
 

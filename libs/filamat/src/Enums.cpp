@@ -161,9 +161,9 @@ std::unordered_map<std::string, SamplerFormat>& Enums::getMap<SamplerFormat>() n
 };
 
 std::unordered_map<std::string, ConstantType > Enums::mStringToConstantType = {
-        { "int",   ConstantType ::INT },
-        { "float", ConstantType ::FLOAT },
-        { "bool",  ConstantType ::BOOL },
+        { "int",   ConstantType::INT },
+        { "float", ConstantType::FLOAT },
+        { "bool",  ConstantType::BOOL },
 };
 
 template <>
