@@ -585,9 +585,6 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
     }
 
     uint32_t cascades = 0;
-    if (engine.debug.shadowmap.visualize_cascades) {
-        cascades |= 0x10u;
-    }
     cascades |= uint32_t(mCascadeShadowMaps.size());
     cascades |= cascadeHasVisibleShadows << 8u;
 

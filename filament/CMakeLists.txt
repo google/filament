@@ -212,6 +212,7 @@ set(MATERIAL_SRCS
         src/materials/colorGrading/colorGrading.mat
         src/materials/colorGrading/colorGradingAsSubpass.mat
         src/materials/colorGrading/customResolveAsSubpass.mat
+        src/materials/debugShadowCascades.mat
         src/materials/defaultMaterial.mat
         src/materials/dof/dof.mat
         src/materials/dof/dofCoc.mat
