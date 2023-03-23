@@ -107,7 +107,7 @@ private:
     friend ostream& flush(ostream& s) noexcept;
 
     enum type {
-        SHORT, USHORT, CHAR, UCHAR, INT, UINT, LONG, ULONG, LONG_LONG, ULONG_LONG, DOUBLE,
+        SHORT, USHORT, CHAR, UCHAR, INT, UINT, LONG, ULONG, LONG_LONG, ULONG_LONG, FLOAT, DOUBLE,
         LONG_DOUBLE
     };
 
