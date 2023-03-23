@@ -241,6 +241,7 @@ static const MaterialInfo sMaterialList[] = {
         { "fsr_easu_mobile",            MATERIAL(FSR_EASU_MOBILE) },
         { "fsr_easu_mobileF",           MATERIAL(FSR_EASU_MOBILEF) },
         { "fsr_rcas",                   MATERIAL(FSR_RCAS) },
+        { "debugShadowCascades",        MATERIAL(DEBUGSHADOWCASCADES) },
 };
 
 void PostProcessManager::init() noexcept {
@@ -3020,6 +3021,42 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
             });
 
     return depthMipmapPass->in;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::debugShadowCascades(FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> depth) noexcept {
+
+    // new pass for showing the cascades
+    struct DebugShadowCascadesData {
+        FrameGraphId<FrameGraphTexture> color;
+        FrameGraphId<FrameGraphTexture> depth;
+        FrameGraphId<FrameGraphTexture> output;
+    };
+    auto& debugShadowCascadePass = fg.addPass<DebugShadowCascadesData>("ShadowCascades",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                auto desc = builder.getDescriptor(input);
+                data.color = builder.sample(input);
+                data.depth = builder.sample(depth);
+                data.output = builder.createTexture("Shadow Cascade Debug", desc);
+                builder.declareRenderPass(data.output);
+            },
+            [=](FrameGraphResources const& resources, auto const& data, backend::DriverApi& driver) {
+                auto color = resources.getTexture(data.color);
+                auto depth = resources.getTexture(data.depth);
+                auto out = resources.getRenderPassInfo();
+                auto& material = getPostProcessMaterial("debugShadowCascades");
+                PipelineState const pipeline(material.getPipelineState(mEngine));
+                FMaterialInstance* mi = material.getMaterialInstance(mEngine);
+                mi->setParameter("color",  color, {});  // nearest
+                mi->setParameter("depth",  depth, {});  // nearest
+                mi->commit(driver);
+                mi->use(driver);
+
+                render(out, pipeline, driver);
+            });
+
+    return debugShadowCascadePass->output;
 }
 
 } // namespace filament

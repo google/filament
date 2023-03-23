@@ -10,3 +10,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 - fog: added an option to disable the fog after a certain distance [⚠️ **Recompile Materials**].
 - fog: fog color now takes exposure and IBL intensity into account [⚠️ **Recompile Materials**].
+- materials: implement cascades debugging as a post-process [⚠️ **Recompile Materials**].
