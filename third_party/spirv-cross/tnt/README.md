@@ -8,6 +8,7 @@ curl -L https://github.com/KhronosGroup/SPIRV-Cross/archive/master.zip > master.
 unzip master.zip
 rsync -r SPIRV-Cross-master/ spirv-cross/ --delete
 git checkout spirv-cross/tnt/*
+patch -p2 < spirv-cross/tnt/0001-convert-floats-to-their-smallest-string-representati.patch
 rm -rf SPIRV-Cross-master master.zip
 git add spirv-cross
 ```
@@ -23,6 +24,7 @@ The Filament-specific `CMakeLists.txt` under the `tnt` directory has the followi
 - Removal of unused `spirv-cross` libraries
 - Removal of the `spirv-cross` executable
 - Removal of `spirv-cross` test cases
+- Added `convert_to_smallest_string` in `spirv_common.hpp` and used for float conversion
 
 To see all changes, run the following diff command from the `third_party/spirv-cross` directory:
 
