@@ -263,6 +263,12 @@ if (NOT ANDROID)
     target_link_libraries(sample_normal_map PRIVATE filameshio)
     target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
 
+    if (FILAMENT_DISABLE_MATOPT)
+        add_definitions(-DFILAMENT_DISABLE_MATOPT=1)
+    else()
+        add_definitions(-DFILAMENT_DISABLE_MATOPT=0)
+    endif()
+
     # ==============================================================================================
     # Installation
     # ==============================================================================================

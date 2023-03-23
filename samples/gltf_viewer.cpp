@@ -61,6 +61,12 @@
 #include "generated/resources/gltf_demo.h"
 #include "materials/uberarchive.h"
 
+#if FILAMENT_DISABLE_MATOPT
+#   define OPTIMIZE_MATERIALS false
+#else
+#   define OPTIMIZE_MATERIALS true
+#endif
+
 using namespace filament;
 using namespace filament::math;
 using namespace filament::viewer;
@@ -621,7 +627,8 @@ int main(int argc, char** argv) {
             }
         }
 
-        app.materials = (app.materialSource == JITSHADER) ? createJitShaderProvider(engine) :
+        app.materials = (app.materialSource == JITSHADER) ?
+                createJitShaderProvider(engine, OPTIMIZE_MATERIALS) :
                 createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
 
         app.assetLoader = AssetLoader::create({engine, app.materials, app.names });
