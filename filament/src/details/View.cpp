@@ -32,7 +32,6 @@
 #include <filament/TextureSampler.h>
 #include <filament/View.h>
 
-#include <private/filament/SibStructs.h>
 #include <private/filament/UibStructs.h>
 
 #include <utils/Profiler.h>
@@ -180,8 +179,8 @@ float2 FView::updateScale(FEngine& engine,
         const float dt = 1.0f; // we don't really need dt here, setting it to 1, means our parameters are in "frames"
         const float target = (1000.0f * float(frameRateOptions.interval)) / displayInfo.refreshRate;
         const float targetWithHeadroom = target * (1.0f - frameRateOptions.headRoomRatio);
-        float measured = duration<float, std::milli>{ info.denoisedFrameTime }.count();
-        float out = mPidController.update(measured / targetWithHeadroom, 1.0f, dt);
+        float const measured = duration<float, std::milli>{ info.denoisedFrameTime }.count();
+        float const out = mPidController.update(measured / targetWithHeadroom, 1.0f, dt);
 
         // maps pid command to a scale (absolute or relative, see below)
          const float command = out < 0.0f ? (1.0f / (1.0f - out)) : (1.0f + out);
@@ -303,7 +302,7 @@ void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableD
         // when we get here all the lights should be visible
         assert_invariant(lightData.elementAt<FScene::VISIBILITY>(l));
 
-        FLightManager::Instance li = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
+        FLightManager::Instance const li = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
 
         if (UTILS_LIKELY(!li)) {
             continue; // invalid instance
@@ -762,7 +761,7 @@ void FView::prepareVisibleRenderables(JobSystem& js,
     }
 }
 
-void FView::cullRenderables(JobSystem& js,
+void FView::cullRenderables(JobSystem&,
         FScene::RenderableSoa& renderableData, Frustum const& frustum, size_t bit) noexcept {
     SYSTRACE_CALL();
 
@@ -806,7 +805,7 @@ void FView::prepareVisibleLights(FLightManager const& lcm, ArenaScope& rootArena
     size_t visibleLightCount = FScene::DIRECTIONAL_LIGHTS_COUNT;
     // skip directional light
     for (size_t i = FScene::DIRECTIONAL_LIGHTS_COUNT; i < lightData.size(); i++) {
-        FLightManager::Instance li = instanceArray[i];
+        FLightManager::Instance const li = instanceArray[i];
         if (visibleArray[i]) {
             if (!lcm.isLightCaster(li)) {
                 visibleArray[i] = 0;
@@ -902,8 +901,8 @@ inline void FView::computeLightCameraDistances(
 void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
         FScene::RenderableSoa& renderableData, Range visible) noexcept {
     FRenderableManager const& rcm = engine.getRenderableManager();
-    for (uint32_t index : visible) {
-        uint8_t level = 0; // TODO: pick the proper level of detail
+    for (uint32_t const index : visible) {
+        uint8_t const level = 0; // TODO: pick the proper level of detail
         auto ri = renderableData.elementAt<FScene::RENDERABLE_INSTANCE>(index);
         renderableData.elementAt<FScene::PRIMITIVES>(index) = rcm.getRenderPrimitives(ri, level);
     }
@@ -944,10 +943,10 @@ void FView::executePickingQueries(backend::DriverApi& driver,
         const uint32_t x = uint32_t(float(pQuery->x) * (scale * mScale.x));
         const uint32_t y = uint32_t(float(pQuery->y) * (scale * mScale.y));
         driver.readPixels(handle, x, y, 1, 1, {
-                &pQuery->result.renderable, 4*4, // 4*uint
+                &pQuery->result.renderable, 4 * 4, // 4*uint
                 // FIXME: RGBA_INTEGER is guaranteed to work. R_INTEGER must be queried.
                 backend::PixelDataFormat::RG_INTEGER, backend::PixelDataType::UINT,
-                pQuery->handler, [](void* buffer, size_t size, void* user) {
+                pQuery->handler, [](void*, size_t, void* user) {
                     FPickingQuery* pQuery = static_cast<FPickingQuery*>(user);
                     pQuery->result.fragCoords = {
                             pQuery->x, pQuery->y,float(1.0 - pQuery->result.depth) };

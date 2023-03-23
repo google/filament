@@ -163,7 +163,7 @@ FLightManager::~FLightManager() {
     assert_invariant(mManager.getComponentCount() == 0);
 }
 
-void FLightManager::init(FEngine& engine) noexcept {
+void FLightManager::init(FEngine&) noexcept {
 }
 
 void FLightManager::create(const FLightManager::Builder& builder, utils::Entity entity) {
@@ -172,7 +172,7 @@ void FLightManager::create(const FLightManager::Builder& builder, utils::Entity 
     if (UTILS_UNLIKELY(manager.hasComponent(entity))) {
         destroy(entity);
     }
-    Instance i = manager.addComponent(entity);
+    Instance const i = manager.addComponent(entity);
     assert_invariant(i);
 
     if (i) {
@@ -202,11 +202,11 @@ void FLightManager::create(const FLightManager::Builder& builder, utils::Entity 
     }
 }
 
-void FLightManager::prepare(backend::DriverApi& driver) const noexcept {
+void FLightManager::prepare(backend::DriverApi&) const noexcept {
 }
 
 void FLightManager::destroy(utils::Entity e) noexcept {
-    Instance i = getInstance(e);
+    Instance const i = getInstance(e);
     if (i) {
         auto& manager = mManager;
         manager.removeComponent(e);
@@ -221,7 +221,7 @@ void FLightManager::terminate() noexcept {
                << " leaked Light components" << io::endl;
 #endif
         while (!manager.empty()) {
-            Instance ci = manager.end() - 1;
+            Instance const ci = manager.end() - 1;
             manager.removeComponent(manager.getEntity(ci));
         }
     }
@@ -289,7 +289,7 @@ void FLightManager::setColor(Instance i, const LinearColor& color) noexcept {
 void FLightManager::setIntensity(Instance i, float intensity, IntensityUnit unit) noexcept {
     auto& manager = mManager;
     if (i) {
-        Type type = getLightType(i).type;
+        Type const type = getLightType(i).type;
         float luminousPower = intensity;
         float luminousIntensity;
         switch (type) {
@@ -312,7 +312,7 @@ void FLightManager::setIntensity(Instance i, float intensity, IntensityUnit unit
 
             case Type::FOCUSED_SPOT: {
                 SpotParams& spotParams = manager[i].spotParams;
-                float cosOuter = std::sqrt(spotParams.cosOuterSquared);
+                float const cosOuter = std::sqrt(spotParams.cosOuterSquared);
                 if (unit == IntensityUnit::LUMEN_LUX) {
                     // li = lp / (2 * pi * (1 - cos(cone_outer / 2)))
                     luminousIntensity = luminousPower / (f::TAU * (1.0f - cosOuter));
@@ -344,7 +344,7 @@ void FLightManager::setIntensity(Instance i, float intensity, IntensityUnit unit
 void FLightManager::setFalloff(Instance i, float falloff) noexcept {
     auto& manager = mManager;
     if (i && !isDirectionalLight(i)) {
-        float sqFalloff = falloff * falloff;
+        float const sqFalloff = falloff * falloff;
         SpotParams& spotParams = manager[i].spotParams;
         manager[i].squaredFallOffInv = sqFalloff > 0.0f ? (1 / sqFalloff) : 0;
         spotParams.radius = falloff;
@@ -356,16 +356,16 @@ void FLightManager::setSpotLightCone(Instance i, float inner, float outer) noexc
     if (i && isSpotLight(i)) {
         // clamp the inner/outer angles to [0.5 degrees, 90 degrees]
         float innerClamped = std::clamp(std::abs(inner), 0.5f * f::DEG_TO_RAD, f::PI_2);
-        float outerClamped = std::clamp(std::abs(outer), 0.5f * f::DEG_TO_RAD, f::PI_2);
+        float const outerClamped = std::clamp(std::abs(outer), 0.5f * f::DEG_TO_RAD, f::PI_2);
 
         // inner must always be smaller than outer
         innerClamped = std::min(innerClamped, outerClamped);
 
-        float cosOuter = fast::cos(outerClamped);
-        float cosInner = fast::cos(innerClamped);
-        float cosOuterSquared = cosOuter * cosOuter;
-        float scale = 1.0f / std::max(1.0f / 1024.0f, cosInner - cosOuter);
-        float offset = -cosOuter * scale;
+        float const cosOuter = fast::cos(outerClamped);
+        float const cosInner = fast::cos(innerClamped);
+        float const cosOuterSquared = cosOuter * cosOuter;
+        float const scale = 1.0f / std::max(1.0f / 1024.0f, cosInner - cosOuter);
+        float const offset = -cosOuter * scale;
 
         SpotParams& spotParams = manager[i].spotParams;
         spotParams.outerClamped = outerClamped;
@@ -374,11 +374,11 @@ void FLightManager::setSpotLightCone(Instance i, float inner, float outer) noexc
         spotParams.scaleOffset = { scale, offset };
 
         // we need to recompute the luminous intensity
-        Type type = getLightType(i).type;
+        Type const type = getLightType(i).type;
         if (type == Type::FOCUSED_SPOT) {
             // li = lp / (2 * pi * (1 - cos(cone_outer / 2)))
-            float luminousPower = spotParams.luminousPower;
-            float luminousIntensity = luminousPower / (f::TAU * (1.0f - cosOuter));
+            float const luminousPower = spotParams.luminousPower;
+            float const luminousIntensity = luminousPower / (f::TAU * (1.0f - cosOuter));
             manager[i].intensity = luminousIntensity;
         }
     }
@@ -412,9 +412,9 @@ void FLightManager::setShadowCaster(Instance i, bool shadowCaster) noexcept {
 
 float FLightManager::getSpotLightInnerCone(Instance i) const noexcept {
     const auto& spotParams = getSpotParams(i);
-    float cosOuter = std::cos(spotParams.outerClamped);
-    float scale = spotParams.scaleOffset.x;
-    float inner = std::acos((1.0f / scale) + cosOuter);
+    float const cosOuter = std::cos(spotParams.outerClamped);
+    float const scale = spotParams.scaleOffset.x;
+    float const inner = std::acos((1.0f / scale) + cosOuter);
     return inner;
 }
 
@@ -426,7 +426,7 @@ void LightManager::ShadowCascades::computeUniformSplits(float splitPositions[3],
     size_t s = 0;
     cascades = max(cascades, (uint8_t) 4u);
     for (size_t c = 1; c < cascades; c++) {
-        splitPositions[s++] = (float) c / cascades;
+        splitPositions[s++] = float(c) / float(cascades);
     }
 }
 
@@ -436,7 +436,7 @@ void LightManager::ShadowCascades::computeLogSplits(float splitPositions[3], uin
     cascades = max(cascades, (uint8_t) 4u);
     for (size_t c = 1; c < cascades; c++) {
         splitPositions[s++] =
-            (near * std::pow(far / near, (float) c / cascades) - near) / (far - near);
+            (near * std::pow(far / near, float(c) / float(cascades)) - near) / (far - near);
     }
 }
 

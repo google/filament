@@ -220,7 +220,7 @@ void FMorphTargetBuffer::updateDataAt(backend::DriverApi& driver,
     // 'out' buffer is going to be used up to 3 times, so for simplicity we use a shared_buffer
     // to manage its lifetime. One side effect of this is that the callbacks below will allocate
     // a small object on the heap.
-    std::shared_ptr<void> allocation((void*)out, ::free);
+    std::shared_ptr<void> const allocation((void*)out, ::free);
 
     // Note: because the texture width is up to 2048, we're expecting that most of the time
     // only a single texture update call will be necessary (i.e. that there are no more

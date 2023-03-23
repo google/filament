@@ -51,7 +51,7 @@ uint32_t FrameGraph::Builder::declareRenderPass(const char* name,
 FrameGraphId<FrameGraphTexture> FrameGraph::Builder::declareRenderPass(
         FrameGraphId<FrameGraphTexture> color, uint32_t* index) {
     color = write(color);
-    uint32_t id = declareRenderPass(getName(color),
+    uint32_t const id = declareRenderPass(getName(color),
             { .attachments = { .color = { color }}});
     if (index) *index = id;
     return color;
@@ -238,10 +238,10 @@ FrameGraphHandle FrameGraph::createNewVersion(FrameGraphHandle handle) noexcept 
     assert_invariant(handle);
     ResourceNode* const node = getActiveResourceNode(handle);
     assert_invariant(node);
-    FrameGraphHandle parent = node->getParentHandle();
+    FrameGraphHandle const parent = node->getParentHandle();
     ResourceSlot& slot = getResourceSlot(handle);
     slot.version = ++handle.version;    // increase the parent's version
-    slot.nid = mResourceNodes.size();   // create the new parent node
+    slot.nid = (ResourceSlot::Index)mResourceNodes.size();   // create the new parent node
     ResourceNode* newNode = mArena.make<ResourceNode>(*this, handle, parent);
     mResourceNodes.push_back(newNode);
     return handle;
@@ -253,7 +253,7 @@ ResourceNode* FrameGraph::createNewVersionForSubresourceIfNeeded(ResourceNode* n
         // if we don't already have a new ResourceNode for this resource, create one.
         // we keep the old ResourceNode index, so we can direct all the reads to it.
         slot.sid = slot.nid; // record the current ResourceNode of the parent
-        slot.nid = mResourceNodes.size();   // create the new parent node
+        slot.nid = (ResourceSlot::Index)mResourceNodes.size();   // create the new parent node
         node = mArena.make<ResourceNode>(*this, node->resourceHandle, node->getParentHandle());
         mResourceNodes.push_back(node);
     }
@@ -266,10 +266,10 @@ FrameGraphHandle FrameGraph::addResourceInternal(VirtualResource* resource) noex
 
 FrameGraphHandle FrameGraph::addSubResourceInternal(FrameGraphHandle parent,
         VirtualResource* resource) noexcept {
-    FrameGraphHandle handle(mResourceSlots.size());
+    FrameGraphHandle const handle(mResourceSlots.size());
     ResourceSlot& slot = mResourceSlots.emplace_back();
-    slot.rid = mResources.size();
-    slot.nid = mResourceNodes.size();
+    slot.rid = (ResourceSlot::Index)mResources.size();
+    slot.nid = (ResourceSlot::Index)mResourceNodes.size();
     mResources.push_back(resource);
     ResourceNode* pNode = mArena.make<ResourceNode>(*this, handle, parent);
     mResourceNodes.push_back(pNode);
@@ -285,7 +285,7 @@ FrameGraphHandle FrameGraph::readInternal(FrameGraphHandle handle, PassNode* pas
     ResourceNode* const node = getActiveResourceNode(handle);
 
     // Check preconditions
-    bool passAlreadyAWriter = node->hasWriteFrom(passNode);
+    bool const passAlreadyAWriter = node->hasWriteFrom(passNode);
     ASSERT_PRECONDITION(!passAlreadyAWriter,
             "Pass \"%s\" already writes to \"%s\"",
             passNode->getName(), node->getName());
@@ -303,7 +303,7 @@ FrameGraphHandle FrameGraph::readInternal(FrameGraphHandle handle, PassNode* pas
             // node to the subresource -- but we may have two parent nodes, one for reads and
             // one for writes, so we need to use the one for reads.
             auto* parentNode = node->getParentNode();
-            ResourceSlot& slot = getResourceSlot(parentNode->resourceHandle);
+            ResourceSlot const& slot = getResourceSlot(parentNode->resourceHandle);
             if (slot.sid >= 0) {
                 // we have a parent's node for reads, use that one
                 parentNode = mResourceNodes[slot.sid];
@@ -314,7 +314,7 @@ FrameGraphHandle FrameGraph::readInternal(FrameGraphHandle handle, PassNode* pas
             // resource is a parent of some subresource, and it might exist as a version for
             // writing, in this case we need to add a dependency from its "read" version to
             // itself.
-            ResourceSlot& slot = getResourceSlot(handle);
+            ResourceSlot const& slot = getResourceSlot(handle);
             if (slot.sid >= 0) {
                 node->setParentReadDependency(mResourceNodes[slot.sid]);
             }
@@ -440,7 +440,7 @@ bool FrameGraph::isValid(FrameGraphHandle handle) const {
     if (!handle.isInitialized()) {
         return false;
     }
-    ResourceSlot slot = getResourceSlot(handle);
+    ResourceSlot const& slot = getResourceSlot(handle);
     if (handle.version != slot.version) {
         return false;
     }
