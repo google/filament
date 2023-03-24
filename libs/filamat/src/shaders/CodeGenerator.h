@@ -17,6 +17,7 @@
 #ifndef TNT_FILAMENT_CODEGENERATOR_H
 #define TNT_FILAMENT_CODEGENERATOR_H
 
+#include <exception>
 #include <iosfwd>
 #include <string>
 #include <variant>
