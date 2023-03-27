@@ -423,15 +423,44 @@ FixedCapacityVector<VkQueueFamilyProperties> getPhysicalDeviceQueueFamilyPropert
     return queueFamiliesProperties;
 }
 
+// Provide a preference ordering of device types.
+// Enum based on:
+// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceType.html
+inline int deviceTypeOrder(VkPhysicalDeviceType deviceType) {
+    switch (deviceType) {
+        case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+            return 5;
+        case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+            return 4;
+        case VK_PHYSICAL_DEVICE_TYPE_CPU:
+            return 3;
+        case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+            return 2;
+        case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+            return 1;
+        default:
+            utils::slog.w << "devcieTypeOrder: Unexpected deviceType: " << deviceType
+                          << utils::io::endl;
+            return -1;
+    }
+}
+
 VkPhysicalDevice selectPhysicalDevice(VkInstance instance) {
-    const FixedCapacityVector<VkPhysicalDevice> physicalDevices = filament::backend::enumerate(
-            vkEnumeratePhysicalDevices, instance);
-    for (const auto& candidateDevice : physicalDevices) {
+    FixedCapacityVector<VkPhysicalDevice> const physicalDevices
+            = filament::backend::enumerate(vkEnumeratePhysicalDevices, instance);
+    struct DeviceInfo {
+        VkPhysicalDevice device = VK_NULL_HANDLE;
+        VkPhysicalDeviceType deviceType = VK_PHYSICAL_DEVICE_TYPE_OTHER;
+    };
+    FixedCapacityVector<DeviceInfo> deviceList(physicalDevices.size());
+
+    for (size_t deviceInd = 0; deviceInd < physicalDevices.size(); ++deviceInd) {
+        auto const candidateDevice = physicalDevices[deviceInd];
         VkPhysicalDeviceProperties targetDeviceProperties;
         vkGetPhysicalDeviceProperties(candidateDevice, &targetDeviceProperties);
 
-        const int major = VK_VERSION_MAJOR(targetDeviceProperties.apiVersion);
-        const int minor = VK_VERSION_MINOR(targetDeviceProperties.apiVersion);
+        int const major = VK_VERSION_MAJOR(targetDeviceProperties.apiVersion);
+        int const minor = VK_VERSION_MINOR(targetDeviceProperties.apiVersion);
 
         // Does the device support the required Vulkan level?
         if (major < VK_REQUIRED_VERSION_MAJOR) {
@@ -444,10 +473,10 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance) {
         // Does the device have any command queues that support graphics?
         // In theory, we should also ensure that the device supports presentation of our
         // particular VkSurface, but we don't have a VkSurface yet, so we'll skip this requirement.
-        const FixedCapacityVector<VkQueueFamilyProperties> queueFamiliesProperties =
-               getPhysicalDeviceQueueFamilyPropertiesHelper(candidateDevice);
+        FixedCapacityVector<VkQueueFamilyProperties> const queueFamiliesProperties
+                = getPhysicalDeviceQueueFamilyPropertiesHelper(candidateDevice);
         bool foundGraphicsQueue = false;
-        for (const auto& props : queueFamiliesProperties) {
+        for (auto const& props: queueFamiliesProperties) {
             if (props.queueCount != 0 && props.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                 foundGraphicsQueue = true;
                 break;
@@ -458,11 +487,11 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance) {
         }
 
         // Does the device support the VK_KHR_swapchain extension?
-        const FixedCapacityVector<VkExtensionProperties> extensions = filament::backend::enumerate(
-                vkEnumerateDeviceExtensionProperties, candidateDevice,
-                static_cast<const char*>(nullptr) /* pLayerName */);
+        FixedCapacityVector<VkExtensionProperties> const extensions
+                = filament::backend::enumerate(vkEnumerateDeviceExtensionProperties,
+                        candidateDevice, static_cast<char const*>(nullptr) /* pLayerName */);
         bool supportsSwapchain = false;
-        for (const auto& extension : extensions) {
+        for (auto const& extension: extensions) {
             if (!strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME)) {
                 supportsSwapchain = true;
                 break;
@@ -471,12 +500,24 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance) {
         if (!supportsSwapchain) {
             continue;
         }
-
-        return candidateDevice;
+        deviceList[deviceInd].device = candidateDevice;
+        deviceList[deviceInd].deviceType = targetDeviceProperties.deviceType;
     }
 
-    PANIC_POSTCONDITION("Unable to find suitable device.");
-    return VK_NULL_HANDLE;
+    // Sort the found devices
+    std::sort(deviceList.begin(), deviceList.end(), [](DeviceInfo const& a, DeviceInfo const& b) {
+        if (a.device == VK_NULL_HANDLE) {
+            return true;
+        }
+        if (b.device == VK_NULL_HANDLE) {
+            return false;
+        }
+        return deviceTypeOrder(a.deviceType) <= deviceTypeOrder(b.deviceType);
+    });
+
+    auto device = deviceList.back().device;
+    ASSERT_POSTCONDITION(device != VK_NULL_HANDLE, "Unable to find suitable device.");
+    return device;
 }
 
 VkFormat findSupportedFormat(VkPhysicalDevice device, utils::Slice<VkFormat> candidates,
