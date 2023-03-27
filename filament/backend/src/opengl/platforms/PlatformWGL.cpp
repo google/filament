@@ -99,12 +99,6 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext,
         0, 0, 0
     };
 
-    int attribs[] = {
-        WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
-        WGL_CONTEXT_MINOR_VERSION_ARB, 1,
-        0
-    };
-
     HGLRC tempContext = NULL;
 
     mHWnd = CreateWindowA("STATIC", "dummy", 0, 0, 0, 1, 1, NULL, NULL, NULL, NULL);
@@ -127,7 +121,20 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext,
 
     wglCreateContextAttribs =
             (PFNWGLCREATECONTEXTATTRIBSARBPROC) wglGetProcAddress("wglCreateContextAttribsARB");
-    mContext = wglCreateContextAttribs(whdc, (HGLRC) sharedGLContext, attribs);
+
+    // try all versions down, from GL 4.5 to 4.1
+    for (int minor = 5; minor >= 1; minor--) {
+        int const attribs[] = {
+                WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
+                WGL_CONTEXT_MINOR_VERSION_ARB, minor,
+                0
+        };
+        mContext = wglCreateContextAttribs(whdc, (HGLRC)sharedGLContext, attribs);
+        if (mContext) {
+            break;
+        }
+    }
+
     if (!mContext) {
         utils::slog.e << "wglCreateContextAttribs() failed, whdc=" << whdc << utils::io::endl;
         goto error;
