@@ -189,7 +189,7 @@ namespace basisu
 #define BASISU_IS_SCALAR_TYPE(T) (scalar_type<T>::cFlag)
 
 #if defined(__GNUC__) && __GNUC__<5
-   #define BASISU_IS_TRIVIALLY_COPYABLE(...) __has_trivial_copy(__VA_ARGS__)
+   #define BASISU_IS_TRIVIALLY_COPYABLE(...) __is_trivially_copyable(__VA_ARGS__)
 #else
    #define BASISU_IS_TRIVIALLY_COPYABLE(...) std::is_trivially_copyable<__VA_ARGS__>::value
 #endif
