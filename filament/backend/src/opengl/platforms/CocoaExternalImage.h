@@ -60,7 +60,7 @@ public:
 private:
     void release() noexcept;
     CVOpenGLTextureRef createTextureFromImage(CVPixelBufferRef image) noexcept;
-    GLuint encodeBlitTexture(GLuint srcTexture, size_t width, size_t height) noexcept;
+    GLuint encodeCopyRectangleToTexture2D(GLuint rectangle, size_t width, size_t height) noexcept;
 
     class State {
     public:

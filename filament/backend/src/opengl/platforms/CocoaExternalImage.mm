@@ -33,12 +33,11 @@ void main() {
 static const char *s_fragment = R"SHADER(#version 410 core
 precision mediump float;
 
-uniform sampler2DRect bgraSampler;
+uniform sampler2DRect rectangle;
 layout(location = 0) out vec4 fragColor;
 
 void main() {
-    vec4 texColor = texture(bgraSampler, gl_FragCoord.xy);
-    fragColor = texColor.bgra;
+    fragColor = texture(rectangle, gl_FragCoord.xy);
 }
 )SHADER";
 
@@ -76,7 +75,7 @@ CocoaExternalImage::SharedGl::SharedGl() noexcept {
     glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
 
     glUseProgram(program);
-    GLint samplerLoc = glGetUniformLocation(program, "bgraSampler");
+    GLint samplerLoc = glGetUniformLocation(program, "rectangle");
     glUniform1i(samplerLoc, 0);
 
     // Restore state.
@@ -122,7 +121,7 @@ bool CocoaExternalImage::set(CVPixelBufferRef image) noexcept {
 
     mImage = image;
     mTexture = createTextureFromImage(image);
-    mRgbaTexture = encodeBlitTexture(CVOpenGLTextureGetName(mTexture),
+    mRgbaTexture = encodeCopyRectangleToTexture2D(CVOpenGLTextureGetName(mTexture),
             CVPixelBufferGetWidth(image), CVPixelBufferGetHeight(image));
     CHECK_GL_ERROR(utils::slog.e)
 
@@ -171,7 +170,8 @@ CVOpenGLTextureRef CocoaExternalImage::createTextureFromImage(CVPixelBufferRef i
     return texture;
 }
 
-GLuint CocoaExternalImage::encodeBlitTexture(GLuint srcTexture, size_t width, size_t height) noexcept {
+GLuint CocoaExternalImage::encodeCopyRectangleToTexture2D(GLuint rectangle,
+        size_t width, size_t height) noexcept {
     GLuint texture;
     glGenTextures(1, &texture);
 
@@ -185,7 +185,7 @@ GLuint CocoaExternalImage::encodeBlitTexture(GLuint srcTexture, size_t width, si
     // source textures
     glBindSampler(0, mSharedGl.sampler);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_RECTANGLE, srcTexture);
+    glBindTexture(GL_TEXTURE_RECTANGLE, rectangle);
     CHECK_GL_ERROR(utils::slog.e)
 
     // destination texture
