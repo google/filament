@@ -9,6 +9,23 @@ This folder was last updated as follows:
     rm -rf ${ver}.zip basis_new
     git add basisu ; git status
 
+!!! IMPORTANT:
+If using a version of basisu <= 1.16.3, the following patch is required:
+ https://github.com/BinomialLLC/basis_universal/commit/53372fc512e6b91c06b28fd47248f269b9b5b010
+
+!!! IMPORTANT:
+If basisu doesn't have that change, in basisu_containers.h, update the following macro:
+
+   #if defined(__GNUC__) && __GNUC__<5
+       #define BASISU_IS_TRIVIALLY_COPYABLE(...) __has_trivial_copy(__VA_ARGS__)
+
+to:
+
+   #if defined(__GNUC__) && __GNUC__<5
+       #define BASISU_IS_TRIVIALLY_COPYABLE(...) __is_trivially_copyable(__VA_ARGS__)
+
+
+
 Our CMakeLists differs from the one in basisu as follows.
 
 (1)
