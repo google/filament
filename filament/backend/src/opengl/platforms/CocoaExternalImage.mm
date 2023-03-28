@@ -113,7 +113,7 @@ bool CocoaExternalImage::set(CVPixelBufferRef image) noexcept {
 
     OSType formatType = CVPixelBufferGetPixelFormatType(image);
     ASSERT_POSTCONDITION(formatType == kCVPixelFormatType_32BGRA,
-            "macOS external images must be in either 32BGRA format.");
+            "macOS external images must be 32BGRA format.");
 
     // The pixel buffer must be locked whenever we do rendering with it. We'll unlock it before
     // releasing.

@@ -50,8 +50,6 @@ public:
     /**
      * Set this external image to the passed-in CVPixelBuffer.
      * Afterwards, calling glGetTexture returns the GL texture name backed by the CVPixelBuffer.
-     *
-     * Calling set with a BGRA image performs a blit image from BGRA to RGBA.
      */
     bool set(CVPixelBufferRef p) noexcept;
 
