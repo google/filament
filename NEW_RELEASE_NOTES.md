@@ -10,3 +10,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 - materials: improved size reduction of OpenGL/Metal shaders by ~65% when compiling materials with
              size optimizations (`matc -S`) [⚠️ **Recompile Materials**]
+opengl: support the external image on macOS

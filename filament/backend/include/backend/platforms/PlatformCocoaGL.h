@@ -57,6 +57,10 @@ protected:
     void destroySwapChain(SwapChain* swapChain) noexcept override;
     void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept override;
     void commit(SwapChain* swapChain) noexcept override;
+    OpenGLPlatform::ExternalTexture* createExternalImageTexture() noexcept override;
+    void destroyExternalImage(ExternalTexture* texture) noexcept override;
+    void retainExternalImage(void* externalImage) noexcept override;
+    bool setExternalImage(void* externalImage, ExternalTexture* texture) noexcept override;
 
 private:
     PlatformCocoaGLImpl* pImpl = nullptr;
