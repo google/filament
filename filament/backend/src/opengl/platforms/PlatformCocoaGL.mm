@@ -300,8 +300,8 @@ void PlatformCocoaGL::destroyExternalImage(ExternalTexture* texture) noexcept {
 void PlatformCocoaGL::retainExternalImage(void* externalImage) noexcept {
     // Take ownership of the passed in buffer. It will be released the next time
     // setExternalImage is called, or when the texture is destroyed.
-    // CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) externalImage;
-    // CVPixelBufferRetain(pixelBuffer);
+    CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) externalImage;
+    CVPixelBufferRetain(pixelBuffer);
 }
 
 bool PlatformCocoaGL::setExternalImage(void* externalImage, ExternalTexture* texture) noexcept {
