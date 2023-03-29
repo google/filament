@@ -31,7 +31,7 @@ set_target_properties(${TARGET} PROPERTIES FOLDER Tools)
 if (MSVC)
     target_compile_options(${TARGET} PRIVATE /fp:fast)
 else()
-    target_compile_options(${TARGET} PRIVATE -ffast-math)
+    target_compile_options(${TARGET} PRIVATE -ffast-math -fno-finite-math-only)
 endif()
 
 if (MSVC)

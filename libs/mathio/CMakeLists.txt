@@ -4,12 +4,6 @@ project(math)
 set(TARGET mathio)
 set(PUBLIC_HDR_DIR include)
 
-if (MSVC)
-    set(OPTIMIZATION_FLAGS /fp:fast)
-else()
-    set(OPTIMIZATION_FLAGS -ffast-math -ffp-contract=fast)
-endif()
-
 # ==================================================================================================
 # Sources and headers
 # ==================================================================================================

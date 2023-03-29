@@ -206,12 +206,10 @@ target_sources(gltf-demo-resources PRIVATE ${RESGEN_SOURCE})
 # ==================================================================================================
 
 if (MSVC)
-    set(COMPILER_FLAGS $<$<CONFIG:Release>:/fp:fast>)
 else()
     set(COMPILER_FLAGS
             -Wno-extern-c-compat
-            $<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>
-            $<$<CONFIG:Release>:-ffast-math>)
+            $<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>)
 endif()
 
 # ==================================================================================================
