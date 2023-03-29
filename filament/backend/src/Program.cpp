@@ -32,6 +32,8 @@ Program& Program::operator=(Program&& rhs) noexcept {
     mShadersSource.operator=(std::move(rhs.mShadersSource));
     mName.operator=(std::move(rhs.mName));
     mLogger.operator=(std::move(rhs.mLogger));
+    mSpecializationConstants.operator=(std::move(rhs.mSpecializationConstants));
+    mBindingUniformInfo.operator=(std::move(rhs.mBindingUniformInfo));
     return *this;
 }
 
@@ -57,6 +59,12 @@ Program& Program::uniformBlockBindings(
         assert_invariant(item.second < UNIFORM_BINDING_COUNT);
         mUniformBlocks[item.second] = item.first;
     }
+    return *this;
+}
+
+Program& Program::uniforms(uint32_t index, UniformInfo const& uniforms) noexcept {
+    assert_invariant(index < UNIFORM_BINDING_COUNT);
+    mBindingUniformInfo[index] = uniforms;
     return *this;
 }
 

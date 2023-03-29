@@ -71,11 +71,15 @@ public:
         GLuint program = 0;
     } gl; // 12 bytes
 
+    // For ES2 only
+    void updateUniforms(uint32_t index, void const* buffer, uint16_t age) noexcept;
+
 private:
     // keep these away from of other class attributes
     struct LazyInitializationData {
         Program::UniformBlockInfo uniformBlockInfo;
         Program::SamplerGroupInfo samplerGroupInfo;
+        std::array<Program::UniformInfo, Program::UNIFORM_BINDING_COUNT> bindingUniformInfo;
         std::array<utils::CString, Program::SHADER_TYPE_COUNT> shaderSourceCode;
     };
 
@@ -101,9 +105,10 @@ private:
     void initialize(OpenGLContext& context);
 
     void initializeProgramState(OpenGLContext& context, GLuint program,
-            LazyInitializationData const& lazyInitializationData) noexcept;
+            LazyInitializationData& lazyInitializationData) noexcept;
 
     void updateSamplers(OpenGLDriver* gld) const noexcept;
+
 
     // number of bindings actually used by this program
     uint8_t mUsedBindingsCount = 0u;
@@ -113,6 +118,14 @@ private:
     bool mValid : 1;
     UTILS_UNUSED uint8_t padding[2] = {};
 
+    // only for ES2
+    using LocationInfo = utils::FixedCapacityVector<GLint>;
+    struct UniformsRecord {
+        Program::UniformInfo uniforms;
+        LocationInfo locations;
+        mutable uint16_t age = std::numeric_limits<uint16_t>::max();
+    };
+
     union {
         // when mInitialized == true:
         // information about each USED sampler buffer per binding (no gaps)
@@ -121,6 +134,9 @@ private:
         // lazy initialization data pointer
         LazyInitializationData* mLazyInitializationData;
     };
+
+    // only needed for ES2
+    UniformsRecord const* mUniformsRecords = nullptr;
 };
 
 // if OpenGLProgram is larger tha 64 bytes, it'll fall in a larger Handle bucket.

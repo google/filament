@@ -269,6 +269,15 @@ void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
 void OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
     // set-up textures and samplers in the proper TMUs (as specified in setSamplers)
     p->use(this, mContext);
+
+    if (UTILS_UNLIKELY(mContext.isES2())) {
+        for (uint32_t i = 0; i < Program::UNIFORM_BINDING_COUNT; i++) {
+            auto [buffer, age] = mUniformBindings[i];
+            if (buffer) {
+                p->updateUniforms(i, buffer, age);
+            }
+        }
+    }
 }
 
 
@@ -474,9 +483,16 @@ void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh,
     }
 
     GLBufferObject* bo = construct<GLBufferObject>(boh, byteCount, bindingType, usage);
-    glGenBuffers(1, &bo->gl.id);
-    gl.bindBuffer(bo->gl.binding, bo->gl.id);
-    glBufferData(bo->gl.binding, byteCount, nullptr, getBufferUsage(usage));
+    if (UTILS_UNLIKELY(bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
+        bo->gl.buffer = malloc(byteCount);
+        memset(bo->gl.buffer, 0, byteCount);
+    } else {
+        bo->gl.binding = GLUtils::getBufferBindingType(bindingType);
+        glGenBuffers(1, &bo->gl.id);
+        gl.bindBuffer(bo->gl.binding, bo->gl.id);
+        glBufferData(bo->gl.binding, byteCount, nullptr, getBufferUsage(usage));
+    }
+
     CHECK_GL_ERROR(utils::slog.e)
 }
 
@@ -1379,7 +1395,11 @@ void OpenGLDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     if (boh) {
         auto& gl = mContext;
         GLBufferObject const* bo = handle_cast<const GLBufferObject*>(boh);
-        gl.deleteBuffers(1, &bo->gl.id, bo->gl.binding);
+        if (UTILS_UNLIKELY(bo->bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
+            free(bo->gl.buffer);
+        } else {
+            gl.deleteBuffers(1, &bo->gl.id, bo->gl.binding);
+        }
         destruct(boh, bo);
     }
 }
@@ -1903,14 +1923,22 @@ void OpenGLDriver::updateBufferObject(
     if (bo->gl.binding == GL_ARRAY_BUFFER) {
         gl.bindVertexArray(nullptr);
     }
-    gl.bindBuffer(bo->gl.binding, bo->gl.id);
-    if (byteOffset == 0 && bd.size == bo->byteCount) {
-        // it looks like it's generally faster (or not worse) to use glBufferData()
-        glBufferData(bo->gl.binding, (GLsizeiptr)bd.size, bd.buffer, getBufferUsage(bo->usage));
+
+    if (UTILS_UNLIKELY(bo->bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
+        assert_invariant(bo->gl.buffer);
+        memcpy(static_cast<uint8_t*>(bo->gl.buffer) + byteOffset, bd.buffer, bd.size);
+        bo->age++;
     } else {
-        // glBufferSubData() could be catastrophically inefficient if several are
-        // issued during the same frame. Currently, we're not doing that though.
-        glBufferSubData(bo->gl.binding, byteOffset, (GLsizeiptr)bd.size, bd.buffer);
+        assert_invariant(bo->gl.id);
+        gl.bindBuffer(bo->gl.binding, bo->gl.id);
+        if (byteOffset == 0 && bd.size == bo->byteCount) {
+            // it looks like it's generally faster (or not worse) to use glBufferData()
+            glBufferData(bo->gl.binding, (GLsizeiptr)bd.size, bd.buffer, getBufferUsage(bo->usage));
+        } else {
+            // glBufferSubData() could be catastrophically inefficient if several are
+            // issued during the same frame. Currently, we're not doing that though.
+            glBufferSubData(bo->gl.binding, byteOffset, (GLsizeiptr)bd.size, bd.buffer);
+        }
     }
 
     scheduleDestroy(std::move(bd));
@@ -1922,6 +1950,12 @@ void OpenGLDriver::updateBufferObjectUnsynchronized(
         Handle<HwBufferObject> boh, BufferDescriptor&& bd, uint32_t byteOffset) {
     DEBUG_MARKER()
 
+    if (UTILS_UNLIKELY(mContext.isES2())) {
+        updateBufferObject(boh, std::move(bd), byteOffset);
+        return;
+    }
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     if constexpr (!HAS_MAPBUFFERS) {
         updateBufferObject(boh, std::move(bd), byteOffset);
     } else {
@@ -1957,6 +1991,7 @@ retry:
         }
     }
     CHECK_GL_ERROR(utils::slog.e)
+#endif
 }
 
 void OpenGLDriver::resetBufferObject(Handle<HwBufferObject> boh) {
@@ -1964,10 +1999,14 @@ void OpenGLDriver::resetBufferObject(Handle<HwBufferObject> boh) {
 
     auto& gl = mContext;
     GLBufferObject* bo = handle_cast<GLBufferObject*>(boh);
-    assert_invariant(bo->gl.id);
 
-    gl.bindBuffer(bo->gl.binding, bo->gl.id);
-    glBufferData(bo->gl.binding, bo->byteCount, nullptr, getBufferUsage(bo->usage));
+    if (UTILS_UNLIKELY(bo->bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
+        // nothing to do here
+    } else {
+        assert_invariant(bo->gl.id);
+        gl.bindBuffer(bo->gl.binding, bo->gl.id);
+        glBufferData(bo->gl.binding, bo->byteCount, nullptr, getBufferUsage(bo->usage));
+    }
 }
 
 void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
@@ -2754,11 +2793,9 @@ void OpenGLDriver::setScissor(Viewport const& scissor) noexcept {
 
 void OpenGLDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> ubh) {
     DEBUG_MARKER()
-    auto& gl = mContext;
     GLBufferObject* ub = handle_cast<GLBufferObject *>(ubh);
-    assert_invariant(ub->gl.binding == GL_UNIFORM_BUFFER);
-    gl.bindBufferRange(ub->gl.binding, GLuint(index), ub->gl.id, 0, ub->byteCount);
-    CHECK_GL_ERROR(utils::slog.e)
+    assert_invariant(ub->bindingType == BufferObjectBinding::UNIFORM);
+    bindBufferRange(BufferObjectBinding::UNIFORM, index, ubh, 0, ub->byteCount);
 }
 
 void OpenGLDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t index,
@@ -2771,19 +2808,31 @@ void OpenGLDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t ind
 
     GLBufferObject* ub = handle_cast<GLBufferObject *>(ubh);
 
-    GLenum const target = GLUtils::getBufferBindingType(bindingType);
-
-    assert_invariant(bindingType == BufferObjectBinding::SHADER_STORAGE ||
-            ub->gl.binding == target);
-
     assert_invariant(offset + size <= ub->byteCount);
-    gl.bindBufferRange(target, GLuint(index), ub->gl.id, offset, size);
+
+    if (UTILS_UNLIKELY(ub->bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
+        mUniformBindings[index] = { static_cast<uint8_t const*>(ub->gl.buffer) + offset, ub->age };
+    } else {
+        GLenum const target = GLUtils::getBufferBindingType(bindingType);
+
+        assert_invariant(bindingType == BufferObjectBinding::SHADER_STORAGE ||
+                         ub->gl.binding == target);
+
+        gl.bindBufferRange(target, GLuint(index), ub->gl.id, offset, size);
+    }
+
     CHECK_GL_ERROR(utils::slog.e)
 }
 
 void OpenGLDriver::unbindBuffer(BufferObjectBinding bindingType, uint32_t index) {
     DEBUG_MARKER()
     auto& gl = mContext;
+
+    if (UTILS_UNLIKELY(bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
+        mUniformBindings[index] = {};
+        return;
+    }
+
     GLenum const target = GLUtils::getBufferBindingType(bindingType);
     gl.bindBufferRange(target, GLuint(index), 0, 0, 0);
     CHECK_GL_ERROR(utils::slog.e)
@@ -3000,7 +3049,7 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
 
 void OpenGLDriver::readBufferSubData(backend::BufferObjectHandle boh,
         uint32_t offset, uint32_t size, backend::BufferDescriptor&& p) {
-    auto& gl = mContext;
+    UTILS_UNUSED_IN_RELEASE auto& gl = mContext;
     assert_invariant(!gl.isES2());
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
@@ -3284,7 +3333,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
         Handle<HwRenderTarget> src, Viewport srcRect,
         SamplerMagFilter filter) {
     DEBUG_MARKER()
-    auto& gl = mContext;
+    UTILS_UNUSED_IN_RELEASE auto& gl = mContext;
     assert_invariant(!gl.isES2());
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2

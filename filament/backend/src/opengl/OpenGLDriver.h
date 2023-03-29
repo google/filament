@@ -73,14 +73,21 @@ public:
         using HwBufferObject::HwBufferObject;
         GLBufferObject(uint32_t size,
                 BufferObjectBinding bindingType, BufferUsage usage) noexcept
-                : HwBufferObject(size), usage(usage) {
-            gl.binding = GLUtils::getBufferBindingType(bindingType);
+                : HwBufferObject(size), usage(usage), bindingType(bindingType) {
         }
+
         struct {
-            GLuint id = 0;
-            GLenum binding = 0;
+            union {
+                struct {
+                    GLuint id;
+                    GLenum binding;
+                };
+                void* buffer;
+            };
         } gl;
-        BufferUsage usage = {};
+        BufferUsage usage;
+        BufferObjectBinding bindingType;
+        uint16_t age = 0;
     };
 
     struct GLVertexBuffer : public HwVertexBuffer {
@@ -320,11 +327,11 @@ private:
         }
         return pos->second;
     }
+#endif
 
     const std::array<GLSamplerGroup*, Program::SAMPLER_BINDING_COUNT>& getSamplerBindings() const {
         return mSamplerBindings;
     }
-#endif
 
     using AttachmentArray = std::array<GLenum, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2>;
     static GLsizei getAttachments(AttachmentArray& attachments,
@@ -341,6 +348,9 @@ private:
             math::float4 const& linearColor, GLfloat depth, GLint stencil) noexcept;
 
     void setScissor(Viewport const& scissor) noexcept;
+
+    // ES2 only. Uniform buffer emulation binding points
+    std::array<std::pair<void const*, uint16_t>, Program::UNIFORM_BINDING_COUNT> mUniformBindings = {};
 
     // sampler buffer binding points (nullptr if not used)
     std::array<GLSamplerGroup*, Program::SAMPLER_BINDING_COUNT> mSamplerBindings = {};   // 4 pointers
