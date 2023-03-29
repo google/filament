@@ -51,7 +51,7 @@ struct PlatformCocoaGLImpl {
     CocoaGLSwapChain* mCurrentSwapChain = nullptr;
     std::vector<NSView*> mHeadlessSwapChains;
     CVOpenGLTextureCacheRef mTextureCache = nullptr;
-    CocoaExternalImage::SharedGl* mExternalImageSharedGl = nullptr;
+    std::unique_ptr<CocoaExternalImage::SharedGl> mExternalImageSharedGl;
     void updateOpenGLContext(NSView *nsView, bool resetView, bool clearView);
 };
 
@@ -168,8 +168,6 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext, const Platform::Drive
             &pImpl->mTextureCache);
     assert_invariant(success == kCVReturnSuccess);
 
-    pImpl->mExternalImageSharedGl = new CocoaExternalImage::SharedGl();
-
     return OpenGLPlatform::createDefaultDriver(this, sharedContext, driverConfig);
 }
 
@@ -180,7 +178,6 @@ int PlatformCocoaGL::getOSVersion() const noexcept {
 void PlatformCocoaGL::terminate() noexcept {
     CFRelease(pImpl->mTextureCache);
     pImpl->mGLContext = nil;
-    delete pImpl->mExternalImageSharedGl;
     bluegl::unbind();
 }
 
@@ -283,6 +280,10 @@ bool PlatformCocoaGL::pumpEvents() noexcept {
 }
 
 OpenGLPlatform::ExternalTexture* PlatformCocoaGL::createExternalImageTexture() noexcept {
+    if (!pImpl->mExternalImageSharedGl) {
+        pImpl->mExternalImageSharedGl = std::make_unique<CocoaExternalImage::SharedGl>();
+    }
+
     ExternalTexture* outTexture = new CocoaExternalImage(pImpl->mTextureCache,
             *pImpl->mExternalImageSharedGl);
 
