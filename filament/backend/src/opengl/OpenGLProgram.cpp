@@ -63,8 +63,12 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& program) noexcept
 
     OpenGLContext& context = gld.getContext();
 
-    mLazyInitializationData->uniformBlockInfo = std::move(program.getUniformBlockBindings());
     mLazyInitializationData->samplerGroupInfo = std::move(program.getSamplerGroupInfo());
+    if (UTILS_UNLIKELY(gld.getContext().isES2())) {
+        mLazyInitializationData->bindingUniformInfo = std::move(program.getBindingUniformInfo());
+    } else {
+        mLazyInitializationData->uniformBlockInfo = std::move(program.getUniformBlockBindings());
+    }
 
     // this cannot fail because we check compilation status after linking the program
     // shaders[] is filled with id of shader stages present.
@@ -91,6 +95,7 @@ OpenGLProgram::~OpenGLProgram() noexcept {
         // mLazyInitializationData is aliased with mIndicesRuns
         delete mLazyInitializationData;
     }
+    delete [] mUniformsRecords;
     const GLuint program = gl.program;
     UTILS_NOUNROLL
     for (GLuint const shader: gl.shaders) {
@@ -333,19 +338,19 @@ void OpenGLProgram::initialize(OpenGLContext& context) {
     assert_invariant(mLazyInitializationData);
 
     // we must copy mLazyInitializationData locally because it is aliased with mIndicesRuns
-    auto* const initializationData = mLazyInitializationData;
+    auto* const pInitializationData = mLazyInitializationData;
 
     // check status of program linking and shader compilation, logs error and free all resources
     // in case of error.
     mValid = OpenGLProgram::checkProgramStatus(name.c_str_safe(),
-            gl.program, gl.shaders, initializationData->shaderSourceCode);
+            gl.program, gl.shaders, pInitializationData->shaderSourceCode);
 
     if (UTILS_LIKELY(mValid)) {
-        initializeProgramState(context, gl.program, *initializationData);
+        initializeProgramState(context, gl.program, *pInitializationData);
     }
 
     // and destroy all temporary init data
-    delete initializationData;
+    delete pInitializationData;
     // mInitialized means mLazyInitializationData is no more valid
     mInitialized = true;
 }
@@ -355,7 +360,7 @@ void OpenGLProgram::initialize(OpenGLContext& context) {
  * checkProgramStatus() has been successfully called.
  */
 void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint program,
-        LazyInitializationData const& lazyInitializationData) noexcept {
+        LazyInitializationData& lazyInitializationData) noexcept {
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     if (!context.isES2()) {
@@ -363,7 +368,7 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
         // (ES3.0 and GL4.1). The backend needs a way to associate a uniform block to a binding point.
         UTILS_NOUNROLL
         for (GLuint binding = 0, n = lazyInitializationData.uniformBlockInfo.size();
-             binding < n; binding++) {
+                binding < n; binding++) {
             auto const& name = lazyInitializationData.uniformBlockInfo[binding];
             if (!name.empty()) {
                 GLuint const index = glGetUniformBlockIndex(program, name.c_str());
@@ -376,7 +381,20 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
     } else
 #endif
     {
-        // ES2 initialization
+        // ES2 initialization of (fake) UBOs
+        UniformsRecord* const uniformsRecords = new UniformsRecord[Program::UNIFORM_BINDING_COUNT];
+        UTILS_NOUNROLL
+        for (GLuint binding = 0, n = Program::UNIFORM_BINDING_COUNT; binding < n; binding++) {
+            Program::UniformInfo& uniforms = lazyInitializationData.bindingUniformInfo[binding];
+            uniformsRecords[binding].locations.reserve(uniforms.size());
+            uniformsRecords[binding].locations.resize(uniforms.size());
+            for (size_t j = 0, c = uniforms.size(); j < c; j++) {
+                GLint const loc = glGetUniformLocation(program, uniforms[j].name.c_str());
+                uniformsRecords[binding].locations[j] = loc;
+            }
+            uniformsRecords[binding].uniforms = std::move(uniforms);
+        }
+        mUniformsRecords = uniformsRecords;
     }
 
     uint8_t usedBindingCount = 0;
@@ -451,6 +469,79 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* const gld) const noexcept {
     CHECK_GL_ERROR(utils::slog.e)
 }
 
+void OpenGLProgram::updateUniforms(uint32_t index, void const* buffer, uint16_t age) noexcept {
+    assert_invariant(mUniformsRecords);
+    assert_invariant(buffer);
+
+    // only update the uniforms if the UBO has changed since last time we updated
+    UniformsRecord const& records = mUniformsRecords[index];
+    if (records.age == age) {
+        return;
+    }
+    records.age = age;
+
+    assert_invariant(records.uniforms.size() == records.locations.size());
+
+    for (size_t i = 0, c = records.uniforms.size(); i < c; i++) {
+        Program::Uniform const& u = records.uniforms[i];
+        GLint const loc = records.locations[i];
+        if (loc < 0) {
+            continue;
+        }
+        // u.offset is in 'uint32_t' units
+        GLfloat const* const bf = reinterpret_cast<GLfloat const*>(buffer) + u.offset;
+        GLint const* const bi = reinterpret_cast<GLint const*>(buffer) + u.offset;
+
+        switch(u.type) {
+            case UniformType::FLOAT:
+                glUniform1fv(loc, u.size, bf);
+                break;
+            case UniformType::FLOAT2:
+                glUniform2fv(loc, u.size, bf);
+                break;
+            case UniformType::FLOAT3:
+                glUniform3fv(loc, u.size, bf);
+                break;
+            case UniformType::FLOAT4:
+                glUniform4fv(loc, u.size, bf);
+                break;
+
+            case UniformType::BOOL:
+            case UniformType::INT:
+            case UniformType::UINT:
+                glUniform1iv(loc, u.size, bi);
+                break;
+            case UniformType::BOOL2:
+            case UniformType::INT2:
+            case UniformType::UINT2:
+                glUniform2iv(loc, u.size, bi);
+                break;
+            case UniformType::BOOL3:
+            case UniformType::INT3:
+            case UniformType::UINT3:
+                glUniform3iv(loc, u.size, bi);
+                break;
+            case UniformType::BOOL4:
+            case UniformType::INT4:
+            case UniformType::UINT4:
+                glUniform4iv(loc, u.size, bi);
+                break;
+
+            case UniformType::MAT3:
+                glUniformMatrix3fv(loc, u.size, GL_FALSE, bf);
+                break;
+            case UniformType::MAT4:
+                glUniformMatrix4fv(loc, u.size, GL_FALSE, bf);
+                break;
+
+            case UniformType::STRUCT:
+                // not supported
+                break;
+        }
+    }
+}
+
+
 UTILS_NOINLINE
 void logCompilationError(io::ostream& out, ShaderStage shaderType,
         const char* name, GLuint shaderId,
@@ -477,12 +568,12 @@ void logCompilationError(io::ostream& out, ShaderStage shaderType,
     }
 
 #ifndef NDEBUG
-    std::string_view shader{ sourceCode.data(), sourceCode.size() };
+    std::string_view const shader{ sourceCode.data(), sourceCode.size() };
     size_t lc = 1;
     size_t start = 0;
     std::string line;
     while (true) {
-        size_t end = shader.find('\n', start);
+        size_t const end = shader.find('\n', start);
         if (end == std::string::npos) {
             line = shader.substr(start);
         } else {
