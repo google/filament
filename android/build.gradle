@@ -126,6 +126,7 @@ buildscript {
         "-fno-asynchronous-unwind-tables",
         "-fno-rtti",
         "-ffast-math",
+        "-fno-finite-math-only",
         "-ffp-contract=fast",
         "-fvisibility-inlines-hidden",
         "-fvisibility=hidden",

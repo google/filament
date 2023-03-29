@@ -332,6 +332,7 @@ elseif(WEBGL)
 else()
     set(OPTIMIZATION_FLAGS
         -ffast-math
+        -fno-finite-math-only
         -ffp-contract=fast
         # TODO: aggressive vectorization is currently broken on Android
         #        -fslp-vectorize-aggressive
