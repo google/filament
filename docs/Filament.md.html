@@ -2016,7 +2016,7 @@ I(f(n, v, \alpha))        \equiv \frac{1}{N}\sum_{\forall \, i \in image} f(l_i,
 \end{equation}$$
 
 However, in practice we're using _importance sampling_ which needs to take the $pdf$ of the distribution
-into account and adds a term $\frac{\left<\VoH\right>}{D(h_i, \alpha)\left<\NoH\right>}$.
+into account and adds a term $\frac{4\left<\VoH\right>}{D(h_i, \alpha)\left<\NoH\right>}$.
 See Importance Sampling For The IBL section:
 
 $$\begin{equation}\label{iblImportanceSampling}
@@ -3486,15 +3486,15 @@ The _important direction samples_ $l_i$ are calculated as the reflection of $v$ 
 **do not** have the same PDF as $h_i$. The PDF of a transformed distribution is given by:
 
 $$\begin{equation}
-p(T_r(x)) = p(x) |J(T_r)|
+p(T_r(x)) = p(x) |J(T_r)|^{-1}
 \end{equation}$$
 
 Where $|J(T_r)|$ is the determinant of the Jacobian of the transform. In our case we're considering
 the transform from $h_i$ to $l_i$ and the determinant of its Jacobian is given in \ref{iblPDF}.
 
 $$\begin{equation}\label{iblPDF}
-p(l,v,\Theta) = D(h,\alpha) \left< \NoH \right> |J_{h \rightarrow l}| \\
-|J_{h \rightarrow l}| = \frac{1}{4 \left< \VoH \right>}
+p(l,v,\Theta) = D(h,\alpha) \left< \NoH \right> |J_{h \rightarrow l}|^{-1} \\
+|J_{h \rightarrow l}| = 4 \left< \VoH \right>
 \end{equation}$$
 
 ### Choosing important directions
