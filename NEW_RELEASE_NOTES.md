@@ -12,3 +12,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - fog: fog color now takes exposure and IBL intensity into account [⚠️ **Recompile Materials**].
 - materials: implement cascades debugging as a post-process [⚠️ **Recompile Materials**].
 - materials: use 9 digits or less for floats [⚠️ **Recompile Materials**].
+- gltfio: fix skinning when objects are far from the origin
