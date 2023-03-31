@@ -177,6 +177,7 @@ int PlatformCocoaGL::getOSVersion() const noexcept {
 
 void PlatformCocoaGL::terminate() noexcept {
     CFRelease(pImpl->mTextureCache);
+    pImpl->mExternalImageSharedGl.reset();
     pImpl->mGLContext = nil;
     bluegl::unbind();
 }
