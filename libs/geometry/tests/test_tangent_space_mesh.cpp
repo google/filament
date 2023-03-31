@@ -347,6 +347,11 @@ TEST_F(TangentSpaceMeshTest, Lengyel) {
     size_t const vertexCount = mesh->getVertexCount();
     std::vector<quatf> quats(vertexCount);
     mesh->getQuats(quats.data());
+
+    ASSERT_EQ(mesh->getTriangleCount(), CUBE_TRIANGLES.size());
+    std::vector<ushort3> triangles(mesh->getTriangleCount());
+    mesh->getTriangles(triangles.data());
+
     for (size_t i = 0; i < vertexCount; ++i) {
         float3 const n = quats[i] * NORMAL_AXIS;
         EXPECT_PRED2(isAlmostEqual3, n, CUBE_NORMALS[i]);
