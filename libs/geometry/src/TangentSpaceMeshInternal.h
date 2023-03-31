@@ -47,7 +47,7 @@ public:
     }
 
     explicit operator bool() const noexcept {
-        return !mBorrowed && !mAllocated.empty();
+        return mBorrowed || !mAllocated.empty();
     }
 
     const T* get() {
