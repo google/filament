@@ -84,6 +84,7 @@ struct App {
     ViewerGui* viewer;
     Config config;
     Camera* mainCamera;
+    Entity rootTransformEntity;
 
     AssetLoader* assetLoader;
     FilamentAsset* asset = nullptr;
@@ -99,6 +100,7 @@ struct App {
     bool recomputeAabb = false;
 
     bool actualSize = false;
+    bool originIsFarAway = false;
 
     struct Scene {
         Entity groundPlane;
@@ -580,6 +582,11 @@ int main(int argc, char** argv) {
         app.viewer = new ViewerGui(engine, scene, view, 410);
         app.viewer->getSettings().viewer.autoScaleEnabled = !app.actualSize;
 
+        engine->enableAccurateTranslations();
+        auto& tcm = engine->getTransformManager();
+        app.rootTransformEntity = engine->getEntityManager().create();
+        tcm.create(app.rootTransformEntity);
+
         const bool batchMode = !app.batchFile.empty();
 
         // First check if a custom automation spec has been provided. If it fails to load, the app
@@ -735,11 +742,12 @@ int main(int argc, char** argv) {
                 auto& debug = engine->getDebugRegistry();
                 if (ImGui::Button("Capture frame")) {
                     bool* captureFrame =
-                        debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
+                            debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
                     *captureFrame = true;
                 }
                 ImGui::Checkbox("Disable buffer padding", debug.getPropertyAddress<bool>("d.renderer.disable_buffer_padding"));
                 ImGui::Checkbox("Camera at origin", debug.getPropertyAddress<bool>("d.view.camera_at_origin"));
+                ImGui::Checkbox("Far Origin", &app.originIsFarAway);
                 auto dataSource = debug.getDataSource("d.view.frame_info");
                 if (dataSource.data) {
                     ImGuiExt::PlotLinesSeries("FrameInfo", 6,
@@ -906,6 +914,13 @@ int main(int argc, char** argv) {
         Camera& camera = view->getCamera();
         Skybox* skybox = scene->getSkybox();
         applySettings(engine, app.viewer->getSettings().viewer, &camera, skybox, renderer);
+
+        // technically we don't need to do this each frame
+        auto& tcm = engine->getTransformManager();
+        TransformManager::Instance const& root = tcm.getInstance(app.rootTransformEntity);
+        tcm.setParent(tcm.getInstance(camera.getEntity()), root);
+        tcm.setParent(tcm.getInstance(app.asset->getRoot()), root);
+        tcm.setTransform(root, mat4f::translation(float3{ app.originIsFarAway ? 1e6f : 0.0f }));
 
         // Check if color grading has changed.
         ColorGradingSettings& options = app.viewer->getSettings().view.colorGrading;
