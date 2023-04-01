@@ -78,8 +78,6 @@ private:
 
     GLuint mFBO = 0;
     const SharedGl& mSharedGl;
-
-    bool mEncodedToRgba = false;
     GLuint mRgbaTexture = 0;
 
     const CVOpenGLTextureCacheRef mTextureCache;

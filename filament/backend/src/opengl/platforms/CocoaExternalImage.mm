@@ -129,21 +129,21 @@ bool CocoaExternalImage::set(CVPixelBufferRef image) noexcept {
 }
 
 GLuint CocoaExternalImage::getGlTexture() const noexcept {
-    if (mEncodedToRgba) {
-        return mRgbaTexture;
-    }
-    return CVOpenGLTextureGetName(mTexture);
+    return mRgbaTexture;
 }
 
 GLuint CocoaExternalImage::getInternalFormat() const noexcept {
-    return GL_RGBA8;
+    if (mRgbaTexture) {
+        return GL_RGBA8;
+    }
+    return 0;
 }
 
 GLuint CocoaExternalImage::getTarget() const noexcept {
-    if (mEncodedToRgba) {
+    if (mRgbaTexture) {
         return GL_TEXTURE_2D;
     }
-    return CVOpenGLTextureGetTarget(mTexture);
+    return 0;
 }
 
 void CocoaExternalImage::release() noexcept {
@@ -154,7 +154,7 @@ void CocoaExternalImage::release() noexcept {
     if (mTexture) {
         CFRelease(mTexture);
     }
-    if (mEncodedToRgba) {
+    if (mRgbaTexture) {
         glDeleteTextures(1, &mRgbaTexture);
         mRgbaTexture = 0;
     }
@@ -207,7 +207,6 @@ GLuint CocoaExternalImage::encodeCopyRectangleToTexture2D(GLuint rectangle,
 
     mState.restore();
     CHECK_GL_ERROR(utils::slog.e)
-    mEncodedToRgba = true;
 
     return texture;
 }
