@@ -701,7 +701,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
             mMaterialFragmentCode.getLineOffset(), mMaterialVertexCode.getResolved(),
             mMaterialVertexCode.getLineOffset(), mMaterialDomain);
 
-    container.addSimpleChild<bool>(ChunkType::MaterialHasCustomDepthShader, needsStandardDepthProgram());
+    container.emplace<bool>(ChunkType::MaterialHasCustomDepthShader, needsStandardDepthProgram());
 
     std::atomic_bool cancelJobs(false);
     bool firstJob = true;
@@ -894,12 +894,12 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     }
 
     // Emit dictionary chunk (TextDictionaryReader and DictionaryTextChunk)
-    const auto& dictionaryChunk = container.addChild<filamat::DictionaryTextChunk>(
+    const auto& dictionaryChunk = container.push<filamat::DictionaryTextChunk>(
             std::move(textDictionary), ChunkType::DictionaryText);
 
     // Emit GLSL chunk (MaterialTextChunk).
     if (!glslEntries.empty()) {
-        container.addChild<MaterialTextChunk>(std::move(glslEntries),
+        container.push<MaterialTextChunk>(std::move(glslEntries),
                 dictionaryChunk.getDictionary(), ChunkType::MaterialGlsl);
     }
 
@@ -907,13 +907,13 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 #ifndef FILAMAT_LITE
     if (!spirvEntries.empty()) {
         const bool stripInfo = !mGenerateDebugInfo;
-        container.addChild<filamat::DictionarySpirvChunk>(std::move(spirvDictionary), stripInfo);
-        container.addChild<MaterialSpirvChunk>(std::move(spirvEntries));
+        container.push<filamat::DictionarySpirvChunk>(std::move(spirvDictionary), stripInfo);
+        container.push<MaterialSpirvChunk>(std::move(spirvEntries));
     }
 
     // Emit Metal chunk (MaterialTextChunk).
     if (!metalEntries.empty()) {
-        container.addChild<MaterialTextChunk>(std::move(metalEntries),
+        container.push<MaterialTextChunk>(std::move(metalEntries),
                 dictionaryChunk.getDictionary(), ChunkType::MaterialMetal);
     }
 #endif
@@ -1186,11 +1186,11 @@ std::string MaterialBuilder::peek(backend::ShaderStage stage,
 }
 
 void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo& info) const noexcept {
-    container.addSimpleChild<uint32_t>(ChunkType::MaterialVersion, MATERIAL_VERSION);
-    container.addSimpleChild<uint8_t>(ChunkType::MaterialFeatureLevel, (uint8_t)info.featureLevel);
-    container.addSimpleChild<const char*>(ChunkType::MaterialName, mMaterialName.c_str_safe());
-    container.addSimpleChild<uint32_t>(ChunkType::MaterialShaderModels, mShaderModels.getValue());
-    container.addSimpleChild<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
+    container.emplace<uint32_t>(ChunkType::MaterialVersion, MATERIAL_VERSION);
+    container.emplace<uint8_t>(ChunkType::MaterialFeatureLevel, (uint8_t)info.featureLevel);
+    container.emplace<const char*>(ChunkType::MaterialName, mMaterialName.c_str_safe());
+    container.emplace<uint32_t>(ChunkType::MaterialShaderModels, mShaderModels.getValue());
+    container.emplace<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
 
     using namespace filament;
 
@@ -1206,18 +1206,18 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
                 { PerRenderableMorphingUib::_name, UniformBindingPoints::PER_RENDERABLE_MORPHING },
                 { info.uib.getName(),              UniformBindingPoints::PER_MATERIAL_INSTANCE }
         };
-        container.addChild<MaterialUniformBlockBindingsChunk>(std::move(list));
+        container.push<MaterialUniformBlockBindingsChunk>(std::move(list));
     }
 
     // note: this chunk is needed for Vulkan and GL backends. Metal shouldn't need it (but
     // still does as of now).
-    container.addChild<MaterialSamplerBlockBindingChunk>(info.samplerBindings);
+    container.push<MaterialSamplerBlockBindingChunk>(info.samplerBindings);
 
     // User Material UIB
-    container.addChild<MaterialUniformInterfaceBlockChunk>(info.uib);
+    container.push<MaterialUniformInterfaceBlockChunk>(info.uib);
 
     // User Material SIB
-    container.addChild<MaterialSamplerInterfaceBlockChunk>(info.sib);
+    container.push<MaterialSamplerInterfaceBlockChunk>(info.sib);
 
     // TODO: should we write the SSBO info? this would only be needed if we wanted to provide
     //       an interface to set [get?] values in the buffer. But we can do that easily
@@ -1225,21 +1225,25 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
 
     if (mMaterialDomain != MaterialDomain::COMPUTE) {
         // User Subpass
-        container.addChild<MaterialSubpassInterfaceBlockChunk>(info.subpass);
+        container.push<MaterialSubpassInterfaceBlockChunk>(info.subpass);
 
-        container.addSimpleChild<bool>(ChunkType::MaterialDoubleSidedSet, mDoubleSidedCapability);
-        container.addSimpleChild<bool>(ChunkType::MaterialDoubleSided, mDoubleSided);
-        container.addSimpleChild<uint8_t>(ChunkType::MaterialBlendingMode, static_cast<uint8_t>(mBlendingMode));
-        container.addSimpleChild<uint8_t>(ChunkType::MaterialTransparencyMode, static_cast<uint8_t>(mTransparencyMode));
-        container.addSimpleChild<uint8_t>(ChunkType::MaterialReflectionMode, static_cast<uint8_t>(mReflectionMode));
-        container.addSimpleChild<bool>(ChunkType::MaterialColorWrite, mColorWrite);
-        container.addSimpleChild<bool>(ChunkType::MaterialDepthWriteSet, mDepthWriteSet);
-        container.addSimpleChild<bool>(ChunkType::MaterialDepthWrite, mDepthWrite);
-        container.addSimpleChild<bool>(ChunkType::MaterialDepthTest, mDepthTest);
-        container.addSimpleChild<bool>(ChunkType::MaterialInstanced, mInstanced);
-        container.addSimpleChild<bool>(ChunkType::MaterialAlphaToCoverageSet, mAlphaToCoverageSet);
-        container.addSimpleChild<bool>(ChunkType::MaterialAlphaToCoverage, mAlphaToCoverage);
-        container.addSimpleChild<uint8_t>(ChunkType::MaterialCullingMode, static_cast<uint8_t>(mCullingMode));
+        container.emplace<bool>(ChunkType::MaterialDoubleSidedSet, mDoubleSidedCapability);
+        container.emplace<bool>(ChunkType::MaterialDoubleSided, mDoubleSided);
+        container.emplace<uint8_t>(ChunkType::MaterialBlendingMode,
+                static_cast<uint8_t>(mBlendingMode));
+        container.emplace<uint8_t>(ChunkType::MaterialTransparencyMode,
+                static_cast<uint8_t>(mTransparencyMode));
+        container.emplace<uint8_t>(ChunkType::MaterialReflectionMode,
+                static_cast<uint8_t>(mReflectionMode));
+        container.emplace<bool>(ChunkType::MaterialColorWrite, mColorWrite);
+        container.emplace<bool>(ChunkType::MaterialDepthWriteSet, mDepthWriteSet);
+        container.emplace<bool>(ChunkType::MaterialDepthWrite, mDepthWrite);
+        container.emplace<bool>(ChunkType::MaterialDepthTest, mDepthTest);
+        container.emplace<bool>(ChunkType::MaterialInstanced, mInstanced);
+        container.emplace<bool>(ChunkType::MaterialAlphaToCoverageSet, mAlphaToCoverageSet);
+        container.emplace<bool>(ChunkType::MaterialAlphaToCoverage, mAlphaToCoverage);
+        container.emplace<uint8_t>(ChunkType::MaterialCullingMode,
+                static_cast<uint8_t>(mCullingMode));
 
         uint64_t properties = 0;
         UTILS_NOUNROLL
@@ -1248,30 +1252,35 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
                 properties |= uint64_t(1u) << i;
             }
         }
-        container.addSimpleChild<uint64_t>(ChunkType::MaterialProperties, properties);
+        container.emplace<uint64_t>(ChunkType::MaterialProperties, properties);
     }
 }
 
 void MaterialBuilder::writeSurfaceChunks(ChunkContainer& container) const noexcept {
     if (mBlendingMode == BlendingMode::MASKED) {
-        container.addSimpleChild<float>(ChunkType::MaterialMaskThreshold, mMaskThreshold);
+        container.emplace<float>(ChunkType::MaterialMaskThreshold, mMaskThreshold);
     }
 
-    container.addSimpleChild<uint8_t>(ChunkType::MaterialShading, static_cast<uint8_t>(mShading));
+    container.emplace<uint8_t>(ChunkType::MaterialShading, static_cast<uint8_t>(mShading));
 
     if (mShading == Shading::UNLIT) {
-        container.addSimpleChild<bool>(ChunkType::MaterialShadowMultiplier, mShadowMultiplier);
+        container.emplace<bool>(ChunkType::MaterialShadowMultiplier, mShadowMultiplier);
     }
 
-    container.addSimpleChild<uint8_t>(ChunkType::MaterialRefraction, static_cast<uint8_t>(mRefractionMode));
-    container.addSimpleChild<uint8_t>(ChunkType::MaterialRefractionType, static_cast<uint8_t>(mRefractionType));
-    container.addSimpleChild<bool>(ChunkType::MaterialClearCoatIorChange, mClearCoatIorChange);
-    container.addSimpleChild<uint32_t>(ChunkType::MaterialRequiredAttributes, mRequiredAttributes.getValue());
-    container.addSimpleChild<bool>(ChunkType::MaterialSpecularAntiAliasing, mSpecularAntiAliasing);
-    container.addSimpleChild<float>(ChunkType::MaterialSpecularAntiAliasingVariance, mSpecularAntiAliasingVariance);
-    container.addSimpleChild<float>(ChunkType::MaterialSpecularAntiAliasingThreshold, mSpecularAntiAliasingThreshold);
-    container.addSimpleChild<uint8_t>(ChunkType::MaterialVertexDomain, static_cast<uint8_t>(mVertexDomain));
-    container.addSimpleChild<uint8_t>(ChunkType::MaterialInterpolation, static_cast<uint8_t>(mInterpolation));
+    container.emplace<uint8_t>(ChunkType::MaterialRefraction, static_cast<uint8_t>(mRefractionMode));
+    container.emplace<uint8_t>(ChunkType::MaterialRefractionType,
+            static_cast<uint8_t>(mRefractionType));
+    container.emplace<bool>(ChunkType::MaterialClearCoatIorChange, mClearCoatIorChange);
+    container.emplace<uint32_t>(ChunkType::MaterialRequiredAttributes,
+            mRequiredAttributes.getValue());
+    container.emplace<bool>(ChunkType::MaterialSpecularAntiAliasing, mSpecularAntiAliasing);
+    container.emplace<float>(ChunkType::MaterialSpecularAntiAliasingVariance,
+            mSpecularAntiAliasingVariance);
+    container.emplace<float>(ChunkType::MaterialSpecularAntiAliasingThreshold,
+            mSpecularAntiAliasingThreshold);
+    container.emplace<uint8_t>(ChunkType::MaterialVertexDomain, static_cast<uint8_t>(mVertexDomain));
+    container.emplace<uint8_t>(ChunkType::MaterialInterpolation,
+            static_cast<uint8_t>(mInterpolation));
 }
 
 } // namespace filamat
