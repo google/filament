@@ -127,6 +127,10 @@ public:
         return mTemplateMap;
     }
 
+    filament::backend::FeatureLevel getFeatureLevel() const noexcept {
+        return mFeatureLevel;
+    }
+
 protected:
     bool mDebug = false;
     bool mIsValid = true;
@@ -137,6 +141,7 @@ protected:
     Platform mPlatform = Platform::ALL;
     OutputFormat mOutputFormat = OutputFormat::BLOB;
     TargetApi mTargetApi = (TargetApi) 0;
+    filament::backend::FeatureLevel mFeatureLevel = filament::backend::FeatureLevel::FEATURE_LEVEL_3;
     StringReplacementMap mDefines;
     StringReplacementMap mTemplateMap;
     filament::UserVariantFilterMask mVariantFilter = 0;

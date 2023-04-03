@@ -1187,7 +1187,7 @@ std::string MaterialBuilder::peek(backend::ShaderStage stage,
 
 void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo& info) const noexcept {
     container.emplace<uint32_t>(ChunkType::MaterialVersion, MATERIAL_VERSION);
-    container.emplace<uint8_t>(ChunkType::MaterialFeatureLevel, (uint8_t)mFeatureLevel);
+    container.emplace<uint8_t>(ChunkType::MaterialFeatureLevel, (uint8_t)info.featureLevel);
     container.emplace<const char*>(ChunkType::MaterialName, mMaterialName.c_str_safe());
     container.emplace<uint32_t>(ChunkType::MaterialShaderModels, mShaderModels.getValue());
     container.emplace<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
