@@ -41,6 +41,7 @@ public:
         uint32_t size;
         backend::UniformType type;
         backend::Precision precision{};
+        backend::FeatureLevel minFeatureLevel = backend::FeatureLevel::FEATURE_LEVEL_1;
         std::string_view structName{};
         uint32_t stride{};
         std::string_view sizeName{};
@@ -67,6 +68,7 @@ public:
         bool isArray;               // true if the field is an array
         uint32_t size;              // size of the array in elements, or 0 if not an array
         Precision precision;        // precision of this field
+        backend::FeatureLevel minFeatureLevel; // below this feature level, this field is not needed
         utils::CString structName;  // name of this field structure if type is STRUCT
         utils::CString sizeName;    // name of the size parameter in the shader
         // returns offset in bytes of this field (at index if an array)

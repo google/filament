@@ -1,4 +1,8 @@
+#if __VERSION__ == 100
+vec4 fragColor;
+#else
 layout(location = 0) out vec4 fragColor;
+#endif
 
 #if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
 void blendPostLightingColor(const MaterialInputs material, inout vec4 color) {
@@ -41,5 +45,9 @@ void main() {
 #if defined(VARIANT_HAS_FOG)
     highp vec3 view = getWorldPosition() - getWorldCameraPosition();
     fragColor = fog(fragColor, view);
+#endif
+
+#if __VERSION__ == 100
+    gl_FragData[0] = fragColor;
 #endif
 }

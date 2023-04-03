@@ -651,6 +651,11 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
 void FView::bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
     mPerViewUniforms.bind(driver);
 
+    if (UTILS_UNLIKELY(driver.getFeatureLevel() == backend::FeatureLevel::FEATURE_LEVEL_0)) {
+        // FIXME: should be okay to use driver (instead of engine) for FEATURE_LEVEL_0 checks
+        return;
+    }
+
     driver.bindUniformBuffer(+UniformBindingPoints::LIGHTS,
             mLightUbh);
 

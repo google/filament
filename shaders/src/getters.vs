@@ -21,6 +21,7 @@ float getObjectUserData() {
 // Attributes access
 //------------------------------------------------------------------------------
 
+#if __VERSION__ >= 300
 /** @public-api */
 int getVertexIndex() {
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
@@ -29,6 +30,7 @@ int getVertexIndex() {
     return gl_VertexID;
 #endif
 }
+#endif
 
 #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
 vec3 mulBoneNormal(vec3 n, uint i) {

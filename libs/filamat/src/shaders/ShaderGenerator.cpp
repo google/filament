@@ -404,7 +404,7 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
             attributes.set(VertexAttribute::MORPH_TANGENTS_3);
         }
     }
-    CodeGenerator::generateShaderInputs(vs, ShaderStage::VERTEX, attributes, interpolation);
+    cg.generateShaderInputs(vs, ShaderStage::VERTEX, attributes, interpolation);
 
     CodeGenerator::generateCommonTypes(vs, ShaderStage::VERTEX);
 
@@ -502,7 +502,7 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     generateSurfaceMaterialVariantProperties(fs, mProperties, mDefines);
 
 
-    CodeGenerator::generateShaderInputs(fs, ShaderStage::FRAGMENT,
+    cg.generateShaderInputs(fs, ShaderStage::FRAGMENT,
             material.requiredAttributes, interpolation);
 
     CodeGenerator::generateCommonTypes(fs, ShaderStage::FRAGMENT);
@@ -541,9 +541,11 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
 
     CodeGenerator::generateSeparator(fs);
 
-    cg.generateSamplers(fs, SamplerBindingPoints::PER_VIEW,
-            material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_VIEW),
-            SibGenerator::getPerViewSib(variant));
+    if (material.featureLevel >= FeatureLevel::FEATURE_LEVEL_1) { // FIXME: generate only what we need
+        cg.generateSamplers(fs, SamplerBindingPoints::PER_VIEW,
+                material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_VIEW),
+                SibGenerator::getPerViewSib(variant));
+    }
 
     cg.generateSamplers(fs, SamplerBindingPoints::PER_MATERIAL_INSTANCE,
             material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_MATERIAL_INSTANCE),
@@ -556,7 +558,10 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     CodeGenerator::generateGetters(fs, ShaderStage::FRAGMENT);
     CodeGenerator::generateCommonMaterial(fs, ShaderStage::FRAGMENT);
     CodeGenerator::generateParameters(fs, ShaderStage::FRAGMENT);
-    CodeGenerator::generateFog(fs, ShaderStage::FRAGMENT);
+
+    if (filament::Variant::isFogVariant(variant)) {
+        CodeGenerator::generateFog(fs, ShaderStage::FRAGMENT);
+    }
 
     // shading model
     if (filament::Variant::isValidDepthVariant(variant)) {

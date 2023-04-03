@@ -524,6 +524,12 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
         glslOptions.fragment.default_int_precision = glslOptions.es ?
                 CompilerGLSL::Options::Precision::Mediump : CompilerGLSL::Options::Precision::Highp;
 
+        // TODO: this should be done only on the "feature level 0" variant
+        if (config.featureLevel == 0) {
+            // convert UBOs to plain uniforms if we're at feature level 0
+            glslOptions.emit_uniform_buffer_as_plain_uniforms = true;
+        }
+
         CompilerGLSL glslCompiler(std::move(spirv));
         glslCompiler.set_common_options(glslOptions);
 
