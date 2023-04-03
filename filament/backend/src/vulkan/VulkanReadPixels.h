@@ -22,7 +22,9 @@
 #include <bluevk/BlueVK.h>
 #include <math/vec4.h>
 
+#include <condition_variable>
 #include <functional>
+#include <mutex>
 #include <queue>
 #include <set>
 #include <thread>
