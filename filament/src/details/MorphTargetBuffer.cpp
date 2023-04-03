@@ -102,6 +102,11 @@ FMorphTargetBuffer::EmptyMorphTargetBuilder::EmptyMorphTargetBuilder() {
 FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
         : mVertexCount(builder->mVertexCount),
           mCount(builder->mCount) {
+
+    if (UTILS_UNLIKELY(engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)) {
+        return;
+    }
+
     FEngine::DriverApi& driver = engine.getDriverApi();
 
     // create buffer (here a texture) to store the morphing vertex data
@@ -129,9 +134,15 @@ FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
 
 void FMorphTargetBuffer::terminate(FEngine& engine) {
     FEngine::DriverApi& driver = engine.getDriverApi();
-    driver.destroySamplerGroup(mSbHandle);
-    driver.destroyTexture(mTbHandle);
-    driver.destroyTexture(mPbHandle);
+    if (UTILS_LIKELY(mSbHandle)) {
+        driver.destroySamplerGroup(mSbHandle);
+    }
+    if (UTILS_LIKELY(mTbHandle)) {
+        driver.destroyTexture(mTbHandle);
+    }
+    if (UTILS_LIKELY(mPbHandle)) {
+        driver.destroyTexture(mPbHandle);
+    }
 }
 
 void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,

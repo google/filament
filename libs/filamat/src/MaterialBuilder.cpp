@@ -21,6 +21,7 @@
 #include "Includes.h"
 #include "MaterialVariants.h"
 #include "shaders/SibGenerator.h"
+#include "shaders/UibGenerator.h"
 
 #ifndef FILAMAT_LITE
 #   include "GLSLPostProcessor.h"
@@ -46,6 +47,8 @@
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UibStructs.h>
 #include <private/filament/ConstantInfo.h>
+
+#include <backend/Program.h>
 
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
@@ -531,7 +534,8 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
                     param.samplerType, param.format, param.precision);
         } else if (param.isUniform()) {
             ibb.add({{{ param.name.data(), param.name.size() },
-                      uint32_t(param.size == 1u ? 0u : param.size), param.uniformType, param.precision }});
+                      uint32_t(param.size == 1u ? 0u : param.size), param.uniformType,
+                      param.precision, FeatureLevel::FEATURE_LEVEL_0 }});
         }
     }
 
@@ -1085,6 +1089,17 @@ error:
         goto error;
     }
 
+    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        if (mPlatform != Platform::MOBILE) {
+            slog.e << "Error: only platform `mobile` is supported at featureLevel 0." << io::endl;
+            goto error;
+        }
+        if (any(mTargetApi & ~TargetApi::OPENGL)) {
+            mTargetApi &= TargetApi::OPENGL;
+            slog.w << "Warning: only target `opengl` is supported at featureLevel 0." << io::endl;
+        }
+    }
+
     // prepareToBuild must be called first, to populate mCodeGenPermutations.
     MaterialInfo info{};
     prepareToBuild(info);
@@ -1109,7 +1124,8 @@ error:
     CodeGenParams const semanticCodeGenParams = {
             .shaderModel = ShaderModel::MOBILE,
             .targetApi = TargetApi::OPENGL,
-            .targetLanguage = TargetLanguage::SPIRV
+            .targetLanguage = (info.featureLevel == FeatureLevel::FEATURE_LEVEL_0) ?
+                              TargetLanguage::GLSL : TargetLanguage::SPIRV
     };
 
     if (!findAllProperties(semanticCodeGenParams)) {
@@ -1132,6 +1148,16 @@ error:
     info.useLegacyMorphing = mUseLegacyMorphing;
 
     // Generate all shaders and write the shader chunks.
+
+    if (mFeatureLevel == filament::backend::FeatureLevel::FEATURE_LEVEL_0) {
+        // at feature level 0, many variants are not supported
+        mVariantFilter |= uint32_t(UserVariantFilterBit::DIRECTIONAL_LIGHTING);
+        mVariantFilter |= uint32_t(UserVariantFilterBit::DYNAMIC_LIGHTING);
+        mVariantFilter |= uint32_t(UserVariantFilterBit::SHADOW_RECEIVER);
+        mVariantFilter |= uint32_t(UserVariantFilterBit::SKINNING);
+        mVariantFilter |= uint32_t(UserVariantFilterBit::VSM);
+        mVariantFilter |= uint32_t(UserVariantFilterBit::SSR);
+    }
 
     std::vector<Variant> variants;
     switch (mMaterialDomain) {
@@ -1186,6 +1212,15 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
 
     const auto userSamplerCount = info.sib.getSize();
     switch (info.featureLevel) {
+        case FeatureLevel::FEATURE_LEVEL_0:
+            // TODO: check FEATURE_LEVEL_0 features (e.g. unlit only, no texture arrays, etc...)
+            if (info.isLit) {
+                slog.e << "Error: material \"" << mMaterialName.c_str()
+                       << "\" has feature level " << +info.featureLevel
+                       << " and is not 'unlit'." << io::endl;
+                return false;
+            }
+            return true;
         case FeatureLevel::FEATURE_LEVEL_1:
         case FeatureLevel::FEATURE_LEVEL_2: {
             // TODO: we need constants somewhere for these values
@@ -1272,6 +1307,33 @@ std::string MaterialBuilder::peek(backend::ShaderStage stage,
     }
 }
 
+static Program::UniformInfo extractUniforms(BufferInterfaceBlock const& uib) noexcept {
+    auto list = uib.getFieldInfoList();
+    Program::UniformInfo uniforms = Program::UniformInfo::with_capacity(list.size());
+
+    char const firstLetter = std::tolower( uib.getName().at(0) );
+    std::string_view const nameAfterFirstLetter{
+        uib.getName().data() + 1, uib.getName().size() - 1 };
+
+    for (auto const& item : list) {
+        // construct the fully qualified name
+        std::string qualified;
+        qualified.reserve(uib.getName().size() + item.name.size() + 1u);
+        qualified.append({ &firstLetter, 1u });
+        qualified.append(nameAfterFirstLetter);
+        qualified.append(".");
+        qualified.append({ item.name.data(), item.name.size() });
+
+        uniforms.push_back({
+            { qualified.data(), qualified.size() },
+            item.offset,
+            uint8_t(item.size < 1u ? 1u : item.size),
+            item.type
+        });
+    }
+    return uniforms;
+}
+
 void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo& info) const noexcept {
     container.emplace<uint32_t>(ChunkType::MaterialVersion, MATERIAL_VERSION);
     container.emplace<uint8_t>(ChunkType::MaterialFeatureLevel, (uint8_t)info.featureLevel);
@@ -1280,6 +1342,62 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.emplace<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
 
     using namespace filament;
+
+    if (info.featureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        FixedCapacityVector<std::pair<UniformBindingPoints, Program::UniformInfo>> list({
+                { UniformBindingPoints::PER_VIEW,
+                        extractUniforms(UibGenerator::getPerViewUib()) },
+                { UniformBindingPoints::PER_RENDERABLE,
+                        extractUniforms(UibGenerator::getPerRenderableUib()) },
+                { UniformBindingPoints::PER_MATERIAL_INSTANCE,
+                        extractUniforms(info.uib) },
+        });
+
+        // FIXME: don't hardcode this
+        auto& uniforms = list[1].second;
+        uniforms.clear();
+        uniforms.reserve(6);
+        uniforms.push_back({
+                "objectUniforms.data[0].worldFromModelMatrix",
+                offsetof(PerRenderableUib, data[0].worldFromModelMatrix), 1,
+                UniformType::MAT4 });
+        uniforms.push_back({
+                "objectUniforms.data[0].worldFromModelNormalMatrix",
+                offsetof(PerRenderableUib, data[0].worldFromModelNormalMatrix), 1,
+                UniformType::MAT3 });
+        uniforms.push_back({
+                "objectUniforms.data[0].morphTargetCount",
+                offsetof(PerRenderableUib, data[0].morphTargetCount), 1,
+                UniformType::UINT });
+        uniforms.push_back({
+                "objectUniforms.data[0].flagsChannels",
+                offsetof(PerRenderableUib, data[0].flagsChannels), 1,
+                UniformType::UINT });
+        uniforms.push_back({
+                "objectUniforms.data[0].objectId",
+                offsetof(PerRenderableUib, data[0].objectId), 1,
+                UniformType::UINT });
+        uniforms.push_back({
+                "objectUniforms.data[0].userData",
+                offsetof(PerRenderableUib, data[0].userData), 1,
+                UniformType::FLOAT });
+
+        container.push<MaterialBindingUniformInfoChunk>(std::move(list));
+
+        using Container = utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>>;
+        auto attributes = Container::with_capacity(sAttributeDatabase.size());
+        for (auto const& attribute: sAttributeDatabase) {
+            std::string name("mesh_");
+            name.append(attribute.name);
+            attributes.emplace_back(utils::CString{ name.data(), name.size() }, attribute.location);
+        }
+        container.push<MaterialAttributesInfoChunk>(std::move(attributes));
+    }
+
+    // TODO: currently, the feature level used is determined by the material because we
+    //       don't have "feature level" variants. In other words, a feature level 0 material
+    //       won't work with a feature level 1 engine. However, we do embed the feature level 1
+    //       meta-data, as it should.
 
     if (info.featureLevel <= FeatureLevel::FEATURE_LEVEL_1) {
         // note: this chunk is only needed for OpenGL backends, which don't all support layout(binding=)

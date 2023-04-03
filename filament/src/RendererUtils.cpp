@@ -98,8 +98,14 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                             TargetBufferFlags::STENCIL : TargetBufferFlags::NONE;
                     const char* const name = config.enabledStencilBuffer ?
                              "Depth/Stencil Buffer" : "Depth Buffer";
-                    TextureFormat const format = config.enabledStencilBuffer ?
+                    TextureFormat format = config.enabledStencilBuffer ?
                             TextureFormat::DEPTH32F_STENCIL8 : TextureFormat::DEPTH32F;
+
+                    if (UTILS_UNLIKELY(engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)) {
+                        // FIXME: handle stencil buffer
+                        format = TextureFormat::DEPTH24;
+                    }
+
                     data.depth = builder.createTexture(name, {
                             .width = colorBufferDesc.width,
                             .height = colorBufferDesc.height,

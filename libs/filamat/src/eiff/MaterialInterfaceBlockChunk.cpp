@@ -130,7 +130,7 @@ void MaterialSamplerBlockBindingChunk::flatten(Flattener& f) {
     f.writeUint8(utils::Enum::count<SamplerBindingPoints>());
     UTILS_NOUNROLL
     for (size_t i = 0; i < utils::Enum::count<SamplerBindingPoints>(); i++) {
-        SamplerBindingPoints bindingPoint = (SamplerBindingPoints)i;
+        SamplerBindingPoints const bindingPoint = (SamplerBindingPoints)i;
         auto const& bindingInfo = mSamplerBindings.getSamplerGroupBindingInfo(bindingPoint);
         f.writeUint8(bindingInfo.bindingOffset);
         f.writeUint8((uint8_t)bindingInfo.shaderStageFlags);
@@ -148,6 +148,44 @@ void MaterialSamplerBlockBindingChunk::flatten(Flattener& f) {
         }
     }
     assert_invariant(c == mSamplerBindings.getActiveSamplerCount());
+}
+
+// ------------------------------------------------------------------------------------------------
+
+MaterialBindingUniformInfoChunk::MaterialBindingUniformInfoChunk(Container list) noexcept
+        : Chunk(ChunkType::MaterialBindingUniformInfo),
+          mBindingUniformInfo(std::move(list))
+{
+}
+
+void MaterialBindingUniformInfoChunk::flatten(Flattener& f) {
+    f.writeUint8(mBindingUniformInfo.size());
+    for (auto const& [index, uniforms] : mBindingUniformInfo) {
+        f.writeUint8(uint8_t(index));
+        f.writeUint8(uint8_t(uniforms.size()));
+        for (auto const& uniform: uniforms) {
+            f.writeString({ uniform.name.data(), uniform.name.size() });
+            f.writeUint16(uniform.offset);
+            f.writeUint8(uniform.size);
+            f.writeUint8(uint8_t(uniform.type));
+        }
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
+MaterialAttributesInfoChunk::MaterialAttributesInfoChunk(Container list) noexcept
+        : Chunk(ChunkType::MaterialAttributeInfo),
+          mAttributeInfo(std::move(list))
+{
+}
+
+void MaterialAttributesInfoChunk::flatten(Flattener& f) {
+    f.writeUint8(mAttributeInfo.size());
+    for (auto const& [attribute, location]: mAttributeInfo) {
+        f.writeString({ attribute.data(), attribute.size() });
+        f.writeUint8(location);
+    }
 }
 
 } // namespace filamat

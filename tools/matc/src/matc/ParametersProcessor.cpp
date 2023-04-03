@@ -748,7 +748,9 @@ static bool processFeatureLevel(MaterialBuilder& builder, const JsonishValue& va
     using filament::backend::FeatureLevel;
     JsonishNumber const* const number = value.toJsonNumber();
     FeatureLevel featureLevel;
-    if (number->getFloat() == 1.0f) {
+    if (number->getFloat() == 0.0f) {
+        featureLevel = FeatureLevel::FEATURE_LEVEL_0;
+    } else if (number->getFloat() == 1.0f) {
         featureLevel = FeatureLevel::FEATURE_LEVEL_1;
     } else if (number->getFloat() == 2.0f) {
         featureLevel = FeatureLevel::FEATURE_LEVEL_2;

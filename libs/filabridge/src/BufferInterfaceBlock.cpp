@@ -58,7 +58,7 @@ BufferInterfaceBlock::Builder& BufferInterfaceBlock::Builder::add(
     for (auto const& item : list) {
         mEntries.push_back({
                 { item.name.data(), item.name.size() },
-                0, uint8_t(item.stride), item.type, item.size > 0, item.size, item.precision,
+                0, uint8_t(item.stride), item.type, item.size > 0, item.size, item.precision, item.minFeatureLevel,
                 { item.structName.data(), item.structName.size() },
                 { item.sizeName.data(), item.sizeName.size() }
         });
@@ -71,7 +71,7 @@ BufferInterfaceBlock::Builder& BufferInterfaceBlock::Builder::addVariableSizedAr
     mHasVariableSizeArray = true;
     mEntries.push_back({
             { item.name.data(), item.name.size() },
-            0, uint8_t(item.stride), item.type, true, 0, item.precision,
+            0, uint8_t(item.stride), item.type, true, 0, item.precision, item.minFeatureLevel,
             { item.structName.data(), item.structName.size() },
             { item.sizeName.data(), item.sizeName.size() }
     });
@@ -143,7 +143,7 @@ BufferInterfaceBlock::BufferInterfaceBlock(Builder const& builder) noexcept
 
         FieldInfo& info = uniformsInfoList[i];
         info = { e.name, offset, uint8_t(stride), e.type, e.isArray, e.size,
-                 e.precision, e.structName, e.sizeName };
+                 e.precision, e.minFeatureLevel, e.structName, e.sizeName };
 
         // record this uniform info
         infoMap[{ info.name.data(), info.name.size() }] = i;
