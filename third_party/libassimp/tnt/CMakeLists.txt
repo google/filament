@@ -252,11 +252,6 @@ add_definitions(
     -DASSIMP_BUILD_NO_OWN_ZLIB
 )
 
-# See https://github.com/madler/zlib/issues/633
-add_compile_options(
-    -Wno-deprecated-non-prototype
-)
-
 # specify where our headers are
 include_directories(${SRC_DIR}/contrib/irrXML)
 include_directories(${SRC_DIR}/contrib/rapidjson/include)
@@ -283,6 +278,7 @@ if(NOT MSVC)
         PRIVATE -Wno-unused-const-variable
         PRIVATE -Wno-unused-private-field
         PRIVATE -Wno-unused-variable
+        PRIVATE -Wno-deprecated-non-prototype # See https://github.com/madler/zlib/issues/633
     )
 else()
     target_compile_options(${TARGET} PRIVATE /bigobj)
