@@ -53,6 +53,11 @@ if (NOT MSVC)
     )
 endif()
 
+# See https://github.com/madler/zlib/issues/633
+add_compile_options(
+    -Wno-deprecated-non-prototype
+)
+
 # we're building a library
 add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 
