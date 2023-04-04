@@ -46,15 +46,16 @@ set(SRCS
     ${SRC_DIR}/zutil.c
 )
 
-if (NOT MSVC)
-    add_definitions(
-        -Wno-implicit-function-declaration
-        -Wno-shift-negative-value
-    )
-endif()
-
 # we're building a library
 add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
+
+if (NOT MSVC)
+    target_compile_options(${TARGET}
+        PRIVATE -Wno-implicit-function-declaration
+        PRIVATE -Wno-shift-negative-value
+        PRIVATE -Wno-deprecated-non-prototype # See https://github.com/madler/zlib/issues/633
+    )
+endif()
 
 # specify where the public headers of this library are
 target_include_directories (${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
