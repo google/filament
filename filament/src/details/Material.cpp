@@ -282,12 +282,14 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     mIsDefaultMaterial = builder->mDefaultMaterial;
 
     // pre-cache the shared variants -- these variants are shared with the default material.
+    // (note: the default material is unlit, so only unlit variants can be shared)
     if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
+        FMaterial const* const pMaterial = engine.getDefaultMaterial();
         auto& cachedPrograms = mCachedPrograms;
         for (Variant::type_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
             const Variant variant(k);
-            if (Variant::isValidDepthVariant(variant)) {
-                FMaterial const* const pMaterial = engine.getDefaultMaterial();
+            if (Variant::isValidDepthVariant(variant) &&
+                (Variant::filterVariant(variant, false) == variant)) {
                 pMaterial->prepareProgram(variant);
                 cachedPrograms[k] = pMaterial->getProgram(variant);
             }
