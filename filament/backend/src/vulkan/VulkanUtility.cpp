@@ -632,11 +632,8 @@ VkImageViewType getImageViewType(SamplerType target) {
 // exceptions for depth and for transient use of specialized layouts, which is why VulkanTexture
 // tracks actual layout at the subresource level.
 VkImageLayout getDefaultImageLayout(TextureUsage usage) {
-    // Filament sometimes samples from depth while it is bound to the current render target, (e.g.
-    // SSAO does this while depth writes are disabled) so let's keep it simple and use GENERAL for
-    // all depth textures.
     if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
-        return VK_IMAGE_LAYOUT_GENERAL;
+        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     }
 
     // Filament sometimes samples from one miplevel while writing to another level in the same
@@ -676,29 +673,8 @@ void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition tra
             nullptr, 1, &barrier);
 }
 
-VulkanLayoutTransition blitterTransitionHelper(VulkanLayoutTransition transition) {
-    switch (transition.newLayout) {
-        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-        case VK_IMAGE_LAYOUT_GENERAL:
-            transition.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            transition.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            transition.dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            break;
-
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-        default:
-            transition.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-            transition.dstAccessMask = 0;
-            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            transition.dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            break;
-    }
-    return transition;
-}
-
 VulkanLayoutTransition textureTransitionHelper(VulkanLayoutTransition transition) {
+    const bool isTransferSrc = transition.oldLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     switch (transition.newLayout) {
         case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
             transition.srcAccessMask = 0;
@@ -714,13 +690,19 @@ VulkanLayoutTransition textureTransitionHelper(VulkanLayoutTransition transition
             break;
         case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
         case VK_IMAGE_LAYOUT_GENERAL:
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-            transition.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            transition.srcAccessMask
+                    = isTransferSrc ? VK_ACCESS_TRANSFER_READ_BIT : VK_ACCESS_TRANSFER_WRITE_BIT;
             transition.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
             transition.dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
             break;
-
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+            transition.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+            transition.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
+                                       | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            transition.dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+            break;
             // We support PRESENT as a target layout to allow blitting from the swap chain.
             // See also SwapChain::makePresentable().
         case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
@@ -765,7 +747,6 @@ bool isDepthFormat(VkFormat format) {
 static uint32_t mostSignificantBit(uint32_t x) { return 1ul << (31ul - utils::clz(x)); }
 
 uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask) {
-    assert_invariant(utils::popcount(sampleCount) == 1);
     if (sampleCount & mask) {
         return sampleCount;
     }
