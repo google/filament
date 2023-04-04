@@ -1,4 +1,4 @@
-/*- genpng
+/* genpng
  *
  * COPYRIGHT: Written by John Cunningham Bowler, 2015.
  * Revised by Glenn Randers-Pehrson, 2017, to add buffer-size check.
@@ -69,6 +69,7 @@
  * joins are mitres; the outside of the lines are continued to the point of
  * intersection.
  */
+
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -453,7 +454,7 @@ check_square(const struct arg *arg, double x, double y)
  * { inside_circle_filled, check_circle_filled },
  * { inside_circle, check_circle }
  *
- * The functions here are analoguous to the square ones; however, they check
+ * The functions here are analogous to the square ones; however, they check
  * the corresponding ellipse as opposed to the rectangle.
  */
 static int

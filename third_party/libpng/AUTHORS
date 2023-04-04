@@ -20,7 +20,9 @@ Authors, for copyright and licensing purposes.
  * Mans Rullgard
  * Matt Sarett
  * Mike Klein
+ * Pascal Massimino
  * Paul Schmidt
+ * Qiang Zhou
  * Sam Bushell
  * Samuel Williams
  * Simon-Pierre Cadieux
@@ -33,12 +35,15 @@ Authors, for copyright and licensing purposes.
  * Arm Holdings
    - Richard Townsend
  * Google Inc.
+   - Dan Field
+   - Leon Scroggins III
    - Matt Sarett
    - Mike Klein
+   - Sami Boukortt
 
 The build projects, the build scripts, the test scripts, and other
-files in the "projects", "scripts" and "tests" directories, have other
-copyright owners, but are released under the libpng license.
+files in the "ci", "projects", "scripts" and "tests" directories, have
+other copyright owners, but are released under the libpng license.
 
 Some files in the "contrib" directory, and some tools-generated files
 that are distributed with libpng, have other copyright owners, and are

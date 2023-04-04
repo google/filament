@@ -1,7 +1,6 @@
 
 /* symbols.c - find all exported symbols
  *
- * Last changed in libpng version 1.6.16 [December 22, 2014]
  * Copyright (c) 2011-2014 Glenn Randers-Pehrson
  *
  * This code is released under the libpng license.

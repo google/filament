@@ -19,9 +19,9 @@ LN       = ppc-amigaos-ld
 RM       = delete quiet
 MKDIR    = makedir
 
-OBJS = png.o pngset.o pngget.o pngrutil.o pngtrans.o pngwutil.o pngread.o \
-       pngerror.o pngpread.o pngwrite.o pngrtran.o pngwtran.o pngrio.o \
-       pngwio.o pngmem.o
+OBJS = png.o pngerror.o pngget.o pngmem.o pngpread.o \
+       pngread.o pngrio.o pngrtran.o pngrutil.o pngset.o \
+       pngtrans.o pngwio.o pngwrite.o pngwtran.o pngwutil.o
 
 all: $(LIBNAME) pngtest
 

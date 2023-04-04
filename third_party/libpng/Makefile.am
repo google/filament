@@ -59,8 +59,7 @@ pngcp_LDADD = libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@.la
 # Generally these are single line shell scripts to run a test with a particular
 # set of parameters:
 TESTS =\
-   tests/pngtest\
-   tests/pngtest-badpngs\
+   tests/pngtest-all\
    tests/pngvalid-gamma-16-to-8 tests/pngvalid-gamma-alpha-mode\
    tests/pngvalid-gamma-background tests/pngvalid-gamma-expand16-alpha-mode\
    tests/pngvalid-gamma-expand16-background\

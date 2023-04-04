@@ -1,7 +1,7 @@
 Instructions for building libpng using Microsoft Visual Studio
 ==============================================================
 
-Copyright (c) 2018 Cosmin Truta
+Copyright (c) 2018,2022 Cosmin Truta
 Copyright (c) 2010,2013,2015 Glenn Randers-Pehrson
 
 This code is released under the libpng license.
@@ -9,9 +9,9 @@ For conditions of distribution and use, see the disclaimer and license
 in png.h
 
 This directory contains a solution for building libpng under Microsoft
-Visual Studio 2010.  It may also work under later versions of Visual
-Studio.  You should be familiar with Visual Studio before using this
-solution.
+Visual Studio 2019.  It may also work under earlier or later versions
+of Visual Studio.  You should be familiar with Visual Studio before
+using this solution.
 
 Initial preparations
 --------------------
