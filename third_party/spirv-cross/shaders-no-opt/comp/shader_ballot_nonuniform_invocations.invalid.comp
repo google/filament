@@ -1,9 +1,0 @@
-#version 450
-#extension GL_AMD_shader_ballot : require
-
-void main ()
-{
-    float addInvocations = addInvocationsNonUniformAMD(0.0);
-    int minInvocations = minInvocationsNonUniformAMD(1);
-    uint maxInvocations = maxInvocationsNonUniformAMD(4);
-}
