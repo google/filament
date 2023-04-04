@@ -1,7 +1,7 @@
-/*-
- * pngstest.c
+
+/* pngstest.c
  *
- * Last changed in libpng 1.6.31 [July 27, 2017]
+ * Copyright (c) 2021 Cosmin Truta
  * Copyright (c) 2013-2017 John Cunningham Bowler
  *
  * This code is released under the libpng license.
@@ -10,8 +10,9 @@
  *
  * Test for the PNG 'simplified' APIs.
  */
+
 #define _ISOC90_SOURCE 1
-#define MALLOC_CHECK_ 2/*glibc facility: turn on debugging*/
+#define MALLOC_CHECK_ 2 /*glibc facility: turn on debugging*/
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -2701,7 +2702,7 @@ compare_two_images(Image *a, Image *b, int via_linear,
             {
                if ((a->opts & ACCUMULATE) == 0)
                {
-                  char pindex[9];
+                  char pindex[16];
                   sprintf(pindex, "%lu[%lu]", (unsigned long)y,
                      (unsigned long)a->image.colormap_entries);
                   logerror(a, a->file_name, ": bad pixel index: ", pindex);
@@ -2712,12 +2713,12 @@ compare_two_images(Image *a, Image *b, int via_linear,
             else if (y >= b->image.colormap_entries)
             {
                if ((b->opts & ACCUMULATE) == 0)
-                  {
-                  char pindex[9];
+               {
+                  char pindex[16];
                   sprintf(pindex, "%lu[%lu]", (unsigned long)y,
                      (unsigned long)b->image.colormap_entries);
                   logerror(b, b->file_name, ": bad pixel index: ", pindex);
-                  }
+               }
                result = 0;
             }
 
@@ -2820,8 +2821,11 @@ compare_two_images(Image *a, Image *b, int via_linear,
          bchannels = component_loc(bloc, formatb);
 
          /* Hence the btoa array. */
-         for (i=0; i<4; ++i) if (bloc[i] < 4)
-            btoa[bloc[i]] = aloc[i]; /* may be '4' for alpha */
+         for (i=0; i<4; ++i)
+         {
+            if (bloc[i] < 4)
+               btoa[bloc[i]] = aloc[i]; /* may be '4' for alpha */
+         }
 
          if (alpha_added)
             alpha_added = bloc[0]; /* location of alpha channel in image b */
@@ -3209,10 +3213,10 @@ write_one_file(Image *output, Image *image, int convert_to_8bit)
    else if (image->opts & USE_FILE)
    {
 #ifdef PNG_SIMPLIFIED_WRITE_STDIO_SUPPORTED
-      static int counter = 0;
+      static unsigned int counter = 0;
       char name[32];
 
-      sprintf(name, "%s%d.png", tmpf, ++counter);
+      sprintf(name, "%s%u.png", tmpf, ++counter);
 
       if (png_image_write_to_file(&image->image, name, convert_to_8bit,
          image->buffer+16, (png_int_32)image->stride, image->colormap))

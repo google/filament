@@ -2,7 +2,6 @@
  *
  * Copyright (c) 2017 Glenn Randers-Pehrson
  * Written by Vadim Barkov, 2017.
- * Last changed in libpng 1.6.29 [March 16, 2017]
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -12,7 +11,7 @@
  * BUG REPORTS: png-mng-implement@sourceforge.net
  *
  * png_have_vsx implemented for Linux by reading the widely available
- * pseudo-file /proc/cpuinfo. 
+ * pseudo-file /proc/cpuinfo.
  *
  * This code is strict ANSI-C and is probably moderately portable; it does
  * however use <stdio.h> and it assumes that /proc/cpuinfo is never localized.

@@ -1,7 +1,6 @@
 #!/bin/awk -f
+
 # scripts/options.awk - library build configuration control
-#
-# last changed in libpng version 1.6.11 - June 5, 2014
 #
 # Copyright (c) 1998-2014 Glenn Randers-Pehrson
 #
@@ -243,7 +242,7 @@ $1 == "file" && NF >= 2{
 
 # option NAME ( (requires|enables|if) NAME* | on | off | disabled |
 #                sets SETTING VALUE+ )*
-#     
+#
 #   Declares an option 'NAME' and describes its default setting (disabled)
 #   and its relationship to other options.  The option is disabled
 #   unless *all* the options listed after 'requires' are set and at

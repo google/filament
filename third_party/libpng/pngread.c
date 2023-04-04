@@ -3452,7 +3452,6 @@ png_image_read_background(png_voidp argument)
 
             for (pass = 0; pass < passes; ++pass)
             {
-               png_bytep row = png_voidcast(png_bytep, display->first_row);
                unsigned int     startx, stepx, stepy;
                png_uint_32      y;
 
@@ -3557,8 +3556,6 @@ png_image_read_background(png_voidp argument)
 
                         inrow += 2; /* gray and alpha channel */
                      }
-
-                     row += display->row_bytes;
                   }
                }
             }
@@ -3765,13 +3762,13 @@ png_image_read_direct(png_voidp argument)
          mode = PNG_ALPHA_PNG;
          output_gamma = PNG_DEFAULT_sRGB;
       }
-      
+
       if ((change & PNG_FORMAT_FLAG_ASSOCIATED_ALPHA) != 0)
       {
          mode = PNG_ALPHA_OPTIMIZED;
          change &= ~PNG_FORMAT_FLAG_ASSOCIATED_ALPHA;
       }
-      
+
       /* If 'do_local_background' is set check for the presence of gamma
        * correction; this is part of the work-round for the libpng bug
        * described above.
