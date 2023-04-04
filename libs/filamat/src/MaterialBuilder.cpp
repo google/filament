@@ -543,6 +543,9 @@ bool MaterialBuilder::findProperties(backend::ShaderStage type,
             mSemanticCodeGenParams.targetApi,
             mSemanticCodeGenParams.targetLanguage,
             mSemanticCodeGenParams.shaderModel)) {
+        if (mPrintShaders) {
+            slog.e << shaderCodeAllProperties << io::endl;
+        }
         return false;
     }
     return true;
