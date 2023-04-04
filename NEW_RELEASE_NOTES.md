@@ -13,3 +13,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - materials: implement cascades debugging as a post-process [⚠️ **Recompile Materials**].
 - materials: use 9 digits or less for floats [⚠️ **Recompile Materials**].
 - gltfio: fix skinning when objects are far from the origin
+- materials: remove 4 unneeded variants from `unlit` materials [⚠️ **Recompile Materials**].
