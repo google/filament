@@ -172,6 +172,9 @@ public:
     Result doTranscoding();
     void uploadImages();
 
+protected:
+    ~FAsync();
+
 private:
     using TranscoderResult = std::atomic<Texture::PixelBufferDescriptor*>;
 
@@ -258,6 +261,15 @@ Texture* Ktx2Reader::load(const void* data, size_t size, TransferFunction transf
         texture->setImage(mEngine, levelIndex, std::move(*pbd));
     }
     return texture;
+}
+
+FAsync::~FAsync() {
+    for (TranscoderResult& level : mTranscoderResults) {
+        Texture::PixelBufferDescriptor* pbd = level.load();
+        if (pbd) {
+            delete pbd;
+        }
+    }
 }
 
 Result FAsync::doTranscoding() {
@@ -411,6 +423,8 @@ Texture* Ktx2Reader::createTexture(ktx2_transcoder* transcoder, const void* data
 
     return texture;
 }
+
+Async::~Async() = default;
 
 Texture* Async::getTexture() const noexcept {
     return static_cast<FAsync const*>(this)->getTexture();

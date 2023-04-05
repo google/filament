@@ -197,6 +197,17 @@ void Ktx2Provider::cancelDecoding() {
     // in-flight jobs. We should consider throttling the number of simultaneous decoder jobs, which
     // would allow for actual cancellation.
     waitForCompletion();
+
+    // For cancelled jobs, we need to set the QueueItemState to POPPED and free the decoded data
+    // stored in item->async.
+    for (auto& item : mQueueItems) {
+        if (item->state != QueueItemState::TRANSCODING) {
+            continue;
+        }
+        mKtxReader->asyncDestroy(&item->async);
+        item->async = nullptr;
+        item->state = QueueItemState::POPPED;
+    }
 }
 
 const char* Ktx2Provider::getPushMessage() const {

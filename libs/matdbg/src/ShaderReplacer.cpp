@@ -306,18 +306,19 @@ ShaderIndex::ShaderIndex(ChunkType dictTag, ChunkType matTag, const filaflat::Ch
     filaflat::MaterialChunk matChunk(cc);
     matChunk.initialize(matTag);
 
-    const auto& offsets = matChunk.getOffsets();
-    mShaderRecords.reserve(offsets.size());
-    for (auto [key, offset] : offsets) {
-        TextEntry info;
-        filaflat::MaterialChunk::decodeKey(key, &info.shaderModel, &info.variantKey, &info.stage);
+    matChunk.visitTextShaders(
+            [this, &matChunk, &stringBlobs](uint8_t shaderModel, Variant::type_t variant,
+                    uint8_t stage) {
+
         ShaderContent content;
         UTILS_UNUSED_IN_RELEASE bool success = matChunk.getShader(content,
-                stringBlobs, info.shaderModel, Variant(info.variantKey), info.stage);
-        info.shader = std::string(content.data(), content.data() + content.size() - 1);
+                stringBlobs, shaderModel, Variant(variant), stage);
+
+        std::string source{content.data(), content.data() + content.size() - 1u};
         assert_invariant(success);
-        mShaderRecords.emplace_back(info);
-    }
+
+        mShaderRecords.push_back({ shaderModel, variant, stage, std::move(source) });
+    });
 }
 
 void ShaderIndex::writeChunks(ostream& stream) {

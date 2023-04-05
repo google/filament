@@ -382,9 +382,9 @@ ViewerGui::ViewerGui(filament::Engine* engine, filament::Scene* scene, filament:
         .intensity(mSettings.lighting.sunlightIntensity)
         .direction(normalize(mSettings.lighting.sunlightDirection))
         .castShadows(true)
-        .sunAngularRadius(1.0f)
-        .sunHaloSize(2.0f)
-        .sunHaloFalloff(80.0f)
+        .sunAngularRadius(mSettings.lighting.sunlightAngularRadius)
+        .sunHaloSize(mSettings.lighting.sunlightHaloSize)
+        .sunHaloFalloff(mSettings.lighting.sunlightHaloFalloff)
         .build(*engine, mSunlight);
     if (mSettings.lighting.enableSunlight) {
         mScene->addEntity(mSunlight);
@@ -462,7 +462,6 @@ void ViewerGui::setIndirectLight(filament::IndirectLight* ibl,
             mSettings.lighting.sunlightDirection = d;
             mSettings.lighting.sunlightColor = c.rgb;
             mSettings.lighting.sunlightIntensity = c[3] * ibl->getIntensity();
-            updateIndirectLight();
         }
     }
 }
@@ -480,14 +479,6 @@ void ViewerGui::updateRootTransform() {
         transform = fitIntoUnitCube(aabb, 4);
     }
     tcm.setTransform(root, transform);
-}
-
-void ViewerGui::updateIndirectLight() {
-    using namespace filament::math;
-    if (mIndirectLight) {
-        mIndirectLight->setIntensity(mSettings.lighting.iblIntensity);
-        mIndirectLight->setRotation(mat3f::rotation(mSettings.lighting.iblRotation, float3{ 0, 1, 0 }));
-    }
 }
 
 void ViewerGui::sceneSelectionUI() {
@@ -774,7 +765,7 @@ void ViewerGui::updateUserInterface() {
             int lowpass = (int) ssao.lowPassFilter;
             bool upsampling = ssao.upsampling != View::QualityLevel::LOW;
 
-            bool halfRes = ssao.resolution == 1.0f ? false : true;
+            bool halfRes = ssao.resolution != 1.0f;
             ImGui::SliderInt("Quality", &quality, 0, 3);
             ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
             ImGui::Checkbox("Bent Normals", &ssao.bentNormals);
@@ -841,7 +832,10 @@ void ViewerGui::updateUserInterface() {
         }
         if (ImGui::CollapsingHeader("Sunlight")) {
             ImGui::Checkbox("Enable sunlight", &light.enableSunlight);
-            ImGui::SliderFloat("Sun intensity", &light.sunlightIntensity, 50000.0, 150000.0f);
+            ImGui::SliderFloat("Sun intensity", &light.sunlightIntensity, 50000.0f, 150000.0f);
+            ImGui::SliderFloat("Halo size", &light.sunlightHaloSize, 1.01f, 40.0f);
+            ImGui::SliderFloat("Halo falloff", &light.sunlightHaloFalloff, 4.0f, 1024.0f);
+            ImGui::SliderFloat("Sun radius", &light.sunlightAngularRadius, 0.1f, 10.0f);
             ImGuiExt::DirectionWidget("Sun direction", light.sunlightDirection.v);
         }
         if (ImGui::CollapsingHeader("All lights")) {
@@ -1016,25 +1010,8 @@ void ViewerGui::updateUserInterface() {
     // At this point, all View settings have been modified,
     //  so we can now push them into the Filament View.
     applySettings(mEngine, mSettings.view, mView);
-
-    mView->setSoftShadowOptions(mSettings.lighting.softShadowOptions);
-
-    if (light.enableSunlight) {
-        mScene->addEntity(mSunlight);
-        auto sun = lm.getInstance(mSunlight);
-        lm.setIntensity(sun, light.sunlightIntensity);
-        lm.setDirection(sun, normalize(light.sunlightDirection));
-        lm.setColor(sun, light.sunlightColor);
-        lm.setShadowCaster(sun, light.enableShadows);
-        lm.setShadowOptions(sun, light.shadowOptions);
-    } else {
-        mScene->remove(mSunlight);
-    }
-
-    lm.forEachComponent([this, &lm, &light](utils::Entity e, LightManager::Instance ci) {
-        lm.setShadowOptions(ci, light.shadowOptions);
-        lm.setShadowCaster(ci, light.enableShadows);
-    });
+    applySettings(mEngine, mSettings.lighting, mIndirectLight, mSunlight,
+                  lm.getEntities(), lm.getComponentCount(), &lm, mScene, mView);
 
     // TODO(prideout): add support for hierarchy, animation and variant selection in remote mode. To
     // support these features, we will need to send a message (list of strings) from DebugServer to
@@ -1112,8 +1089,6 @@ void ViewerGui::updateUserInterface() {
 
     mSidebarWidth = ImGui::GetWindowWidth();
     ImGui::End();
-
-    updateIndirectLight();
 }
 
 } // namespace viewer

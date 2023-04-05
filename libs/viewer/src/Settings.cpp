@@ -412,6 +412,12 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, LightSet
             i = parse(tokens, i + 1, jsonChunk, &out->softShadowOptions);
         } else if (compare(tok, jsonChunk, "sunlightIntensity") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->sunlightIntensity);
+        } else if (compare(tok, jsonChunk, "sunlightHaloSize") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sunlightHaloSize);
+        } else if (compare(tok, jsonChunk, "sunlightHaloFalloff") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sunlightHaloFalloff);
+        } else if (compare(tok, jsonChunk, "sunlightAngularRadius") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sunlightAngularRadius);
         } else if (compare(tok, jsonChunk, "sunlightDirection") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->sunlightDirection);
         } else if (compare(tok, jsonChunk, "sunlightColor") == 0) {
@@ -537,7 +543,7 @@ void applySettings(Engine* engine, const MaterialSettings& settings, MaterialIns
 }
 
 void applySettings(Engine* engine, const LightSettings& settings, IndirectLight* ibl, utils::Entity sunlight,
-        utils::Entity* sceneLights, size_t sceneLightCount, LightManager* lm, Scene* scene, View* view) {
+        const utils::Entity* sceneLights, size_t sceneLightCount, LightManager* lm, Scene* scene, View* view) {
     auto light = lm->getInstance(sunlight);
     if (light) {
         if (settings.enableSunlight) {
@@ -546,6 +552,9 @@ void applySettings(Engine* engine, const LightSettings& settings, IndirectLight*
             scene->remove(sunlight);
         }
         lm->setIntensity(light, settings.sunlightIntensity);
+        lm->setSunHaloSize(light, settings.sunlightHaloSize);
+        lm->setSunHaloFalloff(light, settings.sunlightHaloFalloff);
+        lm->setSunAngularRadius(light, settings.sunlightAngularRadius);
         lm->setDirection(light, normalize(settings.sunlightDirection));
         lm->setColor(light, settings.sunlightColor);
         lm->setShadowCaster(light, settings.enableShadows);
@@ -765,6 +774,9 @@ static std::ostream& operator<<(std::ostream& out, const LightSettings& in) {
         << "\"shadowOptions\": " << (in.shadowOptions) << ",\n"
         << "\"softShadowOptions\": " << (in.softShadowOptions) << ",\n"
         << "\"sunlightIntensity\": " << (in.sunlightIntensity) << ",\n"
+        << "\"sunlightHaloSize\": " << (in.sunlightHaloSize) << ",\n"
+        << "\"sunlightHaloFalloff\": " << (in.sunlightHaloFalloff) << ",\n"
+        << "\"sunlightAngularRadius\": " << (in.sunlightAngularRadius) << ",\n"
         << "\"sunlightDirection\": " << (in.sunlightDirection) << ",\n"
         << "\"sunlightColor\": " << (in.sunlightColor) << ",\n"
         << "\"iblIntensity\": " << (in.iblIntensity) << ",\n"
