@@ -183,6 +183,13 @@ bool MaterialChunk::getShader(ShaderContent& shaderContent, BlobDictionary const
     }
 }
 
+uint32_t MaterialChunk::getShaderCount() const noexcept {
+    Unflattener unflattener{ mUnflattener }; // make a copy
+    uint64_t numShaders;
+    unflattener.read(&numShaders);
+    return uint32_t(numShaders);
+}
+
 void MaterialChunk::visitShaders(
         utils::Invocable<void(ShaderModel, Variant, ShaderStage)>&& visitor) const {
 
