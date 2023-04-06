@@ -44,21 +44,21 @@ OpenGLProgram::OpenGLProgram() noexcept
     : mInitialized(false), mValid(true), mLazyInitializationData(nullptr) {
 }
 
-OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& programBuilder) noexcept
-        : HwProgram(std::move(programBuilder.getName())),
+OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& program) noexcept
+        : HwProgram(std::move(program.getName())),
           mInitialized(false), mValid(true),
           mLazyInitializationData{ new(LazyInitializationData) } {
 
     OpenGLContext& context = gld.getContext();
 
-    mLazyInitializationData->uniformBlockInfo = std::move(programBuilder.getUniformBlockBindings());
-    mLazyInitializationData->samplerGroupInfo = std::move(programBuilder.getSamplerGroupInfo());
+    mLazyInitializationData->uniformBlockInfo = std::move(program.getUniformBlockBindings());
+    mLazyInitializationData->samplerGroupInfo = std::move(program.getSamplerGroupInfo());
 
     // this cannot fail because we check compilation status after linking the program
     // shaders[] is filled with id of shader stages present.
     OpenGLProgram::compileShaders(context,
-            std::move(programBuilder.getShadersSource()),
-            programBuilder.getSpecializationConstants(),
+            std::move(program.getShadersSource()),
+            program.getSpecializationConstants(),
             gl.shaders,
             mLazyInitializationData->shaderSourceCode);
 

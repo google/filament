@@ -38,7 +38,7 @@ class OpenGLProgram : public HwProgram {
 public:
 
     OpenGLProgram() noexcept;
-    OpenGLProgram(OpenGLDriver& gld, Program&& builder) noexcept;
+    OpenGLProgram(OpenGLDriver& gld, Program&& program) noexcept;
     ~OpenGLProgram() noexcept;
 
     bool isValid() const noexcept { return mValid; }

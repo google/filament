@@ -383,16 +383,16 @@ void FMaterial::getSurfaceProgramSlow(Variant variant) const noexcept {
     Variant const vertexVariant   = Variant::filterVariantVertex(variant);
     Variant const fragmentVariant = Variant::filterVariantFragment(variant);
 
-    Program pb{ getProgramBuilderWithVariants(variant, vertexVariant, fragmentVariant) };
+    Program pb{ getProgramWithVariants(variant, vertexVariant, fragmentVariant) };
     createAndCacheProgram(std::move(pb), variant);
 }
 
 void FMaterial::getPostProcessProgramSlow(Variant variant) const noexcept {
-    Program pb{ getProgramBuilderWithVariants(variant, variant, variant) };
+    Program pb{ getProgramWithVariants(variant, variant, variant) };
     createAndCacheProgram(std::move(pb), variant);
 }
 
-Program FMaterial::getProgramBuilderWithVariants(
+Program FMaterial::getProgramWithVariants(
         Variant variant,
         Variant vertexVariant,
         Variant fragmentVariant) const noexcept {
