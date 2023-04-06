@@ -228,6 +228,8 @@ private:
     BufferInterfaceBlock mUniformInterfaceBlock;
     SubpassInfo mSubpassInfo;
     utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> mUniformBlockBindings;
+    utils::FixedCapacityVector<Variant> mDepthVariants; // only populated with default material
+
     SamplerGroupBindingInfoList mSamplerGroupBindingInfoList;
     SamplerBindingToNameMap mSamplerBindingToNameMap;
 

@@ -281,18 +281,28 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     parser->hasCustomDepthShader(&mHasCustomDepthShader);
     mIsDefaultMaterial = builder->mDefaultMaterial;
 
-    // pre-cache the shared variants -- these variants are shared with the default material.
-    // (note: the default material is unlit, so only unlit variants can be shared)
-    if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
-        FMaterial const* const pMaterial = engine.getDefaultMaterial();
-        auto& cachedPrograms = mCachedPrograms;
-        for (Variant::type_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
-            const Variant variant(k);
-            if (Variant::isValidDepthVariant(variant) &&
-                (Variant::filterVariant(variant, false) == variant)) {
-                pMaterial->prepareProgram(variant);
-                cachedPrograms[k] = pMaterial->getProgram(variant);
+    if (UTILS_UNLIKELY(mIsDefaultMaterial)) {
+        filaflat::MaterialChunk const& materialChunk{ mMaterialParser->getMaterialChunk() };
+        auto variants = FixedCapacityVector<Variant>::with_capacity(materialChunk.getShaderCount());
+        materialChunk.visitShaders([&variants](
+                ShaderModel model, Variant variant, ShaderStage stage) {
+            if (Variant::isValidDepthVariant(variant)) {
+                variants.push_back(variant);
             }
+        });
+        std::sort(variants.begin(), variants.end(),
+                [](Variant lhs, Variant rhs) { return lhs.key < rhs.key; });
+        auto pos = std::unique(variants.begin(), variants.end());
+        variants.resize(std::distance(variants.begin(), pos));
+        std::swap(mDepthVariants, variants);
+    }
+
+    if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
+        FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
+        auto& cachedPrograms = mCachedPrograms;
+        for (Variant variant : pDefaultMaterial->mDepthVariants) {
+            pDefaultMaterial->prepareProgram(variant);
+            cachedPrograms[variant.key] = pDefaultMaterial->getProgram(variant);
         }
     }
 

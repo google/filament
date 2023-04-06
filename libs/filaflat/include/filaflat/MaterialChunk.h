@@ -50,6 +50,8 @@ public:
     bool getShader(ShaderContent& shaderContent, BlobDictionary const& dictionary,
             ShaderModel shaderModel, filament::Variant variant, ShaderStage stage);
 
+    uint32_t getShaderCount() const noexcept;
+
     void visitShaders(utils::Invocable<void(ShaderModel, Variant, ShaderStage)>&& visitor) const;
 
     // These methods are for debugging purposes only (matdbg)
