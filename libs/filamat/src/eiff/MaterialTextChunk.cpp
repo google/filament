@@ -20,9 +20,9 @@ namespace filamat {
 
 void MaterialTextChunk::writeEntryAttributes(size_t entryIndex, Flattener& f) const noexcept {
     const TextEntry& entry = mEntries[entryIndex];
-    f.writeUint8(entry.shaderModel);
-    f.writeUint8(entry.variantKey);
-    f.writeUint8(entry.stage);
+    f.writeUint8(uint8_t(entry.shaderModel));
+    f.writeUint8(entry.variant.key);
+    f.writeUint8(uint8_t(entry.stage));
 }
 
 void compressShader(std::string_view src, Flattener &f, const LineDictionary& dictionary) {

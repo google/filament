@@ -26,12 +26,17 @@
 
 #include <tsl/robin_map.h>
 
+#include <backend/DriverEnums.h>
+
 #include <utils/Invocable.h>
+#include <utils/FixedCapacityVector.h>
 
 namespace filaflat {
 
 class MaterialChunk {
 public:
+    using ShaderModel = filament::backend::ShaderModel;
+    using ShaderStage = filament::backend::ShaderStage;
     using Variant = filament::Variant;
 
     explicit MaterialChunk(ChunkContainer const& container);
@@ -43,14 +48,14 @@ public:
     // call this as many times as needed
     // populates "shaderContent" with the requested shader, or returns false on failure.
     bool getShader(ShaderContent& shaderContent, BlobDictionary const& dictionary,
-            uint8_t shaderModel, Variant variant, uint8_t stage);
+            ShaderModel shaderModel, filament::Variant variant, ShaderStage stage);
 
-    void visitTextShaders(
-            utils::Invocable<void(uint8_t, Variant::type_t, uint8_t)>&& visitor) const;
+    void visitShaders(utils::Invocable<void(ShaderModel, Variant, ShaderStage)>&& visitor) const;
 
     // These methods are for debugging purposes only (matdbg)
     // @{
-    static void decodeKey(uint32_t key, uint8_t* model, Variant::type_t* variant, uint8_t* stage);
+    static void decodeKey(uint32_t key,
+            ShaderModel* outModel, Variant* outVariant, ShaderStage* outStage);
     const tsl::robin_map<uint32_t, uint32_t>& getOffsets() const { return mOffsets; }
     // @}
 
@@ -63,11 +68,11 @@ private:
 
     bool getTextShader(Unflattener unflattener,
             BlobDictionary const& dictionary, ShaderContent& shaderContent,
-            uint8_t shaderModel, Variant variant, uint8_t stage);
+            ShaderModel shaderModel, filament::Variant variant, ShaderStage shaderStage);
 
     bool getSpirvShader(
             BlobDictionary const& dictionary, ShaderContent& shaderContent,
-            uint8_t shaderModel, Variant variant, uint8_t stage);
+            ShaderModel shaderModel, filament::Variant variant, ShaderStage shaderStage);
 };
 
 } // namespace filamat

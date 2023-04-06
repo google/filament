@@ -311,7 +311,7 @@ bool MaterialParser::getReflectionMode(ReflectionMode* value) const noexcept {
 bool MaterialParser::getShader(ShaderContent& shader,
         ShaderModel shaderModel, Variant variant, ShaderStage stage) noexcept {
     return mImpl.mMaterialChunk.getShader(shader,
-            mImpl.mBlobDictionary, uint8_t(shaderModel), variant, uint8_t(stage));
+            mImpl.mBlobDictionary, shaderModel, variant, stage);
 }
 
 // ------------------------------------------------------------------------------------------------

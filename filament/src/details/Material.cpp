@@ -509,6 +509,8 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
     return count;
 }
 
+#if FILAMENT_ENABLE_MATDBG
+
 // Swaps in an edited version of the original package that was used to create the material. The
 // edited package was stashed in response to a debugger event. This is invoked only when the
 // Material Debugger is attached. The only editable features of a material package are the shader
@@ -531,8 +533,6 @@ void FMaterial::applyPendingEdits() noexcept {
  *
  * @{
  */
-
-#if FILAMENT_ENABLE_MATDBG
 
 void FMaterial::onEditCallback(void* userdata, const utils::CString&, const void* packageData,
         size_t packageSize) {
