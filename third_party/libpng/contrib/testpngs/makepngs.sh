@@ -1,11 +1,9 @@
 #!/bin/sh
-#
+
 # Make a set of test PNG files, MAKEPNG is the name of the makepng executable
 # built from contrib/libtests/makepng.c
 
 # Copyright (c) 2015 John Cunningham Bowler
-
-# Last changed in libpng 1.6.20 [December 3, 2015]
 
 # This code is released under the libpng license.
 # For conditions of distribution and use, see the disclaimer

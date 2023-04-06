@@ -1,9 +1,8 @@
 
 /* tarith.c
  *
+ * Copyright (c) 2021 Cosmin Truta
  * Copyright (c) 2011-2013 John Cunningham Bowler
- *
- * Last changed in libpng 1.6.0 [February 14, 2013]
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -88,6 +87,7 @@ int validation_ascii_to_fp(int count, int argc, char **argv)
    int    minorarith = 0;
 
    while (--argc > 0)
+   {
       if (strcmp(*++argv, "-a") == 0)
          showall = 1;
       else if (strcmp(*argv, "-e") == 0 && argc > 0)
@@ -105,6 +105,7 @@ int validation_ascii_to_fp(int count, int argc, char **argv)
          fprintf(stderr, "unknown argument %s\n", *argv);
          return 1;
       }
+   }
 
    do
    {
@@ -130,8 +131,8 @@ int validation_ascii_to_fp(int count, int argc, char **argv)
        */
       if (buffer[precision+7] != 71)
       {
-         fprintf(stderr, "%g[%d] -> '%s'[%lu] buffer overflow\n", test,
-            precision, buffer, (unsigned long)strlen(buffer));
+         fprintf(stderr, "%g[%d] -> '%s'[%lu] buffer overflow\n",
+            test, precision, buffer, (unsigned long)strlen(buffer));
          failed = 1;
       }
 
@@ -146,16 +147,16 @@ int validation_ascii_to_fp(int count, int argc, char **argv)
          if (test >= 0 && strcmp(buffer, "inf") ||
              test <  0 && strcmp(buffer, "-inf"))
          {
-            fprintf(stderr, "%g[%d] -> '%s' but expected 'inf'\n", test,
-               precision, buffer);
+            fprintf(stderr, "%g[%d] -> '%s' but expected 'inf'\n",
+               test, precision, buffer);
             failed = 1;
          }
       }
       else if (!png_check_fp_number(buffer, precision+10, &state, &index) ||
           buffer[index] != 0)
       {
-         fprintf(stderr, "%g[%d] -> '%s' but has bad format ('%c')\n", test,
-         precision, buffer, buffer[index]);
+         fprintf(stderr, "%g[%d] -> '%s' but has bad format ('%c')\n",
+            test, precision, buffer, buffer[index]);
          failed = 1;
       }
       else if (PNG_FP_IS_NEGATIVE(state) && !(test < 0))
@@ -187,7 +188,7 @@ int validation_ascii_to_fp(int count, int argc, char **argv)
          /* Check the result against the original. */
          double out = atof(buffer);
          double change = fabs((out - test)/test);
-         double allow = .5/pow(10,
+         double allow = .5 / pow(10,
             (precision >= DBL_DIG) ? DBL_DIG-1 : precision-1);
 
          /* NOTE: if you hit this error case are you compiling with gcc
@@ -257,8 +258,9 @@ skip:
    }
    while (--count);
 
-   printf("Tested %d finite values, %d non-finite, %d OK (%d failed) %d minor "
-      "arithmetic errors\n", finite, nonfinite, ok, failcount, minorarith);
+   printf("Tested %d finite values, %d non-finite, %d OK (%d failed) "
+      "%d minor arithmetic errors\n",
+      finite, nonfinite, ok, failcount, minorarith);
    printf(" Error with >=%d digit precision %.2f%%\n", DBL_DIG, max_abs);
    printf(" Error with < %d digit precision %.2f%%\n", DBL_DIG, max);
 
@@ -371,8 +373,8 @@ static int check_one_character(checkfp_command *co, checkfp_control c, int ch)
    /* This should never fail (it's a serious bug if it does): */
    if (index != 0 && index != 1)
    {
-      fprintf(stderr, "%s: read beyond end of string (%lu)\n", co->number,
-         (unsigned long)index);
+      fprintf(stderr, "%s: read beyond end of string (%lu)\n",
+         co->number, (unsigned long)index);
       return 0;
    }
 
@@ -503,8 +505,8 @@ static int check_one_character(checkfp_command *co, checkfp_control c, int ch)
       if (number_is_valid != c.number_was_valid)
       {
          fprintf(stderr,
-            "%s: character '%c' [0x%.2x] changed number validity\n", co->number,
-            ch, ch);
+            "%s: character '%c' [0x%.2x] changed number validity\n",
+            co->number, ch, ch);
          return 0;
       }
 
@@ -521,10 +523,13 @@ static int check_all_characters(checkfp_command *co, checkfp_control c)
 {
    int ch;
 
-   if (c.cnumber+4 < sizeof co->number) for (ch=0; ch<256; ++ch)
+   if (c.cnumber+4 < sizeof co->number)
    {
-      if (!check_one_character(co, c, ch))
-         return 0;
+      for (ch=0; ch<256; ++ch)
+      {
+         if (!check_one_character(co, c, ch))
+            return 0;
+      }
    }
 
    return 1;
@@ -539,10 +544,13 @@ static int check_some_characters(checkfp_command *co, checkfp_control c,
 
    if (c.cnumber+4 < sizeof co->number && c.limit >= 0)
    {
-      if (c.limit > 0) for (i=0; tests[i]; ++i)
+      if (c.limit > 0)
       {
-         if (!check_one_character(co, c, tests[i]))
-               return 0;
+         for (i=0; tests[i]; ++i)
+         {
+            if (!check_one_character(co, c, tests[i]))
+                  return 0;
+         }
       }
 
       /* At the end check all the characters. */
@@ -616,10 +624,10 @@ int validation_muldiv(int count, int argc, char **argv)
    png_int_32 times, div;
 
    while (--argc > 0)
-      {
-         fprintf(stderr, "unknown argument %s\n", *++argv);
-         return 1;
-      }
+   {
+      fprintf(stderr, "unknown argument %s\n", *++argv);
+      return 1;
+   }
 
    /* Find out about the random number generator. */
    randbuffer = RAND_MAX;
@@ -687,25 +695,25 @@ int validation_muldiv(int count, int argc, char **argv)
         ok = 0, ++overflow, fpround = fp/*misleading*/;
 
       if (verbose)
-         fprintf(stderr, "TEST %d * %d / %d -> %lld (%s)\n", a, times, div,
-            fp, ok ? "ok" : "overflow");
+         fprintf(stderr, "TEST %d * %d / %d -> %lld (%s)\n",
+            a, times, div, fp, ok ? "ok" : "overflow");
 
       ++tested;
       if (png_muldiv(&result, a, times, div) != ok)
       {
          ++error;
          if (ok)
-             fprintf(stderr, "%d * %d / %d -> overflow (expected %lld)\n", a,
-                times, div, fp);
+             fprintf(stderr, "%d * %d / %d -> overflow (expected %lld)\n",
+                a, times, div, fp);
          else
-             fprintf(stderr, "%d * %d / %d -> %d (expected overflow %lld)\n", a,
-                times, div, result, fp);
+             fprintf(stderr, "%d * %d / %d -> %d (expected overflow %lld)\n",
+                a, times, div, result, fp);
       }
       else if (ok && result != fpround)
       {
          ++error;
-         fprintf(stderr, "%d * %d / %d -> %d not %lld\n", a, times, div, result,
-            fp);
+         fprintf(stderr, "%d * %d / %d -> %d not %lld\n",
+            a, times, div, result, fp);
       }
       else
          ++passed;
@@ -721,8 +729,8 @@ int validation_muldiv(int count, int argc, char **argv)
    }
    while (--count > 0);
 
-   printf("%d tests including %d overflows, %d passed, %d failed (%d 64-bit "
-      "errors)\n", tested, overflow, passed, error, error64);
+   printf("%d tests including %d overflows, %d passed, %d failed "
+      "(%d 64-bit errors)\n", tested, overflow, passed, error, error64);
    return 0;
 }
 
@@ -821,8 +829,9 @@ int validation_gamma(int argc, char **argv)
          {
             if (error > .68) /* By experiment error is less than .68 */
             {
-               fprintf(stderr, "16-bit log error: %d: got %u, expected %f"
-                  " error: %f\n", i, png_log16bit(i), correct, error);
+               fprintf(stderr,
+                  "16-bit log error: %d: got %u, expected %f error: %f\n",
+                  i, png_log16bit(i), correct, error);
             }
          }
       }
@@ -841,8 +850,9 @@ int validation_gamma(int argc, char **argv)
             maxerr = fabs(error);
          if (fabs(error) > 1883) /* By experiment. */
          {
-            fprintf(stderr, "32-bit exp error: %d: got %u, expected %f"
-                  " error: %f\n", i, png_exp(i), correct, error);
+            fprintf(stderr,
+               "32-bit exp error: %d: got %u, expected %f error: %f\n",
+               i, png_exp(i), correct, error);
          }
       }
 
@@ -859,8 +869,9 @@ int validation_gamma(int argc, char **argv)
             maxerr = fabs(error);
          if (fabs(error) > .50002) /* By experiment */
          {
-            fprintf(stderr, "8-bit exp error: %d: got %u, expected %f"
-                  " error: %f\n", i, png_exp8bit(i), correct, error);
+            fprintf(stderr,
+               "8-bit exp error: %d: got %u, expected %f error: %f\n",
+               i, png_exp8bit(i), correct, error);
          }
       }
 
@@ -877,8 +888,9 @@ int validation_gamma(int argc, char **argv)
             maxerr = fabs(error);
          if (fabs(error) > .524) /* By experiment */
          {
-            fprintf(stderr, "16-bit exp error: %d: got %u, expected %f"
-                  " error: %f\n", i, png_exp16bit(i), correct, error);
+            fprintf(stderr,
+               "16-bit exp error: %d: got %u, expected %f error: %f\n",
+               i, png_exp16bit(i), correct, error);
          }
       }
 

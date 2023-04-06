@@ -1,5 +1,6 @@
 /*
  * Copyright 2016-2021 Arm Limited
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +19,6 @@
  * At your option, you may choose to accept this material under either:
  *  1. The Apache License, Version 2.0, found at <http://www.apache.org/licenses/LICENSE-2.0>, or
  *  2. The MIT License, found at <http://opensource.org/licenses/MIT>.
- * SPDX-License-Identifier: Apache-2.0 OR MIT.
  */
 
 #include "spirv_cfg.hpp"
@@ -135,7 +135,9 @@ bool CFG::post_order_visit(uint32_t block_id)
 		break;
 
 	case SPIRBlock::MultiSelect:
-		for (auto &target : block.cases)
+	{
+		const auto &cases = compiler.get_case_list(block);
+		for (const auto &target : cases)
 		{
 			if (post_order_visit(target.block))
 				add_branch(block_id, target.block);
@@ -143,7 +145,7 @@ bool CFG::post_order_visit(uint32_t block_id)
 		if (block.default_block && post_order_visit(block.default_block))
 			add_branch(block_id, block.default_block);
 		break;
-
+	}
 	default:
 		break;
 	}
@@ -304,15 +306,36 @@ bool CFG::node_terminates_control_flow_in_sub_graph(BlockID from, BlockID to) co
 
 		bool true_path_ignore = false;
 		bool false_path_ignore = false;
-		if (ignore_block_id && dom.terminator == SPIRBlock::Select)
+
+		bool merges_to_nothing = dom.merge == SPIRBlock::MergeNone ||
+		                         (dom.merge == SPIRBlock::MergeSelection && dom.next_block &&
+		                          compiler.get<SPIRBlock>(dom.next_block).terminator == SPIRBlock::Unreachable) ||
+		                         (dom.merge == SPIRBlock::MergeLoop && dom.merge_block &&
+		                          compiler.get<SPIRBlock>(dom.merge_block).terminator == SPIRBlock::Unreachable);
+
+		if (dom.self == from || merges_to_nothing)
 		{
-			auto &true_block = compiler.get<SPIRBlock>(dom.true_block);
-			auto &false_block = compiler.get<SPIRBlock>(dom.false_block);
-			auto &ignore_block = compiler.get<SPIRBlock>(ignore_block_id);
-			true_path_ignore = compiler.execution_is_branchless(true_block, ignore_block);
-			false_path_ignore = compiler.execution_is_branchless(false_block, ignore_block);
+			// We can only ignore inner branchy paths if there is no merge,
+			// i.e. no code is generated afterwards. E.g. this allows us to elide continue:
+			// for (;;) { if (cond) { continue; } else { break; } }.
+			// Codegen here in SPIR-V will be something like either no merge if one path directly breaks, or
+			// we merge to Unreachable.
+			if (ignore_block_id && dom.terminator == SPIRBlock::Select)
+			{
+				auto &true_block = compiler.get<SPIRBlock>(dom.true_block);
+				auto &false_block = compiler.get<SPIRBlock>(dom.false_block);
+				auto &ignore_block = compiler.get<SPIRBlock>(ignore_block_id);
+				true_path_ignore = compiler.execution_is_branchless(true_block, ignore_block);
+				false_path_ignore = compiler.execution_is_branchless(false_block, ignore_block);
+			}
 		}
 
+		// Cases where we allow traversal. This serves as a proxy for post-dominance in a loop body.
+		// TODO: Might want to do full post-dominance analysis, but it's a lot of churn for something like this ...
+		// - We're the merge block of a selection construct. Jump to header.
+		// - We're the merge block of a loop. Jump to header.
+		// - Direct branch. Trivial.
+		// - Allow cases inside a branch if the header cannot merge execution before loop exit.
 		if ((dom.merge == SPIRBlock::MergeSelection && dom.next_block == to) ||
 		    (dom.merge == SPIRBlock::MergeLoop && dom.merge_block == to) ||
 		    (dom.terminator == SPIRBlock::Direct && dom.next_block == to) ||
@@ -385,7 +408,9 @@ void DominatorBuilder::lift_continue_block_dominator()
 		break;
 
 	case SPIRBlock::MultiSelect:
-		for (auto &target : block.cases)
+	{
+		auto &cases = cfg.get_compiler().get_case_list(block);
+		for (auto &target : cases)
 		{
 			if (cfg.get_visit_order(target.block) > post_order)
 				back_edge_dominator = true;
@@ -393,6 +418,7 @@ void DominatorBuilder::lift_continue_block_dominator()
 		if (block.default_block && cfg.get_visit_order(block.default_block) > post_order)
 			back_edge_dominator = true;
 		break;
+	}
 
 	default:
 		break;

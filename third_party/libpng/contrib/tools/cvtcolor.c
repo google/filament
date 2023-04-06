@@ -1,7 +1,4 @@
-/*-
- * convert.c
- *
- * Last changed in libpng 1.6.0 [February 14, 2013]
+/* convert.c
  *
  * COPYRIGHT: Written by John Cunningham Bowler, 2013.
  * To the extent possible under law, the author has waived all copyright and
@@ -10,6 +7,7 @@
  *
  * Convert 8-bit sRGB or 16-bit linear values to another format.
  */
+
 #define _ISOC99_SOURCE 1
 
 #include <stdlib.h>

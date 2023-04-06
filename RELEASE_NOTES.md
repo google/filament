@@ -7,6 +7,15 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.32.3
+
+- fog: added an option to disable the fog after a certain distance [⚠️ **Recompile Materials**].
+- fog: fog color now takes exposure and IBL intensity into account [⚠️ **Recompile Materials**].
+- materials: implement cascades debugging as a post-process [⚠️ **Recompile Materials**].
+- materials: use 9 digits or less for floats [⚠️ **Recompile Materials**].
+- gltfio: fix skinning when objects are far from the origin
+- materials: remove 4 unneeded variants from `unlit` materials [⚠️ **Recompile Materials**].
+
 ## v1.32.2
 
 - lighting: the sun disc was computed in low/medium quality instead of high quality. This will

@@ -60,6 +60,8 @@ static void usage(char* name) {
             "       Specify the target API: opengl (default), vulkan, metal, or all\n"
             "       This flag can be repeated to individually select APIs for inclusion:\n"
             "           MATC --api opengl --api metal ...\n\n"
+            "   --feature-level, -l\n"
+            "       Specify the maximum feature level allowed (default is 3).\n\n"
             "   --define, -D\n"
             "       Add a preprocessor define macro via <macro>=<value>. <value> defaults to 1 if omitted.\n"
             "       Can be repeated to specify multiple definitions:\n"
@@ -165,10 +167,10 @@ static void parseDefine(std::string defineString, Config::StringReplacementMap& 
 }
 
 bool CommandlineConfig::parse() {
-    static constexpr const char* OPTSTR = "hlxo:f:dm:a:p:D:T:OSEr:vV:gtw";
+    static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:OSEr:vV:gtw";
     static const struct option OPTIONS[] = {
             { "help",                    no_argument, nullptr, 'h' },
-            { "license",                 no_argument, nullptr, 'l' },
+            { "license",                 no_argument, nullptr, 'L' },
             { "output",            required_argument, nullptr, 'o' },
             { "output-format",     required_argument, nullptr, 'f' },
             { "debug",                   no_argument, nullptr, 'd' },
@@ -180,6 +182,7 @@ bool CommandlineConfig::parse() {
             { "optimize-none",           no_argument, nullptr, 'g' },
             { "preprocessor-only",       no_argument, nullptr, 'E' },
             { "api",               required_argument, nullptr, 'a' },
+            { "feature-level",     required_argument, nullptr, 'l' },
             { "define",            required_argument, nullptr, 'D' },
             { "template",          required_argument, nullptr, 'T' },
             { "reflect",           required_argument, nullptr, 'r' },
@@ -200,7 +203,7 @@ bool CommandlineConfig::parse() {
                 usage(mArgv[0]);
                 exit(0);
                 break;
-            case 'l':
+            case 'L':
                 license();
                 exit(0);
                 break;
@@ -249,6 +252,18 @@ bool CommandlineConfig::parse() {
                     return false;
                 }
                 break;
+            case 'l': {
+                auto featureLevel = filament::backend::FeatureLevel(std::atoi(arg.c_str()));
+                mFeatureLevel = filament::backend::FeatureLevel::FEATURE_LEVEL_3;
+                switch (featureLevel) {
+                    case filament::backend::FeatureLevel::FEATURE_LEVEL_1:
+                    case filament::backend::FeatureLevel::FEATURE_LEVEL_2:
+                    case filament::backend::FeatureLevel::FEATURE_LEVEL_3:
+                        mFeatureLevel = featureLevel;
+                        break;
+                }
+                break;
+            }
             case 'D':
                 parseDefine(arg, mDefines);
                 break;

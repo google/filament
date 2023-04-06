@@ -1,5 +1,6 @@
 /*
  * Copyright 2015-2021 Arm Limited
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +19,6 @@
  * At your option, you may choose to accept this material under either:
  *  1. The Apache License, Version 2.0, found at <http://www.apache.org/licenses/LICENSE-2.0>, or
  *  2. The MIT License, found at <http://opensource.org/licenses/MIT>.
- * SPDX-License-Identifier: Apache-2.0 OR MIT.
  */
 
 #include "spirv_cross.hpp"
@@ -36,16 +36,16 @@ using namespace SPIRV_CROSS_NAMESPACE;
 
 Compiler::Compiler(vector<uint32_t> ir_)
 {
-	Parser parser(move(ir_));
+	Parser parser(std::move(ir_));
 	parser.parse();
-	set_ir(move(parser.get_parsed_ir()));
+	set_ir(std::move(parser.get_parsed_ir()));
 }
 
 Compiler::Compiler(const uint32_t *ir_, size_t word_count)
 {
 	Parser parser(ir_, word_count);
 	parser.parse();
-	set_ir(move(parser.get_parsed_ir()));
+	set_ir(std::move(parser.get_parsed_ir()));
 }
 
 Compiler::Compiler(const ParsedIR &ir_)
@@ -55,12 +55,12 @@ Compiler::Compiler(const ParsedIR &ir_)
 
 Compiler::Compiler(ParsedIR &&ir_)
 {
-	set_ir(move(ir_));
+	set_ir(std::move(ir_));
 }
 
 void Compiler::set_ir(ParsedIR &&ir_)
 {
-	ir = move(ir_);
+	ir = std::move(ir_);
 	parse_fixup();
 }
 
@@ -98,7 +98,8 @@ bool Compiler::block_is_pure(const SPIRBlock &block)
 	// This is a global side effect of the function.
 	if (block.terminator == SPIRBlock::Kill ||
 	    block.terminator == SPIRBlock::TerminateRay ||
-	    block.terminator == SPIRBlock::IgnoreIntersection)
+	    block.terminator == SPIRBlock::IgnoreIntersection ||
+	    block.terminator == SPIRBlock::EmitMeshTasks)
 		return false;
 
 	for (auto &i : block.ops)
@@ -154,6 +155,11 @@ bool Compiler::block_is_pure(const SPIRBlock &block)
 		case OpEmitVertex:
 			return false;
 
+		// Mesh shader functions modify global state.
+		// (EmitMeshTasks is a terminator).
+		case OpSetMeshOutputsEXT:
+			return false;
+
 		// Barriers disallow any reordering, so we should treat blocks with barrier as writing.
 		case OpControlBarrier:
 		case OpMemoryBarrier:
@@ -167,6 +173,12 @@ bool Compiler::block_is_pure(const SPIRBlock &block)
 		case OpTraceRayKHR:
 		case OpExecuteCallableNV:
 		case OpExecuteCallableKHR:
+		case OpRayQueryInitializeKHR:
+		case OpRayQueryTerminateKHR:
+		case OpRayQueryGenerateIntersectionKHR:
+		case OpRayQueryConfirmIntersectionKHR:
+		case OpRayQueryProceedKHR:
+			// There are various getters in ray query, but they are considered pure.
 			return false;
 
 			// OpExtInst is potentially impure depending on extension, but GLSL builtins are at least pure.
@@ -174,6 +186,30 @@ bool Compiler::block_is_pure(const SPIRBlock &block)
 		case OpDemoteToHelperInvocationEXT:
 			// This is a global side effect of the function.
 			return false;
+
+		case OpExtInst:
+		{
+			uint32_t extension_set = ops[2];
+			if (get<SPIRExtension>(extension_set).ext == SPIRExtension::GLSL)
+			{
+				auto op_450 = static_cast<GLSLstd450>(ops[3]);
+				switch (op_450)
+				{
+				case GLSLstd450Modf:
+				case GLSLstd450Frexp:
+				{
+					auto &type = expression_type(ops[5]);
+					if (type.storage != StorageClassFunction)
+						return false;
+					break;
+				}
+
+				default:
+					break;
+				}
+			}
+			break;
+		}
 
 		default:
 			break;
@@ -689,7 +725,7 @@ bool Compiler::InterfaceVariableAccessHandler::handle(Op opcode, const uint32_t 
 
 	case OpExtInst:
 	{
-		if (length < 5)
+		if (length < 3)
 			return false;
 		auto &extension_set = compiler.get<SPIRExtension>(args[2]);
 		switch (extension_set.ext)
@@ -707,6 +743,15 @@ bool Compiler::InterfaceVariableAccessHandler::handle(Op opcode, const uint32_t 
 				auto *var = compiler.maybe_get<SPIRVariable>(args[4]);
 				if (var && storage_class_is_interface(var->storage))
 					variables.insert(args[4]);
+				break;
+			}
+
+			case GLSLstd450Modf:
+			case GLSLstd450Fract:
+			{
+				auto *var = compiler.maybe_get<SPIRVariable>(args[5]);
+				if (var && storage_class_is_interface(var->storage))
+					variables.insert(args[5]);
 				break;
 			}
 
@@ -813,7 +858,7 @@ unordered_set<VariableID> Compiler::get_active_interface_variables() const
 
 void Compiler::set_enabled_interface_variables(std::unordered_set<VariableID> active_variables)
 {
-	active_interface_variables = move(active_variables);
+	active_interface_variables = std::move(active_variables);
 	check_active_interface_variables = true;
 }
 
@@ -946,6 +991,10 @@ ShaderResources Compiler::get_shader_resources(const unordered_set<VariableID> *
 			// in the future.
 			res.push_constant_buffers.push_back({ var.self, var.basetype, type.self, get_name(var.self) });
 		}
+		else if (type.storage == StorageClassShaderRecordBufferKHR)
+		{
+			res.shader_record_buffers.push_back({ var.self, var.basetype, type.self, get_remapped_declared_block_name(var.self, ssbo_instance_name) });
+		}
 		// Images
 		else if (type.storage == StorageClassUniformConstant && type.basetype == SPIRType::Image &&
 		         type.image.sampled == 2)
@@ -1011,10 +1060,12 @@ void Compiler::parse_fixup()
 		if (id.get_type() == TypeConstant)
 		{
 			auto &c = id.get<SPIRConstant>();
-			if (ir.meta[c.self].decoration.builtin && ir.meta[c.self].decoration.builtin_type == BuiltInWorkgroupSize)
+			if (has_decoration(c.self, DecorationBuiltIn) &&
+			    BuiltIn(get_decoration(c.self, DecorationBuiltIn)) == BuiltInWorkgroupSize)
 			{
 				// In current SPIR-V, there can be just one constant like this.
 				// All entry points will receive the constant value.
+				// WorkgroupSize take precedence over LocalSizeId.
 				for (auto &entry : ir.entry_points)
 				{
 					entry.second.workgroup_size.constant = c.self;
@@ -1028,8 +1079,11 @@ void Compiler::parse_fixup()
 		{
 			auto &var = id.get<SPIRVariable>();
 			if (var.storage == StorageClassPrivate || var.storage == StorageClassWorkgroup ||
+			    var.storage == StorageClassTaskPayloadWorkgroupEXT ||
 			    var.storage == StorageClassOutput)
+			{
 				global_variables.push_back(var.self);
+			}
 			if (variable_storage_is_aliased(var))
 				aliased_variables.push_back(var.self);
 		}
@@ -1414,6 +1468,58 @@ bool Compiler::get_binary_offset_for_decoration(VariableID id, spv::Decoration d
 	return true;
 }
 
+bool Compiler::block_is_noop(const SPIRBlock &block) const
+{
+	if (block.terminator != SPIRBlock::Direct)
+		return false;
+
+	auto &child = get<SPIRBlock>(block.next_block);
+
+	// If this block participates in PHI, the block isn't really noop.
+	for (auto &phi : block.phi_variables)
+		if (phi.parent == block.self || phi.parent == child.self)
+			return false;
+
+	for (auto &phi : child.phi_variables)
+		if (phi.parent == block.self)
+			return false;
+
+	// Verify all instructions have no semantic impact.
+	for (auto &i : block.ops)
+	{
+		auto op = static_cast<Op>(i.op);
+
+		switch (op)
+		{
+		// Non-Semantic instructions.
+		case OpLine:
+		case OpNoLine:
+			break;
+
+		case OpExtInst:
+		{
+			auto *ops = stream(i);
+			auto ext = get<SPIRExtension>(ops[2]).ext;
+
+			bool ext_is_nonsemantic_only =
+				ext == SPIRExtension::NonSemanticShaderDebugInfo ||
+				ext == SPIRExtension::SPV_debug_info ||
+				ext == SPIRExtension::NonSemanticGeneric;
+
+			if (!ext_is_nonsemantic_only)
+				return false;
+
+			break;
+		}
+
+		default:
+			return false;
+		}
+	}
+
+	return true;
+}
+
 bool Compiler::block_is_loop_candidate(const SPIRBlock &block, SPIRBlock::Method method) const
 {
 	// Tried and failed.
@@ -1471,7 +1577,7 @@ bool Compiler::block_is_loop_candidate(const SPIRBlock &block, SPIRBlock::Method
 	{
 		// Empty loop header that just sets up merge target
 		// and branches to loop body.
-		bool ret = block.terminator == SPIRBlock::Direct && block.merge == SPIRBlock::MergeLoop && block.ops.empty();
+		bool ret = block.terminator == SPIRBlock::Direct && block.merge == SPIRBlock::MergeLoop && block_is_noop(block);
 
 		if (!ret)
 			return false;
@@ -1497,19 +1603,8 @@ bool Compiler::block_is_loop_candidate(const SPIRBlock &block, SPIRBlock::Method
 		ret = child.terminator == SPIRBlock::Select && child.merge == SPIRBlock::MergeNone &&
 		      (positive_candidate || negative_candidate);
 
-		// If we have OpPhi which depends on branches which came from our own block,
-		// we need to flush phi variables in else block instead of a trivial break,
-		// so we cannot assume this is a for loop candidate.
 		if (ret)
 		{
-			for (auto &phi : block.phi_variables)
-				if (phi.parent == block.self || phi.parent == child.self)
-					return false;
-
-			for (auto &phi : child.phi_variables)
-				if (phi.parent == block.self)
-					return false;
-
 			auto *merge = maybe_get<SPIRBlock>(block.merge_block);
 			if (merge)
 				for (auto &phi : merge->phi_variables)
@@ -1534,15 +1629,10 @@ bool Compiler::execution_is_noop(const SPIRBlock &from, const SPIRBlock &to) con
 		if (start->self == to.self)
 			return true;
 
-		if (!start->ops.empty())
+		if (!block_is_noop(*start))
 			return false;
 
 		auto &next = get<SPIRBlock>(start->next_block);
-		// Flushing phi variables does not count as noop.
-		for (auto &phi : next.phi_variables)
-			if (phi.parent == start->self)
-				return false;
-
 		start = &next;
 	}
 }
@@ -1620,6 +1710,44 @@ SPIRBlock::ContinueBlockType Compiler::continue_block_type(const SPIRBlock &bloc
 	}
 }
 
+const SmallVector<SPIRBlock::Case> &Compiler::get_case_list(const SPIRBlock &block) const
+{
+	uint32_t width = 0;
+
+	// First we check if we can get the type directly from the block.condition
+	// since it can be a SPIRConstant or a SPIRVariable.
+	if (const auto *constant = maybe_get<SPIRConstant>(block.condition))
+	{
+		const auto &type = get<SPIRType>(constant->constant_type);
+		width = type.width;
+	}
+	else if (const auto *var = maybe_get<SPIRVariable>(block.condition))
+	{
+		const auto &type = get<SPIRType>(var->basetype);
+		width = type.width;
+	}
+	else if (const auto *undef = maybe_get<SPIRUndef>(block.condition))
+	{
+		const auto &type = get<SPIRType>(undef->basetype);
+		width = type.width;
+	}
+	else
+	{
+		auto search = ir.load_type_width.find(block.condition);
+		if (search == ir.load_type_width.end())
+		{
+			SPIRV_CROSS_THROW("Use of undeclared variable on a switch statement.");
+		}
+
+		width = search->second;
+	}
+
+	if (width > 32)
+		return block.cases_64bit;
+
+	return block.cases_32bit;
+}
+
 bool Compiler::traverse_all_reachable_opcodes(const SPIRBlock &block, OpcodeHandler &handler) const
 {
 	handler.set_current_block(block);
@@ -1652,6 +1780,9 @@ bool Compiler::traverse_all_reachable_opcodes(const SPIRBlock &block, OpcodeHand
 			}
 		}
 	}
+
+	if (!handler.handle_terminator(block))
+		return false;
 
 	return true;
 }
@@ -1720,10 +1851,22 @@ size_t Compiler::get_declared_struct_size(const SPIRType &type) const
 	if (type.member_types.empty())
 		SPIRV_CROSS_THROW("Declared struct in block cannot be empty.");
 
-	uint32_t last = uint32_t(type.member_types.size() - 1);
-	size_t offset = type_struct_member_offset(type, last);
-	size_t size = get_declared_struct_member_size(type, last);
-	return offset + size;
+	// Offsets can be declared out of order, so we need to deduce the actual size
+	// based on last member instead.
+	uint32_t member_index = 0;
+	size_t highest_offset = 0;
+	for (uint32_t i = 0; i < uint32_t(type.member_types.size()); i++)
+	{
+		size_t offset = type_struct_member_offset(type, i);
+		if (offset > highest_offset)
+		{
+			highest_offset = offset;
+			member_index = i;
+		}
+	}
+
+	size_t size = get_declared_struct_member_size(type, member_index);
+	return highest_offset + size;
 }
 
 size_t Compiler::get_declared_struct_size_runtime_array(const SPIRType &type, size_t array_size) const
@@ -2069,12 +2212,22 @@ void Compiler::set_execution_mode(ExecutionMode mode, uint32_t arg0, uint32_t ar
 		execution.workgroup_size.z = arg2;
 		break;
 
+	case ExecutionModeLocalSizeId:
+		execution.workgroup_size.id_x = arg0;
+		execution.workgroup_size.id_y = arg1;
+		execution.workgroup_size.id_z = arg2;
+		break;
+
 	case ExecutionModeInvocations:
 		execution.invocations = arg0;
 		break;
 
 	case ExecutionModeOutputVertices:
 		execution.output_vertices = arg0;
+		break;
+
+	case ExecutionModeOutputPrimitivesEXT:
+		execution.output_primitives = arg0;
 		break;
 
 	default:
@@ -2096,6 +2249,7 @@ uint32_t Compiler::get_work_group_size_specialization_constants(SpecializationCo
 	y = { 0, 0 };
 	z = { 0, 0 };
 
+	// WorkgroupSize builtin takes precedence over LocalSize / LocalSizeId.
 	if (execution.workgroup_size.constant != 0)
 	{
 		auto &c = get<SPIRConstant>(execution.workgroup_size.constant);
@@ -2118,6 +2272,29 @@ uint32_t Compiler::get_work_group_size_specialization_constants(SpecializationCo
 			z.constant_id = get_decoration(c.m.c[0].id[2], DecorationSpecId);
 		}
 	}
+	else if (execution.flags.get(ExecutionModeLocalSizeId))
+	{
+		auto &cx = get<SPIRConstant>(execution.workgroup_size.id_x);
+		if (cx.specialization)
+		{
+			x.id = execution.workgroup_size.id_x;
+			x.constant_id = get_decoration(execution.workgroup_size.id_x, DecorationSpecId);
+		}
+
+		auto &cy = get<SPIRConstant>(execution.workgroup_size.id_y);
+		if (cy.specialization)
+		{
+			y.id = execution.workgroup_size.id_y;
+			y.constant_id = get_decoration(execution.workgroup_size.id_y, DecorationSpecId);
+		}
+
+		auto &cz = get<SPIRConstant>(execution.workgroup_size.id_z);
+		if (cz.specialization)
+		{
+			z.id = execution.workgroup_size.id_z;
+			z.constant_id = get_decoration(execution.workgroup_size.id_z, DecorationSpecId);
+		}
+	}
 
 	return execution.workgroup_size.constant;
 }
@@ -2127,15 +2304,42 @@ uint32_t Compiler::get_execution_mode_argument(spv::ExecutionMode mode, uint32_t
 	auto &execution = get_entry_point();
 	switch (mode)
 	{
+	case ExecutionModeLocalSizeId:
+		if (execution.flags.get(ExecutionModeLocalSizeId))
+		{
+			switch (index)
+			{
+			case 0:
+				return execution.workgroup_size.id_x;
+			case 1:
+				return execution.workgroup_size.id_y;
+			case 2:
+				return execution.workgroup_size.id_z;
+			default:
+				return 0;
+			}
+		}
+		else
+			return 0;
+
 	case ExecutionModeLocalSize:
 		switch (index)
 		{
 		case 0:
-			return execution.workgroup_size.x;
+			if (execution.flags.get(ExecutionModeLocalSizeId) && execution.workgroup_size.id_x != 0)
+				return get<SPIRConstant>(execution.workgroup_size.id_x).scalar();
+			else
+				return execution.workgroup_size.x;
 		case 1:
-			return execution.workgroup_size.y;
+			if (execution.flags.get(ExecutionModeLocalSizeId) && execution.workgroup_size.id_y != 0)
+				return get<SPIRConstant>(execution.workgroup_size.id_y).scalar();
+			else
+				return execution.workgroup_size.y;
 		case 2:
-			return execution.workgroup_size.z;
+			if (execution.flags.get(ExecutionModeLocalSizeId) && execution.workgroup_size.id_z != 0)
+				return get<SPIRConstant>(execution.workgroup_size.id_z).scalar();
+			else
+				return execution.workgroup_size.z;
 		default:
 			return 0;
 		}
@@ -2145,6 +2349,9 @@ uint32_t Compiler::get_execution_mode_argument(spv::ExecutionMode mode, uint32_t
 
 	case ExecutionModeOutputVertices:
 		return execution.output_vertices;
+
+	case ExecutionModeOutputPrimitivesEXT:
+		return execution.output_primitives;
 
 	default:
 		return 0;
@@ -2172,6 +2379,11 @@ bool Compiler::is_vertex_like_shader() const
 bool Compiler::is_tessellation_shader() const
 {
 	return is_tessellation_shader(get_execution_model());
+}
+
+bool Compiler::is_tessellating_triangles() const
+{
+	return get_execution_mode_bitset().get(ExecutionModeTriangles);
 }
 
 void Compiler::set_remapped_variable_state(VariableID id, bool remap_enable)
@@ -2206,6 +2418,19 @@ void Compiler::add_implied_read_expression(SPIRAccessChain &e, uint32_t source)
 	auto itr = find(begin(e.implied_read_expressions), end(e.implied_read_expressions), ID(source));
 	if (itr == end(e.implied_read_expressions))
 		e.implied_read_expressions.push_back(source);
+}
+
+void Compiler::add_active_interface_variable(uint32_t var_id)
+{
+	active_interface_variables.insert(var_id);
+
+	// In SPIR-V 1.4 and up we must also track the interface variable in the entry point.
+	if (ir.get_spirv_version() >= 0x10400)
+	{
+		auto &vars = get_entry_point().interface_variables;
+		if (find(begin(vars), end(vars), VariableID(var_id)) == end(vars))
+			vars.push_back(var_id);
+	}
 }
 
 void Compiler::inherit_expression_dependencies(uint32_t dst, uint32_t source_expression)
@@ -2362,7 +2587,7 @@ void Compiler::CombinedImageSamplerHandler::push_remap_parameters(const SPIRFunc
 	unordered_map<uint32_t, uint32_t> remapping;
 	for (uint32_t i = 0; i < length; i++)
 		remapping[func.arguments[i].id] = remap_parameter(args[i]);
-	parameter_remapping.push(move(remapping));
+	parameter_remapping.push(std::move(remapping));
 }
 
 void Compiler::CombinedImageSamplerHandler::pop_remap_parameters()
@@ -3003,12 +3228,15 @@ void Compiler::AnalyzeVariableScopeAccessHandler::set_current_block(const SPIRBl
 		break;
 
 	case SPIRBlock::MultiSelect:
+	{
 		notify_variable_access(block.condition, block.self);
-		for (auto &target : block.cases)
+		auto &cases = compiler.get_case_list(block);
+		for (auto &target : cases)
 			test_phi(target.block);
 		if (block.default_block)
 			test_phi(block.default_block);
 		break;
+	}
 
 	default:
 		break;
@@ -3021,8 +3249,8 @@ void Compiler::AnalyzeVariableScopeAccessHandler::notify_variable_access(uint32_
 		return;
 
 	// Access chains used in multiple blocks mean hoisting all the variables used to construct the access chain as not all backends can use pointers.
-	auto itr = access_chain_children.find(id);
-	if (itr != end(access_chain_children))
+	auto itr = rvalue_forward_children.find(id);
+	if (itr != end(rvalue_forward_children))
 		for (auto child_id : itr->second)
 			notify_variable_access(child_id, block);
 
@@ -3049,12 +3277,46 @@ bool Compiler::AnalyzeVariableScopeAccessHandler::id_is_potential_temporary(uint
 	return compiler.ir.ids[id].empty() || (compiler.ir.ids[id].get_type() == TypeExpression);
 }
 
+bool Compiler::AnalyzeVariableScopeAccessHandler::handle_terminator(const SPIRBlock &block)
+{
+	switch (block.terminator)
+	{
+	case SPIRBlock::Return:
+		if (block.return_value)
+			notify_variable_access(block.return_value, block.self);
+		break;
+
+	case SPIRBlock::Select:
+	case SPIRBlock::MultiSelect:
+		notify_variable_access(block.condition, block.self);
+		break;
+
+	default:
+		break;
+	}
+
+	return true;
+}
+
 bool Compiler::AnalyzeVariableScopeAccessHandler::handle(spv::Op op, const uint32_t *args, uint32_t length)
 {
 	// Keep track of the types of temporaries, so we can hoist them out as necessary.
 	uint32_t result_type, result_id;
 	if (compiler.instruction_to_result_type(result_type, result_id, op, args, length))
+	{
+		// For some opcodes, we will need to override the result id.
+		// If we need to hoist the temporary, the temporary type is the input, not the result.
+		// FIXME: This will likely break with OpCopyObject + hoisting, but we'll have to
+		// solve it if we ever get there ...
+		if (op == OpConvertUToAccelerationStructureKHR)
+		{
+			auto itr = result_id_to_type.find(args[2]);
+			if (itr != result_id_to_type.end())
+				result_type = itr->second;
+		}
+
 		result_id_to_type[result_id] = result_type;
+	}
 
 	switch (op)
 	{
@@ -3096,14 +3358,14 @@ bool Compiler::AnalyzeVariableScopeAccessHandler::handle(spv::Op op, const uint3
 		if (var)
 		{
 			accessed_variables_to_block[var->self].insert(current_block->self);
-			access_chain_children[args[1]].insert(var->self);
+			rvalue_forward_children[args[1]].insert(var->self);
 		}
 
 		// args[2] might be another access chain we have to track use of.
 		for (uint32_t i = 2; i < length; i++)
 		{
 			notify_variable_access(args[i], current_block->self);
-			access_chain_children[args[1]].insert(args[i]);
+			rvalue_forward_children[args[1]].insert(args[i]);
 		}
 
 		// Also keep track of the access chain pointer itself.
@@ -3185,6 +3447,12 @@ bool Compiler::AnalyzeVariableScopeAccessHandler::handle(spv::Op op, const uint3
 
 		// Might be an access chain we have to track use of.
 		notify_variable_access(args[2], current_block->self);
+
+		// If we're loading an opaque type we cannot lower it to a temporary,
+		// we must defer access of args[2] until it's used.
+		auto &type = compiler.get<SPIRType>(args[0]);
+		if (compiler.type_is_opaque_value(type))
+			rvalue_forward_children[args[1]].insert(args[2]);
 		break;
 	}
 
@@ -3248,10 +3516,41 @@ bool Compiler::AnalyzeVariableScopeAccessHandler::handle(spv::Op op, const uint3
 		for (uint32_t i = 4; i < length; i++)
 			notify_variable_access(args[i], current_block->self);
 		notify_variable_access(args[1], current_block->self);
+
+		uint32_t extension_set = args[2];
+		if (compiler.get<SPIRExtension>(extension_set).ext == SPIRExtension::GLSL)
+		{
+			auto op_450 = static_cast<GLSLstd450>(args[3]);
+			switch (op_450)
+			{
+			case GLSLstd450Modf:
+			case GLSLstd450Frexp:
+			{
+				uint32_t ptr = args[5];
+				auto *var = compiler.maybe_get_backing_variable(ptr);
+				if (var)
+				{
+					accessed_variables_to_block[var->self].insert(current_block->self);
+					if (var->self == ptr)
+						complete_write_variables_to_block[var->self].insert(current_block->self);
+					else
+						partial_write_variables_to_block[var->self].insert(current_block->self);
+				}
+				break;
+			}
+
+			default:
+				break;
+			}
+		}
 		break;
 	}
 
 	case OpArrayLength:
+		// Only result is a temporary.
+		notify_variable_access(args[1], current_block->self);
+		break;
+
 	case OpLine:
 	case OpNoLine:
 		// Uses literals, but cannot be a phi variable or temporary, so ignore.
@@ -3525,6 +3824,7 @@ void Compiler::analyze_variable_scope(SPIRFunction &entry, AnalyzeVariableScopeA
 		DominatorBuilder builder(cfg);
 		auto &blocks = var.second;
 		auto &type = expression_type(var.first);
+		BlockID potential_continue_block = 0;
 
 		// Figure out which block is dominating all accesses of those variables.
 		for (auto &block : blocks)
@@ -3546,14 +3846,13 @@ void Compiler::analyze_variable_scope(SPIRFunction &entry, AnalyzeVariableScopeA
 				{
 					// The variable is used in multiple continue blocks, this is not a loop
 					// candidate, signal that by setting block to -1u.
-					auto &potential = potential_loop_variables[var.first];
-
-					if (potential == 0)
-						potential = block;
+					if (potential_continue_block == 0)
+						potential_continue_block = block;
 					else
-						potential = ~(0u);
+						potential_continue_block = ~(0u);
 				}
 			}
+
 			builder.add_block(block);
 		}
 
@@ -3561,6 +3860,34 @@ void Compiler::analyze_variable_scope(SPIRFunction &entry, AnalyzeVariableScopeA
 
 		// Add it to a per-block list of variables.
 		BlockID dominating_block = builder.get_dominator();
+
+		if (dominating_block && potential_continue_block != 0 && potential_continue_block != ~0u)
+		{
+			auto &inner_block = get<SPIRBlock>(dominating_block);
+
+			BlockID merge_candidate = 0;
+
+			// Analyze the dominator. If it lives in a different loop scope than the candidate continue
+			// block, reject the loop variable candidate.
+			if (inner_block.merge == SPIRBlock::MergeLoop)
+				merge_candidate = inner_block.merge_block;
+			else if (inner_block.loop_dominator != SPIRBlock::NoDominator)
+				merge_candidate = get<SPIRBlock>(inner_block.loop_dominator).merge_block;
+
+			if (merge_candidate != 0 && cfg.is_reachable(merge_candidate))
+			{
+				// If the merge block has a higher post-visit order, we know that continue candidate
+				// cannot reach the merge block, and we have two separate scopes.
+				if (!cfg.is_reachable(potential_continue_block) ||
+				    cfg.get_visit_order(merge_candidate) > cfg.get_visit_order(potential_continue_block))
+				{
+					potential_continue_block = 0;
+				}
+			}
+		}
+
+		if (potential_continue_block != 0 && potential_continue_block != ~0u)
+			potential_loop_variables[var.first] = potential_continue_block;
 
 		// For variables whose dominating block is inside a loop, there is a risk that these variables
 		// actually need to be preserved across loop iterations. We can express this by adding
@@ -4161,8 +4488,9 @@ void Compiler::analyze_image_and_sampler_usage()
 	handler.dependency_hierarchy.clear();
 	traverse_all_reachable_opcodes(get<SPIRFunction>(ir.default_entry_point), handler);
 
-	comparison_ids = move(handler.comparison_ids);
+	comparison_ids = std::move(handler.comparison_ids);
 	need_subpass_input = handler.need_subpass_input;
+	need_subpass_input_ms = handler.need_subpass_input_ms;
 
 	// Forward information from separate images and samplers into combined image samplers.
 	for (auto &combined : combined_image_samplers)
@@ -4214,7 +4542,7 @@ void Compiler::build_function_control_flow_graphs_and_analyze()
 	CFGBuilder handler(*this);
 	handler.function_cfgs[ir.default_entry_point].reset(new CFG(*this, get<SPIRFunction>(ir.default_entry_point)));
 	traverse_all_reachable_opcodes(get<SPIRFunction>(ir.default_entry_point), handler);
-	function_cfgs = move(handler.function_cfgs);
+	function_cfgs = std::move(handler.function_cfgs);
 	bool single_function = function_cfgs.size() <= 1;
 
 	for (auto &f : function_cfgs)
@@ -4329,7 +4657,11 @@ bool Compiler::CombinedImageSamplerUsageHandler::handle(Op opcode, const uint32_
 		// If we load an image, we're going to use it and there is little harm in declaring an unused gl_FragCoord.
 		auto &type = compiler.get<SPIRType>(args[0]);
 		if (type.image.dim == DimSubpassData)
+		{
 			need_subpass_input = true;
+			if (type.image.ms)
+				need_subpass_input_ms = true;
+		}
 
 		// If we load a SampledImage and it will be used with Dref, propagate the state up.
 		if (dref_combined_samplers.count(args[1]) != 0)
@@ -4342,16 +4674,13 @@ bool Compiler::CombinedImageSamplerUsageHandler::handle(Op opcode, const uint32_
 		if (length < 4)
 			return false;
 
-		uint32_t result_type = args[0];
-		uint32_t result_id = args[1];
-		auto &type = compiler.get<SPIRType>(result_type);
-
 		// If the underlying resource has been used for comparison then duplicate loads of that resource must be too.
 		// This image must be a depth image.
+		uint32_t result_id = args[1];
 		uint32_t image = args[2];
 		uint32_t sampler = args[3];
 
-		if (type.image.depth || dref_combined_samplers.count(result_id) != 0)
+		if (dref_combined_samplers.count(result_id) != 0)
 		{
 			add_hierarchy_to_comparison_ids(image);
 
@@ -4507,46 +4836,22 @@ bool Compiler::reflection_ssbo_instance_name_is_significant() const
 	return aliased_ssbo_types;
 }
 
-bool Compiler::instruction_to_result_type(uint32_t &result_type, uint32_t &result_id, spv::Op op, const uint32_t *args,
-                                          uint32_t length)
+bool Compiler::instruction_to_result_type(uint32_t &result_type, uint32_t &result_id, spv::Op op,
+                                          const uint32_t *args, uint32_t length)
 {
-	// Most instructions follow the pattern of <result-type> <result-id> <arguments>.
-	// There are some exceptions.
-	switch (op)
-	{
-	case OpStore:
-	case OpCopyMemory:
-	case OpCopyMemorySized:
-	case OpImageWrite:
-	case OpAtomicStore:
-	case OpAtomicFlagClear:
-	case OpEmitStreamVertex:
-	case OpEndStreamPrimitive:
-	case OpControlBarrier:
-	case OpMemoryBarrier:
-	case OpGroupWaitEvents:
-	case OpRetainEvent:
-	case OpReleaseEvent:
-	case OpSetUserEventStatus:
-	case OpCaptureEventProfilingInfo:
-	case OpCommitReadPipe:
-	case OpCommitWritePipe:
-	case OpGroupCommitReadPipe:
-	case OpGroupCommitWritePipe:
-	case OpLine:
-	case OpNoLine:
+	if (length < 2)
 		return false;
 
-	default:
-		if (length > 1 && maybe_get<SPIRType>(args[0]) != nullptr)
-		{
-			result_type = args[0];
-			result_id = args[1];
-			return true;
-		}
-		else
-			return false;
+	bool has_result_id = false, has_result_type = false;
+	HasResultAndType(op, &has_result_id, &has_result_type);
+	if (has_result_id && has_result_type)
+	{
+		result_type = args[0];
+		result_id = args[1];
+		return true;
 	}
+	else
+		return false;
 }
 
 Bitset Compiler::combined_decoration_for_member(const SPIRType &type, uint32_t index) const
@@ -4611,9 +4916,11 @@ bool Compiler::is_desktop_only_format(spv::ImageFormat format)
 	return false;
 }
 
-bool Compiler::image_is_comparison(const SPIRType &type, uint32_t id) const
+// An image is determined to be a depth image if it is marked as a depth image and is not also
+// explicitly marked with a color format, or if there are any sample/gather compare operations on it.
+bool Compiler::is_depth_image(const SPIRType &type, uint32_t id) const
 {
-	return type.image.depth || (comparison_ids.count(id) != 0);
+	return (type.image.depth && type.image.format == ImageFormatUnknown) || comparison_ids.count(id);
 }
 
 bool Compiler::type_is_opaque_value(const SPIRType &type) const
@@ -4628,6 +4935,12 @@ void Compiler::force_recompile()
 	is_force_recompile = true;
 }
 
+void Compiler::force_recompile_guarantee_forward_progress()
+{
+	force_recompile();
+	is_force_recompile_forward_progress = true;
+}
+
 bool Compiler::is_forcing_recompilation() const
 {
 	return is_force_recompile;
@@ -4636,6 +4949,7 @@ bool Compiler::is_forcing_recompilation() const
 void Compiler::clear_force_recompile()
 {
 	is_force_recompile = false;
+	is_force_recompile_forward_progress = false;
 }
 
 Compiler::PhysicalStorageBufferPointerHandler::PhysicalStorageBufferPointerHandler(Compiler &compiler_)
@@ -4643,31 +4957,181 @@ Compiler::PhysicalStorageBufferPointerHandler::PhysicalStorageBufferPointerHandl
 {
 }
 
-bool Compiler::PhysicalStorageBufferPointerHandler::handle(Op op, const uint32_t *args, uint32_t)
+Compiler::PhysicalBlockMeta *Compiler::PhysicalStorageBufferPointerHandler::find_block_meta(uint32_t id) const
 {
-	if (op == OpConvertUToPtr || op == OpBitcast)
+	auto chain_itr = access_chain_to_physical_block.find(id);
+	if (chain_itr != access_chain_to_physical_block.end())
+		return chain_itr->second;
+	else
+		return nullptr;
+}
+
+void Compiler::PhysicalStorageBufferPointerHandler::mark_aligned_access(uint32_t id, const uint32_t *args, uint32_t length)
+{
+	uint32_t mask = *args;
+	args++;
+	length--;
+	if (length && (mask & MemoryAccessVolatileMask) != 0)
 	{
-		auto &type = compiler.get<SPIRType>(args[0]);
-		if (type.storage == StorageClassPhysicalStorageBufferEXT && type.pointer && type.pointer_depth == 1)
+		args++;
+		length--;
+	}
+
+	if (length && (mask & MemoryAccessAlignedMask) != 0)
+	{
+		uint32_t alignment = *args;
+		auto *meta = find_block_meta(id);
+
+		// This makes the assumption that the application does not rely on insane edge cases like:
+		// Bind buffer with ADDR = 8, use block offset of 8 bytes, load/store with 16 byte alignment.
+		// If we emit the buffer with alignment = 16 here, the first element at offset = 0 should
+		// actually have alignment of 8 bytes, but this is too theoretical and awkward to support.
+		// We could potentially keep track of any offset in the access chain, but it's
+		// practically impossible for high level compilers to emit code like that,
+		// so deducing overall alignment requirement based on maximum observed Alignment value is probably fine.
+		if (meta && alignment > meta->alignment)
+			meta->alignment = alignment;
+	}
+}
+
+bool Compiler::PhysicalStorageBufferPointerHandler::type_is_bda_block_entry(uint32_t type_id) const
+{
+	auto &type = compiler.get<SPIRType>(type_id);
+	return type.storage == StorageClassPhysicalStorageBufferEXT && type.pointer &&
+	       type.pointer_depth == 1 && !compiler.type_is_array_of_pointers(type);
+}
+
+uint32_t Compiler::PhysicalStorageBufferPointerHandler::get_minimum_scalar_alignment(const SPIRType &type) const
+{
+	if (type.storage == spv::StorageClassPhysicalStorageBufferEXT)
+		return 8;
+	else if (type.basetype == SPIRType::Struct)
+	{
+		uint32_t alignment = 0;
+		for (auto &member_type : type.member_types)
 		{
-			// If we need to cast to a pointer type which is not a block, we might need to synthesize ourselves
-			// a block type which wraps this POD type.
-			if (type.basetype != SPIRType::Struct)
-				types.insert(args[0]);
+			uint32_t member_align = get_minimum_scalar_alignment(compiler.get<SPIRType>(member_type));
+			if (member_align > alignment)
+				alignment = member_align;
 		}
+		return alignment;
+	}
+	else
+		return type.width / 8;
+}
+
+void Compiler::PhysicalStorageBufferPointerHandler::setup_meta_chain(uint32_t type_id, uint32_t var_id)
+{
+	if (type_is_bda_block_entry(type_id))
+	{
+		auto &meta = physical_block_type_meta[type_id];
+		access_chain_to_physical_block[var_id] = &meta;
+
+		auto &type = compiler.get<SPIRType>(type_id);
+		if (type.basetype != SPIRType::Struct)
+			non_block_types.insert(type_id);
+
+		if (meta.alignment == 0)
+			meta.alignment = get_minimum_scalar_alignment(compiler.get_pointee_type(type));
+	}
+}
+
+bool Compiler::PhysicalStorageBufferPointerHandler::handle(Op op, const uint32_t *args, uint32_t length)
+{
+	// When a BDA pointer comes to life, we need to keep a mapping of SSA ID -> type ID for the pointer type.
+	// For every load and store, we'll need to be able to look up the type ID being accessed and mark any alignment
+	// requirements.
+	switch (op)
+	{
+	case OpConvertUToPtr:
+	case OpBitcast:
+	case OpCompositeExtract:
+		// Extract can begin a new chain if we had a struct or array of pointers as input.
+		// We don't begin chains before we have a pure scalar pointer.
+		setup_meta_chain(args[0], args[1]);
+		break;
+
+	case OpAccessChain:
+	case OpInBoundsAccessChain:
+	case OpPtrAccessChain:
+	case OpCopyObject:
+	{
+		auto itr = access_chain_to_physical_block.find(args[2]);
+		if (itr != access_chain_to_physical_block.end())
+			access_chain_to_physical_block[args[1]] = itr->second;
+		break;
+	}
+
+	case OpLoad:
+	{
+		setup_meta_chain(args[0], args[1]);
+		if (length >= 4)
+			mark_aligned_access(args[2], args + 3, length - 3);
+		break;
+	}
+
+	case OpStore:
+	{
+		if (length >= 3)
+			mark_aligned_access(args[0], args + 2, length - 2);
+		break;
+	}
+
+	default:
+		break;
 	}
 
 	return true;
+}
+
+uint32_t Compiler::PhysicalStorageBufferPointerHandler::get_base_non_block_type_id(uint32_t type_id) const
+{
+	auto *type = &compiler.get<SPIRType>(type_id);
+	while (type->pointer &&
+	       type->storage == StorageClassPhysicalStorageBufferEXT &&
+	       !type_is_bda_block_entry(type_id))
+	{
+		type_id = type->parent_type;
+		type = &compiler.get<SPIRType>(type_id);
+	}
+
+	assert(type_is_bda_block_entry(type_id));
+	return type_id;
+}
+
+void Compiler::PhysicalStorageBufferPointerHandler::analyze_non_block_types_from_block(const SPIRType &type)
+{
+	for (auto &member : type.member_types)
+	{
+		auto &subtype = compiler.get<SPIRType>(member);
+		if (subtype.basetype != SPIRType::Struct && subtype.pointer &&
+		    subtype.storage == spv::StorageClassPhysicalStorageBufferEXT)
+		{
+			non_block_types.insert(get_base_non_block_type_id(member));
+		}
+		else if (subtype.basetype == SPIRType::Struct && !subtype.pointer)
+			analyze_non_block_types_from_block(subtype);
+	}
 }
 
 void Compiler::analyze_non_block_pointer_types()
 {
 	PhysicalStorageBufferPointerHandler handler(*this);
 	traverse_all_reachable_opcodes(get<SPIRFunction>(ir.default_entry_point), handler);
-	physical_storage_non_block_pointer_types.reserve(handler.types.size());
-	for (auto type : handler.types)
+
+	// Analyze any block declaration we have to make. It might contain
+	// physical pointers to POD types which we never used, and thus never added to the list.
+	// We'll need to add those pointer types to the set of types we declare.
+	ir.for_each_typed_id<SPIRType>([&](uint32_t, SPIRType &type) {
+		if (has_decoration(type.self, DecorationBlock) || has_decoration(type.self, DecorationBufferBlock))
+			handler.analyze_non_block_types_from_block(type);
+	});
+
+	physical_storage_non_block_pointer_types.reserve(handler.non_block_types.size());
+	for (auto type : handler.non_block_types)
 		physical_storage_non_block_pointer_types.push_back(type);
 	sort(begin(physical_storage_non_block_pointer_types), end(physical_storage_non_block_pointer_types));
+	physical_storage_type_to_alignment = std::move(handler.physical_block_type_meta);
 }
 
 bool Compiler::InterlockedResourceAccessPrepassHandler::handle(Op op, const uint32_t *, uint32_t)

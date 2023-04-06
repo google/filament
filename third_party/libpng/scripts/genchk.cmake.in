@@ -10,6 +10,7 @@
 
 # Variables substituted from CMakeLists.txt
 set(SRCDIR "@CMAKE_CURRENT_SOURCE_DIR@")
+set(BINDIR "@CMAKE_CURRENT_BINARY_DIR@")
 
 set(AWK "@AWK@")
 
@@ -23,7 +24,7 @@ get_filename_component(OUTPUTDIR "${OUTPUT}" PATH)
 if("${INPUTEXT}" STREQUAL ".out" AND "${OUTPUTEXT}" STREQUAL ".chk")
   # Generate .chk from .out with awk (generic)
   file(REMOVE "${OUTPUT}" "${OUTPUTDIR}/${OUTPUTBASE}.new")
-  execute_process(COMMAND "${AWK}" -f "${SRCDIR}/scripts/checksym.awk"
+  execute_process(COMMAND "${AWK}" -f "${BINDIR}/scripts/checksym.awk"
                           "${SRCDIR}/scripts/${INPUTBASE}.def"
                           "of=${OUTPUTDIR}/${OUTPUTBASE}.new"
                           "${INPUT}"

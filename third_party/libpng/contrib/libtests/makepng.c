@@ -3,8 +3,6 @@
 /* Copyright: */
 #define COPYRIGHT "\251 2013,2015 John Cunningham Bowler"
 /*
- * Last changed in libpng 1.6.20 [November 24, 2015]
- *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
  * and license in png.h
@@ -299,25 +297,28 @@ generate_palette(png_colorp palette, png_bytep trans, int bit_depth,
             unsigned int x, y;
             volatile unsigned int ip = 0;
 
-            for (x=0; x<size; ++x) for (y=0; y<size; ++y)
+            for (x=0; x<size; ++x)
             {
-               ip = x + (size * y);
+               for (y=0; y<size; ++y)
+               {
+                  ip = x + (size * y);
 
-               /* size is at most 16, so the scaled value below fits in 16 bits
-                */
-#              define interp(pos, c1, c2) ((pos * c1) + ((size-pos) * c2))
-#              define xyinterp(x, y, c1, c2, c3, c4) (((size * size / 2) +\
-                  (interp(x, c1, c2) * y + (size-y) * interp(x, c3, c4))) /\
-                  (size*size))
+                  /* size is at most 16, so the scaled value below fits in 16 bits
+                  */
+#                 define interp(pos, c1, c2) ((pos * c1) + ((size-pos) * c2))
+#                 define xyinterp(x, y, c1, c2, c3, c4) (((size * size / 2) +\
+                     (interp(x, c1, c2) * y + (size-y) * interp(x, c3, c4))) /\
+                     (size*size))
 
-               set_color(palette+ip, trans+ip,
-                  /* color:    green, red,blue,white */
-                  xyinterp(x, y,   0, 255,   0, 255),
-                  xyinterp(x, y, 255,   0,   0, 255),
-                  xyinterp(x, y,   0,   0, 255, 255),
-                  /* alpha:        0, 102, 204, 255) */
-                  xyinterp(x, y,   0, 102, 204, 255),
-                  gamma_table);
+                  set_color(palette+ip, trans+ip,
+                     /* color:    green, red,blue,white */
+                     xyinterp(x, y,   0, 255,   0, 255),
+                     xyinterp(x, y, 255,   0,   0, 255),
+                     xyinterp(x, y,   0,   0, 255, 255),
+                     /* alpha:        0, 102, 204, 255) */
+                     xyinterp(x, y,   0, 102, 204, 255),
+                     gamma_table);
+               }
             }
 
             return ip+1;
@@ -396,7 +397,7 @@ generate_row(png_bytep row, size_t rowbytes, unsigned int y, int color_type,
       image_size_of_type(color_type, bit_depth, colors, small)-1;
    png_uint_32 depth_max = (1U << bit_depth)-1; /* up to 65536 */
 
-   if (colors[0] == 0) if (small)
+   if (colors[0] == 0 && small)
    {
       unsigned int pixel_depth = pixel_depth_of_type(color_type, bit_depth);
 
@@ -858,10 +859,13 @@ write_png(const char **name, FILE *fp, int color_type, int bit_depth,
       {
          unsigned int i;
 
-         if (real_gamma == 45455) for (i=0; i<256; ++i)
+         if (real_gamma == 45455)
          {
-            gamma_table[i] = (png_byte)i;
-            conv = 1.;
+            for (i=0; i<256; ++i)
+            {
+               gamma_table[i] = (png_byte)i;
+               conv = 1.;
+            }
          }
 
          else
@@ -1430,10 +1434,13 @@ find_parameters(png_const_charp what, png_charp param, png_charp *list,
    for (i=0; *param && i<nparams; ++i)
    {
       list[i] = param;
-      while (*++param) if (*param == '\n' || *param == ':')
+      while (*++param)
       {
-         *param++ = 0; /* Terminate last parameter */
-         break;        /* And start a new one. */
+         if (*param == '\n' || *param == ':')
+         {
+            *param++ = 0; /* Terminate last parameter */
+            break;        /* And start a new one. */
+         }
       }
    }
 
@@ -1869,7 +1876,7 @@ main(int argc, char **argv)
          }
    }
 
-   /* small and colors are incomparible (will probably crash if both are used at
+   /* small and colors are incompatible (will probably crash if both are used at
     * the same time!)
     */
    if (small && colors[0] != 0)

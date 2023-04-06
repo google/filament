@@ -1,13 +1,11 @@
 #!/bin/sh
-#
+
 # intgamma.sh
-#
-# Last changed in libpng 1.6.0 [February 14, 2013]
 #
 # COPYRIGHT: Written by John Cunningham Bowler, 2013.
 # To the extent possible under law, the author has waived all copyright and
-# related or neighboring rights to this work.  This work is published from:
-# United States.
+# related or neighboring rights to this work.  The author published this work
+# from the United States.
 #
 # Shell script to generate png.c 8-bit and 16-bit log tables (see the code in
 # png.c for details).
@@ -17,10 +15,10 @@
 # (0..255) value and a similar table for the exponent calculation.
 #
 # "bc" must be on the path when the script is executed, and the math library
-# (-lm) must be available
-#
-# function to print out a list of numbers as integers; the function truncates
-# the integers which must be one-per-line
+# (-lm) must be available.
+
+# Function to print out a list of numbers as integers; the function truncates
+# the integers which must be one-per-line.
 function print(){
    awk 'BEGIN{
       str = ""

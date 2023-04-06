@@ -1,8 +1,6 @@
-
-/* png-fix-itxt version 1.0.0
+/* png-fix-itxt
  *
  * Copyright 2015 Glenn Randers-Pehrson
- * Last changed in libpng 1.6.18 [July 23, 2015]
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -10,7 +8,7 @@
  *
  * Usage:
  *
- *     png-fix-itxt.exe < bad.png > good.png
+ *     png-fix-itxt < bad.png > good.png
  *
  * Fixes a PNG file written with libpng-1.6.0 or 1.6.1 that has one or more
  * uncompressed iTXt chunks.  Assumes that the actual length is greater
