@@ -833,18 +833,22 @@ TEST_F(MaterialCompiler, ConstantParameter) {
 }
 
 TEST_F(MaterialCompiler, ConstantParameterSameName) {
+#if !defined(NDEBUG) && defined(GTEST_HAS_DEATH_TEST)
     EXPECT_THROW({
         filamat::MaterialBuilder builder;
         builder.constant("myFloatConstant", ConstantType::FLOAT, 1.0f);
         builder.constant("myFloatConstant", ConstantType::FLOAT, 1.0f);
     }, utils::PostconditionPanic);
+#endif
 }
 
 TEST_F(MaterialCompiler, ConstantParameterWrongType) {
+#if !defined(NDEBUG) && defined(GTEST_HAS_DEATH_TEST)
     EXPECT_THROW({
         filamat::MaterialBuilder builder;
         builder.constant("myFloatConstant", ConstantType::FLOAT, 10);
     }, utils::PostconditionPanic);
+#endif
 }
 
 int main(int argc, char** argv) {
