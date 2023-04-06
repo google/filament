@@ -99,7 +99,7 @@ public:
         return mCachedPrograms[variant.key];
     }
 
-    backend::Program getProgramBuilderWithVariants(Variant variant, Variant vertexVariant,
+    backend::Program getProgramWithVariants(Variant variant, Variant vertexVariant,
             Variant fragmentVariant) const noexcept;
 
     bool isVariantLit() const noexcept { return mIsVariantLit; }
