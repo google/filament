@@ -697,7 +697,8 @@ VulkanLayoutTransition textureTransitionHelper(VulkanLayoutTransition transition
             transition.dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
             break;
         case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            transition.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+            transition.srcAccessMask
+                    = isTransferSrc ? VK_ACCESS_TRANSFER_READ_BIT : VK_ACCESS_TRANSFER_WRITE_BIT;
             transition.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
                                        | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
