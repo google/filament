@@ -222,6 +222,9 @@ void FTexture::setImage(FEngine& engine, size_t level,
         }
     };
 
+    // this should have been validated already
+    assert_invariant(isTextureFormatSupported(engine, mFormat));
+
     ASSERT_PRECONDITION(buffer.type == PixelDataType::COMPRESSED ||
             validatePixelFormatAndType(mFormat, buffer.format, buffer.type),
             "The combination of internal format=%u and {format=%u, type=%u} is not supported.",
@@ -294,6 +297,9 @@ void FTexture::setImage(FEngine& engine, size_t level,
                 return false;
         }
     };
+
+    // this should have been validated already
+    assert_invariant(isTextureFormatSupported(engine, mFormat));
 
     ASSERT_PRECONDITION(buffer.type == PixelDataType::COMPRESSED ||
                         validatePixelFormatAndType(mFormat, buffer.format, buffer.type),

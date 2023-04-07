@@ -35,6 +35,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <tuple>
 
 namespace filament {
 
@@ -571,21 +572,15 @@ static float3 luminanceScaling(float3 x,
 // Quality
 //------------------------------------------------------------------------------
 
-static void selectLutTextureParams(ColorGrading::LutFormat lutFormat,
-        TextureFormat& internalFormat, PixelDataFormat& format, PixelDataType& type) noexcept {
+static std::tuple<TextureFormat, PixelDataFormat, PixelDataType>
+        selectLutTextureParams(ColorGrading::LutFormat lutFormat) noexcept {
     // We use RGBA16F for high quality modes instead of RGB16F because RGB16F
     // is not supported everywhere
     switch (lutFormat) {
         case ColorGrading::LutFormat::INTEGER:
-            internalFormat = TextureFormat::RGB10_A2;
-            format = PixelDataFormat::RGBA;
-            type = PixelDataType::UINT_2_10_10_10_REV;
-            break;
+            return { TextureFormat::RGB10_A2, PixelDataFormat::RGBA, PixelDataType::UINT_2_10_10_10_REV };
         case ColorGrading::LutFormat::FLOAT:
-            internalFormat = TextureFormat::RGBA16F;
-            format = PixelDataFormat::RGBA;
-            type = PixelDataType::HALF;
-            break;
+            return { TextureFormat::RGBA16F, PixelDataFormat::RGBA, PixelDataType::HALF };
     }
 }
 
@@ -670,10 +665,8 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     size_t elementSize = sizeof(half4);
     void* data = malloc(lutElementCount * elementSize);
 
-    TextureFormat textureFormat;
-    PixelDataFormat format;
-    PixelDataType type;
-    selectLutTextureParams(builder->format, textureFormat, format, type);
+    auto [textureFormat, format, type] = selectLutTextureParams(builder->format);
+    assert_invariant(FTexture::isTextureFormatSupported(engine, textureFormat));
     assert_invariant(FTexture::validatePixelFormatAndType(textureFormat, format, type));
 
     void* converted = nullptr;
