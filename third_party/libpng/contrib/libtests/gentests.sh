@@ -2,8 +2,6 @@
 #
 # Copyright (c) 2013 John Cunningham Bowler
 #
-# Last changed in libpng 1.6.0 [February 14, 2013]
-#
 # This code is released under the libpng license.
 # For conditions of distribution and use, see the disclaimer
 # and license in png.h

@@ -143,7 +143,7 @@ AtlasAllocator::NodeId AtlasAllocator::allocateInLayer(size_t maxHeight) noexcep
                 while (ppp.l > 0) {
                     const size_t pi = QuadTreeUtils::parent(ppp.l, ppp.code);
                     ppp = NodeId{ int8_t(ppp.l - 1), uint8_t(ppp.code >> 2) };
-                    Node& node = mQuadTree[pi];
+                    Node const& node = mQuadTree[pi];
                     assert_invariant(!node.isAllocated());
                     assert_invariant(node.hasChildren());
                 }
@@ -154,7 +154,7 @@ AtlasAllocator::NodeId AtlasAllocator::allocateInLayer(size_t maxHeight) noexcep
             NodeId found{ -1, 0 };
             QuadTree::traverse(candidate.l, candidate.code,
                     [this, n, &found](NodeId const& curr) -> QuadTree::TraversalResult {
-                        size_t i = index(curr.l, curr.code);
+                        size_t const i = index(curr.l, curr.code);
                         Node& node = mQuadTree[i];
                         if (curr.l == n) {
                             found = curr;

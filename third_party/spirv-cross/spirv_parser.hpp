@@ -1,5 +1,6 @@
 /*
  * Copyright 2018-2021 Arm Limited
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +19,6 @@
  * At your option, you may choose to accept this material under either:
  *  1. The Apache License, Version 2.0, found at <http://www.apache.org/licenses/LICENSE-2.0>, or
  *  2. The MIT License, found at <http://opensource.org/licenses/MIT>.
- * SPDX-License-Identifier: Apache-2.0 OR MIT.
  */
 
 #ifndef SPIRV_CROSS_PARSER_HPP
@@ -46,6 +46,8 @@ private:
 	ParsedIR ir;
 	SPIRFunction *current_function = nullptr;
 	SPIRBlock *current_block = nullptr;
+	// For workarounds.
+	bool ignore_trailing_block_opcodes = false;
 
 	void parse(const Instruction &instr);
 	const uint32_t *stream(const Instruction &instr) const;

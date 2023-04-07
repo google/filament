@@ -1,0 +1,34 @@
+diff --git a/third_party/spirv-cross/spirv_common.hpp b/third_party/spirv-cross/spirv_common.hpp
+index f0024d7ed..909543a24 100644
+--- a/third_party/spirv-cross/spirv_common.hpp
++++ b/third_party/spirv-cross/spirv_common.hpp
+@@ -241,8 +241,29 @@ static inline void fixup_radix_point(char *str, char radix_point)
+ 	}
+ }
+ 
++static inline std::string convert_to_smallest_string(float f, char locale_radix_point) {
++    char buf[16]; // e.g.: -0.12345678e-12, 16 bytes needed
++    float r;
++    for (int i = 1; i < 9; i++) {
++        sprintf(buf, "%.*g", i, f);
++        sscanf(buf, "%f", &r);
++        if (r == f) {
++            break;
++        }
++    }
++    fixup_radix_point(buf, locale_radix_point);
++
++    // Ensure that the literal is float.
++    if (!strchr(buf, '.') && !strchr(buf, 'e'))
++        strcat(buf, ".0");
++
++    return { buf };
++}
++
+ inline std::string convert_to_string(float t, char locale_radix_point)
+ {
++    return convert_to_smallest_string(t, locale_radix_point);
++
+ 	// std::to_string for floating point values is broken.
+ 	// Fallback to something more sane.
+ 	char buf[64];

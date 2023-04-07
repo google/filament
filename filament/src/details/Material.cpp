@@ -47,7 +47,7 @@ static MaterialParser* createParser(Backend backend, const void* data, size_t si
     // unique_ptr so we don't leak MaterialParser on failures below
     auto materialParser = std::make_unique<MaterialParser>(backend, data, size);
 
-    MaterialParser::ParseResult materialResult = materialParser->parse();
+    MaterialParser::ParseResult const materialResult = materialParser->parse();
 
     if (backend == Backend::NOOP) {
         return materialParser.release();
@@ -119,7 +119,7 @@ Material* Material::Builder::build(Engine& engine) {
     utils::bitset32 shaderModels;
     shaderModels.setValue(v);
 
-    ShaderModel shaderModel = downcast(engine).getShaderModel();
+    ShaderModel const shaderModel = downcast(engine).getShaderModel();
     if (!shaderModels.test(static_cast<uint32_t>(shaderModel))) {
         CString name;
         materialParser->getName(&name);
@@ -149,7 +149,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     MaterialParser* parser = builder->mMaterialParser;
     mMaterialParser = parser;
 
-    UTILS_UNUSED_IN_RELEASE bool nameOk = parser->getName(&mName);
+    UTILS_UNUSED_IN_RELEASE bool const nameOk = parser->getName(&mName);
     assert_invariant(nameOk);
 
     uint8_t featureLevel = 1;
@@ -336,12 +336,14 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     mIsDefaultMaterial = builder->mDefaultMaterial;
 
     // pre-cache the shared variants -- these variants are shared with the default material.
+    // (note: the default material is unlit, so only unlit variants can be shared)
     if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
+        FMaterial const* const pMaterial = engine.getDefaultMaterial();
         auto& cachedPrograms = mCachedPrograms;
         for (Variant::type_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
             const Variant variant(k);
-            if (Variant::isValidDepthVariant(variant)) {
-                FMaterial const* const pMaterial = engine.getDefaultMaterial();
+            if (Variant::isValidDepthVariant(variant) &&
+                (Variant::filterVariant(variant, false) == variant)) {
                 pMaterial->prepareProgram(variant);
                 cachedPrograms[k] = pMaterial->getProgram(variant);
             }
@@ -432,8 +434,8 @@ void FMaterial::getSurfaceProgramSlow(Variant variant) const noexcept {
 
     assert_invariant(!Variant::isReserved(variant));
 
-    Variant vertexVariant   = Variant::filterVariantVertex(variant);
-    Variant fragmentVariant = Variant::filterVariantFragment(variant);
+    Variant const vertexVariant   = Variant::filterVariantVertex(variant);
+    Variant const fragmentVariant = Variant::filterVariantFragment(variant);
 
     Program pb{ getProgramBuilderWithVariants(variant, vertexVariant, fragmentVariant) };
     createAndCacheProgram(std::move(pb), variant);
@@ -457,7 +459,7 @@ Program FMaterial::getProgramBuilderWithVariants(
 
     ShaderContent& vsBuilder = mEngine.getVertexShaderContent();
 
-    UTILS_UNUSED_IN_RELEASE bool vsOK = mMaterialParser->getShader(vsBuilder, sm,
+    UTILS_UNUSED_IN_RELEASE bool const vsOK = mMaterialParser->getShader(vsBuilder, sm,
             vertexVariant, ShaderStage::VERTEX);
 
     ASSERT_POSTCONDITION(isNoop || (vsOK && !vsBuilder.empty()),
@@ -471,7 +473,7 @@ Program FMaterial::getProgramBuilderWithVariants(
 
     ShaderContent& fsBuilder = mEngine.getFragmentShaderContent();
 
-    UTILS_UNUSED_IN_RELEASE bool fsOK = mMaterialParser->getShader(fsBuilder, sm,
+    UTILS_UNUSED_IN_RELEASE bool const fsOK = mMaterialParser->getShader(fsBuilder, sm,
             fragmentVariant, ShaderStage::FRAGMENT);
 
     ASSERT_POSTCONDITION(isNoop || (fsOK && !fsBuilder.empty()),
@@ -491,12 +493,12 @@ Program FMaterial::getProgramBuilderWithVariants(
 
     UTILS_NOUNROLL
     for (size_t i = 0; i < Enum::count<SamplerBindingPoints>(); i++) {
-        SamplerBindingPoints bindingPoint = (SamplerBindingPoints)i;
+        SamplerBindingPoints const bindingPoint = (SamplerBindingPoints)i;
         auto const& info = mSamplerGroupBindingInfoList[i];
         if (info.count) {
             std::array<Program::Sampler, backend::MAX_SAMPLER_COUNT> samplers{};
             for (size_t j = 0, c = info.count; j < c; ++j) {
-                uint8_t binding = info.bindingOffset + j;
+                uint8_t const binding = info.bindingOffset + j;
                 samplers[j] = { mSamplerBindingToNameMap[binding], binding };
             }
             program.setSamplerGroup(+bindingPoint, info.shaderStageFlags,
@@ -520,7 +522,7 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
 
     const auto& uniforms = mUniformInterfaceBlock.getFieldInfoList();
     size_t i = 0;
-    size_t uniformCount = std::min(count, size_t(uniforms.size()));
+    size_t const uniformCount = std::min(count, size_t(uniforms.size()));
     for ( ; i < uniformCount; i++) {
         ParameterInfo& info = parameters[i];
         const auto& uniformInfo = uniforms[i];
@@ -533,7 +535,7 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
     }
 
     const auto& samplers = mSamplerInterfaceBlock.getSamplerInfoList();
-    size_t samplerCount = samplers.size();
+    size_t const samplerCount = samplers.size();
     for (size_t j = 0; i < count && j < samplerCount; i++, j++) {
         ParameterInfo& info = parameters[i];
         const auto& samplerInfo = samplers[j];
@@ -553,7 +555,6 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
         info.subpassType = mSubpassInfo.type;
         info.count = 1;
         info.precision = mSubpassInfo.precision;
-        i++;
     }
 
     return count;

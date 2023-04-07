@@ -80,7 +80,7 @@ bool ResourceNode::hasActiveReaders() const noexcept {
 
 bool ResourceNode::hasActiveWriters() const noexcept {
     // here we don't use mReaderPasses because this wouldn't account for subresources
-    DependencyGraph& dependencyGraph = mFrameGraph.getGraph();
+    DependencyGraph const& dependencyGraph = mFrameGraph.getGraph();
     auto const& writers = dependencyGraph.getIncomingEdges(this);
     // writers are not culled by definition if we're not culled ourselves
     return !writers.empty();
@@ -135,7 +135,7 @@ utils::CString ResourceNode::graphvizify() const noexcept {
     std::string s;
     s.reserve(128);
 
-    uint32_t id = getId();
+    uint32_t const id = getId();
     const char* const nodeName = getName();
     VirtualResource* const pResource = mFrameGraph.getResource(resourceHandle);
     FrameGraph::ResourceSlot const& slot = mFrameGraph.getResourceSlot(resourceHandle);

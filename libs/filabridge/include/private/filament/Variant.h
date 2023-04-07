@@ -217,6 +217,10 @@ struct Variant {
     static constexpr Variant filterVariant(Variant variant, bool isLit) noexcept {
         // special case for depth variant
         if (isValidDepthVariant(variant)) {
+            if (!isLit) {
+                // if we're unlit, we never need the VSM variant
+                return variant & ~VSM;
+            }
             return variant;
         }
         if (isSSRVariant(variant)) {

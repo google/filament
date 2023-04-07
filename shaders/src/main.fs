@@ -34,15 +34,8 @@ void main() {
 
     fragColor = evaluateMaterial(inputs);
 
-#if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING) && defined(VARIANT_HAS_SHADOWING)
-    bool visualizeCascades = bool(frameUniforms.cascades & 0x10u);
-    if (visualizeCascades) {
-        fragColor.rgb *= uintToColorDebug(getShadowCascade());
-    }
-#endif
-
 #if defined(VARIANT_HAS_FOG)
-    vec3 view = getWorldPosition() - getWorldCameraPosition();
+    highp vec3 view = getWorldPosition() - getWorldCameraPosition();
     fragColor = fog(fragColor, view);
 #endif
 

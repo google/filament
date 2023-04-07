@@ -125,6 +125,7 @@ int main(int argc, const char **argv)
                png_image_free(&image);
             else
                free(buffer);
+         }
       }
 
       /* Something went wrong reading or writing the image.  libpng stores a

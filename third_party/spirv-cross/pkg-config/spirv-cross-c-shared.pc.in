@@ -1,3 +1,6 @@
+# Copyright 2020-2021 Hans-Kristian Arntzen
+# SPDX-License-Identifier: Apache-2.0
+
 prefix=@CMAKE_INSTALL_PREFIX@
 exec_prefix=${prefix}
 libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@

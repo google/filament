@@ -1,5 +1,6 @@
 /*
  * Copyright 2015-2021 Arm Limited
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +19,6 @@
  * At your option, you may choose to accept this material under either:
  *  1. The Apache License, Version 2.0, found at <http://www.apache.org/licenses/LICENSE-2.0>, or
  *  2. The MIT License, found at <http://opensource.org/licenses/MIT>.
- * SPDX-License-Identifier: Apache-2.0 OR MIT.
  */
 
 #include "spirv_cpp.hpp"
@@ -77,7 +77,7 @@ struct CLICallbacks
 struct CLIParser
 {
 	CLIParser(CLICallbacks cbs_, int argc_, char *argv_[])
-	    : cbs(move(cbs_))
+	    : cbs(std::move(cbs_))
 	    , argc(argc_)
 	    , argv(argv_)
 	{
@@ -400,6 +400,12 @@ static void print_resources(const Compiler &compiler, const char *tag, const Sma
 			fprintf(stderr, " writeonly");
 		if (mask.get(DecorationNonWritable))
 			fprintf(stderr, " readonly");
+		if (mask.get(DecorationRestrict))
+			fprintf(stderr, " restrict");
+		if (mask.get(DecorationCoherent))
+			fprintf(stderr, " coherent");
+		if (mask.get(DecorationVolatile))
+			fprintf(stderr, " volatile");
 		if (is_sized_block)
 		{
 			fprintf(stderr, " (BlockSize : %u bytes)", block_size);
@@ -530,6 +536,7 @@ static void print_resources(const Compiler &compiler, const ShaderResources &res
 	print_resources(compiler, "push", res.push_constant_buffers);
 	print_resources(compiler, "counters", res.atomic_counters);
 	print_resources(compiler, "acceleration structures", res.acceleration_structures);
+	print_resources(compiler, "record buffers", res.shader_record_buffers);
 	print_resources(compiler, spv::StorageClassInput, res.builtin_inputs);
 	print_resources(compiler, spv::StorageClassOutput, res.builtin_outputs);
 }
@@ -606,6 +613,12 @@ struct InterfaceVariableRename
 	string variable_name;
 };
 
+struct HLSLVertexAttributeRemapNamed
+{
+	std::string name;
+	std::string semantic;
+};
+
 struct CLIArguments
 {
 	const char *input = nullptr;
@@ -632,6 +645,7 @@ struct CLIArguments
 	bool msl_pad_fragment_output = false;
 	bool msl_domain_lower_left = false;
 	bool msl_argument_buffers = false;
+	uint32_t msl_argument_buffers_tier = 0;		// Tier 1
 	bool msl_texture_buffer_native = false;
 	bool msl_framebuffer_fetch = false;
 	bool msl_invariant_float_math = false;
@@ -647,6 +661,7 @@ struct CLIArguments
 	bool msl_enable_frag_stencil_ref_builtin = true;
 	uint32_t msl_enable_frag_output_mask = 0xffffffff;
 	bool msl_enable_clip_distance_user_varying = true;
+	bool msl_raw_buffer_tese_input = false;
 	bool msl_multi_patch_workgroup = false;
 	bool msl_vertex_for_tessellation = false;
 	uint32_t msl_additional_fixed_sample_mask = 0xffffffff;
@@ -658,21 +673,28 @@ struct CLIArguments
 	bool msl_emulate_subgroups = false;
 	uint32_t msl_fixed_subgroup_size = 0;
 	bool msl_force_sample_rate_shading = false;
+	bool msl_manual_helper_invocation_updates = true;
+	bool msl_check_discarded_frag_stores = false;
+	bool msl_sample_dref_lod_array_as_grad = false;
 	const char *msl_combined_sampler_suffix = nullptr;
 	bool glsl_emit_push_constant_as_ubo = false;
 	bool glsl_emit_ubo_as_plain_uniforms = false;
 	bool glsl_force_flattened_io_blocks = false;
+	uint32_t glsl_ovr_multiview_view_count = 0;
 	SmallVector<pair<uint32_t, uint32_t>> glsl_ext_framebuffer_fetch;
 	bool glsl_ext_framebuffer_fetch_noncoherent = false;
 	bool vulkan_glsl_disable_ext_samplerless_texture_functions = false;
 	bool emit_line_directives = false;
 	bool enable_storage_image_qualifier_deduction = true;
 	bool force_zero_initialized_variables = false;
+	bool relax_nan_checks = false;
+	uint32_t force_recompile_max_debug_iterations = 3;
 	SmallVector<uint32_t> msl_discrete_descriptor_sets;
 	SmallVector<uint32_t> msl_device_argument_buffers;
 	SmallVector<pair<uint32_t, uint32_t>> msl_dynamic_buffers;
 	SmallVector<pair<uint32_t, uint32_t>> msl_inline_uniform_blocks;
-	SmallVector<MSLShaderInput> msl_shader_inputs;
+	SmallVector<MSLShaderInterfaceVariable> msl_shader_inputs;
+	SmallVector<MSLShaderInterfaceVariable> msl_shader_outputs;
 	SmallVector<PLSArg> pls_in;
 	SmallVector<PLSArg> pls_out;
 	SmallVector<Remap> remaps;
@@ -680,6 +702,7 @@ struct CLIArguments
 	SmallVector<VariableTypeRemap> variable_type_remaps;
 	SmallVector<InterfaceVariableRename> interface_variable_renames;
 	SmallVector<HLSLVertexAttributeRemap> hlsl_attr_remap;
+	SmallVector<HLSLVertexAttributeRemapNamed> hlsl_attr_remap_named;
 	SmallVector<std::pair<uint32_t, uint32_t>> masked_stage_outputs;
 	SmallVector<BuiltIn> masked_stage_builtins;
 	string entry;
@@ -699,7 +722,12 @@ struct CLIArguments
 	bool msl = false;
 	bool hlsl = false;
 	bool hlsl_compat = false;
+
 	bool hlsl_support_nonzero_base = false;
+	bool hlsl_base_vertex_index_explicit_binding = false;
+	uint32_t hlsl_base_vertex_index_register_index = 0;
+	uint32_t hlsl_base_vertex_index_register_space = 0;
+
 	bool hlsl_force_storage_buffer_as_uav = false;
 	bool hlsl_nonwritable_uav_texture_as_srv = false;
 	bool hlsl_enable_16bit_types = false;
@@ -779,6 +807,7 @@ static void print_help_glsl()
 	                "\t[--remap-variable-type <variable_name> <new_variable_type>]:\n\t\tRemaps a variable type based on name.\n"
 	                "\t\tPrimary use case is supporting external samplers in ESSL for video rendering on Android where you could remap a texture to a YUV one.\n"
 	                "\t[--glsl-force-flattened-io-blocks]:\n\t\tAlways flatten I/O blocks and structs.\n"
+	                "\t[--glsl-ovr-multiview-view-count count]:\n\t\tIn GL_OVR_multiview2, specify layout(num_views).\n"
 	);
 	// clang-format on
 }
@@ -788,10 +817,14 @@ static void print_help_hlsl()
 	// clang-format off
 	fprintf(stderr, "\nHLSL options:\n"
 	                "\t[--shader-model]:\n\t\tEnables a specific shader model, e.g. --shader-model 50 for SM 5.0.\n"
+	                "\t[--flatten-ubo]:\n\t\tEmit UBOs as plain uniform arrays.\n"
+	                "\t\tE.g.: uniform MyUBO { vec4 a; float b, c, d, e; }; will be emitted as uniform float4 MyUBO[2];\n"
+	                "\t\tCaveat: You cannot mix and match floating-point and integer in the same UBO with this option.\n"
 	                "\t[--hlsl-enable-compat]:\n\t\tAllow point size and point coord to be used, even if they won't work as expected.\n"
 	                "\t\tPointSize is ignored, and PointCoord returns (0.5, 0.5).\n"
 	                "\t[--hlsl-support-nonzero-basevertex-baseinstance]:\n\t\tSupport base vertex and base instance by emitting a special cbuffer declared as:\n"
 	                "\t\tcbuffer SPIRV_Cross_VertexInfo { int SPIRV_Cross_BaseVertex; int SPIRV_Cross_BaseInstance; };\n"
+	                "\t[--hlsl-basevertex-baseinstance-binding <register index> <register space>]:\n\t\tAssign a fixed binding to SPIRV_Cross_VertexInfo.\n"
 	                "\t[--hlsl-auto-binding (push, cbv, srv, uav, sampler, all)]\n"
 	                "\t\tDo not emit any : register(#) bindings for specific resource types, and rely on HLSL compiler to assign something.\n"
 	                "\t[--hlsl-force-storage-buffer-as-uav]:\n\t\tAlways emit SSBOs as UAVs, even when marked as read-only.\n"
@@ -802,6 +835,8 @@ static void print_help_hlsl()
 	                "\t\tShader must ensure that read/write state is consistent at all call sites.\n"
 	                "\t[--set-hlsl-vertex-input-semantic <location> <semantic>]:\n\t\tEmits a specific vertex input semantic for a given location.\n"
 	                "\t\tOtherwise, TEXCOORD# is used as semantics, where # is location.\n"
+	                "\t[--set-hlsl-named-vertex-input-semantic <name> <semantic>]:\n\t\tEmits a specific vertex input semantic for a given name.\n"
+	                "\t\tOpName reflection information must be intact.\n"
 	                "\t[--hlsl-enable-16bit-types]:\n\t\tEnables native use of half/int16_t/uint16_t and ByteAddressBuffer interaction with these types. Requires SM 6.2.\n"
 	                "\t[--hlsl-flatten-matrix-vertex-input-semantics]:\n\t\tEmits matrix vertex inputs with input semantics as if they were independent vectors, e.g. TEXCOORD{2,3,4} rather than matrix form TEXCOORD2_{0,1,2}.\n"
 	);
@@ -823,8 +858,11 @@ static void print_help_msl()
 	                "\t[--msl-pad-fragment-output]:\n\t\tAlways emit color outputs as 4-component variables.\n"
 	                "\t\tIn Metal, the fragment shader must emit at least as many components as the render target format.\n"
 	                "\t[--msl-domain-lower-left]:\n\t\tUse a lower-left tessellation domain.\n"
-	                "\t[--msl-argument-buffers]:\n\t\tEmit Indirect Argument buffers instead of plain bindings.\n"
+	                "\t[--msl-argument-buffers]:\n\t\tEmit Metal argument buffers instead of discrete resource bindings.\n"
 	                "\t\tRequires MSL 2.0 to be enabled.\n"
+	                "\t[--msl-argument-buffer-tier]:\n\t\tWhen using Metal argument buffers, indicate the Metal argument buffer tier level supported by the Metal platform.\n"
+	                "\t\tUses same values as Metal MTLArgumentBuffersTier enumeration (0 = Tier1, 1 = Tier2).\n"
+	                "\t\tSetting this value also enables msl-argument-buffers.\n"
 	                "\t[--msl-texture-buffer-native]:\n\t\tEnable native support for texel buffers. Otherwise, it is emulated as a normal texture.\n"
 	                "\t[--msl-framebuffer-fetch]:\n\t\tImplement subpass inputs with frame buffer fetch.\n"
 	                "\t\tEmits [[color(N)]] inputs in fragment stage.\n"
@@ -857,16 +895,33 @@ static void print_help_msl()
 	                "\t[--msl-disable-frag-stencil-ref-builtin]:\n\t\tDisable FragStencilRef output. Useful if pipeline does not enable stencil output, as pipeline creation might otherwise fail.\n"
 	                "\t[--msl-enable-frag-output-mask <mask>]:\n\t\tOnly selectively enable fragment outputs. Useful if pipeline does not enable fragment output for certain locations, as pipeline creation might otherwise fail.\n"
 	                "\t[--msl-no-clip-distance-user-varying]:\n\t\tDo not emit user varyings to emulate gl_ClipDistance in fragment shaders.\n"
+	                "\t[--msl-add-shader-input <index> <format> <size> <rate>]:\n\t\tSpecify the format of the shader input at <index>.\n"
+	                "\t\t<format> can be 'any32', 'any16', 'u16', 'u8', or 'other', to indicate a 32-bit opaque value, 16-bit opaque value, 16-bit unsigned integer, 8-bit unsigned integer, "
+	                "or other-typed variable. <size> is the vector length of the variable, which must be greater than or equal to that declared in the shader. <rate> can be 'vertex', "
+	                "'primitive', or 'patch' to indicate a per-vertex, per-primitive, or per-patch variable.\n"
+	                "\t\tUseful if shader stage interfaces don't match up, as pipeline creation might otherwise fail.\n"
+	                "\t[--msl-add-shader-output <index> <format> <size> <rate>]:\n\t\tSpecify the format of the shader output at <index>.\n"
+	                "\t\t<format> can be 'any32', 'any16', 'u16', 'u8', or 'other', to indicate a 32-bit opaque value, 16-bit opaque value, 16-bit unsigned integer, 8-bit unsigned integer, "
+	                "or other-typed variable. <size> is the vector length of the variable, which must be greater than or equal to that declared in the shader. <rate> can be 'vertex', "
+	                "'primitive', or 'patch' to indicate a per-vertex, per-primitive, or per-patch variable.\n"
+	                "\t\tUseful if shader stage interfaces don't match up, as pipeline creation might otherwise fail.\n"
 	                "\t[--msl-shader-input <index> <format> <size>]:\n\t\tSpecify the format of the shader input at <index>.\n"
 	                "\t\t<format> can be 'any32', 'any16', 'u16', 'u8', or 'other', to indicate a 32-bit opaque value, 16-bit opaque value, 16-bit unsigned integer, 8-bit unsigned integer, "
-	                "or other-typed variable. <size> is the vector length of the variable, which must be greater than or equal to that declared in the shader.\n"
-	                "\t\tUseful if shader stage interfaces don't match up, as pipeline creation might otherwise fail.\n"
+	                "or other-typed variable. <size> is the vector length of the variable, which must be greater than or equal to that declared in the shader."
+	                "\t\tEquivalent to --msl-add-shader-input with a rate of 'vertex'.\n"
+	                "\t[--msl-shader-output <index> <format> <size>]:\n\t\tSpecify the format of the shader output at <index>.\n"
+	                "\t\t<format> can be 'any32', 'any16', 'u16', 'u8', or 'other', to indicate a 32-bit opaque value, 16-bit opaque value, 16-bit unsigned integer, 8-bit unsigned integer, "
+	                "or other-typed variable. <size> is the vector length of the variable, which must be greater than or equal to that declared in the shader."
+	                "\t\tEquivalent to --msl-add-shader-output with a rate of 'vertex'.\n"
+	                "\t[--msl-raw-buffer-tese-input]:\n\t\tUse raw buffers for tessellation evaluation input.\n"
+	                "\t\tThis allows the use of nested structures and arrays.\n"
+	                "\t\tIn a future version of SPIRV-Cross, this will become the default.\n"
 	                "\t[--msl-multi-patch-workgroup]:\n\t\tUse the new style of tessellation control processing, where multiple patches are processed per workgroup.\n"
-					"\t\tThis should increase throughput by ensuring all the GPU's SIMD lanes are occupied, but it is not compatible with the old style.\n"
-					"\t\tIn addition, this style also passes input variables in buffers directly instead of using vertex attribute processing.\n"
-					"\t\tIn a future version of SPIRV-Cross, this will become the default.\n"
+	                "\t\tThis should increase throughput by ensuring all the GPU's SIMD lanes are occupied, but it is not compatible with the old style.\n"
+	                "\t\tIn addition, this style also passes input variables in buffers directly instead of using vertex attribute processing.\n"
+	                "\t\tIn a future version of SPIRV-Cross, this will become the default.\n"
 	                "\t[--msl-vertex-for-tessellation]:\n\t\tWhen handling a vertex shader, marks it as one that will be used with a new-style tessellation control shader.\n"
-					"\t\tThe vertex shader is output to MSL as a compute kernel which outputs vertices to the buffer in the order they are received, rather than in index order as with --msl-capture-output normally.\n"
+	                "\t\tThe vertex shader is output to MSL as a compute kernel which outputs vertices to the buffer in the order they are received, rather than in index order as with --msl-capture-output normally.\n"
 	                "\t[--msl-additional-fixed-sample-mask <mask>]:\n"
 	                "\t\tSet an additional fixed sample mask. If the shader outputs a sample mask, then the final sample mask will be a bitwise AND of the two.\n"
 	                "\t[--msl-arrayed-subpass-input]:\n\t\tAssume that images of dimension SubpassData have multiple layers. Layered input attachments are accessed relative to BuiltInLayer.\n"
@@ -886,6 +941,17 @@ static void print_help_msl()
 	                "\t\tIf 0, assume variable subgroup size as actually exposed by Metal.\n"
 	                "\t[--msl-force-sample-rate-shading]:\n\t\tForce fragment shaders to run per sample.\n"
 	                "\t\tThis adds a [[sample_id]] parameter if none is already present.\n"
+	                "\t[--msl-no-manual-helper-invocation-updates]:\n\t\tDo not manually update the HelperInvocation builtin when a fragment is discarded.\n"
+	                "\t\tSome Metal devices have a bug where simd_is_helper_thread() does not return true\n"
+	                "\t\tafter the fragment is discarded. This behavior is required by Vulkan and SPIR-V, however.\n"
+	                "\t[--msl-check-discarded-frag-stores]:\n\t\tAdd additional checks to resource stores in a fragment shader.\n"
+	                "\t\tSome Metal devices have a bug where stores to resources from a fragment shader\n"
+	                "\t\tcontinue to execute, even when the fragment is discarded. These checks\n"
+	                "\t\tprevent these stores from executing.\n"
+	                "\t[--msl-sample-dref-lod-array-as-grad]:\n\t\tUse a gradient instead of a level argument.\n"
+	                "\t\tSome Metal devices have a bug where the level() argument to\n"
+	                "\t\tdepth2d_array<T>::sample_compare() in a fragment shader is biased by some\n"
+	                "\t\tunknown amount. This prevents the bias from being added.\n"
 	                "\t[--msl-combined-sampler-suffix <suffix>]:\n\t\tUses a custom suffix for combined samplers.\n");
 	// clang-format on
 }
@@ -895,7 +961,7 @@ static void print_help_common()
 	// clang-format off
 	fprintf(stderr, "\nCommon options:\n"
 	                "\t[--entry name]:\n\t\tUse a specific entry point. By default, the first entry point in the module is used.\n"
-	                "\t[--stage <stage (vert, frag, geom, tesc, tese comp)>]:\n\t\tForces use of a certain shader stage.\n"
+	                "\t[--stage <stage (vert, frag, geom, tesc, tese, comp)>]:\n\t\tForces use of a certain shader stage.\n"
 	                "\t\tCan disambiguate the entry point if more than one entry point exists with same name, but different stage.\n"
 	                "\t[--emit-line-directives]:\n\t\tIf SPIR-V has OpLine directives, aim to emit those accurately in output code as well.\n"
 	                "\t[--rename-entry-point <old> <new> <stage>]:\n\t\tRenames an entry point from what is declared in SPIR-V to code output.\n"
@@ -913,6 +979,7 @@ static void print_help_common()
 	                "\t[--mask-stage-output-builtin <Position|PointSize|ClipDistance|CullDistance>]:\n"
 	                "\t\tIf a stage output variable with matching builtin is active, "
 	                "optimize away the variable if it can affect cross-stage linking correctness.\n"
+	                "\t[--relax-nan-checks]:\n\t\tRelax NaN checks for N{Clamp,Min,Max} and ordered vs. unordered compare instructions.\n"
 	);
 	// clang-format on
 }
@@ -930,6 +997,8 @@ static void print_help_obscure()
 	                "\t\tdo not attempt to analyze usage, and always emit read/write state.\n"
 	                "\t[--flatten-multidimensional-arrays]:\n\t\tDo not support multi-dimensional arrays and flatten them to one dimension.\n"
 	                "\t[--cpp-interface-name <name>]:\n\t\tEmit a specific class name in C++ codegen.\n"
+	                "\t[--force-recompile-max-debug-iterations <count>]:\n\t\tAllow compilation loop to run for N loops.\n"
+	                "\t\tCan be used to triage workarounds, but should not be used as a crutch, since it masks an implementation bug.\n"
 	);
 	// clang-format on
 }
@@ -1054,6 +1123,22 @@ static ExecutionModel stage_to_execution_model(const std::string &stage)
 		return ExecutionModelTessellationEvaluation;
 	else if (stage == "geom")
 		return ExecutionModelGeometry;
+	else if (stage == "rgen")
+		return ExecutionModelRayGenerationKHR;
+	else if (stage == "rint")
+		return ExecutionModelIntersectionKHR;
+	else if (stage == "rahit")
+		return ExecutionModelAnyHitKHR;
+	else if (stage == "rchit")
+		return ExecutionModelClosestHitKHR;
+	else if (stage == "rmiss")
+		return ExecutionModelMissKHR;
+	else if (stage == "rcall")
+		return ExecutionModelCallableKHR;
+	else if (stage == "mesh")
+		return spv::ExecutionModelMeshEXT;
+	else if (stage == "task")
+		return spv::ExecutionModelTaskEXT;
 	else
 		SPIRV_CROSS_THROW("Invalid stage.");
 }
@@ -1081,7 +1166,7 @@ static HLSLBindingFlags hlsl_resource_type_to_flag(const std::string &arg)
 
 static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> spirv_file)
 {
-	Parser spirv_parser(move(spirv_file));
+	Parser spirv_parser(std::move(spirv_file));
 	spirv_parser.parse();
 
 	unique_ptr<CompilerGLSL> compiler;
@@ -1090,13 +1175,13 @@ static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> 
 
 	if (args.cpp)
 	{
-		compiler.reset(new CompilerCPP(move(spirv_parser.get_parsed_ir())));
+		compiler.reset(new CompilerCPP(std::move(spirv_parser.get_parsed_ir())));
 		if (args.cpp_interface_name)
 			static_cast<CompilerCPP *>(compiler.get())->set_interface_name(args.cpp_interface_name);
 	}
 	else if (args.msl)
 	{
-		compiler.reset(new CompilerMSL(move(spirv_parser.get_parsed_ir())));
+		compiler.reset(new CompilerMSL(std::move(spirv_parser.get_parsed_ir())));
 
 		auto *msl_comp = static_cast<CompilerMSL *>(compiler.get());
 		auto msl_opts = msl_comp->get_msl_options();
@@ -1114,6 +1199,7 @@ static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> 
 		msl_opts.pad_fragment_output_components = args.msl_pad_fragment_output;
 		msl_opts.tess_domain_origin_lower_left = args.msl_domain_lower_left;
 		msl_opts.argument_buffers = args.msl_argument_buffers;
+		msl_opts.argument_buffers_tier = static_cast<CompilerMSL::Options::ArgumentBuffersTier>(args.msl_argument_buffers_tier);
 		msl_opts.texture_buffer_native = args.msl_texture_buffer_native;
 		msl_opts.multiview = args.msl_multiview;
 		msl_opts.multiview_layered_rendering = args.msl_multiview_layered_rendering;
@@ -1126,6 +1212,7 @@ static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> 
 		msl_opts.enable_frag_stencil_ref_builtin = args.msl_enable_frag_stencil_ref_builtin;
 		msl_opts.enable_frag_output_mask = args.msl_enable_frag_output_mask;
 		msl_opts.enable_clip_distance_user_varying = args.msl_enable_clip_distance_user_varying;
+		msl_opts.raw_buffer_tese_input = args.msl_raw_buffer_tese_input;
 		msl_opts.multi_patch_workgroup = args.msl_multi_patch_workgroup;
 		msl_opts.vertex_for_tessellation = args.msl_vertex_for_tessellation;
 		msl_opts.additional_fixed_sample_mask = args.msl_additional_fixed_sample_mask;
@@ -1137,6 +1224,10 @@ static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> 
 		msl_opts.emulate_subgroups = args.msl_emulate_subgroups;
 		msl_opts.fixed_subgroup_size = args.msl_fixed_subgroup_size;
 		msl_opts.force_sample_rate_shading = args.msl_force_sample_rate_shading;
+		msl_opts.manual_helper_invocation_updates = args.msl_manual_helper_invocation_updates;
+		msl_opts.check_discarded_frag_stores = args.msl_check_discarded_frag_stores;
+		msl_opts.sample_dref_lod_array_as_grad = args.msl_sample_dref_lod_array_as_grad;
+		msl_opts.ios_support_base_vertex_instance = true;
 		msl_comp->set_msl_options(msl_opts);
 		for (auto &v : args.msl_discrete_descriptor_sets)
 			msl_comp->add_discrete_descriptor_set(v);
@@ -1149,17 +1240,19 @@ static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> 
 			msl_comp->add_inline_uniform_block(v.first, v.second);
 		for (auto &v : args.msl_shader_inputs)
 			msl_comp->add_msl_shader_input(v);
+		for (auto &v : args.msl_shader_outputs)
+			msl_comp->add_msl_shader_output(v);
 		if (args.msl_combined_sampler_suffix)
 			msl_comp->set_combined_sampler_suffix(args.msl_combined_sampler_suffix);
 	}
 	else if (args.hlsl)
-		compiler.reset(new CompilerHLSL(move(spirv_parser.get_parsed_ir())));
+		compiler.reset(new CompilerHLSL(std::move(spirv_parser.get_parsed_ir())));
 	else
 	{
 		combined_image_samplers = !args.vulkan_semantics;
 		if (!args.vulkan_semantics || args.vulkan_glsl_disable_ext_samplerless_texture_functions)
 			build_dummy_sampler = true;
-		compiler.reset(new CompilerGLSL(move(spirv_parser.get_parsed_ir())));
+		compiler.reset(new CompilerGLSL(std::move(spirv_parser.get_parsed_ir())));
 	}
 
 	if (!args.variable_type_remaps.empty())
@@ -1170,7 +1263,7 @@ static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> 
 					out = remap.new_variable_type;
 		};
 
-		compiler->set_variable_type_remap_callback(move(remap_cb));
+		compiler->set_variable_type_remap_callback(std::move(remap_cb));
 	}
 
 	for (auto &masked : args.masked_stage_outputs)
@@ -1279,9 +1372,12 @@ static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> 
 	opts.emit_push_constant_as_uniform_buffer = args.glsl_emit_push_constant_as_ubo;
 	opts.emit_uniform_buffer_as_plain_uniforms = args.glsl_emit_ubo_as_plain_uniforms;
 	opts.force_flattened_io_blocks = args.glsl_force_flattened_io_blocks;
+	opts.ovr_multiview_view_count = args.glsl_ovr_multiview_view_count;
 	opts.emit_line_directives = args.emit_line_directives;
 	opts.enable_storage_image_qualifier_deduction = args.enable_storage_image_qualifier_deduction;
 	opts.force_zero_initialized_variables = args.force_zero_initialized_variables;
+	opts.relax_nan_checks = args.relax_nan_checks;
+	opts.force_recompile_max_debug_iterations = args.force_recompile_max_debug_iterations;
 	compiler->set_common_options(opts);
 
 	for (auto &fetch : args.glsl_ext_framebuffer_fetch)
@@ -1316,6 +1412,10 @@ static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> 
 			build_dummy_sampler = true;
 		}
 
+		// If we're explicitly renaming, we probably want that name to be output.
+		if (!args.entry_point_rename.empty())
+			hlsl_opts.use_entry_point_name = true;
+
 		hlsl_opts.support_nonzero_base_vertex_base_instance = args.hlsl_support_nonzero_base;
 		hlsl_opts.force_storage_buffer_as_uav = args.hlsl_force_storage_buffer_as_uav;
 		hlsl_opts.nonwritable_uav_texture_as_srv = args.hlsl_nonwritable_uav_texture_as_srv;
@@ -1323,6 +1423,12 @@ static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> 
 		hlsl_opts.flatten_matrix_vertex_input_semantics = args.hlsl_flatten_matrix_vertex_input_semantics;
 		hlsl->set_hlsl_options(hlsl_opts);
 		hlsl->set_resource_binding_flags(args.hlsl_binding_flags);
+		if (args.hlsl_base_vertex_index_explicit_binding)
+		{
+			hlsl->set_hlsl_aux_buffer_binding(HLSL_AUX_BINDING_BASE_VERTEX_INSTANCE,
+			                                  args.hlsl_base_vertex_index_register_index,
+			                                  args.hlsl_base_vertex_index_register_space);
+		}
 	}
 
 	if (build_dummy_sampler)
@@ -1341,7 +1447,7 @@ static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> 
 	{
 		auto active = compiler->get_active_interface_variables();
 		res = compiler->get_shader_resources(active);
-		compiler->set_enabled_interface_variables(move(active));
+		compiler->set_enabled_interface_variables(std::move(active));
 	}
 	else
 		res = compiler->get_shader_resources();
@@ -1356,7 +1462,7 @@ static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> 
 
 	auto pls_inputs = remap_pls(args.pls_in, res.stage_inputs, &res.subpass_inputs);
 	auto pls_outputs = remap_pls(args.pls_out, res.stage_outputs, nullptr);
-	compiler->remap_pixel_local_storage(move(pls_inputs), move(pls_outputs));
+	compiler->remap_pixel_local_storage(std::move(pls_inputs), std::move(pls_outputs));
 
 	for (auto &ext : args.extensions)
 		compiler->require_extension(ext);
@@ -1403,18 +1509,29 @@ static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> 
 	if (args.hlsl)
 	{
 		auto *hlsl_compiler = static_cast<CompilerHLSL *>(compiler.get());
-		uint32_t new_builtin = hlsl_compiler->remap_num_workgroups_builtin();
-		if (new_builtin)
-		{
-			hlsl_compiler->set_decoration(new_builtin, DecorationDescriptorSet, 0);
-			hlsl_compiler->set_decoration(new_builtin, DecorationBinding, 0);
-		}
+		hlsl_compiler->remap_num_workgroups_builtin();
 	}
 
 	if (args.hlsl)
 	{
 		for (auto &remap : args.hlsl_attr_remap)
 			static_cast<CompilerHLSL *>(compiler.get())->add_vertex_attribute_remap(remap);
+
+		for (auto &named_remap : args.hlsl_attr_remap_named)
+		{
+			auto itr = std::find_if(res.stage_inputs.begin(), res.stage_inputs.end(), [&](const Resource &input_res) {
+				return input_res.name == named_remap.name;
+			});
+
+			if (itr != res.stage_inputs.end())
+			{
+				HLSLVertexAttributeRemap remap = {
+					compiler->get_decoration(itr->id, DecorationLocation),
+					named_remap.semantic,
+				};
+				static_cast<CompilerHLSL *>(compiler.get())->add_vertex_attribute_remap(remap);
+			}
+		}
 	}
 
 	auto ret = compiler->compile();
@@ -1470,6 +1587,7 @@ static int main_inner(int argc, char *argv[])
 	cbs.add("--glsl-emit-push-constant-as-ubo", [&args](CLIParser &) { args.glsl_emit_push_constant_as_ubo = true; });
 	cbs.add("--glsl-emit-ubo-as-plain-uniforms", [&args](CLIParser &) { args.glsl_emit_ubo_as_plain_uniforms = true; });
 	cbs.add("--glsl-force-flattened-io-blocks", [&args](CLIParser &) { args.glsl_force_flattened_io_blocks = true; });
+	cbs.add("--glsl-ovr-multiview-view-count", [&args](CLIParser &parser) { args.glsl_ovr_multiview_view_count = parser.next_uint(); });
 	cbs.add("--glsl-remap-ext-framebuffer-fetch", [&args](CLIParser &parser) {
 		uint32_t input_index = parser.next_uint();
 		uint32_t color_attachment = parser.next_uint();
@@ -1489,6 +1607,11 @@ static int main_inner(int argc, char *argv[])
 	cbs.add("--hlsl-enable-compat", [&args](CLIParser &) { args.hlsl_compat = true; });
 	cbs.add("--hlsl-support-nonzero-basevertex-baseinstance",
 	        [&args](CLIParser &) { args.hlsl_support_nonzero_base = true; });
+	cbs.add("--hlsl-basevertex-baseinstance-binding", [&args](CLIParser &parser) {
+		args.hlsl_base_vertex_index_explicit_binding = true;
+		args.hlsl_base_vertex_index_register_index = parser.next_uint();
+		args.hlsl_base_vertex_index_register_space = parser.next_uint();
+	});
 	cbs.add("--hlsl-auto-binding", [&args](CLIParser &parser) {
 		args.hlsl_binding_flags |= hlsl_resource_type_to_flag(parser.next_string());
 	});
@@ -1509,6 +1632,10 @@ static int main_inner(int argc, char *argv[])
 	cbs.add("--msl-pad-fragment-output", [&args](CLIParser &) { args.msl_pad_fragment_output = true; });
 	cbs.add("--msl-domain-lower-left", [&args](CLIParser &) { args.msl_domain_lower_left = true; });
 	cbs.add("--msl-argument-buffers", [&args](CLIParser &) { args.msl_argument_buffers = true; });
+	cbs.add("--msl-argument-buffer-tier", [&args](CLIParser &parser) {
+		args.msl_argument_buffers_tier = parser.next_uint();
+		args.msl_argument_buffers = true;
+	});
 	cbs.add("--msl-discrete-descriptor-set",
 	        [&args](CLIParser &parser) { args.msl_discrete_descriptor_sets.push_back(parser.next_uint()); });
 	cbs.add("--msl-device-argument-buffer",
@@ -1548,24 +1675,93 @@ static int main_inner(int argc, char *argv[])
 	        [&args](CLIParser &parser) { args.msl_enable_frag_output_mask = parser.next_hex_uint(); });
 	cbs.add("--msl-no-clip-distance-user-varying",
 	        [&args](CLIParser &) { args.msl_enable_clip_distance_user_varying = false; });
-	cbs.add("--msl-shader-input", [&args](CLIParser &parser) {
-		MSLShaderInput input;
+	cbs.add("--msl-add-shader-input", [&args](CLIParser &parser) {
+		MSLShaderInterfaceVariable input;
 		// Make sure next_uint() is called in-order.
 		input.location = parser.next_uint();
 		const char *format = parser.next_value_string("other");
 		if (strcmp(format, "any32") == 0)
-			input.format = MSL_SHADER_INPUT_FORMAT_ANY32;
+			input.format = MSL_SHADER_VARIABLE_FORMAT_ANY32;
 		else if (strcmp(format, "any16") == 0)
-			input.format = MSL_SHADER_INPUT_FORMAT_ANY16;
+			input.format = MSL_SHADER_VARIABLE_FORMAT_ANY16;
 		else if (strcmp(format, "u16") == 0)
-			input.format = MSL_SHADER_INPUT_FORMAT_UINT16;
+			input.format = MSL_SHADER_VARIABLE_FORMAT_UINT16;
 		else if (strcmp(format, "u8") == 0)
-			input.format = MSL_SHADER_INPUT_FORMAT_UINT8;
+			input.format = MSL_SHADER_VARIABLE_FORMAT_UINT8;
 		else
-			input.format = MSL_SHADER_INPUT_FORMAT_OTHER;
+			input.format = MSL_SHADER_VARIABLE_FORMAT_OTHER;
+		input.vecsize = parser.next_uint();
+		const char *rate = parser.next_value_string("vertex");
+		if (strcmp(rate, "primitive") == 0)
+			input.rate = MSL_SHADER_VARIABLE_RATE_PER_PRIMITIVE;
+		else if (strcmp(rate, "patch") == 0)
+			input.rate = MSL_SHADER_VARIABLE_RATE_PER_PATCH;
+		else
+			input.rate = MSL_SHADER_VARIABLE_RATE_PER_VERTEX;
+		args.msl_shader_inputs.push_back(input);
+	});
+	cbs.add("--msl-add-shader-output", [&args](CLIParser &parser) {
+		MSLShaderInterfaceVariable output;
+		// Make sure next_uint() is called in-order.
+		output.location = parser.next_uint();
+		const char *format = parser.next_value_string("other");
+		if (strcmp(format, "any32") == 0)
+			output.format = MSL_SHADER_VARIABLE_FORMAT_ANY32;
+		else if (strcmp(format, "any16") == 0)
+			output.format = MSL_SHADER_VARIABLE_FORMAT_ANY16;
+		else if (strcmp(format, "u16") == 0)
+			output.format = MSL_SHADER_VARIABLE_FORMAT_UINT16;
+		else if (strcmp(format, "u8") == 0)
+			output.format = MSL_SHADER_VARIABLE_FORMAT_UINT8;
+		else
+			output.format = MSL_SHADER_VARIABLE_FORMAT_OTHER;
+		output.vecsize = parser.next_uint();
+		const char *rate = parser.next_value_string("vertex");
+		if (strcmp(rate, "primitive") == 0)
+			output.rate = MSL_SHADER_VARIABLE_RATE_PER_PRIMITIVE;
+		else if (strcmp(rate, "patch") == 0)
+			output.rate = MSL_SHADER_VARIABLE_RATE_PER_PATCH;
+		else
+			output.rate = MSL_SHADER_VARIABLE_RATE_PER_VERTEX;
+		args.msl_shader_outputs.push_back(output);
+	});
+	cbs.add("--msl-shader-input", [&args](CLIParser &parser) {
+		MSLShaderInterfaceVariable input;
+		// Make sure next_uint() is called in-order.
+		input.location = parser.next_uint();
+		const char *format = parser.next_value_string("other");
+		if (strcmp(format, "any32") == 0)
+			input.format = MSL_SHADER_VARIABLE_FORMAT_ANY32;
+		else if (strcmp(format, "any16") == 0)
+			input.format = MSL_SHADER_VARIABLE_FORMAT_ANY16;
+		else if (strcmp(format, "u16") == 0)
+			input.format = MSL_SHADER_VARIABLE_FORMAT_UINT16;
+		else if (strcmp(format, "u8") == 0)
+			input.format = MSL_SHADER_VARIABLE_FORMAT_UINT8;
+		else
+			input.format = MSL_SHADER_VARIABLE_FORMAT_OTHER;
 		input.vecsize = parser.next_uint();
 		args.msl_shader_inputs.push_back(input);
 	});
+	cbs.add("--msl-shader-output", [&args](CLIParser &parser) {
+		MSLShaderInterfaceVariable output;
+		// Make sure next_uint() is called in-order.
+		output.location = parser.next_uint();
+		const char *format = parser.next_value_string("other");
+		if (strcmp(format, "any32") == 0)
+			output.format = MSL_SHADER_VARIABLE_FORMAT_ANY32;
+		else if (strcmp(format, "any16") == 0)
+			output.format = MSL_SHADER_VARIABLE_FORMAT_ANY16;
+		else if (strcmp(format, "u16") == 0)
+			output.format = MSL_SHADER_VARIABLE_FORMAT_UINT16;
+		else if (strcmp(format, "u8") == 0)
+			output.format = MSL_SHADER_VARIABLE_FORMAT_UINT8;
+		else
+			output.format = MSL_SHADER_VARIABLE_FORMAT_OTHER;
+		output.vecsize = parser.next_uint();
+		args.msl_shader_outputs.push_back(output);
+	});
+	cbs.add("--msl-raw-buffer-tese-input", [&args](CLIParser &) { args.msl_raw_buffer_tese_input = true; });
 	cbs.add("--msl-multi-patch-workgroup", [&args](CLIParser &) { args.msl_multi_patch_workgroup = true; });
 	cbs.add("--msl-vertex-for-tessellation", [&args](CLIParser &) { args.msl_vertex_for_tessellation = true; });
 	cbs.add("--msl-additional-fixed-sample-mask",
@@ -1581,6 +1777,11 @@ static int main_inner(int argc, char *argv[])
 	cbs.add("--msl-fixed-subgroup-size",
 	        [&args](CLIParser &parser) { args.msl_fixed_subgroup_size = parser.next_uint(); });
 	cbs.add("--msl-force-sample-rate-shading", [&args](CLIParser &) { args.msl_force_sample_rate_shading = true; });
+	cbs.add("--msl-no-manual-helper-invocation-updates",
+	        [&args](CLIParser &) { args.msl_manual_helper_invocation_updates = false; });
+	cbs.add("--msl-check-discarded-frag-stores", [&args](CLIParser &) { args.msl_check_discarded_frag_stores = true; });
+	cbs.add("--msl-sample-dref-lod-array-as-grad",
+	        [&args](CLIParser &) { args.msl_sample_dref_lod_array_as_grad = true; });
 	cbs.add("--msl-combined-sampler-suffix", [&args](CLIParser &parser) {
 		args.msl_combined_sampler_suffix = parser.next_string();
 	});
@@ -1589,7 +1790,7 @@ static int main_inner(int argc, char *argv[])
 		auto old_name = parser.next_string();
 		auto new_name = parser.next_string();
 		auto model = stage_to_execution_model(parser.next_string());
-		args.entry_point_rename.push_back({ old_name, new_name, move(model) });
+		args.entry_point_rename.push_back({ old_name, new_name, std::move(model) });
 	});
 	cbs.add("--entry", [&args](CLIParser &parser) { args.entry = parser.next_string(); });
 	cbs.add("--stage", [&args](CLIParser &parser) { args.entry_stage = parser.next_string(); });
@@ -1598,20 +1799,26 @@ static int main_inner(int argc, char *argv[])
 		HLSLVertexAttributeRemap remap;
 		remap.location = parser.next_uint();
 		remap.semantic = parser.next_string();
-		args.hlsl_attr_remap.push_back(move(remap));
+		args.hlsl_attr_remap.push_back(std::move(remap));
+	});
+	cbs.add("--set-hlsl-named-vertex-input-semantic", [&args](CLIParser &parser) {
+		HLSLVertexAttributeRemapNamed remap;
+		remap.name = parser.next_string();
+		remap.semantic = parser.next_string();
+		args.hlsl_attr_remap_named.push_back(std::move(remap));
 	});
 
 	cbs.add("--remap", [&args](CLIParser &parser) {
 		string src = parser.next_string();
 		string dst = parser.next_string();
 		uint32_t components = parser.next_uint();
-		args.remaps.push_back({ move(src), move(dst), components });
+		args.remaps.push_back({ std::move(src), std::move(dst), components });
 	});
 
 	cbs.add("--remap-variable-type", [&args](CLIParser &parser) {
 		string var_name = parser.next_string();
 		string new_type = parser.next_string();
-		args.variable_type_remaps.push_back({ move(var_name), move(new_type) });
+		args.variable_type_remaps.push_back({ std::move(var_name), std::move(new_type) });
 	});
 
 	cbs.add("--rename-interface-variable", [&args](CLIParser &parser) {
@@ -1624,18 +1831,18 @@ static int main_inner(int argc, char *argv[])
 
 		uint32_t loc = parser.next_uint();
 		string var_name = parser.next_string();
-		args.interface_variable_renames.push_back({ cls, loc, move(var_name) });
+		args.interface_variable_renames.push_back({ cls, loc, std::move(var_name) });
 	});
 
 	cbs.add("--pls-in", [&args](CLIParser &parser) {
 		auto fmt = pls_format(parser.next_string());
 		auto name = parser.next_string();
-		args.pls_in.push_back({ move(fmt), move(name) });
+		args.pls_in.push_back({ std::move(fmt), std::move(name) });
 	});
 	cbs.add("--pls-out", [&args](CLIParser &parser) {
 		auto fmt = pls_format(parser.next_string());
 		auto name = parser.next_string();
-		args.pls_out.push_back({ move(fmt), move(name) });
+		args.pls_out.push_back({ std::move(fmt), std::move(name) });
 	});
 	cbs.add("--shader-model", [&args](CLIParser &parser) {
 		args.shader_model = parser.next_uint();
@@ -1678,11 +1885,17 @@ static int main_inner(int argc, char *argv[])
 		args.masked_stage_builtins.push_back(masked_builtin);
 	});
 
+	cbs.add("--force-recompile-max-debug-iterations", [&](CLIParser &parser) {
+		args.force_recompile_max_debug_iterations = parser.next_uint();
+	});
+
+	cbs.add("--relax-nan-checks", [&](CLIParser &) { args.relax_nan_checks = true; });
+
 	cbs.default_handler = [&args](const char *value) { args.input = value; };
 	cbs.add("-", [&args](CLIParser &) { args.input = "-"; });
 	cbs.error_handler = [] { print_help(); };
 
-	CLIParser parser{ move(cbs), argc - 1, argv + 1 };
+	CLIParser parser{ std::move(cbs), argc - 1, argv + 1 };
 	if (!parser.parse())
 		return EXIT_FAILURE;
 	else if (parser.ended_state)
@@ -1702,10 +1915,10 @@ static int main_inner(int argc, char *argv[])
 	// Special case reflection because it has little to do with the path followed by code-outputting compilers
 	if (!args.reflect.empty())
 	{
-		Parser spirv_parser(move(spirv_file));
+		Parser spirv_parser(std::move(spirv_file));
 		spirv_parser.parse();
 
-		CompilerReflection compiler(move(spirv_parser.get_parsed_ir()));
+		CompilerReflection compiler(std::move(spirv_parser.get_parsed_ir()));
 		compiler.set_format(args.reflect);
 		auto json = compiler.compile();
 		if (args.output)
@@ -1718,7 +1931,7 @@ static int main_inner(int argc, char *argv[])
 	string compiled_output;
 
 	if (args.iterations == 1)
-		compiled_output = compile_iteration(args, move(spirv_file));
+		compiled_output = compile_iteration(args, std::move(spirv_file));
 	else
 	{
 		for (unsigned i = 0; i < args.iterations; i++)

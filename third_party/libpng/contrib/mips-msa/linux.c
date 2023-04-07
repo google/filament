@@ -1,8 +1,9 @@
+
 /* contrib/mips-msa/linux.c
  *
+ * Copyright (c) 2020 Cosmin Truta
  * Copyright (c) 2016 Glenn Randers-Pehrson
  * Written by Mandar Sahastrabuddhe, 2016.
- * Last changed in libpng 1.6.25beta03 [August 29, 2016]
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -47,8 +48,10 @@ png_have_msa(png_structp png_ptr)
 
          int val = strcmp(string, word);
 
-         if (val == 0)
+         if (val == 0) {
+            fclose(f);
             return 1;
+         }
 
          i = 0;
          memset(word, 0, 10);

@@ -70,7 +70,7 @@ void ShadowMapManager::terminate(FEngine& engine) {
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::update(FEngine& engine, FView& view,
         CameraInfo const& cameraInfo,
-        FScene::RenderableSoa& renderableData, FScene::LightSoa& lightData) noexcept {
+        FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept {
     ShadowTechnique shadowTechnique = {};
 
     calculateTextureRequirements(engine, view, lightData);
@@ -436,7 +436,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEngine& engine,
         FView& view, CameraInfo const& cameraInfo, FScene::RenderableSoa& renderableData,
-        FScene::LightSoa& lightData, ShadowMap::SceneInfo sceneInfo) noexcept {
+        FScene::LightSoa const& lightData, ShadowMap::SceneInfo sceneInfo) noexcept {
     FScene* scene = view.getScene();
     auto& lcm = engine.getLightManager();
 
@@ -585,9 +585,6 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
     }
 
     uint32_t cascades = 0;
-    if (engine.debug.shadowmap.visualize_cascades) {
-        cascades |= 0x10u;
-    }
     cascades |= uint32_t(mCascadeShadowMaps.size());
     cascades |= cascadeHasVisibleShadows << 8u;
 
@@ -788,9 +785,13 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
 }
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine& engine,
-        FScene::LightSoa& lightData) noexcept {
+        FScene::LightSoa const& lightData) noexcept {
 
-    FScene::ShadowInfo* const shadowInfo = lightData.data<FScene::SHADOW_INFO>();
+    // The const_cast here is a little ugly, but conceptually lightData should be const,
+    // it's just that we're using it to store some temporary data. with SoA we can't have
+    // a `mutable` element, so that's a workaround.
+    FScene::ShadowInfo* const shadowInfo = const_cast<FScene::ShadowInfo*>(
+            lightData.data<FScene::SHADOW_INFO>());
 
     ShadowTechnique shadowTechnique{};
     if (!mSpotShadowMaps.empty()) {
@@ -824,7 +825,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
 }
 
 void ShadowMapManager::calculateTextureRequirements(FEngine&, FView& view,
-        FScene::LightSoa&) noexcept {
+        FScene::LightSoa const&) noexcept {
 
     // Lay out the shadow maps. For now, we take the largest requested dimension and allocate a
     // texture of that size. Each cascade / shadow map gets its own layer in the array texture.

@@ -1,4 +1,5 @@
 # makefile for libpng under FreeBSD
+# Copyright (C) 2020-2022 Cosmin Truta
 # Copyright (C) 2014 Glenn Randers-Pehrson and Andrey A. Chernov
 # Copyright (C) 2002, 2007, 2009 Glenn Randers-Pehrson and Andrey A. Chernov
 #
@@ -6,28 +7,11 @@
 # For conditions of distribution and use, see the disclaimer
 # and license in png.h
 
-PREFIX?=        /usr/local
-SHLIB_VER?=     16
-
 LIB=		png
+SHLIB_VER=	16
 SHLIB_MAJOR=	${SHLIB_VER}
 SHLIB_MINOR=	0
-NO_PROFILE=	YES
-NO_OBJ=		YES
 
-# where make install puts libpng.a and png.h
-DESTDIR=	${PREFIX}
-LIBDIR=		/lib
-INCS=		png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
-INCSDIR=	/include/libpng
-INCDIR=		${INCSDIR}		# for 4.x bsd.lib.mk
-MAN=		libpng.3 libpngpf.3 png.5
-MANDIR=		/man/man
-SYMLINKS=       libpng/png.h ${INCSDIR}/../png.h \
-		libpng/pngconf.h ${INCSDIR}/../pngconf.h \
-		libpng/pnglibconf.h ${INCSDIR}/../pnglibconf.h
-
-# where make install finds libz.a and zlib.h
 ZLIBLIB=	/usr/lib
 ZLIBINC=	/usr/include
 
@@ -37,33 +21,33 @@ LDADD+=		-lm -lz
 DPADD+=		${LIBM} ${LIBZ}
 
 CPPFLAGS+=	-I. -I${ZLIBINC}
-CFLAGS+=	-W -Wall
+CFLAGS+=	-Wall -Wextra -Wundef
+LDFLAGS+=	-L. -L${ZLIBLIB}
+
+CLEANFILES+=	pngtest pngtest.o pngout.png
 
 # Pre-built configuration
 # See scripts/pnglibconf.mak for more options
 PNGLIBCONF_H_PREBUILT= scripts/pnglibconf.h.prebuilt
 
-SRCS=	png.c pngset.c pngget.c pngrutil.c pngtrans.c pngwutil.c \
-	pngread.c pngrio.c pngwio.c pngwrite.c pngrtran.c \
-	pngwtran.c pngmem.c pngerror.c pngpread.c
+SRCS=	png.c pngerror.c pngget.c pngmem.c pngpread.c \
+	pngread.c pngrio.c pngrtran.c pngrutil.c pngset.c \
+	pngtrans.c pngwio.c pngwrite.c pngwtran.c pngwutil.c
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+	${CC} -c ${CPPFLAGS} ${CFLAGS} -o $@ $<
 
-pngtest: pngtest.o libpng.a
-	${CC} ${CFLAGS} -L. -static -o pngtest pngtest.o -L${ZLIBLIB} \
-	-lpng ${LDADD}
+pnglibconf.h:	${PNGLIBCONF_H_PREBUILT}
+	cp ${PNGLIBCONF_H_PREBUILT} $@
 
-CLEANFILES= pngtest pngtest.o pngout.png
+pngtest:	pngtest.o libpng.a
+	${CC} ${LDFLAGS} -static -o pngtest pngtest.o -lpng ${LDADD}
 
-test: pngtest
+test:	pngtest
 	./pngtest
 
-pnglibconf.h: $(PNGLIBCONF_H_PREBUILT)
-	cp $(PNGLIBCONF_H_PREBUILT) $@
-
-DOCS = ANNOUNCE CHANGES INSTALL KNOWNBUG LICENSE README TODO
-writelock:
-	chmod a-w *.[ch35] $(DOCS) scripts/*
+install:
+	@echo "The $@ target is no longer supported by this makefile."
+	@false
 
 .include <bsd.lib.mk>

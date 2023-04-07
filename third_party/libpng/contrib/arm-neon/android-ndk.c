@@ -2,7 +2,6 @@
  *
  * Copyright (c) 2014 Glenn Randers-Pehrson
  * Written by John Bowler, 2014.
- * Last changed in libpng 1.6.10 [March 6, 2014]
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -24,6 +23,7 @@
  * has been compiled only, not linked: no version of the library has been found,
  * only the header files exist in the NDK.
  */
+
 #include <cpu-features.h>
 
 static int

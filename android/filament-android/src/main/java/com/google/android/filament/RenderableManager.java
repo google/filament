@@ -356,16 +356,16 @@ public class RenderableManager {
 
         /**
          * Specifies the number of draw instance of this renderable. The default is 1 instance and
-         * the maximum number of instances allowed is 65535. 0 is invalid.
+         * the maximum number of instances allowed is 32767. 0 is invalid.
          * All instances are culled using the same bounding box, so care must be taken to make
          * sure all instances render inside the specified bounding box.
          * The material can use getInstanceIndex() in the vertex shader to get the instance index and
          * possibly adjust the position or transform.
          *
-         * @param instanceCount the number of instances silently clamped between 1 and 65535.
+         * @param instanceCount the number of instances silently clamped between 1 and 32767.
          */
         @NonNull
-        public Builder instances(@IntRange(from = 1, to = 65535) int instanceCount) {
+        public Builder instances(@IntRange(from = 1, to = 32767) int instanceCount) {
             nBuilderInstances(mNativeBuilder, instanceCount);
             return this;
         }

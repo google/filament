@@ -1,7 +1,7 @@
 
 /* pngwrite.c - general routines to write a PNG file
  *
- * Copyright (c) 2018-2019 Cosmin Truta
+ * Copyright (c) 2018-2022 Cosmin Truta
  * Copyright (c) 1998-2002,2004,2006-2018 Glenn Randers-Pehrson
  * Copyright (c) 1996-1997 Andreas Dilger
  * Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
@@ -75,10 +75,10 @@ write_unknown_chunks(png_structrp png_ptr, png_const_inforp info_ptr,
  * library.  If you have a new chunk to add, make a function to write it,
  * and put it in the correct location here.  If you want the chunk written
  * after the image data, put it in png_write_end().  I strongly encourage
- * you to supply a PNG_INFO_ flag, and check info_ptr->valid before writing
- * the chunk, as that will keep the code from breaking if you want to just
- * write a plain PNG file.  If you have long comments, I suggest writing
- * them in png_write_end(), and compressing them.
+ * you to supply a PNG_INFO_<chunk> flag, and check info_ptr->valid before
+ * writing the chunk, as that will keep the code from breaking if you want
+ * to just write a plain PNG file.  If you have long comments, I suggest
+ * writing them in png_write_end(), and compressing them.
  */
 void PNGAPI
 png_write_info_before_PLTE(png_structrp png_ptr, png_const_inforp info_ptr)
@@ -489,6 +489,16 @@ png_convert_from_time_t(png_timep ptime, time_t ttime)
    png_debug(1, "in png_convert_from_time_t");
 
    tbuf = gmtime(&ttime);
+   if (tbuf == NULL)
+   {
+      /* TODO: add a safe function which takes a png_ptr argument and raises
+       * a png_error if the ttime argument is invalid and the call to gmtime
+       * fails as a consequence.
+       */
+      memset(ptime, 0, sizeof(*ptime));
+      return;
+   }
+
    png_convert_from_struct_tm(ptime, tbuf);
 }
 #endif

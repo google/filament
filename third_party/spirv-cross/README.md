@@ -1,17 +1,22 @@
+<!--
+    Copyright 2020-2021 The Khronos Group, Inc.
+    SPDX-License-Identifier: CC-BY-4.0
+-->
+
 # SPIRV-Cross
 
 SPIRV-Cross is a tool designed for parsing and converting SPIR-V to other shader languages.
 
 [![CI](https://github.com/KhronosGroup/SPIRV-Cross/actions/workflows/main.yml/badge.svg)](https://github.com/KhronosGroup/SPIRV-Cross/actions/workflows/main.yml)
-[![Build Status](https://ci.appveyor.com/api/projects/status/github/KhronosGroup/SPIRV-Cross?svg=true&branch=master)](https://ci.appveyor.com/project/HansKristian-Work/SPIRV-Cross)
+[![Build Status](https://ci.appveyor.com/api/projects/status/github/KhronosGroup/SPIRV-Cross?svg=true&branch=main)](https://ci.appveyor.com/project/HansKristian-Work/SPIRV-Cross)
 
 ## Features
 
   - Convert SPIR-V to readable, usable and efficient GLSL
   - Convert SPIR-V to readable, usable and efficient Metal Shading Language (MSL)
   - Convert SPIR-V to readable, usable and efficient HLSL
+  - Convert SPIR-V to a JSON reflection format
   - Convert SPIR-V to debuggable C++ [DEPRECATED]
-  - Convert SPIR-V to a JSON reflection format [EXPERIMENTAL]
   - Reflection API to simplify the creation of Vulkan pipeline layouts
   - Reflection API to modify and tweak OpDecorations
   - Supports "all" of vertex, fragment, tessellation, geometry and compute shaders.
@@ -25,6 +30,10 @@ However, most missing features are expected to be "trivial" improvements at this
 ## Building
 
 SPIRV-Cross has been tested on Linux, iOS/OSX, Windows and Android. CMake is the main build system.
+
+### NOTE: main branch rename
+
+On 2023-01-12, `master` was renamed to `main` as per Khronos policy.
 
 ### Linux and macOS
 
@@ -51,6 +60,20 @@ The make and CMake build flavors offer the option to treat exceptions as asserti
 ### Static, shared and CLI
 
 You can use `-DSPIRV_CROSS_STATIC=ON/OFF` `-DSPIRV_CROSS_SHARED=ON/OFF` `-DSPIRV_CROSS_CLI=ON/OFF` to control which modules are built (and installed).
+
+### Installing SPIRV-Cross (vcpkg)
+
+Alternatively, you can build and install SPIRV-Cross using [vcpkg](https://github.com/Microsoft/vcpkg/) dependency manager:
+
+```
+git clone https://github.com/Microsoft/vcpkg.git
+cd vcpkg
+./bootstrap-vcpkg.sh
+./vcpkg integrate install
+./vcpkg install spirv-cross
+```
+
+The SPIRV-Cross port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
 
 ## Usage
 
@@ -99,7 +122,7 @@ int main()
 	spirv_cross::CompilerGLSL::Options options;
 	options.version = 310;
 	options.es = true;
-	glsl.set_options(options);
+	glsl.set_common_options(options);
 
 	// Compile to GLSL, ready to give to GL driver.
 	std::string source = glsl.compile();
@@ -376,10 +399,28 @@ for (auto &remap : compiler->get_combined_image_samplers())
 If your target is Vulkan GLSL, `--vulkan-semantics` will emit separate image samplers as you'd expect.
 The command line client calls `Compiler::build_combined_image_samplers` automatically, but if you're calling the library, you'll need to do this yourself.
 
-#### Descriptor sets (Vulkan GLSL) for backends which do not support them (HLSL/GLSL/Metal)
+#### Descriptor sets (Vulkan GLSL) for backends which do not support them (pre HLSL 5.1 / GLSL)
 
 Descriptor sets are unique to Vulkan, so make sure that descriptor set + binding is remapped to a flat binding scheme (set always 0), so that other APIs can make sense of the bindings.
-This can be done with `Compiler::set_decoration(id, spv::DecorationDescriptorSet)`.
+This can be done with `Compiler::set_decoration(id, spv::DecorationDescriptorSet)`. For other backends like MSL and HLSL, descriptor sets
+can be used, with some minor caveats, see below.
+
+##### MSL 2.0+
+
+Metal supports indirect argument buffers (--msl-argument-buffers). In this case, descriptor sets become argument buffers,
+and bindings are mapped to [[id(N)]] within the argument buffer. One quirk is that arrays of resources consume multiple ids,
+where Vulkan does not. This can be worked around either from shader authoring stage
+or remapping bindings as needed to avoid the overlap.
+There is also a rich API to declare remapping schemes which is intended to work like
+the pipeline layout in Vulkan. See `CompilerMSL::add_msl_resource_binding`. Remapping combined image samplers for example
+must be split into two bindings in MSL, so it's possible to declare an id for the texture and sampler binding separately.
+
+##### HLSL - SM 5.1+
+
+In SM 5.1+, descriptor set bindings are interpreted as register spaces directly. In HLSL however, arrays of resources consume
+multiple binding slots where Vulkan does not, so there might be overlap if the SPIR-V was not authored with this in mind.
+This can be worked around either from shader authoring stage (don't assign overlapping bindings)
+or remap bindings in SPIRV-Cross as needed to avoid the overlap.
 
 #### Linking by name for targets which do not support explicit locations (legacy GLSL/ESSL)
 
@@ -439,9 +480,6 @@ All pull requests should ensure that test output does not change unexpectedly. T
 
 ```
 ./checkout_glslang_spirv_tools.sh # Checks out glslang and SPIRV-Tools at a fixed revision which matches the reference output.
-                                  # NOTE: Some users have reported problems cloning from git:// paths. To use https:// instead pass in
-                                  # $ PROTOCOL=https ./checkout_glslang_spirv_tools.sh
-                                  # instead.
 ./build_glslang_spirv_tools.sh    # Builds glslang and SPIRV-Tools.
 ./test_shaders.sh                 # Runs over all changes and makes sure that there are no deltas compared to reference files.
 ```
@@ -465,7 +503,7 @@ to update the reference files and include these changes as part of the pull requ
 Always make sure you are running the correct version of glslangValidator as well as SPIRV-Tools when updating reference files.
 See `checkout_glslang_spirv_tools.sh` which revisions are currently expected. The revisions change regularly.
 
-In short, the master branch should always be able to run `./test_shaders.py shaders` and friends without failure.
+In short, the main branch should always be able to run `./test_shaders.py shaders` and friends without failure.
 SPIRV-Cross uses Travis CI to test all pull requests, so it is not strictly needed to perform testing yourself if you have problems running it locally.
 A pull request which does not pass testing on Travis will not be accepted however.
 

@@ -118,7 +118,6 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // -Inf stored in unused components
     math::float4 cascadeSplits;
     // bit 0-3: cascade count
-    // bit 4: visualize cascades
     // bit 8-11: cascade has visible shadows
     uint32_t cascades;
     float reserved0;
@@ -141,7 +140,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float fogMaxOpacity;
     float fogHeight;
     float fogHeightFalloff;
-    float fogReserved0;
+    float fogCutOffDistance;
     math::float3 fogColor;
     float fogColorFromIbl;
     float fogInscatteringStart;

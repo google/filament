@@ -80,7 +80,7 @@ public:
         } backend;
 
         void devirtualize(FrameGraph& fg, ResourceAllocatorInterface& resourceAllocator) noexcept;
-        void destroy(ResourceAllocatorInterface& resourceAllocator) noexcept;
+        void destroy(ResourceAllocatorInterface& resourceAllocator) const noexcept;
     };
 
     RenderPassNode(FrameGraph& fg, const char* name, FrameGraphPassBase* base) noexcept;

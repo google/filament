@@ -716,6 +716,7 @@ public:
 
     filament::UserVariantFilterMask getVariantFilter() const { return mVariantFilter; }
 
+    FeatureLevel getFeatureLevel() const noexcept { return mFeatureLevel; }
     /// @endcond
 
 private:

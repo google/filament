@@ -55,7 +55,8 @@ const char* ostream::getFormat(ostream::type t) const noexcept {
         case type::ULONG:       return mImpl->mShowHex ? "0x%lx"  : "%lu";
         case type::LONG_LONG:   return mImpl->mShowHex ? "0x%llx" : "%lld";
         case type::ULONG_LONG:  return mImpl->mShowHex ? "0x%llx" : "%llu";
-        case type::DOUBLE:      return "%f";
+        case type::FLOAT:       return "%.9g";
+        case type::DOUBLE:      return "%.17g";
         case type::LONG_DOUBLE: return "%Lf";
     }
 }
@@ -143,7 +144,8 @@ ostream& ostream::operator<<(unsigned long long value) noexcept {
 }
 
 ostream& ostream::operator<<(float value) noexcept {
-    return operator<<((double)value);
+    const char* format = getFormat(type::FLOAT);
+    return print(format, value);
 }
 
 ostream& ostream::operator<<(double value) noexcept {

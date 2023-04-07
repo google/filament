@@ -1,6 +1,6 @@
 # makefile for libpng using gcc (generic, static library)
+# Copyright (C) 2000, 2014, 2019-2022 Cosmin Truta
 # Copyright (C) 2008, 2014 Glenn Randers-Pehrson
-# Copyright (C) 2000, 2014, 2019 Cosmin Truta
 # Copyright (C) 1995 Guy Eric Schalnat, Group 42, Inc.
 #
 # This code is released under the libpng license.
@@ -19,12 +19,16 @@ RANLIB = ranlib
 CP = cp
 RM_F = rm -f
 
+# Compiler and linker flags
+NOHWOPT = -DPNG_ARM_NEON_OPT=0 -DPNG_MIPS_MSA_OPT=0 \
+	-DPNG_POWERPC_VSX_OPT=0 -DPNG_INTEL_SSE_OPT=0
 WARNMORE = -Wwrite-strings -Wpointer-arith -Wshadow \
 	-Wmissing-declarations -Wtraditional -Wcast-align \
 	-Wstrict-prototypes -Wmissing-prototypes # -Wconversion
-CPPFLAGS = -I$(ZLIBINC) # -DPNG_DEBUG=5
-CFLAGS = -W -Wall -O2 # $(WARNMORE) -g
-LDFLAGS = -L$(ZLIBLIB)
+DEFS = $(NOHWOPT)
+CPPFLAGS = -I$(ZLIBINC) $(DEFS) # -DPNG_DEBUG=5
+CFLAGS = -O2 -Wall -Wextra -Wundef # $(WARNMORE) -g
+LDFLAGS = -L$(ZLIBLIB) # -g
 LIBS = -lz -lm
 
 # File extensions
@@ -34,10 +38,10 @@ EXEEXT =
 # See scripts/pnglibconf.mak for more options
 PNGLIBCONF_H_PREBUILT = scripts/pnglibconf.h.prebuilt
 
-# Variables
-OBJS =  png.o pngerror.o pngget.o pngmem.o pngpread.o \
-	pngread.o pngrio.o pngrtran.o pngrutil.o pngset.o \
-	pngtrans.o pngwio.o pngwrite.o pngwtran.o pngwutil.o
+# File lists
+OBJS = png.o pngerror.o pngget.o pngmem.o pngpread.o \
+       pngread.o pngrio.o pngrtran.o pngrutil.o pngset.o \
+       pngtrans.o pngwio.o pngwrite.o pngwtran.o pngwutil.o
 
 # Targets
 all: static

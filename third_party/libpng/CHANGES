@@ -2295,7 +2295,7 @@ Version 1.4.0beta58 [May 14, 2009]
   Clarified usage of sig_bit versus sig_bit_p in example.c (Vincent Torri)
 
 Version 1.4.0beta59 [May 15, 2009]
-  Reformated sources in libpng style (3-space intentation, comment format)
+  Reformated sources in libpng style (3-space indentation, comment format)
   Fixed typo in libpng docs (PNG_FILTER_AVE should be PNG_FILTER_AVG)
   Added sections about the git repository and our coding style to the
     documentation
@@ -3886,7 +3886,7 @@ Version 1.6.0beta06 [January 24, 2012]
 Version 1.6.0beta07 [January 28, 2012]
   Eliminated Intel icc/icl compiler warnings. The Intel (GCC derived)
     compiler issues slightly different warnings from those issued by the
-    current vesions of GCC. This eliminates those warnings by
+    current versions of GCC. This eliminates those warnings by
     adding/removing casts and small code rewrites.
   Updated configure.ac from autoupdate: added --enable-werror option.
     Also some layout regularization and removal of introduced tab characters
@@ -4052,7 +4052,7 @@ Version 1.6.0beta16 [March 6, 2012]
     (in fact this is harmless, but the PNG data produced may be sub-optimal).
 
 Version 1.6.0beta17 [March 10, 2012]
-  Fixed PNG_LIBPNG_BUILD_BASE_TYPE definition. 
+  Fixed PNG_LIBPNG_BUILD_BASE_TYPE definition.
   Reject all iCCP chunks after the first, even if the first one is invalid.
   Deflate/inflate was reworked to move common zlib calls into single
     functions [rw]util.c.  A new shared keyword check routine was also added
@@ -4962,7 +4962,7 @@ Version 1.6.13beta01 [July 4, 2014]
   Changed "if defined(__ARM_NEON__)" to
     "if (defined(__ARM_NEON__) || defined(__ARM_NEON))" (James Wu).
   Fixed clang no-warning builds: png_digit was defined but never used.
-    
+
 Version 1.6.13beta02 [July 21, 2014]
   Fixed an incorrect separator ("/" should be "\") in scripts/makefile.vcwin32
     (bug report from Wolfgang S. Kechel).  Bug was introduced in libpng-1.6.11.
@@ -5453,7 +5453,7 @@ Version 1.6.21beta01 [December 11, 2015]
 Version 1.6.21beta02 [December 14, 2015]
   Moved png_check_keyword() from pngwutil.c to pngset.c
   Removed LE/BE dependencies in pngvalid, to 'fix' the current problem
-    in the BigEndian tests by not testing it, making the BE code the same 
+    in the BigEndian tests by not testing it, making the BE code the same
     as the LE version.
   Fixes to pngvalid for various reduced build configurations (eliminate unused
     statics) and a fix for the case in rgb_to_gray when the digitize option
@@ -5517,7 +5517,7 @@ Version 1.6.22beta03 [March 9, 2016]
   Added a common-law trademark notice and export control information
     to the LICENSE file, png.h, and the man page.
   Restored "& 0xff" in png_save_uint_16() and png_save_uint_32() that
-    were accidentally removed from libpng-1.6.17. 
+    were accidentally removed from libpng-1.6.17.
   Changed PNG_INFO_cHNK and PNG_FREE_cHNK from 0xnnnn to 0xnnnnU in png.h
     (Robert C. Seacord).
   Removed dubious "#if INT_MAX" test from png.h that was added to
@@ -5950,7 +5950,7 @@ Version 1.6.32beta09 [August 3, 2017]
   Require cmake-2.8.8 in CMakeLists.txt. Revised symlink creation,
     no longer using deprecated cmake LOCATION feature (Clifford Yapp).
   Fixed five-byte error in the calculation of IDAT maximum possible size.
-  
+
 Version 1.6.32beta10 [August 5, 2017]
   Moved chunk-length check into a png_check_chunk_length() private
     function (Suggested by Max Stepin).
@@ -6102,6 +6102,24 @@ Version 1.6.37 [April 14, 2019]
     (Contributed by Miguel Ojeda)
   Added makefiles for AddressSanitizer-enabled builds.
   Cleaned up various makefiles.
+
+Version 1.6.38 [September 14, 2022]
+  Added configurations and scripts for continuous integration.
+  Fixed various errors in the handling of tRNS, hIST and eXIf.
+  Implemented many stability improvements across all platforms.
+  Updated the internal documentation.
+
+Version 1.6.39 [November 20, 2022]
+  Changed the error handler of oversized chunks (i.e. larger than
+    PNG_USER_CHUNK_MALLOC_MAX) from png_chunk_error to png_benign_error.
+  Fixed a buffer overflow error in contrib/tools/pngfix.
+  Fixed a memory leak (CVE-2019-6129) in contrib/tools/pngcp.
+  Disabled the ARM Neon optimizations by default in the CMake file,
+    following the default behavior of the configure script.
+  Allowed configure.ac to work with the trunk version of autoconf.
+  Removed the support for "install" targets from the legacy makefiles;
+    removed the obsolete makefile.cegcc.
+  Cleaned up the code and updated the internal documentation.
 
 Send comments/corrections/commendations to png-mng-implement at lists.sf.net.
 Subscription is required; visit

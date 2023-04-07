@@ -1,5 +1,5 @@
-libpng 1.6.37 - April 14, 2019
-==============================
+libpng 1.6.39 - November 20, 2022
+=================================
 
 This is a public release of libpng, intended for use in production code.
 
@@ -9,13 +9,13 @@ Files available for download
 
 Source files with LF line endings (for Unix/Linux):
 
- * libpng-1.6.37.tar.xz (LZMA-compressed, recommended)
- * libpng-1.6.37.tar.gz
+ * libpng-1.6.39.tar.xz (LZMA-compressed, recommended)
+ * libpng-1.6.39.tar.gz
 
 Source files with CRLF line endings (for Windows):
 
- * lp1637.7z (LZMA-compressed, recommended)
- * lp1637.zip
+ * lpng1639.7z (LZMA-compressed, recommended)
+ * lpng1639.zip
 
 Other information:
 
@@ -25,20 +25,19 @@ Other information:
  * TRADEMARK.md
 
 
-Changes since the previous public release (version 1.6.36)
-----------------------------------------------------------
+Changes from version 1.6.38 to version 1.6.39
+---------------------------------------------
 
- * Fixed a use-after-free vulnerability (CVE-2019-7317) in png_image_free.
- * Fixed a memory leak in the ARM NEON implementation of png_do_expand_palette.
- * Fixed a memory leak in pngtest.c.
- * Fixed two vulnerabilities (CVE-2018-14048, CVE-2018-14550) in
-   contrib/pngminus; refactor.
- * Changed the license of contrib/pngminus to MIT; refresh makefile and docs.
-   (Contributed by Willem van Schaik)
- * Fixed a typo in the libpng license v2.
-   (Contributed by Miguel Ojeda)
- * Added makefiles for AddressSanitizer-enabled builds.
- * Cleaned up various makefiles.
+ * Changed the error handler of oversized chunks (i.e. larger than
+   PNG_USER_CHUNK_MALLOC_MAX) from png_chunk_error to png_benign_error.
+ * Fixed a buffer overflow error in contrib/tools/pngfix.
+ * Fixed a memory leak (CVE-2019-6129) in contrib/tools/pngcp.
+ * Disabled the ARM Neon optimizations by default in the CMake file,
+   following the default behavior of the configure script.
+ * Allowed configure.ac to work with the trunk version of autoconf.
+ * Removed the support for "install" targets from the legacy makefiles;
+   removed the obsolete makefile.cegcc.
+ * Cleaned up the code and updated the internal documentation.
 
 
 Send comments/corrections/commendations to png-mng-implement at lists.sf.net.
