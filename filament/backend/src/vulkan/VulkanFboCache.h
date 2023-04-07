@@ -30,8 +30,7 @@ namespace filament::backend {
 // Avoid using VkImageLayout since it requires 4 bytes.
 enum class VulkanDepthLayout : uint8_t {
     UNDEFINED, // VK_IMAGE_LAYOUT_UNDEFINED
-    GENERAL,   // VK_IMAGE_LAYOUT_GENERAL
-    READ_ONLY, // VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL.
+    ATTACHMENT, // VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
 };
 
 // Simple manager for VkFramebuffer and VkRenderPass objects.
@@ -134,17 +133,19 @@ private:
 
 inline VulkanDepthLayout fromVkImageLayout(VkImageLayout layout) {
     switch (layout) {
-        case VK_IMAGE_LAYOUT_GENERAL: return VulkanDepthLayout::GENERAL;
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL: return VulkanDepthLayout::READ_ONLY;
-        default: return VulkanDepthLayout::UNDEFINED;
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+            return VulkanDepthLayout::ATTACHMENT;
+        default:
+            return VulkanDepthLayout::UNDEFINED;
     }
 }
 
 inline VkImageLayout toVkImageLayout(VulkanDepthLayout layout) {
     switch (layout) {
-        case VulkanDepthLayout::GENERAL: return VK_IMAGE_LAYOUT_GENERAL;
-        case VulkanDepthLayout::READ_ONLY: return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-        default: return VK_IMAGE_LAYOUT_UNDEFINED;
+        case VulkanDepthLayout::ATTACHMENT:
+            return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        default:
+            return VK_IMAGE_LAYOUT_UNDEFINED;
     }
 }
 
