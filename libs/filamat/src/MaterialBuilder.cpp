@@ -1274,7 +1274,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     utils::FixedCapacityVector<MaterialConstant> constantsEntry(mConstants.size());
     std::transform(mConstants.begin(), mConstants.end(), constantsEntry.begin(),
             [](Constant const& c) { return MaterialConstant(c.name.c_str(), c.type); });
-    container.addChild<MaterialConstantParametersChunk>(std::move(constantsEntry));
+    container.push<MaterialConstantParametersChunk>(std::move(constantsEntry));
 
     // TODO: should we write the SSBO info? this would only be needed if we wanted to provide
     //       an interface to set [get?] values in the buffer. But we can do that easily
