@@ -74,7 +74,7 @@ struct Material::BuilderDetails {
     size_t mSize = 0;
     MaterialParser* mMaterialParser = nullptr;
     bool mDefaultMaterial = false;
-    std::unordered_map<const char*, std::variant<int32_t, float, bool>> mConstantSpecializations;
+    std::unordered_map<std::string, std::variant<int32_t, float, bool>> mConstantSpecializations;
 };
 
 FMaterial::DefaultMaterialBuilder::DefaultMaterialBuilder() : Material::Builder() {
@@ -96,15 +96,15 @@ Material::Builder& Material::Builder::package(const void* payload, size_t size) 
 }
 
 template<typename T, typename>
-Material::Builder& Material::Builder::constant(const char* name, T value) {
+Material::Builder& Material::Builder::constant(const char* name, size_t nameLength, T value) {
     ASSERT_PRECONDITION(name != nullptr, "name cannot be null");
-    mImpl->mConstantSpecializations[name] = value;
+    mImpl->mConstantSpecializations[{name, nameLength}] = value;
     return *this;
 }
 
-template Material::Builder& Material::Builder::constant<int32_t>(const char* name, int32_t value);
-template Material::Builder& Material::Builder::constant<float>(const char* name, float value);
-template Material::Builder& Material::Builder::constant<bool>(const char* name, bool value);
+template Material::Builder& Material::Builder::constant<int32_t>(const char*, size_t, int32_t);
+template Material::Builder& Material::Builder::constant<float>(const char*, size_t, float);
+template Material::Builder& Material::Builder::constant<bool>(const char*, size_t, bool);
 
 Material* Material::Builder::build(Engine& engine) {
     std::unique_ptr<MaterialParser> materialParser{ createParser(
@@ -207,10 +207,10 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     for (const auto& [name, value] : builder->mConstantSpecializations) {
         auto found = std::find_if(
                 constants.begin(), constants.end(), [name = name](const auto& constant) {
-                    return constant.name == utils::CString(name);
+                    return strncmp(constant.name.data(), name.data(), name.length()) == 0;
                 });
         ASSERT_PRECONDITION(found != constants.end(),
-                "The material %s does not have a constant parameter named %s.", mName.c_str_safe(), name);
+                "The material %s does not have a constant parameter named %s.", mName.c_str_safe(), name.c_str());
         const char* const types[3] = {"an int", "a float", "a bool"};
         const char* const errorMessage =
                 "The constant parameter %s on material %s is of type %s, but %s was "
@@ -218,15 +218,15 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
         switch (found->type) {
             case ConstantType::INT:
                 ASSERT_PRECONDITION(std::holds_alternative<int32_t>(value), errorMessage,
-                        name, mName.c_str_safe(), "int", types[value.index()]);
+                        name.c_str(), mName.c_str_safe(), "int", types[value.index()]);
                 break;
             case ConstantType::FLOAT:
                 ASSERT_PRECONDITION(std::holds_alternative<float>(value), errorMessage,
-                        name, mName.c_str_safe(), "float", types[value.index()]);
+                        name.c_str(), mName.c_str_safe(), "float", types[value.index()]);
                 break;
             case ConstantType::BOOL:
                 ASSERT_PRECONDITION(std::holds_alternative<bool>(value), errorMessage,
-                        name, mName.c_str_safe(), "bool", types[value.index()]);
+                        name.c_str(), mName.c_str_safe(), "bool", types[value.index()]);
                 break;
         }
         uint32_t index = std::distance(constants.begin(), found) + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
