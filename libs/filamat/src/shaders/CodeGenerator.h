@@ -184,8 +184,7 @@ private:
     // return name of the material property (e.g.: "ROUGHNESS")
     static char const* getConstantName(MaterialBuilder::Property property) noexcept;
 
-    static char const* getPrecisionQualifier(filament::backend::Precision precision,
-            filament::backend::Precision defaultPrecision) noexcept;
+    static char const* getPrecisionQualifier(filament::backend::Precision precision) noexcept;
 
     ShaderModel mShaderModel;
     TargetApi mTargetApi;
