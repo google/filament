@@ -96,6 +96,7 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
         list(APPEND SRCS src/opengl/platforms/CocoaTouchExternalImage.mm)
     elseif (APPLE)
         list(APPEND SRCS src/opengl/platforms/PlatformCocoaGL.mm)
+        list(APPEND SRCS src/opengl/platforms/CocoaExternalImage.mm)
     elseif (WEBGL)
         list(APPEND SRCS src/opengl/platforms/PlatformWebGL.cpp)
     elseif (LINUX)
