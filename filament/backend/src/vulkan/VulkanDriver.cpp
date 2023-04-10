@@ -674,6 +674,8 @@ bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
             return false;
         case Workaround::ADRENO_UNIFORM_ARRAY_CRASH:
             return false;
+        default:
+            return false;
     }
     return false;
 }
