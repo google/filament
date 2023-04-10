@@ -47,10 +47,14 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
             if (mTargetLanguage == TargetLanguage::SPIRV ||
                 material.featureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
                 // Vulkan requires layout locations on ins and outs, which were not supported
-                // in the OpenGL 4.1 GLSL profile.
+                // in ESSL 300
                 out << "#version 310 es\n\n";
             } else {
-                out << "#version 300 es\n\n";
+                if (material.featureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+                    out << "#version 300 es\n\n";
+                } else {
+                    out << "#version 100\n\n";
+                }
             }
             if (material.hasExternalSamplers) {
                 out << "#extension GL_OES_EGL_image_external_essl3 : require\n\n";

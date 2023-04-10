@@ -582,15 +582,16 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
 }
 
 bool MaterialBuilder::findProperties(backend::ShaderStage type,
-        MaterialBuilder::PropertyList& allProperties) noexcept {
+        MaterialBuilder::PropertyList& allProperties,
+        CodeGenParams const& semanticCodeGenParams) noexcept {
 #ifndef FILAMAT_LITE
     GLSLTools glslTools;
-    std::string shaderCodeAllProperties = peek(type, mSemanticCodeGenParams, allProperties);
+    std::string shaderCodeAllProperties = peek(type, semanticCodeGenParams, allProperties);
     // Populate mProperties with the properties set in the shader.
     if (!glslTools.findProperties(type, shaderCodeAllProperties, mProperties,
-            mSemanticCodeGenParams.targetApi,
-            mSemanticCodeGenParams.targetLanguage,
-            mSemanticCodeGenParams.shaderModel)) {
+            semanticCodeGenParams.targetApi,
+            semanticCodeGenParams.targetLanguage,
+            semanticCodeGenParams.shaderModel)) {
         if (mPrintShaders) {
             slog.e << shaderCodeAllProperties << io::endl;
         }
@@ -602,7 +603,7 @@ bool MaterialBuilder::findProperties(backend::ShaderStage type,
 #endif
 }
 
-bool MaterialBuilder::findAllProperties() noexcept {
+bool MaterialBuilder::findAllProperties(CodeGenParams const& semanticCodeGenParams) noexcept {
     if (mMaterialDomain != MaterialDomain::SURFACE) {
         return true;
     }
@@ -615,10 +616,10 @@ bool MaterialBuilder::findAllProperties() noexcept {
     // static code analyse the AST.
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MATERIAL_PROPERTIES_COUNT, true);
-    if (!findProperties(ShaderStage::FRAGMENT, allProperties)) {
+    if (!findProperties(ShaderStage::FRAGMENT, allProperties, semanticCodeGenParams)) {
         return false;
     }
-    if (!findProperties(ShaderStage::VERTEX, allProperties)) {
+    if (!findProperties(ShaderStage::VERTEX, allProperties, semanticCodeGenParams)) {
         return false;
     }
     return true;
@@ -632,13 +633,13 @@ bool MaterialBuilder::findAllProperties() noexcept {
 #endif
 }
 
-bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info) noexcept {
+bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info,
+        CodeGenParams const& semanticCodeGenParams) noexcept {
 #ifndef FILAMAT_LITE
     using namespace backend;
-    GLSLTools glslTools;
 
-    TargetApi targetApi = mSemanticCodeGenParams.targetApi;
-    TargetLanguage targetLanguage = mSemanticCodeGenParams.targetLanguage;
+    TargetApi targetApi = semanticCodeGenParams.targetApi;
+    TargetLanguage targetLanguage = semanticCodeGenParams.targetLanguage;
     assertSingleTargetApi(targetApi);
 
     if (mEnableFramebufferFetch) {
@@ -647,17 +648,17 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info) noexcept {
     }
 
     bool result = false;
-    ShaderModel model = mSemanticCodeGenParams.shaderModel;
+    ShaderModel model = semanticCodeGenParams.shaderModel;
     if (mMaterialDomain == filament::MaterialDomain::COMPUTE) {
-        std::string shaderCode = peek(ShaderStage::COMPUTE, mSemanticCodeGenParams, mProperties);
+        std::string shaderCode = peek(ShaderStage::COMPUTE, semanticCodeGenParams, mProperties);
         result = GLSLTools::analyzeComputeShader(shaderCode, model,
                 targetApi, targetLanguage, info);
     } else {
-        std::string shaderCode = peek(ShaderStage::VERTEX, mSemanticCodeGenParams, mProperties);
+        std::string shaderCode = peek(ShaderStage::VERTEX, semanticCodeGenParams, mProperties);
         result = GLSLTools::analyzeVertexShader(shaderCode, model, mMaterialDomain,
                 targetApi, targetLanguage, info);
         if (result) {
-            shaderCode = peek(ShaderStage::FRAGMENT, mSemanticCodeGenParams, mProperties);
+            shaderCode = peek(ShaderStage::FRAGMENT, semanticCodeGenParams, mProperties);
             result = GLSLTools::analyzeFragmentShader(shaderCode, model, mMaterialDomain,
                     targetApi, targetLanguage, mCustomSurfaceShading, info);
         }
@@ -1076,11 +1077,19 @@ error:
     }
 #endif
 
-    if (!findAllProperties()) {
+    // For finding properties and running semantic analysis, we always use the same code gen
+    // permutation. This is the first permutation generated with default arguments passed to matc.
+    CodeGenParams const semanticCodeGenParams = {
+            .shaderModel = ShaderModel::MOBILE,
+            .targetApi = TargetApi::OPENGL,
+            .targetLanguage = TargetLanguage::SPIRV
+    };
+
+    if (!findAllProperties(semanticCodeGenParams)) {
         goto error;
     }
 
-    if (!runSemanticAnalysis(info)) {
+    if (!runSemanticAnalysis(info, semanticCodeGenParams)) {
         goto error;
     }
 
