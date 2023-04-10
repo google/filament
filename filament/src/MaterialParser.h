@@ -105,6 +105,8 @@ public:
     bool getShader(filaflat::ShaderContent& shader, backend::ShaderModel shaderModel,
             Variant variant, backend::ShaderStage stage) noexcept;
 
+    filaflat::MaterialChunk const& getMaterialChunk() const noexcept { return mImpl.mMaterialChunk; }
+
 private:
     struct MaterialParserDetails {
         MaterialParserDetails(backend::Backend backend, const void* data, size_t size);

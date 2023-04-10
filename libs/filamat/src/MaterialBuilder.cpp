@@ -790,17 +790,17 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 std::vector<uint32_t>* pSpirv = targetApiNeedsSpirv ? &spirv : nullptr;
                 std::string* pMsl = targetApiNeedsMsl ? &msl : nullptr;
 
-                TextEntry glslEntry{0};
-                SpirvEntry spirvEntry{0};
-                TextEntry metalEntry{0};
+                TextEntry glslEntry{};
+                SpirvEntry spirvEntry{};
+                TextEntry metalEntry{};
 
-                glslEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
-                spirvEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
-                metalEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
+                glslEntry.shaderModel  = params.shaderModel;
+                spirvEntry.shaderModel = params.shaderModel;
+                metalEntry.shaderModel = params.shaderModel;
 
-                glslEntry.variantKey  = v.variant.key;
-                spirvEntry.variantKey = v.variant.key;
-                metalEntry.variantKey = v.variant.key;
+                glslEntry.variant  = v.variant;
+                spirvEntry.variant = v.variant;
+                metalEntry.variant = v.variant;
 
                 // Generate raw shader code.
                 // The quotes in Google-style line directives cause problems with certain drivers. These
@@ -876,14 +876,14 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                         // should never happen
                         break;
                     case TargetApi::OPENGL:
-                        glslEntry.stage = uint8_t(v.stage);
+                        glslEntry.stage = v.stage;
                         glslEntry.shader = shader;
                         glslEntries.push_back(glslEntry);
                         break;
                     case TargetApi::VULKAN:
 #ifndef FILAMAT_LITE
                         assert(!spirv.empty());
-                        spirvEntry.stage = uint8_t(v.stage);
+                        spirvEntry.stage = v.stage;
                         spirvEntry.spirv = std::move(spirv);
                         spirvEntries.push_back(spirvEntry);
 #endif
@@ -892,7 +892,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 #ifndef FILAMAT_LITE
                         assert(!spirv.empty());
                         assert(msl.length() > 0);
-                        metalEntry.stage = uint8_t(v.stage);
+                        metalEntry.stage = v.stage;
                         metalEntry.shader = msl;
                         metalEntries.push_back(metalEntry);
 #endif
@@ -920,10 +920,10 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
     // Sort the variants.
     auto compare = [](const auto& a, const auto& b) {
-        static_assert(sizeof(decltype(a.variantKey)) == 1);
-        static_assert(sizeof(decltype(b.variantKey)) == 1);
-        const uint32_t akey = (a.shaderModel << 16) | (a.variantKey << 8) | a.stage;
-        const uint32_t bkey = (b.shaderModel << 16) | (b.variantKey << 8) | b.stage;
+        static_assert(sizeof(decltype(a.variant.key)) == 1);
+        static_assert(sizeof(decltype(b.variant.key)) == 1);
+        const uint32_t akey = (uint32_t(a.shaderModel) << 16) | (uint32_t(a.variant.key) << 8) | uint32_t(a.stage);
+        const uint32_t bkey = (uint32_t(b.shaderModel) << 16) | (uint32_t(b.variant.key) << 8) | uint32_t(b.stage);
         return akey < bkey;
     };
     std::sort(glslEntries.begin(), glslEntries.end(), compare);

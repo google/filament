@@ -335,18 +335,28 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     parser->hasCustomDepthShader(&mHasCustomDepthShader);
     mIsDefaultMaterial = builder->mDefaultMaterial;
 
-    // pre-cache the shared variants -- these variants are shared with the default material.
-    // (note: the default material is unlit, so only unlit variants can be shared)
-    if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
-        FMaterial const* const pMaterial = engine.getDefaultMaterial();
-        auto& cachedPrograms = mCachedPrograms;
-        for (Variant::type_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
-            const Variant variant(k);
-            if (Variant::isValidDepthVariant(variant) &&
-                (Variant::filterVariant(variant, false) == variant)) {
-                pMaterial->prepareProgram(variant);
-                cachedPrograms[k] = pMaterial->getProgram(variant);
+    if (UTILS_UNLIKELY(mIsDefaultMaterial)) {
+        filaflat::MaterialChunk const& materialChunk{ mMaterialParser->getMaterialChunk() };
+        auto variants = FixedCapacityVector<Variant>::with_capacity(materialChunk.getShaderCount());
+        materialChunk.visitShaders([&variants](
+                ShaderModel model, Variant variant, ShaderStage stage) {
+            if (Variant::isValidDepthVariant(variant)) {
+                variants.push_back(variant);
             }
+        });
+        std::sort(variants.begin(), variants.end(),
+                [](Variant lhs, Variant rhs) { return lhs.key < rhs.key; });
+        auto pos = std::unique(variants.begin(), variants.end());
+        variants.resize(std::distance(variants.begin(), pos));
+        std::swap(mDepthVariants, variants);
+    }
+
+    if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
+        FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
+        auto& cachedPrograms = mCachedPrograms;
+        for (Variant variant : pDefaultMaterial->mDepthVariants) {
+            pDefaultMaterial->prepareProgram(variant);
+            cachedPrograms[variant.key] = pDefaultMaterial->getProgram(variant);
         }
     }
 
@@ -437,16 +447,16 @@ void FMaterial::getSurfaceProgramSlow(Variant variant) const noexcept {
     Variant const vertexVariant   = Variant::filterVariantVertex(variant);
     Variant const fragmentVariant = Variant::filterVariantFragment(variant);
 
-    Program pb{ getProgramBuilderWithVariants(variant, vertexVariant, fragmentVariant) };
+    Program pb{ getProgramWithVariants(variant, vertexVariant, fragmentVariant) };
     createAndCacheProgram(std::move(pb), variant);
 }
 
 void FMaterial::getPostProcessProgramSlow(Variant variant) const noexcept {
-    Program pb{ getProgramBuilderWithVariants(variant, variant, variant) };
+    Program pb{ getProgramWithVariants(variant, variant, variant) };
     createAndCacheProgram(std::move(pb), variant);
 }
 
-Program FMaterial::getProgramBuilderWithVariants(
+Program FMaterial::getProgramWithVariants(
         Variant variant,
         Variant vertexVariant,
         Variant fragmentVariant) const noexcept {
@@ -560,6 +570,8 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
     return count;
 }
 
+#if FILAMENT_ENABLE_MATDBG
+
 // Swaps in an edited version of the original package that was used to create the material. The
 // edited package was stashed in response to a debugger event. This is invoked only when the
 // Material Debugger is attached. The only editable features of a material package are the shader
@@ -582,8 +594,6 @@ void FMaterial::applyPendingEdits() noexcept {
  *
  * @{
  */
-
-#if FILAMENT_ENABLE_MATDBG
 
 void FMaterial::onEditCallback(void* userdata, const utils::CString&, const void* packageData,
         size_t packageSize) {

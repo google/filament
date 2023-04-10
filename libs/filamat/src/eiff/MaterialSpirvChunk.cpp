@@ -24,9 +24,9 @@ MaterialSpirvChunk::MaterialSpirvChunk(const std::vector<SpirvEntry>&& entries) 
 void MaterialSpirvChunk::flatten(Flattener &f) {
     f.writeUint64(mEntries.size());
     for (const SpirvEntry& entry : mEntries) {
-        f.writeUint8(entry.shaderModel);
-        f.writeUint8(entry.variantKey);
-        f.writeUint8(entry.stage);
+        f.writeUint8(uint8_t(entry.shaderModel));
+        f.writeUint8(entry.variant.key);
+        f.writeUint8(uint8_t(entry.stage));
         f.writeUint32(entry.dictionaryIndex);
     }
 }

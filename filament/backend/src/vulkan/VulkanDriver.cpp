@@ -652,7 +652,26 @@ bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
             // early exit condition is flattened in EASU code
             return deviceProperties.vendorID == 0x5143; // Qualcomm
         case Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP:
-            return true;
+            // Supporting depth attachment as both sampler and attachment is only possible if we set
+            // the depth attachment as read-only (e.g. during SSAO pass), however note that the
+            // store-ops for attachments wrt VkRenderPass only has VK_ATTACHMENT_STORE_OP_DONT_CARE
+            // and VK_ATTACHMENT_STORE_OP_STORE for versions below 1.3. Only at 1.3 and above do we
+            // have a true read-only choice VK_ATTACHMENT_STORE_OP_NONE. That means for < 1.3, we
+            // will trigger a validation sync error if we use the depth attachment also as a
+            // sampler. See full error below:
+            //
+            // SYNC-HAZARD-WRITE-AFTER-READ(ERROR / SPEC): msgNum: 929810911 - Validation Error:
+            // [ SYNC-HAZARD-WRITE-AFTER-READ ] Object 0: handle = 0x6160000c3680,
+            // type = VK_OBJECT_TYPE_RENDER_PASS; | MessageID = 0x376bc9df | vkCmdEndRenderPass:
+            // Hazard WRITE_AFTER_READ in subpass 0 for attachment 1 depth aspect during store with
+            // storeOp VK_ATTACHMENT_STORE_OP_STORE. Access info (usage:
+            // SYNC_LATE_FRAGMENT_TESTS_DEPTH_STENCIL_ATTACHMENT_WRITE, prior_usage:
+            // SYNC_FRAGMENT_SHADER_SHADER_STORAGE_READ, read_barriers: VK_PIPELINE_STAGE_2_NONE,
+            // command: vkCmdDrawIndexed, seq_no: 177, reset_no: 1)
+            //
+            // Therefore we apply the existing workaround of an extra blit until a better
+            // resolution.
+            return false;
         case Workaround::ADRENO_UNIFORM_ARRAY_CRASH:
             return false;
     }
@@ -871,39 +890,27 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     VulkanAttachment depth = rt->getSamples() == 1 ? rt->getDepth() : rt->getMsaaDepth();
 
     VulkanDepthLayout initialDepthLayout = fromVkImageLayout(depth.getLayout());
-    VulkanDepthLayout renderPassDepthLayout =
-            fromVkImageLayout(getDefaultImageLayout(TextureUsage::DEPTH_ATTACHMENT));
-    VulkanDepthLayout finalDepthLayout = renderPassDepthLayout;
+    VulkanDepthLayout renderPassDepthLayout = VulkanDepthLayout::ATTACHMENT;
+    VulkanDepthLayout finalDepthLayout = VulkanDepthLayout::ATTACHMENT;
 
-    // Sometimes we need to permit the shader to sample the depth attachment by transitioning the
-    // layout of all its subresources to a read-only layout. This is especially crucial for SSAO.
-    //
-    // We cannot perform this transition using the render pass because the shaders in this render
-    // pass might sample from multiple miplevels.
-    //
-    // We do not use GENERAL here due to the following validation message:
-    //
-    //   The Vulkan spec states: Image subresources used as attachments in the current render pass
-    //   must not be accessed in any way other than as an attachment by this command, except for
-    //   cases involving read-only access to depth/stencil attachments as described in the Render
-    //   Pass chapter.
-    //
-    // https://vulkan.lunarg.com/doc/view/1.2.182.0/mac/1.2-extensions/vkspec.html#VUID-vkCmdDrawIndexed-None-04584)
-    //
-    if (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) {
-        VkImageSubresourceRange range = {
-            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-            .baseMipLevel = 0,
-            .levelCount = depth.texture->levels,
-            .baseArrayLayer = 0,
-            .layerCount = depth.texture->depth,
-        };
-        depth.texture->transitionLayout(cmdbuffer, range, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
-        initialDepthLayout = renderPassDepthLayout = finalDepthLayout = VulkanDepthLayout::READ_ONLY;
-    }
-
+    TargetBufferFlags clearVal = params.flags.clear;
+    TargetBufferFlags discardEndVal = params.flags.discardEnd;
     if (depth.texture) {
-        depth.texture->trackLayout(depth.level, depth.layer, toVkImageLayout(renderPassDepthLayout));
+        if (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) {
+            discardEndVal &= ~TargetBufferFlags::DEPTH;
+            clearVal &= ~TargetBufferFlags::DEPTH;
+        }
+        if (initialDepthLayout != VulkanDepthLayout::ATTACHMENT) {
+            VkImageSubresourceRange subresources{
+                    .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                    .baseMipLevel = 0,
+                    .levelCount = depth.texture->levels,
+                    .baseArrayLayer = 0,
+                    .layerCount = depth.texture->depth,
+            };
+            depth.texture->transitionLayout(cmdbuffer, subresources,
+                    toVkImageLayout(renderPassDepthLayout));
+        }
     }
 
     // Create the VkRenderPass or fetch it from cache.
@@ -913,9 +920,9 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .renderPassDepthLayout = renderPassDepthLayout,
         .finalDepthLayout = finalDepthLayout,
         .depthFormat = depth.getFormat(),
-        .clear = params.flags.clear,
+        .clear = clearVal,
         .discardStart = discardStart,
-        .discardEnd = params.flags.discardEnd,
+        .discardEnd = discardEndVal,
         .samples = rt->getSamples(),
         .subpassMask = uint8_t(params.subpassMask),
     };
@@ -1069,21 +1076,6 @@ void VulkanDriver::endRenderPass(int) {
 
     VulkanRenderTarget* rt = mContext.currentRenderPass.renderTarget;
     assert_invariant(rt);
-
-    // In some cases, depth needs to be transitioned from DEPTH_STENCIL_READ_ONLY_OPTIMAL back to
-    // GENERAL. We did not do this using the render pass because we need to change multiple mips.
-    if (mContext.currentRenderPass.params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) {
-        const VulkanAttachment& depth = rt->getDepth();
-        VkImageSubresourceRange range = {
-            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-            .baseMipLevel = 0,
-            .levelCount = depth.texture->levels,
-            .baseArrayLayer = 0,
-            .layerCount = depth.texture->depth,
-        };
-        depth.texture->transitionLayout(cmdbuffer, range,
-                getDefaultImageLayout(TextureUsage::DEPTH_ATTACHMENT));
-    }
 
     // Since we might soon be sampling from the render target that we just wrote to, we need a
     // pipeline barrier between framebuffer writes and shader reads. This is a memory barrier rather
