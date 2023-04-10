@@ -111,7 +111,7 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     }
 
     Precision defaultPrecision = getDefaultPrecision(stage);
-    const char* precision = getPrecisionQualifier(defaultPrecision, Precision::DEFAULT);
+    const char* precision = getPrecisionQualifier(defaultPrecision);
     out << "precision " << precision << " float;\n";
     out << "precision " << precision << " int;\n";
     if (mShaderModel == ShaderModel::MOBILE) {
@@ -345,12 +345,21 @@ io::sstream& CodeGenerator::generateDepthShaderMain(io::sstream& out, ShaderStag
 const char* CodeGenerator::getUniformPrecisionQualifier(UniformType type, Precision precision,
         Precision uniformPrecision, Precision defaultPrecision) noexcept {
     if (!hasPrecision(type)) {
+        // some types like bool can't have a precision qualifier
         return "";
     }
     if (precision == Precision::DEFAULT) {
+        // if precision field is specified as default, turn it into the default precision for
+        // uniforms (which might be different on desktop vs mobile)
         precision = uniformPrecision;
     }
-    return getPrecisionQualifier(precision, defaultPrecision);
+    if (precision == defaultPrecision) {
+        // finally if the precision match the default precision of this stage, don't omit
+        // the precision qualifier -- which mean the effective precision might be different
+        // in different stages.
+        return "";
+    }
+    return getPrecisionQualifier(precision);
 }
 
 utils::io::sstream& CodeGenerator::generateBuffers(utils::io::sstream& out,
@@ -492,7 +501,7 @@ io::sstream& CodeGenerator::generateSamplers(
             type = SamplerType::SAMPLER_2D;
         }
         char const* const typeName = getSamplerTypeName(type, info.format, info.multisample);
-        char const* const precision = getPrecisionQualifier(info.precision, Precision::DEFAULT);
+        char const* const precision = getPrecisionQualifier(info.precision);
         if (mTargetLanguage == TargetLanguage::SPIRV) {
             const uint32_t bindingIndex = (uint32_t) firstBinding + info.offset;
             switch (mTargetApi) {
@@ -536,7 +545,7 @@ io::sstream& CodeGenerator::generateSubpass(io::sstream& out, SubpassInfo subpas
 
     char const* const typeName = "subpassInput";
     // In our Vulkan backend, subpass inputs always live in descriptor set 2. (ignored for GLES)
-    char const* const precision = getPrecisionQualifier(subpass.precision, Precision::DEFAULT);
+    char const* const precision = getPrecisionQualifier(subpass.precision);
     out << "layout(input_attachment_index = " << (int) subpass.attachmentIndex
         << ", set = 2, binding = " << (int) subpass.binding
         << ") ";
@@ -967,17 +976,12 @@ char const* CodeGenerator::getInterpolationQualifier(Interpolation interpolation
 }
 
 /* static */
-char const* CodeGenerator::getPrecisionQualifier(Precision precision,
-        Precision defaultPrecision) noexcept {
-    if (precision == defaultPrecision) {
-        return "";
-    }
-
+char const* CodeGenerator::getPrecisionQualifier(Precision precision) noexcept {
     switch (precision) {
         case Precision::LOW:     return "lowp";
         case Precision::MEDIUM:  return "mediump";
         case Precision::HIGH:    return "highp";
-        case Precision::DEFAULT: return "ERROR";
+        case Precision::DEFAULT: return "";
     }
 }
 
