@@ -39,18 +39,18 @@ vertex {
 fragment {
     void dummy(){}
 
-    vec3 uintToColorDebug(uint v) {
-        if (v == 0u) {
+    vec3 uintToColorDebug(int v) {
+        if (v == 0) {
             return vec3(0.0, 1.0, 0.0);     // green
-        } else if (v == 1u) {
+        } else if (v == 1) {
             return vec3(0.0, 0.0, 1.0);     // blue
-        } else if (v == 2u) {
+        } else if (v == 2) {
             return vec3(1.0, 1.0, 0.0);     // yellow
-        } else if (v == 3u) {
+        } else if (v == 3) {
             return vec3(1.0, 0.0, 0.0);     // red
-        } else if (v == 4u) {
+        } else if (v == 4) {
             return vec3(1.0, 0.0, 1.0);     // purple
-        } else if (v == 5u) {
+        } else if (v == 5) {
             return vec3(0.0, 1.0, 1.0);     // cyan
         }
 
@@ -58,10 +58,10 @@ fragment {
         return vec3(0.0, 0.0, 0.0);
     }
 
-    uint getShadowCascade(highp float z) {
-        uvec4 greaterZ = uvec4(greaterThan(frameUniforms.cascadeSplits, vec4(z)));
-        uint cascadeCount = frameUniforms.cascades & 0xFu;
-        return clamp(greaterZ.x + greaterZ.y + greaterZ.z + greaterZ.w, 0u, cascadeCount - 1u);
+    int getShadowCascade(highp float z) {
+        ivec4 greaterZ = ivec4(greaterThan(frameUniforms.cascadeSplits, vec4(z)));
+        int cascadeCount = frameUniforms.cascades & 0xF;
+        return clamp(greaterZ.x + greaterZ.y + greaterZ.z + greaterZ.w, 0, cascadeCount - 1);
     }
 
     void postProcess(inout PostProcessInputs postProcess) {

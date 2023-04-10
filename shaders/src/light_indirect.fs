@@ -224,7 +224,7 @@ float prefilteredImportanceSampling(float ipdf, float omegaP) {
 }
 
 vec3 isEvaluateSpecularIBL(const PixelParams pixel, const vec3 n, const vec3 v, const float NoV) {
-    const uint numSamples = uint(IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT);
+    const int numSamples = IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT;
     const float invNumSamples = 1.0 / float(numSamples);
     const vec3 up = vec3(0.0, 0.0, 1.0);
 
@@ -251,7 +251,7 @@ vec3 isEvaluateSpecularIBL(const PixelParams pixel, const vec3 n, const vec3 v, 
     float omegaP = (4.0 * PI) / (6.0 * dim * dim);
 
     vec3 indirectSpecular = vec3(0.0);
-    for (uint i = 0u; i < numSamples; i++) {
+    for (int i = 0; i < numSamples; i++) {
         vec2 u = hammersley(i);
         vec3 h = T * importanceSamplingNdfDggx(u, roughness);
 
@@ -283,7 +283,7 @@ vec3 isEvaluateSpecularIBL(const PixelParams pixel, const vec3 n, const vec3 v, 
 }
 
 vec3 isEvaluateDiffuseIBL(const PixelParams pixel, vec3 n, vec3 v) {
-    const uint numSamples = uint(IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT);
+    const int numSamples = IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT;
     const float invNumSamples = 1.0 / float(numSamples);
     const vec3 up = vec3(0.0, 0.0, 1.0);
 
@@ -309,7 +309,7 @@ vec3 isEvaluateDiffuseIBL(const PixelParams pixel, vec3 n, vec3 v) {
     float omegaP = (4.0 * PI) / (6.0 * dim * dim);
 
     vec3 indirectDiffuse = vec3(0.0);
-    for (uint i = 0u; i < numSamples; i++) {
+    for (int i = 0; i < numSamples; i++) {
         vec2 u = hammersley(i);
         vec3 h = T * hemisphereCosSample(u);
 
