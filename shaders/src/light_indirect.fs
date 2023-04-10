@@ -71,9 +71,22 @@ vec3 Irradiance_RoughnessOne(const vec3 n) {
 //------------------------------------------------------------------------------
 
 vec3 diffuseIrradiance(const vec3 n) {
+    // On Metal devices with an A8X chipset, this light_iblSpecular texture sample must be pulled
+    // outside the frameUniforms.iblSH check. This is to avoid a Metal pipeline compilation error
+    // with the message: "Could not statically determine the target of a texture".
+    // The reason for this is unknown, and is possibly a bug that exhibits only on these devices.
+    vec3 irradianceRoughnessOne;
+    if (CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND) {
+        irradianceRoughnessOne = Irradiance_RoughnessOne(n);
+    }
+
     if (frameUniforms.iblSH[0].x == 65504.0) {
 #if FILAMENT_QUALITY < FILAMENT_QUALITY_HIGH
-        return Irradiance_RoughnessOne(n);
+        if (CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND) {
+            return irradianceRoughnessOne;
+        } else {
+            return Irradiance_RoughnessOne(n);
+        }
 #else
         ivec2 s = textureSize(light_iblSpecular, int(frameUniforms.iblRoughnessOneLevel));
         float du = 1.0 / float(s.x);

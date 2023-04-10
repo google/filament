@@ -73,6 +73,10 @@ struct MetalContext {
         uint8_t mac;
     } highestSupportedGpuFamily;
 
+    struct {
+        bool a8xStaticTextureTargetError;
+    } bugs;
+
     // sampleCountLookup[requestedSamples] gives a <= sample count supported by the device.
     std::array<uint8_t, MAX_SAMPLE_COUNT + 1> sampleCountLookup;
 

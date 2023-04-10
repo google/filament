@@ -1720,6 +1720,8 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
             return mContext.bugs.allow_read_only_ancillary_feedback_loop;
         case Workaround::ADRENO_UNIFORM_ARRAY_CRASH:
             return mContext.bugs.enable_initialize_non_used_uniform_array;
+        default:
+            return false;
     }
     return false;
 }

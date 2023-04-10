@@ -462,9 +462,13 @@ Program FMaterial::getProgramWithVariants(
         }
     }
 
+    const bool staticTextureWorkaround =
+            mEngine.getDriverApi().isWorkaroundNeeded(Workaround::A8X_STATIC_TEXTURE_TARGET_ERROR);
+
     program.specializationConstants({
             { 0, (int)mEngine.getSupportedFeatureLevel() },
-            { 1, (int)CONFIG_MAX_INSTANCES }
+            { 1, (int)CONFIG_MAX_INSTANCES },
+            { 2, (bool)staticTextureWorkaround }
     });
 
     return program;
