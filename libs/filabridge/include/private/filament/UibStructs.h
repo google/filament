@@ -88,7 +88,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // --------------------------------------------------------------------------------------------
     math::float4 zParams;                       // froxel Z parameters
     math::uint3 fParams;                        // stride-x, stride-y, stride-z
-    uint32_t lightChannels;                     // light channel bits
+    int32_t lightChannels;                      // light channel bits
     math::float2 froxelCountXY;
 
     // IBL
@@ -111,7 +111,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // bit 0: directional (sun) shadow enabled
     // bit 1: directional (sun) screen-space contact shadow enabled
     // bit 8-15: screen-space contact shadows ray casting steps
-    uint32_t directionalShadows;
+    int32_t directionalShadows;
     float ssContactShadowDistance;
 
     // position of cascade splits, in world space (not including the near plane)
@@ -119,7 +119,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float4 cascadeSplits;
     // bit 0-3: cascade count
     // bit 8-11: cascade has visible shadows
-    uint32_t cascades;
+    int32_t cascades;
     float reserved0;
     float reserved1;                    // normal bias
     float shadowPenumbraRatioScale;     // For DPCF or PCSS, scale penumbra ratio for artistic use
@@ -197,9 +197,9 @@ struct PerRenderableData {
 
     mat44_std140 worldFromModelMatrix;
     mat33_std140 worldFromModelNormalMatrix;
-    uint32_t morphTargetCount;
-    uint32_t flagsChannels;                   // see packFlags() below (0x00000fll)
-    uint32_t objectId;                        // used for picking
+    int32_t morphTargetCount;
+    int32_t flagsChannels;                   // see packFlags() below (0x00000fll)
+    int32_t objectId;                        // used for picking
     // TODO: We need a better solution, this currently holds the average local scale for the renderable
     float userData;
 

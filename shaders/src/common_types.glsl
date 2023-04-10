@@ -22,9 +22,9 @@ struct BoneData {
 struct PerRenderableData {
     highp mat4 worldFromModelMatrix;
     highp mat3 worldFromModelNormalMatrix;
-    highp uint morphTargetCount;
-    highp uint flagsChannels;                   // see packFlags() below (0x00000fll)
-    highp uint objectId;                        // used for picking
+    highp int morphTargetCount;
+    highp int flagsChannels;                   // see packFlags() below (0x00000fll)
+    highp int objectId;                        // used for picking
     highp float userData;   // TODO: We need a better solution, this currently holds the average local scale for the renderable
     highp vec4 reserved[8];
 };

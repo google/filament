@@ -9,8 +9,8 @@ struct Light {
     bool castsShadows;
     bool contactShadows;
     uint type;
-    uint shadowIndex;
-    uint channels;
+    int shadowIndex;
+    int channels;
 };
 
 struct PixelParams {

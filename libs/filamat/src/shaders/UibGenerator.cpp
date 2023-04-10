@@ -78,7 +78,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // ------------------------------------------------------------------------------------
             { "zParams",                0, Type::FLOAT4                  },
             { "fParams",                0, Type::UINT3                   },
-            { "lightChannels",          0, Type::UINT                    },
+            { "lightChannels",          0, Type::INT                     },
             { "froxelCountXY",          0, Type::FLOAT2                  },
 
             { "iblLuminance",           0, Type::FLOAT                   },
@@ -97,11 +97,11 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // ------------------------------------------------------------------------------------
             // Directional light shadowing [variant: SRE | DIR]
             // ------------------------------------------------------------------------------------
-            { "directionalShadows",     0, Type::UINT                    },
+            { "directionalShadows",     0, Type::INT                     },
             { "ssContactShadowDistance",0, Type::FLOAT                   },
 
             { "cascadeSplits",          0, Type::FLOAT4, Precision::HIGH },
-            { "cascades",               0, Type::UINT                    },
+            { "cascades",               0, Type::INT                     },
             { "reserved0",              0, Type::FLOAT                   },
             { "reserved1",              0, Type::FLOAT                   },
             { "shadowPenumbraRatioScale", 0, Type::FLOAT                 },

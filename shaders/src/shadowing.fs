@@ -167,7 +167,7 @@ mat2 getRandomRotationMatrix(highp vec2 fragCoord) {
     return R;
 }
 
-float getPenumbraLs(const bool DIRECTIONAL, const uint index, const highp float zLight) {
+float getPenumbraLs(const bool DIRECTIONAL, const int index, const highp float zLight) {
     float penumbra;
     // This conditional is resolved at compile time
     if (DIRECTIONAL) {
@@ -179,7 +179,7 @@ float getPenumbraLs(const bool DIRECTIONAL, const uint index, const highp float 
     return penumbra;
 }
 
-float getPenumbraRatio(const bool DIRECTIONAL, const uint index,
+float getPenumbraRatio(const bool DIRECTIONAL, const int index,
         float z_receiver, float z_blocker) {
     // z_receiver/z_blocker are not linear depths (i.e. they're not distances)
     // Penumbra ratio for PCSS is given by:  pr = (d_receiver - d_blocker) / d_blocker
@@ -273,7 +273,7 @@ float filterPCSS(const mediump sampler2DArray map,
 float ShadowSample_DPCF(const bool DIRECTIONAL,
         const mediump sampler2DArray map,
         const highp vec4 scissorNormalized,
-        const uint layer, const uint index,
+        const uint layer, const int index,
         const highp vec4 shadowPosition, const highp float zLight) {
     highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
     highp vec2 texelSize = vec2(1.0) / vec2(textureSize(map, 0));
@@ -320,7 +320,7 @@ float ShadowSample_DPCF(const bool DIRECTIONAL,
 float ShadowSample_PCSS(const bool DIRECTIONAL,
         const mediump sampler2DArray map,
         const highp vec4 scissorNormalized,
-        const uint layer, const uint index,
+        const uint layer, const int index,
         const highp vec4 shadowPosition, const highp float zLight) {
     highp vec2 size = vec2(textureSize(map, 0));
     highp vec2 texelSize = vec2(1.0) / size;
@@ -395,7 +395,7 @@ void initScreenSpaceRay(out ScreenSpaceRay ray, highp vec3 wsRayStart, vec3 wsRa
 float screenSpaceContactShadow(vec3 lightDirection) {
     // cast a ray in the direction of the light
     float occlusion = 0.0;
-    uint kStepCount = (frameUniforms.directionalShadows >> 8u) & 0xFFu;
+    int kStepCount = (frameUniforms.directionalShadows >> 8) & 0xFF;
     float kDistanceMax = frameUniforms.ssContactShadowDistance;
 
     ScreenSpaceRay rayData;
@@ -414,7 +414,7 @@ float screenSpaceContactShadow(vec3 lightDirection) {
     highp float t = dt * dither + dt;
 
     highp vec3 ray;
-    for (uint i = 0u ; i < kStepCount ; i++, t += dt) {
+    for (int i = 0 ; i < kStepCount ; i++, t += dt) {
         ray = rayData.uvRayStart + rayData.uvRay * t;
         highp float z = textureLod(light_structure, uvToRenderTargetUV(ray.xy), 0.0).r;
         highp float dz = z - ray.z;
@@ -507,36 +507,36 @@ float ShadowSample_VSM(const bool ELVSM, const mediump sampler2DArray shadowMap,
 
 // get texture coordinate for directional and spot shadow maps
 #if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
-highp vec4 getShadowPosition(const uint cascade) {
+highp vec4 getShadowPosition(const int cascade) {
     return getCascadeLightSpacePosition(cascade);
 }
 #endif
 
 #if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
-highp vec4 getShadowPosition(const uint index,  const highp vec3 dir, const highp float zLight) {
+highp vec4 getShadowPosition(const int index,  const highp vec3 dir, const highp float zLight) {
     return getSpotLightSpacePosition(index, dir, zLight);
 }
 #endif
 
-uint getPointLightFace(const highp vec3 r) {
+int getPointLightFace(const highp vec3 r) {
     highp vec4 tc;
     highp float rx = abs(r.x);
     highp float ry = abs(r.y);
     highp float rz = abs(r.z);
     highp float d = max(rx, max(ry, rz));
     if (d == rx) {
-        return (r.x >= 0.0 ? 0u : 1u);
+        return (r.x >= 0.0 ? 0 : 1);
     } else if (d == ry) {
-        return (r.y >= 0.0 ? 2u : 3u);
+        return (r.y >= 0.0 ? 2 : 3);
     } else {
-        return (r.z >= 0.0 ? 4u : 5u);
+        return (r.z >= 0.0 ? 4 : 5);
     }
 }
 
 // PCF sampling
 float shadow(const bool DIRECTIONAL,
         const mediump sampler2DArrayShadow shadowMap,
-        const uint index, highp vec4 shadowPosition, highp float zLight) {
+        const int index, highp vec4 shadowPosition, highp float zLight) {
     highp vec4 scissorNormalized = shadowUniforms.shadows[index].scissorNormalized;
     uint layer = shadowUniforms.shadows[index].layer;
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
@@ -549,7 +549,7 @@ float shadow(const bool DIRECTIONAL,
 // Shadow requiring a sampler2D sampler (VSM, DPCF and PCSS)
 float shadow(const bool DIRECTIONAL,
         const mediump sampler2DArray shadowMap,
-        const uint index, highp vec4 shadowPosition, highp float zLight) {
+        const int index, highp vec4 shadowPosition, highp float zLight) {
     highp vec4 scissorNormalized = shadowUniforms.shadows[index].scissorNormalized;
     uint layer = shadowUniforms.shadows[index].layer;
     // This conditional is resolved at compile time
