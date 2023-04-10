@@ -204,6 +204,9 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     mSpecializationConstants.reserve(constants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
     mSpecializationConstants.push_back({0, (int)mEngine.getSupportedFeatureLevel()});
     mSpecializationConstants.push_back({1, (int)CONFIG_MAX_INSTANCES});
+    const bool staticTextureWorkaround =
+            mEngine.getDriverApi().isWorkaroundNeeded(Workaround::A8X_STATIC_TEXTURE_TARGET_ERROR);
+    mSpecializationConstants.push_back({2, (bool)staticTextureWorkaround});
     for (const auto& [name, value] : builder->mConstantSpecializations) {
         auto found = std::find_if(
                 constants.begin(), constants.end(), [name = name](const auto& constant) {

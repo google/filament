@@ -117,6 +117,9 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
         sc[s] = [mContext->device supportsTextureSampleCount:s] ? s : sc[s - 1];
     }
 
+    mContext->bugs.a8xStaticTextureTargetError =
+            [mContext->device.name containsString:@"Apple A8X GPU"];
+
     mContext->commandQueue = mPlatform.createCommandQueue(mContext->device);
     mContext->pipelineStateCache.setDevice(mContext->device);
     mContext->depthStencilStateCache.setDevice(mContext->device);
@@ -719,6 +722,8 @@ bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
             return true;
         case Workaround::ADRENO_UNIFORM_ARRAY_CRASH:
             return false;
+        case Workaround::A8X_STATIC_TEXTURE_TARGET_ERROR:
+            return mContext->bugs.a8xStaticTextureTargetError;
     }
     return false;
 }

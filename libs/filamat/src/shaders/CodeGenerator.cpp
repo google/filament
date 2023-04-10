@@ -135,6 +135,10 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES", 1, (int)CONFIG_MAX_INSTANCES);
     }
 
+    // Workaround a Metal pipeline compilation error with the message:
+    // "Could not statically determine the target of a texture". See light_indirect.fs
+    generateSpecializationConstant(out, "CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND", 2, false);
+
     out << '\n';
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;
 
