@@ -142,13 +142,6 @@ protected:
         TargetLanguage targetLanguage;
     };
     std::vector<CodeGenParams> mCodeGenPermutations;
-    // For finding properties and running semantic analysis, we always use the same code gen
-    // permutation. This is the first permutation generated with default arguments passed to matc.
-    static constexpr const CodeGenParams mSemanticCodeGenParams = {
-            .shaderModel = ShaderModel::MOBILE,
-            .targetApi = TargetApi::OPENGL,
-            .targetLanguage = TargetLanguage::SPIRV
-    };
 
     // Keeps track of how many times MaterialBuilder::init() has been called without a call to
     // MaterialBuilder::shutdown(). Internally, glslang does something similar. We keep track for
@@ -725,14 +718,16 @@ private:
     // Return true if the shader is syntactically and semantically valid.
     // This method finds all the properties defined in the fragment and
     // vertex shaders of the material.
-    bool findAllProperties() noexcept;
+    bool findAllProperties(CodeGenParams const& semanticCodeGenParams) noexcept;
 
     // Multiple calls to findProperties accumulate the property sets across fragment
     // and vertex shaders in mProperties.
     bool findProperties(filament::backend::ShaderStage type,
-            MaterialBuilder::PropertyList& p) noexcept;
+            MaterialBuilder::PropertyList& allProperties,
+            CodeGenParams const& semanticCodeGenParams) noexcept;
 
-    bool runSemanticAnalysis(MaterialInfo const& info) noexcept;
+    bool runSemanticAnalysis(MaterialInfo const& info,
+            CodeGenParams const& semanticCodeGenParams) noexcept;
 
     bool checkLiteRequirements() noexcept;
 
