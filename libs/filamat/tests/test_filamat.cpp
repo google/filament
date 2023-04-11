@@ -833,7 +833,7 @@ TEST_F(MaterialCompiler, ConstantParameter) {
 }
 
 TEST_F(MaterialCompiler, ConstantParameterSameName) {
-#if !defined(NDEBUG) && defined(GTEST_HAS_DEATH_TEST)
+#ifdef __EXCEPTIONS
     EXPECT_THROW({
         filamat::MaterialBuilder builder;
         builder.constant("myFloatConstant", ConstantType::FLOAT, 1.0f);
@@ -843,7 +843,7 @@ TEST_F(MaterialCompiler, ConstantParameterSameName) {
 }
 
 TEST_F(MaterialCompiler, ConstantParameterWrongType) {
-#if !defined(NDEBUG) && defined(GTEST_HAS_DEATH_TEST)
+#ifdef __EXCEPTIONS
     EXPECT_THROW({
         filamat::MaterialBuilder builder;
         builder.constant("myFloatConstant", ConstantType::FLOAT, 10);
