@@ -59,7 +59,6 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
             if (material.hasExternalSamplers) {
                 out << "#extension GL_OES_EGL_image_external_essl3 : require\n\n";
             }
-            out << "#define TARGET_MOBILE\n";
             break;
         case ShaderModel::DESKTOP:
             if (mTargetLanguage == TargetLanguage::SPIRV ||
@@ -85,28 +84,45 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
             << ") in;\n\n";
     }
 
-    if (mTargetApi == TargetApi::VULKAN) {
-        out << "#define TARGET_VULKAN_ENVIRONMENT\n";
-    }
-    if (mTargetApi == TargetApi::METAL) {
-        out << "#define TARGET_METAL_ENVIRONMENT\n";
-    }
-    if (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::MOBILE) {
-        out << "#define TARGET_GLES_ENVIRONMENT\n";
-    }
-    if (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::DESKTOP) {
-        out << "#define TARGET_GL_ENVIRONMENT\n";
+    switch (mShaderModel) {
+        case ShaderModel::MOBILE:
+            out << "#define TARGET_MOBILE\n";
+            break;
+        case ShaderModel::DESKTOP:
+            break;
     }
 
-    out << '\n';
-    if (mTargetLanguage == TargetLanguage::SPIRV) {
-        out << "#define FILAMENT_VULKAN_SEMANTICS\n";
-    }
-    if (mTargetLanguage == TargetLanguage::GLSL) {
-        out << "#define FILAMENT_OPENGL_SEMANTICS\n";
+    switch (mTargetApi) {
+        case TargetApi::OPENGL:
+            switch (mShaderModel) {
+                case ShaderModel::MOBILE:
+                    out << "#define TARGET_GLES_ENVIRONMENT\n";
+                    break;
+                case ShaderModel::DESKTOP:
+                    out << "#define TARGET_GL_ENVIRONMENT\n";
+                    break;
+            }
+            break;
+        case TargetApi::VULKAN:
+            out << "#define TARGET_VULKAN_ENVIRONMENT\n";
+            break;
+        case TargetApi::METAL:
+            out << "#define TARGET_METAL_ENVIRONMENT\n";
+            break;
+        case TargetApi::ALL:
+            // invalid should never happen
+            break;
     }
 
-    out << '\n';
+    switch (mTargetLanguage) {
+        case TargetLanguage::GLSL:
+            out << "#define FILAMENT_OPENGL_SEMANTICS\n";
+            break;
+        case TargetLanguage::SPIRV:
+            out << "#define FILAMENT_VULKAN_SEMANTICS\n";
+            break;
+    }
+
     if (mTargetApi == TargetApi::VULKAN ||
         mTargetApi == TargetApi::METAL ||
         (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::DESKTOP) ||
@@ -114,7 +130,34 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         out << "#define FILAMENT_HAS_FEATURE_TEXTURE_GATHER\n";
     }
 
-    Precision defaultPrecision = getDefaultPrecision(stage);
+    if (stage == ShaderStage::VERTEX) {
+        CodeGenerator::generateDefine(out, "FLIP_UV_ATTRIBUTE", material.flipUV);
+        CodeGenerator::generateDefine(out, "LEGACY_MORPHING", material.useLegacyMorphing);
+    }
+
+    if (stage == ShaderStage::VERTEX) {
+        generateDefine(out, "VARYING", "out");
+    } else if (stage == ShaderStage::FRAGMENT) {
+        generateDefine(out, "VARYING", "in");
+    }
+
+    auto getShadingDefine = [](Shading shading) -> const char* {
+        switch (shading) {
+            case Shading::LIT:                 return "SHADING_MODEL_LIT";
+            case Shading::UNLIT:               return "SHADING_MODEL_UNLIT";
+            case Shading::SUBSURFACE:          return "SHADING_MODEL_SUBSURFACE";
+            case Shading::CLOTH:               return "SHADING_MODEL_CLOTH";
+            case Shading::SPECULAR_GLOSSINESS: return "SHADING_MODEL_SPECULAR_GLOSSINESS";
+        }
+    };
+
+    CodeGenerator::generateDefine(out, getShadingDefine(material.shading), true);
+
+    generateQualityDefine(out, material.quality);
+
+    // precision qualifiers
+    out << '\n';
+    Precision const defaultPrecision = getDefaultPrecision(stage);
     const char* precision = getPrecisionQualifier(defaultPrecision);
     out << "precision " << precision << " float;\n";
     out << "precision " << precision << " int;\n";
@@ -146,11 +189,6 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     out << '\n';
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;
 
-    if (stage != ShaderStage::COMPUTE) {
-        out << '\n';
-        out << SHADERS_COMMON_TYPES_GLSL_DATA;
-    }
-
     out << "\n";
     return out;
 }
@@ -159,30 +197,46 @@ Precision CodeGenerator::getDefaultPrecision(ShaderStage stage) const {
     switch (stage) {
         case ShaderStage::VERTEX:
             return Precision::HIGH;
-            break;
         case ShaderStage::FRAGMENT:
-            if (mShaderModel < ShaderModel::DESKTOP) {
-                return Precision::MEDIUM;
-            } else {
-                return Precision::HIGH;
+            switch (mShaderModel) {
+                case ShaderModel::MOBILE:
+                    return Precision::MEDIUM;
+                case ShaderModel::DESKTOP:
+                    return Precision::HIGH;
             }
-            break;
         case ShaderStage::COMPUTE:
             return Precision::HIGH;
-            break;
     }
 }
 
 Precision CodeGenerator::getDefaultUniformPrecision() const {
-    if (mShaderModel < ShaderModel::DESKTOP) {
-        return Precision::MEDIUM;
-    } else {
-        return Precision::HIGH;
+    switch (mShaderModel) {
+        case ShaderModel::MOBILE:
+            return Precision::MEDIUM;
+        case ShaderModel::DESKTOP:
+            return Precision::HIGH;
     }
 }
 
 io::sstream& CodeGenerator::generateEpilog(io::sstream& out) {
     out << "\n"; // For line compression all shaders finish with a newline character.
+    return out;
+}
+
+io::sstream& CodeGenerator::generateCommonTypes(io::sstream& out, ShaderStage stage) {
+    out << '\n';
+    switch (stage) {
+        case ShaderStage::VERTEX:
+            out << '\n';
+            out << SHADERS_COMMON_TYPES_GLSL_DATA;
+            break;
+        case ShaderStage::FRAGMENT:
+            out << '\n';
+            out << SHADERS_COMMON_TYPES_GLSL_DATA;
+            break;
+        case ShaderStage::COMPUTE:
+            break;
+    }
     return out;
 }
 
@@ -210,15 +264,15 @@ io::sstream& CodeGenerator::generatePostProcessMain(io::sstream& out, ShaderStag
     return out;
 }
 
-io::sstream& CodeGenerator::generateVariable(io::sstream& out, ShaderStage type,
+io::sstream& CodeGenerator::generateVariable(io::sstream& out, ShaderStage stage,
         const CString& name, size_t index) {
 
     if (!name.empty()) {
-        if (type == ShaderStage::VERTEX) {
+        if (stage == ShaderStage::VERTEX) {
             out << "\n#define VARIABLE_CUSTOM" << index << " " << name.c_str() << "\n";
             out << "\n#define VARIABLE_CUSTOM_AT" << index << " variable_" << name.c_str() << "\n";
             out << "LAYOUT_LOCATION(" << index << ") out vec4 variable_" << name.c_str() << ";\n";
-        } else if (type == ShaderStage::FRAGMENT) {
+        } else if (stage == ShaderStage::FRAGMENT) {
             out << "\nLAYOUT_LOCATION(" << index << ") in highp vec4 variable_" << name.c_str() << ";\n";
         }
     }
@@ -231,26 +285,27 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage t
     const char* shading = getInterpolationQualifier(interpolation);
     out << "#define SHADING_INTERPOLATION " << shading << "\n";
 
-    bool hasTangents = attributes.test(VertexAttribute::TANGENTS);
+    bool const hasTangents = attributes.test(VertexAttribute::TANGENTS);
     generateDefine(out, "HAS_ATTRIBUTE_TANGENTS", hasTangents);
 
-    bool hasColor = attributes.test(VertexAttribute::COLOR);
+    bool const hasColor = attributes.test(VertexAttribute::COLOR);
     generateDefine(out, "HAS_ATTRIBUTE_COLOR", hasColor);
 
-    bool hasUV0 = attributes.test(VertexAttribute::UV0);
+    bool const hasUV0 = attributes.test(VertexAttribute::UV0);
     generateDefine(out, "HAS_ATTRIBUTE_UV0", hasUV0);
 
-    bool hasUV1 = attributes.test(VertexAttribute::UV1);
+    bool const hasUV1 = attributes.test(VertexAttribute::UV1);
     generateDefine(out, "HAS_ATTRIBUTE_UV1", hasUV1);
 
-    bool hasBoneIndices = attributes.test(VertexAttribute::BONE_INDICES);
+    bool const hasBoneIndices = attributes.test(VertexAttribute::BONE_INDICES);
     generateDefine(out, "HAS_ATTRIBUTE_BONE_INDICES", hasBoneIndices);
 
-    bool hasBoneWeights = attributes.test(VertexAttribute::BONE_WEIGHTS);
+    bool const hasBoneWeights = attributes.test(VertexAttribute::BONE_WEIGHTS);
     generateDefine(out, "HAS_ATTRIBUTE_BONE_WEIGHTS", hasBoneWeights);
 
-    for (int i = 0; i < MAX_CUSTOM_ATTRIBUTES; i++) {
-        bool hasCustom = attributes.test(VertexAttribute::CUSTOM0 + i);
+    UTILS_NOUNROLL
+    for (size_t i = 0; i < MAX_CUSTOM_ATTRIBUTES; i++) {
+        bool const hasCustom = attributes.test(VertexAttribute::CUSTOM0 + i);
         if (hasCustom) {
             generateIndexedDefine(out, "HAS_ATTRIBUTE_CUSTOM", i, 1);
         }
@@ -286,10 +341,6 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage t
         }
 
         out << SHADERS_ATTRIBUTES_VS_DATA;
-
-        generateDefine(out, "VARYING", "out");
-    } else if (type == ShaderStage::FRAGMENT) {
-        generateDefine(out, "VARYING", "in");
     }
     out << SHADERS_VARYINGS_GLSL_DATA;
     return out;
@@ -393,8 +444,8 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
     blockName.front() = char(std::toupper((unsigned char)blockName.front()));
     instanceName.front() = char(std::tolower((unsigned char)instanceName.front()));
 
-    Precision uniformPrecision = getDefaultUniformPrecision();
-    Precision defaultPrecision = getDefaultPrecision(stage);
+    Precision const uniformPrecision = getDefaultUniformPrecision();
+    Precision const defaultPrecision = getDefaultPrecision(stage);
 
     auto metalBufferBindingOffset = 0;
     switch (uib.getTarget()) {
@@ -450,7 +501,7 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
     if (uib.getTarget() == BufferInterfaceBlock::Target::SSBO) {
         uint8_t qualifiers = uib.getQualifier();
         while (qualifiers) {
-            uint8_t mask = 1u << utils::ctz(unsigned(qualifiers));
+            uint8_t const mask = 1u << utils::ctz(unsigned(qualifiers));
             switch (BufferInterfaceBlock::Qualifier(qualifiers & mask)) {
                 case BufferInterfaceBlock::Qualifier::COHERENT:  out << "coherent "; break;
                 case BufferInterfaceBlock::Qualifier::WRITEONLY: out << "writeonly "; break;
@@ -575,7 +626,7 @@ void CodeGenerator::fixupExternalSamplers(
     for (auto const& info : infos) {
         if (info.type == SamplerType::SAMPLER_EXTERNAL) {
             auto name = std::string("sampler2D ") + info.uniformName.c_str();
-            size_t index = shader.find(name);
+            size_t const index = shader.find(name);
 
             if (index != std::string::npos) {
                 hasExternalSampler = true;
@@ -634,12 +685,12 @@ struct SpecializationConstantFormatter {
 utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sstream& out,
         const char* name, uint32_t id, std::variant<int, float, bool> value) const {
 
-    std::string constantString = std::visit(SpecializationConstantFormatter(), value);
+    std::string const constantString = std::visit(SpecializationConstantFormatter(), value);
 
     static const char* types[] = { "int", "float", "bool" };
     if (mTargetLanguage == MaterialBuilderBase::TargetLanguage::SPIRV) {
         out << "layout (constant_id = " << id << ") const "
-            << types[value.index()] << " " << name << " = " << constantString << ";\n\n";
+            << types[value.index()] << " " << name << " = " << constantString << ";\n";
     } else {
         out << "#ifndef SPIRV_CROSS_CONSTANT_ID_" << id << '\n'
             << "#define SPIRV_CROSS_CONSTANT_ID_" << id << " " << constantString << '\n'
@@ -845,8 +896,7 @@ io::sstream& CodeGenerator::generateShaderUnlit(io::sstream& out, ShaderStage ty
     return out;
 }
 
-io::sstream& CodeGenerator::generateShaderReflections(utils::io::sstream& out, ShaderStage type,
-        filament::Variant variant) {
+io::sstream& CodeGenerator::generateShaderReflections(utils::io::sstream& out, ShaderStage type) {
     if (type == ShaderStage::VERTEX) {
     } else if (type == ShaderStage::FRAGMENT) {
         out << SHADERS_COMMON_LIGHTING_FS_DATA;

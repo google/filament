@@ -77,6 +77,8 @@ public:
 
     static utils::io::sstream& generateEpilog(utils::io::sstream& out);
 
+    static utils::io::sstream& generateCommonTypes(utils::io::sstream& out, ShaderStage stage);
+
     // generate common functions for the given shader
     static utils::io::sstream& generateCommon(utils::io::sstream& out, ShaderStage stage);
     static utils::io::sstream& generatePostProcessCommon(utils::io::sstream& out, ShaderStage type);
@@ -97,11 +99,10 @@ public:
             filament::Variant variant, bool hasShadowMultiplier);
 
     // generate the shader's code for the screen-space reflections
-    static utils::io::sstream& generateShaderReflections(utils::io::sstream& out, ShaderStage type,
-            filament::Variant variant);
+    static utils::io::sstream& generateShaderReflections(utils::io::sstream& out, ShaderStage type);
 
     // generate declarations for custom interpolants
-    static utils::io::sstream& generateVariable(utils::io::sstream& out, ShaderStage type,
+    static utils::io::sstream& generateVariable(utils::io::sstream& out, ShaderStage stage,
             const utils::CString& name, size_t index);
 
     // generate declarations for non-custom "in" variables
