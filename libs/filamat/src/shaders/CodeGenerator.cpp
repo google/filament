@@ -612,22 +612,27 @@ io::sstream& CodeGenerator::generateIndexedDefine(io::sstream& out, const char* 
     return out;
 }
 
+struct SpecializationConstantFormatter {
+    std::string operator()(int value) noexcept { return std::to_string(value); }
+    std::string operator()(float value) noexcept { return std::to_string(value); }
+    std::string operator()(bool value) noexcept { return value ? "true" : "false"; }
+};
+
 utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sstream& out,
         const char* name, uint32_t id, std::variant<int, float, bool> value) const {
+
+    std::string constantString = std::visit(SpecializationConstantFormatter(), value);
+
     static const char* types[] = { "int", "float", "bool" };
     if (mTargetLanguage == MaterialBuilderBase::TargetLanguage::SPIRV) {
-        std::visit([&](auto&& arg) {
-            out << "layout (constant_id = " << id << ") const "
-                << types[value.index()] << " " << name << " = " << arg << ";\n\n";
-        }, value);
+        out << "layout (constant_id = " << id << ") const "
+            << types[value.index()] << " " << name << " = " << constantString << ";\n\n";
     } else {
-        std::visit([&](auto&& arg) {
-            out << "#ifndef SPIRV_CROSS_CONSTANT_ID_" << id << '\n'
-                << "#define SPIRV_CROSS_CONSTANT_ID_" << id << " " << arg << '\n'
-                << "#endif" << '\n'
-                << "const " << types[value.index()] << " " << name << " = SPIRV_CROSS_CONSTANT_ID_" << id
-                << ";\n\n";
-        }, value);
+        out << "#ifndef SPIRV_CROSS_CONSTANT_ID_" << id << '\n'
+            << "#define SPIRV_CROSS_CONSTANT_ID_" << id << " " << constantString << '\n'
+            << "#endif" << '\n'
+            << "const " << types[value.index()] << " " << name << " = SPIRV_CROSS_CONSTANT_ID_" << id
+            << ";\n\n";
     }
     return out;
 }
