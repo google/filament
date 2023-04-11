@@ -28,6 +28,7 @@
 #include <private/filament/SubpassInfo.h>
 
 #include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
 
 namespace filamat {
 

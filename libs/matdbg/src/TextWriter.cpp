@@ -259,6 +259,42 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
     return true;
 }
 
+static bool printConstantInfo(ostream& text, const ChunkContainer& container) {
+    if (!container.hasChunk(ChunkType::MaterialConstants)) {
+        return true;
+    }
+
+    auto [startConstants, endConstants] = container.getChunkRange(ChunkType::MaterialConstants);
+    Unflattener constants(startConstants, endConstants);
+
+    uint64_t constantsCount;
+    constants.read(&constantsCount);
+
+    text << "Constants:" << endl;
+
+    for (uint64_t i = 0; i < constantsCount; i++) {
+        CString fieldName;
+        uint8_t fieldType;
+
+        if (!constants.read(&fieldName)) {
+            return false;
+        }
+
+        if (!constants.read(&fieldType)) {
+            return false;
+        }
+
+         text << "    "
+         << setw(alignment) << fieldName.c_str()
+         << setw(shortAlignment) << toString(ConstantType(fieldType))
+         << endl;
+    }
+
+    text << endl;
+
+    return true;
+}
+
 static bool printSubpassesInfo(ostream& text, const ChunkContainer& container) {
 
     // Subpasses are optional.
@@ -404,6 +440,9 @@ bool TextWriter::writeMaterialInfo(const filaflat::ChunkContainer& container) {
         return false;
     }
     if (!printParametersInfo(text, container)) {
+        return false;
+    }
+    if (!printConstantInfo(text, container)) {
         return false;
     }
     if (!printSubpassesInfo(text, container)) {

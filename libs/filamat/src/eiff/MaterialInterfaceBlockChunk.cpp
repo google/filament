@@ -21,6 +21,7 @@
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
+#include <private/filament/ConstantInfo.h>
 
 #include <utility>
 
@@ -84,6 +85,20 @@ void MaterialSubpassInterfaceBlockChunk::flatten(Flattener& f) {
         f.writeUint8(static_cast<uint8_t>(mSubpass.precision));
         f.writeUint8(static_cast<uint8_t>(mSubpass.attachmentIndex));
         f.writeUint8(static_cast<uint8_t>(mSubpass.binding));
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
+MaterialConstantParametersChunk::MaterialConstantParametersChunk(
+        utils::FixedCapacityVector<MaterialConstant> constants)
+    : Chunk(ChunkType::MaterialConstants), mConstants(std::move(constants)) {}
+
+void MaterialConstantParametersChunk::flatten(Flattener& f) {
+    f.writeUint64(mConstants.size());
+    for (const auto& constant : mConstants) {
+        f.writeString(constant.name.c_str());
+        f.writeUint8(static_cast<uint8_t>(constant.type));
     }
 }
 

@@ -236,6 +236,16 @@ const char* toString(backend::SamplerFormat format) noexcept {
     return "--";
 }
 
+inline
+const char* toString(backend::ConstantType type) noexcept {
+    switch (type) {
+        case backend::ConstantType::FLOAT: return "float";
+        case backend::ConstantType::INT: return "int";
+        case backend::ConstantType::BOOL: return "bool";
+    }
+    return "--";
+}
+
 // Returns a human-readable variant description.
 // For example: DYN|DIR
 std::string formatVariantString(Variant variant, MaterialDomain domain) noexcept;

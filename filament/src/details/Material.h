@@ -27,6 +27,7 @@
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
+#include <private/filament/ConstantInfo.h>
 
 #include <utils/compiler.h>
 #include <utils/Mutex.h>
@@ -232,6 +233,7 @@ private:
 
     SamplerGroupBindingInfoList mSamplerGroupBindingInfoList;
     SamplerBindingToNameMap mSamplerBindingToNameMap;
+    utils::FixedCapacityVector<backend::Program::SpecializationConstant> mSpecializationConstants;
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;
