@@ -639,7 +639,7 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info,
     using namespace backend;
 
     TargetApi targetApi = semanticCodeGenParams.targetApi;
-    TargetLanguage targetLanguage = semanticCodeGenParams.targetLanguage;
+    TargetLanguage const targetLanguage = semanticCodeGenParams.targetLanguage;
     assertSingleTargetApi(targetApi);
 
     if (mEnableFramebufferFetch) {
@@ -648,13 +648,14 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info,
     }
 
     bool result = false;
-    ShaderModel model = semanticCodeGenParams.shaderModel;
+    std::string shaderCode;
+    ShaderModel const model = semanticCodeGenParams.shaderModel;
     if (mMaterialDomain == filament::MaterialDomain::COMPUTE) {
-        std::string shaderCode = peek(ShaderStage::COMPUTE, semanticCodeGenParams, mProperties);
+        shaderCode = peek(ShaderStage::COMPUTE, semanticCodeGenParams, mProperties);
         result = GLSLTools::analyzeComputeShader(shaderCode, model,
                 targetApi, targetLanguage, info);
     } else {
-        std::string shaderCode = peek(ShaderStage::VERTEX, semanticCodeGenParams, mProperties);
+        shaderCode = peek(ShaderStage::VERTEX, semanticCodeGenParams, mProperties);
         result = GLSLTools::analyzeVertexShader(shaderCode, model, mMaterialDomain,
                 targetApi, targetLanguage, info);
         if (result) {
@@ -662,6 +663,9 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info,
             result = GLSLTools::analyzeFragmentShader(shaderCode, model, mMaterialDomain,
                     targetApi, targetLanguage, mCustomSurfaceShading, info);
         }
+    }
+    if (!result && mPrintShaders) {
+        slog.e << shaderCode << io::endl;
     }
     return result;
 #else
@@ -817,7 +821,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                             shaderModel, targetApi, targetLanguage, info, v.variant, mInterpolation);
                 } else if (v.stage == backend::ShaderStage::COMPUTE) {
                     shader = sg.createComputeProgram(
-                            shaderModel, targetApi, targetLanguage, info, v.variant);
+                            shaderModel, targetApi, targetLanguage, info);
                 }
 
 #ifdef FILAMAT_LITE
@@ -848,13 +852,16 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                     config.glsl.subpassInputToColorLocation.emplace_back(0, 0);
                 }
 
-                bool ok = postProcessor.process(shader, config, pGlsl, pSpirv, pMsl);
+                bool const ok = postProcessor.process(shader, config, pGlsl, pSpirv, pMsl);
 #else
                 bool ok = true;
 #endif
                 if (!ok) {
                     showErrorMessage(mMaterialName.c_str_safe(), v.variant, targetApi, v.stage, shader);
                     cancelJobs = true;
+                    if (mPrintShaders) {
+                        slog.e << shader << io::endl;
+                    }
                     return;
                 }
 
@@ -866,7 +873,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
                 // NOTE: Everything below touches shared structures protected by a lock
                 // NOTE: do not execute expensive work from here on!
-                std::unique_lock<Mutex> lock(entriesLock);
+                std::unique_lock<Mutex> const lock(entriesLock);
 
                 // below we rely on casting ShaderStage to uint8_t
                 static_assert(sizeof(filament::backend::ShaderStage) == 1);
@@ -1241,7 +1248,7 @@ std::string MaterialBuilder::peek(backend::ShaderStage stage,
         case backend::ShaderStage::COMPUTE:
             return sg.createComputeProgram(
                     params.shaderModel, params.targetApi, params.targetLanguage,
-                    info, {});
+                    info);
     }
 }
 
