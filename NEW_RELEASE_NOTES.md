@@ -9,3 +9,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 ## Release notes for next branch cut
 
 - materials: prepare ES2 support [⚠️ **New Material Version**]
+- materials: picking is done in float (prepare for ES2) [⚠️ **New Material Version**]
