@@ -551,19 +551,18 @@ void AnimatorImpl::updateBoneMatrices(FFilamentInstance* instance) {
             if (!renderable) {
                 continue;
             }
-            mat4f inverseGlobalTransform;
+            mat4 inverseGlobalTransform;
             auto xformable = transformManager->getInstance(entity);
             if (xformable) {
-                inverseGlobalTransform = inverse(transformManager->getWorldTransform(xformable));
+                inverseGlobalTransform = inverse(transformManager->getWorldTransformAccurate(xformable));
             }
             for (size_t boneIndex = 0; boneIndex < njoints; ++boneIndex) {
                 const auto& joint = skin.joints[boneIndex];
                 const mat4f& inverseBindMatrix = assetSkin.inverseBindMatrices[boneIndex];
                 TransformManager::Instance jointInstance = transformManager->getInstance(joint);
-                mat4f globalJointTransform = transformManager->getWorldTransform(jointInstance);
+                mat4 globalJointTransform = transformManager->getWorldTransformAccurate(jointInstance);
                 boneMatrices[boneIndex] =
-                        inverseGlobalTransform *
-                        globalJointTransform *
+                        mat4f{ inverseGlobalTransform * globalJointTransform } *
                         inverseBindMatrix;
             }
             renderableManager->setBones(renderable, boneMatrices.data(), boneMatrices.size());

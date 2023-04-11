@@ -1,7 +1,7 @@
 
 /* pngvalid.c - validate libpng by constructing then reading png files.
  *
- * Last changed in libpng 1.6.31 [July 27, 2017]
+ * Copyright (c) 2021 Cosmin Truta
  * Copyright (c) 2014-2017 John Cunningham Bowler
  *
  * This code is released under the libpng license.
@@ -22,6 +22,7 @@
 #define _ISOC99_SOURCE 1 /* For floating point */
 #define _GNU_SOURCE 1 /* For the floating point exception extension */
 #define _BSD_SOURCE 1 /* For the floating point exception extension */
+#define _DEFAULT_SOURCE 1 /* For the floating point exception extension */
 
 #include <signal.h>
 #include <stdio.h>
@@ -5822,8 +5823,9 @@ test_standard(png_modifier* const pm, png_byte const colour_type,
       for (interlace_type = PNG_INTERLACE_NONE;
            interlace_type < INTERLACE_LAST; ++interlace_type)
       {
-         standard_test(&pm->this, FILEID(colour_type, DEPTH(bdlo), 0/*palette*/,
-            interlace_type, 0, 0, 0), do_read_interlace, pm->use_update_info);
+         standard_test(&pm->this, FILEID(colour_type, DEPTH(bdlo),
+            0/*palette*/, interlace_type, 0, 0, 0), do_read_interlace,
+            pm->use_update_info);
 
          if (fail(pm))
             return 0;
@@ -5876,47 +5878,50 @@ test_size(png_modifier* const pm, png_byte const colour_type,
    {
       png_uint_32 h, w;
 
-      for (h=1; h<=16; h+=hinc[bdlo]) for (w=1; w<=16; w+=winc[bdlo])
+      for (h=1; h<=16; h+=hinc[bdlo])
       {
-         /* First test all the 'size' images against the sequential
-          * reader using libpng to deinterlace (where required.)  This
-          * validates the write side of libpng.  There are four possibilities
-          * to validate.
-          */
-         standard_test(&pm->this, FILEID(colour_type, DEPTH(bdlo), 0/*palette*/,
-            PNG_INTERLACE_NONE, w, h, 0), 0/*do_interlace*/,
-            pm->use_update_info);
+         for (w=1; w<=16; w+=winc[bdlo])
+         {
+            /* First test all the 'size' images against the sequential
+            * reader using libpng to deinterlace (where required.)  This
+            * validates the write side of libpng.  There are four possibilities
+            * to validate.
+            */
+            standard_test(&pm->this, FILEID(colour_type, DEPTH(bdlo),
+               0/*palette*/, PNG_INTERLACE_NONE, w, h, 0), 0/*do_interlace*/,
+               pm->use_update_info);
 
-         if (fail(pm))
-            return 0;
+            if (fail(pm))
+               return 0;
 
-         standard_test(&pm->this, FILEID(colour_type, DEPTH(bdlo), 0/*palette*/,
-            PNG_INTERLACE_NONE, w, h, 1), 0/*do_interlace*/,
-            pm->use_update_info);
+            standard_test(&pm->this, FILEID(colour_type, DEPTH(bdlo),
+               0/*palette*/, PNG_INTERLACE_NONE, w, h, 1), 0/*do_interlace*/,
+               pm->use_update_info);
 
-         if (fail(pm))
-            return 0;
+            if (fail(pm))
+               return 0;
 
-         /* Now validate the interlaced read side - do_interlace true,
-          * in the progressive case this does actually make a difference
-          * to the code used in the non-interlaced case too.
-          */
-         standard_test(&pm->this, FILEID(colour_type, DEPTH(bdlo), 0/*palette*/,
-            PNG_INTERLACE_NONE, w, h, 0), 1/*do_interlace*/,
-            pm->use_update_info);
+            /* Now validate the interlaced read side - do_interlace true,
+            * in the progressive case this does actually make a difference
+            * to the code used in the non-interlaced case too.
+            */
+            standard_test(&pm->this, FILEID(colour_type, DEPTH(bdlo),
+               0/*palette*/, PNG_INTERLACE_NONE, w, h, 0), 1/*do_interlace*/,
+               pm->use_update_info);
 
-         if (fail(pm))
-            return 0;
+            if (fail(pm))
+               return 0;
 
-#     if CAN_WRITE_INTERLACE
-         /* Validate the pngvalid code itself: */
-         standard_test(&pm->this, FILEID(colour_type, DEPTH(bdlo), 0/*palette*/,
-            PNG_INTERLACE_ADAM7, w, h, 1), 1/*do_interlace*/,
-            pm->use_update_info);
+#        if CAN_WRITE_INTERLACE
+            /* Validate the pngvalid code itself: */
+            standard_test(&pm->this, FILEID(colour_type, DEPTH(bdlo),
+               0/*palette*/, PNG_INTERLACE_ADAM7, w, h, 1), 1/*do_interlace*/,
+               pm->use_update_info);
 
-         if (fail(pm))
-            return 0;
-#     endif
+            if (fail(pm))
+               return 0;
+#        endif
+         }
       }
    }
 
@@ -5927,45 +5932,48 @@ test_size(png_modifier* const pm, png_byte const colour_type,
    {
       png_uint_32 h, w;
 
-      for (h=1; h<=16; h+=hinc[bdlo]) for (w=1; w<=16; w+=winc[bdlo])
+      for (h=1; h<=16; h+=hinc[bdlo])
       {
-#     ifdef PNG_READ_INTERLACING_SUPPORTED
-         /* Test with pngvalid generated interlaced images first; we have
-          * already verify these are ok (unless pngvalid has self-consistent
-          * read/write errors, which is unlikely), so this detects errors in the
-          * read side first:
-          */
-#     if CAN_WRITE_INTERLACE
-         standard_test(&pm->this, FILEID(colour_type, DEPTH(bdlo), 0/*palette*/,
-            PNG_INTERLACE_ADAM7, w, h, 1), 0/*do_interlace*/,
-            pm->use_update_info);
+         for (w=1; w<=16; w+=winc[bdlo])
+         {
+#        ifdef PNG_READ_INTERLACING_SUPPORTED
+            /* Test with pngvalid generated interlaced images first; we have
+            * already verify these are ok (unless pngvalid has self-consistent
+            * read/write errors, which is unlikely), so this detects errors in
+            * the read side first:
+            */
+#        if CAN_WRITE_INTERLACE
+            standard_test(&pm->this, FILEID(colour_type, DEPTH(bdlo),
+               0/*palette*/, PNG_INTERLACE_ADAM7, w, h, 1), 0/*do_interlace*/,
+               pm->use_update_info);
 
-         if (fail(pm))
-            return 0;
-#     endif
-#     endif /* READ_INTERLACING */
+            if (fail(pm))
+               return 0;
+#        endif
+#        endif /* READ_INTERLACING */
 
-#     ifdef PNG_WRITE_INTERLACING_SUPPORTED
-         /* Test the libpng write side against the pngvalid read side: */
-         standard_test(&pm->this, FILEID(colour_type, DEPTH(bdlo), 0/*palette*/,
-            PNG_INTERLACE_ADAM7, w, h, 0), 1/*do_interlace*/,
-            pm->use_update_info);
+#        ifdef PNG_WRITE_INTERLACING_SUPPORTED
+            /* Test the libpng write side against the pngvalid read side: */
+            standard_test(&pm->this, FILEID(colour_type, DEPTH(bdlo),
+               0/*palette*/, PNG_INTERLACE_ADAM7, w, h, 0), 1/*do_interlace*/,
+               pm->use_update_info);
 
-         if (fail(pm))
-            return 0;
-#     endif
+            if (fail(pm))
+               return 0;
+#        endif
 
-#     ifdef PNG_READ_INTERLACING_SUPPORTED
-#     ifdef PNG_WRITE_INTERLACING_SUPPORTED
-         /* Test both together: */
-         standard_test(&pm->this, FILEID(colour_type, DEPTH(bdlo), 0/*palette*/,
-            PNG_INTERLACE_ADAM7, w, h, 0), 0/*do_interlace*/,
-            pm->use_update_info);
+#        ifdef PNG_READ_INTERLACING_SUPPORTED
+#        ifdef PNG_WRITE_INTERLACING_SUPPORTED
+            /* Test both together: */
+            standard_test(&pm->this, FILEID(colour_type, DEPTH(bdlo),
+               0/*palette*/, PNG_INTERLACE_ADAM7, w, h, 0), 0/*do_interlace*/,
+               pm->use_update_info);
 
-         if (fail(pm))
-            return 0;
-#     endif
-#     endif /* READ_INTERLACING */
+            if (fail(pm))
+               return 0;
+#        endif
+#        endif /* READ_INTERLACING */
+         }
       }
    }
 
@@ -7635,7 +7643,7 @@ image_transform_png_set_rgb_to_gray_ini(const image_transform *this,
 
    else
    {
-      /* The default (built in) coeffcients, as above: */
+      /* The default (built in) coefficients, as above: */
 #     if PNG_LIBPNG_VER < 10700
          data.red_coefficient = 6968 / 32768.;
          data.green_coefficient = 23434 / 32768.;
@@ -10649,16 +10657,21 @@ static void perform_gamma_transform_tests(png_modifier *pm)
    {
       unsigned int i, j;
 
-      for (i=0; i<pm->ngamma_tests; ++i) for (j=0; j<pm->ngamma_tests; ++j)
-         if (i != j)
+      for (i=0; i<pm->ngamma_tests; ++i)
+      {
+         for (j=0; j<pm->ngamma_tests; ++j)
          {
-            gamma_transform_test(pm, colour_type, bit_depth, palette_number,
-               pm->interlace_type, 1/pm->gammas[i], pm->gammas[j], 0/*sBIT*/,
-               pm->use_input_precision, 0 /*do not scale16*/);
+            if (i != j)
+            {
+               gamma_transform_test(pm, colour_type, bit_depth, palette_number,
+                  pm->interlace_type, 1/pm->gammas[i], pm->gammas[j],
+                  0/*sBIT*/, pm->use_input_precision, 0/*do not scale16*/);
 
-            if (fail(pm))
-               return;
+               if (fail(pm))
+                  return;
+            }
          }
+      }
    }
 }
 
@@ -10687,14 +10700,17 @@ static void perform_gamma_sbit_tests(png_modifier *pm)
          {
             unsigned int j;
 
-            for (j=0; j<pm->ngamma_tests; ++j) if (i != j)
+            for (j=0; j<pm->ngamma_tests; ++j)
             {
-               gamma_transform_test(pm, colour_type, bit_depth, npalette,
-                  pm->interlace_type, 1/pm->gammas[i], pm->gammas[j],
-                  sbit, pm->use_input_precision_sbit, 0 /*scale16*/);
+               if (i != j)
+               {
+                  gamma_transform_test(pm, colour_type, bit_depth, npalette,
+                     pm->interlace_type, 1/pm->gammas[i], pm->gammas[j],
+                     sbit, pm->use_input_precision_sbit, 0 /*scale16*/);
 
-               if (fail(pm))
-                  return;
+                  if (fail(pm))
+                     return;
+               }
             }
          }
       }
@@ -10946,14 +10962,17 @@ perform_gamma_composition_tests(png_modifier *pm, int do_background,
       unsigned int i, j;
 
       /* Don't skip the i==j case here - it's relevant. */
-      for (i=0; i<pm->ngamma_tests; ++i) for (j=0; j<pm->ngamma_tests; ++j)
+      for (i=0; i<pm->ngamma_tests; ++i)
       {
-         gamma_composition_test(pm, colour_type, bit_depth, palette_number,
-            pm->interlace_type, 1/pm->gammas[i], pm->gammas[j],
-            pm->use_input_precision, do_background, expand_16);
+         for (j=0; j<pm->ngamma_tests; ++j)
+         {
+            gamma_composition_test(pm, colour_type, bit_depth, palette_number,
+               pm->interlace_type, 1/pm->gammas[i], pm->gammas[j],
+               pm->use_input_precision, do_background, expand_16);
 
-         if (fail(pm))
-            return;
+            if (fail(pm))
+               return;
+         }
       }
    }
 }
@@ -11056,7 +11075,7 @@ perform_gamma_test(png_modifier *pm, int summary)
          pm->calculations_use_input_precision = 0;
 
       if (summary)
-         summarize_gamma_errors(pm, 0/*who*/, 1/*low bit depth*/, 1/*indexed*/);
+         summarize_gamma_errors(pm, NULL/*who*/, 1/*low bit depth*/, 1/*indexed*/);
 
       if (fail(pm))
          return;
@@ -11182,8 +11201,10 @@ png_pass_start_row(int pass)
 {
    int x, y;
    ++pass;
-   for (y=0; y<8; ++y) for (x=0; x<8; ++x) if (adam7[y][x] == pass)
-      return y;
+   for (y=0; y<8; ++y)
+      for (x=0; x<8; ++x)
+         if (adam7[y][x] == pass)
+            return y;
    return 0xf;
 }
 
@@ -11192,8 +11213,10 @@ png_pass_start_col(int pass)
 {
    int x, y;
    ++pass;
-   for (x=0; x<8; ++x) for (y=0; y<8; ++y) if (adam7[y][x] == pass)
-      return x;
+   for (x=0; x<8; ++x)
+      for (y=0; y<8; ++y)
+         if (adam7[y][x] == pass)
+            return x;
    return 0xf;
 }
 
@@ -11202,18 +11225,24 @@ png_pass_row_shift(int pass)
 {
    int x, y, base=(-1), inc=8;
    ++pass;
-   for (y=0; y<8; ++y) for (x=0; x<8; ++x) if (adam7[y][x] == pass)
+   for (y=0; y<8; ++y)
    {
-      if (base == (-1))
-         base = y;
-      else if (base == y)
-         {}
-      else if (inc == y-base)
-         base=y;
-      else if (inc == 8)
-         inc = y-base, base=y;
-      else if (inc != y-base)
-         return 0xff; /* error - more than one 'inc' value! */
+      for (x=0; x<8; ++x)
+      {
+         if (adam7[y][x] == pass)
+         {
+            if (base == (-1))
+               base = y;
+            else if (base == y)
+               {}
+            else if (inc == y-base)
+               base=y;
+            else if (inc == 8)
+               inc = y-base, base=y;
+            else if (inc != y-base)
+               return 0xff; /* error - more than one 'inc' value! */
+         }
+      }
    }
 
    if (base == (-1)) return 0xfe; /* error - no row in pass! */
@@ -11236,18 +11265,24 @@ png_pass_col_shift(int pass)
 {
    int x, y, base=(-1), inc=8;
    ++pass;
-   for (x=0; x<8; ++x) for (y=0; y<8; ++y) if (adam7[y][x] == pass)
+   for (x=0; x<8; ++x)
    {
-      if (base == (-1))
-         base = x;
-      else if (base == x)
-         {}
-      else if (inc == x-base)
-         base=x;
-      else if (inc == 8)
-         inc = x-base, base=x;
-      else if (inc != x-base)
-         return 0xff; /* error - more than one 'inc' value! */
+      for (y=0; y<8; ++y)
+      {
+         if (adam7[y][x] == pass)
+         {
+            if (base == (-1))
+               base = x;
+            else if (base == x)
+               {}
+            else if (inc == x-base)
+               base=x;
+            else if (inc == 8)
+               inc = x-base, base=x;
+            else if (inc != x-base)
+               return 0xff; /* error - more than one 'inc' value! */
+         }
+      }
    }
 
    if (base == (-1)) return 0xfe; /* error - no row in pass! */
@@ -11311,8 +11346,9 @@ png_row_in_interlace_pass(png_uint_32 y, int pass)
    int x;
    y &= 7;
    ++pass;
-   for (x=0; x<8; ++x) if (adam7[y][x] == pass)
-      return 1;
+   for (x=0; x<8; ++x)
+      if (adam7[y][x] == pass)
+         return 1;
 
    return 0;
 }
@@ -11324,8 +11360,9 @@ png_col_in_interlace_pass(png_uint_32 x, int pass)
    int y;
    x &= 7;
    ++pass;
-   for (y=0; y<8; ++y) if (adam7[y][x] == pass)
-      return 1;
+   for (y=0; y<8; ++y)
+      if (adam7[y][x] == pass)
+         return 1;
 
    return 0;
 }
@@ -11339,11 +11376,17 @@ png_pass_rows(png_uint_32 height, int pass)
 
    height &= 7;
    ++pass;
-   for (y=0; y<8; ++y) for (x=0; x<8; ++x) if (adam7[y][x] == pass)
+   for (y=0; y<8; ++y)
    {
-      rows += tiles;
-      if (y < height) ++rows;
-      break; /* i.e. break the 'x', column, loop. */
+      for (x=0; x<8; ++x)
+      {
+         if (adam7[y][x] == pass)
+         {
+            rows += tiles;
+            if (y < height) ++rows;
+            break; /* i.e. break the 'x', column, loop. */
+         }
+      }
    }
 
    return rows;
@@ -11358,11 +11401,17 @@ png_pass_cols(png_uint_32 width, int pass)
 
    width &= 7;
    ++pass;
-   for (x=0; x<8; ++x) for (y=0; y<8; ++y) if (adam7[y][x] == pass)
+   for (x=0; x<8; ++x)
    {
-      cols += tiles;
-      if (x < width) ++cols;
-      break; /* i.e. break the 'y', row, loop. */
+      for (y=0; y<8; ++y)
+      {
+         if (adam7[y][x] == pass)
+         {
+            cols += tiles;
+            if (x < width) ++cols;
+            break; /* i.e. break the 'y', row, loop. */
+         }
+      }
    }
 
    return cols;
@@ -11719,7 +11768,7 @@ int main(int argc, char **argv)
 
    /* The following allows results to pass if they correspond to anything in the
     * transformed range [input-.5,input+.5]; this is is required because of the
-    * way libpng treates the 16_TO_8 flag when building the gamma tables in
+    * way libpng treats the 16_TO_8 flag when building the gamma tables in
     * releases up to 1.6.0.
     *
     * TODO: review this
@@ -11810,21 +11859,21 @@ int main(int argc, char **argv)
 #ifdef PNG_READ_TRANSFORMS_SUPPORTED
       else if (strncmp(*argv, "--transform-disable=",
          sizeof "--transform-disable") == 0)
-         {
+      {
          pm.test_transform = 1;
          transform_disable(*argv + sizeof "--transform-disable");
-         }
+      }
 
       else if (strncmp(*argv, "--transform-enable=",
          sizeof "--transform-enable") == 0)
-         {
+      {
          pm.test_transform = 1;
          transform_enable(*argv + sizeof "--transform-enable");
-         }
+      }
 #endif /* PNG_READ_TRANSFORMS_SUPPORTED */
 
       else if (strcmp(*argv, "--gamma") == 0)
-         {
+      {
          /* Just do two gamma tests here (2.2 and linear) for speed: */
          pm.ngamma_tests = 2U;
          pm.test_gamma_threshold = 1;
@@ -11833,7 +11882,7 @@ int main(int argc, char **argv)
          pm.test_gamma_scale16 = 1;
          pm.test_gamma_background = 1; /* composition */
          pm.test_gamma_alpha_mode = 1;
-         }
+      }
 
       else if (strcmp(*argv, "--nogamma") == 0)
          pm.ngamma_tests = 0;

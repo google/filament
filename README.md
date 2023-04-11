@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.32.2'
+    implementation 'com.google.android.filament:filament-android:1.32.3'
 }
 ```
 
@@ -41,7 +41,6 @@ Here are all the libraries available in the group `com.google.android.filament`:
 | ------------- | ------------- |
 | [![filament-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android/badge.svg?subject=filament-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android)  | The Filament rendering engine itself. |
 | [![gltfio-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android/badge.svg?subject=gltfio-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android) | A glTF 2.0 loader for Filament, depends on `filament-android`. |
-| [![gltfio-android-lite](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android-lite/badge.svg?subject=gltfio-android-lite)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android-lite) | Trimmed version of `gltfio` that does not support some glTF extensions. |
 | [![filament-utils-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android/badge.svg?subject=filament-utils-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android) | KTX loading, Kotlin math, and camera utilities, depends on `gltfio-android`. |
 | [![filamat-android](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android/badge.svg?subject=filamat-android)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android) | A runtime material builder/compiler. This library is large but contains a full shader compiler/validator/optimizer and supports both OpenGL and Vulkan. |
 | [![filamat-android-lite](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android-lite/badge.svg?subject=filamat-android-lite)](https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android-lite) | A much smaller alternative to `filamat-android` that can only generate OpenGL shaders. It does not provide validation or optimizations. |
@@ -51,7 +50,7 @@ Here are all the libraries available in the group `com.google.android.filament`:
 iOS projects can use CocoaPods to install the latest release:
 
 ```
-pod 'Filament', '~> 1.32.2'
+pod 'Filament', '~> 1.32.3'
 ```
 
 ### Snapshots

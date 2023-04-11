@@ -37,7 +37,7 @@ public:
     template <typename T,
              std::enable_if_t<std::is_base_of<Chunk, T>::value, int> = 0,
              typename... Args>
-    const T& addChild(Args&&... args) {
+    const T& push(Args&&... args) {
         T* chunk = new T(std::forward<Args>(args)...);
         mChildren.emplace_back(chunk);
         return *chunk;
@@ -45,8 +45,8 @@ public:
 
     // Helper method to add a SimpleFieldChunk to this ChunkContainer.
     template <typename T, typename... Args>
-    const SimpleFieldChunk<T>& addSimpleChild(Args&&... args) {
-        return addChild<SimpleFieldChunk<T>>(std::forward<Args>(args)...);
+    const SimpleFieldChunk<T>& emplace(Args&&... args) {
+        return push<SimpleFieldChunk<T>>(std::forward<Args>(args)...);
     }
 
     size_t getSize() const;

@@ -110,22 +110,3 @@ vec3 heatmap(float v) {
     vec3 r = v * 2.1 - vec3(1.8, 1.14, 0.3);
     return 1.0 - r * r;
 }
-
-vec3 uintToColorDebug(uint v) {
-    if (v == 0u) {
-        return vec3(0.0, 1.0, 0.0);     // green
-    } else if (v == 1u) {
-        return vec3(0.0, 0.0, 1.0);     // blue
-    } else if (v == 2u) {
-        return vec3(1.0, 1.0, 0.0);     // yellow
-    } else if (v == 3u) {
-        return vec3(1.0, 0.0, 0.0);     // red
-    } else if (v == 4u) {
-        return vec3(1.0, 0.0, 1.0);     // purple
-    } else if (v == 5u) {
-        return vec3(0.0, 1.0, 1.0);     // cyan
-    }
-
-    // fallback to handle "not all code-paths return" warnings
-    return vec3(0.0, 0.0, 0.0);
-}

@@ -98,30 +98,30 @@ static float compute_max_saturation(float a, float b) noexcept {
     // is close to infinite
     // this should be sufficient for most applications, otherwise do two/three steps
 
-    float k_l = +0.3963377774f * a + 0.2158037573f * b;
-    float k_m = -0.1055613458f * a - 0.0638541728f * b;
-    float k_s = -0.0894841775f * a - 1.2914855480f * b;
+    float const k_l = +0.3963377774f * a + 0.2158037573f * b;
+    float const k_m = -0.1055613458f * a - 0.0638541728f * b;
+    float const k_s = -0.0894841775f * a - 1.2914855480f * b;
 
     {
-        float l_ = 1.f + S * k_l;
-        float m_ = 1.f + S * k_m;
-        float s_ = 1.f + S * k_s;
+        float const l_ = 1.f + S * k_l;
+        float const m_ = 1.f + S * k_m;
+        float const s_ = 1.f + S * k_s;
 
-        float l = l_ * l_ * l_;
-        float m = m_ * m_ * m_;
-        float s = s_ * s_ * s_;
+        float const l = l_ * l_ * l_;
+        float const m = m_ * m_ * m_;
+        float const s = s_ * s_ * s_;
 
-        float l_dS = 3.f * k_l * l_ * l_;
-        float m_dS = 3.f * k_m * m_ * m_;
-        float s_dS = 3.f * k_s * s_ * s_;
+        float const l_dS = 3.f * k_l * l_ * l_;
+        float const m_dS = 3.f * k_m * m_ * m_;
+        float const s_dS = 3.f * k_s * s_ * s_;
 
-        float l_dS2 = 6.f * k_l * k_l * l_;
-        float m_dS2 = 6.f * k_m * k_m * m_;
-        float s_dS2 = 6.f * k_s * k_s * s_;
+        float const l_dS2 = 6.f * k_l * k_l * l_;
+        float const m_dS2 = 6.f * k_m * k_m * m_;
+        float const s_dS2 = 6.f * k_s * k_s * s_;
 
-        float f = wl * l + wm * m + ws * s;
-        float f1 = wl * l_dS + wm * m_dS + ws * s_dS;
-        float f2 = wl * l_dS2 + wm * m_dS2 + ws * s_dS2;
+        float const f = wl * l + wm * m + ws * s;
+        float const f1 = wl * l_dS + wm * m_dS + ws * s_dS;
+        float const f2 = wl * l_dS2 + wm * m_dS2 + ws * s_dS2;
 
         S = S - f * f1 / (f1 * f1 - 0.5f * f * f2);
     }
@@ -133,14 +133,14 @@ static float compute_max_saturation(float a, float b) noexcept {
 // a and b must be normalized so a^2 + b^2 == 1
 static float2 find_cusp(float a, float b) noexcept {
     // First, find the maximum saturation (saturation S = C/L)
-    float S_cusp = compute_max_saturation(a, b);
+    float const S_cusp = compute_max_saturation(a, b);
 
     // Convert to linear sRGB to find the first point where at least one of r,g or b >= 1:
-    float3 rgb_at_max = OkLab_to_sRGB({1.0f, S_cusp * a, S_cusp * b});
-    float L_cusp = std::cbrt(1.0f / max(rgb_at_max));
-    float C_cusp = L_cusp * S_cusp;
+    float3 const rgb_at_max = OkLab_to_sRGB({1.0f, S_cusp * a, S_cusp * b});
+    float const L_cusp = std::cbrt(1.0f / max(rgb_at_max));
+    float const C_cusp = L_cusp * S_cusp;
 
-    return {L_cusp, C_cusp};
+    return { L_cusp, C_cusp };
 }
 
 // Finds intersection of the line defined by
@@ -149,7 +149,7 @@ static float2 find_cusp(float a, float b) noexcept {
 // a and b must be normalized so a^2 + b^2 == 1
 static float find_gamut_intersection(float a, float b, float L1, float C1, float L0) noexcept {
     // Find the cusp of the gamut triangle
-    float2 cusp = find_cusp(a, b);
+    float2 const cusp = find_cusp(a, b);
 
     // Find the intersection for upper and lower half separately
     float t;
@@ -164,59 +164,59 @@ static float find_gamut_intersection(float a, float b, float L1, float C1, float
 
         // Then one step Halley's method
         {
-            float dL = L1 - L0;
-            float dC = C1;
+            float const dL = L1 - L0;
+            float const dC = C1;
 
-            float k_l = +0.3963377774f * a + 0.2158037573f * b;
-            float k_m = -0.1055613458f * a - 0.0638541728f * b;
-            float k_s = -0.0894841775f * a - 1.2914855480f * b;
+            float const k_l = +0.3963377774f * a + 0.2158037573f * b;
+            float const k_m = -0.1055613458f * a - 0.0638541728f * b;
+            float const k_s = -0.0894841775f * a - 1.2914855480f * b;
 
-            float l_dt = dL + dC * k_l;
-            float m_dt = dL + dC * k_m;
-            float s_dt = dL + dC * k_s;
+            float const l_dt = dL + dC * k_l;
+            float const m_dt = dL + dC * k_m;
+            float const s_dt = dL + dC * k_s;
 
 
             // If higher accuracy is required, 2 or 3 iterations of the
             // following block can be used:
             {
-                float L = L0 * (1.f - t) + t * L1;
-                float C = t * C1;
+                float const L = L0 * (1.f - t) + t * L1;
+                float const C = t * C1;
 
-                float l_ = L + C * k_l;
-                float m_ = L + C * k_m;
-                float s_ = L + C * k_s;
+                float const l_ = L + C * k_l;
+                float const m_ = L + C * k_m;
+                float const s_ = L + C * k_s;
 
-                float l = l_ * l_ * l_;
-                float m = m_ * m_ * m_;
-                float s = s_ * s_ * s_;
+                float const l = l_ * l_ * l_;
+                float const m = m_ * m_ * m_;
+                float const s = s_ * s_ * s_;
 
-                float ldt = 3 * l_dt * l_ * l_;
-                float mdt = 3 * m_dt * m_ * m_;
-                float sdt = 3 * s_dt * s_ * s_;
+                float const ldt = 3 * l_dt * l_ * l_;
+                float const mdt = 3 * m_dt * m_ * m_;
+                float const sdt = 3 * s_dt * s_ * s_;
 
-                float ldt2 = 6 * l_dt * l_dt * l_;
-                float mdt2 = 6 * m_dt * m_dt * m_;
-                float sdt2 = 6 * s_dt * s_dt * s_;
+                float const ldt2 = 6 * l_dt * l_dt * l_;
+                float const mdt2 = 6 * m_dt * m_dt * m_;
+                float const sdt2 = 6 * s_dt * s_dt * s_;
 
-                float r = 4.0767416621f * l - 3.3077115913f * m + 0.2309699292f * s - 1;
-                float r1 = 4.0767416621f * ldt - 3.3077115913f * mdt + 0.2309699292f * sdt;
-                float r2 = 4.0767416621f * ldt2 - 3.3077115913f * mdt2 + 0.2309699292f * sdt2;
+                float const r = 4.0767416621f * l - 3.3077115913f * m + 0.2309699292f * s - 1;
+                float const r1 = 4.0767416621f * ldt - 3.3077115913f * mdt + 0.2309699292f * sdt;
+                float const r2 = 4.0767416621f * ldt2 - 3.3077115913f * mdt2 + 0.2309699292f * sdt2;
 
-                float u_r = r1 / (r1 * r1 - 0.5f * r * r2);
+                float const u_r = r1 / (r1 * r1 - 0.5f * r * r2);
                 float t_r = -r * u_r;
 
-                float g = -1.2681437731f * l + 2.6097574011f * m - 0.3413193965f * s - 1;
-                float g1 = -1.2681437731f * ldt + 2.6097574011f * mdt - 0.3413193965f * sdt;
-                float g2 = -1.2681437731f * ldt2 + 2.6097574011f * mdt2 - 0.3413193965f * sdt2;
+                float const g = -1.2681437731f * l + 2.6097574011f * m - 0.3413193965f * s - 1;
+                float const g1 = -1.2681437731f * ldt + 2.6097574011f * mdt - 0.3413193965f * sdt;
+                float const g2 = -1.2681437731f * ldt2 + 2.6097574011f * mdt2 - 0.3413193965f * sdt2;
 
-                float u_g = g1 / (g1 * g1 - 0.5f * g * g2);
+                float const u_g = g1 / (g1 * g1 - 0.5f * g * g2);
                 float t_g = -g * u_g;
 
-                float b0 = -0.0041960863f * l - 0.7034186147f * m + 1.7076147010f * s - 1;
-                float b1 = -0.0041960863f * ldt - 0.7034186147f * mdt + 1.7076147010f * sdt;
-                float b2 = -0.0041960863f * ldt2 - 0.7034186147f * mdt2 + 1.7076147010f * sdt2;
+                float const b0 = -0.0041960863f * l - 0.7034186147f * m + 1.7076147010f * s - 1;
+                float const b1 = -0.0041960863f * ldt - 0.7034186147f * mdt + 1.7076147010f * sdt;
+                float const b2 = -0.0041960863f * ldt2 - 0.7034186147f * mdt2 + 1.7076147010f * sdt2;
 
-                float u_b = b1 / (b1 * b1 - 0.5f * b0 * b2);
+                float const u_b = b1 / (b1 * b1 - 0.5f * b0 * b2);
                 float t_b = -b0 * u_b;
 
                 t_r = u_r >= 0.f ? t_r : std::numeric_limits<float>::max();
@@ -247,21 +247,21 @@ inline float3 gamut_clip_adaptive_L0_0_5(float3 rgb,
         return rgb;
     }
 
-    float3 lab = sRGB_to_OkLab(rgb);
+    float3 const lab = sRGB_to_OkLab(rgb);
 
-    float L = lab.x;
-    float eps = 0.00001f;
-    float C = max(eps, std::sqrt(lab.y * lab.y + lab.z * lab.z));
-    float a_ = lab.y / C;
-    float b_ = lab.z / C;
+    float const L = lab.x;
+    float const eps = 0.00001f;
+    float const C = max(eps, std::sqrt(lab.y * lab.y + lab.z * lab.z));
+    float const a_ = lab.y / C;
+    float const b_ = lab.z / C;
 
-    float Ld = L - 0.5f;
-    float e1 = 0.5f + std::abs(Ld) + alpha * C;
-    float L0 = 0.5f * (1.0f + sgn(Ld) * (e1 - std::sqrt(e1 * e1 - 2.0f * std::abs(Ld))));
+    float const Ld = L - 0.5f;
+    float const e1 = 0.5f + std::abs(Ld) + alpha * C;
+    float const L0 = 0.5f * (1.0f + sgn(Ld) * (e1 - std::sqrt(e1 * e1 - 2.0f * std::abs(Ld))));
 
-    float t = find_gamut_intersection(a_, b_, L, C, L0);
-    float L_clipped = L0 * (1.f - t) + t * L;
-    float C_clipped = t * C;
+    float const t = find_gamut_intersection(a_, b_, L, C, L0);
+    float const L_clipped = L0 * (1.f - t) + t * L;
+    float const C_clipped = t * C;
 
     return OkLab_to_sRGB({L_clipped, C_clipped * a_, C_clipped * b_});
 }

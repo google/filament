@@ -128,16 +128,18 @@ Your directory structure should look like this:
           README
           *.h, *.c  => libpng source files
           CMakeLists.txt    =>  "cmake" script
+          ci
+             ci_*.sh
           configuration files:
              configure.ac, configure, Makefile.am, Makefile.in,
              autogen.sh, config.guess, ltmain.sh, missing, libpng.pc.in,
              libpng-config.in, aclocal.m4, config.h.in, config.sub,
-             depcomp, install-sh, mkinstalldirs, test-pngtest.sh
+             depcomp, install-sh, mkinstalldirs, test-pngtest.sh, etc.
           contrib
              arm-neon, conftest, examples, gregbook, libtests, pngminim,
              pngminus, pngsuite, tools, visupng
           projects
-             cbuilder5, owatcom, visualc71, vstudio, xcode
+             owatcom, visualc71, vstudio
           scripts
              makefile.*
              *.def (module definition files)
@@ -145,7 +147,7 @@ Your directory structure should look like this:
           pngtest.png
           etc.
       zlib
-          README, *.h, *.c contrib, etc.
+          README, *.h, *.c, contrib, etc.
 
 If the line endings in the files look funny, you may wish to get the other
 distribution of libpng.  It is available in both tar.gz (UNIX style line
@@ -153,28 +155,27 @@ endings) and zip (DOS style line endings) formats.
 
 VI. Building with project files
 
-If you are building libpng with MSVC, you can enter the
-libpng projects\visualc71 or vstudio directory and follow the instructions
-in README.txt.
+If you are building libpng with Microsoft Visual Studio, you can enter
+the directory projects\visualc71 or projects\vstudio and follow the
+instructions in README.txt.
 
-Otherwise enter the zlib directory and follow the instructions in zlib/README,
-then come back here and run "configure" or choose the appropriate
-makefile.sys in the scripts directory.
+Otherwise, enter the zlib directory and follow the instructions in
+zlib/README, then come back here and run "configure" or choose the
+appropriate makefile in the scripts directory.
 
 VII. Building with makefiles
 
 Copy the file (or files) that you need from the
 scripts directory into this directory, for example
 
-MSDOS example:
-
-    copy scripts\makefile.msc makefile
-    copy scripts\pnglibconf.h.prebuilt pnglibconf.h
-
 UNIX example:
 
-    cp scripts/makefile.std makefile
-    cp scripts/pnglibconf.h.prebuilt pnglibconf.h
+    cp scripts/makefile.std Makefile
+    make
+
+Windows example:
+
+    nmake -f scripts\makefile.vcwin32
 
 Read the makefile to see if you need to change any source or
 target directories to match your preferences.
@@ -191,36 +192,33 @@ test.  For more confidence, you can run another test by typing
 Also, you can run "pngtest -m contrib/pngsuite/*.png" and compare
 your output with the result shown in contrib/pngsuite/README.
 
-Most of the makefiles will allow you to run "make install" to
-put the library in its final resting place (if you want to
-do that, run "make install" in the zlib directory first if necessary).
-Some also allow you to run "make test-installed" after you have
-run "make install".
+Most of the makefiles used to allow you to run "make install" to put
+the library in its final resting place, but that feature is no longer
+supported.  The only tested and supported manners to install libpng are
+the conventional build and install procedures driven by the configure
+script or by the CMake file.
 
-VIII. Configuring libpng for 16-bit platforms
+VIII. Configuring for DOS and other 16-bit platforms
 
-You will want to look into zconf.h to tell zlib (and thus libpng) that
-it cannot allocate more than 64K at a time.  Even if you can, the memory
-won't be accessible.  So limit zlib and libpng to 64K by defining MAXSEG_64K.
-
-IX. Configuring for DOS
+Officially, the support for 16-bit platforms has been removed.
 
 For DOS users who only have access to the lower 640K, you will
 have to limit zlib's memory usage via a png_set_compression_mem_level()
 call.  See zlib.h or zconf.h in the zlib library for more information.
 
-X. Configuring for Medium Model
+You may be or may not be in luck if you target the "large" memory model,
+but all the smaller models ("small", "compact" and "medium") are known
+to be unworkable.  For DOS users who have access beyond the lower 640K,
+a "flat" 32-bit DOS model (such as DJGPP) is strongly recommended.
 
-Libpng's support for medium model has been tested on most of the popular
-compilers.  Make sure MAXSEG_64K gets defined, USE_FAR_KEYWORD gets
-defined, and FAR gets defined to far in pngconf.h, and you should be
-all set.  Everything in the library (except for zlib's structure) is
-expecting far data.  You must use the typedefs with the p or pp on
-the end for pointers (or at least look at them and be careful).  Make
-note that the rows of data are defined as png_bytepp, which is
-an "unsigned char far * far *".
+For DOS users who only have access to the lower 640K, you will have to
+limit zlib's memory usage via a png_set_compression_mem_level() call.
+You will also have to look into zconf.h to tell zlib (and thus libpng)
+that it cannot allocate more than 64K at a time.  Even if you can, the
+memory won't be accessible.  Therefore, you should limit zlib and libpng
+to 64K by defining MAXSEG_64K.
 
-XI. Prepending a prefix to exported symbols
+IX. Prepending a prefix to exported symbols
 
 Starting with libpng-1.6.0, you can configure libpng (when using the
 "configure" script) to prefix all exported symbols by means of the
@@ -231,7 +229,7 @@ identifier).  This creates a set of macros in pnglibconf.h, so this is
 transparent to applications; their function calls get transformed by
 the macros to use the modified names.
 
-XII. Configuring for compiler xxx:
+X. Configuring for compiler xxx:
 
 All includes for libpng are in pngconf.h.  If you need to add, change
 or delete an include, this is the place to do it.
@@ -243,7 +241,7 @@ As of libpng-1.5.0, pngpriv.h also includes three other private header
 files, pngstruct.h, pnginfo.h, and pngdebug.h, which contain material
 that previously appeared in the public headers.
 
-XIII. Removing unwanted object code
+XI. Removing unwanted object code
 
 There are a bunch of #define's in pngconf.h that control what parts of
 libpng are compiled.  All the defines end in _SUPPORTED.  If you are
@@ -282,7 +280,7 @@ library to fail if they call functions not available in your library.
 The size of the library itself should not be an issue, because only
 those sections that are actually used will be loaded into memory.
 
-XIV. Enabling or disabling hardware optimizations
+XII. Enabling or disabling hardware optimizations
 
 Certain hardware capabilities, such as the Intel SSE instructions,
 are normally detected at run time. Enable them with configure options
@@ -332,7 +330,7 @@ or disable them all at once with
 
     cmake . -DPNG_HARDWARE_OPTIMIZATIONS=no
 
-XV. Changes to the build and configuration of libpng in libpng-1.5.x
+XIII. Changes to the build and configuration of libpng in libpng-1.5.x
 
 Details of internal changes to the library code can be found in the CHANGES
 file and in the GIT repository logs.  These will be of no concern to the vast
@@ -423,7 +421,7 @@ $PREFIX/include directory).  Do not edit pnglibconf.h after you have built
 libpng, because than the settings would not accurately reflect the settings
 that were used to build libpng.
 
-XVI. Setjmp/longjmp issues
+XIV. Setjmp/longjmp issues
 
 Libpng uses setjmp()/longjmp() for error handling.  Unfortunately setjmp()
 is known to be not thread-safe on some platforms and we don't know of
@@ -441,7 +439,7 @@ This requires setjmp/longjmp, so you must either build the library
 with PNG_SETJMP_SUPPORTED defined, or with PNG_SIMPLIFIED_READ_SUPPORTED
 and PNG_SIMPLIFIED_WRITE_SUPPORTED undefined.
 
-XVII. Common linking failures
+XV. Common linking failures
 
 If your application fails to find libpng or zlib entries while linking:
 
@@ -453,12 +451,13 @@ If your application fails to find libpng or zlib entries while linking:
   If you are using the vstudio project, observe the WARNING in
   project/vstudio/README.txt.
 
-XVIII. Other sources of information about libpng:
+XVI. Other sources of information about libpng:
 
 Further information can be found in the README and libpng-manual.txt
 files, in the individual makefiles, in png.h, and the manual pages
 libpng.3 and png.5.
 
+Copyright (c) 2022 Cosmin Truta
 Copyright (c) 1998-2002,2006-2016 Glenn Randers-Pehrson
 This document is released under the libpng license.
 For conditions of distribution and use, see the disclaimer

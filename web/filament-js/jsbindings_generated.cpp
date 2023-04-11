@@ -43,6 +43,7 @@ value_object<View::BloomOptions>("View$BloomOptions")
 
 value_object<View::FogOptions>("View$FogOptions")
     .field("distance", &View::FogOptions::distance)
+    .field("cutOffDistance", &View::FogOptions::cutOffDistance)
     .field("maximumOpacity", &View::FogOptions::maximumOpacity)
     .field("height", &View::FogOptions::height)
     .field("heightFalloff", &View::FogOptions::heightFalloff)

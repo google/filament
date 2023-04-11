@@ -334,9 +334,9 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
     keyBlending |= uint64_t(Pass::BLENDED);
     keyBlending |= uint64_t(CustomCommand::PASS);
 
-    BlendingMode blendingMode = ma->getBlendingMode();
-    bool hasScreenSpaceRefraction = ma->getRefractionMode() == RefractionMode::SCREEN_SPACE;
-    bool isBlendingCommand = !hasScreenSpaceRefraction &&
+    BlendingMode const blendingMode = ma->getBlendingMode();
+    bool const hasScreenSpaceRefraction = ma->getRefractionMode() == RefractionMode::SCREEN_SPACE;
+    bool const isBlendingCommand = !hasScreenSpaceRefraction &&
             (blendingMode != BlendingMode::OPAQUE && blendingMode != BlendingMode::MASKED);
 
     uint64_t keyDraw = cmdDraw.key;
@@ -516,7 +516,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
         cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdColor.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
         cmdColor.primitive.index = (uint16_t)i;
-        cmdColor.primitive.instanceCount = soaInstanceCount[i];
+        cmdColor.primitive.instanceCount = soaInstanceCount[i] | PrimitiveInfo::USER_INSTANCE_MASK;
 
         // if we are already an SSR variant, the SRE bit is already set,
         // there is no harm setting it again
@@ -532,7 +532,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
             cmdDepth.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
             cmdDepth.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK, Z_BUCKET_SHIFT);
             cmdDepth.primitive.index = (uint16_t)i;
-            cmdDepth.primitive.instanceCount = soaInstanceCount[i];
+            cmdDepth.primitive.instanceCount = soaInstanceCount[i] | PrimitiveInfo::USER_INSTANCE_MASK;
             cmdDepth.primitive.materialVariant.setSkinning(hasSkinningOrMorphing);
             cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
         }
@@ -691,7 +691,7 @@ void RenderPass::updateSummedPrimitiveCounts(
     auto const* const UTILS_RESTRICT primitives = renderableData.data<FScene::PRIMITIVES>();
     uint32_t* const UTILS_RESTRICT summedPrimitiveCount = renderableData.data<FScene::SUMMED_PRIMITIVE_COUNT>();
     uint32_t count = 0;
-    for (uint32_t i : vr) {
+    for (uint32_t const i : vr) {
         summedPrimitiveCount[i] = count;
         count += primitives[i].size();
     }
@@ -718,7 +718,7 @@ void RenderPass::Executor::overrideScissor(backend::Viewport const& scissor) noe
     mScissor = scissor;
 }
 
-void RenderPass::Executor::execute(FEngine& engine, const char* name) const noexcept {
+void RenderPass::Executor::execute(FEngine& engine, const char*) const noexcept {
     execute(engine.getDriverApi(), mCommands.begin(), mCommands.end());
 }
 
@@ -742,7 +742,7 @@ void RenderPass::Executor::execute(backend::DriverApi& driver,
         auto* const pScissor =
                 mScissorOverride ? &dummyPipeline.scissor : &pipeline.scissor;
 
-        Handle<HwBufferObject> uboHandle = mUboHandle;
+        Handle<HwBufferObject> const uboHandle = mUboHandle;
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
         auto const* UTILS_RESTRICT pCustomCommands = mCustomCommands.data();
@@ -756,7 +756,7 @@ void RenderPass::Executor::execute(backend::DriverApi& driver,
              */
 
             if (UTILS_UNLIKELY((first->key & CUSTOM_MASK) != uint64_t(CustomCommand::PASS))) {
-                uint32_t index = (first->key & CUSTOM_INDEX_MASK) >> CUSTOM_INDEX_SHIFT;
+                uint32_t const index = (first->key & CUSTOM_INDEX_MASK) >> CUSTOM_INDEX_SHIFT;
                 assert_invariant(index < mCustomCommands.size());
                 pCustomCommands[index]();
                 continue;
@@ -812,9 +812,14 @@ void RenderPass::Executor::execute(backend::DriverApi& driver,
 
             // bind per-renderable uniform block. there is no need to attempt to skip this command
             // because the backends already do this.
+            bool const userInstancing = (info.instanceCount & PrimitiveInfo::USER_INSTANCE_MASK) != 0u;
+            uint16_t const instanceCount = info.instanceCount & PrimitiveInfo::INSTANCE_COUNT_MASK;
+            auto const perObjectUboHandle = (!userInstancing && instanceCount > 1)
+                                      ? mInstancedUboHandle : uboHandle;
+            assert_invariant(perObjectUboHandle);
             driver.bindBufferRange(BufferObjectBinding::UNIFORM,
                     +UniformBindingPoints::PER_RENDERABLE,
-                    (info.instanceCount > 1) ? mInstancedUboHandle : uboHandle,
+                    perObjectUboHandle,
                     info.index * sizeof(PerRenderableData),
                     sizeof(PerRenderableUib));
 
@@ -839,7 +844,7 @@ void RenderPass::Executor::execute(backend::DriverApi& driver,
                         info.morphTargetBuffer);
             }
 
-            driver.draw(pipeline, info.primitiveHandle, info.instanceCount);
+            driver.draw(pipeline, info.primitiveHandle, instanceCount);
         }
     }
 

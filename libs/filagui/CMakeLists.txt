@@ -91,6 +91,5 @@ set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 if (NOT MSVC)
     target_compile_options(${TARGET} PRIVATE
             -Wno-deprecated-register
-            $<$<CONFIG:Release>:-ffast-math>
     )
 endif()

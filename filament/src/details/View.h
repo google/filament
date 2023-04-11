@@ -88,8 +88,10 @@ public:
 
     CameraInfo computeCameraInfo(FEngine& engine) const noexcept;
 
+    // note: viewport/cameraInfo are passed by value to make it clear that prepare cannot
+    // keep references on them that would outlive the scope of prepare() (e.g. with JobSystem).
     void prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& arena,
-            filament::Viewport const& viewport, CameraInfo const& cameraInfo,
+            filament::Viewport viewport, CameraInfo cameraInfo,
             math::float4 const& userTime, bool needsAlphaChannel) noexcept;
 
     void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept;
@@ -141,9 +143,8 @@ public:
             const filament::Viewport& logicalViewport) const noexcept;
 
     void prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableData,
-            FScene::LightSoa& lightData, CameraInfo const& cameraInfo) noexcept;
-    void prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena,
-            filament::Viewport const& viewport, CameraInfo const &cameraInfo) noexcept;
+            FScene::LightSoa const& lightData, CameraInfo const& cameraInfo) noexcept;
+    void prepareLighting(FEngine& engine, ArenaScope& arena, CameraInfo const& cameraInfo) noexcept;
 
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset,
@@ -153,9 +154,11 @@ public:
     void prepareShadowMapping(bool highPrecision) const noexcept;
 
     void cleanupRenderPasses() const noexcept;
-    void froxelize(FEngine& engine, math::mat4f const& viewMatrix) const noexcept;
     void commitUniforms(backend::DriverApi& driver) const noexcept;
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;
+
+    utils::JobSystem::Job* getFroxelizerSync() const noexcept { return mFroxelizerSync; }
+    void setFroxelizerSync(utils::JobSystem::Job* sync) noexcept { mFroxelizerSync = sync; }
 
     bool hasDirectionalLight() const noexcept { return mHasDirectionalLight; }
     bool hasDynamicLighting() const noexcept { return mHasDynamicLighting; }
@@ -474,6 +477,7 @@ private:
     FCamera* mViewingCamera = nullptr;
 
     mutable Froxelizer mFroxelizer;
+    utils::JobSystem::Job* mFroxelizerSync = nullptr;
 
     Viewport mViewport;
     bool mCulling = true;

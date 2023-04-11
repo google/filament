@@ -379,6 +379,12 @@ bool MaterialCompiler::run(const Config& config) {
         return false;
     }
 
+    if (builder.getFeatureLevel() > config.getFeatureLevel()) {
+        std::cerr << "Material feature level (" << +builder.getFeatureLevel() << ") is higher "
+                "than maximum allowed (" << +config.getFeatureLevel() << ")" << std::endl;
+        return false;
+    }
+
     switch (config.getReflectionTarget()) {
         case Config::Metadata::NONE:
             break;

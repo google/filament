@@ -173,7 +173,7 @@ void FMaterialInstance::commitSlow(DriverApi& driver) const {
 
 void FMaterialInstance::setParameter(std::string_view name,
         backend::Handle<backend::HwTexture> texture, backend::SamplerParams params) noexcept {
-    size_t index = mMaterial->getSamplerInterfaceBlock().getSamplerInfo(name)->offset;
+    size_t const index = mMaterial->getSamplerInterfaceBlock().getSamplerInfo(name)->offset;
     mSamplers.setSampler(index, { texture, params });
 }
 
@@ -184,8 +184,8 @@ void FMaterialInstance::setParameterImpl(std::string_view name,
     // Per GLES3.x specification, depth texture can't be filtered unless in compare mode.
     if (texture && isDepthFormat(texture->getFormat())) {
         if (sampler.getCompareMode() == SamplerCompareMode::NONE) {
-            SamplerMinFilter minFilter = sampler.getMinFilter();
-            SamplerMagFilter magFilter = sampler.getMagFilter();
+            SamplerMinFilter const minFilter = sampler.getMinFilter();
+            SamplerMagFilter const magFilter = sampler.getMagFilter();
             if (magFilter == SamplerMagFilter::LINEAR ||
                 minFilter == SamplerMinFilter::LINEAR ||
                 minFilter == SamplerMinFilter::LINEAR_MIPMAP_LINEAR ||

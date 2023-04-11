@@ -42,10 +42,11 @@ Filament.loadGeneratedExtensions = function() {
     Filament.View.prototype.setFogOptionsDefaults = function(overrides) {
         const options = {
             distance: 0.0,
+            cutOffDistance: Infinity,
             maximumOpacity: 1.0,
             height: 0.0,
             heightFalloff: 1.0,
-            color: [0.5, 0.5, 0.5],
+            color: [ 1.0, 1.0, 1.0 ],
             density: 0.1,
             inScatteringStart: 0.0,
             inScatteringSize: -1.0,

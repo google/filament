@@ -1,6 +1,6 @@
-.TH LIBPNG 3 "April 14, 2019"
+.TH LIBPNG 3 "November 20, 2022"
 .SH NAME
-libpng \- Portable Network Graphics (PNG) Reference Library 1.6.37
+libpng \- Portable Network Graphics (PNG) Reference Library 1.6.39
 
 .SH SYNOPSIS
 \fB#include <png.h>\fP
@@ -519,7 +519,7 @@ Following is a copy of the libpng-manual.txt file that accompanies libpng.
 .SH LIBPNG.TXT
 libpng-manual.txt - A description on how to use and modify libpng
 
- Copyright (c) 2018-2019 Cosmin Truta
+ Copyright (c) 2018-2022 Cosmin Truta
  Copyright (c) 1998-2018 Glenn Randers-Pehrson
 
  This document is released under the libpng license.
@@ -528,9 +528,9 @@ libpng-manual.txt - A description on how to use and modify libpng
 
  Based on:
 
- libpng version 1.6.36, December 2018, through 1.6.37 - April 2019
+ libpng version 1.6.36, December 2018, through 1.6.39 - November 2022
  Updated and distributed by Cosmin Truta
- Copyright (c) 2018-2019 Cosmin Truta
+ Copyright (c) 2018-2022 Cosmin Truta
 
  libpng versions 0.97, January 1998, through 1.6.35 - July 2018
  Updated and distributed by Glenn Randers-Pehrson
@@ -1396,7 +1396,7 @@ described below (the latter being the two common names for associated alpha
 color channels). Note that PNG files always contain non-associated color
 channels; png_set_alpha_mode() with one of the modes causes the decoder to
 convert the pixels to an associated form before returning them to your
-application. 
+application.
 
 Since it is not necessary to perform arithmetic on opaque color values so
 long as they are not to be resampled and are in the final color space it is
@@ -2311,7 +2311,7 @@ the information.  If, instead, you want to convert the image to an opaque
 version with no alpha channel use png_set_background; see below.
 
 As of libpng version 1.5.2, almost all useful expansions are supported, the
-major ommissions are conversion of grayscale to indexed images (which can be
+major omissions are conversion of grayscale to indexed images (which can be
 done trivially in the application) and conversion of indexed to grayscale (which
 can be done by a trivial manipulation of the palette.)
 

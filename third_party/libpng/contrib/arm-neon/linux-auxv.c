@@ -2,7 +2,6 @@
  *
  * Copyright (c) 2014 Glenn Randers-Pehrson
  * Written by Mans Rullgard, 2011.
- * Last changed in libpng 1.6.10 [March 6, 2014]
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -22,6 +21,7 @@
  * This generic __linux__ implementation requires reading /proc/self/auxv and
  * looking at each element for one that records NEON capabilities.
  */
+
 #include <unistd.h> /* for POSIX 1003.1 */
 #include <errno.h>  /* for EINTR */
 

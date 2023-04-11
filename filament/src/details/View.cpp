@@ -32,7 +32,6 @@
 #include <filament/TextureSampler.h>
 #include <filament/View.h>
 
-#include <private/filament/SibStructs.h>
 #include <private/filament/UibStructs.h>
 
 #include <utils/Profiler.h>
@@ -180,8 +179,8 @@ float2 FView::updateScale(FEngine& engine,
         const float dt = 1.0f; // we don't really need dt here, setting it to 1, means our parameters are in "frames"
         const float target = (1000.0f * float(frameRateOptions.interval)) / displayInfo.refreshRate;
         const float targetWithHeadroom = target * (1.0f - frameRateOptions.headRoomRatio);
-        float measured = duration<float, std::milli>{ info.denoisedFrameTime }.count();
-        float out = mPidController.update(measured / targetWithHeadroom, 1.0f, dt);
+        float const measured = duration<float, std::milli>{ info.denoisedFrameTime }.count();
+        float const out = mPidController.update(measured / targetWithHeadroom, 1.0f, dt);
 
         // maps pid command to a scale (absolute or relative, see below)
          const float command = out < 0.0f ? (1.0f / (1.0f - out)) : (1.0f + out);
@@ -269,7 +268,7 @@ bool FView::isSkyboxVisible() const noexcept {
 }
 
 void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableData,
-        FScene::LightSoa& lightData, CameraInfo const& cameraInfo) noexcept {
+        FScene::LightSoa const& lightData, CameraInfo const& cameraInfo) noexcept {
     SYSTRACE_CALL();
 
     mHasShadowing = false;
@@ -303,7 +302,7 @@ void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableD
         // when we get here all the lights should be visible
         assert_invariant(lightData.elementAt<FScene::VISIBILITY>(l));
 
-        FLightManager::Instance li = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
+        FLightManager::Instance const li = lightData.elementAt<FScene::LIGHT_INSTANCE>(l);
 
         if (UTILS_LIKELY(!li)) {
             continue; // invalid instance
@@ -334,8 +333,8 @@ void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableD
     mNeedsShadowMap = any(shadowTechnique & ShadowMapManager::ShadowTechnique::SHADOW_MAP);
 }
 
-void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena,
-        filament::Viewport const& viewport, CameraInfo const& cameraInfo) noexcept {
+void FView::prepareLighting(FEngine& engine, ArenaScope& arena,
+        CameraInfo const& cameraInfo) noexcept {
     SYSTRACE_CALL();
     SYSTRACE_CONTEXT();
 
@@ -346,15 +345,8 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
      * Dynamic lights
      */
 
-    mHasDynamicLighting = scene->getLightData().size() > FScene::DIRECTIONAL_LIGHTS_COUNT;
-    if (mHasDynamicLighting) {
+    if (hasDynamicLighting()) {
         scene->prepareDynamicLights(cameraInfo, arena, mLightUbh);
-        Froxelizer& froxelizer = mFroxelizer;
-        if (froxelizer.prepare(driver, arena, viewport,
-                cameraInfo.projection, cameraInfo.zn, cameraInfo.zf)) {
-            // update our uniform buffer if needed
-            mPerViewUniforms.prepareDynamicLights(mFroxelizer);
-        }
     }
 
     // here the array of visible lights has been shrunk to CONFIG_MAX_LIGHT_COUNT
@@ -365,7 +357,6 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
      */
 
     const float exposure = Exposure::exposure(cameraInfo.ev100);
-
     mPerViewUniforms.prepareExposure(cameraInfo.ev100);
 
     /*
@@ -383,7 +374,6 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
         FSkybox const* const skybox = scene->getSkybox();
         intensity = skybox ? skybox->getIntensity() : FIndirectLight::DEFAULT_INTENSITY;
     }
-
     mPerViewUniforms.prepareAmbientLight(engine, *ibl, intensity, exposure);
 
     /*
@@ -393,7 +383,6 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     FLightManager::Instance const directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
     const float3 sceneSpaceDirection = lightData.elementAt<FScene::DIRECTION>(0); // guaranteed normalized
     mPerViewUniforms.prepareDirectionalLight(engine, exposure, sceneSpaceDirection, directionalLight);
-    mHasDirectionalLight = directionalLight.isValid();
 }
 
 CameraInfo FView::computeCameraInfo(FEngine& engine) const noexcept {
@@ -429,7 +418,7 @@ CameraInfo FView::computeCameraInfo(FEngine& engine) const noexcept {
 }
 
 void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
-        filament::Viewport const& viewport, CameraInfo const& cameraInfo,
+        filament::Viewport viewport, CameraInfo cameraInfo,
         float4 const& userTime, bool needsAlphaChannel) noexcept {
 
         SYSTRACE_CALL();
@@ -472,14 +461,22 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * Light culling: runs in parallel with Renderable culling (below)
      */
 
+    JobSystem::Job* froxelizeLightsJob = nullptr;
     JobSystem::Job* prepareVisibleLightsJob = nullptr;
     if (scene->getLightData().size() > FScene::DIRECTIONAL_LIGHTS_COUNT) {
+        // create and start the prepareVisibleLights job
+        // note: this job updates LightData (non const)
         prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
-                [&cullingFrustum, &engine, &arena, &cameraInfo, scene](JobSystem&, JobSystem::Job*) {
+                [&engine, &arena, &viewMatrix = cameraInfo.view, &cullingFrustum,
+                 &lightData = scene->getLightData()]
+                        (JobSystem&, JobSystem::Job*) {
                     FView::prepareVisibleLights(engine.getLightManager(), arena,
-                            cameraInfo.view, cullingFrustum, scene->getLightData());
+                            viewMatrix, cullingFrustum, lightData);
                 }));
     }
+
+    // this is used later (in Renderer.cpp) to wait for froxelization to finishes
+    setFroxelizerSync(froxelizeLightsJob);
 
     Range merged;
     FScene::RenderableSoa& renderableData = scene->getRenderableData();
@@ -506,7 +503,40 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
         if (prepareVisibleLightsJob) {
             js.waitAndRelease(prepareVisibleLightsJob);
         }
-        prepareShadowing(engine, renderableData, scene->getLightData(), cameraInfo);
+
+        // lightData is const from this point on (can only happen after prepareVisibleLightsJob)
+        auto const& lightData = scene->getLightData();
+
+        // now we know if we have dynamic lighting (i.e.: dynamic lights are visible)
+        mHasDynamicLighting = lightData.size() > FScene::DIRECTIONAL_LIGHTS_COUNT;
+
+        // we also know if we have a directional light
+        FLightManager::Instance const directionalLight =
+                lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
+        mHasDirectionalLight = directionalLight.isValid();
+
+        // As soon as prepareVisibleLight finishes, we can kick-off the froxelization
+        if (hasDynamicLighting()) {
+            auto& froxelizer = mFroxelizer;
+            if (froxelizer.prepare(driver, arena, viewport,
+                    cameraInfo.projection, cameraInfo.zn, cameraInfo.zf)) {
+                // TODO: might be more consistent to do this in prepareLighting(), but it's not
+                //       strictly necessary
+                mPerViewUniforms.prepareDynamicLights(mFroxelizer);
+            }
+            // We need to pass viewMatrix by value here because it extends the scope of this
+            // function.
+            std::function<void(JobSystem&, JobSystem::Job*)> froxelizerWork =
+                    [&froxelizer = mFroxelizer, &engine, viewMatrix = cameraInfo.view, &lightData]
+                            (JobSystem&, JobSystem::Job*) {
+                        froxelizer.froxelizeLights(engine, viewMatrix, lightData);
+                    };
+            froxelizeLightsJob = js.runAndRetain(js.createJob(nullptr, std::move(froxelizerWork)));
+        }
+
+        setFroxelizerSync(froxelizeLightsJob);
+
+        prepareShadowing(engine, renderableData, lightData, cameraInfo);
 
         /*
          * Partition the SoA so that renderables are partitioned w.r.t their visibility into the
@@ -603,7 +633,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * Relies on FScene::prepare() and prepareVisibleLights()
      */
 
-    prepareLighting(engine, driver, arena, viewport, cameraInfo);
+    prepareLighting(engine, arena, cameraInfo);
 
     /*
      * Update driver state
@@ -734,12 +764,6 @@ void FView::cleanupRenderPasses() const noexcept {
     mPerViewUniforms.unbindSamplers();
 }
 
-void FView::froxelize(FEngine& engine, mat4f const& viewMatrix) const noexcept {
-    SYSTRACE_CALL();
-    assert_invariant(mHasDynamicLighting);
-    mFroxelizer.froxelizeLights(engine, viewMatrix, mScene->getLightData());
-}
-
 void FView::commitUniforms(DriverApi& driver) const noexcept {
     mPerViewUniforms.commit(driver);
 }
@@ -762,7 +786,7 @@ void FView::prepareVisibleRenderables(JobSystem& js,
     }
 }
 
-void FView::cullRenderables(JobSystem& js,
+void FView::cullRenderables(JobSystem&,
         FScene::RenderableSoa& renderableData, Frustum const& frustum, size_t bit) noexcept {
     SYSTRACE_CALL();
 
@@ -806,7 +830,7 @@ void FView::prepareVisibleLights(FLightManager const& lcm, ArenaScope& rootArena
     size_t visibleLightCount = FScene::DIRECTIONAL_LIGHTS_COUNT;
     // skip directional light
     for (size_t i = FScene::DIRECTIONAL_LIGHTS_COUNT; i < lightData.size(); i++) {
-        FLightManager::Instance li = instanceArray[i];
+        FLightManager::Instance const li = instanceArray[i];
         if (visibleArray[i]) {
             if (!lcm.isLightCaster(li)) {
                 visibleArray[i] = 0;
@@ -902,8 +926,8 @@ inline void FView::computeLightCameraDistances(
 void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
         FScene::RenderableSoa& renderableData, Range visible) noexcept {
     FRenderableManager const& rcm = engine.getRenderableManager();
-    for (uint32_t index : visible) {
-        uint8_t level = 0; // TODO: pick the proper level of detail
+    for (uint32_t const index : visible) {
+        uint8_t const level = 0; // TODO: pick the proper level of detail
         auto ri = renderableData.elementAt<FScene::RENDERABLE_INSTANCE>(index);
         renderableData.elementAt<FScene::PRIMITIVES>(index) = rcm.getRenderPrimitives(ri, level);
     }
@@ -944,10 +968,10 @@ void FView::executePickingQueries(backend::DriverApi& driver,
         const uint32_t x = uint32_t(float(pQuery->x) * (scale * mScale.x));
         const uint32_t y = uint32_t(float(pQuery->y) * (scale * mScale.y));
         driver.readPixels(handle, x, y, 1, 1, {
-                &pQuery->result.renderable, 4*4, // 4*uint
+                &pQuery->result.renderable, 4 * 4, // 4*uint
                 // FIXME: RGBA_INTEGER is guaranteed to work. R_INTEGER must be queried.
                 backend::PixelDataFormat::RG_INTEGER, backend::PixelDataType::UINT,
-                pQuery->handler, [](void* buffer, size_t size, void* user) {
+                pQuery->handler, [](void*, size_t, void* user) {
                     FPickingQuery* pQuery = static_cast<FPickingQuery*>(user);
                     pQuery->result.fragCoords = {
                             pQuery->x, pQuery->y,float(1.0 - pQuery->result.depth) };

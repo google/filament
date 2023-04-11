@@ -242,6 +242,10 @@ public:
             FrameGraphId<FrameGraphTexture> output,
             bool reinhard, size_t kernelWidth, float sigma) noexcept;
 
+    FrameGraphId<FrameGraphTexture> debugShadowCascades(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphId<FrameGraphTexture> depth) noexcept;
+
     backend::Handle<backend::HwTexture> getOneTexture() const;
     backend::Handle<backend::HwTexture> getZeroTexture() const;
     backend::Handle<backend::HwTexture> getOneTextureArray() const;

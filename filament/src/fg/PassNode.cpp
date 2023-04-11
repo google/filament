@@ -76,13 +76,13 @@ void RenderPassNode::execute(FrameGraphResources const& resources, DriverApi& dr
     }
 }
 
-uint32_t RenderPassNode::declareRenderTarget(FrameGraph& fg, FrameGraph::Builder& builder,
+uint32_t RenderPassNode::declareRenderTarget(FrameGraph& fg, FrameGraph::Builder&,
         const char* name, FrameGraphRenderPass::Descriptor const& descriptor) {
 
     RenderPassData data;
     data.name = name;
     data.descriptor = descriptor;
-    FrameGraphRenderPass::Attachments& attachments = data.descriptor.attachments;
+    FrameGraphRenderPass::Attachments const& attachments = data.descriptor.attachments;
 
     // retrieve the ResourceNode of the attachments coming to us -- this will be used later
     // to compute the discard flags.
@@ -118,7 +118,7 @@ uint32_t RenderPassNode::declareRenderTarget(FrameGraph& fg, FrameGraph::Builder
         }
     }
 
-    uint32_t id = mRenderTargetData.size();
+    uint32_t const id = mRenderTargetData.size();
     mRenderTargetData.push_back(data);
     return id;
 }
@@ -201,8 +201,8 @@ void RenderPassNode::resolve() noexcept {
 
         // of all attachments size matches there are no ambiguity about the RT size.
         // if they don't match however, we select a size that will accommodate all attachments.
-        uint32_t width = maxWidth;
-        uint32_t height = maxHeight;
+        uint32_t const width = maxWidth;
+        uint32_t const height = maxHeight;
 
         // Update the descriptor if no size was specified (auto mode)
         if (!rt.descriptor.viewport.width) {
@@ -277,7 +277,7 @@ void RenderPassNode::RenderPassData::devirtualize(FrameGraph& fg,
 }
 
 void RenderPassNode::RenderPassData::destroy(
-        ResourceAllocatorInterface& resourceAllocator) noexcept {
+        ResourceAllocatorInterface& resourceAllocator) const noexcept {
     if (UTILS_LIKELY(!imported)) {
         resourceAllocator.destroyRenderTarget(backend.target);
     }
@@ -291,9 +291,9 @@ utils::CString RenderPassNode::graphvizify() const noexcept {
 #ifndef NDEBUG
     std::string s;
 
-    uint32_t id = getId();
+    uint32_t const id = getId();
     const char* const nodeName = getName();
-    uint32_t refCount = getRefCount();
+    uint32_t const refCount = getRefCount();
 
     s.append("[label=\"");
     s.append(nodeName);
@@ -339,7 +339,7 @@ utils::CString PresentPassNode::graphvizify() const noexcept {
 #ifndef NDEBUG
     std::string s;
     s.reserve(128);
-    uint32_t id = getId();
+    uint32_t const id = getId();
     s.append("[label=\"Present , id: ");
     s.append(std::to_string(id));
     s.append("\", style=filled, fillcolor=red3]");

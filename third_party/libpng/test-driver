@@ -3,7 +3,7 @@
 
 scriptversion=2018-03-07.03; # UTC
 
-# Copyright (C) 2011-2018 Free Software Foundation, Inc.
+# Copyright (C) 2011-2021 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -42,11 +42,13 @@ print_usage ()
 {
   cat <<END
 Usage:
-  test-driver --test-name=NAME --log-file=PATH --trs-file=PATH
-              [--expect-failure={yes|no}] [--color-tests={yes|no}]
-              [--enable-hard-errors={yes|no}] [--]
+  test-driver --test-name NAME --log-file PATH --trs-file PATH
+              [--expect-failure {yes|no}] [--color-tests {yes|no}]
+              [--enable-hard-errors {yes|no}] [--]
               TEST-SCRIPT [TEST-SCRIPT-ARGUMENTS]
+
 The '--test-name', '--log-file' and '--trs-file' options are mandatory.
+See the GNU Automake documentation for information.
 END
 }
 
@@ -103,8 +105,11 @@ trap "st=130; $do_exit" 2
 trap "st=141; $do_exit" 13
 trap "st=143; $do_exit" 15
 
-# Test script is run here.
-"$@" >$log_file 2>&1
+# Test script is run here. We create the file first, then append to it,
+# to ameliorate tests themselves also writing to the log file. Our tests
+# don't, but others can (automake bug#35762).
+: >"$log_file"
+"$@" >>"$log_file" 2>&1
 estatus=$?
 
 if test $enable_hard_errors = no && test $estatus -eq 99; then
@@ -126,7 +131,7 @@ esac
 # know whether the test passed or failed simply by looking at the '.log'
 # file, without the need of also peaking into the corresponding '.trs'
 # file (automake bug#11814).
-echo "$res $test_name (exit status: $estatus)" >>$log_file
+echo "$res $test_name (exit status: $estatus)" >>"$log_file"
 
 # Report outcome to console.
 echo "${col}${res}${std}: $test_name"

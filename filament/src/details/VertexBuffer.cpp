@@ -67,7 +67,7 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
         uint32_t byteOffset,
         uint8_t byteStride) noexcept {
 
-    size_t attributeSize = Driver::getElementTypeSize(attributeType);
+    size_t const attributeSize = Driver::getElementTypeSize(attributeType);
     if (byteStride == 0) {
         byteStride = (uint8_t)attributeSize;
     }
@@ -143,7 +143,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
     std::copy(std::begin(builder->mAttributes), std::end(builder->mAttributes), mAttributes.begin());
 
     mDeclaredAttributes = builder->mDeclaredAttributes;
-    uint8_t attributeCount = (uint8_t) mDeclaredAttributes.count();
+    uint8_t const attributeCount = (uint8_t)mDeclaredAttributes.count();
 
     AttributeArray attributeArray;
 
@@ -190,7 +190,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
         #pragma nounroll
         for (size_t i = 0; i < MAX_VERTEX_BUFFER_COUNT; ++i) {
             if (bufferSizes[i] > 0) {
-                BufferObjectHandle bo = driver.createBufferObject(bufferSizes[i],
+                BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
                         backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
                 driver.setVertexBufferObject(mHandle, i, bo);
                 mBufferObjects[i] = bo;
@@ -202,7 +202,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
 void FVertexBuffer::terminate(FEngine& engine) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     if (!mBufferObjectsEnabled) {
-        for (BufferObjectHandle bo : mBufferObjects) {
+        for (BufferObjectHandle const bo : mBufferObjects) {
             driver.destroyBufferObject(bo);
         }
     }

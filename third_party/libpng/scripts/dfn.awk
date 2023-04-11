@@ -1,7 +1,6 @@
 #!/bin/awk -f
+
 # scripts/dfn.awk - process a .dfn file
-#
-# last changed in libpng version 1.5.19 - August 21, 2014
 #
 # Copyright (c) 2013-2014 Glenn Randers-Pehrson
 #
@@ -125,7 +124,7 @@ $1 ~ /^PNG_DFN_END_SORT/{
          # There is no matching "@.  Assume a split line
          else while (1) {
             if (getline nextline) {
-               # If the line starts with '#' it is a preprocesor line directive
+               # If the line starts with '#' it is a preprocessor line directive
                # from cc -E; skip it:
                if (nextline !~ /^#/) {
                   line = line " " nextline

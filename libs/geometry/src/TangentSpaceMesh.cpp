@@ -353,7 +353,7 @@ void lengyelMethod(TangentSpaceMeshInput const* input, TangentSpaceMeshOutput* o
 
     quatf* quats = output->tangentSpace.allocate(vertexCount);
     for (size_t a = 0; a < vertexCount; a++) {
-        float3 const& n = normals[a];
+        float3 const& n = *pointerAdd(normals, a, normalStride);
         float3 const& t1 = tan1[a];
         float3 const& t2 = tan2[a];
 

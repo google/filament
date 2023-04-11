@@ -120,17 +120,17 @@ bool isDoubleSided() {
 }
 #endif
 
+#if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
+
 /**
  * Returns the cascade index for this fragment (between 0 and CONFIG_MAX_SHADOW_CASCADES - 1).
  */
 uint getShadowCascade() {
-    vec3 viewPos = mulMat4x4Float3(getViewFromWorldMatrix(), getWorldPosition()).xyz;
-    bvec4 greaterZ = greaterThan(frameUniforms.cascadeSplits, vec4(viewPos.z));
+    highp float z = mulMat4x4Float3(getViewFromWorldMatrix(), getWorldPosition()).z;
+    uvec4 greaterZ = uvec4(greaterThan(frameUniforms.cascadeSplits, vec4(z)));
     uint cascadeCount = frameUniforms.cascades & 0xFu;
-    return clamp(uint(dot(vec4(greaterZ), vec4(1.0))), 0u, cascadeCount - 1u);
+    return clamp(greaterZ.x + greaterZ.y + greaterZ.z + greaterZ.w, 0u, cascadeCount - 1u);
 }
-
-#if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
 
 highp vec4 getCascadeLightSpacePosition(uint cascade) {
     // For the first cascade, return the interpolated light space position.

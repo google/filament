@@ -203,7 +203,7 @@ public:
      * The variant is inserted while building the commands, because we don't know it before that
      */
     static CommandKey makeMaterialSortingKey(uint32_t materialId, uint32_t instanceId) noexcept {
-        CommandKey key = ((materialId << MATERIAL_ID_SHIFT) & MATERIAL_ID_MASK) |
+        CommandKey const key = ((materialId << MATERIAL_ID_SHIFT) & MATERIAL_ID_MASK) |
                          ((instanceId << MATERIAL_INSTANCE_ID_SHIFT) & MATERIAL_INSTANCE_ID_MASK);
         return (key << MATERIAL_SHIFT) & MATERIAL_MASK;
     }
@@ -236,9 +236,12 @@ public:
         backend::Handle<backend::HwSamplerGroup> morphTargetBuffer;     // 4 bytes
         uint32_t index = 0;                                             // 4 bytes
         uint32_t skinningOffset = 0;                                    // 4 bytes
-        uint16_t instanceCount;                                         // 2 bytes
+        uint16_t instanceCount;                                         // 2 bytes [MSb: user]
         Variant materialVariant;                                        // 1 byte
         uint8_t reserved[1] = {};                                       // 1 byte
+
+        static const uint16_t USER_INSTANCE_MASK = 0x8000u;
+        static const uint16_t INSTANCE_COUNT_MASK = 0x7fffu;
     };
     static_assert(sizeof(PrimitiveInfo) == 40);
 

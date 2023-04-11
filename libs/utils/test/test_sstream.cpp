@@ -78,13 +78,13 @@ TEST(sstream, Formatting) {
     }
     {
         sstream ss;
-        ss << (float) 3.14;
-        EXPECT_STREQ("3.140000", ss.c_str());
+        ss << (float) 3.14; // 3.14 can't be represented exactly by a float
+        EXPECT_STREQ("3.1400001", ss.c_str());
     }
     {
         sstream ss;
         ss << (double) -1;
-        EXPECT_STREQ("-1.000000", ss.c_str());
+        EXPECT_STREQ("-1", ss.c_str());
     }
     {
         sstream ss;

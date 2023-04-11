@@ -1,4 +1,5 @@
 #!/bin/bash -eu
+
 # Copyright 2017-2018 Glenn Randers-Pehrson
 # Copyright 2016 Google Inc.
 #
@@ -13,8 +14,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# Last changed in libpng 1.6.35 [July 15, 2018]
 #
 # Revisions by Glenn Randers-Pehrson, 2017:
 # 1. Build only the library, not the tools (changed "make -j$(nproc) all" to

@@ -206,12 +206,10 @@ target_sources(gltf-demo-resources PRIVATE ${RESGEN_SOURCE})
 # ==================================================================================================
 
 if (MSVC)
-    set(COMPILER_FLAGS $<$<CONFIG:Release>:/fp:fast>)
 else()
     set(COMPILER_FLAGS
             -Wno-extern-c-compat
-            $<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>
-            $<$<CONFIG:Release>:-ffast-math>)
+            $<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>)
 endif()
 
 # ==================================================================================================
@@ -262,6 +260,12 @@ if (NOT ANDROID)
     target_link_libraries(sample_cloth PRIVATE filameshio)
     target_link_libraries(sample_normal_map PRIVATE filameshio)
     target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
+
+    if (FILAMENT_DISABLE_MATOPT)
+        add_definitions(-DFILAMENT_DISABLE_MATOPT=1)
+    else()
+        add_definitions(-DFILAMENT_DISABLE_MATOPT=0)
+    endif()
 
     # ==============================================================================================
     # Installation
