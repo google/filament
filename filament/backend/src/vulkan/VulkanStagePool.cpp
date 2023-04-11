@@ -116,13 +116,12 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
     // VK_IMAGE_LAYOUT_PREINITIALIZED or VK_IMAGE_LAYOUT_GENERAL layout. Calling
     // vkGetImageSubresourceLayout for a linear image returns a subresource layout mapping that is
     // valid for either of those image layouts."
-    transitionImageLayout(cmdbuffer, textureTransitionHelper({
+    VulkanImageUtility::transitionLayout(cmdbuffer, {
             .image = image->image,
-            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .newLayout = VK_IMAGE_LAYOUT_GENERAL,
-            .subresources = { aspectFlags, 0, 1, 0, 1 }
-    }));
-
+            .oldLayout = VulkanLayout::UNDEFINED,
+            .newLayout = VulkanLayout::READ_WRITE, // (= VK_IMAGE_LAYOUT_GENERAL)
+            .subresources = { aspectFlags, 0, 1, 0, 1 },
+        });
     return image;
 }
 

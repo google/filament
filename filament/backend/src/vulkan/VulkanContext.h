@@ -20,6 +20,7 @@
 #include "VulkanPipelineCache.h"
 #include "VulkanCommands.h"
 #include "VulkanConstants.h"
+#include "VulkanImageUtility.h"
 
 #include <utils/bitset.h>
 #include <utils/Slice.h>
@@ -41,9 +42,11 @@ struct VulkanAttachment {
     uint16_t layer = 0;
     VkImage getImage() const;
     VkFormat getFormat() const;
-    VkImageLayout getLayout() const;
+    VulkanLayout getLayout() const;
     VkExtent2D getExtent2D() const;
     VkImageView getImageView(VkImageAspectFlags aspect) const;
+    // TODO: maybe embed aspect into the attachment or texture itself.
+    VkImageSubresourceRange getSubresourceRange(VkImageAspectFlags aspect) const;
 };
 
 struct VulkanTimestamps {

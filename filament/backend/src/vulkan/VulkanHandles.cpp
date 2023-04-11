@@ -186,10 +186,13 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
         return;
     }
 
+    // MSAA depth texture must have the mipmap count of 1
+    uint8_t const msLevel = 1;
+
     // Create sidecar MSAA texture for the depth attachment if it does not already exist.
     VulkanTexture* msTexture = depthTexture->getSidecar();
     if (UTILS_UNLIKELY(msTexture == nullptr)) {
-        msTexture = new VulkanTexture(context, depthTexture->target, depthTexture->levels,
+        msTexture = new VulkanTexture(context, depthTexture->target, msLevel,
                 depthTexture->format, samples, depthTexture->width, depthTexture->height,
                 depthTexture->depth, depthTexture->usage, stagePool);
         depthTexture->setSidecar(msTexture);
@@ -197,7 +200,7 @@ VulkanRenderTarget::VulkanRenderTarget(VulkanContext& context, uint32_t width, u
 
     mMsaaDepthAttachment = {
         .texture = msTexture,
-        .level = mDepth.level,
+        .level = msLevel,
         .layer = mDepth.layer,
     };
 }

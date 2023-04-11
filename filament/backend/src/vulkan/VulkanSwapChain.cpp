@@ -33,15 +33,14 @@ bool VulkanSwapChain::acquire() {
     if (headlessQueue) {
         mCurrentSwapIndex = (mCurrentSwapIndex + 1) % mColor.size();
 
-        UTILS_UNUSED_IN_RELEASE const VkImageLayout layout = getColorTexture().getVkLayout(0, 0);
+        UTILS_UNUSED_IN_RELEASE VulkanLayout const layout = getColorTexture().getLayout(0, 0);
 
         // Next we perform a quick sanity check on layout for headless swap chains. It's easier to
         // catch errors here than with validation. If this is the first time a particular image has
         // been acquired, it should be in an UNDEFINED state. If this is not the first time, then it
         // should be in the normal layout that we use for color attachments.
-        assert_invariant(layout == VK_IMAGE_LAYOUT_UNDEFINED ||
-                layout == getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT));
-
+        assert_invariant(
+                layout == VulkanLayout::UNDEFINED || layout == VulkanLayout::COLOR_ATTACHMENT);
         return true;
     }
 
@@ -57,12 +56,11 @@ bool VulkanSwapChain::acquire() {
         suboptimal = true;
     }
 
-    UTILS_UNUSED_IN_RELEASE const VkImageLayout layout = getColorTexture().getVkLayout(0, 0);
+    UTILS_UNUSED_IN_RELEASE VulkanLayout const layout = getColorTexture().getLayout(0, 0);
 
     // Next perform a quick sanity check on the image layout. Similar to attachable textures, we
     // immediately transition the swap chain image layout during the first render pass of the frame.
-    assert_invariant(layout == VK_IMAGE_LAYOUT_UNDEFINED ||
-            layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    assert_invariant(layout == VulkanLayout::UNDEFINED || layout == VulkanLayout::PRESENT);
 
     // To ensure that the next command buffer submission does not write into the image before
     // it has been acquired, push the image available semaphore into the command buffer manager.
@@ -225,26 +223,16 @@ void VulkanSwapChain::makePresentable() {
         return;
     }
     VulkanTexture& texture = getColorTexture();
-    VkImageMemoryBarrier barrier {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        .dstAccessMask = 0,
-        .oldLayout = texture.getVkLayout(0, 0),
-        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = texture.getVkImage(),
-        .subresourceRange = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .levelCount = 1,
-            .layerCount = 1,
-        },
-    };
-    vkCmdPipelineBarrier(mContext.commands->get().cmdbuffer,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
-    texture.trackLayout(0, 0, barrier.newLayout);
+    VkCommandBuffer const cmdbuffer = mContext.commands->get().cmdbuffer;
+    VkImageSubresourceRange const subresources{
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 1,
+    };
+    texture.transitionLayout(cmdbuffer, subresources, VulkanLayout::PRESENT);
 }
 
 static void getHeadlessQueue(VulkanContext& mContext, VulkanSwapChain& sc) {

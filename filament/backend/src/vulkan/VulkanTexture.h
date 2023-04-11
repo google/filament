@@ -19,7 +19,7 @@
 
 #include "VulkanDriver.h"
 #include "VulkanBuffer.h"
-#include "VulkanUtility.h"
+#include "VulkanImageUtility.h"
 
 #include <utils/RangeMap.h>
 
@@ -51,39 +51,42 @@ struct VulkanTexture : public HwTexture {
 
     VkImageSubresourceRange getPrimaryRange() const { return mPrimaryViewRange; }
 
-    VkImageLayout getPrimaryImageLayout() const {
-        return getVkLayout(mPrimaryViewRange.baseArrayLayer, mPrimaryViewRange.baseMipLevel);
+    VulkanLayout getPrimaryImageLayout() const {
+        return getLayout(mPrimaryViewRange.baseArrayLayer, mPrimaryViewRange.baseMipLevel);
     }
 
     // Gets or creates a cached VkImageView for a single subresource that can be used as a render
     // target attachment.  Unlike the primary image view, this always has type VK_IMAGE_VIEW_TYPE_2D
     // and the identity swizzle.
-    VkImageView getAttachmentView(int singleLevel, int singleLayer, VkImageAspectFlags aspect);
+    VkImageView getAttachmentView(VkImageSubresourceRange range);
 
     VkFormat getVkFormat() const { return mVkFormat; }
     VkImage getVkImage() const { return mTextureImage; }
-    VkImageLayout getVkLayout(uint32_t layer, uint32_t level) const;
+
+    VulkanLayout getLayout(uint32_t layer, uint32_t level) const;
 
     void setSidecar(VulkanTexture* sidecar) { mSidecarMSAA = sidecar; }
     VulkanTexture* getSidecar() const { return mSidecarMSAA; }
 
     void transitionLayout(VkCommandBuffer commands, const VkImageSubresourceRange& range,
-            VkImageLayout newLayout);
-
-    // Notifies the texture that a particular subresource's layout has changed.
-    void trackLayout(uint32_t miplevel, uint32_t layer, VkImageLayout layout);
-
-    // Gets or creates a cached VkImageView for a range of miplevels and array layers.
-    VkImageView getImageView(VkImageSubresourceRange range);
+            VulkanLayout newLayout);
 
     // Returns the preferred data plane of interest for all image views.
     // For now this always returns either DEPTH or COLOR.
     VkImageAspectFlags getImageAspect() const;
 
-private:
+#if FILAMENT_VULKAN_VERBOSE
+    void print() const;
+#endif
 
-    void updateImageWithBlit(const PixelBufferDescriptor& hostData, uint32_t width,
-        uint32_t height, uint32_t depth, uint32_t miplevel);
+private:
+    // Gets or creates a cached VkImageView for a range of miplevels, array layers, viewType, and
+    // swizzle (or not).
+    VkImageView getImageView(VkImageSubresourceRange range, VkImageViewType viewType,
+            VkComponentMapping swizzle);
+
+    void updateImageWithBlit(const PixelBufferDescriptor& hostData, uint32_t width, uint32_t height,
+            uint32_t depth, uint32_t miplevel);
 
     VulkanTexture* mSidecarMSAA = nullptr;
     const VkFormat mVkFormat;
@@ -93,7 +96,7 @@ private:
     VkDeviceMemory mTextureImageMemory = VK_NULL_HANDLE;
 
     // Track the image layout of each subresource using a sparse range map.
-    utils::RangeMap<uint32_t, VkImageLayout> mSubresourceLayouts;
+    utils::RangeMap<uint32_t, VulkanLayout> mSubresourceLayouts;
 
     // Track the range of subresources that define the "primary" image view, which is the special
     // image view that gets bound to an actual texture sampler.

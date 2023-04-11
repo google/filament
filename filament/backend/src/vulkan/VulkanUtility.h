@@ -25,17 +25,6 @@
 
 namespace filament::backend {
 
-struct VulkanLayoutTransition {
-    VkImage image;
-    VkImageLayout oldLayout;
-    VkImageLayout newLayout;
-    VkImageSubresourceRange subresources;
-    VkPipelineStageFlags srcStage;
-    VkAccessFlags srcAccessMask;
-    VkPipelineStageFlags dstStage;
-    VkAccessFlags dstAccessMask;
-};
-
 void createSemaphore(VkDevice device, VkSemaphore* semaphore);
 VkFormat getVkFormat(ElementType type, bool normalized, bool integer);
 VkFormat getVkFormat(TextureFormat format);
@@ -49,14 +38,7 @@ VkFrontFace getFrontFace(bool inverseFrontFaces);
 PixelDataType getComponentType(VkFormat format);
 uint32_t getComponentCount(VkFormat format);
 VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]);
-VkImageViewType getImageViewType(SamplerType target);
-VkImageLayout getDefaultImageLayout(TextureUsage usage);
 VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags);
-
-void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transition);
-
-// Helper function for populating barrier fields based on the desired image layout.
-VulkanLayoutTransition textureTransitionHelper(VulkanLayoutTransition transition);
 
 bool equivalent(const VkRect2D& a, const VkRect2D& b);
 bool equivalent(const VkExtent2D& a, const VkExtent2D& b);
@@ -106,7 +88,5 @@ utils::FixedCapacityVector<OutType> enumerate(
 #undef EXPAND_ENUM_ARGS
 
 } // namespace filament::backend
-
-bool operator<(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b);
 
 #endif // TNT_FILAMENT_BACKEND_VULKANUTILITY_H
