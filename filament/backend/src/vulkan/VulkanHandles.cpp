@@ -93,7 +93,9 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
                 pEntries[i] = {
                         .constantID = specializationConstants[i].id,
                         .offset = offset,
-                        .size = sizeof(arg)
+                        // Turns out vulkan expects the size of bool to be 4 (verified through
+                        // validation layer). So all expected types are of 4 bytes.
+                        .size = 4,
                 };
                 T* const addr = (T*)((char*)pData + offset);
                 *addr = arg;
