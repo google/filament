@@ -40,6 +40,18 @@ static void logCompilationError(utils::io::ostream& out,
 static void logProgramLinkError(utils::io::ostream& out,
         const char* name, GLuint program) noexcept;
 
+static inline std::string to_string(bool b) noexcept {
+    return b ? "true" : "false";
+}
+
+static inline std::string to_string(int i) noexcept {
+    return std::to_string(i);
+}
+
+static inline std::string to_string(float f) noexcept {
+    return "float(" + std::to_string(f) + ")";
+}
+
 OpenGLProgram::OpenGLProgram() noexcept
     : mInitialized(false), mValid(true), mLazyInitializationData(nullptr) {
 }
@@ -109,7 +121,7 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
     for (auto const& sc : specializationConstants) {
         specializationConstantString += "#define SPIRV_CROSS_CONSTANT_ID_" + std::to_string(sc.id) + ' ';
         specializationConstantString += std::visit([](auto&& arg) {
-            return std::to_string(arg);
+            return to_string(arg);
         }, sc.value);
         specializationConstantString += '\n';
     }
