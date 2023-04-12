@@ -160,8 +160,8 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
             << "mipLevels = " << int(levels) << ", "
             << "usage = " << imageInfo.usage << ", "
             << "samples = " << imageInfo.samples << ", "
-            << "type=" << imageInfo.imageType << ", "
-            << "flags=" << imageInfo.flags << ", "
+            << "type = " << imageInfo.imageType << ", "
+            << "flags = " << imageInfo.flags << ", "
             << "format = " << mVkFormat << utils::io::endl;
     }
     ASSERT_POSTCONDITION(!error, "Unable to create image.");

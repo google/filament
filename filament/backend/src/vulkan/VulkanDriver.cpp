@@ -896,14 +896,20 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     }
 
     VulkanAttachment depth = rt->getSamples() == 1 ? rt->getDepth() : rt->getMsaaDepth();
-#ifdef VULKAN_DEBUG_REAL
+#if FILAMENT_VULKAN_VERBOSE
     if (depth.texture) {
         depth.texture->print();
     }
 #endif
 
+    // We need to determine whether the same depth texture is both sampled and set as an attachment.
+    // If that's the case, we need to change the layout of the texture to DEPTH_SAMPLER, which is a
+    // more general layout. Otherwise, we prefer the DEPTH_ATTACHMENT layout, which is optimal for
+    // the non-sampling case.
     bool samplingDepthAttachment = false;
     const VkCommandBuffer cmdbuffer = mContext.commands->get().cmdbuffer;
+
+    UTILS_NOUNROLL
     for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < Program::SAMPLER_BINDING_COUNT;
             samplerGroupIdx++) {
         VulkanSamplerGroup* vksb = mSamplerBindings[samplerGroupIdx];
@@ -912,7 +918,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         }
         SamplerGroup* sb = vksb->sb.get();
         for (size_t i = 0; i < sb->getSize(); i++) {
-            const SamplerDescriptor* boundSampler = sb->data() + i;
+            SamplerDescriptor const* boundSampler = sb->data() + i;
             if (UTILS_LIKELY(boundSampler->t)) {
                 VulkanTexture* texture = handle_cast<VulkanTexture*>(boundSampler->t);
                 if (!any(texture->usage & TextureUsage::DEPTH_ATTACHMENT)) {
@@ -923,7 +929,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
                 if (texture->getPrimaryImageLayout() == VulkanLayout::DEPTH_SAMPLER) {
                     continue;
                 }
-                VkImageSubresourceRange subresources{
+                VkImageSubresourceRange const subresources{
                         .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
                         .baseMipLevel = 0,
                         .levelCount = texture->levels,
@@ -935,7 +941,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             }
         }
     }
-    // The state of the layout after the transition in the above block
+    // currentDepthLayout tracks state of the layout after the (potential) transition in the above block.
     VulkanLayout currentDepthLayout = depth.getLayout();
     VulkanLayout const renderPassDepthLayout = samplingDepthAttachment
                                                        ? VulkanLayout::DEPTH_SAMPLER
@@ -1671,6 +1677,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     VkDescriptorImageInfo samplerInfo[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
     VulkanPipelineCache::UsageFlags usage;
 
+    UTILS_NOUNROLL
     for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < Program::SAMPLER_BINDING_COUNT; samplerGroupIdx++) {
         const auto& samplerGroup = program->samplerGroupInfo[samplerGroupIdx];
         const auto& samplers = samplerGroup.samplers;

@@ -25,18 +25,30 @@
 
 namespace filament::backend {
 
-struct VulkanTexture;    
+struct VulkanTexture;
 
 enum class VulkanLayout : uint8_t {
+    // The initial layout after the creation of the VkImage. We use this to denote the state before
+    // any transition.
     UNDEFINED,
+    // Fragment/vertex shader accessible layout for reading and writing.
     READ_WRITE,
+    // Fragment/vertex shader accessible layout for reading only.
     READ_ONLY,
+    // For the source of a copy operation.
     TRANSFER_SRC,
+    // For the destination of a copy operation.
     TRANSFER_DST,
+    // For using a depth texture as an attachment.
     DEPTH_ATTACHMENT,
+    // For using a depth texture both as an attachment and as a sampler.
     DEPTH_SAMPLER,
+    // For swapchain images that will be presented.
     PRESENT,
+    // For color attachments, but also used when the image is a sampler.
+    // TODO: explore separate layout policies for attachment+sampling and just attachment.
     COLOR_ATTACHMENT,
+    // For color attachment MSAA resolves.
     COLOR_ATTACHMENT_RESOLVE,
 };
 
