@@ -84,9 +84,10 @@ inline void blitFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect,
                 dst.getImage(), ImgUtil::getVkLayout(VulkanLayout::TRANSFER_DST), 
                 1, resolveRegions);
     } else {
-        vkCmdBlitImage(cmdbuffer, src.getImage(),
-                ImgUtil::getVkLayout(VulkanLayout::TRANSFER_SRC), dst.getImage(),
-                ImgUtil::getVkLayout(VulkanLayout::TRANSFER_DST), 1, blitRegions, filter);
+        vkCmdBlitImage(cmdbuffer, 
+                src.getImage(), ImgUtil::getVkLayout(VulkanLayout::TRANSFER_SRC),
+                dst.getImage(),ImgUtil::getVkLayout(VulkanLayout::TRANSFER_DST), 
+                1, blitRegions, filter);
     }
 
     VulkanLayout newSrcLayout = ImgUtil::getDefaultLayout(src.texture->usage);
