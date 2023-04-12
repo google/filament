@@ -79,9 +79,10 @@ inline void blitFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect,
     if (src.texture->samples > 1 && dst.texture->samples == 1) {
         assert_invariant(
                 aspect != VK_IMAGE_ASPECT_DEPTH_BIT && "Resolve with depth is not yet supported.");
-        vkCmdResolveImage(cmdbuffer, src.getImage(),
-                ImgUtil::getVkLayout(VulkanLayout::TRANSFER_SRC), dst.getImage(),
-                ImgUtil::getVkLayout(VulkanLayout::TRANSFER_DST), 1, resolveRegions);
+        vkCmdResolveImage(cmdbuffer, 
+                src.getImage(), ImgUtil::getVkLayout(VulkanLayout::TRANSFER_SRC), 
+                dst.getImage(), ImgUtil::getVkLayout(VulkanLayout::TRANSFER_DST), 
+                1, resolveRegions);
     } else {
         vkCmdBlitImage(cmdbuffer, src.getImage(),
                 ImgUtil::getVkLayout(VulkanLayout::TRANSFER_SRC), dst.getImage(),
