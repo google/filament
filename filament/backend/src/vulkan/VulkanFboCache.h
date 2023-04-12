@@ -27,12 +27,6 @@
 
 namespace filament::backend {
 
-// Avoid using VkImageLayout since it requires 4 bytes.
-enum class VulkanDepthLayout : uint8_t {
-    UNDEFINED, // VK_IMAGE_LAYOUT_UNDEFINED
-    ATTACHMENT, // VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-};
-
 // Simple manager for VkFramebuffer and VkRenderPass objects.
 //
 // Note that a VkFramebuffer is just a binding between a render pass and a set of image views. So,
@@ -53,11 +47,12 @@ public:
         // - For each color target, the pre-existing layout is either UNDEFINED (0) or GENERAL (1).
         // - The render pass and final images layout for color buffers is always GENERAL.
         uint8_t initialColorLayoutMask;
-        VulkanDepthLayout initialDepthLayout : 2;
-        VulkanDepthLayout renderPassDepthLayout : 2;
-        VulkanDepthLayout finalDepthLayout : 2;      // for now this is always GENERAL
-        uint8_t padding0 : 2;
-        uint8_t padding1[2];
+
+        // Note that if VulkanLayout grows beyond 16, we'd need to up this.
+        VulkanLayout initialDepthLayout : 4;
+        VulkanLayout renderPassDepthLayout : 4;
+        VulkanLayout finalDepthLayout : 4;
+        uint8_t padding : 4;
 
         VkFormat colorFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 32 bytes
         VkFormat depthFormat; // 4 bytes
@@ -130,24 +125,6 @@ private:
     tsl::robin_map<VkRenderPass, uint32_t> mRenderPassRefCount;
     uint32_t mCurrentTime = 0;
 };
-
-inline VulkanDepthLayout fromVkImageLayout(VkImageLayout layout) {
-    switch (layout) {
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            return VulkanDepthLayout::ATTACHMENT;
-        default:
-            return VulkanDepthLayout::UNDEFINED;
-    }
-}
-
-inline VkImageLayout toVkImageLayout(VulkanDepthLayout layout) {
-    switch (layout) {
-        case VulkanDepthLayout::ATTACHMENT:
-            return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        default:
-            return VK_IMAGE_LAYOUT_UNDEFINED;
-    }
-}
 
 } // namespace filament::backend
 
