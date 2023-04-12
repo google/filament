@@ -188,7 +188,7 @@ vec4 computeWorldPosition() {
     // w could be zero (e.g.: with the skybox) which corresponds to an infinite distance in
     // world-space. However, we want to avoid infinites and divides-by-zero, so we use a very
     // small number instead in that case (2^-63 seem to work well).
-    const highp float ALMOST_ZERO_FLT = 1.08420217249e-19f;
+    const highp float ALMOST_ZERO_FLT = 1.08420217249e-19;
     if (abs(position.w) < ALMOST_ZERO_FLT) {
         position.w = position.w < 0.0 ? -ALMOST_ZERO_FLT : ALMOST_ZERO_FLT;
     }
