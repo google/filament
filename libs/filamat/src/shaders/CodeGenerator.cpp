@@ -282,66 +282,28 @@ io::sstream& CodeGenerator::generateVariable(io::sstream& out, ShaderStage stage
 io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage type,
         const AttributeBitset& attributes, Interpolation interpolation) {
 
+    auto const& attributeDatabase = MaterialBuilder::getAttributeDatabase();
+
     const char* shading = getInterpolationQualifier(interpolation);
     out << "#define SHADING_INTERPOLATION " << shading << "\n";
 
-    bool const hasTangents = attributes.test(VertexAttribute::TANGENTS);
-    generateDefine(out, "HAS_ATTRIBUTE_TANGENTS", hasTangents);
-
-    bool const hasColor = attributes.test(VertexAttribute::COLOR);
-    generateDefine(out, "HAS_ATTRIBUTE_COLOR", hasColor);
-
-    bool const hasUV0 = attributes.test(VertexAttribute::UV0);
-    generateDefine(out, "HAS_ATTRIBUTE_UV0", hasUV0);
-
-    bool const hasUV1 = attributes.test(VertexAttribute::UV1);
-    generateDefine(out, "HAS_ATTRIBUTE_UV1", hasUV1);
-
-    bool const hasBoneIndices = attributes.test(VertexAttribute::BONE_INDICES);
-    generateDefine(out, "HAS_ATTRIBUTE_BONE_INDICES", hasBoneIndices);
-
-    bool const hasBoneWeights = attributes.test(VertexAttribute::BONE_WEIGHTS);
-    generateDefine(out, "HAS_ATTRIBUTE_BONE_WEIGHTS", hasBoneWeights);
-
-    UTILS_NOUNROLL
-    for (size_t i = 0; i < MAX_CUSTOM_ATTRIBUTES; i++) {
-        bool const hasCustom = attributes.test(VertexAttribute::CUSTOM0 + i);
-        if (hasCustom) {
-            generateIndexedDefine(out, "HAS_ATTRIBUTE_CUSTOM", i, 1);
-        }
-    }
+    out << "\n";
+    attributes.forEachSetBit([&out, &attributeDatabase](size_t i) {
+        generateDefine(out, attributeDatabase[i].getDefineName().c_str(), true);
+    });
 
     if (type == ShaderStage::VERTEX) {
         out << "\n";
-        generateDefine(out, "LOCATION_POSITION", uint32_t(VertexAttribute::POSITION));
-        if (hasTangents) {
-            generateDefine(out, "LOCATION_TANGENTS", uint32_t(VertexAttribute::TANGENTS));
-        }
-        if (hasUV0) {
-            generateDefine(out, "LOCATION_UV0", uint32_t(VertexAttribute::UV0));
-        }
-        if (hasUV1) {
-            generateDefine(out, "LOCATION_UV1", uint32_t(VertexAttribute::UV1));
-        }
-        if (hasColor) {
-            generateDefine(out, "LOCATION_COLOR", uint32_t(VertexAttribute::COLOR));
-        }
-        if (hasBoneIndices) {
-            generateDefine(out, "LOCATION_BONE_INDICES", uint32_t(VertexAttribute::BONE_INDICES));
-        }
-        if (hasBoneWeights) {
-            generateDefine(out, "LOCATION_BONE_WEIGHTS", uint32_t(VertexAttribute::BONE_WEIGHTS));
-        }
-
-        for (int i = 0; i < MAX_CUSTOM_ATTRIBUTES; i++) {
-            if (attributes.test(VertexAttribute::CUSTOM0 + i)) {
-                generateIndexedDefine(out, "LOCATION_CUSTOM", i,
-                        uint32_t(VertexAttribute::CUSTOM0) + i);
-            }
-        }
-
-        out << SHADERS_ATTRIBUTES_VS_DATA;
+        attributes.forEachSetBit([&out, &attributeDatabase](size_t i) {
+            auto const& attribute = attributeDatabase[i];
+            assert_invariant( i == attribute.location );
+            out << "layout(location = " << size_t(attribute.location) << ") in "
+                << getTypeName(attribute.type) << " "
+                << attribute.getAttributeName() << ";\n";
+        });
     }
+
+    out << "\n";
     out << SHADERS_VARYINGS_GLSL_DATA;
     return out;
 }
@@ -939,37 +901,44 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
     }
 }
 
+char const* CodeGenerator::getTypeName(UniformType type) noexcept {
+    switch (type) {
+        case UniformType::BOOL:   return "bool";
+        case UniformType::BOOL2:  return "bvec2";
+        case UniformType::BOOL3:  return "bvec3";
+        case UniformType::BOOL4:  return "bvec4";
+        case UniformType::FLOAT:  return "float";
+        case UniformType::FLOAT2: return "vec2";
+        case UniformType::FLOAT3: return "vec3";
+        case UniformType::FLOAT4: return "vec4";
+        case UniformType::INT:    return "int";
+        case UniformType::INT2:   return "ivec2";
+        case UniformType::INT3:   return "ivec3";
+        case UniformType::INT4:   return "ivec4";
+        case UniformType::UINT:   return "uint";
+        case UniformType::UINT2:  return "uvec2";
+        case UniformType::UINT3:  return "uvec3";
+        case UniformType::UINT4:  return "uvec4";
+        case UniformType::MAT3:   return "mat3";
+        case UniformType::MAT4:   return "mat4";
+        case UniformType::STRUCT: return "";
+    }
+}
+
 char const* CodeGenerator::getUniformTypeName(BufferInterfaceBlock::FieldInfo const& info) noexcept {
     using Type = BufferInterfaceBlock::Type;
     switch (info.type) {
-        case Type::BOOL:   return "bool";
-        case Type::BOOL2:  return "bvec2";
-        case Type::BOOL3:  return "bvec3";
-        case Type::BOOL4:  return "bvec4";
-        case Type::FLOAT:  return "float";
-        case Type::FLOAT2: return "vec2";
-        case Type::FLOAT3: return "vec3";
-        case Type::FLOAT4: return "vec4";
-        case Type::INT:    return "int";
-        case Type::INT2:   return "ivec2";
-        case Type::INT3:   return "ivec3";
-        case Type::INT4:   return "ivec4";
-        case Type::UINT:   return "uint";
-        case Type::UINT2:  return "uvec2";
-        case Type::UINT3:  return "uvec3";
-        case Type::UINT4:  return "uvec4";
-        case Type::MAT3:   return "mat3";
-        case Type::MAT4:   return "mat4";
         case Type::STRUCT: return info.structName.c_str();
+        default:            return getTypeName(info.type);
     }
 }
 
 char const* CodeGenerator::getOutputTypeName(MaterialBuilder::OutputType type) noexcept {
     switch (type) {
         case MaterialBuilder::OutputType::FLOAT:  return "float";
-        case MaterialBuilder::OutputType::FLOAT2: return "float2";
-        case MaterialBuilder::OutputType::FLOAT3: return "float3";
-        case MaterialBuilder::OutputType::FLOAT4: return "float4";
+        case MaterialBuilder::OutputType::FLOAT2: return "vec2";
+        case MaterialBuilder::OutputType::FLOAT3: return "vec3";
+        case MaterialBuilder::OutputType::FLOAT4: return "vec4";
     }
 }
 

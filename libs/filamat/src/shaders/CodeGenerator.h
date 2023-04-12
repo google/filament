@@ -187,12 +187,10 @@ private:
 
     static char const* getPrecisionQualifier(filament::backend::Precision precision) noexcept;
 
-    ShaderModel mShaderModel;
-    TargetApi mTargetApi;
-    TargetLanguage mTargetLanguage;
-    FeatureLevel mFeatureLevel;
+    // return type (e.g.: "vec3", "vec4", "float")
+    static char const* getTypeName(UniformType type) noexcept;
 
-    // return type name of uniform  (e.g.: "vec3", "vec4", "float")
+    // return type name of uniform Field (e.g.: "vec3", "vec4", "float")
     static char const* getUniformTypeName(filament::BufferInterfaceBlock::FieldInfo const& info) noexcept;
 
     // return type name of output  (e.g.: "vec3", "vec4", "float")
@@ -202,6 +200,11 @@ private:
     static char const* getInterpolationQualifier(filament::Interpolation interpolation) noexcept;
 
     static bool hasPrecision(filament::BufferInterfaceBlock::Type type) noexcept;
+
+    ShaderModel mShaderModel;
+    TargetApi mTargetApi;
+    TargetLanguage mTargetLanguage;
+    FeatureLevel mFeatureLevel;
 };
 
 } // namespace filamat

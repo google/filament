@@ -231,12 +231,14 @@ public:
     using TransparencyMode = filament::TransparencyMode;
     using SpecularAmbientOcclusion = filament::SpecularAmbientOcclusion;
 
+    using AttributeType = filament::backend::UniformType;
     using UniformType = filament::backend::UniformType;
     using ConstantType = filament::backend::ConstantType;
     using SamplerType = filament::backend::SamplerType;
     using SubpassType = filament::backend::SubpassType;
     using SamplerFormat = filament::backend::SamplerFormat;
     using ParameterPrecision = filament::backend::Precision;
+    using Precision = filament::backend::Precision;
     using CullingMode = filament::backend::CullingMode;
     using FeatureLevel = filament::backend::FeatureLevel;
 
@@ -712,7 +714,29 @@ public:
     FeatureLevel getFeatureLevel() const noexcept { return mFeatureLevel; }
     /// @endcond
 
+    struct Attribute {
+        std::string_view name;
+        AttributeType type;
+        MaterialBuilder::VertexAttribute location;
+        std::string getAttributeName() const noexcept {
+            return "mesh_" + std::string{ name };
+        }
+        std::string getDefineName() const noexcept {
+            std::string uppercase{ name };
+            transform(uppercase.cbegin(), uppercase.cend(), uppercase.begin(), ::toupper);
+            return "HAS_ATTRIBUTE_" + uppercase;
+        }
+    };
+
+    using AttributeDatabase = std::array<Attribute, filament::backend::MAX_VERTEX_ATTRIBUTE_COUNT>;
+
+    static inline AttributeDatabase const& getAttributeDatabase() noexcept {
+        return sAttributeDatabase;
+    }
+
 private:
+    static const AttributeDatabase sAttributeDatabase;
+
     void prepareToBuild(MaterialInfo& info) noexcept;
 
     // Return true if the shader is syntactically and semantically valid.

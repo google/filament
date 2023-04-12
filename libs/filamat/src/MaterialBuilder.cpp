@@ -62,6 +62,26 @@ namespace filamat {
 using namespace utils;
 using namespace filament;
 
+// Note: the VertexAttribute enum value must match the index in the array
+const MaterialBuilder::AttributeDatabase MaterialBuilder::sAttributeDatabase = {{
+        { "position",      AttributeType::FLOAT4, VertexAttribute::POSITION     },
+        { "tangents",      AttributeType::FLOAT4, VertexAttribute::TANGENTS     },
+        { "color",         AttributeType::FLOAT4, VertexAttribute::COLOR        },
+        { "uv0",           AttributeType::FLOAT2, VertexAttribute::UV0          },
+        { "uv1",           AttributeType::FLOAT2, VertexAttribute::UV1          },
+        { "bone_indices",  AttributeType::UINT4,  VertexAttribute::BONE_INDICES },
+        { "bone_weights",  AttributeType::FLOAT4, VertexAttribute::BONE_WEIGHTS },
+        { },
+        { "custom0",       AttributeType::FLOAT4, VertexAttribute::CUSTOM0      },
+        { "custom1",       AttributeType::FLOAT4, VertexAttribute::CUSTOM1      },
+        { "custom2",       AttributeType::FLOAT4, VertexAttribute::CUSTOM2      },
+        { "custom3",       AttributeType::FLOAT4, VertexAttribute::CUSTOM3      },
+        { "custom4",       AttributeType::FLOAT4, VertexAttribute::CUSTOM4      },
+        { "custom5",       AttributeType::FLOAT4, VertexAttribute::CUSTOM5      },
+        { "custom6",       AttributeType::FLOAT4, VertexAttribute::CUSTOM6      },
+        { "custom7",       AttributeType::FLOAT4, VertexAttribute::CUSTOM7      },
+}};
+
 std::atomic<int> MaterialBuilderBase::materialBuilderClients(0);
 
 inline void assertSingleTargetApi(MaterialBuilderBase::TargetApi api) {
