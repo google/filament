@@ -182,11 +182,11 @@ bool traceScreenSpaceRay(const highp vec3 vsOrigin, const highp vec3 vsDirection
 // -- end "BSD 2-clause license" -------------------------------------------------------------------
 
 highp mat4 scaleMatrix(const highp float x, const highp float y) {
-    mat4 m = mat4(1.0f);
+    mat4 m = mat4(1.0);
     m[0].x = x;
     m[1].y = y;
-    m[2].z = 1.0f;
-    m[3].w = 1.0f;
+    m[2].z = 1.0;
+    m[3].w = 1.0;
     return m;
 }
 
@@ -195,13 +195,13 @@ highp mat4 scaleMatrix(const highp float x, const highp float y) {
  * wsRayDirection is the desired reflected vector.
  *
  * The returned color's alpha is set to a value between [0, 1] representing the "opacity" of the
- * reflection. 1.0f is full screen-space reflection. Values < 1.0f should be blended with the
+ * reflection. 1.0 is full screen-space reflection. Values < 1.0 should be blended with the
  * scene's IBL.
  *
  * If there is no hit, the return value is vec4(0).
  */
 vec4 evaluateScreenSpaceReflections(const highp vec3 wsRayDirection) {
-    vec4 Fr = vec4(0.0f);
+    vec4 Fr = vec4(0.0);
     highp vec3 wsRayStart = shading_position + frameUniforms.ssrBias * wsRayDirection;
 
     // ray start/end in view space
@@ -240,11 +240,11 @@ vec4 evaluateScreenSpaceReflections(const highp vec3 wsRayDirection) {
         // Compute the screen-space reflection's contribution.
 
         // TODO: parameterize fadeRate.
-        const float fadeRateEdge = 12.0f;
-        const float fadeRateDistance = 4.0f;
+        const float fadeRateEdge = 12.0;
+        const float fadeRateDistance = 4.0;
 
         // Fade the reflections out near the edges.
-        vec2 edgeFactor = max(fadeRateEdge * abs(reprojected.xy - 0.5f) - (fadeRateEdge * 0.5f - 1.0f), 0.0f);
+        vec2 edgeFactor = max(fadeRateEdge * abs(reprojected.xy - 0.5) - (fadeRateEdge * 0.5 - 1.0), 0.0);
         float fade = saturate(1.0 - dot(edgeFactor, edgeFactor));
 
         // Fade the reflections out near maxRayTraceDistance.
