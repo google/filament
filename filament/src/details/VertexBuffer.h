@@ -41,6 +41,7 @@ public:
     using BufferObjectHandle = backend::BufferObjectHandle;
 
     FVertexBuffer(FEngine& engine, const Builder& builder);
+    FVertexBuffer(FEngine& engine, FVertexBuffer* buffer);
 
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
@@ -60,6 +61,8 @@ public:
     void setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
             FBufferObject const * bufferObject);
 
+    void updateBoneIndicesAndWeights(FEngine& engine, ushort* skinJoints, float* skinWeights);
+
 private:
     friend class VertexBuffer;
 
@@ -74,6 +77,9 @@ private:
     uint32_t mVertexCount = 0;
     uint8_t mBufferCount = 0;
     bool mBufferObjectsEnabled = false;
+    bool mBoneBufferObjectsUsed = false;  //mBoJointsHandle and mBoWeightsHandle are used, only in buffer object mode
+    BufferObjectHandle mBoJointsHandle;   //handle for extra bone indices BufferObject
+    BufferObjectHandle mBoWeightsHandle;  //handle for extra bone weights BufferObject
 };
 
 FILAMENT_DOWNCAST(VertexBuffer)

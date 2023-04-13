@@ -439,7 +439,9 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
         cg.generateUniforms(vs, ShaderStage::VERTEX,
                 UniformBindingPoints::PER_RENDERABLE_BONES,
                 UibGenerator::getPerRenderableBonesUib());
-
+        cg.generateSamplers(vs, SamplerBindingPoints::PER_RENDERABLE_SKINNING,
+                material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_RENDERABLE_SKINNING),
+                SibGenerator::getPerRenderPrimitiveBonesSib(variant));
         cg.generateUniforms(vs, ShaderStage::VERTEX,
                 UniformBindingPoints::PER_RENDERABLE_MORPHING,
                 UibGenerator::getPerRenderableMorphingUib());

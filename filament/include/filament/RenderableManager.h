@@ -30,6 +30,7 @@
 #include <math/mathfwd.h>
 
 #include <type_traits>
+#include <vector>
 
 namespace utils {
     class Entity;
@@ -350,6 +351,74 @@ public:
         Builder& skinning(size_t boneCount) noexcept; //!< \overload
 
         /**
+         * Define bone indices and weights for vertex skinning. The first pair value defines index of the bone and the
+         * second value is the bone weight. The pairs substitute \c BONE_INDICES and the \c BONE_WEIGHTS
+         * defined in the VertexBuffer. Both ways of indices and weights definition must not be combined in one primitive.
+         * Number of pairs is not limited to 4 bones per vertex.
+         * All bone weights of one vertex should sum to one. Otherwise they will be normalized.
+         * Data must be rectangular and number of pairs must be same for all vertices of this primitive.
+         * The data is arranged sequentially, all bone pairs for the first vertex, then for the second vertex, and so on.
+         *
+         * @param primitiveIndex zero-based index of the primitive, must be less than the primitive count passed to Builder constructor
+         * @param indicesAndWeights pairs of bone index and bone weight for all vertices sequentially,
+         * @param count number of all pairs, must be a multiple of vertexCount of the primitive
+         * @param offset specifies where in the indicesAndWeights buffer to start reading (expressed as a number of pairs)
+         *
+         * @return Builder reference for chaining calls.
+         */
+        Builder& boneIndicesAndWeights(size_t primitiveIndex,math::float2 const* indicesAndWeights, size_t count, size_t offset = 0);
+
+        /**
+         * Define bone indices and weights for vertex skinning. The first pair value defines index of the bone and the
+         * second value is the bone weight. The pairs substitute \c BONE_INDICES and the \c BONE_WEIGHTS
+         * defined in the VertexBuffer. Both ways of indices and weights definition must not be combined in one primitive.
+         * Number of pairs is not limited to 4 bones per vertex.
+         * All bone weights of one vertex should sum to one. Otherwise they will be normalized.
+         * Data must be rectangular and number of pairs must be same for all vertices and all primitives of renderable.
+         * The data is arranged sequentially, all bone pairs for the first vertex of the first primitive, then for the second vertex of
+         * the first primitive, ..., all bone pairs for the first vertex of the second primitive, ..., and so on.
+         *
+         * @param indicesAndWeightsArray pairs of bone index and bone weight for all vertices and primitives sequentially
+         * @param count number of all pairs, must be a multiple of vertexCount by primitiveCount
+         * @param offset specifies where in the indicesAndWeights buffer to start reading (expressed as a number of pairs)
+         *
+         * @return Builder reference for chaining calls.
+         */
+        Builder& boneIndicesAndWeights(math::float2 const* indicesAndWeightsArray, size_t count, size_t offset = 0);
+
+        /**
+         * Define bone indices and weights for vertex skinning. The first pair value defines index of the bone and the
+         * second value is the bone weight. The pairs substitute \c BONE_INDICES and the \c BONE_WEIGHTS
+         * defined in the VertexBuffer. Both ways of indices and weights definition must not be combined in one primitive.
+         * Number of pairs is not limited to 4 bones per vertex.
+         * All bone weights of one vertex should sum to one. Otherwise they will be normalized.
+         * Data doesn't have to be rectangular and number of pairs per vertices of primitive can be variable.
+         * The vector of the vertices contains the vectors of the pairs
+         *
+         * @param primitiveIndex zero-based index of the primitive, must be less than the primitive count passed to Builder constructor
+         * @param indicesAndWeightsVectors pairs of bone index and bone weight for all vertices of the primitive sequentially
+         *
+         * @return Builder reference for chaining calls.
+         */
+        Builder& boneIndicesAndWeights(size_t primitiveIndex,
+               std::vector<std::vector<filament::math::float2>> const &indicesAndWeightsVector);
+        /**
+         * Define bone indices and weights for vertex skinning. The first pair value defines index of the bone and the
+         * second value is the bone weight. The pairs substitute \c BONE_INDICES and the \c BONE_WEIGHTS
+         * defined in the VertexBuffer. Both ways of indices and weights definition must not be combined in one primitive.
+         * Number of pairs is not limited to 4 bones per vertex.
+         * All bone weights of one vertex should sum to one. Otherwise they will be normalized.
+         * Data doesn't have to be rectangular and number of pairs per vertices and primitives can be variable.
+         * The vector of the primitives contains the vectors of the vertices with the vectors of the pairs
+         *
+         * @param indicesAndWeightsVectors pairs of bone index and bone weight for all vertices and primitives sequentially
+         *
+         * @return Builder reference for chaining calls.
+         */
+        Builder& boneIndicesAndWeights(
+               std::vector<std::vector<std::vector<filament::math::float2>>> const &indicesAndWeightsVectors) noexcept;
+
+        /**
          * Controls if the renderable has vertex morphing targets, zero by default. This is
          * required to enable GPU morphing.
          *
@@ -498,7 +567,12 @@ public:
                 size_t offset = 0;
                 size_t count = 0;
             } morphing;
+            struct {
+                bool bonePairsSet = false;
+                std::vector<std::vector<math::float2>> bonePairs; //bone indices and weights for each entry(primitive)
+            } skinning;
         };
+        void processBoneIndicesAndWights(Engine& engine, utils::Entity entity);
     };
 
     /**

@@ -206,7 +206,11 @@ void FVertexBuffer::terminate(FEngine& engine) {
             driver.destroyBufferObject(bo);
         }
     }
-    driver.destroyVertexBuffer(mHandle);
+    if (mBoneBufferObjectsUsed){
+        driver.destroyBufferObject(mBoJointsHandle);
+        driver.destroyBufferObject(mBoWeightsHandle);
+    }
+   driver.destroyVertexBuffer(mHandle);
 }
 
 size_t FVertexBuffer::getVertexCount() const noexcept {
@@ -233,9 +237,108 @@ void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
     if (bufferIndex < mBufferCount) {
         auto hwBufferObject = bufferObject->getHwHandle();
         engine.getDriverApi().setVertexBufferObject(mHandle, bufferIndex, hwBufferObject);
-    } else {
+        //store handle to recreate VertexBuffer in the case extra bone indices and weights definition
+        //used only in buffer object mode
+        mBufferObjects[bufferIndex] = hwBufferObject;
+   } else {
         ASSERT_PRECONDITION(bufferIndex < mBufferCount, "bufferIndex must be < bufferCount");
     }
 }
+void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
+        ushort* skinJoints, float* skinWeights) {
+    AttributeArray attributeArray;
 
+    static_assert(attributeArray.size() == MAX_VERTEX_ATTRIBUTE_COUNT,
+                  "Attribute and Builder::Attribute arrays must match");
+
+    static_assert(sizeof(Attribute) == sizeof(AttributeData),
+                  "Attribute and Builder::Attribute must match");
+
+    ASSERT_PRECONDITION(!mDeclaredAttributes[VertexAttribute::BONE_INDICES],
+                        "Vertex buffer attribute BONE_INDICES is already defined");
+    ASSERT_PRECONDITION(!mDeclaredAttributes[VertexAttribute::BONE_WEIGHTS],
+                        "Vertex buffer attribute BONE_WEIGHTS is already defined");
+    ASSERT_PRECONDITION(mBufferCount < (MAX_VERTEX_BUFFER_COUNT - 2),
+                        "Vertex buffer uses to many buffers (%u)", mBufferCount);
+
+    size_t bufferSizes[MAX_VERTEX_BUFFER_COUNT] = {};
+    auto slotIndicesOld = mAttributes[VertexAttribute::BONE_INDICES].buffer;
+    mDeclaredAttributes.set(VertexAttribute::BONE_INDICES);
+    mAttributes[VertexAttribute::BONE_INDICES].offset = 0;
+    mAttributes[VertexAttribute::BONE_INDICES].stride = 8;
+    mAttributes[VertexAttribute::BONE_INDICES].buffer = mBufferCount;
+    mAttributes[VertexAttribute::BONE_INDICES].type = VertexBuffer::AttributeType::USHORT4;
+    mAttributes[VertexAttribute::BONE_INDICES].flags = Attribute::FLAG_INTEGER_TARGET;
+    auto slotWeightsOld = mAttributes[VertexAttribute::BONE_INDICES].buffer;
+    mDeclaredAttributes.set(VertexAttribute::BONE_WEIGHTS);
+    mAttributes[VertexAttribute::BONE_WEIGHTS].offset = 0;
+    mAttributes[VertexAttribute::BONE_WEIGHTS].stride = 16;
+    mAttributes[VertexAttribute::BONE_WEIGHTS].buffer = mBufferCount + 1;
+    mAttributes[VertexAttribute::BONE_WEIGHTS].type = VertexBuffer::AttributeType::FLOAT4;
+    mAttributes[VertexAttribute::BONE_WEIGHTS].flags = 0;
+
+    auto const& declaredAttributes = mDeclaredAttributes;
+    auto const& attributes = mAttributes;
+
+    uint8_t attributeCount = (uint8_t) mDeclaredAttributes.count();
+    #pragma nounroll
+    for (size_t i = 0, n = attributeArray.size(); i < n; ++i) {
+        if (declaredAttributes[i]) {
+            const uint32_t offset = attributes[i].offset;
+            const uint8_t stride = attributes[i].stride;
+            const uint8_t slot = attributes[i].buffer;
+
+            attributeArray[i].offset = offset;
+            attributeArray[i].stride = stride;
+            attributeArray[i].buffer = slot;
+            attributeArray[i].type = attributes[i].type;
+            attributeArray[i].flags = attributes[i].flags;
+
+            const size_t end = offset + mVertexCount * stride;
+            bufferSizes[slot] = math::max(bufferSizes[slot], end);
+        }
+    }
+
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    //destroy old bone buffer objects if any
+    if (!mBufferObjectsEnabled) {
+        if (slotIndicesOld != Attribute::BUFFER_UNUSED)
+            driver.destroyBufferObject(mBufferObjects[slotIndicesOld]);
+        if (slotIndicesOld != Attribute::BUFFER_UNUSED)
+            driver.destroyBufferObject(mBufferObjects[slotWeightsOld]);
+    }
+
+    //destroy old and create new vertex buffer
+    auto oldHandle = mHandle;
+    mHandle = driver.createVertexBuffer(mBufferCount + 2, attributeCount, mVertexCount, attributeArray);
+    driver.destroyVertexBuffer(oldHandle);
+    #pragma nounroll
+    for (size_t i = 0; i < mBufferCount; ++i)
+        if (bufferSizes[i] > 0)
+            driver.setVertexBufferObject(mHandle, i, mBufferObjects[i]);
+    //add new bone buffer objects
+    mBufferCount++;
+    auto boJointsHandle = driver.createBufferObject(bufferSizes[mBufferCount - 1],
+             backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
+    driver.setVertexBufferObject(mHandle, mBufferCount - 1, boJointsHandle);
+    auto bdJoints = BufferDescriptor(
+            skinJoints, bufferSizes[mBufferCount - 1], nullptr);
+    driver.updateBufferObject(boJointsHandle,std::move(bdJoints), 0);
+    mBufferCount++;
+    auto boWeightsHandle = driver.createBufferObject(bufferSizes[mBufferCount - 1],
+           backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
+    driver.setVertexBufferObject(mHandle, mBufferCount - 1, boWeightsHandle);
+    auto bdWeights = BufferDescriptor(
+            skinWeights, bufferSizes[mBufferCount - 1], nullptr);
+    driver.updateBufferObject(boWeightsHandle,std::move(bdWeights), 0);
+    if (!mBufferObjectsEnabled) {
+        mBufferObjects[mBufferCount - 2] = boJointsHandle;
+        mBufferObjects[mBufferCount - 1] = boWeightsHandle;
+   }else{
+        //for correct destroy bone buffer object
+        mBoneBufferObjectsUsed = true;
+        mBoJointsHandle = boJointsHandle;
+        mBoWeightsHandle = boWeightsHandle;
+   }
+}
 } // namespace filament

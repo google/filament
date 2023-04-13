@@ -23,6 +23,8 @@
 #include "private/filament/EngineEnums.h"
 #include "private/filament/UibStructs.h"
 
+#include "backend/DriverApiForward.h"
+
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
@@ -52,6 +54,9 @@ public:
         return (count + CONFIG_MAX_BONE_COUNT - 1) & ~(CONFIG_MAX_BONE_COUNT - 1);
     }
 
+    backend::Handle<backend::HwSamplerGroup> setIndicesAndWeights(FEngine& engine,
+            math::float2 const* pairs, size_t count);
+
 private:
     friend class ::FilamentTest_Bones_Test;
     friend class SkinningBuffer;
@@ -68,6 +73,15 @@ private:
     backend::Handle<backend::HwBufferObject> getHwHandle() const noexcept {
         return mHandle;
     }
+
+    struct HandleIndicesAndWeights{
+        backend::Handle<backend::HwSamplerGroup> sampler;
+        backend::Handle<backend::HwTexture> texture;
+    };
+    HandleIndicesAndWeights createIndicesAndWeightsHandle(FEngine& engine,
+            size_t count);
+    void setIndicesAndWeightsData(FEngine& engine,
+        backend::Handle<backend::HwTexture> textureHandle, math::float2 const* pairs, size_t count);
 
     backend::Handle<backend::HwBufferObject> mHandle;
     uint32_t mBoneCount;

@@ -18,6 +18,8 @@
 
 #include "components/RenderableManager.h"
 
+#include "private/filament/SibStructs.h"
+
 #include "details/Engine.h"
 
 #include "FilamentAPI-impl.h"
@@ -160,6 +162,102 @@ void FSkinningBuffer::setBones(FEngine& engine, Handle<backend::HwBufferObject> 
     }
     driverApi.updateBufferObject(handle, { out, boneCount * sizeof(PerRenderableBoneUib::BoneData) },
             offset * sizeof(PerRenderableBoneUib::BoneData));
+}
+
+// This value is limited by ES3.0, ES3.0 only guarantees 2048.
+// When you change this value, you must change MAX_SKINNING_BUFFER_WIDTH at getters.vs
+constexpr size_t MAX_SKINNING_BUFFER_WIDTH = 2048;
+
+static inline size_t getWidth(size_t pairCount) noexcept {
+    return std::min(pairCount, MAX_SKINNING_BUFFER_WIDTH);
+}
+
+static inline size_t getHeight(size_t pairCount) noexcept {
+    return (pairCount + MAX_SKINNING_BUFFER_WIDTH) / MAX_SKINNING_BUFFER_WIDTH;
+}
+
+inline size_t getSize(size_t pairCount) noexcept {
+    const size_t stride = getWidth(pairCount);
+    const size_t height = getHeight(pairCount);
+    return Texture::PixelBufferDescriptor::computeDataSize(
+            Texture::PixelBufferDescriptor::PixelDataFormat::RG,
+            Texture::PixelBufferDescriptor::PixelDataType::FLOAT,
+            stride, height, 1);
+}
+
+UTILS_NOINLINE
+void updateDataAt(backend::DriverApi& driver,
+        Handle<HwTexture> handle, PixelDataFormat format, PixelDataType type,
+        const char* out, size_t elementSize,
+        size_t count, size_t size) {
+
+    size_t const textureWidth   = getWidth( count);//size);
+    size_t const lineCount      = count / textureWidth;
+    size_t const lastLineCount  = count % textureWidth;
+
+    // 'out' buffer is going to be used up to 2 times, so for simplicity we use a shared_buffer
+    // to manage its lifetime. One side effect of this is that the callbacks below will allocate
+    // a small object on the heap. (inspired by MorphTargetBuffered)
+    std::shared_ptr<void> allocation((void*)out, ::free);
+
+    if (lineCount) {
+        // update the full-width lines if any
+        driver.update3DImage(handle, 0, 0, 0, 0,
+            textureWidth, lineCount, 1, PixelBufferDescriptor::make(
+                out, (textureWidth * lineCount) * elementSize,
+                format, type,[allocation](void const*, size_t) {}
+            ));
+        out += (lineCount * textureWidth) * elementSize;
+    }
+
+    if (lastLineCount) {
+        // update the last partial line if any
+        driver.update3DImage(handle, 0, 0, lineCount, 0,
+            lastLineCount, 1, 1, PixelBufferDescriptor::make(
+                out, lastLineCount * elementSize,
+                format, type,[allocation](void const*, size_t) {}
+            ));
+    }
+}
+
+FSkinningBuffer::HandleIndicesAndWeights FSkinningBuffer::createIndicesAndWeightsHandle(FEngine& engine, size_t count) {
+    backend::Handle<backend::HwSamplerGroup> samplerHandle;
+    backend::Handle<backend::HwTexture> textureHandle;      //bone indices and weights
+
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    auto size = getSize(count);
+    // create a texture for skinning pairs data (bone index and weight)
+    size = getSize(count);
+
+    textureHandle = driver.createTexture(SamplerType::SAMPLER_2D, 1,
+                         TextureFormat::RG32F, 1,
+                         getWidth(size), getHeight(size), 1,
+                         TextureUsage::DEFAULT);
+    samplerHandle = driver.createSamplerGroup(PerRenderPrimitiveSkinningSib::SAMPLER_COUNT);
+    SamplerGroup samplerGroup(PerRenderPrimitiveSkinningSib::SAMPLER_COUNT);
+    samplerGroup.setSampler(PerRenderPrimitiveSkinningSib::BONE_IaW,
+                            {textureHandle, {}});
+    driver.updateSamplerGroup(samplerHandle,
+                              samplerGroup.toBufferDescriptor(driver));
+    return {
+        .sampler = samplerHandle,
+        .texture = textureHandle
+    };
+}
+
+void FSkinningBuffer::setIndicesAndWeightsData(FEngine& engine,
+        backend::Handle<backend::HwTexture> textureHandle, math::float2 const* pairs, size_t count) {
+
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    auto size = getSize(count);
+    auto* out = (float2*) malloc(size);
+    std::transform(pairs, pairs + count, out,
+            [](const float2& p) { return float2(p); });
+
+    updateDataAt(driver, textureHandle,
+            Texture::Format::RG, Texture::Type::FLOAT,
+            (char const*)out, sizeof(float2),
+            count,  size);
 }
 
 } // namespace filament

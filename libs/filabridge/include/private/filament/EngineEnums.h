@@ -52,6 +52,7 @@ enum class SamplerBindingPoints : uint8_t {
     PER_VIEW                   = 0,    // samplers updated per view
     PER_RENDERABLE_MORPHING    = 1,    // morphing sampler updated per render primitive
     PER_MATERIAL_INSTANCE      = 2,    // samplers updates per material
+    PER_RENDERABLE_SKINNING    = 3,    // bone indices and weights sampler updated per render primitive
     // Update utils::Enum::count<>() below when adding values here
     // These are limited by CONFIG_SAMPLER_BINDING_COUNT (currently 4)
 };
@@ -132,7 +133,7 @@ struct utils::EnableIntegerOperators<filament::ReservedSpecializationConstants> 
 template<>
 inline constexpr size_t utils::Enum::count<filament::UniformBindingPoints>() { return 9; }
 template<>
-inline constexpr size_t utils::Enum::count<filament::SamplerBindingPoints>() { return 3; }
+inline constexpr size_t utils::Enum::count<filament::SamplerBindingPoints>() { return 4; }
 
 static_assert(utils::Enum::count<filament::UniformBindingPoints>() <= filament::backend::CONFIG_UNIFORM_BINDING_COUNT);
 static_assert(utils::Enum::count<filament::SamplerBindingPoints>() <= filament::backend::CONFIG_SAMPLER_BINDING_COUNT);

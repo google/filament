@@ -107,13 +107,28 @@ SamplerInterfaceBlock const& SibGenerator::getPerRenderPrimitiveMorphingSib(Vari
     return sib;
 }
 
-SamplerInterfaceBlock const* SibGenerator::getSib(
-        SamplerBindingPoints bindingPoint, Variant variant) noexcept {
+SamplerInterfaceBlock const& SibGenerator::getPerRenderPrimitiveBonesSib(Variant variant) noexcept {
+    using Type = SamplerInterfaceBlock::Type;
+    using Format = SamplerInterfaceBlock::Format;
+    using Precision = SamplerInterfaceBlock::Precision;
+
+    static SamplerInterfaceBlock sib = SamplerInterfaceBlock::Builder()
+            .name("BonesBuffer")
+            .stageFlags(backend::ShaderStageFlags::VERTEX)
+            .add({  { "indicesAndWeights", Type::SAMPLER_2D, Format::FLOAT, Precision::HIGH }})
+            .build();
+
+    return sib;
+}
+
+SamplerInterfaceBlock const* SibGenerator::getSib(SamplerBindingPoints bindingPoint, Variant variant) noexcept {
     switch (bindingPoint) {
         case SamplerBindingPoints::PER_VIEW:
             return &getPerViewSib(variant);
         case SamplerBindingPoints::PER_RENDERABLE_MORPHING:
             return &getPerRenderPrimitiveMorphingSib(variant);
+        case SamplerBindingPoints::PER_RENDERABLE_SKINNING:
+            return &getPerRenderPrimitiveBonesSib(variant);
         default:
             return nullptr;
     }

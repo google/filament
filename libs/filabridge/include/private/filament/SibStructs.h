@@ -42,6 +42,12 @@ struct PerRenderPrimitiveMorphingSib {
     static constexpr size_t SAMPLER_COUNT  = 2;
 };
 
+struct PerRenderPrimitiveSkinningSib {
+    static constexpr size_t BONE_IaW       = 0;   //bone indices and weights
+
+    static constexpr size_t SAMPLER_COUNT  = 1;
+};
+
 } // namespace filament
 
 #endif //TNT_FILABRIDGE_SIBSTRUCTS_H

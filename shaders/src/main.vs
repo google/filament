@@ -80,9 +80,8 @@ void main() {
             #endif
         }
 
-        if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0) {
-            skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
-            skinNormal(vertex_worldTangent.xyz, mesh_bone_indices, mesh_bone_weights);
+        if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
+            skinTwoVectors(material.worldNormal, vertex_worldTangent.xyz, mesh_bone_indices, mesh_bone_weights);
         }
         #endif
 

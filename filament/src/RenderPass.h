@@ -224,7 +224,7 @@ public:
         return boolish ? value : uint64_t(0);
     }
 
-    struct PrimitiveInfo { // 48 bytes
+    struct PrimitiveInfo { // 56 bytes
         union {
             FMaterialInstance const* mi;
             uint64_t padding = {}; // ensures mi is 8 bytes on all archs
@@ -232,6 +232,7 @@ public:
         backend::RasterState rasterState;                               // 4 bytes
         backend::Handle<backend::HwRenderPrimitive> primitiveHandle;    // 4 bytes
         backend::Handle<backend::HwBufferObject> skinningHandle;        // 4 bytes
+        backend::Handle<backend::HwSamplerGroup> skinningTexture;       // 4 bytes
         backend::Handle<backend::HwBufferObject> morphWeightBuffer;     // 4 bytes
         backend::Handle<backend::HwSamplerGroup> morphTargetBuffer;     // 4 bytes
         backend::Handle<backend::HwBufferObject> instanceBufferHandle;  // 4 bytes
@@ -239,7 +240,7 @@ public:
         uint32_t skinningOffset = 0;                                    // 4 bytes
         uint16_t instanceCount;                                         // 2 bytes [MSb: user]
         Variant materialVariant;                                        // 1 byte
-        uint8_t reserved[4] = {};                                       // 4 bytes
+        uint8_t reserved[0] = {};                                       // 1 byte
 
         static const uint16_t USER_INSTANCE_MASK = 0x8000u;
         static const uint16_t INSTANCE_COUNT_MASK = 0x7fffu;
@@ -249,7 +250,7 @@ public:
     struct alignas(8) Command {     // 64 bytes
         CommandKey key = 0;         //  8 bytes
         PrimitiveInfo primitive;    // 48 bytes
-        uint64_t reserved[1] = {};  //  8 bytes
+        uint64_t reserved[2] = {};  // 16 bytes
         bool operator < (Command const& rhs) const noexcept { return key < rhs.key; }
         // placement new declared as "throw" to avoid the compiler's null-check
         inline void* operator new (std::size_t, void* ptr) {
