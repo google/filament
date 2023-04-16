@@ -200,7 +200,7 @@ Energy conservation is one of the key components of a good BRDF for physically b
 
 ## Specular BRDF
 
-For the specular term, $f_m$ is a mirror BRDF that can be modeled with the Fresnel law, noted $F$ in the Cook-Torrance approximation of the microfacet model integration:
+For the specular term, $f_r$ is a mirror BRDF that can be modeled with the Fresnel law, noted $F$ in the Cook-Torrance approximation of the microfacet model integration:
 
 $$\begin{equation}
 f_r(v,l) = \frac{D(h, \alpha) G(v, l, \alpha) F(v, h, f0)}{4(\NoV)(\NoL)}
@@ -485,7 +485,7 @@ void BRDF(...) {
     // perceptually linear roughness to roughness (see parameterization)
     float roughness = perceptualRoughness * perceptualRoughness;
 
-    float D = D_GGX(NoH, a);
+    float D = D_GGX(NoH, roughness);
     vec3  F = F_Schlick(LoH, f0);
     float V = V_SmithGGXCorrelated(NoV, NoL, roughness);
 
