@@ -1076,6 +1076,63 @@ fragment {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### General: constants
+
+Type
+:   array of constant objects
+
+Value
+:   Each entry is an object with the properties `name` and `type`, both of `string` type. The name
+    must be a valid GLSL identifier. Entries also have an optional `default`, which can either be a
+    `bool` or `number`, depending on the `type` of the constant. The type must be one of the types
+    described in table [materialConstantsTypes].
+
+         Type          |            Description                   |      Default
+:----------------------|:-----------------------------------------|:------------------
+int                    | A signed, 32 bit GLSL int                |         0
+float                  | A single-precision GLSL float            |         0.0
+bool                   | A GLSL bool                              |         false
+[Table [materialConstantsTypes]: Material constants types]
+
+Description
+:   Lists the constant parameters accepted by your material. These constants can be set, or
+    "specialized", at runtime when loading a material package. Multiple materials can be loaded from
+    the same material package with differing constant parameter specializations. Once a material is
+    loaded from a material package, its constant parameters cannot be changed. Compared to regular
+    parameters, constant parameters allow the compiler to generate more efficient code. Access
+    constant parameters from the shader by prefixing the name with `materialConstant_`. For example,
+    a constant parameter named `myConstant` is accessed in the shader as
+    `materialConstant_myConstant`. If a constant parameter is not set at runtime, the default is
+    used.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    constants : [
+        {
+           name : overrideAlpha,
+           type : bool
+        },
+        {
+           name : customAlpha,
+           type : float,
+           default : 0.5
+        }
+    ],
+    shadingModel : lit,
+    blending : transparent,
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        if (materialConstants_overrideAlpha) {
+            material.baseColor.a = materialConstants_customAlpha;
+            material.baseColor.rgb *= material.baseColor.a;
+        }
+    }
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ### General: variantFilter
 
 Type

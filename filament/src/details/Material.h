@@ -27,6 +27,7 @@
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
+#include <private/filament/ConstantInfo.h>
 
 #include <utils/compiler.h>
 #include <utils/Mutex.h>
@@ -99,9 +100,6 @@ public:
         return mCachedPrograms[variant.key];
     }
 
-    backend::Program getProgramBuilderWithVariants(Variant variant, Variant vertexVariant,
-            Variant fragmentVariant) const noexcept;
-
     bool isVariantLit() const noexcept { return mIsVariantLit; }
 
     const utils::CString& getName() const noexcept { return mName; }
@@ -149,11 +147,11 @@ public:
 
     uint32_t generateMaterialInstanceId() const noexcept { return mMaterialInstanceId++; }
 
-    void applyPendingEdits() noexcept;
-
     void destroyPrograms(FEngine& engine);
 
 #if FILAMENT_ENABLE_MATDBG
+    void applyPendingEdits() noexcept;
+
     /**
      * Callback handlers for the debug server, potentially called from any thread. The userdata
      * argument has the same value that was passed to DebugServer::addMaterial(), which should
@@ -187,6 +185,9 @@ private:
     void prepareProgramSlow(Variant variant) const noexcept;
     void getSurfaceProgramSlow(Variant variant) const noexcept;
     void getPostProcessProgramSlow(Variant variant) const noexcept;
+    backend::Program getProgramWithVariants(Variant variant, Variant vertexVariant,
+            Variant fragmentVariant) const noexcept;
+
 
     void createAndCacheProgram(backend::Program&& p,
             Variant variant) const noexcept;
@@ -228,13 +229,17 @@ private:
     BufferInterfaceBlock mUniformInterfaceBlock;
     SubpassInfo mSubpassInfo;
     utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> mUniformBlockBindings;
+    utils::FixedCapacityVector<Variant> mDepthVariants; // only populated with default material
+
     SamplerGroupBindingInfoList mSamplerGroupBindingInfoList;
     SamplerBindingToNameMap mSamplerBindingToNameMap;
+    utils::FixedCapacityVector<backend::Program::SpecializationConstant> mSpecializationConstants;
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;
     mutable utils::Mutex mActiveProgramsLock;
     mutable VariantList mActivePrograms;
+    std::atomic<MaterialParser*> mPendingEdits = {};
 #endif
 
     utils::CString mName;
@@ -242,7 +247,6 @@ private:
     const uint32_t mMaterialId;
     mutable uint32_t mMaterialInstanceId = 0;
     MaterialParser* mMaterialParser = nullptr;
-    std::atomic<MaterialParser*> mPendingEdits = {};
 };
 
 

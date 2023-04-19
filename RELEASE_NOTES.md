@@ -7,6 +7,14 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.32.4
+
+- engine: Add support for _constant parameters_, which are constants that can be specialized after material compilation.
+- materials: improved size reduction of OpenGL/Metal shaders by ~65% when compiling materials with
+             size optimizations (`matc -S`) [⚠️ **Recompile Materials**]
+- engine: fix potential crash on Metal devices with A8X GPU (iPad Air 2) [⚠️ **Recompile Materials**]
+- opengl: support the external image on macOS
+
 ## v1.32.3
 
 - fog: added an option to disable the fog after a certain distance [⚠️ **Recompile Materials**].

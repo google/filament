@@ -802,6 +802,55 @@ TEST_F(MaterialCompiler, CustomSurfaceShadingHasFunction) {
     EXPECT_TRUE(result.isValid());
 }
 
+TEST_F(MaterialCompiler, ConstantParameter) {
+  std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            if (materialConstants_myBoolConstant) {
+              material.baseColor.rgb = float3(materialConstants_myFloatConstant);
+              int anInt = materialConstants_myIntConstant;
+            }
+        }
+    )");
+    std::string vertexCode(R"(
+        void materialVertex(inout MaterialVertexInputs material) {
+            int anInt = materialConstants_myIntConstant;
+            bool aBool = materialConstants_myBoolConstant;
+            float aFloat = materialConstants_myFloatConstant;
+        }
+    )");
+  filamat::MaterialBuilder builder;
+  builder.constant("myFloatConstant", ConstantType::FLOAT, 1.0f);
+  builder.constant("myIntConstant", ConstantType::INT, 123);
+  builder.constant("myBoolConstant", ConstantType::BOOL, true);
+  builder.constant<bool>("myOtherBoolConstant", ConstantType::BOOL);
+
+  builder.shading(filament::Shading::LIT);
+  builder.material(shaderCode.c_str());
+  builder.materialVertex(vertexCode.c_str());
+  filamat::Package result = builder.build(*jobSystem);
+  EXPECT_TRUE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, ConstantParameterSameName) {
+#ifdef __EXCEPTIONS
+    EXPECT_THROW({
+        filamat::MaterialBuilder builder;
+        builder.constant("myFloatConstant", ConstantType::FLOAT, 1.0f);
+        builder.constant("myFloatConstant", ConstantType::FLOAT, 1.0f);
+    }, utils::PostconditionPanic);
+#endif
+}
+
+TEST_F(MaterialCompiler, ConstantParameterWrongType) {
+#ifdef __EXCEPTIONS
+    EXPECT_THROW({
+        filamat::MaterialBuilder builder;
+        builder.constant("myFloatConstant", ConstantType::FLOAT, 10);
+    }, utils::PostconditionPanic);
+#endif
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

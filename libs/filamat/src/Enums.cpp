@@ -160,4 +160,15 @@ std::unordered_map<std::string, SamplerFormat>& Enums::getMap<SamplerFormat>() n
     return mStringToSamplerFormat;
 };
 
+std::unordered_map<std::string, ConstantType > Enums::mStringToConstantType = {
+        { "int",   ConstantType::INT },
+        { "float", ConstantType::FLOAT },
+        { "bool",  ConstantType::BOOL },
+};
+
+template <>
+std::unordered_map<std::string, ConstantType>& Enums::getMap<ConstantType>() noexcept {
+    return mStringToConstantType;
+};
+
 } // namespace filamat

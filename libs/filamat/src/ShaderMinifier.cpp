@@ -137,7 +137,7 @@ namespace {
  * - Remove leading white spaces at the beginning of each line
  * - Remove empty lines
  */
-std::string ShaderMinifier::removeWhitespace(const std::string& s) const {
+std::string ShaderMinifier::removeWhitespace(const std::string& s, bool mergeBraces) const {
     size_t cur = 0;
 
     std::string r;
@@ -155,7 +155,13 @@ std::string ShaderMinifier::removeWhitespace(const std::string& s) const {
         size_t newPos = s.find_first_not_of(" \t", pos);
         if (newPos == std::string::npos) newPos = pos;
 
-        r.append(s, newPos, len - (newPos - pos));
+        // If we have a single { or } on a line, move it to the previous line instead
+        size_t subLen = len - (newPos - pos);
+        if (mergeBraces && subLen == 1 && (s[newPos] == '{' || s[newPos] == '}')) {
+            r.replace(r.size() - 1, 1, 1, s[newPos]);
+        } else {
+            r.append(s, newPos, subLen);
+        }
         r += '\n';
 
         while (s[cur] == '\n') {

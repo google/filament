@@ -60,6 +60,10 @@ enum class SamplerBindingPoints : uint8_t {
 constexpr size_t CONFIG_MAX_LIGHT_COUNT = 256;
 constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 
+// The number of specialization constants that Filament reserves for its own use. These are always
+// the first constants (from 0 to CONFIG_MAX_RESERVED_SPEC_CONSTANTS - 1).
+constexpr size_t CONFIG_MAX_RESERVED_SPEC_CONSTANTS = 8;
+
 // The maximum number of shadowmaps.
 // There is currently a maximum limit of 128 shadowmaps.
 // Factors contributing to this limit:

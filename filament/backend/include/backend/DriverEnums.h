@@ -279,6 +279,15 @@ enum class UniformType : uint8_t {
     STRUCT
 };
 
+/**
+ * Supported constant parameter types
+ */
+ enum class ConstantType : uint8_t {
+  INT,
+  FLOAT,
+  BOOL
+};
+
 enum class Precision : uint8_t {
     LOW,
     MEDIUM,
@@ -1117,7 +1126,10 @@ enum class Workaround : uint16_t {
     // the whole render pass.
     ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP,
     // for some uniform arrays, it's needed to do an initialization to avoid crash on adreno gpu
-    ADRENO_UNIFORM_ARRAY_CRASH
+    ADRENO_UNIFORM_ARRAY_CRASH,
+    // Workaround a Metal pipeline compilation error with the message:
+    // "Could not statically determine the target of a texture". See light_indirect.fs
+    A8X_STATIC_TEXTURE_TARGET_ERROR
 };
 
 } // namespace filament::backend

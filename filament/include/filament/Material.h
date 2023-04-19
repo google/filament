@@ -105,6 +105,34 @@ public:
          */
         Builder& package(const void* payload, size_t size);
 
+        template<typename T>
+        using is_supported_constant_parameter_t = typename std::enable_if<
+                std::is_same<int32_t, T>::value ||
+                std::is_same<float, T>::value ||
+                std::is_same<bool, T>::value>::type;
+
+        /**
+         * Specialize a constant parameter specified in the material definition with a concrete
+         * value for this material. Once build() is called, this constant cannot be changed.
+         * Will throw an exception if the name does not match a constant specified in the
+         * material definition or if the type provided does not match.
+         *
+         * @tparam T The type of constant parameter, either int32_t, float, or bool.
+         * @param name The name of the constant parameter specified in the material definition, such
+         *             as "myConstant".
+         * @param nameLength Length in `char` of the name parameter.
+         * @param value The value to use for the constant parameter, must match the type specified
+         *              in the material definition.
+         */
+        template<typename T, typename = is_supported_constant_parameter_t<T>>
+        Builder& constant(const char* name, size_t nameLength, T value);
+
+        /** inline helper to provide the constant name as a null-terminated C string */
+        template<typename T, typename = is_supported_constant_parameter_t<T>>
+        inline Builder& constant(const char* name, T value) {
+            return constant(name, strlen(name), value);
+        }
+
         /**
          * Creates the Material object and returns a pointer to it.
          *

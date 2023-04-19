@@ -29,6 +29,7 @@
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SubpassInfo.h>
 #include <private/filament/Variant.h>
+#include <private/filament/ConstantInfo.h>
 
 #include <utils/CString.h>
 
@@ -177,6 +178,13 @@ bool MaterialParser::getSamplerBlockBindings(
             pSamplerGroupInfoList, pSamplerBindingToNameMap);
 }
 
+bool MaterialParser::getConstants(utils::FixedCapacityVector<MaterialConstant>* value) const noexcept {
+    auto [start, end] = mImpl.mChunkContainer.getChunkRange(filamat::MaterialConstants);
+    if (start == end) return false;
+    Unflattener unflattener(start, end);
+    return ChunkMaterialConstants::unflatten(unflattener, value);
+}
+
 bool MaterialParser::getDepthWriteSet(bool* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialDepthWriteSet, value);
 }
@@ -311,7 +319,7 @@ bool MaterialParser::getReflectionMode(ReflectionMode* value) const noexcept {
 bool MaterialParser::getShader(ShaderContent& shader,
         ShaderModel shaderModel, Variant variant, ShaderStage stage) noexcept {
     return mImpl.mMaterialChunk.getShader(shader,
-            mImpl.mBlobDictionary, uint8_t(shaderModel), variant, uint8_t(stage));
+            mImpl.mBlobDictionary, shaderModel, variant, stage);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -541,6 +549,38 @@ bool ChunkSamplerBlockBindings::unflatten(Unflattener& unflattener,
         if (!unflattener.read(&samplerBindingToNameMap[binding])) {
             return false;
         }
+    }
+
+    return true;
+}
+
+bool ChunkMaterialConstants::unflatten(filaflat::Unflattener& unflattener,
+        utils::FixedCapacityVector<MaterialConstant>* materialConstants) {
+    assert_invariant(materialConstants);
+
+    // Read number of constants.
+    uint64_t numConstants = 0;
+    if (!unflattener.read(&numConstants)) {
+        return false;
+    }
+
+    materialConstants->reserve(numConstants);
+    materialConstants->resize(numConstants);
+
+    for (uint64_t i = 0; i < numConstants; i++) {
+        CString constantName;
+        uint8_t constantType = 0;
+
+        if (!unflattener.read(&constantName)) {
+            return false;
+        }
+
+        if (!unflattener.read(&constantType)) {
+            return false;
+        }
+
+        (*materialConstants)[i].name = constantName;
+        (*materialConstants)[i].type = static_cast<backend::ConstantType>(constantType);
     }
 
     return true;

@@ -43,6 +43,7 @@ namespace filament {
 class BufferInterfaceBlock;
 class SamplerInterfaceBlock;
 struct SubpassInfo;
+struct MaterialConstant;
 
 class MaterialParser {
 public:
@@ -71,6 +72,7 @@ public:
     bool getUniformBlockBindings(utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>>* value) const noexcept;
     bool getSamplerBlockBindings(SamplerGroupBindingInfoList* pSamplerGroupInfoList,
             SamplerBindingToNameMap* pSamplerBindingToNameMap) const noexcept;
+    bool getConstants(utils::FixedCapacityVector<MaterialConstant>* value) const noexcept;
 
     bool getDepthWriteSet(bool* value) const noexcept;
     bool getDepthWrite(bool* value) const noexcept;
@@ -102,6 +104,8 @@ public:
 
     bool getShader(filaflat::ShaderContent& shader, backend::ShaderModel shaderModel,
             Variant variant, backend::ShaderStage stage) noexcept;
+
+    filaflat::MaterialChunk const& getMaterialChunk() const noexcept { return mImpl.mMaterialChunk; }
 
 private:
     struct MaterialParserDetails {
@@ -166,6 +170,11 @@ struct ChunkSamplerBlockBindings {
     static bool unflatten(filaflat::Unflattener& unflattener,
             SamplerGroupBindingInfoList* pSamplerGroupBindingInfoList,
             SamplerBindingToNameMap* pSamplerBindingToNameMap);
+};
+
+struct ChunkMaterialConstants {
+    static bool unflatten(filaflat::Unflattener& unflattener,
+            utils::FixedCapacityVector<MaterialConstant>* materialConstants);
 };
 
 } // namespace filament

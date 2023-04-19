@@ -39,6 +39,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <variant>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -238,6 +239,7 @@ public:
     using SpecularAmbientOcclusion = filament::SpecularAmbientOcclusion;
 
     using UniformType = filament::backend::UniformType;
+    using ConstantType = filament::backend::ConstantType;
     using SamplerType = filament::backend::SamplerType;
     using SubpassType = filament::backend::SubpassType;
     using SamplerFormat = filament::backend::SamplerFormat;
@@ -289,6 +291,15 @@ public:
     //! Add a parameter array to this material.
     MaterialBuilder& parameter(const char* name, size_t size, UniformType type,
             ParameterPrecision precision = ParameterPrecision::DEFAULT) noexcept;
+
+    //! Add a constant parameter to this material.
+    template<typename T>
+    using is_supported_constant_parameter_t = typename std::enable_if<
+            std::is_same<int32_t, T>::value ||
+            std::is_same<float, T>::value ||
+            std::is_same<bool, T>::value>::type;
+    template<typename T, typename = is_supported_constant_parameter_t<T>>
+    MaterialBuilder& constant(const char *name, ConstantType type, T defaultValue = 0);
 
     /**
      * Add a sampler parameter to this material.
@@ -652,6 +663,16 @@ public:
         int location;
     };
 
+    struct Constant {
+        utils::CString name;
+        ConstantType type;
+        union {
+            int32_t i;
+            float f;
+            bool b;
+        } defaultValue;
+    };
+
     static constexpr size_t MATERIAL_PROPERTIES_COUNT = filament::MATERIAL_PROPERTIES_COUNT;
     using Property = filament::Property;
 
@@ -679,6 +700,7 @@ public:
     using ParameterList = Parameter[MAX_PARAMETERS_COUNT];
     using SubpassList = Parameter[MAX_SUBPASS_COUNT];
     using BufferList = std::vector<std::unique_ptr<filament::BufferInterfaceBlock>>;
+    using ConstantList = std::vector<Constant>;
 
     // returns the number of parameters declared in this material
     uint8_t getParameterCount() const noexcept { return mParameterCount; }
@@ -763,6 +785,7 @@ private:
 
     PropertyList mProperties;
     ParameterList mParameters;
+    ConstantList mConstants;
     SubpassList mSubpasses;
     VariableList mVariables;
     OutputList mOutputs;

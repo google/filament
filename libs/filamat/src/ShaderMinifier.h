@@ -30,7 +30,7 @@ namespace filamat {
 // This custom minifier is designed for generated code such as uniform structs.
 class ShaderMinifier {
     public:
-        std::string removeWhitespace(const std::string& source) const;
+        std::string removeWhitespace(const std::string& source, bool mergeBraces = false) const;
         std::string renameStructFields(const std::string& source);
 
     private:

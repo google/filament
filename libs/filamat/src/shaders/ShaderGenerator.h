@@ -42,6 +42,7 @@ public:
             MaterialBuilder::VariableList const& variables,
             MaterialBuilder::OutputList const& outputs,
             MaterialBuilder::PreprocessorDefineList const& defines,
+            MaterialBuilder::ConstantList const& constants,
             utils::CString const& materialCode,
             size_t lineOffset,
             utils::CString const& materialVertexCode,
@@ -88,6 +89,7 @@ private:
     MaterialBuilder::OutputList mOutputs;
     MaterialBuilder::MaterialDomain mMaterialDomain;
     MaterialBuilder::PreprocessorDefineList mDefines;
+    MaterialBuilder::ConstantList mConstants;
     utils::CString mMaterialFragmentCode;   // fragment or compute code
     utils::CString mMaterialVertexCode;
     size_t mMaterialLineOffset;

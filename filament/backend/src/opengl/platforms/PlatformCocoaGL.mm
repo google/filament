@@ -28,6 +28,7 @@
 #include <Cocoa/Cocoa.h>
 
 #include <vector>
+#include "CocoaExternalImage.h"
 
 namespace filament::backend {
 
@@ -49,6 +50,8 @@ struct PlatformCocoaGLImpl {
     NSOpenGLContext* mGLContext = nullptr;
     CocoaGLSwapChain* mCurrentSwapChain = nullptr;
     std::vector<NSView*> mHeadlessSwapChains;
+    CVOpenGLTextureCacheRef mTextureCache = nullptr;
+    std::unique_ptr<CocoaExternalImage::SharedGl> mExternalImageSharedGl;
     void updateOpenGLContext(NSView *nsView, bool resetView, bool clearView);
 };
 
@@ -159,6 +162,12 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext, const Platform::Drive
 
     int result = bluegl::bind();
     ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
+
+    UTILS_UNUSED_IN_RELEASE CVReturn success = CVOpenGLTextureCacheCreate(kCFAllocatorDefault, nullptr,
+            [pImpl->mGLContext CGLContextObj], [pImpl->mGLContext.pixelFormat CGLPixelFormatObj], nullptr,
+            &pImpl->mTextureCache);
+    assert_invariant(success == kCVReturnSuccess);
+
     return OpenGLPlatform::createDefaultDriver(this, sharedContext, driverConfig);
 }
 
@@ -167,6 +176,8 @@ int PlatformCocoaGL::getOSVersion() const noexcept {
 }
 
 void PlatformCocoaGL::terminate() noexcept {
+    CFRelease(pImpl->mTextureCache);
+    pImpl->mExternalImageSharedGl.reset();
     pImpl->mGLContext = nil;
     bluegl::unbind();
 }
@@ -256,6 +267,9 @@ void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
 
 void PlatformCocoaGL::commit(Platform::SwapChain* swapChain) noexcept {
     [pImpl->mGLContext flushBuffer];
+
+    // This needs to be done periodically.
+    CVOpenGLTextureCacheFlush(pImpl->mTextureCache, 0);
 }
 
 bool PlatformCocoaGL::pumpEvents() noexcept {
@@ -263,6 +277,45 @@ bool PlatformCocoaGL::pumpEvents() noexcept {
         return false;
     }
     [[NSRunLoop currentRunLoop] runUntilDate:[NSDate distantPast]];
+    return true;
+}
+
+OpenGLPlatform::ExternalTexture* PlatformCocoaGL::createExternalImageTexture() noexcept {
+    if (!pImpl->mExternalImageSharedGl) {
+        pImpl->mExternalImageSharedGl = std::make_unique<CocoaExternalImage::SharedGl>();
+    }
+
+    ExternalTexture* outTexture = new CocoaExternalImage(pImpl->mTextureCache,
+            *pImpl->mExternalImageSharedGl);
+
+    // the actual id/target will be set in setExternalImage.
+    outTexture->id = 0;
+    outTexture->target = GL_TEXTURE_2D;
+    return outTexture;
+}
+
+void PlatformCocoaGL::destroyExternalImage(ExternalTexture* texture) noexcept {
+    auto* p = static_cast<CocoaExternalImage*>(texture);
+    delete p;
+}
+
+void PlatformCocoaGL::retainExternalImage(void* externalImage) noexcept {
+    // Take ownership of the passed in buffer. It will be released the next time
+    // setExternalImage is called, or when the texture is destroyed.
+    CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) externalImage;
+    CVPixelBufferRetain(pixelBuffer);
+}
+
+bool PlatformCocoaGL::setExternalImage(void* externalImage, ExternalTexture* texture) noexcept {
+    CVPixelBufferRef cvPixelBuffer = (CVPixelBufferRef) externalImage;
+    CocoaExternalImage* cocoaExternalImage = static_cast<CocoaExternalImage*>(texture);
+    if (!cocoaExternalImage->set(cvPixelBuffer)) {
+        return false;
+    }
+    texture->target = cocoaExternalImage->getTarget();
+    texture->id = cocoaExternalImage->getGlTexture();
+    // we used to set the internalFormat, but it's not used anywhere on the gl backend side
+    // cocoaExternalImage->getInternalFormat();
     return true;
 }
 
