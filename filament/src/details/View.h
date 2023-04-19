@@ -409,7 +409,7 @@ public:
             View::PickingQueryResultCallback callback) noexcept;
 
     void executePickingQueries(backend::DriverApi& driver,
-            backend::RenderTargetHandle handle, float scale) noexcept;
+            backend::RenderTargetHandle handle) noexcept;
 
 private:
 
