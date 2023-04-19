@@ -968,13 +968,14 @@ void FView::executePickingQueries(backend::DriverApi& driver,
         const uint32_t x = uint32_t(float(pQuery->x) * (scale * mScale.x));
         const uint32_t y = uint32_t(float(pQuery->y) * (scale * mScale.y));
         driver.readPixels(handle, x, y, 1, 1, {
-                &pQuery->result.renderable, 4 * 4, // 4*uint
-                // FIXME: RGBA_INTEGER is guaranteed to work. R_INTEGER must be queried.
-                backend::PixelDataFormat::RG_INTEGER, backend::PixelDataType::UINT,
+                &pQuery->result.renderable, 4u * 4u, // 4*float
+                backend::PixelDataFormat::RG, backend::PixelDataType::FLOAT,
                 pQuery->handler, [](void*, size_t, void* user) {
                     FPickingQuery* pQuery = static_cast<FPickingQuery*>(user);
+                    float const identity = *((float*)((char*)&pQuery->result.renderable));
+                    pQuery->result.renderable = Entity::import(identity);
                     pQuery->result.fragCoords = {
-                            pQuery->x, pQuery->y,float(1.0 - pQuery->result.depth) };
+                            pQuery->x, pQuery->y, float(1.0 - pQuery->result.depth) };
                     pQuery->callback(pQuery->result, pQuery);
                     FPickingQuery::put(pQuery);
                 }, pQuery

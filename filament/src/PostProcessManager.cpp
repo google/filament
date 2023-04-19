@@ -381,7 +381,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 if (config.picking) {
                     data.picking = builder.createTexture("Picking Buffer", {
                             .width = width, .height = height,
-                            .format = TextureFormat::RG32UI });
+                            .format = TextureFormat::RG32F });
 
                     data.picking = builder.write(data.picking,
                             FrameGraphTexture::Usage::COLOR_ATTACHMENT);
