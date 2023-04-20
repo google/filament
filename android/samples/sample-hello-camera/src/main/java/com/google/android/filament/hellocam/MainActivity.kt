@@ -30,6 +30,7 @@ import com.google.android.filament.*
 import com.google.android.filament.RenderableManager.*
 import com.google.android.filament.VertexBuffer.*
 import com.google.android.filament.android.DisplayHelper
+import com.google.android.filament.android.FilamentHelper
 import com.google.android.filament.android.UiHelper
 
 import java.nio.ByteBuffer
@@ -401,6 +402,8 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
             camera.setProjection(45.0, aspect, 0.1, 20.0, Camera.Fov.VERTICAL)
 
             view.viewport = Viewport(0, 0, width, height)
+
+            FilamentHelper.synchronizePendingFrames(engine)
         }
     }
 

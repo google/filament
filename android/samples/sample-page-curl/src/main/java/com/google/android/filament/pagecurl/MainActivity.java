@@ -37,6 +37,7 @@ import com.google.android.filament.Camera;
 import com.google.android.filament.Engine;
 import com.google.android.filament.Entity;
 import com.google.android.filament.EntityManager;
+import com.google.android.filament.Fence;
 import com.google.android.filament.Filament;
 import com.google.android.filament.IndirectLight;
 import com.google.android.filament.LightManager;
@@ -49,6 +50,7 @@ import com.google.android.filament.TransformManager;
 import com.google.android.filament.Viewport;
 
 import com.google.android.filament.android.DisplayHelper;
+import com.google.android.filament.android.FilamentHelper;
 import com.google.android.filament.android.TextureHelper;
 import com.google.android.filament.android.UiHelper;
 
@@ -107,6 +109,7 @@ public class MainActivity extends Activity
             mCamera.setProjection(60.0, aspect, 1.0, 2000.0, Camera.Fov.HORIZONTAL);
         }
         mView.setViewport(new Viewport(0, 0, width, height));
+        FilamentHelper.synchronizePendingFrames(mEngine);
     }
 
     @Override
