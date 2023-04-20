@@ -405,7 +405,17 @@ class ModelViewer(
             view.viewport = Viewport(0, 0, width, height)
             cameraManipulator.setViewport(width, height)
             updateCameraProjection()
+            synchronizePendingFrames(engine)
         }
+    }
+
+    private fun synchronizePendingFrames(engine: Engine) {
+        // Wait for all pending frames to be processed before returning. This is to
+        // avoid a race between the surface being resized before pending frames are
+        // rendered into it.
+        val fence = engine.createFence()
+        fence.wait(Fence.Mode.FLUSH, Fence.WAIT_FOR_EVER)
+        engine.destroyFence(fence)
     }
 
     companion object {

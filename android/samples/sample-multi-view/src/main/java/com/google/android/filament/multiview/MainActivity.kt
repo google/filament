@@ -30,6 +30,7 @@ import com.google.android.filament.RenderableManager.*
 import com.google.android.filament.Renderer.ClearOptions
 import com.google.android.filament.VertexBuffer.*
 import com.google.android.filament.android.DisplayHelper
+import com.google.android.filament.android.FilamentHelper
 import com.google.android.filament.android.UiHelper
 
 import java.nio.ByteBuffer
@@ -458,6 +459,8 @@ class MainActivity : Activity() {
             view1.viewport = Viewport(width / 2, 0,          width / 2, height / 2)
             view2.viewport = Viewport(0,         height / 2, width / 2, height / 2)
             view4.viewport = Viewport(width / 4, height / 4, width / 2, height / 2)
+
+            FilamentHelper.synchronizePendingFrames(engine)
         }
     }
 
