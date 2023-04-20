@@ -80,6 +80,7 @@ private:
         Program::UniformBlockInfo uniformBlockInfo;
         Program::SamplerGroupInfo samplerGroupInfo;
         std::array<Program::UniformInfo, Program::UNIFORM_BINDING_COUNT> bindingUniformInfo;
+        utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> attributes;
         std::array<utils::CString, Program::SHADER_TYPE_COUNT> shaderSourceCode;
     };
 
@@ -96,7 +97,9 @@ private:
 
     static std::array<std::string_view, 2> splitShaderSource(std::string_view source) noexcept;
 
-    static GLuint linkProgram(const GLuint shaderIds[Program::SHADER_TYPE_COUNT]) noexcept;
+    static GLuint linkProgram(OpenGLContext& context,
+            LazyInitializationData* lazyInitializationData,
+            const GLuint shaderIds[Program::SHADER_TYPE_COUNT]) noexcept;
 
     static bool checkProgramStatus(const char* name,
             GLuint& program, GLuint shaderIds[Program::SHADER_TYPE_COUNT],

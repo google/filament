@@ -68,6 +68,13 @@ Program& Program::uniforms(uint32_t index, UniformInfo const& uniforms) noexcept
     return *this;
 }
 
+
+Program& Program::attributes(
+        utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> attributes) noexcept {
+    mAttributes = std::move(attributes);
+    return *this;
+}
+
 Program& Program::setSamplerGroup(size_t bindingPoint, ShaderStageFlags stageFlags,
         const Program::Sampler* samplers, size_t count) noexcept {
     auto& groupData = mSamplerGroups[bindingPoint];

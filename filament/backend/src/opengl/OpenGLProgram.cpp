@@ -66,6 +66,7 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& program) noexcept
     mLazyInitializationData->samplerGroupInfo = std::move(program.getSamplerGroupInfo());
     if (UTILS_UNLIKELY(gld.getContext().isES2())) {
         mLazyInitializationData->bindingUniformInfo = std::move(program.getBindingUniformInfo());
+        mLazyInitializationData->attributes = std::move(program.getAttributes());
     } else {
         mLazyInitializationData->uniformBlockInfo = std::move(program.getUniformBlockBindings());
     }
@@ -78,7 +79,7 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& program) noexcept
             gl.shaders,
             mLazyInitializationData->shaderSourceCode);
 
-    gld.runAtNextRenderPass(this, [this]() {
+    gld.runAtNextRenderPass(this, [this, &context]() {
         // by this point we must not have a GL program
         assert_invariant(!gl.program);
         // we also can't be in the initialized state
@@ -86,7 +87,8 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& program) noexcept
         // we must have our lazy initialization data
         assert_invariant(mLazyInitializationData);
         // link the program, this also cannot fail because status is checked later.
-        gl.program = OpenGLProgram::linkProgram(gl.shaders);
+        gl.program = OpenGLProgram::linkProgram(context,
+                mLazyInitializationData, gl.shaders);
     });
 }
 
@@ -282,13 +284,22 @@ std::array<std::string_view, 2> OpenGLProgram::splitShaderSource(std::string_vie
  * are checked later. This always returns a valid GL program ID (which doesn't mean the
  * program itself is valid).
  */
-GLuint OpenGLProgram::linkProgram(const GLuint shaderIds[Program::SHADER_TYPE_COUNT]) noexcept {
+GLuint OpenGLProgram::linkProgram(OpenGLContext& context,
+        LazyInitializationData* const lazyInitializationData,
+        const GLuint shaderIds[Program::SHADER_TYPE_COUNT]) noexcept {
     GLuint const program = glCreateProgram();
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
         if (shaderIds[i]) {
             glAttachShader(program, shaderIds[i]);
         }
     }
+
+    if (UTILS_UNLIKELY(context.isES2())) {
+        for (auto const& [ name, loc ] : lazyInitializationData->attributes) {
+            glBindAttribLocation(program, loc, name.c_str());
+        }
+    }
+
     glLinkProgram(program);
     return program;
 }
