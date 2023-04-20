@@ -90,6 +90,10 @@ public:
     // the program everything it needs to know about the uniforms at a given binding
     Program& uniforms(uint32_t index, UniformInfo const& uniforms) noexcept;
 
+    // Note: This is only needed for GLES2.0.
+    Program& attributes(
+            utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> attributes) noexcept;
+
     // sets the 'bindingPoint' sampler group descriptor for this program.
     // 'samplers' can be destroyed after this call.
     // This effectively associates a set of (BindingPoints, index) to a texture unit in the shader.
@@ -118,6 +122,9 @@ public:
     auto const& getBindingUniformInfo() const { return mBindingUniformInfo; }
     auto& getBindingUniformInfo() { return mBindingUniformInfo; }
 
+    auto const& getAttributes() const { return mAttributes; }
+    auto& getAttributes() { return mAttributes; }
+
     utils::CString const& getName() const noexcept { return mName; }
     utils::CString& getName() noexcept { return mName; }
 
@@ -137,6 +144,7 @@ private:
     utils::CString mName;
     utils::Invocable<utils::io::ostream&(utils::io::ostream& out)> mLogger;
     utils::FixedCapacityVector<SpecializationConstant> mSpecializationConstants;
+    utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> mAttributes;
     std::array<UniformInfo, Program::UNIFORM_BINDING_COUNT> mBindingUniformInfo;
 };
 
