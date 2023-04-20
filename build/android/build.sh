@@ -47,7 +47,7 @@ source `dirname $0`/../common/build-common.sh
 if [[ "$GITHUB_WORKFLOW" ]]; then
     java_version=$(java -version 2>&1 | head -1 | cut -d'"' -f2 | sed '/^1\./s///' | cut -d'.' -f1)
     if [[ "$java_version" < 17 ]]; then
-        echo "Android builds require Java 11, found version ${java_version} instead"
+        echo "Android builds require Java 17, found version ${java_version} instead"
         exit 0
     fi
 fi
