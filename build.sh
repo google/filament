@@ -491,6 +491,7 @@ function build_android {
                 ./gradlew \
                     -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
                     -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
+                    ${MATOPT_GRADLE_OPTION} \
                     :samples:${sample}:assembleDebug
             done
         fi
@@ -539,6 +540,7 @@ function build_android {
                 ./gradlew \
                     -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
                     -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
+                    ${MATOPT_GRADLE_OPTION} \
                     :samples:${sample}:assembleRelease
             done
         fi
@@ -756,7 +758,7 @@ function run_tests {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfijmp:q:uvslwtedk:b" opt; do
+while getopts ":hacCfgijmp:q:uvslwtedk:b" opt; do
     case ${opt} in
         h)
             print_help
