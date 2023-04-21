@@ -1,5 +1,12 @@
 android {
     namespace 'com.google.android.filament'
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
 }
 
 dependencies {
