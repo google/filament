@@ -34,12 +34,12 @@ void main() {
 
     fragColor = evaluateMaterial(inputs);
 
+#if defined(MATERIAL_HAS_POST_LIGHTING_COLOR) && !defined(MATERIAL_HAS_REFLECTIONS)
+    blendPostLightingColor(inputs, fragColor);
+#endif
+
 #if defined(VARIANT_HAS_FOG)
     highp vec3 view = getWorldPosition() - getWorldCameraPosition();
     fragColor = fog(fragColor, view);
-#endif
-
-#if defined(MATERIAL_HAS_POST_LIGHTING_COLOR) && !defined(MATERIAL_HAS_REFLECTIONS)
-    blendPostLightingColor(inputs, fragColor);
 #endif
 }
