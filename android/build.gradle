@@ -79,6 +79,7 @@ buildscript {
     }
 
     ext.versions = [
+        'jdk': 17,
         'minSdk': 19,
         'targetSdk': 33,
         'compileSdk': 33,
@@ -215,8 +216,8 @@ subprojects {
             }
 
             compileOptions {
-                sourceCompatibility 17
-                targetCompatibility 17
+                sourceCompatibility versions.jdk
+                targetCompatibility versions.jdk
             }
         }
     }

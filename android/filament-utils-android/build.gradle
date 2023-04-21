@@ -1,5 +1,9 @@
 apply plugin: 'kotlin-android'
 
+kotlin {
+    jvmToolchain(versions.jdk)
+}
+
 android {
     namespace 'com.google.android.filament.utils'
 
