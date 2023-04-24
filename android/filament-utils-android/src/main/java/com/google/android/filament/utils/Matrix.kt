@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-@file:Suppress("unused")
+@file:Suppress("NOTHING_TO_INLINE", "unused")
 
 package com.google.android.filament.utils
 
@@ -24,8 +24,16 @@ enum class MatrixColumn {
     X, Y, Z, W
 }
 
-enum class RotationsOrder {
-    XYZ, XZY, YXZ, YZX, ZXY, ZYX
+enum class RotationsOrder(
+        val yaw: VectorComponent,
+        val pitch: VectorComponent,
+        val roll: VectorComponent) {
+    XYZ(VectorComponent.X, VectorComponent.Y, VectorComponent.Z),
+    XZY(VectorComponent.X, VectorComponent.Z, VectorComponent.Y),
+    YXZ(VectorComponent.Y, VectorComponent.X, VectorComponent.Z),
+    YZX(VectorComponent.Y, VectorComponent.Z, VectorComponent.X),
+    ZXY(VectorComponent.Z, VectorComponent.X, VectorComponent.Y),
+    ZYX(VectorComponent.Z, VectorComponent.Y, VectorComponent.X);
 }
 
 data class Mat2(
@@ -77,6 +85,12 @@ data class Mat2(
     operator fun minus(v: Float) = Mat2(x - v, y - v)
     operator fun times(v: Float) = Mat2(x * v, y * v)
     operator fun div(v: Float) = Mat2(x / v, y / v)
+    inline fun compareTo(v: Float, delta: Float = 0.0f) = Mat2(
+        x.compareTo(v, delta),
+        y.compareTo(v, delta)
+    )
+
+    inline fun equals(v: Float, delta: Float = 0.0f) = x.equals(v, delta) && y.equals(v, delta)
 
     operator fun times(m: Mat2) = Mat2(
             Float2(
@@ -89,11 +103,17 @@ data class Mat2(
             )
     )
 
+    inline fun compareTo(m: Mat2, delta: Float = 0.0f) = Mat2(
+        x.compareTo(m.x, delta),
+        y.compareTo(m.y, delta)
+    )
+
+    inline fun equals(m: Mat2, delta: Float = 0.0f) = x.equals(m.x, delta) && y.equals(m.y, delta)
+
     operator fun times(v: Float2) = Float2(
             x.x * v.x + y.x * v.y,
             x.y * v.x + y.y * v.y,
     )
-
 
     fun toFloatArray() = floatArrayOf(
             x.x, y.x,
@@ -106,7 +126,6 @@ data class Mat2(
             |${x.y} ${y.y}|
             """.trimIndent()
     }
-
 }
 
 data class Mat3(
@@ -162,6 +181,14 @@ data class Mat3(
     operator fun minus(v: Float) = Mat3(x - v, y - v, z - v)
     operator fun times(v: Float) = Mat3(x * v, y * v, z * v)
     operator fun div(v: Float) = Mat3(x / v, y / v, z / v)
+    inline fun compareTo(v: Float, delta: Float = 0.0f) = Mat3(
+        x.compareTo(v, delta),
+        y.compareTo(v, delta),
+        z.compareTo(v, delta)
+    )
+
+    inline fun equals(v: Float, delta: Float = 0.0f) =
+        x.equals(v, delta) && y.equals(v, delta) && z.equals(v, delta)
 
     operator fun times(m: Mat3) = Mat3(
             Float3(
@@ -180,6 +207,15 @@ data class Mat3(
                     x.z * m.z.x + y.z * m.z.y + z.z * m.z.z,
             )
     )
+
+    inline fun compareTo(m: Mat3, delta: Float = 0.0f) = Mat3(
+        x.compareTo(m.x, delta),
+        y.compareTo(m.y, delta),
+        z.compareTo(m.z, delta)
+    )
+
+    inline fun equals(m: Mat3, delta: Float = 0.0f) =
+        x.equals(m.x, delta) && y.equals(m.y, delta) && z.equals(m.z, delta)
 
     operator fun times(v: Float3) = Float3(
             x.x * v.x + y.x * v.y + z.x * v.z,
@@ -212,6 +248,7 @@ data class Mat4(
     constructor(m: Mat4) : this(m.x.copy(), m.y.copy(), m.z.copy(), m.w.copy())
 
     companion object {
+
         fun of(vararg a: Float): Mat4 {
             require(a.size >= 16)
             return Mat4(
@@ -302,6 +339,15 @@ data class Mat4(
     operator fun minus(v: Float) = Mat4(x - v, y - v, z - v, w - v)
     operator fun times(v: Float) = Mat4(x * v, y * v, z * v, w * v)
     operator fun div(v: Float) = Mat4(x / v, y / v, z / v, w / v)
+    inline fun compareTo(v: Float, delta: Float = 0.0f) = Mat4(
+        x.compareTo(v, delta),
+        y.compareTo(v, delta),
+        z.compareTo(v, delta),
+        w.compareTo(v, delta)
+    )
+
+    inline fun equals(v: Float, delta: Float = 0.0f) =
+        x.equals(v, delta) && y.equals(v, delta) && z.equals(v, delta) && w.equals(v, delta)
 
     operator fun times(m: Mat4) = Mat4(
             Float4(
@@ -330,6 +376,16 @@ data class Mat4(
             )
     )
 
+    inline fun compareTo(m: Mat4, delta: Float = 0.0f) = Mat4(
+        x.compareTo(m.x, delta),
+        y.compareTo(m.y, delta),
+        z.compareTo(m.z, delta),
+        w.compareTo(m.w, delta)
+    )
+
+    inline fun equals(m: Mat4, delta: Float = 0.0f) =
+        x.equals(m.x, delta) && y.equals(m.y, delta) && z.equals(m.z, delta) && w.equals(m.w, delta)
+
     operator fun times(v: Float4) = Float4(
             x.x * v.x + y.x * v.y + z.x * v.z+ w.x * v.w,
             x.y * v.x + y.y * v.y + z.y * v.z+ w.y * v.w,
@@ -337,6 +393,26 @@ data class Mat4(
             x.w * v.x + y.w * v.y + z.w * v.z+ w.w * v.w
     )
 
+    /**
+     * Get the Euler angles in degrees from this rotation Matrix
+     *
+     * Don't forget to extract the rotation with [rotation] if this is a transposed matrix
+     *
+     * @param order The order in which to apply rotations.
+     * Default is [RotationsOrder.ZYX] which means that the object will first be rotated around its Z
+     * axis, then its Y axis and finally its X axis.
+     *
+     * @see eulerAngles
+     */
+    fun toEulerAngles(order: RotationsOrder = RotationsOrder.ZYX) = eulerAngles(this, order)
+
+    /**
+     * Get the [Quaternion] from this rotation Matrix
+     *
+     * Don't forget to extract the rotation with [rotation] if this is a transposed matrix
+     *
+     * @see quaternion
+     */
     fun toQuaternion() = quaternion(this)
 
     fun toFloatArray() = floatArrayOf(
@@ -355,6 +431,78 @@ data class Mat4(
             """.trimIndent()
     }
 }
+
+inline fun equal(a: Mat2, b: Float, delta: Float = 0.0f) = Bool2(
+    a.x.equals(b, delta),
+    a.y.equals(b, delta)
+)
+
+inline fun equal(a: Mat2, b: Mat2, delta: Float = 0.0f) = Bool2(
+    a.x.equals(b.x, delta),
+    a.y.equals(b.y, delta)
+)
+
+inline fun notEqual(a: Mat2, b: Float, delta: Float = 0.0f) = Bool2(
+    !a.x.equals(b, delta),
+    !a.y.equals(b, delta)
+)
+
+inline fun notEqual(a: Mat2, b: Mat2, delta: Float = 0.0f) = Bool2(
+    !a.x.equals(b.x, delta),
+    !a.y.equals(b.y, delta)
+)
+
+inline fun equal(a: Mat3, b: Float, delta: Float = 0.0f) = Bool3(
+    a.x.equals(b, delta),
+    a.y.equals(b, delta),
+    a.z.equals(b, delta)
+)
+
+inline fun equal(a: Mat3, b: Mat3, delta: Float = 0.0f) = Bool3(
+    a.x.equals(b.x, delta),
+    a.y.equals(b.y, delta),
+    a.z.equals(b.z, delta)
+)
+
+inline fun notEqual(a: Mat3, b: Float, delta: Float = 0.0f) = Bool3(
+    !a.x.equals(b, delta),
+    !a.y.equals(b, delta),
+    !a.z.equals(b, delta)
+)
+
+inline fun notEqual(a: Mat3, b: Mat3, delta: Float = 0.0f) = Bool3(
+    !a.x.equals(b.x, delta),
+    !a.y.equals(b.y, delta),
+    !a.z.equals(b.z, delta)
+)
+
+inline fun equal(a: Mat4, b: Float, delta: Float = 0.0f) = Bool4(
+    a.x.equals(b, delta),
+    a.y.equals(b, delta),
+    a.z.equals(b, delta),
+    a.w.equals(b, delta)
+)
+
+inline fun equal(a: Mat4, b: Mat4, delta: Float = 0.0f) = Bool4(
+    a.x.equals(b.x, delta),
+    a.y.equals(b.y, delta),
+    a.z.equals(b.z, delta),
+    a.w.equals(b.w, delta)
+)
+
+inline fun notEqual(a: Mat4, b: Float, delta: Float = 0.0f) = Bool4(
+    !a.x.equals(b, delta),
+    !a.y.equals(b, delta),
+    !a.z.equals(b, delta),
+    !a.w.equals(b, delta)
+)
+
+inline fun notEqual(a: Mat4, b: Mat4, delta: Float = 0.0f) = Bool4(
+    !a.x.equals(b.x, delta),
+    !a.y.equals(b.y, delta),
+    !a.z.equals(b.z, delta),
+    !a.w.equals(b.w, delta)
+)
 
 fun transpose(m: Mat2) = Mat2(
         Float2(m.x.x, m.y.x),
@@ -494,14 +642,7 @@ fun rotation(m: Mat4) = Mat4(normalize(m.right), normalize(m.up), normalize(m.fo
  */
 fun rotation(d: Float3, order: RotationsOrder = RotationsOrder.ZYX): Mat4 {
     val r = transform(d, ::radians)
-    return when(order) {
-        RotationsOrder.XZY -> rotation(r.x, r.z, r.y)
-        RotationsOrder.XYZ -> rotation(r.x, r.y, r.z)
-        RotationsOrder.YXZ -> rotation(r.y, r.x, r.z)
-        RotationsOrder.YZX -> rotation(r.y, r.z, r.x)
-        RotationsOrder.ZYX -> rotation(r.z, r.y, r.x)
-        RotationsOrder.ZXY -> rotation(r.z, r.x, r.y)
-    }
+    return rotation(r[order.yaw], r[order.pitch], r[order.roll], order)
 }
 
 /**
@@ -599,13 +740,93 @@ fun rotation(quaternion: Quaternion): Mat4 {
             Float4(
                 2.0f * (n.x * n.z + n.y * n.w),
                 2.0f * (n.y * n.z - n.x * n.w),
-                1.0f - 2.0f * (n.x * n.x + n.y * n.y),
+                1.0f - 2.0f * (n.x * n.x + n.y * n.y)
             )
     )
 }
 
 /**
- * Extract Quaternion rotation from a Matrix
+ * Get the Euler angles in degrees from a rotation Matrix
+ *
+ * @param m The rotation matrix.
+ * Don't forget to extract the rotation with [rotation] if it's transposed
+ * @param order The order in which to apply rotations.
+ * Default is [RotationsOrder.ZYX] which means that the object will first be rotated around its Z
+ * axis, then its Y axis and finally its X axis.
+ */
+fun eulerAngles(m: Mat4, order: RotationsOrder = RotationsOrder.ZYX): Float3 {
+    // We need to more simplify this with RotationsOrder VectorComponents mapped to MatrixColumn
+    return transform(Float3().apply {
+        when (order) {
+            RotationsOrder.XYZ -> {
+                this[order.pitch] = asin(clamp(m.z.x, -1.0f, 1.0f))
+                if (abs(m.z.x) < 0.9999999f) {
+                    this[order.yaw] = atan2(-m.z.y, m.z.z)
+                    this[order.roll] = atan2(-m.y.x, m.x.x)
+                } else {
+                    this[order.yaw] = atan2(m.y.z, m.y.y)
+                    this[order.roll] = 0.0f
+                }
+            }
+            RotationsOrder.XZY -> {
+                this[order.pitch] = asin(-clamp(m.y.x, -1.0f, 1.0f))
+                if (abs(m.y.x) < 0.9999999f) {
+                    this[order.yaw] = atan2(m.y.z, m.y.y)
+                    this[order.roll] = atan2(m.z.x, m.x.x)
+                } else {
+                    this[order.yaw] = atan2(-m.z.y, m.z.z)
+                    this[order.roll] = 0.0f
+                }
+            }
+            RotationsOrder.YXZ -> {
+                this[order.pitch] = asin(-clamp(m.z.y, -1.0f, 1.0f))
+                if (abs(m.z.y) < 0.9999999f) {
+                    this[order.yaw] = atan2(m.z.x, m.z.z)
+                    this[order.roll] = atan2(m.x.y, m.y.y)
+                } else {
+                    this[order.yaw] = atan2(-m.x.z, m.x.x)
+                    this[order.roll] = 0.0f
+                }
+            }
+            RotationsOrder.YZX -> {
+                this[order.pitch] = asin(clamp(m.x.y, -1.0f, 1.0f))
+                if (abs(m.x.y) < 0.9999999f) {
+                    this[order.roll] = atan2(-m.z.y, m.y.y)
+                    this[order.yaw] = atan2(-m.x.z, m.x.x)
+                } else {
+                    this[order.roll] = 0.0f
+                    this[order.yaw] = atan2(m.z.x, m.z.z)
+                }
+            }
+            RotationsOrder.ZXY -> {
+                this[order.pitch] = asin(clamp(m.y.z, -1.0f, 1.0f))
+                if (abs(m.y.z) < 0.9999999f) {
+                    this[order.roll] = atan2(-m.x.z, m.z.z)
+                    this[order.yaw] = atan2(-m.y.x, m.y.y)
+                } else {
+                    this[order.roll] = 0.0f
+                    this[order.yaw] = atan2(m.x.y, m.x.x)
+                }
+            }
+            RotationsOrder.ZYX -> {
+                this[order.pitch] = asin(-clamp(m.x.z, -1.0f, 1.0f))
+                if (abs(m.x.z) < 0.9999999f) {
+                    this[order.roll] = atan2(m.y.z, m.z.z)
+                    this[order.yaw] = atan2(m.x.y, m.x.x)
+                } else {
+                    this[order.roll] = 0.0f
+                    this[order.yaw] = atan2(-m.y.x, m.y.y)
+                }
+            }
+        }
+    }, ::degrees)
+}
+
+/**
+ * Get the [Quaternion] from a rotation Matrix
+ *
+ * @param m The rotation matrix.
+ * Don't forget to extract the rotation with [rotation] if it's transposed
  */
 fun quaternion(m: Mat4): Quaternion {
     val trace = m.x.x + m.y.y + m.z.z
@@ -673,9 +894,14 @@ fun perspective(fov: Float, ratio: Float, near: Float, far: Float): Mat4 {
 }
 
 fun ortho(l: Float, r: Float, b: Float, t: Float, n: Float, f: Float) = Mat4(
-        Float4(x = 2.0f / (r - 1.0f)),
-        Float4(y = 2.0f / (t - b)),
-        Float4(z = -2.0f / (f - n)),
-        Float4(-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1.0f)
+    Float4(x = 2.0f / (r - l)),
+    Float4(y = 2.0f / (t - b)),
+    Float4(z = -2.0f / (f - n)),
+    Float4(
+        -(r + l) / (r - l),
+        -(t + b) / (t - b),
+        -(f + n) / (f - n),
+        1.0f
+    )
 )
 
