@@ -23,6 +23,7 @@
 
 #include "details/Engine.h"
 #include "details/IndirectLight.h"
+#include "details/InstanceBuffer.h"
 #include "details/Skybox.h"
 
 #include "BufferPoolAllocator.h"
@@ -202,6 +203,7 @@ void FScene::prepare(utils::JobSystem& js,
             sceneData.elementAt<VISIBILITY_STATE>(index)    = visibility;
             sceneData.elementAt<SKINNING_BUFFER>(index)     = rcm.getSkinningBufferInfo(ri);
             sceneData.elementAt<MORPHING_BUFFER>(index)     = rcm.getMorphingBufferInfo(ri);
+            sceneData.elementAt<INSTANCE_BUFFER>(index)     = rcm.getInstanceBuffer(ri);
             sceneData.elementAt<WORLD_AABB_CENTER>(index)   = worldAABB.center;
             sceneData.elementAt<VISIBLE_MASK>(index)        = 0;
             sceneData.elementAt<CHANNELS>(index)            = rcm.getChannels(ri);
@@ -307,6 +309,7 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
         auto const visibility = sceneData.elementAt<VISIBILITY_STATE>(i);
         auto const& model = sceneData.elementAt<WORLD_TRANSFORM>(i);
         auto const ri = sceneData.elementAt<RENDERABLE_INSTANCE>(i);
+        auto* instanceBuffer = sceneData.elementAt<INSTANCE_BUFFER>(i);
 
         // Using mat3f::getTransformForNormals handles non-uniform scaling, but DOESN'T guarantee that
         // the transformed normals will have unit-length, therefore they need to be normalized
@@ -320,7 +323,7 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
         // Note: if the model matrix is known to be a rigid-transform, we could just use it directly.
 
         mat3f m = mat3f::getTransformForNormals(model.upperLeft());
-        m *= mat3f(1.0f / std::sqrt(max(float3{length2(m[0]), length2(m[1]), length2(m[2])})));
+        m = mat3f::prescaleForNormals(m);
 
         // The shading normal must be flipped for mirror transformations.
         // Basically we're shading the other side of the polygon and therefore need to negate the
@@ -337,6 +340,7 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
                 visibility.skinning,
                 visibility.morphing,
                 visibility.screenSpaceContactShadows,
+                sceneData.elementAt<INSTANCE_BUFFER>(i) != nullptr,
                 sceneData.elementAt<CHANNELS>(i));
 
         uboData.morphTargetCount = sceneData.elementAt<MORPHING_BUFFER>(i).count;
@@ -347,6 +351,12 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
         uboData.userData = sceneData.elementAt<USER_DATA>(i);
 
         mHasContactShadows = mHasContactShadows || visibility.screenSpaceContactShadows;
+
+        // Prepare the InstanceBuffer for this Renderable.
+        // TODO: maybe do this inside updateUBOs? And avoid updating the actual UBO?
+        if (UTILS_UNLIKELY(instanceBuffer)) {
+            instanceBuffer->prepare(mEngine, model, uboData);
+        }
     }
 }
 

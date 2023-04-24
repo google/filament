@@ -94,6 +94,7 @@ public:
         VISIBILITY_STATE,       //   2 | visibility data of the component
         SKINNING_BUFFER,        //   8 | bones uniform buffer handle, offset
         MORPHING_BUFFER,        //  16 | weights uniform buffer handle, count, morph targets
+        INSTANCE_BUFFER,        //   8 | instance buffer for this Renderable if present, or nullptr
         WORLD_AABB_CENTER,      //  12 | world-space bounding box center of the renderable
         VISIBLE_MASK,           //   2 | each bit represents a visibility in a pass
         CHANNELS,               //   1 | currently light channels only
@@ -118,6 +119,7 @@ public:
             FRenderableManager::Visibility,             // VISIBILITY_STATE
             FRenderableManager::SkinningBindingInfo,    // SKINNING_BUFFER
             FRenderableManager::MorphingBindingInfo,    // MORPHING_BUFFER
+            FInstanceBuffer*,                           // INSTANCE_BUFFER
             math::float3,                               // WORLD_AABB_CENTER
             VisibleMaskType,                            // VISIBLE_MASK
             uint8_t,                                    // CHANNELS

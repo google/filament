@@ -32,3 +32,9 @@ struct PerRenderableData {
     highp float userData;   // TODO: We need a better solution, this currently holds the average local scale for the renderable
     highp vec4 reserved[8];
 };
+
+// Bits for flagsChannels
+#define FILAMENT_OBJECT_SKINNING_ENABLED_BIT   0x100
+#define FILAMENT_OBJECT_MORPHING_ENABLED_BIT   0x200
+#define FILAMENT_OBJECT_CONTACT_SHADOWS_BIT    0x400
+#define FILAMENT_OBJECT_INSTANCE_BUFFER_BIT    0x800

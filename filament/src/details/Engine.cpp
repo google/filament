@@ -703,6 +703,10 @@ FMorphTargetBuffer* FEngine::createMorphTargetBuffer(const MorphTargetBuffer::Bu
     return create(mMorphTargetBuffers, builder);
 }
 
+FInstanceBuffer* FEngine::createInstanceBuffer(const InstanceBuffer::Builder& builder) noexcept {
+    return create(mInstanceBuffers, builder);
+}
+
 FTexture* FEngine::createTexture(const Texture::Builder& builder) noexcept {
     return create(mTextures, builder);
 }
@@ -992,6 +996,10 @@ bool FEngine::destroy(const FStream* p) {
     return terminateAndDestroy(p, mStreams);
 }
 
+UTILS_NOINLINE
+bool FEngine::destroy(const FInstanceBuffer* p){
+    return terminateAndDestroy(p, mInstanceBuffers);
+}
 
 UTILS_NOINLINE
 bool FEngine::destroy(const FMaterial* ptr) {

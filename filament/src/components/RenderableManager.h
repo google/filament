@@ -29,6 +29,8 @@
 #include <filament/Box.h>
 #include <filament/RenderableManager.h>
 
+#include <details/InstanceBuffer.h>
+
 #include <private/filament/UibStructs.h>
 
 #include <utils/Entity.h>
@@ -143,6 +145,9 @@ public:
     inline uint8_t getPriority(Instance instance) const noexcept;
     inline uint8_t getChannels(Instance instance) const noexcept;
     inline uint16_t getInstanceCount(Instance instance) const noexcept;
+    inline FInstanceBuffer* getInstanceBuffer(Instance instance) const noexcept;
+    inline void setInstanceTransforms(Instance instance, math::mat4f const* localTransforms,
+            size_t count, size_t offset = 0) noexcept;
 
     struct SkinningBindingInfo {
         backend::Handle<backend::HwBufferObject> handle;
@@ -201,15 +206,26 @@ private:
     };
     static_assert(sizeof(MorphWeights) == 8);
 
+    struct Instances {
+        union {
+            FInstanceBuffer* buffer;
+            uint64_t padding;          // ensures the pointer is 64 bits on all archs
+        };
+        uint16_t count;
+        bool shouldDestroyBuffer; // if true, buffer was created by Filament and should be destroyed
+        char padding0[5];
+    };
+    static_assert(sizeof(Instances) == 16);
+
     enum {
-        AABB,               // user data
-        LAYERS,             // user data
-        MORPH_WEIGHTS,      // filament data, UBO storing a pointer to the morph weights information
-        CHANNELS,           // user data
-        INSTANCE_COUNT,     // user data
-        VISIBILITY,         // user data
-        PRIMITIVES,         // user data
-        BONES,              // filament data, UBO storing a pointer to the bones information
+        AABB,                   // user data
+        LAYERS,                 // user data
+        MORPH_WEIGHTS,          // filament data, UBO storing a pointer to the morph weights information
+        CHANNELS,               // user data
+        INSTANCES,              // user data
+        VISIBILITY,             // user data
+        PRIMITIVES,             // user data
+        BONES,                  // filament data, UBO storing a pointer to the bones information
         MORPH_TARGETS
     };
 
@@ -218,7 +234,7 @@ private:
             uint8_t,                         // LAYERS
             MorphWeights,                    // MORPH_WEIGHTS
             uint8_t,                         // CHANNELS
-            uint16_t,                        // INSTANCE_COUNT
+            Instances,                       // INSTANCES
             Visibility,                      // VISIBILITY
             utils::Slice<FRenderPrimitive>,  // PRIMITIVES
             Bones,                           // BONES
@@ -237,15 +253,15 @@ private:
 
             union {
                 // this specific usage of union is permitted. All fields are identical
-                Field<AABB>             aabb;
-                Field<LAYERS>           layers;
-                Field<MORPH_WEIGHTS>    morphWeights;
-                Field<CHANNELS>         channels;
-                Field<INSTANCE_COUNT>   instanceCount;
-                Field<VISIBILITY>       visibility;
-                Field<PRIMITIVES>       primitives;
-                Field<BONES>            bones;
-                Field<MORPH_TARGETS>    morphTargets;
+                Field<AABB>                 aabb;
+                Field<LAYERS>               layers;
+                Field<MORPH_WEIGHTS>        morphWeights;
+                Field<CHANNELS>             channels;
+                Field<INSTANCES>            instances;
+                Field<VISIBILITY>           visibility;
+                Field<PRIMITIVES>           primitives;
+                Field<BONES>                bones;
+                Field<MORPH_TARGETS>        morphTargets;
             };
         };
 
@@ -377,7 +393,13 @@ uint8_t FRenderableManager::getChannels(Instance instance) const noexcept {
 }
 
 uint16_t FRenderableManager::getInstanceCount(Instance instance) const noexcept {
-    return mManager[instance].instanceCount;
+    Instances const& instances = mManager[instance].instances;
+    return instances.count;
+}
+
+FInstanceBuffer* FRenderableManager::getInstanceBuffer(Instance instance) const noexcept {
+    Instances const& instances = mManager[instance].instances;
+    return instances.buffer;
 }
 
 Box const& FRenderableManager::getAABB(Instance instance) const noexcept {
@@ -420,6 +442,20 @@ utils::Slice<FRenderableManager::MorphTargets> const& FRenderableManager::getMor
 utils::Slice<FRenderableManager::MorphTargets>& FRenderableManager::getMorphTargets(
         Instance instance, uint8_t level) noexcept {
     return mManager[instance].morphTargets;
+}
+
+void FRenderableManager::setInstanceTransforms(Instance instance,
+        math::mat4f const* localTransforms, size_t count, size_t offset) noexcept {
+    Instances& instances = mManager[instance].instances;
+    ASSERT_PRECONDITION(instances.buffer != nullptr,
+            "Cannot call setInstanceTransforms(), Renderable has no instances.");
+    ASSERT_PRECONDITION(offset + count <= instances.count,
+            "setInstanceTransforms overflow. Renderable has only %zu instances, but trying to set "
+            "%zu transforms at offset %zu.",
+            instances.count,
+            count,
+            offset);
+    instances.buffer->setLocalTransforms(localTransforms, count, offset);
 }
 
 } // namespace filament

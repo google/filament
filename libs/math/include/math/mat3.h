@@ -290,6 +290,14 @@ public:
     }
 
     /**
+     * Pre-scale a matrix m by the inverse of the largest scale factor to avoid large post-transform
+     * magnitudes in the shader. This is useful for normal transformations, to avoid large
+     * post-transform magnitudes in the shader, especially in the fragment shader, where we use
+     * medium precision.
+     */
+    static constexpr TMat33<T> prescaleForNormals(const TMat33& m) noexcept;
+
+    /**
      * Packs the tangent frame represented by the specified matrix into a quaternion.
      * Reflection is preserved by encoding it as the sign of the w component in the
      * resulting quaternion. Since -0 cannot always be represented on the GPU, this
@@ -429,6 +437,12 @@ constexpr TQuaternion<T> TMat33<T>::packTangentFrame(const TMat33<T>& m, size_t 
 
     return q;
 }
+
+template<typename T>
+constexpr TMat33<T> TMat33<T>::prescaleForNormals(const TMat33<T>& m) noexcept {
+    return m * TMat33<T>(1.0 / std::sqrt(max(float3{length2(m[0]), length2(m[1]), length2(m[2])})));
+}
+
 
 }  // namespace details
 

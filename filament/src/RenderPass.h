@@ -238,17 +238,21 @@ public:
         uint32_t skinningOffset = 0;                                    // 4 bytes
         uint16_t instanceCount;                                         // 2 bytes [MSb: user]
         Variant materialVariant;                                        // 1 byte
-        uint8_t reserved[1] = {};                                       // 1 byte
+        uint8_t padding0;                                               // 1 byte
+        union {
+            FInstanceBuffer const* instanceBuffer;
+            uint64_t padding1 = {}; // ensures instanceBuffer is 8 bytes on all archs
+        };                                                              // 8 bytes
 
         static const uint16_t USER_INSTANCE_MASK = 0x8000u;
         static const uint16_t INSTANCE_COUNT_MASK = 0x7fffu;
     };
-    static_assert(sizeof(PrimitiveInfo) == 40);
+    static_assert(sizeof(PrimitiveInfo) == 48);
 
     struct alignas(8) Command {     // 64 bytes
         CommandKey key = 0;         //  8 bytes
         PrimitiveInfo primitive;    // 40 bytes
-        uint64_t reserved[2] = {};  // 16 bytes
+        uint64_t reserved[1] = {};  //  8 bytes
         bool operator < (Command const& rhs) const noexcept { return key < rhs.key; }
         // placement new declared as "throw" to avoid the compiler's null-check
         inline void* operator new (std::size_t, void* ptr) {
