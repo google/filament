@@ -40,6 +40,11 @@ android {
     dependenciesInfo {
         includeInApk = false
     }
+
+    compileOptions {
+        sourceCompatibility versions.jdk
+        targetCompatibility versions.jdk
+    }
 }
 
 dependencies {

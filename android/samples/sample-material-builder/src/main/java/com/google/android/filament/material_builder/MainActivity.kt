@@ -26,6 +26,7 @@ import android.view.animation.LinearInterpolator
 
 import com.google.android.filament.*
 import com.google.android.filament.android.DisplayHelper
+import com.google.android.filament.android.FilamentHelper
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.filamat.MaterialBuilder
 
@@ -343,6 +344,8 @@ class MainActivity : Activity() {
             camera.setProjection(45.0, aspect, 0.1, 20.0, Camera.Fov.VERTICAL)
 
             view.viewport = Viewport(0, 0, width, height)
+
+            FilamentHelper.synchronizePendingFrames(engine)
         }
     }
 }

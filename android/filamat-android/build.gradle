@@ -17,6 +17,17 @@ android {
             }
         }
     }
+
+    publishing {
+        singleVariant("fullRelease") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+        singleVariant("liteRelease") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
 }
 
 dependencies {

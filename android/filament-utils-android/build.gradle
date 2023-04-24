@@ -1,4 +1,7 @@
 apply plugin: 'kotlin-android'
+kotlin {
+    jvmToolchain(versions.jdk)
+}
 
 android {
     namespace 'com.google.android.filament.utils'
@@ -21,16 +24,11 @@ android {
             excludes += ['lib/*/libfilament-jni.so', 'lib/*/libgltfio-jni.so']
         }
     }
-}
 
-configurations.all { config ->
-    // Hack to preserve the version of the dependencies
-    if (!config.name.endsWith('Publication')) {
-        resolutionStrategy {
-            dependencySubstitution {
-                substitute(module("com.google.android.filament:gltfio-android:${VERSION_NAME}")).with(project(":gltfio-android"))
-                substitute(module("com.google.android.filament:gltfio-android-lite:${VERSION_NAME}")).with(project(":gltfio-android"))
-            }
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
         }
     }
 }
@@ -43,7 +41,7 @@ dependencies {
     implementation deps.coroutines.android
 
     api project(':filament-android')
-    api module("com.google.android.filament:gltfio-android:${VERSION_NAME}")
+    api project(':gltfio-android')
 }
 
 apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
