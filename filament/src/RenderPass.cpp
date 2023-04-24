@@ -823,10 +823,10 @@ void RenderPass::Executor::execute(backend::DriverApi& driver,
                         (info.instanceCount & PrimitiveInfo::USER_INSTANCE_MASK) != 0u;
                 if (!userInstancing && instanceCount > 1) {
                     // automatic instancing
-                    return {mInstancedUboHandle, info.index * sizeof(PerRenderableData)};
+                    return { mInstancedUboHandle, info.index * sizeof(PerRenderableData) };
                 } else {
                     // manual instancing
-                    return {mUboHandle, info.index * sizeof(PerRenderableData)};
+                    return { mUboHandle, info.index * sizeof(PerRenderableData) };
                 }
             };
 

@@ -775,7 +775,7 @@ public:
      * @see Builder::instances(size_t, InstanceBuffer*)
      */
     void setInstanceTransforms(Instance renderableInstance, math::mat4f const* localTransforms,
-            size_t count, size_t offset = 0) noexcept;
+            size_t count, size_t offset = 0);
 
     /*! \cond PRIVATE */
     template<typename T>

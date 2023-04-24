@@ -224,7 +224,7 @@ public:
         return boolish ? value : uint64_t(0);
     }
 
-    struct PrimitiveInfo { // 40 bytes
+    struct PrimitiveInfo { // 48 bytes
         union {
             FMaterialInstance const* mi;
             uint64_t padding = {}; // ensures mi is 8 bytes on all archs

@@ -147,7 +147,7 @@ public:
     inline uint16_t getInstanceCount(Instance instance) const noexcept;
     inline FInstanceBuffer* getInstanceBuffer(Instance instance) const noexcept;
     inline void setInstanceTransforms(Instance instance, math::mat4f const* localTransforms,
-            size_t count, size_t offset = 0) noexcept;
+            size_t count, size_t offset = 0) ;
 
     struct SkinningBindingInfo {
         backend::Handle<backend::HwBufferObject> handle;
@@ -445,7 +445,7 @@ utils::Slice<FRenderableManager::MorphTargets>& FRenderableManager::getMorphTarg
 }
 
 void FRenderableManager::setInstanceTransforms(Instance instance,
-        math::mat4f const* localTransforms, size_t count, size_t offset) noexcept {
+        math::mat4f const* localTransforms, size_t count, size_t offset) {
     Instances& instances = mManager[instance].instances;
     ASSERT_PRECONDITION(instances.buffer != nullptr,
             "Cannot call setInstanceTransforms(), Renderable has no instances.");
