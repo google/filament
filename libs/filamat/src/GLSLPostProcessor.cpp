@@ -594,8 +594,16 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
         optimizer.RegisterPass(CreateMergeReturnPass());
     }
 
-    optimizer
-            .RegisterPass(CreateInlineExhaustivePass())
+    auto const localCreateSimplificationPass = [&config] {
+        // Adreno GPU show artifacts after running simplication passes. We workaround this just by
+        // disabling the simplification pass for mobile + vulkan.
+        return config.shaderModel == ShaderModel::MOBILE
+                               && config.targetApi == MaterialBuilder::TargetApi::VULKAN
+                       ? std::move(CreateNullPass())
+                       : std::move(CreateSimplificationPass());
+    };
+
+    optimizer.RegisterPass(CreateInlineExhaustivePass())
             .RegisterPass(CreateAggressiveDCEPass())
             .RegisterPass(CreatePrivateToLocalPass())
             .RegisterPass(CreateLocalSingleBlockLoadStoreElimPass())
@@ -612,11 +620,11 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
             .RegisterPass(CreateAggressiveDCEPass())
             .RegisterPass(CreateRedundancyEliminationPass())
             .RegisterPass(CreateCombineAccessChainsPass())
-            .RegisterPass(CreateSimplificationPass())
+            .RegisterPass(localCreateSimplificationPass())
             .RegisterPass(CreateVectorDCEPass())
             .RegisterPass(CreateDeadInsertElimPass())
             .RegisterPass(CreateDeadBranchElimPass())
-            .RegisterPass(CreateSimplificationPass())
+            .RegisterPass(localCreateSimplificationPass())
             .RegisterPass(CreateIfConversionPass())
             .RegisterPass(CreateCopyPropagateArraysPass())
             .RegisterPass(CreateReduceLoadSizePass())
@@ -625,7 +633,7 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
             .RegisterPass(CreateRedundancyEliminationPass())
             .RegisterPass(CreateDeadBranchElimPass())
             .RegisterPass(CreateBlockMergePass())
-            .RegisterPass(CreateSimplificationPass());
+            .RegisterPass(localCreateSimplificationPass());
 }
 
 void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& config) {
