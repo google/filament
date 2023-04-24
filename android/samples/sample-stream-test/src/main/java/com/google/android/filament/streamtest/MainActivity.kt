@@ -38,6 +38,7 @@ import android.os.Build
 import android.view.MotionEvent
 import androidx.annotation.RequiresApi
 import com.google.android.filament.android.DisplayHelper
+import com.google.android.filament.android.FilamentHelper
 
 
 class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallback {
@@ -401,6 +402,8 @@ class MainActivity : Activity(), ActivityCompat.OnRequestPermissionsResultCallba
             camera.setProjection(45.0, aspect, 0.1, 20.0, Camera.Fov.VERTICAL)
 
             view.viewport = Viewport(0, 0, width, height)
+
+            FilamentHelper.synchronizePendingFrames(engine)
         }
     }
 
