@@ -9,3 +9,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 ## Release notes for next branch cut
 
 - materials: Materials can now access up to 4 global `vec4` visible by all materials [⚠️ **Recompile Materials**]
+- engine: a local transform can now be supplied for each GPU instance [⚠️ **Recompile materials**]
