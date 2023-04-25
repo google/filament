@@ -62,6 +62,26 @@ namespace filamat {
 using namespace utils;
 using namespace filament;
 
+// Note: the VertexAttribute enum value must match the index in the array
+const MaterialBuilder::AttributeDatabase MaterialBuilder::sAttributeDatabase = {{
+        { "position",      AttributeType::FLOAT4, VertexAttribute::POSITION     },
+        { "tangents",      AttributeType::FLOAT4, VertexAttribute::TANGENTS     },
+        { "color",         AttributeType::FLOAT4, VertexAttribute::COLOR        },
+        { "uv0",           AttributeType::FLOAT2, VertexAttribute::UV0          },
+        { "uv1",           AttributeType::FLOAT2, VertexAttribute::UV1          },
+        { "bone_indices",  AttributeType::UINT4,  VertexAttribute::BONE_INDICES },
+        { "bone_weights",  AttributeType::FLOAT4, VertexAttribute::BONE_WEIGHTS },
+        { },
+        { "custom0",       AttributeType::FLOAT4, VertexAttribute::CUSTOM0      },
+        { "custom1",       AttributeType::FLOAT4, VertexAttribute::CUSTOM1      },
+        { "custom2",       AttributeType::FLOAT4, VertexAttribute::CUSTOM2      },
+        { "custom3",       AttributeType::FLOAT4, VertexAttribute::CUSTOM3      },
+        { "custom4",       AttributeType::FLOAT4, VertexAttribute::CUSTOM4      },
+        { "custom5",       AttributeType::FLOAT4, VertexAttribute::CUSTOM5      },
+        { "custom6",       AttributeType::FLOAT4, VertexAttribute::CUSTOM6      },
+        { "custom7",       AttributeType::FLOAT4, VertexAttribute::CUSTOM7      },
+}};
+
 std::atomic<int> MaterialBuilderBase::materialBuilderClients(0);
 
 inline void assertSingleTargetApi(MaterialBuilderBase::TargetApi api) {
@@ -582,15 +602,16 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
 }
 
 bool MaterialBuilder::findProperties(backend::ShaderStage type,
-        MaterialBuilder::PropertyList& allProperties) noexcept {
+        MaterialBuilder::PropertyList& allProperties,
+        CodeGenParams const& semanticCodeGenParams) noexcept {
 #ifndef FILAMAT_LITE
     GLSLTools glslTools;
-    std::string shaderCodeAllProperties = peek(type, mSemanticCodeGenParams, allProperties);
+    std::string shaderCodeAllProperties = peek(type, semanticCodeGenParams, allProperties);
     // Populate mProperties with the properties set in the shader.
     if (!glslTools.findProperties(type, shaderCodeAllProperties, mProperties,
-            mSemanticCodeGenParams.targetApi,
-            mSemanticCodeGenParams.targetLanguage,
-            mSemanticCodeGenParams.shaderModel)) {
+            semanticCodeGenParams.targetApi,
+            semanticCodeGenParams.targetLanguage,
+            semanticCodeGenParams.shaderModel)) {
         if (mPrintShaders) {
             slog.e << shaderCodeAllProperties << io::endl;
         }
@@ -602,7 +623,7 @@ bool MaterialBuilder::findProperties(backend::ShaderStage type,
 #endif
 }
 
-bool MaterialBuilder::findAllProperties() noexcept {
+bool MaterialBuilder::findAllProperties(CodeGenParams const& semanticCodeGenParams) noexcept {
     if (mMaterialDomain != MaterialDomain::SURFACE) {
         return true;
     }
@@ -615,10 +636,10 @@ bool MaterialBuilder::findAllProperties() noexcept {
     // static code analyse the AST.
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MATERIAL_PROPERTIES_COUNT, true);
-    if (!findProperties(ShaderStage::FRAGMENT, allProperties)) {
+    if (!findProperties(ShaderStage::FRAGMENT, allProperties, semanticCodeGenParams)) {
         return false;
     }
-    if (!findProperties(ShaderStage::VERTEX, allProperties)) {
+    if (!findProperties(ShaderStage::VERTEX, allProperties, semanticCodeGenParams)) {
         return false;
     }
     return true;
@@ -632,13 +653,13 @@ bool MaterialBuilder::findAllProperties() noexcept {
 #endif
 }
 
-bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info) noexcept {
+bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info,
+        CodeGenParams const& semanticCodeGenParams) noexcept {
 #ifndef FILAMAT_LITE
     using namespace backend;
-    GLSLTools glslTools;
 
-    TargetApi targetApi = mSemanticCodeGenParams.targetApi;
-    TargetLanguage targetLanguage = mSemanticCodeGenParams.targetLanguage;
+    TargetApi targetApi = semanticCodeGenParams.targetApi;
+    TargetLanguage const targetLanguage = semanticCodeGenParams.targetLanguage;
     assertSingleTargetApi(targetApi);
 
     if (mEnableFramebufferFetch) {
@@ -647,20 +668,24 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info) noexcept {
     }
 
     bool result = false;
-    ShaderModel model = mSemanticCodeGenParams.shaderModel;
+    std::string shaderCode;
+    ShaderModel const model = semanticCodeGenParams.shaderModel;
     if (mMaterialDomain == filament::MaterialDomain::COMPUTE) {
-        std::string shaderCode = peek(ShaderStage::COMPUTE, mSemanticCodeGenParams, mProperties);
+        shaderCode = peek(ShaderStage::COMPUTE, semanticCodeGenParams, mProperties);
         result = GLSLTools::analyzeComputeShader(shaderCode, model,
                 targetApi, targetLanguage, info);
     } else {
-        std::string shaderCode = peek(ShaderStage::VERTEX, mSemanticCodeGenParams, mProperties);
+        shaderCode = peek(ShaderStage::VERTEX, semanticCodeGenParams, mProperties);
         result = GLSLTools::analyzeVertexShader(shaderCode, model, mMaterialDomain,
                 targetApi, targetLanguage, info);
         if (result) {
-            shaderCode = peek(ShaderStage::FRAGMENT, mSemanticCodeGenParams, mProperties);
+            shaderCode = peek(ShaderStage::FRAGMENT, semanticCodeGenParams, mProperties);
             result = GLSLTools::analyzeFragmentShader(shaderCode, model, mMaterialDomain,
                     targetApi, targetLanguage, mCustomSurfaceShading, info);
         }
+    }
+    if (!result && mPrintShaders) {
+        slog.e << shaderCode << io::endl;
     }
     return result;
 #else
@@ -816,7 +841,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                             shaderModel, targetApi, targetLanguage, info, v.variant, mInterpolation);
                 } else if (v.stage == backend::ShaderStage::COMPUTE) {
                     shader = sg.createComputeProgram(
-                            shaderModel, targetApi, targetLanguage, info, v.variant);
+                            shaderModel, targetApi, targetLanguage, info);
                 }
 
 #ifdef FILAMAT_LITE
@@ -847,13 +872,16 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                     config.glsl.subpassInputToColorLocation.emplace_back(0, 0);
                 }
 
-                bool ok = postProcessor.process(shader, config, pGlsl, pSpirv, pMsl);
+                bool const ok = postProcessor.process(shader, config, pGlsl, pSpirv, pMsl);
 #else
                 bool ok = true;
 #endif
                 if (!ok) {
                     showErrorMessage(mMaterialName.c_str_safe(), v.variant, targetApi, v.stage, shader);
                     cancelJobs = true;
+                    if (mPrintShaders) {
+                        slog.e << shader << io::endl;
+                    }
                     return;
                 }
 
@@ -865,7 +893,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 
                 // NOTE: Everything below touches shared structures protected by a lock
                 // NOTE: do not execute expensive work from here on!
-                std::unique_lock<Mutex> lock(entriesLock);
+                std::unique_lock<Mutex> const lock(entriesLock);
 
                 // below we rely on casting ShaderStage to uint8_t
                 static_assert(sizeof(filament::backend::ShaderStage) == 1);
@@ -1076,11 +1104,19 @@ error:
     }
 #endif
 
-    if (!findAllProperties()) {
+    // For finding properties and running semantic analysis, we always use the same code gen
+    // permutation. This is the first permutation generated with default arguments passed to matc.
+    CodeGenParams const semanticCodeGenParams = {
+            .shaderModel = ShaderModel::MOBILE,
+            .targetApi = TargetApi::OPENGL,
+            .targetLanguage = TargetLanguage::SPIRV
+    };
+
+    if (!findAllProperties(semanticCodeGenParams)) {
         goto error;
     }
 
-    if (!runSemanticAnalysis(info)) {
+    if (!runSemanticAnalysis(info, semanticCodeGenParams)) {
         goto error;
     }
 
@@ -1232,7 +1268,7 @@ std::string MaterialBuilder::peek(backend::ShaderStage stage,
         case backend::ShaderStage::COMPUTE:
             return sg.createComputeProgram(
                     params.shaderModel, params.targetApi, params.targetLanguage,
-                    info, {});
+                    info);
     }
 }
 

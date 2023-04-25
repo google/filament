@@ -611,115 +611,12 @@ VkComponentMapping getSwizzleMap(TextureSwizzle swizzle[4]) {
     return map;
 }
 
-VkImageViewType getImageViewType(SamplerType target) {
-    switch (target) {
-        case SamplerType::SAMPLER_CUBEMAP:
-            return VK_IMAGE_VIEW_TYPE_CUBE;
-        case SamplerType::SAMPLER_2D_ARRAY:
-            return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
-            return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
-        case  SamplerType::SAMPLER_3D:
-            return VK_IMAGE_VIEW_TYPE_3D;
-        default:
-            return VK_IMAGE_VIEW_TYPE_2D;
-    }
-}
-
-// Between Driver API calls, non-presentable texture images are generally kept either in the
-// UNDEFINED layout, or in the usage-specific layout specified by this function. This simple
-// convention allows the use of a bitfield to represent layout in RenderPassKey. However there are
-// exceptions for depth and for transient use of specialized layouts, which is why VulkanTexture
-// tracks actual layout at the subresource level.
-VkImageLayout getDefaultImageLayout(TextureUsage usage) {
-    if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
-        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    }
-
-    // Filament sometimes samples from one miplevel while writing to another level in the same
-    // texture (e.g. bloom does this). Moreover we'd like to avoid lots of expensive layout
-    // transitions. So, keep it simple and use GENERAL for all color-attachable textures.
-    if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
-        return VK_IMAGE_LAYOUT_GENERAL;
-    }
-
-    // Finally, the layout for an immutable texture is optimal read-only.
-    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-}
-
 VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags) {
     VkShaderStageFlags flags = 0x0;
     if (any(stageFlags & ShaderStageFlags::VERTEX))     flags |= VK_SHADER_STAGE_VERTEX_BIT;
     if (any(stageFlags & ShaderStageFlags::FRAGMENT))   flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
     return flags;
 }
-
-void transitionImageLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transition) {
-    if (transition.oldLayout == transition.newLayout) {
-        return;
-    }
-    assert_invariant(transition.image != VK_NULL_HANDLE && "Please call bindToSwapChain.");
-    VkImageMemoryBarrier barrier = {};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = transition.oldLayout;
-    barrier.newLayout = transition.newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = transition.image;
-    barrier.subresourceRange = transition.subresources;
-    barrier.srcAccessMask = transition.srcAccessMask;
-    barrier.dstAccessMask = transition.dstAccessMask;
-    vkCmdPipelineBarrier(cmdbuffer, transition.srcStage, transition.dstStage, 0, 0, nullptr, 0,
-            nullptr, 1, &barrier);
-}
-
-VulkanLayoutTransition textureTransitionHelper(VulkanLayoutTransition transition) {
-    const bool isTransferSrc = transition.oldLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    switch (transition.newLayout) {
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-            transition.srcAccessMask = 0;
-            transition.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            transition.srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            transition.dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-            transition.srcAccessMask = 0;
-            transition.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-            transition.srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            transition.dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-        case VK_IMAGE_LAYOUT_GENERAL:
-            transition.srcAccessMask
-                    = isTransferSrc ? VK_ACCESS_TRANSFER_READ_BIT : VK_ACCESS_TRANSFER_WRITE_BIT;
-            transition.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            transition.dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            transition.srcAccessMask
-                    = isTransferSrc ? VK_ACCESS_TRANSFER_READ_BIT : VK_ACCESS_TRANSFER_WRITE_BIT;
-            transition.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
-                                       | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            transition.dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-            break;
-            // We support PRESENT as a target layout to allow blitting from the swap chain.
-            // See also SwapChain::makePresentable().
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-            transition.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-            transition.dstAccessMask = 0;
-            transition.srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            transition.dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            break;
-
-        default:
-            PANIC_POSTCONDITION("Unsupported layout transition.");
-    }
-    return transition;
-}
-
 
 bool equivalent(const VkRect2D& a, const VkRect2D& b) {
     // These are all integers so there's no need for an epsilon.
@@ -755,17 +652,3 @@ uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask) {
 }
 
 } // namespace filament::backend
-
-bool operator<(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b) {
-    if (a.aspectMask < b.aspectMask) return true;
-    if (a.aspectMask > b.aspectMask) return false;
-    if (a.baseMipLevel < b.baseMipLevel) return true;
-    if (a.baseMipLevel > b.baseMipLevel) return false;
-    if (a.levelCount < b.levelCount) return true;
-    if (a.levelCount > b.levelCount) return false;
-    if (a.baseArrayLayer < b.baseArrayLayer) return true;
-    if (a.baseArrayLayer > b.baseArrayLayer) return false;
-    if (a.layerCount < b.layerCount) return true;
-    if (a.layerCount > b.layerCount) return false;
-    return false;
-}

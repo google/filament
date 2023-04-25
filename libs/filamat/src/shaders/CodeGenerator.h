@@ -77,6 +77,8 @@ public:
 
     static utils::io::sstream& generateEpilog(utils::io::sstream& out);
 
+    static utils::io::sstream& generateCommonTypes(utils::io::sstream& out, ShaderStage stage);
+
     // generate common functions for the given shader
     static utils::io::sstream& generateCommon(utils::io::sstream& out, ShaderStage stage);
     static utils::io::sstream& generatePostProcessCommon(utils::io::sstream& out, ShaderStage type);
@@ -97,11 +99,10 @@ public:
             filament::Variant variant, bool hasShadowMultiplier);
 
     // generate the shader's code for the screen-space reflections
-    static utils::io::sstream& generateShaderReflections(utils::io::sstream& out, ShaderStage type,
-            filament::Variant variant);
+    static utils::io::sstream& generateShaderReflections(utils::io::sstream& out, ShaderStage type);
 
     // generate declarations for custom interpolants
-    static utils::io::sstream& generateVariable(utils::io::sstream& out, ShaderStage type,
+    static utils::io::sstream& generateVariable(utils::io::sstream& out, ShaderStage stage,
             const utils::CString& name, size_t index);
 
     // generate declarations for non-custom "in" variables
@@ -184,15 +185,12 @@ private:
     // return name of the material property (e.g.: "ROUGHNESS")
     static char const* getConstantName(MaterialBuilder::Property property) noexcept;
 
-    static char const* getPrecisionQualifier(filament::backend::Precision precision,
-            filament::backend::Precision defaultPrecision) noexcept;
+    static char const* getPrecisionQualifier(filament::backend::Precision precision) noexcept;
 
-    ShaderModel mShaderModel;
-    TargetApi mTargetApi;
-    TargetLanguage mTargetLanguage;
-    FeatureLevel mFeatureLevel;
+    // return type (e.g.: "vec3", "vec4", "float")
+    static char const* getTypeName(UniformType type) noexcept;
 
-    // return type name of uniform  (e.g.: "vec3", "vec4", "float")
+    // return type name of uniform Field (e.g.: "vec3", "vec4", "float")
     static char const* getUniformTypeName(filament::BufferInterfaceBlock::FieldInfo const& info) noexcept;
 
     // return type name of output  (e.g.: "vec3", "vec4", "float")
@@ -202,6 +200,11 @@ private:
     static char const* getInterpolationQualifier(filament::Interpolation interpolation) noexcept;
 
     static bool hasPrecision(filament::BufferInterfaceBlock::Type type) noexcept;
+
+    ShaderModel mShaderModel;
+    TargetApi mTargetApi;
+    TargetLanguage mTargetLanguage;
+    FeatureLevel mFeatureLevel;
 };
 
 } // namespace filamat

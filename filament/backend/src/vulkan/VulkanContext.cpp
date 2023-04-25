@@ -236,8 +236,8 @@ VkInstance createInstance(const char* const* ppRequiredExtensions, uint32_t requ
     if (!enabledLayers.empty()) {
         // If layers are supported, Check if VK_EXT_validation_features is supported.
         const FixedCapacityVector<VkExtensionProperties> availableExts =
-	        filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
-		        "VK_LAYER_KHRONOS_validation");
+                filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
+                        "VK_LAYER_KHRONOS_validation");
         for (const auto& extProps : availableExts) {
             if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
                 validationFeaturesSupported = true;
@@ -548,8 +548,8 @@ VkFormat VulkanAttachment::getFormat() const {
     return texture ? texture->getVkFormat() : VK_FORMAT_UNDEFINED;
 }
 
-VkImageLayout VulkanAttachment::getLayout() const {
-    return texture ? texture->getVkLayout(layer, level) : VK_IMAGE_LAYOUT_UNDEFINED;
+VulkanLayout VulkanAttachment::getLayout() const {
+    return texture ? texture->getLayout(layer, level) : VulkanLayout::UNDEFINED;
 }
 
 VkExtent2D VulkanAttachment::getExtent2D() const {
@@ -559,7 +559,27 @@ VkExtent2D VulkanAttachment::getExtent2D() const {
 
 VkImageView VulkanAttachment::getImageView(VkImageAspectFlags aspect) const {
     assert_invariant(texture);
-    return texture->getAttachmentView(level, layer, aspect);
+    return texture->getAttachmentView(getSubresourceRange(aspect));
+}
+
+VkImageSubresourceRange VulkanAttachment::getSubresourceRange(VkImageAspectFlags aspect) const {
+    assert_invariant(texture);
+    uint32_t levelCount = 1;
+    uint32_t layerCount = 1;
+    // For depth attachments, we consider all the subresource range since layout transitions of
+    // depth and stencil attachments should always be carried out for all subresources.
+    if (aspect & VK_IMAGE_ASPECT_DEPTH_BIT) {
+        auto range = texture->getPrimaryRange();
+        levelCount = range.levelCount;
+        layerCount = range.layerCount;
+    }
+    return {
+            .aspectMask = aspect,
+            .baseMipLevel = uint32_t(level),
+            .levelCount = levelCount,
+            .baseArrayLayer = uint32_t(layer),
+            .layerCount = layerCount,
+    };
 }
 
 void VulkanContext::initialize(const char* const* ppRequiredExtensions,

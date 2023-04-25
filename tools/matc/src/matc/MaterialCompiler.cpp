@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <iostream>
+#include <utility>
 
 #include <filamat/MaterialBuilder.h>
 
@@ -71,7 +72,7 @@ bool MaterialCompiler::processMaterial(const MaterialLexeme& jsonLexeme,
     jlexer.lex(jsonLexeme.getStart(), jsonLexeme.getSize(), jsonLexeme.getLine());
 
     JsonishParser parser(jlexer.getLexemes());
-    std::unique_ptr<JsonishObject> json = parser.parse();
+    std::unique_ptr<JsonishObject> const json = parser.parse();
 
     if (json == nullptr) {
         std::cerr << "JsonishParser error (see above)." << std::endl;
@@ -79,7 +80,7 @@ bool MaterialCompiler::processMaterial(const MaterialLexeme& jsonLexeme,
     }
 
     ParametersProcessor parametersProcessor;
-    bool ok = parametersProcessor.process(builder, *json);
+    bool const ok = parametersProcessor.process(builder, *json);
     if (!ok) {
         std::cerr << "Error while processing material." << std::endl;
         return false;
@@ -91,8 +92,8 @@ bool MaterialCompiler::processMaterial(const MaterialLexeme& jsonLexeme,
 bool MaterialCompiler::processVertexShader(const MaterialLexeme& lexeme,
         MaterialBuilder& builder) const noexcept {
 
-    MaterialLexeme trimmedLexeme = lexeme.trimBlockMarkers();
-    std::string shaderStr = trimmedLexeme.getStringValue();
+    MaterialLexeme const trimmedLexeme = lexeme.trimBlockMarkers();
+    std::string const shaderStr = trimmedLexeme.getStringValue();
 
     // getLine() returns a line number, with 1 being the first line, but .material wants a 0-based
     // line number offset, where 0 is the first line.
@@ -103,8 +104,8 @@ bool MaterialCompiler::processVertexShader(const MaterialLexeme& lexeme,
 bool MaterialCompiler::processFragmentShader(const MaterialLexeme& lexeme,
         MaterialBuilder& builder) const noexcept {
 
-    MaterialLexeme trimmedLexeme = lexeme.trimBlockMarkers();
-    std::string shaderStr = trimmedLexeme.getStringValue();
+    MaterialLexeme const trimmedLexeme = lexeme.trimBlockMarkers();
+    std::string const shaderStr = trimmedLexeme.getStringValue();
 
     // getLine() returns a line number, with 1 being the first line, but .material wants a 0-based
     // line number offset, where 0 is the first line.
@@ -117,8 +118,7 @@ bool MaterialCompiler::processComputeShader(const MaterialLexeme& lexeme,
     return MaterialCompiler::processFragmentShader(lexeme, builder);
 }
 
-bool MaterialCompiler::ignoreLexeme(const MaterialLexeme& lexeme,
-        MaterialBuilder& builder) const noexcept {
+bool MaterialCompiler::ignoreLexeme(const MaterialLexeme&, MaterialBuilder&) const noexcept {
     return true;
 }
 
@@ -139,7 +139,7 @@ bool MaterialCompiler::processMaterialJSON(const JsonishValue* value,
     }
 
     ParametersProcessor parametersProcessor;
-    bool ok = parametersProcessor.process(builder, *value->toJsonObject());
+    bool const ok = parametersProcessor.process(builder, *value->toJsonObject());
     if (!ok) {
         std::cerr << "Error while processing material." << std::endl;
         return false;
@@ -208,12 +208,12 @@ bool MaterialCompiler::processComputeShaderJSON(const JsonishValue* value,
 }
 
 bool MaterialCompiler::ignoreLexemeJSON(const JsonishValue*,
-        filamat::MaterialBuilder& builder) const noexcept {
+        filamat::MaterialBuilder&) const noexcept {
     return true;
 }
 
 static bool reflectParameters(const MaterialBuilder& builder) {
-    uint8_t count = builder.getParameterCount();
+    uint8_t const count = builder.getParameterCount();
     const MaterialBuilder::ParameterList& parameters = builder.getParameters();
 
     std::cout << "{" << std::endl;
@@ -316,7 +316,7 @@ bool MaterialCompiler::run(const Config& config) {
                 ++endCursor;
             }
             // At this point, cursor points to the F in ${FOO} and endCursor points to the }.
-            std::string_view macro(&buffer[cursor], endCursor - cursor);
+            std::string_view const macro(&buffer[cursor], endCursor - cursor);
             if (auto iter = templateMap.find(macro); iter != templateMap.end()) {
                 modifiedSize -= macro.size() + 3;
                 modifiedSize += iter->second.size();
@@ -342,24 +342,24 @@ bool MaterialCompiler::run(const Config& config) {
             ssize_t endCursor = cursor;
             while (buffer[endCursor] != '}') ++endCursor;
             // At this point, cursor points to the F in ${FOO} and endCursor points to the }.
-            std::string_view macro(&buffer[cursor], endCursor - cursor);
+            std::string_view const macro(&buffer[cursor], endCursor - cursor);
             const std::string& val = templateMap.find(macro)->second;
             for (size_t i = 0, n = val.size(); i < n; ++i, ++dstCursor) {
                 modifiedBuffer[dstCursor] = val[i];
             }
             cursor = endCursor;
         }
-        buffer.reset(modifiedBuffer.release());
+        buffer = std::move(modifiedBuffer);
         size = modifiedSize;
     }
 
-    utils::Path materialFilePath = utils::Path(input->getName()).getAbsolutePath();
+    utils::Path const materialFilePath = utils::Path(input->getName()).getAbsolutePath();
     assert(materialFilePath.isFile());
 
     if (config.rawShaderMode()) {
         const std::string extension = materialFilePath.getExtension();
         glslang::InitializeProcess();
-        bool success = compileRawShader(buffer.get(), size, config.isDebug(), config.getOutput(),
+        bool const success = compileRawShader(buffer.get(), size, config.isDebug(), config.getOutput(),
                 extension.c_str());
         glslang::FinalizeProcess();
         return success;
@@ -414,7 +414,7 @@ bool MaterialCompiler::run(const Config& config) {
     js.adopt();
 
     // Write builder.build() to output.
-    Package package = builder.build(js);
+    Package const package = builder.build(js);
 
     js.emancipate();
     MaterialBuilder::shutdown();
@@ -468,9 +468,9 @@ bool MaterialCompiler::parseMaterialAsJSON(const char* buffer, size_t size,
         }
 
         // Retrieve function member pointer
-        MaterialConfigProcessorJSON p =  mConfigProcessorJSON.at(key);
+        MaterialConfigProcessorJSON const p =  mConfigProcessorJSON.at(key);
         // Call it.
-        bool ok = (*this.*p)(entry.second, builder);
+        bool const ok = (*this.*p)(entry.second, builder);
         if (!ok) {
             std::cerr << "Error while processing block with key:'" << key << "'" << std::endl;
             return false;
@@ -539,7 +539,7 @@ bool MaterialCompiler::parseMaterial(const char* buffer, size_t size,
                 return false;
             }
         } else if (lexeme.getType() == MaterialType::BLOCK) {
-            MaterialConfigProcessor processor = mConfigProcessor.at(identifier);
+            MaterialConfigProcessor const processor = mConfigProcessor.at(identifier);
             if (!(*this.*processor)(lexeme, builder)) {
                 std::cerr << "Error while processing block with key:'" << identifier << "'"
                           << std::endl;
@@ -559,7 +559,7 @@ bool MaterialCompiler::compileRawShader(const char* glsl, size_t size, bool isDe
     const EShLanguage shLang = !strcmp(ext, "vs") ? EShLangVertex : EShLangFragment;
 
     // Add a terminating null by making a copy of the GLSL string.
-    std::string nullTerminated(glsl, size);
+    std::string const nullTerminated(glsl, size);
     glsl = nullTerminated.c_str();
 
     TShader tShader(shLang);
@@ -571,7 +571,7 @@ bool MaterialCompiler::compileRawShader(const char* glsl, size_t size, bool isDe
 
     tShader.setAutoMapBindings(true);
 
-    bool parseOk = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
+    bool const parseOk = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!parseOk) {
         std::cerr << "ERROR: Unable to parse " << ext << ":" << std::endl;
         std::cerr << tShader.getInfoLog() << std::endl;
@@ -582,7 +582,7 @@ bool MaterialCompiler::compileRawShader(const char* glsl, size_t size, bool isDe
     // SPIR-V types
     TProgram program;
     program.addShader(&tShader);
-    bool linkOk = program.link(msg);
+    bool const linkOk = program.link(msg);
     if (!linkOk) {
         std::cerr << "ERROR: link failed " << std::endl << tShader.getInfoLog() << std::endl;
         return false;
@@ -592,7 +592,7 @@ bool MaterialCompiler::compileRawShader(const char* glsl, size_t size, bool isDe
     SpvOptions options;
     GlslangToSpv(*tShader.getIntermediate(), spirv, &options);
 
-    if (spirv.size() == 0) {
+    if (spirv.empty()) {
         std::cerr << "SPIRV blob is empty." << std::endl;
         return false;
     }

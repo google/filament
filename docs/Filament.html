@@ -3164,7 +3164,7 @@ I(f(n, v, \alpha))        \equiv \frac{1}{N}\sum_{\forall \, i \in image} f(l_i,
 </p><p>
 
 However, in practice we're using <em class="underscore">importance sampling</em> which needs to take the \(pdf\) of the distribution
-into account and adds a term \(\frac{\left&lt;\VoH\right&gt;}{D(h_i, \alpha)\left&lt;\NoH\right&gt;}\).
+into account and adds a term \(\frac{4\left&lt;\VoH\right&gt;}{D(h_i, \alpha)\left&lt;\NoH\right&gt;}\).
 See <a href="#importancesamplingfortheibl">Importance Sampling For The IBL</a> section:
 
 </p><p>
@@ -5274,7 +5274,7 @@ The <em class="underscore">important direction samples</em> \(l_i\) are calculat
 </p><p>
 
 $$\begin{equation}
-p(T_r(x)) = p(x) |J(T_r)|
+p(T_r(x)) = p(x) |J(T_r)|^{-1}
 \end{equation}$$
 
 </p><p>
@@ -5285,8 +5285,8 @@ the transform from \(h_i\) to \(l_i\) and the determinant of its Jacobian is giv
 </p><p>
 
 $$\begin{equation}\label{iblPDF}
-p(l,v,\Theta) = D(h,\alpha) \left&lt; \NoH \right&gt; |J_{h \rightarrow l}| \\
-|J_{h \rightarrow l}| = \frac{1}{4 \left&lt; \VoH \right&gt;}
+p(l,v,\Theta) = D(h,\alpha) \left&lt; \NoH \right&gt; |J_{h \rightarrow l}|^{-1} \\
+|J_{h \rightarrow l}| = 4 \left&lt; \VoH \right&gt;
 \end{equation}$$
 
 </p>

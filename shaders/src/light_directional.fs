@@ -27,7 +27,7 @@ Light getDirectionalLight() {
     light.l = sampleSunAreaLight(frameUniforms.lightDirection);
     light.attenuation = 1.0;
     light.NoL = saturate(dot(shading_normal, light.l));
-    light.channels = frameUniforms.lightChannels & 0xFFu;
+    light.channels = frameUniforms.lightChannels & 0xFF;
     return light;
 }
 
@@ -36,8 +36,8 @@ void evaluateDirectionalLight(const MaterialInputs material,
 
     Light light = getDirectionalLight();
 
-    uint channels = object_uniforms.flagsChannels & 0xFFu;
-    if ((light.channels & channels) == 0u) {
+    int channels = object_uniforms.flagsChannels & 0xFF;
+    if ((light.channels & channels) == 0) {
         return;
     }
 
@@ -52,15 +52,15 @@ void evaluateDirectionalLight(const MaterialInputs material,
     if (light.NoL > 0.0) {
         float ssContactShadowOcclusion = 0.0;
 
-        uint cascade = getShadowCascade();
-        bool cascadeHasVisibleShadows = bool(frameUniforms.cascades & ((1u << cascade) << 8u));
-        bool hasDirectionalShadows = bool(frameUniforms.directionalShadows & 1u);
+        int cascade = getShadowCascade();
+        bool cascadeHasVisibleShadows = bool(frameUniforms.cascades & ((1 << cascade) << 8));
+        bool hasDirectionalShadows = bool(frameUniforms.directionalShadows & 1);
         if (hasDirectionalShadows && cascadeHasVisibleShadows) {
             highp vec4 shadowPosition = getShadowPosition(cascade);
-            visibility = shadow(true, light_shadowMap, cascade, shadowPosition, 0.0f);
+            visibility = shadow(true, light_shadowMap, cascade, shadowPosition, 0.0);
         }
-        if ((frameUniforms.directionalShadows & 0x2u) != 0u && visibility > 0.0) {
-            if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {
+        if ((frameUniforms.directionalShadows & 0x2) != 0 && visibility > 0.0) {
+            if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0) {
                 ssContactShadowOcclusion = screenSpaceContactShadow(light.l);
             }
         }

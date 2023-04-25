@@ -62,7 +62,7 @@ public:
 
     std::string createComputeProgram(filament::backend::ShaderModel shaderModel,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-            MaterialInfo const& material, filament::Variant variant) const noexcept;
+            MaterialInfo const& material) const noexcept;
 
     /**
      * When a GLSL shader is optimized we run it through an intermediate SPIR-V
@@ -75,6 +75,23 @@ public:
             MaterialInfo const& material) noexcept;
 
 private:
+    static void generateVertexDomainDefines(utils::io::sstream& out,
+            filament::VertexDomain domain) noexcept;
+
+    static void generateSurfaceMaterialVariantProperties(utils::io::sstream& out,
+            MaterialBuilder::PropertyList const properties,
+            const MaterialBuilder::PreprocessorDefineList& defines) noexcept;
+
+    static void generateSurfaceMaterialVariantDefines(utils::io::sstream& out,
+            filament::backend::ShaderStage stage,
+            MaterialInfo const& material, filament::Variant variant) noexcept;
+
+    static void generatePostProcessMaterialVariantDefines(utils::io::sstream& out,
+            filament::PostProcessVariant variant) noexcept;
+
+    static void generateUserSpecConstants(
+            const CodeGenerator& cg, utils::io::sstream& fs,
+            MaterialBuilder::ConstantList const& constants);
 
     std::string createPostProcessVertexProgram(filament::backend::ShaderModel sm,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
@@ -83,6 +100,9 @@ private:
     std::string createPostProcessFragmentProgram(filament::backend::ShaderModel sm,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
             MaterialInfo const& material, uint8_t variant) const noexcept;
+
+    static void appendShader(utils::io::sstream& ss,
+            const utils::CString& shader, size_t lineOffset) noexcept;
 
     MaterialBuilder::PropertyList mProperties;
     MaterialBuilder::VariableList mVariables;

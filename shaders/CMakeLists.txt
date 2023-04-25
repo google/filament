@@ -12,7 +12,6 @@ endif()
 # ==================================================================================================
 set(SHADERS
         src/ambient_occlusion.fs
-        src/attributes.vs
         src/brdf.fs
         src/common_defines.glsl
         src/common_getters.glsl

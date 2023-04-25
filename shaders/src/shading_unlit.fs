@@ -46,15 +46,15 @@ vec4 evaluateMaterial(const MaterialInputs material) {
 #if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
 #if defined(VARIANT_HAS_SHADOWING)
     float visibility = 1.0;
-    uint cascade = getShadowCascade();
-    bool cascadeHasVisibleShadows = bool(frameUniforms.cascades & ((1u << cascade) << 8u));
-    bool hasDirectionalShadows = bool(frameUniforms.directionalShadows & 1u);
+    int cascade = getShadowCascade();
+    bool cascadeHasVisibleShadows = bool(frameUniforms.cascades & ((1 << cascade) << 8));
+    bool hasDirectionalShadows = bool(frameUniforms.directionalShadows & 1);
     if (hasDirectionalShadows && cascadeHasVisibleShadows) {
         highp vec4 shadowPosition = getShadowPosition(cascade);
-        visibility = shadow(true, light_shadowMap, cascade, shadowPosition, 0.0f);
+        visibility = shadow(true, light_shadowMap, cascade, shadowPosition, 0.0);
     }
-    if ((frameUniforms.directionalShadows & 0x2u) != 0u && visibility > 0.0) {
-        if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {
+    if ((frameUniforms.directionalShadows & 0x2) != 0 && visibility > 0.0) {
+        if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0) {
             visibility *= (1.0 - screenSpaceContactShadow(frameUniforms.lightDirection));
         }
     }

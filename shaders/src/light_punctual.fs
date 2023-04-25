@@ -153,12 +153,12 @@ Light getLight(const uint lightIndex) {
     light.direction = direction;
     light.NoL = saturate(dot(shading_normal, light.l));
     light.worldPosition = positionFalloff.xyz;
-    light.channels = channels;
+    light.channels = int(channels);
     light.contactShadows = bool(typeShadow & 0x10u);
 #if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
     light.type = (typeShadow & 0x1u);
 #if defined(VARIANT_HAS_SHADOWING)
-    light.shadowIndex = (typeShadow >>  8u) & 0xFFu;
+    light.shadowIndex = int((typeShadow >>  8u) & 0xFFu);
     light.castsShadows   = bool(channels & 0x10000u);
     if (light.type == LIGHT_TYPE_SPOT) {
         light.zLight = dot(shadowUniforms.shadows[light.shadowIndex].lightFromWorldZ, vec4(worldPosition, 1.0));
@@ -191,13 +191,13 @@ void evaluatePunctualLights(const MaterialInputs material,
 
     uint index = froxel.recordOffset;
     uint end = index + froxel.count;
-    uint channels = object_uniforms.flagsChannels & 0xFFu;
+    int channels = object_uniforms.flagsChannels & 0xFF;
 
     // Iterate point lights
     for ( ; index < end; index++) {
         uint lightIndex = getLightIndex(index);
         Light light = getLight(lightIndex);
-        if ((light.channels & channels) == 0u) {
+        if ((light.channels & channels) == 0) {
             continue;
         }
 
@@ -211,11 +211,11 @@ void evaluatePunctualLights(const MaterialInputs material,
 #if defined(VARIANT_HAS_SHADOWING)
         if (light.NoL > 0.0) {
             if (light.castsShadows) {
-                uint shadowIndex = light.shadowIndex;
+                int shadowIndex = light.shadowIndex;
                 if (light.type == LIGHT_TYPE_POINT) {
                     // point-light shadows are sampled from a direction
                     highp vec3 r = getWorldPosition() - light.worldPosition;
-                    uint face = getPointLightFace(r);
+                    int face = getPointLightFace(r);
                     shadowIndex += face;
                     light.zLight = dot(shadowUniforms.shadows[shadowIndex].lightFromWorldZ,
                             vec4(getWorldPosition(), 1.0));
@@ -225,7 +225,7 @@ void evaluatePunctualLights(const MaterialInputs material,
                         shadowPosition, light.zLight);
             }
             if (light.contactShadows && visibility > 0.0) {
-                if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0u) {
+                if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0) {
                     visibility *= 1.0 - screenSpaceContactShadow(light.l);
                 }
             }

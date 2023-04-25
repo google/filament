@@ -29,6 +29,8 @@ using namespace bluevk;
 
 namespace filament::backend {
 
+using ImgUtil = VulkanImageUtility;
+
 bool VulkanFboCache::RenderPassEq::operator()(const RenderPassKey& k1,
         const RenderPassKey& k2) const {
     if (k1.initialColorLayoutMask != k2.initialColorLayoutMask) return false;
@@ -194,7 +196,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         if (config.colorFormat[i] == VK_FORMAT_UNDEFINED) {
             continue;
         }
-        const VkImageLayout subpassLayout = getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT);
+        const VkImageLayout subpassLayout = ImgUtil::getVkLayout(VulkanLayout::COLOR_ATTACHMENT);
         uint32_t index;
 
         if (!hasSubpasses) {
@@ -239,9 +241,10 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
             .storeOp = config.samples == 1 ? kEnableStore : kDisableStore,
             .stencilLoadOp = kDontCare,
             .stencilStoreOp = kDisableStore,
-            .initialLayout = (!discard && config.initialColorLayoutMask & (1 << i)) ?
-                VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_UNDEFINED,
-            .finalLayout = getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT)
+            .initialLayout = ((!discard && config.initialColorLayoutMask & (1 << i)) || clear)
+                                     ? ImgUtil::getVkLayout(VulkanLayout::COLOR_ATTACHMENT)
+                                     : ImgUtil::getVkLayout(VulkanLayout::UNDEFINED),
+            .finalLayout = ImgUtil::getVkLayout(VulkanLayout::COLOR_ATTACHMENT),
         };
     }
 
@@ -267,7 +270,8 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         }
 
         pResolveAttachment->attachment = attachmentIndex;
-        pResolveAttachment->layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        pResolveAttachment->layout
+                = ImgUtil::getVkLayout(VulkanLayout::COLOR_ATTACHMENT_RESOLVE);
         ++pResolveAttachment;
 
         attachments[attachmentIndex++] = {
@@ -277,8 +281,8 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
             .storeOp = kEnableStore,
             .stencilLoadOp = kDontCare,
             .stencilStoreOp = kDisableStore,
-            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .finalLayout = getDefaultImageLayout(TextureUsage::COLOR_ATTACHMENT)
+            .initialLayout = ImgUtil::getVkLayout(VulkanLayout::COLOR_ATTACHMENT),
+            .finalLayout = ImgUtil::getVkLayout(VulkanLayout::COLOR_ATTACHMENT),
         };
     }
 
@@ -287,7 +291,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         const bool clear = any(config.clear & TargetBufferFlags::DEPTH);
         const bool discardStart = any(config.discardStart & TargetBufferFlags::DEPTH);
         const bool discardEnd = any(config.discardEnd & TargetBufferFlags::DEPTH);
-        depthAttachmentRef.layout = toVkImageLayout(config.renderPassDepthLayout);
+        depthAttachmentRef.layout = ImgUtil::getVkLayout(config.renderPassDepthLayout);
         depthAttachmentRef.attachment = attachmentIndex;
         attachments[attachmentIndex++] = {
             .format = config.depthFormat,
@@ -296,8 +300,8 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
             .storeOp = discardEnd ? kDisableStore : kEnableStore,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .initialLayout = toVkImageLayout(config.initialDepthLayout),
-            .finalLayout = toVkImageLayout(config.finalDepthLayout),
+            .initialLayout = ImgUtil::getVkLayout(config.initialDepthLayout),
+            .finalLayout = ImgUtil::getVkLayout(config.finalDepthLayout),
         };
     }
     renderPassInfo.attachmentCount = attachmentIndex;

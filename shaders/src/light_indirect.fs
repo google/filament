@@ -178,7 +178,7 @@ vec3 importanceSamplingNdfDggx(vec2 u, float roughness) {
 }
 
 vec3 hemisphereCosSample(vec2 u) {
-    float phi = 2.0f * PI * u.x;
+    float phi = 2.0 * PI * u.x;
     float cosTheta2 = 1.0 - u.y;
     float cosTheta = sqrt(cosTheta2);
     float sinTheta = sqrt(1.0 - cosTheta2);
@@ -224,7 +224,7 @@ float prefilteredImportanceSampling(float ipdf, float omegaP) {
 }
 
 vec3 isEvaluateSpecularIBL(const PixelParams pixel, const vec3 n, const vec3 v, const float NoV) {
-    const uint numSamples = uint(IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT);
+    const int numSamples = IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT;
     const float invNumSamples = 1.0 / float(numSamples);
     const vec3 up = vec3(0.0, 0.0, 1.0);
 
@@ -251,7 +251,7 @@ vec3 isEvaluateSpecularIBL(const PixelParams pixel, const vec3 n, const vec3 v, 
     float omegaP = (4.0 * PI) / (6.0 * dim * dim);
 
     vec3 indirectSpecular = vec3(0.0);
-    for (uint i = 0u; i < numSamples; i++) {
+    for (int i = 0; i < numSamples; i++) {
         vec2 u = hammersley(i);
         vec3 h = T * importanceSamplingNdfDggx(u, roughness);
 
@@ -283,7 +283,7 @@ vec3 isEvaluateSpecularIBL(const PixelParams pixel, const vec3 n, const vec3 v, 
 }
 
 vec3 isEvaluateDiffuseIBL(const PixelParams pixel, vec3 n, vec3 v) {
-    const uint numSamples = uint(IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT);
+    const int numSamples = IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT;
     const float invNumSamples = 1.0 / float(numSamples);
     const vec3 up = vec3(0.0, 0.0, 1.0);
 
@@ -309,7 +309,7 @@ vec3 isEvaluateDiffuseIBL(const PixelParams pixel, vec3 n, vec3 v) {
     float omegaP = (4.0 * PI) / (6.0 * dim * dim);
 
     vec3 indirectDiffuse = vec3(0.0);
-    for (uint i = 0u; i < numSamples; i++) {
+    for (int i = 0; i < numSamples; i++) {
         vec2 u = hammersley(i);
         vec3 h = T * hemisphereCosSample(u);
 
@@ -537,7 +537,7 @@ vec3 evaluateRefraction(
 
     // distance to camera plane
     const float invLog2sqrt5 = 0.8614;
-    float lod = max(0.0, (2.0f * log2(perceptualRoughness) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
+    float lod = max(0.0, (2.0 * log2(perceptualRoughness) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
     Ft = textureLod(light_ssr, vec3(p.xy, 0.0), lod).rgb;
 #endif
 
@@ -558,7 +558,7 @@ vec3 evaluateRefraction(
 
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
     // specular layer
-    vec3 Fr = vec3(0.0f);
+    vec3 Fr = vec3(0.0);
 
     SSAOInterpolationCache interpolationCache;
 #if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED) || defined(MATERIAL_HAS_REFLECTIONS)
@@ -567,10 +567,10 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 
     // screen-space reflections
 #if defined(MATERIAL_HAS_REFLECTIONS)
-    vec4 ssrFr = vec4(0.0f);
+    vec4 ssrFr = vec4(0.0);
 #if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED)
     // do the uniform based test first
-    if (frameUniforms.ssrDistance > 0.0f) {
+    if (frameUniforms.ssrDistance > 0.0) {
         // There is no point doing SSR for very high roughness because we're limited by the fov
         // of the screen, in addition it doesn't really add much to the final image.
         // TODO: maybe make this a parameter
@@ -587,21 +587,21 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     // TODO: for blended transparency, we have to ray-march here (limited to mirror reflections)
 #endif
 #else // MATERIAL_HAS_REFLECTIONS
-    const vec4 ssrFr = vec4(0.0f);
+    const vec4 ssrFr = vec4(0.0);
 #endif
 
-    // If screen-space reflections are turned on and have full contribution (ssr.a == 1.0f), then we
+    // If screen-space reflections are turned on and have full contribution (ssr.a == 1.0), then we
     // skip sampling the IBL down below.
 
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
     vec3 E = specularDFG(pixel);
-    if (ssrFr.a < 1.0f) { // prevent reading the IBL if possible
+    if (ssrFr.a < 1.0) { // prevent reading the IBL if possible
         vec3 r = getReflectedVector(pixel, shading_normal);
         Fr = E * prefilteredRadiance(r, pixel.perceptualRoughness);
     }
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     vec3 E = vec3(0.0); // TODO: fix for importance sampling
-    if (ssrFr.a < 1.0f) { // prevent evaluating the IBL if possible
+    if (ssrFr.a < 1.0) { // prevent evaluating the IBL if possible
         Fr = isEvaluateSpecularIBL(pixel, shading_normal, shading_view, shading_NoV);
     }
 #endif

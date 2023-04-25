@@ -74,19 +74,19 @@ void VulkanBuffer::loadFromCpu(VulkanContext& context, VulkanStagePool& stagePoo
     VkAccessFlags dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
     if (mUsage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
-	dstAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-	dstStageMask |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+        dstAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+        dstStageMask |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
     } else if (mUsage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) {
-	dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
-	dstStageMask |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+        dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
+        dstStageMask |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
     } else if (mUsage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) {
-	dstAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
-	// NOTE: ideally dstStageMask would include VERTEX_SHADER_BIT | FRAGMENT_SHADER_BIT, but
-	// this seems to be insufficient on Mali devices. To work around this we are using a more
-	// aggressive ALL_GRAPHICS_BIT barrier.
-	dstStageMask |= VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+        dstAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
+        // NOTE: ideally dstStageMask would include VERTEX_SHADER_BIT | FRAGMENT_SHADER_BIT, but
+        // this seems to be insufficient on Mali devices. To work around this we are using a more
+        // aggressive ALL_GRAPHICS_BIT barrier.
+        dstStageMask |= VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     } else if (mUsage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) {
-	// TODO: implement me
+        // TODO: implement me
     }
 
     VkBufferMemoryBarrier barrier{

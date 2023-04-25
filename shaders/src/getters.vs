@@ -78,11 +78,11 @@ void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
 
 void morphPosition(inout vec4 p) {
     ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
-    uint c = object_uniforms.morphTargetCount;
-    for (uint i = 0u; i < c; ++i) {
+    int c = object_uniforms.morphTargetCount;
+    for (int i = 0; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];
         if (w != 0.0) {
-            texcoord.z = int(i);
+            texcoord.z = i;
             p += w * texelFetch(morphTargetBuffer_positions, texcoord, 0);
         }
     }
@@ -91,11 +91,11 @@ void morphPosition(inout vec4 p) {
 void morphNormal(inout vec3 n) {
     vec3 baseNormal = n;
     ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
-    uint c = object_uniforms.morphTargetCount;
-    for (uint i = 0u; i < c; ++i) {
+    int c = object_uniforms.morphTargetCount;
+    for (int i = 0; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];
         if (w != 0.0) {
-            texcoord.z = int(i);
+            texcoord.z = i;
             ivec4 tangent = texelFetch(morphTargetBuffer_tangents, texcoord, 0);
             vec3 normal;
             toTangentFrame(float4(tangent) * (1.0 / 32767.0), normal);
@@ -111,7 +111,7 @@ vec4 getPosition() {
 
 #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
 
-    if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0u) {
+    if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0) {
 #if defined(LEGACY_MORPHING)
         pos += morphingUniforms.weights[0] * mesh_custom0;
         pos += morphingUniforms.weights[1] * mesh_custom1;
@@ -122,7 +122,7 @@ vec4 getPosition() {
 #endif
     }
 
-    if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0u) {
+    if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0) {
         skinPosition(pos.xyz, mesh_bone_indices, mesh_bone_weights);
     }
 
@@ -188,7 +188,7 @@ vec4 computeWorldPosition() {
     // w could be zero (e.g.: with the skybox) which corresponds to an infinite distance in
     // world-space. However, we want to avoid infinites and divides-by-zero, so we use a very
     // small number instead in that case (2^-63 seem to work well).
-    const highp float ALMOST_ZERO_FLT = 1.08420217249e-19f;
+    const highp float ALMOST_ZERO_FLT = 1.08420217249e-19;
     if (abs(position.w) < ALMOST_ZERO_FLT) {
         position.w = position.w < 0.0 ? -ALMOST_ZERO_FLT : ALMOST_ZERO_FLT;
     }

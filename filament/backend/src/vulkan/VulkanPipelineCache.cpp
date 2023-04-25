@@ -74,7 +74,7 @@ VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRa
     mDummyBufferWriteInfo.pBufferInfo = &mDummyBufferInfo;
     mDummyBufferWriteInfo.pTexelBufferView = nullptr;
 
-    mDummyTargetInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    mDummyTargetInfo.imageLayout = VulkanImageUtility::getVkLayout(VulkanLayout::READ_ONLY);
     mDummyTargetWriteInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     mDummyTargetWriteInfo.pNext = nullptr;
     mDummyTargetWriteInfo.dstArrayElement = 0;
