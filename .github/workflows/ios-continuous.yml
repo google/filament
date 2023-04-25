@@ -10,7 +10,7 @@ on:
 jobs:
   build-ios:
     name: build-ios
-    runs-on: macos-latest
+    runs-on: macos-latest-xl
 
     steps:
       - uses: actions/checkout@v3.3.0
