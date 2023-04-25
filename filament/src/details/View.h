@@ -411,6 +411,10 @@ public:
     void executePickingQueries(backend::DriverApi& driver,
             backend::RenderTargetHandle handle, float scale) noexcept;
 
+    void setMaterialGlobal(uint32_t index, math::float4 const& value);
+
+    math::float4 getMaterialGlobal(uint32_t index) const;
+
 private:
 
     struct FPickingQuery : public PickingQuery {
@@ -534,6 +538,13 @@ private:
     mutable bool mNeedsShadowMap = false;
 
     ShadowMapManager mShadowMapManager;
+
+    std::array<math::float4, 4> mMaterialGlobals = {{
+                                                            { 0, 0, 0, 1 },
+                                                            { 0, 0, 0, 1 },
+                                                            { 0, 0, 0, 1 },
+                                                            { 0, 0, 0, 1 },
+                                                    }};
 
 #ifndef NDEBUG
     std::array<DebugRegistry::FrameHistory, 5*60> mDebugFrameHistory;

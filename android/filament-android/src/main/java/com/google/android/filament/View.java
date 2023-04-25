@@ -1117,6 +1117,37 @@ public class View {
         float mFragCoordsZ;
     }
 
+    /**
+     * Set the value of material global variables. There are up-to four such variable each of
+     * type float4. These variables can be read in a user Material with
+     * `getMaterialGlobal{0|1|2|3}()`. All variable start with a default value of { 0, 0, 0, 1 }
+     *
+     * @param index index of the variable to set between 0 and 3.
+     * @param value new value for the variable.
+     * @see #getMaterialGlobal
+     */
+    public void setMaterialGlobal(int index, @NonNull @Size(min = 4) float[] value) {
+        Asserts.assertFloat4In(value);
+        nSetMaterialGlobal(getNativeObject(), index, value[0], value[1], value[2], value[3]);
+    }
+
+    /**
+     * Get the value of the material global variables.
+     * All variable start with a default value of { 0, 0, 0, 1 }
+     *
+     * @param index index of the variable to set between 0 and 3.
+     * @param out A 4-float array where the value will be stored, or null in which case the array is
+     *            allocated.
+     * @return A 4-float array containing the current value of the variable.
+     * @see #setMaterialGlobal
+     */
+    @NonNull @Size(min = 4)
+    public float[] getMaterialGlobal(int index, @Nullable @Size(min = 4) float[] out) {
+        out = Asserts.assertFloat4(out);
+        nGetMaterialGlobal(getNativeObject(), index, out);
+        return out;
+    }
+
     public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed View");
@@ -1173,6 +1204,9 @@ public class View {
     private static native void nPick(long nativeView, int x, int y, Object handler, InternalOnPickCallback internalCallback);
     private static native void nSetStencilBufferEnabled(long nativeView, boolean enabled);
     private static native boolean nIsStencilBufferEnabled(long nativeView);
+    private static native void nSetMaterialGlobal(long nativeView, int index, float x, float y, float z, float w);
+    private static native void nGetMaterialGlobal(long nativeView, int index, float[] out);
+
 
     /**
      * List of available ambient occlusion techniques.
