@@ -8,6 +8,3 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
-- materials: picking is done in float (prepare for ES2) [⚠️ **New Material Version**]
-- materials: postLightingBlending is now applied before the fog [⚠️ **Recompile materials**]
-- vulkan: fix adreno optimized material artifacts [⚠️ **Recompile Materials**]
