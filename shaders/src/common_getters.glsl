@@ -105,3 +105,23 @@ float getExposure() {
 float getEV100() {
     return frameUniforms.ev100;
 }
+
+//------------------------------------------------------------------------------
+// user defined globals
+//------------------------------------------------------------------------------
+
+highp vec4 getMaterialGlobal0() {
+    return frameUniforms.custom[0];
+}
+
+highp vec4 getMaterialGlobal1() {
+    return frameUniforms.custom[1];
+}
+
+highp vec4 getMaterialGlobal2() {
+    return frameUniforms.custom[2];
+}
+
+highp vec4 getMaterialGlobal3() {
+    return frameUniforms.custom[3];
+}
