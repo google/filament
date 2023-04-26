@@ -77,7 +77,7 @@ mat4f transforms[] = {math::mat4f(1),
                       mat4f::translation(float3(0, -1, 0)),
                       mat4f::translation(float3(1, -1, 0))};
 
-std::vector<std::vector<float2>> boneDataPerPrimitive(17785); //number of vertices
+utils::FixedCapacityVector<utils::FixedCapacityVector<float2>> boneDataPerPrimitive(17785); //number of vertices
 static const char* IBL_FOLDER = "assets/ibl/lightroom_14b";
 
 static void printUsage(char* name) {
@@ -150,10 +150,10 @@ static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nby
 
 int main(int argc, char** argv) {
     int boneCount = 9;
-    std::vector<float2> boneDataPerVertex;
-    for (uint i = 0; i < boneCount; i++)
-      boneDataPerVertex.push_back(float2(i, 1/(float) boneCount)); //index and weight for one vertex
-    for (uint i = 0; i < boneDataPerPrimitive.size(); i++){
+    utils::FixedCapacityVector<float2> boneDataPerVertex(boneCount);
+    for (size_t i = 0; i < boneCount; i++)
+      boneDataPerVertex[i] = float2(i, 1/(float) boneCount); //index and weight for one vertex
+    for (size_t i = 0; i < boneDataPerPrimitive.size(); i++){
       boneDataPerPrimitive[i] = boneDataPerVertex;
     }
 

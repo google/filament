@@ -104,44 +104,46 @@ mat4f transforms[] = {math::mat4f(1),
                       mat4f::translation(float3(0, -1, 0)),
                       mat4f::translation(float3(1, -1, 0))};
 
-std::vector<std::vector<float2>> boneDataPerPrimitive, boneDataPerPrimitive2;
-std::vector<std::vector<std::vector<float2>>> boneDataPerRenderable;
+utils::FixedCapacityVector<utils::FixedCapacityVector<float2>> boneDataPerPrimitive(3), boneDataPerPrimitive2(6);
+utils::FixedCapacityVector<utils::FixedCapacityVector<utils::FixedCapacityVector<float2>>> boneDataPerRenderable(3);
 
 int main(int argc, char** argv) {
     Config config;
     config.title = "skinning test with more than 4 bones per vertex";
 
-    std::vector<float2> boneDataPerVertex;
+    utils::FixedCapacityVector<float2> boneDataPerVertex(8);
     float w =   1 / 8.f;
     for (uint i = 0; i < 8; i++){
         boneDataArray[i] = float2 (i, w);
         boneDataArray[i + 8] = float2 (i, w);
         boneDataArray[i + 16] = float2 (i, w);
-        boneDataPerVertex.push_back(float2 (i, w));
+        boneDataPerVertex[i] = float2 (i, w);
     }
-    std::vector<float2> boneDataPerVertex2;
+    utils::FixedCapacityVector<float2> boneDataPerVertex2(3);
     w =   1 / 3.f;
     for (uint i = 0; i < 3; i++){
-        boneDataPerVertex2.push_back(float2 (i, w));
+        boneDataPerVertex2[i] = float2 (i, w);
     }
 
-    std::vector<float2> emptyBoneDataPerVertex(0);
-    std::vector<std::vector<float2>> emptyBoneDataPerPrimitive(0);
-    boneDataPerPrimitive.push_back(boneDataPerVertex);
-    boneDataPerPrimitive.push_back(boneDataPerVertex);
-    boneDataPerPrimitive.push_back(boneDataPerVertex);
+    utils::FixedCapacityVector<float2> emptyBoneDataPerVertex(0);
+    utils::FixedCapacityVector<utils::FixedCapacityVector<float2>> emptyBoneDataPerPrimitive(0);
+    auto i = 0;
+    boneDataPerPrimitive[i++] = boneDataPerVertex;
+    boneDataPerPrimitive[i++] = boneDataPerVertex;
+    boneDataPerPrimitive[i++] = boneDataPerVertex;
 
-    boneDataPerPrimitive2.push_back(boneDataPerVertex);
-    boneDataPerPrimitive2.push_back(boneDataPerVertex2);
-    boneDataPerPrimitive2.push_back(boneDataPerVertex);
-    boneDataPerPrimitive2.push_back(boneDataPerVertex);
-    boneDataPerPrimitive2.push_back(boneDataPerVertex2);
-    boneDataPerPrimitive2.push_back(boneDataPerVertex);
-//    boneDataPerPrimitive.push_back(emptyBoneDataPerVertex);
+    i = 0;
+    boneDataPerPrimitive2[i++] = boneDataPerVertex;
+    boneDataPerPrimitive2[i++] = boneDataPerVertex2;
+    boneDataPerPrimitive2[i++] = boneDataPerVertex;
+    boneDataPerPrimitive2[i++] = boneDataPerVertex;
+    boneDataPerPrimitive2[i++] = boneDataPerVertex2;
+    boneDataPerPrimitive2[i++] = boneDataPerVertex;
 
-    boneDataPerRenderable.push_back(boneDataPerPrimitive);
-    boneDataPerRenderable.push_back(boneDataPerPrimitive);
-    boneDataPerRenderable.push_back(emptyBoneDataPerPrimitive);
+    i = 0;
+    boneDataPerRenderable[i++] = boneDataPerPrimitive;
+    boneDataPerRenderable[i++] = boneDataPerPrimitive;
+    boneDataPerRenderable[i++] = emptyBoneDataPerPrimitive;
 
     App app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {

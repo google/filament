@@ -221,12 +221,12 @@ RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(si
         "[primitive @ %u] bone indices and weights pairs count (%u) must be a multiple of vertex count (%u)",
         primitiveIndex, count, vertexCount);
 
-    std::vector<std::vector<filament::math::float2>> bonePairs;
+    utils::FixedCapacityVector<utils::FixedCapacityVector<filament::math::float2>> bonePairs(vertexCount);
     for( size_t iVertex = 0; iVertex < vertexCount; iVertex++){
-        std::vector<float2> vertexData(pairsPerVertexCount);
+        utils::FixedCapacityVector<float2> vertexData(pairsPerVertexCount);
         std::memcpy(&vertexData[0], &indicesAndWeights[offset + iVertex * pairsPerVertexCount],
              pairsPerVertexCount * sizeof(float2));
-        bonePairs.push_back(vertexData);
+        bonePairs[iVertex] = vertexData;
     }
   return boneIndicesAndWeights(primitiveIndex, bonePairs);
 }
@@ -256,7 +256,7 @@ RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(
 }
 
 RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(size_t primitiveIndex,
-               const std::vector<std::vector<filament::math::float2>> &indicesAndWeightsVector) {
+               const  utils::FixedCapacityVector< utils::FixedCapacityVector<filament::math::float2>> &indicesAndWeightsVector) {
     auto count = indicesAndWeightsVector.size();
     if (!count) {
       // skip if no skinning data
@@ -283,8 +283,8 @@ RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(si
 }
 
 RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(
-               const std::vector<std::vector<std::vector<filament::math::float2>>> &indicesAndWeightsVectors) noexcept{
-  for (size_t iEntry = 0, c = min(mImpl->mEntries.size(), indicesAndWeightsVectors.size()); iEntry < c; iEntry++)
+               const  utils::FixedCapacityVector<utils::FixedCapacityVector<utils::FixedCapacityVector<filament::math::float2>>> &indicesAndWeightsVectors) noexcept{
+  for (size_t iEntry = 0, c = min((uint)mImpl->mEntries.size(), indicesAndWeightsVectors.size()); iEntry < c; iEntry++)
       boneIndicesAndWeights(iEntry, indicesAndWeightsVectors[iEntry]);
   return *this;
 }
@@ -344,7 +344,7 @@ void RenderableManager::Builder::processBoneIndicesAndWights(Engine& engine, Ent
             for (size_t iVertex = 0, vertexCount = entry.skinning.bonePairs.size(); iVertex < vertexCount; iVertex++){
                 auto pairCountPerVertex = entry.skinning.bonePairs[iVertex].size();
                 maxPairsCount +=  pairCountPerVertex;
-                maxPairsCountPerPrimitive = max(pairCountPerVertex, maxPairsCountPerPrimitive);
+                maxPairsCountPerPrimitive = max(pairCountPerVertex, (uint)maxPairsCountPerPrimitive);
             }
         }
     }

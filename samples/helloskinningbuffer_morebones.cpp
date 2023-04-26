@@ -75,19 +75,20 @@ mat4f transforms[] = {math::mat4f(1.f),
                       mat4f::translation(float3(1, -1, 0))};
 
 
-std::vector<std::vector<float2>> boneDataPerPrimitive;
+utils::FixedCapacityVector<utils::FixedCapacityVector<float2>> boneDataPerPrimitive(3);
 
 int main(int argc, char** argv) {
     Config config;
     config.title = "skinning buffer common for two renderables";
     auto offset = 0;
-    std::vector<float2> boneDataPerVertex;
+    utils::FixedCapacityVector<float2> boneDataPerVertex(9);
     float w =   1/9.f;
-    for (uint i = 0; i < 9; i++)
-      boneDataPerVertex.push_back(float2 (i, w));
-    boneDataPerPrimitive.push_back(boneDataPerVertex);
-    boneDataPerPrimitive.push_back(boneDataPerVertex);
-    boneDataPerPrimitive.push_back(boneDataPerVertex);
+    for (size_t i = 0; i < 9; i++)
+      boneDataPerVertex[i] = float2 (i, w);
+    auto i = 0;
+    boneDataPerPrimitive[i++] = boneDataPerVertex;
+    boneDataPerPrimitive[i++] = boneDataPerVertex;
+    boneDataPerPrimitive[i++] = boneDataPerVertex;
 
     App app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {

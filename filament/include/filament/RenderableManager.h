@@ -26,6 +26,7 @@
 
 #include <utils/compiler.h>
 #include <utils/EntityInstance.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <math/mathfwd.h>
 
@@ -401,7 +402,7 @@ public:
          * @return Builder reference for chaining calls.
          */
         Builder& boneIndicesAndWeights(size_t primitiveIndex,
-               std::vector<std::vector<filament::math::float2>> const &indicesAndWeightsVector);
+               utils::FixedCapacityVector<utils::FixedCapacityVector<filament::math::float2>> const &indicesAndWeightsVector);
         /**
          * Define bone indices and weights for vertex skinning. The first pair value defines index of the bone and the
          * second value is the bone weight. The pairs substitute \c BONE_INDICES and the \c BONE_WEIGHTS
@@ -416,7 +417,7 @@ public:
          * @return Builder reference for chaining calls.
          */
         Builder& boneIndicesAndWeights(
-               std::vector<std::vector<std::vector<filament::math::float2>>> const &indicesAndWeightsVectors) noexcept;
+                utils::FixedCapacityVector< utils::FixedCapacityVector< utils::FixedCapacityVector<filament::math::float2>>> const &indicesAndWeightsVectors) noexcept;
 
         /**
          * Controls if the renderable has vertex morphing targets, zero by default. This is
@@ -569,7 +570,7 @@ public:
             } morphing;
             struct {
                 bool bonePairsSet = false;
-                std::vector<std::vector<math::float2>> bonePairs; //bone indices and weights for each entry(primitive)
+                utils::FixedCapacityVector<utils::FixedCapacityVector<math::float2>> bonePairs; //bone indices and weights for each entry(primitive)
             } skinning;
         };
         void processBoneIndicesAndWights(Engine& engine, utils::Entity entity);
