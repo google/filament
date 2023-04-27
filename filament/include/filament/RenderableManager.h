@@ -420,9 +420,6 @@ public:
          * getInstanceIndex() in the vertex or fragment shader to get the instance index and
          * possibly adjust the position or transform.
          *
-         * It generally doesn't make sense to use VERTEX_DOMAIN_OBJECT in the material, since it
-         * would pull the same transform for all instances.
-         *
          * @param instanceCount the number of instances silently clamped between 1 and 32767.
          */
         Builder& instances(size_t instanceCount) noexcept;
