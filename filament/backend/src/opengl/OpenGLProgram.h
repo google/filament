@@ -73,6 +73,7 @@ public:
 
     // For ES2 only
     void updateUniforms(uint32_t index, void const* buffer, uint16_t age) noexcept;
+    void setRec709ColorSpace(bool rec709) const noexcept;
 
 private:
     // keep these away from of other class attributes
@@ -140,6 +141,7 @@ private:
 
     // only needed for ES2
     UniformsRecord const* mUniformsRecords = nullptr;
+    GLint mRec709Location = -1;
 };
 
 // if OpenGLProgram is larger tha 64 bytes, it'll fall in a larger Handle bucket.

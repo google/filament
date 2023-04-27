@@ -277,6 +277,9 @@ void OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
                 p->updateUniforms(i, buffer, age);
             }
         }
+        // Set the output colorspace for this program (linear or rec709). This in only relevant
+        // when mPlatform.isSRGBSwapChainSupported() is false (no need to check though).
+        p->setRec709ColorSpace(mRec709OutputColorspace);
     }
 }
 
@@ -532,6 +535,29 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
 
 void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
     DEBUG_MARKER()
+
+
+    if (UTILS_UNLIKELY(mContext.isES2())) {
+        // Here we patch the specification constants to enable or not the rec709 output
+        // color space emulation in this program. Obviously, the backend shouldn't know about
+        // specific spec-constants, so we need to handle failures gracefully. This cannot be
+        // done at Material creation time because only the backend has access to
+        // Platform.isSRGBSwapChainSupported().
+        if (!mPlatform.isSRGBSwapChainSupported()) {
+            auto& specializationConstants = program.getSpecializationConstants();
+            auto pos = std::find_if(specializationConstants.begin(), specializationConstants.end(),
+                    [](auto&& sc) {
+                        // This constant must match
+                        // ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION
+                        // which we can't use here because it's defined in EngineEnums.h.
+                        // (we're breaking layering here, but it's for the good cause).
+                        return sc.id == 3;
+                    });
+            if (pos != specializationConstants.end()) {
+                pos->value = true;
+            }
+        }
+    }
 
     construct<OpenGLProgram>(ph, *this, std::move(program));
     CHECK_GL_ERROR(utils::slog.e)
@@ -1191,6 +1217,7 @@ void OpenGLDriver::createDefaultRenderTargetR(
     uint32_t const framebuffer = mPlatform.createDefaultRenderTarget();
 
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
+    rt->gl.isDefault = true;
     rt->gl.fbo = framebuffer;
     rt->gl.samples = 1;
     // FIXME: these flags should reflect the actual attachments present
@@ -1349,6 +1376,12 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(nativeWindow, flags);
+
+    // See if we need the emulated rec709 output conversion
+    if (UTILS_UNLIKELY(mContext.isES2())) {
+        sc->rec709 = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE &&
+                !mPlatform.isSRGBSwapChainSupported());
+    }
 }
 
 void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
@@ -1357,6 +1390,12 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(width, height, flags);
+
+    // See if we need the emulated rec709 output conversion
+    if (UTILS_UNLIKELY(mContext.isES2())) {
+        sc->rec709 = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE &&
+                      !mPlatform.isSRGBSwapChainSupported());
+    }
 }
 
 void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
@@ -1814,6 +1853,12 @@ bool OpenGLDriver::isAutoDepthResolveSupported() {
 }
 
 bool OpenGLDriver::isSRGBSwapChainSupported() {
+    if (UTILS_UNLIKELY(mContext.isES2())) {
+        // On ES2 backend (i.e. feature level 0), we always pretend to the client that sRGB
+        // SwapChain are available. If we actually have that feature, it'll be used, otherwise
+        // we emulate it in the shaders.
+        return true;
+    }
     return mPlatform.isSRGBSwapChainSupported();
 }
 
@@ -1865,6 +1910,7 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
     GLSwapChain* scDraw = handle_cast<GLSwapChain*>(schDraw);
     GLSwapChain* scRead = handle_cast<GLSwapChain*>(schRead);
     mPlatform.makeCurrent(scDraw->swapChain, scRead->swapChain);
+    mCurrentDrawSwapChain = scDraw;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -2563,6 +2609,11 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     mRenderPassParams = params;
 
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
+
+    // If we're rendering into the default render target (i.e. into the current SwapChain),
+    // get the value of the output colorspace from there, otherwise it's always linear.
+    assert_invariant(!rt->gl.isDefault || mCurrentDrawSwapChain);
+    mRec709OutputColorspace = rt->gl.isDefault ? mCurrentDrawSwapChain->rec709 : false;
 
     const TargetBufferFlags clearFlags = params.flags.clear & rt->targets;
     TargetBufferFlags discardFlags = params.flags.discardStart & rt->targets;

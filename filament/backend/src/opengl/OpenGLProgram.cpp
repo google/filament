@@ -124,13 +124,16 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
         GLuint shaderIds[Program::SHADER_TYPE_COUNT],
         UTILS_UNUSED_IN_RELEASE std::array<CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept {
 
+    auto appendSpecConstantString = +[](std::string& s, Program::SpecializationConstant const& sc) {
+        s += "#define SPIRV_CROSS_CONSTANT_ID_" + std::to_string(sc.id) + ' ';
+        s += std::visit([](auto&& arg) { return to_string(arg); }, sc.value);
+        s += '\n';
+        return s;
+    };
+
     std::string specializationConstantString;
     for (auto const& sc : specializationConstants) {
-        specializationConstantString += "#define SPIRV_CROSS_CONSTANT_ID_" + std::to_string(sc.id) + ' ';
-        specializationConstantString += std::visit([](auto&& arg) {
-            return to_string(arg);
-        }, sc.value);
-        specializationConstantString += '\n';
+        appendSpecConstantString(specializationConstantString, sc);
     }
     if (!specializationConstantString.empty()) {
         specializationConstantString += '\n';
@@ -402,6 +405,17 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
             for (size_t j = 0, c = uniforms.size(); j < c; j++) {
                 GLint const loc = glGetUniformLocation(program, uniforms[j].name.c_str());
                 uniformsRecords[binding].locations[j] = loc;
+                if (UTILS_UNLIKELY(binding == 0)) {
+                    // This is a bit of a gross hack here, we stash the location of
+                    // "frameUniforms.rec709", which obviously the backend shouldn't know about,
+                    // which is used for emulating the "rec709" colorspace in the shader.
+                    // The backend also shouldn't know that binding 0 is where frameUniform is.
+                    std::string_view const uniformName{
+                            uniforms[j].name.data(), uniforms[j].name.size() };
+                    if (uniformName == "frameUniforms.rec709") {
+                        mRec709Location = loc;
+                    }
+                }
             }
             uniformsRecords[binding].uniforms = std::move(uniforms);
         }
@@ -552,6 +566,9 @@ void OpenGLProgram::updateUniforms(uint32_t index, void const* buffer, uint16_t 
     }
 }
 
+void OpenGLProgram::setRec709ColorSpace(bool rec709) const noexcept {
+    glUniform1i(mRec709Location, rec709);
+}
 
 UTILS_NOINLINE
 void logCompilationError(io::ostream& out, ShaderStage shaderType,
