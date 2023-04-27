@@ -817,7 +817,7 @@ void RenderPass::Executor::execute(backend::DriverApi& driver,
                     [this, &info, &instanceCount]() -> std::pair<Handle<backend::HwBufferObject>, uint32_t> {
                 if (info.instanceBuffer) {
                     // "hybrid" instancing
-                    return {info.instanceBuffer->getHwHandle(), 0};
+                    return { info.instanceBuffer->getHwHandle(), 0 };
                 }
                 bool const userInstancing =
                         (info.instanceCount & PrimitiveInfo::USER_INSTANCE_MASK) != 0u;
