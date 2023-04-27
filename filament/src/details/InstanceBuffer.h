@@ -37,7 +37,9 @@ class FInstanceBuffer : public InstanceBuffer {
 public:
     FInstanceBuffer(FEngine& engine, const Builder& builder);
 
-    void setLocalTransforms(math::mat4f const* localTransforms, size_t count, size_t offset);
+ inline size_t getInstanceCount() const noexcept { return mInstanceCount; }
+
+ void setLocalTransforms(math::mat4f const* localTransforms, size_t count, size_t offset);
 
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);

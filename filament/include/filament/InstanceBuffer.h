@@ -75,6 +75,11 @@ public:
     };
 
     /**
+     * Returns the instance count specified when building this InstanceBuffer.
+     */
+    size_t getInstanceCount() const noexcept;
+
+    /**
      * Sets the local transform for each instance. The local transform is relative to the
      * renderable's transform.
      *
