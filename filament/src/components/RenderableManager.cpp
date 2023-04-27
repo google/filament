@@ -247,11 +247,14 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
             "instances when supplying transforms via an InstanceBuffer.",
             mImpl->mInstanceCount,
             CONFIG_MAX_INSTANCES);
-    size_t bufferInstanceCount = mImpl->mInstanceBuffer->mInstanceCount;
-    ASSERT_PRECONDITION(mImpl->mInstanceCount <= bufferInstanceCount,
-            "instance count (%zu) must be less than or equal to the InstanceBuffer's instance count "
-            "(%zu).",
-            mImpl->mInstanceCount, bufferInstanceCount);
+    if (mImpl->mInstanceBuffer) {
+        size_t bufferInstanceCount = mImpl->mInstanceBuffer->mInstanceCount;
+        ASSERT_PRECONDITION(mImpl->mInstanceCount <= bufferInstanceCount,
+                "instance count (%zu) must be less than or equal to the InstanceBuffer's instance "
+                "count "
+                "(%zu).",
+                mImpl->mInstanceCount, bufferInstanceCount);
+    }
 
     for (size_t i = 0, c = mImpl->mEntries.size(); i < c; i++) {
         auto& entry = mImpl->mEntries[i];
