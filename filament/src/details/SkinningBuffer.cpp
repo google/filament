@@ -168,17 +168,17 @@ void FSkinningBuffer::setBones(FEngine& engine, Handle<backend::HwBufferObject> 
 // When you change this value, you must change MAX_SKINNING_BUFFER_WIDTH at getters.vs
 constexpr size_t MAX_SKINNING_BUFFER_WIDTH = 2048;
 
-static inline size_t getWidth(size_t pairCount) noexcept {
+static inline size_t getSkinningBufferWidth(size_t pairCount) noexcept {
     return std::min(pairCount, MAX_SKINNING_BUFFER_WIDTH);
 }
 
-static inline size_t getHeight(size_t pairCount) noexcept {
+static inline size_t getSkinningBufferHeight(size_t pairCount) noexcept {
     return (pairCount + MAX_SKINNING_BUFFER_WIDTH) / MAX_SKINNING_BUFFER_WIDTH;
 }
 
-inline size_t getSize(size_t pairCount) noexcept {
-    const size_t stride = getWidth(pairCount);
-    const size_t height = getHeight(pairCount);
+inline size_t getSkinningBufferSize(size_t pairCount) noexcept {
+    const size_t stride = getSkinningBufferWidth(pairCount);
+    const size_t height = getSkinningBufferHeight(pairCount);
     return Texture::PixelBufferDescriptor::computeDataSize(
             Texture::PixelBufferDescriptor::PixelDataFormat::RG,
             Texture::PixelBufferDescriptor::PixelDataType::FLOAT,
@@ -191,7 +191,7 @@ void updateDataAt(backend::DriverApi& driver,
         const char* out, size_t elementSize,
         size_t count, size_t size) {
 
-    size_t const textureWidth   = getWidth( count);//size);
+    size_t const textureWidth   = getSkinningBufferWidth( count);//size);
     size_t const lineCount      = count / textureWidth;
     size_t const lastLineCount  = count % textureWidth;
 
@@ -222,20 +222,20 @@ void updateDataAt(backend::DriverApi& driver,
 
 FSkinningBuffer::HandleIndicesAndWeights FSkinningBuffer::createIndicesAndWeightsHandle(FEngine& engine, size_t count) {
     backend::Handle<backend::HwSamplerGroup> samplerHandle;
-    backend::Handle<backend::HwTexture> textureHandle;      //bone indices and weights
+    backend::Handle<backend::HwTexture> textureHandle;      // bone indices and weights
 
     FEngine::DriverApi& driver = engine.getDriverApi();
-    auto size = getSize(count);
+    auto size = getSkinningBufferSize(count);
     // create a texture for skinning pairs data (bone index and weight)
-    size = getSize(count);
+    size = getSkinningBufferSize(count);
 
     textureHandle = driver.createTexture(SamplerType::SAMPLER_2D, 1,
                          TextureFormat::RG32F, 1,
-                         getWidth(size), getHeight(size), 1,
+                         getSkinningBufferWidth(size), getSkinningBufferHeight(size), 1,
                          TextureUsage::DEFAULT);
     samplerHandle = driver.createSamplerGroup(PerRenderPrimitiveSkinningSib::SAMPLER_COUNT);
     SamplerGroup samplerGroup(PerRenderPrimitiveSkinningSib::SAMPLER_COUNT);
-    samplerGroup.setSampler(PerRenderPrimitiveSkinningSib::BONE_IaW,
+    samplerGroup.setSampler(PerRenderPrimitiveSkinningSib::BONE_INDICES_AND_WEIGHTS,
                             {textureHandle, {}});
     driver.updateSamplerGroup(samplerHandle,
                               samplerGroup.toBufferDescriptor(driver));
@@ -249,7 +249,7 @@ void FSkinningBuffer::setIndicesAndWeightsData(FEngine& engine,
         backend::Handle<backend::HwTexture> textureHandle, math::float2 const* pairs, size_t count) {
 
     FEngine::DriverApi& driver = engine.getDriverApi();
-    auto size = getSize(count);
+    auto size = getSkinningBufferSize(count);
     auto* out = (float2*) malloc(size);
     std::transform(pairs, pairs + count, out,
             [](const float2& p) { return float2(p); });

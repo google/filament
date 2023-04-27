@@ -250,7 +250,7 @@ public:
     struct alignas(8) Command {     // 64 bytes
         CommandKey key = 0;         //  8 bytes
         PrimitiveInfo primitive;    // 48 bytes
-        uint64_t reserved[2] = {};  // 16 bytes
+        uint64_t reserved[1] = {};  //  8 bytes
         bool operator < (Command const& rhs) const noexcept { return key < rhs.key; }
         // placement new declared as "throw" to avoid the compiler's null-check
         inline void* operator new (std::size_t, void* ptr) {

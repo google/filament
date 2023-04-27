@@ -77,9 +77,9 @@ private:
     uint32_t mVertexCount = 0;
     uint8_t mBufferCount = 0;
     bool mBufferObjectsEnabled = false;
-    bool mBoneBufferObjectsUsed = false;  //mBoJointsHandle and mBoWeightsHandle are used, only in buffer object mode
-    BufferObjectHandle mBoJointsHandle;   //handle for extra bone indices BufferObject
-    BufferObjectHandle mBoWeightsHandle;  //handle for extra bone weights BufferObject
+    bool mBoneBufferObjectsUsed = false;  // mBoJointsHandle and mBoWeightsHandle are used, only in buffer object mode
+    BufferObjectHandle mBoneJointsHandle;   // handle for extra bone indices BufferObject
+    BufferObjectHandle mBoneWeightsHandle;  // handle for extra bone weights BufferObject
 };
 
 FILAMENT_DOWNCAST(VertexBuffer)

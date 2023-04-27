@@ -160,7 +160,7 @@ int main(int argc, char** argv) {
 
         auto& rm = engine->getRenderableManager();
 
-        //skinning/bones animation
+        // Bone skinning animation
         float tr = (float)(sin(now));
         mat4f trans[] = {filament::math::mat4f::translation(filament::math::float3{tr, 0, 0}),
                          filament::math::mat4f::translation(filament::math::float3{-1, tr, 0}),

@@ -207,8 +207,8 @@ void FVertexBuffer::terminate(FEngine& engine) {
         }
     }
     if (mBoneBufferObjectsUsed){
-        driver.destroyBufferObject(mBoJointsHandle);
-        driver.destroyBufferObject(mBoWeightsHandle);
+        driver.destroyBufferObject(mBoneJointsHandle);
+        driver.destroyBufferObject(mBoneWeightsHandle);
     }
    driver.destroyVertexBuffer(mHandle);
 }
@@ -237,8 +237,8 @@ void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
     if (bufferIndex < mBufferCount) {
         auto hwBufferObject = bufferObject->getHwHandle();
         engine.getDriverApi().setVertexBufferObject(mHandle, bufferIndex, hwBufferObject);
-        //store handle to recreate VertexBuffer in the case extra bone indices and weights definition
-        //used only in buffer object mode
+        // store handle to recreate VertexBuffer in the case extra bone indices and weights definition
+        // used only in buffer object mode
         mBufferObjects[bufferIndex] = hwBufferObject;
    } else {
         ASSERT_PRECONDITION(bufferIndex < mBufferCount, "bufferIndex must be < bufferCount");
@@ -316,29 +316,29 @@ void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
     for (size_t i = 0; i < mBufferCount; ++i)
         if (bufferSizes[i] > 0)
             driver.setVertexBufferObject(mHandle, i, mBufferObjects[i]);
-    //add new bone buffer objects
+    // add new bone buffer objects
     mBufferCount++;
-    auto boJointsHandle = driver.createBufferObject(bufferSizes[mBufferCount - 1],
+    auto boneJointsHandle = driver.createBufferObject(bufferSizes[mBufferCount - 1],
              backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
-    driver.setVertexBufferObject(mHandle, mBufferCount - 1, boJointsHandle);
+    driver.setVertexBufferObject(mHandle, mBufferCount - 1, boneJointsHandle);
     auto bdJoints = BufferDescriptor(
             skinJoints, bufferSizes[mBufferCount - 1], nullptr);
-    driver.updateBufferObject(boJointsHandle,std::move(bdJoints), 0);
+    driver.updateBufferObject(boneJointsHandle,std::move(bdJoints), 0);
     mBufferCount++;
-    auto boWeightsHandle = driver.createBufferObject(bufferSizes[mBufferCount - 1],
+    auto boneWeightsHandle = driver.createBufferObject(bufferSizes[mBufferCount - 1],
            backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
-    driver.setVertexBufferObject(mHandle, mBufferCount - 1, boWeightsHandle);
+    driver.setVertexBufferObject(mHandle, mBufferCount - 1, boneWeightsHandle);
     auto bdWeights = BufferDescriptor(
             skinWeights, bufferSizes[mBufferCount - 1], nullptr);
-    driver.updateBufferObject(boWeightsHandle,std::move(bdWeights), 0);
+    driver.updateBufferObject(boneWeightsHandle,std::move(bdWeights), 0);
     if (!mBufferObjectsEnabled) {
-        mBufferObjects[mBufferCount - 2] = boJointsHandle;
-        mBufferObjects[mBufferCount - 1] = boWeightsHandle;
+        mBufferObjects[mBufferCount - 2] = boneJointsHandle;
+        mBufferObjects[mBufferCount - 1] = boneWeightsHandle;
    }else{
         //for correct destroy bone buffer object
         mBoneBufferObjectsUsed = true;
-        mBoJointsHandle = boJointsHandle;
-        mBoWeightsHandle = boWeightsHandle;
+        mBoneJointsHandle = boneJointsHandle;
+        mBoneWeightsHandle = boneWeightsHandle;
    }
 }
 } // namespace filament

@@ -151,10 +151,11 @@ static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nby
 int main(int argc, char** argv) {
     int boneCount = 9;
     utils::FixedCapacityVector<float2> boneDataPerVertex(boneCount);
-    for (size_t i = 0; i < boneCount; i++)
-      boneDataPerVertex[i] = float2(i, 1/(float) boneCount); //index and weight for one vertex
-    for (size_t i = 0; i < boneDataPerPrimitive.size(); i++){
-      boneDataPerPrimitive[i] = boneDataPerVertex;
+    // index and weight for one vertex
+    for (size_t idx = 0; idx < boneCount; idx++)
+      boneDataPerVertex[idx] = float2(idx, 1.f / boneCount);
+    for (size_t idx = 0; idx < boneDataPerPrimitive.size(); idx++){
+      boneDataPerPrimitive[idx] = boneDataPerVertex;
     }
 
     Config config;
@@ -258,13 +259,13 @@ int main(int argc, char** argv) {
 
 FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
 
-        //skinning/bone animation for more than four bones per vertex
+        // Bone skinning animation for more than four bones per vertex
         float t = now / 10.f;
         float s1 = sin(t * f::PI * 4.f) * 10;
         float s2 = sin(t * f::PI * 6.f) * 10;
         float s3 = sin(t * f::PI * 8.f) * 10;
 
-        //create bone transformations
+        // Create bone transformations
         mat4f trans[] = {
           mat4f::scaling(float3(s1 + 10, 1.f, 1.f)),
           mat4f::scaling(float3(1.f, s2 + 10, 1.f)),

@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
             -ZOOM, ZOOM, 0, 1);
                auto& tcm = engine->getTransformManager();
 
-        //transformation of both renderables
+        // Transformation of both renderables
         tcm.setTransform(tcm.getInstance(app.renderable1),
                 filament::math::mat4f::translation(filament::math::float3{ 0.5, 0, 0 }));
         tcm.setTransform(tcm.getInstance(app.renderable2),
@@ -203,7 +203,7 @@ int main(int argc, char** argv) {
 
         auto& rm = engine->getRenderableManager();
 
-        //skinning/bones animation
+        // Bone skinning animation
         float t = (float)(now - (int)now);
         float s = sin(t * f::PI * 2.f);
         float c = cos(t * f::PI * 2.f);
@@ -228,10 +228,10 @@ int main(int argc, char** argv) {
         uint offset = ((uint)now) % 8;
         trans1of8[offset] = transA[offset];
 
-        //set transformation of the first bone
+        // Set transformation of the first bone
         app.sb->setBones(*engine, translate, 1, 0);
 
-        //set transformation of the other bones, only 3 of them can be used, do to limitation
+        // Set transformation of the other bones, only 3 of them can be used, do to limitation
         app.sb->setBones(*engine,trans1of8, 8, 1);
     });
 

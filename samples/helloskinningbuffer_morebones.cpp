@@ -81,14 +81,15 @@ int main(int argc, char** argv) {
     Config config;
     config.title = "skinning buffer common for two renderables";
     auto offset = 0;
+    size_t boneCount = 9;
     utils::FixedCapacityVector<float2> boneDataPerVertex(9);
-    float w =   1/9.f;
-    for (size_t i = 0; i < 9; i++)
-      boneDataPerVertex[i] = float2 (i, w);
-    auto i = 0;
-    boneDataPerPrimitive[i++] = boneDataPerVertex;
-    boneDataPerPrimitive[i++] = boneDataPerVertex;
-    boneDataPerPrimitive[i++] = boneDataPerVertex;
+    float weight = 1.f / boneCount;
+    for (size_t idx = 0; idx < boneCount; idx++)
+      boneDataPerVertex[idx] = float2(idx, weight);
+    auto idx = 0;
+    boneDataPerPrimitive[idx++] = boneDataPerVertex;
+    boneDataPerPrimitive[idx++] = boneDataPerVertex;
+    boneDataPerPrimitive[idx++] = boneDataPerVertex;
 
     App app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
@@ -150,7 +151,7 @@ int main(int argc, char** argv) {
                 .castShadows(false)
                 .enableSkinningBuffers(true)
                 .skinning(app.sb, 9, 0)
-                //set bone indices and weight for 3 vertices, 9 bones per vertx
+                // Set bone indices and weight for 3 vertices, 9 bones per vertx
                 .boneIndicesAndWeights(0, boneDataPerPrimitive)
                 .build(*engine, app.renderable1);
 
@@ -163,7 +164,7 @@ int main(int argc, char** argv) {
                 .castShadows(false)
                 .enableSkinningBuffers(true)
                 .skinning(app.sb, 9, 0)
-                //set bone indices and weight for 3 vertices, 9 bones per vertx
+                // Set bone indices and weight for 3 vertices, 9 bones per vertx
                 .boneIndicesAndWeights(0, boneDataPerPrimitive)
                 .build(*engine, app.renderable2);
 
@@ -198,7 +199,7 @@ int main(int argc, char** argv) {
             -ZOOM, ZOOM, 0, 1);
                auto& tcm = engine->getTransformManager();
 
-        //transformation of both renderables
+        // Transformation of both renderables
         tcm.setTransform(tcm.getInstance(app.renderable1),
                 filament::math::mat4f::translation(filament::math::float3{ 0.5, 0, 0 }));
         tcm.setTransform(tcm.getInstance(app.renderable2),
@@ -206,7 +207,7 @@ int main(int argc, char** argv) {
 
         auto& rm = engine->getRenderableManager();
 
-        //skinning/bones animation
+        // Bone skinning animation
         float t = (float)(now - (int)now);
         float s = sin(t * f::PI * 2.f);
         float c = cos(t * f::PI * 2.f);
@@ -215,7 +216,7 @@ int main(int argc, char** argv) {
 
         mat4f trans[9] = {};
         for(uint i = 0; i < 9; i++){
-            trans[i] = filament::math::mat4f(1);//transforms[0];
+            trans[i] = filament::math::mat4f(1);
         }
         s *= 5;
         mat4f transA[] = {
@@ -231,10 +232,10 @@ int main(int argc, char** argv) {
         uint offset = ((uint)now) % 8;
         trans[offset] = transA[offset];
 
-        //set transformation of the first bone
+        // Set transformation of the first bone
         app.sb->setBones(*engine, translate, 1, 0);
 
-        //set transformation of the others bones
+        // Set transformation of the others bones
         app.sb->setBones(*engine,trans, 8, 1);
 
     });

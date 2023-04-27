@@ -58,20 +58,20 @@ struct Vertex {
 };
 
 static const Vertex TRIANGLE_VERTICES[3] = {
-    {{1, 0}, 0xffff0000u}, //blue one (ABGR)
-    {{cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff00ff00u}, //green one
-    {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xff0000ffu}, //red one
+    {{1, 0}, 0xffff0000u}, // blue one (ABGR)
+    {{cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff00ff00u}, // green one
+    {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xff0000ffu}, // red one
 };
 
 static const float3 targets_pos1[9] = {
-    {-2, 0, 0},{0, 2, 0},{1, 0, 0}, //1st position for 1st, 2nd and 3rd point of the first primitive
-    {1, 1, 0},{-1, 0, 0},{-1, 0, 0}, //2nd ...
-    {0, 0, 0},{0, 0, 0},{0, 0, 0} //no position change
+    {-2, 0, 0},{0, 2, 0},{1, 0, 0}, // 1st position for 1st, 2nd and 3rd point of the first primitive
+    {1, 1, 0},{-1, 0, 0},{-1, 0, 0}, // 2nd ...
+    {0, 0, 0},{0, 0, 0},{0, 0, 0} // no position change
 };
 
 static const float3 targets_pos2[9] = {
-    {0, 2, 0},{-2, 0, 0},{1, 0, 0}, //1st position for 1st, 2nd and 3rd point of the second primitive
-    {-1, 0, 0},{1, 1, 0},{-1, 0, 0}, //position of th 3rd point is same for both morph targets
+    {0, 2, 0},{-2, 0, 0},{1, 0, 0}, // 1st position for 1st, 2nd and 3rd point of the second primitive
+    {-1, 0, 0},{1, 1, 0},{-1, 0, 0}, // position of th 3rd point is same for both morph targets
     {0, 0, 0},{0, 0, 0}, {0, 0, 0}
 };
 
@@ -181,10 +181,10 @@ int main(int argc, char** argv) {
             -ZOOM, ZOOM, 0, 1);
 
         auto& rm = engine->getRenderableManager();
-        //morphTarget/blendshapes animation defined for all primitives
+        // morphTarget/blendshapes animation defined for all primitives
         float z = (float)(sin(now)/2.f + 0.5f);
         float weights[] = {1 - z, z/2, z/2};
-        //set global weights of all morph targets
+        // set global weights of all morph targets
         rm.setMorphWeights(rm.getInstance(app.renderable), weights, 3, 0);
     });
 

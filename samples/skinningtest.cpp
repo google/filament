@@ -111,39 +111,41 @@ int main(int argc, char** argv) {
     Config config;
     config.title = "skinning test with more than 4 bones per vertex";
 
-    utils::FixedCapacityVector<float2> boneDataPerVertex(8);
-    float w =   1 / 8.f;
-    for (uint i = 0; i < 8; i++){
-        boneDataArray[i] = float2 (i, w);
-        boneDataArray[i + 8] = float2 (i, w);
-        boneDataArray[i + 16] = float2 (i, w);
-        boneDataPerVertex[i] = float2 (i, w);
+    size_t boneCount = 8;
+    utils::FixedCapacityVector<float2> boneDataPerVertex(boneCount);
+    float weight = 1.f / boneCount;
+    for (uint idx = 0; idx < boneCount; idx++){
+        boneDataArray[idx] = float2(idx, weight);
+        boneDataArray[idx + boneCount] = float2(idx, weight);
+        boneDataArray[idx + 2*boneCount] = float2(idx, weight);
+        boneDataPerVertex[idx] = float2(idx, weight);
     }
     utils::FixedCapacityVector<float2> boneDataPerVertex2(3);
-    w =   1 / 3.f;
-    for (uint i = 0; i < 3; i++){
-        boneDataPerVertex2[i] = float2 (i, w);
+    boneCount = 3;
+    weight = 1.f / boneCount;
+    for (uint idx = 0; idx < boneCount; idx++){
+        boneDataPerVertex2[idx] = float2(idx, weight);
     }
 
     utils::FixedCapacityVector<float2> emptyBoneDataPerVertex(0);
     utils::FixedCapacityVector<utils::FixedCapacityVector<float2>> emptyBoneDataPerPrimitive(0);
-    auto i = 0;
-    boneDataPerPrimitive[i++] = boneDataPerVertex;
-    boneDataPerPrimitive[i++] = boneDataPerVertex;
-    boneDataPerPrimitive[i++] = boneDataPerVertex;
+    auto idx = 0;
+    boneDataPerPrimitive[idx++] = boneDataPerVertex;
+    boneDataPerPrimitive[idx++] = boneDataPerVertex;
+    boneDataPerPrimitive[idx++] = boneDataPerVertex;
 
-    i = 0;
-    boneDataPerPrimitive2[i++] = boneDataPerVertex;
-    boneDataPerPrimitive2[i++] = boneDataPerVertex2;
-    boneDataPerPrimitive2[i++] = boneDataPerVertex;
-    boneDataPerPrimitive2[i++] = boneDataPerVertex;
-    boneDataPerPrimitive2[i++] = boneDataPerVertex2;
-    boneDataPerPrimitive2[i++] = boneDataPerVertex;
+    idx = 0;
+    boneDataPerPrimitive2[idx++] = boneDataPerVertex;
+    boneDataPerPrimitive2[idx++] = boneDataPerVertex2;
+    boneDataPerPrimitive2[idx++] = boneDataPerVertex;
+    boneDataPerPrimitive2[idx++] = boneDataPerVertex;
+    boneDataPerPrimitive2[idx++] = boneDataPerVertex2;
+    boneDataPerPrimitive2[idx++] = boneDataPerVertex;
 
-    i = 0;
-    boneDataPerRenderable[i++] = boneDataPerPrimitive;
-    boneDataPerRenderable[i++] = boneDataPerPrimitive;
-    boneDataPerRenderable[i++] = emptyBoneDataPerPrimitive;
+    idx = 0;
+    boneDataPerRenderable[idx++] = boneDataPerPrimitive;
+    boneDataPerRenderable[idx++] = boneDataPerPrimitive;
+    boneDataPerRenderable[idx++] = emptyBoneDataPerPrimitive;
 
     App app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
@@ -152,7 +154,7 @@ int main(int argc, char** argv) {
         scene->setSkybox(app.skybox);
         view->setPostProcessingEnabled(false);
         static_assert(sizeof(Vertex) == 12, "Strange vertex size.");
-        //primitive 0, triangle without skinning vertex attributes
+        // primitive 0, triangle without skinning vertex attributes
         app.vb0 = VertexBuffer::Builder()
                 .vertexCount(3)
                 .bufferCount(1)
@@ -161,7 +163,7 @@ int main(int argc, char** argv) {
                 .normalized(VertexAttribute::COLOR)
                 .build(*engine);
 
-        //primitive 1, triangle without skinning vertex attributes
+        // primitive 1, triangle without skinning vertex attributes
         app.vb1 = VertexBuffer::Builder()
                 .vertexCount(3)
                 .bufferCount(1)
@@ -170,7 +172,7 @@ int main(int argc, char** argv) {
                 .normalized(VertexAttribute::COLOR)
                 .build(*engine);
 
-        //primitive 2, triangle with skinning vertex attributes, buffer object disabled
+        // primitive 2, triangle with skinning vertex attributes, buffer object disabled
         app.vb2 = VertexBuffer::Builder()
                 .vertexCount(3)
                 .bufferCount(3)
@@ -179,10 +181,9 @@ int main(int argc, char** argv) {
                 .normalized(VertexAttribute::COLOR)
                 .attribute(VertexAttribute::BONE_INDICES, 1, VertexBuffer::AttributeType::USHORT4, 0, 8)
                 .attribute(VertexAttribute::BONE_WEIGHTS, 2, VertexBuffer::AttributeType::FLOAT4, 0, 16)
-                //.enableBufferObjects()
                 .build(*engine);
 
-        //primitive 3, triangle without skinning vertex attributes, buffer object enabled
+        // primitive 3, triangle without skinning vertex attributes, buffer object enabled
         app.vb3 = VertexBuffer::Builder()
                 .vertexCount(3)
                 .bufferCount(1)
@@ -192,7 +193,7 @@ int main(int argc, char** argv) {
                 .enableBufferObjects()
                 .build(*engine);
 
-        //primitive 4, triangle without skinning vertex attributes
+        // primitive 4, triangle without skinning vertex attributes
         app.vb4 = VertexBuffer::Builder()
                 .vertexCount(3)
                 .bufferCount(1)
@@ -201,7 +202,7 @@ int main(int argc, char** argv) {
                 .normalized(VertexAttribute::COLOR)
                 .build(*engine);
 
-        //primitive 5, two triangles without skinning vertex attributes
+        // primitive 5, two triangles without skinning vertex attributes
         app.vb5 = VertexBuffer::Builder()
                 .vertexCount(6)
                 .bufferCount(1)
@@ -210,7 +211,7 @@ int main(int argc, char** argv) {
                 .normalized(VertexAttribute::COLOR)
                 .build(*engine);
 
-        //primitive 6, triangle without skinning vertex attributes
+        // primitive 6, triangle without skinning vertex attributes
         app.vb6 = VertexBuffer::Builder()
                 .vertexCount(3)
                 .bufferCount(1)
@@ -218,22 +219,22 @@ int main(int argc, char** argv) {
                 .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4, 8, 12)
                 .normalized(VertexAttribute::COLOR)
                 .build(*engine);
-//--------data for primitive 0
+// --------data for primitive 0
         app.vb0->setBufferAt(*engine, 0,
                 VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36, nullptr));
-//--------data for primitive 1
+// --------data for primitive 1
         app.vb1->setBufferAt(*engine, 0,
                 VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES + 3, 36, nullptr));
         app.vb2->setBufferAt(*engine, 0,
                 VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES + 3, 36, nullptr));
 
-//--------data for primitive 2
+// --------data for primitive 2
         app.vb2->setBufferAt(*engine, 1,
                  VertexBuffer::BufferDescriptor(skinJoints, 24, nullptr));
         app.vb2->setBufferAt(*engine, 2,
                 VertexBuffer::BufferDescriptor(skinWeights, 48, nullptr));
 
-//--------data for primitive 3
+// --------data for primitive 3
         app.boTriangle = BufferObject::Builder()
             .size(3 * 4 * sizeof(Vertex))
             .build(*engine);
@@ -241,16 +242,16 @@ int main(int argc, char** argv) {
                     TRIANGLE_VERTICES + 2, app.boTriangle->getByteCount(), nullptr));
         app.vb3->setBufferObjectAt(*engine, 0,app.boTriangle);
 
-//--------data for primitive 4
+// --------data for primitive 4
         app.vb4->setBufferAt(*engine, 0,
                              VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES + 1, 36, nullptr),0);
-//--------data for primitive 5
+// --------data for primitive 5
         app.vb5->setBufferAt(*engine, 0,
                              VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES + 0, 72, nullptr),0);
-//--------data for primitive 6
+// --------data for primitive 6
         app.vb6->setBufferAt(*engine, 0,
                              VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES + 0, 36, nullptr),0);
-//index buffer data
+// index buffer data
         app.ib = IndexBuffer::Builder()
                 .indexCount(3)
                 .bufferType(IndexBuffer::IndexType::USHORT)
@@ -269,13 +270,13 @@ int main(int argc, char** argv) {
                 .package(RESOURCES_BAKEDCOLOR_DATA, RESOURCES_BAKEDCOLOR_SIZE)
                 .build(*engine);
 
-//skinning buffer for renderable 1
+// Skinning buffer for renderable 1
         app.sb = SkinningBuffer::Builder()
             .boneCount(9)
             .initialize(true)
             .build(*engine);
 
-//skinning buffer common for renderable 2 and 3
+// Skinning buffer common for renderable 2 and 3
         app.sb2 = SkinningBuffer::Builder()
             .boneCount(9)
             .initialize(true)
@@ -283,7 +284,7 @@ int main(int argc, char** argv) {
 
         app.sb->setBones(*engine, transforms,9,0);
 
-//morph target definition to check combination bone skinning and blend shapes
+// Morph target definition to check combination bone skinning and blend shapes
         app.mt = MorphTargetBuffer::Builder()
             .vertexCount(9)
             .count(3)
@@ -296,10 +297,10 @@ int main(int argc, char** argv) {
         app.mt->setTangentsAt(*engine,1, targets_tan, 9, 0);
         app.mt->setTangentsAt(*engine,2, targets_tan, 9, 0);
 
-//renderable 1:
-//primitive 0 = skinned triangle, bone data defined as vector per primitive,
-//primitive 1 = skinned triangle, bone data defined as array per primitive,
-//primitive 2 = triangle without skinning and with morphing, bone data defined as vertex attributes
+// renderable 1:
+// primitive 0 = skinned triangle, bone data defined as vector per primitive,
+// primitive 1 = skinned triangle, bone data defined as array per primitive,
+// primitive 2 = triangle without skinning and with morphing, bone data defined as vertex attributes
         app.renderable1 = EntityManager::get().create();
         RenderableManager::Builder(3)
             .boundingBox({{-1, -1, -1}, {1, 1, 1}})
@@ -324,9 +325,9 @@ int main(int argc, char** argv) {
             .morphing(0,2,app.mt)
             .build(*engine, app.renderable1);
 
-//renderable 2:
-//primitive 0 = skinning and morphing triangle, bone data defined as vector for all primitives of renderable,
-//primitive 1 = skinning triangle, bone data defined as vector for all primitives of renderable,
+// renderable 2:
+// primitive 0 = skinning and morphing triangle, bone data defined as vector for all primitives of renderable,
+// primitive 1 = skinning triangle, bone data defined as vector for all primitives of renderable,
         app.renderable2 = EntityManager::get().create();
         RenderableManager::Builder(2)
             .boundingBox({{-1, -1, -1}, {1, 1, 1}})
@@ -346,9 +347,9 @@ int main(int argc, char** argv) {
             .morphing(0,0,app.mt)
             .build(*engine, app.renderable2);
 
-//renderable 3:
-//primitive 0 = skinning of two triangles, bone data defined as vector with various number of bones per vertex,
-//primitive 1 = skinning triangle, bone data defined as vector with various number of bones per vertex,
+// renderable 3:
+// primitive 0 = skinning of two triangles, bone data defined as vector with various number of bones per vertex,
+// primitive 1 = skinning triangle, bone data defined as vector with various number of bones per vertex,
         app.renderable3 = EntityManager::get().create();
         RenderableManager::Builder(2)
             .boundingBox({{-1, -1, -1}, {1, 1, 1}})
@@ -410,17 +411,17 @@ int main(int argc, char** argv) {
 
         auto& rm = engine->getRenderableManager();
 
-        //skinning/bone animation for more than four bones per vertex
+        // Bone skinning animation for more than four bones per vertex
         float t = (float)(now - (int)now);
         uint offset = ((uint)now) % 9;
         float s = sin(t * f::PI * 2.f) * 10;
         mat4f trans[9] = {};
         for(uint i = 0; i < 9; i++){
-            trans[i] = filament::math::mat4f(1);//transforms[0];
+            trans[i] = filament::math::mat4f(1);
         }
         mat4f trans2[9] = {};
         for(uint i = 0; i < 9; i++){
-            trans2[i] = filament::math::mat4f(1);//transforms[0];
+            trans2[i] = filament::math::mat4f(1);
         }
         mat4f transA[] = {
             mat4f::scaling(float3(s / 10.f,s / 10.f, 1)),
@@ -440,7 +441,7 @@ int main(int argc, char** argv) {
         app.sb->setBones(*engine,trans,9,0);
         app.sb2->setBones(*engine,trans2,9,0);
 
-        //morphTarget/blendshapes animation
+        // Morph targets (blendshapes) animation
         float z = (float)(sin(now)/2.f + 0.5f);
         float weights[] = {1 - z, 0, z};
         rm.setMorphWeights(rm.getInstance(app.renderable1), weights, 3, 0);
