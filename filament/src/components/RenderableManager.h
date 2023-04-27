@@ -212,8 +212,7 @@ private:
             uint64_t padding;          // ensures the pointer is 64 bits on all archs
         };
         uint16_t count;
-        bool shouldDestroyBuffer; // if true, buffer was created by Filament and should be destroyed
-        char padding0[5];
+        char padding0[6];
     };
     static_assert(sizeof(Instances) == 16);
 

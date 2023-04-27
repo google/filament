@@ -409,7 +409,6 @@ public:
          */
         Builder& globalBlendOrderEnabled(size_t primitiveIndex, bool enabled) noexcept;
 
-
         /**
          * Specifies the number of draw instances of this renderable. The default is 1 instance and
          * the maximum number of instances allowed is 32767. 0 is invalid.
@@ -429,58 +428,27 @@ public:
         Builder& instances(size_t instanceCount) noexcept;
 
         /**
-         * Specifies the number of draw instances of this renderable and their local transforms. The
-         * default is 1 instance and the maximum number of instances allowed when supplying
-         * transforms is \c CONFIG_MAX_INSTANCES (64 on most platforms). 0 is invalid.
-         *
-         * This method allows providing a local transform for each instance. The local transform is
-         * relative to the renderable's transform, so adjusting the renderable's transform will
-         * affect all instances. Only *one* \c instances() method should be called on this Builder.
-         *
-         * All instances are culled using the same bounding box, so care must be taken to make
-         * sure all instances render inside the specified bounding box.
-         *
-         * The material must set its `instanced` parameter to `true` in order to use
-         * getInstanceIndex() in the vertex or fragment shader to get the instance index.
-         *
-         * It generally doesn't make sense to use \c VERTEX_DOMAIN_OBJECT in the material, since it
-         * would pull the same transform for all instances.
-         *
-         * The local transforms of each instance can be updated with the
-         * RenderableManager::setInstanceTransforms method.
-         *
-         * @param instanceCount the number of instances, must be >= 1 and <= CONFIG_MAX_INSTANCES
-         * @param localTransforms an array of math::mat4f with length instanceCount, must remain
-         *                        valid until after build() is called
-         */
-        Builder& instances(size_t instanceCount, math::mat4f const* localTransforms) noexcept;
-
-        /**
-         * Specifies the number of draw instances of this renderable and an InstanceBuffer
+         * Specifies the number of draw instances of this renderable and an \c InstanceBuffer
          * containing their local transforms. The default is 1 instance and the maximum number of
          * instances allowed when supplying transforms is \c CONFIG_MAX_INSTANCES (64 on most
-         * platforms). 0 is invalid.
-         *
-         * This method is the same as the \c instances(size_t, math::mat4f const*) override, except
-         * the instance transforms are specified with an \c InstanceBuffer. Using an \c
-         * InstanceBuffer allows transforms to be re-used across renderables. The \c InstanceBuffer
-         * must not be destroyed before this renderable.
+         * platforms). 0 is invalid. The \c InstanceBuffer must not be destroyed before this
+         * renderable.
          *
          * All instances are culled using the same bounding box, so care must be taken to make
          * sure all instances render inside the specified bounding box.
          *
          * The material must set its `instanced` parameter to `true` in order to use
-         * getInstanceIndex() in the vertex or fragment shader to get the instance index.
+         * \c getInstanceIndex() in the vertex or fragment shader to get the instance index.
          *
-         * It generally doesn't make sense to use \c VERTEX_DOMAIN_OBJECT in the material, since it
-         * would pull the same transform for all instances.
+         * Only the \c VERTEX_DOMAIN_OBJECT vertex domain is supported.
          *
          * The local transforms of each instance can be updated with
          * InstanceBuffer::setLocalTransforms.
          *
          * \see InstanceBuffer
          * \see instances(size_t, * math::mat4f const*)
-         * @param instanceCount the number of instances, must be >= 1 and <= CONFIG_MAX_INSTANCES
+         * @param instanceCount the number of instances, silently clamped between 1 and
+         *                      CONFIG_MAX_INSTANCES.
          * @param instanceBuffer an InstanceBuffer containing at least instanceCount transforms
          */
         Builder& instances(size_t instanceCount, InstanceBuffer* instanceBuffer) noexcept;

@@ -66,7 +66,6 @@ struct RenderableManager::BuilderDetails {
     mat4f const* mUserBoneMatrices = nullptr;
     FSkinningBuffer* mSkinningBuffer = nullptr;
     FInstanceBuffer* mInstanceBuffer = nullptr;
-    math::mat4f const* mInstanceTransforms = nullptr;  // if not null, will automatically create a FInstanceBuffer
     uint32_t mSkinningBufferOffset = 0;
 
     explicit BuilderDetails(size_t count)
@@ -243,6 +242,16 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
 
     ASSERT_PRECONDITION(mImpl->mSkinningBoneCount <= CONFIG_MAX_BONE_COUNT,
             "bone count > %u", CONFIG_MAX_BONE_COUNT);
+    ASSERT_PRECONDITION(mImpl->mInstanceCount <= CONFIG_MAX_INSTANCES || !mImpl->mInstanceBuffer,
+            "instance count is %zu, but instance count is limited to CONFIG_MAX_INSTANCES (%zu) "
+            "instances when supplying transforms via an InstanceBuffer.",
+            mImpl->mInstanceCount,
+            CONFIG_MAX_INSTANCES);
+    size_t bufferInstanceCount = mImpl->mInstanceBuffer->mInstanceCount;
+    ASSERT_PRECONDITION(mImpl->mInstanceCount <= bufferInstanceCount,
+            "instance count (%zu) must be less than or equal to the InstanceBuffer's instance count "
+            "(%zu).",
+            mImpl->mInstanceCount, bufferInstanceCount);
 
     for (size_t i = 0, c = mImpl->mEntries.size(); i < c; i++) {
         auto& entry = mImpl->mEntries[i];
@@ -304,45 +313,13 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
 }
 
 RenderableManager::Builder& RenderableManager::Builder::instances(size_t instanceCount) noexcept {
-    ASSERT_PRECONDITION(mImpl->mInstanceTransforms == nullptr && mImpl->mInstanceBuffer == nullptr,
-            "cannot call instances(size_t) override, instance local transforms already provided");
     mImpl->mInstanceCount = clamp((unsigned int)instanceCount, 1u, 32767u);
-    return *this;
-}
-
-RenderableManager::Builder& RenderableManager::Builder::instances(size_t instanceCount,
-        math::mat4f const* localTransforms) noexcept {
-    ASSERT_PRECONDITION(instanceCount >= 1, "instanceCount must be >= 1.");
-    ASSERT_PRECONDITION(instanceCount <= CONFIG_MAX_INSTANCES,
-            "instanceCount is %zu, but instance count is limited to CONFIG_MAX_INSTANCES (%zu) "
-            "instances when supplying transforms.",
-            instanceCount,
-            CONFIG_MAX_INSTANCES);
-    ASSERT_PRECONDITION(!mImpl->mInstanceBuffer,
-            "Cannot accept localTransforms, an InstanceBuffer was already supplied for this "
-            "Renderable.");
-    mImpl->mInstanceCount = instanceCount;
-    mImpl->mInstanceTransforms = localTransforms;
     return *this;
 }
 
 RenderableManager::Builder& RenderableManager::Builder::instances(
         size_t instanceCount, InstanceBuffer* instanceBuffer) noexcept {
-    ASSERT_PRECONDITION(instanceCount >= 1, "instanceCount must be >= 1.");
-    ASSERT_PRECONDITION(instanceCount <= CONFIG_MAX_INSTANCES,
-            "instanceCount is %zu, but instance count is limited to CONFIG_MAX_INSTANCES (%zu) "
-            "instances when supplying transforms.",
-            instanceCount,
-            CONFIG_MAX_INSTANCES);
-    size_t bufferInstanceCount = downcast(instanceBuffer)->mInstanceCount;
-    ASSERT_PRECONDITION(instanceCount <= bufferInstanceCount,
-            "instanceCount (%zu) must be less than or equal to the InstanceBuffer's instance count "
-            "(%zu).",
-            instanceCount, bufferInstanceCount);
-    ASSERT_PRECONDITION(!mImpl->mInstanceTransforms,
-            "Cannot accept instanceBuffer, instance transforms were already supplied for this "
-            "Renderable.");
-    mImpl->mInstanceCount = instanceCount;
+    mImpl->mInstanceCount = clamp(instanceCount, 1ul, CONFIG_MAX_INSTANCES);
     mImpl->mInstanceBuffer = downcast(instanceBuffer);
     return *this;
 }
@@ -397,17 +374,7 @@ void FRenderableManager::create(
 
         Instances& instances = manager[ci].instances;
         instances.count = builder->mInstanceCount;
-        if (UTILS_UNLIKELY(builder->mInstanceTransforms)) {
-            assert_invariant(builder->mInstanceBuffer == nullptr);
-            InstanceBuffer *instanceBuffer = InstanceBuffer::Builder(builder->mInstanceCount)
-                    .localTransforms(builder->mInstanceTransforms)
-                    .build(engine);
-            instances.buffer = downcast(instanceBuffer);
-            instances.shouldDestroyBuffer = true;
-        } else {
-            instances.buffer = builder->mInstanceBuffer;
-            instances.shouldDestroyBuffer = false;
-        }
+        instances.buffer = builder->mInstanceBuffer;
 
         const uint32_t boneCount = builder->mSkinningBoneCount;
         const uint32_t targetCount = builder->mMorphTargetCount;
@@ -564,11 +531,6 @@ void FRenderableManager::destroyComponent(Instance ci) noexcept {
     MorphWeights const& morphWeights = manager[ci].morphWeights;
     if (morphWeights.handle) {
         driver.destroyBufferObject(morphWeights.handle);
-    }
-
-    Instances const& instances = manager[ci].instances;
-    if (instances.buffer && instances.shouldDestroyBuffer) {
-        engine.destroy(instances.buffer);
     }
 }
 
