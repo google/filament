@@ -42,7 +42,7 @@ public:
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
 
-    void prepare(FEngine& engine, math::mat4f rootTransform, PerRenderableData& ubo);
+    void prepare(FEngine& engine, math::mat4f rootTransform, const PerRenderableData& ubo);
 
     inline backend::Handle<backend::HwBufferObject> getHwHandle() const noexcept {
         return mUboHandle;

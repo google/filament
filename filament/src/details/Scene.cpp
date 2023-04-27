@@ -309,7 +309,6 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
         auto const visibility = sceneData.elementAt<VISIBILITY_STATE>(i);
         auto const& model = sceneData.elementAt<WORLD_TRANSFORM>(i);
         auto const ri = sceneData.elementAt<RENDERABLE_INSTANCE>(i);
-        auto* instanceBuffer = sceneData.elementAt<INSTANCE_BUFFER>(i);
 
         // Using mat3f::getTransformForNormals handles non-uniform scaling, but DOESN'T guarantee that
         // the transformed normals will have unit-length, therefore they need to be normalized
@@ -351,12 +350,6 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
         uboData.userData = sceneData.elementAt<USER_DATA>(i);
 
         mHasContactShadows = mHasContactShadows || visibility.screenSpaceContactShadows;
-
-        // Prepare the InstanceBuffer for this Renderable.
-        // TODO: maybe do this inside updateUBOs? And avoid updating the actual UBO?
-        if (UTILS_UNLIKELY(instanceBuffer)) {
-            instanceBuffer->prepare(mEngine, model, uboData);
-        }
     }
 }
 
@@ -383,8 +376,18 @@ void FScene::updateUBOs(
         }
     }();
 
-    // copy our data into the UBO for each visible renderable
     PerRenderableData const* const uboData = mRenderableData.data<UBO>();
+    mat4f const* const worldTransformData = mRenderableData.data<WORLD_TRANSFORM>();
+
+    // prepare each InstanceBuffer.
+    FInstanceBuffer* const* instanceBuffer = mRenderableData.data<INSTANCE_BUFFER>();
+    for (uint32_t const i : visibleRenderables) {
+        if (UTILS_UNLIKELY(instanceBuffer[i])) {
+            instanceBuffer[i]->prepare(mEngine, worldTransformData[i], uboData[i]);
+        }
+    }
+
+    // copy our data into the UBO for each visible renderable
     for (uint32_t const i : visibleRenderables) {
         buffer[i] = uboData[i];
     }
