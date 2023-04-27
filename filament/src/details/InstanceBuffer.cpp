@@ -21,6 +21,7 @@
 
 #include "FilamentAPI-impl.h"
 
+#include <math/mat3.h>
 #include <math/vec3.h>
 
 namespace filament {
@@ -107,7 +108,7 @@ void FInstanceBuffer::prepare(FEngine& engine, math::mat4f rootTransform, PerRen
         stagingBuffer[i].worldFromModelMatrix = model;
 
         math::mat3f m = math::mat3f::getTransformForNormals(model.upperLeft());
-        stagingBuffer[i].worldFromModelNormalMatrix = math::mat3f::prescaleForNormals(m);
+        stagingBuffer[i].worldFromModelNormalMatrix = math::prescaleForNormals(m);
     }
     driver.updateBufferObject(mUboHandle, {
             stagingBuffer, stagingBufferSize,

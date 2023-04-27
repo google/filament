@@ -323,7 +323,7 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
         // Note: if the model matrix is known to be a rigid-transform, we could just use it directly.
 
         mat3f m = mat3f::getTransformForNormals(model.upperLeft());
-        m = mat3f::prescaleForNormals(m);
+        m = prescaleForNormals(m);
 
         // The shading normal must be flipped for mirror transformations.
         // Basically we're shading the other side of the polygon and therefore need to negate the
