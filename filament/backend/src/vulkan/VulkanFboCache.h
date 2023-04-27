@@ -52,7 +52,8 @@ public:
         VulkanLayout initialDepthLayout : 4;
         VulkanLayout renderPassDepthLayout : 4;
         VulkanLayout finalDepthLayout : 4;
-        uint8_t padding : 4;
+        uint8_t padding0 : 4;
+        uint8_t padding1;
 
         VkFormat colorFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]; // 32 bytes
         VkFormat depthFormat; // 4 bytes
