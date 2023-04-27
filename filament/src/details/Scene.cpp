@@ -203,11 +203,10 @@ void FScene::prepare(utils::JobSystem& js,
             sceneData.elementAt<VISIBILITY_STATE>(index)    = visibility;
             sceneData.elementAt<SKINNING_BUFFER>(index)     = rcm.getSkinningBufferInfo(ri);
             sceneData.elementAt<MORPHING_BUFFER>(index)     = rcm.getMorphingBufferInfo(ri);
-            sceneData.elementAt<INSTANCE_BUFFER>(index)     = rcm.getInstanceBuffer(ri);
+            sceneData.elementAt<INSTANCES>(index)           = rcm.getInstancesInfo(ri);
             sceneData.elementAt<WORLD_AABB_CENTER>(index)   = worldAABB.center;
             sceneData.elementAt<VISIBLE_MASK>(index)        = 0;
             sceneData.elementAt<CHANNELS>(index)            = rcm.getChannels(ri);
-            sceneData.elementAt<INSTANCE_COUNT>(index)      = rcm.getInstanceCount(ri);
             sceneData.elementAt<LAYERS>(index)              = rcm.getLayerMask(ri);
             sceneData.elementAt<WORLD_AABB_EXTENT>(index)   = worldAABB.halfExtent;
             //sceneData.elementAt<PRIMITIVES>(index)          = {}; // already initialized, Slice<>
@@ -339,7 +338,7 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
                 visibility.skinning,
                 visibility.morphing,
                 visibility.screenSpaceContactShadows,
-                sceneData.elementAt<INSTANCE_BUFFER>(i) != nullptr,
+                sceneData.elementAt<INSTANCES>(i).buffer != nullptr,
                 sceneData.elementAt<CHANNELS>(i));
 
         uboData.morphTargetCount = sceneData.elementAt<MORPHING_BUFFER>(i).count;
@@ -380,10 +379,12 @@ void FScene::updateUBOs(
     mat4f const* const worldTransformData = mRenderableData.data<WORLD_TRANSFORM>();
 
     // prepare each InstanceBuffer.
-    FInstanceBuffer* const* instanceBuffer = mRenderableData.data<INSTANCE_BUFFER>();
+    FRenderableManager::InstancesInfo const* instancesData = mRenderableData.data<INSTANCES>();
     for (uint32_t const i : visibleRenderables) {
-        if (UTILS_UNLIKELY(instanceBuffer[i])) {
-            instanceBuffer[i]->prepare(mEngine, worldTransformData[i], uboData[i]);
+        auto& instancesInfo = instancesData[i];
+        if (UTILS_UNLIKELY(instancesInfo.buffer)) {
+            instancesInfo.buffer->prepare(
+                    mEngine, worldTransformData[i], uboData[i], instancesInfo.handle);
         }
     }
 

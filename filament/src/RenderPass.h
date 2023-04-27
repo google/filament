@@ -234,15 +234,12 @@ public:
         backend::Handle<backend::HwBufferObject> skinningHandle;        // 4 bytes
         backend::Handle<backend::HwBufferObject> morphWeightBuffer;     // 4 bytes
         backend::Handle<backend::HwSamplerGroup> morphTargetBuffer;     // 4 bytes
+        backend::Handle<backend::HwBufferObject> instanceBufferHandle;  // 4 bytes
         uint32_t index = 0;                                             // 4 bytes
         uint32_t skinningOffset = 0;                                    // 4 bytes
         uint16_t instanceCount;                                         // 2 bytes [MSb: user]
         Variant materialVariant;                                        // 1 byte
         uint8_t padding0;                                               // 1 byte
-        union {
-            FInstanceBuffer const* instanceBuffer;
-            uint64_t padding1 = {}; // ensures instanceBuffer is 8 bytes on all archs
-        };                                                              // 8 bytes
 
         static const uint16_t USER_INSTANCE_MASK = 0x8000u;
         static const uint16_t INSTANCE_COUNT_MASK = 0x7fffu;

@@ -375,9 +375,17 @@ void FRenderableManager::create(
         setMorphing(ci, builder->mMorphTargetCount);
         mManager[ci].channels = builder->mLightChannels;
 
-        Instances& instances = manager[ci].instances;
+        InstancesInfo& instances = manager[ci].instances;
         instances.count = builder->mInstanceCount;
         instances.buffer = builder->mInstanceBuffer;
+        if (instances.buffer) {
+            // Allocate our instance buffer for this Renderable. We always allocate a size to match
+            // PerRenderableUib, regardless of the number of instances. This is because the buffer
+            // will get bound to the PER_RENDERABLE UBO, and we can't bind a buffer smaller than the
+            // full size of the UBO.
+            instances.handle = driver.createBufferObject(sizeof(PerRenderableUib),
+                    BufferObjectBinding::UNIFORM, backend::BufferUsage::DYNAMIC);
+        }
 
         const uint32_t boneCount = builder->mSkinningBoneCount;
         const uint32_t targetCount = builder->mMorphTargetCount;
@@ -534,6 +542,11 @@ void FRenderableManager::destroyComponent(Instance ci) noexcept {
     MorphWeights const& morphWeights = manager[ci].morphWeights;
     if (morphWeights.handle) {
         driver.destroyBufferObject(morphWeights.handle);
+    }
+
+    InstancesInfo const& instances = manager[ci].instances;
+    if (instances.handle) {
+        driver.destroyBufferObject(instances.handle);
     }
 }
 

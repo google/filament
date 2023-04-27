@@ -454,8 +454,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
     auto const* const UTILS_RESTRICT soaSkinning            = soa.data<FScene::SKINNING_BUFFER>();
     auto const* const UTILS_RESTRICT soaMorphing            = soa.data<FScene::MORPHING_BUFFER>();
     auto const* const UTILS_RESTRICT soaVisibilityMask      = soa.data<FScene::VISIBLE_MASK>();
-    auto const* const UTILS_RESTRICT soaInstanceCount       = soa.data<FScene::INSTANCE_COUNT>();
-    auto const* const UTILS_RESTRICT soaInstanceBuffers     = soa.data<FScene::INSTANCE_BUFFER>();
+    auto const* const UTILS_RESTRICT soaInstanceInfo        = soa.data<FScene::INSTANCES>();
 
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
     const bool viewInverseFrontFaces = renderFlags & HAS_INVERSE_FRONT_FACES;
@@ -517,8 +516,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
         cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdColor.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
         cmdColor.primitive.index = (uint16_t)i;
-        cmdColor.primitive.instanceCount = soaInstanceCount[i] | PrimitiveInfo::USER_INSTANCE_MASK;
-        cmdColor.primitive.instanceBuffer = soaInstanceBuffers[i];
+        cmdColor.primitive.instanceCount =
+                soaInstanceInfo[i].count | PrimitiveInfo::USER_INSTANCE_MASK;
+        cmdColor.primitive.instanceBufferHandle = soaInstanceInfo[i].handle;
 
         // if we are already an SSR variant, the SRE bit is already set,
         // there is no harm setting it again
@@ -534,8 +534,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
             cmdDepth.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
             cmdDepth.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK, Z_BUCKET_SHIFT);
             cmdDepth.primitive.index = (uint16_t)i;
-            cmdDepth.primitive.instanceCount = soaInstanceCount[i] | PrimitiveInfo::USER_INSTANCE_MASK;
-            cmdDepth.primitive.instanceBuffer = soaInstanceBuffers[i];
+            cmdDepth.primitive.instanceCount =
+                    soaInstanceInfo[i].count | PrimitiveInfo::USER_INSTANCE_MASK;
+            cmdDepth.primitive.instanceBufferHandle = soaInstanceInfo[i].handle;
             cmdDepth.primitive.materialVariant.setSkinning(hasSkinningOrMorphing);
             cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
         }
@@ -815,9 +816,9 @@ void RenderPass::Executor::execute(backend::DriverApi& driver,
             uint16_t const instanceCount = info.instanceCount & PrimitiveInfo::INSTANCE_COUNT_MASK;
             auto getPerObjectUboHandle =
                     [this, &info, &instanceCount]() -> std::pair<Handle<backend::HwBufferObject>, uint32_t> {
-                if (info.instanceBuffer) {
-                    // "hybrid" instancing
-                    return { info.instanceBuffer->getHwHandle(), 0 };
+                if (info.instanceBufferHandle) {
+                    // "hybrid" instancing -- instanceBufferHandle takes the place of the UBO
+                    return { info.instanceBufferHandle, 0 };
                 }
                 bool const userInstancing =
                         (info.instanceCount & PrimitiveInfo::USER_INSTANCE_MASK) != 0u;

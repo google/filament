@@ -37,23 +37,18 @@ class FInstanceBuffer : public InstanceBuffer {
 public:
     FInstanceBuffer(FEngine& engine, const Builder& builder);
 
- inline size_t getInstanceCount() const noexcept { return mInstanceCount; }
-
- void setLocalTransforms(math::mat4f const* localTransforms, size_t count, size_t offset);
-
-    // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
 
-    void prepare(FEngine& engine, math::mat4f rootTransform, const PerRenderableData& ubo);
+    inline size_t getInstanceCount() const noexcept { return mInstanceCount; }
 
-    inline backend::Handle<backend::HwBufferObject> getHwHandle() const noexcept {
-        return mUboHandle;
-    }
+    void setLocalTransforms(math::mat4f const* localTransforms, size_t count, size_t offset);
+
+    void prepare(FEngine& engine, math::mat4f rootTransform, const PerRenderableData& ubo,
+            backend::Handle<backend::HwBufferObject> handle);
 
 private:
     friend class RenderableManager;
 
-    backend::Handle<backend::HwBufferObject> mUboHandle;
     utils::FixedCapacityVector<math::mat4f> mLocalTransforms;
     size_t mInstanceCount;
 };

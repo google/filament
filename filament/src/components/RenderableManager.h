@@ -164,6 +164,18 @@ public:
     };
     inline MorphingBindingInfo getMorphingBufferInfo(Instance instance) const noexcept;
 
+    struct InstancesInfo {
+        union {
+            FInstanceBuffer* buffer;
+            uint64_t padding;          // ensures the pointer is 64 bits on all archs
+        };
+        backend::Handle<backend::HwBufferObject> handle;
+        uint16_t count;
+        char padding0[2];
+    };
+    static_assert(sizeof(InstancesInfo) == 16);
+    inline InstancesInfo getInstancesInfo(Instance instance) const noexcept;
+
     utils::Entity getEntity(Instance instance) const noexcept {
         return mManager.getEntity(instance);
     }
@@ -206,16 +218,6 @@ private:
     };
     static_assert(sizeof(MorphWeights) == 8);
 
-    struct Instances {
-        union {
-            FInstanceBuffer* buffer;
-            uint64_t padding;          // ensures the pointer is 64 bits on all archs
-        };
-        uint16_t count;
-        char padding0[6];
-    };
-    static_assert(sizeof(Instances) == 16);
-
     enum {
         AABB,                   // user data
         LAYERS,                 // user data
@@ -233,7 +235,7 @@ private:
             uint8_t,                         // LAYERS
             MorphWeights,                    // MORPH_WEIGHTS
             uint8_t,                         // CHANNELS
-            Instances,                       // INSTANCES
+            InstancesInfo,                   // INSTANCES
             Visibility,                      // VISIBILITY
             utils::Slice<FRenderPrimitive>,  // PRIMITIVES
             Bones,                           // BONES
@@ -392,12 +394,12 @@ uint8_t FRenderableManager::getChannels(Instance instance) const noexcept {
 }
 
 uint16_t FRenderableManager::getInstanceCount(Instance instance) const noexcept {
-    Instances const& instances = mManager[instance].instances;
+    InstancesInfo const& instances = mManager[instance].instances;
     return instances.count;
 }
 
 FInstanceBuffer* FRenderableManager::getInstanceBuffer(Instance instance) const noexcept {
-    Instances const& instances = mManager[instance].instances;
+    InstancesInfo const& instances = mManager[instance].instances;
     return instances.buffer;
 }
 
@@ -423,6 +425,11 @@ FRenderableManager::getMorphingBufferInfo(Instance instance) const noexcept {
     return { morphWeights.handle, morphWeights.count, morphTargets.data() };
 }
 
+FRenderableManager::InstancesInfo
+FRenderableManager::getInstancesInfo(Instance instance) const noexcept {
+    return mManager[instance].instances;
+}
+
 utils::Slice<FRenderPrimitive> const& FRenderableManager::getRenderPrimitives(
         Instance instance, uint8_t level) const noexcept {
     return mManager[instance].primitives;
@@ -445,7 +452,7 @@ utils::Slice<FRenderableManager::MorphTargets>& FRenderableManager::getMorphTarg
 
 void FRenderableManager::setInstanceTransforms(Instance instance,
         math::mat4f const* localTransforms, size_t count, size_t offset) {
-    Instances& instances = mManager[instance].instances;
+    InstancesInfo& instances = mManager[instance].instances;
     ASSERT_PRECONDITION(instances.buffer != nullptr,
             "Cannot call setInstanceTransforms(), Renderable has no instances.");
     ASSERT_PRECONDITION(offset + count <= instances.count,

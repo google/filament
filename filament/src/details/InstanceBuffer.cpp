@@ -72,13 +72,6 @@ FInstanceBuffer::FInstanceBuffer(FEngine& engine, const Builder& builder) {
         memcpy(mLocalTransforms.data(), builder->mLocalTransforms,
                 sizeof(math::mat4f) * mInstanceCount);
     }
-
-    // Allocate our instance buffer. We always allocate a size to match PerRenderableUib, regardless
-    // of the number of instances. This is because the buffer will get bound to the PER_RENDERABLE
-    // UBO, and we can't bind a buffer smaller than the full size of the UBO.
-    DriverApi& driver = engine.getDriverApi();
-    mUboHandle = driver.createBufferObject(sizeof(PerRenderableUib),
-            BufferObjectBinding::UNIFORM, backend::BufferUsage::STATIC);
 }
 
 void FInstanceBuffer::setLocalTransforms(
@@ -92,8 +85,8 @@ void FInstanceBuffer::setLocalTransforms(
     memcpy(mLocalTransforms.data() + offset, localTransforms, sizeof(math::mat4f) * count);
 }
 
-void FInstanceBuffer::prepare(
-        FEngine& engine, math::mat4f rootTransform, const PerRenderableData& ubo) {
+void FInstanceBuffer::prepare(FEngine& engine, math::mat4f rootTransform,
+        const PerRenderableData& ubo, Handle<HwBufferObject> handle) {
     DriverApi& driver = engine.getDriverApi();
 
     // TODO: allocate this staging buffer from a pool.
@@ -108,7 +101,7 @@ void FInstanceBuffer::prepare(
         math::mat3f m = math::mat3f::getTransformForNormals(model.upperLeft());
         stagingBuffer[i].worldFromModelNormalMatrix = math::prescaleForNormals(m);
     }
-    driver.updateBufferObject(mUboHandle, {
+    driver.updateBufferObject(handle, {
             stagingBuffer, stagingBufferSize,
             +[](void* buffer, size_t, void*) {
                 ::free(buffer);
@@ -117,8 +110,6 @@ void FInstanceBuffer::prepare(
 }
 
 void FInstanceBuffer::terminate(FEngine& engine) {
-    DriverApi& driver = engine.getDriverApi();
-    driver.destroyBufferObject(mUboHandle);
 }
 
 } // namespace filament
