@@ -189,7 +189,8 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
 
     // Filament-reserved specification constants (limited by CONFIG_MAX_RESERVED_SPEC_CONSTANTS)
     out << '\n';
-    generateSpecializationConstant(out, "BACKEND_FEATURE_LEVEL", 0, 1);
+    generateSpecializationConstant(out, "BACKEND_FEATURE_LEVEL",
+            +ReservedSpecializationConstants::BACKEND_FEATURE_LEVEL, 1);
 
     if (mTargetApi == TargetApi::VULKAN) {
         // Note: This is a hack for a hack.
@@ -200,17 +201,20 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         // some Adreno drivers on Android. see: https://github.com/google/filament/issues/6444
         out << "const int CONFIG_MAX_INSTANCES = " << (int)CONFIG_MAX_INSTANCES << ";\n";
     } else {
-        generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES", 1, (int)CONFIG_MAX_INSTANCES);
+        generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
+                +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
     }
 
     // Workaround a Metal pipeline compilation error with the message:
     // "Could not statically determine the target of a texture". See light_indirect.fs
-    generateSpecializationConstant(out, "CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND", 2, false);
+    generateSpecializationConstant(out, "CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND",
+            +ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND, false);
 
     if (material.featureLevel == 0) {
         // On ES2 since we don't have post-processing, we need to emulate EGL_GL_COLORSPACE_KHR,
         // when it's not supported.
-        generateSpecializationConstant(out, "CONFIG_SRGB_SWAPCHAIN_EMULATION", 3, false);
+        generateSpecializationConstant(out, "CONFIG_SRGB_SWAPCHAIN_EMULATION",
+                +ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION, false);
     }
 
     out << '\n';

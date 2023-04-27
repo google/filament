@@ -71,6 +71,7 @@ public:
 
     struct GLSwapChain : public HwSwapChain {
         using HwSwapChain::HwSwapChain;
+        bool rec709 = false;
     };
 
     struct GLBufferObject : public HwBufferObject {
@@ -189,6 +190,7 @@ public:
             mutable GLuint fbo_read = 0;
             mutable TargetBufferFlags resolve = TargetBufferFlags::NONE; // attachments in fbo_draw to resolve
             uint8_t samples = 1;
+            bool isDefault = false;
         } gl;
         TargetBufferFlags targets = {};
     };
@@ -393,6 +395,10 @@ private:
     // timer query implementation
     OpenGLTimerQueryInterface* mTimerQueryImpl = nullptr;
     bool mFrameTimeSupported = false;
+
+    // for ES2 sRGB support
+    GLSwapChain* mCurrentDrawSwapChain = nullptr;
+    bool mRec709OutputColorspace = false;
 };
 
 // ------------------------------------------------------------------------------------------------

@@ -238,9 +238,21 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
             engine.getDriverApi().isWorkaroundNeeded(Workaround::A8X_STATIC_TEXTURE_TARGET_ERROR);
 
     mSpecializationConstants.reserve(constants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
-    mSpecializationConstants.push_back({0, (int)engine.getSupportedFeatureLevel()});
-    mSpecializationConstants.push_back({1, (int)maxInstanceCount});
-    mSpecializationConstants.push_back({2, (bool)staticTextureWorkaround});
+    mSpecializationConstants.push_back({
+                    +ReservedSpecializationConstants::BACKEND_FEATURE_LEVEL,
+                    (int)engine.getSupportedFeatureLevel() });
+    mSpecializationConstants.push_back({
+                    +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES,
+                    (int)maxInstanceCount });
+    mSpecializationConstants.push_back({
+                    +ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND,
+                    (bool)staticTextureWorkaround });
+    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        // The actual value of this spec-constant is set in the OpenGLDriver backend.
+        mSpecializationConstants.push_back({
+            +ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION,
+            false});
+    }
 
     for (const auto& [name, value] : builder->mConstantSpecializations) {
         auto found = std::find_if(
