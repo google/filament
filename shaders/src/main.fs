@@ -47,6 +47,16 @@ void main() {
     fragColor = fog(fragColor, view);
 #endif
 
+#if MATERIAL_FEATURE_LEVEL == 0
+    if (CONFIG_SRGB_SWAPCHAIN_EMULATION) {
+        if (frameUniforms.rec709 != 0) {
+            fragColor.r = pow(fragColor.r, 0.45454);
+            fragColor.g = pow(fragColor.g, 0.45454);
+            fragColor.b = pow(fragColor.b, 0.45454);
+        }
+    }
+#endif
+
 #if __VERSION__ == 100
     gl_FragData[0] = fragColor;
 #endif

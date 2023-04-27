@@ -163,8 +163,16 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // --------------------------------------------------------------------------------------------
     math::float4 custom[4];
 
+    // --------------------------------------------------------------------------------------------
+    // for feature level 0 / es2 usage
+    // --------------------------------------------------------------------------------------------
+    int32_t rec709;                     // Only for ES2, 0 or 1, whether we need to do sRGB conversion
+    float es2Reserved0;
+    float es2Reserved1;
+    float es2Reserved2;
+
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[56];
+    math::float4 reserved[55];
 };
 
 // 2 KiB == 128 float4s

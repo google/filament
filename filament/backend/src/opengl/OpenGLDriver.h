@@ -69,6 +69,10 @@ public:
 
     // OpenGLDriver specific fields
 
+    struct GLSwapChain : public HwSwapChain {
+        using HwSwapChain::HwSwapChain;
+    };
+
     struct GLBufferObject : public HwBufferObject {
         using HwBufferObject::HwBufferObject;
         GLBufferObject(uint32_t size,

@@ -69,6 +69,9 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(utils::io::sstream& 
     }
 
     out << '\n';
+    CodeGenerator::generateDefine(out, "MATERIAL_FEATURE_LEVEL",
+            uint32_t(material.featureLevel));
+
     CodeGenerator::generateDefine(out, "MATERIAL_HAS_SHADOW_MULTIPLIER",
             material.hasShadowMultiplier);
 

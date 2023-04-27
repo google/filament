@@ -433,11 +433,11 @@ Handle<HwSync> OpenGLDriver::createSyncS() noexcept {
 }
 
 Handle<HwSwapChain> OpenGLDriver::createSwapChainS() noexcept {
-    return initHandle<HwSwapChain>();
+    return initHandle<GLSwapChain>();
 }
 
 Handle<HwSwapChain> OpenGLDriver::createSwapChainHeadlessS() noexcept {
-    return initHandle<HwSwapChain>();
+    return initHandle<GLSwapChain>();
 }
 
 Handle<HwTimerQuery> OpenGLDriver::createTimerQueryS() noexcept {
@@ -1188,7 +1188,7 @@ void OpenGLDriver::createDefaultRenderTargetR(
 
     construct<GLRenderTarget>(rth, 0, 0);  // FIXME: we don't know the width/height
 
-    uint32_t framebuffer = mPlatform.createDefaultRenderTarget();
+    uint32_t const framebuffer = mPlatform.createDefaultRenderTarget();
 
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
     rt->gl.fbo = framebuffer;
@@ -1347,7 +1347,7 @@ void OpenGLDriver::createSyncR(Handle<HwSync> fh, int) {
 void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     DEBUG_MARKER()
 
-    HwSwapChain* sc = handle_cast<HwSwapChain*>(sch);
+    GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(nativeWindow, flags);
 }
 
@@ -1355,7 +1355,7 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
         uint32_t width, uint32_t height, uint64_t flags) {
     DEBUG_MARKER()
 
-    HwSwapChain* sc = handle_cast<HwSwapChain*>(sch);
+    GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     sc->swapChain = mPlatform.createSwapChain(width, height, flags);
 }
 
@@ -1485,7 +1485,7 @@ void OpenGLDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     DEBUG_MARKER()
 
     if (sch) {
-        HwSwapChain* sc = handle_cast<HwSwapChain*>(sch);
+        GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
         mPlatform.destroySwapChain(sc->swapChain);
         destruct(sch, sc);
     }
@@ -1855,15 +1855,15 @@ uint8_t OpenGLDriver::getMaxDrawBuffers() {
 void OpenGLDriver::commit(Handle<HwSwapChain> sch) {
     DEBUG_MARKER()
 
-    HwSwapChain* sc = handle_cast<HwSwapChain*>(sch);
+    GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     mPlatform.commit(sc->swapChain);
 }
 
 void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
     DEBUG_MARKER()
 
-    HwSwapChain* scDraw = handle_cast<HwSwapChain*>(schDraw);
-    HwSwapChain* scRead = handle_cast<HwSwapChain*>(schRead);
+    GLSwapChain* scDraw = handle_cast<GLSwapChain*>(schDraw);
+    GLSwapChain* scRead = handle_cast<GLSwapChain*>(schRead);
     mPlatform.makeCurrent(scDraw->swapChain, scRead->swapChain);
 }
 

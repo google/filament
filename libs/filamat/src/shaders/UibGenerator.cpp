@@ -145,6 +145,14 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // --------------------------------------------------------------------------------------------
             { "custom",                  4, Type::FLOAT4, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
 
+            // --------------------------------------------------------------------------------------------
+            // for feature level 0 / es2 usage
+            // --------------------------------------------------------------------------------------------
+            { "rec709",                  0, Type::INT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
+            { "es2Reserved0",            0, Type::FLOAT                  },
+            { "es2Reserved1",            0, Type::FLOAT                  },
+            { "es2Reserved2",            0, Type::FLOAT                  },
+
             // bring PerViewUib to 2 KiB
             { "reserved", sizeof(PerViewUib::reserved)/16, Type::FLOAT4 }
             })
