@@ -26,6 +26,9 @@
 
 #include <backend/DriverEnums.h>
 
+#include <utility>
+#include <vector>
+
 namespace filament::backend {
 
 /**
@@ -37,6 +40,27 @@ public:
     PlatformEGL() noexcept;
 
 protected:
+
+    // --------------------------------------------------------------------------------------------
+    // Helper for EGL configs and attributes parameters
+
+    class Config {
+    public:
+        Config();
+        Config(std::initializer_list<std::pair<EGLint, EGLint>> list);
+        EGLint& operator[](EGLint name);
+        EGLint operator[](EGLint name) const;
+        void erase(EGLint name) noexcept;
+        EGLint const* data() const noexcept {
+            return reinterpret_cast<EGLint const*>(mConfig.data());
+        }
+        size_t size() const noexcept {
+            return mConfig.size();
+        }
+    private:
+        std::vector<std::pair<EGLint, EGLint>> mConfig = {{ EGL_NONE, EGL_NONE }};
+    };
+
     // --------------------------------------------------------------------------------------------
     // Platform Interface
 
@@ -79,6 +103,8 @@ protected:
      * @param name a string giving some context on the error. Typically __func__.
      */
     static void logEglError(const char* name) noexcept;
+    static void logEglError(const char* name, EGLint error) noexcept;
+    static const char* getEglErrorName(EGLint error) noexcept;
 
     /**
      * Calls glGetError() to clear the current error flags. logs a warning to log.w if
