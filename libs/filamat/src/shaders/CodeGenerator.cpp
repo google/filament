@@ -207,6 +207,12 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     // "Could not statically determine the target of a texture". See light_indirect.fs
     generateSpecializationConstant(out, "CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND", 2, false);
 
+    if (material.featureLevel == 0) {
+        // On ES2 since we don't have post-processing, we need to emulate EGL_GL_COLORSPACE_KHR,
+        // when it's not supported.
+        generateSpecializationConstant(out, "CONFIG_SRGB_SWAPCHAIN_EMULATION", 3, false);
+    }
+
     out << '\n';
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;
 

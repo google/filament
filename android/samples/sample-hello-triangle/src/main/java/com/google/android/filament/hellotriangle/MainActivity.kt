@@ -319,7 +319,9 @@ class MainActivity : Activity() {
             // the colorspace to sRGB (FIXME: it's not supported everywhere!)
             var flags = uiHelper.swapChainFlags
             if (engine.activeFeatureLevel == Engine.FeatureLevel.FEATURE_LEVEL_0) {
-                flags = flags or SwapChain.CONFIG_SRGB_COLORSPACE
+                if (SwapChain.isSRGBSwapChainSupported(engine)) {
+                    flags = flags or SwapChain.CONFIG_SRGB_COLORSPACE
+                }
             }
 
             swapChain = engine.createSwapChain(surface, flags)
