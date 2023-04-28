@@ -2,9 +2,13 @@
 layout(location = 0) out vec4 fragColor;
 #elif defined(VARIANT_HAS_PICKING)
 #   if __VERSION__ == 100
-highp vec2 outPicking;
+highp vec4 outPicking;
 #   else
+#       if MATERIAL_FEATURE_LEVEL == 0
+layout(location = 0) out highp vec4 outPicking;
+#       else
 layout(location = 0) out highp vec2 outPicking;
+#       endif
 #   endif
 #else
 // not color output
@@ -53,10 +57,17 @@ void main() {
     fragColor.xy = computeDepthMomentsVSM(depth);
     fragColor.zw = computeDepthMomentsVSM(-1.0 / depth); // requires at least RGBA16F
 #elif defined(VARIANT_HAS_PICKING)
+#if MATERIAL_FEATURE_LEVEL == 0
+    outPicking.a = float((object_uniforms.objectId / 65536) % 256) / 255.0;
+    outPicking.b = float((object_uniforms.objectId /   256) % 256) / 255.0;
+    outPicking.g = float( object_uniforms.objectId          % 256) / 255.0;
+    outPicking.r = vertex_position.z / vertex_position.w;
+#else
     outPicking.x = float(object_uniforms.objectId);
     outPicking.y = vertex_position.z / vertex_position.w;
+#endif
 #if __VERSION__ == 100
-    gl_FragData[0].xy = outPicking;
+    gl_FragData[0] = outPicking;
 #endif
 #else
     // that's it
