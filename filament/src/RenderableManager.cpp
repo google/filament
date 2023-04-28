@@ -165,10 +165,4 @@ bool RenderableManager::getLightChannel(Instance instance, unsigned int channel)
     return downcast(this)->getLightChannel(instance, channel);
 }
 
-void RenderableManager::setInstanceTransforms(Instance renderableInstance,
-        math::mat4f const* localTransforms, size_t count, size_t offset) {
-    return downcast(this)->setInstanceTransforms(
-            renderableInstance, localTransforms, count, offset);
-}
-
 } // namespace filament

@@ -144,10 +144,6 @@ public:
     inline uint8_t getLayerMask(Instance instance) const noexcept;
     inline uint8_t getPriority(Instance instance) const noexcept;
     inline uint8_t getChannels(Instance instance) const noexcept;
-    inline uint16_t getInstanceCount(Instance instance) const noexcept;
-    inline FInstanceBuffer* getInstanceBuffer(Instance instance) const noexcept;
-    inline void setInstanceTransforms(Instance instance, math::mat4f const* localTransforms,
-            size_t count, size_t offset = 0) ;
 
     struct SkinningBindingInfo {
         backend::Handle<backend::HwBufferObject> handle;
@@ -393,16 +389,6 @@ uint8_t FRenderableManager::getChannels(Instance instance) const noexcept {
     return mManager[instance].channels;
 }
 
-uint16_t FRenderableManager::getInstanceCount(Instance instance) const noexcept {
-    InstancesInfo const& instances = mManager[instance].instances;
-    return instances.count;
-}
-
-FInstanceBuffer* FRenderableManager::getInstanceBuffer(Instance instance) const noexcept {
-    InstancesInfo const& instances = mManager[instance].instances;
-    return instances.buffer;
-}
-
 Box const& FRenderableManager::getAABB(Instance instance) const noexcept {
     return mManager[instance].aabb;
 }
@@ -448,20 +434,6 @@ utils::Slice<FRenderableManager::MorphTargets> const& FRenderableManager::getMor
 utils::Slice<FRenderableManager::MorphTargets>& FRenderableManager::getMorphTargets(
         Instance instance, uint8_t level) noexcept {
     return mManager[instance].morphTargets;
-}
-
-void FRenderableManager::setInstanceTransforms(Instance instance,
-        math::mat4f const* localTransforms, size_t count, size_t offset) {
-    InstancesInfo& instances = mManager[instance].instances;
-    ASSERT_PRECONDITION(instances.buffer != nullptr,
-            "Cannot call setInstanceTransforms(), Renderable has no instances.");
-    ASSERT_PRECONDITION(offset + count <= instances.count,
-            "setInstanceTransforms overflow. Renderable has only %zu instances, but trying to set "
-            "%zu transforms at offset %zu.",
-            instances.count,
-            count,
-            offset);
-    instances.buffer->setLocalTransforms(localTransforms, count, offset);
 }
 
 } // namespace filament

@@ -723,25 +723,6 @@ public:
      */
     AttributeBitset getEnabledAttributesAt(Instance instance, size_t primitiveIndex) const noexcept;
 
-    /**
-     * Sets the local transform for each draw instance on this renderable. The local transform is
-     * relative to the renderable's transform.
-     *
-     * In order to use this method, initial local transforms must have been provided to the Builder
-     * through Builder::instances(size_t, math::mat4f const*). Otherwise, calling this method will
-     * error.
-     *
-     * @param renderableInstance the renderable of interest
-     * @param localTransforms an array of math::mat4f with length count, need not outlive this call
-     * @param count the number of local transforms
-     * @param offset index of the first draw instance to set local transforms
-     *
-     * @see Builder::instances(size_t, math::mat4f const*)
-     * @see Builder::instances(size_t, InstanceBuffer*)
-     */
-    void setInstanceTransforms(Instance renderableInstance, math::mat4f const* localTransforms,
-            size_t count, size_t offset = 0);
-
     /*! \cond PRIVATE */
     template<typename T>
     struct is_supported_vector_type {
