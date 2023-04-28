@@ -322,7 +322,7 @@ RenderableManager::Builder& RenderableManager::Builder::instances(size_t instanc
 
 RenderableManager::Builder& RenderableManager::Builder::instances(
         size_t instanceCount, InstanceBuffer* instanceBuffer) noexcept {
-    mImpl->mInstanceCount = clamp(instanceCount, 1ul, CONFIG_MAX_INSTANCES);
+    mImpl->mInstanceCount = clamp(instanceCount, (size_t)1, CONFIG_MAX_INSTANCES);
     mImpl->mInstanceBuffer = downcast(instanceBuffer);
     return *this;
 }
