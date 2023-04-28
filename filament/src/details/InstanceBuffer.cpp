@@ -93,7 +93,7 @@ void FInstanceBuffer::prepare(FEngine& engine, math::mat4f rootTransform,
     uint32_t stagingBufferSize = sizeof(PerRenderableUib);
     PerRenderableData* stagingBuffer = (PerRenderableData*)::malloc(stagingBufferSize);
     // TODO: consider using JobSystem to parallelize this.
-    for (size_t i = 0; i < mInstanceCount; i++) {
+    for (size_t i = 0, c = mInstanceCount; i < c; i++) {
         stagingBuffer[i] = ubo;
         math::mat4f model = rootTransform * mLocalTransforms[i];
         stagingBuffer[i].worldFromModelMatrix = model;
