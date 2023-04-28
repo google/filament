@@ -53,9 +53,10 @@ public:
         Builder& operator=(Builder&& rhs) noexcept;
 
         /**
-         * Provide an initial local transform for each instance. The local transform is
-         * relative to the renderable's transform, so adjusting the renderable's transform will
-         * affect all instances.
+         * Provide an initial local transform for each instance. Each local transform is relative to
+         * the transform of the associated renderable. This forms a parent-child relationship
+         * between the renderable and its instances, so adjusting the renderable's transform will
+-        * affect all instances.
          *
          * The array of math::mat4f must have length instanceCount, provided when constructing this
          * Builder.
@@ -80,8 +81,9 @@ public:
     size_t getInstanceCount() const noexcept;
 
     /**
-     * Sets the local transform for each instance. The local transform is relative to the
-     * renderable's transform.
+     * Sets the local transform for each instance. Each local transform is relative to the transform
+     * of the associated renderable. This forms a parent-child relationship between the renderable
+     * and its instances, so adjusting the renderable's transform will affect all instances.
      *
      * @param localTransforms an array of math::mat4f with length count, need not outlive this call
      * @param count the number of local transforms
