@@ -454,6 +454,7 @@ void FEngine::shutdown() {
     cleanupResourceList(std::move(mTextures));
     cleanupResourceList(std::move(mRenderTargets));
     cleanupResourceList(std::move(mMaterials));
+    cleanupResourceList(std::move(mInstanceBuffers));
     for (auto& item : mMaterialInstances) {
         cleanupResourceList(std::move(item.second));
     }
