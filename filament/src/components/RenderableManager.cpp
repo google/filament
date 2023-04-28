@@ -69,8 +69,8 @@ struct RenderableManager::BuilderDetails {
     uint32_t mSkinningBufferOffset = 0;
 
     explicit BuilderDetails(size_t count)
-            : mEntries(count), mCulling(true), mCastShadows(false),
-              mReceiveShadows(true), mScreenSpaceContactShadows(false), mSkinningBufferMode(false) {
+            : mEntries(count), mCulling(true), mCastShadows(false), mReceiveShadows(true),
+              mScreenSpaceContactShadows(false), mSkinningBufferMode(false) {
     }
     // this is only needed for the explicit instantiation below
     BuilderDetails() = default;
