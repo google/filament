@@ -35,12 +35,6 @@ struct InstanceBuffer::BuilderDetails {
 
 using BuilderType = InstanceBuffer;
 BuilderType::Builder::Builder(size_t instanceCount) noexcept {
-    ASSERT_PRECONDITION(instanceCount >= 1, "instanceCount must be >= 1.");
-    ASSERT_PRECONDITION(instanceCount <= CONFIG_MAX_INSTANCES,
-            "instanceCount is %zu, but instance count is limited to CONFIG_MAX_INSTANCES (%zu) "
-            "instances when supplying transforms.",
-            instanceCount,
-            CONFIG_MAX_INSTANCES);
     mImpl->mInstanceCount = instanceCount;
 }
 
@@ -51,12 +45,18 @@ BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const
 BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
 
 InstanceBuffer::Builder& InstanceBuffer::Builder::localTransforms(
-        math::mat4f const* localTransforms) {
+        math::mat4f const* localTransforms) noexcept {
     mImpl->mLocalTransforms = localTransforms;
     return *this;
 }
 
 InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) {
+    ASSERT_PRECONDITION(mImpl->mInstanceCount >= 1, "instanceCount must be >= 1.");
+    ASSERT_PRECONDITION(mImpl->mInstanceCount <= CONFIG_MAX_INSTANCES,
+            "instanceCount is %zu, but instance count is limited to CONFIG_MAX_INSTANCES (%zu) "
+            "instances when supplying transforms.",
+            mImpl->mInstanceCount,
+            CONFIG_MAX_INSTANCES);
     return downcast(engine).createInstanceBuffer(*this);
 }
 

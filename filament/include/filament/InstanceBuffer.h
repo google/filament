@@ -63,7 +63,7 @@ public:
          * @param localTransforms an array of math::mat4f with length instanceCount, must remain
          *                        valid until after build() is called
          */
-        Builder& localTransforms(math::mat4f const* localTransforms);
+        Builder& localTransforms(math::mat4f const* localTransforms) noexcept;
 
         /**
          * Creates the InstanceBuffer object and returns a pointer to it.
