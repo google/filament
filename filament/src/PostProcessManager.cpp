@@ -367,10 +367,11 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
     // generate depth pass at the requested resolution
     auto& structurePass = fg.addPass<StructurePassData>("Structure Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
+                bool const isES2 = mEngine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0;
                 data.depth = builder.createTexture("Structure Buffer", {
                         .width = width, .height = height,
                         .levels = uint8_t(levelCount),
-                        .format = TextureFormat::DEPTH32F });
+                        .format = isES2 ? TextureFormat::DEPTH24 : TextureFormat::DEPTH32F });
 
                 // workaround: since we have levels, this implies SAMPLEABLE (because of the gl
                 // backend, which implements non-sampleables with renderbuffers, which don't have levels).
@@ -381,7 +382,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 if (config.picking) {
                     data.picking = builder.createTexture("Picking Buffer", {
                             .width = width, .height = height,
-                            .format = TextureFormat::RG32F });
+                            .format = isES2 ? TextureFormat::RGBA8 : TextureFormat::RG32F });
 
                     data.picking = builder.write(data.picking,
                             FrameGraphTexture::Usage::COLOR_ATTACHMENT);

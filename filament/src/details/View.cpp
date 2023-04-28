@@ -973,19 +973,44 @@ void FView::executePickingQueries(backend::DriverApi& driver,
         // adjust for dynamic resolution and structure buffer scale
         const uint32_t x = uint32_t(float(pQuery->x) * (scale * mScale.x));
         const uint32_t y = uint32_t(float(pQuery->y) * (scale * mScale.y));
-        driver.readPixels(handle, x, y, 1, 1, {
-                &pQuery->result.renderable, 4u * 4u, // 4*float
-                backend::PixelDataFormat::RG, backend::PixelDataType::FLOAT,
-                pQuery->handler, [](void*, size_t, void* user) {
-                    FPickingQuery* pQuery = static_cast<FPickingQuery*>(user);
-                    float const identity = *((float*)((char*)&pQuery->result.renderable));
-                    pQuery->result.renderable = Entity::import(identity);
-                    pQuery->result.fragCoords = {
-                            pQuery->x, pQuery->y, float(1.0 - pQuery->result.depth) };
-                    pQuery->callback(pQuery->result, pQuery);
-                    FPickingQuery::put(pQuery);
-                }, pQuery
-        });
+
+        if (UTILS_UNLIKELY(driver.getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)) {
+            driver.readPixels(handle, x, y, 1, 1, {
+                    &pQuery->result.reserved1, 4u, // 4
+                    backend::PixelDataFormat::RGBA, backend::PixelDataType::UBYTE,
+                    pQuery->handler, [](void*, size_t, void* user) {
+                        FPickingQuery* pQuery = static_cast<FPickingQuery*>(user);
+                        uint8_t const* const p =
+                                reinterpret_cast<uint8_t const *>(&pQuery->result.reserved1);
+                        uint32_t const r = p[0];
+                        uint32_t const g = p[1];
+                        uint32_t const b = p[2];
+                        uint32_t const a = p[3];
+                        int32_t const identity = int32_t(a << 16u | (b << 8u) | g);
+                        float const depth = float(r) / 255.0f;
+                        pQuery->result.renderable = Entity::import(identity);
+                        pQuery->result.depth = depth;
+                        pQuery->result.fragCoords = {
+                                pQuery->x, pQuery->y, float(1.0 - depth) };
+                        pQuery->callback(pQuery->result, pQuery);
+                        FPickingQuery::put(pQuery);
+                    }, pQuery
+            });
+        } else {
+            driver.readPixels(handle, x, y, 1, 1, {
+                    &pQuery->result.renderable, 4u * 4u, // 4*float
+                    backend::PixelDataFormat::RG, backend::PixelDataType::FLOAT,
+                    pQuery->handler, [](void*, size_t, void* user) {
+                        FPickingQuery* pQuery = static_cast<FPickingQuery*>(user);
+                        float const identity = *((float*)((char*)&pQuery->result.renderable));
+                        pQuery->result.renderable = Entity::import(int32_t(identity));
+                        pQuery->result.fragCoords = {
+                                pQuery->x, pQuery->y, float(1.0 - pQuery->result.depth) };
+                        pQuery->callback(pQuery->result, pQuery);
+                        FPickingQuery::put(pQuery);
+                    }, pQuery
+            });
+        }
     }
 }
 
