@@ -49,6 +49,7 @@ class SwapChain;
 class Texture;
 class VertexBuffer;
 class View;
+class InstanceBuffer;
 
 class LightManager;
 class RenderableManager;
@@ -625,6 +626,7 @@ public:
     bool destroy(const Texture* p);             //!< Destroys a Texture object.
     bool destroy(const RenderTarget* p);        //!< Destroys a RenderTarget object.
     bool destroy(const View* p);                //!< Destroys a View object.
+    bool destroy(const InstanceBuffer* p);      //!< Destroys an InstanceBuffer object.
     void destroy(utils::Entity e);              //!< Destroys all filament-known components from this entity
 
     /**

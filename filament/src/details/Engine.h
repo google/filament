@@ -35,6 +35,7 @@
 #include "details/DebugRegistry.h"
 #include "details/Fence.h"
 #include "details/IndexBuffer.h"
+#include "details/InstanceBuffer.h"
 #include "details/RenderTarget.h"
 #include "details/SkinningBuffer.h"
 #include "details/MorphTargetBuffer.h"
@@ -247,6 +248,7 @@ public:
     FIndexBuffer* createIndexBuffer(const IndexBuffer::Builder& builder) noexcept;
     FSkinningBuffer* createSkinningBuffer(const SkinningBuffer::Builder& builder) noexcept;
     FMorphTargetBuffer* createMorphTargetBuffer(const MorphTargetBuffer::Builder& builder) noexcept;
+    FInstanceBuffer* createInstanceBuffer(const InstanceBuffer::Builder& builder) noexcept;
     FIndirectLight* createIndirectLight(const IndirectLight::Builder& builder) noexcept;
     FMaterial* createMaterial(const Material::Builder& builder) noexcept;
     FTexture* createTexture(const Texture::Builder& builder) noexcept;
@@ -291,6 +293,7 @@ public:
     bool destroy(const FRenderTarget* p);
     bool destroy(const FSwapChain* p);
     bool destroy(const FView* p);
+    bool destroy(const FInstanceBuffer* p);
 
     void destroy(utils::Entity e);
 
@@ -434,6 +437,7 @@ private:
     ResourceList<FIndexBuffer> mIndexBuffers{ "IndexBuffer" };
     ResourceList<FSkinningBuffer> mSkinningBuffers{ "SkinningBuffer" };
     ResourceList<FMorphTargetBuffer> mMorphTargetBuffers{ "MorphTargetBuffer" };
+    ResourceList<FInstanceBuffer> mInstanceBuffers{ "InstanceBuffer" };
     ResourceList<FVertexBuffer> mVertexBuffers{ "VertexBuffer" };
     ResourceList<FIndirectLight> mIndirectLights{ "IndirectLight" };
     ResourceList<FMaterial> mMaterials{ "Material" };

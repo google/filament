@@ -29,6 +29,8 @@
 #include <filament/Box.h>
 #include <filament/RenderableManager.h>
 
+#include <details/InstanceBuffer.h>
+
 #include <private/filament/UibStructs.h>
 
 #include <utils/Entity.h>
@@ -142,7 +144,6 @@ public:
     inline uint8_t getLayerMask(Instance instance) const noexcept;
     inline uint8_t getPriority(Instance instance) const noexcept;
     inline uint8_t getChannels(Instance instance) const noexcept;
-    inline uint16_t getInstanceCount(Instance instance) const noexcept;
 
     struct SkinningBindingInfo {
         backend::Handle<backend::HwBufferObject> handle;
@@ -158,6 +159,18 @@ public:
         MorphTargets const* targets; // Pointer to Slice<MorphTargets> at a renderable.
     };
     inline MorphingBindingInfo getMorphingBufferInfo(Instance instance) const noexcept;
+
+    struct InstancesInfo {
+        union {
+            FInstanceBuffer* buffer;
+            uint64_t padding;          // ensures the pointer is 64 bits on all archs
+        };
+        backend::Handle<backend::HwBufferObject> handle;
+        uint16_t count;
+        char padding0[2];
+    };
+    static_assert(sizeof(InstancesInfo) == 16);
+    inline InstancesInfo getInstancesInfo(Instance instance) const noexcept;
 
     utils::Entity getEntity(Instance instance) const noexcept {
         return mManager.getEntity(instance);
@@ -202,14 +215,14 @@ private:
     static_assert(sizeof(MorphWeights) == 8);
 
     enum {
-        AABB,               // user data
-        LAYERS,             // user data
-        MORPH_WEIGHTS,      // filament data, UBO storing a pointer to the morph weights information
-        CHANNELS,           // user data
-        INSTANCE_COUNT,     // user data
-        VISIBILITY,         // user data
-        PRIMITIVES,         // user data
-        BONES,              // filament data, UBO storing a pointer to the bones information
+        AABB,                   // user data
+        LAYERS,                 // user data
+        MORPH_WEIGHTS,          // filament data, UBO storing a pointer to the morph weights information
+        CHANNELS,               // user data
+        INSTANCES,              // user data
+        VISIBILITY,             // user data
+        PRIMITIVES,             // user data
+        BONES,                  // filament data, UBO storing a pointer to the bones information
         MORPH_TARGETS
     };
 
@@ -218,7 +231,7 @@ private:
             uint8_t,                         // LAYERS
             MorphWeights,                    // MORPH_WEIGHTS
             uint8_t,                         // CHANNELS
-            uint16_t,                        // INSTANCE_COUNT
+            InstancesInfo,                   // INSTANCES
             Visibility,                      // VISIBILITY
             utils::Slice<FRenderPrimitive>,  // PRIMITIVES
             Bones,                           // BONES
@@ -237,15 +250,15 @@ private:
 
             union {
                 // this specific usage of union is permitted. All fields are identical
-                Field<AABB>             aabb;
-                Field<LAYERS>           layers;
-                Field<MORPH_WEIGHTS>    morphWeights;
-                Field<CHANNELS>         channels;
-                Field<INSTANCE_COUNT>   instanceCount;
-                Field<VISIBILITY>       visibility;
-                Field<PRIMITIVES>       primitives;
-                Field<BONES>            bones;
-                Field<MORPH_TARGETS>    morphTargets;
+                Field<AABB>                 aabb;
+                Field<LAYERS>               layers;
+                Field<MORPH_WEIGHTS>        morphWeights;
+                Field<CHANNELS>             channels;
+                Field<INSTANCES>            instances;
+                Field<VISIBILITY>           visibility;
+                Field<PRIMITIVES>           primitives;
+                Field<BONES>                bones;
+                Field<MORPH_TARGETS>        morphTargets;
             };
         };
 
@@ -376,10 +389,6 @@ uint8_t FRenderableManager::getChannels(Instance instance) const noexcept {
     return mManager[instance].channels;
 }
 
-uint16_t FRenderableManager::getInstanceCount(Instance instance) const noexcept {
-    return mManager[instance].instanceCount;
-}
-
 Box const& FRenderableManager::getAABB(Instance instance) const noexcept {
     return mManager[instance].aabb;
 }
@@ -400,6 +409,11 @@ FRenderableManager::getMorphingBufferInfo(Instance instance) const noexcept {
     MorphWeights const& morphWeights = mManager[instance].morphWeights;
     utils::Slice<MorphTargets> const& morphTargets = getMorphTargets(instance, 0);
     return { morphWeights.handle, morphWeights.count, morphTargets.data() };
+}
+
+FRenderableManager::InstancesInfo
+FRenderableManager::getInstancesInfo(Instance instance) const noexcept {
+    return mManager[instance].instances;
 }
 
 utils::Slice<FRenderPrimitive> const& FRenderableManager::getRenderPrimitives(

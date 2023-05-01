@@ -8,3 +8,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
+- engine: a local transform can now be supplied for each GPU instance [⚠️ **Recompile materials**]
