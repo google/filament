@@ -7,6 +7,10 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.35.0
+
+- materials: Materials can now access up to 4 global `vec4` visible by all materials [⚠️ **Recompile Materials**]
+
 ## v1.34.0
 
 - materials: picking is done in float (prepare for ES2) [⚠️ **New Material Version**]
