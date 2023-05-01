@@ -16,6 +16,13 @@ android {
             excludes += ['lib/*/libfilament-jni.so']
         }
     }
+
+    publishing {
+        singleVariant("fullRelease") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
 }
 
 dependencies {

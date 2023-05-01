@@ -118,6 +118,7 @@ public class ColorGrading {
      *
      * @deprecated Use {@link ColorGrading.Builder#toneMapper(ToneMapper)}
      */
+    @Deprecated
     public enum ToneMapping {
         /** Linear tone mapping (i.e. no tone mapping). */
         LINEAR,
@@ -231,6 +232,7 @@ public class ColorGrading {
          *
          * @deprecated Use {@link #toneMapper(ToneMapper)}
          */
+        @Deprecated
         public Builder toneMapping(ToneMapping toneMapping) {
             nBuilderToneMapping(mNativeBuilder, toneMapping.ordinal());
             return this;
