@@ -105,8 +105,9 @@ void VulkanSwapChain::create(VulkanStagePool& stagePool) {
 
         surfaceFormat = surfaceFormats[0];
         for (const VkSurfaceFormatKHR& format : surfaceFormats) {
-            if (format.format == VK_FORMAT_R8G8B8A8_UNORM) {
+            if (format.format == VK_FORMAT_R8G8B8A8_UNORM || format.format == VK_FORMAT_B8G8R8A8_UNORM) {
                 surfaceFormat = format;
+                break;
             }
         }
     }
