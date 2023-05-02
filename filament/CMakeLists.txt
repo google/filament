@@ -26,6 +26,7 @@ set(PUBLIC_HDRS
         include/filament/Frustum.h
         include/filament/IndexBuffer.h
         include/filament/IndirectLight.h
+        include/filament/InstanceBuffer.h
         include/filament/LightManager.h
         include/filament/Material.h
         include/filament/MaterialInstance.h
@@ -67,6 +68,7 @@ set(SRCS
         src/HwRenderPrimitiveFactory.cpp
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
+        src/InstanceBuffer.cpp
         src/LightManager.cpp
         src/Material.cpp
         src/MaterialInstance.cpp
@@ -108,6 +110,7 @@ set(SRCS
         src/details/Fence.cpp
         src/details/IndexBuffer.cpp
         src/details/IndirectLight.cpp
+        src/details/InstanceBuffer.cpp
         src/details/Material.cpp
         src/details/MaterialInstance.cpp
         src/details/MorphTargetBuffer.cpp
@@ -171,6 +174,7 @@ set(PRIVATE_HDRS
         src/details/Fence.h
         src/details/IndexBuffer.h
         src/details/IndirectLight.h
+        src/details/InstanceBuffer.h
         src/details/Material.h
         src/details/MaterialInstance.h
         src/details/MorphTargetBuffer.h

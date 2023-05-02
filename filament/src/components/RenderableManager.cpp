@@ -23,6 +23,7 @@
 #include "details/Engine.h"
 #include "details/VertexBuffer.h"
 #include "details/IndexBuffer.h"
+#include "details/InstanceBuffer.h"
 #include "details/Texture.h"
 #include "details/Material.h"
 
@@ -64,6 +65,7 @@ struct RenderableManager::BuilderDetails {
     Bone const* mUserBones = nullptr;
     mat4f const* mUserBoneMatrices = nullptr;
     FSkinningBuffer* mSkinningBuffer = nullptr;
+    FInstanceBuffer* mInstanceBuffer = nullptr;
     uint32_t mSkinningBufferOffset = 0;
 
     explicit BuilderDetails(size_t count)
@@ -240,6 +242,19 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
 
     ASSERT_PRECONDITION(mImpl->mSkinningBoneCount <= CONFIG_MAX_BONE_COUNT,
             "bone count > %u", CONFIG_MAX_BONE_COUNT);
+    ASSERT_PRECONDITION(mImpl->mInstanceCount <= CONFIG_MAX_INSTANCES || !mImpl->mInstanceBuffer,
+            "instance count is %zu, but instance count is limited to CONFIG_MAX_INSTANCES (%zu) "
+            "instances when supplying transforms via an InstanceBuffer.",
+            mImpl->mInstanceCount,
+            CONFIG_MAX_INSTANCES);
+    if (mImpl->mInstanceBuffer) {
+        size_t bufferInstanceCount = mImpl->mInstanceBuffer->mInstanceCount;
+        ASSERT_PRECONDITION(mImpl->mInstanceCount <= bufferInstanceCount,
+                "instance count (%zu) must be less than or equal to the InstanceBuffer's instance "
+                "count "
+                "(%zu).",
+                mImpl->mInstanceCount, bufferInstanceCount);
+    }
 
     for (size_t i = 0, c = mImpl->mEntries.size(); i < c; i++) {
         auto& entry = mImpl->mEntries[i];
@@ -305,6 +320,13 @@ RenderableManager::Builder& RenderableManager::Builder::instances(size_t instanc
     return *this;
 }
 
+RenderableManager::Builder& RenderableManager::Builder::instances(
+        size_t instanceCount, InstanceBuffer* instanceBuffer) noexcept {
+    mImpl->mInstanceCount = clamp(instanceCount, (size_t)1, CONFIG_MAX_INSTANCES);
+    mImpl->mInstanceBuffer = downcast(instanceBuffer);
+    return *this;
+}
+
 // ------------------------------------------------------------------------------------------------
 
 FRenderableManager::FRenderableManager(FEngine& engine) noexcept : mEngine(engine) {
@@ -352,7 +374,18 @@ void FRenderableManager::create(
         setSkinning(ci, false);
         setMorphing(ci, builder->mMorphTargetCount);
         mManager[ci].channels = builder->mLightChannels;
-        mManager[ci].instanceCount = builder->mInstanceCount;
+
+        InstancesInfo& instances = manager[ci].instances;
+        instances.count = builder->mInstanceCount;
+        instances.buffer = builder->mInstanceBuffer;
+        if (instances.buffer) {
+            // Allocate our instance buffer for this Renderable. We always allocate a size to match
+            // PerRenderableUib, regardless of the number of instances. This is because the buffer
+            // will get bound to the PER_RENDERABLE UBO, and we can't bind a buffer smaller than the
+            // full size of the UBO.
+            instances.handle = driver.createBufferObject(sizeof(PerRenderableUib),
+                    BufferObjectBinding::UNIFORM, backend::BufferUsage::DYNAMIC);
+        }
 
         const uint32_t boneCount = builder->mSkinningBoneCount;
         const uint32_t targetCount = builder->mMorphTargetCount;
@@ -509,6 +542,11 @@ void FRenderableManager::destroyComponent(Instance ci) noexcept {
     MorphWeights const& morphWeights = manager[ci].morphWeights;
     if (morphWeights.handle) {
         driver.destroyBufferObject(morphWeights.handle);
+    }
+
+    InstancesInfo const& instances = manager[ci].instances;
+    if (instances.handle) {
+        driver.destroyBufferObject(instances.handle);
     }
 }
 

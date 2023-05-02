@@ -197,6 +197,10 @@ bool Engine::destroy(const SwapChain* p) {
     return downcast(this)->destroy(downcast(p));
 }
 
+bool Engine::destroy(const InstanceBuffer* p) {
+    return downcast(this)->destroy(downcast(p));
+}
+
 void Engine::destroy(Entity e) {
     downcast(this)->destroy(e);
 }

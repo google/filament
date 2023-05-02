@@ -486,3 +486,22 @@ Java_com_google_android_filament_View_nSetGuardBandOptions(JNIEnv *, jclass,
     View* view = (View*) nativeView;
     view->setGuardBandOptions({ .enabled = (bool)enabled });
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetMaterialGlobal(JNIEnv * , jclass, jlong nativeView,
+        jint index, jfloat x, jfloat y, jfloat z, jfloat w) {
+    View *view = (View *) nativeView;
+    view->setMaterialGlobal((uint32_t)index, { x, y, z, w });
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nGetMaterialGlobal(JNIEnv *env, jclass clazz,
+        jlong nativeView, jint index, jfloatArray out_) {
+    jfloat* out = env->GetFloatArrayElements(out_, nullptr);
+    View *view = (View *) nativeView;
+    auto result = view->getMaterialGlobal(index);
+    std::copy_n(result.v, 4, out);
+    env->ReleaseFloatArrayElements(out_, out, 0);
+}

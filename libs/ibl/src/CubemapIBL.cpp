@@ -1022,7 +1022,7 @@ void CubemapIBL::DFG(JobSystem& js, Image& dst, bool multiscatter, bool cloth) {
                     // here we're using ^2, but other mappings are possible.
                     // ==> coord = sqrt(linear_roughness)
                     const float linear_roughness = coord * coord;
-                    for (size_t x = 0; x < height; x++, data++) {
+                    for (size_t x = 0; x < width; x++, data++) {
                         // const float NoV = float(x) / (width-1);
                         const float NoV = saturate((x + 0.5f) / width);
                         float3 r = { dfvFunction(NoV, linear_roughness, 1024), 0 };

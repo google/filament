@@ -454,6 +454,7 @@ void FEngine::shutdown() {
     cleanupResourceList(std::move(mTextures));
     cleanupResourceList(std::move(mRenderTargets));
     cleanupResourceList(std::move(mMaterials));
+    cleanupResourceList(std::move(mInstanceBuffers));
     for (auto& item : mMaterialInstances) {
         cleanupResourceList(std::move(item.second));
     }
@@ -701,6 +702,10 @@ FSkinningBuffer* FEngine::createSkinningBuffer(const SkinningBuffer::Builder& bu
 
 FMorphTargetBuffer* FEngine::createMorphTargetBuffer(const MorphTargetBuffer::Builder& builder) noexcept {
     return create(mMorphTargetBuffers, builder);
+}
+
+FInstanceBuffer* FEngine::createInstanceBuffer(const InstanceBuffer::Builder& builder) noexcept {
+    return create(mInstanceBuffers, builder);
 }
 
 FTexture* FEngine::createTexture(const Texture::Builder& builder) noexcept {
@@ -992,6 +997,10 @@ bool FEngine::destroy(const FStream* p) {
     return terminateAndDestroy(p, mStreams);
 }
 
+UTILS_NOINLINE
+bool FEngine::destroy(const FInstanceBuffer* p){
+    return terminateAndDestroy(p, mInstanceBuffers);
+}
 
 UTILS_NOINLINE
 bool FEngine::destroy(const FMaterial* ptr) {

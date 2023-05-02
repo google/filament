@@ -803,6 +803,26 @@ public:
     PickingQuery& pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
             PickingQueryResultCallback callback) noexcept;
 
+    /**
+     * Set the value of material global variables. There are up-to four such variable each of
+     * type float4. These variables can be read in a user Material with
+     * `getMaterialGlobal{0|1|2|3}()`. All variable start with a default value of { 0, 0, 0, 1 }
+     *
+     * @param index index of the variable to set between 0 and 3.
+     * @param value new value for the variable.
+     * @see getMaterialGlobal
+     */
+    void setMaterialGlobal(uint32_t index, math::float4 const& value);
+
+    /**
+     * Get the value of the material global variables.
+     * All variable start with a default value of { 0, 0, 0, 1 }
+     *
+     * @param index index of the variable to set between 0 and 3.
+     * @return current value of the variable.
+     * @see setMaterialGlobal
+     */
+    math::float4 getMaterialGlobal(uint32_t index) const;
 
     /**
      * List of available ambient occlusion techniques

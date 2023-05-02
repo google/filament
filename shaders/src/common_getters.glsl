@@ -75,10 +75,6 @@ highp vec2 uvToRenderTargetUV(const highp vec2 uv) {
 
 // TODO: below shouldn't be accessible from post-process materials
 
-#define FILAMENT_OBJECT_SKINNING_ENABLED_BIT   0x100
-#define FILAMENT_OBJECT_MORPHING_ENABLED_BIT   0x200
-#define FILAMENT_OBJECT_CONTACT_SHADOWS_BIT    0x400
-
 /** @public-api */
 highp vec4 getResolution() {
     return frameUniforms.resolution;
@@ -104,4 +100,24 @@ float getExposure() {
 /** @public-api */
 float getEV100() {
     return frameUniforms.ev100;
+}
+
+//------------------------------------------------------------------------------
+// user defined globals
+//------------------------------------------------------------------------------
+
+highp vec4 getMaterialGlobal0() {
+    return frameUniforms.custom[0];
+}
+
+highp vec4 getMaterialGlobal1() {
+    return frameUniforms.custom[1];
+}
+
+highp vec4 getMaterialGlobal2() {
+    return frameUniforms.custom[2];
+}
+
+highp vec4 getMaterialGlobal3() {
+    return frameUniforms.custom[3];
 }

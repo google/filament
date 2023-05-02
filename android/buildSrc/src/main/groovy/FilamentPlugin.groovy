@@ -142,6 +142,14 @@ abstract class MaterialCompiler extends TaskWithBinary {
                 if (!exclude_vulkan) {
                     matcArgs += ['-a', 'vulkan']
                 }
+
+                def mat_no_opt = providers
+                        .gradleProperty("com.google.android.filament.matnopt")
+                        .forUseAtConfigurationTime().present
+                if (mat_no_opt) {
+                    matcArgs += ['-g']
+                }
+
                 matcArgs += ['-a', 'opengl', '-p', 'mobile', '-o', getOutputFile(file), file]
 
                 exec.exec {

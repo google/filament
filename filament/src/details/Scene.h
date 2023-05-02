@@ -94,10 +94,10 @@ public:
         VISIBILITY_STATE,       //   2 | visibility data of the component
         SKINNING_BUFFER,        //   8 | bones uniform buffer handle, offset
         MORPHING_BUFFER,        //  16 | weights uniform buffer handle, count, morph targets
+        INSTANCES,              //  16 | instancing info for this Renderable
         WORLD_AABB_CENTER,      //  12 | world-space bounding box center of the renderable
         VISIBLE_MASK,           //   2 | each bit represents a visibility in a pass
         CHANNELS,               //   1 | currently light channels only
-        INSTANCE_COUNT,         //   2 | draw instance count
 
         // These are not needed anymore after culling
         LAYERS,                 //   1 | layers
@@ -118,10 +118,10 @@ public:
             FRenderableManager::Visibility,             // VISIBILITY_STATE
             FRenderableManager::SkinningBindingInfo,    // SKINNING_BUFFER
             FRenderableManager::MorphingBindingInfo,    // MORPHING_BUFFER
+            FRenderableManager::InstancesInfo,          // INSTANCES
             math::float3,                               // WORLD_AABB_CENTER
             VisibleMaskType,                            // VISIBLE_MASK
             uint8_t,                                    // CHANNELS
-            uint16_t,                                   // INSTANCE_COUNT
             uint8_t,                                    // LAYERS
             math::float3,                               // WORLD_AABB_EXTENT
             utils::Slice<FRenderPrimitive>,             // PRIMITIVES

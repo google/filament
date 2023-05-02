@@ -33,9 +33,9 @@ data class Quaternion(
         var x: Float = 0.0f,
         var y: Float = 0.0f,
         var z: Float = 0.0f,
-        var w: Float = 0.0f) {
+        var w: Float = 1.0f) {
 
-    constructor(v: Float3, w: Float = 0.0f) : this(v.x, v.y, v.z, w)
+    constructor(v: Float3, w: Float = 1.0f) : this(v.x, v.y, v.z, w)
     constructor(v: Float4) : this(v.x, v.y, v.z, v.w)
     constructor(q: Quaternion) : this(q.x, q.y, q.z, q.w)
 
@@ -52,42 +52,84 @@ data class Quaternion(
         }
 
         /**
-         * Construct a Quaternion from Euler angles using YPR around ZYX respectively
+         * Construct a Quaternion from Euler angles using YPR around a specified order
          *
-         * The Euler angles are applied in ZYX order.
-         * i.e: a vector is first rotated about X (roll) then Y (pitch) and then Z (yaw).
+         * Uses intrinsic Tait-Bryan angles. This means that rotations are performed with respect to
+         * the local coordinate system.
+         * That is, for order 'XYZ', the rotation is first around the X axis (which is the same as
+         * the world-X axis), then around local-Y (which may now be different from the world
+         * Y-axis), then local-Z (which may be different from the world Z-axis)
          *
          * @param d Per axis Euler angles in degrees
+         * Yaw, pitch, roll (YPR) are taken accordingly to the rotations order input.
+         * @param order The order in which to apply rotations.
+         * Default is [RotationsOrder.ZYX] which means that the object will first be rotated around
+         * its Z axis, then its Y axis and finally its X axis.
          */
-        fun fromEuler(d: Float3): Quaternion {
+        fun fromEuler(d: Float3, order: RotationsOrder = RotationsOrder.ZYX): Quaternion {
             val r = transform(d, ::radians)
-            return fromEulerZYX(r.z, r.y, r.x)
+            return fromEuler(r[order.yaw], r[order.pitch], r[order.roll], order)
         }
 
         /**
-         * Construct a Quaternion from Euler angles using YPR around ZYX respectively
+         * Construct a Quaternion from Euler yaw, pitch, roll around a specified order.
          *
-         * The Euler angles are applied in ZYX order.
-         * i.e: a vector is first rotated about X (roll) then Y (pitch) and then Z (yaw).
-         *
-         * @param roll about X axis in radians
-         * @param pitch about Y axis in radians
-         * @param yaw about Z axis in radians
+         * @param roll about 1st rotation axis in radians. Z in case of ZYX order
+         * @param pitch about 2nd rotation axis in radians. Y in case of ZYX order
+         * @param yaw about 3rd rotation axis in radians. X in case of ZYX order
+         * @param order The order in which to apply rotations.
+         * Default is [RotationsOrder.ZYX] which means that the object will first be rotated around its Z
+         * axis, then its Y axis and finally its X axis.
          */
-        fun fromEulerZYX(yaw: Float = 0.0f, pitch: Float = 0.0f, roll: Float = 0.0f): Quaternion {
-            val cy = cos(yaw * 0.5f)
-            val sy = sin(yaw * 0.5f)
-            val cp = cos(pitch * 0.5f)
-            val sp = sin(pitch * 0.5f)
-            val cr = cos(roll * 0.5f)
-            val sr = sin(roll * 0.5f)
-
-            return Quaternion(
-                    sr * cp * cy - cr * sp * sy,
-                    cr * sp * cy + sr * cp * sy,
-                    cr * cp * sy - sr * sp * cy,
-                    cr * cp * cy + sr * sp * sy
-            )
+        fun fromEuler(
+            yaw: Float = 0.0f,
+            pitch: Float = 0.0f,
+            roll: Float = 0.0f,
+            order: RotationsOrder = RotationsOrder.ZYX
+        ): Quaternion {
+            val c1 = cos(yaw * 0.5f)
+            val s1 = sin(yaw * 0.5f)
+            val c2 = cos(pitch * 0.5f)
+            val s2 = sin(pitch * 0.5f)
+            val c3 = cos(roll * 0.5f)
+            val s3 = sin(roll * 0.5f)
+            return when (order) {
+                RotationsOrder.XZY -> Quaternion(
+                        s1 * c2 * c3 - c1 * s2 * s3,
+                        c1 * c2 * s3 - s1 * s2 * c3,
+                        s1 * c2 * s3 + c1 * s2 * c3,
+                        s1 * s2 * s3 + c1 * c2 * c3)
+                RotationsOrder.XYZ -> Quaternion(
+                        s1 * c2 * c3 + s2 * s3 * c1,
+                        s2 * c1 * c3 - s1 * s3 * c2,
+                        s1 * s2 * c3 + s3 * c1 * c2,
+                        c1 * c2 * c3 - s1 * s2 * s3
+                )
+                RotationsOrder.YXZ -> Quaternion(
+                        s1 * c2 * s3 + c1 * s2 * c3,
+                        s1 * c2 * c3 - c1 * s2 * s3,
+                        c1 * c2 * s3 - s1 * s2 * c3,
+                        s1 * s2 * s3 + c1 * c2 * c3
+                )
+                RotationsOrder.YZX -> Quaternion(
+                        s1 * s2 * c3 + c1 * c2 * s3,
+                        s1 * c2 * c3 + c1 * s2 * s3,
+                        c1 * s2 * c3 - s1 * c2 * s3,
+                        c1 * c2 * c3 - s1 * s2 * s3
+                )
+                RotationsOrder.ZYX -> Quaternion(
+                        c1 * c2 * s3 - s1 * s2 * c3,
+                        s1 * c2 * s3 + c1 * s2 * c3,
+                        s1 * c2 * c3 - c1 * s2 * s3,
+                        s1 * s2 * s3 + c1 * c2 * c3
+                )
+                RotationsOrder.ZXY -> Quaternion(
+                        c1 * s2 * c3 - s1 * c2 * s3,
+                        s1 * s2 * c3 + c1 * c2 * s3,
+                        s1 * c2 * c3 + c1 * s2 * s3,
+                        c1 * c2 * c3 - s1 * s2 * s3
+                )
+            }
         }
     }
 
@@ -222,16 +264,44 @@ data class Quaternion(
     inline operator fun minus(v: Float) = Quaternion(x - v, y - v, z - v, w - v)
     inline operator fun times(v: Float) = Quaternion(x * v, y * v, z * v, w * v)
     inline operator fun div(v: Float) = Quaternion(x / v, y / v, z / v, w / v)
+    inline fun compareTo(v: Float, delta: Float = 0.0f) = Float4(
+        x.compareTo(v, delta),
+        y.compareTo(v, delta),
+        z.compareTo(v, delta),
+        w.compareTo(v, delta)
+    )
+
+    inline fun equals(v: Float, delta: Float = 0.0f) = Bool4(
+        x.equals(v, delta),
+        y.equals(v, delta),
+        z.equals(v, delta),
+        w.equals(v, delta)
+    )
 
     inline operator fun times(v: Float3) = (this * Quaternion(v, 0.0f) * inverse(this)).xyz
 
     inline operator fun plus(q: Quaternion) = Quaternion(x + q.x, y + q.y, z + q.z, w + q.w)
     inline operator fun minus(q: Quaternion) = Quaternion(x - q.x, y - q.y, z - q.z, w - q.w)
     inline operator fun times(q: Quaternion) = Quaternion(
-            w * q.x + x * q.w + y * q.z - z * q.y,
-            w * q.y - x * q.z + y * q.w + z * q.x,
-            w * q.z + x * q.y - y * q.x + z * q.w,
-            w * q.w - x * q.x - y * q.y - z * q.z)
+        w * q.x + x * q.w + y * q.z - z * q.y,
+        w * q.y - x * q.z + y * q.w + z * q.x,
+        w * q.z + x * q.y - y * q.x + z * q.w,
+        w * q.w - x * q.x - y * q.y - z * q.z
+    )
+
+    inline fun compareTo(v: Float4, delta: Float = 0.0f) = Float4(
+        x.compareTo(v.x, delta),
+        y.compareTo(v.y, delta),
+        z.compareTo(v.z, delta),
+        w.compareTo(v.w, delta)
+    )
+
+    inline fun equals(v: Float4, delta: Float = 0.0f) = Bool4(
+        x.equals(v.x, delta),
+        y.equals(v.y, delta),
+        z.equals(v.z, delta),
+        w.equals(v.w, delta)
+    )
 
     inline fun transform(block: (Float) -> Float): Quaternion {
         x = block(x)
@@ -252,6 +322,103 @@ inline operator fun Float.plus(q: Quaternion) = Quaternion(this + q.x, this + q.
 inline operator fun Float.minus(q: Quaternion) = Quaternion(this - q.x, this - q.y, this - q.z, this - q.w)
 inline operator fun Float.times(q: Quaternion) = Quaternion(this * q.x, this * q.y, this * q.z, this * q.w)
 inline operator fun Float.div(q: Quaternion) = Quaternion(this / q.x, this / q.y, this / q.z, this / q.w)
+
+inline fun lessThan(a: Quaternion, b: Float) = Bool4(
+    a.x < b,
+    a.y < b,
+    a.z < b,
+    a.w < b
+)
+
+inline fun lessThan(a: Quaternion, b: Quaternion) = Bool4(
+    a.x < b.x,
+    a.y < b.y,
+    a.z < b.z,
+    a.w < b.w
+)
+
+inline fun lessThanEqual(a: Quaternion, b: Float) = Bool4(
+    a.x <= b,
+    a.y <= b,
+    a.z <= b,
+    a.w <= b
+)
+
+inline fun lessThanEqual(a: Quaternion, b: Quaternion) = Bool4(
+    a.x <= b.x,
+    a.y <= b.y,
+    a.z <= b.z,
+    a.w <= b.w
+)
+
+inline fun greaterThan(a: Quaternion, b: Float) = Bool4(
+    a.x > b,
+    a.y > b,
+    a.z > b,
+    a.w > b
+)
+
+inline fun greaterThan(a: Quaternion, b: Quaternion) = Bool4(
+    a.x > b.y,
+    a.y > b.y,
+    a.z > b.z,
+    a.w > b.w
+)
+
+inline fun greaterThanEqual(a: Quaternion, b: Float) = Bool4(
+    a.x >= b,
+    a.y >= b,
+    a.z >= b,
+    a.w >= b
+)
+
+inline fun greaterThanEqual(a: Quaternion, b: Quaternion) = Bool4(
+    a.x >= b.x,
+    a.y >= b.y,
+    a.z >= b.z,
+    a.w >= b.w
+)
+
+inline fun equal(a: Quaternion, b: Float, delta: Float = 0.0f) = Bool4(
+    a.x.equals(b, delta),
+    a.y.equals(b, delta),
+    a.z.equals(b, delta),
+    a.w.equals(b, delta)
+)
+
+inline fun equal(a: Quaternion, b: Quaternion, delta: Float = 0.0f) = Bool4(
+    a.x.equals(b.x, delta),
+    a.y.equals(b.y, delta),
+    a.z.equals(b.z, delta),
+    a.w.equals(b.w, delta)
+)
+
+inline fun notEqual(a: Quaternion, b: Float, delta: Float = 0.0f) = Bool4(
+    !a.x.equals(b, delta),
+    !a.y.equals(b, delta),
+    !a.z.equals(b, delta),
+    !a.w.equals(b, delta)
+)
+
+inline fun notEqual(a: Quaternion, b: Quaternion, delta: Float = 0.0f) = Bool4(
+    !a.x.equals(b.x, delta),
+    !a.y.equals(b.y, delta),
+    !a.z.equals(b.z, delta),
+    !a.w.equals(b.w, delta)
+)
+
+inline infix fun Quaternion.lt(b: Float) = Bool4(x < b, y < b, z < b, w < b)
+inline infix fun Quaternion.lt(b: Float4) = Bool4(x < b.x, y < b.y, z < b.z, w < b.w)
+inline infix fun Quaternion.lte(b: Float) = Bool4(x <= b, y <= b, z <= b, w <= b)
+inline infix fun Quaternion.lte(b: Float4) = Bool4(x <= b.x, y <= b.y, z <= b.z, w <= b.w)
+inline infix fun Quaternion.gt(b: Float) = Bool4(x > b, y > b, z > b, w > b)
+inline infix fun Quaternion.gt(b: Float4) = Bool4(x > b.x, y > b.y, z > b.z, w > b.w)
+inline infix fun Quaternion.gte(b: Float) = Bool4(x >= b, y >= b, z >= b, w >= b)
+inline infix fun Quaternion.gte(b: Float4) = Bool4(x >= b.x, y >= b.y, z >= b.z, w >= b.w)
+inline infix fun Quaternion.eq(b: Float) = Bool4(x == b, y == b, z == b, w == b)
+inline infix fun Quaternion.eq(b: Float4) = Bool4(x == b.x, y == b.y, z == b.z, w == b.w)
+inline infix fun Quaternion.neq(b: Float) = Bool4(x != b, y != b, z != b, w != b)
+inline infix fun Quaternion.neq(b: Float4) = Bool4(x != b.x, y != b.y, z != b.z, w != b.w)
 
 inline fun abs(q: Quaternion) = Quaternion(abs(q.x), abs(q.y), abs(q.z), abs(q.w))
 inline fun length(q: Quaternion) = sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w)
@@ -278,6 +445,10 @@ fun cross(a: Quaternion, b: Quaternion): Quaternion {
     return Quaternion(m.x, m.y, m.z, 0.0f)
 }
 
+fun angle(a: Quaternion, b: Quaternion): Float {
+    return 2.0f * acos(abs(clamp(dot(a, b), -1.0f, 1.0f)))
+}
+
 /**
  * Spherical linear interpolation between two given orientations
  *
@@ -287,36 +458,38 @@ fun cross(a: Quaternion, b: Quaternion): Quaternion {
  * @param a The beginning value
  * @param b The ending value
  * @param t The ratio between the two floats
- * @param valueEps Prevent blowing up when slerping between two quaternions that are very near each
- * other. Linear interpolation (lerp) is returned in this case.
+ * @param dotThreshold If the quaternion dot product is greater than this value
+ * (i.e. the quaternions are very close to each other), then the quaternions are
+ * linearly interpolated instead of spherically interpolated.
  *
  * @return Interpolated value between the two floats
  */
-fun slerp(a: Quaternion, b: Quaternion, t: Float, valueEps: Float = 0.0000000001f): Quaternion {
+fun slerp(a: Quaternion, b: Quaternion, t: Float, dotThreshold: Float = 0.9995f): Quaternion {
     // could also be computed as: pow(q * inverse(p), t) * p;
-    val d = dot(a, b)
-    val absd = abs(d)
+    var dot = dot(a, b)
+    var b1 = b
+
+    // If the dot product is negative, then the interpolation won't follow the shortest angular path
+    // between the two quaterions. In this case, invert the end quaternion to produce an equivalent
+    // rotation that will give us the path we want.
+    if (dot < 0.0f) {
+        dot = -dot
+        b1 = -b
+    }
+
     // Prevent blowing up when slerping between two quaternions that are very near each other.
-    if ((1.0f - absd) < valueEps) {
-        return normalize(lerp(if (d < 0.0f) -a else a, b, t))
+    return if (dot < dotThreshold) {
+        val angle = acos(dot)
+        val s = sin(angle)
+        a * sin((1.0f - t) * angle) / s + b1 * sin(t * angle) / s
+    } else {
+        // If the angle is too small, use linear interpolation
+        nlerp(a, b1, t)
     }
-    val npq = sqrt(dot(a, a) * dot(b, b))  // ||p|| * ||q||
-    val acos = acos(clamp(absd / npq, -1.0f, 1.0f))
-    val acos0 = acos * (1.0f - t)
-    val acos1 = acos * t
-    val sina = sin(acos)
-    if (sina < valueEps) {
-        return normalize(lerp(a, b, t))
-    }
-    val isina = 1.0f / sina
-    val s0 = sin(acos0) * isina
-    val s1 = sin(acos1) * isina
-    // ensure we're taking the "short" side
-    return normalize(s0 * a + (if (d < 0.0f) -s1 else (s1)) * b)
 }
 
 fun lerp(a: Quaternion, b: Quaternion, t: Float): Quaternion {
-    return ((1 - t) * a) + (t * b)
+    return ((1.0f - t) * a) + (t * b)
 }
 
 fun nlerp(a: Quaternion, b: Quaternion, t: Float): Quaternion {
@@ -324,19 +497,12 @@ fun nlerp(a: Quaternion, b: Quaternion, t: Float): Quaternion {
 }
 
 /**
- * Convert a Quaternion to Euler angles using YPR around ZYX respectively
+ * Convert a Quaternion to Euler angles
  *
- * The Euler angles are applied in ZYX order
+ * @param order The order in which to apply rotations.
+ * Default is [RotationsOrder.ZYX] which means that the object will first be rotated around its Z
+ * axis, then its Y axis and finally its X axis.
  */
-fun eulerAngles(q: Quaternion): Float3 {
-    val nq = normalize(q)
-    return Float3(
-            // roll (x-axis rotation)
-            degrees(atan2(2.0f * (nq.y * nq.z + nq.w * nq.x),
-                    nq.w * nq.w - nq.x * nq.x - nq.y * nq.y + nq.z * nq.z)),
-            // pitch (y-axis rotation)
-            degrees(asin(-2.0f * (nq.x * nq.z - nq.w * nq.y))),
-            // yaw (z-axis rotation)
-            degrees(atan2(2.0f * (nq.x * nq.y + nq.w * nq.z),
-                    nq.w * nq.w + nq.x * nq.x - nq.y * nq.y - nq.z * nq.z)))
+fun eulerAngles(q: Quaternion, order: RotationsOrder = RotationsOrder.ZYX): Float3 {
+    return eulerAngles(rotation(q), order)
 }
