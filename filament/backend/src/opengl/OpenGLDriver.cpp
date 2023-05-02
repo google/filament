@@ -2797,7 +2797,7 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
         gl.bindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
         void* vaddr = nullptr;
 #if defined(__EMSCRIPTEN__)
-        std::unique_ptr<uint8_t> clientBuffer = std::make_unique<uint8_t>(pboSize);
+        std::unique_ptr<uint8_t[]> clientBuffer = std::make_unique<uint8_t[]>(pboSize);
         glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, pboSize, clientBuffer.get());
         vaddr = clientBuffer.get();
 #else
