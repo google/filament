@@ -613,13 +613,16 @@ void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
     assert_invariant(state.major > 2);
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    assert_invariant(false
-            || target == GL_UNIFORM_BUFFER
-            || target == GL_TRANSFORM_FEEDBACK_BUFFER
-#ifdef BACKEND_OPENGL_LEVEL_GLES31
-            || target == GL_SHADER_STORAGE_BUFFER
-#endif
-    );
+#   ifdef BACKEND_OPENGL_LEVEL_GLES31
+        assert_invariant(false
+                 || target == GL_UNIFORM_BUFFER
+                 || target == GL_TRANSFORM_FEEDBACK_BUFFER
+                 || target == GL_SHADER_STORAGE_BUFFER);
+#   else
+        assert_invariant(false
+                || target == GL_UNIFORM_BUFFER
+                || target == GL_TRANSFORM_FEEDBACK_BUFFER);
+#   endif
     size_t const targetIndex = getIndexForBufferTarget(target);
     // this ALSO sets the generic binding
     assert_invariant(targetIndex < sizeof(state.buffers.targets) / sizeof(*state.buffers.targets));
