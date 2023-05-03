@@ -146,12 +146,22 @@ OpenGLContext::OpenGLContext() noexcept {
         assert_invariant(ext.OES_rgb8_rgba8);
         assert_invariant(ext.OES_standard_derivatives);
         assert_invariant(ext.OES_texture_npot);
-        assert_invariant(ext.OES_vertex_array_object);
 #endif
 
-        procs.genVertexArrays = glGenVertexArraysOES;
-        procs.bindVertexArray = glBindVertexArrayOES;
-        procs.deleteVertexArrays = glDeleteVertexArraysOES;
+        if (UTILS_LIKELY(ext.OES_vertex_array_object)) {
+            procs.genVertexArrays = glGenVertexArraysOES;
+            procs.bindVertexArray = glBindVertexArrayOES;
+            procs.deleteVertexArrays = glDeleteVertexArraysOES;
+        } else {
+            // if we don't have OES_vertex_array_object, just don't do anything with real VAOs,
+            // we'll just rebind everything each time. Most Mali-400 support this extension, but
+            // a few don't.
+            procs.genVertexArrays = +[](GLsizei, GLuint*) {};
+            procs.bindVertexArray = +[](GLuint) {};
+            procs.deleteVertexArrays = +[](GLsizei, GLuint const*) {};
+            // we activate this workaround path, which does the reset of array buffer
+            bugs.vao_doesnt_store_element_array_buffer_binding = true;
+        }
 
         // EXT_disjoint_timer_query is optional -- pointers will be null if not available
         procs.genQueries = glGenQueriesEXT;
@@ -489,9 +499,10 @@ void OpenGLContext::initExtensionsGLES() noexcept {
         ext.EXT_color_buffer_float = true;
     }
 
-    // ES 3.x implies EXT_discard_framebuffer
+    // ES 3.x implies EXT_discard_framebuffer and OES_vertex_array_object
     if (state.major >= 3) {
         ext.EXT_color_buffer_float = true;
+        ext.OES_vertex_array_object = true;
     }
 }
 

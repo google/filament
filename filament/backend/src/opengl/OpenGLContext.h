@@ -38,7 +38,7 @@ class OpenGLPlatform;
 class OpenGLContext {
 public:
     static constexpr const size_t MAX_TEXTURE_UNIT_COUNT = MAX_SAMPLER_COUNT;
-    static constexpr const size_t DUMMY_TEXTURE_BINDING = 31; // highest binding less than 32
+    static constexpr const size_t DUMMY_TEXTURE_BINDING = 7; // highest binding guaranteed to work with ES2
     static constexpr const size_t MAX_BUFFER_BINDINGS = 32;
     typedef math::details::TVec4<GLint> vec4gli;
     typedef math::details::TVec2<GLclampf> vec2glf;
