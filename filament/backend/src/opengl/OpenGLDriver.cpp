@@ -846,14 +846,20 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
 
     // NOTE: this is called from draw() and must be as efficient as possible.
 
-    // The VAO for the given render primitive must already be bound.
-#ifndef NDEBUG
-    GLint vaoBinding;
-    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vaoBinding);
-    assert_invariant(vaoBinding == (GLint) rp->gl.vao);
-#endif
 
-    rp->gl.vertexBufferVersion = vb->bufferObjectsVersion;
+    if (UTILS_LIKELY(gl.ext.OES_vertex_array_object)) {
+        // The VAO for the given render primitive must already be bound.
+#ifndef NDEBUG
+        GLint vaoBinding;
+        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vaoBinding);
+        assert_invariant(vaoBinding == (GLint)rp->gl.vao);
+#endif
+        rp->gl.vertexBufferVersion = vb->bufferObjectsVersion;
+    } else {
+        // if we don't have OES_vertex_array_object, we never update the buffer version so
+        // that it's always reset in draw
+    }
+
     rp->maxVertexCount = vb->vertexCount;
     for (size_t i = 0, n = vb->attributes.size(); i < n; i++) {
         const auto& attribute = vb->attributes[i];
