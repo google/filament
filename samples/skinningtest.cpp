@@ -105,7 +105,7 @@ mat4f transforms[] = {math::mat4f(1),
                       mat4f::translation(float3(1, -1, 0))};
 
 utils::FixedCapacityVector<utils::FixedCapacityVector<float2>> boneDataPerPrimitive(3), boneDataPerPrimitive2(6);
-utils::FixedCapacityVector<utils::FixedCapacityVector<utils::FixedCapacityVector<float2>>> boneDataPerRenderable(3);
+utils::FixedCapacityVector<utils::FixedCapacityVector<utils::FixedCapacityVector<float2>>> boneDataPerRenderable(2);
 
 int main(int argc, char** argv) {
     Config config;
@@ -127,8 +127,6 @@ int main(int argc, char** argv) {
         boneDataPerVertex2[idx] = float2(idx, weight);
     }
 
-    utils::FixedCapacityVector<float2> emptyBoneDataPerVertex(0);
-    utils::FixedCapacityVector<utils::FixedCapacityVector<float2>> emptyBoneDataPerPrimitive(0);
     auto idx = 0;
     boneDataPerPrimitive[idx++] = boneDataPerVertex;
     boneDataPerPrimitive[idx++] = boneDataPerVertex;
@@ -145,7 +143,6 @@ int main(int argc, char** argv) {
     idx = 0;
     boneDataPerRenderable[idx++] = boneDataPerPrimitive;
     boneDataPerRenderable[idx++] = boneDataPerPrimitive;
-    boneDataPerRenderable[idx++] = emptyBoneDataPerPrimitive;
 
     App app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
@@ -320,7 +317,7 @@ int main(int argc, char** argv) {
             .skinning(app.sb, 9, 0)
 
             .boneIndicesAndWeights(0, boneDataPerPrimitive)
-            .boneIndicesAndWeights(1, boneDataArray, 24)
+            .boneIndicesAndWeights(1, boneDataArray, 24, 8)
             .morphing(3)
             .morphing(0,2,app.mt)
             .build(*engine, app.renderable1);
