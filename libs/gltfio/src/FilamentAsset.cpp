@@ -81,7 +81,7 @@ FFilamentAsset::~FFilamentAsset() {
         mEngine->destroy(ib);
     }
     for (auto tx : mTextures) {
-        if (UTILS_LIKELY(tx.isOwner)) {
+        if (UTILS_LIKELY(tx.isOwner) && tx.texture != nullptr) {
             mEngine->destroy(tx.texture);
         }
     }
