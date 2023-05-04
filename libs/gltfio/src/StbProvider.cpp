@@ -42,7 +42,7 @@ namespace filament::gltfio {
 
 class StbProvider final : public TextureProvider {
 public:
-    StbProvider(Engine* engine, const std::optional<unsigned int> &maxTextureSize);
+    StbProvider(Engine* engine, unsigned int maxTextureSize);
     ~StbProvider();
 
     Texture* pushTexture(const uint8_t* data, size_t byteCount,
@@ -90,7 +90,7 @@ private:
     std::string mRecentPushMessage;
     std::string mRecentPopMessage;
     Engine* const mEngine;
-    const std::optional<unsigned int> mMaxTextureSize;
+    const unsigned int mMaxTextureSize;
 };
 
 static int scaleDownDimension(int dimension, float scaleDownFactor) {
@@ -116,9 +116,8 @@ Texture* StbProvider::pushTexture(const uint8_t* data, size_t byteCount,
         mRecentPushMessage = std::string("Unable to parse texture: ") + stbi_failure_reason();
         return nullptr;
     }
-    if(mMaxTextureSize.has_value()) {
-      scaleDownDimensionsIfNeeded(width, height, *mMaxTextureSize);
-    }
+
+    scaleDownDimensionsIfNeeded(width, height, mMaxTextureSize);
 
     using InternalFormat = Texture::InternalFormat;
 
@@ -300,8 +299,7 @@ void StbProvider::decodeSingleTexture() {
     }
 }
 
-StbProvider::StbProvider(Engine* engine, const std::optional<unsigned int> &maxTextureSize) : mEngine(engine), mMaxTextureSize(maxTextureSize) {
-    assert_invariant(maxTextureSize.has_value() ? *maxTextureSize > 0u : true);
+StbProvider::StbProvider(Engine* engine, unsigned int maxTextureSize) : mEngine(engine), mMaxTextureSize(maxTextureSize) {
     mDecoderRootJob = mEngine->getJobSystem().createJob();
 #ifndef NDEBUG
     slog.i << "Texture Decoder has "
@@ -315,7 +313,7 @@ StbProvider::~StbProvider() {
     mEngine->getJobSystem().release(mDecoderRootJob);
 }
 
-TextureProvider* createStbProvider(Engine* engine, const std::optional<unsigned int> &maxTextureSize) {
+TextureProvider* createStbProvider(Engine* engine, unsigned int maxTextureSize) {
     return new StbProvider(engine, maxTextureSize);
 }
 
