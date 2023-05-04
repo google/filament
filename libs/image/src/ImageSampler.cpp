@@ -379,64 +379,67 @@ Filter filterFromString(const char* rawname) {
     return iter == map.end() ? Filter::DEFAULT : iter->second;
 }
 
-bool canSimpleScaleDown(uint32_t sourceWidth, uint32_t sourceHeight, uint32_t destinationWidth, uint32_t destinationHeight) {
-  assert(sourceWidth > 0u);
-  assert(sourceHeight > 0u);
-  assert(destinationWidth > 0u);
-  assert(destinationHeight > 0u);
-  return(((sourceWidth % destinationWidth) == 0u) && ((sourceHeight % destinationHeight) == 0u));
+bool canSimpleScaleDown(uint32_t sourceWidth, uint32_t sourceHeight, uint32_t destinationWidth,
+        uint32_t destinationHeight) {
+    assert(sourceWidth > 0u);
+    assert(sourceHeight > 0u);
+    assert(destinationWidth > 0u);
+    assert(destinationHeight > 0u);
+    return ((sourceWidth % destinationWidth) == 0u) && ((sourceHeight % destinationHeight) == 0u);
 }
 
 template <uint32_t componentsPerPixel>
 static std::unique_ptr<uint8_t[]> simpleScaleDown(
-    const uint8_t *source, uint32_t sourceWidth, uint32_t sourceHeight, uint32_t sourceLineStride,
-    uint32_t destinationWidth, uint32_t destinationHeight, uint32_t destinationLineStride) {
-  assert(canSimpleScaleDown(sourceWidth, sourceHeight, destinationWidth, destinationHeight));
-  assert(sourceLineStride >= sourceWidth * componentsPerPixel);
-  assert(destinationLineStride >= destinationWidth * componentsPerPixel);
+        const uint8_t *source, uint32_t sourceWidth, uint32_t sourceHeight, uint32_t sourceLineStride,
+        uint32_t destinationWidth, uint32_t destinationHeight, uint32_t destinationLineStride) {
+    assert(canSimpleScaleDown(sourceWidth, sourceHeight, destinationWidth, destinationHeight));
+    assert(sourceLineStride >= sourceWidth * componentsPerPixel);
+    assert(destinationLineStride >= destinationWidth * componentsPerPixel);
 
-  const auto sourceColumnsPerDestinationColumn = sourceWidth / destinationWidth;
-  const auto sourceRowsPerDestinationRow = sourceHeight / destinationHeight;
-  const auto sourcePixelsPerDestinationPixel = sourceColumnsPerDestinationColumn * sourceRowsPerDestinationRow;
-  const auto sourceComponentOffsets = std::unique_ptr<uint32_t[]>(new uint32_t [sourcePixelsPerDestinationPixel]);
-  for(auto row = 0u ; row < sourceRowsPerDestinationRow ; ++row) {
-    const auto rowSourceBase = row * sourceLineStride;
-    const auto rowOffsetBase = row * sourceColumnsPerDestinationColumn;
-    for(auto column = 0u ; column < sourceColumnsPerDestinationColumn ; ++column) {
-      sourceComponentOffsets[rowOffsetBase + column] = column * componentsPerPixel + rowSourceBase;
-    }
-  }
-
-  const auto sumBaseline = (sourcePixelsPerDestinationPixel + 1u) / 2u; // Creates the effect of a crude rounding as opposed to flooring.
-  const auto rowRelativeDestinationEnd = destinationWidth * componentsPerPixel;
-  const auto rowSourceIncrement = sourceRowsPerDestinationRow * sourceLineStride;
-  const auto pixelSourceIncrement = sourceColumnsPerDestinationColumn * componentsPerPixel;
-  auto destination = std::unique_ptr<uint8_t[]>(new uint8_t[destinationLineStride * destinationHeight]);
-  for(auto destinationY = 0u ; destinationY < destinationHeight ; ++destinationY) {
-    const auto rowSourceBase = destinationY * rowSourceIncrement;
-    auto pixelSource = rowSourceBase;
-    const auto rowDestinationBase = destinationY * destinationLineStride;
-    const auto rowDestinationEnd = rowDestinationBase + rowRelativeDestinationEnd;
-    for(auto pixelDestination = rowDestinationBase ; pixelDestination < rowDestinationEnd ; pixelDestination += componentsPerPixel) {
-      for(auto component = 0u ; component < componentsPerPixel ; ++component) {
-        auto sum = sumBaseline;
-        const auto componentSource = pixelSource + component;
-        for(auto sourceComponentOffset = 0u ; sourceComponentOffset < sourcePixelsPerDestinationPixel ; ++sourceComponentOffset) {
-          sum += (uint32_t)source[componentSource + sourceComponentOffsets[sourceComponentOffset]];
+    const auto srcColsPerDstCol = sourceWidth / destinationWidth;
+    const auto srcRowsPerDstRow = sourceHeight / destinationHeight;
+    const auto srcPixelsPerDstPixel = srcColsPerDstCol * srcRowsPerDstRow;
+    const auto srcCompOffsets = std::unique_ptr<uint32_t[]>(new uint32_t [srcPixelsPerDstPixel]);
+    for (auto row = 0u ; row < srcRowsPerDstRow ; ++row) {
+        const auto rowSourceBase = row * sourceLineStride;
+        const auto rowOffsetBase = row * srcColsPerDstCol;
+        for (auto column = 0u ; column < srcColsPerDstCol ; ++column) {
+            srcCompOffsets[rowOffsetBase + column] = column * componentsPerPixel + rowSourceBase;
         }
-        destination[pixelDestination + component] = sum / sourcePixelsPerDestinationPixel;
-      }
-      pixelSource += pixelSourceIncrement;
     }
-  }
 
-  return(destination);
+    // Creates the effect of a crude rounding as opposed to flooring.
+    const auto sumBaseline = (srcPixelsPerDstPixel + 1u) / 2u;
+    const auto rowRelativeDstEnd = destinationWidth * componentsPerPixel;
+    const auto rowSrcIncrement = srcRowsPerDstRow * sourceLineStride;
+    const auto pixelSrcIncrement = srcColsPerDstCol * componentsPerPixel;
+    auto destination = std::unique_ptr<uint8_t[]>(new uint8_t[destinationLineStride * destinationHeight]);
+    for (auto destinationY = 0u ; destinationY < destinationHeight ; ++destinationY) {
+        const auto rowSrcBase = destinationY * rowSrcIncrement;
+        auto pixelSource = rowSrcBase;
+        const auto rowDstBase = destinationY * destinationLineStride;
+        const auto rowDstEnd = rowDstBase + rowRelativeDstEnd;
+        for (auto pixelDst = rowDstBase; pixelDst < rowDstEnd; pixelDst += componentsPerPixel) {
+            for (auto component = 0u ; component < componentsPerPixel ; ++component) {
+                auto sum = sumBaseline;
+                const auto componentSource = pixelSource + component;
+                for (auto srcCompOffset = 0u ; srcCompOffset < srcPixelsPerDstPixel ; ++srcCompOffset) {
+                  sum += (uint32_t)source[componentSource + srcCompOffsets[srcCompOffset]];
+                }
+                destination[pixelDst + component] = sum / srcPixelsPerDstPixel;
+            }
+            pixelSource += pixelSrcIncrement;
+        }
+    }
+
+    return destination;
 }
 
 std::unique_ptr<uint8_t[]> simpleScaleDownRgba(
-    const uint8_t *source, uint32_t sourceWidth, uint32_t sourceHeight, uint32_t sourceLineStride,
-    uint32_t destinationWidth, uint32_t destinationHeight, uint32_t destinationLineStride) {
-  return(simpleScaleDown<4u>(source, sourceWidth, sourceHeight, sourceLineStride, destinationWidth, destinationHeight, destinationLineStride));
+        const uint8_t *source, uint32_t sourceWidth, uint32_t sourceHeight, uint32_t sourceLineStride,
+        uint32_t destinationWidth, uint32_t destinationHeight, uint32_t destinationLineStride) {
+    return simpleScaleDown<4u>(source, sourceWidth, sourceHeight, sourceLineStride,
+            destinationWidth, destinationHeight, destinationLineStride);
 }
 
 } // namespace image

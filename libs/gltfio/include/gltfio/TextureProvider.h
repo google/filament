@@ -171,7 +171,7 @@ public:
  * Creates a simple decoder based on stb_image that can handle "image/png" and "image/jpeg".
  * This works only if your build configuration includes STB.
  */
-TextureProvider* createStbProvider(filament::Engine* engine, unsigned int maxTextureSize = (unsigned int)-1);
+TextureProvider* createStbProvider(filament::Engine* engine, uint32_t maxTextureSize = (uint32_t)-1);
 
 /**
  * Creates a decoder that can handle certain types of "image/ktx2" content as specified in

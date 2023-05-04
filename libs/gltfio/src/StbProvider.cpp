@@ -25,9 +25,9 @@
 #include <filament/Engine.h>
 #include <filament/Texture.h>
 
-#include <image/LinearImage.h>
 #include <image/ColorTransform.h>
 #include <image/ImageSampler.h>
+#include <image/LinearImage.h>
 
 #include <stb_image.h>
 
@@ -42,7 +42,7 @@ namespace filament::gltfio {
 
 class StbProvider final : public TextureProvider {
 public:
-    StbProvider(Engine* engine, unsigned int maxTextureSize);
+    StbProvider(Engine* engine, uint32_t maxTextureSize);
     ~StbProvider();
 
     Texture* pushTexture(const uint8_t* data, size_t byteCount,
@@ -90,23 +90,25 @@ private:
     std::string mRecentPushMessage;
     std::string mRecentPopMessage;
     Engine* const mEngine;
-    const unsigned int mMaxTextureSize;
+    const uint32_t mMaxTextureSize;
 };
 
-static int scaleDownDimension(int dimension, float scaleDownFactor) {
+static uint32_t scaleDownDimension(uint32_t dimension, float scaleDownFactor) {
     assert_invariant(dimension > 0);
-    const auto scaledDimension = std::max(1, static_cast<int>(std::round(static_cast<float>(dimension) / scaleDownFactor)));
-    return (scaledDimension);
+    const auto scaledDimension = std::max(1u, static_cast<uint32_t>(
+            std::round(static_cast<float>(dimension) / scaleDownFactor)));
+    return scaledDimension;
 }
 
-static void scaleDownDimensionsIfNeeded(int &width, int &height, unsigned int maxTextureSize) {
-  const auto largerDimension = std::max(width, height);
-  if(largerDimension <= maxTextureSize) {
-    return;
-  }
-  const auto scaleDownFactor = static_cast<float>(largerDimension) / static_cast<float>(maxTextureSize);
-  width = scaleDownDimension(width, scaleDownFactor);
-  height = scaleDownDimension(height, scaleDownFactor);
+static std::pair<uint32_t, uint32_t> getFinalDimensions(uint32_t width, uint32_t height, uint32_t maxSize) {
+    const auto largerDimension = std::max(width, height);
+    if (largerDimension <= maxSize) {
+        return {width, height };
+    }
+    const auto scaleDownFactor = static_cast<float>(largerDimension) / static_cast<float>(maxSize);
+    width = scaleDownDimension(width, scaleDownFactor);
+    height = scaleDownDimension(height, scaleDownFactor);
+    return {width, height };
 }
 
 Texture* StbProvider::pushTexture(const uint8_t* data, size_t byteCount,
@@ -117,13 +119,13 @@ Texture* StbProvider::pushTexture(const uint8_t* data, size_t byteCount,
         return nullptr;
     }
 
-    scaleDownDimensionsIfNeeded(width, height, mMaxTextureSize);
+    auto dimensions = getFinalDimensions(width, height, mMaxTextureSize);
 
     using InternalFormat = Texture::InternalFormat;
 
     Texture* texture = Texture::Builder()
-            .width(width)
-            .height(height)
+            .width(dimensions.first)
+            .height(dimensions.second)
             .levels(0xff)
             .format(any(flags & TextureFlags::sRGB) ? InternalFormat::SRGB8_A8 : InternalFormat::RGBA8)
             .build(*mEngine);
@@ -197,10 +199,19 @@ void StbProvider::updateQueue() {
                 continue;
             }
             const auto textureSize = texture->getWidth() * texture->getHeight() * 4;
-            auto pbd = info->resized ? Texture::PixelBufferDescriptor((uint8_t*)data, textureSize, Texture::Format::RGBA, Texture::Type::UBYTE,
-                                                                      [](void* mem, size_t, void*) { delete[] ((uint8_t*)mem); })
-                                     : Texture::PixelBufferDescriptor((uint8_t*)data, textureSize, Texture::Format::RGBA, Texture::Type::UBYTE,
-                                                                      [](void* mem, size_t, void*) { stbi_image_free(mem); });
+            auto pbd = info->resized
+                    ? Texture::PixelBufferDescriptor(
+                            (uint8_t*)data,
+                            textureSize,
+                            Texture::Format::RGBA,
+                            Texture::Type::UBYTE,
+                            [](void* mem, size_t, void*) { delete[] ((uint8_t*)mem); })
+                            : Texture::PixelBufferDescriptor(
+                                    (uint8_t*)data,
+                                    textureSize,
+                                    Texture::Format::RGBA,
+                                    Texture::Type::UBYTE,
+                                    [](void* mem, size_t, void*) { stbi_image_free(mem); });
             texture->setImage(*mEngine, 0, std::move(pbd));
 
             // Call generateMipmaps unconditionally to fulfill the promise of the TextureProvider
@@ -264,7 +275,8 @@ void StbProvider::decode(TextureInfo& info) {
     auto& source = info.sourceBuffer;
     int width, height, comp;
 
-    std::uint8_t* texels = static_cast<std::uint8_t*>(stbi_load_from_memory(source.data(), source.size(), &width, &height, &comp, 4));
+    std::uint8_t* texels = static_cast<std::uint8_t*>(stbi_load_from_memory(
+            source.data(), source.size(), &width, &height, &comp, 4));
     source.clear();
     source.shrink_to_fit();
     if (texels == nullptr) {
@@ -274,14 +286,18 @@ void StbProvider::decode(TextureInfo& info) {
     info.resized = ((width != info.texture->getWidth()) || (height != info.texture->getHeight()));
     if (info.resized) {
         if (image::canSimpleScaleDown(width, height, info.texture->getWidth(), info.texture->getHeight())) {
-            auto scaled_down_texels = image::simpleScaleDownRgba(texels, width, height, width * sizeof(std::uint8_t) * 4u, info.texture->getWidth(),
-                                                                 info.texture->getHeight(), info.texture->getWidth() * sizeof(std::uint8_t) * 4u);
+            auto scaled_down_texels = image::simpleScaleDownRgba(
+                    texels, width, height, width * sizeof(std::uint8_t) * 4u,
+                    info.texture->getWidth(), info.texture->getHeight(),
+                    info.texture->getWidth() * sizeof(std::uint8_t) * 4u);
             stbi_image_free(texels);
             texels = scaled_down_texels.release();
         } else {
-            auto linearImage = image::toLinearWithAlpha<std::uint8_t>(width, height, width * sizeof(std::uint8_t) * 4u, texels);
+            auto linearImage = image::toLinearWithAlpha<std::uint8_t>(
+                    width, height, width * sizeof(std::uint8_t) * 4u, texels);
             stbi_image_free(texels);
-            linearImage = image::resampleImage(linearImage, info.texture->getWidth(), info.texture->getHeight());
+            linearImage = image::resampleImage(
+                    linearImage, info.texture->getWidth(), info.texture->getHeight());
             auto scaled_down_texels = image::fromLinearTosRGB<std::uint8_t, 4>(linearImage);
             texels = scaled_down_texels.release();
         }
@@ -299,7 +315,7 @@ void StbProvider::decodeSingleTexture() {
     }
 }
 
-StbProvider::StbProvider(Engine* engine, unsigned int maxTextureSize) : mEngine(engine), mMaxTextureSize(maxTextureSize) {
+StbProvider::StbProvider(Engine* engine, uint32_t maxTextureSize) : mEngine(engine), mMaxTextureSize(maxTextureSize) {
     mDecoderRootJob = mEngine->getJobSystem().createJob();
 #ifndef NDEBUG
     slog.i << "Texture Decoder has "
