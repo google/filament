@@ -134,8 +134,8 @@ uint32_t PlatformCocoaTouchGL::createDefaultRenderTarget() noexcept {
 
 void PlatformCocoaTouchGL::makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept {
     ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
-                                  "PlatformCocoaTouchGL does not support using distinct draw/read swap chains.");
-    CAEAGLLayer* glLayer = (__bridge CAEAGLLayer*) drawSwapChain;
+            "PlatformCocoaTouchGL does not support using distinct draw/read swap chains.");
+    CAEAGLLayer* const glLayer = (__bridge CAEAGLLayer*) drawSwapChain;
 
     [EAGLContext setCurrentContext:pImpl->mGLContext];
 
@@ -144,23 +144,28 @@ void PlatformCocoaTouchGL::makeCurrent(SwapChain* drawSwapChain, SwapChain* read
         pImpl->mCurrentGlLayer = glLayer;
         pImpl->mCurrentGlLayerRect = glLayer.bounds;
 
-        glBindFramebuffer(GL_FRAMEBUFFER, pImpl->mDefaultFramebuffer);
-
+        // associate our default color renderbuffer with the swapchain
+        // this renderbuffer is an attachment of the default FBO
         glBindRenderbuffer(GL_RENDERBUFFER, pImpl->mDefaultColorbuffer);
         [pImpl->mGLContext renderbufferStorage:GL_RENDERBUFFER fromDrawable:glLayer];
 
         // Retrieve width and height of color buffer.
-        GLint width;
-        GLint height;
+        GLint width, height;
         glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH, &width);
         glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT, &height);
 
+        // resize the depth buffer accordingly
         glBindRenderbuffer(GL_RENDERBUFFER, pImpl->mDefaultDepthbuffer);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
 
         // Test the framebuffer for completeness.
-        GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        // We must save/restore the framebuffer binding because filament is tracking the state
+        GLint oldFramebuffer;
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFramebuffer);
+        glBindFramebuffer(GL_FRAMEBUFFER, pImpl->mDefaultFramebuffer);
+        GLenum const status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         ASSERT_POSTCONDITION(status == GL_FRAMEBUFFER_COMPLETE, "Incomplete framebuffer.");
+        glBindFramebuffer(GL_FRAMEBUFFER_BINDING, oldFramebuffer);
     }
 }
 
