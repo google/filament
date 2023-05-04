@@ -78,11 +78,11 @@ PostProcessManager::PostProcessMaterial::PostProcessMaterial() noexcept {
     mData = nullptr;
 }
 
-PostProcessManager::PostProcessMaterial::PostProcessMaterial(FEngine&,
-        uint8_t const* data, int size) noexcept
-        : PostProcessMaterial() {
-    mData = data; // aliased to mMaterial
-    mSize = size;
+PostProcessManager::PostProcessMaterial::PostProcessMaterial(MaterialInfo const& info) noexcept
+    : PostProcessMaterial() {
+    mData = info.data; // aliased to mMaterial
+    mSize = info.size;
+    mConstants = info.constants;
 }
 
 PostProcessManager::PostProcessMaterial::PostProcessMaterial(
@@ -92,6 +92,7 @@ PostProcessManager::PostProcessMaterial::PostProcessMaterial(
     swap(mData, rhs.mData); // aliased to mMaterial
     swap(mSize, rhs.mSize);
     swap(mHasMaterial, rhs.mHasMaterial);
+    swap(mConstants, rhs.mConstants);
 }
 
 PostProcessManager::PostProcessMaterial& PostProcessManager::PostProcessMaterial::operator=(
@@ -101,6 +102,7 @@ PostProcessManager::PostProcessMaterial& PostProcessManager::PostProcessMaterial
         swap(mData, rhs.mData); // aliased to mMaterial
         swap(mSize, rhs.mSize);
         swap(mHasMaterial, rhs.mHasMaterial);
+        swap(mConstants, rhs.mConstants);
     }
     return *this;
 }
@@ -127,7 +129,14 @@ void PostProcessManager::PostProcessMaterial::loadMaterial(FEngine& engine) cons
     // TODO: After all materials using this class have been converted to the post-process material
     //       domain, load both OPAQUE and TRANSPARENT variants here.
     mHasMaterial = true;
-    mMaterial = downcast(Material::Builder().package(mData, mSize).build(engine));
+    auto builder = Material::Builder();
+    builder.package(mData, mSize);
+    for (auto const& constant : mConstants) {
+        std::visit([&](auto&& arg) {
+            builder.constant(constant.name.data(), constant.name.size(), arg);
+        }, constant.value);
+    }
+    mMaterial = downcast(builder.build(engine));
 }
 
 UTILS_NOINLINE
@@ -186,8 +195,8 @@ PostProcessManager::PostProcessManager(FEngine& engine) noexcept
 PostProcessManager::~PostProcessManager() noexcept = default;
 
 UTILS_NOINLINE
-void PostProcessManager::registerPostProcessMaterial(std::string_view name, uint8_t const* data, int size) {
-    mMaterialRegistry.try_emplace(name, mEngine, data, size);
+void PostProcessManager::registerPostProcessMaterial(std::string_view name, MaterialInfo const& info) {
+    mMaterialRegistry.try_emplace(name, info);
 }
 
 UTILS_NOINLINE
@@ -198,13 +207,7 @@ PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMater
 
 #define MATERIAL(n) MATERIALS_ ## n ## _DATA, MATERIALS_ ## n ## _SIZE
 
-struct MaterialInfo {
-    std::string_view name;
-    uint8_t const* data;
-    int size;
-};
-
-static const MaterialInfo sMaterialList[] = {
+static const PostProcessManager::MaterialInfo sMaterialList[] = {
         { "bilateralBlur",              MATERIAL(BILATERALBLUR) },
         { "bilateralBlurBentNormals",   MATERIAL(BILATERALBLURBENTNORMALS) },
         { "blitLow",                    MATERIAL(BLITLOW) },
@@ -227,14 +230,8 @@ static const MaterialInfo sMaterialList[] = {
         { "mipmapDepth",                MATERIAL(MIPMAPDEPTH) },
         { "sao",                        MATERIAL(SAO) },
         { "saoBentNormals",             MATERIAL(SAOBENTNORMALS) },
-        { "separableGaussianBlur1",     MATERIAL(SEPARABLEGAUSSIANBLUR1) },
-        { "separableGaussianBlur2",     MATERIAL(SEPARABLEGAUSSIANBLUR2) },
-        { "separableGaussianBlur3",     MATERIAL(SEPARABLEGAUSSIANBLUR3) },
-        { "separableGaussianBlur4",     MATERIAL(SEPARABLEGAUSSIANBLUR4) },
-        { "separableGaussianBlur1L",    MATERIAL(SEPARABLEGAUSSIANBLUR1L) },
-        { "separableGaussianBlur2L",    MATERIAL(SEPARABLEGAUSSIANBLUR2L) },
-        { "separableGaussianBlur3L",    MATERIAL(SEPARABLEGAUSSIANBLUR3L) },
-        { "separableGaussianBlur4L",    MATERIAL(SEPARABLEGAUSSIANBLUR4L) },
+        { "separableGaussianBlur",      MATERIAL(SEPARABLEGAUSSIANBLUR), {{ "arraySampler", false }} },
+        { "separableGaussianBlurL",     MATERIAL(SEPARABLEGAUSSIANBLUR), {{ "arraySampler", true }} },
         { "taa",                        MATERIAL(TAA) },
         { "vsmMipmap",                  MATERIAL(VSMMIPMAP) },
         { "fsr_easu",                   MATERIAL(FSR_EASU) },
@@ -261,7 +258,7 @@ void PostProcessManager::init() noexcept {
 
     #pragma nounroll
     for (auto const& info : sMaterialList) {
-        registerPostProcessMaterial(info.name, info.data, info.size);
+        registerPostProcessMaterial(info.name, info);
     }
 
     mStarburstTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
@@ -1062,18 +1059,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 FGTD const& tempDesc = resources.getDescriptor(data.temp);
 
                 using namespace std::literals;
-                std::string_view materialName;
                 const bool is2dArray = inDesc.type == SamplerType::SAMPLER_2D_ARRAY;
-                switch (backend::getFormatComponentCount(outDesc.format)) {
-                    case 1: materialName  = is2dArray ?
-                            "separableGaussianBlur1L"sv : "separableGaussianBlur1"sv;   break;
-                    case 2: materialName  = is2dArray ?
-                            "separableGaussianBlur2L"sv : "separableGaussianBlur2"sv;   break;
-                    case 3: materialName  = is2dArray ?
-                            "separableGaussianBlur3L"sv : "separableGaussianBlur3"sv;   break;
-                    default: materialName = is2dArray ?
-                            "separableGaussianBlur4L"sv : "separableGaussianBlur4"sv;   break;
-                }
+                std::string_view materialName =
+                        is2dArray ? "separableGaussianBlurL"sv : "separableGaussianBlur"sv;
+                std::string_view sourceParameterName = is2dArray ? "sourceArray"sv : "source"sv;
 
                 auto const& separableGaussianBlur = getPostProcessMaterial(materialName);
                 FMaterialInstance* const mi = separableGaussianBlur.getMaterialInstance(mEngine);
@@ -1085,7 +1074,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
 
                 // horizontal pass
 
-                mi->setParameter("source", hwIn, {
+                mi->setParameter(sourceParameterName, hwIn, {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                 });
@@ -1107,7 +1096,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 assert_invariant(width == hwOutRT.params.viewport.width);
                 assert_invariant(height == hwOutRT.params.viewport.height);
 
-                mi->setParameter("source", hwTemp, {
+                mi->setParameter(sourceParameterName, hwTemp, {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR /* level is always 0 */
                 });
