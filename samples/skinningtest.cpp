@@ -48,7 +48,7 @@ struct App {
     Camera* cam;
     Entity camera;
     Skybox* skybox;
-    Entity renderable1, renderable2, renderable3;
+    Entity renderable1, renderable2;
     SkinningBuffer *sb, *sb2;
     MorphTargetBuffer *mt;
     BufferObject *boTriangle, *boVertices, *boJoints, *boWeights;
@@ -323,31 +323,9 @@ int main(int argc, char** argv) {
             .build(*engine, app.renderable1);
 
 // renderable 2:
-// primitive 0 = skinning and morphing triangle, bone data defined as vector for all primitives of renderable,
-// primitive 1 = skinning triangle, bone data defined as vector for all primitives of renderable,
-        app.renderable2 = EntityManager::get().create();
-        RenderableManager::Builder(2)
-            .boundingBox({{-1, -1, -1}, {1, 1, 1}})
-            .material(0, app.mat->getDefaultInstance())
-            .material(1, app.mat->getDefaultInstance())
-            .geometry(0,RenderableManager::PrimitiveType::TRIANGLES,
-                      app.vb1,app.ib,0,3)
-            .geometry(1,RenderableManager::PrimitiveType::TRIANGLES,
-                      app.vb6,app.ib,0,3)
-            .culling(false)
-            .receiveShadows(false)
-            .castShadows(false)
-            .enableSkinningBuffers(true)
-            .skinning(app.sb2, 9, 0)
-            .boneIndicesAndWeights(boneDataPerRenderable)
-            .morphing(3)
-            .morphing(0,0,app.mt)
-            .build(*engine, app.renderable2);
-
-// renderable 3:
 // primitive 0 = skinning of two triangles, bone data defined as vector with various number of bones per vertex,
 // primitive 1 = skinning triangle, bone data defined as vector with various number of bones per vertex,
-        app.renderable3 = EntityManager::get().create();
+        app.renderable2 = EntityManager::get().create();
         RenderableManager::Builder(2)
             .boundingBox({{-1, -1, -1}, {1, 1, 1}})
             .material(0, app.mat->getDefaultInstance())
@@ -364,11 +342,10 @@ int main(int argc, char** argv) {
 
             .boneIndicesAndWeights( 1, boneDataPerPrimitive)
             .boneIndicesAndWeights( 0, boneDataPerPrimitive2)
-            .build(*engine, app.renderable3);
+            .build(*engine, app.renderable2);
 
         scene->addEntity(app.renderable1);
         scene->addEntity(app.renderable2);
-        scene->addEntity(app.renderable3);
         app.camera = utils::EntityManager::get().create();
         app.cam = engine->createCamera(app.camera);
         view->setCamera(app.cam);
@@ -378,7 +355,6 @@ int main(int argc, char** argv) {
         engine->destroy(app.skybox);
         engine->destroy(app.renderable1);
         engine->destroy(app.renderable2);
-        engine->destroy(app.renderable3);
         engine->destroy(app.mat);
         engine->destroy(app.vb0);
         engine->destroy(app.vb1);

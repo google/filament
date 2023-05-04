@@ -37,7 +37,7 @@
 #include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/debug.h>
-#include <map>
+#include <unordered_map>
 
 using namespace filament::math;
 using namespace utils;
@@ -71,7 +71,7 @@ struct RenderableManager::BuilderDetails {
     float2* mBoneIndicesAndWeight = nullptr;
     size_t  mBoneIndicesAndWeightsCount = 0;
 
-    std::map<int, utils::FixedCapacityVector<
+    std::unordered_map<size_t, utils::FixedCapacityVector<
                       utils::FixedCapacityVector<math::float2>>> mBonePairs; //bone indices and weights defined for primitive index
 
     explicit BuilderDetails(size_t count)
@@ -212,13 +212,13 @@ RenderableManager::Builder& RenderableManager::Builder::enableSkinningBuffers(bo
 
 RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(size_t primitiveIndex,
                math::float2 const* indicesAndWeights, size_t count, size_t bonesPerVertex) noexcept{
-    auto vertexCount = count / bonesPerVertex;
+    size_t vertexCount = count / bonesPerVertex;
     utils::FixedCapacityVector<utils::FixedCapacityVector<filament::math::float2>> bonePairs(vertexCount);
-    for( size_t iVertex = 0; iVertex < vertexCount; iVertex++){
+    for( size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
         utils::FixedCapacityVector<float2> vertexData(bonesPerVertex);
-        std::memcpy(&vertexData[0], &indicesAndWeights[iVertex * bonesPerVertex],
-             bonesPerVertex * sizeof(float2));
-        bonePairs[iVertex] = vertexData;
+        std::copy_n(indicesAndWeights + iVertex * bonesPerVertex,
+                    bonesPerVertex, vertexData.data());
+        bonePairs[iVertex] = std::move(vertexData);
     }
   return boneIndicesAndWeights(primitiveIndex, bonePairs);
 }
@@ -226,9 +226,10 @@ RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(si
 RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(size_t primitiveIndex,
                const  utils::FixedCapacityVector<
                           utils::FixedCapacityVector<filament::math::float2>> &indicesAndWeightsVector) noexcept{
-    mImpl->mBonePairs[primitiveIndex] = indicesAndWeightsVector;
+    mImpl->mBonePairs[primitiveIndex] = std::move(indicesAndWeightsVector);
     return *this;
 }
+
 RenderableManager::Builder& RenderableManager::Builder::fog(bool enabled) noexcept {
     mImpl->mFogEnabled = enabled;
     return *this;
@@ -275,7 +276,7 @@ void RenderableManager::Builder::processBoneIndicesAndWights(Engine& engine, Ent
     for(auto iBonePair = mImpl->mBonePairs.begin(); iBonePair != mImpl->mBonePairs.end(); ++iBonePair){
         auto primitiveIndex = iBonePair->first;
         auto entries = mImpl->mEntries;
-        ASSERT_PRECONDITION(primitiveIndex < (int) entries.size() && primitiveIndex >= 0,
+        ASSERT_PRECONDITION(primitiveIndex < entries.size() && primitiveIndex >= 0,
             "[primitive @ %u] primitiveindex is out of size (%u)", primitiveIndex, entries.size());
         auto entry = mImpl->mEntries[primitiveIndex];
         auto bonePairsForPrimitive = iBonePair->second;
@@ -372,7 +373,6 @@ void RenderableManager::Builder::processBoneIndicesAndWights(Engine& engine, Ent
     mImpl->mBoneIndicesAndWeightsCount = pairsCount;
 }
 
-
 RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& engine, Entity entity) {
     bool isEmpty = true;
 
@@ -382,7 +382,6 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
     if (UTILS_LIKELY(mImpl->mSkinningBoneCount) || UTILS_LIKELY(mImpl->mSkinningBufferMode)) {
         processBoneIndicesAndWights(engine, entity);
     }
-
 
     for (size_t i = 0, c = mImpl->mEntries.size(); i < c; i++) {
         auto& entry = mImpl->mEntries[i];
