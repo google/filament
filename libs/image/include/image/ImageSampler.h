@@ -20,8 +20,6 @@
 #include <image/LinearImage.h>
 
 #include <utils/compiler.h>
-#include <memory>
-#include <cstdint>
 
 namespace image {
 
@@ -160,20 +158,6 @@ uint32_t getMipmapCount(const LinearImage& source);
  */
 UTILS_PUBLIC
 Filter filterFromString(const char* name);
-
-/**
- * Returns whether simpleScaleDownRgba() is usable on the specified dimensions.
- */
-bool canSimpleScaleDown(uint32_t sourceWidth, uint32_t sourceHeight, uint32_t destinationWidth, uint32_t destinationHeight);
-
-/**
- * Scales down a single byte per component RGBA image where each destination pixel corresponds to
- * a whole number of source pixels on each dimension. canSimpleScaleDown(sourceWidth, sourceHeight, destinationWidth, destinationHeight)
- * must return true as a precondition.
- */
-std::unique_ptr<uint8_t[]> simpleScaleDownRgba(
-    const uint8_t *source, uint32_t sourceWidth, uint32_t sourceHeight, uint32_t sourceLineStride,
-    uint32_t destinationWidth, uint32_t destinationHeight, uint32_t destinationLineStride);
 
 } // namespace image
 

@@ -271,6 +271,77 @@ const char* StbProvider::getPopMessage() const {
     return mRecentPopMessage.empty() ? nullptr : mRecentPopMessage.c_str();
 }
 
+/**
+ * Returns whether simpleScaleDownRgba() is usable on the specified dimensions.
+ */
+static bool canSimpleScaleDown(uint32_t sourceWidth, uint32_t sourceHeight, uint32_t destinationWidth,
+                        uint32_t destinationHeight) {
+    assert(sourceWidth > 0u);
+    assert(sourceHeight > 0u);
+    assert(destinationWidth > 0u);
+    assert(destinationHeight > 0u);
+    return ((sourceWidth % destinationWidth) == 0u) && ((sourceHeight % destinationHeight) == 0u);
+}
+
+template <uint32_t componentsPerPixel>
+static std::unique_ptr<uint8_t[]> simpleScaleDown(
+        const uint8_t *source, uint32_t sourceWidth, uint32_t sourceHeight, uint32_t sourceLineStride,
+        uint32_t destinationWidth, uint32_t destinationHeight, uint32_t destinationLineStride) {
+    assert(canSimpleScaleDown(sourceWidth, sourceHeight, destinationWidth, destinationHeight));
+    assert(sourceLineStride >= sourceWidth * componentsPerPixel);
+    assert(destinationLineStride >= destinationWidth * componentsPerPixel);
+
+    const auto srcColsPerDstCol = sourceWidth / destinationWidth;
+    const auto srcRowsPerDstRow = sourceHeight / destinationHeight;
+    const auto srcPixelsPerDstPixel = srcColsPerDstCol * srcRowsPerDstRow;
+    const auto srcCompOffsets = std::unique_ptr<uint32_t[]>(new uint32_t [srcPixelsPerDstPixel]);
+    for (auto row = 0u ; row < srcRowsPerDstRow ; ++row) {
+        const auto rowSourceBase = row * sourceLineStride;
+        const auto rowOffsetBase = row * srcColsPerDstCol;
+        for (auto column = 0u ; column < srcColsPerDstCol ; ++column) {
+            srcCompOffsets[rowOffsetBase + column] = column * componentsPerPixel + rowSourceBase;
+        }
+    }
+
+    // Creates the effect of a crude rounding as opposed to flooring.
+    const auto sumBaseline = (srcPixelsPerDstPixel + 1u) / 2u;
+    const auto rowRelativeDstEnd = destinationWidth * componentsPerPixel;
+    const auto rowSrcIncrement = srcRowsPerDstRow * sourceLineStride;
+    const auto pixelSrcIncrement = srcColsPerDstCol * componentsPerPixel;
+    auto destination = std::unique_ptr<uint8_t[]>(new uint8_t[destinationLineStride * destinationHeight]);
+    for (auto destinationY = 0u ; destinationY < destinationHeight ; ++destinationY) {
+        const auto rowSrcBase = destinationY * rowSrcIncrement;
+        auto pixelSource = rowSrcBase;
+        const auto rowDstBase = destinationY * destinationLineStride;
+        const auto rowDstEnd = rowDstBase + rowRelativeDstEnd;
+        for (auto pixelDst = rowDstBase; pixelDst < rowDstEnd; pixelDst += componentsPerPixel) {
+            for (auto component = 0u ; component < componentsPerPixel ; ++component) {
+                auto sum = sumBaseline;
+                const auto componentSource = pixelSource + component;
+                for (auto srcCompOffset = 0u ; srcCompOffset < srcPixelsPerDstPixel ; ++srcCompOffset) {
+                    sum += (uint32_t)source[componentSource + srcCompOffsets[srcCompOffset]];
+                }
+                destination[pixelDst + component] = sum / srcPixelsPerDstPixel;
+            }
+            pixelSource += pixelSrcIncrement;
+        }
+    }
+
+    return destination;
+}
+
+/**
+ * Scales down a single byte per component RGBA image where each destination pixel corresponds to
+ * a whole number of source pixels on each dimension. canSimpleScaleDown(sourceWidth, sourceHeight, destinationWidth, destinationHeight)
+ * must return true as a precondition.
+ */
+static std::unique_ptr<uint8_t[]> simpleScaleDownRgba(
+        const uint8_t *source, uint32_t sourceWidth, uint32_t sourceHeight, uint32_t sourceLineStride,
+        uint32_t destinationWidth, uint32_t destinationHeight, uint32_t destinationLineStride) {
+    return simpleScaleDown<4u>(source, sourceWidth, sourceHeight, sourceLineStride,
+                               destinationWidth, destinationHeight, destinationLineStride);
+}
+
 void StbProvider::decode(TextureInfo& info) {
     auto& source = info.sourceBuffer;
     int width, height, comp;
@@ -285,8 +356,9 @@ void StbProvider::decode(TextureInfo& info) {
     }
     info.resized = ((width != info.texture->getWidth()) || (height != info.texture->getHeight()));
     if (info.resized) {
-        if (image::canSimpleScaleDown(width, height, info.texture->getWidth(), info.texture->getHeight())) {
-            auto scaled_down_texels = image::simpleScaleDownRgba(
+        if (canSimpleScaleDown(width, height,
+                info.texture->getWidth(), info.texture->getHeight())) {
+            auto scaled_down_texels = simpleScaleDownRgba(
                     texels, width, height, width * sizeof(std::uint8_t) * 4u,
                     info.texture->getWidth(), info.texture->getHeight(),
                     info.texture->getWidth() * sizeof(std::uint8_t) * 4u);
