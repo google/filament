@@ -103,12 +103,12 @@ static uint32_t scaleDownDimension(uint32_t dimension, float scaleDownFactor) {
 static std::pair<uint32_t, uint32_t> getFinalDimensions(uint32_t width, uint32_t height, uint32_t maxSize) {
     const auto largerDimension = std::max(width, height);
     if (largerDimension <= maxSize) {
-        return {width, height };
+        return { width, height };
     }
     const auto scaleDownFactor = static_cast<float>(largerDimension) / static_cast<float>(maxSize);
     width = scaleDownDimension(width, scaleDownFactor);
     height = scaleDownDimension(height, scaleDownFactor);
-    return {width, height };
+    return { width, height };
 }
 
 Texture* StbProvider::pushTexture(const uint8_t* data, size_t byteCount,
