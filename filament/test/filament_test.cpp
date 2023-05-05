@@ -640,7 +640,7 @@ TEST(FilamentTest, ColorConversion) {
 TEST(FilamentTest, FroxelData) {
     using namespace filament;
 
-    FEngine* engine = FEngine::create();
+    FEngine* engine = downcast(Engine::create());
 
     LinearAllocatorArena arena("FRenderer: per-frame allocator", 3 * 1024 * 1024);
     utils::ArenaScope<LinearAllocatorArena> scope(arena);
