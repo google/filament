@@ -46,20 +46,11 @@ namespace filament {
 using namespace math;
 using namespace backend;
 
-Engine* Engine::create(Backend backend, Platform* platform, void* sharedGLContext, const Config* config) {
-    return FEngine::create(backend, platform, sharedGLContext, config);
-}
-
 void Engine::destroy(Engine* engine) {
     FEngine::destroy(downcast(engine));
 }
 
 #if UTILS_HAS_THREADING
-void Engine::createAsync(Engine::CreateCallback callback, void* user, Backend backend,
-        Platform* platform, void* sharedGLContext, const Config* config) {
-    FEngine::createAsync(callback, user, backend, platform, sharedGLContext, config);
-}
-
 Engine* Engine::getEngine(void* token) {
     return FEngine::getEngine(token);
 }

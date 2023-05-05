@@ -120,16 +120,10 @@ public:
     using duration = clock::duration;
 
 public:
-    static FEngine* create(Backend backend = Backend::DEFAULT,
-            Platform* platform = nullptr, void* sharedGLContext = nullptr,
-            const Config* pConfig = nullptr);
+    static Engine* create(Builder const& builder);
 
 #if UTILS_HAS_THREADING
-    static void createAsync(CreateCallback callback, void* user,
-            Backend backend = Backend::DEFAULT,
-            Platform* platform = nullptr, void* sharedGLContext = nullptr,
-            const Config* config = nullptr);
-
+    static void create(Builder const& builder, utils::Invocable<void(void* token)>&& callback);
     static FEngine* getEngine(void* token);
 #endif
 
@@ -385,9 +379,7 @@ public:
 #endif
 
 private:
-    static Config validateConfig(const Config* pConfig) noexcept;
-
-    FEngine(Backend backend, Platform* platform, const Config& config, void* sharedGLContext);
+    explicit FEngine(Engine::Builder const& builder);
     void init();
     void shutdown();
 
