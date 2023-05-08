@@ -16,6 +16,7 @@
 
 #include "vulkan/VulkanDriver.h"
 
+#include "platform/PlatformVulkan.h"
 #include "CommandStreamDispatcher.h"
 #include "DataReshaper.h"
 #include "VulkanBuffer.h"
@@ -55,19 +56,21 @@ namespace filament::backend {
 using ImgUtil = VulkanImageUtility;
 
 Driver* VulkanDriverFactory::create(VulkanPlatform* const platform,
-        const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount, const Platform::DriverConfig& driverConfig) noexcept {
-    return VulkanDriver::create(platform, ppRequiredExtensions, requiredExtensionCount, driverConfig);
+        const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount,
+        const Platform::DriverConfig& driverConfig) noexcept {
+    return VulkanDriver::create(platform, ppRequiredExtensions, requiredExtensionCount,
+            driverConfig);
 }
 
 Dispatcher VulkanDriver::getDispatcher() const noexcept {
     return ConcreteDispatcher<VulkanDriver>::make();
 }
 
-VulkanDriver::VulkanDriver(VulkanPlatform* platform,
+VulkanDriver::VulkanDriver(PlatformVulkan* platform,
         const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount,
         const Platform::DriverConfig& driverConfig) noexcept :
         mHandleAllocator("Handles", driverConfig.handleArenaSize),
-        mContextManager(*platform),
+        mPlatform(*platform),
         mStagePool(mContext),
         mFramebufferCache(mContext),
         mSamplerCache(mContext),
@@ -88,13 +91,14 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 VulkanDriver::~VulkanDriver() noexcept = default;
 
 UTILS_NOINLINE
-Driver* VulkanDriver::create(VulkanPlatform* const platform,
-        const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount,
-        const Platform::DriverConfig& driverConfig) noexcept {
+Driver* VulkanDriver::create(VulkanPlatform* const platform, const char* const* ppEnabledExtensions,
+        uint32_t enabledExtensionCount, const Platform::DriverConfig& driverConfig) noexcept {
     assert_invariant(platform);
     size_t defaultSize = FILAMENT_VULKAN_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
-    Platform::DriverConfig validConfig{ .handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize) };
-    return new VulkanDriver(platform, ppEnabledExtensions, enabledExtensionCount, validConfig);
+    Platform::DriverConfig validConfig{
+            .handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize)};
+    return new VulkanDriver(static_cast<PlatformVulkan*>(platform), ppEnabledExtensions,
+            enabledExtensionCount, validConfig);
 }
 
 ShaderModel VulkanDriver::getShaderModel() const noexcept {
@@ -403,7 +407,7 @@ void VulkanDriver::createSyncR(Handle<HwSync> sh, int) {
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     const VkInstance instance = mContext.instance;
-    auto bundle = mContextManager.createVkSurfaceKHR(nativeWindow, instance, flags);
+    auto bundle = mPlatform.createVkSurfaceKHR(nativeWindow, instance, flags);
     VkSurfaceKHR surface = (VkSurfaceKHR) bundle.surface;
     VkExtent2D fallback{bundle.width, bundle.height};
     if (fallback.width > 0 && fallback.height > 0) {

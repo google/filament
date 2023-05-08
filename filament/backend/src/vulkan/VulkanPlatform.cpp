@@ -18,6 +18,11 @@
 
 namespace filament::backend {
 
+Driver* VulkanPlatform::createDriver(void* const sharedContext,
+        const Platform::DriverConfig& driverConfig) noexcept {
+    return nullptr;
+}
+
 VulkanPlatform::~VulkanPlatform() = default;
 
 } // namespace filament::backend
