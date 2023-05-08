@@ -288,4 +288,12 @@ View::PickingQuery& View::pick(uint32_t x, uint32_t y, backend::CallbackHandler*
     return downcast(this)->pick(x, y, handler, callback);
 }
 
+void View::setMaterialGlobal(uint32_t index, math::float4 const& value) {
+    downcast(this)->setMaterialGlobal(index, value);
+}
+
+math::float4 View::getMaterialGlobal(uint32_t index) const {
+    return downcast(this)->getMaterialGlobal(index);
+}
+
 } // namespace filament

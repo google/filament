@@ -140,6 +140,11 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "ssrDistance",             0, Type::FLOAT                  },
             { "ssrStride",               0, Type::FLOAT                  },
 
+            // --------------------------------------------------------------------------------------------
+            // user defined global variables
+            // --------------------------------------------------------------------------------------------
+            { "custom",                  4, Type::FLOAT4, Precision::HIGH },
+
             // bring PerViewUib to 2 KiB
             { "reserved", sizeof(PerViewUib::reserved)/16, Type::FLOAT4 }
             })

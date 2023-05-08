@@ -2372,6 +2372,15 @@ type aliases:
     match the API-level world space. To obtain the position of the API-level camera, custom
     materials can use `getUserWorldFromWorldMatrix()` to transform `getWorldCameraPosition()`.
 
+### Material globals
+
+                 Name               |   Type   |            Description
+:-----------------------------------|:--------:|:------------------------------------
+**getMaterialGlobal0()**            | float4   | A vec4 visible by all materials, its value is set by `View::setMaterialGlobal(0, float4)`. Its default value is {0,0,0,1}.
+**getMaterialGlobal1()**            | float4   | A vec4 visible by all materials, its value is set by `View::setMaterialGlobal(1, float4)`. Its default value is {0,0,0,1}.
+**getMaterialGlobal2()**            | float4   | A vec4 visible by all materials, its value is set by `View::setMaterialGlobal(2, float4)`. Its default value is {0,0,0,1}.
+**getMaterialGlobal3()**            | float4   | A vec4 visible by all materials, its value is set by `View::setMaterialGlobal(3, float4)`. Its default value is {0,0,0,1}.
+
 ### Vertex only
 
 The following APIs are only available from the vertex block:

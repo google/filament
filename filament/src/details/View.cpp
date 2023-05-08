@@ -645,6 +645,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
     mPerViewUniforms.prepareFog(userCameraPosition, mFogOptions);
     mPerViewUniforms.prepareTemporalNoise(engine, mTemporalAntiAliasingOptions);
     mPerViewUniforms.prepareBlending(needsAlphaChannel);
+    mPerViewUniforms.prepareMaterialGlobals(mMaterialGlobals);
 }
 
 void FView::bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
@@ -1077,6 +1078,16 @@ View::PickingQuery& FView::pick(uint32_t x, uint32_t y, backend::CallbackHandler
     pQuery->next = mActivePickingQueriesList;
     mActivePickingQueriesList = pQuery;
     return *pQuery;
+}
+
+void FView::setMaterialGlobal(uint32_t index, float4 const& value) {
+    ASSERT_PRECONDITION(index < 4, "material global variable index (%u) out of range", +index);
+    mMaterialGlobals[index] = value;
+}
+
+math::float4 FView::getMaterialGlobal(uint32_t index) const {
+    ASSERT_PRECONDITION(index < 4, "material global variable index (%u) out of range", +index);
+    return mMaterialGlobals[index];
 }
 
 } // namespace filament
