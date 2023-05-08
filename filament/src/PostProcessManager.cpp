@@ -230,8 +230,22 @@ static const PostProcessManager::MaterialInfo sMaterialList[] = {
         { "mipmapDepth",                MATERIAL(MIPMAPDEPTH) },
         { "sao",                        MATERIAL(SAO) },
         { "saoBentNormals",             MATERIAL(SAOBENTNORMALS) },
-        { "separableGaussianBlur",      MATERIAL(SEPARABLEGAUSSIANBLUR), {{ "arraySampler", false }} },
-        { "separableGaussianBlurL",     MATERIAL(SEPARABLEGAUSSIANBLUR), {{ "arraySampler", true }} },
+        { "separableGaussianBlur1",     MATERIAL(SEPARABLEGAUSSIANBLUR),
+                { {"arraySampler", false}, {"componentCount", 1} } },
+        { "separableGaussianBlur1L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
+                { {"arraySampler", true }, {"componentCount", 1} } },
+        { "separableGaussianBlur2",     MATERIAL(SEPARABLEGAUSSIANBLUR),
+                { {"arraySampler", false}, {"componentCount", 2} } },
+        { "separableGaussianBlur2L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
+                { {"arraySampler", true }, {"componentCount", 2} } },
+        { "separableGaussianBlur3",     MATERIAL(SEPARABLEGAUSSIANBLUR),
+                { {"arraySampler", false}, {"componentCount", 3} } },
+        { "separableGaussianBlur3L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
+                { {"arraySampler", true }, {"componentCount", 3} } },
+        { "separableGaussianBlur4",     MATERIAL(SEPARABLEGAUSSIANBLUR),
+                { {"arraySampler", false}, {"componentCount", 4} } },
+        { "separableGaussianBlur4L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
+                { {"arraySampler", true }, {"componentCount", 4} } },
         { "taa",                        MATERIAL(TAA) },
         { "vsmMipmap",                  MATERIAL(VSMMIPMAP) },
         { "fsr_easu",                   MATERIAL(FSR_EASU) },
@@ -1059,9 +1073,18 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 FGTD const& tempDesc = resources.getDescriptor(data.temp);
 
                 using namespace std::literals;
+                std::string_view materialName;
                 const bool is2dArray = inDesc.type == SamplerType::SAMPLER_2D_ARRAY;
-                std::string_view materialName =
-                        is2dArray ? "separableGaussianBlurL"sv : "separableGaussianBlur"sv;
+                switch (backend::getFormatComponentCount(outDesc.format)) {
+                    case 1: materialName  = is2dArray ?
+                            "separableGaussianBlur1L"sv : "separableGaussianBlur1"sv;   break;
+                    case 2: materialName  = is2dArray ?
+                            "separableGaussianBlur2L"sv : "separableGaussianBlur2"sv;   break;
+                    case 3: materialName  = is2dArray ?
+                            "separableGaussianBlur3L"sv : "separableGaussianBlur3"sv;   break;
+                    default: materialName = is2dArray ?
+                            "separableGaussianBlur4L"sv : "separableGaussianBlur4"sv;   break;
+                }
                 std::string_view sourceParameterName = is2dArray ? "sourceArray"sv : "source"sv;
 
                 auto const& separableGaussianBlur = getPostProcessMaterial(materialName);

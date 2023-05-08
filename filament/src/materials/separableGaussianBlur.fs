@@ -50,5 +50,17 @@ void postProcess(inout PostProcessInputs postProcess) {
             tap(sum, k, uv - o);
         }
     }
-    postProcess.color = sum;
+
+    // These conditions are evaluated at compile time and help the driver optimize out unnecessary
+    // computations.
+    postProcess.color = vec4(0.0);
+    if (materialConstants_componentCount == 1) {
+        postProcess.color.r = sum.r;
+    } else if (materialConstants_componentCount == 2) {
+        postProcess.color.rg = sum.rg;
+    } else if (materialConstants_componentCount == 3) {
+        postProcess.color.rgb = sum.rgb;
+    } else {
+        postProcess.color.rgba = sum.rgba;
+   }
 }

@@ -41,6 +41,11 @@ material {
             type : bool,
             name : arraySampler,
             default : false
+        },
+        {
+            type : int,
+            name : componentCount,
+            default : 4
         }
     ],
     variables : [
