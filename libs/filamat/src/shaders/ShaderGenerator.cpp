@@ -644,6 +644,8 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel sm,
     io::sstream vs;
     cg.generateProlog(vs, ShaderStage::VERTEX, material);
 
+    generateUserSpecConstants(cg, vs, mConstants);
+
     CodeGenerator::generateDefine(vs, "LOCATION_POSITION", uint32_t(VertexAttribute::POSITION));
 
     // custom material variables
@@ -682,6 +684,8 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
     const CodeGenerator cg(sm, targetApi, targetLanguage, material.featureLevel);
     io::sstream fs;
     cg.generateProlog(fs, ShaderStage::FRAGMENT, material);
+
+    generateUserSpecConstants(cg, fs, mConstants);
 
     generatePostProcessMaterialVariantDefines(fs, PostProcessVariant(variant));
 
