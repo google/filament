@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,8 +84,6 @@ mat4f transforms[] = {math::mat4f(1.f),
                       mat4f::translation(float3(-1, -1, 0)),
                       mat4f::translation(float3(0, -1, 0)),
                       mat4f::translation(float3(1, -1, 0))};
-
-
 
 int main(int argc, char** argv) {
     Config config;
@@ -193,7 +191,7 @@ int main(int argc, char** argv) {
         app.cam->setProjection(Camera::Projection::ORTHO,
             -aspect * ZOOM, aspect * ZOOM,
             -ZOOM, ZOOM, 0, 1);
-               auto& tcm = engine->getTransformManager();
+        auto& tcm = engine->getTransformManager();
 
         // Transformation of both renderables
         tcm.setTransform(tcm.getInstance(app.renderable1),
@@ -211,7 +209,7 @@ int main(int argc, char** argv) {
         mat4f translate[] = {mat4f::translation(float3(s, c, 0))};
 
         mat4f trans1of8[9] = {};
-        for(uint i = 0; i<9; i++){
+        for (uint i = 0; i < 9; i++) {
             trans1of8[i] = filament::math::mat4f(1);
         }
         s *= 5;

@@ -115,7 +115,7 @@ SamplerInterfaceBlock const& SibGenerator::getPerRenderPrimitiveBonesSib(Variant
     static SamplerInterfaceBlock sib = SamplerInterfaceBlock::Builder()
             .name("BonesBuffer")
             .stageFlags(backend::ShaderStageFlags::VERTEX)
-            .add({  { "indicesAndWeights", Type::SAMPLER_2D, Format::FLOAT, Precision::HIGH }})
+            .add({{"indicesAndWeights", Type::SAMPLER_2D, Format::FLOAT, Precision::HIGH }})
             .build();
 
     return sib;

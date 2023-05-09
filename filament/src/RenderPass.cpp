@@ -879,9 +879,10 @@ void RenderPass::Executor::execute(backend::DriverApi& driver,
                 driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphTargetBuffer);
 
-                if (UTILS_UNLIKELY(info.skinningTexture))
+                if (UTILS_UNLIKELY(info.skinningTexture)) {
                     driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_SKINNING,
-                        info.skinningTexture);
+                                      info.skinningTexture);
+                }
            }
 
             if (UTILS_UNLIKELY(info.morphWeightBuffer)) {

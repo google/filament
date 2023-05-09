@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -116,12 +116,12 @@ int main(int argc, char** argv) {
         app.mt1 = MorphTargetBuffer::Builder()
             .vertexCount(9)
             .count(3)
-            .build( *engine);
+            .build(*engine);
 
         app.mt2 = MorphTargetBuffer::Builder()
             .vertexCount(9)
             .count(3)
-            .build( *engine);
+            .build(*engine);
 
         app.mt1->setPositionsAt(*engine,0, targets_pos1, 3, 0);
         app.mt1->setPositionsAt(*engine,1, targets_pos1+3, 3, 0);

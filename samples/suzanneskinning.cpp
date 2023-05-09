@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -152,10 +152,11 @@ int main(int argc, char** argv) {
     int boneCount = 9;
     utils::FixedCapacityVector<float2> boneDataPerVertex(boneCount);
     // index and weight for one vertex
-    for (size_t idx = 0; idx < boneCount; idx++)
-      boneDataPerVertex[idx] = float2(idx, 1.f / boneCount);
-    for (size_t idx = 0; idx < boneDataPerPrimitive.size(); idx++){
-      boneDataPerPrimitive[idx] = boneDataPerVertex;
+    for (size_t idx = 0; idx < boneCount; idx++) {
+        boneDataPerVertex[idx] = float2(idx, 1.f / boneCount);
+    }
+    for (size_t idx = 0; idx < boneDataPerPrimitive.size(); idx++) {
+        boneDataPerPrimitive[idx] = boneDataPerVertex;
     }
 
     Config config;
@@ -276,7 +277,6 @@ FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
           mat4f::translation(float3(s1, 0, 0)),
           mat4f::translation(float3(0, s2, 0)),
           mat4f::translation(float3(0, 0, s3)),
-//          mat4f::translation(float3(0, 0, 20))*mat4f::rotation(t * f::PI * 2.f, float3(1, 0, 0))*mat4f::translation(float3(0, 0, -20))
         };
 
         app.sb->setBones(*engine,trans,9,0);

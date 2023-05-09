@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,8 +84,9 @@ int main(int argc, char** argv) {
     size_t boneCount = 9;
     utils::FixedCapacityVector<float2> boneDataPerVertex(9);
     float weight = 1.f / boneCount;
-    for (size_t idx = 0; idx < boneCount; idx++)
-      boneDataPerVertex[idx] = float2(idx, weight);
+    for (size_t idx = 0; idx < boneCount; idx++) {
+        boneDataPerVertex[idx] = float2(idx, weight);
+    }
     auto idx = 0;
     boneDataPerPrimitive[idx++] = boneDataPerVertex;
     boneDataPerPrimitive[idx++] = boneDataPerVertex;
@@ -197,7 +198,7 @@ int main(int argc, char** argv) {
         app.cam->setProjection(Camera::Projection::ORTHO,
             -aspect * ZOOM, aspect * ZOOM,
             -ZOOM, ZOOM, 0, 1);
-               auto& tcm = engine->getTransformManager();
+        auto& tcm = engine->getTransformManager();
 
         // Transformation of both renderables
         tcm.setTransform(tcm.getInstance(app.renderable1),
@@ -215,7 +216,7 @@ int main(int argc, char** argv) {
         mat4f translate[] = {mat4f::translation(float3(s, c, 0))};
 
         mat4f trans[9] = {};
-        for(uint i = 0; i < 9; i++){
+        for (uint i = 0; i < 9; i++) {
             trans[i] = filament::math::mat4f(1);
         }
         s *= 5;

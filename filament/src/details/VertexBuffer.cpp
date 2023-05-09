@@ -240,7 +240,7 @@ void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
         // store handle to recreate VertexBuffer in the case extra bone indices and weights definition
         // used only in buffer object mode
         mBufferObjects[bufferIndex] = hwBufferObject;
-   } else {
+    } else {
         ASSERT_PRECONDITION(bufferIndex < mBufferCount, "bufferIndex must be < bufferCount");
     }
 }
@@ -281,7 +281,7 @@ void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
     auto const& attributes = mAttributes;
 
     uint8_t attributeCount = (uint8_t) mDeclaredAttributes.count();
-    #pragma nounroll
+    UTILS_NOUNROLL
     for (size_t i = 0, n = attributeArray.size(); i < n; ++i) {
         if (declaredAttributes[i]) {
             const uint32_t offset = attributes[i].offset;
@@ -302,20 +302,23 @@ void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
     FEngine::DriverApi& driver = engine.getDriverApi();
     //destroy old bone buffer objects if any
     if (!mBufferObjectsEnabled) {
-        if (slotIndicesOld != Attribute::BUFFER_UNUSED)
+        if (slotIndicesOld != Attribute::BUFFER_UNUSED) {
             driver.destroyBufferObject(mBufferObjects[slotIndicesOld]);
-        if (slotIndicesOld != Attribute::BUFFER_UNUSED)
+        }
+        if (slotIndicesOld != Attribute::BUFFER_UNUSED) {
             driver.destroyBufferObject(mBufferObjects[slotWeightsOld]);
+        }
     }
 
     //destroy old and create new vertex buffer
     auto oldHandle = mHandle;
     mHandle = driver.createVertexBuffer(mBufferCount + 2, attributeCount, mVertexCount, attributeArray);
     driver.destroyVertexBuffer(oldHandle);
-    #pragma nounroll
+    UTILS_NOUNROLL
     for (size_t i = 0; i < mBufferCount; ++i)
-        if (bufferSizes[i] > 0)
+        if (bufferSizes[i] > 0) {
             driver.setVertexBufferObject(mHandle, i, mBufferObjects[i]);
+        }
     // add new bone buffer objects
     mBufferCount++;
     auto boneJointsHandle = driver.createBufferObject(bufferSizes[mBufferCount - 1],
@@ -334,7 +337,7 @@ void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
     if (!mBufferObjectsEnabled) {
         mBufferObjects[mBufferCount - 2] = boneJointsHandle;
         mBufferObjects[mBufferCount - 1] = boneWeightsHandle;
-   }else{
+   } else {
         //for correct destroy bone buffer object
         mBoneBufferObjectsUsed = true;
         mBoneJointsHandle = boneJointsHandle;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
     size_t boneCount = 8;
     utils::FixedCapacityVector<float2> boneDataPerVertex(boneCount);
     float weight = 1.f / boneCount;
-    for (uint idx = 0; idx < boneCount; idx++){
+    for (uint idx = 0; idx < boneCount; idx++) {
         boneDataArray[idx] = float2(idx, weight);
         boneDataArray[idx + boneCount] = float2(idx, weight);
         boneDataArray[idx + 2*boneCount] = float2(idx, weight);
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
     utils::FixedCapacityVector<float2> boneDataPerVertex2(3);
     boneCount = 3;
     weight = 1.f / boneCount;
-    for (uint idx = 0; idx < boneCount; idx++){
+    for (uint idx = 0; idx < boneCount; idx++) {
         boneDataPerVertex2[idx] = float2(idx, weight);
     }
 
@@ -389,11 +389,11 @@ int main(int argc, char** argv) {
         uint offset = ((uint)now) % 9;
         float s = sin(t * f::PI * 2.f) * 10;
         mat4f trans[9] = {};
-        for(uint i = 0; i < 9; i++){
+        for (uint i = 0; i < 9; i++) {
             trans[i] = filament::math::mat4f(1);
         }
         mat4f trans2[9] = {};
-        for(uint i = 0; i < 9; i++){
+        for (uint i = 0; i < 9; i++) {
             trans2[i] = filament::math::mat4f(1);
         }
         mat4f transA[] = {

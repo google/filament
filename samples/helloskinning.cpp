@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -165,7 +165,7 @@ int main(int argc, char** argv) {
         mat4f trans[] = {filament::math::mat4f::translation(filament::math::float3{tr, 0, 0}),
                          filament::math::mat4f::translation(filament::math::float3{-1, tr, 0}),
                          filament::math::mat4f(1.f)};
-        rm.setBones(rm.getInstance(app.renderable), trans,3, 0);
+        rm.setBones(rm.getInstance(app.renderable), trans, 3, 0);
 
 
     });

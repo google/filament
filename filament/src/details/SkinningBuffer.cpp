@@ -227,8 +227,6 @@ FSkinningBuffer::HandleIndicesAndWeights FSkinningBuffer::createIndicesAndWeight
     FEngine::DriverApi& driver = engine.getDriverApi();
     auto size = getSkinningBufferSize(count);
     // create a texture for skinning pairs data (bone index and weight)
-    size = getSkinningBufferSize(count);
-
     textureHandle = driver.createTexture(SamplerType::SAMPLER_2D, 1,
                          TextureFormat::RG32F, 1,
                          getSkinningBufferWidth(size), getSkinningBufferHeight(size), 1,
