@@ -92,12 +92,16 @@ Program& Program::specializationConstants(
     return *this;
 }
 
+Program& Program::cacheId(uint64_t cacheId) noexcept {
+    mCacheId = cacheId;
+    return *this;
+}
+
 io::ostream& operator<<(io::ostream& out, const Program& builder) {
     out << "Program{";
     builder.mLogger(out);
     out << "}";
     return out;
 }
-
 
 } // namespace filament::backend

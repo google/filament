@@ -54,6 +54,7 @@
 #include <utils/Log.h>
 #include <utils/Mutex.h>
 #include <utils/Panic.h>
+#include <utils/Hash.h>
 
 #include <atomic>
 #include <utility>
@@ -1465,6 +1466,18 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
         }
         container.emplace<uint64_t>(ChunkType::MaterialProperties, properties);
     }
+
+    // create a unique material id
+    auto const& vert = mMaterialVertexCode.getResolved();
+    auto const& frag = mMaterialFragmentCode.getResolved();
+    std::hash<std::string_view> const hasher;
+    size_t const materialId = utils::hash::combine(
+            MATERIAL_VERSION,
+            utils::hash::combine(
+                    hasher({ vert.data(), vert.size() }),
+                    hasher({ frag.data(), frag.size() })));
+
+    container.emplace<uint64_t>(ChunkType::MaterialCacheId, materialId);
 }
 
 void MaterialBuilder::writeSurfaceChunks(ChunkContainer& container) const noexcept {
