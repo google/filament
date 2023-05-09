@@ -34,6 +34,7 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
+#include <utils/Hash.h>
 
 #include <unordered_map>
 
@@ -175,6 +176,9 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
                      (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0));
 
     UTILS_UNUSED_IN_RELEASE bool success;
+
+    success = parser->getCacheId(&mCacheId);
+    assert_invariant(success);
 
     success = parser->getSIB(&mSamplerInterfaceBlock);
     assert_invariant(success);
@@ -584,6 +588,8 @@ Program FMaterial::getProgramWithVariants(
     }
 
     program.specializationConstants(mSpecializationConstants);
+
+    program.cacheId(utils::hash::combine(size_t(mCacheId), variant.key));
 
     return program;
 }

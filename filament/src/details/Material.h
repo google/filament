@@ -254,6 +254,7 @@ private:
     utils::CString mName;
     FEngine& mEngine;
     const uint32_t mMaterialId;
+    uint64_t mCacheId = 0;
     mutable uint32_t mMaterialInstanceId = 0;
     MaterialParser* mMaterialParser = nullptr;
 };

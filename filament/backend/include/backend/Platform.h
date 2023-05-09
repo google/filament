@@ -115,7 +115,6 @@ public:
      */
     void setBlobFunc(InsertBlobFunc&& insertBlob, RetrieveBlobFunc&& retrieveBlob) noexcept;
 
-protected:
     /**
      * @return true if setBlobFunc was called.
      */
