@@ -206,12 +206,12 @@ void StbProvider::updateQueue() {
                             Texture::Format::RGBA,
                             Texture::Type::UBYTE,
                             [](void* mem, size_t, void*) { delete[] ((uint8_t*)mem); })
-                            : Texture::PixelBufferDescriptor(
-                                    (uint8_t*)data,
-                                    textureSize,
-                                    Texture::Format::RGBA,
-                                    Texture::Type::UBYTE,
-                                    [](void* mem, size_t, void*) { stbi_image_free(mem); });
+                    : Texture::PixelBufferDescriptor(
+                            (uint8_t*)data,
+                            textureSize,
+                            Texture::Format::RGBA,
+                            Texture::Type::UBYTE,
+                            [](void* mem, size_t, void*) { stbi_image_free(mem); });
             texture->setImage(*mEngine, 0, std::move(pbd));
 
             // Call generateMipmaps unconditionally to fulfill the promise of the TextureProvider
