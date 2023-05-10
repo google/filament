@@ -688,11 +688,12 @@ void OpenGLContext::deleteBuffers(GLsizei n, const GLuint* buffers, GLenum targe
 }
 
 void OpenGLContext::deleteVertexArrays(GLsizei n, const GLuint* arrays) noexcept {
-    procs.deleteVertexArrays(1, arrays);
-    // binding of a bound VAO is reset to 0
+    procs.deleteVertexArrays(n, arrays);
+    // if one of the destroyed VAO is bound, clear the binding.
     for (GLsizei i = 0; i < n; ++i) {
         if (state.vao.p->vao == arrays[i]) {
             bindVertexArray(nullptr);
+            break;
         }
     }
 }

@@ -137,12 +137,11 @@ Texture* Texture::Builder::build(Engine& engine) {
         switch (sampler) {
             case SamplerType::SAMPLER_2D:
             case SamplerType::SAMPLER_CUBEMAP:
+            case SamplerType::SAMPLER_EXTERNAL:
                 return true;
             case SamplerType::SAMPLER_3D:
             case SamplerType::SAMPLER_2D_ARRAY:
                 return engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_1);
-            case SamplerType::SAMPLER_EXTERNAL:
-                return false;
             case SamplerType::SAMPLER_CUBEMAP_ARRAY:
                 return engine.hasFeatureLevel(FeatureLevel::FEATURE_LEVEL_2);
         }
