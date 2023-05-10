@@ -27,19 +27,10 @@ namespace filament::backend {
 
 class VulkanPlatform : public Platform {
 public:
-    struct SurfaceBundle {
-        void* surface;
-        // On certain platforms, the extent of the surface cannot be queried from Vulkan. In those
-        // situations, we allow the frontend to pass in the extent to use in creating the swap
-        // chains. Platform implementation should set extent to 0 if they do not expect to set the
-        // swap chain extent.
-        uint32_t width;
-        uint32_t height;
-    };
+    Driver* createDriver(void* const sharedContext,
+	Platform::DriverConfig const& driverConfig) noexcept override;
 
-    // Given a Vulkan instance and native window handle, creates the platform-specific surface.
-    virtual SurfaceBundle createVkSurfaceKHR(void* nativeWindow, void* instance,
-        uint64_t flags) noexcept = 0;
+    int getOSVersion() const noexcept override { return 0; }
 
    ~VulkanPlatform() override;
 };

@@ -37,6 +37,7 @@
 namespace filament::backend {
 
 class VulkanPlatform;
+class PlatformVulkan;
 struct VulkanSamplerGroup;
 
 class VulkanDriver final : public DriverBase {
@@ -48,7 +49,7 @@ private:
 
     void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
 
-    inline VulkanDriver(VulkanPlatform* platform,
+    inline VulkanDriver(PlatformVulkan* platform,
             const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount,
             const Platform::DriverConfig& driverConfig) noexcept;
 
@@ -80,7 +81,7 @@ private:
 
     HandleAllocatorVK mHandleAllocator;
 
-    VulkanPlatform& mContextManager;
+    PlatformVulkan& mPlatform;
 
     template<typename D, typename ... ARGS>
     Handle<D> initHandle(ARGS&& ... args) noexcept {

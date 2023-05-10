@@ -24,36 +24,18 @@
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
         #include "backend/platforms/PlatformEGLAndroid.h"
     #endif
-    #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-        #include "vulkan/PlatformVkAndroid.h"
-    #endif
 #elif defined(IOS)
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3)
         #include "backend/platforms/PlatformCocoaTouchGL.h"
-    #endif
-    #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-        #include "vulkan/PlatformVkCocoaTouch.h"
     #endif
 #elif defined(__APPLE__)
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
         #include <backend/platforms/PlatformCocoaGL.h>
     #endif
-    #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-        #include "vulkan/PlatformVkCocoa.h"
-    #endif
 #elif defined(__linux__)
-    #if defined(FILAMENT_SUPPORTS_GGP)
-        #include "vulkan/PlatformVkLinuxGGP.h"
-    #elif defined(FILAMENT_SUPPORTS_WAYLAND)
-        #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
-            #include "vulkan/PlatformVkLinuxWayland.h"
-        #endif
-    #elif defined(FILAMENT_SUPPORTS_X11)
+    #if defined(FILAMENT_SUPPORTS_X11)
         #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
             #include "backend/platforms/PlatformGLX.h"
-        #endif
-        #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
-            #include "vulkan/PlatformVkLinuxX11.h"
         #endif
     #elif defined(FILAMENT_SUPPORTS_EGL_ON_LINUX)
         #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
@@ -64,11 +46,12 @@
     #if defined(FILAMENT_SUPPORTS_OPENGL) && !defined(FILAMENT_USE_EXTERNAL_GLES3) && !defined(FILAMENT_USE_SWIFTSHADER)
         #include "backend/platforms/PlatformWGL.h"
     #endif
-    #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-        #include "vulkan/PlatformVkWindows.h"
-    #endif
 #elif defined(__EMSCRIPTEN__)
     #include "backend/platforms/PlatformWebGL.h"
+#endif
+
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+    #include "vulkan/platform/PlatformVulkan.h"
 #endif
 
 #if defined (FILAMENT_SUPPORTS_METAL)
@@ -106,7 +89,7 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
 #elif defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         *backend = Backend::VULKAN;
 #else
-        * backend = Backend::OPENGL;
+        *backend = Backend::OPENGL;
 #endif
     }
     if (*backend == Backend::NOOP) {
@@ -114,25 +97,7 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
     }
     if (*backend == Backend::VULKAN) {
         #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-            #if defined(__ANDROID__)
-                return new PlatformVkAndroid();
-            #elif defined(IOS)
-                return new PlatformVkCocoaTouch();
-            #elif defined(__linux__)
-                #if defined(FILAMENT_SUPPORTS_GGP)
-                    return new PlatformVkLinuxGGP();
-                #elif defined(FILAMENT_SUPPORTS_WAYLAND)
-                    return new PlatformVkLinuxWayland();
-                #elif defined(FILAMENT_SUPPORTS_X11)
-                    return new PlatformVkLinuxX11();
-                #endif
-            #elif defined(__APPLE__)
-                return new PlatformVkCocoa();
-            #elif defined(WIN32)
-                return new PlatformVkWindows();
-            #else
-                return nullptr;
-            #endif
+            return new PlatformVulkan();
         #else
             return nullptr;
         #endif
@@ -160,6 +125,8 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
                 return new PlatformGLX();
             #elif defined(FILAMENT_SUPPORTS_EGL_ON_LINUX)
                 return new PlatformEGLHeadless();
+            #else
+                return nullptr;
             #endif
         #elif defined(WIN32)
             return new PlatformWGL();
