@@ -174,6 +174,17 @@ def parse_cpp_name(name, cppfilt):
 
     def parse_one(val):
         """Returns (leftmost-part, remaining)."""
+
+        # TODO(bendoherty)
+        # The algorithm below parses templated symbols and assumes all angle brackets
+        # are matched. However, this won't necessarily be the case if '<' or '>'
+        # are used as less-than or greater-than operators.
+        # (for example: std::enable_if<(X < Y), void>::type)
+        # To avoid this, we give up trying to parse if the symbol has unmatched
+        # brackets.
+        if val.count('<') != val.count('>'):
+            return (val, '')
+
         if (val.startswith('operator') and
             not (val[8].isalnum() or val[8] == '_')):
             # Operator overload function, terminate.
