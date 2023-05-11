@@ -256,6 +256,11 @@ void NoopDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
     scheduleDestroy(std::move(data));
 }
 
+void NoopDriver::compilePrograms(CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user) {
+    scheduleCallback(handler, user, callback);
+}
+
 void NoopDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {
 }
 
