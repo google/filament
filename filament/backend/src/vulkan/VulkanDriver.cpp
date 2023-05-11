@@ -881,6 +881,11 @@ void VulkanDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
     scheduleDestroy(std::move(data));
 }
 
+void VulkanDriver::compilePrograms(CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user) {
+    scheduleCallback(handler, user, callback);
+}
+
 void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {
     VulkanRenderTarget* const rt = handle_cast<VulkanRenderTarget*>(rth);
     const VkExtent2D extent = rt->getExtent();

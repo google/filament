@@ -969,6 +969,11 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
     scheduleDestroy(std::move(data));
 }
 
+void MetalDriver::compilePrograms(CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user) {
+    scheduleCallback(handler, user, callback);
+}
+
 void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         const RenderPassParams& params) {
 
