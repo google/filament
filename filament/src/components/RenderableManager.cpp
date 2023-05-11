@@ -379,7 +379,7 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
     ASSERT_PRECONDITION(mImpl->mSkinningBoneCount <= CONFIG_MAX_BONE_COUNT,
             "bone count > %u", CONFIG_MAX_BONE_COUNT);
 
-    if (UTILS_LIKELY(mImpl->mSkinningBoneCount) || UTILS_LIKELY(mImpl->mSkinningBufferMode)) {
+    if (UTILS_LIKELY(mImpl->mSkinningBoneCount || mImpl->mSkinningBufferMode)) {
         processBoneIndicesAndWights(engine, entity);
     }
 

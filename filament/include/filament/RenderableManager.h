@@ -31,7 +31,6 @@
 #include <math/mathfwd.h>
 
 #include <type_traits>
-#include <vector>
 
 namespace utils {
     class Entity;
