@@ -62,7 +62,7 @@ vec4 fog(vec4 color, highp vec3 view) {
         // Add sun colored fog when looking towards the sun
         vec3 sunColor = frameUniforms.lightColorIntensity.rgb * frameUniforms.lightColorIntensity.w;
 
-        float sunAmount = max(dot(-shading_view, frameUniforms.lightDirection), 0.0); // between 0 and 1
+        float sunAmount = max(dot(normalize(view), frameUniforms.lightDirection), 0.0); // between 0 and 1
         float sunInscattering = pow(sunAmount, frameUniforms.fogInscatteringSize);
 
         fogColor += sunColor * (sunInscattering * (1.0 - sunTransmittance));
