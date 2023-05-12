@@ -80,6 +80,9 @@ struct RenderableManager::BuilderDetails {
     }
     // this is only needed for the explicit instantiation below
     BuilderDetails() = default;
+
+    void processBoneIndicesAndWights(Engine& engine, utils::Entity entity);
+
 };
 
 using BuilderType = RenderableManager;
@@ -211,21 +214,21 @@ RenderableManager::Builder& RenderableManager::Builder::enableSkinningBuffers(bo
 }
 
 RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(size_t primitiveIndex,
-               math::float2 const* indicesAndWeights, size_t count, size_t bonesPerVertex) noexcept{
+               math::float2 const* indicesAndWeights, size_t count, size_t bonesPerVertex) noexcept {
     size_t vertexCount = count / bonesPerVertex;
     utils::FixedCapacityVector<utils::FixedCapacityVector<filament::math::float2>> bonePairs(vertexCount);
-    for( size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
+    for ( size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
         utils::FixedCapacityVector<float2> vertexData(bonesPerVertex);
         std::copy_n(indicesAndWeights + iVertex * bonesPerVertex,
                     bonesPerVertex, vertexData.data());
         bonePairs[iVertex] = std::move(vertexData);
     }
-  return boneIndicesAndWeights(primitiveIndex, bonePairs);
+    return boneIndicesAndWeights(primitiveIndex, bonePairs);
 }
 
 RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(size_t primitiveIndex,
-               const  utils::FixedCapacityVector<
-                          utils::FixedCapacityVector<filament::math::float2>> &indicesAndWeightsVector) noexcept{
+        utils::FixedCapacityVector<
+            utils::FixedCapacityVector<math::float2>> const &indicesAndWeightsVector) noexcept {
     mImpl->mBonePairs[primitiveIndex] = std::move(indicesAndWeightsVector);
     return *this;
 }
@@ -269,16 +272,16 @@ RenderableManager::Builder& RenderableManager::Builder::globalBlendOrderEnabled(
 }
 
 UTILS_NOINLINE
-void RenderableManager::Builder::processBoneIndicesAndWights(Engine& engine, Entity entity){
+void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engine, Entity entity) {
     size_t maxPairsCount = 0; //size of texture, number of bone pairs
     size_t maxPairsCountPerVertex = 0; //maximum of number of bone per vertex
 
-    for(auto iBonePair = mImpl->mBonePairs.begin(); iBonePair != mImpl->mBonePairs.end(); ++iBonePair){
+    for (auto iBonePair = mBonePairs.begin(); iBonePair != mBonePairs.end(); ++iBonePair){
         auto primitiveIndex = iBonePair->first;
-        auto entries = mImpl->mEntries;
+        auto entries = mEntries;
         ASSERT_PRECONDITION(primitiveIndex < entries.size() && primitiveIndex >= 0,
             "[primitive @ %u] primitiveindex is out of size (%u)", primitiveIndex, entries.size());
-        auto entry = mImpl->mEntries[primitiveIndex];
+        auto entry = mEntries[primitiveIndex];
         auto bonePairsForPrimitive = iBonePair->second;
         auto vertexCount = entry.vertices->getVertexCount();
         ASSERT_PRECONDITION(bonePairsForPrimitive.size() == vertexCount,
@@ -291,7 +294,7 @@ void RenderableManager::Builder::processBoneIndicesAndWights(Engine& engine, Ent
         ASSERT_PRECONDITION(!declaredAttributes[VertexAttribute::BONE_WEIGHTS],
             "[entity=%u, primitive @ %u] vertex attribute BONE_WEIGHTS for skinning are already defined",
             entity.getId(), primitiveIndex);
-        for (size_t iVertex = 0; iVertex < vertexCount; iVertex++){
+        for (size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
             auto bonesPerVertex = bonePairsForPrimitive[iVertex].size();
             maxPairsCount +=  bonesPerVertex;
             maxPairsCountPerVertex = max(bonesPerVertex, (uint) maxPairsCountPerVertex);
@@ -299,35 +302,36 @@ void RenderableManager::Builder::processBoneIndicesAndWights(Engine& engine, Ent
     }
 
     size_t pairsCount = 0; // counting of number of pairs stored in texture
-    float2* tempPairs; // temporary indices and weights for one vertex
     if (maxPairsCount) { // at least one primitive has bone indices and weights
-        mImpl->mBoneIndicesAndWeight = (float2*) malloc(
-            maxPairsCount * 2 * 4); // final texture data, indices and weights
-        tempPairs = (float2*) malloc(maxPairsCountPerVertex * 2
-                                               * 4); // temporary indices and weights for one vertex
-        for(auto iBonePair = mImpl->mBonePairs.begin(); iBonePair != mImpl->mBonePairs.end(); ++iBonePair){
+        mBoneIndicesAndWeight = (float2*) calloc(maxPairsCount,
+            sizeof(float2)); // final texture data, indices and weights
+        std::unique_ptr<float2[]> tempPairs(
+            new float2[maxPairsCountPerVertex]); // temporary indices and weights for one vertex
+        for (auto iBonePair = mBonePairs.begin(); iBonePair != mBonePairs.end(); ++iBonePair) {
             auto primitiveIndex = iBonePair->first;
             auto bonePairsForPrimitive = iBonePair->second;
-            if (bonePairsForPrimitive.size()){
-                size_t vertexCount = mImpl->mEntries[primitiveIndex].vertices->getVertexCount();
-                auto skinJoints = (ushort*) malloc(vertexCount * 4 * 2);
-                auto skinWeights = (float*) malloc(vertexCount * 4 * 4);
-                for(size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
+            if (bonePairsForPrimitive.size()) {
+                size_t vertexCount = mEntries[primitiveIndex].vertices->getVertexCount();
+                std::unique_ptr<ushort[]> skinJoints(
+                    new ushort[4 * vertexCount]()); // temporary indices for one vertex
+                std::unique_ptr<float[]> skinWeights(
+                    new float[4 * vertexCount]()); // temporary weights for one vertex
+                for (size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
                     size_t tempPairCount = 0;
                     float boneWeightsSum = 0;
-                    for (size_t k = 0; k < bonePairsForPrimitive[iVertex].size(); k++){
+                    for (size_t k = 0; k < bonePairsForPrimitive[iVertex].size(); k++) {
                         auto boneWeight = bonePairsForPrimitive[iVertex][k][1];
                         auto boneIndex= bonePairsForPrimitive[iVertex][k][0];
                         ASSERT_PRECONDITION(boneWeight >= 0,
                                 "[entity=%u, primitive @ %u] bone weight (%f) of vertex=%u is negative ",
                                 entity.getId(), primitiveIndex, boneWeight, iVertex);
-                        if (boneWeight){
+                        if (boneWeight) {
                             ASSERT_PRECONDITION(boneIndex >= 0,
                                 "[entity=%u, primitive @ %u] bone index (%i) of vertex=%u is negative ",
                                 entity.getId(), primitiveIndex, (int) boneIndex, iVertex);
-                            ASSERT_PRECONDITION(boneIndex < mImpl->mSkinningBoneCount,
+                            ASSERT_PRECONDITION(boneIndex < mSkinningBoneCount,
                                 "[entity=%u, primitive @ %u] bone index (%i) of vertex=%u is bigger then bone count (%u) ",
-                                entity.getId(), primitiveIndex, (int) boneIndex, iVertex, mImpl->mSkinningBoneCount);
+                                entity.getId(), primitiveIndex, (int) boneIndex, iVertex, mSkinningBoneCount);
                             boneWeightsSum += boneWeight;
                             tempPairs[tempPairCount][0] = boneIndex;
                             tempPairs[tempPairCount][1] = boneWeight;
@@ -338,11 +342,12 @@ void RenderableManager::Builder::processBoneIndicesAndWights(Engine& engine, Ent
                     ASSERT_PRECONDITION(boneWeightsSum > 0,
                         "[entity=%u, primitive @ %u] sum of bone weights of vertex=%u is %f, it should be positive.",
                         entity.getId(), primitiveIndex, iVertex, boneWeightsSum);
-                    if (abs(boneWeightsSum - 1.f) > std::numeric_limits<float>::epsilon())
-                        utils::slog.w << "Warning of skinning: [entity=%" << entity.getId() <<", primitive @ %" << primitiveIndex
-                        << "] sum of bone weights of vertex=" << iVertex << " is " << boneWeightsSum
-                        << ", it should be one. Weights will be normalized." << utils::io::endl;
-
+                    if (abs(boneWeightsSum - 1.f) > std::numeric_limits<float>::epsilon()) {
+                        utils::slog.w << "Warning of skinning: [entity=%" << entity.getId()
+                            << ", primitive @ %" << primitiveIndex
+                            << "] sum of bone weights of vertex=" << iVertex << " is " << boneWeightsSum
+                            << ", it should be one. Weights will be normalized." << utils::io::endl;
+                    }
                     // prepare data for vertex attributes
                     auto offset = iVertex * 4;
                     // set attributes, indices and weights, for <= 4 pairs
@@ -350,27 +355,23 @@ void RenderableManager::Builder::processBoneIndicesAndWights(Engine& engine, Ent
                         skinJoints[j + offset] = tempPairs[j][0];
                         skinWeights[j + offset] = tempPairs[j][1] / boneWeightsSum;
                     }
-                    // reset rest weights
-                    for (size_t j = tempPairCount; j < 4; j++)
-                        skinWeights[j + offset] = 0;
                     // prepare data for texture
-                    if (tempPairCount > 4)
-                    { // set attributes, indices and weights, for > 4 pairs
+                    if (tempPairCount > 4) { // set attributes, indices and weights, for > 4 pairs
                         skinWeights[3 + offset] = -(float) (pairsCount + 1); // negative offset to texture 0..-1, 1..-2
                         skinJoints[3 + offset] = (ushort) tempPairCount; // number pairs per vertex in texture
                         for (size_t j = 3; j < tempPairCount; j++) {
-                            mImpl->mBoneIndicesAndWeight[pairsCount][0] = tempPairs[j][0];
-                            mImpl->mBoneIndicesAndWeight[pairsCount][1] = tempPairs[j][1] / boneWeightsSum;
+                            mBoneIndicesAndWeight[pairsCount][0] = tempPairs[j][0];
+                            mBoneIndicesAndWeight[pairsCount][1] = tempPairs[j][1] / boneWeightsSum;
                             pairsCount++;
                         }
                     }
                 } // for all vertices per primitive
-                downcast(mImpl->mEntries[primitiveIndex].vertices)
-                    ->updateBoneIndicesAndWeights(downcast(engine), skinJoints, skinWeights);
+                downcast(mEntries[primitiveIndex].vertices)
+                    ->updateBoneIndicesAndWeights(downcast(engine), std::move(skinJoints), std::move(skinWeights));
             }
         }// for all primitives
     }
-    mImpl->mBoneIndicesAndWeightsCount = pairsCount;
+    mBoneIndicesAndWeightsCount = pairsCount;
 }
 
 RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& engine, Entity entity) {
@@ -378,9 +379,22 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
 
     ASSERT_PRECONDITION(mImpl->mSkinningBoneCount <= CONFIG_MAX_BONE_COUNT,
             "bone count > %u", CONFIG_MAX_BONE_COUNT);
+    ASSERT_PRECONDITION(mImpl->mInstanceCount <= CONFIG_MAX_INSTANCES || !mImpl->mInstanceBuffer,
+            "instance count is %zu, but instance count is limited to CONFIG_MAX_INSTANCES (%zu) "
+            "instances when supplying transforms via an InstanceBuffer.",
+            mImpl->mInstanceCount,
+            CONFIG_MAX_INSTANCES);
+    if (mImpl->mInstanceBuffer) {
+        size_t bufferInstanceCount = mImpl->mInstanceBuffer->mInstanceCount;
+        ASSERT_PRECONDITION(mImpl->mInstanceCount <= bufferInstanceCount,
+                "instance count (%zu) must be less than or equal to the InstanceBuffer's instance "
+                "count "
+                "(%zu).",
+                mImpl->mInstanceCount, bufferInstanceCount);
+    }
 
     if (UTILS_LIKELY(mImpl->mSkinningBoneCount || mImpl->mSkinningBufferMode)) {
-        processBoneIndicesAndWights(engine, entity);
+        mImpl->processBoneIndicesAndWights(engine, entity);
     }
 
     for (size_t i = 0, c = mImpl->mEntries.size(); i < c; i++) {

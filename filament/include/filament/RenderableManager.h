@@ -545,7 +545,6 @@ public:
                 size_t count = 0;
             } morphing;
         };
-        void processBoneIndicesAndWights(Engine& engine, utils::Entity entity);
     };
 
     /**

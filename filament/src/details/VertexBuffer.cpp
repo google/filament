@@ -244,8 +244,10 @@ void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
         ASSERT_PRECONDITION(bufferIndex < mBufferCount, "bufferIndex must be < bufferCount");
     }
 }
+
 void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
-        ushort* skinJoints, float* skinWeights) {
+                                                std::unique_ptr<ushort[]> skinJoints,
+                                                std::unique_ptr<float[]> skinWeights) {
     AttributeArray attributeArray;
 
     static_assert(attributeArray.size() == MAX_VERTEX_ATTRIBUTE_COUNT,
@@ -324,15 +326,19 @@ void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
     auto boneJointsHandle = driver.createBufferObject(bufferSizes[mBufferCount - 1],
              backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
     driver.setVertexBufferObject(mHandle, mBufferCount - 1, boneJointsHandle);
+    auto jointsData = skinJoints.release();
     auto bdJoints = BufferDescriptor(
-            skinJoints, bufferSizes[mBufferCount - 1], nullptr);
+            jointsData, bufferSizes[mBufferCount - 1],
+            [](void *buffer, size_t size, void *user) { delete static_cast<ushort *>(buffer); });
     driver.updateBufferObject(boneJointsHandle,std::move(bdJoints), 0);
     mBufferCount++;
     auto boneWeightsHandle = driver.createBufferObject(bufferSizes[mBufferCount - 1],
            backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
     driver.setVertexBufferObject(mHandle, mBufferCount - 1, boneWeightsHandle);
+    auto weightsData = skinWeights.release();
     auto bdWeights = BufferDescriptor(
-            skinWeights, bufferSizes[mBufferCount - 1], nullptr);
+            weightsData, bufferSizes[mBufferCount - 1],
+            [](void *buffer, size_t size, void *user) { delete static_cast<float *>(buffer); });
     driver.updateBufferObject(boneWeightsHandle,std::move(bdWeights), 0);
     if (!mBufferObjectsEnabled) {
         mBufferObjects[mBufferCount - 2] = boneJointsHandle;
