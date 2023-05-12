@@ -40,7 +40,7 @@ vec4 fog(vec4 color, highp vec3 view) {
     // compute fog color
     vec3 fogColor = frameUniforms.fogColor;
 
-#if !defined(SHADING_MODEL_UNLIT)
+#if MATERIAL_FEATURE_LEVEL > 0
     if (frameUniforms.fogColorFromIbl > 0.0) {
         // get fog color from envmap
         // TODO: use a lower resolution mip as we get further (problem we don't have mips!)
