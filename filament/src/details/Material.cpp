@@ -152,17 +152,27 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     UTILS_UNUSED_IN_RELEASE bool const nameOk = parser->getName(&mName);
     assert_invariant(nameOk);
 
-    uint8_t featureLevel = 1;
-    parser->getFeatureLevel(&featureLevel);
-    assert_invariant(featureLevel <= 3);
-    mFeatureLevel = [featureLevel]() -> FeatureLevel {
-        switch (featureLevel) {
-            default:
-            case 1: return FeatureLevel::FEATURE_LEVEL_1;
-            case 2: return FeatureLevel::FEATURE_LEVEL_2;
-            case 3: return FeatureLevel::FEATURE_LEVEL_3;
+    mFeatureLevel = [parser]() -> FeatureLevel {
+        // code written this way so the IDE will complain when/if we add a FeatureLevel
+        uint8_t level = 1;
+        parser->getFeatureLevel(&level);
+        assert_invariant(level <= 3);
+        FeatureLevel featureLevel = FeatureLevel::FEATURE_LEVEL_1;
+        switch (FeatureLevel(level)) {
+            case FeatureLevel::FEATURE_LEVEL_0:
+            case FeatureLevel::FEATURE_LEVEL_1:
+            case FeatureLevel::FEATURE_LEVEL_2:
+            case FeatureLevel::FEATURE_LEVEL_3:
+                featureLevel = FeatureLevel(level);
+                break;
         }
+        return featureLevel;
     }();
+
+    // TODO: this should probably be checked in build()
+    // if the engine is at feature level 0, so must the material be.
+    assert_invariant((engine.getActiveFeatureLevel() != FeatureLevel::FEATURE_LEVEL_0) ||
+                     (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0));
 
     UTILS_UNUSED_IN_RELEASE bool success;
 
@@ -172,9 +182,27 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     success = parser->getUIB(&mUniformInterfaceBlock);
     assert_invariant(success);
 
-    // read the uniform binding list
-    success = parser->getUniformBlockBindings(&mUniformBlockBindings);
-    assert_invariant(success || mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2);
+    // TODO: currently, the feature level used is determined by the material because we
+    //       don't have "feature level" variants. In the future, we could instead pick
+    //       the code path based on the engine's feature level.
+
+    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        // these chunks are only needed for materials at feature level 0
+        // TODO: remove this assert when we support feature level variants
+        assert_invariant(engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0);
+
+        success = parser->getBindingUniformInfo(&mBindingUniformInfo);
+        assert_invariant(success);
+
+        success = parser->getAttributeInfo(&mAttributeInfo);
+        assert_invariant(success);
+    }
+
+    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_1) {
+        // this chunk is not needed for materials at feature level 2 and above
+        success = parser->getUniformBlockBindings(&mUniformBlockBindings);
+        assert_invariant(success);
+    }
 
     success = parser->getSamplerBlockBindings(
             &mSamplerGroupBindingInfoList, &mSamplerBindingToNameMap);
@@ -201,19 +229,39 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     // Verify that all the constant specializations exist in the material and that their types match.
     // The first specialization constants are defined internally by Filament.
     // The subsequent constants are user-defined in the material.
-    mSpecializationConstants.reserve(constants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
-    mSpecializationConstants.push_back({0, (int)mEngine.getSupportedFeatureLevel()});
-    mSpecializationConstants.push_back({1, (int)CONFIG_MAX_INSTANCES});
+
+    // Feature level 0 doesn't support instancing
+    int const maxInstanceCount = (engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)
+            ? 1 : CONFIG_MAX_INSTANCES;
+
     const bool staticTextureWorkaround =
-            mEngine.getDriverApi().isWorkaroundNeeded(Workaround::A8X_STATIC_TEXTURE_TARGET_ERROR);
-    mSpecializationConstants.push_back({2, (bool)staticTextureWorkaround});
+            engine.getDriverApi().isWorkaroundNeeded(Workaround::A8X_STATIC_TEXTURE_TARGET_ERROR);
+
+    mSpecializationConstants.reserve(constants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
+    mSpecializationConstants.push_back({
+                    +ReservedSpecializationConstants::BACKEND_FEATURE_LEVEL,
+                    (int)engine.getSupportedFeatureLevel() });
+    mSpecializationConstants.push_back({
+                    +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES,
+                    (int)maxInstanceCount });
+    mSpecializationConstants.push_back({
+                    +ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND,
+                    (bool)staticTextureWorkaround });
+    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        // The actual value of this spec-constant is set in the OpenGLDriver backend.
+        mSpecializationConstants.push_back({
+            +ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION,
+            false});
+    }
+
     for (const auto& [name, value] : builder->mConstantSpecializations) {
         auto found = std::find_if(
                 constants.begin(), constants.end(), [name = name](const auto& constant) {
                     return strncmp(constant.name.data(), name.data(), name.length()) == 0;
                 });
         ASSERT_PRECONDITION(found != constants.end(),
-                "The material %s does not have a constant parameter named %s.", mName.c_str_safe(), name.c_str());
+                "The material %s does not have a constant parameter named %s.",
+                mName.c_str_safe(), name.c_str());
         const char* const types[3] = {"an int", "a float", "a bool"};
         const char* const errorMessage =
                 "The constant parameter %s on material %s is of type %s, but %s was "
@@ -232,8 +280,9 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
                         name.c_str(), mName.c_str_safe(), "bool", types[value.index()]);
                 break;
         }
-        uint32_t index = std::distance(constants.begin(), found) + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
-        mSpecializationConstants.push_back({index, value});
+        uint32_t const index =
+                std::distance(constants.begin(), found) + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+        mSpecializationConstants.push_back({ index, value });
     }
 
     parser->getShading(&mShading);
@@ -463,14 +512,15 @@ Program FMaterial::getProgramWithVariants(
         Variant variant,
         Variant vertexVariant,
         Variant fragmentVariant) const noexcept {
-    const ShaderModel sm = mEngine.getShaderModel();
-    const bool isNoop = mEngine.getBackend() == Backend::NOOP;
-
+    FEngine const& engine = mEngine;
+    const ShaderModel sm = engine.getShaderModel();
+    const bool isNoop = engine.getBackend() == Backend::NOOP;
+    const FeatureLevel engineFeatureLevel = engine.getActiveFeatureLevel();
     /*
      * Vertex shader
      */
 
-    ShaderContent& vsBuilder = mEngine.getVertexShaderContent();
+    ShaderContent& vsBuilder = engine.getVertexShaderContent();
 
     UTILS_UNUSED_IN_RELEASE bool const vsOK = mMaterialParser->getShader(vsBuilder, sm,
             vertexVariant, ShaderStage::VERTEX);
@@ -484,10 +534,16 @@ Program FMaterial::getProgramWithVariants(
      * Fragment shader
      */
 
-    ShaderContent& fsBuilder = mEngine.getFragmentShaderContent();
+    ShaderContent& fsBuilder = engine.getFragmentShaderContent();
 
     UTILS_UNUSED_IN_RELEASE bool const fsOK = mMaterialParser->getShader(fsBuilder, sm,
             fragmentVariant, ShaderStage::FRAGMENT);
+
+    ASSERT_POSTCONDITION(
+            (engineFeatureLevel != FeatureLevel::FEATURE_LEVEL_0) ||
+            (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0),
+            "Engine is running a FEATURE_LEVEL_0 but material '%s' is not.",
+            mName.c_str());
 
     ASSERT_POSTCONDITION(isNoop || (fsOK && !fsBuilder.empty()),
             "The material '%s' has not been compiled to include the required "
@@ -517,6 +573,14 @@ Program FMaterial::getProgramWithVariants(
             program.setSamplerGroup(+bindingPoint, info.shaderStageFlags,
                     samplers.data(), info.count);
         }
+    }
+
+    if (engineFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        assert_invariant(!mBindingUniformInfo.empty());
+        for (auto const& [index, uniforms] : mBindingUniformInfo) {
+            program.uniforms(uint32_t(index), uniforms);
+        }
+        program.attributes(mAttributeInfo);
     }
 
     program.specializationConstants(mSpecializationConstants);

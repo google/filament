@@ -45,13 +45,26 @@ PFNGLDEBUGMESSAGECALLBACKKHRPROC glDebugMessageCallbackKHR;
 PFNGLGETDEBUGMESSAGELOGKHRPROC glGetDebugMessageLogKHR;
 #endif
 #ifdef GL_EXT_disjoint_timer_query
-PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64v;
+PFNGLGENQUERIESEXTPROC glGenQueriesEXT;
+PFNGLDELETEQUERIESEXTPROC glDeleteQueriesEXT;
+PFNGLBEGINQUERYEXTPROC glBeginQueryEXT;
+PFNGLENDQUERYEXTPROC glEndQueryEXT;
+PFNGLGETQUERYOBJECTUIVEXTPROC glGetQueryObjectuivEXT;
+PFNGLGETQUERYOBJECTUI64VEXTPROC glGetQueryObjectui64vEXT;
+#endif
+#ifdef GL_OES_vertex_array_object
+PFNGLBINDVERTEXARRAYOESPROC glBindVertexArrayOES;
+PFNGLDELETEVERTEXARRAYSOESPROC glDeleteVertexArraysOES;
+PFNGLGENVERTEXARRAYSOESPROC glGenVertexArraysOES;
 #endif
 #ifdef GL_EXT_clip_control
 PFNGLCLIPCONTROLEXTPROC glClipControlEXT;
 #endif
+#ifdef GL_EXT_discard_framebuffer
+PFNGLDISCARDFRAMEBUFFEREXTPROC glDiscardFramebufferEXT;
+#endif
 
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
 // On Android, If we want to support a build system less than ANDROID_API 21, we need to
 // use getProcAddress for ES3.1 and above entry points.
 PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
@@ -78,12 +91,25 @@ void importGLESExtensionsEntryPoints() {
     getProcAddress(glGetDebugMessageLogKHR, "glGetDebugMessageLogKHR");
 #endif
 #ifdef GL_EXT_disjoint_timer_query
-    getProcAddress(glGetQueryObjectui64v, "glGetQueryObjectui64vEXT");
+    getProcAddress(glGenQueriesEXT, "glGenQueriesEXT");
+    getProcAddress(glDeleteQueriesEXT, "glDeleteQueriesEXT");
+    getProcAddress(glBeginQueryEXT, "glBeginQueryEXT");
+    getProcAddress(glEndQueryEXT, "glEndQueryEXT");
+    getProcAddress(glGetQueryObjectuivEXT, "glGetQueryObjectuivEXT");
+    getProcAddress(glGetQueryObjectui64vEXT, "glGetQueryObjectui64vEXT");
+#endif
+#if defined(GL_OES_vertex_array_object)
+    getProcAddress(glBindVertexArrayOES, "glBindVertexArrayOES");
+    getProcAddress(glDeleteVertexArraysOES, "glDeleteVertexArraysOES");
+    getProcAddress(glGenVertexArraysOES, "glGenVertexArraysOES");
 #endif
 #ifdef GL_EXT_clip_control
     getProcAddress(glClipControlEXT, "glClipControlEXT");
 #endif
-#if defined(__ANDROID__)
+#ifdef GL_EXT_discard_framebuffer
+        getProcAddress(glDiscardFramebufferEXT, "glDiscardFramebufferEXT");
+#endif
+#if defined(__ANDROID__) && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
         getProcAddress(glDispatchCompute, "glDispatchCompute");
 #endif
     });

@@ -168,6 +168,20 @@ bool MaterialParser::getUniformBlockBindings(
     return ChunkUniformBlockBindings::unflatten(unflattener, value);
 }
 
+bool MaterialParser::getBindingUniformInfo(BindingUniformInfoContainer* container) const noexcept {
+    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialBindingUniformInfo);
+    if (start == end) return false;
+    Unflattener unflattener(start, end);
+    return ChunkBindingUniformInfo::unflatten(unflattener, container);
+}
+
+bool MaterialParser::getAttributeInfo(AttributeInfoContainer* container) const noexcept {
+    auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialAttributeInfo);
+    if (start == end) return false;
+    Unflattener unflattener(start, end);
+    return ChunkAttributeInfo::unflatten(unflattener, container);
+}
+
 bool MaterialParser::getSamplerBlockBindings(
         SamplerGroupBindingInfoList* pSamplerGroupInfoList,
         SamplerBindingToNameMap* pSamplerBindingToNameMap) const noexcept {
@@ -507,6 +521,72 @@ bool ChunkUniformBlockBindings::unflatten(filaflat::Unflattener& unflattener,
     return true;
 }
 
+bool ChunkBindingUniformInfo::unflatten(filaflat::Unflattener& unflattener,
+        MaterialParser::BindingUniformInfoContainer* bindingUniformInfo) {
+    uint8_t bindingPointCount;
+    if (!unflattener.read(&bindingPointCount)) {
+        return false;
+    }
+    bindingUniformInfo->reserve(bindingPointCount);
+    for (size_t i = 0; i < bindingPointCount; i++) {
+        uint8_t index;
+        if (!unflattener.read(&index)) {
+            return false;
+        }
+        uint8_t uniformCount;
+        if (!unflattener.read(&uniformCount)) {
+            return false;
+        }
+
+        Program::UniformInfo uniforms = Program::UniformInfo::with_capacity(uniformCount);
+        for (size_t j = 0; j < uniformCount; j++) {
+            utils::CString name;
+            if (!unflattener.read(&name)) {
+                return false;
+            }
+            uint16_t offset;
+            if (!unflattener.read(&offset)) {
+                return false;
+            }
+            uint8_t size;
+            if (!unflattener.read(&size)) {
+                return false;
+            }
+            uint8_t type;
+            if (!unflattener.read(&type)) {
+                return false;
+            }
+            uniforms.push_back({ name, offset, size, UniformType(type) });
+        }
+        bindingUniformInfo->emplace_back(UniformBindingPoints(index), std::move(uniforms));
+    }
+    return true;
+}
+
+bool ChunkAttributeInfo::unflatten(filaflat::Unflattener& unflattener,
+        MaterialParser::AttributeInfoContainer* attributeInfoContainer) {
+
+    uint8_t attributeCount;
+    if (!unflattener.read(&attributeCount)) {
+        return false;
+    }
+
+    attributeInfoContainer->reserve(attributeCount);
+
+    for (size_t j = 0; j < attributeCount; j++) {
+        utils::CString name;
+        if (!unflattener.read(&name)) {
+            return false;
+        }
+        uint8_t location;
+        if (!unflattener.read(&location)) {
+            return false;
+        }
+        attributeInfoContainer->emplace_back(name, location);
+    }
+
+    return true;
+}
 
 bool ChunkSamplerBlockBindings::unflatten(Unflattener& unflattener,
         SamplerGroupBindingInfoList* pSamplerGroupBindingInfoList,

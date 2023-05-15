@@ -105,5 +105,8 @@ AcquiredImage OpenGLPlatform::transformAcquiredImage(AcquiredImage source) noexc
     return source;
 }
 
+TargetBufferFlags OpenGLPlatform::getPreservedFlags(UTILS_UNUSED SwapChain* swapChain) noexcept {
+    return TargetBufferFlags::NONE;
+}
 
 } // namespace filament::backend

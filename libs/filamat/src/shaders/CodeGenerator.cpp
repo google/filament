@@ -130,15 +130,34 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         out << "#define FILAMENT_HAS_FEATURE_TEXTURE_GATHER\n";
     }
 
+    if (material.featureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+        out << "#define FILAMENT_HAS_FEATURE_INSTANCING\n";
+    }
+
     if (stage == ShaderStage::VERTEX) {
         CodeGenerator::generateDefine(out, "FLIP_UV_ATTRIBUTE", material.flipUV);
         CodeGenerator::generateDefine(out, "LEGACY_MORPHING", material.useLegacyMorphing);
     }
 
-    if (stage == ShaderStage::VERTEX) {
-        generateDefine(out, "VARYING", "out");
-    } else if (stage == ShaderStage::FRAGMENT) {
-        generateDefine(out, "VARYING", "in");
+    if (mTargetLanguage == TargetLanguage::SPIRV ||
+        mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+        if (stage == ShaderStage::VERTEX) {
+            generateDefine(out, "VARYING", "out");
+        } else if (stage == ShaderStage::FRAGMENT) {
+            generateDefine(out, "VARYING", "in");
+        }
+    } else {
+        generateDefine(out, "VARYING", "varying");
+    }
+
+    if (mTargetLanguage == TargetLanguage::SPIRV &&
+            mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        generateDefine(out, "texture2D", "texture");
+        generateDefine(out, "textureCube", "texture");
+        if (stage == ShaderStage::VERTEX) {
+            generateDefine(out, "texture2DLod", "textureLod");
+            generateDefine(out, "textureCubeLod", "textureLod");
+        }
     }
 
     auto getShadingDefine = [](Shading shading) -> const char* {
@@ -162,13 +181,16 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     out << "precision " << precision << " float;\n";
     out << "precision " << precision << " int;\n";
     if (mShaderModel == ShaderModel::MOBILE) {
-        out << "precision lowp sampler2DArray;\n";
-        out << "precision lowp sampler3D;\n";
+        if (material.featureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+            out << "precision lowp sampler2DArray;\n";
+            out << "precision lowp sampler3D;\n";
+        }
     }
 
     // Filament-reserved specification constants (limited by CONFIG_MAX_RESERVED_SPEC_CONSTANTS)
     out << '\n';
-    generateSpecializationConstant(out, "BACKEND_FEATURE_LEVEL", 0, 1);
+    generateSpecializationConstant(out, "BACKEND_FEATURE_LEVEL",
+            +ReservedSpecializationConstants::BACKEND_FEATURE_LEVEL, 1);
 
     if (mTargetApi == TargetApi::VULKAN) {
         // Note: This is a hack for a hack.
@@ -179,12 +201,21 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         // some Adreno drivers on Android. see: https://github.com/google/filament/issues/6444
         out << "const int CONFIG_MAX_INSTANCES = " << (int)CONFIG_MAX_INSTANCES << ";\n";
     } else {
-        generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES", 1, (int)CONFIG_MAX_INSTANCES);
+        generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
+                +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
     }
 
     // Workaround a Metal pipeline compilation error with the message:
     // "Could not statically determine the target of a texture". See light_indirect.fs
-    generateSpecializationConstant(out, "CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND", 2, false);
+    generateSpecializationConstant(out, "CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND",
+            +ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND, false);
+
+    if (material.featureLevel == 0) {
+        // On ES2 since we don't have post-processing, we need to emulate EGL_GL_COLORSPACE_KHR,
+        // when it's not supported.
+        generateSpecializationConstant(out, "CONFIG_SRGB_SWAPCHAIN_EMULATION",
+                +ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION, false);
+    }
 
     out << '\n';
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;
@@ -271,16 +302,16 @@ io::sstream& CodeGenerator::generateVariable(io::sstream& out, ShaderStage stage
         if (stage == ShaderStage::VERTEX) {
             out << "\n#define VARIABLE_CUSTOM" << index << " " << name.c_str() << "\n";
             out << "\n#define VARIABLE_CUSTOM_AT" << index << " variable_" << name.c_str() << "\n";
-            out << "LAYOUT_LOCATION(" << index << ") out vec4 variable_" << name.c_str() << ";\n";
+            out << "LAYOUT_LOCATION(" << index << ") VARYING vec4 variable_" << name.c_str() << ";\n";
         } else if (stage == ShaderStage::FRAGMENT) {
-            out << "\nLAYOUT_LOCATION(" << index << ") in highp vec4 variable_" << name.c_str() << ";\n";
+            out << "\nLAYOUT_LOCATION(" << index << ") VARYING highp vec4 variable_" << name.c_str() << ";\n";
         }
     }
     return out;
 }
 
 io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage type,
-        const AttributeBitset& attributes, Interpolation interpolation) {
+        const AttributeBitset& attributes, Interpolation interpolation) const {
 
     auto const& attributeDatabase = MaterialBuilder::getAttributeDatabase();
 
@@ -294,12 +325,16 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage t
 
     if (type == ShaderStage::VERTEX) {
         out << "\n";
-        attributes.forEachSetBit([&out, &attributeDatabase](size_t i) {
+        attributes.forEachSetBit([&out, &attributeDatabase, this](size_t i) {
             auto const& attribute = attributeDatabase[i];
             assert_invariant( i == attribute.location );
-            out << "layout(location = " << size_t(attribute.location) << ") in "
-                << getTypeName(attribute.type) << " "
-                << attribute.getAttributeName() << ";\n";
+            if (mTargetLanguage == TargetLanguage::SPIRV ||
+                    mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+                out << "layout(location = " << size_t(attribute.location) << ") in ";
+            } else {
+                out << "attribute ";
+            }
+            out << getTypeName(attribute.type) << " " << attribute.getAttributeName() << ";\n";
         });
     }
 
@@ -394,6 +429,57 @@ io::sstream& CodeGenerator::generateUniforms(io::sstream& out, ShaderStage stage
     return generateBufferInterfaceBlock(out, stage, +binding, uib);
 }
 
+io::sstream& CodeGenerator::generateInterfaceFields(io::sstream& out,
+        FixedCapacityVector<BufferInterfaceBlock::FieldInfo> const& infos,
+        Precision defaultPrecision) const {
+    Precision const uniformPrecision = getDefaultUniformPrecision();
+
+    for (auto const& info : infos) {
+        if (mFeatureLevel < info.minFeatureLevel) {
+            continue;
+        }
+        char const* const type = getUniformTypeName(info);
+        char const* const precision = getUniformPrecisionQualifier(info.type, info.precision,
+                uniformPrecision, defaultPrecision);
+        out << "    " << precision;
+        if (precision[0] != '\0') out << " ";
+        out << type << " " << info.name.c_str();
+        if (info.isArray) {
+            if (info.sizeName.empty()) {
+                if (info.size) {
+                    out << "[" << info.size << "]";
+                } else {
+                    out << "[]";
+                }
+            } else {
+                out << "[" << info.sizeName.c_str() << "]";
+            }
+        }
+        out << ";\n";
+    }
+    return out;
+}
+
+io::sstream& CodeGenerator::generateUboAsPlainUniforms(io::sstream& out, ShaderStage stage,
+        const BufferInterfaceBlock& uib) const {
+
+    auto const& infos = uib.getFieldInfoList();
+
+    std::string blockName{ uib.getName() };
+    std::string instanceName{ uib.getName() };
+    blockName.front() = char(std::toupper((unsigned char)blockName.front()));
+    instanceName.front() = char(std::tolower((unsigned char)instanceName.front()));
+
+    out << "\nstruct " << blockName << " {\n";
+
+    generateInterfaceFields(out, infos, Precision::DEFAULT);
+
+    out << "};\n";
+    out << "uniform " << blockName << " " << instanceName << ";\n";
+
+    return out;
+}
+
 io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, ShaderStage stage,
         uint32_t binding, const BufferInterfaceBlock& uib) const {
     auto const& infos = uib.getFieldInfoList();
@@ -401,13 +487,18 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
         return out;
     }
 
+    if (mTargetLanguage == TargetLanguage::GLSL &&
+            mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        // we need to generate a structure instead
+        assert_invariant(mTargetApi == TargetApi::OPENGL);
+        assert_invariant(uib.getTarget() == BufferInterfaceBlock::Target::UNIFORM);
+        return generateUboAsPlainUniforms(out, stage, uib);
+    }
+
     std::string blockName{ uib.getName() };
     std::string instanceName{ uib.getName() };
     blockName.front() = char(std::toupper((unsigned char)blockName.front()));
     instanceName.front() = char(std::tolower((unsigned char)instanceName.front()));
-
-    Precision const uniformPrecision = getDefaultUniformPrecision();
-    Precision const defaultPrecision = getDefaultPrecision(stage);
 
     auto metalBufferBindingOffset = 0;
     switch (uib.getTarget()) {
@@ -477,26 +568,8 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
 
     out << "{\n";
 
-    for (auto const& info : infos) {
-        char const* const type = getUniformTypeName(info);
-        char const* const precision = getUniformPrecisionQualifier(info.type, info.precision,
-                uniformPrecision, defaultPrecision);
-        out << "    " << precision;
-        if (precision[0] != '\0') out << " ";
-        out << type << " " << info.name.c_str();
-        if (info.isArray) {
-            if (info.sizeName.empty()) {
-                if (info.size) {
-                    out << "[" << info.size << "]";
-                } else {
-                    out << "[]";
-                }
-            } else {
-                out << "[" << info.sizeName.c_str() << "]";
-            }
-        }
-        out << ";\n";
-    }
+    generateInterfaceFields(out, infos, getDefaultPrecision(stage));
+
     out << "} " << instanceName << ";\n";
 
     return out;

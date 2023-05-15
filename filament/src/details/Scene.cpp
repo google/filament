@@ -23,6 +23,7 @@
 
 #include "details/Engine.h"
 #include "details/IndirectLight.h"
+#include "details/InstanceBuffer.h"
 #include "details/Skybox.h"
 
 #include "BufferPoolAllocator.h"
@@ -202,10 +203,10 @@ void FScene::prepare(utils::JobSystem& js,
             sceneData.elementAt<VISIBILITY_STATE>(index)    = visibility;
             sceneData.elementAt<SKINNING_BUFFER>(index)     = rcm.getSkinningBufferInfo(ri);
             sceneData.elementAt<MORPHING_BUFFER>(index)     = rcm.getMorphingBufferInfo(ri);
+            sceneData.elementAt<INSTANCES>(index)           = rcm.getInstancesInfo(ri);
             sceneData.elementAt<WORLD_AABB_CENTER>(index)   = worldAABB.center;
             sceneData.elementAt<VISIBLE_MASK>(index)        = 0;
             sceneData.elementAt<CHANNELS>(index)            = rcm.getChannels(ri);
-            sceneData.elementAt<INSTANCE_COUNT>(index)      = rcm.getInstanceCount(ri);
             sceneData.elementAt<LAYERS>(index)              = rcm.getLayerMask(ri);
             sceneData.elementAt<WORLD_AABB_EXTENT>(index)   = worldAABB.halfExtent;
             //sceneData.elementAt<PRIMITIVES>(index)          = {}; // already initialized, Slice<>
@@ -320,7 +321,7 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
         // Note: if the model matrix is known to be a rigid-transform, we could just use it directly.
 
         mat3f m = mat3f::getTransformForNormals(model.upperLeft());
-        m *= mat3f(1.0f / std::sqrt(max(float3{length2(m[0]), length2(m[1]), length2(m[2])})));
+        m = prescaleForNormals(m);
 
         // The shading normal must be flipped for mirror transformations.
         // Basically we're shading the other side of the polygon and therefore need to negate the
@@ -337,6 +338,7 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
                 visibility.skinning,
                 visibility.morphing,
                 visibility.screenSpaceContactShadows,
+                sceneData.elementAt<INSTANCES>(i).buffer != nullptr,
                 sceneData.elementAt<CHANNELS>(i));
 
         uboData.morphTargetCount = sceneData.elementAt<MORPHING_BUFFER>(i).count;
@@ -373,8 +375,20 @@ void FScene::updateUBOs(
         }
     }();
 
-    // copy our data into the UBO for each visible renderable
     PerRenderableData const* const uboData = mRenderableData.data<UBO>();
+    mat4f const* const worldTransformData = mRenderableData.data<WORLD_TRANSFORM>();
+
+    // prepare each InstanceBuffer.
+    FRenderableManager::InstancesInfo const* instancesData = mRenderableData.data<INSTANCES>();
+    for (uint32_t const i : visibleRenderables) {
+        auto& instancesInfo = instancesData[i];
+        if (UTILS_UNLIKELY(instancesInfo.buffer)) {
+            instancesInfo.buffer->prepare(
+                    mEngine, worldTransformData[i], uboData[i], instancesInfo.handle);
+        }
+    }
+
+    // copy our data into the UBO for each visible renderable
     for (uint32_t const i : visibleRenderables) {
         buffer[i] = uboData[i];
     }

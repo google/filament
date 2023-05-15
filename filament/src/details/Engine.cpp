@@ -266,7 +266,11 @@ void FEngine::init() {
 
     DriverApi& driverApi = getDriverApi();
 
-    slog.i << "FEngine feature level: " << int(driverApi.getFeatureLevel()) << io::endl;
+    mActiveFeatureLevel = std::min(mActiveFeatureLevel, driverApi.getFeatureLevel());
+
+    slog.i << "Backend feature level: " << int(driverApi.getFeatureLevel()) << io::endl;
+    slog.i << "FEngine feature level: " << int(mActiveFeatureLevel) << io::endl;
+
 
     mResourceAllocator = new ResourceAllocator(driverApi);
 
@@ -310,11 +314,18 @@ void FEngine::init() {
         });
     }
 
+    // initialize the dummy textures so that their contents are not undefined
+    static const uint32_t zeroes[6] = {0};
+    static const uint32_t ones = 0xffffffff;
+
     mDefaultIblTexture = downcast(Texture::Builder()
             .width(1).height(1).levels(1)
             .format(Texture::InternalFormat::RGBA8)
             .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
             .build(*this));
+
+    driverApi.update3DImage(mDefaultIblTexture->getHwHandle(), 0, 0, 0, 0, 1, 1, 6,
+            { zeroes, sizeof(zeroes), Texture::Format::RGBA, Texture::Type::UBYTE });
 
     // 3 bands = 9 float3
     const float sh[9 * 3] = { 0.0f };
@@ -322,62 +333,62 @@ void FEngine::init() {
             .irradiance(3, reinterpret_cast<const float3*>(sh))
             .build(*this));
 
-    mDefaultColorGrading = downcast(ColorGrading::Builder().build(*this));
+    mDefaultRenderTarget = driverApi.createDefaultRenderTarget();
 
-    // Always initialize the default material, most materials' depth shaders fallback on it.
-    mDefaultMaterial = downcast(
-            FMaterial::DefaultMaterialBuilder()
-                    .package(MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE)
-                    .build(*const_cast<FEngine*>(this)));
-
-    // Create a dummy morph target buffer.
-    mDummyMorphTargetBuffer = createMorphTargetBuffer(FMorphTargetBuffer::EmptyMorphTargetBuilder());
-
-    float3 dummyPositions[1] = {};
-    short4 dummyTangents[1] = {};
-    mDummyMorphTargetBuffer->setPositionsAt(*this, 0, dummyPositions, 1, 0);
-    mDummyMorphTargetBuffer->setTangentsAt(*this, 0, dummyTangents, 1, 0);
+    // Create a dummy morph target buffer, without using the builder
+    mDummyMorphTargetBuffer = createMorphTargetBuffer(
+            FMorphTargetBuffer::EmptyMorphTargetBuilder());
 
     // create dummy textures we need throughout the engine
-
     mDummyOneTexture = driverApi.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
-
-    mDummyOneTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
-            TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
-
-    mDummyZeroTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
     mDummyZeroTexture = driverApi.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
-
-    // initialize the dummy textures so that their contents are not undefined
-
-    static const uint32_t zeroes[6] = {0};
-    static const uint32_t ones = 0xffffffff;
-
-    driverApi.update3DImage(mDefaultIblTexture->getHwHandle(), 0, 0, 0, 0, 1, 1, 6,
-            { zeroes, sizeof(zeroes), Texture::Format::RGBA, Texture::Type::UBYTE });
-
     driverApi.update3DImage(mDummyOneTexture, 0, 0, 0, 0, 1, 1, 1,
-            { &ones, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
-
-    driverApi.update3DImage(mDummyOneTextureArray, 0, 0, 0, 0, 1, 1, 1,
             { &ones, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
 
     driverApi.update3DImage(mDummyZeroTexture, 0, 0, 0, 0, 1, 1, 1,
             { zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
 
-    driverApi.update3DImage(mDummyZeroTextureArray, 0, 0, 0, 0, 1, 1, 1,
-            { zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
+#ifdef FILAMENT_TARGET_MOBILE
+    if (UTILS_UNLIKELY(mActiveFeatureLevel == FeatureLevel::FEATURE_LEVEL_0)) {
+        FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
+        defaultMaterialBuilder.package(
+                MATERIALS_DEFAULTMATERIAL0_DATA, MATERIALS_DEFAULTMATERIAL0_SIZE);
+        mDefaultMaterial = downcast(defaultMaterialBuilder.build(*const_cast<FEngine*>(this)));
+    } else
+#endif
+    {
+        mDefaultColorGrading = downcast(ColorGrading::Builder().build(*this));
 
-    mDefaultRenderTarget = driverApi.createDefaultRenderTarget();
+        FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
+        defaultMaterialBuilder.package(
+                MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
+        mDefaultMaterial = downcast(defaultMaterialBuilder.build(*const_cast<FEngine*>(this)));
 
-    mPostProcessManager.init();
-    mLightManager.init(*this);
-    mDFG.init(*this);
+        float3 dummyPositions[1] = {};
+        short4 dummyTangents[1] = {};
+        mDummyMorphTargetBuffer->setPositionsAt(*this, 0, dummyPositions, 1, 0);
+        mDummyMorphTargetBuffer->setTangentsAt(*this, 0, dummyTangents, 1, 0);
+
+        mDummyOneTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+                TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
+
+        mDummyZeroTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+                TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
+
+        driverApi.update3DImage(mDummyOneTextureArray, 0, 0, 0, 0, 1, 1, 1,
+                { &ones, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
+
+        driverApi.update3DImage(mDummyZeroTextureArray, 0, 0, 0, 0, 1, 1, 1,
+                { zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
+
+        mPostProcessManager.init();
+        mLightManager.init(*this);
+        mDFG.init(*this);
+    }
 }
 
 FEngine::~FEngine() noexcept {
@@ -454,6 +465,7 @@ void FEngine::shutdown() {
     cleanupResourceList(std::move(mTextures));
     cleanupResourceList(std::move(mRenderTargets));
     cleanupResourceList(std::move(mMaterials));
+    cleanupResourceList(std::move(mInstanceBuffers));
     for (auto& item : mMaterialInstances) {
         cleanupResourceList(std::move(item.second));
     }
@@ -701,6 +713,10 @@ FSkinningBuffer* FEngine::createSkinningBuffer(const SkinningBuffer::Builder& bu
 
 FMorphTargetBuffer* FEngine::createMorphTargetBuffer(const MorphTargetBuffer::Builder& builder) noexcept {
     return create(mMorphTargetBuffers, builder);
+}
+
+FInstanceBuffer* FEngine::createInstanceBuffer(const InstanceBuffer::Builder& builder) noexcept {
+    return create(mInstanceBuffers, builder);
 }
 
 FTexture* FEngine::createTexture(const Texture::Builder& builder) noexcept {
@@ -992,6 +1008,10 @@ bool FEngine::destroy(const FStream* p) {
     return terminateAndDestroy(p, mStreams);
 }
 
+UTILS_NOINLINE
+bool FEngine::destroy(const FInstanceBuffer* p){
+    return terminateAndDestroy(p, mInstanceBuffers);
+}
 
 UTILS_NOINLINE
 bool FEngine::destroy(const FMaterial* ptr) {

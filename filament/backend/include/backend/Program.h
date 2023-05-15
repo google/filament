@@ -48,7 +48,15 @@ public:
         ShaderStageFlags stageFlags = ShaderStageFlags::ALL_SHADER_STAGE_FLAGS;
     };
 
+    struct Uniform {
+        utils::CString name;    // full qualified name of the uniform field
+        uint16_t offset;        // offset in 'uint32_t' into the uniform buffer
+        uint8_t size;           // >1 for arrays
+        UniformType type;       // uniform type
+    };
+
     using UniformBlockInfo = std::array<utils::CString, UNIFORM_BINDING_COUNT>;
+    using UniformInfo = utils::FixedCapacityVector<Uniform>;
     using SamplerGroupInfo = std::array<SamplerGroupData, SAMPLER_BINDING_COUNT>;
     using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
     using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
@@ -78,6 +86,14 @@ public:
     Program& uniformBlockBindings(
             utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> const& uniformBlockBindings) noexcept;
 
+    // Note: This is only needed for GLES2.0, this is used to emulate UBO. This function tells
+    // the program everything it needs to know about the uniforms at a given binding
+    Program& uniforms(uint32_t index, UniformInfo const& uniforms) noexcept;
+
+    // Note: This is only needed for GLES2.0.
+    Program& attributes(
+            utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> attributes) noexcept;
+
     // sets the 'bindingPoint' sampler group descriptor for this program.
     // 'samplers' can be destroyed after this call.
     // This effectively associates a set of (BindingPoints, index) to a texture unit in the shader.
@@ -103,6 +119,12 @@ public:
     SamplerGroupInfo const& getSamplerGroupInfo() const { return mSamplerGroups; }
     SamplerGroupInfo& getSamplerGroupInfo() { return mSamplerGroups; }
 
+    auto const& getBindingUniformInfo() const { return mBindingUniformInfo; }
+    auto& getBindingUniformInfo() { return mBindingUniformInfo; }
+
+    auto const& getAttributes() const { return mAttributes; }
+    auto& getAttributes() { return mAttributes; }
+
     utils::CString const& getName() const noexcept { return mName; }
     utils::CString& getName() noexcept { return mName; }
 
@@ -122,6 +144,8 @@ private:
     utils::CString mName;
     utils::Invocable<utils::io::ostream&(utils::io::ostream& out)> mLogger;
     utils::FixedCapacityVector<SpecializationConstant> mSpecializationConstants;
+    utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> mAttributes;
+    std::array<UniformInfo, Program::UNIFORM_BINDING_COUNT> mBindingUniformInfo;
 };
 
 } // namespace filament::backend

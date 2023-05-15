@@ -98,8 +98,19 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                             TargetBufferFlags::STENCIL : TargetBufferFlags::NONE;
                     const char* const name = config.enabledStencilBuffer ?
                              "Depth/Stencil Buffer" : "Depth Buffer";
+
+                    bool const isES2 =
+                            engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0;
+
+                    TextureFormat const stencilFormat = isES2 ?
+                            TextureFormat::DEPTH24_STENCIL8 : TextureFormat::DEPTH32F_STENCIL8;
+
+                    TextureFormat const depthOnlyFormat = isES2 ?
+                            TextureFormat::DEPTH24 : TextureFormat::DEPTH32F;
+
                     TextureFormat const format = config.enabledStencilBuffer ?
-                            TextureFormat::DEPTH32F_STENCIL8 : TextureFormat::DEPTH32F;
+                            stencilFormat : depthOnlyFormat;
+
                     data.depth = builder.createTexture(name, {
                             .width = colorBufferDesc.width,
                             .height = colorBufferDesc.height,

@@ -7,10 +7,12 @@
  */
 
 void main() {
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+#if defined(FILAMENT_HAS_FEATURE_INSTANCING)
+#   if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
     instance_index = gl_InstanceIndex;
-#else
+#   else
     instance_index = gl_InstanceID;
+#   endif
 #endif
 
     initObjectUniforms(object_uniforms);

@@ -96,6 +96,19 @@ public:
     virtual void destroySwapChain(SwapChain* swapChain) noexcept = 0;
 
     /**
+     * Returns the set of buffers that must be preserved up to the call to commit().
+     * The default value is TargetBufferFlags::NONE.
+     * The color buffer is always preserved, however ancillary buffers, such as the depth buffer
+     * are generally discarded. The preserve flags can be used to make sure those ancillary
+     * buffers are preserved until the call to commit.
+     *
+     * @param swapChain
+     * @return buffer that must be preserved
+     * @see commit()
+     */
+    virtual TargetBufferFlags getPreservedFlags(SwapChain* swapChain) noexcept;
+
+    /**
      * Called by the driver to establish the default FBO. The default implementation returns 0.
       * @return a GLuint casted to a uint32_t that is an OpenGL framebuffer object.
      */

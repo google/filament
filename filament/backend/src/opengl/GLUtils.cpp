@@ -81,9 +81,6 @@ const char* getFramebufferStatus(GLenum status) noexcept {
         case GL_FRAMEBUFFER_COMPLETE:
             string = "GL_FRAMEBUFFER_COMPLETE";
             break;
-        case GL_FRAMEBUFFER_UNDEFINED:
-            string = "GL_FRAMEBUFFER_UNDEFINED";
-            break;
         case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
             string = "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT";
             break;
@@ -93,9 +90,14 @@ const char* getFramebufferStatus(GLenum status) noexcept {
         case GL_FRAMEBUFFER_UNSUPPORTED:
             string = "GL_FRAMEBUFFER_UNSUPPORTED";
             break;
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+        case GL_FRAMEBUFFER_UNDEFINED:
+            string = "GL_FRAMEBUFFER_UNDEFINED";
+            break;
         case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
             string = "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE";
             break;
+#endif
         default:
             break;
     }

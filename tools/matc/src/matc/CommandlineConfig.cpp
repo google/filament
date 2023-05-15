@@ -256,6 +256,7 @@ bool CommandlineConfig::parse() {
                 auto featureLevel = filament::backend::FeatureLevel(std::atoi(arg.c_str()));
                 mFeatureLevel = filament::backend::FeatureLevel::FEATURE_LEVEL_3;
                 switch (featureLevel) {
+                    case filament::backend::FeatureLevel::FEATURE_LEVEL_0:
                     case filament::backend::FeatureLevel::FEATURE_LEVEL_1:
                     case filament::backend::FeatureLevel::FEATURE_LEVEL_2:
                     case filament::backend::FeatureLevel::FEATURE_LEVEL_3:

@@ -45,6 +45,7 @@ class Renderer;
 class SkinningBuffer;
 class VertexBuffer;
 class Texture;
+class InstanceBuffer;
 
 class FEngine;
 class FRenderPrimitive;
@@ -408,21 +409,46 @@ public:
          */
         Builder& globalBlendOrderEnabled(size_t primitiveIndex, bool enabled) noexcept;
 
-
         /**
-         * Specifies the number of draw instance of this renderable. The default is 1 instance and
+         * Specifies the number of draw instances of this renderable. The default is 1 instance and
          * the maximum number of instances allowed is 32767. 0 is invalid.
+         *
          * All instances are culled using the same bounding box, so care must be taken to make
          * sure all instances render inside the specified bounding box.
+         *
          * The material must set its `instanced` parameter to `true` in order to use
          * getInstanceIndex() in the vertex or fragment shader to get the instance index and
          * possibly adjust the position or transform.
-         * It generally doesn't make sense to use VERTEX_DOMAIN_OBJECT in the material, since it
-         * would pull the same transform for all instances.
          *
          * @param instanceCount the number of instances silently clamped between 1 and 32767.
          */
         Builder& instances(size_t instanceCount) noexcept;
+
+        /**
+         * Specifies the number of draw instances of this renderable and an \c InstanceBuffer
+         * containing their local transforms. The default is 1 instance and the maximum number of
+         * instances allowed when supplying transforms is \c CONFIG_MAX_INSTANCES (64 on most
+         * platforms). 0 is invalid. The \c InstanceBuffer must not be destroyed before this
+         * renderable.
+         *
+         * All instances are culled using the same bounding box, so care must be taken to make
+         * sure all instances render inside the specified bounding box.
+         *
+         * The material must set its `instanced` parameter to `true` in order to use
+         * \c getInstanceIndex() in the vertex or fragment shader to get the instance index.
+         *
+         * Only the \c VERTEX_DOMAIN_OBJECT vertex domain is supported.
+         *
+         * The local transforms of each instance can be updated with
+         * InstanceBuffer::setLocalTransforms.
+         *
+         * \see InstanceBuffer
+         * \see instances(size_t, * math::mat4f const*)
+         * @param instanceCount the number of instances, silently clamped between 1 and
+         *                      CONFIG_MAX_INSTANCES.
+         * @param instanceBuffer an InstanceBuffer containing at least instanceCount transforms
+         */
+        Builder& instances(size_t instanceCount, InstanceBuffer* instanceBuffer) noexcept;
 
         /**
          * Adds the Renderable component to an entity.

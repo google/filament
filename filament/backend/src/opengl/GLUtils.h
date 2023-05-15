@@ -118,9 +118,14 @@ constexpr inline GLenum getBufferBindingType(BufferObjectBinding bindingType) no
         case BufferObjectBinding::VERTEX:
             return GL_ARRAY_BUFFER;
         case BufferObjectBinding::UNIFORM:
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
             return GL_UNIFORM_BUFFER;
+#else
+            utils::panic(__func__, __FILE__, __LINE__, "UNIFORM not supported");
+            return 0x8A11;
+#endif
         case BufferObjectBinding::SHADER_STORAGE:
-#if defined(BACKEND_OPENGL_LEVEL_GLES31)
+#ifdef BACKEND_OPENGL_LEVEL_GLES31
             return GL_SHADER_STORAGE_BUFFER;
 #else
             utils::panic(__func__, __FILE__, __LINE__, "SHADER_STORAGE not supported");
@@ -169,7 +174,12 @@ constexpr inline GLenum getComponentType(ElementType type) noexcept {
         case ElementType::HALF2:
         case ElementType::HALF3:
         case ElementType::HALF4:
+            // on ES2 we should never end-up here
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
             return GL_HALF_FLOAT;
+#else
+            return GL_HALF_FLOAT_OES;
+#endif
     }
 }
 
@@ -238,13 +248,7 @@ constexpr inline GLenum getBlendFunctionMode(BlendFunction mode) noexcept {
     }
 }
 
-constexpr inline GLenum getTextureCompareMode(SamplerCompareMode mode) noexcept {
-    return mode == SamplerCompareMode::NONE ?
-           GL_NONE : GL_COMPARE_REF_TO_TEXTURE;
-}
-
-constexpr inline GLenum getTextureCompareFunc(SamplerCompareFunc func) noexcept {
-    using SamplerCompareFunc = SamplerCompareFunc;
+constexpr inline GLenum getCompareFunc(SamplerCompareFunc func) noexcept {
     switch (func) {
         case SamplerCompareFunc::LE:    return GL_LEQUAL;
         case SamplerCompareFunc::GE:    return GL_GEQUAL;
@@ -257,12 +261,23 @@ constexpr inline GLenum getTextureCompareFunc(SamplerCompareFunc func) noexcept 
     }
 }
 
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+constexpr inline GLenum getTextureCompareMode(SamplerCompareMode mode) noexcept {
+    return mode == SamplerCompareMode::NONE ?
+           GL_NONE : GL_COMPARE_REF_TO_TEXTURE;
+}
+
+constexpr inline GLenum getTextureCompareFunc(SamplerCompareFunc func) noexcept {
+    return getCompareFunc(func);
+}
+#endif
+
 constexpr inline GLenum getDepthFunc(SamplerCompareFunc func) noexcept {
-    return getTextureCompareFunc(func);
+    return getCompareFunc(func);
 }
 
 constexpr inline GLenum getStencilFunc(SamplerCompareFunc func) noexcept {
-    return getTextureCompareFunc(func);
+    return getCompareFunc(func);
 }
 
 constexpr inline GLenum getStencilOp(StencilOperation op) noexcept {
@@ -281,18 +296,24 @@ constexpr inline GLenum getStencilOp(StencilOperation op) noexcept {
 constexpr inline GLenum getFormat(PixelDataFormat format) noexcept {
     using PixelDataFormat = PixelDataFormat;
     switch (format) {
+        case PixelDataFormat::RGB:              return GL_RGB;
+        case PixelDataFormat::RGBA:             return GL_RGBA;
+        case PixelDataFormat::UNUSED:           return GL_RGBA; // should never happen (used to be rgbm)
+        case PixelDataFormat::DEPTH_COMPONENT:  return GL_DEPTH_COMPONENT;
+        case PixelDataFormat::ALPHA:            return GL_ALPHA;
+        case PixelDataFormat::DEPTH_STENCIL:    return GL_DEPTH_STENCIL;
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+        // when context is ES2 we should never end-up here
         case PixelDataFormat::R:                return GL_RED;
         case PixelDataFormat::R_INTEGER:        return GL_RED_INTEGER;
         case PixelDataFormat::RG:               return GL_RG;
         case PixelDataFormat::RG_INTEGER:       return GL_RG_INTEGER;
-        case PixelDataFormat::RGB:              return GL_RGB;
         case PixelDataFormat::RGB_INTEGER:      return GL_RGB_INTEGER;
-        case PixelDataFormat::RGBA:             return GL_RGBA;
         case PixelDataFormat::RGBA_INTEGER:     return GL_RGBA_INTEGER;
-        case PixelDataFormat::UNUSED:           return GL_RGBA; // should never happen (used to be rgbm)
-        case PixelDataFormat::DEPTH_COMPONENT:  return GL_DEPTH_COMPONENT;
-        case PixelDataFormat::DEPTH_STENCIL:    return GL_DEPTH_STENCIL;
-        case PixelDataFormat::ALPHA:            return GL_ALPHA;
+#else
+        // silence compiler warning in ES2 headers mode
+        default: return GL_NONE;
+#endif
     }
 }
 
@@ -305,32 +326,34 @@ constexpr inline GLenum getType(PixelDataType type) noexcept {
         case PixelDataType::SHORT:                return GL_SHORT;
         case PixelDataType::UINT:                 return GL_UNSIGNED_INT;
         case PixelDataType::INT:                  return GL_INT;
-        case PixelDataType::HALF:                 return GL_HALF_FLOAT;
         case PixelDataType::FLOAT:                return GL_FLOAT;
-        case PixelDataType::UINT_10F_11F_11F_REV: return GL_UNSIGNED_INT_10F_11F_11F_REV;
         case PixelDataType::USHORT_565:           return GL_UNSIGNED_SHORT_5_6_5;
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+        // when context is ES2 we should never end-up here
+        case PixelDataType::HALF:                 return GL_HALF_FLOAT;
+        case PixelDataType::UINT_10F_11F_11F_REV: return GL_UNSIGNED_INT_10F_11F_11F_REV;
         case PixelDataType::UINT_2_10_10_10_REV:  return GL_UNSIGNED_INT_2_10_10_10_REV;
         case PixelDataType::COMPRESSED:           return 0; // should never happen
+#else
+        // silence compiler warning in ES2 headers mode
+        default: return GL_NONE;
+#endif
     }
 }
 
+#if !defined(__EMSCRIPTEN__)  && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
 constexpr inline GLenum getSwizzleChannel(TextureSwizzle c) noexcept {
     using TextureSwizzle = TextureSwizzle;
     switch (c) {
-        case TextureSwizzle::SUBSTITUTE_ZERO:
-            return GL_ZERO;
-        case TextureSwizzle::SUBSTITUTE_ONE:
-            return GL_ONE;
-        case TextureSwizzle::CHANNEL_0:
-            return GL_RED;
-        case TextureSwizzle::CHANNEL_1:
-            return GL_GREEN;
-        case TextureSwizzle::CHANNEL_2:
-            return GL_BLUE;
-        case TextureSwizzle::CHANNEL_3:
-            return GL_ALPHA;
+        case TextureSwizzle::SUBSTITUTE_ZERO:   return GL_ZERO;
+        case TextureSwizzle::SUBSTITUTE_ONE:    return GL_ONE;
+        case TextureSwizzle::CHANNEL_0:         return GL_RED;
+        case TextureSwizzle::CHANNEL_1:         return GL_GREEN;
+        case TextureSwizzle::CHANNEL_2:         return GL_BLUE;
+        case TextureSwizzle::CHANNEL_3:         return GL_ALPHA;
     }
 }
+#endif
 
 constexpr inline GLenum getCullingMode(CullingMode mode) noexcept {
     switch (mode) {
@@ -346,18 +369,56 @@ constexpr inline GLenum getCullingMode(CullingMode mode) noexcept {
     }
 }
 
-// clang looses it on this one, and generates a huge jump table when
+// ES2 supported internal formats for texturing and how they  map to a format/type
+constexpr inline std::pair<GLenum, GLenum> textureFormatToFormatAndType(
+        TextureFormat format) noexcept {
+    switch (format) {
+        case TextureFormat::RGB8:       return { GL_RGB,                GL_UNSIGNED_BYTE };
+        case TextureFormat::RGBA8:      return { GL_RGBA,               GL_UNSIGNED_BYTE };
+        case TextureFormat::RGB565:     return { GL_RGB,                GL_UNSIGNED_SHORT_5_6_5 };
+        case TextureFormat::RGB5_A1:    return { GL_RGBA,               GL_UNSIGNED_SHORT_5_5_5_1 };
+        case TextureFormat::RGBA4:      return { GL_RGBA,               GL_UNSIGNED_SHORT_4_4_4_4 };
+        case TextureFormat::DEPTH16:    return { GL_DEPTH_COMPONENT,    GL_UNSIGNED_SHORT };
+        case TextureFormat::DEPTH24:    return { GL_DEPTH_COMPONENT,    GL_UNSIGNED_INT };
+        case TextureFormat::DEPTH24_STENCIL8:
+                                        return { GL_DEPTH24_STENCIL8,   GL_UNSIGNED_INT_24_8 };
+        default:                        return { GL_NONE,               GL_NONE };
+    }
+}
+
+// clang loses it on this one, and generates a huge jump table when
 // inlined. So we don't  mark it as inline (only constexpr) which solves the problem,
 // strangely, when not inlined, clang simply generates an array lookup.
 constexpr /* inline */ GLenum getInternalFormat(TextureFormat format) noexcept {
-    using TextureFormat = TextureFormat;
     switch (format) {
+
+        /* Formats supported by our ES2 implementations */
+
+        // 8-bits per element
+        case TextureFormat::STENCIL8:          return GL_STENCIL_INDEX8;
+
+        // 16-bits per element
+        case TextureFormat::RGB565:            return GL_RGB565;
+        case TextureFormat::RGB5_A1:           return GL_RGB5_A1;
+        case TextureFormat::RGBA4:             return GL_RGBA4;
+        case TextureFormat::DEPTH16:           return GL_DEPTH_COMPONENT16;
+
+        // 24-bits per element
+        case TextureFormat::RGB8:              return GL_RGB8;
+        case TextureFormat::DEPTH24:           return GL_DEPTH_COMPONENT24;
+
+        // 32-bits per element
+        case TextureFormat::RGBA8:             return GL_RGBA8;
+        case TextureFormat::DEPTH24_STENCIL8:  return GL_DEPTH24_STENCIL8;
+
+        /* Formats not supported by our ES2 implementations */
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
         // 8-bits per element
         case TextureFormat::R8:                return GL_R8;
         case TextureFormat::R8_SNORM:          return GL_R8_SNORM;
         case TextureFormat::R8UI:              return GL_R8UI;
         case TextureFormat::R8I:               return GL_R8I;
-        case TextureFormat::STENCIL8:          return GL_STENCIL_INDEX8;
 
         // 16-bits per element
         case TextureFormat::R16F:              return GL_R16F;
@@ -367,18 +428,12 @@ constexpr /* inline */ GLenum getInternalFormat(TextureFormat format) noexcept {
         case TextureFormat::RG8_SNORM:         return GL_RG8_SNORM;
         case TextureFormat::RG8UI:             return GL_RG8UI;
         case TextureFormat::RG8I:              return GL_RG8I;
-        case TextureFormat::RGB565:            return GL_RGB565;
-        case TextureFormat::RGB5_A1:           return GL_RGB5_A1;
-        case TextureFormat::RGBA4:             return GL_RGBA4;
-        case TextureFormat::DEPTH16:           return GL_DEPTH_COMPONENT16;
 
         // 24-bits per element
-        case TextureFormat::RGB8:              return GL_RGB8;
         case TextureFormat::SRGB8:             return GL_SRGB8;
         case TextureFormat::RGB8_SNORM:        return GL_RGB8_SNORM;
         case TextureFormat::RGB8UI:            return GL_RGB8UI;
         case TextureFormat::RGB8I:             return GL_RGB8I;
-        case TextureFormat::DEPTH24:           return GL_DEPTH_COMPONENT24;
 
         // 32-bits per element
         case TextureFormat::R32F:              return GL_R32F;
@@ -389,14 +444,12 @@ constexpr /* inline */ GLenum getInternalFormat(TextureFormat format) noexcept {
         case TextureFormat::RG16I:             return GL_RG16I;
         case TextureFormat::R11F_G11F_B10F:    return GL_R11F_G11F_B10F;
         case TextureFormat::RGB9_E5:           return GL_RGB9_E5;
-        case TextureFormat::RGBA8:             return GL_RGBA8;
         case TextureFormat::SRGB8_A8:          return GL_SRGB8_ALPHA8;
         case TextureFormat::RGBA8_SNORM:       return GL_RGBA8_SNORM;
         case TextureFormat::RGB10_A2:          return GL_RGB10_A2;
         case TextureFormat::RGBA8UI:           return GL_RGBA8UI;
         case TextureFormat::RGBA8I:            return GL_RGBA8I;
         case TextureFormat::DEPTH32F:          return GL_DEPTH_COMPONENT32F;
-        case TextureFormat::DEPTH24_STENCIL8:  return GL_DEPTH24_STENCIL8;
         case TextureFormat::DEPTH32F_STENCIL8: return GL_DEPTH32F_STENCIL8;
 
         // 48-bits per element
@@ -421,6 +474,12 @@ constexpr /* inline */ GLenum getInternalFormat(TextureFormat format) noexcept {
         case TextureFormat::RGBA32F:           return GL_RGBA32F;
         case TextureFormat::RGBA32UI:          return GL_RGBA32UI;
         case TextureFormat::RGBA32I:           return GL_RGBA32I;
+#else
+        default:
+            // this is just to squash the IDE warning about not having all cases when in
+            // ES2 header mode.
+            return 0;
+#endif
 
         // compressed formats
 #if defined(GL_ES_VERSION_3_0) || defined(BACKEND_OPENGL_VERSION_GL) || defined(GL_ARB_ES3_compatibility)

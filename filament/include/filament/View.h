@@ -707,6 +707,9 @@ public:
          * The viewport, projection and model matrices can be obtained from Camera. Because
          * pick() has some latency, it might be more accurate to obtain these values at the
          * time the View::pick() call is made.
+         *
+         * Note: if the Engine is running at FEATURE_LEVEL_0, the precision or `depth` and
+         *       `fragCoords.z` is only 8-bits.
          */
         math::float3 fragCoords;        //! screen space coordinates in GL convention
     };

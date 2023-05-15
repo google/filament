@@ -105,6 +105,10 @@ Froxelizer::Froxelizer(FEngine& engine)
           mZLightNear(FROXEL_FIRST_SLICE_DEPTH),
           mZLightFar(FROXEL_LAST_SLICE_DISTANCE)
 {
+    if (UTILS_UNLIKELY(engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)) {
+        return;
+    }
+
     DriverApi& driverApi = engine.getDriverApi();
 
     static_assert(std::is_same_v<RecordBufferType, uint8_t>,
@@ -132,8 +136,12 @@ void Froxelizer::terminate(DriverApi& driverApi) noexcept {
     mPlanesX = nullptr;
     mDistancesZ = nullptr;
 
-    driverApi.destroyBufferObject(mRecordsBuffer);
-    driverApi.destroyTexture(mFroxelTexture);
+    if (mRecordsBuffer) {
+        driverApi.destroyBufferObject(mRecordsBuffer);
+    }
+    if (mFroxelTexture) {
+        driverApi.destroyTexture(mFroxelTexture);
+    }
 }
 
 void Froxelizer::setOptions(float zLightNear, float zLightFar) noexcept {

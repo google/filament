@@ -231,6 +231,15 @@ private:
     utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> mUniformBlockBindings;
     utils::FixedCapacityVector<Variant> mDepthVariants; // only populated with default material
 
+    using BindingUniformInfoContainer = utils::FixedCapacityVector<
+            std::pair<filament::UniformBindingPoints, backend::Program::UniformInfo>>;
+
+    BindingUniformInfoContainer mBindingUniformInfo;
+
+    using AttributeInfoContainer = utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>>;
+
+    AttributeInfoContainer mAttributeInfo;
+
     SamplerGroupBindingInfoList mSamplerGroupBindingInfoList;
     SamplerBindingToNameMap mSamplerBindingToNameMap;
     utils::FixedCapacityVector<backend::Program::SpecializationConstant> mSpecializationConstants;

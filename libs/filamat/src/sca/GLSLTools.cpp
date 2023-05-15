@@ -381,7 +381,12 @@ std::pair<int, bool> GLSLTools::getShadingLanguageVersion(ShaderModel model,
     using FeatureLevel = filament::backend::FeatureLevel;
     switch (model) {
         case ShaderModel::MOBILE:
-            return { featureLevel >= FeatureLevel::FEATURE_LEVEL_2 ? 310 : 300, true };
+            switch (featureLevel) {
+                case FeatureLevel::FEATURE_LEVEL_0:     return { 100, true };
+                case FeatureLevel::FEATURE_LEVEL_1:     return { 300, true };
+                case FeatureLevel::FEATURE_LEVEL_2:     return { 310, true };
+                case FeatureLevel::FEATURE_LEVEL_3:     return { 310, true };
+            }
         case ShaderModel::DESKTOP:
             return { featureLevel >= FeatureLevel::FEATURE_LEVEL_2 ? 430 : 410, false };
     }

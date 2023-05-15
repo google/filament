@@ -709,7 +709,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             .keepOverrideEnd = keepOverrideEndFlags
     }, viewRenderTarget);
 
-    const bool blending = blendModeTranslucent;
     const TextureFormat hdrFormat = getHdrFormat(view, needsAlphaChannel);
 
     // the clearFlags and clearColor specified below will only apply when rendering into the
@@ -1046,7 +1045,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         if (scaled) {
             mightNeedFinalBlit = false;
             auto viewport = DEBUG_DYNAMIC_SCALING ? xvp : vp;
-            input = ppm.upscale(fg, blending, dsrOptions, input, xvp, {
+            input = ppm.upscale(fg, blendModeTranslucent, dsrOptions, input, xvp, {
                     .width = viewport.width, .height = viewport.height,
                     .format = colorGradingConfig.ldrFormat });
             xvp.left = xvp.bottom = 0;
@@ -1073,7 +1072,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     const bool outputIsSwapChain = (input == colorPassOutput) && (viewRenderTarget == mRenderTargetHandle);
     if (mightNeedFinalBlit) {
-        if (blending ||
+        if (blendModeTranslucent ||
             xvp != svp ||
             (outputIsSwapChain &&
                     (msaaSampleCount > 1 ||
@@ -1081,7 +1080,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     hasScreenSpaceRefraction ||
                     ssReflectionsOptions.enabled))) {
             assert_invariant(!scaled);
-            input = ppm.blit(fg, blending, input, xvp, {
+            input = ppm.blit(fg, blendModeTranslucent, input, xvp, {
                     .width = vp.width, .height = vp.height,
                     .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::NEAREST);
         }
