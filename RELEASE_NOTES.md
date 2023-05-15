@@ -7,6 +7,10 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.37.0
+
+- backend: added `Platform` blob cache APIs, typically used to cache programs [⚠️ **Recompile materials**]
+
 ## v1.36.0
 
 - engine: a local transform can now be supplied for each GPU instance [⚠️ **Recompile materials**]
