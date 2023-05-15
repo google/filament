@@ -137,7 +137,6 @@ void PerViewUniforms::prepareFog(float3 const& cameraPosition, FogOptions const&
     auto& s = mUniforms.edit();
     s.fogStart             = options.distance;
     s.fogMaxOpacity        = options.maximumOpacity;
-    s.fogHeight            = options.height;
     s.fogHeightFalloff     = heightFalloff;
     s.fogCutOffDistance    = options.cutOffDistance;
     s.fogColor             = options.color;
