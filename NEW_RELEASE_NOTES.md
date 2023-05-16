@@ -9,3 +9,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 ## Release notes for next branch cut
 
 - engine: a new feature to set a transform on the global-scale fog  [⚠️ **Recompile materials**]
+- engine: large-scale fog can now be opted-out on a per-renderable basis
