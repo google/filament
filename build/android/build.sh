@@ -57,8 +57,7 @@ FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/ndk.version)}
 
 # Install the required NDK version specifically (if not present)
 if [[ ! -d "${ANDROID_HOME}/ndk/$FILAMENT_NDK_VERSION" ]]; then
-    # NOTE: We MUST use Java 1.8 to run sdkmanager currently, it fails starting with Java 11
-    JAVA_HOME=${JAVA_HOME_8_X64} ${ANDROID_HOME}/tools/bin/sdkmanager "ndk;$FILAMENT_NDK_VERSION" > /dev/null
+    ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "ndk;$FILAMENT_NDK_VERSION" > /dev/null
 fi
 
 # Only build 1 64 bit target during presubmit to cut down build times during presubmit
