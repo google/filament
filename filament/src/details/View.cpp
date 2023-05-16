@@ -56,9 +56,10 @@ static constexpr float PID_CONTROLLER_Ki = 0.002f;
 static constexpr float PID_CONTROLLER_Kd = 0.0f;
 
 FView::FView(FEngine& engine)
-    : mFroxelizer(engine),
-      mPerViewUniforms(engine),
-      mShadowMapManager(engine) {
+        : mFroxelizer(engine),
+          mFogEntity(engine.getEntityManager().create()),
+          mPerViewUniforms(engine),
+          mShadowMapManager(engine) {
     DriverApi& driver = engine.getDriverApi();
 
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
@@ -66,10 +67,10 @@ FView::FView(FEngine& engine)
     debugRegistry.registerProperty("d.view.camera_at_origin",
             &engine.debug.view.camera_at_origin);
 
-    // Integral term is used to fight back the dead-band below, we limit how much it can act.
+    // The integral term is used to fight back the dead-band below, we limit how much it can act.
     mPidController.setIntegralLimits(-100.0f, 100.0f);
 
-    // dead-band, 1% for scaling down, 5% for scaling up. This stabilizes all the jitters.
+    // Dead-band, 1% for scaling down, 5% for scaling up. This stabilizes all the jitters.
     mPidController.setOutputDeadBand(-0.01f, 0.05f);
 
 #ifndef NDEBUG
@@ -86,7 +87,7 @@ FView::FView(FEngine& engine)
             engine.debug.view.pid.kp, engine.debug.view.pid.ki, engine.debug.view.pid.kd);
 #endif
 
-    // allocate ubos
+    // allocate UBOs
     mLightUbh = driver.createBufferObject(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib),
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
 
@@ -114,6 +115,8 @@ void FView::terminate(FEngine& engine) {
     mShadowMapManager.terminate(engine);
     mPerViewUniforms.terminate(driver);
     mFroxelizer.terminate(driver);
+
+    engine.getEntityManager().destroy(mFogEntity);
 }
 
 void FView::setViewport(filament::Viewport const& viewport) noexcept {
@@ -639,10 +642,11 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * Update driver state
      */
 
-    auto const userModelMatrix = inverse(cameraInfo.getUserViewMatrix());
-    auto const userCameraPosition = userModelMatrix[3].xyz;
+    auto const& tcm = engine.getTransformManager();
+    auto const fogTransform = tcm.getWorldTransformAccurate(tcm.getInstance(mFogEntity));
+
     mPerViewUniforms.prepareTime(engine, userTime);
-    mPerViewUniforms.prepareFog(userCameraPosition, mFogOptions);
+    mPerViewUniforms.prepareFog(cameraInfo, fogTransform, mFogOptions);
     mPerViewUniforms.prepareTemporalNoise(engine, mTemporalAntiAliasingOptions);
     mPerViewUniforms.prepareBlending(needsAlphaChannel);
     mPerViewUniforms.prepareMaterialGlobals(mMaterialGlobals);

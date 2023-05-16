@@ -44,13 +44,7 @@ void main() {
 
 #if defined(VARIANT_HAS_FOG)
     highp vec3 view = getWorldPosition() - getWorldCameraPosition();
-
-    // fog should be calculated in the "user's world coordinates" so that it's not
-    // affected by the IBL rotation. We're transofrming a vector, so we should use the
-    // cofactor (or inverse-transpose), but since we know this matrix is a rigid transform,
-    // we can use it as is.
-    view = mulMat3x3Float3(frameUniforms.userWorldFromWorldMatrix, view);
-
+    view = frameUniforms.fogFromWorldMatrix * view;
     fragColor = fog(fragColor, view);
 #endif
 

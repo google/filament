@@ -505,3 +505,11 @@ Java_com_google_android_filament_View_nGetMaterialGlobal(JNIEnv *env, jclass cla
     std::copy_n(result.v, 4, out);
     env->ReleaseFloatArrayElements(out_, out, 0);
 }
+
+extern "C"
+JNIEXPORT int JNICALL
+Java_com_google_android_filament_View_nGetFogEntity(JNIEnv *env, jclass clazz,
+        jlong nativeView) {
+    View *view = (View *) nativeView;
+    return (jint)view->getFogEntity().getId();
+}
