@@ -1148,6 +1148,20 @@ public class View {
         return out;
     }
 
+    /**
+     * Get an Entity representing the large scale fog object.
+     * This entity is always inherited by the View's Scene.
+     *
+     * It is for example possible to create a TransformManager component with this
+     * Entity and apply a transformation globally on the fog.
+     *
+     * @return an Entity representing the large scale fog object.
+     */
+    @Entity
+    public int getFogEntity() {
+        return nGetFogEntity(getNativeObject());
+    }
+
     public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed View");
@@ -1206,6 +1220,7 @@ public class View {
     private static native boolean nIsStencilBufferEnabled(long nativeView);
     private static native void nSetMaterialGlobal(long nativeView, int index, float x, float y, float z, float w);
     private static native void nGetMaterialGlobal(long nativeView, int index, float[] out);
+    private static native int nGetFogEntity(long nativeView);
 
 
     /**

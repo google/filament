@@ -128,11 +128,28 @@ void PerViewUniforms::prepareTemporalNoise(FEngine& engine,
     s.temporalNoise = options.enabled ? temporalNoise : 0.0f;
 }
 
-void PerViewUniforms::prepareFog(float3 const& cameraPosition, FogOptions const& options) noexcept {
+void PerViewUniforms::prepareFog(const CameraInfo& cameraInfo,
+        mat4 const& userWorldFromFog, FogOptions const& options) noexcept {
+    // Fog should be calculated in the "user's world coordinates" so that it's not
+    // affected by the IBL rotation.
+    // fogFromWorldMatrix below is only used to transform the view vector in the shader, which is
+    // why we store the cofactor matrix.
+
+    mat4f const viewFromWorld       = cameraInfo.view;
+    mat4 const worldFromUserWorld   = cameraInfo.worldOrigin;
+    mat4 const worldFromFog         = worldFromUserWorld * userWorldFromFog;
+    mat4 const viewFromFog          = viewFromWorld * worldFromFog;
+
+    mat4 const fogFromView          = inverse(viewFromFog);
+    mat3 const fogFromWorld         = inverse(worldFromFog.upperLeft());
+
+    // camera position relative to the fog's origin
+    auto const userCameraPosition = fogFromView[3].xyz;
+
     const float heightFalloff = std::max(0.0f, options.heightFalloff);
 
     // precalculate the constant part of density integral
-    const float density = -heightFalloff * (cameraPosition.y - options.height);
+    const float density = -float(heightFalloff * (userCameraPosition.y - options.height));
 
     auto& s = mUniforms.edit();
     s.fogStart             = options.distance;
@@ -144,6 +161,7 @@ void PerViewUniforms::prepareFog(float3 const& cameraPosition, FogOptions const&
     s.fogInscatteringStart = options.inScatteringStart;
     s.fogInscatteringSize  = options.inScatteringSize;
     s.fogColorFromIbl      = options.fogColorFromIbl ? 1.0f : 0.0f;
+    s.fogFromWorldMatrix   = mat3f{ cof(fogFromWorld) };
 }
 
 void PerViewUniforms::prepareSSAO(Handle<HwTexture> ssao,

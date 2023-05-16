@@ -586,6 +586,7 @@ int main(int argc, char** argv) {
         auto& tcm = engine->getTransformManager();
         app.rootTransformEntity = engine->getEntityManager().create();
         tcm.create(app.rootTransformEntity);
+        tcm.create(view->getFogEntity());
 
         const bool batchMode = !app.batchFile.empty();
 
@@ -920,6 +921,7 @@ int main(int argc, char** argv) {
         TransformManager::Instance const& root = tcm.getInstance(app.rootTransformEntity);
         tcm.setParent(tcm.getInstance(camera.getEntity()), root);
         tcm.setParent(tcm.getInstance(app.asset->getRoot()), root);
+        tcm.setParent(tcm.getInstance(view->getFogEntity()), root);
         tcm.setTransform(root, mat4f::translation(float3{ app.originIsFarAway ? 1e6f : 0.0f }));
 
         // Check if color grading has changed.

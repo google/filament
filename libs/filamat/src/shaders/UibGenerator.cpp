@@ -129,6 +129,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "fogInscatteringSize",     0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
             { "fogReserved1",            0, Type::FLOAT                  },
             { "fogReserved2",            0, Type::FLOAT                  },
+            { "fogFromWorldMatrix",      0, Type::MAT3, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
 
             // ------------------------------------------------------------------------------------
             // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
