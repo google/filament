@@ -431,7 +431,7 @@ UTILS_NOINLINE
 RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
-        Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
+        Variant const variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
         float3 cameraPosition, float3 cameraForward) noexcept {
 
     // generateCommands() writes both the draw and depth commands simultaneously such that
@@ -479,6 +479,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
             continue;
         }
 
+        Variant renderableVariant = variant;
+
         // Signed distance from camera plane to object's center. Positive distances are in front of
         // the camera. Some objects with a center behind the camera can still be visible
         // so their distance will be negative (this happens a lot for the shadow map).
@@ -523,9 +525,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
         // if we are already an SSR variant, the SRE bit is already set,
         // there is no harm setting it again
         static_assert(Variant::SPECIAL_SSR & Variant::SRE);
-        variant.setShadowReceiver(
+        renderableVariant.setShadowReceiver(
                 Variant::isSSRVariant(variant) || (soaVisibility[i].receiveShadows & hasShadowing));
-        variant.setSkinning(hasSkinningOrMorphing);
+        renderableVariant.setSkinning(hasSkinningOrMorphing);
 
         if constexpr (isDepthPass) {
             cmdDepth.key = uint64_t(Pass::DEPTH);
@@ -539,6 +541,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
             cmdDepth.primitive.instanceBufferHandle = soaInstanceInfo[i].handle;
             cmdDepth.primitive.materialVariant.setSkinning(hasSkinningOrMorphing);
             cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
+        }
+        if constexpr (isColorPass) {
+            renderableVariant.setFog(soaVisibility[i].fog && Variant::isFogVariant(variant));
         }
 
         const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
@@ -560,7 +565,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
             if constexpr (isColorPass) {
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
-                RenderPass::setupColorCommand(cmdColor, variant, mi, inverseFrontFaces);
+                RenderPass::setupColorCommand(cmdColor, renderableVariant, mi, inverseFrontFaces);
 
                 cmdColor.primitive.skinningHandle = skinning.handle;
                 cmdColor.primitive.skinningOffset = skinning.offset;

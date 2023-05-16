@@ -60,6 +60,7 @@ struct RenderableManager::BuilderDetails {
     bool mReceiveShadows : 1;
     bool mScreenSpaceContactShadows : 1;
     bool mSkinningBufferMode : 1;
+    bool mFogEnabled : 1;
     size_t mSkinningBoneCount = 0;
     size_t mMorphTargetCount = 0;
     Bone const* mUserBones = nullptr;
@@ -70,7 +71,7 @@ struct RenderableManager::BuilderDetails {
 
     explicit BuilderDetails(size_t count)
             : mEntries(count), mCulling(true), mCastShadows(false), mReceiveShadows(true),
-              mScreenSpaceContactShadows(false), mSkinningBufferMode(false) {
+              mScreenSpaceContactShadows(false), mSkinningBufferMode(false), mFogEnabled(true) {
     }
     // this is only needed for the explicit instantiation below
     BuilderDetails() = default;
@@ -201,6 +202,11 @@ RenderableManager::Builder& RenderableManager::Builder::skinning(
 
 RenderableManager::Builder& RenderableManager::Builder::enableSkinningBuffers(bool enabled) noexcept {
     mImpl->mSkinningBufferMode = enabled;
+    return *this;
+}
+
+RenderableManager::Builder& RenderableManager::Builder::fog(bool enabled) noexcept {
+    mImpl->mFogEnabled = enabled;
     return *this;
 }
 
@@ -373,6 +379,7 @@ void FRenderableManager::create(
         setCulling(ci, builder->mCulling);
         setSkinning(ci, false);
         setMorphing(ci, builder->mMorphTargetCount);
+        setFogEnabled(ci, builder->mFogEnabled);
         mManager[ci].channels = builder->mLightChannels;
 
         InstancesInfo& instances = manager[ci].instances;
