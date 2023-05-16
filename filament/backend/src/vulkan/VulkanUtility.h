@@ -45,7 +45,6 @@ bool equivalent(const VkExtent2D& a, const VkExtent2D& b);
 bool isDepthFormat(VkFormat format);
 uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
 
-
 // Helper function for the vkEnumerateX methods. These methods have the format of
 // VkResult vkEnumerateX(InputType1 arg1, InputTyp2 arg2, ..., uint32_t* size,
 //         OutputType* output_arg)

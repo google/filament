@@ -26,16 +26,19 @@
 namespace filament::backend {
 
 struct VulkanTexture : public HwTexture {
-
     // Standard constructor for user-facing textures.
-    VulkanTexture(VulkanContext& context, SamplerType target, uint8_t levels,
-            TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-            TextureUsage usage, VulkanStagePool& stagePool, VkComponentMapping swizzle = {});
+    VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, VulkanContext const& context,
+            VmaAllocator allocator, std::shared_ptr<VulkanCommands> commands, SamplerType target,
+            uint8_t levels, TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h,
+            uint32_t depth, TextureUsage tusage, VulkanStagePool& stagePool,
+            VkComponentMapping swizzle={});
 
     // Specialized constructor for internally created textures (e.g. from a swap chain)
     // The texture will never destroy the given VkImage, but it does manages its subresources.
-    VulkanTexture(VulkanContext& context, VkImage image, VkFormat format, uint8_t samples,
-            uint32_t w, uint32_t h, TextureUsage usage, VulkanStagePool& stagePool);
+    VulkanTexture(VkDevice device, 
+        VmaAllocator allocator, std::shared_ptr<VulkanCommands> commands, VkImage image,
+        VkFormat format, uint8_t samples, uint32_t width, uint32_t height, TextureUsage tusage,
+        VulkanStagePool& stagePool);
 
     ~VulkanTexture();
 
@@ -103,8 +106,10 @@ private:
     VkImageSubresourceRange mPrimaryViewRange;
 
     std::map<VkImageSubresourceRange, VkImageView> mCachedImageViews;
-    VulkanContext& mContext;
     VulkanStagePool& mStagePool;
+    VkDevice mDevice;
+    VmaAllocator mAllocator;
+    std::shared_ptr<VulkanCommands> mCommands;    
 };
 
 } // namespace filament::backend

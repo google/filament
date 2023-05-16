@@ -64,7 +64,7 @@ VulkanPipelineCache::getUsageFlags(uint16_t binding, ShaderStageFlags flags, Usa
     return src;
 }
 
-VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRasterState()) {
+VulkanPipelineCache::VulkanPipelineCache() : mCurrentRasterState(createDefaultRasterState()) {
     mDummyBufferWriteInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     mDummyBufferWriteInfo.pNext = nullptr;
     mDummyBufferWriteInfo.dstArrayElement = 0;
@@ -551,7 +551,7 @@ void VulkanPipelineCache::bindProgram(const VulkanProgram& program) noexcept {
 }
 
 void VulkanPipelineCache::bindRasterState(const RasterState& rasterState) noexcept {
-    mPipelineRequirements.rasterState = rasterState;
+    mPipelineRequirements.rasterState = mCurrentRasterState = rasterState;
 }
 
 void VulkanPipelineCache::bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept {

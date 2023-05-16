@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "vulkan/platform/PlatformVulkan.h"
+#include <backend/platforms/VulkanPlatform.h>
 
 #include "vulkan/VulkanConstants.h"
 #include "vulkan/VulkanDriverFactory.h"
@@ -76,37 +76,29 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-Driver* PlatformVulkan::createDriver(void* const sharedContext,
-        const Platform::DriverConfig& driverConfig) noexcept {
-    ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
-
-    static const char* requiredInstanceExtensions[] = {
+VulkanPlatform::ExtensionSet VulkanPlatform::getRequiredInstanceExtensions() {
+    VulkanPlatform::ExtensionSet ret;
     #if defined(__ANDROID__)
-        "VK_KHR_android_surface",
+        ret.insert("VK_KHR_android_surface");
     #elif defined(__linux__) && defined(FILAMENT_SUPPORTS_GGP)
-        VK_GGP_STREAM_DESCRIPTOR_SURFACE_EXTENSION_NAME,
+        ret.insert(VK_GGP_STREAM_DESCRIPTOR_SURFACE_EXTENSION_NAME);
     #elif defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
-        "VK_KHR_wayland_surface",
+        ret.insert("VK_KHR_wayland_surface");
     #elif defined(__linux__) && defined(FILAMENT_SUPPORTS_X11)
         #if defined(FILAMENT_SUPPORTS_XCB)
-            "VK_KHR_xcb_surface",
+            ret.insert("VK_KHR_xcb_surface");
         #endif
         #if defined(FILAMENT_SUPPORTS_XLIB)
-            "VK_KHR_xlib_surface",
+            ret.insert("VK_KHR_xlib_surface");
         #endif
     #elif defined(WIN32)
-        "VK_KHR_win32_surface",
+        ret.insert("VK_KHR_win32_surface");
     #endif
-    };
-
-    size_t const extSize
-            = sizeof(requiredInstanceExtensions) / sizeof(requiredInstanceExtensions[0]);
-    return VulkanDriverFactory::create(this, requiredInstanceExtensions, extSize, driverConfig);
+    return ret;
 }
 
-PlatformVulkan::SurfaceBundle PlatformVulkan::createVkSurfaceKHR(void* nativeWindow,
-        void* vkinstance, uint64_t flags) noexcept {
-    VkInstance const instance = (VkInstance) vkinstance;
+VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWindow,
+        VkInstance instance, uint64_t flags) noexcept {
     SurfaceBundle bundle{
             .surface = VK_NULL_HANDLE,
             .width = 0,

@@ -28,13 +28,17 @@
 
 namespace filament::backend {
 
+class VulkanTimestamps;
+
 struct VulkanProgram : public HwProgram {
-    VulkanProgram(VulkanContext& context, const Program& builder) noexcept;
-    VulkanProgram(VulkanContext& context, VkShaderModule vs, VkShaderModule fs) noexcept;
+    VulkanProgram(VkDevice device, const Program& builder) noexcept;
+    VulkanProgram(VkDevice device, VkShaderModule vs, VkShaderModule fs) noexcept;
     ~VulkanProgram();
-    VulkanContext& context;
     VulkanPipelineCache::ProgramBundle bundle;
     Program::SamplerGroupInfo samplerGroupInfo;
+
+private:
+    VkDevice mDevice;
 };
 
 // The render target bundles together a set of attachments, each of which can have one of the
@@ -47,9 +51,11 @@ struct VulkanProgram : public HwProgram {
 // which are not representative when this is the default render target.
 struct VulkanRenderTarget : private HwRenderTarget {
     // Creates an offscreen render target.
-    VulkanRenderTarget(VulkanContext& context, uint32_t width, uint32_t height, uint8_t samples,
-            VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT], VulkanAttachment depthStencil[2],
-            VulkanStagePool& stagePool);
+    VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice,
+            VulkanContext const& context, VmaAllocator allocator,
+            std::shared_ptr<VulkanCommands> commands, uint32_t width, uint32_t height,
+            uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
+            VulkanAttachment depthStencil[2], VulkanStagePool& stagePool);
 
     // Creates a special "default" render target (i.e. associated with the swap chain)
     explicit VulkanRenderTarget();
@@ -84,20 +90,24 @@ struct VulkanVertexBuffer : public HwVertexBuffer {
 };
 
 struct VulkanIndexBuffer : public HwIndexBuffer {
-    VulkanIndexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-            uint8_t elementSize, uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
-            buffer(context, stagePool,
-                    VK_BUFFER_USAGE_INDEX_BUFFER_BIT, elementSize * indexCount),
-            indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32) {}
-    void terminate(VulkanContext& context) { buffer.terminate(context); }
+    VulkanIndexBuffer(VmaAllocator allocator, std::shared_ptr<VulkanCommands> commands,
+            VulkanStagePool& stagePool, uint8_t elementSize, uint32_t indexCount)
+        : HwIndexBuffer(elementSize, indexCount),
+          buffer(allocator, commands, stagePool, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                  elementSize * indexCount),
+          indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32) {}
+    void terminate() { buffer.terminate(); }
     VulkanBuffer buffer;
     const VkIndexType indexType;
 };
 
 struct VulkanBufferObject : public HwBufferObject {
-    VulkanBufferObject(VulkanContext& context, VulkanStagePool& stagePool,
-            uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage);
-    void terminate(VulkanContext& context) { buffer.terminate(context); }
+    VulkanBufferObject(VmaAllocator allocator, std::shared_ptr<VulkanCommands> commands,
+            VulkanStagePool& stagePool, uint32_t byteCount, BufferObjectBinding bindingType,
+            BufferUsage usage);
+    void terminate() {
+	buffer.terminate();
+    }
     VulkanBuffer buffer;
     const BufferObjectBinding bindingType;
 };
@@ -128,12 +138,19 @@ struct VulkanSync : public HwSync {
 };
 
 struct VulkanTimerQuery : public HwTimerQuery {
-    explicit VulkanTimerQuery(VulkanContext& context);
+    explicit VulkanTimerQuery(std::tuple<uint32_t, uint32_t> indices);
     ~VulkanTimerQuery();
+
+    bool isCompleted() const noexcept;
+
+private:
     uint32_t startingQueryIndex;
     uint32_t stoppingQueryIndex;
-    VulkanContext& mContext;
+
+    // TODO: should be safe to hold this reference (since VulkanCommanBuffers is a ring).
+    // But explore better options.
     std::atomic<VulkanCommandBuffer const*> cmdbuffer = nullptr;
+    friend class VulkanTimestamps;
 };
 
 inline constexpr VkBufferUsageFlagBits getBufferObjectUsage(

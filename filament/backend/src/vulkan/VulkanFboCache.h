@@ -104,8 +104,9 @@ public:
         bool operator()(const FboKey& k1, const FboKey& k2) const;
     };
 
-    explicit VulkanFboCache(VulkanContext&);
     ~VulkanFboCache();
+
+    void initialize(VkDevice device) noexcept;
 
     // Retrieves or creates a VkFramebuffer handle.
     VkFramebuffer getFramebuffer(FboKey config) noexcept;
@@ -120,7 +121,7 @@ public:
     void reset() noexcept;
 
 private:
-    VulkanContext& mContext;
+    VkDevice mDevice;
     tsl::robin_map<FboKey, FboVal, FboKeyHashFn, FboKeyEqualFn> mFramebufferCache;
     tsl::robin_map<RenderPassKey, RenderPassVal, RenderPassHash, RenderPassEq> mRenderPassCache;
     tsl::robin_map<VkRenderPass, uint32_t> mRenderPassRefCount;

@@ -45,7 +45,7 @@ struct VulkanStageImage {
 // This class manages two types of host-mappable staging areas: buffer stages and image stages.
 class VulkanStagePool {
 public:
-    explicit VulkanStagePool(VulkanContext& context) noexcept : mContext(context) {}
+    void initialize(VmaAllocator allocator, std::shared_ptr<VulkanCommands> commands) noexcept;
 
     // Finds or creates a stage whose capacity is at least the given number of bytes.
     // The stage is automatically released back to the pool after TIME_BEFORE_EVICTION frames.
@@ -63,7 +63,8 @@ public:
     void reset() noexcept;
 
 private:
-    VulkanContext& mContext;
+    VmaAllocator mAllocator;
+    std::shared_ptr<VulkanCommands> mCommands;
 
     // Use an ordered multimap for quick (capacity => stage) lookups using lower_bound().
     std::multimap<uint32_t, VulkanStage const*> mFreeStages;

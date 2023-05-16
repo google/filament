@@ -22,24 +22,31 @@
 
 #include <memory>
 
+#include <bluevk/BlueVK.h>
 #include <utils/FixedCapacityVector.h>
 
-namespace filament::backend {
+using namespace bluevk;
 
+namespace filament::backend {
 
 struct VulkanSwapChain : public HwSwapChain {
     // The *fallbackExtent* parameter is for the case where the extent returned by the physical
     // surface is 0xFFFFFFFF.
-    VulkanSwapChain(VulkanContext& context, VulkanStagePool& stagePool, VkSurfaceKHR vksurface,
-            VkExtent2D fallbackExtent={.width=640, .height=320});
+    VulkanSwapChain(VkDevice device, VkPhysicalDevice physicalDevice,
+	    uint32_t graphicsQueueFamilyIndex, VkQueue graphicsQueue, VmaAllocator allocator,
+	    std::shared_ptr<VulkanCommands> commands, VulkanContext const& context,
+	    VulkanStagePool& stagePool, VkSurfaceKHR vksurface,
+	    VkExtent2D fallbackExtent = {.width = 640, .height = 320});
 
     // Headless constructor.
-    VulkanSwapChain(VulkanContext& context, VulkanStagePool& stagePool, uint32_t width,
-            uint32_t height);
+    VulkanSwapChain(VkDevice device, VkPhysicalDevice physicalDevice,
+	    uint32_t graphicsQueueFamilyIndex, VkQueue graphicsQueue, VmaAllocator allocator,
+	    std::shared_ptr<VulkanCommands> commands, VulkanContext const& context,
+	    VulkanStagePool& stagePool, uint32_t width, uint32_t height);
 
     bool acquire();
-    void create(VulkanStagePool& stagePool);
     void destroy();
+    void recreate();
     void makePresentable();
     bool hasResized() const;
 
@@ -65,7 +72,14 @@ struct VulkanSwapChain : public HwSwapChain {
     bool firstRenderPass = false;
 
 private:
-    VulkanContext& mContext;
+    void create();
+
+    VkDevice mDevice;
+    VkPhysicalDevice mPhysicalDevice;
+    std::shared_ptr<VulkanCommands> mCommands;
+    VmaAllocator mAllocator;
+    VulkanContext const& mContext;
+    VulkanStagePool& mStagePool;
     uint32_t mCurrentSwapIndex = 0u;
     const VkExtent2D mFallbackExtent = {};
 

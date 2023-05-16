@@ -64,7 +64,7 @@ bool VulkanFboCache::FboKeyEqualFn::operator()(const FboKey& k1, const FboKey& k
     return true;
 }
 
-VulkanFboCache::VulkanFboCache(VulkanContext& context) : mContext(context) {}
+void VulkanFboCache::initialize(VkDevice device) noexcept { mDevice = device; }
 
 VulkanFboCache::~VulkanFboCache() {
     ASSERT_POSTCONDITION(mFramebufferCache.empty() && mRenderPassCache.empty(),
@@ -117,7 +117,7 @@ VkFramebuffer VulkanFboCache::getFramebuffer(FboKey config) noexcept {
     };
     mRenderPassRefCount[info.renderPass]++;
     VkFramebuffer framebuffer;
-    VkResult error = vkCreateFramebuffer(mContext.device, &info, VKALLOC, &framebuffer);
+    VkResult error = vkCreateFramebuffer(mDevice, &info, VKALLOC, &framebuffer);
     ASSERT_POSTCONDITION(!error, "Unable to create framebuffer.");
     mFramebufferCache[config] = {framebuffer, mCurrentTime};
     return framebuffer;
@@ -308,7 +308,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
 
     // Finally, create the VkRenderPass.
     VkRenderPass renderPass;
-    VkResult error = vkCreateRenderPass(mContext.device, &renderPassInfo, VKALLOC, &renderPass);
+    VkResult error = vkCreateRenderPass(mDevice, &renderPassInfo, VKALLOC, &renderPass);
     ASSERT_POSTCONDITION(!error, "Unable to create render pass.");
     mRenderPassCache[config] = {renderPass, mCurrentTime};
 
@@ -326,11 +326,11 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
 void VulkanFboCache::reset() noexcept {
     for (auto pair : mFramebufferCache) {
         mRenderPassRefCount[pair.first.renderPass]--;
-        vkDestroyFramebuffer(mContext.device, pair.second.handle, VKALLOC);
+        vkDestroyFramebuffer(mDevice, pair.second.handle, VKALLOC);
     }
     mFramebufferCache.clear();
     for (auto pair : mRenderPassCache) {
-        vkDestroyRenderPass(mContext.device, pair.second.handle, VKALLOC);
+        vkDestroyRenderPass(mDevice, pair.second.handle, VKALLOC);
     }
     mRenderPassCache.clear();
 }
@@ -348,14 +348,14 @@ void VulkanFboCache::gc() noexcept {
         const FboVal fbo = iter->second;
         if (fbo.timestamp < evictTime && fbo.handle) {
             mRenderPassRefCount[iter->first.renderPass]--;
-            vkDestroyFramebuffer(mContext.device, fbo.handle, VKALLOC);
+            vkDestroyFramebuffer(mDevice, fbo.handle, VKALLOC);
             iter.value().handle = VK_NULL_HANDLE;
         }
     }
     for (auto iter = mRenderPassCache.begin(); iter != mRenderPassCache.end(); ++iter) {
         const VkRenderPass handle = iter->second.handle;
         if (iter->second.timestamp < evictTime && handle && mRenderPassRefCount[handle] == 0) {
-            vkDestroyRenderPass(mContext.device, handle, VKALLOC);
+            vkDestroyRenderPass(mDevice, handle, VKALLOC);
             iter.value().handle = VK_NULL_HANDLE;
         }
     }
