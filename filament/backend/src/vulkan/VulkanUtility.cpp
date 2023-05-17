@@ -628,6 +628,17 @@ bool equivalent(const VkExtent2D& a, const VkExtent2D& b) {
     return a.height == b.height && a.width == b.width;
 }
 
+bool isDepthStencilFormat(VkFormat format) {
+    switch (format) {
+        case VK_FORMAT_D16_UNORM_S8_UINT:
+        case VK_FORMAT_D24_UNORM_S8_UINT:
+        case VK_FORMAT_D32_SFLOAT_S8_UINT:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool isDepthFormat(VkFormat format) {
     switch (format) {
         case VK_FORMAT_D16_UNORM:
