@@ -383,13 +383,8 @@ VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range, VkImageVi
 }
 
 VkImageAspectFlags VulkanTexture::getImageAspect() const {
-    if (isDepthStencilFormat(mVkFormat)) {
-        return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-    }
-    if (isDepthFormat(mVkFormat)) {
-        return VK_IMAGE_ASPECT_DEPTH_BIT;
-    }
-    return VK_IMAGE_ASPECT_COLOR_BIT;
+    // Helper function in VulkanUtility
+    return filament::backend::getImageAspect(mVkFormat);
 }
 
 void VulkanTexture::transitionLayout(VkCommandBuffer commands, const VkImageSubresourceRange& range,
