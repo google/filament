@@ -44,6 +44,7 @@ void main() {
 
 #if defined(VARIANT_HAS_FOG)
     highp vec3 view = getWorldPosition() - getWorldCameraPosition();
+    view = frameUniforms.fogFromWorldMatrix * view;
     fragColor = fog(fragColor, view);
 #endif
 

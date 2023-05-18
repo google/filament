@@ -120,7 +120,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "fogDensity",              0, Type::FLOAT3,Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "fogStart",                0, Type::FLOAT, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "fogMaxOpacity",           0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
-            { "fogHeight",               0, Type::FLOAT, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogReserved0",            0, Type::FLOAT                  },
             { "fogHeightFalloff",        0, Type::FLOAT, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "fogCutOffDistance",       0, Type::FLOAT, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "fogColor",                0, Type::FLOAT3, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
@@ -129,6 +129,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "fogInscatteringSize",     0, Type::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
             { "fogReserved1",            0, Type::FLOAT                  },
             { "fogReserved2",            0, Type::FLOAT                  },
+            { "fogFromWorldMatrix",      0, Type::MAT3, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
 
             // ------------------------------------------------------------------------------------
             // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]

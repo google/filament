@@ -2603,6 +2603,15 @@ SyncStatus OpenGLDriver::getSyncStatus(Handle<HwSync> sh) {
     }
 }
 
+void OpenGLDriver::compilePrograms(CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user) {
+    // TODO: this works because currently `executeRenderPassOps` is only used for compiling
+    //       materials. If that changed, we'd have to only execute the callbacks related to
+    //       material compilation.
+    executeRenderPassOps();
+    scheduleCallback(handler, user, callback);
+}
+
 void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         const RenderPassParams& params) {
     DEBUG_MARKER()

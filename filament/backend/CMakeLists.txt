@@ -25,6 +25,7 @@ set(PUBLIC_HDRS
 
 set(SRCS
         src/BackendUtils.cpp
+        src/BlobCacheKey.cpp
         src/Callable.cpp
         src/CallbackHandler.cpp
         src/CircularBuffer.cpp
@@ -69,6 +70,8 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
             src/opengl/gl_headers.h
             src/opengl/GLUtils.cpp
             src/opengl/GLUtils.h
+            src/opengl/OpenGLBlobCache.cpp
+            src/opengl/OpenGLBlobCache.h
             src/opengl/OpenGLContext.cpp
             src/opengl/OpenGLContext.h
             src/opengl/OpenGLDriver.cpp

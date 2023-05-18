@@ -617,7 +617,8 @@ class_<View>("View")
     .function("setStencilBufferEnabled", &View::setStencilBufferEnabled)
     .function("isStencilBufferEnabled", &View::isStencilBufferEnabled)
     .function("setMaterialGlobal", &View::setMaterialGlobal)
-    .function("getMaterialGlobal", &View::getMaterialGlobal);
+    .function("getMaterialGlobal", &View::getMaterialGlobal)
+    .function("getFogEntity", &View::getFogEntity);
 
 /// Scene ::core class:: Flat container of renderables and lights.
 /// See also the [Engine] methods `createScene` and `destroyScene`.
@@ -904,11 +905,22 @@ class_<RenderableBuilder>("RenderableManager$Builder")
     .BUILDER_FUNCTION("culling", RenderableBuilder, (RenderableBuilder* builder, bool enable), {
         return &builder->culling(enable); })
 
+    .BUILDER_FUNCTION("lightChannel", RenderableBuilder,
+            (RenderableBuilder* builder, unsigned int channel, bool enable), {
+        return &builder->lightChannel(channel, enable); })
+
     .BUILDER_FUNCTION("castShadows", RenderableBuilder, (RenderableBuilder* builder, bool enable), {
         return &builder->castShadows(enable); })
 
     .BUILDER_FUNCTION("receiveShadows", RenderableBuilder, (RenderableBuilder* builder, bool enable), {
         return &builder->receiveShadows(enable); })
+
+    .BUILDER_FUNCTION("screenSpaceContactShadows", RenderableBuilder,
+            (RenderableBuilder* builder, bool enable), {
+        return &builder->screenSpaceContactShadows(enable); })
+
+    .BUILDER_FUNCTION("fog", RenderableBuilder, (RenderableBuilder* builder, bool enable), {
+        return &builder->fog(enable); })
 
     .BUILDER_FUNCTION("skinning", RenderableBuilder, (RenderableBuilder* builder, size_t boneCount), {
         return &builder->skinning(boneCount); })
@@ -944,9 +956,9 @@ class_<RenderableBuilder>("RenderableManager$Builder")
             (RenderableBuilder* builder, size_t index, bool enabled), {
         return &builder->globalBlendOrderEnabled(index, enabled); })
 
-    .BUILDER_FUNCTION("lightChannel", RenderableBuilder,
-            (RenderableBuilder* builder, unsigned int channel, bool enable), {
-        return &builder->lightChannel(channel, enable); })
+    .BUILDER_FUNCTION("instances", RenderableBuilder,
+            (RenderableBuilder* builder, size_t instanceCount), {
+        return &builder->instances(instanceCount); })
 
     .function("_build", EMBIND_LAMBDA(int, (RenderableBuilder* builder,
             Engine* engine, utils::Entity entity), {
@@ -977,6 +989,8 @@ class_<RenderableManager>("RenderableManager")
     .function("isShadowReceiver", &RenderableManager::isShadowReceiver)
     .function("setLightChannel", &RenderableManager::setLightChannel)
     .function("getLightChannel", &RenderableManager::getLightChannel)
+    .function("setFogEnabled", &RenderableManager::setFogEnabled)
+    .function("getFogEnabled", &RenderableManager::getFogEnabled)
 
     .function("setBones", EMBIND_LAMBDA(void, (RenderableManager* self,
             RenderableManager::Instance instance, emscripten::val transforms, size_t offset), {

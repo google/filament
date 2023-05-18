@@ -17,12 +17,13 @@
 #ifndef TNT_FILABRIDGE_VARIANT_H
 #define TNT_FILABRIDGE_VARIANT_H
 
-#include <stdint.h>
-#include <cstddef>
-
 #include <filament/MaterialEnums.h>
 
 #include <utils/bitset.h>
+#include <utils/Slice.h>
+
+#include <stdint.h>
+#include <stddef.h>
 
 namespace filament {
 static constexpr size_t VARIANT_BITS = 7;
@@ -257,6 +258,13 @@ private:
         key = (key & ~mask) | (v ? mask : type_t(0));
     }
 };
+
+namespace VariantUtils {
+// list of lit variants
+utils::Slice<Variant> getLitVariants() noexcept UTILS_PURE;
+// list of unlit variants
+utils::Slice<Variant> getUnlitVariants() noexcept UTILS_PURE;
+}
 
 } // namespace filament
 

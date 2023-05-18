@@ -109,6 +109,7 @@ public:
     Program& specializationConstants(
             utils::FixedCapacityVector<SpecializationConstant> specConstants) noexcept;
 
+    Program& cacheId(uint64_t cacheId) noexcept;
 
     ShaderSource const& getShadersSource() const noexcept { return mShadersSource; }
     ShaderSource& getShadersSource() noexcept { return mShadersSource; }
@@ -135,6 +136,8 @@ public:
         return mSpecializationConstants;
     }
 
+    uint64_t getCacheId() const noexcept { return mCacheId; }
+
 private:
     friend utils::io::ostream& operator<<(utils::io::ostream& out, const Program& builder);
 
@@ -142,6 +145,7 @@ private:
     SamplerGroupInfo mSamplerGroups = {};
     ShaderSource mShadersSource;
     utils::CString mName;
+    uint64_t mCacheId{};
     utils::Invocable<utils::io::ostream&(utils::io::ostream& out)> mLogger;
     utils::FixedCapacityVector<SpecializationConstant> mSpecializationConstants;
     utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> mAttributes;

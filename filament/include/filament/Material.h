@@ -22,9 +22,11 @@
 #include <filament/MaterialEnums.h>
 #include <filament/MaterialInstance.h>
 
+#include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
+#include <utils/Invocable.h>
 
 #include <math/mathfwd.h>
 
@@ -149,6 +151,27 @@ public:
     private:
         friend class FMaterial;
     };
+
+    /**
+     * Asynchronously ensures that a subset of this Material's variants are compiled. After issuing
+     * several Material::compile() calls in a row, it is recommended to call Engine::flush()
+     * such that the backend can start the compilation work as soon as possible.
+     * The provided callback is guaranteed to be called on the main thread after all unfiltered
+     * variants of the material are compiled. This can take hundreds of milliseconds.
+     *
+     * If all the material's variants are already compiled, the callback will be scheduled as
+     * soon as possible, but this might take a few dozen millisecond, corresponding to how
+     * many previous frames are enqueued in the backend. This also varies by backend. Therefore,
+     * it is recommended to only call this method once per material shortly after creation.
+     *
+     * @param handler   Handler to dispatch the callback or nullptr for the default handler
+     * @param callback  callback called on the main thread when the compilation is done on
+     *                  by backend.
+     * @param variantFilter Variants to filter-out from the compile command.
+     */
+    void compile(backend::CallbackHandler* handler,
+            utils::Invocable<void(Material*)>&& callback,
+            UserVariantFilterMask variantFilter) noexcept;
 
     /**
      * Creates a new instance of this material. Material instances should be freed using

@@ -95,11 +95,11 @@ void DriverBase::CallbackData::release(CallbackData* data) {
 
 void DriverBase::scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) {
     if (handler && UTILS_HAS_THREADING) {
-        std::lock_guard<std::mutex> lock(mServiceThreadLock);
+        std::lock_guard<std::mutex> const lock(mServiceThreadLock);
         mServiceThreadCallbackQueue.emplace_back(handler, callback, user);
         mServiceThreadCondition.notify_one();
     } else {
-        std::lock_guard<std::mutex> lock(mPurgeLock);
+        std::lock_guard<std::mutex> const lock(mPurgeLock);
         mCallbacks.emplace_back(user, callback);
     }
 }

@@ -65,6 +65,7 @@ public:
     bool getMaterialVersion(uint32_t* value) const noexcept;
     bool getFeatureLevel(uint8_t* value) const noexcept;
     bool getName(utils::CString*) const noexcept;
+    bool getCacheId(uint64_t* cacheId) const noexcept;
     bool getUIB(BufferInterfaceBlock* uib) const noexcept;
     bool getSIB(SamplerInterfaceBlock* sib) const noexcept;
     bool getSubpasses(SubpassInfo* subpass) const noexcept;
