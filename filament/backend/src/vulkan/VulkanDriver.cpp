@@ -244,7 +244,7 @@ void VulkanDriver::terminate() {
     if (mDebugMessenger) {
         vkDestroyDebugUtilsMessengerEXT(mPlatform->getInstance(), mDebugMessenger, VKALLOC);
     }
-    mPlatform->cleanup();
+    mPlatform->terminate();
 }
 
 void VulkanDriver::tick(int) {

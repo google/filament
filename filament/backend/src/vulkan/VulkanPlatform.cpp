@@ -465,7 +465,7 @@ VkFormat findSupportedFormat(VkPhysicalDevice device) {
 
 }// anonymous namespace
 
-void VulkanPlatform::cleanup() {
+void VulkanPlatform::terminate() {
     vkDestroyDevice(mDevice, VKALLOC);
     vkDestroyInstance(mInstance, VKALLOC);
 }
