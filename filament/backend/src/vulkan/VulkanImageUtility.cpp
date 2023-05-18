@@ -230,6 +230,7 @@ utils::io::ostream& operator<<(utils::io::ostream& out,
         const filament::backend::VulkanLayout& layout) {
     switch (layout) {
         CASE(UNDEFINED)
+        CASE(READ_ONLY)
         CASE(READ_WRITE)
         CASE(TRANSFER_SRC)
         CASE(TRANSFER_DST)
