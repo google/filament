@@ -58,7 +58,8 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
         FrameGraph& fg, const char* name, FEngine& engine, FView const& view,
         ColorPassInput const& colorPassInput,
         FrameGraphTexture::Descriptor const& colorBufferDesc,
-        ColorPassConfig const& config, PostProcessManager::ColorGradingConfig const colorGradingConfig,
+        ColorPassConfig const& config,
+        PostProcessManager::ColorGradingConfig const colorGradingConfig,
         RenderPass::Executor passExecutor) noexcept {
 
     struct ColorPassData {
@@ -92,7 +93,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                     }
                 }
 
-                if (config.hasContactShadows) {
+                if (config.hasContactShadows || config.fogAsPostProcess) {
                     data.structure = colorPassInput.structure;
                     assert_invariant(data.structure);
                     data.structure = builder.sample(data.structure);
@@ -208,25 +209,36 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                     ColorPassData const& data, DriverApi& driver) {
                 auto out = resources.getRenderPassInfo();
 
-                // set samplers and uniforms
-                view.prepareSSAO(data.ssao ?
-                        resources.getTexture(data.ssao) : engine.getOneTextureArray());
+                TextureHandle const structure = data.structure ?
+                        resources.getTexture(data.structure) : engine.getOneTexture();
 
-                // set screen-space reflections and screen-space refractions
-                view.prepareSSR(data.ssr ?
-                        resources.getTexture(data.ssr) : engine.getOneTextureArray());
+                TextureHandle const ssao = data.ssao ?
+                        resources.getTexture(data.ssao) : engine.getOneTextureArray();
 
-                // set structure sampler
-                view.prepareStructure(data.structure ?
-                        resources.getTexture(data.structure) : engine.getOneTexture());
-
-                // set shadow sampler
-                view.prepareShadowMapping(engine,
-                        data.shadows
+                TextureHandle const shadows = data.shadows
                             ? resources.getTexture(data.shadows)
                             : (view.getShadowType() != ShadowType::PCF
                                    ? engine.getOneTextureArray()
-                                   : engine.getOneTextureArrayDepth()));
+                                   : engine.getOneTextureArrayDepth());
+
+                auto ssr = data.ssr ?
+                        resources.getTexture(data.ssr) : engine.getOneTextureArray();
+
+                // set samplers and uniforms
+                view.prepareSSAO(ssao);
+
+                // set screen-space reflections and screen-space refractions
+                view.prepareSSR(ssr);
+
+                // set structure sampler
+                view.prepareStructure(structure);
+
+                // set shadow sampler
+                view.prepareShadowMapping(engine, shadows);
+
+                if (config.fogAsPostProcess) {
+                    engine.getPostProcessManager().fogPrepare(driver);
+                }
 
                 view.commitDescriptorSet(driver);
 

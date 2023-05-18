@@ -95,6 +95,7 @@ public:
         struct {
             bool check_crc32_after_loading = false;
             bool enable_material_instance_uniform_batching = false;
+            bool enable_fog_as_postprocess = false;
         } material;
     } features;
 

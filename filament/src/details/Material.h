@@ -135,18 +135,20 @@ public:
         return mDefinition.uniformInterfaceBlock;
     }
 
-    inline filament::DescriptorSetLayout const& getPerViewDescriptorSetLayout() const noexcept {
-        assert_invariant(mDefinition.materialDomain == MaterialDomain::POST_PROCESS);
+    DescriptorSetLayout const& getPerViewDescriptorSetLayout() const noexcept {
+        // This is mostly intended to be used for post-process materials; but it's also useful for
+        // Surface material that behave like post-process material (i.e. that don't really have variants or for
+        // which VSM is nonsensical, like for unlit materials)
         return mDefinition.perViewDescriptorSetLayout;
     }
 
-    filament::DescriptorSetLayout const& getPerViewDescriptorSetLayout(
-            Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept;
+    DescriptorSetLayout const& getPerViewDescriptorSetLayout(
+            Variant variant, bool useVsmDescriptorSetLayout) const noexcept;
 
     // Returns the layout that should be used when this material is bound to the pipeline for the
     // given variant. Shared variants use the Engine's default material's variants, so we should
     // also use the default material's layout.
-    filament::DescriptorSetLayout const& getDescriptorSetLayout(Variant variant = {}) const noexcept {
+    DescriptorSetLayout const& getDescriptorSetLayout(Variant variant = {}) const noexcept {
         if (!isSharedVariant(variant)) {
             return mDefinition.descriptorSetLayout;
         }
@@ -195,7 +197,22 @@ public:
     // getProgram returns the backend program for the material's given variant.
     // Must be called after prepareProgram().
     [[nodiscard]]
-    backend::Handle<backend::HwProgram> getProgram(Variant const variant) const noexcept {
+    backend::Handle<backend::HwProgram> getProgram(Variant variant) const noexcept {
+
+        if (UTILS_UNLIKELY(mEngine.features.material.enable_fog_as_postprocess)) {
+            // if the fog as post-process feature is enabled, we need to proceed "as-if" the material
+            // didn't have the FOG variant bit.
+            if (getMaterialDomain() == MaterialDomain::SURFACE) {
+                BlendingMode const blendingMode = getBlendingMode();
+                bool const hasScreenSpaceRefraction = getRefractionMode() == RefractionMode::SCREEN_SPACE;
+                bool const isBlendingCommand = !hasScreenSpaceRefraction &&
+                        (blendingMode != BlendingMode::OPAQUE && blendingMode != BlendingMode::MASKED);
+                if (!isBlendingCommand) {
+                    variant.setFog(false);
+                }
+            }
+        }
+
 #if FILAMENT_ENABLE_MATDBG
         updateActiveProgramsForMatdbg(variant);
 #endif
@@ -354,7 +371,13 @@ private:
 
     void createAndCacheProgram(backend::DriverApi& driver, backend::Program&& p, Variant variant) const noexcept;
 
-    inline bool isSharedVariant(Variant const variant) const {
+    backend::DescriptorSetLayout const& getPerViewDescriptorSetLayoutDescription(
+            Variant variant, bool useVsmDescriptorSetLayout) const noexcept;
+
+    backend::DescriptorSetLayout const& getDescriptorSetLayoutDescription(
+            Variant variant = {}) const noexcept;
+
+    bool isSharedVariant(Variant const variant) const {
         return (mDefinition.materialDomain == MaterialDomain::SURFACE) && !mIsDefaultMaterial &&
                !mDefinition.hasCustomDepthShader && Variant::isValidDepthVariant(variant);
     }
