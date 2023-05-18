@@ -906,7 +906,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 0, [&ppm, &driver, colorGradingConfigForColor]() {
                     ppm.colorGradingSubpass(driver, colorGradingConfigForColor);
                 });
-    } if (colorGradingConfig.customResolve) {
+    }
+
+    if (colorGradingConfig.customResolve) {
         // append custom resolve subpass after all other passes
         pass.appendCustomCommand(3,
                 RenderPass::Pass::BLENDED,
@@ -915,6 +917,11 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     ppm.customResolveSubpass(driver);
                 });
     }
+
+    // FIXME: sorting should happen AFTER the appendCustomCommands
+    // FIXME: concern that Material::prepare() is not called
+    // FIXME: concern that calling mi->use() will mess the renering loop
+
 
     // this makes the viewport relative to xvp
     // FIXME: we should use 'vp' when rendering directly into the swapchain, but that's hard to

@@ -267,6 +267,9 @@ public:
     };
     using PreprocessorDefineList = std::vector<PreprocessorDefine>;
 
+
+    MaterialBuilder& noSamplerValidation(bool enabled) noexcept;
+
     //! Set the name of this material.
     MaterialBuilder& name(const char* name) noexcept;
 
@@ -870,6 +873,8 @@ private:
     PreprocessorDefineList mDefines;
 
     filament::UserVariantFilterMask mVariantFilter = {};
+
+    bool mNoSamplerValidation = false;
 };
 
 } // namespace filamat
