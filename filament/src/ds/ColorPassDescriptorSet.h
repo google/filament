@@ -139,6 +139,10 @@ public:
         mDescriptorSet[index].bind(driver, DescriptorSetBindingPoints::PER_VIEW);
     }
 
+    DescriptorSet const& operator[](size_t const index) const {
+        return mDescriptorSet[index];
+    }
+
     bool isVSM() const noexcept { return mIsVsm; }
 
 private:
