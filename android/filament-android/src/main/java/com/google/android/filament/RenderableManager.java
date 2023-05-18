@@ -417,7 +417,19 @@ public class RenderableManager {
          */
         @NonNull
         public Builder enableSkinningBuffers(boolean enabled) {
-            nEnableSkinningBuffers(mNativeBuilder, enabled);
+            nBuilderEnableSkinningBuffers(mNativeBuilder, enabled);
+            return this;
+        }
+
+        /**
+         * Controls if this renderable is affected by the large-scale fog.
+         * @param enabled If true, enables large-scale fog on this object. Disables it otherwise.
+         *                True by default.
+         * @return this <code>Builder</code> object for chaining calls
+         */
+         @NonNull
+        public Builder fog(boolean enabled) {
+            nBuilderFog(mNativeBuilder, enabled);
             return this;
         }
 
@@ -730,6 +742,23 @@ public class RenderableManager {
     }
 
     /**
+     * Changes whether or not the large-scale fog is applied to this renderable
+     * @see Builder#fog
+     */
+    public void setFogEnabled(@EntityInstance int i, boolean enabled) {
+        nSetFogEnabled(mNativeObject, i, enabled);
+    }
+
+    /**
+     * Returns whether large-scale fog is enabled for this renderable.
+     * @return True if fog is enabled for this renderable.
+     * @see Builder#fog
+     */
+    public boolean getFogEnabled(@EntityInstance int i) {
+        return nGetFogEnabled(mNativeObject, i);
+    }
+
+    /**
      * Enables or disables a light channel.
      * Light channel 0 is enabled by default.
      *
@@ -951,7 +980,8 @@ public class RenderableManager {
     private static native void nBuilderSkinningBuffer(long nativeBuilder, long nativeSkinningBuffer, int boneCount, int offset);
     private static native void nBuilderMorphing(long nativeBuilder, int targetCount);
     private static native void nBuilderSetMorphTargetBufferAt(long nativeBuilder, int level, int primitiveIndex, long nativeMorphTargetBuffer, int offset, int count);
-    private static native void nEnableSkinningBuffers(long nativeBuilder, boolean enabled);
+    private static native void nBuilderEnableSkinningBuffers(long nativeBuilder, boolean enabled);
+    private static native void nBuilderFog(long nativeBuilder, boolean enabled);
     private static native void nBuilderLightChannel(long nativeRenderableManager, int channel, boolean enable);
     private static native void nBuilderInstances(long nativeRenderableManager, int instances);
 
@@ -966,6 +996,8 @@ public class RenderableManager {
     private static native void nSetPriority(long nativeRenderableManager, int i, int priority);
     private static native void nSetChannel(long nativeRenderableManager, int i, int channel);
     private static native void nSetCulling(long nativeRenderableManager, int i, boolean enabled);
+    private static native void nSetFogEnabled(long nativeRenderableManager, int i, boolean enabled);
+    private static native boolean nGetFogEnabled(long nativeRenderableManager, int i);
     private static native void nSetLightChannel(long nativeRenderableManager, int i, int channel, boolean enable);
     private static native boolean nGetLightChannel(long nativeRenderableManager, int i, int channel);
     private static native void nSetCastShadows(long nativeRenderableManager, int i, boolean enabled);
