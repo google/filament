@@ -111,9 +111,7 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
 
     assert_invariant(result == VK_SUCCESS);
 
-    VkImageAspectFlags aspectFlags = isDepthFormat(vkformat) ? VK_IMAGE_ASPECT_DEPTH_BIT
-                                                             : VK_IMAGE_ASPECT_COLOR_BIT;
-
+    VkImageAspectFlags const aspectFlags = getImageAspect(vkformat);
     const VkCommandBuffer cmdbuffer = mCommands->get().cmdbuffer;
 
     // We use VK_IMAGE_LAYOUT_GENERAL here because the spec says:
