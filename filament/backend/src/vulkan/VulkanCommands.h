@@ -85,7 +85,7 @@ public:
 //
 class VulkanCommands {
     public:
-        VulkanCommands(VkDevice device, uint32_t queueFamilyIndex);
+        VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex);
         ~VulkanCommands();
 
         // Creates a "current" command buffer if none exists, otherwise returns the current one.

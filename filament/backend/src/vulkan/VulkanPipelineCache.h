@@ -131,10 +131,6 @@ public:
     ~VulkanPipelineCache();
     void setDevice(VkDevice device, VmaAllocator allocator);
 
-    // Clients should initialize their copy of the raster state using this method. They can then
-    // mutate their copy and pass it back through bindRasterState().
-    const RasterState& getDefaultRasterState() const { return mDefaultRasterState; }
-
     // Creates new descriptor sets if necessary and binds them using vkCmdBindDescriptorSets.
     // Returns false if descriptor set allocation fails.
     bool bindDescriptors(VkCommandBuffer cmdbuffer) noexcept;
@@ -183,6 +179,15 @@ public:
     // Injects a dummy texture that can be used to clear out old descriptor sets.
     void setDummyTexture(VkImageView imageView) {
         mDummyTargetInfo.imageView = imageView;
+    }
+
+    inline RasterState getCurrentRasterState() const noexcept {
+	return mCurrentRasterState;
+    }
+
+    // We need to update this outside of bindRasterState due to VulkanDriver::draw.
+    inline void setCurrentRasterState(RasterState const& rasterState) noexcept {
+	mCurrentRasterState = rasterState;
     }
 
 private:
@@ -383,9 +388,9 @@ private:
     // Immutable state.
     VkDevice mDevice = VK_NULL_HANDLE;
     VmaAllocator mAllocator = VK_NULL_HANDLE;
-    const RasterState mDefaultRasterState;
 
     // Current requirements for the pipeline layout, pipeline, and descriptor sets.
+    RasterState mCurrentRasterState;
     PipelineKey mPipelineRequirements = {};
     DescriptorKey mDescriptorRequirements = {};
     VkSpecializationInfo* mSpecializationRequirements = {};
