@@ -397,6 +397,7 @@ bool MaterialCompiler::run(const Config& config) {
     includer.setIncludeDirectory(materialFilePath.getParent());
 
     builder
+        .noSamplerValidation(config.noSamplerValidation())
         .includeCallback(includer)
         .fileName(materialFilePath.getName().c_str())
         .platform(config.getPlatform())
