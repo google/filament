@@ -22,7 +22,7 @@
  */
 
 #include "ssaoUtils.fs"
-#include "geometry.fs"
+#include "../utils/geometry.fs"
 
 #ifndef COMPUTE_BENT_NORMAL
 #error COMPUTE_BENT_NORMAL must be set

@@ -17,7 +17,7 @@
 #ifndef FILAMENT_MATERIALS_SSAO_UTILS
 #define FILAMENT_MATERIALS_SSAO_UTILS
 
-#include "depthUtils.fs"
+#include "../utils/depthUtils.fs"
 
 vec2 pack(highp float normalizedDepth) {
     // we need 16-bits of precision

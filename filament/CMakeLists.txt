@@ -394,8 +394,8 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/sao.filamat"
         DEPENDS src/materials/ssao/ssaoUtils.fs
         DEPENDS src/materials/ssao/ssct.fs
-        DEPENDS src/materials/ssao/depthUtils.fs
-        DEPENDS src/materials/ssao/geometry.fs
+        DEPENDS src/materials/utils/depthUtils.fs
+        DEPENDS src/materials/utils/geometry.fs
         DEPENDS src/materials/ssao/saoImpl.fs
         DEPENDS src/materials/ssao/ssctImpl.fs
         APPEND
@@ -405,8 +405,8 @@ add_custom_command(
         OUTPUT "${MATERIAL_DIR}/saoBentNormals.filamat"
         DEPENDS src/materials/ssao/ssaoUtils.fs
         DEPENDS src/materials/ssao/ssct.fs
-        DEPENDS src/materials/ssao/depthUtils.fs
-        DEPENDS src/materials/ssao/geometry.fs
+        DEPENDS src/materials/utils/depthUtils.fs
+        DEPENDS src/materials/utils/geometry.fs
         DEPENDS src/materials/ssao/saoImpl.fs
         DEPENDS src/materials/ssao/ssctImpl.fs
         APPEND
