@@ -49,15 +49,6 @@ static constexpr size_t FROXEL_SLICE_COUNT = 16;
 static constexpr float FROXEL_FIRST_SLICE_DEPTH = 5;
 static constexpr float FROXEL_LAST_SLICE_DISTANCE = 100;
 
-// Max number of froxels limited by:
-//   - max ubo size [min 16KiB]
-//
-// Also, increasing the number of froxels adds more pressure on the "record buffer" which stores
-// the light indices per froxel. The record buffer is limited to min(16K[ubo], 64K[uint16]) entries,
-// so with 8192 froxels, we can store 2 lights per froxels assuming they're all used. In practice,
-// some froxels are not used, so we can store more.
-constexpr size_t FROXEL_BUFFER_MAX_ENTRY_COUNT = 8192;
-
 // The record buffer is limited by both the UBO size and our use of 16-bits indices.
 constexpr size_t RECORD_BUFFER_ENTRY_COUNT  = CONFIG_MINSPEC_UBO_SIZE;    // 16 KiB UBO minspec
 
@@ -95,14 +86,18 @@ Froxelizer::Froxelizer(FEngine& engine)
           mZLightNear(FROXEL_FIRST_SLICE_DEPTH),
           mZLightFar(FROXEL_LAST_SLICE_DISTANCE)
 {
+    static_assert(std::is_same_v<RecordBufferType, uint8_t>,
+            "Record Buffer must use bytes");
+
     if (UTILS_UNLIKELY(engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)) {
         return;
     }
 
     DriverApi& driverApi = engine.getDriverApi();
 
-    static_assert(std::is_same_v<RecordBufferType, uint8_t>,
-            "Record Buffer must use bytes");
+    mFroxelBufferEntryCount = std::min(
+            FROXEL_BUFFER_MAX_ENTRY_COUNT,
+            engine.getDriverApi().getMaxUniformBufferSize() / 4u);
 
     mRecordsBuffer = driverApi.createBufferObject(RECORD_BUFFER_ENTRY_COUNT,
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);

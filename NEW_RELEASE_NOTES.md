@@ -10,3 +10,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 - engine: a new feature to set a transform on the global-scale fog  [⚠️ **Recompile materials**]
 - engine: large-scale fog can now be opted-out on a per-renderable basis
+- engine: improve froxelizer resource efficiency [⚠️ **Recompile materials**]

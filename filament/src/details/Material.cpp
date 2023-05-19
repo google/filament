@@ -16,6 +16,7 @@
 
 #include "details/Material.h"
 
+#include "Froxelizer.h"
 #include "MaterialParser.h"
 
 #include "details/Engine.h"
@@ -238,7 +239,11 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     int const maxInstanceCount = (engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)
             ? 1 : CONFIG_MAX_INSTANCES;
 
-    const bool staticTextureWorkaround =
+    int const maxFroxelBufferHeight = std::min(
+            FROXEL_BUFFER_MAX_ENTRY_COUNT / 4,
+            engine.getDriverApi().getMaxUniformBufferSize() / 16u);
+
+    bool const staticTextureWorkaround =
             engine.getDriverApi().isWorkaroundNeeded(Workaround::A8X_STATIC_TEXTURE_TARGET_ERROR);
 
     mSpecializationConstants.reserve(constants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
@@ -248,6 +253,9 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     mSpecializationConstants.push_back({
                     +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES,
                     (int)maxInstanceCount });
+    mSpecializationConstants.push_back({
+                    +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT,
+                    (int)maxFroxelBufferHeight });
     mSpecializationConstants.push_back({
                     +ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND,
                     (bool)staticTextureWorkaround });

@@ -750,6 +750,10 @@ uint8_t MetalDriver::getMaxDrawBuffers() {
     return std::min(mContext->maxColorRenderTargets, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
 }
 
+size_t MetalDriver::getMaxUniformBufferSize() {
+    return 256 * 1024 * 1024;   // TODO: return the actual size instead of hardcoding the minspec
+}
+
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
         uint32_t byteOffset) {
     auto* ib = handle_cast<MetalIndexBuffer>(ibh);

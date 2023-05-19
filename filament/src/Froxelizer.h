@@ -35,6 +35,15 @@
 
 namespace filament {
 
+// Max number of froxels limited by:
+//   - max ubo size [min 16KiB]
+//
+// Also, increasing the number of froxels adds more pressure on the "record buffer" which stores
+// the light indices per froxel. The record buffer is limited to min(16K[ubo], 64K[uint16]) entries,
+// so with 8192 froxels, we can store 2 lights per froxels assuming they're all used. In practice,
+// some froxels are not used, so we can store more.
+constexpr size_t FROXEL_BUFFER_MAX_ENTRY_COUNT = 8192;
+
 class FEngine;
 class FCamera;
 class FTexture;
