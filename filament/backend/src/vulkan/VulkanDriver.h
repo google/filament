@@ -145,13 +145,13 @@ private:
 
     VulkanSwapChain* mCurrentSwapChain = nullptr;
     VulkanRenderTarget* mDefaultRenderTarget = nullptr;
-    VulkanRenderPass mCurrentRenderPass;
-    VmaAllocator mAllocator;
+    VulkanRenderPass mCurrentRenderPass = {};
+    VmaAllocator mAllocator = VK_NULL_HANDLE;
     VkDebugReportCallbackEXT mDebugCallback = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT mDebugMessenger = VK_NULL_HANDLE;
     std::string mCurrentDebugMarker;
 
-    VulkanContext mContext;
+    VulkanContext mContext = {};
     HandleAllocatorVK mHandleAllocator;
     VulkanPipelineCache mPipelineCache;
     VulkanDisposer mDisposer;
