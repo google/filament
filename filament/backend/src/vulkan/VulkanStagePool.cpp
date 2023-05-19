@@ -209,6 +209,8 @@ void VulkanStagePool::reset() noexcept {
         delete image;
     }
     mFreeStages.clear();
+
+    mCommands.reset();
 }
 
 } // namespace filament::backend

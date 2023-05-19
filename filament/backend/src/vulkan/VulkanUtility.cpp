@@ -26,13 +26,6 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-void createSemaphore(VkDevice device, VkSemaphore *semaphore) {
-    VkSemaphoreCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    VkResult result = vkCreateSemaphore(device, &createInfo, nullptr, semaphore);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateSemaphore error.");
-}
-
 VkFormat getVkFormat(ElementType type, bool normalized, bool integer) {
     using ElementType = ElementType;
     if (normalized) {

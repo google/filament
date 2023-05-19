@@ -64,11 +64,7 @@ VulkanPlatform::ExtensionSet VulkanPlatform::getRequiredInstanceExtensions() {
 
 VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWindow,
         VkInstance instance, uint64_t flags) noexcept {
-    SurfaceBundle bundle{
-            .surface = VK_NULL_HANDLE,
-            .width = 0,
-            .height = 0,
-    };
+    VkSurfaceKHR surface;
     #if defined(__APPLE__)
         NSView* nsview = (__bridge NSView*) nativeWindow;
         ASSERT_POSTCONDITION(nsview, "Unable to obtain Metal-backed NSView.");
@@ -79,7 +75,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
         createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
         createInfo.pView = (__bridge void*) nsview;
         VkResult result = vkCreateMacOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC,
-                (VkSurfaceKHR*) &bundle.surface);
+                (VkSurfaceKHR*) &surface);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateMacOSSurfaceMVK error.");
     #elif defined(IOS) && defined(METAL_AVAILABLE)
         CAMetalLayer* metalLayer = (CAMetalLayer*) nativeWindow;
@@ -91,10 +87,10 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
         createInfo.flags = 0;
         createInfo.pView = metalLayer;
         VkResult result = vkCreateIOSSurfaceMVK((VkInstance) instance, &createInfo, VKALLOC,
-                (VkSurfaceKHR*) &bundle.surface);
+                (VkSurfaceKHR*) &surface);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateIOSSurfaceMVK error.");
     #endif
-    return bundle;
+    return std::make_tuple(surface, VkExtent2D {});
 }
 
 } // namespace filament::backend

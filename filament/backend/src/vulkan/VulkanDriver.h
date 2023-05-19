@@ -135,7 +135,6 @@ private:
     inline void setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph, PrimitiveType pt,
             uint32_t offset, uint32_t minIndex, uint32_t maxIndex, uint32_t count);
 
-    void refreshSwapChain();
     void collectGarbage();
 
     VulkanPlatform* mPlatform = nullptr;

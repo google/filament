@@ -26,6 +26,8 @@
 #include <utils/Slice.h>
 #include <utils/bitset.h>
 
+#include <memory>
+
 VK_DEFINE_HANDLE(VmaAllocator)
 VK_DEFINE_HANDLE(VmaPool)
 
@@ -37,15 +39,77 @@ struct VulkanTexture;
 class VulkanStagePool;
 struct VulkanTimerQuery;
 
+// TODO: We want to use std::shared_ptr across the driver, but VulkanTexture also maps to
+// HwTexture so it's not possible. We can clean this up (remove the variant) once we break that
+// mapping.
+struct TexturePointer {
+    TexturePointer() = default;
+    explicit TexturePointer(VulkanTexture* tex) :mTexture(tex) {}
+    explicit TexturePointer(std::shared_ptr<VulkanTexture> tex) :mTexture(tex) {}
+
+    inline void operator=(VulkanTexture* tex) {
+        mTexture = tex;
+    }
+
+    inline void operator=(std::shared_ptr<VulkanTexture> tex) {
+        mTexture = tex;
+    }
+
+    // Be careful not to leak here. Should only be used in local scope.
+    operator VulkanTexture*() const {
+        if (mTexture.index() == 0) {
+            return std::get<0>(mTexture);
+        }
+        return std::get<1>(mTexture).get();
+    }
+
+    // Be careful not to leak here. Should only be used in local scope.
+    operator VulkanTexture const*() const {
+        if (mTexture.index() == 0) {
+            return std::get<0>(mTexture);
+        }
+        return std::get<1>(mTexture).get();
+    }
+
+    operator std::shared_ptr<VulkanTexture>() const {
+        assert_invariant(mTexture.index() == 1);
+        return std::get<1>(mTexture);
+    }
+
+    inline operator bool() const  {
+        if (mTexture.index() == 0) {
+            return std::get<0>(mTexture) != nullptr;
+        }
+        return (bool) std::get<1>(mTexture);
+    }
+
+    inline VulkanTexture* operator->() {
+        if (mTexture.index() == 0) {
+            return std::get<0>(mTexture);
+        }
+        return std::get<1>(mTexture).get();
+    }
+
+    inline VulkanTexture const* operator->() const {
+        if (mTexture.index() == 0) {
+            return std::get<0>(mTexture);
+        }
+        return std::get<1>(mTexture).get();
+    }
+
+private:
+    std::variant<VulkanTexture*, std::shared_ptr<VulkanTexture>> mTexture;
+};
+
 struct VulkanAttachment {
-    VulkanTexture* texture = nullptr;
+    TexturePointer texture;
     uint8_t level = 0;
     uint16_t layer = 0;
     VkImage getImage() const;
     VkFormat getFormat() const;
     VulkanLayout getLayout() const;
     VkExtent2D getExtent2D() const;
-    VkImageView getImageView(VkImageAspectFlags aspect) const;
+    VkImageView getImageView(VkImageAspectFlags aspect);
     // TODO: maybe embed aspect into the attachment or texture itself.
     VkImageSubresourceRange getSubresourceRange(VkImageAspectFlags aspect) const;
 };

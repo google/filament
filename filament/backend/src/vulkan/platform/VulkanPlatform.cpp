@@ -16,11 +16,25 @@
 
 #include "backend/platforms/VulkanPlatform.h"
 
+#include "vulkan/platform/VulkanPlatformSwapChainImpl.h"
 #include "vulkan/VulkanConstants.h"
 #include "vulkan/VulkanDriver.h"
 #include "vulkan/VulkanUtility.h"
 
 #include <bluevk/BlueVK.h>
+#include <utils/PrivateImplementation-impl.h>
+
+#include <unordered_map>
+
+#define SWAPCHAIN_RET_FUNC(func, handle, ...)                                                      \
+    if (mImpl->mSurfaceSwapChains.find(handle) != mImpl->mSurfaceSwapChains.end()) {               \
+        return static_cast<VulkanPlatformSurfaceSwapChain*>(handle)->func(__VA_ARGS__);            \
+    } else if (mImpl->mHeadlessSwapChains.find(handle) != mImpl->mHeadlessSwapChains.end()) {      \
+        return static_cast<VulkanPlatformHeadlessSwapChain*>(handle)->func(__VA_ARGS__);           \
+    } else {                                                                                       \
+        PANIC_PRECONDITION("Bad handle for swapchain");                                            \
+        return {};                                                                                 \
+    }
 
 using namespace utils;
 using namespace bluevk;
@@ -46,8 +60,8 @@ const std::string_view DESIRED_LAYERS[] = {
 FixedCapacityVector<const char*> getEnabledLayers() {
     constexpr size_t kMaxEnabledLayersCount = sizeof(DESIRED_LAYERS) / sizeof(DESIRED_LAYERS[0]);
 
-    const FixedCapacityVector<VkLayerProperties> availableLayers =
-            filament::backend::enumerate(vkEnumerateInstanceLayerProperties);
+    const FixedCapacityVector<VkLayerProperties> availableLayers
+            = filament::backend::enumerate(vkEnumerateInstanceLayerProperties);
 
     auto enabledLayers = FixedCapacityVector<const char*>::with_capacity(kMaxEnabledLayersCount);
     for (auto const& desired: DESIRED_LAYERS) {
@@ -104,8 +118,8 @@ void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
     const int major = VK_VERSION_MAJOR(deviceProperties.apiVersion);
     const int minor = VK_VERSION_MINOR(deviceProperties.apiVersion);
 
-    const FixedCapacityVector<VkPhysicalDevice> physicalDevices =
-            filament::backend::enumerate(vkEnumeratePhysicalDevices, instance);
+    const FixedCapacityVector<VkPhysicalDevice> physicalDevices
+            = filament::backend::enumerate(vkEnumeratePhysicalDevices, instance);
 
     utils::slog.i << "Selected physical device '" << deviceProperties.deviceName << "' from "
                   << physicalDevices.size() << " physical devices. "
@@ -119,8 +133,8 @@ void printDepthFormats(VkPhysicalDevice device) {
     // For diagnostic purposes, print useful information about available depth formats.
     // Note that Vulkan is more constrained than OpenGL ES 3.1 in this area.
     if constexpr (VK_ENABLE_VALIDATION && FILAMENT_VULKAN_VERBOSE) {
-        const VkFormatFeatureFlags required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
-                                              VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+        const VkFormatFeatureFlags required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+                                              | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
         utils::slog.i << "Sampleable depth formats: ";
         for (VkFormat format = (VkFormat) 1;;) {
             VkFormatProperties props;
@@ -148,8 +162,8 @@ ExtensionSet getInstanceExtensions() {
             VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
     };
     ExtensionSet exts;
-    FixedCapacityVector<VkExtensionProperties> const availableExts =
-            filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
+    FixedCapacityVector<VkExtensionProperties> const availableExts
+            = filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
                     static_cast<char const*>(nullptr) /* pLayerName */);
     for (auto const& extProps: availableExts) {
         for (auto const& targetExt: TARGET_EXTS) {
@@ -171,8 +185,8 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
     };
     ExtensionSet exts;
     // Identify supported physical device extensions
-    const FixedCapacityVector<VkExtensionProperties> extensions =
-            filament::backend::enumerate(vkEnumerateDeviceExtensionProperties, device,
+    FixedCapacityVector<VkExtensionProperties> const extensions
+            = filament::backend::enumerate(vkEnumerateDeviceExtensionProperties, device,
                     static_cast<const char*>(nullptr) /* pLayerName */);
     for (auto const& extension: extensions) {
         for (auto const& targetExt: TARGET_EXTS) {
@@ -193,8 +207,8 @@ VkInstance createInstance(const ExtensionSet& requiredExts) {
     auto const enabledLayers = getEnabledLayers();
     if (!enabledLayers.empty()) {
         // If layers are supported, Check if VK_EXT_validation_features is supported.
-        FixedCapacityVector<VkExtensionProperties> const availableValidationExts =
-                filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
+        FixedCapacityVector<VkExtensionProperties> const availableValidationExts
+                = filament::backend::enumerate(vkEnumerateInstanceExtensionProperties,
                         "VK_LAYER_KHRONOS_validation");
         for (auto const& extProps: availableValidationExts) {
             if (!strcmp(extProps.extensionName, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
@@ -236,8 +250,8 @@ VkInstance createInstance(const ExtensionSet& requiredExts) {
     // Create the Vulkan instance.
     VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.apiVersion =
-            VK_MAKE_API_VERSION(0, VK_REQUIRED_VERSION_MAJOR, VK_REQUIRED_VERSION_MINOR, 0);
+    appInfo.apiVersion
+            = VK_MAKE_API_VERSION(0, VK_REQUIRED_VERSION_MAJOR, VK_REQUIRED_VERSION_MINOR, 0);
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceCreateInfo.pApplicationInfo = &appInfo;
     instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
@@ -277,6 +291,8 @@ VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
     VkDeviceCreateInfo deviceCreateInfo = {};
     FixedCapacityVector<const char*> requestExtensions;
     requestExtensions.reserve(deviceExtensions.size() + 1);
+
+    // TODO:We don't really need this if we only ever expect headless swapchains.
     requestExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     for (auto ext: deviceExtensions) {
         requestExtensions.push_back(ext.data());
@@ -343,8 +359,8 @@ std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(VkPhysicalDevice device,
     }
 
     // debugUtils and debugMarkers extensions are used mutually exclusively.
-    if (newInstExts.find(VK_EXT_DEBUG_UTILS_EXTENSION_NAME) != newInstExts.end() &&
-            newDeviceExts.find(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) != newDeviceExts.end()) {
+    if (newInstExts.find(VK_EXT_DEBUG_UTILS_EXTENSION_NAME) != newInstExts.end()
+            && newDeviceExts.find(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) != newDeviceExts.end()) {
         newDeviceExts.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     }
     return std::tuple(newInstExts, newDeviceExts);
@@ -363,8 +379,8 @@ FixedCapacityVector<VkQueueFamilyProperties> getPhysicalDeviceQueueFamilyPropert
 }
 
 uint32_t identifyGraphicsQueueFamilyIndex(VkPhysicalDevice physicalDevice) {
-    const FixedCapacityVector<VkQueueFamilyProperties> queueFamiliesProperties =
-            getPhysicalDeviceQueueFamilyPropertiesHelper(physicalDevice);
+    const FixedCapacityVector<VkQueueFamilyProperties> queueFamiliesProperties
+            = getPhysicalDeviceQueueFamilyPropertiesHelper(physicalDevice);
     uint32_t graphicsQueueFamilyIndex = 0xFFFFFFFF;
     for (uint32_t j = 0; j < queueFamiliesProperties.size(); ++j) {
         VkQueueFamilyProperties props = queueFamiliesProperties[j];
@@ -399,8 +415,8 @@ inline int deviceTypeOrder(VkPhysicalDeviceType deviceType) {
 }
 
 VkPhysicalDevice selectPhysicalDevice(VkInstance instance) {
-    FixedCapacityVector<VkPhysicalDevice> const physicalDevices =
-            filament::backend::enumerate(vkEnumeratePhysicalDevices, instance);
+    FixedCapacityVector<VkPhysicalDevice> const physicalDevices
+            = filament::backend::enumerate(vkEnumeratePhysicalDevices, instance);
     struct DeviceInfo {
         VkPhysicalDevice device = VK_NULL_HANDLE;
         VkPhysicalDeviceType deviceType = VK_PHYSICAL_DEVICE_TYPE_OTHER;
@@ -416,18 +432,24 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance) {
         int const minor = VK_VERSION_MINOR(targetDeviceProperties.apiVersion);
 
         // Does the device support the required Vulkan level?
-        if (major < VK_REQUIRED_VERSION_MAJOR) { continue; }
-        if (major == VK_REQUIRED_VERSION_MAJOR && minor < VK_REQUIRED_VERSION_MINOR) { continue; }
+        if (major < VK_REQUIRED_VERSION_MAJOR) {
+            continue;
+        }
+        if (major == VK_REQUIRED_VERSION_MAJOR && minor < VK_REQUIRED_VERSION_MINOR) {
+            continue;
+        }
 
         // Does the device have any command queues that support graphics?
         // In theory, we should also ensure that the device supports presentation of our
         // particular VkSurface, but we don't have a VkSurface yet, so we'll skip this requirement.
-        if (identifyGraphicsQueueFamilyIndex(candidateDevice) == 0xffff) { continue; }
+        if (identifyGraphicsQueueFamilyIndex(candidateDevice) == 0xffff) {
+            continue;
+        }
 
         // Does the device support the VK_KHR_swapchain extension?
-        FixedCapacityVector<VkExtensionProperties> const extensions =
-                filament::backend::enumerate(vkEnumerateDeviceExtensionProperties, candidateDevice,
-                        static_cast<char const*>(nullptr) /* pLayerName */);
+        FixedCapacityVector<VkExtensionProperties> const extensions
+                = filament::backend::enumerate(vkEnumerateDeviceExtensionProperties,
+                        candidateDevice, static_cast<char const*>(nullptr) /* pLayerName */);
         bool supportsSwapchain = false;
         for (auto const& extension: extensions) {
             if (!strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME)) {
@@ -435,15 +457,21 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance) {
                 break;
             }
         }
-        if (!supportsSwapchain) { continue; }
+        if (!supportsSwapchain) {
+            continue;
+        }
         deviceList[deviceInd].device = candidateDevice;
         deviceList[deviceInd].deviceType = targetDeviceProperties.deviceType;
     }
 
     // Sort the found devices
     std::sort(deviceList.begin(), deviceList.end(), [](DeviceInfo const& a, DeviceInfo const& b) {
-        if (a.device == VK_NULL_HANDLE) { return true; }
-        if (b.device == VK_NULL_HANDLE) { return false; }
+        if (a.device == VK_NULL_HANDLE) {
+            return true;
+        }
+        if (b.device == VK_NULL_HANDLE) {
+            return false;
+        }
         return deviceTypeOrder(a.deviceType) <= deviceTypeOrder(b.deviceType);
     });
 
@@ -458,16 +486,45 @@ VkFormat findSupportedFormat(VkPhysicalDevice device) {
     for (VkFormat format: formats) {
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(device, format, &props);
-        if ((props.optimalTilingFeatures & features) == features) { return format; }
+        if ((props.optimalTilingFeatures & features) == features) {
+            return format;
+        }
     }
     return VK_FORMAT_UNDEFINED;
 }
 
 }// anonymous namespace
 
+using SwChainHandle = VulkanPlatform::SwChainHandle;
+
+struct VulkanPlatformPrivate {
+    VkInstance mInstance = VK_NULL_HANDLE;
+    VkPhysicalDevice mPhysicalDevice = VK_NULL_HANDLE;
+    VkDevice mDevice = VK_NULL_HANDLE;
+    uint32_t mGraphicsQueueFamilyIndex = 0xFFFFFFFF;
+    uint32_t mGraphicsQueueIndex = 0;
+    VkQueue mGraphicsQueue = VK_NULL_HANDLE;
+    VulkanContext mContext = {};
+
+    // We use a map to both map a handle (i.e. SwChainHandle) to the concrete type and also to
+    // store the actual swapchain struct, which is either backed-by-surface or headless.
+    std::unordered_set<SwChainHandle> mSurfaceSwapChains;
+    std::unordered_set<SwChainHandle> mHeadlessSwapChains;
+};
+
 void VulkanPlatform::terminate() {
-    vkDestroyDevice(mDevice, VKALLOC);
-    vkDestroyInstance(mInstance, VKALLOC);
+    for (auto swapchain: mImpl->mHeadlessSwapChains) {
+        delete static_cast<VulkanPlatformHeadlessSwapChain*>(swapchain);
+    }
+    mImpl->mHeadlessSwapChains.clear();
+
+    for (auto swapchain: mImpl->mSurfaceSwapChains) {
+        delete static_cast<VulkanPlatformSurfaceSwapChain*>(swapchain);
+    }
+    mImpl->mSurfaceSwapChains.clear();
+
+    vkDestroyDevice(mImpl->mDevice, VKALLOC);
+    vkDestroyInstance(mImpl->mInstance, VKALLOC);
 }
 
 // This is the main entry point for context creation.
@@ -481,65 +538,151 @@ Driver* VulkanPlatform::createDriver(void* const sharedContext,
     auto instExts = getInstanceExtensions();
     instExts.merge(getRequiredInstanceExtensions());
 
-    mInstance = createInstance(instExts);
-    assert_invariant(mInstance != VK_NULL_HANDLE);
+    mImpl->mInstance = createInstance(instExts);
+    assert_invariant(mImpl->mInstance != VK_NULL_HANDLE);
 
-    bluevk::bindInstance(mInstance);
+    bluevk::bindInstance(mImpl->mInstance);
 
-    mPhysicalDevice = selectPhysicalDevice(mInstance);
-    assert_invariant(mPhysicalDevice != VK_NULL_HANDLE);
+    mImpl->mPhysicalDevice = selectPhysicalDevice(mImpl->mInstance);
+    assert_invariant(mImpl->mPhysicalDevice != VK_NULL_HANDLE);
 
     // Initialize the following fields: physicalDeviceProperties, memoryProperties,
     // physicalDeviceFeatures, graphicsQueueFamilyIndex.
-    vkGetPhysicalDeviceProperties(mPhysicalDevice, &context.mPhysicalDeviceProperties);
-    vkGetPhysicalDeviceFeatures(mPhysicalDevice, &context.mPhysicalDeviceFeatures);
-    vkGetPhysicalDeviceMemoryProperties(mPhysicalDevice, &context.mMemoryProperties);
+    vkGetPhysicalDeviceProperties(mImpl->mPhysicalDevice, &context.mPhysicalDeviceProperties);
+    vkGetPhysicalDeviceFeatures(mImpl->mPhysicalDevice, &context.mPhysicalDeviceFeatures);
+    vkGetPhysicalDeviceMemoryProperties(mImpl->mPhysicalDevice, &context.mMemoryProperties);
 
-    mGraphicsQueueFamilyIndex = identifyGraphicsQueueFamilyIndex(mPhysicalDevice);
-    assert_invariant(mGraphicsQueueFamilyIndex != 0xFFFFFFFF);
+    mImpl->mGraphicsQueueFamilyIndex = identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice);
+    assert_invariant(mImpl->mGraphicsQueueFamilyIndex != 0xFFFFFFFF);
 
-    printDeviceInfo(mInstance, mPhysicalDevice);
+    printDeviceInfo(mImpl->mInstance, mImpl->mPhysicalDevice);
 
-    auto deviceExts = getDeviceExtensions(mPhysicalDevice);
+    auto deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice);
     {
-        auto [prunedInstExts, prunedDeviceExts] =
-                pruneExtensions(mPhysicalDevice, instExts, deviceExts);
+        auto [prunedInstExts, prunedDeviceExts]
+                = pruneExtensions(mImpl->mPhysicalDevice, instExts, deviceExts);
         instExts = prunedInstExts;
         deviceExts = prunedDeviceExts;
     }
 
-    mDevice = createLogicalDevice(mPhysicalDevice, context.mPhysicalDeviceFeatures,
-            mGraphicsQueueFamilyIndex, deviceExts);
-    assert_invariant(mDevice != VK_NULL_HANDLE);
+    mImpl->mDevice = createLogicalDevice(mImpl->mPhysicalDevice, context.mPhysicalDeviceFeatures,
+            mImpl->mGraphicsQueueFamilyIndex, deviceExts);
+    assert_invariant(mImpl->mDevice != VK_NULL_HANDLE);
 
-    vkGetDeviceQueue(mDevice, mGraphicsQueueFamilyIndex, mGraphicsQueueIndex, &mGraphicsQueue);
-    assert_invariant(mGraphicsQueue != VK_NULL_HANDLE);
+    vkGetDeviceQueue(mImpl->mDevice, mImpl->mGraphicsQueueFamilyIndex, mImpl->mGraphicsQueueIndex,
+            &mImpl->mGraphicsQueue);
+    assert_invariant(mImpl->mGraphicsQueue != VK_NULL_HANDLE);
 
     // Store the extension support in the context
-    context.mDebugUtilsSupported =
-            instExts.find(VK_EXT_DEBUG_UTILS_EXTENSION_NAME) != instExts.end();
-    context.mPortabilityEnumerationSupported =
-            instExts.find(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) != instExts.end();
-    context.mDebugMarkersSupported =
-            deviceExts.find(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) != deviceExts.end();
-    context.mPortabilitySubsetSupported =
-            deviceExts.find(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) != deviceExts.end();
-    context.mMaintenanceSupported[0] =
-            deviceExts.find(VK_KHR_MAINTENANCE1_EXTENSION_NAME) != deviceExts.end();
-    context.mMaintenanceSupported[1] =
-            deviceExts.find(VK_KHR_MAINTENANCE2_EXTENSION_NAME) != deviceExts.end();
-    context.mMaintenanceSupported[2] =
-            deviceExts.find(VK_KHR_MAINTENANCE3_EXTENSION_NAME) != deviceExts.end();
+    context.mDebugUtilsSupported
+            = instExts.find(VK_EXT_DEBUG_UTILS_EXTENSION_NAME) != instExts.end();
+    context.mPortabilityEnumerationSupported
+            = instExts.find(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) != instExts.end();
+    context.mDebugMarkersSupported
+            = deviceExts.find(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) != deviceExts.end();
+    context.mPortabilitySubsetSupported
+            = deviceExts.find(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) != deviceExts.end();
+    context.mMaintenanceSupported[0]
+            = deviceExts.find(VK_KHR_MAINTENANCE1_EXTENSION_NAME) != deviceExts.end();
+    context.mMaintenanceSupported[1]
+            = deviceExts.find(VK_KHR_MAINTENANCE2_EXTENSION_NAME) != deviceExts.end();
+    context.mMaintenanceSupported[2]
+            = deviceExts.find(VK_KHR_MAINTENANCE3_EXTENSION_NAME) != deviceExts.end();
 
     // Choose a depth format that meets our requirements. Take care not to include stencil formats
     // just yet, since that would require a corollary change to the "aspect" flags for the VkImage.
-    context.mDepthFormat = findSupportedFormat(mPhysicalDevice);
+    context.mDepthFormat = findSupportedFormat(mImpl->mPhysicalDevice);
 
-    printDepthFormats(mPhysicalDevice);
+    printDepthFormats(mImpl->mPhysicalDevice);
+
+    // Keep a copy of context for swapchains.
+    mImpl->mContext = context;
 
     return VulkanDriver::create(this, context, driverConfig);
 }
 
+// This needs to be explictly written for
+// utils::PrivateImplementation<VulkanPlatformPrivate>::PrivateImplementation() to be properly
+// defined.
+VulkanPlatform::VulkanPlatform() = default;
+
 VulkanPlatform::~VulkanPlatform() = default;
+
+VulkanPlatform::SwapChainBundle VulkanPlatform::getSwapChainBundle(SwChainHandle handle) {
+    SWAPCHAIN_RET_FUNC(getSwapChainBundle, handle, )
+}
+
+VkResult VulkanPlatform::acquire(SwChainHandle handle, VkSemaphore clientSignal, uint32_t* index) {
+    SWAPCHAIN_RET_FUNC(acquire, handle, clientSignal, index)
+}
+
+VkResult VulkanPlatform::present(SwChainHandle handle, uint32_t index,
+        VkSemaphore finishedDrawing) {
+    SWAPCHAIN_RET_FUNC(present, handle, index, finishedDrawing)
+}
+
+bool VulkanPlatform::hasResized(SwChainHandle handle) {
+    SWAPCHAIN_RET_FUNC(hasResized, handle, )
+}
+
+VkResult VulkanPlatform::recreate(SwChainHandle handle) {
+    SWAPCHAIN_RET_FUNC(recreate, handle, )
+}
+
+void VulkanPlatform::destroy(SwChainHandle handle) {
+    if (mImpl->mSurfaceSwapChains.erase(handle)) {
+        delete static_cast<VulkanPlatformSurfaceSwapChain*>(handle);
+    } else if (mImpl->mHeadlessSwapChains.erase(handle)) {
+        delete static_cast<VulkanPlatformHeadlessSwapChain*>(handle);
+    } else {
+        PANIC_PRECONDITION("Bad handle for swapchain");
+    }
+}
+
+SwChainHandle VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
+        VkExtent2D extent) {
+    assert_invariant(nativeWindow || (extent.width != 0 && extent.height != 0));
+    bool const headless = extent.width != 0 && extent.height != 0;
+    if (headless) {
+        VulkanPlatformHeadlessSwapChain* swapchain = new VulkanPlatformHeadlessSwapChain(
+                mImpl->mContext, mImpl->mDevice, mImpl->mGraphicsQueue, extent);
+        mImpl->mHeadlessSwapChains.insert(swapchain);
+        return swapchain;
+    }
+
+    auto [surface, fallbackExtent] = createVkSurfaceKHR(nativeWindow, mImpl->mInstance, flags);
+    // The VulkanPlatformSurfaceSwapChain now `owns` the surface.
+    VulkanPlatformSurfaceSwapChain* swapchain = new VulkanPlatformSurfaceSwapChain(mImpl->mContext,
+            mImpl->mPhysicalDevice, mImpl->mDevice, mImpl->mGraphicsQueue, mImpl->mInstance,
+            surface, fallbackExtent);
+    mImpl->mSurfaceSwapChains.insert(swapchain);
+    return swapchain;
+}
+
+VkInstance VulkanPlatform::getInstance() const noexcept {
+    return mImpl->mInstance;
+}
+
+VkDevice VulkanPlatform::getDevice() const noexcept {
+    return mImpl->mDevice;
+}
+
+VkPhysicalDevice VulkanPlatform::getPhysicalDevice() const noexcept {
+    return mImpl->mPhysicalDevice;
+}
+
+uint32_t VulkanPlatform::getGraphicsQueueFamilyIndex() const noexcept {
+    return mImpl->mGraphicsQueueFamilyIndex;
+}
+
+uint32_t VulkanPlatform::getGraphicsQueueIndex() const noexcept {
+    return mImpl->mGraphicsQueueIndex;
+}
+
+VkQueue VulkanPlatform::getGraphicsQueue() const noexcept {
+    return mImpl->mGraphicsQueue;
+}
+
+#undef SWAPCHAIN
 
 }// namespace filament::backend

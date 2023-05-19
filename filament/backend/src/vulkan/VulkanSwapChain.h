@@ -14,81 +14,80 @@
  * limitations under the License.
  */
 
- #ifndef TNT_FILAMENT_BACKEND_VULKANSWAPCHAIN_H
- #define TNT_FILAMENT_BACKEND_VULKANSWAPCHAIN_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANSWAPCHAIN_H
+#define TNT_FILAMENT_BACKEND_VULKANSWAPCHAIN_H
 
 #include "VulkanContext.h"
 #include "VulkanDriver.h"
 
-#include <memory>
+#include <backend/platforms/VulkanPlatform.h>
 
 #include <bluevk/BlueVK.h>
 #include <utils/FixedCapacityVector.h>
+
+#include <memory>
 
 using namespace bluevk;
 
 namespace filament::backend {
 
+struct VulkanHeadlessSwapChain;
+struct VulkanSurfaceSwapChain;
+
+// A wrapper around the plaform implementation of swapchain.
 struct VulkanSwapChain : public HwSwapChain {
-    // The *fallbackExtent* parameter is for the case where the extent returned by the physical
-    // surface is 0xFFFFFFFF.
-    VulkanSwapChain(VkDevice device, VkPhysicalDevice physicalDevice,
-	    uint32_t graphicsQueueFamilyIndex, VkQueue graphicsQueue, VmaAllocator allocator,
-	    std::shared_ptr<VulkanCommands> commands, VulkanContext const& context,
-	    VulkanStagePool& stagePool, VkSurfaceKHR vksurface,
-	    VkExtent2D fallbackExtent = {.width = 640, .height = 320});
+    VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& context, VmaAllocator allocator,
+            std::shared_ptr<VulkanCommands> commands, VulkanStagePool& stagePool,
+            void* nativeWindow, uint64_t flags, VkExtent2D extent = {0, 0});
 
-    // Headless constructor.
-    VulkanSwapChain(VkDevice device, VkPhysicalDevice physicalDevice,
-	    uint32_t graphicsQueueFamilyIndex, VkQueue graphicsQueue, VmaAllocator allocator,
-	    std::shared_ptr<VulkanCommands> commands, VulkanContext const& context,
-	    VulkanStagePool& stagePool, uint32_t width, uint32_t height);
+    ~VulkanSwapChain();
 
-    bool acquire();
-    void destroy();
-    void recreate();
-    void makePresentable();
-    bool hasResized() const;
+    void present();
 
-    VulkanTexture& getColorTexture();
-    VulkanTexture& getDepthTexture();
-    uint32_t getSwapIndex() const { return mCurrentSwapIndex; }
+    void acquire(bool& reized);
 
-    VkSurfaceKHR surface = {};
-    VkSwapchainKHR swapchain = {};
-    VkSurfaceFormatKHR surfaceFormat = {};
-    VkExtent2D clientSize = {};
-    VkQueue presentQueue = {};
-    VkQueue headlessQueue = {};
+    inline std::shared_ptr<VulkanTexture> getCurrentColor() const noexcept {
+        return mColors[mCurrentSwapIndex];
+    }
 
-    // This is signaled when vkAcquireNextImageKHR succeeds, and is waited on by the first
-    // submission.
-    VkSemaphore imageAvailable = VK_NULL_HANDLE;
+    inline std::shared_ptr<VulkanTexture> getDepth() const noexcept {
+        return mDepth;
+    }
 
-    // This is true after the swap chain image has been acquired, but before it has been presented.
-    bool acquired = false;
+    inline bool isFirstRenderPass() const noexcept {
+        return mIsFirstRenderPass;
+    }
 
-    bool suboptimal = false;
-    bool firstRenderPass = false;
+    inline void markFirstRenderPass() noexcept {
+        mIsFirstRenderPass = false;
+    }
+
+    inline VkExtent2D getExtent() noexcept {
+        return mExtent;
+    }
 
 private:
-    void create();
+    void update();
 
-    VkDevice mDevice;
-    VkPhysicalDevice mPhysicalDevice;
+    VulkanPlatform* mPlatform;
     std::shared_ptr<VulkanCommands> mCommands;
     VmaAllocator mAllocator;
-    VulkanContext const& mContext;
     VulkanStagePool& mStagePool;
-    uint32_t mCurrentSwapIndex = 0u;
-    const VkExtent2D mFallbackExtent = {};
+    bool const mHeadless;
 
-    // Color attachments are swapped, but depth is not. Typically there are 2 or 3 color attachments
-    // in a swap chain.
-    utils::FixedCapacityVector<std::unique_ptr<VulkanTexture>> mColor;
-    std::unique_ptr<VulkanTexture> mDepth;
+    // We create VulkanTextures based on VkImages. VulkanTexture has facilities for doing layout
+    // transitions, which are useful here. We use std::shared_ptr because they will be shared with
+    // VulkanRenderTarget.
+    utils::FixedCapacityVector<std::shared_ptr<VulkanTexture>> mColors;
+    std::shared_ptr<VulkanTexture> mDepth;
+    VkExtent2D mExtent;
+    VkSemaphore mImageReady;
+    uint32_t mCurrentSwapIndex;
+    bool mAcquired;
+    bool mIsFirstRenderPass;
 };
 
-} // namespace filament::backend
 
-#endif // TNT_FILAMENT_BACKEND_VULKANSWAPCHAIN_H
+}// namespace filament::backend
+
+#endif// TNT_FILAMENT_BACKEND_VULKANSWAPCHAIN_H

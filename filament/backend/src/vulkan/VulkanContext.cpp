@@ -55,7 +55,7 @@ VkExtent2D VulkanAttachment::getExtent2D() const {
     return { std::max(1u, texture->width >> level), std::max(1u, texture->height >> level) };
 }
 
-VkImageView VulkanAttachment::getImageView(VkImageAspectFlags aspect) const {
+VkImageView VulkanAttachment::getImageView(VkImageAspectFlags aspect) {
     assert_invariant(texture);
     return texture->getAttachmentView(getSubresourceRange(aspect));
 }
@@ -136,7 +136,8 @@ VulkanTimestamps::QueryResult VulkanTimestamps::getResult(VulkanTimerQuery const
     VkResult vkresult =
             vkGetQueryPoolResults(mDevice, mPool, index, 2, dataSize, (void*) result.data(),
                     stride, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
-    ASSERT_POSTCONDITION(vkresult == VK_SUCCESS, "vkGetQueryPoolResults error.");
+    ASSERT_POSTCONDITION(vkresult == VK_SUCCESS || vkresult == VK_NOT_READY,
+            "vkGetQueryPoolResults error: %d", static_cast<int32_t>(vkresult));
     if (vkresult == VK_NOT_READY) {
         return {0, 0, 0, 0};
     }

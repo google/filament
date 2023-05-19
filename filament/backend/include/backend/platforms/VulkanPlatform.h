@@ -21,24 +21,120 @@
 
 #include <bluevk/BlueVK.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/PrivateImplementation.h>
 
+#include <tuple>
 #include <unordered_set>
 
 namespace filament::backend {
 
+using SwapChain = Platform::SwapChain;
+
+/**
+ * Private implementation details for the provided vulkan platform.
+ */
+struct VulkanPlatformPrivate;
+
 /**
  * A Platform interface that creates a Vulkan backend.
  */
-
-class VulkanPlatform : public Platform {
+class VulkanPlatform : public Platform, public utils::PrivateImplementation<VulkanPlatformPrivate> {
 public:
+    /**
+     *
+     * Shorthand for the pointer to the Platform SwapChain struct, we use it also as a handle (i.e.
+     * identifier for the swapchain). (We didn't name this SwapChainHandle to avoid naming conflict
+     * with Handle.h).
+     */
+    using SwChainHandle = Platform::SwapChain*;
+
+
+    /**
+     * Collection of images, formats, and extent (width/height) that defines the swapchain.
+     */
+    struct SwapChainBundle {
+        utils::FixedCapacityVector<VkImage> colors;
+        VkImage depth = VK_NULL_HANDLE;
+        VkFormat colorFormat = VK_FORMAT_UNDEFINED;
+        VkFormat depthFormat = VK_FORMAT_UNDEFINED;
+        VkExtent2D extent = {0, 0};
+    };
+
+    VulkanPlatform();
+
     ~VulkanPlatform() override;
 
     Driver* createDriver(void* const sharedContext,
             Platform::DriverConfig const& driverConfig) noexcept override;
 
-    int getOSVersion() const noexcept override { return 0; }
+    int getOSVersion() const noexcept override {
+        return 0;
+    }
 
+    /**
+     * Get the images handles and format of the memory backing the swapchain. This should be called
+     * after createSwapChain() or after recreateIfResized().
+     * @param swapchain   The handle returned by createSwapChain()
+     * @return            An array of VkImages
+     */
+    virtual SwapChainBundle getSwapChainBundle(SwChainHandle handle);
+
+    /**
+     * Acquire the next image for rendering. The `index` will be written with an non-negative
+     * integer that the backend can use to index into the `SwapChainBundle.colors` array. The
+     * corresponding VkImage will be used as the output color attachment. The client should signal
+     * the `clientSignal` semaphore when the image is ready to be used by the backend.
+     * @param handle         The handle returned by createSwapChain()
+     * @param clientSignal   The semaphore that the client will signal to indicate that the backend
+     *                       may render into the image.
+     * @param index          Pointer to memory that will be filled with the index that corresponding
+     *                       to an image in the `SwapChainBundle.colors` array.
+     * @return               Result of acquire
+     */
+    virtual VkResult acquire(SwChainHandle handle, VkSemaphore clientSignal, uint32_t* index);
+
+    /**
+     * Present the image corresponding to `index` to the display. The client should wait on
+     * `finishedDrawing` before presenting.
+     * @param handle             The handle returned by createSwapChain()
+     * @param index              Index that corresponding to an image in the
+     *                           `SwapChainBundle.colors` array.
+     * @param finishedDrawing    Backend passes in a semaphore that the client will signal to
+     *                           indicate that the client may render into the image.
+     * @return                   Result of present
+     */
+    virtual VkResult present(SwChainHandle handle, uint32_t index, VkSemaphore finishedDrawing);
+
+    /**
+     * Check if the surface size has changed.
+     * @param handle             The handle returned by createSwapChain()
+     * @return                   Whether the swapchain has been resized
+     */
+    virtual bool hasResized(SwChainHandle handle);
+
+    /**
+     * Carry out a recreation of the swapchain.
+     * @param handle             The handle returned by createSwapChain()
+     * @return                   Result of the recreation
+     */
+    virtual VkResult recreate(SwChainHandle handle);
+
+    /**
+     * Create a swapchain given a platform window, or if given a null `nativeWindow`, then we
+     * try to create a headless swapchain with the given `extent`.
+     * @param flags     Optional parameters passed to the client as defined in
+     *                  Filament::SwapChain.h.
+     * @param extent    Optional width and height that indicates the size of the headless swapchain.
+     * @return          Result of the operation
+     */
+    virtual SwChainHandle createSwapChain(void* nativeWindow, uint64_t flags = 0,
+            VkExtent2D extent = {0, 0});
+
+    /**
+     * Destroy the swapchain.
+     * @param handle    The handle returned by createSwapChain()
+     */
+    virtual void destroy(SwChainHandle handle);
 
     /**
      * Clean up any resources owned by the Platform. For example, if the Vulkan instance handle was
@@ -49,63 +145,46 @@ public:
     /**
      * @return The instance (VkInstance) for the Vulkan backend.
      */
-    inline VkInstance getInstance() const noexcept { return mInstance; }
+    VkInstance getInstance() const noexcept;
 
     /**
      * @return The logical device (VkDevice) that was selected as the backend device.
      */
-    inline VkDevice getDevice() const noexcept { return mDevice; }
+    VkDevice getDevice() const noexcept;
 
     /**
      * @return The physical device (i.e gpu) that was selected as the backend physical device.
      */
-    inline VkPhysicalDevice getPhysicalDevice() const noexcept { return mPhysicalDevice; }
+    VkPhysicalDevice getPhysicalDevice() const noexcept;
 
     /**
      * @return The family index of the graphics queue selected for the Vulkan backend.
      */
-    inline uint32_t getGraphicsQueueFamilyIndex() const noexcept {
-        return mGraphicsQueueFamilyIndex;
-    }
+    uint32_t getGraphicsQueueFamilyIndex() const noexcept;
 
     /**
      * @return The index of the graphics queue (if there are multiple graphics queues)
      *         selected for the Vulkan backend.
      */
-    inline uint32_t getGraphicsQueueIndex() const noexcept { return mGraphicsQueueIndex; }
+    uint32_t getGraphicsQueueIndex() const noexcept;
 
     /**
      * @return The queue that was selected for the Vulkan backend.
      */
-    inline VkQueue getGraphicsQueue() const noexcept { return mGraphicsQueue; }
-
-    // TODO: move this to private when swapchains are created via platform.
-    struct SurfaceBundle {
-        void* surface;
-        // On certain platforms, the extent of the surface cannot be queried from Vulkan. In those
-        // situations, we allow the frontend to pass in the extent to use in creating the swap
-        // chains. Platform implementation should set extent to 0 if they do not expect to set the
-        // swap chain extent.
-        uint32_t width;
-        uint32_t height;
-    };
-    static SurfaceBundle createVkSurfaceKHR(void* nativeWindow, VkInstance instance,
-            uint64_t flags) noexcept;
+    VkQueue getGraphicsQueue() const noexcept;
 
 private:
+    // Platform dependent helper methods
     using ExtensionSet = std::unordered_set<std::string_view>;
     static ExtensionSet getRequiredInstanceExtensions();
 
-protected:
-    VkInstance mInstance = VK_NULL_HANDLE;
-    VkPhysicalDevice mPhysicalDevice = VK_NULL_HANDLE;
-    VkDevice mDevice = VK_NULL_HANDLE;
-    uint32_t mGraphicsQueueFamilyIndex = 0xFFFFFFFF;
-    uint32_t mGraphicsQueueIndex = 0;
+    using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;
+    static SurfaceBundle createVkSurfaceKHR(void* nativeWindow, VkInstance instance,
+            uint64_t flags) noexcept;
 
-    VkQueue mGraphicsQueue = VK_NULL_HANDLE;
+    friend struct VulkanPlatformPrivate;
 };
 
 }// namespace filament::backend
 
-#endif//TNT_FILAMENT_BACKEND_PLATFORMS_VULKANPLATFORM_H
+#endif// TNT_FILAMENT_BACKEND_PLATFORMS_VULKANPLATFORM_H

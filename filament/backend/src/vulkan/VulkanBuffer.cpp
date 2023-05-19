@@ -51,6 +51,7 @@ void VulkanBuffer::terminate() {
     vmaDestroyBuffer(mAllocator, mGpuBuffer, mGpuMemory);
     mGpuMemory = VK_NULL_HANDLE;
     mGpuBuffer = VK_NULL_HANDLE;
+    mCommands.reset();
 }
 
 void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_t numBytes) const {
