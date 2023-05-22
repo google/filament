@@ -87,49 +87,61 @@ struct VulkanRenderPass {
 struct VulkanContext {
 public:
     inline uint32_t selectMemoryType(uint32_t flags, VkFlags reqs) const {
-	for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
-	    if (flags & 1) {
-		if ((mMemoryProperties.memoryTypes[i].propertyFlags & reqs) == reqs) {
-		    return i;
-		}
-	    }
-	    flags >>= 1;
-	}
-	ASSERT_POSTCONDITION(false, "Unable to find a memory type that meets requirements.");
-	return (uint32_t) ~0ul;
+        for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
+            if (flags & 1) {
+                if ((mMemoryProperties.memoryTypes[i].propertyFlags & reqs) == reqs) {
+                    return i;
+                }
+            }
+            flags >>= 1;
+        }
+        ASSERT_POSTCONDITION(false, "Unable to find a memory type that meets requirements.");
+        return (uint32_t) ~0ul;
     }
 
-    inline VkFormat getDepthFormat() const { return mDepthFormat; }
+    inline VkFormat getDepthFormat() const {
+        return mDepthFormat;
+    }
 
     inline VkPhysicalDeviceLimits const& getPhysicalDeviceLimits() const noexcept {
-	return mPhysicalDeviceProperties.limits;
+        return mPhysicalDeviceProperties.limits;
     }
 
     inline uint32_t getPhysicalDeviceVendorId() const noexcept {
-	return mPhysicalDeviceProperties.vendorID;
+        return mPhysicalDeviceProperties.vendorID;
     }
 
     inline bool isImageCubeArraySupported() const noexcept {
-	return mPhysicalDeviceFeatures.imageCubeArray;
+        return mPhysicalDeviceFeatures.imageCubeArray;
     }
 
-    inline bool isDebugMarkersSupported() const noexcept { return mDebugMarkersSupported; }
-    inline bool isDebugUtilsSupported() const noexcept { return mDebugUtilsSupported; }
+    inline bool isDebugMarkersSupported() const noexcept {
+        return mDebugMarkersSupported;
+    }
+    inline bool isDebugUtilsSupported() const noexcept {
+        return mDebugUtilsSupported;
+    }
     inline bool isPortabilitySubsetSupported() const noexcept {
-	return mPortabilitySubsetSupported;
+        return mPortabilitySubsetSupported;
     }
     inline bool isPortabilityEnumerationSupported() const noexcept {
-	return mPortabilityEnumerationSupported;
+        return mPortabilityEnumerationSupported;
     }
 
-    inline bool isMaintenance1Supported() const noexcept { return mMaintenanceSupported[0]; }
-    inline bool isMaintenance2Supported() const noexcept { return mMaintenanceSupported[1]; }
-    inline bool isMaintenance3Supported() const noexcept { return mMaintenanceSupported[2]; }
+    inline bool isMaintenance1Supported() const noexcept {
+        return mMaintenanceSupported[0];
+    }
+    inline bool isMaintenance2Supported() const noexcept {
+        return mMaintenanceSupported[1];
+    }
+    inline bool isMaintenance3Supported() const noexcept {
+        return mMaintenanceSupported[2];
+    }
 
 private:
-    VkPhysicalDeviceMemoryProperties mMemoryProperties;
-    VkPhysicalDeviceProperties mPhysicalDeviceProperties;
-    VkPhysicalDeviceFeatures mPhysicalDeviceFeatures;
+    VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
+    VkPhysicalDeviceProperties mPhysicalDeviceProperties = {};
+    VkPhysicalDeviceFeatures mPhysicalDeviceFeatures = {};
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
     bool mPortabilitySubsetSupported = false;
