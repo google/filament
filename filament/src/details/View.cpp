@@ -646,7 +646,8 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
     auto const fogTransform = tcm.getWorldTransformAccurate(tcm.getInstance(mFogEntity));
 
     mPerViewUniforms.prepareTime(engine, userTime);
-    mPerViewUniforms.prepareFog(cameraInfo, fogTransform, mFogOptions);
+    mPerViewUniforms.prepareFog(engine, cameraInfo, fogTransform, mFogOptions,
+            scene->getIndirectLight());
     mPerViewUniforms.prepareTemporalNoise(engine, mTemporalAntiAliasingOptions);
     mPerViewUniforms.prepareBlending(needsAlphaChannel);
     mPerViewUniforms.prepareMaterialGlobals(mMaterialGlobals);

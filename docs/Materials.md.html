@@ -2596,13 +2596,17 @@ pre-multiplied by default.
 # Sampler usage in Materials
 
 The number of usable sampler parameters (e.g.: type is `sampler2d`) in materials is limited and
-depends on the material properties, shading model and feature level.
+depends on the material properties, shading model, feature level and variant filter.
 
 ## Feature level 1 and 2
 
-`unlit` materials can use up to 13 samplers.
+`unlit` materials can use up to 12 samplers by default.
 
-`lit` materials can use up to 10 samplers by default, but if `refractionMode` or `reflectionMode` is set to `screenspace` that number becomes 9.
+`lit` materials can use up to 9 samplers by default, however if `refractionMode` or `reflectionMode`
+is set to `screenspace` that number is reduced to 8.
+
+Finally if `variantFilter` contains the `fog` filter, an extra sampler is made available, such that
+`unlit` materials can use up to 13 and `lit` materials up to 10 samplers by default.
 
 ## Feature level 3
 
