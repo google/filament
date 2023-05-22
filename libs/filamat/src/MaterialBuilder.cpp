@@ -1433,6 +1433,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
                 { LightsUib::_name,                UniformBindingPoints::LIGHTS },
                 { ShadowUib::_name,                UniformBindingPoints::SHADOW },
                 { FroxelRecordUib::_name,          UniformBindingPoints::FROXEL_RECORDS },
+                { FroxelsUib::_name,               UniformBindingPoints::FROXELS },
                 { PerRenderableBoneUib::_name,     UniformBindingPoints::PER_RENDERABLE_BONES },
                 { PerRenderableMorphingUib::_name, UniformBindingPoints::PER_RENDERABLE_MORPHING },
                 { info.uib.getName(),              UniformBindingPoints::PER_MATERIAL_INSTANCE }

@@ -217,4 +217,13 @@ BufferInterfaceBlock const& UibGenerator::getFroxelRecordUib() noexcept {
     return uib;
 }
 
+BufferInterfaceBlock const& UibGenerator::getFroxelsUib() noexcept {
+    static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
+            .name(FroxelsUib::_name)
+            .add({{ "records", 1024, BufferInterfaceBlock::Type::UINT4, Precision::HIGH, {},
+                    {}, {}, "CONFIG_FROXEL_BUFFER_HEIGHT"}})
+            .build();
+    return uib;
+}
+
 } // namespace filament

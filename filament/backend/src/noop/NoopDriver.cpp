@@ -193,6 +193,10 @@ uint8_t NoopDriver::getMaxDrawBuffers() {
     return MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT;
 }
 
+size_t NoopDriver::getMaxUniformBufferSize() {
+    return 16384u;
+}
+
 void NoopDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
     scheduleDestroy(std::move(p));

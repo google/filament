@@ -311,6 +311,13 @@ struct FroxelRecordUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 static_assert(sizeof(FroxelRecordUib) == 16384,
         "FroxelRecordUib should be exactly 16KiB");
 
+struct FroxelsUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
+    static constexpr std::string_view _name{ "FroxelsUniforms" };
+    math::uint4 records[1024];
+};
+static_assert(sizeof(FroxelsUib) == 16384,
+        "FroxelsUib should be exactly 16KiB");
+
 // ------------------------------------------------------------------------------------------------
 // MARK: -
 

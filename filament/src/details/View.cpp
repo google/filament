@@ -668,6 +668,9 @@ void FView::bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noe
 
     driver.bindUniformBuffer(+UniformBindingPoints::FROXEL_RECORDS,
             mFroxelizer.getRecordBuffer());
+
+    driver.bindUniformBuffer(+UniformBindingPoints::FROXELS,
+            mFroxelizer.getFroxelBuffer());
 }
 
 void FView::computeVisibilityMasks(

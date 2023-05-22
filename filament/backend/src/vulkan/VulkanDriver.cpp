@@ -830,6 +830,13 @@ uint8_t VulkanDriver::getMaxDrawBuffers() {
     return MRT::MIN_SUPPORTED_RENDER_TARGET_COUNT; // TODO: query real value
 }
 
+size_t VulkanDriver::getMaxUniformBufferSize() {
+    // TODO: return the actual size instead of hardcoded value
+    // TODO: devices that return less than 32768 should be rejected. This represents only 3%
+    //       of android devices.
+    return 32768;
+}
+
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
     auto& vb = *handle_cast<VulkanVertexBuffer*>(vbh);

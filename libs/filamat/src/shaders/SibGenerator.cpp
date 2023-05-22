@@ -44,7 +44,6 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
             .name("Light")
             .stageFlags(backend::ShaderStageFlags::FRAGMENT)
             .add(  {{ "shadowMap",   Type::SAMPLER_2D_ARRAY, Format::SHADOW, Precision::MEDIUM },
-                    { "froxels",     Type::SAMPLER_2D,       Format::UINT,   Precision::MEDIUM },
                     { "iblDFG",      Type::SAMPLER_2D,       Format::FLOAT,  Precision::MEDIUM },
                     { "iblSpecular", Type::SAMPLER_CUBEMAP,  Format::FLOAT,  Precision::MEDIUM },
                     { "ssao",        Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM },
@@ -57,7 +56,6 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
             .name("Light")
             .stageFlags(backend::ShaderStageFlags::FRAGMENT)
             .add(  {{ "shadowMap",   Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::HIGH   },
-                    { "froxels",     Type::SAMPLER_2D,       Format::UINT,   Precision::MEDIUM },
                     { "iblDFG",      Type::SAMPLER_2D,       Format::FLOAT,  Precision::MEDIUM },
                     { "iblSpecular", Type::SAMPLER_CUBEMAP,  Format::FLOAT,  Precision::MEDIUM },
                     { "ssao",        Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM },
@@ -73,7 +71,6 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
                     { "unused1" },
                     { "unused2" },
                     { "unused3" },
-                    { "unused4" },
                     { "ssr",         Type::SAMPLER_2D,       Format::FLOAT,  Precision::MEDIUM },
                     { "structure",   Type::SAMPLER_2D,       Format::FLOAT,  Precision::HIGH   }}
             )
