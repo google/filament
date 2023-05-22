@@ -91,6 +91,8 @@ static void usage(char* name) {
             "       Specify output format: blob (default) or header\n\n"
             "   --debug, -d\n"
             "       Generate extra data for debugging\n\n"
+            "   --no-sampler-validation, -F\n"
+            "       Skip validation of number of sampler used\n\n"
             "   --print, -t\n"
             "       Print generated shaders for debugging\n\n"
     );
@@ -167,7 +169,7 @@ static void parseDefine(std::string defineString, Config::StringReplacementMap& 
 }
 
 bool CommandlineConfig::parse() {
-    static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:OSEr:vV:gtw";
+    static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:OSEr:vV:gtwF";
     static const struct option OPTIONS[] = {
             { "help",                    no_argument, nullptr, 'h' },
             { "license",                 no_argument, nullptr, 'L' },
@@ -189,6 +191,7 @@ bool CommandlineConfig::parse() {
             { "print",                   no_argument, nullptr, 't' },
             { "version",                 no_argument, nullptr, 'v' },
             { "raw",                     no_argument, nullptr, 'w' },
+            { "no-sampler-validation",   no_argument, nullptr, 'F' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
 
@@ -302,6 +305,9 @@ bool CommandlineConfig::parse() {
                 break;
             case 'w':
                 mRawShaderMode = true;
+                break;
+            case 'F':
+                mNoSamplerValidation = true;
                 break;
         }
     }
