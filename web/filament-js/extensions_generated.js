@@ -51,6 +51,7 @@ Filament.loadGeneratedExtensions = function() {
             inScatteringStart: 0.0,
             inScatteringSize: -1.0,
             fogColorFromIbl: false,
+            // JavaScript binding for skyColor is not yet supported, must use default value.
             enabled: false,
         };
         return Object.assign(options, overrides);
