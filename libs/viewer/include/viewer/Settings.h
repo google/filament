@@ -160,6 +160,10 @@ struct DynamicLightingSettings {
     float zLightFar = 100;
 };
 
+struct FogSettings {
+    Texture* fogColorTexture = nullptr;
+};
+
 // This defines fields in the same order as the setter methods in filament::View.
 struct ViewSettings {
     // standalone View settings
@@ -185,6 +189,7 @@ struct ViewSettings {
     // Custom View Options
     ColorGradingSettings colorGrading;
     DynamicLightingSettings dynamicLighting;
+    FogSettings fogSettings;
 };
 
 template <typename T>
