@@ -2706,8 +2706,8 @@ void OpenGLDriver::endRenderPass(int) {
         discardFlags &= ~TargetBufferFlags::STENCIL;
     }
 
-    if (rt->gl.isDefault &&
-            mCurrentDrawSwapChain && mCurrentDrawSwapChain->swapChain) {
+    if (rt->gl.isDefault) {
+        assert_invariant(mCurrentDrawSwapChain);
         discardFlags &= ~mPlatform.getPreservedFlags(mCurrentDrawSwapChain->swapChain);
     }
 
