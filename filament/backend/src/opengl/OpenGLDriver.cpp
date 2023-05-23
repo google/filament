@@ -2721,7 +2721,6 @@ void OpenGLDriver::endRenderPass(int) {
 
     if (rt->gl.isDefault) {
         assert_invariant(mCurrentDrawSwapChain);
-        assert_invariant(mCurrentDrawSwapChain->swapChain);
         discardFlags &= ~mPlatform.getPreservedFlags(mCurrentDrawSwapChain->swapChain);
     }
 
