@@ -58,6 +58,10 @@ class Texture;
 class UTILS_PUBLIC IBLPrefilterContext {
 public:
 
+    enum class Kernel : uint8_t {
+        D_GGX,        // Trowbridge-reitz distribution
+    };
+
     /**
      * Creates an IBLPrefilter context.
      * @param engine filament engine to use
@@ -109,7 +113,7 @@ public:
          *                          - Must be allocated with all mip levels.
          *                          - Must be SAMPLEABLE
          * @param outCubemap        Output cubemap. If null the texture is automatically created
-         *                          with default parameters (size of 256 with 5 levels).
+         *                          with default parameters (size of 256 with 9 levels).
          *                          - Must be a cubemap
          *                          - Must have SAMPLEABLE and COLOR_ATTACHMENT usage bits
          * @return returns outCubemap
@@ -123,6 +127,100 @@ public:
         filament::Material* mEquirectMaterial = nullptr;
     };
 
+    /**
+     * IrradianceFilter is a GPU based implementation of the diffuse probe pre-integration filter.
+     * An instance of IrradianceFilter is needed per filter configuration. A filter configuration
+     * contains the filter's kernel and sample count.
+     */
+    class IrradianceFilter {
+    public:
+        using Kernel = Kernel;
+
+        /**
+         * Filter configuration.
+         */
+        struct Config {
+            uint16_t sampleCount = 1024u;   //!< filter sample count (max 2048)
+            Kernel kernel = Kernel::D_GGX;  //!< filter kernel
+        };
+
+        /**
+         * Filtering options for the current environment.
+         */
+        struct Options {
+            float hdrLinear = 1024.0f;   //!< no HDR compression up to this value
+            float hdrMax = 16384.0f;     //!< HDR compression between hdrLinear and hdrMax
+            float lodOffset = 2.0f;      //!< Good values are 2.0 or 3.0. Higher values help with heavily HDR inputs.
+            bool generateMipmap = true;  //!< set to false if the input environment map already has mipmaps
+        };
+
+        /**
+         * Creates a IrradianceFilter processor.
+         * @param context IBLPrefilterContext to use
+         * @param config  Configuration of the filter
+         */
+        IrradianceFilter(IBLPrefilterContext& context, Config config);
+
+        /**
+         * Creates a filter with the default configuration.
+         * @param context IBLPrefilterContext to use
+         */
+        explicit IrradianceFilter(IBLPrefilterContext& context);
+
+        /**
+         * Destroys all GPU resources created during initialization.
+         */
+        ~IrradianceFilter() noexcept;
+
+        IrradianceFilter(IrradianceFilter const&) = delete;
+        IrradianceFilter& operator=(IrradianceFilter const&) = delete;
+        IrradianceFilter(IrradianceFilter&& rhs) noexcept;
+        IrradianceFilter& operator=(IrradianceFilter&& rhs) noexcept;
+
+        /**
+         * Generates an irradiance cubemap. Mipmaps are not generated even if present.
+         * @param options                   Options for this environment
+         * @param environmentCubemap        Environment cubemap (input). Can't be null.
+         *                                  This cubemap must be SAMPLEABLE and must have all its
+         *                                  levels allocated. If Options.generateMipmap is true,
+         *                                  the mipmap levels will be overwritten, otherwise
+         *                                  it is assumed that all levels are correctly initialized.
+         * @param outIrradianceTexture      Output irradiance texture or, if null, it is
+         *                                  automatically created with some default parameters.
+         *                                  outIrradianceTexture must be a cubemap, it must have
+         *                                  at least COLOR_ATTACHMENT and SAMPLEABLE usages.
+         *
+         * @return returns outIrradianceTexture
+         */
+        filament::Texture* operator()(Options options,
+                filament::Texture const* environmentCubemap,
+                filament::Texture* outIrradianceTexture = nullptr);
+
+        /**
+         * Generates a prefiltered cubemap.
+         * @param environmentCubemap        Environment cubemap (input). Can't be null.
+         *                                  This cubemap must be SAMPLEABLE and must have all its
+         *                                  levels allocated. If Options.generateMipmap is true,
+         *                                  the mipmap levels will be overwritten, otherwise
+         *                                  it is assumed that all levels are correctly initialized.
+         * @param outIrradianceTexture      Output irradiance texture or, if null, it is
+         *                                  automatically created with some default parameters.
+         *                                  outIrradianceTexture must be a cubemap, it must have
+         *                                  at least COLOR_ATTACHMENT and SAMPLEABLE usages.
+         *
+         * @return returns outReflectionsTexture
+         */
+        filament::Texture* operator()(
+                filament::Texture const* environmentCubemap,
+                filament::Texture* outIrradianceTexture = nullptr);
+
+    private:
+        filament::Texture* createIrradianceTexture();
+        IBLPrefilterContext& mContext;
+        filament::Material* mKernelMaterial = nullptr;
+        filament::Texture* mKernelTexture = nullptr;
+        uint32_t mSampleCount = 0u;
+    };
 
     /**
      * SpecularFilter is a GPU based implementation of the specular probe pre-integration filter.
@@ -131,9 +229,7 @@ public:
      */
     class SpecularFilter {
     public:
-        enum class Kernel : uint8_t {
-            D_GGX,        // Trowbridge-reitz distribution
-        };
+        using Kernel = Kernel;
 
         /**
          * Filter configuration.
@@ -151,7 +247,7 @@ public:
             float hdrLinear = 1024.0f;   //!< no HDR compression up to this value
             float hdrMax = 16384.0f;     //!< HDR compression between hdrLinear and hdrMax
             float lodOffset = 1.0f;      //!< Good values are 1.0 or 2.0. Higher values help with heavily HDR inputs.
-            bool generateMipmap = true;  //!< set to false if the environment map already has mipmaps
+            bool generateMipmap = true;  //!< set to false if the input environment map already has mipmaps
         };
 
         /**
@@ -237,6 +333,7 @@ private:
     utils::Entity mCameraEntity{};
     filament::View* mView{};
     filament::Material* mIntegrationMaterial{};
+    filament::Material* mIrradianceIntegrationMaterial{};
 };
 
 #endif //TNT_IBL_PREFILTER_IBLPREFILTER_H
