@@ -54,6 +54,13 @@ material {
             type : float3
         }
     ],
+    constants : [
+        {
+            name : irradiance,
+            type : bool,
+            default : false
+        }
+    ],
     variables : [
         vertex
     ],
@@ -139,15 +146,30 @@ void postProcess(inout PostProcessInputs postProcess) {
     vec3 Lz = vec3(0);
 
     float kernelWeight = 0.0;
-    for (uint i = 0u ; i < materialParams.sampleCount ; i++) {
-        // { L, lod }, with L.z == NoL
-        mediump vec4 entry = texelFetch(materialParams_kernel, ivec2(materialParams.attachmentLevel, i), 0);
-        if (entry.z > 0.0) {
-            float l = entry.w + materialParams.lodOffset;// we don't need to clamp, the h/w does it for us
-            Lx += sampleEnvironment(materialParams_environment, Tx * entry.xyz, l) * entry.z;
-            Ly += sampleEnvironment(materialParams_environment, Ty * entry.xyz, l) * entry.z;
-            Lz += sampleEnvironment(materialParams_environment, Tz * entry.xyz, l) * entry.z;
-            kernelWeight += entry.z;
+
+    if (materialConstants_irradiance) {
+        for (uint i = 0u; i < materialParams.sampleCount; i++) {
+            // { L, lod }, with L.z == NoL
+            mediump vec4 entry = texelFetch(materialParams_kernel, ivec2(0u, i), 0);
+            if (entry.z > 0.0) {
+                float l = entry.w + materialParams.lodOffset;// we don't need to clamp, the h/w does it for us
+                Lx += sampleEnvironment(materialParams_environment, Tx * entry.xyz, l);
+                Ly += sampleEnvironment(materialParams_environment, Ty * entry.xyz, l);
+                Lz += sampleEnvironment(materialParams_environment, Tz * entry.xyz, l);
+            }
+        }
+        kernelWeight = float(materialParams.sampleCount);
+    } else {
+        for (uint i = 0u; i < materialParams.sampleCount; i++) {
+            // { L, lod }, with L.z == NoL
+            mediump vec4 entry = texelFetch(materialParams_kernel, ivec2(materialParams.attachmentLevel, i), 0);
+            if (entry.z > 0.0) {
+                float l = entry.w + materialParams.lodOffset;// we don't need to clamp, the h/w does it for us
+                Lx += sampleEnvironment(materialParams_environment, Tx * entry.xyz, l) * entry.z;
+                Ly += sampleEnvironment(materialParams_environment, Ty * entry.xyz, l) * entry.z;
+                Lz += sampleEnvironment(materialParams_environment, Tz * entry.xyz, l) * entry.z;
+                kernelWeight += entry.z;
+            }
         }
     }
 

@@ -11,8 +11,8 @@ material {
             name : sampleCount,
         },
         {
-            type : float,
-            name : oneOverLevelsMinusOne,
+            type : float[16],
+            name : roughness,
         }
     ],
     outputs : [
@@ -20,6 +20,13 @@ material {
             name : weight,
             target : color,
             type : float4
+        }
+    ],
+    constants : [
+        {
+            name : irradiance,
+            type : bool,
+            default : false
         }
     ],
     variables : [
@@ -81,6 +88,14 @@ vec3 hemisphereImportanceSampleDggx(const vec2 u, const float a) { // pdf = D(a)
     return vec3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
 }
 
+vec3 hemisphereCosSample(float2 u) { // pdf = cosTheta / PI;
+    float phi = 2.0 * PI * u.x;
+    float cosTheta2 = 1.0 - u.y;
+    float cosTheta = sqrt(cosTheta2);
+    float sinTheta = sqrt(1.0 - cosTheta2);
+    return vec3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
+}
+
 vec4 computeWeight(const uint index, const float roughness) {
     float sampleCount = materialParams.sampleCount;
     vec2 u = hammersley(index, sampleCount);
@@ -95,27 +110,28 @@ vec4 computeWeight(const uint index, const float roughness) {
     return vec4(L, l);
 }
 
-float lodToPerceptualRoughness(const float lod) {
-    // Inverse perceptualRoughness-to-LOD mapping:
-    // The LOD-to-perceptualRoughness mapping is a quadratic fit for
-    // log2(perceptualRoughness)+iblMaxMipLevel when iblMaxMipLevel is 4.
-    // We found empirically that this mapping works very well for a 256 cubemap with 5 levels used,
-    // but also scales well for other iblMaxMipLevel values.
-    const float a = 2.0f;
-    const float b = -1.0f;
-    return (lod != 0.0) ? saturate((sqrt(a * a + 4.0 * b * lod) - a) / (2.0 * b)) : 0.0;
+vec4 computeWeightIrradiance(const uint index) {
+    float sampleCount = materialParams.sampleCount;
+    vec2 u = hammersley(index, sampleCount);
+    vec3 L = hemisphereCosSample(u);
+    float pdf = L.z / PI;
+    float invOmegaS = sampleCount * pdf;
+    float l = -log4(invOmegaS);
+    return vec4(L, l);
 }
 
 void postProcess(inout PostProcessInputs postProcess) {
     vec2 uv = variable_vertex.xy; // interpolated at pixel's center
 
-    float lod = floor(uv.x);
+    uint lod = uint(uv.x);
     uint index = uint(uv.y);
 
-    float perceptualRoughness = lodToPerceptualRoughness(saturate(lod * materialParams.oneOverLevelsMinusOne));
-    float roughness = perceptualRoughness * perceptualRoughness;
-
-    postProcess.weight = computeWeight(index, roughness);
+    if (materialConstants_irradiance) {
+        postProcess.weight = computeWeightIrradiance(index);
+    } else {
+        float roughness = materialParams.roughness[lod];
+        postProcess.weight = computeWeight(index, roughness);
+    }
 }
 
 }
