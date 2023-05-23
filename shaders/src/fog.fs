@@ -45,7 +45,12 @@ vec4 fog(vec4 color, highp vec3 view) {
         // get fog color from envmap
         // TODO: use a lower resolution mip as we get further (problem we don't have mips!)
         float lod = frameUniforms.iblRoughnessOneLevel;
-        fogColor *= textureLod(light_iblSpecular, view, lod).rgb;
+
+        // when sampling the IBL we need to take into account the IBL transform. We know it's a
+        // a rigid transform, so we can take the transpose instead of the inverse, and for the
+        // same reason we can use it directly instead of taking the cof() to transfrom a vector.
+        highp mat3 worldFromUserWorldMatrix = transpose(mat3(frameUniforms.userWorldFromWorldMatrix));
+        fogColor *= textureLod(light_iblSpecular, worldFromUserWorldMatrix * view, lod).rgb;
     }
 #endif
 
