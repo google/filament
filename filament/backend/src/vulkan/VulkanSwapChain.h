@@ -34,7 +34,7 @@ namespace filament::backend {
 struct VulkanHeadlessSwapChain;
 struct VulkanSurfaceSwapChain;
 
-// A wrapper around the plaform implementation of swapchain.
+// A wrapper around the platform implementation of swapchain.
 struct VulkanSwapChain : public HwSwapChain {
     VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& context, VmaAllocator allocator,
             std::shared_ptr<VulkanCommands> commands, VulkanStagePool& stagePool,
