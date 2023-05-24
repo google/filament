@@ -1364,9 +1364,15 @@ export interface View$FogOptions {
     /**
      * The fog color will be sampled from the IBL in the view direction and tinted by `color`.
      * Depending on the scene this can produce very convincing results.
-     * This simulate a more anisotropic phase-function.
+     *
+     * This simulates a more anisotropic phase-function.
+     *
+     * `fogColorFromIbl` is ignored when skyTexture is specified.
+     *
+     * @see skyColor
      */
     fogColorFromIbl?: boolean;
+    // JavaScript binding for skyColor is not yet supported, must use default value.
     /**
      * Enable or disable large-scale fog
      */

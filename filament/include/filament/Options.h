@@ -237,9 +237,31 @@ struct FogOptions {
     /**
      * The fog color will be sampled from the IBL in the view direction and tinted by `color`.
      * Depending on the scene this can produce very convincing results.
-     * This simulate a more anisotropic phase-function.
+     *
+     * This simulates a more anisotropic phase-function.
+     *
+     * `fogColorFromIbl` is ignored when skyTexture is specified.
+     *
+     * @see skyColor
      */
     bool fogColorFromIbl = false;
+
+    /**
+     * skyTexture must be a mipmapped cubemap. When provided, the fog color will be sampled from
+     * this texture, higher resolution mip levels will be used for objects at the far clip plane,
+     * and lower resolution mip levels for objects closer to the camera. The skyTexture should
+     * typically be heavily blurred; a typical way to produce this texture is to blur the base
+     * level with a strong gaussian filter or even an irradiance filter and then generate mip
+     * levels as usual. How blurred the base level is somewhat of an artistic decision.
+     *
+     * This simulates a more anisotropic phase-function.
+     *
+     * `fogColorFromIbl` is ignored when skyTexture is specified.
+     *
+     * @see Texture
+     * @see fogColorFromIbl
+     */
+    Texture* skyColor = nullptr;    //!< %codegen_skip_json% %codegen_skip_javascript%
 
     /**
      * Enable or disable large-scale fog

@@ -1238,13 +1238,16 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
 
             // count how many samplers filament uses based on the material properties
             // note: currently SSAO is not used with unlit, but we want to keep that possibility.
-            uint32_t textureUsedByFilamentCount = 3;    // shadowMap, structure, ssao
+            uint32_t textureUsedByFilamentCount = 4;    // shadowMap, structure, ssao, fog texture
             if (info.isLit) {
                 textureUsedByFilamentCount += 3;        // froxels, dfg, specular
             }
             if (info.reflectionMode == ReflectionMode::SCREEN_SPACE ||
                 info.refractionMode == RefractionMode::SCREEN_SPACE) {
                 textureUsedByFilamentCount += 1;        // ssr
+            }
+            if (mVariantFilter & (uint32_t)UserVariantFilterBit::FOG) {
+                textureUsedByFilamentCount -= 1;        // fog texture
             }
 
             // TODO: we need constants somewhere for these values

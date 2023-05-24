@@ -167,15 +167,15 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float3 fogDensity;        // { density, -falloff * yc, density * exp(-fallof * yc) }
     float fogStart;
     float fogMaxOpacity;
-    float fogReserved0;
+    uint32_t fogMinMaxMip;
     float fogHeightFalloff;
     float fogCutOffDistance;
     math::float3 fogColor;
     float fogColorFromIbl;
     float fogInscatteringStart;
     float fogInscatteringSize;
-    float fogReserved1;
-    float fogReserved2;
+    float fogOneOverFarMinusNear;
+    float fogNearOverFarMinusNear;
     std140::mat33 fogFromWorldMatrix;
 
     // --------------------------------------------------------------------------------------------
