@@ -38,7 +38,9 @@
             uint32_t height;
         } wl;
     }// anonymous namespace
-#elif defined(__linux__) && defined(FILAMENT_SUPPORTS_X11) && (defined(FILAMENT_SUPPORTS_XCB) || defined(FILAMENT_SUPPORTS_XLIB))
+#elif defined(__linux__) && defined(FILAMENT_SUPPORTS_X11)
+    // TODO: we should allow for headless on Linux explicitly. Right now this is the headless path
+    // (with no FILAMENT_SUPPORTS_XCB or FILAMENT_SUPPORTS_XLIB).
     #include <dlfcn.h>
     #if defined(FILAMENT_SUPPORTS_XCB)
         #include <xcb/xcb.h>
@@ -163,7 +165,9 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
                         "Unable to load vkCreateXlibSurfaceKHR function.");
             #endif
         }
-        bool useXcb = false;
+        #if defined(FILAMENT_SUPPORTS_XCB) || defined(FILAMENT_SUPPORTS_XLIB)
+            bool useXcb = false;
+        #endif
         #if defined(FILAMENT_SUPPORTS_XCB)
             #if defined(FILAMENT_SUPPORTS_XLIB)
                 useXcb = (flags & SWAP_CHAIN_CONFIG_ENABLE_XCB) != 0;
