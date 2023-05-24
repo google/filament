@@ -764,6 +764,7 @@ void RenderPass::Executor::execute(backend::DriverApi& driver,
              */
 
             if (UTILS_UNLIKELY((first->key & CUSTOM_MASK) != uint64_t(CustomCommand::PASS))) {
+                mi = nullptr; // custom command could change the currently bound MaterialInstance
                 uint32_t const index = (first->key & CUSTOM_INDEX_MASK) >> CUSTOM_INDEX_SHIFT;
                 assert_invariant(index < mCustomCommands.size());
                 pCustomCommands[index]();
