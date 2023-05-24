@@ -63,6 +63,9 @@ PFNGLCLIPCONTROLEXTPROC glClipControlEXT;
 #ifdef GL_EXT_discard_framebuffer
 PFNGLDISCARDFRAMEBUFFEREXTPROC glDiscardFramebufferEXT;
 #endif
+#ifdef GL_KHR_parallel_shader_compile
+PFNGLMAXSHADERCOMPILERTHREADSKHRPROC glMaxShaderCompilerThreadsKHR;
+#endif
 
 #if defined(__ANDROID__) && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
 // On Android, If we want to support a build system less than ANDROID_API 21, we need to
@@ -108,6 +111,9 @@ void importGLESExtensionsEntryPoints() {
 #endif
 #ifdef GL_EXT_discard_framebuffer
         getProcAddress(glDiscardFramebufferEXT, "glDiscardFramebufferEXT");
+#endif
+#ifdef GL_KHR_parallel_shader_compile
+        getProcAddress(glMaxShaderCompilerThreadsKHR, "glMaxShaderCompilerThreadsKHR");
 #endif
 #if defined(__ANDROID__) && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
         getProcAddress(glDispatchCompute, "glDispatchCompute");
