@@ -53,6 +53,7 @@ set(DIST_GENERIC_HDRS
 
 set(SRCS
         src/api_level.cpp
+        src/architecture.cpp
         src/ashmem.cpp
         src/debug.cpp
         src/Allocator.cpp
