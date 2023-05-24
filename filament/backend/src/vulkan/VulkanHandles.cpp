@@ -148,7 +148,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         mColor[index] = color[index];
     }
     mDepth = depthStencil[0];
-    VulkanTexture* depthTexture = mDepth.texture;
+    VulkanTexture* depthTexture = (VulkanTexture*) mDepth.texture;
 
     if (samples == 1) {
         return;
@@ -163,7 +163,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
     // Create sidecar MSAA textures for color attachments if they don't already exist.
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
         const VulkanAttachment& spec = color[index];
-        VulkanTexture* texture = spec.texture;
+        VulkanTexture* texture = (VulkanTexture*) spec.texture;
         if (texture && texture->samples == 1) {
             auto msTexture = texture->getSidecar();
             if (UTILS_UNLIKELY(!msTexture)) {

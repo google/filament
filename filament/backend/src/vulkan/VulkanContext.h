@@ -47,16 +47,18 @@ struct TexturePointer {
     explicit TexturePointer(VulkanTexture* tex) :mTexture(tex) {}
     explicit TexturePointer(std::shared_ptr<VulkanTexture> tex) :mTexture(tex) {}
 
-    inline void operator=(VulkanTexture* tex) {
+    inline TexturePointer& operator=(VulkanTexture* tex) {
         mTexture = tex;
+        return *this;
     }
 
-    inline void operator=(std::shared_ptr<VulkanTexture> tex) {
+    inline TexturePointer& operator=(std::shared_ptr<VulkanTexture> tex) {
         mTexture = tex;
+        return *this;
     }
 
     // Be careful not to leak here. Should only be used in local scope.
-    operator VulkanTexture*() const {
+    explicit operator VulkanTexture*() const {
         if (mTexture.index() == 0) {
             return std::get<0>(mTexture);
         }
@@ -64,14 +66,14 @@ struct TexturePointer {
     }
 
     // Be careful not to leak here. Should only be used in local scope.
-    operator VulkanTexture const*() const {
+    explicit operator VulkanTexture const*() const {
         if (mTexture.index() == 0) {
             return std::get<0>(mTexture);
         }
         return std::get<1>(mTexture).get();
     }
 
-    operator std::shared_ptr<VulkanTexture>() const {
+    explicit operator std::shared_ptr<VulkanTexture>() const {
         assert_invariant(mTexture.index() == 1);
         return std::get<1>(mTexture);
     }

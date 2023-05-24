@@ -1104,7 +1104,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             assert_invariant(fbkey.color[i]);
         } else {
             fbkey.color[i] = rt->getMsaaColor(i).getImageView(VK_IMAGE_ASPECT_COLOR_BIT);
-            VulkanTexture* texture = rt->getColor(i).texture;
+            VulkanTexture* texture = (VulkanTexture*) rt->getColor(i).texture;
             if (texture->samples == 1) {
                 fbkey.resolve[i] = rt->getColor(i).getImageView(VK_IMAGE_ASPECT_COLOR_BIT);
                 assert_invariant(fbkey.resolve[i]);
@@ -1142,9 +1142,9 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // The current command buffer now owns a reference to the render target and its attachments.
     // Note that we must acquire parent textures, not sidecars.
     mDisposer.acquire(rt);
-    mDisposer.acquire(rt->getDepth().texture);
+    mDisposer.acquire((VulkanTexture const*) rt->getDepth().texture);
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-        mDisposer.acquire(rt->getColor(i).texture);
+        mDisposer.acquire((VulkanTexture const*) rt->getColor(i).texture);
     }
 
     // Populate the structures required for vkCmdBeginRenderPass.
@@ -1431,7 +1431,7 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
         uint32_t width, uint32_t height, PixelBufferDescriptor&& pbd) {
     const VkDevice device = mPlatform->getDevice();
     VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget*>(src);
-    VulkanTexture* srcTexture = srcTarget->getColor(0).texture;
+    VulkanTexture* srcTexture = (VulkanTexture*) srcTarget->getColor(0).texture;
     assert_invariant(srcTexture);
     const VkFormat srcFormat = srcTexture->getVkFormat();
     const bool swizzle = srcFormat == VK_FORMAT_B8G8R8A8_UNORM;
