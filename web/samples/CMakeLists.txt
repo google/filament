@@ -22,7 +22,7 @@ set(MATERIAL_NAMES
     textured
     nonlit)
 
-set(MATC_FLAGS -a opengl -p mobile)
+set(MATC_FLAGS -a opengl -p web)
 if (NOT CMAKE_BUILD_TYPE MATCHES Release)
     set(MATC_FLAGS -g ${MATC_FLAGS})
 endif()

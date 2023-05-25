@@ -46,7 +46,7 @@ fragment {
 Next, invoke `matc` as follows.
 
 ```bash
-matc -a opengl -p mobile -o plastic.filamat plastic.mat
+matc -a opengl -p web -o plastic.filamat plastic.mat
 ```
 
 You should now have a material archive in your working directory, which we'll use later in the

@@ -104,7 +104,7 @@ fragment {
 Next, invoke `matc` as follows.
 
 ```bash
-matc -a opengl -p mobile -o textured.filamat textured.mat
+matc -a opengl -p web -o textured.filamat textured.mat
 ```
 
 You should now have a material archive in your working directory. For the suzanne asset, the normal

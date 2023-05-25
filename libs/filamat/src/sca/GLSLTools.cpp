@@ -372,6 +372,8 @@ int GLSLTools::getGlslDefaultVersion(ShaderModel model) {
             return 100;
         case ShaderModel::DESKTOP:
             return 110;
+        case ShaderModel::WEB:
+            return 100;
     }
 }
 
@@ -389,6 +391,15 @@ std::pair<int, bool> GLSLTools::getShadingLanguageVersion(ShaderModel model,
             }
         case ShaderModel::DESKTOP:
             return { featureLevel >= FeatureLevel::FEATURE_LEVEL_2 ? 430 : 410, false };
+        case ShaderModel::WEB:
+            switch (featureLevel) {
+                case FeatureLevel::FEATURE_LEVEL_0:     return { 100, true };
+                case FeatureLevel::FEATURE_LEVEL_1:     return { 300, true };
+                // TODO: these feature levels below are not supported with WebGL2, but could be
+                //       with WebGPU.
+                case FeatureLevel::FEATURE_LEVEL_2:     return { 310, true };
+                case FeatureLevel::FEATURE_LEVEL_3:     return { 310, true };
+            }
     }
 }
 

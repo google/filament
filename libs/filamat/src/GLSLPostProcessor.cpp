@@ -601,7 +601,7 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
     }
 
     auto const localCreateSimplificationPass = [&config] {
-        // Adreno GPU show artifacts after running simplication passes. We workaround this just by
+        // Adreno GPU show artifacts after running simplification passes. We work around this just by
         // disabling the simplification pass for mobile + vulkan.
         return config.shaderModel == ShaderModel::MOBILE
                                && config.targetApi == MaterialBuilder::TargetApi::VULKAN

@@ -69,6 +69,7 @@ public:
     enum class Platform {
         DESKTOP,
         MOBILE,
+        WEB,
         ALL
     };
 

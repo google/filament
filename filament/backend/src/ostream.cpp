@@ -43,6 +43,7 @@ io::ostream& operator<<(io::ostream& out, ShaderModel model) {
     switch (model) {
         CASE(ShaderModel, MOBILE)
         CASE(ShaderModel, DESKTOP)
+        CASE(ShaderModel, WEB)
     }
     return out;
 }

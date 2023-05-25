@@ -117,6 +117,9 @@ OpenGLContext::OpenGLContext() noexcept {
 
 #ifdef BACKEND_OPENGL_VERSION_GLES
     initExtensionsGLES();
+#if defined(__EMSCRIPTEN__)
+    mShaderModel = ShaderModel::WEB;
+#endif
     if (state.major == 3) {
         // Runtime OpenGL version is ES 3.x
         assert_invariant(gets.max_texture_image_units >= 16);
@@ -505,6 +508,18 @@ void OpenGLContext::initExtensionsGLES() noexcept {
         ext.EXT_color_buffer_float = true;
         ext.OES_vertex_array_object = true;
     }
+
+
+#if defined(__EMSCRIPTEN__)
+    // EMSCRIPTEN doesn't support any extensions entry points. So, all extentions that
+    // require new function calls must be disabled.
+    //      OES_vertex_array_object, EXT_disjoint_timer_query and EXT_discard_framebuffer
+    //      are ES3 features and don't need to be disabled
+    ext.EXT_clip_control = false;
+    ext.EXT_debug_marker = false;
+    ext.EXT_multisampled_render_to_texture = false;
+    ext.KHR_debug = false;
+#endif
 }
 
 #endif // BACKEND_OPENGL_VERSION_GLES

@@ -260,11 +260,15 @@ list(APPEND SRCS ${RESGEN_SOURCE})
 # whether we're building for mobile -- this can affect some default quality settings
 if (IS_MOBILE_TARGET)
     add_definitions(-DFILAMENT_TARGET_MOBILE=1)
+elseif(IS_WEB_TARGET)
+    add_definitions(-DFILAMENT_TARGET_WEB=1)
 endif()
 
 # Size of the DFG lookup table
 if (NOT DFG_LUT_SIZE)
     if (IS_MOBILE_TARGET)
+        set(DFG_LUT_SIZE 64)
+    elseif(IS_WEB_TARGET)
         set(DFG_LUT_SIZE 64)
     else()
         set(DFG_LUT_SIZE 128)

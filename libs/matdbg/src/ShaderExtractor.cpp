@@ -90,7 +90,7 @@ CString ShaderExtractor::spirvToGLSL(ShaderModel shaderModel, const uint32_t* da
     using namespace spirv_cross;
 
     CompilerGLSL::Options emitOptions;
-    if (shaderModel == ShaderModel::MOBILE) {
+    if (shaderModel == ShaderModel::MOBILE || shaderModel == ShaderModel::WEB) {
         emitOptions.es = true;
         emitOptions.version = 310;
         emitOptions.fragment.default_float_precision = CompilerGLSL::Options::Precision::Mediump;

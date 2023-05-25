@@ -493,8 +493,8 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
 
     generateSurfaceMaterialVariantDefines(fs, ShaderStage::FRAGMENT, material, variant);
 
-    auto defaultSpecularAO = shaderModel == ShaderModel::MOBILE ?
-                             SpecularAmbientOcclusion::NONE : SpecularAmbientOcclusion::SIMPLE;
+    auto defaultSpecularAO = shaderModel == ShaderModel::DESKTOP ?
+                             SpecularAmbientOcclusion::SIMPLE : SpecularAmbientOcclusion::NONE;
     auto specularAO = material.specularAOSet ? material.specularAO : defaultSpecularAO;
     CodeGenerator::generateDefine(fs, "SPECULAR_AMBIENT_OCCLUSION", uint32_t(specularAO));
 

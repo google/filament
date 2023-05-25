@@ -43,6 +43,7 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         MaterialInfo const& material) const {
     switch (mShaderModel) {
         case ShaderModel::MOBILE:
+        case ShaderModel::WEB:
             // Vulkan requires version 310 or higher
             if (mTargetLanguage == TargetLanguage::SPIRV ||
                 material.featureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
@@ -88,7 +89,13 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         case ShaderModel::MOBILE:
             out << "#define TARGET_MOBILE\n";
             break;
+        case ShaderModel::WEB:
+            // FIXME: for compatibility we're generating both (for now)
+            out << "#define TARGET_MOBILE\n";
+            out << "#define TARGET_WEB\n";
+            break;
         case ShaderModel::DESKTOP:
+            out << "#define TARGET_DESKTOP\n";
             break;
     }
 
@@ -100,6 +107,11 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                     break;
                 case ShaderModel::DESKTOP:
                     out << "#define TARGET_GL_ENVIRONMENT\n";
+                    break;
+                case ShaderModel::WEB:
+                    // FIXME: for compatibility we're generating both (for now)
+                    out << "#define TARGET_GLES_ENVIRONMENT\n";
+                    out << "#define TARGET_WEBGL2_ENVIRONMENT\n";
                     break;
             }
             break;
@@ -180,7 +192,7 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     const char* precision = getPrecisionQualifier(defaultPrecision);
     out << "precision " << precision << " float;\n";
     out << "precision " << precision << " int;\n";
-    if (mShaderModel == ShaderModel::MOBILE) {
+    if (mShaderModel == ShaderModel::MOBILE || mShaderModel == ShaderModel::WEB) {
         if (material.featureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
             out << "precision lowp sampler2DArray;\n";
             out << "precision lowp sampler3D;\n";
@@ -248,6 +260,7 @@ Precision CodeGenerator::getDefaultPrecision(ShaderStage stage) const {
         case ShaderStage::FRAGMENT:
             switch (mShaderModel) {
                 case ShaderModel::MOBILE:
+                case ShaderModel::WEB:
                     return Precision::MEDIUM;
                 case ShaderModel::DESKTOP:
                     return Precision::HIGH;
@@ -260,6 +273,7 @@ Precision CodeGenerator::getDefaultPrecision(ShaderStage stage) const {
 Precision CodeGenerator::getDefaultUniformPrecision() const {
     switch (mShaderModel) {
         case ShaderModel::MOBILE:
+        case ShaderModel::WEB:
             return Precision::MEDIUM;
         case ShaderModel::DESKTOP:
             return Precision::HIGH;
@@ -603,7 +617,7 @@ io::sstream& CodeGenerator::generateSamplers(
     for (auto const& info : infos) {
         auto type = info.type;
         if (type == SamplerType::SAMPLER_EXTERNAL && mShaderModel != ShaderModel::MOBILE) {
-            // we're generating the shader for the desktop, where we assume external textures
+            // we're generating the shader for the desktop or web, where we assume external textures
             // are not supported, in which case we revert to texture2d
             type = SamplerType::SAMPLER_2D;
         }
@@ -773,6 +787,7 @@ io::sstream& CodeGenerator::generateQualityDefine(io::sstream& out, ShaderQualit
                 default:                   goto quality_normal;
                 case ShaderModel::DESKTOP: goto quality_high;
                 case ShaderModel::MOBILE:  goto quality_low;
+                case ShaderModel::WEB:     goto quality_low; // FIXME: should we assume good gpus on web?
             }
         case ShaderQuality::LOW:
         quality_low:

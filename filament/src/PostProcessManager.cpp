@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#ifdef FILAMENT_TARGET_MOBILE
+#if defined(FILAMENT_TARGET_MOBILE) || defined(FILAMENT_TARGET_WEB)
 #   define DOF_DEFAULT_RING_COUNT 3
 #   define DOF_DEFAULT_MAX_COC    24
 #else

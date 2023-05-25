@@ -163,6 +163,7 @@ const char* toString(backend::ShaderModel model) noexcept {
     switch (model) {
         case backend::ShaderModel::MOBILE: return "mobile";
         case backend::ShaderModel::DESKTOP: return "desktop";
+        case backend::ShaderModel::WEB: return "web";
     }
     return "--";
 }

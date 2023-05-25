@@ -133,8 +133,11 @@ Material* Material::Builder::build(Engine& engine) {
             case ShaderModel::DESKTOP:
                 slog.e << "desktop.\n";
                 break;
+            case ShaderModel::WEB:
+                slog.e << "web.\n";
+                break;
         }
-        slog.e << "Compiled material contains shader models 0x"
+        slog.e << "Compiled material contains shader models "
                 << io::hex << shaderModels.getValue() << io::dec << "." << io::endl;
         return nullptr;
     }

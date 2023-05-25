@@ -238,8 +238,9 @@ static constexpr uint64_t FENCE_WAIT_FOR_EVER = uint64_t(-1);
  * Shader quality vs. performance is also affected by ShaderModel.
  */
 enum class ShaderModel : uint8_t {
-    MOBILE  = 1,    //!< Mobile level functionality
-    DESKTOP = 2,    //!< Desktop level functionality
+    MOBILE  = 1,    //!< Mobile level functionality (backends: OpenGLES, Vulkan, Metal)
+    DESKTOP = 2,    //!< Desktop level functionality (backends: OpenGL, Vulkan, Metal)
+    WEB     = 3,    //!< Web level functionality (backends:  WebGL 2.0)
 };
 static constexpr size_t SHADER_MODEL_COUNT = 2;
 

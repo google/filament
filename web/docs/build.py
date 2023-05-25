@@ -203,7 +203,7 @@ def tangle(name):
 def build_filamat(name):
     matsrc = SCRIPT_DIR + name + '.mat'
     matdst = os.path.join(OUTPUT_DIR, name + '.filamat')
-    flags = '-a opengl -p mobile'
+    flags = '-a opengl -p web'
     matc_exec = os.path.join(TOOLS_DIR, 'matc/matc')
     retval = os.system(f"{matc_exec} {flags} -o {matdst} {matsrc}")
     if retval != 0:

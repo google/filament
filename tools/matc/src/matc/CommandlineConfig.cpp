@@ -53,7 +53,7 @@ static void usage(char* name) {
             "   --output, -o\n"
             "       Specify path to output file\n\n"
             "   --platform, -p\n"
-            "       Shader family to generate: desktop, mobile or all (default)\n\n"
+            "       Shader family to generate: desktop, mobile, web or all (default)\n\n"
             "   --optimize-size, -S\n"
             "       Optimize generated shader code for size instead of just performance\n\n"
             "   --api, -a\n"
@@ -232,10 +232,12 @@ bool CommandlineConfig::parse() {
                    mPlatform = Platform::DESKTOP;
                 } else if (arg == "mobile") {
                     mPlatform = Platform::MOBILE;
+                } else if (arg == "web") {
+                    mPlatform = Platform::WEB;
                 } else if (arg == "all") {
                     mPlatform = Platform::ALL;
                 } else {
-                    std::cerr << "Unrecognized platform. Must be 'desktop'|'mobile'|'all'."
+                    std::cerr << "Unrecognized platform. Must be 'desktop'|'mobile'|'web'|'all'."
                             << std::endl;
                     return false;
                 }

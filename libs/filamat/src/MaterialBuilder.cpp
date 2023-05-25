@@ -102,9 +102,12 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics) {
         mShaderModels.set(static_cast<size_t>(ShaderModel::MOBILE));
     } else if (mPlatform == Platform::DESKTOP) {
         mShaderModels.set(static_cast<size_t>(ShaderModel::DESKTOP));
+    } else if (mPlatform == Platform::WEB) {
+        mShaderModels.set(static_cast<size_t>(ShaderModel::WEB));
     } else if (mPlatform == Platform::ALL) {
         mShaderModels.set(static_cast<size_t>(ShaderModel::MOBILE));
         mShaderModels.set(static_cast<size_t>(ShaderModel::DESKTOP));
+        mShaderModels.set(static_cast<size_t>(ShaderModel::WEB));
     }
 
     // OpenGL is a special case. If we're doing any optimization, then we need to go to Spir-V.
@@ -124,7 +127,7 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics) {
 
     // Build a list of codegen permutations, which is useful across all types of material builders.
     static_assert(backend::SHADER_MODEL_COUNT == 2);
-    for (const auto shaderModel: { ShaderModel::MOBILE, ShaderModel::DESKTOP }) {
+    for (const auto shaderModel: { ShaderModel::MOBILE, ShaderModel::DESKTOP, ShaderModel::WEB }) {
         const auto i = static_cast<uint8_t>(shaderModel);
         if (!mShaderModels.test(i)) {
             continue; // skip this shader model since it was not requested.

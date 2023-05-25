@@ -39,7 +39,7 @@ protected:
     filament::backend::Driver& getDriver() { return *driver; }
 
     static filament::backend::Backend getBackend() noexcept { return sBackend; };
-    bool isMobile() noexcept { return driver->getShaderModel() == filament::backend::ShaderModel::MOBILE; };
+    bool isMobile() noexcept { return driver->getShaderModel() != filament::backend::ShaderModel::DESKTOP; };
 
 public:
     static void init(filament::backend::Backend backend);
