@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
         app.vb2->setBufferAt(*engine, 0,
                 VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES_WITHBONES + 3, 108, nullptr));
         app.ib = IndexBuffer::Builder()
-                .indexCount(6)
+                .indexCount(4)
                 .bufferType(IndexBuffer::IndexType::USHORT)
                 .build(*engine);
         app.ib->setBuffer(*engine,

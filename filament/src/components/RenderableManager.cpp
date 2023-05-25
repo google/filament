@@ -68,7 +68,7 @@ struct RenderableManager::BuilderDetails {
     FSkinningBuffer* mSkinningBuffer = nullptr;
     FInstanceBuffer* mInstanceBuffer = nullptr;
     uint32_t mSkinningBufferOffset = 0;
-    float2* mBoneIndicesAndWeight = nullptr;
+    float2* mBoneIndicesAndWeights = nullptr;
     size_t  mBoneIndicesAndWeightsCount = 0;
 
     std::unordered_map<size_t, utils::FixedCapacityVector<
@@ -229,7 +229,8 @@ RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(si
 RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(size_t primitiveIndex,
         utils::FixedCapacityVector<
             utils::FixedCapacityVector<math::float2>> const &indicesAndWeightsVector) noexcept {
-    mImpl->mBonePairs[primitiveIndex] = std::move(indicesAndWeightsVector);
+    //mImpl->mBonePairs[primitiveIndex] = std::move(indicesAndWeightsVector);
+    mImpl->mBonePairs[primitiveIndex] = indicesAndWeightsVector;
     return *this;
 }
 
@@ -288,11 +289,8 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
             "[primitive @ %u] bone indices and weights pairs count (%u) must be equal to vertex count (%u)",
             primitiveIndex, bonePairsForPrimitive.size(), vertexCount);
         auto const& declaredAttributes = downcast(entry.vertices)->getDeclaredAttributes();
-        ASSERT_PRECONDITION(!declaredAttributes[VertexAttribute::BONE_INDICES],
-            "[entity=%u, primitive @ %u] vertex attribute BONE_INDICES for skinning are already defined",
-            entity.getId(), primitiveIndex);
-        ASSERT_PRECONDITION(!declaredAttributes[VertexAttribute::BONE_WEIGHTS],
-            "[entity=%u, primitive @ %u] vertex attribute BONE_WEIGHTS for skinning are already defined",
+        ASSERT_PRECONDITION(declaredAttributes[VertexAttribute::BONE_INDICES] || declaredAttributes[VertexAttribute::BONE_WEIGHTS],
+            "[entity=%u, primitive @ %u] for advanced skinning set VertexBuffer::Builder::advancedSkinning()",
             entity.getId(), primitiveIndex);
         for (size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
             auto bonesPerVertex = bonePairsForPrimitive[iVertex].size();
@@ -303,7 +301,7 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
 
     size_t pairsCount = 0; // counting of number of pairs stored in texture
     if (maxPairsCount) { // at least one primitive has bone indices and weights
-        mBoneIndicesAndWeight = (float2*) calloc(maxPairsCount,
+        mBoneIndicesAndWeights = (float2*) calloc(maxPairsCount,
             sizeof(float2)); // final texture data, indices and weights
         std::unique_ptr<float2[]> tempPairs(
             new float2[maxPairsCountPerVertex]); // temporary indices and weights for one vertex
@@ -360,8 +358,8 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
                         skinWeights[3 + offset] = -(float) (pairsCount + 1); // negative offset to texture 0..-1, 1..-2
                         skinJoints[3 + offset] = (ushort) tempPairCount; // number pairs per vertex in texture
                         for (size_t j = 3; j < tempPairCount; j++) {
-                            mBoneIndicesAndWeight[pairsCount][0] = tempPairs[j][0];
-                            mBoneIndicesAndWeight[pairsCount][1] = tempPairs[j][1] / boneWeightsSum;
+                            mBoneIndicesAndWeights[pairsCount][0] = tempPairs[j][0];
+                            mBoneIndicesAndWeights[pairsCount][1] = tempPairs[j][1] / boneWeightsSum;
                             pairsCount++;
                         }
                     }
@@ -605,7 +603,8 @@ void FRenderableManager::create(
 
             downcast(builder->mSkinningBuffer)->
                 setIndicesAndWeightsData(downcast(engine), handle.texture,
-                       builder->mBoneIndicesAndWeight, builder->mBoneIndicesAndWeightsCount);
+                       builder->mBoneIndicesAndWeights, builder->mBoneIndicesAndWeightsCount);
+            delete[] builder->mBoneIndicesAndWeights;
         }
 
         // Create and initialize all needed MorphTargets.

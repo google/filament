@@ -224,7 +224,7 @@ public:
         return boolish ? value : uint64_t(0);
     }
 
-    struct PrimitiveInfo { // 56 bytes
+    struct PrimitiveInfo { // 48 bytes
         union {
             FMaterialInstance const* mi;
             uint64_t padding = {}; // ensures mi is 8 bytes on all archs
@@ -240,7 +240,7 @@ public:
         uint32_t skinningOffset = 0;                                    // 4 bytes
         uint16_t instanceCount;                                         // 2 bytes [MSb: user]
         Variant materialVariant;                                        // 1 byte
-        uint8_t reserved[0] = {};                                       // 1 byte
+        uint8_t reserved[0] = {};                                       // 4 bytes
 
         static const uint16_t USER_INSTANCE_MASK = 0x8000u;
         static const uint16_t INSTANCE_COUNT_MASK = 0x7fffu;

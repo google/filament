@@ -229,7 +229,7 @@ int main(int argc, char** argv) {
         app.renderable = EntityManager::get().create();
         RenderableManager::Builder(1)
                 .boundingBox({{ -2, -2, -2 }, { 2, 2, 2 }})
-                 .material(0, app.materialInstance)
+                .material(0, app.materialInstance)
                 .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.mesh.vertexBuffer, app.mesh.indexBuffer)
                 .receiveShadows(true)
                 .castShadows(false)

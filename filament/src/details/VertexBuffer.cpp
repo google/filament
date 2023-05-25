@@ -36,6 +36,7 @@ struct VertexBuffer::BuilderDetails {
     uint32_t mVertexCount = 0;
     uint8_t mBufferCount = 0;
     bool mBufferObjectsEnabled = false;
+    bool mAdvancedSkinningEnabled = false; // TODO: use bits to save memory
 };
 
 using BuilderType = VertexBuffer;
@@ -112,6 +113,11 @@ VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute attribu
     return *this;
 }
 
+VertexBuffer::Builder& VertexBuffer::Builder::advancedSkinning() noexcept {
+    mImpl->mAdvancedSkinningEnabled = true;
+    return *this;
+}
+
 VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     ASSERT_PRECONDITION(mImpl->mVertexCount > 0, "vertexCount cannot be 0");
     ASSERT_PRECONDITION(mImpl->mBufferCount > 0, "bufferCount cannot be 0");
@@ -139,7 +145,8 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
 
 FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& builder)
         : mVertexCount(builder->mVertexCount), mBufferCount(builder->mBufferCount),
-          mBufferObjectsEnabled(builder->mBufferObjectsEnabled) {
+          mBufferObjectsEnabled(builder->mBufferObjectsEnabled),
+          mAdvancedSkinningEnabled(builder->mAdvancedSkinningEnabled){
     std::copy(std::begin(builder->mAttributes), std::end(builder->mAttributes), mAttributes.begin());
 
     mDeclaredAttributes = builder->mDeclaredAttributes;
@@ -152,6 +159,30 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
 
     static_assert(sizeof(Attribute) == sizeof(AttributeData),
             "Attribute and Builder::Attribute must match");
+
+    if (mAdvancedSkinningEnabled) {
+        ASSERT_PRECONDITION(!mDeclaredAttributes[VertexAttribute::BONE_INDICES],
+                        "Vertex buffer attribute BONE_INDICES is already defined");
+        ASSERT_PRECONDITION(!mDeclaredAttributes[VertexAttribute::BONE_WEIGHTS],
+                        "Vertex buffer attribute BONE_WEIGHTS is already defined");
+        // ASSERT_PRECONDITION(mBufferObjectsEnabled, "Please use enableBufferObjects()");
+        ASSERT_PRECONDITION(mBufferCount < (MAX_VERTEX_BUFFER_COUNT - 2),
+                        "Vertex buffer uses to many buffers (%u)", mBufferCount);
+        mDeclaredAttributes.set(VertexAttribute::BONE_INDICES);
+        mAttributes[VertexAttribute::BONE_INDICES].offset = 0;
+        mAttributes[VertexAttribute::BONE_INDICES].stride = 8;
+        mAttributes[VertexAttribute::BONE_INDICES].buffer = mBufferCount;
+        mAttributes[VertexAttribute::BONE_INDICES].type = VertexBuffer::AttributeType::USHORT4;
+        mAttributes[VertexAttribute::BONE_INDICES].flags = Attribute::FLAG_INTEGER_TARGET;
+        mBufferCount++;
+        mDeclaredAttributes.set(VertexAttribute::BONE_WEIGHTS);
+        mAttributes[VertexAttribute::BONE_WEIGHTS].offset = 0;
+        mAttributes[VertexAttribute::BONE_WEIGHTS].stride = 16;
+        mAttributes[VertexAttribute::BONE_WEIGHTS].buffer = mBufferCount;
+        mAttributes[VertexAttribute::BONE_WEIGHTS].type = VertexBuffer::AttributeType::FLOAT4;
+        mAttributes[VertexAttribute::BONE_WEIGHTS].flags = 0;
+        mBufferCount++;
+    }
 
     size_t bufferSizes[MAX_VERTEX_BUFFER_COUNT] = {};
 
@@ -196,7 +227,18 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
                 mBufferObjects[i] = bo;
             }
         }
+    } else {
+        // add buffer objects for indices and weights
+        if (mAdvancedSkinningEnabled) {
+            for (size_t i = mBufferCount - 2; i < mBufferCount; ++i) {
+              BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
+                          backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
+              driver.setVertexBufferObject(mHandle, i, bo);
+              mBufferObjects[i] = bo;
+            }
+        }
     }
+
 }
 
 void FVertexBuffer::terminate(FEngine& engine) {
@@ -206,11 +248,7 @@ void FVertexBuffer::terminate(FEngine& engine) {
             driver.destroyBufferObject(bo);
         }
     }
-    if (mBoneBufferObjectsUsed){
-        driver.destroyBufferObject(mBoneJointsHandle);
-        driver.destroyBufferObject(mBoneWeightsHandle);
-    }
-   driver.destroyVertexBuffer(mHandle);
+    driver.destroyVertexBuffer(mHandle);
 }
 
 size_t FVertexBuffer::getVertexCount() const noexcept {
@@ -248,106 +286,21 @@ void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
 void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
                                                 std::unique_ptr<ushort[]> skinJoints,
                                                 std::unique_ptr<float[]> skinWeights) {
-    AttributeArray attributeArray;
-
-    static_assert(attributeArray.size() == MAX_VERTEX_ATTRIBUTE_COUNT,
-                  "Attribute and Builder::Attribute arrays must match");
-
-    static_assert(sizeof(Attribute) == sizeof(AttributeData),
-                  "Attribute and Builder::Attribute must match");
-
-    ASSERT_PRECONDITION(!mDeclaredAttributes[VertexAttribute::BONE_INDICES],
-                        "Vertex buffer attribute BONE_INDICES is already defined");
-    ASSERT_PRECONDITION(!mDeclaredAttributes[VertexAttribute::BONE_WEIGHTS],
-                        "Vertex buffer attribute BONE_WEIGHTS is already defined");
-    ASSERT_PRECONDITION(mBufferCount < (MAX_VERTEX_BUFFER_COUNT - 2),
-                        "Vertex buffer uses to many buffers (%u)", mBufferCount);
-
-    size_t bufferSizes[MAX_VERTEX_BUFFER_COUNT] = {};
-    auto slotIndicesOld = mAttributes[VertexAttribute::BONE_INDICES].buffer;
-    mDeclaredAttributes.set(VertexAttribute::BONE_INDICES);
-    mAttributes[VertexAttribute::BONE_INDICES].offset = 0;
-    mAttributes[VertexAttribute::BONE_INDICES].stride = 8;
-    mAttributes[VertexAttribute::BONE_INDICES].buffer = mBufferCount;
-    mAttributes[VertexAttribute::BONE_INDICES].type = VertexBuffer::AttributeType::USHORT4;
-    mAttributes[VertexAttribute::BONE_INDICES].flags = Attribute::FLAG_INTEGER_TARGET;
-    auto slotWeightsOld = mAttributes[VertexAttribute::BONE_INDICES].buffer;
-    mDeclaredAttributes.set(VertexAttribute::BONE_WEIGHTS);
-    mAttributes[VertexAttribute::BONE_WEIGHTS].offset = 0;
-    mAttributes[VertexAttribute::BONE_WEIGHTS].stride = 16;
-    mAttributes[VertexAttribute::BONE_WEIGHTS].buffer = mBufferCount + 1;
-    mAttributes[VertexAttribute::BONE_WEIGHTS].type = VertexBuffer::AttributeType::FLOAT4;
-    mAttributes[VertexAttribute::BONE_WEIGHTS].flags = 0;
-
-    auto const& declaredAttributes = mDeclaredAttributes;
-    auto const& attributes = mAttributes;
-
-    uint8_t attributeCount = (uint8_t) mDeclaredAttributes.count();
-    UTILS_NOUNROLL
-    for (size_t i = 0, n = attributeArray.size(); i < n; ++i) {
-        if (declaredAttributes[i]) {
-            const uint32_t offset = attributes[i].offset;
-            const uint8_t stride = attributes[i].stride;
-            const uint8_t slot = attributes[i].buffer;
-
-            attributeArray[i].offset = offset;
-            attributeArray[i].stride = stride;
-            attributeArray[i].buffer = slot;
-            attributeArray[i].type = attributes[i].type;
-            attributeArray[i].flags = attributes[i].flags;
-
-            const size_t end = offset + mVertexCount * stride;
-            bufferSizes[slot] = math::max(bufferSizes[slot], end);
-        }
-    }
-
-    FEngine::DriverApi& driver = engine.getDriverApi();
-    //destroy old bone buffer objects if any
-    if (!mBufferObjectsEnabled) {
-        if (slotIndicesOld != Attribute::BUFFER_UNUSED) {
-            driver.destroyBufferObject(mBufferObjects[slotIndicesOld]);
-        }
-        if (slotIndicesOld != Attribute::BUFFER_UNUSED) {
-            driver.destroyBufferObject(mBufferObjects[slotWeightsOld]);
-        }
-    }
-
-    //destroy old and create new vertex buffer
-    auto oldHandle = mHandle;
-    mHandle = driver.createVertexBuffer(mBufferCount + 2, attributeCount, mVertexCount, attributeArray);
-    driver.destroyVertexBuffer(oldHandle);
-    UTILS_NOUNROLL
-    for (size_t i = 0; i < mBufferCount; ++i)
-        if (bufferSizes[i] > 0) {
-            driver.setVertexBufferObject(mHandle, i, mBufferObjects[i]);
-        }
-    // add new bone buffer objects
-    mBufferCount++;
-    auto boneJointsHandle = driver.createBufferObject(bufferSizes[mBufferCount - 1],
-             backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
-    driver.setVertexBufferObject(mHandle, mBufferCount - 1, boneJointsHandle);
     auto jointsData = skinJoints.release();
     auto bdJoints = BufferDescriptor(
-            jointsData, bufferSizes[mBufferCount - 1],
-            [](void *buffer, size_t size, void *user) { delete static_cast<ushort *>(buffer); });
-    driver.updateBufferObject(boneJointsHandle,std::move(bdJoints), 0);
-    mBufferCount++;
-    auto boneWeightsHandle = driver.createBufferObject(bufferSizes[mBufferCount - 1],
-           backend::BufferObjectBinding::VERTEX, backend::BufferUsage::STATIC);
-    driver.setVertexBufferObject(mHandle, mBufferCount - 1, boneWeightsHandle);
+            jointsData, mVertexCount * 8,
+            [](void *buffer, size_t size, void *user) {
+                delete static_cast<ushort *>(buffer); });
+    engine.getDriverApi().updateBufferObject(mBufferObjects[mBufferCount - 2],
+               std::move(bdJoints), 0);
+
     auto weightsData = skinWeights.release();
     auto bdWeights = BufferDescriptor(
-            weightsData, bufferSizes[mBufferCount - 1],
-            [](void *buffer, size_t size, void *user) { delete static_cast<float *>(buffer); });
-    driver.updateBufferObject(boneWeightsHandle,std::move(bdWeights), 0);
-    if (!mBufferObjectsEnabled) {
-        mBufferObjects[mBufferCount - 2] = boneJointsHandle;
-        mBufferObjects[mBufferCount - 1] = boneWeightsHandle;
-   } else {
-        //for correct destroy bone buffer object
-        mBoneBufferObjectsUsed = true;
-        mBoneJointsHandle = boneJointsHandle;
-        mBoneWeightsHandle = boneWeightsHandle;
-   }
+            weightsData, mVertexCount * 16,
+            [](void *buffer, size_t size, void *user) {
+                delete static_cast<float *>(buffer); });
+    engine.getDriverApi().updateBufferObject(mBufferObjects[mBufferCount - 1],
+                std::move(bdWeights), 0);
+
 }
 } // namespace filament

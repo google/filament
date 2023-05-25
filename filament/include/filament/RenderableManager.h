@@ -356,6 +356,7 @@ public:
          * The pairs substitute \c BONE_INDICES and the \c BONE_WEIGHTS defined in the VertexBuffer.
          * Both ways of indices and weights definition must not be combined in one primitive.
          * Number of pairs per vertex bonesPerVertex is not limited to 4 bones.
+         * Vertex buffer used for \c primitiveIndex must be set for advance skinning.
          * All bone weights of one vertex should sum to one. Otherwise they will be normalized.
          * Data must be rectangular and number of bone pairs must be same for all vertices of this
          * primitive.
@@ -370,6 +371,8 @@ public:
          * @param bonesPerVertex number of bone pairs, same for all vertices of the primitive
          *
          * @return Builder reference for chaining calls.
+         *
+         * @see VertexBuffer:Builder:advancedSkinning
          */
         Builder& boneIndicesAndWeights(size_t primitiveIndex,
                 math::float2 const* indicesAndWeights, size_t count, size_t bonesPerVertex) noexcept;
@@ -380,6 +383,7 @@ public:
          * The pairs substitute \c BONE_INDICES and the \c BONE_WEIGHTS defined in the VertexBuffer.
          * Both ways of indices and weights definition must not be combined in one primitive.
          * Number of pairs is not limited to 4 bones per vertex.
+         * Vertex buffer used for \c primitiveIndex must be set for advance skinning.
          * All bone weights of one vertex should sum to one. Otherwise they will be normalized.
          * Data doesn't have to be rectangular and number of pairs per vertices of primitive can be
          * variable.
@@ -391,6 +395,8 @@ public:
          *                                 the primitive sequentially
          *
          * @return Builder reference for chaining calls.
+         *
+         * @see VertexBuffer:Builder:advancedSkinning
          */
         Builder& boneIndicesAndWeights(size_t primitiveIndex,
                 utils::FixedCapacityVector<
