@@ -39,9 +39,10 @@ struct VulkanTexture;
 class VulkanStagePool;
 struct VulkanTimerQuery;
 
-// TODO: We want to use std::shared_ptr across the driver, but VulkanTexture also maps to
-// HwTexture so it's not possible. We can clean this up (remove the variant) once we break that
-// mapping.
+// TODO: We used std::shared_ptr in various places across the vulkan backend, but VulkanTexture*
+// also maps to HwTexture so it's not possible to switch in VulkanAttachment. Hence we introduce
+// this temporary class. We need to revisit the ownership pattern and use of smart pointer in the
+// vulkan backend, in particular std::shared_ptr uses atomic, which is overhead we do not need.
 struct TexturePointer {
     TexturePointer() = default;
     explicit TexturePointer(VulkanTexture* tex) :mTexture(tex) {}

@@ -495,7 +495,7 @@ VkFormat findSupportedFormat(VkPhysicalDevice device) {
 
 }// anonymous namespace
 
-using SwChainHandle = VulkanPlatform::SwChainHandle;
+using SwapChainPtr = VulkanPlatform::SwapChainPtr;
 
 struct VulkanPlatformPrivate {
     VkInstance mInstance = VK_NULL_HANDLE;
@@ -506,10 +506,10 @@ struct VulkanPlatformPrivate {
     VkQueue mGraphicsQueue = VK_NULL_HANDLE;
     VulkanContext mContext = {};
 
-    // We use a map to both map a handle (i.e. SwChainHandle) to the concrete type and also to
+    // We use a map to both map a handle (i.e. SwapChainPtr) to the concrete type and also to
     // store the actual swapchain struct, which is either backed-by-surface or headless.
-    std::unordered_set<SwChainHandle> mSurfaceSwapChains;
-    std::unordered_set<SwChainHandle> mHeadlessSwapChains;
+    std::unordered_set<SwapChainPtr> mSurfaceSwapChains;
+    std::unordered_set<SwapChainPtr> mHeadlessSwapChains;
 };
 
 void VulkanPlatform::terminate() {
@@ -608,28 +608,28 @@ VulkanPlatform::VulkanPlatform() = default;
 
 VulkanPlatform::~VulkanPlatform() = default;
 
-VulkanPlatform::SwapChainBundle VulkanPlatform::getSwapChainBundle(SwChainHandle handle) {
+VulkanPlatform::SwapChainBundle VulkanPlatform::getSwapChainBundle(SwapChainPtr handle) {
     SWAPCHAIN_RET_FUNC(getSwapChainBundle, handle, )
 }
 
-VkResult VulkanPlatform::acquire(SwChainHandle handle, VkSemaphore clientSignal, uint32_t* index) {
+VkResult VulkanPlatform::acquire(SwapChainPtr handle, VkSemaphore clientSignal, uint32_t* index) {
     SWAPCHAIN_RET_FUNC(acquire, handle, clientSignal, index)
 }
 
-VkResult VulkanPlatform::present(SwChainHandle handle, uint32_t index,
+VkResult VulkanPlatform::present(SwapChainPtr handle, uint32_t index,
         VkSemaphore finishedDrawing) {
     SWAPCHAIN_RET_FUNC(present, handle, index, finishedDrawing)
 }
 
-bool VulkanPlatform::hasResized(SwChainHandle handle) {
+bool VulkanPlatform::hasResized(SwapChainPtr handle) {
     SWAPCHAIN_RET_FUNC(hasResized, handle, )
 }
 
-VkResult VulkanPlatform::recreate(SwChainHandle handle) {
+VkResult VulkanPlatform::recreate(SwapChainPtr handle) {
     SWAPCHAIN_RET_FUNC(recreate, handle, )
 }
 
-void VulkanPlatform::destroy(SwChainHandle handle) {
+void VulkanPlatform::destroy(SwapChainPtr handle) {
     if (mImpl->mSurfaceSwapChains.erase(handle)) {
         delete static_cast<VulkanPlatformSurfaceSwapChain*>(handle);
     } else if (mImpl->mHeadlessSwapChains.erase(handle)) {
@@ -639,7 +639,7 @@ void VulkanPlatform::destroy(SwChainHandle handle) {
     }
 }
 
-SwChainHandle VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
+SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
         VkExtent2D extent) {
     assert_invariant(nativeWindow || (extent.width != 0 && extent.height != 0));
     bool const headless = extent.width != 0 && extent.height != 0;

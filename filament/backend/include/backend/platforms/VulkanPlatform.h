@@ -38,16 +38,14 @@ struct VulkanPlatformPrivate;
 /**
  * A Platform interface that creates a Vulkan backend.
  */
-class VulkanPlatform : public Platform, public utils::PrivateImplementation<VulkanPlatformPrivate> {
+class VulkanPlatform : public Platform, utils::PrivateImplementation<VulkanPlatformPrivate> {
 public:
     /**
      *
      * Shorthand for the pointer to the Platform SwapChain struct, we use it also as a handle (i.e.
-     * identifier for the swapchain). (We didn't name this SwapChainHandle to avoid naming conflict
-     * with Handle.h).
+     * identifier for the swapchain).
      */
-    using SwChainHandle = Platform::SwapChain*;
-
+    using SwapChainPtr = Platform::SwapChain*;
 
     /**
      * Collection of images, formats, and extent (width/height) that defines the swapchain.
@@ -77,7 +75,7 @@ public:
      * @param swapchain   The handle returned by createSwapChain()
      * @return            An array of VkImages
      */
-    virtual SwapChainBundle getSwapChainBundle(SwChainHandle handle);
+    virtual SwapChainBundle getSwapChainBundle(SwapChainPtr handle);
 
     /**
      * Acquire the next image for rendering. The `index` will be written with an non-negative
@@ -91,7 +89,7 @@ public:
      *                       to an image in the `SwapChainBundle.colors` array.
      * @return               Result of acquire
      */
-    virtual VkResult acquire(SwChainHandle handle, VkSemaphore clientSignal, uint32_t* index);
+    virtual VkResult acquire(SwapChainPtr handle, VkSemaphore clientSignal, uint32_t* index);
 
     /**
      * Present the image corresponding to `index` to the display. The client should wait on
@@ -103,21 +101,21 @@ public:
      *                           indicate that the client may render into the image.
      * @return                   Result of present
      */
-    virtual VkResult present(SwChainHandle handle, uint32_t index, VkSemaphore finishedDrawing);
+    virtual VkResult present(SwapChainPtr handle, uint32_t index, VkSemaphore finishedDrawing);
 
     /**
      * Check if the surface size has changed.
      * @param handle             The handle returned by createSwapChain()
      * @return                   Whether the swapchain has been resized
      */
-    virtual bool hasResized(SwChainHandle handle);
+    virtual bool hasResized(SwapChainPtr handle);
 
     /**
      * Carry out a recreation of the swapchain.
      * @param handle             The handle returned by createSwapChain()
      * @return                   Result of the recreation
      */
-    virtual VkResult recreate(SwChainHandle handle);
+    virtual VkResult recreate(SwapChainPtr handle);
 
     /**
      * Create a swapchain given a platform window, or if given a null `nativeWindow`, then we
@@ -127,14 +125,14 @@ public:
      * @param extent    Optional width and height that indicates the size of the headless swapchain.
      * @return          Result of the operation
      */
-    virtual SwChainHandle createSwapChain(void* nativeWindow, uint64_t flags = 0,
+    virtual SwapChainPtr createSwapChain(void* nativeWindow, uint64_t flags = 0,
             VkExtent2D extent = {0, 0});
 
     /**
      * Destroy the swapchain.
      * @param handle    The handle returned by createSwapChain()
      */
-    virtual void destroy(SwChainHandle handle);
+    virtual void destroy(SwapChainPtr handle);
 
     /**
      * Clean up any resources owned by the Platform. For example, if the Vulkan instance handle was
