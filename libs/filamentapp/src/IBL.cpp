@@ -52,6 +52,7 @@ IBL::~IBL() {
     mEngine.destroy(mTexture);
     mEngine.destroy(mSkybox);
     mEngine.destroy(mSkyboxTexture);
+    mEngine.destroy(mFogTexture);
 }
 
 bool IBL::loadFromEquirect(Path const& path) {
@@ -93,12 +94,16 @@ bool IBL::loadFromEquirect(Path const& path) {
     IBLPrefilterContext context(mEngine);
     IBLPrefilterContext::EquirectangularToCubemap equirectangularToCubemap(context);
     IBLPrefilterContext::SpecularFilter specularFilter(context);
+    IBLPrefilterContext::IrradianceFilter irradianceFilter(context);
 
     mSkyboxTexture = equirectangularToCubemap(equirect);
 
     mEngine.destroy(equirect);
 
     mTexture = specularFilter(mSkyboxTexture);
+
+    mFogTexture = irradianceFilter({ .generateMipmap=false }, mSkyboxTexture);
+    mFogTexture->generateMipmaps(mEngine);
 
     mIndirectLight = IndirectLight::Builder()
             .reflections(mTexture)
@@ -135,6 +140,15 @@ bool IBL::loadFromKtx(const std::string& prefix) {
 
     mSkyboxTexture = Ktx1Reader::createTexture(&mEngine, skyKtx, false);
     mTexture = Ktx1Reader::createTexture(&mEngine, iblKtx, false);
+
+    // TODO: create the fog texture, it's a bit complicated because IBLPrefilter requires
+    //       the source image to have miplevels, and it's not guaranteed here and also
+    //       not guaranteed we can generate them (e.g. texture could be compressed)
+    //IBLPrefilterContext context(mEngine);
+    //IBLPrefilterContext::IrradianceFilter irradianceFilter(context);
+    //mFogTexture = irradianceFilter({ .generateMipmap=false }, mSkyboxTexture);
+    //mFogTexture->generateMipmaps(mEngine);
+
 
     if (!iblKtx->getSphericalHarmonics(mBands)) {
         return false;
