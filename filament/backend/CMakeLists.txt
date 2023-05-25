@@ -160,6 +160,9 @@ endif()
 if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
             include/backend/platforms/VulkanPlatform.h
+            src/vulkan/platform/VulkanPlatform.cpp
+            src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
+            src/vulkan/platform/VulkanPlatformSwapChainImpl.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
             src/vulkan/VulkanBuffer.cpp
@@ -184,7 +187,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanMemory.cpp
             src/vulkan/VulkanPipelineCache.cpp
             src/vulkan/VulkanPipelineCache.h
-            src/vulkan/VulkanPlatform.cpp
             src/vulkan/VulkanSamplerCache.cpp
             src/vulkan/VulkanSamplerCache.h
             src/vulkan/VulkanStagePool.cpp

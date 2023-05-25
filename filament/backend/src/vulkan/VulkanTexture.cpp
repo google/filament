@@ -208,7 +208,6 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
 }
 
 VulkanTexture::~VulkanTexture() {
-    delete mSidecarMSAA;
     if (mTextureImageMemory != VK_NULL_HANDLE) {
         vkDestroyImage(mDevice, mTextureImage, VKALLOC);
         vkFreeMemory(mDevice, mTextureImageMemory, VKALLOC);
@@ -390,6 +389,7 @@ void VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, const VkImageSubres
     #if FILAMENT_VULKAN_VERBOSE
     utils::slog.i << "transition layout of " << mTextureImage << ",layer=" << range.baseArrayLayer
                   << ",level=" << range.baseMipLevel << " from=" << oldLayout << " to=" << newLayout
+                  << " format=" << mVkFormat
                   << " depth=" << isDepthFormat(mVkFormat) << utils::io::endl;
     #endif
 

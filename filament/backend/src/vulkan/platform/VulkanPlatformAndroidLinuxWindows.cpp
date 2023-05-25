@@ -38,7 +38,9 @@
             uint32_t height;
         } wl;
     }// anonymous namespace
-#elif defined(__linux__) && defined(FILAMENT_SUPPORTS_X11) && (defined(FILAMENT_SUPPORTS_XCB) || defined(FILAMENT_SUPPORTS_XLIB))
+#elif defined(__linux__) && defined(FILAMENT_SUPPORTS_X11)
+    // TODO: we should allow for headless on Linux explicitly. Right now this is the headless path
+    // (with no FILAMENT_SUPPORTS_XCB or FILAMENT_SUPPORTS_XLIB).
     #include <dlfcn.h>
     #if defined(FILAMENT_SUPPORTS_XCB)
         #include <xcb/xcb.h>
@@ -99,11 +101,13 @@ VulkanPlatform::ExtensionSet VulkanPlatform::getRequiredInstanceExtensions() {
 
 VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWindow,
         VkInstance instance, uint64_t flags) noexcept {
-    SurfaceBundle bundle{
-            .surface = VK_NULL_HANDLE,
-            .width = 0,
-            .height = 0,
-    };
+    VkSurfaceKHR surface;
+
+    // On certain platforms, the extent of the surface cannot be queried from Vulkan. In those
+    // situations, we allow the frontend to pass in the extent to use in creating the swap
+    // chains. Platform implementation should set extent to 0 if they do not expect to set the
+    // swap chain extent.
+    VkExtent2D extent;
 
     #if defined(__ANDROID__)
         VkAndroidSurfaceCreateInfoKHR const createInfo{
@@ -111,7 +115,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
                 .window = (ANativeWindow*) nativeWindow,
         };
         VkResult const result = vkCreateAndroidSurfaceKHR(instance, &createInfo, VKALLOC,
-                (VkSurfaceKHR*) &bundle.surface);
+                (VkSurfaceKHR*) &surface);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateAndroidSurfaceKHR error.");
     #elif defined(__linux__) && defined(FILAMENT_SUPPORTS_GGP)
         VkStreamDescriptorSurfaceCreateInfoGGP const surface_create_info = {
@@ -125,12 +129,12 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
                 "Error getting VkInstance "
                 "function vkCreateStreamDescriptorSurfaceGGP");
         VkResult const result = fpCreateStreamDescriptorSurfaceGGP(instance, &surface_create_info,
-                nullptr, (VkSurfaceKHR*) &bundle.surface);
+                nullptr, (VkSurfaceKHR*) &surface);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateStreamDescriptorSurfaceGGP error.");
     #elif defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
         wl* ptrval = reinterpret_cast<wl*>(nativeWindow);
-        bundle.width = ptrval->width;
-        bundle.height = ptrval->height;
+        extent.width = ptrval->width;
+        extent.height = ptrval->height;
 
         VkWaylandSurfaceCreateInfoKHR const createInfo = {
                 .sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
@@ -140,7 +144,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
                 .surface = ptrval->surface,
         };
         VkResult const result = vkCreateWaylandSurfaceKHR(instance, &createInfo, VKALLOC,
-                (VkSurfaceKHR*) &bundle.surface);
+                (VkSurfaceKHR*) &surface);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateWaylandSurfaceKHR error.");
     #elif defined(__linux__) && defined(FILAMENT_SUPPORTS_X11)
         if (g_x11_vk.library == nullptr) {
@@ -161,7 +165,9 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
                         "Unable to load vkCreateXlibSurfaceKHR function.");
             #endif
         }
-        bool useXcb = false;
+        #if defined(FILAMENT_SUPPORTS_XCB) || defined(FILAMENT_SUPPORTS_XLIB)
+            bool useXcb = false;
+        #endif
         #if defined(FILAMENT_SUPPORTS_XCB)
             #if defined(FILAMENT_SUPPORTS_XLIB)
                 useXcb = (flags & SWAP_CHAIN_CONFIG_ENABLE_XCB) != 0;
@@ -175,7 +181,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
                         .window = (xcb_window_t) reinterpret_cast<uint64_t>(nativeWindow),
                 };
                 VkResult const result = vkCreateXcbSurfaceKHR(instance, &createInfo, VKALLOC,
-                        (VkSurfaceKHR*) &bundle.surface);
+                        (VkSurfaceKHR*) &surface);
                 ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateXcbSurfaceKHR error.");
             }
         #endif
@@ -187,7 +193,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
                         .window = (Window) nativeWindow,
                 };
                 VkResult const result = vkCreateXlibSurfaceKHR(instance, &createInfo, VKALLOC,
-                        (VkSurfaceKHR*) &bundle.surface);
+                        (VkSurfaceKHR*) &surface);
                 ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateXlibSurfaceKHR error.");
             }
         #endif
@@ -198,10 +204,10 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
             .hwnd = (HWND) nativeWindow,
         };
         VkResult const result = vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr,
-                (VkSurfaceKHR*) &bundle.surface);
+                (VkSurfaceKHR*) &surface);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateWin32SurfaceKHR error.");
     #endif
-    return bundle;
+    return std::make_tuple(surface, extent);
 }
 
 } // namespace filament::backend
