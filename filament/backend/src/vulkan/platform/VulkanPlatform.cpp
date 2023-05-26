@@ -24,8 +24,6 @@
 #include <bluevk/BlueVK.h>
 #include <utils/PrivateImplementation-impl.h>
 
-#include <unordered_map>
-
 #define SWAPCHAIN_RET_FUNC(func, handle, ...)                                                      \
     if (mImpl->mSurfaceSwapChains.find(handle) != mImpl->mSurfaceSwapChains.end()) {               \
         return static_cast<VulkanPlatformSurfaceSwapChain*>(handle)->func(__VA_ARGS__);            \
@@ -43,13 +41,15 @@ namespace filament::backend {
 
 namespace {
 
+constexpr uint32_t const INVALID_VK_INDEX = 0xFFFFFFFF;
+
 typedef std::unordered_set<std::string_view> ExtensionSet;
 
 #if VK_ENABLE_VALIDATION
 // These strings need to be allocated outside a function stack
 const std::string_view DESIRED_LAYERS[] = {
         "VK_LAYER_KHRONOS_validation",
-#if FILAMENT_VULKAN_DUMP_API
+#if defined(FILAMENT_VULKAN_DUMP_API)
         "VK_LAYER_LUNARG_api_dump",
 #endif
 #if defined(ENABLE_RENDERDOC)
@@ -381,7 +381,7 @@ FixedCapacityVector<VkQueueFamilyProperties> getPhysicalDeviceQueueFamilyPropert
 uint32_t identifyGraphicsQueueFamilyIndex(VkPhysicalDevice physicalDevice) {
     const FixedCapacityVector<VkQueueFamilyProperties> queueFamiliesProperties
             = getPhysicalDeviceQueueFamilyPropertiesHelper(physicalDevice);
-    uint32_t graphicsQueueFamilyIndex = 0xFFFFFFFF;
+    uint32_t graphicsQueueFamilyIndex = INVALID_VK_INDEX;
     for (uint32_t j = 0; j < queueFamiliesProperties.size(); ++j) {
         VkQueueFamilyProperties props = queueFamiliesProperties[j];
         if (props.queueCount != 0 && props.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
@@ -442,7 +442,7 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance) {
         // Does the device have any command queues that support graphics?
         // In theory, we should also ensure that the device supports presentation of our
         // particular VkSurface, but we don't have a VkSurface yet, so we'll skip this requirement.
-        if (identifyGraphicsQueueFamilyIndex(candidateDevice) == 0xffff) {
+        if (identifyGraphicsQueueFamilyIndex(candidateDevice) == INVALID_VK_INDEX) {
             continue;
         }
 
@@ -501,8 +501,8 @@ struct VulkanPlatformPrivate {
     VkInstance mInstance = VK_NULL_HANDLE;
     VkPhysicalDevice mPhysicalDevice = VK_NULL_HANDLE;
     VkDevice mDevice = VK_NULL_HANDLE;
-    uint32_t mGraphicsQueueFamilyIndex = 0xFFFFFFFF;
-    uint32_t mGraphicsQueueIndex = 0;
+    uint32_t mGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
+    uint32_t mGraphicsQueueIndex = INVALID_VK_INDEX;
     VkQueue mGraphicsQueue = VK_NULL_HANDLE;
     VulkanContext mContext = {};
 
@@ -528,23 +528,49 @@ void VulkanPlatform::terminate() {
 }
 
 // This is the main entry point for context creation.
-Driver* VulkanPlatform::createDriver(void* const sharedContext,
+Driver* VulkanPlatform::createDriver(void* sharedContext,
         const Platform::DriverConfig& driverConfig) noexcept {
     // Load Vulkan entry points.
     ASSERT_POSTCONDITION(bluevk::initialize(), "BlueVK is unable to load entry points.");
+
+    if (sharedContext) {
+        VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
+        // All fields of VulkanSharedContext should be present.
+        ASSERT_PRECONDITION(scontext->instance != VK_NULL_HANDLE,
+                "Client needs to provide VkInstance");
+        ASSERT_PRECONDITION(scontext->physicalDevice != VK_NULL_HANDLE,
+                "Client needs to provide VkPhysicalDevice");
+        ASSERT_PRECONDITION(scontext->logicalDevice != VK_NULL_HANDLE,
+                "Client needs to provide VkDevice");
+        ASSERT_PRECONDITION(scontext->graphicsQueueFamilyIndex != INVALID_VK_INDEX,
+                "Client needs to provide graphics queue family index");
+        ASSERT_PRECONDITION(scontext->graphicsQueueIndex != INVALID_VK_INDEX,
+                "Client needs to provide graphics queue index");
+
+        mImpl->mInstance = scontext->instance;
+        mImpl->mPhysicalDevice = scontext->physicalDevice;
+        mImpl->mDevice = scontext->logicalDevice;
+        mImpl->mGraphicsQueueFamilyIndex = scontext->graphicsQueueFamilyIndex;
+        mImpl->mGraphicsQueueIndex = scontext->graphicsQueueIndex;
+    }
 
     VulkanContext context;
 
     auto instExts = getInstanceExtensions();
     instExts.merge(getRequiredInstanceExtensions());
 
-    mImpl->mInstance = createInstance(instExts);
+    mImpl->mInstance
+            = mImpl->mInstance == VK_NULL_HANDLE ? createInstance(instExts) : mImpl->mInstance;
     assert_invariant(mImpl->mInstance != VK_NULL_HANDLE);
 
     bluevk::bindInstance(mImpl->mInstance);
 
-    mImpl->mPhysicalDevice = selectPhysicalDevice(mImpl->mInstance);
+    mImpl->mPhysicalDevice = mImpl->mPhysicalDevice == VK_NULL_HANDLE
+                                     ? selectPhysicalDevice(mImpl->mInstance)
+                                     : mImpl->mPhysicalDevice;
     assert_invariant(mImpl->mPhysicalDevice != VK_NULL_HANDLE);
+
+    printDeviceInfo(mImpl->mInstance, mImpl->mPhysicalDevice);
 
     // Initialize the following fields: physicalDeviceProperties, memoryProperties,
     // physicalDeviceFeatures, graphicsQueueFamilyIndex.
@@ -552,10 +578,18 @@ Driver* VulkanPlatform::createDriver(void* const sharedContext,
     vkGetPhysicalDeviceFeatures(mImpl->mPhysicalDevice, &context.mPhysicalDeviceFeatures);
     vkGetPhysicalDeviceMemoryProperties(mImpl->mPhysicalDevice, &context.mMemoryProperties);
 
-    mImpl->mGraphicsQueueFamilyIndex = identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice);
-    assert_invariant(mImpl->mGraphicsQueueFamilyIndex != 0xFFFFFFFF);
+    mImpl->mGraphicsQueueFamilyIndex
+            = mImpl->mGraphicsQueueFamilyIndex == INVALID_VK_INDEX
+                      ? identifyGraphicsQueueFamilyIndex(mImpl->mPhysicalDevice)
+                      : mImpl->mGraphicsQueueFamilyIndex;
+    assert_invariant(mImpl->mGraphicsQueueFamilyIndex != INVALID_VK_INDEX);
 
-    printDeviceInfo(mImpl->mInstance, mImpl->mPhysicalDevice);
+    // At this point, we should have a family index that points to a family that has > 0 queues for
+    // graphics. In which case, we will allocate one queue for all of Filament (and assumes at least
+    // one has been allocated by the client if context was shared). If the index of the target queue
+    // within the family hasn't been provided by the client, we assume it to be 0.
+    mImpl->mGraphicsQueueIndex
+            = mImpl->mGraphicsQueueIndex == INVALID_VK_INDEX ? 0 : mImpl->mGraphicsQueueIndex;
 
     auto deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice);
     {
@@ -565,8 +599,10 @@ Driver* VulkanPlatform::createDriver(void* const sharedContext,
         deviceExts = prunedDeviceExts;
     }
 
-    mImpl->mDevice = createLogicalDevice(mImpl->mPhysicalDevice, context.mPhysicalDeviceFeatures,
-            mImpl->mGraphicsQueueFamilyIndex, deviceExts);
+    mImpl->mDevice
+            = mImpl->mDevice == VK_NULL_HANDLE ? createLogicalDevice(mImpl->mPhysicalDevice,
+                      context.mPhysicalDeviceFeatures, mImpl->mGraphicsQueueFamilyIndex, deviceExts)
+                                               : mImpl->mDevice;
     assert_invariant(mImpl->mDevice != VK_NULL_HANDLE);
 
     vkGetDeviceQueue(mImpl->mDevice, mImpl->mGraphicsQueueFamilyIndex, mImpl->mGraphicsQueueIndex,
@@ -683,6 +719,6 @@ VkQueue VulkanPlatform::getGraphicsQueue() const noexcept {
     return mImpl->mGraphicsQueue;
 }
 
-#undef SWAPCHAIN
+#undef SWAPCHAIN_RET_FUNC
 
 }// namespace filament::backend
