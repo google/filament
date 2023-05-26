@@ -90,6 +90,7 @@ Froxelizer::Froxelizer(FEngine& engine)
             "Record Buffer must use bytes");
 
     if (UTILS_UNLIKELY(engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)) {
+        return;
     }
 
     DriverApi& driverApi = engine.getDriverApi();
