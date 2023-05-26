@@ -14,3 +14,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - matc: better accounting and validation of used samplers in user materials
 - engine: add support for sampling fog color from a custom texture [⚠️ **Recompile materials**]
 - vulkan: introduce new custom swapchain API
+- vulkan: new context sharing API

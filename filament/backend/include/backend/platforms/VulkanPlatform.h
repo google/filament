@@ -40,8 +40,26 @@ struct VulkanPlatformPrivate;
  */
 class VulkanPlatform : public Platform, utils::PrivateImplementation<VulkanPlatformPrivate> {
 public:
+
     /**
-     *
+     * A collection of handles to objects and metadata that comprises a Vulkan context. The client
+     * can instantiate this struct and pass to Engine::Builder::sharedContext if they wishes to
+     * share their vulkan context. This is specifically necessary if the client wishes to override
+     * the swapchain API.
+     */
+    struct VulkanSharedContext {
+        VkInstance instance = VK_NULL_HANDLE;
+        VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+        VkDevice logicalDevice = VK_NULL_HANDLE;
+        uint32_t graphicsQueueFamilyIndex = 0xFFFFFFFF;
+        // In the usual case, the client needs to allocate at least one more graphics queue
+        // for Filament, and this index is the param to pass into vkGetDeviceQueue. In the case
+        // where the gpu only has one graphics queue. Then the client needs to ensure that no
+        // concurrent access can occur.
+        uint32_t graphicsQueueIndex = 0xFFFFFFFF;
+    };
+
+    /**
      * Shorthand for the pointer to the Platform SwapChain struct, we use it also as a handle (i.e.
      * identifier for the swapchain).
      */
@@ -62,7 +80,7 @@ public:
 
     ~VulkanPlatform() override;
 
-    Driver* createDriver(void* const sharedContext,
+    Driver* createDriver(void* sharedContext,
             Platform::DriverConfig const& driverConfig) noexcept override;
 
     int getOSVersion() const noexcept override {
