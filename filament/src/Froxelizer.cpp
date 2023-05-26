@@ -90,14 +90,13 @@ Froxelizer::Froxelizer(FEngine& engine)
             "Record Buffer must use bytes");
 
     if (UTILS_UNLIKELY(engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)) {
-        return;
     }
 
     DriverApi& driverApi = engine.getDriverApi();
 
     mFroxelBufferEntryCount = std::min(
             FROXEL_BUFFER_MAX_ENTRY_COUNT,
-            engine.getDriverApi().getMaxUniformBufferSize() / 4u);
+            engine.getDriverApi().getMaxUniformBufferSize() / 16u);
 
     mRecordsBuffer = driverApi.createBufferObject(RECORD_BUFFER_ENTRY_COUNT,
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
