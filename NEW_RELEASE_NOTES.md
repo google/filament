@@ -7,11 +7,3 @@ for next branch cut* header.
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
-
-- engine: a new feature to set a transform on the global-scale fog  [⚠️ **Recompile materials**]
-- engine: large-scale fog can now be opted-out on a per-renderable basis
-- engine: improve froxelizer resource efficiency [⚠️ **Recompile materials**]
-- matc: better accounting and validation of used samplers in user materials
-- engine: add support for sampling fog color from a custom texture [⚠️ **Recompile materials**]
-- vulkan: introduce new custom swapchain API
-- vulkan: new context sharing API
