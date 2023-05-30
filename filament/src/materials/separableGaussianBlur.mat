@@ -1,9 +1,14 @@
 material {
-    name : separableGaussianBlur2L,
+    name : separableGaussianBlur,
     parameters : [
         {
-            type : sampler2dArray,
+            type : sampler2d,
             name : source,
+            precision: medium
+        },
+        {
+            type : sampler2dArray,
+            name : sourceArray,
             precision: medium
         },
         {
@@ -31,6 +36,18 @@ material {
             name : kernel
         }
     ],
+    constants : [
+        {
+            type : bool,
+            name : arraySampler,
+            default : false
+        },
+        {
+            type : int,
+            name : componentCount,
+            default : 4
+        }
+    ],
     variables : [
         vertex
     ],
@@ -44,10 +61,6 @@ vertex {
 }
 
 fragment {
-
-#define BLUR_TYPE    vec2
-#define BLUR_SWIZZLE rg
-#define TEXTURE_LOD(s, p, m, l) textureLod(s, vec3(p, l), m)
 
 #include "separableGaussianBlur.fs"
 

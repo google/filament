@@ -32,10 +32,13 @@
 #include <private/filament/Variant.h>
 
 #include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <tsl/robin_map.h>
 
 #include <random>
+#include <string_view>
+#include <variant>
 
 namespace filament {
 
@@ -50,6 +53,19 @@ struct CameraInfo;
 
 class PostProcessManager {
 public:
+
+    struct ConstantInfo {
+        std::string_view name;
+        std::variant<int32_t, float, bool> value;
+    };
+
+    struct MaterialInfo {
+        std::string_view name;
+        uint8_t const* data;
+        int size;
+        utils::FixedCapacityVector<ConstantInfo> constants = {};
+    };
+
     struct ColorGradingConfig {
         bool asSubpass{};
         bool customResolve{};
@@ -291,7 +307,7 @@ private:
     class PostProcessMaterial {
     public:
         PostProcessMaterial() noexcept;
-        PostProcessMaterial(FEngine& engine, uint8_t const* data, int size) noexcept;
+        PostProcessMaterial(MaterialInfo const& info) noexcept;
 
         PostProcessMaterial(PostProcessMaterial const& rhs) = delete;
         PostProcessMaterial& operator=(PostProcessMaterial const& rhs) = delete;
@@ -318,6 +334,7 @@ private:
         };
         uint32_t mSize{};
         mutable bool mHasMaterial{};
+        utils::FixedCapacityVector<ConstantInfo> mConstants{};
     };
 
     using MaterialRegistryMap = tsl::robin_map<
@@ -326,7 +343,7 @@ private:
 
     MaterialRegistryMap mMaterialRegistry;
 
-    void registerPostProcessMaterial(std::string_view name, uint8_t const* data, int size);
+    void registerPostProcessMaterial(std::string_view name, MaterialInfo const& info);
     PostProcessMaterial& getPostProcessMaterial(std::string_view name) noexcept;
 
     backend::Handle<backend::HwTexture> mStarburstTexture;

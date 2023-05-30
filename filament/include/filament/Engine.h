@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_ENGINE_H
 #define TNT_FILAMENT_ENGINE_H
 
+#include <filament/FilamentAPI.h>
+
 #include <backend/Platform.h>
 
 #include <utils/compiler.h>
@@ -165,6 +167,7 @@ class TransformManager;
  * @see Renderer
  */
 class UTILS_PUBLIC Engine {
+    struct BuilderDetails;
 public:
     using Platform = backend::Platform;
     using Backend = backend::Backend;
@@ -266,96 +269,124 @@ public:
         uint32_t perFrameCommandsSizeMB = FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB;
     };
 
+
+#if UTILS_HAS_THREADING
+    using CreateCallback = void(void* user, void* token);
+#endif
+
     /**
-     * Creates an instance of Engine
-     *
-     * @param backend           Which driver backend to use.
-     *
-     * @param platform          A pointer to an object that implements Platform. If this is
-     *                          provided, then this object is used to create the hardware context
-     *                          and expose platform features to it.
-     *
-     *                          If not provided (or nullptr is used), an appropriate Platform
-     *                          is created automatically.
-     *
-     *                          All methods of this interface are called from filament's
-     *                          render thread, which is different from the main thread.
-     *
-     *                          The lifetime of \p platform must exceed the lifetime of
-     *                          the Engine object.
-     *
-     *  @param sharedGLContext  A platform-dependant OpenGL context used as a shared context
-     *                          when creating filament's internal context.
-     *                          Setting this parameter will force filament to use the OpenGL
-     *                          implementation (instead of Vulkan for instance).
-     *
-     * @param config            A pointer to optional parameters to specify memory size
-     *                          configuration options.  If nullptr, then defaults used.
-     *
-     * @return A pointer to the newly created Engine, or nullptr if the Engine couldn't be created.
-     *
-     * nullptr if the GPU driver couldn't be initialized, for instance if it doesn't
-     * support the right version of OpenGL or OpenGL ES.
-     *
-     * @exception utils::PostConditionPanic can be thrown if there isn't enough memory to
-     * allocate the command buffer. If exceptions are disabled, this condition if fatal and
-     * this function will abort.
-     *
-     * \remark
-     * This method is thread-safe.
+     * Engine::Builder is used to create a new filament Engine.
      */
-    static Engine* create(Backend backend = Backend::DEFAULT,
-            Platform* platform = nullptr, void* sharedGLContext = nullptr,
-            const Config* config = nullptr);
+    class Builder : public BuilderBase<BuilderDetails> {
+        friend struct BuilderDetails;
+        friend class FEngine;
+    public:
+        Builder() noexcept;
+        Builder(Builder const& rhs) noexcept;
+        Builder(Builder&& rhs) noexcept;
+        ~Builder() noexcept;
+        Builder& operator=(Builder const& rhs) noexcept;
+        Builder& operator=(Builder&& rhs) noexcept;
+
+        /**
+         * @param backend Which driver backend to use
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& backend(Backend backend) noexcept;
+
+        /**
+         * @param platform A pointer to an object that implements Platform. If this is
+         *                 provided, then this object is used to create the hardware context
+         *                 and expose platform features to it.
+         *
+         *                 If not provided (or nullptr is used), an appropriate Platform
+         *                 is created automatically.
+         *
+         *                 All methods of this interface are called from filament's
+         *                 render thread, which is different from the main thread.
+         *
+         *                 The lifetime of \p platform must exceed the lifetime of
+         *                 the Engine object.
+         *
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& platform(Platform* platform) noexcept;
+
+        /**
+         * @param config    A pointer to optional parameters to specify memory size
+         *                  configuration options.  If nullptr, then defaults used.
+         *
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& config(const Config* config) noexcept;
+
+        /**
+         * @param sharedContext A platform-dependant context used as a shared context
+         *                      when creating filament's internal context.
+         *
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& sharedContext(void* sharedContext) noexcept;
+
+#if UTILS_HAS_THREADING
+        /**
+         * Creates the filament Engine asynchronously.
+         *
+         * @param callback  Callback called once the engine is initialized and it is safe to
+         *                  call Engine::getEngine().
+         */
+        void build(utils::Invocable<void(void* token)>&& callback) const;
+#endif
+
+        /**
+         * Creates an instance of Engine.
+         *
+         * @return  A pointer to the newly created Engine, or nullptr if the Engine couldn't be
+         *          created.
+         *          nullptr if the GPU driver couldn't be initialized, for instance if it doesn't
+         *          support the right version of OpenGL or OpenGL ES.
+         *
+         * @exception   utils::PostConditionPanic can be thrown if there isn't enough memory to
+         *              allocate the command buffer. If exceptions are disabled, this condition if
+         *              fatal and this function will abort.
+         */
+        Engine* build() const;
+    };
+
+    /**
+     * Backward compatibility helper to create an Engine.
+     * @see Builder
+     */
+    static inline Engine* create(Backend backend = Backend::DEFAULT,
+            Platform* platform = nullptr, void* sharedContext = nullptr,
+            const Config* config = nullptr) {
+        return Engine::Builder()
+                .backend(backend)
+                .platform(platform)
+                .sharedContext(sharedContext)
+                .config(config)
+                .build();
+    }
+
 
 #if UTILS_HAS_THREADING
     /**
-     * A callback used with Engine::createAsync() called once the engine is initialized and it is
-     * safe to call Engine::getEngine(token). This callback is invoked from an arbitrary worker
-     * thread. Engine::getEngine() CANNOT be called from that thread, instead it must be called
-     * from the same thread than Engine::createAsync() was called from.
-     *
-     * @param user   User provided parameter given in createAsync().
-     *
-     * @param token  An opaque token used to call Engine::getEngine().
+     * Backward compatibility helper to create an Engine asynchronously.
+     * @see Builder
      */
-    using CreateCallback = void(void* user, void* token);
-
-    /**
-     * Creates an instance of Engine asynchronously
-     *
-     * @param callback          Callback called once the engine is initialized and it is safe to
-     *                          call Engine::getEngine.
-     *
-     * @param user              A user provided pointer that is given back to callback unmodified.
-     *
-     * @param backend           Which driver backend to use.
-     *
-     * @param platform          A pointer to an object that implements Platform. If this is
-     *                          provided, then this object is used to create the hardware context
-     *                          and expose platform features to it.
-     *
-     *                          If not provided (or nullptr is used), an appropriate Platform
-     *                          is created automatically.
-     *
-     *                          All methods of this interface are called from filament's
-     *                          render thread, which is different from the main thread.
-     *
-     *                          The lifetime of \p platform must exceed the lifetime of
-     *                          the Engine object.
-     *
-     *  @param sharedGLContext  A platform-dependant OpenGL context used as a shared context
-     *                          when creating filament's internal context.
-     *                          Setting this parameter will force filament to use the OpenGL
-     *                          implementation (instead of Vulkan for instance).
-     * 
-     * @param config            A pointer to optional parameters to specify memory size
-     *                          configuration options
-     */
-    static void createAsync(CreateCallback callback, void* user,
+    static inline void createAsync(CreateCallback callback, void* user,
             Backend backend = Backend::DEFAULT,
-            Platform* platform = nullptr, void* sharedGLContext = nullptr,
-            const Config* config = nullptr);
+            Platform* platform = nullptr, void* sharedContext = nullptr,
+            const Config* config = nullptr) {
+        Engine::Builder()
+                .backend(backend)
+                .platform(platform)
+                .sharedContext(sharedContext)
+                .config(config)
+                .build([callback, user](void* token) {
+                    callback(user, token);
+                });
+    }
 
     /**
      * Retrieve an Engine* from createAsync(). This must be called from the same thread than
@@ -371,6 +402,7 @@ public:
      */
     static Engine* getEngine(void* token);
 #endif
+
 
     /**
      * Destroy the Engine instance and all associated resources.

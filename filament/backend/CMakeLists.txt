@@ -25,6 +25,7 @@ set(PUBLIC_HDRS
 
 set(SRCS
         src/BackendUtils.cpp
+        src/BlobCacheKey.cpp
         src/Callable.cpp
         src/CallbackHandler.cpp
         src/CircularBuffer.cpp
@@ -69,6 +70,8 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
             src/opengl/gl_headers.h
             src/opengl/GLUtils.cpp
             src/opengl/GLUtils.h
+            src/opengl/OpenGLBlobCache.cpp
+            src/opengl/OpenGLBlobCache.h
             src/opengl/OpenGLContext.cpp
             src/opengl/OpenGLContext.h
             src/opengl/OpenGLDriver.cpp
@@ -193,20 +196,10 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanUtility.cpp
             src/vulkan/VulkanUtility.h
     )
-    if (LINUX)
-        if (FILAMENT_SUPPORTS_WAYLAND)
-            list(APPEND SRCS src/vulkan/PlatformVkLinuxWayland.cpp)
-        elseif (FILAMENT_SUPPORTS_X11)
-            list(APPEND SRCS src/vulkan/PlatformVkLinuxX11.cpp)
-        endif()
-    elseif (APPLE AND NOT IOS)
-        list(APPEND SRCS src/vulkan/PlatformVkCocoa.mm)
-    elseif (IOS)
-        list(APPEND SRCS src/vulkan/PlatformVkCocoaTouch.mm)
-    elseif (ANDROID)
-        list(APPEND SRCS src/vulkan/PlatformVkAndroid.cpp)
-    elseif (WIN32)
-        list(APPEND SRCS src/vulkan/PlatformVkWindows.cpp)
+    if (ANDROID OR LINUX OR WIN32)
+        list(APPEND SRCS src/vulkan/platform/PlatformVulkanAndroidLinuxWindows.cpp)
+    elseif (APPLE OR IOS)
+        list(APPEND SRCS src/vulkan/platform/PlatformVulkanApple.mm)
     endif()
 endif()
 

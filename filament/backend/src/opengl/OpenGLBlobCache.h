@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,30 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/VulkanPlatform.h>
+#ifndef TNT_FILAMENT_BACKEND_OPENGLBLOBCACHE_H
+#define TNT_FILAMENT_BACKEND_OPENGLBLOBCACHE_H
+
+#include "gl_headers.h"
+
+#include "BlobCacheKey.h"
 
 namespace filament::backend {
 
-Driver* VulkanPlatform::createDriver(void* const sharedContext,
-        const Platform::DriverConfig& driverConfig) noexcept {
-    return nullptr;
-}
+class Platform;
+class Program;
 
-VulkanPlatform::~VulkanPlatform() = default;
+class OpenGLBlobCache {
+public:
+    static GLuint retrieve(BlobCacheKey* key, Platform& platform,
+            Program const& program) noexcept;
+
+    static void insert(Platform& platform,
+            BlobCacheKey const& key, GLuint program) noexcept;
+
+private:
+    struct Blob;
+};
 
 } // namespace filament::backend
+
+#endif // TNT_FILAMENT_BACKEND_OPENGLBLOBCACHE_H

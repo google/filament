@@ -18,11 +18,37 @@
 
 namespace filament::backend {
 
+Platform::Platform() noexcept = default;
+
 // this generates the vtable in this translation unit
 Platform::~Platform() noexcept = default;
 
 bool Platform::pumpEvents() noexcept {
     return false;
+}
+
+void Platform::setBlobFunc(InsertBlobFunc&& insertBlob, RetrieveBlobFunc&& retrieveBlob) noexcept {
+    if (!mInsertBlob && !mRetrieveBlob) {
+        mInsertBlob = std::move(insertBlob);
+        mRetrieveBlob = std::move(retrieveBlob);
+    }
+}
+
+bool Platform::hasBlobFunc() const noexcept {
+    return mInsertBlob && mRetrieveBlob;
+}
+
+void Platform::insertBlob(void const* key, size_t keySize, void const* value, size_t valueSize) {
+    if (mInsertBlob) {
+        mInsertBlob(key, keySize, value, valueSize);
+    }
+}
+
+size_t Platform::retrieveBlob(void const* key, size_t keySize, void* value, size_t valueSize) {
+    if (mRetrieveBlob) {
+        return mRetrieveBlob(key, keySize, value, valueSize);
+    }
+    return 0;
 }
 
 } // namespace filament::backend

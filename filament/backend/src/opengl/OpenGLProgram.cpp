@@ -16,12 +16,16 @@
 
 #include "OpenGLProgram.h"
 
+#include "OpenGLBlobCache.h"
 #include "OpenGLDriver.h"
 
-#include <utils/Log.h>
-#include <utils/compiler.h>
-#include <utils/Panic.h>
+#include "BlobCacheKey.h"
+
 #include <utils/debug.h>
+#include <utils/compiler.h>
+#include <utils/Log.h>
+#include <utils/Panic.h>
+#include <utils/Systrace.h>
 
 #include <private/backend/BackendUtils.h>
 
@@ -71,25 +75,34 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver& gld, Program&& program) noexcept
         mLazyInitializationData->uniformBlockInfo = std::move(program.getUniformBlockBindings());
     }
 
-    // this cannot fail because we check compilation status after linking the program
-    // shaders[] is filled with id of shader stages present.
-    OpenGLProgram::compileShaders(context,
-            std::move(program.getShadersSource()),
-            program.getSpecializationConstants(),
-            gl.shaders,
-            mLazyInitializationData->shaderSourceCode);
+    BlobCacheKey key;
+    gl.program = OpenGLBlobCache::retrieve(&key, gld.mPlatform, program);
+    if (!gl.program) {
+        // this cannot fail because we check compilation status after linking the program
+        // shaders[] is filled with id of shader stages present.
+        OpenGLProgram::compileShaders(context,
+                std::move(program.getShadersSource()),
+                program.getSpecializationConstants(),
+                gl.shaders,
+                mLazyInitializationData->shaderSourceCode);
 
-    gld.runAtNextRenderPass(this, [this, &context]() {
-        // by this point we must not have a GL program
-        assert_invariant(!gl.program);
-        // we also can't be in the initialized state
-        assert_invariant(!mInitialized);
-        // we must have our lazy initialization data
-        assert_invariant(mLazyInitializationData);
-        // link the program, this also cannot fail because status is checked later.
-        gl.program = OpenGLProgram::linkProgram(context,
-                mLazyInitializationData, gl.shaders);
-    });
+        gld.runAtNextRenderPass(this, [this, &gld, &context, key = std::move(key)]() {
+            // by this point we must not have a GL program
+            assert_invariant(!gl.program);
+            // we also can't be in the initialized state
+            assert_invariant(!mInitialized);
+            // we must have our lazy initialization data
+            assert_invariant(mLazyInitializationData);
+            // link the program, this also cannot fail because status is checked later.
+            gl.program = OpenGLProgram::linkProgram(context,
+                    mLazyInitializationData, gl.shaders);
+
+            if (key) {
+                // attempt to cache
+                OpenGLBlobCache::insert(gld.mPlatform, key, gl.program);
+            }
+        });
+    }
 }
 
 OpenGLProgram::~OpenGLProgram() noexcept {
@@ -123,6 +136,8 @@ void OpenGLProgram::compileShaders(OpenGLContext& context,
         utils::FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
         GLuint shaderIds[Program::SHADER_TYPE_COUNT],
         UTILS_UNUSED_IN_RELEASE std::array<CString, Program::SHADER_TYPE_COUNT>& outShaderSourceCode) noexcept {
+
+    SYSTRACE_CALL();
 
     auto appendSpecConstantString = +[](std::string& s, Program::SpecializationConstant const& sc) {
         s += "#define SPIRV_CROSS_CONSTANT_ID_" + std::to_string(sc.id) + ' ';
@@ -290,6 +305,9 @@ std::array<std::string_view, 2> OpenGLProgram::splitShaderSource(std::string_vie
 GLuint OpenGLProgram::linkProgram(OpenGLContext& context,
         LazyInitializationData* const lazyInitializationData,
         const GLuint shaderIds[Program::SHADER_TYPE_COUNT]) noexcept {
+
+    SYSTRACE_CALL();
+
     GLuint const program = glCreateProgram();
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
         if (shaderIds[i]) {
@@ -314,6 +332,8 @@ GLuint OpenGLProgram::linkProgram(OpenGLContext& context,
 bool OpenGLProgram::checkProgramStatus(const char* name,
         GLuint& program, GLuint shaderIds[Program::SHADER_TYPE_COUNT],
         std::array<CString, Program::SHADER_TYPE_COUNT> const& shaderSourceCode) noexcept {
+
+    SYSTRACE_CALL();
 
     GLint status;
     glGetProgramiv(program, GL_LINK_STATUS, &status);
@@ -375,6 +395,8 @@ void OpenGLProgram::initialize(OpenGLContext& context) {
  */
 void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint program,
         LazyInitializationData& lazyInitializationData) noexcept {
+
+    SYSTRACE_CALL();
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     if (!context.isES2()) {
