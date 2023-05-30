@@ -284,13 +284,13 @@ void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
 }
 
 void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
-                                                std::unique_ptr<ushort[]> skinJoints,
+                                                std::unique_ptr<uint16_t[]> skinJoints,
                                                 std::unique_ptr<float[]> skinWeights) {
     auto jointsData = skinJoints.release();
     auto bdJoints = BufferDescriptor(
             jointsData, mVertexCount * 8,
             [](void *buffer, size_t size, void *user) {
-                delete static_cast<ushort *>(buffer); });
+                delete static_cast<uint16_t *>(buffer); });
     engine.getDriverApi().updateBufferObject(mBufferObjects[mBufferCount - 2],
                std::move(bdJoints), 0);
 

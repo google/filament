@@ -310,8 +310,8 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
             auto bonePairsForPrimitive = iBonePair->second;
             if (bonePairsForPrimitive.size()) {
                 size_t vertexCount = mEntries[primitiveIndex].vertices->getVertexCount();
-                std::unique_ptr<ushort[]> skinJoints(
-                    new ushort[4 * vertexCount]()); // temporary indices for one vertex
+                std::unique_ptr<uint16_t[]> skinJoints(
+                    new uint16_t[4 * vertexCount]()); // temporary indices for one vertex
                 std::unique_ptr<float[]> skinWeights(
                     new float[4 * vertexCount]()); // temporary weights for one vertex
                 for (size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
@@ -356,7 +356,7 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
                     // prepare data for texture
                     if (tempPairCount > 4) { // set attributes, indices and weights, for > 4 pairs
                         skinWeights[3 + offset] = -(float) (pairsCount + 1); // negative offset to texture 0..-1, 1..-2
-                        skinJoints[3 + offset] = (ushort) tempPairCount; // number pairs per vertex in texture
+                        skinJoints[3 + offset] = (uint16_t) tempPairCount; // number pairs per vertex in texture
                         for (size_t j = 3; j < tempPairCount; j++) {
                             mBoneIndicesAndWeights[pairsCount][0] = tempPairs[j][0];
                             mBoneIndicesAndWeights[pairsCount][1] = tempPairs[j][1] / boneWeightsSum;
@@ -604,7 +604,7 @@ void FRenderableManager::create(
             downcast(builder->mSkinningBuffer)->
                 setIndicesAndWeightsData(downcast(engine), handle.texture,
                        builder->mBoneIndicesAndWeights, builder->mBoneIndicesAndWeightsCount);
-            delete[] builder->mBoneIndicesAndWeights;
+            free(builder->mBoneIndicesAndWeights);
         }
 
         // Create and initialize all needed MorphTargets.

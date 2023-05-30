@@ -61,7 +61,7 @@ public:
     void setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
             FBufferObject const * bufferObject);
 
-    void updateBoneIndicesAndWeights(FEngine& engine, std::unique_ptr<ushort[]> skinJoints,
+    void updateBoneIndicesAndWeights(FEngine& engine, std::unique_ptr<uint16_t[]> skinJoints,
                                         std::unique_ptr<float[]> skinWeights);
 
 private:

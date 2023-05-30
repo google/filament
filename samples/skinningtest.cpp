@@ -100,13 +100,13 @@ static const short4 targets_tan[9] = {
   { 0, 0, 0, 0},{ 0, 0, 0, 0},{ 0, 0, 0, 0},
   { 0, 0, 0, 0},{ 0, 0, 0, 0},{ 0, 0, 0, 0}};
 
-static const ushort skinJoints[] = { 0,1,2,5,
-                                     0,2,3,5,
-                                     0,3,1,5};
+static const uint16_t skinJoints[] = { 0, 1, 2, 5,
+                                     0, 2, 3, 5,
+                                     0, 3, 1, 5};
 
-static const float skinWeights[] = { 0.5f,0.0f,0.0f,0.5f,
-                                     0.5f,0.0f,0.f,0.5f,
-                                     0.5f,0.0f,0.f,0.5f,};
+static const float skinWeights[] = { 0.5f, 0.0f, 0.0f, 0.5f,
+                                     0.5f, 0.0f, 0.f, 0.5f,
+                                     0.5f, 0.0f, 0.f, 0.5f,};
 
 static float2 boneDataArray[48] = {}; //index and weight for 3 vertices X 8 bones
 
@@ -336,14 +336,14 @@ int main(int argc, char** argv) {
             .bufferType(IndexBuffer::IndexType::USHORT)
             .build(*engine);
         app.ib->setBuffer(*engine,
-            IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 3 * sizeof(ushort), nullptr));
+            IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 3 * sizeof(uint16_t), nullptr));
 
         app.ib2 = IndexBuffer::Builder()
             .indexCount(6)
             .bufferType(IndexBuffer::IndexType::USHORT)
             .build(*engine);
         app.ib2->setBuffer(*engine,
-            IndexBuffer::BufferDescriptor(TRIANGLE_INDICES_2, 6 * sizeof(ushort), nullptr));
+            IndexBuffer::BufferDescriptor(TRIANGLE_INDICES_2, 6 * sizeof(uint16_t), nullptr));
 
         app.mat = Material::Builder()
             .package(RESOURCES_BAKEDCOLOR_DATA, RESOURCES_BAKEDCOLOR_SIZE)

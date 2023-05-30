@@ -63,14 +63,14 @@ static const Vertex TRIANGLE_VERTICES[3] = {
     {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xff0000ffu},
 };
 
-static const ushort skinJoints[] = {0,1,2,3,
-                                     0,1,2,3,
-                                     0,1,2,3
+static const uint16_t skinJoints[] = { 0, 1, 2, 3,
+                                     0, 1, 2, 3,
+                                     0, 1, 2, 3
 };
 
-static const float skinWeights[] = {0.25f,0.25f,0.25f,0.25f,
-                                     0.25f,0.25f,0.25f,0.25f,
-                                     0.25f,0.25f,0.25f,0.25f
+static const float skinWeights[] = { 0.25f, 0.25f, 0.25f, 0.25f,
+                                     0.25f, 0.25f, 0.25f, 0.25f,
+                                     0.25f, 0.25f, 0.25f, 0.25f
 };
 
 static constexpr uint16_t TRIANGLE_INDICES[] = { 0, 1, 2, 3 };
