@@ -49,7 +49,7 @@ typedef std::unordered_set<std::string_view> ExtensionSet;
 // These strings need to be allocated outside a function stack
 const std::string_view DESIRED_LAYERS[] = {
         "VK_LAYER_KHRONOS_validation",
-#if defined(FILAMENT_VULKAN_DUMP_API)
+#if FILAMENT_VULKAN_DUMP_API
         "VK_LAYER_LUNARG_api_dump",
 #endif
 #if defined(ENABLE_RENDERDOC)
