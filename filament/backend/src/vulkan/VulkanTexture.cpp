@@ -252,7 +252,7 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     vmaUnmapMemory(mAllocator, stage->memory);
     vmaFlushAllocation(mAllocator, stage->memory, 0, hostData->size);
 
-    const VkCommandBuffer cmdbuf = mCommands->get().cmdbuffer;
+    const VkCommandBuffer cmdbuf = mCommands->get(true).cmdbuffer;
 
     VkBufferImageCopy copyRegion = {
         .bufferOffset = {},

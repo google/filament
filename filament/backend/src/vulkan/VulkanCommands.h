@@ -48,6 +48,7 @@ struct VulkanCommandBuffer {
     VulkanCommandBuffer& operator=(VulkanCommandBuffer const&) = delete;
     VkCommandBuffer cmdbuffer = VK_NULL_HANDLE;
     std::shared_ptr<VulkanCmdFence> fence;
+    bool blockOnGC = false;
 };
 
 // Allows classes to be notified after a new command buffer has been activated.
@@ -89,7 +90,10 @@ class VulkanCommands {
         ~VulkanCommands();
 
         // Creates a "current" command buffer if none exists, otherwise returns the current one.
-        VulkanCommandBuffer const& get();
+        // `blockOnGC` guarrantees that this buffer will be waited on when gc() is called on it so
+        // that dependent resources can be gc'd safetly after the buffer is sumbitted, completed,
+        // and gc'd.
+        VulkanCommandBuffer const& get(bool blockOnGC = false);
 
         // Submits the current command buffer if it exists, then sets "current" to null.
         // If there are no outstanding commands then nothing happens and this returns false.
