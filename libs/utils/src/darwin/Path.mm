@@ -19,6 +19,8 @@
 #include <vector>
 
 #include <dirent.h>
+#include <pwd.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 
 #include <mach-o/dyld.h>
@@ -47,6 +49,17 @@ Path Path::getCurrentExecutable() {
 Path Path::getTemporaryDirectory() {
     NSString* tempDir = NSTemporaryDirectory();
     return Path([tempDir cStringUsingEncoding:NSUTF8StringEncoding]);
+}
+
+Path Path::getUserSettingsDirectory() {
+    const char* home = getenv("HOME");
+    if (!home) {
+        struct passwd* pwd = getpwuid(getuid());
+        if (pwd) {
+           home = pwd->pw_dir;
+        }
+    }
+    return Path(home);
 }
 
 std::vector<Path> Path::listContents() const {
