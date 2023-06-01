@@ -44,6 +44,8 @@
 #include <filament/DebugRegistry.h>
 #endif
 
+#include <backend/platforms/VulkanPlatform.h>
+
 #include <filagui/ImGuiHelper.h>
 
 #include <filamentapp/Cube.h>
@@ -57,6 +59,36 @@ using namespace filament;
 using namespace filagui;
 using namespace filament::math;
 using namespace utils;
+
+namespace {
+
+using namespace filament::backend;
+
+class FilamentAppVulkanPlatform : public VulkanPlatform {
+public:
+    FilamentAppVulkanPlatform(std::string const& gpuHint) {
+        if (gpuHint.empty()) {
+            return;
+        }
+        // Check to see if it is an integer, if so turn it into an index.
+        if (std::find_if(gpuHint.begin(), gpuHint.end(), [](unsigned char c) {
+                return !std::isdigit(c);
+            }) == gpuHint.end()) {
+            mPreference.index = static_cast<int8_t>(std::stoi(gpuHint));
+            return;
+        }
+        mPreference.deviceName = gpuHint;
+    }
+
+    virtual VulkanPlatform::GPUPreference getPreferredGPU() noexcept override {
+        return mPreference;
+    }
+
+private:
+    VulkanPlatform::GPUPreference mPreference;
+};
+
+} // anonymous namespace
 
 FilamentApp& FilamentApp::get() {
     static FilamentApp filamentApp;
@@ -397,7 +429,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         // TODO: Use SDL_GL_SetSwapInterval for proper vsync
         SDL_DisplayMode Mode;
         int refreshIntervalMS = (SDL_GetDesktopDisplayMode(
-            SDL_GetWindowDisplayIndex(window->mWindow), &Mode) == 0 && 
+            SDL_GetWindowDisplayIndex(window->mWindow), &Mode) == 0 &&
             Mode.refresh_rate != 0) ? round(1000.0 / Mode.refresh_rate) : 16;
         SDL_Delay(refreshIntervalMS);
 
@@ -442,6 +474,10 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     mEngine->destroy(mScene);
     Engine::destroy(&mEngine);
     mEngine = nullptr;
+
+    if (mVulkanPlatform) {
+        delete mVulkanPlatform;
+    }
 }
 
 // RELATIVE_ASSET_PATH is set inside samples/CMakeLists.txt and used to support multi-configuration
@@ -537,8 +573,30 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
     // events.
     mWindow = SDL_CreateWindow(title.c_str(), x, y, (int) w, (int) h, windowFlags);
 
+    auto const createEngine = [&config, this]() {
+        auto backend = config.backend;
+
+        // This mirrors the logic for choosing a backend given compile-time flags and client having
+        // provided DEFAULT as the backend (see PlatformFactory.cpp)
+        #if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !defined(IOS) && \
+            !defined(__APPLE__) && defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+            if (backend == Engine::Backend::DEFAULT) {
+                backend = Engine::Backend::VULKAN;
+            }
+        #endif
+
+        if (backend == Engine::Backend::VULKAN) {
+            mFilamentApp->mVulkanPlatform = new FilamentAppVulkanPlatform(config.vulkanGPUHint);
+            return Engine::Builder()
+                    .backend(backend)
+                    .platform(mFilamentApp->mVulkanPlatform)
+                    .build();
+        }
+        return Engine::Builder().backend(backend).build();
+    };
+
     if (config.headless) {
-        mFilamentApp->mEngine = Engine::create(config.backend);
+        mFilamentApp->mEngine = createEngine();
         mSwapChain = mFilamentApp->mEngine->createSwapChain((uint32_t) w, (uint32_t) h);
         mWidth = w;
         mHeight = h;
@@ -549,7 +607,7 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         // Create the Engine after the window in case this happens to be a single-threaded platform.
         // For single-threaded platforms, we need to ensure that Filament's OpenGL context is
         // current, rather than the one created by SDL.
-        mFilamentApp->mEngine = Engine::create(config.backend);
+        mFilamentApp->mEngine = createEngine();
 
         // get the resolved backend
         mBackend = config.backend = mFilamentApp->mEngine->getBackend();
@@ -829,7 +887,7 @@ FilamentApp::CView::~CView() {
     engine.destroy(view);
 }
 
-void FilamentApp::CView::setViewport(Viewport const& viewport) {
+void FilamentApp::CView::setViewport(filament::Viewport const& viewport) {
     mViewport = viewport;
     view->setViewport(viewport);
     if (mCameraManipulator) {

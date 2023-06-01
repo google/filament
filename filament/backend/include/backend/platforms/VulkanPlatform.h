@@ -87,6 +87,29 @@ public:
         return 0;
     }
 
+    // ----------------------------------------------------
+    // ---------- Platform Customization options ----------
+    /**
+     * The client preference can be stored within the struct.  We allow for two specification of
+     * preference:
+     *     1) A substring to match against `VkPhysicalDeviceProperties.deviceName`.
+     *     2) Index of the device in the list as returned by vkEnumeratePhysicalDevices.
+     */
+    struct GPUPreference {
+        std::string deviceName;
+        int8_t index = -1;
+    };
+
+    /**
+     * Client can provide a preference over the GPU to use in the vulkan instance
+     * @return            `GPUPreference` struct that indicates the client's preference
+     */
+    virtual GPUPreference getPreferredGPU() noexcept {
+        return {};
+    }
+    // -------- End platform customization options --------
+    // ----------------------------------------------------
+
     /**
      * Get the images handles and format of the memory backing the swapchain. This should be called
      * after createSwapChain() or after recreateIfResized().
