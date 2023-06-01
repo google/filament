@@ -40,6 +40,7 @@ struct PlatformCocoaTouchGLImpl {
     EAGLContext* mGLContext = nullptr;
     CAEAGLLayer* mCurrentGlLayer = nullptr;
     std::vector<CAEAGLLayer*> mHeadlessGlLayers;
+    std::vector<EAGLContext*> mAdditionalContexts;
     CGRect mCurrentGlLayerRect;
     GLuint mDefaultFramebuffer = 0;
     GLuint mDefaultColorbuffer = 0;
@@ -91,6 +92,20 @@ Driver* PlatformCocoaTouchGL::createDriver(void* const sharedGLContext, const Pl
     pImpl->mExternalImageSharedGl = new CocoaTouchExternalImage::SharedGl();
 
     return OpenGLPlatform::createDefaultDriver(this, sharedGLContext, driverConfig);
+}
+
+bool PlatformCocoaTouchGL::isExtraContextSupported() const noexcept {
+    return true;
+}
+
+void PlatformCocoaTouchGL::createContext(bool shared) {
+    EAGLSharegroup* const sharegroup = shared ? pImpl->mGLContext.sharegroup : nil;
+    EAGLContext* const context = [[EAGLContext alloc]
+                                  initWithAPI:kEAGLRenderingAPIOpenGLES3
+                                   sharegroup:sharegroup];
+    ASSERT_POSTCONDITION(context, "Unable to create extra OpenGL ES context.");
+    [EAGLContext setCurrentContext:context];
+    pImpl->mAdditionalContexts.push_back(context);
 }
 
 void PlatformCocoaTouchGL::terminate() noexcept {

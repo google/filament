@@ -50,13 +50,15 @@
 #define HAS_MAPBUFFERS 1
 #endif
 
-#define DEBUG_MARKER_NONE       0
-#define DEBUG_MARKER_OPENGL     1
+#define DEBUG_MARKER_NONE       0x00    // no debug marker
+#define DEBUG_MARKER_OPENGL     0x01    // markers in the gl command queue (req. driver support)
+#define DEBUG_MARKER_BACKEND    0x02    // markers on the backend side (systrace)
+#define DEBUG_MARKER_ALL        0x03    // all markers
 
 // set to the desired debug marker level
 #define DEBUG_MARKER_LEVEL      DEBUG_MARKER_NONE
 
-#if DEBUG_MARKER_LEVEL == DEBUG_MARKER_OPENGL
+#if DEBUG_MARKER_LEVEL > DEBUG_MARKER_NONE
 #   define DEBUG_MARKER() \
         DebugMarker _debug_marker(*this, __func__);
 #else
@@ -165,9 +167,11 @@ OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
 // ------------------------------------------------------------------------------------------------
 
 OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
-        : mHandleAllocator("Handles", driverConfig.handleArenaSize),
-          mSamplerMap(32),
-          mPlatform(*platform) {
+        : mPlatform(*platform),
+          mContext(),
+          mShaderCompilerService(*this),
+          mHandleAllocator("Handles", driverConfig.handleArenaSize),
+          mSamplerMap(32) {
   
     std::fill(mSamplerBindings.begin(), mSamplerBindings.end(), nullptr);
 
@@ -208,6 +212,8 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
         mTimerQueryImpl = new TimerQueryFallback();
         mFrameTimeSupported = false;
     }
+
+    mShaderCompilerService.init();
 }
 
 OpenGLDriver::~OpenGLDriver() noexcept { // NOLINT(modernize-use-equals-default)
@@ -242,6 +248,8 @@ void OpenGLDriver::terminate() {
 #endif
 
     delete mTimerQueryImpl;
+
+    mShaderCompilerService.terminate();
 
     mPlatform.terminate();
 }
@@ -1455,7 +1463,6 @@ void OpenGLDriver::destroyProgram(Handle<HwProgram> ph) {
     DEBUG_MARKER()
     if (ph) {
         OpenGLProgram* p = handle_cast<OpenGLProgram*>(ph);
-        cancelRunAtNextPassOp(p);
         destruct(ph, p);
     }
 }
@@ -2602,18 +2609,16 @@ SyncStatus OpenGLDriver::getSyncStatus(Handle<HwSync> sh) {
 
 void OpenGLDriver::compilePrograms(CallbackHandler* handler,
         CallbackHandler::Callback callback, void* user) {
-    // TODO: this works because currently `executeRenderPassOps` is only used for compiling
-    //       materials. If that changed, we'd have to only execute the callbacks related to
-    //       material compilation.
-    executeRenderPassOps();
-    scheduleCallback(handler, user, callback);
+    if (callback) {
+        getShaderCompilerService().notifyWhenAllProgramsAreReady(handler, callback, user);
+    }
 }
 
 void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         const RenderPassParams& params) {
     DEBUG_MARKER()
 
-    executeRenderPassOps();
+    getShaderCompilerService().tick();
 
     auto& gl = mContext;
 
@@ -2954,29 +2959,34 @@ void OpenGLDriver::insertEventMarker(char const* string, uint32_t len) {
 }
 
 void OpenGLDriver::pushGroupMarker(char const* string, uint32_t len) {
+
 #ifdef GL_EXT_debug_marker
-    auto& gl = mContext;
-    if (UTILS_LIKELY(gl.ext.EXT_debug_marker)) {
+#if DEBUG_MARKER_LEVEL & DEBUG_MARKER_OPENGL
+    if (UTILS_LIKELY(mContext.ext.EXT_debug_marker)) {
         glPushGroupMarkerEXT(GLsizei(len ? len : strlen(string)), string);
-    } else
-#endif
-    {
-        SYSTRACE_CONTEXT();
-        SYSTRACE_NAME_BEGIN(string);
     }
+#endif
+#endif
+
+#if DEBUG_MARKER_LEVEL & DEBUG_MARKER_BACKEND
+    SYSTRACE_CONTEXT();
+    SYSTRACE_NAME_BEGIN(string);
+#endif
 }
 
 void OpenGLDriver::popGroupMarker(int) {
 #ifdef GL_EXT_debug_marker
-    auto& gl = mContext;
-    if (UTILS_LIKELY(gl.ext.EXT_debug_marker)) {
+#if DEBUG_MARKER_LEVEL & DEBUG_MARKER_OPENGL
+    if (UTILS_LIKELY(mContext.ext.EXT_debug_marker)) {
         glPopGroupMarkerEXT();
-    } else
-#endif
-    {
-        SYSTRACE_CONTEXT();
-        SYSTRACE_NAME_END();
     }
+#endif
+#endif
+
+#if DEBUG_MARKER_LEVEL & DEBUG_MARKER_BACKEND
+    SYSTRACE_CONTEXT();
+    SYSTRACE_NAME_END();
+#endif
 }
 
 void OpenGLDriver::startCapture(int) {
@@ -3213,25 +3223,6 @@ void OpenGLDriver::executeEveryNowAndThenOps() noexcept {
     }
 }
 
-void OpenGLDriver::runAtNextRenderPass(void* token, std::function<void()> fn) noexcept {
-    assert_invariant(mRunAtNextRenderPassOps.find(token) == mRunAtNextRenderPassOps.end());
-    mRunAtNextRenderPassOps[token] = std::move(fn);
-}
-
-void OpenGLDriver::cancelRunAtNextPassOp(void* token) noexcept {
-    mRunAtNextRenderPassOps.erase(token);
-}
-
-void OpenGLDriver::executeRenderPassOps() noexcept {
-    auto& ops = mRunAtNextRenderPassOps;
-    if (!ops.empty()) {
-        for (auto& item: ops) {
-            item.second();
-        }
-        ops.clear();
-    }
-}
-
 // ------------------------------------------------------------------------------------------------
 // Rendering ops
 // ------------------------------------------------------------------------------------------------
@@ -3240,6 +3231,7 @@ void OpenGLDriver::tick(int) {
     DEBUG_MARKER()
     executeGpuCommandsCompleteOps();
     executeEveryNowAndThenOps();
+    getShaderCompilerService().tick();
 }
 
 void OpenGLDriver::beginFrame(
@@ -3549,7 +3541,7 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
 }
 
 void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
-    executeRenderPassOps();
+    getShaderCompilerService().tick();
 
     OpenGLProgram* p = handle_cast<OpenGLProgram*>(program);
 

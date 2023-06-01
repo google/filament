@@ -109,4 +109,11 @@ TargetBufferFlags OpenGLPlatform::getPreservedFlags(UTILS_UNUSED SwapChain* swap
     return TargetBufferFlags::NONE;
 }
 
+bool OpenGLPlatform::isExtraContextSupported() const noexcept {
+    return false;
+}
+
+void OpenGLPlatform::createContext(bool) {
+}
+
 } // namespace filament::backend

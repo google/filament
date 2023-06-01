@@ -296,6 +296,14 @@ enum class Precision : uint8_t {
     DEFAULT
 };
 
+/**
+ * Shader compiler priority queue
+ */
+enum class CompilerPriorityQueue : uint8_t {
+    HIGH,
+    LOW
+};
+
 //! Texture sampler type
 enum class SamplerType : uint8_t {
     SAMPLER_2D,             //!< 2D texture

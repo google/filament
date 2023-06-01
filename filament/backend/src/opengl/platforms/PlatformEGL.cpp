@@ -27,6 +27,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
+#include <utils/Panic.h>
 
 #ifndef EGL_CONTEXT_OPENGL_BACKWARDS_COMPATIBLE_ANGLE
 #   define EGL_CONTEXT_OPENGL_BACKWARDS_COMPATIBLE_ANGLE 0x3483
@@ -225,6 +226,8 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
         goto error;
     }
 
+    mContextAttribs = std::move(contextAttribs);
+
     initializeGlExtensions();
 
     // this is needed with older emulators/API levels on Android
@@ -251,6 +254,26 @@ error:
     return nullptr;
 }
 
+bool PlatformEGL::isExtraContextSupported() const noexcept {
+    return ext.egl.KHR_no_config_context;
+}
+
+void PlatformEGL::createContext(bool shared) {
+    EGLContext context = eglCreateContext(mEGLDisplay, EGL_NO_CONFIG_KHR,
+            shared ? mEGLContext : EGL_NO_CONTEXT, mContextAttribs.data());
+
+    if (UTILS_UNLIKELY(context == EGL_NO_CONTEXT)) {
+        // eglCreateContext failed
+        logEglError("eglCreateContext");
+    }
+
+    assert_invariant(context != EGL_NO_CONTEXT);
+
+    eglMakeCurrent(mEGLDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, context);
+
+    mAdditionalContexts.push_back(context);
+}
+
 EGLBoolean PlatformEGL::makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept {
     if (UTILS_UNLIKELY((drawSurface != mCurrentDrawSurface || readSurface != mCurrentReadSurface))) {
         mCurrentDrawSurface = drawSurface;
@@ -264,6 +287,9 @@ void PlatformEGL::terminate() noexcept {
     eglMakeCurrent(mEGLDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     eglDestroySurface(mEGLDisplay, mEGLDummySurface);
     eglDestroyContext(mEGLDisplay, mEGLContext);
+    for (auto context : mAdditionalContexts) {
+        eglDestroyContext(mEGLDisplay, context);
+    }
     eglTerminate(mEGLDisplay);
     eglReleaseThread();
 }
@@ -441,7 +467,7 @@ FenceStatus PlatformEGL::waitFence(
 #ifdef EGL_KHR_reusable_sync
     EGLSyncKHR sync = (EGLSyncKHR) fence;
     if (sync != EGL_NO_SYNC_KHR) {
-        EGLint status = eglClientWaitSyncKHR(mEGLDisplay, sync, 0, (EGLTimeKHR)timeout);
+        EGLint const status = eglClientWaitSyncKHR(mEGLDisplay, sync, 0, (EGLTimeKHR)timeout);
         if (status == EGL_CONDITION_SATISFIED_KHR) {
             return FenceStatus::CONDITION_SATISFIED;
         }

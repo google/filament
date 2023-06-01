@@ -119,6 +119,16 @@ Material* ArchiveCache::getMaterial(const ArchiveRequirements& reqs) {
                     .package(spec.package, spec.packageByteCount)
                     .build(mEngine);
             }
+
+            // compile everything at low priority
+            mMaterials[i]->compile(Material::CompilerPriorityQueue::LOW);
+
+            // promote variants we care about to high priority
+            mMaterials[i]->compile(Material::CompilerPriorityQueue::HIGH,
+                    UserVariantFilterBit::DIRECTIONAL_LIGHTING |
+                    UserVariantFilterBit::DYNAMIC_LIGHTING |
+                    UserVariantFilterBit::SHADOW_RECEIVER);
+
             return mMaterials[i];
         }
     }

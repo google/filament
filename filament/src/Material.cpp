@@ -136,10 +136,10 @@ MaterialInstance const* Material::getDefaultInstance() const noexcept {
     return downcast(this)->getDefaultInstance();
 }
 
-void Material::compile(backend::CallbackHandler* handler,
-        utils::Invocable<void(Material*)>&& callback,
-        UserVariantFilterMask variantFilter) noexcept {
-    downcast(this)->compile(handler, std::move(callback), variantFilter);
+void Material::compile(CompilerPriorityQueue priority, UserVariantFilterMask variantFilter,
+        backend::CallbackHandler* handler, utils::Invocable<void(Material*)>&& callback) noexcept {
+    downcast(this)->compile(priority, variantFilter, handler, std::move(callback));
 }
+
 
 } // namespace filament

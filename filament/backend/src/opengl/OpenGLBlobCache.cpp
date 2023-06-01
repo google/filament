@@ -41,6 +41,7 @@ GLuint OpenGLBlobCache::retrieve(BlobCacheKey* outKey, Platform& platform,
 
     GLuint programId = 0;
 
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     BlobCacheKey key{ program.getCacheId(), program.getSpecializationConstants() };
 
     // FIXME: use a static buffer to avoid systematic allocation
@@ -77,12 +78,14 @@ GLuint OpenGLBlobCache::retrieve(BlobCacheKey* outKey, Platform& platform,
         using std::swap;
         swap(*outKey, key);
     }
+#endif
 
     return programId;
 }
 
 void OpenGLBlobCache::insert(Platform& platform,
         BlobCacheKey const& key, GLuint program) noexcept {
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     SYSTRACE_CALL();
     if (platform.hasBlobFunc()) {
         SYSTRACE_CONTEXT();
@@ -100,6 +103,21 @@ void OpenGLBlobCache::insert(Platform& platform,
                 blob->format = format;
                 platform.insertBlob(key.data(), key.size(), blob.get(), size);
             }
+        }
+    }
+#endif
+}
+
+void OpenGLBlobCache::insert(Platform& platform, BlobCacheKey const& key,
+        GLenum format, void* data, GLsizei programBinarySize) noexcept {
+    SYSTRACE_CALL();
+    if (platform.hasBlobFunc()) {
+        if (programBinarySize) {
+            size_t const size = sizeof(Blob) + programBinarySize;
+            std::unique_ptr<Blob, decltype(&::free)> blob{ (Blob*)malloc(size), &::free };
+            blob->format = format;
+            memcpy(blob->data, data, programBinarySize);
+            platform.insertBlob(key.data(), key.size(), blob.get(), size);
         }
     }
 }

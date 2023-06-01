@@ -10,3 +10,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 - matc: fix VSM high precision option on mobile [⚠️ **Recompile materials**]
 - vulkan: support sRGB swap chain
+- backend: parallel shader compilation support. This breaks and improves the recent `Material::compile` API.

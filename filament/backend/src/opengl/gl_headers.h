@@ -174,6 +174,12 @@ using namespace glext;
 #   define GL_ZERO_TO_ONE                           GL_ZERO_TO_ONE_EXT
 #endif
 
+#ifdef GL_KHR_parallel_shader_compile
+#   define GL_COMPLETION_STATUS                     GL_COMPLETION_STATUS_KHR
+#else
+#   define GL_COMPLETION_STATUS                     0x91B1
+#endif
+
 // we need GL_TEXTURE_CUBE_MAP_ARRAY defined, but we won't use it if the extension/feature
 // is not available.
 #if defined(GL_EXT_texture_cube_map_array)
@@ -221,6 +227,14 @@ using namespace glext;
 #       define GL_UNSIGNED_INT_24_8                 GL_UNSIGNED_INT_24_8_OES
 #       define GL_DEPTH24_STENCIL8                  GL_DEPTH24_STENCIL8_OES
 #   endif
+#endif
+
+#else // All version OpenGL below
+
+#ifdef GL_ARB_parallel_shader_compile
+#   define GL_COMPLETION_STATUS                     GL_COMPLETION_STATUS_ARB
+#else
+#   define GL_COMPLETION_STATUS                     0x91B1
 #endif
 
 #endif // GL_ES_VERSION_2_0

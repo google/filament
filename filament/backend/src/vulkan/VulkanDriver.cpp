@@ -980,7 +980,9 @@ void VulkanDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
 
 void VulkanDriver::compilePrograms(CallbackHandler* handler,
         CallbackHandler::Callback callback, void* user) {
-    scheduleCallback(handler, user, callback);
+    if (callback) {
+        scheduleCallback(handler, user, callback);
+    }
 }
 
 void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {

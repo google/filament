@@ -227,7 +227,8 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     // NOTE: this makes synchronous calls to the driver
     driver.updateStreams(&driver);
 
-    // gives the backend a chance to execute periodic tasks
+    // Gives the backend a chance to execute periodic tasks. This must be called before
+    // the frame skipper.
     driver.tick();
 
     /*

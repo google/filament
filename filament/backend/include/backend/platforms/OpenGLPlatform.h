@@ -267,6 +267,27 @@ public:
      * @return Transformed image.
      */
     virtual AcquiredImage transformAcquiredImage(AcquiredImage source) noexcept;
+
+    // --------------------------------------------------------------------------------------------
+
+    /**
+     * Returns true if additional OpenGL contexts can be created. Default: false.
+     * @return true if additional OpenGL contexts can be created.
+     * @see createContext
+     */
+    virtual bool isExtraContextSupported() const noexcept;
+
+    /**
+     * Creates an OpenGL context with the same configuration than the main context and makes it
+     * current to the current thread. Must not be called from the main driver thread.
+     * createContext() is only supported if isExtraContextSupported() returns true.
+     * These additional contexts will be automatically terminated in terminate.
+     *
+     * @param shared whether the new context is shared with the main context.
+     * @see isExtraContextSupported()
+     * @see terminate()
+     */
+    virtual void createContext(bool shared);
 };
 
 } // namespace filament
