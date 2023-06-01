@@ -49,7 +49,7 @@ Path Path::getTemporaryDirectory() {
 
 Path Path::getUserSettingsDirectory() {
     TCHAR home[MAX_PATH];
-    SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, home)
+    SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, home);
     return Path(home);
 }
 
