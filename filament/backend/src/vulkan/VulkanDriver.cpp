@@ -1757,34 +1757,40 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             const SamplerDescriptor* boundSampler = sb->data() + samplerIdx;
             samplerIdx++;
 
+            VulkanTexture* texture = nullptr;
             if (UTILS_LIKELY(boundSampler->t)) {
-                VulkanTexture* texture = handle_cast<VulkanTexture*>(boundSampler->t);
+                texture = handle_cast<VulkanTexture*>(boundSampler->t);
                 mDisposer.acquire(texture);
-
-                // TODO: can this uninitialized check be checked in a higher layer?
-                // This fallback path is very flaky because the dummy texture might not have
-                // matching characteristics. (e.g. if the missing texture is a 3D texture)
-                if (UTILS_UNLIKELY(texture->getPrimaryImageLayout() == VulkanLayout::UNDEFINED)) {
-#ifndef NDEBUG
-                    utils::slog.w << "Uninitialized texture bound to '" << sampler.name.c_str() << "'";
-                    utils::slog.w << " in material '" << program->name.c_str() << "'";
-                    utils::slog.w << " at binding point " << +sampler.binding << utils::io::endl;
-#endif
-                    // Calling get() won't leak here since `texture` is local.
-                    texture = mEmptyTexture.get();
-                }
-
-                const SamplerParams& samplerParams = boundSampler->s;
-                VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
-
-                usage = VulkanPipelineCache::getUsageFlags(sampler.binding, samplerGroup.stageFlags, usage);
-
-                samplerInfo[sampler.binding] = {
-                    .sampler = vksampler,
-                    .imageView = texture->getPrimaryImageView(),
-                    .imageLayout = ImgUtil::getVkLayout(texture->getPrimaryImageLayout())
-                };
             }
+
+            // Even if the sampler is not associated with a texture, we still need to bind it to a
+            // texture because it's defined in the shader.
+            // TODO: can this uninitialized check be checked in a higher layer?
+            // This fallback path is very flaky because the dummy texture might not have matching
+            // characteristics. (e.g. if the missing texture is a 3D texture)
+            if (UTILS_UNLIKELY(!texture)) {
+                // Calling get() won't leak here since `texture` is local.
+                texture = mEmptyTexture.get();
+            } else if (UTILS_UNLIKELY(
+                               texture->getPrimaryImageLayout() == VulkanLayout::UNDEFINED)) {
+
+#ifndef NDEBUG
+                utils::slog.w << "Uninitialized texture bound to '" << sampler.name.c_str() << "'";
+                utils::slog.w << " in material '" << program->name.c_str() << "'";
+                utils::slog.w << " at binding point " << +sampler.binding << utils::io::endl;
+#endif
+                // Calling get() won't leak here since `texture` is local.
+                texture = mEmptyTexture.get();
+            }
+            SamplerParams const& samplerParams = boundSampler->s;
+            VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
+
+            usage = VulkanPipelineCache::getUsageFlags(sampler.binding, samplerGroup.stageFlags, usage);
+            samplerInfo[sampler.binding] = {
+                .sampler = vksampler,
+                .imageView = texture->getPrimaryImageView(),
+                .imageLayout = ImgUtil::getVkLayout(texture->getPrimaryImageLayout())
+            };
         }
     }
 
