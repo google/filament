@@ -71,9 +71,7 @@ public:
             return;
         }
         // Check to see if it is an integer, if so turn it into an index.
-        if (std::find_if(gpuHint.begin(), gpuHint.end(), [](unsigned char c) {
-                return !std::isdigit(c);
-            }) == gpuHint.end()) {
+        if (std::all_of(gpuHint.begin(), gpuHint.end(), ::isdigit)) {
             mPreference.index = static_cast<int8_t>(std::stoi(gpuHint));
             return;
         }
