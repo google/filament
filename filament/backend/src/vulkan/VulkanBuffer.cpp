@@ -63,7 +63,7 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
     vmaUnmapMemory(mAllocator, stage->memory);
     vmaFlushAllocation(mAllocator, stage->memory, byteOffset, numBytes);
 
-    const VkCommandBuffer cmdbuffer = mCommands->get().cmdbuffer;
+    VkCommandBuffer const cmdbuffer = mCommands->get(true).cmdbuffer;
 
     VkBufferCopy region{ .size = numBytes };
     vkCmdCopyBuffer(cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
