@@ -254,6 +254,12 @@ public:
     static Path getTemporaryDirectory();
 
     /**
+     * @return a path representing a directory where settings files can be stored,
+     *         it is recommended to append an app specific folder name to that path
+     */
+    static Path getUserSettingsDirectory();
+
+    /**
      * Creates a directory denoted by the given path.
      * This is not recursive and doesn't create intermediate directories.
      *
