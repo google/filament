@@ -32,6 +32,7 @@
 #include <filament/TextureSampler.h>
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
+
 #include <utils/EntityManager.h>
 
 using namespace filament::math;
@@ -50,6 +51,13 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
         : mEngine(engine), mView(view), mScene(engine->createScene()),
         mImGuiContext(imGuiContext ? imGuiContext : ImGui::CreateContext()) {
     ImGuiIO& io = ImGui::GetIO();
+    mSettingsPath.setPath(
+            Path::getUserSettingsDirectory() +
+            Path(std::string(".") + Path::getCurrentExecutable().getNameWithoutExtension()) +
+            Path("imgui_settings.ini")
+    );
+    mSettingsPath.getParent().mkdirRecursive();
+    io.IniFilename = mSettingsPath.c_str();
 
     // Create a simple alpha-blended 2D blitting material.
     mMaterial = Material::Builder()

@@ -91,6 +91,9 @@ if (APPLE)
     list(APPEND SRCS src/darwin/Path.mm)
     list(APPEND SRCS src/darwin/Systrace.cpp)
 endif()
+if (WEBGL)
+    list(APPEND SRCS src/web/Path.cpp)
+endif()
 
 # ==================================================================================================
 # Includes and target definition
