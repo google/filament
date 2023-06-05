@@ -780,6 +780,8 @@ bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
             return false;
         case Workaround::ADRENO_UNIFORM_ARRAY_CRASH:
             return false;
+        case Workaround::DISABLE_BLIT_INTO_TEXTURE_ARRAY:
+            return false;
         default:
             return false;
     }
