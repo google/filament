@@ -30,6 +30,7 @@
 #include <limits>
 #include <locale.h>
 #include <utility>
+#include <array>
 
 #ifndef _WIN32
 #include <langinfo.h>
@@ -1533,7 +1534,7 @@ uint32_t CompilerGLSL::type_to_packed_alignment(const SPIRType &type, const Bits
 {
 	// If using PhysicalStorageBufferEXT storage class, this is a pointer,
 	// and is 64-bit.
-	if (type.storage == StorageClassPhysicalStorageBufferEXT)
+	if (type_is_top_level_physical_pointer(type))
 	{
 		if (!type.pointer)
 			SPIRV_CROSS_THROW("Types in PhysicalStorageBufferEXT must be pointers.");
@@ -1548,8 +1549,7 @@ uint32_t CompilerGLSL::type_to_packed_alignment(const SPIRType &type, const Bits
 		else
 			SPIRV_CROSS_THROW("AddressingModelPhysicalStorageBuffer64EXT must be used for PhysicalStorageBufferEXT.");
 	}
-
-	if (!type.array.empty())
+	else if (type_is_top_level_array(type))
 	{
 		uint32_t minimum_alignment = 1;
 		if (packing_is_vec4_padded(packing))
@@ -1655,7 +1655,19 @@ uint32_t CompilerGLSL::type_to_packed_array_stride(const SPIRType &type, const B
 
 uint32_t CompilerGLSL::type_to_packed_size(const SPIRType &type, const Bitset &flags, BufferPackingStandard packing)
 {
-	if (!type.array.empty())
+	// If using PhysicalStorageBufferEXT storage class, this is a pointer,
+	// and is 64-bit.
+	if (type_is_top_level_physical_pointer(type))
+	{
+		if (!type.pointer)
+			SPIRV_CROSS_THROW("Types in PhysicalStorageBufferEXT must be pointers.");
+
+		if (ir.addressing_model == AddressingModelPhysicalStorageBuffer64EXT)
+			return 8;
+		else
+			SPIRV_CROSS_THROW("AddressingModelPhysicalStorageBuffer64EXT must be used for PhysicalStorageBufferEXT.");
+	}
+	else if (type_is_top_level_array(type))
 	{
 		uint32_t packed_size = to_array_size_literal(type) * type_to_packed_array_stride(type, flags, packing);
 
@@ -1665,19 +1677,6 @@ uint32_t CompilerGLSL::type_to_packed_size(const SPIRType &type, const Bitset &f
 			packed_size -= (4 - type.vecsize) * (type.width / 8);
 
 		return packed_size;
-	}
-
-	// If using PhysicalStorageBufferEXT storage class, this is a pointer,
-	// and is 64-bit.
-	if (type.storage == StorageClassPhysicalStorageBufferEXT)
-	{
-		if (!type.pointer)
-			SPIRV_CROSS_THROW("Types in PhysicalStorageBufferEXT must be pointers.");
-
-		if (ir.addressing_model == AddressingModelPhysicalStorageBuffer64EXT)
-			return 8;
-		else
-			SPIRV_CROSS_THROW("AddressingModelPhysicalStorageBuffer64EXT must be used for PhysicalStorageBufferEXT.");
 	}
 
 	uint32_t size = 0;
@@ -1798,16 +1797,17 @@ bool CompilerGLSL::buffer_is_packing_standard(const SPIRType &type, BufferPackin
 			packed_size = type_to_packed_size(memb_type, member_flags, packing);
 
 		// We only need to care about this if we have non-array types which can straddle the vec4 boundary.
+		uint32_t actual_offset = type_struct_member_offset(type, i);
+
 		if (packing_is_hlsl(packing))
 		{
 			// If a member straddles across a vec4 boundary, alignment is actually vec4.
-			uint32_t begin_word = offset / 16;
-			uint32_t end_word = (offset + packed_size - 1) / 16;
+			uint32_t begin_word = actual_offset / 16;
+			uint32_t end_word = (actual_offset + packed_size - 1) / 16;
 			if (begin_word != end_word)
 				packed_alignment = max<uint32_t>(packed_alignment, 16u);
 		}
 
-		uint32_t actual_offset = type_struct_member_offset(type, i);
 		// Field is not in the specified range anymore and we can ignore any further fields.
 		if (actual_offset >= end_offset)
 			break;
@@ -1845,8 +1845,9 @@ bool CompilerGLSL::buffer_is_packing_standard(const SPIRType &type, BufferPackin
 			}
 
 			// Verify array stride rules.
-			if (!memb_type.array.empty() && type_to_packed_array_stride(memb_type, member_flags, packing) !=
-			                                    type_struct_member_array_stride(type, i))
+			if (type_is_top_level_array(memb_type) &&
+			    type_to_packed_array_stride(memb_type, member_flags, packing) !=
+			    type_struct_member_array_stride(type, i))
 			{
 				if (failed_validation_index)
 					*failed_validation_index = i;
@@ -4004,6 +4005,169 @@ void CompilerGLSL::emit_output_variable_initializer(const SPIRVariable &var)
 	}
 }
 
+void CompilerGLSL::emit_subgroup_arithmetic_workaround(const std::string &func, Op op, GroupOperation group_op)
+{
+	std::string result;
+	switch (group_op)
+	{
+	case GroupOperationReduce:
+		result = "reduction";
+		break;
+
+	case GroupOperationExclusiveScan:
+		result = "excl_scan";
+		break;
+
+	case GroupOperationInclusiveScan:
+		result = "incl_scan";
+		break;
+
+	default:
+		SPIRV_CROSS_THROW("Unsupported workaround for arithmetic group operation");
+	}
+
+	struct TypeInfo
+	{
+		std::string type;
+		std::string identity;
+	};
+
+	std::vector<TypeInfo> type_infos;
+	switch (op)
+	{
+	case OpGroupNonUniformIAdd:
+	{
+		type_infos.emplace_back(TypeInfo{ "uint", "0u" });
+		type_infos.emplace_back(TypeInfo{ "uvec2", "uvec2(0u)" });
+		type_infos.emplace_back(TypeInfo{ "uvec3", "uvec3(0u)" });
+		type_infos.emplace_back(TypeInfo{ "uvec4", "uvec4(0u)" });
+		type_infos.emplace_back(TypeInfo{ "int", "0" });
+		type_infos.emplace_back(TypeInfo{ "ivec2", "ivec2(0)" });
+		type_infos.emplace_back(TypeInfo{ "ivec3", "ivec3(0)" });
+		type_infos.emplace_back(TypeInfo{ "ivec4", "ivec4(0)" });
+		break;
+	}
+
+	case OpGroupNonUniformFAdd:
+	{
+		type_infos.emplace_back(TypeInfo{ "float", "0.0f" });
+		type_infos.emplace_back(TypeInfo{ "vec2", "vec2(0.0f)" });
+		type_infos.emplace_back(TypeInfo{ "vec3", "vec3(0.0f)" });
+		type_infos.emplace_back(TypeInfo{ "vec4", "vec4(0.0f)" });
+		// ARB_gpu_shader_fp64 is required in GL4.0 which in turn is required by NV_thread_shuffle
+		type_infos.emplace_back(TypeInfo{ "double", "0.0LF" });
+		type_infos.emplace_back(TypeInfo{ "dvec2", "dvec2(0.0LF)" });
+		type_infos.emplace_back(TypeInfo{ "dvec3", "dvec3(0.0LF)" });
+		type_infos.emplace_back(TypeInfo{ "dvec4", "dvec4(0.0LF)" });
+		break;
+	}
+
+	case OpGroupNonUniformIMul:
+	{
+		type_infos.emplace_back(TypeInfo{ "uint", "1u" });
+		type_infos.emplace_back(TypeInfo{ "uvec2", "uvec2(1u)" });
+		type_infos.emplace_back(TypeInfo{ "uvec3", "uvec3(1u)" });
+		type_infos.emplace_back(TypeInfo{ "uvec4", "uvec4(1u)" });
+		type_infos.emplace_back(TypeInfo{ "int", "1" });
+		type_infos.emplace_back(TypeInfo{ "ivec2", "ivec2(1)" });
+		type_infos.emplace_back(TypeInfo{ "ivec3", "ivec3(1)" });
+		type_infos.emplace_back(TypeInfo{ "ivec4", "ivec4(1)" });
+		break;
+	}
+
+	case OpGroupNonUniformFMul:
+	{
+		type_infos.emplace_back(TypeInfo{ "float", "1.0f" });
+		type_infos.emplace_back(TypeInfo{ "vec2", "vec2(1.0f)" });
+		type_infos.emplace_back(TypeInfo{ "vec3", "vec3(1.0f)" });
+		type_infos.emplace_back(TypeInfo{ "vec4", "vec4(1.0f)" });
+		type_infos.emplace_back(TypeInfo{ "double", "0.0LF" });
+		type_infos.emplace_back(TypeInfo{ "dvec2", "dvec2(1.0LF)" });
+		type_infos.emplace_back(TypeInfo{ "dvec3", "dvec3(1.0LF)" });
+		type_infos.emplace_back(TypeInfo{ "dvec4", "dvec4(1.0LF)" });
+		break;
+	}
+
+	default:
+		SPIRV_CROSS_THROW("Unsupported workaround for arithmetic group operation");
+	}
+
+	const bool op_is_addition = op == OpGroupNonUniformIAdd || op == OpGroupNonUniformFAdd;
+	const bool op_is_multiplication = op == OpGroupNonUniformIMul || op == OpGroupNonUniformFMul;
+	std::string op_symbol;
+	if (op_is_addition)
+	{
+		op_symbol = "+=";
+	}
+	else if (op_is_multiplication)
+	{
+		op_symbol = "*=";
+	}
+
+	for (const TypeInfo &t : type_infos)
+	{
+		statement(t.type, " ", func, "(", t.type, " v)");
+		begin_scope();
+		statement(t.type, " ", result, " = ", t.identity, ";");
+		statement("uvec4 active_threads = subgroupBallot(true);");
+		statement("if (subgroupBallotBitCount(active_threads) == gl_SubgroupSize)");
+		begin_scope();
+		statement("uint total = gl_SubgroupSize / 2u;");
+		statement(result, " = v;");
+		statement("for (uint i = 1u; i <= total; i <<= 1u)");
+		begin_scope();
+		statement("bool valid;");
+		if (group_op == GroupOperationReduce)
+		{
+			statement(t.type, " s = shuffleXorNV(", result, ", i, gl_SubgroupSize, valid);");
+		}
+		else if (group_op == GroupOperationExclusiveScan || group_op == GroupOperationInclusiveScan)
+		{
+			statement(t.type, " s = shuffleUpNV(", result, ", i, gl_SubgroupSize, valid);");
+		}
+		if (op_is_addition || op_is_multiplication)
+		{
+			statement(result, " ", op_symbol, " valid ? s : ", t.identity, ";");
+		}
+		end_scope();
+		if (group_op == GroupOperationExclusiveScan)
+		{
+			statement(result, " = shuffleUpNV(", result, ", 1u, gl_SubgroupSize);");
+			statement("if (subgroupElect())");
+			begin_scope();
+			statement(result, " = ", t.identity, ";");
+			end_scope();
+		}
+		end_scope();
+		statement("else");
+		begin_scope();
+		if (group_op == GroupOperationExclusiveScan)
+		{
+			statement("uint total = subgroupBallotBitCount(gl_SubgroupLtMask);");
+		}
+		else if (group_op == GroupOperationInclusiveScan)
+		{
+			statement("uint total = subgroupBallotBitCount(gl_SubgroupLeMask);");
+		}
+		statement("for (uint i = 0u; i < gl_SubgroupSize; ++i)");
+		begin_scope();
+		statement("bool valid = subgroupBallotBitExtract(active_threads, i);");
+		statement(t.type, " s = shuffleNV(v, i, gl_SubgroupSize);");
+		if (group_op == GroupOperationExclusiveScan || group_op == GroupOperationInclusiveScan)
+		{
+			statement("valid = valid && (i < total);");
+		}
+		if (op_is_addition || op_is_multiplication)
+		{
+			statement(result, " ", op_symbol, " valid ? s : ", t.identity, ";");
+		}
+		end_scope();
+		end_scope();
+		statement("return ", result, ";");
+		end_scope();
+	}
+}
+
 void CompilerGLSL::emit_extension_workarounds(spv::ExecutionModel model)
 {
 	static const char *workaround_types[] = { "int",   "ivec2", "ivec3", "ivec4", "uint",   "uvec2", "uvec3", "uvec4",
@@ -4407,6 +4571,57 @@ void CompilerGLSL::emit_extension_workarounds(spv::ExecutionModel model)
 			statement("#endif");
 			statement("");
 		}
+
+		auto arithmetic_feature_helper =
+		    [&](Supp::Feature feat, std::string func_name, spv::Op op, spv::GroupOperation group_op)
+		{
+			if (shader_subgroup_supporter.is_feature_requested(feat))
+			{
+				auto exts = Supp::get_candidates_for_feature(feat, result);
+				for (auto &e : exts)
+				{
+					const char *name = Supp::get_extension_name(e);
+					statement(&e == &exts.front() ? "#if" : "#elif", " defined(", name, ")");
+
+					switch (e)
+					{
+					case Supp::NV_shader_thread_shuffle:
+						emit_subgroup_arithmetic_workaround(func_name, op, group_op);
+						break;
+					default:
+						break;
+					}
+				}
+				statement("#endif");
+				statement("");
+			}
+		};
+
+		arithmetic_feature_helper(Supp::SubgroupArithmeticIAddReduce, "subgroupAdd", OpGroupNonUniformIAdd,
+		                          GroupOperationReduce);
+		arithmetic_feature_helper(Supp::SubgroupArithmeticIAddExclusiveScan, "subgroupExclusiveAdd",
+		                          OpGroupNonUniformIAdd, GroupOperationExclusiveScan);
+		arithmetic_feature_helper(Supp::SubgroupArithmeticIAddInclusiveScan, "subgroupInclusiveAdd",
+		                          OpGroupNonUniformIAdd, GroupOperationInclusiveScan);
+		arithmetic_feature_helper(Supp::SubgroupArithmeticFAddReduce, "subgroupAdd", OpGroupNonUniformFAdd,
+		                          GroupOperationReduce);
+		arithmetic_feature_helper(Supp::SubgroupArithmeticFAddExclusiveScan, "subgroupExclusiveAdd",
+		                          OpGroupNonUniformFAdd, GroupOperationExclusiveScan);
+		arithmetic_feature_helper(Supp::SubgroupArithmeticFAddInclusiveScan, "subgroupInclusiveAdd",
+		                          OpGroupNonUniformFAdd, GroupOperationInclusiveScan);
+
+		arithmetic_feature_helper(Supp::SubgroupArithmeticIMulReduce, "subgroupMul", OpGroupNonUniformIMul,
+		                          GroupOperationReduce);
+		arithmetic_feature_helper(Supp::SubgroupArithmeticIMulExclusiveScan, "subgroupExclusiveMul",
+		                          OpGroupNonUniformIMul, GroupOperationExclusiveScan);
+		arithmetic_feature_helper(Supp::SubgroupArithmeticIMulInclusiveScan, "subgroupInclusiveMul",
+		                          OpGroupNonUniformIMul, GroupOperationInclusiveScan);
+		arithmetic_feature_helper(Supp::SubgroupArithmeticFMulReduce, "subgroupMul", OpGroupNonUniformFMul,
+		                          GroupOperationReduce);
+		arithmetic_feature_helper(Supp::SubgroupArithmeticFMulExclusiveScan, "subgroupExclusiveMul",
+		                          OpGroupNonUniformFMul, GroupOperationExclusiveScan);
+		arithmetic_feature_helper(Supp::SubgroupArithmeticFMulInclusiveScan, "subgroupInclusiveMul",
+		                          OpGroupNonUniformFMul, GroupOperationInclusiveScan);
 	}
 
 	if (!workaround_ubo_load_overload_types.empty())
@@ -4899,8 +5114,27 @@ string CompilerGLSL::to_extract_constant_composite_expression(uint32_t result_ty
 	return constant_expression(tmp);
 }
 
-string CompilerGLSL::to_rerolled_array_expression(const string &base_expr, const SPIRType &type)
+string CompilerGLSL::to_rerolled_array_expression(const SPIRType &parent_type,
+                                                  const string &base_expr, const SPIRType &type)
 {
+	bool remapped_boolean = parent_type.basetype == SPIRType::Struct &&
+	                        type.basetype == SPIRType::Boolean &&
+	                        backend.boolean_in_struct_remapped_type != SPIRType::Boolean;
+
+	SPIRType tmp_type;
+	if (remapped_boolean)
+	{
+		tmp_type = get<SPIRType>(type.parent_type);
+		tmp_type.basetype = backend.boolean_in_struct_remapped_type;
+	}
+	else if (type.basetype == SPIRType::Boolean && backend.boolean_in_struct_remapped_type != SPIRType::Boolean)
+	{
+		// It's possible that we have an r-value expression that was OpLoaded from a struct.
+		// We have to reroll this and explicitly cast the input to bool, because the r-value is short.
+		tmp_type = get<SPIRType>(type.parent_type);
+		remapped_boolean = true;
+	}
+
 	uint32_t size = to_array_size_literal(type);
 	auto &parent = get<SPIRType>(type.parent_type);
 	string expr = "{ ";
@@ -4908,10 +5142,14 @@ string CompilerGLSL::to_rerolled_array_expression(const string &base_expr, const
 	for (uint32_t i = 0; i < size; i++)
 	{
 		auto subexpr = join(base_expr, "[", convert_to_string(i), "]");
-		if (parent.array.empty())
+		if (!type_is_top_level_array(parent))
+		{
+			if (remapped_boolean)
+				subexpr = join(type_to_glsl(tmp_type), "(", subexpr, ")");
 			expr += subexpr;
+		}
 		else
-			expr += to_rerolled_array_expression(subexpr, parent);
+			expr += to_rerolled_array_expression(parent_type, subexpr, parent);
 
 		if (i + 1 < size)
 			expr += ", ";
@@ -4921,13 +5159,26 @@ string CompilerGLSL::to_rerolled_array_expression(const string &base_expr, const
 	return expr;
 }
 
-string CompilerGLSL::to_composite_constructor_expression(uint32_t id, bool block_like_type)
+string CompilerGLSL::to_composite_constructor_expression(const SPIRType &parent_type, uint32_t id, bool block_like_type)
 {
 	auto &type = expression_type(id);
 
-	bool reroll_array = !type.array.empty() &&
-	                    (!backend.array_is_value_type ||
-	                     (block_like_type && !backend.array_is_value_type_in_buffer_blocks));
+	bool reroll_array = false;
+	bool remapped_boolean = parent_type.basetype == SPIRType::Struct &&
+	                        type.basetype == SPIRType::Boolean &&
+	                        backend.boolean_in_struct_remapped_type != SPIRType::Boolean;
+
+	if (type_is_top_level_array(type))
+	{
+		reroll_array = !backend.array_is_value_type ||
+		               (block_like_type && !backend.array_is_value_type_in_buffer_blocks);
+
+		if (remapped_boolean)
+		{
+			// Forced to reroll if we have to change bool[] to short[].
+			reroll_array = true;
+		}
+	}
 
 	if (reroll_array)
 	{
@@ -4941,10 +5192,20 @@ string CompilerGLSL::to_composite_constructor_expression(uint32_t id, bool block
 
 		// We're only triggering one read of the array expression, but this is fine since arrays have to be declared
 		// as temporaries anyways.
-		return to_rerolled_array_expression(to_enclosed_expression(id), type);
+		return to_rerolled_array_expression(parent_type, to_enclosed_expression(id), type);
 	}
 	else
-		return to_unpacked_expression(id);
+	{
+		auto expr = to_unpacked_expression(id);
+		if (remapped_boolean)
+		{
+			auto tmp_type = type;
+			tmp_type.basetype = backend.boolean_in_struct_remapped_type;
+			expr = join(type_to_glsl(tmp_type), "(", expr, ")");
+		}
+
+		return expr;
+	}
 }
 
 string CompilerGLSL::to_non_uniform_aware_expression(uint32_t id)
@@ -5454,11 +5715,13 @@ string CompilerGLSL::constant_op_expression(const SPIRConstantOp &cop)
 	}
 }
 
-string CompilerGLSL::constant_expression(const SPIRConstant &c, bool inside_block_like_struct_scope)
+string CompilerGLSL::constant_expression(const SPIRConstant &c,
+                                         bool inside_block_like_struct_scope,
+                                         bool inside_struct_scope)
 {
 	auto &type = get<SPIRType>(c.constant_type);
 
-	if (type.pointer)
+	if (type_is_top_level_pointer(type))
 	{
 		return backend.null_pointer_literal;
 	}
@@ -5473,19 +5736,32 @@ string CompilerGLSL::constant_expression(const SPIRConstant &c, bool inside_bloc
 		// with Offset = 0, using no ArrayStride on the enclosed array type.
 		// A particular CTS test hits this scenario.
 		bool array_type_decays = inside_block_like_struct_scope &&
-		                         !type.array.empty() && !backend.array_is_value_type_in_buffer_blocks;
+		                         type_is_top_level_array(type) &&
+		                         !backend.array_is_value_type_in_buffer_blocks;
 
 		// Allow Metal to use the array<T> template to make arrays a value type
 		bool needs_trailing_tracket = false;
 		if (backend.use_initializer_list && backend.use_typed_initializer_list && type.basetype == SPIRType::Struct &&
-		    type.array.empty())
+		    !type_is_top_level_array(type))
 		{
 			res = type_to_glsl_constructor(type) + "{ ";
 		}
 		else if (backend.use_initializer_list && backend.use_typed_initializer_list && backend.array_is_value_type &&
-		         !type.array.empty() && !array_type_decays)
+		         type_is_top_level_array(type) && !array_type_decays)
 		{
-			res = type_to_glsl_constructor(type) + "({ ";
+			const auto *p_type = &type;
+			SPIRType tmp_type;
+
+			if (inside_struct_scope &&
+			    backend.boolean_in_struct_remapped_type != SPIRType::Boolean &&
+			    type.basetype == SPIRType::Boolean)
+			{
+				tmp_type = type;
+				tmp_type.basetype = backend.boolean_in_struct_remapped_type;
+				p_type = &tmp_type;
+			}
+
+			res = type_to_glsl_constructor(*p_type) + "({ ";
 			needs_trailing_tracket = true;
 		}
 		else if (backend.use_initializer_list)
@@ -5515,7 +5791,7 @@ string CompilerGLSL::constant_expression(const SPIRConstant &c, bool inside_bloc
 					res += to_name(elem);
 				else
 				{
-					if (type.array.empty() && type.basetype == SPIRType::Struct)
+					if (!type_is_top_level_array(type) && type.basetype == SPIRType::Struct)
 					{
 						// When we get down to emitting struct members, override the block-like information.
 						// For constants, we can freely mix and match block-like state.
@@ -5523,7 +5799,10 @@ string CompilerGLSL::constant_expression(const SPIRConstant &c, bool inside_bloc
 						    has_member_decoration(type.self, subconstant_index, DecorationOffset);
 					}
 
-					res += constant_expression(subc, inside_block_like_struct_scope);
+					if (type.basetype == SPIRType::Struct)
+						inside_struct_scope = true;
+
+					res += constant_expression(subc, inside_block_like_struct_scope, inside_struct_scope);
 				}
 			}
 
@@ -5545,19 +5824,30 @@ string CompilerGLSL::constant_expression(const SPIRConstant &c, bool inside_bloc
 		if (backend.supports_empty_struct)
 			return "{ }";
 		else if (backend.use_typed_initializer_list)
-			return join(type_to_glsl(get<SPIRType>(c.constant_type)), "{ 0 }");
+			return join(type_to_glsl(type), "{ 0 }");
 		else if (backend.use_initializer_list)
 			return "{ 0 }";
 		else
-			return join(type_to_glsl(get<SPIRType>(c.constant_type)), "(0)");
+			return join(type_to_glsl(type), "(0)");
 	}
 	else if (c.columns() == 1)
 	{
-		return constant_expression_vector(c, 0);
+		auto res = constant_expression_vector(c, 0);
+
+		if (inside_struct_scope &&
+		    backend.boolean_in_struct_remapped_type != SPIRType::Boolean &&
+		    type.basetype == SPIRType::Boolean)
+		{
+			SPIRType tmp_type = type;
+			tmp_type.basetype = backend.boolean_in_struct_remapped_type;
+			res = join(type_to_glsl(tmp_type), "(", res, ")");
+		}
+
+		return res;
 	}
 	else
 	{
-		string res = type_to_glsl(get<SPIRType>(c.constant_type)) + "(";
+		string res = type_to_glsl(type) + "(";
 		for (uint32_t col = 0; col < c.columns(); col++)
 		{
 			if (c.specialization_constant_id(col) != 0)
@@ -5569,6 +5859,16 @@ string CompilerGLSL::constant_expression(const SPIRConstant &c, bool inside_bloc
 				res += ", ";
 		}
 		res += ")";
+
+		if (inside_struct_scope &&
+		    backend.boolean_in_struct_remapped_type != SPIRType::Boolean &&
+		    type.basetype == SPIRType::Boolean)
+		{
+			SPIRType tmp_type = type;
+			tmp_type.basetype = backend.boolean_in_struct_remapped_type;
+			res = join(type_to_glsl(tmp_type), "(", res, ")");
+		}
+
 		return res;
 	}
 }
@@ -7120,7 +7420,7 @@ string CompilerGLSL::to_combined_image_sampler(VariableID image_id, VariableID s
 	}
 }
 
-bool CompilerGLSL::is_supported_subgroup_op_in_opengl(spv::Op op)
+bool CompilerGLSL::is_supported_subgroup_op_in_opengl(spv::Op op, const uint32_t *ops)
 {
 	switch (op)
 	{
@@ -7139,6 +7439,22 @@ bool CompilerGLSL::is_supported_subgroup_op_in_opengl(spv::Op op)
 	case OpGroupNonUniformBallotBitExtract:
 	case OpGroupNonUniformInverseBallot:
 		return true;
+	case OpGroupNonUniformIAdd:
+	case OpGroupNonUniformFAdd:
+	case OpGroupNonUniformIMul:
+	case OpGroupNonUniformFMul:
+	{
+		const GroupOperation operation = static_cast<GroupOperation>(ops[3]);
+		if (operation == GroupOperationReduce || operation == GroupOperationInclusiveScan ||
+		    operation == GroupOperationExclusiveScan)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
 	default:
 		return false;
 	}
@@ -7533,7 +7849,7 @@ bool CompilerGLSL::expression_is_constant_null(uint32_t id) const
 bool CompilerGLSL::expression_is_non_value_type_array(uint32_t ptr)
 {
 	auto &type = expression_type(ptr);
-	if (type.array.empty())
+	if (!type_is_top_level_array(get_pointee_type(type)))
 		return false;
 
 	if (!backend.array_is_value_type)
@@ -8736,7 +9052,7 @@ void CompilerGLSL::emit_subgroup_op(const Instruction &i)
 	const uint32_t *ops = stream(i);
 	auto op = static_cast<Op>(i.op);
 
-	if (!options.vulkan_semantics && !is_supported_subgroup_op_in_opengl(op))
+	if (!options.vulkan_semantics && !is_supported_subgroup_op_in_opengl(op, ops))
 		SPIRV_CROSS_THROW("This subgroup operation is only supported in Vulkan semantics.");
 
 	// If we need to do implicit bitcasts, make sure we do it with the correct type.
@@ -8804,12 +9120,34 @@ void CompilerGLSL::emit_subgroup_op(const Instruction &i)
 	}
 	break;
 
-	case OpGroupNonUniformFAdd:
-	case OpGroupNonUniformFMul:
+	// clang-format off
+#define GLSL_GROUP_OP(OP)\
+	case OpGroupNonUniform##OP:\
+	{\
+		auto operation = static_cast<GroupOperation>(ops[3]);\
+		if (operation == GroupOperationClusteredReduce)\
+			require_extension_internal("GL_KHR_shader_subgroup_clustered");\
+		else if (operation == GroupOperationReduce)\
+			request_subgroup_feature(ShaderSubgroupSupportHelper::SubgroupArithmetic##OP##Reduce);\
+		else if (operation == GroupOperationExclusiveScan)\
+			request_subgroup_feature(ShaderSubgroupSupportHelper::SubgroupArithmetic##OP##ExclusiveScan);\
+		else if (operation == GroupOperationInclusiveScan)\
+			request_subgroup_feature(ShaderSubgroupSupportHelper::SubgroupArithmetic##OP##InclusiveScan);\
+		else\
+			SPIRV_CROSS_THROW("Invalid group operation.");\
+		break;\
+	}
+
+	GLSL_GROUP_OP(IAdd)
+	GLSL_GROUP_OP(FAdd)
+	GLSL_GROUP_OP(IMul)
+	GLSL_GROUP_OP(FMul)
+
+#undef GLSL_GROUP_OP
+	// clang-format on
+
 	case OpGroupNonUniformFMin:
 	case OpGroupNonUniformFMax:
-	case OpGroupNonUniformIAdd:
-	case OpGroupNonUniformIMul:
 	case OpGroupNonUniformSMin:
 	case OpGroupNonUniformSMax:
 	case OpGroupNonUniformUMin:
@@ -9617,6 +9955,9 @@ string CompilerGLSL::access_chain_internal(uint32_t base, const uint32_t *indice
 	bool pending_array_enclose = false;
 	bool dimension_flatten = false;
 
+	// If we are translating access to a structured buffer, the first subscript '._m0' must be hidden
+	bool hide_first_subscript = count > 1 && is_user_type_structured(base);
+
 	const auto append_index = [&](uint32_t index, bool is_literal, bool is_ptr_chain = false) {
 		AccessChainFlags mod_flags = flags;
 		if (!is_literal)
@@ -9803,32 +10144,40 @@ string CompilerGLSL::access_chain_internal(uint32_t base, const uint32_t *indice
 			if (index >= type->member_types.size())
 				SPIRV_CROSS_THROW("Member index is out of bounds!");
 
-			BuiltIn builtin = BuiltInMax;
-			if (is_member_builtin(*type, index, &builtin) && access_chain_needs_stage_io_builtin_translation(base))
+			if (hide_first_subscript)
 			{
-				if (access_chain_is_arrayed)
-				{
-					expr += ".";
-					expr += builtin_to_glsl(builtin, type->storage);
-				}
-				else
-					expr = builtin_to_glsl(builtin, type->storage);
+				// First "._m0" subscript has been hidden, subsequent fields must be emitted even for structured buffers
+				hide_first_subscript = false;
 			}
 			else
 			{
-				// If the member has a qualified name, use it as the entire chain
-				string qual_mbr_name = get_member_qualified_name(type_id, index);
-				if (!qual_mbr_name.empty())
-					expr = qual_mbr_name;
-				else if (flatten_member_reference)
-					expr += join("_", to_member_name(*type, index));
+				BuiltIn builtin = BuiltInMax;
+				if (is_member_builtin(*type, index, &builtin) && access_chain_needs_stage_io_builtin_translation(base))
+				{
+					if (access_chain_is_arrayed)
+					{
+						expr += ".";
+						expr += builtin_to_glsl(builtin, type->storage);
+					}
+					else
+						expr = builtin_to_glsl(builtin, type->storage);
+				}
 				else
 				{
-					// Any pointer de-refences for values are handled in the first access chain.
-					// For pointer chains, the pointer-ness is resolved through an array access.
-					// The only time this is not true is when accessing array of SSBO/UBO.
-					// This case is explicitly handled.
-					expr += to_member_reference(base, *type, index, ptr_chain || i != 0);
+					// If the member has a qualified name, use it as the entire chain
+					string qual_mbr_name = get_member_qualified_name(type_id, index);
+					if (!qual_mbr_name.empty())
+						expr = qual_mbr_name;
+					else if (flatten_member_reference)
+						expr += join("_", to_member_name(*type, index));
+					else
+					{
+						// Any pointer de-refences for values are handled in the first access chain.
+						// For pointer chains, the pointer-ness is resolved through an array access.
+						// The only time this is not true is when accessing array of SSBO/UBO.
+						// This case is explicitly handled.
+						expr += to_member_reference(base, *type, index, ptr_chain || i != 0);
+					}
 				}
 			}
 
@@ -10855,7 +11204,7 @@ string CompilerGLSL::build_composite_combiner(uint32_t return_type, const uint32
 
 			bool uses_buffer_offset =
 			    type.basetype == SPIRType::Struct && has_member_decoration(type.self, i, DecorationOffset);
-			subop = to_composite_constructor_expression(elems[i], uses_buffer_offset);
+			subop = to_composite_constructor_expression(type, elems[i], uses_buffer_offset);
 		}
 
 		base = e ? e->base_expression : ID(0);
@@ -10945,8 +11294,15 @@ void CompilerGLSL::emit_block_instructions(SPIRBlock &block)
 	if (backend.requires_relaxed_precision_analysis)
 	{
 		// If PHI variables are consumed in unexpected precision contexts, copy them here.
-		for (auto &phi : block.phi_variables)
+		for (size_t i = 0, n = block.phi_variables.size(); i < n; i++)
 		{
+			auto &phi = block.phi_variables[i];
+
+			// Ensure we only copy once. We know a-priori that this array will lay out
+			// the same function variables together.
+			if (i && block.phi_variables[i - 1].function_variable == phi.function_variable)
+				continue;
+
 			auto itr = temporary_to_mirror_precision_alias.find(phi.function_variable);
 			if (itr != temporary_to_mirror_precision_alias.end())
 			{
@@ -11485,7 +11841,7 @@ void CompilerGLSL::emit_instruction(const Instruction &instruction)
 			// it is an array, and our backend does not support arrays as value types.
 			// Emit the temporary, and copy it explicitly.
 			e = &emit_uninitialized_temporary_expression(result_type, id);
-			emit_array_copy(to_expression(id), id, ptr, StorageClassFunction, get_expression_effective_storage_class(ptr));
+			emit_array_copy(nullptr, id, ptr, StorageClassFunction, get_expression_effective_storage_class(ptr));
 		}
 		else
 			e = &emit_op(result_type, id, expr, forward, !usage_tracking);
@@ -15313,6 +15669,11 @@ void CompilerGLSL::require_extension(const std::string &ext)
 		forced_extensions.push_back(ext);
 }
 
+const SmallVector<std::string> &CompilerGLSL::get_required_extensions() const
+{
+	return forced_extensions;
+}
+
 void CompilerGLSL::require_extension_internal(const string &ext)
 {
 	if (backend.supports_extensions && !has_extension(ext))
@@ -15344,6 +15705,11 @@ void CompilerGLSL::flatten_buffer_block(VariableID id)
 bool CompilerGLSL::builtin_translates_to_nonarray(spv::BuiltIn /*builtin*/) const
 {
 	return false; // GLSL itself does not need to translate array builtin types to non-array builtin types
+}
+
+bool CompilerGLSL::is_user_type_structured(uint32_t /*id*/) const
+{
+	return false; // GLSL itself does not have structured user type, but HLSL does with StructuredBuffer and RWStructuredBuffer resources.
 }
 
 bool CompilerGLSL::check_atomic_image(uint32_t id)
@@ -16300,6 +16666,24 @@ void CompilerGLSL::emit_block_chain(SPIRBlock &block)
 	if (block.merge == SPIRBlock::MergeLoop)
 		add_loop_level();
 
+	// If we're emitting PHI variables with precision aliases, we have to emit them as hoisted temporaries.
+	for (auto var_id : block.dominated_variables)
+	{
+		auto &var = get<SPIRVariable>(var_id);
+		if (var.phi_variable)
+		{
+			auto mirrored_precision_itr = temporary_to_mirror_precision_alias.find(var_id);
+			if (mirrored_precision_itr != temporary_to_mirror_precision_alias.end() &&
+			    find_if(block.declare_temporary.begin(), block.declare_temporary.end(),
+			            [mirrored_precision_itr](const std::pair<TypeID, VariableID> &p) {
+			              return p.second == mirrored_precision_itr->second;
+			            }) == block.declare_temporary.end())
+			{
+				block.declare_temporary.push_back({ var.basetype, mirrored_precision_itr->second });
+			}
+		}
+	}
+
 	emit_hoisted_temporaries(block.declare_temporary);
 
 	SPIRBlock::ContinueBlockType continue_type = SPIRBlock::ContinueNone;
@@ -17081,9 +17465,16 @@ uint32_t CompilerGLSL::mask_relevant_memory_semantics(uint32_t semantics)
 	                    MemorySemanticsCrossWorkgroupMemoryMask | MemorySemanticsSubgroupMemoryMask);
 }
 
-void CompilerGLSL::emit_array_copy(const string &lhs, uint32_t, uint32_t rhs_id, StorageClass, StorageClass)
+bool CompilerGLSL::emit_array_copy(const char *expr, uint32_t lhs_id, uint32_t rhs_id, StorageClass, StorageClass)
 {
+	string lhs;
+	if (expr)
+		lhs = expr;
+	else
+		lhs = to_expression(lhs_id);
+
 	statement(lhs, " = ", to_expression(rhs_id), ";");
+	return true;
 }
 
 bool CompilerGLSL::unroll_array_to_complex_store(uint32_t target_id, uint32_t source_id)
@@ -17678,6 +18069,7 @@ const char *CompilerGLSL::ShaderSubgroupSupportHelper::get_extension_name(Candid
 	static const char *const retval[CandidateCount] = { "GL_KHR_shader_subgroup_ballot",
 		                                                "GL_KHR_shader_subgroup_basic",
 		                                                "GL_KHR_shader_subgroup_vote",
+		                                                "GL_KHR_shader_subgroup_arithmetic",
 		                                                "GL_NV_gpu_shader_5",
 		                                                "GL_NV_shader_thread_group",
 		                                                "GL_NV_shader_thread_shuffle",
@@ -17726,6 +18118,21 @@ CompilerGLSL::ShaderSubgroupSupportHelper::FeatureVector CompilerGLSL::ShaderSub
 		return { SubgroupMask };
 	case SubgroupBallotBitCount:
 		return { SubgroupBallot };
+	case SubgroupArithmeticIAddReduce:
+	case SubgroupArithmeticIAddInclusiveScan:
+	case SubgroupArithmeticFAddReduce:
+	case SubgroupArithmeticFAddInclusiveScan:
+	case SubgroupArithmeticIMulReduce:
+	case SubgroupArithmeticIMulInclusiveScan:
+	case SubgroupArithmeticFMulReduce:
+	case SubgroupArithmeticFMulInclusiveScan:
+		return { SubgroupSize, SubgroupBallot, SubgroupBallotBitCount, SubgroupMask, SubgroupBallotBitExtract };
+	case SubgroupArithmeticIAddExclusiveScan:
+	case SubgroupArithmeticFAddExclusiveScan:
+	case SubgroupArithmeticIMulExclusiveScan:
+	case SubgroupArithmeticFMulExclusiveScan:
+		return { SubgroupSize, SubgroupBallot, SubgroupBallotBitCount,
+			     SubgroupMask, SubgroupElect,  SubgroupBallotBitExtract };
 	default:
 		return {};
 	}
@@ -17739,11 +18146,15 @@ CompilerGLSL::ShaderSubgroupSupportHelper::FeatureMask CompilerGLSL::ShaderSubgr
 
 bool CompilerGLSL::ShaderSubgroupSupportHelper::can_feature_be_implemented_without_extensions(Feature feature)
 {
-	static const bool retval[FeatureCount] = { false, false, false, false, false, false,
-		                                       true, // SubgroupBalloFindLSB_MSB
-		                                       false, false, false, false,
-		                                       true, // SubgroupMemBarrier - replaced with workgroup memory barriers
-		                                       false, false, true,  false };
+	static const bool retval[FeatureCount] = {
+		false, false, false, false, false, false,
+		true, // SubgroupBalloFindLSB_MSB
+		false, false, false, false,
+		true, // SubgroupMemBarrier - replaced with workgroup memory barriers
+		false, false, true, false,
+		false, false, false, false, false, false, // iadd, fadd
+		false, false, false, false, false, false, // imul , fmul
+	};
 
 	return retval[feature];
 }
@@ -17755,7 +18166,11 @@ CompilerGLSL::ShaderSubgroupSupportHelper::Candidate CompilerGLSL::ShaderSubgrou
 		KHR_shader_subgroup_ballot, KHR_shader_subgroup_basic,  KHR_shader_subgroup_basic,  KHR_shader_subgroup_basic,
 		KHR_shader_subgroup_basic,  KHR_shader_subgroup_ballot, KHR_shader_subgroup_ballot, KHR_shader_subgroup_vote,
 		KHR_shader_subgroup_vote,   KHR_shader_subgroup_basic,  KHR_shader_subgroup_basic, KHR_shader_subgroup_basic,
-		KHR_shader_subgroup_ballot, KHR_shader_subgroup_ballot, KHR_shader_subgroup_ballot, KHR_shader_subgroup_ballot
+		KHR_shader_subgroup_ballot, KHR_shader_subgroup_ballot, KHR_shader_subgroup_ballot, KHR_shader_subgroup_ballot,
+		KHR_shader_subgroup_arithmetic, KHR_shader_subgroup_arithmetic, KHR_shader_subgroup_arithmetic,
+		KHR_shader_subgroup_arithmetic, KHR_shader_subgroup_arithmetic, KHR_shader_subgroup_arithmetic,
+		KHR_shader_subgroup_arithmetic, KHR_shader_subgroup_arithmetic, KHR_shader_subgroup_arithmetic,
+		KHR_shader_subgroup_arithmetic, KHR_shader_subgroup_arithmetic, KHR_shader_subgroup_arithmetic,
 	};
 
 	return extensions[feature];
@@ -17851,6 +18266,19 @@ CompilerGLSL::ShaderSubgroupSupportHelper::CandidateVector CompilerGLSL::ShaderS
 		return { NV_shader_thread_group };
 	case SubgroupBallotBitCount:
 		return {};
+	case SubgroupArithmeticIAddReduce:
+	case SubgroupArithmeticIAddExclusiveScan:
+	case SubgroupArithmeticIAddInclusiveScan:
+	case SubgroupArithmeticFAddReduce:
+	case SubgroupArithmeticFAddExclusiveScan:
+	case SubgroupArithmeticFAddInclusiveScan:
+	case SubgroupArithmeticIMulReduce:
+	case SubgroupArithmeticIMulExclusiveScan:
+	case SubgroupArithmeticIMulInclusiveScan:
+	case SubgroupArithmeticFMulReduce:
+	case SubgroupArithmeticFMulExclusiveScan:
+	case SubgroupArithmeticFMulInclusiveScan:
+		return { KHR_shader_subgroup_arithmetic, NV_shader_thread_shuffle };
 	default:
 		return {};
 	}
@@ -17875,6 +18303,7 @@ CompilerGLSL::ShaderSubgroupSupportHelper::Result::Result()
 	weights[KHR_shader_subgroup_ballot] = big_num;
 	weights[KHR_shader_subgroup_basic] = big_num;
 	weights[KHR_shader_subgroup_vote] = big_num;
+	weights[KHR_shader_subgroup_arithmetic] = big_num;
 }
 
 void CompilerGLSL::request_workaround_wrapper_overload(TypeID id)

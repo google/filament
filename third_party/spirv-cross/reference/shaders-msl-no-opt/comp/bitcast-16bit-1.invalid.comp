@@ -1,0 +1,26 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO0
+{
+    short4 inputs[1];
+};
+
+struct SSBO1
+{
+    int4 outputs[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO0& _25 [[buffer(0)]], device SSBO1& _39 [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    uint ident = gl_GlobalInvocationID.x;
+    half2 a = as_type<half2>(_25.inputs[ident].xy);
+    ((device int*)&_39.outputs[ident])[0u] = int(as_type<uint>(a + half2(half(1.0))));
+    ((device int*)&_39.outputs[ident])[1u] = as_type<int>(_25.inputs[ident].zw);
+    ((device int*)&_39.outputs[ident])[2u] = int(as_type<uint>(ushort2(_25.inputs[ident].xy)));
+}
+

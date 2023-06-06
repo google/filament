@@ -1,0 +1,25 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    float a;
+    float b;
+    float c;
+    float d;
+    float e;
+    float f;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO& _9 [[buffer(0)]])
+{
+    _9.c = abs(_9.a - _9.b);
+    _9.d = abs(_9.a);
+    _9.e = sign(_9.a);
+    _9.f = abs((_9.a - 1.0) - (_9.b - 2.0));
+}
+

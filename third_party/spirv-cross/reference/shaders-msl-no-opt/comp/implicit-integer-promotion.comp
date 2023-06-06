@@ -1,0 +1,93 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct BUF0
+{
+    half2 f16s;
+    ushort2 u16;
+    short2 i16;
+    ushort4 u16s;
+    short4 i16s;
+    half f16;
+};
+
+static inline __attribute__((always_inline))
+void test_u16(device BUF0& _24)
+{
+    _24.f16 += as_type<half>(ushort(((device ushort*)&_24.u16)[0u] + ((device ushort*)&_24.u16)[1u]));
+    _24.f16 += as_type<half>(ushort(((device ushort*)&_24.u16)[0u] - ((device ushort*)&_24.u16)[1u]));
+    _24.f16 += as_type<half>(ushort(((device ushort*)&_24.u16)[0u] * ((device ushort*)&_24.u16)[1u]));
+    _24.f16 += as_type<half>(ushort(((device ushort*)&_24.u16)[0u] / ((device ushort*)&_24.u16)[1u]));
+    _24.f16 += as_type<half>(ushort(((device ushort*)&_24.u16)[0u] % ((device ushort*)&_24.u16)[1u]));
+    _24.f16 += as_type<half>(ushort(((device ushort*)&_24.u16)[0u] << ((device ushort*)&_24.u16)[1u]));
+    _24.f16 += as_type<half>(ushort(((device ushort*)&_24.u16)[0u] >> ((device ushort*)&_24.u16)[1u]));
+    _24.f16 += as_type<half>(ushort(~((device ushort*)&_24.u16)[0u]));
+    _24.f16 += as_type<half>(ushort(-((device ushort*)&_24.u16)[0u]));
+    _24.f16 += as_type<half>(ushort(((device ushort*)&_24.u16)[0u] ^ ((device ushort*)&_24.u16)[1u]));
+    _24.f16 += as_type<half>(ushort(((device ushort*)&_24.u16)[0u] & ((device ushort*)&_24.u16)[1u]));
+    _24.f16 += as_type<half>(ushort(((device ushort*)&_24.u16)[0u] | ((device ushort*)&_24.u16)[1u]));
+}
+
+static inline __attribute__((always_inline))
+void test_i16(device BUF0& _24)
+{
+    _24.f16 += as_type<half>(short(((device short*)&_24.i16)[0u] + ((device short*)&_24.i16)[1u]));
+    _24.f16 += as_type<half>(short(((device short*)&_24.i16)[0u] - ((device short*)&_24.i16)[1u]));
+    _24.f16 += as_type<half>(short(((device short*)&_24.i16)[0u] * ((device short*)&_24.i16)[1u]));
+    _24.f16 += as_type<half>(short(((device short*)&_24.i16)[0u] / ((device short*)&_24.i16)[1u]));
+    _24.f16 += as_type<half>(short(((device short*)&_24.i16)[0u] % ((device short*)&_24.i16)[1u]));
+    _24.f16 += as_type<half>(short(((device short*)&_24.i16)[0u] << ((device short*)&_24.i16)[1u]));
+    _24.f16 += as_type<half>(short(((device short*)&_24.i16)[0u] >> ((device short*)&_24.i16)[1u]));
+    _24.f16 += as_type<half>(short(~((device short*)&_24.i16)[0u]));
+    _24.f16 += as_type<half>(short(-((device short*)&_24.i16)[0u]));
+    _24.f16 += as_type<half>(short(((device short*)&_24.i16)[0u] ^ ((device short*)&_24.i16)[1u]));
+    _24.f16 += as_type<half>(short(((device short*)&_24.i16)[0u] & ((device short*)&_24.i16)[1u]));
+    _24.f16 += as_type<half>(short(((device short*)&_24.i16)[0u] | ((device short*)&_24.i16)[1u]));
+}
+
+static inline __attribute__((always_inline))
+void test_u16s(device BUF0& _24)
+{
+    _24.f16s += as_type<half2>(_24.u16s.xy + _24.u16s.zw);
+    _24.f16s += as_type<half2>(_24.u16s.xy - _24.u16s.zw);
+    _24.f16s += as_type<half2>(_24.u16s.xy * _24.u16s.zw);
+    _24.f16s += as_type<half2>(_24.u16s.xy / _24.u16s.zw);
+    _24.f16s += as_type<half2>(_24.u16s.xy % _24.u16s.zw);
+    _24.f16s += as_type<half2>(_24.u16s.xy << _24.u16s.zw);
+    _24.f16s += as_type<half2>(_24.u16s.xy >> _24.u16s.zw);
+    _24.f16s += as_type<half2>(~_24.u16s.xy);
+    _24.f16s += as_type<half2>(-_24.u16s.xy);
+    _24.f16s += as_type<half2>(_24.u16s.xy ^ _24.u16s.zw);
+    _24.f16s += as_type<half2>(_24.u16s.xy & _24.u16s.zw);
+    _24.f16s += as_type<half2>(_24.u16s.xy | _24.u16s.zw);
+}
+
+static inline __attribute__((always_inline))
+void test_i16s(device BUF0& _24)
+{
+    _24.f16s += as_type<half2>(_24.i16s.xy + _24.i16s.zw);
+    _24.f16s += as_type<half2>(_24.i16s.xy - _24.i16s.zw);
+    _24.f16s += as_type<half2>(_24.i16s.xy * _24.i16s.zw);
+    _24.f16s += as_type<half2>(_24.i16s.xy / _24.i16s.zw);
+    _24.f16s += as_type<half2>(_24.i16s.xy % _24.i16s.zw);
+    _24.f16s += as_type<half2>(_24.i16s.xy << _24.i16s.zw);
+    _24.f16s += as_type<half2>(_24.i16s.xy >> _24.i16s.zw);
+    _24.f16s += as_type<half2>(~_24.i16s.xy);
+    _24.f16s += as_type<half2>(-_24.i16s.xy);
+    _24.f16s += as_type<half2>(_24.i16s.xy ^ _24.i16s.zw);
+    _24.f16s += as_type<half2>(_24.i16s.xy & _24.i16s.zw);
+    _24.f16s += as_type<half2>(_24.i16s.xy | _24.i16s.zw);
+}
+
+kernel void main0(device BUF0& _24 [[buffer(0)]])
+{
+    test_u16(_24);
+    test_i16(_24);
+    test_u16s(_24);
+    test_i16s(_24);
+}
+

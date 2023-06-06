@@ -1,0 +1,25 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct foo
+{
+    int a;
+};
+
+struct bar
+{
+    int b;
+};
+
+kernel void main0(device foo& x [[buffer(0)]], device bar& y [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    device int* _47 = (gl_GlobalInvocationID.x != 0u) ? &x.a : &y.b;
+    device int* _40 = _47;
+    device int* _33 = _47;
+    int _37 = x.a;
+    *_47 = 0;
+    y.b = _37 + _37;
+}
+

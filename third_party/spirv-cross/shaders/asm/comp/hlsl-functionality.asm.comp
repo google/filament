@@ -1,0 +1,64 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 6
+; Bound: 31
+; Schema: 0
+               OpCapability Shader
+			   OpExtension "SPV_GOOGLE_hlsl_functionality1"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource HLSL 500
+               OpName %main "main"
+               OpName %_main_ "@main("
+               OpName %Buf "Buf"
+               OpMemberName %Buf 0 "@data"
+               OpName %Buf_0 "Buf"
+               OpName %Buf_count "Buf@count"
+               OpMemberName %Buf_count 0 "@count"
+               OpName %Buf_count_0 "Buf@count"
+               OpDecorate %_runtimearr_v4float ArrayStride 16
+               OpMemberDecorate %Buf 0 Offset 0
+               OpDecorate %Buf BufferBlock
+               OpDecorate %Buf_0 DescriptorSet 0
+               OpDecorate %Buf_0 Binding 0
+               OpMemberDecorate %Buf_count 0 Offset 0
+               OpDecorate %Buf_count BufferBlock
+               OpDecorate %Buf_count_0 DescriptorSet 0
+               OpDecorate %Buf_count_0 Binding 1
+               OpDecorateId %Buf_0 HlslCounterBufferGOOGLE %Buf_count_0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_runtimearr_v4float = OpTypeRuntimeArray %v4float
+        %Buf = OpTypeStruct %_runtimearr_v4float
+%_ptr_Uniform_Buf = OpTypePointer Uniform %Buf
+      %Buf_0 = OpVariable %_ptr_Uniform_Buf Uniform
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+  %Buf_count = OpTypeStruct %int
+%_ptr_Uniform_Buf_count = OpTypePointer Uniform %Buf_count
+%Buf_count_0 = OpVariable %_ptr_Uniform_Buf_count Uniform
+%_ptr_Uniform_int = OpTypePointer Uniform %int
+      %int_1 = OpConstant %int 1
+       %uint = OpTypeInt 32 0
+     %uint_1 = OpConstant %uint 1
+     %uint_0 = OpConstant %uint 0
+    %float_1 = OpConstant %float 1
+         %27 = OpConstantComposite %v4float %float_1 %float_1 %float_1 %float_1
+%_ptr_Uniform_v4float = OpTypePointer Uniform %v4float
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %30 = OpFunctionCall %void %_main_
+               OpReturn
+               OpFunctionEnd
+     %_main_ = OpFunction %void None %3
+          %7 = OpLabel
+         %20 = OpAccessChain %_ptr_Uniform_int %Buf_count_0 %int_0
+         %25 = OpAtomicIAdd %int %20 %uint_1 %uint_0 %int_1
+         %29 = OpAccessChain %_ptr_Uniform_v4float %Buf_0 %int_0 %25
+               OpStore %29 %27
+               OpReturn
+               OpFunctionEnd

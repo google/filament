@@ -1,0 +1,23 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct StorageBuffer
+{
+    uint values[1];
+};
+
+constant uint _22_tmp [[function_constant(0)]];
+constant uint _22 = is_function_constant_defined(_22_tmp) ? _22_tmp : 1u;
+constant uint _23_tmp [[function_constant(1)]];
+constant uint _23 = is_function_constant_defined(_23_tmp) ? _23_tmp : 1u;
+constant uint _24_tmp [[function_constant(2)]];
+constant uint _24 = is_function_constant_defined(_24_tmp) ? _24_tmp : 1u;
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(_22, _23, _24);
+
+kernel void main0(device StorageBuffer& ssbo [[buffer(0)]], uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]])
+{
+    ssbo.values[gl_LocalInvocationIndex] = 1u;
+}
+

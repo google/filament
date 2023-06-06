@@ -5446,17 +5446,54 @@ void Compiler::analyze_interlocked_resource_usage()
 
 bool Compiler::type_is_array_of_pointers(const SPIRType &type) const
 {
+	if (!type_is_top_level_array(type))
+		return false;
+
+	// BDA types must have parent type hierarchy.
+	if (!type.parent_type)
+		return false;
+
+	// Punch through all array layers.
+	auto *parent = &get<SPIRType>(type.parent_type);
+	while (type_is_top_level_array(*parent))
+		parent = &get<SPIRType>(parent->parent_type);
+
+	return type_is_top_level_pointer(*parent);
+}
+
+bool Compiler::type_is_top_level_pointer(const SPIRType &type) const
+{
 	if (!type.pointer)
 		return false;
 
-	// If parent type has same pointer depth, we must have an array of pointers.
-	return type.pointer_depth == get<SPIRType>(type.parent_type).pointer_depth;
+	// Function pointers, should not be hit by valid SPIR-V.
+	// Parent type will be SPIRFunction instead.
+	if (type.basetype == SPIRType::Unknown)
+		return false;
+
+	// Some types are synthesized in-place without complete type hierarchy and might not have parent types,
+	// but these types are never array-of-pointer or any complicated BDA type, infer reasonable defaults.
+	if (type.parent_type)
+		return type.pointer_depth > get<SPIRType>(type.parent_type).pointer_depth;
+	else
+		return true;
 }
 
 bool Compiler::type_is_top_level_physical_pointer(const SPIRType &type) const
 {
-	return type.pointer && type.storage == StorageClassPhysicalStorageBuffer &&
-	       type.pointer_depth > get<SPIRType>(type.parent_type).pointer_depth;
+	return type_is_top_level_pointer(type) && type.storage == StorageClassPhysicalStorageBuffer;
+}
+
+bool Compiler::type_is_top_level_array(const SPIRType &type) const
+{
+	if (type.array.empty())
+		return false;
+
+	// If we have pointer and array, we infer pointer-to-array as it's the only meaningful thing outside BDA.
+	if (type.parent_type)
+		return type.array.size() > get<SPIRType>(type.parent_type).array.size();
+	else
+		return !type.pointer;
 }
 
 bool Compiler::flush_phi_required(BlockID from, BlockID to) const

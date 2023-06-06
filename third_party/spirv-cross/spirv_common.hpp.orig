@@ -1663,6 +1663,7 @@ struct Meta
 		std::string alias;
 		std::string qualified_alias;
 		std::string hlsl_semantic;
+		std::string user_type;
 		Bitset decoration_flags;
 		spv::BuiltIn builtin_type = spv::BuiltInMax;
 		uint32_t location = 0;

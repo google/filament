@@ -1,0 +1,11 @@
+#version 310 es
+layout(local_size_x = 8, local_size_y = 4, local_size_z = 2) in;
+
+void main()
+{
+	uvec3 local_id = gl_LocalInvocationID;
+	uvec3 global_id = gl_GlobalInvocationID;
+	uint local_index = gl_LocalInvocationIndex;
+	uvec3 work_group_size = gl_WorkGroupSize;
+	uvec3 work_group_id = gl_WorkGroupID;
+}

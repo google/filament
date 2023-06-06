@@ -1,0 +1,43 @@
+OpCapability Shader
+OpExtension "SPV_KHR_storage_buffer_storage_class"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main" %var_id
+OpExecutionMode %main LocalSize 1 1 1
+OpDecorate %var_id BuiltIn GlobalInvocationId
+OpDecorate %var_input Binding 0
+OpDecorate %var_input DescriptorSet 0
+OpDecorate %var_outdata Binding 1
+OpDecorate %var_outdata DescriptorSet 0
+OpMemberDecorate %type_container_struct 0 Offset 0
+OpMemberDecorate %type_container_struct 1 Offset 16
+OpMemberDecorate %type_container_struct 2 Offset 32
+OpMemberDecorate %type_container_struct 3 Offset 48
+OpDecorate %type_container_struct Block
+%bool      = OpTypeBool
+%void      = OpTypeVoid
+%voidf     = OpTypeFunction %void
+%u32       = OpTypeInt 32 0
+%i32       = OpTypeInt 32 1
+%f32       = OpTypeFloat 32
+%uvec3     = OpTypeVector %u32 3
+%fvec3     = OpTypeVector %f32 3
+%uvec3ptr  = OpTypePointer Input %uvec3
+%i32ptr    = OpTypePointer Uniform %i32
+%f32ptr    = OpTypePointer Uniform %f32
+%i32arr    = OpTypeRuntimeArray %i32
+%f32arr    = OpTypeRuntimeArray %f32
+%type_empty_struct					= OpTypeStruct
+%type_container_struct				= OpTypeStruct %i32 %type_empty_struct %type_empty_struct %i32
+%type_container_struct_ubo_ptr		= OpTypePointer Uniform %type_container_struct
+%type_container_struct_ssbo_ptr	= OpTypePointer StorageBuffer %type_container_struct
+%var_id							= OpVariable %uvec3ptr Input
+%var_input						= OpVariable %type_container_struct_ubo_ptr Uniform
+%var_outdata					= OpVariable %type_container_struct_ssbo_ptr StorageBuffer
+
+%main								= OpFunction %void None %voidf
+%label								= OpLabel
+%input_copy					= OpCopyObject %type_container_struct_ubo_ptr %var_input
+%result						= OpLoad %type_container_struct %input_copy
+OpStore %var_outdata %result
+OpReturn
+OpFunctionEnd
