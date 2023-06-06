@@ -466,13 +466,13 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance) {
 
     // Sort the found devices
     std::sort(deviceList.begin(), deviceList.end(), [](DeviceInfo const& a, DeviceInfo const& b) {
-        if (a.device == VK_NULL_HANDLE) {
-            return true;
-        }
         if (b.device == VK_NULL_HANDLE) {
             return false;
         }
-        return deviceTypeOrder(a.deviceType) <= deviceTypeOrder(b.deviceType);
+        if (a.device == VK_NULL_HANDLE) {
+            return true;
+        }
+        return deviceTypeOrder(a.deviceType) < deviceTypeOrder(b.deviceType);
     });
 
     auto device = deviceList.back().device;
