@@ -724,6 +724,8 @@ bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
             return false;
         case Workaround::A8X_STATIC_TEXTURE_TARGET_ERROR:
             return mContext->bugs.a8xStaticTextureTargetError;
+        case Workaround::DISABLE_BLIT_INTO_TEXTURE_ARRAY:
+            return false;
     }
     return false;
 }
