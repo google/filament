@@ -260,10 +260,12 @@ void VulkanDriver::tick(int) {
 // rather than the wall clock, because we must wait 3 frames after a DriverAPI-level resource has
 // been destroyed for safe destruction, due to outstanding command buffers and triple buffering.
 void VulkanDriver::collectGarbage() {
+    // Command buffers need to be submitted and completed before other resources can be gc'd. And
+    // its gc() function carrys out the *wait*.
+    mCommands->gc();
     mStagePool.gc();
     mFramebufferCache.gc();
     mDisposer.gc();
-    mCommands->gc();
 }
 
 void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
@@ -777,6 +779,8 @@ bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
             // resolution.
             return false;
         case Workaround::ADRENO_UNIFORM_ARRAY_CRASH:
+            return false;
+        case Workaround::DISABLE_BLIT_INTO_TEXTURE_ARRAY:
             return false;
         default:
             return false;

@@ -95,6 +95,7 @@ public:
       ImGuiContext* mImGuiContext;
       filament::TextureSampler mSampler;
       bool mFlipVertical = false;
+      utils::Path mSettingsPath;
 };
 
 } // namespace filagui

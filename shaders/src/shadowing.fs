@@ -237,7 +237,7 @@ float filterPCSS(const mediump sampler2DArray map,
         const highp vec2 filterRadii, const mat2 R, const highp vec2 dz_duv,
         const uint tapCount) {
 
-    float occludedCount = 0.0;
+    highp float occludedCount = 0.0; // must be highp to workaround a spirv-tools issue
     for (uint i = 0u; i < tapCount; i++) {
         highp vec2 duv = R * (poissonDisk[i] * filterRadii);
 

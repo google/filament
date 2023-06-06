@@ -2,6 +2,11 @@
 
 set -e
 
+case "$(uname -s)" in
+    Darwin*) IS_DARWIN=1;;
+    *) ;;
+esac
+
 function print_help {
     local SELF_NAME
     SELF_NAME=$(basename "$0")
@@ -45,7 +50,11 @@ function replace {
     FIND_STR="${1//\{\{VERSION\}\}/${VERSION_REGEX}}"
     REPLACE_STR="${1//\{\{VERSION\}\}/${NEW_VERSION}}"
     local FILE_NAME="$2"
-    sed -i '' -E "s/${FIND_STR}/${REPLACE_STR}/" "${FILE_NAME}"
+    if [ IS_DARWIN ]; then
+        sed -i '' -E "s/${FIND_STR}/${REPLACE_STR}/" "${FILE_NAME}"
+    else
+        sed -i -E "s/${FIND_STR}/${REPLACE_STR}/" "${FILE_NAME}"
+    fi
 }
 
 # The following are the canonical locations where the Filament version number is referenced.

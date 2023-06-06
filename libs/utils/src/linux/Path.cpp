@@ -17,6 +17,8 @@
 #include <utils/Path.h>
 
 #include <dirent.h>
+#include <pwd.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/stat.h>
 
@@ -43,6 +45,17 @@ Path Path::getCurrentExecutable() {
 
 Path Path::getTemporaryDirectory() {
     return Path("/tmp/");
+}
+
+Path Path::getUserSettingsDirectory() {
+    const char* home = getenv("HOME");
+    if (!home) {
+        struct passwd* pwd = getpwuid(getuid());
+        if (pwd) {
+           home = pwd->pw_dir;
+        }
+    }
+    return Path(home);
 }
 
 std::vector<Path> Path::listContents() const {
