@@ -1,0 +1,79 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+struct BUF
+{
+    int a;
+    float b;
+    float c;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+constant spvUnsafeArray<float, 2> _16 = spvUnsafeArray<float, 2>({ 1.0, 2.0 });
+constant spvUnsafeArray<float, 2> _19 = spvUnsafeArray<float, 2>({ 3.0, 4.0 });
+constant spvUnsafeArray<spvUnsafeArray<float, 2>, 2> _20 = spvUnsafeArray<spvUnsafeArray<float, 2>, 2>({ spvUnsafeArray<float, 2>({ 1.0, 2.0 }), spvUnsafeArray<float, 2>({ 3.0, 4.0 }) });
+constant spvUnsafeArray<spvUnsafeArray<spvUnsafeArray<float, 2>, 2>, 2> _21 = spvUnsafeArray<spvUnsafeArray<spvUnsafeArray<float, 2>, 2>, 2>({ spvUnsafeArray<spvUnsafeArray<float, 2>, 2>({ spvUnsafeArray<float, 2>({ 1.0, 2.0 }), spvUnsafeArray<float, 2>({ 3.0, 4.0 }) }), spvUnsafeArray<spvUnsafeArray<float, 2>, 2>({ spvUnsafeArray<float, 2>({ 1.0, 2.0 }), spvUnsafeArray<float, 2>({ 3.0, 4.0 }) }) });
+
+kernel void main0(device BUF& o [[buffer(0)]])
+{
+    spvUnsafeArray<spvUnsafeArray<spvUnsafeArray<float, 2>, 2>, 2> c;
+    c = _21;
+    o.a = int(c[1][1][1]);
+    spvUnsafeArray<float, 2> _43 = spvUnsafeArray<float, 2>({ o.b, o.c });
+    spvUnsafeArray<float, 2> _48 = spvUnsafeArray<float, 2>({ o.b, o.b });
+    spvUnsafeArray<spvUnsafeArray<float, 2>, 2> _49 = spvUnsafeArray<spvUnsafeArray<float, 2>, 2>({ _43, _48 });
+    spvUnsafeArray<float, 2> _54 = spvUnsafeArray<float, 2>({ o.c, o.c });
+    spvUnsafeArray<float, 2> _59 = spvUnsafeArray<float, 2>({ o.c, o.b });
+    spvUnsafeArray<spvUnsafeArray<float, 2>, 2> _60 = spvUnsafeArray<spvUnsafeArray<float, 2>, 2>({ _54, _59 });
+    spvUnsafeArray<spvUnsafeArray<spvUnsafeArray<float, 2>, 2>, 2> _61 = spvUnsafeArray<spvUnsafeArray<spvUnsafeArray<float, 2>, 2>, 2>({ _49, _60 });
+    spvUnsafeArray<spvUnsafeArray<spvUnsafeArray<float, 2>, 2>, 2> d;
+    d = _61;
+    spvUnsafeArray<spvUnsafeArray<spvUnsafeArray<float, 2>, 2>, 2> e;
+    e = d;
+    o.b = e[1][0][1];
+}
+

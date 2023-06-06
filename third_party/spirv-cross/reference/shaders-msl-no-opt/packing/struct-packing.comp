@@ -1,0 +1,29 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct Foo
+{
+    packed_float3 a;
+};
+
+struct Bar
+{
+    packed_float3 a;
+};
+
+struct SSBOScalar
+{
+    Foo foo;
+    Bar bar;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBOScalar& buffer_scalar [[buffer(0)]])
+{
+    buffer_scalar.foo.a[0u] = 10.0;
+    buffer_scalar.bar.a[0u] = 20.0;
+}
+

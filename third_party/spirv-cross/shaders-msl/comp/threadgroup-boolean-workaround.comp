@@ -1,0 +1,21 @@
+#version 450
+layout(local_size_x = 4) in;
+
+shared bvec4 foo[4];
+
+layout(binding = 0) buffer SSBO
+{
+	vec4 values[];
+};
+
+void in_function()
+{
+	foo[gl_LocalInvocationIndex] = notEqual(values[gl_GlobalInvocationID.x], vec4(10.0));
+	barrier();
+	values[gl_GlobalInvocationID.x] = mix(vec4(40.0), vec4(30.0), foo[gl_LocalInvocationIndex ^ 3]);
+}
+
+void main()
+{
+	in_function();
+}

@@ -1,0 +1,411 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer _4_12
+{
+    uint _m0[1];
+} _12;
+
+layout(binding = 1, std430) buffer _4_13
+{
+    uint _m0[1];
+} _13;
+
+layout(binding = 7, std430) buffer _4_19
+{
+    uint _m0[1];
+} _19;
+
+layout(binding = 2, std430) buffer _6_14
+{
+    uint _m0[2];
+} _14;
+
+layout(binding = 3, std430) buffer _6_15
+{
+    uint _m0[2];
+} _15;
+
+layout(binding = 4, std430) buffer _6_16
+{
+    uint _m0[2];
+} _16;
+
+layout(binding = 5, std430) buffer _6_17
+{
+    uint _m0[2];
+} _17;
+
+layout(binding = 6, std430) buffer _6_18
+{
+    uint _m0[2];
+} _18;
+
+layout(binding = 8, std430) buffer _8_20
+{
+    uint _m0[3];
+} _20;
+
+layout(binding = 9, std430) buffer _10_21
+{
+    uint _m0[37];
+} _21;
+
+void main()
+{
+    uint _70 = 0u;
+    uint _71 = 0u;
+    uint _72 = 0u;
+    uint _74 = 0u;
+    uint _75 = 0u;
+    uint _76 = 0u;
+    uint _77 = 0u;
+    uint _78 = 0u;
+    uint _79 = 0u;
+    uint _90 = ((gl_WorkGroupID.y * 1u) + (gl_WorkGroupID.z * 1u)) + gl_WorkGroupID.x;
+    uint _111 = (_90 * 2u) + (gl_LocalInvocationIndex * 2u);
+    _71 = (_90 * 1u) + (gl_LocalInvocationIndex * 1u);
+    _72 = (_90 * 1u) + (gl_LocalInvocationIndex * 1u);
+    _74 = (_90 * 2u) + (gl_LocalInvocationIndex * 2u);
+    _75 = (_90 * 2u) + (gl_LocalInvocationIndex * 2u);
+    _76 = (_90 * 2u) + (gl_LocalInvocationIndex * 2u);
+    _77 = (_90 * 2u) + (gl_LocalInvocationIndex * 2u);
+    _78 = (_90 * 1u) + (gl_LocalInvocationIndex * 1u);
+    _79 = (_90 * 3u) + (gl_LocalInvocationIndex * 3u);
+    _70 = (_90 * 37u) + (gl_LocalInvocationIndex * 37u);
+    _21._m0[_70] = 8u;
+    uint _123 = _70 + 1u;
+    _71++;
+    uint _136;
+    uint _233;
+    uint _234;
+    uint _241;
+    uint _242;
+    uint _73 = _111;
+    uint _129 = _123;
+    for (;;)
+    {
+        _21._m0[_129] = 9u;
+        _136 = _129 + 1u;
+        uint _141;
+        for (;;)
+        {
+            _21._m0[_136] = 12u;
+            _141 = _136 + 1u;
+            break;
+        }
+        uint _148;
+        uint _149;
+        uint _162;
+        uint _163;
+        for (;;)
+        {
+            _21._m0[_141] = 13u;
+            _148 = _141 + 1u;
+            _149 = _75;
+            _21._m0[_148] = 17u;
+            _75 = _149 + 1u;
+            uint _158;
+            if (_16._m0[_149] == 1u)
+            {
+                _158 = _148 + 1u;
+                _21._m0[_158] = 19u;
+                _162 = _158 + 1u;
+                _163 = _74;
+                break;
+            }
+            if (true)
+            {
+                _141 = 666u;
+                continue;
+            }
+            else
+            {
+                _162 = 666u;
+                _163 = 666u;
+                break;
+            }
+        }
+        _21._m0[_162] = 15u;
+        uint _165 = _162 + 1u;
+        _74 = _163 + 1u;
+        uint _174;
+        uint _178;
+        uint _179;
+        if (_15._m0[_163] == 1u)
+        {
+            _178 = _165;
+            _179 = _76;
+            _21._m0[_178] = 21u;
+            uint _181 = _178 + 1u;
+            uint _184 = _179 + 1u;
+            _76 = _184;
+            uint _186;
+            _186 = _181;
+            uint _191;
+            for (;;)
+            {
+                _21._m0[_186] = 23u;
+                uint _189 = _186 + 1u;
+                _191 = _189;
+                break;
+            }
+            uint _199;
+            uint _200;
+            uint _216;
+            uint _217;
+            uint _224;
+            uint _225;
+            for (;;)
+            {
+                _21._m0[_191] = 24u;
+                uint _195 = _191 + 1u;
+                uint _196 = _79;
+                _199 = _195;
+                _200 = _196;
+                _21._m0[_199] = 28u;
+                uint _202 = _199 + 1u;
+                uint _204 = _20._m0[_200];
+                uint _205 = _200 + 1u;
+                _79 = _205;
+                uint _208;
+                uint _212;
+                bool _198_ladder_break = false;
+                switch (_204)
+                {
+                    default:
+                    {
+                        _208 = _202;
+                        _21._m0[_208] = 30u;
+                        uint _210 = _208 + 1u;
+                        uint _211 = _77;
+                        _224 = _210;
+                        _225 = _211;
+                        _198_ladder_break = true;
+                        break;
+                    }
+                    case 1u:
+                    {
+                        _212 = _202;
+                        break;
+                    }
+                }
+                if (_198_ladder_break)
+                {
+                    break;
+                }
+                _21._m0[_212] = 29u;
+                uint _214 = _212 + 1u;
+                uint _215 = _78;
+                _216 = _214;
+                _217 = _215;
+                _21._m0[_216] = 27u;
+                uint _192 = _216 + 1u;
+                uint _220 = _19._m0[_217];
+                uint _222 = _217 + 1u;
+                _78 = _222;
+                uint _223 = _77;
+                if (_220 == 1u)
+                {
+                    _191 = _192;
+                    continue;
+                }
+                else
+                {
+                    _224 = _192;
+                    _225 = _223;
+                    break;
+                }
+            }
+            _21._m0[_224] = 26u;
+            uint _227 = _224 + 1u;
+            uint _229 = _18._m0[_225];
+            bool _230 = _229 == 1u;
+            uint _231 = _225 + 1u;
+            _77 = _231;
+            uint _232 = _73;
+            if (_230)
+            {
+                _233 = _227;
+                _234 = _232;
+                _21._m0[_233] = 11u;
+                uint _130 = _233 + 1u;
+                uint _237 = _14._m0[_234];
+                uint _239 = _234 + 1u;
+                _73 = _239;
+                if (_237 == 1u)
+                {
+                    _129 = _130;
+                    continue;
+                }
+                else
+                {
+                    _241 = _130;
+                    _242 = _72;
+                    break;
+                }
+            }
+            else
+            {
+            }
+        }
+        else
+        {
+            _174 = _165;
+            _21._m0[_174] = 22u;
+            _178 = _174 + 1u;
+            _179 = _76;
+            _21._m0[_178] = 21u;
+            uint _181 = _178 + 1u;
+            uint _184 = _179 + 1u;
+            _76 = _184;
+            uint _186;
+            _186 = _181;
+            uint _191;
+            for (;;)
+            {
+                _21._m0[_186] = 23u;
+                uint _189 = _186 + 1u;
+                _191 = _189;
+                break;
+            }
+            uint _199;
+            uint _200;
+            uint _216;
+            uint _217;
+            uint _224;
+            uint _225;
+            for (;;)
+            {
+                _21._m0[_191] = 24u;
+                uint _195 = _191 + 1u;
+                uint _196 = _79;
+                _199 = _195;
+                _200 = _196;
+                _21._m0[_199] = 28u;
+                uint _202 = _199 + 1u;
+                uint _204 = _20._m0[_200];
+                uint _205 = _200 + 1u;
+                _79 = _205;
+                uint _208;
+                uint _212;
+                bool _198_ladder_break = false;
+                switch (_204)
+                {
+                    default:
+                    {
+                        _208 = _202;
+                        _21._m0[_208] = 30u;
+                        uint _210 = _208 + 1u;
+                        uint _211 = _77;
+                        _224 = _210;
+                        _225 = _211;
+                        _198_ladder_break = true;
+                        break;
+                    }
+                    case 1u:
+                    {
+                        _212 = _202;
+                        break;
+                    }
+                }
+                if (_198_ladder_break)
+                {
+                    break;
+                }
+                _21._m0[_212] = 29u;
+                uint _214 = _212 + 1u;
+                uint _215 = _78;
+                _216 = _214;
+                _217 = _215;
+                _21._m0[_216] = 27u;
+                uint _192 = _216 + 1u;
+                uint _220 = _19._m0[_217];
+                uint _222 = _217 + 1u;
+                _78 = _222;
+                uint _223 = _77;
+                if (_220 == 1u)
+                {
+                    _191 = _192;
+                    continue;
+                }
+                else
+                {
+                    _224 = _192;
+                    _225 = _223;
+                    break;
+                }
+            }
+            _21._m0[_224] = 26u;
+            uint _227 = _224 + 1u;
+            uint _229 = _18._m0[_225];
+            bool _230 = _229 == 1u;
+            uint _231 = _225 + 1u;
+            _77 = _231;
+            uint _232 = _73;
+            if (_230)
+            {
+                _233 = _227;
+                _234 = _232;
+                _21._m0[_233] = 11u;
+                uint _130 = _233 + 1u;
+                uint _237 = _14._m0[_234];
+                uint _239 = _234 + 1u;
+                _73 = _239;
+                if (_237 == 1u)
+                {
+                    _129 = _130;
+                    continue;
+                }
+                else
+                {
+                    _241 = _130;
+                    _242 = _72;
+                    break;
+                }
+            }
+            else
+            {
+            }
+        }
+        _233 = 666u;
+        _234 = 666u;
+        _21._m0[_233] = 11u;
+        uint _130 = _233 + 1u;
+        uint _237 = _14._m0[_234];
+        uint _239 = _234 + 1u;
+        _73 = _239;
+        if (_237 == 1u)
+        {
+            _129 = _130;
+            continue;
+        }
+        else
+        {
+            _241 = _130;
+            _242 = _72;
+            break;
+        }
+    }
+    _21._m0[_241] = 10u;
+    _72 = _242 + 1u;
+    uint _251;
+    uint _254;
+    switch (_13._m0[_242])
+    {
+        case 1u:
+        {
+            _254 = 666u;
+            break;
+        }
+        default:
+        {
+            _251 = _241 + 1u;
+            _21._m0[_251] = 32u;
+            _254 = _251 + 1u;
+            break;
+        }
+    }
+    _21._m0[_254] = 31u;
+}
+

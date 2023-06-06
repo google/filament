@@ -1,0 +1,116 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 91
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %2 "main"
+               OpExecutionMode %2 LocalSize 1 1 1
+               OpDecorate %_arr_v2uint_uint_324 ArrayStride 8
+               OpMemberDecorate %_struct_6 0 NonWritable
+               OpMemberDecorate %_struct_6 0 Offset 0
+               OpDecorate %_struct_6 BufferBlock
+               OpDecorate %7 DescriptorSet 0
+               OpDecorate %7 Binding 0
+               OpDecorate %_arr_v2float_uint_648 ArrayStride 8
+               OpMemberDecorate %_struct_9 0 Offset 0
+               OpDecorate %_struct_9 BufferBlock
+               OpDecorate %11 DescriptorSet 0
+               OpDecorate %11 Binding 1
+               OpDecorate %_arr_v2float_uint_648_0 ArrayStride 8
+               OpMemberDecorate %_struct_13 0 Offset 0
+               OpDecorate %_struct_13 BufferBlock
+               OpDecorate %14 DescriptorSet 0
+               OpDecorate %14 Binding 2
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+%_ptr_Function_v2float = OpTypePointer Function %v2float
+ %_struct_19 = OpTypeStruct %v2float %v2float
+         %10 = OpTypeFunction %_struct_19 %_ptr_Function_v2float
+%_ptr_Function__struct_19 = OpTypePointer Function %_struct_19
+       %uint = OpTypeInt 32 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+     %uint_0 = OpConstant %uint 0
+   %uint_648 = OpConstant %uint 648
+       %bool = OpTypeBool
+     %v2uint = OpTypeVector %uint 2
+%_ptr_Function_v2uint = OpTypePointer Function %v2uint
+   %uint_324 = OpConstant %uint 324
+%_arr_v2uint_uint_324 = OpTypeArray %v2uint %uint_324
+  %_struct_6 = OpTypeStruct %_arr_v2uint_uint_324
+%_ptr_Uniform__struct_6 = OpTypePointer Uniform %_struct_6
+          %7 = OpVariable %_ptr_Uniform__struct_6 Uniform
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+     %uint_2 = OpConstant %uint 2
+%_ptr_Uniform_v2uint = OpTypePointer Uniform %v2uint
+%_arr_v2float_uint_648 = OpTypeArray %v2float %uint_648
+  %_struct_9 = OpTypeStruct %_arr_v2float_uint_648
+%_ptr_Uniform__struct_9 = OpTypePointer Uniform %_struct_9
+         %11 = OpVariable %_ptr_Uniform__struct_9 Uniform
+     %uint_1 = OpConstant %uint 1
+%_ptr_Uniform_v2float = OpTypePointer Uniform %v2float
+%_arr_v2float_uint_648_0 = OpTypeArray %v2float %uint_648
+ %_struct_13 = OpTypeStruct %_arr_v2float_uint_648_0
+%_ptr_Uniform__struct_13 = OpTypePointer Uniform %_struct_13
+         %14 = OpVariable %_ptr_Uniform__struct_13 Uniform
+      %int_1 = OpConstant %int 1
+          %2 = OpFunction %void None %3
+          %5 = OpLabel
+         %46 = OpVariable %_ptr_Function_uint Function
+         %47 = OpVariable %_ptr_Function_v2uint Function
+         %48 = OpVariable %_ptr_Function_v2float Function
+         %50 = OpVariable %_ptr_Function__struct_19 Function
+               OpStore %46 %uint_0
+               OpBranch %30
+         %30 = OpLabel
+               OpLoopMerge %32 %33 None
+               OpBranch %34
+         %34 = OpLabel
+         %35 = OpLoad %uint %46
+         %38 = OpULessThan %bool %35 %uint_648
+               OpBranchConditional %38 %31 %32
+         %31 = OpLabel
+         %49 = OpLoad %uint %46
+         %51 = OpUDiv %uint %49 %uint_2
+         %53 = OpAccessChain %_ptr_Uniform_v2uint %7 %int_0 %51
+         %54 = OpLoad %v2uint %53
+               OpStore %47 %54
+         %56 = OpLoad %v2uint %47
+         %57 = OpBitcast %v2float %56
+               OpStore %48 %57
+         %62 = OpLoad %uint %46
+         %64 = OpIAdd %uint %62 %uint_1
+         %65 = OpLoad %v2float %48
+         %66 = OpLoad %uint %46
+         %68 = OpAccessChain %_ptr_Uniform_v2float %11 %int_0 %66
+         %69 = OpExtInst %v2float %1 Modf %65 %68
+         %70 = OpAccessChain %_ptr_Uniform_v2float %11 %int_0 %64
+               OpStore %70 %69
+         %73 = OpLoad %v2float %48
+         %74 = OpExtInst %_struct_19 %1 ModfStruct %73
+               OpStore %50 %74
+         %79 = OpLoad %uint %46
+         %81 = OpAccessChain %_ptr_Function_v2float %50 %int_1
+         %82 = OpLoad %v2float %81
+         %83 = OpAccessChain %_ptr_Uniform_v2float %14 %int_0 %79
+               OpStore %83 %82
+         %84 = OpLoad %uint %46
+         %85 = OpIAdd %uint %84 %uint_1
+         %86 = OpAccessChain %_ptr_Function_v2float %50 %int_0
+         %87 = OpLoad %v2float %86
+         %88 = OpAccessChain %_ptr_Uniform_v2float %14 %int_0 %85
+               OpStore %88 %87
+               OpBranch %33
+         %33 = OpLabel
+         %89 = OpLoad %uint %46
+         %90 = OpIAdd %uint %89 %uint_2
+               OpStore %46 %90
+               OpBranch %30
+         %32 = OpLabel
+               OpReturn
+               OpFunctionEnd

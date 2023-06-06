@@ -1,0 +1,77 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+struct _10
+{
+    float _m0[4];
+    float _m1[4];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+struct SSBO
+{
+    uint a;
+    int b;
+};
+
+constant spvUnsafeArray<float, 4> _31 = spvUnsafeArray<float, 4>({ 1.0, 2.0, 3.0, 4.0 });
+
+kernel void main0()
+{
+    spvUnsafeArray<_10, 2> _34 = spvUnsafeArray<_10, 2>({ _10{ { 1.0, 2.0, 3.0, 4.0 }, { 1.0, 2.0, 3.0, 4.0 } }, _10{ { 1.0, 2.0, 3.0, 4.0 }, { 1.0, 2.0, 3.0, 4.0 } } });
+    
+    spvUnsafeArray<float, 4> foo;
+    foo[0] = 1.0;
+    foo = _31;
+    foo[1] = 2.0;
+    foo[2] = 3.0;
+    foo[3] = 4.0;
+    spvUnsafeArray<float, 4> foo2;
+    foo2 = foo;
+    _10 _37 = _10{ { foo[0], foo[1], foo[2], foo[3] }, { foo2[0], foo2[1], foo2[2], foo2[3] } };
+}
+

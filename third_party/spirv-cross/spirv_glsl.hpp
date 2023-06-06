@@ -258,6 +258,10 @@ public:
 	// require_extension("GL_KHR_my_extension");
 	void require_extension(const std::string &ext);
 
+	// Returns the list of required extensions. After compilation this will contains any other 
+	// extensions that the compiler used automatically, in addition to the user specified ones.
+	const SmallVector<std::string> &get_required_extensions() const;
+
 	// Legacy GLSL compatibility method.
 	// Takes a uniform or push constant variable and flattens it into a (i|u)vec4 array[N]; array instead.
 	// For this to work, all types in the block must be the same basic type, e.g. mixing vec2 and vec4 is fine, but
@@ -292,6 +296,7 @@ protected:
 			KHR_shader_subgroup_ballot,
 			KHR_shader_subgroup_basic,
 			KHR_shader_subgroup_vote,
+			KHR_shader_subgroup_arithmetic,
 			NV_gpu_shader_5,
 			NV_shader_thread_group,
 			NV_shader_thread_shuffle,
@@ -324,7 +329,18 @@ protected:
 			SubgroupInverseBallot_InclBitCount_ExclBitCout = 13,
 			SubgroupBallotBitExtract = 14,
 			SubgroupBallotBitCount = 15,
-
+			SubgroupArithmeticIAddReduce = 16,
+			SubgroupArithmeticIAddExclusiveScan = 17,
+			SubgroupArithmeticIAddInclusiveScan = 18,
+			SubgroupArithmeticFAddReduce = 19,
+			SubgroupArithmeticFAddExclusiveScan = 20,
+			SubgroupArithmeticFAddInclusiveScan = 21,
+			SubgroupArithmeticIMulReduce = 22,
+			SubgroupArithmeticIMulExclusiveScan = 23,
+			SubgroupArithmeticIMulInclusiveScan = 24,
+			SubgroupArithmeticFMulReduce = 25,
+			SubgroupArithmeticFMulExclusiveScan = 26,
+			SubgroupArithmeticFMulInclusiveScan = 27,
 			FeatureCount
 		};
 
@@ -358,7 +374,7 @@ protected:
 	};
 
 	// TODO remove this function when all subgroup ops are supported (or make it always return true)
-	static bool is_supported_subgroup_op_in_opengl(spv::Op op);
+	static bool is_supported_subgroup_op_in_opengl(spv::Op op, const uint32_t *ops);
 
 	void reset(uint32_t iteration_count);
 	void emit_function(SPIRFunction &func, const Bitset &return_flags);
@@ -464,6 +480,8 @@ protected:
 	                                           bool packed_type, bool row_major);
 
 	virtual bool builtin_translates_to_nonarray(spv::BuiltIn builtin) const;
+
+	virtual bool is_user_type_structured(uint32_t id) const;
 
 	void emit_copy_logical_type(uint32_t lhs_id, uint32_t lhs_type_id, uint32_t rhs_id, uint32_t rhs_type_id,
 	                            SmallVector<uint32_t> chain);
@@ -627,6 +645,7 @@ protected:
 	void emit_struct(SPIRType &type);
 	void emit_resources();
 	void emit_extension_workarounds(spv::ExecutionModel model);
+	void emit_subgroup_arithmetic_workaround(const std::string &func, spv::Op op, spv::GroupOperation group_op);
 	void emit_polyfills(uint32_t polyfills, bool relaxed);
 	void emit_buffer_block_native(const SPIRVariable &var);
 	void emit_buffer_reference_block(uint32_t type_id, bool forward_declaration);

@@ -1,0 +1,15 @@
+# Copyright 2020-2021 Hans-Kristian Arntzen
+# SPDX-License-Identifier: Apache-2.0
+
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/spirv_cross
+
+Name: spirv-cross-c
+Description: C API for SPIRV-Cross (static)
+Version: @SPIRV_CROSS_VERSION@
+
+Requires:
+Libs: -L${libdir} -lspirv-cross-c
+Cflags: -I${includedir}

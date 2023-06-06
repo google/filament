@@ -1,0 +1,130 @@
+#version 450
+layout(local_size_x = 1) in;
+
+layout(binding = 0, std430) buffer SSBO
+{
+	float res;
+	int ires;
+	uint ures;
+
+	vec4 f32;
+	ivec4 s32;
+	uvec4 u32;
+
+	mat2 m2;
+	mat3 m3;
+	mat4 m4;
+};
+
+void main()
+{
+	float tmp;
+	vec2 v2;
+	vec3 v3;
+	vec4 v4;
+	int itmp;
+
+	res = round(f32.x);
+	//res = roundEven(f32.x);
+	res = trunc(f32.x);
+	res = abs(f32.x);
+	ires = abs(s32.x);
+	res = sign(f32.x);
+	ires = sign(s32.x);
+	res = floor(f32.x);
+	res = ceil(f32.x);
+	res = fract(f32.x);
+	res = radians(f32.x);
+	res = degrees(f32.x);
+	res = sin(f32.x);
+	res = cos(f32.x);
+	res = tan(f32.x);
+	res = asin(f32.x);
+	res = acos(f32.x);
+	res = atan(f32.x);
+	res = sinh(f32.x);
+	res = cosh(f32.x);
+	res = tanh(f32.x);
+	//res = asinh(f32.x);
+	//res = acosh(f32.x);
+	//res = atanh(f32.x);
+	res = atan(f32.x, f32.y);
+	res = pow(f32.x, f32.y);
+	res = exp(f32.x);
+	res = log(f32.x);
+	res = exp2(f32.x);
+	res = log2(f32.x);
+	res = sqrt(f32.x);
+	res = inversesqrt(f32.x);
+
+	res = length(f32.x);
+	res = distance(f32.x, f32.y);
+	res = normalize(f32.x);
+	res = faceforward(f32.x, f32.y, f32.z);
+	res = reflect(f32.x, f32.y);
+	res = refract(f32.x, f32.y, f32.z);
+
+	res = length(f32.xy);
+	res = distance(f32.xy, f32.zw);
+	v2 = normalize(f32.xy);
+	v2 = faceforward(f32.xy, f32.yz, f32.zw);
+	v2 = reflect(f32.xy, f32.zw);
+	v2 = refract(f32.xy, f32.yz, f32.w);
+
+	v3 = cross(f32.xyz, f32.yzw);
+
+	res = determinant(m2);
+	res = determinant(m3);
+	res = determinant(m4);
+	m2 = inverse(m2);
+	m3 = inverse(m3);
+	m4 = inverse(m4);
+
+	res = modf(f32.x, tmp);
+	// ModfStruct
+
+	res = min(f32.x, f32.y);
+	ures = min(u32.x, u32.y);
+	ires = min(s32.x, s32.y);
+	res = max(f32.x, f32.y);
+	ures = max(u32.x, u32.y);
+	ires = max(s32.x, s32.y);
+
+	res = clamp(f32.x, f32.y, f32.z);
+	ures = clamp(u32.x, u32.y, u32.z);
+	ires = clamp(s32.x, s32.y, s32.z);
+
+	res = mix(f32.x, f32.y, f32.z);
+	res = step(f32.x, f32.y);
+	res = smoothstep(f32.x, f32.y, f32.z);
+	res = fma(f32.x, f32.y, f32.z);
+
+	res = frexp(f32.x, itmp);
+
+	// FrexpStruct
+	res = ldexp(f32.x, itmp);
+
+	ures = packSnorm4x8(f32);
+	ures = packUnorm4x8(f32);
+	ures = packSnorm2x16(f32.xy);
+	ures = packUnorm2x16(f32.xy);
+	ures = packHalf2x16(f32.xy);
+	// packDouble2x32
+
+	v2 = unpackSnorm2x16(u32.x);
+	v2 = unpackUnorm2x16(u32.x);
+	v2 = unpackHalf2x16(u32.x);
+	v4 = unpackSnorm4x8(u32.x);
+	v4 = unpackUnorm4x8(u32.x);
+	// unpackDouble2x32
+
+	s32 = findLSB(s32);
+	s32 = findLSB(u32);
+	s32 = findMSB(s32);
+	s32 = findMSB(u32);
+
+	// interpolateAtSample
+	// interpolateAtOffset
+
+	// NMin, NMax, NClamp
+}

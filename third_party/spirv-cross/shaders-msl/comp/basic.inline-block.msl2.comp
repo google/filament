@@ -1,0 +1,37 @@
+#version 450
+#extension GL_EXT_scalar_block_layout : require
+layout(local_size_x = 3, local_size_y = 3, local_size_z = 2) in;
+
+struct X
+{
+	int x;
+	int y;
+	float z;
+};
+
+layout(set = 0, binding = 0, scalar) uniform Foo
+{
+	int a;
+	int b;
+	mat4 c;
+	X x[2];
+};
+
+layout(set = 0, binding = 1) uniform Bar
+{
+	int d;
+	int e;
+};
+
+layout(set = 1, binding = 2) buffer Baz
+{
+	int f;
+	int g;
+} baz[3];
+
+void main()
+{
+	uvec3 coords = gl_GlobalInvocationID;
+	baz[coords.x].f = a + d;
+	baz[coords.x].g = b * e;
+}

@@ -1,0 +1,61 @@
+#version 450
+#extension GL_KHR_shader_subgroup_arithmetic : require
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) buffer DATA_IN
+{
+	float data_in_float[128];
+	vec2 data_in_vec2[128];
+	vec3 data_in_vec3[128];
+	vec4 data_in_vec4[128];
+	double data_in_double[128];
+	dvec2 data_in_dvec2[128];
+	dvec3 data_in_dvec3[128];
+	dvec4 data_in_dvec4[128];
+};
+
+layout(std430, binding = 1) buffer DATA_OUT
+{
+	float data_out_float;
+	vec2 data_out_vec2;
+	vec3 data_out_vec3;
+	vec4 data_out_vec4;
+	double data_out_double;
+	dvec2 data_out_dvec2;
+	dvec3 data_out_dvec3;
+	dvec4 data_out_dvec4;
+};
+
+void main()
+{
+	data_out_float = subgroupMul(data_in_float[gl_LocalInvocationID.x]);
+	data_out_vec2 = subgroupMul(data_in_vec2[gl_LocalInvocationID.x]);
+	data_out_vec3 = subgroupMul(data_in_vec3[gl_LocalInvocationID.x]);
+	data_out_vec4 = subgroupMul(data_in_vec4[gl_LocalInvocationID.x]);
+
+	data_out_double = subgroupMul(data_in_double[gl_LocalInvocationID.x]);
+	data_out_dvec2 = subgroupMul(data_in_dvec2[gl_LocalInvocationID.x]);
+	data_out_dvec3 = subgroupMul(data_in_dvec3[gl_LocalInvocationID.x]);
+	data_out_dvec4 = subgroupMul(data_in_dvec4[gl_LocalInvocationID.x]);
+
+	data_out_float = subgroupExclusiveMul(data_in_float[gl_LocalInvocationID.x]);
+	data_out_vec2 = subgroupExclusiveMul(data_in_vec2[gl_LocalInvocationID.x]);
+	data_out_vec3 = subgroupExclusiveMul(data_in_vec3[gl_LocalInvocationID.x]);
+	data_out_vec4 = subgroupExclusiveMul(data_in_vec4[gl_LocalInvocationID.x]);
+
+	data_out_double = subgroupExclusiveMul(data_in_double[gl_LocalInvocationID.x]);
+	data_out_dvec2 = subgroupExclusiveMul(data_in_dvec2[gl_LocalInvocationID.x]);
+	data_out_dvec3 = subgroupExclusiveMul(data_in_dvec3[gl_LocalInvocationID.x]);
+	data_out_dvec4 = subgroupExclusiveMul(data_in_dvec4[gl_LocalInvocationID.x]);
+
+	data_out_float = subgroupInclusiveMul(data_in_float[gl_LocalInvocationID.x]);
+	data_out_vec2 = subgroupInclusiveMul(data_in_vec2[gl_LocalInvocationID.x]);
+	data_out_vec3 = subgroupInclusiveMul(data_in_vec3[gl_LocalInvocationID.x]);
+	data_out_vec4 = subgroupInclusiveMul(data_in_vec4[gl_LocalInvocationID.x]);
+
+	data_out_double = subgroupInclusiveMul(data_in_double[gl_LocalInvocationID.x]);
+	data_out_dvec2 = subgroupInclusiveMul(data_in_dvec2[gl_LocalInvocationID.x]);
+	data_out_dvec3 = subgroupInclusiveMul(data_in_dvec3[gl_LocalInvocationID.x]);
+	data_out_dvec4 = subgroupInclusiveMul(data_in_dvec4[gl_LocalInvocationID.x]);
+}

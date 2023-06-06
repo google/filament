@@ -1,0 +1,96 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct t21;
+
+struct t24
+{
+    int4 m0[2];
+    int m1;
+    ulong2 m2[2];
+    device t21* m3;
+    float2x4 m4;
+};
+
+struct t21
+{
+    int4 m0[2];
+    int m1;
+    ulong2 m2[2];
+    device t21* m3;
+    float2x4 m4;
+};
+
+struct t35
+{
+    int m0[32];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(constant t24& u24 [[buffer(0)]], constant t35& u35 [[buffer(1)]], texture2d<uint, access::write> v295 [[texture(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    int v8 = 0;
+    int _30 = 0 | (u24.m0[0].x - 0);
+    v8 = _30;
+    int _44 = _30 | (u24.m0[u35.m0[1]].x - 1);
+    v8 = _44;
+    int _50 = _44 | (u24.m1 - 2);
+    v8 = _50;
+    int _60 = _50 | int(u24.m4[0u][0] - 3.0);
+    v8 = _60;
+    int _68 = _60 | int(u24.m4[1u][0] - 5.0);
+    v8 = _68;
+    int _75 = _68 | int(u24.m4[0u][1] - 4.0);
+    v8 = _75;
+    int _82 = _75 | int(u24.m4[1u][1] - 6.0);
+    v8 = _82;
+    int _92 = _82 | (((device t21*)u24.m2[0].x)->m0[0].x - 3);
+    v8 = _92;
+    int _101 = _92 | (((device t21*)u24.m2[0].x)->m0[u35.m0[1]].x - 4);
+    v8 = _101;
+    int _109 = _101 | (((device t21*)u24.m2[0].x)->m1 - 5);
+    v8 = _109;
+    int _118 = _109 | int(((device t21*)u24.m2[0].x)->m4[0u][0] - 6.0);
+    v8 = _118;
+    int _127 = _118 | int(((device t21*)u24.m2[0].x)->m4[1u][0] - 8.0);
+    v8 = _127;
+    int _136 = _127 | int(((device t21*)u24.m2[0].x)->m4[0u][1] - 7.0);
+    v8 = _136;
+    int _145 = _136 | int(((device t21*)u24.m2[0].x)->m4[1u][1] - 9.0);
+    v8 = _145;
+    int _155 = _145 | (((device t21*)u24.m2[u35.m0[1]].x)->m0[0].x - 6);
+    v8 = _155;
+    int _167 = _155 | (((device t21*)u24.m2[u35.m0[1]].x)->m0[u35.m0[1]].x - 7);
+    v8 = _167;
+    int _177 = _167 | (((device t21*)u24.m2[u35.m0[1]].x)->m1 - 8);
+    v8 = _177;
+    int _187 = _177 | int(((device t21*)u24.m2[u35.m0[1]].x)->m4[0u][0] - 9.0);
+    v8 = _187;
+    int _198 = _187 | int(((device t21*)u24.m2[u35.m0[1]].x)->m4[1u][0] - 11.0);
+    v8 = _198;
+    int _209 = _198 | int(((device t21*)u24.m2[u35.m0[1]].x)->m4[0u][1] - 10.0);
+    v8 = _209;
+    int _220 = _209 | int(((device t21*)u24.m2[u35.m0[1]].x)->m4[1u][1] - 12.0);
+    v8 = _220;
+    int _228 = _220 | (u24.m3->m0[0].x - 9);
+    v8 = _228;
+    int _238 = _228 | (u24.m3->m0[u35.m0[1]].x - 10);
+    v8 = _238;
+    int _246 = _238 | (u24.m3->m1 - 11);
+    v8 = _246;
+    int _254 = _246 | int(u24.m3->m4[0u][0] - 12.0);
+    v8 = _254;
+    int _263 = _254 | int(u24.m3->m4[1u][0] - 14.0);
+    v8 = _263;
+    int _272 = _263 | int(u24.m3->m4[0u][1] - 13.0);
+    v8 = _272;
+    int _281 = _272 | int(u24.m3->m4[1u][1] - 15.0);
+    v8 = _281;
+    uint4 _292 = select(uint4(1u, 0u, 0u, 1u), uint4(0u), bool4(_281 != 0));
+    uint4 v284 = _292;
+    v295.write(_292, uint2(int2(gl_GlobalInvocationID.xy)));
+}
+
