@@ -53,7 +53,7 @@ struct VulkanRenderTarget : private HwRenderTarget {
     // Creates an offscreen render target.
     VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice,
             VulkanContext const& context, VmaAllocator allocator,
-            std::shared_ptr<VulkanCommands> commands, uint32_t width, uint32_t height,
+            VulkanCommands* commands, uint32_t width, uint32_t height,
             uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
             VulkanAttachment depthStencil[2], VulkanStagePool& stagePool);
 
@@ -90,7 +90,7 @@ struct VulkanVertexBuffer : public HwVertexBuffer {
 };
 
 struct VulkanIndexBuffer : public HwIndexBuffer {
-    VulkanIndexBuffer(VmaAllocator allocator, std::shared_ptr<VulkanCommands> commands,
+    VulkanIndexBuffer(VmaAllocator allocator, VulkanCommands* commands,
             VulkanStagePool& stagePool, uint8_t elementSize, uint32_t indexCount)
         : HwIndexBuffer(elementSize, indexCount),
           buffer(allocator, commands, stagePool, VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
@@ -102,7 +102,7 @@ struct VulkanIndexBuffer : public HwIndexBuffer {
 };
 
 struct VulkanBufferObject : public HwBufferObject {
-    VulkanBufferObject(VmaAllocator allocator, std::shared_ptr<VulkanCommands> commands,
+    VulkanBufferObject(VmaAllocator allocator, VulkanCommands* commands,
             VulkanStagePool& stagePool, uint32_t byteCount, BufferObjectBinding bindingType,
             BufferUsage usage);
     void terminate() {

@@ -198,7 +198,7 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
     return exts;
 }
 
-VkInstance createInstance(const ExtensionSet& requiredExts) {
+VkInstance createInstance(ExtensionSet const& requiredExts) {
     VkInstance instance;
     VkInstanceCreateInfo instanceCreateInfo = {};
     bool validationFeaturesSupported = false;
@@ -363,6 +363,13 @@ std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(VkPhysicalDevice device,
             && newDeviceExts.find(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) != newDeviceExts.end()) {
         newDeviceExts.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     }
+
+    // debugMarker must also request debugReport the instance extension. So check if that's present.
+    if (newDeviceExts.find(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) != newDeviceExts.end()
+            && newInstExts.find(VK_EXT_DEBUG_REPORT_EXTENSION_NAME) == newInstExts.end()) {
+        newDeviceExts.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+    }
+
     return std::tuple(newInstExts, newDeviceExts);
 }
 

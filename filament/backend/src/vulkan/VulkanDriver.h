@@ -138,9 +138,9 @@ private:
     void collectGarbage();
 
     VulkanPlatform* mPlatform = nullptr;
-    std::shared_ptr<VulkanCommands> mCommands;
+    std::unique_ptr<VulkanCommands> mCommands;
     std::unique_ptr<VulkanTimestamps> mTimestamps;
-    std::shared_ptr<VulkanTexture> mEmptyTexture;
+    std::unique_ptr<VulkanTexture> mEmptyTexture;
 
     VulkanSwapChain* mCurrentSwapChain = nullptr;
     VulkanRenderTarget* mDefaultRenderTarget = nullptr;
