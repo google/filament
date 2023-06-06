@@ -510,6 +510,8 @@ struct VulkanPlatformPrivate {
     // store the actual swapchain struct, which is either backed-by-surface or headless.
     std::unordered_set<SwapChainPtr> mSurfaceSwapChains;
     std::unordered_set<SwapChainPtr> mHeadlessSwapChains;
+
+    bool mSharedContext = false;
 };
 
 void VulkanPlatform::terminate() {
@@ -523,8 +525,10 @@ void VulkanPlatform::terminate() {
     }
     mImpl->mSurfaceSwapChains.clear();
 
-    vkDestroyDevice(mImpl->mDevice, VKALLOC);
-    vkDestroyInstance(mImpl->mInstance, VKALLOC);
+    if (!mImpl->mSharedContext) {
+        vkDestroyDevice(mImpl->mDevice, VKALLOC);
+        vkDestroyInstance(mImpl->mInstance, VKALLOC);
+    }
 }
 
 // This is the main entry point for context creation.
@@ -552,12 +556,18 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         mImpl->mDevice = scontext->logicalDevice;
         mImpl->mGraphicsQueueFamilyIndex = scontext->graphicsQueueFamilyIndex;
         mImpl->mGraphicsQueueIndex = scontext->graphicsQueueIndex;
+
+        mImpl->mSharedContext = true;
     }
 
     VulkanContext context;
 
-    auto instExts = getInstanceExtensions();
-    instExts.merge(getRequiredInstanceExtensions());
+    ExtensionSet instExts;
+    // If using a shared context, we do not assume any extensions.
+    if (!mImpl->mSharedContext) {
+        instExts = getInstanceExtensions();
+        instExts.merge(getRequiredInstanceExtensions());
+    }
 
     mImpl->mInstance
             = mImpl->mInstance == VK_NULL_HANDLE ? createInstance(instExts) : mImpl->mInstance;
@@ -591,8 +601,10 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     mImpl->mGraphicsQueueIndex
             = mImpl->mGraphicsQueueIndex == INVALID_VK_INDEX ? 0 : mImpl->mGraphicsQueueIndex;
 
-    auto deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice);
-    {
+    ExtensionSet deviceExts;
+    // If using a shared context, we do not assume any extensions.
+    if (!mImpl->mSharedContext) {
+        deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice);
         auto [prunedInstExts, prunedDeviceExts]
                 = pruneExtensions(mImpl->mPhysicalDevice, instExts, deviceExts);
         instExts = prunedInstExts;
