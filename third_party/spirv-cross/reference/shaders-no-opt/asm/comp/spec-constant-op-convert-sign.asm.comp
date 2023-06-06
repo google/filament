@@ -1,0 +1,39 @@
+#version 450
+#if defined(GL_ARB_gpu_shader_int64)
+#extension GL_ARB_gpu_shader_int64 : require
+#elif defined(GL_NV_gpu_shader5)
+#extension GL_NV_gpu_shader5 : require
+#else
+#error No extension available for 64-bit integers.
+#endif
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 1
+#endif
+const int ConstantInt = SPIRV_CROSS_CONSTANT_ID_0;
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 2u
+#endif
+const uint ConstantUint = SPIRV_CROSS_CONSTANT_ID_1;
+const int64_t ConstantInt64_1 = int64_t(ConstantInt);
+const int64_t ConstantInt64_2 = int64_t(int(ConstantUint));
+const uint64_t ConstantUint64_1 = uint64_t(ConstantInt);
+const uint64_t ConstantUint64_2 = uint64_t(int(ConstantUint));
+const int64_t _20 = (ConstantInt64_1 + ConstantInt64_2);
+const uint64_t _21 = (ConstantUint64_1 + ConstantUint64_2);
+const int _22 = int(_20);
+const uint _23 = uint(_21);
+
+layout(binding = 0, std430) buffer SSBO
+{
+    int s64;
+    uint u64;
+} _4;
+
+void main()
+{
+    _4.s64 = _22;
+    _4.u64 = _23;
+}
+

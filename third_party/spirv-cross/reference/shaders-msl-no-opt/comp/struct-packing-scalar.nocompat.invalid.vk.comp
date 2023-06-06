@@ -1,0 +1,151 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+typedef packed_float2 packed_float2x2[2];
+typedef packed_float3 packed_float2x3[2];
+typedef packed_float3 packed_rm_float3x2[2];
+
+struct S0
+{
+    packed_float2 a[1];
+    float b;
+};
+
+struct S1
+{
+    packed_float3 a;
+    float b;
+};
+
+struct S2
+{
+    packed_float3 a[1];
+    float b;
+};
+
+struct S3
+{
+    packed_float2 a;
+    float b;
+};
+
+struct Content
+{
+    S0 m0s[1];
+    S1 m1s[1];
+    S2 m2s[1];
+    S0 m0;
+    S1 m1;
+    S2 m2;
+    S3 m3;
+    float m4;
+};
+
+struct SSBO1
+{
+    Content content;
+    Content content1[2];
+    Content content2;
+    float2x2 m0;
+    float2x2 m1;
+    packed_float2x3 m2[4];
+    float3x2 m3;
+    float2x2 m4;
+    float2x2 m5[9];
+    float3x2 m6[4][2];
+    packed_rm_float3x2 m7;
+    float array[1];
+};
+
+struct S0_1
+{
+    float2 a[1];
+    char _m1_pad[8];
+    float b;
+    char _m0_final_padding[12];
+};
+
+struct S1_1
+{
+    packed_float3 a;
+    float b;
+};
+
+struct S2_1
+{
+    float3 a[1];
+    float b;
+    char _m0_final_padding[12];
+};
+
+struct S3_1
+{
+    float2 a;
+    float b;
+};
+
+struct Content_1
+{
+    S0_1 m0s[1];
+    S1_1 m1s[1];
+    S2_1 m2s[1];
+    S0_1 m0;
+    S1_1 m1;
+    S2_1 m2;
+    S3_1 m3;
+    float m4;
+    char _m0_final_padding[12];
+};
+
+struct SSBO0
+{
+    Content_1 content;
+    Content_1 content1[2];
+    Content_1 content2;
+    float2x4 m0;
+    float2x4 m1;
+    float2x3 m2[4];
+    float3x4 m3;
+    float2x4 m4;
+    float2x4 m5[9];
+    float3x4 m6[4][2];
+    float2x3 m7;
+    float4 array[1];
+};
+
+struct SSBO2
+{
+    float m0;
+    packed_float2x2 m1;
+    packed_rm_float3x2 m2;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO1& ssbo_scalar [[buffer(0)]], device SSBO0& ssbo_140 [[buffer(1)]], device SSBO2& ssbo_scalar2 [[buffer(2)]])
+{
+    ssbo_scalar.content.m0s[0].a[0] = ssbo_140.content.m0s[0].a[0];
+    ssbo_scalar.content.m0s[0].b = ssbo_140.content.m0s[0].b;
+    ssbo_scalar.content.m1s[0].a = float3(ssbo_140.content.m1s[0].a);
+    ssbo_scalar.content.m1s[0].b = ssbo_140.content.m1s[0].b;
+    ssbo_scalar.content.m2s[0].a[0] = ssbo_140.content.m2s[0].a[0];
+    ssbo_scalar.content.m2s[0].b = ssbo_140.content.m2s[0].b;
+    ssbo_scalar.content.m0.a[0] = ssbo_140.content.m0.a[0];
+    ssbo_scalar.content.m0.b = ssbo_140.content.m0.b;
+    ssbo_scalar.content.m1.a = float3(ssbo_140.content.m1.a);
+    ssbo_scalar.content.m1.b = ssbo_140.content.m1.b;
+    ssbo_scalar.content.m2.a[0] = ssbo_140.content.m2.a[0];
+    ssbo_scalar.content.m2.b = ssbo_140.content.m2.b;
+    ssbo_scalar.content.m3.a = ssbo_140.content.m3.a;
+    ssbo_scalar.content.m3.b = ssbo_140.content.m3.b;
+    ssbo_scalar.content.m4 = ssbo_140.content.m4;
+    ssbo_scalar.content.m1.a = float2x3(float3(ssbo_scalar.m2[1][0]), float3(ssbo_scalar.m2[1][1])) * float2(ssbo_scalar.content.m0.a[0]);
+    ssbo_scalar.m0 = float2x2(float2(ssbo_scalar2.m1[0]), float2(ssbo_scalar2.m1[1]));
+    ssbo_scalar2.m1[0] = float2(ssbo_scalar.m4[0][0], ssbo_scalar.m4[1][0]);
+    ssbo_scalar2.m1[1] = float2(ssbo_scalar.m4[0][1], ssbo_scalar.m4[1][1]);
+    ssbo_scalar2.m2[0] = float3(ssbo_scalar.m3[0][0], ssbo_scalar.m3[1][0], ssbo_scalar.m3[2][0]);
+    ssbo_scalar2.m2[1] = float3(ssbo_scalar.m3[0][1], ssbo_scalar.m3[1][1], ssbo_scalar.m3[2][1]);
+}
+

@@ -1,0 +1,64 @@
+#version 450
+#extension GL_EXT_buffer_reference : require
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(buffer_reference) buffer t21;
+layout(buffer_reference, buffer_reference_align = 16, std140) buffer t21
+{
+    int m0[2];
+    int m1;
+    layout(row_major) t21 m2[2];
+    layout(row_major) t21 m3;
+    layout(row_major) mat2 m4;
+};
+
+layout(set = 0, binding = 1, std140) uniform t24
+{
+    int m0[2];
+    int m1;
+    layout(row_major) t21 m2[2];
+    layout(row_major) t21 m3;
+    layout(row_major) mat2 m4;
+} u24;
+
+layout(push_constant, std430) uniform t35
+{
+    int m0[32];
+} u35;
+
+layout(set = 0, binding = 0, r32ui) uniform writeonly uimage2D v295;
+
+void main()
+{
+    int v8 = 0;
+    v8 |= (u24.m0[0] - 0);
+    v8 |= (u24.m0[u35.m0[1]] - 1);
+    v8 |= (u24.m1 - 2);
+    v8 |= int(u24.m4[0].x - 3.0);
+    v8 |= int(u24.m4[0].y - 5.0);
+    v8 |= int(u24.m4[1].x - 4.0);
+    v8 |= int(u24.m4[1].y - 6.0);
+    v8 |= (u24.m2[0].m0[0] - 3);
+    v8 |= (u24.m2[0].m0[u35.m0[1]] - 4);
+    v8 |= (u24.m2[0].m1 - 5);
+    v8 |= int(u24.m2[0].m4[0].x - 6.0);
+    v8 |= int(u24.m2[0].m4[0].y - 8.0);
+    v8 |= int(u24.m2[0].m4[1].x - 7.0);
+    v8 |= int(u24.m2[0].m4[1].y - 9.0);
+    v8 |= (u24.m2[u35.m0[1]].m0[0] - 6);
+    v8 |= (u24.m2[u35.m0[1]].m0[u35.m0[1]] - 7);
+    v8 |= (u24.m2[u35.m0[1]].m1 - 8);
+    v8 |= int(u24.m2[u35.m0[1]].m4[0].x - 9.0);
+    v8 |= int(u24.m2[u35.m0[1]].m4[0].y - 11.0);
+    v8 |= int(u24.m2[u35.m0[1]].m4[1].x - 10.0);
+    v8 |= int(u24.m2[u35.m0[1]].m4[1].y - 12.0);
+    v8 |= (u24.m3.m0[0] - 9);
+    v8 |= (u24.m3.m0[u35.m0[1]] - 10);
+    v8 |= (u24.m3.m1 - 11);
+    v8 |= int(u24.m3.m4[0].x - 12.0);
+    v8 |= int(u24.m3.m4[0].y - 14.0);
+    v8 |= int(u24.m3.m4[1].x - 13.0);
+    v8 |= int(u24.m3.m4[1].y - 15.0);
+    uvec4 v284 = mix(uvec4(1u, 0u, 0u, 1u), uvec4(0u), bvec4(v8 != 0));
+    imageStore(v295, ivec2(gl_GlobalInvocationID.xy), v284);
+}

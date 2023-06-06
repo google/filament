@@ -292,7 +292,7 @@ bool CompilerReflection::type_is_reference(const SPIRType &type) const
 {
 	// Physical pointers and arrays of physical pointers need to refer to the pointee's type.
 	return type_is_top_level_physical_pointer(type) ||
-	       (!type.array.empty() && type_is_top_level_physical_pointer(get<SPIRType>(type.parent_type)));
+	       (type_is_array_of_pointers(type) && type.storage == StorageClassPhysicalStorageBuffer);
 }
 
 void CompilerReflection::emit_types()

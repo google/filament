@@ -1,0 +1,19 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer SSBO
+{
+    float a;
+    float b;
+    float c;
+    float d;
+    float e;
+} _9;
+
+void main()
+{
+    _9.c = distance(_9.a, _9.b);
+    _9.d = length(_9.a);
+    _9.e = normalize(_9.a);
+}
+

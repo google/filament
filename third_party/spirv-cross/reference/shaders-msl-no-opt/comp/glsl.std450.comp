@@ -1,0 +1,289 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+// Implementation of the GLSL radians() function
+template<typename T>
+inline T radians(T d)
+{
+    return d * T(0.01745329251);
+}
+
+// Implementation of the GLSL degrees() function
+template<typename T>
+inline T degrees(T r)
+{
+    return r * T(57.2957795131);
+}
+
+// Implementation of the GLSL findLSB() function
+template<typename T>
+inline T spvFindLSB(T x)
+{
+    return select(ctz(x), T(-1), x == T(0));
+}
+
+// Implementation of the signed GLSL findMSB() function
+template<typename T>
+inline T spvFindSMSB(T x)
+{
+    T v = select(x, T(-1) - x, x < T(0));
+    return select(clz(T(0)) - (clz(v) + T(1)), T(-1), v == T(0));
+}
+
+// Implementation of the unsigned GLSL findMSB() function
+template<typename T>
+inline T spvFindUMSB(T x)
+{
+    return select(clz(T(0)) - (clz(x) + T(1)), T(-1), x == T(0));
+}
+
+// Implementation of the GLSL sign() function for integer types
+template<typename T, typename E = typename enable_if<is_integral<T>::value>::type>
+inline T sign(T x)
+{
+    return select(select(select(x, T(0), x == T(0)), T(1), x > T(0)), T(-1), x < T(0));
+}
+
+// Returns the determinant of a 2x2 matrix.
+static inline __attribute__((always_inline))
+float spvDet2x2(float a1, float a2, float b1, float b2)
+{
+    return a1 * b2 - b1 * a2;
+}
+
+// Returns the determinant of a 3x3 matrix.
+static inline __attribute__((always_inline))
+float spvDet3x3(float a1, float a2, float a3, float b1, float b2, float b3, float c1, float c2, float c3)
+{
+    return a1 * spvDet2x2(b2, b3, c2, c3) - b1 * spvDet2x2(a2, a3, c2, c3) + c1 * spvDet2x2(a2, a3, b2, b3);
+}
+
+// Returns the inverse of a matrix, by using the algorithm of calculating the classical
+// adjoint and dividing by the determinant. The contents of the matrix are changed.
+static inline __attribute__((always_inline))
+float4x4 spvInverse4x4(float4x4 m)
+{
+    float4x4 adj;	// The adjoint matrix (inverse after dividing by determinant)
+
+    // Create the transpose of the cofactors, as the classical adjoint of the matrix.
+    adj[0][0] =  spvDet3x3(m[1][1], m[1][2], m[1][3], m[2][1], m[2][2], m[2][3], m[3][1], m[3][2], m[3][3]);
+    adj[0][1] = -spvDet3x3(m[0][1], m[0][2], m[0][3], m[2][1], m[2][2], m[2][3], m[3][1], m[3][2], m[3][3]);
+    adj[0][2] =  spvDet3x3(m[0][1], m[0][2], m[0][3], m[1][1], m[1][2], m[1][3], m[3][1], m[3][2], m[3][3]);
+    adj[0][3] = -spvDet3x3(m[0][1], m[0][2], m[0][3], m[1][1], m[1][2], m[1][3], m[2][1], m[2][2], m[2][3]);
+
+    adj[1][0] = -spvDet3x3(m[1][0], m[1][2], m[1][3], m[2][0], m[2][2], m[2][3], m[3][0], m[3][2], m[3][3]);
+    adj[1][1] =  spvDet3x3(m[0][0], m[0][2], m[0][3], m[2][0], m[2][2], m[2][3], m[3][0], m[3][2], m[3][3]);
+    adj[1][2] = -spvDet3x3(m[0][0], m[0][2], m[0][3], m[1][0], m[1][2], m[1][3], m[3][0], m[3][2], m[3][3]);
+    adj[1][3] =  spvDet3x3(m[0][0], m[0][2], m[0][3], m[1][0], m[1][2], m[1][3], m[2][0], m[2][2], m[2][3]);
+
+    adj[2][0] =  spvDet3x3(m[1][0], m[1][1], m[1][3], m[2][0], m[2][1], m[2][3], m[3][0], m[3][1], m[3][3]);
+    adj[2][1] = -spvDet3x3(m[0][0], m[0][1], m[0][3], m[2][0], m[2][1], m[2][3], m[3][0], m[3][1], m[3][3]);
+    adj[2][2] =  spvDet3x3(m[0][0], m[0][1], m[0][3], m[1][0], m[1][1], m[1][3], m[3][0], m[3][1], m[3][3]);
+    adj[2][3] = -spvDet3x3(m[0][0], m[0][1], m[0][3], m[1][0], m[1][1], m[1][3], m[2][0], m[2][1], m[2][3]);
+
+    adj[3][0] = -spvDet3x3(m[1][0], m[1][1], m[1][2], m[2][0], m[2][1], m[2][2], m[3][0], m[3][1], m[3][2]);
+    adj[3][1] =  spvDet3x3(m[0][0], m[0][1], m[0][2], m[2][0], m[2][1], m[2][2], m[3][0], m[3][1], m[3][2]);
+    adj[3][2] = -spvDet3x3(m[0][0], m[0][1], m[0][2], m[1][0], m[1][1], m[1][2], m[3][0], m[3][1], m[3][2]);
+    adj[3][3] =  spvDet3x3(m[0][0], m[0][1], m[0][2], m[1][0], m[1][1], m[1][2], m[2][0], m[2][1], m[2][2]);
+
+    // Calculate the determinant as a combination of the cofactors of the first row.
+    float det = (adj[0][0] * m[0][0]) + (adj[0][1] * m[1][0]) + (adj[0][2] * m[2][0]) + (adj[0][3] * m[3][0]);
+
+    // Divide the classical adjoint matrix by the determinant.
+    // If determinant is zero, matrix is not invertable, so leave it unchanged.
+    return (det != 0.0f) ? (adj * (1.0f / det)) : m;
+}
+
+// Returns the inverse of a matrix, by using the algorithm of calculating the classical
+// adjoint and dividing by the determinant. The contents of the matrix are changed.
+static inline __attribute__((always_inline))
+float3x3 spvInverse3x3(float3x3 m)
+{
+    float3x3 adj;	// The adjoint matrix (inverse after dividing by determinant)
+
+    // Create the transpose of the cofactors, as the classical adjoint of the matrix.
+    adj[0][0] =  spvDet2x2(m[1][1], m[1][2], m[2][1], m[2][2]);
+    adj[0][1] = -spvDet2x2(m[0][1], m[0][2], m[2][1], m[2][2]);
+    adj[0][2] =  spvDet2x2(m[0][1], m[0][2], m[1][1], m[1][2]);
+
+    adj[1][0] = -spvDet2x2(m[1][0], m[1][2], m[2][0], m[2][2]);
+    adj[1][1] =  spvDet2x2(m[0][0], m[0][2], m[2][0], m[2][2]);
+    adj[1][2] = -spvDet2x2(m[0][0], m[0][2], m[1][0], m[1][2]);
+
+    adj[2][0] =  spvDet2x2(m[1][0], m[1][1], m[2][0], m[2][1]);
+    adj[2][1] = -spvDet2x2(m[0][0], m[0][1], m[2][0], m[2][1]);
+    adj[2][2] =  spvDet2x2(m[0][0], m[0][1], m[1][0], m[1][1]);
+
+    // Calculate the determinant as a combination of the cofactors of the first row.
+    float det = (adj[0][0] * m[0][0]) + (adj[0][1] * m[1][0]) + (adj[0][2] * m[2][0]);
+
+    // Divide the classical adjoint matrix by the determinant.
+    // If determinant is zero, matrix is not invertable, so leave it unchanged.
+    return (det != 0.0f) ? (adj * (1.0f / det)) : m;
+}
+
+// Returns the inverse of a matrix, by using the algorithm of calculating the classical
+// adjoint and dividing by the determinant. The contents of the matrix are changed.
+static inline __attribute__((always_inline))
+float2x2 spvInverse2x2(float2x2 m)
+{
+    float2x2 adj;	// The adjoint matrix (inverse after dividing by determinant)
+
+    // Create the transpose of the cofactors, as the classical adjoint of the matrix.
+    adj[0][0] =  m[1][1];
+    adj[0][1] = -m[0][1];
+
+    adj[1][0] = -m[1][0];
+    adj[1][1] =  m[0][0];
+
+    // Calculate the determinant as a combination of the cofactors of the first row.
+    float det = (adj[0][0] * m[0][0]) + (adj[0][1] * m[1][0]);
+
+    // Divide the classical adjoint matrix by the determinant.
+    // If determinant is zero, matrix is not invertable, so leave it unchanged.
+    return (det != 0.0f) ? (adj * (1.0f / det)) : m;
+}
+
+template<typename T>
+[[clang::optnone]] T spvReflect(T i, T n)
+{
+    return i - T(2) * i * n * n;
+}
+
+template<typename T>
+inline T spvRefract(T i, T n, T eta)
+{
+    T NoI = n * i;
+    T NoI2 = NoI * NoI;
+    T k = T(1) - eta * eta * (T(1) - NoI2);
+    if (k < T(0))
+    {
+        return T(0);
+    }
+    else
+    {
+        return eta * i - (eta * NoI + sqrt(k)) * n;
+    }
+}
+
+template<typename T>
+inline T spvFaceForward(T n, T i, T nref)
+{
+    return i * nref < T(0) ? n : -n;
+}
+
+struct SSBO
+{
+    float res;
+    int ires;
+    uint ures;
+    float4 f32;
+    int4 s32;
+    uint4 u32;
+    float2x2 m2;
+    float3x3 m3;
+    float4x4 m4;
+};
+
+struct ResType
+{
+    float _m0;
+    int _m1;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO& _19 [[buffer(0)]])
+{
+    _19.res = round(((device float*)&_19.f32)[0u]);
+    _19.res = rint(((device float*)&_19.f32)[0u]);
+    _19.res = trunc(((device float*)&_19.f32)[0u]);
+    _19.res = abs(((device float*)&_19.f32)[0u]);
+    _19.ires = abs(((device int*)&_19.s32)[0u]);
+    _19.res = sign(((device float*)&_19.f32)[0u]);
+    _19.ires = sign(((device int*)&_19.s32)[0u]);
+    _19.res = floor(((device float*)&_19.f32)[0u]);
+    _19.res = ceil(((device float*)&_19.f32)[0u]);
+    _19.res = fract(((device float*)&_19.f32)[0u]);
+    _19.res = radians(((device float*)&_19.f32)[0u]);
+    _19.res = degrees(((device float*)&_19.f32)[0u]);
+    _19.res = sin(((device float*)&_19.f32)[0u]);
+    _19.res = cos(((device float*)&_19.f32)[0u]);
+    _19.res = tan(((device float*)&_19.f32)[0u]);
+    _19.res = asin(((device float*)&_19.f32)[0u]);
+    _19.res = acos(((device float*)&_19.f32)[0u]);
+    _19.res = atan(((device float*)&_19.f32)[0u]);
+    _19.res = fast::sinh(((device float*)&_19.f32)[0u]);
+    _19.res = fast::cosh(((device float*)&_19.f32)[0u]);
+    _19.res = precise::tanh(((device float*)&_19.f32)[0u]);
+    _19.res = asinh(((device float*)&_19.f32)[0u]);
+    _19.res = acosh(((device float*)&_19.f32)[0u]);
+    _19.res = atanh(((device float*)&_19.f32)[0u]);
+    _19.res = precise::atan2(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u]);
+    _19.res = pow(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u]);
+    _19.res = exp(((device float*)&_19.f32)[0u]);
+    _19.res = log(((device float*)&_19.f32)[0u]);
+    _19.res = exp2(((device float*)&_19.f32)[0u]);
+    _19.res = log2(((device float*)&_19.f32)[0u]);
+    _19.res = sqrt(((device float*)&_19.f32)[0u]);
+    _19.res = rsqrt(((device float*)&_19.f32)[0u]);
+    _19.res = abs(((device float*)&_19.f32)[0u]);
+    _19.res = abs(((device float*)&_19.f32)[0u] - ((device float*)&_19.f32)[1u]);
+    _19.res = sign(((device float*)&_19.f32)[0u]);
+    _19.res = spvFaceForward(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u], ((device float*)&_19.f32)[2u]);
+    _19.res = spvReflect(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u]);
+    _19.res = spvRefract(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u], ((device float*)&_19.f32)[2u]);
+    _19.res = length(_19.f32.xy);
+    _19.res = distance(_19.f32.xy, _19.f32.zw);
+    float2 v2 = fast::normalize(_19.f32.xy);
+    v2 = faceforward(_19.f32.xy, _19.f32.yz, _19.f32.zw);
+    v2 = reflect(_19.f32.xy, _19.f32.zw);
+    v2 = refract(_19.f32.xy, _19.f32.yz, ((device float*)&_19.f32)[3u]);
+    float3 v3 = cross(_19.f32.xyz, _19.f32.yzw);
+    _19.res = determinant(_19.m2);
+    _19.res = determinant(_19.m3);
+    _19.res = determinant(_19.m4);
+    _19.m2 = spvInverse2x2(_19.m2);
+    _19.m3 = spvInverse3x3(_19.m3);
+    _19.m4 = spvInverse4x4(_19.m4);
+    float tmp;
+    float _287 = modf(((device float*)&_19.f32)[0u], tmp);
+    _19.res = _287;
+    _19.res = fast::min(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u]);
+    _19.ures = min(((device uint*)&_19.u32)[0u], ((device uint*)&_19.u32)[1u]);
+    _19.ires = min(((device int*)&_19.s32)[0u], ((device int*)&_19.s32)[1u]);
+    _19.res = fast::max(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u]);
+    _19.ures = max(((device uint*)&_19.u32)[0u], ((device uint*)&_19.u32)[1u]);
+    _19.ires = max(((device int*)&_19.s32)[0u], ((device int*)&_19.s32)[1u]);
+    _19.res = fast::clamp(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u], ((device float*)&_19.f32)[2u]);
+    _19.ures = clamp(((device uint*)&_19.u32)[0u], ((device uint*)&_19.u32)[1u], ((device uint*)&_19.u32)[2u]);
+    _19.ires = clamp(((device int*)&_19.s32)[0u], ((device int*)&_19.s32)[1u], ((device int*)&_19.s32)[2u]);
+    _19.res = mix(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u], ((device float*)&_19.f32)[2u]);
+    _19.res = step(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u]);
+    _19.res = smoothstep(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u], ((device float*)&_19.f32)[2u]);
+    _19.res = fma(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u], ((device float*)&_19.f32)[2u]);
+    ResType _387;
+    _387._m0 = frexp(((device float*)&_19.f32)[0u], _387._m1);
+    int itmp = _387._m1;
+    _19.res = _387._m0;
+    _19.res = ldexp(((device float*)&_19.f32)[0u], itmp);
+    _19.ures = pack_float_to_snorm4x8(_19.f32);
+    _19.ures = pack_float_to_unorm4x8(_19.f32);
+    _19.ures = pack_float_to_snorm2x16(_19.f32.xy);
+    _19.ures = pack_float_to_unorm2x16(_19.f32.xy);
+    _19.ures = as_type<uint>(half2(_19.f32.xy));
+    v2 = unpack_snorm2x16_to_float(((device uint*)&_19.u32)[0u]);
+    v2 = unpack_unorm2x16_to_float(((device uint*)&_19.u32)[0u]);
+    v2 = float2(as_type<half2>(((device uint*)&_19.u32)[0u]));
+    float4 v4 = unpack_snorm4x8_to_float(((device uint*)&_19.u32)[0u]);
+    v4 = unpack_unorm4x8_to_float(((device uint*)&_19.u32)[0u]);
+    _19.s32 = spvFindLSB(_19.s32);
+    _19.s32 = int4(spvFindLSB(_19.u32));
+    _19.s32 = spvFindSMSB(_19.s32);
+    _19.s32 = int4(spvFindUMSB(_19.u32));
+}
+

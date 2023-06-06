@@ -1,0 +1,14 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(set = 0, binding = 0) uniform texture2D uSampler2D;
+layout(set = 0, binding = 0) uniform texture2DMS uSampler2DMS;
+
+void main()
+{
+    ivec2 b = textureSize(uSampler2D, 0);
+    ivec2 c = textureSize(uSampler2DMS);
+    int l1 = textureQueryLevels(uSampler2D);
+    int s0 = textureSamples(uSampler2DMS);
+}
+

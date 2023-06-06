@@ -1,0 +1,61 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Google Shaderc over Glslang; 7
+; Bound: 41
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpSourceExtension "GL_GOOGLE_cpp_style_line_directive"
+               OpSourceExtension "GL_GOOGLE_include_directive"
+               OpName %main "main"
+               OpName %SSBO "SSBO"
+               OpMemberName %SSBO 0 "index"
+               OpMemberName %SSBO 1 "array"
+               OpName %_ ""
+               OpDecorate %_arr_uint_uint_64 ArrayStride 4
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpMemberDecorate %SSBO 1 Offset 4
+               OpDecorate %SSBO BufferBlock
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+    %uint_64 = OpConstant %uint 64
+%_arr_uint_uint_64 = OpTypeArray %uint %uint_64
+       %SSBO = OpTypeStruct %uint %_arr_uint_uint_64
+%_ptr_Uniform_SSBO = OpTypePointer Uniform %SSBO
+          %_ = OpVariable %_ptr_Uniform_SSBO Uniform
+        %int = OpTypeInt 32 1
+      %int_1 = OpConstant %int 1
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+     %uint_0 = OpConstant %uint 0
+       %bool = OpTypeBool
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %18 = OpAccessChain %_ptr_Uniform_uint %_ %int_0
+         %19 = OpLoad %uint %18
+         %20 = OpAccessChain %_ptr_Uniform_uint %_ %int_1 %19
+         %21 = OpLoad %uint %20
+               OpBranch %24
+         %24 = OpLabel
+         %40 = OpPhi %uint %uint_0 %5 %35 %25
+         %31 = OpULessThan %bool %40 %uint_64
+               OpLoopMerge %26 %25 None
+               OpBranchConditional %31 %25 %26
+         %25 = OpLabel
+         %33 = OpAccessChain %_ptr_Uniform_uint %_ %int_1 %40
+               OpStore %33 %uint_0
+         %35 = OpIAdd %uint %40 %int_1
+               OpBranch %24
+         %26 = OpLabel
+         %37 = OpLoad %uint %18
+         %39 = OpAccessChain %_ptr_Uniform_uint %_ %int_1 %37
+               OpStore %39 %21
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,31 @@
+struct _8
+{
+    float _m0;
+    float _m1;
+};
+
+struct _15
+{
+    float _m0;
+    int _m1;
+};
+
+RWByteAddressBuffer _4 : register(u0);
+
+void comp_main()
+{
+    _8 _23;
+    _23._m0 = modf(20.0f, _23._m1);
+    _15 _24;
+    _24._m0 = frexp(40.0f, _24._m1);
+    _4.Store(0, asuint(_23._m0));
+    _4.Store(0, asuint(_23._m1));
+    _4.Store(0, asuint(_24._m0));
+    _4.Store(4, uint(_24._m1));
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

@@ -1,0 +1,83 @@
+{
+    "entryPoints" : [
+        {
+            "name" : "main",
+            "mode" : "comp",
+            "workgroup_size" : [
+                1,
+                1,
+                1
+            ],
+            "workgroup_size_is_spec_constant_id" : [
+                false,
+                false,
+                false
+            ]
+        }
+    ],
+    "types" : {
+        "_19" : {
+            "name" : "Foo",
+            "members" : [
+                {
+                    "name" : "m",
+                    "type" : "mat4",
+                    "offset" : 0,
+                    "matrix_stride" : 16
+                }
+            ]
+        },
+        "_21" : {
+            "name" : "SSBO2",
+            "members" : [
+                {
+                    "name" : "out_data",
+                    "type" : "_19",
+                    "array" : [
+                        0
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 0,
+                    "array_stride" : 64
+                }
+            ]
+        },
+        "_28" : {
+            "name" : "SSBO",
+            "members" : [
+                {
+                    "name" : "in_data",
+                    "type" : "_19",
+                    "array" : [
+                        0
+                    ],
+                    "array_size_is_literal" : [
+                        true
+                    ],
+                    "offset" : 0,
+                    "array_stride" : 64
+                }
+            ]
+        }
+    },
+    "ssbos" : [
+        {
+            "type" : "_21",
+            "name" : "SSBO2",
+            "writeonly" : true,
+            "block_size" : 0,
+            "set" : 0,
+            "binding" : 1
+        },
+        {
+            "type" : "_28",
+            "name" : "SSBO",
+            "readonly" : true,
+            "block_size" : 0,
+            "set" : 0,
+            "binding" : 0
+        }
+    ]
+}

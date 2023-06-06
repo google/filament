@@ -1,0 +1,22 @@
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
+RWByteAddressBuffer _11 : register(u0);
+
+void comp_main()
+{
+    _11.Store(0, asuint(asfloat(_11.Load(0)) * asfloat(_11.Load(96))));
+    _11.Store4(16, asuint(asfloat(_11.Load4(16)) * asfloat(_11.Load4(112))));
+    float4x4 _35 = asfloat(uint4x4(_11.Load4(128), _11.Load4(144), _11.Load4(160), _11.Load4(176)));
+    float4x4 _37 = asfloat(uint4x4(_11.Load4(32), _11.Load4(48), _11.Load4(64), _11.Load4(80)));
+    float4x4 _38 = mul(_35, _37);
+    _11.Store4(32, asuint(_38[0]));
+    _11.Store4(48, asuint(_38[1]));
+    _11.Store4(64, asuint(_38[2]));
+    _11.Store4(80, asuint(_38[3]));
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

@@ -1,0 +1,71 @@
+{
+    "entryPoints" : [
+        {
+            "name" : "main",
+            "mode" : "comp",
+            "workgroup_size" : [
+                1,
+                1,
+                1
+            ],
+            "workgroup_size_is_spec_constant_id" : [
+                false,
+                false,
+                false
+            ]
+        }
+    ],
+    "types" : {
+        "_3" : {
+            "name" : "Params",
+            "members" : [
+                {
+                    "name" : "x",
+                    "type" : "float",
+                    "offset" : 0
+                },
+                {
+                    "name" : "y",
+                    "type" : "_6",
+                    "offset" : 16,
+                    "physical_pointer" : true
+                }
+            ]
+        },
+        "_4" : {
+            "name" : "IntBuf",
+            "members" : [
+                {
+                    "name" : "v",
+                    "type" : "int",
+                    "offset" : 0
+                }
+            ]
+        },
+        "_11" : {
+            "name" : "IntBuf",
+            "type" : "_4",
+            "physical_pointer" : true
+        },
+        "_6" : {
+            "name" : "IntBuf",
+            "array" : [
+                3
+            ],
+            "array_size_is_literal" : [
+                true
+            ],
+            "type" : "_11",
+            "array_stride" : 16
+        }
+    },
+    "ubos" : [
+        {
+            "type" : "_3",
+            "name" : "Params",
+            "block_size" : 24,
+            "set" : 0,
+            "binding" : 0
+        }
+    ]
+}

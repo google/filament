@@ -1,0 +1,66 @@
+#version 450
+#extension GL_EXT_mesh_shader : require
+#extension GL_EXT_fragment_shading_rate : require
+layout(local_size_x = 2, local_size_y = 3, local_size_z = 4) in;
+layout(max_vertices = 24, max_primitives = 22, triangles) out;
+
+out gl_MeshPerVertexEXT
+{
+    vec4 gl_Position;
+    float gl_PointSize;
+    float gl_ClipDistance[1];
+    float gl_CullDistance[2];
+} gl_MeshVerticesEXT[];
+
+struct TaskPayload
+{
+    float a;
+    float b;
+    int c;
+};
+
+layout(location = 0) out vec4 vOut[24];
+layout(location = 2) out BlockOut
+{
+    vec4 a;
+    vec4 b;
+} outputs[24];
+
+layout(location = 1) perprimitiveEXT out vec4 vPrim[22];
+layout(location = 4) perprimitiveEXT out BlockOutPrim
+{
+    vec4 a;
+    vec4 b;
+} prim_outputs[22];
+
+taskPayloadSharedEXT TaskPayload payload;
+shared float shared_float[16];
+
+void main()
+{
+    SetMeshOutputsEXT(24u, 22u);
+    vec3 _29 = vec3(gl_GlobalInvocationID);
+    float _31 = _29.x;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position = vec4(_31, _29.yz, 1.0);
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_PointSize = 2.0;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[0] = 4.0;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_CullDistance[1] = 5.0;
+    vOut[gl_LocalInvocationIndex] = vec4(_31, _29.yz, 2.0);
+    outputs[gl_LocalInvocationIndex].a = vec4(5.0);
+    outputs[gl_LocalInvocationIndex].b = vec4(6.0);
+    barrier();
+    if (gl_LocalInvocationIndex < 22u)
+    {
+        vPrim[gl_LocalInvocationIndex] = vec4(vec3(gl_WorkGroupID), 3.0);
+        prim_outputs[gl_LocalInvocationIndex].a = vec4(payload.a);
+        prim_outputs[gl_LocalInvocationIndex].b = vec4(payload.b);
+        gl_PrimitiveTriangleIndicesEXT[gl_LocalInvocationIndex] = uvec3(0u, 1u, 2u) + uvec3(gl_LocalInvocationIndex);
+        int _127 = int(gl_GlobalInvocationID.x);
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_PrimitiveID = _127;
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_Layer = _127 + 1;
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_ViewportIndex = _127 + 2;
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_CullPrimitiveEXT = (gl_GlobalInvocationID.x & 1u) != 0u;
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_PrimitiveShadingRateEXT = _127 + 3;
+    }
+}
+

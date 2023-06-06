@@ -1,0 +1,15 @@
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
+RWByteAddressBuffer _14 : register(u0);
+
+void comp_main()
+{
+    bool3 c = bool3(asfloat(_14.Load3(16)).x < 1.0f.xxx.x, asfloat(_14.Load3(16)).y < 1.0f.xxx.y, asfloat(_14.Load3(16)).z < 1.0f.xxx.z);
+    _14.Store3(0, asuint(float3(c.x ? float3(0.0f, 0.0f, 1.0f).x : float3(1.0f, 0.0f, 0.0f).x, c.y ? float3(0.0f, 0.0f, 1.0f).y : float3(1.0f, 0.0f, 0.0f).y, c.z ? float3(0.0f, 0.0f, 1.0f).z : float3(1.0f, 0.0f, 0.0f).z)));
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

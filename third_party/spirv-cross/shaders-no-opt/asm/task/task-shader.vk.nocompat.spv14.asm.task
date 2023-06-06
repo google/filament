@@ -1,0 +1,132 @@
+; SPIR-V
+; Version: 1.4
+; Generator: Khronos Glslang Reference Front End; 10
+; Bound: 93
+; Schema: 0
+               OpCapability MeshShadingEXT
+               OpExtension "SPV_EXT_mesh_shader"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint TaskEXT %main "main" %vs %gl_LocalInvocationIndex %p
+               OpExecutionMode %main LocalSize 4 3 2
+               OpSource GLSL 450
+               OpSourceExtension "GL_EXT_mesh_shader"
+               OpName %main "main"
+               OpName %vs "vs"
+               OpName %gl_LocalInvocationIndex "gl_LocalInvocationIndex"
+               OpName %Payload "Payload"
+               OpMemberName %Payload 0 "v"
+               OpName %p "p"
+               OpDecorate %gl_LocalInvocationIndex BuiltIn LocalInvocationIndex
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+       %uint = OpTypeInt 32 0
+    %uint_24 = OpConstant %uint 24
+%_arr_float_uint_24 = OpTypeArray %float %uint_24
+%_ptr_Workgroup__arr_float_uint_24 = OpTypePointer Workgroup %_arr_float_uint_24
+         %vs = OpVariable %_ptr_Workgroup__arr_float_uint_24 Workgroup
+%_ptr_Input_uint = OpTypePointer Input %uint
+%gl_LocalInvocationIndex = OpVariable %_ptr_Input_uint Input
+   %float_10 = OpConstant %float 10
+%_ptr_Workgroup_float = OpTypePointer Workgroup %float
+     %uint_2 = OpConstant %uint 2
+   %uint_264 = OpConstant %uint 264
+    %uint_12 = OpConstant %uint 12
+       %bool = OpTypeBool
+     %uint_6 = OpConstant %uint 6
+     %uint_3 = OpConstant %uint 3
+%_arr_float_uint_3 = OpTypeArray %float %uint_3
+    %Payload = OpTypeStruct %_arr_float_uint_3
+%_ptr_TaskPayloadWorkgroupEXT_Payload = OpTypePointer TaskPayloadWorkgroupEXT %Payload
+          %p = OpVariable %_ptr_TaskPayloadWorkgroupEXT_Payload TaskPayloadWorkgroupEXT
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_TaskPayloadWorkgroupEXT_float = OpTypePointer TaskPayloadWorkgroupEXT %float
+      %int_4 = OpConstant %int 4
+      %int_6 = OpConstant %int 6
+      %int_8 = OpConstant %int 8
+     %v3uint = OpTypeVector %uint 3
+     %uint_4 = OpConstant %uint 4
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_4 %uint_3 %uint_2
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %14 = OpLoad %uint %gl_LocalInvocationIndex
+         %17 = OpAccessChain %_ptr_Workgroup_float %vs %14
+               OpStore %17 %float_10
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %20 = OpLoad %uint %gl_LocalInvocationIndex
+         %23 = OpULessThan %bool %20 %uint_12
+               OpSelectionMerge %25 None
+               OpBranchConditional %23 %24 %25
+         %24 = OpLabel
+         %26 = OpLoad %uint %gl_LocalInvocationIndex
+         %27 = OpLoad %uint %gl_LocalInvocationIndex
+         %28 = OpIAdd %uint %27 %uint_12
+         %29 = OpAccessChain %_ptr_Workgroup_float %vs %28
+         %30 = OpLoad %float %29
+         %31 = OpAccessChain %_ptr_Workgroup_float %vs %26
+         %32 = OpLoad %float %31
+         %33 = OpFAdd %float %32 %30
+         %34 = OpAccessChain %_ptr_Workgroup_float %vs %26
+               OpStore %34 %33
+               OpBranch %25
+         %25 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %35 = OpLoad %uint %gl_LocalInvocationIndex
+         %37 = OpULessThan %bool %35 %uint_6
+               OpSelectionMerge %39 None
+               OpBranchConditional %37 %38 %39
+         %38 = OpLabel
+         %40 = OpLoad %uint %gl_LocalInvocationIndex
+         %41 = OpLoad %uint %gl_LocalInvocationIndex
+         %42 = OpIAdd %uint %41 %uint_6
+         %43 = OpAccessChain %_ptr_Workgroup_float %vs %42
+         %44 = OpLoad %float %43
+         %45 = OpAccessChain %_ptr_Workgroup_float %vs %40
+         %46 = OpLoad %float %45
+         %47 = OpFAdd %float %46 %44
+         %48 = OpAccessChain %_ptr_Workgroup_float %vs %40
+               OpStore %48 %47
+               OpBranch %39
+         %39 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %49 = OpLoad %uint %gl_LocalInvocationIndex
+         %51 = OpULessThan %bool %49 %uint_3
+               OpSelectionMerge %53 None
+               OpBranchConditional %51 %52 %53
+         %52 = OpLabel
+         %54 = OpLoad %uint %gl_LocalInvocationIndex
+         %55 = OpLoad %uint %gl_LocalInvocationIndex
+         %56 = OpIAdd %uint %55 %uint_3
+         %57 = OpAccessChain %_ptr_Workgroup_float %vs %56
+         %58 = OpLoad %float %57
+         %59 = OpAccessChain %_ptr_Workgroup_float %vs %54
+         %60 = OpLoad %float %59
+         %61 = OpFAdd %float %60 %58
+         %62 = OpAccessChain %_ptr_Workgroup_float %vs %54
+               OpStore %62 %61
+               OpBranch %53
+         %53 = OpLabel
+               OpControlBarrier %uint_2 %uint_2 %uint_264
+         %69 = OpLoad %uint %gl_LocalInvocationIndex
+         %70 = OpLoad %uint %gl_LocalInvocationIndex
+         %71 = OpAccessChain %_ptr_Workgroup_float %vs %70
+         %72 = OpLoad %float %71
+         %74 = OpAccessChain %_ptr_TaskPayloadWorkgroupEXT_float %p %int_0 %69
+               OpStore %74 %72
+         %76 = OpAccessChain %_ptr_Workgroup_float %vs %int_4
+         %77 = OpLoad %float %76
+         %78 = OpConvertFToS %int %77
+         %79 = OpBitcast %uint %78
+         %81 = OpAccessChain %_ptr_Workgroup_float %vs %int_6
+         %82 = OpLoad %float %81
+         %83 = OpConvertFToS %int %82
+         %84 = OpBitcast %uint %83
+         %86 = OpAccessChain %_ptr_Workgroup_float %vs %int_8
+         %87 = OpLoad %float %86
+         %88 = OpConvertFToS %int %87
+         %89 = OpBitcast %uint %88
+               OpEmitMeshTasksEXT %79 %84 %89 %p
+               OpFunctionEnd
