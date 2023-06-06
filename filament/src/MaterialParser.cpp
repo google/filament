@@ -74,9 +74,9 @@ UTILS_NOINLINE
 bool MaterialParser::MaterialParserDetails::getFromSimpleChunk(
         filamat::ChunkType type, T* value) const noexcept {
     ChunkContainer const& chunkContainer = mChunkContainer;
-    ChunkContainer::ChunkDesc const* pChunkDesc;
-    if (chunkContainer.hasChunk(type, &pChunkDesc)) {
-        Unflattener unflattener(pChunkDesc->start, pChunkDesc->start + pChunkDesc->size);
+    ChunkContainer::ChunkDesc chunkDesc;
+    if (chunkContainer.hasChunk(type, &chunkDesc)) {
+        Unflattener unflattener(chunkDesc.start, chunkDesc.start + chunkDesc.size);
         return unflattener.read(value);
     }
     return false;

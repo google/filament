@@ -221,13 +221,13 @@ OpenGLContext::OpenGLContext() noexcept {
             // Blits to texture arrays are failing
             //   This bug continues to reproduce, though at times we've seen it appear to "go away".
             //   The standalone sample app that was written to show this problem still reproduces.
-            //   The working hypthesis is that some other state affects this behavior.
-            bugs.disable_sidecar_blit_into_texture_array = true;
+            //   The working hypothesis is that some other state affects this behavior.
+            bugs.disable_blit_into_texture_array = true;
 
             // early exit condition is flattened in EASU code
             bugs.split_easu = true;
 
-            // initialize the non used uniform array for adreno drivers.
+            // initialize the non-used uniform array for Adreno drivers.
             bugs.enable_initialize_non_used_uniform_array = true;
 
             int maj, min, driverMajor, driverMinor;
