@@ -22,6 +22,7 @@
 #include "FilamentAPI-impl.h"
 
 #include <math/quat.h>
+#include <math/vec2.h>
 
 #include <utils/Panic.h>
 

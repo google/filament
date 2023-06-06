@@ -244,12 +244,13 @@ FSkinningBuffer::HandleIndicesAndWeights FSkinningBuffer::createIndicesAndWeight
 }
 
 void FSkinningBuffer::setIndicesAndWeightsData(FEngine& engine,
-        backend::Handle<backend::HwTexture> textureHandle, math::float2 const* pairs, size_t count) {
+        backend::Handle<backend::HwTexture> textureHandle,
+        const utils::FixedCapacityVector<math::float2>& pairs, size_t count) {
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     auto size = getSkinningBufferSize(count);
     auto* out = (float2*) malloc(size);
-    std::transform(pairs, pairs + count, out,
+    std::transform(pairs.begin(), pairs.end(), out,
             [](const float2& p) { return float2(p); });
 
     updateDataAt(driver, textureHandle,

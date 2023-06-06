@@ -24,10 +24,7 @@
 #include "details/VertexBuffer.h"
 #include "details/IndexBuffer.h"
 #include "details/InstanceBuffer.h"
-#include "details/Texture.h"
 #include "details/Material.h"
-
-#include <private/filament/SibStructs.h>
 
 #include "filament/RenderableManager.h"
 
@@ -68,11 +65,12 @@ struct RenderableManager::BuilderDetails {
     FSkinningBuffer* mSkinningBuffer = nullptr;
     FInstanceBuffer* mInstanceBuffer = nullptr;
     uint32_t mSkinningBufferOffset = 0;
-    float2* mBoneIndicesAndWeights = nullptr;
-    size_t  mBoneIndicesAndWeightsCount = 0;
+    utils::FixedCapacityVector<math::float2> mBoneIndicesAndWeights;
+    size_t mBoneIndicesAndWeightsCount = 0;
 
+    // bone indices and weights defined for primitive index
     std::unordered_map<size_t, utils::FixedCapacityVector<
-                      utils::FixedCapacityVector<math::float2>>> mBonePairs; //bone indices and weights defined for primitive index
+        utils::FixedCapacityVector<math::float2>>> mBonePairs;
 
     explicit BuilderDetails(size_t count)
             : mEntries(count), mCulling(true), mCastShadows(false), mReceiveShadows(true),
@@ -301,10 +299,10 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
 
     size_t pairsCount = 0; // counting of number of pairs stored in texture
     if (maxPairsCount) { // at least one primitive has bone indices and weights
-        mBoneIndicesAndWeights = (float2*) calloc(maxPairsCount,
-            sizeof(float2)); // final texture data, indices and weights
-        std::unique_ptr<float2[]> tempPairs(
-            new float2[maxPairsCountPerVertex]); // temporary indices and weights for one vertex
+        // final texture data, indices and weights
+        mBoneIndicesAndWeights = utils::FixedCapacityVector<float2>(maxPairsCount);
+        // temporary indices and weights for one vertex
+        std::unique_ptr<float2[]> tempPairs(new float2[maxPairsCountPerVertex]());
         for (auto iBonePair = mBonePairs.begin(); iBonePair != mBonePairs.end(); ++iBonePair) {
             auto primitiveIndex = iBonePair->first;
             auto bonePairsForPrimitive = iBonePair->second;
@@ -600,11 +598,9 @@ void FRenderableManager::create(
                 createIndicesAndWeightsHandle(downcast(engine), builder->mBoneIndicesAndWeightsCount);
             bones.handleSamplerGroup = handle.sampler;
             bones.handleTexture = handle.texture;
-
             downcast(builder->mSkinningBuffer)->
                 setIndicesAndWeightsData(downcast(engine), handle.texture,
                        builder->mBoneIndicesAndWeights, builder->mBoneIndicesAndWeightsCount);
-            free(builder->mBoneIndicesAndWeights);
         }
 
         // Create and initialize all needed MorphTargets.

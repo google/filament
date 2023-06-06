@@ -28,6 +28,7 @@
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
+#include <math/vec2.h>
 
 // for gtest
 class FilamentTest_Bones_Test;
@@ -81,7 +82,9 @@ private:
     HandleIndicesAndWeights createIndicesAndWeightsHandle(FEngine& engine,
             size_t count);
     void setIndicesAndWeightsData(FEngine& engine,
-        backend::Handle<backend::HwTexture> textureHandle, math::float2 const* pairs, size_t count);
+          backend::Handle<backend::HwTexture> textureHandle,
+          const utils::FixedCapacityVector<math::float2>& pairs,
+          size_t count);
 
     backend::Handle<backend::HwBufferObject> mHandle;
     uint32_t mBoneCount;

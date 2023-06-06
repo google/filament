@@ -26,6 +26,7 @@
 
 #include <utils/bitset.h>
 #include <utils/compiler.h>
+#include <math/vec2.h>
 
 #include <array>
 #include <type_traits>
