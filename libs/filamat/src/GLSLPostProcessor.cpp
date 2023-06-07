@@ -377,7 +377,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                     msl::collectSibs(config, sibs);
                     spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput,
                             config.shaderModel, config.hasFramebufferFetch, sibs,
-                            &internalConfig.minifier);
+                            mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
                 }
             } else {
                 slog.e << "GLSL post-processor invoked with optimization level NONE"
@@ -394,17 +394,18 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     }
 
     if (internalConfig.glslOutput) {
-        *internalConfig.glslOutput =
-                internalConfig.minifier.removeWhitespace(
-                        *internalConfig.glslOutput,
-                        mOptimization == MaterialBuilder::Optimization::SIZE);
+        if (!mGenerateDebugInfo) {
+            *internalConfig.glslOutput =
+                    internalConfig.minifier.removeWhitespace(
+                            *internalConfig.glslOutput,
+                            mOptimization == MaterialBuilder::Optimization::SIZE);
 
-        // In theory this should only be enabled for SIZE, but in practice we often use PERFORMANCE.
-        if (mOptimization != MaterialBuilder::Optimization::NONE) {
-           *internalConfig.glslOutput =
-                   internalConfig.minifier.renameStructFields(*internalConfig.glslOutput);
+            // In theory this should only be enabled for SIZE, but in practice we often use PERFORMANCE.
+            if (mOptimization != MaterialBuilder::Optimization::NONE) {
+                *internalConfig.glslOutput =
+                        internalConfig.minifier.renameStructFields(*internalConfig.glslOutput);
+            }
         }
-
         if (mPrintShaders) {
             slog.i << *internalConfig.glslOutput << io::endl;
         }
@@ -460,7 +461,8 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
         auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
         msl::collectSibs(config, sibs);
         spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput, config.shaderModel,
-                config.hasFramebufferFetch, sibs, &internalConfig.minifier);
+                config.hasFramebufferFetch, sibs,
+                mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
     }
 
     if (internalConfig.glslOutput) {
@@ -508,7 +510,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
         auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
         msl::collectSibs(config, sibs);
         spirvToMsl(&spirv, internalConfig.mslOutput, config.shaderModel, config.hasFramebufferFetch,
-                sibs, &internalConfig.minifier);
+                sibs, mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
     }
 
     // Transpile back to GLSL
