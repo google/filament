@@ -51,12 +51,6 @@ VulkanCmdFence::~VulkanCmdFence() {
 
 CommandBufferObserver::~CommandBufferObserver() {}
 
-static VkQueue getQueue(VkDevice device, uint32_t queueFamilyIndex) {
-    VkQueue queue;
-    vkGetDeviceQueue(device, queueFamilyIndex, 0, &queue);
-    return queue;
-}
-
 static VkCommandPool createPool(VkDevice device, uint32_t queueFamilyIndex) {
     VkCommandPoolCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -70,8 +64,8 @@ static VkCommandPool createPool(VkDevice device, uint32_t queueFamilyIndex) {
 
 }
 
-VulkanCommands::VulkanCommands(VkDevice device, uint32_t queueFamilyIndex) : mDevice(device),
-        mQueue(getQueue(device, queueFamilyIndex)), mPool(createPool(mDevice, queueFamilyIndex)) {
+VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex) : mDevice(device),
+        mQueue(queue), mPool(createPool(mDevice, queueFamilyIndex)) {
     VkSemaphoreCreateInfo sci { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
     for (auto& semaphore : mSubmissionSignals) {
         vkCreateSemaphore(mDevice, &sci, nullptr, &semaphore);

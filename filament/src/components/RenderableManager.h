@@ -64,6 +64,7 @@ public:
         bool morphing                   : 1;
         bool screenSpaceContactShadows  : 1;
         bool reversedWindingOrder       : 1;
+        bool fog                        : 1;
     };
 
     static_assert(sizeof(Visibility) == sizeof(uint16_t), "Visibility should be 16 bits");
@@ -114,6 +115,8 @@ public:
     inline void setReceiveShadows(Instance instance, bool enable) noexcept;
     inline void setScreenSpaceContactShadows(Instance instance, bool enable) noexcept;
     inline void setCulling(Instance instance, bool enable) noexcept;
+    inline void setFogEnabled(Instance instance, bool enable) noexcept;
+    inline bool getFogEnabled(Instance instance) const noexcept;
 
     inline void setPrimitives(Instance instance, utils::Slice<FRenderPrimitive> const& primitives) noexcept;
 
@@ -337,6 +340,17 @@ void FRenderableManager::setCulling(Instance instance, bool enable) noexcept {
         Visibility& visibility = mManager[instance].visibility;
         visibility.culling = enable;
     }
+}
+
+void FRenderableManager::setFogEnabled(Instance instance, bool enable) noexcept {
+    if (instance) {
+        Visibility& visibility = mManager[instance].visibility;
+        visibility.fog = enable;
+    }
+}
+
+bool FRenderableManager::getFogEnabled(RenderableManager::Instance instance) const noexcept {
+    return getVisibility(instance).fog;
 }
 
 void FRenderableManager::setSkinning(Instance instance, bool enable) noexcept {

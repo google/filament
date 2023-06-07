@@ -130,10 +130,10 @@ highp vec3 computeViewSpaceNormal(
         highp vec2 texel, highp vec2 positionParams) {
     // todo: maybe make this a quality parameter
 #if FILAMENT_QUALITY == FILAMENT_QUALITY_HIGH
-    vec3 normal = computeViewSpaceNormalHighQ(materialParams_depth, uv, depth, position,
+    vec3 normal = computeViewSpaceNormalHighQ(depthTexture, uv, depth, position,
             texel, positionParams);
 #else
-    vec3 normal = computeViewSpaceNormalMediumQ(materialParams_depth, uv, position,
+    vec3 normal = computeViewSpaceNormalMediumQ(depthTexture, uv, position,
             texel, positionParams);
 #endif
     return normal;

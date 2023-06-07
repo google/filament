@@ -115,6 +115,10 @@ public:
         return mRawShaderMode;
     }
 
+    bool noSamplerValidation() const noexcept {
+        return mNoSamplerValidation;
+    }
+
     filament::UserVariantFilterMask getVariantFilter() const noexcept {
         return mVariantFilter;
     }
@@ -136,6 +140,7 @@ protected:
     bool mIsValid = true;
     bool mPrintShaders = false;
     bool mRawShaderMode = false;
+    bool mNoSamplerValidation = false;
     Optimization mOptimizationLevel = Optimization::PERFORMANCE;
     Metadata mReflectionTarget = Metadata::NONE;
     Platform mPlatform = Platform::ALL;

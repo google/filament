@@ -1211,7 +1211,13 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
         flush(slog.e);
     };
 
-    const auto userSamplerCount = info.sib.getSize();
+    auto userSamplerCount = info.sib.getSize();
+    for (auto const& sampler: info.sib.getSamplerInfoList()) {
+        if (sampler.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) {
+            userSamplerCount += 1;
+        }
+    }
+
     switch (info.featureLevel) {
         case FeatureLevel::FEATURE_LEVEL_0:
             // TODO: check FEATURE_LEVEL_0 features (e.g. unlit only, no texture arrays, etc...)
@@ -1224,11 +1230,32 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
             return true;
         case FeatureLevel::FEATURE_LEVEL_1:
         case FeatureLevel::FEATURE_LEVEL_2: {
+            if (mNoSamplerValidation) {
+                break;
+            }
+
+            auto const maxTextureCount = backend::FEATURE_LEVEL_CAPS[1].MAX_FRAGMENT_SAMPLER_COUNT;
+
+            // count how many samplers filament uses based on the material properties
+            // note: currently SSAO is not used with unlit, but we want to keep that possibility.
+            uint32_t textureUsedByFilamentCount = 4;    // shadowMap, structure, ssao, fog texture
+            if (info.isLit) {
+                textureUsedByFilamentCount += 3;        // froxels, dfg, specular
+            }
+            if (info.reflectionMode == ReflectionMode::SCREEN_SPACE ||
+                info.refractionMode == RefractionMode::SCREEN_SPACE) {
+                textureUsedByFilamentCount += 1;        // ssr
+            }
+            if (mVariantFilter & (uint32_t)UserVariantFilterBit::FOG) {
+                textureUsedByFilamentCount -= 1;        // fog texture
+            }
+
             // TODO: we need constants somewhere for these values
-            if (userSamplerCount > 9) {
+            if (userSamplerCount > maxTextureCount - textureUsedByFilamentCount) {
                 slog.e << "Error: material \"" << mMaterialName.c_str()
                        << "\" has feature level " << +info.featureLevel
-                       << " and is using more than 9 samplers." << io::endl;
+                       << " and is using more than " << maxTextureCount - textureUsedByFilamentCount
+                       << " samplers." << io::endl;
                 logSamplerOverflow(info.sib);
                 return false;
             }
@@ -1248,10 +1275,11 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
         }
         case FeatureLevel::FEATURE_LEVEL_3: {
             // TODO: we need constants somewhere for these values
-            if (userSamplerCount > 12) {
+            // TODO: 16 is artificially low for now, until we have a better idea of what we want
+            if (userSamplerCount > 16) {
                 slog.e << "Error: material \"" << mMaterialName.c_str()
                        << "\" has feature level " << +info.featureLevel
-                       << " and is using more than 12 samplers" << io::endl;
+                       << " and is using more than 16 samplers" << io::endl;
                 logSamplerOverflow(info.sib);
                 return false;
             }
@@ -1408,6 +1436,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
                 { LightsUib::_name,                UniformBindingPoints::LIGHTS },
                 { ShadowUib::_name,                UniformBindingPoints::SHADOW },
                 { FroxelRecordUib::_name,          UniformBindingPoints::FROXEL_RECORDS },
+                { FroxelsUib::_name,               UniformBindingPoints::FROXELS },
                 { PerRenderableBoneUib::_name,     UniformBindingPoints::PER_RENDERABLE_BONES },
                 { PerRenderableMorphingUib::_name, UniformBindingPoints::PER_RENDERABLE_MORPHING },
                 { info.uib.getName(),              UniformBindingPoints::PER_MATERIAL_INSTANCE }
@@ -1505,6 +1534,11 @@ void MaterialBuilder::writeSurfaceChunks(ChunkContainer& container) const noexce
     container.emplace<uint8_t>(ChunkType::MaterialVertexDomain, static_cast<uint8_t>(mVertexDomain));
     container.emplace<uint8_t>(ChunkType::MaterialInterpolation,
             static_cast<uint8_t>(mInterpolation));
+}
+
+MaterialBuilder& MaterialBuilder::noSamplerValidation(bool enabled) noexcept {
+    mNoSamplerValidation = enabled;
+    return *this;
 }
 
 } // namespace filamat

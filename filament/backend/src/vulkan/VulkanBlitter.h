@@ -19,6 +19,8 @@
 
 #include "VulkanContext.h"
 
+#include <utils/compiler.h>
+
 namespace filament::backend {
 
 class VulkanBuffer;
@@ -30,11 +32,12 @@ struct VulkanProgram;
 
 class VulkanBlitter {
 public:
-    VulkanBlitter(VulkanContext& context, VulkanStagePool& stagePool,
-            VulkanPipelineCache& pipelineCache, VulkanFboCache& fboCache,
-            VulkanSamplerCache& samplerCache) :
-            mContext(context), mStagePool(stagePool), mPipelineCache(pipelineCache),
-            mFramebufferCache(fboCache), mSamplerCache(samplerCache) {}
+    VulkanBlitter(VulkanStagePool& stagePool, VulkanPipelineCache& pipelineCache,
+            VulkanFboCache& fboCache, VulkanSamplerCache& samplerCache) noexcept;
+
+    void initialize(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator,
+            std::shared_ptr<VulkanCommands> commands,
+            std::shared_ptr<VulkanTexture> emptyTexture) noexcept;
 
     struct BlitArgs {
         const VulkanRenderTarget* dstTarget;
@@ -53,15 +56,20 @@ public:
 private:
     void lazyInit() noexcept;
 
-    void blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
-            const VkExtent2D srcExtent, VulkanAttachment src, VulkanAttachment dst,
-            const VkOffset3D srcRect[2], const VkOffset3D dstRect[2]);
+    void blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter, const VkExtent2D srcExtent,
+            VulkanAttachment src, VulkanAttachment dst, const VkOffset3D srcRect[2],
+            const VkOffset3D dstRect[2]);
 
     VulkanBuffer* mTriangleBuffer = nullptr;
     VulkanBuffer* mParamsBuffer = nullptr;
     VulkanProgram* mDepthResolveProgram = nullptr;
 
-    VulkanContext& mContext;
+    UTILS_UNUSED VkPhysicalDevice mPhysicalDevice;
+    VkDevice mDevice;
+    VmaAllocator mAllocator;
+    std::shared_ptr<VulkanCommands> mCommands;
+    std::shared_ptr<VulkanTexture> mEmptyTexture;
+
     VulkanStagePool& mStagePool;
     VulkanPipelineCache& mPipelineCache;
     VulkanFboCache& mFramebufferCache;

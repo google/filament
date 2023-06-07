@@ -32,6 +32,35 @@
 
 namespace filament {
 
+namespace std140 {
+
+struct alignas(16) vec3 : public std::array<float, 3> {};
+struct alignas(16) vec4 : public std::array<float, 4> {};
+
+struct mat33 : public std::array<vec3, 3> {
+    mat33& operator=(math::mat3f const& rhs) noexcept {
+        for (int i = 0; i < 3; i++) {
+            (*this)[i][0] = rhs[i][0];
+            (*this)[i][1] = rhs[i][1];
+            (*this)[i][2] = rhs[i][2];
+        }
+        return *this;
+    }
+};
+
+struct mat44 : public std::array<vec4, 4> {
+    mat44& operator=(math::mat4f const& rhs) noexcept {
+        for (int i = 0; i < 4; i++) {
+            (*this)[i][0] = rhs[i][0];
+            (*this)[i][1] = rhs[i][1];
+            (*this)[i][2] = rhs[i][2];
+            (*this)[i][3] = rhs[i][3];
+        }
+        return *this;
+    }
+};
+
+} // std140
 /*
  * IMPORTANT NOTE: Respect std140 layout, don't update without updating UibGenerator::get{*}Uib()
  */
@@ -138,15 +167,16 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float3 fogDensity;        // { density, -falloff * yc, density * exp(-fallof * yc) }
     float fogStart;
     float fogMaxOpacity;
-    float fogHeight;
+    uint32_t fogMinMaxMip;
     float fogHeightFalloff;
     float fogCutOffDistance;
     math::float3 fogColor;
     float fogColorFromIbl;
     float fogInscatteringStart;
     float fogInscatteringSize;
-    float fogReserved1;
-    float fogReserved2;
+    float fogOneOverFarMinusNear;
+    float fogNearOverFarMinusNear;
+    std140::mat33 fogFromWorldMatrix;
 
     // --------------------------------------------------------------------------------------------
     // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
@@ -172,7 +202,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float es2Reserved2;
 
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[55];
+    math::float4 reserved[52];
 };
 
 // 2 KiB == 128 float4s
@@ -183,33 +213,8 @@ static_assert(sizeof(PerViewUib) == sizeof(math::float4) * 128,
 // MARK: -
 
 struct PerRenderableData {
-
-    struct alignas(16) vec3_std140 : public std::array<float, 3> { };
-    struct alignas(16) vec4_std140 : public std::array<float, 4> { };
-    struct mat33_std140 : public std::array<vec3_std140, 3> {
-        mat33_std140& operator=(math::mat3f const& rhs) noexcept {
-            for (int i = 0; i < 3; i++) {
-                (*this)[i][0] = rhs[i][0];
-                (*this)[i][1] = rhs[i][1];
-                (*this)[i][2] = rhs[i][2];
-            }
-            return *this;
-        }
-    };
-    struct mat44_std140 : public std::array<vec4_std140, 4> {
-        mat44_std140& operator=(math::mat4f const& rhs) noexcept {
-            for (int i = 0; i < 4; i++) {
-                (*this)[i][0] = rhs[i][0];
-                (*this)[i][1] = rhs[i][1];
-                (*this)[i][2] = rhs[i][2];
-                (*this)[i][3] = rhs[i][3];
-            }
-            return *this;
-        }
-    };
-
-    mat44_std140 worldFromModelMatrix;
-    mat33_std140 worldFromModelNormalMatrix;
+    std140::mat44 worldFromModelMatrix;
+    std140::mat33 worldFromModelNormalMatrix;
     int32_t morphTargetCount;
     int32_t flagsChannels;                   // see packFlags() below (0x00000fll)
     int32_t objectId;                        // used for picking
@@ -305,6 +310,13 @@ struct FroxelRecordUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 };
 static_assert(sizeof(FroxelRecordUib) == 16384,
         "FroxelRecordUib should be exactly 16KiB");
+
+struct FroxelsUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
+    static constexpr std::string_view _name{ "FroxelsUniforms" };
+    math::uint4 records[1024];
+};
+static_assert(sizeof(FroxelsUib) == 16384,
+        "FroxelsUib should be exactly 16KiB");
 
 // ------------------------------------------------------------------------------------------------
 // MARK: -

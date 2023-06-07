@@ -480,6 +480,7 @@ void OpenGLContext::initExtensionsGLES() noexcept {
     ext.EXT_texture_cube_map_array = exts.has("GL_EXT_texture_cube_map_array"sv) || exts.has("GL_OES_texture_cube_map_array"sv);
     ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
     ext.KHR_debug = exts.has("GL_KHR_debug"sv);
+    ext.KHR_parallel_shader_compile = exts.has("GL_KHR_parallel_shader_compile"sv);
     ext.KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
     ext.KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
     ext.OES_depth_texture = exts.has("GL_OES_depth_texture"sv);
@@ -544,6 +545,7 @@ void OpenGLContext::initExtensionsGL() noexcept {
     ext.EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
     ext.EXT_texture_sRGB = exts.has("GL_EXT_texture_sRGB"sv);
     ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
+    ext.KHR_parallel_shader_compile = exts.has("GL_KHR_parallel_shader_compile"sv);
     ext.KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
     ext.KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
     ext.OES_depth_texture = true;

@@ -25,14 +25,17 @@ namespace filament::backend {
 // Encapsulates a Vulkan buffer, its attached DeviceMemory and a staging area.
 class VulkanBuffer {
 public:
-    VulkanBuffer(VulkanContext& context, VulkanStagePool& stagePool, VkBufferUsageFlags usage,
-            uint32_t numBytes);
+    VulkanBuffer(VmaAllocator allocator, std::shared_ptr<VulkanCommands> commands,
+            VulkanStagePool& stagePool, VkBufferUsageFlags usage, uint32_t numBytes);
     ~VulkanBuffer();
-    void terminate(VulkanContext& context);
-    void loadFromCpu(VulkanContext& context, VulkanStagePool& stagePool,
-            const void* cpuData, uint32_t byteOffset, uint32_t numBytes) const;
+    void terminate();
+    void loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_t numBytes) const;
     VkBuffer getGpuBuffer() const { return mGpuBuffer; }
 private:
+    VmaAllocator mAllocator;
+    std::shared_ptr<VulkanCommands> mCommands;
+    VulkanStagePool& mStagePool;
+
     VmaAllocation mGpuMemory = VK_NULL_HANDLE;
     VkBuffer mGpuBuffer = VK_NULL_HANDLE;
     VkBufferUsageFlags mUsage = {};

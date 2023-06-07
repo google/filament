@@ -2593,4 +2593,26 @@ pre-multiplied ahead of time. On Android, any texture uploaded from a
 [Bitmap](https://developer.android.com/reference/android/graphics/Bitmap.html) will be
 pre-multiplied by default.
 
+# Sampler usage in Materials
+
+The number of usable sampler parameters (e.g.: type is `sampler2d`) in materials is limited and
+depends on the material properties, shading model, feature level and variant filter.
+
+## Feature level 1 and 2
+
+`unlit` materials can use up to 12 samplers by default.
+
+`lit` materials can use up to 9 samplers by default, however if `refractionMode` or `reflectionMode`
+is set to `screenspace` that number is reduced to 8.
+
+Finally if `variantFilter` contains the `fog` filter, an extra sampler is made available, such that
+`unlit` materials can use up to 13 and `lit` materials up to 10 samplers by default.
+
+## Feature level 3
+
+16 samplers are available.
+
+!!! TIP: external samplers
+               Be aware that `external` samplers account for 2 regular samplers.
+
 <!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="../third_party/markdeep/markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>

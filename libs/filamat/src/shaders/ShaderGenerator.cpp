@@ -537,6 +537,8 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     if (variant.hasDynamicLighting()) {
         cg.generateUniforms(fs, ShaderStage::FRAGMENT,
                 UniformBindingPoints::FROXEL_RECORDS, UibGenerator::getFroxelRecordUib());
+        cg.generateUniforms(fs, ShaderStage::FRAGMENT,
+                UniformBindingPoints::FROXELS, UibGenerator::getFroxelsUib());
     }
 
     cg.generateUniforms(fs, ShaderStage::FRAGMENT,

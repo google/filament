@@ -889,6 +889,13 @@ void ViewerGui::updateUserInterface() {
     }
 
     if (ImGui::CollapsingHeader("Fog")) {
+        int fogColorSource = 0;
+        if (mSettings.view.fog.skyColor) {
+            fogColorSource = 2;
+        } else if (mSettings.view.fog.fogColorFromIbl) {
+            fogColorSource = 1;
+        }
+
         bool excludeSkybox = !std::isinf(mSettings.view.fog.cutOffDistance);
         ImGui::Indent();
         ImGui::Checkbox("Enable large-scale fog", &mSettings.view.fog.enabled);
@@ -899,11 +906,25 @@ void ViewerGui::updateUserInterface() {
         ImGui::SliderFloat("Sun Scattering start [m]", &mSettings.view.fog.inScatteringStart, 0.0f, 100.0f);
         ImGui::SliderFloat("Sun Scattering size", &mSettings.view.fog.inScatteringSize, 0.1f, 100.0f);
         ImGui::Checkbox("Exclude Skybox", &excludeSkybox);
-        ImGui::Checkbox("Color from IBL", &mSettings.view.fog.fogColorFromIbl);
+        ImGui::Combo("Color##fogColor", &fogColorSource, "Constant\0IBL\0Skybox\0\0");
         ImGui::ColorPicker3("Color", mSettings.view.fog.color.v);
         ImGui::Unindent();
         mSettings.view.fog.cutOffDistance =
                 excludeSkybox ? 1e6f : std::numeric_limits<float>::infinity();
+        switch (fogColorSource) {
+            case 0:
+                mSettings.view.fog.skyColor = nullptr;
+                mSettings.view.fog.fogColorFromIbl = false;
+                break;
+            case 1:
+                mSettings.view.fog.skyColor = nullptr;
+                mSettings.view.fog.fogColorFromIbl = true;
+                break;
+            case 2:
+                mSettings.view.fog.skyColor = mSettings.view.fogSettings.fogColorTexture;
+                mSettings.view.fog.fogColorFromIbl = false;
+                break;
+        }
     }
 
     if (ImGui::CollapsingHeader("Scene")) {

@@ -128,23 +128,80 @@ void PerViewUniforms::prepareTemporalNoise(FEngine& engine,
     s.temporalNoise = options.enabled ? temporalNoise : 0.0f;
 }
 
-void PerViewUniforms::prepareFog(float3 const& cameraPosition, FogOptions const& options) noexcept {
+void PerViewUniforms::prepareFog(FEngine& engine, const CameraInfo& cameraInfo,
+        mat4 const& userWorldFromFog, FogOptions const& options, FIndirectLight const* ibl) noexcept {
+
+    auto packHalf2x16 = [](math::half2 v) -> uint32_t {
+        short2 s;
+        memcpy(&s[0], &v[0], sizeof(s));
+        return s.y << 16 | s.x;
+    };
+
+    // Fog should be calculated in the "user's world coordinates" so that it's not
+    // affected by the IBL rotation.
+    // fogFromWorldMatrix below is only used to transform the view vector in the shader, which is
+    // why we store the cofactor matrix.
+
+    mat4f const viewFromWorld       = cameraInfo.view;
+    mat4 const worldFromUserWorld   = cameraInfo.worldOrigin;
+    mat4 const worldFromFog         = worldFromUserWorld * userWorldFromFog;
+    mat4 const viewFromFog          = viewFromWorld * worldFromFog;
+
+    mat4 const fogFromView          = inverse(viewFromFog);
+    mat3 const fogFromWorld         = inverse(worldFromFog.upperLeft());
+
+    // camera position relative to the fog's origin
+    auto const userCameraPosition = fogFromView[3].xyz;
+
     const float heightFalloff = std::max(0.0f, options.heightFalloff);
 
     // precalculate the constant part of density integral
-    const float density = -heightFalloff * (cameraPosition.y - options.height);
+    const float density = -float(heightFalloff * (userCameraPosition.y - options.height));
 
     auto& s = mUniforms.edit();
+
+    // note: this code is written so that near/far/minLod/maxLod could be user settable
+    //       currently they're inferred.
+    Handle<HwTexture> fogColorTextureHandle;
+    if (options.skyColor) {
+        fogColorTextureHandle = downcast(options.skyColor)->getHwHandle();
+        math::half2 const minMaxMip{ 0.0f, float(options.skyColor->getLevels()) - 1.0f };
+        s.fogMinMaxMip = packHalf2x16(minMaxMip);
+        s.fogOneOverFarMinusNear = 1.0f / (cameraInfo.zf - cameraInfo.zn);
+        s.fogNearOverFarMinusNear = cameraInfo.zn / (cameraInfo.zf - cameraInfo.zn);
+    }
+    if (!fogColorTextureHandle && options.fogColorFromIbl) {
+        if (ibl) {
+            // When using the IBL, because we don't have mip levels, we don't have a mop to
+            // select based on the distance. However, we can cheat a little and use
+            // mip_roughnessOne-1 as the horizon base color and mip_roughnessOne as the near
+            // camera base color. This will give a distant fog that's a bit too sharp, but it
+            // improves the effect overall.
+            fogColorTextureHandle = ibl->getReflectionHwHandle();
+            float const levelCount = float(ibl->getLevelCount());
+            math::half2 const minMaxMip{ levelCount - 2.0f, levelCount - 1.0f };
+            s.fogMinMaxMip = packHalf2x16(minMaxMip);
+            s.fogOneOverFarMinusNear = 1.0f / (cameraInfo.zf - cameraInfo.zn);
+            s.fogNearOverFarMinusNear = cameraInfo.zn / (cameraInfo.zf - cameraInfo.zn);
+        }
+    }
+
+    mSamplers.setSampler(PerViewSib::FOG, {
+            fogColorTextureHandle ? fogColorTextureHandle : engine.getDummyCubemap()->getHwHandle(), {
+                    .filterMag = SamplerMagFilter::LINEAR,
+                    .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
+            }});
+
     s.fogStart             = options.distance;
     s.fogMaxOpacity        = options.maximumOpacity;
-    s.fogHeight            = options.height;
     s.fogHeightFalloff     = heightFalloff;
     s.fogCutOffDistance    = options.cutOffDistance;
     s.fogColor             = options.color;
     s.fogDensity           = { options.density, density, options.density * std::exp(density) };
     s.fogInscatteringStart = options.inScatteringStart;
     s.fogInscatteringSize  = options.inScatteringSize;
-    s.fogColorFromIbl      = options.fogColorFromIbl ? 1.0f : 0.0f;
+    s.fogColorFromIbl      = fogColorTextureHandle ? 1.0f : 0.0f;
+    s.fogFromWorldMatrix   = mat3f{ cof(fogFromWorld) };
 }
 
 void PerViewUniforms::prepareSSAO(Handle<HwTexture> ssao,
@@ -282,8 +339,7 @@ void PerViewUniforms::prepareAmbientLight(FEngine& engine, FIndirectLight const&
 void PerViewUniforms::prepareDynamicLights(Froxelizer& froxelizer) noexcept {
     auto& s = mUniforms.edit();
     froxelizer.updateUniforms(s);
-    float f = froxelizer.getLightFar();
-    mSamplers.setSampler(PerViewSib::FROXELS, { froxelizer.getFroxelTexture() });
+    float const f = froxelizer.getLightFar();
     s.lightFarAttenuationParams = 0.5f * float2{ 10.0f, 10.0f / (f * f) };
 }
 

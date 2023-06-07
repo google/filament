@@ -304,6 +304,14 @@ public:
         Builder& enableSkinningBuffers(bool enabled = true) noexcept;
 
         /**
+         * Controls if this renderable is affected by the large-scale fog.
+         * @param enabled If true, enables large-scale fog on this object. Disables it otherwise.
+         *                True by default.
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& fog(bool enabled = true) noexcept;
+
+        /**
          * Enables GPU vertex skinning for up to 255 bones, 0 by default.
          *
          * Skinning Buffer mode must be enabled.
@@ -535,6 +543,19 @@ public:
      * \see Builder::culling()
      */
     void setCulling(Instance instance, bool enable) noexcept;
+
+    /**
+     * Changes whether or not the large-scale fog is applied to this renderable
+     * @see Builder::fog()
+     */
+    void setFogEnabled(Instance instance, bool enable) noexcept;
+
+    /**
+     * Returns whether large-scale fog is enabled for this renderable.
+     * @return True if fog is enabled for this renderable.
+     * @see Builder::fog()
+     */
+    bool getFogEnabled(Instance instance) const noexcept;
 
     /**
      * Enables or disables a light channel.

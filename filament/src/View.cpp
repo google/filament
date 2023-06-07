@@ -296,4 +296,8 @@ math::float4 View::getMaterialGlobal(uint32_t index) const {
     return downcast(this)->getMaterialGlobal(index);
 }
 
+utils::Entity View::getFogEntity() const noexcept {
+    return downcast(this)->getFogEntity();
+}
+
 } // namespace filament

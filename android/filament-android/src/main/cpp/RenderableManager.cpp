@@ -201,10 +201,17 @@ Java_com_google_android_filament_RenderableManager_nBuilderSkinning(JNIEnv*, jcl
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_RenderableManager_nEnableSkinningBuffers(JNIEnv*, jclass,
+Java_com_google_android_filament_RenderableManager_nBuilderEnableSkinningBuffers(JNIEnv*, jclass,
         jlong nativeBuilder, jboolean enabled) {
     RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
     builder->enableSkinningBuffers(enabled);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nBuilderFog(JNIEnv*, jclass,
+        jlong nativeBuilder, jboolean enabled) {
+    RenderableManager::Builder *builder = (RenderableManager::Builder *) nativeBuilder;
+    builder->fog(enabled);
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -358,6 +365,20 @@ Java_com_google_android_filament_RenderableManager_nSetCulling(JNIEnv*, jclass,
         jlong nativeRenderableManager, jint i, jboolean enabled) {
     RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
     rm->setCulling((RenderableManager::Instance) i, enabled);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_RenderableManager_nSetFogEnabled(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i, jboolean enabled) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    rm->setFogEnabled((RenderableManager::Instance) i, enabled);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_RenderableManager_nGetFogEnabled(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    return (jboolean)rm->getFogEnabled((RenderableManager::Instance) i);
 }
 
 extern "C" JNIEXPORT void JNICALL

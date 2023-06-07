@@ -96,7 +96,7 @@ constexpr inline VkBool32 getCompareEnable(SamplerCompareMode mode) noexcept {
     return mode == SamplerCompareMode::NONE ? VK_FALSE : VK_TRUE;
 }
 
-VulkanSamplerCache::VulkanSamplerCache(VulkanContext& context) : mContext(context) {}
+void VulkanSamplerCache::initialize(VkDevice device) { mDevice = device; }
 
 VkSampler VulkanSamplerCache::getSampler(SamplerParams params) noexcept {
     auto iter = mCache.find(params.u);
@@ -121,7 +121,7 @@ VkSampler VulkanSamplerCache::getSampler(SamplerParams params) noexcept {
         .unnormalizedCoordinates = VK_FALSE
     };
     VkSampler sampler;
-    VkResult error = vkCreateSampler(mContext.device, &samplerInfo, VKALLOC, &sampler);
+    VkResult error = vkCreateSampler(mDevice, &samplerInfo, VKALLOC, &sampler);
     ASSERT_POSTCONDITION(!error, "Unable to create sampler.");
     mCache.insert({params.u, sampler});
     return sampler;
@@ -129,7 +129,7 @@ VkSampler VulkanSamplerCache::getSampler(SamplerParams params) noexcept {
 
 void VulkanSamplerCache::reset() noexcept {
     for (auto pair : mCache) {
-        vkDestroySampler(mContext.device, pair.second, VKALLOC);
+        vkDestroySampler(mDevice, pair.second, VKALLOC);
     }
     mCache.clear();
 }

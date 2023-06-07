@@ -7,6 +7,16 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.38.0
+
+- engine: a new feature to set a transform on the global-scale fog  [⚠️ **Recompile materials**]
+- engine: large-scale fog can now be opted-out on a per-renderable basis
+- engine: improve froxelizer resource efficiency [⚠️ **Recompile materials**]
+- matc: better accounting and validation of used samplers in user materials
+- engine: add support for sampling fog color from a custom texture [⚠️ **Recompile materials**]
+- vulkan: introduce new custom swapchain API
+- vulkan: new context sharing API
+
 ## v1.37.0
 
 - backend: added `Platform` blob cache APIs, typically used to cache programs [⚠️ **Recompile materials**]

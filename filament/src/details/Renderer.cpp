@@ -863,7 +863,39 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // (i.e. it won't be culled, unless everything is culled), so no need to complexify things.
     pass.setVariant(variant);
     pass.appendCommands(engine, RenderPass::COLOR);
+
+    // color-grading as subpass is done either by the color pass or the TAA pass if any
+    auto colorGradingConfigForColor = colorGradingConfig;
+    colorGradingConfigForColor.asSubpass = colorGradingConfigForColor.asSubpass && !taaOptions.enabled;
+
+    if (colorGradingConfigForColor.asSubpass) {
+        // append color grading subpass after all other passes
+        pass.appendCustomCommand(3,
+                RenderPass::Pass::BLENDED,
+                RenderPass::CustomCommand::EPILOG,
+                0, [&ppm, &driver, colorGradingConfigForColor]() {
+                    ppm.colorGradingSubpass(driver, colorGradingConfigForColor);
+                });
+    } else if (colorGradingConfig.customResolve) {
+        // append custom resolve subpass after all other passes
+        pass.appendCustomCommand(3,
+                RenderPass::Pass::BLENDED,
+                RenderPass::CustomCommand::EPILOG,
+                0, [&ppm, &driver]() {
+                    ppm.customResolveSubpass(driver);
+                });
+    }
+
+    // sort commands once we're done adding commands
     pass.sortCommands(engine);
+
+
+    // this makes the viewport relative to xvp
+    // FIXME: we should use 'vp' when rendering directly into the swapchain, but that's hard to
+    //        know at this point. This will usually be the case when post-process is disabled.
+    // FIXME: we probably should take the dynamic scaling into account too
+    pass.setScissorViewport(hasPostProcess ? xvp : vp);
+
 
     FrameGraphTexture::Descriptor const desc = {
             .width = config.physicalViewport.width,
@@ -894,34 +926,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             }
     );
 
-    // color-grading as subpass is done either by the color pass or the TAA pass if any
-    auto colorGradingConfigForColor = colorGradingConfig;
-    colorGradingConfigForColor.asSubpass = colorGradingConfigForColor.asSubpass && !taaOptions.enabled;
-
-    if (colorGradingConfigForColor.asSubpass) {
-        // append color grading subpass after all other passes
-        pass.appendCustomCommand(3,
-                RenderPass::Pass::BLENDED,
-                RenderPass::CustomCommand::EPILOG,
-                0, [&ppm, &driver, colorGradingConfigForColor]() {
-                    ppm.colorGradingSubpass(driver, colorGradingConfigForColor);
-                });
-    } if (colorGradingConfig.customResolve) {
-        // append custom resolve subpass after all other passes
-        pass.appendCustomCommand(3,
-                RenderPass::Pass::BLENDED,
-                RenderPass::CustomCommand::EPILOG,
-                0, [&ppm, &driver]() {
-                    ppm.customResolveSubpass(driver);
-                });
-    }
-
-    // this makes the viewport relative to xvp
-    // FIXME: we should use 'vp' when rendering directly into the swapchain, but that's hard to
-    //        know at this point. This will usually be the case when post-process is disabled.
-    // FIXME: we probably should take the dynamic scaling into account too
-    pass.setScissorViewport(hasPostProcess ? xvp : vp);
-
     // the color pass itself + color-grading as subpass if needed
     auto colorPassOutput = RendererUtils::colorPass(fg, "Color Pass", mEngine, view,
             desc, config, colorGradingConfigForColor, pass.getExecutor());
@@ -936,7 +940,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     }
 
     if (colorGradingConfig.customResolve) {
-        // TODO: we have to "uncompress" (i.e. detonemap) the color buffer here because it's  used
+        // TODO: we have to "uncompress" (i.e. detonemap) the color buffer here because it's used
         //       by many other passes (Bloom, TAA, DoF, etc...). We could make this more
         //       efficient by using ARM_shader_framebuffer_fetch. We use a load/store (i.e.
         //       subpass) here because it's more convenient.

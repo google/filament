@@ -26,16 +26,19 @@
 namespace filament::backend {
 
 struct VulkanTexture : public HwTexture {
-
     // Standard constructor for user-facing textures.
-    VulkanTexture(VulkanContext& context, SamplerType target, uint8_t levels,
-            TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-            TextureUsage usage, VulkanStagePool& stagePool, VkComponentMapping swizzle = {});
+    VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, VulkanContext const& context,
+            VmaAllocator allocator, std::shared_ptr<VulkanCommands> commands, SamplerType target,
+            uint8_t levels, TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h,
+            uint32_t depth, TextureUsage tusage, VulkanStagePool& stagePool,
+            VkComponentMapping swizzle={});
 
     // Specialized constructor for internally created textures (e.g. from a swap chain)
     // The texture will never destroy the given VkImage, but it does manages its subresources.
-    VulkanTexture(VulkanContext& context, VkImage image, VkFormat format, uint8_t samples,
-            uint32_t w, uint32_t h, TextureUsage usage, VulkanStagePool& stagePool);
+    VulkanTexture(VkDevice device,
+        VmaAllocator allocator, std::shared_ptr<VulkanCommands> commands, VkImage image,
+        VkFormat format, uint8_t samples, uint32_t width, uint32_t height, TextureUsage tusage,
+        VulkanStagePool& stagePool);
 
     ~VulkanTexture();
 
@@ -65,8 +68,13 @@ struct VulkanTexture : public HwTexture {
 
     VulkanLayout getLayout(uint32_t layer, uint32_t level) const;
 
-    void setSidecar(VulkanTexture* sidecar) { mSidecarMSAA = sidecar; }
-    VulkanTexture* getSidecar() const { return mSidecarMSAA; }
+    void setSidecar(std::shared_ptr<VulkanTexture> sidecar) {
+        mSidecarMSAA = sidecar;
+    }
+
+    std::shared_ptr<VulkanTexture> getSidecar() const {
+        return mSidecarMSAA;
+    }
 
     void transitionLayout(VkCommandBuffer commands, const VkImageSubresourceRange& range,
             VulkanLayout newLayout);
@@ -88,7 +96,7 @@ private:
     void updateImageWithBlit(const PixelBufferDescriptor& hostData, uint32_t width, uint32_t height,
             uint32_t depth, uint32_t miplevel);
 
-    VulkanTexture* mSidecarMSAA = nullptr;
+    std::shared_ptr<VulkanTexture> mSidecarMSAA;
     const VkFormat mVkFormat;
     const VkImageViewType mViewType;
     const VkComponentMapping mSwizzle;
@@ -103,8 +111,10 @@ private:
     VkImageSubresourceRange mPrimaryViewRange;
 
     std::map<VkImageSubresourceRange, VkImageView> mCachedImageViews;
-    VulkanContext& mContext;
     VulkanStagePool& mStagePool;
+    VkDevice mDevice;
+    VmaAllocator mAllocator;
+    std::shared_ptr<VulkanCommands> mCommands;
 };
 
 } // namespace filament::backend

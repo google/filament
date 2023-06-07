@@ -415,6 +415,10 @@ public:
 
     math::float4 getMaterialGlobal(uint32_t index) const;
 
+    utils::Entity getFogEntity() const noexcept {
+        return mFogEntity;
+    }
+
 private:
 
     struct FPickingQuery : public PickingQuery {
@@ -511,6 +515,7 @@ private:
     BlendMode mBlendMode = BlendMode::OPAQUE;
     const FColorGrading* mColorGrading = nullptr;
     const FColorGrading* mDefaultColorGrading = nullptr;
+    utils::Entity mFogEntity{};
 
     PIDController mPidController;
     DynamicResolutionOptions mDynamicResolution;

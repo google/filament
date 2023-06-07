@@ -23,8 +23,9 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-VulkanBuffer::VulkanBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        VkBufferUsageFlags usage, uint32_t numBytes) : mUsage(usage) {
+VulkanBuffer::VulkanBuffer(VmaAllocator allocator, std::shared_ptr<VulkanCommands> commands,
+        VulkanStagePool& stagePool, VkBufferUsageFlags usage, uint32_t numBytes)
+    : mAllocator(allocator), mCommands(commands), mStagePool(stagePool), mUsage(usage) {
 
     // for now make sure that only 1 bit is set in usage
     // (because loadFromCpu() assumes that somewhat)
@@ -38,7 +39,7 @@ VulkanBuffer::VulkanBuffer(VulkanContext& context, VulkanStagePool& stagePool,
     };
 
     VmaAllocationCreateInfo allocInfo { .usage = VMA_MEMORY_USAGE_GPU_ONLY };
-    vmaCreateBuffer(context.allocator, &bufferInfo, &allocInfo, &mGpuBuffer, &mGpuMemory, nullptr);
+    vmaCreateBuffer(mAllocator, &bufferInfo, &allocInfo, &mGpuBuffer, &mGpuMemory, nullptr);
 }
 
 VulkanBuffer::~VulkanBuffer() {
@@ -46,23 +47,23 @@ VulkanBuffer::~VulkanBuffer() {
     assert_invariant(mGpuBuffer == VK_NULL_HANDLE);
 }
 
-void VulkanBuffer::terminate(VulkanContext& context) {
-    vmaDestroyBuffer(context.allocator, mGpuBuffer, mGpuMemory);
+void VulkanBuffer::terminate() {
+    vmaDestroyBuffer(mAllocator, mGpuBuffer, mGpuMemory);
     mGpuMemory = VK_NULL_HANDLE;
     mGpuBuffer = VK_NULL_HANDLE;
+    mCommands.reset();
 }
 
-void VulkanBuffer::loadFromCpu(VulkanContext& context, VulkanStagePool& stagePool,
-        const void* cpuData, uint32_t byteOffset, uint32_t numBytes) const {
+void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_t numBytes) const {
     assert_invariant(byteOffset == 0);
-    VulkanStage const* stage = stagePool.acquireStage(numBytes);
+    VulkanStage const* stage = mStagePool.acquireStage(numBytes);
     void* mapped;
-    vmaMapMemory(context.allocator, stage->memory, &mapped);
+    vmaMapMemory(mAllocator, stage->memory, &mapped);
     memcpy(mapped, cpuData, numBytes);
-    vmaUnmapMemory(context.allocator, stage->memory);
-    vmaFlushAllocation(context.allocator, stage->memory, byteOffset, numBytes);
+    vmaUnmapMemory(mAllocator, stage->memory);
+    vmaFlushAllocation(mAllocator, stage->memory, byteOffset, numBytes);
 
-    const VkCommandBuffer cmdbuffer = context.commands->get().cmdbuffer;
+    const VkCommandBuffer cmdbuffer = mCommands->get().cmdbuffer;
 
     VkBufferCopy region{ .size = numBytes };
     vkCmdCopyBuffer(cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);

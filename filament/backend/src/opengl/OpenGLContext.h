@@ -212,6 +212,7 @@ public:
         bool EXT_texture_sRGB;
         bool GOOGLE_cpp_style_line_directive;
         bool KHR_debug;
+        bool KHR_parallel_shader_compile;
         bool KHR_texture_compression_astc_hdr;
         bool KHR_texture_compression_astc_ldr;
         bool OES_depth_texture;

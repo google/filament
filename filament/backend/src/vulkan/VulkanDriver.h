@@ -37,21 +37,19 @@
 namespace filament::backend {
 
 class VulkanPlatform;
-class PlatformVulkan;
 struct VulkanSamplerGroup;
 
 class VulkanDriver final : public DriverBase {
 public:
-    static Driver* create(VulkanPlatform* platform,
-            const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount, const Platform::DriverConfig& driverConfig) noexcept;
+    static Driver* create(VulkanPlatform* platform, VulkanContext const& context,
+            Platform::DriverConfig const& driverConfig) noexcept;
 
 private:
 
     void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
 
-    inline VulkanDriver(PlatformVulkan* platform,
-            const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount,
-            const Platform::DriverConfig& driverConfig) noexcept;
+    inline VulkanDriver(VulkanPlatform* platform, VulkanContext const& context,
+            Platform::DriverConfig const& driverConfig) noexcept;
 
     ~VulkanDriver() noexcept override;
 
@@ -78,10 +76,6 @@ private:
     VulkanDriver& operator = (VulkanDriver const&) = delete;
 
 private:
-
-    HandleAllocatorVK mHandleAllocator;
-
-    PlatformVulkan& mPlatform;
 
     template<typename D, typename ... ARGS>
     Handle<D> initHandle(ARGS&& ... args) noexcept {
@@ -129,9 +123,9 @@ private:
     // This version of destruct takes a VulkanContext and calls a terminate(VulkanContext&)
     // on the handle before calling the dtor
     template<typename Dp, typename B>
-    void destruct(VulkanContext& context, Handle<B> handle) noexcept {
+    void destructBuffer(Handle<B> handle) noexcept {
         auto ptr = handle_cast<Dp*>(handle);
-        ptr->terminate(context);
+        ptr->terminate();
         mHandleAllocator.deallocate(handle, ptr);
     }
 
@@ -141,10 +135,23 @@ private:
     inline void setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph, PrimitiveType pt,
             uint32_t offset, uint32_t minIndex, uint32_t maxIndex, uint32_t count);
 
-    void refreshSwapChain();
     void collectGarbage();
 
+    VulkanPlatform* mPlatform = nullptr;
+    std::shared_ptr<VulkanCommands> mCommands;
+    std::unique_ptr<VulkanTimestamps> mTimestamps;
+    std::shared_ptr<VulkanTexture> mEmptyTexture;
+
+    VulkanSwapChain* mCurrentSwapChain = nullptr;
+    VulkanRenderTarget* mDefaultRenderTarget = nullptr;
+    VulkanRenderPass mCurrentRenderPass = {};
+    VmaAllocator mAllocator = VK_NULL_HANDLE;
+    VkDebugReportCallbackEXT mDebugCallback = VK_NULL_HANDLE;
+    VkDebugUtilsMessengerEXT mDebugMessenger = VK_NULL_HANDLE;
+    std::string mCurrentDebugMarker;
+
     VulkanContext mContext = {};
+    HandleAllocatorVK mHandleAllocator;
     VulkanPipelineCache mPipelineCache;
     VulkanDisposer mDisposer;
     VulkanStagePool mStagePool;

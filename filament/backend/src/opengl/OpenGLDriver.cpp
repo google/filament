@@ -1898,6 +1898,10 @@ uint8_t OpenGLDriver::getMaxDrawBuffers() {
     return std::min(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT, uint8_t(mContext.gets.max_draw_buffers));
 }
 
+size_t OpenGLDriver::getMaxUniformBufferSize() {
+    return mContext.gets.max_uniform_block_size;
+}
+
 // ------------------------------------------------------------------------------------------------
 // Swap chains
 // ------------------------------------------------------------------------------------------------
@@ -2717,7 +2721,6 @@ void OpenGLDriver::endRenderPass(int) {
 
     if (rt->gl.isDefault) {
         assert_invariant(mCurrentDrawSwapChain);
-        assert_invariant(mCurrentDrawSwapChain->swapChain);
         discardFlags &= ~mPlatform.getPreservedFlags(mCurrentDrawSwapChain->swapChain);
     }
 

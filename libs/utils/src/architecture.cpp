@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,26 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/VulkanPlatform.h>
+#include <utils/architecture.h>
 
-namespace filament::backend {
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+#   include <unistd.h>
+#elif defined(WIN32)
+#   include <windows.h>
+#endif
 
-Driver* VulkanPlatform::createDriver(void* const sharedContext,
-        const Platform::DriverConfig& driverConfig) noexcept {
-    return nullptr;
+namespace utils::arch {
+
+size_t getPageSize() noexcept {
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+    return size_t(sysconf(_SC_PAGESIZE));
+#elif defined(WIN32)
+    SYSTEM_INFO sysInfo;
+    GetSystemInfo(&sysInfo);
+    return size_t(sysInfo.dwPageSize);
+#else
+    return 4096u;
+#endif
 }
 
-VulkanPlatform::~VulkanPlatform() = default;
-
-} // namespace filament::backend
+} // namespace utils::arch

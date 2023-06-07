@@ -52,6 +52,7 @@ value_object<View::FogOptions>("View$FogOptions")
     .field("inScatteringStart", &View::FogOptions::inScatteringStart)
     .field("inScatteringSize", &View::FogOptions::inScatteringSize)
     .field("fogColorFromIbl", &View::FogOptions::fogColorFromIbl)
+    // JavaScript binding for skyColor is not yet supported, must use default value.
     .field("enabled", &View::FogOptions::enabled)
     ;
 

@@ -51,7 +51,7 @@
 #endif
 
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-    #include "vulkan/platform/PlatformVulkan.h"
+    #include "backend/platforms/VulkanPlatform.h"
 #endif
 
 #if defined (FILAMENT_SUPPORTS_METAL)
@@ -97,7 +97,7 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
     }
     if (*backend == Backend::VULKAN) {
         #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-            return new PlatformVulkan();
+            return new VulkanPlatform();
         #else
             return nullptr;
         #endif

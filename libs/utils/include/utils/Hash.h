@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <string_view>
 
 namespace utils::hash {
 

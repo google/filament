@@ -828,6 +828,17 @@ public:
     math::float4 getMaterialGlobal(uint32_t index) const;
 
     /**
+     * Get an Entity representing the large scale fog object.
+     * This entity is always inherited by the View's Scene.
+     *
+     * It is for example possible to create a TransformManager component with this
+     * Entity and apply a transformation globally on the fog.
+     *
+     * @return an Entity representing the large scale fog object.
+     */
+    utils::Entity getFogEntity() const noexcept;
+
+    /**
      * List of available ambient occlusion techniques
      * @deprecated use AmbientOcclusionOptions::enabled instead
      */
