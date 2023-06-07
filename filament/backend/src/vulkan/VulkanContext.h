@@ -188,22 +188,6 @@ public:
     inline bool isDebugUtilsSupported() const noexcept {
         return mDebugUtilsSupported;
     }
-    inline bool isPortabilitySubsetSupported() const noexcept {
-        return mPortabilitySubsetSupported;
-    }
-    inline bool isPortabilityEnumerationSupported() const noexcept {
-        return mPortabilityEnumerationSupported;
-    }
-
-    inline bool isMaintenance1Supported() const noexcept {
-        return mMaintenanceSupported[0];
-    }
-    inline bool isMaintenance2Supported() const noexcept {
-        return mMaintenanceSupported[1];
-    }
-    inline bool isMaintenance3Supported() const noexcept {
-        return mMaintenanceSupported[2];
-    }
 
 private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
@@ -211,9 +195,6 @@ private:
     VkPhysicalDeviceFeatures mPhysicalDeviceFeatures = {};
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
-    bool mPortabilitySubsetSupported = false;
-    bool mPortabilityEnumerationSupported = false;
-    bool mMaintenanceSupported[3] = {};
 
     VkFormat mDepthFormat;
 

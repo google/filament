@@ -510,12 +510,24 @@ void VulkanDriver::createSyncR(Handle<HwSync> sh, int) {
 }
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
+    if ((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0 &&
+        !isSRGBSwapChainSupported()) {
+        utils::slog.w << "sRGB swapchain requested, but Platform does not support it"
+                      << utils::io::endl;
+        flags = flags | ~(backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE);
+    }
     construct<VulkanSwapChain>(sch, mPlatform, mContext, mAllocator, mCommands, mStagePool,
             nativeWindow, flags);
 }
 
 void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
         uint32_t height, uint64_t flags) {
+    if ((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0 &&
+        !isSRGBSwapChainSupported()) {
+        utils::slog.w << "sRGB swapchain requested, but Platform does not support it"
+                      << utils::io::endl;
+        flags = flags | ~(backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE);
+    }
     assert_invariant(width > 0 && height > 0 && "Vulkan requires non-zero swap chain dimensions.");
     construct<VulkanSwapChain>(sch, mPlatform, mContext, mAllocator, mCommands, mStagePool, nullptr,
             flags, VkExtent2D{width, height});
@@ -746,8 +758,7 @@ bool VulkanDriver::isAutoDepthResolveSupported() {
 }
 
 bool VulkanDriver::isSRGBSwapChainSupported() {
-    // TODO: implement SWAP_CHAIN_CONFIG_SRGB_COLORSPACE
-    return false;
+    return mPlatform->isSRGBSwapChainSupported();
 }
 
 bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
@@ -1438,7 +1449,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     VulkanTexture* srcTexture = (VulkanTexture*) srcTarget->getColor(0).texture;
     assert_invariant(srcTexture);
     const VkFormat srcFormat = srcTexture->getVkFormat();
-    const bool swizzle = srcFormat == VK_FORMAT_B8G8R8A8_UNORM;
+    const bool swizzle = srcFormat == VK_FORMAT_B8G8R8A8_UNORM ||
+        srcFormat == VK_FORMAT_B8G8R8A8_SRGB;
 
     // Create a host visible, linearly tiled image as a staging area.
     VkImageCreateInfo imageInfo {

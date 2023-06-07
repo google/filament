@@ -652,18 +652,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // Store the extension support in the context
     context.mDebugUtilsSupported
             = instExts.find(VK_EXT_DEBUG_UTILS_EXTENSION_NAME) != instExts.end();
-    context.mPortabilityEnumerationSupported
-            = instExts.find(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) != instExts.end();
     context.mDebugMarkersSupported
             = deviceExts.find(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) != deviceExts.end();
-    context.mPortabilitySubsetSupported
-            = deviceExts.find(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) != deviceExts.end();
-    context.mMaintenanceSupported[0]
-            = deviceExts.find(VK_KHR_MAINTENANCE1_EXTENSION_NAME) != deviceExts.end();
-    context.mMaintenanceSupported[1]
-            = deviceExts.find(VK_KHR_MAINTENANCE2_EXTENSION_NAME) != deviceExts.end();
-    context.mMaintenanceSupported[2]
-            = deviceExts.find(VK_KHR_MAINTENANCE3_EXTENSION_NAME) != deviceExts.end();
 
     // Choose a depth format that meets our requirements. Take care not to include stencil formats
     // just yet, since that would require a corollary change to the "aspect" flags for the VkImage.
@@ -721,7 +711,7 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
     bool const headless = extent.width != 0 && extent.height != 0;
     if (headless) {
         VulkanPlatformHeadlessSwapChain* swapchain = new VulkanPlatformHeadlessSwapChain(
-                mImpl->mContext, mImpl->mDevice, mImpl->mGraphicsQueue, extent);
+                mImpl->mContext, mImpl->mDevice, mImpl->mGraphicsQueue, extent, flags);
         mImpl->mHeadlessSwapChains.insert(swapchain);
         return swapchain;
     }
@@ -730,7 +720,7 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
     // The VulkanPlatformSurfaceSwapChain now `owns` the surface.
     VulkanPlatformSurfaceSwapChain* swapchain = new VulkanPlatformSurfaceSwapChain(mImpl->mContext,
             mImpl->mPhysicalDevice, mImpl->mDevice, mImpl->mGraphicsQueue, mImpl->mInstance,
-            surface, fallbackExtent);
+            surface, fallbackExtent, flags);
     mImpl->mSurfaceSwapChains.insert(swapchain);
     return swapchain;
 }
