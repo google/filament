@@ -36,8 +36,7 @@ public:
             VulkanFboCache& fboCache, VulkanSamplerCache& samplerCache) noexcept;
 
     void initialize(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator,
-            std::shared_ptr<VulkanCommands> commands,
-            std::shared_ptr<VulkanTexture> emptyTexture) noexcept;
+            VulkanCommands* commands, VulkanTexture* emptyTexture) noexcept;
 
     struct BlitArgs {
         const VulkanRenderTarget* dstTarget;
@@ -51,7 +50,7 @@ public:
     void blitColor(BlitArgs args);
     void blitDepth(BlitArgs args);
 
-    void shutdown() noexcept;
+    void terminate() noexcept;
 
 private:
     void lazyInit() noexcept;
@@ -67,8 +66,8 @@ private:
     UTILS_UNUSED VkPhysicalDevice mPhysicalDevice;
     VkDevice mDevice;
     VmaAllocator mAllocator;
-    std::shared_ptr<VulkanCommands> mCommands;
-    std::shared_ptr<VulkanTexture> mEmptyTexture;
+    VulkanCommands* mCommands;
+    VulkanTexture* mEmptyTexture;
 
     VulkanStagePool& mStagePool;
     VulkanPipelineCache& mPipelineCache;

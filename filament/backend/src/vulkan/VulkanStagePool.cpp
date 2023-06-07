@@ -26,8 +26,7 @@ static constexpr uint32_t TIME_BEFORE_EVICTION = VK_MAX_COMMAND_BUFFERS;
 
 namespace filament::backend {
 
-void VulkanStagePool::initialize(VmaAllocator allocator,
-				 std::shared_ptr<VulkanCommands> commands) noexcept {
+void VulkanStagePool::initialize(VmaAllocator allocator, VulkanCommands* commands) noexcept {
     mAllocator = allocator;
     mCommands = commands;
 }
@@ -185,7 +184,7 @@ void VulkanStagePool::gc() noexcept {
     }
 }
 
-void VulkanStagePool::reset() noexcept {
+void VulkanStagePool::terminate() noexcept {
     for (auto stage : mUsedStages) {
         vmaDestroyBuffer(mAllocator, stage->buffer, stage->memory);
         delete stage;
@@ -209,8 +208,6 @@ void VulkanStagePool::reset() noexcept {
         delete image;
     }
     mFreeStages.clear();
-
-    mCommands.reset();
 }
 
 } // namespace filament::backend
