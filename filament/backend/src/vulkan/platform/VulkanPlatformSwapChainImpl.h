@@ -81,7 +81,7 @@ protected:
 struct VulkanPlatformSurfaceSwapChain : public VulkanPlatformSwapChainImpl {
     VulkanPlatformSurfaceSwapChain(VulkanContext const& context, VkPhysicalDevice physicalDevice,
             VkDevice device, VkQueue queue, VkInstance instance, VkSurfaceKHR surface,
-            VkExtent2D fallbackExtent);
+            VkExtent2D fallbackExtent, uint64_t flags);
 
     ~VulkanPlatformSurfaceSwapChain();
 
@@ -107,6 +107,7 @@ private:
     VkSwapchainKHR mSwapchain = VK_NULL_HANDLE;
     VkExtent2D const mFallbackExtent;
 
+    bool mUsesRGB = false;
     bool mSuboptimal;
 };
 
@@ -114,7 +115,7 @@ struct VulkanPlatformHeadlessSwapChain : public VulkanPlatformSwapChainImpl {
     static constexpr size_t const HEADLESS_SWAPCHAIN_SIZE = 2;
 
     VulkanPlatformHeadlessSwapChain(VulkanContext const& context, VkDevice device, VkQueue queue,
-            VkExtent2D extent);
+            VkExtent2D extent, uint64_t flags);
 
     ~VulkanPlatformHeadlessSwapChain();
 

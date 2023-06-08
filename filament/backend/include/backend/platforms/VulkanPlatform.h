@@ -111,6 +111,15 @@ public:
     // ----------------------------------------------------
 
     /**
+     * Returns whether the platform supports sRGB swapchain. This is true by default, and the client
+     * needs to override this method to specify otherwise.
+     * @return            Whether the platform supports sRGB swapchain.
+     */
+    virtual bool isSRGBSwapChainSupported() const {
+        return true;
+    }
+
+    /**
      * Get the images handles and format of the memory backing the swapchain. This should be called
      * after createSwapChain() or after recreateIfResized().
      * @param swapchain   The handle returned by createSwapChain()

@@ -9,3 +9,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 ## Release notes for next branch cut
 
 - matc: fix VSM high precision option on mobile [⚠️ **Recompile materials**]
+- vulkan: support sRGB swap chain

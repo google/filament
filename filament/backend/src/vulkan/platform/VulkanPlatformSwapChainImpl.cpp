@@ -19,6 +19,8 @@
 #include "vulkan/VulkanConstants.h"
 #include "vulkan/VulkanUtility.h"
 
+#include <backend/DriverEnums.h>
+
 using namespace bluevk;
 using namespace utils;
 
@@ -102,12 +104,13 @@ VkImage VulkanPlatformSwapChainImpl::createImage(VkExtent2D extent, VkFormat for
 
 VulkanPlatformSurfaceSwapChain::VulkanPlatformSurfaceSwapChain(VulkanContext const& context,
         VkPhysicalDevice physicalDevice, VkDevice device, VkQueue queue, VkInstance instance,
-        VkSurfaceKHR surface, VkExtent2D fallbackExtent)
+        VkSurfaceKHR surface, VkExtent2D fallbackExtent, uint64_t flags)
     : VulkanPlatformSwapChainImpl(context, device, queue),
       mInstance(instance),
       mPhysicalDevice(physicalDevice),
       mSurface(surface),
-      mFallbackExtent(fallbackExtent) {
+      mFallbackExtent(fallbackExtent),
+      mUsesRGB((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0) {
     assert_invariant(surface);
     create();
 }
@@ -141,18 +144,22 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     }
 
     // Find a suitable surface format.
-    if (surfaceFormat.format == VK_FORMAT_UNDEFINED) {
-        FixedCapacityVector<VkSurfaceFormatKHR> const surfaceFormats
-                = enumerate(vkGetPhysicalDeviceSurfaceFormatsKHR, mPhysicalDevice, mSurface);
-        surfaceFormat = surfaceFormats[0];
-        for (const VkSurfaceFormatKHR& format: surfaceFormats) {
-            if (format.format == VK_FORMAT_R8G8B8A8_UNORM
-                    || format.format == VK_FORMAT_B8G8R8A8_UNORM) {
-                surfaceFormat = format;
-                break;
-            }
+    FixedCapacityVector<VkSurfaceFormatKHR> const surfaceFormats
+            = enumerate(vkGetPhysicalDeviceSurfaceFormatsKHR, mPhysicalDevice, mSurface);
+    FixedCapacityVector<VkFormat> expectedFormats
+            = {VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8A8_UNORM};
+    if (mUsesRGB) {
+        expectedFormats = {VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB};
+    }
+    for (VkSurfaceFormatKHR const& format: surfaceFormats) {
+        if (std::any_of(expectedFormats.begin(), expectedFormats.end(),
+                    [&format](VkFormat f) { return f == format.format; })) {
+            surfaceFormat = format;
+            break;
         }
     }
+    ASSERT_POSTCONDITION(surfaceFormat.format != VK_FORMAT_UNDEFINED,
+            "Cannot find suitable swapchain format");
 
     // Verify that our chosen present mode is supported. In practice all devices support the FIFO
     // mode, but we check for it anyway for completeness.  (and to avoid validation warnings)
@@ -281,11 +288,13 @@ VkResult VulkanPlatformSurfaceSwapChain::recreate() {
 }
 
 VulkanPlatformHeadlessSwapChain::VulkanPlatformHeadlessSwapChain(VulkanContext const& context,
-        VkDevice device, VkQueue queue, VkExtent2D extent)
+        VkDevice device, VkQueue queue, VkExtent2D extent, uint64_t flags)
     : VulkanPlatformSwapChainImpl(context, device, queue),
       mCurrentIndex(0) {
     mSwapChainBundle.extent = extent;
-    mSwapChainBundle.colorFormat = VK_FORMAT_R8G8B8A8_UNORM;
+    mSwapChainBundle.colorFormat = (flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0
+                                           ? VK_FORMAT_R8G8B8A8_SRGB
+                                           : VK_FORMAT_R8G8B8A8_UNORM;
 
     auto& images = mSwapChainBundle.colors;
     images.reserve(HEADLESS_SWAPCHAIN_SIZE);
