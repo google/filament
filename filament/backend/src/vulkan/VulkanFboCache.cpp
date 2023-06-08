@@ -68,7 +68,7 @@ void VulkanFboCache::initialize(VkDevice device) noexcept { mDevice = device; }
 
 VulkanFboCache::~VulkanFboCache() {
     ASSERT_POSTCONDITION(mFramebufferCache.empty() && mRenderPassCache.empty(),
-            "Please explicitly call reset() while the VkDevice is still alive.");
+            "Please explicitly call terminate() while the VkDevice is still alive.");
 }
 
 VkFramebuffer VulkanFboCache::getFramebuffer(FboKey config) noexcept {

@@ -44,7 +44,7 @@ public:
     void gc() noexcept;
 
     // Invokes the destructor function for all disposables, regardless of reference count.
-    void reset() noexcept;
+    void terminate() noexcept;
 
 private:
     struct Disposable {

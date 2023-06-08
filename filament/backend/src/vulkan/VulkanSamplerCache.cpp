@@ -127,7 +127,7 @@ VkSampler VulkanSamplerCache::getSampler(SamplerParams params) noexcept {
     return sampler;
 }
 
-void VulkanSamplerCache::reset() noexcept {
+void VulkanSamplerCache::terminate() noexcept {
     for (auto pair : mCache) {
         vkDestroySampler(mDevice, pair.second, VKALLOC);
     }

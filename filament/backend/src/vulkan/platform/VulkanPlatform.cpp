@@ -198,7 +198,7 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
     return exts;
 }
 
-VkInstance createInstance(const ExtensionSet& requiredExts) {
+VkInstance createInstance(ExtensionSet const& requiredExts) {
     VkInstance instance;
     VkInstanceCreateInfo instanceCreateInfo = {};
     bool validationFeaturesSupported = false;
@@ -363,6 +363,13 @@ std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(VkPhysicalDevice device,
             && newDeviceExts.find(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) != newDeviceExts.end()) {
         newDeviceExts.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     }
+
+    // debugMarker must also request debugReport the instance extension. So check if that's present.
+    if (newDeviceExts.find(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) != newDeviceExts.end()
+            && newInstExts.find(VK_EXT_DEBUG_REPORT_EXTENSION_NAME) == newInstExts.end()) {
+        newDeviceExts.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+    }
+
     return std::tuple(newInstExts, newDeviceExts);
 }
 
@@ -414,12 +421,15 @@ inline int deviceTypeOrder(VkPhysicalDeviceType deviceType) {
     }
 }
 
-VkPhysicalDevice selectPhysicalDevice(VkInstance instance) {
+VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
+        VulkanPlatform::GPUPreference const& gpuPreference) {
     FixedCapacityVector<VkPhysicalDevice> const physicalDevices
             = filament::backend::enumerate(vkEnumeratePhysicalDevices, instance);
     struct DeviceInfo {
         VkPhysicalDevice device = VK_NULL_HANDLE;
         VkPhysicalDeviceType deviceType = VK_PHYSICAL_DEVICE_TYPE_OTHER;
+        int8_t index = -1;
+        std::string_view name;
     };
     FixedCapacityVector<DeviceInfo> deviceList(physicalDevices.size());
 
@@ -462,19 +472,39 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance) {
         }
         deviceList[deviceInd].device = candidateDevice;
         deviceList[deviceInd].deviceType = targetDeviceProperties.deviceType;
+        deviceList[deviceInd].index = deviceInd;
+        deviceList[deviceInd].name = targetDeviceProperties.deviceName;
     }
 
-    // Sort the found devices
-    std::sort(deviceList.begin(), deviceList.end(), [](DeviceInfo const& a, DeviceInfo const& b) {
-        if (a.device == VK_NULL_HANDLE) {
-            return true;
-        }
-        if (b.device == VK_NULL_HANDLE) {
-            return false;
-        }
-        return deviceTypeOrder(a.deviceType) <= deviceTypeOrder(b.deviceType);
-    });
+    ASSERT_PRECONDITION(gpuPreference.index < static_cast<int32_t>(deviceList.size()),
+            "Provided GPU index=%d >= the number of GPUs=%d", gpuPreference.index,
+            static_cast<int32_t>(deviceList.size()));
 
+    // Sort the found devices
+    std::sort(deviceList.begin(), deviceList.end(),
+            [pref = gpuPreference](DeviceInfo const& a, DeviceInfo const& b) {
+                if (b.device == VK_NULL_HANDLE) {
+                    return false;
+                }
+                if (a.device == VK_NULL_HANDLE) {
+                    return true;
+                }
+                if (!pref.deviceName.empty()) {
+                    if (a.name.find(pref.deviceName) != a.name.npos) {
+                        return false;
+                    }
+                    if (b.name.find(pref.deviceName) != b.name.npos) {
+                        return true;
+                    }
+                }
+                if (pref.index == a.index) {
+                    return false;
+                }
+                if (pref.index == b.index) {
+                    return true;
+                }
+                return deviceTypeOrder(a.deviceType) < deviceTypeOrder(b.deviceType);
+            });
     auto device = deviceList.back().device;
     ASSERT_POSTCONDITION(device != VK_NULL_HANDLE, "Unable to find suitable device.");
     return device;
@@ -510,6 +540,8 @@ struct VulkanPlatformPrivate {
     // store the actual swapchain struct, which is either backed-by-surface or headless.
     std::unordered_set<SwapChainPtr> mSurfaceSwapChains;
     std::unordered_set<SwapChainPtr> mHeadlessSwapChains;
+
+    bool mSharedContext = false;
 };
 
 void VulkanPlatform::terminate() {
@@ -523,8 +555,10 @@ void VulkanPlatform::terminate() {
     }
     mImpl->mSurfaceSwapChains.clear();
 
-    vkDestroyDevice(mImpl->mDevice, VKALLOC);
-    vkDestroyInstance(mImpl->mInstance, VKALLOC);
+    if (!mImpl->mSharedContext) {
+        vkDestroyDevice(mImpl->mDevice, VKALLOC);
+        vkDestroyInstance(mImpl->mInstance, VKALLOC);
+    }
 }
 
 // This is the main entry point for context creation.
@@ -552,12 +586,18 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         mImpl->mDevice = scontext->logicalDevice;
         mImpl->mGraphicsQueueFamilyIndex = scontext->graphicsQueueFamilyIndex;
         mImpl->mGraphicsQueueIndex = scontext->graphicsQueueIndex;
+
+        mImpl->mSharedContext = true;
     }
 
     VulkanContext context;
 
-    auto instExts = getInstanceExtensions();
-    instExts.merge(getRequiredInstanceExtensions());
+    ExtensionSet instExts;
+    // If using a shared context, we do not assume any extensions.
+    if (!mImpl->mSharedContext) {
+        instExts = getInstanceExtensions();
+        instExts.merge(getRequiredInstanceExtensions());
+    }
 
     mImpl->mInstance
             = mImpl->mInstance == VK_NULL_HANDLE ? createInstance(instExts) : mImpl->mInstance;
@@ -565,8 +605,13 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
 
     bluevk::bindInstance(mImpl->mInstance);
 
+    VulkanPlatform::GPUPreference const pref = getPreferredGPU();
+    bool const hasGPUPreference = pref.index >= 0 || !pref.deviceName.empty();
+    ASSERT_PRECONDITION(!(hasGPUPreference && sharedContext),
+            "Cannot both share context and indicate GPU preference");
+
     mImpl->mPhysicalDevice = mImpl->mPhysicalDevice == VK_NULL_HANDLE
-                                     ? selectPhysicalDevice(mImpl->mInstance)
+                                     ? selectPhysicalDevice(mImpl->mInstance, pref)
                                      : mImpl->mPhysicalDevice;
     assert_invariant(mImpl->mPhysicalDevice != VK_NULL_HANDLE);
 
@@ -591,8 +636,10 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     mImpl->mGraphicsQueueIndex
             = mImpl->mGraphicsQueueIndex == INVALID_VK_INDEX ? 0 : mImpl->mGraphicsQueueIndex;
 
-    auto deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice);
-    {
+    ExtensionSet deviceExts;
+    // If using a shared context, we do not assume any extensions.
+    if (!mImpl->mSharedContext) {
+        deviceExts = getDeviceExtensions(mImpl->mPhysicalDevice);
         auto [prunedInstExts, prunedDeviceExts]
                 = pruneExtensions(mImpl->mPhysicalDevice, instExts, deviceExts);
         instExts = prunedInstExts;

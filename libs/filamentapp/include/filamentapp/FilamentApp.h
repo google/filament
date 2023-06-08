@@ -49,6 +49,11 @@ class ImGuiHelper;
 class IBL;
 class MeshAssimp;
 
+// For customizing the vulkan backend
+namespace filament::backend {
+class VulkanPlatform;
+}
+
 class FilamentApp {
 public:
     using SetupCallback = std::function<void(filament::Engine*, filament::View*, filament::Scene*)>;
@@ -244,6 +249,8 @@ private:
     float mCameraFocalLength = 28.0f;
     float mCameraNear = 0.1f;
     float mCameraFar = 100.0f;
+
+    filament::backend::VulkanPlatform* mVulkanPlatform = nullptr;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_FILAMENTAPP_H
