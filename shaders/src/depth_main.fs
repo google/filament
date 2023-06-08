@@ -1,5 +1,5 @@
 #if defined(VARIANT_HAS_VSM)
-layout(location = 0) out vec4 fragColor;
+layout(location = 0) out highp vec4 fragColor;
 #elif defined(VARIANT_HAS_PICKING)
 #   if __VERSION__ == 100
 highp vec4 outPicking;

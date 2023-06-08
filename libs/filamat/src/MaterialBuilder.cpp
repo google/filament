@@ -1006,7 +1006,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 }
 
 MaterialBuilder& MaterialBuilder::output(VariableQualifier qualifier, OutputTarget target,
-        OutputType type, const char* name, int location) noexcept {
+        Precision precision, OutputType type, const char* name, int location) noexcept {
 
     ASSERT_PRECONDITION(target != OutputTarget::DEPTH || type == OutputType::FLOAT,
             "Depth outputs must be of type FLOAT.");
@@ -1023,7 +1023,7 @@ MaterialBuilder& MaterialBuilder::output(VariableQualifier qualifier, OutputTarg
     }
 
     // Unconditionally add this output, then we'll check if we've maxed on on any particular target.
-    mOutputs.emplace_back(name, qualifier, target, type, location);
+    mOutputs.emplace_back(name, qualifier, target, precision, type, location);
 
     uint8_t colorOutputCount = 0;
     uint8_t depthOutputCount = 0;
@@ -1074,7 +1074,8 @@ error:
 
     // Add a default color output.
     if (mMaterialDomain == MaterialDomain::POST_PROCESS && mOutputs.empty()) {
-        output(VariableQualifier::OUT, OutputTarget::COLOR, OutputType::FLOAT4, "color");
+        output(VariableQualifier::OUT,
+                OutputTarget::COLOR, Precision::DEFAULT, OutputType::FLOAT4, "color");
     }
 
     // TODO: maybe check MaterialDomain::COMPUTE has outputs
