@@ -92,12 +92,11 @@ VmaAllocator createAllocator(VkInstance instance, VkPhysicalDevice physicalDevic
     return allocator;
 }
 
-std::shared_ptr<VulkanTexture> createEmptyTexture(VkDevice device, VkPhysicalDevice physicalDevice,
-        VulkanContext const& context, VmaAllocator allocator,
-        std::shared_ptr<VulkanCommands> commands, VulkanStagePool& stagePool) {
-    std::shared_ptr<VulkanTexture> emptyTexture = std::make_shared<VulkanTexture>(device,
-            physicalDevice, context, allocator, commands, SamplerType::SAMPLER_2D, 1,
-            TextureFormat::RGBA8, 1, 1, 1, 1,
+VulkanTexture* createEmptyTexture(VkDevice device, VkPhysicalDevice physicalDevice,
+        VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
+        VulkanStagePool& stagePool) {
+    VulkanTexture* emptyTexture = new VulkanTexture(device, physicalDevice, context, allocator,
+            commands, SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1, 1, 1, 1,
             TextureUsage::DEFAULT | TextureUsage::COLOR_ATTACHMENT | TextureUsage::SUBPASS_INPUT,
             stagePool);
     uint32_t black = 0;
@@ -186,22 +185,22 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
     }
 #endif
     mTimestamps = std::make_unique<VulkanTimestamps>(mPlatform->getDevice());
-    mCommands = std::make_shared<VulkanCommands>(mPlatform->getDevice(),
+    mCommands = std::make_unique<VulkanCommands>(mPlatform->getDevice(),
             mPlatform->getGraphicsQueue(), mPlatform->getGraphicsQueueFamilyIndex());
     mCommands->setObserver(&mPipelineCache);
     mPipelineCache.setDevice(mPlatform->getDevice(), mAllocator);
 
     // TOOD: move them all to be initialized by constructor
-    mStagePool.initialize(mAllocator, mCommands);
+    mStagePool.initialize(mAllocator, mCommands.get());
     mFramebufferCache.initialize(mPlatform->getDevice());
     mSamplerCache.initialize(mPlatform->getDevice());
 
-    mEmptyTexture = createEmptyTexture(mPlatform->getDevice(), mPlatform->getPhysicalDevice(),
-            mContext, mAllocator, mCommands, mStagePool);
+    mEmptyTexture.reset(createEmptyTexture(mPlatform->getDevice(), mPlatform->getPhysicalDevice(),
+            mContext, mAllocator, mCommands.get(), mStagePool));
 
     mPipelineCache.setDummyTexture(mEmptyTexture->getPrimaryImageView());
     mBlitter.initialize(mPlatform->getPhysicalDevice(), mPlatform->getDevice(), mAllocator,
-            mCommands, mEmptyTexture);
+            mCommands.get(), mEmptyTexture.get());
 }
 
 VulkanDriver::~VulkanDriver() noexcept = default;
@@ -225,20 +224,22 @@ ShaderModel VulkanDriver::getShaderModel() const noexcept {
 }
 
 void VulkanDriver::terminate() {
-    mEmptyTexture.reset();
+    // Command buffers should come first since it might have commands depending on resources that
+    // are about to be destroyed.
     mCommands.reset();
+    mEmptyTexture.reset();
     mTimestamps.reset();
 
-    mBlitter.shutdown();
+    mBlitter.terminate();
 
     // Allow the stage pool and disposer to clean up.
     mStagePool.gc();
-    mDisposer.reset();
+    mDisposer.terminate();
 
-    mStagePool.reset();
-    mPipelineCache.destroyCache();
+    mStagePool.terminate();
+    mPipelineCache.terminate();
     mFramebufferCache.reset();
-    mSamplerCache.reset();
+    mSamplerCache.terminate();
 
     vmaDestroyAllocator(mAllocator);
 
@@ -335,7 +336,7 @@ void VulkanDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
 void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
         uint32_t indexCount, BufferUsage usage) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
-    auto indexBuffer = construct<VulkanIndexBuffer>(ibh, mAllocator, mCommands, mStagePool,
+    auto indexBuffer = construct<VulkanIndexBuffer>(ibh, mAllocator, mCommands.get(), mStagePool,
             elementSize, indexCount);
     mDisposer.createDisposable(indexBuffer,
             [this, ibh]() { destructBuffer<VulkanIndexBuffer>(ibh); });
@@ -350,7 +351,7 @@ void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 
 void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage) {
-    auto bufferObject = construct<VulkanBufferObject>(boh, mAllocator, mCommands, mStagePool,
+    auto bufferObject = construct<VulkanBufferObject>(boh, mAllocator, mCommands.get(), mStagePool,
             byteCount, bindingType, usage);
     mDisposer.createDisposable(bufferObject,
             [this, boh]() { destructBuffer<VulkanBufferObject>(boh); });
@@ -374,8 +375,8 @@ void VulkanDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage) {
     auto vktexture = construct<VulkanTexture>(th, mPlatform->getDevice(),
-            mPlatform->getPhysicalDevice(), mContext, mAllocator, mCommands, target, levels, format,
-            samples, w, h, depth, usage, mStagePool);
+            mPlatform->getPhysicalDevice(), mContext, mAllocator, mCommands.get(), target, levels,
+            format, samples, w, h, depth, usage, mStagePool);
     mDisposer.createDisposable(vktexture, [this, th]() { destruct<VulkanTexture>(th); });
 }
 
@@ -386,8 +387,8 @@ void VulkanDriver::createTextureSwizzledR(Handle<HwTexture> th, SamplerType targ
     TextureSwizzle swizzleArray[] = {r, g, b, a};
     const VkComponentMapping swizzleMap = getSwizzleMap(swizzleArray);
     auto vktexture = construct<VulkanTexture>(th, mPlatform->getDevice(),
-            mPlatform->getPhysicalDevice(), mContext, mAllocator, mCommands, target, levels, format,
-            samples, w, h, depth, usage, mStagePool, swizzleMap);
+            mPlatform->getPhysicalDevice(), mContext, mAllocator, mCommands.get(), target, levels,
+            format, samples, w, h, depth, usage, mStagePool, swizzleMap);
     mDisposer.createDisposable(vktexture, [this, th]() {
         destruct<VulkanTexture>(th);
     });
@@ -441,7 +442,7 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (color[i].handle) {
             colorTargets[i] = {
-                .texture = TexturePointer(handle_cast<VulkanTexture*>(color[i].handle)),
+                .texture = handle_cast<VulkanTexture*>(color[i].handle),
                 .level = color[i].level,
                 .layer = color[i].layer,
             };
@@ -455,7 +456,7 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     VulkanAttachment depthStencil[2] = {};
     if (depth.handle) {
         depthStencil[0] = {
-            .texture = TexturePointer(handle_cast<VulkanTexture*>(depth.handle)),
+            .texture = handle_cast<VulkanTexture*>(depth.handle),
             .level = depth.level,
             .layer = depth.layer,
         };
@@ -467,7 +468,7 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     if (stencil.handle) {
         depthStencil[1] = {
-            .texture = TexturePointer(handle_cast<VulkanTexture*>(stencil.handle)),
+            .texture = handle_cast<VulkanTexture*>(stencil.handle),
             .level = stencil.level,
             .layer = stencil.layer,
         };
@@ -484,8 +485,8 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     assert_invariant(tmin.x >= width && tmin.y >= height);
 
     auto renderTarget = construct<VulkanRenderTarget>(rth, mPlatform->getDevice(),
-            mPlatform->getPhysicalDevice(), mContext, mAllocator, mCommands, width, height, samples,
-            colorTargets, depthStencil, mStagePool);
+            mPlatform->getPhysicalDevice(), mContext, mAllocator, mCommands.get(), width, height,
+            samples, colorTargets, depthStencil, mStagePool);
     mDisposer.createDisposable(renderTarget, [this, rth]() { destruct<VulkanRenderTarget>(rth); });
 }
 
@@ -516,7 +517,7 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
                       << utils::io::endl;
         flags = flags | ~(backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE);
     }
-    construct<VulkanSwapChain>(sch, mPlatform, mContext, mAllocator, mCommands, mStagePool,
+    construct<VulkanSwapChain>(sch, mPlatform, mContext, mAllocator, mCommands.get(), mStagePool,
             nativeWindow, flags);
 }
 
@@ -529,8 +530,8 @@ void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t wi
         flags = flags | ~(backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE);
     }
     assert_invariant(width > 0 && height > 0 && "Vulkan requires non-zero swap chain dimensions.");
-    construct<VulkanSwapChain>(sch, mPlatform, mContext, mAllocator, mCommands, mStagePool, nullptr,
-            flags, VkExtent2D{width, height});
+    construct<VulkanSwapChain>(sch, mPlatform, mContext, mAllocator, mCommands.get(), mStagePool,
+            nullptr, flags, VkExtent2D{width, height});
 }
 
 void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {

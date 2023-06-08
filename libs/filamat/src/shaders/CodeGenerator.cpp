@@ -363,6 +363,7 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage t
 io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage type,
         const CString& name, size_t index,
         MaterialBuilder::VariableQualifier qualifier,
+        MaterialBuilder::Precision precision,
         MaterialBuilder::OutputType outputType) const {
     if (name.empty() || type == ShaderStage::VERTEX) {
         return out;
@@ -388,16 +389,18 @@ io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage type,
         }
     }
 
+    const char* precisionString = getPrecisionQualifier(precision);
     const char* materialTypeString = getOutputTypeName(materialOutputType);
     const char* typeString = getOutputTypeName(outputType);
 
-    out << "\n#define FRAG_OUTPUT" << index << " " << name.c_str() << "\n";
-    out << "\n#define FRAG_OUTPUT_AT" << index << " output_" << name.c_str() << "\n";
-    out << "\n#define FRAG_OUTPUT_MATERIAL_TYPE" << index << " " << materialTypeString << "\n";
-    out << "\n#define FRAG_OUTPUT_TYPE" << index << " " << typeString << "\n";
-    out << "\n#define FRAG_OUTPUT_SWIZZLE" << index << " " << swizzleString << "\n";
-    out << "layout(location=" << index << ") out " << typeString <<
-        " output_" << name.c_str() << ";\n";
+    out << "\n#define FRAG_OUTPUT"               << index << " " << name.c_str();
+    out << "\n#define FRAG_OUTPUT_AT"            << index << " output_" << name.c_str();
+    out << "\n#define FRAG_OUTPUT_MATERIAL_TYPE" << index << " " << materialTypeString;
+    out << "\n#define FRAG_OUTPUT_PRECISION"     << index << " " << precisionString;
+    out << "\n#define FRAG_OUTPUT_TYPE"          << index << " " << typeString;
+    out << "\n#define FRAG_OUTPUT_SWIZZLE"       << index << " " << swizzleString;
+    out << "\nlayout(location=" << index << ") out " << precisionString << " "
+            << typeString << " output_" << name.c_str() << ";\n";
 
     return out;
 }

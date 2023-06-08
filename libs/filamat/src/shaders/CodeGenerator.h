@@ -114,6 +114,7 @@ public:
     utils::io::sstream& generateOutput(utils::io::sstream& out, ShaderStage type,
             const utils::CString& name, size_t index,
             MaterialBuilder::VariableQualifier qualifier,
+            MaterialBuilder::Precision precision,
             MaterialBuilder::OutputType outputType) const;
 
     // generate no-op shader for depth prepass

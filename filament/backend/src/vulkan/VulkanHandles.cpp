@@ -132,15 +132,15 @@ VulkanRenderTarget::VulkanRenderTarget() : HwRenderTarget(0, 0), mOffscreen(fals
 void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
     assert_invariant(!mOffscreen);
     VkExtent2D const extent = swapChain.getExtent();
-    mColor[0] = { .texture = TexturePointer(swapChain.getCurrentColor()) };
-    mDepth = { .texture = TexturePointer(swapChain.getDepth()) };
+    mColor[0] = { .texture = swapChain.getCurrentColor() };
+    mDepth = { .texture = swapChain.getDepth() };
     width = extent.width;
     height = extent.height;
 }
 
 VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice,
         VulkanContext const& context, VmaAllocator allocator,
-        std::shared_ptr<VulkanCommands> commands, uint32_t width, uint32_t height, uint8_t samples,
+        VulkanCommands* commands, uint32_t width, uint32_t height, uint8_t samples,
         VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
         VulkanAttachment depthStencil[2], VulkanStagePool& stagePool)
     : HwRenderTarget(width, height), mOffscreen(true), mSamples(samples) {
@@ -167,13 +167,13 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         if (texture && texture->samples == 1) {
             auto msTexture = texture->getSidecar();
             if (UTILS_UNLIKELY(!msTexture)) {
-                msTexture = std::make_shared<VulkanTexture>(device, physicalDevice, context,
+                msTexture = new VulkanTexture(device, physicalDevice, context,
                         allocator, commands, texture->target,
                         ((VulkanTexture const*) texture)->levels, texture->format, samples,
                         texture->width, texture->height, texture->depth, texture->usage, stagePool);
                 texture->setSidecar(msTexture);
             }
-            mMsaaAttachments[index] = {.texture = TexturePointer(msTexture)};
+            mMsaaAttachments[index] = {.texture = msTexture};
         }
         if (texture && texture->samples > 1) {
             mMsaaAttachments[index] = mColor[index];
@@ -194,9 +194,9 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
     uint8_t const msLevel = 1;
 
     // Create sidecar MSAA texture for the depth attachment if it does not already exist.
-    std::shared_ptr<VulkanTexture> msTexture = depthTexture->getSidecar();
+    VulkanTexture* msTexture = depthTexture->getSidecar();
     if (UTILS_UNLIKELY(!msTexture)) {
-        msTexture = std::make_shared<VulkanTexture>(device, physicalDevice, context, allocator,
+        msTexture = new VulkanTexture(device, physicalDevice, context, allocator,
                 commands, depthTexture->target, msLevel, depthTexture->format, samples,
                 depthTexture->width, depthTexture->height, depthTexture->depth, depthTexture->usage,
                 stagePool);
@@ -204,7 +204,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
     }
 
     mMsaaDepthAttachment = {
-        .texture = TexturePointer(msTexture),
+        .texture = msTexture,
         .level = msLevel,
         .layer = mDepth.layer,
     };
@@ -264,7 +264,7 @@ VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& 
         buffers(bufferCount, nullptr) {}
 
 VulkanBufferObject::VulkanBufferObject(VmaAllocator allocator,
-        std::shared_ptr<VulkanCommands> commands, VulkanStagePool& stagePool, uint32_t byteCount,
+        VulkanCommands* commands, VulkanStagePool& stagePool, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage)
     : HwBufferObject(byteCount),
       buffer(allocator, commands, stagePool, getBufferObjectUsage(bindingType), byteCount),

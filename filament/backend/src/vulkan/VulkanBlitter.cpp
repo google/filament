@@ -116,8 +116,7 @@ VulkanBlitter::VulkanBlitter(VulkanStagePool& stagePool, VulkanPipelineCache& pi
       mSamplerCache(samplerCache) {}
 
 void VulkanBlitter::initialize(VkPhysicalDevice physicalDevice, VkDevice device,
-        VmaAllocator allocator, std::shared_ptr<VulkanCommands> commands,
-        std::shared_ptr<VulkanTexture> emptyTexture) noexcept {
+        VmaAllocator allocator, VulkanCommands* commands, VulkanTexture* emptyTexture) noexcept {
     mPhysicalDevice = physicalDevice;
     mDevice = device;
     mAllocator = allocator;
@@ -181,7 +180,7 @@ void VulkanBlitter::blitDepth(BlitArgs args) {
             args.dstRectPair);
 }
 
-void VulkanBlitter::shutdown() noexcept {
+void VulkanBlitter::terminate() noexcept {
     if (mDevice) {
         delete mDepthResolveProgram;
         mDepthResolveProgram = nullptr;
@@ -198,9 +197,6 @@ void VulkanBlitter::shutdown() noexcept {
             mParamsBuffer = nullptr;
         }
     }
-
-    mCommands.reset();
-    mEmptyTexture.reset();
 }
 
 // If we created these shader modules in the constructor, the device might not be ready yet.

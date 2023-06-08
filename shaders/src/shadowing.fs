@@ -466,7 +466,7 @@ float evaluateShadowVSM(const highp vec2 moments, const highp float depth) {
     return chebyshevUpperBound(moments, depth, minVariance, frameUniforms.vsmLightBleedReduction);
 }
 
-float ShadowSample_VSM(const bool ELVSM, const mediump sampler2DArray shadowMap,
+float ShadowSample_VSM(const bool ELVSM, const highp sampler2DArray shadowMap,
         const highp vec4 scissorNormalized,
         const uint layer, const highp vec4 shadowPosition) {
 
@@ -548,7 +548,7 @@ float shadow(const bool DIRECTIONAL,
 
 // Shadow requiring a sampler2D sampler (VSM, DPCF and PCSS)
 float shadow(const bool DIRECTIONAL,
-        const mediump sampler2DArray shadowMap,
+        const highp sampler2DArray shadowMap,
         const int index, highp vec4 shadowPosition, highp float zLight) {
     highp vec4 scissorNormalized = shadowUniforms.shadows[index].scissorNormalized;
     uint layer = shadowUniforms.shadows[index].layer;
