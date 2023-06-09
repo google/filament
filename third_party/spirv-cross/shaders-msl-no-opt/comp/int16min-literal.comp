@@ -1,0 +1,22 @@
+#version 450
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+layout(local_size_x = 1) in;
+
+layout(set = 0, binding = 1) buffer SSBO
+{
+	float16_t a;
+};
+
+layout(set = 0, binding = 0) uniform UBO
+{
+	float16_t b;
+};
+
+void main()
+{
+	int16_t v = float16BitsToInt16(b);
+	v ^= 0x8000s;
+	a = int16BitsToFloat16(v);
+}

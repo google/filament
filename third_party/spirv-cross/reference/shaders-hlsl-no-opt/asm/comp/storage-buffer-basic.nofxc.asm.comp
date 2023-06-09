@@ -1,0 +1,32 @@
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 1u
+#endif
+static const uint _3 = SPIRV_CROSS_CONSTANT_ID_0;
+#ifndef SPIRV_CROSS_CONSTANT_ID_2
+#define SPIRV_CROSS_CONSTANT_ID_2 3u
+#endif
+static const uint _4 = SPIRV_CROSS_CONSTANT_ID_2;
+static const uint3 gl_WorkGroupSize = uint3(_3, 2u, _4);
+
+RWByteAddressBuffer _8 : register(u0);
+RWByteAddressBuffer _9 : register(u1);
+
+static uint3 gl_WorkGroupID;
+struct SPIRV_Cross_Input
+{
+    uint3 gl_WorkGroupID : SV_GroupID;
+};
+
+static uint3 _22 = gl_WorkGroupSize;
+
+void comp_main()
+{
+    _8.Store(gl_WorkGroupID.x * 4 + 0, asuint(asfloat(_9.Load(gl_WorkGroupID.x * 4 + 0)) + asfloat(_8.Load(gl_WorkGroupID.x * 4 + 0))));
+}
+
+[numthreads(SPIRV_CROSS_CONSTANT_ID_0, 2, SPIRV_CROSS_CONSTANT_ID_2)]
+void main(SPIRV_Cross_Input stage_input)
+{
+    gl_WorkGroupID = stage_input.gl_WorkGroupID;
+    comp_main();
+}

@@ -1,0 +1,47 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer SSBO
+{
+    ivec4 ints;
+    uvec4 uints;
+} _4;
+
+void main()
+{
+    ivec4 _19 = _4.ints;
+    uvec4 _20 = _4.uints;
+    _4.ints = abs(_19);
+    _4.uints = uvec4(abs(_19));
+    _4.ints = abs(ivec4(_20));
+    _4.uints = uvec4(abs(ivec4(_20)));
+    _4.ints = sign(_19);
+    _4.uints = uvec4(sign(_19));
+    _4.ints = sign(ivec4(_20));
+    _4.uints = uvec4(sign(ivec4(_20)));
+    _4.ints = findMSB(ivec4(_20));
+    _4.uints = uvec4(findMSB(ivec4(_20)));
+    _4.ints = findMSB(uvec4(_19));
+    _4.uints = uvec4(findMSB(uvec4(_19)));
+    _4.ints = min(_19, _19);
+    _4.uints = uvec4(min(_19, ivec4(_20)));
+    _4.ints = min(ivec4(_20), ivec4(_20));
+    _4.uints = uvec4(min(ivec4(_20), _19));
+    _4.ints = ivec4(min(uvec4(_19), _20));
+    _4.uints = min(uvec4(_19), _20);
+    _4.ints = ivec4(min(_20, uvec4(_19)));
+    _4.uints = min(_20, uvec4(_19));
+    _4.ints = max(_19, _19);
+    _4.uints = uvec4(max(_19, _19));
+    _4.ints = max(ivec4(_20), _19);
+    _4.uints = uvec4(max(ivec4(_20), _19));
+    _4.ints = ivec4(max(uvec4(_19), _20));
+    _4.uints = max(uvec4(_19), uvec4(_19));
+    _4.ints = ivec4(max(_20, uvec4(_19)));
+    _4.uints = max(_20, uvec4(_19));
+    _4.ints = clamp(ivec4(_20), ivec4(_20), ivec4(_20));
+    _4.uints = uvec4(clamp(ivec4(_20), ivec4(_20), ivec4(_20)));
+    _4.ints = ivec4(clamp(uvec4(_19), uvec4(_19), uvec4(_19)));
+    _4.uints = clamp(uvec4(_19), uvec4(_19), uvec4(_19));
+}
+

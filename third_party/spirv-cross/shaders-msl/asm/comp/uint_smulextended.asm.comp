@@ -1,0 +1,61 @@
+                         OpCapability Shader
+
+                         OpMemoryModel Logical GLSL450
+                         OpEntryPoint GLCompute %main "main" %gl_GlobalInvocationId
+                         OpExecutionMode %main LocalSize 1 1 1
+
+                         OpDecorate %gl_GlobalInvocationId BuiltIn GlobalInvocationId
+                         OpDecorate %ra_uint ArrayStride 4
+                         OpDecorate %struct_uint4 BufferBlock
+                         OpMemberDecorate %struct_uint4 0 Offset 0
+                         OpDecorate %input0 DescriptorSet 0
+                         OpDecorate %input0 Binding 0
+                         OpDecorate %input1 DescriptorSet 0
+                         OpDecorate %input1 Binding 1
+                         OpDecorate %output0 DescriptorSet 0
+                         OpDecorate %output0 Binding 2
+                         OpDecorate %output1 DescriptorSet 0
+                         OpDecorate %output1 Binding 3
+
+                 %uint = OpTypeInt 32 0
+             %ptr_uint = OpTypePointer Uniform %uint
+       %ptr_input_uint = OpTypePointer Input %uint
+                %uint3 = OpTypeVector %uint 3
+      %ptr_input_uint3 = OpTypePointer Input %uint3
+                 %void = OpTypeVoid
+               %voidFn = OpTypeFunction %void
+
+               %uint_0 = OpConstant %uint 0
+               %uint_1 = OpConstant %uint 1
+              %ra_uint = OpTypeRuntimeArray %uint
+                %uint4 = OpTypeVector %uint 4
+         %struct_uint4 = OpTypeStruct %ra_uint
+     %ptr_struct_uint4 = OpTypePointer Uniform %struct_uint4
+           %resulttype = OpTypeStruct %uint %uint
+%gl_GlobalInvocationId = OpVariable %ptr_input_uint3 Input
+               %input0 = OpVariable %ptr_struct_uint4 Uniform
+               %input1 = OpVariable %ptr_struct_uint4 Uniform
+
+              %output0 = OpVariable %ptr_struct_uint4 Uniform
+              %output1 = OpVariable %ptr_struct_uint4 Uniform
+
+                 %main = OpFunction %void None %voidFn
+            %mainStart = OpLabel
+            %index_ptr = OpAccessChain %ptr_input_uint %gl_GlobalInvocationId %uint_0
+                %index = OpLoad %uint %index_ptr
+              %in_ptr0 = OpAccessChain %ptr_uint %input0 %uint_0 %index
+             %invalue0 = OpLoad %uint %in_ptr0
+              %in_ptr1 = OpAccessChain %ptr_uint %input1 %uint_0 %index
+             %invalue1 = OpLoad %uint %in_ptr1
+
+             %outvalue = OpSMulExtended %resulttype %invalue0 %invalue1
+            %outvalue0 = OpCompositeExtract %uint %outvalue 0
+             %out_ptr0 = OpAccessChain %ptr_uint %output0 %uint_0 %index
+                         OpStore %out_ptr0 %outvalue0
+            %outvalue1 = OpCompositeExtract %uint %outvalue 1
+             %out_ptr1 = OpAccessChain %ptr_uint %output1 %uint_0 %index
+                         OpStore %out_ptr1 %outvalue1
+
+
+                         OpReturn
+                         OpFunctionEnd

@@ -1,0 +1,41 @@
+{
+    "entryPoints" : [
+        {
+            "name" : "main",
+            "mode" : "vert"
+        }
+    ],
+    "types" : {
+        "_8" : {
+            "name" : "gl_PerVertex",
+            "members" : [
+                {
+                    "name" : "gl_Position",
+                    "type" : "vec4"
+                },
+                {
+                    "name" : "gl_PointSize",
+                    "type" : "float"
+                }
+            ]
+        }
+    },
+    "textures" : [
+        {
+            "type" : "samplerBuffer",
+            "name" : "uSamp",
+            "set" : 0,
+            "binding" : 4
+        }
+    ],
+    "images" : [
+        {
+            "type" : "imageBuffer",
+            "name" : "uSampo",
+            "readonly" : true,
+            "set" : 0,
+            "binding" : 5,
+            "format" : "rgba32f"
+        }
+    ]
+}

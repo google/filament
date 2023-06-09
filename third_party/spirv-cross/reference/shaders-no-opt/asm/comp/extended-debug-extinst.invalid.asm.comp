@@ -1,0 +1,18 @@
+#version 430
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer _8_9
+{
+    float _m0[];
+} _9;
+
+layout(binding = 1, std430) buffer _8_10
+{
+    float _m0[];
+} _10;
+
+void main()
+{
+    _10._m0[gl_GlobalInvocationID.x] = -_9._m0[gl_GlobalInvocationID.x];
+}
+

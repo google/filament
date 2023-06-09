@@ -1,0 +1,60 @@
+; SPIR-V
+; Version: 1.4
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 24
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %2 "main" %3 %4
+               OpExecutionMode %2 LocalSize 1 1 1
+               OpDecorate %5 Block
+               OpMemberDecorate %5 0 Offset 0
+               OpMemberDecorate %5 1 Offset 16
+               OpMemberDecorate %5 2 Offset 48
+               OpMemberDecorate %5 3 Offset 64
+               OpMemberDecorate %5 4 Offset 80
+               OpMemberDecorate %5 5 Offset 96
+               OpMemberDecorate %5 6 Offset 112
+               OpDecorate %6 Block
+               OpMemberDecorate %6 0 Offset 0
+               OpMemberDecorate %6 1 Offset 4
+               OpMemberDecorate %6 2 Offset 12
+               OpMemberDecorate %6 3 Offset 16
+               OpMemberDecorate %6 4 Offset 32
+               OpMemberDecorate %6 5 Offset 48
+               OpMemberDecorate %6 6 Offset 64
+               OpDecorate %3 DescriptorSet 0
+               OpDecorate %3 Binding 0
+               OpDecorate %4 DescriptorSet 0
+               OpDecorate %4 Binding 1
+               OpDecorate %7 ArrayStride 4
+               OpDecorate %8 ArrayStride 16
+               OpMemberDecorate %9 0 Offset 4
+               OpMemberDecorate %10 0 Offset 8
+         %11 = OpTypeVoid
+         %12 = OpTypeFloat 32
+         %13 = OpTypeVector %12 2
+         %14 = OpTypeVector %12 3
+         %15 = OpTypeVector %12 4
+         %16 = OpTypeMatrix %15 4
+         %17 = OpTypeInt 32 0
+         %18 = OpConstant %17 2
+          %7 = OpTypeArray %17 %18
+          %8 = OpTypeArray %17 %18
+          %9 = OpTypeStruct %17
+         %10 = OpTypeStruct %17
+          %5 = OpTypeStruct %17 %8 %17 %9 %15 %14 %13
+         %19 = OpTypePointer StorageBuffer %5
+          %6 = OpTypeStruct %17 %7 %17 %10 %15 %14 %13
+         %20 = OpTypePointer StorageBuffer %6
+          %3 = OpVariable %20 StorageBuffer
+          %4 = OpVariable %19 StorageBuffer
+         %21 = OpTypeFunction %11
+          %2 = OpFunction %11 None %21
+          %1 = OpLabel
+         %22 = OpLoad %6 %3
+         %23 = OpCopyLogical %5 %22
+               OpStore %4 %23
+               OpReturn
+               OpFunctionEnd
+

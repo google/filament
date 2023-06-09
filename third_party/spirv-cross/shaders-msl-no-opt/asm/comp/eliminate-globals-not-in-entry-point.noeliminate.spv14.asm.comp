@@ -1,0 +1,59 @@
+; SPIR-V
+; Version: 1.5
+; Generator: Khronos Glslang Reference Front End; 10
+; Bound: 26
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               ;OpEntryPoint GLCompute %main "main" %Samp %ubo %ssbo %v %w
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 64 1 1
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %Samp "Samp"
+               OpName %UBO "UBO"
+               OpMemberName %UBO 0 "v"
+               OpName %ubo "ubo"
+               OpName %SSBO "SSBO"
+               OpMemberName %SSBO 0 "v"
+               OpName %ssbo "ssbo"
+               OpName %v "v"
+               OpName %w "w"
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+               OpDecorate %Samp DescriptorSet 0
+               OpDecorate %Samp Binding 0
+               OpMemberDecorate %UBO 0 Offset 0
+               OpDecorate %UBO Block
+               OpDecorate %ubo DescriptorSet 0
+               OpDecorate %ubo Binding 1
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpDecorate %SSBO Block
+               OpDecorate %ssbo DescriptorSet 0
+               OpDecorate %ssbo Binding 2
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+    %uint_64 = OpConstant %uint 64
+     %uint_1 = OpConstant %uint 1
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_64 %uint_1 %uint_1
+      %float = OpTypeFloat 32
+         %12 = OpTypeImage %float 2D 0 0 0 1 Unknown
+         %13 = OpTypeSampledImage %12
+%_ptr_UniformConstant_13 = OpTypePointer UniformConstant %13
+       %Samp = OpVariable %_ptr_UniformConstant_13 UniformConstant
+        %UBO = OpTypeStruct %float
+%_ptr_Uniform_UBO = OpTypePointer Uniform %UBO
+        %ubo = OpVariable %_ptr_Uniform_UBO Uniform
+       %SSBO = OpTypeStruct %float
+%_ptr_StorageBuffer_SSBO = OpTypePointer StorageBuffer %SSBO
+       %ssbo = OpVariable %_ptr_StorageBuffer_SSBO StorageBuffer
+%_ptr_Private_float = OpTypePointer Private %float
+          %v = OpVariable %_ptr_Private_float Private
+%_ptr_Workgroup_float = OpTypePointer Workgroup %float
+          %w = OpVariable %_ptr_Workgroup_float Workgroup
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd

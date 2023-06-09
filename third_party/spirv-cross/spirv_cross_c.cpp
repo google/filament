@@ -820,6 +820,43 @@ spvc_result spvc_compiler_require_extension(spvc_compiler compiler, const char *
 #endif
 }
 
+size_t spvc_compiler_get_num_required_extensions(spvc_compiler compiler) 
+{
+#if SPIRV_CROSS_C_API_GLSL
+	if (compiler->backend != SPVC_BACKEND_GLSL)
+	{
+		compiler->context->report_error("Enabled extensions can only be queried on GLSL backend.");
+		return SPVC_ERROR_INVALID_ARGUMENT;
+	}
+
+	return static_cast<CompilerGLSL *>(compiler->compiler.get())->get_required_extensions().size();
+#else
+	compiler->context->report_error("Enabled extensions can only be queried on GLSL backend.");
+	return 0;
+#endif
+}
+
+const char *spvc_compiler_get_required_extension(spvc_compiler compiler, size_t index)
+{
+#if SPIRV_CROSS_C_API_GLSL
+	if (compiler->backend != SPVC_BACKEND_GLSL)
+	{
+		compiler->context->report_error("Enabled extensions can only be queried on GLSL backend.");
+		return nullptr;
+	}
+
+	auto &exts = static_cast<CompilerGLSL *>(compiler->compiler.get())->get_required_extensions();
+	if (index < exts.size())
+		return exts[index].c_str();
+	else
+		return nullptr;
+#else
+	(void)index;
+	compiler->context->report_error("Enabled extensions can only be queried on GLSL backend.");
+	return nullptr;
+#endif
+}
+
 spvc_result spvc_compiler_flatten_buffer_block(spvc_compiler compiler, spvc_variable_id id)
 {
 #if SPIRV_CROSS_C_API_GLSL

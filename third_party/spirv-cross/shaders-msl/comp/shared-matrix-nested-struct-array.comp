@@ -1,0 +1,87 @@
+#version 450
+layout(local_size_x = 1) in;
+
+layout(std140, binding = 0) buffer block { highp uint passed; };
+struct sA
+{
+	mediump mat2x3 mA;
+};
+struct sB
+{
+	mediump mat2 mA;
+	mediump mat3x2 mB;
+	highp uvec3 mC;
+};
+struct sC
+{
+	sA mA;
+	sB mB;
+};
+struct sD
+{
+	sC mA;
+};
+struct sE
+{
+	lowp mat3x2 mA;
+	lowp mat4x3 mB;
+};
+struct sF
+{
+	sE mA;
+};
+struct sG
+{
+	sF mA;
+};
+struct sH
+{
+	bvec3 mA[2];
+};
+struct S1 {
+	sD a;
+	sG b;
+	sH c[2];
+};
+
+bool compare_float    (highp float a, highp float b)  { return abs(a - b) < 0.05; }
+bool compare_vec2     (highp vec2 a, highp vec2 b)    { return compare_float(a.x, b.x)&&compare_float(a.y, b.y); }
+bool compare_vec3     (highp vec3 a, highp vec3 b)    { return compare_float(a.x, b.x)&&compare_float(a.y, b.y)&&compare_float(a.z, b.z); }
+bool compare_mat2     (highp mat2 a, highp mat2 b)    { return compare_vec2(a[0], b[0])&&compare_vec2(a[1], b[1]); }
+bool compare_mat2x3   (highp mat2x3 a, highp mat2x3 b){ return compare_vec3(a[0], b[0])&&compare_vec3(a[1], b[1]); }
+bool compare_mat3x2   (highp mat3x2 a, highp mat3x2 b){ return compare_vec2(a[0], b[0])&&compare_vec2(a[1], b[1])&&compare_vec2(a[2], b[2]); }
+bool compare_mat4x3   (highp mat4x3 a, highp mat4x3 b){ return compare_vec3(a[0], b[0])&&compare_vec3(a[1], b[1])&&compare_vec3(a[2], b[2])&&compare_vec3(a[3], b[3]); }
+bool compare_uvec3    (highp uvec3 a, highp uvec3 b)  { return a == b; }
+bool compare_bvec3    (bvec3 a, bvec3 b)              { return a == b; }
+
+shared S1 s1;
+
+void main (void) {
+	s1.a.mA.mA.mA = mat2x3(6.0, 8.0, 8.0, 0.0, -4.0, -5.0);
+	s1.a.mA.mB.mA = mat2(9.0, -4.0, -6.0, -1.0);
+	s1.a.mA.mB.mB = mat3x2(-1.0, -2.0, 1.0, 6.0, 5.0, 7.0);
+	s1.a.mA.mB.mC = uvec3(3u, 1u, 5u);
+	s1.b.mA.mA.mA = mat3x2(8.0, 3.0, 0.0, 2.0, 1.0, 8.0);
+	s1.b.mA.mA.mB = mat4x3(0.0, 9.0, -1.0, -1.0, -7.0, 7.0, -4.0, -3.0, 1.0, -4.0, -9.0, 1.0);
+	s1.c[0].mA[0] = bvec3(true, false, false);
+	s1.c[0].mA[1] = bvec3(true, false, false);
+	s1.c[1].mA[0] = bvec3(false, false, false);
+	s1.c[1].mA[1] = bvec3(false, false, false);
+
+	barrier();
+	memoryBarrier();
+	bool allOk = true;
+	allOk = allOk && compare_mat2x3(mat2x3(6.0, 8.0, 8.0, 0.0, -4.0, -5.0), s1.a.mA.mA.mA);
+	allOk = allOk && compare_mat2(mat2(9.0, -4.0, -6.0, -1.0), s1.a.mA.mB.mA);
+	allOk = allOk && compare_mat3x2(mat3x2(-1.0, -2.0, 1.0, 6.0, 5.0, 7.0), s1.a.mA.mB.mB);
+	allOk = allOk && compare_uvec3(uvec3(3u, 1u, 5u), s1.a.mA.mB.mC);
+	allOk = allOk && compare_mat3x2(mat3x2(8.0, 3.0, 0.0, 2.0, 1.0, 8.0), s1.b.mA.mA.mA);
+	allOk = allOk && compare_mat4x3(mat4x3(0.0, 9.0, -1.0, -1.0, -7.0, 7.0, -4.0, -3.0, 1.0, -4.0, -9.0, 1.0), s1.b.mA.mA.mB);
+	allOk = allOk && compare_bvec3(bvec3(true, false, false), s1.c[0].mA[0]);
+	allOk = allOk && compare_bvec3(bvec3(true, false, false), s1.c[0].mA[1]);
+	allOk = allOk && compare_bvec3(bvec3(false, false, false), s1.c[1].mA[0]);
+	allOk = allOk && compare_bvec3(bvec3(false, false, false), s1.c[1].mA[1]);
+	if (allOk)
+		passed++;
+
+}

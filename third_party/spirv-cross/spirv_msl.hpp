@@ -1032,7 +1032,7 @@ protected:
 	void add_pragma_line(const std::string &line);
 	void add_typedef_line(const std::string &line);
 	void emit_barrier(uint32_t id_exe_scope, uint32_t id_mem_scope, uint32_t id_mem_sem);
-	void emit_array_copy(const std::string &lhs, uint32_t lhs_id, uint32_t rhs_id,
+	bool emit_array_copy(const char *expr, uint32_t lhs_id, uint32_t rhs_id,
 	                     spv::StorageClass lhs_storage, spv::StorageClass rhs_storage) override;
 	void build_implicit_builtins();
 	uint32_t build_constant_uint_array_pointer();

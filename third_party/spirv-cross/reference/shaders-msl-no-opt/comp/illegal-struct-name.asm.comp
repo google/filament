@@ -1,0 +1,29 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct Foo
+{
+    float _abs;
+};
+
+struct Foo_1
+{
+    float _abs;
+};
+
+struct SSBO
+{
+    Foo_1 foo;
+    Foo_1 foo2;
+};
+
+kernel void main0(device SSBO& _7 [[buffer(0)]])
+{
+    Foo f;
+    f._abs = _7.foo._abs;
+    int _abs = 10;
+    _7.foo2._abs = f._abs;
+}
+

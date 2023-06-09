@@ -8,7 +8,7 @@ sharedlibdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
 includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/spirv_cross
 
 Name: spirv-cross-c-shared
-Description: C API for SPIRV-Cross
+Description: C API for SPIRV-Cross (shared)
 Version: @SPIRV_CROSS_VERSION@
 
 Requires:

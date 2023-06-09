@@ -1,0 +1,17 @@
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
+RWByteAddressBuffer WriteOnly : register(u2);
+ByteAddressBuffer ReadOnly : register(t0);
+RWByteAddressBuffer ReadWrite : register(u1);
+
+void comp_main()
+{
+    WriteOnly.Store4(0, asuint(asfloat(ReadOnly.Load4(0))));
+    ReadWrite.Store4(0, asuint(asfloat(ReadWrite.Load4(0)) + 10.0f.xxxx));
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

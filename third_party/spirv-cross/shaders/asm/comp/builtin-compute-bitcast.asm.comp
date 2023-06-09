@@ -1,0 +1,50 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 6
+; Bound: 26
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %gl_WorkGroupID %gl_GlobalInvocationID
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %BUF "BUF"
+               OpMemberName %BUF 0 "values"
+               OpName %_ ""
+               OpName %gl_WorkGroupID "gl_WorkGroupID"
+               OpName %gl_GlobalInvocationID "gl_GlobalInvocationID"
+               OpDecorate %_runtimearr_int ArrayStride 4
+               OpMemberDecorate %BUF 0 Offset 0
+               OpDecorate %BUF BufferBlock
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+               OpDecorate %gl_WorkGroupID BuiltIn WorkgroupId
+               OpDecorate %gl_GlobalInvocationID BuiltIn GlobalInvocationId
+       %void = OpTypeVoid
+        %int = OpTypeInt 32 1
+%_runtimearr_int = OpTypeRuntimeArray %int
+          %3 = OpTypeFunction %void
+        %BUF = OpTypeStruct %_runtimearr_int
+%_ptr_Uniform_BUF = OpTypePointer Uniform %BUF
+          %_ = OpVariable %_ptr_Uniform_BUF Uniform
+      %int_0 = OpConstant %int 0
+     %v3int = OpTypeVector %int 3
+%_ptr_Input_v3int = OpTypePointer Input %v3int
+%gl_WorkGroupID = OpVariable %_ptr_Input_v3int Input
+     %int_1 = OpConstant %int 1
+%_ptr_Input_int = OpTypePointer Input %int
+%gl_GlobalInvocationID = OpVariable %_ptr_Input_v3int Input
+     %int_2 = OpConstant %int 2
+%_ptr_Uniform_int = OpTypePointer Uniform %int
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %18 = OpAccessChain %_ptr_Input_int %gl_WorkGroupID %int_1
+         %19 = OpLoad %int %18
+         %22 = OpAccessChain %_ptr_Input_int %gl_GlobalInvocationID %int_2
+         %23 = OpLoad %int %22
+         %25 = OpAccessChain %_ptr_Uniform_int %_ %int_0 %19
+               OpStore %25 %23
+               OpReturn
+               OpFunctionEnd

@@ -1,0 +1,26 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+struct _20
+{
+    int _m0;
+    int _m1;
+};
+
+int _28;
+
+layout(binding = 1, std430) buffer _5_6
+{
+    int _m0[10];
+} _6;
+
+layout(binding = 0, std430) buffer _7_8
+{
+    int _m0[10];
+} _8;
+
+void main()
+{
+    _6._m0[gl_GlobalInvocationID.x] = _8._m0[gl_GlobalInvocationID.x] + _20(_28, 200)._m1;
+}
+
