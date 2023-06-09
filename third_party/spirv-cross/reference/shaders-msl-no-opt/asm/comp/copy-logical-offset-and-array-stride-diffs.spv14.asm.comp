@@ -1,0 +1,54 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct _8
+{
+    char _m0_pad[4];
+    uint _m0;
+};
+
+struct _9
+{
+    char _m0_pad[8];
+    uint _m0;
+};
+
+struct _4
+{
+    uint _m0;
+    uint4 _m1[2];
+    uint _m2;
+    char _m3_pad[12];
+    _8 _m3;
+    float4 _m4;
+    float3 _m5;
+    float2 _m6;
+};
+
+struct _5
+{
+    uint _m0;
+    uint _m1[2];
+    uint _m2;
+    _9 _m3;
+    float4 _m4;
+    float3 _m5;
+    float2 _m6;
+};
+
+kernel void main0(device _5& _2 [[buffer(0)]], device _4& _3 [[buffer(1)]])
+{
+    _4 _23;
+    _23._m0 = _2._m0;
+    (thread uint&)_23._m1[0] = _2._m1[0];
+    (thread uint&)_23._m1[1] = _2._m1[1];
+    _23._m2 = _2._m2;
+    _23._m3._m0 = _2._m3._m0;
+    _23._m4 = _2._m4;
+    _23._m5 = _2._m5;
+    _23._m6 = _2._m6;
+    _3 = _23;
+}
+

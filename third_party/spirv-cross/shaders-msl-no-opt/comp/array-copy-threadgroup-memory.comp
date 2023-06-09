@@ -1,0 +1,18 @@
+#version 450
+layout(local_size_x = 8) in;
+
+shared float shared_group[8][8];
+shared float shared_group_alt[8][8];
+
+void main()
+{
+	float blob[8];
+	for (int i = 0; i < 8; i++)
+		blob[i] = float(i);
+	shared_group[gl_LocalInvocationIndex] = blob;
+
+	barrier();
+
+	float copied_blob[8] = shared_group[gl_LocalInvocationIndex ^ 1u];
+	shared_group_alt[gl_LocalInvocationIndex] = shared_group[gl_LocalInvocationIndex];
+}

@@ -1,0 +1,27 @@
+RWByteAddressBuffer _4 : register(u0);
+
+void comp_main()
+{
+    _4.Store(0, asuint(min(asfloat(_4.Load(48)), asfloat(_4.Load(96)))));
+    _4.Store2(8, asuint(min(asfloat(_4.Load2(56)), asfloat(_4.Load2(104)))));
+    _4.Store3(16, asuint(min(asfloat(_4.Load3(64)), asfloat(_4.Load3(112)))));
+    _4.Store4(32, asuint(min(asfloat(_4.Load4(80)), asfloat(_4.Load4(128)))));
+    _4.Store(0, asuint(max(asfloat(_4.Load(48)), asfloat(_4.Load(96)))));
+    _4.Store2(8, asuint(max(asfloat(_4.Load2(56)), asfloat(_4.Load2(104)))));
+    _4.Store3(16, asuint(max(asfloat(_4.Load3(64)), asfloat(_4.Load3(112)))));
+    _4.Store4(32, asuint(max(asfloat(_4.Load4(80)), asfloat(_4.Load4(128)))));
+    _4.Store(0, asuint(clamp(asfloat(_4.Load(0)), asfloat(_4.Load(48)), asfloat(_4.Load(96)))));
+    _4.Store2(8, asuint(clamp(asfloat(_4.Load2(8)), asfloat(_4.Load2(56)), asfloat(_4.Load2(104)))));
+    _4.Store3(16, asuint(clamp(asfloat(_4.Load3(16)), asfloat(_4.Load3(64)), asfloat(_4.Load3(112)))));
+    _4.Store4(32, asuint(clamp(asfloat(_4.Load4(32)), asfloat(_4.Load4(80)), asfloat(_4.Load4(128)))));
+    for (int i = 0; i < 2; i++, _4.Store(0, asuint(clamp(asfloat(_4.Load(0)), asfloat(_4.Load(56)), asfloat(_4.Load(60))))))
+    {
+        _4.Store2(8, asuint(min(asfloat(_4.Load2(56)), asfloat(_4.Load2(104)))));
+    }
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

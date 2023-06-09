@@ -1,0 +1,105 @@
+RWByteAddressBuffer _3 : register(u0);
+
+uint spvBitfieldInsert(uint Base, uint Insert, uint Offset, uint Count)
+{
+    uint Mask = Count == 32 ? 0xffffffff : (((1u << Count) - 1) << (Offset & 31));
+    return (Base & ~Mask) | ((Insert << Offset) & Mask);
+}
+
+uint2 spvBitfieldInsert(uint2 Base, uint2 Insert, uint Offset, uint Count)
+{
+    uint Mask = Count == 32 ? 0xffffffff : (((1u << Count) - 1) << (Offset & 31));
+    return (Base & ~Mask) | ((Insert << Offset) & Mask);
+}
+
+uint3 spvBitfieldInsert(uint3 Base, uint3 Insert, uint Offset, uint Count)
+{
+    uint Mask = Count == 32 ? 0xffffffff : (((1u << Count) - 1) << (Offset & 31));
+    return (Base & ~Mask) | ((Insert << Offset) & Mask);
+}
+
+uint4 spvBitfieldInsert(uint4 Base, uint4 Insert, uint Offset, uint Count)
+{
+    uint Mask = Count == 32 ? 0xffffffff : (((1u << Count) - 1) << (Offset & 31));
+    return (Base & ~Mask) | ((Insert << Offset) & Mask);
+}
+
+uint spvBitfieldUExtract(uint Base, uint Offset, uint Count)
+{
+    uint Mask = Count == 32 ? 0xffffffff : ((1 << Count) - 1);
+    return (Base >> Offset) & Mask;
+}
+
+uint2 spvBitfieldUExtract(uint2 Base, uint Offset, uint Count)
+{
+    uint Mask = Count == 32 ? 0xffffffff : ((1 << Count) - 1);
+    return (Base >> Offset) & Mask;
+}
+
+uint3 spvBitfieldUExtract(uint3 Base, uint Offset, uint Count)
+{
+    uint Mask = Count == 32 ? 0xffffffff : ((1 << Count) - 1);
+    return (Base >> Offset) & Mask;
+}
+
+uint4 spvBitfieldUExtract(uint4 Base, uint Offset, uint Count)
+{
+    uint Mask = Count == 32 ? 0xffffffff : ((1 << Count) - 1);
+    return (Base >> Offset) & Mask;
+}
+
+int spvBitfieldSExtract(int Base, int Offset, int Count)
+{
+    int Mask = Count == 32 ? -1 : ((1 << Count) - 1);
+    int Masked = (Base >> Offset) & Mask;
+    int ExtendShift = (32 - Count) & 31;
+    return (Masked << ExtendShift) >> ExtendShift;
+}
+
+int2 spvBitfieldSExtract(int2 Base, int Offset, int Count)
+{
+    int Mask = Count == 32 ? -1 : ((1 << Count) - 1);
+    int2 Masked = (Base >> Offset) & Mask;
+    int ExtendShift = (32 - Count) & 31;
+    return (Masked << ExtendShift) >> ExtendShift;
+}
+
+int3 spvBitfieldSExtract(int3 Base, int Offset, int Count)
+{
+    int Mask = Count == 32 ? -1 : ((1 << Count) - 1);
+    int3 Masked = (Base >> Offset) & Mask;
+    int ExtendShift = (32 - Count) & 31;
+    return (Masked << ExtendShift) >> ExtendShift;
+}
+
+int4 spvBitfieldSExtract(int4 Base, int Offset, int Count)
+{
+    int Mask = Count == 32 ? -1 : ((1 << Count) - 1);
+    int4 Masked = (Base >> Offset) & Mask;
+    int ExtendShift = (32 - Count) & 31;
+    return (Masked << ExtendShift) >> ExtendShift;
+}
+
+void comp_main()
+{
+    int4 _19 = int4(_3.Load4(0));
+    uint4 _20 = _3.Load4(16);
+    _3.Store4(0, uint4(countbits(_19)));
+    _3.Store4(16, uint4(countbits(_19)));
+    _3.Store4(0, uint4(int4(countbits(_20))));
+    _3.Store4(16, countbits(_20));
+    _3.Store4(0, uint4(reversebits(_19)));
+    _3.Store4(16, reversebits(_20));
+    _3.Store4(0, uint4(spvBitfieldSExtract(_19, 1, 11u)));
+    _3.Store4(16, spvBitfieldSExtract(_20, 11u, 1));
+    _3.Store4(0, uint4(spvBitfieldUExtract(_19, 1, 11u)));
+    _3.Store4(16, spvBitfieldUExtract(_20, 11u, 1));
+    _3.Store4(0, uint4(int4(spvBitfieldInsert(_19, _19.wzyx, 1, 11u))));
+    _3.Store4(16, spvBitfieldInsert(_20, _20.wzyx, 11u, 1));
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

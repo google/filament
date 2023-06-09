@@ -1,0 +1,122 @@
+;
+; The shader below is based on the following GLSL shader:
+;
+;     #version 450
+;
+;     struct Pair {
+;         int first;
+;         int second;
+;     };
+;
+;     const Pair constant_pair = { 100, 200 };
+;
+;     layout (constant_id=0) const int constantFirst = 0;
+;
+;     Pair spec_constant_pair = { constantFirst, 200 };
+;
+;     layout(set=0, binding=0, std430) buffer InputBlock {
+;         int array[10];
+;     } inputValues;
+;
+;     layout(set=0, binding=1, std430) buffer OutputBlock {
+;         int array[10];
+;     } outputValues;
+;
+;     int add_first_and_second (int value, Pair p1, Pair p2) {
+;         return value + p1.first + p2.second;
+;     }
+;
+;     void main() {
+;         uint idx = gl_GlobalInvocationID.x;
+;         outputValues.array[idx] = add_first_and_second(inputValues.array[idx], spec_constant_pair, constant_pair);
+;     }
+;
+; However, both the constant_pair and the spec_constant_pair have one of their members replaced by undefined values.
+;
+                              OpCapability Shader
+                    %std450 = OpExtInstImport "GLSL.std.450"
+                              OpMemoryModel Logical GLSL450
+                              OpEntryPoint GLCompute %main "main" %gl_GlobalInvocationID
+                              OpExecutionMode %main LocalSize 1 1 1
+                              OpDecorate %gl_GlobalInvocationID BuiltIn GlobalInvocationId
+                              OpDecorate %_arr_int_uint_10 ArrayStride 4
+                              OpMemberDecorate %OutputBlock 0 Offset 0
+                              OpDecorate %OutputBlock BufferBlock
+                              OpDecorate %outputValues DescriptorSet 0
+                              OpDecorate %outputValues Binding 1
+                              OpMemberDecorate %InputBlock 0 Offset 0
+                              OpDecorate %InputBlock BufferBlock
+                              OpDecorate %inputValues DescriptorSet 0
+                              OpDecorate %inputValues Binding 0
+                              OpDecorate %spec_constant SpecId 0
+                      %void = OpTypeVoid
+                 %void_func = OpTypeFunction %void
+                       %int = OpTypeInt 32 1
+                      %uint = OpTypeInt 32 0
+                    %v3uint = OpTypeVector %uint 3
+                     %int_0 = OpConstant %int 0
+                     %int_1 = OpConstant %int 1
+                   %int_200 = OpConstant %int 200
+                    %uint_0 = OpConstant %uint 0
+                   %uint_10 = OpConstant %uint 10
+         %_ptr_Function_int = OpTypePointer Function %int
+                      %Pair = OpTypeStruct %int %int
+        %_ptr_Function_Pair = OpTypePointer Function %Pair
+%add_pair_members_func_type = OpTypeFunction %int %_ptr_Function_int %_ptr_Function_Pair %_ptr_Function_Pair
+        %_ptr_Function_uint = OpTypePointer Function %uint
+         %_ptr_Input_v3uint = OpTypePointer Input %v3uint
+           %_ptr_Input_uint = OpTypePointer Input %uint
+          %_arr_int_uint_10 = OpTypeArray %int %uint_10
+               %OutputBlock = OpTypeStruct %_arr_int_uint_10
+  %_ptr_Uniform_OutputBlock = OpTypePointer Uniform %OutputBlock
+              %outputValues = OpVariable %_ptr_Uniform_OutputBlock Uniform
+                %InputBlock = OpTypeStruct %_arr_int_uint_10
+   %_ptr_Uniform_InputBlock = OpTypePointer Uniform %InputBlock
+               %inputValues = OpVariable %_ptr_Uniform_InputBlock Uniform
+                              ; Replaced %int_100 with an undefined int.
+                 %undef_int = OpUndef %int
+                              ; Composed a spec constant Pair with an undefined int in the second member.
+             %spec_constant = OpSpecConstant %int 0
+           %spec_const_Pair = OpSpecConstantComposite %Pair %spec_constant %undef_int
+                              ; Composed a constant Pair with the undefined int in the first member.
+                %const_Pair = OpConstantComposite %Pair %undef_int %int_200
+          %_ptr_Uniform_int = OpTypePointer Uniform %int
+     %gl_GlobalInvocationID = OpVariable %_ptr_Input_v3uint Input
+                      %main = OpFunction %void None %void_func
+                %main_label = OpLabel
+                   %param_1 = OpVariable %_ptr_Function_int Function
+                   %param_2 = OpVariable %_ptr_Function_Pair Function
+                   %param_3 = OpVariable %_ptr_Function_Pair Function
+                  %gidx_ptr = OpAccessChain %_ptr_Input_uint %gl_GlobalInvocationID %uint_0
+                      %gidx = OpLoad %uint %gidx_ptr
+           %input_value_ptr = OpAccessChain %_ptr_Uniform_int %inputValues %int_0 %gidx
+               %input_value = OpLoad %int %input_value_ptr
+                              OpStore %param_1 %input_value
+                              OpStore %param_2 %spec_const_Pair
+                              OpStore %param_3 %const_Pair
+                              ; Pass the input value as the first argument.
+                              ; Pass the specialization constant Pair as the second argument.
+                              ; Pass the constant Pair as the third argument.
+                    %retval = OpFunctionCall %int %add_pair_members %param_1 %param_2 %param_3
+          %output_value_ptr = OpAccessChain %_ptr_Uniform_int %outputValues %int_0 %gidx
+                              OpStore %output_value_ptr %retval
+                              OpReturn
+                              OpFunctionEnd
+          %add_pair_members = OpFunction %int None %add_pair_members_func_type
+                 %value_ptr = OpFunctionParameter %_ptr_Function_int
+                    %pair_1 = OpFunctionParameter %_ptr_Function_Pair
+                    %pair_2 = OpFunctionParameter %_ptr_Function_Pair
+    %add_pair_members_label = OpLabel
+                     %value = OpLoad %int %value_ptr
+                              ; Access the first struct member from the first pair.
+                              ; Access the second struct member from the second pair.
+                              ; Both should be defined according to the function call above.
+          %pair_1_first_ptr = OpAccessChain %_ptr_Function_int %pair_1 %int_0
+         %pair_2_second_ptr = OpAccessChain %_ptr_Function_int %pair_2 %int_1
+              %pair_1_first = OpLoad %int %pair_1_first_ptr
+             %pair_2_second = OpLoad %int %pair_2_second_ptr
+            %partial_result = OpIAdd %int %value %pair_1_first
+              %final_result = OpIAdd %int %partial_result %pair_2_second
+                              OpReturnValue %final_result
+                              OpFunctionEnd
+

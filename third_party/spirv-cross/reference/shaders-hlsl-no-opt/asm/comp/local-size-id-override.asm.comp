@@ -1,0 +1,37 @@
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 11u
+#endif
+static const uint _10 = SPIRV_CROSS_CONSTANT_ID_1;
+#ifndef SPIRV_CROSS_CONSTANT_ID_2
+#define SPIRV_CROSS_CONSTANT_ID_2 12u
+#endif
+static const uint _11 = SPIRV_CROSS_CONSTANT_ID_2;
+#ifndef SPIRV_CROSS_CONSTANT_ID_3
+#define SPIRV_CROSS_CONSTANT_ID_3 13u
+#endif
+static const uint _4 = SPIRV_CROSS_CONSTANT_ID_3;
+#ifndef SPIRV_CROSS_CONSTANT_ID_4
+#define SPIRV_CROSS_CONSTANT_ID_4 14u
+#endif
+static const uint _5 = SPIRV_CROSS_CONSTANT_ID_4;
+static const uint3 gl_WorkGroupSize = uint3(3u, _10, _11);
+
+RWByteAddressBuffer _8 : register(u0);
+
+static uint3 gl_GlobalInvocationID;
+struct SPIRV_Cross_Input
+{
+    uint3 gl_GlobalInvocationID : SV_DispatchThreadID;
+};
+
+void comp_main()
+{
+    _8.Store4(gl_GlobalInvocationID.x * 16 + 0, asuint(asfloat(_8.Load4(gl_GlobalInvocationID.x * 16 + 0)) + 2.0f.xxxx));
+}
+
+[numthreads(3, SPIRV_CROSS_CONSTANT_ID_1, SPIRV_CROSS_CONSTANT_ID_2)]
+void main(SPIRV_Cross_Input stage_input)
+{
+    gl_GlobalInvocationID = stage_input.gl_GlobalInvocationID;
+    comp_main();
+}

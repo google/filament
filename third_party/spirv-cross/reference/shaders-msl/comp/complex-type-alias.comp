@@ -1,0 +1,69 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct Foo0
+{
+    float a;
+};
+
+struct Foo1
+{
+    Foo0 a;
+};
+
+struct Foo2
+{
+    Foo1 a;
+    float weight;
+};
+
+struct Foo0_1
+{
+    float a;
+};
+
+struct Foo1_1
+{
+    Foo0_1 a;
+};
+
+struct Foo2_1
+{
+    Foo1_1 a;
+    float weight;
+};
+
+struct SSBO
+{
+    Foo2_1 outputs[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(8u, 8u, 1u);
+
+static inline __attribute__((always_inline))
+void Zero(thread Foo0& v)
+{
+    v.a = 0.0;
+}
+
+kernel void main0(device SSBO& _53 [[buffer(0)]], uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
+{
+    threadgroup Foo2 coeffs[64];
+    Foo2 data;
+    data.weight = 0.0;
+    Foo0 param;
+    Zero(param);
+    data.a.a = param;
+    coeffs[gl_LocalInvocationIndex] = data;
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (gl_LocalInvocationIndex == 0u)
+    {
+        _53.outputs[gl_WorkGroupID.x].a.a.a = coeffs[0].a.a.a;
+        _53.outputs[gl_WorkGroupID.x].weight = coeffs[0].weight;
+    }
+}
+

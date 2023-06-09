@@ -1,0 +1,51 @@
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 0
+#endif
+static const int A = SPIRV_CROSS_CONSTANT_ID_0;
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 1
+#endif
+static const int A_1 = SPIRV_CROSS_CONSTANT_ID_1;
+#ifndef SPIRV_CROSS_CONSTANT_ID_2
+#define SPIRV_CROSS_CONSTANT_ID_2 2
+#endif
+static const int A_2 = SPIRV_CROSS_CONSTANT_ID_2;
+#ifndef SPIRV_CROSS_CONSTANT_ID_3
+#define SPIRV_CROSS_CONSTANT_ID_3 3
+#endif
+static const int A_3 = SPIRV_CROSS_CONSTANT_ID_3;
+#ifndef SPIRV_CROSS_CONSTANT_ID_4
+#define SPIRV_CROSS_CONSTANT_ID_4 4
+#endif
+static const int A_4 = SPIRV_CROSS_CONSTANT_ID_4;
+#ifndef SPIRV_CROSS_CONSTANT_ID_5
+#define SPIRV_CROSS_CONSTANT_ID_5 5
+#endif
+static const int A_5 = SPIRV_CROSS_CONSTANT_ID_5;
+static const int A_6 = (A - A_1);
+static const int A_7 = (A_6 - A_2);
+static const int A_8 = (A_7 - A_3);
+static const int A_9 = (A_8 - A_4);
+static const int A_10 = (A_9 - A_5);
+static const int A_11 = (A_10 + A_5);
+static const uint3 gl_WorkGroupSize = uint3(1u, 1u, 1u);
+
+RWByteAddressBuffer _5 : register(u0);
+
+static uint3 gl_GlobalInvocationID;
+struct SPIRV_Cross_Input
+{
+    uint3 gl_GlobalInvocationID : SV_DispatchThreadID;
+};
+
+void comp_main()
+{
+    _5.Store(gl_GlobalInvocationID.x * 4 + 0, uint(A_11));
+}
+
+[numthreads(1, 1, 1)]
+void main(SPIRV_Cross_Input stage_input)
+{
+    gl_GlobalInvocationID = stage_input.gl_GlobalInvocationID;
+    comp_main();
+}

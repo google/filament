@@ -1,0 +1,20 @@
+RWByteAddressBuffer _5 : register(u0);
+RWByteAddressBuffer _6 : register(u1);
+
+void comp_main()
+{
+    _6.Store4(0, uint4(bool4(int(_5.Load4(16).x) < int4(_5.Load4(0)).x, int(_5.Load4(16).y) < int4(_5.Load4(0)).y, int(_5.Load4(16).z) < int4(_5.Load4(0)).z, int(_5.Load4(16).w) < int4(_5.Load4(0)).w)));
+    _6.Store4(0, uint4(bool4(int(_5.Load4(16).x) <= int4(_5.Load4(0)).x, int(_5.Load4(16).y) <= int4(_5.Load4(0)).y, int(_5.Load4(16).z) <= int4(_5.Load4(0)).z, int(_5.Load4(16).w) <= int4(_5.Load4(0)).w)));
+    _6.Store4(0, uint4(bool4(_5.Load4(16).x < uint(int4(_5.Load4(0)).x), _5.Load4(16).y < uint(int4(_5.Load4(0)).y), _5.Load4(16).z < uint(int4(_5.Load4(0)).z), _5.Load4(16).w < uint(int4(_5.Load4(0)).w))));
+    _6.Store4(0, uint4(bool4(_5.Load4(16).x <= uint(int4(_5.Load4(0)).x), _5.Load4(16).y <= uint(int4(_5.Load4(0)).y), _5.Load4(16).z <= uint(int4(_5.Load4(0)).z), _5.Load4(16).w <= uint(int4(_5.Load4(0)).w))));
+    _6.Store4(0, uint4(bool4(int(_5.Load4(16).x) > int4(_5.Load4(0)).x, int(_5.Load4(16).y) > int4(_5.Load4(0)).y, int(_5.Load4(16).z) > int4(_5.Load4(0)).z, int(_5.Load4(16).w) > int4(_5.Load4(0)).w)));
+    _6.Store4(0, uint4(bool4(int(_5.Load4(16).x) >= int4(_5.Load4(0)).x, int(_5.Load4(16).y) >= int4(_5.Load4(0)).y, int(_5.Load4(16).z) >= int4(_5.Load4(0)).z, int(_5.Load4(16).w) >= int4(_5.Load4(0)).w)));
+    _6.Store4(0, uint4(bool4(_5.Load4(16).x > uint(int4(_5.Load4(0)).x), _5.Load4(16).y > uint(int4(_5.Load4(0)).y), _5.Load4(16).z > uint(int4(_5.Load4(0)).z), _5.Load4(16).w > uint(int4(_5.Load4(0)).w))));
+    _6.Store4(0, uint4(bool4(_5.Load4(16).x >= uint(int4(_5.Load4(0)).x), _5.Load4(16).y >= uint(int4(_5.Load4(0)).y), _5.Load4(16).z >= uint(int4(_5.Load4(0)).z), _5.Load4(16).w >= uint(int4(_5.Load4(0)).w))));
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

@@ -1,0 +1,11 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+kernel void main0(texture2d<float, access::write> uImage [[texture(0)]], texture2d<float> uImageRead [[texture(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    int2 _17 = int2(gl_GlobalInvocationID.xy);
+    uImage.write(uImageRead.read(uint2(_17)), uint2(_17));
+}
+

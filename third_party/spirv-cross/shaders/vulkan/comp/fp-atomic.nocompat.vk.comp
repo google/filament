@@ -1,0 +1,18 @@
+#version 450
+#extension GL_EXT_shader_atomic_float : require
+
+shared float shared_v;
+layout(set = 0, binding = 0, r32f) uniform image2D uImage;
+
+layout(set = 0, binding = 1) buffer SSBO
+{
+	float v;
+};
+
+void main()
+{
+	float value = atomicAdd(shared_v, 2.0);
+	atomicAdd(v, value);
+	imageAtomicAdd(uImage, ivec2(gl_GlobalInvocationID.xy), value);
+	value = imageAtomicExchange(uImage, ivec2(gl_GlobalInvocationID.xy), value);
+}

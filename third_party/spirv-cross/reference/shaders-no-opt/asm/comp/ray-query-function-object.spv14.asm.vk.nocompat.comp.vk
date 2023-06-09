@@ -1,0 +1,15 @@
+#version 460
+#extension GL_EXT_ray_query : require
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+float _16;
+vec3 _17;
+
+layout(set = 0, binding = 0) uniform accelerationStructureEXT RTAS;
+
+void main()
+{
+    rayQueryEXT _19;
+    rayQueryInitializeEXT(_19, RTAS, 2u, 255u, _17, _16, _17, _16);
+}
+

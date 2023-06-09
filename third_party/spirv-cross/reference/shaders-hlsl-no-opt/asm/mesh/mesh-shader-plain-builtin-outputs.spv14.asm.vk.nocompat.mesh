@@ -1,0 +1,63 @@
+struct _12
+{
+    float _m0;
+};
+
+static uint gl_LocalInvocationIndex;
+struct SPIRV_Cross_Input
+{
+    uint gl_LocalInvocationIndex : SV_GroupIndex;
+};
+
+struct gl_MeshPerVertexEXT
+{
+    float4 B : TEXCOORD1;
+    float4 gl_Position : SV_Position;
+};
+
+struct gl_MeshPerPrimitiveEXT
+{
+    float4 C : TEXCOORD3;
+    uint gl_PrimitiveID : SV_PrimitiveID;
+    uint gl_Layer : SV_RenderTargetArrayIndex;
+    bool gl_CullPrimitiveEXT : SV_CullPrimitive;
+};
+
+groupshared float _9[64];
+
+void mesh_main(inout gl_MeshPerVertexEXT gl_MeshVerticesEXT[24], _12 _11, inout uint3 gl_PrimitiveTriangleIndicesEXT[8], inout gl_MeshPerPrimitiveEXT gl_MeshPrimitivesEXT[8])
+{
+    _9[gl_LocalInvocationIndex] = float(gl_LocalInvocationIndex);
+    GroupMemoryBarrierWithGroupSync();
+    SetMeshOutputCounts(24u, 8u);
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position.x = _9[gl_LocalInvocationIndex];
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position.y = _9[gl_LocalInvocationIndex];
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position.z = _9[gl_LocalInvocationIndex];
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position.w = _9[gl_LocalInvocationIndex];
+    float _63 = _11._m0 + _9[gl_LocalInvocationIndex ^ 1u];
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].B.x = _63;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].B.y = _63;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].B.z = _63;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].B.w = _63;
+    if (gl_LocalInvocationIndex < 8u)
+    {
+        uint _71 = gl_LocalInvocationIndex * 3u;
+        gl_PrimitiveTriangleIndicesEXT[gl_LocalInvocationIndex] = uint3(_71, _71 + 1u, _71 + 2u);
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_CullPrimitiveEXT = (gl_LocalInvocationIndex & 1u) != 0u;
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_PrimitiveID = int(gl_LocalInvocationIndex);
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_Layer = int(gl_LocalInvocationIndex);
+        uint _81 = gl_LocalInvocationIndex ^ 2u;
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].C.x = _9[_81];
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].C.y = _9[_81];
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].C.z = _9[_81];
+        gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].C.w = _9[_81];
+    }
+}
+
+[outputtopology("triangle")]
+[numthreads(2, 3, 4)]
+void main(SPIRV_Cross_Input stage_input, out vertices gl_MeshPerVertexEXT gl_MeshVerticesEXT[24], in payload _12 _11, out indices uint3 gl_PrimitiveTriangleIndicesEXT[8], out primitives gl_MeshPerPrimitiveEXT gl_MeshPrimitivesEXT[8])
+{
+    gl_LocalInvocationIndex = stage_input.gl_LocalInvocationIndex;
+    mesh_main(gl_MeshVerticesEXT, _11, gl_PrimitiveTriangleIndicesEXT, gl_MeshPrimitivesEXT);
+}

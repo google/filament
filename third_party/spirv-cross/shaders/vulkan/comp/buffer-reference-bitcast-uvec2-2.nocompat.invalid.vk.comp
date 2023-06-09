@@ -1,0 +1,19 @@
+#version 450
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference_uvec2 : require
+
+layout(buffer_reference) buffer PtrInt
+{
+	int value;
+};
+
+layout(set = 0, binding = 0) buffer Buf
+{
+	uvec2 ptr;
+	PtrInt ptrint;
+};
+
+void main()
+{
+	ptr = uvec2(ptrint);
+}
