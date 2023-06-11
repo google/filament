@@ -151,7 +151,7 @@ enum VertexAttribute : uint8_t {
 };
 
 static constexpr size_t MAX_LEGACY_MORPH_TARGETS = 4;
-static constexpr size_t MAX_MORPH_TARGETS = 256; // this is limited by filament::CONFIG_MAX_MORPH_TARGET_COUNT
+static constexpr size_t MAX_MORPH_TARGETS = 2 * 256; // this is limited by filament::CONFIG_MAX_MORPH_TARGET_COUNT
 static constexpr size_t MAX_CUSTOM_ATTRIBUTES = 8;
 
 /**

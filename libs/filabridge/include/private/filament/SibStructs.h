@@ -36,10 +36,13 @@ struct PerViewSib {
 };
 
 struct PerRenderPrimitiveMorphingSib {
-    static constexpr size_t POSITIONS      = 0;
-    static constexpr size_t TANGENTS       = 1;
+    static constexpr size_t POSITIONS_1      = 0;
+    static constexpr size_t TANGENTS_1       = 1;
 
-    static constexpr size_t SAMPLER_COUNT  = 2;
+    static constexpr size_t POSITIONS_2      = 2;
+    static constexpr size_t TANGENTS_2       = 3;
+
+    static constexpr size_t SAMPLER_COUNT  = 4;
 };
 
 } // namespace filament

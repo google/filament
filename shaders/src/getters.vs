@@ -84,8 +84,16 @@ void morphPosition(inout vec4 p) {
     for (int i = 0; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];
         if (w != 0.0) {
-            texcoord.z = i;
-            p += w * texelFetch(morphTargetBuffer_positions, texcoord, 0);
+            texcoord.z = i % 256;
+            
+            if (i < 256)
+            {
+                p += w * texelFetch(morphTargetBuffer_positions_1, texcoord, 0);
+            }
+            else
+            {
+                p += w * texelFetch(morphTargetBuffer_positions_2, texcoord, 0);
+            }
         }
     }
 }
@@ -97,8 +105,19 @@ void morphNormal(inout vec3 n) {
     for (int i = 0; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];
         if (w != 0.0) {
-            texcoord.z = i;
-            ivec4 tangent = texelFetch(morphTargetBuffer_tangents, texcoord, 0);
+            texcoord.z = i % 256;
+            
+            ivec4 tangent;
+            
+            if (i < 256)
+            {
+                tangent = texelFetch(morphTargetBuffer_tangents_1, texcoord, 0);
+            }
+            else
+            {
+                tangent = texelFetch(morphTargetBuffer_tangents_2, texcoord, 0);
+            }
+            
             vec3 normal;
             toTangentFrame(float4(tangent) * (1.0 / 32767.0), normal);
             n += w * (normal - baseNormal);

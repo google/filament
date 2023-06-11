@@ -110,25 +110,41 @@ FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
     FEngine::DriverApi& driver = engine.getDriverApi();
 
     // create buffer (here a texture) to store the morphing vertex data
-    mPbHandle = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+    mPbHandle[0] = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
             TextureFormat::RGBA32F, 1,
             getWidth(mVertexCount),
             getHeight(mVertexCount),
             mCount,
             TextureUsage::DEFAULT);
 
-    mTbHandle = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+    mTbHandle[0] = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
             TextureFormat::RGBA16I, 1,
             getWidth(mVertexCount),
             getHeight(mVertexCount),
             mCount,
             TextureUsage::DEFAULT);
+              
+   mPbHandle[1] = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+           TextureFormat::RGBA32F, 1,
+           getWidth(mVertexCount),
+           getHeight(mVertexCount),
+           mCount,
+           TextureUsage::DEFAULT);
+
+   mTbHandle[1] = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+                      TextureFormat::RGBA16I, 1,
+                      getWidth(mVertexCount),
+                      getHeight(mVertexCount),
+                      mCount,
+                      TextureUsage::DEFAULT);
 
     // create and update sampler group
     mSbHandle = driver.createSamplerGroup(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
     SamplerGroup samplerGroup(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
-    samplerGroup.setSampler(PerRenderPrimitiveMorphingSib::POSITIONS, { mPbHandle, {}});
-    samplerGroup.setSampler(PerRenderPrimitiveMorphingSib::TANGENTS, { mTbHandle, {}});
+    samplerGroup.setSampler(PerRenderPrimitiveMorphingSib::POSITIONS_1, { mPbHandle[0], {}});
+    samplerGroup.setSampler(PerRenderPrimitiveMorphingSib::TANGENTS_1, { mTbHandle[0], {}});
+    samplerGroup.setSampler(PerRenderPrimitiveMorphingSib::POSITIONS_2, { mPbHandle[1], {}});
+    samplerGroup.setSampler(PerRenderPrimitiveMorphingSib::TANGENTS_2, { mTbHandle[1], {}});
     driver.updateSamplerGroup(mSbHandle, samplerGroup.toBufferDescriptor(driver));
 }
 
@@ -138,10 +154,12 @@ void FMorphTargetBuffer::terminate(FEngine& engine) {
         driver.destroySamplerGroup(mSbHandle);
     }
     if (UTILS_LIKELY(mTbHandle)) {
-        driver.destroyTexture(mTbHandle);
+        driver.destroyTexture(mTbHandle[0]);
+        driver.destroyTexture(mTbHandle[1]);
     }
     if (UTILS_LIKELY(mPbHandle)) {
-        driver.destroyTexture(mPbHandle);
+        driver.destroyTexture(mPbHandle[0]);
+        driver.destroyTexture(mPbHandle[1]);
     }
 }
 
@@ -159,14 +177,14 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
 
     // We could use a pool instead of malloc() directly.
     auto* out = (float4*) malloc(size);
-    std::transform(positions, positions + count, out,
-            [](const float3& p) { return float4(p, 1.0f); });
-
+    std::transform(positions , positions + count, out,
+                       [](const float3& p) { return float4(p, 1.0f); });
+        
     FEngine::DriverApi& driver = engine.getDriverApi();
-    updateDataAt(driver, mPbHandle,
-            Texture::Format::RGBA, Texture::Type::FLOAT,
-            (char const*)out, sizeof(float4), targetIndex,
-            count, offset);
+        updateDataAt(driver, mPbHandle[targetIndex / 256],
+                     Texture::Format::RGBA, Texture::Type::FLOAT,
+                     (char const*)out, sizeof(float4), targetIndex % 256,
+                     count, offset);
 }
 
 void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
@@ -184,12 +202,12 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t targetIndex,
     // We could use a pool instead of malloc() directly.
     auto* out = (float4*) malloc(size);
     memcpy(out, positions, sizeof(math::float4) * count);
-
+    
     FEngine::DriverApi& driver = engine.getDriverApi();
-    updateDataAt(driver, mPbHandle,
-            Texture::Format::RGBA, Texture::Type::FLOAT,
-            (char const*)out, sizeof(float4), targetIndex,
-            count, offset);
+    updateDataAt(driver, mPbHandle[targetIndex / 256],
+                     Texture::Format::RGBA, Texture::Type::FLOAT,
+                     (char const*)out, sizeof(float4), targetIndex % 256,
+                     count, offset);
 }
 
 void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t targetIndex,
@@ -207,12 +225,12 @@ void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t targetIndex,
     // We could use a pool instead of malloc() directly.
     auto* out = (short4*) malloc(size);
     memcpy(out, tangents, sizeof(short4) * count);
-
+    
     FEngine::DriverApi& driver = engine.getDriverApi();
-    updateDataAt(driver, mTbHandle,
-            Texture::Format::RGBA_INTEGER, Texture::Type::SHORT,
-            (char const*)out, sizeof(short4), targetIndex,
-            count, offset);
+    updateDataAt(driver, mTbHandle[targetIndex / 256],
+                     Texture::Format::RGBA_INTEGER, Texture::Type::SHORT,
+                     (char const*)out, sizeof(short4), targetIndex % 256,
+                     count, offset);
 }
 
 UTILS_NOINLINE
