@@ -1,0 +1,22 @@
+#version 310 es
+layout(local_size_x = 4, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) readonly buffer SSBO
+{
+    float in_data[];
+} _22;
+
+layout(binding = 1, std430) writeonly buffer SSBO2
+{
+    float out_data[];
+} _44;
+
+shared float sShared[4];
+
+void main()
+{
+    sShared[gl_LocalInvocationIndex] = _22.in_data[gl_GlobalInvocationID.x];
+    barrier();
+    _44.out_data[gl_GlobalInvocationID.x] = sShared[3u - gl_LocalInvocationIndex];
+}
+

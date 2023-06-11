@@ -1,0 +1,44 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 10
+; Bound: 25
+; Schema: 0
+               OpCapability Shader
+               OpCapability PhysicalStorageBufferAddresses
+               OpExtension "SPV_EXT_physical_storage_buffer"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel PhysicalStorageBuffer64 GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpSourceExtension "GL_EXT_buffer_reference"
+               OpName %main "main"
+               OpName %Push "Push"
+               OpMemberName %Push 0 "ptr"
+               OpName %_ ""
+               OpMemberDecorate %Push 0 Offset 0
+               OpDecorate %Push Block
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+     %v4uint = OpTypeVector %uint 4
+%_ptr_PhysicalStorageBuffer_uintPtr = OpTypePointer PhysicalStorageBuffer %v4uint
+       %Push = OpTypeStruct %_ptr_PhysicalStorageBuffer_uintPtr
+%_ptr_PushConstant_Push = OpTypePointer PushConstant %Push
+          %_ = OpVariable %_ptr_PushConstant_Push PushConstant
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_PushConstant__ptr_PhysicalStorageBuffer_uintPtr = OpTypePointer PushConstant %_ptr_PhysicalStorageBuffer_uintPtr
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+     %uint_4 = OpConstant %uint 4
+         %22 = OpConstantComposite %v4uint %uint_1 %uint_2 %uint_3 %uint_4
+%_ptr_PhysicalStorageBuffer_v4uint = OpTypePointer PhysicalStorageBuffer %v4uint
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %16 = OpAccessChain %_ptr_PushConstant__ptr_PhysicalStorageBuffer_uintPtr %_ %int_0
+         %17 = OpLoad %_ptr_PhysicalStorageBuffer_uintPtr %16
+               OpStore %17 %22 Aligned 8
+               OpReturn
+               OpFunctionEnd

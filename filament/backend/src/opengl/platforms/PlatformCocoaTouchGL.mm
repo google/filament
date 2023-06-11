@@ -165,7 +165,7 @@ void PlatformCocoaTouchGL::makeCurrent(SwapChain* drawSwapChain, SwapChain* read
         glBindFramebuffer(GL_FRAMEBUFFER, pImpl->mDefaultFramebuffer);
         GLenum const status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         ASSERT_POSTCONDITION(status == GL_FRAMEBUFFER_COMPLETE, "Incomplete framebuffer.");
-        glBindFramebuffer(GL_FRAMEBUFFER_BINDING, oldFramebuffer);
+        glBindFramebuffer(GL_FRAMEBUFFER, oldFramebuffer);
     }
 }
 

@@ -1,0 +1,14 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(64u, 1u, 1u);
+
+kernel void main0()
+{
+    int t11 = min3(0, 3, 2);
+    int t12 = max3(0, 3, 2);
+    int t13 = median3(0, 3, 2);
+}
+

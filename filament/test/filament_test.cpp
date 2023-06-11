@@ -640,7 +640,7 @@ TEST(FilamentTest, ColorConversion) {
 TEST(FilamentTest, FroxelData) {
     using namespace filament;
 
-    FEngine* engine = FEngine::create();
+    FEngine* engine = downcast(Engine::create());
 
     LinearAllocatorArena arena("FRenderer: per-frame allocator", 3 * 1024 * 1024);
     utils::ArenaScope<LinearAllocatorArena> scope(arena);
@@ -712,8 +712,8 @@ TEST(FilamentTest, FroxelData) {
         // light straddles the "light near" plane
         size_t pointCount = 0;
         for (const auto& entry : froxelBuffer) {
-            EXPECT_LE(entry.count, 1);
-            pointCount += entry.count;
+            EXPECT_LE(entry.count(), 1);
+            pointCount += entry.count();
         }
         EXPECT_GT(pointCount, 0);
     }
@@ -730,8 +730,8 @@ TEST(FilamentTest, FroxelData) {
         auto const& recordBuffer = froxelData.getRecordBufferUser();
         size_t pointCount = 0;
         for (const auto& entry : froxelBuffer) {
-            EXPECT_LE(entry.count, 1);
-            pointCount += entry.count;
+            EXPECT_LE(entry.count(), 1);
+            pointCount += entry.count();
         }
         EXPECT_GT(pointCount, 0);
     }

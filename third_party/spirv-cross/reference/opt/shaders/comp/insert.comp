@@ -1,0 +1,14 @@
+#version 310 es
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) writeonly buffer SSBO
+{
+    vec4 out_data[];
+} _27;
+
+void main()
+{
+    _27.out_data[gl_GlobalInvocationID.x] = vec4(10.0, 30.0, 70.0, 90.0);
+    _27.out_data[gl_GlobalInvocationID.x].y = 20.0;
+}
+

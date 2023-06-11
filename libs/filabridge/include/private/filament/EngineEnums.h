@@ -41,7 +41,8 @@ enum class UniformBindingPoints : uint8_t {
     LIGHTS                     = 4,    // lights data array
     SHADOW                     = 5,    // punctual shadow data
     FROXEL_RECORDS             = 6,
-    PER_MATERIAL_INSTANCE      = 7,    // uniforms updates per material
+    FROXELS                    = 7,
+    PER_MATERIAL_INSTANCE      = 8,    // uniforms updates per material
     // Update utils::Enum::count<>() below when adding values here
     // These are limited by CONFIG_BINDING_COUNT (currently 10)
 };
@@ -59,7 +60,8 @@ enum class ReservedSpecializationConstants : uint8_t {
     BACKEND_FEATURE_LEVEL = 0,
     CONFIG_MAX_INSTANCES = 1,
     CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND = 2,
-    CONFIG_SRGB_SWAPCHAIN_EMULATION = 3 // don't change (hardcoded in OpenGLDriver.cpp)
+    CONFIG_SRGB_SWAPCHAIN_EMULATION = 3, // don't change (hardcoded in OpenGLDriver.cpp)
+    CONFIG_FROXEL_BUFFER_HEIGHT = 4
 };
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
@@ -124,7 +126,7 @@ template<>
 struct utils::EnableIntegerOperators<filament::ReservedSpecializationConstants> : public std::true_type {};
 
 template<>
-inline constexpr size_t utils::Enum::count<filament::UniformBindingPoints>() { return 8; }
+inline constexpr size_t utils::Enum::count<filament::UniformBindingPoints>() { return 9; }
 template<>
 inline constexpr size_t utils::Enum::count<filament::SamplerBindingPoints>() { return 3; }
 

@@ -329,6 +329,10 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, FogOptions* out
             i = parse(tokens, i + 1, jsonChunk, &out->inScatteringSize);
         } else if (compare(tok, jsonChunk, "fogColorFromIbl") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->fogColorFromIbl);
+        } else if (compare(tok, jsonChunk, "skyColor") == 0) {
+            // JSON serialization for skyColor is not supported.
+            int unused;
+            i = parse(tokens, i + 1, jsonChunk, &unused);
         } else if (compare(tok, jsonChunk, "enabled") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
         } else {
@@ -355,6 +359,7 @@ std::ostream& operator<<(std::ostream& out, const FogOptions& in) {
         << "\"inScatteringStart\": " << (in.inScatteringStart) << ",\n"
         << "\"inScatteringSize\": " << (in.inScatteringSize) << ",\n"
         << "\"fogColorFromIbl\": " << to_string(in.fogColorFromIbl) << ",\n"
+        // JSON serialization for skyColor is not supported.
         << "\"enabled\": " << to_string(in.enabled) << "\n"
         << "}";
 }

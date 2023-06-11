@@ -25,8 +25,7 @@
 
 #include <vector>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 /*
  * A producer-consumer command queue that uses a CircularBuffer as main storage
@@ -79,7 +78,6 @@ public:
     bool isExitRequested() const;
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_PRIVATE_COMMANDBUFFERQUEUE_H

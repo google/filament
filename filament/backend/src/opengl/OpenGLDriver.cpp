@@ -968,9 +968,14 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
             break;
     }
 
-    // depth/stencil attachment must match the rendertarget sample count
-    // this is because EXT_multisampled_render_to_texture doesn't guarantee depth/stencil
-    // is resolved.
+    // depth/stencil attachments must match the rendertarget sample count
+    // because EXT_multisampled_render_to_texture[2] doesn't resolve the depth/stencil
+    // buffers:
+    // for EXT_multisampled_render_to_texture
+    //      "the contents of the multisample buffer become undefined"
+    // for EXT_multisampled_render_to_texture2
+    //      "the contents of the multisample buffer is discarded rather than resolved -
+    //       equivalent to the application calling InvalidateFramebuffer for this attachment"
     UTILS_UNUSED bool attachmentTypeNotSupportedByMSRTT = false;
     switch (attachment) {
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
@@ -1018,22 +1023,8 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
         attachmentTypeNotSupportedByMSRTT = true;
     }
 
-    // There's a bug with certain drivers preventing us from emulating
-    // EXT_multisampled_render_to_texture when the texture is a TEXTURE_2D_ARRAY, so we'll simply
-    // fall back to non-MSAA rendering for now. Also, MSRTT is never available for TEXTURE_2D_ARRAY,
-    // and since we are a 2D array, we know we're sampleable and therefore that a resolve will
-    // be needed.
-    // Note that this affects VSM shadows in particular.
-    // TODO: a better workaround would be to do the resolve by hand in that case
-    const bool disableMultisampling =
-            gl.bugs.disable_sidecar_blit_into_texture_array &&
-            rt->gl.samples > 1 && t->samples <= 1 &&
-            (target == GL_TEXTURE_2D_ARRAY ||
-             target == GL_TEXTURE_CUBE_MAP_ARRAY); // implies MSRTT is not available
-
     if (rt->gl.samples <= 1 ||
-        (rt->gl.samples > 1 && t->samples > 1 && gl.features.multisample_texture) ||
-        disableMultisampling) {
+        (rt->gl.samples > 1 && t->samples > 1 && gl.features.multisample_texture)) {
         // on GL3.2 / GLES3.1 and above multisample is handled when creating the texture.
         // If multisampled textures are not supported and we end-up here, things should
         // still work, albeit without MSAA.
@@ -1876,6 +1867,8 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
             return mContext.bugs.allow_read_only_ancillary_feedback_loop;
         case Workaround::ADRENO_UNIFORM_ARRAY_CRASH:
             return mContext.bugs.enable_initialize_non_used_uniform_array;
+        case Workaround::DISABLE_BLIT_INTO_TEXTURE_ARRAY:
+            return mContext.bugs.disable_blit_into_texture_array;
         default:
             return false;
     }
@@ -1896,6 +1889,10 @@ math::float2 OpenGLDriver::getClipSpaceParams() {
 
 uint8_t OpenGLDriver::getMaxDrawBuffers() {
     return std::min(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT, uint8_t(mContext.gets.max_draw_buffers));
+}
+
+size_t OpenGLDriver::getMaxUniformBufferSize() {
+    return mContext.gets.max_uniform_block_size;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -2603,6 +2600,15 @@ SyncStatus OpenGLDriver::getSyncStatus(Handle<HwSync> sh) {
     }
 }
 
+void OpenGLDriver::compilePrograms(CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user) {
+    // TODO: this works because currently `executeRenderPassOps` is only used for compiling
+    //       materials. If that changed, we'd have to only execute the callbacks related to
+    //       material compilation.
+    executeRenderPassOps();
+    scheduleCallback(handler, user, callback);
+}
+
 void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         const RenderPassParams& params) {
     DEBUG_MARKER()
@@ -2708,7 +2714,6 @@ void OpenGLDriver::endRenderPass(int) {
 
     if (rt->gl.isDefault) {
         assert_invariant(mCurrentDrawSwapChain);
-        assert_invariant(mCurrentDrawSwapChain->swapChain);
         discardFlags &= ~mPlatform.getPreservedFlags(mCurrentDrawSwapChain->swapChain);
     }
 

@@ -1,28 +1,33 @@
-// BLUR_TYPE and BLUR_SWIZZLE must be defined
-// BLUR_TYPE        vec2, vec3, vec4
-// BLUR_SWIZZLE     r, rg, rgb, rgba
-
 float vmax(const float v) {
     return v;
 }
 
-void tap(inout highp BLUR_TYPE sum, const float weight, const highp vec2 position) {
-    vec4 s = TEXTURE_LOD(materialParams_source, position, materialParams.level, materialParams.layer);
-    sum.BLUR_SWIZZLE += s.BLUR_SWIZZLE * weight;
+highp vec4 sourceTexLod(const highp vec2 p, float m, float l) {
+    // This condition is optimized away at compile-time.
+    if (materialConstants_arraySampler) {
+        return textureLod(materialParams_sourceArray, vec3(p, l), m);
+    } else {
+        return textureLod(materialParams_source, p, m);
+    }
 }
 
-void tapReinhard(inout highp BLUR_TYPE sum, inout float totalWeight, const float weight, const highp vec2 position) {
-    vec4 s = TEXTURE_LOD(materialParams_source, position, materialParams.level, materialParams.layer);
-    float w = weight / (1.0 + vmax(s.BLUR_SWIZZLE));
+void tap(inout highp vec4 sum, const float weight, const highp vec2 position) {
+    highp vec4 s = sourceTexLod(position, materialParams.level, materialParams.layer);
+    sum += s * weight;
+}
+
+void tapReinhard(inout highp vec4 sum, inout float totalWeight, const float weight, const highp vec2 position) {
+    highp vec4 s = sourceTexLod(position, materialParams.level, materialParams.layer);
+    float w = weight / (1.0 + vmax(s));
     totalWeight += w;
-    sum.BLUR_SWIZZLE += s.BLUR_SWIZZLE * w;
+    sum += s * w;
 }
 
 void postProcess(inout PostProcessInputs postProcess) {
     highp vec2 uv = variable_vertex.xy;
 
     // we handle the center pixel separately
-    highp BLUR_TYPE sum = BLUR_TYPE(0.0);
+    highp vec4 sum = vec4(0.0);
 
     if (materialParams.reinhard != 0) {
         float totalWeight = 0.0;
@@ -45,5 +50,17 @@ void postProcess(inout PostProcessInputs postProcess) {
             tap(sum, k, uv - o);
         }
     }
-    postProcess.color.BLUR_SWIZZLE = sum.BLUR_SWIZZLE;
+
+    // These conditions are evaluated at compile time and help the driver optimize out unnecessary
+    // computations.
+    postProcess.color = vec4(0.0);
+    if (materialConstants_componentCount == 1) {
+        postProcess.color.r = sum.r;
+    } else if (materialConstants_componentCount == 2) {
+        postProcess.color.rg = sum.rg;
+    } else if (materialConstants_componentCount == 3) {
+        postProcess.color.rgb = sum.rgb;
+    } else {
+        postProcess.color.rgba = sum.rgba;
+   }
 }

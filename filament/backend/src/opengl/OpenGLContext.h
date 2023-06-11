@@ -212,6 +212,7 @@ public:
         bool EXT_texture_sRGB;
         bool GOOGLE_cpp_style_line_directive;
         bool KHR_debug;
+        bool KHR_parallel_shader_compile;
         bool KHR_texture_compression_astc_hdr;
         bool KHR_texture_compression_astc_ldr;
         bool OES_depth_texture;
@@ -261,7 +262,7 @@ public:
 
         // Some drivers can't blit from a sidecar renderbuffer into a layer of a texture array.
         // This technique is used for VSM with MSAA turned on.
-        bool disable_sidecar_blit_into_texture_array;
+        bool disable_blit_into_texture_array;
 
         // Some drivers incorrectly flatten the early exit condition in the EASU code, in which
         // case we need an alternative algorithm
@@ -445,8 +446,8 @@ private:
             {   bugs.dont_use_timer_query,
                     "dont_use_timer_query",
                     ""},
-            {   bugs.disable_sidecar_blit_into_texture_array,
-                    "disable_sidecar_blit_into_texture_array",
+            {   bugs.disable_blit_into_texture_array,
+                    "disable_blit_into_texture_array",
                     ""},
             {   bugs.split_easu,
                     "split_easu",

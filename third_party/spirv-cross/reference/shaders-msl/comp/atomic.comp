@@ -1,0 +1,72 @@
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+struct SSBO
+{
+    uint u32;
+    int i32;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO& ssbo [[buffer(0)]])
+{
+    threadgroup uint shared_u32;
+    threadgroup int shared_i32;
+    uint _16 = atomic_fetch_add_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _18 = atomic_fetch_or_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _20 = atomic_fetch_xor_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _22 = atomic_fetch_and_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _24 = atomic_fetch_min_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _26 = atomic_fetch_max_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _28 = atomic_exchange_explicit((device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _32;
+    do
+    {
+        _32 = 10u;
+    } while (!atomic_compare_exchange_weak_explicit((device atomic_uint*)&ssbo.u32, &_32, 2u, memory_order_relaxed, memory_order_relaxed) && _32 == 10u);
+    int _36 = atomic_fetch_add_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _38 = atomic_fetch_or_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _40 = atomic_fetch_xor_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _42 = atomic_fetch_and_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _44 = atomic_fetch_min_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _46 = atomic_fetch_max_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _48 = atomic_exchange_explicit((device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _52;
+    do
+    {
+        _52 = 10;
+    } while (!atomic_compare_exchange_weak_explicit((device atomic_int*)&ssbo.i32, &_52, 2, memory_order_relaxed, memory_order_relaxed) && _52 == 10);
+    shared_u32 = 10u;
+    shared_i32 = 10;
+    uint _57 = atomic_fetch_add_explicit((threadgroup atomic_uint*)&shared_u32, 1u, memory_order_relaxed);
+    uint _58 = atomic_fetch_or_explicit((threadgroup atomic_uint*)&shared_u32, 1u, memory_order_relaxed);
+    uint _59 = atomic_fetch_xor_explicit((threadgroup atomic_uint*)&shared_u32, 1u, memory_order_relaxed);
+    uint _60 = atomic_fetch_and_explicit((threadgroup atomic_uint*)&shared_u32, 1u, memory_order_relaxed);
+    uint _61 = atomic_fetch_min_explicit((threadgroup atomic_uint*)&shared_u32, 1u, memory_order_relaxed);
+    uint _62 = atomic_fetch_max_explicit((threadgroup atomic_uint*)&shared_u32, 1u, memory_order_relaxed);
+    uint _63 = atomic_exchange_explicit((threadgroup atomic_uint*)&shared_u32, 1u, memory_order_relaxed);
+    uint _64;
+    do
+    {
+        _64 = 10u;
+    } while (!atomic_compare_exchange_weak_explicit((threadgroup atomic_uint*)&shared_u32, &_64, 2u, memory_order_relaxed, memory_order_relaxed) && _64 == 10u);
+    int _65 = atomic_fetch_add_explicit((threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
+    int _66 = atomic_fetch_or_explicit((threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
+    int _67 = atomic_fetch_xor_explicit((threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
+    int _68 = atomic_fetch_and_explicit((threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
+    int _69 = atomic_fetch_min_explicit((threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
+    int _70 = atomic_fetch_max_explicit((threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
+    int _71 = atomic_exchange_explicit((threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
+    int _72;
+    do
+    {
+        _72 = 10;
+    } while (!atomic_compare_exchange_weak_explicit((threadgroup atomic_int*)&shared_i32, &_72, 2, memory_order_relaxed, memory_order_relaxed) && _72 == 10);
+}
+

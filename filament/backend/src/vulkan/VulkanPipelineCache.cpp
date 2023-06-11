@@ -64,7 +64,7 @@ VulkanPipelineCache::getUsageFlags(uint16_t binding, ShaderStageFlags flags, Usa
     return src;
 }
 
-VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRasterState()) {
+VulkanPipelineCache::VulkanPipelineCache() : mCurrentRasterState(createDefaultRasterState()) {
     mDummyBufferWriteInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     mDummyBufferWriteInfo.pNext = nullptr;
     mDummyBufferWriteInfo.dstArrayElement = 0;
@@ -86,7 +86,7 @@ VulkanPipelineCache::VulkanPipelineCache() : mDefaultRasterState(createDefaultRa
 }
 
 VulkanPipelineCache::~VulkanPipelineCache() {
-    // This does nothing because VulkanDriver::terminate() calls destroyCache() in order to
+    // This does nothing because VulkanDriver::terminate() calls terminate() in order to
     // be explicit about teardown order of various components.
 }
 
@@ -551,7 +551,7 @@ void VulkanPipelineCache::bindProgram(const VulkanProgram& program) noexcept {
 }
 
 void VulkanPipelineCache::bindRasterState(const RasterState& rasterState) noexcept {
-    mPipelineRequirements.rasterState = rasterState;
+    mPipelineRequirements.rasterState = mCurrentRasterState = rasterState;
 }
 
 void VulkanPipelineCache::bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept {
@@ -639,7 +639,7 @@ void VulkanPipelineCache::bindInputAttachment(uint32_t bindingIndex,
     mDescriptorRequirements.inputAttachments[bindingIndex] = targetInfo;
 }
 
-void VulkanPipelineCache::destroyCache() noexcept {
+void VulkanPipelineCache::terminate() noexcept {
     // Symmetric to createLayoutsAndDescriptors.
     destroyLayoutsAndDescriptors();
     for (auto& iter : mPipelines) {

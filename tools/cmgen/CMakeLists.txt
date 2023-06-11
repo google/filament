@@ -7,14 +7,12 @@ set(TARGET cmgen)
 # Sources and headers
 # ==================================================================================================
 set(HDRS
-    src/JobQueue.h
-    src/ProgressUpdater.h
+        src/ProgressUpdater.h
 )
 
 set(SRCS
     src/cmgen.cpp
-    src/JobQueue.cpp
-    src/ProgressUpdater.cpp
+        src/ProgressUpdater.cpp
 )
 
 # ==================================================================================================

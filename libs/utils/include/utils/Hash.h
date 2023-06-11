@@ -21,8 +21,14 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <string_view>
 
 namespace utils::hash {
+
+inline size_t combine(size_t lhs, size_t rhs) noexcept {
+    std::pair<size_t, size_t> const p{ lhs, rhs };
+    return std::hash<std::string_view>{}({ (char*)&p, sizeof(p) });
+}
 
 // Hash function that takes an arbitrary swath of word-aligned data.
 inline uint32_t murmur3(const uint32_t* key, size_t wordCount, uint32_t seed) noexcept {

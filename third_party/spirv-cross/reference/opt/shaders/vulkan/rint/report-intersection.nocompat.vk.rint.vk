@@ -1,0 +1,8 @@
+#version 460
+#extension GL_NV_ray_tracing : require
+
+void main()
+{
+    bool _16 = reportIntersectionNV(0.5, 10u);
+}
+

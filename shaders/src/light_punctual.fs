@@ -46,8 +46,7 @@ uvec3 getFroxelCoords(const highp vec3 fragCoords) {
 /**
  * Computes the froxel index of the fragment at the specified coordinates.
  * The froxel index is computed from the 3D coordinates of the froxel in the
- * froxel grid and later used to fetch from the froxel data texture
- * (light_froxels).
+ * froxel grid and later used to fetch from the froxel buffer.
  */
 uint getFroxelIndex(const highp vec3 fragCoords) {
     uvec3 froxelCoord = getFroxelCoords(fragCoords);
@@ -65,15 +64,16 @@ ivec2 getFroxelTexCoord(uint froxelIndex) {
 
 /**
  * Returns the froxel data for the given froxel index. The data is fetched
- * from the light_froxels texture.
+ * from FroxelsUniforms UBO.
  */
-FroxelParams getFroxelParams(uint froxelIndex) {
-    ivec2 texCoord = getFroxelTexCoord(froxelIndex);
-    uvec2 entry = texelFetch(light_froxels, texCoord, 0).rg;
-
+FroxelParams getFroxelParams(const uint froxelIndex) {
+    uint w = froxelIndex >> 2u;
+    uint c = froxelIndex & 0x3u;
+    highp uvec4 d = froxelsUniforms.records[w];
+    highp uint f = d[c];
     FroxelParams froxel;
-    froxel.recordOffset = entry.r;
-    froxel.count = entry.g & 0xFFu;
+    froxel.recordOffset = f >> 16u;
+    froxel.count = f & 0xFFu;
     return froxel;
 }
 

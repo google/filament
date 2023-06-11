@@ -30,6 +30,7 @@ public:
     static BufferInterfaceBlock const& getPerRenderableBonesUib() noexcept;
     static BufferInterfaceBlock const& getPerRenderableMorphingUib() noexcept;
     static BufferInterfaceBlock const& getFroxelRecordUib() noexcept;
+    static BufferInterfaceBlock const& getFroxelsUib() noexcept;
     // When adding an UBO here, make sure to also update
     //      MaterialBuilder::writeCommonChunks() if needed
 };

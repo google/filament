@@ -25,7 +25,6 @@
 
 namespace filament::backend {
 
-void createSemaphore(VkDevice device, VkSemaphore* semaphore);
 VkFormat getVkFormat(ElementType type, bool normalized, bool integer);
 VkFormat getVkFormat(TextureFormat format);
 VkFormat getVkFormat(PixelDataFormat format, PixelDataType type);
@@ -43,8 +42,8 @@ VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags);
 bool equivalent(const VkRect2D& a, const VkRect2D& b);
 bool equivalent(const VkExtent2D& a, const VkExtent2D& b);
 bool isDepthFormat(VkFormat format);
+VkImageAspectFlags getImageAspect(VkFormat format);
 uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
-
 
 // Helper function for the vkEnumerateX methods. These methods have the format of
 // VkResult vkEnumerateX(InputType1 arg1, InputTyp2 arg2, ..., uint32_t* size,

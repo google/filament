@@ -16,6 +16,7 @@
 
 #include "details/Material.h"
 
+#include "Froxelizer.h"
 #include "MaterialParser.h"
 
 #include "details/Engine.h"
@@ -34,6 +35,7 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
+#include <utils/Hash.h>
 
 #include <unordered_map>
 
@@ -176,6 +178,9 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
 
     UTILS_UNUSED_IN_RELEASE bool success;
 
+    success = parser->getCacheId(&mCacheId);
+    assert_invariant(success);
+
     success = parser->getSIB(&mSamplerInterfaceBlock);
     assert_invariant(success);
 
@@ -234,7 +239,11 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     int const maxInstanceCount = (engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)
             ? 1 : CONFIG_MAX_INSTANCES;
 
-    const bool staticTextureWorkaround =
+    int const maxFroxelBufferHeight = std::min(
+            FROXEL_BUFFER_MAX_ENTRY_COUNT / 4,
+            engine.getDriverApi().getMaxUniformBufferSize() / 16u);
+
+    bool const staticTextureWorkaround =
             engine.getDriverApi().isWorkaroundNeeded(Workaround::A8X_STATIC_TEXTURE_TARGET_ERROR);
 
     mSpecializationConstants.reserve(constants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
@@ -244,6 +253,9 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     mSpecializationConstants.push_back({
                     +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES,
                     (int)maxInstanceCount });
+    mSpecializationConstants.push_back({
+                    +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT,
+                    (int)maxFroxelBufferHeight });
     mSpecializationConstants.push_back({
                     +ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND,
                     (bool)staticTextureWorkaround });
@@ -445,7 +457,7 @@ void FMaterial::terminate(FEngine& engine) {
 
 #if FILAMENT_ENABLE_MATDBG
     // Unregister the material with matdbg.
-    matdbg::DebugServer* server = downcast(mEngine).debug.server;
+    matdbg::DebugServer* server = engine.debug.server;
     if (UTILS_UNLIKELY(server)) {
         server->removeMaterial(mDebuggerId);
     }
@@ -453,6 +465,33 @@ void FMaterial::terminate(FEngine& engine) {
 
     destroyPrograms(engine);
     mDefaultInstance.terminate(engine);
+}
+
+void FMaterial::compile(backend::CallbackHandler* handler,
+        utils::Invocable<void(Material*)>&& callback,
+        UserVariantFilterMask variantFilter) noexcept {
+    auto const& variants = isVariantLit() ?
+            VariantUtils::getLitVariants() : VariantUtils::getUnlitVariants();
+    for (auto const variant : variants) {
+        if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
+            if (hasVariant(variant)) {
+                prepareProgram(variant);
+            }
+        }
+    }
+
+    struct Callback {
+        Invocable<void(Material*)> f;
+        Material* m;
+        static void func(void* user) {
+            auto* const c = reinterpret_cast<Callback*>(user);
+            c->f(c->m);
+            delete c;
+        }
+    };
+
+    auto* const user = new Callback{ std::move(callback), this };
+    mEngine.getDriverApi().compilePrograms(handler, &Callback::func, static_cast<void*>(user));
 }
 
 FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
@@ -472,6 +511,31 @@ bool FMaterial::isSampler(const char* name) const noexcept {
 BufferInterfaceBlock::FieldInfo const* FMaterial::reflect(
         std::string_view name) const noexcept {
     return mUniformInterfaceBlock.getFieldInfo(name);
+}
+
+bool FMaterial::hasVariant(Variant variant) const noexcept {
+    Variant vertexVariant, fragmentVariant;
+    switch (getMaterialDomain()) {
+        case MaterialDomain::SURFACE:
+            vertexVariant = Variant::filterVariantVertex(variant);
+            fragmentVariant = Variant::filterVariantFragment(variant);
+            break;
+        case MaterialDomain::POST_PROCESS:
+            vertexVariant = fragmentVariant = variant;
+            break;
+        case MaterialDomain::COMPUTE:
+            // TODO: implement MaterialDomain::COMPUTE
+            return false;
+    }
+    ShaderContent& vsBuilder = mEngine.getVertexShaderContent();
+    const ShaderModel sm = mEngine.getShaderModel();
+    if (!mMaterialParser->getShader(vsBuilder, sm, vertexVariant, ShaderStage::VERTEX)) {
+        return false;
+    }
+    if (!mMaterialParser->getShader(vsBuilder, sm, fragmentVariant, ShaderStage::FRAGMENT)) {
+        return false;
+    }
+    return true;
 }
 
 void FMaterial::prepareProgramSlow(Variant variant) const noexcept {
@@ -584,6 +648,8 @@ Program FMaterial::getProgramWithVariants(
     }
 
     program.specializationConstants(mSpecializationConstants);
+
+    program.cacheId(utils::hash::combine(size_t(mCacheId), variant.key));
 
     return program;
 }

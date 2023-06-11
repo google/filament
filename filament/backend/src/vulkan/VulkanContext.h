@@ -17,14 +17,16 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
 #define TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
 
-#include "VulkanPipelineCache.h"
 #include "VulkanCommands.h"
 #include "VulkanConstants.h"
 #include "VulkanImageUtility.h"
+#include "VulkanPipelineCache.h"
 
-#include <utils/bitset.h>
-#include <utils/Slice.h>
 #include <utils/Mutex.h>
+#include <utils/Slice.h>
+#include <utils/bitset.h>
+
+#include <memory>
 
 VK_DEFINE_HANDLE(VmaAllocator)
 VK_DEFINE_HANDLE(VmaPool)
@@ -35,24 +37,44 @@ struct VulkanRenderTarget;
 struct VulkanSwapChain;
 struct VulkanTexture;
 class VulkanStagePool;
+struct VulkanTimerQuery;
 
 struct VulkanAttachment {
-    VulkanTexture* texture = nullptr;
+    VulkanTexture* texture;
     uint8_t level = 0;
     uint16_t layer = 0;
     VkImage getImage() const;
     VkFormat getFormat() const;
     VulkanLayout getLayout() const;
     VkExtent2D getExtent2D() const;
-    VkImageView getImageView(VkImageAspectFlags aspect) const;
+    VkImageView getImageView(VkImageAspectFlags aspect);
     // TODO: maybe embed aspect into the attachment or texture itself.
     VkImageSubresourceRange getSubresourceRange(VkImageAspectFlags aspect) const;
 };
 
-struct VulkanTimestamps {
-    VkQueryPool pool;
-    utils::bitset32 used;
-    utils::Mutex mutex;
+class VulkanTimestamps {
+public:
+    using QueryResult = std::array<uint64_t, 4>;
+
+    VulkanTimestamps(VkDevice device);
+    ~VulkanTimestamps();
+
+    // Not copy-able.
+    VulkanTimestamps(VulkanTimestamps const&) = delete;
+    VulkanTimestamps& operator=(VulkanTimestamps const&) = delete;
+
+    std::tuple<uint32_t, uint32_t> getNextQuery();
+    void clearQuery(uint32_t queryIndex);
+
+    void beginQuery(VulkanCommandBuffer const* commands, VulkanTimerQuery* query);
+    void endQuery(VulkanCommandBuffer const* commands, VulkanTimerQuery const* query);
+    QueryResult getResult(VulkanTimerQuery const* query);
+
+private:
+    VkDevice mDevice;
+    VkQueryPool mPool;
+    utils::bitset32 mUsed;
+    utils::Mutex mMutex;
 };
 
 struct VulkanRenderPass {
@@ -62,50 +84,59 @@ struct VulkanRenderPass {
     int currentSubpass;
 };
 
-// For now we only support a single-device, single-instance scenario. Our concept of "context" is a
-// bundle of state containing the Device, the Instance, and various globally-useful Vulkan objects.
+// This is a collection of immutable data about the vulkan context. This actual handles to the
+// context are stored in VulkanPlatform.
 struct VulkanContext {
 public:
-    void initialize(const char* const* ppRequiredExtensions, uint32_t requiredExtensionCount);
-    void createEmptyTexture(VulkanStagePool& stagePool);
-    uint32_t selectMemoryType(uint32_t flags, VkFlags reqs);
+    inline uint32_t selectMemoryType(uint32_t flags, VkFlags reqs) const {
+        for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
+            if (flags & 1) {
+                if ((mMemoryProperties.memoryTypes[i].propertyFlags & reqs) == reqs) {
+                    return i;
+                }
+            }
+            flags >>= 1;
+        }
+        ASSERT_POSTCONDITION(false, "Unable to find a memory type that meets requirements.");
+        return (uint32_t) ~0ul;
+    }
+
+    inline VkFormat getDepthFormat() const {
+        return mDepthFormat;
+    }
+
+    inline VkPhysicalDeviceLimits const& getPhysicalDeviceLimits() const noexcept {
+        return mPhysicalDeviceProperties.limits;
+    }
+
+    inline uint32_t getPhysicalDeviceVendorId() const noexcept {
+        return mPhysicalDeviceProperties.vendorID;
+    }
+
+    inline bool isImageCubeArraySupported() const noexcept {
+        return mPhysicalDeviceFeatures.imageCubeArray;
+    }
+
+    inline bool isDebugMarkersSupported() const noexcept {
+        return mDebugMarkersSupported;
+    }
+    inline bool isDebugUtilsSupported() const noexcept {
+        return mDebugUtilsSupported;
+    }
 
 private:
-    void afterSelectPhysicalDevice();
-    void afterCreateLogicalDevice();
-    void afterCreateInstance();
+    VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
+    VkPhysicalDeviceProperties mPhysicalDeviceProperties = {};
+    VkPhysicalDeviceFeatures mPhysicalDeviceFeatures = {};
+    bool mDebugMarkersSupported = false;
+    bool mDebugUtilsSupported = false;
 
-public:
-    VkInstance instance;
-    VkPhysicalDevice physicalDevice;
-    VkPhysicalDeviceProperties physicalDeviceProperties;
-    VkPhysicalDeviceFeatures physicalDeviceFeatures;
-    VkPhysicalDeviceMemoryProperties memoryProperties;
-    VkDevice device;
-    VkCommandPool commandPool;
-    VulkanTimestamps timestamps;
-    uint32_t graphicsQueueFamilyIndex;
-    VkQueue graphicsQueue;
-    bool debugMarkersSupported = false;
-    bool debugUtilsSupported = false;
-    bool portabilitySubsetSupported = false;
-    bool portabilityEnumerationSupported = false;
-    bool maintenanceSupported[3] = {};
-    VulkanPipelineCache::RasterState rasterState;
-    VulkanSwapChain* currentSwapChain;
-    VulkanRenderTarget* defaultRenderTarget;
-    VulkanRenderPass currentRenderPass;
-    VkViewport viewport;
-    VkFormat finalDepthFormat;
-    VmaAllocator allocator;
-    VulkanTexture* emptyTexture = nullptr;
-    VulkanCommands* commands = nullptr;
-    VkDebugReportCallbackEXT debugCallback = VK_NULL_HANDLE;
-    VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
+    VkFormat mDepthFormat;
 
-    std::string currentDebugMarker;
+    // For convenience so that VulkanPlatform can initialize the private fields.
+    friend class VulkanPlatform;
 };
 
-} // namespace filament::backend
+}// namespace filament::backend
 
-#endif // TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
+#endif// TNT_FILAMENT_BACKEND_VULKANCONTEXT_H

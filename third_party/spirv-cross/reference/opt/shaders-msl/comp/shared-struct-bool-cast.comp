@@ -1,0 +1,63 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct S1
+{
+    int3 a;
+    uint2 b;
+    short4 c;
+    uint d;
+};
+
+struct block
+{
+    uint passed;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device block& _132 [[buffer(0)]])
+{
+    threadgroup S1 s1;
+    s1.a = int3(6, 8, 8);
+    s1.b = uint2(4u);
+    s1.c = short4(bool4(false, false, false, true));
+    s1.d = 6u;
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    threadgroup_barrier(mem_flags::mem_device | mem_flags::mem_threadgroup | mem_flags::mem_texture);
+    bool _144 = all(int3(6, 8, 8) == s1.a);
+    bool _108;
+    if (_144)
+    {
+        _108 = all(uint2(4u) == s1.b);
+    }
+    else
+    {
+        _108 = _144;
+    }
+    bool _117;
+    if (_108)
+    {
+        _117 = all(bool4(false, false, false, true) == bool4(s1.c));
+    }
+    else
+    {
+        _117 = _108;
+    }
+    bool _126;
+    if (_117)
+    {
+        _126 = 6u == s1.d;
+    }
+    else
+    {
+        _126 = _117;
+    }
+    if (_126)
+    {
+        _132.passed++;
+    }
+}
+

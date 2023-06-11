@@ -40,12 +40,17 @@ vec4 fog(vec4 color, highp vec3 view) {
     // compute fog color
     vec3 fogColor = frameUniforms.fogColor;
 
-#if !defined(SHADING_MODEL_UNLIT)
+#if MATERIAL_FEATURE_LEVEL > 0
     if (frameUniforms.fogColorFromIbl > 0.0) {
-        // get fog color from envmap
-        // TODO: use a lower resolution mip as we get further (problem we don't have mips!)
-        float lod = frameUniforms.iblRoughnessOneLevel;
-        fogColor *= textureLod(light_iblSpecular, view, lod).rgb;
+        float normalizedDepth = d * frameUniforms.fogOneOverFarMinusNear - frameUniforms.fogNearOverFarMinusNear;
+        lowp vec2 minMaxMip = unpackHalf2x16(frameUniforms.fogMinMaxMip);
+        lowp float lod = mix(minMaxMip.y, minMaxMip.x, saturate(normalizedDepth));
+
+        // when sampling the IBL we need to take into account the IBL transform. We know it's a
+        // a rigid transform, so we can take the transpose instead of the inverse, and for the
+        // same reason we can use it directly instead of taking the cof() to transfrom a vector.
+        highp mat3 worldFromUserWorldMatrix = transpose(mat3(frameUniforms.userWorldFromWorldMatrix));
+        fogColor *= textureLod(light_fog, worldFromUserWorldMatrix * view, lod).rgb;
     }
 #endif
 
@@ -62,7 +67,7 @@ vec4 fog(vec4 color, highp vec3 view) {
         // Add sun colored fog when looking towards the sun
         vec3 sunColor = frameUniforms.lightColorIntensity.rgb * frameUniforms.lightColorIntensity.w;
 
-        float sunAmount = max(dot(-shading_view, frameUniforms.lightDirection), 0.0); // between 0 and 1
+        float sunAmount = max(dot(normalize(view), frameUniforms.lightDirection), 0.0); // between 0 and 1
         float sunInscattering = pow(sunAmount, frameUniforms.fogInscatteringSize);
 
         fogColor += sunColor * (sunInscattering * (1.0 - sunTransmittance));

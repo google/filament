@@ -54,6 +54,7 @@
 #include <utils/Log.h>
 #include <utils/Mutex.h>
 #include <utils/Panic.h>
+#include <utils/Hash.h>
 
 #include <atomic>
 #include <utility>
@@ -1005,7 +1006,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 }
 
 MaterialBuilder& MaterialBuilder::output(VariableQualifier qualifier, OutputTarget target,
-        OutputType type, const char* name, int location) noexcept {
+        Precision precision, OutputType type, const char* name, int location) noexcept {
 
     ASSERT_PRECONDITION(target != OutputTarget::DEPTH || type == OutputType::FLOAT,
             "Depth outputs must be of type FLOAT.");
@@ -1022,7 +1023,7 @@ MaterialBuilder& MaterialBuilder::output(VariableQualifier qualifier, OutputTarg
     }
 
     // Unconditionally add this output, then we'll check if we've maxed on on any particular target.
-    mOutputs.emplace_back(name, qualifier, target, type, location);
+    mOutputs.emplace_back(name, qualifier, target, precision, type, location);
 
     uint8_t colorOutputCount = 0;
     uint8_t depthOutputCount = 0;
@@ -1073,7 +1074,8 @@ error:
 
     // Add a default color output.
     if (mMaterialDomain == MaterialDomain::POST_PROCESS && mOutputs.empty()) {
-        output(VariableQualifier::OUT, OutputTarget::COLOR, OutputType::FLOAT4, "color");
+        output(VariableQualifier::OUT,
+                OutputTarget::COLOR, Precision::DEFAULT, OutputType::FLOAT4, "color");
     }
 
     // TODO: maybe check MaterialDomain::COMPUTE has outputs
@@ -1210,7 +1212,13 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
         flush(slog.e);
     };
 
-    const auto userSamplerCount = info.sib.getSize();
+    auto userSamplerCount = info.sib.getSize();
+    for (auto const& sampler: info.sib.getSamplerInfoList()) {
+        if (sampler.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) {
+            userSamplerCount += 1;
+        }
+    }
+
     switch (info.featureLevel) {
         case FeatureLevel::FEATURE_LEVEL_0:
             // TODO: check FEATURE_LEVEL_0 features (e.g. unlit only, no texture arrays, etc...)
@@ -1223,11 +1231,32 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
             return true;
         case FeatureLevel::FEATURE_LEVEL_1:
         case FeatureLevel::FEATURE_LEVEL_2: {
+            if (mNoSamplerValidation) {
+                break;
+            }
+
+            auto const maxTextureCount = backend::FEATURE_LEVEL_CAPS[1].MAX_FRAGMENT_SAMPLER_COUNT;
+
+            // count how many samplers filament uses based on the material properties
+            // note: currently SSAO is not used with unlit, but we want to keep that possibility.
+            uint32_t textureUsedByFilamentCount = 4;    // shadowMap, structure, ssao, fog texture
+            if (info.isLit) {
+                textureUsedByFilamentCount += 3;        // froxels, dfg, specular
+            }
+            if (info.reflectionMode == ReflectionMode::SCREEN_SPACE ||
+                info.refractionMode == RefractionMode::SCREEN_SPACE) {
+                textureUsedByFilamentCount += 1;        // ssr
+            }
+            if (mVariantFilter & (uint32_t)UserVariantFilterBit::FOG) {
+                textureUsedByFilamentCount -= 1;        // fog texture
+            }
+
             // TODO: we need constants somewhere for these values
-            if (userSamplerCount > 9) {
+            if (userSamplerCount > maxTextureCount - textureUsedByFilamentCount) {
                 slog.e << "Error: material \"" << mMaterialName.c_str()
                        << "\" has feature level " << +info.featureLevel
-                       << " and is using more than 9 samplers." << io::endl;
+                       << " and is using more than " << maxTextureCount - textureUsedByFilamentCount
+                       << " samplers." << io::endl;
                 logSamplerOverflow(info.sib);
                 return false;
             }
@@ -1247,10 +1276,11 @@ bool MaterialBuilder::checkMaterialLevelFeatures(MaterialInfo const& info) const
         }
         case FeatureLevel::FEATURE_LEVEL_3: {
             // TODO: we need constants somewhere for these values
-            if (userSamplerCount > 12) {
+            // TODO: 16 is artificially low for now, until we have a better idea of what we want
+            if (userSamplerCount > 16) {
                 slog.e << "Error: material \"" << mMaterialName.c_str()
                        << "\" has feature level " << +info.featureLevel
-                       << " and is using more than 12 samplers" << io::endl;
+                       << " and is using more than 16 samplers" << io::endl;
                 logSamplerOverflow(info.sib);
                 return false;
             }
@@ -1407,6 +1437,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
                 { LightsUib::_name,                UniformBindingPoints::LIGHTS },
                 { ShadowUib::_name,                UniformBindingPoints::SHADOW },
                 { FroxelRecordUib::_name,          UniformBindingPoints::FROXEL_RECORDS },
+                { FroxelsUib::_name,               UniformBindingPoints::FROXELS },
                 { PerRenderableBoneUib::_name,     UniformBindingPoints::PER_RENDERABLE_BONES },
                 { PerRenderableMorphingUib::_name, UniformBindingPoints::PER_RENDERABLE_MORPHING },
                 { info.uib.getName(),              UniformBindingPoints::PER_MATERIAL_INSTANCE }
@@ -1465,6 +1496,18 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
         }
         container.emplace<uint64_t>(ChunkType::MaterialProperties, properties);
     }
+
+    // create a unique material id
+    auto const& vert = mMaterialVertexCode.getResolved();
+    auto const& frag = mMaterialFragmentCode.getResolved();
+    std::hash<std::string_view> const hasher;
+    size_t const materialId = utils::hash::combine(
+            MATERIAL_VERSION,
+            utils::hash::combine(
+                    hasher({ vert.data(), vert.size() }),
+                    hasher({ frag.data(), frag.size() })));
+
+    container.emplace<uint64_t>(ChunkType::MaterialCacheId, materialId);
 }
 
 void MaterialBuilder::writeSurfaceChunks(ChunkContainer& container) const noexcept {
@@ -1492,6 +1535,11 @@ void MaterialBuilder::writeSurfaceChunks(ChunkContainer& container) const noexce
     container.emplace<uint8_t>(ChunkType::MaterialVertexDomain, static_cast<uint8_t>(mVertexDomain));
     container.emplace<uint8_t>(ChunkType::MaterialInterpolation,
             static_cast<uint8_t>(mInterpolation));
+}
+
+MaterialBuilder& MaterialBuilder::noSamplerValidation(bool enabled) noexcept {
+    mNoSamplerValidation = enabled;
+    return *this;
 }
 
 } // namespace filamat

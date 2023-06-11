@@ -301,6 +301,7 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isAutoDepthResolveSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isSRGBSwapChainSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
+DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxUniformBufferSize)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, canGenerateMipmaps)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
@@ -387,6 +388,10 @@ DECL_DRIVER_API_N(beginTimerQuery,
 DECL_DRIVER_API_N(endTimerQuery,
         backend::TimerQueryHandle, query)
 
+DECL_DRIVER_API_N(compilePrograms,
+        backend::CallbackHandler*, handler,
+        backend::CallbackHandler::Callback, callback,
+        void*, user)
 
 /*
  * Swap chain

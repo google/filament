@@ -194,15 +194,32 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
 
     if (mTargetApi == TargetApi::VULKAN) {
         // Note: This is a hack for a hack.
-        // Vulkan doesn't fully support sizing arrays within a block with specialization constants,
-        // and since we only need to do this for a hack for WebGL, it's fine to replace it with
-        // regular constant here.
-        // We *could* leave it as a specialization constant, but this triggers a crashing bug with
+        //
+        // Vulkan doesn't support sizing arrays within a block with specialization constants,
+        // as per this paragraph of the ARB_spir_v specification:
+        //      https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_gl_spirv.txt
+        //
+        //      Arrays inside a block may be sized with a specialization constant,
+        //      but the block will have a static layout. Changing the specialized size will
+        //      not re-layout the block. In the absence of explicit offsets, the layout will be
+        //      based on the default size of the array.
+        //
+        // CONFIG_MAX_INSTANCES is only needed for WebGL, so we can replace it with a constant.
+        // CONFIG_FROXEL_BUFFER_HEIGHT can be hardcoded to 2048 because only 3% of Android devices
+        //                             only support 16KiB buffer or less (1024 lines).
+        //
+        // We *could* leave these as a specialization constant, but this triggers a crashing bug with
         // some Adreno drivers on Android. see: https://github.com/google/filament/issues/6444
+        //
         out << "const int CONFIG_MAX_INSTANCES = " << (int)CONFIG_MAX_INSTANCES << ";\n";
+        out << "const int CONFIG_FROXEL_BUFFER_HEIGHT = 2048;\n";
     } else {
         generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
                 +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
+
+        // the default of 1024 (16KiB) is needed for 32% of Android devices
+        generateSpecializationConstant(out, "CONFIG_FROXEL_BUFFER_HEIGHT",
+                +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT, 1024);
     }
 
     // Workaround a Metal pipeline compilation error with the message:
@@ -346,6 +363,7 @@ io::sstream& CodeGenerator::generateShaderInputs(io::sstream& out, ShaderStage t
 io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage type,
         const CString& name, size_t index,
         MaterialBuilder::VariableQualifier qualifier,
+        MaterialBuilder::Precision precision,
         MaterialBuilder::OutputType outputType) const {
     if (name.empty() || type == ShaderStage::VERTEX) {
         return out;
@@ -371,16 +389,18 @@ io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage type,
         }
     }
 
+    const char* precisionString = getPrecisionQualifier(precision);
     const char* materialTypeString = getOutputTypeName(materialOutputType);
     const char* typeString = getOutputTypeName(outputType);
 
-    out << "\n#define FRAG_OUTPUT" << index << " " << name.c_str() << "\n";
-    out << "\n#define FRAG_OUTPUT_AT" << index << " output_" << name.c_str() << "\n";
-    out << "\n#define FRAG_OUTPUT_MATERIAL_TYPE" << index << " " << materialTypeString << "\n";
-    out << "\n#define FRAG_OUTPUT_TYPE" << index << " " << typeString << "\n";
-    out << "\n#define FRAG_OUTPUT_SWIZZLE" << index << " " << swizzleString << "\n";
-    out << "layout(location=" << index << ") out " << typeString <<
-        " output_" << name.c_str() << ";\n";
+    out << "\n#define FRAG_OUTPUT"               << index << " " << name.c_str();
+    out << "\n#define FRAG_OUTPUT_AT"            << index << " output_" << name.c_str();
+    out << "\n#define FRAG_OUTPUT_MATERIAL_TYPE" << index << " " << materialTypeString;
+    out << "\n#define FRAG_OUTPUT_PRECISION"     << index << " " << precisionString;
+    out << "\n#define FRAG_OUTPUT_TYPE"          << index << " " << typeString;
+    out << "\n#define FRAG_OUTPUT_SWIZZLE"       << index << " " << swizzleString;
+    out << "\nlayout(location=" << index << ") out " << precisionString << " "
+            << typeString << " output_" << name.c_str() << ";\n";
 
     return out;
 }

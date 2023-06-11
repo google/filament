@@ -377,7 +377,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                     msl::collectSibs(config, sibs);
                     spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput,
                             config.shaderModel, config.hasFramebufferFetch, sibs,
-                            &internalConfig.minifier);
+                            mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
                 }
             } else {
                 slog.e << "GLSL post-processor invoked with optimization level NONE"
@@ -394,17 +394,18 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     }
 
     if (internalConfig.glslOutput) {
-        *internalConfig.glslOutput =
-                internalConfig.minifier.removeWhitespace(
-                        *internalConfig.glslOutput,
-                        mOptimization == MaterialBuilder::Optimization::SIZE);
+        if (!mGenerateDebugInfo) {
+            *internalConfig.glslOutput =
+                    internalConfig.minifier.removeWhitespace(
+                            *internalConfig.glslOutput,
+                            mOptimization == MaterialBuilder::Optimization::SIZE);
 
-        // In theory this should only be enabled for SIZE, but in practice we often use PERFORMANCE.
-        if (mOptimization != MaterialBuilder::Optimization::NONE) {
-           *internalConfig.glslOutput =
-                   internalConfig.minifier.renameStructFields(*internalConfig.glslOutput);
+            // In theory this should only be enabled for SIZE, but in practice we often use PERFORMANCE.
+            if (mOptimization != MaterialBuilder::Optimization::NONE) {
+                *internalConfig.glslOutput =
+                        internalConfig.minifier.renameStructFields(*internalConfig.glslOutput);
+            }
         }
-
         if (mPrintShaders) {
             slog.i << *internalConfig.glslOutput << io::endl;
         }
@@ -460,7 +461,8 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
         auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
         msl::collectSibs(config, sibs);
         spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput, config.shaderModel,
-                config.hasFramebufferFetch, sibs, &internalConfig.minifier);
+                config.hasFramebufferFetch, sibs,
+                mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
     }
 
     if (internalConfig.glslOutput) {
@@ -508,7 +510,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
         auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
         msl::collectSibs(config, sibs);
         spirvToMsl(&spirv, internalConfig.mslOutput, config.shaderModel, config.hasFramebufferFetch,
-                sibs, &internalConfig.minifier);
+                sibs, mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
     }
 
     // Transpile back to GLSL
@@ -567,10 +569,10 @@ std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
         registerPerformancePasses(*optimizer, config);
         // Metal doesn't support relaxed precision, but does have support for float16 math operations.
         if (config.targetApi == MaterialBuilder::TargetApi::METAL) {
-            optimizer->RegisterPass(CreateConvertRelaxedToHalfPass());
-            optimizer->RegisterPass(CreateSimplificationPass());
-            optimizer->RegisterPass(CreateRedundancyEliminationPass());
-            optimizer->RegisterPass(CreateAggressiveDCEPass());
+           optimizer->RegisterPass(CreateConvertRelaxedToHalfPass());
+           optimizer->RegisterPass(CreateSimplificationPass());
+           optimizer->RegisterPass(CreateRedundancyEliminationPass());
+           optimizer->RegisterPass(CreateAggressiveDCEPass());
         }
     }
 
@@ -600,46 +602,55 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
         optimizer.RegisterPass(CreateMergeReturnPass());
     }
 
-    auto const localCreateSimplificationPass = [&config] {
-        // Adreno GPU show artifacts after running simplication passes. We workaround this just by
-        // disabling the simplification pass for mobile + vulkan.
-        return config.shaderModel == ShaderModel::MOBILE
-                               && config.targetApi == MaterialBuilder::TargetApi::VULKAN
-                       ? std::move(CreateNullPass())
-                       : std::move(CreateSimplificationPass());
+    // CreateSimplificationPass() creates a lot of problems:
+    // - Adreno GPU show artifacts after running simplication passes (Vulkan)
+    // - spirv-cross fails generating working glsl
+    //      (https://github.com/KhronosGroup/SPIRV-Cross/issues/2162)
+    // - generally it makes the code more complicated, e.g.: replacing for loops with
+    //   while-if-break, unclear if it helps for anything.
+    // However, the simplification passes below are necessary when targeting Metal, otherwise the
+    // result is mismatched half / float assignments in MSL.
+
+    auto RegisterPass = [&](spvtools::Optimizer::PassToken&& pass,
+                                MaterialBuilder::TargetApi apiFilter =
+                                        MaterialBuilder::TargetApi::ALL) {
+        if (!(config.targetApi & apiFilter)) {
+            return;
+        }
+        optimizer.RegisterPass(std::move(pass));
     };
 
-    optimizer.RegisterPass(CreateInlineExhaustivePass())
-            .RegisterPass(CreateAggressiveDCEPass())
-            .RegisterPass(CreatePrivateToLocalPass())
-            .RegisterPass(CreateLocalSingleBlockLoadStoreElimPass())
-            .RegisterPass(CreateLocalSingleStoreElimPass())
-            .RegisterPass(CreateAggressiveDCEPass())
-            .RegisterPass(CreateScalarReplacementPass())
-            .RegisterPass(CreateLocalAccessChainConvertPass())
-            .RegisterPass(CreateLocalSingleBlockLoadStoreElimPass())
-            .RegisterPass(CreateLocalSingleStoreElimPass())
-            .RegisterPass(CreateAggressiveDCEPass())
-            .RegisterPass(CreateLocalMultiStoreElimPass())
-            .RegisterPass(CreateAggressiveDCEPass())
-            .RegisterPass(CreateCCPPass())
-            .RegisterPass(CreateAggressiveDCEPass())
-            .RegisterPass(CreateRedundancyEliminationPass())
-            .RegisterPass(CreateCombineAccessChainsPass())
-            .RegisterPass(localCreateSimplificationPass())
-            .RegisterPass(CreateVectorDCEPass())
-            .RegisterPass(CreateDeadInsertElimPass())
-            .RegisterPass(CreateDeadBranchElimPass())
-            .RegisterPass(localCreateSimplificationPass())
-            .RegisterPass(CreateIfConversionPass())
-            .RegisterPass(CreateCopyPropagateArraysPass())
-            .RegisterPass(CreateReduceLoadSizePass())
-            .RegisterPass(CreateAggressiveDCEPass())
-            .RegisterPass(CreateBlockMergePass())
-            .RegisterPass(CreateRedundancyEliminationPass())
-            .RegisterPass(CreateDeadBranchElimPass())
-            .RegisterPass(CreateBlockMergePass())
-            .RegisterPass(localCreateSimplificationPass());
+    RegisterPass(CreateInlineExhaustivePass());
+    RegisterPass(CreateAggressiveDCEPass());
+    RegisterPass(CreatePrivateToLocalPass());
+    RegisterPass(CreateLocalSingleBlockLoadStoreElimPass());
+    RegisterPass(CreateLocalSingleStoreElimPass());
+    RegisterPass(CreateAggressiveDCEPass());
+    RegisterPass(CreateScalarReplacementPass());
+    RegisterPass(CreateLocalAccessChainConvertPass());
+    RegisterPass(CreateLocalSingleBlockLoadStoreElimPass());
+    RegisterPass(CreateLocalSingleStoreElimPass());
+    RegisterPass(CreateAggressiveDCEPass());
+    RegisterPass(CreateLocalMultiStoreElimPass());
+    RegisterPass(CreateAggressiveDCEPass());
+    RegisterPass(CreateCCPPass());
+    RegisterPass(CreateAggressiveDCEPass());
+    RegisterPass(CreateRedundancyEliminationPass());
+    RegisterPass(CreateCombineAccessChainsPass());
+    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
+    RegisterPass(CreateVectorDCEPass());
+    RegisterPass(CreateDeadInsertElimPass());
+    RegisterPass(CreateDeadBranchElimPass());
+    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
+    RegisterPass(CreateIfConversionPass());
+    RegisterPass(CreateCopyPropagateArraysPass());
+    RegisterPass(CreateReduceLoadSizePass());
+    RegisterPass(CreateAggressiveDCEPass());
+    RegisterPass(CreateBlockMergePass());
+    RegisterPass(CreateRedundancyEliminationPass());
+    RegisterPass(CreateDeadBranchElimPass());
+    RegisterPass(CreateBlockMergePass());
+    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
 }
 
 void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& config) {

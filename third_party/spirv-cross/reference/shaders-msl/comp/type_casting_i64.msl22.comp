@@ -1,0 +1,27 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct dst_buff_t
+{
+    int m0[1];
+};
+
+struct src_buff_t
+{
+    int m0[1];
+};
+
+constant int base_val_tmp [[function_constant(0)]];
+constant int base_val = is_function_constant_defined(base_val_tmp) ? base_val_tmp : 0;
+constant long shift_val_tmp [[function_constant(1)]];
+constant long shift_val = is_function_constant_defined(shift_val_tmp) ? shift_val_tmp : 0l;
+constant int offset = (base_val >> int(shift_val));
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device dst_buff_t& dst_buff [[buffer(0)]], device src_buff_t& src_buff [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    dst_buff.m0[gl_GlobalInvocationID.x] = src_buff.m0[gl_GlobalInvocationID.x] + offset;
+}
+

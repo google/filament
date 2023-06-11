@@ -1,0 +1,16 @@
+#version 460
+#extension GL_NV_ray_tracing : require
+
+layout(set = 0, binding = 0, rgba8) uniform image2D image;
+layout(set = 0, binding = 1) uniform accelerationStructureNV as;
+layout(location = 0) rayPayloadNV float payload;
+
+void main()
+{
+    vec4 col = vec4(0.0, 0.0, 0.0, 1.0);
+    vec3 origin = vec3(float(gl_LaunchIDNV.x) / float(gl_LaunchSizeNV.x), float(gl_LaunchIDNV.y) / float(gl_LaunchSizeNV.y), 1.0);
+    vec3 direction = vec3(0.0, 0.0, -1.0);
+    traceNV(as, 0u, 255u, 0u, 1u, 0u, origin, 0.0, direction, 1000.0, 0);
+    col.y = payload;
+    imageStore(image, ivec2(gl_LaunchIDNV.xy), col);
+}

@@ -165,4 +165,12 @@ bool RenderableManager::getLightChannel(Instance instance, unsigned int channel)
     return downcast(this)->getLightChannel(instance, channel);
 }
 
+void RenderableManager::setFogEnabled(RenderableManager::Instance instance, bool enable) noexcept {
+    downcast(this)->setFogEnabled(instance, enable);
+}
+
+bool RenderableManager::getFogEnabled(RenderableManager::Instance instance) const noexcept {
+    return downcast(this)->getFogEnabled(instance);
+}
+
 } // namespace filament

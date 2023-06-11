@@ -36,8 +36,6 @@
 #include "details/VertexBuffer.h"
 #include "details/View.h"
 
-#include <private/filament/SibStructs.h>
-
 #include <filament/MaterialEnums.h>
 
 #include <private/backend/PlatformFactory.h>
@@ -48,6 +46,7 @@
 #include <utils/debug.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
+#include <utils/PrivateImplementation-impl.h>
 #include <utils/Systrace.h>
 #include <utils/ThreadUtils.h>
 
@@ -64,13 +63,19 @@ namespace filament {
 using namespace backend;
 using namespace filaflat;
 
-FEngine* FEngine::create(Backend backend, Platform* platform,
-        void* sharedGLContext, const Config *pConfig) {
+struct Engine::BuilderDetails {
+    Backend mBackend = Backend::DEFAULT;
+    Platform* mPlatform = nullptr;
+    Engine::Config mConfig;
+    void* mSharedContext = nullptr;
+    static Config validateConfig(const Config* pConfig) noexcept;
+};
+
+Engine* FEngine::create(Engine::Builder const& builder) {
     SYSTRACE_ENABLE();
     SYSTRACE_CALL();
 
-    const Config config{ validateConfig(pConfig) };
-    FEngine* instance = new FEngine(backend, platform, config, sharedGLContext);
+    FEngine* instance = new FEngine(builder);
 
     // initialize all fields that need an instance of FEngine
     // (this cannot be done safely in the ctor)
@@ -78,6 +83,9 @@ FEngine* FEngine::create(Backend backend, Platform* platform,
     // Normally we launch a thread and create the context and Driver from there (see FEngine::loop).
     // In the single-threaded case, we do so in the here and now.
     if (!UTILS_HAS_THREADING) {
+        Platform* platform = builder->mPlatform;
+        void* const sharedContext = builder->mSharedContext;
+
         if (platform == nullptr) {
             platform = PlatformFactory::create(&instance->mBackend);
             instance->mPlatform = platform;
@@ -88,8 +96,9 @@ FEngine* FEngine::create(Backend backend, Platform* platform,
             delete instance;
             return nullptr;
         }
-        DriverConfig driverConfig{ .handleArenaSize = instance->getRequestedDriverHandleArenaSize() };
-        instance->mDriver = platform->createDriver(sharedGLContext, driverConfig);
+        DriverConfig const driverConfig{
+            .handleArenaSize = instance->getRequestedDriverHandleArenaSize() };
+        instance->mDriver = platform->createDriver(sharedContext, driverConfig);
 
     } else {
         // start the driver thread
@@ -118,20 +127,19 @@ FEngine* FEngine::create(Backend backend, Platform* platform,
 
 #if UTILS_HAS_THREADING
 
-void FEngine::createAsync(CreateCallback callback, void* user,
-        Backend backend, Platform* platform, void* sharedGLContext, const Config* config) {
+void FEngine::create(Engine::Builder const& builder, Invocable<void(void*)>&& callback) {
     SYSTRACE_ENABLE();
     SYSTRACE_CALL();
-    Config validConfig = validateConfig(config);
-    FEngine* instance = new FEngine(backend, platform, validConfig, sharedGLContext);
+
+    FEngine* instance = new FEngine(builder);
 
     // start the driver thread
     instance->mDriverThread = std::thread(&FEngine::loop, instance);
 
     // launch a thread to call the callback -- so it can't do any damage.
-    std::thread callbackThread = std::thread([instance, callback, user]() {
+    std::thread callbackThread = std::thread([instance, callback = std::move(callback)]() {
         instance->mDriverBarrier.await();
-        callback(user, instance);
+        callback(instance);
     });
 
     // let the callback thread die on its own
@@ -163,48 +171,6 @@ FEngine* FEngine::getEngine(void* token) {
 
 #endif
 
-Engine::Config FEngine::validateConfig(const Config* const pConfig) noexcept
-{
-    // Rule of thumb: perRenderPassArenaMB must be roughly 1 MB larger than perFrameCommandsMB
-    constexpr uint32_t COMMAND_ARENA_OVERHEAD = 1;
-    constexpr uint32_t CONCURRENT_FRAME_COUNT = 3;
-
-    Config config;
-    if (!pConfig) {
-        return config;
-    }
-
-    // make sure to copy all the fields
-    config = *pConfig;
-
-    // Use at least the defaults set by the build system
-    config.minCommandBufferSizeMB = std::max(
-            config.minCommandBufferSizeMB,
-            (uint32_t)FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB);
-
-    config.perFrameCommandsSizeMB = std::max(
-            config.perFrameCommandsSizeMB,
-            (uint32_t)FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB);
-
-    config.perRenderPassArenaSizeMB = std::max(
-            config.perRenderPassArenaSizeMB,
-            (uint32_t)FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB);
-
-    config.commandBufferSizeMB = std::max(
-            config.commandBufferSizeMB,
-            config.minCommandBufferSizeMB * CONCURRENT_FRAME_COUNT);
-
-    // Enforce pre-render-pass arena rule-of-thumb
-    config.perRenderPassArenaSizeMB = std::max(
-            config.perRenderPassArenaSizeMB,
-            config.perFrameCommandsSizeMB + COMMAND_ARENA_OVERHEAD);
-
-    // This value gets validated during driver creation, so pass it through
-    config.driverHandleArenaSizeMB = config.driverHandleArenaSizeMB;
-
-    return config;
-}
-
 // these must be static because only a pointer is copied to the render stream
 // Note that these coordinates are specified in OpenGL clip space. Other backends can transform
 // these in the vertex shader as needed.
@@ -217,24 +183,28 @@ static constexpr float4 sFullScreenTriangleVertices[3] = {
 // these must be static because only a pointer is copied to the render stream
 static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
-FEngine::FEngine(Backend backend, Platform* platform, const Config& config, void* sharedGLContext) :
-        mBackend(backend),
-        mPlatform(platform),
-        mSharedGLContext(sharedGLContext),
+FEngine::FEngine(Engine::Builder const& builder) :
+        mBackend(builder->mBackend),
+        mPlatform(builder->mPlatform),
+        mSharedGLContext(builder->mSharedContext),
         mPostProcessManager(*this),
         mEntityManager(EntityManager::get()),
         mRenderableManager(*this),
         mTransformManager(),
         mLightManager(*this),
         mCameraManager(*this),
-        mCommandBufferQueue(config.minCommandBufferSizeMB * MiB, config.commandBufferSizeMB * MiB),
-        mPerRenderPassAllocator("FEngine::mPerRenderPassAllocator", config.perRenderPassArenaSizeMB * MiB),
+        mCommandBufferQueue(
+                builder->mConfig.minCommandBufferSizeMB * MiB,
+                builder->mConfig.commandBufferSizeMB * MiB),
+        mPerRenderPassAllocator(
+                "FEngine::mPerRenderPassAllocator",
+                builder->mConfig.perRenderPassArenaSizeMB * MiB),
         mHeapAllocator("FEngine::mHeapAllocator", AreaPolicy::NullArea{}),
         mJobSystem(getJobSystemThreadPoolSize()),
         mEngineEpoch(std::chrono::steady_clock::now()),
         mDriverBarrier(1),
         mMainThreadId(ThreadUtils::getThreadId()),
-        mConfig(config)
+        mConfig(builder->mConfig)
 {
     // we're assuming we're on the main thread here.
     // (it may not be the case)
@@ -411,8 +381,8 @@ void FEngine::shutdown() {
 
 #ifndef NDEBUG
     // print out some statistics about this run
-    size_t wm = mCommandBufferQueue.getHighWatermark();
-    size_t wmpct = wm / (getCommandBufferSize() / 100);
+    size_t const wm = mCommandBufferQueue.getHighWatermark();
+    size_t const wmpct = wm / (getCommandBufferSize() / 100);
     slog.d << "CircularBuffer: High watermark "
            << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;
 #endif
@@ -637,7 +607,7 @@ int FEngine::loop() {
     JobSystem::setThreadName("FEngine::loop");
     JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
 
-    DriverConfig driverConfig { .handleArenaSize = getRequestedDriverHandleArenaSize() };
+    DriverConfig const driverConfig { .handleArenaSize = getRequestedDriverHandleArenaSize() };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
 
     mDriverBarrier.latch();
@@ -651,7 +621,7 @@ int FEngine::loop() {
     // configuration. This is also a core not used by the JobSystem.
     // Either way the main reason to do this is to avoid this thread jumping from core to core
     // and lose its caches in the process.
-    uint32_t id = std::thread::hardware_concurrency() - 1;
+    uint32_t const id = std::thread::hardware_concurrency() - 1;
 
     while (true) {
         // looks like thread affinity needs to be reset regularly (on Android)
@@ -792,7 +762,7 @@ FView* FEngine::createView() noexcept {
 FFence* FEngine::createFence(FFence::Type type) noexcept {
     FFence* p = mHeapAllocator.make<FFence>(*this, type);
     if (p) {
-        std::lock_guard guard(mFenceListLock);
+        std::lock_guard const guard(mFenceListLock);
         mFences.insert(p);
     }
     return p;
@@ -886,7 +856,7 @@ template<typename T>
 UTILS_ALWAYS_INLINE
 inline bool FEngine::terminateAndDestroy(const T* ptr, ResourceList<T>& list) {
     if (ptr == nullptr) return true;
-    bool success = list.remove(ptr);
+    bool const success = list.remove(ptr);
 
 #if UTILS_HAS_RTTI
     auto typeName = CallStack::typeName<T>();
@@ -908,7 +878,7 @@ UTILS_ALWAYS_INLINE
 inline bool FEngine::terminateAndDestroyLocked(Lock& lock, const T* ptr, ResourceList<T>& list) {
     if (ptr == nullptr) return true;
     lock.lock();
-    bool success = list.remove(ptr);
+    bool const success = list.remove(ptr);
     lock.unlock();
 
 #if UTILS_HAS_RTTI
@@ -1058,7 +1028,6 @@ void* FEngine::streamAlloc(size_t size, size_t alignment) noexcept {
 }
 
 bool FEngine::execute() {
-
     // wait until we get command buffers to be executed (or thread exit requested)
     auto buffers = mCommandBufferQueue.waitForCommands();
     if (UTILS_UNLIKELY(buffers.empty())) {
@@ -1099,5 +1068,87 @@ void FEngine::resetBackendState() noexcept {
     getDriverApi().resetState();
 }
 #endif
+
+// ------------------------------------------------------------------------------------------------
+
+Engine::Builder::Builder() noexcept = default;
+Engine::Builder::~Builder() noexcept = default;
+Engine::Builder::Builder(Engine::Builder const& rhs) noexcept = default;
+Engine::Builder::Builder(Engine::Builder&& rhs) noexcept = default;
+Engine::Builder& Engine::Builder::operator=(Engine::Builder const& rhs) noexcept = default;
+Engine::Builder& Engine::Builder::operator=(Engine::Builder&& rhs) noexcept = default;
+
+Engine::Builder& Engine::Builder::backend(Backend backend) noexcept {
+    mImpl->mBackend = backend;
+    return *this;
+}
+
+Engine::Builder& Engine::Builder::platform(Platform* platform) noexcept {
+    mImpl->mPlatform = platform;
+    return *this;
+}
+
+Engine::Builder& Engine::Builder::config(Engine::Config const* config) noexcept {
+    mImpl->mConfig = BuilderDetails::validateConfig(config);
+    return *this;
+}
+
+Engine::Builder& Engine::Builder::sharedContext(void* sharedContext) noexcept {
+    mImpl->mSharedContext = sharedContext;
+    return *this;
+}
+
+#if UTILS_HAS_THREADING
+
+void Engine::Builder::build(Invocable<void(void*)>&& callback) const {
+    FEngine::create(*this, std::move(callback));
+}
+
+#endif
+
+Engine* Engine::Builder::build() const {
+    return FEngine::create(*this);
+}
+
+Engine::Config Engine::BuilderDetails::validateConfig(const Config* const pConfig) noexcept {
+    // Rule of thumb: perRenderPassArenaMB must be roughly 1 MB larger than perFrameCommandsMB
+    constexpr uint32_t COMMAND_ARENA_OVERHEAD = 1;
+    constexpr uint32_t CONCURRENT_FRAME_COUNT = 3;
+
+    Config config;
+    if (!pConfig) {
+        return config;
+    }
+
+    // make sure to copy all the fields
+    config = *pConfig;
+
+    // Use at least the defaults set by the build system
+    config.minCommandBufferSizeMB = std::max(
+            config.minCommandBufferSizeMB,
+            (uint32_t)FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB);
+
+    config.perFrameCommandsSizeMB = std::max(
+            config.perFrameCommandsSizeMB,
+            (uint32_t)FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB);
+
+    config.perRenderPassArenaSizeMB = std::max(
+            config.perRenderPassArenaSizeMB,
+            (uint32_t)FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB);
+
+    config.commandBufferSizeMB = std::max(
+            config.commandBufferSizeMB,
+            config.minCommandBufferSizeMB * CONCURRENT_FRAME_COUNT);
+
+    // Enforce pre-render-pass arena rule-of-thumb
+    config.perRenderPassArenaSizeMB = std::max(
+            config.perRenderPassArenaSizeMB,
+            config.perFrameCommandsSizeMB + COMMAND_ARENA_OVERHEAD);
+
+    // This value gets validated during driver creation, so pass it through
+    config.driverHandleArenaSizeMB = config.driverHandleArenaSizeMB;
+
+    return config;
+}
 
 } // namespace filament

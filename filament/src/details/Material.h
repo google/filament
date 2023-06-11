@@ -63,6 +63,10 @@ public:
         return mSamplerInterfaceBlock;
     }
 
+    void compile(backend::CallbackHandler* handler,
+            utils::Invocable<void(Material*)>&& callback,
+            UserVariantFilterMask variantFilter) noexcept;
+
     // Create an instance of this material
     FMaterialInstance* createInstance(const char* name) const noexcept;
 
@@ -77,12 +81,16 @@ public:
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
+    bool isCached(Variant variant) const noexcept {
+        return bool(mCachedPrograms[variant.key]);
+    }
+
     // prepareProgram creates the program for the material's given variant at the backend level.
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.
     void prepareProgram(Variant variant) const noexcept {
         // prepareProgram() is called for each RenderPrimitive in the scene, so it must be efficient.
-        if (UTILS_UNLIKELY(!mCachedPrograms[variant.key])) {
+        if (UTILS_UNLIKELY(!isCached(variant))) {
             prepareProgramSlow(variant);
         }
     }
@@ -182,6 +190,7 @@ public:
 #endif
 
 private:
+    bool hasVariant(Variant variant) const noexcept;
     void prepareProgramSlow(Variant variant) const noexcept;
     void getSurfaceProgramSlow(Variant variant) const noexcept;
     void getPostProcessProgramSlow(Variant variant) const noexcept;
@@ -254,6 +263,7 @@ private:
     utils::CString mName;
     FEngine& mEngine;
     const uint32_t mMaterialId;
+    uint64_t mCacheId = 0;
     mutable uint32_t mMaterialInstanceId = 0;
     MaterialParser* mMaterialParser = nullptr;
 };

@@ -1,0 +1,81 @@
+static const uint3 gl_WorkGroupSize = uint3(4u, 1u, 1u);
+
+void barrier_shared()
+{
+    GroupMemoryBarrier();
+}
+
+void full_barrier()
+{
+    AllMemoryBarrier();
+}
+
+void image_barrier()
+{
+    DeviceMemoryBarrier();
+}
+
+void buffer_barrier()
+{
+    DeviceMemoryBarrier();
+}
+
+void group_barrier()
+{
+    AllMemoryBarrier();
+}
+
+void barrier_shared_exec()
+{
+    GroupMemoryBarrierWithGroupSync();
+}
+
+void full_barrier_exec()
+{
+    AllMemoryBarrier();
+    GroupMemoryBarrierWithGroupSync();
+}
+
+void image_barrier_exec()
+{
+    DeviceMemoryBarrier();
+    GroupMemoryBarrierWithGroupSync();
+}
+
+void buffer_barrier_exec()
+{
+    DeviceMemoryBarrier();
+    GroupMemoryBarrierWithGroupSync();
+}
+
+void group_barrier_exec()
+{
+    AllMemoryBarrier();
+    GroupMemoryBarrierWithGroupSync();
+}
+
+void exec_barrier()
+{
+    GroupMemoryBarrierWithGroupSync();
+}
+
+void comp_main()
+{
+    barrier_shared();
+    full_barrier();
+    image_barrier();
+    buffer_barrier();
+    group_barrier();
+    barrier_shared_exec();
+    full_barrier_exec();
+    image_barrier_exec();
+    buffer_barrier_exec();
+    group_barrier_exec();
+    exec_barrier();
+}
+
+[numthreads(4, 1, 1)]
+void main()
+{
+    comp_main();
+}

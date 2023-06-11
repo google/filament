@@ -29,7 +29,7 @@ using namespace utils;
 namespace filament::backend {
 
 CommandBufferQueue::CommandBufferQueue(size_t requiredSize, size_t bufferSize)
-        : mRequiredSize((requiredSize + CircularBuffer::BLOCK_MASK) & ~CircularBuffer::BLOCK_MASK),
+        : mRequiredSize((requiredSize + (CircularBuffer::getBlockSize() - 1u)) & ~(CircularBuffer::getBlockSize() -1u)),
           mCircularBuffer(bufferSize),
           mFreeSpace(mCircularBuffer.size()) {
     assert_invariant(mCircularBuffer.size() > requiredSize);

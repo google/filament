@@ -1145,6 +1145,8 @@ protected:
 
 	bool type_is_array_of_pointers(const SPIRType &type) const;
 	bool type_is_top_level_physical_pointer(const SPIRType &type) const;
+	bool type_is_top_level_pointer(const SPIRType &type) const;
+	bool type_is_top_level_array(const SPIRType &type) const;
 	bool type_is_block_like(const SPIRType &type) const;
 	bool type_is_opaque_value(const SPIRType &type) const;
 

@@ -193,6 +193,10 @@ uint8_t NoopDriver::getMaxDrawBuffers() {
     return MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT;
 }
 
+size_t NoopDriver::getMaxUniformBufferSize() {
+    return 16384u;
+}
+
 void NoopDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
     scheduleDestroy(std::move(p));
@@ -254,6 +258,11 @@ bool NoopDriver::canGenerateMipmaps() {
 void NoopDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
         BufferDescriptor&& data) {
     scheduleDestroy(std::move(data));
+}
+
+void NoopDriver::compilePrograms(CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user) {
+    scheduleCallback(handler, user, callback);
 }
 
 void NoopDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {

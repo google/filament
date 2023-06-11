@@ -131,7 +131,7 @@ fragment {
 
     #include "saoImpl.fs"
     #include "ssctImpl.fs"
-    #include "geometry.fs"
+    #include "../utils/geometry.fs"
     #include "ssaoUtils.fs"
 
     void dummy(){}

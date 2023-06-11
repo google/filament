@@ -51,12 +51,6 @@ VulkanCmdFence::~VulkanCmdFence() {
 
 CommandBufferObserver::~CommandBufferObserver() {}
 
-static VkQueue getQueue(VkDevice device, uint32_t queueFamilyIndex) {
-    VkQueue queue;
-    vkGetDeviceQueue(device, queueFamilyIndex, 0, &queue);
-    return queue;
-}
-
 static VkCommandPool createPool(VkDevice device, uint32_t queueFamilyIndex) {
     VkCommandPoolCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -70,8 +64,8 @@ static VkCommandPool createPool(VkDevice device, uint32_t queueFamilyIndex) {
 
 }
 
-VulkanCommands::VulkanCommands(VkDevice device, uint32_t queueFamilyIndex) : mDevice(device),
-        mQueue(getQueue(device, queueFamilyIndex)), mPool(createPool(mDevice, queueFamilyIndex)) {
+VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex) : mDevice(device),
+        mQueue(queue), mPool(createPool(mDevice, queueFamilyIndex)) {
     VkSemaphoreCreateInfo sci { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
     for (auto& semaphore : mSubmissionSignals) {
         vkCreateSemaphore(mDevice, &sci, nullptr, &semaphore);
@@ -87,8 +81,9 @@ VulkanCommands::~VulkanCommands() {
     }
 }
 
-VulkanCommandBuffer const& VulkanCommands::get() {
+VulkanCommandBuffer const& VulkanCommands::get(bool blockOnGC) {
     if (mCurrent) {
+        mCurrent->blockOnGC = mCurrent->blockOnGC || blockOnGC;
         return *mCurrent;
     }
 
@@ -124,6 +119,8 @@ VulkanCommandBuffer const& VulkanCommands::get() {
         .commandBufferCount = 1
     };
     vkAllocateCommandBuffers(mDevice, &allocateInfo, &mCurrent->cmdbuffer);
+
+    mCurrent->blockOnGC = blockOnGC;
 
     // Note that the fence wrapper uses shared_ptr because a DriverAPI fence can also have ownership
     // over it.  The destruction of the low-level fence occurs either in VulkanCommands::gc(), or in
@@ -246,7 +243,9 @@ void VulkanCommands::wait() {
 void VulkanCommands::gc() {
     for (auto& wrapper : mStorage) {
         if (wrapper.cmdbuffer != VK_NULL_HANDLE) {
-            VkResult result = vkWaitForFences(mDevice, 1, &wrapper.fence->fence, VK_TRUE, 0);
+            uint64_t const timeout = wrapper.blockOnGC ? UINT64_MAX : 0;
+            VkResult const result
+                    = vkWaitForFences(mDevice, 1, &wrapper.fence->fence, VK_TRUE, timeout);
             if (result == VK_SUCCESS) {
                 vkFreeCommandBuffers(mDevice, mPool, 1, &wrapper.cmdbuffer);
                 wrapper.cmdbuffer = VK_NULL_HANDLE;

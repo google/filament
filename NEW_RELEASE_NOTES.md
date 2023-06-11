@@ -8,6 +8,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
-- engine: a local transform can now be supplied for each GPU instance [⚠️ **Recompile materials**]
-- everything: Add limited support for OpenGL ES 2.0 devices. [⚠️ **Recompile Materials**]
-- platform: New virtual on `OpenGLPlatform` to preserve ancillary buffers
+- matc: fix VSM high precision option on mobile [⚠️ **Recompile materials**]
+- vulkan: support sRGB swap chain

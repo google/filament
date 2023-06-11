@@ -537,6 +537,8 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     if (variant.hasDynamicLighting()) {
         cg.generateUniforms(fs, ShaderStage::FRAGMENT,
                 UniformBindingPoints::FROXEL_RECORDS, UibGenerator::getFroxelRecordUib());
+        cg.generateUniforms(fs, ShaderStage::FRAGMENT,
+                UniformBindingPoints::FROXELS, UibGenerator::getFroxelsUib());
     }
 
     cg.generateUniforms(fs, ShaderStage::FRAGMENT,
@@ -644,6 +646,8 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel sm,
     io::sstream vs;
     cg.generateProlog(vs, ShaderStage::VERTEX, material);
 
+    generateUserSpecConstants(cg, vs, mConstants);
+
     CodeGenerator::generateDefine(vs, "LOCATION_POSITION", uint32_t(VertexAttribute::POSITION));
 
     // custom material variables
@@ -683,6 +687,8 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
     io::sstream fs;
     cg.generateProlog(fs, ShaderStage::FRAGMENT, material);
 
+    generateUserSpecConstants(cg, fs, mConstants);
+
     generatePostProcessMaterialVariantDefines(fs, PostProcessVariant(variant));
 
     // custom material variables
@@ -711,7 +717,7 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
     for (const auto& output : mOutputs) {
         if (output.target == MaterialBuilder::OutputTarget::COLOR) {
             cg.generateOutput(fs, ShaderStage::FRAGMENT, output.name, output.location,
-                    output.qualifier, output.type);
+                    output.qualifier, output.precision, output.type);
         }
         if (output.target == MaterialBuilder::OutputTarget::DEPTH) {
             CodeGenerator::generateDefine(fs, "FRAG_OUTPUT_DEPTH", 1u);

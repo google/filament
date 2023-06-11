@@ -128,6 +128,10 @@ if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W0 /Zc:__cplusplus")
 endif()
 
+if (FILAMENT_ENABLE_MATDBG)
+    add_definitions(-DFILAMENT_ENABLE_MATDBG)
+endif()
+
 # ==================================================================================================
 # Installation
 # ==================================================================================================

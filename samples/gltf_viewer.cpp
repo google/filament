@@ -182,7 +182,11 @@ static void printUsage(char* name) {
         "           A / D: left / right\n"
         "           E / Q: up / down\n\n"
         "   --split-view, -v\n"
-        "       Splits the window into 4 views\n"
+        "       Splits the window into 4 views\n\n"
+        "   --vulkan-gpu-hint=<hint>, -g\n"
+        "       Vulkan backend allows user to choose their GPU.\n"
+        "       You can provide the index of the GPU or\n"
+        "       a substring to match against the device name\n\n"
     );
     const std::string from("SHOWCASE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -197,20 +201,21 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:f:i:usc:rt:b:ev";
+    static constexpr const char* OPTSTR = "ha:f:i:usc:rt:b:evg:";
     static const struct option OPTIONS[] = {
-        { "help",         no_argument,          nullptr, 'h' },
-        { "api",          required_argument,    nullptr, 'a' },
-        { "feature-level",required_argument,    nullptr, 'f' },
-        { "batch",        required_argument,    nullptr, 'b' },
-        { "headless",     no_argument,          nullptr, 'e' },
-        { "ibl",          required_argument,    nullptr, 'i' },
-        { "ubershader",   no_argument,          nullptr, 'u' },
-        { "actual-size",  no_argument,          nullptr, 's' },
-        { "camera",       required_argument,    nullptr, 'c' },
-        { "recompute-aabb", no_argument,        nullptr, 'r' },
-        { "settings",     required_argument,    nullptr, 't' },
-        { "split-view",   no_argument,          nullptr, 'v' },
+        { "help",            no_argument,          nullptr, 'h' },
+        { "api",             required_argument,    nullptr, 'a' },
+        { "feature-level",   required_argument,    nullptr, 'f' },
+        { "batch",           required_argument,    nullptr, 'b' },
+        { "headless",        no_argument,          nullptr, 'e' },
+        { "ibl",             required_argument,    nullptr, 'i' },
+        { "ubershader",      no_argument,          nullptr, 'u' },
+        { "actual-size",     no_argument,          nullptr, 's' },
+        { "camera",          required_argument,    nullptr, 'c' },
+        { "recompute-aabb",  no_argument,          nullptr, 'r' },
+        { "settings",        required_argument,    nullptr, 't' },
+        { "split-view",      no_argument,          nullptr, 'v' },
+        { "vulkan-gpu-hint", required_argument,    nullptr, 'g' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -277,6 +282,10 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
             }
             case 'v': {
                 app->config.splitView = true;
+                break;
+            }
+            case 'g': {
+                app->config.vulkanGPUHint = arg;
                 break;
             }
         }
@@ -573,6 +582,7 @@ int main(int argc, char** argv) {
         auto ibl = FilamentApp::get().getIBL();
         if (ibl) {
             app.viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
+            app.viewer->getSettings().view.fogSettings.fogColorTexture = ibl->getFogTexture();
         }
     };
 
@@ -586,6 +596,7 @@ int main(int argc, char** argv) {
         auto& tcm = engine->getTransformManager();
         app.rootTransformEntity = engine->getEntityManager().create();
         tcm.create(app.rootTransformEntity);
+        tcm.create(view->getFogEntity());
 
         const bool batchMode = !app.batchFile.empty();
 
@@ -920,6 +931,7 @@ int main(int argc, char** argv) {
         TransformManager::Instance const& root = tcm.getInstance(app.rootTransformEntity);
         tcm.setParent(tcm.getInstance(camera.getEntity()), root);
         tcm.setParent(tcm.getInstance(app.asset->getRoot()), root);
+        tcm.setParent(tcm.getInstance(view->getFogEntity()), root);
         tcm.setTransform(root, mat4f::translation(float3{ app.originIsFarAway ? 1e6f : 0.0f }));
 
         // Check if color grading has changed.

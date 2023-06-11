@@ -965,7 +965,7 @@ public class View {
                 options.heightFalloff, options.cutOffDistance,
                 options.color[0], options.color[1], options.color[2],
                 options.density, options.inScatteringStart, options.inScatteringSize,
-                options.fogColorFromIbl,
+                options.fogColorFromIbl, options.skyColor.getNativeObject(),
                 options.enabled);
     }
 
@@ -1148,6 +1148,20 @@ public class View {
         return out;
     }
 
+    /**
+     * Get an Entity representing the large scale fog object.
+     * This entity is always inherited by the View's Scene.
+     *
+     * It is for example possible to create a TransformManager component with this
+     * Entity and apply a transformation globally on the fog.
+     *
+     * @return an Entity representing the large scale fog object.
+     */
+    @Entity
+    public int getFogEntity() {
+        return nGetFogEntity(getNativeObject());
+    }
+
     public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed View");
@@ -1189,7 +1203,7 @@ public class View {
     private static native void nSetSSCTOptions(long nativeView, float ssctLightConeRad, float ssctStartTraceDistance, float ssctContactDistanceMax, float ssctIntensity, float v, float v1, float v2, float ssctDepthBias, float ssctDepthSlopeBias, int ssctSampleCount, int ssctRayCount, boolean ssctEnabled);
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled, float highlight,
             boolean lensFlare, boolean starburst, float chromaticAberration, int ghostCount, float ghostSpacing, float ghostThreshold, float haloThickness, float haloRadius, float haloThreshold);
-    private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float cutOffDistance, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, boolean enabled);
+    private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float cutOffDistance, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, long skyColorNativeObject, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);
     private static native void nSetDepthOfFieldOptions(long nativeView, float cocScale, float maxApertureDiameter, boolean enabled, int filter,
             boolean nativeResolution, int foregroundRingCount, int backgroundRingCount, int fastGatherRingCount, int maxForegroundCOC, int maxBackgroundCOC);
@@ -1206,6 +1220,7 @@ public class View {
     private static native boolean nIsStencilBufferEnabled(long nativeView);
     private static native void nSetMaterialGlobal(long nativeView, int index, float x, float y, float z, float w);
     private static native void nGetMaterialGlobal(long nativeView, int index, float[] out);
+    private static native int nGetFogEntity(long nativeView);
 
 
     /**
@@ -1503,9 +1518,31 @@ public class View {
         /**
          * The fog color will be sampled from the IBL in the view direction and tinted by `color`.
          * Depending on the scene this can produce very convincing results.
-         * This simulate a more anisotropic phase-function.
+         *
+         * This simulates a more anisotropic phase-function.
+         *
+         * `fogColorFromIbl` is ignored when skyTexture is specified.
+         *
+         * @see skyColor
          */
         public boolean fogColorFromIbl = false;
+        /**
+         * skyTexture must be a mipmapped cubemap. When provided, the fog color will be sampled from
+         * this texture, higher resolution mip levels will be used for objects at the far clip plane,
+         * and lower resolution mip levels for objects closer to the camera. The skyTexture should
+         * typically be heavily blurred; a typical way to produce this texture is to blur the base
+         * level with a strong gaussian filter or even an irradiance filter and then generate mip
+         * levels as usual. How blurred the base level is somewhat of an artistic decision.
+         *
+         * This simulates a more anisotropic phase-function.
+         *
+         * `fogColorFromIbl` is ignored when skyTexture is specified.
+         *
+         * @see Texture
+         * @see fogColorFromIbl
+         */
+        @Nullable
+        public Texture skyColor = null;
         /**
          * Enable or disable large-scale fog
          */

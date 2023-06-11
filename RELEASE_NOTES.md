@@ -7,6 +7,30 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.39.0
+
+- matc: workaround a bug in spirv-tools causing vsm to fail [⚠️ **Recompile materials**]
+
+## v1.38.0
+
+- engine: a new feature to set a transform on the global-scale fog  [⚠️ **Recompile materials**]
+- engine: large-scale fog can now be opted-out on a per-renderable basis
+- engine: improve froxelizer resource efficiency [⚠️ **Recompile materials**]
+- matc: better accounting and validation of used samplers in user materials
+- engine: add support for sampling fog color from a custom texture [⚠️ **Recompile materials**]
+- vulkan: introduce new custom swapchain API
+- vulkan: new context sharing API
+
+## v1.37.0
+
+- backend: added `Platform` blob cache APIs, typically used to cache programs [⚠️ **Recompile materials**]
+
+## v1.36.0
+
+- engine: a local transform can now be supplied for each GPU instance [⚠️ **Recompile materials**]
+- everything: Add limited support for OpenGL ES 2.0 devices. [⚠️ **Recompile Materials**]
+- platform: New virtual on `OpenGLPlatform` to preserve ancillary buffers
+
 ## v1.35.0
 
 - materials: Materials can now access up to 4 global `vec4` visible by all materials [⚠️ **Recompile Materials**]

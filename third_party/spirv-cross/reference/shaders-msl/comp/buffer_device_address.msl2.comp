@@ -1,0 +1,43 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct Position;
+struct PositionReferences;
+
+struct Position
+{
+    float2 positions[1];
+};
+
+struct Registers
+{
+    device PositionReferences* references;
+    float fract_time;
+};
+
+struct PositionReferences
+{
+    device Position* buffers[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(8u, 8u, 1u);
+
+kernel void main0(constant Registers& registers [[buffer(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint3 gl_NumWorkGroups [[threadgroups_per_grid]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
+{
+    uint2 local_offset = gl_GlobalInvocationID.xy;
+    uint local_index = ((local_offset.y * 8u) * gl_NumWorkGroups.x) + local_offset.x;
+    uint slice = gl_WorkGroupID.z;
+    device Position* __restrict positions = registers.references->buffers[slice];
+    float offset = 6.283125400543212890625 * fract(registers.fract_time + (float(slice) * 0.100000001490116119384765625));
+    float2 pos = float2(local_offset);
+    pos.x += (0.20000000298023223876953125 * sin((2.2000000476837158203125 * pos.x) + offset));
+    pos.y += (0.20000000298023223876953125 * sin((2.25 * pos.y) + (2.0 * offset)));
+    pos.x += (0.20000000298023223876953125 * cos((1.7999999523162841796875 * pos.y) + (3.0 * offset)));
+    pos.y += (0.20000000298023223876953125 * cos((2.849999904632568359375 * pos.x) + (4.0 * offset)));
+    pos.x += (0.5 * sin(offset));
+    pos.y += (0.5 * sin(offset + 0.300000011920928955078125));
+    positions->positions[local_index] = (pos / ((float2(8.0) * float2(gl_NumWorkGroups.xy)) - float2(1.0))) - float2(0.5);
+}
+

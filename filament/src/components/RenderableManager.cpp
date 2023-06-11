@@ -60,6 +60,7 @@ struct RenderableManager::BuilderDetails {
     bool mReceiveShadows : 1;
     bool mScreenSpaceContactShadows : 1;
     bool mSkinningBufferMode : 1;
+    bool mFogEnabled : 1;
     size_t mSkinningBoneCount = 0;
     size_t mMorphTargetCount = 0;
     Bone const* mUserBones = nullptr;
@@ -70,7 +71,7 @@ struct RenderableManager::BuilderDetails {
 
     explicit BuilderDetails(size_t count)
             : mEntries(count), mCulling(true), mCastShadows(false), mReceiveShadows(true),
-              mScreenSpaceContactShadows(false), mSkinningBufferMode(false) {
+              mScreenSpaceContactShadows(false), mSkinningBufferMode(false), mFogEnabled(true) {
     }
     // this is only needed for the explicit instantiation below
     BuilderDetails() = default;
@@ -201,6 +202,11 @@ RenderableManager::Builder& RenderableManager::Builder::skinning(
 
 RenderableManager::Builder& RenderableManager::Builder::enableSkinningBuffers(bool enabled) noexcept {
     mImpl->mSkinningBufferMode = enabled;
+    return *this;
+}
+
+RenderableManager::Builder& RenderableManager::Builder::fog(bool enabled) noexcept {
+    mImpl->mFogEnabled = enabled;
     return *this;
 }
 
@@ -373,6 +379,7 @@ void FRenderableManager::create(
         setCulling(ci, builder->mCulling);
         setSkinning(ci, false);
         setMorphing(ci, builder->mMorphTargetCount);
+        setFogEnabled(ci, builder->mFogEnabled);
         mManager[ci].channels = builder->mLightChannels;
 
         InstancesInfo& instances = manager[ci].instances;
@@ -440,8 +447,10 @@ void FRenderableManager::create(
                     }
                 }
                 else {
-                    // When boneCount is 0, do an initialization for the bones uniform array to avoid crash on adreno gpu.
-                    if (UTILS_UNLIKELY(driver.isWorkaroundNeeded(Workaround::ADRENO_UNIFORM_ARRAY_CRASH))) {
+                    // When boneCount is 0, do an initialization for the bones uniform array to
+                    // avoid crash on adreno gpu.
+                    if (UTILS_UNLIKELY(driver.isWorkaroundNeeded(
+                            Workaround::ADRENO_UNIFORM_ARRAY_CRASH))) {
                         auto *initBones = driver.allocatePod<PerRenderableBoneUib::BoneData>(1);
                         std::uninitialized_fill_n(initBones, 1, FSkinningBuffer::makeBone({}));
                         driver.updateBufferObject(bones.handle, {
@@ -451,7 +460,8 @@ void FRenderableManager::create(
             }
         }
 
-        // Create and initialize all needed MorphTargets. It's required to avoid branches in hot loops.
+        // Create and initialize all needed MorphTargets.
+        // It's required to avoid branches in hot loops.
         MorphTargets* morphTargets = new MorphTargets[entryCount];
         for (size_t i = 0; i < entryCount; ++i) {
             morphTargets[i] = { mEngine.getDummyMorphTargetBuffer(), 0, 0 };
@@ -481,8 +491,10 @@ void FRenderableManager::create(
                                     (uint32_t)morphing.count };
             }
             
-            // When targetCount equal 0, boneCount>0 in this case, do an initialization for the morphWeights uniform array to avoid crash on adreno gpu.
-            if (UTILS_UNLIKELY(targetCount == 0 && driver.isWorkaroundNeeded(Workaround::ADRENO_UNIFORM_ARRAY_CRASH))) {
+            // When targetCount equal 0, boneCount>0 in this case, do an initialization for the
+            // morphWeights uniform array to avoid crash on adreno gpu.
+            if (UTILS_UNLIKELY(targetCount == 0 &&
+                    driver.isWorkaroundNeeded(Workaround::ADRENO_UNIFORM_ARRAY_CRASH))) {
                 float initWeights[1] = {0};
                 setMorphWeights(ci, initWeights, 1, 0);
             }

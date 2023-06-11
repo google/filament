@@ -724,6 +724,8 @@ bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
             return false;
         case Workaround::A8X_STATIC_TEXTURE_TARGET_ERROR:
             return mContext->bugs.a8xStaticTextureTargetError;
+        case Workaround::DISABLE_BLIT_INTO_TEXTURE_ARRAY:
+            return false;
     }
     return false;
 }
@@ -748,6 +750,10 @@ math::float2 MetalDriver::getClipSpaceParams() {
 
 uint8_t MetalDriver::getMaxDrawBuffers() {
     return std::min(mContext->maxColorRenderTargets, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
+}
+
+size_t MetalDriver::getMaxUniformBufferSize() {
+    return 256 * 1024 * 1024;   // TODO: return the actual size instead of hardcoding the minspec
 }
 
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
@@ -967,6 +973,11 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
     }
 
     scheduleDestroy(std::move(data));
+}
+
+void MetalDriver::compilePrograms(CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user) {
+    scheduleCallback(handler, user, callback);
 }
 
 void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
