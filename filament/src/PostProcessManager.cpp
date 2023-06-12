@@ -1085,18 +1085,29 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                     default: materialName = is2dArray ?
                             "separableGaussianBlur4L"sv : "separableGaussianBlur4"sv;   break;
                 }
-                std::string_view sourceParameterName = is2dArray ? "sourceArray"sv : "source"sv;
-
                 auto const& separableGaussianBlur = getPostProcessMaterial(materialName);
                 FMaterialInstance* const mi = separableGaussianBlur.getMaterialInstance(mEngine);
                 const size_t kernelStorageSize = mi->getMaterial()->reflect("kernel")->size;
+
+
+                // Initialize the samplers with dummy textures because vulkan requires a sampler to
+                // be bound to a texture even if sampler might be unused.
+                mi->setParameter("sourceArray"sv, getZeroTextureArray(), {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+                });
+                mi->setParameter("source"sv, getZeroTexture(), {
+                        .filterMag = SamplerMagFilter::LINEAR,
+                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+                });
+
 
                 float2 kernel[64];
                 size_t const m = computeGaussianCoefficients(kernel,
                         std::min(sizeof(kernel) / sizeof(*kernel), kernelStorageSize));
 
+                std::string_view sourceParameterName = is2dArray ? "sourceArray"sv : "source"sv;
                 // horizontal pass
-
                 mi->setParameter(sourceParameterName, hwIn, {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
