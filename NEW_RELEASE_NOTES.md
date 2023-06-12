@@ -10,3 +10,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 - matc: fix VSM high precision option on mobile [⚠️ **Recompile materials**]
 - vulkan: support sRGB swap chain
+- UiHelper: fix jank when a `TextureView` is resized (fixes b\282220665)
