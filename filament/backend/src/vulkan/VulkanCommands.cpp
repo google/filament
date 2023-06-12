@@ -22,6 +22,8 @@
 #include "VulkanCommands.h"
 
 #include "VulkanConstants.h"
+#include "VulkanContext.h"
+#include "VulkanDriver.h"
 
 #include <utils/Log.h>
 #include <utils/Panic.h>
@@ -31,6 +33,8 @@ using namespace bluevk;
 using namespace utils;
 
 namespace filament::backend {
+
+using Timestamp = VulkanGroupMarkers::Timestamp;
 
 VulkanCmdFence::VulkanCmdFence(VkDevice device, bool signaled) : device(device) {
     VkFenceCreateInfo fenceCreateInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -64,10 +68,51 @@ static VkCommandPool createPool(VkDevice device, uint32_t queueFamilyIndex) {
 
 }
 
-VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex) : mDevice(device),
-        mQueue(queue), mPool(createPool(mDevice, queueFamilyIndex)) {
-    VkSemaphoreCreateInfo sci { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-    for (auto& semaphore : mSubmissionSignals) {
+void VulkanGroupMarkers::push(std::string const& marker, Timestamp start) noexcept {
+    mMarkers.push(marker);
+#if FILAMENT_VULKAN_VERBOSE
+    mTimestamps.push(start.time_since_epoch().count() > 0.0
+                                  ? start
+                                  : std::chrono::high_resolution_clock::now());
+#endif
+}
+
+std::tuple<std::string, Timestamp> VulkanGroupMarkers::pop() noexcept {
+    auto const marker = mMarkers.top();
+    mMarkers.pop();
+
+#if FILAMENT_VULKAN_VERBOSE
+    auto const topTimestamp = mTimestamps.top();
+    mTimestamps.pop();
+    return std::make_tuple(marker, topTimestamp);
+#else
+    return std::make_tuple(marker, Timestamp{});
+#endif
+}
+
+std::tuple<std::string, Timestamp> VulkanGroupMarkers::top() const {
+    assert_invariant(!empty());
+    auto const marker = mMarkers.top();
+#if FILAMENT_VULKAN_VERBOSE
+    auto const topTimestamp = mTimestamps.top();
+    return std::make_tuple(marker, topTimestamp);
+#else
+    return std::make_tuple(marker, Timestamp{});
+#endif
+}
+
+bool VulkanGroupMarkers::empty() const noexcept {
+    return mMarkers.empty();
+}
+
+VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
+        VulkanContext* context)
+    : mDevice(device),
+      mQueue(queue),
+      mPool(createPool(mDevice, queueFamilyIndex)),
+      mContext(context) {
+    VkSemaphoreCreateInfo sci{.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+    for (auto& semaphore: mSubmissionSignals) {
         vkCreateSemaphore(mDevice, &sci, nullptr, &semaphore);
     }
 }
@@ -139,6 +184,13 @@ VulkanCommandBuffer const& VulkanCommands::get(bool blockOnGC) {
         mObserver->onCommandBuffer(*mCurrent);
     }
 
+    // We push the current markers onto a temporary stack. This must be placed after mCurrent is set
+    // to the new command buffer since pushGroupMarker also calls get().
+    while (mCarriedOverMarkers && !mCarriedOverMarkers->empty()) {
+        auto [marker, time] = mCarriedOverMarkers->pop();
+        pushGroupMarker(marker.c_str(), time);
+    }
+
     return *mCurrent;
 }
 
@@ -193,6 +245,17 @@ bool VulkanCommands::flush() {
             << " wait=(" << signals[0] << ", " << signals[1] << ") "
             << " signal=" << renderingFinished
             << io::endl;
+    }
+
+    // Before actually submitting, we need to pop any leftover group markers.
+    while (mGroupMarkers && !mGroupMarkers->empty()) {
+        if (!mCarriedOverMarkers) {
+            mCarriedOverMarkers = std::make_unique<VulkanGroupMarkers>();
+        }
+        auto const [marker, time] = mGroupMarkers->top();
+        mCarriedOverMarkers->push(marker, time);
+        // We still need to call through to vkCmdEndDebugUtilsLabelEXT.
+        popGroupMarker();
     }
 
     auto& cmdfence = mCurrent->fence;
@@ -270,7 +333,94 @@ void VulkanCommands::updateFences() {
     }
 }
 
-} // namespace filament::backend
+void VulkanCommands::pushGroupMarker(char const* str, VulkanGroupMarkers::Timestamp timestamp) {
+#if FILAMENT_VULKAN_VERBOSE
+    // If the timestamp is not 0, then we are carrying over a marker across buffer submits.
+    // If it is 0, then this is a normal marker push and we should just print debug line as usual.
+    if (timestamp.time_since_epoch().count() == 0.0) {
+        utils::slog.d << "----> " << str << "\n" << utils::io::flush;
+    }
+#endif
+
+    // TODO: Add group marker color to the Driver API
+    const VkCommandBuffer cmdbuffer = get().cmdbuffer;
+
+    if (!mGroupMarkers) {
+        mGroupMarkers = std::make_unique<VulkanGroupMarkers>();
+    }
+    mGroupMarkers->push(str, timestamp);
+
+    if (mContext->isDebugUtilsSupported()) {
+        VkDebugUtilsLabelEXT labelInfo = {
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+                .pLabelName = str,
+                .color = {0, 1, 0, 1},
+        };
+        vkCmdBeginDebugUtilsLabelEXT(cmdbuffer, &labelInfo);
+    } else if (mContext->isDebugMarkersSupported()) {
+        VkDebugMarkerMarkerInfoEXT markerInfo = {
+                .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
+                .pMarkerName = str,
+                .color = {0.0f, 1.0f, 0.0f, 1.0f},
+        };
+        vkCmdDebugMarkerBeginEXT(cmdbuffer, &markerInfo);
+    }
+}
+
+void VulkanCommands::popGroupMarker() {
+     assert_invariant(mGroupMarkers);
+
+    if (!mGroupMarkers->empty()) {
+        const VkCommandBuffer cmdbuffer = get().cmdbuffer;
+        #if FILAMENT_VULKAN_VERBOSE
+            auto const [marker, startTime] = mGroupMarkers->pop();
+            auto const endTime = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> diff = endTime - startTime;
+            utils::slog.d << "<---- " << marker << " elapsed: " << (diff.count() * 1000) << " ms\n"
+                          << utils::io::flush;
+        #else
+            mGroupMarkers->pop();
+        #endif
+
+        if (mContext->isDebugUtilsSupported()) {
+            vkCmdEndDebugUtilsLabelEXT(cmdbuffer);
+        } else if (mContext->isDebugMarkersSupported()) {
+            vkCmdDebugMarkerEndEXT(cmdbuffer);
+        }
+    } else if (mCarriedOverMarkers && !mCarriedOverMarkers->empty()) {
+        // It could be that pop is called between flush() and get() (new command buffer), in which
+        // case the marker is in "carried over" state. We'd just remove that
+        mCarriedOverMarkers->pop();
+    }
+}
+
+void VulkanCommands::insertEventMarker(char const* string, uint32_t len) {
+    VkCommandBuffer const cmdbuffer = get().cmdbuffer;
+    if (mContext->isDebugUtilsSupported()) {
+        VkDebugUtilsLabelEXT labelInfo = {
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+                .pLabelName = string,
+                .color = {1, 1, 0, 1},
+        };
+        vkCmdInsertDebugUtilsLabelEXT(cmdbuffer, &labelInfo);
+    } else if (mContext->isDebugMarkersSupported()) {
+        VkDebugMarkerMarkerInfoEXT markerInfo = {
+            .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
+            .pMarkerName = string,
+            .color = {0.0f, 1.0f, 0.0f, 1.0f},
+        };
+        vkCmdDebugMarkerInsertEXT(cmdbuffer, &markerInfo);
+    }
+}
+
+std::string VulkanCommands::getTopGroupMarker() const {
+    if (!mGroupMarkers || mGroupMarkers->empty()) {
+        return "";
+    }
+    return std::get<0>(mGroupMarkers->top());
+}
+
+}// namespace filament::backend
 
 #if defined(_MSC_VER)
 #pragma warning( pop )
