@@ -248,17 +248,17 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
 
     ASSERT_PRECONDITION(mImpl->mSkinningBoneCount <= CONFIG_MAX_BONE_COUNT,
             "bone count > %u", CONFIG_MAX_BONE_COUNT);
-    ASSERT_PRECONDITION(mImpl->mInstanceCount <= CONFIG_MAX_INSTANCES || !mImpl->mInstanceBuffer,
-            "instance count is %zu, but instance count is limited to CONFIG_MAX_INSTANCES (%zu) "
-            "instances when supplying transforms via an InstanceBuffer.",
-            mImpl->mInstanceCount,
-            CONFIG_MAX_INSTANCES);
+    ASSERT_PRECONDITION(
+            mImpl->mInstanceCount <= engine.getMaxAutomaticInstances() || !mImpl->mInstanceBuffer,
+            "instance count is %zu, but instance count is limited to "
+            "Engine::getMaxAutomaticInstances() (%zu) instances when supplying transforms via an "
+            "InstanceBuffer.",
+            mImpl->mInstanceCount, engine.getMaxAutomaticInstances());
     if (mImpl->mInstanceBuffer) {
         size_t bufferInstanceCount = mImpl->mInstanceBuffer->mInstanceCount;
         ASSERT_PRECONDITION(mImpl->mInstanceCount <= bufferInstanceCount,
                 "instance count (%zu) must be less than or equal to the InstanceBuffer's instance "
-                "count "
-                "(%zu).",
+                "count (%zu).",
                 mImpl->mInstanceCount, bufferInstanceCount);
     }
 

@@ -435,9 +435,9 @@ public:
         /**
          * Specifies the number of draw instances of this renderable and an \c InstanceBuffer
          * containing their local transforms. The default is 1 instance and the maximum number of
-         * instances allowed when supplying transforms is \c CONFIG_MAX_INSTANCES (64 on most
-         * platforms). 0 is invalid. The \c InstanceBuffer must not be destroyed before this
-         * renderable.
+         * instances allowed when supplying transforms is given by
+         * \c Engine::getMaxAutomaticInstances (64 on most platforms). 0 is invalid. The
+         * \c InstanceBuffer must not be destroyed before this renderable.
          *
          * All instances are culled using the same bounding box, so care must be taken to make
          * sure all instances render inside the specified bounding box.
@@ -448,12 +448,12 @@ public:
          * Only the \c VERTEX_DOMAIN_OBJECT vertex domain is supported.
          *
          * The local transforms of each instance can be updated with
-         * InstanceBuffer::setLocalTransforms.
+         * \c InstanceBuffer::setLocalTransforms.
          *
          * \see InstanceBuffer
          * \see instances(size_t, * math::mat4f const*)
          * @param instanceCount the number of instances, silently clamped between 1 and
-         *                      CONFIG_MAX_INSTANCES.
+         *                      the result of Engine::getMaxAutomaticInstances().
          * @param instanceBuffer an InstanceBuffer containing at least instanceCount transforms
          */
         Builder& instances(size_t instanceCount, InstanceBuffer* instanceBuffer) noexcept;
