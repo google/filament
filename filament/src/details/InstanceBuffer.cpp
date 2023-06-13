@@ -52,11 +52,11 @@ InstanceBuffer::Builder& InstanceBuffer::Builder::localTransforms(
 
 InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) {
     ASSERT_PRECONDITION(mImpl->mInstanceCount >= 1, "instanceCount must be >= 1.");
-    ASSERT_PRECONDITION(mImpl->mInstanceCount <= CONFIG_MAX_INSTANCES,
-            "instanceCount is %zu, but instance count is limited to CONFIG_MAX_INSTANCES (%zu) "
-            "instances when supplying transforms.",
+    ASSERT_PRECONDITION(mImpl->mInstanceCount <= engine.getMaxAutomaticInstances(),
+            "instanceCount is %zu, but instance count is limited to "
+            "Engine::getMaxAutomaticInstances() (%zu) instances when supplying transforms.",
             mImpl->mInstanceCount,
-            CONFIG_MAX_INSTANCES);
+            engine.getMaxAutomaticInstances());
     return downcast(engine).createInstanceBuffer(*this);
 }
 
