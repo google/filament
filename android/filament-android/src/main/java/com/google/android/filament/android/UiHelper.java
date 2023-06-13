@@ -244,6 +244,10 @@ public class UiHelper {
             }
             mSurface = surface;
         }
+
+        public Surface getSurface() {
+            return mSurface;
+        }
     }
 
     /**
@@ -489,6 +493,14 @@ public class UiHelper {
                     } else {
                         mRenderCallback.onResized(width, height);
                     }
+                    // We must recreate the SwapChain to guarantee that it sees the new size.
+                    // More precisely, for an EGL client, the EGLSurface must be recreated. For
+                    // a Vulkan client, the SwapChain must be recreated. Calling
+                    // onNativeWindowChanged() will accomplish that.
+                    // This requirement comes from SurfaceTexture.setDefaultBufferSize()
+                    // documentation.
+                    TextureViewHandler textureViewHandler = (TextureViewHandler) mRenderSurface;
+                    mRenderCallback.onNativeWindowChanged(textureViewHandler.getSurface());
                 }
 
                 @Override

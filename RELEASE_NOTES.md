@@ -10,6 +10,7 @@ Instead, if you are authoring a PR for the main branch, add your release note to
 ## v1.39.0
 
 - matc: workaround a bug in spirv-tools causing vsm to fail [⚠️ **Recompile materials**]
+- UiHelper: fix jank when a `TextureView` is resized (fixes b\282220665)
 
 ## v1.38.0
 
