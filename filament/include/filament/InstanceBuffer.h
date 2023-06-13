@@ -42,7 +42,8 @@ public:
 
         /**
          * @param instanceCount the number of instances this InstanceBuffer will support, must be
-         *                      >= 1 and <= \c CONFIG_MAX_INSTANCES
+         *                      >= 1 and <= \c Engine::getMaxAutomaticInstances()
+         * @see Engine::getMaxAutomaticInstances
          */
         Builder(size_t instanceCount) noexcept;
 

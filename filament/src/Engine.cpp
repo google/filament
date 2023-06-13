@@ -268,6 +268,10 @@ FeatureLevel Engine::getActiveFeatureLevel() const noexcept {
     return downcast(this)->getActiveFeatureLevel();
 }
 
+size_t Engine::getMaxAutomaticInstances() const noexcept {
+    return downcast(this)->getMaxAutomaticInstances();
+}
+
 #if defined(__EMSCRIPTEN__)
 void Engine::resetBackendState() noexcept {
     downcast(this)->resetBackendState();
