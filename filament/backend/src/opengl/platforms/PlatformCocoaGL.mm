@@ -50,6 +50,7 @@ struct PlatformCocoaGLImpl {
     NSOpenGLContext* mGLContext = nullptr;
     CocoaGLSwapChain* mCurrentSwapChain = nullptr;
     std::vector<NSView*> mHeadlessSwapChains;
+    std::vector<NSOpenGLContext*> mAdditionalContexts;
     CVOpenGLTextureCacheRef mTextureCache = nullptr;
     std::unique_ptr<CocoaExternalImage::SharedGl> mExternalImageSharedGl;
     void updateOpenGLContext(NSView *nsView, bool resetView, bool clearView);
@@ -171,6 +172,23 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext, const Platform::Drive
     return OpenGLPlatform::createDefaultDriver(this, sharedContext, driverConfig);
 }
 
+bool PlatformCocoaGL::isExtraContextSupported() const noexcept {
+    return true;
+}
+
+void PlatformCocoaGL::createContext(bool shared) {
+    NSOpenGLPixelFormatAttribute pixelFormatAttributes[] = {
+            NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core,
+            NSOpenGLPFAAccelerated,  (NSOpenGLPixelFormatAttribute) true,
+            0, 0,
+    };
+    NSOpenGLContext* const sharedContext = shared ? pImpl->mGLContext : nil;
+    NSOpenGLPixelFormat* const pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:pixelFormatAttributes];
+    NSOpenGLContext* const nsOpenGLContext = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:sharedContext];
+    [nsOpenGLContext makeCurrentContext];
+    pImpl->mAdditionalContexts.push_back(nsOpenGLContext);
+}
+
 int PlatformCocoaGL::getOSVersion() const noexcept {
     return 0;
 }
@@ -179,6 +197,9 @@ void PlatformCocoaGL::terminate() noexcept {
     CFRelease(pImpl->mTextureCache);
     pImpl->mExternalImageSharedGl.reset();
     pImpl->mGLContext = nil;
+    for (auto& context : pImpl->mAdditionalContexts) {
+        context = nil;
+    }
     bluegl::unbind();
 }
 

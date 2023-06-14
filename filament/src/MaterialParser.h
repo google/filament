@@ -117,7 +117,14 @@ public:
     bool getShader(filaflat::ShaderContent& shader, backend::ShaderModel shaderModel,
             Variant variant, backend::ShaderStage stage) noexcept;
 
-    filaflat::MaterialChunk const& getMaterialChunk() const noexcept { return mImpl.mMaterialChunk; }
+    bool hasShader(backend::ShaderModel model,
+            Variant variant, backend::ShaderStage stage) const noexcept {
+        return getMaterialChunk().hasShader(model, variant, stage);
+    }
+
+    filaflat::MaterialChunk const& getMaterialChunk() const noexcept {
+        return mImpl.mMaterialChunk;
+    }
 
 private:
     struct MaterialParserDetails {

@@ -71,6 +71,8 @@ public:
 
     ~Program() noexcept;
 
+    Program& priorityQueue(CompilerPriorityQueue priorityQueue) noexcept;
+
     // sets the material name and variant for diagnostic purposes only
     Program& diagnostics(utils::CString const& name,
             utils::Invocable<utils::io::ostream&(utils::io::ostream& out)>&& logger);
@@ -138,6 +140,8 @@ public:
 
     uint64_t getCacheId() const noexcept { return mCacheId; }
 
+    CompilerPriorityQueue getPriorityQueue() const noexcept { return mPriorityQueue; }
+
 private:
     friend utils::io::ostream& operator<<(utils::io::ostream& out, const Program& builder);
 
@@ -150,6 +154,7 @@ private:
     utils::FixedCapacityVector<SpecializationConstant> mSpecializationConstants;
     utils::FixedCapacityVector<std::pair<utils::CString, uint8_t>> mAttributes;
     std::array<UniformInfo, Program::UNIFORM_BINDING_COUNT> mBindingUniformInfo;
+    CompilerPriorityQueue mPriorityQueue = CompilerPriorityQueue::HIGH;
 };
 
 } // namespace filament::backend

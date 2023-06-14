@@ -63,9 +63,10 @@ public:
         return mSamplerInterfaceBlock;
     }
 
-    void compile(backend::CallbackHandler* handler,
-            utils::Invocable<void(Material*)>&& callback,
-            UserVariantFilterMask variantFilter) noexcept;
+    void compile(CompilerPriorityQueue priority,
+            UserVariantFilterMask variantFilter,
+            backend::CallbackHandler* handler,
+            utils::Invocable<void(Material*)>&& callback) noexcept;
 
     // Create an instance of this material
     FMaterialInstance* createInstance(const char* name) const noexcept;
@@ -88,10 +89,11 @@ public:
     // prepareProgram creates the program for the material's given variant at the backend level.
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.
-    void prepareProgram(Variant variant) const noexcept {
+    void prepareProgram(Variant variant,
+            backend::CompilerPriorityQueue priorityQueue = CompilerPriorityQueue::HIGH) const noexcept {
         // prepareProgram() is called for each RenderPrimitive in the scene, so it must be efficient.
         if (UTILS_UNLIKELY(!isCached(variant))) {
-            prepareProgramSlow(variant);
+            prepareProgramSlow(variant, priorityQueue);
         }
     }
 
@@ -191,15 +193,16 @@ public:
 
 private:
     bool hasVariant(Variant variant) const noexcept;
-    void prepareProgramSlow(Variant variant) const noexcept;
-    void getSurfaceProgramSlow(Variant variant) const noexcept;
-    void getPostProcessProgramSlow(Variant variant) const noexcept;
-    backend::Program getProgramWithVariants(Variant variant, Variant vertexVariant,
-            Variant fragmentVariant) const noexcept;
+    void prepareProgramSlow(Variant variant,
+            CompilerPriorityQueue priorityQueue) const noexcept;
+    void getSurfaceProgramSlow(Variant variant,
+            CompilerPriorityQueue priorityQueue) const noexcept;
+    void getPostProcessProgramSlow(Variant variant,
+            CompilerPriorityQueue priorityQueue) const noexcept;
+    backend::Program getProgramWithVariants(Variant variant,
+            Variant vertexVariant, Variant fragmentVariant) const noexcept;
 
-
-    void createAndCacheProgram(backend::Program&& p,
-            Variant variant) const noexcept;
+    void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
 
     // try to order by frequency of use
     mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;

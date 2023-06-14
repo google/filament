@@ -141,5 +141,4 @@ inline constexpr bool any(Enum lhs) noexcept {
     return !none(lhs);
 }
 
-
 #endif // TNT_UTILS_BITMASKENUM_H

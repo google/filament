@@ -39,6 +39,11 @@ Program& Program::operator=(Program&& rhs) noexcept {
 
 Program::~Program() noexcept = default;
 
+Program& Program::priorityQueue(CompilerPriorityQueue priorityQueue) noexcept {
+    mPriorityQueue = priorityQueue;
+    return *this;
+}
+
 Program& Program::diagnostics(CString const& name,
         Invocable<io::ostream&(io::ostream&)>&& logger) {
     mName = name;

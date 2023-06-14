@@ -2213,8 +2213,10 @@ void PostProcessManager::colorGradingPrepareSubpass(DriverApi& driver,
     mi->commit(driver);
 
     // load both variants
-    material.getMaterial(mEngine)->prepareProgram(Variant{Variant::type_t(PostProcessVariant::TRANSLUCENT)});
-    material.getMaterial(mEngine)->prepareProgram(Variant{Variant::type_t(PostProcessVariant::OPAQUE)});
+    material.getMaterial(mEngine)->prepareProgram(
+            Variant{ Variant::type_t(PostProcessVariant::TRANSLUCENT) });
+    material.getMaterial(mEngine)->prepareProgram(
+            Variant{ Variant::type_t(PostProcessVariant::OPAQUE) });
 }
 
 void PostProcessManager::colorGradingSubpass(DriverApi& driver,

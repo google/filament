@@ -12,3 +12,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - vulkan: support sRGB swap chain
 - Add new `getMaxAutomaticInstances()` API on `Engine` to get max supported automatic instances.
 - UiHelper: fix jank when a `TextureView` is resized (fixes b\282220665)
+- backend: parallel shader compilation support. This breaks and improves the recent `Material::compile` API.

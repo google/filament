@@ -415,6 +415,8 @@ public:
         void (* getQueryObjectui64v)(GLuint id, GLenum pname, GLuint64* params);
 
         void (* invalidateFramebuffer)(GLenum target, GLsizei numAttachments, const GLenum *attachments);
+
+        void (* maxShaderCompilerThreadsKHR)(GLuint count);
     } procs{};
 
 private:

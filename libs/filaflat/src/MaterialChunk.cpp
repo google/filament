@@ -170,6 +170,14 @@ bool MaterialChunk::getSpirvShader(BlobDictionary const& dictionary,
     return true;
 }
 
+bool MaterialChunk::hasShader(ShaderModel model, Variant variant, ShaderStage stage) const noexcept {
+    if (mBase == nullptr) {
+        return false;
+    }
+    auto pos = mOffsets.find(makeKey(model, variant, stage));
+    return pos != mOffsets.end();
+}
+
 bool MaterialChunk::getShader(ShaderContent& shaderContent, BlobDictionary const& dictionary,
         ShaderModel shaderModel, filament::Variant variant, ShaderStage stage) {
     switch (mMaterialTag) {

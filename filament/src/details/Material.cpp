@@ -403,7 +403,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
         filaflat::MaterialChunk const& materialChunk{ mMaterialParser->getMaterialChunk() };
         auto variants = FixedCapacityVector<Variant>::with_capacity(materialChunk.getShaderCount());
         materialChunk.visitShaders([&variants](
-                ShaderModel model, Variant variant, ShaderStage stage) {
+                ShaderModel, Variant variant, ShaderStage) {
             if (Variant::isValidDepthVariant(variant)) {
                 variants.push_back(variant);
             }
@@ -418,7 +418,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
         FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
         auto& cachedPrograms = mCachedPrograms;
-        for (Variant variant : pDefaultMaterial->mDepthVariants) {
+        for (Variant const variant : pDefaultMaterial->mDepthVariants) {
             pDefaultMaterial->prepareProgram(variant);
             cachedPrograms[variant.key] = pDefaultMaterial->getProgram(variant);
         }
@@ -467,31 +467,39 @@ void FMaterial::terminate(FEngine& engine) {
     mDefaultInstance.terminate(engine);
 }
 
-void FMaterial::compile(backend::CallbackHandler* handler,
-        utils::Invocable<void(Material*)>&& callback,
-        UserVariantFilterMask variantFilter) noexcept {
+void FMaterial::compile(CompilerPriorityQueue priority,
+        UserVariantFilterMask variantSpec,
+        backend::CallbackHandler* handler,
+        utils::Invocable<void(Material*)>&& callback) noexcept {
+
+    UserVariantFilterMask const variantFilter =
+            ~variantSpec & UserVariantFilterMask(UserVariantFilterBit::ALL);
+
     auto const& variants = isVariantLit() ?
             VariantUtils::getLitVariants() : VariantUtils::getUnlitVariants();
     for (auto const variant : variants) {
         if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
             if (hasVariant(variant)) {
-                prepareProgram(variant);
+                prepareProgram(variant, priority);
             }
         }
     }
 
-    struct Callback {
-        Invocable<void(Material*)> f;
-        Material* m;
-        static void func(void* user) {
-            auto* const c = reinterpret_cast<Callback*>(user);
-            c->f(c->m);
-            delete c;
-        }
-    };
-
-    auto* const user = new Callback{ std::move(callback), this };
-    mEngine.getDriverApi().compilePrograms(handler, &Callback::func, static_cast<void*>(user));
+    if (callback) {
+        struct Callback {
+            Invocable<void(Material*)> f;
+            Material* m;
+            static void func(void* user) {
+                auto* const c = reinterpret_cast<Callback*>(user);
+                c->f(c->m);
+                delete c;
+            }
+        };
+        auto* const user = new(std::nothrow) Callback{ std::move(callback), this };
+        mEngine.getDriverApi().compilePrograms(handler, &Callback::func, static_cast<void*>(user));
+    } else {
+        mEngine.getDriverApi().compilePrograms(nullptr, nullptr, nullptr);
+    }
 }
 
 FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
@@ -527,25 +535,25 @@ bool FMaterial::hasVariant(Variant variant) const noexcept {
             // TODO: implement MaterialDomain::COMPUTE
             return false;
     }
-    ShaderContent& vsBuilder = mEngine.getVertexShaderContent();
     const ShaderModel sm = mEngine.getShaderModel();
-    if (!mMaterialParser->getShader(vsBuilder, sm, vertexVariant, ShaderStage::VERTEX)) {
+    if (!mMaterialParser->hasShader(sm, vertexVariant, ShaderStage::VERTEX)) {
         return false;
     }
-    if (!mMaterialParser->getShader(vsBuilder, sm, fragmentVariant, ShaderStage::FRAGMENT)) {
+    if (!mMaterialParser->hasShader(sm, fragmentVariant, ShaderStage::FRAGMENT)) {
         return false;
     }
     return true;
 }
 
-void FMaterial::prepareProgramSlow(Variant variant) const noexcept {
+void FMaterial::prepareProgramSlow(Variant variant,
+        backend::CompilerPriorityQueue priorityQueue) const noexcept {
     assert_invariant(mEngine.hasFeatureLevel(mFeatureLevel));
     switch (getMaterialDomain()) {
         case MaterialDomain::SURFACE:
-            getSurfaceProgramSlow(variant);
+            getSurfaceProgramSlow(variant, priorityQueue);
             break;
         case MaterialDomain::POST_PROCESS:
-            getPostProcessProgramSlow(variant);
+            getPostProcessProgramSlow(variant, priorityQueue);
             break;
         case MaterialDomain::COMPUTE:
             // TODO: implement MaterialDomain::COMPUTE
@@ -553,7 +561,8 @@ void FMaterial::prepareProgramSlow(Variant variant) const noexcept {
     }
 }
 
-void FMaterial::getSurfaceProgramSlow(Variant variant) const noexcept {
+void FMaterial::getSurfaceProgramSlow(Variant variant,
+        CompilerPriorityQueue priorityQueue) const noexcept {
     // filterVariant() has already been applied in generateCommands(), shouldn't be needed here
     // if we're unlit, we don't have any bits that correspond to lit materials
     assert_invariant(variant == Variant::filterVariant(variant, isVariantLit()) );
@@ -564,11 +573,14 @@ void FMaterial::getSurfaceProgramSlow(Variant variant) const noexcept {
     Variant const fragmentVariant = Variant::filterVariantFragment(variant);
 
     Program pb{ getProgramWithVariants(variant, vertexVariant, fragmentVariant) };
+    pb.priorityQueue(priorityQueue);
     createAndCacheProgram(std::move(pb), variant);
 }
 
-void FMaterial::getPostProcessProgramSlow(Variant variant) const noexcept {
+void FMaterial::getPostProcessProgramSlow(Variant variant,
+        CompilerPriorityQueue priorityQueue) const noexcept {
     Program pb{ getProgramWithVariants(variant, variant, variant) };
+    pb.priorityQueue(priorityQueue);
     createAndCacheProgram(std::move(pb), variant);
 }
 
