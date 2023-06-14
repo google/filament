@@ -178,6 +178,10 @@ public:
         return mActiveFeatureLevel;
     }
 
+    size_t getMaxAutomaticInstances() const noexcept {
+        return CONFIG_MAX_INSTANCES;
+    }
+
     PostProcessManager const& getPostProcessManager() const noexcept {
         return mPostProcessManager;
     }
