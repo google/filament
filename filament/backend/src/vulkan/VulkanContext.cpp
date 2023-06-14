@@ -118,8 +118,8 @@ void VulkanTimestamps::beginQuery(VulkanCommandBuffer const* commands,
     vkCmdResetQueryPool(commands->cmdbuffer, mPool, index, 2);
     vkCmdWriteTimestamp(commands->cmdbuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mPool, index);
 
-    // We stash this because getResult might come before beginquery.
-    query->cmdbuffer.store(commands);
+    // We stash this because getResult might come before the query is actually processed.
+    query->fence = commands->fence;
 }
 
 void VulkanTimestamps::endQuery(VulkanCommandBuffer const* commands,
