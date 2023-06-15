@@ -77,27 +77,27 @@ void VulkanGroupMarkers::push(std::string const& marker, Timestamp start) noexce
 #endif
 }
 
-std::tuple<std::string, Timestamp> VulkanGroupMarkers::pop() noexcept {
+std::pair<std::string, Timestamp> VulkanGroupMarkers::pop() noexcept {
     auto const marker = mMarkers.top();
     mMarkers.pop();
 
 #if FILAMENT_VULKAN_VERBOSE
     auto const topTimestamp = mTimestamps.top();
     mTimestamps.pop();
-    return std::make_tuple(marker, topTimestamp);
+    return std::make_pair(marker, topTimestamp);
 #else
-    return std::make_tuple(marker, Timestamp{});
+    return std::make_pair(marker, Timestamp{});
 #endif
 }
 
-std::tuple<std::string, Timestamp> VulkanGroupMarkers::top() const {
+std::pair<std::string, Timestamp> VulkanGroupMarkers::top() const {
     assert_invariant(!empty());
     auto const marker = mMarkers.top();
 #if FILAMENT_VULKAN_VERBOSE
     auto const topTimestamp = mTimestamps.top();
-    return std::make_tuple(marker, topTimestamp);
+    return std::make_pair(marker, topTimestamp);
 #else
-    return std::make_tuple(marker, Timestamp{});
+    return std::make_pair(marker, Timestamp{});
 #endif
 }
 
@@ -338,7 +338,7 @@ void VulkanCommands::pushGroupMarker(char const* str, VulkanGroupMarkers::Timest
     // If the timestamp is not 0, then we are carrying over a marker across buffer submits.
     // If it is 0, then this is a normal marker push and we should just print debug line as usual.
     if (timestamp.time_since_epoch().count() == 0.0) {
-        utils::slog.d << "----> " << str << "\n" << utils::io::flush;
+        utils::slog.d << "----> " << str << utils::io::endl;
     }
 #endif
 

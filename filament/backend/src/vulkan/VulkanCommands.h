@@ -29,7 +29,7 @@
 #include <chrono>
 #include <stack>
 #include <string>
-#include <tuple>
+#include <utility>
 
 namespace filament::backend {
 
@@ -40,8 +40,8 @@ public:
     using Timestamp = std::chrono::time_point<std::chrono::high_resolution_clock>;
 
     void push(std::string const& marker, Timestamp start = {}) noexcept;
-    std::tuple<std::string, Timestamp> pop() noexcept;
-    std::tuple<std::string, Timestamp> top() const;
+    std::pair<std::string, Timestamp> pop() noexcept;
+    std::pair<std::string, Timestamp> top() const;
     bool empty() const noexcept;
 
 private:
