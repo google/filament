@@ -108,9 +108,8 @@ VulkanProgram::VulkanProgram(VkDevice device, const Program& builder) noexcept :
     // Make a copy of the binding map
     samplerGroupInfo = builder.getSamplerGroupInfo();
     if constexpr (FILAMENT_VULKAN_VERBOSE) {
-        utils::slog.d << "Created VulkanProgram " << builder
-                    << ", shaders = (" << bundle.vertex << ", " << bundle.fragment << ")"
-                    << utils::io::endl;
+        utils::slog.d << "Created VulkanProgram " << builder << ", shaders = (" << bundle.vertex
+                      << ", " << bundle.fragment << ")" << utils::io::endl;
     }
 }
 

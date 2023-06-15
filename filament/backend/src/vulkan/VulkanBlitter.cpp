@@ -171,7 +171,7 @@ void VulkanBlitter::blitDepth(BlitArgs args) {
     assert_invariant(src.texture && dst.texture);
 
     if (src.texture->samples > 1 && dst.texture->samples == 1) {
-        blitSlowDepth(aspect, args.filter, args.srcTarget->getExtent(), src, dst, args.srcRectPair,
+        blitSlowDepth(args.filter, args.srcTarget->getExtent(), src, dst, args.srcRectPair,
                 args.dstRectPair);
         return;
     }
@@ -259,27 +259,30 @@ void VulkanBlitter::lazyInit() noexcept {
 // 2. Begin render pass
 // 3. Draw a big triangle
 // 4. End render pass.
-void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
-        const VkExtent2D srcExtent, VulkanAttachment src, VulkanAttachment dst,
-        const VkOffset3D srcRect[2], const VkOffset3D dstRect[2]) {
+void VulkanBlitter::blitSlowDepth(VkFilter filter, const VkExtent2D srcExtent, VulkanAttachment src,
+        VulkanAttachment dst, const VkOffset3D srcRect[2], const VkOffset3D dstRect[2]) {
     lazyInit();
 
-    const BlitterUniforms uniforms = {
+    BlitterUniforms const uniforms = {
         .sampleCount = src.texture->samples,
         .inverseSampleCount = 1.0f / float(src.texture->samples),
     };
     mParamsBuffer->loadFromCpu(&uniforms, 0, sizeof(uniforms));
 
+    VkImageAspectFlags const aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+    // We will transition the src into sampler layout and also keep it in sampler layout for
+    // consistency.
+    VulkanLayout const samplerLayout = VulkanLayout::DEPTH_SAMPLER;
+
     // BEGIN RENDER PASS
     // -----------------
-
-    VulkanLayout const layout = VulkanLayout::DEPTH_ATTACHMENT;
 
     const VulkanFboCache::RenderPassKey rpkey = {
         .initialColorLayoutMask = 0,
         .initialDepthLayout = VulkanLayout::UNDEFINED,
-        .renderPassDepthLayout = layout,
-        .finalDepthLayout = layout,
+        .renderPassDepthLayout = samplerLayout,
+        .finalDepthLayout = samplerLayout,
         .depthFormat = dst.getFormat(),
         .clear = {},
         .discardStart = TargetBufferFlags::DEPTH,
@@ -297,7 +300,7 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
         .samples = rpkey.samples,
         .color = {},
         .resolve = {},
-        .depth = dst.getImageView(VK_IMAGE_ASPECT_DEPTH_BIT),
+        .depth = dst.getImageView(aspect),
     };
     const VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
 
@@ -311,12 +314,18 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
     renderPassInfo.renderArea.extent.width = dstRect[1].x - dstRect[0].x;
     renderPassInfo.renderArea.extent.height = dstRect[1].y - dstRect[0].y;
 
-    // Even though we don't clear anything, we have to provide a clear value.
-    VkClearValue clearValues[1] = {};
-    renderPassInfo.clearValueCount = 1;
-    renderPassInfo.pClearValues = clearValues;
-
     const VkCommandBuffer cmdbuffer = mCommands->get().cmdbuffer;
+
+    // We need to transition the source into a sampler since it'll be sampled in the shader.
+    const VkImageSubresourceRange srcRange = {
+            .aspectMask = aspect,
+            .baseMipLevel = src.level,
+            .levelCount = 1,
+            .baseArrayLayer = src.layer,
+            .layerCount = 1,
+    };
+    src.texture->transitionLayout(cmdbuffer, srcRange, samplerLayout);
+
     vkCmdBeginRenderPass(cmdbuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     VkViewport viewport = {
@@ -378,7 +387,7 @@ void VulkanBlitter::blitSlowDepth(VkImageAspectFlags aspect, VkFilter filter,
     samplers[0] = {
         .sampler = vksampler,
         .imageView = src.getImageView(VK_IMAGE_ASPECT_DEPTH_BIT),
-        .imageLayout = ImgUtil::getVkLayout(VulkanLayout::DEPTH_ATTACHMENT),
+        .imageLayout = ImgUtil::getVkLayout(samplerLayout),
     };
 
     mPipelineCache.bindSamplers(samplers,

@@ -154,10 +154,12 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
             << "handle = " << utils::io::hex << mTextureImage << utils::io::dec << ", "
             << "extent = " << w << "x" << h << "x"<< depth << ", "
             << "mipLevels = " << int(levels) << ", "
+            << "TextureUsage = " << static_cast<int>(usage) << ", "            
             << "usage = " << imageInfo.usage << ", "
             << "samples = " << imageInfo.samples << ", "
             << "type = " << imageInfo.imageType << ", "
             << "flags = " << imageInfo.flags << ", "
+            << "target = " << static_cast<int>(target) <<", "
             << "format = " << mVkFormat << utils::io::endl;
     }
     ASSERT_POSTCONDITION(!error, "Unable to create image.");
@@ -199,11 +201,13 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     // Transition the layout of each image slice that might be used as a render target.
     // We do not transition images that are merely SAMPLEABLE, this is deferred until upload time
     // because we do not know how many layers and levels will actually be used.
-    if (any(usage & (TextureUsage::COLOR_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT))) {
+    if (imageInfo.usage
+        & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+           | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
         const uint32_t layers = mPrimaryViewRange.layerCount;
         VkImageSubresourceRange range = { getImageAspect(), 0, levels, 0, layers };
         VkCommandBuffer cmdbuf = mCommands->get().cmdbuffer;
-        transitionLayout(cmdbuf, range, ImgUtil::getDefaultLayout(usage));
+        transitionLayout(cmdbuf, range, ImgUtil::getDefaultLayout(imageInfo.usage));
     }
 }
 

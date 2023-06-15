@@ -1181,7 +1181,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     VkClearValue clearValues[
             MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT +
             1] = {};
-    if (params.flags.clear != TargetBufferFlags::NONE) {
+    if (clearVal != TargetBufferFlags::NONE) {
 
         // NOTE: clearValues must be populated in the same order as the attachments array in
         // VulkanFboCache::getFramebuffer. Values must be provided regardless of whether Vulkan is
