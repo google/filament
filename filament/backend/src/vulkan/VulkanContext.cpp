@@ -15,6 +15,8 @@
  */
 
 #include "VulkanContext.h"
+
+#include "VulkanCommands.h"
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
 #include "VulkanTexture.h"

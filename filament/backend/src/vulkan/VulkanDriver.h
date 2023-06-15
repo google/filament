@@ -148,7 +148,6 @@ private:
     VmaAllocator mAllocator = VK_NULL_HANDLE;
     VkDebugReportCallbackEXT mDebugCallback = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT mDebugMessenger = VK_NULL_HANDLE;
-    std::string mCurrentDebugMarker;
 
     VulkanContext mContext = {};
     HandleAllocatorVK mHandleAllocator;

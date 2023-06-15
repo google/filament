@@ -17,7 +17,6 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
 #define TNT_FILAMENT_BACKEND_VULKANCONTEXT_H
 
-#include "VulkanCommands.h"
 #include "VulkanConstants.h"
 #include "VulkanImageUtility.h"
 #include "VulkanPipelineCache.h"
@@ -38,6 +37,7 @@ struct VulkanSwapChain;
 struct VulkanTexture;
 class VulkanStagePool;
 struct VulkanTimerQuery;
+struct VulkanCommandBuffer;
 
 struct VulkanAttachment {
     VulkanTexture* texture;
