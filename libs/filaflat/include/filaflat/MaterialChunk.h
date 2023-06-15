@@ -54,6 +54,8 @@ public:
 
     void visitShaders(utils::Invocable<void(ShaderModel, Variant, ShaderStage)>&& visitor) const;
 
+    bool hasShader(ShaderModel model, Variant variant, ShaderStage stage) const noexcept;
+
     // These methods are for debugging purposes only (matdbg)
     // @{
     static void decodeKey(uint32_t key,

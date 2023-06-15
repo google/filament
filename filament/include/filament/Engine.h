@@ -497,6 +497,21 @@ public:
      */
     FeatureLevel getActiveFeatureLevel() const noexcept;
 
+    /**
+     * Queries the maximum number of GPU instances that Filament creates when automatic instancing
+     * is enabled. This value is also the limit for the number of transforms that can be stored in
+     * an InstanceBuffer. This value may depend on the device and platform, but will remain constant
+     * during the lifetime of this Engine.
+     *
+     * This value does not apply when using the instances(size_t) method on
+     * RenderableManager::Builder.
+     *
+     * @return the number of max automatic instances
+     * @see setAutomaticInstancingEnabled
+     * @see RenderableManager::Builder::instances(size_t)
+     * @see RenderableManager::Builder::instances(size_t, InstanceBuffer*)
+     */
+    size_t getMaxAutomaticInstances() const noexcept;
 
     /**
      * @return EntityManager used by filament

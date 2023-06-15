@@ -74,10 +74,11 @@ struct WGLSwapChain {
     bool isHeadless = false;
 };
 
+static PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs = nullptr;
+
 Driver* PlatformWGL::createDriver(void* const sharedGLContext,
         const Platform::DriverConfig& driverConfig) noexcept {
     int result = 0;
-    PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs = nullptr;
     int pixelFormat = 0;
 
     mPfd = {
@@ -123,13 +124,15 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext,
             (PFNWGLCREATECONTEXTATTRIBSARBPROC) wglGetProcAddress("wglCreateContextAttribsARB");
 
     // try all versions down, from GL 4.5 to 4.1
+
+
     for (int minor = 5; minor >= 1; minor--) {
-        int const attribs[] = {
+        mAttribs = {
                 WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
                 WGL_CONTEXT_MINOR_VERSION_ARB, minor,
                 0
         };
-        mContext = wglCreateContextAttribs(whdc, (HGLRC)sharedGLContext, attribs);
+        mContext = wglCreateContextAttribs(whdc, (HGLRC)sharedGLContext, mAttribs.data());
         if (mContext) {
             break;
         }
@@ -164,11 +167,24 @@ error:
     return NULL;
 }
 
+bool PlatformWGL::isExtraContextSupported() const noexcept {
+    return true;
+}
+
+void PlatformWGL::createContext(bool shared) {
+    HGLRC context = wglCreateContextAttribs(mWhdc, shared ? mContext : nullptr, mAttribs.data());
+    wglMakeCurrent(mWhdc, context);
+    mAdditionalContexts.push_back(context);
+}
+
 void PlatformWGL::terminate() noexcept {
     wglMakeCurrent(NULL, NULL);
     if (mContext) {
         wglDeleteContext(mContext);
         mContext = NULL;
+    }
+    for (auto& context : mAdditionalContexts) {
+        wglDeleteContext(mContext);
     }
     if (mHWnd && mWhdc) {
         ReleaseDC(mHWnd, mWhdc);

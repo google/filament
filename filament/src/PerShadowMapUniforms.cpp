@@ -107,7 +107,7 @@ void PerShadowMapUniforms::prepareShadowMapping(Transaction const& transaction,
 PerShadowMapUniforms::Transaction PerShadowMapUniforms::open(backend::DriverApi& driver) noexcept {
     Transaction transaction;
     // TODO: use out-of-line buffer if too large
-    transaction.uniforms = (PerViewUib *)driver.allocate(sizeof(PerViewUib));
+    transaction.uniforms = (PerViewUib *)driver.allocate(sizeof(PerViewUib), 16);
     assert_invariant(transaction.uniforms);
     return transaction;
 }

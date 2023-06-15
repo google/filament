@@ -38,6 +38,8 @@ class PlatformEGL : public OpenGLPlatform {
 public:
 
     PlatformEGL() noexcept;
+    bool isExtraContextSupported() const noexcept override;
+    void createContext(bool shared) override;
 
 protected:
 
@@ -124,6 +126,8 @@ protected:
     EGLSurface mCurrentReadSurface = EGL_NO_SURFACE;
     EGLSurface mEGLDummySurface = EGL_NO_SURFACE;
     EGLConfig mEGLConfig = EGL_NO_CONFIG_KHR;
+    Config mContextAttribs;
+    std::vector<EGLContext> mAdditionalContexts;
 
     // supported extensions detected at runtime
     struct {

@@ -147,9 +147,7 @@ private:
     uint32_t startingQueryIndex;
     uint32_t stoppingQueryIndex;
 
-    // TODO: should be safe to hold this reference (since VulkanCommanBuffers is a ring).
-    // But explore better options.
-    std::atomic<VulkanCommandBuffer const*> cmdbuffer = nullptr;
+    std::shared_ptr<VulkanCmdFence> fence;
     friend class VulkanTimestamps;
 };
 

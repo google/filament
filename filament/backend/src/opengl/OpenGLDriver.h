@@ -20,6 +20,7 @@
 #include "DriverBase.h"
 #include "GLUtils.h"
 #include "OpenGLContext.h"
+#include "ShaderCompilerService.h"
 
 #include "private/backend/Driver.h"
 #include "private/backend/HandleAllocator.h"
@@ -209,9 +210,15 @@ public:
     OpenGLDriver& operator=(OpenGLDriver const&) = delete;
 
 private:
+    OpenGLPlatform& mPlatform;
     OpenGLContext mContext;
+    ShaderCompilerService mShaderCompilerService;
 
     OpenGLContext& getContext() noexcept { return mContext; }
+
+    ShaderCompilerService& getShaderCompilerService() noexcept {
+        return mShaderCompilerService;
+    }
 
     ShaderModel getShaderModel() const noexcept final;
 
@@ -273,6 +280,7 @@ private:
     }
 
     friend class OpenGLProgram;
+    friend class ShaderCompilerService;
 
     /* Extension management... */
 
@@ -373,8 +381,6 @@ private:
     void detachStream(GLTexture* t) noexcept;
     void replaceStream(GLTexture* t, GLStream* stream) noexcept;
 
-    OpenGLPlatform& mPlatform;
-
     void updateTextureLodRange(GLTexture* texture, int8_t targetLevel) noexcept;
 
     // tasks executed on the main thread after the fence signaled
@@ -386,11 +392,6 @@ private:
     void runEveryNowAndThen(std::function<bool()> fn) noexcept;
     void executeEveryNowAndThenOps() noexcept;
     std::vector<std::function<bool()>> mEveryNowAndThenOps;
-
-    void runAtNextRenderPass(void* token, std::function<void()> fn) noexcept;
-    void executeRenderPassOps() noexcept;
-    void cancelRunAtNextPassOp(void* token) noexcept;
-    tsl::robin_map<void*, std::function<void()>> mRunAtNextRenderPassOps;
 
     // timer query implementation
     OpenGLTimerQueryInterface* mTimerQueryImpl = nullptr;
