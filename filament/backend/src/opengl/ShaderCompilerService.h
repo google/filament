@@ -120,7 +120,7 @@ private:
 
     GLuint initialize(ShaderCompilerService::program_token_t& token) noexcept;
 
-    void getProgramFromCompilerPool(program_token_t& token) noexcept;
+    static void getProgramFromCompilerPool(program_token_t& token) noexcept;
 
         static void compileShaders(
             OpenGLContext& context,
