@@ -110,7 +110,7 @@ public:
     inline void useProgram(GLuint program) noexcept;
 
           void pixelStore(GLenum, GLint) noexcept;
-    inline void activeTexture(GLuint unit) noexcept;
+    inline bool activeTexture(GLuint unit) noexcept;
     inline void bindTexture(GLuint unit, GLuint target, GLuint texId, size_t targetIndex) noexcept;
     inline void bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept;
 
@@ -476,11 +476,13 @@ private:
 #endif
 
     template <typename T, typename F>
-    static inline void update_state(T& state, T const& expected, F functor, bool force = false) noexcept {
+    static inline bool update_state(T& state, T const& expected, F functor, bool force = false) noexcept {
         if (UTILS_UNLIKELY(force || state != expected)) {
             state = expected;
             functor();
+            return true;
         }
+        return false;
     }
 
     void setDefaultState() noexcept;
@@ -558,9 +560,9 @@ constexpr size_t OpenGLContext::getIndexForBufferTarget(GLenum target) noexcept 
 
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLContext::activeTexture(GLuint unit) noexcept {
+bool OpenGLContext::activeTexture(GLuint unit) noexcept {
     assert_invariant(unit < MAX_TEXTURE_UNIT_COUNT);
-    update_state(state.textures.active, unit, [&]() {
+    return update_state(state.textures.active, unit, [&]() {
         glActiveTexture(GL_TEXTURE0 + unit);
     });
 }
@@ -674,7 +676,7 @@ void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId, size_t
     update_state(state.textures.units[unit].targets[targetIndex].texture_id, texId, [&]() {
         activeTexture(unit);
         glBindTexture(target, texId);
-    }, (target == GL_TEXTURE_EXTERNAL_OES) && bugs.texture_external_needs_rebind);
+    }, ((target == GL_TEXTURE_EXTERNAL_OES) && bugs.texture_external_needs_rebind) || activeTexture(unit));
 }
 
 void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept {
