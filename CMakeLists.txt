@@ -372,6 +372,12 @@ if (ANDROID OR IOS OR WEBGL)
     endif()
 endif()
 
+# Turn off exceptions on iOS debug as well. This fixes an availability error we see when using
+# std::visit, which is not supported on iOS 11.0 when exceptions are enabled.
+if (IOS)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-exceptions")
+endif()
+
 # With WebGL, we disable RTTI even for debug builds because we pass emscripten::val back and forth
 # between C++ and JavaScript in order to efficiently access typed arrays, which are unbound.
 # NOTE: This is not documented in emscripten so we should consider a different approach.
