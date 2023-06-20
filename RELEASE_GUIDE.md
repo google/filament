@@ -9,11 +9,15 @@ Before starting, ensure that each of these branches is up-to-date with origin:
 - rc/$RELEASE
 - main
 
-## 0. Make sure the rc/$RELEASE branch has the correct version.
+## 0. Check versions.
 
-It should have the version corresponding to its name, $RELEASE.
+Make sure the rc/$RELEASE branch has the correct Filament version. It should have the version
+corresponding to its name, $RELEASE.
 
-## 1. Bump versions on main to $RELEASE.
+Make sure `MATERIAL_VERSION` has been bumped to a new version if this is a MAJOR or MINOR release
+(first two version numbers).
+
+## 1. Bump Filament versions on main to $RELEASE.
 
 Checkout main and run the following command to bump Filament's version to $RELEASE:
 
