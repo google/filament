@@ -37,7 +37,7 @@ struct VulkanSurfaceSwapChain;
 // A wrapper around the platform implementation of swapchain.
 struct VulkanSwapChain : public HwSwapChain {
     VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& context, VmaAllocator allocator,
-            std::shared_ptr<VulkanCommands> commands, VulkanStagePool& stagePool,
+            VulkanCommands* commands, VulkanStagePool& stagePool,
             void* nativeWindow, uint64_t flags, VkExtent2D extent = {0, 0});
 
     ~VulkanSwapChain();
@@ -46,12 +46,12 @@ struct VulkanSwapChain : public HwSwapChain {
 
     void acquire(bool& reized);
 
-    inline std::shared_ptr<VulkanTexture> getCurrentColor() const noexcept {
-        return mColors[mCurrentSwapIndex];
+    inline VulkanTexture* getCurrentColor() const noexcept {
+        return mColors[mCurrentSwapIndex].get();
     }
 
-    inline std::shared_ptr<VulkanTexture> getDepth() const noexcept {
-        return mDepth;
+    inline VulkanTexture* getDepth() const noexcept {
+        return mDepth.get();
     }
 
     inline bool isFirstRenderPass() const noexcept {
@@ -70,16 +70,15 @@ private:
     void update();
 
     VulkanPlatform* mPlatform;
-    std::shared_ptr<VulkanCommands> mCommands;
+    VulkanCommands* mCommands;
     VmaAllocator mAllocator;
     VulkanStagePool& mStagePool;
     bool const mHeadless;
 
     // We create VulkanTextures based on VkImages. VulkanTexture has facilities for doing layout
-    // transitions, which are useful here. We use std::shared_ptr because they will be shared with
-    // VulkanRenderTarget.
-    utils::FixedCapacityVector<std::shared_ptr<VulkanTexture>> mColors;
-    std::shared_ptr<VulkanTexture> mDepth;
+    // transitions, which are useful here.
+    utils::FixedCapacityVector<std::unique_ptr<VulkanTexture>> mColors;
+    std::unique_ptr<VulkanTexture> mDepth;
     VkExtent2D mExtent;
     VkSemaphore mImageReady;
     uint32_t mCurrentSwapIndex;

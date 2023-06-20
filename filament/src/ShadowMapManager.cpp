@@ -824,7 +824,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
     return shadowTechnique;
 }
 
-void ShadowMapManager::calculateTextureRequirements(FEngine&, FView& view,
+void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view,
         FScene::LightSoa const&) noexcept {
 
     // Lay out the shadow maps. For now, we take the largest requested dimension and allocate a
@@ -854,7 +854,10 @@ void ShadowMapManager::calculateTextureRequirements(FEngine&, FView& view,
     const bool useMipmapping = view.hasVSM() &&
                                ((vsmShadowOptions.anisotropy > 0) || vsmShadowOptions.mipmapping);
 
-    const uint8_t msaaSamples = vsmShadowOptions.msaaSamples;
+    uint8_t msaaSamples = vsmShadowOptions.msaaSamples;
+    if (engine.getDriverApi().isWorkaroundNeeded(Workaround::DISABLE_BLIT_INTO_TEXTURE_ARRAY)) {
+        msaaSamples = 1;
+    }
 
     TextureFormat format = TextureFormat::DEPTH16;
     if (view.hasVSM()) {

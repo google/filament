@@ -29,7 +29,7 @@ class VulkanSamplerCache {
 public:
     void initialize(VkDevice device);
     VkSampler getSampler(SamplerParams params) noexcept;
-    void reset() noexcept;
+    void terminate() noexcept;
 private:
     VkDevice mDevice;
     tsl::robin_map<uint32_t, VkSampler> mCache;

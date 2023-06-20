@@ -23,7 +23,7 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-VulkanBuffer::VulkanBuffer(VmaAllocator allocator, std::shared_ptr<VulkanCommands> commands,
+VulkanBuffer::VulkanBuffer(VmaAllocator allocator, VulkanCommands* commands,
         VulkanStagePool& stagePool, VkBufferUsageFlags usage, uint32_t numBytes)
     : mAllocator(allocator), mCommands(commands), mStagePool(stagePool), mUsage(usage) {
 
@@ -51,7 +51,6 @@ void VulkanBuffer::terminate() {
     vmaDestroyBuffer(mAllocator, mGpuBuffer, mGpuMemory);
     mGpuMemory = VK_NULL_HANDLE;
     mGpuBuffer = VK_NULL_HANDLE;
-    mCommands.reset();
 }
 
 void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_t numBytes) const {
@@ -63,7 +62,7 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
     vmaUnmapMemory(mAllocator, stage->memory);
     vmaFlushAllocation(mAllocator, stage->memory, byteOffset, numBytes);
 
-    const VkCommandBuffer cmdbuffer = mCommands->get().cmdbuffer;
+    VkCommandBuffer const cmdbuffer = mCommands->get(true).cmdbuffer;
 
     VkBufferCopy region{ .size = numBytes };
     vkCmdCopyBuffer(cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);

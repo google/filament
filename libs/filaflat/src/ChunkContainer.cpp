@@ -22,6 +22,23 @@ namespace filaflat {
 
 ChunkContainer::~ChunkContainer() noexcept = default;
 
+bool ChunkContainer::hasChunk(Type type) const noexcept {
+    auto const& chunks = mChunks;
+    auto pos = chunks.find(type);
+    return pos != chunks.end();
+}
+
+bool ChunkContainer::hasChunk(Type type, ChunkDesc* pChunkDesc) const noexcept {
+    assert_invariant(pChunkDesc);
+    auto const& chunks = mChunks;
+    auto pos = chunks.find(type);
+    if (UTILS_LIKELY(pos != chunks.end())) {
+        *pChunkDesc = pos.value();
+        return true;
+    }
+    return false;
+}
+
 bool ChunkContainer::parseChunk(Unflattener& unflattener) {
     uint64_t type;
     if (!unflattener.read(&type)) {

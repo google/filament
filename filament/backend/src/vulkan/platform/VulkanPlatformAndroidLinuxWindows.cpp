@@ -23,6 +23,10 @@
 
 #include <bluevk/BlueVK.h>
 
+#if defined(__linux__) || defined(__FreeBSD__)
+#define LINUX_OR_FREEBSD 1
+#endif
+
 // Platform specific includes and defines
 #if defined(__ANDROID__)
     #include <android/native_window.h>
@@ -38,7 +42,7 @@
             uint32_t height;
         } wl;
     }// anonymous namespace
-#elif defined(__linux__) && defined(FILAMENT_SUPPORTS_X11)
+#elif LINUX_OR_FREEBSD && defined(FILAMENT_SUPPORTS_X11)
     // TODO: we should allow for headless on Linux explicitly. Right now this is the headless path
     // (with no FILAMENT_SUPPORTS_XCB or FILAMENT_SUPPORTS_XLIB).
     #include <dlfcn.h>
@@ -86,7 +90,7 @@ VulkanPlatform::ExtensionSet VulkanPlatform::getRequiredInstanceExtensions() {
         ret.insert(VK_GGP_STREAM_DESCRIPTOR_SURFACE_EXTENSION_NAME);
     #elif defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
         ret.insert("VK_KHR_wayland_surface");
-    #elif defined(__linux__) && defined(FILAMENT_SUPPORTS_X11)
+    #elif LINUX_OR_FREEBSD && defined(FILAMENT_SUPPORTS_X11)
         #if defined(FILAMENT_SUPPORTS_XCB)
             ret.insert("VK_KHR_xcb_surface");
         #endif
@@ -146,7 +150,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
         VkResult const result = vkCreateWaylandSurfaceKHR(instance, &createInfo, VKALLOC,
                 (VkSurfaceKHR*) &surface);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateWaylandSurfaceKHR error.");
-    #elif defined(__linux__) && defined(FILAMENT_SUPPORTS_X11)
+    #elif LINUX_OR_FREEBSD && defined(FILAMENT_SUPPORTS_X11)
         if (g_x11_vk.library == nullptr) {
             g_x11_vk.library = dlopen(LIBRARY_X11, RTLD_LOCAL | RTLD_NOW);
             ASSERT_PRECONDITION(g_x11_vk.library, "Unable to open X11 library.");
@@ -211,3 +215,5 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
 }
 
 } // namespace filament::backend
+
+#undef LINUX_OR_FREEBSD

@@ -81,8 +81,9 @@ VulkanCommands::~VulkanCommands() {
     }
 }
 
-VulkanCommandBuffer const& VulkanCommands::get() {
+VulkanCommandBuffer const& VulkanCommands::get(bool blockOnGC) {
     if (mCurrent) {
+        mCurrent->blockOnGC = mCurrent->blockOnGC || blockOnGC;
         return *mCurrent;
     }
 
@@ -118,6 +119,8 @@ VulkanCommandBuffer const& VulkanCommands::get() {
         .commandBufferCount = 1
     };
     vkAllocateCommandBuffers(mDevice, &allocateInfo, &mCurrent->cmdbuffer);
+
+    mCurrent->blockOnGC = blockOnGC;
 
     // Note that the fence wrapper uses shared_ptr because a DriverAPI fence can also have ownership
     // over it.  The destruction of the low-level fence occurs either in VulkanCommands::gc(), or in
@@ -240,7 +243,9 @@ void VulkanCommands::wait() {
 void VulkanCommands::gc() {
     for (auto& wrapper : mStorage) {
         if (wrapper.cmdbuffer != VK_NULL_HANDLE) {
-            VkResult result = vkWaitForFences(mDevice, 1, &wrapper.fence->fence, VK_TRUE, 0);
+            uint64_t const timeout = wrapper.blockOnGC ? UINT64_MAX : 0;
+            VkResult const result
+                    = vkWaitForFences(mDevice, 1, &wrapper.fence->fence, VK_TRUE, timeout);
             if (result == VK_SUCCESS) {
                 vkFreeCommandBuffers(mDevice, mPool, 1, &wrapper.cmdbuffer);
                 wrapper.cmdbuffer = VK_NULL_HANDLE;

@@ -26,8 +26,8 @@ using namespace utils;
 namespace filament::backend {
 
 VulkanSwapChain::VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& context,
-        VmaAllocator allocator, std::shared_ptr<VulkanCommands> commands,
-        VulkanStagePool& stagePool, void* nativeWindow, uint64_t flags, VkExtent2D extent)
+        VmaAllocator allocator, VulkanCommands* commands, VulkanStagePool& stagePool,
+        void* nativeWindow, uint64_t flags, VkExtent2D extent)
     : mPlatform(platform),
       mCommands(commands),
       mAllocator(allocator),
@@ -48,6 +48,11 @@ VulkanSwapChain::VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& 
 }
 
 VulkanSwapChain::~VulkanSwapChain() {
+    // Must wait for the inflight command buffers to finish since they might contain the images
+    // we're about to destroy.
+    mCommands->flush();
+    mCommands->wait();
+
     mPlatform->destroy(swapChain);
     vkDestroySemaphore(mPlatform->getDevice(), mImageReady, VKALLOC);
 }
@@ -60,11 +65,11 @@ void VulkanSwapChain::update() {
     VkDevice const device = mPlatform->getDevice();
 
     for (auto const color: bundle.colors) {
-        mColors.push_back(std::make_shared<VulkanTexture>(device, mAllocator, mCommands, color,
+        mColors.push_back(std::make_unique<VulkanTexture>(device, mAllocator, mCommands, color,
                 bundle.colorFormat, 1, bundle.extent.width, bundle.extent.height,
                 TextureUsage::COLOR_ATTACHMENT, mStagePool));
     }
-    mDepth = std::make_shared<VulkanTexture>(device, mAllocator, mCommands, bundle.depth,
+    mDepth = std::make_unique<VulkanTexture>(device, mAllocator, mCommands, bundle.depth,
             bundle.depthFormat, 1, bundle.extent.width, bundle.extent.height,
             TextureUsage::DEPTH_ATTACHMENT, mStagePool);
 

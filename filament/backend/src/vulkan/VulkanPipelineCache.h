@@ -169,7 +169,7 @@ public:
     // NOTE: In theory we should proffer "unbindSampler" but in practice we never destroy samplers.
 
     // Destroys all managed Vulkan objects. This should be called before changing the VkDevice.
-    void destroyCache() noexcept;
+    void terminate() noexcept;
 
     // vkCmdBindPipeline and vkCmdBindDescriptorSets establish bindings to a specific command
     // buffer; they are not global to the device. Therefore we need to be notified when a

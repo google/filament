@@ -30,7 +30,7 @@ namespace filament::backend {
 
 using ImgUtil = VulkanImageUtility;
 VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator,
-        std::shared_ptr<VulkanCommands> commands, VkImage image, VkFormat format, uint8_t samples,
+        VulkanCommands* commands, VkImage image, VkFormat format, uint8_t samples,
         uint32_t width, uint32_t height, TextureUsage tusage, VulkanStagePool& stagePool)
     : HwTexture(SamplerType::SAMPLER_2D, 1, samples, width, height, 1, TextureFormat::UNUSED,
               tusage),
@@ -47,7 +47,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator,
 
 VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         VulkanContext const& context, VmaAllocator allocator,
-        std::shared_ptr<VulkanCommands> commands, SamplerType target, uint8_t levels,
+        VulkanCommands* commands, SamplerType target, uint8_t levels,
         TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage tusage, VulkanStagePool& stagePool, VkComponentMapping swizzle)
     : HwTexture(target, levels, samples, w, h, depth, tformat, tusage),
@@ -252,7 +252,7 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     vmaUnmapMemory(mAllocator, stage->memory);
     vmaFlushAllocation(mAllocator, stage->memory, 0, hostData->size);
 
-    const VkCommandBuffer cmdbuf = mCommands->get().cmdbuffer;
+    const VkCommandBuffer cmdbuf = mCommands->get(true).cmdbuffer;
 
     VkBufferImageCopy copyRegion = {
         .bufferOffset = {},

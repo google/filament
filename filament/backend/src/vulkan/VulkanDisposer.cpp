@@ -84,7 +84,7 @@ void VulkanDisposer::gc() noexcept {
     disposables.swap(mDisposables);
 }
 
-void VulkanDisposer::reset() noexcept {
+void VulkanDisposer::terminate() noexcept {
 #ifndef NDEBUG
     utils::slog.i << mDisposables.size() << " disposables are outstanding." << utils::io::endl;
 #endif

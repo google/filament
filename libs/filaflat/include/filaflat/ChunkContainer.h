@@ -67,25 +67,16 @@ public:
     }
 
     std::pair<uint8_t const*, uint8_t const*> getChunkRange(Type type) const noexcept {
-        ChunkDesc const* pChunkDesc;
-        bool success = hasChunk(type, &pChunkDesc);
+        ChunkDesc chunkDesc;
+        bool const success = hasChunk(type, &chunkDesc);
         if (success) {
-            return { pChunkDesc->start, pChunkDesc->start + pChunkDesc->size };
+            return { chunkDesc.start, chunkDesc.start + chunkDesc.size };
         }
         return { nullptr, nullptr };
     }
 
-    bool hasChunk(Type type, ChunkDesc const** pChunkDesc = nullptr) const noexcept {
-        auto& chunks = mChunks;
-        auto pos = chunks.find(type);
-        if (pos != chunks.end()) {
-            if (pChunkDesc) {
-                *pChunkDesc = &pos.value();
-            }
-            return true;
-        }
-        return false;
-    }
+    bool hasChunk(Type type) const noexcept;
+    bool hasChunk(Type type, ChunkDesc* pChunkDesc) const noexcept;
 
     void const* getData() const { return mData; }
 
