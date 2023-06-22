@@ -27,6 +27,10 @@
 #   endif
 #endif
 
+#if defined(__EMSCRIPTEN__)
+#include <emscripten/console.h>
+#endif
+
 namespace utils {
 namespace io {
 
@@ -66,7 +70,23 @@ ostream& LogStream::flush() noexcept {
             __android_log_write(ANDROID_LOG_VERBOSE, UTILS_LOG_TAG, buf.get());
             break;
     }
-#else // ANDROID
+#elif defined(__EMSCRIPTEN__)
+    switch (mPriority) {
+        case LOG_DEBUG:
+        case LOG_WARNING:
+        case LOG_INFO:
+            _emscripten_out(buf.get());
+            break;
+        case LOG_ERROR:
+            _emscripten_err(buf.get());
+            break;
+        case LOG_VERBOSE:
+#ifndef NFIL_DEBUG
+            _emscripten_out(buf.get());
+#endif
+            break;
+    }
+#else  // not ANDROID or EMSCRIPTEN
     switch (mPriority) {
         case LOG_DEBUG:
         case LOG_WARNING:
@@ -82,7 +102,7 @@ ostream& LogStream::flush() noexcept {
 #endif
             break;
     }
-#endif // __ANDROID__
+#endif  // __ANDROID__ or __EMSCRIPTEN__
     buf.reset();
     return *this;
 }
