@@ -172,7 +172,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
           mShaderCompilerService(*this),
           mHandleAllocator("Handles", driverConfig.handleArenaSize),
           mSamplerMap(32) {
-  
+
     std::fill(mSamplerBindings.begin(), mSamplerBindings.end(), nullptr);
 
     // set a reasonable default value for our stream array
@@ -3532,6 +3532,8 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
                 (GLsizei)instanceCount);
 #endif
     }
+
+    gl.bindVertexArray(nullptr); // Restore to default VAO
 
 #ifdef FILAMENT_ENABLE_MATDBG
     CHECK_GL_ERROR_NON_FATAL(utils::slog.e)
