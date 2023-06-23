@@ -68,6 +68,7 @@ struct ShaderCompilerService::ProgramToken {
     struct ProgramBinary {
         GLenum format{};
         GLuint program{};
+        std::array<GLuint, Program::SHADER_TYPE_COUNT> shaders{};
         std::vector<char> blob;
     };
 
@@ -251,15 +252,9 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                         // link the program
                         GLuint const glProgram = linkProgram(gl, shaders, token->attributes);
 
-                        // immediately destroy the shaders
-                        for (GLuint const shader: shaders) {
-                            if (shader) {
-                                glDetachShader(glProgram, shader);
-                                glDeleteShader(shader);
-                            }
-                        }
-
                         ProgramToken::ProgramBinary binary;
+                        binary.shaders = shaders;
+
                         if (UTILS_LIKELY(mUseSharedContext)) {
                             // We need to query the link status here to guarantee that the
                             // program is compiled and linked now (we don't want this to be
@@ -323,7 +318,8 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                         return false;
                     }
                     // program binary is ready, retrieve it without blocking
-                    getProgramFromCompilerPool(const_cast<program_token_t&>(token));
+                    ShaderCompilerService::getProgramFromCompilerPool(
+                            const_cast<program_token_t&>(token));
                 }
             } else {
                 if (KHR_parallel_shader_compile) {
@@ -479,6 +475,7 @@ void ShaderCompilerService::notifyWhenAllProgramsAreReady(CallbackHandler* handl
 void ShaderCompilerService::getProgramFromCompilerPool(program_token_t& token) noexcept {
     ProgramToken::ProgramBinary const binary{ token->binary.get() };
     if (!token->canceled) {
+        token->gl.shaders = binary.shaders;
         if (UTILS_LIKELY(mUseSharedContext)) {
             token->gl.program = binary.program;
         }
@@ -507,7 +504,7 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) noexcept {
             }
 
             // block until we get the program from the pool
-            getProgramFromCompilerPool(token);
+            ShaderCompilerService::getProgramFromCompilerPool(token);
         } else if (KHR_parallel_shader_compile) {
             // we force the program link -- which might stall, either here or below in
             // checkProgramStatus(), but we don't have a choice, we need to use the program now.

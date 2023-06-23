@@ -26,7 +26,30 @@
 
 #include <atomic>
 
+#include <chrono>
+#include <stack>
+#include <string>
+#include <utility>
+
 namespace filament::backend {
+
+struct VulkanContext;
+
+class VulkanGroupMarkers {
+public:
+    using Timestamp = std::chrono::time_point<std::chrono::high_resolution_clock>;
+
+    void push(std::string const& marker, Timestamp start = {}) noexcept;
+    std::pair<std::string, Timestamp> pop() noexcept;
+    std::pair<std::string, Timestamp> top() const;
+    bool empty() const noexcept;
+
+private:
+    std::stack<std::string> mMarkers;
+#if FILAMENT_VULKAN_VERBOSE
+    std::stack<Timestamp> mTimestamps;
+#endif
+};
 
 // Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
 struct VulkanCmdFence {
@@ -86,7 +109,8 @@ public:
 //
 class VulkanCommands {
     public:
-        VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex);
+        VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
+                VulkanContext* context);
         ~VulkanCommands();
 
         // Creates a "current" command buffer if none exists, otherwise returns the current one.
@@ -121,11 +145,21 @@ class VulkanCommands {
         // The observer's event handler can only be called during get().
         void setObserver(CommandBufferObserver* observer) { mObserver = observer; }
 
+        void pushGroupMarker(char const* str, VulkanGroupMarkers::Timestamp timestamp = {});
+
+        void popGroupMarker();
+
+        void insertEventMarker(char const* string, uint32_t len);
+
+        std::string getTopGroupMarker() const;
+
     private:
         static constexpr int CAPACITY = VK_MAX_COMMAND_BUFFERS;
-        const VkDevice mDevice;
-        const VkQueue mQueue;
-        const VkCommandPool mPool;
+        VkDevice const mDevice;
+        VkQueue const mQueue;
+        VkCommandPool const mPool;
+        VulkanContext const* mContext;
+
         VulkanCommandBuffer* mCurrent = nullptr;
         VkSemaphore mSubmissionSignal = {};
         VkSemaphore mInjectedSignal = {};
@@ -133,6 +167,9 @@ class VulkanCommands {
         VkSemaphore mSubmissionSignals[CAPACITY] = {};
         size_t mAvailableCount = CAPACITY;
         CommandBufferObserver* mObserver = nullptr;
+
+        std::unique_ptr<VulkanGroupMarkers> mGroupMarkers;
+        std::unique_ptr<VulkanGroupMarkers> mCarriedOverMarkers;
 };
 
 } // namespace filament::backend

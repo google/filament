@@ -30,14 +30,10 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
+#include <utils/Systrace.h>
 
 #ifndef NDEBUG
 #include <set>
-#endif
-
-#if FILAMENT_VULKAN_VERBOSE
-#include <stack>
-static std::stack<std::string> renderPassMarkers;
 #endif
 
 using namespace bluevk;
@@ -186,7 +182,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
 #endif
     mTimestamps = std::make_unique<VulkanTimestamps>(mPlatform->getDevice());
     mCommands = std::make_unique<VulkanCommands>(mPlatform->getDevice(),
-            mPlatform->getGraphicsQueue(), mPlatform->getGraphicsQueueFamilyIndex());
+            mPlatform->getGraphicsQueue(), mPlatform->getGraphicsQueueFamilyIndex(), &mContext);
     mCommands->setObserver(&mPipelineCache);
     mPipelineCache.setDevice(mPlatform->getDevice(), mAllocator);
 
@@ -1146,15 +1142,18 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
 
     // Assign a label to the framebuffer for debugging purposes.
-    if (UTILS_UNLIKELY(mContext.isDebugUtilsSupported()) && !mCurrentDebugMarker.empty()) {
-        const VkDebugUtilsObjectNameInfoEXT info = {
-            VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-            nullptr,
-            VK_OBJECT_TYPE_FRAMEBUFFER,
-            reinterpret_cast<uint64_t>(vkfb),
-            mCurrentDebugMarker.c_str(),
-        };
-        vkSetDebugUtilsObjectNameEXT(mPlatform->getDevice(), &info);
+    if (UTILS_UNLIKELY(mContext.isDebugUtilsSupported())) {
+        auto const topMarker = mCommands->getTopGroupMarker();
+        if (!topMarker.empty()) {
+            const VkDebugUtilsObjectNameInfoEXT info = {
+                VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                nullptr,
+                VK_OBJECT_TYPE_FRAMEBUFFER,
+                reinterpret_cast<uint64_t>(vkfb),
+                topMarker.c_str(),
+            };
+            vkSetDebugUtilsObjectNameEXT(mPlatform->getDevice(), &info);
+        }
     }
 
     // The current command buffer now owns a reference to the render target and its attachments.
@@ -1181,7 +1180,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     VkClearValue clearValues[
             MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT +
             1] = {};
-    if (params.flags.clear != TargetBufferFlags::NONE) {
+    if (clearVal != TargetBufferFlags::NONE) {
 
         // NOTE: clearValues must be populated in the same order as the attachments array in
         // VulkanFboCache::getFramebuffer. Values must be provided regardless of whether Vulkan is
@@ -1375,75 +1374,29 @@ void VulkanDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
 }
 
 void VulkanDriver::insertEventMarker(char const* string, uint32_t len) {
-    constexpr float MARKER_COLOR[] = { 0.0f, 1.0f, 0.0f, 1.0f };
-    VkCommandBuffer const cmdbuffer = mCommands->get().cmdbuffer;
-    if (mContext.isDebugUtilsSupported()) {
-        VkDebugUtilsLabelEXT labelInfo = {
-            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-            .pLabelName = string,
-            .color = {1, 1, 0, 1},
-        };
-        vkCmdInsertDebugUtilsLabelEXT(cmdbuffer, &labelInfo);
-    } else if (mContext.isDebugMarkersSupported()) {
-        VkDebugMarkerMarkerInfoEXT markerInfo = {};
-        markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-        memcpy(markerInfo.color, &MARKER_COLOR[0], sizeof(MARKER_COLOR));
-        markerInfo.pMarkerName = string;
-        vkCmdDebugMarkerInsertEXT(cmdbuffer, &markerInfo);
-    }
+    mCommands->insertEventMarker(string, len);
 }
 
-void VulkanDriver::pushGroupMarker(char const* string, uint32_t len) {
-
-#if FILAMENT_VULKAN_VERBOSE
-    renderPassMarkers.push(std::string(string));
-    utils::slog.d << "----> " << string << utils::io::endl;
-#endif
-
-    // TODO: Add group marker color to the Driver API
-    constexpr float MARKER_COLOR[] = { 0.0f, 1.0f, 0.0f, 1.0f };
-    const VkCommandBuffer cmdbuffer = mCommands->get().cmdbuffer;
-    if (mContext.isDebugUtilsSupported()) {
-        VkDebugUtilsLabelEXT labelInfo = {
-            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-            .pLabelName = string,
-            .color = {0, 1, 0, 1},
-        };
-        vkCmdBeginDebugUtilsLabelEXT(cmdbuffer, &labelInfo);
-        mCurrentDebugMarker = string;
-    } else if (mContext.isDebugMarkersSupported()) {
-        VkDebugMarkerMarkerInfoEXT markerInfo = {};
-        markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-        memcpy(markerInfo.color, &MARKER_COLOR[0], sizeof(MARKER_COLOR));
-        markerInfo.pMarkerName = string;
-        vkCmdDebugMarkerBeginEXT(cmdbuffer, &markerInfo);
+void VulkanDriver::pushGroupMarker(char const* string, uint32_t) {
+    // Turns out all the markers are 0-terminated, so we can just pass it without len.
+    mCommands->pushGroupMarker(string);
+    {
+        SYSTRACE_CONTEXT();
+        SYSTRACE_NAME_BEGIN(string);
     }
 }
 
 void VulkanDriver::popGroupMarker(int) {
-
-#if FILAMENT_VULKAN_VERBOSE
-    std::string const& marker = renderPassMarkers.top();
-    renderPassMarkers.pop();
-    utils::slog.d << "<---- " << marker << utils::io::endl;
-#endif
-
-    const VkCommandBuffer cmdbuffer = mCommands->get().cmdbuffer;
-    if (mContext.isDebugUtilsSupported()) {
-        vkCmdEndDebugUtilsLabelEXT(cmdbuffer);
-        mCurrentDebugMarker.clear();
-    } else if (mContext.isDebugMarkersSupported()) {
-        vkCmdDebugMarkerEndEXT(cmdbuffer);
+    mCommands->popGroupMarker();
+    {
+        SYSTRACE_CONTEXT();
+        SYSTRACE_NAME_END();
     }
 }
 
-void VulkanDriver::startCapture(int) {
+void VulkanDriver::startCapture(int) {}
 
-}
-
-void VulkanDriver::stopCapture(int) {
-
-}
+void VulkanDriver::stopCapture(int) {}
 
 void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
         uint32_t width, uint32_t height, PixelBufferDescriptor&& pbd) {
