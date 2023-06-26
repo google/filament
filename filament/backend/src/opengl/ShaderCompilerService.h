@@ -26,6 +26,7 @@
 #include <utils/Invocable.h>
 #include <utils/FixedCapacityVector.h>
 
+#include <atomic>
 #include <condition_variable>
 #include <deque>
 #include <functional>
