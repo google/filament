@@ -1,0 +1,31 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Khronos; 0
+; Bound: 62
+; Schema: 0
+               OpCapability Shader
+			   OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+			   OpExecutionMode %main LocalSize 1 1 1
+               OpName %main "main"
+               OpName %i "i"
+       %uint = OpTypeInt 32 0
+       %void = OpTypeVoid
+         %11 = OpTypeFunction %void
+      %uint_0 = OpConstant %uint 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+         %31 = OpConstantNull %uint
+       %main = OpFunction %void None %11
+         %14 = OpLabel
+          %i = OpVariable %_ptr_Function_uint Function %31
+               OpStore %i %uint_0
+               OpBranch %32
+         %32 = OpLabel
+               OpLoopMerge %33 %34 None
+               OpBranch %33
+         %34 = OpLabel
+         %57 = OpLoad %uint %i
+               OpBranch %32
+         %33 = OpLabel
+               OpReturn
+               OpFunctionEnd

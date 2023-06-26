@@ -1,0 +1,26 @@
+#version 310 es
+layout(local_size_x = 4) in;
+
+layout(std430, binding = 0) readonly buffer SSBO
+{
+    float in_data[];
+};
+
+layout(std430, binding = 1) writeonly buffer SSBO2
+{
+    float out_data[];
+};
+
+layout(std430, binding = 2) buffer SSBO3
+{
+    uint count;
+};
+
+void main()
+{
+    uint ident = gl_GlobalInvocationID.x;
+    float idata = in_data[ident];
+    if (idata > 12.0)
+        out_data[atomicAdd(count, 1u)] = idata;
+}
+

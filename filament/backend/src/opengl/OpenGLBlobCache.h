@@ -34,6 +34,9 @@ public:
     static void insert(Platform& platform,
             BlobCacheKey const& key, GLuint program) noexcept;
 
+    static void insert(Platform& platform, BlobCacheKey const& key,
+            GLenum format, void* data, GLsizei programBinarySize) noexcept;
+
 private:
     struct Blob;
 };

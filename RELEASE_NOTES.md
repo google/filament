@@ -7,10 +7,17 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.40.0
+
+- matc: fix VSM high precision option on mobile [⚠️ **Recompile materials**]
+- vulkan: support sRGB swap chain
+- Add new `getMaxAutomaticInstances()` API on `Engine` to get max supported automatic instances.
+- UiHelper: fix jank when a `TextureView` is resized (fixes b\282220665)
+- backend: parallel shader compilation support. This breaks and improves the recent `Material::compile` API.
+
 ## v1.39.0
 
 - matc: workaround a bug in spirv-tools causing vsm to fail [⚠️ **Recompile materials**]
-- UiHelper: fix jank when a `TextureView` is resized (fixes b\282220665)
 
 ## v1.38.0
 

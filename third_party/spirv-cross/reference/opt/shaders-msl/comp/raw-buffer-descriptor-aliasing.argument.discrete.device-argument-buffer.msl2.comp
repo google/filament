@@ -1,0 +1,116 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO_A
+{
+    float data[1];
+};
+
+struct UBO_C
+{
+    float4 data[1024];
+};
+
+struct Registers
+{
+    float reg;
+};
+
+struct SSBO_B
+{
+    uint2 data[1];
+};
+
+struct UBO_D
+{
+    uint4 data[1024];
+};
+
+struct SSBO_BRO
+{
+    uint2 data[1];
+};
+
+struct SSBO_As
+{
+    float data[1];
+};
+
+struct UBO_Cs
+{
+    float4 data[1024];
+};
+
+struct SSBO_Bs
+{
+    uint2 data[1024];
+};
+
+struct UBO_Ds
+{
+    uint4 data[1024];
+};
+
+struct SSBO_BsRO
+{
+    uint2 data[1024];
+};
+
+struct SSBO_E
+{
+    float data[1];
+};
+
+struct UBO_G
+{
+    float4 data[1024];
+};
+
+struct SSBO_F
+{
+    uint2 data[1];
+};
+
+struct UBO_H
+{
+    uint4 data[1024];
+};
+
+struct SSBO_I
+{
+    uint2 data[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(64u, 1u, 1u);
+
+struct spvDescriptorSetBuffer0
+{
+    device SSBO_A* ssbo_a [[id(0)]];
+    constant UBO_C* ubo_c [[id(1)]];
+    device SSBO_As* ssbo_as [[id(2)]][4];
+    constant UBO_Cs* ubo_cs [[id(6)]][4];
+};
+
+kernel void main0(const device spvDescriptorSetBuffer0& spvDescriptorSet0 [[buffer(0)]], constant Registers& _42 [[buffer(1)]], device void* spvBufferAliasSet2Binding0 [[buffer(2)]], constant void* spvBufferAliasSet2Binding1 [[buffer(3)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
+{
+    device auto& ssbo_e = *(device SSBO_E*)spvBufferAliasSet2Binding0;
+    constant auto& ubo_g = *(constant UBO_G*)spvBufferAliasSet2Binding1;
+    device auto& ssbo_f = *(device SSBO_F*)spvBufferAliasSet2Binding0;
+    constant auto& ubo_h = *(constant UBO_H*)spvBufferAliasSet2Binding1;
+    const device auto& ssbo_i = *(const device SSBO_I*)spvBufferAliasSet2Binding0;
+    device auto& ssbo_b = (device SSBO_B&)(*spvDescriptorSet0.ssbo_a);
+    constant auto& ubo_d = (constant UBO_D&)(*spvDescriptorSet0.ubo_c);
+    const device auto& ssbo_b_readonly = (const device SSBO_BRO&)(*spvDescriptorSet0.ssbo_a);
+    const device auto& ssbo_bs = (device SSBO_Bs* const device (&)[4])spvDescriptorSet0.ssbo_as;
+    const device auto& ubo_ds = (constant UBO_Ds* const device (&)[4])spvDescriptorSet0.ubo_cs;
+    const device auto& ssbo_bs_readonly = (const device SSBO_BsRO* const device (&)[4])spvDescriptorSet0.ssbo_as;
+    (*spvDescriptorSet0.ssbo_a).data[gl_GlobalInvocationID.x] = (*spvDescriptorSet0.ubo_c).data[gl_WorkGroupID.x].x + _42.reg;
+    ssbo_b.data[gl_GlobalInvocationID.x] = ubo_d.data[gl_WorkGroupID.y].xy + ssbo_b_readonly.data[gl_GlobalInvocationID.x];
+    spvDescriptorSet0.ssbo_as[gl_WorkGroupID.x]->data[gl_GlobalInvocationID.x] = spvDescriptorSet0.ubo_cs[gl_WorkGroupID.x]->data[0].x;
+    ssbo_bs[gl_WorkGroupID.x]->data[gl_GlobalInvocationID.x] = ubo_ds[gl_WorkGroupID.x]->data[0].xy + ssbo_bs_readonly[gl_WorkGroupID.x]->data[gl_GlobalInvocationID.x];
+    ssbo_e.data[gl_GlobalInvocationID.x] = ubo_g.data[gl_WorkGroupID.x].x;
+    ssbo_f.data[gl_GlobalInvocationID.x] = ubo_h.data[gl_WorkGroupID.y].xy + ssbo_i.data[gl_GlobalInvocationID.x];
+}
+

@@ -1,0 +1,38 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct T
+{
+    float a;
+};
+
+struct T_1
+{
+    float b;
+};
+
+struct SSBO1
+{
+    T_1 foo[1];
+};
+
+struct T_2
+{
+    float c;
+    char _m0_final_padding[12];
+};
+
+struct SSBO2
+{
+    T_2 bar[1];
+};
+
+kernel void main0(device SSBO1& _7 [[buffer(0)]], device SSBO2& _10 [[buffer(1)]])
+{
+    T v = T{ 40.0 };
+    _7.foo[10].b = v.a;
+    _10.bar[30].c = v.a;
+}
+

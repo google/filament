@@ -1,0 +1,16 @@
+#version 450
+#extension GL_EXT_demote_to_helper_invocation : require
+
+layout(location = 0) out float FragColor;
+
+void main()
+{
+    bool _12 = gl_HelperInvocation;
+    float _15 = float(_12);
+    FragColor = _15;
+    demote;
+    bool _16 = gl_HelperInvocation;
+    float _17 = float(_16);
+    FragColor = _17;
+}
+

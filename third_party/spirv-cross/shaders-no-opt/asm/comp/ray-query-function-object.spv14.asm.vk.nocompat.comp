@@ -1,0 +1,39 @@
+               OpCapability Shader
+               OpCapability RayTracingKHR
+               OpCapability RayQueryKHR
+               OpExtension "SPV_KHR_ray_tracing"
+               OpExtension "SPV_KHR_ray_query"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %RTAS %gl_LocalInvocationIndex
+               OpExecutionMode %main LocalSize 64 1 1
+               OpSource GLSL 460
+               OpName %accelerationStructureNV "accelerationStructureNV"
+               OpName %RTAS "RTAS"
+               OpName %main "main"
+               OpName %rayQueryKHR "rayQueryKHR"
+               OpDecorate %gl_LocalInvocationIndex BuiltIn LocalInvocationIndex
+               OpDecorate %RTAS DescriptorSet 0
+               OpDecorate %RTAS Binding 0
+       %uint = OpTypeInt 32 0
+     %uint_2 = OpConstant %uint 2
+   %uint_255 = OpConstant %uint 255
+%accelerationStructureNV = OpTypeAccelerationStructureKHR
+%_ptr_UniformConstant_accelerationStructureNV = OpTypePointer UniformConstant %accelerationStructureNV
+%_ptr_Input_uint = OpTypePointer Input %uint
+       %void = OpTypeVoid
+         %12 = OpTypeFunction %void
+%rayQueryKHR = OpTypeRayQueryKHR
+%_ptr_Function_rayQueryKHR = OpTypePointer Function %rayQueryKHR
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+       %RTAS = OpVariable %_ptr_UniformConstant_accelerationStructureNV UniformConstant
+%gl_LocalInvocationIndex = OpVariable %_ptr_Input_uint Input
+         %16 = OpUndef %float
+         %17 = OpUndef %v3float
+       %main = OpFunction %void None %12
+         %18 = OpLabel
+         %19 = OpVariable %_ptr_Function_rayQueryKHR Function
+         %20 = OpLoad %accelerationStructureNV %RTAS
+               OpRayQueryInitializeKHR %19 %20 %uint_2 %uint_255 %17 %16 %17 %16
+               OpReturn
+               OpFunctionEnd

@@ -4,12 +4,12 @@ material {
         {
             type : sampler2d,
             name : source,
-            precision: medium
+            precision: high
         },
         {
             type : sampler2dArray,
             name : sourceArray,
-            precision: medium
+            precision: high
         },
         {
             type : float2,
@@ -34,6 +34,13 @@ material {
         {
             type : float2[32],
             name : kernel
+        }
+    ],
+    outputs : [
+        {
+            type : float4,
+            name : color,
+            precision : high
         }
     ],
     constants : [
@@ -61,7 +68,5 @@ vertex {
 }
 
 fragment {
-
 #include "separableGaussianBlur.fs"
-
 }

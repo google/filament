@@ -1,0 +1,45 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct _7
+{
+    int _m0;
+    int _m1[1];
+};
+
+struct _9
+{
+    int2 _m0[1];
+};
+
+kernel void main0(device _7& _2 [[buffer(0)]], device _9& _3 [[buffer(1)]])
+{
+    int _28 = _2._m0;
+    device int* _4 = &_2._m1[0];
+    device int* _5 = &_2._m1[0 + _28];
+    int _34;
+    if (!(_28 <= 0))
+    {
+        _34 = 0;
+        for (;;)
+        {
+            device int* _36 = _4;
+            device int* _37 = _5;
+            int _35 = _34 + 1;
+            _4 = &_36[1];
+            _5 = &_37[-1];
+            _3._m0[_34] = int2(_36 - _37, _37 - _36);
+            if (_34 >= _28)
+            {
+                break;
+            }
+            else
+            {
+                _34 = _35;
+            }
+        }
+    }
+}
+

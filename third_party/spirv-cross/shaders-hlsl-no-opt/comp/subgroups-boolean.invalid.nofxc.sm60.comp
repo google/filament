@@ -1,0 +1,30 @@
+#version 450
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_ballot : require
+#extension GL_KHR_shader_subgroup_vote : require
+#extension GL_KHR_shader_subgroup_shuffle : require
+#extension GL_KHR_shader_subgroup_shuffle_relative : require
+#extension GL_KHR_shader_subgroup_arithmetic : require
+#extension GL_KHR_shader_subgroup_clustered : require
+#extension GL_KHR_shader_subgroup_quad : require
+layout(local_size_x = 30) in;
+
+layout(std430, binding = 0) buffer SSBO
+{
+	uint FragColor[];
+};
+
+void main()
+{
+	bool v = gl_GlobalInvocationID.x != 3;
+	bvec4 v4;
+	v4.x = subgroupOr(v);
+	v4.y = subgroupAnd(v);
+	v4.z = subgroupXor(v);
+	v4.w = subgroupAllEqual(v);
+
+	uvec4 w = uvec4(v4);
+	FragColor[gl_GlobalInvocationID.x] = w.x + w.y + w.z + w.w;
+}
+
+

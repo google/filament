@@ -1,0 +1,56 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct Position;
+struct PositionReferences;
+
+struct Position
+{
+    float2 positions[1];
+};
+
+struct Registers
+{
+    device PositionReferences* references;
+    float fract_time;
+};
+
+struct PositionReferences
+{
+    device Position* buffers[1];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(8u, 8u, 1u);
+
+kernel void main0(constant Registers& registers [[buffer(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint3 gl_NumWorkGroups [[threadgroups_per_grid]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
+{
+    uint2 local_offset = gl_GlobalInvocationID.xy;
+    uint _19 = local_offset.y;
+    uint _29 = local_offset.x;
+    uint _30 = ((_19 * 8u) * gl_NumWorkGroups.x) + _29;
+    uint local_index = _30;
+    uint slice = gl_WorkGroupID.z;
+    device Position* __restrict positions = registers.references->buffers[gl_WorkGroupID.z];
+    float _66 = float(gl_WorkGroupID.z);
+    float _70 = fract(fma(_66, 0.100000001490116119384765625, registers.fract_time));
+    float _71 = 6.283125400543212890625 * _70;
+    float offset = _71;
+    float2 pos = float2(local_offset);
+    float _83 = sin(fma(2.2000000476837158203125, pos.x, _71));
+    pos.x = fma(0.20000000298023223876953125, _83, pos.x);
+    float _97 = sin(fma(2.25, pos.y, _70 * 12.56625080108642578125));
+    pos.y = fma(0.20000000298023223876953125, _97, pos.y);
+    float _111 = cos(fma(1.7999999523162841796875, pos.y, _70 * 18.849376678466796875));
+    pos.x = fma(0.20000000298023223876953125, _111, pos.x);
+    float _125 = cos(fma(2.849999904632568359375, pos.x, _70 * 25.1325016021728515625));
+    pos.y = fma(0.20000000298023223876953125, _125, pos.y);
+    float _133 = sin(_71);
+    pos.x = fma(0.5, _133, pos.x);
+    float _142 = sin(fma(6.283125400543212890625, _70, 0.300000011920928955078125));
+    pos.y = fma(0.5, _142, pos.y);
+    float2 _155 = float2(gl_NumWorkGroups.xy);
+    registers.references->buffers[gl_WorkGroupID.z]->positions[_30] = (pos / fma(float2(8.0), _155, float2(-1.0))) - float2(0.5);
+}
+

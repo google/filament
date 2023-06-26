@@ -108,9 +108,8 @@ VulkanProgram::VulkanProgram(VkDevice device, const Program& builder) noexcept :
     // Make a copy of the binding map
     samplerGroupInfo = builder.getSamplerGroupInfo();
     if constexpr (FILAMENT_VULKAN_VERBOSE) {
-        utils::slog.d << "Created VulkanProgram " << builder
-                    << ", shaders = (" << bundle.vertex << ", " << bundle.fragment << ")"
-                    << utils::io::endl;
+        utils::slog.d << "Created VulkanProgram " << builder << ", shaders = (" << bundle.vertex
+                      << ", " << bundle.fragment << ")" << utils::io::endl;
     }
 }
 
@@ -305,11 +304,16 @@ bool VulkanTimerQuery::isCompleted() const noexcept {
     // into the command buffer, which is an error according to the validation layer that ships in
     // the Android NDK.  Even when AVAILABILITY_BIT is set, validation seems to require that the
     // timestamp has at least been written into a processed command buffer.
-    VulkanCommandBuffer const* cmdbuf = cmdbuffer.load();
-    if (!cmdbuf || !cmdbuf->fence) { return false; }
 
-    VkResult status = cmdbuf->fence->status.load(std::memory_order_relaxed);
-    if (status != VK_SUCCESS) { return false; }
+    // This fence indicates that the corresponding buffer has been completed.
+    if (!fence) {
+        return false;
+    }
+
+    VkResult status = fence->status.load(std::memory_order_relaxed);
+    if (status != VK_SUCCESS) {
+        return false;
+    }
 
     return true;
 }

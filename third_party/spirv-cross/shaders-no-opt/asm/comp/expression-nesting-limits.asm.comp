@@ -1,0 +1,288 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 10117
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main" %gl_GlobalInvocationID
+               OpExecutionMode %1 LocalSize 1 1 1
+               OpSource GLSL 430
+               OpDecorate %gl_GlobalInvocationID BuiltIn GlobalInvocationId
+               OpDecorate %_arr_uint_int_16 ArrayStride 4
+               OpMemberDecorate %_struct_4 0 Offset 0
+               OpDecorate %_struct_4 BufferBlock
+               OpDecorate %5 DescriptorSet 0
+               OpDecorate %5 Binding 0
+               OpDecorate %6 DescriptorSet 0
+               OpDecorate %6 Binding 1
+               OpDecorate %7 DescriptorSet 0
+               OpDecorate %7 Binding 2
+       %void = OpTypeVoid
+       %bool = OpTypeBool
+        %int = OpTypeInt 32 1
+       %uint = OpTypeInt 32 0
+      %float = OpTypeFloat 32
+      %v2int = OpTypeVector %int 2
+     %v2uint = OpTypeVector %uint 2
+    %v2float = OpTypeVector %float 2
+      %v3int = OpTypeVector %int 3
+     %v3uint = OpTypeVector %uint 3
+    %v3float = OpTypeVector %float 3
+      %v4int = OpTypeVector %int 4
+     %v4uint = OpTypeVector %uint 4
+    %v4float = OpTypeVector %float 4
+     %v4bool = OpTypeVector %bool 4
+         %23 = OpTypeFunction %v4float %v4float
+         %24 = OpTypeFunction %bool
+         %25 = OpTypeFunction %void
+%_ptr_Input_float = OpTypePointer Input %float
+%_ptr_Input_int = OpTypePointer Input %int
+%_ptr_Input_uint = OpTypePointer Input %uint
+%_ptr_Input_v2float = OpTypePointer Input %v2float
+%_ptr_Input_v2int = OpTypePointer Input %v2int
+%_ptr_Input_v2uint = OpTypePointer Input %v2uint
+%_ptr_Input_v3float = OpTypePointer Input %v3float
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%_ptr_Input_v4int = OpTypePointer Input %v4int
+%_ptr_Input_v4uint = OpTypePointer Input %v4uint
+%_ptr_Output_float = OpTypePointer Output %float
+%_ptr_Output_int = OpTypePointer Output %int
+%_ptr_Output_uint = OpTypePointer Output %uint
+%_ptr_Output_v2float = OpTypePointer Output %v2float
+%_ptr_Output_v2int = OpTypePointer Output %v2int
+%_ptr_Output_v2uint = OpTypePointer Output %v2uint
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%_ptr_Output_v4int = OpTypePointer Output %v4int
+%_ptr_Output_v4uint = OpTypePointer Output %v4uint
+%_ptr_Function_float = OpTypePointer Function %float
+%_ptr_Function_int = OpTypePointer Function %int
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+    %float_1 = OpConstant %float 1
+    %float_0 = OpConstant %float 0
+  %float_0_5 = OpConstant %float 0.5
+   %float_n1 = OpConstant %float -1
+    %float_7 = OpConstant %float 7
+    %float_8 = OpConstant %float 8
+      %int_0 = OpConstant %int 0
+      %int_1 = OpConstant %int 1
+      %int_2 = OpConstant %int 2
+      %int_3 = OpConstant %int 3
+      %int_4 = OpConstant %int 4
+     %uint_0 = OpConstant %uint 0
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+    %uint_32 = OpConstant %uint 32
+     %uint_4 = OpConstant %uint 4
+%uint_2147483647 = OpConstant %uint 2147483647
+         %66 = OpConstantComposite %v4float %float_1 %float_1 %float_1 %float_1
+         %67 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+         %68 = OpConstantComposite %v4float %float_0_5 %float_0_5 %float_0_5 %float_0_5
+%_arr_float_uint_1 = OpTypeArray %float %uint_1
+%_arr_float_uint_2 = OpTypeArray %float %uint_2
+%_arr_v4float_uint_3 = OpTypeArray %v4float %uint_3
+%_arr_float_uint_4 = OpTypeArray %float %uint_4
+%_arr_v4float_uint_32 = OpTypeArray %v4float %uint_32
+%_ptr_Input__arr_v4float_uint_3 = OpTypePointer Input %_arr_v4float_uint_3
+%_ptr_Input__arr_v4float_uint_32 = OpTypePointer Input %_arr_v4float_uint_32
+%_ptr_Output__arr_float_uint_2 = OpTypePointer Output %_arr_float_uint_2
+%_ptr_Output__arr_v4float_uint_3 = OpTypePointer Output %_arr_v4float_uint_3
+%_ptr_Output__arr_float_uint_4 = OpTypePointer Output %_arr_float_uint_4
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%gl_GlobalInvocationID = OpVariable %_ptr_Input_v3uint Input
+     %int_16 = OpConstant %int 16
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+%_arr_uint_int_16 = OpTypeArray %uint %int_16
+  %_struct_4 = OpTypeStruct %_arr_uint_int_16
+%_ptr_Uniform__struct_4 = OpTypePointer Uniform %_struct_4
+          %5 = OpVariable %_ptr_Uniform__struct_4 Uniform
+          %6 = OpVariable %_ptr_Uniform__struct_4 Uniform
+          %7 = OpVariable %_ptr_Uniform__struct_4 Uniform
+          %1 = OpFunction %void None %25
+         %83 = OpLabel
+         %84 = OpLoad %v3uint %gl_GlobalInvocationID
+         %85 = OpCompositeConstruct %v4uint %84 %uint_0
+         %86 = OpConvertUToF %v4float %85
+         %87 = OpFunctionCall %v4float %88 %86
+               OpReturn
+               OpFunctionEnd
+         %88 = OpFunction %v4float None %23
+         %89 = OpFunctionParameter %v4float
+         %92 = OpLabel
+         %93 = OpVariable %_ptr_Function_int Function
+               OpStore %93 %int_0
+               OpBranch %94
+         %94 = OpLabel
+         %95 = OpLoad %int %93
+         %96 = OpSLessThan %bool %95 %int_16
+               OpLoopMerge %97 %10100 None
+               OpBranchConditional %96 %10101 %97
+      %10101 = OpLabel
+      %10102 = OpLoad %int %93
+         %90 = OpAccessChain %_ptr_Uniform_uint %6 %int_0 %10102
+         %91 = OpLoad %uint %90
+         %98 = OpAccessChain %_ptr_Uniform_uint %5 %int_0 %10102
+         %99 = OpLoad %uint %98
+        %100 = OpIAdd %uint %91 %99
+        %101 = OpIAdd %uint %91 %100
+        %102 = OpIAdd %uint %91 %101
+        %103 = OpIAdd %uint %91 %102
+        %104 = OpIAdd %uint %91 %103
+        %105 = OpIAdd %uint %91 %104
+        %106 = OpIAdd %uint %91 %105
+        %107 = OpIAdd %uint %91 %106
+        %108 = OpIAdd %uint %91 %107
+        %109 = OpIAdd %uint %91 %108
+        %110 = OpIAdd %uint %91 %109
+        %111 = OpIAdd %uint %91 %110
+        %112 = OpIAdd %uint %91 %111
+        %113 = OpIAdd %uint %91 %112
+        %114 = OpIAdd %uint %91 %113
+        %115 = OpIAdd %uint %91 %114
+        %116 = OpIAdd %uint %91 %115
+        %117 = OpIAdd %uint %91 %116
+        %118 = OpIAdd %uint %91 %117
+        %119 = OpIAdd %uint %91 %118
+        %120 = OpIAdd %uint %91 %119
+        %121 = OpIAdd %uint %91 %120
+        %122 = OpIAdd %uint %91 %121
+        %123 = OpIAdd %uint %91 %122
+        %124 = OpIAdd %uint %91 %123
+        %125 = OpIAdd %uint %91 %124
+        %126 = OpIAdd %uint %91 %125
+        %127 = OpIAdd %uint %91 %126
+        %128 = OpIAdd %uint %91 %127
+        %129 = OpIAdd %uint %91 %128
+        %130 = OpIAdd %uint %91 %129
+        %131 = OpIAdd %uint %91 %130
+        %132 = OpIAdd %uint %91 %131
+        %133 = OpIAdd %uint %91 %132
+        %134 = OpIAdd %uint %91 %133
+        %135 = OpIAdd %uint %91 %134
+        %136 = OpIAdd %uint %91 %135
+        %137 = OpIAdd %uint %91 %136
+        %138 = OpIAdd %uint %91 %137
+        %139 = OpIAdd %uint %91 %138
+        %140 = OpIAdd %uint %91 %139
+        %141 = OpIAdd %uint %91 %140
+        %142 = OpIAdd %uint %91 %141
+        %143 = OpIAdd %uint %91 %142
+        %144 = OpIAdd %uint %91 %143
+        %145 = OpIAdd %uint %91 %144
+        %146 = OpIAdd %uint %91 %145
+        %147 = OpIAdd %uint %91 %146
+        %148 = OpIAdd %uint %91 %147
+        %149 = OpIAdd %uint %91 %148
+        %150 = OpIAdd %uint %91 %149
+        %151 = OpIAdd %uint %91 %150
+        %152 = OpIAdd %uint %91 %151
+        %153 = OpIAdd %uint %91 %152
+        %154 = OpIAdd %uint %91 %153
+        %155 = OpIAdd %uint %91 %154
+        %156 = OpIAdd %uint %91 %155
+        %157 = OpIAdd %uint %91 %156
+        %158 = OpIAdd %uint %91 %157
+        %159 = OpIAdd %uint %91 %158
+        %160 = OpIAdd %uint %91 %159
+        %161 = OpIAdd %uint %91 %160
+        %162 = OpIAdd %uint %91 %161
+        %163 = OpIAdd %uint %91 %162
+        %164 = OpIAdd %uint %91 %163
+        %165 = OpIAdd %uint %91 %164
+        %166 = OpIAdd %uint %91 %165
+        %167 = OpIAdd %uint %91 %166
+        %168 = OpIAdd %uint %91 %167
+        %169 = OpIAdd %uint %91 %168
+        %170 = OpIAdd %uint %91 %169
+        %171 = OpIAdd %uint %91 %170
+        %172 = OpIAdd %uint %91 %171
+        %173 = OpIAdd %uint %91 %172
+        %174 = OpIAdd %uint %91 %173
+        %175 = OpIAdd %uint %91 %174
+        %176 = OpIAdd %uint %91 %175
+        %177 = OpIAdd %uint %91 %176
+        %178 = OpIAdd %uint %91 %177
+        %179 = OpIAdd %uint %91 %178
+        %180 = OpIAdd %uint %91 %179
+        %181 = OpIAdd %uint %91 %180
+        %182 = OpIAdd %uint %91 %181
+        %183 = OpIAdd %uint %91 %182
+        %184 = OpIAdd %uint %91 %183
+        %185 = OpIAdd %uint %91 %184
+        %186 = OpIAdd %uint %91 %185
+        %187 = OpIAdd %uint %91 %186
+        %188 = OpIAdd %uint %91 %187
+        %189 = OpIAdd %uint %91 %188
+        %190 = OpIAdd %uint %91 %189
+        %191 = OpIAdd %uint %91 %190
+        %192 = OpIAdd %uint %91 %191
+        %193 = OpIAdd %uint %91 %192
+        %194 = OpIAdd %uint %91 %193
+        %195 = OpIAdd %uint %91 %194
+        %196 = OpIAdd %uint %91 %195
+        %197 = OpIAdd %uint %91 %196
+        %198 = OpIAdd %uint %91 %197
+        %199 = OpIAdd %uint %91 %198
+        %200 = OpIAdd %uint %91 %199
+        %201 = OpIAdd %uint %91 %200
+        %202 = OpIAdd %uint %91 %201
+        %203 = OpIAdd %uint %91 %202
+        %204 = OpIAdd %uint %91 %203
+        %205 = OpIAdd %uint %91 %204
+        %206 = OpIAdd %uint %91 %205
+        %207 = OpIAdd %uint %91 %206
+        %208 = OpIAdd %uint %91 %207
+        %209 = OpIAdd %uint %91 %208
+        %210 = OpIAdd %uint %91 %209
+        %211 = OpIAdd %uint %91 %210
+        %212 = OpIAdd %uint %91 %211
+        %213 = OpIAdd %uint %91 %212
+        %214 = OpIAdd %uint %91 %213
+        %215 = OpIAdd %uint %91 %214
+        %216 = OpIAdd %uint %91 %215
+        %217 = OpIAdd %uint %91 %216
+        %218 = OpIAdd %uint %91 %217
+        %219 = OpIAdd %uint %91 %218
+        %220 = OpIAdd %uint %91 %219
+        %221 = OpIAdd %uint %91 %220
+        %222 = OpIAdd %uint %91 %221
+        %223 = OpIAdd %uint %91 %222
+        %224 = OpIAdd %uint %91 %223
+        %225 = OpIAdd %uint %91 %224
+        %226 = OpIAdd %uint %91 %225
+        %227 = OpIAdd %uint %91 %226
+        %228 = OpIAdd %uint %91 %227
+        %229 = OpIAdd %uint %91 %228
+        %230 = OpIAdd %uint %91 %229
+        %231 = OpIAdd %uint %91 %230
+        %232 = OpIAdd %uint %91 %231
+        %233 = OpIAdd %uint %91 %232
+        %234 = OpIAdd %uint %91 %233
+        %235 = OpIAdd %uint %91 %234
+        %236 = OpIAdd %uint %91 %235
+        %result = OpIAdd %uint %91 %236
+      %10103 = OpAccessChain %_ptr_Uniform_uint %7 %int_0 %10102
+               OpStore %10103 %result
+               OpBranch %10100
+      %10100 = OpLabel
+      %10104 = OpLoad %int %93
+      %10105 = OpIAdd %int %10104 %int_1
+               OpStore %93 %10105
+               OpBranch %94
+         %97 = OpLabel
+               OpReturnValue %89
+               OpFunctionEnd
+      %10106 = OpFunction %bool None %24
+      %10107 = OpLabel
+      %10108 = OpAccessChain %_ptr_Input_uint %gl_GlobalInvocationID %uint_0
+      %10109 = OpAccessChain %_ptr_Input_uint %gl_GlobalInvocationID %uint_1
+      %10110 = OpAccessChain %_ptr_Input_uint %gl_GlobalInvocationID %uint_2
+      %10111 = OpLoad %uint %10108
+      %10112 = OpLoad %uint %10109
+      %10113 = OpLoad %uint %10110
+      %10114 = OpBitwiseOr %uint %10111 %10112
+      %10115 = OpBitwiseOr %uint %10113 %10114
+      %10116 = OpIEqual %bool %10115 %uint_0
+               OpReturnValue %10116
+               OpFunctionEnd

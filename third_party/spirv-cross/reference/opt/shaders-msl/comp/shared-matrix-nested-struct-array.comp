@@ -1,0 +1,1369 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+template<typename T, int Cols, int Rows=Cols>
+struct spvStorageMatrix
+{
+    vec<T, Rows> columns[Cols];
+    
+    spvStorageMatrix() thread = default;
+    thread spvStorageMatrix& operator=(initializer_list<vec<T, Rows>> cols) thread
+    {
+        size_t i;
+        thread vec<T, Rows>* col;
+        for (i = 0, col = cols.begin(); i < Cols; ++i, ++col)
+            columns[i] = *col;
+        return *this;
+    }
+    
+    spvStorageMatrix(const thread matrix<T, Cols, Rows>& m) thread
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const thread spvStorageMatrix& m) thread = default;
+    thread spvStorageMatrix& operator=(const thread matrix<T, Cols, Rows>& m) thread
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    thread spvStorageMatrix& operator=(const thread spvStorageMatrix& m) thread = default;
+    
+    spvStorageMatrix(const constant matrix<T, Cols, Rows>& m) thread
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const constant spvStorageMatrix& m) thread = default;
+    thread spvStorageMatrix& operator=(const constant matrix<T, Cols, Rows>& m) thread
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    thread spvStorageMatrix& operator=(const constant spvStorageMatrix& m) thread = default;
+    
+    spvStorageMatrix(const device matrix<T, Cols, Rows>& m) thread
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const device spvStorageMatrix& m) thread = default;
+    thread spvStorageMatrix& operator=(const device matrix<T, Cols, Rows>& m) thread
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    thread spvStorageMatrix& operator=(const device spvStorageMatrix& m) thread = default;
+    
+    spvStorageMatrix(const threadgroup matrix<T, Cols, Rows>& m) thread
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const threadgroup spvStorageMatrix& m) thread = default;
+    thread spvStorageMatrix& operator=(const threadgroup matrix<T, Cols, Rows>& m) thread
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    thread spvStorageMatrix& operator=(const threadgroup spvStorageMatrix& m) thread = default;
+    
+    #ifdef __HAVE_IMAGEBLOCKS__
+    spvStorageMatrix(const threadgroup_imageblock matrix<T, Cols, Rows>& m) thread
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const threadgroup_imageblock spvStorageMatrix& m) thread = default;
+    thread spvStorageMatrix& operator=(const threadgroup_imageblock matrix<T, Cols, Rows>& m) thread
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    thread spvStorageMatrix& operator=(const threadgroup_imageblock spvStorageMatrix& m) thread = default;
+    #endif
+    
+    #ifdef __HAVE_RAYTRACING__
+    spvStorageMatrix(const ray_data matrix<T, Cols, Rows>& m) thread
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const ray_data spvStorageMatrix& m) thread = default;
+    thread spvStorageMatrix& operator=(const ray_data matrix<T, Cols, Rows>& m) thread
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    thread spvStorageMatrix& operator=(const ray_data spvStorageMatrix& m) thread = default;
+    #endif
+    
+    #ifdef __HAVE_MESH__
+    spvStorageMatrix(const object_data matrix<T, Cols, Rows>& m) thread
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const object_data spvStorageMatrix& m) thread = default;
+    thread spvStorageMatrix& operator=(const object_data matrix<T, Cols, Rows>& m) thread
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    thread spvStorageMatrix& operator=(const object_data spvStorageMatrix& m) thread = default;
+    #endif
+    
+    operator matrix<T, Cols, Rows>() const thread
+    {
+        matrix<T, Cols, Rows> m;
+        for (int i = 0; i < Cols; ++i)
+            m.columns[i] = columns[i];
+        return m;
+    }
+    
+    vec<T, Rows> operator[](size_t idx) const thread
+    {
+        return columns[idx];
+    }
+    thread vec<T, Rows>& operator[](size_t idx) thread
+    {
+        return columns[idx];
+    }
+    
+    spvStorageMatrix() constant = default;
+    
+    spvStorageMatrix(const thread matrix<T, Cols, Rows>& m) constant
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const thread spvStorageMatrix& m) constant = default;
+    
+    spvStorageMatrix(const constant matrix<T, Cols, Rows>& m) constant
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const constant spvStorageMatrix& m) constant = default;
+    
+    spvStorageMatrix(const device matrix<T, Cols, Rows>& m) constant
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const device spvStorageMatrix& m) constant = default;
+    
+    spvStorageMatrix(const threadgroup matrix<T, Cols, Rows>& m) constant
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const threadgroup spvStorageMatrix& m) constant = default;
+    
+    #ifdef __HAVE_IMAGEBLOCKS__
+    spvStorageMatrix(const threadgroup_imageblock matrix<T, Cols, Rows>& m) constant
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const threadgroup_imageblock spvStorageMatrix& m) constant = default;
+    #endif
+    
+    #ifdef __HAVE_RAYTRACING__
+    spvStorageMatrix(const ray_data matrix<T, Cols, Rows>& m) constant
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const ray_data spvStorageMatrix& m) constant = default;
+    #endif
+    
+    #ifdef __HAVE_MESH__
+    spvStorageMatrix(const object_data matrix<T, Cols, Rows>& m) constant
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const object_data spvStorageMatrix& m) constant = default;
+    #endif
+    
+    operator matrix<T, Cols, Rows>() const constant
+    {
+        matrix<T, Cols, Rows> m;
+        for (int i = 0; i < Cols; ++i)
+            m.columns[i] = columns[i];
+        return m;
+    }
+    
+    vec<T, Rows> operator[](size_t idx) const constant
+    {
+        return columns[idx];
+    }
+    
+    spvStorageMatrix() device = default;
+    device spvStorageMatrix& operator=(initializer_list<vec<T, Rows>> cols) device
+    {
+        size_t i;
+        thread vec<T, Rows>* col;
+        for (i = 0, col = cols.begin(); i < Cols; ++i, ++col)
+            columns[i] = *col;
+        return *this;
+    }
+    
+    spvStorageMatrix(const thread matrix<T, Cols, Rows>& m) device
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const thread spvStorageMatrix& m) device = default;
+    device spvStorageMatrix& operator=(const thread matrix<T, Cols, Rows>& m) device
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    device spvStorageMatrix& operator=(const thread spvStorageMatrix& m) device = default;
+    
+    spvStorageMatrix(const constant matrix<T, Cols, Rows>& m) device
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const constant spvStorageMatrix& m) device = default;
+    device spvStorageMatrix& operator=(const constant matrix<T, Cols, Rows>& m) device
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    device spvStorageMatrix& operator=(const constant spvStorageMatrix& m) device = default;
+    
+    spvStorageMatrix(const device matrix<T, Cols, Rows>& m) device
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const device spvStorageMatrix& m) device = default;
+    device spvStorageMatrix& operator=(const device matrix<T, Cols, Rows>& m) device
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    device spvStorageMatrix& operator=(const device spvStorageMatrix& m) device = default;
+    
+    spvStorageMatrix(const threadgroup matrix<T, Cols, Rows>& m) device
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const threadgroup spvStorageMatrix& m) device = default;
+    device spvStorageMatrix& operator=(const threadgroup matrix<T, Cols, Rows>& m) device
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    device spvStorageMatrix& operator=(const threadgroup spvStorageMatrix& m) device = default;
+    
+    #ifdef __HAVE_IMAGEBLOCKS__
+    spvStorageMatrix(const threadgroup_imageblock matrix<T, Cols, Rows>& m) device
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const threadgroup_imageblock spvStorageMatrix& m) device = default;
+    device spvStorageMatrix& operator=(const threadgroup_imageblock matrix<T, Cols, Rows>& m) device
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    device spvStorageMatrix& operator=(const threadgroup_imageblock spvStorageMatrix& m) device = default;
+    #endif
+    
+    #ifdef __HAVE_RAYTRACING__
+    spvStorageMatrix(const ray_data matrix<T, Cols, Rows>& m) device
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const ray_data spvStorageMatrix& m) device = default;
+    device spvStorageMatrix& operator=(const ray_data matrix<T, Cols, Rows>& m) device
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    device spvStorageMatrix& operator=(const ray_data spvStorageMatrix& m) device = default;
+    #endif
+    
+    #ifdef __HAVE_MESH__
+    spvStorageMatrix(const object_data matrix<T, Cols, Rows>& m) device
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const object_data spvStorageMatrix& m) device = default;
+    device spvStorageMatrix& operator=(const object_data matrix<T, Cols, Rows>& m) device
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    device spvStorageMatrix& operator=(const object_data spvStorageMatrix& m) device = default;
+    #endif
+    
+    operator matrix<T, Cols, Rows>() const device
+    {
+        matrix<T, Cols, Rows> m;
+        for (int i = 0; i < Cols; ++i)
+            m.columns[i] = columns[i];
+        return m;
+    }
+    
+    vec<T, Rows> operator[](size_t idx) const device
+    {
+        return columns[idx];
+    }
+    device vec<T, Rows>& operator[](size_t idx) device
+    {
+        return columns[idx];
+    }
+    
+    spvStorageMatrix() threadgroup = default;
+    threadgroup spvStorageMatrix& operator=(initializer_list<vec<T, Rows>> cols) threadgroup
+    {
+        size_t i;
+        thread vec<T, Rows>* col;
+        for (i = 0, col = cols.begin(); i < Cols; ++i, ++col)
+            columns[i] = *col;
+        return *this;
+    }
+    
+    spvStorageMatrix(const thread matrix<T, Cols, Rows>& m) threadgroup
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const thread spvStorageMatrix& m) threadgroup = default;
+    threadgroup spvStorageMatrix& operator=(const thread matrix<T, Cols, Rows>& m) threadgroup
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    threadgroup spvStorageMatrix& operator=(const thread spvStorageMatrix& m) threadgroup = default;
+    
+    spvStorageMatrix(const constant matrix<T, Cols, Rows>& m) threadgroup
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const constant spvStorageMatrix& m) threadgroup = default;
+    threadgroup spvStorageMatrix& operator=(const constant matrix<T, Cols, Rows>& m) threadgroup
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    threadgroup spvStorageMatrix& operator=(const constant spvStorageMatrix& m) threadgroup = default;
+    
+    spvStorageMatrix(const device matrix<T, Cols, Rows>& m) threadgroup
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const device spvStorageMatrix& m) threadgroup = default;
+    threadgroup spvStorageMatrix& operator=(const device matrix<T, Cols, Rows>& m) threadgroup
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    threadgroup spvStorageMatrix& operator=(const device spvStorageMatrix& m) threadgroup = default;
+    
+    spvStorageMatrix(const threadgroup matrix<T, Cols, Rows>& m) threadgroup
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const threadgroup spvStorageMatrix& m) threadgroup = default;
+    threadgroup spvStorageMatrix& operator=(const threadgroup matrix<T, Cols, Rows>& m) threadgroup
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    threadgroup spvStorageMatrix& operator=(const threadgroup spvStorageMatrix& m) threadgroup = default;
+    
+    #ifdef __HAVE_IMAGEBLOCKS__
+    spvStorageMatrix(const threadgroup_imageblock matrix<T, Cols, Rows>& m) threadgroup
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const threadgroup_imageblock spvStorageMatrix& m) threadgroup = default;
+    threadgroup spvStorageMatrix& operator=(const threadgroup_imageblock matrix<T, Cols, Rows>& m) threadgroup
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    threadgroup spvStorageMatrix& operator=(const threadgroup_imageblock spvStorageMatrix& m) threadgroup = default;
+    #endif
+    
+    #ifdef __HAVE_RAYTRACING__
+    spvStorageMatrix(const ray_data matrix<T, Cols, Rows>& m) threadgroup
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const ray_data spvStorageMatrix& m) threadgroup = default;
+    threadgroup spvStorageMatrix& operator=(const ray_data matrix<T, Cols, Rows>& m) threadgroup
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    threadgroup spvStorageMatrix& operator=(const ray_data spvStorageMatrix& m) threadgroup = default;
+    #endif
+    
+    #ifdef __HAVE_MESH__
+    spvStorageMatrix(const object_data matrix<T, Cols, Rows>& m) threadgroup
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const object_data spvStorageMatrix& m) threadgroup = default;
+    threadgroup spvStorageMatrix& operator=(const object_data matrix<T, Cols, Rows>& m) threadgroup
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    threadgroup spvStorageMatrix& operator=(const object_data spvStorageMatrix& m) threadgroup = default;
+    #endif
+    
+    operator matrix<T, Cols, Rows>() const threadgroup
+    {
+        matrix<T, Cols, Rows> m;
+        for (int i = 0; i < Cols; ++i)
+            m.columns[i] = columns[i];
+        return m;
+    }
+    
+    vec<T, Rows> operator[](size_t idx) const threadgroup
+    {
+        return columns[idx];
+    }
+    threadgroup vec<T, Rows>& operator[](size_t idx) threadgroup
+    {
+        return columns[idx];
+    }
+    
+    #ifdef __HAVE_IMAGEBLOCKS__
+    spvStorageMatrix() threadgroup_imageblock = default;
+    threadgroup_imageblock spvStorageMatrix& operator=(initializer_list<vec<T, Rows>> cols) threadgroup_imageblock
+    {
+        size_t i;
+        thread vec<T, Rows>* col;
+        for (i = 0, col = cols.begin(); i < Cols; ++i, ++col)
+            columns[i] = *col;
+        return *this;
+    }
+    
+    spvStorageMatrix(const thread matrix<T, Cols, Rows>& m) threadgroup_imageblock
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const thread spvStorageMatrix& m) threadgroup_imageblock = default;
+    threadgroup_imageblock spvStorageMatrix& operator=(const thread matrix<T, Cols, Rows>& m) threadgroup_imageblock
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    threadgroup_imageblock spvStorageMatrix& operator=(const thread spvStorageMatrix& m) threadgroup_imageblock = default;
+    
+    spvStorageMatrix(const constant matrix<T, Cols, Rows>& m) threadgroup_imageblock
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const constant spvStorageMatrix& m) threadgroup_imageblock = default;
+    threadgroup_imageblock spvStorageMatrix& operator=(const constant matrix<T, Cols, Rows>& m) threadgroup_imageblock
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    threadgroup_imageblock spvStorageMatrix& operator=(const constant spvStorageMatrix& m) threadgroup_imageblock = default;
+    
+    spvStorageMatrix(const device matrix<T, Cols, Rows>& m) threadgroup_imageblock
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const device spvStorageMatrix& m) threadgroup_imageblock = default;
+    threadgroup_imageblock spvStorageMatrix& operator=(const device matrix<T, Cols, Rows>& m) threadgroup_imageblock
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    threadgroup_imageblock spvStorageMatrix& operator=(const device spvStorageMatrix& m) threadgroup_imageblock = default;
+    
+    spvStorageMatrix(const threadgroup matrix<T, Cols, Rows>& m) threadgroup_imageblock
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const threadgroup spvStorageMatrix& m) threadgroup_imageblock = default;
+    threadgroup_imageblock spvStorageMatrix& operator=(const threadgroup matrix<T, Cols, Rows>& m) threadgroup_imageblock
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    threadgroup_imageblock spvStorageMatrix& operator=(const threadgroup spvStorageMatrix& m) threadgroup_imageblock = default;
+    
+    spvStorageMatrix(const threadgroup_imageblock matrix<T, Cols, Rows>& m) threadgroup_imageblock
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const threadgroup_imageblock spvStorageMatrix& m) threadgroup_imageblock = default;
+    threadgroup_imageblock spvStorageMatrix& operator=(const threadgroup_imageblock matrix<T, Cols, Rows>& m) threadgroup_imageblock
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    threadgroup_imageblock spvStorageMatrix& operator=(const threadgroup_imageblock spvStorageMatrix& m) threadgroup_imageblock = default;
+    
+    #ifdef __HAVE_RAYTRACING__
+    spvStorageMatrix(const ray_data matrix<T, Cols, Rows>& m) threadgroup_imageblock
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const ray_data spvStorageMatrix& m) threadgroup_imageblock = default;
+    threadgroup_imageblock spvStorageMatrix& operator=(const ray_data matrix<T, Cols, Rows>& m) threadgroup_imageblock
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    threadgroup_imageblock spvStorageMatrix& operator=(const ray_data spvStorageMatrix& m) threadgroup_imageblock = default;
+    #endif
+    
+    #ifdef __HAVE_MESH__
+    spvStorageMatrix(const object_data matrix<T, Cols, Rows>& m) threadgroup_imageblock
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const object_data spvStorageMatrix& m) threadgroup_imageblock = default;
+    threadgroup_imageblock spvStorageMatrix& operator=(const object_data matrix<T, Cols, Rows>& m) threadgroup_imageblock
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    threadgroup_imageblock spvStorageMatrix& operator=(const object_data spvStorageMatrix& m) threadgroup_imageblock = default;
+    #endif
+    
+    operator matrix<T, Cols, Rows>() const threadgroup_imageblock
+    {
+        matrix<T, Cols, Rows> m;
+        for (int i = 0; i < Cols; ++i)
+            m.columns[i] = columns[i];
+        return m;
+    }
+    
+    vec<T, Rows> operator[](size_t idx) const threadgroup_imageblock
+    {
+        return columns[idx];
+    }
+    threadgroup_imageblock vec<T, Rows>& operator[](size_t idx) threadgroup_imageblock
+    {
+        return columns[idx];
+    }
+    #endif
+    
+    #ifdef __HAVE_RAYTRACING__
+    spvStorageMatrix() ray_data = default;
+    ray_data spvStorageMatrix& operator=(initializer_list<vec<T, Rows>> cols) ray_data
+    {
+        size_t i;
+        thread vec<T, Rows>* col;
+        for (i = 0, col = cols.begin(); i < Cols; ++i, ++col)
+            columns[i] = *col;
+        return *this;
+    }
+    
+    spvStorageMatrix(const thread matrix<T, Cols, Rows>& m) ray_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const thread spvStorageMatrix& m) ray_data = default;
+    ray_data spvStorageMatrix& operator=(const thread matrix<T, Cols, Rows>& m) ray_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    ray_data spvStorageMatrix& operator=(const thread spvStorageMatrix& m) ray_data = default;
+    
+    spvStorageMatrix(const constant matrix<T, Cols, Rows>& m) ray_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const constant spvStorageMatrix& m) ray_data = default;
+    ray_data spvStorageMatrix& operator=(const constant matrix<T, Cols, Rows>& m) ray_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    ray_data spvStorageMatrix& operator=(const constant spvStorageMatrix& m) ray_data = default;
+    
+    spvStorageMatrix(const device matrix<T, Cols, Rows>& m) ray_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const device spvStorageMatrix& m) ray_data = default;
+    ray_data spvStorageMatrix& operator=(const device matrix<T, Cols, Rows>& m) ray_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    ray_data spvStorageMatrix& operator=(const device spvStorageMatrix& m) ray_data = default;
+    
+    spvStorageMatrix(const threadgroup matrix<T, Cols, Rows>& m) ray_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const threadgroup spvStorageMatrix& m) ray_data = default;
+    ray_data spvStorageMatrix& operator=(const threadgroup matrix<T, Cols, Rows>& m) ray_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    ray_data spvStorageMatrix& operator=(const threadgroup spvStorageMatrix& m) ray_data = default;
+    
+    #ifdef __HAVE_IMAGEBLOCKS__
+    spvStorageMatrix(const threadgroup_imageblock matrix<T, Cols, Rows>& m) ray_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const threadgroup_imageblock spvStorageMatrix& m) ray_data = default;
+    ray_data spvStorageMatrix& operator=(const threadgroup_imageblock matrix<T, Cols, Rows>& m) ray_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    ray_data spvStorageMatrix& operator=(const threadgroup_imageblock spvStorageMatrix& m) ray_data = default;
+    #endif
+    
+    spvStorageMatrix(const ray_data matrix<T, Cols, Rows>& m) ray_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const ray_data spvStorageMatrix& m) ray_data = default;
+    ray_data spvStorageMatrix& operator=(const ray_data matrix<T, Cols, Rows>& m) ray_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    ray_data spvStorageMatrix& operator=(const ray_data spvStorageMatrix& m) ray_data = default;
+    
+    #ifdef __HAVE_MESH__
+    spvStorageMatrix(const object_data matrix<T, Cols, Rows>& m) ray_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const object_data spvStorageMatrix& m) ray_data = default;
+    ray_data spvStorageMatrix& operator=(const object_data matrix<T, Cols, Rows>& m) ray_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    ray_data spvStorageMatrix& operator=(const object_data spvStorageMatrix& m) ray_data = default;
+    #endif
+    
+    operator matrix<T, Cols, Rows>() const ray_data
+    {
+        matrix<T, Cols, Rows> m;
+        for (int i = 0; i < Cols; ++i)
+            m.columns[i] = columns[i];
+        return m;
+    }
+    
+    vec<T, Rows> operator[](size_t idx) const ray_data
+    {
+        return columns[idx];
+    }
+    ray_data vec<T, Rows>& operator[](size_t idx) ray_data
+    {
+        return columns[idx];
+    }
+    #endif
+    
+    #ifdef __HAVE_MESH__
+    spvStorageMatrix() object_data = default;
+    object_data spvStorageMatrix& operator=(initializer_list<vec<T, Rows>> cols) object_data
+    {
+        size_t i;
+        thread vec<T, Rows>* col;
+        for (i = 0, col = cols.begin(); i < Cols; ++i, ++col)
+            columns[i] = *col;
+        return *this;
+    }
+    
+    spvStorageMatrix(const thread matrix<T, Cols, Rows>& m) object_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const thread spvStorageMatrix& m) object_data = default;
+    object_data spvStorageMatrix& operator=(const thread matrix<T, Cols, Rows>& m) object_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    object_data spvStorageMatrix& operator=(const thread spvStorageMatrix& m) object_data = default;
+    
+    spvStorageMatrix(const constant matrix<T, Cols, Rows>& m) object_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const constant spvStorageMatrix& m) object_data = default;
+    object_data spvStorageMatrix& operator=(const constant matrix<T, Cols, Rows>& m) object_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    object_data spvStorageMatrix& operator=(const constant spvStorageMatrix& m) object_data = default;
+    
+    spvStorageMatrix(const device matrix<T, Cols, Rows>& m) object_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const device spvStorageMatrix& m) object_data = default;
+    object_data spvStorageMatrix& operator=(const device matrix<T, Cols, Rows>& m) object_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    object_data spvStorageMatrix& operator=(const device spvStorageMatrix& m) object_data = default;
+    
+    spvStorageMatrix(const threadgroup matrix<T, Cols, Rows>& m) object_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const threadgroup spvStorageMatrix& m) object_data = default;
+    object_data spvStorageMatrix& operator=(const threadgroup matrix<T, Cols, Rows>& m) object_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    object_data spvStorageMatrix& operator=(const threadgroup spvStorageMatrix& m) object_data = default;
+    
+    #ifdef __HAVE_IMAGEBLOCKS__
+    spvStorageMatrix(const threadgroup_imageblock matrix<T, Cols, Rows>& m) object_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const threadgroup_imageblock spvStorageMatrix& m) object_data = default;
+    object_data spvStorageMatrix& operator=(const threadgroup_imageblock matrix<T, Cols, Rows>& m) object_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    object_data spvStorageMatrix& operator=(const threadgroup_imageblock spvStorageMatrix& m) object_data = default;
+    #endif
+    
+    #ifdef __HAVE_RAYTRACING__
+    spvStorageMatrix(const ray_data matrix<T, Cols, Rows>& m) object_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const ray_data spvStorageMatrix& m) object_data = default;
+    object_data spvStorageMatrix& operator=(const ray_data matrix<T, Cols, Rows>& m) object_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    object_data spvStorageMatrix& operator=(const ray_data spvStorageMatrix& m) object_data = default;
+    #endif
+    
+    spvStorageMatrix(const object_data matrix<T, Cols, Rows>& m) object_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+    }
+    spvStorageMatrix(const object_data spvStorageMatrix& m) object_data = default;
+    object_data spvStorageMatrix& operator=(const object_data matrix<T, Cols, Rows>& m) object_data
+    {
+        for (size_t i = 0; i < Cols; ++i)
+            columns[i] = m.columns[i];
+        return *this;
+    }
+    object_data spvStorageMatrix& operator=(const object_data spvStorageMatrix& m) object_data = default;
+    
+    operator matrix<T, Cols, Rows>() const object_data
+    {
+        matrix<T, Cols, Rows> m;
+        for (int i = 0; i < Cols; ++i)
+            m.columns[i] = columns[i];
+        return m;
+    }
+    
+    vec<T, Rows> operator[](size_t idx) const object_data
+    {
+        return columns[idx];
+    }
+    object_data vec<T, Rows>& operator[](size_t idx) object_data
+    {
+        return columns[idx];
+    }
+    #endif
+    
+};
+
+template<typename T, int Cols, int Rows>
+matrix<T, Rows, Cols> transpose(spvStorageMatrix<T, Cols, Rows> m)
+{
+    return transpose(matrix<T, Cols, Rows>(m));
+}
+
+typedef spvStorageMatrix<half, 2, 2> spvStorage_half2x2;
+typedef spvStorageMatrix<half, 2, 3> spvStorage_half2x3;
+typedef spvStorageMatrix<half, 2, 4> spvStorage_half2x4;
+typedef spvStorageMatrix<half, 3, 2> spvStorage_half3x2;
+typedef spvStorageMatrix<half, 3, 3> spvStorage_half3x3;
+typedef spvStorageMatrix<half, 3, 4> spvStorage_half3x4;
+typedef spvStorageMatrix<half, 4, 2> spvStorage_half4x2;
+typedef spvStorageMatrix<half, 4, 3> spvStorage_half4x3;
+typedef spvStorageMatrix<half, 4, 4> spvStorage_half4x4;
+typedef spvStorageMatrix<float, 2, 2> spvStorage_float2x2;
+typedef spvStorageMatrix<float, 2, 3> spvStorage_float2x3;
+typedef spvStorageMatrix<float, 2, 4> spvStorage_float2x4;
+typedef spvStorageMatrix<float, 3, 2> spvStorage_float3x2;
+typedef spvStorageMatrix<float, 3, 3> spvStorage_float3x3;
+typedef spvStorageMatrix<float, 3, 4> spvStorage_float3x4;
+typedef spvStorageMatrix<float, 4, 2> spvStorage_float4x2;
+typedef spvStorageMatrix<float, 4, 3> spvStorage_float4x3;
+typedef spvStorageMatrix<float, 4, 4> spvStorage_float4x4;
+
+struct sA
+{
+    spvStorage_float2x3 mA;
+};
+
+struct sB
+{
+    spvStorage_float2x2 mA;
+    spvStorage_float3x2 mB;
+    uint3 mC;
+};
+
+struct sC
+{
+    sA mA;
+    sB mB;
+};
+
+struct sD
+{
+    sC mA;
+};
+
+struct sE
+{
+    spvStorage_float3x2 mA;
+    spvStorage_float4x3 mB;
+};
+
+struct sF
+{
+    sE mA;
+};
+
+struct sG
+{
+    sF mA;
+};
+
+struct sH
+{
+    spvUnsafeArray<short3, 2> mA;
+};
+
+struct S1
+{
+    sD a;
+    sG b;
+    spvUnsafeArray<sH, 2> c;
+};
+
+struct block
+{
+    uint passed;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device block& _424 [[buffer(0)]])
+{
+    threadgroup S1 s1;
+    s1.a.mA.mA.mA = spvStorage_float2x3(float2x3(float3(6.0, 8.0, 8.0), float3(0.0, -4.0, -5.0)));
+    s1.a.mA.mB.mA = spvStorage_float2x2(float2x2(float2(9.0, -4.0), float2(-6.0, -1.0)));
+    s1.a.mA.mB.mB = spvStorage_float3x2(float3x2(float2(-1.0, -2.0), float2(1.0, 6.0), float2(5.0, 7.0)));
+    s1.a.mA.mB.mC = uint3(3u, 1u, 5u);
+    s1.b.mA.mA.mA = spvStorage_float3x2(float3x2(float2(8.0, 3.0), float2(0.0, 2.0), float2(1.0, 8.0)));
+    s1.b.mA.mA.mB = spvStorage_float4x3(float4x3(float3(0.0, 9.0, -1.0), float3(-1.0, -7.0, 7.0), float3(-4.0, -3.0, 1.0), float3(-4.0, -9.0, 1.0)));
+    s1.c[0].mA[0] = short3(bool3(true, false, false));
+    s1.c[0].mA[1] = short3(bool3(true, false, false));
+    s1.c[1].mA[0] = short3(bool3(false));
+    s1.c[1].mA[1] = short3(bool3(false));
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    threadgroup_barrier(mem_flags::mem_device | mem_flags::mem_threadgroup | mem_flags::mem_texture);
+    bool _484 = abs(6.0 - float2x3(s1.a.mA.mA.mA)[0].x) < 0.0500000007450580596923828125;
+    bool _469;
+    if (_484)
+    {
+        _469 = abs(8.0 - float2x3(s1.a.mA.mA.mA)[0].y) < 0.0500000007450580596923828125;
+    }
+    else
+    {
+        _469 = _484;
+    }
+    bool _477;
+    if (_469)
+    {
+        _477 = abs(8.0 - float2x3(s1.a.mA.mA.mA)[0].z) < 0.0500000007450580596923828125;
+    }
+    else
+    {
+        _477 = _469;
+    }
+    bool _448;
+    if (_477)
+    {
+        bool _534 = abs(-float2x3(s1.a.mA.mA.mA)[1].x) < 0.0500000007450580596923828125;
+        bool _519;
+        if (_534)
+        {
+            _519 = abs((-4.0) - float2x3(s1.a.mA.mA.mA)[1].y) < 0.0500000007450580596923828125;
+        }
+        else
+        {
+            _519 = _534;
+        }
+        bool _527;
+        if (_519)
+        {
+            _527 = abs((-5.0) - float2x3(s1.a.mA.mA.mA)[1].z) < 0.0500000007450580596923828125;
+        }
+        else
+        {
+            _527 = _519;
+        }
+        _448 = _527;
+    }
+    else
+    {
+        _448 = _477;
+    }
+    bool _346;
+    if (_448)
+    {
+        bool _593 = abs(9.0 - float2x2(s1.a.mA.mB.mA)[0].x) < 0.0500000007450580596923828125;
+        bool _586;
+        if (_593)
+        {
+            _586 = abs((-4.0) - float2x2(s1.a.mA.mB.mA)[0].y) < 0.0500000007450580596923828125;
+        }
+        else
+        {
+            _586 = _593;
+        }
+        bool _567;
+        if (_586)
+        {
+            bool _626 = abs((-6.0) - float2x2(s1.a.mA.mB.mA)[1].x) < 0.0500000007450580596923828125;
+            bool _619;
+            if (_626)
+            {
+                _619 = abs((-1.0) - float2x2(s1.a.mA.mB.mA)[1].y) < 0.0500000007450580596923828125;
+            }
+            else
+            {
+                _619 = _626;
+            }
+            _567 = _619;
+        }
+        else
+        {
+            _567 = _586;
+        }
+        _346 = _567;
+    }
+    else
+    {
+        _346 = _448;
+    }
+    bool _355;
+    if (_346)
+    {
+        bool _688 = abs((-1.0) - float3x2(s1.a.mA.mB.mB)[0].x) < 0.0500000007450580596923828125;
+        bool _681;
+        if (_688)
+        {
+            _681 = abs((-2.0) - float3x2(s1.a.mA.mB.mB)[0].y) < 0.0500000007450580596923828125;
+        }
+        else
+        {
+            _681 = _688;
+        }
+        bool _654;
+        if (_681)
+        {
+            bool _721 = abs(1.0 - float3x2(s1.a.mA.mB.mB)[1].x) < 0.0500000007450580596923828125;
+            bool _714;
+            if (_721)
+            {
+                _714 = abs(6.0 - float3x2(s1.a.mA.mB.mB)[1].y) < 0.0500000007450580596923828125;
+            }
+            else
+            {
+                _714 = _721;
+            }
+            _654 = _714;
+        }
+        else
+        {
+            _654 = _681;
+        }
+        bool _662;
+        if (_654)
+        {
+            bool _754 = abs(5.0 - float3x2(s1.a.mA.mB.mB)[2].x) < 0.0500000007450580596923828125;
+            bool _747;
+            if (_754)
+            {
+                _747 = abs(7.0 - float3x2(s1.a.mA.mB.mB)[2].y) < 0.0500000007450580596923828125;
+            }
+            else
+            {
+                _747 = _754;
+            }
+            _662 = _747;
+        }
+        else
+        {
+            _662 = _654;
+        }
+        _355 = _662;
+    }
+    else
+    {
+        _355 = _346;
+    }
+    bool _364;
+    if (_355)
+    {
+        _364 = all(uint3(3u, 1u, 5u) == s1.a.mA.mB.mC);
+    }
+    else
+    {
+        _364 = _355;
+    }
+    bool _373;
+    if (_364)
+    {
+        bool _822 = abs(8.0 - float3x2(s1.b.mA.mA.mA)[0].x) < 0.0500000007450580596923828125;
+        bool _815;
+        if (_822)
+        {
+            _815 = abs(3.0 - float3x2(s1.b.mA.mA.mA)[0].y) < 0.0500000007450580596923828125;
+        }
+        else
+        {
+            _815 = _822;
+        }
+        bool _788;
+        if (_815)
+        {
+            bool _855 = abs(-float3x2(s1.b.mA.mA.mA)[1].x) < 0.0500000007450580596923828125;
+            bool _848;
+            if (_855)
+            {
+                _848 = abs(2.0 - float3x2(s1.b.mA.mA.mA)[1].y) < 0.0500000007450580596923828125;
+            }
+            else
+            {
+                _848 = _855;
+            }
+            _788 = _848;
+        }
+        else
+        {
+            _788 = _815;
+        }
+        bool _796;
+        if (_788)
+        {
+            bool _888 = abs(1.0 - float3x2(s1.b.mA.mA.mA)[2].x) < 0.0500000007450580596923828125;
+            bool _881;
+            if (_888)
+            {
+                _881 = abs(8.0 - float3x2(s1.b.mA.mA.mA)[2].y) < 0.0500000007450580596923828125;
+            }
+            else
+            {
+                _881 = _888;
+            }
+            _796 = _881;
+        }
+        else
+        {
+            _796 = _788;
+        }
+        _373 = _796;
+    }
+    else
+    {
+        _373 = _364;
+    }
+    bool _382;
+    if (_373)
+    {
+        bool _970 = abs(-float4x3(s1.b.mA.mA.mB)[0].x) < 0.0500000007450580596923828125;
+        bool _955;
+        if (_970)
+        {
+            _955 = abs(9.0 - float4x3(s1.b.mA.mA.mB)[0].y) < 0.0500000007450580596923828125;
+        }
+        else
+        {
+            _955 = _970;
+        }
+        bool _963;
+        if (_955)
+        {
+            _963 = abs((-1.0) - float4x3(s1.b.mA.mA.mB)[0].z) < 0.0500000007450580596923828125;
+        }
+        else
+        {
+            _963 = _955;
+        }
+        bool _918;
+        if (_963)
+        {
+            bool _1020 = abs((-1.0) - float4x3(s1.b.mA.mA.mB)[1].x) < 0.0500000007450580596923828125;
+            bool _1005;
+            if (_1020)
+            {
+                _1005 = abs((-7.0) - float4x3(s1.b.mA.mA.mB)[1].y) < 0.0500000007450580596923828125;
+            }
+            else
+            {
+                _1005 = _1020;
+            }
+            bool _1013;
+            if (_1005)
+            {
+                _1013 = abs(7.0 - float4x3(s1.b.mA.mA.mB)[1].z) < 0.0500000007450580596923828125;
+            }
+            else
+            {
+                _1013 = _1005;
+            }
+            _918 = _1013;
+        }
+        else
+        {
+            _918 = _963;
+        }
+        bool _926;
+        if (_918)
+        {
+            bool _1070 = abs((-4.0) - float4x3(s1.b.mA.mA.mB)[2].x) < 0.0500000007450580596923828125;
+            bool _1055;
+            if (_1070)
+            {
+                _1055 = abs((-3.0) - float4x3(s1.b.mA.mA.mB)[2].y) < 0.0500000007450580596923828125;
+            }
+            else
+            {
+                _1055 = _1070;
+            }
+            bool _1063;
+            if (_1055)
+            {
+                _1063 = abs(1.0 - float4x3(s1.b.mA.mA.mB)[2].z) < 0.0500000007450580596923828125;
+            }
+            else
+            {
+                _1063 = _1055;
+            }
+            _926 = _1063;
+        }
+        else
+        {
+            _926 = _918;
+        }
+        bool _934;
+        if (_926)
+        {
+            bool _1120 = abs((-4.0) - float4x3(s1.b.mA.mA.mB)[3].x) < 0.0500000007450580596923828125;
+            bool _1105;
+            if (_1120)
+            {
+                _1105 = abs((-9.0) - float4x3(s1.b.mA.mA.mB)[3].y) < 0.0500000007450580596923828125;
+            }
+            else
+            {
+                _1105 = _1120;
+            }
+            bool _1113;
+            if (_1105)
+            {
+                _1113 = abs(1.0 - float4x3(s1.b.mA.mA.mB)[3].z) < 0.0500000007450580596923828125;
+            }
+            else
+            {
+                _1113 = _1105;
+            }
+            _934 = _1113;
+        }
+        else
+        {
+            _934 = _926;
+        }
+        _382 = _934;
+    }
+    else
+    {
+        _382 = _373;
+    }
+    bool _391;
+    if (_382)
+    {
+        _391 = all(bool3(true, false, false) == bool3(s1.c[0].mA[0]));
+    }
+    else
+    {
+        _391 = _382;
+    }
+    bool _400;
+    if (_391)
+    {
+        _400 = all(bool3(true, false, false) == bool3(s1.c[0].mA[1]));
+    }
+    else
+    {
+        _400 = _391;
+    }
+    bool _409;
+    if (_400)
+    {
+        _409 = all(bool3(false) == bool3(s1.c[1].mA[0]));
+    }
+    else
+    {
+        _409 = _400;
+    }
+    bool _418;
+    if (_409)
+    {
+        _418 = all(bool3(false) == bool3(s1.c[1].mA[1]));
+    }
+    else
+    {
+        _418 = _409;
+    }
+    if (_418)
+    {
+        _424.passed++;
+    }
+}
+

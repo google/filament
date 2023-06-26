@@ -1,0 +1,54 @@
+; SPIR-V
+; Version: 1.3
+; Generator: Khronos Glslang Reference Front End; 11
+; Bound: 26
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %gl_LocalInvocationIndex
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %StorageBuffer "StorageBuffer"
+               OpMemberName %StorageBuffer 0 "values"
+               OpName %ssbo "ssbo"
+               OpName %gl_LocalInvocationIndex "gl_LocalInvocationIndex"
+               OpName %foo "foo"
+               OpName %bar "bar"
+               OpDecorate %_runtimearr_float ArrayStride 4
+               OpMemberDecorate %StorageBuffer 0 Offset 0
+               OpDecorate %StorageBuffer Block
+               OpDecorate %ssbo DescriptorSet 0
+               OpDecorate %ssbo Binding 0
+               OpDecorate %gl_LocalInvocationIndex BuiltIn LocalInvocationIndex
+               OpDecorate %foo SpecId 0
+               OpDecorate %bar SpecId 0
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+%_runtimearr_float = OpTypeRuntimeArray %float
+%StorageBuffer = OpTypeStruct %_runtimearr_float
+%_ptr_StorageBuffer_StorageBuffer = OpTypePointer StorageBuffer %StorageBuffer
+       %ssbo = OpVariable %_ptr_StorageBuffer_StorageBuffer StorageBuffer
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+       %uint = OpTypeInt 32 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+%gl_LocalInvocationIndex = OpVariable %_ptr_Input_uint Input
+        %foo = OpSpecConstant %int 1
+        %bar = OpSpecConstant %float 2
+%_ptr_StorageBuffer_float = OpTypePointer StorageBuffer %float
+     %v3uint = OpTypeVector %uint 3
+     %uint_1 = OpConstant %uint 1
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %16 = OpLoad %uint %gl_LocalInvocationIndex
+         %18 = OpConvertSToF %float %foo
+         %20 = OpFAdd %float %18 %bar
+         %22 = OpAccessChain %_ptr_StorageBuffer_float %ssbo %int_0 %16
+               OpStore %22 %20
+               OpReturn
+               OpFunctionEnd

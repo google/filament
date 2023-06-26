@@ -515,6 +515,8 @@ def cross_compile_hlsl(shader, spirv, opt, force_no_external_validation, iterati
         hlsl_args.append('--hlsl-flatten-matrix-vertex-input-semantics')
     if '.relax-nan.' in shader:
         hlsl_args.append('--relax-nan-checks')
+    if '.structured.' in shader:
+        hlsl_args.append('--hlsl-preserve-structured-buffers')
 
     subprocess.check_call(hlsl_args)
 

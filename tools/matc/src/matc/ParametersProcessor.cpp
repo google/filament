@@ -819,6 +819,19 @@ static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObj
         }
     }
 
+    const JsonishValue* precisionValue = jsonObject.getValue("precision");
+    if (precisionValue) {
+        if (precisionValue->getType() != JsonishValue::STRING) {
+            std::cerr << "parameters: precision must be a STRING." << std::endl;
+            return false;
+        }
+
+        auto precisionString = precisionValue->toJsonString();
+        if (!Enums::isValid<ParameterPrecision>(precisionString->getString())){
+            return logEnumIssue("parameters", *precisionString, Enums::map<ParameterPrecision>());
+        }
+    }
+
     const JsonishValue* typeValue = jsonObject.getValue("type");
     if (typeValue) {
         if (typeValue->getType() != JsonishValue::STRING) {
@@ -860,6 +873,11 @@ static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObj
         target = Enums::toEnum<OutputTarget>(targetValue->toJsonString()->getString());
     }
 
+    ParameterPrecision precision = ParameterPrecision::DEFAULT;
+    if (precisionValue) {
+        precision = Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
+    }
+
     OutputType type = OutputType::FLOAT4;
     if (target == OutputTarget::DEPTH) {
         // The default type for depth targets is float.
@@ -879,7 +897,7 @@ static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObj
         location = static_cast<int>(locationValue->toJsonNumber()->getFloat());
     }
 
-    builder.output(qualifier, target, type, name, location);
+    builder.output(qualifier, target, precision, type, name, location);
 
     return true;
 }

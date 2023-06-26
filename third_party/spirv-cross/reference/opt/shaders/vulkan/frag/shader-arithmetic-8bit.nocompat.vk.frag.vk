@@ -1,0 +1,43 @@
+#version 450
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+#extension GL_EXT_shader_8bit_storage : require
+
+layout(set = 0, binding = 1, std430) buffer SSBO
+{
+    int8_t i8[16];
+    uint8_t u8[16];
+} ssbo;
+
+layout(set = 0, binding = 0, std140) uniform UBO
+{
+    int8_t i8;
+    uint8_t u8;
+} ubo;
+
+layout(push_constant, std430) uniform Push
+{
+    int8_t i8;
+    uint8_t u8;
+} registers;
+
+layout(location = 0) flat in ivec4 vColor;
+layout(location = 0) out ivec4 FragColorInt;
+layout(location = 1) out uvec4 FragColorUint;
+
+void main()
+{
+    i8vec4 _204 = unpack8(20);
+    ssbo.i8[0] = _204.x;
+    ssbo.i8[1] = _204.y;
+    ssbo.i8[2] = _204.z;
+    ssbo.i8[3] = _204.w;
+    u8vec4 _229 = unpack8(20u);
+    ssbo.u8[0] = _229.x;
+    ssbo.u8[1] = _229.y;
+    ssbo.u8[2] = _229.z;
+    ssbo.u8[3] = _229.w;
+    i8vec4 _249 = i8vec4(vColor);
+    FragColorInt = ivec4((((((_249 + i8vec4(registers.i8)) + i8vec4(-40)) + i8vec4(-50)) + i8vec4(int8_t(10), int8_t(20), int8_t(30), int8_t(40))) + i8vec4(ssbo.i8[4])) + i8vec4(ubo.i8));
+    FragColorUint = uvec4((((((u8vec4(_249) + u8vec4(registers.u8)) + u8vec4(216)) + u8vec4(206)) + u8vec4(uint8_t(10), uint8_t(20), uint8_t(30), uint8_t(40))) + u8vec4(ssbo.u8[4])) + u8vec4(ubo.u8));
+}
+

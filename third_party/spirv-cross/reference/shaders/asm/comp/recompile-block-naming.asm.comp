@@ -1,0 +1,36 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer MyFirstBuffer
+{
+    uint _data[];
+} MyFirstBuffer_1;
+
+layout(binding = 0, std430) buffer MySecondBuffer
+{
+    uint _data[];
+} MySecondBuffer_1;
+
+layout(binding = 0, std430) buffer MyThirdBuffer
+{
+    uint _data[];
+} MyThirdBuffer_1;
+
+void _main()
+{
+    int byteAddrTemp = 0 >> 2;
+    uvec4 a = uvec4(MyFirstBuffer_1._data[byteAddrTemp], MyFirstBuffer_1._data[byteAddrTemp + 1], MyFirstBuffer_1._data[byteAddrTemp + 2], MyFirstBuffer_1._data[byteAddrTemp + 3]);
+    int byteAddrTemp_1 = 4 >> 2;
+    uvec4 b = uvec4(MySecondBuffer_1._data[byteAddrTemp_1], MySecondBuffer_1._data[byteAddrTemp_1 + 1], MySecondBuffer_1._data[byteAddrTemp_1 + 2], MySecondBuffer_1._data[byteAddrTemp_1 + 3]);
+    int byteAddrTemp_2 = 0 >> 2;
+    MyThirdBuffer_1._data[byteAddrTemp_2] = (a + b).x;
+    MyThirdBuffer_1._data[byteAddrTemp_2 + 1] = (a + b).y;
+    MyThirdBuffer_1._data[byteAddrTemp_2 + 2] = (a + b).z;
+    MyThirdBuffer_1._data[byteAddrTemp_2 + 3] = (a + b).w;
+}
+
+void main()
+{
+    _main();
+}
+

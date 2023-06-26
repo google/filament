@@ -1,0 +1,17 @@
+#version 460
+#extension GL_NV_ray_tracing : require
+
+layout(shaderRecordNV, std430) buffer sbt
+{
+    vec3 direction;
+    float tmax;
+} _20;
+
+layout(set = 0, binding = 0) uniform accelerationStructureNV as;
+layout(location = 0) rayPayloadNV float payload;
+
+void main()
+{
+    traceNV(as, 0u, 255u, 0u, 1u, 0u, vec3(0.0), 0.0, _20.direction, _20.tmax, 0);
+}
+

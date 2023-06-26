@@ -1,0 +1,98 @@
+; SPIR-V
+; Version: 1.4
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 63
+; Schema: 0
+               OpCapability Shader
+               OpCapability VariablePointersStorageBuffer
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main" %2 %3 %4
+               OpExecutionMode %1 LocalSize 1 1 1
+               OpDecorate %5 ArrayStride 4
+               OpDecorate %6 Block
+               OpDecorate %7 Block
+               OpMemberDecorate %6 0 ColMajor
+               OpMemberDecorate %6 0 Offset 0
+               OpMemberDecorate %6 0 MatrixStride 16
+               OpMemberDecorate %6 1 RowMajor
+               OpMemberDecorate %6 1 Offset 64
+               OpMemberDecorate %6 1 MatrixStride 16
+               OpMemberDecorate %6 2 Offset 128
+               OpMemberDecorate %6 3 Offset 132
+               OpMemberDecorate %7 0 Offset 0
+               OpDecorate %2 DescriptorSet 0
+               OpDecorate %2 Binding 0
+               OpDecorate %3 DescriptorSet 0
+               OpDecorate %3 Binding 1
+               OpDecorate %4 DescriptorSet 0
+               OpDecorate %4 Binding 2
+          %8 = OpTypeVoid
+          %9 = OpTypeBool
+         %10 = OpTypeInt 32 0
+         %11 = OpConstant %10 0
+         %12 = OpConstant %10 1
+         %13 = OpConstant %10 2
+         %14 = OpConstant %10 3
+         %15 = OpTypeFloat 32
+          %5 = OpTypeRuntimeArray %10
+         %16 = OpTypeVector %15 4
+         %17 = OpTypeMatrix %16 4
+          %6 = OpTypeStruct %17 %17 %15 %15
+          %7 = OpTypeStruct %5
+         %18 = OpTypePointer StorageBuffer %6
+         %19 = OpTypePointer StorageBuffer %7
+         %20 = OpTypePointer StorageBuffer %17
+         %21 = OpTypePointer StorageBuffer %10
+         %22 = OpTypePointer StorageBuffer %15
+         %23 = OpTypePointer StorageBuffer %16
+          %2 = OpVariable %18 StorageBuffer
+          %3 = OpVariable %18 StorageBuffer
+          %4 = OpVariable %19 StorageBuffer
+         %24 = OpTypeFunction %8
+          %1 = OpFunction %8 None %24
+         %25 = OpLabel
+         %26 = OpCopyObject %10 %11
+         %27 = OpAccessChain %22 %2 %13
+         %28 = OpAccessChain %22 %2 %14
+         %29 = OpAccessChain %22 %3 %13
+         %30 = OpAccessChain %22 %3 %14
+         %31 = OpAccessChain %20 %2 %11
+         %32 = OpAccessChain %20 %2 %12
+         %33 = OpAccessChain %23 %2 %11 %11
+         %34 = OpAccessChain %23 %2 %11 %12
+         %35 = OpAccessChain %22 %2 %11 %11 %11
+         %36 = OpPtrEqual %9 %27 %28
+         %37 = OpSelect %10 %36 %11 %12
+         %38 = OpAccessChain %21 %4 %11 %26
+         %39 = OpIAdd %10 %26 %12
+               OpStore %38 %37
+         %40 = OpPtrEqual %9 %27 %29
+         %41 = OpSelect %10 %40 %11 %12
+         %42 = OpAccessChain %21 %4 %11 %39
+         %43 = OpIAdd %10 %39 %12
+               OpStore %42 %41
+         %44 = OpSelect %22 %40 %27 %28
+         %45 = OpSelect %22 %40 %29 %30
+         %46 = OpPtrEqual %9 %44 %45
+         %47 = OpSelect %10 %46 %11 %12
+         %48 = OpAccessChain %21 %4 %11 %43
+         %49 = OpIAdd %10 %43 %12
+               OpStore %48 %47
+         %50 = OpSelect %22 %46 %27 %28
+         %51 = OpPtrEqual %9 %50 %35
+         %52 = OpSelect %10 %51 %11 %12
+         %53 = OpAccessChain %21 %4 %11 %49
+         %54 = OpIAdd %10 %49 %12
+               OpStore %53 %52
+         %55 = OpPtrEqual %9 %31 %32
+         %56 = OpSelect %10 %55 %11 %12
+         %57 = OpAccessChain %21 %4 %11 %54
+         %58 = OpIAdd %10 %54 %12
+               OpStore %57 %56
+         %59 = OpPtrEqual %9 %33 %34
+         %60 = OpSelect %10 %59 %11 %12
+         %61 = OpAccessChain %21 %4 %11 %58
+         %62 = OpIAdd %10 %58 %12
+               OpStore %61 %56
+               OpReturn
+               OpFunctionEnd

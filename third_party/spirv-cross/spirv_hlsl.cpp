@@ -724,10 +724,8 @@ void CompilerHLSL::emit_builtin_primitive_outputs_in_struct()
 		{
 		case BuiltInLayer:
 		{
-			const ExecutionModel model = get_entry_point().model;
-			if (hlsl_options.shader_model < 50 ||
-			    (model != ExecutionModelGeometry && model != ExecutionModelMeshEXT))
-				SPIRV_CROSS_THROW("Render target array index output is only supported in GS/MS 5.0 or higher.");
+			if (hlsl_options.shader_model < 50)
+				SPIRV_CROSS_THROW("Render target array index output is only supported in SM 5.0 or higher.");
 			type = "uint";
 			semantic = "SV_RenderTargetArrayIndex";
 			break;
@@ -2605,11 +2603,30 @@ void CompilerHLSL::emit_buffer_block(const SPIRVariable &var)
 		bool is_readonly = flags.get(DecorationNonWritable) && !is_hlsl_force_storage_buffer_as_uav(var.self);
 		bool is_coherent = flags.get(DecorationCoherent) && !is_readonly;
 		bool is_interlocked = interlocked_resources.count(var.self) > 0;
-		const char *type_name = "ByteAddressBuffer ";
-		if (!is_readonly)
-			type_name = is_interlocked ? "RasterizerOrderedByteAddressBuffer " : "RWByteAddressBuffer ";
+
+		auto to_structuredbuffer_subtype_name = [this](const SPIRType &parent_type) -> std::string
+		{
+			if (parent_type.basetype == SPIRType::Struct && parent_type.member_types.size() == 1)
+			{
+				// Use type of first struct member as a StructuredBuffer will have only one '._m0' field in SPIR-V
+				const auto &member0_type = this->get<SPIRType>(parent_type.member_types.front());
+				return this->type_to_glsl(member0_type);
+			}
+			else
+			{
+				// Otherwise, this StructuredBuffer only has a basic subtype, e.g. StructuredBuffer<int>
+				return this->type_to_glsl(parent_type);
+			}
+		};
+
+		std::string type_name;
+		if (is_user_type_structured(var.self))
+			type_name = join(is_readonly ? "" : is_interlocked ? "RasterizerOrdered" : "RW", "StructuredBuffer<", to_structuredbuffer_subtype_name(type), ">");
+		else
+			type_name = is_readonly ? "ByteAddressBuffer" : is_interlocked ? "RasterizerOrderedByteAddressBuffer" : "RWByteAddressBuffer";
+
 		add_resource_name(var.self);
-		statement(is_coherent ? "globallycoherent " : "", type_name, to_name(var.self), type_to_array_glsl(type),
+		statement(is_coherent ? "globallycoherent " : "", type_name, " ", to_name(var.self), type_to_array_glsl(type),
 		          to_resource_binding(var), ";");
 	}
 	else
@@ -3526,7 +3543,7 @@ void CompilerHLSL::emit_texture_op(const Instruction &i, bool sparse)
 			{
 				if (gather)
 				{
-					SPIRV_CROSS_THROW("GatherCmp does not exist in HLSL.");
+					texop += ".GatherCmp";
 				}
 				else if (lod || grad_x || grad_y)
 				{
@@ -4970,6 +4987,12 @@ void CompilerHLSL::emit_access_chain(const Instruction &instruction)
 		uint32_t to_plain_buffer_length = chain ? 0u : static_cast<uint32_t>(type.array.size());
 
 		auto *backing_variable = maybe_get_backing_variable(ops[2]);
+
+		if (backing_variable != nullptr && is_user_type_structured(backing_variable->self))
+		{
+			CompilerGLSL::emit_instruction(instruction);
+			return;
+		}
 
 		string base;
 		if (to_plain_buffer_length != 0)
@@ -6694,4 +6717,18 @@ void CompilerHLSL::set_hlsl_force_storage_buffer_as_uav(uint32_t desc_set, uint3
 bool CompilerHLSL::builtin_translates_to_nonarray(spv::BuiltIn builtin) const
 {
 	return (builtin == BuiltInSampleMask);
+}
+
+bool CompilerHLSL::is_user_type_structured(uint32_t id) const
+{
+	if (hlsl_options.preserve_structured_buffers)
+	{
+		// Compare left hand side of string only as these user types can contain more meta data such as their subtypes,
+		// e.g. "structuredbuffer:int"
+		const std::string &user_type = get_decoration_string(id, DecorationUserTypeGOOGLE);
+		return user_type.compare(0, 16, "structuredbuffer") == 0 ||
+		       user_type.compare(0, 18, "rwstructuredbuffer") == 0 ||
+		       user_type.compare(0, 33, "rasterizerorderedstructuredbuffer") == 0;
+	}
+	return false;
 }

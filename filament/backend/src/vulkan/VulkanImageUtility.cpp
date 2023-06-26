@@ -101,9 +101,12 @@ getVkTransition(const VulkanLayoutTransition& transition) {
             srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
             srcStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
             break;
-        case VulkanLayout::PRESENT:
         case VulkanLayout::COLOR_ATTACHMENT_RESOLVE:
             srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            break;
+        case VulkanLayout::PRESENT:
+            srcAccessMask = VK_ACCESS_NONE;
             srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
             break;
     }

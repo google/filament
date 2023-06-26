@@ -115,6 +115,9 @@ OpenGLContext::OpenGLContext() noexcept {
     procs.invalidateFramebuffer = glInvalidateFramebuffer;
 #endif // BACKEND_OPENGL_LEVEL_GLES30
 
+    // no-op if not supported
+    procs.maxShaderCompilerThreadsKHR = +[](GLuint) {};
+
 #ifdef BACKEND_OPENGL_VERSION_GLES
     initExtensionsGLES();
     if (state.major == 3) {
@@ -173,6 +176,8 @@ OpenGLContext::OpenGLContext() noexcept {
 
         procs.invalidateFramebuffer = glDiscardFramebufferEXT;
 
+        procs.maxShaderCompilerThreadsKHR = glMaxShaderCompilerThreadsKHR;
+
         mFeatureLevel = FeatureLevel::FEATURE_LEVEL_0;
     }
 #endif // IOS
@@ -197,6 +202,8 @@ OpenGLContext::OpenGLContext() noexcept {
     bugs.allow_read_only_ancillary_feedback_loop = true;
     assert_invariant(gets.max_texture_image_units >= 16);
     assert_invariant(gets.max_combined_texture_image_units >= 32);
+
+    procs.maxShaderCompilerThreadsKHR = glMaxShaderCompilerThreadsARB;
 #endif
 
 #ifdef GL_EXT_texture_filter_anisotropic

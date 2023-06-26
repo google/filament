@@ -1,0 +1,74 @@
+#version 310 es
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+void out_test_0(int cond, out int i)
+{
+    if (cond == 0)
+    {
+        i = 40;
+    }
+    else
+    {
+        i = 60;
+    }
+}
+
+void out_test_1(int cond, out int i)
+{
+    switch (cond)
+    {
+        case 40:
+        {
+            i = 40;
+            break;
+        }
+        default:
+        {
+            i = 70;
+            break;
+        }
+    }
+}
+
+void inout_test_0(int cond, inout int i)
+{
+    if (cond == 0)
+    {
+        i = 40;
+    }
+}
+
+void inout_test_1(int cond, inout int i)
+{
+    switch (cond)
+    {
+        case 40:
+        {
+            i = 40;
+            break;
+        }
+    }
+}
+
+void main()
+{
+    int cond = 40;
+    int i = 50;
+    int param = cond;
+    int param_1 = i;
+    out_test_0(param, param_1);
+    i = param_1;
+    int param_2 = cond;
+    int param_3 = i;
+    out_test_1(param_2, param_3);
+    i = param_3;
+    int param_4 = cond;
+    int param_5 = i;
+    inout_test_0(param_4, param_5);
+    i = param_5;
+    int param_6 = cond;
+    int param_7 = i;
+    inout_test_1(param_6, param_7);
+    i = param_7;
+}
+

@@ -82,6 +82,8 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMEN
             src/opengl/OpenGLPlatform.cpp
             src/opengl/OpenGLTimerQuery.cpp
             src/opengl/OpenGLTimerQuery.h
+            src/opengl/ShaderCompilerService.cpp
+            src/opengl/ShaderCompilerService.h
     )
     if (EGL)
         list(APPEND SRCS src/opengl/platforms/PlatformEGL.cpp)

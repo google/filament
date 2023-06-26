@@ -1,0 +1,60 @@
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %gl_GlobalInvocationID
+               OpExecutionModeId %main LocalSizeId %spec_3 %spec_4 %uint_2
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %SSBO "SSBO"
+               OpMemberName %SSBO 0 "values"
+               OpName %_ ""
+               OpName %gl_GlobalInvocationID "gl_GlobalInvocationID"
+               OpDecorate %_runtimearr_v4float ArrayStride 16
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpDecorate %SSBO Block
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+               OpDecorate %gl_GlobalInvocationID BuiltIn GlobalInvocationId
+               OpDecorate %spec_1 SpecId 1
+               OpDecorate %spec_2 SpecId 2
+               OpDecorate %spec_3 SpecId 3
+               OpDecorate %spec_4 SpecId 4
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_runtimearr_v4float = OpTypeRuntimeArray %v4float
+       %SSBO = OpTypeStruct %_runtimearr_v4float
+%_ptr_Uniform_SSBO = OpTypePointer StorageBuffer %SSBO
+          %_ = OpVariable %_ptr_Uniform_SSBO StorageBuffer
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%gl_GlobalInvocationID = OpVariable %_ptr_Input_v3uint Input
+     %uint_0 = OpConstant %uint 0
+%_ptr_Input_uint = OpTypePointer Input %uint
+    %float_2 = OpConstant %float 2
+%_ptr_Uniform_v4float = OpTypePointer StorageBuffer %v4float
+         %spec_1 = OpSpecConstant %uint 11
+         %spec_2 = OpSpecConstant %uint 12
+         %spec_3 = OpSpecConstant %uint 13
+         %spec_4 = OpSpecConstant %uint 14
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+     %uint_3 = OpConstant %uint 3
+%gl_WorkGroupSize = OpSpecConstantComposite %v3uint %uint_3 %spec_1 %spec_2
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %20 = OpAccessChain %_ptr_Input_uint %gl_GlobalInvocationID %uint_0
+         %21 = OpLoad %uint %20
+         %24 = OpAccessChain %_ptr_Uniform_v4float %_ %int_0 %21
+         %25 = OpLoad %v4float %24
+         %26 = OpCompositeConstruct %v4float %float_2 %float_2 %float_2 %float_2
+         %27 = OpFAdd %v4float %25 %26
+         %28 = OpAccessChain %_ptr_Uniform_v4float %_ %int_0 %21
+               OpStore %28 %27
+               OpReturn
+               OpFunctionEnd

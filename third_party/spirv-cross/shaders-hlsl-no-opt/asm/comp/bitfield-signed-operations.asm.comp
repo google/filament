@@ -1,0 +1,97 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 7
+; Bound: 26
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpName %main "main"
+               OpName %SSBO "SSBO"
+               OpMemberName %SSBO 0 "ints"
+               OpMemberName %SSBO 1 "uints"
+               OpName %_ ""
+               OpMemberDecorate %SSBO 0 Offset 0
+               OpMemberDecorate %SSBO 1 Offset 16
+               OpDecorate %SSBO BufferBlock
+               OpDecorate %_ DescriptorSet 0
+               OpDecorate %_ Binding 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %v4int = OpTypeVector %int 4
+       %uint = OpTypeInt 32 0
+     %v4uint = OpTypeVector %uint 4
+
+	 %int_1 = OpConstant %int 1
+	 %uint_11 = OpConstant %uint 11
+
+       %SSBO = OpTypeStruct %v4int %v4uint
+%_ptr_Uniform_SSBO = OpTypePointer Uniform %SSBO
+          %_ = OpVariable %_ptr_Uniform_SSBO Uniform
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform_v4int = OpTypePointer Uniform %v4int
+%_ptr_Uniform_v4uint = OpTypePointer Uniform %v4uint
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %ints_ptr = OpAccessChain %_ptr_Uniform_v4int %_ %int_0
+         %uints_ptr = OpAccessChain %_ptr_Uniform_v4uint %_ %int_1
+         %ints = OpLoad %v4int %ints_ptr
+         %uints = OpLoad %v4uint %uints_ptr
+
+		 %ints_alt = OpVectorShuffle %v4int %ints %ints 3 2 1 0
+		 %uints_alt = OpVectorShuffle %v4uint %uints %uints 3 2 1 0
+
+         %int_to_int_popcount = OpBitCount %v4int %ints
+         %int_to_uint_popcount = OpBitCount %v4uint %ints
+         %uint_to_int_popcount = OpBitCount %v4int %uints
+         %uint_to_uint_popcount = OpBitCount %v4uint %uints
+
+		; BitReverse must have matching types w.r.t. sign, yay.
+         %int_to_int_reverse = OpBitReverse %v4int %ints
+         ;%int_to_uint_reverse = OpBitReverse %v4uint %ints
+         ;%uint_to_int_reverse = OpBitReverse %v4int %uints
+         %uint_to_uint_reverse = OpBitReverse %v4uint %uints
+
+		; Base and Result must match.
+         %int_to_int_sbit = OpBitFieldSExtract %v4int %ints %int_1 %uint_11
+         ;%int_to_uint_sbit = OpBitFieldSExtract %v4uint %ints %offset %count
+         ;%uint_to_int_sbit = OpBitFieldSExtract %v4int %uints %offset %count
+         %uint_to_uint_sbit = OpBitFieldSExtract %v4uint %uints %uint_11 %int_1
+
+		; Base and Result must match.
+         %int_to_int_ubit = OpBitFieldUExtract %v4int %ints %int_1 %uint_11
+         ;%int_to_uint_ubit = OpBitFieldUExtract %v4uint %ints %offset %count
+         ;%uint_to_int_ubit = OpBitFieldUExtract %v4int %uints %offset %count
+         %uint_to_uint_ubit = OpBitFieldUExtract %v4uint %uints %uint_11 %int_1
+
+		 %int_to_int_insert = OpBitFieldInsert %v4int %ints %ints_alt %int_1 %uint_11
+		 %uint_to_uint_insert = OpBitFieldInsert %v4uint %uints %uints_alt %uint_11 %int_1
+
+               OpStore %ints_ptr %int_to_int_popcount
+               OpStore %uints_ptr %int_to_uint_popcount
+               OpStore %ints_ptr %uint_to_int_popcount
+               OpStore %uints_ptr %uint_to_uint_popcount
+
+               OpStore %ints_ptr %int_to_int_reverse
+               ;OpStore %uints_ptr %int_to_uint_reverse
+               ;OpStore %ints_ptr %uint_to_int_reverse
+               OpStore %uints_ptr %uint_to_uint_reverse
+
+               OpStore %ints_ptr %int_to_int_sbit
+               ;OpStore %uints_ptr %int_to_uint_sbit
+               ;OpStore %ints_ptr %uint_to_int_sbit
+               OpStore %uints_ptr %uint_to_uint_sbit
+
+               OpStore %ints_ptr %int_to_int_ubit
+               ;OpStore %uints_ptr %int_to_uint_ubit
+               ;OpStore %ints_ptr %uint_to_int_ubit
+               OpStore %uints_ptr %uint_to_uint_ubit
+
+			   OpStore %ints_ptr %int_to_int_insert
+			   OpStore %uints_ptr %uint_to_uint_insert
+
+               OpReturn
+               OpFunctionEnd
