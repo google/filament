@@ -120,6 +120,11 @@ Material* ArchiveCache::getMaterial(const ArchiveRequirements& reqs) {
                     .build(mEngine);
             }
 
+            // Don't attempt to precompile shaders on WebGL.
+            // Chrome already suffers from slow shader compilation:
+            // https://github.com/google/filament/issues/6615
+            // Precompiling shaders exacerbates the problem.
+#if !defined(__EMSCRIPTEN__)
             // compile everything at low priority
             mMaterials[i]->compile(Material::CompilerPriorityQueue::LOW);
 
@@ -128,6 +133,7 @@ Material* ArchiveCache::getMaterial(const ArchiveRequirements& reqs) {
                     UserVariantFilterBit::DIRECTIONAL_LIGHTING |
                     UserVariantFilterBit::DYNAMIC_LIGHTING |
                     UserVariantFilterBit::SHADOW_RECEIVER);
+#endif
 
             return mMaterials[i];
         }
