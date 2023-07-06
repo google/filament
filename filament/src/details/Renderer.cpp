@@ -1050,7 +1050,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         if (scaled) {
             mightNeedFinalBlit = false;
             auto viewport = DEBUG_DYNAMIC_SCALING ? xvp : vp;
-            input = ppm.upscale(fg, blendModeTranslucent, dsrOptions, input, xvp, {
+            input = ppm.upscale(fg, needsAlphaChannel, dsrOptions, input, xvp, {
                     .width = viewport.width, .height = viewport.height,
                     .format = colorGradingConfig.ldrFormat });
             xvp.left = xvp.bottom = 0;

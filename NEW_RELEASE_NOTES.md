@@ -8,3 +8,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
+- rendering: dynamic resolution would not work with a translucent render target and quality > low
