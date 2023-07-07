@@ -90,8 +90,8 @@ function print_help {
     echo "    Desktop matc target, release build:"
     echo "        \$ ./$self_name release matc"
     echo ""
-    echo "    Build gltf_viewer then immediately run it with no arguments:"
-    echo "        \$ ./$self_name release run_gltf_viewer"
+    echo "    Build gltf_viewer:"
+    echo "        \$ ./$self_name release gltf_viewer"
     echo ""
  }
 
