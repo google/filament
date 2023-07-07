@@ -511,9 +511,7 @@ public:
 
 private:
     void* mData = nullptr;
-    jobject mBitmap = nullptr;
-    jobject mHandler = nullptr;
-    jobject mCallback = nullptr;
+    jobject mBitmap{};
     AndroidBitmapInfo mInfo{};
 };
 
