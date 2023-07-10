@@ -166,6 +166,7 @@ if (WIN32)
     # "VCRUNTIME140.dll not found. Try reinstalling the app.", but give users
     # a choice to opt for the shared runtime if they want.
     option(USE_STATIC_CRT "Link against the static runtime libraries." ON)
+    set(CMAKE_CXX_STANDARD 20)
 
     # On Windows we need to instruct cmake to generate the .def in order to get the .lib required
     # when linking against dlls. CL.EXE will not generate .lib without .def file (or without pragma
@@ -452,7 +453,8 @@ endif()
 
 # By default, build with Vulkan support on desktop platforms, although clients must request to use
 # it at run time.
-if (WIN32 OR WEBGL OR IOS)
+# if (WIN32 OR WEBGL OR IOS)
+if (WEBGL OR IOS)
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" OFF)
 else()
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" ON)
