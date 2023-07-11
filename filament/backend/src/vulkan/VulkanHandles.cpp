@@ -297,20 +297,25 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
 }
 
 VulkanTimerQuery::VulkanTimerQuery(std::tuple<uint32_t, uint32_t> indices)
-    : startingQueryIndex(std::get<0>(indices)), stoppingQueryIndex(std::get<1>(indices)) {}
+    : mStartingQueryIndex(std::get<0>(indices)), mStoppingQueryIndex(std::get<1>(indices)) {}
 
-bool VulkanTimerQuery::isCompleted() const noexcept {
+void VulkanTimerQuery::setFence(std::shared_ptr<VulkanCmdFence> fence) noexcept {
+    std::unique_lock<utils::Mutex> lock(mFenceMutex);
+    mFence = fence;
+}
+
+bool VulkanTimerQuery::isCompleted() noexcept {
+    std::unique_lock<utils::Mutex> lock(mFenceMutex);
     // QueryValue is a synchronous call and might occur before beginTimerQuery has written anything
     // into the command buffer, which is an error according to the validation layer that ships in
     // the Android NDK.  Even when AVAILABILITY_BIT is set, validation seems to require that the
     // timestamp has at least been written into a processed command buffer.
 
     // This fence indicates that the corresponding buffer has been completed.
-    if (!fence) {
+    if (!mFence) {
         return false;
     }
-
-    VkResult status = fence->status.load(std::memory_order_relaxed);
+    VkResult status = mFence->status.load(std::memory_order_relaxed);
     if (status != VK_SUCCESS) {
         return false;
     }
