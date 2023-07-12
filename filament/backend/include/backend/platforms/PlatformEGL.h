@@ -142,8 +142,9 @@ protected:
         } egl;
     } ext;
 
-private:
     void initializeGlExtensions() noexcept;
+
+private:
     EGLConfig findSwapChainConfig(uint64_t flags) const;
 };
 

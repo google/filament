@@ -191,7 +191,7 @@ class ModelViewer(
         asset = assetLoader.createAsset(buffer)
         asset?.let { asset ->
             resourceLoader.asyncBeginLoad(asset)
-            animator = asset.getInstance().animator
+            animator = asset.instance.animator
             asset.releaseSourceData()
         }
     }
@@ -214,7 +214,7 @@ class ModelViewer(
                 resourceLoader.addResourceData(uri, resourceBuffer)
             }
             resourceLoader.asyncBeginLoad(asset)
-            animator = asset.getInstance().animator
+            animator = asset.instance.animator
             asset.releaseSourceData()
         }
     }
@@ -311,7 +311,7 @@ class ModelViewer(
         var count = 0
         val popRenderables = { count = asset.popRenderables(readyRenderables); count != 0 }
         while (popRenderables()) {
-            for (i in 0..count - 1) {
+            for (i in 0 until count) {
                 val ri = rcm.getInstance(readyRenderables[i])
                 rcm.setScreenSpaceContactShadows(ri, true)
             }
@@ -371,7 +371,7 @@ class ModelViewer(
                 resourceLoader.addResourceData(uri, buffer)
             }
             resourceLoader.asyncBeginLoad(asset)
-            animator = asset.getInstance().animator
+            animator = asset.instance.animator
             asset.releaseSourceData()
         }
     }
