@@ -28,9 +28,18 @@ namespace filament {
 Frustum::Frustum(const mat4f& pv) {
     Frustum::setProjection(pv);
 }
+// NOTE: if we don't specify noinline here, LLVM inlines this huge function into
+// two (?!) version of the Frustum(const mat4f& pv) constructor!
 
 UTILS_NOINLINE
 void Frustum::setProjection(const mat4f& pv) {
+    // see: "Fast Extraction of Viewing Frustum Planes from the WorldView-Projection Matrix"
+    // by Gil Gribb & Klaus Hartmann
+    //
+    // Another way to think about this is that we're transforming each plane in clip-space to
+    // view-space. Such transform is performed as:
+    //      transpose(inverse(viewFromClipMatrix)), i.e.: transpose(projection)
+
     const mat4f m(transpose(pv));
 
     // Calculate the unnormalized plane vectors
