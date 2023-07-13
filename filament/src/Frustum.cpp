@@ -51,7 +51,7 @@ void Frustum::setProjection(const mat4f& pv) {
     planes[4] = -m[3] - m[2];
     planes[5] = -m[3] + m[2];
 
-    // Normalize the plane vectors
+    // Normalize the plane vectors in single loop
     for (int i = 0; i < 6; ++i) {
         float invLength = 1 / length(planes[i].xyz);
         planes[i] *= invLength;
