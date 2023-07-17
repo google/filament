@@ -231,7 +231,7 @@ class MainActivity : Activity() {
         animator.repeatCount = ValueAnimator.INFINITE
         animator.addUpdateListener { a ->
             val v = (a.animatedValue as Float)
-            camera.lookAt(cos(v) * 4.5, 1.5, sin(v) * 4.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+            camera.lookAt(cos(v) * 5.5, 1.5, sin(v) * 5.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
         }
         animator.start()
     }
@@ -253,7 +253,7 @@ class MainActivity : Activity() {
 
         // Stop the animation and any pending frame
         choreographer.removeFrameCallback(frameScheduler)
-        animator.cancel();
+        animator.cancel()
 
         // Always detach the surface before destroying the engine
         uiHelper.detach()

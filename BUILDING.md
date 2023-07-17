@@ -78,7 +78,7 @@ To turn an option on or off:
 
 ```
 $ cd <cmake-build-directory>
-$ cmake . -DOPTION=ON       # Relace OPTION with the option name, set to ON / OFF
+$ cmake . -DOPTION=ON       # Replace OPTION with the option name, set to ON / OFF
 ```
 
 Options can also be set with the CMake GUI.
@@ -181,7 +181,7 @@ Install the following components:
 - [Python 3.7](https://www.python.org/ftp/python/3.7.0/python-3.7.0.exe)
 - [CMake 3.14 or later](https://github.com/Kitware/CMake/releases/download/v3.14.7/cmake-3.14.7-win64-x64.msi)
 
-The latest Windows SDK can also by installed by opening Visual Studio and selecting _Get Tools and
+The latest Windows SDK can also be installed by opening Visual Studio and selecting _Get Tools and
 Features..._ under the _Tools_ menu.
 
 By default, Windows treats the file system as case insensitive. Please do not enable case

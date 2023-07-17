@@ -140,9 +140,9 @@ class MainActivity : Activity() {
         camera = engine.createCamera(engine.entityManager.create())
 
         // clear the swapchain with transparent pixels
-        val options = renderer.clearOptions
-        options.clear = true
-        renderer.clearOptions = options
+        renderer.clearOptions = renderer.clearOptions.apply {
+            clear = true
+        }
     }
 
     private fun setupView() {

@@ -85,10 +85,10 @@ VkImageSubresourceRange VulkanAttachment::getSubresourceRange(VkImageAspectFlags
 VulkanTimestamps::VulkanTimestamps(VkDevice device) : mDevice(device) {
     // Create a timestamp pool large enough to hold a pair of queries for each timer.
     VkQueryPoolCreateInfo tqpCreateInfo = {
-	.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
-	.queryType = VK_QUERY_TYPE_TIMESTAMP,
+        .sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
+        .queryType = VK_QUERY_TYPE_TIMESTAMP,
     };  
-    std::unique_lock<utils::Mutex> timestamps_lock(mMutex);
+    std::unique_lock<utils::Mutex> lock(mMutex);
     tqpCreateInfo.queryCount = mUsed.size() * 2;
     VkResult result = vkCreateQueryPool(mDevice, &tqpCreateInfo, VKALLOC, &mPool);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateQueryPool error.");
@@ -115,23 +115,23 @@ void VulkanTimestamps::clearQuery(uint32_t queryIndex) {
 
 void VulkanTimestamps::beginQuery(VulkanCommandBuffer const* commands,
         VulkanTimerQuery* query) {
-    uint32_t const index = query->startingQueryIndex;
+    uint32_t const index = query->getStartingQueryIndex();
 
     vkCmdResetQueryPool(commands->cmdbuffer, mPool, index, 2);
     vkCmdWriteTimestamp(commands->cmdbuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mPool, index);
 
     // We stash this because getResult might come before the query is actually processed.
-    query->fence = commands->fence;
+    query->setFence(commands->fence);
 }
 
 void VulkanTimestamps::endQuery(VulkanCommandBuffer const* commands,
         VulkanTimerQuery const* query) {
-    uint32_t const index = query->stoppingQueryIndex;
+    uint32_t const index = query->getStoppingQueryIndex();
     vkCmdWriteTimestamp(commands->cmdbuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mPool, index);
 }
 
 VulkanTimestamps::QueryResult VulkanTimestamps::getResult(VulkanTimerQuery const* query) {
-    uint32_t const index = query->startingQueryIndex;
+    uint32_t const index = query->getStartingQueryIndex();
     QueryResult result;
     size_t const dataSize = result.size() * sizeof(uint64_t);
     VkDeviceSize const stride = sizeof(uint64_t) * 2;
