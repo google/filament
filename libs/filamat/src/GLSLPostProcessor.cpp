@@ -18,6 +18,7 @@
 
 #include <GlslangToSpv.h>
 #include <SPVRemapper.h>
+#include <spirv-tools/libspirv.hpp>
 
 #include <spirv_glsl.hpp>
 #include <spirv_msl.hpp>
@@ -30,6 +31,7 @@
 #include "shaders/SibGenerator.h"
 
 #include "MetalArgumentBuffer.h"
+#include "SpirvFixup.h"
 
 #include <filament/MaterialEnums.h>
 
@@ -331,6 +333,10 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     const char* shaderCString = inputShader.c_str();
     tShader.setStrings(&shaderCString, 1);
 
+    // This allows shaders to query if they will be run through glslang.
+    // OpenGL shaders without optimization, for example, won't have this define.
+    tShader.setPreamble("#define FILAMENT_GLSLANG 1\n");
+
     internalConfig.langVersion = GLSLTools::getGlslDefaultVersion(config.shaderModel);
     GLSLTools::prepareShaderParser(config.targetApi, config.targetLanguage, tShader,
             internalConfig.shLang, internalConfig.langVersion);
@@ -372,6 +378,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                 options.generateDebugInfo = mGenerateDebugInfo;
                 GlslangToSpv(*program.getIntermediate(internalConfig.shLang),
                         *internalConfig.spirvOutput, &options);
+                fixupClipDistance(*internalConfig.spirvOutput, config);
                 if (internalConfig.mslOutput) {
                     auto sibs = SibVector::with_capacity(CONFIG_SAMPLER_BINDING_COUNT);
                     msl::collectSibs(config, sibs);
@@ -454,6 +461,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
             options.generateDebugInfo = mGenerateDebugInfo;
             GlslangToSpv(*program.getIntermediate(internalConfig.shLang),
                     *internalConfig.spirvOutput, &options);
+            fixupClipDistance(*internalConfig.spirvOutput, config);
         }
     }
 
@@ -502,6 +510,8 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
         }
     }
 
+    fixupClipDistance(spirv, config);
+
     if (internalConfig.spirvOutput) {
         *internalConfig.spirvOutput = spirv;
     }
@@ -547,6 +557,17 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
         }
 
         *internalConfig.glslOutput = glslCompiler.compile();
+
+        // spirv-cross automatically redeclares gl_ClipDistance if it's used. Some drivers don't
+        // like this, so we simply remove it.
+        // According to EXT_clip_cull_distance, gl_ClipDistance can be
+        // "implicitly sized by indexing it only with integral constant expressions".
+        std::string& str = *internalConfig.glslOutput;
+        const std::string clipDistanceDefinition = "out float gl_ClipDistance[1];";
+        size_t found = str.find(clipDistanceDefinition);
+        if (found != std::string::npos) {
+            str.replace(found, clipDistanceDefinition.length(), "");
+        }
     }
 }
 
@@ -588,6 +609,21 @@ void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) 
     // Remove dead module-level objects: functions, types, vars
     spv::spirvbin_t remapper(0);
     remapper.remap(spirv, spv::spirvbin_base_t::DCE_ALL);
+}
+
+void GLSLPostProcessor::fixupClipDistance(
+        SpirvBlob& spirv, GLSLPostProcessor::Config const& config) const {
+    if (!config.usesClipDistance) {
+        return;
+    }
+    SpirvTools tools(SPV_ENV_UNIVERSAL_1_3);
+    std::string disassembly;
+    tools.Disassemble(spirv, &disassembly);
+    if (filamat::fixupClipDistance(disassembly)) {
+        spirv.clear();
+        tools.Assemble(disassembly, &spirv);
+        assert_invariant(tools.Validate(spirv));
+    }
 }
 
 void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config const& config) {

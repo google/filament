@@ -451,6 +451,14 @@ void OpenGLContext::setDefaultState() noexcept {
         glClipControlEXT(GL_LOWER_LEFT_EXT, GL_ZERO_TO_ONE_EXT);
 #endif
     }
+
+    if (ext.EXT_clip_cull_distance) {
+#if defined(BACKEND_OPENGL_VERSION_GL)
+        glEnable(GL_CLIP_DISTANCE0);
+#elif defined(GL_CLIP_DISTANCE0_EXT)
+        glEnable(GL_CLIP_DISTANCE0_EXT);
+#endif
+    }
 }
 
 #ifdef BACKEND_OPENGL_VERSION_GLES
@@ -469,6 +477,7 @@ void OpenGLContext::initExtensionsGLES() noexcept {
     using namespace std::literals;
     ext.APPLE_color_buffer_packed_float = exts.has("GL_APPLE_color_buffer_packed_float"sv);
     ext.EXT_clip_control = exts.has("GL_EXT_clip_control"sv);
+    ext.EXT_clip_cull_distance = exts.has("GL_EXT_clip_cull_distance"sv);
     ext.EXT_color_buffer_float = exts.has("GL_EXT_color_buffer_float"sv);
     ext.EXT_color_buffer_half_float = exts.has("GL_EXT_color_buffer_half_float"sv);
     ext.EXT_debug_marker = exts.has("GL_EXT_debug_marker"sv);
@@ -537,6 +546,7 @@ void OpenGLContext::initExtensionsGL() noexcept {
     ext.ARB_shading_language_packing = exts.has("GL_ARB_shading_language_packing"sv);
     ext.EXT_color_buffer_float = true;  // Assumes core profile.
     ext.EXT_color_buffer_half_float = true;  // Assumes core profile.
+    ext.EXT_clip_cull_distance = true;
     ext.EXT_debug_marker = exts.has("GL_EXT_debug_marker"sv);
     ext.EXT_discard_framebuffer = false;
     ext.EXT_disjoint_timer_query = true;

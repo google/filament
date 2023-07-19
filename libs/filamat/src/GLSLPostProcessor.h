@@ -66,6 +66,7 @@ public:
         filament::MaterialDomain domain;
         const filamat::MaterialInfo* materialInfo;
         bool hasFramebufferFetch;
+        bool usesClipDistance;
         struct {
             std::vector<std::pair<uint32_t, uint32_t>> subpassInputToColorLocation;
         } glsl;
@@ -110,6 +111,8 @@ private:
     static void registerPerformancePasses(spvtools::Optimizer& optimizer, Config const& config);
 
     void optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) const;
+
+    void fixupClipDistance(SpirvBlob& spirv, GLSLPostProcessor::Config const& config) const;
 
     const MaterialBuilder::Optimization mOptimization;
     const bool mPrintShaders;
