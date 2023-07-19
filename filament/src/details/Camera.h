@@ -45,6 +45,11 @@ public:
 
     void terminate(FEngine& engine) noexcept { }
 
+    void setEyeModelMatrix(math::mat4 const (&model)[2]) noexcept;
+
+    void setCustomEyeProjection(math::mat4 const (&projection)[2],
+            math::mat4 const& projectionForCulling, double near, double far);
+
     // sets the projection matrix
     void setProjection(Projection projection,
                        double left, double right, double bottom, double top,
@@ -73,13 +78,15 @@ public:
 
     // viewing the projection matrix to be used for rendering, contains scaling/shift and possibly
     // other transforms needed by the shaders
-    math::mat4 getProjectionMatrix() const noexcept;
+    math::mat4 getProjectionMatrix(int eye = 0) const noexcept;
 
     // culling the projection matrix to be used for culling, contains scaling/shift
     math::mat4 getCullingProjectionMatrix() const noexcept;
 
+    math::mat4 getEyeFromViewMatrix(int eye) const noexcept { return mEyeFromView[eye]; }
+
     // viewing projection matrix set by the user
-    math::mat4 getUserProjectionMatrix() const noexcept { return mProjection; }
+    math::mat4 getUserProjectionMatrix() const noexcept { return mEyeProjection[0]; }
 
     // culling projection matrix set by the user
     math::mat4 getUserCullingProjectionMatrix() const noexcept { return mProjectionForCulling; }
@@ -186,8 +193,11 @@ private:
     FEngine& mEngine;
     utils::Entity mEntity;
 
-    math::mat4 mProjection;                // projection matrix (infinite far)
+    // For monoscopic cameras, mEyeProjection[0] == mEyeProjection[1].
+    math::mat4 mEyeProjection[2];          // projection matrix per eye (infinite far)
     math::mat4 mProjectionForCulling;      // projection matrix (with far plane)
+    math::mat4 mEyeFromView[2];            // transforms from the main view (head) space to each
+                                           // eye's unique view space
     math::double2 mScalingCS = { 1.0 };    // additional scaling applied to projection
     math::double2 mShiftCS = { 0.0 };      // additional translation applied to projection
 
@@ -205,10 +215,19 @@ struct CameraInfo {
     explicit CameraInfo(FCamera const& camera) noexcept;
     CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamera) noexcept;
 
-    math::mat4f projection;         // projection matrix for drawing (infinite zfar)
+    int eyeCount = 1;
+
+    // projection matrix for drawing (infinite zfar)
+    // for monoscopic rendering
+    math::mat4f projection;
+
+    // for stereo rendering, one matrix per eye
+    math::mat4f eyeProjection[2]  = {};
+
     math::mat4f cullingProjection;  // projection matrix for culling
     math::mat4f model;              // camera model matrix
     math::mat4f view;               // camera view matrix (inverse(model))
+    math::mat4f eyeFromView[2];     // eye view matrix (only for stereoscopic rendering)
     math::mat4 worldOrigin;         // world origin transform (already applied to model and view)
     math::float4 clipTransfrom{1,1,0,0}; // clip-space transform, only for VERTEX_DOMAIN_DEVICE
     float zn{};                     // distance (positive) to the near plane

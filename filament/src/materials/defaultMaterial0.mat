@@ -1,7 +1,8 @@
 material {
     name : "Filament Default Material",
     shadingModel : unlit,
-    featureLevel: 0
+    featureLevel: 0,
+    variantFilter : [ stereo ]
 }
 
 fragment {

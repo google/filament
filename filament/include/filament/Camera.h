@@ -34,9 +34,12 @@ class Entity;
 namespace filament {
 
 /**
- * Camera represents the eye through which the scene is viewed.
+ * Camera represents the eye(s) through which the scene is viewed.
  *
  * A Camera has a position and orientation and controls the projection and exposure parameters.
+ *
+ * For stereoscopic rendering, a Camera maintains two separate "eyes": Eye 0 and Eye 1. These are
+ * arbitrary and don't necessarily need to correspond to "left" and "right".
  *
  * Creation and destruction
  * ========================
@@ -140,6 +143,18 @@ namespace filament {
  * intensity and the Camera exposure interact to produce the final scene's brightness.
  *
  *
+ * Stereoscopic rendering
+ * ======================
+ *
+ * The Camera's transform (as set by setModelMatrix or via TransformManager) defines a "head" space,
+ * which typically corresponds to the location of the viewer's head. Each eye's transform is set
+ * relative to this head space by setEyeModelMatrix.
+ *
+ * Each eye also maintains its own projection matrix. These can be set with setCustomEyeProjection.
+ * Care must taken to correctly set the projectionForCulling matrix, as well as its corresponding
+ * near and far values. The projectionForCulling matrix must define a frustum (in head space) that
+ * bounds the frustums of both eyes. Alternatively, culling may be disabled with
+ * View::setFrustumCullingEnabled.
  *
  * \see Frustum, View
  */
@@ -233,6 +248,19 @@ public:
      * @param far         distance in world units from the camera to the far plane. \p far > \p near.
      */
     void setCustomProjection(math::mat4 const& projection, double near, double far) noexcept;
+
+    /** Sets a custom projection matrix for each eye.
+     *
+     * The projectionForCulling, near, and far parameters establish a "culling frustum" which must
+     * encompass anything either eye can see.
+     *
+     * @param projectionForCulling custom projection matrix for culling, must encompass both eyes
+     * @param near distance in world units from the camera to the culling near plane. \p near > 0.
+     * @param far distance in world units from the camera to the culling far plane. \p far > \p near.
+     * @see setCustomProjection
+     */
+    void setCustomEyeProjection(math::mat4 const (&projection)[2],
+            math::mat4 const& projectionForCulling, double near, double far) noexcept;
 
     /** Sets the projection matrix.
      *
@@ -349,6 +377,25 @@ public:
      */
     void setModelMatrix(const math::mat4& model) noexcept;
     void setModelMatrix(const math::mat4f& model) noexcept; //!< @overload
+
+    /** Set the position of each eye relative to this Camera (head).
+     *
+     * By default, these are both identity matrices.
+     *
+     * For example, to position Eye 0 3cm leftwards and Eye 1 3cm rightwards:
+     * ~~~~~~~~~~~{.cpp}
+     * mat4 eyes[2];
+     * eyes[0] = mat4::translation(double3{-0.03, 0.0, 0.0});
+     * eyes[1] = mat4::translation(double3{ 0.03, 0.0, 0.0});
+     * camera.setEyeModelMatrix(eyes);
+     * ~~~~~~~~~~~
+     *
+     * This method is not intended to be called every frame. Instead, to update the position of the
+     * head, use Camera::setModelMatrix.
+     *
+     * @param model an array of two eye model matrices, the first, Eye 0, the second, Eye 1.
+     */
+    void setEyeModelMatrix(math::mat4 const (&model)[2]) noexcept;
 
     /** Sets the camera's model matrix
      *

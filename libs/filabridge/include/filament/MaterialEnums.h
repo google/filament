@@ -243,7 +243,8 @@ enum class UserVariantFilterBit : UserVariantFilterMask {
     FOG                         = 0x10,
     VSM                         = 0x20,
     SSR                         = 0x40,
-    ALL                         = 0x7F,
+    STE                         = 0x80,
+    ALL                         = 0xFF,
 };
 
 } // namespace filament

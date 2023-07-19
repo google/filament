@@ -1118,6 +1118,10 @@ View::PickingQuery& FView::pick(uint32_t x, uint32_t y, backend::CallbackHandler
     return *pQuery;
 }
 
+void FView::setStereoscopicOptions(const StereoscopicOptions& options) noexcept {
+    mStereoscopicOptions = options;
+}
+
 void FView::setMaterialGlobal(uint32_t index, float4 const& value) {
     ASSERT_PRECONDITION(index < 4, "material global variable index (%u) out of range", +index);
     mMaterialGlobals[index] = value;

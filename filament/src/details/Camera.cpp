@@ -80,8 +80,18 @@ void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p, double near, dou
 
 void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p,
         mat4 const& c, double near, double far) noexcept {
-    mProjection = p;
+    mEyeProjection[0] = p;
+    mEyeProjection[1] = p;
     mProjectionForCulling = c;
+    mNear = near;
+    mFar = far;
+}
+
+void UTILS_NOINLINE FCamera::setCustomEyeProjection(math::mat4 const (&projection)[2],
+        math::mat4 const& projectionForCulling, double near, double far) {
+    mEyeProjection[0] = projection[0];
+    mEyeProjection[1] = projection[1];
+    mProjectionForCulling = projectionForCulling;
     mNear = near;
     mFar = far;
 }
@@ -142,7 +152,7 @@ void UTILS_NOINLINE FCamera::setProjection(Camera::Projection projection,
     FCamera::setCustomProjection(p, c, near, far);
 }
 
-math::mat4 FCamera::getProjectionMatrix() const noexcept {
+math::mat4 FCamera::getProjectionMatrix(int eye) const noexcept {
     // This is where we transform the user clip-space (GL convention) to our virtual clip-space
     // (inverted DX convention)
     // Note that this math ends up setting the projection matrix' p33 to 0, which is where we're
@@ -153,7 +163,7 @@ math::mat4 FCamera::getProjectionMatrix() const noexcept {
             0.0, 0.0, -0.5, 0.5,    // GL to inverted DX convention
             0.0, 0.0, 0.0, 1.0
     }};
-    return m * mProjection;
+    return m * mEyeProjection[eye];
 }
 
 math::mat4 FCamera::getCullingProjectionMatrix() const noexcept {
@@ -175,6 +185,11 @@ void UTILS_NOINLINE FCamera::setModelMatrix(const mat4f& modelMatrix) noexcept {
 void UTILS_NOINLINE FCamera::setModelMatrix(const mat4& modelMatrix) noexcept {
     FTransformManager& transformManager = mEngine.getTransformManager();
     transformManager.setTransform(transformManager.getInstance(mEntity), modelMatrix);
+}
+
+void UTILS_NOINLINE FCamera::setEyeModelMatrix(math::mat4 const (&model)[2]) noexcept {
+    mEyeFromView[0] = inverse(model[0]);
+    mEyeFromView[1] = inverse(model[1]);
 }
 
 void FCamera::lookAt(double3 const& eye, double3 const& center, double3 const& up) noexcept {
@@ -204,7 +219,7 @@ void FCamera::setExposure(float aperture, float shutterSpeed, float sensitivity)
 }
 
 double FCamera::getFocalLength() const noexcept {
-    return (FCamera::SENSOR_SIZE * mProjection[1][1]) * 0.5;
+    return (FCamera::SENSOR_SIZE * mEyeProjection[0][1][1]) * 0.5;
 }
 
 double FCamera::computeEffectiveFocalLength(double focalLength, double focusDistance) noexcept {
@@ -260,7 +275,11 @@ math::details::TMat44<T> inverseProjection(const math::details::TMat44<T>& p) no
 // ------------------------------------------------------------------------------------------------
 
 CameraInfo::CameraInfo(FCamera const& camera) noexcept {
-    projection         = mat4f{ camera.getProjectionMatrix() };
+    projection         = mat4f{ camera.getProjectionMatrix(0) };
+    eyeProjection[0]   = mat4f{ camera.getProjectionMatrix(0) };
+    eyeProjection[1]   = mat4f{ camera.getProjectionMatrix(1) };
+    eyeFromView[0]     = mat4f{ camera.getEyeFromViewMatrix(0) };
+    eyeFromView[1]     = mat4f{ camera.getEyeFromViewMatrix(1) };
     cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
     model              = mat4f{ camera.getModelMatrix() };
     view               = mat4f{ camera.getViewMatrix() };
@@ -274,7 +293,11 @@ CameraInfo::CameraInfo(FCamera const& camera) noexcept {
 
 CameraInfo::CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamera) noexcept {
     const mat4 modelMatrix{ worldOriginCamera * camera.getModelMatrix() };
-    projection         = mat4f{ camera.getProjectionMatrix() };
+    projection         = mat4f{ camera.getProjectionMatrix(0) };
+    eyeProjection[0]   = mat4f{ camera.getProjectionMatrix(0) };
+    eyeProjection[1]   = mat4f{ camera.getProjectionMatrix(1) };
+    eyeFromView[0]     = mat4f{ camera.getEyeFromViewMatrix(0) };
+    eyeFromView[1]     = mat4f{ camera.getEyeFromViewMatrix(1) };
     cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
     model              = mat4f{ modelMatrix };
     view               = mat4f{ inverse(modelMatrix) };

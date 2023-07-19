@@ -23,7 +23,7 @@ namespace filamat {
 std::vector<Variant> determineSurfaceVariants(
         filament::UserVariantFilterMask userVariantFilter, bool isLit, bool shadowMultiplier) {
     std::vector<Variant> variants;
-    for (filament::Variant::type_t k = 0; k < filament::VARIANT_COUNT; k++) {
+    for (size_t k = 0; k < filament::VARIANT_COUNT; k++) {
         filament::Variant variant(k);
         if (filament::Variant::isReserved(variant)) {
             continue;

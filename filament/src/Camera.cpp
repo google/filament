@@ -67,6 +67,15 @@ mat4 Camera::inverseProjection(const mat4 & p) noexcept {
     return filament::inverseProjection(p);
 }
 
+void Camera::setEyeModelMatrix(math::mat4 const (&model)[2]) noexcept {
+    downcast(this)->setEyeModelMatrix(model);
+}
+
+void Camera::setCustomEyeProjection(math::mat4 const (&projection)[2],
+        math::mat4 const& projectionForCulling, double near, double far) noexcept {
+    downcast(this)->setCustomEyeProjection(projection, projectionForCulling, near, far);
+}
+
 void Camera::setProjection(Camera::Projection projection, double left, double right, double bottom,
         double top, double near, double far) {
     downcast(this)->setProjection(projection, left, right, bottom, top, near, far);

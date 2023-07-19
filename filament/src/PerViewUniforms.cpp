@@ -82,6 +82,11 @@ void PerViewUniforms::prepareCamera(FEngine& engine, const CameraInfo& camera) n
     s.oneOverFarMinusNear = 1.0f / (camera.zf - camera.zn);
     s.nearOverFarMinusNear = camera.zn / (camera.zf - camera.zn);
 
+    s.eyeFromWorldMatrix[0] = highPrecisionMultiply(camera.eyeFromView[0], viewFromWorld);
+    s.eyeFromWorldMatrix[1] = highPrecisionMultiply(camera.eyeFromView[1], viewFromWorld);
+    s.clipFromEyeMatrix[0] = camera.eyeProjection[0];
+    s.clipFromEyeMatrix[1] = camera.eyeProjection[1];
+
     // with a clip-space of [-w, w] ==> z' = -z
     // with a clip-space of [0,  w] ==> z' = (w - z)/2
     s.clipControl = engine.getDriverApi().getClipSpaceParams();

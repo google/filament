@@ -541,6 +541,13 @@ struct SoftShadowOptions {
     float penumbraRatioScale = 1.0f;
 };
 
+/**
+ * Options for stereoscopic (multi-eye) rendering.
+ */
+struct StereoscopicOptions {
+    bool enabled = false;
+};
+
 } // namespace filament
 
 #endif //TNT_FILAMENT_OPTIONS_H

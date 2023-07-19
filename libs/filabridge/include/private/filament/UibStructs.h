@@ -81,6 +81,15 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::mat4f userWorldFromWorldMatrix;   // userWorld <- world
     math::float4 clipTransform;             // [sx, sy, tx, ty] only used by VERTEX_DOMAIN_DEVICE
 
+    // --------------------------------------------------------------------------------------------
+    // Stereoscopic rendering
+    // --------------------------------------------------------------------------------------------
+
+    math::mat4f eyeFromWorldMatrix[4];
+    math::mat4f clipFromEyeMatrix[4];
+
+    // --------------------------------------------------------------------------------------------
+
     math::float2 clipControl;       // clip control
     float time;                     // time in seconds, with a 1-second period
     float temporalNoise;            // noise [0,1] when TAA is used, 0 otherwise
@@ -202,7 +211,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float es2Reserved2;
 
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[52];
+    math::float4 reserved[20];
 };
 
 // 2 KiB == 128 float4s

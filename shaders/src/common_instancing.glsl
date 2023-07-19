@@ -6,15 +6,21 @@ PerRenderableData object_uniforms;
 
 void initInstanceUniforms(out PerRenderableData p) {
 #if defined(FILAMENT_HAS_FEATURE_INSTANCING)
+#if defined(VARIANT_HAS_INSTANCED_STEREO)
+    // The lowest bit of the instance index represents the eye.
+    highp int index = instance_index >> 1;
+#else
+    highp int index = instance_index;
+#endif
     // We're copying each field separately to workaround an issue in some Adreno drivers
     // that fail on non-const array access in a UBO. Accessing the fields works however.
     // e.g.: this fails `p = objectUniforms.data[instance_index];`
-    p.worldFromModelMatrix = objectUniforms.data[instance_index].worldFromModelMatrix;
-    p.worldFromModelNormalMatrix = objectUniforms.data[instance_index].worldFromModelNormalMatrix;
-    p.morphTargetCount = objectUniforms.data[instance_index].morphTargetCount;
-    p.flagsChannels = objectUniforms.data[instance_index].flagsChannels;
-    p.objectId = objectUniforms.data[instance_index].objectId;
-    p.userData = objectUniforms.data[instance_index].userData;
+    p.worldFromModelMatrix = objectUniforms.data[index].worldFromModelMatrix;
+    p.worldFromModelNormalMatrix = objectUniforms.data[index].worldFromModelNormalMatrix;
+    p.morphTargetCount = objectUniforms.data[index].morphTargetCount;
+    p.flagsChannels = objectUniforms.data[index].flagsChannels;
+    p.objectId = objectUniforms.data[index].objectId;
+    p.userData = objectUniforms.data[index].userData;
 #else
     p.worldFromModelMatrix = objectUniforms.data[0].worldFromModelMatrix;
     p.worldFromModelNormalMatrix = objectUniforms.data[0].worldFromModelNormalMatrix;

@@ -133,6 +133,8 @@ static filament::UserVariantFilterMask parseVariantFilter(const std::string& arg
             variantFilter |= (uint32_t) filament::UserVariantFilterBit::FOG;
         } else if (item == "ssr") {
             variantFilter |= (uint32_t) filament::UserVariantFilterBit::SSR;
+        } else if (item == "stereo") {
+            variantFilter |= (uint32_t) filament::UserVariantFilterBit::STE;
         }
     }
     return variantFilter;

@@ -15,6 +15,12 @@ void main() {
 #   endif
 #endif
 
+#if defined(VARIANT_HAS_INSTANCED_STEREO)
+#if !defined(FILAMENT_HAS_FEATURE_INSTANCING)
+#error Instanced stereo not supported at this feature level
+#endif
+#endif
+
     initObjectUniforms(object_uniforms);
 
     // Initialize the inputs to sensible default values, see material_inputs.vs
@@ -197,7 +203,32 @@ void main() {
 #endif
 
     // this must happen before we compensate for vulkan below
+#if defined(VARIANT_HAS_INSTANCED_STEREO)
     vertex_position = gl_Position;
+#if !defined(VERTEX_DOMAIN_DEVICE)
+    vertex_position = frameUniforms.clipFromWorldMatrix * getWorldPosition(material);
+#endif
+#else
+    vertex_position = gl_Position;
+#endif
+
+#if defined(VARIANT_HAS_INSTANCED_STEREO)
+    // We're transforming a vertex whose x coordinate is within the range (-w to w).
+    // To move it to the correct half of the viewport, we need to modify the x coordinate:
+    //      Eye 0  (left half): (-w to 0)
+    //      Eye 1 (right half): ( 0 to w)
+    // It's important to do this after computing vertex_position.
+    int eyeIndex = instance_index % 2;
+    float eyeShift = float(eyeIndex) * 2.0f - 1.0f;     // eye 0: -1.0,     eye 1: 1.0
+    gl_Position.x = gl_Position.x * 0.5f + (gl_Position.w * 0.5 * eyeShift);
+
+    // A fragment is clipped when gl_ClipDistance is negative (outside the clip plane). So,
+    // Eye 0 should have a positive value when x is < 0
+    //      -gl_Position.x
+    // Eye 1 should have a positive value when x is > 0
+    //       gl_Position.x
+    FILAMENT_CLIPDISTANCE[0] = gl_Position.x * eyeShift;
+#endif
 
 #if defined(TARGET_VULKAN_ENVIRONMENT)
     // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.

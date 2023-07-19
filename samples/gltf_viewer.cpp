@@ -918,6 +918,29 @@ int main(int argc, char** argv) {
             camera->setScaling({1.0 / aspectRatio, 1.0});
         }
 
+        if (view->getStereoscopicOptions().enabled) {
+            Camera& c = view->getCamera();
+            auto od = app.viewer->getOcularDistance();
+            // Eye 0 is always rendered to the left side of the screen; Eye 1, the right side.
+            // For testing, we want to render a side-by-side layout so users can view with
+            // "cross-eyed" stereo.
+            // For cross-eyed stereo, Eye 0 is really the RIGHT eye, while Eye 1 is the LEFT eye.
+            mat4 eyes[2];
+            eyes[0] = mat4::translation(double3{ od, 0.0, 0.0});    // right eye
+            eyes[1] = mat4::translation(double3{-od, 0.0, 0.0});    // left eye
+            c.setEyeModelMatrix(eyes);
+            mat4 projections[2];
+            // Use an aspect ratio of 1.0. The viewport will be taken into account in
+            // FilamentApp.cpp.
+            projections[0] = mat4::perspective(70.0, 1.0, .1, 10.0);
+            projections[1] = mat4::perspective(70.0, 1.0, .1, 10.0);
+            c.setCustomEyeProjection(projections, projections[0], .1, 10.0);
+            // FIXME: the aspect ratio will be incorrect until configureCamerasForWindow is
+            // triggered, which will happen the next time the window is resized.
+        } else {
+            view->getCamera().setEyeModelMatrix({});
+        }
+
         app.scene.groundMaterial->setDefaultParameter(
                 "strength", viewerOptions.groundShadowStrength);
 

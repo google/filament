@@ -1027,6 +1027,14 @@ void ViewerGui::updateUserInterface() {
             ImGui::ListBox("Cameras", &mCurrentCamera, cstrings.data(), cstrings.size());
         }
 
+        StereoscopicOptions stereoOptions = mView->getStereoscopicOptions();
+        ImGui::Checkbox("Instanced stereo", &stereoOptions.enabled);
+        if (stereoOptions.enabled) {
+            ImGui::SliderFloat("Ocular distance", &mOcularDistance, 0.0f, 10.0f);
+
+        }
+        mView->setStereoscopicOptions(stereoOptions);
+
         ImGui::Unindent();
     }
 
