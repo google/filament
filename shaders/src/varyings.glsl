@@ -34,7 +34,7 @@ LAYOUT_LOCATION(11) VARYING highp vec4 vertex_lightSpacePosition;
 // Note that fragColor is an output and is not declared here; see main.fs and depth_main.fs
 
 #if 0 // only enable for variants that need gl_ClipDistance
-#if GL_ES && defined(FILAMENT_GLSLANG)
+#if defined(GL_ES) && defined(FILAMENT_GLSLANG)
 // On ES, gl_ClipDistance is not a built-in, so we have to rely on EXT_clip_cull_distance
 // However, this extension is not supported by glslang, so we instead write to
 // filament_gl_ClipDistance, which will get decorated at the SPIR-V stage to refer to the built-in.
