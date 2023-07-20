@@ -8,4 +8,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
+- matc: fix buggy `variant-filter` flag
 - web: Added missing setMat3Parameter()/setMat4Parameter() to MaterialInstance

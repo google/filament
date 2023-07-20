@@ -24,32 +24,32 @@ Variant Variant::filterUserVariant(
         Variant variant, UserVariantFilterMask filterMask) noexcept {
     // these are easy to filter by just removing the corresponding bit
     if (filterMask & (uint32_t)UserVariantFilterBit::DIRECTIONAL_LIGHTING) {
-        variant.key &= ~(filterMask & DIR);
+        variant.key &= ~DIR;
     }
     if (filterMask & (uint32_t)UserVariantFilterBit::DYNAMIC_LIGHTING) {
-        variant.key &= ~(filterMask & DYN);
+        variant.key &= ~DYN;
     }
     if (filterMask & (uint32_t)UserVariantFilterBit::SKINNING) {
-        variant.key &= ~(filterMask & SKN);
+        variant.key &= ~SKN;
     }
     if (!isValidDepthVariant(variant)) {
         // we can't remove FOG from depth variants, this would, in fact, remove picking
         if (filterMask & (uint32_t)UserVariantFilterBit::FOG) {
-            variant.key &= ~(filterMask & FOG);
+            variant.key &= ~FOG;
         }
     } else {
         // depth variants can have their VSM bit filtered
         if (filterMask & (uint32_t)UserVariantFilterBit::VSM) {
-            variant.key &= ~(filterMask & VSM);
+            variant.key &= ~VSM;
         }
     }
     if (!isSSRVariant(variant)) {
         // SSR variant needs to be handled separately
         if (filterMask & (uint32_t)UserVariantFilterBit::SHADOW_RECEIVER) {
-            variant.key &= ~(filterMask & SRE);
+            variant.key &= ~SRE;
         }
         if (filterMask & (uint32_t)UserVariantFilterBit::VSM) {
-            variant.key &= ~(filterMask & VSM);
+            variant.key &= ~VSM;
         }
     } else {
         // see if we need to filter out the SSR variants
