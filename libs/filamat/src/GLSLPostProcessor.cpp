@@ -335,7 +335,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
 
     // This allows shaders to query if they will be run through glslang.
     // OpenGL shaders without optimization, for example, won't have this define.
-    tShader.setPreamble("#define FILAMENT_GLSLANG 1\n");
+    tShader.setPreamble("#define FILAMENT_GLSLANG\n");
 
     internalConfig.langVersion = GLSLTools::getGlslDefaultVersion(config.shaderModel);
     GLSLTools::prepareShaderParser(config.targetApi, config.targetLanguage, tShader,
