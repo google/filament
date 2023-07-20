@@ -974,8 +974,8 @@ void VulkanDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
     scheduleDestroy(std::move(data));
 }
 
-void VulkanDriver::compilePrograms(CallbackHandler* handler,
-        CallbackHandler::Callback callback, void* user) {
+void VulkanDriver::compilePrograms(CompilerPriorityQueue priority,
+        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     if (callback) {
         scheduleCallback(handler, user, callback);
     }

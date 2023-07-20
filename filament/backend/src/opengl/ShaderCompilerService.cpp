@@ -305,7 +305,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
 
         }
 
-        runAtNextTick(token, [this, token]() {
+        runAtNextTick(token->priorityQueue, token, [this, token]() {
             if (mShaderCompilerThreadCount) {
                 if (!token->gl.program) {
                     // TODO: see if we could completely eliminate this callback here
@@ -425,20 +425,21 @@ void ShaderCompilerService::tick() {
     executeTickOps();
 }
 
-void ShaderCompilerService::notifyWhenAllProgramsAreReady(CallbackHandler* handler,
-        CallbackHandler::Callback callback, void* user) {
+void ShaderCompilerService::notifyWhenAllProgramsAreReady(CompilerPriorityQueue priority,
+        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
 
     if (KHR_parallel_shader_compile || mShaderCompilerThreadCount) {
-        // list all programs up to this point
+        // list all programs up to this point, both low and high priority
         utils::FixedCapacityVector<program_token_t, std::allocator<program_token_t>, false> tokens;
         tokens.reserve(mRunAtNextTickOps.size());
-        for (auto& [token, _] : mRunAtNextTickOps) {
+        for (auto& [priority_, token, fn_] : mRunAtNextTickOps) {
             if (token) {
                 tokens.push_back(token);
             }
         }
 
-        runAtNextTick(nullptr, [this, tokens = std::move(tokens), handler, user, callback]() {
+        runAtNextTick(priority, nullptr,
+                [this, tokens = std::move(tokens), handler, user, callback]() {
             for (auto const& token : tokens) {
                 assert_invariant(token);
                 if (!isProgramReady(token)) {
@@ -459,7 +460,7 @@ void ShaderCompilerService::notifyWhenAllProgramsAreReady(CallbackHandler* handl
 
     // we don't have KHR_parallel_shader_compile
 
-    runAtNextTick(nullptr, [this, handler, user, callback]() {
+    runAtNextTick(priority, nullptr, [this, handler, user, callback]() {
         mDriver.scheduleCallback(handler, user, callback);
         return true;
     });
@@ -747,17 +748,15 @@ GLuint ShaderCompilerService::linkProgram(OpenGLContext& context,
 
 // ------------------------------------------------------------------------------------------------
 
-void ShaderCompilerService::runAtNextTick(
+void ShaderCompilerService::runAtNextTick(CompilerPriorityQueue priority,
         const program_token_t& token, std::function<bool()> fn) noexcept {
     // insert items in order of priority and at the end of the range
     auto& ops = mRunAtNextTickOps;
-    using ContainerType = std::pair<program_token_t, std::function<bool()>>;
-    auto const pos = std::lower_bound(ops.begin(), ops.end(),
-            token->priorityQueue,
+    auto const pos = std::lower_bound(ops.begin(), ops.end(), priority,
             [](ContainerType const& lhs, CompilerPriorityQueue priorityQueue) {
-                return lhs.first->priorityQueue < priorityQueue;
+                return std::get<0>(lhs) < priorityQueue;
             });
-    ops.emplace(pos, token, std::move(fn));
+    ops.emplace(pos, priority, token, std::move(fn));
 
     SYSTRACE_CONTEXT();
     SYSTRACE_VALUE32("ShaderCompilerService Jobs", mRunAtNextTickOps.size());
@@ -768,7 +767,7 @@ void ShaderCompilerService::cancelTickOp(program_token_t token) noexcept {
     auto& ops = mRunAtNextTickOps;
     auto pos = std::find_if(ops.begin(), ops.end(),
             [&](const auto& item) {
-        return item.first == token;
+        return std::get<1>(item) == token;
     });
     if (pos != ops.end()) {
         ops.erase(pos);
@@ -781,7 +780,8 @@ void ShaderCompilerService::executeTickOps() noexcept {
     auto& ops = mRunAtNextTickOps;
     auto it = ops.begin();
     while (it != ops.end()) {
-        bool const remove = it->second();
+        auto fn = std::get<2>(*it);
+        bool const remove = fn();
         if (remove) {
             it = ops.erase(it);
         } else {

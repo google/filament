@@ -975,8 +975,8 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
     scheduleDestroy(std::move(data));
 }
 
-void MetalDriver::compilePrograms(CallbackHandler* handler,
-        CallbackHandler::Callback callback, void* user) {
+void MetalDriver::compilePrograms(CompilerPriorityQueue priority,
+        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     if (callback) {
         scheduleCallback(handler, user, callback);
     }

@@ -10,3 +10,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 - matc: fix buggy `variant-filter` flag
 - web: Added missing setMat3Parameter()/setMat4Parameter() to MaterialInstance
+- engine: fix a crash with `Material::compile()` when a callback is specified
