@@ -135,7 +135,7 @@ gradlew -Pcom.google.android.filament.dist-dir=..\out\android-release\filament a
 If you're only interested in building SDK, you may skip samples build by passing a `com.google.android.filament.skip-samples` flag:
 
 ```
-gradlew -Pcom.google.android.filament.dist-dir=..\out\android-release\filament assembleRelease -Pfilament_skip_samples
+gradlew -Pcom.google.android.filament.dist-dir=..\out\android-release\filament assembleRelease -Pcom.google.android.filament.skip-samples
 ```
 
 
