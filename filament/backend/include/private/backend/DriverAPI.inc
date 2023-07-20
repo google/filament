@@ -389,6 +389,7 @@ DECL_DRIVER_API_N(endTimerQuery,
         backend::TimerQueryHandle, query)
 
 DECL_DRIVER_API_N(compilePrograms,
+        backend::CompilerPriorityQueue, priority,
         backend::CallbackHandler*, handler,
         backend::CallbackHandler::Callback, callback,
         void*, user)

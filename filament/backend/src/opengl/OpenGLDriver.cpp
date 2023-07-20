@@ -2607,10 +2607,10 @@ SyncStatus OpenGLDriver::getSyncStatus(Handle<HwSync> sh) {
     }
 }
 
-void OpenGLDriver::compilePrograms(CallbackHandler* handler,
-        CallbackHandler::Callback callback, void* user) {
+void OpenGLDriver::compilePrograms(CompilerPriorityQueue priority,
+        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     if (callback) {
-        getShaderCompilerService().notifyWhenAllProgramsAreReady(handler, callback, user);
+        getShaderCompilerService().notifyWhenAllProgramsAreReady(priority, handler, callback, user);
     }
 }
 

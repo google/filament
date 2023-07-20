@@ -11,3 +11,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - gltfio: fix crash when compute morph target without material
 - matc: fix buggy `variant-filter` flag
 - web: Added missing setMat3Parameter()/setMat4Parameter() to MaterialInstance
+- engine: fix a crash with `Material::compile()` when a callback is specified
