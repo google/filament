@@ -453,11 +453,7 @@ void OpenGLContext::setDefaultState() noexcept {
     }
 
     if (ext.EXT_clip_cull_distance) {
-#if defined(BACKEND_OPENGL_VERSION_GL)
         glEnable(GL_CLIP_DISTANCE0);
-#elif defined(GL_CLIP_DISTANCE0_EXT)
-        glEnable(GL_CLIP_DISTANCE0_EXT);
-#endif
     }
 }
 
