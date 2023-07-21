@@ -67,13 +67,12 @@ public:
         std::thread mThread;
     };
 
-public:
     using OnReadCompleteFunction = std::function<void(PixelBufferDescriptor&&)>;
     using SelecteMemoryFunction = std::function<uint32_t(uint32_t, VkFlags)>;
 
-    void initialize(VkDevice device) noexcept;
+    explicit VulkanReadPixels(VkDevice device);
 
-    void shutdown() noexcept;
+    void terminate() noexcept;
 
     void run(VulkanRenderTarget const* srcTarget, uint32_t x, uint32_t y, uint32_t width,
             uint32_t height, uint32_t graphicsQueueFamilyIndex, PixelBufferDescriptor&& pbd,

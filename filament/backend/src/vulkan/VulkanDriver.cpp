@@ -149,7 +149,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
               mPlatform->getDevice())),
       mContext(context),
       mHandleAllocator("Handles", driverConfig.handleArenaSize),
-      mBlitter(mStagePool, mPipelineCache, mFramebufferCache, mSamplerCache) {
+      mBlitter(mStagePool, mPipelineCache, mFramebufferCache, mSamplerCache),
+      mReadPixels(mPlatform->getDevice()) {
 
 #if VK_ENABLE_VALIDATION
     UTILS_UNUSED const PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback
@@ -197,7 +198,6 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
     mPipelineCache.setDummyTexture(mEmptyTexture->getPrimaryImageView());
     mBlitter.initialize(mPlatform->getPhysicalDevice(), mPlatform->getDevice(), mAllocator,
             mCommands.get(), mEmptyTexture.get());
-    mReadPixels.initialize(mContext.device);
 }
 
 VulkanDriver::~VulkanDriver() noexcept = default;
@@ -1406,9 +1406,10 @@ void VulkanDriver::stopCapture(int) {}
 void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y, uint32_t width,
         uint32_t height, PixelBufferDescriptor&& pbd) {
     VulkanRenderTarget* srcTarget = handle_cast<VulkanRenderTarget*>(src);
-    mContext.commands->flush();
+    mCommands->flush();
     mReadPixels.run(
-            srcTarget, x, y, width, height, mContext.graphicsQueueFamilyIndex, std::move(pbd),
+            srcTarget, x, y, width, height, mPlatform->getGraphicsQueueFamilyIndex(),
+            std::move(pbd),
             [&context = mContext](uint32_t reqs, VkFlags flags) {
                 return context.selectMemoryType(reqs, flags);
             },

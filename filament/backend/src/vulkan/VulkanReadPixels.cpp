@@ -19,6 +19,7 @@
 #include "DataReshaper.h"
 #include "VulkanCommands.h"
 #include "VulkanHandles.h"
+#include "VulkanImageUtility.h"
 #include "VulkanTexture.h"
 
 #include <utils/Log.h>
@@ -27,6 +28,7 @@ using namespace bluevk;
 
 namespace filament::backend {
 
+using ImgUtil = VulkanImageUtility;
 using TaskHandler = VulkanReadPixels::TaskHandler;
 using WorkloadFunc = TaskHandler::WorkloadFunc;
 using OnCompleteFunc = TaskHandler::OnCompleteFunc;
@@ -101,7 +103,7 @@ void TaskHandler::loop() {
     }
 }
 
-void VulkanReadPixels::shutdown() noexcept {
+void VulkanReadPixels::terminate() noexcept {
     assert_invariant(mDevice != VK_NULL_HANDLE);
     if (mCommandPool == VK_NULL_HANDLE) {
         return;
@@ -113,9 +115,8 @@ void VulkanReadPixels::shutdown() noexcept {
     mTaskHandler.reset();
 }
 
-void VulkanReadPixels::initialize(VkDevice device) noexcept {
-    mDevice = device;
-}
+VulkanReadPixels::VulkanReadPixels(VkDevice device)
+    : mDevice(device) {}
 
 void VulkanReadPixels::run(VulkanRenderTarget const* srcTarget, uint32_t const x, uint32_t const y,
         uint32_t const width, uint32_t const height, uint32_t const graphicsQueueFamilyIndex,
@@ -166,6 +167,12 @@ void VulkanReadPixels::run(VulkanRenderTarget const* srcTarget, uint32_t const x
     VkImage stagingImage;
     vkCreateImage(device, &imageInfo, VKALLOC, &stagingImage);
 
+#if FILAMENT_VULKAN_VERBOSE
+    utils::slog.d << "readPixels created image=" << stagingImage
+                  << " to copy from image=" << srcTexture->getVkImage()
+                  << " src-layout=" << srcTexture->getLayout(0, 0) << utils::io::endl;
+#endif
+
     VkMemoryRequirements memReqs;
     VkDeviceMemory stagingMemory;
     vkGetImageMemoryRequirements(device, stagingImage, &memReqs);
@@ -195,26 +202,23 @@ void VulkanReadPixels::run(VulkanRenderTarget const* srcTarget, uint32_t const x
     };
     vkBeginCommandBuffer(cmdbuffer, &binfo);
 
-    transitionImageLayout(cmdbuffer, {
-            .image = stagingImage,
-            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .newLayout = VK_IMAGE_LAYOUT_GENERAL,
-            .subresources = {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .baseMipLevel = 0,
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
-            .srcStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-            .srcAccessMask = 0,
-            .dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT,
-            .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-        });
+    ImgUtil::transitionLayout(cmdbuffer, {
+        .image = stagingImage,
+        .oldLayout = VulkanLayout::UNDEFINED,
+        .newLayout = VulkanLayout::TRANSFER_DST,
+        .subresources = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+    });
 
     VulkanAttachment const srcAttachment = srcTarget->getColor(0);
-    srcTexture->transitionLayoutForReadPixels(cmdbuffer, srcAttachment.level, srcAttachment.layer,
-            true /* forward */);
+    const VkImageSubresourceRange srcRange
+            = srcAttachment.getSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+    srcTexture->transitionLayout(cmdbuffer, srcRange, VulkanLayout::TRANSFER_SRC);
 
     VkImageCopy const imageCopyRegion = {
         .srcSubresource = {
@@ -245,13 +249,13 @@ void VulkanReadPixels::run(VulkanRenderTarget const* srcTarget, uint32_t const x
     assert_invariant(
             imageCopyRegion.srcOffset.y + imageCopyRegion.extent.height <= srcExtent.height);
 
-    vkCmdCopyImage(cmdbuffer, srcAttachment.getImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            stagingImage, VK_IMAGE_LAYOUT_GENERAL, 1, &imageCopyRegion);
+    vkCmdCopyImage(cmdbuffer, srcAttachment.getImage(),
+            ImgUtil::getVkLayout(VulkanLayout::TRANSFER_SRC), stagingImage,
+            ImgUtil::getVkLayout(VulkanLayout::TRANSFER_DST), 1, &imageCopyRegion);
 
-    // Restore the source image layout. Between driver API calls, color images are always kept in
-    // UNDEFINED layout or in their "usage default" layout (see comment for getDefaultImageLayout).
-    srcTexture->transitionLayoutForReadPixels(cmdbuffer, srcAttachment.level, srcAttachment.layer,
-            false /* forward */);
+    // Restore the source image layout.
+    srcTexture->transitionLayout(cmdbuffer, srcRange, VulkanLayout::COLOR_ATTACHMENT);
+
     vkEndCommandBuffer(cmdbuffer);
 
     VkQueue queue;
