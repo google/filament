@@ -465,7 +465,7 @@ void FEngine::shutdown() {
         getDriverApi().terminate();
     } else {
         mDriverThread.join();
-
+        // Driver::terminate() has been called here.
     }
 
     // Finally, call user callbacks that might have been scheduled.

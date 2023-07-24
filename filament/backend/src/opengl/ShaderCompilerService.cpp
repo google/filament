@@ -100,6 +100,14 @@ void* ShaderCompilerService::getUserData(const program_token_t& token) noexcept 
 
 // ------------------------------------------------------------------------------------------------
 
+ShaderCompilerService::CompilerThreadPool::CompilerThreadPool() noexcept = default;
+
+ShaderCompilerService::CompilerThreadPool::~CompilerThreadPool() noexcept {
+    assert_invariant(mCompilerThreads.empty());
+    assert_invariant(mQueues[0].empty());
+    assert_invariant(mQueues[1].empty());
+}
+
 void ShaderCompilerService::CompilerThreadPool::init(
         bool useSharedContexts, uint32_t threadCount, OpenGLPlatform& platform) noexcept {
 
@@ -186,15 +194,22 @@ void ShaderCompilerService::CompilerThreadPool::queue(CompilerPriorityQueue prio
     mQueueCondition.notify_one();
 }
 
-void ShaderCompilerService::CompilerThreadPool::exit() noexcept {
+void ShaderCompilerService::CompilerThreadPool::terminate() noexcept {
     std::unique_lock lock(mQueueLock);
     mExitRequested = true;
     mQueueCondition.notify_all();
     lock.unlock();
+
     for (auto& thread: mCompilerThreads) {
         if (thread.joinable()) {
             thread.join();
         }
+    }
+    mCompilerThreads.clear();
+
+    // Clear all the queues, dropping the remaining jobs. This relies on the jobs being cancelable.
+    for (auto&& q : mQueues) {
+        q.clear();
     }
 }
 
@@ -227,8 +242,16 @@ void ShaderCompilerService::init() noexcept {
 }
 
 void ShaderCompilerService::terminate() noexcept {
-    // FIXME: could we have some user callbacks pending here?
-    mCompilerThreadPool.exit();
+    mCompilerThreadPool.terminate();
+
+    // We could have some pending callbacks here, we need to execute them
+    for (auto&& op: mRunAtNextTickOps) {
+        Job const& job = std::get<2>(op);
+        if (job.callback) {
+            mDriver.scheduleCallback(job.handler, job.user, job.callback);
+        }
+    }
+    mRunAtNextTickOps.clear();
 }
 
 ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
@@ -317,7 +340,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
 
         }
 
-        runAtNextTick(priorityQueue, token, [this, token]() {
+        runAtNextTick(priorityQueue, token, [this, token](Job const&) {
             if (mShaderCompilerThreadCount) {
                 if (!token->gl.program) {
                     // TODO: see if we could completely eliminate this callback here
@@ -442,16 +465,19 @@ void ShaderCompilerService::notifyWhenAllProgramsAreReady(CompilerPriorityQueue 
 
     if (KHR_parallel_shader_compile || mShaderCompilerThreadCount) {
         // list all programs up to this point, both low and high priority
-        utils::FixedCapacityVector<program_token_t, std::allocator<program_token_t>, false> tokens;
-        tokens.reserve(mRunAtNextTickOps.size());
-        for (auto& [itemPriority, token, fn] : mRunAtNextTickOps) {
-            if (token && fn && itemPriority == priority) {
+
+        using TokenVector = utils::FixedCapacityVector<
+                program_token_t, std::allocator<program_token_t>, false>;
+        TokenVector tokens{ TokenVector::with_capacity(mRunAtNextTickOps.size()) };
+
+        for (auto& [itemPriority, token, job] : mRunAtNextTickOps) {
+            if (token && job.fn && itemPriority == priority) {
                 tokens.push_back(token);
             }
         }
 
-        runAtNextTick(priority, nullptr,
-                [this, tokens = std::move(tokens), handler, user, callback]() {
+        runAtNextTick(priority, nullptr, {
+                [this, tokens = std::move(tokens)](Job const& job) {
             for (auto const& token : tokens) {
                 assert_invariant(token);
                 if (!isProgramReady(token)) {
@@ -459,23 +485,23 @@ void ShaderCompilerService::notifyWhenAllProgramsAreReady(CompilerPriorityQueue 
                     return false;
                 }
             }
-            if (callback) {
+            if (job.callback) {
                 // all programs are ready, we can call the callbacks
-                mDriver.scheduleCallback(handler, user, callback);
+                mDriver.scheduleCallback(job.handler, job.user, job.callback);
             }
             // and we're done
             return true;
-        });
+        }, handler, user, callback });
 
         return;
     }
 
     // we don't have KHR_parallel_shader_compile
 
-    runAtNextTick(priority, nullptr, [this, handler, user, callback]() {
-        mDriver.scheduleCallback(handler, user, callback);
+    runAtNextTick(priority, nullptr, {[this](Job const& job) {
+        mDriver.scheduleCallback(job.handler, job.user, job.callback);
         return true;
-    });
+    }, handler, user, callback });
 
     // TODO: we could spread the compiles over several frames, the tick() below then is not
     //       needed here. We keep it for now as to not change the current behavior too much.
@@ -761,14 +787,14 @@ GLuint ShaderCompilerService::linkProgram(OpenGLContext& context,
 // ------------------------------------------------------------------------------------------------
 
 void ShaderCompilerService::runAtNextTick(CompilerPriorityQueue priority,
-        const program_token_t& token, std::function<bool()> fn) noexcept {
+        const program_token_t& token, Job job) noexcept {
     // insert items in order of priority and at the end of the range
     auto& ops = mRunAtNextTickOps;
     auto const pos = std::lower_bound(ops.begin(), ops.end(), priority,
             [](ContainerType const& lhs, CompilerPriorityQueue priorityQueue) {
                 return std::get<0>(lhs) < priorityQueue;
             });
-    ops.emplace(pos, priority, token, std::move(fn));
+    ops.emplace(pos, priority, token, std::move(job));
 
     SYSTRACE_CONTEXT();
     SYSTRACE_VALUE32("ShaderCompilerService Jobs", mRunAtNextTickOps.size());
@@ -792,8 +818,8 @@ void ShaderCompilerService::executeTickOps() noexcept {
     auto& ops = mRunAtNextTickOps;
     auto it = ops.begin();
     while (it != ops.end()) {
-        auto fn = std::get<2>(*it);
-        bool const remove = fn();
+        Job const& job = std::get<2>(*it);
+        bool const remove = job.fn(job);
         if (remove) {
             it = ops.erase(it);
         } else {
