@@ -166,6 +166,14 @@ public:
      * many previous frames are enqueued in the backend. This also varies by backend. Therefore,
      * it is recommended to only call this method once per material shortly after creation.
      *
+     * If the same variant is scheduled for compilation multiple times, the first scheduling
+     * takes precedence; later scheduling are ignored.
+     *
+     * caveat: A consequence is that if a variant is scheduled on the low priority queue and later
+     * scheduled again on the high priority queue, the later scheduling is ignored.
+     * Therefore, the second callback could be called before the variant is compiled.
+     * However, the first callback, if specified, will trigger as expected.
+     *
      * @param priority      Which priority queue to use, LOW or HIGH.
      * @param variants      Variants to include to the compile command.
      * @param handler       Handler to dispatch the callback or nullptr for the default handler
