@@ -8,3 +8,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 - backend: Disable timer queries on all Mali GPUs (fixes b/233754398)
+- engine: Add a way to query the validity of most filament objects (see `Engine::isValid`)
+- opengl: fix b/290388359 : possible crash when shutting down the engine
