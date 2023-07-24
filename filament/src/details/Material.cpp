@@ -496,9 +496,9 @@ void FMaterial::compile(CompilerPriorityQueue priority,
             }
         };
         auto* const user = new(std::nothrow) Callback{ std::move(callback), this };
-        mEngine.getDriverApi().compilePrograms(handler, &Callback::func, static_cast<void*>(user));
+        mEngine.getDriverApi().compilePrograms(priority, handler, &Callback::func, static_cast<void*>(user));
     } else {
-        mEngine.getDriverApi().compilePrograms(nullptr, nullptr, nullptr);
+        mEngine.getDriverApi().compilePrograms(priority, nullptr, nullptr, nullptr);
     }
 }
 

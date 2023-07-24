@@ -368,7 +368,7 @@ using EntityVector = std::vector<utils::Entity>;
 register_vector<std::string>("RegistryKeys");
 register_vector<utils::Entity>("EntityVector");
 register_vector<FilamentInstance*>("AssetInstanceVector");
-register_vector<const MaterialInstance*>("MaterialInstanceVector");
+register_vector<MaterialInstance*>("MaterialInstanceVector");
 
 // CORE FILAMENT CLASSES
 // ---------------------
@@ -1290,6 +1290,12 @@ class_<MaterialInstance>("MaterialInstance")
     .function("setFloat4Parameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, filament::math::float4 value), {
         self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+    .function("setMat3Parameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, filament::math::mat3f value), {
+        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+    .function("setMat4Parameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, filament::math::mat4f value), {
+        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
     .function("setTextureParameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, Texture* value, TextureSampler sampler), {
         self->setParameter(name.c_str(), value, sampler); }), allow_raw_pointers())
@@ -1907,10 +1913,10 @@ class_<FilamentInstance>("gltfio$FilamentInstance")
 
     .function("applyMaterialVariant", &FilamentInstance::applyMaterialVariant)
 
-    .function("getMaterialInstances", EMBIND_LAMBDA(std::vector<const MaterialInstance*>,
+    .function("getMaterialInstances", EMBIND_LAMBDA(std::vector<MaterialInstance*>,
             (FilamentInstance* self), {
-        const MaterialInstance* const* ptr = self->getMaterialInstances();
-        return std::vector<const MaterialInstance*>(ptr, ptr + self->getMaterialInstanceCount());
+        MaterialInstance* const* ptr = self->getMaterialInstances();
+        return std::vector<MaterialInstance*>(ptr, ptr + self->getMaterialInstanceCount());
     }), allow_raw_pointers())
 
     .function("_getMaterialVariantNames", EMBIND_LAMBDA(std::vector<std::string>, (FilamentInstance* self), {

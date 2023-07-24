@@ -87,8 +87,8 @@ public:
     static void* getUserData(const program_token_t& token) noexcept;
 
     // call the callback when all active programs are ready
-    void notifyWhenAllProgramsAreReady(CallbackHandler* handler,
-            CallbackHandler::Callback callback, void* user);
+    void notifyWhenAllProgramsAreReady(CompilerPriorityQueue priority,
+            CallbackHandler* handler, CallbackHandler::Callback callback, void* user);
 
 private:
     class CompilerThreadPool {
@@ -143,11 +143,13 @@ private:
 
     static bool checkProgramStatus(program_token_t const& token) noexcept;
 
-    void runAtNextTick(const program_token_t& token, std::function<bool()> fn) noexcept;
+    void runAtNextTick(CompilerPriorityQueue priority,
+            const program_token_t& token, std::function<bool()> fn) noexcept;
     void executeTickOps() noexcept;
     void cancelTickOp(program_token_t token) noexcept;
     // order of insertion is important
-    std::vector<std::pair<program_token_t, std::function<bool()>>> mRunAtNextTickOps;
+    using ContainerType = std::tuple<CompilerPriorityQueue, program_token_t, std::function<bool()>>;
+    std::vector<ContainerType> mRunAtNextTickOps;
 };
 
 } // namespace filament::backend
