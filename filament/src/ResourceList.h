@@ -38,6 +38,8 @@ public:
 
     bool remove(void const* item);
 
+    iterator find(void const* item);
+
     void clear() noexcept;
 
     bool empty() const noexcept {
@@ -76,9 +78,12 @@ public:
     using ResourceListBase::forEach;
     using ResourceListBase::insert;
     using ResourceListBase::remove;
+    using ResourceListBase::find;
     using ResourceListBase::empty;
     using ResourceListBase::size;
     using ResourceListBase::clear;
+    using ResourceListBase::begin;
+    using ResourceListBase::end;
 
     explicit ResourceList(const char* name) noexcept: ResourceListBase(name) {}
 

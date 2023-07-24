@@ -278,6 +278,112 @@ Java_com_google_android_filament_Engine_nDestroyEntity(JNIEnv*, jclass,
     engine->destroy(entity);
 }
 
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidRenderer(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeRenderer) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValid((Renderer*)nativeRenderer);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidView(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeView) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValid((View*)nativeView);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidScene(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeScene) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValid((Scene*)nativeScene);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidFence(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeFence) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValid((Fence*)nativeFence);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidStream(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeStream) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValid((Stream*)nativeStream);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidIndexBuffer(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeIndexBuffer) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValid((IndexBuffer*)nativeIndexBuffer);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidVertexBuffer(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeVertexBuffer) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValid((VertexBuffer*)nativeVertexBuffer);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidSkinningBuffer(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeSkinningBuffer) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValid((SkinningBuffer*)nativeSkinningBuffer);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidIndirectLight(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeIndirectLight) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValid((IndirectLight*)nativeIndirectLight);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidMaterial(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeMaterial) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValid((Material*)nativeMaterial);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidSkybox(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeSkybox) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValid((Skybox*)nativeSkybox);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidColorGrading(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeColorGrading) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValid((ColorGrading*)nativeColorGrading);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidTexture(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeTexture) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValid((Texture*)nativeTexture);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidRenderTarget(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeTarget) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValid((RenderTarget*)nativeTarget);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Engine_nIsValidSwapChain(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeSwapChain) {
+    Engine* engine = (Engine *)nativeEngine;
+    return (jboolean)engine->isValid((SwapChain*)nativeSwapChain);
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Engine_nFlushAndWait(JNIEnv*, jclass,
         jlong nativeEngine) {
