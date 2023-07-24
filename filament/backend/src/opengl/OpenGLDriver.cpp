@@ -231,6 +231,8 @@ void OpenGLDriver::terminate() {
     // wait for the GPU to finish executing all commands
     glFinish();
 
+    mShaderCompilerService.terminate();
+
     // and make sure to execute all the GpuCommandCompleteOps callbacks
     executeGpuCommandsCompleteOps();
 
@@ -248,8 +250,6 @@ void OpenGLDriver::terminate() {
 #endif
 
     delete mTimerQueryImpl;
-
-    mShaderCompilerService.terminate();
 
     mPlatform.terminate();
 }

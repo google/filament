@@ -63,6 +63,8 @@ DriverBase::DriverBase() noexcept {
 }
 
 DriverBase::~DriverBase() noexcept {
+    assert_invariant(mCallbacks.empty());
+    assert_invariant(mServiceThreadCallbackQueue.empty());
     if constexpr (UTILS_HAS_THREADING) {
         // quit our service thread
         std::unique_lock<std::mutex> lock(mServiceThreadLock);
