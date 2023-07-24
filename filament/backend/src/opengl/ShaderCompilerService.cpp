@@ -87,7 +87,6 @@ struct ShaderCompilerService::ProgramToken {
 
     BlobCacheKey key;
     std::future<ProgramBinary> binary;
-    CompilerPriorityQueue priorityQueue = CompilerPriorityQueue::HIGH;
     bool canceled = false;
 };
 
@@ -148,12 +147,23 @@ void ShaderCompilerService::CompilerThreadPool::init(
     }
 }
 
+auto ShaderCompilerService::CompilerThreadPool::find(
+        program_token_t const& token) -> std::pair<Queue&, Queue::iterator> {
+    for (auto&& q: mQueues) {
+        auto pos = std::find_if(q.begin(), q.end(), [&token](auto&& item) {
+            return item.first == token;
+        });
+        if (pos != q.end()) {
+            return { q, pos };
+        }
+    }
+    // this can happen if the program is being processed right now
+    return { mQueues[0], mQueues[0].end() };
+}
+
 auto ShaderCompilerService::CompilerThreadPool::dequeue(program_token_t const& token) -> Job {
-    auto& q = mQueues[size_t(token->priorityQueue)];
-    auto pos = std::find_if(q.begin(), q.end(), [&token](auto&& item) {
-        return item.first == token;
-    });
     Job job;
+    auto&& [q, pos] = find(token);
     if (pos != q.end()) {
         std::swap(job, pos->second);
         q.erase(pos);
@@ -169,9 +179,10 @@ void ShaderCompilerService::CompilerThreadPool::makeUrgent(program_token_t const
     mQueueCondition.notify_one();
 }
 
-void ShaderCompilerService::CompilerThreadPool::queue(program_token_t const& token, Job&& job) {
+void ShaderCompilerService::CompilerThreadPool::queue(CompilerPriorityQueue priorityQueue,
+        program_token_t const& token, Job&& job) {
     std::unique_lock const lock(mQueueLock);
-    mQueues[size_t(token->priorityQueue)].emplace_back(token, std::move(job));
+    mQueues[size_t(priorityQueue)].emplace_back(token, std::move(job));
     mQueueCondition.notify_one();
 }
 
@@ -204,7 +215,9 @@ void ShaderCompilerService::init() noexcept {
         //   also glProgramBinary blocks if other threads are compiling.
         // - on Mali shader compilation can be multithreaded, but program linking happens on
         //   a single service thread, so we don't bother using more than one thread either.
-        // - on desktop we could use more threads, tbd.
+        // - on macOS (M1 MacBook Pro/Ventura) there is global lock around all GL APIs when using
+        //   a shared context, so parallel shader compilation yields no benefit.
+        // - on windows/linux we could use more threads, tbd.
         if (mDriver.mPlatform.isExtraContextSupported()) {
             mShaderCompilerThreadCount = 1;
             mCompilerThreadPool.init(mUseSharedContext,
@@ -230,13 +243,13 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
 
     token->gl.program = OpenGLBlobCache::retrieve(&token->key, mDriver.mPlatform, program);
     if (!token->gl.program) {
+        CompilerPriorityQueue const priorityQueue = program.getPriorityQueue();
         if (mShaderCompilerThreadCount) {
             // set the future in the token and pass the promise to the worker thread
             std::promise<ProgramToken::ProgramBinary> promise;
             token->binary = promise.get_future();
-            token->priorityQueue = program.getPriorityQueue();
             // queue a compile job
-            mCompilerThreadPool.queue(token,
+            mCompilerThreadPool.queue(priorityQueue, token,
                     [this, &gl, promise = std::move(promise),
                             program = std::move(program), token]() mutable {
 
@@ -304,7 +317,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
 
         }
 
-        runAtNextTick(token->priorityQueue, token, [this, token]() {
+        runAtNextTick(priorityQueue, token, [this, token]() {
             if (mShaderCompilerThreadCount) {
                 if (!token->gl.program) {
                     // TODO: see if we could completely eliminate this callback here
@@ -431,8 +444,8 @@ void ShaderCompilerService::notifyWhenAllProgramsAreReady(CompilerPriorityQueue 
         // list all programs up to this point, both low and high priority
         utils::FixedCapacityVector<program_token_t, std::allocator<program_token_t>, false> tokens;
         tokens.reserve(mRunAtNextTickOps.size());
-        for (auto& [priority_, token, fn_] : mRunAtNextTickOps) {
-            if (token) {
+        for (auto& [itemPriority, token, fn] : mRunAtNextTickOps) {
+            if (token && fn && itemPriority == priority) {
                 tokens.push_back(token);
             }
         }

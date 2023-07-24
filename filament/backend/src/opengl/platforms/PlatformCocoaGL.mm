@@ -173,6 +173,9 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext, const Platform::Drive
 }
 
 bool PlatformCocoaGL::isExtraContextSupported() const noexcept {
+    // macOS supports shared contexts however, it looks like the implementation uses a global
+    // lock around all GL APIs. It's a problem for API calls that take a long time to execute,
+    // one such call is e.g.: glCompileProgram.
     return true;
 }
 

@@ -96,17 +96,19 @@ private:
         using Job = utils::Invocable<void()>;
         void init(bool useSharedContexts, uint32_t threadCount, OpenGLPlatform& platform) noexcept;
         void exit() noexcept;
-        void queue(program_token_t const& token, Job&& job);
+        void queue(CompilerPriorityQueue priorityQueue, program_token_t const& token, Job&& job);
         void makeUrgent(program_token_t const& token);
 
     private:
+        using Queue = std::deque<std::pair<program_token_t, Job>>;
         std::vector<std::thread> mCompilerThreads;
         std::atomic_bool mExitRequested{ false };
         std::mutex mQueueLock;
         std::condition_variable mQueueCondition;
-        std::array<std::deque<std::pair<program_token_t, Job>>, 2> mQueues;
-        Job mUrgentJob;
+        std::array<Queue, 2> mQueues;
+        Job mUrgentJob; // needs mQueueLock as well
         Job dequeue(program_token_t const& token); // lock must be held
+        std::pair<Queue&, Queue::iterator> find(program_token_t const& token);
     };
 
     OpenGLDriver& mDriver;
