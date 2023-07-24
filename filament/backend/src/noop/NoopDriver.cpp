@@ -260,8 +260,8 @@ void NoopDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
     scheduleDestroy(std::move(data));
 }
 
-void NoopDriver::compilePrograms(CallbackHandler* handler,
-        CallbackHandler::Callback callback, void* user) {
+void NoopDriver::compilePrograms(CompilerPriorityQueue priority,
+        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     if (callback) {
         scheduleCallback(handler, user, callback);
     }
