@@ -264,8 +264,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                             binary.program = glProgram;
                             if (token->key) {
                                 // Attempt to cache. This calls glGetProgramBinary.
-                                OpenGLBlobCache::insert(mDriver.mPlatform,
-                                        token->key, token->gl.program);
+                                OpenGLBlobCache::insert(mDriver.mPlatform, token->key, glProgram);
                             }
                         }
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2

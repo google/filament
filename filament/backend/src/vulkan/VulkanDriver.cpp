@@ -1270,7 +1270,7 @@ void VulkanDriver::endRenderPass(int) {
     }
 
     if (mCurrentRenderPass.currentSubpass > 0) {
-        for (uint32_t i = 0; i < VulkanPipelineCache::TARGET_BINDING_COUNT; i++) {
+        for (uint32_t i = 0; i < VulkanPipelineCache::INPUT_ATTACHMENT_COUNT; i++) {
             mPipelineCache.bindInputAttachment(i, {});
         }
         mCurrentRenderPass.currentSubpass = 0;
@@ -1292,7 +1292,7 @@ void VulkanDriver::nextSubpass(int) {
     mPipelineCache.bindRenderPass(mCurrentRenderPass.renderPass,
             ++mCurrentRenderPass.currentSubpass);
 
-    for (uint32_t i = 0; i < VulkanPipelineCache::TARGET_BINDING_COUNT; i++) {
+    for (uint32_t i = 0; i < VulkanPipelineCache::INPUT_ATTACHMENT_COUNT; i++) {
         if ((1 << i) & mCurrentRenderPass.params.subpassMask) {
             VulkanAttachment subpassInput = renderTarget->getColor(i);
             VkDescriptorImageInfo info = {

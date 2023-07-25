@@ -234,9 +234,9 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
     // Rewrite every binding in the new descriptor sets.
     VkDescriptorBufferInfo descriptorBuffers[UBUFFER_BINDING_COUNT];
     VkDescriptorImageInfo descriptorSamplers[SAMPLER_BINDING_COUNT];
-    VkDescriptorImageInfo descriptorInputAttachments[TARGET_BINDING_COUNT];
+    VkDescriptorImageInfo descriptorInputAttachments[INPUT_ATTACHMENT_COUNT];
     VkWriteDescriptorSet descriptorWrites[UBUFFER_BINDING_COUNT + SAMPLER_BINDING_COUNT +
-            TARGET_BINDING_COUNT];
+            INPUT_ATTACHMENT_COUNT];
     uint32_t nwrites = 0;
     VkWriteDescriptorSet* writes = descriptorWrites;
     nwrites = 0;
@@ -286,9 +286,9 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
             writeInfo.dstBinding = binding;
         }
     }
-    for (uint32_t binding = 0; binding < TARGET_BINDING_COUNT; binding++) {
-        VkWriteDescriptorSet& writeInfo = writes[nwrites++];
+    for (uint32_t binding = 0; binding < INPUT_ATTACHMENT_COUNT; binding++) {
         if (mDescriptorRequirements.inputAttachments[binding].imageView) {
+            VkWriteDescriptorSet& writeInfo = writes[nwrites++];
             VkDescriptorImageInfo& imageInfo = descriptorInputAttachments[binding];
             imageInfo = mDescriptorRequirements.inputAttachments[binding];
             writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -299,13 +299,11 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
             writeInfo.pImageInfo = &imageInfo;
             writeInfo.pBufferInfo = nullptr;
             writeInfo.pTexelBufferView = nullptr;
-        } else {
-            writeInfo = mDummyTargetWriteInfo;
-            assert_invariant(mDummyTargetInfo.imageView);
+            writeInfo.dstSet = descriptorCacheEntry.handles[2];
+            writeInfo.dstBinding = binding;
         }
-        writeInfo.dstSet = descriptorCacheEntry.handles[2];
-        writeInfo.dstBinding = binding;
     }
+
     vkUpdateDescriptorSets(mDevice, nwrites, writes, 0, nullptr);
 
     return &mDescriptorSets.emplace(mDescriptorRequirements, descriptorCacheEntry).first.value();
@@ -518,14 +516,14 @@ VulkanPipelineCache::PipelineLayoutCacheEntry* VulkanPipelineCache::getOrCreateP
     vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &cacheEntry.descriptorSetLayouts[1]);
 
     // Next create the descriptor set layout for input attachments.
-    VkDescriptorSetLayoutBinding tbindings[TARGET_BINDING_COUNT];
+    VkDescriptorSetLayoutBinding tbindings[INPUT_ATTACHMENT_COUNT];
     binding.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
     binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    for (uint32_t i = 0; i < TARGET_BINDING_COUNT; i++) {
+    for (uint32_t i = 0; i < INPUT_ATTACHMENT_COUNT; i++) {
         binding.binding = i;
         tbindings[i] = binding;
     }
-    dlinfo.bindingCount = TARGET_BINDING_COUNT;
+    dlinfo.bindingCount = INPUT_ATTACHMENT_COUNT;
     dlinfo.pBindings = tbindings;
     vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &cacheEntry.descriptorSetLayouts[2]);
 
@@ -633,9 +631,9 @@ void VulkanPipelineCache::bindSamplers(VkDescriptorImageInfo samplers[SAMPLER_BI
 
 void VulkanPipelineCache::bindInputAttachment(uint32_t bindingIndex,
         VkDescriptorImageInfo targetInfo) noexcept {
-    ASSERT_POSTCONDITION(bindingIndex < TARGET_BINDING_COUNT,
+    ASSERT_POSTCONDITION(bindingIndex < INPUT_ATTACHMENT_COUNT,
             "Input attachment bindings overflow: index = %d, capacity = %d.",
-            bindingIndex, TARGET_BINDING_COUNT);
+            bindingIndex, INPUT_ATTACHMENT_COUNT);
     mDescriptorRequirements.inputAttachments[bindingIndex] = targetInfo;
 }
 
@@ -757,7 +755,7 @@ VkDescriptorPool VulkanPipelineCache::createDescriptorPool(uint32_t size) const 
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     poolSizes[1].descriptorCount = poolInfo.maxSets * SAMPLER_BINDING_COUNT;
     poolSizes[2].type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-    poolSizes[2].descriptorCount = poolInfo.maxSets * TARGET_BINDING_COUNT;
+    poolSizes[2].descriptorCount = poolInfo.maxSets * INPUT_ATTACHMENT_COUNT;
 
     VkDescriptorPool pool;
     const UTILS_UNUSED VkResult result = vkCreateDescriptorPool(mDevice, &poolInfo, VKALLOC, &pool);
@@ -864,7 +862,7 @@ bool VulkanPipelineCache::DescEqual::operator()(const DescriptorKey& k1,
             return false;
         }
     }
-    for (uint32_t i = 0; i < TARGET_BINDING_COUNT; i++) {
+    for (uint32_t i = 0; i < INPUT_ATTACHMENT_COUNT; i++) {
         if (k1.inputAttachments[i].imageView != k2.inputAttachments[i].imageView ||
             k1.inputAttachments[i].imageLayout != k2.inputAttachments[i].imageLayout) {
             return false;
