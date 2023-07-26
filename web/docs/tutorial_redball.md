@@ -313,7 +313,7 @@ In the [next tutorial], we'll take a closer look at textures and interaction.
 [pillars_2k.hdr]:
 //github.com/google/filament/blob/main/third_party/environments/pillars_2k.hdr
 
-[next tutorial]: tutorial_suzanne.html
+[next tutorial]: tutorial_suzanne.md
 [previous tutorial]: tutorial_triangle.html
 [Filament release]: //github.com/google/filament/releases
 [Filament Material System]: https://google.github.io/filament/Materials.md.html
