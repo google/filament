@@ -269,4 +269,4 @@ You should now have a spinning triangle! The completed JavaScript is available
 
 In the [next tutorial], we'll take a closer look at Filament materials and 3D rendering.
 
-[next tutorial]: tutorial_redball.html
+[next tutorial]: tutorial_redball.md
