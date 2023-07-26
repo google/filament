@@ -194,6 +194,7 @@ public:
         bool APPLE_color_buffer_packed_float;
         bool ARB_shading_language_packing;
         bool EXT_clip_control;
+        bool EXT_clip_cull_distance;
         bool EXT_color_buffer_float;
         bool EXT_color_buffer_half_float;
         bool EXT_debug_marker;
