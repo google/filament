@@ -616,9 +616,11 @@ void GLSLPostProcessor::fixupClipDistance(
     if (!config.usesClipDistance) {
         return;
     }
+    // This should match the version of SPIR-V used in GLSLTools::prepareShaderParser.
     SpirvTools tools(SPV_ENV_UNIVERSAL_1_3);
     std::string disassembly;
-    tools.Disassemble(spirv, &disassembly);
+    const bool result = tools.Disassemble(spirv, &disassembly);
+    assert_invariant(result);
     if (filamat::fixupClipDistance(disassembly)) {
         spirv.clear();
         tools.Assemble(disassembly, &spirv);
