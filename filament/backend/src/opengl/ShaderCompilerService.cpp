@@ -661,8 +661,8 @@ float u16tofp32(highp uint v) {
     v <<= 16u;
     highp uint s = v & 0x80000000u;
     highp uint n = v & 0x7FFFFFFFu;
-    highp uint nz = n == 0u ? 0u : 0xFFFFFFFF;
-    return uintBitsToFloat(s | ((((n >> 3u) + (0x70u << 23))) & nz));
+    highp uint nz = (n == 0u) ? 0u : 0xFFFFFFFFu;
+    return uintBitsToFloat(s | ((((n >> 3u) + (0x70u << 23u))) & nz));
 }
 vec2 unpackHalf2x16(highp uint v) {
     return vec2(u16tofp32(v&0xFFFFu), u16tofp32(v>>16u));
@@ -670,11 +670,11 @@ vec2 unpackHalf2x16(highp uint v) {
 uint fp32tou16(float val) {
     uint f32 = floatBitsToUint(val);
     uint f16 = 0u;
-    uint sign = (f32 >> 16) & 0x8000u;
-    int exponent = int((f32 >> 23) & 0xFFu) - 127;
+    uint sign = (f32 >> 16u) & 0x8000u;
+    int exponent = int((f32 >> 23u) & 0xFFu) - 127;
     uint mantissa = f32 & 0x007FFFFFu;
     if (exponent > 15) {
-        f16 = sign | (0x1Fu << 10);
+        f16 = sign | (0x1Fu << 10u);
     } else if (exponent > -15) {
         exponent += 15;
         mantissa >>= 13;
@@ -687,7 +687,7 @@ uint fp32tou16(float val) {
 highp uint packHalf2x16(vec2 v) {
     highp uint x = fp32tou16(v.x);
     highp uint y = fp32tou16(v.y);
-    return (y << 16) | x;
+    return (y << 16u) | x;
 }
 )"sv;
     }
