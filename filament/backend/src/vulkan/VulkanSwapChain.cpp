@@ -107,7 +107,7 @@ void VulkanSwapChain::acquire(bool& resized) {
     }
 
     // Check if the swapchain should be resized.
-    if (!mHeadless && (resized = mPlatform->hasResized(swapChain))) {
+    if ((resized = mPlatform->hasResized(swapChain))) {
         mCommands->flush();
         mCommands->wait();
         mPlatform->recreate(swapChain);
