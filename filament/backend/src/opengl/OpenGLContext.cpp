@@ -268,25 +268,13 @@ OpenGLContext::OpenGLContext() noexcept {
                 bugs.dont_use_timer_query = true;
             }
             if (strstr(state.renderer, "Mali-G")) {
-                // assume we don't have working timer queries
+                // We have run into several problems with timer queries on Mali-Gxx:
+                // - timer queries seem to cause memory corruptions in some cases on some devices
+                //   (see b/233754398)
+                //          - appeared at least in: "OpenGL ES 3.2 v1.r26p0-01eac0"
+                //          - wasn't present in: "OpenGL ES 3.2 v1.r32p1-00pxl1"
+                // - timer queries sometime crash with an NPE (see b/273759031)
                 bugs.dont_use_timer_query = true;
-
-                int maj, min, driverVersion, driverRevision, driverPatch;
-                int const c = sscanf(state.version, "OpenGL ES %d.%d v%d.r%dp%d", // NOLINT(cert-err34-c)
-                        &maj, &min, &driverVersion, &driverRevision, &driverPatch);
-                if (c == 5) {
-                    // Workarounds based on version here.
-                    // notes:
-                    //  bugs.dont_use_timer_query : on some Mali-Gxx drivers timer query seems
-                    //  to cause memory corruptions in some cases on some devices (see b/233754398).
-                    //  - appeared at least in
-                    //      "OpenGL ES 3.2 v1.r26p0-01eac0"
-                    //  - wasn't present in
-                    //      "OpenGL ES 3.2 v1.r32p1-00pxl1"
-                    if (driverVersion >= 2 || (driverVersion == 1 && driverRevision >= 32)) {
-                        bugs.dont_use_timer_query = false;
-                    }
-                }
             }
             // Mali seems to have no problem with this (which is good for us)
             bugs.allow_read_only_ancillary_feedback_loop = true;
