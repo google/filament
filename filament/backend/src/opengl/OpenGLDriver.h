@@ -151,8 +151,7 @@ public:
 
     struct GLTimerQuery : public HwTimerQuery {
         struct State {
-            std::atomic<uint64_t> elapsed{};
-            std::atomic_bool available{};
+            std::atomic<int64_t> elapsed{};
         };
         struct {
             GLuint query = 0;

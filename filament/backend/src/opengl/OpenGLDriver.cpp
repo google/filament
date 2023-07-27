@@ -3296,19 +3296,17 @@ void OpenGLDriver::flush(int) {
     if (!gl.bugs.disable_glFlush) {
         glFlush();
     }
-    mTimerQueryImpl->flush();
 }
 
 void OpenGLDriver::finish(int) {
     DEBUG_MARKER()
     glFinish();
-    mTimerQueryImpl->flush();
     executeGpuCommandsCompleteOps();
     executeEveryNowAndThenOps();
     // Note: since we executed a glFinish(), all pending tasks should be done
     assert_invariant(mGpuCommandCompleteOps.empty());
 
-    // however, some tasks rely on a separated thread to publish their result (e.g.
+    // However, some tasks rely on a separated thread to publish their result (e.g.
     // endTimerQuery), so the result could very well not be ready, and the task will
     // linger a bit longer, this is only true for mEveryNowAndThenOps tasks.
     // The fallout of this is that we can't assert that mEveryNowAndThenOps is empty.
