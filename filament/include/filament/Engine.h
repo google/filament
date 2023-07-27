@@ -676,6 +676,25 @@ public:
     bool destroy(const InstanceBuffer* p);      //!< Destroys an InstanceBuffer object.
     void destroy(utils::Entity e);              //!< Destroys all filament-known components from this entity
 
+    bool isValid(const BufferObject* p);        //!< Tells whether a BufferObject object is valid
+    bool isValid(const VertexBuffer* p);        //!< Tells whether an VertexBuffer object is valid
+    bool isValid(const Fence* p);               //!< Tells whether a Fence object is valid
+    bool isValid(const IndexBuffer* p);         //!< Tells whether an IndexBuffer object is valid
+    bool isValid(const SkinningBuffer* p);      //!< Tells whether a SkinningBuffer object is valid
+    bool isValid(const MorphTargetBuffer* p);   //!< Tells whether a MorphTargetBuffer object is valid
+    bool isValid(const IndirectLight* p);       //!< Tells whether an IndirectLight object is valid
+    bool isValid(const Material* p);            //!< Tells whether an IndirectLight object is valid
+    bool isValid(const Renderer* p);            //!< Tells whether a Renderer object is valid
+    bool isValid(const Scene* p);               //!< Tells whether a Scene object is valid
+    bool isValid(const Skybox* p);              //!< Tells whether a SkyBox object is valid
+    bool isValid(const ColorGrading* p);        //!< Tells whether a ColorGrading object is valid
+    bool isValid(const SwapChain* p);           //!< Tells whether a SwapChain object is valid
+    bool isValid(const Stream* p);              //!< Tells whether a Stream object is valid
+    bool isValid(const Texture* p);             //!< Tells whether a Texture object is valid
+    bool isValid(const RenderTarget* p);        //!< Tells whether a RenderTarget object is valid
+    bool isValid(const View* p);                //!< Tells whether a View object is valid
+    bool isValid(const InstanceBuffer* p);      //!< Tells whether an InstanceBuffer object is valid
+
     /**
      * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) and blocks until
      * all commands to this point are executed. Note that does guarantee that the

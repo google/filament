@@ -368,7 +368,7 @@ using EntityVector = std::vector<utils::Entity>;
 register_vector<std::string>("RegistryKeys");
 register_vector<utils::Entity>("EntityVector");
 register_vector<FilamentInstance*>("AssetInstanceVector");
-register_vector<const MaterialInstance*>("MaterialInstanceVector");
+register_vector<MaterialInstance*>("MaterialInstanceVector");
 
 // CORE FILAMENT CLASSES
 // ---------------------
@@ -540,7 +540,53 @@ class_<Engine>("Engine")
     /// vb ::argument:: the [VertexBuffer] to destroy
     .function("destroyVertexBuffer", (void (*)(Engine*, VertexBuffer*)) []
             (Engine* engine, VertexBuffer* vb) { engine->destroy(vb); },
-            allow_raw_pointers());
+            allow_raw_pointers())
+
+    .function("isValidRenderer", EMBIND_LAMBDA(bool, (Engine* engine, Renderer* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidView", EMBIND_LAMBDA(bool, (Engine* engine, View* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidScene", EMBIND_LAMBDA(bool, (Engine* engine, Scene* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidFence", EMBIND_LAMBDA(bool, (Engine* engine, Fence* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidStream", EMBIND_LAMBDA(bool, (Engine* engine, Stream* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidIndexBuffer", EMBIND_LAMBDA(bool, (Engine* engine, IndexBuffer* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidVertexBuffer", EMBIND_LAMBDA(bool, (Engine* engine, VertexBuffer* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidSkinningBuffer", EMBIND_LAMBDA(bool, (Engine* engine, SkinningBuffer* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidIndirectLight", EMBIND_LAMBDA(bool, (Engine* engine, IndirectLight* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidMaterial", EMBIND_LAMBDA(bool, (Engine* engine, Material* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidSkybox", EMBIND_LAMBDA(bool, (Engine* engine, Skybox* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidColorGrading", EMBIND_LAMBDA(bool, (Engine* engine, ColorGrading* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidTexture", EMBIND_LAMBDA(bool, (Engine* engine, Texture* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidRenderTarget", EMBIND_LAMBDA(bool, (Engine* engine, RenderTarget* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidSwapChain", EMBIND_LAMBDA(bool, (Engine* engine, SwapChain* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers());
 
 /// SwapChain ::core class:: Represents the platform's native rendering surface.
 /// See also the [Engine] methods `createSwapChain` and `destroySwapChain`.
@@ -1290,6 +1336,12 @@ class_<MaterialInstance>("MaterialInstance")
     .function("setFloat4Parameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, filament::math::float4 value), {
         self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+    .function("setMat3Parameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, filament::math::mat3f value), {
+        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+    .function("setMat4Parameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, filament::math::mat4f value), {
+        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
     .function("setTextureParameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, Texture* value, TextureSampler sampler), {
         self->setParameter(name.c_str(), value, sampler); }), allow_raw_pointers())
@@ -1907,10 +1959,10 @@ class_<FilamentInstance>("gltfio$FilamentInstance")
 
     .function("applyMaterialVariant", &FilamentInstance::applyMaterialVariant)
 
-    .function("getMaterialInstances", EMBIND_LAMBDA(std::vector<const MaterialInstance*>,
+    .function("getMaterialInstances", EMBIND_LAMBDA(std::vector<MaterialInstance*>,
             (FilamentInstance* self), {
-        const MaterialInstance* const* ptr = self->getMaterialInstances();
-        return std::vector<const MaterialInstance*>(ptr, ptr + self->getMaterialInstanceCount());
+        MaterialInstance* const* ptr = self->getMaterialInstances();
+        return std::vector<MaterialInstance*>(ptr, ptr + self->getMaterialInstanceCount());
     }), allow_raw_pointers())
 
     .function("_getMaterialVariantNames", EMBIND_LAMBDA(std::vector<std::string>, (FilamentInstance* self), {

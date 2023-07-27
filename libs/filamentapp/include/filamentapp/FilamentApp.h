@@ -49,10 +49,12 @@ class ImGuiHelper;
 class IBL;
 class MeshAssimp;
 
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
 // For customizing the vulkan backend
 namespace filament::backend {
 class VulkanPlatform;
 }
+#endif
 
 class FilamentApp {
 public:
@@ -250,7 +252,9 @@ private:
     float mCameraNear = 0.1f;
     float mCameraFar = 100.0f;
 
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
     filament::backend::VulkanPlatform* mVulkanPlatform = nullptr;
+#endif
 };
 
 #endif // TNT_FILAMENT_SAMPLE_FILAMENTAPP_H

@@ -337,6 +337,11 @@ class MainActivity : Activity() {
         remoteServer?.close()
     }
 
+    override fun onBackPressed() {
+        super.onBackPressed()
+        finish()
+    }
+
     fun loadModelData(message: RemoteServer.ReceivedMessage) {
         Log.i(TAG, "Downloaded model ${message.label} (${message.buffer.capacity()} bytes)")
         clearStatusText()

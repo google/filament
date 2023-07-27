@@ -118,22 +118,22 @@ Material* ArchiveCache::getMaterial(const ArchiveRequirements& reqs) {
                 mMaterials[i] = Material::Builder()
                     .package(spec.package, spec.packageByteCount)
                     .build(mEngine);
+
+                // Don't attempt to precompile shaders on WebGL.
+                // Chrome already suffers from slow shader compilation:
+                // https://github.com/google/filament/issues/6615
+                // Precompiling shaders exacerbates the problem.
+    #if !defined(__EMSCRIPTEN__)
+                // First compile high priority variants
+                mMaterials[i]->compile(Material::CompilerPriorityQueue::HIGH,
+                        UserVariantFilterBit::DIRECTIONAL_LIGHTING |
+                        UserVariantFilterBit::DYNAMIC_LIGHTING |
+                        UserVariantFilterBit::SHADOW_RECEIVER);
+
+                // and then, everything else at low priority
+                mMaterials[i]->compile(Material::CompilerPriorityQueue::LOW);
+    #endif
             }
-
-            // Don't attempt to precompile shaders on WebGL.
-            // Chrome already suffers from slow shader compilation:
-            // https://github.com/google/filament/issues/6615
-            // Precompiling shaders exacerbates the problem.
-#if !defined(__EMSCRIPTEN__)
-            // compile everything at low priority
-            mMaterials[i]->compile(Material::CompilerPriorityQueue::LOW);
-
-            // promote variants we care about to high priority
-            mMaterials[i]->compile(Material::CompilerPriorityQueue::HIGH,
-                    UserVariantFilterBit::DIRECTIONAL_LIGHTING |
-                    UserVariantFilterBit::DYNAMIC_LIGHTING |
-                    UserVariantFilterBit::SHADOW_RECEIVER);
-#endif
 
             return mMaterials[i];
         }

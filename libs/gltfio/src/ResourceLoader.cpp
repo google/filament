@@ -854,7 +854,7 @@ void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
                     break;
                 }
                 // Generate flat normals if necessary.
-                if (!hasNormals && !prim.material->unlit) {
+                if (!hasNormals && prim.material && !prim.material->unlit) {
                     jobParams.emplace_back(Params { { &prim, (int) tindex },
                                                     { nullptr, tb, (uint8_t) pindex } });
                 }

@@ -7,6 +7,14 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.40.4
+
+- gltfio: fix crash when compute morph target without material
+- matc: fix buggy `variant-filter` flag
+- web: Added missing setMat3Parameter()/setMat4Parameter() to MaterialInstance
+- opengl: fix b/290670707 : crash when using the blob cache
+- engine: fix a crash with `Material::compile()` when a callback is specified
+
 ## v1.40.3
 
 ## v1.40.2

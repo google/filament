@@ -449,6 +449,141 @@ public class Engine {
         swapChain.clearNativeObject();
     }
 
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
+    public boolean isValidRenderer(@NonNull Renderer object) {
+        return nIsValidRenderer(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
+    public boolean isValidView(@NonNull View object) {
+        return nIsValidView(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
+    public boolean isValidScene(@NonNull Scene object) {
+        return nIsValidScene(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
+    public boolean isValidFence(@NonNull Fence object) {
+        return nIsValidFence(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
+    public boolean isValidStream(@NonNull Stream object) {
+        return nIsValidStream(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
+    public boolean isValidIndexBuffer(@NonNull IndexBuffer object) {
+        return nIsValidIndexBuffer(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
+    public boolean isValidVertexBuffer(@NonNull VertexBuffer object) {
+        return nIsValidVertexBuffer(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
+    public boolean isValidSkinningBuffer(@NonNull SkinningBuffer object) {
+        return nIsValidSkinningBuffer(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
+    public boolean isValidIndirectLight(@NonNull IndirectLight object) {
+        return nIsValidIndirectLight(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
+    public boolean isValidMaterial(@NonNull Material object) {
+        return nIsValidMaterial(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
+    public boolean isValidSkybox(@NonNull Skybox object) {
+        return nIsValidSkybox(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
+    public boolean isValidColorGrading(@NonNull ColorGrading object) {
+        return nIsValidColorGrading(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
+    public boolean isValidTexture(@NonNull Texture object) {
+        return nIsValidTexture(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
+    public boolean isValidRenderTarget(@NonNull RenderTarget object) {
+        return nIsValidRenderTarget(getNativeObject(), object.getNativeObject());
+    }
+
+    /**
+     * Returns whether the object is valid.
+     * @param object Object to check for validity
+     * @return returns true if the specified object is valid.
+     */
+    public boolean isValidSwapChain(@NonNull SwapChain object) {
+        return nIsValidSwapChain(getNativeObject(), object.getNativeObject());
+    }
+
     // View
 
     /**
@@ -785,17 +920,17 @@ public class Engine {
     private static native long nCreateSwapChain(long nativeEngine, Object nativeWindow, long flags);
     private static native long nCreateSwapChainHeadless(long nativeEngine, int width, int height, long flags);
     private static native long nCreateSwapChainFromRawPointer(long nativeEngine, long pointer, long flags);
-    private static native boolean nDestroySwapChain(long nativeEngine, long nativeSwapChain);
     private static native long nCreateView(long nativeEngine);
-    private static native boolean nDestroyView(long nativeEngine, long nativeView);
     private static native long nCreateRenderer(long nativeEngine);
-    private static native boolean nDestroyRenderer(long nativeEngine, long nativeRenderer);
     private static native long nCreateCamera(long nativeEngine, int entity);
     private static native long nGetCameraComponent(long nativeEngine, int entity);
     private static native void nDestroyCameraComponent(long nativeEngine, int entity);
     private static native long nCreateScene(long nativeEngine);
-    private static native boolean nDestroyScene(long nativeEngine, long nativeScene);
     private static native long nCreateFence(long nativeEngine);
+
+    private static native boolean nDestroyRenderer(long nativeEngine, long nativeRenderer);
+    private static native boolean nDestroyView(long nativeEngine, long nativeView);
+    private static native boolean nDestroyScene(long nativeEngine, long nativeScene);
     private static native boolean nDestroyFence(long nativeEngine, long nativeFence);
     private static native boolean nDestroyStream(long nativeEngine, long nativeStream);
     private static native boolean nDestroyIndexBuffer(long nativeEngine, long nativeIndexBuffer);
@@ -808,6 +943,22 @@ public class Engine {
     private static native boolean nDestroyColorGrading(long nativeEngine, long nativeColorGrading);
     private static native boolean nDestroyTexture(long nativeEngine, long nativeTexture);
     private static native boolean nDestroyRenderTarget(long nativeEngine, long nativeTarget);
+    private static native boolean nDestroySwapChain(long nativeEngine, long nativeSwapChain);
+    private static native boolean nIsValidRenderer(long nativeEngine, long nativeRenderer);
+    private static native boolean nIsValidView(long nativeEngine, long nativeView);
+    private static native boolean nIsValidScene(long nativeEngine, long nativeScene);
+    private static native boolean nIsValidFence(long nativeEngine, long nativeFence);
+    private static native boolean nIsValidStream(long nativeEngine, long nativeStream);
+    private static native boolean nIsValidIndexBuffer(long nativeEngine, long nativeIndexBuffer);
+    private static native boolean nIsValidVertexBuffer(long nativeEngine, long nativeVertexBuffer);
+    private static native boolean nIsValidSkinningBuffer(long nativeEngine, long nativeSkinningBuffer);
+    private static native boolean nIsValidIndirectLight(long nativeEngine, long nativeIndirectLight);
+    private static native boolean nIsValidMaterial(long nativeEngine, long nativeMaterial);
+    private static native boolean nIsValidSkybox(long nativeEngine, long nativeSkybox);
+    private static native boolean nIsValidColorGrading(long nativeEngine, long nativeColorGrading);
+    private static native boolean nIsValidTexture(long nativeEngine, long nativeTexture);
+    private static native boolean nIsValidRenderTarget(long nativeEngine, long nativeTarget);
+    private static native boolean nIsValidSwapChain(long nativeEngine, long nativeSwapChain);
     private static native void nDestroyEntity(long nativeEngine, int entity);
     private static native void nFlushAndWait(long nativeEngine);
     private static native long nGetTransformManager(long nativeEngine);
