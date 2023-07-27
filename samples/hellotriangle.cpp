@@ -72,7 +72,7 @@ static void printUsage(char* name) {
     std::string usage(
             "HELLOTRIANGLE renders a spinning colored triangle\n"
             "Usage:\n"
-            "    SHOWCASE [options]\n"
+            "    HELLOTRIANGLE [options]\n"
             "Options:\n"
             "   --help, -h\n"
             "       Prints this message\n\n"
