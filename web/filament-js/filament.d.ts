@@ -183,6 +183,7 @@ export class MaterialInstance {
     public setDepthWrite(enable: boolean): void;
     public setStencilWrite(enable: boolean): void;
     public setDepthCulling(enable: boolean): void;
+    public setDepthFunc(func: CompareFunc): void;
     public setStencilCompareFunction(func: CompareFunc, face?: StencilFace): void;
     public setStencilOpStencilFail(op: StencilOperation, face?: StencilFace): void;
     public setStencilOpDepthFail(op: StencilOperation, face?: StencilFace): void;

@@ -255,6 +255,14 @@ void MaterialInstance::setDepthCulling(bool enable) noexcept {
     downcast(this)->setDepthCulling(enable);
 }
 
+void MaterialInstance::setDepthFunc(DepthFunc depthFunc) noexcept {
+    downcast(this)->setDepthFunc(depthFunc);
+}
+
+MaterialInstance::DepthFunc MaterialInstance::getDepthFunc() const noexcept {
+    return downcast(this)->getDepthFunc();
+}
+
 void MaterialInstance::setStencilWrite(bool enable) noexcept {
     downcast(this)->setStencilWrite(enable);
 }
