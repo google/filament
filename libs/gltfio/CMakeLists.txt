@@ -214,7 +214,7 @@ add_custom_target(test_gltfio_files DEPENDS ${GLTF_TEST_FILES})
 
 # The following tests rely on private APIs that are stripped
 # away in Release builds
-if (TNT_DEV)
+if (TNT_DEV AND NOT WEBGL AND NOT ANDROID AND NOT IOS)
     set(TEST_TARGET test_gltfio)
 
     add_executable(${TEST_TARGET} test/gltfio_test.cpp)
