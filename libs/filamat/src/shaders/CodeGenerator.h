@@ -73,7 +73,7 @@ public:
 
     // generate prolog for the given shader
     utils::io::sstream& generateProlog(utils::io::sstream& out, ShaderStage stage,
-            MaterialInfo const& material) const;
+            MaterialInfo const& material, filament::Variant v) const;
 
     static utils::io::sstream& generateEpilog(utils::io::sstream& out);
 
