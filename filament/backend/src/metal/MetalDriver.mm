@@ -380,11 +380,6 @@ void MetalDriver::createFenceR(Handle<HwFence> fh, int dummy) {
     fence->encode();
 }
 
-void MetalDriver::createSyncR(Handle<HwSync> sh, int) {
-    auto* fence = handle_cast<MetalFence>(sh);
-    fence->encode();
-}
-
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     if (UTILS_UNLIKELY(flags & SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER)) {
         CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) nativeWindow;
@@ -452,12 +447,6 @@ Handle<HwFence> MetalDriver::createFenceS() noexcept {
     // The handle must be constructed here, as a synchronous call to wait might happen before
     // createFenceR is executed.
     return alloc_and_construct_handle<MetalFence, HwFence>(*mContext);
-}
-
-Handle<HwSync> MetalDriver::createSyncS() noexcept {
-    // The handle must be constructed here, as a synchronous call to getSyncStatus might happen
-    // before createSyncR is executed.
-    return alloc_and_construct_handle<MetalFence, HwSync>(*mContext);
 }
 
 Handle<HwSwapChain> MetalDriver::createSwapChainS() noexcept {
@@ -566,13 +555,6 @@ void MetalDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
         destruct_handle<MetalTimerQuery>(tqh);
     }
 }
-
-void MetalDriver::destroySync(Handle<HwSync> sh) {
-    if (sh) {
-        destruct_handle<MetalFence>(sh);
-    }
-}
-
 
 void MetalDriver::terminate() {
     // finish() will flush the pending command buffer and will ensure all GPU work has finished.
@@ -839,17 +821,6 @@ void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 bool MetalDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     auto* tq = handle_cast<MetalTimerQuery>(tqh);
     return mContext->timerQueryImpl->getQueryResult(tq, elapsedTime);
-}
-
-SyncStatus MetalDriver::getSyncStatus(Handle<HwSync> sh) {
-    auto* fence = handle_cast<MetalFence>(sh);
-    FenceStatus status = fence->wait(0);
-    if (status == FenceStatus::TIMEOUT_EXPIRED) {
-        return SyncStatus::NOT_SIGNALED;
-    } else if (status == FenceStatus::CONDITION_SATISFIED) {
-        return SyncStatus::SIGNALED;
-    }
-    return SyncStatus::ERROR;
 }
 
 void MetalDriver::generateMipmaps(Handle<HwTexture> th) {
