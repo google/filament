@@ -27,7 +27,7 @@ using namespace utils;
 using namespace backend;
 
 FrameSkipper::FrameSkipper(size_t latency) noexcept
-        : mLast(latency) {
+        : mLast(latency - 1) {
     assert_invariant(latency <= MAX_FRAME_LATENCY);
 }
 
