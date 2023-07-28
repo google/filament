@@ -1114,9 +1114,10 @@ bool FEngine::execute() {
     }
 
     // execute all command buffers
+    auto& driver = getDriverApi();
     for (auto& item : buffers) {
         if (UTILS_LIKELY(item.begin)) {
-            getDriverApi().execute(item.begin);
+            driver.execute(item.begin);
             mCommandBufferQueue.releaseBuffer(item);
         }
     }
