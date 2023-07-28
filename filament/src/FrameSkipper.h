@@ -58,8 +58,8 @@ public:
     void endFrame(backend::DriverApi& driver) noexcept;
 
 private:
-    using Container = std::array<backend::Handle<backend::HwSync>, MAX_FRAME_LATENCY>;
-    mutable Container mDelayedSyncs{};
+    using Container = std::array<backend::Handle<backend::HwFence>, MAX_FRAME_LATENCY>;
+    mutable Container mDelayedFences{};
     size_t mLast;
 };
 

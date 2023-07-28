@@ -506,11 +506,6 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
     construct<VulkanFence>(fh, commandBuffer);
 }
 
-void VulkanDriver::createSyncR(Handle<HwSync> sh, int) {
-    VulkanCommandBuffer const& commandBuffer = mCommands->get();
-    construct<VulkanSync>(sh, commandBuffer);
-}
-
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     if ((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0 &&
         !isSRGBSwapChainSupported()) {
@@ -587,12 +582,6 @@ Handle<HwFence> VulkanDriver::createFenceS() noexcept {
     return allocHandle<VulkanFence>();
 }
 
-Handle<HwSync> VulkanDriver::createSyncS() noexcept {
-    Handle<HwSync> sh = allocHandle<VulkanSync>();
-    construct<VulkanSync>(sh);
-    return sh;
-}
-
 Handle<HwSwapChain> VulkanDriver::createSwapChainS() noexcept {
     return allocHandle<VulkanSwapChain>();
 }
@@ -646,11 +635,6 @@ void VulkanDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
         mDisposer.removeReference(handle_cast<VulkanTimerQuery*>(tqh));
     }
 }
-
-void VulkanDriver::destroySync(Handle<HwSync> sh) {
-    destruct<VulkanSync>(sh);
-}
-
 
 Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream) {
     return {};
@@ -929,23 +913,6 @@ bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapse
     uint64_t delta = uint64_t(float(timestamp1 - timestamp0) * period);
     *elapsedTime = delta;
     return true;
-}
-
-SyncStatus VulkanDriver::getSyncStatus(Handle<HwSync> sh) {
-    VulkanSync* sync = handle_cast<VulkanSync*>(sh);
-    if (sync->fence == nullptr) {
-        return SyncStatus::NOT_SIGNALED;
-    }
-    VkResult status = sync->fence->status.load(std::memory_order_relaxed);
-    switch (status) {
-        case VK_SUCCESS: return SyncStatus::SIGNALED;
-        case VK_INCOMPLETE: return SyncStatus::NOT_SIGNALED;
-        case VK_NOT_READY: return SyncStatus::NOT_SIGNALED;
-        case VK_ERROR_DEVICE_LOST: return SyncStatus::ERROR;
-        default:
-            // NOTE: In theory, the fence status must be one of the above values.
-            return SyncStatus::ERROR;
-    }
 }
 
 void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {
