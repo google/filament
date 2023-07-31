@@ -628,36 +628,33 @@ void GLSLPostProcessor::fixupClipDistance(
     }
 }
 
+// CreateMergeReturnPass() causes these issues:
+// - triggers a segfault with AMD OpenGL drivers on macOS
+// - triggers a crash on some Adreno drivers (b/291140208, b/289401984, b/289393290)
+// However Metal requires this pass in order to correctly generate half-precision MSL
+//
+// CreateSimplificationPass() creates a lot of problems:
+// - Adreno GPU show artifacts after running simplification passes (Vulkan)
+// - spirv-cross fails generating working glsl
+//      (https://github.com/KhronosGroup/SPIRV-Cross/issues/2162)
+// - generally it makes the code more complicated, e.g.: replacing for loops with
+//   while-if-break, unclear if it helps for anything.
+// However, the simplification passes below are necessary when targeting Metal, otherwise the
+// result is mismatched half / float assignments in MSL.
+
+
 void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config const& config) {
-    optimizer
-            .RegisterPass(CreateWrapOpKillPass())
-            .RegisterPass(CreateDeadBranchElimPass());
-
-    if (config.shaderModel != ShaderModel::DESKTOP ||
-            config.targetApi != MaterialBuilder::TargetApi::OPENGL) {
-        // this triggers a segfault with AMD OpenGL drivers on MacOS
-        // note that Metal also requires this pass in order to correctly generate half-precision MSL
-        optimizer.RegisterPass(CreateMergeReturnPass());
-    }
-
-    // CreateSimplificationPass() creates a lot of problems:
-    // - Adreno GPU show artifacts after running simplication passes (Vulkan)
-    // - spirv-cross fails generating working glsl
-    //      (https://github.com/KhronosGroup/SPIRV-Cross/issues/2162)
-    // - generally it makes the code more complicated, e.g.: replacing for loops with
-    //   while-if-break, unclear if it helps for anything.
-    // However, the simplification passes below are necessary when targeting Metal, otherwise the
-    // result is mismatched half / float assignments in MSL.
-
     auto RegisterPass = [&](spvtools::Optimizer::PassToken&& pass,
-                                MaterialBuilder::TargetApi apiFilter =
-                                        MaterialBuilder::TargetApi::ALL) {
+            MaterialBuilder::TargetApi apiFilter = MaterialBuilder::TargetApi::ALL) {
         if (!(config.targetApi & apiFilter)) {
             return;
         }
         optimizer.RegisterPass(std::move(pass));
     };
 
+    RegisterPass(CreateWrapOpKillPass());
+    RegisterPass(CreateDeadBranchElimPass());
+    RegisterPass(CreateMergeReturnPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateInlineExhaustivePass());
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreatePrivateToLocalPass());
@@ -692,47 +689,48 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
 }
 
 void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& config) {
-    optimizer
-            .RegisterPass(CreateWrapOpKillPass())
-            .RegisterPass(CreateDeadBranchElimPass());
+    auto RegisterPass = [&](spvtools::Optimizer::PassToken&& pass,
+            MaterialBuilder::TargetApi apiFilter = MaterialBuilder::TargetApi::ALL) {
+        if (!(config.targetApi & apiFilter)) {
+            return;
+        }
+        optimizer.RegisterPass(std::move(pass));
+    };
 
-    if (config.shaderModel != ShaderModel::DESKTOP) {
-        // this triggers a segfault with AMD drivers on MacOS
-        optimizer.RegisterPass(CreateMergeReturnPass());
-    }
-
-    optimizer
-            .RegisterPass(CreateInlineExhaustivePass())
-            .RegisterPass(CreateEliminateDeadFunctionsPass())
-            .RegisterPass(CreatePrivateToLocalPass())
-            .RegisterPass(CreateScalarReplacementPass(0))
-            .RegisterPass(CreateLocalMultiStoreElimPass())
-            .RegisterPass(CreateCCPPass())
-            .RegisterPass(CreateLoopUnrollPass(true))
-            .RegisterPass(CreateDeadBranchElimPass())
-            .RegisterPass(CreateSimplificationPass())
-            .RegisterPass(CreateScalarReplacementPass(0))
-            .RegisterPass(CreateLocalSingleStoreElimPass())
-            .RegisterPass(CreateIfConversionPass())
-            .RegisterPass(CreateSimplificationPass())
-            .RegisterPass(CreateAggressiveDCEPass())
-            .RegisterPass(CreateDeadBranchElimPass())
-            .RegisterPass(CreateBlockMergePass())
-            .RegisterPass(CreateLocalAccessChainConvertPass())
-            .RegisterPass(CreateLocalSingleBlockLoadStoreElimPass())
-            .RegisterPass(CreateAggressiveDCEPass())
-            .RegisterPass(CreateCopyPropagateArraysPass())
-            .RegisterPass(CreateVectorDCEPass())
-            .RegisterPass(CreateDeadInsertElimPass())
-            // this breaks UBO layout
-            //.RegisterPass(CreateEliminateDeadMembersPass())
-            .RegisterPass(CreateLocalSingleStoreElimPass())
-            .RegisterPass(CreateBlockMergePass())
-            .RegisterPass(CreateLocalMultiStoreElimPass())
-            .RegisterPass(CreateRedundancyEliminationPass())
-            .RegisterPass(CreateSimplificationPass())
-            .RegisterPass(CreateAggressiveDCEPass())
-            .RegisterPass(CreateCFGCleanupPass());
+    RegisterPass(CreateWrapOpKillPass());
+    RegisterPass(CreateDeadBranchElimPass());
+    RegisterPass(CreateMergeReturnPass(), MaterialBuilder::TargetApi::METAL);
+    RegisterPass(CreateInlineExhaustivePass());
+    RegisterPass(CreateEliminateDeadFunctionsPass());
+    RegisterPass(CreatePrivateToLocalPass());
+    RegisterPass(CreateScalarReplacementPass(0));
+    RegisterPass(CreateLocalMultiStoreElimPass());
+    RegisterPass(CreateCCPPass());
+    RegisterPass(CreateLoopUnrollPass(true));
+    RegisterPass(CreateDeadBranchElimPass());
+    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
+    RegisterPass(CreateScalarReplacementPass(0));
+    RegisterPass(CreateLocalSingleStoreElimPass());
+    RegisterPass(CreateIfConversionPass());
+    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
+    RegisterPass(CreateAggressiveDCEPass());
+    RegisterPass(CreateDeadBranchElimPass());
+    RegisterPass(CreateBlockMergePass());
+    RegisterPass(CreateLocalAccessChainConvertPass());
+    RegisterPass(CreateLocalSingleBlockLoadStoreElimPass());
+    RegisterPass(CreateAggressiveDCEPass());
+    RegisterPass(CreateCopyPropagateArraysPass());
+    RegisterPass(CreateVectorDCEPass());
+    RegisterPass(CreateDeadInsertElimPass());
+    // this breaks UBO layout
+    //RegisterPass(CreateEliminateDeadMembersPass());
+    RegisterPass(CreateLocalSingleStoreElimPass());
+    RegisterPass(CreateBlockMergePass());
+    RegisterPass(CreateLocalMultiStoreElimPass());
+    RegisterPass(CreateRedundancyEliminationPass());
+    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
+    RegisterPass(CreateAggressiveDCEPass());
+    RegisterPass(CreateCFGCleanupPass());
 }
 
 } // namespace filamat
