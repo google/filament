@@ -26,6 +26,8 @@
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
+#include <imgui.h>
+
 #include <utils/EntityManager.h>
 
 #include <filamentapp/Config.h>
@@ -48,6 +50,7 @@ struct App {
     Skybox* skybox;
     Entity whiteTriangle;
     Entity colorTriangle;
+    MaterialInstance::DepthFunc depthFunc;
 };
 
 struct Vertex {
@@ -115,8 +118,11 @@ int main(int argc, char** argv) {
                 .culling(false)
                 .receiveShadows(false)
                 .castShadows(false)
+                .priority(5)  // draw after whiteTriangle.
                 .build(*engine, app.colorTriangle);
         scene->addEntity(app.colorTriangle);
+
+        app.depthFunc = MaterialInstance::DepthFunc::GE;
     };
 
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
@@ -129,6 +135,17 @@ int main(int argc, char** argv) {
 
         engine->destroyCameraComponent(app.camera);
         utils::EntityManager::get().destroy(app.camera);
+    };
+
+    auto gui = [&app](Engine* engine, View* view) {
+        int depthFuncSelection = (int) app.depthFunc;
+        ImGui::Combo("Depth Function", &depthFuncSelection,
+                "Less or equal\0Greater or equal\0Strictly less than\0"
+                "Strictly greater than\0Equal\0Not equal\0Always\0Never\0\0");
+        if (depthFuncSelection != (int) app.depthFunc) {
+            app.depthFunc = (MaterialInstance::DepthFunc) depthFuncSelection;
+            app.mat->getDefaultInstance()->setDepthFunc(app.depthFunc);
+        }
     };
 
     FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
@@ -144,7 +161,7 @@ int main(int argc, char** argv) {
                 filament::math::mat4f::rotation(now, filament::math::float3{ 0, 1, 0 }));
     });
 
-    FilamentApp::get().run(config, setup, cleanup);
+    FilamentApp::get().run(config, setup, cleanup, gui);
 
     return 0;
 }
