@@ -151,8 +151,7 @@ public:
 
     struct GLTimerQuery : public HwTimerQuery {
         struct State {
-            std::atomic<uint64_t> elapsed{};
-            std::atomic_bool available{};
+            std::atomic<int64_t> elapsed{};
         };
         struct {
             GLuint query = 0;
@@ -196,14 +195,15 @@ public:
         TargetBufferFlags targets = {};
     };
 
-    struct GLSync : public HwSync {
-        using HwSync::HwSync;
+    struct GLFence : public HwFence {
+        using HwFence::HwFence;
         struct State {
-            std::atomic<OpenGLContext::FenceSync::Status> status{
-                OpenGLContext::FenceSync::Status::TIMEOUT_EXPIRED };
+            std::mutex lock;
+            std::condition_variable cond;
+            FenceStatus status{ FenceStatus::TIMEOUT_EXPIRED };
         };
-        OpenGLContext::FenceSync handle{};
-        std::shared_ptr<State> result{ std::make_shared<GLSync::State>() };
+        GLsync sync;
+        std::shared_ptr<State> state{ std::make_shared<GLFence::State>() };
     };
 
     OpenGLDriver(OpenGLDriver const&) = delete;
@@ -383,10 +383,12 @@ private:
 
     void updateTextureLodRange(GLTexture* texture, int8_t targetLevel) noexcept;
 
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     // tasks executed on the main thread after the fence signaled
-    void whenGpuCommandsComplete(std::function<void()> fn) noexcept;
+    void whenGpuCommandsComplete(const std::function<void()>& fn) noexcept;
     void executeGpuCommandsCompleteOps() noexcept;
-    std::vector<std::pair<OpenGLContext::FenceSync, std::function<void()>>> mGpuCommandCompleteOps;
+    std::vector<std::pair<GLsync, std::function<void()>>> mGpuCommandCompleteOps;
+#endif
 
     // tasks regularly executed on the main thread at until they return true
     void runEveryNowAndThen(std::function<bool()> fn) noexcept;
