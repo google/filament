@@ -28,6 +28,7 @@ import com.google.android.filament.Fence
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
 import com.google.android.filament.View
+import com.google.android.filament.View.OnPickCallback
 import com.google.android.filament.utils.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,7 +57,9 @@ class MainActivity : Activity() {
     private lateinit var modelViewer: ModelViewer
     private lateinit var titlebarHint: TextView
     private val doubleTapListener = DoubleTapListener()
+    private val singleTapListener = SingleTapListener()
     private lateinit var doubleTapDetector: GestureDetector
+    private lateinit var singleTapDetector: GestureDetector
     private var remoteServer: RemoteServer? = null
     private var statusToast: Toast? = null
     private var statusText: String? = null
@@ -77,6 +80,7 @@ class MainActivity : Activity() {
         choreographer = Choreographer.getInstance()
 
         doubleTapDetector = GestureDetector(applicationContext, doubleTapListener)
+        singleTapDetector = GestureDetector(applicationContext, singleTapListener)
 
         modelViewer = ModelViewer(surfaceView)
         viewerContent.view = modelViewer.view
@@ -88,6 +92,7 @@ class MainActivity : Activity() {
         surfaceView.setOnTouchListener { _, event ->
             modelViewer.onTouchEvent(event)
             doubleTapDetector.onTouchEvent(event)
+            singleTapDetector.onTouchEvent(event)
             true
         }
 
@@ -229,6 +234,7 @@ class MainActivity : Activity() {
                 modelViewer.scene.skybox = sky
                 modelViewer.scene.indirectLight = ibl
                 viewerContent.indirectLight = ibl
+
             }
         }
     }
@@ -428,6 +434,21 @@ class MainActivity : Activity() {
             modelViewer.destroyModel()
             createDefaultRenderables()
             return super.onDoubleTap(e)
+        }
+    }
+
+    // Just for testing purposes
+    inner class SingleTapListener : GestureDetector.SimpleOnGestureListener() {
+        override fun onSingleTapUp(event: MotionEvent): Boolean {
+            modelViewer.view.pick(
+                event.x.toInt(),
+                surfaceView.height - event.y.toInt(),
+                surfaceView.handler, {
+                    val name = modelViewer.asset!!.getName(it.renderable)
+                    Log.v("Filament", "Picked ${it.renderable}: " + name)
+                },
+            )
+            return super.onSingleTapUp(event)
         }
     }
 }
