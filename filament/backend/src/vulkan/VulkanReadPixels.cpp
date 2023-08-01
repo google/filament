@@ -57,8 +57,8 @@ void TaskHandler::drain() {
                 {
                     std::unique_lock<std::mutex> lock(syncPointMutex);
                     done = true;
+                    syncCondition.notify_one();
                 }
-                syncCondition.notify_one();
             });
 
     std::unique_lock<std::mutex> lock(syncPointMutex);
