@@ -23,6 +23,7 @@
 #include "VulkanConstants.h"
 #include "VulkanContext.h"
 #include "VulkanFboCache.h"
+#include "VulkanReadPixels.h"
 #include "VulkanSamplerCache.h"
 #include "VulkanStagePool.h"
 #include "VulkanUtility.h"
@@ -158,6 +159,7 @@ private:
     VulkanSamplerCache mSamplerCache;
     VulkanBlitter mBlitter;
     VulkanSamplerGroup* mSamplerBindings[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
+    VulkanReadPixels mReadPixels;
 };
 
 } // namespace filament::backend

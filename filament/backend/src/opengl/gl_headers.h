@@ -188,6 +188,12 @@ using namespace glext;
 #   define GL_TEXTURE_CUBE_MAP_ARRAY                0x9009
 #endif
 
+#if defined(GL_EXT_clip_cull_distance)
+#   define GL_CLIP_DISTANCE0                        GL_CLIP_DISTANCE0_EXT
+#else
+#   define GL_CLIP_DISTANCE0                        0x3000
+#endif
+
 #if defined(GL_KHR_debug)
 #   define GL_DEBUG_OUTPUT                          GL_DEBUG_OUTPUT_KHR
 #   define GL_DEBUG_OUTPUT_SYNCHRONOUS              GL_DEBUG_OUTPUT_SYNCHRONOUS_KHR
