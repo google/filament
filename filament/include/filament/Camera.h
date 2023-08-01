@@ -151,7 +151,7 @@ namespace filament {
  * relative to this head space by setEyeModelMatrix.
  *
  * Each eye also maintains its own projection matrix. These can be set with setCustomEyeProjection.
- * Care must taken to correctly set the projectionForCulling matrix, as well as its corresponding
+ * Care must be taken to correctly set the projectionForCulling matrix, as well as its corresponding
  * near and far values. The projectionForCulling matrix must define a frustum (in head space) that
  * bounds the frustums of both eyes. Alternatively, culling may be disabled with
  * View::setFrustumCullingEnabled.

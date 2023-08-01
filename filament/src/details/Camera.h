@@ -78,7 +78,7 @@ public:
 
     // viewing the projection matrix to be used for rendering, contains scaling/shift and possibly
     // other transforms needed by the shaders
-    math::mat4 getProjectionMatrix(int eye = 0) const noexcept;
+    math::mat4 getProjectionMatrix(uint8_t eye = 0) const noexcept;
 
     // culling the projection matrix to be used for culling, contains scaling/shift
     math::mat4 getCullingProjectionMatrix() const noexcept;
@@ -214,8 +214,6 @@ struct CameraInfo {
     CameraInfo() noexcept = default;
     explicit CameraInfo(FCamera const& camera) noexcept;
     CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamera) noexcept;
-
-    int eyeCount = 1;
 
     // projection matrix for drawing (infinite zfar)
     // for monoscopic rendering

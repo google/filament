@@ -152,7 +152,8 @@ void UTILS_NOINLINE FCamera::setProjection(Camera::Projection projection,
     FCamera::setCustomProjection(p, c, near, far);
 }
 
-math::mat4 FCamera::getProjectionMatrix(int eye) const noexcept {
+math::mat4 FCamera::getProjectionMatrix(uint8_t eye) const noexcept {
+    assert_invariant(eye == 0 || eye == 1);
     // This is where we transform the user clip-space (GL convention) to our virtual clip-space
     // (inverted DX convention)
     // Note that this math ends up setting the projection matrix' p33 to 0, which is where we're

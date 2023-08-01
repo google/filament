@@ -525,7 +525,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
         // soaInstanceInfo[i].count is the number of instances the user has requested, either for
         // manual or hybrid instancing. Instanced stereo doubles the number of instances.
-        if (hasInstancedStereo) {
+        if (UTILS_UNLIKELY(hasInstancedStereo)) {
             cmdColor.primitive.instanceCount =
                     (soaInstanceInfo[i].count * 2) | PrimitiveInfo::USER_INSTANCE_MASK;
         }
@@ -550,7 +550,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
             cmdDepth.primitive.materialVariant.setSkinning(hasSkinningOrMorphing);
             cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
 
-            if (hasInstancedStereo) {
+            if (UTILS_UNLIKELY(hasInstancedStereo)) {
                 cmdColor.primitive.instanceCount =
                         (soaInstanceInfo[i].count * 2) | PrimitiveInfo::USER_INSTANCE_MASK;
             }

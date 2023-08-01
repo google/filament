@@ -85,8 +85,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // Stereoscopic rendering
     // --------------------------------------------------------------------------------------------
 
-    math::mat4f eyeFromWorldMatrix[4];
-    math::mat4f clipFromEyeMatrix[4];
+    math::mat4f eyeFromWorldMatrix[2];
+    math::mat4f clipFromEyeMatrix[2];
 
     // --------------------------------------------------------------------------------------------
 
@@ -215,7 +215,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 };
 
 // 2 KiB == 128 float4s
-static_assert(sizeof(PerViewUib) == sizeof(math::float4) * 128,
+static_assert(sizeof(PerViewUib) == sizeof(math::float4) * 112,
         "PerViewUib should be exactly 2KiB");
 
 // ------------------------------------------------------------------------------------------------
