@@ -55,13 +55,13 @@ struct Variant {
     //   X: either 1 or 0
     //                               1     0    0      0     1     0     1
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-    // Variant              | STE | VSM | FOG | DEP | SKN | SRE | DYN | DIR |   128
+    // Variant              | STE | VSM | FOG | DEP | SKN | SRE | DYN | DIR |   256
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
     //                                    PCK
     //
     // Standard variants:
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-    //                      | STE | VSM | FOG |  0  | SKN | SRE | DYN | DIR |    64 - 22 = 42
+    //                      | STE | VSM | FOG |  0  | SKN | SRE | DYN | DIR |    128 - 44 = 84
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
     //      Vertex shader      X     0     0     0     X     X     X     X
     //    Fragment shader      0     X     X     0     0     X     X     X
@@ -72,12 +72,11 @@ struct Variant {
     //
     // Depth variants:
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-    //                      | STE | VSM | PCK |  1  | SKN |  0  |  0  |  0  |   8 - 2 = 6
+    //                      | STE | VSM | PCK |  1  | SKN |  0  |  0  |  0  |   16 - 4 = 12
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
     //       Vertex depth      X     X     0     1     X     0     0     0
     //     Fragment depth      0     X     X     1     0     0     0     0
-    //           Reserved      X     1     1     1     X     0     0     0     [  -8]
-    //           Reserved      X     X     X     1     X     X     X     X     [-128]
+    //           Reserved      X     1     1     1     X     0     0     0     [  -4]
     //
     // 48 variants used, 80 reserved (128 - 46)
     //
