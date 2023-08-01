@@ -7,6 +7,18 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.40.5
+
+- backend: Disable timer queries on all Mali GPUs (fixes b/233754398)
+- engine: Add a way to query the validity of most filament objects (see `Engine::isValid`)
+- opengl: fix b/290388359 : possible crash when shutting down the engine
+- engine: Improve precision of frame time measurement when using emulated TimerQueries
+- backend: Improve frame pacing on Android and Vulkan.
+- backend: workaround b/291140208 (gltf_viewer crashes on Nexus 6P)
+- engine: support `setDepthFunc` for `MaterialInstance`
+- web: Added setDepthFunc()/getDepthFunc() to MaterialInstance
+- android: Added setDepthFunc()/getDepthFunc() to MaterialInstance
+
 ## v1.40.4
 
 - gltfio: fix crash when compute morph target without material
