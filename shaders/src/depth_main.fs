@@ -63,7 +63,7 @@ void main() {
     outPicking.g = float( object_uniforms_objectId          % 256) / 255.0;
     outPicking.r = vertex_position.z / vertex_position.w;
 #else
-    outPicking.x = float(object_uniforms_objectId);
+    outPicking.x = intBitsToFloat(object_uniforms_objectId);
     outPicking.y = vertex_position.z / vertex_position.w;
 #endif
 #if __VERSION__ == 100
