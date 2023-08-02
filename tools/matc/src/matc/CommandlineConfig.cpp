@@ -76,7 +76,7 @@ static void usage(char* name) {
             "   --variant-filter=<filter>, -V <filter>\n"
             "       Filter out specified comma-separated variants:\n"
             "           directionalLighting, dynamicLighting, shadowReceiver, skinning, vsm, fog,"
-            "           ssr (screen-space reflections)\n"
+            "           ssr (screen-space reflections), stereo\n"
             "       This variant filter is merged with the filter from the material, if any\n\n"
             "   --version, -v\n"
             "       Print the material version number\n\n"
