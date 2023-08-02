@@ -925,10 +925,10 @@ int main(int argc, char** argv) {
             // For testing, we want to render a side-by-side layout so users can view with
             // "cross-eyed" stereo.
             // For cross-eyed stereo, Eye 0 is really the RIGHT eye, while Eye 1 is the LEFT eye.
-            mat4 eyes[2];
-            eyes[0] = mat4::translation(double3{ od, 0.0, 0.0});    // right eye
-            eyes[1] = mat4::translation(double3{-od, 0.0, 0.0});    // left eye
-            c.setEyeModelMatrix(eyes);
+            const mat4 rightEye = mat4::translation(double3{ od, 0.0, 0.0});    // right eye
+            const mat4 leftEye  = mat4::translation(double3{-od, 0.0, 0.0});    // left eye
+            c.setEyeModelMatrix(0, rightEye);
+            c.setEyeModelMatrix(1, leftEye);
             mat4 projections[2];
             // Use an aspect ratio of 1.0. The viewport will be taken into account in
             // FilamentApp.cpp.
@@ -938,7 +938,8 @@ int main(int argc, char** argv) {
             // FIXME: the aspect ratio will be incorrect until configureCamerasForWindow is
             // triggered, which will happen the next time the window is resized.
         } else {
-            view->getCamera().setEyeModelMatrix({});
+            view->getCamera().setEyeModelMatrix(0, {});
+            view->getCamera().setEyeModelMatrix(1, {});
         }
 
         app.scene.groundMaterial->setDefaultParameter(

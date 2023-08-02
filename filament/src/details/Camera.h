@@ -45,7 +45,7 @@ public:
 
     void terminate(FEngine& engine) noexcept { }
 
-    void setEyeModelMatrix(math::mat4 const (&model)[2]) noexcept;
+    void setEyeModelMatrix(uint8_t eyeId, math::mat4 const& model);
 
     void setCustomEyeProjection(math::mat4 const* projection, size_t count,
             math::mat4 const& projectionForCulling, double near, double far);

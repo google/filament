@@ -380,24 +380,25 @@ public:
     void setModelMatrix(const math::mat4& model) noexcept;
     void setModelMatrix(const math::mat4f& model) noexcept; //!< @overload
 
-    /** Set the position of each eye relative to this Camera (head).
+    /** Set the position of an eye relative to this Camera (head).
      *
-     * By default, these are both identity matrices.
+     * By default, both eyes' model matrices are identity matrices.
      *
      * For example, to position Eye 0 3cm leftwards and Eye 1 3cm rightwards:
      * ~~~~~~~~~~~{.cpp}
-     * mat4 eyes[2];
-     * eyes[0] = mat4::translation(double3{-0.03, 0.0, 0.0});
-     * eyes[1] = mat4::translation(double3{ 0.03, 0.0, 0.0});
-     * camera.setEyeModelMatrix(eyes);
+     * const mat4 leftEye  = mat4::translation(double3{-0.03, 0.0, 0.0});
+     * const mat4 rightEye = mat4::translation(double3{ 0.03, 0.0, 0.0});
+     * camera.setEyeModelMatrix(0, leftEye);
+     * camera.setEyeModelMatrix(1, rightEye);
      * ~~~~~~~~~~~
      *
      * This method is not intended to be called every frame. Instead, to update the position of the
      * head, use Camera::setModelMatrix.
      *
-     * @param model an array of two eye model matrices, the first, Eye 0, the second, Eye 1.
+     * @param eyeId the index of the eye to set, 0 for Eye 0, 1 for Eye 1.
+     * @param model the model matrix for an individual eye
      */
-    void setEyeModelMatrix(math::mat4 const (&model)[2]) noexcept;
+    void setEyeModelMatrix(uint8_t eyeId, math::mat4 const& model);
 
     /** Sets the camera's model matrix
      *

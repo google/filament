@@ -189,9 +189,9 @@ void UTILS_NOINLINE FCamera::setModelMatrix(const mat4& modelMatrix) noexcept {
     transformManager.setTransform(transformManager.getInstance(mEntity), modelMatrix);
 }
 
-void UTILS_NOINLINE FCamera::setEyeModelMatrix(math::mat4 const (&model)[2]) noexcept {
-    mEyeFromView[0] = inverse(model[0]);
-    mEyeFromView[1] = inverse(model[1]);
+void UTILS_NOINLINE FCamera::setEyeModelMatrix(uint8_t eyeId, math::mat4 const& model) {
+    ASSERT_PRECONDITION(eyeId == 0 || eyeId == 1, "eyeId must be either 0 or 1.");
+    mEyeFromView[eyeId] = inverse(model);
 }
 
 void FCamera::lookAt(double3 const& eye, double3 const& center, double3 const& up) noexcept {
