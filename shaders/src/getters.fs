@@ -4,7 +4,7 @@
 
 /** sort-of public */
 float getObjectUserData() {
-    return object_uniforms.userData;
+    return object_uniforms_userData;
 }
 
 //------------------------------------------------------------------------------
