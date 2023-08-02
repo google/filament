@@ -1160,6 +1160,7 @@ error:
         mVariantFilter |= uint32_t(UserVariantFilterBit::SKINNING);
         mVariantFilter |= uint32_t(UserVariantFilterBit::VSM);
         mVariantFilter |= uint32_t(UserVariantFilterBit::SSR);
+        mVariantFilter |= uint32_t(UserVariantFilterBit::STE);
     }
 
     std::vector<Variant> variants;
