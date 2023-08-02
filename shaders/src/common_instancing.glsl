@@ -2,41 +2,48 @@
 // Instancing
 // ------------------------------------------------------------------------------------------------
 
-PerRenderableData object_uniforms;
+highp mat4 object_uniforms_worldFromModelMatrix;
+highp mat3 object_uniforms_worldFromModelNormalMatrix;
+highp int object_uniforms_morphTargetCount;
+highp int object_uniforms_flagsChannels;                   // see packFlags() below (0x00000fll)
+highp int object_uniforms_objectId;                        // used for picking
+highp float object_uniforms_userData;   // TODO: We need a better solution, this currently holds the average local scale for the renderable
 
-void initInstanceUniforms(out PerRenderableData p) {
+void initObjectUniforms() {
+    // Adreno drivers workarounds:
+    // - We need to copy each field separately because non-const array access in a UBO fails
+    //    e.g.: this fails `p = objectUniforms.data[instance_index];`
+    // - We can't use a struct to hold the result because Adreno driver ignore precision qualifiers
+    //   on fields of structs, unless they're in a UBO (which we just copied out of).
+
 #if defined(FILAMENT_HAS_FEATURE_INSTANCING)
-    // We're copying each field separately to workaround an issue in some Adreno drivers
-    // that fail on non-const array access in a UBO. Accessing the fields works however.
-    // e.g.: this fails `p = objectUniforms.data[instance_index];`
-    p.worldFromModelMatrix = objectUniforms.data[instance_index].worldFromModelMatrix;
-    p.worldFromModelNormalMatrix = objectUniforms.data[instance_index].worldFromModelNormalMatrix;
-    p.morphTargetCount = objectUniforms.data[instance_index].morphTargetCount;
-    p.flagsChannels = objectUniforms.data[instance_index].flagsChannels;
-    p.objectId = objectUniforms.data[instance_index].objectId;
-    p.userData = objectUniforms.data[instance_index].userData;
-#else
-    p.worldFromModelMatrix = objectUniforms.data[0].worldFromModelMatrix;
-    p.worldFromModelNormalMatrix = objectUniforms.data[0].worldFromModelNormalMatrix;
-    p.morphTargetCount = objectUniforms.data[0].morphTargetCount;
-    p.flagsChannels = objectUniforms.data[0].flagsChannels;
-    p.objectId = objectUniforms.data[0].objectId;
-    p.userData = objectUniforms.data[0].userData;
+#if defined(MATERIAL_HAS_INSTANCES)
+    if ((objectUniforms.data[0].flagsChannels & FILAMENT_OBJECT_INSTANCE_BUFFER_BIT) == 0) {
+        // the material manages instancing, all instances share the same uniform block.
+        object_uniforms_worldFromModelMatrix        = objectUniforms.data[0].worldFromModelMatrix;
+        object_uniforms_worldFromModelNormalMatrix  = objectUniforms.data[0].worldFromModelNormalMatrix;
+        object_uniforms_morphTargetCount            = objectUniforms.data[0].morphTargetCount;
+        object_uniforms_flagsChannels               = objectUniforms.data[0].flagsChannels;
+        object_uniforms_objectId                    = objectUniforms.data[0].objectId;
+        object_uniforms_userData                    = objectUniforms.data[0].userData;
+    } else
 #endif
-}
-
-void initObjectUniforms(out PerRenderableData p) {
-#if defined(FILAMENT_HAS_FEATURE_INSTANCING) && defined(MATERIAL_HAS_INSTANCES)
-    if ((objectUniforms.data[0].flagsChannels & FILAMENT_OBJECT_INSTANCE_BUFFER_BIT) != 0) {
+    {
         // the object has an instance buffer
-        initInstanceUniforms(p);
-        return;
+        object_uniforms_worldFromModelMatrix        = objectUniforms.data[instance_index].worldFromModelMatrix;
+        object_uniforms_worldFromModelNormalMatrix  = objectUniforms.data[instance_index].worldFromModelNormalMatrix;
+        object_uniforms_morphTargetCount            = objectUniforms.data[instance_index].morphTargetCount;
+        object_uniforms_flagsChannels               = objectUniforms.data[instance_index].flagsChannels;
+        object_uniforms_objectId                    = objectUniforms.data[instance_index].objectId;
+        object_uniforms_userData                    = objectUniforms.data[instance_index].userData;
     }
-    // the material manages instancing, all instances share the same uniform block.
-    p = objectUniforms.data[0];
 #else
-    // automatic instancing was used, each instance has its own uniform block.
-    initInstanceUniforms(p);
+    object_uniforms_worldFromModelMatrix        = objectUniforms.data[0].worldFromModelMatrix;
+    object_uniforms_worldFromModelNormalMatrix  = objectUniforms.data[0].worldFromModelNormalMatrix;
+    object_uniforms_morphTargetCount            = objectUniforms.data[0].morphTargetCount;
+    object_uniforms_flagsChannels               = objectUniforms.data[0].flagsChannels;
+    object_uniforms_objectId                    = objectUniforms.data[0].objectId;
+    object_uniforms_userData                    = objectUniforms.data[0].userData;
 #endif
 }
 
