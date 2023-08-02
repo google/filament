@@ -51,7 +51,7 @@ void FrameInfoManager::terminate(DriverApi& driver) noexcept {
     }
 }
 
-void FrameInfoManager::beginFrame(DriverApi& driver,Config const& config, uint32_t frameId) noexcept {
+void FrameInfoManager::beginFrame(DriverApi& driver,Config const& config, uint32_t) noexcept {
     driver.beginTimerQuery(mQueries[mIndex]);
     uint64_t elapsed = 0;
     if (driver.getTimerQueryValue(mQueries[mLast], &elapsed)) {
@@ -67,7 +67,8 @@ void FrameInfoManager::endFrame(DriverApi& driver) noexcept {
     mIndex = (mIndex + 1) % POOL_COUNT;
 }
 
-void FrameInfoManager::update(Config const& config, FrameInfoManager::duration lastFrameTime) noexcept {
+void FrameInfoManager::update(Config const& config,
+        FrameInfoManager::duration lastFrameTime) noexcept {
     // keep an history of frame times
     auto& history = mFrameTimeHistory;
 
@@ -85,12 +86,13 @@ void FrameInfoManager::update(Config const& config, FrameInfoManager::duration l
     // apply a median filter to get a good representation of the frame time of the last
     // N frames.
     std::array<duration, MAX_FRAMETIME_HISTORY> median; // NOLINT -- it's initialized below
-    size_t size = std::min(mFrameTimeHistorySize, std::min(config.historySize, (uint32_t)median.size()));
+    size_t const size = std::min(mFrameTimeHistorySize,
+            std::min(config.historySize, (uint32_t)median.size()));
     for (size_t i = 0; i < size; ++i) {
         median[i] = history[i].frameTime;
     }
     std::sort(median.begin(), median.begin() + size);
-    duration denoisedFrameTime = median[size / 2];
+    duration const denoisedFrameTime = median[size / 2];
 
     history[0].denoisedFrameTime = denoisedFrameTime;
     history[0].valid = true;

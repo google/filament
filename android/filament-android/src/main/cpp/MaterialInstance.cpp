@@ -359,6 +359,14 @@ Java_com_google_android_filament_MaterialInstance_nSetDepthCulling(JNIEnv*,
 
 extern "C"
 JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetDepthFunc(JNIEnv*,
+        jclass, jlong nativeMaterialInstance, jlong function) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    instance->setDepthFunc(static_cast<MaterialInstance::DepthFunc>(function));
+}
+
+extern "C"
+JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetStencilCompareFunction(JNIEnv*, jclass,
         jlong nativeMaterialInstance, jlong function, jlong face) {
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
@@ -523,4 +531,12 @@ Java_com_google_android_filament_MaterialInstance_nIsDepthCullingEnabled(JNIEnv*
         jlong nativeMaterialInstance) {
     MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
     return instance->isDepthCullingEnabled();
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_google_android_filament_MaterialInstance_nGetDepthFunc(JNIEnv* env, jclass clazz,
+        jlong nativeMaterialInstance) {
+    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
+    return (jint)instance->getDepthFunc();
 }

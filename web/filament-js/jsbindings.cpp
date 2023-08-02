@@ -1371,6 +1371,8 @@ class_<MaterialInstance>("MaterialInstance")
     .function("setStencilWrite", &MaterialInstance::setStencilWrite)
     .function("setDepthCulling", &MaterialInstance::setDepthCulling)
     .function("isDepthCullingEnabled", &MaterialInstance::isDepthCullingEnabled)
+    .function("setDepthFunc", &MaterialInstance::setDepthFunc)
+    .function("getDepthFunc", &MaterialInstance::getDepthFunc)
     .function("setStencilCompareFunction", &MaterialInstance::setStencilCompareFunction)
     .function("setStencilCompareFunction", EMBIND_LAMBDA(void,
             (MaterialInstance* self, MaterialInstance::StencilCompareFunc func), {

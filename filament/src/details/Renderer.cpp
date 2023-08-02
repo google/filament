@@ -55,7 +55,7 @@ using namespace backend;
 
 FRenderer::FRenderer(FEngine& engine) :
         mEngine(engine),
-        mFrameSkipper(1u),
+        mFrameSkipper(),
         mRenderTargetHandle(engine.getDefaultRenderTarget()),
         mFrameInfoManager(engine.getDriverApi()),
         mHdrTranslucent(TextureFormat::RGBA16F),
@@ -287,13 +287,13 @@ void FRenderer::endFrame() {
         driver.debugThreading();
     }
 
-    mFrameInfoManager.endFrame(driver);
-    mFrameSkipper.endFrame(driver);
-
     if (mSwapChain) {
         mSwapChain->commit(driver);
         mSwapChain = nullptr;
     }
+
+    mFrameInfoManager.endFrame(driver);
+    mFrameSkipper.endFrame(driver);
 
     driver.endFrame(mFrameId);
 

@@ -101,6 +101,10 @@ public:
 
     backend::RasterState::DepthFunc getDepthFunc() const noexcept { return mDepthFunc; }
 
+    void setDepthFunc(backend::RasterState::DepthFunc depthFunc) noexcept {
+        mDepthFunc = depthFunc;
+    }
+
     void setPolygonOffset(float scale, float constant) noexcept {
         // handle reversed Z
         mPolygonOffset = { -scale, -constant };

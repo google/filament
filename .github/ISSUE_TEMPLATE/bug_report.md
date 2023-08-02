@@ -4,6 +4,8 @@ about: Create a report to help us improve
 
 ---
 
+⚠️ **Issues not using this template will be systematically closed.**
+
 **Describe the bug**
 A clear and concise description of what the bug is.
 
@@ -18,8 +20,8 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Logs**
-If applicable, copy logs from your console here. Please *do not*
-use screenshots of logs, copy them as text.
+If applicable, copy **full** logs from your console here. Please *do not*
+use screenshots of logs, copy them as text, use gist or attach an *uncompressed* file.
 
 **Desktop (please complete the following information):**
  - OS: [e.g. iOS]

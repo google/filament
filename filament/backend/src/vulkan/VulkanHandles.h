@@ -133,12 +133,6 @@ struct VulkanFence : public HwFence {
     std::shared_ptr<VulkanCmdFence> fence;
 };
 
-struct VulkanSync : public HwSync {
-    VulkanSync() = default;
-    explicit VulkanSync(const VulkanCommandBuffer& commands) : fence(commands.fence) {}
-    std::shared_ptr<VulkanCmdFence> fence;
-};
-
 struct VulkanTimerQuery : public HwTimerQuery {
     explicit VulkanTimerQuery(std::tuple<uint32_t, uint32_t> indices);
     ~VulkanTimerQuery();
