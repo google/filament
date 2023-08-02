@@ -934,7 +934,7 @@ int main(int argc, char** argv) {
             // FilamentApp.cpp.
             projections[0] = mat4::perspective(70.0, 1.0, .1, 10.0);
             projections[1] = mat4::perspective(70.0, 1.0, .1, 10.0);
-            c.setCustomEyeProjection(projections, projections[0], .1, 10.0);
+            c.setCustomEyeProjection(projections, 2, projections[0], .1, 10.0);
             // FIXME: the aspect ratio will be incorrect until configureCamerasForWindow is
             // triggered, which will happen the next time the window is resized.
         } else {

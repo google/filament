@@ -47,7 +47,7 @@ public:
 
     void setEyeModelMatrix(math::mat4 const (&model)[2]) noexcept;
 
-    void setCustomEyeProjection(math::mat4 const (&projection)[2],
+    void setCustomEyeProjection(math::mat4 const* projection, size_t count,
             math::mat4 const& projectionForCulling, double near, double far);
 
     // sets the projection matrix

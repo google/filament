@@ -71,9 +71,9 @@ void Camera::setEyeModelMatrix(math::mat4 const (&model)[2]) noexcept {
     downcast(this)->setEyeModelMatrix(model);
 }
 
-void Camera::setCustomEyeProjection(math::mat4 const (&projection)[2],
-        math::mat4 const& projectionForCulling, double near, double far) noexcept {
-    downcast(this)->setCustomEyeProjection(projection, projectionForCulling, near, far);
+void Camera::setCustomEyeProjection(math::mat4 const* projection, size_t count,
+        math::mat4 const& projectionForCulling, double near, double far) {
+    downcast(this)->setCustomEyeProjection(projection, count, projectionForCulling, near, far);
 }
 
 void Camera::setProjection(Camera::Projection projection, double left, double right, double bottom,

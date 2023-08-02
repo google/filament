@@ -87,8 +87,9 @@ void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p,
     mFar = far;
 }
 
-void UTILS_NOINLINE FCamera::setCustomEyeProjection(math::mat4 const (&projection)[2],
+void UTILS_NOINLINE FCamera::setCustomEyeProjection(math::mat4 const* projection, size_t count,
         math::mat4 const& projectionForCulling, double near, double far) {
+    ASSERT_PRECONDITION(count >= 2, "count must be >= 2");
     mEyeProjection[0] = projection[0];
     mEyeProjection[1] = projection[1];
     mProjectionForCulling = projectionForCulling;
