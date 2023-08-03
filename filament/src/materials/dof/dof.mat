@@ -477,6 +477,7 @@ void fastTile(inout vec4 color, inout float alpha,
     }
     alpha = cocToAlpha(kernelSize);
     color *= rcp(sampleCount(ringCountFast));
+    color = min(vec4(MEDIUMP_FLT_MAX), color);
 }
 
 void foregroundTile(inout vec4 foreground, inout float fgOpacity,
@@ -658,6 +659,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     // the downside of doing this is that we couldn't use a different upscaler for each
     // layer, but this is a lot less costly
     postProcess.color = foreground + (1.0 - fgOpacity) * background;
+    postProcess.color = min(vec4(MEDIUMP_FLT_MAX), postProcess.color);
     postProcess.alpha = fgOpacity  + (1.0 - fgOpacity) * bgOpacity;
 }
 

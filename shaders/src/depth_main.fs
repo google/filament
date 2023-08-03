@@ -25,7 +25,7 @@ highp vec2 computeDepthMomentsVSM(const highp float depth);
 void main() {
     filament_lodBias = frameUniforms.lodBias;
 
-    initObjectUniforms(object_uniforms);
+    initObjectUniforms();
 
 #if defined(BLEND_MODE_MASKED) || ((defined(BLEND_MODE_TRANSPARENT) || defined(BLEND_MODE_FADE)) && defined(MATERIAL_HAS_TRANSPARENT_SHADOW))
     MaterialInputs inputs;
@@ -58,12 +58,12 @@ void main() {
     fragColor.zw = computeDepthMomentsVSM(-1.0 / depth); // requires at least RGBA16F
 #elif defined(VARIANT_HAS_PICKING)
 #if MATERIAL_FEATURE_LEVEL == 0
-    outPicking.a = float((object_uniforms.objectId / 65536) % 256) / 255.0;
-    outPicking.b = float((object_uniforms.objectId /   256) % 256) / 255.0;
-    outPicking.g = float( object_uniforms.objectId          % 256) / 255.0;
+    outPicking.a = float((object_uniforms_objectId / 65536) % 256) / 255.0;
+    outPicking.b = float((object_uniforms_objectId /   256) % 256) / 255.0;
+    outPicking.g = float( object_uniforms_objectId          % 256) / 255.0;
     outPicking.r = vertex_position.z / vertex_position.w;
 #else
-    outPicking.x = float(object_uniforms.objectId);
+    outPicking.x = intBitsToFloat(object_uniforms_objectId);
     outPicking.y = vertex_position.z / vertex_position.w;
 #endif
 #if __VERSION__ == 100
