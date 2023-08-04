@@ -502,7 +502,7 @@ void OpenGLContext::initExtensionsGLES() noexcept {
 
     // ES 3.x implies EXT_discard_framebuffer and OES_vertex_array_object
     if (state.major >= 3) {
-        ext.EXT_color_buffer_float = true;
+        ext.EXT_discard_framebuffer = true;
         ext.OES_vertex_array_object = true;
     }
 }
