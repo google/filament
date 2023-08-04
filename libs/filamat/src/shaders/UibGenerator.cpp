@@ -39,13 +39,10 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "worldFromViewMatrix",    0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "clipFromViewMatrix",     0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "viewFromClipMatrix",     0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "clipFromWorldMatrix",    0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "clipFromWorldMatrix",    2, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "worldFromClipMatrix",    0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "userWorldFromWorldMatrix",0,Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "clipTransform",          0, Type::FLOAT4, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-
-            { "eyeFromWorldMatrix",     2, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
-            { "clipFromEyeMatrix",      2, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
 
             { "clipControl",            0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "time",                   0, Type::FLOAT,  Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },

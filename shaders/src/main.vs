@@ -203,14 +203,7 @@ void main() {
 #endif
 
     // this must happen before we compensate for vulkan below
-#if defined(VARIANT_HAS_INSTANCED_STEREO)
     vertex_position = gl_Position;
-#if !defined(VERTEX_DOMAIN_DEVICE)
-    vertex_position = frameUniforms.clipFromWorldMatrix * getWorldPosition(material);
-#endif
-#else
-    vertex_position = gl_Position;
-#endif
 
 #if defined(VARIANT_HAS_INSTANCED_STEREO)
     // We're transforming a vertex whose x coordinate is within the range (-w to w).

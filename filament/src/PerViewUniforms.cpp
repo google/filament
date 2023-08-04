@@ -66,7 +66,6 @@ void PerViewUniforms::prepareCamera(FEngine& engine, const CameraInfo& camera) n
     mat4f const& clipFromView  = camera.projection;
 
     const mat4f viewFromClip{ inverse((mat4)camera.projection) };
-    const mat4f clipFromWorld{ highPrecisionMultiply(clipFromView, viewFromWorld) };
     const mat4f worldFromClip{ highPrecisionMultiply(worldFromView, viewFromClip) };
 
     auto& s = mUniforms.edit();
@@ -74,7 +73,6 @@ void PerViewUniforms::prepareCamera(FEngine& engine, const CameraInfo& camera) n
     s.worldFromViewMatrix = worldFromView;    // model
     s.clipFromViewMatrix  = clipFromView;     // projection
     s.viewFromClipMatrix  = viewFromClip;     // 1/projection
-    s.clipFromWorldMatrix = clipFromWorld;    // projection * view
     s.worldFromClipMatrix = worldFromClip;    // 1/(projection * view)
     s.userWorldFromWorldMatrix = mat4f(inverse(camera.worldOrigin));
     s.clipTransform = camera.clipTransfrom;
@@ -82,10 +80,14 @@ void PerViewUniforms::prepareCamera(FEngine& engine, const CameraInfo& camera) n
     s.oneOverFarMinusNear = 1.0f / (camera.zf - camera.zn);
     s.nearOverFarMinusNear = camera.zn / (camera.zf - camera.zn);
 
-    s.eyeFromWorldMatrix[0] = highPrecisionMultiply(camera.eyeFromView[0], viewFromWorld);
-    s.eyeFromWorldMatrix[1] = highPrecisionMultiply(camera.eyeFromView[1], viewFromWorld);
-    s.clipFromEyeMatrix[0] = camera.eyeProjection[0];
-    s.clipFromEyeMatrix[1] = camera.eyeProjection[1];
+    mat4f const& headFromWorld = camera.view;
+    for (int i = 0; i < 2; i++) {
+        mat4f const& eyeFromHead = camera.eyeFromView[i];   // identity for monoscopic rendering
+        mat4f const& clipFromEye = camera.eyeProjection[i];
+        // clipFromEye * eyeFromHead * headFromWorld
+        s.clipFromWorldMatrix[i] = highPrecisionMultiply(
+                clipFromEye, highPrecisionMultiply(eyeFromHead, headFromWorld));
+    }
 
     // with a clip-space of [-w, w] ==> z' = -z
     // with a clip-space of [0,  w] ==> z' = (w - z)/2
