@@ -277,7 +277,6 @@ math::details::TMat44<T> inverseProjection(const math::details::TMat44<T>& p) no
 // ------------------------------------------------------------------------------------------------
 
 CameraInfo::CameraInfo(FCamera const& camera) noexcept {
-    projection         = mat4f{ camera.getProjectionMatrix(0) };
     eyeProjection[0]   = mat4f{ camera.getProjectionMatrix(0) };
     eyeProjection[1]   = mat4f{ camera.getProjectionMatrix(1) };
     eyeFromView[0]     = mat4f{ camera.getEyeFromViewMatrix(0) };
@@ -295,7 +294,6 @@ CameraInfo::CameraInfo(FCamera const& camera) noexcept {
 
 CameraInfo::CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamera) noexcept {
     const mat4 modelMatrix{ worldOriginCamera * camera.getModelMatrix() };
-    projection         = mat4f{ camera.getProjectionMatrix(0) };
     eyeProjection[0]   = mat4f{ camera.getProjectionMatrix(0) };
     eyeProjection[1]   = mat4f{ camera.getProjectionMatrix(1) };
     eyeFromView[0]     = mat4f{ camera.getEyeFromViewMatrix(0) };

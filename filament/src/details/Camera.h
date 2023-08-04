@@ -211,16 +211,19 @@ private:
 };
 
 struct CameraInfo {
-    CameraInfo() noexcept = default;
+    CameraInfo() noexcept {}
     explicit CameraInfo(FCamera const& camera) noexcept;
     CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamera) noexcept;
 
-    // projection matrix for drawing (infinite zfar)
-    // for monoscopic rendering
-    math::mat4f projection;
+    union {
+        // projection matrix for drawing (infinite zfar)
+        // for monoscopic rendering
+        // equivalent to eyeProjection[0], but aliased here for convenience
+        math::mat4f projection;
 
-    // for stereo rendering, one matrix per eye
-    math::mat4f eyeProjection[2]  = {};
+        // for stereo rendering, one matrix per eye
+        math::mat4f eyeProjection[2]  = {};
+    };
 
     math::mat4f cullingProjection;  // projection matrix for culling
     math::mat4f model;              // camera model matrix
