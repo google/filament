@@ -5,7 +5,7 @@
 To build Filament, you must first install the following tools:
 
 - CMake 3.19 (or more recent)
-- clang 7.0 (or more recent)
+- clang 14.0 (or more recent)
 - [ninja 1.10](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages) (or more recent)
 
 Additional dependencies may be required for your operating system. Please refer to the appropriate
@@ -87,10 +87,10 @@ Options can also be set with the CMake GUI.
 
 Make sure you've installed the following dependencies:
 
-- `clang-7` or higher
+- `clang-14` or higher
 - `libglu1-mesa-dev`
-- `libc++-7-dev` (`libcxx-devel` and `libcxx-static` on Fedora) or higher
-- `libc++abi-7-dev` (`libcxxabi-static` on Fedora) or higher
+- `libc++-14-dev` (`libcxx-devel` and `libcxx-static` on Fedora) or higher
+- `libc++abi-14-dev` (`libcxxabi-static` on Fedora) or higher
 - `ninja-build`
 - `libxi-dev`
 - `libxcomposite-dev` (`libXcomposite-devel` on Fedora)
@@ -114,7 +114,7 @@ Your Linux distribution might default to `gcc` instead of `clang`, if that's the
 ```
 $ mkdir out/cmake-release
 $ cd out/cmake-release
-# Or use a specific version of clang, for instance /usr/bin/clang-7
+# Or use a specific version of clang, for instance /usr/bin/clang-14
 $ CC=/usr/bin/clang CXX=/usr/bin/clang++ CXXFLAGS=-stdlib=libc++ \
     cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
 ```
@@ -124,8 +124,8 @@ solution is to use `update-alternatives` to both change the default compiler, an
 specific version of clang:
 
 ```
-$ update-alternatives --install /usr/bin/clang clang /usr/bin/clang-7 100
-$ update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-7 100
+$ update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 100
+$ update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-14 100
 $ update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
 $ update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
 ```
