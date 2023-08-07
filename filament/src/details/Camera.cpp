@@ -221,7 +221,8 @@ void FCamera::setExposure(float aperture, float shutterSpeed, float sensitivity)
 }
 
 double FCamera::getFocalLength() const noexcept {
-    return (FCamera::SENSOR_SIZE * mEyeProjection[0][1][1]) * 0.5;
+    auto const& monoscopicEyeProjection = mEyeProjection[0];
+    return (FCamera::SENSOR_SIZE * monoscopicEyeProjection[1][1]) * 0.5;
 }
 
 double FCamera::computeEffectiveFocalLength(double focalLength, double focusDistance) noexcept {

@@ -498,7 +498,9 @@ public:
     //! returns this camera's sensitivity in ISO
     float getSensitivity() const noexcept;
 
-    //! returns the focal length in meters [m] for a 35mm camera
+    /** Returns the focal length in meters [m] for a 35mm camera.
+     * Eye 0's projection matrix is used to compute the focal length.
+     */
     double getFocalLength() const noexcept;
 
     /**
