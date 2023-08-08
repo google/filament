@@ -503,7 +503,7 @@ void VulkanDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 
 void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
     VulkanCommandBuffer const& commandBuffer = mCommands->get();
-    construct<VulkanFence>(fh, commandBuffer);
+    construct<VulkanFence>(fh, commandBuffer.fence);
 }
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
@@ -579,7 +579,7 @@ Handle<HwRenderTarget> VulkanDriver::createRenderTargetS() noexcept {
 }
 
 Handle<HwFence> VulkanDriver::createFenceS() noexcept {
-    return allocHandle<VulkanFence>();
+    return initHandle<VulkanFence>();
 }
 
 Handle<HwSwapChain> VulkanDriver::createSwapChainS() noexcept {
@@ -664,6 +664,12 @@ void VulkanDriver::destroyFence(Handle<HwFence> fh) {
 
 FenceStatus VulkanDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
     auto& cmdfence = handle_cast<VulkanFence*>(fh)->fence;
+    if (!cmdfence) {
+        // If wait is called before a fence actually exists, we return timeout.  This matches the
+        // current behavior in OpenGLDriver, but we should eventually reconsider a different error
+        // code.
+        return FenceStatus::TIMEOUT_EXPIRED;
+    }
 
     // Internally we use the VK_INCOMPLETE status to mean "not yet submitted".
     // When this fence gets submitted, its status changes to VK_NOT_READY.

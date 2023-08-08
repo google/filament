@@ -21,7 +21,7 @@ void main() {
 #endif
 #endif
 
-    initObjectUniforms(object_uniforms);
+    initObjectUniforms();
 
     // Initialize the inputs to sensible default values, see material_inputs.vs
 #if defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)
@@ -51,7 +51,7 @@ void main() {
         toTangentFrame(mesh_tangents, material.worldNormal, vertex_worldTangent.xyz);
 
         #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
-        if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0) {
+        if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0) {
             #if defined(LEGACY_MORPHING)
             vec3 normal0, normal1, normal2, normal3;
             toTangentFrame(mesh_custom4, normal0);
@@ -69,7 +69,7 @@ void main() {
             #endif
         }
 
-        if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0) {
+        if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0) {
             skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
             skinNormal(vertex_worldTangent.xyz, mesh_bone_indices, mesh_bone_weights);
         }
@@ -87,7 +87,7 @@ void main() {
         toTangentFrame(mesh_tangents, material.worldNormal);
 
         #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
-        if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0) {
+        if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0) {
             #if defined(LEGACY_MORPHING)
             vec3 normal0, normal1, normal2, normal3;
             toTangentFrame(mesh_custom4, normal0);
@@ -105,7 +105,7 @@ void main() {
             #endif
         }
 
-        if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0) {
+        if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0) {
             skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
         }
         #endif
@@ -160,28 +160,29 @@ void main() {
 
 #endif // !defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)
 
+    vec4 position;
 
 #if defined(VERTEX_DOMAIN_DEVICE)
     // The other vertex domains are handled in initMaterialVertex()->computeWorldPosition()
-    gl_Position = getPosition();
+    position = getPosition();
 
 #if !defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)
 #if defined(MATERIAL_HAS_CLIP_SPACE_TRANSFORM)
-    gl_Position = getMaterialClipSpaceTransform(material) * gl_Position;
+    position = getMaterialClipSpaceTransform(material) * position;
 #endif
 #endif // !USE_OPTIMIZED_DEPTH_VERTEX_SHADER
 
 #if defined(MATERIAL_HAS_VERTEX_DOMAIN_DEVICE_JITTERED)
     // Apply the clip-space transform which is normally part of the projection
-    gl_Position.xy = gl_Position.xy * frameUniforms.clipTransform.xy + (gl_Position.w * frameUniforms.clipTransform.zw);
+    position.xy = position.xy * frameUniforms.clipTransform.xy + (position.w * frameUniforms.clipTransform.zw);
 #endif
 #else
-    gl_Position = getClipFromWorldMatrix() * getWorldPosition(material);
+    position = getClipFromWorldMatrix() * getWorldPosition(material);
 #endif
 
 #if defined(VERTEX_DOMAIN_DEVICE)
     // GL convention to inverted DX convention (must happen after clipSpaceTransform)
-    gl_Position.z = gl_Position.z * -0.5 + 0.5;
+    position.z = position.z * -0.5 + 0.5;
 #endif
 
 #if defined(VARIANT_HAS_VSM)
@@ -203,7 +204,7 @@ void main() {
 #endif
 
     // this must happen before we compensate for vulkan below
-    vertex_position = gl_Position;
+    vertex_position = position;
 
 #if defined(VARIANT_HAS_INSTANCED_STEREO)
     // This logic must be updated if CONFIG_STEREOSCOPIC_EYES changes
@@ -214,23 +215,28 @@ void main() {
     // It's important to do this after computing vertex_position.
     int eyeIndex = instance_index % 2;
     float eyeShift = float(eyeIndex) * 2.0f - 1.0f;     // eye 0: -1.0,     eye 1: 1.0
-    gl_Position.x = gl_Position.x * 0.5f + (gl_Position.w * 0.5 * eyeShift);
+    position.x = position.x * 0.5f + (position.w * 0.5 * eyeShift);
 
     // A fragment is clipped when gl_ClipDistance is negative (outside the clip plane). So,
     // Eye 0 should have a positive value when x is < 0
-    //      -gl_Position.x
+    //      -position.x
     // Eye 1 should have a positive value when x is > 0
-    //       gl_Position.x
-    FILAMENT_CLIPDISTANCE[0] = gl_Position.x * eyeShift;
+    //       position.x
+    FILAMENT_CLIPDISTANCE[0] = position.x * eyeShift;
 #endif
 
 #if defined(TARGET_VULKAN_ENVIRONMENT)
     // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
-    gl_Position.y = -gl_Position.y;
+    position.y = -position.y;
 #endif
 
 #if !defined(TARGET_VULKAN_ENVIRONMENT) && !defined(TARGET_METAL_ENVIRONMENT)
     // This is not needed in Vulkan or Metal because clipControl is always (1, 0)
-    gl_Position.z = dot(gl_Position.zw, frameUniforms.clipControl);
+    // (We don't use a dot() here because it workaround a spirv-opt optimization that in turn
+    //  causes a crash on PowerVR, see #5118)
+    position.z = position.z * frameUniforms.clipControl.x + position.w * frameUniforms.clipControl.y;
 #endif
+
+    // some PowerVR drivers crash when gl_Position is written more than once
+    gl_Position = position;
 }

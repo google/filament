@@ -81,8 +81,6 @@ public class RenderTarget {
         /**
          * Sets a texture to a given attachment point.
          *
-         * <p>All RenderTargets must have a non-null <code>COLOR</code> attachment.</p>
-         *
          * @param attachment The attachment point of the texture.
          * @param texture The associated texture object.
          * @return A reference to this Builder for chaining calls.

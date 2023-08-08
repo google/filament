@@ -32,7 +32,6 @@
 #include <utils/Systrace.h>
 
 #include <chrono>
-#include <future>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -85,9 +84,40 @@ struct ShaderCompilerService::ProgramToken {
         GLuint program = 0;
     } gl; // 12 bytes
 
+
+    // Sets the programBinary, typically from the compiler thread, and signal the main thread.
+    // This is similar to std::promise::set_value.
+    void set(ProgramBinary programBinary) noexcept {
+        using std::swap;
+        std::unique_lock const l(lock);
+        swap(binary, programBinary);
+        signaled = true;
+        cond.notify_one();
+    }
+
+    // Get the programBinary, wait if necessary.
+    // This is similar to std::future::get
+    ProgramBinary const& get() const noexcept {
+        std::unique_lock l(lock);
+        cond.wait(l, [this](){ return signaled; });
+        return binary;
+    }
+
+    // Checks if the programBinary is ready.
+    // This is similar to std::future::wait_for(0s)
+    bool isReady() const noexcept {
+        std::unique_lock l(lock);
+        using namespace std::chrono_literals;
+        return cond.wait_for(l, 0s, [this](){ return signaled; });
+    }
+
     BlobCacheKey key;
-    std::future<ProgramBinary> binary;
-    bool canceled = false;
+    mutable utils::Mutex lock;
+    mutable utils::Condition cond;
+    ProgramBinary binary;
+    bool signaled = false;
+
+    bool canceled = false; // not part of the signaling
 };
 
 void ShaderCompilerService::setUserData(const program_token_t& token, void* user) noexcept {
@@ -242,16 +272,22 @@ void ShaderCompilerService::init() noexcept {
 }
 
 void ShaderCompilerService::terminate() noexcept {
-    mCompilerThreadPool.terminate();
-
-    // We could have some pending callbacks here, we need to execute them
+    // We could have some pending callbacks here, we need to execute them.
+    // This is equivalent to calling cancelTickOp() on all active tokens.
     for (auto&& op: mRunAtNextTickOps) {
-        Job const& job = std::get<2>(op);
-        if (job.callback) {
+        auto const& [priority, token, job] = op;
+        if (!token && job.callback) {
+            // This is a little fragile here. We know by construction that jobs that have a
+            // null token are the ones that dispatch the user callbacks.
             mDriver.scheduleCallback(job.handler, job.user, job.callback);
         }
     }
     mRunAtNextTickOps.clear();
+
+    // Finally stop the thread pool immediately. Pending jobs will be discarded. We guarantee by
+    // construction that nobody is waiting on a token (because waiting is only done on the main
+    // backend thread, and if we're here, we're on the backend main thread).
+    mCompilerThreadPool.terminate();
 }
 
 ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
@@ -268,13 +304,9 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
     if (!token->gl.program) {
         CompilerPriorityQueue const priorityQueue = program.getPriorityQueue();
         if (mShaderCompilerThreadCount) {
-            // set the future in the token and pass the promise to the worker thread
-            std::promise<ProgramToken::ProgramBinary> promise;
-            token->binary = promise.get_future();
             // queue a compile job
             mCompilerThreadPool.queue(priorityQueue, token,
-                    [this, &gl, promise = std::move(promise),
-                            program = std::move(program), token]() mutable {
+                    [this, &gl, program = std::move(program), token]() mutable {
 
                         // compile the shaders
                         std::array<GLuint, Program::SHADER_TYPE_COUNT> shaders{};
@@ -326,7 +358,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
 #endif
                         // we don't need to check for success here, it'll be done on the
                         // main thread side.
-                        promise.set_value(binary);
+                        token->set(std::move(binary));
                     });
         } else
         {
@@ -346,10 +378,8 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                     // TODO: see if we could completely eliminate this callback here
                     //       and instead just rely on token->gl.program being atomically
                     //       set by the compiler thread.
-                    assert_invariant(token->binary.valid());
                     // we're using the compiler thread, check if the program is ready, no-op if not.
-                    using namespace std::chrono_literals;
-                    if (token->binary.wait_for(0s) != std::future_status::ready) {
+                    if (!token->isReady()) {
                         return false;
                     }
                     // program binary is ready, retrieve it without blocking
@@ -453,7 +483,7 @@ GLuint ShaderCompilerService::getProgram(ShaderCompilerService::program_token_t&
         glDeleteProgram(token->gl.program);
     }
 
-    token = nullptr;
+    token.reset();
 }
 
 void ShaderCompilerService::tick() {
@@ -512,7 +542,7 @@ void ShaderCompilerService::notifyWhenAllProgramsAreReady(CompilerPriorityQueue 
 // ------------------------------------------------------------------------------------------------
 
 void ShaderCompilerService::getProgramFromCompilerPool(program_token_t& token) noexcept {
-    ProgramToken::ProgramBinary const binary{ token->binary.get() };
+    ProgramToken::ProgramBinary const& binary{ token->get() };
     if (!token->canceled) {
         token->gl.shaders = binary.shaders;
         if (UTILS_LIKELY(mUseSharedContext)) {
@@ -532,9 +562,6 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) noexcept {
     SYSTRACE_CALL();
     if (!token->gl.program) {
         if (mShaderCompilerThreadCount) {
-            // Block until the program is ready. This could take a very long time.
-            assert_invariant(token->binary.valid());
-
             // we need this program right now, so move it to the head of the queue.
             mCompilerThreadPool.makeUrgent(token);
 
@@ -803,8 +830,7 @@ void ShaderCompilerService::runAtNextTick(CompilerPriorityQueue priority,
 void ShaderCompilerService::cancelTickOp(program_token_t token) noexcept {
     // We do a linear search here, but this is rare, and we know the list is pretty small.
     auto& ops = mRunAtNextTickOps;
-    auto pos = std::find_if(ops.begin(), ops.end(),
-            [&](const auto& item) {
+    auto pos = std::find_if(ops.begin(), ops.end(), [&](const auto& item) {
         return std::get<1>(item) == token;
     });
     if (pos != ops.end()) {

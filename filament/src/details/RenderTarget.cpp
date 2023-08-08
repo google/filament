@@ -68,10 +68,11 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) {
     using backend::TextureUsage;
     const FRenderTarget::Attachment& color = mImpl->mAttachments[(size_t)AttachmentPoint::COLOR0];
     const FRenderTarget::Attachment& depth = mImpl->mAttachments[(size_t)AttachmentPoint::DEPTH];
-    ASSERT_PRECONDITION(color.texture, "COLOR0 attachment not set");
 
-    ASSERT_PRECONDITION(color.texture->getUsage() & TextureUsage::COLOR_ATTACHMENT,
-            "Texture usage must contain COLOR_ATTACHMENT");
+    if (color.texture) {
+        ASSERT_PRECONDITION(color.texture->getUsage() & TextureUsage::COLOR_ATTACHMENT,
+                "Texture usage must contain COLOR_ATTACHMENT");
+    }
 
     if (depth.texture) {
         ASSERT_PRECONDITION(depth.texture->getUsage() & TextureUsage::DEPTH_ATTACHMENT,
@@ -135,7 +136,7 @@ FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& build
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         Attachment const& attachment = mAttachments[i];
         if (attachment.texture) {
-            TargetBufferFlags targetBufferBit = getTargetBufferFlagsAt(i);
+            TargetBufferFlags const targetBufferBit = getTargetBufferFlagsAt(i);
             mAttachmentMask |= targetBufferBit;
             setAttachment(mrt[i], (AttachmentPoint)i);
             if (any(attachment.texture->getUsage() &
