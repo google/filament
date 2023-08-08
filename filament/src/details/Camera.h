@@ -27,6 +27,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>
+#include <utils/Panic.h>
 
 #include <math/mat4.h>
 #include <math/scalar.h>
@@ -88,7 +89,11 @@ public:
     math::mat4 getEyeFromViewMatrix(int eye) const noexcept { return mEyeFromView[eye]; }
 
     // viewing projection matrix set by the user
-    math::mat4 getUserProjectionMatrix() const noexcept { return mEyeProjection[0]; }
+    math::mat4 getUserProjectionMatrix(uint8_t eyeId) const {
+        ASSERT_PRECONDITION(eyeId < CONFIG_STEREOSCOPIC_EYES,
+                "eyeId must be < CONFIG_STEREOSCOPIC_EYES(%d)", CONFIG_STEREOSCOPIC_EYES);
+        return mEyeProjection[eyeId];
+    }
 
     // culling projection matrix set by the user
     math::mat4 getUserCullingProjectionMatrix() const noexcept { return mProjectionForCulling; }

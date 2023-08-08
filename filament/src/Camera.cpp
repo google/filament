@@ -108,8 +108,8 @@ void Camera::setShift(double2 shift) noexcept {
     downcast(this)->setShift(shift);
 }
 
-mat4 Camera::getProjectionMatrix() const noexcept {
-    return downcast(this)->getUserProjectionMatrix();
+mat4 Camera::getProjectionMatrix(uint8_t eyeId) const {
+    return downcast(this)->getUserProjectionMatrix(eyeId);
 }
 
 mat4 Camera::getCullingProjectionMatrix() const noexcept {

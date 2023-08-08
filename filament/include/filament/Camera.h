@@ -255,7 +255,7 @@ public:
      * encompass anything either eye can see.
      *
      * @param projection an array of projection matrices, only the first
-     *                   CONFIG_STEREOSCOPIC_EYES (2) are read (2)
+     *                   CONFIG_STEREOSCOPIC_EYES (2) are read
      * @param count size of the projection matrix array to set, must be
      *              >= CONFIG_STEREOSCOPIC_EYES (2)
      * @param projectionForCulling custom projection matrix for culling, must encompass both eyes
@@ -342,11 +342,14 @@ public:
      * The projection matrix used for rendering always has its far plane set to infinity. This
      * is why it may differ from the matrix set through setProjection() or setLensProjection().
      *
+     * @param eyeId the index of the eye to return the projection matrix for, must be <
+     *              CONFIG_STEREOSCOPIC_EYES (2)
      * @return The projection matrix used for rendering
      *
-     * @see setProjection, setLensProjection, setCustomProjection, getCullingProjectionMatrix
+     * @see setProjection, setLensProjection, setCustomProjection, getCullingProjectionMatrix,
+     * setCustomEyeProjection
      */
-    math::mat4 getProjectionMatrix() const noexcept;
+    math::mat4 getProjectionMatrix(uint8_t eyeId = 0) const;
 
 
     /** Returns the projection matrix used for culling (far plane is finite).
@@ -398,7 +401,7 @@ public:
      * This method is not intended to be called every frame. Instead, to update the position of the
      * head, use Camera::setModelMatrix.
      *
-     * @param eyeId the index of the eye to set, 0 for Eye 0, 1 for Eye 1.
+     * @param eyeId the index of the eye to set, must be < CONFIG_STEREOSCOPIC_EYES (2)
      * @param model the model matrix for an individual eye
      */
     void setEyeModelMatrix(uint8_t eyeId, math::mat4 const& model);
