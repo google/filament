@@ -80,8 +80,9 @@ void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p, double near, dou
 
 void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p,
         mat4 const& c, double near, double far) noexcept {
-    mEyeProjection[0] = p;
-    mEyeProjection[1] = p;
+    for (uint8_t i = 0; i < CONFIG_STEREOSCOPIC_EYES; i++) {
+        mEyeProjection[i] = p;
+    }
     mProjectionForCulling = c;
     mNear = near;
     mFar = far;
@@ -89,9 +90,13 @@ void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p,
 
 void UTILS_NOINLINE FCamera::setCustomEyeProjection(math::mat4 const* projection, size_t count,
         math::mat4 const& projectionForCulling, double near, double far) {
-    ASSERT_PRECONDITION(count >= 2, "count must be >= 2");
-    mEyeProjection[0] = projection[0];
-    mEyeProjection[1] = projection[1];
+    ASSERT_PRECONDITION(count >= CONFIG_STEREOSCOPIC_EYES,
+            "All eye projections must be supplied together, count must be >= "
+            "CONFIG_STEREOSCOPIC_EYES(%d)",
+            CONFIG_STEREOSCOPIC_EYES);
+    for (uint8_t i = 0; i < CONFIG_STEREOSCOPIC_EYES; i++) {
+        mEyeProjection[i] = projection[i];
+    }
     mProjectionForCulling = projectionForCulling;
     mNear = near;
     mFar = far;
@@ -154,7 +159,7 @@ void UTILS_NOINLINE FCamera::setProjection(Camera::Projection projection,
 }
 
 math::mat4 FCamera::getProjectionMatrix(uint8_t eye) const noexcept {
-    assert_invariant(eye == 0 || eye == 1);
+    assert_invariant(eye < CONFIG_STEREOSCOPIC_EYES);
     // This is where we transform the user clip-space (GL convention) to our virtual clip-space
     // (inverted DX convention)
     // Note that this math ends up setting the projection matrix' p33 to 0, which is where we're
@@ -190,7 +195,8 @@ void UTILS_NOINLINE FCamera::setModelMatrix(const mat4& modelMatrix) noexcept {
 }
 
 void UTILS_NOINLINE FCamera::setEyeModelMatrix(uint8_t eyeId, math::mat4 const& model) {
-    ASSERT_PRECONDITION(eyeId == 0 || eyeId == 1, "eyeId must be either 0 or 1.");
+    ASSERT_PRECONDITION(eyeId < CONFIG_STEREOSCOPIC_EYES,
+            "eyeId must be < CONFIG_STEREOSCOPIC_EYES(%d)", CONFIG_STEREOSCOPIC_EYES);
     mEyeFromView[eyeId] = inverse(model);
 }
 
@@ -278,10 +284,9 @@ math::details::TMat44<T> inverseProjection(const math::details::TMat44<T>& p) no
 // ------------------------------------------------------------------------------------------------
 
 CameraInfo::CameraInfo(FCamera const& camera) noexcept {
-    eyeProjection[0]   = mat4f{ camera.getProjectionMatrix(0) };
-    eyeProjection[1]   = mat4f{ camera.getProjectionMatrix(1) };
-    eyeFromView[0]     = mat4f{ camera.getEyeFromViewMatrix(0) };
-    eyeFromView[1]     = mat4f{ camera.getEyeFromViewMatrix(1) };
+    for (uint8_t i = 0; i < CONFIG_STEREOSCOPIC_EYES; i++) {
+        eyeProjection[i]   = mat4f{ camera.getProjectionMatrix(i) };
+    }
     cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
     model              = mat4f{ camera.getModelMatrix() };
     view               = mat4f{ camera.getViewMatrix() };
@@ -295,8 +300,9 @@ CameraInfo::CameraInfo(FCamera const& camera) noexcept {
 
 CameraInfo::CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamera) noexcept {
     const mat4 modelMatrix{ worldOriginCamera * camera.getModelMatrix() };
-    eyeProjection[0]   = mat4f{ camera.getProjectionMatrix(0) };
-    eyeProjection[1]   = mat4f{ camera.getProjectionMatrix(1) };
+    for (uint8_t i = 0; i < CONFIG_STEREOSCOPIC_EYES; i++) {
+        eyeProjection[i]   = mat4f{ camera.getProjectionMatrix(i) };
+    }
     eyeFromView[0]     = mat4f{ camera.getEyeFromViewMatrix(0) };
     eyeFromView[1]     = mat4f{ camera.getEyeFromViewMatrix(1) };
     cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };

@@ -236,6 +236,8 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     generateSpecializationConstant(out, "CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND",
             +ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND, false);
 
+    out << "const int CONFIG_STEREOSCOPIC_EYES = " << (int)CONFIG_STEREOSCOPIC_EYES << ";\n";
+
     if (material.featureLevel == 0) {
         // On ES2 since we don't have post-processing, we need to emulate EGL_GL_COLORSPACE_KHR,
         // when it's not supported.

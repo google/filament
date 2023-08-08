@@ -81,7 +81,7 @@ void PerViewUniforms::prepareCamera(FEngine& engine, const CameraInfo& camera) n
     s.nearOverFarMinusNear = camera.zn / (camera.zf - camera.zn);
 
     mat4f const& headFromWorld = camera.view;
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < CONFIG_STEREOSCOPIC_EYES; i++) {
         mat4f const& eyeFromHead = camera.eyeFromView[i];   // identity for monoscopic rendering
         mat4f const& clipFromEye = camera.eyeProjection[i];
         // clipFromEye * eyeFromHead * headFromWorld

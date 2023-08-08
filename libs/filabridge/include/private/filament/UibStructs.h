@@ -76,7 +76,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::mat4f worldFromViewMatrix;    // clip    view -> world    : model matrix
     math::mat4f clipFromViewMatrix;     // clip <- view    world    : projection matrix
     math::mat4f viewFromClipMatrix;     // clip -> view    world    : inverse projection matrix
-    math::mat4f clipFromWorldMatrix[2]; // clip <- view <- world    : per-eye
+    math::mat4f clipFromWorldMatrix[CONFIG_STEREOSCOPIC_EYES]; // clip <- view <- world
     math::mat4f worldFromClipMatrix;    // clip -> view -> world
     math::mat4f userWorldFromWorldMatrix;   // userWorld <- world
     math::float4 clipTransform;             // [sx, sy, tx, ty] only used by VERTEX_DOMAIN_DEVICE

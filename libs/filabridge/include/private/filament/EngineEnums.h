@@ -116,6 +116,9 @@ constexpr size_t CONFIG_MAX_BONE_COUNT = 256;
 // Furthermore, this is constrained by CONFIG_MINSPEC_UBO_SIZE (16 bytes per morph target).
 constexpr size_t CONFIG_MAX_MORPH_TARGET_COUNT = 256;
 
+// The number of eyes in stereoscopic mode.
+constexpr uint8_t CONFIG_STEREOSCOPIC_EYES = 2;
+
 } // namespace filament
 
 template<>

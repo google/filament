@@ -254,11 +254,14 @@ public:
      * The projectionForCulling, near, and far parameters establish a "culling frustum" which must
      * encompass anything either eye can see.
      *
-     * @param projection an array of projection matrices, only the first two are used
-     * @param count size of the projection matrix array to set, must be >= 2
+     * @param projection an array of projection matrices, only the first
+     *                   CONFIG_STEREOSCOPIC_EYES (2) are read (2)
+     * @param count size of the projection matrix array to set, must be
+     *              >= CONFIG_STEREOSCOPIC_EYES (2)
      * @param projectionForCulling custom projection matrix for culling, must encompass both eyes
      * @param near distance in world units from the camera to the culling near plane. \p near > 0.
-     * @param far distance in world units from the camera to the culling far plane. \p far > \p near.
+     * @param far distance in world units from the camera to the culling far plane. \p far > \p
+     * near.
      * @see setCustomProjection
      */
     void setCustomEyeProjection(math::mat4 const* projection, size_t count,

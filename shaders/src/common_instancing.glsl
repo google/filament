@@ -8,6 +8,7 @@ void initInstanceUniforms(out PerRenderableData p) {
 #if defined(FILAMENT_HAS_FEATURE_INSTANCING)
 #if defined(VARIANT_HAS_INSTANCED_STEREO)
     // The lowest bit of the instance index represents the eye.
+    // This logic must be updated if CONFIG_STEREOSCOPIC_EYES changes
     highp int index = instance_index >> 1;
 #else
     highp int index = instance_index;

@@ -524,10 +524,12 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
         cmdColor.primitive.instanceBufferHandle = soaInstanceInfo[i].handle;
 
         // soaInstanceInfo[i].count is the number of instances the user has requested, either for
-        // manual or hybrid instancing. Instanced stereo doubles the number of instances.
+        // manual or hybrid instancing. Instanced stereo multiplies the number of instances by the
+        // eye count.
         if (UTILS_UNLIKELY(hasInstancedStereo)) {
             cmdColor.primitive.instanceCount =
-                    (soaInstanceInfo[i].count * 2) | PrimitiveInfo::USER_INSTANCE_MASK;
+                    (soaInstanceInfo[i].count * CONFIG_STEREOSCOPIC_EYES) |
+                    PrimitiveInfo::USER_INSTANCE_MASK;
         }
 
         // if we are already an SSR variant, the SRE bit is already set,
@@ -552,7 +554,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
             if (UTILS_UNLIKELY(hasInstancedStereo)) {
                 cmdColor.primitive.instanceCount =
-                        (soaInstanceInfo[i].count * 2) | PrimitiveInfo::USER_INSTANCE_MASK;
+                        (soaInstanceInfo[i].count * CONFIG_STEREOSCOPIC_EYES) |
+                        PrimitiveInfo::USER_INSTANCE_MASK;
             }
         }
         if constexpr (isColorPass) {

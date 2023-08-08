@@ -206,6 +206,7 @@ void main() {
     vertex_position = gl_Position;
 
 #if defined(VARIANT_HAS_INSTANCED_STEREO)
+    // This logic must be updated if CONFIG_STEREOSCOPIC_EYES changes
     // We're transforming a vertex whose x coordinate is within the range (-w to w).
     // To move it to the correct half of the viewport, we need to modify the x coordinate:
     //      Eye 0  (left half): (-w to 0)
