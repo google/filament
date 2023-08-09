@@ -8,6 +8,8 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
+- matc: fix VSM high precision option on mobile [⚠️ **Recompile materials**]
+- engine: add support for skinning with more than four bones per vertex.
 - Fix possible NPE when updating fog options from Java/Kotlin
 - The `emissive` property was not applied properly to `MASKED` materials, and could cause
   dark fringes to appear (recompile materials)

@@ -80,7 +80,6 @@ utils::FixedCapacityVector<utils::FixedCapacityVector<float2>> boneDataPerPrimit
 int main(int argc, char** argv) {
     Config config;
     config.title = "skinning buffer common for two renderables";
-    auto offset = 0;
     size_t boneCount = 9;
     utils::FixedCapacityVector<float2> boneDataPerVertex(9);
     float weight = 1.f / boneCount;
@@ -221,7 +220,7 @@ int main(int argc, char** argv) {
         for (uint i = 0; i < 9; i++) {
             trans[i] = filament::math::mat4f(1);
         }
-        s *= 5;
+        s *= 8;
         mat4f transA[] = {
             mat4f::translation(float3(s, 0, 0)),
             mat4f::translation(float3(s, s, 0)),

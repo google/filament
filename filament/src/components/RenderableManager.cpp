@@ -226,8 +226,7 @@ RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(si
 
 RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(size_t primitiveIndex,
         utils::FixedCapacityVector<
-            utils::FixedCapacityVector<math::float2>> const &indicesAndWeightsVector) noexcept {
-    //mImpl->mBonePairs[primitiveIndex] = std::move(indicesAndWeightsVector);
+            utils::FixedCapacityVector<math::float2>> indicesAndWeightsVector) noexcept {
     mImpl->mBonePairs[primitiveIndex] = indicesAndWeightsVector;
     return *this;
 }
@@ -287,7 +286,8 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
             "[primitive @ %u] bone indices and weights pairs count (%u) must be equal to vertex count (%u)",
             primitiveIndex, bonePairsForPrimitive.size(), vertexCount);
         auto const& declaredAttributes = downcast(entry.vertices)->getDeclaredAttributes();
-        ASSERT_PRECONDITION(declaredAttributes[VertexAttribute::BONE_INDICES] || declaredAttributes[VertexAttribute::BONE_WEIGHTS],
+        ASSERT_PRECONDITION(declaredAttributes[VertexAttribute::BONE_INDICES]
+        || declaredAttributes[VertexAttribute::BONE_WEIGHTS],
             "[entity=%u, primitive @ %u] for advanced skinning set VertexBuffer::Builder::advancedSkinning()",
             entity.getId(), primitiveIndex);
         for (size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
@@ -363,11 +363,13 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
                     }
                 } // for all vertices per primitive
                 downcast(mEntries[primitiveIndex].vertices)
-                    ->updateBoneIndicesAndWeights(downcast(engine), std::move(skinJoints), std::move(skinWeights));
+                    ->updateBoneIndicesAndWeights(downcast(engine),
+                                                  std::move(skinJoints),
+                                                  std::move(skinWeights));
             }
-        }// for all primitives
+        } // for all primitives
     }
-    mBoneIndicesAndWeightsCount = pairsCount;
+    mBoneIndicesAndWeightsCount = pairsCount; // only part of mBoneIndicesAndWeights is used for real data
 }
 
 RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& engine, Entity entity) {

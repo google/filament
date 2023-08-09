@@ -400,7 +400,7 @@ public:
          */
         Builder& boneIndicesAndWeights(size_t primitiveIndex,
                 utils::FixedCapacityVector<
-                    utils::FixedCapacityVector<math::float2>> const &indicesAndWeightsVector) noexcept;
+                    utils::FixedCapacityVector<math::float2>> indicesAndWeightsVector) noexcept;
         /**
          * Controls if the renderable has vertex morphing targets, zero by default. This is
          * required to enable GPU morphing.

@@ -173,7 +173,7 @@ static inline size_t getSkinningBufferWidth(size_t pairCount) noexcept {
 }
 
 static inline size_t getSkinningBufferHeight(size_t pairCount) noexcept {
-    return (pairCount + MAX_SKINNING_BUFFER_WIDTH) / MAX_SKINNING_BUFFER_WIDTH;
+    return pairCount / MAX_SKINNING_BUFFER_WIDTH + 1;
 }
 
 inline size_t getSkinningBufferSize(size_t pairCount) noexcept {
@@ -250,13 +250,13 @@ void FSkinningBuffer::setIndicesAndWeightsData(FEngine& engine,
     FEngine::DriverApi& driver = engine.getDriverApi();
     auto size = getSkinningBufferSize(count);
     auto* out = (float2*) malloc(size);
-    std::transform(pairs.begin(), pairs.end(), out,
+    std::transform(pairs.begin(), pairs.begin() + count, out,
             [](const float2& p) { return float2(p); });
 
     updateDataAt(driver, textureHandle,
             Texture::Format::RG, Texture::Type::FLOAT,
             (char const*)out, sizeof(float2),
-            count,  size);
+            count, size);
 }
 
 } // namespace filament

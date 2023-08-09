@@ -163,10 +163,9 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
 
     if (mAdvancedSkinningEnabled) {
         ASSERT_PRECONDITION(!mDeclaredAttributes[VertexAttribute::BONE_INDICES],
-                        "Vertex buffer attribute BONE_INDICES is already defined");
+          "Vertex buffer attribute BONE_INDICES is already defined, no advanced skinning is allowed");
         ASSERT_PRECONDITION(!mDeclaredAttributes[VertexAttribute::BONE_WEIGHTS],
-                        "Vertex buffer attribute BONE_WEIGHTS is already defined");
-        // ASSERT_PRECONDITION(mBufferObjectsEnabled, "Please use enableBufferObjects()");
+          "Vertex buffer attribute BONE_WEIGHTS is already defined, no advanced skinning is allowed");
         ASSERT_PRECONDITION(mBufferCount < (MAX_VERTEX_BUFFER_COUNT - 2),
                         "Vertex buffer uses to many buffers (%u)", mBufferCount);
         mDeclaredAttributes.set(VertexAttribute::BONE_INDICES);
@@ -287,11 +286,13 @@ void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t bufferIndex,
 void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
                                                 std::unique_ptr<uint16_t[]> skinJoints,
                                                 std::unique_ptr<float[]> skinWeights) {
+
+    ASSERT_PRECONDITION(mAdvancedSkinningEnabled, "No advanced skinning enabled");
     auto jointsData = skinJoints.release();
     auto bdJoints = BufferDescriptor(
             jointsData, mVertexCount * 8,
             [](void *buffer, size_t size, void *user) {
-                delete static_cast<uint16_t *>(buffer); });
+                delete[] static_cast<uint16_t *>(buffer); });
     engine.getDriverApi().updateBufferObject(mBufferObjects[mBufferCount - 2],
                std::move(bdJoints), 0);
 
@@ -299,7 +300,7 @@ void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
     auto bdWeights = BufferDescriptor(
             weightsData, mVertexCount * 16,
             [](void *buffer, size_t size, void *user) {
-                delete static_cast<float *>(buffer); });
+                delete[] static_cast<float *>(buffer); });
     engine.getDriverApi().updateBufferObject(mBufferObjects[mBufferCount - 1],
                 std::move(bdWeights), 0);
 
