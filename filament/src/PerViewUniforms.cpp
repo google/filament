@@ -243,6 +243,14 @@ void PerViewUniforms::prepareMaterialGlobals(
     mUniforms.edit().custom[3] = materialGlobals[3];
 }
 
+void PerViewUniforms::prepareStereoscopic(StereoscopicOptions const& options) noexcept {
+    // instanceIndexShift controls the number of bits instance_index is right-shifted by when
+    // fetching the PerRenderable data from the UBO. When stereoscopic rendering is enabled, the
+    // lowest n bits determine the eye.
+    auto stereoEyesLog2 = static_cast<uint32_t>(std::log2(CONFIG_STEREOSCOPIC_EYES)) & 0xF;
+    mUniforms.edit().instanceIndexShift = options.enabled ? stereoEyesLog2 : 0;
+}
+
 void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr,
         float refractionLodOffset,
         ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {

@@ -651,6 +651,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
     mPerViewUniforms.prepareTemporalNoise(engine, mTemporalAntiAliasingOptions);
     mPerViewUniforms.prepareBlending(needsAlphaChannel);
     mPerViewUniforms.prepareMaterialGlobals(mMaterialGlobals);
+    mPerViewUniforms.prepareStereoscopic(mStereoscopicOptions);
 }
 
 void FView::bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {

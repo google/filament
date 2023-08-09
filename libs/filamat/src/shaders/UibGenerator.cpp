@@ -155,6 +155,14 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "es2Reserved1",            0, Type::FLOAT                  },
             { "es2Reserved2",            0, Type::FLOAT                  },
 
+            // --------------------------------------------------------------------------------------------
+            // Stereoscopic rendering
+            // --------------------------------------------------------------------------------------------
+            { "instanceIndexShift",      0, Type::UINT, Precision::HIGH,    FeatureLevel::FEATURE_LEVEL_0 },
+            { "stereoReserved0",         0, Type::FLOAT                  },
+            { "stereoReserved1",         0, Type::FLOAT                  },
+            { "stereoReserved2",         0, Type::FLOAT                  },
+
             // bring PerViewUib to 2 KiB
             { "reserved", sizeof(PerViewUib::reserved)/16, Type::FLOAT4 }
             })

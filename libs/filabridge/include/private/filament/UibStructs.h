@@ -203,8 +203,16 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float es2Reserved1;
     float es2Reserved2;
 
+    // --------------------------------------------------------------------------------------------
+    // Stereoscopic rendering [variant: STE]
+    // --------------------------------------------------------------------------------------------
+    uint32_t instanceIndexShift;       // bits 0-4: instance_index >> n, used for instanced stereo
+    float stereoReserved0;
+    float stereoReserved1;
+    float stereoReserved2;
+
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[48];
+    math::float4 reserved[47];
 };
 
 // 2 KiB == 128 float4s

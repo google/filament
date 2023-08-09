@@ -29,13 +29,7 @@ void initObjectUniforms() {
     } else
 #endif
     {
-#if defined(VARIANT_HAS_INSTANCED_STEREO)
-        // The lowest bit of the instance index represents the eye.
-        // This logic must be updated if CONFIG_STEREOSCOPIC_EYES changes
-        highp int index = instance_index >> 1;
-#else
-        highp int index = instance_index;
-#endif
+        highp int index = instance_index >> (frameUniforms.instanceIndexShift & 0xFu);
         // the object has an instance buffer
         object_uniforms_worldFromModelMatrix        = objectUniforms.data[index].worldFromModelMatrix;
         object_uniforms_worldFromModelNormalMatrix  = objectUniforms.data[index].worldFromModelNormalMatrix;
