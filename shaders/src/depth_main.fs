@@ -20,7 +20,7 @@ layout(location = 0) out highp vec2 outPicking;
 // note: VARIANT_HAS_VSM and VARIANT_HAS_PICKING are mutually exclusive
 //------------------------------------------------------------------------------
 
-highp vec2 computeDepthMomentsVSM(const highp float depth);
+highp vec2 computeDepthMomentsVSM(highp float depth);
 
 void main() {
     filament_lodBias = frameUniforms.lodBias;
@@ -74,7 +74,7 @@ void main() {
 #endif
 }
 
-highp vec2 computeDepthMomentsVSM(const highp float depth) {
+highp vec2 computeDepthMomentsVSM(highp float depth) {
     // computes the moments
     // See GPU Gems 3
     // https://developer.nvidia.com/gpugems/gpugems3/part-ii-light-and-shadows/chapter-8-summed-area-variance-shadow-maps

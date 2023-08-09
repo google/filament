@@ -34,14 +34,14 @@ const float kLog2LodRate = 3.0;
 // "The Alchemy Screen-Space Ambient Obscurance Algorithm" by Morgan McGuire
 // "Scalable Ambient Obscurance" by Morgan McGuire, Michael Mara and David Luebke
 
-vec3 tapLocation(float i, const float noise) {
+vec3 tapLocation(float i, float noise) {
     float offset = ((2.0 * PI) * 2.4) * noise;
     float angle = ((i * materialParams.sampleCount.y) * materialParams.spiralTurns) * (2.0 * PI) + offset;
     float radius = (i + noise + 0.5) * materialParams.sampleCount.y;
     return vec3(cos(angle), sin(angle), radius * radius);
 }
 
-highp vec2 startPosition(const float noise) {
+highp vec2 startPosition(float noise) {
     float angle = ((2.0 * PI) * 2.4) * noise;
     return vec2(cos(angle), sin(angle));
 }
@@ -51,15 +51,15 @@ highp mat2 tapAngleStep() {
     return mat2(t.x, t.y, -t.y, t.x);
 }
 
-vec3 tapLocationFast(float i, vec2 p, const float noise) {
+vec3 tapLocationFast(float i, vec2 p, float noise) {
     float radius = (i + noise + 0.5) * materialParams.sampleCount.y;
     return vec3(p, radius * radius);
 }
 
 void computeAmbientOcclusionSAO(inout float occlusion, inout vec3 bentNormal,
         float i, float ssDiskRadius,
-        const highp vec2 uv,  const highp vec3 origin, const vec3 normal,
-        const vec2 tapPosition, const float noise) {
+        highp vec2 uv,  highp vec3 origin, vec3 normal,
+        vec2 tapPosition, float noise) {
 
     vec3 tap = tapLocationFast(i, tapPosition, noise);
 

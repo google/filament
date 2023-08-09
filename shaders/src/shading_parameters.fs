@@ -56,7 +56,7 @@ void computeShadingParams() {
  * This function must be invoked by the user's material code (guaranteed by
  * the material compiler) after setting a value for MaterialInputs.normal.
  */
-void prepareMaterial(const MaterialInputs material) {
+void prepareMaterial(MaterialInputs material) {
 #if defined(HAS_ATTRIBUTE_TANGENTS)
 #if defined(MATERIAL_HAS_NORMAL)
     shading_normal = normalize(shading_tangentToWorld * material.normal);

@@ -48,7 +48,7 @@ fragment {
         return max(0.0, 1.0 - diff * diff);
     }
 
-    void tap(const highp sampler2DArray saoTexture,
+    void tap(highp sampler2DArray saoTexture,
             inout float sum, inout float totalWeight, float weight, float depth, vec2 position) {
         // ambient occlusion sample
         vec3 data = textureLod(saoTexture, vec3(position, 0.0), 0.0).rgb;

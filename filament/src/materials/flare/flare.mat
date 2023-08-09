@@ -78,15 +78,15 @@ fragment {
 
 void dummy(){ }
 
-float smoothstep01(const float t) {
+float smoothstep01(float t) {
     return t * t * (3.0 - 2.0 * t);
 }
 
-float ring(float x, const float c, const float r) {
+float ring(float x, float c, float r) {
     return 1.0 - smoothstep01(min(abs(x - c) / r, 1.0));
 }
 
-vec3 sampleColor(const vec2 uv) {
+vec3 sampleColor(vec2 uv) {
     // because we work on reduced resolution, we assume mediump uv is enough.
     float level = materialParams.level;
     float chromaticAberration = materialParams.chromaticAberration;
@@ -99,7 +99,7 @@ vec3 sampleColor(const vec2 uv) {
     );
 }
 
-vec3 ghosts(const vec2 vertex_uv) {
+vec3 ghosts(vec2 vertex_uv) {
     // because we work on reduced resolution, we assume mediump uv is enough.
     float ghostSpacing = materialParams.ghostSpacing;
     float ghostCount = materialParams.ghostCount;
@@ -116,7 +116,7 @@ vec3 ghosts(const vec2 vertex_uv) {
     return color;
 }
 
-vec3 halo(const vec2 uv) {
+vec3 halo(vec2 uv) {
     float haloRadius = materialParams.haloRadius;
     float haloThickness = materialParams.haloThickness;
     float threshold = materialParams.threshold.y;

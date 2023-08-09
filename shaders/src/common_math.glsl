@@ -53,19 +53,19 @@ float sq(float x) {
  *
  * @public-api
  */
-float max3(const vec3 v) {
+float max3(vec3 v) {
     return max(v.x, max(v.y, v.z));
 }
 
-float vmax(const vec2 v) {
+float vmax(vec2 v) {
     return max(v.x, v.y);
 }
 
-float vmax(const vec3 v) {
+float vmax(vec3 v) {
     return max(v.x, max(v.y, v.z));
 }
 
-float vmax(const vec4 v) {
+float vmax(vec4 v) {
     return max(max(v.x, v.y), max(v.y, v.z));
 }
 
@@ -74,19 +74,19 @@ float vmax(const vec4 v) {
  *
  * @public-api
  */
-float min3(const vec3 v) {
+float min3(vec3 v) {
     return min(v.x, min(v.y, v.z));
 }
 
-float vmin(const vec2 v) {
+float vmin(vec2 v) {
     return min(v.x, v.y);
 }
 
-float vmin(const vec3 v) {
+float vmin(vec3 v) {
     return min(v.x, min(v.y, v.z));
 }
 
-float vmin(const vec4 v) {
+float vmin(vec4 v) {
     return min(min(v.x, v.y), min(v.y, v.z));
 }
 
@@ -126,7 +126,7 @@ float acosFastPositive(float x) {
  *
  * @public-api
  */
-highp vec4 mulMat4x4Float3(const highp mat4 m, const highp vec3 v) {
+highp vec4 mulMat4x4Float3(highp mat4 m, highp vec3 v) {
     return v.x * m[0] + (v.y * m[1] + (v.z * m[2] + m[3]));
 }
 
@@ -136,14 +136,14 @@ highp vec4 mulMat4x4Float3(const highp mat4 m, const highp vec3 v) {
  *
  * @public-api
  */
-highp vec3 mulMat3x3Float3(const highp mat4 m, const highp vec3 v) {
+highp vec3 mulMat3x3Float3(highp mat4 m, highp vec3 v) {
     return v.x * m[0].xyz + (v.y * m[1].xyz + (v.z * m[2].xyz));
 }
 
 /**
  * Extracts the normal vector of the tangent frame encoded in the specified quaternion.
  */
-void toTangentFrame(const highp vec4 q, out highp vec3 n) {
+void toTangentFrame(highp vec4 q, out highp vec3 n) {
     n = vec3( 0.0,  0.0,  1.0) +
         vec3( 2.0, -2.0, -2.0) * q.x * q.zwx +
         vec3( 2.0,  2.0, -2.0) * q.y * q.wzy;
@@ -153,14 +153,14 @@ void toTangentFrame(const highp vec4 q, out highp vec3 n) {
  * Extracts the normal and tangent vectors of the tangent frame encoded in the
  * specified quaternion.
  */
-void toTangentFrame(const highp vec4 q, out highp vec3 n, out highp vec3 t) {
+void toTangentFrame(highp vec4 q, out highp vec3 n, out highp vec3 t) {
     toTangentFrame(q, n);
     t = vec3( 1.0,  0.0,  0.0) +
         vec3(-2.0,  2.0, -2.0) * q.y * q.yxw +
         vec3(-2.0,  2.0,  2.0) * q.z * q.zwx;
 }
 
-highp mat3 cofactor(const highp mat3 m) {
+highp mat3 cofactor(highp mat3 m) {
     highp float a = m[0][0];
     highp float b = m[1][0];
     highp float c = m[2][0];
