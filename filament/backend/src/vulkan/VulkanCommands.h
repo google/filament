@@ -19,6 +19,8 @@
 
 #include <bluevk/BlueVK.h>
 
+#include "DriverBase.h"
+
 #include "VulkanConstants.h"
 
 #include <utils/Condition.h>

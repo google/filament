@@ -17,7 +17,8 @@
  #ifndef TNT_FILAMENT_BACKEND_VULKANTEXTURE_H
  #define TNT_FILAMENT_BACKEND_VULKANTEXTURE_H
 
-#include "VulkanDriver.h"
+#include "DriverBase.h"
+
 #include "VulkanBuffer.h"
 #include "VulkanImageUtility.h"
 
