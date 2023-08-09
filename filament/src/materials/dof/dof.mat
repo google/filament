@@ -108,16 +108,16 @@ float ringCountFast() {
     return materialParams.ringCounts[2];
 }
 
-float sampleCount(const float ringCount) {
+float sampleCount(float ringCount) {
     float s = (ringCount * 2.0 - 1.0);
     return s * s;
 }
 
-float computeNeededRings(const float kernelSizeInPixel) {
+float computeNeededRings(float kernelSizeInPixel) {
     return ceil(kernelSizeInPixel + 0.5);
 }
 
-float getMipLevel(const float ringCount, const float kernelSizeInPixels) {
+float getMipLevel(float ringCount, float kernelSizeInPixels) {
 #if KERNEL_USE_MIPMAP
     // note: the 0.5 is to convert from highres to our downslampled texture
     float ringDistanceInTexels = kernelSizeInPixels * rcp(ringCount - 0.5);
@@ -140,7 +140,7 @@ float getMipLevel(const float ringCount, const float kernelSizeInPixels) {
 #endif
 }
 
-float sampleWeight(const float coc, const float mip) {
+float sampleWeight(float coc, float mip) {
     // The contribution of sample is inversely proportional to *its* area
     // (the larger area, the fainter it is).
     // In theory this factor should be 1 / pi * radius^2, however 1/pi is a constant, and
@@ -159,7 +159,7 @@ float sampleWeight(const float coc, const float mip) {
     return (MAX_COC_RADIUS * MAX_COC_RADIUS) / (max(coc * coc, pixelRadiusSquared));
 }
 
-float intersection(const float border, const float absCoc, const float mip) {
+float intersection(float border, float absCoc, float mip) {
     // there is very little visible difference, so use the cheaper version on mobile
 #if FILAMENT_QUALITY < FILAMENT_QUALITY_HIGH
     return saturate((absCoc - border) + 0.5);
@@ -168,7 +168,7 @@ float intersection(const float border, const float absCoc, const float mip) {
 #endif
 }
 
-highp vec2 diaphragm(const highp vec2 center, const vec2 offset) {
+highp vec2 diaphragm(highp vec2 center, vec2 offset) {
 #if DOF_DIAPHRAGM == DOF_DIAPHRAGM_CIRCLE
     return center + offset;
 #elif DOF_DIAPHRAGM == DOF_DIAPHRAGM_STRAIGHT_BLADES
@@ -217,7 +217,7 @@ void initBucket(out Bucket ring) {
     ring.coc = 0.0;
 }
 
-void initRing(const float i, const float ringCount, const float kernelSize, const vec2 noise,
+void initRing(float i, float ringCount, float kernelSize, vec2 noise,
         out float offset, out float count, out mat2 r, out vec2 p) {
     float radius = (kernelSize / (ringCount - 0.5)) * i;
 
@@ -240,7 +240,7 @@ void initRing(const float i, const float ringCount, const float kernelSize, cons
     offset = length(p + noise);
 }
 
-void mergeRings(inout Bucket curr, inout Bucket prev, const float count) {
+void mergeRings(inout Bucket curr, inout Bucket prev, float count) {
     if (curr.cw >= MEDIUMP_FLT_MIN) {
         // "Life of a Bokeh", SIGGRAPH 2018 -- slide 32
         // How much the current ring is occluding the previous ring -- we estimate this based
@@ -265,8 +265,8 @@ void mergeRings(inout Bucket curr, inout Bucket prev, const float count) {
     }
 }
 
-void accumulate(inout Bucket curr, inout Bucket prev, const Sample tap,
-        const float radius, const float border, const float mip, const bool first) {
+void accumulate(inout Bucket curr, inout Bucket prev, Sample tap,
+        float radius, float border, float mip, bool first) {
     float inLayer = tap.inLayer;
     float coc = abs(tap.coc);
     float w = inLayer * intersection(radius, coc, mip) * sampleWeight(coc, mip);
@@ -299,8 +299,8 @@ void accumulate(inout Bucket curr, inout Bucket prev, const Sample tap,
     }
 }
 
-void accumulateBackground(inout Bucket curr, inout Bucket prev, const highp vec2 pos,
-        const float radius, const float border, const float mip, const bool first) {
+void accumulateBackground(inout Bucket curr, inout Bucket prev, highp vec2 pos,
+        float radius, float border, float mip, bool first) {
     Sample tap;
     tap.s = textureLod(materialParams_color, pos, mip);
     tap.coc = textureLod(materialParams_coc, pos, mip).r;
@@ -309,15 +309,15 @@ void accumulateBackground(inout Bucket curr, inout Bucket prev, const highp vec2
 }
 
 void accumulateBackgroundMirror(inout Bucket curr, inout Bucket prev,
-        const highp vec2 center, const vec2 offset,
-        const float radius, const float border, const float mip, const bool first) {
+        highp vec2 center, vec2 offset,
+        float radius, float border, float mip, bool first) {
     accumulateBackground(curr, prev, diaphragm(center,  offset), radius, border, mip, first);
     accumulateBackground(curr, prev, diaphragm(center, -offset), radius, border, mip, first);
 }
 
 void accumulateBackgroundCenter(inout Bucket prev,
-        const highp vec2 pos, const float ringCount,
-        const float kernelSize, const float noiseRadius, const float mip) {
+        highp vec2 pos, float ringCount,
+        float kernelSize, float noiseRadius, float mip) {
     Bucket curr;
     initBucket(curr);
     float border = (kernelSize / (ringCount - 0.5)) * 0.5;
@@ -327,9 +327,9 @@ void accumulateBackgroundCenter(inout Bucket prev,
     mergeRings(curr, prev, 1.0);
 }
 
-void accumulateRing(inout Bucket prev, const float index, const float ringCount,
-        const float kernelSize, const vec2 noise, const highp vec2 uvCenter,
-        const highp vec2 cocToTexelScale, const float mip, const bool first) {
+void accumulateRing(inout Bucket prev, float index, float ringCount,
+        float kernelSize, vec2 noise, highp vec2 uvCenter,
+        highp vec2 cocToTexelScale, float mip, bool first) {
 
     // we accumulate the larger rings first
     float i = (ringCount - 1.0) - index;
@@ -378,12 +378,12 @@ float computeLayer(float coc, vec2 tiles) {
     return 	saturate((coc - tiles.r - frontLayerCocSize) * invTransitionSize);
 }
 
-float foregroundFadding(const float coc) {
+float foregroundFadding(float coc) {
     return saturate(abs(coc) - (MAX_IN_FOCUS_COC - 1.0));
 }
 
-void accumulateForeground(inout Layer layer[2], const vec2 tiles,
-        const highp vec2 pos, const float border, const float mip) {
+void accumulateForeground(inout Layer layer[2], vec2 tiles,
+        highp vec2 pos, float border, float mip) {
     float coc = textureLod(materialParams_coc, pos, mip).r;
     vec4 s = textureLod(materialParams_color, pos, mip);
 
@@ -399,13 +399,13 @@ void accumulateForeground(inout Layer layer[2], const vec2 tiles,
     layer[1].weight += inBackWeight;
 }
 
-void accumulateForegroundCenter(inout Layer layer[2], const vec2 tiles,
-        const highp vec2 pos, const float border, const float mip) {
+void accumulateForegroundCenter(inout Layer layer[2], vec2 tiles,
+        highp vec2 pos, float border, float mip) {
     accumulateForeground(layer, tiles, pos, border, mip);
 }
 
-void accumulateForegroundMirror(inout Layer layer[2], const vec2 tiles,
-        const highp vec2 center, const vec2 offset, const float border, const float mip) {
+void accumulateForegroundMirror(inout Layer layer[2], vec2 tiles,
+        highp vec2 center, vec2 offset, float border, float mip) {
     // The code below is equivalent to:
     //  accumulateForeground(layer, tiles, diaphragm(center,  offset), border, mip);
     //  accumulateForeground(layer, tiles, diaphragm(center, -offset), border, mip);
@@ -440,7 +440,7 @@ void accumulateForegroundMirror(inout Layer layer[2], const vec2 tiles,
  */
 
 void fastTile(inout vec4 color, inout float alpha,
-        const highp vec2 uv, const vec2 tiles, const NoiseState noiseState) {
+        highp vec2 uv, vec2 tiles, NoiseState noiseState) {
     highp vec2 cocToTexelScale = materialParams.cocToTexelScale;
     float cocToPixelScale = materialParams.cocToPixelScale;
 
@@ -481,7 +481,7 @@ void fastTile(inout vec4 color, inout float alpha,
 }
 
 void foregroundTile(inout vec4 foreground, inout float fgOpacity,
-        const highp vec2 uv, const vec2 tiles, const NoiseState noiseState) {
+        highp vec2 uv, vec2 tiles, NoiseState noiseState) {
     highp vec2 cocToTexelScale = materialParams.cocToTexelScale;
     float cocToPixelScale = materialParams.cocToPixelScale;
 
@@ -536,7 +536,7 @@ void foregroundTile(inout vec4 foreground, inout float fgOpacity,
 }
 
 void backgroundTile(inout vec4 background, inout float bgOpacity,
-        const highp vec2 uv, const vec2 tiles, const NoiseState noiseState) {
+        highp vec2 uv, vec2 tiles, NoiseState noiseState) {
     highp vec2 cocToTexelScale = materialParams.cocToTexelScale;
     float cocToPixelScale = materialParams.cocToPixelScale;
 

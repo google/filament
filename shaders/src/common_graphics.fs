@@ -8,7 +8,7 @@
  *
  * @public-api
  */
-float luminance(const vec3 linear) {
+float luminance(vec3 linear) {
     return dot(linear, vec3(0.2126, 0.7152, 0.0722));
 }
 
@@ -16,7 +16,7 @@ float luminance(const vec3 linear) {
  * Computes the pre-exposed intensity using the specified intensity and exposure.
  * This function exists to force highp precision on the two parameters
  */
-float computePreExposedIntensity(const highp float intensity, const highp float exposure) {
+float computePreExposedIntensity(highp float intensity, highp float exposure) {
     return intensity * exposure;
 }
 
@@ -47,7 +47,7 @@ vec3 ycbcrToRgb(float luminance, vec2 cbcr) {
 /*
  * The input must be in the [0, 1] range.
  */
-vec3 Inverse_Tonemap_Filmic(const vec3 x) {
+vec3 Inverse_Tonemap_Filmic(vec3 x) {
     return (0.03 - 0.59 * x - sqrt(0.0009 + 1.3702 * x - 1.0127 * x * x)) / (-5.02 + 4.86 * x);
 }
 
@@ -94,7 +94,7 @@ vec3 decodeRGBM(vec4 c) {
 
 // returns the frag coord in the GL convention with (0, 0) at the bottom-left
 // resolution : width, height
-highp vec2 getFragCoord(const highp vec2 resolution) {
+highp vec2 getFragCoord(highp vec2 resolution) {
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
     return vec2(gl_FragCoord.x, resolution.y - gl_FragCoord.y);
 #else

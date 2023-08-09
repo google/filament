@@ -139,7 +139,7 @@ vec3 unpackBentNormal(vec3 bn) {
     return bn * 2.0 - 1.0;
 }
 
-float specularAO(float NoV, float visibility, float roughness, const in SSAOInterpolationCache cache) {
+float specularAO(float NoV, float visibility, float roughness, SSAOInterpolationCache cache) {
     float specularAO = 1.0;
 
 // SSAO is not applied when blending is enabled
@@ -200,7 +200,7 @@ float specularAO(float NoV, float visibility, float roughness, const in SSAOInte
  * The albedo term is meant to be the diffuse color or f0 for the diffuse and
  * specular terms respectively.
  */
-vec3 gtaoMultiBounce(float visibility, const vec3 albedo) {
+vec3 gtaoMultiBounce(float visibility, vec3 albedo) {
     // Jimenez et al. 2016, "Practical Realtime Strategies for Accurate Indirect Occlusion"
     vec3 a =  2.0404 * albedo - 0.3324;
     vec3 b = -4.7951 * albedo + 0.6417;
@@ -210,13 +210,13 @@ vec3 gtaoMultiBounce(float visibility, const vec3 albedo) {
 }
 #endif
 
-void multiBounceAO(float visibility, const vec3 albedo, inout vec3 color) {
+void multiBounceAO(float visibility, vec3 albedo, inout vec3 color) {
 #if MULTI_BOUNCE_AMBIENT_OCCLUSION == 1
     color *= gtaoMultiBounce(visibility, albedo);
 #endif
 }
 
-void multiBounceSpecularAO(float visibility, const vec3 albedo, inout vec3 color) {
+void multiBounceSpecularAO(float visibility, vec3 albedo, inout vec3 color) {
 #if MULTI_BOUNCE_AMBIENT_OCCLUSION == 1 && SPECULAR_AMBIENT_OCCLUSION != SPECULAR_AO_OFF
     color *= gtaoMultiBounce(visibility, albedo);
 #endif

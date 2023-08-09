@@ -1,4 +1,4 @@
-vec3 colorGrade(mediump sampler3D lut, const vec3 x) {
+vec3 colorGrade(mediump sampler3D lut, vec3 x) {
     // Alexa LogC EI 1000
     const float a = 5.555556;
     const float b = 0.047996;

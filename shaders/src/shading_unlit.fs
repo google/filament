@@ -1,4 +1,4 @@
-void addEmissive(const MaterialInputs material, inout vec4 color) {
+void addEmissive(MaterialInputs material, inout vec4 color) {
 #if defined(MATERIAL_HAS_EMISSIVE)
     highp vec4 emissive = material.emissive;
     highp float attenuation = mix(1.0, getExposure(), emissive.w);
@@ -27,7 +27,7 @@ float computeMaskedAlpha(float a) {
  * This is mostly useful in AR to cast shadows on unlit transparent shadow
  * receiving planes.
  */
-vec4 evaluateMaterial(const MaterialInputs material) {
+vec4 evaluateMaterial(MaterialInputs material) {
     vec4 color = material.baseColor;
 
 #if defined(BLEND_MODE_MASKED)

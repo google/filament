@@ -20,7 +20,7 @@ struct FroxelParams {
  * Returns the coordinates of the froxel at the specified fragment coordinates.
  * The coordinates are a 3D position in the froxel grid.
  */
-uvec3 getFroxelCoords(const highp vec3 fragCoords) {
+uvec3 getFroxelCoords(highp vec3 fragCoords) {
     uvec3 froxelCoord;
 
     froxelCoord.xy = uvec2(fragCoords.xy * frameUniforms.froxelCountXY);
@@ -48,7 +48,7 @@ uvec3 getFroxelCoords(const highp vec3 fragCoords) {
  * The froxel index is computed from the 3D coordinates of the froxel in the
  * froxel grid and later used to fetch from the froxel buffer.
  */
-uint getFroxelIndex(const highp vec3 fragCoords) {
+uint getFroxelIndex(highp vec3 fragCoords) {
     uvec3 froxelCoord = getFroxelCoords(fragCoords);
     return froxelCoord.x * frameUniforms.fParams.x +
            froxelCoord.y * frameUniforms.fParams.y +
@@ -66,7 +66,7 @@ ivec2 getFroxelTexCoord(uint froxelIndex) {
  * Returns the froxel data for the given froxel index. The data is fetched
  * from FroxelsUniforms UBO.
  */
-FroxelParams getFroxelParams(const uint froxelIndex) {
+FroxelParams getFroxelParams(uint froxelIndex) {
     uint w = froxelIndex >> 2u;
     uint c = froxelIndex & 0x3u;
     highp uvec4 d = froxelsUniforms.records[w];
@@ -81,7 +81,7 @@ FroxelParams getFroxelParams(const uint froxelIndex) {
  * Return the light index from the record index
  * A light record is a single uint index into the lights data buffer (lightsUniforms UBO).
  */
-uint getLightIndex(const uint index) {
+uint getLightIndex(uint index) {
     uint v = index >> 4u;
     uint c = (index >> 2u) & 0x3u;
     uint s = (index & 0x3u) * 8u;
@@ -98,7 +98,7 @@ float getSquareFalloffAttenuation(float distanceSquare, float falloff) {
     return smoothFactor * smoothFactor;
 }
 
-float getDistanceAttenuation(const highp vec3 posToLight, float falloff) {
+float getDistanceAttenuation(highp vec3 posToLight, float falloff) {
     float distanceSquare = dot(posToLight, posToLight);
     float attenuation = getSquareFalloffAttenuation(distanceSquare, falloff);
     // light far attenuation
@@ -109,7 +109,7 @@ float getDistanceAttenuation(const highp vec3 posToLight, float falloff) {
     return attenuation / max(distanceSquare, 1e-4);
 }
 
-float getAngleAttenuation(const highp vec3 lightDir, const highp vec3 l, const highp vec2 scaleOffset) {
+float getAngleAttenuation(highp vec3 lightDir, highp vec3 l, highp vec2 scaleOffset) {
     float cd = dot(lightDir, l);
     float attenuation = saturate(cd * scaleOffset.x + scaleOffset.y);
     return attenuation * attenuation;
@@ -124,7 +124,7 @@ float getAngleAttenuation(const highp vec3 lightDir, const highp vec3 l, const h
  * lightsUniforms uniform buffer.
  */
 
-Light getLight(const uint lightIndex) {
+Light getLight(uint lightIndex) {
     // retrieve the light data from the UBO
 
     highp mat4 data = lightsUniforms.lights[lightIndex];
@@ -176,8 +176,8 @@ Light getLight(const uint lightIndex) {
  * The result of the lighting computations is accumulated in the color
  * parameter, as linear HDR RGB.
  */
-void evaluatePunctualLights(const MaterialInputs material,
-        const PixelParams pixel, inout vec3 color) {
+void evaluatePunctualLights(MaterialInputs material,
+        PixelParams pixel, inout vec3 color) {
 
     // Fetch the light information stored in the froxel that contains the
     // current fragment

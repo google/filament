@@ -17,7 +17,7 @@
 // IBL utilities
 //------------------------------------------------------------------------------
 
-vec3 decodeDataForIBL(const vec4 data) {
+vec3 decodeDataForIBL(vec4 data) {
     return data.rgb;
 }
 
@@ -43,7 +43,7 @@ vec3 prefilteredDFG(float perceptualRoughness, float NoV) {
 // IBL irradiance implementations
 //------------------------------------------------------------------------------
 
-vec3 Irradiance_SphericalHarmonics(const vec3 n) {
+vec3 Irradiance_SphericalHarmonics(vec3 n) {
     return max(
           frameUniforms.iblSH[0]
 #if SPHERICAL_HARMONICS_BANDS >= 2
@@ -61,7 +61,7 @@ vec3 Irradiance_SphericalHarmonics(const vec3 n) {
         , 0.0);
 }
 
-vec3 Irradiance_RoughnessOne(const vec3 n) {
+vec3 Irradiance_RoughnessOne(vec3 n) {
     // note: lod used is always integer, hopefully the hardware skips tri-linear filtering
     return decodeDataForIBL(textureLod(light_iblSpecular, n, frameUniforms.iblRoughnessOneLevel));
 }
@@ -70,7 +70,7 @@ vec3 Irradiance_RoughnessOne(const vec3 n) {
 // IBL irradiance dispatch
 //------------------------------------------------------------------------------
 
-vec3 diffuseIrradiance(const vec3 n) {
+vec3 diffuseIrradiance(vec3 n) {
     // On Metal devices with an A8X chipset, this light_iblSpecular texture sample must be pulled
     // outside the frameUniforms.iblSH check. This is to avoid a Metal pipeline compilation error
     // with the message: "Could not statically determine the target of a texture".
@@ -118,21 +118,21 @@ float perceptualRoughnessToLod(float perceptualRoughness) {
     return frameUniforms.iblRoughnessOneLevel * perceptualRoughness * (2.0 - perceptualRoughness);
 }
 
-vec3 prefilteredRadiance(const vec3 r, float perceptualRoughness) {
+vec3 prefilteredRadiance(vec3 r, float perceptualRoughness) {
     float lod = perceptualRoughnessToLod(perceptualRoughness);
     return decodeDataForIBL(textureLod(light_iblSpecular, r, lod));
 }
 
-vec3 prefilteredRadiance(const vec3 r, float roughness, float offset) {
+vec3 prefilteredRadiance(vec3 r, float roughness, float offset) {
     float lod = frameUniforms.iblRoughnessOneLevel * roughness;
     return decodeDataForIBL(textureLod(light_iblSpecular, r, lod + offset));
 }
 
-vec3 getSpecularDominantDirection(const vec3 n, const vec3 r, float roughness) {
+vec3 getSpecularDominantDirection(vec3 n, vec3 r, float roughness) {
     return mix(r, n, roughness * roughness);
 }
 
-vec3 specularDFG(const PixelParams pixel) {
+vec3 specularDFG(PixelParams pixel) {
 #if defined(SHADING_MODEL_CLOTH)
     return pixel.f0 * pixel.dfg.z;
 #else
@@ -140,7 +140,7 @@ vec3 specularDFG(const PixelParams pixel) {
 #endif
 }
 
-vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
+vec3 getReflectedVector(PixelParams pixel, vec3 n) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
     vec3 r = getReflectedVector(pixel, shading_view, n);
 #else
@@ -223,7 +223,7 @@ float prefilteredImportanceSampling(float ipdf, float omegaP) {
     return mipLevel;
 }
 
-vec3 isEvaluateSpecularIBL(const PixelParams pixel, const vec3 n, const vec3 v, const float NoV) {
+vec3 isEvaluateSpecularIBL(PixelParams pixel, vec3 n, vec3 v, float NoV) {
     const int numSamples = IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT;
     const float invNumSamples = 1.0 / float(numSamples);
     const vec3 up = vec3(0.0, 0.0, 1.0);
@@ -282,7 +282,7 @@ vec3 isEvaluateSpecularIBL(const PixelParams pixel, const vec3 n, const vec3 v, 
     return indirectSpecular;
 }
 
-vec3 isEvaluateDiffuseIBL(const PixelParams pixel, vec3 n, vec3 v) {
+vec3 isEvaluateDiffuseIBL(PixelParams pixel, vec3 n, vec3 v) {
     const int numSamples = IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT;
     const float invNumSamples = 1.0 / float(numSamples);
     const vec3 up = vec3(0.0, 0.0, 1.0);
@@ -332,7 +332,7 @@ vec3 isEvaluateDiffuseIBL(const PixelParams pixel, vec3 n, vec3 v) {
     return indirectDiffuse * invNumSamples; // we bake 1/PI here, which cancels out
 }
 
-void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 Fd, inout vec3 Fr) {
+void isEvaluateClearCoatIBL(PixelParams pixel, float specularAO, inout vec3 Fd, inout vec3 Fr) {
 #if defined(MATERIAL_HAS_CLEAR_COAT)
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     // We want to use the geometric normal for the clear coat layer
@@ -366,7 +366,7 @@ void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec
 // IBL evaluation
 //------------------------------------------------------------------------------
 
-void evaluateClothIndirectDiffuseBRDF(const PixelParams pixel, inout float diffuse) {
+void evaluateClothIndirectDiffuseBRDF(PixelParams pixel, inout float diffuse) {
 #if defined(SHADING_MODEL_CLOTH)
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     // Simulate subsurface scattering with a wrap diffuse term
@@ -375,8 +375,8 @@ void evaluateClothIndirectDiffuseBRDF(const PixelParams pixel, inout float diffu
 #endif
 }
 
-void evaluateSheenIBL(const PixelParams pixel, float diffuseAO,
-        const in SSAOInterpolationCache cache, inout vec3 Fd, inout vec3 Fr) {
+void evaluateSheenIBL(PixelParams pixel, float diffuseAO,
+        SSAOInterpolationCache cache, inout vec3 Fd, inout vec3 Fr) {
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE)
 #if defined(MATERIAL_HAS_SHEEN_COLOR)
     // Albedo scaling of the base layer before we layer sheen on top
@@ -391,8 +391,8 @@ void evaluateSheenIBL(const PixelParams pixel, float diffuseAO,
 #endif
 }
 
-void evaluateClearCoatIBL(const PixelParams pixel, float diffuseAO,
-        const in SSAOInterpolationCache cache, inout vec3 Fd, inout vec3 Fr) {
+void evaluateClearCoatIBL(PixelParams pixel, float diffuseAO,
+        SSAOInterpolationCache cache, inout vec3 Fd, inout vec3 Fr) {
 #if IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     float specularAO = specularAO(shading_NoV, diffuseAO, pixel.clearCoatRoughness, cache);
     isEvaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
@@ -422,7 +422,7 @@ void evaluateClearCoatIBL(const PixelParams pixel, float diffuseAO,
 #endif
 }
 
-void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance,
+void evaluateSubsurfaceIBL(PixelParams pixel, vec3 diffuseIrradiance,
         inout vec3 Fd, inout vec3 Fr) {
 #if defined(SHADING_MODEL_SUBSURFACE)
     vec3 viewIndependent = diffuseIrradiance;
@@ -442,8 +442,8 @@ struct Refraction {
     float d;
 };
 
-void refractionSolidSphere(const PixelParams pixel,
-    const vec3 n, vec3 r, out Refraction ray) {
+void refractionSolidSphere(PixelParams pixel,
+    vec3 n, vec3 r, out Refraction ray) {
     r = refract(r, n, pixel.etaIR);
     float NoR = dot(n, r);
     float d = pixel.thickness * -NoR;
@@ -453,8 +453,8 @@ void refractionSolidSphere(const PixelParams pixel,
     ray.direction = refract(r, n1,  pixel.etaRI);
 }
 
-void refractionSolidBox(const PixelParams pixel,
-    const vec3 n, vec3 r, out Refraction ray) {
+void refractionSolidBox(PixelParams pixel,
+    vec3 n, vec3 r, out Refraction ray) {
     vec3 rr = refract(r, n, pixel.etaIR);
     float NoR = dot(n, rr);
     float d = pixel.thickness / max(-NoR, 0.001);
@@ -468,8 +468,8 @@ void refractionSolidBox(const PixelParams pixel,
 #endif
 }
 
-void refractionThinSphere(const PixelParams pixel,
-    const vec3 n, vec3 r, out Refraction ray) {
+void refractionThinSphere(PixelParams pixel,
+    vec3 n, vec3 r, out Refraction ray) {
     float d = 0.0;
 #if defined(MATERIAL_HAS_MICRO_THICKNESS)
     // note: we need the refracted ray to calculate the distance traveled
@@ -485,9 +485,7 @@ void refractionThinSphere(const PixelParams pixel,
     ray.d = d;
 }
 
-vec3 evaluateRefraction(
-    const PixelParams pixel,
-    const vec3 n0, vec3 E) {
+vec3 evaluateRefraction(PixelParams pixel, vec3 n0, vec3 E) {
 
     Refraction ray;
 
@@ -556,7 +554,7 @@ vec3 evaluateRefraction(
 }
 #endif
 
-void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
+void evaluateIBL(MaterialInputs material, PixelParams pixel, inout vec3 color) {
     // specular layer
     vec3 Fr = vec3(0.0);
 
