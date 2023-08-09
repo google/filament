@@ -540,7 +540,53 @@ class_<Engine>("Engine")
     /// vb ::argument:: the [VertexBuffer] to destroy
     .function("destroyVertexBuffer", (void (*)(Engine*, VertexBuffer*)) []
             (Engine* engine, VertexBuffer* vb) { engine->destroy(vb); },
-            allow_raw_pointers());
+            allow_raw_pointers())
+
+    .function("isValidRenderer", EMBIND_LAMBDA(bool, (Engine* engine, Renderer* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidView", EMBIND_LAMBDA(bool, (Engine* engine, View* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidScene", EMBIND_LAMBDA(bool, (Engine* engine, Scene* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidFence", EMBIND_LAMBDA(bool, (Engine* engine, Fence* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidStream", EMBIND_LAMBDA(bool, (Engine* engine, Stream* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidIndexBuffer", EMBIND_LAMBDA(bool, (Engine* engine, IndexBuffer* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidVertexBuffer", EMBIND_LAMBDA(bool, (Engine* engine, VertexBuffer* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidSkinningBuffer", EMBIND_LAMBDA(bool, (Engine* engine, SkinningBuffer* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidIndirectLight", EMBIND_LAMBDA(bool, (Engine* engine, IndirectLight* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidMaterial", EMBIND_LAMBDA(bool, (Engine* engine, Material* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidSkybox", EMBIND_LAMBDA(bool, (Engine* engine, Skybox* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidColorGrading", EMBIND_LAMBDA(bool, (Engine* engine, ColorGrading* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidTexture", EMBIND_LAMBDA(bool, (Engine* engine, Texture* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidRenderTarget", EMBIND_LAMBDA(bool, (Engine* engine, RenderTarget* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers())
+    .function("isValidSwapChain", EMBIND_LAMBDA(bool, (Engine* engine, SwapChain* object), {
+                return engine->isValid(object);
+            }), allow_raw_pointers());
 
 /// SwapChain ::core class:: Represents the platform's native rendering surface.
 /// See also the [Engine] methods `createSwapChain` and `destroySwapChain`.
@@ -1325,6 +1371,8 @@ class_<MaterialInstance>("MaterialInstance")
     .function("setStencilWrite", &MaterialInstance::setStencilWrite)
     .function("setDepthCulling", &MaterialInstance::setDepthCulling)
     .function("isDepthCullingEnabled", &MaterialInstance::isDepthCullingEnabled)
+    .function("setDepthFunc", &MaterialInstance::setDepthFunc)
+    .function("getDepthFunc", &MaterialInstance::getDepthFunc)
     .function("setStencilCompareFunction", &MaterialInstance::setStencilCompareFunction)
     .function("setStencilCompareFunction", EMBIND_LAMBDA(void,
             (MaterialInstance* self, MaterialInstance::StencilCompareFunc func), {

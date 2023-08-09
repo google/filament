@@ -465,7 +465,7 @@ void FEngine::shutdown() {
         getDriverApi().terminate();
     } else {
         mDriverThread.join();
-
+        // Driver::terminate() has been called here.
     }
 
     // Finally, call user callbacks that might have been scheduled.
@@ -854,6 +854,12 @@ void FEngine::cleanupResourceListLocked(Lock& lock, ResourceList<T>&& list) {
 
 template<typename T>
 UTILS_ALWAYS_INLINE
+inline bool FEngine::isValid(const T* ptr, ResourceList<T>& list) {
+    return list.find(ptr) != list.end();
+}
+
+template<typename T>
+UTILS_ALWAYS_INLINE
 inline bool FEngine::terminateAndDestroy(const T* ptr, ResourceList<T>& list) {
     if (ptr == nullptr) return true;
     bool const success = list.remove(ptr);
@@ -1019,6 +1025,79 @@ void FEngine::destroy(Entity e) {
     mCameraManager.destroy(e);
 }
 
+bool FEngine::isValid(const FBufferObject* p) {
+    return isValid(p, mBufferObjects);
+}
+
+bool FEngine::isValid(const FVertexBuffer* p) {
+    return isValid(p, mVertexBuffers);
+}
+
+bool FEngine::isValid(const FFence* p) {
+    return isValid(p, mFences);
+}
+
+bool FEngine::isValid(const FIndexBuffer* p) {
+    return isValid(p, mIndexBuffers);
+}
+
+bool FEngine::isValid(const FSkinningBuffer* p) {
+    return isValid(p, mSkinningBuffers);
+}
+
+bool FEngine::isValid(const FMorphTargetBuffer* p) {
+    return isValid(p, mMorphTargetBuffers);
+}
+
+bool FEngine::isValid(const FIndirectLight* p) {
+    return isValid(p, mIndirectLights);
+}
+
+bool FEngine::isValid(const FMaterial* p) {
+    return isValid(p, mMaterials);
+}
+
+bool FEngine::isValid(const FRenderer* p) {
+    return isValid(p, mRenderers);
+}
+
+bool FEngine::isValid(const FScene* p) {
+    return isValid(p, mScenes);
+}
+
+bool FEngine::isValid(const FSkybox* p) {
+    return isValid(p, mSkyboxes);
+}
+
+bool FEngine::isValid(const FColorGrading* p) {
+    return isValid(p, mColorGradings);
+}
+
+bool FEngine::isValid(const FSwapChain* p) {
+    return isValid(p, mSwapChains);
+}
+
+bool FEngine::isValid(const FStream* p) {
+    return isValid(p, mStreams);
+}
+
+bool FEngine::isValid(const FTexture* p) {
+    return isValid(p, mTextures);
+}
+
+bool FEngine::isValid(const FRenderTarget* p) {
+    return isValid(p, mRenderTargets);
+}
+
+bool FEngine::isValid(const FView* p) {
+    return isValid(p, mViews);
+}
+
+bool FEngine::isValid(const FInstanceBuffer* p) {
+    return isValid(p, mInstanceBuffers);
+}
+
+
 void* FEngine::streamAlloc(size_t size, size_t alignment) noexcept {
     // we allow this only for small allocations
     if (size > 65536) {
@@ -1035,9 +1114,10 @@ bool FEngine::execute() {
     }
 
     // execute all command buffers
+    auto& driver = getDriverApi();
     for (auto& item : buffers) {
         if (UTILS_LIKELY(item.begin)) {
-            getDriverApi().execute(item.begin);
+            driver.execute(item.begin);
             mCommandBufferQueue.releaseBuffer(item);
         }
     }

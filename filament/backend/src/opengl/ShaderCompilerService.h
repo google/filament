@@ -33,6 +33,7 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <utility>
 #include <vector>
 
 namespace filament::backend {
@@ -93,20 +94,24 @@ public:
 private:
     class CompilerThreadPool {
     public:
+        CompilerThreadPool() noexcept;
+        ~CompilerThreadPool() noexcept;
         using Job = utils::Invocable<void()>;
         void init(bool useSharedContexts, uint32_t threadCount, OpenGLPlatform& platform) noexcept;
-        void exit() noexcept;
-        void queue(program_token_t const& token, Job&& job);
+        void terminate() noexcept;
+        void queue(CompilerPriorityQueue priorityQueue, program_token_t const& token, Job&& job);
         void makeUrgent(program_token_t const& token);
 
     private:
+        using Queue = std::deque<std::pair<program_token_t, Job>>;
         std::vector<std::thread> mCompilerThreads;
         std::atomic_bool mExitRequested{ false };
         std::mutex mQueueLock;
         std::condition_variable mQueueCondition;
-        std::array<std::deque<std::pair<program_token_t, Job>>, 2> mQueues;
-        Job mUrgentJob;
+        std::array<Queue, 2> mQueues;
+        Job mUrgentJob; // needs mQueueLock as well
         Job dequeue(program_token_t const& token); // lock must be held
+        std::pair<Queue&, Queue::iterator> find(program_token_t const& token);
     };
 
     OpenGLDriver& mDriver;
@@ -143,12 +148,26 @@ private:
 
     static bool checkProgramStatus(program_token_t const& token) noexcept;
 
+    struct Job {
+        template<typename FUNC>
+        Job(FUNC&& fn) : fn(std::forward<FUNC>(fn)) {}
+        Job(std::function<bool(Job const& job)> fn,
+                CallbackHandler* handler, void* user, CallbackHandler::Callback callback)
+                : fn(std::move(fn)), handler(handler), user(user), callback(callback) {
+        }
+        std::function<bool(Job const& job)> fn;
+        CallbackHandler* handler = nullptr;
+        void* user = nullptr;
+        CallbackHandler::Callback callback{};
+    };
+
     void runAtNextTick(CompilerPriorityQueue priority,
-            const program_token_t& token, std::function<bool()> fn) noexcept;
+            const program_token_t& token, Job job) noexcept;
     void executeTickOps() noexcept;
     void cancelTickOp(program_token_t token) noexcept;
     // order of insertion is important
-    using ContainerType = std::tuple<CompilerPriorityQueue, program_token_t, std::function<bool()>>;
+
+    using ContainerType = std::tuple<CompilerPriorityQueue, program_token_t, Job>;
     std::vector<ContainerType> mRunAtNextTickOps;
 };
 

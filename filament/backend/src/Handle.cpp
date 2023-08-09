@@ -67,7 +67,6 @@ template io::ostream& operator<<(io::ostream& out, const Handle<HwFence>& h) noe
 template io::ostream& operator<<(io::ostream& out, const Handle<HwSwapChain>& h) noexcept;
 template io::ostream& operator<<(io::ostream& out, const Handle<HwStream>& h) noexcept;
 template io::ostream& operator<<(io::ostream& out, const Handle<HwTimerQuery>& h) noexcept;
-template io::ostream& operator<<(io::ostream& out, const Handle<HwSync>& h) noexcept;
 template io::ostream& operator<<(io::ostream& out, const Handle<HwBufferObject>& h) noexcept;
 
 #endif

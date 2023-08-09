@@ -626,10 +626,26 @@ public class MaterialInstance {
     }
 
     /**
+     * Sets the depth comparison function (default is {@link TextureSampler.CompareFunction#GE}).
+     *
+     * @param func the depth comparison function
+     */
+    public void setDepthFunc(TextureSampler.CompareFunction func) {
+        nSetDepthFunc(getNativeObject(), func.ordinal());
+    }
+
+    /**
      * Returns whether depth culling is enabled.
      */
     public boolean isDepthCullingEnabled() {
         return nIsDepthCullingEnabled(getNativeObject());
+    }
+
+    /**
+     * Returns the depth comparison function.
+     */
+    public TextureSampler.CompareFunction getDepthFunc() {
+        return TextureSampler.EnumCache.sCompareFunctionValues[nGetDepthFunc(getNativeObject())];
     }
 
     /**
@@ -908,6 +924,7 @@ public class MaterialInstance {
     private static native void nSetDepthWrite(long nativeMaterialInstance, boolean enable);
     private static native void nSetStencilWrite(long nativeMaterialInstance, boolean enable);
     private static native void nSetDepthCulling(long nativeMaterialInstance, boolean enable);
+    private static native void nSetDepthFunc(long nativeMaterialInstance, long function);
 
     private static native void nSetStencilCompareFunction(long nativeMaterialInstance,
             long function, long face);
@@ -939,4 +956,5 @@ public class MaterialInstance {
     private static native boolean nIsDepthWriteEnabled(long nativeMaterialInstance);
     private static native boolean nIsStencilWriteEnabled(long nativeMaterialInstance);
     private static native boolean nIsDepthCullingEnabled(long nativeMaterialInstance);
+    private static native int nGetDepthFunc(long nativeMaterialInstance);
 }

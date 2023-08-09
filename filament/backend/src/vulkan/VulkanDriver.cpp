@@ -503,12 +503,7 @@ void VulkanDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 
 void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
     VulkanCommandBuffer const& commandBuffer = mCommands->get();
-    construct<VulkanFence>(fh, commandBuffer);
-}
-
-void VulkanDriver::createSyncR(Handle<HwSync> sh, int) {
-    VulkanCommandBuffer const& commandBuffer = mCommands->get();
-    construct<VulkanSync>(sh, commandBuffer);
+    construct<VulkanFence>(fh, commandBuffer.fence);
 }
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
@@ -584,13 +579,7 @@ Handle<HwRenderTarget> VulkanDriver::createRenderTargetS() noexcept {
 }
 
 Handle<HwFence> VulkanDriver::createFenceS() noexcept {
-    return allocHandle<VulkanFence>();
-}
-
-Handle<HwSync> VulkanDriver::createSyncS() noexcept {
-    Handle<HwSync> sh = allocHandle<VulkanSync>();
-    construct<VulkanSync>(sh);
-    return sh;
+    return initHandle<VulkanFence>();
 }
 
 Handle<HwSwapChain> VulkanDriver::createSwapChainS() noexcept {
@@ -647,11 +636,6 @@ void VulkanDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
     }
 }
 
-void VulkanDriver::destroySync(Handle<HwSync> sh) {
-    destruct<VulkanSync>(sh);
-}
-
-
 Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream) {
     return {};
 }
@@ -680,6 +664,12 @@ void VulkanDriver::destroyFence(Handle<HwFence> fh) {
 
 FenceStatus VulkanDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
     auto& cmdfence = handle_cast<VulkanFence*>(fh)->fence;
+    if (!cmdfence) {
+        // If wait is called before a fence actually exists, we return timeout.  This matches the
+        // current behavior in OpenGLDriver, but we should eventually reconsider a different error
+        // code.
+        return FenceStatus::TIMEOUT_EXPIRED;
+    }
 
     // Internally we use the VK_INCOMPLETE status to mean "not yet submitted".
     // When this fence gets submitted, its status changes to VK_NOT_READY.
@@ -929,23 +919,6 @@ bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapse
     uint64_t delta = uint64_t(float(timestamp1 - timestamp0) * period);
     *elapsedTime = delta;
     return true;
-}
-
-SyncStatus VulkanDriver::getSyncStatus(Handle<HwSync> sh) {
-    VulkanSync* sync = handle_cast<VulkanSync*>(sh);
-    if (sync->fence == nullptr) {
-        return SyncStatus::NOT_SIGNALED;
-    }
-    VkResult status = sync->fence->status.load(std::memory_order_relaxed);
-    switch (status) {
-        case VK_SUCCESS: return SyncStatus::SIGNALED;
-        case VK_INCOMPLETE: return SyncStatus::NOT_SIGNALED;
-        case VK_NOT_READY: return SyncStatus::NOT_SIGNALED;
-        case VK_ERROR_DEVICE_LOST: return SyncStatus::ERROR;
-        default:
-            // NOTE: In theory, the fence status must be one of the above values.
-            return SyncStatus::ERROR;
-    }
 }
 
 void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {

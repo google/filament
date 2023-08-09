@@ -87,7 +87,6 @@ struct ShaderCompilerService::ProgramToken {
 
     BlobCacheKey key;
     std::future<ProgramBinary> binary;
-    CompilerPriorityQueue priorityQueue = CompilerPriorityQueue::HIGH;
     bool canceled = false;
 };
 
@@ -100,6 +99,14 @@ void* ShaderCompilerService::getUserData(const program_token_t& token) noexcept 
 }
 
 // ------------------------------------------------------------------------------------------------
+
+ShaderCompilerService::CompilerThreadPool::CompilerThreadPool() noexcept = default;
+
+ShaderCompilerService::CompilerThreadPool::~CompilerThreadPool() noexcept {
+    assert_invariant(mCompilerThreads.empty());
+    assert_invariant(mQueues[0].empty());
+    assert_invariant(mQueues[1].empty());
+}
 
 void ShaderCompilerService::CompilerThreadPool::init(
         bool useSharedContexts, uint32_t threadCount, OpenGLPlatform& platform) noexcept {
@@ -148,12 +155,23 @@ void ShaderCompilerService::CompilerThreadPool::init(
     }
 }
 
+auto ShaderCompilerService::CompilerThreadPool::find(
+        program_token_t const& token) -> std::pair<Queue&, Queue::iterator> {
+    for (auto&& q: mQueues) {
+        auto pos = std::find_if(q.begin(), q.end(), [&token](auto&& item) {
+            return item.first == token;
+        });
+        if (pos != q.end()) {
+            return { q, pos };
+        }
+    }
+    // this can happen if the program is being processed right now
+    return { mQueues[0], mQueues[0].end() };
+}
+
 auto ShaderCompilerService::CompilerThreadPool::dequeue(program_token_t const& token) -> Job {
-    auto& q = mQueues[size_t(token->priorityQueue)];
-    auto pos = std::find_if(q.begin(), q.end(), [&token](auto&& item) {
-        return item.first == token;
-    });
     Job job;
+    auto&& [q, pos] = find(token);
     if (pos != q.end()) {
         std::swap(job, pos->second);
         q.erase(pos);
@@ -169,21 +187,29 @@ void ShaderCompilerService::CompilerThreadPool::makeUrgent(program_token_t const
     mQueueCondition.notify_one();
 }
 
-void ShaderCompilerService::CompilerThreadPool::queue(program_token_t const& token, Job&& job) {
+void ShaderCompilerService::CompilerThreadPool::queue(CompilerPriorityQueue priorityQueue,
+        program_token_t const& token, Job&& job) {
     std::unique_lock const lock(mQueueLock);
-    mQueues[size_t(token->priorityQueue)].emplace_back(token, std::move(job));
+    mQueues[size_t(priorityQueue)].emplace_back(token, std::move(job));
     mQueueCondition.notify_one();
 }
 
-void ShaderCompilerService::CompilerThreadPool::exit() noexcept {
+void ShaderCompilerService::CompilerThreadPool::terminate() noexcept {
     std::unique_lock lock(mQueueLock);
     mExitRequested = true;
     mQueueCondition.notify_all();
     lock.unlock();
+
     for (auto& thread: mCompilerThreads) {
         if (thread.joinable()) {
             thread.join();
         }
+    }
+    mCompilerThreads.clear();
+
+    // Clear all the queues, dropping the remaining jobs. This relies on the jobs being cancelable.
+    for (auto&& q : mQueues) {
+        q.clear();
     }
 }
 
@@ -204,7 +230,9 @@ void ShaderCompilerService::init() noexcept {
         //   also glProgramBinary blocks if other threads are compiling.
         // - on Mali shader compilation can be multithreaded, but program linking happens on
         //   a single service thread, so we don't bother using more than one thread either.
-        // - on desktop we could use more threads, tbd.
+        // - on macOS (M1 MacBook Pro/Ventura) there is global lock around all GL APIs when using
+        //   a shared context, so parallel shader compilation yields no benefit.
+        // - on windows/linux we could use more threads, tbd.
         if (mDriver.mPlatform.isExtraContextSupported()) {
             mShaderCompilerThreadCount = 1;
             mCompilerThreadPool.init(mUseSharedContext,
@@ -214,8 +242,16 @@ void ShaderCompilerService::init() noexcept {
 }
 
 void ShaderCompilerService::terminate() noexcept {
-    // FIXME: could we have some user callbacks pending here?
-    mCompilerThreadPool.exit();
+    mCompilerThreadPool.terminate();
+
+    // We could have some pending callbacks here, we need to execute them
+    for (auto&& op: mRunAtNextTickOps) {
+        Job const& job = std::get<2>(op);
+        if (job.callback) {
+            mDriver.scheduleCallback(job.handler, job.user, job.callback);
+        }
+    }
+    mRunAtNextTickOps.clear();
 }
 
 ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
@@ -230,13 +266,13 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
 
     token->gl.program = OpenGLBlobCache::retrieve(&token->key, mDriver.mPlatform, program);
     if (!token->gl.program) {
+        CompilerPriorityQueue const priorityQueue = program.getPriorityQueue();
         if (mShaderCompilerThreadCount) {
             // set the future in the token and pass the promise to the worker thread
             std::promise<ProgramToken::ProgramBinary> promise;
             token->binary = promise.get_future();
-            token->priorityQueue = program.getPriorityQueue();
             // queue a compile job
-            mCompilerThreadPool.queue(token,
+            mCompilerThreadPool.queue(priorityQueue, token,
                     [this, &gl, promise = std::move(promise),
                             program = std::move(program), token]() mutable {
 
@@ -304,7 +340,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
 
         }
 
-        runAtNextTick(token->priorityQueue, token, [this, token]() {
+        runAtNextTick(priorityQueue, token, [this, token](Job const&) {
             if (mShaderCompilerThreadCount) {
                 if (!token->gl.program) {
                     // TODO: see if we could completely eliminate this callback here
@@ -429,16 +465,19 @@ void ShaderCompilerService::notifyWhenAllProgramsAreReady(CompilerPriorityQueue 
 
     if (KHR_parallel_shader_compile || mShaderCompilerThreadCount) {
         // list all programs up to this point, both low and high priority
-        utils::FixedCapacityVector<program_token_t, std::allocator<program_token_t>, false> tokens;
-        tokens.reserve(mRunAtNextTickOps.size());
-        for (auto& [priority_, token, fn_] : mRunAtNextTickOps) {
-            if (token) {
+
+        using TokenVector = utils::FixedCapacityVector<
+                program_token_t, std::allocator<program_token_t>, false>;
+        TokenVector tokens{ TokenVector::with_capacity(mRunAtNextTickOps.size()) };
+
+        for (auto& [itemPriority, token, job] : mRunAtNextTickOps) {
+            if (token && job.fn && itemPriority == priority) {
                 tokens.push_back(token);
             }
         }
 
-        runAtNextTick(priority, nullptr,
-                [this, tokens = std::move(tokens), handler, user, callback]() {
+        runAtNextTick(priority, nullptr, {
+                [this, tokens = std::move(tokens)](Job const& job) {
             for (auto const& token : tokens) {
                 assert_invariant(token);
                 if (!isProgramReady(token)) {
@@ -446,23 +485,23 @@ void ShaderCompilerService::notifyWhenAllProgramsAreReady(CompilerPriorityQueue 
                     return false;
                 }
             }
-            if (callback) {
+            if (job.callback) {
                 // all programs are ready, we can call the callbacks
-                mDriver.scheduleCallback(handler, user, callback);
+                mDriver.scheduleCallback(job.handler, job.user, job.callback);
             }
             // and we're done
             return true;
-        });
+        }, handler, user, callback });
 
         return;
     }
 
     // we don't have KHR_parallel_shader_compile
 
-    runAtNextTick(priority, nullptr, [this, handler, user, callback]() {
-        mDriver.scheduleCallback(handler, user, callback);
+    runAtNextTick(priority, nullptr, {[this](Job const& job) {
+        mDriver.scheduleCallback(job.handler, job.user, job.callback);
         return true;
-    });
+    }, handler, user, callback });
 
     // TODO: we could spread the compiles over several frames, the tick() below then is not
     //       needed here. We keep it for now as to not change the current behavior too much.
@@ -661,8 +700,8 @@ float u16tofp32(highp uint v) {
     v <<= 16u;
     highp uint s = v & 0x80000000u;
     highp uint n = v & 0x7FFFFFFFu;
-    highp uint nz = n == 0u ? 0u : 0xFFFFFFFF;
-    return uintBitsToFloat(s | ((((n >> 3u) + (0x70u << 23))) & nz));
+    highp uint nz = (n == 0u) ? 0u : 0xFFFFFFFFu;
+    return uintBitsToFloat(s | ((((n >> 3u) + (0x70u << 23u))) & nz));
 }
 vec2 unpackHalf2x16(highp uint v) {
     return vec2(u16tofp32(v&0xFFFFu), u16tofp32(v>>16u));
@@ -670,11 +709,11 @@ vec2 unpackHalf2x16(highp uint v) {
 uint fp32tou16(float val) {
     uint f32 = floatBitsToUint(val);
     uint f16 = 0u;
-    uint sign = (f32 >> 16) & 0x8000u;
-    int exponent = int((f32 >> 23) & 0xFFu) - 127;
+    uint sign = (f32 >> 16u) & 0x8000u;
+    int exponent = int((f32 >> 23u) & 0xFFu) - 127;
     uint mantissa = f32 & 0x007FFFFFu;
     if (exponent > 15) {
-        f16 = sign | (0x1Fu << 10);
+        f16 = sign | (0x1Fu << 10u);
     } else if (exponent > -15) {
         exponent += 15;
         mantissa >>= 13;
@@ -687,7 +726,7 @@ uint fp32tou16(float val) {
 highp uint packHalf2x16(vec2 v) {
     highp uint x = fp32tou16(v.x);
     highp uint y = fp32tou16(v.y);
-    return (y << 16) | x;
+    return (y << 16u) | x;
 }
 )"sv;
     }
@@ -748,14 +787,14 @@ GLuint ShaderCompilerService::linkProgram(OpenGLContext& context,
 // ------------------------------------------------------------------------------------------------
 
 void ShaderCompilerService::runAtNextTick(CompilerPriorityQueue priority,
-        const program_token_t& token, std::function<bool()> fn) noexcept {
+        const program_token_t& token, Job job) noexcept {
     // insert items in order of priority and at the end of the range
     auto& ops = mRunAtNextTickOps;
     auto const pos = std::lower_bound(ops.begin(), ops.end(), priority,
             [](ContainerType const& lhs, CompilerPriorityQueue priorityQueue) {
                 return std::get<0>(lhs) < priorityQueue;
             });
-    ops.emplace(pos, priority, token, std::move(fn));
+    ops.emplace(pos, priority, token, std::move(job));
 
     SYSTRACE_CONTEXT();
     SYSTRACE_VALUE32("ShaderCompilerService Jobs", mRunAtNextTickOps.size());
@@ -779,8 +818,8 @@ void ShaderCompilerService::executeTickOps() noexcept {
     auto& ops = mRunAtNextTickOps;
     auto it = ops.begin();
     while (it != ops.end()) {
-        auto fn = std::get<2>(*it);
-        bool const remove = fn();
+        Job const& job = std::get<2>(*it);
+        bool const remove = job.fn(job);
         if (remove) {
             it = ops.erase(it);
         } else {

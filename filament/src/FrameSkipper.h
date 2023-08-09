@@ -24,24 +24,42 @@
 
 namespace filament {
 
+/*
+ * FrameSkipper is used to determine if the current frame needs to be skipped so that we don't
+ * outrun the GPU.
+ */
 class FrameSkipper {
-    static constexpr size_t MAX_FRAME_LATENCY = 4;
+    static constexpr size_t MAX_FRAME_LATENCY = 3;
 public:
+    /*
+     * The latency parameter defines how many unfinished frames we want to accept before we start
+     * dropping frames. This affects frame latency.
+     *
+     * A latency of 1 means that the GPU must be finished with the previous frame so that
+     * we don't drop the current frame. While this provides the best latency this doesn't allow
+     * much overlap between the main thread, the back thread and the GPU.
+     *
+     * A latency of 2 (default) allows full overlap between the CPU And GPU, but the main and driver
+     * thread can't fully overlap.
+     *
+     * A latency 3 allows the main thread, driver thread and GPU to overlap, each being able to
+     * use up to 16ms (or whatever the refresh rate is).
+     */
     explicit FrameSkipper(size_t latency = 2) noexcept;
     ~FrameSkipper() noexcept;
 
     void terminate(backend::DriverApi& driver) noexcept;
 
-    // returns false if we need to skip this frame, because the gpu is running behind the cpu.
-    // in that case, don't call endFrame().
-    // returns true if rendering can proceed. Always call endFrame() when done.
+    // Returns false if we need to skip this frame, because the GPU is running behind the CPU;
+    // In that case, don't call render endFrame()
+    // Returns true if rendering can proceed. Always call endFrame() when done.
     bool beginFrame(backend::DriverApi& driver) noexcept;
 
     void endFrame(backend::DriverApi& driver) noexcept;
 
 private:
-    using Container = std::array<backend::Handle<backend::HwSync>, MAX_FRAME_LATENCY>;
-    mutable Container mDelayedSyncs{};
+    using Container = std::array<backend::Handle<backend::HwFence>, MAX_FRAME_LATENCY>;
+    mutable Container mDelayedFences{};
     size_t mLast;
 };
 

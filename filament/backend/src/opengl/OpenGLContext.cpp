@@ -268,25 +268,13 @@ OpenGLContext::OpenGLContext() noexcept {
                 bugs.dont_use_timer_query = true;
             }
             if (strstr(state.renderer, "Mali-G")) {
-                // assume we don't have working timer queries
+                // We have run into several problems with timer queries on Mali-Gxx:
+                // - timer queries seem to cause memory corruptions in some cases on some devices
+                //   (see b/233754398)
+                //          - appeared at least in: "OpenGL ES 3.2 v1.r26p0-01eac0"
+                //          - wasn't present in: "OpenGL ES 3.2 v1.r32p1-00pxl1"
+                // - timer queries sometime crash with an NPE (see b/273759031)
                 bugs.dont_use_timer_query = true;
-
-                int maj, min, driverVersion, driverRevision, driverPatch;
-                int const c = sscanf(state.version, "OpenGL ES %d.%d v%d.r%dp%d", // NOLINT(cert-err34-c)
-                        &maj, &min, &driverVersion, &driverRevision, &driverPatch);
-                if (c == 5) {
-                    // Workarounds based on version here.
-                    // notes:
-                    //  bugs.dont_use_timer_query : on some Mali-Gxx drivers timer query seems
-                    //  to cause memory corruptions in some cases on some devices (see b/233754398).
-                    //  - appeared at least in
-                    //      "OpenGL ES 3.2 v1.r26p0-01eac0"
-                    //  - wasn't present in
-                    //      "OpenGL ES 3.2 v1.r32p1-00pxl1"
-                    if (driverVersion >= 2 || (driverVersion == 1 && driverRevision >= 32)) {
-                        bugs.dont_use_timer_query = false;
-                    }
-                }
             }
             // Mali seems to have no problem with this (which is good for us)
             bugs.allow_read_only_ancillary_feedback_loop = true;
@@ -892,65 +880,6 @@ void OpenGLContext::resetState() noexcept {
     );
     glDepthRangef(state.window.depthRange.x, state.window.depthRange.y);
     
-}
-
-OpenGLContext::FenceSync OpenGLContext::createFenceSync(
-        OpenGLPlatform& platform) noexcept {
-
-    if (UTILS_UNLIKELY(isES2())) {
-        assert_invariant(platform.canCreateFence());
-        return { .fence = platform.createFence() };
-    }
-
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    auto sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-    CHECK_GL_ERROR(utils::slog.e)
-    return { .sync = sync };
-#else
-    return {};
-#endif
-}
-
-void OpenGLContext::destroyFenceSync(
-        OpenGLPlatform& platform, FenceSync sync) noexcept {
-
-    if (UTILS_UNLIKELY(isES2())) {
-        platform.destroyFence(static_cast<Platform::Fence*>(sync.fence));
-        return;
-    }
-
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    glDeleteSync(sync.sync);
-    CHECK_GL_ERROR(utils::slog.e)
-#endif
-}
-
-OpenGLContext::FenceSync::Status OpenGLContext::clientWaitSync(
-        OpenGLPlatform& platform, FenceSync sync) const noexcept {
-
-    if (UTILS_UNLIKELY(isES2())) {
-        using Status = OpenGLContext::FenceSync::Status;
-        auto const status = platform.waitFence(static_cast<Platform::Fence*>(sync.fence), 0u);
-        switch (status) {
-            case FenceStatus::ERROR:                return Status::FAILURE;
-            case FenceStatus::CONDITION_SATISFIED:  return Status::CONDITION_SATISFIED;
-            case FenceStatus::TIMEOUT_EXPIRED:      return Status ::TIMEOUT_EXPIRED;
-        }
-    }
-
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    GLenum const status = glClientWaitSync(sync.sync, 0, 0u);
-    CHECK_GL_ERROR(utils::slog.e)
-    using Status = OpenGLContext::FenceSync::Status;
-    switch (status) {
-        case GL_ALREADY_SIGNALED:       return Status::ALREADY_SIGNALED;
-        case GL_TIMEOUT_EXPIRED:        return Status::TIMEOUT_EXPIRED;
-        case GL_CONDITION_SATISFIED:    return Status::CONDITION_SATISFIED;
-        default:                        return Status::FAILURE;
-    }
-#else
-    return FenceSync::Status::FAILURE;
-#endif
 }
 
 } // namesapce filament

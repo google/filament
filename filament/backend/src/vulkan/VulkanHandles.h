@@ -129,13 +129,9 @@ struct VulkanRenderPrimitive : public HwRenderPrimitive {
 };
 
 struct VulkanFence : public HwFence {
-    explicit VulkanFence(const VulkanCommandBuffer& commands) : fence(commands.fence) {}
-    std::shared_ptr<VulkanCmdFence> fence;
-};
+    VulkanFence() = default;
+    explicit VulkanFence(std::shared_ptr<VulkanCmdFence> fence) : fence(fence) {}
 
-struct VulkanSync : public HwSync {
-    VulkanSync() = default;
-    explicit VulkanSync(const VulkanCommandBuffer& commands) : fence(commands.fence) {}
     std::shared_ptr<VulkanCmdFence> fence;
 };
 
