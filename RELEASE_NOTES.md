@@ -7,6 +7,11 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.41.0
+
+- backend: fix #6997 : picking can fail on Adreno [⚠️ **New Material Version**]
+- backend: A partial workaround for PowerVR devices (#5118, b/190221124) [⚠️ **Recompile Materials**]
+
 ## v1.40.5
 
 - backend: Disable timer queries on all Mali GPUs (fixes b/233754398)
