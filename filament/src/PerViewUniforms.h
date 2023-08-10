@@ -37,7 +37,6 @@ struct DynamicResolutionOptions;
 struct FogOptions;
 struct ScreenSpaceReflectionsOptions;
 struct SoftShadowOptions;
-struct StereoscopicOptions;
 struct TemporalAntiAliasingOptions;
 struct VsmShadowOptions;
 
@@ -93,7 +92,6 @@ public:
     void prepareSSAO(TextureHandle ssao, AmbientOcclusionOptions const& options) noexcept;
     void prepareBlending(bool needsAlphaChannel) noexcept;
     void prepareMaterialGlobals(std::array<math::float4, 4> const& materialGlobals) noexcept;
-    void prepareStereoscopic(StereoscopicOptions const& options) noexcept;
 
     // screen-space reflection and/or refraction (SSR)
     void prepareSSR(TextureHandle ssr,
