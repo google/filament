@@ -292,6 +292,8 @@ OpenGLContext::OpenGLContext() noexcept {
             // On PowerVR (Rogue GE8320) destroying a fbo after glBlitFramebuffer is effectively
             // equivalent to glFinish.
             bugs.delay_fbo_destruction = true;
+            // PowerVR seems to have no problem with this (which is good for us)
+            bugs.allow_read_only_ancillary_feedback_loop = true;
         } else if (strstr(state.renderer, "Apple")) {
             // Apple GPU
         } else if (strstr(state.renderer, "Tegra") ||
