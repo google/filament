@@ -139,12 +139,15 @@ ShaderCompilerService::CompilerThreadPool::~CompilerThreadPool() noexcept {
 }
 
 void ShaderCompilerService::CompilerThreadPool::init(
-        bool useSharedContexts, uint32_t threadCount, OpenGLPlatform& platform) noexcept {
+        bool useSharedContexts, uint32_t threadCount, JobSystem::Priority priority,
+        OpenGLPlatform& platform) noexcept {
 
     for (size_t i = 0; i < threadCount; i++) {
-        mCompilerThreads.emplace_back([this, useSharedContexts, &platform]() {
+        mCompilerThreads.emplace_back([this, useSharedContexts, priority, &platform]() {
             // give the thread a name
             JobSystem::setThreadName("CompilerThreadPool");
+            // run at a slightly lower priority than other filament threads
+            JobSystem::setThreadPriority(priority);
 
             // create a gl context current to this thread
             platform.createContext(useSharedContexts);
@@ -256,9 +259,23 @@ void ShaderCompilerService::init() noexcept {
         //   a shared context, so parallel shader compilation yields no benefit.
         // - on windows/linux we could use more threads, tbd.
         if (mDriver.mPlatform.isExtraContextSupported()) {
-            mShaderCompilerThreadCount = 1;
+            // By default, we use one thread at the same priority as the gl thread. This is the
+            // safest choice that avoids priority inversions.
+            uint32_t poolSize = 1;
+            JobSystem::Priority priority = JobSystem::Priority::DISPLAY;
+
+            auto const& renderer = mDriver.getContext().state.renderer;
+            if (UTILS_UNLIKELY(strstr(renderer, "PowerVR"))) {
+                // The PowerVR driver support parallel shader compilation well, so we use 4
+                // threads, we can use lower priority threads here because urgent compilations
+                // will most likely happen on the main gl thread.
+                poolSize = 4;
+                priority = JobSystem::Priority::BACKGROUND;
+            }
+
+            mShaderCompilerThreadCount = poolSize;
             mCompilerThreadPool.init(mUseSharedContext,
-                    mShaderCompilerThreadCount, mDriver.mPlatform);
+                    mShaderCompilerThreadCount, priority, mDriver.mPlatform);
         }
     }
 }

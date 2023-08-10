@@ -293,7 +293,8 @@ public:
     enum class Priority {
         NORMAL,
         DISPLAY,
-        URGENT_DISPLAY
+        URGENT_DISPLAY,
+        BACKGROUND
     };
 
     static void setThreadPriority(Priority priority) noexcept;
