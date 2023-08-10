@@ -237,6 +237,14 @@ void OpenGLDriver::terminate() {
     // and make sure to execute all the GpuCommandCompleteOps callbacks
     executeGpuCommandsCompleteOps();
 
+    // as well as the FrameCompleteOps callbacks
+    if (UTILS_UNLIKELY(!mFrameCompleteOps.empty())) {
+        for (auto&& op: mFrameCompleteOps) {
+            op();
+        }
+        mFrameCompleteOps.clear();
+    }
+
     // because we called glFinish(), all callbacks should have been executed
     assert_invariant(mGpuCommandCompleteOps.empty());
 
@@ -1526,12 +1534,33 @@ void OpenGLDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
         if (rt->gl.fbo) {
             // first unbind this framebuffer if needed
             gl.bindFramebuffer(GL_FRAMEBUFFER, 0);
-            glDeleteFramebuffers(1, &rt->gl.fbo);
         }
         if (rt->gl.fbo_read) {
             // first unbind this framebuffer if needed
             gl.bindFramebuffer(GL_FRAMEBUFFER, 0);
-            glDeleteFramebuffers(1, &rt->gl.fbo_read);
+        }
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+        if (UTILS_UNLIKELY(gl.bugs.delay_fbo_destruction)) {
+            if (rt->gl.fbo) {
+                whenFrameComplete([fbo = rt->gl.fbo]() {
+                    glDeleteFramebuffers(1, &fbo);
+                });
+            }
+            if (rt->gl.fbo_read) {
+                whenFrameComplete([fbo_read = rt->gl.fbo_read]() {
+                    glDeleteFramebuffers(1, &fbo_read);
+                });
+            }
+        } else
+#endif
+        {
+            if (rt->gl.fbo) {
+                glDeleteFramebuffers(1, &rt->gl.fbo);
+            }
+            if (rt->gl.fbo_read) {
+                glDeleteFramebuffers(1, &rt->gl.fbo_read);
+            }
         }
         destruct(rth, rt);
     }
@@ -1940,6 +1969,16 @@ void OpenGLDriver::commit(Handle<HwSwapChain> sch) {
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     mPlatform.commit(sc->swapChain);
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    if (UTILS_UNLIKELY(!mFrameCompleteOps.empty())) {
+        whenGpuCommandsComplete([ops = std::move(mFrameCompleteOps)]() {
+            for (auto&& op: ops) {
+                op();
+            }
+        });
+    }
+#endif
 }
 
 void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
@@ -3207,6 +3246,10 @@ void OpenGLDriver::executeEveryNowAndThenOps() noexcept {
 }
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+void OpenGLDriver::whenFrameComplete(const std::function<void()>& fn) noexcept {
+    mFrameCompleteOps.push_back(fn);
+}
+
 void OpenGLDriver::whenGpuCommandsComplete(const std::function<void()>& fn) noexcept {
     GLsync sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
     mGpuCommandCompleteOps.emplace_back(sync, fn);

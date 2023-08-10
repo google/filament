@@ -283,8 +283,15 @@ OpenGLContext::OpenGLContext() noexcept {
             bugs.vao_doesnt_store_element_array_buffer_binding = true;
         } else if (strstr(state.renderer, "PowerVR")) {
             // PowerVR GPU
+            // On PowerVR (Rogue GE8320) glFlush doesn't seem to do anything, in particular,
+            // it doesn't kick the GPU earlier, so don't issue these calls as they seem to slow
+            // things down.
+            bugs.disable_glFlush = true;
             // On PowerVR (Rogue GE8320) using gl_InstanceID too early in the shader doesn't work.
             bugs.powervr_shader_workarounds = true;
+            // On PowerVR (Rogue GE8320) destroying a fbo after glBlitFramebuffer is effectively
+            // equivalent to glFinish.
+            bugs.delay_fbo_destruction = true;
         } else if (strstr(state.renderer, "Apple")) {
             // Apple GPU
         } else if (strstr(state.renderer, "Tegra") ||
