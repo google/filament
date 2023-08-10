@@ -16,7 +16,9 @@
 
 #include "VulkanBlitter.h"
 #include "VulkanContext.h"
+#include "VulkanFboCache.h"
 #include "VulkanHandles.h"
+#include "VulkanSamplerCache.h"
 
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
