@@ -261,6 +261,11 @@ public:
         // Some Adreno drivers crash in glDrawXXX() when there's an uninitialized uniform block,
         // even when the shader doesn't access it.
         bool enable_initialize_non_used_uniform_array;
+
+        // Workarounds specific to PowerVR GPUs affecting shaders (currently, we lump them all
+        // under one specialization constant).
+        // - gl_InstanceID is invalid when used first in the vertex shader
+        bool powervr_shader_workarounds;
     } bugs = {};
 
     // state getters -- as needed.
@@ -443,6 +448,9 @@ private:
                     ""},
             {   bugs.enable_initialize_non_used_uniform_array,
                     "enable_initialize_non_used_uniform_array",
+                    ""},
+            {   bugs.powervr_shader_workarounds,
+                    "powervr_shader_workarounds",
                     ""},
     }};
 

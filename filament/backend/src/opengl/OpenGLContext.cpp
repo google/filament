@@ -283,6 +283,8 @@ OpenGLContext::OpenGLContext() noexcept {
             bugs.vao_doesnt_store_element_array_buffer_binding = true;
         } else if (strstr(state.renderer, "PowerVR")) {
             // PowerVR GPU
+            // On PowerVR (Rogue GE8320) using gl_InstanceID too early in the shader doesn't work.
+            bugs.powervr_shader_workarounds = true;
         } else if (strstr(state.renderer, "Apple")) {
             // Apple GPU
         } else if (strstr(state.renderer, "Tegra") ||
