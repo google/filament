@@ -227,7 +227,7 @@ public:
         if (mg_get_var(request->query_string, qlength, "matid", matid, sizeof(matid)) < 0) {
             return error(__LINE__);
         }
-        const uint32_t id = strtol(matid, nullptr, 16);
+        const uint32_t id = strtoul(matid, nullptr, 16);
         const DebugServer::MaterialRecord* result = mServer->getRecord(id);
         if (result == nullptr) {
             return error(__LINE__);
@@ -257,7 +257,7 @@ public:
             return error(__LINE__);
         }
 
-        std::string_view language(type, strlen(type));
+        std::string_view const language(type, strlen(type));
 
         char glindex[4] = {};
         char vkindex[4] = {};

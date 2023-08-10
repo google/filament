@@ -154,26 +154,23 @@ void ShaderCompilerService::CompilerThreadPool::init(
                 std::unique_lock lock(mQueueLock);
                 mQueueCondition.wait(lock, [this]() {
                         return  mExitRequested ||
-                                mUrgentJob ||
                                 (!std::all_of( std::begin(mQueues), std::end(mQueues),
                                         [](auto&& q) { return q.empty(); }));
                 });
                 if (!mExitRequested) {
-                    Job job{ std::move(mUrgentJob) };
-                    if (!job) {
-                        // use the first queue that's not empty
-                        auto& queue = [this]() -> auto& {
-                            for (auto& q: mQueues) {
-                                if (!q.empty()) {
-                                    return q;
-                                }
+                    Job job;
+                    // use the first queue that's not empty
+                    auto& queue = [this]() -> auto& {
+                        for (auto& q: mQueues) {
+                            if (!q.empty()) {
+                                return q;
                             }
-                            return mQueues[0]; // we should never end-up here.
-                        }();
-                        assert_invariant(!queue.empty());
-                        std::swap(job, queue.front().second);
-                        queue.pop_front();
-                    }
+                        }
+                        return mQueues[0]; // we should never end-up here.
+                    }();
+                    assert_invariant(!queue.empty());
+                    std::swap(job, queue.front().second);
+                    queue.pop_front();
 
                     // execute the job without holding any locks
                     lock.unlock();
@@ -200,6 +197,7 @@ auto ShaderCompilerService::CompilerThreadPool::find(
 }
 
 auto ShaderCompilerService::CompilerThreadPool::dequeue(program_token_t const& token) -> Job {
+    std::unique_lock const lock(mQueueLock);
     Job job;
     auto&& [q, pos] = find(token);
     if (pos != q.end()) {
@@ -207,14 +205,6 @@ auto ShaderCompilerService::CompilerThreadPool::dequeue(program_token_t const& t
         q.erase(pos);
     }
     return job;
-}
-
-void ShaderCompilerService::CompilerThreadPool::makeUrgent(program_token_t const& token) {
-    std::unique_lock const lock(mQueueLock);
-    assert_invariant(!mUrgentJob);
-    Job job{ dequeue(token) };
-    std::swap(job, mUrgentJob);
-    mQueueCondition.notify_one();
 }
 
 void ShaderCompilerService::CompilerThreadPool::queue(CompilerPriorityQueue priorityQueue,
@@ -258,8 +248,10 @@ void ShaderCompilerService::init() noexcept {
     if (!KHR_parallel_shader_compile) {
         // - on Adreno there is a single compiler object. We can't use a pool > 1
         //   also glProgramBinary blocks if other threads are compiling.
-        // - on Mali shader compilation can be multithreaded, but program linking happens on
+        // - on Mali shader compilation can be multi-threaded, but program linking happens on
         //   a single service thread, so we don't bother using more than one thread either.
+        // - on PowerVR shader compilation and linking can be multi-threaded.
+        //   How many threads should we use?
         // - on macOS (M1 MacBook Pro/Ventura) there is global lock around all GL APIs when using
         //   a shared context, so parallel shader compilation yields no benefit.
         // - on windows/linux we could use more threads, tbd.
@@ -562,14 +554,20 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) noexcept {
     SYSTRACE_CALL();
     if (!token->gl.program) {
         if (mShaderCompilerThreadCount) {
-            // we need this program right now, so move it to the head of the queue.
-            mCompilerThreadPool.makeUrgent(token);
+            // we need this program right now, remove it from the queue
+            auto job = mCompilerThreadPool.dequeue(token);
+            if (job) {
+                // if we were able to remove it, we execute the job now, otherwise it means
+                // it's being executed right now.
+                job();
+            }
 
             if (!token->canceled) {
                 token->compiler.cancelTickOp(token);
             }
 
-            // block until we get the program from the pool
+            // Block until we get the program from the pool. Generally this wouldn't block
+            // because we just compiled the program above, when executing job.
             ShaderCompilerService::getProgramFromCompilerPool(token);
         } else if (KHR_parallel_shader_compile) {
             // we force the program link -- which might stall, either here or below in

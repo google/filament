@@ -255,11 +255,13 @@ error:
 }
 
 bool PlatformEGL::isExtraContextSupported() const noexcept {
-    return ext.egl.KHR_no_config_context;
+    return true;
 }
 
 void PlatformEGL::createContext(bool shared) {
-    EGLContext context = eglCreateContext(mEGLDisplay, EGL_NO_CONFIG_KHR,
+    EGLConfig config = ext.egl.KHR_no_config_context ? EGL_NO_CONFIG_KHR : mEGLConfig;
+
+    EGLContext context = eglCreateContext(mEGLDisplay, config,
             shared ? mEGLContext : EGL_NO_CONTEXT, mContextAttribs.data());
 
     if (UTILS_UNLIKELY(context == EGL_NO_CONTEXT)) {
