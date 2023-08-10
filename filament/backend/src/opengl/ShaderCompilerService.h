@@ -23,8 +23,9 @@
 #include <backend/Program.h>
 
 #include <utils/CString.h>
-#include <utils/Invocable.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/Invocable.h>
+#include <utils/JobSystem.h>
 
 #include <atomic>
 #include <condition_variable>
@@ -97,7 +98,8 @@ private:
         CompilerThreadPool() noexcept;
         ~CompilerThreadPool() noexcept;
         using Job = utils::Invocable<void()>;
-        void init(bool useSharedContexts, uint32_t threadCount, OpenGLPlatform& platform) noexcept;
+        void init(bool useSharedContexts, uint32_t threadCount, utils::JobSystem::Priority priority,
+                OpenGLPlatform& platform) noexcept;
         void terminate() noexcept;
         void queue(CompilerPriorityQueue priorityQueue, program_token_t const& token, Job&& job);
         Job dequeue(program_token_t const& token);
