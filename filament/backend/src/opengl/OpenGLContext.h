@@ -266,6 +266,11 @@ public:
         // under one specialization constant).
         // - gl_InstanceID is invalid when used first in the vertex shader
         bool powervr_shader_workarounds;
+
+        // On PowerVR destroying the destination of a glBlitFramebuffer operation is equivalent to
+        // a glFinish. So we must delay the destruction until we know the GPU is finished.
+        bool delay_fbo_destruction;
+
     } bugs = {};
 
     // state getters -- as needed.
@@ -451,6 +456,9 @@ private:
                     ""},
             {   bugs.powervr_shader_workarounds,
                     "powervr_shader_workarounds",
+                    ""},
+            {   bugs.delay_fbo_destruction,
+                    "delay_fbo_destruction",
                     ""},
     }};
 
