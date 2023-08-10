@@ -15,6 +15,7 @@ LAYOUT_LOCATION(7) VARYING highp vec4 vertex_position;
 
 #if defined(FILAMENT_HAS_FEATURE_INSTANCING)
 LAYOUT_LOCATION(8) flat VARYING highp int instance_index;
+highp int logical_instance_index;
 #endif
 
 #if defined(HAS_ATTRIBUTE_COLOR)

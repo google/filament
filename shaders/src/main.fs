@@ -22,6 +22,7 @@ void blendPostLightingColor(const MaterialInputs material, inout vec4 color) {
 
 void main() {
     filament_lodBias = frameUniforms.lodBias;
+    logical_instance_index = instance_index;
 
     initObjectUniforms();
 

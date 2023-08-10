@@ -13,12 +13,16 @@ void main() {
 #   else
     instance_index = gl_InstanceID;
 #   endif
+    logical_instance_index = instance_index;
 #endif
 
 #if defined(VARIANT_HAS_INSTANCED_STEREO)
 #if !defined(FILAMENT_HAS_FEATURE_INSTANCING)
 #error Instanced stereo not supported at this feature level
 #endif
+    // The lowest bit of the instance index represents the eye.
+    // This logic must be updated if CONFIG_STEREOSCOPIC_EYES changes
+    logical_instance_index = instance_index >> 1;
 #endif
 
     initObjectUniforms();
@@ -239,4 +243,9 @@ void main() {
 
     // some PowerVR drivers crash when gl_Position is written more than once
     gl_Position = position;
+
+#if defined(VARIANT_HAS_INSTANCED_STEREO)
+    // Fragment shaders filter out the stereo variant, so we need to set instance_index here.
+    instance_index = logical_instance_index;
+#endif
 }

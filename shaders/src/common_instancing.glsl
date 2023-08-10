@@ -29,20 +29,13 @@ void initObjectUniforms() {
     } else
 #endif
     {
-#if defined(VARIANT_HAS_INSTANCED_STEREO)
-        // The lowest bit of the instance index represents the eye.
-        // This logic must be updated if CONFIG_STEREOSCOPIC_EYES changes
-        highp int index = instance_index >> 1;
-#else
-        highp int index = instance_index;
-#endif
         // the object has an instance buffer
-        object_uniforms_worldFromModelMatrix        = objectUniforms.data[index].worldFromModelMatrix;
-        object_uniforms_worldFromModelNormalMatrix  = objectUniforms.data[index].worldFromModelNormalMatrix;
-        object_uniforms_morphTargetCount            = objectUniforms.data[index].morphTargetCount;
-        object_uniforms_flagsChannels               = objectUniforms.data[index].flagsChannels;
-        object_uniforms_objectId                    = objectUniforms.data[index].objectId;
-        object_uniforms_userData                    = objectUniforms.data[index].userData;
+        object_uniforms_worldFromModelMatrix        = objectUniforms.data[logical_instance_index].worldFromModelMatrix;
+        object_uniforms_worldFromModelNormalMatrix  = objectUniforms.data[logical_instance_index].worldFromModelNormalMatrix;
+        object_uniforms_morphTargetCount            = objectUniforms.data[logical_instance_index].morphTargetCount;
+        object_uniforms_flagsChannels               = objectUniforms.data[logical_instance_index].flagsChannels;
+        object_uniforms_objectId                    = objectUniforms.data[logical_instance_index].objectId;
+        object_uniforms_userData                    = objectUniforms.data[logical_instance_index].userData;
     }
 #else
     object_uniforms_worldFromModelMatrix        = objectUniforms.data[0].worldFromModelMatrix;
@@ -62,7 +55,7 @@ void initObjectUniforms() {
 #if defined(MATERIAL_HAS_INSTANCES)
 /** @public-api */
 int getInstanceIndex() {
-    return instance_index;
+    return logical_instance_index;
 }
 #endif
 #endif
