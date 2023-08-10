@@ -11,7 +11,14 @@ void main() {
 #   if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
     instance_index = gl_InstanceIndex;
 #   else
-    instance_index = gl_InstanceID;
+    // PowerVR drivers don't initialize gl_InstanceID correctly if it's assigned to the varying
+    // directly and early in the shader. Adding a bit of extra integer math, works around it.
+    // Using an intermediate variable doesn't work because of spirv-opt.
+    if (CONFIG_POWER_VR_SHADER_WORKAROUNDS) {
+        instance_index = (1 + gl_InstanceID) - 1;
+    } else {
+        instance_index = gl_InstanceID;
+    }
 #   endif
 #endif
 

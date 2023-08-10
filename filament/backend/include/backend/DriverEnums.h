@@ -1141,6 +1141,8 @@ enum class Workaround : uint16_t {
     A8X_STATIC_TEXTURE_TARGET_ERROR,
     // Adreno drivers sometimes aren't able to blit into a layer of a texture array.
     DISABLE_BLIT_INTO_TEXTURE_ARRAY,
+    // Multiple workarounds needed for PowerVR GPUs
+    POWER_VR_SHADER_WORKAROUNDS,
 };
 
 } // namespace filament::backend

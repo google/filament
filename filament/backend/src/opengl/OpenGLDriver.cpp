@@ -1902,6 +1902,8 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
             return mContext.bugs.enable_initialize_non_used_uniform_array;
         case Workaround::DISABLE_BLIT_INTO_TEXTURE_ARRAY:
             return mContext.bugs.disable_blit_into_texture_array;
+        case Workaround::POWER_VR_SHADER_WORKAROUNDS:
+            return mContext.bugs.powervr_shader_workarounds;
         default:
             return false;
     }
