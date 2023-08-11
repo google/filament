@@ -271,6 +271,10 @@ public:
         // a glFinish. So we must delay the destruction until we know the GPU is finished.
         bool delay_fbo_destruction;
 
+        // The driver has some threads pinned, and we can't easily know on which core, it can hurt
+        // performance more if we end-up pinned on the same one.
+        bool disable_thread_affinity;
+
     } bugs = {};
 
     // state getters -- as needed.
@@ -459,6 +463,9 @@ private:
                     ""},
             {   bugs.delay_fbo_destruction,
                     "delay_fbo_destruction",
+                    ""},
+            {   bugs.disable_thread_affinity,
+                    "disable_thread_affinity",
                     ""},
     }};
 

@@ -617,15 +617,18 @@ int FEngine::loop() {
         return 0;
     }
 
-    // We use the highest affinity bit, assuming this is a Big core in a  big.little
-    // configuration. This is also a core not used by the JobSystem.
-    // Either way the main reason to do this is to avoid this thread jumping from core to core
-    // and lose its caches in the process.
-    uint32_t const id = std::thread::hardware_concurrency() - 1;
+    // Set thread affinity for the backend thread.
+    //  see https://developer.android.com/agi/sys-trace/threads-scheduling#cpu_core_affinity
+    // Certain backends already have some threads pinned, and we can't easily know on which core.
+    const bool disableThreadAffinity
+            = mDriver->isWorkaroundNeeded(Workaround::DISABLE_THREAD_AFFINITY);
 
+    uint32_t const id = std::thread::hardware_concurrency() - 1;
     while (true) {
         // looks like thread affinity needs to be reset regularly (on Android)
-        JobSystem::setThreadAffinityById(id);
+        if (!disableThreadAffinity) {
+            JobSystem::setThreadAffinityById(id);
+        }
         if (!execute()) {
             break;
         }
