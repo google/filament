@@ -31,6 +31,7 @@ set(SRCS
         src/CircularBuffer.cpp
         src/CommandBufferQueue.cpp
         src/CommandStream.cpp
+        src/CompilerThreadPool.cpp
         src/Driver.cpp
         src/Handle.cpp
         src/HandleAllocator.cpp
@@ -55,6 +56,7 @@ set(PRIVATE_HDRS
         include/private/backend/PlatformFactory.h
         include/private/backend/SamplerGroup.h
         src/CommandStreamDispatcher.h
+        src/CompilerThreadPool.h
         src/DataReshaper.h
         src/DriverBase.h
 )

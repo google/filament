@@ -19,6 +19,8 @@
 
 #include "gl_headers.h"
 
+#include "CompilerThreadPool.h"
+
 #include <backend/CallbackHandler.h>
 #include <backend/Program.h>
 
@@ -49,10 +51,10 @@ class CallbackHandler;
  * A class handling shader compilation that supports asynchronous compilation.
  */
 class ShaderCompilerService {
-    struct ProgramToken;
+    struct OpenGLProgramToken;
 
 public:
-    using program_token_t = std::shared_ptr<ProgramToken>;
+    using program_token_t = std::shared_ptr<OpenGLProgramToken>;
 
     explicit ShaderCompilerService(OpenGLDriver& driver);
 
@@ -93,28 +95,6 @@ public:
             CallbackHandler* handler, CallbackHandler::Callback callback, void* user);
 
 private:
-    class CompilerThreadPool {
-    public:
-        CompilerThreadPool() noexcept;
-        ~CompilerThreadPool() noexcept;
-        using Job = utils::Invocable<void()>;
-        void init(bool useSharedContexts, uint32_t threadCount, utils::JobSystem::Priority priority,
-                OpenGLPlatform& platform) noexcept;
-        void terminate() noexcept;
-        void queue(CompilerPriorityQueue priorityQueue, program_token_t const& token, Job&& job);
-        Job dequeue(program_token_t const& token);
-
-    private:
-        using Queue = std::deque<std::pair<program_token_t, Job>>;
-        std::vector<std::thread> mCompilerThreads;
-        std::atomic_bool mExitRequested{ false };
-        std::mutex mQueueLock;
-        std::condition_variable mQueueCondition;
-        std::array<Queue, 2> mQueues;
-        // lock must be held for methods below
-        std::pair<Queue&, Queue::iterator> find(program_token_t const& token);
-    };
-
     OpenGLDriver& mDriver;
     CompilerThreadPool mCompilerThreadPool;
 
