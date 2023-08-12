@@ -161,10 +161,11 @@ void ShaderCompilerService::init() noexcept {
 
             auto const& renderer = mDriver.getContext().state.renderer;
             if (UTILS_UNLIKELY(strstr(renderer, "PowerVR"))) {
-                // The PowerVR driver support parallel shader compilation well, so we use 4
+                // The PowerVR driver support parallel shader compilation well, so we use 2
                 // threads, we can use lower priority threads here because urgent compilations
-                // will most likely happen on the main gl thread.
-                poolSize = 4;
+                // will most likely happen on the main gl thread. Using too many thread can
+                // increase memory pressure significantly.
+                poolSize = 2;
                 priority = JobSystem::Priority::BACKGROUND;
             }
 
