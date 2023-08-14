@@ -43,7 +43,7 @@ bool FrameSkipper::beginFrame(DriverApi& driver) noexcept {
     auto& fences = mDelayedFences;
     auto fence = fences.front();
     if (fence) {
-        auto status = driver.wait(fence, 0);
+        auto status = driver.getFenceStatus(fence);
         if (status == FenceStatus::TIMEOUT_EXPIRED) {
             // Sync not ready, skip frame
             return false;

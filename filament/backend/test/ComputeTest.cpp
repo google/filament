@@ -87,11 +87,8 @@ void ComputeTest::executeCommands() {
     }
 }
 
-void ComputeTest::flushAndWait(uint64_t timeout) {
+void ComputeTest::flushAndWait() {
     auto& api = getDriverApi();
-    auto fence = api.createFence();
     api.finish();
     executeCommands();
-    api.wait(fence, timeout);
-    api.destroyFence(fence);
 }
