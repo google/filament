@@ -556,8 +556,7 @@ void FEngine::flushAndWait() {
 
 #else
 
-    FFence::waitAndDestroy(
-            FEngine::createFence(FFence::Type::SOFT), FFence::Mode::FLUSH);
+    FFence::waitAndDestroy(FEngine::createFence(), FFence::Mode::FLUSH);
 
 #endif
 
@@ -762,8 +761,8 @@ FView* FEngine::createView() noexcept {
     return p;
 }
 
-FFence* FEngine::createFence(FFence::Type type) noexcept {
-    FFence* p = mHeapAllocator.make<FFence>(*this, type);
+FFence* FEngine::createFence() noexcept {
+    FFence* p = mHeapAllocator.make<FFence>(*this);
     if (p) {
         std::lock_guard const guard(mFenceListLock);
         mFences.insert(p);

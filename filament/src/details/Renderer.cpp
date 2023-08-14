@@ -119,11 +119,11 @@ void FRenderer::terminate(FEngine& engine) {
     // shut down threads if we created any.
     DriverApi& driver = engine.getDriverApi();
 
-    // before we can destroy this Renderer's resources, we must make sure
+    // Before we can destroy this Renderer's resources, we must make sure
     // that all pending commands have been executed (as they could reference data in this
     // instance, e.g. Fences, Callbacks, etc...)
     if (UTILS_HAS_THREADING) {
-        Fence::waitAndDestroy(engine.createFence(FFence::Type::SOFT));
+        Fence::waitAndDestroy(engine.createFence());
     } else {
         // In single threaded mode, allow recently-created objects (e.g. no-op fences in Skipper)
         // to initialize themselves, otherwise the engine tries to destroy invalid handles.
