@@ -302,9 +302,8 @@ CameraInfo::CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamer
     const mat4 modelMatrix{ worldOriginCamera * camera.getModelMatrix() };
     for (uint8_t i = 0; i < CONFIG_STEREOSCOPIC_EYES; i++) {
         eyeProjection[i]   = mat4f{ camera.getProjectionMatrix(i) };
+        eyeFromView[i]     = mat4f{ camera.getEyeFromViewMatrix(i) };
     }
-    eyeFromView[0]     = mat4f{ camera.getEyeFromViewMatrix(0) };
-    eyeFromView[1]     = mat4f{ camera.getEyeFromViewMatrix(1) };
     cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
     model              = mat4f{ modelMatrix };
     view               = mat4f{ inverse(modelMatrix) };

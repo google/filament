@@ -86,10 +86,10 @@ public:
     // culling the projection matrix to be used for culling, contains scaling/shift
     math::mat4 getCullingProjectionMatrix() const noexcept;
 
-    math::mat4 getEyeFromViewMatrix(int eye) const noexcept { return mEyeFromView[eye]; }
+    math::mat4 getEyeFromViewMatrix(uint8_t eye) const noexcept { return mEyeFromView[eye]; }
 
     // viewing projection matrix set by the user
-    math::mat4 getUserProjectionMatrix(uint8_t eyeId) const {
+    const math::mat4& getUserProjectionMatrix(uint8_t eyeId) const {
         ASSERT_PRECONDITION(eyeId < CONFIG_STEREOSCOPIC_EYES,
                 "eyeId must be < CONFIG_STEREOSCOPIC_EYES(%d)", CONFIG_STEREOSCOPIC_EYES);
         return mEyeProjection[eyeId];
