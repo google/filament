@@ -191,27 +191,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
     assert_invariant(mContext.ext.EXT_disjoint_timer_query);
 #endif
 
-#if defined(BACKEND_OPENGL_VERSION_GL) || defined(GL_EXT_disjoint_timer_query)
-    if (mContext.ext.EXT_disjoint_timer_query) {
-        // timer queries are available
-        if (mContext.bugs.dont_use_timer_query && mPlatform.canCreateFence()) {
-            // however, they don't work well, revert to using fences if we can.
-            mTimerQueryImpl = new OpenGLTimerQueryFence(mPlatform);
-        } else {
-            mTimerQueryImpl = new TimerQueryNative(mContext);
-        }
-        mFrameTimeSupported = true;
-    } else
-#endif
-    if (mPlatform.canCreateFence()) {
-        // no timer queries, but we can use fences
-        mTimerQueryImpl = new OpenGLTimerQueryFence(mPlatform);
-        mFrameTimeSupported = true;
-    } else {
-        // no queries, no fences -- that's a problem
-        mTimerQueryImpl = new TimerQueryFallback();
-        mFrameTimeSupported = false;
-    }
+    mTimerQueryImpl = OpenGLTimerQueryFactory::init(mPlatform, *this);
 
     mShaderCompilerService.init();
 }
@@ -1426,10 +1406,8 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 
 void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     DEBUG_MARKER()
-
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
-    mContext.procs.genQueries(1u, &tq->gl.query);
-    CHECK_GL_ERROR(utils::slog.e)
+    mTimerQueryImpl->createTimerQuery(tq);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1609,7 +1587,7 @@ void OpenGLDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 
     if (tqh) {
         GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
-        getContext().procs.deleteQueries(1u, &tq->gl.query);
+        mTimerQueryImpl->destroyTimerQuery(tq);
         destruct(tqh, tq);
     }
 }
@@ -1903,7 +1881,7 @@ bool OpenGLDriver::isFrameBufferFetchMultiSampleSupported() {
 }
 
 bool OpenGLDriver::isFrameTimeSupported() {
-    return mFrameTimeSupported;
+    return OpenGLTimerQueryFactory::isGpuTimeSupported();
 }
 
 bool OpenGLDriver::isAutoDepthResolveSupported() {
@@ -2625,8 +2603,6 @@ void OpenGLDriver::replaceStream(GLTexture* texture, GLStream* newStream) noexce
 void OpenGLDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
     DEBUG_MARKER()
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
-    // reset the state of the result availability
-    tq->elapsed.store(0, std::memory_order_relaxed);
     mTimerQueryImpl->beginTimeElapsedQuery(tq);
 }
 
@@ -2634,27 +2610,11 @@ void OpenGLDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
     DEBUG_MARKER()
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
     mTimerQueryImpl->endTimeElapsedQuery(tq);
-
-    runEveryNowAndThen([this, tq]() -> bool {
-        if (!mTimerQueryImpl->queryResultAvailable(tq)) {
-            // we need to try this one again later
-            return false;
-        }
-        tq->elapsed.store(mTimerQueryImpl->queryResult(tq), std::memory_order_relaxed);
-        return true;
-    });
 }
 
 bool OpenGLDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
-    uint64_t const d = tq->elapsed.load(std::memory_order_relaxed);
-    if (!d) {
-        return false;
-    }
-    if (elapsedTime) {
-        *elapsedTime = d;
-    }
-    return true;
+    return OpenGLTimerQueryInterface::getTimerQueryValue(tq, elapsedTime);
 }
 
 void OpenGLDriver::compilePrograms(CompilerPriorityQueue priority,

@@ -151,14 +151,12 @@ public:
 
     struct GLTimerQuery : public HwTimerQuery {
         struct State {
+            struct {
+                GLuint query;
+            } gl;
             std::atomic<int64_t> elapsed{};
         };
-        struct {
-            GLuint query = 0;
-            std::shared_ptr<State> emulation;
-        } gl;
-        // 0 means not available, otherwise query result in ns.
-        std::atomic<uint64_t> elapsed{};
+        std::shared_ptr<State> state;
     };
 
     struct GLStream : public HwStream {
@@ -214,6 +212,8 @@ private:
     OpenGLContext mContext;
     ShaderCompilerService mShaderCompilerService;
 
+    friend class OpenGLTimerQueryFactory;
+    friend class TimerQueryNative;
     OpenGLContext& getContext() noexcept { return mContext; }
 
     ShaderCompilerService& getShaderCompilerService() noexcept {
@@ -400,7 +400,6 @@ private:
 
     // timer query implementation
     OpenGLTimerQueryInterface* mTimerQueryImpl = nullptr;
-    bool mFrameTimeSupported = false;
 
     // for ES2 sRGB support
     GLSwapChain* mCurrentDrawSwapChain = nullptr;
