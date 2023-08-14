@@ -23,9 +23,11 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-VulkanBuffer::VulkanBuffer(VmaAllocator allocator, VulkanCommands* commands,
-        VulkanStagePool& stagePool, VkBufferUsageFlags usage, uint32_t numBytes)
-    : mAllocator(allocator), mCommands(commands), mStagePool(stagePool), mUsage(usage) {
+VulkanBuffer::VulkanBuffer(VmaAllocator allocator, VulkanStagePool& stagePool,
+        VkBufferUsageFlags usage, uint32_t numBytes)
+    : mAllocator(allocator),
+      mStagePool(stagePool),
+      mUsage(usage) {
 
     // for now make sure that only 1 bit is set in usage
     // (because loadFromCpu() assumes that somewhat)
@@ -53,7 +55,8 @@ void VulkanBuffer::terminate() {
     mGpuBuffer = VK_NULL_HANDLE;
 }
 
-void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_t numBytes) const {
+void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint32_t byteOffset,
+        uint32_t numBytes) const {
     assert_invariant(byteOffset == 0);
     VulkanStage const* stage = mStagePool.acquireStage(numBytes);
     void* mapped;
@@ -62,10 +65,8 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
     vmaUnmapMemory(mAllocator, stage->memory);
     vmaFlushAllocation(mAllocator, stage->memory, byteOffset, numBytes);
 
-    VkCommandBuffer const cmdbuffer = mCommands->get(true).cmdbuffer;
-
     VkBufferCopy region{ .size = numBytes };
-    vkCmdCopyBuffer(cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
+    vkCmdCopyBuffer(cmdbuf, stage->buffer, mGpuBuffer, 1, &region);
 
     // Firstly, ensure that the copy finishes before the next draw call.
     // Secondly, in case the user decides to upload another chunk (without ever using the first one)
@@ -99,7 +100,7 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
 	    .size = VK_WHOLE_SIZE,
     };
 
-    vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask, 0, 0, nullptr, 1,
+    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask, 0, 0, nullptr, 1,
 	    &barrier, 0, nullptr);
 }
 

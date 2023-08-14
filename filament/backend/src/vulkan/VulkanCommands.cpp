@@ -105,14 +105,19 @@ bool VulkanGroupMarkers::empty() const noexcept {
 }
 
 VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
-        VulkanContext* context)
+        VulkanContext* context, VulkanResourceAllocator* allocator)
     : mDevice(device),
       mQueue(queue),
       mPool(createPool(mDevice, queueFamilyIndex)),
-      mContext(context) {
+      mContext(context),
+      mStorage(CAPACITY) {
     VkSemaphoreCreateInfo sci{.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
     for (auto& semaphore: mSubmissionSignals) {
         vkCreateSemaphore(mDevice, &sci, nullptr, &semaphore);
+    }
+
+    for (size_t i = 0; i < CAPACITY; ++i) {
+        mStorage[i] = std::make_unique<VulkanCommandBuffer>(allocator);
     }
 }
 
@@ -125,10 +130,9 @@ VulkanCommands::~VulkanCommands() {
     }
 }
 
-VulkanCommandBuffer const& VulkanCommands::get(bool blockOnGC) {
-    if (mCurrent) {
-        mCurrent->blockOnGC = mCurrent->blockOnGC || blockOnGC;
-        return *mCurrent;
+VulkanCommandBuffer& VulkanCommands::get() {
+    if (mCurrentCommandBufferIndex >= 0) {
+        return *mStorage[mCurrentCommandBufferIndex].get();
     }
 
     // If we ran out of available command buffers, stall until one finishes. This is very rare.
@@ -144,15 +148,18 @@ VulkanCommandBuffer const& VulkanCommands::get(bool blockOnGC) {
         gc();
     }
 
+    VulkanCommandBuffer* currentbuf = nullptr;
     // Find an available slot.
-    for (VulkanCommandBuffer& wrapper : mStorage) {
-        if (wrapper.cmdbuffer == VK_NULL_HANDLE) {
-            mCurrent = &wrapper;
+    for (size_t i = 0; i < CAPACITY; ++i) {
+        auto wrapper = mStorage[i].get();
+        if (wrapper->cmdbuffer == VK_NULL_HANDLE) {
+            mCurrentCommandBufferIndex = static_cast<int8_t>(i);
+            currentbuf = wrapper;
             break;
         }
     }
 
-    assert_invariant(mCurrent);
+    assert_invariant(currentbuf);
     --mAvailableCount;
 
     // Create the low-level command buffer.
@@ -162,47 +169,46 @@ VulkanCommandBuffer const& VulkanCommands::get(bool blockOnGC) {
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = 1
     };
-    vkAllocateCommandBuffers(mDevice, &allocateInfo, &mCurrent->cmdbuffer);
-
-    mCurrent->blockOnGC = blockOnGC;
+    vkAllocateCommandBuffers(mDevice, &allocateInfo, &currentbuf->cmdbuffer);
 
     // Note that the fence wrapper uses shared_ptr because a DriverAPI fence can also have ownership
     // over it.  The destruction of the low-level fence occurs either in VulkanCommands::gc(), or in
     // VulkanDriver::destroyFence(), both of which are safe spots.
-    mCurrent->fence = std::make_shared<VulkanCmdFence>(mDevice);
+    currentbuf->fence = std::make_shared<VulkanCmdFence>(mDevice);
 
     // Begin writing into the command buffer.
     const VkCommandBufferBeginInfo binfo {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     };
-    vkBeginCommandBuffer(mCurrent->cmdbuffer, &binfo);
+    vkBeginCommandBuffer(currentbuf->cmdbuffer, &binfo);
 
     // Notify the observer that a new command buffer has been activated.
     if (mObserver) {
-        mObserver->onCommandBuffer(*mCurrent);
+        mObserver->onCommandBuffer(*currentbuf);
     }
 
-    // We push the current markers onto a temporary stack. This must be placed after mCurrent is set
-    // to the new command buffer since pushGroupMarker also calls get().
+    // We push the current markers onto a temporary stack. This must be placed after currentbuf is
+    // set to the new command buffer since pushGroupMarker also calls get().
     while (mCarriedOverMarkers && !mCarriedOverMarkers->empty()) {
         auto [marker, time] = mCarriedOverMarkers->pop();
         pushGroupMarker(marker.c_str(), time);
     }
 
-    return *mCurrent;
+    return *currentbuf;
 }
 
 bool VulkanCommands::flush() {
     // It's perfectly fine to call flush when no commands have been written.
-    if (mCurrent == nullptr) {
+    if (mCurrentCommandBufferIndex < 0) {
         return false;
     }
 
-    const int64_t index = mCurrent - &mStorage[0];
-    VkSemaphore renderingFinished = mSubmissionSignals[index];
+    int8_t const index = mCurrentCommandBufferIndex;
+    VulkanCommandBuffer const* currentbuf = mStorage[index].get();
+    VkSemaphore const renderingFinished = mSubmissionSignals[index];
 
-    vkEndCommandBuffer(mCurrent->cmdbuffer);
+    vkEndCommandBuffer(currentbuf->cmdbuffer);
 
     // If the injected semaphore is an "image available" semaphore that has not yet been signaled,
     // it is sometimes fine to start executing commands anyway, as along as we stall the GPU at the
@@ -226,7 +232,7 @@ bool VulkanCommands::flush() {
         .pWaitSemaphores = signals,
         .pWaitDstStageMask = waitDestStageMasks,
         .commandBufferCount = 1,
-        .pCommandBuffers = &mCurrent->cmdbuffer,
+        .pCommandBuffers = &currentbuf->cmdbuffer,
         .signalSemaphoreCount = 1u,
         .pSignalSemaphores = &renderingFinished,
     };
@@ -239,12 +245,17 @@ bool VulkanCommands::flush() {
         signals[submitInfo.waitSemaphoreCount++] = mInjectedSignal;
     }
 
-    if (FILAMENT_VULKAN_VERBOSE) {
-        slog.i << "Submitting cmdbuffer=" << mCurrent->cmdbuffer
-            << " wait=(" << signals[0] << ", " << signals[1] << ") "
-            << " signal=" << renderingFinished
-            << io::endl;
+    // To address a validation warning.
+    if (submitInfo.waitSemaphoreCount == 0) {
+        submitInfo.pWaitSemaphores = VK_NULL_HANDLE;
     }
+
+#if FILAMENT_VULKAN_VERBOSE
+    slog.i << "Submitting cmdbuffer=" << currentbuf->cmdbuffer
+        << " wait=(" << signals[0] << ", " << signals[1] << ") "
+        << " signal=" << renderingFinished
+        << io::endl;
+#endif
 
     // Before actually submitting, we need to pop any leftover group markers.
     while (mGroupMarkers && !mGroupMarkers->empty()) {
@@ -257,44 +268,51 @@ bool VulkanCommands::flush() {
         popGroupMarker();
     }
 
-    auto& cmdfence = mCurrent->fence;
+    auto& cmdfence = currentbuf->fence;
     std::unique_lock<utils::Mutex> lock(cmdfence->mutex);
     cmdfence->status.store(VK_NOT_READY);
     UTILS_UNUSED_IN_RELEASE VkResult result = vkQueueSubmit(mQueue, 1, &submitInfo, cmdfence->fence);
     cmdfence->condition.notify_all();
     lock.unlock();
 
+#if FILAMENT_VULKAN_VERBOSE
+    if (result != VK_SUCCESS) {
+        utils::slog.d <<"Failed command buffer submission result: " << result << utils::io::endl;
+    }
+#endif
     assert_invariant(result == VK_SUCCESS);
 
     mSubmissionSignal = renderingFinished;
     mInjectedSignal = VK_NULL_HANDLE;
-    mCurrent = nullptr;
+    mCurrentCommandBufferIndex = -1;
     return true;
 }
 
 VkSemaphore VulkanCommands::acquireFinishedSignal() {
     VkSemaphore semaphore = mSubmissionSignal;
     mSubmissionSignal = VK_NULL_HANDLE;
-    if (FILAMENT_VULKAN_VERBOSE) {
-        slog.i << "Acquiring " << semaphore << " (e.g. for vkQueuePresentKHR)" << io::endl;
-    }
+#if FILAMENT_VULKAN_VERBOSE
+     slog.i << "Acquiring " << semaphore << " (e.g. for vkQueuePresentKHR)" << io::endl;
+#endif
     return semaphore;
 }
 
 void VulkanCommands::injectDependency(VkSemaphore next) {
     assert_invariant(mInjectedSignal == VK_NULL_HANDLE);
     mInjectedSignal = next;
-    if (FILAMENT_VULKAN_VERBOSE) {
-        slog.i << "Injecting " << next << " (e.g. due to vkAcquireNextImageKHR)" << io::endl;
-    }
+#if FILAMENT_VULKAN_VERBOSE
+    slog.i << "Injecting " << next << " (e.g. due to vkAcquireNextImageKHR)" << io::endl;
+#endif
 }
 
 void VulkanCommands::wait() {
     VkFence fences[CAPACITY];
-    uint32_t count = 0;
-    for (auto& wrapper : mStorage) {
-        if (wrapper.cmdbuffer != VK_NULL_HANDLE && mCurrent != &wrapper) {
-            fences[count++] = wrapper.fence->fence;
+    size_t count = 0;
+    for (size_t i = 0; i < CAPACITY; i++) {
+        auto wrapper = mStorage[i].get();
+        if (wrapper->cmdbuffer != VK_NULL_HANDLE
+                && mCurrentCommandBufferIndex != static_cast<int8_t>(i)) {
+            fences[count++] = wrapper->fence->fence;
         }
     }
     if (count > 0) {
@@ -303,26 +321,34 @@ void VulkanCommands::wait() {
 }
 
 void VulkanCommands::gc() {
-    for (auto& wrapper : mStorage) {
-        if (wrapper.cmdbuffer != VK_NULL_HANDLE) {
-            uint64_t const timeout = wrapper.blockOnGC ? UINT64_MAX : 0;
-            VkResult const result
-                    = vkWaitForFences(mDevice, 1, &wrapper.fence->fence, VK_TRUE, timeout);
-            if (result == VK_SUCCESS) {
-                vkFreeCommandBuffers(mDevice, mPool, 1, &wrapper.cmdbuffer);
-                wrapper.cmdbuffer = VK_NULL_HANDLE;
-                wrapper.fence->status.store(VK_SUCCESS);
-                wrapper.fence.reset();
-                ++mAvailableCount;
-            }
+    VkCommandBuffer buffers[CAPACITY];
+    size_t count = 0;
+    for (size_t i = 0; i < CAPACITY; i++) {
+        auto wrapper = mStorage[i].get();
+        if (wrapper->cmdbuffer == VK_NULL_HANDLE) {
+            continue;
         }
+        VkResult const result = vkWaitForFences(mDevice, 1, &wrapper->fence->fence, VK_TRUE, 0);
+        if (result != VK_SUCCESS) {
+            continue;
+        }
+        buffers[count++] = wrapper->cmdbuffer;
+        wrapper->cmdbuffer = VK_NULL_HANDLE;
+        wrapper->fence->status.store(VK_SUCCESS);
+        wrapper->fence.reset();
+        wrapper->clearResources();
+        ++mAvailableCount;
+    }
+    if (count > 0) {
+        vkFreeCommandBuffers(mDevice, mPool, count, buffers);
     }
 }
 
 void VulkanCommands::updateFences() {
-    for (auto& wrapper : mStorage) {
-        if (wrapper.cmdbuffer != VK_NULL_HANDLE) {
-            VulkanCmdFence* fence = wrapper.fence.get();
+    for (size_t i = 0; i < CAPACITY; i++) {
+        auto wrapper = mStorage[i].get();
+        if (wrapper->cmdbuffer != VK_NULL_HANDLE) {
+            VulkanCmdFence* fence = wrapper->fence.get();
             if (fence) {
                 VkResult status = vkGetFenceStatus(mDevice, fence->fence);
                 // This is either VK_SUCCESS, VK_NOT_READY, or VK_ERROR_DEVICE_LOST.
