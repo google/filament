@@ -200,7 +200,6 @@ public:
             std::condition_variable cond;
             FenceStatus status{ FenceStatus::TIMEOUT_EXPIRED };
         };
-        GLsync sync;
         std::shared_ptr<State> state{ std::make_shared<GLFence::State>() };
     };
 

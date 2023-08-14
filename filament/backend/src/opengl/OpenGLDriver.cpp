@@ -1344,35 +1344,15 @@ void OpenGLDriver::createFenceR(Handle<HwFence> fh, int) {
     }
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     else {
-        f->sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
         std::weak_ptr<GLFence::State> const weak = f->state;
-        runEveryNowAndThen(
-                [sync = f->sync, weak]() -> bool {
-                    auto state = weak.lock();
-                    if (state) {
-                        FenceStatus fenceStatus;
-                        GLenum const syncStatus = glClientWaitSync(sync, 0, 0u);
-                        switch (syncStatus) {
-                            case GL_TIMEOUT_EXPIRED:
-                                fenceStatus = FenceStatus::TIMEOUT_EXPIRED;
-                                break;
-                            case GL_ALREADY_SIGNALED:
-                            case GL_CONDITION_SATISFIED:
-                                fenceStatus = FenceStatus::CONDITION_SATISFIED;
-                                break;
-                            default:
-                                fenceStatus = FenceStatus::ERROR;
-                                break;
-                        }
-                        if (fenceStatus != FenceStatus::TIMEOUT_EXPIRED) {
-                            std::lock_guard const lock(state->lock);
-                            state->status = fenceStatus;
-                            state->cond.notify_all();
-                        }
-                        return (fenceStatus != FenceStatus::TIMEOUT_EXPIRED);
-                    }
-                    return true;
-                });
+        whenGpuCommandsComplete([weak](){
+            auto state = weak.lock();
+            if (state) {
+                std::lock_guard const lock(state->lock);
+                state->status = FenceStatus::CONDITION_SATISFIED;
+                state->cond.notify_all();
+            }
+        });
     }
 #endif
 }
@@ -1698,12 +1678,6 @@ void OpenGLDriver::destroyFence(Handle<HwFence> fh) {
         if (mPlatform.canCreateFence() || mContext.isES2()) {
             mPlatform.destroyFence(f->fence);
         }
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-        else {
-            glDeleteSync(f->sync);
-            CHECK_GL_ERROR(utils::slog.e)
-        }
-#endif
         destruct(fh, f);
     }
 }
