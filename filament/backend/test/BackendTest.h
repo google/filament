@@ -43,7 +43,7 @@ protected:
 
     void initializeDriver();
     void executeCommands();
-    void flushAndWait(uint64_t timeout = 1000);
+    void flushAndWait();
 
     filament::backend::Handle<filament::backend::HwSwapChain> createSwapChain();
 

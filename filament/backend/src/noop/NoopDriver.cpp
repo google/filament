@@ -132,7 +132,7 @@ void NoopDriver::updateStreams(CommandStream* driver) {
 void NoopDriver::destroyFence(Handle<HwFence> fh) {
 }
 
-FenceStatus NoopDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
+FenceStatus NoopDriver::getFenceStatus(Handle<HwFence> fh) {
     return FenceStatus::CONDITION_SATISFIED;
 }
 
