@@ -16,6 +16,8 @@
 
 #include "CompilerThreadPool.h"
 
+#include <utils/Systrace.h>
+
 #include <memory>
 
 namespace filament::backend {
@@ -38,6 +40,7 @@ void CompilerThreadPool::init(uint32_t threadCount, JobSystem::Priority priority
 
     for (size_t i = 0; i < threadCount; i++) {
         mCompilerThreads.emplace_back([this, priority, setup]() {
+            SYSTRACE_CONTEXT();
             // give the thread a name
             JobSystem::setThreadName("CompilerThreadPool");
             // run at a slightly lower priority than other filament threads
@@ -53,7 +56,11 @@ void CompilerThreadPool::init(uint32_t threadCount, JobSystem::Priority priority
                             (!std::all_of( std::begin(mQueues), std::end(mQueues),
                                     [](auto&& q) { return q.empty(); }));
                 });
-                if (!mExitRequested) {
+
+                SYSTRACE_VALUE32("CompilerThreadPool Jobs",
+                        mQueues[0].size() + mQueues[1].size());
+
+                if (UTILS_LIKELY(!mExitRequested)) {
                     Job job;
                     // use the first queue that's not empty
                     auto& queue = [this]() -> auto& {

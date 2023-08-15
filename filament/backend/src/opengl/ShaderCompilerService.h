@@ -19,6 +19,7 @@
 
 #include "gl_headers.h"
 
+#include "CallbackManager.h"
 #include "CompilerThreadPool.h"
 
 #include <backend/CallbackHandler.h>
@@ -71,10 +72,6 @@ public:
     // creates a program (compile + link) asynchronously if supported
     program_token_t createProgram(utils::CString const& name, Program&& program);
 
-    // Returns true if the program is linked (successfully or not). Guarantees that
-    // getProgram() won't block. Does not block.
-    bool isProgramReady(const program_token_t& token) const noexcept;
-
     // Return the GL program, blocks if necessary. The Token is destroyed and becomes invalid.
     GLuint getProgram(program_token_t& token);
 
@@ -91,19 +88,16 @@ public:
     static void* getUserData(const program_token_t& token) noexcept;
 
     // call the callback when all active programs are ready
-    void notifyWhenAllProgramsAreReady(CompilerPriorityQueue priority,
+    void notifyWhenAllProgramsAreReady(
             CallbackHandler* handler, CallbackHandler::Callback callback, void* user);
 
 private:
     OpenGLDriver& mDriver;
+    CallbackManager mCallbackManager;
     CompilerThreadPool mCompilerThreadPool;
 
     const bool KHR_parallel_shader_compile;
     uint32_t mShaderCompilerThreadCount = 0u;
-
-    // For now, we assume shared contexts are supported everywhere. If they are not,
-    // we don't use the shader compiler pool. However, the code supports it.
-    static constexpr bool mUseSharedContext = true;
 
     GLuint initialize(ShaderCompilerService::program_token_t& token) noexcept;
 
