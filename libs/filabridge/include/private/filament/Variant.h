@@ -53,7 +53,6 @@ struct Variant {
     // STE: Instanced stereo rendering
     //
     //   X: either 1 or 0
-    //                               1     0    0      0     1     0     1
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
     // Variant              | STE | VSM | FOG | DEP | SKN | SRE | DYN | DIR |   256
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
