@@ -2593,7 +2593,7 @@ bool OpenGLDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapse
 void OpenGLDriver::compilePrograms(CompilerPriorityQueue priority,
         CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     if (callback) {
-        getShaderCompilerService().notifyWhenAllProgramsAreReady(priority, handler, callback, user);
+        getShaderCompilerService().notifyWhenAllProgramsAreReady(handler, callback, user);
     }
 }
 
