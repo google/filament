@@ -82,7 +82,7 @@ float computeMicroShadowing(float NoL, float visibility) {
  *   direction to match reference renderings when the roughness increases
  */
 
-vec3 getReflectedVector(const PixelParams pixel, const vec3 v, const vec3 n) {
+vec3 getReflectedVector(PixelParams pixel, vec3 v, vec3 n) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
     vec3  anisotropyDirection = pixel.anisotropy >= 0.0 ? pixel.anisotropicB : pixel.anisotropicT;
     vec3  anisotropicTangent  = cross(anisotropyDirection, v);
@@ -97,7 +97,7 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 v, const vec3 n) {
     return r;
 }
 
-void getAnisotropyPixelParams(const MaterialInputs material, inout PixelParams pixel) {
+void getAnisotropyPixelParams(MaterialInputs material, inout PixelParams pixel) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
     vec3 direction = material.anisotropyDirection;
     pixel.anisotropy = material.anisotropy;

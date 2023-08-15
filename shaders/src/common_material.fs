@@ -14,11 +14,11 @@ float clampNoV(float NoV) {
     return max(NoV, MIN_N_DOT_V);
 }
 
-vec3 computeDiffuseColor(const vec4 baseColor, float metallic) {
+vec3 computeDiffuseColor(vec4 baseColor, float metallic) {
     return baseColor.rgb * (1.0 - metallic);
 }
 
-vec3 computeF0(const vec4 baseColor, float metallic, float reflectance) {
+vec3 computeF0(vec4 baseColor, float metallic, float reflectance) {
     return baseColor.rgb * metallic + (reflectance * (1.0 - metallic));
 }
 
@@ -26,7 +26,7 @@ float computeDielectricF0(float reflectance) {
     return 0.16 * reflectance * reflectance;
 }
 
-float computeMetallicFromSpecularColor(const vec3 specularColor) {
+float computeMetallicFromSpecularColor(vec3 specularColor) {
     return max3(specularColor);
 }
 
@@ -51,7 +51,7 @@ float f0ToIor(float f0) {
     return (1.0 + r) / (1.0 - r);
 }
 
-vec3 f0ClearCoatToSurface(const vec3 f0) {
+vec3 f0ClearCoatToSurface(vec3 f0) {
     // Approximation of iorTof0(f0ToIor(f0), 1.5)
     // This assumes that the clear coat layer has an IOR of 1.5
 #if FILAMENT_QUALITY == FILAMENT_QUALITY_LOW

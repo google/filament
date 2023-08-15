@@ -30,11 +30,11 @@ void dummy(){}
 // Size of a tile in full-resolution pixels -- must match tileSize in PostProcessManager.cpp
 #define TILE_SIZE   16.0
 
-vec2 tap(const vec2 uv, const vec2 offset) {
+vec2 tap(vec2 uv, vec2 offset) {
     return textureLod(materialParams_tiles, uv + offset, 0.0).rg;
 }
 
-vec2 dilate(inout vec2 center, const vec2 tap) {
+vec2 dilate(inout vec2 center, vec2 tap) {
     // Tiles that can affect us need to transfer their CoC to us (for the foreground it's
     // min(ourCoc, theirCoc) because CoC are negative (the min is the larger radius).
     center.r = min(center.r, tap.r);

@@ -34,7 +34,7 @@ protected:
     void TearDown() override;
 
     void executeCommands();
-    void flushAndWait(uint64_t timeout = 1000);
+    void flushAndWait();
     filament::backend::DriverApi& getDriverApi() { return *commandStream; }
     filament::backend::Driver& getDriver() { return *driver; }
 

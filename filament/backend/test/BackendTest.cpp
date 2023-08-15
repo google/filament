@@ -85,13 +85,10 @@ void BackendTest::executeCommands() {
     }
 }
 
-void BackendTest::flushAndWait(uint64_t timeout) {
+void BackendTest::flushAndWait() {
     auto& api = getDriverApi();
-    auto fence = api.createFence();
     api.finish();
     executeCommands();
-    api.wait(fence, timeout);
-    api.destroyFence(fence);
 }
 
 Handle<HwSwapChain> BackendTest::createSwapChain() {

@@ -33,13 +33,7 @@ class FEngine;
 
 class FFence : public Fence {
 public:
-    // Type of the Fence being created
-    enum class Type : uint8_t {
-        SOFT,
-        HARD
-    };
-
-    FFence(FEngine& engine, Type type);
+    FFence(FEngine& engine);
 
     void terminate(FEngine& engine) noexcept;
 
@@ -54,18 +48,14 @@ private:
     static utils::Condition sCondition;
 
     struct FenceSignal {
-        explicit FenceSignal(Type type) noexcept : mType(type) { }
+        explicit FenceSignal() noexcept = default;
         enum State : uint8_t { UNSIGNALED, SIGNALED, DESTROYED };
-        // we store mType here instead of in FFence, because it allows sizeof(FFence) to be
-        // much smaller (since it needs to be multiple of 8 on 64 bits architectures)
-        const Type mType;
         State mState = UNSIGNALED;
         void signal(State s = SIGNALED) noexcept;
         FenceStatus wait(uint64_t timeout) noexcept;
     };
 
     FEngine& mEngine;
-    backend::Handle<backend::HwFence> mFenceHandle;
     // TODO: use custom allocator for these small objects
     std::shared_ptr<FenceSignal> mFenceSignal;
 };

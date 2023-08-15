@@ -246,6 +246,9 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     bool const staticTextureWorkaround =
             engine.getDriverApi().isWorkaroundNeeded(Workaround::A8X_STATIC_TEXTURE_TARGET_ERROR);
 
+    bool const powerVrShaderWorkarounds =
+            engine.getDriverApi().isWorkaroundNeeded(Workaround::POWER_VR_SHADER_WORKAROUNDS);
+
     mSpecializationConstants.reserve(constants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
     mSpecializationConstants.push_back({
                     +ReservedSpecializationConstants::BACKEND_FEATURE_LEVEL,
@@ -259,6 +262,9 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     mSpecializationConstants.push_back({
                     +ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND,
                     (bool)staticTextureWorkaround });
+    mSpecializationConstants.push_back({
+                    +ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS,
+                    (bool)powerVrShaderWorkarounds });
     if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
         // The actual value of this spec-constant is set in the OpenGLDriver backend.
         mSpecializationConstants.push_back({

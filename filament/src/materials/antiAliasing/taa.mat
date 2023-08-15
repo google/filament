@@ -95,7 +95,7 @@ fragment {
 #define PREVENT_FLICKERING      0   // FIXME: thin lines disapear
 
 
-float luma(const vec3 color) {
+float luma(vec3 color) {
 #if USE_YCoCg
     return color.x;
 #else
@@ -103,14 +103,14 @@ float luma(const vec3 color) {
 #endif
 }
 
-vec3 RGB_YCoCg(const vec3 c) {
+vec3 RGB_YCoCg(vec3 c) {
     float Y  = dot(c.rgb, vec3( 1, 2,  1) * 0.25);
     float Co = dot(c.rgb, vec3( 2, 0, -2) * 0.25);
     float Cg = dot(c.rgb, vec3(-1, 2, -1) * 0.25);
     return vec3(Y, Co, Cg);
 }
 
-vec3 YCoCg_RGB(const vec3 c) {
+vec3 YCoCg_RGB(vec3 c) {
     float Y  = c.x;
     float Co = c.y;
     float Cg = c.z;
@@ -121,8 +121,8 @@ vec3 YCoCg_RGB(const vec3 c) {
 }
 
 // clip the (c, h) segment to a box
-vec4 clipToBox(const int quality,
-        const vec3 boxmin,  const vec3 boxmax, const vec4 c, const vec4 h) {
+vec4 clipToBox(int quality,
+        vec3 boxmin,  vec3 boxmax, vec4 c, vec4 h) {
     const float epsilon = 0.0001;
 
     if (quality == BOX_CLIPPING_ACCURATE) {
@@ -144,7 +144,7 @@ vec4 clipToBox(const int quality,
 //      http://vec3.ca/bicubic-filtering-in-fewer-taps/ for more details
 // Optimized to 5 taps by removing the corner samples
 // And modified for mediump support
-vec4 sampleTextureCatmullRom(const sampler2D tex, const highp vec2 uv, const highp vec2 texSize) {
+vec4 sampleTextureCatmullRom(sampler2D tex, highp vec2 uv, highp vec2 texSize) {
     // We're going to sample a a 4x4 grid of texels surrounding the target UV coordinate. We'll do this by rounding
     // down the sample location to get the exact center of our "starting" texel. The starting texel will be at
     // location [1, 1] in the grid, where [0, 0] is the top left corner.

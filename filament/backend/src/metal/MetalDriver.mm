@@ -607,12 +607,12 @@ void MetalDriver::destroyFence(Handle<HwFence> fh) {
     }
 }
 
-FenceStatus MetalDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
+FenceStatus MetalDriver::getFenceStatus(Handle<HwFence> fh) {
     auto* fence = handle_cast<MetalFence>(fh);
     if (!fence) {
         return FenceStatus::ERROR;
     }
-    return fence->wait(timeout);
+    return fence->wait(0);
 }
 
 bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
@@ -707,6 +707,8 @@ bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
         case Workaround::A8X_STATIC_TEXTURE_TARGET_ERROR:
             return mContext->bugs.a8xStaticTextureTargetError;
         case Workaround::DISABLE_BLIT_INTO_TEXTURE_ARRAY:
+            return false;
+        default:
             return false;
     }
     return false;

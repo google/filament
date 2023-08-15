@@ -51,7 +51,7 @@
 // Specular BRDF implementations
 //------------------------------------------------------------------------------
 
-float D_GGX(float roughness, float NoH, const vec3 h) {
+float D_GGX(float roughness, float NoH, vec3 h) {
     // Walter et al. 2007, "Microfacet Models for Refraction through Rough Surfaces"
 
     // In mediump, there are two problems computing 1.0 - NoH^2
@@ -138,12 +138,12 @@ float V_Neubelt(float NoV, float NoL) {
     return saturateMediump(1.0 / (4.0 * (NoL + NoV - NoL * NoV)));
 }
 
-vec3 F_Schlick(const vec3 f0, float f90, float VoH) {
+vec3 F_Schlick(vec3 f0, float f90, float VoH) {
     // Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"
     return f0 + (f90 - f0) * pow5(1.0 - VoH);
 }
 
-vec3 F_Schlick(const vec3 f0, float VoH) {
+vec3 F_Schlick(vec3 f0, float VoH) {
     float f = pow(1.0 - VoH, 5.0);
     return f + f0 * (1.0 - f);
 }
@@ -156,7 +156,7 @@ float F_Schlick(float f0, float f90, float VoH) {
 // Specular BRDF dispatch
 //------------------------------------------------------------------------------
 
-float distribution(float roughness, float NoH, const vec3 h) {
+float distribution(float roughness, float NoH, vec3 h) {
 #if BRDF_SPECULAR_D == SPECULAR_D_GGX
     return D_GGX(roughness, NoH, h);
 #endif
@@ -170,7 +170,7 @@ float visibility(float roughness, float NoV, float NoL) {
 #endif
 }
 
-vec3 fresnel(const vec3 f0, float LoH) {
+vec3 fresnel(vec3 f0, float LoH) {
 #if BRDF_SPECULAR_F == SPECULAR_F_SCHLICK
 #if FILAMENT_QUALITY == FILAMENT_QUALITY_LOW
     return F_Schlick(f0, LoH); // f90 = 1.0
@@ -196,7 +196,7 @@ float visibilityAnisotropic(float roughness, float at, float ab,
 #endif
 }
 
-float distributionClearCoat(float roughness, float NoH, const vec3 h) {
+float distributionClearCoat(float roughness, float NoH, vec3 h) {
 #if BRDF_CLEAR_COAT_D == SPECULAR_D_GGX
     return D_GGX(roughness, NoH, h);
 #endif

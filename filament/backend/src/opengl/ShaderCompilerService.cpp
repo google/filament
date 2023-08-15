@@ -63,7 +63,7 @@ static inline std::string to_string(float f) noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-struct ShaderCompilerService::ProgramToken {
+struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     struct ProgramBinary {
         GLenum format{};
         GLuint program{};
@@ -71,7 +71,8 @@ struct ShaderCompilerService::ProgramToken {
         std::vector<char> blob;
     };
 
-    ProgramToken(ShaderCompilerService& compiler, utils::CString const& name) noexcept
+    ~OpenGLProgramToken();
+    OpenGLProgramToken(ShaderCompilerService& compiler, utils::CString const& name) noexcept
             : compiler(compiler), name(name) {
     }
     ShaderCompilerService& compiler;
@@ -120,117 +121,14 @@ struct ShaderCompilerService::ProgramToken {
     bool canceled = false; // not part of the signaling
 };
 
+ShaderCompilerService::OpenGLProgramToken::~OpenGLProgramToken() = default;
+
 void ShaderCompilerService::setUserData(const program_token_t& token, void* user) noexcept {
     token->user = user;
 }
 
 void* ShaderCompilerService::getUserData(const program_token_t& token) noexcept {
     return token->user;
-}
-
-// ------------------------------------------------------------------------------------------------
-
-ShaderCompilerService::CompilerThreadPool::CompilerThreadPool() noexcept = default;
-
-ShaderCompilerService::CompilerThreadPool::~CompilerThreadPool() noexcept {
-    assert_invariant(mCompilerThreads.empty());
-    assert_invariant(mQueues[0].empty());
-    assert_invariant(mQueues[1].empty());
-}
-
-void ShaderCompilerService::CompilerThreadPool::init(
-        bool useSharedContexts, uint32_t threadCount, OpenGLPlatform& platform) noexcept {
-
-    for (size_t i = 0; i < threadCount; i++) {
-        mCompilerThreads.emplace_back([this, useSharedContexts, &platform]() {
-            // give the thread a name
-            JobSystem::setThreadName("CompilerThreadPool");
-
-            // create a gl context current to this thread
-            platform.createContext(useSharedContexts);
-
-            // process jobs from the queue until we're asked to exit
-            while (!mExitRequested) {
-                std::unique_lock lock(mQueueLock);
-                mQueueCondition.wait(lock, [this]() {
-                        return  mExitRequested ||
-                                (!std::all_of( std::begin(mQueues), std::end(mQueues),
-                                        [](auto&& q) { return q.empty(); }));
-                });
-                if (!mExitRequested) {
-                    Job job;
-                    // use the first queue that's not empty
-                    auto& queue = [this]() -> auto& {
-                        for (auto& q: mQueues) {
-                            if (!q.empty()) {
-                                return q;
-                            }
-                        }
-                        return mQueues[0]; // we should never end-up here.
-                    }();
-                    assert_invariant(!queue.empty());
-                    std::swap(job, queue.front().second);
-                    queue.pop_front();
-
-                    // execute the job without holding any locks
-                    lock.unlock();
-                    job();
-                }
-            }
-        });
-
-    }
-}
-
-auto ShaderCompilerService::CompilerThreadPool::find(
-        program_token_t const& token) -> std::pair<Queue&, Queue::iterator> {
-    for (auto&& q: mQueues) {
-        auto pos = std::find_if(q.begin(), q.end(), [&token](auto&& item) {
-            return item.first == token;
-        });
-        if (pos != q.end()) {
-            return { q, pos };
-        }
-    }
-    // this can happen if the program is being processed right now
-    return { mQueues[0], mQueues[0].end() };
-}
-
-auto ShaderCompilerService::CompilerThreadPool::dequeue(program_token_t const& token) -> Job {
-    std::unique_lock const lock(mQueueLock);
-    Job job;
-    auto&& [q, pos] = find(token);
-    if (pos != q.end()) {
-        std::swap(job, pos->second);
-        q.erase(pos);
-    }
-    return job;
-}
-
-void ShaderCompilerService::CompilerThreadPool::queue(CompilerPriorityQueue priorityQueue,
-        program_token_t const& token, Job&& job) {
-    std::unique_lock const lock(mQueueLock);
-    mQueues[size_t(priorityQueue)].emplace_back(token, std::move(job));
-    mQueueCondition.notify_one();
-}
-
-void ShaderCompilerService::CompilerThreadPool::terminate() noexcept {
-    std::unique_lock lock(mQueueLock);
-    mExitRequested = true;
-    mQueueCondition.notify_all();
-    lock.unlock();
-
-    for (auto& thread: mCompilerThreads) {
-        if (thread.joinable()) {
-            thread.join();
-        }
-    }
-    mCompilerThreads.clear();
-
-    // Clear all the queues, dropping the remaining jobs. This relies on the jobs being cancelable.
-    for (auto&& q : mQueues) {
-        q.clear();
-    }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -256,9 +154,27 @@ void ShaderCompilerService::init() noexcept {
         //   a shared context, so parallel shader compilation yields no benefit.
         // - on windows/linux we could use more threads, tbd.
         if (mDriver.mPlatform.isExtraContextSupported()) {
-            mShaderCompilerThreadCount = 1;
-            mCompilerThreadPool.init(mUseSharedContext,
-                    mShaderCompilerThreadCount, mDriver.mPlatform);
+            // By default, we use one thread at the same priority as the gl thread. This is the
+            // safest choice that avoids priority inversions.
+            uint32_t poolSize = 1;
+            JobSystem::Priority priority = JobSystem::Priority::DISPLAY;
+
+            auto const& renderer = mDriver.getContext().state.renderer;
+            if (UTILS_UNLIKELY(strstr(renderer, "PowerVR"))) {
+                // The PowerVR driver support parallel shader compilation well, so we use 2
+                // threads, we can use lower priority threads here because urgent compilations
+                // will most likely happen on the main gl thread. Using too many thread can
+                // increase memory pressure significantly.
+                poolSize = 2;
+                priority = JobSystem::Priority::BACKGROUND;
+            }
+
+            mShaderCompilerThreadCount = poolSize;
+            mCompilerThreadPool.init(mShaderCompilerThreadCount, priority,
+                    [platform = &mDriver.mPlatform, sharedContext = mUseSharedContext]() {
+                        // create a gl context current to this thread
+                        platform->createContext(sharedContext);
+                    });
         }
     }
 }
@@ -286,7 +202,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
         utils::CString const& name, Program&& program) {
     auto& gl = mDriver.getContext();
 
-    auto token = std::make_shared<ProgramToken>(*this, name);
+    auto token = std::make_shared<OpenGLProgramToken>(*this, name);
 
     if (UTILS_UNLIKELY(gl.isES2())) {
         token->attributes = std::move(program.getAttributes());
@@ -312,7 +228,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                         // link the program
                         GLuint const glProgram = linkProgram(gl, shaders, token->attributes);
 
-                        ProgramToken::ProgramBinary binary;
+                        OpenGLProgramToken::ProgramBinary binary;
                         binary.shaders = shaders;
 
                         if (UTILS_LIKELY(mUseSharedContext)) {
@@ -534,7 +450,7 @@ void ShaderCompilerService::notifyWhenAllProgramsAreReady(CompilerPriorityQueue 
 // ------------------------------------------------------------------------------------------------
 
 void ShaderCompilerService::getProgramFromCompilerPool(program_token_t& token) noexcept {
-    ProgramToken::ProgramBinary const& binary{ token->get() };
+    OpenGLProgramToken::ProgramBinary const& binary{ token->get() };
     if (!token->canceled) {
         token->gl.shaders = binary.shaders;
         if (UTILS_LIKELY(mUseSharedContext)) {

@@ -60,14 +60,14 @@ fragment {
         return max(0.0, 1.0 - diff * diff);
     }
 
-    void tapAO(const highp sampler2DArray saoTexture, highp vec2 uv,
+    void tapAO(highp sampler2DArray saoTexture, highp vec2 uv,
             out float ao, out highp float sampleDepth) {
         vec3 data = textureLod(saoTexture, vec3(uv, 0.0), 0.0).rgb;
         ao = data.r;
         sampleDepth = unpack(data.gb);
     }
 
-    void tapBN(const highp sampler2DArray saoTexture, highp vec2 uv,
+    void tapBN(highp sampler2DArray saoTexture, highp vec2 uv,
             out vec3 bentNormal) {
         vec3 data = textureLod(saoTexture, vec3(uv, 1.0), 0.0).xyz;
         bentNormal = unpackBentNormal(data);

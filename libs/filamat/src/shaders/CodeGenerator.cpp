@@ -236,6 +236,9 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     generateSpecializationConstant(out, "CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND",
             +ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND, false);
 
+    generateSpecializationConstant(out, "CONFIG_POWER_VR_SHADER_WORKAROUNDS",
+            +ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS, false);
+
     out << "const int CONFIG_STEREOSCOPIC_EYES = " << (int)CONFIG_STEREOSCOPIC_EYES << ";\n";
 
     if (material.featureLevel == 0) {

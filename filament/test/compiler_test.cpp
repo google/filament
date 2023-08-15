@@ -74,25 +74,29 @@ private:
 };
 
 TEST_F(CompilerTest, Simple) {
-    auto vertex = R"(
+    auto shader = R"(
 #version 300 es
 void main()
 {
 })"sv;
 
-    const char* const vs = vertex.data();
-    GLint const vl = (GLint)vertex.size();
+    const char* const src = shader.data();
+    GLint const len = (GLint)shader.size();
 
-    GLuint const vid = glCreateShader(GL_VERTEX_SHADER);
+    GLuint const id = glCreateShader(GL_VERTEX_SHADER);
     EXPECT_EQ(glGetError(), GL_NO_ERROR);
 
-    glShaderSource(vid, 1, &vs, &vl);
+    glShaderSource(id, 1, &src, &len);
     EXPECT_EQ(glGetError(), GL_NO_ERROR);
 
-    glCompileShader(vid);
+    glCompileShader(id);
     EXPECT_EQ(glGetError(), GL_NO_ERROR);
 
-    glDeleteShader(vid);
+    GLint result = 0;
+    glGetShaderiv(id, GL_COMPILE_STATUS, &result);
+    EXPECT_EQ(result, GL_TRUE);
+
+    glDeleteShader(id);
     EXPECT_EQ(glGetError(), GL_NO_ERROR);
 }
 
@@ -100,7 +104,7 @@ TEST_F(CompilerTest, CrashPVRUniFlexCompileToHw) {
 
     // Some PowerVR driver crash with this shader
 
-    auto vertex = R"(
+    auto shader = R"(
 #version 300 es
 
 layout(location = 0) in vec4 mesh_position;
@@ -114,19 +118,60 @@ void main() {
     gl_Position.z = dot(gl_Position.zw, frameUniforms.i);
 })"sv;
 
-    const char* const vs = vertex.data();
-    GLint const vl = (GLint)vertex.size();
+    const char* const src = shader.data();
+    GLint const len = (GLint)shader.size();
 
-    GLuint const vid = glCreateShader(GL_VERTEX_SHADER);
+    GLuint const id = glCreateShader(GL_VERTEX_SHADER);
     EXPECT_EQ(glGetError(), GL_NO_ERROR);
 
-    glShaderSource(vid, 1, &vs, &vl);
+    glShaderSource(id, 1, &src, &len);
     EXPECT_EQ(glGetError(), GL_NO_ERROR);
 
-    glCompileShader(vid);
+    glCompileShader(id);
     EXPECT_EQ(glGetError(), GL_NO_ERROR);
 
-    glDeleteShader(vid);
+    GLint result = 0;
+    glGetShaderiv(id, GL_COMPILE_STATUS, &result);
+    EXPECT_EQ(result, GL_TRUE);
+
+    glDeleteShader(id);
+    EXPECT_EQ(glGetError(), GL_NO_ERROR);
+}
+
+TEST_F(CompilerTest, ConstParameters) {
+
+    // Some PowerVR driver fail to compile this shader
+
+    auto shader = R"(
+#version 300 es
+
+highp mat3 m;
+void buggy(const mediump vec3 n) {
+    m*n;
+}
+
+void main() {
+})"sv;
+
+    const char* const src = shader.data();
+    GLint const len = (GLint)shader.size();
+
+    GLuint const id = glCreateShader(GL_FRAGMENT_SHADER);
+    EXPECT_EQ(glGetError(), GL_NO_ERROR);
+
+    glShaderSource(id, 1, &src, &len);
+    EXPECT_EQ(glGetError(), GL_NO_ERROR);
+
+    glCompileShader(id);
+    EXPECT_EQ(glGetError(), GL_NO_ERROR);
+
+    GLint result = 0;
+    glGetShaderiv(id, GL_COMPILE_STATUS, &result);
+    EXPECT_EQ(result, GL_TRUE);
+
+    EXPECT_EQ(glGetError(), GL_NO_ERROR);
+
+    glDeleteShader(id);
     EXPECT_EQ(glGetError(), GL_NO_ERROR);
 }
 
