@@ -78,7 +78,7 @@ struct Variant {
     //     Fragment depth      0     X     X     1     0     0     0     0
     //           Reserved      X     1     1     1     X     0     0     0     [  -4]
     //
-    // 48 variants used, 80 reserved (128 - 46)
+    // 96 variants used, 160 reserved (256 - 96)
     //
     // note: a valid variant can be neither a valid vertex nor a valid fragment variant
     //       (e.g.: FOG|SKN variants), the proper bits are filtered appropriately,
