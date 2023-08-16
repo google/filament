@@ -4,17 +4,17 @@
 
 /** @public-api */
 mat4 getWorldFromModelMatrix() {
-    return object_uniforms.worldFromModelMatrix;
+    return object_uniforms_worldFromModelMatrix;
 }
 
 /** @public-api */
 mat3 getWorldFromModelNormalMatrix() {
-    return object_uniforms.worldFromModelNormalMatrix;
+    return object_uniforms_worldFromModelNormalMatrix;
 }
 
 /** sort-of public */
 float getObjectUserData() {
-    return object_uniforms.userData;
+    return object_uniforms_userData;
 }
 
 //------------------------------------------------------------------------------
@@ -80,7 +80,7 @@ void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
 
 void morphPosition(inout vec4 p) {
     ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
-    int c = object_uniforms.morphTargetCount;
+    int c = object_uniforms_morphTargetCount;
     for (int i = 0; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];
         if (w != 0.0) {
@@ -93,7 +93,7 @@ void morphPosition(inout vec4 p) {
 void morphNormal(inout vec3 n) {
     vec3 baseNormal = n;
     ivec3 texcoord = ivec3(getVertexIndex() % MAX_MORPH_TARGET_BUFFER_WIDTH, getVertexIndex() / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
-    int c = object_uniforms.morphTargetCount;
+    int c = object_uniforms_morphTargetCount;
     for (int i = 0; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];
         if (w != 0.0) {
@@ -113,7 +113,7 @@ vec4 getPosition() {
 
 #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
 
-    if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0) {
+    if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_MORPHING_ENABLED_BIT) != 0) {
 #if defined(LEGACY_MORPHING)
         pos += morphingUniforms.weights[0] * mesh_custom0;
         pos += morphingUniforms.weights[1] * mesh_custom1;
@@ -124,7 +124,7 @@ vec4 getPosition() {
 #endif
     }
 
-    if ((object_uniforms.flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0) {
+    if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0) {
         skinPosition(pos.xyz, mesh_bone_indices, mesh_bone_weights);
     }
 
