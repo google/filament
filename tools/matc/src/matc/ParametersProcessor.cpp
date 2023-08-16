@@ -1137,6 +1137,7 @@ static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& v
         strToEnum["vsm"]                    = filament::UserVariantFilterBit::VSM;
         strToEnum["fog"]                    = filament::UserVariantFilterBit::FOG;
         strToEnum["ssr"]                    = filament::UserVariantFilterBit::SSR;
+        strToEnum["stereo"]                 = filament::UserVariantFilterBit::STE;
         return strToEnum;
     }();
 

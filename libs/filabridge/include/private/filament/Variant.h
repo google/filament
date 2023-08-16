@@ -26,7 +26,7 @@
 #include <stddef.h>
 
 namespace filament {
-static constexpr size_t VARIANT_BITS = 7;
+static constexpr size_t VARIANT_BITS = 8;
 static constexpr size_t VARIANT_COUNT = 1 << VARIANT_BITS;
 
 using VariantList = utils::bitset<uint64_t, VARIANT_COUNT / 64>;
@@ -50,34 +50,34 @@ struct Variant {
     // FOG: Fog
     // PCK: Picking (depth variant only)
     // VSM: Variance shadow maps
+    // STE: Instanced stereo rendering
     //
     //   X: either 1 or 0
-    //                               1     0    0      0     1     0     1
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-    // Variant              |  0  | VSM | FOG | DEP | SKN | SRE | DYN | DIR |   128
+    // Variant              | STE | VSM | FOG | DEP | SKN | SRE | DYN | DIR |   256
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
     //                                    PCK
     //
     // Standard variants:
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-    //                      |  0  | VSM | FOG |  0  | SKN | SRE | DYN | DIR |    64 - 22 = 42
+    //                      | STE | VSM | FOG |  0  | SKN | SRE | DYN | DIR |    128 - 44 = 84
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-    //      Vertex shader            0     0     0     X     X     X     X
-    //    Fragment shader            X     X     0     0     X     X     X
-    //       Fragment SSR            1     0     0     0     1     0     0
-    //           Reserved            1     1     0     X     1     0     0      [ -2]
-    //           Reserved            0     X     0     X     1     0     0      [ -4]
-    //           Reserved            1     X     0     X     0     X     X      [-16]
+    //      Vertex shader      X     0     0     0     X     X     X     X
+    //    Fragment shader      0     X     X     0     0     X     X     X
+    //       Fragment SSR      0     1     0     0     0     1     0     0
+    //           Reserved      X     1     1     0     X     1     0     0      [ -4]
+    //           Reserved      X     0     X     0     X     1     0     0      [ -8]
+    //           Reserved      X     1     X     0     X     0     X     X      [-32]
     //
     // Depth variants:
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-    //                      |  0  | VSM | PCK |  1  | SKN |  0  |  0  |  0  |   8 - 2 = 6
+    //                      | STE | VSM | PCK |  1  | SKN |  0  |  0  |  0  |   16 - 4 = 12
     //                      +-----+-----+-----+-----+-----+-----+-----+-----+
-    //       Vertex depth            X     0     1     X     0     0     0
-    //     Fragment depth            X     X     1     0     0     0     0
-    //           Reserved            1     1     1     X     0     0     0     [ -2]
+    //       Vertex depth      X     X     0     1     X     0     0     0
+    //     Fragment depth      0     X     X     1     0     0     0     0
+    //           Reserved      X     1     1     1     X     0     0     0     [  -4]
     //
-    // 48 variants used, 80 reserved (128 - 46)
+    // 96 variants used, 160 reserved (256 - 96)
     //
     // note: a valid variant can be neither a valid vertex nor a valid fragment variant
     //       (e.g.: FOG|SKN variants), the proper bits are filtered appropriately,
@@ -95,6 +95,7 @@ struct Variant {
     static constexpr type_t FOG   = 0x20; // fog (standard)
     static constexpr type_t PCK   = 0x20; // picking (depth)
     static constexpr type_t VSM   = 0x40; // variance shadow maps
+    static constexpr type_t STE   = 0x80; // instanced stereo
 
     // special variants (variants that use the reserved space)
     static constexpr type_t SPECIAL_SSR   = VSM | SRE; // screen-space reflections variant
@@ -108,12 +109,13 @@ struct Variant {
     static constexpr type_t DEPTH_VARIANT      = DEP;
 
     // this mask filters out the lighting variants
-    static constexpr type_t UNLIT_MASK         = SKN | FOG;
+    static constexpr type_t UNLIT_MASK         = STE | SKN | FOG;
 
     // returns raw variant bits
     inline bool hasDirectionalLighting() const noexcept { return key & DIR; }
     inline bool hasDynamicLighting() const noexcept     { return key & DYN; }
     inline bool hasSkinningOrMorphing() const noexcept  { return key & SKN; }
+    inline bool hasInstancedStereo() const noexcept     { return key & STE; }
 
     inline void setDirectionalLighting(bool v) noexcept { set(v, DIR); }
     inline void setDynamicLighting(bool v) noexcept     { set(v, DYN); }
@@ -122,6 +124,7 @@ struct Variant {
     inline void setFog(bool v) noexcept                 { set(v, FOG); }
     inline void setPicking(bool v) noexcept             { set(v, PCK); }
     inline void setVsm(bool v) noexcept                 { set(v, VSM); }
+    inline void setStereo(bool v) noexcept              { set(v, STE); }
 
     inline static constexpr bool isValidDepthVariant(Variant variant) noexcept {
         // Can't have VSM and PICKING together with DEPTH variants
@@ -167,7 +170,7 @@ struct Variant {
     }
 
     inline static constexpr bool isSSRVariant(Variant variant) noexcept {
-        return (variant.key & (VSM | DEP | SRE | DYN | DIR)) == (VSM | SRE);
+        return (variant.key & (STE | VSM | DEP | SRE | DYN | DIR)) == (VSM | SRE);
     }
 
     inline static constexpr bool isVSMVariant(Variant variant) noexcept {
@@ -186,6 +189,10 @@ struct Variant {
         return (variant.key & (PCK | DEP)) == (PCK | DEP);
     }
 
+    inline static constexpr bool isStereoVariant(Variant variant) noexcept {
+        return (variant.key & STE) == STE;
+    }
+
     static constexpr Variant filterVariantVertex(Variant variant) noexcept {
         // filter out vertex variants that are not needed. For e.g. fog doesn't affect the
         // vertex shader.
@@ -193,11 +200,11 @@ struct Variant {
             if (isSSRVariant(variant)) {
                 variant.key &= ~(VSM | SRE);
             }
-            return variant & (SKN | SRE | DYN | DIR);
+            return variant & (STE | SKN | SRE | DYN | DIR);
         }
         if ((variant.key & DEPTH_MASK) == DEPTH_VARIANT) {
-            // Only VSM and skinning affects the vertex shader's DEPTH variant
-            return variant & (VSM | SKN | DEP);
+            // Only VSM, skinning, and stereo affect the vertex shader's DEPTH variant
+            return variant & (STE | VSM | SKN | DEP);
         }
         return {};
     }

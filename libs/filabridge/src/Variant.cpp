@@ -32,6 +32,9 @@ Variant Variant::filterUserVariant(
     if (filterMask & (uint32_t)UserVariantFilterBit::SKINNING) {
         variant.key &= ~SKN;
     }
+    if (filterMask & (uint32_t)UserVariantFilterBit::STE) {
+        variant.key &= ~(filterMask & STE);
+    }
     if (!isValidDepthVariant(variant)) {
         // we can't remove FOG from depth variants, this would, in fact, remove picking
         if (filterMask & (uint32_t)UserVariantFilterBit::FOG) {
@@ -65,7 +68,7 @@ namespace details {
 // Compile-time variant count for lit and unlit
 constexpr inline size_t variant_count(bool lit) noexcept {
     size_t count = 0;
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
+    for (size_t i = 0; i < VARIANT_COUNT; i++) {
         Variant variant(i);
         if (!Variant::isValid(variant)) {
             continue;
@@ -83,7 +86,7 @@ template<bool LIT>
 constexpr auto get_variants() noexcept {
     std::array<Variant, variant_count(LIT)> variants;
     size_t count = 0;
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
+    for (size_t i = 0; i < VARIANT_COUNT; i++) {
         Variant variant(i);
         if (Variant::isReserved(variant)) {
             continue;
@@ -101,7 +104,7 @@ static auto const gUnlitVariants{ details::get_variants<false>() };
 
 // Below are compile time sanity-check tests
 constexpr inline bool reserved_is_not_valid() noexcept {
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
+    for (size_t i = 0; i < VARIANT_COUNT; i++) {
         const Variant variant(i);
         bool const is_valid = Variant::isValid(variant);
         bool const is_reserved = Variant::isReserved(variant);
@@ -114,7 +117,7 @@ constexpr inline bool reserved_is_not_valid() noexcept {
 
 constexpr inline size_t reserved_variant_count() noexcept {
     size_t count = 0;
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
+    for (size_t i = 0; i < VARIANT_COUNT; i++) {
         const Variant variant(i);
         if (Variant::isReserved(variant)) {
             count++;
@@ -125,7 +128,7 @@ constexpr inline size_t reserved_variant_count() noexcept {
 
 constexpr inline size_t valid_variant_count() noexcept {
     size_t count = 0;
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
+    for (size_t i = 0; i < VARIANT_COUNT; i++) {
         const Variant variant(i);
         if (Variant::isValid(variant)) {
             count++;
@@ -136,7 +139,7 @@ constexpr inline size_t valid_variant_count() noexcept {
 
 constexpr inline size_t vertex_variant_count() noexcept {
     size_t count = 0;
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
+    for (size_t i = 0; i < VARIANT_COUNT; i++) {
         const Variant variant(i);
         if (Variant::isValid(variant)) {
             if (Variant::isVertexVariant(variant)) {
@@ -149,7 +152,7 @@ constexpr inline size_t vertex_variant_count() noexcept {
 
 constexpr inline size_t fragment_variant_count() noexcept {
     size_t count = 0;
-    for (Variant::type_t i = 0; i < VARIANT_COUNT; i++) {
+    for (size_t i = 0; i < VARIANT_COUNT; i++) {
         const Variant variant(i);
         if (Variant::isValid(variant)) {
             if (Variant::isFragmentVariant(variant)) {
@@ -161,9 +164,9 @@ constexpr inline size_t fragment_variant_count() noexcept {
 }
 
 static_assert(reserved_is_not_valid());
-static_assert(reserved_variant_count() == 80);
-static_assert(valid_variant_count() == 48);
-static_assert(vertex_variant_count() == 16 - (2 + 0) + 4 - 0);        // 18
+static_assert(reserved_variant_count() == 160);
+static_assert(valid_variant_count() == 96);
+static_assert(vertex_variant_count() == 32 - (4 + 0) + 8 - 0);        // 36
 static_assert(fragment_variant_count() == 33 - (2 + 2 + 8) + 4 - 1);    // 24
 
 } // namespace details

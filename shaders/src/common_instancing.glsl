@@ -26,14 +26,14 @@ void initObjectUniforms() {
     // instancing handled by the material
     if ((objectUniforms.data[0].flagsChannels & FILAMENT_OBJECT_INSTANCE_BUFFER_BIT) != 0) {
         // hybrid instancing, we have a instance buffer per object
-        i = instance_index;
+        i = logical_instance_index;
     } else {
         // fully manual instancing
         i = 0;
     }
 #   else
     // automatic instancing
-    i = instance_index;
+    i = logical_instance_index;
 #   endif
 #else
     // we don't support instancing (e.g. ES2)
@@ -50,6 +50,6 @@ void initObjectUniforms() {
 #if defined(FILAMENT_HAS_FEATURE_INSTANCING) && defined(MATERIAL_HAS_INSTANCES)
 /** @public-api */
 highp int getInstanceIndex() {
-    return instance_index;
+    return logical_instance_index;
 }
 #endif

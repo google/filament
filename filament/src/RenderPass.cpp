@@ -458,6 +458,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
     const bool viewInverseFrontFaces = renderFlags & HAS_INVERSE_FRONT_FACES;
+    const bool hasInstancedStereo = renderFlags & IS_STEREOSCOPIC;
 
     Command cmdColor;
 
@@ -522,6 +523,15 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 soaInstanceInfo[i].count | PrimitiveInfo::USER_INSTANCE_MASK;
         cmdColor.primitive.instanceBufferHandle = soaInstanceInfo[i].handle;
 
+        // soaInstanceInfo[i].count is the number of instances the user has requested, either for
+        // manual or hybrid instancing. Instanced stereo multiplies the number of instances by the
+        // eye count.
+        if (UTILS_UNLIKELY(hasInstancedStereo)) {
+            cmdColor.primitive.instanceCount =
+                    (soaInstanceInfo[i].count * CONFIG_STEREOSCOPIC_EYES) |
+                    PrimitiveInfo::USER_INSTANCE_MASK;
+        }
+
         // if we are already an SSR variant, the SRE bit is already set,
         // there is no harm setting it again
         static_assert(Variant::SPECIAL_SSR & Variant::SRE);
@@ -541,6 +551,12 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
             cmdDepth.primitive.instanceBufferHandle = soaInstanceInfo[i].handle;
             cmdDepth.primitive.materialVariant.setSkinning(hasSkinningOrMorphing);
             cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
+
+            if (UTILS_UNLIKELY(hasInstancedStereo)) {
+                cmdColor.primitive.instanceCount =
+                        (soaInstanceInfo[i].count * CONFIG_STEREOSCOPIC_EYES) |
+                        PrimitiveInfo::USER_INSTANCE_MASK;
+            }
         }
         if constexpr (isColorPass) {
             renderableVariant.setFog(soaVisibility[i].fog && Variant::isFogVariant(variant));

@@ -770,7 +770,7 @@ void FMaterial::onQueryCallback(void* userdata, VariantList* pVariants) {
 void FMaterial::destroyPrograms(FEngine& engine) {
     DriverApi& driverApi = engine.getDriverApi();
     auto& cachedPrograms = mCachedPrograms;
-    for (Variant::type_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
+    for (size_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
         const Variant variant(k);
         if (!mIsDefaultMaterial) {
             // The depth variants may be shared with the default material, in which case

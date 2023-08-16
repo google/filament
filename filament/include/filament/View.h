@@ -85,6 +85,7 @@ public:
     using SoftShadowOptions = SoftShadowOptions;
     using ScreenSpaceReflectionsOptions = ScreenSpaceReflectionsOptions;
     using GuardBandOptions = GuardBandOptions;
+    using StereoscopicOptions = StereoscopicOptions;
 
     /**
      * Sets the View's name. Only useful for debugging.
@@ -675,6 +676,29 @@ public:
      * See setStencilBufferEnabled() for more information.
      */
     bool isStencilBufferEnabled() const noexcept;
+
+    /**
+     * Sets the stereoscopic rendering options for this view.
+     *
+     * Currently, only one type of stereoscopic rendering is supported: side-by-side.
+     * Side-by-side stereo rendering splits the viewport into two halves: a left and right half.
+     * Eye 0 will render to the left half, while Eye 1 will render into the right half.
+     *
+     * Currently, the following features are not supported with stereoscopic rendering:
+     * - post-processing
+     * - shadowing
+     * - punctual lights
+     *
+     * @param options The stereoscopic options to use on this view
+     */
+    void setStereoscopicOptions(StereoscopicOptions const& options) noexcept;
+
+    /**
+     * Returns the stereoscopic options associated with this View.
+     *
+     * @return value set by setStereoscopicOptions().
+     */
+    StereoscopicOptions const& getStereoscopicOptions() const noexcept;
 
     // for debugging...
 

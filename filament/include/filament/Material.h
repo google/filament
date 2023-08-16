@@ -180,6 +180,11 @@ public:
      * is guaranteed to be invalid (either because it's been destroyed by the user already, or,
      * because it's been cleaned-up by the Engine).
      *
+     * UserVariantFilterMask::ALL should be used with caution. Only variants that an application
+     * needs should be included in the variants argument. For example, the STE variant is only used
+     * for stereoscopic rendering. If an application is not planning to render in stereo, this bit
+     * should be turned off to avoid unnecessary material compilations.
+     *
      * @param priority      Which priority queue to use, LOW or HIGH.
      * @param variants      Variants to include to the compile command.
      * @param handler       Handler to dispatch the callback or nullptr for the default handler

@@ -59,7 +59,7 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
             if (material.hasExternalSamplers) {
                 out << "#extension GL_OES_EGL_image_external_essl3 : require\n\n";
             }
-            if (false /* variant needs gl_ClipDistance */) {
+            if (v.hasInstancedStereo() && stage == ShaderStage::VERTEX) {
                 // If we're not processing the shader through glslang (in the case of unoptimized
                 // OpenGL shaders), then we need to add the #extension string ourselves.
                 // If we ARE running the shader through glslang, then we must not include it,
@@ -238,6 +238,8 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
 
     generateSpecializationConstant(out, "CONFIG_POWER_VR_SHADER_WORKAROUNDS",
             +ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS, false);
+
+    out << "const int CONFIG_STEREOSCOPIC_EYES = " << (int)CONFIG_STEREOSCOPIC_EYES << ";\n";
 
     if (material.featureLevel == 0) {
         // On ES2 since we don't have post-processing, we need to emulate EGL_GL_COLORSPACE_KHR,
