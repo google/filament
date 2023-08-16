@@ -101,7 +101,7 @@ public:
     // Must be called after prepareProgram().
     [[nodiscard]] backend::Handle<backend::HwProgram> getProgram(Variant variant) const noexcept {
 #if FILAMENT_ENABLE_MATDBG
-        assert_invariant(variant.key < VARIANT_COUNT);
+        assert_invariant((size_t)variant.key < VARIANT_COUNT);
         std::unique_lock<utils::Mutex> lock(mActiveProgramsLock);
         mActivePrograms.set(variant.key);
         lock.unlock();
