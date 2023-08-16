@@ -118,9 +118,10 @@ class MainActivity : Activity() {
     }
 
     private fun setupView() {
-        val ssaoOptions = view.ambientOcclusionOptions
-        ssaoOptions.enabled = true
-        view.ambientOcclusionOptions = ssaoOptions
+        // ambient occlusion is the cheapest effect that adds a lot of quality
+        view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
+            enabled = true
+        }
 
         // NOTE: Try to disable post-processing (tone-mapping, etc.) to see the difference
         // view.isPostProcessingEnabled = false
