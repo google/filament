@@ -118,6 +118,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
     ext.egl.KHR_create_context = extensions.has("EGL_KHR_create_context");
     ext.egl.KHR_gl_colorspace = extensions.has("EGL_KHR_gl_colorspace");
     ext.egl.KHR_no_config_context = extensions.has("EGL_KHR_no_config_context");
+    ext.egl.KHR_surfaceless_context = extensions.has("KHR_surfaceless_context");
 
     eglCreateSyncKHR = (PFNEGLCREATESYNCKHRPROC) eglGetProcAddress("eglCreateSyncKHR");
     eglDestroySyncKHR = (PFNEGLDESTROYSYNCKHRPROC) eglGetProcAddress("eglDestroySyncKHR");
@@ -181,11 +182,13 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
         eglConfig = mEGLConfig;
     }
 
-    // create the dummy surface, just for being able to make the context current.
-    mEGLDummySurface = eglCreatePbufferSurface(mEGLDisplay, mEGLConfig, pbufferAttribs);
-    if (UTILS_UNLIKELY(mEGLDummySurface == EGL_NO_SURFACE)) {
-        logEglError("eglCreatePbufferSurface");
-        goto error;
+    if (UTILS_UNLIKELY(!ext.egl.KHR_surfaceless_context)) {
+        // create the dummy surface, just for being able to make the context current.
+        mEGLDummySurface = eglCreatePbufferSurface(mEGLDisplay, mEGLConfig, pbufferAttribs);
+        if (UTILS_UNLIKELY(mEGLDummySurface == EGL_NO_SURFACE)) {
+            logEglError("eglCreatePbufferSurface");
+            goto error;
+        }
     }
 
     for (size_t tries = 0; tries < 3; tries++) {
@@ -255,7 +258,7 @@ error:
 }
 
 bool PlatformEGL::isExtraContextSupported() const noexcept {
-    return true;
+    return ext.egl.KHR_surfaceless_context;
 }
 
 void PlatformEGL::createContext(bool shared) {
@@ -286,8 +289,10 @@ EGLBoolean PlatformEGL::makeCurrent(EGLSurface drawSurface, EGLSurface readSurfa
 }
 
 void PlatformEGL::terminate() noexcept {
-    eglMakeCurrent(mEGLDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-    eglDestroySurface(mEGLDisplay, mEGLDummySurface);
+    eglMakeCurrent(mEGLDisplay, mEGLDummySurface, mEGLDummySurface, EGL_NO_CONTEXT);
+    if (mEGLDummySurface) {
+        eglDestroySurface(mEGLDisplay, mEGLDummySurface);
+    }
     eglDestroyContext(mEGLDisplay, mEGLContext);
     for (auto context : mAdditionalContexts) {
         eglDestroyContext(mEGLDisplay, context);

@@ -139,6 +139,7 @@ protected:
             bool KHR_create_context = false;
             bool KHR_gl_colorspace = false;
             bool KHR_no_config_context = false;
+            bool KHR_surfaceless_context = false;
         } egl;
     } ext;
 
