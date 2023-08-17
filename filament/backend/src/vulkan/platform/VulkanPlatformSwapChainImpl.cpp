@@ -57,11 +57,17 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
     VkDeviceMemory imageMemory;
     VkMemoryRequirements memReqs;
     vkGetImageMemoryRequirements(device, image, &memReqs);
+
+    uint32_t memoryTypeIndex
+            = context.selectMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    ASSERT_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES,
+            "VulkanPlatformSwapChainImpl: unable to find a memory type that meets requirements.");
+
     VkMemoryAllocateInfo allocInfo = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
             .allocationSize = memReqs.size,
-            .memoryTypeIndex
-            = context.selectMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+            .memoryTypeIndex = memoryTypeIndex,
     };
     result = vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to allocate image memory.");
