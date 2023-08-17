@@ -696,6 +696,10 @@ bool MetalDriver::isSRGBSwapChainSupported() {
     return false;
 }
 
+bool MetalDriver::isStereoSupported() {
+    return true;
+}
+
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:

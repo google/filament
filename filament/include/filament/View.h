@@ -689,6 +689,9 @@ public:
      * - shadowing
      * - punctual lights
      *
+     * Stereo rendering depends on device and platform support. To check if stereo rendering is
+     * supported, use Engine::isStereoSupported().
+     *
      * @param options The stereoscopic options to use on this view
      */
     void setStereoscopicOptions(StereoscopicOptions const& options) noexcept;

@@ -478,6 +478,11 @@ void FMaterial::compile(CompilerPriorityQueue priority,
         backend::CallbackHandler* handler,
         utils::Invocable<void(Material*)>&& callback) noexcept {
 
+    // Turn off the STE variant if stereo is not supported.
+    if (!mEngine.getDriverApi().isStereoSupported()) {
+        variantSpec &= ~UserVariantFilterMask(UserVariantFilterBit::STE);
+    }
+
     UserVariantFilterMask const variantFilter =
             ~variantSpec & UserVariantFilterMask(UserVariantFilterBit::ALL);
 
