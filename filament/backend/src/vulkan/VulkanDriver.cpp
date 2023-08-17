@@ -755,6 +755,10 @@ bool VulkanDriver::isSRGBSwapChainSupported() {
     return mPlatform->isSRGBSwapChainSupported();
 }
 
+bool VulkanDriver::isParallelShaderCompileSupported() {
+    return false;
+}
+
 bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU: {

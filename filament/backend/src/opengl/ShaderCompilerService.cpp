@@ -141,6 +141,10 @@ ShaderCompilerService::ShaderCompilerService(OpenGLDriver& driver)
 
 ShaderCompilerService::~ShaderCompilerService() noexcept = default;
 
+bool ShaderCompilerService::isParallelShaderCompileSupported() const noexcept {
+    return KHR_parallel_shader_compile || mShaderCompilerThreadCount;
+}
+
 void ShaderCompilerService::init() noexcept {
     // If we have KHR_parallel_shader_compile, we always use it, it should be more resource
     // friendly.
