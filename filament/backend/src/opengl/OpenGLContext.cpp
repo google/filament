@@ -517,7 +517,7 @@ FeatureLevel OpenGLContext::resolveFeatureLevel(GLint major, GLint minor,
         assert_invariant(exts.OES_rgb8_rgba8);
         assert_invariant(exts.OES_standard_derivatives);
         assert_invariant(exts.OES_texture_npot);
-#    endif
+#       endif
         featureLevel = FeatureLevel::FEATURE_LEVEL_0;
     }
 #   endif // IOS
