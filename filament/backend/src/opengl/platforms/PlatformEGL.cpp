@@ -294,6 +294,22 @@ void PlatformEGL::createContext(bool shared) {
     mAdditionalContexts.push_back(context);
 }
 
+void PlatformEGL::releaseContext() noexcept {
+    EGLContext context = eglGetCurrentContext();
+    eglMakeCurrent(mEGLDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    if (context != EGL_NO_CONTEXT) {
+        eglDestroyContext(mEGLDisplay, context);
+    }
+
+    mAdditionalContexts.erase(
+            std::remove_if(mAdditionalContexts.begin(), mAdditionalContexts.end(),
+                    [context](EGLContext c) {
+                        return c == context;
+                    }), mAdditionalContexts.end());
+
+    eglReleaseThread();
+}
+
 EGLBoolean PlatformEGL::makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept {
     if (UTILS_UNLIKELY((drawSurface != mCurrentDrawSurface || readSurface != mCurrentReadSurface))) {
         mCurrentDrawSurface = drawSurface;
@@ -304,7 +320,8 @@ EGLBoolean PlatformEGL::makeCurrent(EGLSurface drawSurface, EGLSurface readSurfa
 }
 
 void PlatformEGL::terminate() noexcept {
-    eglMakeCurrent(mEGLDisplay, mEGLDummySurface, mEGLDummySurface, EGL_NO_CONTEXT);
+    // it's always allowed to use EGL_NO_SURFACE, EGL_NO_CONTEXT
+    eglMakeCurrent(mEGLDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     if (mEGLDummySurface) {
         eglDestroySurface(mEGLDisplay, mEGLDummySurface);
     }

@@ -171,10 +171,18 @@ void ShaderCompilerService::init() noexcept {
             }
 
             mShaderCompilerThreadCount = poolSize;
-            mCompilerThreadPool.init(mShaderCompilerThreadCount, priority,
-                    [platform = &mDriver.mPlatform]() {
+            mCompilerThreadPool.init(mShaderCompilerThreadCount,
+                    [&platform = mDriver.mPlatform, priority]() {
+                        // give the thread a name
+                        JobSystem::setThreadName("CompilerThreadPool");
+                        // run at a slightly lower priority than other filament threads
+                        JobSystem::setThreadPriority(priority);
                         // create a gl context current to this thread
-                        platform->createContext(true);
+                        platform.createContext(true);
+                    },
+                    [&platform = mDriver.mPlatform]() {
+                        // release context and thread state
+                        platform.releaseContext();
                     });
         }
     }
