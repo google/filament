@@ -313,7 +313,9 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
 GLuint ShaderCompilerService::getProgram(ShaderCompilerService::program_token_t& token) {
     GLuint const program = initialize(token);
     assert_invariant(token == nullptr);
+#ifndef FILAMENT_ENABLE_MATDBG
     assert_invariant(program);
+#endif
     return program;
 }
 
