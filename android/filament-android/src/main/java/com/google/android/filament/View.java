@@ -1391,13 +1391,13 @@ public class View {
         /**
          * resolution of vertical axis (2^levels to 2048)
          */
-        public int resolution = 360;
+        public int resolution = 384;
         /**
          * bloom x/y aspect-ratio (1/32 to 32)
          */
         public float anamorphism = 1.0f;
         /**
-         * number of blur levels (3 to 11)
+         * number of blur levels (1 to 11)
          */
         public int levels = 6;
         /**
@@ -1984,5 +1984,12 @@ public class View {
          * Acceptable values are equal to or greater than 1.
          */
         public float penumbraRatioScale = 1.0f;
+    }
+
+    /**
+     * Options for stereoscopic (multi-eye) rendering.
+     */
+    public static class StereoscopicOptions {
+        public boolean enabled = false;
     }
 }

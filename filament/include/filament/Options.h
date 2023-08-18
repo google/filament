@@ -133,9 +133,9 @@ struct BloomOptions {
     Texture* dirt = nullptr;                //!< user provided dirt texture %codegen_skip_json% %codegen_skip_javascript%
     float dirtStrength = 0.2f;              //!< strength of the dirt texture %codegen_skip_json% %codegen_skip_javascript%
     float strength = 0.10f;                 //!< bloom's strength between 0.0 and 1.0
-    uint32_t resolution = 360;              //!< resolution of vertical axis (2^levels to 2048)
+    uint32_t resolution = 384;              //!< resolution of vertical axis (2^levels to 2048)
     float anamorphism = 1.0f;               //!< bloom x/y aspect-ratio (1/32 to 32)
-    uint8_t levels = 6;                     //!< number of blur levels (3 to 11)
+    uint8_t levels = 6;                     //!< number of blur levels (1 to 11)
     BlendMode blendMode = BlendMode::ADD;   //!< how the bloom effect is applied
     bool threshold = true;                  //!< whether to threshold the source
     bool enabled = false;                   //!< enable or disable bloom

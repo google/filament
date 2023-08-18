@@ -19,7 +19,7 @@ Filament.loadGeneratedExtensions = function() {
             // JavaScript binding for dirt is not yet supported, must use default value.
             // JavaScript binding for dirtStrength is not yet supported, must use default value.
             strength: 0.10,
-            resolution: 360,
+            resolution: 384,
             anamorphism: 1.0,
             levels: 6,
             blendMode: Filament.View$BloomOptions$BlendMode.ADD,
@@ -178,6 +178,13 @@ Filament.loadGeneratedExtensions = function() {
         const options = {
             penumbraScale: 1.0,
             penumbraRatioScale: 1.0,
+        };
+        return Object.assign(options, overrides);
+    };
+
+    Filament.View.prototype.setStereoscopicOptionsDefaults = function(overrides) {
+        const options = {
+            enabled: false,
         };
         return Object.assign(options, overrides);
     };
