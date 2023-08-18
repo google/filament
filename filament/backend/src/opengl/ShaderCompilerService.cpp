@@ -141,6 +141,10 @@ ShaderCompilerService::ShaderCompilerService(OpenGLDriver& driver)
 
 ShaderCompilerService::~ShaderCompilerService() noexcept = default;
 
+bool ShaderCompilerService::isParallelShaderCompileSupported() const noexcept {
+    return KHR_parallel_shader_compile || mShaderCompilerThreadCount;
+}
+
 void ShaderCompilerService::init() noexcept {
     // If we have KHR_parallel_shader_compile, we always use it, it should be more resource
     // friendly.
@@ -171,10 +175,18 @@ void ShaderCompilerService::init() noexcept {
             }
 
             mShaderCompilerThreadCount = poolSize;
-            mCompilerThreadPool.init(mShaderCompilerThreadCount, priority,
-                    [platform = &mDriver.mPlatform]() {
+            mCompilerThreadPool.init(mShaderCompilerThreadCount,
+                    [&platform = mDriver.mPlatform, priority]() {
+                        // give the thread a name
+                        JobSystem::setThreadName("CompilerThreadPool");
+                        // run at a slightly lower priority than other filament threads
+                        JobSystem::setThreadPriority(priority);
                         // create a gl context current to this thread
-                        platform->createContext(true);
+                        platform.createContext(true);
+                    },
+                    [&platform = mDriver.mPlatform]() {
+                        // release context and thread state
+                        platform.releaseContext();
                     });
         }
     }
@@ -313,7 +325,9 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
 GLuint ShaderCompilerService::getProgram(ShaderCompilerService::program_token_t& token) {
     GLuint const program = initialize(token);
     assert_invariant(token == nullptr);
+#ifndef FILAMENT_ENABLE_MATDBG
     assert_invariant(program);
+#endif
     return program;
 }
 

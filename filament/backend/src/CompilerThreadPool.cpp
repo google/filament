@@ -34,17 +34,14 @@ CompilerThreadPool::~CompilerThreadPool() noexcept {
     assert_invariant(mQueues[1].empty());
 }
 
-void CompilerThreadPool::init(uint32_t threadCount, JobSystem::Priority priority,
-        ThreadSetup&& threadSetup) noexcept {
+void CompilerThreadPool::init(uint32_t threadCount,
+        ThreadSetup&& threadSetup, ThreadCleanup&& threadCleanup) noexcept {
     auto setup = std::make_shared<ThreadSetup>(std::move(threadSetup));
+    auto cleanup = std::make_shared<ThreadCleanup>(std::move(threadCleanup));
 
     for (size_t i = 0; i < threadCount; i++) {
-        mCompilerThreads.emplace_back([this, priority, setup]() {
+        mCompilerThreads.emplace_back([this, setup, cleanup]() {
             SYSTRACE_CONTEXT();
-            // give the thread a name
-            JobSystem::setThreadName("CompilerThreadPool");
-            // run at a slightly lower priority than other filament threads
-            JobSystem::setThreadPriority(priority);
 
             (*setup)();
 
@@ -80,6 +77,8 @@ void CompilerThreadPool::init(uint32_t threadCount, JobSystem::Priority priority
                     job();
                 }
             }
+
+            (*cleanup)();
         });
 
     }

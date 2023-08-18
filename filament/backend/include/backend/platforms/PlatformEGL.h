@@ -40,6 +40,7 @@ public:
     PlatformEGL() noexcept;
     bool isExtraContextSupported() const noexcept override;
     void createContext(bool shared) override;
+    void releaseContext() noexcept override;
 
 protected:
 

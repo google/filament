@@ -116,4 +116,7 @@ bool OpenGLPlatform::isExtraContextSupported() const noexcept {
 void OpenGLPlatform::createContext(bool) {
 }
 
+void OpenGLPlatform::releaseContext() noexcept {
+}
+
 } // namespace filament::backend
