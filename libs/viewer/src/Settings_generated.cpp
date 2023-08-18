@@ -868,4 +868,30 @@ std::ostream& operator<<(std::ostream& out, const SoftShadowOptions& in) {
         << "}";
 }
 
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, StereoscopicOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "enabled") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else {
+            slog.w << "Invalid StereoscopicOptions key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid StereoscopicOptions value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+std::ostream& operator<<(std::ostream& out, const StereoscopicOptions& in) {
+    return out << "{\n"
+        << "\"enabled\": " << to_string(in.enabled) << "\n"
+        << "}";
+}
+
 } // namespace filament::viewer
