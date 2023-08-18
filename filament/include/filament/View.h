@@ -694,7 +694,7 @@ public:
      *
      * @param options The stereoscopic options to use on this view
      */
-    void setStereoscopicOptions(StereoscopicOptions const& options) noexcept;
+    void setStereoscopicOptions(StereoscopicOptions const& options);
 
     /**
      * Returns the stereoscopic options associated with this View.

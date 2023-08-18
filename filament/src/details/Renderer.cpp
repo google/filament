@@ -417,9 +417,6 @@ void FRenderer::render(FView const* view) {
 
     assert_invariant(mSwapChain);
 
-    ASSERT_PRECONDITION(!view->hasInstancedStereo() || mEngine.getDriverApi().isStereoSupported(),
-            "Stereo rendering is not supported.");
-
     if (UTILS_UNLIKELY(mBeginFrameInternal)) {
         // this should not happen, the user should not call render() if we returned false from
         // beginFrame(). But because this is allowed, we handle it gracefully.

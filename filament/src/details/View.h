@@ -193,7 +193,7 @@ public:
 
     bool isStencilBufferEnabled() const noexcept { return mStencilBufferEnabled; }
 
-    void setStereoscopicOptions(StereoscopicOptions const& options) noexcept;
+    void setStereoscopicOptions(StereoscopicOptions const& options);
 
     FCamera const* getDirectionalLightCamera() const noexcept {
         return &mShadowMapManager.getShadowMap(0)->getDebugCamera();
@@ -485,6 +485,7 @@ private:
     backend::Handle<backend::HwBufferObject> mLightUbh;
     backend::Handle<backend::HwBufferObject> mRenderableUbh;
 
+    FEngine& mEngine;
     FScene* mScene = nullptr;
     // The camera set by the user, used for culling and viewing
     FCamera* mCullingCamera = nullptr;

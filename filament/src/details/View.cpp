@@ -56,7 +56,8 @@ static constexpr float PID_CONTROLLER_Ki = 0.002f;
 static constexpr float PID_CONTROLLER_Kd = 0.0f;
 
 FView::FView(FEngine& engine)
-        : mFroxelizer(engine),
+        : mEngine(engine),
+          mFroxelizer(engine),
           mFogEntity(engine.getEntityManager().create()),
           mPerViewUniforms(engine),
           mShadowMapManager(engine) {
@@ -1117,7 +1118,9 @@ View::PickingQuery& FView::pick(uint32_t x, uint32_t y, backend::CallbackHandler
     return *pQuery;
 }
 
-void FView::setStereoscopicOptions(const StereoscopicOptions& options) noexcept {
+void FView::setStereoscopicOptions(const StereoscopicOptions& options) {
+    ASSERT_PRECONDITION(!options.enabled || mEngine.getDriverApi().isStereoSupported(),
+            "Stereo rendering is not supported.");
     mStereoscopicOptions = options;
 }
 
