@@ -485,7 +485,6 @@ private:
     backend::Handle<backend::HwBufferObject> mLightUbh;
     backend::Handle<backend::HwBufferObject> mRenderableUbh;
 
-    FEngine& mEngine;
     FScene* mScene = nullptr;
     // The camera set by the user, used for culling and viewing
     FCamera* mCullingCamera = nullptr;
@@ -525,6 +524,7 @@ private:
     const FColorGrading* mColorGrading = nullptr;
     const FColorGrading* mDefaultColorGrading = nullptr;
     utils::Entity mFogEntity{};
+    bool mIsStereoSupported : 1;
 
     PIDController mPidController;
     DynamicResolutionOptions mDynamicResolution;
