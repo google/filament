@@ -92,7 +92,7 @@ public:
 #   ifndef BACKEND_OPENGL_LEVEL_GLES30
             return true;
 #   else
-            return state.major == 2;
+            return mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0;
 #   endif
 #else
         return false;
@@ -151,7 +151,7 @@ public:
     void deleteVertexArrays(GLsizei n, const GLuint* arrays) noexcept;
 
     // glGet*() values
-    struct {
+    struct Gets {
         GLfloat max_anisotropy;
         GLint max_draw_buffers;
         GLint max_renderbuffer_size;
@@ -170,7 +170,7 @@ public:
     } features = {};
 
     // supported extensions detected at runtime
-    struct {
+    struct Extensions {
         bool APPLE_color_buffer_packed_float;
         bool ARB_shading_language_packing;
         bool EXT_clip_control;
@@ -209,7 +209,7 @@ public:
         bool WEBGL_compressed_texture_s3tc_srgb;
     } ext = {};
 
-    struct {
+    struct Bugs {
         // Some drivers have issues with UBOs in the fragment shader when
         // glFlush() is called between draw calls.
         bool disable_glFlush;
@@ -274,6 +274,10 @@ public:
         // The driver has some threads pinned, and we can't easily know on which core, it can hurt
         // performance more if we end-up pinned on the same one.
         bool disable_thread_affinity;
+
+        // Force feature level 0. Typically used for low end ES3 devices with significant driver
+        // bugs or performance issues.
+        bool force_feature_level0;
 
     } bugs = {};
 
@@ -397,7 +401,7 @@ public:
         } window;
     } state;
 
-    struct {
+    struct Procs {
         void (* bindVertexArray)(GLuint array);
         void (* deleteVertexArrays)(GLsizei n, const GLuint* arrays);
         void (* genVertexArrays)(GLsizei n, GLuint* arrays);
@@ -467,17 +471,45 @@ private:
             {   bugs.disable_thread_affinity,
                     "disable_thread_affinity",
                     ""},
+            {   bugs.force_feature_level0,
+                    "force_feature_level0",
+                    ""},
     }};
 
     RenderPrimitive mDefaultVAO;
 
     // this is chosen to minimize code size
 #if defined(BACKEND_OPENGL_VERSION_GLES)
-    void initExtensionsGLES() noexcept;
+    static void initExtensionsGLES(Extensions* ext, GLint major, GLint minor) noexcept;
 #endif
 #if defined(BACKEND_OPENGL_VERSION_GL)
-    void initExtensionsGL() noexcept;
+    static void initExtensionsGL(Extensions* ext, GLint major, GLint minor) noexcept;
 #endif
+
+    static void initExtensions(Extensions* ext, GLint major, GLint minor) noexcept {
+#if defined(BACKEND_OPENGL_VERSION_GLES)
+        initExtensionsGLES(ext, major, minor);
+#endif
+#if defined(BACKEND_OPENGL_VERSION_GL)
+        initExtensionsGL(ext, major, minor);
+#endif
+    }
+
+    static void initBugs(Bugs* bugs, Extensions const& exts,
+            GLint major, GLint minor,
+            char const* vendor,
+            char const* renderer,
+            char const* version,
+            char const* shader
+    );
+
+    static void initProcs(Procs* procs,
+            Extensions const& exts, GLint major, GLint minor) noexcept;
+
+    static FeatureLevel resolveFeatureLevel(GLint major, GLint minor,
+            Extensions const& exts,
+            Gets const& gets,
+            Bugs const& bugs) noexcept;
 
     template <typename T, typename F>
     static inline void update_state(T& state, T const& expected, F functor, bool force = false) noexcept {
@@ -571,7 +603,7 @@ void OpenGLContext::activeTexture(GLuint unit) noexcept {
 
 void OpenGLContext::bindSampler(GLuint unit, GLuint sampler) noexcept {
     assert_invariant(unit < MAX_TEXTURE_UNIT_COUNT);
-    assert_invariant(state.major > 2);
+    assert_invariant(mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1);
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     update_state(state.textures.units[unit].sampler, sampler, [&]() {
         glBindSampler(unit, sampler);
@@ -617,7 +649,7 @@ void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
 
 void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
         GLintptr offset, GLsizeiptr size) noexcept {
-    assert_invariant(state.major > 2);
+    assert_invariant(mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1);
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
 #   ifdef BACKEND_OPENGL_LEVEL_GLES31

@@ -486,12 +486,14 @@ void FMaterial::compile(CompilerPriorityQueue priority,
     UserVariantFilterMask const variantFilter =
             ~variantSpec & UserVariantFilterMask(UserVariantFilterBit::ALL);
 
-    auto const& variants = isVariantLit() ?
-            VariantUtils::getLitVariants() : VariantUtils::getUnlitVariants();
-    for (auto const variant : variants) {
-        if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
-            if (hasVariant(variant)) {
-                prepareProgram(variant, priority);
+    if (UTILS_LIKELY(mEngine.getDriverApi().isParallelShaderCompileSupported())) {
+        auto const& variants = isVariantLit() ?
+                VariantUtils::getLitVariants() : VariantUtils::getUnlitVariants();
+        for (auto const variant: variants) {
+            if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
+                if (hasVariant(variant)) {
+                    prepareProgram(variant, priority);
+                }
             }
         }
     }

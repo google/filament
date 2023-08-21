@@ -167,11 +167,17 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     // Allocate memory for the VkImage and bind it.
     VkMemoryRequirements memReqs = {};
     vkGetImageMemoryRequirements(mDevice, mTextureImage, &memReqs);
+
+    uint32_t memoryTypeIndex
+            = context.selectMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    ASSERT_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES,
+            "VulkanTexture: unable to find a memory type that meets requirements.");
+
     VkMemoryAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = memReqs.size,
-        .memoryTypeIndex = context.selectMemoryType(memReqs.memoryTypeBits,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        .memoryTypeIndex = memoryTypeIndex,
     };
     error = vkAllocateMemory(mDevice, &allocInfo, nullptr, &mTextureImageMemory);
     ASSERT_POSTCONDITION(!error, "Unable to allocate image memory.");

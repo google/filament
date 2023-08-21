@@ -97,8 +97,7 @@ public:
             }
             flags >>= 1;
         }
-        ASSERT_POSTCONDITION(false, "Unable to find a memory type that meets requirements.");
-        return (uint32_t) ~0ul;
+        return (uint32_t) VK_MAX_MEMORY_TYPES;
     }
 
     inline VkFormat getDepthFormat() const {

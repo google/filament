@@ -27,6 +27,8 @@ import static com.google.android.filament.Asserts.assertFloat3In;
 import static com.google.android.filament.Asserts.assertFloat4In;
 import static com.google.android.filament.Colors.LinearColor;
 
+import com.google.android.filament.proguard.UsedByNative;
+
 /**
  * Encompasses all the state needed for rendering a {@link Scene}.
  *
@@ -1095,10 +1097,29 @@ public class View {
         nPick(getNativeObject(), x, y, handler, internalCallback);
     }
 
+    @UsedByNative("View.cpp")
     private static class InternalOnPickCallback implements Runnable {
+        private final OnPickCallback mUserCallback;
+        private final PickingQueryResult mPickingQueryResult = new PickingQueryResult();
+
+        @UsedByNative("View.cpp")
+        @Entity
+        int mRenderable;
+
+        @UsedByNative("View.cpp")
+        float mDepth;
+
+        @UsedByNative("View.cpp")
+        float mFragCoordsX;
+        @UsedByNative("View.cpp")
+        float mFragCoordsY;
+        @UsedByNative("View.cpp")
+        float mFragCoordsZ;
+
         public InternalOnPickCallback(OnPickCallback mUserCallback) {
             this.mUserCallback = mUserCallback;
         }
+
         @Override
         public void run() {
             mPickingQueryResult.renderable = mRenderable;
@@ -1108,13 +1129,6 @@ public class View {
             mPickingQueryResult.fragCoords[2] = mFragCoordsZ;
             mUserCallback.onPick(mPickingQueryResult);
         }
-        private final OnPickCallback mUserCallback;
-        private final PickingQueryResult mPickingQueryResult = new PickingQueryResult();
-        @Entity int mRenderable;
-        float mDepth;
-        float mFragCoordsX;
-        float mFragCoordsY;
-        float mFragCoordsZ;
     }
 
     /**

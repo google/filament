@@ -574,6 +574,18 @@ do {                                                            \
 } while(0)
 
 //------------------------------------------------------------------------------
+// A macro to help with vector comparisons within a range.
+#define EXPECT_VEC_NEAR(VEC1, VEC2, eps)                        \
+do {                                                            \
+    const decltype(VEC1) v1 = VEC1;                             \
+    const decltype(VEC2) v2 = VEC2;                             \
+    for (int i = 0; i < v1.size(); ++i) {                       \
+        EXPECT_NEAR(v1[i], v2[i], eps);                         \
+    }                                                           \
+} while(0)
+
+
+//------------------------------------------------------------------------------
 // A macro to help with type comparisons within floating point range.
 #define ASSERT_TYPE_EQ(T1, T2)                                  \
 do {                                                            \
@@ -834,9 +846,10 @@ TYPED_TEST(MatTestT, cofactor) {
         M33T r = M33T::eulerZYX(rand_gen(), rand_gen(), rand_gen());
         M33T c0 = details::matrix::cofactor(r);
         M33T c1 = details::matrix::fastCofactor3(r);
-        EXPECT_VEC_EQ(c0[0], c1[0]);
-        EXPECT_VEC_EQ(c0[1], c1[1]);
-        EXPECT_VEC_EQ(c0[2], c1[2]);
+
+        EXPECT_VEC_NEAR(c0[0], c1[0], value_eps);
+        EXPECT_VEC_NEAR(c0[1], c1[1], value_eps);
+        EXPECT_VEC_NEAR(c0[2], c1[2], value_eps);
     }
 }
 

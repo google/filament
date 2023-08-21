@@ -66,6 +66,8 @@ public:
 
     ~ShaderCompilerService() noexcept;
 
+    bool isParallelShaderCompileSupported() const noexcept;
+
     void init() noexcept;
     void terminate() noexcept;
 

@@ -288,6 +288,12 @@ public:
      * @see terminate()
      */
     virtual void createContext(bool shared);
+
+    /**
+     * Detach and destroy the current context if any and releases all resources associated to
+     * this thread.
+     */
+    virtual void releaseContext() noexcept;
 };
 
 } // namespace filament

@@ -178,6 +178,10 @@ bool NoopDriver::isStereoSupported() {
     return false;
 }
 
+bool NoopDriver::isParallelShaderCompileSupported() {
+    return false;
+}
+
 bool NoopDriver::isWorkaroundNeeded(Workaround) {
     return false;
 }

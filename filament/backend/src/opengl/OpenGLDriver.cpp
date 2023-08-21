@@ -1880,6 +1880,10 @@ bool OpenGLDriver::isStereoSupported() {
     return mContext.ext.EXT_clip_cull_distance;
 }
 
+bool OpenGLDriver::isParallelShaderCompileSupported() {
+    return mShaderCompilerService.isParallelShaderCompileSupported();
+}
+
 bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:
