@@ -536,7 +536,7 @@ void FEngine::flushAndWait() {
 
     // then create a fence that will trigger when we're past the finish() above
     size_t tryCount = 8;
-    FFence* fence = FEngine::createFence();
+    FFence* fence = FEngine::createFence(FFence::Type::SOFT);
     UTILS_NOUNROLL
     do {
         FenceStatus status = fence->wait(FFence::Mode::FLUSH,250000000u);
