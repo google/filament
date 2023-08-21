@@ -28,7 +28,11 @@
 namespace filament {
 
 /**
- * Fence is used to synchronize the application main thread with filament's rendering thread.
+ * Fence is used to synchronize rendering operations together, with the CPU or with compute.
+ *
+ * \note
+ * Currently Fence only provide client-side synchronization.
+ *
  */
 class UTILS_PUBLIC Fence : public FilamentAPI {
 public:

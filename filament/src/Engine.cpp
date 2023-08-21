@@ -105,7 +105,7 @@ void Engine::destroyCameraComponent(utils::Entity entity) noexcept {
 }
 
 Fence* Engine::createFence() noexcept {
-    return downcast(this)->createFence();
+    return downcast(this)->createFence(FFence::Type::SOFT);
 }
 
 SwapChain* Engine::createSwapChain(void* nativeWindow, uint64_t flags) noexcept {
