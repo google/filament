@@ -607,12 +607,12 @@ void MetalDriver::destroyFence(Handle<HwFence> fh) {
     }
 }
 
-FenceStatus MetalDriver::getFenceStatus(Handle<HwFence> fh) {
+FenceStatus MetalDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
     auto* fence = handle_cast<MetalFence>(fh);
     if (!fence) {
         return FenceStatus::ERROR;
     }
-    return fence->wait(0);
+    return fence->wait(timeout);
 }
 
 bool MetalDriver::isTextureFormatSupported(TextureFormat format) {

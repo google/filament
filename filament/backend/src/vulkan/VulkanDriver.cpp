@@ -664,7 +664,7 @@ void VulkanDriver::destroyFence(Handle<HwFence> fh) {
     mHandleAllocator.destruct<VulkanFence>(fh);
 }
 
-FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> fh) {
+FenceStatus VulkanDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
     auto& cmdfence = mHandleAllocator.handle_cast<VulkanFence*>(fh)->fence;
     if (!cmdfence) {
         // If wait is called before a fence actually exists, we return timeout.  This matches the
@@ -684,7 +684,7 @@ FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> fh) {
         lock.unlock();
     }
     VkResult result =
-            vkWaitForFences(mPlatform->getDevice(), 1, &cmdfence->fence, VK_TRUE, 0);
+            vkWaitForFences(mPlatform->getDevice(), 1, &cmdfence->fence, VK_TRUE, timeout);
     return result == VK_SUCCESS ? FenceStatus::CONDITION_SATISFIED : FenceStatus::TIMEOUT_EXPIRED;
 }
 
