@@ -514,6 +514,14 @@ public:
     size_t getMaxAutomaticInstances() const noexcept;
 
     /**
+     * Queries the device and platform for instanced stereo rendering support.
+     *
+     * @return true if stereo rendering is supported, false otherwise
+     * @see View::setStereoscopicOptions
+     */
+    bool isStereoSupported() const noexcept;
+
+    /**
      * @return EntityManager used by filament
      */
     utils::EntityManager& getEntityManager() noexcept;

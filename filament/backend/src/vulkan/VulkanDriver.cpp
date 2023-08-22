@@ -755,6 +755,10 @@ bool VulkanDriver::isSRGBSwapChainSupported() {
     return mPlatform->isSRGBSwapChainSupported();
 }
 
+bool VulkanDriver::isStereoSupported() {
+    return true;
+}
+
 bool VulkanDriver::isParallelShaderCompileSupported() {
     return false;
 }

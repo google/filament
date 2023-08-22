@@ -174,6 +174,10 @@ bool NoopDriver::isSRGBSwapChainSupported() {
     return false;
 }
 
+bool NoopDriver::isStereoSupported() {
+    return false;
+}
+
 bool NoopDriver::isParallelShaderCompileSupported() {
     return false;
 }

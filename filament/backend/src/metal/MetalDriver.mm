@@ -696,6 +696,10 @@ bool MetalDriver::isSRGBSwapChainSupported() {
     return false;
 }
 
+bool MetalDriver::isStereoSupported() {
+    return true;
+}
+
 bool MetalDriver::isParallelShaderCompileSupported() {
     return false;
 }

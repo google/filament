@@ -327,6 +327,10 @@ size_t Engine::getMaxAutomaticInstances() const noexcept {
     return downcast(this)->getMaxAutomaticInstances();
 }
 
+bool Engine::isStereoSupported() const noexcept {
+    return downcast(this)->isStereoSupported();
+}
+
 #if defined(__EMSCRIPTEN__)
 void Engine::resetBackendState() noexcept {
     downcast(this)->resetBackendState();

@@ -1872,6 +1872,14 @@ bool OpenGLDriver::isSRGBSwapChainSupported() {
     return mPlatform.isSRGBSwapChainSupported();
 }
 
+bool OpenGLDriver::isStereoSupported() {
+    // Stereo requires instancing and EXT_clip_cull_distance.
+    if (UTILS_UNLIKELY(mContext.isES2())) {
+        return false;
+    }
+    return mContext.ext.EXT_clip_cull_distance;
+}
+
 bool OpenGLDriver::isParallelShaderCompileSupported() {
     return mShaderCompilerService.isParallelShaderCompileSupported();
 }
