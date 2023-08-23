@@ -58,7 +58,7 @@ void NoopDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
 }
 
 void NoopDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        FrameCompletedCallback callback, void* user) {
+        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
 
 }
 

@@ -28,8 +28,9 @@ void SwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, void*
     return downcast(this)->setFrameScheduledCallback(callback, user);
 }
 
-void SwapChain::setFrameCompletedCallback(FrameCompletedCallback callback, void* user) {
-    return downcast(this)->setFrameCompletedCallback(callback, user);
+void SwapChain::setFrameCompletedCallback(backend::CallbackHandler* handler,
+            utils::Invocable<void(SwapChain*)>&& callback) noexcept {
+    return downcast(this)->setFrameCompletedCallback(handler, std::move(callback));
 }
 
 bool SwapChain::isSRGBSwapChainSupported(Engine& engine) noexcept {

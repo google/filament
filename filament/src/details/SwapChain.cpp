@@ -38,8 +38,24 @@ void FSwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, void
     mEngine.getDriverApi().setFrameScheduledCallback(mSwapChain, callback, user);
 }
 
-void FSwapChain::setFrameCompletedCallback(FrameCompletedCallback callback, void* user) {
-    mEngine.getDriverApi().setFrameCompletedCallback(mSwapChain, callback, user);
+void FSwapChain::setFrameCompletedCallback(backend::CallbackHandler* handler,
+                utils::Invocable<void(SwapChain*)>&& callback) noexcept {
+    struct Callback {
+        utils::Invocable<void(SwapChain*)> f;
+        SwapChain* s;
+        static void func(void* user) {
+            auto* const c = reinterpret_cast<Callback*>(user);
+            c->f(c->s);
+            delete c;
+        }
+    };
+    if (callback) {
+        auto* const user = new(std::nothrow) Callback{ std::move(callback), this };
+        mEngine.getDriverApi().setFrameCompletedCallback(
+                mSwapChain, handler, &Callback::func, static_cast<void*>(user));
+    } else {
+        mEngine.getDriverApi().setFrameCompletedCallback(mSwapChain, nullptr, nullptr, nullptr);
+    }
 }
 
 bool FSwapChain::isSRGBSwapChainSupported(FEngine& engine) noexcept {

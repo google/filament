@@ -1126,8 +1126,6 @@ static_assert(sizeof(StencilState) == 12u,
 
 using FrameScheduledCallback = void(*)(PresentCallable callable, void* user);
 
-using FrameCompletedCallback = void(*)(void* user);
-
 enum class Workaround : uint16_t {
     // The EASU pass must split because shader compiler flattens early-exit branch
     SPLIT_EASU,
