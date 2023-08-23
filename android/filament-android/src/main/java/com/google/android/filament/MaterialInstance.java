@@ -900,7 +900,7 @@ public class MaterialInstance {
             @IntRange(from = 0) int offset, @IntRange(from = 1) int count);
 
     private static native void nSetParameterTexture(long nativeMaterialInstance,
-            @NonNull String name, long nativeTexture, int sampler);
+            @NonNull String name, long nativeTexture, long sampler);
 
     private static native void nSetScissor(long nativeMaterialInstance,
             @IntRange(from = 0) int left, @IntRange(from = 0) int bottom,

@@ -18,142 +18,139 @@
 
 #include <filament/TextureSampler.h>
 
+#include <utils/algorithm.h>
+
 using namespace filament;
 
-extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nCreateSampler(JNIEnv *env, jclass type, jint min,
+namespace filament::JniUtils {
+
+jlong to_long(TextureSampler const& sampler) noexcept {
+    return jlong(utils::bit_cast<uint32_t>(sampler.getSamplerParams()));
+}
+
+TextureSampler from_long(jlong params) noexcept {
+    return TextureSampler{
+            utils::bit_cast<backend::SamplerParams>(
+                    static_cast<uint32_t>(params))};
+}
+
+} // namespace filament::JniUtils
+
+using namespace JniUtils;
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_TextureSampler_nCreateSampler(JNIEnv *, jclass, jint min,
         jint max, jint s, jint t, jint r) {
-    return TextureSampler(static_cast<TextureSampler::MinFilter>(min),
-            static_cast<TextureSampler::MagFilter>(max), static_cast<TextureSampler::WrapMode>(s),
-            static_cast<TextureSampler::WrapMode>(t),
-            static_cast<TextureSampler::WrapMode>(r)).getSamplerParams().u;
+    TextureSampler sampler(static_cast<TextureSampler::MinFilter>(min),
+                           static_cast<TextureSampler::MagFilter>(max),
+                           static_cast<TextureSampler::WrapMode>(s),
+                           static_cast<TextureSampler::WrapMode>(t),
+                           static_cast<TextureSampler::WrapMode>(r));
+    return to_long(sampler);
 }
 
-extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nCreateCompareSampler(JNIEnv *env, jclass type,
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_TextureSampler_nCreateCompareSampler(JNIEnv *, jclass,
         jint mode, jint function) {
-    return TextureSampler(static_cast<TextureSampler::CompareMode>(mode),
-            static_cast<TextureSampler::CompareFunc>(function)).getSamplerParams().u;
+    TextureSampler sampler(static_cast<TextureSampler::CompareMode>(mode),
+                           static_cast<TextureSampler::CompareFunc>(function));
+    return to_long(sampler);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nGetMinFilter(JNIEnv *env, jclass type,
-        jint sampler_) {
-    TextureSampler &sampler = reinterpret_cast<TextureSampler &>(sampler_);
-    return static_cast<jint>(sampler.getMinFilter());
+Java_com_google_android_filament_TextureSampler_nGetMinFilter(JNIEnv *, jclass, jlong sampler) {
+    return static_cast<jint>(from_long(sampler).getMinFilter());
 }
 
-extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nSetMinFilter(JNIEnv *env, jclass type,
-        jint sampler_, jint filter) {
-    TextureSampler &sampler = reinterpret_cast<TextureSampler &>(sampler_);
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_TextureSampler_nSetMinFilter(JNIEnv *, jclass, jlong sampler_, jint filter) {
+    TextureSampler sampler{from_long(sampler_)};
     sampler.setMinFilter(static_cast<TextureSampler::MinFilter>(filter));
-    return sampler.getSamplerParams().u;
+    return to_long(sampler);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nGetMagFilter(JNIEnv *env, jclass type,
-        jint sampler_) {
-    TextureSampler &sampler = reinterpret_cast<TextureSampler &>(sampler_);
-    return static_cast<jint>(sampler.getMagFilter());
+Java_com_google_android_filament_TextureSampler_nGetMagFilter(JNIEnv *, jclass, jlong sampler) {
+    return static_cast<jint>(from_long(sampler).getMagFilter());
 }
 
-extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nSetMagFilter(JNIEnv *env, jclass type,
-        jint sampler_, jint filter) {
-    TextureSampler &sampler = reinterpret_cast<TextureSampler &>(sampler_);
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_TextureSampler_nSetMagFilter(JNIEnv *, jclass, jlong sampler_, jint filter) {
+    TextureSampler sampler{from_long(sampler_)};
     sampler.setMagFilter(static_cast<TextureSampler::MagFilter>(filter));
-    return sampler.getSamplerParams().u;
+    return to_long(sampler);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nGetWrapModeS(JNIEnv *env, jclass type,
-        jint sampler_) {
-    TextureSampler &sampler = reinterpret_cast<TextureSampler &>(sampler_);
-    return static_cast<jint>(sampler.getWrapModeS());
+Java_com_google_android_filament_TextureSampler_nGetWrapModeS(JNIEnv *, jclass, jlong sampler) {
+    return static_cast<jint>(from_long(sampler).getWrapModeS());
 }
 
-extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nSetWrapModeS(JNIEnv *env, jclass type,
-        jint sampler_, jint mode) {
-    TextureSampler &sampler = reinterpret_cast<TextureSampler &>(sampler_);
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_TextureSampler_nSetWrapModeS(JNIEnv *, jclass, jlong sampler_, jint mode) {
+    TextureSampler sampler{from_long(sampler_)};
     sampler.setWrapModeS(static_cast<TextureSampler::WrapMode>(mode));
-    return sampler.getSamplerParams().u;
+    return to_long(sampler);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nGetWrapModeT(JNIEnv *env, jclass type,
-        jint sampler_) {
-    TextureSampler &sampler = reinterpret_cast<TextureSampler &>(sampler_);
-    return static_cast<jint>(sampler.getWrapModeT());
+Java_com_google_android_filament_TextureSampler_nGetWrapModeT(JNIEnv *, jclass, jlong sampler) {
+    return static_cast<jint>(from_long(sampler).getWrapModeT());
 }
 
-extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nSetWrapModeT(JNIEnv *env, jclass type,
-        jint sampler_, jint mode) {
-    TextureSampler &sampler = reinterpret_cast<TextureSampler &>(sampler_);
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_TextureSampler_nSetWrapModeT(JNIEnv *, jclass, jlong sampler_, jint mode) {
+    TextureSampler sampler{from_long(sampler_)};
     sampler.setWrapModeT(static_cast<TextureSampler::WrapMode>(mode));
-    return sampler.getSamplerParams().u;
+    return to_long(sampler);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nGetWrapModeR(JNIEnv *env, jclass type,
-        jint sampler_) {
-    TextureSampler &sampler = reinterpret_cast<TextureSampler &>(sampler_);
-    return static_cast<jint>(sampler.getWrapModeR());
+Java_com_google_android_filament_TextureSampler_nGetWrapModeR(JNIEnv *, jclass, jlong sampler) {
+    return static_cast<jint>(from_long(sampler).getWrapModeR());
 }
 
-extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nSetWrapModeR(JNIEnv *env, jclass type,
-        jint sampler_, jint mode) {
-    TextureSampler &sampler = reinterpret_cast<TextureSampler &>(sampler_);
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_TextureSampler_nSetWrapModeR(JNIEnv *, jclass, jlong sampler_, jint mode) {
+    TextureSampler sampler{from_long(sampler_)};
     sampler.setWrapModeR(static_cast<TextureSampler::WrapMode>(mode));
-    return sampler.getSamplerParams().u;
+    return to_long(sampler);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nGetCompareMode(JNIEnv *env, jclass type,
-        jint sampler_) {
-    TextureSampler &sampler = reinterpret_cast<TextureSampler &>(sampler_);
-    return static_cast<jint>(sampler.getCompareMode());
+Java_com_google_android_filament_TextureSampler_nGetCompareMode(JNIEnv *, jclass, jlong sampler) {
+    return static_cast<jint>(from_long(sampler).getCompareMode());
 }
 
-extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nSetCompareMode(JNIEnv *env, jclass type,
-        jint sampler_, jint mode) {
-    TextureSampler &sampler = reinterpret_cast<TextureSampler &>(sampler_);
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_TextureSampler_nSetCompareMode(JNIEnv *, jclass, jlong sampler_, jint mode) {
+    TextureSampler sampler{from_long(sampler_)};
     sampler.setCompareMode(static_cast<TextureSampler::CompareMode>(mode),
             sampler.getCompareFunc());
-    return sampler.getSamplerParams().u;
+    return to_long(sampler);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nGetCompareFunction(JNIEnv *env, jclass type,
-        jint sampler_) {
-    TextureSampler &sampler = reinterpret_cast<TextureSampler &>(sampler_);
-    return static_cast<jint>(sampler.getCompareFunc());
+Java_com_google_android_filament_TextureSampler_nGetCompareFunction(JNIEnv *, jclass, jlong sampler) {
+    return static_cast<jint>(from_long(sampler).getCompareFunc());
 }
 
-extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nSetCompareFunction(JNIEnv *env, jclass type,
-        jint sampler_, jint function) {
-    TextureSampler &sampler = reinterpret_cast<TextureSampler &>(sampler_);
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_TextureSampler_nSetCompareFunction(JNIEnv *, jclass, jlong sampler_, jint function) {
+    TextureSampler sampler{from_long(sampler_)};
     sampler.setCompareMode(sampler.getCompareMode(),
             static_cast<TextureSampler::CompareFunc>(function));
-    return sampler.getSamplerParams().u;
+    return to_long(sampler);
 }
 
 extern "C" JNIEXPORT jfloat JNICALL
-Java_com_google_android_filament_TextureSampler_nGetAnisotropy(JNIEnv *env, jclass type,
-        jint sampler_) {
-    TextureSampler &sampler = reinterpret_cast<TextureSampler &>(sampler_);
-    return sampler.getAnisotropy();
+Java_com_google_android_filament_TextureSampler_nGetAnisotropy(JNIEnv *, jclass, jlong sampler) {
+    return from_long(sampler).getAnisotropy();
 }
 
-extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_TextureSampler_nSetAnisotropy(JNIEnv *env, jclass type,
-        jint sampler_, jfloat anisotropy) {
-    TextureSampler &sampler = reinterpret_cast<TextureSampler &>(sampler_);
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_TextureSampler_nSetAnisotropy(JNIEnv *, jclass, jlong sampler_, jfloat anisotropy) {
+    TextureSampler sampler{from_long(sampler_)};
     sampler.setAnisotropy(anisotropy);
-    return sampler.getSamplerParams().u;
+    return to_long(sampler);
 }

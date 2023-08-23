@@ -2917,7 +2917,7 @@ void OpenGLDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
 GLuint OpenGLDriver::getSamplerSlow(SamplerParams params) const noexcept {
-    assert_invariant(mSamplerMap.find(params.u) == mSamplerMap.end());
+    assert_invariant(mSamplerMap.find(params) == mSamplerMap.end());
 
     GLuint s;
     glGenSamplers(1, &s);
@@ -2939,7 +2939,7 @@ GLuint OpenGLDriver::getSamplerSlow(SamplerParams params) const noexcept {
     }
 #endif
     CHECK_GL_ERROR(utils::slog.e)
-    mSamplerMap[params.u] = s;
+    mSamplerMap[params] = s;
     return s;
 }
 #endif
