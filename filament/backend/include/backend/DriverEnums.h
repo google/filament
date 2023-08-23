@@ -796,32 +796,53 @@ enum class SamplerCompareFunc : uint8_t {
 
 //! Sampler parameters
 struct SamplerParams { // NOLINT
-    union {
-        struct {
-            SamplerMagFilter filterMag      : 1;    //!< magnification filter (NEAREST)
-            SamplerMinFilter filterMin      : 3;    //!< minification filter  (NEAREST)
-            SamplerWrapMode wrapS           : 2;    //!< s-coordinate wrap mode (CLAMP_TO_EDGE)
-            SamplerWrapMode wrapT           : 2;    //!< t-coordinate wrap mode (CLAMP_TO_EDGE)
+    SamplerMagFilter filterMag      : 1;    //!< magnification filter (NEAREST)
+    SamplerMinFilter filterMin      : 3;    //!< minification filter  (NEAREST)
+    SamplerWrapMode wrapS           : 2;    //!< s-coordinate wrap mode (CLAMP_TO_EDGE)
+    SamplerWrapMode wrapT           : 2;    //!< t-coordinate wrap mode (CLAMP_TO_EDGE)
 
-            SamplerWrapMode wrapR           : 2;    //!< r-coordinate wrap mode (CLAMP_TO_EDGE)
-            uint8_t anisotropyLog2          : 3;    //!< anisotropy level (0)
-            SamplerCompareMode compareMode  : 1;    //!< sampler compare mode (NONE)
-            uint8_t padding0                : 2;    //!< reserved. must be 0.
+    SamplerWrapMode wrapR           : 2;    //!< r-coordinate wrap mode (CLAMP_TO_EDGE)
+    uint8_t anisotropyLog2          : 3;    //!< anisotropy level (0)
+    SamplerCompareMode compareMode  : 1;    //!< sampler compare mode (NONE)
+    uint8_t padding0                : 2;    //!< reserved. must be 0.
 
-            SamplerCompareFunc compareFunc  : 3;    //!< sampler comparison function (LE)
-            uint8_t padding1                : 5;    //!< reserved. must be 0.
+    SamplerCompareFunc compareFunc  : 3;    //!< sampler comparison function (LE)
+    uint8_t padding1                : 5;    //!< reserved. must be 0.
+    uint8_t padding2                : 8;    //!< reserved. must be 0.
 
-            uint8_t padding2                : 8;    //!< reserved. must be 0.
-        };
-        uint32_t u;
+    struct Hasher {
+        size_t operator()(SamplerParams p) const noexcept {
+            // we don't use std::hash<> here, so we don't have to include <functional>
+            return *reinterpret_cast<uint64_t const*>(reinterpret_cast<char const*>(&p));
+        }
     };
+
+    struct EqualTo {
+        bool operator()(SamplerParams lhs, SamplerParams rhs) const noexcept {
+            auto* pLhs = reinterpret_cast<uint64_t const*>(reinterpret_cast<char const*>(&lhs));
+            auto* pRhs = reinterpret_cast<uint64_t const*>(reinterpret_cast<char const*>(&rhs));
+            return *pLhs == *pRhs;
+        }
+    };
+
+    struct LessThan {
+        bool operator()(SamplerParams lhs, SamplerParams rhs) const noexcept {
+            auto* pLhs = reinterpret_cast<uint64_t const*>(reinterpret_cast<char const*>(&lhs));
+            auto* pRhs = reinterpret_cast<uint64_t const*>(reinterpret_cast<char const*>(&rhs));
+            return *pLhs == *pRhs;
+        }
+    };
+
 private:
-    friend inline bool operator < (SamplerParams lhs, SamplerParams rhs) {
-        return lhs.u < rhs.u;
+    friend inline bool operator < (SamplerParams lhs, SamplerParams rhs) noexcept {
+        return SamplerParams::LessThan{}(lhs, rhs);
     }
 };
 
-static_assert(sizeof(SamplerParams) == sizeof(uint32_t), "SamplerParams must be 32 bits");
+// The limitation to 64-bits max comes from how we store a SamplerParams in our JNI code
+// see android/.../TextureSampler.cpp
+static_assert(sizeof(SamplerParams) <= sizeof(uint64_t),
+        "SamplerParams must be no more than 64 bits");
 
 //! blending equation function
 enum class BlendEquation : uint8_t {

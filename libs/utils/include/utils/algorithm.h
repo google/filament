@@ -199,14 +199,26 @@ RandomAccessIterator partition_point(
     return first;
 }
 
-template <class To, class From>
-typename std::enable_if_t<
-    (sizeof(To) == sizeof(From)) &&
-    std::is_trivially_copyable<From>::value,
-    To>
-// constexpr support needs compiler magic
-bit_cast(const From &src) noexcept {
-    return reinterpret_cast<const To&>(src);
+template <class Dest, class Source>
+#if __has_builtin(__builtin_bit_cast)
+constexpr
+#else
+inline
+#endif
+Dest bit_cast(const Source& source) noexcept {
+#if __has_builtin(__builtin_bit_cast)
+    return __builtin_bit_cast(Dest, source);
+#else
+    static_assert(sizeof(Dest) == sizeof(Source),
+            "bit_cast requires source and destination to be the same size");
+    static_assert(std::is_trivially_copyable_v<Dest>,
+            "bit_cast requires the destination type to be copyable");
+    static_assert(std::is_trivially_copyable_v<Source>,
+            "bit_cast requires the source type to be copyable");
+    Dest dest;
+    memcpy(&dest, &source, sizeof(dest));
+    return dest;
+#endif
 }
 
 } // namespace utils
