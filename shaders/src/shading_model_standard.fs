@@ -1,5 +1,5 @@
 #if defined(MATERIAL_HAS_SHEEN_COLOR)
-vec3 sheenLobe(PixelParams pixel, float NoV, float NoL, float NoH) {
+vec3 sheenLobe(const PixelParams pixel, float NoV, float NoL, float NoH) {
     float D = distributionCloth(pixel.sheenRoughness, NoH);
     float V = visibilityCloth(NoV, NoL);
 
@@ -8,7 +8,7 @@ vec3 sheenLobe(PixelParams pixel, float NoV, float NoL, float NoH) {
 #endif
 
 #if defined(MATERIAL_HAS_CLEAR_COAT)
-float clearCoatLobe(PixelParams pixel, vec3 h, float NoH, float LoH, out float Fcc) {
+float clearCoatLobe(const PixelParams pixel, const vec3 h, float NoH, float LoH, out float Fcc) {
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     // If the material has a normal map, we want to use the geometric normal
     // instead to avoid applying the normal map details to the clear coat layer
@@ -28,7 +28,7 @@ float clearCoatLobe(PixelParams pixel, vec3 h, float NoH, float LoH, out float F
 #endif
 
 #if defined(MATERIAL_HAS_ANISOTROPY)
-vec3 anisotropicLobe(PixelParams pixel, Light light, vec3 h,
+vec3 anisotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
         float NoV, float NoL, float NoH, float LoH) {
 
     vec3 l = light.l;
@@ -58,7 +58,7 @@ vec3 anisotropicLobe(PixelParams pixel, Light light, vec3 h,
 }
 #endif
 
-vec3 isotropicLobe(PixelParams pixel, Light light, vec3 h,
+vec3 isotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
         float NoV, float NoL, float NoH, float LoH) {
 
     float D = distribution(pixel.roughness, NoH, h);
@@ -68,7 +68,7 @@ vec3 isotropicLobe(PixelParams pixel, Light light, vec3 h,
     return (D * V) * F;
 }
 
-vec3 specularLobe(PixelParams pixel, Light light, vec3 h,
+vec3 specularLobe(const PixelParams pixel, const Light light, const vec3 h,
         float NoV, float NoL, float NoH, float LoH) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
     return anisotropicLobe(pixel, light, h, NoV, NoL, NoH, LoH);
@@ -77,7 +77,7 @@ vec3 specularLobe(PixelParams pixel, Light light, vec3 h,
 #endif
 }
 
-vec3 diffuseLobe(PixelParams pixel, float NoV, float NoL, float LoH) {
+vec3 diffuseLobe(const PixelParams pixel, float NoV, float NoL, float LoH) {
     return pixel.diffuseColor * diffuse(pixel.roughness, NoV, NoL, LoH);
 }
 
@@ -98,7 +98,7 @@ vec3 diffuseLobe(PixelParams pixel, float NoV, float NoL, float LoH) {
  * on the Cook-Torrance microfacet model, it uses cheaper terms than the surface
  * BRDF's specular lobe (see brdf.fs).
  */
-vec3 surfaceShading(PixelParams pixel, Light light, float occlusion) {
+vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion) {
     vec3 h = normalize(shading_view + light.l);
 
     float NoV = shading_NoV;

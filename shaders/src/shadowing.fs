@@ -17,9 +17,9 @@
 // PCF Shadow Sampling
 //------------------------------------------------------------------------------
 
-float sampleDepth(mediump sampler2DArrayShadow map,
-        highp vec4 scissorNormalized,
-        uint layer, highp vec2 uv, float depth) {
+float sampleDepth(const mediump sampler2DArrayShadow map,
+        const highp vec4 scissorNormalized,
+        const uint layer,  highp vec2 uv, float depth) {
 
     // clamp needed for directional lights and/or large kernels
     uv = clamp(uv, scissorNormalized.xy, scissorNormalized.zw);
@@ -31,9 +31,9 @@ float sampleDepth(mediump sampler2DArrayShadow map,
 
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
 // use hardware assisted PCF
-float ShadowSample_PCF_Hard(mediump sampler2DArrayShadow map,
-        highp vec4 scissorNormalized,
-        uint layer, highp vec4 shadowPosition) {
+float ShadowSample_PCF_Hard(const mediump sampler2DArrayShadow map,
+        const highp vec4 scissorNormalized,
+        const uint layer, const highp vec4 shadowPosition) {
     highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
     // note: shadowPosition.z is in the [1, 0] range (reversed Z)
     return sampleDepth(map, scissorNormalized, layer, position.xy, position.z);
@@ -42,9 +42,9 @@ float ShadowSample_PCF_Hard(mediump sampler2DArrayShadow map,
 
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_LOW
 // use hardware assisted PCF + 3x3 gaussian filter
-float ShadowSample_PCF_Low(mediump sampler2DArrayShadow map,
-        highp vec4 scissorNormalized,
-        uint layer, highp vec4 shadowPosition) {
+float ShadowSample_PCF_Low(const mediump sampler2DArrayShadow map,
+        const highp vec4 scissorNormalized,
+        const uint layer, const highp vec4 shadowPosition) {
     highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
     // note: shadowPosition.z is in the [1, 0] range (reversed Z)
     highp vec2 size = vec2(textureSize(map, 0));
@@ -80,9 +80,9 @@ float ShadowSample_PCF_Low(mediump sampler2DArrayShadow map,
 #endif
 
 // use manual PCF
-float ShadowSample_PCF(mediump sampler2DArray map,
-        highp vec4 scissorNormalized,
-        uint layer, highp vec4 shadowPosition) {
+float ShadowSample_PCF(const mediump sampler2DArray map,
+        const highp vec4 scissorNormalized,
+        const uint layer, const highp vec4 shadowPosition) {
     highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
     // note: shadowPosition.z is in the [1, 0] range (reversed Z)
     highp vec2 size = vec2(textureSize(map, 0));
@@ -147,7 +147,7 @@ float hardenedKernel(float x) {
     return 0.5 * x + 0.5;
 }
 
-highp vec2 computeReceiverPlaneDepthBias(highp vec3 position) {
+highp vec2 computeReceiverPlaneDepthBias(const highp vec3 position) {
     // see: GDC '06: Shadow Mapping: GPU-based Tips and Techniques
     // Chain rule to compute dz/du and dz/dv
     // |dz/du|   |du/dx du/dy|^-T   |dz/dx|
@@ -167,7 +167,7 @@ mat2 getRandomRotationMatrix(highp vec2 fragCoord) {
     return R;
 }
 
-float getPenumbraLs(bool DIRECTIONAL, int index, highp float zLight) {
+float getPenumbraLs(const bool DIRECTIONAL, const int index, const highp float zLight) {
     float penumbra;
     // This conditional is resolved at compile time
     if (DIRECTIONAL) {
@@ -179,7 +179,7 @@ float getPenumbraLs(bool DIRECTIONAL, int index, highp float zLight) {
     return penumbra;
 }
 
-float getPenumbraRatio(bool DIRECTIONAL, int index,
+float getPenumbraRatio(const bool DIRECTIONAL, const int index,
         float z_receiver, float z_blocker) {
     // z_receiver/z_blocker are not linear depths (i.e. they're not distances)
     // Penumbra ratio for PCSS is given by:  pr = (d_receiver - d_blocker) / d_blocker
@@ -202,10 +202,10 @@ float getPenumbraRatio(bool DIRECTIONAL, int index,
 }
 
 void blockerSearchAndFilter(out float occludedCount, out float z_occSum,
-        mediump sampler2DArray map, highp vec4 scissorNormalized, highp vec2 uv,
-        float z_rec, uint layer,
-        highp vec2 filterRadii, mat2 R, highp vec2 dz_duv,
-        uint tapCount) {
+        const mediump sampler2DArray map, const highp vec4 scissorNormalized, const highp vec2 uv,
+        const float z_rec, const uint layer,
+        const highp vec2 filterRadii, const mat2 R, const highp vec2 dz_duv,
+        const uint tapCount) {
     occludedCount = 0.0;
     z_occSum = 0.0;
     for (uint i = 0u; i < tapCount; i++) {
@@ -230,12 +230,12 @@ void blockerSearchAndFilter(out float occludedCount, out float z_occSum,
     }
 }
 
-float filterPCSS(mediump sampler2DArray map,
-        highp vec4 scissorNormalized,
-        highp vec2 size,
-        highp vec2 uv, float z_rec, uint layer,
-        highp vec2 filterRadii, mat2 R, highp vec2 dz_duv,
-        uint tapCount) {
+float filterPCSS(const mediump sampler2DArray map,
+        const highp vec4 scissorNormalized,
+        const highp vec2 size,
+        const highp vec2 uv, const float z_rec, const uint layer,
+        const highp vec2 filterRadii, const mat2 R, const highp vec2 dz_duv,
+        const uint tapCount) {
 
     float occludedCount = 0.0; // must be highp to workaround a spirv-tools issue
     for (uint i = 0u; i < tapCount; i++) {
@@ -270,11 +270,11 @@ float filterPCSS(mediump sampler2DArray map,
  * DPCF, PCF with contact hardenning simulation.
  * see "Shadow of Cold War", A scalable approach to shadowing -- by Kevin Myers
  */
-float ShadowSample_DPCF(bool DIRECTIONAL,
-        mediump sampler2DArray map,
-        highp vec4 scissorNormalized,
-        uint layer, int index,
-        highp vec4 shadowPosition, highp float zLight) {
+float ShadowSample_DPCF(const bool DIRECTIONAL,
+        const mediump sampler2DArray map,
+        const highp vec4 scissorNormalized,
+        const uint layer, const int index,
+        const highp vec4 shadowPosition, const highp float zLight) {
     highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
     highp vec2 texelSize = vec2(1.0) / vec2(textureSize(map, 0));
 
@@ -317,11 +317,11 @@ float ShadowSample_DPCF(bool DIRECTIONAL,
     return 1.0 - percentageOccluded;
 }
 
-float ShadowSample_PCSS(bool DIRECTIONAL,
-        mediump sampler2DArray map,
-        highp vec4 scissorNormalized,
-        uint layer, int index,
-        highp vec4 shadowPosition, highp float zLight) {
+float ShadowSample_PCSS(const bool DIRECTIONAL,
+        const mediump sampler2DArray map,
+        const highp vec4 scissorNormalized,
+        const uint layer, const int index,
+        const highp vec4 shadowPosition, const highp float zLight) {
     highp vec2 size = vec2(textureSize(map, 0));
     highp vec2 texelSize = vec2(1.0) / size;
     highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
@@ -435,18 +435,18 @@ float screenSpaceContactShadow(vec3 lightDirection) {
 // VSM
 //------------------------------------------------------------------------------
 
-float linstep(float min, float max, float v) {
+float linstep(const float min, const float max, const float v) {
     // we could use smoothstep() too
     return clamp((v - min) / (max - min), 0.0, 1.0);
 }
 
-float reduceLightBleed(float pMax, float amount) {
+float reduceLightBleed(const float pMax, const float amount) {
     // Remove the [0, amount] tail and linearly rescale (amount, 1].
     return linstep(amount, 1.0, pMax);
 }
 
-float chebyshevUpperBound(highp vec2 moments, highp float mean,
-        highp float minVariance, float lightBleedReduction) {
+float chebyshevUpperBound(const highp vec2 moments, const highp float mean,
+        const highp float minVariance, const float lightBleedReduction) {
     // Donnelly and Lauritzen 2006, "Variance Shadow Maps"
 
     highp float variance = moments.y - (moments.x * moments.x);
@@ -460,15 +460,15 @@ float chebyshevUpperBound(highp vec2 moments, highp float mean,
     return mean <= moments.x ? 1.0 : pMax;
 }
 
-float evaluateShadowVSM(highp vec2 moments, highp float depth) {
+float evaluateShadowVSM(const highp vec2 moments, const highp float depth) {
     highp float depthScale = frameUniforms.vsmDepthScale * depth;
     highp float minVariance = depthScale * depthScale;
     return chebyshevUpperBound(moments, depth, minVariance, frameUniforms.vsmLightBleedReduction);
 }
 
-float ShadowSample_VSM(bool ELVSM, highp sampler2DArray shadowMap,
-        in highp vec4 scissorNormalized,
-        in uint layer, highp vec4 shadowPosition) {
+float ShadowSample_VSM(const bool ELVSM, const highp sampler2DArray shadowMap,
+        const highp vec4 scissorNormalized,
+        const uint layer, const highp vec4 shadowPosition) {
 
     // note: shadowPosition.z is in linear light-space normalized to [0, 1]
     //  see: ShadowMap::computeVsmLightSpaceMatrix() in ShadowMap.cpp
@@ -507,18 +507,18 @@ float ShadowSample_VSM(bool ELVSM, highp sampler2DArray shadowMap,
 
 // get texture coordinate for directional and spot shadow maps
 #if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
-highp vec4 getShadowPosition(int cascade) {
+highp vec4 getShadowPosition(const int cascade) {
     return getCascadeLightSpacePosition(cascade);
 }
 #endif
 
 #if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
-highp vec4 getShadowPosition(int index, highp vec3 dir, highp float zLight) {
+highp vec4 getShadowPosition(const int index,  const highp vec3 dir, const highp float zLight) {
     return getSpotLightSpacePosition(index, dir, zLight);
 }
 #endif
 
-int getPointLightFace(highp vec3 r) {
+int getPointLightFace(const highp vec3 r) {
     highp vec4 tc;
     highp float rx = abs(r.x);
     highp float ry = abs(r.y);
@@ -534,9 +534,9 @@ int getPointLightFace(highp vec3 r) {
 }
 
 // PCF sampling
-float shadow(bool DIRECTIONAL,
-        in mediump sampler2DArrayShadow shadowMap,
-        in int index, highp vec4 shadowPosition, highp float zLight) {
+float shadow(const bool DIRECTIONAL,
+        const mediump sampler2DArrayShadow shadowMap,
+        const int index, highp vec4 shadowPosition, highp float zLight) {
     highp vec4 scissorNormalized = shadowUniforms.shadows[index].scissorNormalized;
     uint layer = shadowUniforms.shadows[index].layer;
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
@@ -547,9 +547,9 @@ float shadow(bool DIRECTIONAL,
 }
 
 // Shadow requiring a sampler2D sampler (VSM, DPCF and PCSS)
-float shadow(bool DIRECTIONAL,
-        in highp sampler2DArray shadowMap,
-        in int index, highp vec4 shadowPosition, highp float zLight) {
+float shadow(const bool DIRECTIONAL,
+        const highp sampler2DArray shadowMap,
+        const int index, highp vec4 shadowPosition, highp float zLight) {
     highp vec4 scissorNormalized = shadowUniforms.shadows[index].scissorNormalized;
     uint layer = shadowUniforms.shadows[index].layer;
     // This conditional is resolved at compile time
