@@ -68,22 +68,35 @@ static VkCommandPool createPool(VkDevice device, uint32_t queueFamilyIndex) {
 }
 
 void VulkanGroupMarkers::push(std::string const& marker, Timestamp start) noexcept {
-    mMarkers.push(marker);
+    mMarkers.push_back(marker);
 #if FILAMENT_VULKAN_VERBOSE
-    mTimestamps.push(start.time_since_epoch().count() > 0.0
+    mTimestamps.push_back(start.time_since_epoch().count() > 0.0
                                   ? start
                                   : std::chrono::high_resolution_clock::now());
 #endif
 }
 
 std::pair<std::string, Timestamp> VulkanGroupMarkers::pop() noexcept {
-    auto const marker = mMarkers.top();
-    mMarkers.pop();
+    auto const marker = mMarkers.back();
+    mMarkers.pop_back();
 
 #if FILAMENT_VULKAN_VERBOSE
-    auto const topTimestamp = mTimestamps.top();
-    mTimestamps.pop();
-    return std::make_pair(marker, topTimestamp);
+    auto const timestamp = mTimestamps.back();
+    mTimestamps.pop_back();
+    return std::make_pair(marker, timestamp);
+#else
+    return std::make_pair(marker, Timestamp{});
+#endif
+}
+
+std::pair<std::string, Timestamp> VulkanGroupMarkers::pop_bottom() noexcept {
+    auto const marker = mMarkers.front();
+    mMarkers.pop_front();
+
+#if FILAMENT_VULKAN_VERBOSE
+    auto const timestamp = mTimestamps.front();
+    mTimestamps.pop_front();
+    return std::make_pair(marker, timestamp);
 #else
     return std::make_pair(marker, Timestamp{});
 #endif
@@ -91,7 +104,7 @@ std::pair<std::string, Timestamp> VulkanGroupMarkers::pop() noexcept {
 
 std::pair<std::string, Timestamp> VulkanGroupMarkers::top() const {
     assert_invariant(!empty());
-    auto const marker = mMarkers.top();
+    auto const marker = mMarkers.back();
 #if FILAMENT_VULKAN_VERBOSE
     auto const topTimestamp = mTimestamps.top();
     return std::make_pair(marker, topTimestamp);
@@ -388,8 +401,9 @@ void VulkanCommands::popGroupMarker() {
         }
     } else if (mCarriedOverMarkers && !mCarriedOverMarkers->empty()) {
         // It could be that pop is called between flush() and get() (new command buffer), in which
-        // case the marker is in "carried over" state. We'd just remove that
-        mCarriedOverMarkers->pop();
+        // case the marker is in "carried over" state, we'd just remove that. Since the
+        // mCarriedOverMarkers is in the opposite order, we pop the bottom instead of the top.
+        mCarriedOverMarkers->pop_bottom();
     }
 }
 
