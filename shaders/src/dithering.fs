@@ -30,7 +30,7 @@ float triangleNoise(highp vec2 n) {
 // Dithering
 //------------------------------------------------------------------------------
 
-vec4 Dither_InterleavedGradientNoise(vec4 rgba, highp float temporalNoise01) {
+vec4 Dither_InterleavedGradientNoise(vec4 rgba, const highp float temporalNoise01) {
     // Jimenez 2014, "Next Generation Post-Processing in Call of Duty"
     highp vec2 uv = gl_FragCoord.xy + temporalNoise01;
 
@@ -43,7 +43,7 @@ vec4 Dither_InterleavedGradientNoise(vec4 rgba, highp float temporalNoise01) {
     return rgba + vec4(noise / 255.0);
 }
 
-vec4 Dither_TriangleNoise(vec4 rgba, highp float temporalNoise01) {
+vec4 Dither_TriangleNoise(vec4 rgba, const highp float temporalNoise01) {
     // Gjøl 2016, "Banding in Games: A Noisy Rant"
     highp vec2 fragCoord = gl_FragCoord.xy;
     // FIXME: resolution.zw is the viewport dimension but we should be using the buffer's
@@ -58,7 +58,7 @@ vec4 Dither_TriangleNoise(vec4 rgba, highp float temporalNoise01) {
     return rgba + vec4(noise / 255.0);
 }
 
-vec4 Dither_Vlachos(vec4 rgba, highp float temporalNoise01) {
+vec4 Dither_Vlachos(vec4 rgba, const highp float temporalNoise01) {
     // Vlachos 2016, "Advanced VR Rendering"
     highp vec2 fragCoord = gl_FragCoord.xy;
     float noise = dot(vec2(171.0, 231.0), fragCoord + temporalNoise01);
@@ -70,7 +70,7 @@ vec4 Dither_Vlachos(vec4 rgba, highp float temporalNoise01) {
     return vec4(rgba.rgb + (noiseRGB / 255.0), rgba.a);
 }
 
-vec4 Dither_TriangleNoiseRGB(vec4 rgba, highp float temporalNoise01) {
+vec4 Dither_TriangleNoiseRGB(vec4 rgba, const highp float temporalNoise01) {
     // Gjøl 2016, "Banding in Games: A Noisy Rant"
     highp vec2 fragCoord = gl_FragCoord.xy;
     // FIXME: resolution.zw is the viewport dimension but we should be using the buffer's
@@ -97,7 +97,7 @@ vec4 Dither_TriangleNoiseRGB(vec4 rgba, highp float temporalNoise01) {
  * This dithering function assumes we are dithering to an 8-bit target.
  * This function dithers the alpha channel assuming premultiplied output
  */
-vec4 dither(vec4 rgba, highp float temporalNoise01) {
+vec4 dither(vec4 rgba, const highp float temporalNoise01) {
 #if DITHERING_OPERATOR == DITHERING_NONE
     return rgba;
 #elif DITHERING_OPERATOR == DITHERING_INTERLEAVED_NOISE

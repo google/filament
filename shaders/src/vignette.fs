@@ -7,7 +7,7 @@
 // uv: viewport coordinates
 // vignette: pre-computed parameters midPoint, radius, aspect and feather
 // vignetteColor: color of the vignette effect
-vec3 vignette(vec3 color, highp vec2 uv, vec4 vignette, vec4 vignetteColor) {
+vec3 vignette(const vec3 color, const highp vec2 uv, const vec4 vignette, const vec4 vignetteColor) {
     float midPoint = vignette.x;
     float radius = vignette.y;
     float aspect = vignette.z;

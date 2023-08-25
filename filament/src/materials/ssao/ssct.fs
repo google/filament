@@ -52,7 +52,7 @@ struct ConeTraceSetup {
     uint sampleCount;
 };
 
-highp float getWFromProjectionMatrix(highp mat4 p, vec3 v) {
+highp float getWFromProjectionMatrix(const highp mat4 p, const vec3 v) {
     // this essentially returns (p * vec4(v, 1.0)).w, but we make some assumptions
     // this assumes a perspective projection
     return -v.z;
@@ -60,14 +60,14 @@ highp float getWFromProjectionMatrix(highp mat4 p, vec3 v) {
     //return p[2][3] * v.z + p[3][3];
 }
 
-highp float getViewSpaceZFromW(highp mat4 p, float w) {
+highp float getViewSpaceZFromW(const highp mat4 p, const float w) {
     // this assumes a perspective projection
     return -w;
     // this assumes a perspective or ortho projection
     //return (w - p[3][3]) / p[2][3];
 }
 
-float coneTraceOcclusion(in ConeTraceSetup setup, highp sampler2D depthTexture) {
+float coneTraceOcclusion(in ConeTraceSetup setup, const highp sampler2D depthTexture) {
     // skip fragments that are back-facing trace direction
     // (avoid overshadowing of translucent surfaces)
     float NoL = dot(setup.vsNormal, setup.vsConeDirection);
@@ -138,7 +138,7 @@ float coneTraceOcclusion(in ConeTraceSetup setup, highp sampler2D depthTexture) 
 }
 
 float ssctDominantLightShadowing(highp vec2 uv, highp vec3 origin, vec3 normal,
-        highp sampler2D depthTexture, highp vec2 fragCoord,
+        const highp sampler2D depthTexture, const highp vec2 fragCoord,
         vec2 rayCount, ConeTraceSetup cone) {
 
     float occlusion = 0.0;

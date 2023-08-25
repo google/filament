@@ -6,7 +6,7 @@
 #define SUN_AS_AREA_LIGHT
 #endif
 
-vec3 sampleSunAreaLight(vec3 lightDirection) {
+vec3 sampleSunAreaLight(const vec3 lightDirection) {
 #if defined(SUN_AS_AREA_LIGHT)
     if (frameUniforms.sun.w >= 0.0) {
         // simulate sun as disc area light
@@ -31,8 +31,8 @@ Light getDirectionalLight() {
     return light;
 }
 
-void evaluateDirectionalLight(MaterialInputs material,
-        PixelParams pixel, inout vec3 color) {
+void evaluateDirectionalLight(const MaterialInputs material,
+        const PixelParams pixel, inout vec3 color) {
 
     Light light = getDirectionalLight();
 

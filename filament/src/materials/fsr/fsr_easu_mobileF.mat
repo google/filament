@@ -76,7 +76,7 @@ fragment {
 #if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
     #define gather textureGather
 #else
-    vec4 gather(mediump sampler2D color, highp vec2 p, int comp) {
+    vec4 gather(const mediump sampler2D color, highp vec2 p, const int comp) {
         highp ivec2 i = ivec2(p * materialParams.textureSize - 0.5);
         vec4 d;
         d[0] = texelFetchOffset(color, i, 0, ivec2(0, 1))[comp];
