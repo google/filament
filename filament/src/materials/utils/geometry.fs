@@ -36,7 +36,7 @@ highp vec3 faceNormal(highp vec3 dpdx, highp vec3 dpdy) {
 // this creates arifacts around geometry edges.
 // Note: when using the spirv optimizer, this results in much slower execution time because
 //       this whole expression is inlined in the AO loop below.
-highp vec3 computeViewSpaceNormalLowQ(highp vec3 position) {
+highp vec3 computeViewSpaceNormalLowQ(const highp vec3 position) {
     return faceNormal(dFdx(position), dFdy(position));
 }
 
@@ -52,8 +52,8 @@ highp vec3 computeViewSpaceNormalLowQ(highp vec3 position) {
 // positionParams : invProjection[0][0] * 2, invProjection[1][1] * 2
 //
 highp vec3 computeViewSpaceNormalMediumQ(
-        highp sampler2D depthTexture, highp vec2 uv,
-        highp vec3 position,
+        const highp sampler2D depthTexture, const highp vec2 uv,
+        const highp vec3 position,
         highp vec2 texel, highp vec2 positionParams) {
 
     precision highp float;
@@ -81,8 +81,8 @@ highp vec3 computeViewSpaceNormalMediumQ(
 // positionParams : invProjection[0][0] * 2, invProjection[1][1] * 2
 //
 highp vec3 computeViewSpaceNormalHighQ(
-        highp sampler2D depthTexture, highp vec2 uv,
-        highp float depth, highp vec3 position,
+        const highp sampler2D depthTexture, const highp vec2 uv,
+        const highp float depth, const highp vec3 position,
         highp vec2 texel, highp vec2 positionParams) {
 
     precision highp float;
@@ -125,8 +125,8 @@ highp vec3 computeViewSpaceNormalHighQ(
 // positionParams : invProjection[0][0] * 2, invProjection[1][1] * 2
 //
 highp vec3 computeViewSpaceNormal(
-        highp sampler2D depthTexture, highp vec2 uv,
-        highp float depth, highp vec3 position,
+        const highp sampler2D depthTexture, const highp vec2 uv,
+        const highp float depth, const highp vec3 position,
         highp vec2 texel, highp vec2 positionParams) {
     // todo: maybe make this a quality parameter
 #if FILAMENT_QUALITY == FILAMENT_QUALITY_HIGH

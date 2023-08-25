@@ -1,8 +1,8 @@
-float vmax(float v) {
+float vmax(const float v) {
     return v;
 }
 
-highp vec4 sourceTexLod(highp vec2 p, float m, float l) {
+highp vec4 sourceTexLod(const highp vec2 p, float m, float l) {
     // This condition is optimized away at compile-time.
     if (materialConstants_arraySampler) {
         return textureLod(materialParams_sourceArray, vec3(p, l), m);
@@ -11,12 +11,12 @@ highp vec4 sourceTexLod(highp vec2 p, float m, float l) {
     }
 }
 
-void tap(inout highp vec4 sum, float weight, highp vec2 position) {
+void tap(inout highp vec4 sum, const float weight, const highp vec2 position) {
     highp vec4 s = sourceTexLod(position, materialParams.level, materialParams.layer);
     sum += s * weight;
 }
 
-void tapReinhard(inout highp vec4 sum, inout float totalWeight, float weight, highp vec2 position) {
+void tapReinhard(inout highp vec4 sum, inout float totalWeight, const float weight, const highp vec2 position) {
     highp vec4 s = sourceTexLod(position, materialParams.level, materialParams.layer);
     float w = weight / (1.0 + vmax(s));
     totalWeight += w;

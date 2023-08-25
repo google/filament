@@ -17,68 +17,68 @@
 // Currently our dilate pass is set-up for 32 max.
 #define MAX_COC_RADIUS      32.0
 
-float min2(vec2 v) {
+float min2(const vec2 v) {
     return min(v.x, v.y);
 }
 
-float max2(vec2 v) {
+float max2(const vec2 v) {
     return max(v.x, v.y);
 }
 
-float max4(vec4 v) {
+float max4(const vec4 v) {
     return max2(max(v.xy, v.zw));
 }
 
-float min4(vec4 v) {
+float min4(const vec4 v) {
     return min2(min(v.xy, v.zw));
 }
 
-float rcp(float x) {
+float rcp(const float x) {
     return 1.0 / x;
 }
 
-float rcpOrZero(float x) {
+float rcpOrZero(const float x) {
     return x > MEDIUMP_FLT_MIN ? (1.0 / x) : 0.0;
 }
 
-highp float rcpOrZeroHighp(highp float x) {
+highp float rcpOrZeroHighp(const highp float x) {
     return x > MEDIUMP_FLT_MIN ? (1.0 / x) : 0.0;
 }
 
-float cocToAlpha(float coc) {
+float cocToAlpha(const float coc) {
     // CoC is positive for background field.
     // CoC is negative for the foreground field.
     return saturate(abs(coc) - MAX_IN_FOCUS_COC);
 }
 
 // returns circle-of-confusion diameter in pixels
-float getCOC(float depth, vec2 cocParams) {
+float getCOC(const float depth, const vec2 cocParams) {
     return depth * cocParams.x + cocParams.y;
 }
 
-vec4 getCOC(vec4 depth, vec2 cocParams) {
+vec4 getCOC(const vec4 depth, const vec2 cocParams) {
     return depth * cocParams.x + cocParams.y;
 }
 
-float isForeground(float coc) {
+float isForeground(const float coc) {
     return coc < 0.0 ? 1.0 : 0.0;
 }
 
-float isBackground(float coc) {
+float isBackground(const float coc) {
     return coc > 0.0 ? 1.0 : 0.0;
 }
 
-bool isForegroundTile(vec2 tiles) {
+bool isForegroundTile(const vec2 tiles) {
     // A foreground tile is one where the smallest CoC is negative
     return tiles.r < 0.0;
 }
 
-bool isBackgroundTile(vec2 tiles) {
+bool isBackgroundTile(const vec2 tiles) {
     // A background tile is one where the largest CoC is positive
     return tiles.g > 0.0;
 }
 
-bool isFastTile(vec2 tiles) {
+bool isFastTile(const vec2 tiles) {
     // We use the distance between the min and max CoC and if the relative error is less than
     // 5% we assume the tile contains a constant CoC.
     // We could cannot use the absolute value of the min/mac CoC -- which would categorize more
@@ -87,19 +87,19 @@ bool isFastTile(vec2 tiles) {
     return (tiles.g - tiles.r) <= abs(tiles.g) * 0.05;
 }
 
-bool isTrivialTile(vec2 tiles) {
+bool isTrivialTile(const vec2 tiles) {
     float maxCocRadius = max(abs(tiles.r), abs(tiles.g));
     return maxCocRadius < MAX_IN_FOCUS_COC;
 }
 
-float downsampleCoC(vec4 c) {
+float downsampleCoC(const vec4 c) {
     // We need to compute a suitable CoC to represent the 4 pixels that are downsampled.
     // We pick the min because this always selects the most foreground sample if there is one,
     // because the foreground can leak on the background, but not the reverse.
     return min4(c);
 }
 
-vec4 downsampleCocWeights(vec4 c, float outCoc, float scale) {
+vec4 downsampleCocWeights(const vec4 c, const float outCoc, const float scale) {
     // The bilateral weight is normally computed as saturate(1 - |outCoc - c|) which selects
     // the sample with the outCoc weight (and does a little bit of cross-fade if other samples
     // are close). However, this can also cause some aliasing with dithered objects, so by

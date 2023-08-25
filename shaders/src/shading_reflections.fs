@@ -1,7 +1,7 @@
 /*
  * screen-space reflection shading
  */
-vec4 evaluateMaterial(MaterialInputs material) {
+vec4 evaluateMaterial(const MaterialInputs material) {
 
 #if defined(MATERIAL_HAS_REFLECTIONS)
     PixelParams pixel;

@@ -89,7 +89,7 @@ fragment {
 
 void dummy(){}
 
-float starburst(vec2 uv) {
+float starburst(const vec2 uv) {
     // get an offset that continuously moves with the camera
     vec3 forward = getViewFromWorldMatrix()[2].xyz;
     float offset = forward.x + forward.y + forward.z;
@@ -104,7 +104,7 @@ float starburst(vec2 uv) {
     return saturate(mask + (1.0 - smoothstep(0.0, 0.3, d)));
 }
 
-vec3 bloom(highp vec2 uv, vec3 color) {
+vec3 bloom(highp vec2 uv, const vec3 color) {
     vec3 result = vec3(0.0);
 
     if (materialParams.bloom.x > 0.0) {
@@ -128,7 +128,7 @@ vec3 bloom(highp vec2 uv, vec3 color) {
     return result;
 }
 
-vec4 resolveFragment(highp vec2 uv) {
+vec4 resolveFragment(const highp vec2 uv) {
 #if POST_PROCESS_OPAQUE
     return vec4(textureLod(materialParams_colorBuffer, uv, 0.0).rgb, 1.0);
 #else
