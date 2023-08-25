@@ -11,10 +11,6 @@ material {
             name : layer
         },
         {
-            type : int,
-            name : level
-        },
-        {
             type : float,
             name : uvscale
         }
@@ -36,7 +32,6 @@ fragment {
     void postProcess(inout PostProcessInputs postProcess) {
         highp vec2 uv = gl_FragCoord.xy * materialParams.uvscale;
         postProcess.color = textureLod(materialParams_color,
-                vec3(uv, materialParams.layer),
-                float(materialParams.level));
+                vec3(uv, materialParams.layer), 0.0);
     }
 }

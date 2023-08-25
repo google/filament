@@ -777,6 +777,10 @@ void ViewerGui::updateUserInterface() {
         ImGui::SliderInt("Levels", &levels, 3, 11);
         mSettings.view.bloom.levels = levels;
 
+        int quality = (int) mSettings.view.bloom.quality;
+        ImGui::SliderInt("Bloom Quality", &quality, 0, 3);
+        mSettings.view.bloom.quality = (View::QualityLevel) quality;
+
         ImGui::Checkbox("Lens Flare", &mSettings.view.bloom.lensFlare);
     }
 

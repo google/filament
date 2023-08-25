@@ -230,6 +230,8 @@ set(MATERIAL_SRCS
         src/materials/flare/flare.mat
         src/materials/blitLow.mat
         src/materials/bloom/bloomDownsample.mat
+        src/materials/bloom/bloomDownsample2x.mat
+        src/materials/bloom/bloomDownsample9.mat
         src/materials/bloom/bloomUpsample.mat
         src/materials/ssao/bilateralBlur.mat
         src/materials/ssao/bilateralBlurBentNormals.mat
