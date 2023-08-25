@@ -70,7 +70,7 @@ highp float getUserTimeMod(float m) {
  *
  * @public-api
  */
-highp vec2 uvToRenderTargetUV(highp vec2 uv) {
+highp vec2 uvToRenderTargetUV(const highp vec2 uv) {
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
     return vec2(uv.x, 1.0 - uv.y);
 #else

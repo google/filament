@@ -57,10 +57,10 @@ highp float distanceSquared(highp vec2 a, highp vec2 b) {
 
 // Note: McGuire and Mara use the "cs" prefix to stand for "camera space", equivalent to Filament's
 // "view space". "cs" has been replaced with "vs" to avoid confusion.
-bool traceScreenSpaceRay(highp vec3 vsOrigin, highp vec3 vsDirection,
-        highp mat4 uvFromViewMatrix, highp sampler2D vsZBuffer,
-        float vsZThickness, highp float nearPlaneZ, float stride,
-        float jitterFraction, highp float maxSteps, float maxRayTraceDistance,
+bool traceScreenSpaceRay(const highp vec3 vsOrigin, const highp vec3 vsDirection,
+        highp_mat4 uvFromViewMatrix, const highp sampler2D vsZBuffer,
+        const float vsZThickness, const highp float nearPlaneZ, const float stride,
+        const float jitterFraction, const highp float maxSteps, const float maxRayTraceDistance,
         out highp vec2 hitPixel, out highp vec3 vsHitPoint) {
     // Clip ray to a near plane in 3D (doesn't have to be *the* near plane, although that would be a
     // good idea)
@@ -181,7 +181,7 @@ bool traceScreenSpaceRay(highp vec3 vsOrigin, highp vec3 vsDirection,
 
 // -- end "BSD 2-clause license" -------------------------------------------------------------------
 
-highp mat4 scaleMatrix(highp float x, highp float y) {
+highp mat4 scaleMatrix(const highp float x, const highp float y) {
     mat4 m = mat4(1.0);
     m[0].x = x;
     m[1].y = y;
@@ -200,7 +200,7 @@ highp mat4 scaleMatrix(highp float x, highp float y) {
  *
  * If there is no hit, the return value is vec4(0).
  */
-vec4 evaluateScreenSpaceReflections(highp vec3 wsRayDirection) {
+vec4 evaluateScreenSpaceReflections(const highp vec3 wsRayDirection) {
     vec4 Fr = vec4(0.0);
     highp vec3 wsRayStart = shading_position + frameUniforms.ssrBias * wsRayDirection;
 

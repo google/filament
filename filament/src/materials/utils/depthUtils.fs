@@ -28,12 +28,12 @@ highp float linearizeDepth(highp float depth) {
     return (depth * p[2].z + p[3].z) / max(depth * p[2].w + p[3].w, preventDiv0);
 }
 
-highp float sampleDepth(highp sampler2D depthTexture, highp vec2 uv, float lod) {
+highp float sampleDepth(const highp sampler2D depthTexture, const highp vec2 uv, float lod) {
     return textureLod(depthTexture, uvToRenderTargetUV(uv), lod).r;
 }
 
-highp float sampleDepthLinear(highp sampler2D depthTexture,
-        highp vec2 uv, float lod) {
+highp float sampleDepthLinear(const highp sampler2D depthTexture,
+        const highp vec2 uv, float lod) {
     return linearizeDepth(sampleDepth(depthTexture, uv, lod));
 }
 

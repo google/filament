@@ -5,7 +5,7 @@
  * scattering. The BTDF itself is not physically based and does not represent a
  * correct interpretation of transmission events.
  */
-vec3 surfaceShading(PixelParams pixel, Light light, float occlusion) {
+vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion) {
     vec3 h = normalize(shading_view + light.l);
 
     float NoL = light.NoL;

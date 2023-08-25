@@ -1,5 +1,5 @@
-vec3 customSurfaceShading(MaterialInputs materialInputs,
-        PixelParams pixel, Light light, float visibility) {
+vec3 customSurfaceShading(const MaterialInputs materialInputs,
+        const PixelParams pixel, const Light light, float visibility) {
 
     LightData lightData;
     lightData.colorIntensity = light.colorIntensity;
