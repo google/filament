@@ -32,7 +32,7 @@ public:
     void terminate() noexcept;
 private:
     VkDevice mDevice;
-    tsl::robin_map<uint32_t, VkSampler> mCache;
+    tsl::robin_map<SamplerParams, VkSampler, SamplerParams::Hasher, SamplerParams::EqualTo> mCache;
 };
 
 } // namespace filament::backend

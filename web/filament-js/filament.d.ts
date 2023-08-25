@@ -1234,7 +1234,7 @@ export interface View$BloomOptions {
      */
     anamorphism?: number;
     /**
-     * number of blur levels (3 to 11)
+     * number of blur levels (1 to 11)
      */
     levels?: number;
     /**
@@ -1769,4 +1769,11 @@ export interface View$SoftShadowOptions {
      * Acceptable values are equal to or greater than 1.
      */
     penumbraRatioScale?: number;
+}
+
+/**
+ * Options for stereoscopic (multi-eye) rendering.
+ */
+export interface View$StereoscopicOptions {
+    enabled?: boolean;
 }

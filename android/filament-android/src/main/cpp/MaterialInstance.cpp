@@ -246,17 +246,21 @@ Java_com_google_android_filament_MaterialInstance_nSetFloatParameterArray(JNIEnv
     env->ReleaseStringUTFChars(name_, name);
 }
 
+// defined in TextureSampler.cpp
+namespace filament::JniUtils {
+    TextureSampler from_long(jlong params) noexcept;
+} // TextureSamplerJniUtils
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterTexture(
         JNIEnv *env, jclass, jlong nativeMaterialInstance, jstring name_,
-        jlong nativeTexture, jint sampler_) {
+        jlong nativeTexture, jlong sampler_) {
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
     Texture* texture = (Texture*) nativeTexture;
-    TextureSampler& sampler = reinterpret_cast<TextureSampler&>(sampler_);
 
     const char *name = env->GetStringUTFChars(name_, 0);
-    instance->setParameter(name, texture, sampler);
+    instance->setParameter(name, texture, JniUtils::from_long(sampler_));
     env->ReleaseStringUTFChars(name_, name);
 }
 

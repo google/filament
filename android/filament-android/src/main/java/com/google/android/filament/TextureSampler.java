@@ -126,7 +126,7 @@ public class TextureSampler {
         NEVER
     }
 
-    int mSampler = 0; // bit field used by native
+    long mSampler = 0; // bit field used by native
 
     /**
      * Initializes the <code>TextureSampler</code> with default values.
@@ -342,26 +342,26 @@ public class TextureSampler {
         }
     }
 
-    private static native int nCreateSampler(int min, int max, int s, int t, int r);
-    private static native int nCreateCompareSampler(int mode, int function);
+    private static native long nCreateSampler(int min, int max, int s, int t, int r);
+    private static native long nCreateCompareSampler(int mode, int function);
 
-    private static native int nGetMinFilter(int sampler);
-    private static native int nSetMinFilter(int sampler, int filter);
-    private static native int nGetMagFilter(int sampler);
-    private static native int nSetMagFilter(int sampler, int filter);
+    private static native int nGetMinFilter(long sampler);
+    private static native long nSetMinFilter(long sampler, int filter);
+    private static native int nGetMagFilter(long sampler);
+    private static native long nSetMagFilter(long sampler, int filter);
 
-    private static native int nGetWrapModeS(int sampler);
-    private static native int nSetWrapModeS(int sampler, int mode);
-    private static native int nGetWrapModeT(int sampler);
-    private static native int nSetWrapModeT(int sampler, int mode);
-    private static native int nGetWrapModeR(int sampler);
-    private static native int nSetWrapModeR(int sampler, int mode);
+    private static native int nGetWrapModeS(long sampler);
+    private static native long nSetWrapModeS(long sampler, int mode);
+    private static native int nGetWrapModeT(long sampler);
+    private static native long nSetWrapModeT(long sampler, int mode);
+    private static native int nGetWrapModeR(long sampler);
+    private static native long nSetWrapModeR(long sampler, int mode);
 
-    private static native int nGetCompareMode(int sampler);
-    private static native int nSetCompareMode(int sampler, int mode);
-    private static native int nGetCompareFunction(int sampler);
-    private static native int nSetCompareFunction(int sampler, int function);
+    private static native int nGetCompareMode(long sampler);
+    private static native long nSetCompareMode(long sampler, int mode);
+    private static native int nGetCompareFunction(long sampler);
+    private static native long nSetCompareFunction(long sampler, int function);
 
-    private static native float nGetAnisotropy(int sampler);
-    private static native int nSetAnisotropy(int sampler, float anisotropy);
+    private static native float nGetAnisotropy(long sampler);
+    private static native long nSetAnisotropy(long sampler, float anisotropy);
 }

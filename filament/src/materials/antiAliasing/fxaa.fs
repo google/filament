@@ -20,7 +20,7 @@
 
 // This substitute for the built-in "mix" function exists to work around #732,
 // seen with Vulkan on the Pixel 3 + Android P.
-vec4 lerp(vec4 x, vec4 y, float a) {
+vec4 lerp(const vec4 x, const vec4 y, float a) {
     return x * (1.0 - a) + y * a;
 }
 

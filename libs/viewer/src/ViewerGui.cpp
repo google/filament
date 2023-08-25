@@ -738,8 +738,6 @@ void ViewerGui::updateUserInterface() {
             ImGui::Checkbox("Dithering", &dither);
             enableDithering(dither);
             ImGui::Checkbox("Bloom", &mSettings.view.bloom.enabled);
-            ImGui::Checkbox("Flare", &mSettings.view.bloom.lensFlare);
-
             ImGui::Checkbox("TAA", &mSettings.view.taa.enabled);
             // this clutters the UI and isn't that useful (except when working on TAA)
             //ImGui::Indent();
@@ -758,54 +756,72 @@ void ViewerGui::updateUserInterface() {
         ImGui::Unindent();
 
         ImGui::Checkbox("SSAO", &mSettings.view.ssao.enabled);
-        if (ImGui::CollapsingHeader("SSAO Options")) {
-            auto& ssao = mSettings.view.ssao;
-
-            int quality = (int) ssao.quality;
-            int lowpass = (int) ssao.lowPassFilter;
-            bool upsampling = ssao.upsampling != View::QualityLevel::LOW;
-
-            bool halfRes = ssao.resolution != 1.0f;
-            ImGui::SliderInt("Quality", &quality, 0, 3);
-            ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
-            ImGui::Checkbox("Bent Normals", &ssao.bentNormals);
-            ImGui::Checkbox("High quality upsampling", &upsampling);
-            ImGui::SliderFloat("Min Horizon angle", &ssao.minHorizonAngleRad, 0.0f, (float)M_PI_4);
-            ImGui::SliderFloat("Bilateral Threshold", &ssao.bilateralThreshold, 0.0f, 0.1f);
-            ImGui::Checkbox("Half resolution", &halfRes);
-            ssao.resolution = halfRes ? 0.5f : 1.0f;
-
-
-            ssao.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
-            ssao.lowPassFilter = (View::QualityLevel) lowpass;
-            ssao.quality = (View::QualityLevel) quality;
-
-            if (ImGui::CollapsingHeader("Dominant Light Shadows (experimental)")) {
-                int sampleCount = ssao.ssct.sampleCount;
-                ImGui::Checkbox("Enabled##dls", &ssao.ssct.enabled);
-                ImGui::SliderFloat("Cone angle", &ssao.ssct.lightConeRad, 0.0f, (float)M_PI_2);
-                ImGui::SliderFloat("Shadow Distance", &ssao.ssct.shadowDistance, 0.0f, 10.0f);
-                ImGui::SliderFloat("Contact dist max", &ssao.ssct.contactDistanceMax, 0.0f, 100.0f);
-                ImGui::SliderFloat("Intensity##dls", &ssao.ssct.intensity, 0.0f, 10.0f);
-                ImGui::SliderFloat("Depth bias", &ssao.ssct.depthBias, 0.0f, 1.0f);
-                ImGui::SliderFloat("Depth slope bias", &ssao.ssct.depthSlopeBias, 0.0f, 1.0f);
-                ImGui::SliderInt("Sample Count", &sampleCount, 1, 32);
-                ImGuiExt::DirectionWidget("Direction##dls", ssao.ssct.lightDirection.v);
-                ssao.ssct.sampleCount = sampleCount;
-            }
-        }
 
         ImGui::Checkbox("Screen-space reflections", &mSettings.view.screenSpaceReflections.enabled);
-        if (ImGui::CollapsingHeader("Screen-space reflections Options")) {
-            auto& ssrefl = mSettings.view.screenSpaceReflections;
-            ImGui::SliderFloat("Ray thickness", &ssrefl.thickness, 0.001f, 0.2f);
-            ImGui::SliderFloat("Bias", &ssrefl.bias, 0.001f, 0.5f);
-            ImGui::SliderFloat("Max distance", &ssrefl.maxDistance, 0.1, 10.0f);
-            ImGui::SliderFloat("Stride", &ssrefl.stride, 1.0, 10.0f);
-        }
         ImGui::Unindent();
 
         ImGui::Checkbox("Screen-space Guard Band", &mSettings.view.guardBand.enabled);
+    }
+
+    if (ImGui::CollapsingHeader("Bloom Options")) {
+        ImGui::SliderFloat("Strength", &mSettings.view.bloom.strength, 0.0f, 1.0f);
+        ImGui::Checkbox("Threshold", &mSettings.view.bloom.threshold);
+
+        float anamorphism = mSettings.view.bloom.anamorphism >= 1.0f ?
+                mSettings.view.bloom.anamorphism - 1.0f : 1.0f - 1.0f / mSettings.view.bloom.anamorphism;
+        ImGui::SliderFloat("Amamorphism", &anamorphism, -32.0f, 32.0f);
+        mSettings.view.bloom.anamorphism = anamorphism >= 0 ?
+                (anamorphism + 1.0f) : 1.0f / (1.0f - anamorphism);
+
+        int levels = mSettings.view.bloom.levels;
+        ImGui::SliderInt("Levels", &levels, 3, 11);
+        mSettings.view.bloom.levels = levels;
+
+        ImGui::Checkbox("Lens Flare", &mSettings.view.bloom.lensFlare);
+    }
+
+    if (ImGui::CollapsingHeader("SSAO Options")) {
+        auto& ssao = mSettings.view.ssao;
+
+        int quality = (int) ssao.quality;
+        int lowpass = (int) ssao.lowPassFilter;
+        bool upsampling = ssao.upsampling != View::QualityLevel::LOW;
+
+        bool halfRes = ssao.resolution != 1.0f;
+        ImGui::SliderInt("Quality", &quality, 0, 3);
+        ImGui::SliderInt("Low Pass", &lowpass, 0, 2);
+        ImGui::Checkbox("Bent Normals", &ssao.bentNormals);
+        ImGui::Checkbox("High quality upsampling", &upsampling);
+        ImGui::SliderFloat("Min Horizon angle", &ssao.minHorizonAngleRad, 0.0f, (float)M_PI_4);
+        ImGui::SliderFloat("Bilateral Threshold", &ssao.bilateralThreshold, 0.0f, 0.1f);
+        ImGui::Checkbox("Half resolution", &halfRes);
+        ssao.resolution = halfRes ? 0.5f : 1.0f;
+
+        ssao.upsampling = upsampling ? View::QualityLevel::HIGH : View::QualityLevel::LOW;
+        ssao.lowPassFilter = (View::QualityLevel) lowpass;
+        ssao.quality = (View::QualityLevel) quality;
+
+        if (ImGui::CollapsingHeader("Dominant Light Shadows (experimental)")) {
+            int sampleCount = ssao.ssct.sampleCount;
+            ImGui::Checkbox("Enabled##dls", &ssao.ssct.enabled);
+            ImGui::SliderFloat("Cone angle", &ssao.ssct.lightConeRad, 0.0f, (float)M_PI_2);
+            ImGui::SliderFloat("Shadow Distance", &ssao.ssct.shadowDistance, 0.0f, 10.0f);
+            ImGui::SliderFloat("Contact dist max", &ssao.ssct.contactDistanceMax, 0.0f, 100.0f);
+            ImGui::SliderFloat("Intensity##dls", &ssao.ssct.intensity, 0.0f, 10.0f);
+            ImGui::SliderFloat("Depth bias", &ssao.ssct.depthBias, 0.0f, 1.0f);
+            ImGui::SliderFloat("Depth slope bias", &ssao.ssct.depthSlopeBias, 0.0f, 1.0f);
+            ImGui::SliderInt("Sample Count", &sampleCount, 1, 32);
+            ImGuiExt::DirectionWidget("Direction##dls", ssao.ssct.lightDirection.v);
+            ssao.ssct.sampleCount = sampleCount;
+        }
+    }
+
+    if (ImGui::CollapsingHeader("Screen-space reflections Options")) {
+        auto& ssrefl = mSettings.view.screenSpaceReflections;
+        ImGui::SliderFloat("Ray thickness", &ssrefl.thickness, 0.001f, 0.2f);
+        ImGui::SliderFloat("Bias", &ssrefl.bias, 0.001f, 0.5f);
+        ImGui::SliderFloat("Max distance", &ssrefl.maxDistance, 0.1, 10.0f);
+        ImGui::SliderFloat("Stride", &ssrefl.stride, 1.0, 10.0f);
     }
 
     if (ImGui::CollapsingHeader("Dynamic Resolution")) {

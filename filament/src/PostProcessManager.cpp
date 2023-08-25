@@ -2132,7 +2132,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::flarePass(FrameGraph& fg,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                 });
 
-                mi->setParameter("level", 1.0f);    // adjust with resolution
+                mi->setParameter("level", 0.0f);    // adjust with resolution
                 mi->setParameter("aspectRatio", float2{ aspectRatio, 1.0f / aspectRatio });
                 mi->setParameter("threshold",
                         float2{ bloomOptions.ghostThreshold, bloomOptions.haloThreshold });
