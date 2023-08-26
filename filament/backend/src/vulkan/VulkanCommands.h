@@ -31,7 +31,7 @@
 #include <atomic>
 
 #include <chrono>
-#include <stack>
+#include <list>
 #include <string>
 #include <utility>
 
@@ -45,13 +45,14 @@ public:
 
     void push(std::string const& marker, Timestamp start = {}) noexcept;
     std::pair<std::string, Timestamp> pop() noexcept;
+    std::pair<std::string, Timestamp> pop_bottom() noexcept;
     std::pair<std::string, Timestamp> top() const;
     bool empty() const noexcept;
 
 private:
-    std::stack<std::string> mMarkers;
+    std::list<std::string> mMarkers;
 #if FILAMENT_VULKAN_VERBOSE
-    std::stack<Timestamp> mTimestamps;
+    std::list<Timestamp> mTimestamps;
 #endif
 };
 

@@ -148,4 +148,8 @@ value_object<View::SoftShadowOptions>("View$SoftShadowOptions")
     .field("penumbraRatioScale", &View::SoftShadowOptions::penumbraRatioScale)
     ;
 
+value_object<View::StereoscopicOptions>("View$StereoscopicOptions")
+    .field("enabled", &View::StereoscopicOptions::enabled)
+    ;
+
 } // EMSCRIPTEN_BINDINGS

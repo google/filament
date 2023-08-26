@@ -33,13 +33,13 @@ struct MaterialVertexInputs {
 
 // Workaround for a driver bug on ARM Bifrost GPUs. Assigning a structure member
 // (directly or inside an expression) to an invariant causes a driver crash.
-vec4 getWorldPosition(MaterialVertexInputs material) {
+vec4 getWorldPosition(const MaterialVertexInputs material) {
     return material.worldPosition;
 }
 
 #ifdef VERTEX_DOMAIN_DEVICE
 #ifdef MATERIAL_HAS_CLIP_SPACE_TRANSFORM
-mat4 getMaterialClipSpaceTransform(MaterialVertexInputs material) {
+mat4 getMaterialClipSpaceTransform(const MaterialVertexInputs material) {
     return material.clipSpaceTransform;
 }
 #endif // MATERIAL_HAS_CLIP_SPACE_TRANSFORM

@@ -62,14 +62,14 @@ vec3 mulBoneVertex(vec3 v, uint i) {
     return v.x * m[0].xyz + (v.y * m[1].xyz + (v.z * m[2].xyz + m[3].xyz));
 }
 
-void skinNormal(inout vec3 n, uvec4 ids, vec4 weights) {
+void skinNormal(inout vec3 n, const uvec4 ids, const vec4 weights) {
     n =   mulBoneNormal(n, ids.x) * weights.x
         + mulBoneNormal(n, ids.y) * weights.y
         + mulBoneNormal(n, ids.z) * weights.z
         + mulBoneNormal(n, ids.w) * weights.w;
 }
 
-void skinPosition(inout vec3 p, uvec4 ids, vec4 weights) {
+void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
     p =   mulBoneVertex(p, ids.x) * weights.x
         + mulBoneVertex(p, ids.y) * weights.y
         + mulBoneVertex(p, ids.z) * weights.z
