@@ -194,13 +194,15 @@ void MetalSwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, 
     frameScheduledUserData = user;
 }
 
-void MetalSwapChain::setFrameCompletedCallback(FrameCompletedCallback callback, void* user) {
-    frameCompletedCallback = callback;
-    frameCompletedUserData = user;
+void MetalSwapChain::setFrameCompletedCallback(CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user) {
+    frameCompleted.handler = handler;
+    frameCompleted.callback = callback;
+    frameCompleted.user = user;
 }
 
 void MetalSwapChain::present() {
-    if (frameCompletedCallback) {
+    if (frameCompleted.callback) {
         scheduleFrameCompletedCallback();
     }
     if (drawable) {
@@ -244,30 +246,17 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
 }
 
 void MetalSwapChain::scheduleFrameCompletedCallback() {
-    if (!frameCompletedCallback) {
+    if (!frameCompleted.callback) {
         return;
     }
 
-    FrameCompletedCallback callback = frameCompletedCallback;
-    void* userData = frameCompletedUserData;
-    [getPendingCommandBuffer(&context) addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-        struct CallbackData {
-            void* userData;
-            FrameCompletedCallback callback;
-        };
-        CallbackData* data = new CallbackData();
-        data->userData = userData;
-        data->callback = callback;
+    CallbackHandler* handler = frameCompleted.handler;
+    void* user = frameCompleted.user;
+    CallbackHandler::Callback callback = frameCompleted.callback;
 
-        // Instantiate a BufferDescriptor with a callback for the sole purpose of passing it to
-        // scheduleDestroy. This forces the BufferDescriptor callback (and thus the
-        // FrameCompletedCallback) to be called on the user thread.
-        BufferDescriptor b(nullptr, 0u, [](void* buffer, size_t size, void* user) {
-            CallbackData* data = (CallbackData*) user;
-            data->callback(data->userData);
-            free(data);
-        }, data);
-        context.driver->scheduleDestroy(std::move(b));
+    MetalDriver* driver = context.driver;
+    [getPendingCommandBuffer(&context) addCompletedHandler:^(id<MTLCommandBuffer> cb) {
+        driver->scheduleCallback(handler, user, callback);
     }];
 }
 
