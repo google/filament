@@ -34,9 +34,12 @@ class Entity;
 namespace filament {
 
 /**
- * Camera represents the eye through which the scene is viewed.
+ * Camera represents the eye(s) through which the scene is viewed.
  *
  * A Camera has a position and orientation and controls the projection and exposure parameters.
+ *
+ * For stereoscopic rendering, a Camera maintains two separate "eyes": Eye 0 and Eye 1. These are
+ * arbitrary and don't necessarily need to correspond to "left" and "right".
  *
  * Creation and destruction
  * ========================
@@ -140,6 +143,18 @@ namespace filament {
  * intensity and the Camera exposure interact to produce the final scene's brightness.
  *
  *
+ * Stereoscopic rendering
+ * ======================
+ *
+ * The Camera's transform (as set by setModelMatrix or via TransformManager) defines a "head" space,
+ * which typically corresponds to the location of the viewer's head. Each eye's transform is set
+ * relative to this head space by setEyeModelMatrix.
+ *
+ * Each eye also maintains its own projection matrix. These can be set with setCustomEyeProjection.
+ * Care must be taken to correctly set the projectionForCulling matrix, as well as its corresponding
+ * near and far values. The projectionForCulling matrix must define a frustum (in head space) that
+ * bounds the frustums of both eyes. Alternatively, culling may be disabled with
+ * View::setFrustumCullingEnabled.
  *
  * \see Frustum, View
  */
@@ -234,6 +249,24 @@ public:
      */
     void setCustomProjection(math::mat4 const& projection, double near, double far) noexcept;
 
+    /** Sets a custom projection matrix for each eye.
+     *
+     * The projectionForCulling, near, and far parameters establish a "culling frustum" which must
+     * encompass anything either eye can see.
+     *
+     * @param projection an array of projection matrices, only the first
+     *                   CONFIG_STEREOSCOPIC_EYES (2) are read
+     * @param count size of the projection matrix array to set, must be
+     *              >= CONFIG_STEREOSCOPIC_EYES (2)
+     * @param projectionForCulling custom projection matrix for culling, must encompass both eyes
+     * @param near distance in world units from the camera to the culling near plane. \p near > 0.
+     * @param far distance in world units from the camera to the culling far plane. \p far > \p
+     * near.
+     * @see setCustomProjection
+     */
+    void setCustomEyeProjection(math::mat4 const* projection, size_t count,
+            math::mat4 const& projectionForCulling, double near, double far);
+
     /** Sets the projection matrix.
      *
      * The projection matrices must be of one of the following form:
@@ -309,11 +342,14 @@ public:
      * The projection matrix used for rendering always has its far plane set to infinity. This
      * is why it may differ from the matrix set through setProjection() or setLensProjection().
      *
+     * @param eyeId the index of the eye to return the projection matrix for, must be <
+     *              CONFIG_STEREOSCOPIC_EYES (2)
      * @return The projection matrix used for rendering
      *
-     * @see setProjection, setLensProjection, setCustomProjection, getCullingProjectionMatrix
+     * @see setProjection, setLensProjection, setCustomProjection, getCullingProjectionMatrix,
+     * setCustomEyeProjection
      */
-    math::mat4 getProjectionMatrix() const noexcept;
+    math::mat4 getProjectionMatrix(uint8_t eyeId = 0) const;
 
 
     /** Returns the projection matrix used for culling (far plane is finite).
@@ -349,6 +385,26 @@ public:
      */
     void setModelMatrix(const math::mat4& model) noexcept;
     void setModelMatrix(const math::mat4f& model) noexcept; //!< @overload
+
+    /** Set the position of an eye relative to this Camera (head).
+     *
+     * By default, both eyes' model matrices are identity matrices.
+     *
+     * For example, to position Eye 0 3cm leftwards and Eye 1 3cm rightwards:
+     * ~~~~~~~~~~~{.cpp}
+     * const mat4 leftEye  = mat4::translation(double3{-0.03, 0.0, 0.0});
+     * const mat4 rightEye = mat4::translation(double3{ 0.03, 0.0, 0.0});
+     * camera.setEyeModelMatrix(0, leftEye);
+     * camera.setEyeModelMatrix(1, rightEye);
+     * ~~~~~~~~~~~
+     *
+     * This method is not intended to be called every frame. Instead, to update the position of the
+     * head, use Camera::setModelMatrix.
+     *
+     * @param eyeId the index of the eye to set, must be < CONFIG_STEREOSCOPIC_EYES (2)
+     * @param model the model matrix for an individual eye
+     */
+    void setEyeModelMatrix(uint8_t eyeId, math::mat4 const& model);
 
     /** Sets the camera's model matrix
      *
@@ -448,7 +504,9 @@ public:
     //! returns this camera's sensitivity in ISO
     float getSensitivity() const noexcept;
 
-    //! returns the focal length in meters [m] for a 35mm camera
+    /** Returns the focal length in meters [m] for a 35mm camera.
+     * Eye 0's projection matrix is used to compute the focal length.
+     */
     double getFocalLength() const noexcept;
 
     /**

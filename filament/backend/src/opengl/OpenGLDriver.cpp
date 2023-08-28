@@ -191,27 +191,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
     assert_invariant(mContext.ext.EXT_disjoint_timer_query);
 #endif
 
-#if defined(BACKEND_OPENGL_VERSION_GL) || defined(GL_EXT_disjoint_timer_query)
-    if (mContext.ext.EXT_disjoint_timer_query) {
-        // timer queries are available
-        if (mContext.bugs.dont_use_timer_query && mPlatform.canCreateFence()) {
-            // however, they don't work well, revert to using fences if we can.
-            mTimerQueryImpl = new OpenGLTimerQueryFence(mPlatform);
-        } else {
-            mTimerQueryImpl = new TimerQueryNative(mContext);
-        }
-        mFrameTimeSupported = true;
-    } else
-#endif
-    if (mPlatform.canCreateFence()) {
-        // no timer queries, but we can use fences
-        mTimerQueryImpl = new OpenGLTimerQueryFence(mPlatform);
-        mFrameTimeSupported = true;
-    } else {
-        // no queries, no fences -- that's a problem
-        mTimerQueryImpl = new TimerQueryFallback();
-        mFrameTimeSupported = false;
-    }
+    mTimerQueryImpl = OpenGLTimerQueryFactory::init(mPlatform, *this);
 
     mShaderCompilerService.init();
 }
@@ -236,6 +216,14 @@ void OpenGLDriver::terminate() {
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     // and make sure to execute all the GpuCommandCompleteOps callbacks
     executeGpuCommandsCompleteOps();
+
+    // as well as the FrameCompleteOps callbacks
+    if (UTILS_UNLIKELY(!mFrameCompleteOps.empty())) {
+        for (auto&& op: mFrameCompleteOps) {
+            op();
+        }
+        mFrameCompleteOps.clear();
+    }
 
     // because we called glFinish(), all callbacks should have been executed
     assert_invariant(mGpuCommandCompleteOps.empty());
@@ -1356,35 +1344,15 @@ void OpenGLDriver::createFenceR(Handle<HwFence> fh, int) {
     }
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     else {
-        f->sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
         std::weak_ptr<GLFence::State> const weak = f->state;
-        runEveryNowAndThen(
-                [sync = f->sync, weak]() -> bool {
-                    auto state = weak.lock();
-                    if (state) {
-                        FenceStatus fenceStatus;
-                        GLenum const syncStatus = glClientWaitSync(sync, 0, 0u);
-                        switch (syncStatus) {
-                            case GL_TIMEOUT_EXPIRED:
-                                fenceStatus = FenceStatus::TIMEOUT_EXPIRED;
-                                break;
-                            case GL_ALREADY_SIGNALED:
-                            case GL_CONDITION_SATISFIED:
-                                fenceStatus = FenceStatus::CONDITION_SATISFIED;
-                                break;
-                            default:
-                                fenceStatus = FenceStatus::ERROR;
-                                break;
-                        }
-                        if (fenceStatus != FenceStatus::TIMEOUT_EXPIRED) {
-                            std::lock_guard const lock(state->lock);
-                            state->status = fenceStatus;
-                            state->cond.notify_all();
-                        }
-                        return (fenceStatus != FenceStatus::TIMEOUT_EXPIRED);
-                    }
-                    return true;
-                });
+        whenGpuCommandsComplete([weak](){
+            auto state = weak.lock();
+            if (state) {
+                std::lock_guard const lock(state->lock);
+                state->status = FenceStatus::CONDITION_SATISFIED;
+                state->cond.notify_all();
+            }
+        });
     }
 #endif
 }
@@ -1418,10 +1386,8 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
 
 void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     DEBUG_MARKER()
-
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
-    mContext.procs.genQueries(1u, &tq->gl.query);
-    CHECK_GL_ERROR(utils::slog.e)
+    mTimerQueryImpl->createTimerQuery(tq);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1526,12 +1492,33 @@ void OpenGLDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
         if (rt->gl.fbo) {
             // first unbind this framebuffer if needed
             gl.bindFramebuffer(GL_FRAMEBUFFER, 0);
-            glDeleteFramebuffers(1, &rt->gl.fbo);
         }
         if (rt->gl.fbo_read) {
             // first unbind this framebuffer if needed
             gl.bindFramebuffer(GL_FRAMEBUFFER, 0);
-            glDeleteFramebuffers(1, &rt->gl.fbo_read);
+        }
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+        if (UTILS_UNLIKELY(gl.bugs.delay_fbo_destruction)) {
+            if (rt->gl.fbo) {
+                whenFrameComplete([fbo = rt->gl.fbo]() {
+                    glDeleteFramebuffers(1, &fbo);
+                });
+            }
+            if (rt->gl.fbo_read) {
+                whenFrameComplete([fbo_read = rt->gl.fbo_read]() {
+                    glDeleteFramebuffers(1, &fbo_read);
+                });
+            }
+        } else
+#endif
+        {
+            if (rt->gl.fbo) {
+                glDeleteFramebuffers(1, &rt->gl.fbo);
+            }
+            if (rt->gl.fbo_read) {
+                glDeleteFramebuffers(1, &rt->gl.fbo_read);
+            }
         }
         destruct(rth, rt);
     }
@@ -1580,7 +1567,7 @@ void OpenGLDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 
     if (tqh) {
         GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
-        getContext().procs.deleteQueries(1u, &tq->gl.query);
+        mTimerQueryImpl->destroyTimerQuery(tq);
         destruct(tqh, tq);
     }
 }
@@ -1691,17 +1678,11 @@ void OpenGLDriver::destroyFence(Handle<HwFence> fh) {
         if (mPlatform.canCreateFence() || mContext.isES2()) {
             mPlatform.destroyFence(f->fence);
         }
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-        else {
-            glDeleteSync(f->sync);
-            CHECK_GL_ERROR(utils::slog.e)
-        }
-#endif
         destruct(fh, f);
     }
 }
 
-FenceStatus OpenGLDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
+FenceStatus OpenGLDriver::getFenceStatus(Handle<HwFence> fh) {
     if (fh) {
         GLFence* f = handle_cast<GLFence*>(fh);
         if (mPlatform.canCreateFence() || mContext.isES2()) {
@@ -1714,14 +1695,13 @@ FenceStatus OpenGLDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
                 // - wait() was called before the fence was asynchronously created.
                 return FenceStatus::TIMEOUT_EXPIRED;
             }
-            return mPlatform.waitFence(f->fence, timeout);
+            return mPlatform.waitFence(f->fence, 0);
         }
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
         else {
             assert_invariant(f->state);
             std::unique_lock lock(f->state->lock);
-            f->state->cond.wait_for(lock,
-                    std::chrono::nanoseconds(timeout), [&state = f->state]() {
+            f->state->cond.wait_for(lock, std::chrono::nanoseconds(0), [&state = f->state]() {
                 return state->status != FenceStatus::TIMEOUT_EXPIRED;
             });
             return f->state->status;
@@ -1874,7 +1854,7 @@ bool OpenGLDriver::isFrameBufferFetchMultiSampleSupported() {
 }
 
 bool OpenGLDriver::isFrameTimeSupported() {
-    return mFrameTimeSupported;
+    return OpenGLTimerQueryFactory::isGpuTimeSupported();
 }
 
 bool OpenGLDriver::isAutoDepthResolveSupported() {
@@ -1902,6 +1882,10 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
             return mContext.bugs.enable_initialize_non_used_uniform_array;
         case Workaround::DISABLE_BLIT_INTO_TEXTURE_ARRAY:
             return mContext.bugs.disable_blit_into_texture_array;
+        case Workaround::POWER_VR_SHADER_WORKAROUNDS:
+            return mContext.bugs.powervr_shader_workarounds;
+        case Workaround::DISABLE_THREAD_AFFINITY:
+            return mContext.bugs.disable_thread_affinity;
         default:
             return false;
     }
@@ -1938,6 +1922,16 @@ void OpenGLDriver::commit(Handle<HwSwapChain> sch) {
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     mPlatform.commit(sc->swapChain);
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    if (UTILS_UNLIKELY(!mFrameCompleteOps.empty())) {
+        whenGpuCommandsComplete([ops = std::move(mFrameCompleteOps)]() {
+            for (auto&& op: ops) {
+                op();
+            }
+        });
+    }
+#endif
 }
 
 void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
@@ -2582,8 +2576,6 @@ void OpenGLDriver::replaceStream(GLTexture* texture, GLStream* newStream) noexce
 void OpenGLDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
     DEBUG_MARKER()
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
-    // reset the state of the result availability
-    tq->elapsed.store(0, std::memory_order_relaxed);
     mTimerQueryImpl->beginTimeElapsedQuery(tq);
 }
 
@@ -2591,27 +2583,11 @@ void OpenGLDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
     DEBUG_MARKER()
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
     mTimerQueryImpl->endTimeElapsedQuery(tq);
-
-    runEveryNowAndThen([this, tq]() -> bool {
-        if (!mTimerQueryImpl->queryResultAvailable(tq)) {
-            // we need to try this one again later
-            return false;
-        }
-        tq->elapsed.store(mTimerQueryImpl->queryResult(tq), std::memory_order_relaxed);
-        return true;
-    });
 }
 
 bool OpenGLDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
-    uint64_t const d = tq->elapsed.load(std::memory_order_relaxed);
-    if (!d) {
-        return false;
-    }
-    if (elapsedTime) {
-        *elapsedTime = d;
-    }
-    return true;
+    return OpenGLTimerQueryInterface::getTimerQueryValue(tq, elapsedTime);
 }
 
 void OpenGLDriver::compilePrograms(CompilerPriorityQueue priority,
@@ -3205,6 +3181,10 @@ void OpenGLDriver::executeEveryNowAndThenOps() noexcept {
 }
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+void OpenGLDriver::whenFrameComplete(const std::function<void()>& fn) noexcept {
+    mFrameCompleteOps.push_back(fn);
+}
+
 void OpenGLDriver::whenGpuCommandsComplete(const std::function<void()>& fn) noexcept {
     GLsync sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
     mGpuCommandCompleteOps.emplace_back(sync, fn);

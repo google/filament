@@ -283,6 +283,14 @@ bool View::isStencilBufferEnabled() const noexcept {
     return downcast(this)->isStencilBufferEnabled();
 }
 
+void View::setStereoscopicOptions(const StereoscopicOptions& options) noexcept {
+    return downcast(this)->setStereoscopicOptions(options);
+}
+
+const View::StereoscopicOptions& View::getStereoscopicOptions() const noexcept {
+    return downcast(this)->getStereoscopicOptions();
+}
+
 View::PickingQuery& View::pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
         View::PickingQueryResultCallback callback) noexcept {
     return downcast(this)->pick(x, y, handler, callback);

@@ -169,6 +169,7 @@ public:
     bool hasDPCF() const noexcept { return mShadowType == ShadowType::DPCF; }
     bool hasPCSS() const noexcept { return mShadowType == ShadowType::PCSS; }
     bool hasPicking() const noexcept { return mActivePickingQueriesList != nullptr; }
+    bool hasInstancedStereo() const noexcept { return mStereoscopicOptions.enabled; }
 
     FrameGraphId<FrameGraphTexture> renderShadowMaps(FEngine& engine, FrameGraph& fg,
             CameraInfo const& cameraInfo, math::float4 const& userTime,
@@ -191,6 +192,8 @@ public:
     void setStencilBufferEnabled(bool enabled) noexcept { mStencilBufferEnabled = enabled; }
 
     bool isStencilBufferEnabled() const noexcept { return mStencilBufferEnabled; }
+
+    void setStereoscopicOptions(StereoscopicOptions const& options) noexcept;
 
     FCamera const* getDirectionalLightCamera() const noexcept {
         return &mShadowMapManager.getShadowMap(0)->getDebugCamera();
@@ -262,6 +265,10 @@ public:
 
     Dithering getDithering() const noexcept {
         return mDithering;
+    }
+
+    const StereoscopicOptions& getStereoscopicOptions() const noexcept {
+        return mStereoscopicOptions;
     }
 
     bool hasPostProcessPass() const noexcept {
@@ -512,6 +519,7 @@ private:
     MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
     ScreenSpaceReflectionsOptions mScreenSpaceReflectionsOptions;
     GuardBandOptions mGuardBandOptions;
+    StereoscopicOptions mStereoscopicOptions;
     BlendMode mBlendMode = BlendMode::OPAQUE;
     const FColorGrading* mColorGrading = nullptr;
     const FColorGrading* mDefaultColorGrading = nullptr;

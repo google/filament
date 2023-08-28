@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
- #ifndef TNT_FILAMENT_BACKEND_VULKANHANDLES_H
- #define TNT_FILAMENT_BACKEND_VULKANHANDLES_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANHANDLES_H
+#define TNT_FILAMENT_BACKEND_VULKANHANDLES_H
 
-#include "VulkanDriver.h"
+// This needs to be at the top
+#include "DriverBase.h"
+
 #include "VulkanPipelineCache.h"
 #include "VulkanBuffer.h"
 #include "VulkanSwapChain.h"
@@ -26,7 +28,7 @@
 
 #include "private/backend/SamplerGroup.h"
 
-#include "utils/Mutex.h"
+#include <utils/Mutex.h>
 
 namespace filament::backend {
 

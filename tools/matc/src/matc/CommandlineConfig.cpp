@@ -76,7 +76,7 @@ static void usage(char* name) {
             "   --variant-filter=<filter>, -V <filter>\n"
             "       Filter out specified comma-separated variants:\n"
             "           directionalLighting, dynamicLighting, shadowReceiver, skinning, vsm, fog,"
-            "           ssr (screen-space reflections)\n"
+            "           ssr (screen-space reflections), stereo\n"
             "       This variant filter is merged with the filter from the material, if any\n\n"
             "   --version, -v\n"
             "       Print the material version number\n\n"
@@ -133,6 +133,8 @@ static filament::UserVariantFilterMask parseVariantFilter(const std::string& arg
             variantFilter |= (uint32_t) filament::UserVariantFilterBit::FOG;
         } else if (item == "ssr") {
             variantFilter |= (uint32_t) filament::UserVariantFilterBit::SSR;
+        } else if (item == "stereo") {
+            variantFilter |= (uint32_t) filament::UserVariantFilterBit::STE;
         }
     }
     return variantFilter;

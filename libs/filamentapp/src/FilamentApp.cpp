@@ -864,8 +864,14 @@ void FilamentApp::Window::configureCamerasForWindow() {
 
     double near = mFilamentApp->mCameraNear;
     double far = mFilamentApp->mCameraFar;
-    mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, double(mainWidth) / height, near, far);
+    mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, 1.0, near, far);
     mDebugCamera->setProjection(45.0, double(width) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
+
+    auto aspectRatio = double(mainWidth) / height;
+    if (mMainView->getView()->getStereoscopicOptions().enabled) {
+        aspectRatio = double(mainWidth) / 2.0 / height;
+    }
+    mMainCamera->setScaling({1.0 / aspectRatio, 1.0});
 
     // We're in split view when there are more views than just the Main and UI views.
     if (splitview) {

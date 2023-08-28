@@ -23,7 +23,6 @@
 
 #include "VulkanConstants.h"
 #include "VulkanContext.h"
-#include "VulkanDriver.h"
 
 #include <utils/Log.h>
 #include <utils/Panic.h>

@@ -29,6 +29,7 @@ static constexpr bool DEBUG_FINISH_HANGS = false;
 #include <utils/JobSystem.h>
 
 #include <utils/compiler.h>
+#include <utils/Log.h>
 #include <utils/memalign.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
@@ -46,16 +47,20 @@ static constexpr bool DEBUG_FINISH_HANGS = false;
 #endif
 
 #ifdef __ANDROID__
+    // see https://developer.android.com/topic/performance/threads#priority
 #    include <sys/time.h>
 #    include <sys/resource.h>
 #    ifndef ANDROID_PRIORITY_URGENT_DISPLAY
-#        define ANDROID_PRIORITY_URGENT_DISPLAY -8  // see include/system/thread_defs.h
+#        define ANDROID_PRIORITY_URGENT_DISPLAY (-8)
 #    endif
 #    ifndef ANDROID_PRIORITY_DISPLAY
-#        define ANDROID_PRIORITY_DISPLAY -4  // see include/system/thread_defs.h
+#        define ANDROID_PRIORITY_DISPLAY (-4)
 #    endif
 #    ifndef ANDROID_PRIORITY_NORMAL
-#        define ANDROID_PRIORITY_NORMAL 0 // see include/system/thread_defs.h
+#        define ANDROID_PRIORITY_NORMAL (0)
+#    endif
+#    ifndef ANDROID_PRIORITY_BACKGROUND
+#        define ANDROID_PRIORITY_BACKGROUND (10)
 #    endif
 #elif defined(__linux__)
 // There is no glibc wrapper for gettid on linux so we need to syscall it.
@@ -97,6 +102,9 @@ void JobSystem::setThreadPriority(Priority priority) noexcept {
 #ifdef __ANDROID__
     int androidPriority = 0;
     switch (priority) {
+        case Priority::BACKGROUND:
+            androidPriority = ANDROID_PRIORITY_BACKGROUND;
+            break;
         case Priority::NORMAL:
             androidPriority = ANDROID_PRIORITY_NORMAL;
             break;
@@ -107,7 +115,14 @@ void JobSystem::setThreadPriority(Priority priority) noexcept {
             androidPriority = ANDROID_PRIORITY_URGENT_DISPLAY;
             break;
     }
-    setpriority(PRIO_PROCESS, 0, androidPriority);
+    errno = 0;
+    UTILS_UNUSED_IN_RELEASE int error;
+    error = setpriority(PRIO_PROCESS, 0, androidPriority);
+#ifndef NDEBUG
+    if (UTILS_UNLIKELY(error)) {
+        slog.w << "setpriority failed: " << strerror(errno) << io::endl;
+    }
+#endif
 #endif
 }
 
@@ -591,7 +606,7 @@ void JobSystem::adopt() {
             "Too many calls to adopt(). No more adoptable threads!");
 
     // all threads adopted by the JobSystem need to run at the same priority
-    JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
+    JobSystem::setThreadPriority(Priority::DISPLAY);
 
     // This thread's queue will be selectable immediately (i.e.: before we set its TLS)
     // however, it's not a problem since mThreadState is pre-initialized and valid

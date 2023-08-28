@@ -28,7 +28,7 @@
 namespace filament {
 
 // update this when a new version of filament wouldn't work with older materials
-static constexpr size_t MATERIAL_VERSION = 41;
+static constexpr size_t MATERIAL_VERSION = 42;
 
 /**
  * Supported shading models
@@ -236,14 +236,15 @@ enum class Property : uint8_t {
 using UserVariantFilterMask = uint32_t;
 
 enum class UserVariantFilterBit : UserVariantFilterMask {
-    DIRECTIONAL_LIGHTING        = 0x01,
-    DYNAMIC_LIGHTING            = 0x02,
-    SHADOW_RECEIVER             = 0x04,
-    SKINNING                    = 0x08,
-    FOG                         = 0x10,
-    VSM                         = 0x20,
-    SSR                         = 0x40,
-    ALL                         = 0x7F,
+    DIRECTIONAL_LIGHTING        = 0x01,         //!< Directional lighting
+    DYNAMIC_LIGHTING            = 0x02,         //!< Dynamic lighting
+    SHADOW_RECEIVER             = 0x04,         //!< Shadow receiver
+    SKINNING                    = 0x08,         //!< Skinning
+    FOG                         = 0x10,         //!< Fog
+    VSM                         = 0x20,         //!< Variance shadow maps
+    SSR                         = 0x40,         //!< Screen-space reflections
+    STE                         = 0x80,         //!< Instanced stereo rendering
+    ALL                         = 0xFF,
 };
 
 } // namespace filament

@@ -58,7 +58,7 @@ void PerShadowMapUniforms::prepareCamera(Transaction const& transaction,
     s.worldFromViewMatrix = worldFromView;    // model
     s.clipFromViewMatrix  = clipFromView;     // projection
     s.viewFromClipMatrix  = viewFromClip;     // 1/projection
-    s.clipFromWorldMatrix = clipFromWorld;    // projection * view
+    s.clipFromWorldMatrix[0] = clipFromWorld; // projection * view
     s.worldFromClipMatrix = worldFromClip;    // 1/(projection * view)
     s.userWorldFromWorldMatrix = mat4f(inverse(camera.worldOrigin));
     s.clipTransform = camera.clipTransfrom;

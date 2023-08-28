@@ -61,7 +61,8 @@ enum class ReservedSpecializationConstants : uint8_t {
     CONFIG_MAX_INSTANCES = 1,
     CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND = 2,
     CONFIG_SRGB_SWAPCHAIN_EMULATION = 3, // don't change (hardcoded in OpenGLDriver.cpp)
-    CONFIG_FROXEL_BUFFER_HEIGHT = 4
+    CONFIG_FROXEL_BUFFER_HEIGHT = 4,
+    CONFIG_POWER_VR_SHADER_WORKAROUNDS = 5,
 };
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
@@ -115,6 +116,9 @@ constexpr size_t CONFIG_MAX_BONE_COUNT = 256;
 // Note that ES3.0 only guarantees 256 layers in an array texture.
 // Furthermore, this is constrained by CONFIG_MINSPEC_UBO_SIZE (16 bytes per morph target).
 constexpr size_t CONFIG_MAX_MORPH_TARGET_COUNT = 256;
+
+// The number of eyes in stereoscopic mode.
+constexpr uint8_t CONFIG_STEREOSCOPIC_EYES = 2;
 
 } // namespace filament
 

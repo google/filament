@@ -80,8 +80,24 @@ void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p, double near, dou
 
 void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p,
         mat4 const& c, double near, double far) noexcept {
-    mProjection = p;
+    for (uint8_t i = 0; i < CONFIG_STEREOSCOPIC_EYES; i++) {
+        mEyeProjection[i] = p;
+    }
     mProjectionForCulling = c;
+    mNear = near;
+    mFar = far;
+}
+
+void UTILS_NOINLINE FCamera::setCustomEyeProjection(math::mat4 const* projection, size_t count,
+        math::mat4 const& projectionForCulling, double near, double far) {
+    ASSERT_PRECONDITION(count >= CONFIG_STEREOSCOPIC_EYES,
+            "All eye projections must be supplied together, count must be >= "
+            "CONFIG_STEREOSCOPIC_EYES(%d)",
+            CONFIG_STEREOSCOPIC_EYES);
+    for (uint8_t i = 0; i < CONFIG_STEREOSCOPIC_EYES; i++) {
+        mEyeProjection[i] = projection[i];
+    }
+    mProjectionForCulling = projectionForCulling;
     mNear = near;
     mFar = far;
 }
@@ -142,7 +158,8 @@ void UTILS_NOINLINE FCamera::setProjection(Camera::Projection projection,
     FCamera::setCustomProjection(p, c, near, far);
 }
 
-math::mat4 FCamera::getProjectionMatrix() const noexcept {
+math::mat4 FCamera::getProjectionMatrix(uint8_t eye) const noexcept {
+    assert_invariant(eye < CONFIG_STEREOSCOPIC_EYES);
     // This is where we transform the user clip-space (GL convention) to our virtual clip-space
     // (inverted DX convention)
     // Note that this math ends up setting the projection matrix' p33 to 0, which is where we're
@@ -153,7 +170,7 @@ math::mat4 FCamera::getProjectionMatrix() const noexcept {
             0.0, 0.0, -0.5, 0.5,    // GL to inverted DX convention
             0.0, 0.0, 0.0, 1.0
     }};
-    return m * mProjection;
+    return m * mEyeProjection[eye];
 }
 
 math::mat4 FCamera::getCullingProjectionMatrix() const noexcept {
@@ -175,6 +192,12 @@ void UTILS_NOINLINE FCamera::setModelMatrix(const mat4f& modelMatrix) noexcept {
 void UTILS_NOINLINE FCamera::setModelMatrix(const mat4& modelMatrix) noexcept {
     FTransformManager& transformManager = mEngine.getTransformManager();
     transformManager.setTransform(transformManager.getInstance(mEntity), modelMatrix);
+}
+
+void UTILS_NOINLINE FCamera::setEyeModelMatrix(uint8_t eyeId, math::mat4 const& model) {
+    ASSERT_PRECONDITION(eyeId < CONFIG_STEREOSCOPIC_EYES,
+            "eyeId must be < CONFIG_STEREOSCOPIC_EYES(%d)", CONFIG_STEREOSCOPIC_EYES);
+    mEyeFromView[eyeId] = inverse(model);
 }
 
 void FCamera::lookAt(double3 const& eye, double3 const& center, double3 const& up) noexcept {
@@ -204,7 +227,8 @@ void FCamera::setExposure(float aperture, float shutterSpeed, float sensitivity)
 }
 
 double FCamera::getFocalLength() const noexcept {
-    return (FCamera::SENSOR_SIZE * mProjection[1][1]) * 0.5;
+    auto const& monoscopicEyeProjection = mEyeProjection[0];
+    return (FCamera::SENSOR_SIZE * monoscopicEyeProjection[1][1]) * 0.5;
 }
 
 double FCamera::computeEffectiveFocalLength(double focalLength, double focusDistance) noexcept {
@@ -260,7 +284,9 @@ math::details::TMat44<T> inverseProjection(const math::details::TMat44<T>& p) no
 // ------------------------------------------------------------------------------------------------
 
 CameraInfo::CameraInfo(FCamera const& camera) noexcept {
-    projection         = mat4f{ camera.getProjectionMatrix() };
+    for (uint8_t i = 0; i < CONFIG_STEREOSCOPIC_EYES; i++) {
+        eyeProjection[i]   = mat4f{ camera.getProjectionMatrix(i) };
+    }
     cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
     model              = mat4f{ camera.getModelMatrix() };
     view               = mat4f{ camera.getViewMatrix() };
@@ -274,7 +300,10 @@ CameraInfo::CameraInfo(FCamera const& camera) noexcept {
 
 CameraInfo::CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamera) noexcept {
     const mat4 modelMatrix{ worldOriginCamera * camera.getModelMatrix() };
-    projection         = mat4f{ camera.getProjectionMatrix() };
+    for (uint8_t i = 0; i < CONFIG_STEREOSCOPIC_EYES; i++) {
+        eyeProjection[i]   = mat4f{ camera.getProjectionMatrix(i) };
+        eyeFromView[i]     = mat4f{ camera.getEyeFromViewMatrix(i) };
+    }
     cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
     model              = mat4f{ modelMatrix };
     view               = mat4f{ inverse(modelMatrix) };

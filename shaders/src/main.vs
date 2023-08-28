@@ -11,8 +11,25 @@ void main() {
 #   if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
     instance_index = gl_InstanceIndex;
 #   else
-    instance_index = gl_InstanceID;
+    // PowerVR drivers don't initialize gl_InstanceID correctly if it's assigned to the varying
+    // directly and early in the shader. Adding a bit of extra integer math, works around it.
+    // Using an intermediate variable doesn't work because of spirv-opt.
+    if (CONFIG_POWER_VR_SHADER_WORKAROUNDS) {
+        instance_index = (1 + gl_InstanceID) - 1;
+    } else {
+        instance_index = gl_InstanceID;
+    }
 #   endif
+    logical_instance_index = instance_index;
+#endif
+
+#if defined(VARIANT_HAS_INSTANCED_STEREO)
+#if !defined(FILAMENT_HAS_FEATURE_INSTANCING)
+#error Instanced stereo not supported at this feature level
+#endif
+    // The lowest bit of the instance index represents the eye.
+    // This logic must be updated if CONFIG_STEREOSCOPIC_EYES changes
+    logical_instance_index = instance_index >> 1;
 #endif
 
     initObjectUniforms();
@@ -200,6 +217,25 @@ void main() {
     // this must happen before we compensate for vulkan below
     vertex_position = position;
 
+#if defined(VARIANT_HAS_INSTANCED_STEREO)
+    // This logic must be updated if CONFIG_STEREOSCOPIC_EYES changes
+    // We're transforming a vertex whose x coordinate is within the range (-w to w).
+    // To move it to the correct half of the viewport, we need to modify the x coordinate:
+    //      Eye 0  (left half): (-w to 0)
+    //      Eye 1 (right half): ( 0 to w)
+    // It's important to do this after computing vertex_position.
+    int eyeIndex = instance_index % 2;
+    float eyeShift = float(eyeIndex) * 2.0f - 1.0f;     // eye 0: -1.0,     eye 1: 1.0
+    position.x = position.x * 0.5f + (position.w * 0.5 * eyeShift);
+
+    // A fragment is clipped when gl_ClipDistance is negative (outside the clip plane). So,
+    // Eye 0 should have a positive value when x is < 0
+    //      -position.x
+    // Eye 1 should have a positive value when x is > 0
+    //       position.x
+    FILAMENT_CLIPDISTANCE[0] = position.x * eyeShift;
+#endif
+
 #if defined(TARGET_VULKAN_ENVIRONMENT)
     // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
     position.y = -position.y;
@@ -214,4 +250,9 @@ void main() {
 
     // some PowerVR drivers crash when gl_Position is written more than once
     gl_Position = position;
+
+#if defined(VARIANT_HAS_INSTANCED_STEREO)
+    // Fragment shaders filter out the stereo variant, so we need to set instance_index here.
+    instance_index = logical_instance_index;
+#endif
 }

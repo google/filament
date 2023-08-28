@@ -151,14 +151,12 @@ public:
 
     struct GLTimerQuery : public HwTimerQuery {
         struct State {
+            struct {
+                GLuint query;
+            } gl;
             std::atomic<int64_t> elapsed{};
         };
-        struct {
-            GLuint query = 0;
-            std::shared_ptr<State> emulation;
-        } gl;
-        // 0 means not available, otherwise query result in ns.
-        std::atomic<uint64_t> elapsed{};
+        std::shared_ptr<State> state;
     };
 
     struct GLStream : public HwStream {
@@ -202,7 +200,6 @@ public:
             std::condition_variable cond;
             FenceStatus status{ FenceStatus::TIMEOUT_EXPIRED };
         };
-        GLsync sync;
         std::shared_ptr<State> state{ std::make_shared<GLFence::State>() };
     };
 
@@ -214,6 +211,8 @@ private:
     OpenGLContext mContext;
     ShaderCompilerService mShaderCompilerService;
 
+    friend class OpenGLTimerQueryFactory;
+    friend class TimerQueryNative;
     OpenGLContext& getContext() noexcept { return mContext; }
 
     ShaderCompilerService& getShaderCompilerService() noexcept {
@@ -388,6 +387,9 @@ private:
     void whenGpuCommandsComplete(const std::function<void()>& fn) noexcept;
     void executeGpuCommandsCompleteOps() noexcept;
     std::vector<std::pair<GLsync, std::function<void()>>> mGpuCommandCompleteOps;
+
+    void whenFrameComplete(const std::function<void()>& fn) noexcept;
+    std::vector<std::function<void()>> mFrameCompleteOps;
 #endif
 
     // tasks regularly executed on the main thread at until they return true
@@ -397,7 +399,6 @@ private:
 
     // timer query implementation
     OpenGLTimerQueryInterface* mTimerQueryImpl = nullptr;
-    bool mFrameTimeSupported = false;
 
     // for ES2 sRGB support
     GLSwapChain* mCurrentDrawSwapChain = nullptr;

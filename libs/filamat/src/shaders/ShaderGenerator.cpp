@@ -50,6 +50,8 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(utils::io::sstream& 
             litVariants && filament::Variant::isShadowReceiverVariant(variant));
     CodeGenerator::generateDefine(out, "VARIANT_HAS_VSM",
             filament::Variant::isVSMVariant(variant));
+    CodeGenerator::generateDefine(out, "VARIANT_HAS_INSTANCED_STEREO",
+            filament::Variant::isStereoVariant(variant));
 
     switch (stage) {
         case ShaderStage::VERTEX:
