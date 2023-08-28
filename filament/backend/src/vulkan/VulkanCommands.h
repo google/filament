@@ -22,8 +22,10 @@
 #include "DriverBase.h"
 
 #include "VulkanConstants.h"
+#include "VulkanResources.h"
 
 #include <utils/Condition.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
 
 #include <atomic>
@@ -69,12 +71,28 @@ struct VulkanCmdFence {
 // DriverApi fence object and should not be destroyed until both the DriverApi object is freed and
 // we're done waiting on the most recent submission of the given command buffer.
 struct VulkanCommandBuffer {
-    VulkanCommandBuffer() {}
+    VulkanCommandBuffer(VulkanResourceAllocator* allocator)
+        : mResourceManager(allocator) {}
+
     VulkanCommandBuffer(VulkanCommandBuffer const&) = delete;
     VulkanCommandBuffer& operator=(VulkanCommandBuffer const&) = delete;
     VkCommandBuffer cmdbuffer = VK_NULL_HANDLE;
     std::shared_ptr<VulkanCmdFence> fence;
-    bool blockOnGC = false;
+
+    inline void acquire(VulkanResource* resource) {
+        mResourceManager.acquire(resource);
+    }
+
+    inline void acquire(VulkanAcquireOnlyResourceManager* srcResources) {
+        mResourceManager.acquire(srcResources);
+    }
+
+    inline void clearResources() {
+        mResourceManager.clear();
+    }
+
+private:
+    VulkanAcquireOnlyResourceManager mResourceManager;
 };
 
 // Allows classes to be notified after a new command buffer has been activated.
@@ -113,14 +131,11 @@ public:
 class VulkanCommands {
     public:
         VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
-                VulkanContext* context);
+                VulkanContext* context, VulkanResourceAllocator* allocator);
         ~VulkanCommands();
 
         // Creates a "current" command buffer if none exists, otherwise returns the current one.
-        // `blockOnGC` guarrantees that this buffer will be waited on when gc() is called on it so
-        // that dependent resources can be gc'd safetly after the buffer is sumbitted, completed,
-        // and gc'd.
-        VulkanCommandBuffer const& get(bool blockOnGC = false);
+        VulkanCommandBuffer& get();
 
         // Submits the current command buffer if it exists, then sets "current" to null.
         // If there are no outstanding commands then nothing happens and this returns false.
@@ -163,10 +178,12 @@ class VulkanCommands {
         VkCommandPool const mPool;
         VulkanContext const* mContext;
 
-        VulkanCommandBuffer* mCurrent = nullptr;
+        // int8 only goes up to 127, therefore capacity must be less than that.
+        static_assert(CAPACITY < 128);
+        int8_t mCurrentCommandBufferIndex = -1;
         VkSemaphore mSubmissionSignal = {};
         VkSemaphore mInjectedSignal = {};
-        VulkanCommandBuffer mStorage[CAPACITY] = {};
+        utils::FixedCapacityVector<std::unique_ptr<VulkanCommandBuffer>> mStorage;
         VkSemaphore mSubmissionSignals[CAPACITY] = {};
         size_t mAvailableCount = CAPACITY;
         CommandBufferObserver* mObserver = nullptr;

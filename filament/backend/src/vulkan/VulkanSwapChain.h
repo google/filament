@@ -20,6 +20,7 @@
 #include "DriverBase.h"
 
 #include "VulkanContext.h"
+#include "VulkanResources.h"
 
 #include <backend/platforms/VulkanPlatform.h>
 
@@ -36,7 +37,7 @@ struct VulkanHeadlessSwapChain;
 struct VulkanSurfaceSwapChain;
 
 // A wrapper around the platform implementation of swapchain.
-struct VulkanSwapChain : public HwSwapChain {
+struct VulkanSwapChain : public HwSwapChain, VulkanResource {
     VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& context, VmaAllocator allocator,
             VulkanCommands* commands, VulkanStagePool& stagePool,
             void* nativeWindow, uint64_t flags, VkExtent2D extent = {0, 0});

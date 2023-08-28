@@ -19,6 +19,7 @@
 #include "VulkanFboCache.h"
 #include "VulkanHandles.h"
 #include "VulkanSamplerCache.h"
+#include "VulkanTexture.h"
 
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
@@ -136,16 +137,20 @@ void VulkanBlitter::blitColor(BlitArgs args) {
     VkFormatProperties info;
     vkGetPhysicalDeviceFormatProperties(gpu, src.getFormat(), &info);
     if (!ASSERT_POSTCONDITION_NON_FATAL(info.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT,
-            "Source format is not blittable")) {
+                "Source format is not blittable %d", src.getFormat())) {
         return;
     }
     vkGetPhysicalDeviceFormatProperties(gpu, dst.getFormat(), &info);
     if (!ASSERT_POSTCONDITION_NON_FATAL(info.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT,
-            "Destination format is not blittable")) {
+                "Destination format is not blittable %d", dst.getFormat())) {
         return;
     }
 #endif
-    VkCommandBuffer const cmdbuffer = mCommands->get().cmdbuffer;
+    VulkanCommandBuffer& commands = mCommands->get();
+    VkCommandBuffer const cmdbuffer = commands.cmdbuffer;
+    commands.acquire(src.texture);
+    commands.acquire(dst.texture);
+
     blitFast(cmdbuffer, aspect, args.filter, args.srcTarget->getExtent(), src, dst,
             args.srcRectPair, args.dstRectPair);
 }
@@ -160,12 +165,12 @@ void VulkanBlitter::blitDepth(BlitArgs args) {
     VkFormatProperties info;
     vkGetPhysicalDeviceFormatProperties(gpu, src.getFormat(), &info);
     if (!ASSERT_POSTCONDITION_NON_FATAL(info.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT,
-            "Depth format is not blittable")) {
+                "Depth src format is not blittable %d", src.getFormat())) {
         return;
     }
     vkGetPhysicalDeviceFormatProperties(gpu, dst.getFormat(), &info);
     if (!ASSERT_POSTCONDITION_NON_FATAL(info.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT,
-            "Depth format is not blittable")) {
+                "Depth dst format is not blittable %d", dst.getFormat())) {
         return;
     }
 #endif
@@ -177,7 +182,11 @@ void VulkanBlitter::blitDepth(BlitArgs args) {
                 args.dstRectPair);
         return;
     }
-    VkCommandBuffer const cmdbuffer = mCommands->get().cmdbuffer;
+
+    VulkanCommandBuffer& commands = mCommands->get();
+    VkCommandBuffer const cmdbuffer = commands.cmdbuffer;
+    commands.acquire(src.texture);
+    commands.acquire(dst.texture);
     blitFast(cmdbuffer, aspect, args.filter, args.srcTarget->getExtent(), src, dst, args.srcRectPair,
             args.dstRectPair);
 }
@@ -247,13 +256,16 @@ void VulkanBlitter::lazyInit() noexcept {
         +1.0f, +1.0f,
     };
 
-    mTriangleBuffer = new VulkanBuffer(mAllocator, mCommands, mStagePool,
-            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(kTriangleVertices));
+    VulkanCommandBuffer& commands = mCommands->get();
+    VkCommandBuffer const cmdbuffer = commands.cmdbuffer;
 
-    mTriangleBuffer->loadFromCpu(kTriangleVertices, 0, sizeof(kTriangleVertices));
+    mTriangleBuffer = new VulkanBuffer(mAllocator, mStagePool, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            sizeof(kTriangleVertices));
 
-    mParamsBuffer = new VulkanBuffer(mAllocator, mCommands, mStagePool,
-            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(BlitterUniforms));
+    mTriangleBuffer->loadFromCpu(cmdbuffer, kTriangleVertices, 0, sizeof(kTriangleVertices));
+
+    mParamsBuffer = new VulkanBuffer(mAllocator, mStagePool, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            sizeof(BlitterUniforms));
 }
 
 // At a high level, the procedure for resolving depth looks like this:
@@ -265,11 +277,16 @@ void VulkanBlitter::blitSlowDepth(VkFilter filter, const VkExtent2D srcExtent, V
         VulkanAttachment dst, const VkOffset3D srcRect[2], const VkOffset3D dstRect[2]) {
     lazyInit();
 
+    VulkanCommandBuffer* commands = &mCommands->get();
+    VkCommandBuffer const cmdbuffer = commands->cmdbuffer;
+    commands->acquire(src.texture);
+    commands->acquire(dst.texture);
+
     BlitterUniforms const uniforms = {
-        .sampleCount = src.texture->samples,
-        .inverseSampleCount = 1.0f / float(src.texture->samples),
+            .sampleCount = src.texture->samples,
+            .inverseSampleCount = 1.0f / float(src.texture->samples),
     };
-    mParamsBuffer->loadFromCpu(&uniforms, 0, sizeof(uniforms));
+    mParamsBuffer->loadFromCpu(cmdbuffer, &uniforms, 0, sizeof(uniforms));
 
     VkImageAspectFlags const aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
 
@@ -315,8 +332,6 @@ void VulkanBlitter::blitSlowDepth(VkFilter filter, const VkExtent2D srcExtent, V
     renderPassInfo.renderArea.offset.y = dstRect[0].y;
     renderPassInfo.renderArea.extent.width = dstRect[1].x - dstRect[0].x;
     renderPassInfo.renderArea.extent.height = dstRect[1].y - dstRect[0].y;
-
-    const VkCommandBuffer cmdbuffer = mCommands->get().cmdbuffer;
 
     // We need to transition the source into a sampler since it'll be sampled in the shader.
     const VkImageSubresourceRange srcRange = {
@@ -378,6 +393,7 @@ void VulkanBlitter::blitSlowDepth(VkFilter filter, const VkExtent2D srcExtent, V
     VkSampler vksampler = mSamplerCache.getSampler({});
 
     VkDescriptorImageInfo samplers[VulkanPipelineCache::SAMPLER_BINDING_COUNT];
+    VulkanTexture* textures[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {nullptr};
     for (auto& sampler : samplers) {
         sampler = {
             .sampler = vksampler,
@@ -391,8 +407,9 @@ void VulkanBlitter::blitSlowDepth(VkFilter filter, const VkExtent2D srcExtent, V
         .imageView = src.getImageView(VK_IMAGE_ASPECT_DEPTH_BIT),
         .imageLayout = ImgUtil::getVkLayout(samplerLayout),
     };
+    textures[0] = src.texture;
 
-    mPipelineCache.bindSamplers(samplers,
+    mPipelineCache.bindSamplers(samplers, textures,
             VulkanPipelineCache::getUsageFlags(0, ShaderStageFlags::FRAGMENT));
 
     auto previousUbo = mPipelineCache.getUniformBufferBinding(0);
@@ -409,7 +426,7 @@ void VulkanBlitter::blitSlowDepth(VkFilter filter, const VkExtent2D srcExtent, V
 
     mPipelineCache.bindScissor(cmdbuffer, scissor);
 
-    if (!mPipelineCache.bindPipeline(cmdbuffer)) {
+    if (!mPipelineCache.bindPipeline(commands)) {
         assert_invariant(false);
     }
 

@@ -28,7 +28,8 @@ namespace filament::backend {
 VulkanSwapChain::VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& context,
         VmaAllocator allocator, VulkanCommands* commands, VulkanStagePool& stagePool,
         void* nativeWindow, uint64_t flags, VkExtent2D extent)
-    : mPlatform(platform),
+    : VulkanResource(VulkanResourceType::SWAP_CHAIN),
+      mPlatform(platform),
       mCommands(commands),
       mAllocator(allocator),
       mStagePool(stagePool),
@@ -67,11 +68,11 @@ void VulkanSwapChain::update() {
     for (auto const color: bundle.colors) {
         mColors.push_back(std::make_unique<VulkanTexture>(device, mAllocator, mCommands, color,
                 bundle.colorFormat, 1, bundle.extent.width, bundle.extent.height,
-                TextureUsage::COLOR_ATTACHMENT, mStagePool));
+                TextureUsage::COLOR_ATTACHMENT, mStagePool, true /* heap allocated */));
     }
     mDepth = std::make_unique<VulkanTexture>(device, mAllocator, mCommands, bundle.depth,
             bundle.depthFormat, 1, bundle.extent.width, bundle.extent.height,
-            TextureUsage::DEPTH_ATTACHMENT, mStagePool);
+            TextureUsage::DEPTH_ATTACHMENT, mStagePool, true /* heap allocated */);
 
     mExtent = bundle.extent;
 }

@@ -22,6 +22,7 @@
 
 #include "VulkanConstants.h"
 #include "VulkanHandles.h"
+#include "VulkanTexture.h"
 #include "VulkanUtility.h"
 
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
@@ -64,7 +65,10 @@ VulkanPipelineCache::getUsageFlags(uint16_t binding, ShaderStageFlags flags, Usa
     return src;
 }
 
-VulkanPipelineCache::VulkanPipelineCache() : mCurrentRasterState(createDefaultRasterState()) {
+VulkanPipelineCache::VulkanPipelineCache(VulkanResourceAllocator* allocator)
+    : mCurrentRasterState(createDefaultRasterState()),
+      mResourceAllocator(allocator),
+      mPipelineBoundResources(allocator) {
     mDummyBufferWriteInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     mDummyBufferWriteInfo.pNext = nullptr;
     mDummyBufferWriteInfo.dstArrayElement = 0;
@@ -144,6 +148,15 @@ bool VulkanPipelineCache::bindDescriptors(VkCommandBuffer cmdbuffer) noexcept {
 
     cacheEntry->lastUsed = mCurrentTime;
     mBoundDescriptor = mDescriptorRequirements;
+    // This passes the currently "bound" uniform buffer objects to pipeline that will be used in the
+    // draw call.
+    auto resourceEntry = mDescriptorResources.find(cacheEntry->id);
+    if (resourceEntry == mDescriptorResources.end()) {
+        mDescriptorResources[cacheEntry->id]
+                = std::make_unique<VulkanAcquireOnlyResourceManager>(mResourceAllocator);
+        resourceEntry = mDescriptorResources.find(cacheEntry->id);
+    }
+    resourceEntry->second->acquire(&mPipelineBoundResources);
 
     vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             getOrCreatePipelineLayout()->handle, 0, VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT,
@@ -152,7 +165,9 @@ bool VulkanPipelineCache::bindDescriptors(VkCommandBuffer cmdbuffer) noexcept {
     return true;
 }
 
-bool VulkanPipelineCache::bindPipeline(VkCommandBuffer cmdbuffer) noexcept {
+bool VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) noexcept {
+    VkCommandBuffer const cmdbuffer = commands->cmdbuffer;
+
     PipelineMap::iterator pipelineIter = mPipelines.find(mPipelineRequirements);
 
     // Check if the required pipeline is already bound.
@@ -191,7 +206,10 @@ void VulkanPipelineCache::bindScissor(VkCommandBuffer cmdbuffer, VkRect2D scisso
 VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptorSets() noexcept {
     PipelineLayoutCacheEntry* layoutCacheEntry = getOrCreatePipelineLayout();
 
-    DescriptorCacheEntry descriptorCacheEntry = { .pipelineLayout = mPipelineRequirements.layout };
+    DescriptorCacheEntry descriptorCacheEntry = {
+        .pipelineLayout = mPipelineRequirements.layout,
+        .id = mDescriptorCacheEntryCount++,
+    };
 
     // Each of the arenas for this particular layout are guaranteed to have the same size. Check
     // the first arena to see if any descriptor sets are available that can be re-claimed. If not,
@@ -602,13 +620,19 @@ void VulkanPipelineCache::unbindImageView(VkImageView imageView) noexcept {
     }
 }
 
-void VulkanPipelineCache::bindUniformBuffer(uint32_t bindingIndex, VkBuffer uniformBuffer,
+void VulkanPipelineCache::bindUniformBufferObject(uint32_t bindingIndex,
+        VulkanBufferObject* bufferObject, VkDeviceSize offset, VkDeviceSize size) noexcept {
+    bindUniformBuffer(bindingIndex, bufferObject->buffer.getGpuBuffer(), offset, size);
+    mPipelineBoundResources.acquire(bufferObject);
+}
+
+void VulkanPipelineCache::bindUniformBuffer(uint32_t bindingIndex, VkBuffer buffer,
         VkDeviceSize offset, VkDeviceSize size) noexcept {
     ASSERT_POSTCONDITION(bindingIndex < UBUFFER_BINDING_COUNT,
-            "Uniform bindings overflow: index = %d, capacity = %d.",
-            bindingIndex, UBUFFER_BINDING_COUNT);
+            "Uniform bindings overflow: index = %d, capacity = %d.", bindingIndex,
+            UBUFFER_BINDING_COUNT);
     auto& key = mDescriptorRequirements;
-    key.uniformBuffers[bindingIndex] = uniformBuffer;
+    key.uniformBuffers[bindingIndex] = buffer;
 
     if (size == VK_WHOLE_SIZE) {
         size = WHOLE_SIZE;
@@ -622,9 +646,12 @@ void VulkanPipelineCache::bindUniformBuffer(uint32_t bindingIndex, VkBuffer unif
 }
 
 void VulkanPipelineCache::bindSamplers(VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT],
-        UsageFlags flags) noexcept {
+        VulkanTexture* textures[SAMPLER_BINDING_COUNT], UsageFlags flags) noexcept {
     for (uint32_t bindingIndex = 0; bindingIndex < SAMPLER_BINDING_COUNT; bindingIndex++) {
         mDescriptorRequirements.samplers[bindingIndex] = samplers[bindingIndex];
+        if (textures[bindingIndex]) {
+            mPipelineBoundResources.acquire(textures[bindingIndex]);
+        }
     }
     mPipelineRequirements.layout = flags;
 }
@@ -643,6 +670,7 @@ void VulkanPipelineCache::terminate() noexcept {
     for (auto& iter : mPipelines) {
         vkDestroyPipeline(mDevice, iter.second.handle, VKALLOC);
     }
+    mPipelineBoundResources.clear();
     mPipelines.clear();
     mBoundPipeline = {};
     vmaDestroyBuffer(mAllocator, mDummyBuffer, mDummyMemory);
@@ -676,6 +704,7 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
                 arenas[i].push_back(cacheEntry.handles[i]);
             }
             ++mDescriptorArenasCount;
+            mDescriptorResources.erase(cacheEntry.id);
             iter = mDescriptorSets.erase(iter);
         } else {
             ++iter;
@@ -736,6 +765,10 @@ void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) 
             vkDestroyDescriptorPool(mDevice, pool, VKALLOC);
         }
         mExtinctDescriptorPools.clear();
+
+        for (auto const& entry : mExtinctDescriptorBundles) {
+            mDescriptorResources.erase(entry.id);
+        }
         mExtinctDescriptorBundles.clear();
     }
 }
@@ -797,6 +830,10 @@ void VulkanPipelineCache::destroyLayoutsAndDescriptors() noexcept {
     }
     mExtinctDescriptorPools.clear();
     mExtinctDescriptorBundles.clear();
+
+    // Both mDescriptorSets and mExtinctDescriptorBundles have been cleared, so it's safe to call
+    // clear() on mDescriptorResources.
+    mDescriptorResources.clear();
 
     mBoundDescriptor = {};
 }
