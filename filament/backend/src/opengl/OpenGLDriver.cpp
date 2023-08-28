@@ -3270,7 +3270,7 @@ void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
 }
 
 void OpenGLDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        FrameCompletedCallback callback, void* user) {
+        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     DEBUG_MARKER()
 }
 

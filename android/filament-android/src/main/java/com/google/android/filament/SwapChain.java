@@ -137,10 +137,6 @@ public class SwapChain {
      * </p>
      *
      * <p>
-     * The FrameCompletedCallback is guaranteed to be called on the main Filament thread.
-     * </p>
-     *
-     * <p>
      * Warning: Only Filament's Metal backend supports frame callbacks. Other backends ignore the
      * callback (which will never be called) and proceed normally.
      * </p>

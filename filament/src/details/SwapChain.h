@@ -23,6 +23,9 @@
 
 #include <filament/SwapChain.h>
 
+#include <backend/CallbackHandler.h>
+
+#include <utils/Invocable.h>
 #include <utils/compiler.h>
 
 namespace filament {
@@ -61,7 +64,8 @@ public:
 
     void setFrameScheduledCallback(FrameScheduledCallback callback, void* user);
 
-    void setFrameCompletedCallback(FrameCompletedCallback callback, void* user);
+    void setFrameCompletedCallback(backend::CallbackHandler* handler,
+                utils::Invocable<void(SwapChain*)>&& callback) noexcept;
 
     static bool isSRGBSwapChainSupported(FEngine& engine) noexcept;
 

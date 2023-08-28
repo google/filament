@@ -10,6 +10,7 @@ Instead, if you are authoring a PR for the main branch, add your release note to
 ## v1.42.1
 
 - Fix potential `EXC_BAD_ACCESS` with Metal backend: b/297059776
+- `setFrameCompletedCallback` now takes a `backend::CallbackHandler`.
 
 ## v1.42.0
 

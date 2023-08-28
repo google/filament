@@ -66,7 +66,7 @@ public:
     virtual void post(void* user, Callback callback) = 0;
 
 protected:
-    virtual ~CallbackHandler();
+    virtual ~CallbackHandler() = default;
 };
 
 } // namespace filament::backend
