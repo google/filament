@@ -173,7 +173,7 @@ static inline size_t getSkinningBufferWidth(size_t pairCount) noexcept {
 }
 
 static inline size_t getSkinningBufferHeight(size_t pairCount) noexcept {
-    return pairCount / MAX_SKINNING_BUFFER_WIDTH + 1;
+    return (pairCount + MAX_SKINNING_BUFFER_WIDTH - 1) / MAX_SKINNING_BUFFER_WIDTH;
 }
 
 inline size_t getSkinningBufferSize(size_t pairCount) noexcept {
@@ -188,10 +188,16 @@ inline size_t getSkinningBufferSize(size_t pairCount) noexcept {
 UTILS_NOINLINE
 void updateDataAt(backend::DriverApi& driver,
         Handle<HwTexture> handle, PixelDataFormat format, PixelDataType type,
-        const char* out, size_t elementSize,
-        size_t count, size_t size) {
+        const utils::FixedCapacityVector<math::float2>& pairs,
+        size_t count) {
 
-    size_t const textureWidth   = getSkinningBufferWidth( count);//size);
+    size_t elementSize = sizeof(float2);
+    size_t size = getSkinningBufferSize(count);
+    auto* out = (float2*) malloc(size);
+    std::transform(pairs.begin(), pairs.begin() + count, out,
+            [](const float2& p) { return float2(p); });
+
+    size_t const textureWidth   = getSkinningBufferWidth( count);
     size_t const lineCount      = count / textureWidth;
     size_t const lastLineCount  = count % textureWidth;
 
@@ -203,17 +209,19 @@ void updateDataAt(backend::DriverApi& driver,
     if (lineCount) {
         // update the full-width lines if any
         driver.update3DImage(handle, 0, 0, 0, 0,
-            textureWidth, lineCount, 1, PixelBufferDescriptor::make(
-                out, (textureWidth * lineCount) * elementSize,
+            textureWidth, lineCount, 1,
+            PixelBufferDescriptor::make(
+                out, textureWidth * lineCount * elementSize,
                 format, type,[allocation](void const*, size_t) {}
             ));
-        out += (lineCount * textureWidth) * elementSize;
+        out += lineCount * textureWidth;
     }
 
     if (lastLineCount) {
         // update the last partial line if any
         driver.update3DImage(handle, 0, 0, lineCount, 0,
-            lastLineCount, 1, 1, PixelBufferDescriptor::make(
+            lastLineCount, 1, 1,
+            PixelBufferDescriptor::make(
                 out, lastLineCount * elementSize,
                 format, type,[allocation](void const*, size_t) {}
             ));
@@ -222,14 +230,14 @@ void updateDataAt(backend::DriverApi& driver,
 
 FSkinningBuffer::HandleIndicesAndWeights FSkinningBuffer::createIndicesAndWeightsHandle(FEngine& engine, size_t count) {
     backend::Handle<backend::HwSamplerGroup> samplerHandle;
-    backend::Handle<backend::HwTexture> textureHandle;      // bone indices and weights
+    backend::Handle<backend::HwTexture> textureHandle;
 
     FEngine::DriverApi& driver = engine.getDriverApi();
-    auto size = getSkinningBufferSize(count);
     // create a texture for skinning pairs data (bone index and weight)
     textureHandle = driver.createTexture(SamplerType::SAMPLER_2D, 1,
                          TextureFormat::RG32F, 1,
-                         getSkinningBufferWidth(size), getSkinningBufferHeight(size), 1,
+                         getSkinningBufferWidth(count),
+                         getSkinningBufferHeight(count), 1,
                          TextureUsage::DEFAULT);
     samplerHandle = driver.createSamplerGroup(PerRenderPrimitiveSkinningSib::SAMPLER_COUNT);
     SamplerGroup samplerGroup(PerRenderPrimitiveSkinningSib::SAMPLER_COUNT);
@@ -248,15 +256,9 @@ void FSkinningBuffer::setIndicesAndWeightsData(FEngine& engine,
         const utils::FixedCapacityVector<math::float2>& pairs, size_t count) {
 
     FEngine::DriverApi& driver = engine.getDriverApi();
-    auto size = getSkinningBufferSize(count);
-    auto* out = (float2*) malloc(size);
-    std::transform(pairs.begin(), pairs.begin() + count, out,
-            [](const float2& p) { return float2(p); });
-
     updateDataAt(driver, textureHandle,
             Texture::Format::RG, Texture::Type::FLOAT,
-            (char const*)out, sizeof(float2),
-            count, size);
+             pairs, count);
 }
 
 } // namespace filament

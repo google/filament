@@ -368,6 +368,7 @@ public:
          * @param indicesAndWeights pairs of bone index and bone weight for all vertices
          *                          sequentially
          * @param count number of all pairs, must be a multiple of vertexCount of the primitive
+         *                          count = vertexCount * bonesPerVertex
          * @param bonesPerVertex number of bone pairs, same for all vertices of the primitive
          *
          * @return Builder reference for chaining calls.

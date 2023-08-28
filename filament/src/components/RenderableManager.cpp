@@ -227,7 +227,7 @@ RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(si
 RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(size_t primitiveIndex,
         utils::FixedCapacityVector<
             utils::FixedCapacityVector<math::float2>> indicesAndWeightsVector) noexcept {
-    mImpl->mBonePairs[primitiveIndex] = indicesAndWeightsVector;
+    mImpl->mBonePairs[primitiveIndex] = std::move(indicesAndWeightsVector);
     return *this;
 }
 
