@@ -194,8 +194,7 @@ void updateDataAt(backend::DriverApi& driver,
     size_t elementSize = sizeof(float2);
     size_t size = getSkinningBufferSize(count);
     auto* out = (float2*) malloc(size);
-    std::transform(pairs.begin(), pairs.begin() + count, out,
-            [](const float2& p) { return float2(p); });
+    std::memcpy(out, pairs.begin(), size);
 
     size_t const textureWidth   = getSkinningBufferWidth( count);
     size_t const lineCount      = count / textureWidth;
