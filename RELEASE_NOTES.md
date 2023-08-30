@@ -9,6 +9,8 @@ Instead, if you are authoring a PR for the main branch, add your release note to
 
 ## v1.42.1
 
+- Fix potential `EXC_BAD_ACCESS` with Metal backend: b/297059776
+
 ## v1.42.0
 
 - engine: add preliminary support for instanced stereoscopic rendering [⚠️ **Recompile materials**]
