@@ -9,3 +9,7 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 ## Release notes for next branch cut
 
 - `setFrameCompletedCallback` now takes a `backend::CallbackHandler`.
+- Fix possible NPE when updating fog options from Java/Kotlin
+- The `emissive` property was not applied properly to `MASKED` materials, and could cause
+  dark fringes to appear (recompile materials)
+  
