@@ -9,3 +9,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 ## Release notes for next branch cut
 
 - `setFrameCompletedCallback` now takes a `backend::CallbackHandler`.
+- The `emissive` property was not applied properly to `MASKED` materials, and could cause
+  dark fringes to appear
