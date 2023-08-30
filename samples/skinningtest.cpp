@@ -292,7 +292,7 @@ int main(int argc, char** argv) {
                        VertexBuffer::AttributeType::UBYTE4, 8, 12)
             .normalized(VertexAttribute::COLOR)
             .enableBufferObjects()
-            .advancedSkinning()
+            .advancedSkinning(true)
             .build(*engine);
         app.bos[app.boCount] = BufferObject::Builder()
             .size(3 * sizeof(Vertex))
@@ -314,7 +314,7 @@ int main(int argc, char** argv) {
                        VertexBuffer::AttributeType::UBYTE4, 8, 12)
             .normalized(VertexAttribute::COLOR)
             .enableBufferObjects()
-            .advancedSkinning()
+            .advancedSkinning(true)
             .build(*engine);
         app.bos[app.boCount] = BufferObject::Builder()
             .size(3 * sizeof(Vertex))
@@ -337,7 +337,7 @@ int main(int argc, char** argv) {
                        VertexBuffer::AttributeType::UBYTE4, 8, 12)
             .normalized(VertexAttribute::COLOR)
             .enableBufferObjects()
-            .advancedSkinning()
+            .advancedSkinning(true)
             .build(*engine);
         app.bos[app.boCount] = BufferObject::Builder()
             .size(3 * sizeof(Vertex))
@@ -361,7 +361,7 @@ int main(int argc, char** argv) {
                        VertexBuffer::AttributeType::UBYTE4, 8, 12)
             .normalized(VertexAttribute::COLOR)
             .enableBufferObjects()
-            .advancedSkinning()
+            .advancedSkinning(true)
             .build(*engine);
         app.bos[app.boCount] = BufferObject::Builder()
             .size(6 * sizeof(Vertex))
@@ -383,7 +383,7 @@ int main(int argc, char** argv) {
                        VertexBuffer::AttributeType::UBYTE4, 8, 12)
             .normalized(VertexAttribute::COLOR)
             .enableBufferObjects()
-            .advancedSkinning()
+            .advancedSkinning(true)
             .build(*engine);
         app.bos[app.boCount] = BufferObject::Builder()
             .size(3 * sizeof(Vertex))

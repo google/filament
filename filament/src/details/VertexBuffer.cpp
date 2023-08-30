@@ -114,8 +114,8 @@ VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute attribu
     return *this;
 }
 
-VertexBuffer::Builder& VertexBuffer::Builder::advancedSkinning() noexcept {
-    mImpl->mAdvancedSkinningEnabled = true;
+VertexBuffer::Builder& VertexBuffer::Builder::advancedSkinning(bool enabled) noexcept {
+    mImpl->mAdvancedSkinningEnabled = enabled;
     return *this;
 }
 

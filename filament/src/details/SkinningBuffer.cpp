@@ -211,7 +211,7 @@ void updateDataAt(backend::DriverApi& driver,
             textureWidth, lineCount, 1,
             PixelBufferDescriptor::make(
                 out, textureWidth * lineCount * elementSize,
-                format, type,[allocation](void const*, size_t) {}
+                format, type, [allocation](void const*, size_t) {}
             ));
         out += lineCount * textureWidth;
     }
@@ -222,7 +222,7 @@ void updateDataAt(backend::DriverApi& driver,
             lastLineCount, 1, 1,
             PixelBufferDescriptor::make(
                 out, lastLineCount * elementSize,
-                format, type,[allocation](void const*, size_t) {}
+                format, type, [allocation](void const*, size_t) {}
             ));
     }
 }

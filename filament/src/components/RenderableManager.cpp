@@ -292,7 +292,7 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
             entity.getId(), primitiveIndex);
         for (size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
             auto bonesPerVertex = bonePairsForPrimitive[iVertex].size();
-            maxPairsCount +=  bonesPerVertex;
+            maxPairsCount += bonesPerVertex;
             maxPairsCountPerVertex = max(bonesPerVertex, (uint) maxPairsCountPerVertex);
         }
     }
@@ -302,71 +302,73 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
         // final texture data, indices and weights
         mBoneIndicesAndWeights = utils::FixedCapacityVector<float2>(maxPairsCount);
         // temporary indices and weights for one vertex
-        std::unique_ptr<float2[]> tempPairs(new float2[maxPairsCountPerVertex]());
+        std::unique_ptr<float2[]> tempPairs = std::make_unique<float2[]>
+                (maxPairsCountPerVertex);
         for (auto iBonePair = mBonePairs.begin(); iBonePair != mBonePairs.end(); ++iBonePair) {
             auto primitiveIndex = iBonePair->first;
             auto bonePairsForPrimitive = iBonePair->second;
-            if (bonePairsForPrimitive.size()) {
-                size_t vertexCount = mEntries[primitiveIndex].vertices->getVertexCount();
-                std::unique_ptr<uint16_t[]> skinJoints(
-                    new uint16_t[4 * vertexCount]()); // temporary indices for one vertex
-                std::unique_ptr<float[]> skinWeights(
-                    new float[4 * vertexCount]()); // temporary weights for one vertex
-                for (size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
-                    size_t tempPairCount = 0;
-                    float boneWeightsSum = 0;
-                    for (size_t k = 0; k < bonePairsForPrimitive[iVertex].size(); k++) {
-                        auto boneWeight = bonePairsForPrimitive[iVertex][k][1];
-                        auto boneIndex= bonePairsForPrimitive[iVertex][k][0];
-                        ASSERT_PRECONDITION(boneWeight >= 0,
-                                "[entity=%u, primitive @ %u] bone weight (%f) of vertex=%u is negative ",
-                                entity.getId(), primitiveIndex, boneWeight, iVertex);
-                        if (boneWeight) {
-                            ASSERT_PRECONDITION(boneIndex >= 0,
-                                "[entity=%u, primitive @ %u] bone index (%i) of vertex=%u is negative ",
-                                entity.getId(), primitiveIndex, (int) boneIndex, iVertex);
-                            ASSERT_PRECONDITION(boneIndex < mSkinningBoneCount,
-                                "[entity=%u, primitive @ %u] bone index (%i) of vertex=%u is bigger then bone count (%u) ",
-                                entity.getId(), primitiveIndex, (int) boneIndex, iVertex, mSkinningBoneCount);
-                            boneWeightsSum += boneWeight;
-                            tempPairs[tempPairCount][0] = boneIndex;
-                            tempPairs[tempPairCount][1] = boneWeight;
-                            tempPairCount++;
-                        }
-                    }
-
-                    ASSERT_PRECONDITION(boneWeightsSum > 0,
-                        "[entity=%u, primitive @ %u] sum of bone weights of vertex=%u is %f, it should be positive.",
-                        entity.getId(), primitiveIndex, iVertex, boneWeightsSum);
-                    if (abs(boneWeightsSum - 1.f) > std::numeric_limits<float>::epsilon()) {
-                        utils::slog.w << "Warning of skinning: [entity=%" << entity.getId()
-                            << ", primitive @ %" << primitiveIndex
-                            << "] sum of bone weights of vertex=" << iVertex << " is " << boneWeightsSum
-                            << ", it should be one. Weights will be normalized." << utils::io::endl;
-                    }
-                    // prepare data for vertex attributes
-                    auto offset = iVertex * 4;
-                    // set attributes, indices and weights, for <= 4 pairs
-                    for (size_t j = 0, c = min(tempPairCount, 4ul); j < c; j++) {
-                        skinJoints[j + offset] = tempPairs[j][0];
-                        skinWeights[j + offset] = tempPairs[j][1] / boneWeightsSum;
-                    }
-                    // prepare data for texture
-                    if (tempPairCount > 4) { // set attributes, indices and weights, for > 4 pairs
-                        skinWeights[3 + offset] = -(float) (pairsCount + 1); // negative offset to texture 0..-1, 1..-2
-                        skinJoints[3 + offset] = (uint16_t) tempPairCount; // number pairs per vertex in texture
-                        for (size_t j = 3; j < tempPairCount; j++) {
-                            mBoneIndicesAndWeights[pairsCount][0] = tempPairs[j][0];
-                            mBoneIndicesAndWeights[pairsCount][1] = tempPairs[j][1] / boneWeightsSum;
-                            pairsCount++;
-                        }
-                    }
-                } // for all vertices per primitive
-                downcast(mEntries[primitiveIndex].vertices)
-                    ->updateBoneIndicesAndWeights(downcast(engine),
-                                                  std::move(skinJoints),
-                                                  std::move(skinWeights));
+            if (!bonePairsForPrimitive.size()) {
+              continue;
             }
+            size_t vertexCount = mEntries[primitiveIndex].vertices->getVertexCount();
+            std::unique_ptr<uint16_t[]> skinJoints = std::make_unique<uint16_t[]>
+                (4 * vertexCount); // temporary indices for one vertex
+            std::unique_ptr<float[]> skinWeights = std::make_unique<float[]>
+                (4 * vertexCount); // temporary weights for one vertex
+            for (size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
+                size_t tempPairCount = 0;
+                float boneWeightsSum = 0;
+                for (size_t k = 0; k < bonePairsForPrimitive[iVertex].size(); k++) {
+                    auto boneWeight = bonePairsForPrimitive[iVertex][k][1];
+                    auto boneIndex = bonePairsForPrimitive[iVertex][k][0];
+                    ASSERT_PRECONDITION(boneWeight >= 0,
+                            "[entity=%u, primitive @ %u] bone weight (%f) of vertex=%u is negative ",
+                            entity.getId(), primitiveIndex, boneWeight, iVertex);
+                    if (boneWeight) {
+                        ASSERT_PRECONDITION(boneIndex >= 0,
+                            "[entity=%u, primitive @ %u] bone index (%i) of vertex=%u is negative ",
+                            entity.getId(), primitiveIndex, (int) boneIndex, iVertex);
+                        ASSERT_PRECONDITION(boneIndex < mSkinningBoneCount,
+                            "[entity=%u, primitive @ %u] bone index (%i) of vertex=%u is bigger then bone count (%u) ",
+                            entity.getId(), primitiveIndex, (int) boneIndex, iVertex, mSkinningBoneCount);
+                        boneWeightsSum += boneWeight;
+                        tempPairs[tempPairCount][0] = boneIndex;
+                        tempPairs[tempPairCount][1] = boneWeight;
+                        tempPairCount++;
+                    }
+                }
+
+                ASSERT_PRECONDITION(boneWeightsSum > 0,
+                    "[entity=%u, primitive @ %u] sum of bone weights of vertex=%u is %f, it should be positive.",
+                    entity.getId(), primitiveIndex, iVertex, boneWeightsSum);
+                if (abs(boneWeightsSum - 1.f) > std::numeric_limits<float>::epsilon()) {
+                    utils::slog.w << "Warning of skinning: [entity=%" << entity.getId()
+                        << ", primitive @ %" << primitiveIndex
+                        << "] sum of bone weights of vertex=" << iVertex << " is " << boneWeightsSum
+                        << ", it should be one. Weights will be normalized." << utils::io::endl;
+                }
+                // prepare data for vertex attributes
+                auto offset = iVertex * 4;
+                // set attributes, indices and weights, for <= 4 pairs
+                for (size_t j = 0, c = min(tempPairCount, 4ul); j < c; j++) {
+                    skinJoints[j + offset] = tempPairs[j][0];
+                    skinWeights[j + offset] = tempPairs[j][1] / boneWeightsSum;
+                }
+                // prepare data for texture
+                if (tempPairCount > 4) { // set attributes, indices and weights, for > 4 pairs
+                    skinWeights[3 + offset] = -(float) (pairsCount + 1); // negative offset to texture 0..-1, 1..-2
+                    skinJoints[3 + offset] = (uint16_t) tempPairCount; // number pairs per vertex in texture
+                    for (size_t j = 3; j < tempPairCount; j++) {
+                        mBoneIndicesAndWeights[pairsCount][0] = tempPairs[j][0];
+                        mBoneIndicesAndWeights[pairsCount][1] = tempPairs[j][1] / boneWeightsSum;
+                        pairsCount++;
+                    }
+                }
+            } // for all vertices per primitive
+            downcast(mEntries[primitiveIndex].vertices)
+                ->updateBoneIndicesAndWeights(downcast(engine),
+                                              std::move(skinJoints),
+                                              std::move(skinWeights));
         } // for all primitives
     }
     mBoneIndicesAndWeightsCount = pairsCount; // only part of mBoneIndicesAndWeights is used for real data

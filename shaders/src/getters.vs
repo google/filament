@@ -78,7 +78,7 @@ void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
     posSum += weights.z * mulBoneVertex(p, uint(ids.z));
     uint pairIndex = uint(-weights.w - 1.);
     uint pairStop = pairIndex + uint(ids.w - 3u);
-    for (uint i = pairIndex; i < pairStop; i = i + 1u) {
+    for (uint i = pairIndex; i < pairStop; ++i) {
         ivec2 texcoord = ivec2(i % MAX_SKINNING_BUFFER_WIDTH, i / MAX_SKINNING_BUFFER_WIDTH);
         vec2 indexWeight = texelFetch(bonesBuffer_indicesAndWeights, texcoord, 0).rg;
         posSum += mulBoneVertex(p, uint(indexWeight.r)) * indexWeight.g;
