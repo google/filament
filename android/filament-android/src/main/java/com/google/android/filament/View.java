@@ -967,7 +967,8 @@ public class View {
                 options.heightFalloff, options.cutOffDistance,
                 options.color[0], options.color[1], options.color[2],
                 options.density, options.inScatteringStart, options.inScatteringSize,
-                options.fogColorFromIbl, options.skyColor.getNativeObject(),
+                options.fogColorFromIbl,
+                options.skyColor == null ? 0 : options.skyColor.getNativeObject(),
                 options.enabled);
     }
 
