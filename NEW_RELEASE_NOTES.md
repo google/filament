@@ -13,3 +13,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - The `emissive` property was not applied properly to `MASKED` materials, and could cause
   dark fringes to appear (recompile materials)
 - Fix potential `EXC_BAD_ACCESS` with Metal backend: b/297059776
+- Allow glTF materials with transmission/volume extensions to choose their alpha mode
+  instead of forcing `MASKED`

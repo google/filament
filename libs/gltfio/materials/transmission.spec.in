@@ -1,9 +1,7 @@
 ShadingModel=lit
 
-# Even though the transmission material actually has its
-# blend mode set to "masked", we want the glTF loader to
-# think that it is "opaque".
-BlendingMode=opaque
+# Required Aspects
+BlendingMode = ${BLENDING}
 
 Sheen=unsupported
 Volume=unsupported
