@@ -151,7 +151,7 @@ class Engine;
 class UTILS_PUBLIC SwapChain : public FilamentAPI {
 public:
     using FrameScheduledCallback = backend::FrameScheduledCallback;
-    using FrameCompletedCallback = backend::CallbackHandler::Callback;
+    using FrameCompletedCallback = utils::Invocable<void(SwapChain*)>;
 
     /**
      * Requests a SwapChain with an alpha channel.
@@ -259,7 +259,7 @@ public:
      * @see CallbackHandler
      */
     void setFrameCompletedCallback(backend::CallbackHandler* handler = nullptr,
-            utils::Invocable<void(SwapChain*)>&& callback = {}) noexcept;
+            FrameCompletedCallback&& callback = {}) noexcept;
 
 };
 
