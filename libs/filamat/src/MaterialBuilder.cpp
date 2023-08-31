@@ -205,6 +205,8 @@ MaterialBuilder& MaterialBuilder::variable(Variable v, const char* name) noexcep
         case Variable::CUSTOM1:
         case Variable::CUSTOM2:
         case Variable::CUSTOM3:
+        case Variable::CUSTOM4:
+        case Variable::CUSTOM5:
             assert(size_t(v) < MATERIAL_VARIABLES_COUNT);
             mVariables[size_t(v)] = CString(name);
             break;

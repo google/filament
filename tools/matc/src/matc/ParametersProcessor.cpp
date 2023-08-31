@@ -66,6 +66,8 @@ static MaterialBuilder::Variable intToVariable(size_t i) noexcept {
         case 1:  return MaterialBuilder::Variable::CUSTOM1;
         case 2:  return MaterialBuilder::Variable::CUSTOM2;
         case 3:  return MaterialBuilder::Variable::CUSTOM3;
+        case 4:  return MaterialBuilder::Variable::CUSTOM4;
+        case 5:  return MaterialBuilder::Variable::CUSTOM5;
         default: return MaterialBuilder::Variable::CUSTOM0;
     }
 }
@@ -607,8 +609,9 @@ static bool processVariables(MaterialBuilder& builder, const JsonishValue& value
     const JsonishArray* jsonArray = value.toJsonArray();
     const auto& elements = jsonArray->getElements();
 
-    if (elements.size() > 4) {
-        std::cerr << "variables: Max array size is 4." << std::endl;
+    if (elements.size() > MaterialBuilder::MATERIAL_VARIABLES_COUNT) {
+        std::cerr << "variables: Max array size is " << MaterialBuilder::MATERIAL_VARIABLES_COUNT
+                  << "." << std::endl;
         return false;
     }
 

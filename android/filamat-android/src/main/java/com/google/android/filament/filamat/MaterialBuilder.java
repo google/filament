@@ -102,7 +102,9 @@ public class MaterialBuilder {
         CUSTOM0,
         CUSTOM1,
         CUSTOM2,
-        CUSTOM3
+        CUSTOM3,
+        CUSTOM4,
+        CUSTOM5
     }
 
     public enum VertexAttribute {

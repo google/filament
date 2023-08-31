@@ -13,3 +13,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   dark fringes to appear (recompile materials)
 - Allow glTF materials with transmission/volume extensions to choose their alpha mode
   instead of forcing `MASKED`
+- Add support for 2 additional material variables [⚠️ **Recompile materials**]
