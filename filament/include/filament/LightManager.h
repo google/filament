@@ -25,6 +25,7 @@
 #include <utils/EntityInstance.h>
 
 #include <math/mathfwd.h>
+#include <math/quat.h>
 
 namespace utils {
     class Entity;
@@ -360,6 +361,13 @@ public:
          * enabled. (2cm by default).
          */
         float shadowBulbRadius = 0.02f;
+
+        /**
+         * Transforms the shadow direction. Must be a unit quaternion.
+         * The default is identity.
+         * Ignored if the light type isn't directional. For artistic use. Use with caution.
+         */
+        math::quatf transform{ 1.0f };
     };
 
     struct ShadowCascades {

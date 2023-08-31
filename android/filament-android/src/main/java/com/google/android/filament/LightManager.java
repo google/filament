@@ -368,6 +368,17 @@ public class LightManager {
          * enabled. (2cm by default).
          */
         public float shadowBulbRadius = 0.02f;
+
+        /**
+         * Transforms the shadow direction. Must be a unit quaternion.
+         * The default is identity.
+         * Ignored if the light type isn't directional. For artistic use. Use with caution.
+         * The quaternion is stored as the imaginary part in the first 3 elements and the real
+         * part in the last element of the transform array.
+         */
+        @NonNull
+        @Size(min = 4, max = 4)
+        public float[] transform = { 0.0f, 0.0f, 0.0f, 1.0f };
     }
 
     public static class ShadowCascades {
@@ -506,7 +517,7 @@ public class LightManager {
                     options.polygonOffsetConstant, options.polygonOffsetSlope,
                     options.screenSpaceContactShadows,
                     options.stepCount, options.maxShadowDistance,
-                    options.elvsm, options.blurWidth, options.shadowBulbRadius);
+                    options.elvsm, options.blurWidth, options.shadowBulbRadius, options.transform);
             return this;
         }
 
@@ -1169,7 +1180,7 @@ public class LightManager {
              boolean stable, boolean lispsm,
              float polygonOffsetConstant, float polygonOffsetSlope,
              boolean screenSpaceContactShadows, int stepCount, float maxShadowDistance,
-             boolean elvsm, float blurWidth, float shadowBulbRadius);
+             boolean elvsm, float blurWidth, float shadowBulbRadius, float[] transform);
     private static native void nBuilderCastLight(long nativeBuilder, boolean enabled);
     private static native void nBuilderPosition(long nativeBuilder, float x, float y, float z);
     private static native void nBuilderDirection(long nativeBuilder, float x, float y, float z);

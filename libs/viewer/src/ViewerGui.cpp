@@ -853,6 +853,14 @@ void ViewerGui::updateUserInterface() {
             ImGui::SliderFloat("Halo falloff", &light.sunlightHaloFalloff, 4.0f, 1024.0f);
             ImGui::SliderFloat("Sun radius", &light.sunlightAngularRadius, 0.1f, 10.0f);
             ImGuiExt::DirectionWidget("Sun direction", light.sunlightDirection.v);
+
+            float3 shadowDirection = light.shadowOptions.transform * light.sunlightDirection;
+            ImGuiExt::DirectionWidget("Shadow direction", shadowDirection.v);
+            light.shadowOptions.transform = normalize(quatf{
+                    cross(light.sunlightDirection, shadowDirection),
+                    sqrt(length2(light.sunlightDirection) * length2(shadowDirection))
+                            + dot(light.sunlightDirection, shadowDirection)
+            });
         }
         if (ImGui::CollapsingHeader("All lights")) {
             ImGui::Checkbox("Enable shadows", &light.enableShadows);

@@ -16,3 +16,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - Fix a crash in gltfio when not using ubershaders
 - Use flatmat for mat parameter in jsbinding
 - Fix TextureFlags for sheenRoughnessMap when textures of sheenRoughnessMap and sheenColorMap is same
+- Directional shadows can now be transformed (b/297095805)
