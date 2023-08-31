@@ -46,6 +46,14 @@ TransformManager::Instance TransformManager::getInstance(Entity e) const noexcep
     return downcast(this)->getInstance(e);
 }
 
+void TransformManager::setScale(Instance ci, const float3& scale) noexcept {
+    downcast(this)->setScale(ci, scale);
+}
+
+const float3& TransformManager::getScale(Instance ci) const noexcept {
+    return downcast(this)->getScale(ci);
+}
+
 void TransformManager::setTransform(Instance ci, const mat4f& model) noexcept {
     downcast(this)->setTransform(ci, model);
 }

@@ -40,7 +40,8 @@ UTILS_PUBLIC T cubicSpline(const T& vert0, const T& tang0, const T& vert1, const
 }
 
 UTILS_PUBLIC inline void decomposeMatrix(const filament::math::mat4f& mat, filament::math::float3* translation,
-        filament::math::quatf* rotation, filament::math::float3* scale) {
+        filament::math::quatf* rotation, filament::math::float3* scale,
+        const filament::math::float3& preservedScale) {
     using namespace filament::math;
 
     // Extract translation.
@@ -66,8 +67,17 @@ UTILS_PUBLIC inline void decomposeMatrix(const filament::math::mat4f& mat, filam
     float scaley = length(float3({d, e, f}));
     float scalez = length(float3({g, h, i}));
     float3 s = { scalex, scaley, scalez };
-    if (det < 0) {
-        s = -s;
+    if (preservedScale != float3{}) {
+        const float signx = (preservedScale.x < 0) ? -1 : 1;
+        const float signy = (preservedScale.y < 0) ? -1 : 1;
+        const float signz = (preservedScale.z < 0) ? -1 : 1;
+        s.x *= signx;
+        s.y *= signy;
+        s.z *= signz;
+    } else {
+        if (det < 0) {
+            s = -s;
+        }
     }
     *scale = s;
 

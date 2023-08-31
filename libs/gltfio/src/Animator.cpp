@@ -76,6 +76,7 @@ struct AnimatorImpl {
     TransformManager* transformManager;
     vector<float> weights;
     FixedCapacityVector<mat4f> crossFade;
+    FixedCapacityVector<float3> crossFadeScale;
     void addChannels(const FixedCapacityVector<Entity>& nodeMap, const cgltf_animation& srcAnim,
             Animation& dst);
     void applyAnimation(const Channel& channel, float t, size_t prevIndex, size_t nextIndex);
@@ -345,6 +346,7 @@ void AnimatorImpl::stashCrossFade() {
     using Instance = TransformManager::Instance;
     auto& tm = *this->transformManager;
     auto& stash = this->crossFade;
+    auto& stashScale = this->crossFadeScale;
 
     // Count the total number of transformable nodes to preallocate the stash memory.
     // We considered caching this count, but the cache would need to be invalidated when entities
@@ -357,7 +359,8 @@ void AnimatorImpl::stashCrossFade() {
         return count;
     };
 
-    auto recursiveStash = [&tm, &stash](Instance node, size_t index, auto& fn) -> size_t {
+    auto recursiveStash = [&tm, &stash, &stashScale](Instance node, size_t index, auto& fn) -> size_t {
+        stashScale[index] = tm.getScale(node);
         stash[index++] = tm.getTransform(node);
         for (auto iter = tm.getChildrenBegin(node); iter != tm.getChildrenEnd(node); ++iter) {
             index = fn(*iter, index, fn);
@@ -369,6 +372,8 @@ void AnimatorImpl::stashCrossFade() {
     const size_t count = recursiveCount(root, 0, recursiveCount);
     crossFade.reserve(count);
     crossFade.resize(count);
+    crossFadeScale.reserve(count);
+    crossFadeScale.resize(count);
     recursiveStash(root, 0, recursiveStash);
 }
 
@@ -376,16 +381,20 @@ void AnimatorImpl::applyCrossFade(float alpha) {
     using Instance = TransformManager::Instance;
     auto& tm = *this->transformManager;
     auto& stash = this->crossFade;
-    auto recursiveFn = [&tm, &stash, alpha](Instance node, size_t index, auto& fn) -> size_t {
+    auto& stashScale = this->crossFadeScale;
+    auto recursiveFn = [&tm, &stash, &stashScale, alpha](Instance node, size_t index, auto& fn) -> size_t {
         float3 scale0, scale1;
         quatf rotation0, rotation1;
         float3 translation0, translation1;
-        decomposeMatrix(stash[index++], &translation1, &rotation1, &scale1);
-        decomposeMatrix(tm.getTransform(node), &translation0, &rotation0, &scale0);
+        const float3& preservedStashScale = stashScale[index];
+        const float3& preservedScale = tm.getScale(node);
+        decomposeMatrix(stash[index++], &translation1, &rotation1, &scale1, preservedStashScale);
+        decomposeMatrix(tm.getTransform(node), &translation0, &rotation0, &scale0, preservedScale);
         const float3 scale = mix(scale0, scale1, alpha);
         const quatf rotation = slerp(rotation0, rotation1, alpha);
         const float3 translation = mix(translation0, translation1, alpha);
         tm.setTransform(node, composeMatrix(translation, rotation, scale));
+        tm.setScale(node, scale);
         for (auto iter = tm.getChildrenBegin(node); iter != tm.getChildrenEnd(node); ++iter) {
             index = fn(*iter, index, fn);
         }
@@ -434,11 +443,12 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
     // Perform the interpolation. This is a simple but inefficient implementation; Filament
     // stores transforms as mat4's but glTF animation is based on TRS (translation rotation
     // scale).
+    const float3 preservedScale = transformManager->getScale(node);
     mat4f xform = transformManager->getTransform(node);
     float3 scale;
     quatf rotation;
     float3 translation;
-    decomposeMatrix(xform, &translation, &rotation, &scale);
+    decomposeMatrix(xform, &translation, &rotation, &scale, preservedScale);
 
     switch (channel.transformType) {
 
@@ -453,6 +463,7 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
             } else {
                 scale = ((1 - t) * srcVec3[prevIndex]) + (t * srcVec3[nextIndex]);
             }
+            transformManager->setScale(node, scale);
             break;
         }
 

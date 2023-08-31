@@ -167,6 +167,14 @@ void FTransformManager::destroy(Entity e) noexcept {
     }
 }
 
+void FTransformManager::setScale(Instance ci, const float3& scale) noexcept {
+    validateNode(ci);
+    if (ci) {
+        auto& manager = mManager;
+        manager[ci].scale = scale;
+    }
+}
+
 void FTransformManager::setTransform(Instance ci, const mat4f& model) noexcept {
     validateNode(ci);
     if (ci) {

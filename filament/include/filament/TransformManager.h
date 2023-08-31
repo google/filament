@@ -223,6 +223,23 @@ public:
     children_iterator getChildrenEnd(Instance parent) const noexcept;
 
     /**
+     * Sets a scale of a transform component.
+     * This scale is preserved for sign check when decomposing transform matrix.
+     * @param ci     The instance of the transform component to set the scale to.
+     * @param scale  The preserved scale.
+     * @see getScale()
+     */
+    void setScale(Instance ci, const math::float3& scale) noexcept;
+
+    /**
+     * Returns the scale of a transform component.
+     * @param ci The instance of the transform component to query the scale.
+     * @return The scale of the component.
+     * @see setTransform()
+     */
+    const math::float3& getScale(Instance ci) const noexcept;
+
+    /**
      * Sets a local transform of a transform component.
      * @param ci              The instance of the transform component to set the local transform to.
      * @param localTransform  The local transform (i.e. relative to the parent).

@@ -557,17 +557,23 @@ void FAssetLoader::recurseEntities(const cgltf_data* srcAsset, const cgltf_node*
 
     // Always create a transform component to reflect the original hierarchy.
     mat4f localTransform;
+    float3* scale = nullptr;
     if (node->has_matrix) {
         memcpy(&localTransform[0][0], &node->matrix[0], 16 * sizeof(float));
     } else {
         quatf* rotation = (quatf*) &node->rotation[0];
-        float3* scale = (float3*) &node->scale[0];
+        scale = (float3*) &node->scale[0];
         float3* translation = (float3*) &node->translation[0];
         localTransform = composeMatrix(*translation, *rotation, *scale);
     }
 
     auto parentTransform = mTransformManager.getInstance(parent);
     mTransformManager.create(entity, parentTransform, localTransform);
+    if (scale) {
+        // Store the origin scale from gltf data,
+        // for further sign check when decomposing matrix.
+        mTransformManager.setScale(mTransformManager.getInstance(entity), *scale);
+    }
 
     // Check if this node has an extras string.
     const cgltf_size extras_size = node->extras.end_offset - node->extras.start_offset;

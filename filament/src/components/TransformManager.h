@@ -27,6 +27,7 @@
 #include <utils/Slice.h>
 
 #include <math/mat4.h>
+#include "math/vec3.h"
 
 namespace filament {
 
@@ -89,6 +90,12 @@ public:
         return mManager.slice<WORLD>();
     }
 
+    void setScale(Instance ci, const math::float3& scale) noexcept;
+
+    const math::float3& getScale(Instance ci) const noexcept {
+        return mManager[ci].scale;
+    }
+
     void setTransform(Instance ci, const math::mat4f& model) noexcept;
 
     void setTransform(Instance ci, const math::mat4& model) noexcept;
@@ -142,6 +149,7 @@ private:
         WORLD,          // world transform
         LOCAL_LO,       // accurate local translation
         WORLD_LO,       // accurate world translation
+        SCALE,          // preserved scaling for sign check when decompose matrix
         PARENT,         // instance to the parent
         FIRST_CHILD,    // instance to our first child
         NEXT,           // instance to our next sibling
@@ -153,6 +161,7 @@ private:
             math::mat4f,    // world
             math::float3,   // accurate local translation
             math::float3,   // accurate world translation
+            math::float3,   // preserved scaling for sign check when decompose matrix
             Instance,       // parent
             Instance,       // firstChild
             Instance,       // next
@@ -177,6 +186,7 @@ private:
                 Field<WORLD>        world;
                 Field<LOCAL_LO>     localTranslationLo;
                 Field<WORLD_LO>     worldTranslationLo;
+                Field<SCALE>        scale;
                 Field<PARENT>       parent;
                 Field<FIRST_CHILD>  firstChild;
                 Field<NEXT>         next;
