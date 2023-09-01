@@ -127,12 +127,12 @@ public:
     }
 
     bool isSpotLight(Instance i) const noexcept {
-        Type type = getType(i);
+        Type const type = getType(i);
         return type == Type::FOCUSED_SPOT || type == Type::SPOT;
     }
 
     bool isDirectionalLight(Instance i) const noexcept {
-        Type type = getType(i);
+        Type const type = getType(i);
         return type == Type::DIRECTIONAL || type == Type::SUN;
     }
 
