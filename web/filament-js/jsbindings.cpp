@@ -1337,11 +1337,11 @@ class_<MaterialInstance>("MaterialInstance")
             (MaterialInstance* self, std::string name, filament::math::float4 value), {
         self->setParameter(name.c_str(), value); }), allow_raw_pointers())
     .function("setMat3Parameter", EMBIND_LAMBDA(void,
-            (MaterialInstance* self, std::string name, filament::math::mat3f value), {
-        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+            (MaterialInstance* self, std::string name, flatmat3 value), {
+        self->setParameter(name.c_str(), value.m); }), allow_raw_pointers())
     .function("setMat4Parameter", EMBIND_LAMBDA(void,
-            (MaterialInstance* self, std::string name, filament::math::mat4f value), {
-        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+            (MaterialInstance* self, std::string name, flatmat4 value), {
+        self->setParameter(name.c_str(), value.m); }), allow_raw_pointers())
     .function("setTextureParameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, Texture* value, TextureSampler sampler), {
         self->setParameter(name.c_str(), value, sampler); }), allow_raw_pointers())
