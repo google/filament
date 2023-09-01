@@ -679,7 +679,7 @@ public:
      * @return      true is this light is a type of directional light
      */
     inline bool isDirectional(Instance i) const noexcept {
-        Type type = getType(i);
+        Type const type = getType(i);
         return type == Type::DIRECTIONAL || type == Type::SUN;
     }
 
@@ -700,7 +700,7 @@ public:
      * @return      true is this light is a type of spot light
      */
     inline bool isSpotLight(Instance i) const noexcept {
-        Type type = getType(i);
+        Type const type = getType(i);
         return type == Type::SPOT || type == Type::FOCUSED_SPOT;
     }
 
