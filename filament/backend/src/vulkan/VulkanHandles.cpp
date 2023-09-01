@@ -87,21 +87,26 @@ VulkanProgram::VulkanProgram(VkDevice device, const Program& builder) noexcept :
         };
 
         for (size_t i = 0; i < specializationConstants.size(); i++) {
-            const uint32_t offset = uint32_t(i) * 4;
-            std::visit([&](auto&& arg) {
-                using T = std::decay_t<decltype(arg)>;
-                pEntries[i] = {
-                        .constantID = specializationConstants[i].id,
-                        .offset = offset,
-                        // Turns out vulkan expects the size of bool to be 4 (verified through
-                        // validation layer). So all expected types are of 4 bytes.
-                        .size = 4,
-                };
-                T* const addr = (T*)((char*)pData + offset);
-                *addr = arg;
-            }, specializationConstants[i].value);
-        }
+            uint32_t const offset = uint32_t(i) * 4;
+            pEntries[i] = {
+                .constantID = specializationConstants[i].id,
+                .offset = offset,
+                // Note that bools are 4-bytes in Vulkan
+                // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBool32.html
+                .size = 4,
+            };
 
+            using SpecConstant = Program::SpecializationConstant::Type;
+            char const* addr = (char*)pData + offset;
+            SpecConstant const& arg = specializationConstants[i].value;
+            if (std::holds_alternative<bool>(arg)) {
+                *((VkBool32*)addr) = std::get<bool>(arg) ? VK_TRUE : VK_FALSE;
+            } else if (std::holds_alternative<float>(arg)) {
+                *((float*)addr) = std::get<float>(arg);
+            } else {
+                *((int32_t*)addr) = std::get<int32_t>(arg);
+            }
+        }
         bundle.specializationInfos = pInfo;
     }
 
