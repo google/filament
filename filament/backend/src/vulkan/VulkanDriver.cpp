@@ -30,10 +30,9 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
-#include <utils/Systrace.h>
 
 #ifndef NDEBUG
-#include <set>
+#include <set>  // For VulkanDriver::debugCommandBegin
 #endif
 
 using namespace bluevk;
@@ -101,7 +100,7 @@ VulkanTexture* createEmptyTexture(VkDevice device, VkPhysicalDevice physicalDevi
     return emptyTexture;
 }
 
-#if VK_ENABLE_VALIDATION
+#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
 VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
         VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location,
         int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData) {
@@ -136,7 +135,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
     utils::slog.e << utils::io::endl;
     return VK_FALSE;
 }
-#endif// VK_ENABLE_VALIDATION
+#endif // FVK_EANBLED(FVK_DEBUG_VALIDATION)
 
 } // anonymous namespace
 
@@ -159,7 +158,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mBlitter(mStagePool, mPipelineCache, mFramebufferCache, mSamplerCache),
       mReadPixels(mPlatform->getDevice()) {
 
-#if VK_ENABLE_VALIDATION
+#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     UTILS_UNUSED const PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback
             = vkCreateDebugReportCallbackEXT;
     VkResult result;
@@ -214,7 +213,7 @@ UTILS_NOINLINE
 Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& context,
          Platform::DriverConfig const& driverConfig) noexcept {
     assert_invariant(platform);
-    size_t defaultSize = FILAMENT_VULKAN_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
+    size_t defaultSize = FVK_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
     Platform::DriverConfig validConfig{
             .handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize)};
     return new VulkanDriver(platform, context, validConfig);
@@ -266,24 +265,15 @@ void VulkanDriver::tick(int) {
 // rather than the wall clock, because we must wait 3 frames after a DriverAPI-level resource has
 // been destroyed for safe destruction, due to outstanding command buffers and triple buffering.
 void VulkanDriver::collectGarbage() {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("gc");
     // Command buffers need to be submitted and completed before other resources can be gc'd. And
     // its gc() function carrys out the *wait*.
-    SYSTRACE_CONTEXT();
-    SYSTRACE_NAME_BEGIN("gc");
-
     mCommands->gc();
-
-    SYSTRACE_NAME_BEGIN("stagepool-gc");
     mStagePool.gc();
-    SYSTRACE_NAME_END();
-
-    SYSTRACE_NAME_BEGIN("framebuffercache-gc");
     mFramebufferCache.gc();
-    SYSTRACE_NAME_END();
-
-    SYSTRACE_NAME_END(); // "gc"
+    FVK_SYSTRACE_END();
 }
-
 void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
     // Do nothing.
 }
@@ -306,14 +296,21 @@ void VulkanDriver::endFrame(uint32_t frameId) {
 }
 
 void VulkanDriver::flush(int) {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("flush");
     mCommands->flush();
+    FVK_SYSTRACE_END();
 }
 
 void VulkanDriver::finish(int dummy) {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("finish");
+
     mCommands->flush();
     mCommands->wait();
 
     mReadPixels.runUntilComplete();
+    FVK_SYSTRACE_END();
 }
 
 void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t count) {
@@ -990,6 +987,9 @@ void VulkanDriver::compilePrograms(CompilerPriorityQueue priority,
 }
 
 void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassParams& params) {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("beginRenderPass");
+
     VulkanRenderTarget* const rt = mResourceAllocator.handle_cast<VulkanRenderTarget*>(rth);
     const VkExtent2D extent = rt->getExtent();
     assert_invariant(extent.width > 0 && extent.height > 0);
@@ -1008,7 +1008,8 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     }
 
     VulkanAttachment depth = rt->getSamples() == 1 ? rt->getDepth() : rt->getMsaaDepth();
-#if FILAMENT_VULKAN_VERBOSE
+
+#if FVK_ENABLED(FVK_DEBUG_TEXTURE)
     if (depth.texture) {
         depth.texture->print();
     }
@@ -1153,6 +1154,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
 
     // Assign a label to the framebuffer for debugging purposes.
+    #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     if (UTILS_UNLIKELY(mContext.isDebugUtilsSupported())) {
         auto const topMarker = mCommands->getTopGroupMarker();
         if (!topMarker.empty()) {
@@ -1166,6 +1168,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
             vkSetDebugUtilsObjectNameEXT(mPlatform->getDevice(), &info);
         }
     }
+    #endif
 
     // The current command buffer now owns a reference to the render target and its attachments.
     // Note that we must acquire parent textures, not sidecars.
@@ -1242,9 +1245,13 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .params = params,
         .currentSubpass = 0,
     };
+    FVK_SYSTRACE_END();
 }
 
 void VulkanDriver::endRenderPass(int) {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("endRenderPass");
+
     VulkanCommandBuffer& commands = mCommands->get();
     VkCommandBuffer cmdbuffer = commands.buffer();
     vkCmdEndRenderPass(cmdbuffer);
@@ -1288,6 +1295,7 @@ void VulkanDriver::endRenderPass(int) {
     }
     mCurrentRenderPass.renderTarget = nullptr;
     mCurrentRenderPass.renderPass = VK_NULL_HANDLE;
+    FVK_SYSTRACE_END();
 }
 
 void VulkanDriver::nextSubpass(int) {
@@ -1334,6 +1342,9 @@ void VulkanDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
 }
 
 void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("makeCurrent");
+
     ASSERT_PRECONDITION_NON_FATAL(drawSch == readSch,
             "Vulkan driver does not support distinct draw/read swap chains.");
     VulkanSwapChain* swapChain = mCurrentSwapChain
@@ -1349,9 +1360,14 @@ void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     if (UTILS_LIKELY(mDefaultRenderTarget)) {
         mDefaultRenderTarget->bindToSwapChain(*swapChain);
     }
+
+    FVK_SYSTRACE_END();
 }
 
 void VulkanDriver::commit(Handle<HwSwapChain> sch) {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("commit");
+
     VulkanSwapChain* swapChain = mResourceAllocator.handle_cast<VulkanSwapChain*>(sch);
 
     if (mCommands->flush()) {
@@ -1360,6 +1376,7 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
 
     // Present the backbuffer after the most recent command buffer submission has finished.
     swapChain->present();
+    FVK_SYSTRACE_END();
 }
 
 void VulkanDriver::bindUniformBuffer(uint32_t index, Handle<HwBufferObject> boh) {
@@ -1391,24 +1408,26 @@ void VulkanDriver::bindSamplers(uint32_t index, Handle<HwSamplerGroup> sbh) {
 }
 
 void VulkanDriver::insertEventMarker(char const* string, uint32_t len) {
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     mCommands->insertEventMarker(string, len);
+#endif
 }
 
 void VulkanDriver::pushGroupMarker(char const* string, uint32_t) {
     // Turns out all the markers are 0-terminated, so we can just pass it without len.
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     mCommands->pushGroupMarker(string);
-    {
-        SYSTRACE_CONTEXT();
-        SYSTRACE_NAME_BEGIN(string);
-    }
+#endif
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START(string);
 }
 
 void VulkanDriver::popGroupMarker(int) {
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     mCommands->popGroupMarker();
-    {
-        SYSTRACE_CONTEXT();
-        SYSTRACE_NAME_END();
-    }
+#endif
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_END();
 }
 
 void VulkanDriver::startCapture(int) {}
@@ -1439,6 +1458,9 @@ void VulkanDriver::readBufferSubData(backend::BufferObjectHandle boh,
 
 void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, Viewport dstRect,
         Handle<HwRenderTarget> src, Viewport srcRect, SamplerMagFilter filter) {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("blit");
+
     assert_invariant(mCurrentRenderPass.renderPass == VK_NULL_HANDLE);
 
     // blit operation only support COLOR0 color buffer
@@ -1478,10 +1500,14 @@ void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, V
     if (any(buffers & TargetBufferFlags::COLOR0)) {
         mBlitter.blitColor({ dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, int(0) });
     }
+    FVK_SYSTRACE_END();
 }
 
 void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,
         const uint32_t instanceCount) {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("draw");
+
     VulkanCommandBuffer* commands = &mCommands->get();
     VkCommandBuffer cmdbuffer = commands->buffer();
     const VulkanRenderPrimitive& prim = *mResourceAllocator.handle_cast<VulkanRenderPrimitive*>(rph);
@@ -1497,7 +1523,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     commands->acquire(prim.vertexBuffer);
 
     // If this is a debug build, validate the current shader.
-#if !defined(NDEBUG)
+#if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
     if (program->bundle.vertex == VK_NULL_HANDLE || program->bundle.fragment == VK_NULL_HANDLE) {
         utils::slog.e << "Binding missing shader: " << program->name.c_str() << utils::io::endl;
     }
@@ -1613,7 +1639,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
                 // This fallback path is very flaky because the dummy texture might not have
                 // matching characteristics. (e.g. if the missing texture is a 3D texture)
                 if (UTILS_UNLIKELY(texture->getPrimaryImageLayout() == VulkanLayout::UNDEFINED)) {
-#ifndef NDEBUG
+#if FVK_ENABLED(FVK_DEBUG_TEXTURE)
                     utils::slog.w << "Uninitialized texture bound to '" << sampler.name.c_str() << "'";
                     utils::slog.w << " in material '" << program->name.c_str() << "'";
                     utils::slog.w << " at binding point " << +sampler.binding << utils::io::endl;
@@ -1687,6 +1713,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     const uint32_t firstInstId = 0;
 
     vkCmdDrawIndexed(cmdbuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstId);
+    FVK_SYSTRACE_END();
 }
 
 void VulkanDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {

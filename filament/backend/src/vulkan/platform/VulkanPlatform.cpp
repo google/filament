@@ -45,11 +45,11 @@ constexpr uint32_t const INVALID_VK_INDEX = 0xFFFFFFFF;
 
 typedef std::unordered_set<std::string_view> ExtensionSet;
 
-#if VK_ENABLE_VALIDATION
+#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
 // These strings need to be allocated outside a function stack
 const std::string_view DESIRED_LAYERS[] = {
         "VK_LAYER_KHRONOS_validation",
-#if FILAMENT_VULKAN_DUMP_API
+#if FVK_ENABLED(FVK_DEBUG_DUMP_API)
         "VK_LAYER_LUNARG_api_dump",
 #endif
 #if defined(ENABLE_RENDERDOC)
@@ -75,7 +75,7 @@ FixedCapacityVector<const char*> getEnabledLayers() {
     }
     return enabledLayers;
 }
-#endif
+#endif // FVK_EANBLED(FVK_DEBUG_VALIDATION)
 
 void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
     // Print some driver or MoltenVK information if it is available.
@@ -129,27 +129,27 @@ void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
                   << minor << ")" << utils::io::endl;
 }
 
+#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
 void printDepthFormats(VkPhysicalDevice device) {
     // For diagnostic purposes, print useful information about available depth formats.
     // Note that Vulkan is more constrained than OpenGL ES 3.1 in this area.
-    if constexpr (VK_ENABLE_VALIDATION && FILAMENT_VULKAN_VERBOSE) {
-        const VkFormatFeatureFlags required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+    const VkFormatFeatureFlags required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
                                               | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
-        utils::slog.i << "Sampleable depth formats: ";
-        for (VkFormat format = (VkFormat) 1;;) {
-            VkFormatProperties props;
-            vkGetPhysicalDeviceFormatProperties(device, format, &props);
-            if ((props.optimalTilingFeatures & required) == required) {
-                utils::slog.i << format << " ";
-            }
-            if (format == VK_FORMAT_ASTC_12x12_SRGB_BLOCK) {
-                utils::slog.i << utils::io::endl;
-                break;
-            }
-            format = (VkFormat) (1 + (int) format);
+    utils::slog.i << "Sampleable depth formats: ";
+    for (VkFormat format = (VkFormat) 1;;) {
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(device, format, &props);
+        if ((props.optimalTilingFeatures & required) == required) {
+            utils::slog.i << format << " ";
         }
+        if (format == VK_FORMAT_ASTC_12x12_SRGB_BLOCK) {
+            utils::slog.i << utils::io::endl;
+            break;
+        }
+        format = (VkFormat) (1 + (int) format);
     }
 }
+#endif
 
 ExtensionSet getInstanceExtensions() {
     std::string_view const TARGET_EXTS[] = {
@@ -161,7 +161,7 @@ ExtensionSet getInstanceExtensions() {
             VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
             VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
 
-#if VK_ENABLE_VALIDATION
+#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
             VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
 #endif
     };
@@ -207,7 +207,7 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
     VkInstanceCreateInfo instanceCreateInfo = {};
     bool validationFeaturesSupported = false;
 
-#if VK_ENABLE_VALIDATION
+#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     auto const enabledLayers = getEnabledLayers();
     if (!enabledLayers.empty()) {
         // If layers are supported, Check if VK_EXT_validation_features is supported.
@@ -229,9 +229,10 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
 #else
         utils::slog.d << "Validation layer not available; did you install the Vulkan SDK?\n"
                       << "Please ensure that VK_LAYER_PATH is set correctly." << utils::io::endl;
-#endif
+#endif // __ANDROID__
+
     }
-#endif// VK_ENABLE_VALIDATION
+#endif // FVK_ENABLED(FVK_DEBUG_VALIDATION)
 
     // The Platform class can require 1 or 2 instance extensions, plus we'll request at most 5
     // instance extensions here in the common code. So that's a max of 7.
@@ -252,7 +253,7 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
     VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.apiVersion
-            = VK_MAKE_API_VERSION(0, VK_REQUIRED_VERSION_MAJOR, VK_REQUIRED_VERSION_MINOR, 0);
+            = VK_MAKE_API_VERSION(0, FVK_REQUIRED_VERSION_MAJOR, FVK_REQUIRED_VERSION_MINOR, 0);
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceCreateInfo.pApplicationInfo = &appInfo;
     instanceCreateInfo.enabledExtensionCount = enabledExtensionCount;
@@ -274,12 +275,8 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
     }
 
     VkResult result = vkCreateInstance(&instanceCreateInfo, VKALLOC, &instance);
-#ifndef NDEBUG
-    if (result != VK_SUCCESS) {
-        utils::slog.e << "Unable to create instance: " << result << utils::io::endl;
-    }
-#endif
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan instance.");
+    ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan instance. Result=%d",
+            result);
     return instance;
 }
 
@@ -443,10 +440,10 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
         int const minor = VK_VERSION_MINOR(targetDeviceProperties.apiVersion);
 
         // Does the device support the required Vulkan level?
-        if (major < VK_REQUIRED_VERSION_MAJOR) {
+        if (major < FVK_REQUIRED_VERSION_MAJOR) {
             continue;
         }
-        if (major == VK_REQUIRED_VERSION_MAJOR && minor < VK_REQUIRED_VERSION_MINOR) {
+        if (major == FVK_REQUIRED_VERSION_MAJOR && minor < FVK_REQUIRED_VERSION_MINOR) {
             continue;
         }
 
@@ -667,7 +664,9 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // just yet, since that would require a corollary change to the "aspect" flags for the VkImage.
     context.mDepthFormat = findSupportedFormat(mImpl->mPhysicalDevice);
 
+#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     printDepthFormats(mImpl->mPhysicalDevice);
+#endif
 
     // Keep a copy of context for swapchains.
     mImpl->mContext = context;
