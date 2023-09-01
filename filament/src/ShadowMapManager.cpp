@@ -504,19 +504,13 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             splitPercentages[i] = options.cascadeSplitPositions[i - 1];
         }
 
-        const CascadeSplits::Params p{
+        const CascadeSplits splits({
                 .proj = cameraInfo.cullingProjection,
                 .near = vsNear,
                 .far = vsFar,
                 .cascadeCount = cascadeCount,
                 .splitPositions = splitPercentages
-        };
-        if (p != mCascadeSplitParams) {
-            mCascadeSplits = CascadeSplits{ p };
-            mCascadeSplitParams = p;
-        }
-
-        const CascadeSplits& splits = mCascadeSplits;
+        });
 
         // The split positions uniform is a float4. To save space, we chop off the first split position
         // (which is the near plane, and doesn't need to be communicated to the shaders).
@@ -530,7 +524,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
 
         mShadowMappingUniforms.cascadeSplits = wsSplitPositionUniform;
 
-        // when computing the required bias we need a half-texel size, so we multiply by 0.5 here.
+        // When computing the required bias we need a half-texel size, so we multiply by 0.5 here.
         // note: normalBias is set to zero for VSM
         const float normalBias = shadowMapInfo.vsm ? 0.0f : 0.5f * lcm.getShadowNormalBias(0);
 

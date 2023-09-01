@@ -443,6 +443,37 @@ private:
         return v;
     }
 
+    template<typename U>
+    friend inline
+    VECTOR<T> MATH_PURE fmod(VECTOR<T> const& x, VECTOR<U> const& y) {
+        VECTOR<T> r;
+        for (size_t i = 0; i < r.size(); i++) {
+            r[i] = std::fmod(x[i], y[i]);
+        }
+        return r;
+    }
+
+    template<typename U>
+    friend inline
+    VECTOR<T> MATH_PURE remainder(VECTOR<T> const& x, VECTOR<U> const& y) {
+        VECTOR<T> r;
+        for (size_t i = 0; i < r.size(); i++) {
+            r[i] = std::remainder(x[i], y[i]);
+        }
+        return r;
+    }
+
+    template<typename U>
+    friend inline
+    VECTOR<T> MATH_PURE remquo(VECTOR<T> const& x, VECTOR<U> const& y,
+            VECTOR<int>* q) {
+        VECTOR<T> r;
+        for (size_t i = 0; i < r.size(); i++) {
+            r[i] = std::remquo(x[i], y[i], &((*q)[i]));
+        }
+        return r;
+    }
+
     friend inline VECTOR<T> MATH_PURE inversesqrt(VECTOR<T> v) {
         for (size_t i = 0; i < v.size(); i++) {
             v[i] = T(1) / std::sqrt(v[i]);

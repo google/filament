@@ -222,7 +222,7 @@ private:
             const math::float3& dir);
 
     static inline void snapLightFrustum(math::float2& s, math::float2& o,
-            math::mat4f const& Mv, math::float3 worldOrigin, math::float2 shadowMapResolution) noexcept;
+            math::mat4f const& Mv, math::mat4 worldOrigin, math::int2 resolution) noexcept;
 
     static inline void computeFrustumCorners(math::float3* out,
             const math::mat4f& projectionViewInverse, math::float2 csNearFar = { -1.0f, 1.0f }) noexcept;
