@@ -73,8 +73,9 @@ struct RenderableManager::BuilderDetails {
         utils::FixedCapacityVector<math::float2>>> mBonePairs;
 
     explicit BuilderDetails(size_t count)
-            : mEntries(count), mCulling(true), mCastShadows(false), mReceiveShadows(true),
-              mScreenSpaceContactShadows(false), mSkinningBufferMode(false), mBonePairs(), mFogEnabled(true) {
+            : mEntries(count), mCulling(true), mCastShadows(false),
+              mReceiveShadows(true), mScreenSpaceContactShadows(false),
+              mSkinningBufferMode(false),  mFogEnabled(true), mBonePairs() {
     }
     // this is only needed for the explicit instantiation below
     BuilderDetails() = default;
