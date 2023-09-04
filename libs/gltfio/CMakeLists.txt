@@ -16,6 +16,7 @@ set(PUBLIC_HDRS
         include/gltfio/FilamentInstance.h
         include/gltfio/MaterialProvider.h
         include/gltfio/NodeManager.h
+        include/gltfio/TrsTransformManager.h
         include/gltfio/ResourceLoader.h
         include/gltfio/TextureProvider.h
         include/gltfio/math.h
@@ -35,10 +36,12 @@ set(SRCS
         src/FilamentAsset.cpp
         src/FilamentInstance.cpp
         src/FNodeManager.h
+        src/FTrsTransformManager.h
         src/GltfEnums.h
         src/Ktx2Provider.cpp
         src/MaterialProvider.cpp
         src/NodeManager.cpp
+        src/TrsTransformManager.cpp
         src/ResourceLoader.cpp
         src/StbProvider.cpp
         src/TangentsJob.cpp
