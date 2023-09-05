@@ -212,11 +212,8 @@ function build_desktop_target {
 
     cd "out/cmake-${lc_target}"
 
-    # On macOS, set the deployment target to 10.15.
     local lc_name=$(echo "${UNAME}" | tr '[:upper:]' '[:lower:]')
     if [[ "${lc_name}" == "darwin" ]]; then
-        local deployment_target="-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15"
-
         if [[ "${BUILD_UNIVERSAL_LIBRARIES}" == "true" ]]; then
             local architectures="-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
         fi
@@ -233,7 +230,6 @@ function build_desktop_target {
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ${ASAN_UBSAN_OPTION} \
-            ${deployment_target} \
             ${architectures} \
             ../..
     fi
