@@ -217,6 +217,20 @@ bool VulkanCommands::flush() {
         return false;
     }
 
+
+    // Before actually submitting, we need to pop any leftover group markers.
+    // Note that this needs to occur before vkEndCommandBuffer.
+    while (mGroupMarkers && !mGroupMarkers->empty()) {
+        if (!mCarriedOverMarkers) {
+            mCarriedOverMarkers = std::make_unique<VulkanGroupMarkers>();
+        }
+        auto const [marker, time] = mGroupMarkers->top();
+        mCarriedOverMarkers->push(marker, time);
+        // We still need to call through to vkCmdEndDebugUtilsLabelEXT.
+        popGroupMarker();
+    }
+
+
     int8_t const index = mCurrentCommandBufferIndex;
     VulkanCommandBuffer const* currentbuf = mStorage[index].get();
     VkSemaphore const renderingFinished = mSubmissionSignals[index];
@@ -269,17 +283,6 @@ bool VulkanCommands::flush() {
         << " signal=" << renderingFinished
         << io::endl;
 #endif
-
-    // Before actually submitting, we need to pop any leftover group markers.
-    while (mGroupMarkers && !mGroupMarkers->empty()) {
-        if (!mCarriedOverMarkers) {
-            mCarriedOverMarkers = std::make_unique<VulkanGroupMarkers>();
-        }
-        auto const [marker, time] = mGroupMarkers->top();
-        mCarriedOverMarkers->push(marker, time);
-        // We still need to call through to vkCmdEndDebugUtilsLabelEXT.
-        popGroupMarker();
-    }
 
     auto& cmdfence = currentbuf->fence;
     std::unique_lock<utils::Mutex> lock(cmdfence->mutex);
