@@ -15,3 +15,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   instead of forcing `MASKED`
 - Fix a crash in gltfio when not using ubershaders
 - Use flatmat for mat parameter in jsbinding
+- Fix TextureFlags for sheenRoughnessMap when textures of sheenRoughnessMap and sheenColorMap is same

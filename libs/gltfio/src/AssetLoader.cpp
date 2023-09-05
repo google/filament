@@ -1467,8 +1467,9 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
             }
         }
         if (matkey.hasSheenRoughnessTexture) {
+            bool sameTexture = shConfig.sheen_color_texture.texture == shConfig.sheen_roughness_texture.texture;
             mAsset->addTextureBinding(mi, "sheenRoughnessMap",
-                    shConfig.sheen_roughness_texture.texture, LINEAR);
+                    shConfig.sheen_roughness_texture.texture, sameTexture ? sRGB : LINEAR);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = shConfig.sheen_roughness_texture.transform;
                 auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
