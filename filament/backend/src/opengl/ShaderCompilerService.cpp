@@ -103,6 +103,11 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
         return programData;
     }
 
+    void wait() const noexcept {
+        std::unique_lock l(lock);
+        cond.wait(l, [this](){ return signaled; });
+    }
+
     // Checks if the programBinary is ready.
     // This is similar to std::future::wait_for(0s)
     bool isReady() const noexcept {
@@ -337,6 +342,12 @@ GLuint ShaderCompilerService::getProgram(ShaderCompilerService::program_token_t&
     token->canceled = true;
 
     token->compiler.cancelTickOp(token);
+
+    auto job = token->compiler.mCompilerThreadPool.dequeue(token);
+    if (!job) {
+        // The job is being executed right now. We need to wait for it to finish to avoid a race.
+        token->wait();
+    }
 
     for (GLuint& shader: token->gl.shaders) {
         if (shader) {
