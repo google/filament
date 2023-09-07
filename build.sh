@@ -210,7 +210,7 @@ function build_desktop_target {
     echo "Building ${lc_target} in out/cmake-${lc_target}..."
     mkdir -p "out/cmake-${lc_target}"
 
-    pushd "out/cmake-${lc_target}"
+    pushd "out/cmake-${lc_target}" > /dev/null
 
     local lc_name=$(echo "${UNAME}" | tr '[:upper:]' '[:lower:]')
     if [[ "${lc_name}" == "darwin" ]]; then
@@ -243,13 +243,13 @@ function build_desktop_target {
     if [[ -d "../${lc_target}/filament" ]]; then
         if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
             echo "Generating out/filament-${lc_target}-${LC_UNAME}.tgz..."
-            pushd "../${lc_target}"
+            pushd "../${lc_target}" > /dev/null
             tar -czvf "../filament-${lc_target}-${LC_UNAME}.tgz" filament
-            popd
+            popd > /dev/null
         fi
     fi
 
-    popd
+    popd > /dev/null
 }
 
 function build_desktop {
@@ -267,7 +267,7 @@ function build_webgl_with_target {
 
     echo "Building WebGL ${lc_target}..."
     mkdir -p "out/cmake-webgl-${lc_target}"
-    pushd "out/cmake-webgl-${lc_target}"
+    pushd "out/cmake-webgl-${lc_target}" > /dev/null
 
     if [[ ! "${BUILD_TARGETS}" ]]; then
         BUILD_TARGETS=${BUILD_CUSTOM_TARGETS}
@@ -304,17 +304,17 @@ function build_webgl_with_target {
 
         if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
             echo "Generating out/filament-${lc_target}-web.tgz..."
-            pushd web/filament-js
+            pushd web/filament-js > /dev/null
             tar -cvf "../../../filament-${lc_target}-web.tar" filament.js
             tar -rvf "../../../filament-${lc_target}-web.tar" filament.wasm
             tar -rvf "../../../filament-${lc_target}-web.tar" filament.d.ts
-            popd
+            popd > /dev/null
             gzip -c "../filament-${lc_target}-web.tar" > "../filament-${lc_target}-web.tgz"
             rm "../filament-${lc_target}-web.tar"
         fi
     fi
 
-    popd
+    popd > /dev/null
 }
 
 function build_webgl {
@@ -345,7 +345,7 @@ function build_android_target {
     echo "Building Android ${lc_target} (${arch})..."
     mkdir -p "out/cmake-android-${lc_target}-${arch}"
 
-    pushd "out/cmake-android-${lc_target}-${arch}"
+    pushd "out/cmake-android-${lc_target}-${arch}" > /dev/null
 
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
@@ -364,7 +364,7 @@ function build_android_target {
     # We must always install Android libraries to build the AAR
     ${BUILD_COMMAND} install
 
-    popd
+    popd > /dev/null
 }
 
 function build_android_arch {
@@ -385,9 +385,9 @@ function archive_android {
     if [[ -d "out/android-${lc_target}/filament" ]]; then
         if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
             echo "Generating out/filament-android-${lc_target}-${LC_UNAME}.tgz..."
-            pushd "out/android-${lc_target}"
+            pushd "out/android-${lc_target}" > /dev/null
             tar -czvf "../filament-android-${lc_target}-${LC_UNAME}.tgz" filament
-            popd
+            popd > /dev/null
         fi
     fi
 }
@@ -465,7 +465,7 @@ function build_android {
         archive_android "Release"
     fi
 
-    pushd android
+    pushd android > /dev/null
 
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
         ./gradlew \
@@ -566,7 +566,7 @@ function build_android {
         fi
     fi
 
-    popd
+    popd > /dev/null
 }
 
 function build_ios_target {
@@ -577,7 +577,7 @@ function build_ios_target {
     echo "Building iOS ${lc_target} (${arch}) for ${platform}..."
     mkdir -p "out/cmake-ios-${lc_target}-${arch}"
 
-    pushd "out/cmake-ios-${lc_target}-${arch}"
+    pushd "out/cmake-ios-${lc_target}-${arch}" > /dev/null
 
     if [[ ! -d "CMakeFiles" ]] || [[ "${ISSUE_CMAKE_ALWAYS}" == "true" ]]; then
         cmake \
@@ -601,7 +601,7 @@ function build_ios_target {
         ${BUILD_COMMAND} ${INSTALL_COMMAND}
     fi
 
-    popd
+    popd > /dev/null
 }
 
 function archive_ios {
@@ -610,9 +610,9 @@ function archive_ios {
     if [[ -d "out/ios-${lc_target}/filament" ]]; then
         if [[ "${ISSUE_ARCHIVES}" == "true" ]]; then
             echo "Generating out/filament-${lc_target}-ios.tgz..."
-            pushd "out/ios-${lc_target}"
+            pushd "out/ios-${lc_target}" > /dev/null
             tar -czvf "../filament-${lc_target}-ios.tgz" filament
-            popd
+            popd > /dev/null
         fi
     fi
 }
@@ -671,14 +671,14 @@ function build_web_docs {
 
     mkdir -p out/web-docs
     cp -f docs/web-docs-package.json out/web-docs/package.json
-    pushd out/web-docs
+    pushd out/web-docs > /dev/null
 
     npm install > /dev/null
 
     # Generate documents
     npx markdeep-rasterizer ../../docs/Filament.md.html ../../docs/Materials.md.html  ../../docs/
 
-    popd
+    popd > /dev/null
 }
 
 function validate_build_command {
