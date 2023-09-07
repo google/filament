@@ -343,13 +343,19 @@ GLuint ShaderCompilerService::getProgram(ShaderCompilerService::program_token_t&
 
     token->compiler.cancelTickOp(token);
 
-    auto job = token->compiler.mCompilerThreadPool.dequeue(token);
-    if (!job) {
-        // The job is being executed right now. We need to wait for it to finish to avoid a race.
-        token->wait();
+    if (token->compiler.mShaderCompilerThreadCount) {
+        auto job = token->compiler.mCompilerThreadPool.dequeue(token);
+        if (!job) {
+            // The job is being executed right now. We need to wait for it to finish to avoid a
+            // race.
+            token->wait();
+        } else {
+            // The job has not been executed, but we still need to inform the callback manager in
+            // order for future callbacks to be successfully called.
+            token->compiler.mCallbackManager.put(token->handle);
+        }
     } else {
-        // The job has not been executed, but we still need to inform the callback manager in order
-        // for future callbacks to be successfully called.
+        // Since the tick op was canceled, we need to .put the token here.
         token->compiler.mCallbackManager.put(token->handle);
     }
 
