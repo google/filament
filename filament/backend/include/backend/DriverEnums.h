@@ -813,22 +813,22 @@ struct SamplerParams { // NOLINT
     struct Hasher {
         size_t operator()(SamplerParams p) const noexcept {
             // we don't use std::hash<> here, so we don't have to include <functional>
-            return *reinterpret_cast<uint64_t const*>(reinterpret_cast<char const*>(&p));
+            return *reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&p));
         }
     };
 
     struct EqualTo {
         bool operator()(SamplerParams lhs, SamplerParams rhs) const noexcept {
-            auto* pLhs = reinterpret_cast<uint64_t const*>(reinterpret_cast<char const*>(&lhs));
-            auto* pRhs = reinterpret_cast<uint64_t const*>(reinterpret_cast<char const*>(&rhs));
+            auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
+            auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
             return *pLhs == *pRhs;
         }
     };
 
     struct LessThan {
         bool operator()(SamplerParams lhs, SamplerParams rhs) const noexcept {
-            auto* pLhs = reinterpret_cast<uint64_t const*>(reinterpret_cast<char const*>(&lhs));
-            auto* pRhs = reinterpret_cast<uint64_t const*>(reinterpret_cast<char const*>(&rhs));
+            auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
+            auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
             return *pLhs == *pRhs;
         }
     };
@@ -838,6 +838,7 @@ private:
         return SamplerParams::LessThan{}(lhs, rhs);
     }
 };
+static_assert(sizeof(SamplerParams) == 4);
 
 // The limitation to 64-bits max comes from how we store a SamplerParams in our JNI code
 // see android/.../TextureSampler.cpp
