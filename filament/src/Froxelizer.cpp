@@ -81,6 +81,21 @@ struct Froxelizer::FroxelThreadData :
         public std::array<LightGroupType, FROXEL_BUFFER_MAX_ENTRY_COUNT> {
 };
 
+
+// Returns false if the two matrices are different. May return false if they're the
+// same, with some elements only differing by +0 or -0. Behaviour is undefined with NaNs.
+static bool fuzzyEqual(mat4f const& UTILS_RESTRICT l, mat4f const& UTILS_RESTRICT r) noexcept {
+    auto const li = reinterpret_cast<uint32_t const*>( reinterpret_cast<char const*>(&l) );
+    auto const ri = reinterpret_cast<uint32_t const*>( reinterpret_cast<char const*>(&r) );
+    uint32_t result = 0;
+    for (size_t i = 0; i < sizeof(mat4f) / sizeof(uint32_t); i++) {
+        // clang fully vectorizes this
+        result |= li[i] ^ ri[i];
+    }
+    return result == 0;
+}
+
+
 Froxelizer::Froxelizer(FEngine& engine)
         : mArena("froxel", PER_FROXELDATA_ARENA_SIZE),
           mZLightNear(FROXEL_FIRST_SLICE_DEPTH),
@@ -144,9 +159,8 @@ void Froxelizer::setViewport(filament::Viewport const& viewport) noexcept {
 }
 
 void Froxelizer::setProjection(const mat4f& projection,
-        float near,
-        UTILS_UNUSED float far) noexcept {
-    if (UTILS_UNLIKELY(mat4f::fuzzyEqual(mProjection, projection))) {
+        float near, UTILS_UNUSED float far) noexcept {
+    if (UTILS_UNLIKELY(!fuzzyEqual(mProjection, projection))) {
         mProjection = projection;
         mNear = near;
         mDirtyFlags |= PROJECTION_CHANGED;

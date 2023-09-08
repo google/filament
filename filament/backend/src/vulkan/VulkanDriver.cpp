@@ -276,7 +276,7 @@ void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
 }
 
 void VulkanDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        FrameCompletedCallback callback, void* user) {
+        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
 }
 
 void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
@@ -753,6 +753,14 @@ bool VulkanDriver::isAutoDepthResolveSupported() {
 
 bool VulkanDriver::isSRGBSwapChainSupported() {
     return mPlatform->isSRGBSwapChainSupported();
+}
+
+bool VulkanDriver::isStereoSupported() {
+    return true;
+}
+
+bool VulkanDriver::isParallelShaderCompileSupported() {
+    return false;
 }
 
 bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {

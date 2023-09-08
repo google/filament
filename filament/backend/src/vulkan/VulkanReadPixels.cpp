@@ -176,12 +176,28 @@ void VulkanReadPixels::run(VulkanRenderTarget const* srcTarget, uint32_t const x
     VkMemoryRequirements memReqs;
     VkDeviceMemory stagingMemory;
     vkGetImageMemoryRequirements(device, stagingImage, &memReqs);
+
+    uint32_t memoryTypeIndex = selectMemoryFunc(memReqs.memoryTypeBits,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                    | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
+
+    // If VK_MEMORY_PROPERTY_HOST_CACHED_BIT is not supported, we try only
+    // HOST_VISIBLE+HOST_COHERENT.  HOST_CACHED helps a lot with readpixels performance.
+    if (memoryTypeIndex >= VK_MAX_MEMORY_TYPES) {
+        memoryTypeIndex = selectMemoryFunc(memReqs.memoryTypeBits,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        utils::slog.w
+                << "readPixels is slow because VK_MEMORY_PROPERTY_HOST_CACHED_BIT is not available"
+                << utils::io::endl;
+    }
+
+    ASSERT_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES,
+            "VulkanReadPixels: unable to find a memory type that meets requirements.");
+
     VkMemoryAllocateInfo const allocInfo = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
             .allocationSize = memReqs.size,
-            .memoryTypeIndex = selectMemoryFunc(memReqs.memoryTypeBits,
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-                            | VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
+            .memoryTypeIndex = memoryTypeIndex,
     };
 
     vkAllocateMemory(device, &allocInfo, VKALLOC, &stagingMemory);

@@ -104,8 +104,9 @@ public:
             Sampler const* samplers, size_t count) noexcept;
 
     struct SpecializationConstant {
+        using Type = std::variant<int32_t, float, bool>;
         uint32_t id;                                // id set in glsl
-        std::variant<int32_t, float, bool> value;   // value and type
+        Type value;                                 // value and type
     };
 
     Program& specializationConstants(

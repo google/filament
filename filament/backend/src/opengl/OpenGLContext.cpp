@@ -49,6 +49,7 @@ bool OpenGLContext::queryOpenGLVersion(GLint* major, GLint* minor) noexcept {
 }
 
 OpenGLContext::OpenGLContext() noexcept {
+
     state.vao.p = &mDefaultVAO;
 
     // These queries work with all GL/GLES versions!
@@ -61,265 +62,74 @@ OpenGLContext::OpenGLContext() noexcept {
               "[" << state.version << "], [" << state.shader << "]" << io::endl;
 
     /*
-     * Figure out GL / GLES version and available features
+     * Figure out GL / GLES version, extensions and capabilities we need to
+     * determine the feature level
      */
 
     queryOpenGLVersion(&state.major, &state.minor);
 
-    glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &gets.max_renderbuffer_size);
-    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &gets.max_texture_image_units);
-    glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &gets.max_combined_texture_image_units);
+    OpenGLContext::initExtensions(&ext, state.major, state.minor);
 
-    if (state.major > 2) { // this check works for both GL and GLES, but is intended for GLES
+    OpenGLContext::initProcs(&procs, ext, state.major, state.minor);
+
+    OpenGLContext::initBugs(&bugs, ext, state.major, state.minor,
+            state.vendor, state.renderer, state.version, state.shader);
+
+    glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE,             &gets.max_renderbuffer_size);
+    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS,           &gets.max_texture_image_units);
+    glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS,  &gets.max_combined_texture_image_units);
+
+    mFeatureLevel = OpenGLContext::resolveFeatureLevel(state.major, state.minor, ext, gets, bugs);
+
+#ifdef BACKEND_OPENGL_VERSION_GLES
+    mShaderModel = ShaderModel::MOBILE;
+#else
+    mShaderModel = ShaderModel::DESKTOP;
+#endif
+
+#ifdef BACKEND_OPENGL_VERSION_GLES
+    if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
+        features.multisample_texture = true;
+    }
+#else
+    if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+        features.multisample_texture = true;
+    }
+#endif
+
+    if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-        glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &gets.max_uniform_block_size);
-        glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &gets.max_uniform_buffer_bindings);
-        glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
-        glGetIntegerv(GL_MAX_SAMPLES, &gets.max_samples);
-        glGetIntegerv(GL_MAX_DRAW_BUFFERS, &gets.max_draw_buffers);
+        glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE,
+                &gets.max_uniform_block_size);
+        glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS,
+                &gets.max_uniform_buffer_bindings);
+        glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT,
+                &gets.uniform_buffer_offset_alignment);
+        glGetIntegerv(GL_MAX_SAMPLES,
+                &gets.max_samples);
+        glGetIntegerv(GL_MAX_DRAW_BUFFERS,
+                &gets.max_draw_buffers);
         glGetIntegerv(GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS,
                 &gets.max_transform_feedback_separate_attribs);
+#ifdef GL_EXT_texture_filter_anisotropic
+        if (ext.EXT_texture_filter_anisotropic) {
+            glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gets.max_anisotropy);
+        }
 #endif
-    } else {
+#endif
+    }
+#ifdef BACKEND_OPENGL_VERSION_GLES
+    else {
         gets.max_uniform_block_size = 0;
         gets.max_uniform_buffer_bindings = 0;
         gets.uniform_buffer_offset_alignment = 0;
         gets.max_samples = 1;
         gets.max_draw_buffers = 1;
         gets.max_transform_feedback_separate_attribs = 0;
-    }
-
-    constexpr auto const caps3 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
-    constexpr GLint MAX_VERTEX_SAMPLER_COUNT = caps3.MAX_VERTEX_SAMPLER_COUNT;
-    constexpr GLint MAX_FRAGMENT_SAMPLER_COUNT = caps3.MAX_FRAGMENT_SAMPLER_COUNT;
-
-    // default procs that can be overridden based on runtime version
-#ifdef BACKEND_OPENGL_LEVEL_GLES30
-    procs.genVertexArrays = glGenVertexArrays;
-    procs.bindVertexArray = glBindVertexArray;
-    procs.deleteVertexArrays = glDeleteVertexArrays;
-
-    // these are core in GL and GLES 3.x
-    procs.genQueries = glGenQueries;
-    procs.deleteQueries = glDeleteQueries;
-    procs.beginQuery = glBeginQuery;
-    procs.endQuery = glEndQuery;
-    procs.getQueryObjectuiv = glGetQueryObjectuiv;
-#   ifdef BACKEND_OPENGL_VERSION_GL
-        procs.getQueryObjectui64v = glGetQueryObjectui64v; // only core in GL
-#   elif defined(GL_EXT_disjoint_timer_query)
-        procs.getQueryObjectui64v = glGetQueryObjectui64vEXT;
-#   endif // BACKEND_OPENGL_VERSION_GL
-
-     // core in ES 3.0 and GL 4.3
-    procs.invalidateFramebuffer = glInvalidateFramebuffer;
-#endif // BACKEND_OPENGL_LEVEL_GLES30
-
-    // no-op if not supported
-    procs.maxShaderCompilerThreadsKHR = +[](GLuint) {};
-
-#ifdef BACKEND_OPENGL_VERSION_GLES
-    initExtensionsGLES();
-    if (state.major == 3) {
-        // Runtime OpenGL version is ES 3.x
-        assert_invariant(gets.max_texture_image_units >= 16);
-        assert_invariant(gets.max_combined_texture_image_units >= 32);
-        if (state.minor >= 1) {
-            features.multisample_texture = true;
-            // figure out our feature level
-            if (ext.EXT_texture_cube_map_array) {
-                mFeatureLevel = FeatureLevel::FEATURE_LEVEL_2;
-                if (gets.max_texture_image_units >= MAX_FRAGMENT_SAMPLER_COUNT &&
-                    gets.max_combined_texture_image_units >=
-                            (MAX_FRAGMENT_SAMPLER_COUNT + MAX_VERTEX_SAMPLER_COUNT)) {
-                    mFeatureLevel = FeatureLevel::FEATURE_LEVEL_3;
-                }
-            }
-        }
-    }
-#ifndef IOS // IOS is guaranteed to have ES3.x
-    else if (UTILS_UNLIKELY(state.major == 2)) {
-        // Runtime OpenGL version is ES 2.x
-
-#if defined(BACKEND_OPENGL_LEVEL_GLES30)
-        // mandatory extensions (all supported by Mali-400 and Adreno 304)
-        assert_invariant(ext.OES_depth_texture);
-        assert_invariant(ext.OES_depth24);
-        assert_invariant(ext.OES_packed_depth_stencil);
-        assert_invariant(ext.OES_rgb8_rgba8);
-        assert_invariant(ext.OES_standard_derivatives);
-        assert_invariant(ext.OES_texture_npot);
-#endif
-
-        if (UTILS_LIKELY(ext.OES_vertex_array_object)) {
-            procs.genVertexArrays = glGenVertexArraysOES;
-            procs.bindVertexArray = glBindVertexArrayOES;
-            procs.deleteVertexArrays = glDeleteVertexArraysOES;
-        } else {
-            // if we don't have OES_vertex_array_object, just don't do anything with real VAOs,
-            // we'll just rebind everything each time. Most Mali-400 support this extension, but
-            // a few don't.
-            procs.genVertexArrays = +[](GLsizei, GLuint*) {};
-            procs.bindVertexArray = +[](GLuint) {};
-            procs.deleteVertexArrays = +[](GLsizei, GLuint const*) {};
-            // we activate this workaround path, which does the reset of array buffer
-            bugs.vao_doesnt_store_element_array_buffer_binding = true;
-        }
-
-        // EXT_disjoint_timer_query is optional -- pointers will be null if not available
-        procs.genQueries = glGenQueriesEXT;
-        procs.deleteQueries = glDeleteQueriesEXT;
-        procs.beginQuery = glBeginQueryEXT;
-        procs.endQuery = glEndQueryEXT;
-        procs.getQueryObjectuiv = glGetQueryObjectuivEXT;
-        procs.getQueryObjectui64v = glGetQueryObjectui64vEXT;
-
-        procs.invalidateFramebuffer = glDiscardFramebufferEXT;
-
-        procs.maxShaderCompilerThreadsKHR = glMaxShaderCompilerThreadsKHR;
-
-        mFeatureLevel = FeatureLevel::FEATURE_LEVEL_0;
-    }
-#endif // IOS
-#else
-    initExtensionsGL();
-    if (state.major == 4) {
-        assert_invariant(state.minor >= 1);
-        mShaderModel = ShaderModel::DESKTOP;
-        if (state.minor >= 3) {
-            // cubemap arrays are available as of OpenGL 4.0
-            mFeatureLevel = FeatureLevel::FEATURE_LEVEL_2;
-            // figure out our feature level
-            if (gets.max_texture_image_units >= MAX_FRAGMENT_SAMPLER_COUNT &&
-                gets.max_combined_texture_image_units >=
-                        (MAX_FRAGMENT_SAMPLER_COUNT + MAX_VERTEX_SAMPLER_COUNT)) {
-                mFeatureLevel = FeatureLevel::FEATURE_LEVEL_3;
-            }
-        }
-        features.multisample_texture = true;
-    }
-    // feedback loops are allowed on GL desktop as long as writes are disabled
-    bugs.allow_read_only_ancillary_feedback_loop = true;
-    assert_invariant(gets.max_texture_image_units >= 16);
-    assert_invariant(gets.max_combined_texture_image_units >= 32);
-
-    procs.maxShaderCompilerThreadsKHR = glMaxShaderCompilerThreadsARB;
-#endif
-
-#ifdef GL_EXT_texture_filter_anisotropic
-    if (ext.EXT_texture_filter_anisotropic) {
-        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gets.max_anisotropy);
+        gets.max_anisotropy = 1;
     }
 #endif
 
-    /*
-     * Figure out which driver bugs we need to workaround
-     */
-
-    const bool isAngle = strstr(state.renderer, "ANGLE");
-    if (!isAngle) {
-        if (strstr(state.renderer, "Adreno")) {
-            // Qualcomm GPU
-            bugs.invalidate_end_only_if_invalidate_start = true;
-
-            // On Adreno (As of 3/20) timer query seem to return the CPU time, not the GPU time.
-            bugs.dont_use_timer_query = true;
-
-            // Blits to texture arrays are failing
-            //   This bug continues to reproduce, though at times we've seen it appear to "go away".
-            //   The standalone sample app that was written to show this problem still reproduces.
-            //   The working hypothesis is that some other state affects this behavior.
-            bugs.disable_blit_into_texture_array = true;
-
-            // early exit condition is flattened in EASU code
-            bugs.split_easu = true;
-
-            // initialize the non-used uniform array for Adreno drivers.
-            bugs.enable_initialize_non_used_uniform_array = true;
-
-            int maj, min, driverMajor, driverMinor;
-            int const c = sscanf(state.version, "OpenGL ES %d.%d V@%d.%d", // NOLINT(cert-err34-c)
-                    &maj, &min, &driverMajor, &driverMinor);
-            if (c == 4) {
-                // Workarounds based on version here.
-                // notes:
-                //  bugs.invalidate_end_only_if_invalidate_start
-                //  - appeared at least in
-                //      "OpenGL ES 3.2 V@0490.0 (GIT@85da404, I46ff5fc46f, 1606794520) (Date:11/30/20)"
-                //  - wasn't present in
-                //      "OpenGL ES 3.2 V@0490.0 (GIT@0905e9f, Ia11ce2d146, 1599072951) (Date:09/02/20)"
-                //  - has been confirmed fixed in V@570.1 by Qualcomm
-                if (driverMajor < 490 || driverMajor > 570 ||
-                    (driverMajor == 570 && driverMinor >= 1)) {
-                    bugs.invalidate_end_only_if_invalidate_start = false;
-                }
-            }
-
-            // qualcomm seems to have no problem with this (which is good for us)
-            bugs.allow_read_only_ancillary_feedback_loop = true;
-        } else if (strstr(state.renderer, "Mali")) {
-            // ARM GPU
-            bugs.vao_doesnt_store_element_array_buffer_binding = true;
-            if (strstr(state.renderer, "Mali-T")) {
-                bugs.disable_glFlush = true;
-                bugs.disable_shared_context_draws = true;
-                bugs.texture_external_needs_rebind = true;
-                // We have not verified that timer queries work on Mali-T, so we disable to be safe.
-                bugs.dont_use_timer_query = true;
-            }
-            if (strstr(state.renderer, "Mali-G")) {
-                // We have run into several problems with timer queries on Mali-Gxx:
-                // - timer queries seem to cause memory corruptions in some cases on some devices
-                //   (see b/233754398)
-                //          - appeared at least in: "OpenGL ES 3.2 v1.r26p0-01eac0"
-                //          - wasn't present in: "OpenGL ES 3.2 v1.r32p1-00pxl1"
-                // - timer queries sometime crash with an NPE (see b/273759031)
-                bugs.dont_use_timer_query = true;
-            }
-            // Mali seems to have no problem with this (which is good for us)
-            bugs.allow_read_only_ancillary_feedback_loop = true;
-        } else if (strstr(state.renderer, "Intel")) {
-            // Intel GPU
-            bugs.vao_doesnt_store_element_array_buffer_binding = true;
-        } else if (strstr(state.renderer, "PowerVR")) {
-            // PowerVR GPU
-            // On PowerVR (Rogue GE8320) glFlush doesn't seem to do anything, in particular,
-            // it doesn't kick the GPU earlier, so don't issue these calls as they seem to slow
-            // things down.
-            bugs.disable_glFlush = true;
-            // On PowerVR (Rogue GE8320) using gl_InstanceID too early in the shader doesn't work.
-            bugs.powervr_shader_workarounds = true;
-            // On PowerVR (Rogue GE8320) destroying a fbo after glBlitFramebuffer is effectively
-            // equivalent to glFinish.
-            bugs.delay_fbo_destruction = true;
-            // PowerVR seems to have no problem with this (which is good for us)
-            bugs.allow_read_only_ancillary_feedback_loop = true;
-            // PowerVR has a shader compiler thread pinned on the last core
-            bugs.disable_thread_affinity = true;
-        } else if (strstr(state.renderer, "Apple")) {
-            // Apple GPU
-        } else if (strstr(state.renderer, "Tegra") ||
-                   strstr(state.renderer, "GeForce") ||
-                   strstr(state.renderer, "NV")) {
-            // NVIDIA GPU
-        } else if (strstr(state.renderer, "Vivante")) {
-            // Vivante GPU
-        } else if (strstr(state.renderer, "AMD") ||
-                   strstr(state.renderer, "ATI")) {
-            // AMD/ATI GPU
-        } else if (strstr(state.renderer, "Mozilla")) {
-            bugs.disable_invalidate_framebuffer = true;
-        }
-    } else {
-        // When running under ANGLE, it's a different set of workaround that we need.
-        if (strstr(state.renderer, "Adreno")) {
-            // Qualcomm GPU
-            // early exit condition is flattened in EASU code
-            // (that should be regardless of ANGLE, but we should double-check)
-            bugs.split_easu = true;
-        }
-        // TODO: see if we could use `bugs.allow_read_only_ancillary_feedback_loop = true`
-    }
 
     slog.v << "Feature level: " << +mFeatureLevel << '\n';
     slog.v << "Active workarounds: " << '\n';
@@ -345,14 +155,14 @@ OpenGLContext::OpenGLContext() noexcept {
 #endif
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    assert_invariant(state.major <= 2 || gets.max_draw_buffers >= 4); // minspec
+    assert_invariant(mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0 || gets.max_draw_buffers >= 4); // minspec
 #endif
 
     setDefaultState();
 
 #ifdef GL_EXT_texture_filter_anisotropic
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    if (state.major > 2 && ext.EXT_texture_filter_anisotropic) {
+    if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1 && ext.EXT_texture_filter_anisotropic) {
         // make sure we don't have any error flag
         while (glGetError() != GL_NO_ERROR) { }
 
@@ -458,9 +268,287 @@ void OpenGLContext::setDefaultState() noexcept {
     }
 }
 
+
+void OpenGLContext::initProcs(Procs* procs,
+        Extensions const& ext, GLint major, GLint) noexcept {
+    (void)ext;
+    (void)major;
+
+    // default procs that can be overridden based on runtime version
+#ifdef BACKEND_OPENGL_LEVEL_GLES30
+    procs->genVertexArrays = glGenVertexArrays;
+    procs->bindVertexArray = glBindVertexArray;
+    procs->deleteVertexArrays = glDeleteVertexArrays;
+
+    // these are core in GL and GLES 3.x
+    procs->genQueries = glGenQueries;
+    procs->deleteQueries = glDeleteQueries;
+    procs->beginQuery = glBeginQuery;
+    procs->endQuery = glEndQuery;
+    procs->getQueryObjectuiv = glGetQueryObjectuiv;
+#   ifdef BACKEND_OPENGL_VERSION_GL
+    procs->getQueryObjectui64v = glGetQueryObjectui64v; // only core in GL
+#   elif defined(GL_EXT_disjoint_timer_query)
+    procs->getQueryObjectui64v = glGetQueryObjectui64vEXT;
+#   endif // BACKEND_OPENGL_VERSION_GL
+
+    // core in ES 3.0 and GL 4.3
+    procs->invalidateFramebuffer = glInvalidateFramebuffer;
+#endif // BACKEND_OPENGL_LEVEL_GLES30
+
+    // no-op if not supported
+    procs->maxShaderCompilerThreadsKHR = +[](GLuint) {};
+
+#ifdef BACKEND_OPENGL_VERSION_GLES
+#   ifndef IOS // IOS is guaranteed to have ES3.x
+    if (UTILS_UNLIKELY(major == 2)) {
+        // Runtime OpenGL version is ES 2.x
+        if (UTILS_LIKELY(ext.OES_vertex_array_object)) {
+            procs->genVertexArrays = glGenVertexArraysOES;
+            procs->bindVertexArray = glBindVertexArrayOES;
+            procs->deleteVertexArrays = glDeleteVertexArraysOES;
+        } else {
+            // if we don't have OES_vertex_array_object, just don't do anything with real VAOs,
+            // we'll just rebind everything each time. Most Mali-400 support this extension, but
+            // a few don't.
+            procs->genVertexArrays = +[](GLsizei, GLuint*) {};
+            procs->bindVertexArray = +[](GLuint) {};
+            procs->deleteVertexArrays = +[](GLsizei, GLuint const*) {};
+        }
+
+        // EXT_disjoint_timer_query is optional -- pointers will be null if not available
+        procs->genQueries = glGenQueriesEXT;
+        procs->deleteQueries = glDeleteQueriesEXT;
+        procs->beginQuery = glBeginQueryEXT;
+        procs->endQuery = glEndQueryEXT;
+        procs->getQueryObjectuiv = glGetQueryObjectuivEXT;
+        procs->getQueryObjectui64v = glGetQueryObjectui64vEXT;
+
+        procs->invalidateFramebuffer = glDiscardFramebufferEXT;
+
+        procs->maxShaderCompilerThreadsKHR = glMaxShaderCompilerThreadsKHR;
+    }
+#   endif // IOS
+#else
+    procs->maxShaderCompilerThreadsKHR = glMaxShaderCompilerThreadsARB;
+#endif
+}
+
+void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
+        GLint major, GLint minor,
+        char const* vendor,
+        char const* renderer,
+        char const* version,
+        char const* shader) {
+
+    (void)major;
+    (void)minor;
+    (void)vendor;
+    (void)renderer;
+    (void)version;
+    (void)shader;
+
+    const bool isAngle = strstr(renderer, "ANGLE");
+    if (!isAngle) {
+        if (strstr(renderer, "Adreno")) {
+            // Qualcomm GPU
+            bugs->invalidate_end_only_if_invalidate_start = true;
+
+            // On Adreno (As of 3/20) timer query seem to return the CPU time, not the GPU time.
+            bugs->dont_use_timer_query = true;
+
+            // Blits to texture arrays are failing
+            //   This bug continues to reproduce, though at times we've seen it appear to "go away".
+            //   The standalone sample app that was written to show this problem still reproduces.
+            //   The working hypothesis is that some other state affects this behavior.
+            bugs->disable_blit_into_texture_array = true;
+
+            // early exit condition is flattened in EASU code
+            bugs->split_easu = true;
+
+            // initialize the non-used uniform array for Adreno drivers.
+            bugs->enable_initialize_non_used_uniform_array = true;
+
+            int maj, min, driverMajor, driverMinor;
+            int const c = sscanf(version, "OpenGL ES %d.%d V@%d.%d", // NOLINT(cert-err34-c)
+                    &maj, &min, &driverMajor, &driverMinor);
+            if (c == 4) {
+                // Workarounds based on version here.
+                // Notes:
+                //  bugs.invalidate_end_only_if_invalidate_start
+                //  - appeared at least in
+                //      "OpenGL ES 3.2 V@0490.0 (GIT@85da404, I46ff5fc46f, 1606794520) (Date:11/30/20)"
+                //  - wasn't present in
+                //      "OpenGL ES 3.2 V@0490.0 (GIT@0905e9f, Ia11ce2d146, 1599072951) (Date:09/02/20)"
+                //  - has been confirmed fixed in V@570.1 by Qualcomm
+                if (driverMajor < 490 || driverMajor > 570 ||
+                    (driverMajor == 570 && driverMinor >= 1)) {
+                    bugs->invalidate_end_only_if_invalidate_start = false;
+                }
+            }
+
+            // qualcomm seems to have no problem with this (which is good for us)
+            bugs->allow_read_only_ancillary_feedback_loop = true;
+
+            // Older Adreno devices that support ES3.0 only tend to be extremely buggy, so we
+            // fall back to ES2.0.
+            if (major == 3 && minor == 0) {
+                bugs->force_feature_level0 = true;
+            }
+        } else if (strstr(renderer, "Mali")) {
+            // ARM GPU
+            bugs->vao_doesnt_store_element_array_buffer_binding = true;
+            if (strstr(renderer, "Mali-T")) {
+                bugs->disable_glFlush = true;
+                bugs->disable_shared_context_draws = true;
+                bugs->texture_external_needs_rebind = true;
+                // We have not verified that timer queries work on Mali-T, so we disable to be safe.
+                bugs->dont_use_timer_query = true;
+            }
+            if (strstr(renderer, "Mali-G")) {
+                // We have run into several problems with timer queries on Mali-Gxx:
+                // - timer queries seem to cause memory corruptions in some cases on some devices
+                //   (see b/233754398)
+                //          - appeared at least in: "OpenGL ES 3.2 v1.r26p0-01eac0"
+                //          - wasn't present in: "OpenGL ES 3.2 v1.r32p1-00pxl1"
+                // - timer queries sometime crash with an NPE (see b/273759031)
+                bugs->dont_use_timer_query = true;
+            }
+            // Mali seems to have no problem with this (which is good for us)
+            bugs->allow_read_only_ancillary_feedback_loop = true;
+        } else if (strstr(renderer, "Intel")) {
+            // Intel GPU
+            bugs->vao_doesnt_store_element_array_buffer_binding = true;
+        } else if (strstr(renderer, "PowerVR")) {
+            // PowerVR GPU
+            // On PowerVR (Rogue GE8320) glFlush doesn't seem to do anything, in particular,
+            // it doesn't kick the GPU earlier, so don't issue these calls as they seem to slow
+            // things down.
+            bugs->disable_glFlush = true;
+            // On PowerVR (Rogue GE8320) using gl_InstanceID too early in the shader doesn't work.
+            bugs->powervr_shader_workarounds = true;
+            // On PowerVR (Rogue GE8320) destroying a fbo after glBlitFramebuffer is effectively
+            // equivalent to glFinish.
+            bugs->delay_fbo_destruction = true;
+            // PowerVR seems to have no problem with this (which is good for us)
+            bugs->allow_read_only_ancillary_feedback_loop = true;
+            // PowerVR has a shader compiler thread pinned on the last core
+            bugs->disable_thread_affinity = true;
+        } else if (strstr(renderer, "Apple")) {
+            // Apple GPU
+        } else if (strstr(renderer, "Tegra") ||
+                   strstr(renderer, "GeForce") ||
+                   strstr(renderer, "NV")) {
+            // NVIDIA GPU
+        } else if (strstr(renderer, "Vivante")) {
+            // Vivante GPU
+        } else if (strstr(renderer, "AMD") ||
+                   strstr(renderer, "ATI")) {
+            // AMD/ATI GPU
+        } else if (strstr(renderer, "Mozilla")) {
+            bugs->disable_invalidate_framebuffer = true;
+        }
+    } else {
+        // When running under ANGLE, it's a different set of workaround that we need.
+        if (strstr(renderer, "Adreno")) {
+            // Qualcomm GPU
+            // early exit condition is flattened in EASU code
+            // (that should be regardless of ANGLE, but we should double-check)
+            bugs->split_easu = true;
+        }
+        // TODO: see if we could use `bugs.allow_read_only_ancillary_feedback_loop = true`
+    }
+
+#ifdef BACKEND_OPENGL_VERSION_GLES
+#   ifndef IOS // IOS is guaranteed to have ES3.x
+    if (UTILS_UNLIKELY(major == 2)) {
+        if (UTILS_UNLIKELY(!exts.OES_vertex_array_object)) {
+            // we activate this workaround path, which does the reset of array buffer
+            bugs->vao_doesnt_store_element_array_buffer_binding = true;
+        }
+    }
+#   endif // IOS
+#else
+    // feedback loops are allowed on GL desktop as long as writes are disabled
+    bugs->allow_read_only_ancillary_feedback_loop = true;
+#endif
+}
+
+FeatureLevel OpenGLContext::resolveFeatureLevel(GLint major, GLint minor,
+        Extensions const& exts,
+        Gets const& gets,
+        Bugs const& bugs) noexcept {
+
+    constexpr auto const caps3 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
+    constexpr GLint MAX_VERTEX_SAMPLER_COUNT = caps3.MAX_VERTEX_SAMPLER_COUNT;
+    constexpr GLint MAX_FRAGMENT_SAMPLER_COUNT = caps3.MAX_FRAGMENT_SAMPLER_COUNT;
+
+    (void)exts;
+    (void)gets;
+    (void)bugs;
+
+    FeatureLevel featureLevel = FeatureLevel::FEATURE_LEVEL_1;
+
+#ifdef BACKEND_OPENGL_VERSION_GLES
+    if (major == 3) {
+        // Runtime OpenGL version is ES 3.x
+        assert_invariant(gets.max_texture_image_units >= 16);
+        assert_invariant(gets.max_combined_texture_image_units >= 32);
+        if (minor >= 1) {
+            // figure out our feature level
+            if (exts.EXT_texture_cube_map_array) {
+                featureLevel = FeatureLevel::FEATURE_LEVEL_2;
+                if (gets.max_texture_image_units >= MAX_FRAGMENT_SAMPLER_COUNT &&
+                    gets.max_combined_texture_image_units >=
+                    (MAX_FRAGMENT_SAMPLER_COUNT + MAX_VERTEX_SAMPLER_COUNT)) {
+                    featureLevel = FeatureLevel::FEATURE_LEVEL_3;
+                }
+            }
+        }
+    }
+#   ifndef IOS // IOS is guaranteed to have ES3.x
+    else if (UTILS_UNLIKELY(major == 2)) {
+        // Runtime OpenGL version is ES 2.x
+#       if defined(BACKEND_OPENGL_LEVEL_GLES30)
+        // mandatory extensions (all supported by Mali-400 and Adreno 304)
+        assert_invariant(exts.OES_depth_texture);
+        assert_invariant(exts.OES_depth24);
+        assert_invariant(exts.OES_packed_depth_stencil);
+        assert_invariant(exts.OES_rgb8_rgba8);
+        assert_invariant(exts.OES_standard_derivatives);
+        assert_invariant(exts.OES_texture_npot);
+#       endif
+        featureLevel = FeatureLevel::FEATURE_LEVEL_0;
+    }
+#   endif // IOS
+#else
+    assert_invariant(gets.max_texture_image_units >= 16);
+    assert_invariant(gets.max_combined_texture_image_units >= 32);
+    if (major == 4) {
+        assert_invariant(minor >= 1);
+        if (minor >= 3) {
+            // cubemap arrays are available as of OpenGL 4.0
+            featureLevel = FeatureLevel::FEATURE_LEVEL_2;
+            // figure out our feature level
+            if (gets.max_texture_image_units >= MAX_FRAGMENT_SAMPLER_COUNT &&
+                gets.max_combined_texture_image_units >=
+                (MAX_FRAGMENT_SAMPLER_COUNT + MAX_VERTEX_SAMPLER_COUNT)) {
+                featureLevel = FeatureLevel::FEATURE_LEVEL_3;
+            }
+        }
+    }
+#endif
+
+    if (bugs.force_feature_level0) {
+        featureLevel = FeatureLevel::FEATURE_LEVEL_0;
+    }
+
+    return featureLevel;
+}
+
 #ifdef BACKEND_OPENGL_VERSION_GLES
 
-void OpenGLContext::initExtensionsGLES() noexcept {
+void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor) noexcept {
     const char * const extensions = (const char*)glGetString(GL_EXTENSIONS);
     GLUtils::unordered_string_set const exts = GLUtils::split(extensions);
     if constexpr (DEBUG_PRINT_EXTENSIONS) {
@@ -472,51 +560,50 @@ void OpenGLContext::initExtensionsGLES() noexcept {
 
     // figure out and initialize the extensions we need
     using namespace std::literals;
-    ext.APPLE_color_buffer_packed_float = exts.has("GL_APPLE_color_buffer_packed_float"sv);
-    ext.EXT_clip_control = exts.has("GL_EXT_clip_control"sv);
-    ext.EXT_clip_cull_distance = exts.has("GL_EXT_clip_cull_distance"sv);
-    ext.EXT_color_buffer_float = exts.has("GL_EXT_color_buffer_float"sv);
-    ext.EXT_color_buffer_half_float = exts.has("GL_EXT_color_buffer_half_float"sv);
-    ext.EXT_debug_marker = exts.has("GL_EXT_debug_marker"sv);
-    ext.EXT_discard_framebuffer = exts.has("GL_EXT_discard_framebuffer"sv);
-    ext.EXT_disjoint_timer_query = exts.has("GL_EXT_disjoint_timer_query"sv);
-    ext.EXT_multisampled_render_to_texture = exts.has("GL_EXT_multisampled_render_to_texture"sv);
-    ext.EXT_multisampled_render_to_texture2 = exts.has("GL_EXT_multisampled_render_to_texture2"sv);
-    ext.EXT_shader_framebuffer_fetch = exts.has("GL_EXT_shader_framebuffer_fetch"sv);
+    ext->APPLE_color_buffer_packed_float = exts.has("GL_APPLE_color_buffer_packed_float"sv);
+    ext->EXT_clip_control = exts.has("GL_EXT_clip_control"sv);
+    ext->EXT_clip_cull_distance = exts.has("GL_EXT_clip_cull_distance"sv);
+    ext->EXT_color_buffer_float = exts.has("GL_EXT_color_buffer_float"sv);
+    ext->EXT_color_buffer_half_float = exts.has("GL_EXT_color_buffer_half_float"sv);
+    ext->EXT_debug_marker = exts.has("GL_EXT_debug_marker"sv);
+    ext->EXT_discard_framebuffer = exts.has("GL_EXT_discard_framebuffer"sv);
+    ext->EXT_disjoint_timer_query = exts.has("GL_EXT_disjoint_timer_query"sv);
+    ext->EXT_multisampled_render_to_texture = exts.has("GL_EXT_multisampled_render_to_texture"sv);
+    ext->EXT_multisampled_render_to_texture2 = exts.has("GL_EXT_multisampled_render_to_texture2"sv);
+    ext->EXT_shader_framebuffer_fetch = exts.has("GL_EXT_shader_framebuffer_fetch"sv);
 #if !defined(__EMSCRIPTEN__)
-    ext.EXT_texture_compression_etc2 = true;
+    ext->EXT_texture_compression_etc2 = true;
 #endif
-    ext.EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
-    ext.EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
-    ext.EXT_texture_compression_rgtc = exts.has("GL_EXT_texture_compression_rgtc"sv);
-    ext.EXT_texture_compression_bptc = exts.has("GL_EXT_texture_compression_bptc"sv);
-    ext.EXT_texture_cube_map_array = exts.has("GL_EXT_texture_cube_map_array"sv) || exts.has("GL_OES_texture_cube_map_array"sv);
-    ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
-    ext.KHR_debug = exts.has("GL_KHR_debug"sv);
-    ext.KHR_parallel_shader_compile = exts.has("GL_KHR_parallel_shader_compile"sv);
-    ext.KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
-    ext.KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
-    ext.OES_depth_texture = exts.has("GL_OES_depth_texture"sv);
-    ext.OES_depth24 = exts.has("GL_OES_depth24"sv);
-    ext.OES_packed_depth_stencil = exts.has("GL_OES_packed_depth_stencil"sv);
-    ext.OES_EGL_image_external_essl3 = exts.has("GL_OES_EGL_image_external_essl3"sv);
-    ext.OES_rgb8_rgba8 = exts.has("GL_OES_rgb8_rgba8"sv);
-    ext.OES_standard_derivatives = exts.has("GL_OES_standard_derivatives"sv);
-    ext.OES_texture_npot = exts.has("GL_OES_texture_npot"sv);
-    ext.OES_vertex_array_object = exts.has("GL_OES_vertex_array_object"sv);
-    ext.WEBGL_compressed_texture_etc = exts.has("WEBGL_compressed_texture_etc"sv);
-    ext.WEBGL_compressed_texture_s3tc = exts.has("WEBGL_compressed_texture_s3tc"sv);
-    ext.WEBGL_compressed_texture_s3tc_srgb = exts.has("WEBGL_compressed_texture_s3tc_srgb"sv);
+    ext->EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
+    ext->EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
+    ext->EXT_texture_compression_rgtc = exts.has("GL_EXT_texture_compression_rgtc"sv);
+    ext->EXT_texture_compression_bptc = exts.has("GL_EXT_texture_compression_bptc"sv);
+    ext->EXT_texture_cube_map_array = exts.has("GL_EXT_texture_cube_map_array"sv) || exts.has("GL_OES_texture_cube_map_array"sv);
+    ext->GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
+    ext->KHR_debug = exts.has("GL_KHR_debug"sv);
+    ext->KHR_parallel_shader_compile = exts.has("GL_KHR_parallel_shader_compile"sv);
+    ext->KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
+    ext->KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
+    ext->OES_depth_texture = exts.has("GL_OES_depth_texture"sv);
+    ext->OES_depth24 = exts.has("GL_OES_depth24"sv);
+    ext->OES_packed_depth_stencil = exts.has("GL_OES_packed_depth_stencil"sv);
+    ext->OES_EGL_image_external_essl3 = exts.has("GL_OES_EGL_image_external_essl3"sv);
+    ext->OES_rgb8_rgba8 = exts.has("GL_OES_rgb8_rgba8"sv);
+    ext->OES_standard_derivatives = exts.has("GL_OES_standard_derivatives"sv);
+    ext->OES_texture_npot = exts.has("GL_OES_texture_npot"sv);
+    ext->OES_vertex_array_object = exts.has("GL_OES_vertex_array_object"sv);
+    ext->WEBGL_compressed_texture_etc = exts.has("WEBGL_compressed_texture_etc"sv);
+    ext->WEBGL_compressed_texture_s3tc = exts.has("WEBGL_compressed_texture_s3tc"sv);
+    ext->WEBGL_compressed_texture_s3tc_srgb = exts.has("WEBGL_compressed_texture_s3tc_srgb"sv);
 
     // ES 3.2 implies EXT_color_buffer_float
-    if (state.major > 3 || (state.major == 3 && state.minor >= 2)) {
-        ext.EXT_color_buffer_float = true;
+    if (major > 3 || (major == 3 && minor >= 2)) {
+        ext->EXT_color_buffer_float = true;
     }
-
     // ES 3.x implies EXT_discard_framebuffer and OES_vertex_array_object
-    if (state.major >= 3) {
-        ext.EXT_discard_framebuffer = true;
-        ext.OES_vertex_array_object = true;
+    if (major >= 3) {
+        ext->EXT_discard_framebuffer = true;
+        ext->OES_vertex_array_object = true;
     }
 }
 
@@ -524,7 +611,7 @@ void OpenGLContext::initExtensionsGLES() noexcept {
 
 #ifdef BACKEND_OPENGL_VERSION_GL
 
-void OpenGLContext::initExtensionsGL() noexcept {
+void OpenGLContext::initExtensionsGL(Extensions* ext, GLint major, GLint minor) noexcept {
     GLUtils::unordered_string_set exts;
     GLint n = 0;
     glGetIntegerv(GL_NUM_EXTENSIONS, &n);
@@ -539,55 +626,52 @@ void OpenGLContext::initExtensionsGL() noexcept {
     }
 
     using namespace std::literals;
-    ext.APPLE_color_buffer_packed_float = true;  // Assumes core profile.
-    ext.ARB_shading_language_packing = exts.has("GL_ARB_shading_language_packing"sv);
-    ext.EXT_color_buffer_float = true;  // Assumes core profile.
-    ext.EXT_color_buffer_half_float = true;  // Assumes core profile.
-    ext.EXT_clip_cull_distance = true;
-    ext.EXT_debug_marker = exts.has("GL_EXT_debug_marker"sv);
-    ext.EXT_discard_framebuffer = false;
-    ext.EXT_disjoint_timer_query = true;
-    ext.EXT_multisampled_render_to_texture = false;
-    ext.EXT_multisampled_render_to_texture2 = false;
-    ext.EXT_shader_framebuffer_fetch = exts.has("GL_EXT_shader_framebuffer_fetch"sv);
-    ext.EXT_texture_compression_bptc = exts.has("GL_EXT_texture_compression_bptc"sv);
-    ext.EXT_texture_compression_etc2 = exts.has("GL_ARB_ES3_compatibility"sv);
-    ext.EXT_texture_compression_rgtc = exts.has("GL_EXT_texture_compression_rgtc"sv);
-    ext.EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
-    ext.EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
-    ext.EXT_texture_cube_map_array = true;
-    ext.EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
-    ext.EXT_texture_sRGB = exts.has("GL_EXT_texture_sRGB"sv);
-    ext.GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
-    ext.KHR_parallel_shader_compile = exts.has("GL_KHR_parallel_shader_compile"sv);
-    ext.KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
-    ext.KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
-    ext.OES_depth_texture = true;
-    ext.OES_depth24 = true;
-    ext.OES_EGL_image_external_essl3 = false;
-    ext.OES_rgb8_rgba8 = true;
-    ext.OES_standard_derivatives = true;
-    ext.OES_texture_npot = true;
-    ext.OES_vertex_array_object = true;
-    ext.WEBGL_compressed_texture_etc = false;
-    ext.WEBGL_compressed_texture_s3tc = false;
-    ext.WEBGL_compressed_texture_s3tc_srgb = false;
-
-    auto const major = state.major;
-    auto const minor = state.minor;
+    ext->APPLE_color_buffer_packed_float = true;  // Assumes core profile.
+    ext->ARB_shading_language_packing = exts.has("GL_ARB_shading_language_packing"sv);
+    ext->EXT_color_buffer_float = true;  // Assumes core profile.
+    ext->EXT_color_buffer_half_float = true;  // Assumes core profile.
+    ext->EXT_clip_cull_distance = true;
+    ext->EXT_debug_marker = exts.has("GL_EXT_debug_marker"sv);
+    ext->EXT_discard_framebuffer = false;
+    ext->EXT_disjoint_timer_query = true;
+    ext->EXT_multisampled_render_to_texture = false;
+    ext->EXT_multisampled_render_to_texture2 = false;
+    ext->EXT_shader_framebuffer_fetch = exts.has("GL_EXT_shader_framebuffer_fetch"sv);
+    ext->EXT_texture_compression_bptc = exts.has("GL_EXT_texture_compression_bptc"sv);
+    ext->EXT_texture_compression_etc2 = exts.has("GL_ARB_ES3_compatibility"sv);
+    ext->EXT_texture_compression_rgtc = exts.has("GL_EXT_texture_compression_rgtc"sv);
+    ext->EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);
+    ext->EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
+    ext->EXT_texture_cube_map_array = true;
+    ext->EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
+    ext->EXT_texture_sRGB = exts.has("GL_EXT_texture_sRGB"sv);
+    ext->GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
+    ext->KHR_parallel_shader_compile = exts.has("GL_KHR_parallel_shader_compile"sv);
+    ext->KHR_texture_compression_astc_hdr = exts.has("GL_KHR_texture_compression_astc_hdr"sv);
+    ext->KHR_texture_compression_astc_ldr = exts.has("GL_KHR_texture_compression_astc_ldr"sv);
+    ext->OES_depth_texture = true;
+    ext->OES_depth24 = true;
+    ext->OES_EGL_image_external_essl3 = false;
+    ext->OES_rgb8_rgba8 = true;
+    ext->OES_standard_derivatives = true;
+    ext->OES_texture_npot = true;
+    ext->OES_vertex_array_object = true;
+    ext->WEBGL_compressed_texture_etc = false;
+    ext->WEBGL_compressed_texture_s3tc = false;
+    ext->WEBGL_compressed_texture_s3tc_srgb = false;
 
     // OpenGL 4.2 implies ARB_shading_language_packing
     if (major > 4 || (major == 4 && minor >= 2)) {
-        ext.ARB_shading_language_packing = true;
+        ext->ARB_shading_language_packing = true;
     }
     // OpenGL 4.3 implies EXT_discard_framebuffer
     if (major > 4 || (major == 4 && minor >= 3)) {
-        ext.EXT_discard_framebuffer = true;
-        ext.KHR_debug = true;
+        ext->EXT_discard_framebuffer = true;
+        ext->KHR_debug = true;
     }
     // OpenGL 4.5 implies EXT_clip_control
     if (major > 4 || (major == 4 && minor >= 5)) {
-        ext.EXT_clip_control = true;
+        ext->EXT_clip_control = true;
     }
 }
 
@@ -683,7 +767,7 @@ void OpenGLContext::deleteBuffers(GLsizei n, const GLuint* buffers, GLenum targe
     }
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    assert_invariant(state.major > 2 ||
+    assert_invariant(mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1 ||
             (target != GL_UNIFORM_BUFFER && target != GL_TRANSFORM_FEEDBACK_BUFFER));
 
     if (target == GL_UNIFORM_BUFFER || target == GL_TRANSFORM_FEEDBACK_BUFFER) {

@@ -272,24 +272,6 @@ public:
     template<typename U, typename V>
     constexpr TMat44(const TMat33<U>& matrix, const TVec4<V>& column3) noexcept;
 
-    /*
-     *  helpers
-     */
-
-    // returns false if the two matrices are different. May return false if they're the
-    // same, with some elements only differing by +0 or -0. Behaviour is undefined with NaNs.
-    static constexpr bool fuzzyEqual(TMat44 const& l, TMat44 const& r) noexcept {
-        uint64_t const* const li = reinterpret_cast<uint64_t const*>(&l);
-        uint64_t const* const ri = reinterpret_cast<uint64_t const*>(&r);
-        uint64_t result = 0;
-        // For some reason clang is not able to vectorize this loop when the number of iteration
-        // is known and constant (!?!?!). Still this is better than operator==.
-        for (size_t i = 0; i < sizeof(TMat44) / sizeof(uint64_t); i++) {
-            result |= li[i] ^ ri[i];
-        }
-        return result != 0;
-    }
-
     static constexpr TMat44 ortho(T left, T right, T bottom, T top, T near, T far) noexcept;
 
     static constexpr TMat44 frustum(T left, T right, T bottom, T top, T near, T far) noexcept;

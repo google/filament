@@ -182,6 +182,8 @@ public:
         return CONFIG_MAX_INSTANCES;
     }
 
+    bool isStereoSupported() const noexcept { return getDriver().isStereoSupported(); }
+
     PostProcessManager const& getPostProcessManager() const noexcept {
         return mPostProcessManager;
     }

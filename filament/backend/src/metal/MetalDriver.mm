@@ -176,9 +176,9 @@ void MetalDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
 }
 
 void MetalDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        FrameCompletedCallback callback, void* user) {
+        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     auto* swapChain = handle_cast<MetalSwapChain>(sch);
-    swapChain->setFrameCompletedCallback(callback, user);
+    swapChain->setFrameCompletedCallback(handler, callback, user);
 }
 
 void MetalDriver::execute(std::function<void(void)> const& fn) noexcept {
@@ -693,6 +693,14 @@ bool MetalDriver::isAutoDepthResolveSupported() {
 
 bool MetalDriver::isSRGBSwapChainSupported() {
     // the SWAP_CHAIN_CONFIG_SRGB_COLORSPACE flag is not supported
+    return false;
+}
+
+bool MetalDriver::isStereoSupported() {
+    return true;
+}
+
+bool MetalDriver::isParallelShaderCompileSupported() {
     return false;
 }
 

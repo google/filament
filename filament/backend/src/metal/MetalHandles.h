@@ -70,7 +70,8 @@ public:
     void releaseDrawable();
 
     void setFrameScheduledCallback(FrameScheduledCallback callback, void* user);
-    void setFrameCompletedCallback(FrameCompletedCallback callback, void* user);
+    void setFrameCompletedCallback(CallbackHandler* handler,
+            CallbackHandler::Callback callback, void* user);
 
     // For CAMetalLayer-backed SwapChains, presents the drawable or schedules a
     // FrameScheduledCallback.
@@ -112,8 +113,11 @@ private:
     FrameScheduledCallback frameScheduledCallback = nullptr;
     void* frameScheduledUserData = nullptr;
 
-    FrameCompletedCallback frameCompletedCallback = nullptr;
-    void* frameCompletedUserData = nullptr;
+    struct {
+        CallbackHandler* handler = nullptr;
+        CallbackHandler::Callback callback = {};
+        void* user = nullptr;
+    } frameCompleted;
 };
 
 class MetalBufferObject : public HwBufferObject {

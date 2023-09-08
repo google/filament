@@ -40,6 +40,7 @@ public:
     PlatformEGL() noexcept;
     bool isExtraContextSupported() const noexcept override;
     void createContext(bool shared) override;
+    void releaseContext() noexcept override;
 
 protected:
 
@@ -139,6 +140,7 @@ protected:
             bool KHR_create_context = false;
             bool KHR_gl_colorspace = false;
             bool KHR_no_config_context = false;
+            bool KHR_surfaceless_context = false;
         } egl;
     } ext;
 

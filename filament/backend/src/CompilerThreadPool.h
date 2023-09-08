@@ -20,12 +20,13 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/Invocable.h>
-#include <utils/JobSystem.h>
+#include <utils/Mutex.h>
+#include <utils/Condition.h>
 
 #include <array>
-#include <atomic>
 #include <deque>
 #include <memory>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -45,8 +46,9 @@ public:
     ~CompilerThreadPool() noexcept;
     using Job = utils::Invocable<void()>;
     using ThreadSetup = utils::Invocable<void()>;
-    void init(uint32_t threadCount, utils::JobSystem::Priority priority,
-            ThreadSetup&& threadSetup) noexcept;
+    using ThreadCleanup = utils::Invocable<void()>;
+    void init(uint32_t threadCount,
+            ThreadSetup&& threadSetup, ThreadCleanup&& threadCleanup) noexcept;
     void terminate() noexcept;
     void queue(CompilerPriorityQueue priorityQueue, program_token_t const& token, Job&& job);
     Job dequeue(program_token_t const& token);
@@ -54,9 +56,9 @@ public:
 private:
     using Queue = std::deque<std::pair<program_token_t, Job>>;
     std::vector<std::thread> mCompilerThreads;
-    std::atomic_bool mExitRequested{false};
-    std::mutex mQueueLock;
-    std::condition_variable mQueueCondition;
+    bool mExitRequested{ false };
+    utils::Mutex mQueueLock;
+    utils::Condition mQueueCondition;
     std::array<Queue, 2> mQueues;
     // lock must be held for methods below
     std::pair<Queue&, Queue::iterator> find(program_token_t const& token);

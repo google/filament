@@ -18,10 +18,13 @@
 #define TNT_FILAMENT_SWAPCHAIN_H
 
 #include <filament/FilamentAPI.h>
+
+#include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
 #include <backend/PresentCallable.h>
 
 #include <utils/compiler.h>
+#include <utils/Invocable.h>
 
 namespace filament {
 
@@ -148,7 +151,7 @@ class Engine;
 class UTILS_PUBLIC SwapChain : public FilamentAPI {
 public:
     using FrameScheduledCallback = backend::FrameScheduledCallback;
-    using FrameCompletedCallback = backend::FrameCompletedCallback;
+    using FrameCompletedCallback = utils::Invocable<void(SwapChain*)>;
 
     /**
      * Requests a SwapChain with an alpha channel.
@@ -241,17 +244,23 @@ public:
      * contents have completed rendering on the GPU.
      *
      * Use SwapChain::setFrameCompletedCallback to set a callback on an individual SwapChain. Each
-     * time a frame completes GPU rendering, the callback will be called with optional user data.
+     * time a frame completes GPU rendering, the callback will be called.
      *
-     * The FrameCompletedCallback is guaranteed to be called on the main Filament thread.
+     * If handler is nullptr, the callback is guaranteed to be called on the main Filament thread.
      *
-     * @param callback    A callback, or nullptr to unset.
-     * @param user        An optional pointer to user data passed to the callback function.
+     * Use \c setFrameCompletedCallback() (with default arguments) to unset the callback.
+     *
+     * @param handler     Handler to dispatch the callback or nullptr for the default handler.
+     * @param callback    Callback called when each frame completes.
      *
      * @remark Only Filament's Metal backend supports frame callbacks. Other backends ignore the
      * callback (which will never be called) and proceed normally.
+     *
+     * @see CallbackHandler
      */
-    void setFrameCompletedCallback(FrameCompletedCallback callback, void* user = nullptr);
+    void setFrameCompletedCallback(backend::CallbackHandler* handler = nullptr,
+            FrameCompletedCallback&& callback = {}) noexcept;
+
 };
 
 } // namespace filament

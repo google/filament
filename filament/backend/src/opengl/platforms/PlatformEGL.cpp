@@ -115,9 +115,14 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
 
     auto extensions = GLUtils::split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
     ext.egl.ANDROID_recordable = extensions.has("EGL_ANDROID_recordable");
-    ext.egl.KHR_create_context = extensions.has("EGL_KHR_create_context");
     ext.egl.KHR_gl_colorspace = extensions.has("EGL_KHR_gl_colorspace");
+    ext.egl.KHR_create_context = extensions.has("EGL_KHR_create_context");
     ext.egl.KHR_no_config_context = extensions.has("EGL_KHR_no_config_context");
+    ext.egl.KHR_surfaceless_context = extensions.has("KHR_surfaceless_context");
+    if (ext.egl.KHR_create_context) {
+        // KHR_create_context implies KHR_surfaceless_context for ES3.x contexts
+        ext.egl.KHR_surfaceless_context = true;
+    }
 
     eglCreateSyncKHR = (PFNEGLCREATESYNCKHRPROC) eglGetProcAddress("eglCreateSyncKHR");
     eglDestroySyncKHR = (PFNEGLDESTROYSYNCKHRPROC) eglGetProcAddress("eglDestroySyncKHR");
@@ -181,13 +186,6 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
         eglConfig = mEGLConfig;
     }
 
-    // create the dummy surface, just for being able to make the context current.
-    mEGLDummySurface = eglCreatePbufferSurface(mEGLDisplay, mEGLConfig, pbufferAttribs);
-    if (UTILS_UNLIKELY(mEGLDummySurface == EGL_NO_SURFACE)) {
-        logEglError("eglCreatePbufferSurface");
-        goto error;
-    }
-
     for (size_t tries = 0; tries < 3; tries++) {
         mEGLContext = eglCreateContext(mEGLDisplay, eglConfig,
                 (EGLContext)sharedContext, contextAttribs.data());
@@ -218,6 +216,26 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
         // eglCreateContext failed
         logEglError("eglCreateContext");
         goto error;
+    }
+
+    if (ext.egl.KHR_surfaceless_context) {
+        // Adreno 306 driver advertises KHR_create_context but doesn't support passing
+        // EGL_NO_SURFACE to eglMakeCurrent with a 3.0 context.
+        if (UTILS_UNLIKELY(!eglMakeCurrent(mEGLDisplay,
+                EGL_NO_SURFACE, EGL_NO_SURFACE, mEGLContext))) {
+            if (eglGetError() == EGL_BAD_MATCH) {
+                ext.egl.KHR_surfaceless_context = false;
+            }
+        }
+    }
+
+    if (UTILS_UNLIKELY(!ext.egl.KHR_surfaceless_context)) {
+        // create the dummy surface, just for being able to make the context current.
+        mEGLDummySurface = eglCreatePbufferSurface(mEGLDisplay, mEGLConfig, pbufferAttribs);
+        if (UTILS_UNLIKELY(mEGLDummySurface == EGL_NO_SURFACE)) {
+            logEglError("eglCreatePbufferSurface");
+            goto error;
+        }
     }
 
     if (UTILS_UNLIKELY(!makeCurrent(mEGLDummySurface, mEGLDummySurface))) {
@@ -255,7 +273,7 @@ error:
 }
 
 bool PlatformEGL::isExtraContextSupported() const noexcept {
-    return true;
+    return ext.egl.KHR_surfaceless_context;
 }
 
 void PlatformEGL::createContext(bool shared) {
@@ -276,6 +294,22 @@ void PlatformEGL::createContext(bool shared) {
     mAdditionalContexts.push_back(context);
 }
 
+void PlatformEGL::releaseContext() noexcept {
+    EGLContext context = eglGetCurrentContext();
+    eglMakeCurrent(mEGLDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    if (context != EGL_NO_CONTEXT) {
+        eglDestroyContext(mEGLDisplay, context);
+    }
+
+    mAdditionalContexts.erase(
+            std::remove_if(mAdditionalContexts.begin(), mAdditionalContexts.end(),
+                    [context](EGLContext c) {
+                        return c == context;
+                    }), mAdditionalContexts.end());
+
+    eglReleaseThread();
+}
+
 EGLBoolean PlatformEGL::makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept {
     if (UTILS_UNLIKELY((drawSurface != mCurrentDrawSurface || readSurface != mCurrentReadSurface))) {
         mCurrentDrawSurface = drawSurface;
@@ -286,8 +320,11 @@ EGLBoolean PlatformEGL::makeCurrent(EGLSurface drawSurface, EGLSurface readSurfa
 }
 
 void PlatformEGL::terminate() noexcept {
+    // it's always allowed to use EGL_NO_SURFACE, EGL_NO_CONTEXT
     eglMakeCurrent(mEGLDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-    eglDestroySurface(mEGLDisplay, mEGLDummySurface);
+    if (mEGLDummySurface) {
+        eglDestroySurface(mEGLDisplay, mEGLDummySurface);
+    }
     eglDestroyContext(mEGLDisplay, mEGLContext);
     for (auto context : mAdditionalContexts) {
         eglDestroyContext(mEGLDisplay, context);

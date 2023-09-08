@@ -7,6 +7,11 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.42.1
+
+- Fix potential `EXC_BAD_ACCESS` with Metal backend: b/297059776
+- `setFrameCompletedCallback` now takes a `backend::CallbackHandler`.
+
 ## v1.42.0
 
 - engine: add preliminary support for instanced stereoscopic rendering [⚠️ **Recompile materials**]

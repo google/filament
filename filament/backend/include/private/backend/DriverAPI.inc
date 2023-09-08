@@ -142,7 +142,8 @@ DECL_DRIVER_API_N(setFrameScheduledCallback,
 
 DECL_DRIVER_API_N(setFrameCompletedCallback,
         backend::SwapChainHandle, sch,
-        backend::FrameCompletedCallback, callback,
+        backend::CallbackHandler*, handler,
+        backend::CallbackHandler::Callback, callback,
         void*, user)
 
 DECL_DRIVER_API_N(setPresentationTime,
@@ -273,6 +274,7 @@ DECL_DRIVER_API_N(destroyRenderTarget,    backend::RenderTargetHandle, rth)
 DECL_DRIVER_API_N(destroySwapChain,       backend::SwapChainHandle, sch)
 DECL_DRIVER_API_N(destroyStream,          backend::StreamHandle, sh)
 DECL_DRIVER_API_N(destroyTimerQuery,      backend::TimerQueryHandle, sh)
+DECL_DRIVER_API_N(destroyFence,           backend::FenceHandle, fh)
 
 /*
  * Synchronous APIs
@@ -286,7 +288,6 @@ DECL_DRIVER_API_SYNCHRONOUS_N(void, setAcquiredImage, backend::StreamHandle, str
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setStreamDimensions, backend::StreamHandle, stream, uint32_t, width, uint32_t, height)
 DECL_DRIVER_API_SYNCHRONOUS_N(int64_t, getStreamTimestamp, backend::StreamHandle, stream)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, updateStreams, backend::DriverApi*, driver)
-DECL_DRIVER_API_SYNCHRONOUS_N(void, destroyFence, backend::FenceHandle, fh)
 DECL_DRIVER_API_SYNCHRONOUS_N(backend::FenceStatus, getFenceStatus, backend::FenceHandle, fh)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isTextureFormatSupported, backend::TextureFormat, format)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isTextureSwizzleSupported)
@@ -297,6 +298,8 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameBufferFetchMultiSampleSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isAutoDepthResolveSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isSRGBSwapChainSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isStereoSupported)
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, isParallelShaderCompileSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
 DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxUniformBufferSize)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)

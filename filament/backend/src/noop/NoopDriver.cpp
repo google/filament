@@ -58,7 +58,7 @@ void NoopDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
 }
 
 void NoopDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        FrameCompletedCallback callback, void* user) {
+        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
 
 }
 
@@ -171,6 +171,14 @@ bool NoopDriver::isAutoDepthResolveSupported() {
 }
 
 bool NoopDriver::isSRGBSwapChainSupported() {
+    return false;
+}
+
+bool NoopDriver::isStereoSupported() {
+    return false;
+}
+
+bool NoopDriver::isParallelShaderCompileSupported() {
     return false;
 }
 

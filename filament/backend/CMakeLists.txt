@@ -27,7 +27,6 @@ set(SRCS
         src/BackendUtils.cpp
         src/BlobCacheKey.cpp
         src/Callable.cpp
-        src/CallbackHandler.cpp
         src/CircularBuffer.cpp
         src/CommandBufferQueue.cpp
         src/CommandStream.cpp
@@ -68,6 +67,8 @@ set(PRIVATE_HDRS
 if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3 AND NOT FILAMENT_USE_SWIFTSHADER)
     list(APPEND SRCS
             include/backend/platforms/OpenGLPlatform.h
+            src/opengl/CallbackManager.h
+            src/opengl/CallbackManager.cpp
             src/opengl/gl_headers.cpp
             src/opengl/gl_headers.h
             src/opengl/GLUtils.cpp

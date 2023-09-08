@@ -193,7 +193,7 @@ public:
 
     bool isStencilBufferEnabled() const noexcept { return mStencilBufferEnabled; }
 
-    void setStereoscopicOptions(StereoscopicOptions const& options) noexcept;
+    void setStereoscopicOptions(StereoscopicOptions const& options);
 
     FCamera const* getDirectionalLightCamera() const noexcept {
         return &mShadowMapManager.getShadowMap(0)->getDebugCamera();
@@ -524,6 +524,7 @@ private:
     const FColorGrading* mColorGrading = nullptr;
     const FColorGrading* mDefaultColorGrading = nullptr;
     utils::Entity mFogEntity{};
+    bool mIsStereoSupported : 1;
 
     PIDController mPidController;
     DynamicResolutionOptions mDynamicResolution;

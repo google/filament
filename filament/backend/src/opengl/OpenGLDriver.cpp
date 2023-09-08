@@ -1872,6 +1872,18 @@ bool OpenGLDriver::isSRGBSwapChainSupported() {
     return mPlatform.isSRGBSwapChainSupported();
 }
 
+bool OpenGLDriver::isStereoSupported() {
+    // Stereo requires instancing and EXT_clip_cull_distance.
+    if (UTILS_UNLIKELY(mContext.isES2())) {
+        return false;
+    }
+    return mContext.ext.EXT_clip_cull_distance;
+}
+
+bool OpenGLDriver::isParallelShaderCompileSupported() {
+    return mShaderCompilerService.isParallelShaderCompileSupported();
+}
+
 bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:
@@ -2593,7 +2605,7 @@ bool OpenGLDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapse
 void OpenGLDriver::compilePrograms(CompilerPriorityQueue priority,
         CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     if (callback) {
-        getShaderCompilerService().notifyWhenAllProgramsAreReady(priority, handler, callback, user);
+        getShaderCompilerService().notifyWhenAllProgramsAreReady(handler, callback, user);
     }
 }
 
@@ -3258,7 +3270,7 @@ void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
 }
 
 void OpenGLDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
-        FrameCompletedCallback callback, void* user) {
+        CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     DEBUG_MARKER()
 }
 
