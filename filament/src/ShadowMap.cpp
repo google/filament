@@ -144,7 +144,7 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
         return p;
     }(camera.cullingProjection) };
 
-    const auto direction = lightData.elementAt<FScene::DIRECTION>(index);
+    const auto direction = params.options.transform * lightData.elementAt<FScene::DIRECTION>(index);
 
     /*
      * Compute the light's model matrix

@@ -7,7 +7,22 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.42.2
+
+- Fix possible NPE when updating fog options from Java/Kotlin
+- The `emissive` property was not applied properly to `MASKED` materials, and could cause
+  dark fringes to appear (recompile materials)
+- Allow glTF materials with transmission/volume extensions to choose their alpha mode
+  instead of forcing `MASKED`
+- Fix a crash in gltfio when not using ubershaders
+- Use flatmat for mat parameter in jsbinding
+- Fix TextureFlags for sheenRoughnessMap when textures of sheenRoughnessMap and sheenColorMap is same
+- Directional shadows can now be transformed (b/297095805)
+
 ## v1.42.1
+
+- Fix potential `EXC_BAD_ACCESS` with Metal backend: b/297059776
+- `setFrameCompletedCallback` now takes a `backend::CallbackHandler`.
 
 ## v1.42.0
 

@@ -330,7 +330,9 @@ value_object<LightManager::ShadowOptions>("LightManager$ShadowOptions")
     .field("polygonOffsetSlope", &LightManager::ShadowOptions::polygonOffsetSlope)
     .field("screenSpaceContactShadows", &LightManager::ShadowOptions::screenSpaceContactShadows)
     .field("stepCount", &LightManager::ShadowOptions::stepCount)
-    .field("maxShadowDistance", &LightManager::ShadowOptions::maxShadowDistance);
+    .field("maxShadowDistance", &LightManager::ShadowOptions::maxShadowDistance)
+    .field("shadowBulbRadius", &LightManager::ShadowOptions::shadowBulbRadius)
+    .field("transform", &LightManager::ShadowOptions::transform);
 
 // In JavaScript, a flat contiguous representation is best for matrices (see gl-matrix) so we
 // need to define a small wrapper here.

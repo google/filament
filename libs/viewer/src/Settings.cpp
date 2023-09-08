@@ -362,19 +362,13 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
         LightManager::ShadowOptions* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
-    int size = tokens[i++].size;
+    int const size = tokens[i++].size;
     math::float3 splitsVector;
     for (int j = 0; j < size; ++j) {
         const jsmntok_t tok = tokens[i];
         CHECK_KEY(tok);
         if (compare(tok, jsonChunk, "mapSize") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->mapSize);
-        } else if (compare(tok, jsonChunk, "stable") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->stable);
-        } else if (compare(tok, jsonChunk, "lispsm") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->lispsm);
-        } else if (compare(tok, jsonChunk, "screenSpaceContactShadows") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->screenSpaceContactShadows);
         } else if (compare(tok, jsonChunk, "shadowCascades") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->shadowCascades);
         } else if (compare(tok, jsonChunk, "cascadeSplitPositions") == 0) {
@@ -382,8 +376,27 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk,
             out->cascadeSplitPositions[0] = splitsVector[0];
             out->cascadeSplitPositions[1] = splitsVector[1];
             out->cascadeSplitPositions[2] = splitsVector[2];
+        // TODO: constantBias
+        // TODO: normalBias
+        // TODO: shadowFar
+        // TODO: shadowNearHint
+        // TODO: shadowFarHint
+        } else if (compare(tok, jsonChunk, "stable") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->stable);
+        } else if (compare(tok, jsonChunk, "lispsm") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->lispsm);
+        // TODO: polygonOffsetConstant
+        // TODO: polygonOffsetSlope
+        } else if (compare(tok, jsonChunk, "screenSpaceContactShadows") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->screenSpaceContactShadows);
+        // TODO: stepCount
+        // TODO: maxShadowDistance
         } else if (compare(tok, jsonChunk, "vsm") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->vsm);
+        } else if (compare(tok, jsonChunk, "shadowBulbRadius") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->shadowBulbRadius);
+        } else if (compare(tok, jsonChunk, "transform") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->transform.xyzw);
         } else {
             slog.w << "Invalid shadow options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -712,18 +725,20 @@ static std::ostream& operator<<(std::ostream& out, const ColorGradingSettings& i
 
 static std::ostream& operator<<(std::ostream& out, const LightManager::ShadowOptions& in) {
     const float* splits = in.cascadeSplitPositions;
-    math::float3 splitsVector = { splits[0], splits[1], splits[2] };
+    math::float3 const splitsVector = { splits[0], splits[1], splits[2] };
     return out << "{\n"
         << "\"vsm\": {\n"
         << "\"elvsm\": " << to_string(in.vsm.elvsm) << ",\n"
         << "\"blurWidth\": " << in.vsm.blurWidth << "\n"
         << "},\n"
         << "\"mapSize\": " << in.mapSize << ",\n"
+        << "\"shadowCascades\": " << int(in.shadowCascades) << ",\n"
+        << "\"cascadeSplitPositions\": " << (splitsVector) << "\n"
         << "\"stable\": " << to_string(in.stable) << ",\n"
         << "\"lispsm\": " << to_string(in.lispsm) << ",\n"
         << "\"screenSpaceContactShadows\": " << to_string(in.screenSpaceContactShadows) << ",\n"
-        << "\"shadowCascades\": " << int(in.shadowCascades) << ",\n"
-        << "\"cascadeSplitPositions\": " << (splitsVector) << "\n"
+        << "\"shadowBulbRadius\": " << in.shadowBulbRadius << ",\n"
+        << "\"transform\": " << in.transform.xyzw << ",\n"
         << "}";
 }
 
