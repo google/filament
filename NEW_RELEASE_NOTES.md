@@ -7,13 +7,3 @@ for next branch cut* header.
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
-
-- Fix possible NPE when updating fog options from Java/Kotlin
-- The `emissive` property was not applied properly to `MASKED` materials, and could cause
-  dark fringes to appear (recompile materials)
-- Allow glTF materials with transmission/volume extensions to choose their alpha mode
-  instead of forcing `MASKED`
-- Fix a crash in gltfio when not using ubershaders
-- Use flatmat for mat parameter in jsbinding
-- Fix TextureFlags for sheenRoughnessMap when textures of sheenRoughnessMap and sheenColorMap is same
-- Directional shadows can now be transformed (b/297095805)
