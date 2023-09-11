@@ -341,7 +341,7 @@ GLuint ShaderCompilerService::getProgram(ShaderCompilerService::program_token_t&
 
     token->canceled = true;
 
-    token->compiler.cancelTickOp(token);
+    bool canceled = token->compiler.cancelTickOp(token);
 
     if (token->compiler.mShaderCompilerThreadCount) {
         auto job = token->compiler.mCompilerThreadPool.dequeue(token);
@@ -354,7 +354,7 @@ GLuint ShaderCompilerService::getProgram(ShaderCompilerService::program_token_t&
             // order for future callbacks to be successfully called.
             token->compiler.mCallbackManager.put(token->handle);
         }
-    } else {
+    } else if (canceled) {
         // Since the tick op was canceled, we need to .put the token here.
         token->compiler.mCallbackManager.put(token->handle);
     }
@@ -683,7 +683,7 @@ void ShaderCompilerService::runAtNextTick(CompilerPriorityQueue priority,
     SYSTRACE_VALUE32("ShaderCompilerService Jobs", mRunAtNextTickOps.size());
 }
 
-void ShaderCompilerService::cancelTickOp(program_token_t token) noexcept {
+bool ShaderCompilerService::cancelTickOp(program_token_t token) noexcept {
     // We do a linear search here, but this is rare, and we know the list is pretty small.
     auto& ops = mRunAtNextTickOps;
     auto pos = std::find_if(ops.begin(), ops.end(), [&](const auto& item) {
@@ -691,9 +691,11 @@ void ShaderCompilerService::cancelTickOp(program_token_t token) noexcept {
     });
     if (pos != ops.end()) {
         ops.erase(pos);
+        return true;
     }
     SYSTRACE_CONTEXT();
     SYSTRACE_VALUE32("ShaderCompilerService Jobs", ops.size());
+    return false;
 }
 
 void ShaderCompilerService::executeTickOps() noexcept {
