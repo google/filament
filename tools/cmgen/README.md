@@ -7,9 +7,9 @@ The tool can consume a HDR environment map in latlong format (equirectilinear) a
 
 ## Usage
 
-```
-$ cmgen [options] <input-file>
-$ cmgen [options] <uv[N]>
+```shell
+cmgen [options] <input-file>
+cmgen [options] <uv[N]>
 ```
 
 ## Supported input formats
@@ -21,6 +21,7 @@ $ cmgen [options] <uv[N]>
 
 ## Options
 
+```
 --help, -h
     Print this message
 --license
@@ -61,4 +62,4 @@ $ cmgen [options] <uv[N]>
     Roughness pre-filter into <dir>
 --sh-shader
     Generate irradiance SH for shader code
-
+```

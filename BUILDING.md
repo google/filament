@@ -40,20 +40,20 @@ inside the Filament source tree.
 
 To trigger an incremental debug build:
 
-```
-$ ./build.sh debug
+```shell
+./build.sh debug
 ```
 
 To trigger an incremental release build:
 
-```
-$ ./build.sh release
+```shell
+./build.sh release
 ```
 
 To trigger both incremental debug and release builds:
 
-```
-$ ./build.sh debug release
+```shell
+./build.sh debug release
 ```
 
 To install the libraries and executables in `out/debug/` and `out/release/`, add the `-i` flag.
@@ -76,9 +76,9 @@ The following CMake options are boolean options specific to Filament:
 
 To turn an option on or off:
 
-```
-$ cd <cmake-build-directory>
-$ cmake . -DOPTION=ON       # Replace OPTION with the option name, set to ON / OFF
+```shell
+cd <cmake-build-directory>
+cmake . -DOPTION=ON       # Replace OPTION with the option name, set to ON / OFF
 ```
 
 Options can also be set with the CMake GUI.
@@ -102,38 +102,38 @@ script.
 If you'd like to run `cmake` directly rather than using the build script, it can be invoked as
 follows, with some caveats that are explained further down.
 
-```
-$ mkdir out/cmake-release
-$ cd out/cmake-release
-$ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
+```shell
+mkdir out/cmake-release
+cd out/cmake-release
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
 ```
 
 Your Linux distribution might default to `gcc` instead of `clang`, if that's the case invoke
 `cmake` with the following command:
 
-```
-$ mkdir out/cmake-release
-$ cd out/cmake-release
+```shell
+mkdir out/cmake-release
+cd out/cmake-release
 # Or use a specific version of clang, for instance /usr/bin/clang-14
-$ CC=/usr/bin/clang CXX=/usr/bin/clang++ CXXFLAGS=-stdlib=libc++ \
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
+CC=/usr/bin/clang CXX=/usr/bin/clang++ CXXFLAGS=-stdlib=libc++ \
+  cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
 ```
 
 You can also export the `CC` and `CXX` environment variables to always point to `clang`. Another
 solution is to use `update-alternatives` to both change the default compiler, and point to a
 specific version of clang:
 
-```
-$ update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 100
-$ update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-14 100
-$ update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
-$ update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
+```shell
+update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 100
+update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-14 100
+update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
+update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
 ```
 
 Finally, invoke `ninja`:
 
-```
-$ ninja
+```shell
+ninja
 ```
 
 This will build Filament, its tests and samples, and various host tools.
@@ -143,8 +143,8 @@ This will build Filament, its tests and samples, and various host tools.
 To compile Filament you must have the most recent version of Xcode installed and you need to
 make sure the command line tools are setup by running:
 
-```
-$ xcode-select --install
+```shell
+xcode-select --install
 ```
 
 If you wish to run the Vulkan backend instead of the default Metal backend, you must install
@@ -152,11 +152,11 @@ the LunarG SDK, enable "System Global Components", and reboot your machine.
 
 Then run `cmake` and `ninja` to trigger a build:
 
-```
-$ mkdir out/cmake-release
-$ cd out/cmake-release
-$ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
-$ ninja
+```shell
+mkdir out/cmake-release
+cd out/cmake-release
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
+ninja
 ```
 
 ### iOS
@@ -164,8 +164,8 @@ $ ninja
 The easiest way to build Filament for iOS is to use `build.sh` and the
 `-p ios` flag. For instance to build the debug target:
 
-```
-$ ./build.sh -p ios debug
+```shell
+./build.sh -p ios debug
 ```
 
 See [ios/samples/README.md](./ios/samples/README.md) for more information.
@@ -191,10 +191,10 @@ using `fsutil.exe file queryCaseSensitiveInfo`.
 Next, open `x64 Native Tools Command Prompt for VS 2019`, create a working directory, and run
 CMake in it:
 
-```
-> mkdir out
-> cd out
-> cmake ..
+```bat
+mkdir out
+cd out
+cmake ..
 ```
 
 Open the generated solution file `TNT.sln` in Visual Studio.
@@ -204,15 +204,15 @@ target in the _Solution Explorer_ and choose _Build_ to build a specific target.
 
 For example, build the `material_sandbox` sample and run it from the `out` directory with:
 
-```
-> samples\Debug\material_sandbox.exe ..\assets\models\monkey\monkey.obj
+```bat
+samples\Debug\material_sandbox.exe ..\assets\models\monkey\monkey.obj
 ```
 
 You can also use CMake to invoke the build without opening Visual Studio. For example, from the
 `out` folder run the following command.
 
-```
-> cmake --build . --target gltf_viewer --config Release
+```bat
+cmake --build . --target gltf_viewer --config Release
 ```
 
 ### Android
@@ -237,8 +237,8 @@ To build Android on Windows machines, see [android/Windows.md](android/Windows.m
 The easiest way to build Filament for Android is to use `build.sh` and the
 `-p android` flag. For instance to build the release target:
 
-```
-$ ./build.sh -p android release
+```shell
+./build.sh -p android release
 ```
 
 Run `build.sh -h` for more information.
@@ -248,23 +248,23 @@ Run `build.sh -h` for more information.
 Invoke CMake in a build directory of your choice, inside of filament's directory. The commands
 below show how to build Filament for ARM 64-bit (`aarch64`).
 
-```
-$ mkdir out/android-build-release-aarch64
-$ cd out/android-build-release-aarch64
-$ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-aarch64-linux-android.cmake \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../android-release/filament ../..
+```shell
+mkdir out/android-build-release-aarch64
+cd out/android-build-release-aarch64
+cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-aarch64-linux-android.cmake \
+      -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../android-release/filament ../..
 ```
 
 And then invoke `ninja`:
 
-```
-$ ninja install
+```shell
+ninja install
 ```
 
 or
 
-```
-$ ninja install/strip
+```shell
+ninja install/strip
 ```
 
 This will generate Filament's Android binaries in `out/android-release`. This location is important
@@ -296,8 +296,8 @@ AAR.
 Alternatively you can build the AAR from the command line by executing the following in the
 `android/` directory:
 
-```
-$ ./gradlew -Pcom.google.android.filament.dist-dir=../../out/android-release/filament assembleRelease
+```shell
+./gradlew -Pcom.google.android.filament.dist-dir=../../out/android-release/filament assembleRelease
 ```
 
 The `-Pcom.google.android.filament.dist-dir` can be used to specify a different installation
@@ -311,7 +311,7 @@ sure to add the newly created module as a dependency to your application.
 If you do not wish to include all supported ABIs, make sure to create the appropriate flavors in
 your Gradle build file. For example:
 
-```
+```gradle
 flavorDimensions 'cpuArch'
 productFlavors {
     arm8 {
@@ -353,7 +353,7 @@ started, follow the instructions for building Filament on your platform ([macOS]
 Next, you need to install the Emscripten SDK. The following instructions show how to install the
 same version that our continuous builds use.
 
-```
+```shell
 cd <your chosen parent folder for the emscripten SDK>
 curl -L https://github.com/emscripten-core/emsdk/archive/refs/tags/3.1.15.zip > emsdk.zip
 unzip emsdk.zip ; mv emsdk-* emsdk ; cd emsdk
@@ -364,7 +364,7 @@ source ./emsdk_env.sh
 
 After this you can invoke the [easy build](#easy-build) script as follows:
 
-```
+```shell
 export EMSDK=<your chosen home for the emscripten SDK>
 ./build.sh -p webgl release
 ```
@@ -374,7 +374,7 @@ creates a `samples` folder that can be used as the root of a simple static web s
 cannot open the HTML directly from the filesystem due to CORS. We recommend using the emrun tool
 to create a quick localhost server:
 
-```
+```shell
 emrun out/cmake-webgl-release/web/samples --no_browser --port 8000
 ```
 
@@ -395,7 +395,7 @@ Some of the samples accept FBX/OBJ meshes while others rely on the `filamesh` fi
 generate a `filamesh ` file from an FBX/OBJ asset, run the `filamesh` tool
 (`./tools/filamesh/filamesh` in your build directory):
 
-```
+```shell
 filamesh ./assets/models/monkey/monkey.obj monkey.filamesh
 ```
 
@@ -405,7 +405,7 @@ files for the IBL (which are PNGs containing `R11F_G11F_B10F` data) or a path to
 containing two `.ktx` files (one for the IBL itself, one for the skybox). To generate an IBL
 simply use this command:
 
-```
+```shell
 cmgen -f ktx -x ./ibls/ my_ibl.exr
 ```
 
@@ -427,9 +427,9 @@ value is the desired roughness between 0 and 1.
 To generate the documentation you must first install `doxygen` and `graphviz`, then run the 
 following commands:
 
-```
-$ cd filament/filament
-$ doxygen docs/doxygen/filament.doxygen
+```shell
+cd filament/filament
+doxygen docs/doxygen/filament.doxygen
 ```
 
 Finally simply open `docs/html/index.html` in your web browser.
@@ -439,7 +439,7 @@ Finally simply open `docs/html/index.html` in your web browser.
 To try out Filament's Vulkan support with SwiftShader, first build SwiftShader and set the
 `SWIFTSHADER_LD_LIBRARY_PATH` variable to the folder that contains `libvk_swiftshader.dylib`:
 
-```
+```shell
 git clone https://github.com/google/swiftshader.git
 cd swiftshader/build
 cmake .. &&  make -j
@@ -454,7 +454,7 @@ Continuous testing turnaround can be quite slow if you need to build SwiftShader
 provide an Ubuntu-based Docker image that has it already built. The Docker image also includes
 everything necessary for building Filament. You can fetch and run the image as follows:
 
-```
+```shell
 docker pull ghcr.io/filament-assets/swiftshader
 docker run -it ghcr.io/filament-assets/swiftshader
 ```

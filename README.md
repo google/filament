@@ -50,7 +50,7 @@ Here are all the libraries available in the group `com.google.android.filament`:
 
 iOS projects can use CocoaPods to install the latest release:
 
-```
+```shell
 pod 'Filament', '~> 1.42.1'
 ```
 

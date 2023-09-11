@@ -11,8 +11,8 @@ grazing angles. See Hoffman 2019, "Fresnel Equations Considered Harmful".
 
 ## Usage
 
-```
-$ specular-color <spectral data file>
+```shell
+specular-color <spectral data file>
 ```
 
 The spectral data files can be obtained from
@@ -20,12 +20,12 @@ The spectral data files can be obtained from
 
 For instance, to compute the base color of gold:
 
-```
-$ specular-color data/gold.txt
+```shell
+specular-color data/gold.txt
 ```
 
 To set the second angle, use `-a` to specify the angle in degrees:
 
-```
-$ specular-color -a 75 data/gold.txt
+```shell
+specular-color -a 75 data/gold.txt
 ```
