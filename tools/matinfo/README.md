@@ -5,6 +5,6 @@ used for debug purpose only.
 
 ## Usage
 
-```
-$ matinfo [options] <material file>
+```shell
+matinfo [options] <material file>
 ```
