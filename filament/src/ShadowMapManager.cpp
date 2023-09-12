@@ -435,14 +435,33 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 }
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEngine& engine,
-        FView& view, CameraInfo const& cameraInfo, FScene::RenderableSoa& renderableData,
+        FView& view, CameraInfo cameraInfo, FScene::RenderableSoa& renderableData,
         FScene::LightSoa const& lightData, ShadowMap::SceneInfo sceneInfo) noexcept {
+
     FScene* scene = view.getScene();
     auto& lcm = engine.getLightManager();
 
     FLightManager::Instance const directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
     FLightManager::ShadowOptions const& options = lcm.getShadowOptions(directionalLight);
     FLightManager::ShadowParams const& params = lcm.getShadowParams(directionalLight);
+
+    // Adjust the camera's projection for the light's shadowFar
+
+    cameraInfo.zf = params.options.shadowFar > 0.0f ? params.options.shadowFar : cameraInfo.zf;
+    if (UTILS_UNLIKELY(params.options.shadowFar > 0.0f)) {
+        cameraInfo.zf = params.options.shadowFar;
+        float const n = cameraInfo.zn;
+        float const f = cameraInfo.zf;
+        if (std::abs(cameraInfo.cullingProjection[2].w) > std::numeric_limits<float>::epsilon()) {
+            // perspective projection
+            cameraInfo.cullingProjection[2].z = (f + n) / (n - f);
+            cameraInfo.cullingProjection[3].z = (2 * f * n) / (n - f);
+        } else {
+            // orthographic projection
+            cameraInfo.cullingProjection[2].z = 2.0f / (n - f);
+            cameraInfo.cullingProjection[3].z = (f + n) / (n - f);
+        }
+    }
 
     const ShadowMap::ShadowMapInfo shadowMapInfo{
             .atlasDimension      = mTextureAtlasRequirements.size,

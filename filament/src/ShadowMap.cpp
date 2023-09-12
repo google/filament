@@ -131,19 +131,6 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
     else            params.options.shadowFarHint = dzf * dz + camera.zf;
 #endif
 
-    // Adjust the camera's projection for the light's shadowFar
-    const mat4f cullingProjection{ [&](auto p) {
-        if (params.options.shadowFar > 0.0f) {
-            float const n = camera.zn;
-            float const f = params.options.shadowFar;
-            // orthographic projection
-            assert_invariant(std::abs(p[2].w) <= std::numeric_limits<float>::epsilon());
-            p[2].z =    2.0f / (n - f);
-            p[3].z = (f + n) / (n - f);
-        }
-        return p;
-    }(camera.cullingProjection) };
-
     const auto direction = params.options.transform * lightData.elementAt<FScene::DIRECTION>(index);
 
     /*
@@ -164,7 +151,7 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
 
     // view frustum vertices in world-space
     float3 wsViewFrustumVertices[8];
-    const mat4f worldToClipMatrix = cullingProjection * camera.view;
+    const mat4f worldToClipMatrix = camera.cullingProjection * camera.view;
     const Frustum wsFrustum(worldToClipMatrix);
     computeFrustumCorners(wsViewFrustumVertices, inverse(worldToClipMatrix), sceneInfo.csNearFar);
 
@@ -243,7 +230,7 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
         // in stable mode we simply take the view volume bounding sphere, but we calculate it
         // in view space, so that it's perfectly stable.
         float3 vertices[8];
-        computeFrustumCorners(vertices, inverse(cullingProjection), sceneInfo.csNearFar);
+        computeFrustumCorners(vertices, inverse(camera.cullingProjection), sceneInfo.csNearFar);
         viewVolumeBoundingSphere = computeBoundingSphere(vertices, 8);
 
         if (shadowReceiverVolumeBoundingSphere.w < viewVolumeBoundingSphere.w) {
@@ -1081,7 +1068,7 @@ bool ShadowMap::intersectSegmentWithPlanarQuad(float3& UTILS_RESTRICT p,
 }
 
 float ShadowMap::texelSizeWorldSpace(const mat3f& worldToShadowTexture,
-        uint16_t shadowDimension) const noexcept {
+        uint16_t shadowDimension) noexcept {
     // The Jacobian of the transformation from texture-to-world is the matrix itself for
     // orthographic projections. We just need to inverse worldToShadowTexture,
     // which is guaranteed to be orthographic.
@@ -1096,7 +1083,7 @@ float ShadowMap::texelSizeWorldSpace(const mat3f& worldToShadowTexture,
 }
 
 float ShadowMap::texelSizeWorldSpace(const mat4f& Wp, const mat4f& MbMtF,
-        uint16_t shadowDimension) const noexcept {
+        uint16_t shadowDimension) noexcept {
     // Here we compute the Jacobian of inverse(MbMtF * Wp).
     // The expression below has been computed with Mathematica. However, it's not very hard,
     // albeit error-prone, to do it by hand because MbMtF is a linear transform.
@@ -1117,7 +1104,7 @@ float ShadowMap::texelSizeWorldSpace(const mat4f& Wp, const mat4f& MbMtF,
 
     constexpr bool JACOBIAN_ESTIMATE = false;
     if constexpr (JACOBIAN_ESTIMATE) {
-        // this estimates the Jacobian -- this is a lot heavier. This is mostly for reference
+        // This estimates the Jacobian -- this is a lot heavier. This is mostly for reference
         // and testing.
         const mat4f Si(inverse(MbMtF * Wp));
         const float3 p0 = mat4f::project(Si, p);
