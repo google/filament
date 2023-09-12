@@ -19,6 +19,7 @@
 
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/NodeManager.h>
+#include <gltfio/TrsTransformManager.h>
 
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
@@ -110,9 +111,9 @@ using MeshCache = utils::FixedCapacityVector<utils::FixedCapacityVector<Primitiv
 struct FFilamentAsset : public FilamentAsset {
     FFilamentAsset(Engine* engine, utils::NameComponentManager* names,
             utils::EntityManager* entityManager, NodeManager* nodeManager,
-            const cgltf_data* srcAsset) :
+            TrsTransformManager* trsTransformManager, const cgltf_data* srcAsset) :
             mEngine(engine), mNameManager(names), mEntityManager(entityManager),
-            mNodeManager(nodeManager),
+            mNodeManager(nodeManager), mTrsTransformManager(trsTransformManager),
             mSourceAsset(new SourceAsset {(cgltf_data*)srcAsset}),
             mTextures(srcAsset->textures_count),
             mMeshCache(srcAsset->meshes_count) {}
@@ -195,6 +196,10 @@ struct FFilamentAsset : public FilamentAsset {
         return mEngine;
     }
 
+    TrsTransformManager* getTrsTransformManager() const noexcept {
+        return mTrsTransformManager;
+    }
+
     void releaseSourceData() noexcept;
 
     const void* getSourceAsset() const noexcept {
@@ -242,6 +247,7 @@ struct FFilamentAsset : public FilamentAsset {
     utils::NameComponentManager* const mNameManager;
     utils::EntityManager* const mEntityManager;
     NodeManager* const mNodeManager;
+    TrsTransformManager* const mTrsTransformManager;
     std::vector<utils::Entity> mEntities; // sorted such that renderables come first
     std::vector<utils::Entity> mLightEntities;
     std::vector<utils::Entity> mCameraEntities;
