@@ -111,7 +111,7 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
     assert_invariant(result == VK_SUCCESS);
 
     VkImageAspectFlags const aspectFlags = getImageAspect(vkformat);
-    const VkCommandBuffer cmdbuffer = mCommands->get().cmdbuffer;
+    VkCommandBuffer const cmdbuffer = mCommands->get().buffer();
 
     // We use VK_IMAGE_LAYOUT_GENERAL here because the spec says:
     // "Host access to image memory is only well-defined for linear images and for image

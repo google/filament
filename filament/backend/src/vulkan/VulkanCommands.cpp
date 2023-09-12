@@ -52,6 +52,23 @@ VulkanCmdFence::~VulkanCmdFence() {
     vkDestroyFence(device, fence, VKALLOC);
 }
 
+VulkanCommandBuffer::VulkanCommandBuffer(VulkanResourceAllocator* allocator, VkDevice device,
+        VkCommandPool pool)
+    : mResourceManager(allocator) {
+    // Create the low-level command buffer.
+    const VkCommandBufferAllocateInfo allocateInfo{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .commandPool = pool,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = 1,
+    };
+
+    // The buffer allocated here will be implicitly reset when vkBeginCommandBuffer is called.
+    vkAllocateCommandBuffers(device, &allocateInfo, &mBuffer);
+
+    // We don't need to deallocate since destroying the pool will free all of the buffers.
+}
+
 CommandBufferObserver::~CommandBufferObserver() {}
 
 static VkCommandPool createPool(VkDevice device, uint32_t queueFamilyIndex) {
@@ -130,7 +147,7 @@ VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFam
     }
 
     for (size_t i = 0; i < CAPACITY; ++i) {
-        mStorage[i] = std::make_unique<VulkanCommandBuffer>(allocator);
+        mStorage[i] = std::make_unique<VulkanCommandBuffer>(allocator, mDevice, mPool);
     }
 }
 
@@ -151,7 +168,7 @@ VulkanCommandBuffer& VulkanCommands::get() {
     // If we ran out of available command buffers, stall until one finishes. This is very rare.
     // It occurs only when Filament invokes commit() or endFrame() a large number of times without
     // presenting the swap chain or waiting on a fence.
-    while (mAvailableCount == 0) {
+    while (mAvailableBufferCount == 0) {
 #if VK_REPORT_STALLS
         slog.i  << "VulkanCommands has stalled. "
                 << "If this occurs frequently, consider increasing VK_MAX_COMMAND_BUFFERS."
@@ -165,7 +182,7 @@ VulkanCommandBuffer& VulkanCommands::get() {
     // Find an available slot.
     for (size_t i = 0; i < CAPACITY; ++i) {
         auto wrapper = mStorage[i].get();
-        if (wrapper->cmdbuffer == VK_NULL_HANDLE) {
+        if (wrapper->buffer() == VK_NULL_HANDLE) {
             mCurrentCommandBufferIndex = static_cast<int8_t>(i);
             currentbuf = wrapper;
             break;
@@ -173,16 +190,7 @@ VulkanCommandBuffer& VulkanCommands::get() {
     }
 
     assert_invariant(currentbuf);
-    --mAvailableCount;
-
-    // Create the low-level command buffer.
-    const VkCommandBufferAllocateInfo allocateInfo {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = mPool,
-        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = 1
-    };
-    vkAllocateCommandBuffers(mDevice, &allocateInfo, &currentbuf->cmdbuffer);
+    mAvailableBufferCount--;
 
     // Note that the fence wrapper uses shared_ptr because a DriverAPI fence can also have ownership
     // over it.  The destruction of the low-level fence occurs either in VulkanCommands::gc(), or in
@@ -194,7 +202,7 @@ VulkanCommandBuffer& VulkanCommands::get() {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     };
-    vkBeginCommandBuffer(currentbuf->cmdbuffer, &binfo);
+    vkBeginCommandBuffer(currentbuf->buffer(), &binfo);
 
     // Notify the observer that a new command buffer has been activated.
     if (mObserver) {
@@ -235,7 +243,7 @@ bool VulkanCommands::flush() {
     VulkanCommandBuffer const* currentbuf = mStorage[index].get();
     VkSemaphore const renderingFinished = mSubmissionSignals[index];
 
-    vkEndCommandBuffer(currentbuf->cmdbuffer);
+    vkEndCommandBuffer(currentbuf->buffer());
 
     // If the injected semaphore is an "image available" semaphore that has not yet been signaled,
     // it is sometimes fine to start executing commands anyway, as along as we stall the GPU at the
@@ -253,13 +261,15 @@ bool VulkanCommands::flush() {
         VK_NULL_HANDLE,
     };
 
+    VkCommandBuffer const cmdbuffer = currentbuf->buffer();
+
     VkSubmitInfo submitInfo {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .waitSemaphoreCount = 0,
         .pWaitSemaphores = signals,
         .pWaitDstStageMask = waitDestStageMasks,
         .commandBufferCount = 1,
-        .pCommandBuffers = &currentbuf->cmdbuffer,
+        .pCommandBuffers = &cmdbuffer,
         .signalSemaphoreCount = 1u,
         .pSignalSemaphores = &renderingFinished,
     };
@@ -278,7 +288,7 @@ bool VulkanCommands::flush() {
     }
 
 #if FILAMENT_VULKAN_VERBOSE
-    slog.i << "Submitting cmdbuffer=" << currentbuf->cmdbuffer
+    slog.i << "Submitting cmdbuffer=" << cmdbuffer
         << " wait=(" << signals[0] << ", " << signals[1] << ") "
         << " signal=" << renderingFinished
         << io::endl;
@@ -326,7 +336,7 @@ void VulkanCommands::wait() {
     size_t count = 0;
     for (size_t i = 0; i < CAPACITY; i++) {
         auto wrapper = mStorage[i].get();
-        if (wrapper->cmdbuffer != VK_NULL_HANDLE
+        if (wrapper->buffer() != VK_NULL_HANDLE
                 && mCurrentCommandBufferIndex != static_cast<int8_t>(i)) {
             fences[count++] = wrapper->fence->fence;
         }
@@ -337,33 +347,25 @@ void VulkanCommands::wait() {
 }
 
 void VulkanCommands::gc() {
-    VkCommandBuffer buffers[CAPACITY];
-    size_t count = 0;
     for (size_t i = 0; i < CAPACITY; i++) {
         auto wrapper = mStorage[i].get();
-        if (wrapper->cmdbuffer == VK_NULL_HANDLE) {
+        if (wrapper->buffer() == VK_NULL_HANDLE) {
             continue;
         }
         VkResult const result = vkWaitForFences(mDevice, 1, &wrapper->fence->fence, VK_TRUE, 0);
         if (result != VK_SUCCESS) {
             continue;
         }
-        buffers[count++] = wrapper->cmdbuffer;
-        wrapper->cmdbuffer = VK_NULL_HANDLE;
         wrapper->fence->status.store(VK_SUCCESS);
-        wrapper->fence.reset();
-        wrapper->clearResources();
-        ++mAvailableCount;
-    }
-    if (count > 0) {
-        vkFreeCommandBuffers(mDevice, mPool, count, buffers);
+        wrapper->reset();
+        mAvailableBufferCount++;
     }
 }
 
 void VulkanCommands::updateFences() {
     for (size_t i = 0; i < CAPACITY; i++) {
         auto wrapper = mStorage[i].get();
-        if (wrapper->cmdbuffer != VK_NULL_HANDLE) {
+        if (wrapper->buffer() != VK_NULL_HANDLE) {
             VulkanCmdFence* fence = wrapper->fence.get();
             if (fence) {
                 VkResult status = vkGetFenceStatus(mDevice, fence->fence);
@@ -384,7 +386,7 @@ void VulkanCommands::pushGroupMarker(char const* str, VulkanGroupMarkers::Timest
 #endif
 
     // TODO: Add group marker color to the Driver API
-    const VkCommandBuffer cmdbuffer = get().cmdbuffer;
+    VkCommandBuffer const cmdbuffer = get().buffer();
 
     if (!mGroupMarkers) {
         mGroupMarkers = std::make_unique<VulkanGroupMarkers>();
@@ -412,7 +414,7 @@ void VulkanCommands::popGroupMarker() {
      assert_invariant(mGroupMarkers);
 
     if (!mGroupMarkers->empty()) {
-        const VkCommandBuffer cmdbuffer = get().cmdbuffer;
+        VkCommandBuffer const cmdbuffer = get().buffer();
         #if FILAMENT_VULKAN_VERBOSE
             auto const [marker, startTime] = mGroupMarkers->pop();
             auto const endTime = std::chrono::high_resolution_clock::now();
@@ -437,7 +439,7 @@ void VulkanCommands::popGroupMarker() {
 }
 
 void VulkanCommands::insertEventMarker(char const* string, uint32_t len) {
-    VkCommandBuffer const cmdbuffer = get().cmdbuffer;
+    VkCommandBuffer const cmdbuffer = get().buffer();
     if (mContext->isDebugUtilsSupported()) {
         VkDebugUtilsLabelEXT labelInfo = {
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,

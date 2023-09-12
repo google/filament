@@ -117,8 +117,9 @@ void VulkanTimestamps::beginQuery(VulkanCommandBuffer const* commands,
         VulkanTimerQuery* query) {
     uint32_t const index = query->getStartingQueryIndex();
 
-    vkCmdResetQueryPool(commands->cmdbuffer, mPool, index, 2);
-    vkCmdWriteTimestamp(commands->cmdbuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mPool, index);
+    auto const cmdbuffer = commands->buffer();
+    vkCmdResetQueryPool(cmdbuffer, mPool, index, 2);
+    vkCmdWriteTimestamp(cmdbuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mPool, index);
 
     // We stash this because getResult might come before the query is actually processed.
     query->setFence(commands->fence);
@@ -127,7 +128,7 @@ void VulkanTimestamps::beginQuery(VulkanCommandBuffer const* commands,
 void VulkanTimestamps::endQuery(VulkanCommandBuffer const* commands,
         VulkanTimerQuery const* query) {
     uint32_t const index = query->getStoppingQueryIndex();
-    vkCmdWriteTimestamp(commands->cmdbuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mPool, index);
+    vkCmdWriteTimestamp(commands->buffer(), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, mPool, index);
 }
 
 VulkanTimestamps::QueryResult VulkanTimestamps::getResult(VulkanTimerQuery const* query) {
