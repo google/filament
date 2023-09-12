@@ -109,7 +109,7 @@ highp vec4 getSpotLightSpacePosition(int index, highp vec3 dir, highp float zLig
     // for spotlights, the bias depends on z
     float bias = shadowUniforms.shadows[index].normalBias * zLight;
 
-    return computeLightSpacePosition(getWorldPosition(), getWorldNormalVector(),
+    return computeLightSpacePosition(getWorldPosition(), getWorldGeometricNormalVector(),
             dir, bias, lightFromWorldMatrix);
 }
 #endif
@@ -141,7 +141,7 @@ highp vec4 getCascadeLightSpacePosition(int cascade) {
         return vertex_lightSpacePosition;
     }
 
-    return computeLightSpacePosition(getWorldPosition(), getWorldNormalVector(),
+    return computeLightSpacePosition(getWorldPosition(), getWorldGeometricNormalVector(),
         frameUniforms.lightDirection,
         shadowUniforms.shadows[cascade].normalBias,
         shadowUniforms.shadows[cascade].lightFromWorldMatrix);

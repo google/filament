@@ -189,8 +189,7 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     # ==================================================================================================
     # Compiler flags
     # ==================================================================================================
-    if (MSVC)
-    else()
+    if (NOT MSVC)
         target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
     endif()
 
@@ -228,7 +227,9 @@ if (TNT_DEV AND NOT WEBGL AND NOT ANDROID AND NOT IOS)
     add_dependencies(${TEST_TARGET} test_gltfio_files)
 
     target_link_libraries(${TEST_TARGET} PRIVATE ${TARGET} filament filabridge gtest uberarchive)
-    target_compile_options(${TEST_TARGET} PRIVATE -Wno-deprecated-register)
+    if (NOT MSVC)
+        target_compile_options(${TEST_TARGET} PRIVATE -Wno-deprecated-register)
+    endif()
     set_target_properties(${TEST_TARGET} PROPERTIES FOLDER Tests)
 endif()
 
