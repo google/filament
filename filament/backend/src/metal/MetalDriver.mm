@@ -345,7 +345,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto colorTexture = handle_cast<MetalTexture>(buffer.handle);
         ASSERT_PRECONDITION(colorTexture->getMtlTextureForWrite(),
                 "Color texture passed to render target has no texture allocation");
-        colorTexture->updateLodRange(buffer.level);
+        colorTexture->extendLodRangeTo(buffer.level);
         colorAttachments[i] = { colorTexture, color[i].level, color[i].layer };
     }
 
@@ -356,7 +356,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto depthTexture = handle_cast<MetalTexture>(depth.handle);
         ASSERT_PRECONDITION(depthTexture->getMtlTextureForWrite(),
                 "Depth texture passed to render target has no texture allocation.");
-        depthTexture->updateLodRange(depth.level);
+        depthTexture->extendLodRangeTo(depth.level);
         depthAttachment = { depthTexture, depth.level, depth.layer };
     }
 
@@ -367,7 +367,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto stencilTexture = handle_cast<MetalTexture>(stencil.handle);
         ASSERT_PRECONDITION(stencilTexture->getMtlTextureForWrite(),
                 "Stencil texture passed to render target has no texture allocation.");
-        stencilTexture->updateLodRange(stencil.level);
+        stencilTexture->extendLodRangeTo(stencil.level);
         stencilAttachment = { stencilTexture, stencil.level, stencil.layer };
     }
 
@@ -790,7 +790,7 @@ void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t ind
 
 void MetalDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
     auto tex = handle_cast<MetalTexture>(th);
-    tex->updateLodRange(minLevel, maxLevel);
+    tex->setLodRange(minLevel, maxLevel);
 }
 
 void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,

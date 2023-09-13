@@ -223,8 +223,8 @@ public:
     // - using the texture as a render target attachment
     // - calling setMinMaxLevels
     // A texture's available mips are consistent throughout a render pass.
-    void updateLodRange(uint32_t level);
-    void updateLodRange(uint32_t minLevel, uint32_t maxLevel);
+    void setLodRange(uint32_t minLevel, uint32_t maxLevel);
+    void extendLodRangeTo(uint32_t level);
 
     static MTLPixelFormat decidePixelFormat(MetalContext* context, TextureFormat format);
 
