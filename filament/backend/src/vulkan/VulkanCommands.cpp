@@ -35,21 +35,12 @@ namespace filament::backend {
 
 using Timestamp = VulkanGroupMarkers::Timestamp;
 
-VulkanCmdFence::VulkanCmdFence(VkDevice device, bool signaled) : device(device) {
-    VkFenceCreateInfo fenceCreateInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-    if (signaled) {
-        fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-    }
-    vkCreateFence(device, &fenceCreateInfo, VKALLOC, &fence);
-
+VulkanCmdFence::VulkanCmdFence(VkFence ifence)
+    : fence(ifence) {
     // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence gets
     // submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually finishes
     // executing the command buffer, the status changes to VK_SUCCESS.
     status.store(VK_INCOMPLETE);
-}
-
-VulkanCmdFence::~VulkanCmdFence() {
-    vkDestroyFence(device, fence, VKALLOC);
 }
 
 VulkanCommandBuffer::VulkanCommandBuffer(VulkanResourceAllocator* allocator, VkDevice device,
@@ -64,19 +55,18 @@ VulkanCommandBuffer::VulkanCommandBuffer(VulkanResourceAllocator* allocator, VkD
     };
 
     // The buffer allocated here will be implicitly reset when vkBeginCommandBuffer is called.
-    vkAllocateCommandBuffers(device, &allocateInfo, &mBuffer);
-
     // We don't need to deallocate since destroying the pool will free all of the buffers.
+    vkAllocateCommandBuffers(device, &allocateInfo, &mBuffer);
 }
 
 CommandBufferObserver::~CommandBufferObserver() {}
 
 static VkCommandPool createPool(VkDevice device, uint32_t queueFamilyIndex) {
     VkCommandPoolCreateInfo createInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags =
-            VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
-        .queueFamilyIndex = queueFamilyIndex,
+    .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+    .flags =
+        VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+    .queueFamilyIndex = queueFamilyIndex,
     };
     VkCommandPool pool;
     vkCreateCommandPool(device, &createInfo, VKALLOC, &pool);
@@ -123,7 +113,7 @@ std::pair<std::string, Timestamp> VulkanGroupMarkers::top() const {
     assert_invariant(!empty());
     auto const marker = mMarkers.back();
 #if FILAMENT_VULKAN_VERBOSE
-    auto const topTimestamp = mTimestamps.top();
+    auto const topTimestamp = mTimestamps.front();
     return std::make_pair(marker, topTimestamp);
 #else
     return std::make_pair(marker, Timestamp{});
@@ -146,6 +136,11 @@ VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFam
         vkCreateSemaphore(mDevice, &sci, nullptr, &semaphore);
     }
 
+    VkFenceCreateInfo fenceCreateInfo{.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+    for (auto& fence: mFences) {
+        vkCreateFence(device, &fenceCreateInfo, VKALLOC, &fence);
+    }
+
     for (size_t i = 0; i < CAPACITY; ++i) {
         mStorage[i] = std::make_unique<VulkanCommandBuffer>(allocator, mDevice, mPool);
     }
@@ -155,8 +150,11 @@ VulkanCommands::~VulkanCommands() {
     wait();
     gc();
     vkDestroyCommandPool(mDevice, mPool, VKALLOC);
-    for (VkSemaphore sema : mSubmissionSignals) {
+    for (VkSemaphore sema: mSubmissionSignals) {
         vkDestroySemaphore(mDevice, sema, VKALLOC);
+    }
+    for (VkFence fence: mFences) {
+        vkDestroyFence(mDevice, fence, VKALLOC);
     }
 }
 
@@ -170,9 +168,9 @@ VulkanCommandBuffer& VulkanCommands::get() {
     // presenting the swap chain or waiting on a fence.
     while (mAvailableBufferCount == 0) {
 #if VK_REPORT_STALLS
-        slog.i  << "VulkanCommands has stalled. "
-                << "If this occurs frequently, consider increasing VK_MAX_COMMAND_BUFFERS."
-                << io::endl;
+        slog.i << "VulkanCommands has stalled. "
+               << "If this occurs frequently, consider increasing VK_MAX_COMMAND_BUFFERS."
+               << io::endl;
 #endif
         wait();
         gc();
@@ -195,12 +193,12 @@ VulkanCommandBuffer& VulkanCommands::get() {
     // Note that the fence wrapper uses shared_ptr because a DriverAPI fence can also have ownership
     // over it.  The destruction of the low-level fence occurs either in VulkanCommands::gc(), or in
     // VulkanDriver::destroyFence(), both of which are safe spots.
-    currentbuf->fence = std::make_shared<VulkanCmdFence>(mDevice);
+    currentbuf->fence = std::make_shared<VulkanCmdFence>(mFences[mCurrentCommandBufferIndex]);
 
     // Begin writing into the command buffer.
-    const VkCommandBufferBeginInfo binfo {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    const VkCommandBufferBeginInfo binfo{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     };
     vkBeginCommandBuffer(currentbuf->buffer(), &binfo);
 
@@ -215,7 +213,6 @@ VulkanCommandBuffer& VulkanCommands::get() {
         auto [marker, time] = mCarriedOverMarkers->pop();
         pushGroupMarker(marker.c_str(), time);
     }
-
     return *currentbuf;
 }
 
@@ -224,7 +221,6 @@ bool VulkanCommands::flush() {
     if (mCurrentCommandBufferIndex < 0) {
         return false;
     }
-
 
     // Before actually submitting, we need to pop any leftover group markers.
     // Note that this needs to occur before vkEndCommandBuffer.
@@ -252,26 +248,26 @@ bool VulkanCommands::flush() {
     // the only safe option because the previously submitted command buffer might have set up some
     // state that the new command buffer depends on.
     VkPipelineStageFlags waitDestStageMasks[2] = {
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
     };
 
     VkSemaphore signals[2] = {
-        VK_NULL_HANDLE,
-        VK_NULL_HANDLE,
+            VK_NULL_HANDLE,
+            VK_NULL_HANDLE,
     };
 
     VkCommandBuffer const cmdbuffer = currentbuf->buffer();
 
-    VkSubmitInfo submitInfo {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount = 0,
-        .pWaitSemaphores = signals,
-        .pWaitDstStageMask = waitDestStageMasks,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &cmdbuffer,
-        .signalSemaphoreCount = 1u,
-        .pSignalSemaphores = &renderingFinished,
+    VkSubmitInfo submitInfo{
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .waitSemaphoreCount = 0,
+            .pWaitSemaphores = signals,
+            .pWaitDstStageMask = waitDestStageMasks,
+            .commandBufferCount = 1,
+            .pCommandBuffers = &cmdbuffer,
+            .signalSemaphoreCount = 1u,
+            .pSignalSemaphores = &renderingFinished,
     };
 
     if (mSubmissionSignal) {
@@ -289,9 +285,9 @@ bool VulkanCommands::flush() {
 
 #if FILAMENT_VULKAN_VERBOSE
     slog.i << "Submitting cmdbuffer=" << cmdbuffer
-        << " wait=(" << signals[0] << ", " << signals[1] << ") "
-        << " signal=" << renderingFinished
-        << io::endl;
+           << " wait=(" << signals[0] << ", " << signals[1] << ") "
+           << " signal=" << renderingFinished
+           << io::endl;
 #endif
 
     auto& cmdfence = currentbuf->fence;
@@ -303,7 +299,7 @@ bool VulkanCommands::flush() {
 
 #if FILAMENT_VULKAN_VERBOSE
     if (result != VK_SUCCESS) {
-        utils::slog.d <<"Failed command buffer submission result: " << result << utils::io::endl;
+        utils::slog.d << "Failed command buffer submission result: " << result << utils::io::endl;
     }
 #endif
     assert_invariant(result == VK_SUCCESS);
@@ -343,22 +339,31 @@ void VulkanCommands::wait() {
     }
     if (count > 0) {
         vkWaitForFences(mDevice, count, fences, VK_TRUE, UINT64_MAX);
+        vkResetFences(mDevice, count, fences);
     }
 }
 
 void VulkanCommands::gc() {
+    VkFence fences[CAPACITY];
+    size_t count = 0;
+
     for (size_t i = 0; i < CAPACITY; i++) {
         auto wrapper = mStorage[i].get();
         if (wrapper->buffer() == VK_NULL_HANDLE) {
             continue;
         }
-        VkResult const result = vkWaitForFences(mDevice, 1, &wrapper->fence->fence, VK_TRUE, 0);
+        VkResult const result = vkGetFenceStatus(mDevice, wrapper->fence->fence);
         if (result != VK_SUCCESS) {
             continue;
         }
+        fences[count++] = wrapper->fence->fence;
         wrapper->fence->status.store(VK_SUCCESS);
         wrapper->reset();
         mAvailableBufferCount++;
+    }
+
+    if (count > 0) {
+        vkResetFences(mDevice, count, fences);
     }
 }
 
@@ -411,19 +416,19 @@ void VulkanCommands::pushGroupMarker(char const* str, VulkanGroupMarkers::Timest
 }
 
 void VulkanCommands::popGroupMarker() {
-     assert_invariant(mGroupMarkers);
+    assert_invariant(mGroupMarkers);
 
     if (!mGroupMarkers->empty()) {
         VkCommandBuffer const cmdbuffer = get().buffer();
-        #if FILAMENT_VULKAN_VERBOSE
-            auto const [marker, startTime] = mGroupMarkers->pop();
-            auto const endTime = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> diff = endTime - startTime;
-            utils::slog.d << "<---- " << marker << " elapsed: " << (diff.count() * 1000) << " ms\n"
-                          << utils::io::flush;
-        #else
-            mGroupMarkers->pop();
-        #endif
+#if FILAMENT_VULKAN_VERBOSE
+        auto const [marker, startTime] = mGroupMarkers->pop();
+        auto const endTime = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> diff = endTime - startTime;
+        utils::slog.d << "<---- " << marker << " elapsed: " << (diff.count() * 1000) << " ms\n"
+                      << utils::io::flush;
+#else
+        mGroupMarkers->pop();
+#endif
 
         if (mContext->isDebugUtilsSupported()) {
             vkCmdEndDebugUtilsLabelEXT(cmdbuffer);
@@ -449,9 +454,9 @@ void VulkanCommands::insertEventMarker(char const* string, uint32_t len) {
         vkCmdInsertDebugUtilsLabelEXT(cmdbuffer, &labelInfo);
     } else if (mContext->isDebugMarkersSupported()) {
         VkDebugMarkerMarkerInfoEXT markerInfo = {
-            .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
-            .pMarkerName = string,
-            .color = {0.0f, 1.0f, 0.0f, 1.0f},
+                .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
+                .pMarkerName = string,
+                .color = {0.0f, 1.0f, 0.0f, 1.0f},
         };
         vkCmdDebugMarkerInsertEXT(cmdbuffer, &markerInfo);
     }
