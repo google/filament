@@ -873,7 +873,7 @@ void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor
     VulkanCommandBuffer& commands = mCommands->get();
     auto ib = mResourceAllocator.handle_cast<VulkanIndexBuffer*>(ibh);
     commands.acquire(ib);
-    ib->buffer.loadFromCpu(commands.cmdbuffer, p.buffer, byteOffset, p.size);
+    ib->buffer.loadFromCpu(commands.buffer(), p.buffer, byteOffset, p.size);
 
     scheduleDestroy(std::move(p));
 }
@@ -884,7 +884,7 @@ void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescript
 
     auto bo = mResourceAllocator.handle_cast<VulkanBufferObject*>(boh);
     commands.acquire(bo);
-    bo->buffer.loadFromCpu(commands.cmdbuffer, bd.buffer, byteOffset, bd.size);
+    bo->buffer.loadFromCpu(commands.buffer(), bd.buffer, byteOffset, bd.size);
 
     scheduleDestroy(std::move(bd));
 }
@@ -895,7 +895,7 @@ void VulkanDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
     auto bo = mResourceAllocator.handle_cast<VulkanBufferObject*>(boh);
     commands.acquire(bo);
     // TODO: implement unsynchronized version
-    bo->buffer.loadFromCpu(commands.cmdbuffer, bd.buffer, byteOffset, bd.size);
+    bo->buffer.loadFromCpu(commands.buffer(), bd.buffer, byteOffset, bd.size);
     mResourceManager.acquire(bo);
     scheduleDestroy(std::move(bd));
 }
@@ -1021,7 +1021,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // the non-sampling case.
     bool samplingDepthAttachment = false;
     VulkanCommandBuffer& commands = mCommands->get();
-    VkCommandBuffer const cmdbuffer = commands.cmdbuffer;
+    VkCommandBuffer const cmdbuffer = commands.buffer();
 
     UTILS_NOUNROLL
     for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < Program::SAMPLER_BINDING_COUNT;
@@ -1247,7 +1247,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
 void VulkanDriver::endRenderPass(int) {
     VulkanCommandBuffer& commands = mCommands->get();
-    VkCommandBuffer cmdbuffer = commands.cmdbuffer;
+    VkCommandBuffer cmdbuffer = commands.buffer();
     vkCmdEndRenderPass(cmdbuffer);
 
     VulkanRenderTarget* rt = mCurrentRenderPass.renderTarget;
@@ -1299,7 +1299,7 @@ void VulkanDriver::nextSubpass(int) {
     assert_invariant(renderTarget);
     assert_invariant(mCurrentRenderPass.params.subpassMask);
 
-    vkCmdNextSubpass(mCommands->get().cmdbuffer, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdNextSubpass(mCommands->get().buffer(), VK_SUBPASS_CONTENTS_INLINE);
 
     mPipelineCache.bindRenderPass(mCurrentRenderPass.renderPass,
             ++mCurrentRenderPass.currentSubpass);
@@ -1484,7 +1484,7 @@ void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, V
 void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,
         const uint32_t instanceCount) {
     VulkanCommandBuffer* commands = &mCommands->get();
-    VkCommandBuffer cmdbuffer = commands->cmdbuffer;
+    VkCommandBuffer cmdbuffer = commands->buffer();
     const VulkanRenderPrimitive& prim = *mResourceAllocator.handle_cast<VulkanRenderPrimitive*>(rph);
 
     Handle<HwProgram> programHandle = pipelineState.program;

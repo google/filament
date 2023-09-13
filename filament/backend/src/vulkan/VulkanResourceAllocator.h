@@ -101,10 +101,6 @@ public:
     template<typename D, typename B>
     inline void destruct(Handle<B> handle) noexcept {
         auto obj = handle_cast<D*>(handle);
-        if constexpr (std::is_base_of_v<VulkanIndexBuffer, D>
-                      || std::is_base_of_v<VulkanBufferObject, D>) {
-            obj->terminate();
-        }
         TRACK_DECREMENT();
         mHandleAllocatorImpl.deallocate(handle, obj);
     }

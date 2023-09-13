@@ -166,7 +166,7 @@ bool VulkanPipelineCache::bindDescriptors(VkCommandBuffer cmdbuffer) noexcept {
 }
 
 bool VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) noexcept {
-    VkCommandBuffer const cmdbuffer = commands->cmdbuffer;
+    VkCommandBuffer const cmdbuffer = commands->buffer();
 
     PipelineMap::iterator pipelineIter = mPipelines.find(mPipelineRequirements);
 
@@ -678,7 +678,7 @@ void VulkanPipelineCache::terminate() noexcept {
     mDummyMemory = VK_NULL_HANDLE;
 }
 
-void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& cmdbuffer) {
+void VulkanPipelineCache::onCommandBuffer(const VulkanCommandBuffer& commands) {
     // The timestamp associated with a given cache entry represents "time" as a count of flush
     // events since the cache was constructed. If any cache entry was most recently used over
     // VK_MAX_PIPELINE_AGE flush events in the past, then we can be sure that it is no longer

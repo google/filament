@@ -96,10 +96,6 @@ struct VulkanVertexBuffer : public HwVertexBuffer, VulkanResource {
 
     void setBuffer(VulkanBufferObject* bufferObject, uint32_t index);
 
-    inline void terminate() {
-        mResources.clear();
-    }
-
     utils::FixedCapacityVector<VulkanBuffer const*> buffers;
 
 private:
@@ -114,9 +110,6 @@ struct VulkanIndexBuffer : public HwIndexBuffer, VulkanResource {
           buffer(allocator, stagePool, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, elementSize * indexCount),
           indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32) {}
 
-    void terminate() {
-        buffer.terminate();
-    }
     VulkanBuffer buffer;
     const VkIndexType indexType;
 };
@@ -124,9 +117,7 @@ struct VulkanIndexBuffer : public HwIndexBuffer, VulkanResource {
 struct VulkanBufferObject : public HwBufferObject, VulkanResource {
     VulkanBufferObject(VmaAllocator allocator, VulkanStagePool& stagePool, uint32_t byteCount,
             BufferObjectBinding bindingType, BufferUsage usage);
-    void terminate() {
-        buffer.terminate();
-    }
+
     VulkanBuffer buffer;
     const BufferObjectBinding bindingType;
 };
