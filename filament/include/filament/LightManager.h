@@ -245,6 +245,7 @@ public:
          * shadows that are too far and wouldn't contribute to the scene much, improving
          * performance and quality. This value is always positive.
          * Use 0.0f to use the camera far distance.
+         * This only affect directional lights.
          */
         float shadowFar = 0.0f;
 

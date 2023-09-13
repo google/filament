@@ -60,6 +60,11 @@ FFilamentAsset::~FFilamentAsset() {
 
     }
 
+    // Destroy gltfio trs transform components.
+    for (auto entity : mEntities) {
+        mTrsTransformManager->destroy(entity);
+    }
+
     // Destroy all renderable, light, transform, and camera components,
     // then destroy the actual entities. This includes instances.
     if (!mDetachedFilamentComponents) {

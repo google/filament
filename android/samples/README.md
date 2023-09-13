@@ -87,9 +87,9 @@ compile Filament's native library and Filament's AAR for this project. The easie
 is to install all the required dependencies and to run the following commands at the root of the
 source tree:
 
-```
-$ ./build.sh -p desktop -i release
-$ ./build.sh -p android release
+```shell
+./build.sh -p desktop -i release
+./build.sh -p android release
 ```
 
 This will build all the native components and the AAR required by this sample application.
@@ -100,8 +100,8 @@ distribution/install directory for desktop (produced by make/ninja install). Thi
 contain `bin/matc` and `bin/cmgen`.
 
 Example:
-```
-$ ./gradlew -Pfilament_tools_dir=../../dist-release assembleDebug
+```shell
+./gradlew -Pfilament_tools_dir=../../dist-release assembleDebug
 ```
 
 ## Important: SDK location
@@ -110,14 +110,24 @@ Either ensure your `ANDROID_HOME` environment variable is set or make sure the r
 contains a `local.properties` file with the `sdk.dir` property pointing to your installation of
 the Android SDK.
 
-## Android Studio
+## Compiling
+
+### Android Studio
 
 You must use the latest stable release of Android Studio. To open the project, point Studio to the
 `android` folder. After opening the project and syncing to gradle, select the sample of your choice
 using the drop-down widget in the toolbar.
 
-## Compiling
-
 To compile and run each sample make sure you have selected the appropriate build variant
 (arm7, arm8, x86 or x86_64). If you are not sure you can simply select the "universal"
 variant which includes all the other ones.
+
+### Command Line
+
+From the `android` directory in the project root:
+
+```shell
+./gradlew :samples:sample-hello-triangle:installDebug
+```
+
+Replace `sample-hello-triangle` with your preferred project.

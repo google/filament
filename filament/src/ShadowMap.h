@@ -222,7 +222,7 @@ private:
             const math::float3& dir);
 
     static inline void snapLightFrustum(math::float2& s, math::float2& o,
-            math::mat4f const& Mv, math::mat4 worldOrigin, math::int2 resolution) noexcept;
+            math::mat4f const& Mv, math::double3 wsSnapCoords, math::int2 resolution) noexcept;
 
     static inline void computeFrustumCorners(math::float3* out,
             const math::mat4f& projectionViewInverse, math::float2 csNearFar = { -1.0f, 1.0f }) noexcept;
@@ -281,13 +281,13 @@ private:
     static math::mat4f computeVsmLightSpaceMatrix(const math::mat4f& lightSpacePcf,
             const math::mat4f& Mv, float znear, float zfar) noexcept;
 
-    math::float4 getViewportNormalized(ShadowMapInfo const& shadowMapInfo) const noexcept;
+    math::float4 getClampToEdgeCoords(ShadowMapInfo const& shadowMapInfo) const noexcept;
 
-    float texelSizeWorldSpace(const math::mat3f& worldToShadowTexture,
-            uint16_t shadowDimension) const noexcept;
+    static float texelSizeWorldSpace(const math::mat3f& worldToShadowTexture,
+            uint16_t shadowDimension) noexcept;
 
-    float texelSizeWorldSpace(const math::mat4f& W, const math::mat4f& MbMtF,
-            uint16_t shadowDimension) const noexcept;
+    static float texelSizeWorldSpace(const math::mat4f& W, const math::mat4f& MbMtF,
+            uint16_t shadowDimension) noexcept;
 
     static constexpr const Segment sBoxSegments[12] = {
             { 0, 1 }, { 1, 3 }, { 3, 2 }, { 2, 0 },

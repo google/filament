@@ -526,21 +526,22 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
                       << utils::io::endl;
         flags = flags | ~(backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE);
     }
-    mResourceAllocator.construct<VulkanSwapChain>(sch, mPlatform, mContext, mAllocator,
-            mCommands.get(), mStagePool, nativeWindow, flags);
+    auto swapChain = mResourceAllocator.construct<VulkanSwapChain>(sch, mPlatform, mContext,
+            mAllocator, mCommands.get(), mStagePool, nativeWindow, flags);
+    mResourceManager.acquire(swapChain);
 }
 
 void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
         uint32_t height, uint64_t flags) {
-    if ((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0 &&
-        !isSRGBSwapChainSupported()) {
+    if ((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0 && !isSRGBSwapChainSupported()) {
         utils::slog.w << "sRGB swapchain requested, but Platform does not support it"
                       << utils::io::endl;
         flags = flags | ~(backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE);
     }
     assert_invariant(width > 0 && height > 0 && "Vulkan requires non-zero swap chain dimensions.");
-    mResourceAllocator.construct<VulkanSwapChain>(sch, mPlatform, mContext, mAllocator,
-            mCommands.get(), mStagePool, nullptr, flags, VkExtent2D{width, height});
+    auto swapChain = mResourceAllocator.construct<VulkanSwapChain>(sch, mPlatform, mContext,
+            mAllocator, mCommands.get(), mStagePool, nullptr, flags, VkExtent2D{width, height});
+    mResourceManager.acquire(swapChain);
 }
 
 void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
