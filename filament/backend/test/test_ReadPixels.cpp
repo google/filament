@@ -18,6 +18,7 @@
 
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
+#include "BackendTestUtils.h"
 
 #include <utils/Hash.h>
 
