@@ -46,10 +46,12 @@ static void clampToFramebuffer(VkRect2D* rect, uint32_t fbWidth, uint32_t fbHeig
     rect->extent.height = std::max(top - y, 0);
 }
 
-VulkanProgram::VulkanProgram(VkDevice device, const Program& builder) noexcept :
-        HwProgram(builder.getName()), mDevice(device) {
+VulkanProgram::VulkanProgram(VkDevice device, const Program& builder) noexcept
+    : HwProgram(builder.getName()),
+      VulkanResource(VulkanResourceType::PROGRAM),
+      mDevice(device) {
     auto const& blobs = builder.getShadersSource();
-    VkShaderModule* modules[2] = { &bundle.vertex, &bundle.fragment };
+    VkShaderModule* modules[2] = {&bundle.vertex, &bundle.fragment};
     // TODO: handle compute shaders.
     for (size_t i = 0; i < 2; i++) {
         const auto& blob = blobs[i];
@@ -118,8 +120,9 @@ VulkanProgram::VulkanProgram(VkDevice device, const Program& builder) noexcept :
     }
 }
 
-VulkanProgram::VulkanProgram(VkDevice device, VkShaderModule vs, VkShaderModule fs) noexcept :
-        mDevice(device) {
+VulkanProgram::VulkanProgram(VkDevice device, VkShaderModule vs, VkShaderModule fs) noexcept
+    : VulkanResource(VulkanResourceType::PROGRAM),
+      mDevice(device) {
     bundle.vertex = vs;
     bundle.fragment = fs;
 }
@@ -131,7 +134,10 @@ VulkanProgram::~VulkanProgram() {
 }
 
 // Creates a special "default" render target (i.e. associated with the swap chain)
-VulkanRenderTarget::VulkanRenderTarget() : HwRenderTarget(0, 0), mOffscreen(false), mSamples(1) {}
+VulkanRenderTarget::VulkanRenderTarget() :
+    HwRenderTarget(0, 0),
+    VulkanResource(VulkanResourceType::RENDER_TARGET),
+    mOffscreen(false), mSamples(1) {}
 
 void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
     assert_invariant(!mOffscreen);
@@ -143,11 +149,14 @@ void VulkanRenderTarget::bindToSwapChain(VulkanSwapChain& swapChain) {
 }
 
 VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice,
-        VulkanContext const& context, VmaAllocator allocator,
-        VulkanCommands* commands, uint32_t width, uint32_t height, uint8_t samples,
+        VulkanContext const& context, VmaAllocator allocator, VulkanCommands* commands,
+        uint32_t width, uint32_t height, uint8_t samples,
         VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
         VulkanAttachment depthStencil[2], VulkanStagePool& stagePool)
-    : HwRenderTarget(width, height), mOffscreen(true), mSamples(samples) {
+    : HwRenderTarget(width, height),
+      VulkanResource(VulkanResourceType::RENDER_TARGET),
+      mOffscreen(true),
+      mSamples(samples) {
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
         mColor[index] = color[index];
     }
@@ -171,10 +180,11 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         if (texture && texture->samples == 1) {
             auto msTexture = texture->getSidecar();
             if (UTILS_UNLIKELY(!msTexture)) {
-                msTexture = new VulkanTexture(device, physicalDevice, context,
-                        allocator, commands, texture->target,
-                        ((VulkanTexture const*) texture)->levels, texture->format, samples,
-                        texture->width, texture->height, texture->depth, texture->usage, stagePool);
+                // TODO: This should be allocated with the ResourceAllocator.
+                msTexture = new VulkanTexture(device, physicalDevice, context, allocator, commands,
+                        texture->target, ((VulkanTexture const*) texture)->levels, texture->format,
+                        samples, texture->width, texture->height, texture->depth, texture->usage,
+                        stagePool, true /* heap allocated */);
                 texture->setSidecar(msTexture);
             }
             mMsaaAttachments[index] = {.texture = msTexture};
@@ -203,7 +213,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         msTexture = new VulkanTexture(device, physicalDevice, context, allocator,
                 commands, depthTexture->target, msLevel, depthTexture->format, samples,
                 depthTexture->width, depthTexture->height, depthTexture->depth, depthTexture->usage,
-                stagePool);
+                stagePool, true /* heap allocated */);
         depthTexture->setSidecar(msTexture);
     }
 
@@ -262,16 +272,23 @@ uint8_t VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) co
 }
 
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        uint8_t bufferCount, uint8_t attributeCount,
-        uint32_t elementCount, AttributeArray const& attribs) :
-        HwVertexBuffer(bufferCount, attributeCount, elementCount, attribs),
-        buffers(bufferCount, nullptr) {}
+        VulkanResourceAllocator* allocator, uint8_t bufferCount, uint8_t attributeCount,
+        uint32_t elementCount, AttributeArray const& attribs)
+    : HwVertexBuffer(bufferCount, attributeCount, elementCount, attribs),
+      VulkanResource(VulkanResourceType::VERTEX_BUFFER),
+      buffers(bufferCount, nullptr),
+      mResources(allocator) {}
 
-VulkanBufferObject::VulkanBufferObject(VmaAllocator allocator,
-        VulkanCommands* commands, VulkanStagePool& stagePool, uint32_t byteCount,
-        BufferObjectBinding bindingType, BufferUsage usage)
+void VulkanVertexBuffer::setBuffer(VulkanBufferObject* bufferObject, uint32_t index) {
+    buffers[index] = &bufferObject->buffer;
+    mResources.acquire(bufferObject);
+}
+
+VulkanBufferObject::VulkanBufferObject(VmaAllocator allocator, VulkanStagePool& stagePool,
+        uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage)
     : HwBufferObject(byteCount),
-      buffer(allocator, commands, stagePool, getBufferObjectUsage(bindingType), byteCount),
+      VulkanResource(VulkanResourceType::BUFFER_OBJECT),
+      buffer(allocator, stagePool, getBufferObjectUsage(bindingType), byteCount),
       bindingType(bindingType) {}
 
 void VulkanRenderPrimitive::setPrimitiveType(PrimitiveType pt) {
@@ -299,10 +316,14 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
         VulkanIndexBuffer* indexBuffer) {
     this->vertexBuffer = vertexBuffer;
     this->indexBuffer = indexBuffer;
+    mResources.acquire(vertexBuffer);
+    mResources.acquire(indexBuffer);
 }
 
 VulkanTimerQuery::VulkanTimerQuery(std::tuple<uint32_t, uint32_t> indices)
-    : mStartingQueryIndex(std::get<0>(indices)), mStoppingQueryIndex(std::get<1>(indices)) {}
+    : VulkanThreadSafeResource(VulkanResourceType::TIMER_QUERY),
+      mStartingQueryIndex(std::get<0>(indices)),
+      mStoppingQueryIndex(std::get<1>(indices)) {}
 
 void VulkanTimerQuery::setFence(std::shared_ptr<VulkanCmdFence> fence) noexcept {
     std::unique_lock<utils::Mutex> lock(mFenceMutex);

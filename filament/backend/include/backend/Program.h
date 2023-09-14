@@ -67,7 +67,7 @@ public:
     Program& operator=(const Program& rhs) = delete;
 
     Program(Program&& rhs) noexcept;
-    Program& operator=(Program&& rhs) noexcept;
+    Program& operator=(Program&& rhs) noexcept = delete;
 
     ~Program() noexcept;
 

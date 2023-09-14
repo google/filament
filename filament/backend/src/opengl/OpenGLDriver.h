@@ -334,7 +334,7 @@ private:
         assert_invariant(!sp.padding1);
         assert_invariant(!sp.padding2);
         auto& samplerMap = mSamplerMap;
-        auto pos = samplerMap.find(sp.u);
+        auto pos = samplerMap.find(sp);
         if (UTILS_UNLIKELY(pos == samplerMap.end())) {
             return getSamplerSlow(sp);
         }
@@ -368,7 +368,8 @@ private:
     // sampler buffer binding points (nullptr if not used)
     std::array<GLSamplerGroup*, Program::SAMPLER_BINDING_COUNT> mSamplerBindings = {};   // 4 pointers
 
-    mutable tsl::robin_map<uint32_t, GLuint> mSamplerMap;
+    mutable tsl::robin_map<SamplerParams, GLuint,
+            SamplerParams::Hasher, SamplerParams::EqualTo> mSamplerMap;
 
     // this must be accessed from the driver thread only
     std::vector<GLTexture*> mTexturesWithStreamsAttached;

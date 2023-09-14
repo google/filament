@@ -26,17 +26,6 @@ Program::Program() noexcept { // NOLINT(modernize-use-equals-default)
 
 Program::Program(Program&& rhs) noexcept = default;
 
-Program& Program::operator=(Program&& rhs) noexcept {
-    mUniformBlocks.operator=(rhs.mUniformBlocks);
-    mSamplerGroups.operator=(std::move(rhs.mSamplerGroups));
-    mShadersSource.operator=(std::move(rhs.mShadersSource));
-    mName.operator=(std::move(rhs.mName));
-    mLogger.operator=(std::move(rhs.mLogger));
-    mSpecializationConstants.operator=(std::move(rhs.mSpecializationConstants));
-    mBindingUniformInfo.operator=(std::move(rhs.mBindingUniformInfo));
-    return *this;
-}
-
 Program::~Program() noexcept = default;
 
 Program& Program::priorityQueue(CompilerPriorityQueue priorityQueue) noexcept {

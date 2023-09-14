@@ -33,8 +33,7 @@
 
 #include <stdint.h>
 
-namespace filament {
-namespace math {
+namespace filament::math {
 namespace details {
 
 template<typename T> class TVec2;
@@ -44,6 +43,8 @@ template<typename T> class TVec4;
 template<typename T> class TMat22;
 template<typename T> class TMat33;
 template<typename T> class TMat44;
+
+template<typename T> class TQuaternion;
 
 }  // namespace details
 
@@ -86,8 +87,10 @@ using mat3f     = details::TMat33<float>;
 using mat4      = details::TMat44<double>;
 using mat4f     = details::TMat44<float>;
 
-}  // namespace math
-}  // namespace filament
+using quat      = details::TQuaternion<double>;
+using quatf     = details::TQuaternion<float>;
+
+}  // namespace filament::math
 
 #endif // _MSC_VER
 

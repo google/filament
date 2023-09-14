@@ -160,7 +160,7 @@ constexpr inline half makeHalf(uint16_t bits) noexcept {
 
 #endif // __ARM_NEON
 
-inline constexpr half operator "" _h(long double v) {
+inline constexpr half operator""_h(long double v) {
     return half( static_cast<float>(v) );
 }
 

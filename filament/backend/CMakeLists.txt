@@ -177,8 +177,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanConstants.h
             src/vulkan/VulkanContext.cpp
             src/vulkan/VulkanContext.h
-            src/vulkan/VulkanDisposer.cpp
-            src/vulkan/VulkanDisposer.h
             src/vulkan/VulkanDriver.cpp
             src/vulkan/VulkanDriver.h
             src/vulkan/VulkanDriverFactory.h
@@ -200,6 +198,9 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanSwapChain.h
             src/vulkan/VulkanReadPixels.cpp
             src/vulkan/VulkanReadPixels.h
+            src/vulkan/VulkanResourceAllocator.h
+            src/vulkan/VulkanResources.cpp
+            src/vulkan/VulkanResources.h
             src/vulkan/VulkanTexture.cpp
             src/vulkan/VulkanTexture.h
             src/vulkan/VulkanUtility.cpp

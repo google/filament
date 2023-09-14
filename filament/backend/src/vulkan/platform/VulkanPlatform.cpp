@@ -152,7 +152,7 @@ void printDepthFormats(VkPhysicalDevice device) {
 }
 
 ExtensionSet getInstanceExtensions() {
-    std::array<std::string_view, 4> const TARGET_EXTS = {
+    std::string_view const TARGET_EXTS[] = {
             // Request all cross-platform extensions.
             VK_KHR_SURFACE_EXTENSION_NAME,
             VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
@@ -160,6 +160,10 @@ ExtensionSet getInstanceExtensions() {
             // Request these if available.
             VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
             VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
+
+#if VK_ENABLE_VALIDATION
+            VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+#endif
     };
     ExtensionSet exts;
     FixedCapacityVector<VkExtensionProperties> const availableExts
@@ -176,7 +180,7 @@ ExtensionSet getInstanceExtensions() {
 }
 
 ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
-    std::array<std::string_view, 5> const TARGET_EXTS = {
+    std::string_view const TARGET_EXTS[] = {
             VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
             VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
             VK_KHR_MAINTENANCE1_EXTENSION_NAME,
@@ -231,13 +235,10 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
 
     // The Platform class can require 1 or 2 instance extensions, plus we'll request at most 5
     // instance extensions here in the common code. So that's a max of 7.
-    static constexpr uint32_t MAX_INSTANCE_EXTENSION_COUNT = 7;
+    static constexpr uint32_t MAX_INSTANCE_EXTENSION_COUNT = 8;
     const char* ppEnabledExtensions[MAX_INSTANCE_EXTENSION_COUNT];
     uint32_t enabledExtensionCount = 0;
 
-#if VK_ENABLE_VALIDATION && defined(__ANDROID__)
-    ppEnabledExtensions[enabledExtensionCount++] = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
-#endif
     if (validationFeaturesSupported) {
         ppEnabledExtensions[enabledExtensionCount++] = VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME;
     }
@@ -512,7 +513,7 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
 
 VkFormat findSupportedFormat(VkPhysicalDevice device) {
     VkFormatFeatureFlags const features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    std::array<VkFormat, 2> const formats = {VK_FORMAT_D32_SFLOAT, VK_FORMAT_X8_D24_UNORM_PACK32};
+    VkFormat const formats[] = {VK_FORMAT_D32_SFLOAT, VK_FORMAT_X8_D24_UNORM_PACK32};
     for (VkFormat format: formats) {
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(device, format, &props);

@@ -1,7 +1,5 @@
-ShadingModel=lit
-
-# NOTE: this intentionally omits the blending mode spec because
-# Filament requires MASKED blending for KHR_materials_volume.
+# Required Aspects
+BlendingMode = ${BLENDING}
 
 # Core Features
 VertexColors=optional

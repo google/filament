@@ -52,6 +52,8 @@ public:
      */
     TextureSampler() noexcept = default;
 
+    explicit TextureSampler(backend::SamplerParams params) noexcept : mSamplerParams(params) { }
+
     TextureSampler(const TextureSampler& rhs) noexcept = default;
     TextureSampler& operator=(const TextureSampler& rhs) noexcept = default;
 

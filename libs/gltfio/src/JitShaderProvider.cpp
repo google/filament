@@ -287,7 +287,7 @@ std::string shaderFromKey(const MaterialKey& config) {
 
                 // TODO: Provided by Filament, but this should really be provided/computed by gltfio
                 // TODO: This scale is per renderable and should include the scale of the mesh node
-                float scale = object_uniforms.userData;
+                float scale = getObjectUserData();
                 material.thickness = materialParams.volumeThicknessFactor * scale;
             )SHADER";
 
@@ -461,6 +461,22 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
         }
     }
 
+    // BLENDING
+    switch (config.alphaMode) {
+        case AlphaMode::OPAQUE:
+            builder.blending(MaterialBuilder::BlendingMode::OPAQUE);
+            break;
+        case AlphaMode::MASK:
+            builder.blending(MaterialBuilder::BlendingMode::MASKED);
+            break;
+        case AlphaMode::BLEND:
+            builder.blending(MaterialBuilder::BlendingMode::FADE);
+            break;
+        default:
+            // Ignore
+            break;
+    }
+
     // TRANSMISSION
     if (config.hasTransmission) {
         // According to KHR_materials_transmission, the minimum expectation for a compliant renderer
@@ -479,24 +495,6 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
                 builder.parameter("transmissionUvMatrix", MaterialBuilder::UniformType::MAT3,
                         MaterialBuilder::ParameterPrecision::HIGH);
             }
-        }
-
-        builder.blending(MaterialBuilder::BlendingMode::MASKED);
-    } else {
-        // BLENDING
-        switch (config.alphaMode) {
-            case AlphaMode::OPAQUE:
-                builder.blending(MaterialBuilder::BlendingMode::OPAQUE);
-                break;
-            case AlphaMode::MASK:
-                builder.blending(MaterialBuilder::BlendingMode::MASKED);
-                break;
-            case AlphaMode::BLEND:
-                builder.blending(MaterialBuilder::BlendingMode::FADE);
-                break;
-            default:
-                // Ignore
-                break;
         }
     }
 
@@ -517,8 +515,6 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
                         MaterialBuilder::ParameterPrecision::HIGH);
             }
         }
-
-        builder.blending(MaterialBuilder::BlendingMode::MASKED);
     }
 
     // IOR

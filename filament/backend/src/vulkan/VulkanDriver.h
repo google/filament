@@ -20,18 +20,17 @@
 #include "VulkanBlitter.h"
 #include "VulkanConstants.h"
 #include "VulkanContext.h"
-#include "VulkanDisposer.h"
 #include "VulkanFboCache.h"
 #include "VulkanHandles.h"
 #include "VulkanPipelineCache.h"
 #include "VulkanReadPixels.h"
+#include "VulkanResourceAllocator.h"
 #include "VulkanSamplerCache.h"
 #include "VulkanStagePool.h"
 #include "VulkanUtility.h"
 
 #include "DriverBase.h"
 #include "private/backend/Driver.h"
-#include "private/backend/HandleAllocator.h"
 
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
@@ -40,60 +39,6 @@ namespace filament::backend {
 
 class VulkanPlatform;
 struct VulkanSamplerGroup;
-
-class VulkanHandleAllocator {
-public:
-    VulkanHandleAllocator(size_t arenaSize)
-        : mHandleAllocatorImpl("Handles", arenaSize) {}
-
-    template<typename D, typename... ARGS>
-    inline Handle<D> initHandle(ARGS&&... args) noexcept {
-        return mHandleAllocatorImpl.allocateAndConstruct<D>(std::forward<ARGS>(args)...);
-    }
-
-    template<typename D>
-    inline Handle<D> allocHandle() noexcept {
-        return mHandleAllocatorImpl.allocate<D>();
-    }
-
-    template<typename D, typename B, typename... ARGS>
-    inline typename std::enable_if<std::is_base_of<B, D>::value, D>::type* construct(
-            Handle<B> const& handle, ARGS&&... args) noexcept {
-        return mHandleAllocatorImpl.construct<D, B>(handle, std::forward<ARGS>(args)...);
-    }
-
-    template<typename B, typename D,
-            typename = typename std::enable_if<std::is_base_of<B, D>::value, D>::type>
-    inline void destruct(Handle<B> handle, D const* p) noexcept {
-        return mHandleAllocatorImpl.deallocate(handle, p);
-    }
-
-    template<typename Dp, typename B>
-    inline typename std::enable_if_t<
-            std::is_pointer_v<Dp> && std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
-    handle_cast(Handle<B>& handle) noexcept {
-        return mHandleAllocatorImpl.handle_cast<Dp, B>(handle);
-    }
-
-    template<typename Dp, typename B>
-    inline typename std::enable_if_t<
-            std::is_pointer_v<Dp> && std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
-    handle_cast(Handle<B> const& handle) noexcept {
-        return mHandleAllocatorImpl.handle_cast<Dp, B>(handle);
-    }
-
-    template<typename D, typename B>
-    inline void destruct(Handle<B> handle) noexcept {
-        if constexpr (std::is_base_of_v<VulkanIndexBuffer, D>
-                      || std::is_base_of_v<VulkanBufferObject, D>) {
-            auto ptr = handle_cast<D*>(handle);
-            ptr->terminate();
-        }
-        destruct(handle, handle_cast<D const*>(handle));
-    }
-
-    HandleAllocatorVK mHandleAllocatorImpl;
-};
 
 class VulkanDriver final : public DriverBase {
 public:
@@ -153,9 +98,14 @@ private:
     VkDebugUtilsMessengerEXT mDebugMessenger = VK_NULL_HANDLE;
 
     VulkanContext mContext = {};
-    VulkanHandleAllocator mHandleAllocator;
+    VulkanResourceAllocator mResourceAllocator;
+    VulkanResourceManager mResourceManager;
+
+    // Used for resources that are created synchronously and used and destroyed on the backend
+    // thread.
+    VulkanThreadSafeResourceManager mThreadSafeResourceManager;
+
     VulkanPipelineCache mPipelineCache;
-    VulkanDisposer mDisposer;
     VulkanStagePool mStagePool;
     VulkanFboCache mFramebufferCache;
     VulkanSamplerCache mSamplerCache;

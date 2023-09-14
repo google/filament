@@ -26,10 +26,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-namespace filament {
-namespace math {
-// -------------------------------------------------------------------------------------
-
+namespace filament::math {
 namespace details {
 
 template<typename T>
@@ -89,15 +86,15 @@ public:
 
     // constructors
 
-    // leaves object uninitialized. use with caution.
+    // Leaves object uninitialized. Use with caution.
     explicit constexpr TQuaternion(no_init) {}
 
     // default constructor. sets all values to zero.
     constexpr TQuaternion() : x(0), y(0), z(0), w(0) {}
 
-    // handles implicit conversion to a quat. must not be explicit.
+    // Handles implicit conversion to a quat. Must not be explicit.
     template<typename A, typename = enable_if_arithmetic_t<A>>
-    constexpr TQuaternion(A w) : x(0), y(0), z(0), w(w) {}
+    constexpr TQuaternion(A w) : x(0), y(0), z(0), w(w) {} // NOLINT(google-explicit-constructor)
 
     // initialize from 4 values to w + xi + yj + zk
     template<typename A, typename B, typename C, typename D,
@@ -175,31 +172,29 @@ typedef details::TQuaternion<float> quatf;
 typedef details::TQuaternion<half> quath;
 
 constexpr inline quat operator "" _i(long double v) {
-    return quat(0.0, double(v), 0.0, 0.0);
+    return { 0.0, double(v), 0.0, 0.0 };
 }
 
 constexpr inline quat operator "" _j(long double v) {
-    return quat(0.0, 0.0, double(v), 0.0);
+    return { 0.0, 0.0, double(v), 0.0 };
 }
 
 constexpr inline quat operator "" _k(long double v) {
-    return quat(0.0, 0.0, 0.0, double(v));
+    return { 0.0, 0.0, 0.0, double(v) };
 }
 
 constexpr inline quat operator "" _i(unsigned long long v) {
-    return quat(0.0, double(v), 0.0, 0.0);
+    return { 0.0, double(v), 0.0, 0.0 };
 }
 
 constexpr inline quat operator "" _j(unsigned long long v) {
-    return quat(0.0, 0.0, double(v), 0.0);
+    return { 0.0, 0.0, double(v), 0.0 };
 }
 
 constexpr inline quat operator "" _k(unsigned long long v) {
-    return quat(0.0, 0.0, 0.0, double(v));
+    return { 0.0, 0.0, 0.0, double(v) };
 }
 
-// ----------------------------------------------------------------------------------------
-}  // namespace math
-}  // namespace filament
+}  // namespace filament::math
 
 #endif  // TNT_MATH_QUAT_H

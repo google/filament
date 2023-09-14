@@ -129,11 +129,11 @@ void TimerQueryNative::endTimeElapsedQuery(GLTimerQuery* tq) {
                 // we need to try this one again later
                 return false;
             }
+            GLuint64 elapsedTime = 0;
+            // we won't end-up here if we're on ES and don't have GL_EXT_disjoint_timer_query
+            context.procs.getQueryObjectui64v(state->gl.query, GL_QUERY_RESULT, &elapsedTime);
+            state->elapsed.store((int64_t)elapsedTime, std::memory_order_relaxed);
         }
-        GLuint64 elapsedTime = 0;
-        // we won't end-up here if we're on ES and don't have GL_EXT_disjoint_timer_query
-        context.procs.getQueryObjectui64v(state->gl.query, GL_QUERY_RESULT, &elapsedTime);
-        state->elapsed.store((int64_t)elapsedTime, std::memory_order_relaxed);
         return true;
     });
 }

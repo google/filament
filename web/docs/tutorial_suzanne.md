@@ -23,27 +23,26 @@ non-compressed variants for each texture, since not all platforms support the sa
 formats. First copy over the PNG files from the [monkey folder], then do:
 
 ```bash
-# Create mipmaps for base color and two compressed variants.
-mipgen albedo.png albedo.ktx
-mipgen --compression=astc_fast_ldr_4x4 albedo.png albedo_astc.ktx
-mipgen --compression=s3tc_rgb_dxt1 albedo.png albedo_s3tc_srgb.ktx
+# Create mipmaps for base color
+mipgen albedo.png albedo.ktx2
+mipgen --compression=uastc albedo.png albedo.ktx2
 
 # Create mipmaps for the normal map and a compressed variant.
 mipgen --strip-alpha --kernel=NORMALS --linear normal.png normal.ktx
-mipgen --strip-alpha --kernel=NORMALS --linear --compression=etc_rgb8_normalxyz_40 \
-    normal.png normal_etc.ktx
+mipgen --strip-alpha --kernel=NORMALS --linear --compression=uastc_normals \
+    normal.png normal.ktx2
 
 # Create mipmaps for the single-component roughness map and a compressed variant.
 mipgen --grayscale roughness.png roughness.ktx
-mipgen --grayscale --compression=etc_r11_numeric_40 roughness.png roughness_etc.ktx
+mipgen --grayscale --compression=uastc roughness.png roughness.ktx2
 
 # Create mipmaps for the single-component metallic map and a compressed variant.
 mipgen --grayscale metallic.png metallic.ktx
-mipgen --grayscale --compression=etc_r11_numeric_40 metallic.png metallic_etc.ktx
+mipgen --grayscale --compression=uastc metallic.png metallic.ktx2
 
 # Create mipmaps for the single-component occlusion map and a compressed variant.
 mipgen --grayscale ao.png ao.ktx
-mipgen --grayscale --compression=etc_r11_numeric_40 ao.png ao_etc.ktx
+mipgen --grayscale --compression=uastc ao.png ao.ktx2
 ```
 
 For more information on mipgen's arguments and supported formats, do `mipgen --help`.
@@ -237,11 +236,11 @@ was created in the app constructor.
 
 ```js {fragment="fetch larger assets"}
 Filament.fetch([sky_large_url, albedo_url, roughness_url, metallic_url, normal_url, ao_url], () => {
-    const albedo = this.engine.createTextureFromKtx1(albedo_url, {srgb: true});
-    const roughness = this.engine.createTextureFromKtx1(roughness_url);
-    const metallic = this.engine.createTextureFromKtx1(metallic_url);
-    const normal = this.engine.createTextureFromKtx1(normal_url);
-    const ao = this.engine.createTextureFromKtx1(ao_url);
+    const albedo = this.engine.createTextureFromKtx2(albedo_url, {srgb: true});
+    const roughness = this.engine.createTextureFromKtx2(roughness_url);
+    const metallic = this.engine.createTextureFromKtx2(metallic_url);
+    const normal = this.engine.createTextureFromKtx2(normal_url);
+    const ao = this.engine.createTextureFromKtx2(ao_url);
 
     const sampler = new Filament.TextureSampler(
         Filament.MinFilter.LINEAR_MIPMAP_LINEAR,

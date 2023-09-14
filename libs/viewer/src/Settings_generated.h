@@ -93,4 +93,7 @@ std::ostream& operator<<(std::ostream& out, const VsmShadowOptions& in);
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, SoftShadowOptions* out);
 std::ostream& operator<<(std::ostream& out, const SoftShadowOptions& in);
 
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, StereoscopicOptions* out);
+std::ostream& operator<<(std::ostream& out, const StereoscopicOptions& in);
+
 } // namespace filament::viewer

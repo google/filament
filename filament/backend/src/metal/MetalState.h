@@ -34,7 +34,7 @@ namespace filament {
 namespace backend {
 
 inline bool operator==(const SamplerParams& lhs, const SamplerParams& rhs) {
-    return lhs.u == rhs.u;
+    return SamplerParams::EqualTo{}(lhs, rhs);
 }
 
 //   Rasterization Bindings
