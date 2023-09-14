@@ -39,6 +39,7 @@ namespace filament::backend {
 
 struct VulkanContext;
 
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
 class VulkanGroupMarkers {
 public:
     using Timestamp = std::chrono::time_point<std::chrono::high_resolution_clock>;
@@ -51,10 +52,12 @@ public:
 
 private:
     std::list<std::string> mMarkers;
-#if FILAMENT_VULKAN_VERBOSE
+#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
     std::list<Timestamp> mTimestamps;
 #endif
 };
+
+#endif // FVK_DEBUG_GROUP_MARKERS
 
 // Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
 struct VulkanCmdFence {
@@ -170,6 +173,7 @@ class VulkanCommands {
         // The observer's event handler can only be called during get().
         void setObserver(CommandBufferObserver* observer) { mObserver = observer; }
 
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
         void pushGroupMarker(char const* str, VulkanGroupMarkers::Timestamp timestamp = {});
 
         void popGroupMarker();
@@ -177,9 +181,10 @@ class VulkanCommands {
         void insertEventMarker(char const* string, uint32_t len);
 
         std::string getTopGroupMarker() const;
+#endif
 
     private:
-        static constexpr int CAPACITY = VK_MAX_COMMAND_BUFFERS;
+        static constexpr int CAPACITY = FVK_MAX_COMMAND_BUFFERS;
         VkDevice const mDevice;
         VkQueue const mQueue;
         VkCommandPool const mPool;
@@ -196,8 +201,10 @@ class VulkanCommands {
         uint8_t mAvailableBufferCount = CAPACITY;
         CommandBufferObserver* mObserver = nullptr;
 
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
         std::unique_ptr<VulkanGroupMarkers> mGroupMarkers;
         std::unique_ptr<VulkanGroupMarkers> mCarriedOverMarkers;
+#endif
 };
 
 } // namespace filament::backend

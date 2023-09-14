@@ -33,7 +33,9 @@ using namespace utils;
 
 namespace filament::backend {
 
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
 using Timestamp = VulkanGroupMarkers::Timestamp;
+#endif
 
 VulkanCmdFence::VulkanCmdFence(VkFence ifence)
     : fence(ifence) {
@@ -63,20 +65,21 @@ CommandBufferObserver::~CommandBufferObserver() {}
 
 static VkCommandPool createPool(VkDevice device, uint32_t queueFamilyIndex) {
     VkCommandPoolCreateInfo createInfo = {
-    .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-    .flags =
-        VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
-    .queueFamilyIndex = queueFamilyIndex,
+            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+                     | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+            .queueFamilyIndex = queueFamilyIndex,
     };
     VkCommandPool pool;
     vkCreateCommandPool(device, &createInfo, VKALLOC, &pool);
     return pool;
-
 }
 
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
 void VulkanGroupMarkers::push(std::string const& marker, Timestamp start) noexcept {
     mMarkers.push_back(marker);
-#if FILAMENT_VULKAN_VERBOSE
+
+#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
     mTimestamps.push_back(start.time_since_epoch().count() > 0.0
                                   ? start
                                   : std::chrono::high_resolution_clock::now());
@@ -87,7 +90,7 @@ std::pair<std::string, Timestamp> VulkanGroupMarkers::pop() noexcept {
     auto const marker = mMarkers.back();
     mMarkers.pop_back();
 
-#if FILAMENT_VULKAN_VERBOSE
+#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
     auto const timestamp = mTimestamps.back();
     mTimestamps.pop_back();
     return std::make_pair(marker, timestamp);
@@ -100,7 +103,7 @@ std::pair<std::string, Timestamp> VulkanGroupMarkers::pop_bottom() noexcept {
     auto const marker = mMarkers.front();
     mMarkers.pop_front();
 
-#if FILAMENT_VULKAN_VERBOSE
+#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
     auto const timestamp = mTimestamps.front();
     mTimestamps.pop_front();
     return std::make_pair(marker, timestamp);
@@ -112,7 +115,7 @@ std::pair<std::string, Timestamp> VulkanGroupMarkers::pop_bottom() noexcept {
 std::pair<std::string, Timestamp> VulkanGroupMarkers::top() const {
     assert_invariant(!empty());
     auto const marker = mMarkers.back();
-#if FILAMENT_VULKAN_VERBOSE
+#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
     auto const topTimestamp = mTimestamps.front();
     return std::make_pair(marker, topTimestamp);
 #else
@@ -123,6 +126,8 @@ std::pair<std::string, Timestamp> VulkanGroupMarkers::top() const {
 bool VulkanGroupMarkers::empty() const noexcept {
     return mMarkers.empty();
 }
+
+#endif // FVK_DEBUG_GROUP_MARKERS
 
 VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
         VulkanContext* context, VulkanResourceAllocator* allocator)
@@ -144,6 +149,10 @@ VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFam
     for (size_t i = 0; i < CAPACITY; ++i) {
         mStorage[i] = std::make_unique<VulkanCommandBuffer>(allocator, mDevice, mPool);
     }
+
+#if !FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
+    (void) mContext;
+#endif
 }
 
 VulkanCommands::~VulkanCommands() {
@@ -167,7 +176,7 @@ VulkanCommandBuffer& VulkanCommands::get() {
     // It occurs only when Filament invokes commit() or endFrame() a large number of times without
     // presenting the swap chain or waiting on a fence.
     while (mAvailableBufferCount == 0) {
-#if VK_REPORT_STALLS
+#if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
         slog.i << "VulkanCommands has stalled. "
                << "If this occurs frequently, consider increasing VK_MAX_COMMAND_BUFFERS."
                << io::endl;
@@ -207,12 +216,14 @@ VulkanCommandBuffer& VulkanCommands::get() {
         mObserver->onCommandBuffer(*currentbuf);
     }
 
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     // We push the current markers onto a temporary stack. This must be placed after currentbuf is
     // set to the new command buffer since pushGroupMarker also calls get().
     while (mCarriedOverMarkers && !mCarriedOverMarkers->empty()) {
         auto [marker, time] = mCarriedOverMarkers->pop();
         pushGroupMarker(marker.c_str(), time);
     }
+#endif
     return *currentbuf;
 }
 
@@ -224,6 +235,7 @@ bool VulkanCommands::flush() {
 
     // Before actually submitting, we need to pop any leftover group markers.
     // Note that this needs to occur before vkEndCommandBuffer.
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     while (mGroupMarkers && !mGroupMarkers->empty()) {
         if (!mCarriedOverMarkers) {
             mCarriedOverMarkers = std::make_unique<VulkanGroupMarkers>();
@@ -233,7 +245,7 @@ bool VulkanCommands::flush() {
         // We still need to call through to vkCmdEndDebugUtilsLabelEXT.
         popGroupMarker();
     }
-
+#endif
 
     int8_t const index = mCurrentCommandBufferIndex;
     VulkanCommandBuffer const* currentbuf = mStorage[index].get();
@@ -283,7 +295,7 @@ bool VulkanCommands::flush() {
         submitInfo.pWaitSemaphores = VK_NULL_HANDLE;
     }
 
-#if FILAMENT_VULKAN_VERBOSE
+#if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
     slog.i << "Submitting cmdbuffer=" << cmdbuffer
            << " wait=(" << signals[0] << ", " << signals[1] << ") "
            << " signal=" << renderingFinished
@@ -297,7 +309,7 @@ bool VulkanCommands::flush() {
     cmdfence->condition.notify_all();
     lock.unlock();
 
-#if FILAMENT_VULKAN_VERBOSE
+#if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
     if (result != VK_SUCCESS) {
         utils::slog.d << "Failed command buffer submission result: " << result << utils::io::endl;
     }
@@ -313,8 +325,8 @@ bool VulkanCommands::flush() {
 VkSemaphore VulkanCommands::acquireFinishedSignal() {
     VkSemaphore semaphore = mSubmissionSignal;
     mSubmissionSignal = VK_NULL_HANDLE;
-#if FILAMENT_VULKAN_VERBOSE
-     slog.i << "Acquiring " << semaphore << " (e.g. for vkQueuePresentKHR)" << io::endl;
+#if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
+    slog.i << "Acquiring " << semaphore << " (e.g. for vkQueuePresentKHR)" << io::endl;
 #endif
     return semaphore;
 }
@@ -322,7 +334,7 @@ VkSemaphore VulkanCommands::acquireFinishedSignal() {
 void VulkanCommands::injectDependency(VkSemaphore next) {
     assert_invariant(mInjectedSignal == VK_NULL_HANDLE);
     mInjectedSignal = next;
-#if FILAMENT_VULKAN_VERBOSE
+#if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
     slog.i << "Injecting " << next << " (e.g. due to vkAcquireNextImageKHR)" << io::endl;
 #endif
 }
@@ -344,6 +356,9 @@ void VulkanCommands::wait() {
 }
 
 void VulkanCommands::gc() {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("commands::gc");
+
     VkFence fences[CAPACITY];
     size_t count = 0;
 
@@ -365,6 +380,7 @@ void VulkanCommands::gc() {
     if (count > 0) {
         vkResetFences(mDevice, count, fences);
     }
+    FVK_SYSTRACE_END();
 }
 
 void VulkanCommands::updateFences() {
@@ -381,8 +397,10 @@ void VulkanCommands::updateFences() {
     }
 }
 
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
+
 void VulkanCommands::pushGroupMarker(char const* str, VulkanGroupMarkers::Timestamp timestamp) {
-#if FILAMENT_VULKAN_VERBOSE
+#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
     // If the timestamp is not 0, then we are carrying over a marker across buffer submits.
     // If it is 0, then this is a normal marker push and we should just print debug line as usual.
     if (timestamp.time_since_epoch().count() == 0.0) {
@@ -420,7 +438,7 @@ void VulkanCommands::popGroupMarker() {
 
     if (!mGroupMarkers->empty()) {
         VkCommandBuffer const cmdbuffer = get().buffer();
-#if FILAMENT_VULKAN_VERBOSE
+#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
         auto const [marker, startTime] = mGroupMarkers->pop();
         auto const endTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> diff = endTime - startTime;
@@ -429,7 +447,6 @@ void VulkanCommands::popGroupMarker() {
 #else
         mGroupMarkers->pop();
 #endif
-
         if (mContext->isDebugUtilsSupported()) {
             vkCmdEndDebugUtilsLabelEXT(cmdbuffer);
         } else if (mContext->isDebugMarkersSupported()) {
@@ -468,8 +485,9 @@ std::string VulkanCommands::getTopGroupMarker() const {
     }
     return std::get<0>(mGroupMarkers->top());
 }
+#endif // FVK_DEBUG_GROUP_MARKERS
 
-}// namespace filament::backend
+} // namespace filament::backend
 
 #if defined(_MSC_VER)
 #pragma warning( pop )

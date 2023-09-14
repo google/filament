@@ -106,7 +106,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
 
     if (any(usage & TextureUsage::SAMPLEABLE)) {
 
-#if VK_ENABLE_VALIDATION
+#if FVK_ENABLED(FVK_DEBUG_TEXTURE)
         // Validate that the format is actually sampleable.
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(physicalDevice, mVkFormat, &props);
@@ -160,7 +160,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     imageInfo.samples = (VkSampleCountFlagBits) samples;
 
     VkResult error = vkCreateImage(mDevice, &imageInfo, VKALLOC, &mTextureImage);
-    if (error || FILAMENT_VULKAN_VERBOSE) {
+    if (error || FVK_ENABLED_BOOL(FVK_DEBUG_TEXTURE)) {
         utils::slog.d << "vkCreateImage: "
             << "image = " << mTextureImage << ", "
             << "result = " << error << ", "
@@ -417,7 +417,7 @@ void VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, const VkImageSubres
         VulkanLayout newLayout) {
     VulkanLayout oldLayout = getLayout(range.baseArrayLayer, range.baseMipLevel);
 
-    #if FILAMENT_VULKAN_VERBOSE
+    #if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
     utils::slog.i << "transition layout of " << mTextureImage << ",layer=" << range.baseArrayLayer
                   << ",level=" << range.baseMipLevel << " from=" << oldLayout << " to=" << newLayout
                   << " format=" << mVkFormat
@@ -463,7 +463,7 @@ VulkanLayout VulkanTexture::getLayout(uint32_t layer, uint32_t level) const {
     return mSubresourceLayouts.get(key);
 }
 
-#if FILAMENT_VULKAN_VERBOSE
+#if FVK_ENABLED(FVK_DEBUG_TEXTURE)
 void VulkanTexture::print() const {
     const uint32_t firstLayer = 0;
     const uint32_t lastLayer = firstLayer + mPrimaryViewRange.layerCount;

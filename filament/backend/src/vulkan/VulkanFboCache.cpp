@@ -23,7 +23,7 @@
 
 // If any VkRenderPass or VkFramebuffer is unused for more than TIME_BEFORE_EVICTION frames, it
 // is evicted from the cache.
-static constexpr uint32_t TIME_BEFORE_EVICTION = VK_MAX_COMMAND_BUFFERS;
+static constexpr uint32_t TIME_BEFORE_EVICTION = FVK_MAX_COMMAND_BUFFERS;
 
 using namespace bluevk;
 
@@ -97,7 +97,7 @@ VkFramebuffer VulkanFboCache::getFramebuffer(FboKey config) noexcept {
         attachments[attachmentCount++] = config.depth;
     }
 
-    #if FILAMENT_VULKAN_VERBOSE
+    #if FVK_ENABLED(FVK_DEBUG_FBO_CACHE)
     utils::slog.d << "Creating framebuffer " << config.width << "x" << config.height << " "
         << "for render pass " << config.renderPass << ", "
         << "samples = " << int(config.samples) << ", "
@@ -312,7 +312,7 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     ASSERT_POSTCONDITION(!error, "Unable to create render pass.");
     mRenderPassCache[config] = {renderPass, mCurrentTime};
 
-    #if FILAMENT_VULKAN_VERBOSE
+    #if FVK_ENABLED(FVK_DEBUG_FBO_CACHE)
     utils::slog.d << "Created render pass " << renderPass << " with "
         << "samples = " << int(config.samples) << ", "
         << "depth = " << (hasDepth ? 1 : 0) << ", "
@@ -338,6 +338,9 @@ void VulkanFboCache::reset() noexcept {
 // Frees up old framebuffers and render passes, then nulls out their key.  Doesn't bother removing
 // the actual map entry since it is fairly small.
 void VulkanFboCache::gc() noexcept {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("fbocache::gc");
+
     // If this is one of the first few frames, return early to avoid wrapping unsigned integers.
     if (++mCurrentTime <= TIME_BEFORE_EVICTION) {
         return;
@@ -359,6 +362,7 @@ void VulkanFboCache::gc() noexcept {
             iter.value().handle = VK_NULL_HANDLE;
         }
     }
+    FVK_SYSTRACE_END();
 }
 
 } // namespace filament::backend

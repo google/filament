@@ -340,7 +340,7 @@ private:
 
     // The timestamp associated with a given cache entry represents time as a count of flush
     // events since the cache was constructed. If any cache entry was most recently used over
-    // VK_MAX_PIPELINE_AGE flushes in the past, then we can be sure that it is no longer
+    // FVK_MAX_PIPELINE_AGE flushes in the past, then we can be sure that it is no longer
     // being used by the GPU, and is therefore safe to destroy or reclaim.
     using Timestamp = uint64_t;
     Timestamp mCurrentTime = 0;
