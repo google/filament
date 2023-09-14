@@ -58,9 +58,8 @@ private:
 
 // Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
 struct VulkanCmdFence {
-    VulkanCmdFence(VkDevice device, bool signaled = false);
-    ~VulkanCmdFence();
-    const VkDevice device;
+    VulkanCmdFence(VkFence ifence);
+    ~VulkanCmdFence() = default;
     VkFence fence;
     utils::Condition condition;
     utils::Mutex mutex;
@@ -192,6 +191,7 @@ class VulkanCommands {
         VkSemaphore mSubmissionSignal = {};
         VkSemaphore mInjectedSignal = {};
         utils::FixedCapacityVector<std::unique_ptr<VulkanCommandBuffer>> mStorage;
+        VkFence mFences[CAPACITY] = {};
         VkSemaphore mSubmissionSignals[CAPACITY] = {};
         uint8_t mAvailableBufferCount = CAPACITY;
         CommandBufferObserver* mObserver = nullptr;
