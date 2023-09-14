@@ -207,7 +207,7 @@ jobs:
         run: |
           build\windows\build-github.bat release
           cd ..\..
-          move out\filament-windows.tgz out\filament-%TAG%-windows.tgz
+          move out\filament-windows.tgz out\filament-$Env:TAG-windows.tgz
         shell: cmd
       - uses: actions/github-script@v6
         env:
