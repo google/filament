@@ -52,6 +52,18 @@ void main() {
 }
 )");
 
+std::string whiteFragment (R"(#version 450 core
+
+layout(location = 0) out vec4 fragColor;
+layout(location = 0) in vec2 uv;
+
+layout(location = 0, set = 1) uniform sampler2D backend_test_sib_tex;
+
+void main() {
+    fragColor = vec4(1.0);
+}
+)");
+
 }
 
 namespace test {
@@ -70,17 +82,30 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         auto swapChain = createSwapChain();
         api.makeCurrent(swapChain, swapChain);
 
+        // Create a program that draws only white.
+        Handle<HwProgram> whiteProgram;
+        {
+            ShaderGenerator shaderGen(vertex, whiteFragment, sBackend, sIsMobilePlatform);
+            Program p = shaderGen.getProgram(api);
+            Program::Sampler sampler{utils::CString("backend_test_sib_tex"), 0};
+            p.setSamplerGroup(0, ShaderStageFlags::FRAGMENT, &sampler, 1);
+            whiteProgram = api.createProgram(std::move(p));
+        }
+
         // Create a program that samples a texture.
-        SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
-                .name("backend_test_sib")
-                .stageFlags(backend::ShaderStageFlags::FRAGMENT)
-                .add( {{"tex", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
-                .build();
-        ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
-        Program p = shaderGen.getProgram(api);
-        Program::Sampler sampler { utils::CString("backend_test_sib_tex"), 0 };
-        p.setSamplerGroup(0, ShaderStageFlags::FRAGMENT, &sampler, 1);
-        auto program = api.createProgram(std::move(p));
+        Handle<HwProgram> textureProgram;
+        {
+            SamplerInterfaceBlock sib = filament::SamplerInterfaceBlock::Builder()
+                    .name("backend_test_sib")
+                    .stageFlags(backend::ShaderStageFlags::FRAGMENT)
+                    .add( {{"tex", SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH }} )
+                    .build();
+            ShaderGenerator shaderGen(vertex, fragment, sBackend, sIsMobilePlatform, &sib);
+            Program p = shaderGen.getProgram(api);
+            Program::Sampler sampler{utils::CString("backend_test_sib_tex"), 0};
+            p.setSamplerGroup(0, ShaderStageFlags::FRAGMENT, &sampler, 1);
+            textureProgram = api.createProgram(std::move(p));
+        }
 
         // Create a texture that has 4 mip levels. Each level is a different color.
         // Level 0: 128x128 (red)
@@ -91,7 +116,7 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         const size_t kMipLevels = 4;
         Handle<HwTexture> texture = api.createTexture(SamplerType::SAMPLER_2D, kMipLevels,
                 TextureFormat::RGBA8, 1, kTextureSize, kTextureSize, 1,
-                TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE);
+                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::UPLOADABLE);
 
         // Create image data.
         auto pixelFormat = PixelDataFormat::RGBA;
@@ -116,7 +141,36 @@ TEST_F(BackendTest, SetMinMaxLevel) {
                     texture, l, 0, 0, 0, mipSize, mipSize, 1, std::move(descriptor));
         }
 
+        TrianglePrimitive triangle(api);
+
+        api.beginFrame(0, 0);
+
+        // We set the base mip to 1, and the max mip to 3
+        // Level 0: 128x128 (red)
+        // Level 1:   64x64 (green)             <-- base
+        // Level 2:   32x32 (blue)              <--- white triangle rendered
+        // Level 3:   16x16 (yellow)            <-- max
         api.setMinMaxLevels(texture, 1, 3);
+
+        // Render a white triangle into level 2.
+        // We specify mip level 2, because minMaxLevels has no effect when rendering into a texture.
+        Handle<HwRenderTarget> renderTarget = api.createRenderTarget(
+                TargetBufferFlags::COLOR, 32, 32, 1,
+                {texture, 2 /* level */, 0 /* layer */}, {}, {});
+        {
+            RenderPassParams params = {};
+            fullViewport(params);
+            params.flags.clear = TargetBufferFlags::NONE;
+            params.flags.discardStart = TargetBufferFlags::NONE;
+            params.flags.discardEnd = TargetBufferFlags::NONE;
+            PipelineState ps = {};
+            ps.program = whiteProgram;
+            ps.rasterState.colorWrite = true;
+            ps.rasterState.depthWrite = false;
+            api.beginRenderPass(renderTarget, params);
+            api.draw(ps, triangle.getRenderPrimitive(), 1);
+            api.endRenderPass();
+        }
 
         backend::Handle<HwRenderTarget> defaultRenderTarget = api.createDefaultRenderTarget(0);
 
@@ -129,13 +183,11 @@ TEST_F(BackendTest, SetMinMaxLevel) {
 
         PipelineState state;
         state.scissor = params.viewport;
-        state.program = program;
+        state.program = textureProgram;
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
         state.rasterState.depthFunc = SamplerCompareFunc::A;
         state.rasterState.culling = CullingMode::NONE;
-
-        api.beginFrame(0, 0);
 
         SamplerGroup samplers(1);
         SamplerParams samplerParams {};
@@ -147,8 +199,8 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         api.bindSamplers(0, samplerGroup);
 
         // Render a triangle to the screen, sampling from mip level 1.
-        // Because the min level is 1, the result color should be blue.
-        TrianglePrimitive triangle(api);
+        // Because the min level is 1, the result color should be the white triangle drawn in the
+        // previous pass.
         api.beginRenderPass(defaultRenderTarget, params);
         api.draw(state, triangle.getRenderPrimitive(), 1);
         api.endRenderPass();
