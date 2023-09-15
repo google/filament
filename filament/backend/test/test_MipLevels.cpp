@@ -205,6 +205,24 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         api.draw(state, triangle.getRenderPrimitive(), 1);
         api.endRenderPass();
 
+        // Adjust the base mip to 2.
+        // Note that this is done without another call to updateSamplerGroup.
+        api.setMinMaxLevels(texture, 2, 3);
+
+        // Render a second, smaller, triangle, again sampling from mip level 1.
+        // This triangle should be yellow striped.
+        static filament::math::float2 vertices[3] = {
+                { -0.5, -0.5 },
+                {  0.5, -0.5 },
+                { -0.5,  0.5 }
+        };
+        triangle.updateVertices(vertices);
+        params.flags.clear = TargetBufferFlags::NONE;
+        params.flags.discardStart = TargetBufferFlags::NONE;
+        api.beginRenderPass(defaultRenderTarget, params);
+        api.draw(state, triangle.getRenderPrimitive(), 1);
+        api.endRenderPass();
+
         api.commit(swapChain);
         api.endFrame(0);
 
@@ -212,6 +230,10 @@ TEST_F(BackendTest, SetMinMaxLevel) {
 
         // Cleanup.
         api.destroySwapChain(swapChain);
+        api.destroyRenderTarget(renderTarget);
+        api.destroyTexture(texture);
+        api.destroyProgram(whiteProgram);
+        api.destroyProgram(textureProgram);
     }
 
     api.finish();
