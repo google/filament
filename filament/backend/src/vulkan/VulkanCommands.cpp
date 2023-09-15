@@ -299,7 +299,8 @@ bool VulkanCommands::flush() {
     slog.i << "Submitting cmdbuffer=" << cmdbuffer
            << " wait=(" << signals[0] << ", " << signals[1] << ") "
            << " signal=" << renderingFinished
-           << io::endl;
+           << " fence=" << currentbuf->fence->fence
+           << utils::io::endl;
 #endif
 
     auto& cmdfence = currentbuf->fence;
@@ -351,7 +352,7 @@ void VulkanCommands::wait() {
     }
     if (count > 0) {
         vkWaitForFences(mDevice, count, fences, VK_TRUE, UINT64_MAX);
-        vkResetFences(mDevice, count, fences);
+        updateFences();
     }
 }
 
