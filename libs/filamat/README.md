@@ -35,7 +35,7 @@ for example, `filament-20181009-linux.tgz`.
 
 Create a file, `main.cpp`, in the same directory with the following contents:
 
-```
+```c++
 #include <filamat/MaterialBuilder.h>
 
 #include <iostream>
@@ -85,7 +85,7 @@ Copy your platform's Makefile below into a `Makefile` inside the same directory.
 
 ### Linux
 
-```
+```make
 FILAMENT_LIBS=-lfilamat -lfilabridge -lshaders -lutils -lsmol-v
 CC=clang++
 
@@ -103,7 +103,7 @@ clean:
 
 ### macOS
 
-```
+```make
 FILAMENT_LIBS=-lfilamat -lfilabridge -lshaders -lutils -lsmol-v
 CC=clang++
 
@@ -129,7 +129,7 @@ flags](https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-tim
 When building Filamat from source, the `USE_STATIC_CRT` CMake option can be
 used to change the run-time library version.
 
-```
+```make
 FILAMENT_LIBS=lib/x86_64/mt/filamat.lib lib/x86_64/mt/filabridge.lib lib/x86_64/mt/shaders.lib \
               lib/x86_64/mt/utils.lib lib/x86_64/mt/smol-v.lib
 CC=clang-cl.exe
@@ -164,7 +164,7 @@ and invoke `nmake` instead of `make`.
 For simplicity, this demo doesn't do anything useful with the built material package. To use the
 material with Filament, pass the material package's data into a Filament Material builder:
 
-```
+```c++
     Package package = builder.build();
     filament::Material* myMaterial = Material::Builder()
         .package(package.getData(), package.getSize())
@@ -186,7 +186,7 @@ In addition, `filamat_lite` only performs a simple text match to determine which
 `MaterialInputs` structure are set. The `material` input variable must also always be refered to by
 the name `material`.
 
-```
+```glsl
 void anotherFunction(inout MaterialInputs m) {
     // Incorrect! The MaterialInputs is being referred to by the name "m".
     m.metallic = 0.0;

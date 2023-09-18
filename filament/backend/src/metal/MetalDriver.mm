@@ -345,7 +345,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto colorTexture = handle_cast<MetalTexture>(buffer.handle);
         ASSERT_PRECONDITION(colorTexture->getMtlTextureForWrite(),
                 "Color texture passed to render target has no texture allocation");
-        colorTexture->updateLodRange(buffer.level);
+        colorTexture->extendLodRangeTo(buffer.level);
         colorAttachments[i] = { colorTexture, color[i].level, color[i].layer };
     }
 
@@ -356,7 +356,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto depthTexture = handle_cast<MetalTexture>(depth.handle);
         ASSERT_PRECONDITION(depthTexture->getMtlTextureForWrite(),
                 "Depth texture passed to render target has no texture allocation.");
-        depthTexture->updateLodRange(depth.level);
+        depthTexture->extendLodRangeTo(depth.level);
         depthAttachment = { depthTexture, depth.level, depth.layer };
     }
 
@@ -367,7 +367,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         auto stencilTexture = handle_cast<MetalTexture>(stencil.handle);
         ASSERT_PRECONDITION(stencilTexture->getMtlTextureForWrite(),
                 "Stencil texture passed to render target has no texture allocation.");
-        stencilTexture->updateLodRange(stencil.level);
+        stencilTexture->extendLodRangeTo(stencil.level);
         stencilAttachment = { stencilTexture, stencil.level, stencil.layer };
     }
 
@@ -789,6 +789,8 @@ void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t ind
 }
 
 void MetalDriver::setMinMaxLevels(Handle<HwTexture> th, uint32_t minLevel, uint32_t maxLevel) {
+    auto tex = handle_cast<MetalTexture>(th);
+    tex->setLodRange(minLevel, maxLevel);
 }
 
 void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
@@ -900,29 +902,24 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
     // 2. LOD-clamped textures
     //
     // Both of these cases prevent us from knowing the final id<MTLTexture> that will be bound into
-    // the argument buffer representing the sampler group. So, we bind what we can now and wait
-    // until draw call time to bind any special cases (done in finalizeSamplerGroup).
+    // the argument buffer representing the sampler group. So, we wait until draw call time to bind
+    // textures (done in finalizeSamplerGroup).
     // The good news is that once a render pass has started, the texture bindings won't change.
     // A SamplerGroup is "finalized" when all of its textures have been set and is ready for use in
     // a draw call.
-    // Even if we do know all the final textures at this point, we still wait until draw call time
-    // to call finalizeSamplerGroup, which has one additional responsibility: to call useResources
-    // for all the textures, which is required by Metal.
+    // finalizeSamplerGroup has one additional responsibility: to call useResources for all the
+    // textures, which is required by Metal.
     for (size_t s = 0; s < data.size / sizeof(SamplerDescriptor); s++) {
         if (!samplers[s].t) {
-            // Assign a default texture / sampler to empty slots.
+            // Assign a default sampler to empty slots.
             // Metal requires all samplers referenced in shaders to be bound.
-            id<MTLTexture> empty = getOrCreateEmptyTexture(mContext);
-            sb->setFinalizedTexture(s, empty);
-
+            // An empty texture will be assigned inside finalizeSamplerGroup.
             id<MTLSamplerState> sampler = mContext->samplerStateCache.getOrCreateState({});
             sb->setFinalizedSampler(s, sampler);
-
             continue;
         }
 
-        // First, bind the sampler state. We always know the full sampler state at
-        // updateSamplerGroup time.
+        // Bind the sampler state. We always know the full sampler state at updateSamplerGroup time.
         SamplerState samplerState {
                 .samplerParams = samplers[s].s,
         };
@@ -930,27 +927,6 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
         sb->setFinalizedSampler(s, sampler);
 
         sb->setTextureHandle(s, samplers[s].t);
-
-        auto* t = handle_cast<MetalTexture>(samplers[s].t);
-        assert_invariant(t);
-
-        // If this texture is an external texture, we defer binding the texture until draw call time
-        // (in finalizeSamplerGroup).
-        if (t->target == SamplerType::SAMPLER_EXTERNAL) {
-            continue;
-        }
-
-        if (!t->allLodsValid()) {
-            // The texture doesn't have all of its LODs loaded, and this could change by the time we
-            // issue a draw call with this sampler group. So, we defer binding the texture until
-            // draw call time (in finalizeSamplerGroup).
-            continue;
-        }
-
-        // If we get here, we know we have a valid MTLTexture that's guaranteed not to change.
-        id<MTLTexture> mtlTexture = t->getMtlTextureForRead();
-        assert_invariant(mtlTexture);
-        sb->setFinalizedTexture(s, mtlTexture);
     }
 
     scheduleDestroy(std::move(data));
@@ -1376,8 +1352,8 @@ void MetalDriver::blit(TargetBufferFlags buffers,
 }
 
 void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
-    // All of the id<MTLSamplerState> objects have already been bound to the argument buffer.
-    // Here we bind any textures that were unable to be bound in updateSamplerGroup.
+    // All the id<MTLSamplerState> objects have already been bound to the argument buffer.
+    // Here we bind all the textures.
 
     id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(mContext);
 
@@ -1399,28 +1375,38 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
     }
 #endif
 
+    utils::FixedCapacityVector<id<MTLTexture>> newTextures(samplerGroup->size, nil);
     for (size_t binding = 0; binding < samplerGroup->size; binding++) {
-        auto [th, t] = samplerGroup->getFinalizedTexture(binding);
+        auto [th, _] = samplerGroup->getFinalizedTexture(binding);
 
-        // This may be an external texture, in which case we can't cache the id<MTLTexture>, we
-        // need to refetch it in case the external image has changed.
-        bool isExternalImage = false;
-        if (th) {
-            auto* texture = handle_cast<MetalTexture>(th);
-            isExternalImage = texture->target == SamplerType::SAMPLER_EXTERNAL;
-        }
-
-        // If t is non-nil, then we've already finalized this texture.
-        if (t && !isExternalImage) {
+        if (!th) {
+            // Bind an empty texture.
+            newTextures[binding] = getOrCreateEmptyTexture(mContext);
             continue;
         }
 
-        // It's possible that some texture handles are null, but we should have already handled
-        // these inside updateSamplerGroup by binding an "empty" texture.
         assert_invariant(th);
         auto* texture = handle_cast<MetalTexture>(th);
 
-        // Determine if this SamplerGroup needs mutation.
+        // External images
+        if (texture->target == SamplerType::SAMPLER_EXTERNAL) {
+            if (texture->externalImage.isValid()) {
+                id<MTLTexture> mtlTexture = texture->externalImage.getMetalTextureForDraw();
+                assert_invariant(mtlTexture);
+                newTextures[binding] = mtlTexture;
+            } else {
+                // Bind an empty texture.
+                newTextures[binding] = getOrCreateEmptyTexture(mContext);
+            }
+            continue;
+        }
+
+        newTextures[binding] = texture->getMtlTextureForRead();
+    }
+
+    if (!std::equal(newTextures.begin(), newTextures.end(), samplerGroup->textures.begin())) {
+        // One or more of the id<MTLTexture>s has changed.
+        // First, determine if this SamplerGroup needs mutation.
         // We can't just simply mutate the SamplerGroup, since it could currently be in use by the
         // GPU from a prior render pass.
         // If the SamplerGroup does need mutation, then there's two cases:
@@ -1428,29 +1414,17 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
         //    draw call). We're free to mutate it.
         // 2. The SamplerGroup is finalized. We must call mutate(), which will create a new argument
         //    buffer that we can then mutate freely.
-        // TODO: don't just always call mutate, check to see if the texture is actually different.
 
         if (samplerGroup->isFinalized()) {
             samplerGroup->mutate(cmdBuffer);
         }
 
-        // External images
-        if (texture->target == SamplerType::SAMPLER_EXTERNAL) {
-            if (texture->externalImage.isValid()) {
-                id<MTLTexture> mtlTexture = texture->externalImage.getMetalTextureForDraw();
-                assert_invariant(mtlTexture);
-                samplerGroup->setFinalizedTexture(binding, mtlTexture);
-            } else {
-                // Bind an empty texture.
-                samplerGroup->setFinalizedTexture(binding, getOrCreateEmptyTexture(mContext));
-            }
-            continue;
+        for (size_t binding = 0; binding < samplerGroup->size; binding++) {
+            samplerGroup->setFinalizedTexture(binding, newTextures[binding]);
         }
 
-        samplerGroup->setFinalizedTexture(binding, texture->getMtlTextureForRead());
+        samplerGroup->finalize();
     }
-
-    samplerGroup->finalize();
 
     // At this point, all the id<MTLTextures> should be set to valid textures. Some of them will be
     // the "empty" texture. Per Apple documentation, the useResource method must be called once per

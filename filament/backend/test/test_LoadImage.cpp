@@ -18,6 +18,7 @@
 
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
+#include "BackendTestUtils.h"
 
 #include "private/filament/SamplerInterfaceBlock.h"
 #include "private/backend/SamplerGroup.h"
@@ -113,91 +114,7 @@ namespace test {
 
 template<typename componentType> inline componentType getMaxValue();
 
-template<typename ComponentType>
-static void fillCheckerboard(void* buffer, size_t size, size_t stride, size_t components,
-        ComponentType value) {
-    ComponentType* row = (ComponentType*)buffer;
-    int p = 0;
-    for (int r = 0; r < size; r++) {
-        ComponentType* pixel = row;
-        for (int col = 0; col < size; col++) {
-            // Generate a checkerboard pattern.
-            if ((p & 0x0010) ^ ((p / size) & 0x0010)) {
-                // Turn on the first component (red).
-                pixel[0] = value;
-            }
-            pixel += components;
-            p++;
-        }
-        row += stride * components;
-    }
-}
 
-static PixelBufferDescriptor checkerboardPixelBuffer(PixelDataFormat format, PixelDataType type,
-        size_t size, size_t bufferPadding = 0) {
-    size_t components; int bpp;
-    getPixelInfo(format, type, components, bpp);
-
-    size_t bufferSize = size + bufferPadding * 2;
-    uint8_t* buffer = (uint8_t*) calloc(1, bufferSize * bufferSize * bpp);
-
-    uint8_t* ptr = buffer + (bufferSize * bufferPadding * bpp) + (bufferPadding * bpp);
-
-    switch (type) {
-        case PixelDataType::BYTE:
-            fillCheckerboard<int8_t>(ptr, size, bufferSize, components, 1);
-            break;
-
-        case PixelDataType::UBYTE:
-            fillCheckerboard<uint8_t>(ptr, size, bufferSize, components, 0xFF);
-            break;
-
-        case PixelDataType::SHORT:
-            fillCheckerboard<int16_t>(ptr, size, bufferSize, components, 1);
-            break;
-
-        case PixelDataType::USHORT:
-            fillCheckerboard<uint16_t>(ptr, size, bufferSize, components, 1u);
-            break;
-
-        case PixelDataType::UINT:
-            fillCheckerboard<uint32_t>(ptr, size, bufferSize, components, 1u);
-            break;
-
-        case PixelDataType::INT:
-            fillCheckerboard<int32_t>(ptr, size, bufferSize, components, 1);
-            break;
-
-        case PixelDataType::FLOAT:
-            fillCheckerboard<float>(ptr, size, bufferSize, components, 1.0f);
-            break;
-
-        case PixelDataType::HALF:
-            fillCheckerboard<math::half>(ptr, size, bufferSize, components, math::half(1.0f));
-            break;
-
-        case PixelDataType::UINT_2_10_10_10_REV:
-            fillCheckerboard<uint32_t>(ptr, size, bufferSize, 1, 0xC00003FF /* red */);
-            break;
-
-        case PixelDataType::USHORT_565:
-            fillCheckerboard<uint16_t>(ptr, size, bufferSize, 1, 0xF800 /* red */);
-            break;
-
-        case PixelDataType::UINT_10F_11F_11F_REV:
-            fillCheckerboard<uint32_t>(ptr, size, bufferSize, 1, 0x000003C0 /* red */);
-            break;
-
-        case PixelDataType::COMPRESSED:
-            break;
-    }
-
-    PixelBufferDescriptor descriptor(buffer, bufferSize * bufferSize * bpp, format, type,
-            1, bufferPadding, bufferPadding, bufferSize, [](void* buffer, size_t size, void* user) {
-                free(buffer);
-            }, nullptr);
-    return descriptor;
-}
 
 inline std::string stringReplace(const std::string& find, const std::string& replace,
         std::string source) {

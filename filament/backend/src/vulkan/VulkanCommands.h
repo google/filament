@@ -39,6 +39,7 @@ namespace filament::backend {
 
 struct VulkanContext;
 
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
 class VulkanGroupMarkers {
 public:
     using Timestamp = std::chrono::time_point<std::chrono::high_resolution_clock>;
@@ -51,16 +52,17 @@ public:
 
 private:
     std::list<std::string> mMarkers;
-#if FILAMENT_VULKAN_VERBOSE
+#if FVK_ENABLED(FVK_DEBUG_PRINT_GROUP_MARKERS)
     std::list<Timestamp> mTimestamps;
 #endif
 };
 
+#endif // FVK_DEBUG_GROUP_MARKERS
+
 // Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
 struct VulkanCmdFence {
-    VulkanCmdFence(VkDevice device, bool signaled = false);
-    ~VulkanCmdFence();
-    const VkDevice device;
+    VulkanCmdFence(VkFence ifence);
+    ~VulkanCmdFence() = default;
     VkFence fence;
     utils::Condition condition;
     utils::Mutex mutex;
@@ -71,13 +73,10 @@ struct VulkanCmdFence {
 // DriverApi fence object and should not be destroyed until both the DriverApi object is freed and
 // we're done waiting on the most recent submission of the given command buffer.
 struct VulkanCommandBuffer {
-    VulkanCommandBuffer(VulkanResourceAllocator* allocator)
-        : mResourceManager(allocator) {}
+    VulkanCommandBuffer(VulkanResourceAllocator* allocator, VkDevice device, VkCommandPool pool);
 
     VulkanCommandBuffer(VulkanCommandBuffer const&) = delete;
     VulkanCommandBuffer& operator=(VulkanCommandBuffer const&) = delete;
-    VkCommandBuffer cmdbuffer = VK_NULL_HANDLE;
-    std::shared_ptr<VulkanCmdFence> fence;
 
     inline void acquire(VulkanResource* resource) {
         mResourceManager.acquire(resource);
@@ -87,12 +86,23 @@ struct VulkanCommandBuffer {
         mResourceManager.acquire(srcResources);
     }
 
-    inline void clearResources() {
+    inline void reset() {
+        fence.reset();
         mResourceManager.clear();
     }
 
+    inline VkCommandBuffer buffer() const {
+        if (fence) {
+            return mBuffer;
+        }
+        return VK_NULL_HANDLE;
+    }
+
+    std::shared_ptr<VulkanCmdFence> fence;
+
 private:
     VulkanAcquireOnlyResourceManager mResourceManager;
+    VkCommandBuffer mBuffer;
 };
 
 // Allows classes to be notified after a new command buffer has been activated.
@@ -163,6 +173,7 @@ class VulkanCommands {
         // The observer's event handler can only be called during get().
         void setObserver(CommandBufferObserver* observer) { mObserver = observer; }
 
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
         void pushGroupMarker(char const* str, VulkanGroupMarkers::Timestamp timestamp = {});
 
         void popGroupMarker();
@@ -170,9 +181,10 @@ class VulkanCommands {
         void insertEventMarker(char const* string, uint32_t len);
 
         std::string getTopGroupMarker() const;
+#endif
 
     private:
-        static constexpr int CAPACITY = VK_MAX_COMMAND_BUFFERS;
+        static constexpr int CAPACITY = FVK_MAX_COMMAND_BUFFERS;
         VkDevice const mDevice;
         VkQueue const mQueue;
         VkCommandPool const mPool;
@@ -184,12 +196,15 @@ class VulkanCommands {
         VkSemaphore mSubmissionSignal = {};
         VkSemaphore mInjectedSignal = {};
         utils::FixedCapacityVector<std::unique_ptr<VulkanCommandBuffer>> mStorage;
+        VkFence mFences[CAPACITY] = {};
         VkSemaphore mSubmissionSignals[CAPACITY] = {};
-        size_t mAvailableCount = CAPACITY;
+        uint8_t mAvailableBufferCount = CAPACITY;
         CommandBufferObserver* mObserver = nullptr;
 
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
         std::unique_ptr<VulkanGroupMarkers> mGroupMarkers;
         std::unique_ptr<VulkanGroupMarkers> mCarriedOverMarkers;
+#endif
 };
 
 } // namespace filament::backend

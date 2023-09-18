@@ -14,8 +14,8 @@ identified by an offset and count in the index buffer. Each part can have its ow
 
 ## Usage
 
-```
-$ filamesh source_mesh destination_mesh
+```shell
+filamesh source_mesh destination_mesh
 ```
 
 ## Format

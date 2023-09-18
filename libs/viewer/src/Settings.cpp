@@ -578,11 +578,9 @@ void applySettings(Engine* engine, const LightSettings& settings, IndirectLight*
         ibl->setRotation(math::mat3f::rotation(settings.iblRotation, math::float3 { 0, 1, 0 }));
     }
     for (size_t i = 0; i < sceneLightCount; i++) {
-        light = lm->getInstance(sceneLights[i]);
-        if (lm->isSpotLight(light)) {
-            lm->setShadowCaster(light, settings.enableShadows);
-        }
-        lm->setShadowOptions(light, settings.shadowOptions);
+        auto const li = lm->getInstance(sceneLights[i]);
+        lm->setShadowCaster(li, settings.enableShadows);
+        lm->setShadowOptions(li, settings.shadowOptions);
     }
     view->setSoftShadowOptions(settings.softShadowOptions);
 }

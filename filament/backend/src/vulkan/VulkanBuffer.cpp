@@ -45,14 +45,7 @@ VulkanBuffer::VulkanBuffer(VmaAllocator allocator, VulkanStagePool& stagePool,
 }
 
 VulkanBuffer::~VulkanBuffer() {
-    assert_invariant(mGpuMemory == VK_NULL_HANDLE);
-    assert_invariant(mGpuBuffer == VK_NULL_HANDLE);
-}
-
-void VulkanBuffer::terminate() {
     vmaDestroyBuffer(mAllocator, mGpuBuffer, mGpuMemory);
-    mGpuMemory = VK_NULL_HANDLE;
-    mGpuBuffer = VK_NULL_HANDLE;
 }
 
 void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint32_t byteOffset,

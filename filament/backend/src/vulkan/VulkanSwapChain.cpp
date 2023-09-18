@@ -79,7 +79,7 @@ void VulkanSwapChain::update() {
 
 void VulkanSwapChain::present() {
     if (!mHeadless) {
-        VkCommandBuffer const cmdbuf = mCommands->get().cmdbuffer;
+        VkCommandBuffer const cmdbuf = mCommands->get().buffer();
         VkImageSubresourceRange const subresources{
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .baseMipLevel = 0,

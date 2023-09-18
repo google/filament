@@ -28,8 +28,6 @@
 
 #include "generated/vkshaders/vkshaders.h"
 
-#define FILAMENT_VULKAN_CHECK_BLIT_FORMAT 0
-
 using namespace bluevk;
 using namespace utils;
 
@@ -69,7 +67,7 @@ inline void blitFast(const VkCommandBuffer cmdbuffer, VkImageAspectFlags aspect,
             .layerCount = 1,
     };
 
-    if constexpr (FILAMENT_VULKAN_VERBOSE) {
+    if constexpr (FVK_ENABLED(FVK_DEBUG_BLITTER)) {
         utils::slog.d << "Fast blit from=" << src.texture->getVkImage() << ",level=" << (int) src.level
                       << "layout=" << src.getLayout()
                       << " to=" << dst.texture->getVkImage() << ",level=" << (int) dst.level
@@ -132,7 +130,7 @@ void VulkanBlitter::blitColor(BlitArgs args) {
     const VulkanAttachment dst = args.dstTarget->getColor(0);
     const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 
-#if FILAMENT_VULKAN_CHECK_BLIT_FORMAT
+#if FVK_ENABLED(FVK_DEBUG_BLIT_FORMAT)
     VkPhysicalDevice const gpu = mPhysicalDevice;
     VkFormatProperties info;
     vkGetPhysicalDeviceFormatProperties(gpu, src.getFormat(), &info);
@@ -147,7 +145,7 @@ void VulkanBlitter::blitColor(BlitArgs args) {
     }
 #endif
     VulkanCommandBuffer& commands = mCommands->get();
-    VkCommandBuffer const cmdbuffer = commands.cmdbuffer;
+    VkCommandBuffer const cmdbuffer = commands.buffer();
     commands.acquire(src.texture);
     commands.acquire(dst.texture);
 
@@ -160,7 +158,7 @@ void VulkanBlitter::blitDepth(BlitArgs args) {
     const VulkanAttachment dst = args.dstTarget->getDepth();
     const VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-#if FILAMENT_VULKAN_CHECK_BLIT_FORMAT
+#if FVK_ENABLED(FVK_DEBUG_BLIT_FORMAT)
     VkPhysicalDevice const gpu = mPhysicalDevice;
     VkFormatProperties info;
     vkGetPhysicalDeviceFormatProperties(gpu, src.getFormat(), &info);
@@ -184,7 +182,7 @@ void VulkanBlitter::blitDepth(BlitArgs args) {
     }
 
     VulkanCommandBuffer& commands = mCommands->get();
-    VkCommandBuffer const cmdbuffer = commands.cmdbuffer;
+    VkCommandBuffer const cmdbuffer = commands.buffer();
     commands.acquire(src.texture);
     commands.acquire(dst.texture);
     blitFast(cmdbuffer, aspect, args.filter, args.srcTarget->getExtent(), src, dst, args.srcRectPair,
@@ -197,13 +195,11 @@ void VulkanBlitter::terminate() noexcept {
         mDepthResolveProgram = nullptr;
 
         if (mTriangleBuffer) {
-            mTriangleBuffer->terminate();
             delete mTriangleBuffer;
             mTriangleBuffer = nullptr;
         }
 
         if (mParamsBuffer) {
-            mParamsBuffer->terminate();
             delete mParamsBuffer;
             mParamsBuffer = nullptr;
         }
@@ -243,7 +239,7 @@ void VulkanBlitter::lazyInit() noexcept {
     mDepthResolveProgram->samplerGroupInfo[0].samplers.reserve(1);
     mDepthResolveProgram->samplerGroupInfo[0].samplers.resize(1);
 
-    if constexpr (FILAMENT_VULKAN_VERBOSE) {
+    if constexpr (FVK_ENABLED(FVK_DEBUG_BLITTER)) {
         utils::slog.d << "Created Shader Module for VulkanBlitter "
                     << "shaders = (" << vertexShader << ", " << fragmentShader << ")"
                     << utils::io::endl;
@@ -257,7 +253,7 @@ void VulkanBlitter::lazyInit() noexcept {
     };
 
     VulkanCommandBuffer& commands = mCommands->get();
-    VkCommandBuffer const cmdbuffer = commands.cmdbuffer;
+    VkCommandBuffer const cmdbuffer = commands.buffer();
 
     mTriangleBuffer = new VulkanBuffer(mAllocator, mStagePool, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             sizeof(kTriangleVertices));
@@ -278,7 +274,7 @@ void VulkanBlitter::blitSlowDepth(VkFilter filter, const VkExtent2D srcExtent, V
     lazyInit();
 
     VulkanCommandBuffer* commands = &mCommands->get();
-    VkCommandBuffer const cmdbuffer = commands->cmdbuffer;
+    VkCommandBuffer const cmdbuffer = commands->buffer();
     commands->acquire(src.texture);
     commands->acquire(dst.texture);
 

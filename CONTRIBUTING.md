@@ -27,7 +27,7 @@ again.
 
 ## Code Style
 
-See [CodeStyle.md](/CODE_STYLE.md)
+See [CODE_STYLE.md](/CODE_STYLE.md)
 
 ## Code reviews
 

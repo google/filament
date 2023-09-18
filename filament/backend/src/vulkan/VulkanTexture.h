@@ -84,7 +84,7 @@ struct VulkanTexture : public HwTexture, VulkanResource {
     // For now this always returns either DEPTH or COLOR.
     VkImageAspectFlags getImageAspect() const;
 
-#if FILAMENT_VULKAN_VERBOSE
+#if FVK_ENABLED(FVK_DEBUG_TEXTURE)
     void print() const;
 #endif
 

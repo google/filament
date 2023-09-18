@@ -45,8 +45,8 @@ end
 
 Then run:
 
-```
-$ pod install
+```shell
+pod install
 ```
 
 Close the project and then re-open the newly created HelloCocoaPods.xcworkspace file.

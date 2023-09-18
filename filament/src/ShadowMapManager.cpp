@@ -435,14 +435,33 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 }
 
 ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEngine& engine,
-        FView& view, CameraInfo const& cameraInfo, FScene::RenderableSoa& renderableData,
+        FView& view, CameraInfo cameraInfo, FScene::RenderableSoa& renderableData,
         FScene::LightSoa const& lightData, ShadowMap::SceneInfo sceneInfo) noexcept {
+
     FScene* scene = view.getScene();
     auto& lcm = engine.getLightManager();
 
     FLightManager::Instance const directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
     FLightManager::ShadowOptions const& options = lcm.getShadowOptions(directionalLight);
     FLightManager::ShadowParams const& params = lcm.getShadowParams(directionalLight);
+
+    // Adjust the camera's projection for the light's shadowFar
+
+    cameraInfo.zf = params.options.shadowFar > 0.0f ? params.options.shadowFar : cameraInfo.zf;
+    if (UTILS_UNLIKELY(params.options.shadowFar > 0.0f)) {
+        cameraInfo.zf = params.options.shadowFar;
+        float const n = cameraInfo.zn;
+        float const f = cameraInfo.zf;
+        if (std::abs(cameraInfo.cullingProjection[2].w) > std::numeric_limits<float>::epsilon()) {
+            // perspective projection
+            cameraInfo.cullingProjection[2].z = (f + n) / (n - f);
+            cameraInfo.cullingProjection[3].z = (2 * f * n) / (n - f);
+        } else {
+            // orthographic projection
+            cameraInfo.cullingProjection[2].z = 2.0f / (n - f);
+            cameraInfo.cullingProjection[3].z = (f + n) / (n - f);
+        }
+    }
 
     const ShadowMap::ShadowMapInfo shadowMapInfo{
             .atlasDimension      = mTextureAtlasRequirements.size,
@@ -504,19 +523,13 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             splitPercentages[i] = options.cascadeSplitPositions[i - 1];
         }
 
-        const CascadeSplits::Params p{
+        const CascadeSplits splits({
                 .proj = cameraInfo.cullingProjection,
                 .near = vsNear,
                 .far = vsFar,
                 .cascadeCount = cascadeCount,
                 .splitPositions = splitPercentages
-        };
-        if (p != mCascadeSplitParams) {
-            mCascadeSplits = CascadeSplits{ p };
-            mCascadeSplitParams = p;
-        }
-
-        const CascadeSplits& splits = mCascadeSplits;
+        });
 
         // The split positions uniform is a float4. To save space, we chop off the first split position
         // (which is the near plane, and doesn't need to be communicated to the shaders).
@@ -530,7 +543,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
 
         mShadowMappingUniforms.cascadeSplits = wsSplitPositionUniform;
 
-        // when computing the required bias we need a half-texel size, so we multiply by 0.5 here.
+        // When computing the required bias we need a half-texel size, so we multiply by 0.5 here.
         // note: normalBias is set to zero for VSM
         const float normalBias = shadowMapInfo.vsm ? 0.0f : 0.5f * lcm.getShadowNormalBias(0);
 

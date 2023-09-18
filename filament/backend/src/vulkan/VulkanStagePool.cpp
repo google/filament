@@ -22,7 +22,7 @@
 
 #include <utils/Panic.h>
 
-static constexpr uint32_t TIME_BEFORE_EVICTION = VK_MAX_COMMAND_BUFFERS;
+static constexpr uint32_t TIME_BEFORE_EVICTION = FVK_MAX_COMMAND_BUFFERS;
 
 namespace filament::backend {
 
@@ -59,7 +59,7 @@ VulkanStage const* VulkanStagePool::acquireStage(uint32_t numBytes) {
     UTILS_UNUSED_IN_RELEASE VkResult result = vmaCreateBuffer(mAllocator, &bufferInfo,
             &allocInfo, &stage->buffer, &stage->memory, nullptr);
 
-#ifndef NDEBUG
+#if FVK_ENABLED(FVK_DEBUG_ALLOCATION)
     if (result != VK_SUCCESS) {
         utils::slog.e << "Allocation error: " << result << utils::io::endl;
     }
@@ -111,7 +111,7 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
     assert_invariant(result == VK_SUCCESS);
 
     VkImageAspectFlags const aspectFlags = getImageAspect(vkformat);
-    const VkCommandBuffer cmdbuffer = mCommands->get().cmdbuffer;
+    VkCommandBuffer const cmdbuffer = mCommands->get().buffer();
 
     // We use VK_IMAGE_LAYOUT_GENERAL here because the spec says:
     // "Host access to image memory is only well-defined for linear images and for image
@@ -129,6 +129,9 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
 }
 
 void VulkanStagePool::gc() noexcept {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("stagepool::gc");
+
     // If this is one of the first few frames, return early to avoid wrapping unsigned integers.
     if (++mCurrentFrame <= TIME_BEFORE_EVICTION) {
         return;
@@ -182,6 +185,7 @@ void VulkanStagePool::gc() noexcept {
             mUsedImages.insert(image);
         }
     }
+    FVK_SYSTRACE_END();
 }
 
 void VulkanStagePool::terminate() noexcept {

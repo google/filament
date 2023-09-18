@@ -4,8 +4,8 @@
 
 ## Usage
 
-```
-$ mipgen [options] <input_file> <output_pattern>
+```shell
+mipgen [options] <input_file> <output_pattern>
 ```
 
 Run `mipgen --help` for more information about available options.

@@ -109,7 +109,7 @@ public:
 
 private:
     ShadowMapManager::ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
-            FView& view, CameraInfo const& cameraInfo, FScene::RenderableSoa& renderableData,
+            FView& view, CameraInfo cameraInfo, FScene::RenderableSoa& renderableData,
             FScene::LightSoa const& lightData, ShadowMap::SceneInfo sceneInfo) noexcept;
 
     ShadowMapManager::ShadowTechnique updateSpotShadowMaps(FEngine& engine,
@@ -145,17 +145,8 @@ private:
             float far = 0.0f;
             size_t cascadeCount = 1;
             std::array<float, SPLIT_COUNT> splitPositions = { 0.0f };
-
-            bool operator!=(const Params& rhs) const {
-                return proj != rhs.proj ||
-                       near != rhs.near ||
-                       far != rhs.far ||
-                       cascadeCount != rhs.cascadeCount ||
-                       splitPositions != rhs.splitPositions;
-            }
         };
 
-        CascadeSplits() noexcept : CascadeSplits(Params{}) {}
         explicit CascadeSplits(Params const& params) noexcept;
 
         // Split positions in world-space.
@@ -186,9 +177,6 @@ private:
 
     SoftShadowOptions mSoftShadowOptions;
 
-    CascadeSplits::Params mCascadeSplitParams;
-    CascadeSplits mCascadeSplits;
-
     mutable TypedUniformBuffer<ShadowUib> mShadowUb;
     backend::Handle<backend::HwBufferObject> mShadowUbh;
 
@@ -204,8 +192,8 @@ private:
             utils::FixedCapacityVector<ShadowMap*>::with_capacity(
                     CONFIG_MAX_SHADOWMAPS - CONFIG_MAX_SHADOW_CASCADES) };
 
-    // inline storage for all our ShadowMap objects, we can't easily use a std::array<> directly.
-    // because ShadowMap doesn't have a default ctor, and we avoid out-of-line allocations.
+    // Inline storage for all our ShadowMap objects, we can't easily use a std::array<> directly.
+    // Because ShadowMap doesn't have a default ctor, and we avoid out-of-line allocations.
     // Each ShadowMap is currently 40 bytes (total of 2.5KB for 64 shadow maps)
     using ShadowMapStorage = std::aligned_storage<sizeof(ShadowMap), alignof(ShadowMap)>::type;
     std::array<ShadowMapStorage, CONFIG_MAX_SHADOWMAPS> mShadowMapCache;
