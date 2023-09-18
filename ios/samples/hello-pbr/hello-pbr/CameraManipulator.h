@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_SAMPLE_CAMERA_MANIPULATOR_H
 #define TNT_FILAMENT_SAMPLE_CAMERA_MANIPULATOR_H
 
+#include <functional>
+
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>

@@ -101,6 +101,7 @@ struct App {
 
     bool actualSize = false;
     bool originIsFarAway = false;
+    float originDistance = 6378137; // Earth's radius in [m]
 
     struct Scene {
         Entity groundPlane;
@@ -759,6 +760,7 @@ int main(int argc, char** argv) {
                 ImGui::Checkbox("Disable buffer padding", debug.getPropertyAddress<bool>("d.renderer.disable_buffer_padding"));
                 ImGui::Checkbox("Camera at origin", debug.getPropertyAddress<bool>("d.view.camera_at_origin"));
                 ImGui::Checkbox("Far Origin", &app.originIsFarAway);
+                ImGui::SliderFloat("Origin", &app.originDistance, 0, 10000000);
                 auto dataSource = debug.getDataSource("d.view.frame_info");
                 if (dataSource.data) {
                     ImGuiExt::PlotLinesSeries("FrameInfo", 6,
@@ -956,7 +958,7 @@ int main(int argc, char** argv) {
         tcm.setParent(tcm.getInstance(camera.getEntity()), root);
         tcm.setParent(tcm.getInstance(app.asset->getRoot()), root);
         tcm.setParent(tcm.getInstance(view->getFogEntity()), root);
-        tcm.setTransform(root, mat4f::translation(float3{ app.originIsFarAway ? 1e6f : 0.0f }));
+        tcm.setTransform(root, mat4f::translation(float3{ app.originIsFarAway ? app.originDistance : 0.0f }));
 
         // Check if color grading has changed.
         ColorGradingSettings& options = app.viewer->getSettings().view.colorGrading;

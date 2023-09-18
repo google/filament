@@ -227,7 +227,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         VkImageSubresourceRange range = { getImageAspect(), 0, levels, 0, layers };
 
         VulkanCommandBuffer& commands = mCommands->get();
-        VkCommandBuffer const cmdbuf = commands.cmdbuffer;
+        VkCommandBuffer const cmdbuf = commands.buffer();
         commands.acquire(this);
 
         transitionLayout(cmdbuf, range, ImgUtil::getDefaultLayout(imageInfo.usage));
@@ -280,7 +280,7 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     vmaFlushAllocation(mAllocator, stage->memory, 0, hostData->size);
 
     VulkanCommandBuffer& commands = mCommands->get();
-    VkCommandBuffer const cmdbuf = commands.cmdbuffer;
+    VkCommandBuffer const cmdbuf = commands.buffer();
     commands.acquire(this);
 
     VkBufferImageCopy copyRegion = {
@@ -343,7 +343,7 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& hostData, u
     vmaFlushAllocation(mAllocator, stage->memory, 0, hostData.size);
 
     VulkanCommandBuffer& commands = mCommands->get();
-    VkCommandBuffer const cmdbuf = commands.cmdbuffer;
+    VkCommandBuffer const cmdbuf = commands.buffer();
     commands.acquire(this);
 
     // TODO: support blit-based format conversion for 3D images and cubemaps.

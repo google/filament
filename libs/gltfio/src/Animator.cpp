@@ -19,6 +19,7 @@
 
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
+#include "FTrsTransformManager.h"
 #include "downcast.h"
 
 #include <filament/VertexBuffer.h>
@@ -74,6 +75,7 @@ struct AnimatorImpl {
     FFilamentInstance* instance = nullptr;
     RenderableManager* renderableManager;
     TransformManager* transformManager;
+    TrsTransformManager* trsTransformManager;
     vector<float> weights;
     FixedCapacityVector<mat4f> crossFade;
     void addChannels(const FixedCapacityVector<Entity>& nodeMap, const cgltf_animation& srcAnim,
@@ -190,6 +192,7 @@ Animator::Animator(FFilamentAsset const* asset, FFilamentInstance* instance) {
     mImpl->instance = instance;
     mImpl->renderableManager = &asset->mEngine->getRenderableManager();
     mImpl->transformManager = &asset->mEngine->getTransformManager();
+    mImpl->trsTransformManager = asset->getTrsTransformManager();
 
     const cgltf_data* srcAsset = asset->mSourceAsset->hierarchy;
     const cgltf_animation* srcAnims = srcAsset->animations;
@@ -429,20 +432,13 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
         size_t nextIndex) {
     const Sampler* sampler = channel.sourceData;
     const TimeValues& times = sampler->times;
+    TrsTransformManager::Instance trsNode = trsTransformManager->getInstance(channel.targetEntity);
     TransformManager::Instance node = transformManager->getInstance(channel.targetEntity);
-
-    // Perform the interpolation. This is a simple but inefficient implementation; Filament
-    // stores transforms as mat4's but glTF animation is based on TRS (translation rotation
-    // scale).
-    mat4f xform = transformManager->getTransform(node);
-    float3 scale;
-    quatf rotation;
-    float3 translation;
-    decomposeMatrix(xform, &translation, &rotation, &scale);
 
     switch (channel.transformType) {
 
         case Channel::SCALE: {
+            float3 scale;
             const float3* srcVec3 = (const float3*) sampler->values.data();
             if (sampler->interpolation == Sampler::CUBIC) {
                 float3 vert0 = srcVec3[prevIndex * 3 + 1];
@@ -453,10 +449,12 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
             } else {
                 scale = ((1 - t) * srcVec3[prevIndex]) + (t * srcVec3[nextIndex]);
             }
+            trsTransformManager->setScale(trsNode, scale);
             break;
         }
 
         case Channel::TRANSLATION: {
+            float3 translation;
             const float3* srcVec3 = (const float3*) sampler->values.data();
             if (sampler->interpolation == Sampler::CUBIC) {
                 float3 vert0 = srcVec3[prevIndex * 3 + 1];
@@ -467,10 +465,12 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
             } else {
                 translation = ((1 - t) * srcVec3[prevIndex]) + (t * srcVec3[nextIndex]);
             }
+            trsTransformManager->setTranslation(trsNode, translation);
             break;
         }
 
         case Channel::ROTATION: {
+            quatf rotation;
             const quatf* srcQuat = (const quatf*) sampler->values.data();
             if (sampler->interpolation == Sampler::CUBIC) {
                 quatf vert0 = srcQuat[prevIndex * 3 + 1];
@@ -481,6 +481,7 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
             } else {
                 rotation = slerp(srcQuat[prevIndex], srcQuat[nextIndex], t);
             }
+            trsTransformManager->setRotation(trsNode, rotation);
             break;
         }
 
@@ -519,8 +520,7 @@ void AnimatorImpl::applyAnimation(const Channel& channel, float t, size_t prevIn
         }
     }
 
-    xform = composeMatrix(translation, rotation, scale);
-    transformManager->setTransform(node, xform);
+    transformManager->setTransform(node, trsTransformManager->getTransform(trsNode));
 }
 
 void AnimatorImpl::resetBoneMatrices(FFilamentInstance* instance) {

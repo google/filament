@@ -217,21 +217,14 @@ public:
     void generateMipmaps() noexcept;
 
     // A texture starts out with none of its mip levels (also referred to as LODs) available for
-    // reading. 3 actions update the range of LODs available:
+    // reading. 4 actions update the range of LODs available:
     // - calling loadImage
     // - calling generateMipmaps
     // - using the texture as a render target attachment
-    // The range of available mips can only increase, never decrease.
+    // - calling setMinMaxLevels
     // A texture's available mips are consistent throughout a render pass.
-    void updateLodRange(uint32_t level);
-    void updateLodRange(uint32_t minLevel, uint32_t maxLevel);
-
-    // Returns true if the texture has all of its mip levels accessible for reading.
-    // For any MetalTexture, once this is true, will always return true.
-    // The value returned will remain consistent for an entire render pass.
-    bool allLodsValid() const {
-        return minLod == 0 && maxLod == levels - 1;
-    }
+    void setLodRange(uint32_t minLevel, uint32_t maxLevel);
+    void extendLodRangeTo(uint32_t level);
 
     static MTLPixelFormat decidePixelFormat(MetalContext* context, TextureFormat format);
 

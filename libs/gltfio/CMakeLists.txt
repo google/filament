@@ -16,6 +16,7 @@ set(PUBLIC_HDRS
         include/gltfio/FilamentInstance.h
         include/gltfio/MaterialProvider.h
         include/gltfio/NodeManager.h
+        include/gltfio/TrsTransformManager.h
         include/gltfio/ResourceLoader.h
         include/gltfio/TextureProvider.h
         include/gltfio/math.h
@@ -35,10 +36,12 @@ set(SRCS
         src/FilamentAsset.cpp
         src/FilamentInstance.cpp
         src/FNodeManager.h
+        src/FTrsTransformManager.h
         src/GltfEnums.h
         src/Ktx2Provider.cpp
         src/MaterialProvider.cpp
         src/NodeManager.cpp
+        src/TrsTransformManager.cpp
         src/ResourceLoader.cpp
         src/StbProvider.cpp
         src/TangentsJob.cpp
@@ -186,8 +189,7 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     # ==================================================================================================
     # Compiler flags
     # ==================================================================================================
-    if (MSVC)
-    else()
+    if (NOT MSVC)
         target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
     endif()
 
@@ -225,7 +227,9 @@ if (TNT_DEV AND NOT WEBGL AND NOT ANDROID AND NOT IOS)
     add_dependencies(${TEST_TARGET} test_gltfio_files)
 
     target_link_libraries(${TEST_TARGET} PRIVATE ${TARGET} filament filabridge gtest uberarchive)
-    target_compile_options(${TEST_TARGET} PRIVATE -Wno-deprecated-register)
+    if (NOT MSVC)
+        target_compile_options(${TEST_TARGET} PRIVATE -Wno-deprecated-register)
+    endif()
     set_target_properties(${TEST_TARGET} PROPERTIES FOLDER Tests)
 endif()
 

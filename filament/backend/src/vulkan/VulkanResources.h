@@ -164,6 +164,10 @@ private:
 public:
     using const_iterator = FixedSizeArray::const_iterator;
 
+    inline ~FixedCapacityResourceSet() {
+        clear();
+    }
+
     inline const_iterator begin() {
         if (mInd == 0) {
             return mArray.cend();

@@ -412,6 +412,7 @@ if (APPLE)
         test/test_RenderExternalImage.cpp
         test/test_StencilBuffer.cpp
         test/test_Scissor.cpp
+        test/test_MipLevels.cpp
         )
 
     target_link_libraries(backend_test PRIVATE

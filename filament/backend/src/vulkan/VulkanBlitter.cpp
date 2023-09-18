@@ -147,7 +147,7 @@ void VulkanBlitter::blitColor(BlitArgs args) {
     }
 #endif
     VulkanCommandBuffer& commands = mCommands->get();
-    VkCommandBuffer const cmdbuffer = commands.cmdbuffer;
+    VkCommandBuffer const cmdbuffer = commands.buffer();
     commands.acquire(src.texture);
     commands.acquire(dst.texture);
 
@@ -184,7 +184,7 @@ void VulkanBlitter::blitDepth(BlitArgs args) {
     }
 
     VulkanCommandBuffer& commands = mCommands->get();
-    VkCommandBuffer const cmdbuffer = commands.cmdbuffer;
+    VkCommandBuffer const cmdbuffer = commands.buffer();
     commands.acquire(src.texture);
     commands.acquire(dst.texture);
     blitFast(cmdbuffer, aspect, args.filter, args.srcTarget->getExtent(), src, dst, args.srcRectPair,
@@ -197,13 +197,11 @@ void VulkanBlitter::terminate() noexcept {
         mDepthResolveProgram = nullptr;
 
         if (mTriangleBuffer) {
-            mTriangleBuffer->terminate();
             delete mTriangleBuffer;
             mTriangleBuffer = nullptr;
         }
 
         if (mParamsBuffer) {
-            mParamsBuffer->terminate();
             delete mParamsBuffer;
             mParamsBuffer = nullptr;
         }
@@ -257,7 +255,7 @@ void VulkanBlitter::lazyInit() noexcept {
     };
 
     VulkanCommandBuffer& commands = mCommands->get();
-    VkCommandBuffer const cmdbuffer = commands.cmdbuffer;
+    VkCommandBuffer const cmdbuffer = commands.buffer();
 
     mTriangleBuffer = new VulkanBuffer(mAllocator, mStagePool, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             sizeof(kTriangleVertices));
@@ -278,7 +276,7 @@ void VulkanBlitter::blitSlowDepth(VkFilter filter, const VkExtent2D srcExtent, V
     lazyInit();
 
     VulkanCommandBuffer* commands = &mCommands->get();
-    VkCommandBuffer const cmdbuffer = commands->cmdbuffer;
+    VkCommandBuffer const cmdbuffer = commands->buffer();
     commands->acquire(src.texture);
     commands->acquire(dst.texture);
 

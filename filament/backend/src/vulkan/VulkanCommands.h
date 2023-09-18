@@ -58,9 +58,8 @@ private:
 
 // Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
 struct VulkanCmdFence {
-    VulkanCmdFence(VkDevice device, bool signaled = false);
-    ~VulkanCmdFence();
-    const VkDevice device;
+    VulkanCmdFence(VkFence ifence);
+    ~VulkanCmdFence() = default;
     VkFence fence;
     utils::Condition condition;
     utils::Mutex mutex;
@@ -71,13 +70,10 @@ struct VulkanCmdFence {
 // DriverApi fence object and should not be destroyed until both the DriverApi object is freed and
 // we're done waiting on the most recent submission of the given command buffer.
 struct VulkanCommandBuffer {
-    VulkanCommandBuffer(VulkanResourceAllocator* allocator)
-        : mResourceManager(allocator) {}
+    VulkanCommandBuffer(VulkanResourceAllocator* allocator, VkDevice device, VkCommandPool pool);
 
     VulkanCommandBuffer(VulkanCommandBuffer const&) = delete;
     VulkanCommandBuffer& operator=(VulkanCommandBuffer const&) = delete;
-    VkCommandBuffer cmdbuffer = VK_NULL_HANDLE;
-    std::shared_ptr<VulkanCmdFence> fence;
 
     inline void acquire(VulkanResource* resource) {
         mResourceManager.acquire(resource);
@@ -87,12 +83,23 @@ struct VulkanCommandBuffer {
         mResourceManager.acquire(srcResources);
     }
 
-    inline void clearResources() {
+    inline void reset() {
+        fence.reset();
         mResourceManager.clear();
     }
 
+    inline VkCommandBuffer buffer() const {
+        if (fence) {
+            return mBuffer;
+        }
+        return VK_NULL_HANDLE;
+    }
+
+    std::shared_ptr<VulkanCmdFence> fence;
+
 private:
     VulkanAcquireOnlyResourceManager mResourceManager;
+    VkCommandBuffer mBuffer;
 };
 
 // Allows classes to be notified after a new command buffer has been activated.
@@ -184,8 +191,9 @@ class VulkanCommands {
         VkSemaphore mSubmissionSignal = {};
         VkSemaphore mInjectedSignal = {};
         utils::FixedCapacityVector<std::unique_ptr<VulkanCommandBuffer>> mStorage;
+        VkFence mFences[CAPACITY] = {};
         VkSemaphore mSubmissionSignals[CAPACITY] = {};
-        size_t mAvailableCount = CAPACITY;
+        uint8_t mAvailableBufferCount = CAPACITY;
         CommandBufferObserver* mObserver = nullptr;
 
         std::unique_ptr<VulkanGroupMarkers> mGroupMarkers;
