@@ -237,6 +237,9 @@ public:
     //! Returns the vertex domain of this material.
     VertexDomain getVertexDomain() const noexcept;
 
+    //! Returns the material's supported variants
+    UserVariantFilterMask getSupportedVariants() const noexcept;
+
     //! Returns the material domain of this material.
     //! The material domain determines how the material is used.
     MaterialDomain getMaterialDomain() const noexcept;

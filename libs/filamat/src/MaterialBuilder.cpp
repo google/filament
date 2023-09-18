@@ -1141,17 +1141,7 @@ error:
 
     info.samplerBindings.init(mMaterialDomain, info.sib);
 
-    // Create chunk tree.
-    ChunkContainer container;
-    writeCommonChunks(container, info);
-    if (mMaterialDomain == MaterialDomain::SURFACE) {
-        writeSurfaceChunks(container);
-    }
-
-    info.useLegacyMorphing = mUseLegacyMorphing;
-
-    // Generate all shaders and write the shader chunks.
-
+    // adjust variant-filter for feature level *before* we start writing into the container
     if (mFeatureLevel == filament::backend::FeatureLevel::FEATURE_LEVEL_0) {
         // at feature level 0, many variants are not supported
         mVariantFilter |= uint32_t(UserVariantFilterBit::DIRECTIONAL_LIGHTING);
@@ -1162,6 +1152,17 @@ error:
         mVariantFilter |= uint32_t(UserVariantFilterBit::SSR);
         mVariantFilter |= uint32_t(UserVariantFilterBit::STE);
     }
+
+    // Create chunk tree.
+    ChunkContainer container;
+    writeCommonChunks(container, info);
+    if (mMaterialDomain == MaterialDomain::SURFACE) {
+        writeSurfaceChunks(container);
+    }
+
+    info.useLegacyMorphing = mUseLegacyMorphing;
+
+    // Generate all shaders and write the shader chunks.
 
     std::vector<Variant> variants;
     switch (mMaterialDomain) {
@@ -1372,6 +1373,11 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.emplace<const char*>(ChunkType::MaterialName, mMaterialName.c_str_safe());
     container.emplace<uint32_t>(ChunkType::MaterialShaderModels, mShaderModels.getValue());
     container.emplace<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
+
+    // if that ever needed to change, this would require a material version bump
+    static_assert(sizeof(uint32_t) >= sizeof(UserVariantFilterMask));
+
+    container.emplace<uint32_t>(ChunkType::MaterialVariantFilterMask, mVariantFilter);
 
     using namespace filament;
 

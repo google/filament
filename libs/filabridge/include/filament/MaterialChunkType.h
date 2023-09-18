@@ -66,6 +66,7 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
     MaterialSpecularAntiAliasingThreshold = charTo64bitNum("MAT_STHR"),
     MaterialClearCoatIorChange = charTo64bitNum("MAT_CIOR"),
     MaterialDomain = charTo64bitNum("MAT_DOMN"),
+    MaterialVariantFilterMask = charTo64bitNum("MAT_VFLT"),
     MaterialRefraction = charTo64bitNum("MAT_REFM"),
     MaterialRefractionType = charTo64bitNum("MAT_REFT"),
     MaterialReflectionMode = charTo64bitNum("MAT_REFL"),

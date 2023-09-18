@@ -309,6 +309,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     parser->getInterpolation(&mInterpolation);
     parser->getVertexDomain(&mVertexDomain);
     parser->getMaterialDomain(&mMaterialDomain);
+    parser->getMaterialVariantFilterMask(&mVariantFilterMask);
     parser->getRequiredAttributes(&mRequiredAttributes);
     parser->getRefractionMode(&mRefractionMode);
     parser->getRefractionType(&mRefractionType);
