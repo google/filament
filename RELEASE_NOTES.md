@@ -7,7 +7,7 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
-## v1.42.3
+## v1.43.0
 
 - gltfio: Fix possible change of scale sign when decomposing transform matrix for animation
 - engine: Fixes "stable" shadows (see b/299310624)
