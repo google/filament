@@ -22,27 +22,26 @@ converting <a href="https://github.com/google/filament/blob/main/assets/models/m
 <p>Next, let&#x27;s create mipmapped KTX files using filament&#x27;s <code>mipgen</code> tool. We&#x27;ll create compressed and
 non-compressed variants for each texture, since not all platforms support the same compression
 formats. First copy over the PNG files from the <a href="https://github.com/google/filament/blob/main/assets/models/monkey">monkey folder</a>, then do:</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #3D7B7B; font-style: italic"># Create mipmaps for base color and two compressed variants.</span>
-mipgen albedo.png albedo.ktx
-mipgen --compression<span style="color: #666666">=</span>astc_fast_ldr_4x4 albedo.png albedo_astc.ktx
-mipgen --compression<span style="color: #666666">=</span>s3tc_rgb_dxt1 albedo.png albedo_s3tc_srgb.ktx
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><span style="color: #3D7B7B; font-style: italic"># Create mipmaps for base color</span>
+mipgen albedo.png albedo.ktx2
+mipgen --compression<span style="color: #666666">=</span>uastc albedo.png albedo.ktx2
 
 <span style="color: #3D7B7B; font-style: italic"># Create mipmaps for the normal map and a compressed variant.</span>
 mipgen --strip-alpha --kernel<span style="color: #666666">=</span>NORMALS --linear normal.png normal.ktx
-mipgen --strip-alpha --kernel<span style="color: #666666">=</span>NORMALS --linear --compression<span style="color: #666666">=</span>etc_rgb8_normalxyz_40 <span style="color: #AA5D1F; font-weight: bold">\</span>
-    normal.png normal_etc.ktx
+mipgen --strip-alpha --kernel<span style="color: #666666">=</span>NORMALS --linear --compression<span style="color: #666666">=</span>uastc_normals <span style="color: #AA5D1F; font-weight: bold">\</span>
+    normal.png normal.ktx2
 
 <span style="color: #3D7B7B; font-style: italic"># Create mipmaps for the single-component roughness map and a compressed variant.</span>
 mipgen --grayscale roughness.png roughness.ktx
-mipgen --grayscale --compression<span style="color: #666666">=</span>etc_r11_numeric_40 roughness.png roughness_etc.ktx
+mipgen --grayscale --compression<span style="color: #666666">=</span>uastc roughness.png roughness.ktx2
 
 <span style="color: #3D7B7B; font-style: italic"># Create mipmaps for the single-component metallic map and a compressed variant.</span>
 mipgen --grayscale metallic.png metallic.ktx
-mipgen --grayscale --compression<span style="color: #666666">=</span>etc_r11_numeric_40 metallic.png metallic_etc.ktx
+mipgen --grayscale --compression<span style="color: #666666">=</span>uastc metallic.png metallic.ktx2
 
 <span style="color: #3D7B7B; font-style: italic"># Create mipmaps for the single-component occlusion map and a compressed variant.</span>
 mipgen --grayscale ao.png ao.ktx
-mipgen --grayscale --compression<span style="color: #666666">=</span>etc_r11_numeric_40 ao.png ao_etc.ktx
+mipgen --grayscale --compression<span style="color: #666666">=</span>uastc ao.png ao.ktx2
 </pre></div>
 
 <p>For more information on mipgen&#x27;s arguments and supported formats, do <code>mipgen --help</code>.</p>
@@ -207,11 +206,11 @@ when the assets have finished downloading.</p>
 recreate the skybox using a higher-resolution texture. As a last step we unhide the renderable that
 was created in the app constructor.</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span>Filament.fetch([sky_large_url,<span style="color: #bbbbbb"> </span>albedo_url,<span style="color: #bbbbbb"> </span>roughness_url,<span style="color: #bbbbbb"> </span>metallic_url,<span style="color: #bbbbbb"> </span>normal_url,<span style="color: #bbbbbb"> </span>ao_url],<span style="color: #bbbbbb"> </span>()<span style="color: #bbbbbb"> </span>=&gt;<span style="color: #bbbbbb"> </span>{<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>albedo<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.engine.createTextureFromKtx1(albedo_url,<span style="color: #bbbbbb"> </span>{srgb<span style="color: #666666">:</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">true</span>});<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>roughness<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.engine.createTextureFromKtx1(roughness_url);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>metallic<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.engine.createTextureFromKtx1(metallic_url);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>normal<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.engine.createTextureFromKtx1(normal_url);<span style="color: #bbbbbb"></span>
-<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>ao<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.engine.createTextureFromKtx1(ao_url);<span style="color: #bbbbbb"></span>
+<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>albedo<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.engine.createTextureFromKtx2(albedo_url,<span style="color: #bbbbbb"> </span>{srgb<span style="color: #666666">:</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">true</span>});<span style="color: #bbbbbb"></span>
+<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>roughness<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.engine.createTextureFromKtx2(roughness_url);<span style="color: #bbbbbb"></span>
+<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>metallic<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.engine.createTextureFromKtx2(metallic_url);<span style="color: #bbbbbb"></span>
+<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>normal<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.engine.createTextureFromKtx2(normal_url);<span style="color: #bbbbbb"></span>
+<span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>ao<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #008000; font-weight: bold">this</span>.engine.createTextureFromKtx2(ao_url);<span style="color: #bbbbbb"></span>
 
 <span style="color: #bbbbbb">    </span><span style="color: #008000; font-weight: bold">const</span><span style="color: #bbbbbb"> </span>sampler<span style="color: #bbbbbb"> </span><span style="color: #666666">=</span><span style="color: #bbbbbb"> </span><span style="color: #AA22FF; font-weight: bold">new</span><span style="color: #bbbbbb"> </span>Filament.TextureSampler(<span style="color: #bbbbbb"></span>
 <span style="color: #bbbbbb">        </span>Filament.MinFilter.LINEAR_MIPMAP_LINEAR,<span style="color: #bbbbbb"></span>

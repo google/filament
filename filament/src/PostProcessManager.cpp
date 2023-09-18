@@ -1921,16 +1921,6 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
     float bloomHeight = float(inoutBloomOptions.resolution);
     float bloomWidth  = bloomHeight * aspect;
 
-    // Anamorphic bloom by always scaling down one of the dimension -- we do this (as opposed
-    // to scaling up) so that the amount of blooming doesn't decrease. However, the resolution
-    // decreases, meaning that the user might need to adjust the BloomOptions::resolution and
-    // BloomOptions::levels.
-    if (inoutBloomOptions.anamorphism >= 1.0f) {
-        bloomWidth *= 1.0f / inoutBloomOptions.anamorphism;
-    } else {
-        bloomHeight *= inoutBloomOptions.anamorphism;
-    }
-
     // we might need to adjust the max # of levels
     const uint32_t major = uint32_t(std::max(bloomWidth,  bloomHeight));
     const uint8_t maxLevels = FTexture::maxLevelCount(major);
