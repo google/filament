@@ -141,5 +141,9 @@ void Material::compile(CompilerPriorityQueue priority, UserVariantFilterMask var
     downcast(this)->compile(priority, variantFilter, handler, std::move(callback));
 }
 
+UserVariantFilterMask Material::getSupportedVariants() const noexcept {
+    return downcast(this)->getSupportedVariants();
+}
+
 
 } // namespace filament

@@ -90,6 +90,7 @@ static bool printMaterial(ostream& json, const ChunkContainer& container) {
     json << "\"shading\": {\n";
     printChunk<Shading, uint8_t>(json, container, MaterialShading, "model");
     printChunk<MaterialDomain, uint8_t>(json, container, ChunkType::MaterialDomain, "material_domain");
+    printChunk<UserVariantFilterMask, uint8_t>(json, container, ChunkType::MaterialVariantFilterMask, "variant_filter_mask");
     printChunk<VertexDomain, uint8_t>(json, container, MaterialVertexDomain, "vertex_domain");
     printChunk<Interpolation, uint8_t>(json, container, MaterialInterpolation, "interpolation");
     printChunk<bool, bool>(json, container, MaterialShadowMultiplier, "shadow_multiply");
@@ -112,7 +113,7 @@ static bool printMaterial(ostream& json, const ChunkContainer& container) {
     return true;
 }
 
-static bool printParametersInfo(ostream& json, const ChunkContainer& container) {
+static bool printParametersInfo(ostream&, const ChunkContainer&) {
     // TODO
     return true;
 }
