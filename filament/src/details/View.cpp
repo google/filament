@@ -1083,7 +1083,6 @@ void FView::setBloomOptions(BloomOptions options) noexcept {
     options.resolution = math::clamp(options.resolution, 2u, 2048u);
     options.levels = math::clamp(options.levels, uint8_t(1),
             FTexture::maxLevelCount(options.resolution));
-    options.anamorphism = math::clamp(options.anamorphism, 1.0f/32.0f, 32.0f);
     options.highlight = std::max(10.0f, options.highlight);
     mBloomOptions = options;
 }

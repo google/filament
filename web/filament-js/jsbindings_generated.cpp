@@ -24,7 +24,6 @@ value_object<View::BloomOptions>("View$BloomOptions")
     // JavaScript binding for dirtStrength is not yet supported, must use default value.
     .field("strength", &View::BloomOptions::strength)
     .field("resolution", &View::BloomOptions::resolution)
-    .field("anamorphism", &View::BloomOptions::anamorphism)
     .field("levels", &View::BloomOptions::levels)
     .field("blendMode", &View::BloomOptions::blendMode)
     .field("threshold", &View::BloomOptions::threshold)
