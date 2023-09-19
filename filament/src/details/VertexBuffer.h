@@ -26,9 +26,11 @@
 
 #include <utils/bitset.h>
 #include <utils/compiler.h>
+
 #include <math/vec2.h>
 
 #include <array>
+#include <memory>
 #include <type_traits>
 
 namespace filament {
