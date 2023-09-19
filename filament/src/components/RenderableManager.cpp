@@ -351,7 +351,7 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
                 // prepare data for vertex attributes
                 auto offset = iVertex * 4;
                 // set attributes, indices and weights, for <= 4 pairs
-                for (size_t j = 0, c = std::min(tempPairCount, 4ul); j < c; j++) {
+                for (size_t j = 0, c = std::min((int) tempPairCount, 4); j < c; j++) {
                     skinJoints[j + offset] = tempPairs[j][0];
                     skinWeights[j + offset] = tempPairs[j][1] / boneWeightsSum;
                 }
