@@ -209,7 +209,7 @@ int main(int argc, char** argv) {
         mat4f translate[] = {mat4f::translation(float3(s, c, 0))};
 
         mat4f trans1of8[9] = {};
-        for (uint i = 0; i < 9; i++) {
+        for (size_t i = 0; i < 9; i++) {
             trans1of8[i] = filament::math::mat4f(1);
         }
         s *= 5;
@@ -223,7 +223,7 @@ int main(int argc, char** argv) {
             mat4f::translation(float3(0, -s, 0)),
             mat4f::translation(float3(s, -s, 0)),
             filament::math::mat4f(1)};
-        uint offset = ((uint)now) % 8;
+        size_t offset = ((size_t)now) % 8;
         trans1of8[offset] = transA[offset];
 
         // Set transformation of the first bone
