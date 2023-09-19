@@ -12,10 +12,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-#ifndef TNT_FILAMENT_BACKEND_OPENGL_CALLBACKMANAGER_H
-#define TNT_FILAMENT_BACKEND_OPENGL_CALLBACKMANAGER_H
+#ifndef TNT_FILAMENT_BACKEND_CALLBACKMANAGER_H
+#define TNT_FILAMENT_BACKEND_CALLBACKMANAGER_H
 
 #include <backend/CallbackHandler.h>
 
@@ -95,4 +96,4 @@ private:
 
 } // namespace filament::backend
 
-#endif // TNT_FILAMENT_BACKEND_OPENGL_CALLBACKMANAGER_H
+#endif // TNT_FILAMENT_BACKEND_CALLBACKMANAGER_H
