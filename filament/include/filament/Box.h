@@ -170,6 +170,8 @@ struct UTILS_PUBLIC Aabb {
         value_type const* data() const { return vertices; }
         value_type * data() { return vertices; }
         size_t size() const { return 8; }
+        value_type const& operator[](size_t i) const noexcept { return vertices[i]; }
+        value_type& operator[](size_t i) noexcept { return vertices[i]; }
         value_type vertices[8];
     };
 
