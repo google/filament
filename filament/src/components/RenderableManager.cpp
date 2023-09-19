@@ -292,9 +292,9 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
             "[entity=%u, primitive @ %u] for advanced skinning set VertexBuffer::Builder::advancedSkinning()",
             entity.getId(), primitiveIndex);
         for (size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
-            auto bonesPerVertex = bonePairsForPrimitive[iVertex].size();
+            size_t bonesPerVertex = bonePairsForPrimitive[iVertex].size();
             maxPairsCount += bonesPerVertex;
-            maxPairsCountPerVertex = max(bonesPerVertex, (uint) maxPairsCountPerVertex);
+            maxPairsCountPerVertex = std::max(bonesPerVertex, maxPairsCountPerVertex);
         }
     }
 
@@ -351,7 +351,7 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
                 // prepare data for vertex attributes
                 auto offset = iVertex * 4;
                 // set attributes, indices and weights, for <= 4 pairs
-                for (size_t j = 0, c = min(tempPairCount, 4ul); j < c; j++) {
+                for (size_t j = 0, c = std::min(tempPairCount, 4ul); j < c; j++) {
                     skinJoints[j + offset] = tempPairs[j][0];
                     skinWeights[j + offset] = tempPairs[j][1] / boneWeightsSum;
                 }
