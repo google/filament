@@ -141,7 +141,7 @@ int main(int argc, char** argv) {
     size_t boneCount = app.bonesPerVertex;
     float weight = 1.f / boneCount;
     FixedCapacityVector<float2> boneDataPerVertex(boneCount);
-    for (uint idx = 0; idx < boneCount; idx++) {
+    for (size_t idx = 0; idx < boneCount; idx++) {
         boneDataPerVertex[idx] = float2(idx, weight);
         boneDataArray[idx] = float2(idx, weight);
         boneDataArray[idx + boneCount] = float2(idx, weight);
@@ -156,11 +156,11 @@ int main(int argc, char** argv) {
     app.boneDataPerPrimitive[idx++] = boneDataPerVertex;
     app.boneDataPerPrimitive[idx++] = boneDataPerVertex;
 
-    for (uint vertex_idx = 0; vertex_idx < 6; vertex_idx++) {
+    for (size_t vertex_idx = 0; vertex_idx < 6; vertex_idx++) {
       boneCount = vertex_idx % app.bonesPerVertex + 1;
       weight = 1.f / boneCount;
       FixedCapacityVector<float2> boneDataPerVertex1(boneCount);
-      for (uint idx = 0; idx < boneCount; idx++) {
+      for (size_t idx = 0; idx < boneCount; idx++) {
           boneDataPerVertex1[idx] = float2(idx, weight);
       }
       app.boneDataPerPrimitiveMulti[vertex_idx] = boneDataPerVertex1;
@@ -607,14 +607,14 @@ int main(int argc, char** argv) {
 
         // Bone skinning animation for more than four bones per vertex
         float t = (float)(now - (int)now);
-        uint offset = ((uint)now) % 9;
+        size_t offset = ((size_t)now) % 9;
         float s = sin(t * f::PI * 2.f) * 10;
         mat4f trans[9] = {};
-        for (uint i = 0; i < 9; i++) {
+        for (size_t i = 0; i < 9; i++) {
             trans[i] = filament::math::mat4f(1);
         }
         mat4f trans2[9] = {};
-        for (uint i = 0; i < 9; i++) {
+        for (size_t i = 0; i < 9; i++) {
             trans2[i] = filament::math::mat4f(1);
         }
         mat4f transA[] = {
