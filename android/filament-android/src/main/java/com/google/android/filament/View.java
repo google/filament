@@ -904,7 +904,7 @@ public class View {
         mBloomOptions = options;
         nSetBloomOptions(getNativeObject(), options.dirt != null ? options.dirt.getNativeObject() : 0,
                 options.dirtStrength, options.strength, options.resolution,
-                options.anamorphism, options.levels, options.blendMode.ordinal(),
+                options.levels, options.blendMode.ordinal(),
                 options.threshold, options.enabled, options.highlight,
                 options.lensFlare, options.starburst, options.chromaticAberration,
                 options.ghostCount, options.ghostSpacing, options.ghostThreshold,
@@ -1216,7 +1216,7 @@ public class View {
     private static native int nGetAmbientOcclusion(long nativeView);
     private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, float bilateralThreshold, int quality, int lowPassFilter, int upsampling, boolean enabled, boolean bentNormals, float minHorizonAngleRad);
     private static native void nSetSSCTOptions(long nativeView, float ssctLightConeRad, float ssctStartTraceDistance, float ssctContactDistanceMax, float ssctIntensity, float v, float v1, float v2, float ssctDepthBias, float ssctDepthSlopeBias, int ssctSampleCount, int ssctRayCount, boolean ssctEnabled);
-    private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, float anamorphism, int levels, int blendMode, boolean threshold, boolean enabled, float highlight,
+    private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, int levels, int blendMode, boolean threshold, boolean enabled, float highlight,
             boolean lensFlare, boolean starburst, float chromaticAberration, int ghostCount, float ghostSpacing, float ghostThreshold, float haloThickness, float haloRadius, float haloThreshold);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float cutOffDistance, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, long skyColorNativeObject, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);
@@ -1353,8 +1353,6 @@ public class View {
      * blendMode:   Whether the bloom effect is purely additive (false) or mixed with the original
      *              image (true).
      *
-     * anamorphism: Bloom's aspect ratio (x/y), for artistic purposes.
-     *
      * threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
      *              useful for artistic reasons and is usually needed when a dirt texture is used.
      *
@@ -1394,10 +1392,6 @@ public class View {
          */
         public int resolution = 384;
         /**
-         * bloom x/y aspect-ratio (1/32 to 32)
-         */
-        public float anamorphism = 1.0f;
-        /**
          * number of blur levels (1 to 11)
          */
         public int levels = 6;
@@ -1418,6 +1412,17 @@ public class View {
          * limit highlights to this value before bloom [10, +inf]
          */
         public float highlight = 1000.0f;
+        /**
+         * Bloom quality level.
+         * LOW (default): use a more optimized down-sampling filter, however there can be artifacts
+         *      with dynamic resolution, this can be alleviated by using the homogenous mode.
+         * MEDIUM: Good balance between quality and performance.
+         * HIGH: In this mode the bloom resolution is automatically increased to avoid artifacts.
+         *      This mode can be significantly slower on mobile, especially at high resolution.
+         *      This mode greatly improves the anamorphic bloom.
+         */
+        @NonNull
+        public QualityLevel quality = QualityLevel.LOW;
         /**
          * enable screen-space lens flare
          */

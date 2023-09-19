@@ -767,15 +767,13 @@ void ViewerGui::updateUserInterface() {
         ImGui::SliderFloat("Strength", &mSettings.view.bloom.strength, 0.0f, 1.0f);
         ImGui::Checkbox("Threshold", &mSettings.view.bloom.threshold);
 
-        float anamorphism = mSettings.view.bloom.anamorphism >= 1.0f ?
-                mSettings.view.bloom.anamorphism - 1.0f : 1.0f - 1.0f / mSettings.view.bloom.anamorphism;
-        ImGui::SliderFloat("Amamorphism", &anamorphism, -32.0f, 32.0f);
-        mSettings.view.bloom.anamorphism = anamorphism >= 0 ?
-                (anamorphism + 1.0f) : 1.0f / (1.0f - anamorphism);
-
         int levels = mSettings.view.bloom.levels;
         ImGui::SliderInt("Levels", &levels, 3, 11);
         mSettings.view.bloom.levels = levels;
+
+        int quality = (int) mSettings.view.bloom.quality;
+        ImGui::SliderInt("Bloom Quality", &quality, 0, 3);
+        mSettings.view.bloom.quality = (View::QualityLevel) quality;
 
         ImGui::Checkbox("Lens Flare", &mSettings.view.bloom.lensFlare);
     }

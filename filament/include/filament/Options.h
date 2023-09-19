@@ -114,8 +114,6 @@ struct DynamicResolutionOptions {
  * blendMode:   Whether the bloom effect is purely additive (false) or mixed with the original
  *              image (true).
  *
- * anamorphism: Bloom's aspect ratio (x/y), for artistic purposes.
- *
  * threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
  *              useful for artistic reasons and is usually needed when a dirt texture is used.
  *
@@ -134,12 +132,22 @@ struct BloomOptions {
     float dirtStrength = 0.2f;              //!< strength of the dirt texture %codegen_skip_json% %codegen_skip_javascript%
     float strength = 0.10f;                 //!< bloom's strength between 0.0 and 1.0
     uint32_t resolution = 384;              //!< resolution of vertical axis (2^levels to 2048)
-    float anamorphism = 1.0f;               //!< bloom x/y aspect-ratio (1/32 to 32)
     uint8_t levels = 6;                     //!< number of blur levels (1 to 11)
     BlendMode blendMode = BlendMode::ADD;   //!< how the bloom effect is applied
     bool threshold = true;                  //!< whether to threshold the source
     bool enabled = false;                   //!< enable or disable bloom
     float highlight = 1000.0f;              //!< limit highlights to this value before bloom [10, +inf]
+
+    /**
+     * Bloom quality level.
+     * LOW (default): use a more optimized down-sampling filter, however there can be artifacts
+     *      with dynamic resolution, this can be alleviated by using the homogenous mode.
+     * MEDIUM: Good balance between quality and performance.
+     * HIGH: In this mode the bloom resolution is automatically increased to avoid artifacts.
+     *      This mode can be significantly slower on mobile, especially at high resolution.
+     *      This mode greatly improves the anamorphic bloom.
+     */
+    QualityLevel quality = QualityLevel::LOW;
 
     bool lensFlare = false;                 //!< enable screen-space lens flare
     bool starburst = true;                  //!< enable starburst effect on lens flare

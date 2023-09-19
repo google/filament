@@ -237,8 +237,6 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, BloomOptions* o
             i = parse(tokens, i + 1, jsonChunk, &out->strength);
         } else if (compare(tok, jsonChunk, "resolution") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->resolution);
-        } else if (compare(tok, jsonChunk, "anamorphism") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->anamorphism);
         } else if (compare(tok, jsonChunk, "levels") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->levels);
         } else if (compare(tok, jsonChunk, "blendMode") == 0) {
@@ -249,6 +247,8 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, BloomOptions* o
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
         } else if (compare(tok, jsonChunk, "highlight") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->highlight);
+        } else if (compare(tok, jsonChunk, "quality") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->quality);
         } else if (compare(tok, jsonChunk, "lensFlare") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->lensFlare);
         } else if (compare(tok, jsonChunk, "starburst") == 0) {
@@ -285,12 +285,12 @@ std::ostream& operator<<(std::ostream& out, const BloomOptions& in) {
         // JSON serialization for dirtStrength is not supported.
         << "\"strength\": " << (in.strength) << ",\n"
         << "\"resolution\": " << (in.resolution) << ",\n"
-        << "\"anamorphism\": " << (in.anamorphism) << ",\n"
         << "\"levels\": " << int(in.levels) << ",\n"
         << "\"blendMode\": " << (in.blendMode) << ",\n"
         << "\"threshold\": " << to_string(in.threshold) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"highlight\": " << (in.highlight) << ",\n"
+        << "\"quality\": " << (in.quality) << ",\n"
         << "\"lensFlare\": " << to_string(in.lensFlare) << ",\n"
         << "\"starburst\": " << to_string(in.starburst) << ",\n"
         << "\"chromaticAberration\": " << (in.chromaticAberration) << ",\n"

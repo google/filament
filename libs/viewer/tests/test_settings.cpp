@@ -106,7 +106,6 @@ static const char* JSON_TEST_DEFAULTS = R"TXT(
             "enabled": false,
             "strength": 0.10,
             "resolution": 360,
-            "anamorphism": 1.0,
             "levels": 6,
             "blendMode": "ADD",
             "threshold": true,

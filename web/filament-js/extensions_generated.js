@@ -20,12 +20,12 @@ Filament.loadGeneratedExtensions = function() {
             // JavaScript binding for dirtStrength is not yet supported, must use default value.
             strength: 0.10,
             resolution: 384,
-            anamorphism: 1.0,
             levels: 6,
             blendMode: Filament.View$BloomOptions$BlendMode.ADD,
             threshold: true,
             enabled: false,
             highlight: 1000.0,
+            quality: Filament.View$QualityLevel.LOW,
             lensFlare: false,
             starburst: true,
             chromaticAberration: 0.005,
