@@ -752,7 +752,10 @@ function run_tests {
 }
 
 function check_debug_release_build {
-    if [[ "${ISSUE_DEBUG_BUILD}" == "true" || "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
+    if [[ "${ISSUE_DEBUG_BUILD}" == "true" || \
+          "${ISSUE_RELEASE_BUILD}" == "true" || \
+          "${ISSUE_CLEAN}" == "true" || \
+          "${ISSUE_WEB_DOCS}" == "true" ]]; then
         "$@";
     else
         echo "You must declare a debug or release target for $@ builds."
