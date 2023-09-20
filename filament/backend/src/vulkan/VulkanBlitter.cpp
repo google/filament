@@ -377,13 +377,19 @@ void VulkanBlitter::blitSlowDepth(VkFilter filter, const VkExtent2D srcExtent, V
     vkraster.colorTargetCount = 0;
     mPipelineCache.bindRasterState(vkraster);
 
-    VulkanPipelineCache::VertexArray varray = {};
     VkBuffer buffers[1] = {};
     VkDeviceSize offsets[1] = {};
     buffers[0] = mTriangleBuffer->getGpuBuffer();
-    varray.attributes[0] = { .location = 0, .binding = 0, .format = VK_FORMAT_R32G32_SFLOAT };
-    varray.buffers[0] = { .binding = 0, .stride = sizeof(float) * 2 };
-    mPipelineCache.bindVertexArray(varray);
+    VkVertexInputAttributeDescription attribDesc = {
+            .location = 0,
+            .binding = 0,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+    };
+    VkVertexInputBindingDescription bufferDesc = {
+            .binding = 0,
+            .stride = sizeof(float) * 2,
+    };
+    mPipelineCache.bindVertexArray(&attribDesc, &bufferDesc, 1);
 
     // Select nearest filtering and clamp_to_edge.
     VkSampler vksampler = mSamplerCache.getSampler({});

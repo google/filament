@@ -80,8 +80,6 @@ public:
     // as a vertex assembler configuration. For simplicity it contains fixed-size arrays and does
     // not store sizes; all unused entries are simply zeroed out.
     struct VertexArray {
-        VkVertexInputAttributeDescription attributes[VERTEX_ATTRIBUTE_COUNT];
-        VkVertexInputBindingDescription buffers[VERTEX_ATTRIBUTE_COUNT];
     };
 
     // The ProgramBundle contains weak references to the compiled vertex and fragment shaders.
@@ -163,7 +161,8 @@ public:
     void bindSamplers(VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT],
             VulkanTexture* textures[SAMPLER_BINDING_COUNT], UsageFlags flags) noexcept;
     void bindInputAttachment(uint32_t bindingIndex, VkDescriptorImageInfo imageInfo) noexcept;
-    void bindVertexArray(const VertexArray& varray) noexcept;
+    void bindVertexArray(VkVertexInputAttributeDescription const* attribDesc,
+            VkVertexInputBindingDescription const* bufferDesc, uint8_t count);
 
     // Gets the current UBO at the given slot, useful for push / pop.
     UniformBufferBinding getUniformBufferBinding(uint32_t bindingIndex) const noexcept;
