@@ -26,6 +26,7 @@
 
 #include <backend/DriverApiForward.h>
 
+#include <filament/Box.h>
 #include <filament/Viewport.h>
 
 #include <math/mat4.h>
@@ -104,7 +105,8 @@ public:
 
         // scratch data: light's near/far expressed in light-space, calculated from the scene's
         // content assuming the light is at the origin.
-        math::float2 lsNearFar;
+        math::float2 lsCastersNearFar;
+        math::float2 lsReceiversNearFar;
 
         // Viewing camera's near/far expressed in view-space, calculated from the
         // scene's content.
@@ -207,6 +209,8 @@ private:
         uint8_t v0, v1, v2, v3;
     };
 
+    using Corners = Aabb::Corners;
+
     // 8 corners, 12 segments w/ 2 intersection max -- all of this twice (8 + 12 * 2) * 2 (768 bytes)
     using FrustumBoxIntersection = std::array<math::float3, 64>;
 
@@ -215,17 +219,50 @@ private:
             const ShadowMapInfo& shadowMapInfo,
             const FLightManager::ShadowParams& params) noexcept;
 
+    struct DirectionalShadowBounds {
+        math::mat4f Mv;
+        float zNear;
+        float zFar;
+        FrustumBoxIntersection lsClippedShadowVolume;
+        size_t vertexCount;
+        bool visibleShadows = false;
+    };
+
+    static DirectionalShadowBounds computeDirectionalShadowBounds(
+            FEngine& engine,
+            math::float3 direction,
+            FLightManager::ShadowParams params,
+            filament::CameraInfo const& camera,
+            SceneInfo const& sceneInfo) noexcept;
+
     static math::mat4f applyLISPSM(math::mat4f& Wp,
             filament::CameraInfo const& camera, FLightManager::ShadowParams const& params,
+            const math::mat4f& LMp,
+            const math::mat4f& Mv,
             const math::mat4f& LMpMv,
-            FrustumBoxIntersection const& wsShadowReceiverVolume, size_t vertexCount,
+            FrustumBoxIntersection const& lsShadowVolume, size_t vertexCount,
             const math::float3& dir);
+
+    static inline math::mat4f computeLightRotation(math::float3 const& lsDirection) noexcept;
+
+    static inline math::mat4f computeFocusMatrix(
+            const math::mat4f& LMpMv,
+            const math::mat4f& WLMp,
+            Aabb const& wsShadowReceiversVolume,
+            FrustumBoxIntersection const& lsShadowVolume, size_t vertexCount,
+            filament::CameraInfo const& camera, math::float2 const& csNearFar,
+            uint16_t shadowDimension, bool stable) noexcept;
 
     static inline void snapLightFrustum(math::float2& s, math::float2& o,
             math::mat4f const& Mv, math::double3 wsSnapCoords, math::int2 resolution) noexcept;
 
-    static inline void computeFrustumCorners(math::float3* out,
-            const math::mat4f& projectionViewInverse, math::float2 csNearFar = { -1.0f, 1.0f }) noexcept;
+    static inline Aabb computeLightFrustumBounds(const math::mat4f& lightView,
+            Aabb const& wsShadowReceiversVolume, Aabb const& wsShadowCastersVolume,
+            SceneInfo const& sceneInfo,
+            bool stable, bool focusShadowCasters, bool farUsesShadowCasters) noexcept;
+
+    static Corners computeFrustumCorners(const math::mat4f& projectionInverse,
+            math::float2 csNearFar = { -1.0f, 1.0f }) noexcept;
 
     static inline math::float2 computeNearFar(math::mat4f const& view,
             math::float3 const* wsVertices, size_t count) noexcept;
@@ -240,9 +277,8 @@ private:
     static inline Aabb compute2DBounds(const math::mat4f& lightView,
             math::float3 const* wsVertices, size_t count) noexcept;
 
-    static inline void intersectWithShadowCasters(Aabb* lightFrustum,
-            math::mat4f const& lightView,
-            Aabb const& wsShadowCastersVolume) noexcept;
+    static inline Aabb compute2DBounds(const math::mat4f& lightView,
+            Aabb const& volume) noexcept;
 
     static inline math::float2 computeNearFarOfWarpSpace(math::mat4f const& lightView,
             math::float3 const* wsVertices, size_t count) noexcept;
@@ -261,9 +297,8 @@ private:
 
     static size_t intersectFrustumWithBox(
             FrustumBoxIntersection& outVertices,
-            Frustum const& wsFrustum,
-            math::float3 const* wsFrustumCorners,
-            Aabb const& wsBox);
+            math::mat4f const& projection, math::float2 const& csNearFar,
+            Aabb const& box);
 
     static math::mat4f warpFrustum(float n, float f) noexcept;
 

@@ -33,13 +33,13 @@ class App {
     });
     Filament.fetch([sky_large_url, albedo_url, roughness_url, metallic_url, normal_url, ao_url],
     () => {
-      const albedo = this.engine.createTextureFromKtx1(albedo_url, {
+      const albedo = this.engine.createTextureFromKtx2(albedo_url, {
         srgb: true
       });
-      const roughness = this.engine.createTextureFromKtx1(roughness_url);
-      const metallic = this.engine.createTextureFromKtx1(metallic_url);
-      const normal = this.engine.createTextureFromKtx1(normal_url);
-      const ao = this.engine.createTextureFromKtx1(ao_url);
+      const roughness = this.engine.createTextureFromKtx2(roughness_url);
+      const metallic = this.engine.createTextureFromKtx2(metallic_url);
+      const normal = this.engine.createTextureFromKtx2(normal_url);
+      const ao = this.engine.createTextureFromKtx2(ao_url);
       const sampler = new Filament.TextureSampler(Filament.MinFilter.LINEAR_MIPMAP_LINEAR,
         Filament.MagFilter.LINEAR, Filament.WrapMode.CLAMP_TO_EDGE);
       this.matinstance.setTextureParameter('albedo', albedo, sampler);

@@ -117,6 +117,10 @@ public:
     backend::RasterState getRasterState() const noexcept  { return mRasterState; }
     uint32_t getId() const noexcept { return mMaterialId; }
 
+    UserVariantFilterMask getSupportedVariants() const noexcept {
+        return UserVariantFilterMask(UserVariantFilterBit::ALL) & ~mVariantFilterMask;
+    }
+
     Shading getShading() const noexcept { return mShading; }
     Interpolation getInterpolation() const noexcept { return mInterpolation; }
     BlendingMode getBlendingMode() const noexcept { return mBlendingMode; }
@@ -220,6 +224,7 @@ private:
     MaterialDomain mMaterialDomain = MaterialDomain::SURFACE;
     CullingMode mCullingMode = CullingMode::NONE;
     AttributeBitset mRequiredAttributes;
+    UserVariantFilterMask mVariantFilterMask = 0;
     RefractionMode mRefractionMode = RefractionMode::NONE;
     RefractionType mRefractionType = RefractionType::SOLID;
     ReflectionMode mReflectionMode = ReflectionMode::DEFAULT;
