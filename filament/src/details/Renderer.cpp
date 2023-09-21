@@ -854,9 +854,11 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 ssReflectionsOptions,
                 { .width = svp.width, .height = svp.height });
 
-        // generate the mipchain
-        PostProcessManager::generateMipmapSSR(ppm, fg,
-                reflections, ssrConfig.reflection, false, ssrConfig);
+        if (UTILS_LIKELY(reflections)) {
+            // generate the mipchain
+            PostProcessManager::generateMipmapSSR(ppm, fg,
+                    reflections, ssrConfig.reflection, false, ssrConfig);
+        }
     }
 
     // --------------------------------------------------------------------------------------------
@@ -956,7 +958,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             FrameGraphId<FrameGraphTexture> history;
         };
         // FIXME: should we use the TAA-modified cameraInfo here or not? (we are).
-        auto projection = mat4f{ cameraInfo.projection * cameraInfo.getUserViewMatrix() };
+        mat4 const projection = cameraInfo.projection * cameraInfo.getUserViewMatrix();
         fg.addPass<ExportSSRHistoryData>("Export SSR history",
                 [&](FrameGraph::Builder& builder, auto& data) {
                     // We need to use sideEffect here to ensure this pass won't be culled.

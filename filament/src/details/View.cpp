@@ -394,7 +394,7 @@ CameraInfo FView::computeCameraInfo(FEngine& engine) const noexcept {
 
     /*
      * We apply a "world origin" to "everything" in order to implement the IBL rotation.
-     * The "world origin" is also be used to kee the origin close to the camera position to
+     * The "world origin" is also used to keep the origin close to the camera position to
      * improve fp precision in the shader for large scenes.
      */
     mat4 translation;

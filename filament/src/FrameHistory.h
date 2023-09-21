@@ -31,14 +31,14 @@ struct FrameHistoryEntry {
     struct TemporalAA{
         FrameGraphTexture color;
         FrameGraphTexture::Descriptor desc;
-        math::mat4f projection;     // world space to clip space
+        math::mat4 projection;     // world space to clip space
         math::float2 jitter{};
         uint32_t frameId = 0;   // used for halton sequence
     } taa;
     struct {
         FrameGraphTexture color;
         FrameGraphTexture::Descriptor desc;
-        math::mat4f projection;
+        math::mat4 projection;
     } ssr;
 };
 
