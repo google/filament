@@ -51,17 +51,20 @@ public:
 
     std::string createVertexProgram(filament::backend::ShaderModel shaderModel,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+            MaterialBuilder::FeatureLevel featureLevel,
             MaterialInfo const& material, filament::Variant variant,
             filament::Interpolation interpolation,
             filament::VertexDomain vertexDomain) const noexcept;
 
     std::string createFragmentProgram(filament::backend::ShaderModel shaderModel,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+            MaterialBuilder::FeatureLevel featureLevel,
             MaterialInfo const& material, filament::Variant variant,
             filament::Interpolation interpolation) const noexcept;
 
     std::string createComputeProgram(filament::backend::ShaderModel shaderModel,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+            MaterialBuilder::FeatureLevel featureLevel,
             MaterialInfo const& material) const noexcept;
 
     /**
@@ -84,6 +87,7 @@ private:
 
     static void generateSurfaceMaterialVariantDefines(utils::io::sstream& out,
             filament::backend::ShaderStage stage,
+            MaterialBuilder::FeatureLevel featureLevel,
             MaterialInfo const& material, filament::Variant variant) noexcept;
 
     static void generatePostProcessMaterialVariantDefines(utils::io::sstream& out,
@@ -95,10 +99,12 @@ private:
 
     std::string createPostProcessVertexProgram(filament::backend::ShaderModel sm,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+            MaterialBuilder::FeatureLevel featureLevel,
             MaterialInfo const& material, filament::Variant::type_t variantKey) const noexcept;
 
     std::string createPostProcessFragmentProgram(filament::backend::ShaderModel sm,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+            MaterialBuilder::FeatureLevel featureLevel,
             MaterialInfo const& material, uint8_t variant) const noexcept;
 
     static void appendShader(utils::io::sstream& ss,

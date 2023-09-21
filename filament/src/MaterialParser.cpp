@@ -44,27 +44,26 @@ namespace filament {
 
 // ------------------------------------------------------------------------------------------------
 
-MaterialParser::MaterialParserDetails::MaterialParserDetails(Backend backend, const void* data, size_t size)
+MaterialParser::MaterialParserDetails::MaterialParserDetails(ShaderLanguage language, const void* data, size_t size)
         : mManagedBuffer(data, size),
           mChunkContainer(mManagedBuffer.data(), mManagedBuffer.size()),
           mMaterialChunk(mChunkContainer) {
-    switch (backend) {
-        case Backend::OPENGL:
+    switch (language) {
+        case ShaderLanguage::ESSL3:
             mMaterialTag = ChunkType::MaterialGlsl;
             mDictionaryTag = ChunkType::DictionaryText;
             break;
-        case Backend::METAL:
+        case ShaderLanguage::ESSL1:
+            mMaterialTag = ChunkType::MaterialEssl1;
+            mDictionaryTag = ChunkType::DictionaryText;
+            break;
+        case ShaderLanguage::MSL:
             mMaterialTag = ChunkType::MaterialMetal;
             mDictionaryTag = ChunkType::DictionaryText;
             break;
-        case Backend::VULKAN:
+        case ShaderLanguage::SPIRV:
             mMaterialTag = ChunkType::MaterialSpirv;
             mDictionaryTag = ChunkType::DictionarySpirv;
-            break;
-        default:
-            // this is for testing purpose -- for e.g.: with the NoopDriver
-            mMaterialTag = ChunkType::MaterialGlsl;
-            mDictionaryTag = ChunkType::DictionaryText;
             break;
     }
 }
@@ -84,8 +83,8 @@ bool MaterialParser::MaterialParserDetails::getFromSimpleChunk(
 
 // ------------------------------------------------------------------------------------------------
 
-MaterialParser::MaterialParser(Backend backend, const void* data, size_t size)
-        : mImpl(backend, data, size) {
+MaterialParser::MaterialParser(ShaderLanguage language, const void* data, size_t size)
+        : mImpl(language, data, size) {
 }
 
 ChunkContainer& MaterialParser::getChunkContainer() noexcept {
