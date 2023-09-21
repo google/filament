@@ -171,27 +171,29 @@ typedef details::TQuaternion<double> quat;
 typedef details::TQuaternion<float> quatf;
 typedef details::TQuaternion<half> quath;
 
-constexpr inline quat operator "" _i(long double v) {
+// note: don't put a space between "" and _{i,j,k}, this is deprecated
+
+constexpr inline quat operator ""_i(long double v) {
     return { 0.0, double(v), 0.0, 0.0 };
 }
 
-constexpr inline quat operator "" _j(long double v) {
+constexpr inline quat operator ""_j(long double v) {
     return { 0.0, 0.0, double(v), 0.0 };
 }
 
-constexpr inline quat operator "" _k(long double v) {
+constexpr inline quat operator ""_k(long double v) {
     return { 0.0, 0.0, 0.0, double(v) };
 }
 
-constexpr inline quat operator "" _i(unsigned long long v) {
+constexpr inline quat operator ""_i(unsigned long long v) {
     return { 0.0, double(v), 0.0, 0.0 };
 }
 
-constexpr inline quat operator "" _j(unsigned long long v) {
+constexpr inline quat operator ""_j(unsigned long long v) {
     return { 0.0, 0.0, double(v), 0.0 };
 }
 
-constexpr inline quat operator "" _k(unsigned long long v) {
+constexpr inline quat operator ""_k(unsigned long long v) {
     return { 0.0, 0.0, 0.0, double(v) };
 }
 
