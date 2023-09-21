@@ -241,7 +241,8 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
                     lhs.primitive.skinningHandle    == rhs.primitive.skinningHandle     &&
                     lhs.primitive.skinningOffset    == rhs.primitive.skinningOffset     &&
                     lhs.primitive.morphWeightBuffer == rhs.primitive.morphWeightBuffer  &&
-                    lhs.primitive.morphTargetBuffer == rhs.primitive.morphTargetBuffer;
+                    lhs.primitive.morphTargetBuffer == rhs.primitive.morphTargetBuffer  &&
+                    lhs.primitive.skinningTexture   == rhs.primitive.skinningTexture    ;
         });
 
         uint32_t const instanceCount = e - curr;
@@ -585,6 +586,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
                 cmdColor.primitive.skinningHandle = skinning.handle;
                 cmdColor.primitive.skinningOffset = skinning.offset;
+                cmdColor.primitive.skinningTexture = skinning.handleSampler;
+
                 cmdColor.primitive.morphWeightBuffer = morphing.handle;
                 cmdColor.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
 
@@ -689,6 +692,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
                 cmdDepth.primitive.skinningHandle = skinning.handle;
                 cmdDepth.primitive.skinningOffset = skinning.offset;
+                cmdDepth.primitive.skinningTexture = skinning.handleSampler;
+
                 cmdDepth.primitive.morphWeightBuffer = morphing.handle;
                 cmdDepth.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
 
@@ -873,7 +878,12 @@ void RenderPass::Executor::execute(backend::DriverApi& driver,
                 // note: even if only skinning is enabled, binding morphTargetBuffer is needed.
                 driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphTargetBuffer);
-            }
+
+                if (UTILS_UNLIKELY(info.skinningTexture)) {
+                    driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_SKINNING,
+                                      info.skinningTexture);
+                }
+           }
 
             if (UTILS_UNLIKELY(info.morphWeightBuffer)) {
                 // Instead of using a UBO per primitive, we could also have a single UBO for all
