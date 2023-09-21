@@ -94,7 +94,8 @@ inline void assertSingleTargetApi(MaterialBuilderBase::TargetApi api) {
     assert(bits && !(bits & bits - 1u));
 }
 
-void MaterialBuilderBase::prepare(bool vulkanSemantics) {
+void MaterialBuilderBase::prepare(bool vulkanSemantics,
+        filament::backend::FeatureLevel featureLevel) {
     mCodeGenPermutations.clear();
     mShaderModels.reset();
 
@@ -122,6 +123,11 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics) {
         mTargetApi = TargetApi::OPENGL;
     }
 
+    // Generally build for a minimum of feature level 1. If feature level 0 is specified, an extra
+    // permutation is specifically included for the OpenGL/mobile target.
+    MaterialBuilder::FeatureLevel effectiveFeatureLevel =
+            std::max(featureLevel, filament::backend::FeatureLevel::FEATURE_LEVEL_1);
+
     // Build a list of codegen permutations, which is useful across all types of material builders.
     static_assert(backend::SHADER_MODEL_COUNT == 2);
     for (const auto shaderModel: { ShaderModel::MOBILE, ShaderModel::DESKTOP }) {
@@ -129,14 +135,40 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics) {
         if (!mShaderModels.test(i)) {
             continue; // skip this shader model since it was not requested.
         }
+
         if (any(mTargetApi & TargetApi::OPENGL)) {
-            mCodeGenPermutations.push_back({shaderModel, TargetApi::OPENGL, glTargetLanguage});
+            mCodeGenPermutations.push_back({
+                shaderModel,
+                TargetApi::OPENGL,
+                glTargetLanguage,
+                effectiveFeatureLevel,
+            });
+            if (featureLevel == filament::backend::FeatureLevel::FEATURE_LEVEL_0
+                && shaderModel == ShaderModel::MOBILE) {
+                // ESSL1 code may never be compiled to SPIR-V.
+                mCodeGenPermutations.push_back({
+                    shaderModel,
+                    TargetApi::OPENGL,
+                    TargetLanguage::GLSL,
+                    filament::backend::FeatureLevel::FEATURE_LEVEL_0
+                });
+            }
         }
         if (any(mTargetApi & TargetApi::VULKAN)) {
-            mCodeGenPermutations.push_back({shaderModel, TargetApi::VULKAN, TargetLanguage::SPIRV});
+            mCodeGenPermutations.push_back({
+                shaderModel,
+                TargetApi::VULKAN,
+                TargetLanguage::SPIRV,
+                effectiveFeatureLevel,
+            });
         }
         if (any(mTargetApi & TargetApi::METAL)) {
-            mCodeGenPermutations.push_back({shaderModel, TargetApi::METAL, TargetLanguage::SPIRV});
+            mCodeGenPermutations.push_back({
+                shaderModel,
+                TargetApi::METAL,
+                TargetLanguage::SPIRV,
+                effectiveFeatureLevel,
+            });
         }
     }
 }
@@ -511,10 +543,10 @@ MaterialBuilder& MaterialBuilder::shaderDefine(const char* name, const char* val
     return *this;
 }
 
-bool MaterialBuilder::hasExternalSampler() const noexcept {
+bool MaterialBuilder::hasSamplerType(SamplerType samplerType) const noexcept {
     for (size_t i = 0, c = mParameterCount; i < c; i++) {
         auto const& param = mParameters[i];
-        if (param.isSampler() && param.samplerType == SamplerType::SAMPLER_EXTERNAL) {
+        if (param.isSampler() && param.samplerType == samplerType) {
             return  true;
         }
     }
@@ -522,7 +554,7 @@ bool MaterialBuilder::hasExternalSampler() const noexcept {
 }
 
 void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
-    MaterialBuilderBase::prepare(mEnableFramebufferFetch);
+    MaterialBuilderBase::prepare(mEnableFramebufferFetch, mFeatureLevel);
 
     // Build the per-material sampler block and uniform block.
     SamplerInterfaceBlock::Builder sbb;
@@ -580,7 +612,8 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
 
     info.isLit = isLit();
     info.hasDoubleSidedCapability = mDoubleSidedCapability;
-    info.hasExternalSamplers = hasExternalSampler();
+    info.hasExternalSamplers = hasSamplerType(SamplerType::SAMPLER_EXTERNAL);
+    info.has3dSamplers = hasSamplerType(SamplerType::SAMPLER_3D);
     info.specularAntiAliasing = mSpecularAntiAliasing;
     info.clearCoatIorChange = mClearCoatIorChange;
     info.flipUV = mFlipUV;
@@ -742,16 +775,47 @@ bool MaterialBuilder::ShaderCode::resolveIncludes(IncludeCallback callback,
 
 static void showErrorMessage(const char* materialName, filament::Variant variant,
         MaterialBuilder::TargetApi targetApi, backend::ShaderStage shaderType,
+        MaterialBuilder::FeatureLevel featureLevel,
         const std::string& shaderCode) {
     using ShaderStage = backend::ShaderStage;
     using TargetApi = MaterialBuilder::TargetApi;
+
+    const char* targetApiString;
+    switch (targetApi) {
+        case TargetApi::OPENGL:
+            targetApiString = (featureLevel == MaterialBuilder::FeatureLevel::FEATURE_LEVEL_0)
+                              ? "GLES 2.0.\n" : "OpenGL.\n";
+            break;
+        case TargetApi::VULKAN:
+            targetApiString = "Vulkan.\n";
+            break;
+        case TargetApi::METAL:
+            targetApiString = "Metal.\n";
+            break;
+        case TargetApi::ALL:
+            assert(0); // Unreachable.
+            break;
+    }
+
+    const char* shaderStageString;
+    switch (shaderType) {
+        case ShaderStage::VERTEX:
+            shaderStageString = "Vertex Shader\n";
+            break;
+        case ShaderStage::FRAGMENT:
+            shaderStageString = "Fragment Shader\n";
+            break;
+        case ShaderStage::COMPUTE:
+            shaderStageString = "Compute Shader\n";
+            break;
+    }
+
     slog.e
             << "Error in \"" << materialName << "\""
             << ", Variant 0x" << io::hex << +variant.key
-            << (targetApi == TargetApi::VULKAN ? ", Vulkan.\n" : ", OpenGL.\n")
+            << ", " << targetApiString
             << "=========================\n"
-            << "Generated "
-            << (shaderType == ShaderStage::VERTEX ? "Vertex Shader\n" : "Fragment Shader\n")
+            << "Generated " << shaderStageString
             << "=========================\n"
             << shaderCode;
 }
@@ -769,6 +833,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     // Start: must be protected by lock
     Mutex entriesLock;
     std::vector<TextEntry> glslEntries;
+    std::vector<TextEntry> essl1Entries;
     std::vector<SpirvEntry> spirvEntries;
     std::vector<TextEntry> metalEntries;
     LineDictionary textDictionary;
@@ -795,6 +860,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
         const ShaderModel shaderModel = ShaderModel(params.shaderModel);
         const TargetApi targetApi = params.targetApi;
         const TargetLanguage targetLanguage = params.targetLanguage;
+        const FeatureLevel featureLevel = params.featureLevel;
 
         assertSingleTargetApi(targetApi);
 
@@ -839,14 +905,15 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 std::string shader;
                 if (v.stage == backend::ShaderStage::VERTEX) {
                     shader = sg.createVertexProgram(
-                            shaderModel, targetApi, targetLanguage, info, v.variant,
+                            shaderModel, targetApi, targetLanguage, featureLevel, info, v.variant,
                             mInterpolation, mVertexDomain);
                 } else if (v.stage == backend::ShaderStage::FRAGMENT) {
                     shader = sg.createFragmentProgram(
-                            shaderModel, targetApi, targetLanguage, info, v.variant, mInterpolation);
+                            shaderModel, targetApi, targetLanguage, featureLevel, info, v.variant,
+                            mInterpolation);
                 } else if (v.stage == backend::ShaderStage::COMPUTE) {
                     shader = sg.createComputeProgram(
-                            shaderModel, targetApi, targetLanguage, info);
+                            shaderModel, targetApi, targetLanguage, featureLevel, info);
                 }
 
 #ifdef FILAMAT_LITE
@@ -866,7 +933,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                         .targetLanguage = targetLanguage,
                         .shaderType = v.stage,
                         .shaderModel = shaderModel,
-                        .featureLevel = mFeatureLevel,
+                        .featureLevel = featureLevel,
                         .domain = mMaterialDomain,
                         .materialInfo = &info,
                         .hasFramebufferFetch = mEnableFramebufferFetch,
@@ -883,7 +950,8 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 bool ok = true;
 #endif
                 if (!ok) {
-                    showErrorMessage(mMaterialName.c_str_safe(), v.variant, targetApi, v.stage, shader);
+                    showErrorMessage(mMaterialName.c_str_safe(), v.variant, targetApi, v.stage,
+                                     featureLevel, shader);
                     cancelJobs = true;
                     if (mPrintShaders) {
                         slog.e << shader << io::endl;
@@ -912,7 +980,11 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                     case TargetApi::OPENGL:
                         glslEntry.stage = v.stage;
                         glslEntry.shader = shader;
-                        glslEntries.push_back(glslEntry);
+                        if (featureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+                            essl1Entries.push_back(glslEntry);
+                        } else {
+                            glslEntries.push_back(glslEntry);
+                        }
                         break;
                     case TargetApi::VULKAN:
 #ifndef FILAMAT_LITE
@@ -961,11 +1033,15 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
         return akey < bkey;
     };
     std::sort(glslEntries.begin(), glslEntries.end(), compare);
+    std::sort(essl1Entries.begin(), essl1Entries.end(), compare);
     std::sort(spirvEntries.begin(), spirvEntries.end(), compare);
     std::sort(metalEntries.begin(), metalEntries.end(), compare);
 
     // Generate the dictionaries.
     for (const auto& s : glslEntries) {
+        textDictionary.addText(s.shader);
+    }
+    for (const auto& s : essl1Entries) {
         textDictionary.addText(s.shader);
     }
 #ifndef FILAMAT_LITE
@@ -986,6 +1062,12 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     if (!glslEntries.empty()) {
         container.push<MaterialTextChunk>(std::move(glslEntries),
                 dictionaryChunk.getDictionary(), ChunkType::MaterialGlsl);
+    }
+
+    // Emit ESSL1 chunk (MaterialTextChunk).
+    if (!essl1Entries.empty()) {
+        container.push<MaterialTextChunk>(std::move(essl1Entries),
+                dictionaryChunk.getDictionary(), ChunkType::MaterialEssl1);
     }
 
     // Emit SPIRV chunks (SpirvDictionaryReader and MaterialSpirvChunk).
@@ -1092,17 +1174,6 @@ error:
         goto error;
     }
 
-    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
-        if (mPlatform != Platform::MOBILE) {
-            slog.e << "Error: only platform `mobile` is supported at featureLevel 0." << io::endl;
-            goto error;
-        }
-        if (any(mTargetApi & ~TargetApi::OPENGL)) {
-            mTargetApi &= TargetApi::OPENGL;
-            slog.w << "Warning: only target `opengl` is supported at featureLevel 0." << io::endl;
-        }
-    }
-
     // prepareToBuild must be called first, to populate mCodeGenPermutations.
     MaterialInfo info{};
     prepareToBuild(info);
@@ -1128,7 +1199,8 @@ error:
             .shaderModel = ShaderModel::MOBILE,
             .targetApi = TargetApi::OPENGL,
             .targetLanguage = (info.featureLevel == FeatureLevel::FEATURE_LEVEL_0) ?
-                              TargetLanguage::GLSL : TargetLanguage::SPIRV
+                              TargetLanguage::GLSL : TargetLanguage::SPIRV,
+            .featureLevel = info.featureLevel,
     };
 
     if (!findAllProperties(semanticCodeGenParams)) {
@@ -1328,15 +1400,15 @@ std::string MaterialBuilder::peek(backend::ShaderStage stage,
         case backend::ShaderStage::VERTEX:
             return sg.createVertexProgram(
                     params.shaderModel, params.targetApi, params.targetLanguage,
-                    info, {}, mInterpolation, mVertexDomain);
+                    params.featureLevel, info, {}, mInterpolation, mVertexDomain);
         case backend::ShaderStage::FRAGMENT:
             return sg.createFragmentProgram(
                     params.shaderModel, params.targetApi, params.targetLanguage,
-                    info, {}, mInterpolation);
+                    params.featureLevel, info, {}, mInterpolation);
         case backend::ShaderStage::COMPUTE:
             return sg.createComputeProgram(
                     params.shaderModel, params.targetApi, params.targetLanguage,
-                    info);
+                    params.featureLevel, info);
     }
 }
 

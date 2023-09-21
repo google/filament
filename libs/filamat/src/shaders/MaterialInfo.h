@@ -40,6 +40,7 @@ struct UTILS_PUBLIC MaterialInfo {
     bool isLit;
     bool hasDoubleSidedCapability;
     bool hasExternalSamplers;
+    bool has3dSamplers;
     bool hasShadowMultiplier;
     bool hasTransparentShadow;
     bool specularAntiAliasing;
