@@ -276,16 +276,62 @@ VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& 
         uint32_t elementCount, AttributeArray const& attribs)
     : HwVertexBuffer(bufferCount, attributeCount, elementCount, attribs),
       VulkanResource(VulkanResourceType::VERTEX_BUFFER),
-      buffers(bufferCount, nullptr),
-      mResources(allocator) {}
+      mInfo(new PipelineInfo(attribs.size())),
+      mResources(allocator) {
+    auto attribDesc = mInfo->mSoa.data<PipelineInfo::ATTRIBUTE_DESCRIPTION>();
+    auto bufferDesc = mInfo->mSoa.data<PipelineInfo::BUFFER_DESCRIPTION>();
+    auto offsets = mInfo->mSoa.data<PipelineInfo::OFFSETS>();
+    auto attribToBufferIndex = mInfo->mSoa.data<PipelineInfo::ATTRIBUTE_TO_BUFFER_INDEX>();
+    std::fill(mInfo->mSoa.begin<PipelineInfo::ATTRIBUTE_TO_BUFFER_INDEX>(),
+            mInfo->mSoa.end<PipelineInfo::ATTRIBUTE_TO_BUFFER_INDEX>(), -1);
+
+    for (uint32_t attribIndex = 0; attribIndex < attribs.size(); attribIndex++) {
+        Attribute attrib = attribs[attribIndex];
+        bool const isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
+        bool const isNormalized = attrib.flags & Attribute::FLAG_NORMALIZED;
+        VkFormat vkformat = getVkFormat(attrib.type, isNormalized, isInteger);
+
+        // HACK: Re-use the positions buffer as a dummy buffer for disabled attributes. Filament's
+        // vertex shaders declare all attributes as either vec4 or uvec4 (the latter for bone
+        // indices), and positions are always at least 32 bits per element. Therefore we can assign
+        // a dummy type of either R8G8B8A8_UINT or R8G8B8A8_SNORM, depending on whether the shader
+        // expects to receive floats or ints.
+        if (attrib.buffer == Attribute::BUFFER_UNUSED) {
+            vkformat = isInteger ? VK_FORMAT_R8G8B8A8_UINT : VK_FORMAT_R8G8B8A8_SNORM;
+            attrib = attribs[0];
+        }
+        offsets[attribIndex] = attrib.offset;
+        attribDesc[attribIndex] = {
+            .location = attribIndex,// matches the GLSL layout specifier
+            .binding = attribIndex, // matches the position within vkCmdBindVertexBuffers
+            .format = vkformat,
+        };
+        bufferDesc[attribIndex] = {
+            .binding = attribIndex,
+            .stride = attrib.stride,
+        };
+        attribToBufferIndex[attribIndex] = attrib.buffer;
+    }
+}
+
+VulkanVertexBuffer::~VulkanVertexBuffer() {
+    delete mInfo;
+}
 
 void VulkanVertexBuffer::setBuffer(VulkanBufferObject* bufferObject, uint32_t index) {
-    buffers[index] = &bufferObject->buffer;
+    size_t count = attributes.size();
+    auto vkbuffers = mInfo->mSoa.data<PipelineInfo::VK_BUFFER>();
+    auto attribToBuffer = mInfo->mSoa.data<PipelineInfo::ATTRIBUTE_TO_BUFFER_INDEX>();
+    for (uint8_t attribIndex = 0; attribIndex < count; attribIndex++) {
+        if (attribToBuffer[attribIndex] == static_cast<int8_t>(index)) {
+            vkbuffers[attribIndex] = bufferObject->buffer.getGpuBuffer();
+        }
+    }
     mResources.acquire(bufferObject);
 }
 
 VulkanBufferObject::VulkanBufferObject(VmaAllocator allocator, VulkanStagePool& stagePool,
-        uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage)
+        uint32_t byteCount, BufferObjectBinding bindingType)
     : HwBufferObject(byteCount),
       VulkanResource(VulkanResourceType::BUFFER_OBJECT),
       buffer(allocator, stagePool, getBufferObjectUsage(bindingType), byteCount),
