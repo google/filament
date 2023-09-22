@@ -169,11 +169,12 @@ void FSkinningBuffer::setBones(FEngine& engine, Handle<backend::HwBufferObject> 
 constexpr size_t MAX_SKINNING_BUFFER_WIDTH = 2048;
 
 static inline size_t getSkinningBufferWidth(size_t pairCount) noexcept {
-    return std::min(pairCount, MAX_SKINNING_BUFFER_WIDTH);
+    return std::clamp(pairCount, size_t(1), MAX_SKINNING_BUFFER_WIDTH);
 }
 
 static inline size_t getSkinningBufferHeight(size_t pairCount) noexcept {
-    return (pairCount + MAX_SKINNING_BUFFER_WIDTH - 1) / MAX_SKINNING_BUFFER_WIDTH;
+    return std::max(size_t(1),
+            (pairCount + MAX_SKINNING_BUFFER_WIDTH - 1) / MAX_SKINNING_BUFFER_WIDTH);
 }
 
 inline size_t getSkinningBufferSize(size_t pairCount) noexcept {
