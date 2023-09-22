@@ -599,8 +599,9 @@ void FRenderableManager::create(
         if (UTILS_UNLIKELY(boneCount > 0) && (builder->mBoneIndicesAndWeightsCount > 0)){
             // create and set texture for bone indices and weights
             Bones& bones = manager[ci].bones;
-            FSkinningBuffer::HandleIndicesAndWeights handle = downcast(builder->mSkinningBuffer)->
-                createIndicesAndWeightsHandle(downcast(engine), builder->mBoneIndicesAndWeightsCount);
+            FSkinningBuffer::HandleIndicesAndWeights const handle =
+                    downcast(builder->mSkinningBuffer)->createIndicesAndWeightsHandle(
+                            downcast(engine), builder->mBoneIndicesAndWeightsCount);
             bones.handleSamplerGroup = handle.sampler;
             bones.handleTexture = handle.texture;
             downcast(builder->mSkinningBuffer)->
@@ -610,13 +611,15 @@ void FRenderableManager::create(
 
         // Create and initialize all needed MorphTargets.
         // It's required to avoid branches in hot loops.
-        MorphTargets* morphTargets = new MorphTargets[entryCount];
-        for (size_t i = 0; i < entryCount; ++i) {
-            morphTargets[i] = { mEngine.getDummyMorphTargetBuffer(), 0, 0 };
-        }
+        MorphTargets* const morphTargets = new MorphTargets[entryCount];
+        std::generate_n(morphTargets, entryCount,
+                [dummy = mEngine.getDummyMorphTargetBuffer()]() -> MorphTargets {
+                    return { dummy, 0, 0 };
+                });
+
         mManager[ci].morphTargets = { morphTargets, size_type(entryCount) };
 
-        // Even morphing isn't enabled, we should create morphig resources.
+        // Even when morphing isn't enabled, we should create morphing resources.
         // Because morphing shader code is generated when skinning is enabled.
         // You can see more detail at Variant::SKINNING_OR_MORPHING.
         if (UTILS_UNLIKELY(boneCount > 0 || targetCount > 0)) {
@@ -643,7 +646,7 @@ void FRenderableManager::create(
             // morphWeights uniform array to avoid crash on adreno gpu.
             if (UTILS_UNLIKELY(targetCount == 0 &&
                     driver.isWorkaroundNeeded(Workaround::ADRENO_UNIFORM_ARRAY_CRASH))) {
-                float initWeights[1] = {0};
+                float initWeights[1] = { 0 };
                 setMorphWeights(ci, initWeights, 1, 0);
             }
         }

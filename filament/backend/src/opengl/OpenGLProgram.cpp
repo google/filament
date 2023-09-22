@@ -208,7 +208,8 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* const gld) const noexcept {
     auto const& UTILS_RESTRICT usedBindingPoints = mUsedSamplerBindingPoints;
 
     for (uint8_t i = 0, tmu = 0, n = mUsedBindingsCount; i < n; i++) {
-        auto const binding = usedBindingPoints[i];
+        size_t const binding = usedBindingPoints[i];
+        assert_invariant(binding < Program::SAMPLER_BINDING_COUNT);
         auto const * const sb = samplerBindings[binding];
         assert_invariant(sb);
         for (uint8_t j = 0, m = sb->textureUnitEntries.size(); j < m; ++j, ++tmu) { // "<=" on purpose here

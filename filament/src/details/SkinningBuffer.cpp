@@ -191,62 +191,63 @@ void updateDataAt(backend::DriverApi& driver,
         const utils::FixedCapacityVector<math::float2>& pairs,
         size_t count) {
 
-    size_t elementSize = sizeof(float2);
-    size_t size = getSkinningBufferSize(count);
-    auto* out = (float2*) malloc(size);
+    size_t const elementSize = sizeof(float2);
+    size_t const size = getSkinningBufferSize(count);
+    auto* out = (float2*)malloc(size);
     std::memcpy(out, pairs.begin(), size);
 
-    size_t const textureWidth   = getSkinningBufferWidth( count);
-    size_t const lineCount      = count / textureWidth;
-    size_t const lastLineCount  = count % textureWidth;
+    size_t const textureWidth = getSkinningBufferWidth(count);
+    size_t const lineCount = count / textureWidth;
+    size_t const lastLineCount = count % textureWidth;
 
     // 'out' buffer is going to be used up to 2 times, so for simplicity we use a shared_buffer
     // to manage its lifetime. One side effect of this is that the callbacks below will allocate
     // a small object on the heap. (inspired by MorphTargetBuffered)
-    std::shared_ptr<void> allocation((void*)out, ::free);
+    std::shared_ptr<void> const allocation((void*)out, ::free);
 
     if (lineCount) {
         // update the full-width lines if any
         driver.update3DImage(handle, 0, 0, 0, 0,
-            textureWidth, lineCount, 1,
-            PixelBufferDescriptor::make(
-                out, textureWidth * lineCount * elementSize,
-                format, type, [allocation](void const*, size_t) {}
-            ));
+                textureWidth, lineCount, 1,
+                PixelBufferDescriptor::make(
+                        out, textureWidth * lineCount * elementSize,
+                        format, type, [allocation](void const*, size_t) {}
+                ));
         out += lineCount * textureWidth;
     }
 
     if (lastLineCount) {
         // update the last partial line if any
         driver.update3DImage(handle, 0, 0, lineCount, 0,
-            lastLineCount, 1, 1,
-            PixelBufferDescriptor::make(
-                out, lastLineCount * elementSize,
-                format, type, [allocation](void const*, size_t) {}
-            ));
+                lastLineCount, 1, 1,
+                PixelBufferDescriptor::make(
+                        out, lastLineCount * elementSize,
+                        format, type, [allocation](void const*, size_t) {}
+                ));
     }
 }
 
-FSkinningBuffer::HandleIndicesAndWeights FSkinningBuffer::createIndicesAndWeightsHandle(FEngine& engine, size_t count) {
+FSkinningBuffer::HandleIndicesAndWeights FSkinningBuffer::createIndicesAndWeightsHandle(
+        FEngine& engine, size_t count) {
     backend::Handle<backend::HwSamplerGroup> samplerHandle;
     backend::Handle<backend::HwTexture> textureHandle;
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     // create a texture for skinning pairs data (bone index and weight)
     textureHandle = driver.createTexture(SamplerType::SAMPLER_2D, 1,
-                         TextureFormat::RG32F, 1,
-                         getSkinningBufferWidth(count),
-                         getSkinningBufferHeight(count), 1,
-                         TextureUsage::DEFAULT);
+            TextureFormat::RG32F, 1,
+            getSkinningBufferWidth(count),
+            getSkinningBufferHeight(count), 1,
+            TextureUsage::DEFAULT);
     samplerHandle = driver.createSamplerGroup(PerRenderPrimitiveSkinningSib::SAMPLER_COUNT);
     SamplerGroup samplerGroup(PerRenderPrimitiveSkinningSib::SAMPLER_COUNT);
     samplerGroup.setSampler(PerRenderPrimitiveSkinningSib::BONE_INDICES_AND_WEIGHTS,
-                            {textureHandle, {}});
+            { textureHandle, {}});
     driver.updateSamplerGroup(samplerHandle,
-                              samplerGroup.toBufferDescriptor(driver));
+            samplerGroup.toBufferDescriptor(driver));
     return {
-        .sampler = samplerHandle,
-        .texture = textureHandle
+            .sampler = samplerHandle,
+            .texture = textureHandle
     };
 }
 
@@ -257,7 +258,7 @@ void FSkinningBuffer::setIndicesAndWeightsData(FEngine& engine,
     FEngine::DriverApi& driver = engine.getDriverApi();
     updateDataAt(driver, textureHandle,
             Texture::Format::RG, Texture::Type::FLOAT,
-             pairs, count);
+            pairs, count);
 }
 
 } // namespace filament
