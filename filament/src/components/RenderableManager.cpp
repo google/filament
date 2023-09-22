@@ -596,19 +596,6 @@ void FRenderableManager::create(
             }
         }
 
-        if (UTILS_UNLIKELY(boneCount > 0) && (builder->mBoneIndicesAndWeightsCount > 0)){
-            // create and set texture for bone indices and weights
-            Bones& bones = manager[ci].bones;
-            FSkinningBuffer::HandleIndicesAndWeights const handle =
-                    downcast(builder->mSkinningBuffer)->createIndicesAndWeightsHandle(
-                            downcast(engine), builder->mBoneIndicesAndWeightsCount);
-            bones.handleSamplerGroup = handle.sampler;
-            bones.handleTexture = handle.texture;
-            downcast(builder->mSkinningBuffer)->
-                setIndicesAndWeightsData(downcast(engine), handle.texture,
-                       builder->mBoneIndicesAndWeights, builder->mBoneIndicesAndWeightsCount);
-        }
-
         // Create and initialize all needed MorphTargets.
         // It's required to avoid branches in hot loops.
         MorphTargets* const morphTargets = new MorphTargets[entryCount];
@@ -619,10 +606,20 @@ void FRenderableManager::create(
 
         mManager[ci].morphTargets = { morphTargets, size_type(entryCount) };
 
-        // Even when morphing isn't enabled, we should create morphing resources.
-        // Because morphing shader code is generated when skinning is enabled.
-        // You can see more detail at Variant::SKINNING_OR_MORPHING.
+        // Always create skinning and morphing resources if one of them is enabled because
+        // the shader always handles both. See Variant::SKINNING_OR_MORPHING.
         if (UTILS_UNLIKELY(boneCount > 0 || targetCount > 0)) {
+
+            auto [sampler, texture] = FSkinningBuffer::createIndicesAndWeightsHandle(
+                    downcast(engine), builder->mBoneIndicesAndWeightsCount);
+            if (builder->mBoneIndicesAndWeightsCount > 0) {
+                FSkinningBuffer::setIndicesAndWeightsData(downcast(engine), texture,
+                        builder->mBoneIndicesAndWeights, builder->mBoneIndicesAndWeightsCount);
+            }
+            Bones& bones = manager[ci].bones;
+            bones.handleSamplerGroup = sampler;
+            bones.handleTexture = texture;
+
             // Instead of using a UBO per primitive, we could also have a single UBO for all primitives
             // and use bindUniformBufferRange which might be more efficient.
             MorphWeights& morphWeights = manager[ci].morphWeights;
