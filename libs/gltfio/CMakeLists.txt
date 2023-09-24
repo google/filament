@@ -225,8 +225,9 @@ if (TNT_DEV AND NOT WEBGL AND NOT ANDROID AND NOT IOS)
 
     add_executable(${TEST_TARGET} test/gltfio_test.cpp)
     add_dependencies(${TEST_TARGET} test_gltfio_files)
+    set_property(TARGET test_gltfio PROPERTY LINK_LIBRARIES)
 
-    target_link_libraries(${TEST_TARGET} PRIVATE ${TARGET} filament filabridge gtest uberarchive)
+    target_link_libraries(${TEST_TARGET} PRIVATE ${TARGET} gtest uberarchive)
     if (NOT MSVC)
         target_compile_options(${TEST_TARGET} PRIVATE -Wno-deprecated-register)
     endif()
