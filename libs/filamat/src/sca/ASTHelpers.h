@@ -17,18 +17,48 @@
 #ifndef TNT_SCAHELPERS_H_H
 #define TNT_SCAHELPERS_H_H
 
-#include <deque>
 #include <string>
 #include <vector>
 #include <intermediate.h>
 
-#include "GLSLTools.h"
-
 class TIntermNode;
 
-using namespace filamat;
+namespace ASTHelpers {
 
-namespace ASTUtils {
+template<typename F>
+class TraverserAdapter : public glslang::TIntermTraverser {
+    F closure;
+public:
+    explicit TraverserAdapter(F closure)
+            : TIntermTraverser(true, false, false, false),
+              closure(closure) {
+    }
+
+    bool visitAggregate(glslang::TVisit visit, glslang::TIntermAggregate* node) override {
+        return closure(visit, node);
+    }
+};
+
+template<typename F>
+void traverse(TIntermNode* root, F&& closure) {
+    TraverserAdapter adapter(std::forward<std::decay_t<F>>(closure));
+    root->traverse(&adapter);
+}
+
+class NodeToString : public glslang::TIntermTraverser {
+    void pad();
+public:
+    using TVisit = glslang::TVisit;
+    bool visitBinary(TVisit, glslang::TIntermBinary* node) override;
+    bool visitUnary(TVisit, glslang::TIntermUnary* node) override;
+    bool visitAggregate(TVisit, glslang::TIntermAggregate* node) override;
+    bool visitSelection(TVisit, glslang::TIntermSelection*) override;
+    void visitConstantUnion(glslang::TIntermConstantUnion*) override;
+    void visitSymbol(glslang::TIntermSymbol* node) override;
+    bool visitLoop(TVisit, glslang::TIntermLoop*) override;
+    bool visitBranch(TVisit, glslang::TIntermBranch*) override;
+    bool visitSwitch(TVisit, glslang::TIntermSwitch*) override;
+};
 
 // Extract the name of a function from its glslang mangled signature. e.g: Returns prepareMaterial
 // for input "prepareMaterial(struct-MaterialInputs-vf4-f1-f1-f1-f1-vf41;".
@@ -48,17 +78,13 @@ glslang::TIntermAggregate* getFunctionBySignature(std::string_view functionSigna
 // This function is useful when looking for a function with variable signature. e.g: prepareMaterial
 // and material functions take a struct which can vary in size depending on the property of the
 // material processed.
-glslang::TIntermAggregate* getFunctionByNameOnly(std::string_view functionName, TIntermNode& root)
-        noexcept;
+glslang::TIntermAggregate* getFunctionByNameOnly(std::string_view functionName,
+        TIntermNode& root) noexcept;
 
 // Recursively traverse the AST function node provided, looking for a call to the specified
 // function. Traverse all function calls found in each function.
 bool isFunctionCalled(std::string_view functionName, TIntermNode& functionNode,
         TIntermNode& rootNode) noexcept;
-
-// Traverse the function node provided and record all symbol writes operation and all function call
-// involving symbols.
-void traceSymbols(TIntermNode& functionNode, std::deque<Symbol>& vector);
 
 struct FunctionParameter {
     enum Qualifier { IN, OUT, INOUT, CONST };
@@ -68,13 +94,12 @@ struct FunctionParameter {
 };
 
 // Traverse function definition node, looking for parameters and populate params vector.
-void getFunctionParameters(glslang::TIntermAggregate* func, std::vector<FunctionParameter>& output)
-        noexcept;
+void getFunctionParameters(glslang::TIntermAggregate* func,
+        std::vector<FunctionParameter>& output) noexcept;
 
-// add lod bias to texture() calls
-void textureLodBias(glslang::TIntermediate* intermediate, TIntermNode* root,
-        const char* entryPointSignatureish, const char* lodBiasSymbolName);
+std::string to_string(glslang::TOperator op);
 
+std::string getIndexDirectStructString(const glslang::TIntermBinary& node);
 
 } // namespace ASTutils
 #endif //TNT_SCAHELPERS_H_H

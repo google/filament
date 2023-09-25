@@ -711,15 +711,15 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info,
     if (mMaterialDomain == filament::MaterialDomain::COMPUTE) {
         shaderCode = peek(ShaderStage::COMPUTE, semanticCodeGenParams, mProperties);
         result = GLSLTools::analyzeComputeShader(shaderCode, model,
-                targetApi, targetLanguage, info);
+                targetApi, targetLanguage);
     } else {
         shaderCode = peek(ShaderStage::VERTEX, semanticCodeGenParams, mProperties);
         result = GLSLTools::analyzeVertexShader(shaderCode, model, mMaterialDomain,
-                targetApi, targetLanguage, info);
+                targetApi, targetLanguage);
         if (result) {
             shaderCode = peek(ShaderStage::FRAGMENT, semanticCodeGenParams, mProperties);
             result = GLSLTools::analyzeFragmentShader(shaderCode, model, mMaterialDomain,
-                    targetApi, targetLanguage, mCustomSurfaceShading, info);
+                    targetApi, targetLanguage, mCustomSurfaceShading);
         }
     }
     if (!result && mPrintShaders) {

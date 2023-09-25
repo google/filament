@@ -27,6 +27,7 @@
 #include <ShaderLang.h>
 
 class TIntermNode;
+
 namespace glslang {
 class TPoolAllocator;
 }
@@ -43,7 +44,7 @@ struct Access {
     size_t parameterIdx = 0; // Only used when type == FunctionCall;
 };
 
-// Record of symbol interactions in a statment involving a symbol. Can track a sequence of up to
+// Record of symbol interactions in a statement involving a symbol. Can track a sequence of up to
 // (and in this order):
 // Function call: foo(material)
 // DirectIndexForStruct e.g: material.baseColor
@@ -82,12 +83,9 @@ public:
     }
 
     bool hasDirectIndexForStruct() const noexcept {
-        for (const Access& access : mAccesses) {
-            if (access.type == Access::Type::DirectIndexForStruct) {
-                return true;
-            }
-        }
-        return false;
+        return std::any_of(mAccesses.begin(), mAccesses.end(), [](auto&& access) {
+            return access.type == Access::Type::DirectIndexForStruct;
+        });
     }
 
     std::string getDirectIndexStructName() const noexcept {
@@ -126,17 +124,16 @@ public:
     static bool analyzeFragmentShader(const std::string& shaderCode,
             filament::backend::ShaderModel model, MaterialBuilder::MaterialDomain materialDomain,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-            bool hasCustomSurfaceShading, MaterialInfo const& info) noexcept;
+            bool hasCustomSurfaceShading) noexcept;
 
     static bool analyzeVertexShader(const std::string& shaderCode,
             filament::backend::ShaderModel model,
             MaterialBuilder::MaterialDomain materialDomain, MaterialBuilder::TargetApi targetApi,
-            MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& info) noexcept;
+            MaterialBuilder::TargetLanguage targetLanguage) noexcept;
 
     static bool analyzeComputeShader(const std::string& shaderCode,
             filament::backend::ShaderModel model, MaterialBuilder::TargetApi targetApi,
-            MaterialBuilder::TargetLanguage targetLanguage,
-            MaterialInfo const& info) noexcept;
+            MaterialBuilder::TargetLanguage targetLanguage) noexcept;
 
         // Public for unit tests.
     using Property = MaterialBuilder::Property;
@@ -192,6 +189,9 @@ private:
     void scanSymbolForProperty(Symbol& symbol, TIntermNode* rootNode,
             MaterialBuilder::PropertyList& properties) const noexcept;
 
+    // add lod bias to texture() calls
+    static void textureLodBias(glslang::TIntermediate* intermediate, TIntermNode* root,
+            const char* entryPointSignatureish, const char* lodBiasSymbolName) noexcept;
 };
 
 } // namespace filamat
