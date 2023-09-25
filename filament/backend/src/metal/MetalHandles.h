@@ -165,16 +165,20 @@ struct MetalRenderPrimitive : public HwRenderPrimitive {
     VertexDescription vertexDescription = {};
 };
 
-struct MetalProgram : public HwProgram {
-    MetalProgram(id<MTLDevice> device, const Program& program) noexcept;
+class MetalProgram : public HwProgram {
+public:
+    MetalProgram(MetalContext& context, Program&& program) noexcept;
 
-    id<MTLFunction> vertexFunction;
-    id<MTLFunction> fragmentFunction;
-    id<MTLFunction> computeFunction;
+    const MetalShaderCompiler::MetalFunctionBundle& getFunctions();
+    const Program::SamplerGroupInfo& getSamplerGroupInfo() { return samplerGroupInfo; }
+
+private:
+    void initialize();
 
     Program::SamplerGroupInfo samplerGroupInfo;
-
-    bool isValid = false;
+    MetalContext& mContext;
+    MetalShaderCompiler::MetalFunctionBundle mFunctionBundle;
+    MetalShaderCompiler::program_token_t mToken;
 };
 
 struct PixelBufferShape {

@@ -34,11 +34,11 @@ namespace backend {
 class MetalPlatform;
 
 class MetalBuffer;
+class MetalProgram;
 class MetalSamplerGroup;
 class MetalTexture;
 struct MetalUniformBuffer;
 struct MetalContext;
-struct MetalProgram;
 struct BufferState;
 
 #ifndef FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB
