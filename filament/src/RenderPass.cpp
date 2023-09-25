@@ -875,14 +875,12 @@ void RenderPass::Executor::execute(backend::DriverApi& driver,
                         info.skinningHandle,
                         info.skinningOffset * sizeof(PerRenderableBoneUib::BoneData),
                         sizeof(PerRenderableBoneUib));
+                // note: always bind the skinningTexture because the shader needs it.
+                driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_SKINNING,
+                        info.skinningTexture);
                 // note: even if only skinning is enabled, binding morphTargetBuffer is needed.
                 driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphTargetBuffer);
-
-                if (UTILS_UNLIKELY(info.skinningTexture)) {
-                    driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_SKINNING,
-                                      info.skinningTexture);
-                }
            }
 
             if (UTILS_UNLIKELY(info.morphWeightBuffer)) {
@@ -892,6 +890,9 @@ void RenderPass::Executor::execute(backend::DriverApi& driver,
                         info.morphWeightBuffer);
                 driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_MORPHING,
                         info.morphTargetBuffer);
+                // note: even if only morphing is enabled, binding skinningTexture is needed.
+                driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_SKINNING,
+                        info.skinningTexture);
             }
 
             driver.draw(pipeline, info.primitiveHandle, instanceCount);

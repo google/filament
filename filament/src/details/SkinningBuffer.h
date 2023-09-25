@@ -79,9 +79,9 @@ private:
         backend::Handle<backend::HwSamplerGroup> sampler;
         backend::Handle<backend::HwTexture> texture;
     };
-    HandleIndicesAndWeights createIndicesAndWeightsHandle(FEngine& engine,
+    static HandleIndicesAndWeights createIndicesAndWeightsHandle(FEngine& engine,
             size_t count);
-    void setIndicesAndWeightsData(FEngine& engine,
+    static void setIndicesAndWeightsData(FEngine& engine,
           backend::Handle<backend::HwTexture> textureHandle,
           const utils::FixedCapacityVector<math::float2>& pairs,
           size_t count);
