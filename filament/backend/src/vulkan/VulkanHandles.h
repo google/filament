@@ -139,7 +139,7 @@ private:
     };
 
     PipelineInfo* mInfo;
-    FixedSizeVulkanResourceManager mResources;
+    FixedSizeVulkanResourceManager<MAX_VERTEX_BUFFER_COUNT> mResources;
 };
 
 struct VulkanIndexBuffer : public HwIndexBuffer, VulkanResource {
@@ -186,7 +186,8 @@ struct VulkanRenderPrimitive : public HwRenderPrimitive, VulkanResource {
     VkPrimitiveTopology primitiveTopology;
 
 private:
-    FixedSizeVulkanResourceManager mResources;
+    // Keep references to the vertex buffer and the index buffer.
+    FixedSizeVulkanResourceManager<2> mResources;
 };
 
 struct VulkanFence : public HwFence, VulkanResource {
