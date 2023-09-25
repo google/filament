@@ -290,9 +290,11 @@ void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
 void VulkanDriver::endFrame(uint32_t frameId) {
-    if (mCommands->flush()) {
-        collectGarbage();
-    }
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("endframe");
+    mCommands->flush();
+    collectGarbage();
+    FVK_SYSTRACE_END();
 }
 
 void VulkanDriver::flush(int) {
@@ -1369,10 +1371,6 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
     FVK_SYSTRACE_START("commit");
 
     VulkanSwapChain* swapChain = mResourceAllocator.handle_cast<VulkanSwapChain*>(sch);
-
-    if (mCommands->flush()) {
-        collectGarbage();
-    }
 
     // Present the backbuffer after the most recent command buffer submission has finished.
     swapChain->present();
