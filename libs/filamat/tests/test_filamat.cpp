@@ -17,18 +17,21 @@
 #include <gtest/gtest.h>
 
 #include "sca/ASTHelpers.h"
+#include "sca/GLSLTools.h"
 #include "shaders/ShaderGenerator.h"
 
 #include "MockIncluder.h"
 
 #include <filamat/Enums.h>
+#include <filamat/MaterialBuilder.h>
 
 #include <utils/JobSystem.h>
 
 #include <memory>
 
 using namespace utils;
-using namespace ASTUtils;
+using namespace ASTHelpers;
+using namespace filamat;
 using namespace filament::backend;
 
 static ::testing::AssertionResult PropertyListsMatch(const MaterialBuilder::PropertyList& expected,
