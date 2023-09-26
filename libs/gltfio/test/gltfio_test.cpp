@@ -160,6 +160,21 @@ TEST_F(glTFIOTest, AnimatedMorphCubeMaterials) {
     EXPECT_EQ(name, "Material");
 }
 
+// A macro to help with mat comparisons within a range.
+#define EXPECT_MAT_NEAR(MAT1, MAT2, eps)                        \
+do {                                                            \
+    const decltype(MAT1) v1 = MAT1;                             \
+    const decltype(MAT2) v2 = MAT2;                             \
+    EXPECT_EQ(v1.NUM_ROWS, v2.NUM_ROWS);                        \
+    EXPECT_EQ(v1.NUM_COLS, v2.NUM_COLS);                        \
+    for (int i = 0; i < v1.NUM_ROWS; ++i) {                     \
+        for (int j = 0; j < v1.NUM_COLS; ++j)                   \
+            EXPECT_NEAR(v1[i][j], v2[i][j], eps) <<             \
+                "v[" << i << "][" << j << "]";                  \
+    }                                                           \
+} while(0)
+
+
 TEST_F(glTFIOTest, AnimatedMorphCubeTransforms) {
     FilamentAsset const& morphCubeAsset = *mData[ANIMATED_MORPH_CUBE_GLB]->getAsset();
     auto const& transformManager = mEngine->getTransformManager();
@@ -177,8 +192,10 @@ TEST_F(glTFIOTest, AnimatedMorphCubeTransforms) {
 
     auto const result = inverse(transform) * expectedTransform;
 
+    float const value_eps = float(0.00001) * std::numeric_limits<float>::epsilon();
+
     // We expect the result to be identity
-    EXPECT_EQ(result, math::mat4f{});
+    EXPECT_MAT_NEAR(result, math::mat4f{}, value_eps);
 }
 
 TEST_F(glTFIOTest, AnimatedMorphCubeRenderables) {
