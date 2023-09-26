@@ -6,9 +6,6 @@ option(FILAMENT_ENABLE_MATDBG "Enables Material debugger" OFF)
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 
 set(FILAMAT_FLAVOR "filamat")
-if(FILAMAT_LITE)
-    set(FILAMAT_FLAVOR "filamat_lite")
-endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
     message("Library filamat ignores Vulkan settings")
