@@ -66,8 +66,8 @@ getVkTransition(const VulkanLayoutTransition& transition) {
 
     switch (transition.oldLayout) {
         case VulkanLayout::UNDEFINED:
-            srcAccessMask = 0;
-            srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+            srcStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
             break;
         case VulkanLayout::COLOR_ATTACHMENT:
             srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT
@@ -93,8 +93,7 @@ getVkTransition(const VulkanLayoutTransition& transition) {
             srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
             break;
         case VulkanLayout::DEPTH_ATTACHMENT:
-            srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
-                            | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             srcStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
             break;
         case VulkanLayout::DEPTH_SAMPLER:
@@ -125,7 +124,7 @@ getVkTransition(const VulkanLayoutTransition& transition) {
             break;
         case VulkanLayout::READ_ONLY:
             dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
             break;
         case VulkanLayout::TRANSFER_SRC:
             dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
@@ -141,10 +140,10 @@ getVkTransition(const VulkanLayoutTransition& transition) {
             dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
             break;
         case VulkanLayout::DEPTH_SAMPLER:
-            dstAccessMask
-                    = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-                       | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+            dstAccessMask =
+                    VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                       VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
             break;
         case VulkanLayout::PRESENT:
         case VulkanLayout::COLOR_ATTACHMENT_RESOLVE:
