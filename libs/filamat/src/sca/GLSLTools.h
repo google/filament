@@ -19,6 +19,7 @@
 
 #include <deque>
 #include <list>
+#include <optional>
 #include <set>
 #include <string>
 
@@ -116,12 +117,16 @@ public:
     static void init();
     static void shutdown();
 
+    struct FragmentShaderInfo {
+        bool userMaterialHasCustomDepth = false;
+    };
+
     // Return true if:
     // The shader is syntactically and semantically valid AND
     // The shader features a material() function AND
     // The shader features a prepareMaterial() function AND
     // prepareMaterial() is called at some point in material() call chain.
-    static bool analyzeFragmentShader(const std::string& shaderCode,
+    static std::optional<FragmentShaderInfo> analyzeFragmentShader(const std::string& shaderCode,
             filament::backend::ShaderModel model, MaterialBuilder::MaterialDomain materialDomain,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
             bool hasCustomSurfaceShading) noexcept;
@@ -167,6 +172,9 @@ public:
             EShLanguage stage, int version);
 
     static void textureLodBias(glslang::TShader& shader);
+
+    static bool hasCustomDepth(TIntermNode* root, TIntermNode* entryPoint);
+
 
 private:
     // Traverse a function definition and retrieve all symbol written to and all symbol passed down

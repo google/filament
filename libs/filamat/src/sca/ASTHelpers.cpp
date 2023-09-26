@@ -144,8 +144,7 @@ std::string_view getFunctionName(std::string_view functionSignature) noexcept {
 }
 
 glslang::TIntermAggregate* getFunctionBySignature(std::string_view functionSignature,
-        TIntermNode& rootNode)
-        noexcept {
+        TIntermNode& rootNode) noexcept {
     FunctionDefinitionFinder functionDefinitionFinder(functionSignature);
     rootNode.traverse(&functionDefinitionFinder);
     return functionDefinitionFinder.getFunctionDefinitionNode();

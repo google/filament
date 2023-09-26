@@ -8,3 +8,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 - materials: fix alpha masked materials when MSAA is turned on [⚠️ **Recompile materials**]
+- materials: better support materials with custom depth [**Recompile Materials**]

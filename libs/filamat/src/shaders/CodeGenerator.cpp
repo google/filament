@@ -154,6 +154,10 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         CodeGenerator::generateDefine(out, "FLIP_UV_ATTRIBUTE", material.flipUV);
         CodeGenerator::generateDefine(out, "LEGACY_MORPHING", material.useLegacyMorphing);
     }
+    if (stage == ShaderStage::FRAGMENT) {
+        CodeGenerator::generateDefine(out, "MATERIAL_HAS_CUSTOM_DEPTH",
+                material.userMaterialHasCustomDepth);
+    }
 
     if (mTargetLanguage == TargetLanguage::SPIRV ||
         mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {

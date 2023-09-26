@@ -53,6 +53,7 @@ struct UTILS_PUBLIC MaterialInfo {
     bool useLegacyMorphing;
     bool instanced;
     bool vertexDomainDeviceJittered;
+    bool userMaterialHasCustomDepth;
     filament::SpecularAmbientOcclusion specularAO;
     filament::RefractionMode refractionMode;
     filament::RefractionType refractionType;

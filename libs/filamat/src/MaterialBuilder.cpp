@@ -691,7 +691,7 @@ bool MaterialBuilder::findAllProperties(CodeGenParams const& semanticCodeGenPara
 #endif
 }
 
-bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info,
+bool MaterialBuilder::runSemanticAnalysis(MaterialInfo* inOutInfo,
         CodeGenParams const& semanticCodeGenParams) noexcept {
 #ifndef FILAMAT_LITE
     using namespace backend;
@@ -705,27 +705,31 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo const& info,
         targetApi = TargetApi::VULKAN;
     }
 
-    bool result = false;
+    bool success = false;
     std::string shaderCode;
     ShaderModel const model = semanticCodeGenParams.shaderModel;
     if (mMaterialDomain == filament::MaterialDomain::COMPUTE) {
         shaderCode = peek(ShaderStage::COMPUTE, semanticCodeGenParams, mProperties);
-        result = GLSLTools::analyzeComputeShader(shaderCode, model,
+        success = GLSLTools::analyzeComputeShader(shaderCode, model,
                 targetApi, targetLanguage);
     } else {
         shaderCode = peek(ShaderStage::VERTEX, semanticCodeGenParams, mProperties);
-        result = GLSLTools::analyzeVertexShader(shaderCode, model, mMaterialDomain,
+        success = GLSLTools::analyzeVertexShader(shaderCode, model, mMaterialDomain,
                 targetApi, targetLanguage);
-        if (result) {
+        if (success) {
             shaderCode = peek(ShaderStage::FRAGMENT, semanticCodeGenParams, mProperties);
-            result = GLSLTools::analyzeFragmentShader(shaderCode, model, mMaterialDomain,
+            auto result = GLSLTools::analyzeFragmentShader(shaderCode, model, mMaterialDomain,
                     targetApi, targetLanguage, mCustomSurfaceShading);
+            success = result.has_value();
+            if (success) {
+                inOutInfo->userMaterialHasCustomDepth = result->userMaterialHasCustomDepth;
+            }
         }
     }
-    if (!result && mPrintShaders) {
+    if (!success && mPrintShaders) {
         slog.e << shaderCode << io::endl;
     }
-    return result;
+    return success;
 #else
     return true;
 #endif
@@ -1207,7 +1211,7 @@ error:
         goto error;
     }
 
-    if (!runSemanticAnalysis(info, semanticCodeGenParams)) {
+    if (!runSemanticAnalysis(&info, semanticCodeGenParams)) {
         goto error;
     }
 
