@@ -544,7 +544,6 @@ function build_android {
 
         if [[ "${INSTALL_COMMAND}" ]]; then
             echo "Installing out/filamat-android-release.aar..."
-            cp filamat-android/build/outputs/aar/filamat-android-lite-release.aar ../out/
             cp filamat-android/build/outputs/aar/filamat-android-full-release.aar ../out/filamat-android-release.aar
 
             echo "Installing out/filament-android-release.aar..."

@@ -23,12 +23,8 @@
 #include "shaders/SibGenerator.h"
 #include "shaders/UibGenerator.h"
 
-#ifndef FILAMAT_LITE
-#   include "GLSLPostProcessor.h"
-#   include "sca/GLSLTools.h"
-#else
-#   include "sca/GLSLToolsLite.h"
-#endif
+#include "GLSLPostProcessor.h"
+#include "sca/GLSLTools.h"
 
 #include "shaders/MaterialInfo.h"
 #include "shaders/ShaderGenerator.h"
@@ -182,16 +178,12 @@ MaterialBuilder::~MaterialBuilder() = default;
 
 void MaterialBuilderBase::init() {
     materialBuilderClients++;
-#ifndef FILAMAT_LITE
     GLSLTools::init();
-#endif
 }
 
 void MaterialBuilderBase::shutdown() {
     materialBuilderClients--;
-#ifndef FILAMAT_LITE
     GLSLTools::shutdown();
-#endif
 }
 
 MaterialBuilder& MaterialBuilder::name(const char* name) noexcept {
@@ -642,7 +634,6 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
 bool MaterialBuilder::findProperties(backend::ShaderStage type,
         MaterialBuilder::PropertyList& allProperties,
         CodeGenParams const& semanticCodeGenParams) noexcept {
-#ifndef FILAMAT_LITE
     GLSLTools glslTools;
     std::string shaderCodeAllProperties = peek(type, semanticCodeGenParams, allProperties);
     // Populate mProperties with the properties set in the shader.
@@ -656,9 +647,6 @@ bool MaterialBuilder::findProperties(backend::ShaderStage type,
         return false;
     }
     return true;
-#else
-    return false;
-#endif
 }
 
 bool MaterialBuilder::findAllProperties(CodeGenParams const& semanticCodeGenParams) noexcept {
@@ -668,7 +656,6 @@ bool MaterialBuilder::findAllProperties(CodeGenParams const& semanticCodeGenPara
 
     using namespace backend;
 
-#ifndef FILAMAT_LITE
     // Some fields in MaterialInputs only exist if the property is set (e.g: normal, subsurface
     // for cloth shading model). Give our shader all properties. This will enable us to parse and
     // static code analyse the AST.
@@ -681,19 +668,10 @@ bool MaterialBuilder::findAllProperties(CodeGenParams const& semanticCodeGenPara
         return false;
     }
     return true;
-#else
-    GLSLToolsLite glslTools;
-    if (glslTools.findProperties(ShaderStage::FRAGMENT, mMaterialFragmentCode.getResolved(), mProperties)) {
-        return glslTools.findProperties(
-                ShaderStage::VERTEX, mMaterialVertexCode.getResolved(), mProperties);
-    }
-    return false;
-#endif
 }
 
 bool MaterialBuilder::runSemanticAnalysis(MaterialInfo* inOutInfo,
         CodeGenParams const& semanticCodeGenParams) noexcept {
-#ifndef FILAMAT_LITE
     using namespace backend;
 
     TargetApi targetApi = semanticCodeGenParams.targetApi;
@@ -730,28 +708,6 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo* inOutInfo,
         slog.e << shaderCode << io::endl;
     }
     return success;
-#else
-    return true;
-#endif
-}
-
-bool MaterialBuilder::checkLiteRequirements() noexcept {
-#ifdef FILAMAT_LITE
-    if (mTargetApi != TargetApi::OPENGL) {
-        slog.e
-                << "Filamat lite only supports building materials for the OpenGL backend."
-                << io::endl;
-        return false;
-    }
-
-    if (mOptimization != Optimization::NONE) {
-        slog.e
-                << "Filamat lite does not support material optimization." << io::endl
-                << "Ensure optimization is set to NONE." << io::endl;
-        return false;
-    }
-#endif
-    return true;
 }
 
 bool MaterialBuilder::ShaderCode::resolveIncludes(IncludeCallback callback,
@@ -827,12 +783,11 @@ static void showErrorMessage(const char* materialName, filament::Variant variant
 bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Variant>& variants,
         ChunkContainer& container, const MaterialInfo& info) const noexcept {
     // Create a postprocessor to optimize / compile to Spir-V if necessary.
-#ifndef FILAMAT_LITE
+
     uint32_t flags = 0;
     flags |= mPrintShaders ? GLSLPostProcessor::PRINT_SHADERS : 0;
     flags |= mGenerateDebugInfo ? GLSLPostProcessor::GENERATE_DEBUG_INFO : 0;
     GLSLPostProcessor postProcessor(mOptimization, flags);
-#endif
 
     // Start: must be protected by lock
     Mutex entriesLock;
@@ -841,9 +796,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     std::vector<SpirvEntry> spirvEntries;
     std::vector<TextEntry> metalEntries;
     LineDictionary textDictionary;
-#ifndef FILAMAT_LITE
     BlobDictionary spirvDictionary;
-#endif
     // End: must be protected by lock
 
     ShaderGenerator sg(mProperties, mVariables, mOutputs, mDefines, mConstants,
@@ -920,17 +873,11 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                             shaderModel, targetApi, targetLanguage, featureLevel, info);
                 }
 
-#ifdef FILAMAT_LITE
-                GLSLToolsLite glslTools;
-                glslTools.removeGoogleLineDirectives(shader);
-#endif
-
                 std::string* pGlsl = nullptr;
                 if (targetApiNeedsGlsl) {
                     pGlsl = &shader;
                 }
 
-#ifndef FILAMAT_LITE
                 GLSLPostProcessor::Config config{
                         .variant = v.variant,
                         .targetApi = targetApi,
@@ -950,9 +897,6 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                 }
 
                 bool const ok = postProcessor.process(shader, config, pGlsl, pSpirv, pMsl);
-#else
-                bool ok = true;
-#endif
                 if (!ok) {
                     showErrorMessage(mMaterialName.c_str_safe(), v.variant, targetApi, v.stage,
                                      featureLevel, shader);
@@ -991,21 +935,17 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                         }
                         break;
                     case TargetApi::VULKAN:
-#ifndef FILAMAT_LITE
                         assert(!spirv.empty());
                         spirvEntry.stage = v.stage;
                         spirvEntry.spirv = std::move(spirv);
                         spirvEntries.push_back(spirvEntry);
-#endif
                         break;
                     case TargetApi::METAL:
-#ifndef FILAMAT_LITE
                         assert(!spirv.empty());
                         assert(msl.length() > 0);
                         metalEntry.stage = v.stage;
                         metalEntry.shader = msl;
                         metalEntries.push_back(metalEntry);
-#endif
                         break;
                 }
             });
@@ -1048,12 +988,10 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     for (const auto& s : essl1Entries) {
         textDictionary.addText(s.shader);
     }
-#ifndef FILAMAT_LITE
     for (auto& s : spirvEntries) {
         std::vector<uint32_t> spirv = std::move(s.spirv);
         s.dictionaryIndex = spirvDictionary.addBlob(spirv);
     }
-#endif
     for (const auto& s : metalEntries) {
         textDictionary.addText(s.shader);
     }
@@ -1075,7 +1013,6 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     }
 
     // Emit SPIRV chunks (SpirvDictionaryReader and MaterialSpirvChunk).
-#ifndef FILAMAT_LITE
     if (!spirvEntries.empty()) {
         const bool stripInfo = !mGenerateDebugInfo;
         container.push<filamat::DictionarySpirvChunk>(std::move(spirvDictionary), stripInfo);
@@ -1087,7 +1024,6 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
         container.push<MaterialTextChunk>(std::move(metalEntries),
                 dictionaryChunk.getDictionary(), ChunkType::MaterialMetal);
     }
-#endif
 
     return true;
 }
@@ -1190,12 +1126,6 @@ error:
     // Run checks, in order.
     // The call to findProperties populates mProperties and must come before runSemanticAnalysis.
     // Return an empty package to signal a failure to build the material.
-
-#ifdef FILAMAT_LITE
-    if (!checkLiteRequirements()) {
-        goto error;
-    }
-#endif
 
     // For finding properties and running semantic analysis, we always use the same code gen
     // permutation. This is the first permutation generated with default arguments passed to matc.
