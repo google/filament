@@ -145,7 +145,7 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob *spirv, std::string *outMsl,
     using namespace msl;
 
     CompilerMSL mslCompiler(*spirv);
-    CompilerGLSL::Options options;
+    CompilerGLSL::Options const options;
     mslCompiler.set_common_options(options);
 
     const CompilerMSL::Options::Platform platform =
@@ -252,8 +252,7 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob *spirv, std::string *outMsl,
         mslCompiler.add_msl_resource_binding(argBufferBinding);
     }
 
-    auto updateResourceBindingDefault = [executionModel, &mslCompiler]
-            (const auto& resource, const BindingIndexMap* map = nullptr) {
+    auto updateResourceBindingDefault = [executionModel, &mslCompiler](const auto& resource) {
         auto set = mslCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
         auto binding = mslCompiler.get_decoration(resource.id, spv::DecorationBinding);
         MSLResourceBinding newBinding;
@@ -328,7 +327,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     TShader tShader(internalConfig.shLang);
 
     // The cleaner must be declared after the TShader to prevent ASAN failures.
-    GLSLangCleaner cleaner;
+    GLSLangCleaner const cleaner;
 
     const char* shaderCString = inputShader.c_str();
     tShader.setStrings(&shaderCString, 1);
@@ -350,7 +349,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
         msg = EShMessages(Type(msg) | Type(EShMessages::EShMsgVulkanRules));
     }
 
-    bool ok = tShader.parse(&DefaultTBuiltInResource, internalConfig.langVersion, false, msg);
+    bool const ok = tShader.parse(&DefaultTBuiltInResource, internalConfig.langVersion, false, msg);
     if (!ok) {
         slog.e << tShader.getInfoLog() << io::endl;
         return false;
@@ -365,7 +364,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     program.addShader(&tShader);
     // Even though we only have a single shader stage, linking is still necessary to finalize
     // SPIR-V types
-    bool linkOk = program.link(msg);
+    bool const linkOk = program.link(msg);
     if (!linkOk) {
         slog.e << tShader.getInfoLog() << io::endl;
         return false;
@@ -429,7 +428,8 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
     TShader::ForbidIncluder forbidIncluder;
 
     const int version = GLSLTools::getGlslDefaultVersion(config.shaderModel);
-    EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(config.targetApi, config.targetLanguage);
+    EShMessages const msg =
+            GLSLTools::glslangFlagsFromTargetApi(config.targetApi, config.targetLanguage);
     bool ok = tShader.preprocess(&DefaultTBuiltInResource, version, ENoProfile, false, false,
             msg, &glsl, forbidIncluder);
 
@@ -443,7 +443,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
 
         // The cleaner must be declared after the TShader/TProgram which are setting the current
         // pool in the tls
-        GLSLangCleaner cleaner;
+        GLSLangCleaner const cleaner;
 
         const char* shaderCString = glsl.c_str();
         spirvShader.setStrings(&shaderCString, 1);
@@ -453,7 +453,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
         program.addShader(&spirvShader);
         // Even though we only have a single shader stage, linking is still necessary to finalize
         // SPIR-V types
-        bool linkOk = program.link(msg);
+        bool const linkOk = program.link(msg);
         if (!ok || !linkOk) {
             slog.e << spirvShader.getInfoLog() << io::endl;
         } else {
@@ -482,7 +482,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
         GLSLPostProcessor::Config const& config, InternalConfig& internalConfig) const {
     SpirvBlob spirv;
 
-    bool optimizeForSize = mOptimization == MaterialBuilderBase::Optimization::SIZE;
+    bool const optimizeForSize = mOptimization == MaterialBuilderBase::Optimization::SIZE;
 
     // Compile GLSL to to SPIR-V
     SpvOptions options;
@@ -495,17 +495,16 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
 
     if (internalConfig.spirvOutput) {
         // Run the SPIR-V optimizer
-        OptimizerPtr optimizer = createOptimizer(mOptimization, config);
+        OptimizerPtr const optimizer = createOptimizer(mOptimization, config);
         optimizeSpirv(optimizer, spirv);
     } else {
         // When we optimize for size, and we generate text-based shaders, we save much more
         // by preserving variable names and running a simple DCE pass instead of using spirv-opt
         if (optimizeForSize) {
-            std::vector<std::string> whiteListStrings;
             spv::spirvbin_t(0).remap(
-                    spirv, whiteListStrings, spv::spirvbin_t::DCE_ALL | spv::spirvbin_t::OPT_ALL);
+                    spirv, {}, spv::spirvbin_t::DCE_ALL | spv::spirvbin_t::OPT_ALL);
         } else {
-            OptimizerPtr optimizer = createOptimizer(mOptimization, config);
+            OptimizerPtr const optimizer = createOptimizer(mOptimization, config);
             optimizeSpirv(optimizer, spirv);
         }
     }
@@ -564,7 +563,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
         // "implicitly sized by indexing it only with integral constant expressions".
         std::string& str = *internalConfig.glslOutput;
         const std::string clipDistanceDefinition = "out float gl_ClipDistance[1];";
-        size_t found = str.find(clipDistanceDefinition);
+        size_t const found = str.find(clipDistanceDefinition);
         if (found != std::string::npos) {
             str.replace(found, clipDistanceDefinition.length(), "");
         }
@@ -617,7 +616,7 @@ void GLSLPostProcessor::fixupClipDistance(
         return;
     }
     // This should match the version of SPIR-V used in GLSLTools::prepareShaderParser.
-    SpirvTools tools(SPV_ENV_UNIVERSAL_1_3);
+    SpirvTools const tools(SPV_ENV_UNIVERSAL_1_3);
     std::string disassembly;
     const bool result = tools.Disassemble(spirv, &disassembly);
     assert_invariant(result);

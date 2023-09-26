@@ -60,6 +60,8 @@ static std::string_view getMaterialFunctionName(MaterialBuilder::MaterialDomain 
 
 // ------------------------------------------------------------------------------------------------
 
+static const TIntermTyped* findLValueBase(const TIntermTyped* node, Symbol& symbol);
+
 class SymbolsTracer : public TIntermTraverser {
 public:
     explicit SymbolsTracer(std::deque<Symbol>& events) : mEvents(events) {
@@ -125,36 +127,36 @@ public:
 
 private:
     std::deque<Symbol>& mEvents;
-
-    // Meant to explore the Lvalue in an assignment. Depth traverse the left child of an assignment
-    // binary node to find out the symbol and all access applied on it.
-    static const TIntermTyped* findLValueBase(const TIntermTyped* node, Symbol& symbol) {
-        do {
-            // Make sure we have a binary node
-            const TIntermBinary* binary = node->getAsBinaryNode();
-            if (binary == nullptr) {
-                return node;
-            }
-
-            // Check Operator
-            TOperator const op = binary->getOp();
-            if (op != EOpIndexDirect && op != EOpIndexIndirect && op != EOpIndexDirectStruct
-                && op != EOpVectorSwizzle && op != EOpMatrixSwizzle) {
-                return nullptr;
-            }
-            Access access;
-            if (op == EOpIndexDirectStruct) {
-                access.string = ASTHelpers::getIndexDirectStructString(*binary);
-                access.type = Access::DirectIndexForStruct;
-            } else {
-                access.string = ASTHelpers::to_string(op) ;
-                access.type = Access::Swizzling;
-            }
-            symbol.add(access);
-            node = node->getAsBinaryNode()->getLeft();
-        } while (true);
-    }
 };
+
+// Meant to explore the Lvalue in an assignment. Depth traverse the left child of an assignment
+// binary node to find out the symbol and all access applied on it.
+static const TIntermTyped* findLValueBase(const TIntermTyped* node, Symbol& symbol) {
+    do {
+        // Make sure we have a binary node
+        const TIntermBinary* binary = node->getAsBinaryNode();
+        if (binary == nullptr) {
+            return node;
+        }
+
+        // Check Operator
+        TOperator const op = binary->getOp();
+        if (op != EOpIndexDirect && op != EOpIndexIndirect && op != EOpIndexDirectStruct
+            && op != EOpVectorSwizzle && op != EOpMatrixSwizzle) {
+            return nullptr;
+        }
+        Access access;
+        if (op == EOpIndexDirectStruct) {
+            access.string = ASTHelpers::getIndexDirectStructString(*binary);
+            access.type = Access::DirectIndexForStruct;
+        } else {
+            access.string = ASTHelpers::to_string(op) ;
+            access.type = Access::Swizzling;
+        }
+        symbol.add(access);
+        node = node->getAsBinaryNode()->getLeft();
+    } while (true);
+}
 
 // ------------------------------------------------------------------------------------------------
 
@@ -192,7 +194,8 @@ bool GLSLTools::analyzeComputeShader(const std::string& shaderCode,
     return true;
 }
 
-bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode,
+std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
+        const std::string& shaderCode,
         filament::backend::ShaderModel model, MaterialBuilder::MaterialDomain materialDomain,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         bool hasCustomSurfaceShading) noexcept {
@@ -212,7 +215,7 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode,
     if (!ok) {
         utils::slog.e << "ERROR: Unable to parse fragment shader:" << utils::io::endl;
         utils::slog.e << tShader.getInfoLog() << utils::io::flush;
-        return false;
+        return std::nullopt;
     }
 
     auto materialFunctionName = getMaterialFunctionName(materialDomain);
@@ -223,13 +226,17 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode,
     if (materialFctNode == nullptr) {
         utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
         utils::slog.e << "ERROR: Unable to find " << materialFunctionName << "() function" << utils::io::endl;
-        return false;
+        return std::nullopt;
     }
+
+    FragmentShaderInfo result {
+        .userMaterialHasCustomDepth = GLSLTools::hasCustomDepth(root, materialFctNode)
+    };
 
     // If this is a post-process material, at this point we've successfully met all the
     // requirements.
     if (materialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
-        return true;
+        return result;
     }
 
     // Check there is a prepareMaterial function definition in this shader.
@@ -238,7 +245,7 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode,
     if (prepareMaterialNode == nullptr) {
         utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
         utils::slog.e << "ERROR: Unable to find prepareMaterial() function" << utils::io::endl;
-        return false;
+        return std::nullopt;
     }
 
     std::string_view const prepareMaterialSignature = prepareMaterialNode->getName();
@@ -247,7 +254,7 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode,
     if (!prepareMaterialCalled) {
         utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
         utils::slog.e << "ERROR: prepareMaterial() is not called" << utils::io::endl;
-        return false;
+        return std::nullopt;
     }
 
     if (hasCustomSurfaceShading) {
@@ -256,11 +263,11 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode,
             utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
             utils::slog.e << "ERROR: Unable to find surfaceShading() function"
                           << utils::io::endl;
-            return false;
+            return std::nullopt;
         }
     }
 
-    return true;
+    return result;
 }
 
 bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
@@ -554,6 +561,25 @@ void GLSLTools::textureLodBias(TShader& shader) {
             "filament_lodBias");
 }
 
+template<typename F>
+class AggregateTraverserAdapter : public glslang::TIntermTraverser {
+    F closure;
+public:
+    explicit AggregateTraverserAdapter(F closure)
+            : TIntermTraverser(true, false, false, false),
+              closure(closure) { }
+
+    bool visitAggregate(glslang::TVisit visit, glslang::TIntermAggregate* node) override {
+        return closure(visit, node);
+    }
+};
+
+template<typename F>
+void traverseAggregate(TIntermNode* root, F&& closure) {
+    AggregateTraverserAdapter adapter(std::forward<std::decay_t<F>>(closure));
+    root->traverse(&adapter);
+}
+
 void GLSLTools::textureLodBias(TIntermediate* intermediate, TIntermNode* root,
         const char* entryPointSignatureish, const char* lodBiasSymbolName) noexcept {
 
@@ -561,7 +587,7 @@ void GLSLTools::textureLodBias(TIntermediate* intermediate, TIntermNode* root,
     const std::string functionName{ entryPointSignatureish };
     TIntermSymbol* pIntermSymbolLodBias = nullptr;
     TIntermNode* pEntryPointRoot = nullptr;
-    ASTHelpers::traverse(root,
+    traverseAggregate(root,
             [&](TVisit, TIntermAggregate* node) {
                 if (node->getOp() == glslang::EOpSequence) {
                     return true;
@@ -601,7 +627,7 @@ void GLSLTools::textureLodBias(TIntermediate* intermediate, TIntermNode* root,
 
     // add lod bias to texture calls
     // we need to run this only from the user's main entry point
-    ASTHelpers::traverse(pEntryPointRoot,
+    traverseAggregate(pEntryPointRoot,
             [&](TVisit, TIntermAggregate* node) {
                 // skip everything that's not a texture() call
                 if (node->getOp() != glslang::EOpTexture) {
@@ -638,6 +664,76 @@ void GLSLTools::textureLodBias(TIntermediate* intermediate, TIntermNode* root,
 
                 return false;
             });
+}
+
+bool GLSLTools::hasCustomDepth(TIntermNode* root, TIntermNode* entryPoint) {
+
+    class HasCustomDepth : public glslang::TIntermTraverser {
+        using TVisit = glslang::TVisit;
+        TIntermNode* const root;        // shader root
+        bool hasCustomDepth = false;
+
+    public:
+        bool operator()(TIntermNode* entryPoint) noexcept {
+            entryPoint->traverse(this);
+            return hasCustomDepth;
+        }
+
+        explicit HasCustomDepth(TIntermNode* root) : root(root) {}
+
+        bool visitAggregate(TVisit, TIntermAggregate* node) override {
+            if (node->getOp() == EOpFunctionCall) {
+                // we have a function call, "recurse" into it to see if we call discard or
+                // write to gl_FragDepth.
+
+                // find the entry point corresponding to that call
+                TIntermNode* const entryPoint =
+                        ASTHelpers::getFunctionBySignature(node->getName(), *root);
+
+                // this should never happen because the shader has already been validated
+                assert_invariant(entryPoint);
+
+                hasCustomDepth = hasCustomDepth || HasCustomDepth{ root }(entryPoint);
+
+                return !hasCustomDepth;
+            }
+            return true;
+        }
+
+        // this checks if we write gl_FragDepth
+        bool visitBinary(TVisit, glslang::TIntermBinary* node) override {
+            TOperator const op = node->getOp();
+            Symbol symbol;
+            if (op == EOpAssign ||
+                op == EOpAddAssign ||
+                op == EOpDivAssign ||
+                op == EOpSubAssign ||
+                op == EOpMulAssign) {
+                const TIntermTyped* n = findLValueBase(node->getLeft(), symbol);
+                if (n != nullptr && n->getAsSymbolNode() != nullptr) {
+                    const TString& symbolTString = n->getAsSymbolNode()->getName();
+                    if (symbolTString == "gl_FragDepth") {
+                        hasCustomDepth = true;
+                    }
+                    // Don't visit subtree since we just traced it with findLValueBase()
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // this check if we call `discard`
+        bool visitBranch(TVisit, glslang::TIntermBranch* branch) override {
+            if (branch->getFlowOp() == EOpKill) {
+                hasCustomDepth = true;
+                return false;
+            }
+            return true;
+        }
+
+    } hasCustomDepth(root);
+
+    return hasCustomDepth(entryPoint);
 }
 
 } // namespace filamat

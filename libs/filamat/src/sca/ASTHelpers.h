@@ -25,26 +25,6 @@ class TIntermNode;
 
 namespace ASTHelpers {
 
-template<typename F>
-class TraverserAdapter : public glslang::TIntermTraverser {
-    F closure;
-public:
-    explicit TraverserAdapter(F closure)
-            : TIntermTraverser(true, false, false, false),
-              closure(closure) {
-    }
-
-    bool visitAggregate(glslang::TVisit visit, glslang::TIntermAggregate* node) override {
-        return closure(visit, node);
-    }
-};
-
-template<typename F>
-void traverse(TIntermNode* root, F&& closure) {
-    TraverserAdapter adapter(std::forward<std::decay_t<F>>(closure));
-    root->traverse(&adapter);
-}
-
 class NodeToString : public glslang::TIntermTraverser {
     void pad();
 public:
