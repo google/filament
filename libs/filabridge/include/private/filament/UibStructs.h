@@ -134,7 +134,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float padding0;
     math::float4 lightColorIntensity;           // directional light
     math::float4 sun;                           // cos(sunAngle), sin(sunAngle), 1/(sunAngle*HALO_SIZE-sunAngle), HALO_EXP
-    math::float2 lightFarAttenuationParams;     // a, a/far (a=1/pct-of-far)
+    math::float2 shadowFarAttenuationParams;    // a, a/far (a=1/pct-of-far)
 
     // --------------------------------------------------------------------------------------------
     // Directional light shadowing [variant: SRE | DIR]
@@ -151,9 +151,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // bit 0-3: cascade count
     // bit 8-11: cascade has visible shadows
     int32_t cascades;
-    float reserved0;
-    float reserved1;                    // normal bias
     float shadowPenumbraRatioScale;     // For DPCF or PCSS, scale penumbra ratio for artistic use
+    math::float2 lightFarAttenuationParams;     // a, a/far (a=1/pct-of-far)
 
     // --------------------------------------------------------------------------------------------
     // VSM shadows [variant: VSM]

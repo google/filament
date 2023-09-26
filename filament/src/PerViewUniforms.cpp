@@ -288,6 +288,11 @@ void PerViewUniforms::prepareDirectionalLight(FEngine& engine,
     FLightManager const& lcm = engine.getLightManager();
     auto& s = mUniforms.edit();
 
+    float const shadowFar = lcm.getShadowFar(directionalLight);
+    // TODO: make the falloff rate a parameter
+    s.shadowFarAttenuationParams = shadowFar > 0.0f ?
+            0.5f * float2{ 10.0f, 10.0f / (shadowFar * shadowFar) } : float2{ 1.0f, 0.0f };
+
     const float3 l = -sceneSpaceDirection; // guaranteed normalized
 
     if (directionalLight.isValid()) {
@@ -324,7 +329,7 @@ void PerViewUniforms::prepareAmbientLight(FEngine& engine, FIndirectLight const&
     auto& s = mUniforms.edit();
 
     // Set up uniforms and sampler for the IBL, guaranteed to be non-null at this point.
-    float iblRoughnessOneLevel = ibl.getLevelCount() - 1.0f;
+    float const iblRoughnessOneLevel = ibl.getLevelCount() - 1.0f;
     s.iblRoughnessOneLevel = iblRoughnessOneLevel;
     s.iblLuminance = intensity * exposure;
     std::transform(ibl.getSH(), ibl.getSH() + 9, s.iblSH, [](float3 v) {
@@ -347,6 +352,7 @@ void PerViewUniforms::prepareDynamicLights(Froxelizer& froxelizer) noexcept {
     auto& s = mUniforms.edit();
     froxelizer.updateUniforms(s);
     float const f = froxelizer.getLightFar();
+    // TODO: make the falloff rate a parameter
     s.lightFarAttenuationParams = 0.5f * float2{ 10.0f, 10.0f / (f * f) };
 }
 
