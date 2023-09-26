@@ -88,8 +88,8 @@ void VulkanSwapChain::present() {
                 .layerCount = 1,
         };
         mColors[mCurrentSwapIndex]->transitionLayout(cmdbuf, subresources, VulkanLayout::PRESENT);
-        mCommands->flush();
     }
+    mCommands->flush();
     VkSemaphore const finishedDrawing = mCommands->acquireFinishedSignal();
     VkResult const result = mPlatform->present(swapChain, mCurrentSwapIndex, finishedDrawing);
     ASSERT_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR
