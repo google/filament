@@ -41,30 +41,30 @@ class MetalShaderCompiler {
 public:
     class MetalFunctionBundle {
     public:
-     MetalFunctionBundle() = default;
-     MetalFunctionBundle(id<MTLFunction> fragment, id<MTLFunction> vertex)
+        MetalFunctionBundle() = default;
+        MetalFunctionBundle(id<MTLFunction> fragment, id<MTLFunction> vertex)
             : functions{fragment, vertex} {
-        assert_invariant(fragment && vertex);
-        assert_invariant(fragment.functionType == MTLFunctionTypeFragment);
-        assert_invariant(vertex.functionType == MTLFunctionTypeVertex);
-    }
-    explicit MetalFunctionBundle(id<MTLFunction> compute) : functions{compute, nil} {
-        assert_invariant(compute);
-        assert_invariant(compute.functionType == MTLFunctionTypeKernel);
-    }
+            assert_invariant(fragment && vertex);
+            assert_invariant(fragment.functionType == MTLFunctionTypeFragment);
+            assert_invariant(vertex.functionType == MTLFunctionTypeVertex);
+        }
+        explicit MetalFunctionBundle(id<MTLFunction> compute) : functions{compute, nil} {
+            assert_invariant(compute);
+            assert_invariant(compute.functionType == MTLFunctionTypeKernel);
+        }
 
-    std::pair<id<MTLFunction>, id<MTLFunction>> getRasterFunctions() const noexcept {
-        assert_invariant(functions[0].functionType == MTLFunctionTypeFragment);
-        assert_invariant(functions[1].functionType == MTLFunctionTypeVertex);
-        return {functions[0], functions[1]};
-    }
+        std::pair<id<MTLFunction>, id<MTLFunction>> getRasterFunctions() const noexcept {
+            assert_invariant(functions[0].functionType == MTLFunctionTypeFragment);
+            assert_invariant(functions[1].functionType == MTLFunctionTypeVertex);
+            return {functions[0], functions[1]};
+        }
 
-    id<MTLFunction> getComputeFunction() const noexcept {
-        assert_invariant(functions[0].functionType == MTLFunctionTypeKernel);
-        return functions[0];
-    }
+        id<MTLFunction> getComputeFunction() const noexcept {
+            assert_invariant(functions[0].functionType == MTLFunctionTypeKernel);
+            return functions[0];
+        }
 
-    explicit operator bool() const { return functions[0] != nil; }
+        explicit operator bool() const { return functions[0] != nil; }
 
     private:
         // Can hold two functions, either:
@@ -97,7 +97,7 @@ public:
     void notifyWhenAllProgramsAreReady(
             CallbackHandler* handler, CallbackHandler::Callback callback, void* user);
 
-   private:
+private:
     static MetalFunctionBundle compileProgram(const Program& program, id<MTLDevice> device);
 
     CompilerThreadPool mCompilerThreadPool;
