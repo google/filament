@@ -218,7 +218,7 @@ bool operator<(const VkImageSubresourceRange& a, const VkImageSubresourceRange& 
     return false;
 }
 
-#if FILAMENT_VULKAN_VERBOSE
+#if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION | FVK_DEBUG_TEXTURE)
 #define CASE(VALUE)                                                                                \
     case filament::backend::VulkanLayout::VALUE: {                                                 \
         out << #VALUE;                                                                             \

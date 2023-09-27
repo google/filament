@@ -12,10 +12,6 @@ material {
             precision: medium
         },
         {
-            type : int,
-            name : mip
-        },
-        {
             type : float,
             name : weightScale
         },
@@ -65,19 +61,18 @@ void postProcess(inout PostProcessInputs postProcess) {
 
     // the bilateral weights need to be scaled by to match the lower resolution
     float weightScale = materialParams.weightScale;
-    float mip = float(materialParams.mip);
 
-    vec4 s01 = textureLodOffset(materialParams_color, uv, mip, ivec2(0, 1));
-    vec4 s11 = textureLodOffset(materialParams_color, uv, mip, ivec2(1, 1));
-    vec4 s10 = textureLodOffset(materialParams_color, uv, mip, ivec2(1, 0));
-    vec4 s00 = textureLodOffset(materialParams_color, uv, mip, ivec2(0, 0));
+    vec4 s01 = textureLodOffset(materialParams_color, uv, 0.0, ivec2(0, 1));
+    vec4 s11 = textureLodOffset(materialParams_color, uv, 0.0, ivec2(1, 1));
+    vec4 s10 = textureLodOffset(materialParams_color, uv, 0.0, ivec2(1, 0));
+    vec4 s00 = textureLodOffset(materialParams_color, uv, 0.0, ivec2(0, 0));
 
     // fetch the 4 corresponding CoC (textureGather with LOD doesn't exist)
     vec4 c;
-    c[0] = textureLodOffset(materialParams_coc, uv, mip, ivec2(0, 1)).r;
-    c[1] = textureLodOffset(materialParams_coc, uv, mip, ivec2(1, 1)).r;
-    c[2] = textureLodOffset(materialParams_coc, uv, mip, ivec2(1, 0)).r;
-    c[3] = textureLodOffset(materialParams_coc, uv, mip, ivec2(0, 0)).r;
+    c[0] = textureLodOffset(materialParams_coc, uv, 0.0, ivec2(0, 1)).r;
+    c[1] = textureLodOffset(materialParams_coc, uv, 0.0, ivec2(1, 1)).r;
+    c[2] = textureLodOffset(materialParams_coc, uv, 0.0, ivec2(1, 0)).r;
+    c[3] = textureLodOffset(materialParams_coc, uv, 0.0, ivec2(0, 0)).r;
 
     float outCoc = downsampleCoC(c);
     vec4 w = downsampleCocWeights(c, outCoc, weightScale);

@@ -141,6 +141,17 @@ struct BloomOptions {
     bool enabled = false;                   //!< enable or disable bloom
     float highlight = 1000.0f;              //!< limit highlights to this value before bloom [10, +inf]
 
+    /**
+     * Bloom quality level.
+     * LOW (default): use a more optimized down-sampling filter, however there can be artifacts
+     *      with dynamic resolution, this can be alleviated by using the homogenous mode.
+     * MEDIUM: Good balance between quality and performance.
+     * HIGH: In this mode the bloom resolution is automatically increased to avoid artifacts.
+     *      This mode can be significantly slower on mobile, especially at high resolution.
+     *      This mode greatly improves the anamorphic bloom.
+     */
+    QualityLevel quality = QualityLevel::LOW;
+
     bool lensFlare = false;                 //!< enable screen-space lens flare
     bool starburst = true;                  //!< enable starburst effect on lens flare
     float chromaticAberration = 0.005f;     //!< amount of chromatic aberration

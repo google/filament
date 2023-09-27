@@ -343,8 +343,9 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
         // For directional lights, we further constraint the light frustum to the
         // intersection of the shadow casters & shadow receivers in light-space.
         // ** This relies on the 1-texel shadow map border **
+
         if (engine.debug.shadowmap.focus_shadowcasters) {
-            intersectWithShadowCasters(lsLightFrustumBounds, WLMpMv, wsShadowCastersVolume);
+            intersectWithShadowCasters(&lsLightFrustumBounds, WLMpMv, wsShadowCastersVolume);
         }
         if (UTILS_UNLIKELY((lsLightFrustumBounds.min.x >= lsLightFrustumBounds.max.x) ||
                            (lsLightFrustumBounds.min.y >= lsLightFrustumBounds.max.y))) {
@@ -356,8 +357,8 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
         assert_invariant(lsLightFrustumBounds.min.x < lsLightFrustumBounds.max.x);
         assert_invariant(lsLightFrustumBounds.min.y < lsLightFrustumBounds.max.y);
 
-        s = 2.0f / float2(bounds.max.xy - bounds.min.xy);
-        o = float2(bounds.max.xy + bounds.min.xy) * 0.5f;
+        s = 2.0f / float2(lsLightFrustumBounds.max.xy - lsLightFrustumBounds.min.xy);
+        o = float2(lsLightFrustumBounds.max.xy + lsLightFrustumBounds.min.xy) * 0.5f;
 
         // TODO: we could quantize `s` here to give some stability when lispsm is disabled,
         //       however, the quantization paramater should probably be user settable.
@@ -767,20 +768,12 @@ Aabb ShadowMap::compute2DBounds(const mat4f& lightView,
     return bounds;
 }
 
-Aabb ShadowMap::compute2DBounds(const mat4f& lightView, float4 const& sphere) noexcept {
-    // this assumes a rigid body transform
-    float4 s;
-    s.xyz = (lightView * float4{sphere.xyz, 1.0f}).xyz;
-    s.w = sphere.w;
-    return Aabb{s.xyz - s.w, s.xyz + s.w};
-}
-
-void ShadowMap::intersectWithShadowCasters(Aabb& UTILS_RESTRICT lightFrustum,
+void ShadowMap::intersectWithShadowCasters(Aabb* UTILS_RESTRICT lightFrustum,
         mat4f const& lightView, Aabb const& wsShadowCastersVolume) noexcept {
 
     // construct the Focus transform (scale + offset)
-    const float2 s = 2.0f / float2(lightFrustum.max.xy - lightFrustum.min.xy);
-    const float2 o =   -s * float2(lightFrustum.max.xy + lightFrustum.min.xy) * 0.5f;
+    const float2 s = 2.0f / float2(lightFrustum->max.xy - lightFrustum->min.xy);
+    const float2 o =   -s * float2(lightFrustum->max.xy + lightFrustum->min.xy) * 0.5f;
     const mat4f F(mat4f::row_major_init {
             s.x,  0.0f, 0.0f,    o.x,
             0.0f,  s.y, 0.0f,    o.y,
@@ -806,8 +799,8 @@ void ShadowMap::intersectWithShadowCasters(Aabb& UTILS_RESTRICT lightFrustum,
     Aabb const box = compute2DBounds(lightView, wsClippedShadowCasterVolumeVertices.data(), vertexCount);
 
     // intersect shadow-caster and current light frustum bounds
-    lightFrustum.min.xy = max(box.min.xy, lightFrustum.min.xy);
-    lightFrustum.max.xy = min(box.max.xy, lightFrustum.max.xy);
+    lightFrustum->min.xy = max(box.min.xy, lightFrustum->min.xy);
+    lightFrustum->max.xy = min(box.max.xy, lightFrustum->max.xy);
 }
 
 void ShadowMap::computeFrustumCorners(float3* UTILS_RESTRICT out,

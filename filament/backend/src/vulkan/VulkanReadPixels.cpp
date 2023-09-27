@@ -167,7 +167,7 @@ void VulkanReadPixels::run(VulkanRenderTarget const* srcTarget, uint32_t const x
     VkImage stagingImage;
     vkCreateImage(device, &imageInfo, VKALLOC, &stagingImage);
 
-#if FILAMENT_VULKAN_VERBOSE
+#if FVK_ENABLED(FVK_DEBUG_READ_PIXELS)
     utils::slog.d << "readPixels created image=" << stagingImage
                   << " to copy from image=" << srcTexture->getVkImage()
                   << " src-layout=" << srcTexture->getLayout(0, 0) << utils::io::endl;

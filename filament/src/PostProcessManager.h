@@ -292,6 +292,11 @@ private:
             FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
             BloomOptions& inoutBloomOptions, math::float2 scale) noexcept;
 
+    FrameGraphId<FrameGraphTexture> downscalePass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphTexture::Descriptor const& outDesc,
+            bool threshold, float highlight, bool fireflies) noexcept;
+
     void commitAndRender(FrameGraphResources::RenderPassInfo const& out,
             PostProcessMaterial const& material, uint8_t variant,
             backend::DriverApi& driver) const noexcept;

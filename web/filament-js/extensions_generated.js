@@ -26,6 +26,7 @@ Filament.loadGeneratedExtensions = function() {
             threshold: true,
             enabled: false,
             highlight: 1000.0,
+            quality: Filament.View$QualityLevel.LOW,
             lensFlare: false,
             starburst: true,
             chromaticAberration: 0.005,
