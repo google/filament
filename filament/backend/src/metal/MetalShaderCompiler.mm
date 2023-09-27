@@ -43,7 +43,7 @@ struct MetalShaderCompiler::MetalProgramToken : ProgramToken {
         cond.notify_one();
     }
 
-    MetalFunctionBundle get() noexcept {
+    MetalFunctionBundle get() const noexcept {
         std::unique_lock l(lock);
         cond.wait(l, [this](){ return signaled; });
         return program;
@@ -142,12 +142,11 @@ void MetalShaderCompiler::terminate() noexcept {
 
     static_assert(Program::SHADER_TYPE_COUNT == 3,
             "Only vertex, fragment, and/or compute shaders expected.");
-    UTILS_UNUSED_IN_RELEASE id<MTLFunction> vertexFunction = functions[0];
-    UTILS_UNUSED_IN_RELEASE id<MTLFunction> fragmentFunction = functions[1];
-    UTILS_UNUSED_IN_RELEASE id<MTLFunction> computeFunction = functions[2];
-    UTILS_UNUSED_IN_RELEASE const bool isRasterizationProgram =
-            vertexFunction != nil && fragmentFunction != nil;
-    UTILS_UNUSED_IN_RELEASE const bool isComputeProgram = computeFunction != nil;
+    id<MTLFunction> vertexFunction = functions[0];
+    id<MTLFunction> fragmentFunction = functions[1];
+    id<MTLFunction> computeFunction = functions[2];
+    const bool isRasterizationProgram = vertexFunction != nil && fragmentFunction != nil;
+    const bool isComputeProgram = computeFunction != nil;
     // The program must be either a rasterization program XOR a compute program.
     assert_invariant(isRasterizationProgram != isComputeProgram);
 
