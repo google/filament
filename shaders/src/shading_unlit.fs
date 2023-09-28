@@ -9,13 +9,6 @@ void addEmissive(const MaterialInputs material, inout vec4 color) {
 #endif
 }
 
-#if defined(BLEND_MODE_MASKED)
-float computeMaskedAlpha(float a) {
-    // Use derivatives to smooth alpha tested edges
-    return (a - getMaskThreshold()) / max(fwidth(a), 1e-3) + 0.5;
-}
-#endif
-
 /**
  * Evaluates unlit materials. In this lighting model, only the base color and
  * emissive properties are taken into account:
@@ -32,19 +25,6 @@ float computeMaskedAlpha(float a) {
  */
 vec4 evaluateMaterial(const MaterialInputs material) {
     vec4 color = material.baseColor;
-
-#if defined(BLEND_MODE_MASKED)
-    color.a = computeMaskedAlpha(color.a);
-    if (color.a <= 0.0) {
-        discard;
-    }
-
-    // Output 1.0 for translucent view to prevent "punch through" artifacts. We do not do this
-    // for opaque views to enable proper usage of ALPHA_TO_COVERAGE.
-    if (frameUniforms.needsAlphaChannel == 1.0) {
-        color.a = 1.0;
-    }
-#endif
 
 #if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
 #if defined(VARIANT_HAS_SHADOWING)
