@@ -1440,7 +1440,6 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
             srcTarget, x, y, width, height, mPlatform->getGraphicsQueueFamilyIndex(),
             std::move(pbd),
             [&context = mContext](uint32_t reqs, VkFlags flags) {
-                utils::slog.d <<"read pixels: reqs=" << reqs <<" flags=" << flags << utils::io::endl;
                 return context.selectMemoryType(reqs, flags);
             },
             [this](PixelBufferDescriptor&& pbd) {
