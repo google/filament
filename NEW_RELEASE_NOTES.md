@@ -14,3 +14,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - build: fix emscripten-1.3.46 build
 - engine: materials built for feature level 0 can now also be loaded in higher feature levels [⚠️
   **New Material Version**]
+- materials: fix alpha masked materials when MSAA is turned on [⚠️ **Recompile materials**]
