@@ -20,6 +20,19 @@ void blendPostLightingColor(const MaterialInputs material, inout vec4 color) {
 }
 #endif
 
+#if defined(BLEND_MODE_MASKED)
+void applyAlphaMask(inout vec4 baseColor) {
+    // Use derivatives to sharpen alpha tested edges, combined with alpha to
+    // coverage to smooth the result
+    baseColor.a = (baseColor.a - getMaskThreshold()) / max(fwidth(baseColor.a), 1e-3) + 0.5;
+    if (baseColor.a <= getMaskThreshold()) {
+        discard;
+    }
+}
+#else
+void applyAlphaMask(inout vec4 baseColor) {}
+#endif
+
 void main() {
     filament_lodBias = frameUniforms.lodBias;
 #if defined(FILAMENT_HAS_FEATURE_INSTANCING)
@@ -38,6 +51,8 @@ void main() {
 
     // Invoke user code
     material(inputs);
+
+    applyAlphaMask(inputs.baseColor);
 
     fragColor = evaluateMaterial(inputs);
 
