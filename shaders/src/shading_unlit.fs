@@ -9,6 +9,18 @@ void addEmissive(const MaterialInputs material, inout vec4 color) {
 #endif
 }
 
+vec4 fixupAlpha(vec4 color) {
+#if defined(BLEND_MODE_MASKED)
+    // If we reach this point in the code, we already know that the fragment is not discarded due
+    // to the threshold factor. Therefore we can just output 1.0, which prevents a "punch through"
+    // effect from occuring. We do this only for TRANSLUCENT views in order to prevent breakage
+    // of ALPHA_TO_COVERAGE.
+    return vec4(color.rgb, (frameUniforms.needsAlphaChannel == 1.0) ? 1.0 : color.a);
+#else
+    return color;
+#endif
+}
+
 /**
  * Evaluates unlit materials. In this lighting model, only the base color and
  * emissive properties are taken into account:
@@ -51,5 +63,5 @@ vec4 evaluateMaterial(const MaterialInputs material) {
 
     addEmissive(material, color);
 
-    return color;
+    return fixupAlpha(color);
 }
