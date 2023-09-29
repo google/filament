@@ -37,14 +37,64 @@ namespace filament::backend {
 class VulkanTimestamps;
 
 struct VulkanProgram : public HwProgram, VulkanResource {
+
     VulkanProgram(VkDevice device, const Program& builder) noexcept;
-    VulkanProgram(VkDevice device, VkShaderModule vs, VkShaderModule fs) noexcept;
+
+    struct CustomSamplerInfo {
+        uint8_t groupIndex;
+        uint8_t samplerIndex;
+        ShaderStageFlags flags;
+    };
+    using CustomSamplerInfoList = utils::FixedCapacityVector<CustomSamplerInfo>;
+
+    // We allow custom descriptor of the samplers within shaders.  This is needed if we want to use
+    // a program that exists only in the backend - for example, for shader-based bliting.
+    VulkanProgram(VkDevice device, VkShaderModule vs, VkShaderModule fs,
+            CustomSamplerInfoList const& samplerInfo) noexcept;
     ~VulkanProgram();
-    VulkanPipelineCache::ProgramBundle bundle;
-    Program::SamplerGroupInfo samplerGroupInfo;
+
+    inline VkShaderModule getVertexShader() const {
+        return mInfo->shaders[0];
+    }
+
+    inline VkShaderModule getFragmentShader() const { return mInfo->shaders[1]; }
+
+    inline VulkanPipelineCache::UsageFlags getUsage() const { return mInfo->usage; }
+
+    inline utils::FixedCapacityVector<uint16_t> const& getBindingToSamplerIndex() const {
+        return mInfo->bindingToSamplerIndex;
+    }
+
+    inline VkSpecializationInfo const& getSpecConstInfo() const {
+        return mInfo->specializationInfo;
+    }
 
 private:
-    VkDevice mDevice;
+    // TODO: handle compute shaders.
+    // The expected order of shaders - from frontend to backend - is vertex, fragment, compute.
+    static constexpr uint8_t MAX_SHADER_MODULES = 2;
+
+    struct PipelineInfo {
+        PipelineInfo(size_t specConstsCount) :
+            bindingToSamplerIndex(MAX_SAMPLER_COUNT, 0xffff),
+            specConsts(specConstsCount, VkSpecializationMapEntry{}),
+            specConstData(new char[specConstsCount * 4])
+        {}
+
+        // This bitset maps to each of the sampler in the sampler groups associated with this
+        // program, and whether each sampler is used in which shader (i.e. vert, frag, compute).
+        VulkanPipelineCache::UsageFlags usage;
+
+        // We store the samplerGroupIndex as the top 8-bit and the index within each group as the lower 8-bit.
+        utils::FixedCapacityVector<uint16_t> bindingToSamplerIndex;
+        VkShaderModule shaders[MAX_SHADER_MODULES] = {VK_NULL_HANDLE};
+        VkSpecializationInfo specializationInfo = {};
+        utils::FixedCapacityVector<VkSpecializationMapEntry> specConsts;
+        std::unique_ptr<char[]> specConstData;
+    };
+
+    PipelineInfo* mInfo;
+    VkDevice mDevice = VK_NULL_HANDLE;
 };
 
 // The render target bundles together a set of attachments, each of which can have one of the
