@@ -9,12 +9,17 @@ void addEmissive(const MaterialInputs material, inout vec4 color) {
 #endif
 }
 
+vec4 fixupAlpha(vec4 color) {
 #if defined(BLEND_MODE_MASKED)
-float computeMaskedAlpha(float a) {
-    // Use derivatives to smooth alpha tested edges
-    return (a - getMaskThreshold()) / max(fwidth(a), 1e-3) + 0.5;
-}
+    // If we reach this point in the code, we already know that the fragment is not discarded due
+    // to the threshold factor. Therefore we can just output 1.0, which prevents a "punch through"
+    // effect from occuring. We do this only for TRANSLUCENT views in order to prevent breakage
+    // of ALPHA_TO_COVERAGE.
+    return vec4(color.rgb, (frameUniforms.needsAlphaChannel == 1.0) ? 1.0 : color.a);
+#else
+    return color;
 #endif
+}
 
 /**
  * Evaluates unlit materials. In this lighting model, only the base color and
@@ -33,19 +38,6 @@ float computeMaskedAlpha(float a) {
 vec4 evaluateMaterial(const MaterialInputs material) {
     vec4 color = material.baseColor;
 
-#if defined(BLEND_MODE_MASKED)
-    color.a = computeMaskedAlpha(color.a);
-    if (color.a <= 0.0) {
-        discard;
-    }
-
-    // Output 1.0 for translucent view to prevent "punch through" artifacts. We do not do this
-    // for opaque views to enable proper usage of ALPHA_TO_COVERAGE.
-    if (frameUniforms.needsAlphaChannel == 1.0) {
-        color.a = 1.0;
-    }
-#endif
-
 #if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
 #if defined(VARIANT_HAS_SHADOWING)
     float visibility = 1.0;
@@ -55,6 +47,12 @@ vec4 evaluateMaterial(const MaterialInputs material) {
     if (hasDirectionalShadows && cascadeHasVisibleShadows) {
         highp vec4 shadowPosition = getShadowPosition(cascade);
         visibility = shadow(true, light_shadowMap, cascade, shadowPosition, 0.0);
+        // shadow far attenuation
+        highp vec3 v = getWorldPosition() - getWorldCameraPosition();
+        // (viewFromWorld * v).z == dot(transpose(viewFromWorld), v)
+        highp float z = dot(transpose(getViewFromWorldMatrix())[2].xyz, v);
+        highp vec2 p = frameUniforms.shadowFarAttenuationParams;
+        visibility = 1.0 - ((1.0 - visibility) * saturate(p.x - z * z * p.y));
     }
     if ((frameUniforms.directionalShadows & 0x2) != 0 && visibility > 0.0) {
         if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0) {
@@ -71,5 +69,5 @@ vec4 evaluateMaterial(const MaterialInputs material) {
 
     addEmissive(material, color);
 
-    return color;
+    return fixupAlpha(color);
 }

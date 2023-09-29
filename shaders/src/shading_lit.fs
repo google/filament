@@ -3,11 +3,6 @@
 //------------------------------------------------------------------------------
 
 #if defined(BLEND_MODE_MASKED)
-float computeMaskedAlpha(float a) {
-    // Use derivatives to smooth alpha tested edges
-    return (a - getMaskThreshold()) / max(fwidth(a), 1e-3) + 0.5;
-}
-
 float computeDiffuseAlpha(float a) {
     // If we reach this point in the code, we already know that the fragment is not discarded due
     // to the threshold factor. Therefore we can just output 1.0, which prevents a "punch through"
@@ -15,14 +10,6 @@ float computeDiffuseAlpha(float a) {
     // of ALPHA_TO_COVERAGE.
     return (frameUniforms.needsAlphaChannel == 1.0) ? 1.0 : a;
 }
-
-void applyAlphaMask(inout vec4 baseColor) {
-    baseColor.a = computeMaskedAlpha(baseColor.a);
-    if (baseColor.a <= 0.0) {
-        discard;
-    }
-}
-
 #else // not masked
 
 float computeDiffuseAlpha(float a) {
@@ -32,9 +19,6 @@ float computeDiffuseAlpha(float a) {
     return 1.0;
 #endif
 }
-
-void applyAlphaMask(inout vec4 baseColor) {}
-
 #endif
 
 #if defined(GEOMETRIC_SPECULAR_AA)
@@ -65,7 +49,6 @@ float normalFiltering(float perceptualRoughness, const vec3 worldNormal) {
 
 void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel) {
     vec4 baseColor = material.baseColor;
-    applyAlphaMask(baseColor);
 
 #if defined(BLEND_MODE_FADE) && !defined(SHADING_MODEL_UNLIT)
     // Since we work in premultiplied alpha mode, we need to un-premultiply

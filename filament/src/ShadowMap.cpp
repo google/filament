@@ -411,6 +411,7 @@ ShadowMap::DirectionalShadowBounds ShadowMap::computeDirectionalShadowBounds(
             engine.debug.shadowmap.focus_shadowcasters,
             engine.debug.shadowmap.far_uses_shadowcasters);
 
+    // handles NaNs
     if (UTILS_UNLIKELY(!((lsLightFrustumBounds.min.x < lsLightFrustumBounds.max.x) &&
                          (lsLightFrustumBounds.min.y < lsLightFrustumBounds.max.y)))) {
         return {};
@@ -463,7 +464,7 @@ ShadowMap::DirectionalShadowBounds ShadowMap::computeDirectionalShadowBounds(
     const float znear = 0.0f;
     const float zfar = lsLightFrustumBounds.max.z - lsLightFrustumBounds.min.z;
     // if znear >= zfar, it means we don't have any shadow caster in front of a shadow receiver
-    if (UTILS_UNLIKELY(znear >= zfar)) {
+    if (UTILS_UNLIKELY(!(znear < zfar))) { // handles NaNs
         return {};
     }
 
@@ -501,7 +502,7 @@ mat4f ShadowMap::applyLISPSM(mat4f& Wp,
     const float zn = std::max(camera.zn, znf[0]); // near plane distance from the eye
     const float zf = std::min(camera.zf, znf[1]); // far plane distance from the eye
 
-    // compute n and f, the near and far planes coordinates of Wp (warp space).
+    // Compute n and f, the near and far planes coordinates of Wp (warp space).
     // It's found by looking down the Y axis in light space (i.e. -Z axis of Wp,
     // i.e. the axis orthogonal to the light direction) and taking the min/max
     // of the shadow receivers' volume.
@@ -519,7 +520,7 @@ mat4f ShadowMap::applyLISPSM(mat4f& Wp,
     // see nopt1 below for an explanation about this test
     // sinLV is positive since it comes from a square-root
     constexpr float epsilon = 0.02f; // very roughly 1 degree
-    if (sinLV > epsilon && 3.0f * (dzn / (zf - zn)) < 2.0f) {
+    if (f > n && sinLV > epsilon && 3.0f * (dzn / (zf - zn)) < 2.0f) {
         // nopt is the optimal near plane distance of Wp (i.e. distance from P).
 
         // virtual near and far planes
@@ -529,7 +530,7 @@ mat4f ShadowMap::applyLISPSM(mat4f& Wp,
         // in the general case, nopt is computed as:
         const float nopt0 = (1.0f / sinLV) * (z0 + std::sqrt(vz0 * vz1));
 
-        // however, if dzn becomes too large, the max error doesn't happen in the depth range,
+        // However, if dzn becomes too large, the max error doesn't happen in the depth range,
         // and the equation below should be used instead. If dzn reaches 2/3 of the depth range
         // zf-zn, nopt becomes infinite, and we must revert to an ortho projection.
         const float nopt1 = dzn / (2.0f - 3.0f * (dzn / (zf - zn)));
@@ -543,7 +544,7 @@ mat4f ShadowMap::applyLISPSM(mat4f& Wp,
                 // x-axis. Doesn't seem to make a big difference in the end.
                 lsCameraPosition.x,
                 n - nopt,
-                // note: various papers suggest using the shadow receiver's center z coordinate in light
+                // Note: various papers suggest using the shadow receiver's center z coordinate in light
                 // space, i.e. to center "vertically" on the shadow receiver volume.
                 // e.g. (LMpMv * wsShadowReceiversVolume.center()).z
                 // However, simply using 0, guarantees to be centered on the light frustum, which itself

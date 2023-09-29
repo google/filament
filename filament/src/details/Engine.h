@@ -224,6 +224,22 @@ public:
         return mPlatform;
     }
 
+    backend::ShaderLanguage getShaderLanguage() const noexcept {
+        switch (mBackend) {
+            case Backend::DEFAULT:
+            case Backend::NOOP:
+            default:
+                return backend::ShaderLanguage::ESSL3;
+            case Backend::OPENGL:
+                return mActiveFeatureLevel == FeatureLevel::FEATURE_LEVEL_0
+                        ? backend::ShaderLanguage::ESSL1 : backend::ShaderLanguage::ESSL3;
+            case Backend::VULKAN:
+                return backend::ShaderLanguage::SPIRV;
+            case Backend::METAL:
+                return backend::ShaderLanguage::MSL;
+        }
+    }
+
     ResourceAllocator& getResourceAllocator() noexcept {
         assert_invariant(mResourceAllocator);
         return *mResourceAllocator;

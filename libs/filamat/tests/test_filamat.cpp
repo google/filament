@@ -17,18 +17,21 @@
 #include <gtest/gtest.h>
 
 #include "sca/ASTHelpers.h"
+#include "sca/GLSLTools.h"
 #include "shaders/ShaderGenerator.h"
 
 #include "MockIncluder.h"
 
 #include <filamat/Enums.h>
+#include <filamat/MaterialBuilder.h>
 
 #include <utils/JobSystem.h>
 
 #include <memory>
 
 using namespace utils;
-using namespace ASTUtils;
+using namespace ASTHelpers;
+using namespace filamat;
 using namespace filament::backend;
 
 static ::testing::AssertionResult PropertyListsMatch(const MaterialBuilder::PropertyList& expected,
@@ -72,7 +75,8 @@ std::string shaderWithAllProperties(JobSystem& jobSystem, ShaderStage type,
     return builder.peek(type, {
                     ShaderModel::MOBILE,
                     MaterialBuilder::TargetApi::OPENGL,
-                    MaterialBuilder::TargetLanguage::GLSL
+                    MaterialBuilder::TargetLanguage::GLSL,
+                    FeatureLevel::FEATURE_LEVEL_1,
             },
             allProperties);
 }
@@ -849,6 +853,58 @@ TEST_F(MaterialCompiler, ConstantParameterWrongType) {
         builder.constant("myFloatConstant", ConstantType::FLOAT, 10);
     }, utils::PostconditionPanic);
 #endif
+}
+
+TEST_F(MaterialCompiler, FeatureLevel0Sampler2D) {
+  std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = texture2D(materialParams_sampler, vec2(0.0, 0.0));
+        }
+    )");
+  filamat::MaterialBuilder builder;
+  builder.parameter("sampler", SamplerType::SAMPLER_2D);
+
+  builder.featureLevel(FeatureLevel::FEATURE_LEVEL_0);
+  builder.shading(filament::Shading::UNLIT);
+  builder.material(shaderCode.c_str());
+  filamat::Package result = builder.build(*jobSystem);
+  EXPECT_TRUE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, FeatureLevel0Sampler3D) {
+  std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = texture3D(materialParams_sampler, vec3(0.0, 0.0, 0.0));
+        }
+    )");
+  filamat::MaterialBuilder builder;
+  builder.parameter("sampler", SamplerType::SAMPLER_3D);
+
+  builder.featureLevel(FeatureLevel::FEATURE_LEVEL_0);
+  builder.shading(filament::Shading::UNLIT);
+  builder.material(shaderCode.c_str());
+  builder.printShaders(true);
+  filamat::Package result = builder.build(*jobSystem);
+  EXPECT_TRUE(result.isValid());
+}
+
+TEST_F(MaterialCompiler, FeatureLevel0Ess3CallFails) {
+  std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = texture(materialParams_sampler, vec3(0.0, 0.0));
+        }
+    )");
+  filamat::MaterialBuilder builder;
+  builder.parameter("sampler", SamplerType::SAMPLER_2D);
+
+  builder.featureLevel(FeatureLevel::FEATURE_LEVEL_0);
+  builder.shading(filament::Shading::UNLIT);
+  builder.material(shaderCode.c_str());
+  filamat::Package result = builder.build(*jobSystem);
+  EXPECT_FALSE(result.isValid());
 }
 
 int main(int argc, char** argv) {

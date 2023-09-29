@@ -1,6 +1,7 @@
 material {
     name : "Filament Default Material",
-    shadingModel : unlit
+    shadingModel : unlit,
+    featureLevel : 0
 }
 
 fragment {

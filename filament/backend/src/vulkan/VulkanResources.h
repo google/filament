@@ -17,7 +17,6 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANRESOURCES_H
 #define TNT_FILAMENT_BACKEND_VULKANRESOURCES_H
 
-#include <backend/DriverEnums.h>// For MAX_VERTEX_BUFFER_COUNT
 #include <backend/Handle.h>
 
 #include <tsl/robin_set.h>
@@ -156,13 +155,13 @@ namespace {
 
 // When the size of the resource set is known to be small, (for example for VulkanRenderPrimitive),
 // we just use a std::array to back the set.
+template<std::size_t SIZE>
 class FixedCapacityResourceSet {
 private:
-    constexpr static size_t const SIZE = MAX_VERTEX_BUFFER_COUNT;
     using FixedSizeArray = std::array<VulkanResource*, SIZE>;
 
 public:
-    using const_iterator = FixedSizeArray::const_iterator;
+    using const_iterator = typename FixedSizeArray::const_iterator;
 
     inline ~FixedCapacityResourceSet() {
         clear();
@@ -186,7 +185,7 @@ public:
     }
 
     inline const_iterator find(VulkanResource* resource) {
-        return std::find(mArray.begin(), mArray.end(), resource);
+        return std::find(begin(), end(), resource);
     }
 
     inline void insert(VulkanResource* resource) {
@@ -203,6 +202,10 @@ public:
             return;
         }
         mInd = 0;
+    }
+
+    inline size_t size() {
+        return mInd;
     }
 
 private:
@@ -272,14 +275,21 @@ public:
     }
 
     // Transfers ownership from one resource set to another
-    inline void acquire(VulkanResourceManagerImpl<ResourceType, SetType>* srcResources) {
+    template <typename tSetType>
+    inline void acquireAll(VulkanResourceManagerImpl<ResourceType, tSetType>* srcResources) {
+        copyAll(srcResources);
+        srcResources->clear();
+    }
+
+    // Transfers ownership from one resource set to another
+    template <typename tSetType>
+    inline void copyAll(VulkanResourceManagerImpl<ResourceType, tSetType>* srcResources) {
         LOCK_IF_NEEDED();
         for (auto iter = srcResources->mResources.begin(); iter != srcResources->mResources.end();
                 iter++) {
             acquire(*iter);
         }
         UNLOCK_IF_NEEDED();
-        srcResources->clear();
     }
 
     inline void release(ResourceType* resource) {
@@ -323,13 +333,18 @@ private:
     VulkanResourceAllocator* mAllocator;
     SetType mResources;
     std::unique_ptr<utils::Mutex> mMutex;
+
+    template <typename, typename> friend class VulkanResourceManagerImpl;
 };
 
 using VulkanAcquireOnlyResourceManager
         = VulkanResourceManagerImpl<VulkanResource, FastIterationResourceSet>;
 using VulkanResourceManager = VulkanResourceManagerImpl<VulkanResource, ResourceSet>;
-using FixedSizeVulkanResourceManager
-        = VulkanResourceManagerImpl<VulkanResource, FixedCapacityResourceSet>;
+
+template<std::size_t SIZE>
+using FixedSizeVulkanResourceManager =
+        VulkanResourceManagerImpl<VulkanResource, FixedCapacityResourceSet<SIZE>>;
+
 using VulkanThreadSafeResourceManager
         = VulkanResourceManagerImpl<VulkanThreadSafeResource, ThreadSafeResourceSet>;
 

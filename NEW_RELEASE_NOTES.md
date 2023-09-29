@@ -7,8 +7,6 @@ for next branch cut* header.
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
-
-- engine: add support for skinning with more than four bones per vertex.
-- engine: remove `BloomOptions::anamorphism` which wasn't working well in most cases [**API CHANGE**] 
-- engine: new API to return a Material's supported variants, C++ only (b/297456590)
-- build: fix emscripten-1.3.46 build
+- materials: fix alpha masked materials when MSAA is turned on [⚠️ **Recompile materials**]
+- materials: better support materials with custom depth [**Recompile Materials**]
+- engine: fade shadows at shadowFar distance instead of hard cutoff [⚠️ **New Material Version**]
