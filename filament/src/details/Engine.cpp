@@ -322,16 +322,21 @@ void FEngine::init() {
     driverApi.update3DImage(mDummyZeroTexture, 0, 0, 0, 0, 1, 1, 1,
             { zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
 
-    FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
-    defaultMaterialBuilder.package(
-        MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
-    mDefaultMaterial = downcast(defaultMaterialBuilder.build(*const_cast<FEngine*>(this)));
-
 #ifdef FILAMENT_TARGET_MOBILE
-    if (UTILS_LIKELY(mActiveFeatureLevel > FeatureLevel::FEATURE_LEVEL_0))
+    if (UTILS_UNLIKELY(mActiveFeatureLevel == FeatureLevel::FEATURE_LEVEL_0)) {
+        FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
+        defaultMaterialBuilder.package(
+                MATERIALS_DEFAULTMATERIAL0_DATA, MATERIALS_DEFAULTMATERIAL0_SIZE);
+        mDefaultMaterial = downcast(defaultMaterialBuilder.build(*const_cast<FEngine*>(this)));
+    } else
 #endif
     {
         mDefaultColorGrading = downcast(ColorGrading::Builder().build(*this));
+
+        FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
+        defaultMaterialBuilder.package(
+                MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
+        mDefaultMaterial = downcast(defaultMaterialBuilder.build(*const_cast<FEngine*>(this)));
 
         float3 dummyPositions[1] = {};
         short4 dummyTangents[1] = {};
