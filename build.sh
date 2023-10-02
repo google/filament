@@ -495,13 +495,13 @@ function build_android {
 
         if [[ "${INSTALL_COMMAND}" ]]; then
             echo "Installing out/filamat-android-debug.aar..."
-            cp filamat-android/build/outputs/aar/filamat-android-full-debug.aar ../out/filamat-android-debug.aar
+            cp filamat-android/build/outputs/aar/filamat-android-debug.aar ../out/filamat-android-debug.aar
 
             echo "Installing out/filament-android-debug.aar..."
             cp filament-android/build/outputs/aar/filament-android-debug.aar ../out/
 
             echo "Installing out/gltfio-android-debug.aar..."
-            cp gltfio-android/build/outputs/aar/gltfio-android-full-debug.aar ../out/gltfio-android-debug.aar
+            cp gltfio-android/build/outputs/aar/gltfio-android-debug.aar ../out/gltfio-android-debug.aar
 
             echo "Installing out/filament-utils-android-debug.aar..."
             cp filament-utils-android/build/outputs/aar/filament-utils-android-debug.aar ../out/filament-utils-android-debug.aar
@@ -544,13 +544,13 @@ function build_android {
 
         if [[ "${INSTALL_COMMAND}" ]]; then
             echo "Installing out/filamat-android-release.aar..."
-            cp filamat-android/build/outputs/aar/filamat-android-full-release.aar ../out/filamat-android-release.aar
+            cp filamat-android/build/outputs/aar/filamat-android-release.aar ../out/filamat-android-release.aar
 
             echo "Installing out/filament-android-release.aar..."
             cp filament-android/build/outputs/aar/filament-android-release.aar ../out/
 
             echo "Installing out/gltfio-android-release.aar..."
-            cp gltfio-android/build/outputs/aar/gltfio-android-full-release.aar ../out/gltfio-android-release.aar
+            cp gltfio-android/build/outputs/aar/gltfio-android-release.aar ../out/gltfio-android-release.aar
 
             echo "Installing out/filament-utils-android-release.aar..."
             cp filament-utils-android/build/outputs/aar/filament-utils-android-release.aar ../out/filament-utils-android-release.aar
