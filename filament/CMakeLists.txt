@@ -245,6 +245,11 @@ set(MATERIAL_SRCS
         src/materials/vsmMipmap.mat
 )
 
+set(MATERIAL_ES2_SRCS
+        src/materials/defaultMaterial0.mat
+        src/materials/skybox0.mat
+)
+
 # Embed the binary resource blob for materials.
 get_resgen_vars(${RESOURCE_DIR} materials)
 list(APPEND PRIVATE_HDRS ${RESGEN_HEADER})
@@ -309,6 +314,23 @@ foreach (mat_src ${MATERIAL_SRCS})
     )
     list(APPEND MATERIAL_BINS ${output_path})
 endforeach()
+
+if (IS_MOBILE_TARGET AND FILAMENT_SUPPORTS_OPENGL)
+    foreach (mat_src ${MATERIAL_ES2_SRCS})
+        get_filename_component(localname "${mat_src}" NAME_WE)
+        get_filename_component(fullname "${mat_src}" ABSOLUTE)
+        set(output_path "${MATERIAL_DIR}/${localname}.filamat")
+
+        add_custom_command(
+                OUTPUT ${output_path}
+                COMMAND matc -a opengl -p ${MATC_TARGET} ${MATC_OPT_FLAGS} -o ${output_path} ${fullname}
+                MAIN_DEPENDENCY ${fullname}
+                DEPENDS matc
+                COMMENT "Compiling material ${mat_src} to ${output_path}"
+        )
+        list(APPEND MATERIAL_BINS ${output_path})
+    endforeach ()
+endif ()
 
 # Additional dependencies on included files for materials
 
