@@ -232,6 +232,7 @@ public:
         backend::RasterState rasterState;                               // 4 bytes
         backend::Handle<backend::HwRenderPrimitive> primitiveHandle;    // 4 bytes
         backend::Handle<backend::HwBufferObject> skinningHandle;        // 4 bytes
+        backend::Handle<backend::HwSamplerGroup> skinningTexture;       // 4 bytes
         backend::Handle<backend::HwBufferObject> morphWeightBuffer;     // 4 bytes
         backend::Handle<backend::HwSamplerGroup> morphTargetBuffer;     // 4 bytes
         backend::Handle<backend::HwBufferObject> instanceBufferHandle;  // 4 bytes
@@ -239,7 +240,7 @@ public:
         uint32_t skinningOffset = 0;                                    // 4 bytes
         uint16_t instanceCount;                                         // 2 bytes [MSb: user]
         Variant materialVariant;                                        // 1 byte
-        uint8_t reserved[4] = {};                                       // 4 bytes
+//        uint8_t reserved[0] = {};                                       // 0 bytes
 
         static const uint16_t USER_INSTANCE_MASK = 0x8000u;
         static const uint16_t INSTANCE_COUNT_MASK = 0x7fffu;

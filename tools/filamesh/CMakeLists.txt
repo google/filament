@@ -16,10 +16,7 @@ set(SRCS
 # ==================================================================================================
 add_executable(${TARGET} ${SRCS})
 
-target_link_libraries(${TARGET} PUBLIC math)
-target_link_libraries(${TARGET} PUBLIC utils)
-target_link_libraries(${TARGET} PUBLIC assimp)
-target_link_libraries(${TARGET} PRIVATE getopt filameshio meshoptimizer)
+target_link_libraries(${TARGET} PRIVATE assimp getopt filameshio meshoptimizer)
 set_target_properties(${TARGET} PROPERTIES FOLDER Tools)
 
 # ==================================================================================================

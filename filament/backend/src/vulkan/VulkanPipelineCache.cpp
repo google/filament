@@ -580,14 +580,21 @@ void VulkanPipelineCache::bindPrimitiveTopology(VkPrimitiveTopology topology) no
     mPipelineRequirements.topology = topology;
 }
 
-void VulkanPipelineCache::bindVertexArray(const VertexArray& varray) noexcept {
+void VulkanPipelineCache::bindVertexArray(VkVertexInputAttributeDescription const* attribDesc,
+        VkVertexInputBindingDescription const* bufferDesc, uint8_t count) {
     for (size_t i = 0; i < VERTEX_ATTRIBUTE_COUNT; i++) {
-        mPipelineRequirements.vertexAttributes[i] = varray.attributes[i];
-        mPipelineRequirements.vertexBuffers[i] = varray.buffers[i];
+        if (i < count) {
+            mPipelineRequirements.vertexAttributes[i] = attribDesc[i];
+            mPipelineRequirements.vertexBuffers[i] = bufferDesc[i];
+        } else {
+            mPipelineRequirements.vertexAttributes[i] = {};
+            mPipelineRequirements.vertexBuffers[i] = {};
+        }
     }
 }
 
-VulkanPipelineCache::UniformBufferBinding VulkanPipelineCache::getUniformBufferBinding(uint32_t bindingIndex) const noexcept {
+VulkanPipelineCache::UniformBufferBinding VulkanPipelineCache::getUniformBufferBinding(
+        uint32_t bindingIndex) const noexcept {
     auto& key = mDescriptorRequirements;
     return {
         key.uniformBuffers[bindingIndex],

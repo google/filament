@@ -13,7 +13,7 @@ set(SRCS
 # Target definitions
 # ==================================================================================================
 add_executable(${TARGET} ${SRCS})
-target_link_libraries(${TARGET} PRIVATE utils getopt uberzlib)
+target_link_libraries(${TARGET} PRIVATE getopt uberzlib)
 set_target_properties(${TARGET} PROPERTIES FOLDER Tools)
 
 # =================================================================================================

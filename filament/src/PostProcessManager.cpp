@@ -482,23 +482,20 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> history;
     };
 
-    mat4f historyProjection;
-    FrameGraphId<FrameGraphTexture> history;
-
-    FrameHistoryEntry const& entry = frameHistory[0];
-    if (entry.ssr.color.handle) {
-        // the first time around we may not have a history buffer
-        history = fg.import("SSR history", entry.ssr.desc,
-                FrameGraphTexture::Usage::SAMPLEABLE, entry.ssr.color);
-        historyProjection = entry.ssr.projection;
+    auto const& previous = frameHistory.getPrevious().ssr;
+    if (!previous.color.handle) {
+        return {};
     }
 
+    FrameGraphId<FrameGraphTexture> history = fg.import("SSR history", previous.desc,
+            FrameGraphTexture::Usage::SAMPLEABLE, previous.color);
+    mat4 const& historyProjection = previous.projection;
     auto const& uvFromClipMatrix = mEngine.getUvFromClipMatrix();
 
     auto& ssrPass = fg.addPass<SSRPassData>("SSR Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
 
-                // create our reflection buffer. We need an alpha channel, so we have to use RGBA16F
+                // Create our reflection buffer. We need an alpha channel, so we have to use RGBA16F
                 data.reflections = builder.createTexture("Reflections Texture", {
                         .width = desc.width, .height = desc.height,
                         .format = TextureFormat::RGBA16F });
@@ -537,8 +534,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
 
                 // set screen-space reflections and screen-space refractions
                 mat4f const uvFromViewMatrix = uvFromClipMatrix * projection;
-                mat4f const reprojection = mat4f{ uvFromClipMatrix * historyProjection
-                        * inverse(userViewMatrix) };
+                mat4f const reprojection = uvFromClipMatrix *
+                        mat4f{ historyProjection * inverse(userViewMatrix) };
 
                 // the history sampler is a regular texture2D
                 TextureHandle const history = data.history ?
@@ -1921,16 +1918,6 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
     float bloomHeight = float(inoutBloomOptions.resolution);
     float bloomWidth  = bloomHeight * aspect;
 
-    // Anamorphic bloom by always scaling down one of the dimension -- we do this (as opposed
-    // to scaling up) so that the amount of blooming doesn't decrease. However, the resolution
-    // decreases, meaning that the user might need to adjust the BloomOptions::resolution and
-    // BloomOptions::levels.
-    if (inoutBloomOptions.anamorphism >= 1.0f) {
-        bloomWidth *= 1.0f / inoutBloomOptions.anamorphism;
-    } else {
-        bloomHeight *= inoutBloomOptions.anamorphism;
-    }
-
     // we might need to adjust the max # of levels
     const uint32_t major = uint32_t(std::max(bloomWidth,  bloomHeight));
     const uint8_t maxLevels = FTexture::maxLevelCount(major);
@@ -2503,7 +2490,7 @@ void PostProcessManager::prepareTaa(FrameGraph& fg, filament::Viewport const& sv
     auto& current = frameHistory.getCurrent().*pTaa;
 
     // compute projection
-    current.projection = mat4f{ inoutCameraInfo->projection * inoutCameraInfo->getUserViewMatrix() };
+    current.projection = inoutCameraInfo->projection * inoutCameraInfo->getUserViewMatrix();
     current.frameId = previous.frameId + 1;
 
     // sample position within a pixel [-0.5, 0.5]
@@ -2537,17 +2524,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
     auto const& previous = frameHistory.getPrevious().*pTaa;
     auto& current = frameHistory.getCurrent().*pTaa;
 
-    FrameGraphId<FrameGraphTexture> colorHistory;
-    mat4f historyProjection;
-    if (UTILS_UNLIKELY(!previous.color.handle)) {
-        // if we don't have a history yet, just use the current color buffer as history
-        colorHistory = input;
-        historyProjection = current.projection;
-    } else {
+    // if we don't have a history yet, just use the current color buffer as history
+    FrameGraphId<FrameGraphTexture> colorHistory = input;
+    if (UTILS_LIKELY(previous.color.handle)) {
         colorHistory = fg.import("TAA history", previous.desc,
                 FrameGraphTexture::Usage::SAMPLEABLE, previous.color);
-        historyProjection = previous.projection;
     }
+
+    mat4 const& historyProjection = previous.color.handle ?
+            previous.projection : current.projection;
 
     struct TAAData {
         FrameGraphId<FrameGraphTexture> color;
@@ -2627,8 +2612,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 });
                 mi->setParameter("filterWeights",  weights, 9);
                 mi->setParameter("reprojection",
-                        historyProjection *
-                        inverse(current.projection) *
+                        mat4f{ historyProjection * inverse(current.projection) } *
                         normalizedToClip);
 
                 mi->commit(driver);

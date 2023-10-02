@@ -151,6 +151,7 @@ public:
     struct SkinningBindingInfo {
         backend::Handle<backend::HwBufferObject> handle;
         uint32_t offset;
+        backend::Handle<backend::HwSamplerGroup> handleSampler;
     };
 
     inline SkinningBindingInfo getSkinningBufferInfo(Instance instance) const noexcept;
@@ -208,8 +209,10 @@ private:
         uint16_t count = 0;
         uint16_t offset = 0;
         bool skinningBufferMode = false;
+        backend::Handle<backend::HwSamplerGroup> handleSamplerGroup;
+        backend::Handle<backend::HwTexture> handleTexture;
     };
-    static_assert(sizeof(Bones) == 12);
+    static_assert(sizeof(Bones) == 20);
 
     struct MorphWeights {
         backend::Handle<backend::HwBufferObject> handle;
@@ -410,7 +413,7 @@ Box const& FRenderableManager::getAABB(Instance instance) const noexcept {
 FRenderableManager::SkinningBindingInfo
 FRenderableManager::getSkinningBufferInfo(Instance instance) const noexcept {
     Bones const& bones = mManager[instance].bones;
-    return { bones.handle, bones.offset };
+    return { bones.handle, bones.offset, bones.handleSamplerGroup };
 }
 
 inline uint32_t FRenderableManager::getBoneCount(Instance instance) const noexcept {

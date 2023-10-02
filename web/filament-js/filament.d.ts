@@ -1207,8 +1207,6 @@ export enum View$BloomOptions$BlendMode {
  * blendMode:   Whether the bloom effect is purely additive (false) or mixed with the original
  *              image (true).
  *
- * anamorphism: Bloom's aspect ratio (x/y), for artistic purposes.
- *
  * threshold:   When enabled, a threshold at 1.0 is applied on the source image, this is
  *              useful for artistic reasons and is usually needed when a dirt texture is used.
  *
@@ -1229,10 +1227,6 @@ export interface View$BloomOptions {
      * resolution of vertical axis (2^levels to 2048)
      */
     resolution?: number;
-    /**
-     * bloom x/y aspect-ratio (1/32 to 32)
-     */
-    anamorphism?: number;
     /**
      * number of blur levels (1 to 11)
      */

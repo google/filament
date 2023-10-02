@@ -139,6 +139,17 @@ static constexpr const char* backendToString(Backend backend) {
 }
 
 /**
+ * Defines the shader language. Similar to the above backend enum, but the OpenGL backend can select
+ * between two shader languages: ESSL 1.0 and ESSL 3.0.
+ */
+enum class ShaderLanguage {
+    ESSL1 = 0,
+    ESSL3 = 1,
+    SPIRV = 2,
+    MSL = 3,
+};
+
+/**
  * Bitmask for selecting render buffers
  */
 enum class TargetBufferFlags : uint32_t {

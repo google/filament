@@ -394,7 +394,7 @@ CameraInfo FView::computeCameraInfo(FEngine& engine) const noexcept {
 
     /*
      * We apply a "world origin" to "everything" in order to implement the IBL rotation.
-     * The "world origin" is also be used to kee the origin close to the camera position to
+     * The "world origin" is also used to keep the origin close to the camera position to
      * improve fp precision in the shader for large scenes.
      */
     mat4 translation;
@@ -1083,7 +1083,6 @@ void FView::setBloomOptions(BloomOptions options) noexcept {
     options.resolution = math::clamp(options.resolution, 2u, 2048u);
     options.levels = math::clamp(options.levels, uint8_t(1),
             FTexture::maxLevelCount(options.resolution));
-    options.anamorphism = math::clamp(options.anamorphism, 1.0f/32.0f, 32.0f);
     options.highlight = std::max(10.0f, options.highlight);
     mBloomOptions = options;
 }

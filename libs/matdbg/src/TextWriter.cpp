@@ -112,6 +112,7 @@ static bool printMaterial(ostream& text, const ChunkContainer& container) {
     text << "Shading:" << endl;
     printChunk<Shading, uint8_t>(text, container, MaterialShading, "Model: ");
     printChunk<MaterialDomain, uint8_t>(text, container, ChunkType::MaterialDomain, "Material domain: ");
+    printChunk<UserVariantFilterMask, uint32_t>(text, container, ChunkType::MaterialVariantFilterMask, "Material Variant Filter: ");
     printChunk<VertexDomain, uint8_t>(text, container, MaterialVertexDomain, "Vertex domain: ");
     printChunk<Interpolation, uint8_t>(text, container, MaterialInterpolation, "Interpolation: ");
     printChunk<bool, bool>(text, container, MaterialShadowMultiplier, "Shadow multiply: ");

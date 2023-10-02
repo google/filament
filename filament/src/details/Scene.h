@@ -92,7 +92,7 @@ public:
         RENDERABLE_INSTANCE,    //   4 | instance of the Renderable component
         WORLD_TRANSFORM,        //  16 | instance of the Transform component
         VISIBILITY_STATE,       //   2 | visibility data of the component
-        SKINNING_BUFFER,        //   8 | bones uniform buffer handle, offset
+        SKINNING_BUFFER,        //   8 | bones uniform buffer handle, offset, indices and weights
         MORPHING_BUFFER,        //  16 | weights uniform buffer handle, count, morph targets
         INSTANCES,              //  16 | instancing info for this Renderable
         WORLD_AABB_CENTER,      //  12 | world-space bounding box center of the renderable

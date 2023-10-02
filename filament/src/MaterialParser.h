@@ -48,7 +48,7 @@ struct MaterialConstant;
 
 class MaterialParser {
 public:
-    MaterialParser(backend::Backend backend, const void* data, size_t size);
+    MaterialParser(backend::ShaderLanguage language, const void* data, size_t size);
 
     MaterialParser(MaterialParser const& rhs) noexcept = delete;
     MaterialParser& operator=(MaterialParser const& rhs) noexcept = delete;
@@ -98,6 +98,7 @@ public:
     bool getInterpolation(Interpolation* value) const noexcept;
     bool getVertexDomain(VertexDomain* value) const noexcept;
     bool getMaterialDomain(MaterialDomain* domain) const noexcept;
+    bool getMaterialVariantFilterMask(UserVariantFilterMask* userVariantFilterMask) const noexcept;
 
     bool getShading(Shading*) const noexcept;
     bool getBlendingMode(BlendingMode*) const noexcept;
@@ -128,7 +129,7 @@ public:
 
 private:
     struct MaterialParserDetails {
-        MaterialParserDetails(backend::Backend backend, const void* data, size_t size);
+        MaterialParserDetails(backend::ShaderLanguage language, const void* data, size_t size);
 
         template<typename T>
         bool getFromSimpleChunk(filamat::ChunkType type, T* value) const noexcept;

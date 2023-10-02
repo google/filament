@@ -761,6 +761,8 @@ int main(int argc, char** argv) {
                 ImGui::Checkbox("Camera at origin", debug.getPropertyAddress<bool>("d.view.camera_at_origin"));
                 ImGui::Checkbox("Far Origin", &app.originIsFarAway);
                 ImGui::SliderFloat("Origin", &app.originDistance, 0, 10000000);
+                ImGui::Checkbox("Far uses shadow casters", debug.getPropertyAddress<bool>("d.shadowmap.far_uses_shadowcasters"));
+                ImGui::Checkbox("Focus shadow casters", debug.getPropertyAddress<bool>("d.shadowmap.focus_shadowcasters"));
                 auto dataSource = debug.getDataSource("d.view.frame_info");
                 if (dataSource.data) {
                     ImGuiExt::PlotLinesSeries("FrameInfo", 6,

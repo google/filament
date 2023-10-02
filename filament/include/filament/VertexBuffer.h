@@ -143,6 +143,19 @@ public:
         Builder& normalized(VertexAttribute attribute, bool normalize = true) noexcept;
 
         /**
+         * Sets advanced skinning mode. Bone data, indices and weights will be
+         * set in RenderableManager:Builder:boneIndicesAndWeights methods.
+         * Works with or without buffer objects.
+         *
+         * @param enabled If true, enables advanced skinning mode. False by default.
+         *
+         * @return A reference to this Builder for chaining calls.
+         *
+         * @see RenderableManager:Builder:boneIndicesAndWeights
+         */
+        Builder& advancedSkinning(bool enabled) noexcept;
+
+        /**
          * Creates the VertexBuffer object and returns a pointer to it.
          *
          * @param engine Reference to the filament::Engine to associate this VertexBuffer with.

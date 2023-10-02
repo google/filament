@@ -17,6 +17,8 @@
 // Operators +, *, / based on http://half.sourceforge.net/ by Christian Rau
 // and licensed under MIT
 
+@file:Suppress("NOTHING_TO_INLINE")
+
 package com.google.android.filament.utils
 
 import com.google.android.filament.utils.Half.Companion.POSITIVE_INFINITY

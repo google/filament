@@ -37,7 +37,7 @@ using namespace filament::backend;
 using namespace utils;
 
 void ShaderGenerator::generateSurfaceMaterialVariantDefines(utils::io::sstream& out,
-        ShaderStage stage,
+        ShaderStage stage, MaterialBuilder::FeatureLevel featureLevel,
         MaterialInfo const& material, filament::Variant variant) noexcept {
 
     bool const litVariants = material.isLit || material.hasShadowMultiplier;
@@ -71,8 +71,7 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(utils::io::sstream& 
     }
 
     out << '\n';
-    CodeGenerator::generateDefine(out, "MATERIAL_FEATURE_LEVEL",
-            uint32_t(material.featureLevel));
+    CodeGenerator::generateDefine(out, "MATERIAL_FEATURE_LEVEL", uint32_t(featureLevel));
 
     CodeGenerator::generateDefine(out, "MATERIAL_HAS_SHADOW_MULTIPLIER",
             material.hasShadowMultiplier);
@@ -354,6 +353,7 @@ void ShaderGenerator::fixupExternalSamplers(ShaderModel sm,
 
 std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+        MaterialBuilder::FeatureLevel featureLevel,
         MaterialInfo const& material, const filament::Variant variant, Interpolation interpolation,
         VertexDomain vertexDomain) const noexcept {
 
@@ -361,13 +361,14 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
     assert_invariant(mMaterialDomain != MaterialBuilder::MaterialDomain::COMPUTE);
 
     if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
-        return createPostProcessVertexProgram(shaderModel, targetApi,
-                targetLanguage, material, variant.key);
+        return createPostProcessVertexProgram(
+                shaderModel, targetApi,
+                targetLanguage, featureLevel, material, variant.key);
     }
 
     io::sstream vs;
 
-    const CodeGenerator cg(shaderModel, targetApi, targetLanguage, material.featureLevel);
+    const CodeGenerator cg(shaderModel, targetApi, targetLanguage, featureLevel);
 
     cg.generateProlog(vs, ShaderStage::VERTEX, material, variant);
 
@@ -390,7 +391,7 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
     CodeGenerator::generateDefine(vs, "USE_OPTIMIZED_DEPTH_VERTEX_SHADER",
             useOptimizedDepthVertexShader);
 
-    generateSurfaceMaterialVariantDefines(vs, ShaderStage::VERTEX, material, variant);
+    generateSurfaceMaterialVariantDefines(vs, ShaderStage::VERTEX, featureLevel, material, variant);
 
     generateSurfaceMaterialVariantProperties(vs, mProperties, mDefines);
 
@@ -439,7 +440,9 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
         cg.generateUniforms(vs, ShaderStage::VERTEX,
                 UniformBindingPoints::PER_RENDERABLE_BONES,
                 UibGenerator::getPerRenderableBonesUib());
-
+        cg.generateSamplers(vs, SamplerBindingPoints::PER_RENDERABLE_SKINNING,
+                material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_RENDERABLE_SKINNING),
+                SibGenerator::getPerRenderPrimitiveBonesSib(variant));
         cg.generateUniforms(vs, ShaderStage::VERTEX,
                 UniformBindingPoints::PER_RENDERABLE_MORPHING,
                 UibGenerator::getPerRenderableMorphingUib());
@@ -475,6 +478,7 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
 
 std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+        MaterialBuilder::FeatureLevel featureLevel,
         MaterialInfo const& material, const filament::Variant variant,
         Interpolation interpolation) const noexcept {
 
@@ -482,18 +486,19 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     assert_invariant(mMaterialDomain != MaterialBuilder::MaterialDomain::COMPUTE);
 
     if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
-        return createPostProcessFragmentProgram(shaderModel, targetApi, targetLanguage, material,
-                variant.key);
+        return createPostProcessFragmentProgram(shaderModel, targetApi, targetLanguage,
+                                                featureLevel, material, variant.key);
     }
 
-    const CodeGenerator cg(shaderModel, targetApi, targetLanguage, material.featureLevel);
+    const CodeGenerator cg(shaderModel, targetApi, targetLanguage, featureLevel);
 
     io::sstream fs;
     cg.generateProlog(fs, ShaderStage::FRAGMENT, material, variant);
 
     generateUserSpecConstants(cg, fs, mConstants);
 
-    generateSurfaceMaterialVariantDefines(fs, ShaderStage::FRAGMENT, material, variant);
+    generateSurfaceMaterialVariantDefines(
+            fs, ShaderStage::FRAGMENT, featureLevel, material, variant);
 
     auto defaultSpecularAO = shaderModel == ShaderModel::MOBILE ?
                              SpecularAmbientOcclusion::NONE : SpecularAmbientOcclusion::SIMPLE;
@@ -548,7 +553,7 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
 
     CodeGenerator::generateSeparator(fs);
 
-    if (material.featureLevel >= FeatureLevel::FEATURE_LEVEL_1) { // FIXME: generate only what we need
+    if (featureLevel >= FeatureLevel::FEATURE_LEVEL_1) { // FIXME: generate only what we need
         cg.generateSamplers(fs, SamplerBindingPoints::PER_VIEW,
                 material.samplerBindings.getBlockOffset(SamplerBindingPoints::PER_VIEW),
                 SibGenerator::getPerViewSib(variant));
@@ -602,10 +607,11 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
 
 std::string ShaderGenerator::createComputeProgram(filament::backend::ShaderModel shaderModel,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+        MaterialBuilder::FeatureLevel featureLevel,
         MaterialInfo const& material) const noexcept {
     assert_invariant(mMaterialDomain == MaterialBuilder::MaterialDomain::COMPUTE);
-    assert_invariant(material.featureLevel >= FeatureLevel::FEATURE_LEVEL_2);
-    const CodeGenerator cg(shaderModel, targetApi, targetLanguage, material.featureLevel);
+    assert_invariant(featureLevel >= FeatureLevel::FEATURE_LEVEL_2);
+    const CodeGenerator cg(shaderModel, targetApi, targetLanguage, featureLevel);
     io::sstream s;
 
     cg.generateProlog(s, ShaderStage::COMPUTE, material, {});
@@ -643,8 +649,9 @@ std::string ShaderGenerator::createComputeProgram(filament::backend::ShaderModel
 
 std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel sm,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+        MaterialBuilder::FeatureLevel featureLevel,
         MaterialInfo const& material, const filament::Variant::type_t variantKey) const noexcept {
-    const CodeGenerator cg(sm, targetApi, targetLanguage, material.featureLevel);
+    const CodeGenerator cg(sm, targetApi, targetLanguage, featureLevel);
     io::sstream vs;
     cg.generateProlog(vs, ShaderStage::VERTEX, material, {});
 
@@ -684,8 +691,9 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel sm,
 
 std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
+        MaterialBuilder::FeatureLevel featureLevel,
         MaterialInfo const& material, uint8_t variant) const noexcept {
-    const CodeGenerator cg(sm, targetApi, targetLanguage, material.featureLevel);
+    const CodeGenerator cg(sm, targetApi, targetLanguage, featureLevel);
     io::sstream fs;
     cg.generateProlog(fs, ShaderStage::FRAGMENT, material, {});
 

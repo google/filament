@@ -30,6 +30,7 @@
 #include "private/backend/SamplerGroup.h"
 
 #include <utils/Mutex.h>
+#include <utils/StructureOfArrays.h>
 
 namespace filament::backend {
 
@@ -94,11 +95,50 @@ struct VulkanVertexBuffer : public HwVertexBuffer, VulkanResource {
             VulkanResourceAllocator* allocator, uint8_t bufferCount, uint8_t attributeCount,
             uint32_t elementCount, AttributeArray const& attributes);
 
+    ~VulkanVertexBuffer();
+
     void setBuffer(VulkanBufferObject* bufferObject, uint32_t index);
 
-    utils::FixedCapacityVector<VulkanBuffer const*> buffers;
+    inline VkVertexInputAttributeDescription const* getAttribDescriptions() {
+        return mInfo->mSoa.data<PipelineInfo::ATTRIBUTE_DESCRIPTION>();
+    }
+
+    inline VkVertexInputBindingDescription const* getBufferDescriptions() {
+        return mInfo->mSoa.data<PipelineInfo::BUFFER_DESCRIPTION>();
+    }
+
+    inline VkBuffer const* getVkBuffers() const {
+        return mInfo->mSoa.data<PipelineInfo::VK_BUFFER>();
+    }
+
+    inline VkDeviceSize const* getOffsets() const {
+        return mInfo->mSoa.data<PipelineInfo::OFFSETS>();
+    }
 
 private:
+    struct PipelineInfo {
+        PipelineInfo(size_t size)
+            : mSoa(size /* capacity */) {
+            mSoa.resize(size);
+        }
+
+        // These corresponds to the index of the element in the SoA
+        static constexpr uint8_t ATTRIBUTE_DESCRIPTION = 0;
+        static constexpr uint8_t BUFFER_DESCRIPTION = 1;
+        static constexpr uint8_t VK_BUFFER = 2;
+        static constexpr uint8_t OFFSETS = 3;
+        static constexpr uint8_t ATTRIBUTE_TO_BUFFER_INDEX = 4;
+
+        utils::StructureOfArrays<
+            VkVertexInputAttributeDescription,
+            VkVertexInputBindingDescription,
+            VkBuffer,
+            VkDeviceSize,
+            int8_t
+        > mSoa;
+    };
+
+    PipelineInfo* mInfo;
     FixedSizeVulkanResourceManager mResources;
 };
 
@@ -116,7 +156,7 @@ struct VulkanIndexBuffer : public HwIndexBuffer, VulkanResource {
 
 struct VulkanBufferObject : public HwBufferObject, VulkanResource {
     VulkanBufferObject(VmaAllocator allocator, VulkanStagePool& stagePool, uint32_t byteCount,
-            BufferObjectBinding bindingType, BufferUsage usage);
+            BufferObjectBinding bindingType);
 
     VulkanBuffer buffer;
     const BufferObjectBinding bindingType;
