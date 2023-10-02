@@ -7,6 +7,12 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.45.0
+
+- materials: fix alpha masked materials when MSAA is turned on [⚠️ **Recompile materials**]
+- materials: better support materials with custom depth [**Recompile Materials**]
+- engine: fade shadows at shadowFar distance instead of hard cutoff [⚠️ **New Material Version**]
+
 ## v1.44.0
 
 - engine: add support for skinning with more than four bones per vertex.
