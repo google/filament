@@ -7,6 +7,3 @@ for next branch cut* header.
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
-- materials: fix alpha masked materials when MSAA is turned on [⚠️ **Recompile materials**]
-- materials: better support materials with custom depth [**Recompile Materials**]
-- engine: fade shadows at shadowFar distance instead of hard cutoff [⚠️ **New Material Version**]
