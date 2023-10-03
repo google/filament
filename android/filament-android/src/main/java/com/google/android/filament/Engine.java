@@ -154,6 +154,184 @@ public class Engine {
         FEATURE_LEVEL_2
     };
 
+    /**
+     * Constructs <code>Engine</code> objects using a builder pattern.
+     */
+    public static class Builder {
+        @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"})
+        private final BuilderFinalizer mFinalizer;
+        private final long mNativeBuilder;
+
+        public Builder() {
+            mNativeBuilder = nCreateBuilder();
+            mFinalizer = new BuilderFinalizer(mNativeBuilder);
+        }
+
+        /**
+         * Sets the {@link Backend} for the Engine.
+         *
+         * @param backend Driver backend to use
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder backend(Backend backend) {
+            nSetBuilderBackend(mNativeBuilder, backend.ordinal());
+            return this;
+        }
+
+        /**
+         * Sets a sharedContext for the Engine.
+         *
+         * @param sharedContext  A platform-dependant OpenGL context used as a shared context
+         *                       when creating filament's internal context. On Android this parameter
+         *                       <b>must be</b> an instance of {@link android.opengl.EGLContext}.
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder sharedContext(Object sharedContext) {
+            if (Platform.get().validateSharedContext(sharedContext)) {
+                nSetBuilderSharedContext(mNativeBuilder,
+                        Platform.get().getSharedContextNativeHandle(sharedContext));
+                return this;
+            }
+            throw new IllegalArgumentException("Invalid shared context " + sharedContext);
+        }
+
+        /**
+         * Configure the Engine with custom parameters.
+         *
+         * @param config A {@link Config} object
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder config(Config config) {
+            nSetBuilderConfig(mNativeBuilder, config.commandBufferSizeMB,
+                    config.perRenderPassArenaSizeMB, config.driverHandleArenaSizeMB,
+                    config.minCommandBufferSizeMB, config.perFrameCommandsSizeMB,
+                    config.jobSystemThreadCount);
+            return this;
+        }
+
+        /**
+         * Creates an instance of Engine
+         *
+         * @return A newly created <code>Engine</code>, or <code>null</code> if the GPU driver couldn't
+         *         be initialized, for instance if it doesn't support the right version of OpenGL or
+         *         OpenGL ES.
+         *
+         * @exception IllegalStateException can be thrown if there isn't enough memory to
+         * allocate the command buffer.
+         */
+        Engine build() {
+            long nativeEngine = nBuilderBuild(mNativeBuilder);
+            if (nativeEngine == 0) throw new IllegalStateException("Couldn't create Engine");
+            return new Engine(nativeEngine);
+        }
+
+        private static class BuilderFinalizer {
+            private final long mNativeObject;
+
+            BuilderFinalizer(long nativeObject) {
+                mNativeObject = nativeObject;
+            }
+
+            @Override
+            public void finalize() {
+                try {
+                    super.finalize();
+                } catch (Throwable t) { // Ignore
+                } finally {
+                    nDestroyBuilder(mNativeObject);
+                }
+            }
+        }
+    }
+
+    /**
+     * Parameters for customizing the initialization of {@link Engine}.
+     */
+    public static class Config {
+
+        // #defines in Engine.h
+        private static final long FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB = 3;
+        private static final long FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB = 2;
+        private static final long FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB = 1;
+        private static final long FILAMENT_COMMAND_BUFFER_SIZE_IN_MB =
+                FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB * 3;
+
+        /**
+         * Size in MiB of the low-level command buffer arena.
+         *
+         * Each new command buffer is allocated from here. If this buffer is too small the program
+         * might terminate or rendering errors might occur.
+         *
+         * This is typically set to minCommandBufferSizeMB * 3, so that up to 3 frames can be
+         * batched-up at once.
+         *
+         * This value affects the application's memory usage.
+         */
+        public long commandBufferSizeMB = FILAMENT_COMMAND_BUFFER_SIZE_IN_MB;
+
+        /**
+         * Size in MiB of the per-frame data arena.
+         *
+         * This is the main arena used for allocations when preparing a frame.
+         * e.g.: Froxel data and high-level commands are allocated from this arena.
+         *
+         * If this size is too small, the program will abort on debug builds and have undefined
+         * behavior otherwise.
+         *
+         * This value affects the application's memory usage.
+         */
+        public long perRenderPassArenaSizeMB = FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB;
+
+        /**
+         * Size in MiB of the backend's handle arena.
+         *
+         * Backends will fallback to slower heap-based allocations when running out of space and
+         * log this condition.
+         *
+         * If 0, then the default value for the given platform is used
+         *
+         * This value affects the application's memory usage.
+         */
+        public long driverHandleArenaSizeMB = 0;
+
+        /**
+         * Minimum size in MiB of a low-level command buffer.
+         *
+         * This is how much space is guaranteed to be available for low-level commands when a new
+         * buffer is allocated. If this is too small, the engine might have to stall to wait for
+         * more space to become available, this situation is logged.
+         *
+         * This value does not affect the application's memory usage.
+         */
+        public long minCommandBufferSizeMB = FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB;
+
+        /**
+         * Size in MiB of the per-frame high level command buffer.
+         *
+         * This buffer is related to the number of draw calls achievable within a frame, if it is
+         * too small, the program will abort on debug builds and have undefined behavior otherwise.
+         *
+         * It is allocated from the 'per-render-pass arena' above. Make sure that at least 1 MiB is
+         * left in the per-render-pass arena when deciding the size of this buffer.
+         *
+         * This value does not affect the application's memory usage.
+         */
+        public long perFrameCommandsSizeMB = FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB;
+
+        /**
+         * Number of threads to use in Engine's JobSystem.
+         *
+         * Engine uses a utils::JobSystem to carry out paralleization of Engine workloads. This
+         * value sets the number of threads allocated for JobSystem. Configuring this value can be
+         * helpful in CPU-constrained environments where too many threads can cause contention of
+         * CPU and reduce performance.
+         *
+         * The default value is 0, which implies that the Engine will use a heuristic to determine
+         * the number of threads to use.
+         */
+        public long jobSystemThreadCount = 0;
+    }
+
     private Engine(long nativeEngine) {
         mNativeObject = nativeEngine;
         mTransformManager = new TransformManager(nGetTransformManager(nativeEngine));
@@ -174,12 +352,12 @@ public class Engine {
      * @exception IllegalStateException can be thrown if there isn't enough memory to
      * allocate the command buffer.
      *
+     * @deprecated use {@link Builder}
      */
+    @Deprecated
     @NonNull
     public static Engine create() {
-        long nativeEngine = nCreateEngine(0, 0);
-        if (nativeEngine == 0) throw new IllegalStateException("Couldn't create Engine");
-        return new Engine(nativeEngine);
+        return new Builder().build();
     }
 
     /**
@@ -196,12 +374,14 @@ public class Engine {
      * @exception IllegalStateException can be thrown if there isn't enough memory to
      * allocate the command buffer.
      *
+     * @deprecated use {@link Builder}
      */
+    @Deprecated
     @NonNull
     public static Engine create(@NonNull Backend backend) {
-        long nativeEngine = nCreateEngine(backend.ordinal(), 0);
-        if (nativeEngine == 0) throw new IllegalStateException("Couldn't create Engine");
-        return new Engine(nativeEngine);
+        return new Builder()
+            .backend(backend)
+            .build();
     }
 
     /**
@@ -220,16 +400,14 @@ public class Engine {
      * @exception IllegalStateException can be thrown if there isn't enough memory to
      * allocate the command buffer.
      *
+     * @deprecated use {@link Builder}
      */
+    @Deprecated
     @NonNull
     public static Engine create(@NonNull Object sharedContext) {
-        if (Platform.get().validateSharedContext(sharedContext)) {
-            long nativeEngine = nCreateEngine(0,
-                    Platform.get().getSharedContextNativeHandle(sharedContext));
-            if (nativeEngine == 0) throw new IllegalStateException("Couldn't create Engine");
-            return new Engine(nativeEngine);
-        }
-        throw new IllegalArgumentException("Invalid shared context " + sharedContext);
+        return new Builder()
+            .sharedContext(sharedContext)
+            .build();
     }
 
     /**
@@ -914,7 +1092,6 @@ public class Engine {
         }
     }
 
-    private static native long nCreateEngine(long backend, long sharedContext);
     private static native void nDestroyEngine(long nativeEngine);
     private static native long nGetBackend(long nativeEngine);
     private static native long nCreateSwapChain(long nativeEngine, Object nativeWindow, long flags);
@@ -971,4 +1148,13 @@ public class Engine {
     private static native int nGetSupportedFeatureLevel(long nativeEngine);
     private static native int nSetActiveFeatureLevel(long nativeEngine, int ordinal);
     private static native int nGetActiveFeatureLevel(long nativeEngine);
+
+    private static native long nCreateBuilder();
+    private static native void nDestroyBuilder(long nativeBuilder);
+    private static native void nSetBuilderBackend(long nativeBuilder, long backend);
+    private static native void nSetBuilderConfig(long nativeBuilder, long commandBufferSizeMB,
+            long perRenderPassArenaSizeMB, long driverHandleArenaSizeMB,
+            long minCommandBufferSizeMB, long perFrameCommandsSizeMB, long jobSystemThreadCount);
+    private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
+    private static native long nBuilderBuild(long nativeBuilder);
 }
