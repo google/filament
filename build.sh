@@ -550,7 +550,7 @@ function build_android {
             cp filament-android/build/outputs/aar/filament-android-release.aar ../out/
 
             echo "Installing out/gltfio-android-release.aar..."
-            cp gltfio-android/build/outputs/aar/gltfio-android-full-release.aar ../out/gltfio-android-release.aar
+            cp gltfio-android/build/outputs/aar/gltfio-android-release.aar ../out/gltfio-android-release.aar
 
             echo "Installing out/filament-utils-android-release.aar..."
             cp filament-utils-android/build/outputs/aar/filament-utils-android-release.aar ../out/filament-utils-android-release.aar
