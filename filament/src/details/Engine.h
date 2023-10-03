@@ -508,7 +508,7 @@ private:
     HeapAllocatorArena mHeapAllocator;
 
     utils::JobSystem mJobSystem;
-    static uint32_t getJobSystemThreadPoolSize() noexcept;
+    static uint32_t getJobSystemThreadPoolSize(Engine::Config const& config) noexcept;
 
     std::default_random_engine mRandomEngine;
 

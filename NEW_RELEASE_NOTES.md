@@ -7,3 +7,6 @@ for next branch cut* header.
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+
+engine: Added parameter for configuring JobSystem thread count
+engine: In Java, decpreate Engine.create() and recommend Engine.Builder instead

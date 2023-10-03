@@ -200,7 +200,7 @@ FEngine::FEngine(Engine::Builder const& builder) :
                 "FEngine::mPerRenderPassAllocator",
                 builder->mConfig.perRenderPassArenaSizeMB * MiB),
         mHeapAllocator("FEngine::mHeapAllocator", AreaPolicy::NullArea{}),
-        mJobSystem(getJobSystemThreadPoolSize()),
+        mJobSystem(getJobSystemThreadPoolSize(builder->mConfig)),
         mEngineEpoch(std::chrono::steady_clock::now()),
         mDriverBarrier(1),
         mMainThreadId(ThreadUtils::getThreadId()),
@@ -214,7 +214,11 @@ FEngine::FEngine(Engine::Builder const& builder) :
            << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)") << io::endl;
 }
 
-uint32_t FEngine::getJobSystemThreadPoolSize() noexcept {
+uint32_t FEngine::getJobSystemThreadPoolSize(Engine::Config const& config) noexcept {
+    if (config.jobSystemThreadCount > 0) {
+        return config.jobSystemThreadCount;
+    }
+
     // 1 thread for the user, 1 thread for the backend
     int threadCount = (int)std::thread::hardware_concurrency() - 2;
     // make sure we have at least 1 thread though
