@@ -1099,7 +1099,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         assert_invariant(mSwapChain);
         ASSERT_PRECONDITION(mSwapChain->hasStencilBuffer(),
                 "View has stencil buffer enabled, but SwapChain does not have "
-                "CONFIG::CONFIG_HAS_STENCIL_BUFFER flag set.");
+                "SwapChain::CONFIG_HAS_STENCIL_BUFFER flag set.");
     }
 
 //    auto debug = structure
