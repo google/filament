@@ -58,6 +58,10 @@ public:
         return (mConfigFlags & CONFIG_READABLE) != 0;
     }
 
+    constexpr bool hasStencilBuffer() const noexcept {
+        return (mConfigFlags & CONFIG_HAS_STENCIL_BUFFER) != 0;
+    }
+
     backend::Handle<backend::HwSwapChain> getHwHandle() const noexcept {
       return mSwapChain;
     }
