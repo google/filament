@@ -10,4 +10,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 engine: Added parameter for configuring JobSystem thread count
 engine: In Java, decpreate Engine.create() and recommend Engine.Builder instead
-engine: Add support for stencil buffer when post-processing is disabled.
+engine: Add support for stencil buffer when post-processing is disabled (Metal backend only).
