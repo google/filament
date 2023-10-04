@@ -1095,7 +1095,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         }
     }
 
-    if (outputIsSwapChain && view.isStencilBufferEnabled()) {
+    if (UTILS_UNLIKELY(outputIsSwapChain && view.isStencilBufferEnabled())) {
         assert_invariant(mSwapChain);
         ASSERT_PRECONDITION(mSwapChain->hasStencilBuffer(),
                 "View has stencil buffer enabled, but SwapChain does not have "
