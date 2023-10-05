@@ -115,6 +115,13 @@ struct UTILS_PUBLIC FilmicToneMapper final : public ToneMapper {
     math::float3 operator()(math::float3 x) const noexcept override;
 };
 
+struct UTILS_PUBLIC AgxToneMapper final : public ToneMapper {
+    AgxToneMapper() noexcept;
+    ~AgxToneMapper() noexcept final;
+
+    math::float3 operator()(math::float3 x) const noexcept override;
+};
+
 /**
  * Generic tone mapping operator that gives control over the tone mapping
  * curve. This operator can be used to control the aesthetics of the final

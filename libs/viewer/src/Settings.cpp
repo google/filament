@@ -86,6 +86,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ToneMapp
     else if (0 == compare(tokens[i], jsonChunk, "ACES_LEGACY")) { *out = ToneMapping::ACES_LEGACY; }
     else if (0 == compare(tokens[i], jsonChunk, "ACES")) { *out = ToneMapping::ACES; }
     else if (0 == compare(tokens[i], jsonChunk, "FILMIC")) { *out = ToneMapping::FILMIC; }
+    else if (0 == compare(tokens[i], jsonChunk, "AGX")) { *out = ToneMapping::AGX; }
     else if (0 == compare(tokens[i], jsonChunk, "GENERIC")) { *out = ToneMapping::GENERIC; }
     else if (0 == compare(tokens[i], jsonChunk, "DISPLAY_RANGE")) { *out = ToneMapping::DISPLAY_RANGE; }
     else {
@@ -619,6 +620,7 @@ constexpr ToneMapper* createToneMapper(const ColorGradingSettings& settings) noe
         case ToneMapping::ACES_LEGACY: return new ACESLegacyToneMapper;
         case ToneMapping::ACES: return new ACESToneMapper;
         case ToneMapping::FILMIC: return new FilmicToneMapper;
+        case ToneMapping::AGX: return new AgxToneMapper;
         case ToneMapping::GENERIC: return new GenericToneMapper(
                     settings.genericToneMapper.contrast,
                     settings.genericToneMapper.midGrayIn,
@@ -673,6 +675,7 @@ static std::ostream& operator<<(std::ostream& out, ToneMapping in) {
         case ToneMapping::ACES_LEGACY: return out << "\"ACES_LEGACY\"";
         case ToneMapping::ACES: return out << "\"ACES\"";
         case ToneMapping::FILMIC: return out << "\"FILMIC\"";
+        case ToneMapping::AGX: return out << "\"AGX\"";
         case ToneMapping::GENERIC: return out << "\"GENERIC\"";
         case ToneMapping::DISPLAY_RANGE: return out << "\"DISPLAY_RANGE\"";
     }

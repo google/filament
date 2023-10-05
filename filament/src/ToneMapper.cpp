@@ -231,6 +231,73 @@ float3 FilmicToneMapper::operator()(math::float3 x) const noexcept {
 }
 
 //------------------------------------------------------------------------------
+// AgX tone mapper
+//------------------------------------------------------------------------------
+
+DEFAULT_CONSTRUCTORS(AgxToneMapper)
+
+// Computed using the default configuration from:
+// https://github.com/sobotka/SB2383-Configuration-Generation
+// primaries_rotate = [4.5, -0.5, -2.0]
+// primaries_scale = [0.15, 0.1, 0.1]
+constexpr mat3f AgXInsetMatrix {
+    0.9135008, 0.08087188, 0.03593972,
+    0.04474362, 0.81547429, 0.0342846,
+    0.04175558, 0.10365383, 0.92977567
+};
+
+constexpr mat3f AgxOutsetMatrix { inverse(AgXInsetMatrix) };
+
+// LOG2_MIN      = -10.0
+// LOG2_MAX      =  +6.5
+// MIDDLE_GRAY   =  0.18
+const float AgxMinEv = -12.47393f;      // log2(pow(2, LOG2_MIN) * MIDDLE_GRAY)
+const float AgxMaxEv = 4.026069f;       // log2(pow(2, LOG2_MAX) * MIDDLE_GRAY)
+
+// Adapted from https://iolite-engine.com/blog_posts/minimal_agx_implementation
+float3 agxDefaultContrastApprox(float3 x) {
+    float3 x2 = x * x;
+    float3 x4 = x2 * x2;
+    float3 x6 = x4 * x2;
+    return  - 17.86     * x6 * x
+            + 78.01     * x6
+            - 126.7     * x4 * x
+            + 92.06     * x4
+            - 28.72     * x2 * x
+            + 4.361     * x2
+            - 0.1718    * x
+            + 0.002857;
+}
+
+float3 AgxToneMapper::operator()(float3 v) const noexcept {
+    // TODO: It's unclear if we need to temporarily transform to 709 primaries again.
+    // The original AgX inset matrix assumes 709 primaries, but Blender's implementation of AgX
+    // keeps the color in Rec.2020.
+    // v = Rec2020_to_sRGB * v;
+
+    v = AgXInsetMatrix * v;
+
+    // Log2 encoding
+    v = max(v, 1E-10); // avoid 0 or negative numbers for log2
+    v = log2(v);
+    v = (v - AgxMinEv) / (AgxMaxEv - AgxMinEv);
+
+    v = clamp(v, 0, 1);
+
+    // Apply sigmoid
+    v = agxDefaultContrastApprox(v);
+
+    // Linearize
+    v = pow(v, 2.2);
+
+    v = AgxOutsetMatrix * v;
+
+    // v = sRGB_to_Rec2020 * v;
+
+    return v;
+}
+
+//------------------------------------------------------------------------------
 // Display range tone mapper
 //------------------------------------------------------------------------------
 
