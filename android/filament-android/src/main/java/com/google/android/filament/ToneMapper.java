@@ -101,6 +101,15 @@ public class ToneMapper {
     }
 
     /**
+     * AgX tone mapping operator.
+     */
+    public static class Agx extends ToneMapper {
+        public Agx() {
+            super(nCreateAgxToneMapper());
+        }
+    }
+
+    /**
      * Generic tone mapping operator that gives control over the tone mapping
      * curve. This operator can be used to control the aesthetics of the final
      * image. This operator also allows to control the dynamic range of the
@@ -194,6 +203,7 @@ public class ToneMapper {
     private static native long nCreateACESToneMapper();
     private static native long nCreateACESLegacyToneMapper();
     private static native long nCreateFilmicToneMapper();
+    private static native long nCreateAgxToneMapper();
     private static native long nCreateGenericToneMapper(
             float contrast, float midGrayIn, float midGrayOut, float hdrMax);
 

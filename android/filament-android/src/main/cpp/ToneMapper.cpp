@@ -48,6 +48,11 @@ Java_com_google_android_filament_ToneMapper_nCreateFilmicToneMapper(JNIEnv*, jcl
 }
 
 extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_ToneMapper_nCreateAgxToneMapper(JNIEnv*, jclass) {
+    return (jlong) new AgxToneMapper();
+}
+
+extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_ToneMapper_nCreateGenericToneMapper(JNIEnv*, jclass,
         jfloat contrast, jfloat midGrayIn, jfloat midGrayOut, jfloat hdrMax) {
     return (jlong) new GenericToneMapper(contrast, midGrayIn, midGrayOut, hdrMax);
