@@ -303,8 +303,8 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
         target, levels, format, samples, width, height, depth, usage, metalTexture));
 }
 
-void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size) {
-    mContext->samplerGroups.insert(construct_handle<MetalSamplerGroup>(sbh, size));
+void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size, const char* name) {
+    mContext->samplerGroups.insert(construct_handle<MetalSamplerGroup>(sbh, size, name));
 }
 
 void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
@@ -530,8 +530,19 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
         return;
     }
 
-    mContext->textures.erase(handle_cast<MetalTexture>(th));
-    destruct_handle<MetalTexture>(th);
+    auto* metalTexture = handle_cast<MetalTexture>(th);
+    mContext->textures.erase(metalTexture);
+
+    // Free memory from the texture and mark it as freed.
+    metalTexture->terminate();
+
+    // Delay the destruction of this texture handle.
+    mContext->texturesToDestroy.push_back(th);
+    if (mContext->texturesToDestroy.size() > kMetalFreedTextureListSize) {
+        Handle<HwTexture> handleToFree = mContext->texturesToDestroy.front();
+        mContext->texturesToDestroy.pop_front();
+        destruct_handle<MetalTexture>(handleToFree);
+    }
 }
 
 void MetalDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
@@ -557,6 +568,12 @@ void MetalDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void MetalDriver::terminate() {
+    // Terminate any oustanding MetalTextures.
+    for (auto th : mContext->texturesToDestroy) {
+        destruct_handle<MetalTexture>(th);
+    }
+    mContext->texturesToDestroy.clear();
+
     // finish() will flush the pending command buffer and will ensure all GPU work has finished.
     // This must be done before calling bufferPool->reset() to ensure no buffers are in flight.
     finish();
@@ -854,13 +871,27 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
     assert_invariant(sb->size == data.size / sizeof(SamplerDescriptor));
     auto const* const samplers = (SamplerDescriptor const*) data.buffer;
 
-#ifndef NDEBUG
-    // In debug builds, verify that all the textures in the sampler group are still alive.
+    // Verify that all the textures in the sampler group are still alive.
     // These bugs lead to memory corruption and can be difficult to track down.
     for (size_t s = 0; s < data.size / sizeof(SamplerDescriptor); s++) {
         if (!samplers[s].t) {
             continue;
         }
+        // The difference between this check and the one below is that in release, we do this for
+        // only a set number of recently freed textures, while the debug check is exhaustive.
+        auto* metalTexture = handle_cast<MetalTexture>(samplers[s].t);
+        if (UTILS_UNLIKELY(metalTexture->isTerminated())) {
+            NSString* reason = [NSString stringWithFormat:
+                    @"Filament Metal texture use after free, sampler "
+                    @"group = %s, texture index = %zu",
+                    sb->debugName.c_str_safe(), s];
+            NSException* useAfterFreeException =
+                    [NSException exceptionWithName:@"MetalTextureUseAfterFree"
+                                            reason:reason
+                                          userInfo:nil];
+            @throw useAfterFreeException;
+        }
+#ifndef NDEBUG
         auto iter = mContext->textures.find(handle_cast<MetalTexture>(samplers[s].t));
         if (iter == mContext->textures.end()) {
             utils::slog.e << "updateSamplerGroup: texture #"
@@ -868,8 +899,8 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
                           << samplers[s].t << utils::io::endl;
         }
         assert_invariant(iter != mContext->textures.end());
-    }
 #endif
+    }
 
     // Create a MTLArgumentEncoder for these textures.
     // Ideally, we would create this encoder at createSamplerGroup time, but we need to know the
@@ -1357,23 +1388,38 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
 
     id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(mContext);
 
-#ifndef NDEBUG
-    // In debug builds, verify that all the textures in the sampler group are still alive.
+    // Verify that all the textures in the sampler group are still alive.
     // These bugs lead to memory corruption and can be difficult to track down.
     const auto& handles = samplerGroup->getTextureHandles();
     for (size_t s = 0; s < handles.size(); s++) {
         if (!handles[s]) {
             continue;
         }
-        auto iter = mContext->textures.find(handle_cast<MetalTexture>(handles[s]));
+        // The difference between this check and the one below is that in release, we do this for
+        // only a set number of recently freed textures, while the debug check is exhaustive.
+        auto* metalTexture = handle_cast<MetalTexture>(handles[s]);
+        if (UTILS_UNLIKELY(metalTexture->isTerminated())) {
+            NSString* reason = [NSString stringWithFormat:
+                    @"Filament Metal texture use after free, sampler "
+                    @"group = %s, texture index = %zu",
+                    samplerGroup->debugName.c_str_safe(), s];
+            NSException* useAfterFreeException =
+                    [NSException exceptionWithName:@"MetalTextureUseAfterFree"
+                                            reason:reason
+                                          userInfo:nil];
+            @throw useAfterFreeException;
+        }
+
+#ifndef NDEBUG
+        auto iter = mContext->textures.find(metalTexture);
         if (iter == mContext->textures.end()) {
             utils::slog.e << "finalizeSamplerGroup: texture #"
                           << (int) s << " is dead, texture handle = "
                           << handles[s] << utils::io::endl;
         }
         assert_invariant(iter != mContext->textures.end());
-    }
 #endif
+    }
 
     utils::FixedCapacityVector<id<MTLTexture>> newTextures(samplerGroup->size, nil);
     for (size_t binding = 0; binding < samplerGroup->size; binding++) {

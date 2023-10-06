@@ -238,6 +238,11 @@ public:
 
     MTLPixelFormat devicePixelFormat;
 
+    // Frees memory associated with this texture and marks it as "terminated".
+    // Used to track "use after free" scenario.
+    void terminate() noexcept;
+    bool isTerminated() const noexcept { return terminated; }
+
 private:
     void loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffset, uint32_t slice,
             PixelBufferDescriptor const& data) noexcept;
@@ -256,12 +261,15 @@ private:
 
     uint32_t minLod = UINT_MAX;
     uint32_t maxLod = 0;
+
+    bool terminated = false;
 };
 
 class MetalSamplerGroup : public HwSamplerGroup {
 public:
-    explicit MetalSamplerGroup(size_t size) noexcept
+    explicit MetalSamplerGroup(size_t size, const char* name) noexcept
         : size(size),
+          debugName(name),
           textureHandles(size, Handle<HwTexture>()),
           textures(size, nil),
           samplers(size, nil) {}
@@ -271,12 +279,10 @@ public:
         textureHandles[index] = th;
     }
 
-#ifndef NDEBUG
     // This method is only used for debugging, to ensure all texture handles are alive.
     const auto& getTextureHandles() const {
         return textureHandles;
     }
-#endif
 
     // Encode a MTLTexture into this SamplerGroup at the given index.
     inline void setFinalizedTexture(size_t index, id<MTLTexture> t) {
@@ -322,6 +328,7 @@ public:
     void useResources(id<MTLRenderCommandEncoder> renderPassEncoder);
 
     size_t size;
+    utils::CString debugName;
 
 public:
 

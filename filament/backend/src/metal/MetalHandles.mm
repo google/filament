@@ -516,6 +516,15 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
     setLodRange(0, levels - 1);
 }
 
+void MetalTexture::terminate() noexcept {
+    texture = nil;
+    swizzledTextureView = nil;
+    lodTextureView = nil;
+    msaaSidecar = nil;
+    externalImage.set(nullptr);
+    terminated = true;
+}
+
 MetalTexture::~MetalTexture() {
     externalImage.set(nullptr);
 }

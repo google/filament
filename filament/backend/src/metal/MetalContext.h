@@ -27,6 +27,7 @@
 #include <array>
 #include <atomic>
 #include <stack>
+#include <deque>
 
 #if defined(FILAMENT_METAL_PROFILING)
 #include <os/log.h>
@@ -51,6 +52,11 @@ struct MetalIndexBuffer;
 struct MetalVertexBuffer;
 
 constexpr static uint8_t MAX_SAMPLE_COUNT = 8;  // Metal devices support at most 8 MSAA samples
+
+// Keep track of this many most recently freed textures, marking them as "terminated". If the Metal
+// backend is asked to bind a texture that has been marked terminated, we throw an Obj-C error,
+// which is helpful for debugging use-after-free issues in release builds.
+constexpr static size_t kMetalFreedTextureListSize = 64;
 
 struct MetalContext {
     MetalDriver* driver;
@@ -110,6 +116,13 @@ struct MetalContext {
     // Keeps track of all alive sampler groups, textures.
     tsl::robin_set<MetalSamplerGroup*> samplerGroups;
     tsl::robin_set<MetalTexture*> textures;
+
+    // This deque implements delayed destruction for Metal texture handles. It keeps a handle to
+    // the most recent kMetalFreedTextureListSize texture handles. When we're asked to destroy a
+    // texture handle, we free its texture memory, but keep the MetalTexture object alive, marking
+    // it as "terminated". If we later are asked to use that texture, we can check its terminated
+    // status and throw an error instead of crashing.
+    std::deque<Handle<HwTexture>> texturesToDestroy;
 
     MetalBufferPool* bufferPool;
 

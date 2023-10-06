@@ -303,7 +303,7 @@ TEST_F(BackendTest, UpdateImage2D) {
         sparams.filterMag = SamplerMagFilter::LINEAR;
         sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
         samplers.setSampler(0, { texture, sparams });
-        auto sgroup = api.createSamplerGroup(samplers.getSize());
+        auto sgroup = api.createSamplerGroup(samplers.getSize(), "Test");
         api.updateSamplerGroup(sgroup, samplers.toBufferDescriptor(api));
 
         api.bindSamplers(0, sgroup);
@@ -394,7 +394,7 @@ TEST_F(BackendTest, UpdateImageSRGB) {
     sparams.filterMag = SamplerMagFilter::LINEAR;
     sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
     samplers.setSampler(0, { texture, sparams });
-    auto sgroup = api.createSamplerGroup(samplers.getSize());
+    auto sgroup = api.createSamplerGroup(samplers.getSize(), "Test");
     api.updateSamplerGroup(sgroup, samplers.toBufferDescriptor(api));
 
     api.bindSamplers(0, sgroup);
@@ -469,7 +469,7 @@ TEST_F(BackendTest, UpdateImageMipLevel) {
     sparams.filterMag = SamplerMagFilter::LINEAR;
     sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
     samplers.setSampler(0, { texture, sparams });
-    auto sgroup = api.createSamplerGroup(samplers.getSize());
+    auto sgroup = api.createSamplerGroup(samplers.getSize(), "Test");
     api.updateSamplerGroup(sgroup, samplers.toBufferDescriptor(api));
 
     api.bindSamplers(0, sgroup);
@@ -556,7 +556,7 @@ TEST_F(BackendTest, UpdateImage3D) {
     sparams.filterMag = SamplerMagFilter::LINEAR;
     sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
     samplers.setSampler(0, { texture, sparams});
-    auto sgroup = api.createSamplerGroup(samplers.getSize());
+    auto sgroup = api.createSamplerGroup(samplers.getSize(), "Test");
     api.updateSamplerGroup(sgroup, samplers.toBufferDescriptor(api));
 
     api.bindSamplers(0, sgroup);

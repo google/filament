@@ -73,7 +73,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
 
     if (!material->getSamplerInterfaceBlock().isEmpty()) {
         mSamplers = other->getSamplerGroup();
-        mSbHandle = driver.createSamplerGroup(mSamplers.getSize());
+        mSbHandle = driver.createSamplerGroup(mSamplers.getSize(), mMaterial->getName().c_str());
     }
 
     if (material->hasDoubleSidedCapability()) {
@@ -115,7 +115,8 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
 
     if (!material->getSamplerInterfaceBlock().isEmpty()) {
         mSamplers = SamplerGroup(material->getSamplerInterfaceBlock().getSize());
-        mSbHandle = driver.createSamplerGroup(mSamplers.getSize());
+        mSbHandle = driver.createSamplerGroup(
+                mSamplers.getSize(), "Material samplers (default material)");
     }
 
     const RasterState& rasterState = material->getRasterState();

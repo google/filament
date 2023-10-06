@@ -315,7 +315,7 @@ void VulkanDriver::finish(int dummy) {
     FVK_SYSTRACE_END();
 }
 
-void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t count) {
+void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t count, const char* name) {
     auto sg = mResourceAllocator.construct<VulkanSamplerGroup>(sbh, count);
     mResourceManager.acquire(sg);
 }

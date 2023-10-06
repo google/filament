@@ -43,7 +43,7 @@ PerViewUniforms::PerViewUniforms(FEngine& engine) noexcept
         : mSamplers(PerViewSib::SAMPLER_COUNT) {
     DriverApi& driver = engine.getDriverApi();
 
-    mSamplerGroupHandle = driver.createSamplerGroup(mSamplers.getSize());
+    mSamplerGroupHandle = driver.createSamplerGroup(mSamplers.getSize(), "Per-view samplers");
 
     mUniformBufferHandle = driver.createBufferObject(mUniforms.getSize(),
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
