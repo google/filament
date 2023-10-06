@@ -22,49 +22,28 @@ namespace filament {
 
 using namespace math;
 
-template<typename T>
-details::TMat44<T> inverseProjection(const details::TMat44<T>& p) noexcept {
-    details::TMat44<T> r;
-    const T A = 1 / p[0][0];
-    const T B = 1 / p[1][1];
-    if (p[2][3] != T(0)) {
-        // perspective projection
-        // a 0 tx 0
-        // 0 b ty 0
-        // 0 0 tz c
-        // 0 0 -1 0
-        const T C = 1 / p[3][2];
-        r[0][0] = A;
-        r[1][1] = B;
-        r[2][2] = 0;
-        r[2][3] = C;
-        r[3][0] = p[2][0] * A;    // not needed if symmetric
-        r[3][1] = p[2][1] * B;    // not needed if symmetric
-        r[3][2] = -1;
-        r[3][3] = p[2][2] * C;
-    } else {
-        // orthographic projection
-        // a 0 0 tx
-        // 0 b 0 ty
-        // 0 0 c tz
-        // 0 0 0 1
-        const T C = 1 / p[2][2];
-        r[0][0] = A;
-        r[1][1] = B;
-        r[2][2] = C;
-        r[3][3] = 1;
-        r[3][0] = -p[3][0] * A;
-        r[3][1] = -p[3][1] * B;
-        r[3][2] = -p[3][2] * C;
-    }
-    return r;
+void Camera::setProjection(double fovInDegrees, double aspect, double near, double far,
+        Camera::Fov direction) {
+    setCustomProjection(
+            projection(direction, fovInDegrees, aspect, near),
+            projection(direction, fovInDegrees, aspect, near, far),
+            near, far);
+}
+
+void Camera::setLensProjection(double focalLengthInMillimeters,
+        double aspect, double near, double far) {
+    setCustomProjection(
+            projection(focalLengthInMillimeters, aspect, near),
+            projection(focalLengthInMillimeters, aspect, near, far),
+            near, far);
 }
 
 mat4f Camera::inverseProjection(const mat4f& p) noexcept {
-    return filament::inverseProjection(p);
+    return inverse(p);
 }
-mat4 Camera::inverseProjection(const mat4 & p) noexcept {
-    return filament::inverseProjection(p);
+
+mat4 Camera::inverseProjection(const mat4& p) noexcept {
+    return inverse(p);
 }
 
 void Camera::setEyeModelMatrix(uint8_t eyeId, math::mat4 const& model) {
@@ -79,16 +58,6 @@ void Camera::setCustomEyeProjection(math::mat4 const* projection, size_t count,
 void Camera::setProjection(Camera::Projection projection, double left, double right, double bottom,
         double top, double near, double far) {
     downcast(this)->setProjection(projection, left, right, bottom, top, near, far);
-}
-
-void Camera::setProjection(double fovInDegrees, double aspect, double near, double far,
-        Camera::Fov direction) {
-    downcast(this)->setProjection(fovInDegrees, aspect, near, far, direction);
-}
-
-void Camera::setLensProjection(double focalLengthInMillimeters,
-        double aspect, double near, double far) {
-    downcast(this)->setLensProjection(focalLengthInMillimeters, aspect, near, far);
 }
 
 void Camera::setCustomProjection(mat4 const& projection, double near, double far) noexcept {
@@ -214,6 +183,16 @@ double Camera::computeEffectiveFocalLength(double focalLength, double focusDista
 
 double Camera::computeEffectiveFov(double fovInDegrees, double focusDistance) noexcept {
     return FCamera::computeEffectiveFov(fovInDegrees, focusDistance);
+}
+
+math::mat4 Camera::projection(Fov direction, double fovInDegrees,
+        double aspect, double near, double far) {
+    return FCamera::projection(direction, fovInDegrees, aspect, near, far);
+}
+
+math::mat4 Camera::projection(double focalLengthInMillimeters,
+        double aspect, double near, double far) {
+    return FCamera::projection(focalLengthInMillimeters, aspect, near, far);
 }
 
 } // namespace filament
