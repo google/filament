@@ -86,6 +86,8 @@ public:
         return bool(mCachedPrograms[variant.key]);
     }
 
+    void invalidate(Variant::type_t variantMask = 0, Variant::type_t variantValue = 0) noexcept;
+
     // prepareProgram creates the program for the material's given variant at the backend level.
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.

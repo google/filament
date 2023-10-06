@@ -234,6 +234,10 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                 +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT, 1024);
     }
 
+    // directional shadowmap visualization
+    generateSpecializationConstant(out, "CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP",
+            +ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP, false);
+
     // Workaround a Metal pipeline compilation error with the message:
     // "Could not statically determine the target of a texture". See light_indirect.fs
     generateSpecializationConstant(out, "CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND",

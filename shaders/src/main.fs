@@ -66,6 +66,26 @@ void main() {
     fragColor = fog(fragColor, view);
 #endif
 
+#if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
+    if (CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP) {
+        float a = fragColor.a;
+        highp vec4 p = getShadowPosition(getShadowCascade());
+        p.xy = p.xy * (1.0 / p.w);
+        if (p.xy != saturate(p.xy)) {
+            vec4 c = vec4(1.0, 0, 1.0, 1.0) * a;
+            fragColor = mix(fragColor, c, 0.2);
+        } else {
+            p.xy = saturate(p.xy);
+            highp vec2 size = vec2(textureSize(light_shadowMap, 0));
+            highp int ix = int(floor(p.x * size.x));
+            highp int iy = int(floor(p.y * size.y));
+            float t = float((ix ^ iy) & 1) * 0.2;
+            vec4 c = vec4(vec3(t * a), a);
+            fragColor = mix(fragColor, c, 0.5);
+        }
+    }
+#endif
+
 #if MATERIAL_FEATURE_LEVEL == 0
     if (CONFIG_SRGB_SWAPCHAIN_EMULATION) {
         if (frameUniforms.rec709 != 0) {

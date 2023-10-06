@@ -247,6 +247,9 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
                     +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT,
                     (int)maxFroxelBufferHeight });
     mSpecializationConstants.push_back({
+                    +ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
+                    (bool)engine.debug.shadowmap.debug_directional_shadowmap });
+    mSpecializationConstants.push_back({
                     +ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND,
                     (bool)staticTextureWorkaround });
     mSpecializationConstants.push_back({
@@ -445,6 +448,48 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
 
 FMaterial::~FMaterial() noexcept {
     delete mMaterialParser;
+}
+
+void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantValue) noexcept {
+    // update the spec constants that can change
+    // TODO: should we just always update all of them?
+    auto pos = std::find_if(mSpecializationConstants.begin(), mSpecializationConstants.end(),
+            [&](const auto& item) {
+                return item.id == ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP;
+            });
+    if (pos != mSpecializationConstants.end()) {
+        pos->value = mEngine.debug.shadowmap.debug_directional_shadowmap;
+    }
+
+    DriverApi& driverApi = mEngine.getDriverApi();
+    auto& cachedPrograms = mCachedPrograms;
+    for (size_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
+        const Variant variant(k);
+        if ((k & variantMask) == variantValue) {
+            if (UTILS_LIKELY(!mIsDefaultMaterial)) {
+                // The depth variants may be shared with the default material, in which case
+                // we should not free it now.
+                bool const isSharedVariant =
+                        Variant::isValidDepthVariant(variant) && !mHasCustomDepthShader;
+                if (isSharedVariant) {
+                    // we don't own this variant, skip.
+                    continue;
+                }
+            }
+            driverApi.destroyProgram(cachedPrograms[k]);
+            cachedPrograms[k].clear();
+        }
+    }
+
+    if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
+        FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+        for (Variant const variant: pDefaultMaterial->mDepthVariants) {
+            pDefaultMaterial->prepareProgram(variant);
+            if (!cachedPrograms[variant.key]) {
+                cachedPrograms[variant.key] = pDefaultMaterial->getProgram(variant);
+            }
+        }
+    }
 }
 
 void FMaterial::terminate(FEngine& engine) {
@@ -719,10 +764,7 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
 void FMaterial::applyPendingEdits() noexcept {
     const char* name = mName.c_str();
     slog.d << "Applying edits to " << (name ? name : "(untitled)") << io::endl;
-    destroyPrograms(mEngine);
-    for (auto& program : mCachedPrograms) {
-        program.clear();
-    }
+    destroyPrograms(mEngine); // FIXME: this will not destroy the shared variants
     delete mMaterialParser;
     mMaterialParser = mPendingEdits;
     mPendingEdits = nullptr;
@@ -772,6 +814,7 @@ void FMaterial::destroyPrograms(FEngine& engine) {
             }
         }
         driverApi.destroyProgram(cachedPrograms[k]);
+        cachedPrograms[k].clear();
     }
 }
 
