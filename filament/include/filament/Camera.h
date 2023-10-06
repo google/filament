@@ -26,6 +26,7 @@
 #include <math/mathfwd.h>
 #include <math/vec2.h>
 #include <math/vec4.h>
+#include <math/mat4.h>
 
 namespace utils {
 class Entity;
@@ -172,6 +173,30 @@ public:
         HORIZONTAL      //!< the field-of-view angle is defined on the horizontal axis
     };
 
+    /** Returns the projection matrix from the field-of-view.
+     *
+     * @param fovInDegrees full field-of-view in degrees. 0 < \p fov < 180.
+     * @param aspect       aspect ratio \f$ \frac{width}{height} \f$. \p aspect > 0.
+     * @param near         distance in world units from the camera to the near plane. \p near > 0.
+     * @param far          distance in world units from the camera to the far plane. \p far > \p near.
+     * @param direction    direction of the \p fovInDegrees parameter.
+     *
+     * @see Fov.
+     */
+    static math::mat4 projection(Fov direction, double fovInDegrees,
+            double aspect, double near, double far = std::numeric_limits<double>::infinity());
+
+    /** Returns the projection matrix from the focal length.
+     *
+     * @param focalLengthInMillimeters lens's focal length in millimeters. \p focalLength > 0.
+     * @param aspect      aspect ratio \f$ \frac{width}{height} \f$. \p aspect > 0.
+     * @param near        distance in world units from the camera to the near plane. \p near > 0.
+     * @param far         distance in world units from the camera to the far plane. \p far > \p near.
+     */
+    static math::mat4 projection(double focalLengthInMillimeters,
+            double aspect, double near, double far = std::numeric_limits<double>::infinity());
+
+
     /** Sets the projection matrix from a frustum defined by six planes.
      *
      * @param projection    type of #Projection to use.
@@ -209,7 +234,8 @@ public:
             double bottom, double top,
             double near, double far);
 
-    /** Sets the projection matrix from the field-of-view.
+
+    /** Utility to set the projection matrix from the field-of-view.
      *
      * @param fovInDegrees full field-of-view in degrees. 0 < \p fov < 180.
      * @param aspect       aspect ratio \f$ \frac{width}{height} \f$. \p aspect > 0.
@@ -222,7 +248,7 @@ public:
     void setProjection(double fovInDegrees, double aspect, double near, double far,
                        Fov direction = Fov::VERTICAL);
 
-    /** Sets the projection matrix from the focal length.
+    /** Utility to set the projection matrix from the focal length.
      *
      * @param focalLengthInMillimeters lens's focal length in millimeters. \p focalLength > 0.
      * @param aspect      aspect ratio \f$ \frac{width}{height} \f$. \p aspect > 0.
@@ -232,13 +258,8 @@ public:
     void setLensProjection(double focalLengthInMillimeters,
             double aspect, double near, double far);
 
+
     /** Sets a custom projection matrix.
-     *
-     * The projection matrix must be of one of the following form:
-     *       a 0 tx 0              a 0 0 tx
-     *       0 b ty 0              0 b 0 ty
-     *       0 0 tz c              0 0 c tz
-     *       0 0 -1 0              0 0 0 1
      *
      * The projection matrix must define an NDC system that must match the OpenGL convention,
      * that is all 3 axis are mapped to [-1, 1].
@@ -248,6 +269,19 @@ public:
      * @param far         distance in world units from the camera to the far plane. \p far > \p near.
      */
     void setCustomProjection(math::mat4 const& projection, double near, double far) noexcept;
+
+    /** Sets the projection matrix.
+     *
+     * The projection matrices must define an NDC system that must match the OpenGL convention,
+     * that is all 3 axis are mapped to [-1, 1].
+     *
+     * @param projection  custom projection matrix used for rendering
+     * @param projectionForCulling  custom projection matrix used for culling
+     * @param near        distance in world units from the camera to the near plane. \p near > 0.
+     * @param far         distance in world units from the camera to the far plane. \p far > \p near.
+     */
+    void setCustomProjection(math::mat4 const& projection, math::mat4 const& projectionForCulling,
+            double near, double far) noexcept;
 
     /** Sets a custom projection matrix for each eye.
      *
@@ -266,25 +300,6 @@ public:
      */
     void setCustomEyeProjection(math::mat4 const* projection, size_t count,
             math::mat4 const& projectionForCulling, double near, double far);
-
-    /** Sets the projection matrix.
-     *
-     * The projection matrices must be of one of the following form:
-     *       a 0 tx 0              a 0 0 tx
-     *       0 b ty 0              0 b 0 ty
-     *       0 0 tz c              0 0 c tz
-     *       0 0 -1 0              0 0 0 1
-     *
-     * The projection matrices must define an NDC system that must match the OpenGL convention,
-     * that is all 3 axis are mapped to [-1, 1].
-     *
-     * @param projection  custom projection matrix used for rendering
-     * @param projectionForCulling  custom projection matrix used for culling
-     * @param near        distance in world units from the camera to the near plane. \p near > 0.
-     * @param far         distance in world units from the camera to the far plane. \p far > \p near.
-     */
-    void setCustomProjection(math::mat4 const& projection, math::mat4 const& projectionForCulling,
-            double near, double far) noexcept;
 
     /** Sets an additional matrix that scales the projection matrix.
      *
@@ -524,33 +539,6 @@ public:
      *
      * \param p the projection matrix to inverse
      * \returns the inverse of the projection matrix \p p
-     *
-     * \warning the projection matrix to invert must have one of the form below:
-     * - perspective projection
-     *
-     *      \f$
-     *      \left(
-     *      \begin{array}{cccc}
-     *      a & 0 & tx & 0 \\
-     *      0 & b & ty & 0 \\
-     *      0 & 0 & tz & c \\
-     *      0 & 0 & -1 & 0 \\
-     *      \end{array}
-     *      \right)
-     *      \f$
-     *
-     * - orthographic projection
-     *
-     *      \f$
-     *      \left(
-     *      \begin{array}{cccc}
-     *      a & 0 & 0 & tx \\
-     *      0 & b & 0 & ty \\
-     *      0 & 0 & c & tz \\
-     *      0 & 0 & 0 & 1  \\
-     *      \end{array}
-     *      \right)
-     *      \f$
      */
     static math::mat4 inverseProjection(const math::mat4& p) noexcept;
 
