@@ -116,10 +116,19 @@ struct UTILS_PUBLIC FilmicToneMapper final : public ToneMapper {
 };
 
 struct UTILS_PUBLIC AgxToneMapper final : public ToneMapper {
-    AgxToneMapper() noexcept;
+
+    enum class AgxLook : uint8_t {
+        NONE = 0,   //!< Base contrast with no look applied
+        PUNCHY,     //!< A punchy and more chroma laden look for sRGB displays
+        GOLDEN      //!< A golden tinted, slightly washed look for BT.1886 displays
+    };
+
+    explicit AgxToneMapper(AgxLook look = AgxLook::NONE) noexcept;
     ~AgxToneMapper() noexcept final;
 
     math::float3 operator()(math::float3 x) const noexcept override;
+
+    AgxLook look;
 };
 
 /**

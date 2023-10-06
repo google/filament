@@ -234,19 +234,22 @@ float3 FilmicToneMapper::operator()(math::float3 x) const noexcept {
 // AgX tone mapper
 //------------------------------------------------------------------------------
 
-DEFAULT_CONSTRUCTORS(AgxToneMapper)
+AgxToneMapper::AgxToneMapper(AgxToneMapper::AgxLook look) noexcept : look(look) {}
+AgxToneMapper::~AgxToneMapper() noexcept = default;
 
-// Computed using the default configuration from:
-// https://github.com/sobotka/SB2383-Configuration-Generation
-// primaries_rotate = [4.5, -0.5, -2.0]
-// primaries_scale = [0.15, 0.1, 0.1]
+// These matrices taken from Blender's implementation of AgX, which works with Rec.2020 primaries.
+// https://github.com/EaryChow/AgX_LUT_Gen/blob/main/AgXBaseRec2020.py
 constexpr mat3f AgXInsetMatrix {
-    0.9135008, 0.08087188, 0.03593972,
-    0.04474362, 0.81547429, 0.0342846,
-    0.04175558, 0.10365383, 0.92977567
+    0.856627153315983, 0.137318972929847, 0.11189821299995,
+    0.0951212405381588, 0.761241990602591, 0.0767994186031903,
+    0.0482516061458583, 0.101439036467562, 0.811302368396859
 };
-
-constexpr mat3f AgxOutsetMatrix { inverse(AgXInsetMatrix) };
+constexpr mat3f AgXOutsetMatrixInv {
+    0.899796955911611, 0.11142098895748, 0.11142098895748,
+    0.0871996192028351, 0.875575586156966, 0.0871996192028349,
+    0.013003424885555, 0.0130034248855548, 0.801379391839686
+};
+constexpr mat3f AgXOutsetMatrix { inverse(AgXOutsetMatrixInv) };
 
 // LOG2_MIN      = -10.0
 // LOG2_MAX      =  +6.5
@@ -269,11 +272,40 @@ float3 agxDefaultContrastApprox(float3 x) {
             + 0.002857;
 }
 
+// Adapted from https://iolite-engine.com/blog_posts/minimal_agx_implementation
+float3 agxLook(float3 val, AgxToneMapper::AgxLook look) {
+    if (look == AgxToneMapper::AgxLook::NONE) {
+        return val;
+    }
+
+    const float3 lw = float3(0.2126, 0.7152, 0.0722);
+    float luma = dot(val, lw);
+
+    // Default
+    float3 offset = float3(0.0);
+    float3 slope = float3(1.0);
+    float3 power = float3(1.0);
+    float sat = 1.0;
+
+    if (look == AgxToneMapper::AgxLook::GOLDEN) {
+        slope = float3(1.0, 0.9, 0.5);
+        power = float3(0.8);
+        sat = 1.3;
+    }
+    if (look == AgxToneMapper::AgxLook::PUNCHY) {
+        slope = float3(1.0);
+        power = float3(1.35, 1.35, 1.35);
+        sat = 1.4;
+    }
+
+    // ASC CDL
+    val = pow(val * slope + offset, power);
+    return luma + sat * (val - luma);
+}
+
 float3 AgxToneMapper::operator()(float3 v) const noexcept {
-    // TODO: It's unclear if we need to temporarily transform to 709 primaries again.
-    // The original AgX inset matrix assumes 709 primaries, but Blender's implementation of AgX
-    // keeps the color in Rec.2020.
-    // v = Rec2020_to_sRGB * v;
+    // Ensure no negative values
+    v = max(float3(0.0), v);
 
     v = AgXInsetMatrix * v;
 
@@ -287,12 +319,13 @@ float3 AgxToneMapper::operator()(float3 v) const noexcept {
     // Apply sigmoid
     v = agxDefaultContrastApprox(v);
 
+    // Apply AgX look
+    v = agxLook(v, look);
+
+    v = AgXOutsetMatrix * v;
+
     // Linearize
-    v = pow(v, 2.2);
-
-    v = AgxOutsetMatrix * v;
-
-    // v = sRGB_to_Rec2020 * v;
+    v = pow(max(float3(0.0), v), 2.2);
 
     return v;
 }

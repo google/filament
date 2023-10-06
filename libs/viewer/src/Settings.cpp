@@ -620,7 +620,7 @@ constexpr ToneMapper* createToneMapper(const ColorGradingSettings& settings) noe
         case ToneMapping::ACES_LEGACY: return new ACESLegacyToneMapper;
         case ToneMapping::ACES: return new ACESToneMapper;
         case ToneMapping::FILMIC: return new FilmicToneMapper;
-        case ToneMapping::AGX: return new AgxToneMapper;
+        case ToneMapping::AGX: return new AgxToneMapper(settings.agxToneMapper.look);
         case ToneMapping::GENERIC: return new GenericToneMapper(
                     settings.genericToneMapper.contrast,
                     settings.genericToneMapper.midGrayIn,
@@ -857,7 +857,7 @@ static std::ostream& operator<<(std::ostream& out, const Settings& in) {
         << "}";
 }
 
-bool GenericToneMapperSettings::operator==(const GenericToneMapperSettings &rhs) const {
+bool GenericToneMapperSettings::operator==(const GenericToneMapperSettings& rhs) const {
     static_assert(sizeof(GenericToneMapperSettings) == 16, "Please update Settings.cpp");
     return contrast == rhs.contrast &&
            midGrayIn == rhs.midGrayIn &&
@@ -865,7 +865,12 @@ bool GenericToneMapperSettings::operator==(const GenericToneMapperSettings &rhs)
            hdrMax == rhs.hdrMax;
 }
 
-bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
+bool AgxToneMapperSettings::operator==(const AgxToneMapperSettings& rhs) const {
+    static_assert(sizeof(AgxToneMapperSettings) == 1, "Please update Settings.cpp");
+    return look == rhs.look;
+}
+
+bool ColorGradingSettings::operator==(const ColorGradingSettings& rhs) const {
     // If you had to fix the following codeline, then you likely also need to update the
     // implementation of operator==.
     static_assert(sizeof(ColorGradingSettings) == 312, "Please update Settings.cpp");
@@ -874,6 +879,7 @@ bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
             quality == rhs.quality &&
             toneMapping == rhs.toneMapping &&
             genericToneMapper == rhs.genericToneMapper &&
+            agxToneMapper == rhs.agxToneMapper &&
             luminanceScaling == rhs.luminanceScaling &&
             gamutMapping == rhs.gamutMapping &&
             exposure == rhs.exposure &&

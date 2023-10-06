@@ -134,7 +134,7 @@ static void computeToneMapPlot(ColorGradingSettings& settings, float* plot) {
             mapper = new FilmicToneMapper;
             break;
         case ToneMapping::AGX:
-            mapper = new AgxToneMapper;
+            mapper = new AgxToneMapper(settings.agxToneMapper.look);
             break;
         case ToneMapping::GENERIC:
             mapper = new GenericToneMapper(
@@ -206,6 +206,11 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
                 ImGui::SliderFloat("Mid-gray out##genericToneMapper", &generic.midGrayOut, 0.0f, 1.0f);
                 ImGui::SliderFloat("HDR max", &generic.hdrMax, 1.0f, 64.0f);
             }
+        }
+        if (colorGrading.toneMapping == ToneMapping::AGX) {
+            int agxLook = (int) colorGrading.agxToneMapper.look;
+            ImGui::Combo("AgX Look", &agxLook, "None\0Punchy\0Golden\0\0");
+            colorGrading.agxToneMapper.look = (decltype(colorGrading.agxToneMapper.look)) agxLook;
         }
 
         computeToneMapPlot(colorGrading, toneMapPlot);
