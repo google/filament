@@ -10,3 +10,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 - engine: Added parameter for configuring JobSystem thread count
 - engine: In Java, introduce Engine.Builder
+- gltfio: fix ubershader index for transmission&volume material
