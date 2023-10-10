@@ -49,6 +49,4 @@ do `npm publish`.
 9. Update the live drag-and-drop viewer as follows:
 
    1. Edit the pinned Filament version in the `<script>` tag in `docs/viewer/index.html`.
-   2. Copy `web/filament-js/filament-viewer.js` to `docs/viewer`. To keep life simple, we do not
-      bother minifying this file.
-   3. Push these changes to GitHub and test the site: `https://google.github.io/filament/viewer/`.
+   2. Push the change to GitHub and test the site: `https://google.github.io/filament/viewer/`.

@@ -15,7 +15,7 @@
 */
 
 // If you are bundling this with rollup, webpack, or esbuild, the following URL should be trimmed.
-import { LitElement, html, css } from "https://unpkg.com/lit?module";
+import { LitElement, html, css } from "https://unpkg.com/lit@2.8.0?module";
 
 // This little utility checks if the Filament module is ready for action.
 // If so, it immediately calls the given function. If not, it asks the Filament
