@@ -39,12 +39,12 @@ class RenderPass;
 // The value of the 'VISIBLE_MASK' after culling. Each bit represents visibility in a frustum
 // (either camera or light).
 //
-//                                    1
-// bits                               5 ... 7 6 5 4 3 2 1 0
-// +------------------------------------------------------+
-// VISIBLE_RENDERABLE                                     X
-// VISIBLE_DIR_SHADOW_RENDERABLE                        X
-// VISIBLE_DYN_SHADOW_RENDERABLE                      X
+//
+// bits                            7 6 5 4 3 2 1 0
+// +---------------------------------------------+
+// VISIBLE_RENDERABLE                            X
+// VISIBLE_DIR_SHADOW_RENDERABLE               X
+// VISIBLE_DYN_SHADOW_RENDERABLE             X
 
 // A "shadow renderable" is a renderable rendered to the shadow map during a shadow pass:
 // PCF shadows: only shadow casters
@@ -54,6 +54,7 @@ static constexpr size_t VISIBLE_RENDERABLE_BIT              = 0u;
 static constexpr size_t VISIBLE_DIR_SHADOW_RENDERABLE_BIT   = 1u;
 static constexpr size_t VISIBLE_DYN_SHADOW_RENDERABLE_BIT   = 2u;
 
+static constexpr Culler::result_type VISIBLE_RENDERABLE = 1u << VISIBLE_RENDERABLE_BIT;
 static constexpr Culler::result_type VISIBLE_DIR_SHADOW_RENDERABLE = 1u << VISIBLE_DIR_SHADOW_RENDERABLE_BIT;
 static constexpr Culler::result_type VISIBLE_DYN_SHADOW_RENDERABLE = 1u << VISIBLE_DYN_SHADOW_RENDERABLE_BIT;
 

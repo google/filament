@@ -173,7 +173,7 @@ public class Engine {
          * @param backend Driver backend to use
          * @return A reference to this Builder for chaining calls.
          */
-        Builder backend(Backend backend) {
+        public Builder backend(Backend backend) {
             nSetBuilderBackend(mNativeBuilder, backend.ordinal());
             return this;
         }
@@ -186,7 +186,7 @@ public class Engine {
          *                       <b>must be</b> an instance of {@link android.opengl.EGLContext}.
          * @return A reference to this Builder for chaining calls.
          */
-        Builder sharedContext(Object sharedContext) {
+        public Builder sharedContext(Object sharedContext) {
             if (Platform.get().validateSharedContext(sharedContext)) {
                 nSetBuilderSharedContext(mNativeBuilder,
                         Platform.get().getSharedContextNativeHandle(sharedContext));
@@ -201,7 +201,7 @@ public class Engine {
          * @param config A {@link Config} object
          * @return A reference to this Builder for chaining calls.
          */
-        Builder config(Config config) {
+        public Builder config(Config config) {
             nSetBuilderConfig(mNativeBuilder, config.commandBufferSizeMB,
                     config.perRenderPassArenaSizeMB, config.driverHandleArenaSizeMB,
                     config.minCommandBufferSizeMB, config.perFrameCommandsSizeMB,
@@ -219,7 +219,7 @@ public class Engine {
          * @exception IllegalStateException can be thrown if there isn't enough memory to
          * allocate the command buffer.
          */
-        Engine build() {
+        public Engine build() {
             long nativeEngine = nBuilderBuild(mNativeBuilder);
             if (nativeEngine == 0) throw new IllegalStateException("Couldn't create Engine");
             return new Engine(nativeEngine);
@@ -352,9 +352,7 @@ public class Engine {
      * @exception IllegalStateException can be thrown if there isn't enough memory to
      * allocate the command buffer.
      *
-     * @deprecated use {@link Builder}
      */
-    @Deprecated
     @NonNull
     public static Engine create() {
         return new Builder().build();
@@ -374,9 +372,7 @@ public class Engine {
      * @exception IllegalStateException can be thrown if there isn't enough memory to
      * allocate the command buffer.
      *
-     * @deprecated use {@link Builder}
      */
-    @Deprecated
     @NonNull
     public static Engine create(@NonNull Backend backend) {
         return new Builder()
@@ -400,9 +396,7 @@ public class Engine {
      * @exception IllegalStateException can be thrown if there isn't enough memory to
      * allocate the command buffer.
      *
-     * @deprecated use {@link Builder}
      */
-    @Deprecated
     @NonNull
     public static Engine create(@NonNull Object sharedContext) {
         return new Builder()
