@@ -280,7 +280,7 @@ public:
             }
 
             FixedCapacityVector<ShaderInfo> info(getShaderCount(package, ChunkType::MaterialGlsl));
-            if (!getGlShaderInfo(package, info.data())) {
+            if (!getGlShaderInfo(package, info.data(), ChunkType::MaterialGlsl)) {
                 return error(__LINE__);
             }
 
@@ -289,7 +289,7 @@ public:
                 return error(__LINE__);
             }
 
-            ShaderExtractor extractor(Backend::OPENGL, result->package, result->packageSize);
+            ShaderExtractor extractor(ShaderLanguage::ESSL3, result->package, result->packageSize);
             if (!extractor.parse()) {
                 return error(__LINE__);
             }
@@ -304,7 +304,7 @@ public:
         }
 
         if (vkindex[0]) {
-            ShaderExtractor extractor(Backend::VULKAN, result->package, result->packageSize);
+            ShaderExtractor extractor(ShaderLanguage::SPIRV, result->package, result->packageSize);
             if (!extractor.parse()) {
                 return error(__LINE__);
             }
@@ -337,7 +337,7 @@ public:
         }
 
         if (metalindex[0]) {
-            ShaderExtractor extractor(Backend::METAL, result->package, result->packageSize);
+            ShaderExtractor extractor(ShaderLanguage::MSL, result->package, result->packageSize);
             if (!extractor.parse()) {
                 return error(__LINE__);
             }
@@ -600,7 +600,7 @@ bool DebugServer::handleEditCommand(const MaterialKey& key, backend::Backend api
             shaderCount = getShaderCount(package, ChunkType::MaterialGlsl);
             infos.reserve(shaderCount);
             infos.resize(shaderCount);
-            if (!getGlShaderInfo(package, infos.data())) {
+            if (!getGlShaderInfo(package, infos.data(), ChunkType::MaterialGlsl)) {
                 return error(__LINE__);
             }
             break;

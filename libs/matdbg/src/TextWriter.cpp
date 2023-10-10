@@ -402,13 +402,23 @@ static void printShaderInfo(ostream& text, const vector<ShaderInfo>& info,
     text << endl;
 }
 
-static bool printGlslInfo(ostream& text, const ChunkContainer& container) {
+static bool printGlslInfo(ostream& text, const ChunkContainer& container, ChunkType chunkType) {
     vector<ShaderInfo> info;
     info.resize(getShaderCount(container, ChunkType::MaterialGlsl));
-    if (!getGlShaderInfo(container, info.data())) {
+    if (!getGlShaderInfo(container, info.data(), ChunkType::MaterialGlsl)) {
         return false;
     }
-    text << "GLSL shaders:" << endl;
+    switch (chunkType) {
+        case ChunkType::MaterialGlsl:
+            text << "GLSL shaders:" << endl;
+            break;
+        case ChunkType::MaterialEssl1:
+            text << "ESSL1 shaders:" << endl;
+            break;
+        default:
+            assert(false && "Invalid GLSL ChunkType");
+            break;
+    }
     printShaderInfo(text, info, container);
     return true;
 }
@@ -449,7 +459,10 @@ bool TextWriter::writeMaterialInfo(const filaflat::ChunkContainer& container) {
     if (!printSubpassesInfo(text, container)) {
         return false;
     }
-    if (!printGlslInfo(text, container)) {
+    if (!printGlslInfo(text, container, ChunkType::MaterialGlsl)) {
+        return false;
+    }
+    if (!printGlslInfo(text, container, ChunkType::MaterialEssl1)) {
         return false;
     }
     if (!printVkInfo(text, container)) {

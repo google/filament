@@ -139,7 +139,7 @@ static void printShaderInfo(ostream& json, const vector<ShaderInfo>& info, const
 static bool printGlslInfo(ostream& json, const ChunkContainer& container) {
     std::vector<ShaderInfo> info;
     info.resize(getShaderCount(container, ChunkType::MaterialGlsl));
-    if (!getGlShaderInfo(container, info.data())) {
+    if (!getGlShaderInfo(container, info.data(), ChunkType::MaterialGlsl)) {
         return false;
     }
     json << "\"opengl\": [\n";
@@ -227,7 +227,7 @@ bool JsonWriter::writeActiveInfo(const filaflat::ChunkContainer& package,
     switch (backend) {
         case Backend::OPENGL:
             shaders.resize(getShaderCount(package, ChunkType::MaterialGlsl));
-            getGlShaderInfo(package, shaders.data());
+            getGlShaderInfo(package, shaders.data(), ChunkType::MaterialGlsl);
             json << "opengl";
             break;
         case Backend::VULKAN:
