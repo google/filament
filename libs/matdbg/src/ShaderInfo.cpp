@@ -94,12 +94,12 @@ bool getMetalShaderInfo(const ChunkContainer& container, ShaderInfo* info) {
     return true;
 }
 
-bool getGlShaderInfo(const ChunkContainer& container, ShaderInfo* info) {
-    if (!container.hasChunk(ChunkType::MaterialGlsl)) {
+bool getGlShaderInfo(const ChunkContainer& container, ShaderInfo* info, ChunkType chunkType) {
+    if (!container.hasChunk(chunkType)) {
         return true;
     }
 
-    auto [start, end] = container.getChunkRange(ChunkType::MaterialGlsl);
+    auto [start, end] = container.getChunkRange(chunkType);
     Unflattener unflattener(start, end);
 
     uint64_t shaderCount;
