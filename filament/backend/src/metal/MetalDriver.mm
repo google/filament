@@ -889,7 +889,7 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
                     [NSException exceptionWithName:@"MetalTextureUseAfterFree"
                                             reason:reason
                                           userInfo:nil];
-            @throw useAfterFreeException;
+            [useAfterFreeException raise];
         }
 #ifndef NDEBUG
         auto iter = mContext->textures.find(handle_cast<MetalTexture>(samplers[s].t));
@@ -1407,7 +1407,7 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
                     [NSException exceptionWithName:@"MetalTextureUseAfterFree"
                                             reason:reason
                                           userInfo:nil];
-            @throw useAfterFreeException;
+            [useAfterFreeException raise];
         }
 
 #ifndef NDEBUG
