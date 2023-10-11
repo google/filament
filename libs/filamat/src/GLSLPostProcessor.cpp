@@ -487,10 +487,6 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
     // Compile GLSL to to SPIR-V
     SpvOptions options;
     options.generateDebugInfo = mGenerateDebugInfo;
-    // This step is required for what we attempt later using spirvbin_t::remap()
-    if (!internalConfig.spirvOutput && optimizeForSize) {
-        options.emitNonSemanticShaderDebugInfo = true;
-    }
     GlslangToSpv(*tShader.getIntermediate(), spirv, &options);
 
     if (internalConfig.spirvOutput) {
@@ -498,12 +494,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
         OptimizerPtr const optimizer = createOptimizer(mOptimization, config);
         optimizeSpirv(optimizer, spirv);
     } else {
-        // When we optimize for size, and we generate text-based shaders, we save much more
-        // by preserving variable names and running a simple DCE pass instead of using spirv-opt
-        if (optimizeForSize) {
-            spv::spirvbin_t(0).remap(
-                    spirv, {}, spv::spirvbin_t::DCE_ALL | spv::spirvbin_t::OPT_ALL);
-        } else {
+        if (!optimizeForSize) {
             OptimizerPtr const optimizer = createOptimizer(mOptimization, config);
             optimizeSpirv(optimizer, spirv);
         }
