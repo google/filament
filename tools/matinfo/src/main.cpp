@@ -435,7 +435,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
             }
 
             info.resize(getShaderCount(container, filamat::ChunkType::MaterialGlsl));
-            if (!getGlShaderInfo(container, info.data(), filamat::ChunkType::MaterialGlsl)) {
+            if (!getShaderInfo(container, info.data(), filamat::ChunkType::MaterialGlsl)) {
                 std::cerr << "Failed to parse GLSL chunk." << std::endl;
                 return false;
             }
@@ -461,7 +461,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
             }
 
             info.resize(getShaderCount(container, filamat::ChunkType::MaterialEssl1));
-            if (!getGlShaderInfo(container, info.data(), filamat::ChunkType::MaterialEssl1)) {
+            if (!getShaderInfo(container, info.data(), filamat::ChunkType::MaterialEssl1)) {
                 std::cerr << "Failed to parse ESSL1 chunk." << std::endl;
                 return false;
             }
@@ -487,7 +487,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
             }
 
             info.resize(getShaderCount(container, filamat::ChunkType::MaterialSpirv));
-            if (!getVkShaderInfo(container, info.data())) {
+            if (!getShaderInfo(container, info.data(), filamat::ChunkType::MaterialSpirv)) {
                 std::cerr << "Failed to parse SPIRV chunk." << std::endl;
                 return false;
             }
@@ -523,7 +523,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
             }
 
             info.resize(getShaderCount(container, filamat::ChunkType::MaterialMetal));
-            if (!getMetalShaderInfo(container, info.data())) {
+            if (!getShaderInfo(container, info.data(), filamat::ChunkType::MaterialMetal)) {
                 std::cerr << "Failed to parse Metal chunk." << std::endl;
                 return false;
             }
