@@ -104,8 +104,19 @@ public class ToneMapper {
      * AgX tone mapping operator.
      */
     public static class Agx extends ToneMapper {
+
+        public enum AgxLook {
+            NONE,
+            PUNCHY,
+            GOLDEN
+        }
+
         public Agx() {
-            super(nCreateAgxToneMapper());
+            this(AgxLook.NONE);
+        }
+
+        public Agx(AgxLook look) {
+            super(nCreateAgxToneMapper(look.ordinal()));
         }
     }
 
@@ -203,7 +214,7 @@ public class ToneMapper {
     private static native long nCreateACESToneMapper();
     private static native long nCreateACESLegacyToneMapper();
     private static native long nCreateFilmicToneMapper();
-    private static native long nCreateAgxToneMapper();
+    private static native long nCreateAgxToneMapper(int look);
     private static native long nCreateGenericToneMapper(
             float contrast, float midGrayIn, float midGrayOut, float hdrMax);
 

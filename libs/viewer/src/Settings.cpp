@@ -131,6 +131,36 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, GenericT
     return i;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AgxToneMapper::AgxLook* out) {
+    if (0 == compare(tokens[i], jsonChunk, "NONE")) { *out = AgxToneMapper::AgxLook::NONE; }
+    else if (0 == compare(tokens[i], jsonChunk, "PUNCHY")) { *out = AgxToneMapper::AgxLook::PUNCHY; }
+    else if (0 == compare(tokens[i], jsonChunk, "GOLDEN")) { *out = AgxToneMapper::AgxLook::GOLDEN; }
+    else {
+        slog.w << "Invalid AgxLook: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
+    }
+    return i + 1;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AgxToneMapperSettings* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "look") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->look);
+        } else {
+            slog.w << "Invalid AgX tone mapper key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid AgX tone mapper value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ColorGradingSettings* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -147,6 +177,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ColorGra
             i = parse(tokens, i + 1, jsonChunk, &out->toneMapping);
         } else if (compare(tok, jsonChunk, "genericToneMapper") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->genericToneMapper);
+        } else if (compare(tok, jsonChunk, "agxToneMapper") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->agxToneMapper);
         } else if (compare(tok, jsonChunk, "luminanceScaling") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->luminanceScaling);
         } else if (compare(tok, jsonChunk, "gamutMapping") == 0) {
@@ -691,6 +723,21 @@ static std::ostream& operator<<(std::ostream& out, const GenericToneMapperSettin
        << "}";
 }
 
+static std::ostream& operator<<(std::ostream& out, AgxToneMapper::AgxLook in) {
+    switch (in) {
+        case AgxToneMapper::AgxLook::NONE: return out << "\"NONE\"";
+        case AgxToneMapper::AgxLook::PUNCHY: return out << "\"PUNCHY\"";
+        case AgxToneMapper::AgxLook::GOLDEN: return out << "\"GOLDEN\"";
+    }
+    return out << "\"INVALID\"";
+}
+
+static std::ostream& operator<<(std::ostream& out, const AgxToneMapperSettings& in) {
+    return out << "{\n"
+               << "\"look\": " << (in.look) << ",\n"
+               << "}";
+}
+
 static std::ostream& operator<<(std::ostream& out, const ColorGradingSettings& in) {
     return out << "{\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
@@ -698,6 +745,7 @@ static std::ostream& operator<<(std::ostream& out, const ColorGradingSettings& i
         << "\"quality\": " << (in.quality) << ",\n"
         << "\"toneMapping\": " << (in.toneMapping) << ",\n"
         << "\"genericToneMapper\": " << (in.genericToneMapper) << ",\n"
+        << "\"agxToneMapper\": " << (in.agxToneMapper) << ",\n"
         << "\"luminanceScaling\": " << to_string(in.luminanceScaling) << ",\n"
         << "\"gamutMapping\": " << to_string(in.gamutMapping) << ",\n"
         << "\"exposure\": " << (in.exposure) << ",\n"
