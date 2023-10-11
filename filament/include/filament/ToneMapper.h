@@ -115,6 +115,9 @@ struct UTILS_PUBLIC FilmicToneMapper final : public ToneMapper {
     math::float3 operator()(math::float3 x) const noexcept override;
 };
 
+/**
+ * AgX tone mapping operator.
+ */
 struct UTILS_PUBLIC AgxToneMapper final : public ToneMapper {
 
     enum class AgxLook : uint8_t {
@@ -123,6 +126,11 @@ struct UTILS_PUBLIC AgxToneMapper final : public ToneMapper {
         GOLDEN      //!< A golden tinted, slightly washed look for BT.1886 displays
     };
 
+    /**
+     * Builds a new AgX tone mapper.
+     *
+     * @param look an optional creative adjustment to contrast and saturation
+     */
     explicit AgxToneMapper(AgxLook look = AgxLook::NONE) noexcept;
     ~AgxToneMapper() noexcept final;
 

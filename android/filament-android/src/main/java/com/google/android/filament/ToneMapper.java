@@ -106,15 +106,34 @@ public class ToneMapper {
     public static class Agx extends ToneMapper {
 
         public enum AgxLook {
+            /**
+             * Base contrast with no look applied
+             */
             NONE,
+
+            /**
+             * A punchy and more chroma laden look for sRGB displays
+             */
             PUNCHY,
+
+            /**
+             * A golden tinted, slightly washed look for BT.1886 displays
+             */
             GOLDEN
         }
 
+        /**
+         * Builds a new AgX tone mapper with no look applied.
+         */
         public Agx() {
             this(AgxLook.NONE);
         }
 
+        /**
+         * Builds a new AgX tone mapper.
+         *
+         * @param look: an optional creative adjustment to contrast and saturation
+         */
         public Agx(AgxLook look) {
             super(nCreateAgxToneMapper(look.ordinal()));
         }
