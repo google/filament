@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2014-2016 The Khronos Group Inc.
+** Copyright (c) 2022 ARM Limited
 **
 ** Permission is hereby granted, free of charge, to any person obtaining a copy
 ** of this software and/or associated documentation files (the "Materials"),
@@ -24,22 +24,12 @@
 ** IN THE MATERIALS.
 */
 
-#ifndef GLSLextEXT_H
-#define GLSLextEXT_H
+#ifndef GLSLextARM_H
+#define GLSLextARM_H
 
-static const int GLSLextEXTVersion = 100;
-static const int GLSLextEXTRevision = 2;
+static const int GLSLextARMVersion = 100;
+static const int GLSLextARMRevision = 1;
 
-static const char* const E_SPV_EXT_shader_stencil_export        = "SPV_EXT_shader_stencil_export";
-static const char* const E_SPV_EXT_shader_viewport_index_layer  = "SPV_EXT_shader_viewport_index_layer";
-static const char* const E_SPV_EXT_fragment_fully_covered = "SPV_EXT_fragment_fully_covered";
-static const char* const E_SPV_EXT_fragment_invocation_density = "SPV_EXT_fragment_invocation_density";
-static const char* const E_SPV_EXT_demote_to_helper_invocation = "SPV_EXT_demote_to_helper_invocation";
-static const char* const E_SPV_EXT_shader_atomic_float_add = "SPV_EXT_shader_atomic_float_add";
-static const char* const E_SPV_EXT_shader_atomic_float16_add = "SPV_EXT_shader_atomic_float16_add";
-static const char* const E_SPV_EXT_shader_atomic_float_min_max = "SPV_EXT_shader_atomic_float_min_max";
-static const char* const E_SPV_EXT_shader_image_int64 = "SPV_EXT_shader_image_int64";
-static const char* const E_SPV_EXT_shader_tile_image = "SPV_EXT_shader_tile_image";
-static const char* const E_SPV_EXT_mesh_shader = "SPV_EXT_mesh_shader";
+static const char * const E_SPV_ARM_core_builtins = "SPV_ARM_core_builtins";
 
-#endif  // #ifndef GLSLextEXT_H
+#endif  // #ifndef GLSLextARM_H

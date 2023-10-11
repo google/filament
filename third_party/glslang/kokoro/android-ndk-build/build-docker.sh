@@ -43,6 +43,7 @@ using ndk-r21d
 
 export NDK_PROJECT_PATH="${ROOT_DIR}/ndk_test"
 export APP_BUILD_SCRIPT="${ROOT_DIR}/ndk_test/Android.mk"
+export APP_PLATFORM=android-24 # Vulkan introduced in API 24
 
 echo "Building..."
 ndk-build -j

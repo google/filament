@@ -29,11 +29,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _STAND_ALONE_RESOURCE_LIMITS_C_INCLUDED_
 #define _STAND_ALONE_RESOURCE_LIMITS_C_INCLUDED_
 
-#include "../glslang/Include/glslang_c_interface.h"
+#include "../Include/glslang_c_interface.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// Returns a struct that can be use to create custom resource values.
+glslang_resource_t* glslang_resource(void);
 
 // These are the default resources for TBuiltInResources, used for both
 //  - parsing this string for the case where the user didn't supply one,

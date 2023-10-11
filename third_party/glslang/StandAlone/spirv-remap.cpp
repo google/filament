@@ -37,7 +37,11 @@
 #include <fstream>
 #include <cstring>
 #include <stdexcept>
+#include <filesystem>
 
+//
+// Include remapper
+//
 #include "../SPIRV/SPVRemapper.h"
 
 namespace {
@@ -157,7 +161,7 @@ namespace {
     }
 
     // Print helpful usage message to stdout, and exit
-    void usage(const char* const name, const char* const msg = 0)
+    void usage(const char* const name, const char* const msg = nullptr)
     {
         if (msg)
             std::cout << msg << std::endl << std::endl;
@@ -172,7 +176,7 @@ namespace {
             << " [--strip-all | --strip all | -s]"
             << " [--strip-white-list]"
             << " [--do-everything]"
-            << " --input | -i file1 [file2...] --output|-o DESTDIR"
+            << " --input | -i file1 [file2...] --output|-o DESTDIR | destfile1 [destfile2...]"
             << std::endl;
 
         std::cout << "  " << basename(name) << " [--version | -V]" << std::endl;
@@ -182,32 +186,45 @@ namespace {
     }
 
     // grind through each SPIR in turn
-    void execute(const std::vector<std::string>& inputFile, const std::string& outputDir,
-                 const std::string& whiteListFile, int opts, int verbosity)
+    void execute(const std::vector<std::string>& inputFiles,
+                 const std::vector<std::string>& outputDirOrFiles,
+                 const bool                      isSingleOutputDir,
+                 const std::string&              whiteListFile,
+                 int                             opts,
+                 int                             verbosity)
     {
         std::vector<std::string> whiteListStrings;
-        if(!whiteListFile.empty())
+        if (!whiteListFile.empty())
             read(whiteListStrings, whiteListFile, verbosity);
 
-        for (auto it = inputFile.cbegin(); it != inputFile.cend(); ++it) {
-            const std::string &filename = *it;
+        for (std::size_t ii=0; ii<inputFiles.size(); ii++) {
             std::vector<SpvWord> spv;
-            read(spv, filename, verbosity);
+            read(spv, inputFiles[ii], verbosity);
+
             spv::spirvbin_t(verbosity).remap(spv, whiteListStrings, opts);
-            const std::string outfile = outputDir + path_sep_char() + basename(filename);
-            write(spv, outfile, verbosity);
+
+            if (isSingleOutputDir) {
+                // write all outputs to same directory
+                const std::string outFile = outputDirOrFiles[0] + path_sep_char() + basename(inputFiles[ii]);
+                write(spv, outFile, verbosity);
+            } else {
+                // write each input to its associated output
+                write(spv, outputDirOrFiles[ii], verbosity);
+            }
         }
 
         if (verbosity > 0)
-            std::cout << "Done: " << inputFile.size() << " file(s) processed" << std::endl;
+            std::cout << "Done: " << inputFiles.size() << " file(s) processed" << std::endl;
     }
 
     // Parse command line options
-    void parseCmdLine(int argc, char** argv, std::vector<std::string>& inputFile,
-        std::string& outputDir,
-        std::string& stripWhiteListFile,
-        int& options,
-        int& verbosity)
+    void parseCmdLine(int argc,
+                      char** argv,
+                      std::vector<std::string>& inputFiles,
+                      std::vector<std::string>& outputDirOrFiles,
+                      std::string& stripWhiteListFile,
+                      int& options,
+                      int& verbosity)
     {
         if (argc < 2)
             usage(argv[0]);
@@ -222,18 +239,19 @@ namespace {
             const std::string arg = argv[a];
 
             if (arg == "--output" || arg == "-o") {
-                // Output directory
-                if (++a >= argc)
+                // Collect output dirs or files
+                for (++a; a < argc && argv[a][0] != '-'; ++a)
+                    outputDirOrFiles.push_back(argv[a]);
+
+                if (outputDirOrFiles.size() == 0)
                     usage(argv[0], "--output requires an argument");
-                if (!outputDir.empty())
-                    usage(argv[0], "--output can be provided only once");
 
-                outputDir = argv[a++];
-
-                // Remove trailing directory separator characters
-                while (!outputDir.empty() && outputDir.back() == path_sep_char())
-                    outputDir.pop_back();
-
+                // Remove trailing directory separator characters from all paths
+                for (std::size_t ii=0; ii<outputDirOrFiles.size(); ii++) {
+                    auto path = outputDirOrFiles[ii];
+                    while (!path.empty() && path.back() == path_sep_char())
+                        path.pop_back();
+                }
             }
             else if (arg == "-vv")     { verbosity = 2; ++a; } // verbosity shortcuts
             else if (arg == "-vvv")    { verbosity = 3; ++a; } // ...
@@ -245,7 +263,7 @@ namespace {
                 verbosity = 1;
 
                 if (a < argc) {
-                    char* end_ptr = 0;
+                    char* end_ptr = nullptr;
                     int verb = ::strtol(argv[a], &end_ptr, 10);
                     // If we have not read to the end of the string or
                     // the string contained no elements, then we do not want to
@@ -262,7 +280,7 @@ namespace {
             } else if (arg == "--input" || arg == "-i") {
                 // Collect input files
                 for (++a; a < argc && argv[a][0] != '-'; ++a)
-                    inputFile.push_back(argv[a]);
+                    inputFiles.push_back(argv[a]);
             } else if (arg == "--do-everything") {
                 ++a;
                 options = options | spv::spirvbin_t::DO_EVERYTHING;
@@ -346,30 +364,39 @@ namespace {
 
 int main(int argc, char** argv)
 {
-    std::vector<std::string> inputFile;
-    std::string              outputDir;
+    std::vector<std::string> inputFiles;
+    std::vector<std::string> outputDirOrFiles;
     std::string              whiteListFile;
     int                      opts;
     int                      verbosity;
 
-#ifdef use_cpp11
     // handle errors by exiting
     spv::spirvbin_t::registerErrorHandler(errHandler);
 
     // Log messages to std::cout
     spv::spirvbin_t::registerLogHandler(logHandler);
-#endif
 
     if (argc < 2)
         usage(argv[0]);
 
-    parseCmdLine(argc, argv, inputFile, outputDir, whiteListFile, opts, verbosity);
+    parseCmdLine(argc, argv, inputFiles, outputDirOrFiles, whiteListFile, opts, verbosity);
 
-    if (outputDir.empty())
-        usage(argv[0], "Output directory required");
+    if (outputDirOrFiles.empty())
+        usage(argv[0], "Output directory or file(s) required.");
+
+    const bool isMultiInput      = inputFiles.size() > 1;
+    const bool isMultiOutput     = outputDirOrFiles.size() > 1;
+    const bool isSingleOutputDir = !isMultiOutput && std::filesystem::is_directory(outputDirOrFiles[0]);
+
+    if (isMultiInput && !isMultiOutput && !isSingleOutputDir)
+        usage(argv[0], "Output is not a directory.");
+
+
+    if (isMultiInput && isMultiOutput && (outputDirOrFiles.size() != inputFiles.size()))
+        usage(argv[0], "Output must be either a single directory or one output file per input.");
 
     // Main operations: read, remap, and write.
-    execute(inputFile, outputDir, whiteListFile, opts, verbosity);
+    execute(inputFiles, outputDirOrFiles, isSingleOutputDir, whiteListFile, opts, verbosity);
 
     // If we get here, everything went OK!  Nothing more to be done.
 }
