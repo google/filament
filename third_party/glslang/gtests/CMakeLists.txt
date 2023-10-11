@@ -76,7 +76,7 @@ if(BUILD_TESTING)
                 message(WARNING \"Using `glslangtestsTargets.cmake` is deprecated: use `find_package(glslang)` to find glslang CMake targets.\")
 
                 if (NOT TARGET glslang::glslangtests)
-                    include(\"\${CMAKE_CURRENT_LIST_DIR}/../../${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}/glslang-targets.cmake\")
+                    include(\"${CMAKE_INSTALL_FULL_LIBDIR}/cmake/${PROJECT_NAME}/glslang-targets.cmake\")
                 endif()
 
                 add_library(glslangtests ALIAS glslang::glslangtests)

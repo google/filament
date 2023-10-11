@@ -38,6 +38,7 @@ set -e # Fail on any error.
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd )"
 ROOT_DIR="$( cd "${SCRIPT_DIR}/../.." >/dev/null 2>&1 && pwd )"
 
+set +e # Allow build failure
 docker run --rm -i \
   --volume "${ROOT_DIR}:${ROOT_DIR}" \
   --workdir "${ROOT_DIR}" \
@@ -46,4 +47,9 @@ docker run --rm -i \
   --entrypoint "${SCRIPT_DIR}/build-docker.sh" \
   "gcr.io/shaderc-build/radial-build:latest"
 
+# This is important. If the permissions are not fixed, kokoro will fail
+# to pull build artifacts, and put the build in tool-failure state, which
+# blocks the logs.
+RESULT=$?
 sudo chown -R "$(id -u):$(id -g)" "${ROOT_DIR}"
+exit $RESULT

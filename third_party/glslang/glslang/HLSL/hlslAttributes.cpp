@@ -101,6 +101,8 @@ namespace glslang {
 
             if (name == "nonwritable")    return EatNonWritable;
             if (name == "nonreadable")    return EatNonReadable;
+
+            if (name == "export")         return EatExport;
         } else if (nameSpace.size() > 0)
             return EatNone;
 
