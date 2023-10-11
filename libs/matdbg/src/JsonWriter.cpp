@@ -139,7 +139,7 @@ static void printShaderInfo(ostream& json, const vector<ShaderInfo>& info, const
 static bool printGlslInfo(ostream& json, const ChunkContainer& container) {
     std::vector<ShaderInfo> info;
     info.resize(getShaderCount(container, ChunkType::MaterialGlsl));
-    if (!getGlShaderInfo(container, info.data(), ChunkType::MaterialGlsl)) {
+    if (!getShaderInfo(container, info.data(), ChunkType::MaterialGlsl)) {
         return false;
     }
     json << "\"opengl\": [\n";
@@ -151,7 +151,7 @@ static bool printGlslInfo(ostream& json, const ChunkContainer& container) {
 static bool printVkInfo(ostream& json, const ChunkContainer& container) {
     std::vector<ShaderInfo> info;
     info.resize(getShaderCount(container, ChunkType::MaterialSpirv));
-    if (!getVkShaderInfo(container, info.data())) {
+    if (!getShaderInfo(container, info.data(), ChunkType::MaterialSpirv)) {
         return false;
     }
     json << "\"vulkan\": [\n";
@@ -163,7 +163,7 @@ static bool printVkInfo(ostream& json, const ChunkContainer& container) {
 static bool printMetalInfo(ostream& json, const ChunkContainer& container) {
     std::vector<ShaderInfo> info;
     info.resize(getShaderCount(container, ChunkType::MaterialMetal));
-    if (!getMetalShaderInfo(container, info.data())) {
+    if (!getShaderInfo(container, info.data(), ChunkType::MaterialMetal)) {
         return false;
     }
     json << "\"metal\": [\n";
@@ -227,17 +227,17 @@ bool JsonWriter::writeActiveInfo(const filaflat::ChunkContainer& package,
     switch (backend) {
         case Backend::OPENGL:
             shaders.resize(getShaderCount(package, ChunkType::MaterialGlsl));
-            getGlShaderInfo(package, shaders.data(), ChunkType::MaterialGlsl);
+            getShaderInfo(package, shaders.data(), ChunkType::MaterialGlsl);
             json << "opengl";
             break;
         case Backend::VULKAN:
             shaders.resize(getShaderCount(package, ChunkType::MaterialSpirv));
-            getVkShaderInfo(package, shaders.data());
+            getShaderInfo(package, shaders.data(), ChunkType::MaterialSpirv);
             json << "vulkan";
             break;
         case Backend::METAL:
             shaders.resize(getShaderCount(package, ChunkType::MaterialMetal));
-            getMetalShaderInfo(package, shaders.data());
+            getShaderInfo(package, shaders.data(), ChunkType::MaterialMetal);
             json << "metal";
             break;
         default:

@@ -280,7 +280,7 @@ public:
             }
 
             FixedCapacityVector<ShaderInfo> info(getShaderCount(package, ChunkType::MaterialGlsl));
-            if (!getGlShaderInfo(package, info.data(), ChunkType::MaterialGlsl)) {
+            if (!getShaderInfo(package, info.data(), ChunkType::MaterialGlsl)) {
                 return error(__LINE__);
             }
 
@@ -311,7 +311,7 @@ public:
 
             filaflat::ShaderContent content;
             FixedCapacityVector<ShaderInfo> info(getShaderCount(package, ChunkType::MaterialSpirv));
-            if (!getVkShaderInfo(package, info.data())) {
+            if (!getShaderInfo(package, info.data(), ChunkType::MaterialSpirv)) {
                 return error(__LINE__);
             }
 
@@ -344,7 +344,7 @@ public:
 
             filaflat::ShaderContent content;
             FixedCapacityVector<ShaderInfo> info(getShaderCount(package, ChunkType::MaterialMetal));
-            if (!getMetalShaderInfo(package, info.data())) {
+            if (!getShaderInfo(package, info.data(), ChunkType::MaterialMetal)) {
                 return error(__LINE__);
             }
 
@@ -600,7 +600,7 @@ bool DebugServer::handleEditCommand(const MaterialKey& key, backend::Backend api
             shaderCount = getShaderCount(package, ChunkType::MaterialGlsl);
             infos.reserve(shaderCount);
             infos.resize(shaderCount);
-            if (!getGlShaderInfo(package, infos.data(), ChunkType::MaterialGlsl)) {
+            if (!getShaderInfo(package, infos.data(), ChunkType::MaterialGlsl)) {
                 return error(__LINE__);
             }
             break;
@@ -609,7 +609,7 @@ bool DebugServer::handleEditCommand(const MaterialKey& key, backend::Backend api
             shaderCount = getShaderCount(package, ChunkType::MaterialSpirv);
             infos.reserve(shaderCount);
             infos.resize(shaderCount);
-            if (!getVkShaderInfo(package, infos.data())) {
+            if (!getShaderInfo(package, infos.data(), ChunkType::MaterialSpirv)) {
                 return error(__LINE__);
             }
             break;
@@ -618,7 +618,7 @@ bool DebugServer::handleEditCommand(const MaterialKey& key, backend::Backend api
             shaderCount = getShaderCount(package, ChunkType::MaterialMetal);
             infos.reserve(shaderCount);
             infos.resize(shaderCount);
-            if (!getMetalShaderInfo(package, infos.data())) {
+            if (!getShaderInfo(package, infos.data(), ChunkType::MaterialMetal)) {
                 return error(__LINE__);
             }
             break;
