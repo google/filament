@@ -37,21 +37,21 @@
 
 #include <string>
 
-#include "../glslang/Include/ResourceLimits.h"
+#include "../Include/ResourceLimits.h"
 
-namespace glslang {
+// Return pointer to user-writable Resource to pass through API in
+// future-proof way.
+extern TBuiltInResource* GetResources();
 
 // These are the default resources for TBuiltInResources, used for both
 //  - parsing this string for the case where the user didn't supply one,
 //  - dumping out a template for user construction of a config file.
-extern const TBuiltInResource DefaultTBuiltInResource;
+extern const TBuiltInResource* GetDefaultResources();
 
 // Returns the DefaultTBuiltInResource as a human-readable string.
 std::string GetDefaultTBuiltInResourceString();
 
 // Decodes the resource limits from |config| to |resources|.
 void DecodeResourceLimits(TBuiltInResource* resources, char* config);
-
-}  // end namespace glslang
 
 #endif  // _STAND_ALONE_RESOURCE_LIMITS_INCLUDED_

@@ -48,7 +48,7 @@
 #include "SPIRV/disassemble.h"
 #include "SPIRV/doc.h"
 #include "SPIRV/SPVRemapper.h"
-#include "StandAlone/ResourceLimits.h"
+#include "glslang/Public/ResourceLimits.h"
 #include "glslang/Public/ShaderLang.h"
 
 #include "Initializer.h"
@@ -199,7 +199,7 @@ public:
             shader->setStringsWithLengths(&shaderStrings, &shaderLengths, 1);
         if (!entryPointName.empty()) shader->setEntryPoint(entryPointName.c_str());
         return shader->parse(
-                (resources ? resources : &glslang::DefaultTBuiltInResource),
+                (resources ? resources : GetDefaultResources()),
                 defaultVersion, isForwardCompatible, controls);
     }
 
@@ -248,38 +248,58 @@ public:
             }
         }
 
+        if (options().compileOnly)
+            shader.setCompileOnly();
+
         bool success = compile(
                 &shader, code, entryPointName, controls, nullptr, &shaderName);
 
         glslang::TProgram program;
-        program.addShader(&shader);
-        success &= program.link(controls);
-#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
-        if (success)
-            program.mapIO();
-#endif
+        spv::SpvBuildLogger logger;
+        std::vector<uint32_t> spirv_binary;
 
-        if (success && (controls & EShMsgSpvRules)) {
-            spv::SpvBuildLogger logger;
-            std::vector<uint32_t> spirv_binary;
+        if (!options().compileOnly) {
+            program.addShader(&shader);
+            success &= program.link(controls);
+            if (success)
+                program.mapIO();
+
+            if (success && (controls & EShMsgSpvRules)) {
+                options().disableOptimizer = !enableOptimizer;
+                options().generateDebugInfo = enableDebug;
+                options().emitNonSemanticShaderDebugInfo = enableNonSemanticShaderDebugInfo;
+                options().emitNonSemanticShaderDebugSource = enableNonSemanticShaderDebugInfo;
+                glslang::GlslangToSpv(*program.getIntermediate(stage), spirv_binary, &logger, &options());
+            } else {
+                return {{
+                            {shaderName, shader.getInfoLog(), shader.getInfoDebugLog()},
+                        },
+                        program.getInfoLog(),
+                        program.getInfoDebugLog(),
+                        true,
+                        "",
+                        ""};
+            }
+        } else {
             options().disableOptimizer = !enableOptimizer;
             options().generateDebugInfo = enableDebug;
             options().emitNonSemanticShaderDebugInfo = enableNonSemanticShaderDebugInfo;
             options().emitNonSemanticShaderDebugSource = enableNonSemanticShaderDebugInfo;
-            glslang::GlslangToSpv(*program.getIntermediate(stage),
-                                  spirv_binary, &logger, &options());
-
-            std::ostringstream disassembly_stream;
-            spv::Parameterize();
-            spv::Disassemble(disassembly_stream, spirv_binary);
-            bool validation_result = !options().validate || logger.getAllMessages().empty();
-            return {{{shaderName, shader.getInfoLog(), shader.getInfoDebugLog()},},
-                    program.getInfoLog(), program.getInfoDebugLog(),
-                    validation_result, logger.getAllMessages(), disassembly_stream.str()};
-        } else {
-            return {{{shaderName, shader.getInfoLog(), shader.getInfoDebugLog()},},
-                    program.getInfoLog(), program.getInfoDebugLog(), true, "", ""};
+            glslang::GlslangToSpv(*shader.getIntermediate(), spirv_binary, &logger, &options());
         }
+
+        std::ostringstream disassembly_stream;
+        spv::Parameterize();
+        spv::Disassemble(disassembly_stream, spirv_binary);
+        bool validation_result = !options().validate || logger.getAllMessages().empty();
+        return {{
+                    {shaderName, shader.getInfoLog(), shader.getInfoDebugLog()},
+                },
+                program.getInfoLog(),
+                program.getInfoDebugLog(),
+                validation_result,
+                logger.getAllMessages(),
+                disassembly_stream.str()};
     }
 
     // Compiles and links the given source |code| of the given shader
@@ -318,10 +338,8 @@ public:
         program.addShader(&shader);
         
         success &= program.link(controls);
-#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
         if (success)
             program.mapIO();
-#endif
 
         spv::SpvBuildLogger logger;
 
@@ -363,10 +381,8 @@ public:
         glslang::TProgram program;
         program.addShader(&shader);
         success &= program.link(controls);
-#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
         if (success)
             program.mapIO();
-#endif
 
         if (success && (controls & EShMsgSpvRules)) {
         spv::SpvBuildLogger logger;
@@ -471,7 +487,7 @@ public:
             targetLanguageVersion, false, EShTexSampTransKeep, enableOptimizer, enableDebug,
             enableNonSemanticShaderDebugInfo, automap);
 
-        // Generate the hybrid output in the way of glslangValidator.
+        // Generate the hybrid output in the way of glslang.
         std::ostringstream stream;
         outputResultToStream(&stream, result, controls);
 
@@ -501,7 +517,7 @@ public:
         GlslangResult result = compileAndLink(testName, input, entryPointName, controls, clientTargetVersion,
             targetLanguageVersion, false, EShTexSampTransKeep, false, automap);
 
-        // Generate the hybrid output in the way of glslangValidator.
+        // Generate the hybrid output in the way of glslang.
         std::ostringstream stream;
         outputResultToStream(&stream, result, controls);
 
@@ -527,7 +543,7 @@ public:
         GlslangResult result = compileAndLink(testName, input, entryPointName, controls,
                                               glslang::EShTargetVulkan_1_0, glslang::EShTargetSpv_1_0, true);
 
-        // Generate the hybrid output in the way of glslangValidator.
+        // Generate the hybrid output in the way of glslang.
         std::ostringstream stream;
         outputResultToStream(&stream, result, controls);
 
@@ -564,7 +580,7 @@ public:
                                                 autoMapBindings,
                                                 flattenUniformArrays);
 
-        // Generate the hybrid output in the way of glslangValidator.
+        // Generate the hybrid output in the way of glslang.
         std::ostringstream stream;
         outputResultToStream(&stream, result, controls);
 
@@ -591,7 +607,7 @@ public:
         const EShMessages controls = DeriveOptions(source, semantics, target);
         GlslangResult result = compileLinkRemap(testName, input, entryPointName, controls, remapOptions);
 
-        // Generate the hybrid output in the way of glslangValidator.
+        // Generate the hybrid output in the way of glslang.
         std::ostringstream stream;
         outputResultToStream(&stream, result, controls);
 
@@ -618,7 +634,7 @@ public:
         const EShMessages controls = DeriveOptions(source, semantics, target);
         GlslangResult result = remap(testName, input, controls, remapOptions);
 
-        // Generate the hybrid output in the way of glslangValidator.
+        // Generate the hybrid output in the way of glslang.
         std::ostringstream stream;
         outputResultToStream(&stream, result, controls);
 
@@ -640,7 +656,7 @@ public:
         std::string ppShader;
         glslang::TShader::ForbidIncluder includer;
         const bool success = shader.preprocess(
-            &glslang::DefaultTBuiltInResource, defaultVersion, defaultProfile,
+            GetDefaultResources(), defaultVersion, defaultProfile,
             forceVersionProfile, isForwardCompatible, (EShMessages)(EShMsgOnlyPreprocessor | EShMsgCascadingErrors),
             &ppShader, includer);
 
@@ -698,7 +714,7 @@ public:
                                               glslang::EShTargetVulkan_1_0, glslang::EShTargetSpv_1_0, false,
                                               EShTexSampTransUpgradeTextureRemoveSampler);
 
-        // Generate the hybrid output in the way of glslangValidator.
+        // Generate the hybrid output in the way of glslang.
         std::ostringstream stream;
         outputResultToStream(&stream, result, controls);
 
