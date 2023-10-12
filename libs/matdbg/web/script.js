@@ -25,14 +25,14 @@ const shaderSource = document.getElementById("shader-source");
 const matDetailTemplate = document.getElementById("material-detail-template");
 const matListTemplate = document.getElementById("material-list-template");
 
+const STATUS_LOOP_TIMEOUT = 3000;
+
 const gMaterialDatabase = {};
 
-let gSocket = null;
 let gEditor = null;
 let gCurrentMaterial = "00000000";
 let gCurrentLanguage = "glsl";
 let gCurrentShader = { matid: "00000000", glindex: 0 };
-let gCurrentSocketId = 0;
 let gEditorIsLoading = false;
 
 require.config({ paths: { "vs": `${kMonacoBaseUrl}vs` }});
@@ -166,16 +166,7 @@ function fetchMaterial(matid) {
 }
 
 function queryActiveShaders() {
-    if (!gSocket) {
-        for (matid in gMaterialDatabase) {
-            const material = gMaterialDatabase[matid];
-            material.active = false;
-            for (const shader of material.opengl) shader.active = false;
-            for (const shader of material.vulkan) shader.active = false;
-            for (const shader of material.metal)  shader.active = false;
-        }
-        renderMaterialList();
-        renderMaterialDetail();
+    if (!isConnected()) {
         return;
     }
     fetch("api/active").then(function(response) {
@@ -204,38 +195,54 @@ function queryActiveShaders() {
     });
 }
 
-function startSocket() {
-    const url = new URL(document.URL)
-    const ws = new WebSocket(`ws://${url.host}`);
+function isConnected() {
+    return footer.innerText == 'connected';
+}
 
-    // When a new server has come online, ask it what materials it has.
-    ws.addEventListener("open", () => {
-        footer.innerText = `connection ${gCurrentSocketId}`;
-        gCurrentSocketId++;
-
-        fetch("api/matids").then(function(response) {
-            return response.json();
-        }).then(function(matInfo) {
-            for (matid of matInfo) {
-                if (!(matid in gMaterialDatabase)) {
-                    fetchMaterial(matid);
-                }
+function onConnected() {
+    footer.innerText = 'connected';
+    fetch("api/matids").then(function(response) {
+        return response.json();
+    }).then(function(matInfo) {
+        for (matid of matInfo) {
+            if (!(matid in gMaterialDatabase)) {
+                fetchMaterial(matid);
             }
+        }
+    });
+}
+
+function onDisconnected() {
+    footer.innerText = 'not connected';
+    for (matid in gMaterialDatabase) {
+        const material = gMaterialDatabase[matid];
+        material.active = false;
+        for (const shader of material.opengl) shader.active = false;
+        for (const shader of material.vulkan) shader.active = false;
+        for (const shader of material.metal)  shader.active = false;
+    }
+    renderMaterialList();
+    renderMaterialDetail();
+}
+
+function statusLoop() {
+    // This is a hanging get except for when transition from disconnected to connected, which
+    // should return immediately.
+    fetch("api/status" + (isConnected() ? '' : '?firstTime'))
+        .then(async (response) => {
+            const matid = await response.text();
+            // A first-time request returned successfully
+            if (matid === '0') {
+                onConnected();
+            } else {
+                fetchMaterial(matid);
+            }
+            statusLoop();
+        })
+        .catch(err => {
+            onDisconnected();
+            setTimeout(statusLoop, STATUS_LOOP_TIMEOUT)
         });
-    });
-
-    ws.addEventListener("close", (e) => {
-        footer.innerText = "no connection";
-        gSocket = null;
-        setTimeout(() => startSocket(), 3000);
-    });
-
-    ws.addEventListener("message", event => {
-        const matid = event.data;
-        fetchMaterial(matid);
-    });
-
-    gSocket = ws;
 }
 
 function fetchMaterials() {
@@ -498,7 +505,7 @@ function init() {
     Mustache.parse(matDetailTemplate.innerHTML);
     Mustache.parse(matListTemplate.innerHTML);
 
-    startSocket();
+    statusLoop();
 
     // Poll for active shaders once every second.
     // Take care not to poll more frequently than the frame rate. Active variants are determined

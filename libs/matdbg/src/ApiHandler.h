@@ -17,6 +17,8 @@
 #ifndef MATDBG_APIHANDLER_H
 #define MATDBG_APIHANDLER_H
 
+#include <utils/Mutex.h>
+
 #include <CivetServer.h>
 
 namespace filament::matdbg {
@@ -31,23 +33,34 @@ struct MaterialRecord;
 //    GET /api/material?matid={id}
 //    GET /api/shader?matid={id}&type=[glsl|spirv]&[glindex|vkindex|metalindex]={index}
 //    GET /api/active
+//    GET /api/status
 //    POST /api/edit
 //
 class ApiHandler : public CivetHandler {
 public:
     explicit ApiHandler(DebugServer* server)
         : mServer(server) {}
+    ~ApiHandler() = default;
 
     bool handleGet(CivetServer* server, struct mg_connection* conn);
-
     bool handlePost(CivetServer* server, struct mg_connection* conn);
-
-    ~ApiHandler() = default;
+    void addMaterial(MaterialRecord const* material);
 
 private:
     bool handleGetApiShader(struct mg_connection* conn, struct mg_request_info const* request);
+    bool handleGetStatus(struct mg_connection* conn, struct mg_request_info const* request);
     MaterialRecord const* getMaterialRecord(struct mg_request_info const* request);
+
     DebugServer* mServer;
+
+    utils::Mutex mStatusMutex;
+    std::condition_variable mStatusCondition;
+    char statusMaterialId[9] = {};
+
+    // This variable is to implement a *hanging* effect for /api/status. The call to /api/status
+    // will always block until statusMaterialId is updated again. The client is expected to keep
+    // calling /api/status (a constant "pull" to simulate a push).
+    std::atomic_uint64_t mCurrentStatus = 0;
 };
 
 } // filament::matdbg
