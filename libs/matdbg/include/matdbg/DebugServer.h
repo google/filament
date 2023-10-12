@@ -27,10 +27,18 @@
 
 class CivetServer;
 
-namespace filament {
-namespace matdbg {
+namespace filament::matdbg {
 
 using MaterialKey = uint32_t;
+
+struct MaterialRecord {
+    void* userdata;
+    const uint8_t* package;
+    size_t packageSize;
+    utils::CString name;
+    MaterialKey key;
+    VariantList activeVariants;
+};
 
 /**
  * Server-side material debugger.
@@ -41,6 +49,9 @@ using MaterialKey = uint32_t;
  */
 class DebugServer {
 public:
+    static std::string_view const kSuccessHeader;
+    static std::string_view const kErrorHeader;
+
     DebugServer(backend::Backend backend, int port);
     ~DebugServer();
 
@@ -74,16 +85,7 @@ public:
     bool isReady() const { return mServer; }
 
 private:
-    struct MaterialRecord {
-        void* userdata;
-        const uint8_t* package;
-        size_t packageSize;
-        utils::CString name;
-        MaterialKey key;
-        VariantList activeVariants;
-    };
-
-    const MaterialRecord* getRecord(const MaterialKey& key) const;
+    MaterialRecord const* getRecord(const MaterialKey& key) const;
 
     void updateActiveVariants();
 
@@ -109,15 +111,14 @@ private:
     QueryCallback mQueryCallback = nullptr;
 
     class FileRequestHandler* mFileHandler = nullptr;
-    class RestRequestHandler* mRestHandler = nullptr;
+    class ApiHandler* mApiHandler = nullptr;
     class WebSocketHandler* mWebSocketHandler = nullptr;
 
     friend class FileRequestHandler;
-    friend class RestRequestHandler;
+    friend class ApiHandler;
     friend class WebSocketHandler;
 };
 
-} // namespace matdbg
-} // namespace filament
+} // namespace filament::matdbg
 
 #endif  // MATDBG_DEBUGSERVER_H
