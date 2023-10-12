@@ -101,7 +101,7 @@ struct App {
 
     bool actualSize = false;
     bool originIsFarAway = false;
-    float originDistance = 6378137; // Earth's radius in [m]
+    float originDistance = 1.0f;
 
     struct Scene {
         Entity groundPlane;
@@ -760,7 +760,7 @@ int main(int argc, char** argv) {
                 ImGui::Checkbox("Disable buffer padding", debug.getPropertyAddress<bool>("d.renderer.disable_buffer_padding"));
                 ImGui::Checkbox("Camera at origin", debug.getPropertyAddress<bool>("d.view.camera_at_origin"));
                 ImGui::Checkbox("Far Origin", &app.originIsFarAway);
-                ImGui::SliderFloat("Origin", &app.originDistance, 0, 10000000);
+                ImGui::SliderFloat("Origin", &app.originDistance, 0, 1);
                 ImGui::Checkbox("Far uses shadow casters", debug.getPropertyAddress<bool>("d.shadowmap.far_uses_shadowcasters"));
                 ImGui::Checkbox("Focus shadow casters", debug.getPropertyAddress<bool>("d.shadowmap.focus_shadowcasters"));
                 auto dataSource = debug.getDataSource("d.view.frame_info");
@@ -960,7 +960,11 @@ int main(int argc, char** argv) {
         tcm.setParent(tcm.getInstance(camera.getEntity()), root);
         tcm.setParent(tcm.getInstance(app.asset->getRoot()), root);
         tcm.setParent(tcm.getInstance(view->getFogEntity()), root);
-        tcm.setTransform(root, mat4f::translation(float3{ app.originIsFarAway ? app.originDistance : 0.0f }));
+
+        // these values represent a point somewhere on Earth's surface
+        float const d = app.originIsFarAway ? app.originDistance : 0.0f;
+//        tcm.setTransform(root, mat4::translation(double3{ 67.0, -6366759.0, -21552.0 } * d));
+        tcm.setTransform(root, mat4::translation(double3{ 2304097.1410110965, -4688442.9915525438, -3639452.5611694567 } * d));
 
         // Check if color grading has changed.
         ColorGradingSettings& options = app.viewer->getSettings().view.colorGrading;

@@ -397,8 +397,8 @@ CameraInfo FView::computeCameraInfo(FEngine& engine) const noexcept {
      * The "world origin" is also used to keep the origin close to the camera position to
      * improve fp precision in the shader for large scenes.
      */
-    mat4 translation;
-    mat4 rotation;
+    double3 translation;
+    mat3 rotation;
 
     /*
      * Calculate all camera parameters needed to render this View for this frame.
@@ -409,16 +409,18 @@ CameraInfo FView::computeCameraInfo(FEngine& engine) const noexcept {
         // view-space, which improves floating point precision in the shader by staying around
         // zero, where fp precision is highest. This also ensures that when the camera is placed
         // very far from the origin, objects are still rendered and lit properly.
-        translation = mat4::translation( -camera->getPosition() );
+        translation = -camera->getPosition();
     }
 
     FIndirectLight const* const ibl = scene->getIndirectLight();
     if (ibl) {
         // the IBL transformation must be a rigid transform
-        rotation = mat4{ transpose(scene->getIndirectLight()->getRotation()) };
+        rotation = mat3{ transpose(scene->getIndirectLight()->getRotation()) };
+        // it is important to orthogonalize the matrix when converting it to doubles, because
+        // as float, it only has about a 1e-8 precision on the size of the basis vectors
+        rotation = orthogonalize(rotation);
     }
-
-    return { *camera, rotation * translation };
+    return { *camera, mat4{ rotation } * mat4::translation(translation) };
 }
 
 void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
@@ -446,7 +448,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
             // intent of the code, which is that we should only depend on CameraInfo here.
             // This is an extremely uncommon case.
             const mat4 projection = mCullingCamera->getCullingProjectionMatrix();
-            const mat4 view = inverse(cameraInfo.worldOrigin * mCullingCamera->getModelMatrix());
+            const mat4 view = inverse(cameraInfo.worldTransform * mCullingCamera->getModelMatrix());
             return Frustum{ mat4f{ projection * view }};
         }
     };
@@ -459,7 +461,9 @@ void FView::prepare(FEngine& engine, DriverApi& driver, ArenaScope& arena,
      * Gather all information needed to render this scene. Apply the world origin to all
      * objects in the scene.
      */
-    scene->prepare(js, arena.getAllocator(), cameraInfo.worldOrigin, hasVSM());
+    scene->prepare(js, arena.getAllocator(),
+            cameraInfo.worldTransform,
+            hasVSM());
 
     /*
      * Light culling: runs in parallel with Renderable culling (below)
