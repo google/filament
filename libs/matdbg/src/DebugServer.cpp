@@ -116,42 +116,6 @@ private:
     DebugServer* mServer;
 };
 
-class WebSocketHandler : public CivetWebSocketHandler {
-public:
-    WebSocketHandler(DebugServer* server) : mServer(server) {}
-
-    bool handleConnection(CivetServer *server, const struct mg_connection *conn) override {
-        return true;
-    }
-
-    void handleReadyState(CivetServer *server, struct mg_connection *conn) override {
-        mConnections.insert(conn);
-    }
-
-    bool handleData(CivetServer *server, struct mg_connection *conn, int bits, char *data,
-            size_t size) override {
-        return false;
-    }
-
-    void handleClose(CivetServer *server, const struct mg_connection *conn) override {
-        struct mg_connection *key = const_cast<struct mg_connection *>(conn);
-        mConnections.erase(key);
-    }
-
-    // Notify all JavaScript clients that a new material package has been loaded.
-    void addMaterial(MaterialRecord const& material) {
-        for (auto connection : mConnections) {
-            char matid[9] = {};
-            snprintf(matid, sizeof(matid), "%8.8x", material.key);
-            mg_websocket_write(connection, MG_WEBSOCKET_OPCODE_TEXT, matid, 8);
-        }
-    }
-
-private:
-    DebugServer* mServer;
-    tsl::robin_set<struct mg_connection*> mConnections;
-};
-
 DebugServer::DebugServer(Backend backend, int port) : mBackend(backend) {
     #if !SERVE_FROM_SOURCE_TREE
     mHtml = CString((const char*) MATDBG_RESOURCES_INDEX_DATA, MATDBG_RESOURCES_INDEX_SIZE - 1);
@@ -182,11 +146,9 @@ DebugServer::DebugServer(Backend backend, int port) : mBackend(backend) {
 
     mFileHandler = new FileRequestHandler(this);
     mApiHandler = new ApiHandler(this);
-    mWebSocketHandler = new WebSocketHandler(this);
 
     mServer->addHandler("/api", mApiHandler);
     mServer->addHandler("", mFileHandler);
-    mServer->addWebSocketHandler("", mWebSocketHandler);
 
     slog.i << "DebugServer listening at http://localhost:" << port << io::endl;
     filamat::GLSLTools::init();
@@ -194,12 +156,17 @@ DebugServer::DebugServer(Backend backend, int port) : mBackend(backend) {
 
 DebugServer::~DebugServer() {
     filamat::GLSLTools::shutdown();
-    for (auto& pair : mMaterialRecords) {
-        delete [] pair.second.package;
-    }
+
+    mServer->close();
+
     delete mFileHandler;
     delete mApiHandler;
     delete mServer;
+
+    std::unique_lock<utils::Mutex> lock(mMaterialRecordsMutex);
+    for (auto& pair : mMaterialRecords) {
+        delete [] pair.second.package;
+    }
 }
 
 MaterialKey
@@ -218,23 +185,27 @@ DebugServer::addMaterial(const CString& name, const void* data, size_t size, voi
     uint8_t* package = new uint8_t[size];
     memcpy(package, data, size);
 
+    std::unique_lock<utils::Mutex> lock(mMaterialRecordsMutex);
     MaterialRecord info = {userdata, package, size, name, key};
     mMaterialRecords.insert({key, info});
-    mWebSocketHandler->addMaterial(info);
+    mApiHandler->addMaterial(&info);
     return key;
 }
 
 void DebugServer::removeMaterial(MaterialKey key) {
+    std::unique_lock<utils::Mutex> lock(mMaterialRecordsMutex);
     mMaterialRecords.erase(key);
 }
 
 const MaterialRecord* DebugServer::getRecord(const MaterialKey& key) const {
+    std::unique_lock<utils::Mutex> lock(mMaterialRecordsMutex);
     const auto& iter = mMaterialRecords.find(key);
     return iter == mMaterialRecords.end() ? nullptr : &iter->second;
 }
 
 void DebugServer::updateActiveVariants() {
     if (mQueryCallback) {
+        std::unique_lock<utils::Mutex> lock(mMaterialRecordsMutex);
         auto curr = mMaterialRecords.begin();
         auto end = mMaterialRecords.end();
         while (curr != end) {
@@ -253,6 +224,7 @@ bool DebugServer::handleEditCommand(const MaterialKey& key, backend::Backend api
         return false;
     };
 
+    std::unique_lock<utils::Mutex> lock(mMaterialRecordsMutex);
     if (mMaterialRecords.find(key) == mMaterialRecords.end()) {
         return error(__LINE__);
     }

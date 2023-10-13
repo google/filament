@@ -24,6 +24,7 @@
 #include <private/filament/Variant.h>
 
 #include <tsl/robin_map.h>
+#include <utils/Mutex.h>
 
 class CivetServer;
 
@@ -43,9 +44,8 @@ struct MaterialRecord {
 /**
  * Server-side material debugger.
  *
- * This class manages an HTTP server and a WebSockets server that listen on a secondary thread. It
- * receives material packages from the Filament C++ engine or from a standalone tool such as
- * matinfo.
+ * This class manages an HTTP server. It receives material packages from the Filament C++ engine or
+ * from a standalone tool such as matinfo.
  */
 class DebugServer {
 public:
@@ -99,7 +99,10 @@ private:
     const backend::Backend mBackend;
 
     CivetServer* mServer;
+
     tsl::robin_map<MaterialKey, MaterialRecord> mMaterialRecords;
+    mutable utils::Mutex mMaterialRecordsMutex;
+
     utils::CString mHtml;
     utils::CString mJavascript;
     utils::CString mCss;
@@ -112,11 +115,9 @@ private:
 
     class FileRequestHandler* mFileHandler = nullptr;
     class ApiHandler* mApiHandler = nullptr;
-    class WebSocketHandler* mWebSocketHandler = nullptr;
 
     friend class FileRequestHandler;
     friend class ApiHandler;
-    friend class WebSocketHandler;
 };
 
 } // namespace filament::matdbg
