@@ -79,8 +79,9 @@ function rebuildMaterial() {
     }
 
     const editedText = shader[gCurrentLanguage];
-    const byteCount = new Blob([editedText]).size;
-    gSocket.send(`EDIT ${gCurrentShader.matid} ${api} ${index} ${byteCount} ${editedText}`);
+    const req = new XMLHttpRequest();
+    req.open('POST', '/api/edit');
+    req.send(`${gCurrentShader.matid} ${api} ${index} ${editedText}`);
 }
 
 document.querySelector("body").addEventListener("click", (evt) => {

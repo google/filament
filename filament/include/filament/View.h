@@ -662,7 +662,8 @@ public:
      * Material's stencil comparison function and reference value. Fragments that don't pass the
      * stencil test are then discarded.
      *
-     * Post-processing must be enabled in order to use the stencil buffer.
+     * If post-processing is disabled, then the SwapChain must have the CONFIG_HAS_STENCIL_BUFFER
+     * flag set in order to use the stencil buffer.
      *
      * A renderable's priority (see RenderableManager::setPriority) is useful to control the order
      * in which primitives are drawn.
