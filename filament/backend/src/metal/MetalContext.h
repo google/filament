@@ -24,10 +24,11 @@
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
 
+#include <utils/FixedCircularBuffer.h>
+
 #include <array>
 #include <atomic>
 #include <stack>
-#include <deque>
 
 #if defined(FILAMENT_METAL_PROFILING)
 #include <os/log.h>
@@ -117,12 +118,12 @@ struct MetalContext {
     tsl::robin_set<MetalSamplerGroup*> samplerGroups;
     tsl::robin_set<MetalTexture*> textures;
 
-    // This deque implements delayed destruction for Metal texture handles. It keeps a handle to
-    // the most recent kMetalFreedTextureListSize texture handles. When we're asked to destroy a
-    // texture handle, we free its texture memory, but keep the MetalTexture object alive, marking
-    // it as "terminated". If we later are asked to use that texture, we can check its terminated
-    // status and throw an error instead of crashing.
-    std::deque<Handle<HwTexture>> texturesToDestroy;
+    // This circle buffer implements delayed destruction for Metal texture handles. It keeps a
+    // handle to the most recent kMetalFreedTextureListSize texture handles. When we're asked to
+    // destroy a texture handle, we free its texture memory, but keep the MetalTexture object alive,
+    // marking it as "terminated". If we later are asked to use that texture, we can check its
+    // terminated status and throw an error instead of crashing.
+    utils::FixedCircularBuffer<Handle<HwTexture>, kMetalFreedTextureListSize> texturesToDestroy;
 
     MetalBufferPool* bufferPool;
 

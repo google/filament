@@ -537,12 +537,12 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
     metalTexture->terminate();
 
     // Delay the destruction of this texture handle.
-    mContext->texturesToDestroy.push_back(th);
-    if (mContext->texturesToDestroy.size() > kMetalFreedTextureListSize) {
-        Handle<HwTexture> handleToFree = mContext->texturesToDestroy.front();
-        mContext->texturesToDestroy.pop_front();
+    if (mContext->texturesToDestroy.full()) {
+        Handle<HwTexture> handleToFree = mContext->texturesToDestroy.pop();
         destruct_handle<MetalTexture>(handleToFree);
     }
+    assert_invariant(!mContext->texturesToDestroy.full());
+    mContext->texturesToDestroy.push(th);
 }
 
 void MetalDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
@@ -569,10 +569,10 @@ void MetalDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 
 void MetalDriver::terminate() {
     // Terminate any oustanding MetalTextures.
-    for (auto th : mContext->texturesToDestroy) {
-        destruct_handle<MetalTexture>(th);
+    while (mContext->texturesToDestroy.size() > 0) {
+        Handle<HwTexture> toDestroy = mContext->texturesToDestroy.pop();
+        destruct_handle<MetalTexture>(toDestroy);
     }
-    mContext->texturesToDestroy.clear();
 
     // finish() will flush the pending command buffer and will ensure all GPU work has finished.
     // This must be done before calling bufferPool->reset() to ensure no buffers are in flight.
