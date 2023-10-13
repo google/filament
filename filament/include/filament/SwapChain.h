@@ -202,6 +202,31 @@ public:
     static constexpr uint64_t CONFIG_SRGB_COLORSPACE = backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE;
 
     /**
+     * Indicates that this SwapChain should allocate a stencil buffer in addition to a depth buffer.
+     *
+     * This flag is necessary when using View::setStencilBufferEnabled and rendering directly into
+     * the SwapChain (when post-processing is disabled).
+     *
+     * The specific format of the stencil buffer depends on platform support. The following pixel
+     * formats are tried, in order of preference:
+     *
+     * Depth only (without CONFIG_HAS_STENCIL_BUFFER):
+     * - DEPTH32F
+     * - DEPTH24
+     *
+     * Depth + stencil (with CONFIG_HAS_STENCIL_BUFFER):
+     * - DEPTH32F_STENCIL8
+     * - DEPTH24F_STENCIL8
+     *
+     * Note that enabling the stencil buffer may hinder depth precision and should only be used if
+     * necessary.
+     *
+     * @see View.setStencilBufferEnabled
+     * @see View.setPostProcessingEnabled
+     */
+    static constexpr uint64_t CONFIG_HAS_STENCIL_BUFFER = backend::SWAP_CHAIN_HAS_STENCIL_BUFFER;
+
+    /**
      * Return whether createSwapChain supports the SWAP_CHAIN_CONFIG_SRGB_COLORSPACE flag.
      * The default implementation returns false.
      *
