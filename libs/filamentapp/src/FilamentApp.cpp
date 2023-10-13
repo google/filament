@@ -70,24 +70,30 @@ using namespace filament::backend;
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
 class FilamentAppVulkanPlatform : public VulkanPlatform {
 public:
-    FilamentAppVulkanPlatform(std::string const& gpuHint) {
+    FilamentAppVulkanPlatform(char const* gpuHintCstr) {
+        utils::CString gpuHint{ gpuHintCstr };
         if (gpuHint.empty()) {
             return;
         }
+        VulkanPlatform::Customization::GPUPreference pref;
         // Check to see if it is an integer, if so turn it into an index.
         if (std::all_of(gpuHint.begin(), gpuHint.end(), ::isdigit)) {
-            mPreference.index = static_cast<int8_t>(std::stoi(gpuHint));
-            return;
+            char* p_end {};
+            pref.index = static_cast<int8_t>(std::strtol(gpuHint.c_str(), &p_end, 10));
+        } else {
+            pref.deviceName = gpuHint;
         }
-        mPreference.deviceName = gpuHint;
+        mCustomization = {
+            .gpu = pref
+        };
     }
 
-    virtual VulkanPlatform::GPUPreference getPreferredGPU() noexcept override {
-        return mPreference;
+    virtual VulkanPlatform::Customization getCustomization() const noexcept override {
+        return mCustomization;
     }
 
 private:
-    VulkanPlatform::GPUPreference mPreference;
+    VulkanPlatform::Customization mCustomization;
 };
 #endif
 
@@ -592,7 +598,8 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
         if (backend == Engine::Backend::VULKAN) {
             #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-                mFilamentApp->mVulkanPlatform = new FilamentAppVulkanPlatform(config.vulkanGPUHint);
+                mFilamentApp->mVulkanPlatform =
+                        new FilamentAppVulkanPlatform(config.vulkanGPUHint.c_str());
                 return Engine::Builder()
                         .backend(backend)
                         .platform(mFilamentApp->mVulkanPlatform)
