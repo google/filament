@@ -34,7 +34,16 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 set -e # Fail on any error.
+
+. /bin/using.sh # Declare the bash `using` function for configuring toolchains.
+
 set -x # Display commands being run.
+
+using ninja-1.10.0
+
+# Disable git's "detected dubious ownership" error - kokoro checks out the repo
+# with a different user, and we don't care about this warning.
+git config --global --add safe.directory '*'
 
 echo "Fetching external projects..."
 ./update_glslang_sources.py

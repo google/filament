@@ -116,6 +116,30 @@ struct UTILS_PUBLIC FilmicToneMapper final : public ToneMapper {
 };
 
 /**
+ * AgX tone mapping operator.
+ */
+struct UTILS_PUBLIC AgxToneMapper final : public ToneMapper {
+
+    enum class AgxLook : uint8_t {
+        NONE = 0,   //!< Base contrast with no look applied
+        PUNCHY,     //!< A punchy and more chroma laden look for sRGB displays
+        GOLDEN      //!< A golden tinted, slightly washed look for BT.1886 displays
+    };
+
+    /**
+     * Builds a new AgX tone mapper.
+     *
+     * @param look an optional creative adjustment to contrast and saturation
+     */
+    explicit AgxToneMapper(AgxLook look = AgxLook::NONE) noexcept;
+    ~AgxToneMapper() noexcept final;
+
+    math::float3 operator()(math::float3 x) const noexcept override;
+
+    AgxLook look;
+};
+
+/**
  * Generic tone mapping operator that gives control over the tone mapping
  * curve. This operator can be used to control the aesthetics of the final
  * image. This operator also allows to control the dynamic range of the

@@ -446,21 +446,65 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
     FLightManager::ShadowParams const& params = lcm.getShadowParams(directionalLight);
 
     // Adjust the camera's projection for the light's shadowFar
-
     cameraInfo.zf = params.options.shadowFar > 0.0f ? params.options.shadowFar : cameraInfo.zf;
     if (UTILS_UNLIKELY(params.options.shadowFar > 0.0f)) {
         cameraInfo.zf = params.options.shadowFar;
         float const n = cameraInfo.zn;
         float const f = cameraInfo.zf;
-        if (std::abs(cameraInfo.cullingProjection[2].w) > std::numeric_limits<float>::epsilon()) {
-            // perspective projection
-            cameraInfo.cullingProjection[2].z = (f + n) / (n - f);
-            cameraInfo.cullingProjection[3].z = (2 * f * n) / (n - f);
-        } else {
-            // orthographic projection
-            cameraInfo.cullingProjection[2].z = 2.0f / (n - f);
-            cameraInfo.cullingProjection[3].z = (f + n) / (n - f);
-        }
+
+        /*
+         *  Updating a projection matrix near and far planes:
+         *
+         *  We assume that the near and far plane equations are of the form:
+         *           N = { 0, 0,  1,  n }
+         *           F = { 0, 0, -1, -f }
+         *
+         *  We also assume that the lower-left 2x2 of the projection is all 0:
+         *       P =   A   0   C   0
+         *             0   B   D   0
+         *             0   0   E   F
+         *             0   0   G   H
+         *
+         *  It result that we need to calculate E and F while leaving all other parameter unchanged.
+         *
+         *  We know that:
+         *       with N, F the near/far normalized plane equation parameters
+         *            sn, sf arbitrary scale factors (they don't affect the planes)
+         *            m is the transpose of projection (see Frustum.cpp)
+         *
+         *       sn * N == -m[3] - m[2]
+         *       sf * F == -m[3] + m[2]
+         *
+         *       sn * N + sf * F == -2 * m[3]
+         *       sn * N - sf * F == -2 * m[2]
+         *
+         *       sn * N.z + sf * F.z == -2 * m[3].z
+         *       sn * N.w + sf * F.w == -2 * m[3].w
+         *       sn * N.z - sf * F.z == -2 * m[2].z
+         *       sn * N.w - sf * F.w == -2 * m[2].w
+         *
+         *       sn * N.z + sf * F.z == -2 * p[2].w
+         *       sn * N.w + sf * F.w == -2 * p[3].w
+         *       sn * N.z - sf * F.z == -2 * p[2].z
+         *       sn * N.w - sf * F.w == -2 * p[3].z
+         *
+         *  We now need to solve for { p[2].z, p[3].z, sn, sf } :
+         *
+         *       sn == -2 * (p[2].w * F.w - p[3].w * F.z) / (N.z * F.w - N.w * F.z)
+         *       sf == -2 * (p[2].w * N.w - p[3].w * N.z) / (F.z * N.w - F.w * N.z)
+         *   p[2].z == (sf * F.z - sn * N.z) / 2
+         *   p[3].z == (sf * F.w - sn * N.w) / 2
+         */
+        auto& p = cameraInfo.cullingProjection;
+        float4 const N = { 0, 0,  1,  n };  // near plane equation
+        float4 const F = { 0, 0, -1, -f };  // far plane equation
+        // near plane equation scale factor
+        float const sn = -2.0f * (p[2].w * F.w - p[3].w * F.z) / (N.z * F.w - N.w * F.z);
+        // far plane equation scale factor
+        float const sf = -2.0f * (p[2].w * N.w - p[3].w * N.z) / (F.z * N.w - F.w * N.z);
+        // New values for the projection
+        p[2].z = (sf * F.z - sn * N.z) * 0.5f;
+        p[3].z = (sf * F.w - sn * N.w) * 0.5f;
     }
 
     const ShadowMap::ShadowMapInfo shadowMapInfo{

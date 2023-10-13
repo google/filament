@@ -57,7 +57,7 @@ def generate_main(glsl_files, output_header_file):
         contents += '\tfor (int i = 0; i < n; i++) {\n'
 
         for symbol_name in symbol_name_list:
-            contents += '\t\tif (strstr(shaders[i], "%s") != NULL) {\n'   % (symbol_name)
+            contents += '\t\tif (strstr(shaders[i], "%s") != nullptr) {\n'   % (symbol_name)
             contents += '\t\t    shaderString.append(%s_GLSL);\n' % (symbol_name)
             contents += '\t\t}\n'
 

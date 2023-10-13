@@ -312,6 +312,86 @@ void HlslScanContext::fillInKeywordMap()
     (*KeywordMap)["double4x2"] =               EHTokDouble4x2;
     (*KeywordMap)["double4x3"] =               EHTokDouble4x3;
     (*KeywordMap)["double4x4"] =               EHTokDouble4x4;
+    (*KeywordMap)["min16float1x1"] =           EHTokMin16float1x1;
+    (*KeywordMap)["min16float1x2"] =           EHTokMin16float1x2;
+    (*KeywordMap)["min16float1x3"] =           EHTokMin16float1x3;
+    (*KeywordMap)["min16float1x4"] =           EHTokMin16float1x4;
+    (*KeywordMap)["min16float2x1"] =           EHTokMin16float2x1;
+    (*KeywordMap)["min16float2x2"] =           EHTokMin16float2x2;
+    (*KeywordMap)["min16float2x3"] =           EHTokMin16float2x3;
+    (*KeywordMap)["min16float2x4"] =           EHTokMin16float2x4;
+    (*KeywordMap)["min16float3x1"] =           EHTokMin16float3x1;
+    (*KeywordMap)["min16float3x2"] =           EHTokMin16float3x2;
+    (*KeywordMap)["min16float3x3"] =           EHTokMin16float3x3;
+    (*KeywordMap)["min16float3x4"] =           EHTokMin16float3x4;
+    (*KeywordMap)["min16float4x1"] =           EHTokMin16float4x1;
+    (*KeywordMap)["min16float4x2"] =           EHTokMin16float4x2;
+    (*KeywordMap)["min16float4x3"] =           EHTokMin16float4x3;
+    (*KeywordMap)["min16float4x4"] =           EHTokMin16float4x4;
+    (*KeywordMap)["min10float1x1"] =           EHTokMin10float1x1;
+    (*KeywordMap)["min10float1x2"] =           EHTokMin10float1x2;
+    (*KeywordMap)["min10float1x3"] =           EHTokMin10float1x3;
+    (*KeywordMap)["min10float1x4"] =           EHTokMin10float1x4;
+    (*KeywordMap)["min10float2x1"] =           EHTokMin10float2x1;
+    (*KeywordMap)["min10float2x2"] =           EHTokMin10float2x2;
+    (*KeywordMap)["min10float2x3"] =           EHTokMin10float2x3;
+    (*KeywordMap)["min10float2x4"] =           EHTokMin10float2x4;
+    (*KeywordMap)["min10float3x1"] =           EHTokMin10float3x1;
+    (*KeywordMap)["min10float3x2"] =           EHTokMin10float3x2;
+    (*KeywordMap)["min10float3x3"] =           EHTokMin10float3x3;
+    (*KeywordMap)["min10float3x4"] =           EHTokMin10float3x4;
+    (*KeywordMap)["min10float4x1"] =           EHTokMin10float4x1;
+    (*KeywordMap)["min10float4x2"] =           EHTokMin10float4x2;
+    (*KeywordMap)["min10float4x3"] =           EHTokMin10float4x3;
+    (*KeywordMap)["min10float4x4"] =           EHTokMin10float4x4;
+    (*KeywordMap)["min16int1x1"] =             EHTokMin16int1x1;
+    (*KeywordMap)["min16int1x2"] =             EHTokMin16int1x2;
+    (*KeywordMap)["min16int1x3"] =             EHTokMin16int1x3;
+    (*KeywordMap)["min16int1x4"] =             EHTokMin16int1x4;
+    (*KeywordMap)["min16int2x1"] =             EHTokMin16int2x1;
+    (*KeywordMap)["min16int2x2"] =             EHTokMin16int2x2;
+    (*KeywordMap)["min16int2x3"] =             EHTokMin16int2x3;
+    (*KeywordMap)["min16int2x4"] =             EHTokMin16int2x4;
+    (*KeywordMap)["min16int3x1"] =             EHTokMin16int3x1;
+    (*KeywordMap)["min16int3x2"] =             EHTokMin16int3x2;
+    (*KeywordMap)["min16int3x3"] =             EHTokMin16int3x3;
+    (*KeywordMap)["min16int3x4"] =             EHTokMin16int3x4;
+    (*KeywordMap)["min16int4x1"] =             EHTokMin16int4x1;
+    (*KeywordMap)["min16int4x2"] =             EHTokMin16int4x2;
+    (*KeywordMap)["min16int4x3"] =             EHTokMin16int4x3;
+    (*KeywordMap)["min16int4x4"] =             EHTokMin16int4x4;
+    (*KeywordMap)["min12int1x1"] =             EHTokMin12int1x1;
+    (*KeywordMap)["min12int1x2"] =             EHTokMin12int1x2;
+    (*KeywordMap)["min12int1x3"] =             EHTokMin12int1x3;
+    (*KeywordMap)["min12int1x4"] =             EHTokMin12int1x4;
+    (*KeywordMap)["min12int2x1"] =             EHTokMin12int2x1;
+    (*KeywordMap)["min12int2x2"] =             EHTokMin12int2x2;
+    (*KeywordMap)["min12int2x3"] =             EHTokMin12int2x3;
+    (*KeywordMap)["min12int2x4"] =             EHTokMin12int2x4;
+    (*KeywordMap)["min12int3x1"] =             EHTokMin12int3x1;
+    (*KeywordMap)["min12int3x2"] =             EHTokMin12int3x2;
+    (*KeywordMap)["min12int3x3"] =             EHTokMin12int3x3;
+    (*KeywordMap)["min12int3x4"] =             EHTokMin12int3x4;
+    (*KeywordMap)["min12int4x1"] =             EHTokMin12int4x1;
+    (*KeywordMap)["min12int4x2"] =             EHTokMin12int4x2;
+    (*KeywordMap)["min12int4x3"] =             EHTokMin12int4x3;
+    (*KeywordMap)["min12int4x4"] =             EHTokMin12int4x4;
+    (*KeywordMap)["min16uint1x1"] =            EHTokMin16uint1x1;
+    (*KeywordMap)["min16uint1x2"] =            EHTokMin16uint1x2;
+    (*KeywordMap)["min16uint1x3"] =            EHTokMin16uint1x3;
+    (*KeywordMap)["min16uint1x4"] =            EHTokMin16uint1x4;
+    (*KeywordMap)["min16uint2x1"] =            EHTokMin16uint2x1;
+    (*KeywordMap)["min16uint2x2"] =            EHTokMin16uint2x2;
+    (*KeywordMap)["min16uint2x3"] =            EHTokMin16uint2x3;
+    (*KeywordMap)["min16uint2x4"] =            EHTokMin16uint2x4;
+    (*KeywordMap)["min16uint3x1"] =            EHTokMin16uint3x1;
+    (*KeywordMap)["min16uint3x2"] =            EHTokMin16uint3x2;
+    (*KeywordMap)["min16uint3x3"] =            EHTokMin16uint3x3;
+    (*KeywordMap)["min16uint3x4"] =            EHTokMin16uint3x4;
+    (*KeywordMap)["min16uint4x1"] =            EHTokMin16uint4x1;
+    (*KeywordMap)["min16uint4x2"] =            EHTokMin16uint4x2;
+    (*KeywordMap)["min16uint4x3"] =            EHTokMin16uint4x3;
+    (*KeywordMap)["min16uint4x4"] =            EHTokMin16uint4x4;
 
     (*KeywordMap)["sampler"] =                 EHTokSampler;
     (*KeywordMap)["sampler1D"] =               EHTokSampler1d;
@@ -806,6 +886,86 @@ EHlslTokenClass HlslScanContext::tokenizeIdentifier()
     case EHTokDouble4x2:
     case EHTokDouble4x3:
     case EHTokDouble4x4:
+    case EHTokMin16float1x1:
+    case EHTokMin16float1x2:
+    case EHTokMin16float1x3:
+    case EHTokMin16float1x4:
+    case EHTokMin16float2x1:
+    case EHTokMin16float2x2:
+    case EHTokMin16float2x3:
+    case EHTokMin16float2x4:
+    case EHTokMin16float3x1:
+    case EHTokMin16float3x2:
+    case EHTokMin16float3x3:
+    case EHTokMin16float3x4:
+    case EHTokMin16float4x1:
+    case EHTokMin16float4x2:
+    case EHTokMin16float4x3:
+    case EHTokMin16float4x4:
+    case EHTokMin10float1x1:
+    case EHTokMin10float1x2:
+    case EHTokMin10float1x3:
+    case EHTokMin10float1x4:
+    case EHTokMin10float2x1:
+    case EHTokMin10float2x2:
+    case EHTokMin10float2x3:
+    case EHTokMin10float2x4:
+    case EHTokMin10float3x1:
+    case EHTokMin10float3x2:
+    case EHTokMin10float3x3:
+    case EHTokMin10float3x4:
+    case EHTokMin10float4x1:
+    case EHTokMin10float4x2:
+    case EHTokMin10float4x3:
+    case EHTokMin10float4x4:
+    case EHTokMin16int1x1:
+    case EHTokMin16int1x2:
+    case EHTokMin16int1x3:
+    case EHTokMin16int1x4:
+    case EHTokMin16int2x1:
+    case EHTokMin16int2x2:
+    case EHTokMin16int2x3:
+    case EHTokMin16int2x4:
+    case EHTokMin16int3x1:
+    case EHTokMin16int3x2:
+    case EHTokMin16int3x3:
+    case EHTokMin16int3x4:
+    case EHTokMin16int4x1:
+    case EHTokMin16int4x2:
+    case EHTokMin16int4x3:
+    case EHTokMin16int4x4:
+    case EHTokMin12int1x1:
+    case EHTokMin12int1x2:
+    case EHTokMin12int1x3:
+    case EHTokMin12int1x4:
+    case EHTokMin12int2x1:
+    case EHTokMin12int2x2:
+    case EHTokMin12int2x3:
+    case EHTokMin12int2x4:
+    case EHTokMin12int3x1:
+    case EHTokMin12int3x2:
+    case EHTokMin12int3x3:
+    case EHTokMin12int3x4:
+    case EHTokMin12int4x1:
+    case EHTokMin12int4x2:
+    case EHTokMin12int4x3:
+    case EHTokMin12int4x4:
+    case EHTokMin16uint1x1:
+    case EHTokMin16uint1x2:
+    case EHTokMin16uint1x3:
+    case EHTokMin16uint1x4:
+    case EHTokMin16uint2x1:
+    case EHTokMin16uint2x2:
+    case EHTokMin16uint2x3:
+    case EHTokMin16uint2x4:
+    case EHTokMin16uint3x1:
+    case EHTokMin16uint3x2:
+    case EHTokMin16uint3x3:
+    case EHTokMin16uint3x4:
+    case EHTokMin16uint4x1:
+    case EHTokMin16uint4x2:
+    case EHTokMin16uint4x3:
+    case EHTokMin16uint4x4:
         return keyword;
 
     // texturing types

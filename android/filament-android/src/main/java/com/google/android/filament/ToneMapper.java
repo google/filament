@@ -101,6 +101,45 @@ public class ToneMapper {
     }
 
     /**
+     * AgX tone mapping operator.
+     */
+    public static class Agx extends ToneMapper {
+
+        public enum AgxLook {
+            /**
+             * Base contrast with no look applied
+             */
+            NONE,
+
+            /**
+             * A punchy and more chroma laden look for sRGB displays
+             */
+            PUNCHY,
+
+            /**
+             * A golden tinted, slightly washed look for BT.1886 displays
+             */
+            GOLDEN
+        }
+
+        /**
+         * Builds a new AgX tone mapper with no look applied.
+         */
+        public Agx() {
+            this(AgxLook.NONE);
+        }
+
+        /**
+         * Builds a new AgX tone mapper.
+         *
+         * @param look: an optional creative adjustment to contrast and saturation
+         */
+        public Agx(AgxLook look) {
+            super(nCreateAgxToneMapper(look.ordinal()));
+        }
+    }
+
+    /**
      * Generic tone mapping operator that gives control over the tone mapping
      * curve. This operator can be used to control the aesthetics of the final
      * image. This operator also allows to control the dynamic range of the
@@ -194,6 +233,7 @@ public class ToneMapper {
     private static native long nCreateACESToneMapper();
     private static native long nCreateACESLegacyToneMapper();
     private static native long nCreateFilmicToneMapper();
+    private static native long nCreateAgxToneMapper(int look);
     private static native long nCreateGenericToneMapper(
             float contrast, float midGrayIn, float midGrayOut, float hdrMax);
 

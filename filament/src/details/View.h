@@ -73,8 +73,6 @@ class FMaterialInstance;
 class FRenderer;
 class FScene;
 
-static constexpr Culler::result_type VISIBLE_RENDERABLE = 1u << VISIBLE_RENDERABLE_BIT;
-
 // ------------------------------------------------------------------------------------------------
 
 class FView : public View {
