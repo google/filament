@@ -525,6 +525,20 @@ void MetalTexture::terminate() noexcept {
     terminated = true;
 }
 
+void MetalTexture::checkUseAfterFree(const char* samplerGroupDebugName, size_t textureIndex) {
+    if (UTILS_LIKELY(!isTerminated())) {
+        return;
+    }
+    NSString* reason = [NSString stringWithFormat:
+                                         @"Filament Metal texture use after free, sampler group = "
+                                         @"%s, texture index = %zu",
+                                 samplerGroupDebugName, textureIndex];
+    NSException* useAfterFreeException = [NSException exceptionWithName:@"MetalTextureUseAfterFree"
+                                                                 reason:reason
+                                                               userInfo:nil];
+    [useAfterFreeException raise];
+}
+
 MetalTexture::~MetalTexture() {
     externalImage.set(nullptr);
 }

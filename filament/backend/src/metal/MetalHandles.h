@@ -242,6 +242,7 @@ public:
     // Used to track "use after free" scenario.
     void terminate() noexcept;
     bool isTerminated() const noexcept { return terminated; }
+    void checkUseAfterFree(const char* samplerGroupDebugName, size_t textureIndex);
 
 private:
     void loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffset, uint32_t slice,

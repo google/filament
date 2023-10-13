@@ -880,17 +880,7 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
         // The difference between this check and the one below is that in release, we do this for
         // only a set number of recently freed textures, while the debug check is exhaustive.
         auto* metalTexture = handle_cast<MetalTexture>(samplers[s].t);
-        if (UTILS_UNLIKELY(metalTexture->isTerminated())) {
-            NSString* reason = [NSString stringWithFormat:
-                    @"Filament Metal texture use after free, sampler "
-                    @"group = %s, texture index = %zu",
-                    sb->debugName.c_str_safe(), s];
-            NSException* useAfterFreeException =
-                    [NSException exceptionWithName:@"MetalTextureUseAfterFree"
-                                            reason:reason
-                                          userInfo:nil];
-            [useAfterFreeException raise];
-        }
+        metalTexture->checkUseAfterFree(sb->debugName.c_str_safe(), s);
 #ifndef NDEBUG
         auto iter = mContext->textures.find(handle_cast<MetalTexture>(samplers[s].t));
         if (iter == mContext->textures.end()) {
@@ -1398,18 +1388,7 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
         // The difference between this check and the one below is that in release, we do this for
         // only a set number of recently freed textures, while the debug check is exhaustive.
         auto* metalTexture = handle_cast<MetalTexture>(handles[s]);
-        if (UTILS_UNLIKELY(metalTexture->isTerminated())) {
-            NSString* reason = [NSString stringWithFormat:
-                    @"Filament Metal texture use after free, sampler "
-                    @"group = %s, texture index = %zu",
-                    samplerGroup->debugName.c_str_safe(), s];
-            NSException* useAfterFreeException =
-                    [NSException exceptionWithName:@"MetalTextureUseAfterFree"
-                                            reason:reason
-                                          userInfo:nil];
-            [useAfterFreeException raise];
-        }
-
+        metalTexture->checkUseAfterFree(samplerGroup->debugName.c_str_safe(), s);
 #ifndef NDEBUG
         auto iter = mContext->textures.find(metalTexture);
         if (iter == mContext->textures.end()) {
