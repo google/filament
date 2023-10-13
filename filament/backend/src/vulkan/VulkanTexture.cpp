@@ -61,9 +61,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     : HwTexture(target, levels, samples, w, h, depth, tformat, tusage),
       VulkanResource(
               heapAllocated ? VulkanResourceType::HEAP_ALLOCATED : VulkanResourceType::TEXTURE),
-      // Vulkan does not support 24-bit depth, use the official fallback format.
-      mVkFormat(tformat == TextureFormat::DEPTH24 ? context.getDepthFormat()
-                                                  : backend::getVkFormat(tformat)),
+      mVkFormat(backend::getVkFormat(tformat)),
       mViewType(ImgUtil::getViewType(target)),
       mSwizzle(swizzle),
       mStagePool(stagePool),

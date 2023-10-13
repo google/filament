@@ -20,10 +20,12 @@
 #include "VulkanConstants.h"
 #include "VulkanImageUtility.h"
 #include "VulkanPipelineCache.h"
+#include "VulkanUtility.h"
 
+#include <utils/bitset.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
 #include <utils/Slice.h>
-#include <utils/bitset.h>
 
 #include <memory>
 
@@ -100,8 +102,8 @@ public:
         return (uint32_t) VK_MAX_MEMORY_TYPES;
     }
 
-    inline VkFormat getDepthFormat() const {
-        return mDepthFormat;
+    inline VkFormatList const& getAttachmentDepthFormats() const {
+        return mDepthFormats;
     }
 
     inline VkPhysicalDeviceLimits const& getPhysicalDeviceLimits() const noexcept {
@@ -130,7 +132,7 @@ private:
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
 
-    VkFormat mDepthFormat;
+    VkFormatList mDepthFormats;
 
     // For convenience so that VulkanPlatform can initialize the private fields.
     friend class VulkanPlatform;

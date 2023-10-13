@@ -705,10 +705,6 @@ FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> fh) {
 // the GPU supports the given texture format with non-zero optimal tiling features.
 bool VulkanDriver::isTextureFormatSupported(TextureFormat format) {
     VkFormat vkformat = getVkFormat(format);
-    // We automatically use an alternative format when the client requests DEPTH24.
-    if (format == TextureFormat::DEPTH24) {
-        vkformat = mContext.getDepthFormat();
-    }
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;
     }
@@ -736,10 +732,6 @@ bool VulkanDriver::isTextureFormatMipmappable(TextureFormat format) {
 
 bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
     VkFormat vkformat = getVkFormat(format);
-    // We automatically use an alternative format when the client requests DEPTH24.
-    if (format == TextureFormat::DEPTH24) {
-        vkformat = mContext.getDepthFormat();
-    }
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;
     }

@@ -30,7 +30,7 @@ namespace {
 
 std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& context,
         VkDevice device, VkExtent2D extent, VkFormat format) {
-    bool const isDepth = format == context.getDepthFormat();
+    bool const isDepth = isDepthFormat(format);
     // Filament expects blit() to work with any texture, so we almost always set these usage flags.
     // TODO: investigate performance implications of setting these flags.
     VkImageUsageFlags const blittable
@@ -233,7 +233,8 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
            << surfaceFormat.format << ", " << surfaceFormat.colorSpace << ", "
            << mSwapChainBundle.colors.size() << ", " << caps.currentTransform << io::endl;
 
-    mSwapChainBundle.depthFormat = mContext.getDepthFormat();
+    auto const& depthFormats = mContext.getAttachmentDepthFormats();
+    mSwapChainBundle.depthFormat = depthFormats[0];
     mSwapChainBundle.depth = createImage(mSwapChainBundle.extent, mSwapChainBundle.depthFormat);
     return result;
 }
@@ -309,7 +310,8 @@ VulkanPlatformHeadlessSwapChain::VulkanPlatformHeadlessSwapChain(VulkanContext c
         images[i] = createImage(extent, mSwapChainBundle.colorFormat);
     }
 
-    mSwapChainBundle.depthFormat = context.getDepthFormat();
+    auto const& depthFormats = mContext.getAttachmentDepthFormats();
+    mSwapChainBundle.depthFormat = depthFormats[0];
     mSwapChainBundle.depth = createImage(extent, mSwapChainBundle.depthFormat);
 }
 
@@ -336,7 +338,8 @@ VkResult VulkanPlatformHeadlessSwapChain::acquire(VkSemaphore clientSignal, uint
             .signalSemaphoreCount = 1u,
             .pSignalSemaphores = &localSignal,
     };
-    UTILS_UNUSED_IN_RELEASE VkResult result = vkQueueSubmit(mQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    UTILS_UNUSED_IN_RELEASE VkResult const result
+            = vkQueueSubmit(mQueue, 1, &submitInfo, VK_NULL_HANDLE);
     assert_invariant(result == VK_SUCCESS);
     return result;
 }
