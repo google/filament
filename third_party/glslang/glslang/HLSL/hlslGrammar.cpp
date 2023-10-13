@@ -1,6 +1,7 @@
 //
 // Copyright (C) 2016-2018 Google, Inc.
 // Copyright (C) 2016 LunarG, Inc.
+// Copyright (C) 2023 Mobica Limited.
 //
 // All rights reserved.
 //
@@ -594,6 +595,7 @@ bool HlslGrammar::acceptControlDeclaration(TIntermNode*& node)
 // fully_specified_type
 //      : type_specifier
 //      | type_qualifier type_specifier
+//      | type_specifier type_qualifier
 //
 bool HlslGrammar::acceptFullySpecifiedType(TType& type, const TAttributes& attributes)
 {
@@ -605,7 +607,7 @@ bool HlslGrammar::acceptFullySpecifiedType(TType& type, TIntermNode*& nodeList, 
     // type_qualifier
     TQualifier qualifier;
     qualifier.clear();
-    if (! acceptQualifier(qualifier))
+    if (! acceptPreQualifier(qualifier))
         return false;
     TSourceLoc loc = token.loc;
 
@@ -619,6 +621,10 @@ bool HlslGrammar::acceptFullySpecifiedType(TType& type, TIntermNode*& nodeList, 
 
         return false;
     }
+
+    // type_qualifier
+    if (! acceptPostQualifier(qualifier))
+       return false;
 
     if (type.getBasicType() == EbtBlock) {
         // the type was a block, which set some parts of the qualifier
@@ -634,7 +640,7 @@ bool HlslGrammar::acceptFullySpecifiedType(TType& type, TIntermNode*& nodeList, 
             parseContext.declareBlock(loc, type);
     } else {
         // Some qualifiers are set when parsing the type.  Merge those with
-        // whatever comes from acceptQualifier.
+        // whatever comes from acceptPreQualifier and acceptPostQualifier.
         assert(qualifier.layoutFormat == ElfNone);
 
         qualifier.layoutFormat = type.getQualifier().layoutFormat;
@@ -660,7 +666,7 @@ bool HlslGrammar::acceptFullySpecifiedType(TType& type, TIntermNode*& nodeList, 
 //
 // Zero or more of these, so this can't return false.
 //
-bool HlslGrammar::acceptQualifier(TQualifier& qualifier)
+bool HlslGrammar::acceptPreQualifier(TQualifier& qualifier)
 {
     do {
         switch (peek()) {
@@ -766,6 +772,25 @@ bool HlslGrammar::acceptQualifier(TQualifier& qualifier)
     } while (true);
 }
 
+// type_qualifier
+//      : qualifier qualifier ...
+//
+// Zero or more of these, so this can't return false.
+//
+bool HlslGrammar::acceptPostQualifier(TQualifier& qualifier)
+{
+    do {
+        switch (peek()) {
+        case EHTokConst:
+            qualifier.storage = EvqConst;
+            break;
+        default:
+            return true;
+        }
+        advanceToken();
+    } while (true);
+}
+
 // layout_qualifier_list
 //      : LAYOUT LEFT_PAREN layout_qualifier COMMA layout_qualifier ... RIGHT_PAREN
 //
@@ -823,8 +848,10 @@ bool HlslGrammar::acceptLayoutQualifierList(TQualifier& qualifier)
 //      | UINT
 //      | BOOL
 //
-bool HlslGrammar::acceptTemplateVecMatBasicType(TBasicType& basicType)
+bool HlslGrammar::acceptTemplateVecMatBasicType(TBasicType& basicType,
+                                                TPrecisionQualifier& precision)
 {
+    precision = EpqNone;
     switch (peek()) {
     case EHTokFloat:
         basicType = EbtFloat;
@@ -841,6 +868,23 @@ bool HlslGrammar::acceptTemplateVecMatBasicType(TBasicType& basicType)
         break;
     case EHTokBool:
         basicType = EbtBool;
+        break;
+    case EHTokHalf:
+        basicType = parseContext.hlslEnable16BitTypes() ? EbtFloat16 : EbtFloat;
+        break;
+    case EHTokMin16float:
+    case EHTokMin10float:
+        basicType = parseContext.hlslEnable16BitTypes() ? EbtFloat16 : EbtFloat;
+        precision = EpqMedium;
+        break;
+    case EHTokMin16int:
+    case EHTokMin12int:
+        basicType = parseContext.hlslEnable16BitTypes() ? EbtInt16 : EbtInt;
+        precision = EpqMedium;
+        break;
+    case EHTokMin16uint:
+        basicType = parseContext.hlslEnable16BitTypes() ? EbtUint16 : EbtUint;
+        precision = EpqMedium;
         break;
     default:
         return false;
@@ -867,7 +911,8 @@ bool HlslGrammar::acceptVectorTemplateType(TType& type)
     }
 
     TBasicType basicType;
-    if (! acceptTemplateVecMatBasicType(basicType)) {
+    TPrecisionQualifier precision;
+    if (! acceptTemplateVecMatBasicType(basicType, precision)) {
         expected("scalar type");
         return false;
     }
@@ -890,7 +935,7 @@ bool HlslGrammar::acceptVectorTemplateType(TType& type)
 
     const int vecSizeI = vecSize->getAsConstantUnion()->getConstArray()[0].getIConst();
 
-    new(&type) TType(basicType, EvqTemporary, vecSizeI);
+    new(&type) TType(basicType, EvqTemporary, precision, vecSizeI);
 
     if (vecSizeI == 1)
         type.makeVector();
@@ -919,7 +964,8 @@ bool HlslGrammar::acceptMatrixTemplateType(TType& type)
     }
 
     TBasicType basicType;
-    if (! acceptTemplateVecMatBasicType(basicType)) {
+    TPrecisionQualifier precision;
+    if (! acceptTemplateVecMatBasicType(basicType, precision)) {
         expected("scalar type");
         return false;
     }
@@ -956,7 +1002,7 @@ bool HlslGrammar::acceptMatrixTemplateType(TType& type)
     if (! acceptLiteral(cols))
         return false;
 
-    new(&type) TType(basicType, EvqTemporary, 0,
+    new(&type) TType(basicType, EvqTemporary, precision, 0,
                      rows->getAsConstantUnion()->getConstArray()[0].getIConst(),
                      cols->getAsConstantUnion()->getConstArray()[0].getIConst());
 
@@ -2062,6 +2108,251 @@ bool HlslGrammar::acceptType(TType& type, TIntermNode*& nodeList)
         break;
     case EHTokDouble4x4:
         new(&type) TType(EbtDouble, EvqTemporary, 0, 4, 4);
+        break;
+
+    case EHTokMin16float1x1:
+        new(&type) TType(min16float_bt, EvqTemporary, EpqMedium, 0, 1, 1);
+        break;
+    case EHTokMin16float1x2:
+        new(&type) TType(min16float_bt, EvqTemporary, EpqMedium, 0, 1, 2);
+        break;
+    case EHTokMin16float1x3:
+        new(&type) TType(min16float_bt, EvqTemporary, EpqMedium, 0, 1, 3);
+        break;
+    case EHTokMin16float1x4:
+        new(&type) TType(min16float_bt, EvqTemporary, EpqMedium, 0, 1, 4);
+        break;
+    case EHTokMin16float2x1:
+        new(&type) TType(min16float_bt, EvqTemporary, EpqMedium, 0, 2, 1);
+        break;
+    case EHTokMin16float2x2:
+        new(&type) TType(min16float_bt, EvqTemporary, EpqMedium, 0, 2, 2);
+        break;
+    case EHTokMin16float2x3:
+        new(&type) TType(min16float_bt, EvqTemporary, EpqMedium, 0, 2, 3);
+        break;
+    case EHTokMin16float2x4:
+        new(&type) TType(min16float_bt, EvqTemporary, EpqMedium, 0, 2, 4);
+        break;
+    case EHTokMin16float3x1:
+        new(&type) TType(min16float_bt, EvqTemporary, EpqMedium, 0, 3, 1);
+        break;
+    case EHTokMin16float3x2:
+        new(&type) TType(min16float_bt, EvqTemporary, EpqMedium, 0, 3, 2);
+        break;
+    case EHTokMin16float3x3:
+        new(&type) TType(min16float_bt, EvqTemporary, EpqMedium, 0, 3, 3);
+        break;
+    case EHTokMin16float3x4:
+        new(&type) TType(min16float_bt, EvqTemporary, EpqMedium, 0, 3, 4);
+        break;
+    case EHTokMin16float4x1:
+        new(&type) TType(min16float_bt, EvqTemporary, EpqMedium, 0, 4, 1);
+        break;
+    case EHTokMin16float4x2:
+        new(&type) TType(min16float_bt, EvqTemporary, EpqMedium, 0, 4, 2);
+        break;
+    case EHTokMin16float4x3:
+        new(&type) TType(min16float_bt, EvqTemporary, EpqMedium, 0, 4, 3);
+        break;
+    case EHTokMin16float4x4:
+        new(&type) TType(min16float_bt, EvqTemporary, EpqMedium, 0, 4, 4);
+        break;
+
+    case EHTokMin10float1x1:
+        new(&type) TType(min10float_bt, EvqTemporary, EpqMedium, 0, 1, 1);
+        break;
+    case EHTokMin10float1x2:
+        new(&type) TType(min10float_bt, EvqTemporary, EpqMedium, 0, 1, 2);
+        break;
+    case EHTokMin10float1x3:
+        new(&type) TType(min10float_bt, EvqTemporary, EpqMedium, 0, 1, 3);
+        break;
+    case EHTokMin10float1x4:
+        new(&type) TType(min10float_bt, EvqTemporary, EpqMedium, 0, 1, 4);
+        break;
+    case EHTokMin10float2x1:
+        new(&type) TType(min10float_bt, EvqTemporary, EpqMedium, 0, 2, 1);
+        break;
+    case EHTokMin10float2x2:
+        new(&type) TType(min10float_bt, EvqTemporary, EpqMedium, 0, 2, 2);
+        break;
+    case EHTokMin10float2x3:
+        new(&type) TType(min10float_bt, EvqTemporary, EpqMedium, 0, 2, 3);
+        break;
+    case EHTokMin10float2x4:
+        new(&type) TType(min10float_bt, EvqTemporary, EpqMedium, 0, 2, 4);
+        break;
+    case EHTokMin10float3x1:
+        new(&type) TType(min10float_bt, EvqTemporary, EpqMedium, 0, 3, 1);
+        break;
+    case EHTokMin10float3x2:
+        new(&type) TType(min10float_bt, EvqTemporary, EpqMedium, 0, 3, 2);
+        break;
+    case EHTokMin10float3x3:
+        new(&type) TType(min10float_bt, EvqTemporary, EpqMedium, 0, 3, 3);
+        break;
+    case EHTokMin10float3x4:
+        new(&type) TType(min10float_bt, EvqTemporary, EpqMedium, 0, 3, 4);
+        break;
+    case EHTokMin10float4x1:
+        new(&type) TType(min10float_bt, EvqTemporary, EpqMedium, 0, 4, 1);
+        break;
+    case EHTokMin10float4x2:
+        new(&type) TType(min10float_bt, EvqTemporary, EpqMedium, 0, 4, 2);
+        break;
+    case EHTokMin10float4x3:
+        new(&type) TType(min10float_bt, EvqTemporary, EpqMedium, 0, 4, 3);
+        break;
+    case EHTokMin10float4x4:
+        new(&type) TType(min10float_bt, EvqTemporary, EpqMedium, 0, 4, 4);
+        break;
+
+    case EHTokMin16int1x1:
+        new(&type) TType(min16int_bt, EvqTemporary, EpqMedium, 0, 1, 1);
+        break;
+    case EHTokMin16int1x2:
+        new(&type) TType(min16int_bt, EvqTemporary, EpqMedium, 0, 1, 2);
+        break;
+    case EHTokMin16int1x3:
+        new(&type) TType(min16int_bt, EvqTemporary, EpqMedium, 0, 1, 3);
+        break;
+    case EHTokMin16int1x4:
+        new(&type) TType(min16int_bt, EvqTemporary, EpqMedium, 0, 1, 4);
+        break;
+    case EHTokMin16int2x1:
+        new(&type) TType(min16int_bt, EvqTemporary, EpqMedium, 0, 2, 1);
+        break;
+    case EHTokMin16int2x2:
+        new(&type) TType(min16int_bt, EvqTemporary, EpqMedium, 0, 2, 2);
+        break;
+    case EHTokMin16int2x3:
+        new(&type) TType(min16int_bt, EvqTemporary, EpqMedium, 0, 2, 3);
+        break;
+    case EHTokMin16int2x4:
+        new(&type) TType(min16int_bt, EvqTemporary, EpqMedium, 0, 2, 4);
+        break;
+    case EHTokMin16int3x1:
+        new(&type) TType(min16int_bt, EvqTemporary, EpqMedium, 0, 3, 1);
+        break;
+    case EHTokMin16int3x2:
+        new(&type) TType(min16int_bt, EvqTemporary, EpqMedium, 0, 3, 2);
+        break;
+    case EHTokMin16int3x3:
+        new(&type) TType(min16int_bt, EvqTemporary, EpqMedium, 0, 3, 3);
+        break;
+    case EHTokMin16int3x4:
+        new(&type) TType(min16int_bt, EvqTemporary, EpqMedium, 0, 3, 4);
+        break;
+    case EHTokMin16int4x1:
+        new(&type) TType(min16int_bt, EvqTemporary, EpqMedium, 0, 4, 1);
+        break;
+    case EHTokMin16int4x2:
+        new(&type) TType(min16int_bt, EvqTemporary, EpqMedium, 0, 4, 2);
+        break;
+    case EHTokMin16int4x3:
+        new(&type) TType(min16int_bt, EvqTemporary, EpqMedium, 0, 4, 3);
+        break;
+    case EHTokMin16int4x4:
+        new(&type) TType(min16int_bt, EvqTemporary, EpqMedium, 0, 4, 4);
+        break;
+
+    case EHTokMin12int1x1:
+        new(&type) TType(min12int_bt, EvqTemporary, EpqMedium, 0, 1, 1);
+        break;
+    case EHTokMin12int1x2:
+        new(&type) TType(min12int_bt, EvqTemporary, EpqMedium, 0, 1, 2);
+        break;
+    case EHTokMin12int1x3:
+        new(&type) TType(min12int_bt, EvqTemporary, EpqMedium, 0, 1, 3);
+        break;
+    case EHTokMin12int1x4:
+        new(&type) TType(min12int_bt, EvqTemporary, EpqMedium, 0, 1, 4);
+        break;
+    case EHTokMin12int2x1:
+        new(&type) TType(min12int_bt, EvqTemporary, EpqMedium, 0, 2, 1);
+        break;
+    case EHTokMin12int2x2:
+        new(&type) TType(min12int_bt, EvqTemporary, EpqMedium, 0, 2, 2);
+        break;
+    case EHTokMin12int2x3:
+        new(&type) TType(min12int_bt, EvqTemporary, EpqMedium, 0, 2, 3);
+        break;
+    case EHTokMin12int2x4:
+        new(&type) TType(min12int_bt, EvqTemporary, EpqMedium, 0, 2, 4);
+        break;
+    case EHTokMin12int3x1:
+        new(&type) TType(min12int_bt, EvqTemporary, EpqMedium, 0, 3, 1);
+        break;
+    case EHTokMin12int3x2:
+        new(&type) TType(min12int_bt, EvqTemporary, EpqMedium, 0, 3, 2);
+        break;
+    case EHTokMin12int3x3:
+        new(&type) TType(min12int_bt, EvqTemporary, EpqMedium, 0, 3, 3);
+        break;
+    case EHTokMin12int3x4:
+        new(&type) TType(min12int_bt, EvqTemporary, EpqMedium, 0, 3, 4);
+        break;
+    case EHTokMin12int4x1:
+        new(&type) TType(min12int_bt, EvqTemporary, EpqMedium, 0, 4, 1);
+        break;
+    case EHTokMin12int4x2:
+        new(&type) TType(min12int_bt, EvqTemporary, EpqMedium, 0, 4, 2);
+        break;
+    case EHTokMin12int4x3:
+        new(&type) TType(min12int_bt, EvqTemporary, EpqMedium, 0, 4, 3);
+        break;
+    case EHTokMin12int4x4:
+        new(&type) TType(min12int_bt, EvqTemporary, EpqMedium, 0, 4, 4);
+        break;
+
+    case EHTokMin16uint1x1:
+        new(&type) TType(min16uint_bt, EvqTemporary, EpqMedium, 0, 1, 1);
+        break;
+    case EHTokMin16uint1x2:
+        new(&type) TType(min16uint_bt, EvqTemporary, EpqMedium, 0, 1, 2);
+        break;
+    case EHTokMin16uint1x3:
+        new(&type) TType(min16uint_bt, EvqTemporary, EpqMedium, 0, 1, 3);
+        break;
+    case EHTokMin16uint1x4:
+        new(&type) TType(min16uint_bt, EvqTemporary, EpqMedium, 0, 1, 4);
+        break;
+    case EHTokMin16uint2x1:
+        new(&type) TType(min16uint_bt, EvqTemporary, EpqMedium, 0, 2, 1);
+        break;
+    case EHTokMin16uint2x2:
+        new(&type) TType(min16uint_bt, EvqTemporary, EpqMedium, 0, 2, 2);
+        break;
+    case EHTokMin16uint2x3:
+        new(&type) TType(min16uint_bt, EvqTemporary, EpqMedium, 0, 2, 3);
+        break;
+    case EHTokMin16uint2x4:
+        new(&type) TType(min16uint_bt, EvqTemporary, EpqMedium, 0, 2, 4);
+        break;
+    case EHTokMin16uint3x1:
+        new(&type) TType(min16uint_bt, EvqTemporary, EpqMedium, 0, 3, 1);
+        break;
+    case EHTokMin16uint3x2:
+        new(&type) TType(min16uint_bt, EvqTemporary, EpqMedium, 0, 3, 2);
+        break;
+    case EHTokMin16uint3x3:
+        new(&type) TType(min16uint_bt, EvqTemporary, EpqMedium, 0, 3, 3);
+        break;
+    case EHTokMin16uint3x4:
+        new(&type) TType(min16uint_bt, EvqTemporary, EpqMedium, 0, 3, 4);
+        break;
+    case EHTokMin16uint4x1:
+        new(&type) TType(min16uint_bt, EvqTemporary, EpqMedium, 0, 4, 1);
+        break;
+    case EHTokMin16uint4x2:
+        new(&type) TType(min16uint_bt, EvqTemporary, EpqMedium, 0, 4, 2);
+        break;
+    case EHTokMin16uint4x3:
+        new(&type) TType(min16uint_bt, EvqTemporary, EpqMedium, 0, 4, 3);
+        break;
+    case EHTokMin16uint4x4:
+        new(&type) TType(min16uint_bt, EvqTemporary, EpqMedium, 0, 4, 4);
         break;
 
     default:
@@ -3794,7 +4085,7 @@ bool HlslGrammar::acceptIterationStatement(TIntermNode*& statement, const TAttri
         parseContext.unnestLooping();
         --parseContext.controlFlowNestingLevel;
 
-        loopNode = intermediate.addLoop(statement, condition, 0, false, loc);
+        loopNode = intermediate.addLoop(statement, condition, nullptr, false, loc);
         statement = loopNode;
         break;
 

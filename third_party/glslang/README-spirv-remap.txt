@@ -112,7 +112,7 @@ BUILD DEPENDENCIES:
 
 BUILDING
 --------------------------------------------------------------------------------
-The standalone remapper is built along side glslangValidator through its
+The standalone remapper is built along side glslang through its
 normal build process.
 
 

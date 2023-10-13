@@ -32,7 +32,7 @@
 // ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include "StandAlone/ResourceLimits.h"
+#include "glslang/Public/ResourceLimits.h"
 #include "TestFixture.h"
 
 namespace glslangtest {
@@ -65,7 +65,7 @@ TEST_P(ConfigTest, FromFile)
         char* configChars = new char[len + 1];
         memcpy(configChars, configContents.data(), len);
         configChars[len] = 0;
-        glslang::DecodeResourceLimits(&resources, configChars);
+        DecodeResourceLimits(&resources, configChars);
         delete[] configChars;
     }
 

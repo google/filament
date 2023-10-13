@@ -46,5 +46,5 @@ using ninja-1.10.0
 echo "Building..."
 mkdir /build && cd /build
 
-cmake "$ROOT_DIR" -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$(pwd)/install" -DBUILD_SHARED_LIBS=$BUILD_SHARED_LIBS
+cmake "$ROOT_DIR" -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$(pwd)/install" -DBUILD_SHARED_LIBS=$BUILD_SHARED_LIBS -DENABLE_OPT=0
 ninja install

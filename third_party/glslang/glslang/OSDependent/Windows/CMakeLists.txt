@@ -55,7 +55,7 @@ if(ENABLE_GLSLANG_INSTALL)
         message(WARNING \"Using `OSDependentTargets.cmake` is deprecated: use `find_package(glslang)` to find glslang CMake targets.\")
 
         if (NOT TARGET glslang::OSDependent)
-            include(\"\${CMAKE_CURRENT_LIST_DIR}/../../${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}/glslang-targets.cmake\")
+            include(\"${CMAKE_INSTALL_FULL_LIBDIR}/cmake/${PROJECT_NAME}/glslang-targets.cmake\")
         endif()
 
         add_library(OSDependent ALIAS glslang::OSDependent)

@@ -157,27 +157,16 @@ typedef struct glslang_resource_s {
     int max_task_work_group_size_y_ext;
     int max_task_work_group_size_z_ext;
     int max_mesh_view_count_ext;
-    int maxDualSourceDrawBuffersEXT;
+    union
+    {
+        int max_dual_source_draw_buffers_ext;
+
+        /* Incorrectly capitalized name retained for backward compatibility */
+        int maxDualSourceDrawBuffersEXT;
+    };
 
     glslang_limits_t limits;
 } glslang_resource_t;
-
-typedef struct glslang_input_s {
-    glslang_source_t language;
-    glslang_stage_t stage;
-    glslang_client_t client;
-    glslang_target_client_version_t client_version;
-    glslang_target_language_t target_language;
-    glslang_target_language_version_t target_language_version;
-    /** Shader source code */
-    const char* code;
-    int default_version;
-    glslang_profile_t default_profile;
-    int force_default_version_and_profile;
-    int forward_compatible;
-    glslang_messages_t messages;
-    const glslang_resource_t* resource;
-} glslang_input_t;
 
 /* Inclusion result structure allocated by C include_local/include_system callbacks */
 typedef struct glsl_include_result_s {
@@ -208,6 +197,25 @@ typedef struct glsl_include_callbacks_s {
     glsl_free_include_result_func free_include_result;
 } glsl_include_callbacks_t;
 
+typedef struct glslang_input_s {
+    glslang_source_t language;
+    glslang_stage_t stage;
+    glslang_client_t client;
+    glslang_target_client_version_t client_version;
+    glslang_target_language_t target_language;
+    glslang_target_language_version_t target_language_version;
+    /** Shader source code */
+    const char* code;
+    int default_version;
+    glslang_profile_t default_profile;
+    int force_default_version_and_profile;
+    int forward_compatible;
+    glslang_messages_t messages;
+    const glslang_resource_t* resource;
+    glsl_include_callbacks_t callbacks;
+    void* callbacks_ctx;
+} glslang_input_t;
+
 /* SpvOptions counterpart */
 typedef struct glslang_spv_options_s {
     bool generate_debug_info;
@@ -218,6 +226,7 @@ typedef struct glslang_spv_options_s {
     bool validate;
     bool emit_nonsemantic_shader_debug_info;
     bool emit_nonsemantic_shader_debug_source;
+    bool compile_only;
 } glslang_spv_options_t;
 
 #ifdef __cplusplus
@@ -240,11 +249,12 @@ extern "C" {
 #define GLSLANG_EXPORT
 #endif
 
-GLSLANG_EXPORT int glslang_initialize_process();
-GLSLANG_EXPORT void glslang_finalize_process();
+GLSLANG_EXPORT int glslang_initialize_process(void);
+GLSLANG_EXPORT void glslang_finalize_process(void);
 
 GLSLANG_EXPORT glslang_shader_t* glslang_shader_create(const glslang_input_t* input);
 GLSLANG_EXPORT void glslang_shader_delete(glslang_shader_t* shader);
+GLSLANG_EXPORT void glslang_shader_set_preamble(glslang_shader_t* shader, const char* s);
 GLSLANG_EXPORT void glslang_shader_shift_binding(glslang_shader_t* shader, glslang_resource_type_t res, unsigned int base);
 GLSLANG_EXPORT void glslang_shader_shift_binding_for_set(glslang_shader_t* shader, glslang_resource_type_t res, unsigned int base, unsigned int set);
 GLSLANG_EXPORT void glslang_shader_set_options(glslang_shader_t* shader, int options); // glslang_shader_options_t
@@ -255,7 +265,7 @@ GLSLANG_EXPORT const char* glslang_shader_get_preprocessed_code(glslang_shader_t
 GLSLANG_EXPORT const char* glslang_shader_get_info_log(glslang_shader_t* shader);
 GLSLANG_EXPORT const char* glslang_shader_get_info_debug_log(glslang_shader_t* shader);
 
-GLSLANG_EXPORT glslang_program_t* glslang_program_create();
+GLSLANG_EXPORT glslang_program_t* glslang_program_create(void);
 GLSLANG_EXPORT void glslang_program_delete(glslang_program_t* program);
 GLSLANG_EXPORT void glslang_program_add_shader(glslang_program_t* program, glslang_shader_t* shader);
 GLSLANG_EXPORT int glslang_program_link(glslang_program_t* program, int messages); // glslang_messages_t
