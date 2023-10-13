@@ -12,6 +12,7 @@ Instead, if you are authoring a PR for the main branch, add your release note to
 - materials: fix alpha masked materials when MSAA is turned on [⚠️ **Recompile materials**]
 - materials: better support materials with custom depth [**Recompile Materials**]
 - engine: fade shadows at shadowFar distance instead of hard cutoff [⚠️ **New Material Version**]
+- engine: Add support for stencil buffer when post-processing is disabled (Metal backend only).
 
 ## v1.44.0
 

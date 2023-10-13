@@ -66,6 +66,7 @@ public:
     id<MTLTexture> acquireDrawable();
 
     id<MTLTexture> acquireDepthTexture();
+    id<MTLTexture> acquireStencilTexture();
 
     void releaseDrawable();
 
@@ -94,12 +95,16 @@ private:
     void scheduleFrameScheduledCallback();
     void scheduleFrameCompletedCallback();
 
+    static MTLPixelFormat decideDepthStencilFormat(uint64_t flags);
+    void ensureDepthStencilTexture();
+
     MetalContext& context;
     id<CAMetalDrawable> drawable = nil;
-    id<MTLTexture> depthTexture = nil;
+    id<MTLTexture> depthStencilTexture = nil;
     id<MTLTexture> headlessDrawable = nil;
-    NSUInteger headlessWidth;
-    NSUInteger headlessHeight;
+    MTLPixelFormat depthStencilFormat = MTLPixelFormatInvalid;
+    NSUInteger headlessWidth = 0;
+    NSUInteger headlessHeight = 0;
     CAMetalLayer* layer = nullptr;
     MetalExternalImage externalImage;
     SwapChainType type;
