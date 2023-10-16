@@ -57,8 +57,9 @@ enum class ToneMapping : uint8_t {
     ACES_LEGACY   = 1,
     ACES          = 2,
     FILMIC        = 3,
-    GENERIC       = 4,
-    DISPLAY_RANGE = 5,
+    AGX           = 4,
+    GENERIC       = 5,
+    DISPLAY_RANGE = 6,
 };
 
 using AmbientOcclusionOptions = filament::View::AmbientOcclusionOptions;
@@ -114,8 +115,14 @@ struct GenericToneMapperSettings {
     float midGrayIn = 0.18f;
     float midGrayOut = 0.215f;
     float hdrMax = 10.0f;
-    bool operator!=(const GenericToneMapperSettings &rhs) const { return !(rhs == *this); }
-    bool operator==(const GenericToneMapperSettings &rhs) const;
+    bool operator!=(const GenericToneMapperSettings& rhs) const { return !(rhs == *this); }
+    bool operator==(const GenericToneMapperSettings& rhs) const;
+};
+
+struct AgxToneMapperSettings {
+    AgxToneMapper::AgxLook look = AgxToneMapper::AgxLook::NONE;
+    bool operator!=(const AgxToneMapperSettings& rhs) const { return !(rhs == *this); }
+    bool operator==(const AgxToneMapperSettings& rhs) const;
 };
 
 struct ColorGradingSettings {
@@ -127,7 +134,7 @@ struct ColorGradingSettings {
     filament::ColorGrading::QualityLevel quality = filament::ColorGrading::QualityLevel::MEDIUM;
     ToneMapping toneMapping = ToneMapping::ACES_LEGACY;
     bool padding0{};
-    bool padding1{};
+    AgxToneMapperSettings agxToneMapper;
     color::ColorSpace colorspace = Rec709-sRGB-D65;
     GenericToneMapperSettings genericToneMapper;
     math::float4 shadows{1.0f, 1.0f, 1.0f, 0.0f};

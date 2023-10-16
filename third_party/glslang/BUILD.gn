@@ -96,9 +96,6 @@ action("glslang_extension_headers") {
 }
 
 spirv_tools_dir = glslang_spirv_tools_dir
-if (!defined(glslang_angle)) {
-  glslang_angle = false
-}
 
 config("glslang_public") {
   include_dirs = [ "." ]
@@ -126,6 +123,8 @@ template("glslang_sources_common") {
       "SPIRV/GLSL.ext.EXT.h",
       "SPIRV/GLSL.ext.KHR.h",
       "SPIRV/GLSL.ext.NV.h",
+      "SPIRV/GLSL.ext.ARM.h",
+      "SPIRV/GLSL.ext.QCOM.h",
       "SPIRV/GLSL.std.450.h",
       "SPIRV/GlslangToSpv.cpp",
       "SPIRV/GlslangToSpv.h",
@@ -242,9 +241,6 @@ template("glslang_sources_common") {
       sources += [ "SPIRV/SpvTools.cpp" ]
       defines += [ "ENABLE_OPT=1" ]
     }
-    if (invoker.is_angle) {
-      defines += [ "GLSLANG_ANGLE" ]
-    }
 
     if (is_win) {
       sources += [ "glslang/OSDependent/Windows/ossource.cpp" ]
@@ -293,21 +289,19 @@ template("glslang_sources_common") {
 }
 
 glslang_sources_common("glslang_lib_sources") {
-  enable_opt = !glslang_angle
-  enable_hlsl = !glslang_angle
-  is_angle = glslang_angle
+  enable_opt = true
+  enable_hlsl = true
 }
 
 glslang_sources_common("glslang_sources") {
   enable_opt = true
   enable_hlsl = true
-  is_angle = false
 }
 
 source_set("glslang_default_resource_limits_sources") {
   sources = [
-    "StandAlone/ResourceLimits.cpp",
-    "StandAlone/ResourceLimits.h",
+    "glslang/ResourceLimits/ResourceLimits.cpp",
+    "glslang/Public/ResourceLimits.h",
     "glslang/Include/ResourceLimits.h",
   ]
   public_configs = [ ":glslang_public" ]

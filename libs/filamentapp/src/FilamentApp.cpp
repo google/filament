@@ -38,6 +38,7 @@
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
+#include <filament/SwapChain.h>
 #include <filament/View.h>
 
 #ifndef NDEBUG
@@ -644,7 +645,8 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
                 mFilamentApp->mEngine->getSupportedFeatureLevel());
         mFilamentApp->mEngine->setActiveFeatureLevel(config.featureLevel);
 
-        mSwapChain = mFilamentApp->mEngine->createSwapChain(nativeSwapChain);
+        mSwapChain = mFilamentApp->mEngine->createSwapChain(
+                nativeSwapChain, filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
     }
     mRenderer = mFilamentApp->mEngine->createRenderer();
 
