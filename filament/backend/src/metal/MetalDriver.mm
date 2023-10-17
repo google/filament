@@ -60,7 +60,7 @@ Dispatcher MetalDriver::getDispatcher() const noexcept {
 
 MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
         : mPlatform(*platform),
-          mContext(new MetalContext),
+          mContext(new MetalContext(driverConfig.textureUseAfterFreePoolSize)),
           mHandleAllocator("Handles", driverConfig.handleArenaSize) {
     mContext->driver = this;
 
@@ -536,13 +536,10 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
     // Free memory from the texture and mark it as freed.
     metalTexture->terminate();
 
-    // Delay the destruction of this texture handle.
-    if (mContext->texturesToDestroy.full()) {
-        Handle<HwTexture> handleToFree = mContext->texturesToDestroy.pop();
-        destruct_handle<MetalTexture>(handleToFree);
+    if (auto handleToFree = mContext->texturesToDestroy.push(th)) {
+        // Delay the destruction of this texture handle.
+        destruct_handle<MetalTexture>(handleToFree.value());
     }
-    assert_invariant(!mContext->texturesToDestroy.full());
-    mContext->texturesToDestroy.push(th);
 }
 
 void MetalDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
@@ -569,7 +566,7 @@ void MetalDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 
 void MetalDriver::terminate() {
     // Terminate any oustanding MetalTextures.
-    while (mContext->texturesToDestroy.size() > 0) {
+    while (!mContext->texturesToDestroy.empty()) {
         Handle<HwTexture> toDestroy = mContext->texturesToDestroy.pop();
         destruct_handle<MetalTexture>(toDestroy);
     }
