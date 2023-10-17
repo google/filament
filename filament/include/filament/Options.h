@@ -479,7 +479,8 @@ enum class ShadowType : uint8_t {
     PCF,        //!< percentage-closer filtered shadows (default)
     VSM,        //!< variance shadows
     DPCF,       //!< PCF with contact hardening simulation
-    PCSS        //!< PCF with soft shadows and contact hardening
+    PCSS,       //!< PCF with soft shadows and contact hardening
+    PCFd,       // for debugging only, don't use.
 };
 
 /**
