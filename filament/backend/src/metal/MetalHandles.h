@@ -242,7 +242,21 @@ public:
     // Used to track "use after free" scenario.
     void terminate() noexcept;
     bool isTerminated() const noexcept { return terminated; }
-    void checkUseAfterFree(const char* samplerGroupDebugName, size_t textureIndex);
+    inline void checkUseAfterFree(const char* samplerGroupDebugName, size_t textureIndex) const {
+        if (UTILS_LIKELY(!isTerminated())) {
+            return;
+        }
+        NSString* reason =
+                [NSString stringWithFormat:
+                                  @"Filament Metal texture use after free, sampler group = "
+                                  @"%s, texture index = %zu",
+                          samplerGroupDebugName, textureIndex];
+        NSException* useAfterFreeException =
+                [NSException exceptionWithName:@"MetalTextureUseAfterFree"
+                                        reason:reason
+                                      userInfo:nil];
+        [useAfterFreeException raise];
+    }
 
 private:
     void loadSlice(uint32_t level, MTLRegion region, uint32_t byteOffset, uint32_t slice,
