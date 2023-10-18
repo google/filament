@@ -193,7 +193,8 @@ TEST_F(BackendTest, FeedbackLoops) {
             sparams.filterMag = SamplerMagFilter::LINEAR;
             sparams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
             samplers.setSampler(0, { texture, sparams });
-            auto sgroup = api.createSamplerGroup(samplers.getSize(), "Test");
+            auto sgroup =
+                    api.createSamplerGroup(samplers.getSize(), utils::FixedSizeString<32>("Test"));
             api.updateSamplerGroup(sgroup, samplers.toBufferDescriptor(api));
             auto ubuffer = api.createBufferObject(sizeof(MaterialParams),
                     BufferObjectBinding::UNIFORM, BufferUsage::STATIC);

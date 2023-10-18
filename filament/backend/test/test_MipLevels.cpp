@@ -194,7 +194,8 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         samplerParams.filterMag = SamplerMagFilter::NEAREST;
         samplerParams.filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST;
         samplers.setSampler(0, { texture, samplerParams });
-        backend::Handle<HwSamplerGroup> samplerGroup = api.createSamplerGroup(1, "Test");
+        backend::Handle<HwSamplerGroup> samplerGroup =
+                api.createSamplerGroup(1, utils::FixedSizeString<32>("Test"));
         api.updateSamplerGroup(samplerGroup, samplers.toBufferDescriptor(api));
         api.bindSamplers(0, samplerGroup);
 
