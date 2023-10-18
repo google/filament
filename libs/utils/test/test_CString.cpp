@@ -93,3 +93,25 @@ TEST(CString, ReplacePastEndOfString) {
         EXPECT_STREQ("foo bar bat", str.c_str());
     }
 }
+
+TEST(FixedSizeString, EmptyString) {
+    {
+        FixedSizeString<32> str;
+        EXPECT_STREQ("", str.c_str());
+    }
+    {
+        FixedSizeString<32> str("");
+        EXPECT_STREQ("", str.c_str());
+    }
+}
+
+TEST(FixedSizeString, Constructors) {
+    {
+        FixedSizeString<32> str("short string");
+        EXPECT_STREQ("short string", str.c_str());
+    }
+    {
+        FixedSizeString<16> str("a long string abcdefghijklmnopqrst");
+        EXPECT_STREQ("a long string a", str.c_str());
+    }
+}

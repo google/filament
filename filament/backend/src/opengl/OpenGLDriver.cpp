@@ -555,7 +555,8 @@ void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size, const char* name) {
+void OpenGLDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size,
+        utils::FixedSizeString<32> debugName) {
     DEBUG_MARKER()
 
     construct<GLSamplerGroup>(sbh, size);

@@ -303,8 +303,9 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
         target, levels, format, samples, width, height, depth, usage, metalTexture));
 }
 
-void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size, const char* name) {
-    mContext->samplerGroups.insert(construct_handle<MetalSamplerGroup>(sbh, size, name));
+void MetalDriver::createSamplerGroupR(
+        Handle<HwSamplerGroup> sbh, uint32_t size, utils::FixedSizeString<32> debugName) {
+    mContext->samplerGroups.insert(construct_handle<MetalSamplerGroup>(sbh, size, debugName));
 }
 
 void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
@@ -877,7 +878,7 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
         // The difference between this check and the one below is that in release, we do this for
         // only a set number of recently freed textures, while the debug check is exhaustive.
         auto* metalTexture = handle_cast<MetalTexture>(samplers[s].t);
-        metalTexture->checkUseAfterFree(sb->debugName.c_str_safe(), s);
+        metalTexture->checkUseAfterFree(sb->debugName.c_str(), s);
 #ifndef NDEBUG
         auto iter = mContext->textures.find(handle_cast<MetalTexture>(samplers[s].t));
         if (iter == mContext->textures.end()) {
@@ -1385,7 +1386,7 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
         // The difference between this check and the one below is that in release, we do this for
         // only a set number of recently freed textures, while the debug check is exhaustive.
         auto* metalTexture = handle_cast<MetalTexture>(handles[s]);
-        metalTexture->checkUseAfterFree(samplerGroup->debugName.c_str_safe(), s);
+        metalTexture->checkUseAfterFree(samplerGroup->debugName.c_str(), s);
 #ifndef NDEBUG
         auto iter = mContext->textures.find(metalTexture);
         if (iter == mContext->textures.end()) {

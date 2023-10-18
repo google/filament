@@ -125,8 +125,8 @@ FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
             TextureUsage::DEFAULT);
 
     // create and update sampler group
-    mSbHandle = driver.createSamplerGroup(
-            PerRenderPrimitiveMorphingSib::SAMPLER_COUNT, "Morph target samplers");
+    mSbHandle = driver.createSamplerGroup(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT,
+            utils::FixedSizeString<32>("Morph target samplers"));
     SamplerGroup samplerGroup(PerRenderPrimitiveMorphingSib::SAMPLER_COUNT);
     samplerGroup.setSampler(PerRenderPrimitiveMorphingSib::POSITIONS, { mPbHandle, {}});
     samplerGroup.setSampler(PerRenderPrimitiveMorphingSib::TANGENTS, { mTbHandle, {}});

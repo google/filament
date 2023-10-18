@@ -32,6 +32,7 @@
 #include "private/backend/SamplerGroup.h"
 
 #include <utils/bitset.h>
+#include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 
@@ -282,7 +283,7 @@ private:
 
 class MetalSamplerGroup : public HwSamplerGroup {
 public:
-    explicit MetalSamplerGroup(size_t size, const char* name) noexcept
+    explicit MetalSamplerGroup(size_t size, utils::FixedSizeString<32> name) noexcept
         : size(size),
           debugName(name),
           textureHandles(size, Handle<HwTexture>()),
@@ -343,7 +344,7 @@ public:
     void useResources(id<MTLRenderCommandEncoder> renderPassEncoder);
 
     size_t size;
-    utils::CString debugName;
+    utils::FixedSizeString<32> debugName;
 
 public:
 
