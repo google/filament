@@ -172,6 +172,7 @@ public:
     using Platform = backend::Platform;
     using Backend = backend::Backend;
     using DriverConfig = backend::Platform::DriverConfig;
+    using FeatureLevel = backend::FeatureLevel;
 
     /**
      * Config is used to define the memory footprint used by the engine, such as the
@@ -351,6 +352,12 @@ public:
          */
         Builder& sharedContext(void* sharedContext) noexcept;
 
+        /**
+         * @param featureLevel The feature level at which initialize Filament.
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& featureLevel(FeatureLevel featureLevel) noexcept;
+
 #if UTILS_HAS_THREADING
         /**
          * Creates the filament Engine asynchronously.
@@ -481,9 +488,6 @@ public:
      * This method is thread-safe.
      */
     static void destroy(Engine* engine);
-
-    using FeatureLevel = backend::FeatureLevel;
-
 
     /**
      * Query the feature level supported by the selected backend.

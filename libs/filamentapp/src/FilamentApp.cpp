@@ -603,10 +603,14 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
                 return Engine::Builder()
                         .backend(backend)
                         .platform(mFilamentApp->mVulkanPlatform)
+                        .featureLevel(config.featureLevel)
                         .build();
             #endif
         }
-        return Engine::Builder().backend(backend).build();
+        return Engine::Builder()
+                .backend(backend)
+                .featureLevel(config.featureLevel)
+                .build();
     };
 
     if (config.headless) {
@@ -647,10 +651,8 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
 #endif
 
-        // Select the feature level to use
-        config.featureLevel = std::min(config.featureLevel,
-                mFilamentApp->mEngine->getSupportedFeatureLevel());
-        mFilamentApp->mEngine->setActiveFeatureLevel(config.featureLevel);
+        // Write back the active feature level.
+        config.featureLevel = mFilamentApp->mEngine->getActiveFeatureLevel();
 
         mSwapChain = mFilamentApp->mEngine->createSwapChain(
                 nativeSwapChain, filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);

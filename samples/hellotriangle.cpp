@@ -122,6 +122,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
 int main(int argc, char** argv) {
     App app{};
     app.config.title = "hellotriangle";
+    app.config.featureLevel = backend::FeatureLevel::FEATURE_LEVEL_0;
     handleCommandLineArguments(argc, argv, &app);
 
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
