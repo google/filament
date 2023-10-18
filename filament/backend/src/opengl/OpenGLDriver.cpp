@@ -147,8 +147,8 @@ Driver* OpenGLDriver::create(OpenGLPlatform* const platform,
 #endif
 
     size_t const defaultSize = FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
-    Platform::DriverConfig const validConfig {
-        .handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize) };
+    Platform::DriverConfig validConfig {driverConfig};
+    validConfig.handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize);
     OpenGLDriver* const driver = new OpenGLDriver(ec, validConfig);
     return driver;
 }

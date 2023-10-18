@@ -214,8 +214,8 @@ Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& cont
          Platform::DriverConfig const& driverConfig) noexcept {
     assert_invariant(platform);
     size_t defaultSize = FVK_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
-    Platform::DriverConfig validConfig{
-            .handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize)};
+    Platform::DriverConfig validConfig {driverConfig};
+    validConfig.handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize);
     return new VulkanDriver(platform, context, validConfig);
 }
 
