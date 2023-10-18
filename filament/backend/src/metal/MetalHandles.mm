@@ -797,14 +797,14 @@ void MetalTexture::loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region
     context.blitter->blit(getPendingCommandBuffer(&context), args, "Texture upload blit");
 }
 
-void MetalTexture::extendLodRangeTo(uint32_t level) {
+void MetalTexture::extendLodRangeTo(uint16_t level) {
     assert_invariant(!isInRenderPass(&context));
     minLod = std::min(minLod, level);
     maxLod = std::max(maxLod, level);
     lodTextureView = nil;
 }
 
-void MetalTexture::setLodRange(uint32_t min, uint32_t max) {
+void MetalTexture::setLodRange(uint16_t min, uint16_t max) {
     assert_invariant(!isInRenderPass(&context));
     assert_invariant(min <= max);
     minLod = min;

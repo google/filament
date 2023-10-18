@@ -224,8 +224,8 @@ public:
     // - using the texture as a render target attachment
     // - calling setMinMaxLevels
     // A texture's available mips are consistent throughout a render pass.
-    void setLodRange(uint32_t minLevel, uint32_t maxLevel);
-    void extendLodRangeTo(uint32_t level);
+    void setLodRange(uint16_t minLevel, uint16_t maxLevel);
+    void extendLodRangeTo(uint16_t level);
 
     static MTLPixelFormat decidePixelFormat(MetalContext* context, TextureFormat format);
 
@@ -275,8 +275,8 @@ private:
     id<MTLTexture> swizzledTextureView = nil;
     id<MTLTexture> lodTextureView = nil;
 
-    uint32_t minLod = UINT_MAX;
-    uint32_t maxLod = 0;
+    uint16_t minLod = std::numeric_limits<uint16_t>::max();
+    uint16_t maxLod = 0;
 
     bool terminated = false;
 };
