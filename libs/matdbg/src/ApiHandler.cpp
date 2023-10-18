@@ -31,10 +31,12 @@
 #include <CivetServer.h>
 
 #include <sstream>
+#include <chrono>
 
 namespace filament::matdbg {
 
 using namespace filament::backend;
+using namespace std::chrono_literals;
 
 namespace {
 
@@ -227,14 +229,17 @@ bool ApiHandler::handleGetStatus(struct mg_connection* conn,
         return true;
     }
 
-    {
-        std::unique_lock<utils::Mutex> lock(mStatusMutex);
-        uint64_t const currentStatusCount = mCurrentStatus;
-        mStatusCondition.wait(lock,
-                [this, currentStatusCount] { return currentStatusCount < mCurrentStatus; });
-
+    std::unique_lock<utils::Mutex> lock(mStatusMutex);
+    uint64_t const currentStatusCount = mCurrentStatus;
+    if (mStatusCondition.wait_for(lock, 10s,
+                [this, currentStatusCount] { return currentStatusCount < mCurrentStatus; })) {
         mg_printf(conn, kSuccessHeader.data(), "application/txt");
         mg_write(conn, statusMaterialId, 8);
+    } else {
+        mg_printf(conn, kSuccessHeader.data(), "application/txt");
+        // Use '1' to indicate a no-op.  This ensures that we don't block forever if the client is
+        // gone.
+        mg_write(conn, "1", 1);
     }
     return true;
 }

@@ -50,6 +50,10 @@ using utils::FixedCapacityVector;
 // serves files directly from the source code tree.
 #define SERVE_FROM_SOURCE_TREE 0
 
+// When set to 1, we will serve an experimental frontend, which will potentially replace the current
+// frontend when ready.
+#define EXPERIMENTAL_WEB_FRAMEWORK 0
+
 #if !SERVE_FROM_SOURCE_TREE
 #include "matdbg_resources.h"
 #endif
@@ -70,10 +74,36 @@ std::string_view const DebugServer::kErrorHeader =
         "HTTP/1.1 404 Not Found\r\nContent-Type: %s\r\n"
         "Connection: close\r\n\r\n";
 
+#if EXPERIMENTAL_WEB_FRAMEWORK
+
 namespace {
 
-}// namespace
+std::string const BASE_URL = "libs/matdbg/web/experiment";
 
+} // anonymous
+
+class FileRequestHandler : public CivetHandler {
+public:
+    FileRequestHandler(DebugServer* server) : mServer(server) {}
+    bool handleGet(CivetServer *server, struct mg_connection *conn) {
+        auto const& kSuccessHeader = DebugServer::kSuccessHeader;
+        struct mg_request_info const* request = mg_get_request_info(conn);
+        std::string uri(request->request_uri);
+        if (uri == "/") {
+            uri = "/index.html";
+        }
+        if (uri == "/index.html" || uri == "/app.js" || uri == "/api.js") {
+            mg_send_file(conn, (BASE_URL + uri).c_str());
+            return true;
+        }
+        slog.e << "DebugServer: bad request at line " <<  __LINE__ << ": " << uri << io::endl;
+        return false;
+    }
+private:
+    DebugServer* mServer;
+};
+
+#else
 class FileRequestHandler : public CivetHandler {
 public:
     FileRequestHandler(DebugServer* server) : mServer(server) {}
@@ -115,6 +145,7 @@ public:
 private:
     DebugServer* mServer;
 };
+#endif
 
 DebugServer::DebugServer(Backend backend, int port) : mBackend(backend) {
     #if !SERVE_FROM_SOURCE_TREE
