@@ -4,7 +4,8 @@ material {
         color
     ],
     shadingModel : unlit,
-    culling : none
+    culling : none,
+    featureLevel : 0
 }
 
 fragment {

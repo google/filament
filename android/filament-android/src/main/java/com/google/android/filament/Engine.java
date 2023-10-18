@@ -210,6 +210,17 @@ public class Engine {
         }
 
         /**
+         * Sets the initial featureLevel for the Engine.
+         *
+         * @param featureLevel The feature level at which initialize Filament.
+         * @return A reference to this Builder for chaining calls.
+         */
+        public Builder featureLevel(FeatureLevel featureLevel) {
+            nSetBuilderFeatureLevel(mNativeBuilder, featureLevel.ordinal());
+            return this;
+        }
+
+        /**
          * Creates an instance of Engine
          *
          * @return A newly created <code>Engine</code>, or <code>null</code> if the GPU driver couldn't
@@ -1149,6 +1160,7 @@ public class Engine {
     private static native void nSetBuilderConfig(long nativeBuilder, long commandBufferSizeMB,
             long perRenderPassArenaSizeMB, long driverHandleArenaSizeMB,
             long minCommandBufferSizeMB, long perFrameCommandsSizeMB, long jobSystemThreadCount);
+    private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
     private static native long nBuilderBuild(long nativeBuilder);
 }

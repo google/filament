@@ -118,12 +118,9 @@ FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
 
 FMaterial const* FSkybox::createMaterial(FEngine& engine) {
     Material::Builder builder;
-#ifdef FILAMENT_TARGET_MOBILE
     if (UTILS_UNLIKELY(engine.getActiveFeatureLevel() == Engine::FeatureLevel::FEATURE_LEVEL_0)) {
         builder.package(MATERIALS_SKYBOX0_DATA, MATERIALS_SKYBOX0_SIZE);
-    } else
-#endif
-    {
+    } else {
         builder.package(MATERIALS_SKYBOX_DATA, MATERIALS_SKYBOX_SIZE);
     }
     auto material = builder.build(engine);

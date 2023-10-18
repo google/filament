@@ -57,7 +57,9 @@ static MaterialParser* createParser(Backend backend, ShaderLanguage language,
     }
 
     ASSERT_PRECONDITION(materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND,
-                "the material was not built for the %s backend\n", backendToString(backend));
+                "the material was not built for the %s backend and %s shader language\n",
+                backendToString(backend),
+                shaderLanguageToString(language));
 
     ASSERT_PRECONDITION(materialResult == MaterialParser::ParseResult::SUCCESS,
                 "could not parse the material package");
@@ -184,7 +186,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     success = parser->getUIB(&mUniformInterfaceBlock);
     assert_invariant(success);
 
-    if (engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0) {
+    if (UTILS_UNLIKELY(engine.getShaderLanguage() == ShaderLanguage::ESSL1)) {
         success = parser->getBindingUniformInfo(&mBindingUniformInfo);
         assert_invariant(success);
 
@@ -258,7 +260,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     mSpecializationConstants.push_back({
                     +ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS,
                     (bool)powerVrShaderWorkarounds });
-    if (engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0) {
+    if (UTILS_UNLIKELY(engine.getShaderLanguage() == ShaderLanguage::ESSL1)) {
         // The actual value of this spec-constant is set in the OpenGLDriver backend.
         mSpecializationConstants.push_back({
             +ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION,
@@ -640,7 +642,6 @@ Program FMaterial::getProgramWithVariants(
     FEngine const& engine = mEngine;
     const ShaderModel sm = engine.getShaderModel();
     const bool isNoop = engine.getBackend() == Backend::NOOP;
-    const FeatureLevel engineFeatureLevel = engine.getActiveFeatureLevel();
     /*
      * Vertex shader
      */
@@ -694,7 +695,7 @@ Program FMaterial::getProgramWithVariants(
         }
     }
 
-    if (engineFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+    if (UTILS_UNLIKELY(mEngine.getShaderLanguage() == ShaderLanguage::ESSL1)) {
         assert_invariant(!mBindingUniformInfo.empty());
         for (auto const& [index, uniforms] : mBindingUniformInfo) {
             program.uniforms(uint32_t(index), uniforms);

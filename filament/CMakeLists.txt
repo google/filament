@@ -218,6 +218,7 @@ set(MATERIAL_SRCS
         src/materials/colorGrading/customResolveAsSubpass.mat
         src/materials/debugShadowCascades.mat
         src/materials/defaultMaterial.mat
+        src/materials/defaultMaterial0.mat
         src/materials/dof/dof.mat
         src/materials/dof/dofCoc.mat
         src/materials/dof/dofDownsample.mat
@@ -237,17 +238,13 @@ set(MATERIAL_SRCS
         src/materials/ssao/bilateralBlurBentNormals.mat
         src/materials/ssao/mipmapDepth.mat
         src/materials/skybox.mat
+        src/materials/skybox0.mat
         src/materials/ssao/sao.mat
         src/materials/ssao/saoBentNormals.mat
         src/materials/separableGaussianBlur.mat
         src/materials/antiAliasing/fxaa.mat
         src/materials/antiAliasing/taa.mat
         src/materials/vsmMipmap.mat
-)
-
-set(MATERIAL_ES2_SRCS
-        src/materials/defaultMaterial0.mat
-        src/materials/skybox0.mat
 )
 
 # Embed the binary resource blob for materials.
@@ -314,23 +311,6 @@ foreach (mat_src ${MATERIAL_SRCS})
     )
     list(APPEND MATERIAL_BINS ${output_path})
 endforeach()
-
-if (IS_MOBILE_TARGET AND FILAMENT_SUPPORTS_OPENGL)
-    foreach (mat_src ${MATERIAL_ES2_SRCS})
-        get_filename_component(localname "${mat_src}" NAME_WE)
-        get_filename_component(fullname "${mat_src}" ABSOLUTE)
-        set(output_path "${MATERIAL_DIR}/${localname}.filamat")
-
-        add_custom_command(
-                OUTPUT ${output_path}
-                COMMAND matc -a opengl -p ${MATC_TARGET} ${MATC_OPT_FLAGS} -o ${output_path} ${fullname}
-                MAIN_DEPENDENCY ${fullname}
-                DEPENDS matc
-                COMMENT "Compiling material ${mat_src} to ${output_path}"
-        )
-        list(APPEND MATERIAL_BINS ${output_path})
-    endforeach ()
-endif ()
 
 # Additional dependencies on included files for materials
 
