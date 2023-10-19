@@ -527,7 +527,8 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         // We compute the directional light's model matrix using the origin's as the light position.
         // The choice of the light's origin initially doesn't matter for a directional light.
         // This will be adjusted later because of how we compute the depth metric for VSM.
-        const mat4f MvAtOrigin = ShadowMap::getDirectionalLightViewMatrix(direction);
+        const mat4f MvAtOrigin = ShadowMap::getDirectionalLightViewMatrix(direction,
+                normalize(cameraInfo.worldTransform[0].xyz));
 
         // Compute scene-dependent values shared across all cascades
         ShadowMap::updateSceneInfoDirectional(MvAtOrigin, *scene, sceneInfo);
@@ -695,7 +696,7 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap,
     const auto outerConeAngle = lcm.getSpotLightOuterCone(li);
 
     // compute shadow map frustum for culling
-    const mat4f Mv = ShadowMap::getDirectionalLightViewMatrix(direction, position);
+    const mat4f Mv = ShadowMap::getDirectionalLightViewMatrix(direction, { 0, 1, 0 }, position);
     const mat4f Mp = mat4f::perspective(outerConeAngle * f::RAD_TO_DEG * 2.0f, 1.0f, 0.01f, radius);
     const mat4f MpMv = math::highPrecisionMultiply(Mp, Mv);
     const Frustum frustum(MpMv);

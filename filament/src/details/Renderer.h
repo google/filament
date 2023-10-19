@@ -127,6 +127,10 @@ public:
         mClearOptions = options;
     }
 
+    ClearOptions const& getClearOptions() const noexcept {
+        return mClearOptions;
+    }
+
 private:
     friend class Renderer;
     using Command = RenderPass::Command;

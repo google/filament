@@ -81,6 +81,10 @@ void Renderer::setClearOptions(const ClearOptions& options) {
     downcast(this)->setClearOptions(options);
 }
 
+Renderer::ClearOptions const& Renderer::getClearOptions() const noexcept {
+    return downcast(this)->getClearOptions();
+}
+
 void Renderer::renderStandaloneView(View const* view) {
     downcast(this)->renderStandaloneView(downcast(view));
 }

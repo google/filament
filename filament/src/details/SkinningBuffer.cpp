@@ -27,6 +27,8 @@
 #include <math/half.h>
 #include <math/mat4.h>
 
+#include <cstring>
+
 namespace filament {
 
 using namespace backend;
