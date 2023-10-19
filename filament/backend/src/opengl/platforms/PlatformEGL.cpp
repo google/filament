@@ -174,7 +174,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
 
     // find a config we can use if we don't have "EGL_KHR_no_config_context" and that we can use
     // for the dummy pbuffer surface.
-    mEGLConfig = findSwapChainConfig(0);
+    mEGLConfig = findSwapChainConfig(SWAP_CHAIN_CONFIG_TRANSPARENT);
     if (UTILS_UNLIKELY(mEGLConfig == EGL_NO_CONFIG_KHR)) {
         goto error; // error already logged
     }
@@ -348,7 +348,7 @@ EGLConfig PlatformEGL::findSwapChainConfig(uint64_t flags) const {
 
 
     if (ext.egl.KHR_create_context) {
-        configAttribs[EGL_RECORDABLE_ANDROID] |= EGL_OPENGL_ES3_BIT_KHR;
+        configAttribs[EGL_RENDERABLE_TYPE] |= EGL_OPENGL_ES3_BIT_KHR;
     }
 
     if (ext.egl.ANDROID_recordable) {
@@ -569,7 +569,7 @@ EGLint& PlatformEGL::Config::operator[](EGLint name) {
     auto pos = std::find_if(mConfig.begin(), mConfig.end(),
             [name](auto&& v) { return v.first == name; });
     if (pos == mConfig.end()) {
-        mConfig.insert(pos - 1, { name, EGL_NONE });
+        mConfig.insert(pos - 1, { name, 0 });
         pos = mConfig.end() - 2;
     }
     return pos->second;
