@@ -30,6 +30,9 @@ public:
 
     Driver* createDriver(void* sharedContext,
             const Platform::DriverConfig& driverConfig) noexcept override;
+
+protected:
+    bool isOpenGL() const noexcept override;
 };
 
 } // namespace filament

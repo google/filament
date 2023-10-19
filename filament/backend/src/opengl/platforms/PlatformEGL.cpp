@@ -97,13 +97,32 @@ int PlatformEGL::getOSVersion() const noexcept {
     return 0;
 }
 
+bool PlatformEGL::isOpenGL() const noexcept {
+    return false;
+}
 
 Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept {
     mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
 
     EGLint major, minor;
-    EGLBoolean const initialized = eglInitialize(mEGLDisplay, &major, &minor);
+    EGLBoolean initialized = eglInitialize(mEGLDisplay, &major, &minor);
+
+    if (!initialized) {
+        EGLDeviceEXT eglDevice;
+        EGLint numDevices;
+        PFNEGLQUERYDEVICESEXTPROC eglQueryDevicesEXT =
+                (PFNEGLQUERYDEVICESEXTPROC)eglGetProcAddress("eglQueryDevicesEXT");
+        if (eglQueryDevicesEXT != nullptr) {
+            eglQueryDevicesEXT(1, &eglDevice, &numDevices);
+            if(auto* getPlatformDisplay = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(
+                    eglGetProcAddress("eglGetPlatformDisplay"))) {
+                mEGLDisplay = getPlatformDisplay(EGL_PLATFORM_DEVICE_EXT, eglDevice, 0);
+                initialized = eglInitialize(mEGLDisplay, &major, &minor);
+            }
+        }
+    }
+
     if (UTILS_UNLIKELY(!initialized)) {
         slog.e << "eglInitialize failed" << io::endl;
         return nullptr;
@@ -148,10 +167,16 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
     constexpr bool requestES2Context = false;
 #endif
 
-    // Request a ES2 context, devices that support ES3 will return an ES3 context
-    Config contextAttribs = {
-            { EGL_CONTEXT_CLIENT_VERSION, 2 },
-    };
+    Config contextAttribs;
+
+    if (isOpenGL()) {
+        // Request a OpenGL 4.1 context
+        contextAttribs[EGL_CONTEXT_MAJOR_VERSION] = 4;
+        contextAttribs[EGL_CONTEXT_MINOR_VERSION] = 1;
+    } else {
+        // Request a ES2 context, devices that support ES3 will return an ES3 context
+        contextAttribs[EGL_CONTEXT_CLIENT_VERSION] = 2;
+    }
 
     // FOR TESTING ONLY, enforce the ES version we're asking for.
     // FIXME: we should check EGL_ANGLE_create_context_backwards_compatible, however, at least
@@ -172,16 +197,17 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
     // config use for creating the context
     EGLConfig eglConfig = EGL_NO_CONFIG_KHR;
 
-    // find a config we can use if we don't have "EGL_KHR_no_config_context" and that we can use
-    // for the dummy pbuffer surface.
-    mEGLConfig = findSwapChainConfig(
-            SWAP_CHAIN_CONFIG_TRANSPARENT |
-            SWAP_CHAIN_HAS_STENCIL_BUFFER );
-    if (UTILS_UNLIKELY(mEGLConfig == EGL_NO_CONFIG_KHR)) {
-        goto error; // error already logged
-    }
 
     if (UTILS_UNLIKELY(!ext.egl.KHR_no_config_context)) {
+        // find a config we can use if we don't have "EGL_KHR_no_config_context" and that we can use
+        // for the dummy pbuffer surface.
+        mEGLConfig = findSwapChainConfig(
+                SWAP_CHAIN_CONFIG_TRANSPARENT |
+                SWAP_CHAIN_HAS_STENCIL_BUFFER,
+                true, true);
+        if (UTILS_UNLIKELY(mEGLConfig == EGL_NO_CONFIG_KHR)) {
+            goto error; // error already logged
+        }
         // if we don't have the EGL_KHR_no_config_context the context must be created with
         // the same config as the swapchain, so we have no choice but to create a
         // transparent config.
@@ -335,12 +361,11 @@ void PlatformEGL::terminate() noexcept {
     eglReleaseThread();
 }
 
-EGLConfig PlatformEGL::findSwapChainConfig(uint64_t flags) const {
+EGLConfig PlatformEGL::findSwapChainConfig(uint64_t flags, bool window, bool pbuffer) const {
     // Find config that support ES3.
     EGLConfig config = EGL_NO_CONFIG_KHR;
     EGLint configsCount;
     Config configAttribs = {
-            { EGL_RENDERABLE_TYPE,  EGL_OPENGL_ES2_BIT },
             { EGL_RED_SIZE,         8 },
             { EGL_GREEN_SIZE,       8 },
             { EGL_BLUE_SIZE,        8 },
@@ -349,9 +374,23 @@ EGLConfig PlatformEGL::findSwapChainConfig(uint64_t flags) const {
             { EGL_STENCIL_SIZE,    (flags & SWAP_CHAIN_HAS_STENCIL_BUFFER) ? 8 : 0 }
     };
 
+    if (!ext.egl.KHR_no_config_context) {
+        if (isOpenGL()) {
+            configAttribs[EGL_RENDERABLE_TYPE] = EGL_OPENGL_BIT;
+        } else {
+            configAttribs[EGL_RENDERABLE_TYPE] = EGL_OPENGL_ES2_BIT;
+            if (ext.egl.KHR_create_context) {
+                configAttribs[EGL_RENDERABLE_TYPE] |= EGL_OPENGL_ES3_BIT_KHR;
+            }
+        }
+    }
 
-    if (ext.egl.KHR_create_context) {
-        configAttribs[EGL_RENDERABLE_TYPE] |= EGL_OPENGL_ES3_BIT_KHR;
+    if (window) {
+        configAttribs[EGL_SURFACE_TYPE] |= EGL_WINDOW_BIT;
+    }
+
+    if (pbuffer) {
+        configAttribs[EGL_SURFACE_TYPE] |= EGL_PBUFFER_BIT;
     }
 
     if (ext.egl.ANDROID_recordable) {
@@ -394,7 +433,7 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
 
     EGLConfig config = EGL_NO_CONFIG_KHR;
     if (UTILS_LIKELY(ext.egl.KHR_no_config_context)) {
-        config = findSwapChainConfig(flags);
+        config = findSwapChainConfig(flags, true, false);
     } else {
         config = mEGLConfig;
     }
@@ -430,7 +469,7 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
 
     EGLConfig config = EGL_NO_CONFIG_KHR;
     if (UTILS_LIKELY(ext.egl.KHR_no_config_context)) {
-        config = findSwapChainConfig(flags);
+        config = findSwapChainConfig(flags, false, true);
     } else {
         config = mEGLConfig;
     }
