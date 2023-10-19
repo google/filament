@@ -464,7 +464,7 @@ void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantV
     DriverApi& driverApi = mEngine.getDriverApi();
     auto& cachedPrograms = mCachedPrograms;
     for (size_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
-        const Variant variant(k);
+        Variant const variant(k);
         if ((k & variantMask) == variantValue) {
             if (UTILS_LIKELY(!mIsDefaultMaterial)) {
                 // The depth variants may be shared with the default material, in which case
