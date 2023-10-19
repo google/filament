@@ -543,6 +543,7 @@ public:
     // these are the debug properties used by FDebug. They're accessed directly by modules who need them.
     struct {
         struct {
+            bool debug_directional_shadowmap = false;
             bool far_uses_shadowcasters = true;
             bool focus_shadowcasters = true;
             bool visualize_cascades = false;

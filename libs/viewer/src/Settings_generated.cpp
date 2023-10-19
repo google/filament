@@ -782,6 +782,7 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ShadowType* out
     else if (0 == compare(tokens[i], jsonChunk, "VSM")) { *out = ShadowType::VSM; }
     else if (0 == compare(tokens[i], jsonChunk, "DPCF")) { *out = ShadowType::DPCF; }
     else if (0 == compare(tokens[i], jsonChunk, "PCSS")) { *out = ShadowType::PCSS; }
+    else if (0 == compare(tokens[i], jsonChunk, "PCFd")) { *out = ShadowType::PCFd; }
     else {
         slog.w << "Invalid ShadowType: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
     }
@@ -794,6 +795,7 @@ std::ostream& operator<<(std::ostream& out, ShadowType in) {
         case ShadowType::VSM: return out << "\"VSM\"";
         case ShadowType::DPCF: return out << "\"DPCF\"";
         case ShadowType::PCSS: return out << "\"PCSS\"";
+        case ShadowType::PCFd: return out << "\"PCFd\"";
     }
     return out << "\"INVALID\"";
 }

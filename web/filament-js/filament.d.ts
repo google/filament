@@ -1712,6 +1712,7 @@ export enum View$ShadowType {
     VSM, // variance shadows
     DPCF, // PCF with contact hardening simulation
     PCSS, // PCF with soft shadows and contact hardening
+    PCFd,
 }
 
 /**

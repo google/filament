@@ -61,7 +61,7 @@ FrameGraphId<FrameGraphTexture> FrameGraph::Builder::declareRenderPass(
 
 FrameGraph::FrameGraph(ResourceAllocatorInterface& resourceAllocator)
         : mResourceAllocator(resourceAllocator),
-          mArena("FrameGraph Arena", 131072),
+          mArena("FrameGraph Arena", 262144),
           mResourceSlots(mArena),
           mResources(mArena),
           mResourceNodes(mArena),
