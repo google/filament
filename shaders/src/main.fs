@@ -75,7 +75,6 @@ void main() {
             vec4 c = vec4(1.0, 0, 1.0, 1.0) * a;
             fragColor = mix(fragColor, c, 0.2);
         } else {
-            p.xy = saturate(p.xy);
             highp vec2 size = vec2(textureSize(light_shadowMap, 0));
             highp int ix = int(floor(p.x * size.x));
             highp int iy = int(floor(p.y * size.y));
