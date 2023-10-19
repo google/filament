@@ -420,9 +420,9 @@ inline int deviceTypeOrder(VkPhysicalDeviceType deviceType) {
 }
 
 VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
-        VulkanPlatform::GPUPreference const& gpuPreference) {
-    FixedCapacityVector<VkPhysicalDevice> const physicalDevices
-            = filament::backend::enumerate(vkEnumeratePhysicalDevices, instance);
+        VulkanPlatform::Customization::GPUPreference const& gpuPreference) {
+    FixedCapacityVector<VkPhysicalDevice> const physicalDevices =
+            filament::backend::enumerate(vkEnumeratePhysicalDevices, instance);
     struct DeviceInfo {
         VkPhysicalDevice device = VK_NULL_HANDLE;
         VkPhysicalDeviceType deviceType = VK_PHYSICAL_DEVICE_TYPE_OTHER;
@@ -488,10 +488,10 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
                     return true;
                 }
                 if (!pref.deviceName.empty()) {
-                    if (a.name.find(pref.deviceName) != a.name.npos) {
+                    if (a.name.find(pref.deviceName.c_str()) != a.name.npos) {
                         return false;
                     }
-                    if (b.name.find(pref.deviceName) != b.name.npos) {
+                    if (b.name.find(pref.deviceName.c_str()) != b.name.npos) {
                         return true;
                     }
                 }
@@ -614,7 +614,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
 
     bluevk::bindInstance(mImpl->mInstance);
 
-    VulkanPlatform::GPUPreference const pref = getPreferredGPU();
+    VulkanPlatform::Customization::GPUPreference const pref = getCustomization().gpu;
     bool const hasGPUPreference = pref.index >= 0 || !pref.deviceName.empty();
     ASSERT_PRECONDITION(!(hasGPUPreference && sharedContext),
             "Cannot both share context and indicate GPU preference");

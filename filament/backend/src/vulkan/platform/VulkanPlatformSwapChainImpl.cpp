@@ -346,21 +346,7 @@ VkResult VulkanPlatformHeadlessSwapChain::present(uint32_t index, VkSemaphore fi
 VkResult VulkanPlatformHeadlessSwapChain::acquire(VkSemaphore clientSignal, uint32_t* index) {
     *index = mCurrentIndex;
     mCurrentIndex = (mCurrentIndex + 1) % HEADLESS_SWAPCHAIN_SIZE;
-    VkSemaphore const localSignal = clientSignal;
-    VkSubmitInfo const submitInfo{
-            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            .waitSemaphoreCount = 0,
-            .pWaitSemaphores = nullptr,
-            .pWaitDstStageMask = nullptr,
-            .commandBufferCount = 0,
-            .pCommandBuffers = nullptr,
-            .signalSemaphoreCount = 1u,
-            .pSignalSemaphores = &localSignal,
-    };
-    UTILS_UNUSED_IN_RELEASE VkResult const result
-            = vkQueueSubmit(mQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    assert_invariant(result == VK_SUCCESS);
-    return result;
+    return VK_SUCCESS;
 }
 
 void VulkanPlatformHeadlessSwapChain::destroy() {

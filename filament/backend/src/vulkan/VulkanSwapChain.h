@@ -76,6 +76,7 @@ private:
     VmaAllocator mAllocator;
     VulkanStagePool& mStagePool;
     bool const mHeadless;
+    bool const mFlushAndWaitOnResize;
 
     // We create VulkanTextures based on VkImages. VulkanTexture has facilities for doing layout
     // transitions, which are useful here.

@@ -524,19 +524,25 @@ void ViewerGui::applyAnimation(double currentTime, FilamentInstance* instance) {
         return;
     }
     Animator& animator = *instance->getAnimator();
-    const size_t numAnimations = animator.getAnimationCount();
+    const size_t animationCount = animator.getAnimationCount();
     if (mResetAnimation) {
         mPreviousStartTime = mCurrentStartTime;
         mCurrentStartTime = currentTime;
         mResetAnimation = false;
     }
     const double elapsedSeconds = currentTime - mCurrentStartTime;
-    if (numAnimations > 0 && mCurrentAnimation > 0) {
-        animator.applyAnimation(mCurrentAnimation - 1, elapsedSeconds);
-        if (elapsedSeconds < mCrossFadeDuration && mPreviousAnimation > 0) {
+    if (animationCount > 0 && mCurrentAnimation >= 0) {
+        if (mCurrentAnimation == animationCount) {
+            for (size_t i = 0; i < animationCount; i++) {
+                animator.applyAnimation(i, elapsedSeconds);
+            }
+        } else {
+            animator.applyAnimation(mCurrentAnimation, elapsedSeconds);
+        }
+        if (elapsedSeconds < mCrossFadeDuration && mPreviousAnimation >= 0 && mPreviousAnimation != animationCount) {
             const double previousSeconds = currentTime - mPreviousStartTime;
             const float lerpFactor = elapsedSeconds / mCrossFadeDuration;
-            animator.applyCrossFade(mPreviousAnimation - 1, previousSeconds, lerpFactor);
+            animator.applyCrossFade(mPreviousAnimation, previousSeconds, lerpFactor);
         }
     }
     if (mShowingRestPose) {
@@ -1106,18 +1112,20 @@ void ViewerGui::updateUserInterface() {
         }
 
         Animator& animator = *mInstance->getAnimator();
-        if (animator.getAnimationCount() > 0 && ImGui::CollapsingHeader("Animation")) {
+        const size_t animationCount = animator.getAnimationCount();
+        if (animationCount > 0 && ImGui::CollapsingHeader("Animation")) {
             ImGui::Indent();
             int selectedAnimation = mCurrentAnimation;
-            ImGui::RadioButton("Disable", &selectedAnimation, 0);
+            ImGui::RadioButton("Disable", &selectedAnimation, -1);
+            ImGui::RadioButton("Apply all animations", &selectedAnimation, animationCount);
             ImGui::SliderFloat("Cross fade", &mCrossFadeDuration, 0.0f, 2.0f,
                     "%4.2f seconds", ImGuiSliderFlags_AlwaysClamp);
-            for (size_t i = 0, count = animator.getAnimationCount(); i < count; ++i) {
+            for (size_t i = 0; i < animationCount; ++i) {
                 std::string label = animator.getAnimationName(i);
                 if (label.empty()) {
                     label = "Unnamed " + std::to_string(i);
                 }
-                ImGui::RadioButton(label.c_str(), &selectedAnimation, i + 1);
+                ImGui::RadioButton(label.c_str(), &selectedAnimation, i);
             }
             if (selectedAnimation != mCurrentAnimation) {
                 mPreviousAnimation = mCurrentAnimation;
