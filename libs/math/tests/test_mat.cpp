@@ -32,6 +32,71 @@ class MatTest : public testing::Test {
 protected:
 };
 
+//------------------------------------------------------------------------------
+// A macro to help with vector comparisons within floating point range.
+#define EXPECT_VEC_EQ(VEC1, VEC2)                               \
+do {                                                            \
+    const decltype(VEC1) v1 = VEC1;                             \
+    const decltype(VEC2) v2 = VEC2;                             \
+    if (std::is_same<TypeParam,float>::value) {                 \
+        for (int i = 0; i < v1.size(); ++i) {                   \
+            EXPECT_FLOAT_EQ(v1[i], v2[i]);                      \
+        }                                                       \
+    } else if (std::is_same<TypeParam,double>::value) {         \
+        for (int i = 0; i < v1.size(); ++i) {                   \
+            EXPECT_DOUBLE_EQ(v1[i], v2[i]);                     \
+        }                                                       \
+    } else {                                                    \
+        for (int i = 0; i < v1.size(); ++i) {                   \
+            EXPECT_EQ(v1[i], v2[i]);                            \
+        }                                                       \
+    }                                                           \
+} while(0)
+
+//------------------------------------------------------------------------------
+// A macro to help with vector comparisons within a range.
+#define EXPECT_VEC_NEAR(VEC1, VEC2, eps)                        \
+do {                                                            \
+    const decltype(VEC1) v1 = VEC1;                             \
+    const decltype(VEC2) v2 = VEC2;                             \
+    for (int i = 0; i < v1.size(); ++i) {                       \
+        EXPECT_NEAR(v1[i], v2[i], eps);                         \
+    }                                                           \
+} while(0)
+
+
+//------------------------------------------------------------------------------
+// A macro to help with type comparisons within floating point range.
+#define ASSERT_TYPE_EQ(T1, T2)                                  \
+do {                                                            \
+    const decltype(T1) t1 = T1;                                 \
+    const decltype(T2) t2 = T2;                                 \
+    if (std::is_same<TypeParam,float>::value) {                 \
+        ASSERT_FLOAT_EQ(t1, t2);                                \
+    } else if (std::is_same<TypeParam,double>::value) {         \
+        ASSERT_DOUBLE_EQ(t1, t2);                               \
+    } else {                                                    \
+        ASSERT_EQ(t1, t2);                                      \
+    }                                                           \
+} while(0)
+
+
+
+TEST_F(MatTest, LargeFloatRotationsWithOrthogonalization) {
+     double3 const t = { 2304097.1410110965, -4688442.9915525438, -3639452.5611694567 };
+     mat4 const T = mat4::translation(t);
+    for (float d = 0; d < 90; d = d + 1.0) {
+        mat3f const R = mat3f::rotation(d * f::DEG_TO_RAD, float3{ 0, 1, 0 });
+        mat3 RR = orthogonalize(mat3{ R });
+        ASSERT_NEAR(dot(RR[0], RR[0]), 1.0, 1e-12);
+        ASSERT_NEAR(dot(RR[1], RR[1]), 1.0, 1e-12);
+        ASSERT_NEAR(dot(RR[2], RR[2]), 1.0, 1e-12);
+        mat4 M = mat4{ RR } * T;
+        double3 const t2 = transpose(M.upperLeft()) * M[3].xyz;
+        EXPECT_VEC_NEAR(t, t2, 0.0001);  // 0.1mm
+     }
+}
+
 TEST_F(MatTest, ConstexprMat2) {
     constexpr float a = F_PI;
     constexpr mat2f M;
@@ -552,53 +617,6 @@ TYPED_TEST(MatTestT, Inverse2) {
     TEST_MATRIX_INVERSE(m4, 20.0 * std::numeric_limits<TypeParam>::epsilon());
 }
 
-//------------------------------------------------------------------------------
-// A macro to help with vector comparisons within floating point range.
-#define EXPECT_VEC_EQ(VEC1, VEC2)                               \
-do {                                                            \
-    const decltype(VEC1) v1 = VEC1;                             \
-    const decltype(VEC2) v2 = VEC2;                             \
-    if (std::is_same<TypeParam,float>::value) {                 \
-        for (int i = 0; i < v1.size(); ++i) {                   \
-            EXPECT_FLOAT_EQ(v1[i], v2[i]);                      \
-        }                                                       \
-    } else if (std::is_same<TypeParam,double>::value) {         \
-        for (int i = 0; i < v1.size(); ++i) {                   \
-            EXPECT_DOUBLE_EQ(v1[i], v2[i]);                     \
-        }                                                       \
-    } else {                                                    \
-        for (int i = 0; i < v1.size(); ++i) {                   \
-            EXPECT_EQ(v1[i], v2[i]);                            \
-        }                                                       \
-    }                                                           \
-} while(0)
-
-//------------------------------------------------------------------------------
-// A macro to help with vector comparisons within a range.
-#define EXPECT_VEC_NEAR(VEC1, VEC2, eps)                        \
-do {                                                            \
-    const decltype(VEC1) v1 = VEC1;                             \
-    const decltype(VEC2) v2 = VEC2;                             \
-    for (int i = 0; i < v1.size(); ++i) {                       \
-        EXPECT_NEAR(v1[i], v2[i], eps);                         \
-    }                                                           \
-} while(0)
-
-
-//------------------------------------------------------------------------------
-// A macro to help with type comparisons within floating point range.
-#define ASSERT_TYPE_EQ(T1, T2)                                  \
-do {                                                            \
-    const decltype(T1) t1 = T1;                                 \
-    const decltype(T2) t2 = T2;                                 \
-    if (std::is_same<TypeParam,float>::value) {                 \
-        ASSERT_FLOAT_EQ(t1, t2);                                \
-    } else if (std::is_same<TypeParam,double>::value) {         \
-        ASSERT_DOUBLE_EQ(t1, t2);                               \
-    } else {                                                    \
-        ASSERT_EQ(t1, t2);                                      \
-    }                                                           \
-} while(0)
 
 TYPED_TEST(MatTestT, NormalsNegativeScale) {
     typedef filament::math::details::TMat33<TypeParam> M33T;

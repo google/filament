@@ -612,6 +612,7 @@ class_<Renderer>("Renderer")
         engine->execute();
     }), allow_raw_pointers())
     .function("_setClearOptions", &Renderer::setClearOptions, allow_raw_pointers())
+    .function("getClearOptions", &Renderer::getClearOptions)
     .function("beginFrame", EMBIND_LAMBDA(bool, (Renderer* self, SwapChain* swapChain), {
         return self->beginFrame(swapChain);
     }), allow_raw_pointers())
