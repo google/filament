@@ -174,7 +174,9 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
 
     // find a config we can use if we don't have "EGL_KHR_no_config_context" and that we can use
     // for the dummy pbuffer surface.
-    mEGLConfig = findSwapChainConfig(SWAP_CHAIN_CONFIG_TRANSPARENT);
+    mEGLConfig = findSwapChainConfig(
+            SWAP_CHAIN_CONFIG_TRANSPARENT |
+            SWAP_CHAIN_HAS_STENCIL_BUFFER );
     if (UTILS_UNLIKELY(mEGLConfig == EGL_NO_CONFIG_KHR)) {
         goto error; // error already logged
     }
@@ -344,6 +346,7 @@ EGLConfig PlatformEGL::findSwapChainConfig(uint64_t flags) const {
             { EGL_BLUE_SIZE,        8 },
             { EGL_ALPHA_SIZE,      (flags & SWAP_CHAIN_CONFIG_TRANSPARENT) ? 8 : 0 },
             { EGL_DEPTH_SIZE,      24 },
+            { EGL_STENCIL_SIZE,    (flags & SWAP_CHAIN_HAS_STENCIL_BUFFER) ? 8 : 0 }
     };
 
 
