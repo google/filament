@@ -156,7 +156,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mThreadSafeResourceManager(&mResourceAllocator),
       mPipelineCache(&mResourceAllocator),
       mBlitter(mStagePool, mPipelineCache, mFramebufferCache, mSamplerCache),
-      mReadPixels(mPlatform->getDevice()) {
+      mReadPixels(mPlatform->getDevice()),
+      mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported) {
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     UTILS_UNUSED const PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback
@@ -757,7 +758,7 @@ bool VulkanDriver::isAutoDepthResolveSupported() {
 }
 
 bool VulkanDriver::isSRGBSwapChainSupported() {
-    return mPlatform->isSRGBSwapChainSupported();
+    return mIsSRGBSwapChainSupported;
 }
 
 bool VulkanDriver::isStereoSupported() {
