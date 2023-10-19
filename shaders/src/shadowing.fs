@@ -85,24 +85,8 @@ float ShadowSample_PCF(const mediump sampler2DArray map,
         const uint layer, const highp vec4 shadowPosition) {
     highp vec3 position = shadowPosition.xyz * (1.0 / shadowPosition.w);
     // note: shadowPosition.z is in the [1, 0] range (reversed Z)
-    highp vec2 size = vec2(textureSize(map, 0));
     highp vec2 tc = clamp(position.xy, scissorNormalized.xy, scissorNormalized.zw);
-    highp vec2 st = tc.xy * size - 0.5;
-
-    vec4 d;
-#if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
-    d = textureGather(map, vec3(tc, layer), 0); // 01, 11, 10, 00
-#else
-    // we must use texelFetchOffset before texelLodOffset filters
-    d[0] = texelFetchOffset(map, ivec3(st, layer), 0, ivec2(0, 1)).r;
-    d[1] = texelFetchOffset(map, ivec3(st, layer), 0, ivec2(1, 1)).r;
-    d[2] = texelFetchOffset(map, ivec3(st, layer), 0, ivec2(1, 0)).r;
-    d[3] = texelFetchOffset(map, ivec3(st, layer), 0, ivec2(0, 0)).r;
-#endif
-
-    vec4 pcf = step(0.0, position.zzzz - d);
-    highp vec2 grad = fract(st);
-    return mix(mix(pcf.w, pcf.z, grad.x), mix(pcf.x, pcf.y, grad.x), grad.y);
+    return step(0.0, position.z - textureLod(map, vec3(tc, layer), 0.0).r);
 }
 
 //------------------------------------------------------------------------------

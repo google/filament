@@ -77,7 +77,11 @@ bool DebugRegistry::getProperty(const char* name, float4* v) const noexcept {
     return downcast(this)->getProperty(name, v);
 }
 
-void *DebugRegistry::getPropertyAddress(const char *name) noexcept {
+void *DebugRegistry::getPropertyAddress(const char *name) {
+    return  downcast(this)->getPropertyAddress(name);
+}
+
+void const *DebugRegistry::getPropertyAddress(const char *name) const noexcept {
     return  downcast(this)->getPropertyAddress(name);
 }
 

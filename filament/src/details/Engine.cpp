@@ -363,6 +363,17 @@ void FEngine::init() {
         mLightManager.init(*this);
         mDFG.init(*this);
     }
+
+    mDebugRegistry.registerProperty("d.shadowmap.debug_directional_shadowmap",
+            &debug.shadowmap.debug_directional_shadowmap, [this]() {
+                mMaterials.forEach([](FMaterial* material) {
+                    if (material->getMaterialDomain() == MaterialDomain::SURFACE) {
+                        material->invalidate(
+                                Variant::DIR | Variant::SRE | Variant::DEP,
+                                Variant::DIR | Variant::SRE);
+                    }
+                });
+            });
 }
 
 FEngine::~FEngine() noexcept {

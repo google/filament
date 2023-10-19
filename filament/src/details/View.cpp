@@ -772,6 +772,9 @@ void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
         case filament::ShadowType::PCSS:
             mPerViewUniforms.prepareShadowPCSS(texture, uniforms, mSoftShadowOptions);
             break;
+        case filament::ShadowType::PCFd:
+            mPerViewUniforms.prepareShadowPCFDebug(texture, uniforms);
+            break;
     }
 }
 

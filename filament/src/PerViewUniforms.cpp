@@ -428,6 +428,17 @@ void PerViewUniforms::prepareShadowPCSS(Handle<HwTexture> texture,
     PerViewUniforms::prepareShadowSampling(s, shadowMappingUniforms);
 }
 
+void PerViewUniforms::prepareShadowPCFDebug(Handle<HwTexture> texture,
+        ShadowMappingUniforms const& shadowMappingUniforms) noexcept {
+    mSamplers.setSampler(PerViewSib::SHADOW_MAP, { texture, {
+            .filterMag = SamplerMagFilter::NEAREST,
+            .filterMin = SamplerMinFilter::NEAREST
+    }});
+    auto& s = mUniforms.edit();
+    s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCF;
+    PerViewUniforms::prepareShadowSampling(s, shadowMappingUniforms);
+}
+
 void PerViewUniforms::commit(backend::DriverApi& driver) noexcept {
     if (mUniforms.isDirty()) {
         driver.updateBufferObject(mUniformBufferHandle, mUniforms.toBufferDescriptor(driver), 0);
