@@ -211,6 +211,9 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* const gld) const noexcept {
         size_t const binding = usedBindingPoints[i];
         assert_invariant(binding < Program::SAMPLER_BINDING_COUNT);
         auto const * const sb = samplerBindings[binding];
+        if (!sb) { // A sampler may not need to be used, although it's declared in the shader
+            continue;
+        }
         assert_invariant(sb);
         for (uint8_t j = 0, m = sb->textureUnitEntries.size(); j < m; ++j, ++tmu) { // "<=" on purpose here
             const GLTexture* const t = sb->textureUnitEntries[j].texture;
