@@ -55,7 +55,7 @@ public:
         uint8_t* const gens = mGens;
 
         // this must be thread-safe, acquire the free-list mutex
-        std::lock_guard<Mutex> lock(mFreeListLock);
+        std::lock_guard<Mutex> const lock(mFreeListLock);
         Entity::Type currentIndex = mCurrentIndex;
         for (size_t i = 0; i < n; i++) {
             // If we have more than a certain number of freed indices, get one from the list.
@@ -106,7 +106,7 @@ public:
             // against it. We don't guarantee anything about external state -- e.g. the listeners
             // will be called.
             if (isAlive(entities[i])) {
-                Entity::Type index = getIndex(entities[i]);
+                Entity::Type const index = getIndex(entities[i]);
                 freeList.push_back(index);
 
                 // The generation update doesn't require the lock because it's only used for isAlive()
@@ -130,12 +130,12 @@ public:
     }
 
     void registerListener(EntityManager::Listener* l) noexcept {
-        std::lock_guard<Mutex> lock(mListenerLock);
+        std::lock_guard<Mutex> const lock(mListenerLock);
         mListeners.insert(l);
     }
 
     void unregisterListener(EntityManager::Listener* l) noexcept {
-        std::lock_guard<Mutex> lock(mListenerLock);
+        std::lock_guard<Mutex> const lock(mListenerLock);
         mListeners.erase(l);
     }
 
@@ -160,7 +160,7 @@ public:
 
 private:
     utils::FixedCapacityVector<EntityManager::Listener*> getListeners() const noexcept {
-        std::lock_guard<Mutex> lock(mListenerLock);
+        std::lock_guard<Mutex> const lock(mListenerLock);
         tsl::robin_set<Listener*> const& listeners = mListeners;
         utils::FixedCapacityVector<EntityManager::Listener*> result(listeners.size());
         result.resize(result.capacity()); // unfortunately this memset()
