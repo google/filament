@@ -479,17 +479,23 @@ public class Engine {
     }
 
     /**
-     * Activate all features of a given feature level. By default FeatureLevel::FEATURE_LEVEL_1 is
-     * active. The selected feature level must not be higher than the value returned by
-     * getActiveFeatureLevel() and it's not possible lower the active feature level.
+     * Activate all features of a given feature level. If an explicit feature level is not specified
+     * at Engine initialization time via {@link Builder#featureLevel}, the default feature level is
+     * {@link FeatureLevel#FEATURE_LEVEL_0} on devices not compatible with GLES 3.0; otherwise, the
+     * default is {@link FeatureLevel::FEATURE_LEVEL_1}. The selected feature level must not be
+     * higher than the value returned by {@link #getActiveFeatureLevel} and it's not possible lower
+     * the active feature level. Additionally, it is not possible to modify the feature level at all
+     * if the Engine was initialized at {@link FeatureLevel#FEATURE_LEVEL_0}.
      *
-     * @param featureLevel the feature level to activate. If featureLevel is lower than
-     *                     getActiveFeatureLevel(), the current (higher) feature level is kept.
-     *                     If featureLevel is higher than getSupportedFeatureLevel(), an exception
-     *                     is thrown, or the program is terminated if exceptions are disabled.
+     * @param featureLevel the feature level to activate. If featureLevel is lower than {@link
+     *                     #getActiveFeatureLevel}, the current (higher) feature level is kept. If
+     *                     featureLevel is higher than {@link #getSupportedFeatureLevel}, or if the
+     *                     engine was initialized at feature level 0, an exception is thrown, or the
+     *                     program is terminated if exceptions are disabled.
      *
      * @return the active feature level.
      *
+     * @see Builder#featureLevel
      * @see #getSupportedFeatureLevel
      * @see #getActiveFeatureLevel
      */
