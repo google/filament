@@ -538,8 +538,10 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
     // Free memory from the texture and mark it as freed.
     metalTexture->terminate();
 
+    // Add this texture handle to our texturesToDestroy queue to be destroyed later.
     if (auto handleToFree = mContext->texturesToDestroy.push(th)) {
-        // Delay the destruction of this texture handle.
+        // If texturesToDestroy is full, then .push evicts the oldest texture handle in the
+        // queue (or simply th, if use-after-free detection is disabled).
         destruct_handle<MetalTexture>(handleToFree.value());
     }
 }
@@ -567,7 +569,7 @@ void MetalDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void MetalDriver::terminate() {
-    // Terminate any oustanding MetalTextures.
+    // Terminate any outstanding MetalTextures.
     while (!mContext->texturesToDestroy.empty()) {
         Handle<HwTexture> toDestroy = mContext->texturesToDestroy.pop();
         destruct_handle<MetalTexture>(toDestroy);
