@@ -1170,6 +1170,8 @@ Engine::FeatureLevel FEngine::getSupportedFeatureLevel() const noexcept {
 Engine::FeatureLevel FEngine::setActiveFeatureLevel(FeatureLevel featureLevel) {
     ASSERT_PRECONDITION(featureLevel <= getSupportedFeatureLevel(),
             "Feature level %u not supported", (unsigned)featureLevel);
+    ASSERT_PRECONDITION(mActiveFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1,
+            "Cannot adjust feature level beyond 0 at runtime");
     return (mActiveFeatureLevel = std::max(mActiveFeatureLevel, featureLevel));
 }
 
