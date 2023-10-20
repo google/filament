@@ -535,6 +535,15 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
     setLodRange(0, levels - 1);
 }
 
+void MetalTexture::terminate() noexcept {
+    texture = nil;
+    swizzledTextureView = nil;
+    lodTextureView = nil;
+    msaaSidecar = nil;
+    externalImage.set(nullptr);
+    terminated = true;
+}
+
 MetalTexture::~MetalTexture() {
     externalImage.set(nullptr);
 }
@@ -807,14 +816,14 @@ void MetalTexture::loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region
     context.blitter->blit(getPendingCommandBuffer(&context), args, "Texture upload blit");
 }
 
-void MetalTexture::extendLodRangeTo(uint32_t level) {
+void MetalTexture::extendLodRangeTo(uint16_t level) {
     assert_invariant(!isInRenderPass(&context));
     minLod = std::min(minLod, level);
     maxLod = std::max(maxLod, level);
     lodTextureView = nil;
 }
 
-void MetalTexture::setLodRange(uint32_t min, uint32_t max) {
+void MetalTexture::setLodRange(uint16_t min, uint16_t max) {
     assert_invariant(!isInRenderPass(&context));
     assert_invariant(min <= max);
     minLod = min;
