@@ -18,6 +18,8 @@
 
 #include "EntityManagerImpl.h"
 
+#include <new>
+
 namespace utils {
 
 EntityManager::EntityManager()
@@ -34,8 +36,8 @@ EntityManager::Listener::~Listener() noexcept = default;
 
 EntityManager& EntityManager::get() noexcept {
     // note: we leak the EntityManager because it's more important that it survives everything else
-    // the leak is really not a problem because the process is terminating anyways.
-    static EntityManagerImpl* instance = new EntityManagerImpl;
+    // the leak is really not a problem because the process is terminating anyway.
+    static EntityManagerImpl* instance = new(std::nothrow) EntityManagerImpl;
     return *instance;
 }
 
