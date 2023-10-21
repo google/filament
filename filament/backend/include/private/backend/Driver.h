@@ -24,6 +24,7 @@
 #include <backend/PipelineState.h>
 #include <backend/TargetBufferInfo.h>
 
+#include <utils/CString.h>
 #include <utils/compiler.h>
 
 #include <functional>

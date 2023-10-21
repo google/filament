@@ -242,7 +242,8 @@ FSkinningBuffer::HandleIndicesAndWeights FSkinningBuffer::createIndicesAndWeight
             getSkinningBufferWidth(count),
             getSkinningBufferHeight(count), 1,
             TextureUsage::DEFAULT);
-    samplerHandle = driver.createSamplerGroup(PerRenderPrimitiveSkinningSib::SAMPLER_COUNT);
+    samplerHandle = driver.createSamplerGroup(PerRenderPrimitiveSkinningSib::SAMPLER_COUNT,
+            utils::FixedSizeString<32>("Skinning buffer samplers"));
     SamplerGroup samplerGroup(PerRenderPrimitiveSkinningSib::SAMPLER_COUNT);
     samplerGroup.setSampler(PerRenderPrimitiveSkinningSib::BONE_INDICES_AND_WEIGHTS,
             { textureHandle, {}});

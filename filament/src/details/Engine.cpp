@@ -621,7 +621,10 @@ int FEngine::loop() {
     JobSystem::setThreadName("FEngine::loop");
     JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
 
-    DriverConfig const driverConfig { .handleArenaSize = getRequestedDriverHandleArenaSize() };
+    DriverConfig const driverConfig {
+            .handleArenaSize = getRequestedDriverHandleArenaSize(),
+            .textureUseAfterFreePoolSize = mConfig.textureUseAfterFreePoolSize
+    };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
 
     mDriverBarrier.latch();
