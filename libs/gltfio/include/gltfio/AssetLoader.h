@@ -197,7 +197,7 @@ public:
      * This cannot be called after FilamentAsset::releaseSourceData().
      * See also AssetLoader::createInstancedAsset().
      */
-    FilamentInstance* createInstance(FilamentAsset* primary);
+    FilamentInstance* createInstance(FilamentAsset* asset);
 
     /**
      * Allows clients to enable diagnostic shading on newly-loaded assets.
