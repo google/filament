@@ -587,11 +587,11 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     }
 
     if (mBlendingMode == BlendingMode::MASKED) {
-        ibb.add({{ "_maskThreshold", 0, UniformType::FLOAT }});
+        ibb.add({{ "_maskThreshold", 0, UniformType::FLOAT, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 }});
     }
 
     if (mDoubleSidedCapability) {
-        ibb.add({{ "_doubleSided", 0, UniformType::BOOL }});
+        ibb.add({{ "_doubleSided", 0, UniformType::BOOL, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 }});
     }
 
     mRequiredAttributes.set(VertexAttribute::POSITION);

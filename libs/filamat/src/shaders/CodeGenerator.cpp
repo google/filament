@@ -63,9 +63,6 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                     out << "#extension GL_OES_EGL_image_external : require\n\n";
                 }
             }
-            if (material.has3dSamplers && mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
-                out << "#extension GL_OES_texture_3D : require\n\n";
-            }
             if (v.hasInstancedStereo() && stage == ShaderStage::VERTEX) {
                 // If we're not processing the shader through glslang (in the case of unoptimized
                 // OpenGL shaders), then we need to add the #extension string ourselves.
@@ -87,6 +84,10 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                 out << "#extension GL_ARB_shading_language_packing : enable\n\n";
             }
             break;
+    }
+
+    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        out << "#extension GL_OES_standard_derivatives : require\n\n";
     }
 
     // This allows our includer system to use the #line directive to denote the source file for
@@ -554,10 +555,11 @@ io::sstream& CodeGenerator::generateUboAsPlainUniforms(io::sstream& out, ShaderS
 
 io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, ShaderStage stage,
         uint32_t binding, const BufferInterfaceBlock& uib) const {
-    auto const& infos = uib.getFieldInfoList();
-    if (infos.empty()) {
+    if (uib.isEmptyForFeatureLevel(mFeatureLevel)) {
         return out;
     }
+
+    auto const& infos = uib.getFieldInfoList();
 
     if (mTargetLanguage == TargetLanguage::GLSL &&
             mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
