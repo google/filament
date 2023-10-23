@@ -346,78 +346,28 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
     };
 }
 
-MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcept
-    : HwProgram(program.getName()), vertexFunction(nil), fragmentFunction(nil),
-            computeFunction(nil), isValid(false) {
-
-    using MetalFunctionPtr = __strong id<MTLFunction>*;
-
-    static_assert(Program::SHADER_TYPE_COUNT == 3, "Only vertex, fragment, and/or compute shaders expected.");
-    MetalFunctionPtr shaderFunctions[3] = { &vertexFunction, &fragmentFunction, &computeFunction };
-
-    const auto& sources = program.getShadersSource();
-    for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
-        const auto& source = sources[i];
-        // It's okay for some shaders to be empty, they shouldn't be used in any draw calls.
-        if (source.empty()) {
-            continue;
-        }
-
-        assert_invariant( source[source.size() - 1] == '\0' );
-
-        // the shader string is null terminated and the length includes the null character
-        NSString* objcSource = [[NSString alloc] initWithBytes:source.data()
-                                                        length:source.size() - 1
-                                                      encoding:NSUTF8StringEncoding];
-        NSError* error = nil;
-        // When options is nil, Metal uses the most recent language version available.
-        id<MTLLibrary> library = [device newLibraryWithSource:objcSource
-                                                      options:nil
-                                                        error:&error];
-        if (library == nil) {
-            if (error) {
-                auto description =
-                        [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
-                utils::slog.w << description << utils::io::endl;
-            }
-            PANIC_LOG("Failed to compile Metal program.");
-            return;
-        }
-
-        MTLFunctionConstantValues* constants = [MTLFunctionConstantValues new];
-        auto const& specializationConstants = program.getSpecializationConstants();
-        for (auto const& sc : specializationConstants) {
-            const std::array<MTLDataType, 3> types{
-                MTLDataTypeInt, MTLDataTypeFloat, MTLDataTypeBool };
-            std::visit([&sc, constants, type = types[sc.value.index()]](auto&& arg) {
-                [constants setConstantValue:&arg
-                                       type:type
-                                    atIndex:sc.id];
-            }, sc.value);
-        }
-
-        id<MTLFunction> function = [library newFunctionWithName:@"main0"
-                                                 constantValues:constants
-                                                          error:&error];
-        if (!program.getName().empty()) {
-            function.label = @(program.getName().c_str());
-        }
-        assert_invariant(function);
-        *shaderFunctions[i] = function;
-    }
-
-    UTILS_UNUSED_IN_RELEASE const bool isRasterizationProgram =
-            vertexFunction != nil && fragmentFunction != nil;
-    UTILS_UNUSED_IN_RELEASE const bool isComputeProgram = computeFunction != nil;
-    // The program must be either a rasterization program XOR a compute program.
-    assert_invariant(isRasterizationProgram != isComputeProgram);
-
-    // All stages of the program have compiled successfully, this is a valid program.
-    isValid = true;
+MetalProgram::MetalProgram(MetalContext& context, Program&& program) noexcept
+    : HwProgram(program.getName()), mContext(context) {
 
     // Save this program's SamplerGroupInfo, it's used during draw calls to bind sampler groups to
     // the appropriate stage(s).
     samplerGroupInfo = program.getSamplerGroupInfo();
+
+    mToken = context.shaderCompiler->createProgram(program.getName(), std::move(program));
+    assert_invariant(mToken);
+}
+
+const MetalShaderCompiler::MetalFunctionBundle& MetalProgram::getFunctions() {
+    initialize();
+    return mFunctionBundle;
+}
+
+void MetalProgram::initialize() {
+    if (!mToken) {
+        return;
+    }
+    mFunctionBundle = mContext.shaderCompiler->getProgram(mToken);
+    assert_invariant(!mToken);
 }
 
 MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels,
