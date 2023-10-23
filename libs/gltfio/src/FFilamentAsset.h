@@ -290,6 +290,9 @@ struct FFilamentAsset : public FilamentAsset {
     using SourceHandle = std::shared_ptr<SourceAsset>;
     SourceHandle mSourceAsset;
 
+    // The mapping of root nodes to scene membership sets.
+    tsl::robin_map<cgltf_node*, SceneMask> mRootNodes;
+
     // Stores all information related to a single cgltf_texture.
     // Note that more than one cgltf_texture can map to a single Filament texture,
     // e.g. if several have the same URL or bufferView. For each Filament texture,
