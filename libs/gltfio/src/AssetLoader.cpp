@@ -299,7 +299,6 @@ public:
     FTrsTransformManager mTrsTransformManager;
 
     // Transient state used only for the asset currently being loaded:
-    tsl::robin_map<cgltf_node*, SceneMask> mRootNodes;
     const char* mDefaultNodeName;
     bool mError = false;
     bool mDiagnosticsEnabled = false;
@@ -400,7 +399,7 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* fAsset) {
     }
 
     // For each scene root, recursively create all entities.
-    for (const auto& pair : mRootNodes) {
+    for (const auto& pair : fAsset->mRootNodes) {
         recurseEntities(pair.first, pair.second, instanceRoot, fAsset, instance);
     }
 
@@ -458,14 +457,14 @@ FFilamentAsset* FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
 
     // Build a mapping of root nodes to scene membership sets.
     assert_invariant(srcAsset->scenes_count <= NodeManager::MAX_SCENE_COUNT);
-    mRootNodes.clear();
+    fAsset->mRootNodes.clear();
     const size_t sic = std::min(srcAsset->scenes_count, NodeManager::MAX_SCENE_COUNT);
     fAsset->mScenes.reserve(sic);
     for (size_t si = 0; si < sic; ++si) {
         const cgltf_scene& scene = srcAsset->scenes[si];
         fAsset->mScenes.emplace_back(scene.name);
         for (size_t ni = 0, nic = scene.nodes_count; ni < nic; ++ni) {
-            mRootNodes[scene.nodes[ni]].set(si);
+            fAsset->mRootNodes[scene.nodes[ni]].set(si);
         }
     }
 
@@ -474,12 +473,12 @@ FFilamentAsset* FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
     // transformable entities for "un-scened" nodes in case they have bones.
     for (size_t i = 0, n = srcAsset->nodes_count; i < n; ++i) {
         cgltf_node* node = &srcAsset->nodes[i];
-        if (node->parent == nullptr && mRootNodes.find(node) == mRootNodes.end()) {
-            mRootNodes.insert({node, {}});
+        if (node->parent == nullptr && fAsset->mRootNodes.find(node) == fAsset->mRootNodes.end()) {
+            fAsset->mRootNodes.insert({node, {}});
         }
     }
 
-    for (const auto& [node, sceneMask] : mRootNodes) {
+    for (const auto& [node, sceneMask] : fAsset->mRootNodes) {
         recursePrimitives(node, fAsset);
     }
 
