@@ -1,26 +1,19 @@
 # News
 
-1. Visual Studio 2013 is no longer supported
+1. [As discussed in #3107](https://github.com/KhronosGroup/glslang/issues/3107), the default branch of this repository is now 'main'. This change should be transparent to repository users, since github rewrites many references to the old 'master' branch to 'main'. However, if you have a checked-out local clone, you may wish to take the following steps as recommended by github:
 
-   [As scheduled](https://github.com/KhronosGroup/glslang/blob/9eef54b2513ca6b40b47b07d24f453848b65c0df/README.md#planned-deprecationsremovals),
-Microsoft Visual Studio 2013 is no longer officially supported. \
-   Please upgrade to at least Visual Studio 2015.
+```sh
+git branch -m master main
+git fetch origin
+git branch -u origin/main main
+git remote set-head origin -a
+```
 
-2. The versioning scheme is being improved, and you might notice some differences.  This is currently WIP, but will be coming soon.  See, for example, PR #2277.
+2. C++17 (all platforms) and Visual Studio 2019 (Windows) are now required. This change was driven by the external dependency on SPIRV-Tools.
 
-3. If you get a new **compilation error due to a missing header**, it might be caused by this planned removal:
-
-**SPIRV Folder, 1-May, 2020.** Glslang, when installed through CMake,
-will install a `SPIRV` folder into `${CMAKE_INSTALL_INCLUDEDIR}`.
-This `SPIRV` folder is being moved to `glslang/SPIRV`.
-During the transition the `SPIRV` folder will be installed into both locations.
-The old install of `SPIRV/` will be removed as a CMake install target no sooner than May 1, 2020.
-See issue #1964.
-
-If people are only using this location to get spirv.hpp, I recommend they get that from [SPIRV-Headers](https://github.com/KhronosGroup/SPIRV-Headers) instead.
-
-[![appveyor status](https://ci.appveyor.com/api/projects/status/q6fi9cb0qnhkla68/branch/master?svg=true)](https://ci.appveyor.com/project/Khronoswebmaster/glslang/branch/master)
+![Continuous Integration](https://github.com/KhronosGroup/glslang/actions/workflows/continuous_integration.yml/badge.svg)
 ![Continuous Deployment](https://github.com/KhronosGroup/glslang/actions/workflows/continuous_deployment.yml/badge.svg)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/KhronosGroup/glslang/badge)](https://securityscorecards.dev/viewer/?uri=github.com/KhronosGroup/glslang)
 
 # Glslang Components and Status
 
@@ -55,7 +48,7 @@ An API for getting reflection information from the AST, reflection types/variabl
 
 ### Standalone Wrapper
 
-`glslangValidator` is command-line tool for accessing the functionality above.
+`glslang` is command-line tool for accessing the functionality above.
 
 Status: Complete.
 
@@ -73,7 +66,7 @@ The above page, while not kept up to date, includes additional information regar
 
 ## Execution of Standalone Wrapper
 
-To use the standalone binary form, execute `glslangValidator`, and it will print
+To use the standalone binary form, execute `glslang`, and it will print
 a usage statement.  Basic operation is to give it a file containing a shader,
 and it will print out warnings/errors and optionally an AST.
 
@@ -99,15 +92,15 @@ There is also a non-shader extension:
 ## Building (CMake)
 
 Instead of building manually, you can also download the binaries for your
-platform directly from the [master-tot release][master-tot-release] on GitHub.
+platform directly from the [main-tot release][main-tot-release] on GitHub.
 Those binaries are automatically uploaded by the buildbots after successful
-testing and they always reflect the current top of the tree of the master
+testing and they always reflect the current top of the tree of the main
 branch.
 
 ### Dependencies
 
-* A C++11 compiler.
-  (For MSVS: use 2015 or later.)
+* A C++17 compiler.
+  (For MSVS: use 2019 or later.)
 * [CMake][cmake]: for generating compilation targets.
 * make: _Linux_, ninja is an alternative, if configured.
 * [Python 3.x][python]: for executing SPIRV-Tools scripts. (Optional if not using SPIRV-Tools and the 'External' subdirectory does not exist.)
@@ -242,16 +235,13 @@ changes are quite infrequent. For windows you can get binaries from
 The command to rebuild is:
 
 ```bash
-m4 -P MachineIndependent/glslang.m4 > MachineIndependent/glslang.y
 bison --defines=MachineIndependent/glslang_tab.cpp.h
       -t MachineIndependent/glslang.y
       -o MachineIndependent/glslang_tab.cpp
 ```
 
-The above commands are also available in the bash script in `updateGrammar`,
+The above command is also available in the bash script in `updateGrammar`,
 when executed from the glslang subdirectory of the glslang repository.
-With no arguments it builds the full grammar, and with a "web" argument,
-the web grammar subset (see more about the web subset in the next section).
 
 ### Building to WASM for the Web and Node
 ### Building a standalone JS/WASM library for the Web and Node
@@ -261,15 +251,9 @@ Use the steps in [Build Steps](#build-steps), with the following notes/exception
   Bash-like environments:
   + [Instructions located here](https://emscripten.org/docs/getting_started/downloads.html#sdk-download-and-install)
 * Wrap cmake call: `emcmake cmake`
-* Set `-DBUILD_TESTING=OFF -DENABLE_OPT=OFF -DINSTALL_GTEST=OFF`.
+* Set `-DBUILD_TESTING=OFF -DENABLE_OPT=OFF`.
 * Set `-DENABLE_HLSL=OFF` if HLSL is not needed.
 * For a standalone JS/WASM library, turn on `-DENABLE_GLSLANG_JS=ON`.
-* For building a minimum-size web subset of core glslang:
-  + turn on `-DENABLE_GLSLANG_WEBMIN=ON` (disables HLSL)
-  + execute `updateGrammar web` from the glslang subdirectory
-    (or if using your own scripts, `m4` needs a `-DGLSLANG_WEB` argument)
-  + optionally, for GLSL compilation error messages, turn on
-    `-DENABLE_GLSLANG_WEBMIN_DEVEL=ON`
 * To get a fully minimized build, make sure to use `brotli` to compress the .js
   and .wasm files
 
@@ -277,7 +261,7 @@ Example:
 
 ```sh
 emcmake cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_GLSLANG_JS=ON \
-    -DENABLE_HLSL=OFF -DBUILD_TESTING=OFF -DENABLE_OPT=OFF -DINSTALL_GTEST=OFF ..
+    -DENABLE_HLSL=OFF -DBUILD_TESTING=OFF -DENABLE_OPT=OFF ..
 ```
 
 ## Building glslang - Using vcpkg
@@ -433,9 +417,18 @@ warning/error and other options for controlling compilation.
 
 This interface is located `glslang_c_interface.h` and exposes functionality similar to the C++ interface. The following snippet is a complete example showing how to compile GLSL into SPIR-V 1.5 for Vulkan 1.2.
 
-```cxx
-std::vector<uint32_t> compileShaderToSPIRV_Vulkan(glslang_stage_t stage, const char* shaderSource, const char* fileName)
-{
+```c
+#include <glslang/Include/glslang_c_interface.h>
+
+// Required for use of glslang_default_resource
+#include <glslang/Public/resource_limits_c.h>
+
+typedef struct SpirVBinary {
+    uint32_t *words; // SPIR-V words
+    int size; // number of words in SPIR-V binary
+} SpirVBinary;
+
+SpirVBinary compileShaderToSPIRV_Vulkan(glslang_stage_t stage, const char* shaderSource, const char* fileName) {
     const glslang_input_t input = {
         .language = GLSLANG_SOURCE_GLSL,
         .stage = stage,
@@ -449,18 +442,22 @@ std::vector<uint32_t> compileShaderToSPIRV_Vulkan(glslang_stage_t stage, const c
         .force_default_version_and_profile = false,
         .forward_compatible = false,
         .messages = GLSLANG_MSG_DEFAULT_BIT,
-        .resource = reinterpret_cast<const glslang_resource_t*>(&glslang::DefaultTBuiltInResource),
+        .resource = glslang_default_resource(),
     };
 
     glslang_shader_t* shader = glslang_shader_create(&input);
 
+    SpirVBinary bin = {
+        .words = NULL,
+        .size = 0,
+    };
     if (!glslang_shader_preprocess(shader, &input))	{
         printf("GLSL preprocessing failed %s\n", fileName);
         printf("%s\n", glslang_shader_get_info_log(shader));
         printf("%s\n", glslang_shader_get_info_debug_log(shader));
         printf("%s\n", input.code);
         glslang_shader_delete(shader);
-        return std::vector<uint32_t>();
+        return bin;
     }
 
     if (!glslang_shader_parse(shader, &input)) {
@@ -469,7 +466,7 @@ std::vector<uint32_t> compileShaderToSPIRV_Vulkan(glslang_stage_t stage, const c
         printf("%s\n", glslang_shader_get_info_debug_log(shader));
         printf("%s\n", glslang_shader_get_preprocessed_code(shader));
         glslang_shader_delete(shader);
-        return std::vector<uint32_t>();
+        return bin;
     }
 
     glslang_program_t* program = glslang_program_create();
@@ -481,13 +478,14 @@ std::vector<uint32_t> compileShaderToSPIRV_Vulkan(glslang_stage_t stage, const c
         printf("%s\n", glslang_program_get_info_debug_log(program));
         glslang_program_delete(program);
         glslang_shader_delete(shader);
-        return std::vector<uint32_t>();
+        return bin;
     }
 
     glslang_program_SPIRV_generate(program, stage);
 
-    std::vector<uint32_t> outShaderModule(glslang_program_SPIRV_get_size(program));
-    glslang_program_SPIRV_get(program, outShaderModule.data());
+    bin.size = glslang_program_SPIRV_get_size(program);
+    bin.words = malloc(bin.size * sizeof(uint32_t));
+    glslang_program_SPIRV_get(program, bin.words);
 
     const char* spirv_messages = glslang_program_SPIRV_get_messages(program);
     if (spirv_messages)
@@ -496,7 +494,7 @@ std::vector<uint32_t> compileShaderToSPIRV_Vulkan(glslang_stage_t stage, const c
     glslang_program_delete(program);
     glslang_shader_delete(shader);
 
-    return outShaderModule;
+    return bin;
 }
 ```
 
@@ -555,4 +553,4 @@ std::vector<uint32_t> compileShaderToSPIRV_Vulkan(glslang_stage_t stage, const c
 [bison]: https://www.gnu.org/software/bison/
 [googletest]: https://github.com/google/googletest
 [bison-gnu-win32]: http://gnuwin32.sourceforge.net/packages/bison.htm
-[master-tot-release]: https://github.com/KhronosGroup/glslang/releases/tag/master-tot
+[main-tot-release]: https://github.com/KhronosGroup/glslang/releases/tag/main-tot

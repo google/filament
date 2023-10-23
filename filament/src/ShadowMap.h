@@ -39,12 +39,12 @@ class RenderPass;
 // The value of the 'VISIBLE_MASK' after culling. Each bit represents visibility in a frustum
 // (either camera or light).
 //
-//                                    1
-// bits                               5 ... 7 6 5 4 3 2 1 0
-// +------------------------------------------------------+
-// VISIBLE_RENDERABLE                                     X
-// VISIBLE_DIR_SHADOW_RENDERABLE                        X
-// VISIBLE_DYN_SHADOW_RENDERABLE                      X
+//
+// bits                            7 6 5 4 3 2 1 0
+// +---------------------------------------------+
+// VISIBLE_RENDERABLE                            X
+// VISIBLE_DIR_SHADOW_RENDERABLE               X
+// VISIBLE_DYN_SHADOW_RENDERABLE             X
 
 // A "shadow renderable" is a renderable rendered to the shadow map during a shadow pass:
 // PCF shadows: only shadow casters
@@ -54,6 +54,7 @@ static constexpr size_t VISIBLE_RENDERABLE_BIT              = 0u;
 static constexpr size_t VISIBLE_DIR_SHADOW_RENDERABLE_BIT   = 1u;
 static constexpr size_t VISIBLE_DYN_SHADOW_RENDERABLE_BIT   = 2u;
 
+static constexpr Culler::result_type VISIBLE_RENDERABLE = 1u << VISIBLE_RENDERABLE_BIT;
 static constexpr Culler::result_type VISIBLE_DIR_SHADOW_RENDERABLE = 1u << VISIBLE_DIR_SHADOW_RENDERABLE_BIT;
 static constexpr Culler::result_type VISIBLE_DYN_SHADOW_RENDERABLE = 1u << VISIBLE_DYN_SHADOW_RENDERABLE_BIT;
 
@@ -121,8 +122,8 @@ public:
         uint8_t visibleLayers;
     };
 
-    static math::mat4f getDirectionalLightViewMatrix(
-            math::float3 direction, math::float3 position = {}) noexcept;
+    static math::mat4f getDirectionalLightViewMatrix(math::float3 direction, math::float3 up,
+            math::float3 position = {}) noexcept;
 
     static math::mat4f getPointLightViewMatrix(backend::TextureCubemapFace face,
             math::float3 position) noexcept;
@@ -245,16 +246,15 @@ private:
 
     static inline math::mat4f computeLightRotation(math::float3 const& lsDirection) noexcept;
 
-    static inline math::mat4f computeFocusMatrix(
-            const math::mat4f& LMpMv,
-            const math::mat4f& WLMp,
-            Aabb const& wsShadowReceiversVolume,
+    static inline math::float4 computeFocusParams(
+            math::mat4f const& LMpMv,
+            math::mat4f const& WLMp,
             FrustumBoxIntersection const& lsShadowVolume, size_t vertexCount,
             filament::CameraInfo const& camera, math::float2 const& csNearFar,
-            uint16_t shadowDimension, bool stable) noexcept;
+            float shadowFar, bool stable) noexcept;
 
     static inline void snapLightFrustum(math::float2& s, math::float2& o,
-            math::mat4f const& Mv, math::double3 wsSnapCoords, math::int2 resolution) noexcept;
+            math::double2 lsRef, math::int2 resolution) noexcept;
 
     static inline Aabb computeLightFrustumBounds(const math::mat4f& lightView,
             Aabb const& wsShadowReceiversVolume, Aabb const& wsShadowCastersVolume,

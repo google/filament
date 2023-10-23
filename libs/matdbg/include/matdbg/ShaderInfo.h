@@ -35,9 +35,7 @@ struct ShaderInfo {
 };
 
 size_t getShaderCount(const filaflat::ChunkContainer& container, filamat::ChunkType type);
-bool getMetalShaderInfo(const filaflat::ChunkContainer& container, ShaderInfo* info);
-bool getGlShaderInfo(const filaflat::ChunkContainer& container, ShaderInfo* info);
-bool getVkShaderInfo(const filaflat::ChunkContainer& container, ShaderInfo* info);
+bool getShaderInfo(const filaflat::ChunkContainer& container, ShaderInfo* info, filamat::ChunkType chunkType);
 
 } // namespace matdbg
 } // namespace filament

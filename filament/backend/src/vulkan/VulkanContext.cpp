@@ -64,21 +64,12 @@ VkImageView VulkanAttachment::getImageView(VkImageAspectFlags aspect) {
 
 VkImageSubresourceRange VulkanAttachment::getSubresourceRange(VkImageAspectFlags aspect) const {
     assert_invariant(texture);
-    uint32_t levelCount = 1;
-    uint32_t layerCount = 1;
-    // For depth attachments, we consider all the subresource range since layout transitions of
-    // depth and stencil attachments should always be carried out for all subresources.
-    if (aspect & VK_IMAGE_ASPECT_DEPTH_BIT) {
-        auto range = texture->getPrimaryRange();
-        levelCount = range.levelCount;
-        layerCount = range.layerCount;
-    }
     return {
             .aspectMask = aspect,
             .baseMipLevel = uint32_t(level),
-            .levelCount = levelCount,
+            .levelCount = 1,
             .baseArrayLayer = uint32_t(layer),
-            .layerCount = layerCount,
+            .layerCount = 1,
     };
 }
 

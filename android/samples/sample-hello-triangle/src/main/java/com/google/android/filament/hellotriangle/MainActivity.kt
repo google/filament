@@ -160,11 +160,7 @@ class MainActivity : Activity() {
     }
 
     private fun loadMaterial() {
-        var name = "materials/baked_color.filamat"
-        if (engine.activeFeatureLevel == Engine.FeatureLevel.FEATURE_LEVEL_0) {
-            name = "materials/baked_color_es2.filamat"
-        }
-        readUncompressedAsset(name).let {
+        readUncompressedAsset("materials/baked_color.filamat").let {
             material = Material.Builder().payload(it, it.remaining()).build(engine)
         }
     }

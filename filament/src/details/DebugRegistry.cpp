@@ -16,6 +16,8 @@
 
 #include "details/DebugRegistry.h"
 
+#include <utils/Panic.h>
+
 #include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
@@ -33,33 +35,53 @@ namespace filament {
 
 FDebugRegistry::FDebugRegistry() noexcept = default;
 
-UTILS_NOINLINE
-void* FDebugRegistry::getPropertyAddress(const char* name) noexcept {
-    std::string_view key{ name };
+auto FDebugRegistry::getPropertyInfo(const char* name) noexcept -> PropertyInfo {
+    std::string_view const key{ name };
     auto& propertyMap = mPropertyMap;
     if (propertyMap.find(key) == propertyMap.end()) {
-        return nullptr;
+        return { nullptr, {} };
     }
     return propertyMap[key];
 }
 
-void FDebugRegistry::registerProperty(std::string_view name, void* p, Type type) noexcept {
+UTILS_NOINLINE
+void* FDebugRegistry::getPropertyAddress(const char* name) {
+    auto info = getPropertyInfo(name);
+    ASSERT_PRECONDITION_NON_FATAL(!info.second,
+            "don't use DebugRegistry::getPropertyAddress() when a callback is set. "
+            "Use setProperty() instead.");
+    return info.first;
+}
+
+UTILS_NOINLINE
+void const* FDebugRegistry::getPropertyAddress(const char* name) const noexcept {
+    auto info = const_cast<FDebugRegistry*>(this)->getPropertyInfo(name);
+    return info.first;
+}
+
+void FDebugRegistry::registerProperty(std::string_view name, void* p, Type,
+        std::function<void()> fn) noexcept {
     auto& propertyMap = mPropertyMap;
     if (propertyMap.find(name) == propertyMap.end()) {
-        propertyMap[name] = p;
+        propertyMap[name] = { p, std::move(fn) };
     }
 }
 
 bool FDebugRegistry::hasProperty(const char* name) const noexcept {
-    return const_cast<FDebugRegistry*>(this)->getPropertyAddress(name) != nullptr;
+    return getPropertyAddress(name) != nullptr;
 }
 
 template<typename T>
 bool FDebugRegistry::setProperty(const char* name, T v) noexcept {
     if constexpr (DEBUG_PROPERTIES_WRITABLE) {
-        T* const addr = static_cast<T*>(getPropertyAddress(name));
+        auto info = getPropertyInfo(name);
+        T* const addr = static_cast<T*>(info.first);
         if (addr) {
+            auto old = *addr;
             *addr = v;
+            if (info.second && old != v) {
+                info.second();
+            }
             return true;
         }
     }
@@ -75,8 +97,7 @@ template bool FDebugRegistry::setProperty<float4>(const char* name, float4 v) no
 
 template<typename T>
 bool FDebugRegistry::getProperty(const char* name, T* p) const noexcept {
-    FDebugRegistry* const pRegistry = const_cast<FDebugRegistry*>(this);
-    T const* const addr = static_cast<T*>(pRegistry->getPropertyAddress(name));
+    T const* const addr = static_cast<T const*>(getPropertyAddress(name));
     if (addr) {
         *p = *addr;
         return true;
@@ -100,7 +121,7 @@ void FDebugRegistry::registerDataSource(std::string_view name,
 }
 
 DebugRegistry::DataSource FDebugRegistry::getDataSource(const char* name) const noexcept {
-    std::string_view key{ name };
+    std::string_view const key{ name };
     auto& dataSourceMap = mDataSourceMap;
     auto const& it = dataSourceMap.find(key);
     if (it == dataSourceMap.end()) {

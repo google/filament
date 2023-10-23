@@ -1,10 +1,10 @@
 This folder was last updated as follows:
 
-    export sha=280ab89
+    export tag=v1.13
     cd third_party
-    curl -L -O https://github.com/jkuhlmann/cgltf/archive/${sha}.zip
-    unzip ${sha}.zip
+    curl -L -O https://github.com/jkuhlmann/cgltf/archive/refs/tags/${tag}.zip
+    unzip ${tag}.zip
     mv cgltf-* cgltf_new
     rsync -r cgltf_new/ cgltf/ --delete --exclude tnt
-    rm -rf ${sha}.zip cgltf_new
+    rm -rf ${tag}.zip cgltf_new
     git add cgltf ; git status

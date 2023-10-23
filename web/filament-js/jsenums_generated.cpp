@@ -48,6 +48,7 @@ enum_<View::ShadowType>("View$ShadowType")
     .value("VSM", View::ShadowType::VSM)
     .value("DPCF", View::ShadowType::DPCF)
     .value("PCSS", View::ShadowType::PCSS)
+    .value("PCFd", View::ShadowType::PCFd)
     ;
 
 } // EMSCRIPTEN_BINDINGS

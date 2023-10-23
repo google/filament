@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "StandAlone/ResourceLimits.h"
+#include "glslang/Public/ResourceLimits.h"
 #include "TestFixture.h"
 
 namespace glslangtest {
@@ -49,8 +49,18 @@ TEST_F(DefaultResourceTest, FromFile)
     const std::string path = GlobalTestSettings.testRoot + "/baseResults/test.conf";
     std::string expectedConfig;
     tryLoadFile(path, "expected resource limit", &expectedConfig);
-    const std::string realConfig = glslang::GetDefaultTBuiltInResourceString();
+    const std::string realConfig = GetDefaultTBuiltInResourceString();
     ASSERT_EQ(expectedConfig, realConfig);
+}
+
+TEST_F(DefaultResourceTest, UnrecognizedLimit)
+{
+    const std::string defaultConfig = GetDefaultTBuiltInResourceString();
+    testing::internal::CaptureStdout();
+    TBuiltInResource resources;
+    DecodeResourceLimits(&resources, const_cast<char*>(defaultConfig.c_str()));
+    std::string output = testing::internal::GetCapturedStdout();
+    ASSERT_EQ(output.find("unrecognized limit"), std::string::npos);
 }
 
 }  // anonymous namespace

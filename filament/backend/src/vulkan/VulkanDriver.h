@@ -112,6 +112,8 @@ private:
     VulkanBlitter mBlitter;
     VulkanSamplerGroup* mSamplerBindings[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
     VulkanReadPixels mReadPixels;
+
+    bool const mIsSRGBSwapChainSupported;
 };
 
 } // namespace filament::backend

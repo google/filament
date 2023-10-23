@@ -285,6 +285,9 @@ public:
     template<typename A, typename B, typename C>
     static TMat44 lookAt(const TVec3<A>& eye, const TVec3<B>& center, const TVec3<C>& up) noexcept;
 
+    template<typename A, typename B, typename C>
+    static TMat44 lookTo(const TVec3<A>& direction, const TVec3<B>& position, const TVec3<C>& up) noexcept;
+
     template<typename A>
     static constexpr TVec3<A> project(const TMat44& projectionMatrix, TVec3<A> vertice) noexcept{
         TVec4<A> r = projectionMatrix * TVec4<A>{ vertice, 1 };
@@ -517,19 +520,19 @@ template<typename T>
 template<typename A, typename B, typename C>
 TMat44<T> TMat44<T>::lookAt(const TVec3<A>& eye, const TVec3<B>& center,
         const TVec3<C>& up) noexcept {
-    TVec3<T> z_axis(normalize(center - eye));
-    TVec3<T> norm_up(normalize(up));
-    if (std::abs(dot(z_axis, norm_up)) > T(0.999)) {
-        // Fix up vector if we're degenerate (looking straight up, basically)
-        norm_up = { norm_up.z, norm_up.x, norm_up.y };
-    }
-    TVec3<T> x_axis(normalize(cross(z_axis, norm_up)));
-    TVec3<T> y_axis(cross(x_axis, z_axis));
-    return TMat44<T>(
-            TVec4<T>(x_axis, 0),
-            TVec4<T>(y_axis, 0),
-            TVec4<T>(-z_axis, 0),
-            TVec4<T>(eye, 1));
+    return lookTo(normalize(center - eye), eye, normalize(up));
+}
+
+template<typename T>
+template<typename A, typename B, typename C>
+TMat44<T> TMat44<T>::lookTo(const TVec3<A>& direction, const TVec3<B>& position,
+        const TVec3<C>& up) noexcept {
+    auto r = TMat33<T>::lookTo(direction, up);
+    return TMat44<T>{
+            TVec4<T>{     r[0], 0 },
+            TVec4<T>{     r[1], 0 },
+            TVec4<T>{     r[2], 0 },
+            TVec4<T>{ position, 1 } };
 }
 
 // ----------------------------------------------------------------------------------------

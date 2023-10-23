@@ -101,7 +101,7 @@ struct App {
 
     bool actualSize = false;
     bool originIsFarAway = false;
-    float originDistance = 6378137; // Earth's radius in [m]
+    float originDistance = 1.0f;
 
     struct Scene {
         Entity groundPlane;
@@ -135,7 +135,7 @@ struct App {
 static const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
 
 static void printUsage(char* name) {
-    std::string exec_name(Path(name).getName());
+    std::string const exec_name(Path(name).getName());
     std::string usage(
         "SHOWCASE renders the specified glTF file, or a built-in file if none is specified\n"
         "Usage:\n"
@@ -222,7 +222,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
     int opt;
     int option_index = 0;
     while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+        std::string const arg(optarg ? optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -326,7 +326,7 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
 
     Aabb aabb = app.asset->getBoundingBox();
     if (!app.actualSize) {
-        mat4f transform = fitIntoUnitCube(aabb, 4);
+        mat4f const transform = fitIntoUnitCube(aabb, 4);
         aabb = aabb.transform(transform);
     }
 
@@ -339,7 +339,7 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
             {  planeExtent.x, 0, -planeExtent.z },
     };
 
-    short4 tbn = packSnorm16(
+    short4 const tbn = packSnorm16(
             mat3f::packTangentFrame(
                     mat3f{
                             float3{ 1.0f, 0.0f, 0.0f },
@@ -372,7 +372,7 @@ static void createGroundPlane(Engine* engine, Scene* scene, App& app) {
     indexBuffer->setBuffer(*engine, IndexBuffer::BufferDescriptor(
             indices, indexBuffer->getIndexCount() * sizeof(uint32_t)));
 
-    Entity groundPlane = em.create();
+    Entity const groundPlane = em.create();
     RenderableManager::Builder(1)
             .boundingBox({
                     {}, { planeExtent.x, 1e-4f, planeExtent.z }
@@ -491,10 +491,10 @@ int main(int argc, char** argv) {
     app.config.title = "Filament";
     app.config.iblDirectory = FilamentApp::getRootAssetsPath() + DEFAULT_IBL;
 
-    int optionIndex = handleCommandLineArguments(argc, argv, &app);
+    int const optionIndex = handleCommandLineArguments(argc, argv, &app);
 
     utils::Path filename;
-    int num_args = argc - optionIndex;
+    int const num_args = argc - optionIndex;
     if (num_args >= 1) {
         filename = argv[optionIndex];
         if (!filename.exists()) {
@@ -503,7 +503,7 @@ int main(int argc, char** argv) {
         }
         if (filename.isDirectory()) {
             auto files = filename.listContents();
-            for (auto file : files) {
+            for (const auto& file : files) {
                 if (file.getExtension() == "gltf" || file.getExtension() == "glb") {
                     filename = file;
                     break;
@@ -516,9 +516,9 @@ int main(int argc, char** argv) {
         }
     }
 
-    auto loadAsset = [&app](utils::Path filename) {
+    auto loadAsset = [&app](const utils::Path& filename) {
         // Peek at the file size to allow pre-allocation.
-        long contentSize = static_cast<long>(getFileSize(filename.c_str()));
+        long const contentSize = static_cast<long>(getFileSize(filename.c_str()));
         if (contentSize <= 0) {
             std::cerr << "Unable to open " << filename << std::endl;
             exit(1);
@@ -544,9 +544,9 @@ int main(int argc, char** argv) {
         }
     };
 
-    auto loadResources = [&app] (utils::Path filename) {
+    auto loadResources = [&app] (const utils::Path& filename) {
         // Load external textures and buffers.
-        std::string gltfPath = filename.getAbsolutePath();
+        std::string const gltfPath = filename.getAbsolutePath();
         ResourceConfiguration configuration = {};
         configuration.engine = app.engine;
         configuration.gltfPath = gltfPath.c_str();
@@ -637,8 +637,8 @@ int main(int argc, char** argv) {
             app.viewer->stopAnimation();
         }
 
-        if (app.settingsFile.size() > 0) {
-            bool success = loadSettings(app.settingsFile.c_str(), &app.viewer->getSettings());
+        if (!app.settingsFile.empty()) {
+            bool const success = loadSettings(app.settingsFile.c_str(), &app.viewer->getSettings());
             if (success) {
                 std::cout << "Loaded settings from " << app.settingsFile << std::endl;
             } else {
@@ -688,7 +688,7 @@ int main(int argc, char** argv) {
                 ImGui::Spacing();
             }
 
-            float progress = app.resourceLoader->asyncGetLoadProgress();
+            float const progress = app.resourceLoader->asyncGetLoadProgress();
             if (progress < 1.0) {
                 ImGui::ProgressBar(progress);
             } else {
@@ -735,7 +735,7 @@ int main(int argc, char** argv) {
                 }
 
                 if (ImGui::Button("Export view settings")) {
-                    automation.exportSettings(app.viewer->getSettings(), "settings.json");
+                    AutomationEngine::exportSettings(app.viewer->getSettings(), "settings.json");
                     app.messageBoxText = automation.getStatusMessage();
                     ImGui::OpenPopup("MessageBox");
                 }
@@ -757,12 +757,33 @@ int main(int argc, char** argv) {
                             debug.getPropertyAddress<bool>("d.renderer.doFrameCapture");
                     *captureFrame = true;
                 }
-                ImGui::Checkbox("Disable buffer padding", debug.getPropertyAddress<bool>("d.renderer.disable_buffer_padding"));
-                ImGui::Checkbox("Camera at origin", debug.getPropertyAddress<bool>("d.view.camera_at_origin"));
+                ImGui::Checkbox("Disable buffer padding",
+                        debug.getPropertyAddress<bool>("d.renderer.disable_buffer_padding"));
+                ImGui::Checkbox("Camera at origin",
+                        debug.getPropertyAddress<bool>("d.view.camera_at_origin"));
                 ImGui::Checkbox("Far Origin", &app.originIsFarAway);
-                ImGui::SliderFloat("Origin", &app.originDistance, 0, 10000000);
-                ImGui::Checkbox("Far uses shadow casters", debug.getPropertyAddress<bool>("d.shadowmap.far_uses_shadowcasters"));
-                ImGui::Checkbox("Focus shadow casters", debug.getPropertyAddress<bool>("d.shadowmap.focus_shadowcasters"));
+                ImGui::SliderFloat("Origin", &app.originDistance, 0, 1);
+                ImGui::Checkbox("Far uses shadow casters",
+                        debug.getPropertyAddress<bool>("d.shadowmap.far_uses_shadowcasters"));
+                ImGui::Checkbox("Focus shadow casters",
+                        debug.getPropertyAddress<bool>("d.shadowmap.focus_shadowcasters"));
+
+                bool debugDirectionalShadowmap;
+                if (debug.getProperty("d.shadowmap.debug_directional_shadowmap",
+                        &debugDirectionalShadowmap)) {
+                    ImGui::Checkbox("Debug DIR shadowmap", &debugDirectionalShadowmap);
+                    debug.setProperty("d.shadowmap.debug_directional_shadowmap",
+                            debugDirectionalShadowmap);
+                }
+
+                bool debugFroxelVisualization;
+                if (debug.getProperty("d.lighting.debug_froxel_visualization",
+                        &debugFroxelVisualization)) {
+                    ImGui::Checkbox("Froxel Visualization", &debugFroxelVisualization);
+                    debug.setProperty("d.lighting.debug_froxel_visualization",
+                            debugFroxelVisualization);
+                }
+
                 auto dataSource = debug.getDataSource("d.view.frame_info");
                 if (dataSource.data) {
                     ImGuiExt::PlotLinesSeries("FrameInfo", 6,
@@ -815,7 +836,7 @@ int main(int argc, char** argv) {
                 view->setStencilBufferEnabled(visualizeOverdraw);
             }
 
-            if (ImGui::BeginPopupModal("MessageBox", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+            if (ImGui::BeginPopupModal("MessageBox", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text("%s", app.messageBoxText.c_str());
                 if (ImGui::Button("OK", ImVec2(120, 0))) {
                     ImGui::CloseCurrentPopup();
@@ -861,7 +882,7 @@ int main(int argc, char** argv) {
         AssetLoader::destroy(&app.assetLoader);
     };
 
-    auto animate = [&app](Engine* engine, View* view, double now) {
+    auto animate = [&app](Engine*, View*, double now) {
         app.resourceLoader->asyncUpdateLoad();
 
         // Optionally fit the model into a unit cube at the origin.
@@ -873,7 +894,7 @@ int main(int argc, char** argv) {
         app.viewer->applyAnimation(now);
     };
 
-    auto resize = [&app](Engine* engine, View* view) {
+    auto resize = [&app](Engine*, View* view) {
         Camera& camera = view->getCamera();
         if (&camera == app.mainCamera) {
             // Don't adjust the aspect ratio of the main camera, this is done inside of
@@ -881,11 +902,11 @@ int main(int argc, char** argv) {
             return;
         }
         const Viewport& vp = view->getViewport();
-        double aspectRatio = (double) vp.width / vp.height;
+        double const aspectRatio = (double) vp.width / vp.height;
         camera.setScaling({1.0 / aspectRatio, 1.0 });
     };
 
-    auto gui = [&app](Engine* engine, View* view) {
+    auto gui = [&app](Engine*, View*) {
         app.viewer->updateUserInterface();
 
         FilamentApp::get().setSidebarWidth(app.viewer->getSidebarWidth());
@@ -918,7 +939,7 @@ int main(int argc, char** argv) {
             // Override the aspect ratio in the glTF file and adjust the aspect ratio of this
             // camera to the viewport.
             const Viewport& vp = view->getViewport();
-            double aspectRatio = (double) vp.width / vp.height;
+            double const aspectRatio = (double) vp.width / vp.height;
             camera->setScaling({1.0 / aspectRatio, 1.0});
         }
 
@@ -960,10 +981,15 @@ int main(int argc, char** argv) {
         tcm.setParent(tcm.getInstance(camera.getEntity()), root);
         tcm.setParent(tcm.getInstance(app.asset->getRoot()), root);
         tcm.setParent(tcm.getInstance(view->getFogEntity()), root);
-        tcm.setTransform(root, mat4f::translation(float3{ app.originIsFarAway ? app.originDistance : 0.0f }));
+
+        // these values represent a point somewhere on Earth's surface
+        float const d = app.originIsFarAway ? app.originDistance : 0.0f;
+//        tcm.setTransform(root, mat4::translation(double3{ 67.0, -6366759.0, -21552.0 } * d));
+        tcm.setTransform(root, mat4::translation(
+                double3{ 2304097.1410110965, -4688442.9915525438, -3639452.5611694567 } * d));
 
         // Check if color grading has changed.
-        ColorGradingSettings& options = app.viewer->getSettings().view.colorGrading;
+        ColorGradingSettings const& options = app.viewer->getSettings().view.colorGrading;
         if (options.enabled) {
             if (options != app.lastColorGradingOptions) {
                 ColorGrading *colorGrading = createColorGrading(options, engine);
@@ -977,12 +1003,12 @@ int main(int argc, char** argv) {
         }
     };
 
-    auto postRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
+    auto postRender = [&app](Engine* engine, View* view, Scene*, Renderer* renderer) {
         if (app.automationEngine->shouldClose()) {
             FilamentApp::get().close();
             return;
         }
-        AutomationEngine::ViewerContent content = {
+        AutomationEngine::ViewerContent const content = {
             .view = view,
             .renderer = renderer,
             .materials = app.instance->getMaterialInstances(),

@@ -267,6 +267,29 @@ public:
          * This value does not affect the application's memory usage.
          */
         uint32_t perFrameCommandsSizeMB = FILAMENT_PER_FRAME_COMMANDS_SIZE_IN_MB;
+
+        /**
+         * Number of threads to use in Engine's JobSystem.
+         *
+         * Engine uses a utils::JobSystem to carry out paralleization of Engine workloads. This
+         * value sets the number of threads allocated for JobSystem. Configuring this value can be
+         * helpful in CPU-constrained environments where too many threads can cause contention of
+         * CPU and reduce performance.
+         *
+         * The default value is 0, which implies that the Engine will use a heuristic to determine
+         * the number of threads to use.
+         */
+        uint32_t jobSystemThreadCount = 0;
+
+        /*
+         * Number of most-recently destroyed textures to track for use-after-free.
+         *
+         * This will cause the backend to throw an exception when a texture is freed but still bound
+         * to a SamplerGroup and used in a draw call. 0 disables completely.
+         *
+         * Currently only respected by the Metal backend.
+         */
+        size_t textureUseAfterFreePoolSize = 0;
     };
 
 

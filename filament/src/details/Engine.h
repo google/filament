@@ -224,6 +224,22 @@ public:
         return mPlatform;
     }
 
+    backend::ShaderLanguage getShaderLanguage() const noexcept {
+        switch (mBackend) {
+            case Backend::DEFAULT:
+            case Backend::NOOP:
+            default:
+                return backend::ShaderLanguage::ESSL3;
+            case Backend::OPENGL:
+                return mActiveFeatureLevel == FeatureLevel::FEATURE_LEVEL_0
+                        ? backend::ShaderLanguage::ESSL1 : backend::ShaderLanguage::ESSL3;
+            case Backend::VULKAN:
+                return backend::ShaderLanguage::SPIRV;
+            case Backend::METAL:
+                return backend::ShaderLanguage::MSL;
+        }
+    }
+
     ResourceAllocator& getResourceAllocator() noexcept {
         assert_invariant(mResourceAllocator);
         return *mResourceAllocator;
@@ -492,7 +508,7 @@ private:
     HeapAllocatorArena mHeapAllocator;
 
     utils::JobSystem mJobSystem;
-    static uint32_t getJobSystemThreadPoolSize() noexcept;
+    static uint32_t getJobSystemThreadPoolSize(Engine::Config const& config) noexcept;
 
     std::default_random_engine mRandomEngine;
 
@@ -527,6 +543,7 @@ public:
     // these are the debug properties used by FDebug. They're accessed directly by modules who need them.
     struct {
         struct {
+            bool debug_directional_shadowmap = false;
             bool far_uses_shadowcasters = true;
             bool focus_shadowcasters = true;
             bool visualize_cascades = false;
@@ -548,6 +565,9 @@ public:
             bool doFrameCapture = false;
             bool disable_buffer_padding = false;
         } renderer;
+        struct {
+            bool debug_froxel_visualization = false;
+        } lighting;
         matdbg::DebugServer* server = nullptr;
     } debug;
 };

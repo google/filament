@@ -41,7 +41,9 @@ VkShaderStageFlags getShaderStageFlags(ShaderStageFlags stageFlags);
 
 bool equivalent(const VkRect2D& a, const VkRect2D& b);
 bool equivalent(const VkExtent2D& a, const VkExtent2D& b);
-bool isDepthFormat(VkFormat format);
+bool isVkDepthFormat(VkFormat format);
+bool isVkStencilFormat(VkFormat format);
+
 VkImageAspectFlags getImageAspect(VkFormat format);
 uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
 
@@ -85,6 +87,10 @@ utils::FixedCapacityVector<OutType> enumerate(
 #undef EXPAND_ENUM
 #undef EXPAND_ENUM_NO_ARGS
 #undef EXPAND_ENUM_ARGS
+
+
+// Useful shorthands
+using VkFormatList = utils::FixedCapacityVector<VkFormat>;
 
 } // namespace filament::backend
 

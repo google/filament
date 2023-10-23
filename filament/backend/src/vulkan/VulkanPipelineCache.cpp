@@ -65,6 +65,13 @@ VulkanPipelineCache::getUsageFlags(uint16_t binding, ShaderStageFlags flags, Usa
     return src;
 }
 
+VulkanPipelineCache::UsageFlags VulkanPipelineCache::disableUsageFlags(uint16_t binding,
+        UsageFlags src) {
+    src.unset(binding);
+    src.unset(MAX_SAMPLER_COUNT + binding);
+    return src;
+}
+
 VulkanPipelineCache::VulkanPipelineCache(VulkanResourceAllocator* allocator)
     : mCurrentRasterState(createDefaultRasterState()),
       mResourceAllocator(allocator),
@@ -156,7 +163,7 @@ bool VulkanPipelineCache::bindDescriptors(VkCommandBuffer cmdbuffer) noexcept {
                 = std::make_unique<VulkanAcquireOnlyResourceManager>(mResourceAllocator);
         resourceEntry = mDescriptorResources.find(cacheEntry->id);
     }
-    resourceEntry->second->acquire(&mPipelineBoundResources);
+    resourceEntry->second->acquireAll(&mPipelineBoundResources);
 
     vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             getOrCreatePipelineLayout()->handle, 0, VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT,
@@ -558,12 +565,10 @@ VulkanPipelineCache::PipelineLayoutCacheEntry* VulkanPipelineCache::getOrCreateP
     return &mPipelineLayouts.emplace(mPipelineRequirements.layout, cacheEntry).first.value();
 }
 
-void VulkanPipelineCache::bindProgram(const VulkanProgram& program) noexcept {
-    const VkShaderModule shaders[2] = { program.bundle.vertex, program.bundle.fragment };
-    for (uint32_t ssi = 0; ssi < SHADER_MODULE_COUNT; ssi++) {
-        mPipelineRequirements.shaders[ssi] = shaders[ssi];
-    }
-    mSpecializationRequirements = program.bundle.specializationInfos;
+void VulkanPipelineCache::bindProgram(VulkanProgram* program) noexcept {
+    mPipelineRequirements.shaders[0] = program->getVertexShader();
+    mPipelineRequirements.shaders[1] = program->getFragmentShader();
+    mSpecializationRequirements = &program->getSpecConstInfo();
 }
 
 void VulkanPipelineCache::bindRasterState(const RasterState& rasterState) noexcept {

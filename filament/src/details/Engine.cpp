@@ -200,7 +200,7 @@ FEngine::FEngine(Engine::Builder const& builder) :
                 "FEngine::mPerRenderPassAllocator",
                 builder->mConfig.perRenderPassArenaSizeMB * MiB),
         mHeapAllocator("FEngine::mHeapAllocator", AreaPolicy::NullArea{}),
-        mJobSystem(getJobSystemThreadPoolSize()),
+        mJobSystem(getJobSystemThreadPoolSize(builder->mConfig)),
         mEngineEpoch(std::chrono::steady_clock::now()),
         mDriverBarrier(1),
         mMainThreadId(ThreadUtils::getThreadId()),
@@ -214,7 +214,11 @@ FEngine::FEngine(Engine::Builder const& builder) :
            << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)") << io::endl;
 }
 
-uint32_t FEngine::getJobSystemThreadPoolSize() noexcept {
+uint32_t FEngine::getJobSystemThreadPoolSize(Engine::Config const& config) noexcept {
+    if (config.jobSystemThreadCount > 0) {
+        return config.jobSystemThreadCount;
+    }
+
     // 1 thread for the user, 1 thread for the backend
     int threadCount = (int)std::thread::hardware_concurrency() - 2;
     // make sure we have at least 1 thread though
@@ -359,6 +363,28 @@ void FEngine::init() {
         mLightManager.init(*this);
         mDFG.init(*this);
     }
+
+    mDebugRegistry.registerProperty("d.shadowmap.debug_directional_shadowmap",
+            &debug.shadowmap.debug_directional_shadowmap, [this]() {
+                mMaterials.forEach([](FMaterial* material) {
+                    if (material->getMaterialDomain() == MaterialDomain::SURFACE) {
+                        material->invalidate(
+                                Variant::DIR | Variant::SRE | Variant::DEP,
+                                Variant::DIR | Variant::SRE);
+                    }
+                });
+            });
+
+    mDebugRegistry.registerProperty("d.lighting.debug_froxel_visualization",
+            &debug.lighting.debug_froxel_visualization, [this]() {
+                mMaterials.forEach([](FMaterial* material) {
+                    if (material->getMaterialDomain() == MaterialDomain::SURFACE) {
+                        material->invalidate(
+                                Variant::DYN | Variant::DEP,
+                                Variant::DYN);
+                    }
+                });
+            });
 }
 
 FEngine::~FEngine() noexcept {
@@ -606,7 +632,10 @@ int FEngine::loop() {
     JobSystem::setThreadName("FEngine::loop");
     JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
 
-    DriverConfig const driverConfig { .handleArenaSize = getRequestedDriverHandleArenaSize() };
+    DriverConfig const driverConfig {
+            .handleArenaSize = getRequestedDriverHandleArenaSize(),
+            .textureUseAfterFreePoolSize = mConfig.textureUseAfterFreePoolSize
+    };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
 
     mDriverBarrier.latch();

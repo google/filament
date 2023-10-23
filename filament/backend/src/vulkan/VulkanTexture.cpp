@@ -40,13 +40,14 @@ VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator, VulkanComm
       mViewType(ImgUtil::getViewType(target)),
       mSwizzle({}),
       mTextureImage(image),
-      mPrimaryViewRange{
+      mFullViewRange{
               .aspectMask = getImageAspect(),
               .baseMipLevel = 0,
               .levelCount = 1,
               .baseArrayLayer = 0,
               .layerCount = 1,
       },
+      mPrimaryViewRange(mFullViewRange),
       mStagePool(stagePool),
       mDevice(device),
       mAllocator(allocator),
@@ -60,9 +61,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     : HwTexture(target, levels, samples, w, h, depth, tformat, tusage),
       VulkanResource(
               heapAllocated ? VulkanResourceType::HEAP_ALLOCATED : VulkanResourceType::TEXTURE),
-      // Vulkan does not support 24-bit depth, use the official fallback format.
-      mVkFormat(tformat == TextureFormat::DEPTH24 ? context.getDepthFormat()
-                                                  : backend::getVkFormat(tformat)),
+      mVkFormat(backend::getVkFormat(tformat)),
       mViewType(ImgUtil::getViewType(target)),
       mSwizzle(swizzle),
       mStagePool(stagePool),
@@ -145,7 +144,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     // any kind of attachment (color or depth).
     const auto& limits = context.getPhysicalDeviceLimits();
     if (imageInfo.usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
-        samples = reduceSampleCount(samples, isDepthFormat(mVkFormat)
+        samples = reduceSampleCount(samples, isVkDepthFormat(mVkFormat)
                                                      ? limits.sampledImageDepthSampleCounts
                                                      : limits.sampledImageColorSampleCounts);
     }
@@ -197,24 +196,31 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     error = vkBindImageMemory(mDevice, mTextureImage, mTextureImageMemory, 0);
     ASSERT_POSTCONDITION(!error, "Unable to bind image.");
 
-    // Spec out the "primary" VkImageView that shaders use to sample from the image.
-    mPrimaryViewRange.aspectMask = getImageAspect();
-    mPrimaryViewRange.baseMipLevel = 0;
-    mPrimaryViewRange.levelCount = levels;
-    mPrimaryViewRange.baseArrayLayer = 0;
+    uint32_t layerCount = 0;
     if (target == SamplerType::SAMPLER_CUBEMAP) {
-        mPrimaryViewRange.layerCount = 6;
+        layerCount = 6;
     } else if (target == SamplerType::SAMPLER_CUBEMAP_ARRAY) {
-        mPrimaryViewRange.layerCount = depth * 6;
+        layerCount = depth * 6;
     } else if (target == SamplerType::SAMPLER_2D_ARRAY) {
-        mPrimaryViewRange.layerCount = depth;
+        layerCount = depth;
     } else if (target == SamplerType::SAMPLER_3D) {
-        mPrimaryViewRange.layerCount = 1;
+        layerCount = 1;
     } else {
-        mPrimaryViewRange.layerCount = 1;
+        layerCount = 1;
     }
 
-    // Go ahead and create the primary image view, no need to do it lazily.
+    mFullViewRange = {
+        .aspectMask = getImageAspect(),
+        .baseMipLevel = 0,
+        .levelCount = levels,
+        .baseArrayLayer = 0,
+        .layerCount = layerCount,
+    };
+
+    // Spec out the "primary" VkImageView that shaders use to sample from the image.
+    mPrimaryViewRange = mFullViewRange;
+
+    // Go ahead and create the primary image view.
     getImageView(mPrimaryViewRange, mViewType, mSwizzle);
 
     // Transition the layout of each image slice that might be used as a render target.
@@ -223,14 +229,10 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     if (imageInfo.usage
         & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
            | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
-        const uint32_t layers = mPrimaryViewRange.layerCount;
-        VkImageSubresourceRange range = { getImageAspect(), 0, levels, 0, layers };
-
         VulkanCommandBuffer& commands = mCommands->get();
         VkCommandBuffer const cmdbuf = commands.buffer();
         commands.acquire(this);
-
-        transitionLayout(cmdbuf, range, ImgUtil::getDefaultLayout(imageInfo.usage));
+        transitionLayout(cmdbuf, mFullViewRange, ImgUtil::getDefaultLayout(imageInfo.usage));
     }
 }
 
@@ -318,11 +320,11 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     }
 
     VulkanLayout const newLayout = VulkanLayout::TRANSFER_DST;
-    VulkanLayout nextLayout = getLayout(0, miplevel);
+    VulkanLayout nextLayout = getLayout(transitionRange.baseArrayLayer, miplevel);
     VkImageLayout const newVkLayout = ImgUtil::getVkLayout(newLayout);
 
     if (nextLayout == VulkanLayout::UNDEFINED) {
-        nextLayout = VulkanLayout::READ_WRITE;
+        nextLayout = ImgUtil::getDefaultLayout(this->usage);
     }
 
     transitionLayout(cmdbuf, transitionRange, newLayout);
@@ -360,10 +362,10 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& hostData, u
         .dstOffsets = { rect[0], rect[1] }
     }};
 
-    const VkImageSubresourceRange range = { aspect, miplevel, 1, 0, 1 };
+    const VkImageSubresourceRange range = { aspect, miplevel, 1, layer, 1 };
 
     VulkanLayout const newLayout = VulkanLayout::TRANSFER_DST;
-    VulkanLayout const oldLayout = getLayout(0, miplevel);
+    VulkanLayout const oldLayout = getLayout(layer, miplevel);
     transitionLayout(cmdbuf, range, newLayout);
 
     vkCmdBlitImage(cmdbuf, stage->image, ImgUtil::getVkLayout(VulkanLayout::TRANSFER_SRC),
@@ -386,9 +388,14 @@ VkImageView VulkanTexture::getAttachmentView(VkImageSubresourceRange range) {
     return getImageView(range, VK_IMAGE_VIEW_TYPE_2D, {});
 }
 
+VkImageView VulkanTexture::getViewForType(VkImageSubresourceRange const& range, VkImageViewType type) {
+    return getImageView(range, type, mSwizzle);
+}
+
 VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range, VkImageViewType viewType,
         VkComponentMapping swizzle) {
-    auto iter = mCachedImageViews.find(range);
+    ImageViewKey const key {range, viewType, swizzle};
+    auto iter = mCachedImageViews.find(key);
     if (iter != mCachedImageViews.end()) {
         return iter->second;
     }
@@ -404,7 +411,7 @@ VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range, VkImageVi
     };
     VkImageView imageView;
     vkCreateImageView(mDevice, &viewInfo, VKALLOC, &imageView);
-    mCachedImageViews.emplace(range, imageView);
+    mCachedImageViews.emplace(key, imageView);
     return imageView;
 }
 
@@ -415,22 +422,72 @@ VkImageAspectFlags VulkanTexture::getImageAspect() const {
 
 void VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, const VkImageSubresourceRange& range,
         VulkanLayout newLayout) {
-    VulkanLayout oldLayout = getLayout(range.baseArrayLayer, range.baseMipLevel);
 
-    #if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
-    utils::slog.i << "transition layout of " << mTextureImage << ",layer=" << range.baseArrayLayer
-                  << ",level=" << range.baseMipLevel << " from=" << oldLayout << " to=" << newLayout
+    VulkanLayout const oldLayout = getLayout(range.baseArrayLayer, range.baseMipLevel);
+
+    uint32_t const firstLayer = range.baseArrayLayer;
+    uint32_t const lastLayer = firstLayer + range.layerCount;
+    uint32_t const firstLevel = range.baseMipLevel;
+    uint32_t const lastLevel = firstLevel + range.levelCount;
+
+    // If we are transitioning more than one layer/level (slice), we need to know whether they are
+    // all of the same layer.  If not, we need to transition slice-by-slice. Otherwise it would
+    // trigger the validation layer saying that the `oldLayout` provided is incorrect.
+    // TODO: transition by multiple slices with more sophiscated range finding.
+    bool transitionSliceBySlice = false;
+    for (uint32_t i = firstLayer; i < lastLayer; ++i) {
+        for (uint32_t j = firstLevel; j < lastLevel; ++j) {
+            if (oldLayout != getLayout(i, j)) {
+                transitionSliceBySlice = true;
+                break;
+            }
+        }
+    }
+
+#if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
+    utils::slog.d << "transition texture=" << mTextureImage
+                  << " (" << range.baseArrayLayer
+                  << "," << range.baseMipLevel << ")"
+                  << " count=(" << range.layerCount
+                  << "," << range.levelCount << ")"
+                  << " from=" << oldLayout << " to=" << newLayout
                   << " format=" << mVkFormat
-                  << " depth=" << isDepthFormat(mVkFormat) << utils::io::endl;
-    #endif
+                  << " depth=" << isVkDepthFormat(mVkFormat)
+                  << " slice-by-slice=" << transitionSliceBySlice
+                  << utils::io::endl;
+#endif
 
-    ImgUtil::transitionLayout(cmdbuf, {
+    if (transitionSliceBySlice) {
+        for (uint32_t i = firstLayer; i < lastLayer; ++i) {
+            for (uint32_t j = firstLevel; j < lastLevel; ++j) {
+                VulkanLayout const layout = getLayout(i, j);
+                ImgUtil::transitionLayout(cmdbuf, {
+                        .image = mTextureImage,
+                        .oldLayout = layout,
+                        .newLayout = newLayout,
+                        .subresources = {
+                            .aspectMask = range.aspectMask,
+                            .baseMipLevel = j,
+                            .levelCount = 1,
+                            .baseArrayLayer = i,
+                            .layerCount = 1,
+                        },
+                    });
+            }
+        }
+    } else {
+        ImgUtil::transitionLayout(cmdbuf, {
             .image = mTextureImage,
             .oldLayout = oldLayout,
             .newLayout = newLayout,
             .subresources = range,
-    });
+        });
+    }
 
+    setLayout(range, newLayout);
+}
+
+void VulkanTexture::setLayout(const VkImageSubresourceRange& range, VulkanLayout newLayout) {
     uint32_t const firstLayer = range.baseArrayLayer;
     uint32_t const lastLayer = firstLayer + range.layerCount;
     uint32_t const firstLevel = range.baseMipLevel;
@@ -465,16 +522,32 @@ VulkanLayout VulkanTexture::getLayout(uint32_t layer, uint32_t level) const {
 
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)
 void VulkanTexture::print() const {
-    const uint32_t firstLayer = 0;
-    const uint32_t lastLayer = firstLayer + mPrimaryViewRange.layerCount;
-    const uint32_t firstLevel = 0;
-    const uint32_t lastLevel = firstLevel + mPrimaryViewRange.levelCount;
+    uint32_t const firstLayer = 0;
+    uint32_t const lastLayer = firstLayer + mFullViewRange.layerCount;
+    uint32_t const firstLevel = 0;
+    uint32_t const lastLevel = firstLevel + mFullViewRange.levelCount;
 
     for (uint32_t layer = firstLayer; layer < lastLayer; ++layer) {
         for (uint32_t level = firstLevel; level < lastLevel; ++level) {
+            bool primary =
+                layer >= mPrimaryViewRange.baseArrayLayer &&
+                layer < (mPrimaryViewRange.baseArrayLayer + mPrimaryViewRange.layerCount) &&
+                level >= mPrimaryViewRange.baseMipLevel &&
+                level < (mPrimaryViewRange.baseMipLevel + mPrimaryViewRange.levelCount);
             utils::slog.d << "[" << mTextureImage << "]: (" << layer << "," << level
-                          << ")=" << getLayout(layer, level) << utils::io::endl;
+                          << ")=" << getLayout(layer, level)
+                          << " primary=" << primary
+                          << utils::io::endl;
         }
+    }
+
+    for (auto view: mCachedImageViews) {
+        auto& range = view.first.range;
+        utils::slog.d << "[" << mTextureImage << ", imageView=" << view.second << "]=>"
+                      << " (" << range.baseArrayLayer << "," << range.baseMipLevel << ")"
+                      << " count=(" << range.layerCount << "," << range.levelCount << ")"
+                      << " aspect=" << range.aspectMask << " viewType=" << view.first.type
+                      << utils::io::endl;
     }
 }
 #endif

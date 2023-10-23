@@ -77,6 +77,11 @@ static constexpr uint64_t SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER = 0x8;
  */
 static constexpr uint64_t SWAP_CHAIN_CONFIG_SRGB_COLORSPACE     = 0x10;
 
+/**
+ * Indicates that the SwapChain should also contain a stencil component.
+ */
+static constexpr uint64_t SWAP_CHAIN_HAS_STENCIL_BUFFER         = 0x20;
+
 
 static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT  = 16;   // This is guaranteed by OpenGL ES.
 static constexpr size_t MAX_SAMPLER_COUNT           = 62;   // Maximum needed at feature level 3.
@@ -137,6 +142,17 @@ static constexpr const char* backendToString(Backend backend) {
             return "Unknown";
     }
 }
+
+/**
+ * Defines the shader language. Similar to the above backend enum, but the OpenGL backend can select
+ * between two shader languages: ESSL 1.0 and ESSL 3.0.
+ */
+enum class ShaderLanguage {
+    ESSL1 = 0,
+    ESSL3 = 1,
+    SPIRV = 2,
+    MSL = 3,
+};
 
 /**
  * Bitmask for selecting render buffers

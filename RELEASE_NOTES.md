@@ -7,6 +7,21 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.45.0
+
+- materials: fix alpha masked materials when MSAA is turned on [⚠️ **Recompile materials**]
+- materials: better support materials with custom depth [**Recompile Materials**]
+- engine: fade shadows at shadowFar distance instead of hard cutoff [⚠️ **New Material Version**]
+
+## v1.44.0
+
+- engine: add support for skinning with more than four bones per vertex.
+- engine: remove `BloomOptions::anamorphism` which wasn't working well in most cases [**API CHANGE**]
+- engine: new API to return a Material's supported variants, C++ only (b/297456590)
+- build: fix emscripten-1.3.46 build
+- engine: materials built for feature level 0 can now also be loaded in higher feature levels [⚠️
+  **New Material Version**]
+
 ## v1.43.1
 
 ## v1.43.0

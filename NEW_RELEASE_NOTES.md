@@ -8,7 +8,10 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
-- engine: add support for skinning with more than four bones per vertex.
-- engine: remove `BloomOptions::anamorphism` which wasn't working well in most cases [**API CHANGE**] 
-- engine: new API to return a Material's supported variants, C++ only (b/297456590)
-- build: fix emscripten-1.3.46 build
+- engine: Added parameter for configuring JobSystem thread count
+- engine: In Java, introduce Engine.Builder
+- gltfio: fix ubershader index for transmission&volume material
+- engine: New tone mapper: `AgXTonemapper`.
+- matinfo: Add support for viewing ESSL 1.0 shaders
+- engine: Add `Renderer::getClearOptions()` [b/243846268]
+- engine: Fix stable shadows (again) when an IBL rotation is used

@@ -40,10 +40,8 @@ struct SpirvEntry {
     filament::backend::ShaderStage stage;
     size_t dictionaryIndex;
 
-#ifndef FILAMAT_LITE
     // temporarily holds this entry's spirv until added to the dictionary
     std::vector<uint32_t> spirv;
-#endif
 };
 
 }  // namespace filamat

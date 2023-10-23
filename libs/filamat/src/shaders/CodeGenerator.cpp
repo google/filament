@@ -45,19 +45,26 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         case ShaderModel::MOBILE:
             // Vulkan requires version 310 or higher
             if (mTargetLanguage == TargetLanguage::SPIRV ||
-                material.featureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
+                mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
                 // Vulkan requires layout locations on ins and outs, which were not supported
                 // in ESSL 300
                 out << "#version 310 es\n\n";
             } else {
-                if (material.featureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+                if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
                     out << "#version 300 es\n\n";
                 } else {
                     out << "#version 100\n\n";
                 }
             }
             if (material.hasExternalSamplers) {
-                out << "#extension GL_OES_EGL_image_external_essl3 : require\n\n";
+                if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+                    out << "#extension GL_OES_EGL_image_external_essl3 : require\n\n";
+                } else {
+                    out << "#extension GL_OES_EGL_image_external : require\n\n";
+                }
+            }
+            if (material.has3dSamplers && mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+                out << "#extension GL_OES_texture_3D : require\n\n";
             }
             if (v.hasInstancedStereo() && stage == ShaderStage::VERTEX) {
                 // If we're not processing the shader through glslang (in the case of unoptimized
@@ -71,7 +78,7 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
             break;
         case ShaderModel::DESKTOP:
             if (mTargetLanguage == TargetLanguage::SPIRV ||
-                material.featureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
+                mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
                 // Vulkan requires binding specifiers on uniforms and samplers, which were not
                 // supported in the OpenGL 4.1 GLSL profile.
                 out << "#version 450 core\n\n";
@@ -135,17 +142,21 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     if (mTargetApi == TargetApi::VULKAN ||
         mTargetApi == TargetApi::METAL ||
         (mTargetApi == TargetApi::OPENGL && mShaderModel == ShaderModel::DESKTOP) ||
-        material.featureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
+        mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
         out << "#define FILAMENT_HAS_FEATURE_TEXTURE_GATHER\n";
     }
 
-    if (material.featureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+    if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
         out << "#define FILAMENT_HAS_FEATURE_INSTANCING\n";
     }
 
     if (stage == ShaderStage::VERTEX) {
         CodeGenerator::generateDefine(out, "FLIP_UV_ATTRIBUTE", material.flipUV);
         CodeGenerator::generateDefine(out, "LEGACY_MORPHING", material.useLegacyMorphing);
+    }
+    if (stage == ShaderStage::FRAGMENT) {
+        CodeGenerator::generateDefine(out, "MATERIAL_HAS_CUSTOM_DEPTH",
+                material.userMaterialHasCustomDepth);
     }
 
     if (mTargetLanguage == TargetLanguage::SPIRV ||
@@ -157,16 +168,6 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         }
     } else {
         generateDefine(out, "VARYING", "varying");
-    }
-
-    if (mTargetLanguage == TargetLanguage::SPIRV &&
-            mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
-        generateDefine(out, "texture2D", "texture");
-        generateDefine(out, "textureCube", "texture");
-        if (stage == ShaderStage::VERTEX) {
-            generateDefine(out, "texture2DLod", "textureLod");
-            generateDefine(out, "textureCubeLod", "textureLod");
-        }
     }
 
     auto getShadingDefine = [](Shading shading) -> const char* {
@@ -190,8 +191,10 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     out << "precision " << precision << " float;\n";
     out << "precision " << precision << " int;\n";
     if (mShaderModel == ShaderModel::MOBILE) {
-        if (material.featureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+        if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
             out << "precision lowp sampler2DArray;\n";
+        }
+        if (material.has3dSamplers) {
             out << "precision lowp sampler3D;\n";
         }
     }
@@ -231,6 +234,14 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                 +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT, 1024);
     }
 
+    // directional shadowmap visualization
+    generateSpecializationConstant(out, "CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP",
+            +ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP, false);
+
+    // froxel visualization
+    generateSpecializationConstant(out, "CONFIG_DEBUG_FROXEL_VISUALIZATION",
+            +ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION, false);
+
     // Workaround a Metal pipeline compilation error with the message:
     // "Could not statically determine the target of a texture". See light_indirect.fs
     generateSpecializationConstant(out, "CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND",
@@ -244,7 +255,7 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     // example), we'd run into a GPU crash.
     out << "#define CONFIG_STEREOSCOPIC_EYES " << (int) CONFIG_STEREOSCOPIC_EYES << "\n";
 
-    if (material.featureLevel == 0) {
+    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
         // On ES2 since we don't have post-processing, we need to emulate EGL_GL_COLORSPACE_KHR,
         // when it's not supported.
         generateSpecializationConstant(out, "CONFIG_SRGB_SWAPCHAIN_EMULATION",
@@ -253,6 +264,30 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
 
     out << '\n';
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;
+
+    if (mFeatureLevel > FeatureLevel::FEATURE_LEVEL_0 &&
+            material.featureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        // Insert compatibility definitions for ESSL 1.0 functions which were removed in ESSL 3.0.
+
+        // This is the minimum required value according to the OpenGL ES Shading Language Version
+        // 1.00 document. glslang forbids defining symbols beginning with gl_ as const, hence the
+        // #define.
+        CodeGenerator::generateDefine(out, "gl_MaxVaryingVectors", "8");
+
+        CodeGenerator::generateDefine(out, "texture2D", "texture");
+        CodeGenerator::generateDefine(out, "texture2DProj", "textureProj");
+        CodeGenerator::generateDefine(out, "texture3D", "texture");
+        CodeGenerator::generateDefine(out, "texture3DProj", "textureProj");
+        CodeGenerator::generateDefine(out, "textureCube", "texture");
+
+        if (stage == ShaderStage::VERTEX) {
+            CodeGenerator::generateDefine(out, "texture2DLod", "textureLod");
+            CodeGenerator::generateDefine(out, "texture2DProjLod", "textureProjLod");
+            CodeGenerator::generateDefine(out, "texture3DLod", "textureLod");
+            CodeGenerator::generateDefine(out, "texture3DProjLod", "textureProjLod");
+            CodeGenerator::generateDefine(out, "textureCubeLod", "textureLod");
+        }
+    }
 
     out << "\n";
     return out;

@@ -47,11 +47,11 @@ FCamera::FCamera(FEngine& engine, Entity e)
           mEntity(e) {
 }
 
-void UTILS_NOINLINE FCamera::setProjection(double fovInDegrees, double aspect, double near, double far,
-        Camera::Fov direction) {
+math::mat4 FCamera::projection(Fov direction, double fovInDegrees,
+        double aspect, double near, double far) {
     double w;
     double h;
-    double s = std::tan(fovInDegrees * math::d::DEG_TO_RAD / 2.0) * near;
+    double const s = std::tan(fovInDegrees * math::d::DEG_TO_RAD / 2.0) * near;
     if (direction == Fov::VERTICAL) {
         w = s * aspect;
         h = s;
@@ -59,29 +59,35 @@ void UTILS_NOINLINE FCamera::setProjection(double fovInDegrees, double aspect, d
         w = s;
         h = s / aspect;
     }
-    FCamera::setProjection(Projection::PERSPECTIVE, -w, w, -h, h, near, far);
+    mat4 p = math::mat4::frustum(-w, w, -h, h, near, far);
+    if (far == std::numeric_limits<double>::infinity()) {
+        p[2][2] = -1.0f;           // lim(far->inf) = -1
+        p[3][2] = -2.0f * near;    // lim(far->inf) = -2*near
+    }
+    return p;
 }
 
-void FCamera::setLensProjection(double focalLengthInMillimeters,
+math::mat4 FCamera::projection(double focalLengthInMillimeters,
         double aspect, double near, double far) {
     // a 35mm camera has a 36x24mm wide frame size
-    double h = (0.5 * near) * ((SENSOR_SIZE * 1000.0) / focalLengthInMillimeters);
-    double w = h * aspect;
-    FCamera::setProjection(Projection::PERSPECTIVE, -w, w, -h, h, near, far);
+    double const h = (0.5 * near) * ((SENSOR_SIZE * 1000.0) / focalLengthInMillimeters);
+    double const w = h * aspect;
+    mat4 p = math::mat4::frustum(-w, w, -h, h, near, far);
+    if (far == std::numeric_limits<double>::infinity()) {
+        p[2][2] = -1.0f;           // lim(far->inf) = -1
+        p[3][2] = -2.0f * near;    // lim(far->inf) = -2*near
+    }
+    return p;
 }
 
 /*
  * All methods for setting the projection funnel through here
  */
 
-void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p, double near, double far) noexcept {
-    setCustomProjection(p, p, near, far);
-}
-
 void UTILS_NOINLINE FCamera::setCustomProjection(mat4 const& p,
         mat4 const& c, double near, double far) noexcept {
-    for (uint8_t i = 0; i < CONFIG_STEREOSCOPIC_EYES; i++) {
-        mEyeProjection[i] = p;
+    for (auto& eyeProjection: mEyeProjection) {
+        eyeProjection = p;
     }
     mProjectionForCulling = c;
     mNear = near;
@@ -237,48 +243,10 @@ double FCamera::computeEffectiveFocalLength(double focalLength, double focusDist
 }
 
 double FCamera::computeEffectiveFov(double fovInDegrees, double focusDistance) noexcept {
-    double f = 0.5 * FCamera::SENSOR_SIZE / std::tan(fovInDegrees * math::d::DEG_TO_RAD * 0.5);
+    double const f = 0.5 * FCamera::SENSOR_SIZE / std::tan(fovInDegrees * math::d::DEG_TO_RAD * 0.5);
     focusDistance = std::max(f, focusDistance);
-    double fov = 2.0 * std::atan(FCamera::SENSOR_SIZE * (focusDistance - f) / (2.0 * focusDistance * f));
+    double const fov = 2.0 * std::atan(FCamera::SENSOR_SIZE * (focusDistance - f) / (2.0 * focusDistance * f));
     return fov * math::d::RAD_TO_DEG;
-}
-
-template<typename T>
-math::details::TMat44<T> inverseProjection(const math::details::TMat44<T>& p) noexcept {
-    math::details::TMat44<T> r;
-    const T A = 1 / p[0][0];
-    const T B = 1 / p[1][1];
-    if (p[2][3] != T(0)) {
-        // perspective projection
-        // a 0 tx 0
-        // 0 b ty 0
-        // 0 0 tz c
-        // 0 0 -1 0
-        const T C = 1 / p[3][2];
-        r[0][0] = A;
-        r[1][1] = B;
-        r[2][2] = 0;
-        r[2][3] = C;
-        r[3][0] = p[2][0] * A;    // not needed if symmetric
-        r[3][1] = p[2][1] * B;    // not needed if symmetric
-        r[3][2] = -1;
-        r[3][3] = p[2][2] * C;
-    } else {
-        // orthographic projection
-        // a 0 0 tx
-        // 0 b 0 ty
-        // 0 0 c tz
-        // 0 0 0 1
-        const T C = 1 / p[2][2];
-        r[0][0] = A;
-        r[1][1] = B;
-        r[2][2] = C;
-        r[3][3] = 1;
-        r[3][0] = -p[3][0] * A;
-        r[3][1] = -p[3][1] * B;
-        r[3][2] = -p[3][2] * C;
-    }
-    return r;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -298,8 +266,8 @@ CameraInfo::CameraInfo(FCamera const& camera) noexcept {
     d                  = std::max(zn, camera.getFocusDistance());
 }
 
-CameraInfo::CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamera) noexcept {
-    const mat4 modelMatrix{ worldOriginCamera * camera.getModelMatrix() };
+CameraInfo::CameraInfo(FCamera const& camera, math::mat4 const& inWorldTransform) noexcept {
+    const mat4 modelMatrix{ inWorldTransform * camera.getModelMatrix() };
     for (uint8_t i = 0; i < CONFIG_STEREOSCOPIC_EYES; i++) {
         eyeProjection[i]   = mat4f{ camera.getProjectionMatrix(i) };
         eyeFromView[i]     = mat4f{ camera.getEyeFromViewMatrix(i) };
@@ -307,7 +275,7 @@ CameraInfo::CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamer
     cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
     model              = mat4f{ modelMatrix };
     view               = mat4f{ inverse(modelMatrix) };
-    worldOrigin        = worldOriginCamera;
+    worldTransform     = inWorldTransform;
     zn                 = (float)camera.getNear();
     zf                 = (float)camera.getCullingFar();
     ev100              = Exposure::ev100(camera);

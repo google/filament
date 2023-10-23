@@ -83,7 +83,7 @@ struct VulkanCommandBuffer {
     }
 
     inline void acquire(VulkanAcquireOnlyResourceManager* srcResources) {
-        mResourceManager.acquire(srcResources);
+        mResourceManager.acquireAll(srcResources);
     }
 
     inline void reset() {

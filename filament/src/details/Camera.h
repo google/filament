@@ -46,30 +46,26 @@ public:
 
     FCamera(FEngine& engine, utils::Entity e);
 
-    void terminate(FEngine& engine) noexcept { }
+    void terminate(FEngine&) noexcept { }
 
-    void setEyeModelMatrix(uint8_t eyeId, math::mat4 const& model);
 
-    void setCustomEyeProjection(math::mat4 const* projection, size_t count,
-            math::mat4 const& projectionForCulling, double near, double far);
-
-    // sets the projection matrix
+    // Sets the projection matrices (viewing and culling). The viewing matrice has infinite far.
     void setProjection(Projection projection,
                        double left, double right, double bottom, double top,
                        double near, double far);
 
-    // sets the projection matrix
-    void setProjection(double fovInDegrees, double aspect, double near, double far,
-                       Fov direction = Fov::VERTICAL);
-
-    // sets the projection matrix
-    void setLensProjection(double focalLengthInMillimeters,
-            double aspect, double near, double far);
-
-    // Sets a custom projection matrix (sets both the viewing and culling projections).
-    void setCustomProjection(math::mat4 const& projection, double near, double far) noexcept;
+    // Sets custom projection matrices (sets both the viewing and culling projections).
     void setCustomProjection(math::mat4 const& projection,
             math::mat4 const& projectionForCulling, double near, double far) noexcept;
+
+    inline void setCustomProjection(math::mat4 const& projection,
+            double near, double far) noexcept {
+        setCustomProjection(projection, projection, near, far);
+    }
+
+    void setCustomEyeProjection(math::mat4 const* projection, size_t count,
+            math::mat4 const& projectionForCulling, double near, double far);
+
 
     void setScaling(math::double2 scaling) noexcept { mScalingCS = scaling; }
 
@@ -105,6 +101,7 @@ public:
     // sets the camera's model matrix (must be a rigid transform)
     void setModelMatrix(const math::mat4& modelMatrix) noexcept;
     void setModelMatrix(const math::mat4f& modelMatrix) noexcept;
+    void setEyeModelMatrix(uint8_t eyeId, math::mat4 const& model);
 
     // sets the camera's model matrix
     void lookAt(math::double3 const& eye, math::double3 const& center, math::double3 const& up) noexcept;
@@ -196,6 +193,12 @@ public:
         return mEntity;
     }
 
+    static math::mat4 projection(Fov direction, double fovInDegrees,
+            double aspect, double near, double far);
+
+    static math::mat4 projection(double focalLengthInMillimeters,
+            double aspect, double near, double far);
+
 private:
     FEngine& mEngine;
     utils::Entity mEntity;
@@ -220,7 +223,7 @@ private:
 struct CameraInfo {
     CameraInfo() noexcept {}
     explicit CameraInfo(FCamera const& camera) noexcept;
-    CameraInfo(FCamera const& camera, const math::mat4& worldOriginCamera) noexcept;
+    CameraInfo(FCamera const& camera, math::mat4 const& inWorldTransform) noexcept;
 
     union {
         // projection matrix for drawing (infinite zfar)
@@ -236,9 +239,9 @@ struct CameraInfo {
     math::mat4f model;                                  // camera model matrix
     math::mat4f view;                                   // camera view matrix (inverse(model))
     math::mat4f eyeFromView[CONFIG_STEREOSCOPIC_EYES];  // eye view matrix (only for stereoscopic)
-    math::mat4 worldOrigin;                             // world origin transform (already applied
+    math::mat4 worldTransform;                          // world transform (already applied
                                                         // to model and view)
-    math::float4 clipTransfrom{1, 1, 0, 0};  // clip-space transform, only for VERTEX_DOMAIN_DEVICE
+    math::float4 clipTransform{1, 1, 0, 0};  // clip-space transform, only for VERTEX_DOMAIN_DEVICE
     float zn{};                              // distance (positive) to the near plane
     float zf{};                              // distance (positive) to the far plane
     float ev100{};                           // exposure
@@ -247,7 +250,7 @@ struct CameraInfo {
     float d{};                               // focus distance [m]
     math::float3 const& getPosition() const noexcept { return model[3].xyz; }
     math::float3 getForwardVector() const noexcept { return normalize(-model[2].xyz); }
-    math::mat4 getUserViewMatrix() const noexcept { return view * worldOrigin; }
+    math::mat4 getUserViewMatrix() const noexcept { return view * worldTransform; }
 };
 
 FILAMENT_DOWNCAST(Camera)

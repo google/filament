@@ -124,7 +124,6 @@ jobs:
           cd ../..
           mv out/filament-android-release.aar out/filament-${TAG}-android.aar
           mv out/filamat-android-release.aar out/filamat-${TAG}-android.aar
-          mv out/filamat-android-lite-release.aar out/filamat-${TAG}-lite-android.aar
           mv out/gltfio-android-release.aar out/gltfio-${TAG}-android.aar
           mv out/filament-utils-android-release.aar out/filament-utils-${TAG}-android.aar
       - name: Sign sample-gltf-viewer

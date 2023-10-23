@@ -53,6 +53,9 @@ if(ENABLE_GLSLANG_JS)
         target_link_libraries(glslang.js "-s ALLOW_MEMORY_GROWTH=1")
         target_link_libraries(glslang.js "-s FILESYSTEM=0")
 
+        # We use ccall in glslang.pre.js, so make sure it's exposed
+        target_link_libraries(glslang.js "-s EXPORTED_RUNTIME_METHODS=ccall")
+
         if(ENABLE_EMSCRIPTEN_SINGLE_FILE)
             target_link_libraries(glslang.js "-s SINGLE_FILE=1")
         endif()
@@ -64,8 +67,28 @@ if(ENABLE_GLSLANG_JS)
         endif()
 
         if(NOT ENABLE_EMSCRIPTEN_ENVIRONMENT_NODE)
-            add_custom_command(TARGET glslang.js POST_BUILD
-                COMMAND cat ${CMAKE_CURRENT_SOURCE_DIR}/glslang.after.js >> ${CMAKE_CURRENT_BINARY_DIR}/glslang.js)
+            if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
+                add_custom_command(TARGET glslang.js POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E cat ${CMAKE_CURRENT_SOURCE_DIR}/glslang.after.js >> ${CMAKE_CURRENT_BINARY_DIR}/glslang.js
+                )
+            else()
+                if (MINGW)
+                    message(FATAL_ERROR "Must use at least CMake 3.18")
+                endif()
+
+                if (CMAKE_HOST_SYSTEM MATCHES "Windows.*")
+                    # There are several ways we could append one file to another on Windows, but unfortunately 'cat' is not one of them
+                    # (there is no 'cat' command in cmd). Also, since this will ultimately run in cmd and not pwsh, we need to ensure
+                    # Windows path separators are used.
+                    file(TO_NATIVE_PATH "${CMAKE_CURRENT_BINARY_DIR}/glslang.js" glslang_js_path)
+                    file(TO_NATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/glslang.after.js" glslang_after_js_path)
+                    add_custom_command(TARGET glslang.js POST_BUILD
+                        COMMAND type "${glslang_after_js_path}" >> "${glslang_js_path}")
+                else()
+                    add_custom_command(TARGET glslang.js POST_BUILD
+                        COMMAND cat ${CMAKE_CURRENT_SOURCE_DIR}/glslang.after.js >> ${CMAKE_CURRENT_BINARY_DIR}/glslang.js)
+                endif()
+            endif()
         endif()
     endif()
 endif()
