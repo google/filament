@@ -629,6 +629,9 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.vertexDomainDeviceJittered = mVertexDomainDeviceJittered;
     info.featureLevel = mFeatureLevel;
     info.groupSize = mGroupSize;
+
+    // This is determined via static analysis of the glsl after prepareToBuild().
+    info.userMaterialHasCustomDepth = false;
 }
 
 bool MaterialBuilder::findProperties(backend::ShaderStage type,
