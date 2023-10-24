@@ -148,6 +148,7 @@ set(TEST_SRCS
         test/test_CyclicBarrier.cpp
         test/test_Entity.cpp
         test/test_FixedCapacityVector.cpp
+        test/test_FixedCircularBuffer.cpp
         test/test_Hash.cpp
         test/test_JobSystem.cpp
         test/test_QuadTreeArray.cpp

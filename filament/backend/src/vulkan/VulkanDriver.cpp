@@ -156,7 +156,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mThreadSafeResourceManager(&mResourceAllocator),
       mPipelineCache(&mResourceAllocator),
       mBlitter(mStagePool, mPipelineCache, mFramebufferCache, mSamplerCache),
-      mReadPixels(mPlatform->getDevice()) {
+      mReadPixels(mPlatform->getDevice()),
+      mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported) {
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     UTILS_UNUSED const PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback
@@ -214,8 +215,8 @@ Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& cont
          Platform::DriverConfig const& driverConfig) noexcept {
     assert_invariant(platform);
     size_t defaultSize = FVK_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
-    Platform::DriverConfig validConfig{
-            .handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize)};
+    Platform::DriverConfig validConfig {driverConfig};
+    validConfig.handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize);
     return new VulkanDriver(platform, context, validConfig);
 }
 
@@ -315,7 +316,8 @@ void VulkanDriver::finish(int dummy) {
     FVK_SYSTRACE_END();
 }
 
-void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t count) {
+void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t count,
+        utils::FixedSizeString<32> debugName) {
     auto sg = mResourceAllocator.construct<VulkanSamplerGroup>(sbh, count);
     mResourceManager.acquire(sg);
 }
@@ -757,7 +759,7 @@ bool VulkanDriver::isAutoDepthResolveSupported() {
 }
 
 bool VulkanDriver::isSRGBSwapChainSupported() {
-    return mPlatform->isSRGBSwapChainSupported();
+    return mIsSRGBSwapChainSupported;
 }
 
 bool VulkanDriver::isStereoSupported() {

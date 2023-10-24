@@ -30,7 +30,7 @@ namespace {
 
 std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& context,
         VkDevice device, VkExtent2D extent, VkFormat format) {
-    bool const isDepth = isDepthFormat(format);
+    bool const isDepth = isVkDepthFormat(format);
     // Filament expects blit() to work with any texture, so we almost always set these usage flags.
     // TODO: investigate performance implications of setting these flags.
     VkImageUsageFlags const blittable
@@ -76,6 +76,14 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
     return std::tuple(image, imageMemory);
 }
 
+VkFormat selectDepthFormat(VkFormatList const& depthFormats, bool hasStencil) {
+    auto const formatItr = std::find_if(depthFormats.begin(), depthFormats.end(),
+            hasStencil ? isVkStencilFormat : isVkDepthFormat);
+    assert_invariant(
+            formatItr != depthFormats.end() && "Cannot find suitable swapchain depth format");
+    return *formatItr;
+}
+
 }// anonymous namespace
 
 VulkanPlatformSwapChainImpl::VulkanPlatformSwapChainImpl(VulkanContext const& context,
@@ -116,7 +124,8 @@ VulkanPlatformSurfaceSwapChain::VulkanPlatformSurfaceSwapChain(VulkanContext con
       mPhysicalDevice(physicalDevice),
       mSurface(surface),
       mFallbackExtent(fallbackExtent),
-      mUsesRGB((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0) {
+      mUsesRGB((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0),
+      mHasStencil((flags & backend::SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0) {
     assert_invariant(surface);
     create();
 }
@@ -152,10 +161,15 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     // Find a suitable surface format.
     FixedCapacityVector<VkSurfaceFormatKHR> const surfaceFormats
             = enumerate(vkGetPhysicalDeviceSurfaceFormatsKHR, mPhysicalDevice, mSurface);
-    FixedCapacityVector<VkFormat> expectedFormats
-            = {VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8A8_UNORM};
+    std::array<VkFormat, 2> expectedFormats = {
+            VK_FORMAT_R8G8B8A8_UNORM,
+            VK_FORMAT_B8G8R8A8_UNORM,
+    };
     if (mUsesRGB) {
-        expectedFormats = {VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_SRGB};
+        expectedFormats = {
+                VK_FORMAT_R8G8B8A8_SRGB,
+                VK_FORMAT_B8G8R8A8_SRGB,
+        };
     }
     for (VkSurfaceFormatKHR const& format: surfaceFormats) {
         if (std::any_of(expectedFormats.begin(), expectedFormats.end(),
@@ -228,14 +242,18 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
 
     mSwapChainBundle.colors = enumerate(vkGetSwapchainImagesKHR, mDevice, mSwapchain);
     mSwapChainBundle.colorFormat = surfaceFormat.format;
+    mSwapChainBundle.depthFormat =
+            selectDepthFormat(mContext.getAttachmentDepthFormats(), mHasStencil);
+    mSwapChainBundle.depth = createImage(mSwapChainBundle.extent, mSwapChainBundle.depthFormat);
+
     slog.i << "vkCreateSwapchain"
            << ": " << mSwapChainBundle.extent.width << "x" << mSwapChainBundle.extent.height << ", "
            << surfaceFormat.format << ", " << surfaceFormat.colorSpace << ", "
-           << mSwapChainBundle.colors.size() << ", " << caps.currentTransform << io::endl;
+           << "swapchain-size=" << mSwapChainBundle.colors.size() << ", "
+           << "identity-transform=" << (caps.currentTransform == 1) << ", "
+           << "depth=" << mSwapChainBundle.depthFormat
+           << io::endl;
 
-    auto const& depthFormats = mContext.getAttachmentDepthFormats();
-    mSwapChainBundle.depthFormat = depthFormats[0];
-    mSwapChainBundle.depth = createImage(mSwapChainBundle.extent, mSwapChainBundle.depthFormat);
     return result;
 }
 
@@ -310,8 +328,9 @@ VulkanPlatformHeadlessSwapChain::VulkanPlatformHeadlessSwapChain(VulkanContext c
         images[i] = createImage(extent, mSwapChainBundle.colorFormat);
     }
 
-    auto const& depthFormats = mContext.getAttachmentDepthFormats();
-    mSwapChainBundle.depthFormat = depthFormats[0];
+    bool const hasStencil = (flags & backend::SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0;
+    mSwapChainBundle.depthFormat =
+            selectDepthFormat(mContext.getAttachmentDepthFormats(), hasStencil);
     mSwapChainBundle.depth = createImage(extent, mSwapChainBundle.depthFormat);
 }
 
@@ -327,21 +346,7 @@ VkResult VulkanPlatformHeadlessSwapChain::present(uint32_t index, VkSemaphore fi
 VkResult VulkanPlatformHeadlessSwapChain::acquire(VkSemaphore clientSignal, uint32_t* index) {
     *index = mCurrentIndex;
     mCurrentIndex = (mCurrentIndex + 1) % HEADLESS_SWAPCHAIN_SIZE;
-    VkSemaphore const localSignal = clientSignal;
-    VkSubmitInfo const submitInfo{
-            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            .waitSemaphoreCount = 0,
-            .pWaitSemaphores = nullptr,
-            .pWaitDstStageMask = nullptr,
-            .commandBufferCount = 0,
-            .pCommandBuffers = nullptr,
-            .signalSemaphoreCount = 1u,
-            .pSignalSemaphores = &localSignal,
-    };
-    UTILS_UNUSED_IN_RELEASE VkResult const result
-            = vkQueueSubmit(mQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    assert_invariant(result == VK_SUCCESS);
-    return result;
+    return VK_SUCCESS;
 }
 
 void VulkanPlatformHeadlessSwapChain::destroy() {

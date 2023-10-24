@@ -13,6 +13,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - gltfio: fix ubershader index for transmission&volume material
 - engine: New tone mapper: `AgXTonemapper`.
 - matinfo: Add support for viewing ESSL 1.0 shaders
-- engine: Add support for stencil buffer when post-processing is disabled (Metal backend only).
 - engine: Add `Renderer::getClearOptions()` [b/243846268]
 - engine: Fix stable shadows (again) when an IBL rotation is used

@@ -543,6 +543,7 @@ public:
     // these are the debug properties used by FDebug. They're accessed directly by modules who need them.
     struct {
         struct {
+            bool debug_directional_shadowmap = false;
             bool far_uses_shadowcasters = true;
             bool focus_shadowcasters = true;
             bool visualize_cascades = false;
@@ -564,6 +565,9 @@ public:
             bool doFrameCapture = false;
             bool disable_buffer_padding = false;
         } renderer;
+        struct {
+            bool debug_froxel_visualization = false;
+        } lighting;
         matdbg::DebugServer* server = nullptr;
     } debug;
 };

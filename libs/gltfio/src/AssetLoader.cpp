@@ -228,9 +228,7 @@ struct FAssetLoader : public AssetLoader {
     FFilamentAsset* createAsset(const uint8_t* bytes, uint32_t nbytes);
     FFilamentAsset* createInstancedAsset(const uint8_t* bytes, uint32_t numBytes,
             FilamentInstance** instances, size_t numInstances);
-    FilamentInstance* createInstance(FFilamentAsset* primary);
-    void importSkins(FFilamentAsset* primary, FFilamentInstance* instance,
-            const cgltf_data* srcAsset);
+    FilamentInstance* createInstance(FFilamentAsset* fAsset);
 
     static void destroy(FAssetLoader** loader) noexcept {
         delete *loader;
@@ -258,31 +256,33 @@ struct FAssetLoader : public AssetLoader {
     }
 
 private:
+    void importSkins(FFilamentInstance* instance, const cgltf_data* srcAsset);
+
     // Methods used during the first traveral (creation of VertexBuffer, IndexBuffer, etc)
-    void createRootAsset(const cgltf_data* srcAsset);
-    void recursePrimitives(const cgltf_data* srcAsset, const cgltf_node* rootNode);
-    void createPrimitives(const cgltf_data* srcAsset, const cgltf_node* node, const char* name);
-    bool createPrimitive(const cgltf_primitive& inPrim, Primitive* outPrim, const char* name);
+    FFilamentAsset* createRootAsset(const cgltf_data* srcAsset);
+    void recursePrimitives(const cgltf_node* rootNode, FFilamentAsset* fAsset);
+    void createPrimitives(const cgltf_node* node, const char* name, FFilamentAsset* fAsset);
+    bool createPrimitive(const cgltf_primitive& inPrim, const char* name, Primitive* outPrim,
+            FFilamentAsset* fAsset);
 
     // Methods used during subsequent traverals (creation of entities, renderables, etc)
-    void createInstances(const cgltf_data* srcAsset, size_t numInstances);
-    FFilamentInstance* createInstance(const cgltf_data* srcAsset);
-    void recurseEntities(const cgltf_data* srcAsset, const cgltf_node* node, SceneMask scenes,
-            Entity parent, FFilamentInstance* instance);
-    void createRenderable(const cgltf_data* srcAsset, const cgltf_node* node, Entity entity,
-            const char* name, FFilamentInstance* instance);
-    void createLight(const cgltf_light* light, Entity entity);
-    void createCamera(const cgltf_camera* camera, Entity entity);
+    void createInstances(size_t numInstances, FFilamentAsset* fAsset);
+    void recurseEntities(const cgltf_node* node, SceneMask scenes, Entity parent,
+            FFilamentAsset* fAsset, FFilamentInstance* instance);
+    void createRenderable(const cgltf_node* node, Entity entity, const char* name,
+            FFilamentAsset* fAsset);
+    void createLight(const cgltf_light* light, Entity entity, FFilamentAsset* fAsset);
+    void createCamera(const cgltf_camera* camera, Entity entity, FFilamentAsset* fAsset);
     void addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
             const cgltf_texture* srcTexture, bool srgb);
-    void createMaterialVariants(const cgltf_data* srcAsset, const cgltf_mesh* mesh, Entity entity,
+    void createMaterialVariants(const cgltf_mesh* mesh, Entity entity, FFilamentAsset* fAsset,
             FFilamentInstance* instance);
 
     // Utility methods that work with MaterialProvider.
     Material* getMaterial(const cgltf_data* srcAsset, const cgltf_material* inputMat, UvMap* uvmap,
             bool vertexColor);
-    MaterialInstance* createMaterialInstance(const cgltf_data* srcAsset,
-            const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor);
+    MaterialInstance* createMaterialInstance(const cgltf_material* inputMat, UvMap* uvmap,
+            bool vertexColor, FFilamentAsset* fAsset);
     MaterialKey getMaterialKey(const cgltf_data* srcAsset,
             const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor,
             cgltf_texture_view* baseColorTexture,
@@ -299,8 +299,6 @@ public:
     FTrsTransformManager mTrsTransformManager;
 
     // Transient state used only for the asset currently being loaded:
-    FFilamentAsset* mAsset;
-    tsl::robin_map<cgltf_node*, SceneMask> mRootNodes;
     const char* mDefaultNodeName;
     bool mError = false;
     bool mDiagnosticsEnabled = false;
@@ -343,6 +341,7 @@ FFilamentAsset* FAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_
     utils::FixedCapacityVector<uint8_t> glbdata(byteCount);
     std::copy_n(bytes, byteCount, glbdata.data());
 
+    // The ownership of an allocated `sourceAsset` will be moved to FFilamentAsset::mSourceAsset.
     cgltf_data* sourceAsset;
     cgltf_result result = cgltf_parse(&options, glbdata.data(), byteCount, &sourceAsset);
     if (result != cgltf_result_success) {
@@ -350,88 +349,122 @@ FFilamentAsset* FAssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_
         return nullptr;
     }
 
-    createRootAsset(sourceAsset);
+    FFilamentAsset* fAsset = createRootAsset(sourceAsset);
     if (mError) {
-        delete mAsset;
-        mAsset = nullptr;
+        delete fAsset;
+        fAsset = nullptr;
+        mError = false;
+        return nullptr;
+    }
+    glbdata.swap(fAsset->mSourceAsset->glbData);
+
+    createInstances(numInstances, fAsset);
+    if (mError) {
+        delete fAsset;
+        fAsset = nullptr;
         mError = false;
         return nullptr;
     }
 
-    createInstances(sourceAsset, numInstances);
-    if (mError) {
-        delete mAsset;
-        mAsset = nullptr;
-        mError = false;
-        return nullptr;
-     }
-
-    glbdata.swap(mAsset->mSourceAsset->glbData);
-    std::copy_n(mAsset->mInstances.data(), numInstances, instances);
-    return mAsset;
+    std::copy_n(fAsset->mInstances.data(), numInstances, instances);
+    return fAsset;
 }
 
-// note there a two overloads; this is the high-level one
-FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* primary) {
-    if (!primary->mSourceAsset) {
+FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* fAsset) {
+    if (!fAsset->mSourceAsset) {
         slog.e << "Source data has been released; asset is frozen." << io::endl;
         return nullptr;
     }
-    const cgltf_data* srcAsset = primary->mSourceAsset->hierarchy;
+    const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
     if (srcAsset->scenes == nullptr) {
         slog.e << "There is no scene in the asset." << io::endl;
         return nullptr;
     }
 
-    FFilamentInstance* instance = createInstance(srcAsset);
+    auto rootTransform = mTransformManager.getInstance(fAsset->mRoot);
+    Entity instanceRoot = mEntityManager.create();
+    mTransformManager.create(instanceRoot, rootTransform);
 
-    primary->mDependencyGraph.commitEdges();
+    mMaterialInstanceCache = MaterialInstanceCache(srcAsset);
+
+    // Create an instance object, which is a just a lightweight wrapper around a vector of
+    // entities and an animator. The creation of animator is triggered from ResourceLoader
+    // because it could require external bin data.
+    FFilamentInstance* instance = new FFilamentInstance(instanceRoot, fAsset);
+
+    // Check if the asset has variants.
+    instance->mVariants.reserve(srcAsset->variants_count);
+    for (cgltf_size i = 0, len = srcAsset->variants_count; i < len; ++i) {
+        instance->mVariants.push_back({ CString(srcAsset->variants[i].name) });
+    }
+
+    // For each scene root, recursively create all entities.
+    for (const auto& pair : fAsset->mRootNodes) {
+        recurseEntities(pair.first, pair.second, instanceRoot, fAsset, instance);
+    }
+
+    importSkins(instance, srcAsset);
+
+    // Now that all entities have been created, the instance can create the animator component.
+    // Note that it may need to defer actual creation until external buffers are fully loaded.
+    instance->createAnimator();
+
+    fAsset->mInstances.push_back(instance);
+
+    // Bounding boxes are not shared because users might call recomputeBoundingBoxes() which can
+    // be affected by entity transforms. However, upon instance creation we can safely copy over
+    // the asset's bounding box.
+    instance->mBoundingBox = fAsset->mBoundingBox;
+
+    mMaterialInstanceCache.flush(&instance->mMaterialInstances);
+
+    fAsset->mDependencyGraph.commitEdges();
+
     return instance;
 }
 
-void FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
+FFilamentAsset* FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
     SYSTRACE_CALL();
     #if !GLTFIO_DRACO_SUPPORTED
     for (cgltf_size i = 0; i < srcAsset->extensions_required_count; i++) {
         if (!strcmp(srcAsset->extensions_required[i], "KHR_draco_mesh_compression")) {
             slog.e << "KHR_draco_mesh_compression is not supported." << io::endl;
-            mAsset = nullptr;
-            return;
+            return nullptr;
         }
     }
     #endif
 
     mDummyBufferObject = nullptr;
-    mAsset = new FFilamentAsset(&mEngine, mNameManager, &mEntityManager, &mNodeManager,
-            &mTrsTransformManager, srcAsset);
+    FFilamentAsset* fAsset = new FFilamentAsset(&mEngine, mNameManager, &mEntityManager,
+            &mNodeManager, &mTrsTransformManager, srcAsset);
 
     // It is not an error for a glTF file to have zero scenes.
-    mAsset->mScenes.clear();
+    fAsset->mScenes.clear();
     if (srcAsset->scenes == nullptr) {
-        return;
+        return fAsset;
     }
 
     // Create a single root node with an identity transform as a convenience to the client.
-    mAsset->mRoot = mEntityManager.create();
-    mTransformManager.create(mAsset->mRoot);
+    fAsset->mRoot = mEntityManager.create();
+    mTransformManager.create(fAsset->mRoot);
 
     // Check if the asset has an extras string.
     const cgltf_asset& asset = srcAsset->asset;
     const cgltf_size extras_size = asset.extras.end_offset - asset.extras.start_offset;
     if (extras_size > 1) {
-        mAsset->mAssetExtras = CString(srcAsset->json + asset.extras.start_offset, extras_size);
+        fAsset->mAssetExtras = CString(srcAsset->json + asset.extras.start_offset, extras_size);
     }
 
     // Build a mapping of root nodes to scene membership sets.
     assert_invariant(srcAsset->scenes_count <= NodeManager::MAX_SCENE_COUNT);
-    mRootNodes.clear();
+    fAsset->mRootNodes.clear();
     const size_t sic = std::min(srcAsset->scenes_count, NodeManager::MAX_SCENE_COUNT);
-    mAsset->mScenes.reserve(sic);
+    fAsset->mScenes.reserve(sic);
     for (size_t si = 0; si < sic; ++si) {
         const cgltf_scene& scene = srcAsset->scenes[si];
-        mAsset->mScenes.emplace_back(scene.name);
+        fAsset->mScenes.emplace_back(scene.name);
         for (size_t ni = 0, nic = scene.nodes_count; ni < nic; ++ni) {
-            mRootNodes[scene.nodes[ni]].set(si);
+            fAsset->mRootNodes[scene.nodes[ni]].set(si);
         }
     }
 
@@ -440,13 +473,13 @@ void FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
     // transformable entities for "un-scened" nodes in case they have bones.
     for (size_t i = 0, n = srcAsset->nodes_count; i < n; ++i) {
         cgltf_node* node = &srcAsset->nodes[i];
-        if (node->parent == nullptr && mRootNodes.find(node) == mRootNodes.end()) {
-            mRootNodes.insert({node, {}});
+        if (node->parent == nullptr && fAsset->mRootNodes.find(node) == fAsset->mRootNodes.end()) {
+            fAsset->mRootNodes.insert({node, {}});
         }
     }
 
-    for (const auto& [node, sceneMask] : mRootNodes) {
-        recursePrimitives(srcAsset, node);
+    for (const auto& [node, sceneMask] : fAsset->mRootNodes) {
+        recursePrimitives(node, fAsset);
     }
 
     // Find every unique resource URI and store a pointer to any of the cgltf-owned cstrings
@@ -463,32 +496,34 @@ void FAssetLoader::createRootAsset(const cgltf_data* srcAsset) {
     for (cgltf_size i = 0, len = srcAsset->images_count; i < len; ++i) {
         addResourceUri(srcAsset->images[i].uri);
     }
-    mAsset->mResourceUris.reserve(resourceUris.size());
+    fAsset->mResourceUris.reserve(resourceUris.size());
     for (std::string_view uri : resourceUris) {
-        mAsset->mResourceUris.push_back(uri.data());
+        fAsset->mResourceUris.push_back(uri.data());
     }
+
+    return fAsset;
 }
 
-void FAssetLoader::recursePrimitives(const cgltf_data* srcAsset, const cgltf_node* node) {
+void FAssetLoader::recursePrimitives(const cgltf_node* node, FFilamentAsset* fAsset) {
     const char* name = getNodeName(node, mDefaultNodeName);
     name = name ? name : "node";
 
     if (node->mesh) {
-        createPrimitives(srcAsset, node, name);
-        mAsset->mRenderableCount++;
+        createPrimitives(node, name, fAsset);
+        fAsset->mRenderableCount++;
     }
 
     for (cgltf_size i = 0, len = node->children_count; i < len; ++i) {
-        recursePrimitives(srcAsset, node->children[i]);
+        recursePrimitives(node->children[i], fAsset);
     }
 }
 
-void FAssetLoader::createInstances(const cgltf_data* srcAsset, size_t numInstances) {
+void FAssetLoader::createInstances(size_t numInstances, FFilamentAsset* fAsset) {
     // Create a separate entity hierarchy for each instance. Note that MeshCache (vertex
     // buffers and index buffers) and MaterialInstanceCache (materials and textures) help avoid
     // needless duplication of resources.
     for (size_t index = 0; index < numInstances; ++index) {
-        if (createInstance(srcAsset) == nullptr) {
+        if (createInstance(fAsset) == nullptr) {
             mError = true;
             break;
         }
@@ -497,62 +532,21 @@ void FAssetLoader::createInstances(const cgltf_data* srcAsset, size_t numInstanc
     // Sort the entities so that the renderable ones come first. This allows us to expose
     // a "renderables only" pointer without storing a separate list.
     const auto& rm = mEngine.getRenderableManager();
-    std::partition(mAsset->mEntities.begin(), mAsset->mEntities.end(), [&rm](Entity a) {
+    std::partition(fAsset->mEntities.begin(), fAsset->mEntities.end(), [&rm](Entity a) {
         return rm.hasComponent(a);
     });
 
     if (mError) {
-        destroyAsset(mAsset);
-        mAsset = nullptr;
+        destroyAsset(fAsset);
+        fAsset = nullptr;
         mError = false;
     }
 }
 
-// note there a two overloads; this is the low-level one
-FFilamentInstance* FAssetLoader::createInstance(const cgltf_data* srcAsset) {
-    auto rootTransform = mTransformManager.getInstance(mAsset->mRoot);
-    Entity instanceRoot = mEntityManager.create();
-    mTransformManager.create(instanceRoot, rootTransform);
-
-    mMaterialInstanceCache = MaterialInstanceCache(srcAsset);
-
-    // Create an instance object, which is a just a lightweight wrapper around a vector of
-    // entities and an animator. The creation of animator is triggered from ResourceLoader
-    // because it could require external bin data.
-    FFilamentInstance* instance = new FFilamentInstance(instanceRoot, mAsset);
-
-    // Check if the asset has variants.
-    instance->mVariants.reserve(srcAsset->variants_count);
-    for (cgltf_size i = 0, len = srcAsset->variants_count; i < len; ++i) {
-        instance->mVariants.push_back({CString(srcAsset->variants[i].name)});
-    }
-
-    // For each scene root, recursively create all entities.
-    for (const auto& pair : mRootNodes) {
-        recurseEntities(srcAsset, pair.first, pair.second, instanceRoot, instance);
-    }
-
-    importSkins(mAsset, instance, srcAsset);
-
-    // Now that all entities have been created, the instance can create the animator component.
-    // Note that it may need to defer actual creation until external buffers are fully loaded.
-    instance->createAnimator();
-
-    mAsset->mInstances.push_back(instance);
-
-    // Bounding boxes are not shared because users might call recomputeBoundingBoxes() which can
-    // be affected by entity transforms. However, upon instance creation we can safely copy over
-    // the asset's bounding box.
-    instance->mBoundingBox = mAsset->mBoundingBox;
-
-    mMaterialInstanceCache.flush(&instance->mMaterialInstances);
-
-    return instance;
-}
-
-void FAssetLoader::recurseEntities(const cgltf_data* srcAsset, const cgltf_node* node,
-        SceneMask scenes, Entity parent, FFilamentInstance* instance) {
+void FAssetLoader::recurseEntities(const cgltf_node* node, SceneMask scenes, Entity parent,
+        FFilamentAsset* fAsset, FFilamentInstance* instance) {
     NodeManager& nm = mNodeManager;
+    const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
     const Entity entity = mEntityManager.create();
     nm.create(entity);
     const auto nodeInstance = nm.getInstance(entity);
@@ -577,20 +571,19 @@ void FAssetLoader::recurseEntities(const cgltf_data* srcAsset, const cgltf_node*
     // Check if this node has an extras string.
     const cgltf_size extras_size = node->extras.end_offset - node->extras.start_offset;
     if (extras_size > 0) {
-        const cgltf_data* srcAsset = mAsset->mSourceAsset->hierarchy;
         mNodeManager.setExtras(mNodeManager.getInstance(entity),
                 {srcAsset->json + node->extras.start_offset, extras_size});
     }
 
     // Update the asset's entity list and private node mapping.
-    mAsset->mEntities.push_back(entity);
+    fAsset->mEntities.push_back(entity);
     instance->mEntities.push_back(entity);
     instance->mNodeMap[node - srcAsset->nodes] = entity;
 
     const char* name = getNodeName(node, mDefaultNodeName);
 
     if (name) {
-        mAsset->mNameToEntity[name].push_back(entity);
+        fAsset->mNameToEntity[name].push_back(entity);
         if (mNameManager) {
             mNameManager->addComponent(entity);
             mNameManager->setName(mNameManager->getInstance(entity), name);
@@ -602,34 +595,36 @@ void FAssetLoader::recurseEntities(const cgltf_data* srcAsset, const cgltf_node*
 
     // If the node has a mesh, then create a renderable component.
     if (node->mesh) {
-        createRenderable(srcAsset, node, entity, name, instance);
+        createRenderable(node, entity, name, fAsset);
         if (srcAsset->variants_count > 0) {
-            createMaterialVariants(srcAsset, node->mesh, entity, instance);
+            createMaterialVariants(node->mesh, entity, fAsset, instance);
         }
     }
 
     if (node->light) {
-        createLight(node->light, entity);
+        createLight(node->light, entity, fAsset);
     }
 
     if (node->camera) {
-        createCamera(node->camera, entity);
+        createCamera(node->camera, entity, fAsset);
     }
 
     for (cgltf_size i = 0, len = node->children_count; i < len; ++i) {
-        recurseEntities(srcAsset, node->children[i], scenes, entity, instance);
+        recurseEntities(node->children[i], scenes, entity, fAsset, instance);
     }
 }
 
-void FAssetLoader::createPrimitives(const cgltf_data* srcAsset, const cgltf_node* node,
-        const char* name) {
+void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
+        FFilamentAsset* fAsset) {
+    const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
     const cgltf_mesh* mesh = node->mesh;
+    assert_invariant(srcAsset != nullptr);
     assert_invariant(mesh != nullptr);
 
     // If the mesh is already loaded, obtain the list of Filament VertexBuffer / IndexBuffer objects
     // that were already generated (one for each primitive), otherwise allocate a new list of
     // pointers for the primitives.
-    FixedCapacityVector<Primitive>& prims = mAsset->mMeshCache[mesh - srcAsset->meshes];
+    FixedCapacityVector<Primitive>& prims = fAsset->mMeshCache[mesh - srcAsset->meshes];
     if (prims.empty()) {
         prims.reserve(mesh->primitives_count);
         prims.resize(mesh->primitives_count);
@@ -642,7 +637,7 @@ void FAssetLoader::createPrimitives(const cgltf_data* srcAsset, const cgltf_node
         const cgltf_primitive& inputPrim = mesh->primitives[index];
 
         // Create a Filament VertexBuffer and IndexBuffer for this prim if we haven't already.
-        if (!outputPrim.vertices && !createPrimitive(inputPrim, &outputPrim, name)) {
+        if (!outputPrim.vertices && !createPrimitive(inputPrim, name, &outputPrim, fAsset)) {
             mError = true;
             return;
         }
@@ -656,18 +651,19 @@ void FAssetLoader::createPrimitives(const cgltf_data* srcAsset, const cgltf_node
     cgltf_node_transform_world(node, &worldTransform[0][0]);
 
     const Aabb transformed = aabb.transform(worldTransform);
-    mAsset->mBoundingBox.min = min(mAsset->mBoundingBox.min, transformed.min);
-    mAsset->mBoundingBox.max = max(mAsset->mBoundingBox.max, transformed.max);
+    fAsset->mBoundingBox.min = min(fAsset->mBoundingBox.min, transformed.min);
+    fAsset->mBoundingBox.max = max(fAsset->mBoundingBox.max, transformed.max);
  }
 
-void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node* node,
-        Entity entity, const char* name, FFilamentInstance* instance) {
+void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const char* name,
+        FFilamentAsset* fAsset) {
+    const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
     const cgltf_mesh* mesh = node->mesh;
     const cgltf_size primitiveCount = mesh->primitives_count;
 
     // If the mesh is already loaded, obtain the list of Filament VertexBuffer / IndexBuffer objects
     // that were already generated (one for each primitive).
-    FixedCapacityVector<Primitive>& prims = mAsset->mMeshCache[mesh - srcAsset->meshes];
+    FixedCapacityVector<Primitive>& prims = fAsset->mMeshCache[mesh - srcAsset->meshes];
     assert_invariant(prims.size() == primitiveCount);
     Primitive* outputPrim = prims.data();
     const cgltf_primitive* inputPrim = &mesh->primitives[0];
@@ -698,15 +694,15 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
         // Create a material instance for this primitive or fetch one from the cache.
         UvMap uvmap {};
         bool hasVertexColor = primitiveHasVertexColor(*inputPrim);
-        MaterialInstance* mi = createMaterialInstance(srcAsset, inputPrim->material, &uvmap,
-                hasVertexColor);
+        MaterialInstance* mi = createMaterialInstance(inputPrim->material, &uvmap, hasVertexColor,
+                fAsset);
         assert_invariant(mi);
         if (!mi) {
             mError = true;
             continue;
         }
 
-        mAsset->mDependencyGraph.addEdge(entity, mi);
+        fAsset->mDependencyGraph.addEdge(entity, mi);
         builder.material(index, mi);
 
         assert_invariant(outputPrim->vertices);
@@ -770,8 +766,9 @@ void FAssetLoader::createRenderable(const cgltf_data* srcAsset, const cgltf_node
     }
 }
 
-void FAssetLoader::createMaterialVariants(const cgltf_data* srcAsset, const cgltf_mesh* mesh,
-        Entity entity, FFilamentInstance* instance) {
+void FAssetLoader::createMaterialVariants(const cgltf_mesh* mesh, Entity entity,
+        FFilamentAsset* fAsset, FFilamentInstance* instance) {
+    const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
     UvMap uvmap {};
     for (cgltf_size prim = 0, n = mesh->primitives_count; prim < n; ++prim) {
         const cgltf_primitive& srcPrim = mesh->primitives[prim];
@@ -780,21 +777,21 @@ void FAssetLoader::createMaterialVariants(const cgltf_data* srcAsset, const cglt
             const cgltf_material* material = srcPrim.mappings[i].material;
             bool hasVertexColor = primitiveHasVertexColor(srcPrim);
             MaterialInstance* mi =
-                    createMaterialInstance(srcAsset, material, &uvmap, hasVertexColor);
+                    createMaterialInstance(material, &uvmap, hasVertexColor, fAsset);
             assert_invariant(mi);
             if (!mi) {
                 mError = true;
                 break;
             }
-            mAsset->mDependencyGraph.addEdge(entity, mi);
+            fAsset->mDependencyGraph.addEdge(entity, mi);
             instance->mVariants[variantIndex].mappings.push_back({entity, prim, mi});
         }
     }
 }
 
-bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* outPrim,
-        const char* name) {
-    Material* material = getMaterial(mAsset->mSourceAsset->hierarchy,
+bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* name,
+        Primitive* outPrim, FFilamentAsset* fAsset) {
+    Material* material = getMaterial(fAsset->mSourceAsset->hierarchy,
                 inPrim.material, &outPrim->uvmap, primitiveHasVertexColor(inPrim));
     AttributeBitset requiredAttributes = material->getRequiredAttributes();
 
@@ -804,7 +801,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* out
     // request from Google.
 
     // Create a little lambda that appends to the asset's vertex buffer slots.
-    auto slots = &mAsset->mBufferSlots;
+    auto slots = &fAsset->mBufferSlots;
     auto addBufferSlot = [slots](BufferSlot entry) {
         slots->push_back(entry);
     };
@@ -844,7 +841,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* out
         IndexBuffer::BufferDescriptor bd(indexData, indexDataSize, FREE_CALLBACK);
         indices->setBuffer(mEngine, std::move(bd));
     }
-    mAsset->mIndexBuffers.push_back(indices);
+    fAsset->mIndexBuffers.push_back(indices);
 
     VertexBuffer::Builder vbb;
     vbb.enableBufferObjects();
@@ -852,7 +849,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* out
     bool hasUv0 = false, hasUv1 = false, hasVertexColor = false, hasNormals = false;
     uint32_t vertexCount = 0;
 
-    const size_t firstSlot = mAsset->mBufferSlots.size();
+    const size_t firstSlot = fAsset->mBufferSlots.size();
     int slot = 0;
 
     for (cgltf_size aindex = 0; aindex < inPrim.attributes_count; aindex++) {
@@ -872,7 +869,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* out
             vbb.attribute(VertexAttribute::TANGENTS, slot, VertexBuffer::AttributeType::SHORT4);
             vbb.normalized(VertexAttribute::TANGENTS);
             hasNormals = true;
-            addBufferSlot({&mAsset->mGenerateTangents, atype, slot++});
+            addBufferSlot({&fAsset->mGenerateTangents, atype, slot++});
             continue;
         }
 
@@ -958,7 +955,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* out
         vbb.attribute(VertexAttribute::TANGENTS, slot, VertexBuffer::AttributeType::SHORT4);
         vbb.normalized(VertexAttribute::TANGENTS);
         cgltf_attribute_type atype = cgltf_attribute_type_normal;
-        addBufferSlot({&mAsset->mGenerateNormals, atype, slot++});
+        addBufferSlot({&fAsset->mGenerateNormals, atype, slot++});
     }
 
     cgltf_size targetsCount = inPrim.targets_count;
@@ -1065,11 +1062,11 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* out
 
     outPrim->indices = indices;
     outPrim->vertices = vertices;
-    mAsset->mPrimitives.push_back({&inPrim, vertices});
-    mAsset->mVertexBuffers.push_back(vertices);
+    fAsset->mPrimitives.push_back({&inPrim, vertices});
+    fAsset->mVertexBuffers.push_back(vertices);
 
-    for (size_t i = firstSlot; i < mAsset->mBufferSlots.size(); ++i) {
-        mAsset->mBufferSlots[i].vertexBuffer = vertices;
+    for (size_t i = firstSlot; i < fAsset->mBufferSlots.size(); ++i) {
+        fAsset->mBufferSlots[i].vertexBuffer = vertices;
     }
 
     if (targetsCount > 0) {
@@ -1078,7 +1075,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* out
                 .count(targetsCount)
                 .build(mEngine);
         outPrim->targets = targets;
-        mAsset->mMorphTargetBuffers.push_back(targets);
+        fAsset->mMorphTargetBuffers.push_back(targets);
         const cgltf_accessor* previous = nullptr;
         for (int tindex = 0; tindex < targetsCount; ++tindex) {
             const cgltf_morph_target& inTarget = inPrim.targets[tindex];
@@ -1104,7 +1101,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* out
         const uint32_t requiredSize = sizeof(ubyte4) * vertexCount;
         if (mDummyBufferObject == nullptr || requiredSize > mDummyBufferObject->getByteCount()) {
             mDummyBufferObject = BufferObject::Builder().size(requiredSize).build(mEngine);
-            mAsset->mBufferObjects.push_back(mDummyBufferObject);
+            fAsset->mBufferObjects.push_back(mDummyBufferObject);
             uint32_t* dummyData = (uint32_t*) malloc(requiredSize);
             memset(dummyData, 0xff, requiredSize);
             VertexBuffer::BufferDescriptor bd(dummyData, requiredSize, FREE_CALLBACK);
@@ -1116,7 +1113,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, Primitive* out
     return true;
 }
 
-void FAssetLoader::createLight(const cgltf_light* light, Entity entity) {
+void FAssetLoader::createLight(const cgltf_light* light, Entity entity, FFilamentAsset* fAsset) {
     LightManager::Type type = getLightType(light->type);
     LightManager::Builder builder(type);
 
@@ -1149,10 +1146,10 @@ void FAssetLoader::createLight(const cgltf_light* light, Entity entity) {
     }
 
     builder.build(mEngine, entity);
-    mAsset->mLightEntities.push_back(entity);
+    fAsset->mLightEntities.push_back(entity);
 }
 
-void FAssetLoader::createCamera(const cgltf_camera* camera, Entity entity) {
+void FAssetLoader::createCamera(const cgltf_camera* camera, Entity entity, FFilamentAsset* fAsset) {
     Camera* filamentCamera = mEngine.createCamera(entity);
 
     if (camera->type == cgltf_camera_type_perspective) {
@@ -1187,7 +1184,7 @@ void FAssetLoader::createCamera(const cgltf_camera* camera, Entity entity) {
         return;
     }
 
-    mAsset->mCameraEntities.push_back(entity);
+    fAsset->mCameraEntities.push_back(entity);
 }
 
 MaterialKey FAssetLoader::getMaterialKey(const cgltf_data* srcAsset,
@@ -1301,8 +1298,9 @@ Material* FAssetLoader::getMaterial(const cgltf_data* srcAsset,
     return material;
 }
 
-MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsset,
-        const cgltf_material* inputMat, UvMap* uvmap, bool vertexColor) {
+MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inputMat, UvMap* uvmap,
+    bool vertexColor, FFilamentAsset* fAsset) {
+    const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
     MaterialInstanceCache::Entry* const cacheEntry =
             mMaterialInstanceCache.getEntry(&inputMat, vertexColor);
     if (cacheEntry->instance) {
@@ -1368,7 +1366,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
     const TextureProvider::TextureFlags LINEAR = TextureProvider::TextureFlags::NONE;
 
     if (matkey.hasBaseColorTexture) {
-        mAsset->addTextureBinding(mi, "baseColorMap", baseColorTexture.texture, sRGB);
+        fAsset->addTextureBinding(mi, "baseColorMap", baseColorTexture.texture, sRGB);
         if (matkey.hasTextureTransforms) {
             const cgltf_texture_transform& uvt = baseColorTexture.transform;
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1382,7 +1380,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         // specularGlossinessTexture are both sRGB, whereas the core glTF spec stipulates that
         // metallicRoughness is not sRGB.
         TextureProvider::TextureFlags srgb = inputMat->has_pbr_specular_glossiness ? sRGB : LINEAR;
-        mAsset->addTextureBinding(mi, "metallicRoughnessMap", metallicRoughnessTexture.texture, srgb);
+        fAsset->addTextureBinding(mi, "metallicRoughnessMap", metallicRoughnessTexture.texture, srgb);
         if (matkey.hasTextureTransforms) {
             const cgltf_texture_transform& uvt = metallicRoughnessTexture.transform;
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1391,7 +1389,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
     }
 
     if (matkey.hasNormalTexture) {
-        mAsset->addTextureBinding(mi, "normalMap", inputMat->normal_texture.texture, LINEAR);
+        fAsset->addTextureBinding(mi, "normalMap", inputMat->normal_texture.texture, LINEAR);
         if (matkey.hasTextureTransforms) {
             const cgltf_texture_transform& uvt = inputMat->normal_texture.transform;
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1403,7 +1401,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
     }
 
     if (matkey.hasOcclusionTexture) {
-        mAsset->addTextureBinding(mi, "occlusionMap", inputMat->occlusion_texture.texture, LINEAR);
+        fAsset->addTextureBinding(mi, "occlusionMap", inputMat->occlusion_texture.texture, LINEAR);
         if (matkey.hasTextureTransforms) {
             const cgltf_texture_transform& uvt = inputMat->occlusion_texture.transform;
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1415,7 +1413,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
     }
 
     if (matkey.hasEmissiveTexture) {
-        mAsset->addTextureBinding(mi, "emissiveMap", inputMat->emissive_texture.texture, sRGB);
+        fAsset->addTextureBinding(mi, "emissiveMap", inputMat->emissive_texture.texture, sRGB);
         if (matkey.hasTextureTransforms) {
             const cgltf_texture_transform& uvt = inputMat->emissive_texture.transform;
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
@@ -1428,7 +1426,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         mi->setParameter("clearCoatRoughnessFactor", ccConfig.clearcoat_roughness_factor);
 
         if (matkey.hasClearCoatTexture) {
-            mAsset->addTextureBinding(mi, "clearCoatMap", ccConfig.clearcoat_texture.texture,
+            fAsset->addTextureBinding(mi, "clearCoatMap", ccConfig.clearcoat_texture.texture,
                     LINEAR);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = ccConfig.clearcoat_texture.transform;
@@ -1437,7 +1435,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
             }
         }
         if (matkey.hasClearCoatRoughnessTexture) {
-            mAsset->addTextureBinding(mi, "clearCoatRoughnessMap",
+            fAsset->addTextureBinding(mi, "clearCoatRoughnessMap",
                     ccConfig.clearcoat_roughness_texture.texture, LINEAR);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = ccConfig.clearcoat_roughness_texture.transform;
@@ -1446,7 +1444,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
             }
         }
         if (matkey.hasClearCoatNormalTexture) {
-            mAsset->addTextureBinding(mi, "clearCoatNormalMap",
+            fAsset->addTextureBinding(mi, "clearCoatNormalMap",
                     ccConfig.clearcoat_normal_texture.texture, LINEAR);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = ccConfig.clearcoat_normal_texture.transform;
@@ -1463,7 +1461,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         mi->setParameter("sheenRoughnessFactor", shConfig.sheen_roughness_factor);
 
         if (matkey.hasSheenColorTexture) {
-            mAsset->addTextureBinding(mi, "sheenColorMap", shConfig.sheen_color_texture.texture,
+            fAsset->addTextureBinding(mi, "sheenColorMap", shConfig.sheen_color_texture.texture,
                     sRGB);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = shConfig.sheen_color_texture.transform;
@@ -1473,7 +1471,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         }
         if (matkey.hasSheenRoughnessTexture) {
             bool sameTexture = shConfig.sheen_color_texture.texture == shConfig.sheen_roughness_texture.texture;
-            mAsset->addTextureBinding(mi, "sheenRoughnessMap",
+            fAsset->addTextureBinding(mi, "sheenRoughnessMap",
                     shConfig.sheen_roughness_texture.texture, sameTexture ? sRGB : LINEAR);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = shConfig.sheen_roughness_texture.transform;
@@ -1494,7 +1492,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
         mi->setParameter("volumeAbsorption", RgbType::LINEAR, absorption);
 
         if (matkey.hasVolumeThicknessTexture) {
-            mAsset->addTextureBinding(mi, "volumeThicknessMap", vlConfig.thickness_texture.texture,
+            fAsset->addTextureBinding(mi, "volumeThicknessMap", vlConfig.thickness_texture.texture,
                     LINEAR);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = vlConfig.thickness_texture.transform;
@@ -1507,7 +1505,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
     if (matkey.hasTransmission) {
         mi->setParameter("transmissionFactor", trConfig.transmission_factor);
         if (matkey.hasTransmissionTexture) {
-            mAsset->addTextureBinding(mi, "transmissionMap", trConfig.transmission_texture.texture,
+            fAsset->addTextureBinding(mi, "transmissionMap", trConfig.transmission_texture.texture,
                     LINEAR);
             if (matkey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = trConfig.transmission_texture.transform;
@@ -1540,8 +1538,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_data* srcAsse
     return mi;
 }
 
-void FAssetLoader::importSkins(FFilamentAsset* primary,
-        FFilamentInstance* instance, const cgltf_data* gltf) {
+void FAssetLoader::importSkins(FFilamentInstance* instance, const cgltf_data* gltf) {
     instance->mSkins.reserve(gltf->skins_count);
     instance->mSkins.resize(gltf->skins_count);
     const auto& nodeMap = instance->mNodeMap;

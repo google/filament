@@ -18,11 +18,14 @@
 #define TNT_METALCONTEXT_H
 
 #include "MetalResourceTracker.h"
+#include "MetalShaderCompiler.h"
 #include "MetalState.h"
 
 #include <CoreVideo/CVMetalTextureCache.h>
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
+
+#include <utils/FixedCircularBuffer.h>
 
 #include <array>
 #include <atomic>
@@ -53,6 +56,9 @@ struct MetalVertexBuffer;
 constexpr static uint8_t MAX_SAMPLE_COUNT = 8;  // Metal devices support at most 8 MSAA samples
 
 struct MetalContext {
+    explicit MetalContext(size_t metalFreedTextureListSize)
+        : texturesToDestroy(metalFreedTextureListSize) {}
+
     MetalDriver* driver;
     id<MTLDevice> device = nullptr;
     id<MTLCommandQueue> commandQueue = nullptr;
@@ -111,6 +117,14 @@ struct MetalContext {
     tsl::robin_set<MetalSamplerGroup*> samplerGroups;
     tsl::robin_set<MetalTexture*> textures;
 
+    // This circular buffer implements delayed destruction for Metal texture handles. It keeps a
+    // handle to a fixed number of the most recently destroyed texture handles. When we're asked to
+    // destroy a texture handle, we free its texture memory, but keep the MetalTexture object alive,
+    // marking it as "terminated". If we later are asked to use that texture, we can check its
+    // terminated status and throw an Objective-C error instead of crashing, which is helpful for
+    // debugging use-after-free issues in release builds.
+    utils::FixedCircularBuffer<Handle<HwTexture>> texturesToDestroy;
+
     MetalBufferPool* bufferPool;
 
     MetalSwapChain* currentDrawSwapChain = nil;
@@ -135,6 +149,8 @@ struct MetalContext {
     std::stack<const char*> groupMarkers;
 
     MTLViewport currentViewport;
+
+    MetalShaderCompiler* shaderCompiler = nullptr;
 
 #if defined(FILAMENT_METAL_PROFILING)
     // Logging and profiling.

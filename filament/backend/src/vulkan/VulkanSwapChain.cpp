@@ -34,6 +34,8 @@ VulkanSwapChain::VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& 
       mAllocator(allocator),
       mStagePool(stagePool),
       mHeadless(extent.width != 0 && extent.height != 0 && !nativeWindow),
+      mFlushAndWaitOnResize(platform->getCustomization().flushAndWaitOnWindowResize),
+      mImageReady(VK_NULL_HANDLE),
       mAcquired(false),
       mIsFirstRenderPass(true) {
     swapChain = mPlatform->createSwapChain(nativeWindow, flags, extent);
@@ -42,8 +44,13 @@ VulkanSwapChain::VulkanSwapChain(VulkanPlatform* platform, VulkanContext const& 
     VkSemaphoreCreateInfo const createInfo = {
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
-    VkResult result = vkCreateSemaphore(mPlatform->getDevice(), &createInfo, nullptr, &mImageReady);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "Failed to create semaphore");
+
+    // No need to wait on this semaphore before drawing when in Headless mode.
+    if (!mHeadless) {
+        VkResult result =
+                vkCreateSemaphore(mPlatform->getDevice(), &createInfo, nullptr, &mImageReady);
+        ASSERT_POSTCONDITION(result == VK_SUCCESS, "Failed to create semaphore");
+    }
 
     update();
 }
@@ -55,7 +62,9 @@ VulkanSwapChain::~VulkanSwapChain() {
     mCommands->wait();
 
     mPlatform->destroy(swapChain);
-    vkDestroySemaphore(mPlatform->getDevice(), mImageReady, VKALLOC);
+    if (mImageReady != VK_NULL_HANDLE) {
+        vkDestroySemaphore(mPlatform->getDevice(), mImageReady, VKALLOC);
+    }
 }
 
 void VulkanSwapChain::update() {
@@ -109,8 +118,10 @@ void VulkanSwapChain::acquire(bool& resized) {
 
     // Check if the swapchain should be resized.
     if ((resized = mPlatform->hasResized(swapChain))) {
-        mCommands->flush();
-        mCommands->wait();
+        if (mFlushAndWaitOnResize) {
+            mCommands->flush();
+            mCommands->wait();
+        }
         mPlatform->recreate(swapChain);
         update();
     }
@@ -118,7 +129,9 @@ void VulkanSwapChain::acquire(bool& resized) {
     VkResult const result = mPlatform->acquire(swapChain, mImageReady, &mCurrentSwapIndex);
     ASSERT_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR,
             "Cannot acquire in swapchain.");
-    mCommands->injectDependency(mImageReady);
+    if (mImageReady != VK_NULL_HANDLE) {
+        mCommands->injectDependency(mImageReady);
+    }
     mAcquired = true;
 }
 

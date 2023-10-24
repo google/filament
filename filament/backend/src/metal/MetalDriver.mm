@@ -50,7 +50,8 @@ UTILS_NOINLINE
 Driver* MetalDriver::create(MetalPlatform* const platform, const Platform::DriverConfig& driverConfig) {
     assert_invariant(platform);
     size_t defaultSize = FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
-    Platform::DriverConfig validConfig { .handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize) };
+    Platform::DriverConfig validConfig {driverConfig};
+    validConfig.handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize);
     return new MetalDriver(platform, validConfig);
 }
 
@@ -60,7 +61,7 @@ Dispatcher MetalDriver::getDispatcher() const noexcept {
 
 MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& driverConfig) noexcept
         : mPlatform(*platform),
-          mContext(new MetalContext),
+          mContext(new MetalContext(driverConfig.textureUseAfterFreePoolSize)),
           mHandleAllocator("Handles", driverConfig.handleArenaSize) {
     mContext->driver = this;
 
@@ -143,6 +144,9 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
         mContext->eventListener = [[MTLSharedEventListener alloc] initWithDispatchQueue:queue];
     }
 
+    mContext->shaderCompiler = new MetalShaderCompiler(mContext->device, *this);
+    mContext->shaderCompiler->init();
+
 #if defined(FILAMENT_METAL_PROFILING)
     mContext->log = os_log_create("com.google.filament", "Metal");
     mContext->signpostId = os_signpost_id_generate(mContext->log);
@@ -157,6 +161,7 @@ MetalDriver::~MetalDriver() noexcept {
     delete mContext->bufferPool;
     delete mContext->blitter;
     delete mContext->timerQueryImpl;
+    delete mContext->shaderCompiler;
     delete mContext;
 }
 
@@ -303,8 +308,9 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
         target, levels, format, samples, width, height, depth, usage, metalTexture));
 }
 
-void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t size) {
-    mContext->samplerGroups.insert(construct_handle<MetalSamplerGroup>(sbh, size));
+void MetalDriver::createSamplerGroupR(
+        Handle<HwSamplerGroup> sbh, uint32_t size, utils::FixedSizeString<32> debugName) {
+    mContext->samplerGroups.insert(construct_handle<MetalSamplerGroup>(sbh, size, debugName));
 }
 
 void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
@@ -317,7 +323,7 @@ void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
 }
 
 void MetalDriver::createProgramR(Handle<HwProgram> rph, Program&& program) {
-    construct_handle<MetalProgram>(rph, mContext->device, program);
+    construct_handle<MetalProgram>(rph, *mContext, std::move(program));
 }
 
 void MetalDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int dummy) {
@@ -530,8 +536,18 @@ void MetalDriver::destroyTexture(Handle<HwTexture> th) {
         return;
     }
 
-    mContext->textures.erase(handle_cast<MetalTexture>(th));
-    destruct_handle<MetalTexture>(th);
+    auto* metalTexture = handle_cast<MetalTexture>(th);
+    mContext->textures.erase(metalTexture);
+
+    // Free memory from the texture and mark it as freed.
+    metalTexture->terminate();
+
+    // Add this texture handle to our texturesToDestroy queue to be destroyed later.
+    if (auto handleToFree = mContext->texturesToDestroy.push(th)) {
+        // If texturesToDestroy is full, then .push evicts the oldest texture handle in the
+        // queue (or simply th, if use-after-free detection is disabled).
+        destruct_handle<MetalTexture>(handleToFree.value());
+    }
 }
 
 void MetalDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
@@ -557,6 +573,12 @@ void MetalDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void MetalDriver::terminate() {
+    // Terminate any outstanding MetalTextures.
+    while (!mContext->texturesToDestroy.empty()) {
+        Handle<HwTexture> toDestroy = mContext->texturesToDestroy.pop();
+        destruct_handle<MetalTexture>(toDestroy);
+    }
+
     // finish() will flush the pending command buffer and will ensure all GPU work has finished.
     // This must be done before calling bufferPool->reset() to ensure no buffers are in flight.
     finish();
@@ -566,6 +588,7 @@ void MetalDriver::terminate() {
 
     MetalExternalImage::shutdown(*mContext);
     mContext->blitter->shutdown();
+    mContext->shaderCompiler->terminate();
 }
 
 ShaderModel MetalDriver::getShaderModel() const noexcept {
@@ -701,7 +724,7 @@ bool MetalDriver::isStereoSupported() {
 }
 
 bool MetalDriver::isParallelShaderCompileSupported() {
-    return false;
+    return true;
 }
 
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
@@ -854,13 +877,17 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
     assert_invariant(sb->size == data.size / sizeof(SamplerDescriptor));
     auto const* const samplers = (SamplerDescriptor const*) data.buffer;
 
-#ifndef NDEBUG
-    // In debug builds, verify that all the textures in the sampler group are still alive.
+    // Verify that all the textures in the sampler group are still alive.
     // These bugs lead to memory corruption and can be difficult to track down.
     for (size_t s = 0; s < data.size / sizeof(SamplerDescriptor); s++) {
         if (!samplers[s].t) {
             continue;
         }
+        // The difference between this check and the one below is that in release, we do this for
+        // only a set number of recently freed textures, while the debug check is exhaustive.
+        auto* metalTexture = handle_cast<MetalTexture>(samplers[s].t);
+        metalTexture->checkUseAfterFree(sb->debugName.c_str(), s);
+#ifndef NDEBUG
         auto iter = mContext->textures.find(handle_cast<MetalTexture>(samplers[s].t));
         if (iter == mContext->textures.end()) {
             utils::slog.e << "updateSamplerGroup: texture #"
@@ -868,8 +895,8 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
                           << samplers[s].t << utils::io::endl;
         }
         assert_invariant(iter != mContext->textures.end());
-    }
 #endif
+    }
 
     // Create a MTLArgumentEncoder for these textures.
     // Ideally, we would create this encoder at createSamplerGroup time, but we need to know the
@@ -935,7 +962,7 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
 void MetalDriver::compilePrograms(CompilerPriorityQueue priority,
         CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     if (callback) {
-        scheduleCallback(handler, user, callback);
+        mContext->shaderCompiler->notifyWhenAllProgramsAreReady(handler, callback, user);
     }
 }
 
@@ -1357,23 +1384,27 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
 
     id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(mContext);
 
-#ifndef NDEBUG
-    // In debug builds, verify that all the textures in the sampler group are still alive.
+    // Verify that all the textures in the sampler group are still alive.
     // These bugs lead to memory corruption and can be difficult to track down.
     const auto& handles = samplerGroup->getTextureHandles();
     for (size_t s = 0; s < handles.size(); s++) {
         if (!handles[s]) {
             continue;
         }
-        auto iter = mContext->textures.find(handle_cast<MetalTexture>(handles[s]));
+        // The difference between this check and the one below is that in release, we do this for
+        // only a set number of recently freed textures, while the debug check is exhaustive.
+        auto* metalTexture = handle_cast<MetalTexture>(handles[s]);
+        metalTexture->checkUseAfterFree(samplerGroup->debugName.c_str(), s);
+#ifndef NDEBUG
+        auto iter = mContext->textures.find(metalTexture);
         if (iter == mContext->textures.end()) {
             utils::slog.e << "finalizeSamplerGroup: texture #"
                           << (int) s << " is dead, texture handle = "
                           << handles[s] << utils::io::endl;
         }
         assert_invariant(iter != mContext->textures.end());
-    }
 #endif
+    }
 
     utils::FixedCapacityVector<id<MTLTexture>> newTextures(samplerGroup->size, nil);
     for (size_t binding = 0; binding < samplerGroup->size; binding++) {
@@ -1447,14 +1478,19 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     auto program = handle_cast<MetalProgram>(ps.program);
     const auto& rs = ps.rasterState;
 
+    // This might block until the shader compilation has finished.
+    auto functions = program->getFunctions();
+
     // If the material debugger is enabled, avoid fatal (or cascading) errors and that can occur
     // during the draw call when the program is invalid. The shader compile error has already been
     // dumped to the console at this point, so it's fine to simply return early.
-    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!program->isValid)) {
+    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!functions)) {
         return;
     }
 
-    ASSERT_PRECONDITION(program->isValid, "Attempting to draw with an invalid Metal program.");
+    ASSERT_PRECONDITION(bool(functions), "Attempting to draw with an invalid Metal program.");
+
+    auto [fragment, vertex] = functions.getRasterFunctions();
 
     // Pipeline state
     MTLPixelFormat colorPixelFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { MTLPixelFormatInvalid };
@@ -1477,8 +1513,8 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         assert_invariant(isMetalFormatStencil(stencilPixelFormat));
     }
     MetalPipelineState pipelineState {
-        .vertexFunction = program->vertexFunction,
-        .fragmentFunction = program->fragmentFunction,
+        .vertexFunction = vertex,
+        .fragmentFunction = fragment,
         .vertexDescription = primitive->vertexDescription,
         .colorAttachmentPixelFormat = {
             colorPixelFormat[0],
@@ -1623,7 +1659,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         if (!samplerGroup) {
             continue;
         }
-        const auto& stageFlags = program->samplerGroupInfo[s].stageFlags;
+        const auto& stageFlags = program->getSamplerGroupInfo()[s].stageFlags;
         if (stageFlags == ShaderStageFlags::NONE) {
             continue;
         }
@@ -1696,21 +1732,26 @@ void MetalDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGro
 
     auto mtlProgram = handle_cast<MetalProgram>(program);
 
+    // This might block until the shader compilation has finished.
+    auto functions = mtlProgram->getFunctions();
+
     // If the material debugger is enabled, avoid fatal (or cascading) errors and that can occur
     // during the draw call when the program is invalid. The shader compile error has already been
     // dumped to the console at this point, so it's fine to simply return early.
-    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!mtlProgram->isValid)) {
+    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!functions)) {
         return;
     }
 
-    assert_invariant(mtlProgram->isValid && mtlProgram->computeFunction);
+    auto compute = functions.getComputeFunction();
+
+    assert_invariant(bool(functions) && compute);
 
     id<MTLComputeCommandEncoder> computeEncoder =
             [getPendingCommandBuffer(mContext) computeCommandEncoder];
 
     NSError* error = nil;
     id<MTLComputePipelineState> computePipelineState =
-            [mContext->device newComputePipelineStateWithFunction:mtlProgram->computeFunction
+            [mContext->device newComputePipelineStateWithFunction:compute
                                                             error:&error];
     if (error) {
         auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];

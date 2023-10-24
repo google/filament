@@ -185,7 +185,7 @@ AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage source) n
         AcquiredImage acquiredImage;
         EGLDisplay display;
     };
-    Closure* closure = new Closure(source, mEGLDisplay);
+    Closure* closure = new(std::nothrow) Closure(source, mEGLDisplay);
     auto patchedCallback = [](void* image, void* userdata) {
         Closure* closure = (Closure*)userdata;
         if (eglDestroyImageKHR(closure->display, (EGLImageKHR) image) == EGL_FALSE) {

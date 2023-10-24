@@ -363,6 +363,28 @@ void FEngine::init() {
         mLightManager.init(*this);
         mDFG.init(*this);
     }
+
+    mDebugRegistry.registerProperty("d.shadowmap.debug_directional_shadowmap",
+            &debug.shadowmap.debug_directional_shadowmap, [this]() {
+                mMaterials.forEach([](FMaterial* material) {
+                    if (material->getMaterialDomain() == MaterialDomain::SURFACE) {
+                        material->invalidate(
+                                Variant::DIR | Variant::SRE | Variant::DEP,
+                                Variant::DIR | Variant::SRE);
+                    }
+                });
+            });
+
+    mDebugRegistry.registerProperty("d.lighting.debug_froxel_visualization",
+            &debug.lighting.debug_froxel_visualization, [this]() {
+                mMaterials.forEach([](FMaterial* material) {
+                    if (material->getMaterialDomain() == MaterialDomain::SURFACE) {
+                        material->invalidate(
+                                Variant::DYN | Variant::DEP,
+                                Variant::DYN);
+                    }
+                });
+            });
 }
 
 FEngine::~FEngine() noexcept {
@@ -610,7 +632,10 @@ int FEngine::loop() {
     JobSystem::setThreadName("FEngine::loop");
     JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
 
-    DriverConfig const driverConfig { .handleArenaSize = getRequestedDriverHandleArenaSize() };
+    DriverConfig const driverConfig {
+            .handleArenaSize = getRequestedDriverHandleArenaSize(),
+            .textureUseAfterFreePoolSize = mConfig.textureUseAfterFreePoolSize
+    };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
 
     mDriverBarrier.latch();

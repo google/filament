@@ -20,6 +20,7 @@
 #include <backend/Platform.h>
 
 #include <bluevk/BlueVK.h>
+#include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/PrivateImplementation.h>
 
@@ -89,35 +90,43 @@ public:
 
     // ----------------------------------------------------
     // ---------- Platform Customization options ----------
-    /**
-     * The client preference can be stored within the struct.  We allow for two specification of
-     * preference:
-     *     1) A substring to match against `VkPhysicalDeviceProperties.deviceName`.
-     *     2) Index of the device in the list as returned by vkEnumeratePhysicalDevices.
-     */
-    struct GPUPreference {
-        std::string deviceName;
-        int8_t index = -1;
+    struct Customization {
+        /**
+         * The client can specify the GPU (i.e. VkDevice) for the platform. We allow the
+         * following preferences:
+         *     1) A substring to match against `VkPhysicalDeviceProperties.deviceName`. Empty string
+         *        by default.
+         *     2) Index of the device in the list as returned by
+         *        `vkEnumeratePhysicalDevices`. -1 by default to indicate no preference.
+         */
+        struct GPUPreference {
+            utils::CString deviceName;
+            int8_t index = -1;
+        } gpu;
+
+        /**
+         * Whether the platform supports sRGB swapchain. Default is true.
+         */
+        bool isSRGBSwapChainSupported = true;
+
+        /**
+         * When the platform window is resized, we will flush and wait on the command queues
+         * before recreating the swapchain. Default is true.
+         */
+        bool flushAndWaitOnWindowResize = true;
     };
 
     /**
-     * Client can provide a preference over the GPU to use in the vulkan instance
-     * @return            `GPUPreference` struct that indicates the client's preference
+     * Client can override to indicate customized behavior or parameter for their platform.
+     * @return            `Customization` struct that indicates the client's platform
+     *                    customizations.
      */
-    virtual GPUPreference getPreferredGPU() noexcept {
+    virtual Customization getCustomization() const noexcept {
         return {};
     }
+
     // -------- End platform customization options --------
     // ----------------------------------------------------
-
-    /**
-     * Returns whether the platform supports sRGB swapchain. This is true by default, and the client
-     * needs to override this method to specify otherwise.
-     * @return            Whether the platform supports sRGB swapchain.
-     */
-    virtual bool isSRGBSwapChainSupported() const {
-        return true;
-    }
 
     /**
      * Get the images handles and format of the memory backing the swapchain. This should be called

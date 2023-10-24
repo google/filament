@@ -225,6 +225,28 @@ private:
 template<typename T>
 CString to_string(T value) noexcept;
 
+// ------------------------------------------------------------------------------------------------
+
+template <size_t N>
+class UTILS_PUBLIC FixedSizeString {
+public:
+    using value_type      = char;
+    using pointer         = value_type*;
+    using const_pointer   = const value_type*;
+    static_assert(N > 0);
+
+    FixedSizeString() noexcept = default;
+    explicit FixedSizeString(const char* str) noexcept {
+        strncpy(mData, str, N - 1); // leave room for the null terminator
+    }
+
+    const_pointer c_str() const noexcept { return mData; }
+    pointer c_str() noexcept { return mData; }
+
+private:
+    value_type mData[N] = {0};
+};
+
 } // namespace utils
 
 #endif // TNT_UTILS_CSTRING_H

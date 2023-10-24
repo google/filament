@@ -638,14 +638,13 @@ VkImageAspectFlags getImageAspect(VkFormat format) {
     }
 }
 
-bool isDepthFormat(VkFormat format) {
+bool isVkDepthFormat(VkFormat format) {
     return (getImageAspect(format) & VK_IMAGE_ASPECT_DEPTH_BIT) != 0;
 }
 
-// TODO: support stencil attachments
-// bool isStencilFormat(VkFormat format) {
-//    return (getImageAspect(format) & VK_IMAGE_ASPECT_STENCIL_BIT) != 0;
-// }
+bool isVkStencilFormat(VkFormat format) {
+    return (getImageAspect(format) & VK_IMAGE_ASPECT_STENCIL_BIT) != 0;
+}
 
 static uint32_t mostSignificantBit(uint32_t x) { return 1ul << (31ul - utils::clz(x)); }
 

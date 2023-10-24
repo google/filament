@@ -108,6 +108,7 @@ private:
     VkExtent2D const mFallbackExtent;
 
     bool mUsesRGB = false;
+    bool mHasStencil = false;
     bool mSuboptimal;
 };
 
