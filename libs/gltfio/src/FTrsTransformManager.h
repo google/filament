@@ -70,13 +70,15 @@ public:
     }
 
     void destroy(utils::Entity e) noexcept {
-        if (Instance ci = mManager.getInstance(e); ci) {
+        if (Instance const ci = mManager.getInstance(e); ci) {
             mManager.removeComponent(e);
         }
     }
 
     void gc(utils::EntityManager& em) noexcept {
-        mManager.gc(em);
+        mManager.gc(em, [this](Entity e) {
+            destroy(e);
+        });
     }
 
     void setTranslation(Instance ci, const float3& translation) noexcept {

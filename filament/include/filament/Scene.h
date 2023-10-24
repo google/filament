@@ -140,16 +140,22 @@ public:
     void removeEntities(const utils::Entity* entities, size_t count);
 
     /**
-     * Returns the number of Renderable objects in the Scene.
+     * Returns the total number of Entities in the Scene, whether alive or not.
+     * @return Total number of Entities in the Scene.
+     */
+    size_t getEntityCount() const noexcept;
+
+    /**
+     * Returns the number of active (alive) Renderable objects in the Scene.
      *
-     * @return number of Renderable objects in the Scene.
+     * @return The number of active (alive) Renderable objects in the Scene.
      */
     size_t getRenderableCount() const noexcept;
 
     /**
-     * Returns the total number of Light objects in the Scene.
+     * Returns the number of active (alive) Light objects in the Scene.
      *
-     * @return The total number of Light objects in the Scene.
+     * @return The number of active (alive) Light objects in the Scene.
      */
     size_t getLightCount() const noexcept;
 

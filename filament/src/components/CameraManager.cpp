@@ -53,7 +53,7 @@ void FCameraManager::terminate() noexcept {
 
 void FCameraManager::gc(utils::EntityManager& em) noexcept {
     auto& manager = mManager;
-    manager.gc(em, 4, [this](Entity e) {
+    manager.gc(em, [this](Entity e) {
         destroy(e);
     });
 }

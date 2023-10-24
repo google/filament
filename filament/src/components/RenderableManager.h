@@ -92,7 +92,23 @@ public:
     }
 
     Instance getInstance(utils::Entity e) const noexcept {
-        return mManager.getInstance(e);
+        return { mManager.getInstance(e) };
+    }
+
+    size_t getComponentCount() const noexcept {
+        return mManager.getComponentCount();
+    }
+
+    bool empty() const noexcept {
+        return mManager.empty();
+    }
+
+    utils::Entity getEntity(Instance i) const noexcept {
+        return mManager.getEntity(i);
+    }
+
+    utils::Entity const* getEntities() const noexcept {
+        return mManager.getEntities();
     }
 
     void create(const RenderableManager::Builder& builder, utils::Entity entity);
@@ -175,10 +191,6 @@ public:
     };
     static_assert(sizeof(InstancesInfo) == 16);
     inline InstancesInfo getInstancesInfo(Instance instance) const noexcept;
-
-    utils::Entity getEntity(Instance instance) const noexcept {
-        return mManager.getEntity(instance);
-    }
 
     inline size_t getLevelCount(Instance) const noexcept { return 1u; }
     size_t getPrimitiveCount(Instance instance, uint8_t level) const noexcept;

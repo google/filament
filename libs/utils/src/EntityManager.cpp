@@ -57,6 +57,10 @@ void EntityManager::unregisterListener(EntityManager::Listener* l) noexcept {
     static_cast<EntityManagerImpl *>(this)->unregisterListener(l);
 }
 
+size_t EntityManager::getEntityCount() const noexcept {
+    return static_cast<EntityManagerImpl const *>(this)->getEntityCount();
+}
+
 #if FILAMENT_UTILS_TRACK_ENTITIES
 std::vector<Entity> EntityManager::getActiveEntities() const {
     return static_cast<EntityManagerImpl const *>(this)->getActiveEntities();

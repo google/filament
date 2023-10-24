@@ -103,6 +103,29 @@ public:
     Instance getInstance(utils::Entity e) const noexcept;
 
     /**
+     * @return the number of Components
+     */
+    size_t getComponentCount() const noexcept;
+
+    /**
+     * @return true if the this manager has no components
+     */
+    bool empty() const noexcept;
+
+    /**
+     * Retrieve the `Entity` of the component from its `Instance`.
+     * @param i Instance of the component obtained from getInstance()
+     * @return
+     */
+    utils::Entity getEntity(Instance i) const noexcept;
+
+    /**
+     * Retrieve the Entities of all the components of this manager.
+     * @return A list, in no particular order, of all the entities managed by this manager.
+     */
+    utils::Entity const* getEntities() const noexcept;
+
+    /**
      * The transformation associated with a skinning joint.
      *
      * Clients can specify bones either using this quat-vec3 pair, or by using 4x4 matrices.

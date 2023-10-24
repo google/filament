@@ -612,8 +612,10 @@ void applySettings(Engine* engine, const LightSettings& settings, IndirectLight*
     }
     for (size_t i = 0; i < sceneLightCount; i++) {
         auto const li = lm->getInstance(sceneLights[i]);
-        lm->setShadowCaster(li, settings.enableShadows);
-        lm->setShadowOptions(li, settings.shadowOptions);
+        if (li) {
+            lm->setShadowCaster(li, settings.enableShadows);
+            lm->setShadowOptions(li, settings.shadowOptions);
+        }
     }
     view->setSoftShadowOptions(settings.softShadowOptions);
 }
