@@ -160,6 +160,7 @@ struct MetalIndexBuffer : public HwIndexBuffer {
 };
 
 struct MetalRenderPrimitive : public HwRenderPrimitive {
+    MetalRenderPrimitive();
     void setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer* indexBuffer);
     // The pointers to MetalVertexBuffer and MetalIndexBuffer are "weak".
     // The MetalVertexBuffer and MetalIndexBuffer must outlive the MetalRenderPrimitive.
@@ -169,6 +170,19 @@ struct MetalRenderPrimitive : public HwRenderPrimitive {
 
     // This struct is used to create the pipeline description to describe vertex assembly.
     VertexDescription vertexDescription = {};
+
+    struct Entry {
+        uint8_t sourceBufferIndex = 0;
+        uint8_t stride = 0;
+        // maps to ->
+        uint8_t bufferArgumentIndex = 0;
+
+        Entry(uint8_t sourceBufferIndex, uint8_t stride, uint8_t bufferArgumentIndex)
+                : sourceBufferIndex(sourceBufferIndex),
+                  stride(stride),
+                  bufferArgumentIndex(bufferArgumentIndex) {}
+    };
+    utils::FixedCapacityVector<Entry> bufferMapping;
 };
 
 class MetalProgram : public HwProgram {

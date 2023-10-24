@@ -1686,26 +1686,23 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
 
     // Bind the user vertex buffers.
 
-    MetalBuffer* buffers[MAX_VERTEX_BUFFER_COUNT] = {};
+    MetalBuffer* vertexBuffers[MAX_VERTEX_BUFFER_COUNT] = {};
     size_t vertexBufferOffsets[MAX_VERTEX_BUFFER_COUNT] = {};
-    size_t bufferIndex = 0;
+    size_t maxBufferIndex = 0;
 
     auto vb = primitive->vertexBuffer;
-    for (uint32_t attributeIndex = 0; attributeIndex < vb->attributes.size(); attributeIndex++) {
-        const auto& attribute = vb->attributes[attributeIndex];
-        if (attribute.buffer == Attribute::BUFFER_UNUSED) {
-            continue;
-        }
-
-        assert_invariant(vb->buffers[attribute.buffer]);
-        buffers[bufferIndex] = vb->buffers[attribute.buffer];
-        vertexBufferOffsets[bufferIndex] = attribute.offset;
-        bufferIndex++;
+    for (auto m : primitive->bufferMapping) {
+        assert_invariant(
+                m.bufferArgumentIndex >= USER_VERTEX_BUFFER_BINDING_START &&
+                m.bufferArgumentIndex < USER_VERTEX_BUFFER_BINDING_START + MAX_VERTEX_BUFFER_COUNT);
+        size_t vertexBufferIndex = m.bufferArgumentIndex - USER_VERTEX_BUFFER_BINDING_START;
+        vertexBuffers[vertexBufferIndex] = vb->buffers[m.sourceBufferIndex];
+        maxBufferIndex = std::max(maxBufferIndex, vertexBufferIndex);
     }
 
-    const auto bufferCount = bufferIndex;
+    const auto bufferCount = maxBufferIndex + 1;
     MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
-            USER_VERTEX_BUFFER_BINDING_START, MetalBuffer::Stage::VERTEX, buffers,
+            USER_VERTEX_BUFFER_BINDING_START, MetalBuffer::Stage::VERTEX, vertexBuffers,
             vertexBufferOffsets, bufferCount);
 
     // Bind the zero buffer, used for missing vertex attributes.
