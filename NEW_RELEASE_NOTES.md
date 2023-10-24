@@ -12,3 +12,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - matc: Enable `GL_OES_standard_derivatives` extension in ESSL 1.0 shaders
 - matc: Fix code generation of double sided and masked materials in ESSL 1.0 shaders
 - filagui: Add support for feature level 0
+- mtac: Add support for post-process materials in feature level 0
