@@ -741,10 +741,6 @@ class MatdbgViewer extends LitElement {
         }
     }
 
-    _code() {
-
-    }
-
     render() {
         const shader = this._getShader();
         return html`
