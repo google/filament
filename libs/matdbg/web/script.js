@@ -234,9 +234,9 @@ function statusLoop() {
             // A first-time request returned successfully
             if (matid === '0') {
                 onConnected();
-            } else {
+            } else if (matid != '1') {
                 fetchMaterial(matid);
-            }
+            } // else matid == '1' and it's a no-op, we just loop again.
             statusLoop();
         })
         .catch(err => {
