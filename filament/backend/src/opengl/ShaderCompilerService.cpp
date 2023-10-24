@@ -249,7 +249,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                     // We need to query the link status here to guarantee that the
                     // program is compiled and linked now (we don't want this to be
                     // deferred to later). We don't care about the result at this point.
-                    GLint status;
+                    GLint status = GL_FALSE;
                     glGetProgramiv(glProgram, GL_LINK_STATUS, &status);
                     programData.program = glProgram;
 
@@ -262,7 +262,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                     mCallbackManager.put(token->handle);
 
                     // caching must be the last thing we do
-                    if (token->key) {
+                    if (token->key && status == GL_TRUE) {
                         // Attempt to cache. This calls glGetProgramBinary.
                         OpenGLBlobCache::insert(mDriver.mPlatform, token->key, glProgram);
                     }
