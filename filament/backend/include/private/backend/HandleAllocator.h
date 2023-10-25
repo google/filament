@@ -33,7 +33,7 @@
 
 #define HandleAllocatorGL  HandleAllocator<16, 64, 208>
 #define HandleAllocatorVK  HandleAllocator<16, 64, 880>
-#define HandleAllocatorMTL HandleAllocator<16, 64, 576>
+#define HandleAllocatorMTL HandleAllocator<16, 64, 584>
 
 namespace filament::backend {
 
@@ -256,6 +256,7 @@ private:
     HandleBase::HandleId allocateHandle() noexcept {
         if constexpr (SIZE <= P0) { return allocateHandleInPool<P0>(); }
         if constexpr (SIZE <= P1) { return allocateHandleInPool<P1>(); }
+        static_assert(SIZE <= P2);
         return allocateHandleInPool<P2>();
     }
 
@@ -266,6 +267,7 @@ private:
         } else if constexpr (SIZE <= P1) {
             deallocateHandleFromPool<P1>(id);
         } else {
+            static_assert(SIZE <= P2);
             deallocateHandleFromPool<P2>(id);
         }
     }

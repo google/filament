@@ -299,6 +299,9 @@ MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uin
         uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
         buffer(context, BufferObjectBinding::VERTEX, usage, elementSize * indexCount, true) { }
 
+MetalRenderPrimitive::MetalRenderPrimitive()
+    : bufferMapping(utils::FixedCapacityVector<Entry>::with_capacity(MAX_VERTEX_BUFFER_COUNT)) {}
+
 void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer*
         indexBuffer) {
     this->vertexBuffer = vertexBuffer;
@@ -306,44 +309,70 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
 
     const size_t attributeCount = vertexBuffer->attributes.size();
 
+    auto& mapping = bufferMapping;
+    mapping.clear();
     vertexDescription = {};
 
-    // Each attribute gets its own vertex buffer, starting at logical buffer 1.
-    uint32_t bufferIndex = 1;
+    // Set the layout for the zero buffer, which unused attributes are mapped to.
+    vertexDescription.layouts[ZERO_VERTEX_BUFFER_LOGICAL_INDEX] = {
+            .step = MTLVertexStepFunctionConstant, .stride = 16
+    };
+
+    // Here we map each source buffer to a Metal buffer argument.
+    // Each attribute has a source buffer, offset, and stride.
+    // Two source buffers with the same index and stride can share the same Metal buffer argument
+    // index.
+    //
+    // The source buffer is the buffer index that the Filament client sets.
+    //                                       * source buffer
+    // .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 12)
+    // .attribute(VertexAttribute::UV,       0, VertexBuffer::AttributeType::HALF2,  8, 12)
+    // .attribute(VertexAttribute::COLOR,    1, VertexBuffer::AttributeType::UBYTE4, 0,  4)
+
+    auto allocateOrGetBufferArgumentIndex =
+            [&mapping, currentBufferArgumentIndex = USER_VERTEX_BUFFER_BINDING_START, this](
+                    auto sourceBuffer, auto sourceBufferStride) mutable -> uint8_t {
+        auto match = [&](const auto& e) {
+            return e.sourceBufferIndex == sourceBuffer && e.stride == sourceBufferStride;
+        };
+        if (auto it = std::find_if(mapping.begin(), mapping.end(), match); it != mapping.end()) {
+            return it->bufferArgumentIndex;
+        } else {
+            auto bufferArgumentIndex = currentBufferArgumentIndex++;
+            mapping.emplace_back(sourceBuffer, sourceBufferStride, bufferArgumentIndex);
+            vertexDescription.layouts[bufferArgumentIndex] = {
+                    .step = MTLVertexStepFunctionPerVertex, .stride = sourceBufferStride
+            };
+            return bufferArgumentIndex;
+        }
+    };
+
     for (uint32_t attributeIndex = 0; attributeIndex < attributeCount; attributeIndex++) {
         const auto& attribute = vertexBuffer->attributes[attributeIndex];
-        if (attribute.buffer == Attribute::BUFFER_UNUSED) {
-            const uint8_t flags = attribute.flags;
-            const MTLVertexFormat format = (flags & Attribute::FLAG_INTEGER_TARGET) ?
-                    MTLVertexFormatUInt4 : MTLVertexFormatFloat4;
 
-            // If the attribute is not enabled, bind it to the zero buffer. It's a Metal error for a
-            // shader to read from missing vertex attributes.
+        // If the attribute is unused, bind it to the zero buffer. It's a Metal error for a shader
+        // to read from missing vertex attributes.
+        if (attribute.buffer == Attribute::BUFFER_UNUSED) {
+            const MTLVertexFormat format = (attribute.flags & Attribute::FLAG_INTEGER_TARGET)
+                    ? MTLVertexFormatUInt4
+                    : MTLVertexFormatFloat4;
             vertexDescription.attributes[attributeIndex] = {
-                    .format = format,
-                    .buffer = ZERO_VERTEX_BUFFER_LOGICAL_INDEX,
-                    .offset = 0
-            };
-            vertexDescription.layouts[ZERO_VERTEX_BUFFER_LOGICAL_INDEX] = {
-                    .step = MTLVertexStepFunctionConstant,
-                    .stride = 16
+                    .format = format, .buffer = ZERO_VERTEX_BUFFER_LOGICAL_INDEX, .offset = 0
             };
             continue;
         }
 
-        vertexDescription.attributes[attributeIndex] = {
-                .format = getMetalFormat(attribute.type,
-                                         attribute.flags & Attribute::FLAG_NORMALIZED),
-                .buffer = bufferIndex,
-                .offset = 0
-        };
-        vertexDescription.layouts[bufferIndex] = {
-                .step = MTLVertexStepFunctionPerVertex,
-                .stride = attribute.stride
-        };
+        // Map the source buffer and stride of this attribute to a Metal buffer argument.
+        auto bufferArgumentIndex =
+                allocateOrGetBufferArgumentIndex(attribute.buffer, attribute.stride);
 
-        bufferIndex++;
-    };
+        vertexDescription.attributes[attributeIndex] = {
+                .format = getMetalFormat(
+                        attribute.type, attribute.flags & Attribute::FLAG_NORMALIZED),
+                .buffer = uint32_t(bufferArgumentIndex),
+                .offset = attribute.offset
+        };
+    }
 }
 
 MetalProgram::MetalProgram(MetalContext& context, Program&& program) noexcept
