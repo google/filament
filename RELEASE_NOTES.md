@@ -7,6 +7,16 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.45.1
+
+- engine: Added parameter for configuring JobSystem thread count
+- engine: In Java, introduce Engine.Builder
+- gltfio: fix ubershader index for transmission&volume material
+- engine: New tone mapper: `AgXTonemapper`.
+- matinfo: Add support for viewing ESSL 1.0 shaders
+- engine: Add `Renderer::getClearOptions()` [b/243846268]
+- engine: Fix stable shadows (again) when an IBL rotation is used
+
 ## v1.45.0
 
 - materials: fix alpha masked materials when MSAA is turned on [⚠️ **Recompile materials**]
