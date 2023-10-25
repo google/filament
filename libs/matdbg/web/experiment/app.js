@@ -25,6 +25,25 @@ const LANGUAGE_CHOICES = {
     'metal': ['msl'],
 };
 
+const MATERIAL_INFO_KEY_TO_STRING = {
+    'model': 'shading model',
+    'vertex_domain': 'vertex domain',
+    'interpolation': 'interpolation',
+    'shadow_multiply': 'shadow multiply',
+    'specular_antialiasing': 'specular antialiasing',
+    'variance':  'variance',
+    'threshold': 'threshold',
+    'clear_coat_IOR_change': 'clear coat IOR change',
+    'blending': 'blending',
+    'mask_threshold': 'mask threshold',
+    'color_write': 'color write',
+    'depth_write': 'depth write',
+    'depth_test': 'depth test',
+    'double_sided': 'double sided',
+    'culling': 'culling',
+    'transparency': 'transparency',
+};
+
 // CSS constants
 const FOREGROUND_COLOR = '#fafafa';
 const INACTIVE_COLOR = '#9a9a9a';
@@ -33,6 +52,21 @@ const LIGHTER_INACTIVE_COLOR = '#d9d9d9';
 const UNSELECTED_COLOR = '#dfdfdf';
 const BACKGROUND_COLOR = '#5362e5';
 const HOVER_BACKGROUND_COLOR = '#b3c2ff';
+const CODE_VIEWER_BOTTOM_ROW_HEIGHT = 60;
+const REGULAR_FONT_SIZE = 12;
+const MENU_HR = `
+                display: block;
+                height: 1px;
+                border: 0px;
+                border-top: 1px solid ${UNSELECTED_COLOR};
+                padding: 0;
+                width: 100%;
+                margin: 3px 0 8px 0;
+`;
+const MENU_SECTION_TITLE = `
+                font-size: 16px;
+                color: ${UNSELECTED_COLOR};
+`;
 
 // Set up the Monaco editor. See also CodeViewer
 const kMonacoBaseUrl = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.25.2/min/';
@@ -136,7 +170,7 @@ class CodeViewer extends LitElement {
             #bottom-row {
                 width: 100%;
                 display: flex;
-                height: 60px;
+                height: ${unsafeCSS(CODE_VIEWER_BOTTOM_ROW_HEIGHT)}px;
                 flex-direction: column;
                 align-items: flex-end;
                 justify-content: center;
@@ -168,6 +202,8 @@ class CodeViewer extends LitElement {
             code: {type: String, state: true},
             active: {type: Boolean, attribute: 'active'},
             modified: {type: Boolean, attribute: 'modified'},
+            expectedWidth: {type: Number, attribute: 'expected-width'},
+            expectedHeight: {type: Number, attribute: 'expected-height'},
         }
     }
 
@@ -216,6 +252,12 @@ class CodeViewer extends LitElement {
         if (props.has('code') && this.code.length > 0) {
             this.editor.setValue(this.code);
         }
+        if ((props.has('expectedWidth') || props.has('expectedHeight')) &&
+            (this.expectedWidth > 0 && (this.expectedHeight - CODE_VIEWER_BOTTOM_ROW_HEIGHT) > 0)) {
+            this._editorDiv.style.width = Math.floor(this.expectedWidth) + 'px';
+            this._editorDiv.style.height =
+                (Math.floor(this.expectedHeight) - CODE_VIEWER_BOTTOM_ROW_HEIGHT) + 'px';
+        }
     }
 
     constructor() {
@@ -224,6 +266,8 @@ class CodeViewer extends LitElement {
         this.active = false;
         this.modified = false;
         this.addEventListener('button-clicked', this._rebuild.bind(this));
+        this.expectedWidth = 0;
+        this.expectedHeight = 0;
     }
 
     render() {
@@ -252,13 +296,109 @@ class CodeViewer extends LitElement {
             <div id="bottom-row">
                 <div style="display:flex;flex-direction:row;align-items:center">
                     ${stateDiv ?? nothing}
-                    <custom-button class="${divClass}" label="Rebuild" ?enabled="${this.active && this.modified}"></custom-button>
+                    <custom-button class="${divClass}"
+                                   label="Rebuild"
+                                   ?enabled="${this.active && this.modified}">
+                    </custom-button>
                 </div>
             </div>
         `;
     }
 }
 customElements.define("code-viewer", CodeViewer);
+
+class MaterialInfo extends LitElement {
+    static get properties() {
+        return {
+            info: {type: Object, state: true},
+            showing: {type: Boolean, state: true},
+        }
+    }
+
+    static get styles() {
+        return css`
+            :host {
+                font-size: ${unsafeCSS(REGULAR_FONT_SIZE)}px;
+                color: ${unsafeCSS(UNSELECTED_COLOR)};
+                margin-bottom: 20px;
+            }
+            .section-title {
+                ${unsafeCSS(MENU_SECTION_TITLE)}
+                cursor: pointer;
+            }
+            hr {
+                ${unsafeCSS(MENU_HR)}
+            }
+            .hide {
+                display: none;
+                flex-direction: column;
+            }
+            .expander {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+        `;
+    }
+
+    constructor() {
+        super();
+        this.showing = true;
+        this.info = null;
+    }
+
+    _hasInfo() {
+        return this.info && Object.keys(this.info).length > 0;
+    }
+
+    _showClick() {
+        this.showing = !this.showing;
+    }
+
+    render() {
+        const expandedIcon = this._hasInfo() ? (this.showing ? '－' : '＋') : '';
+        let infoDivs = [];
+        if (this._hasInfo()) {
+            if (this.info.shading && this.info.shading.material_domain === 'surface') {
+                infoDivs = infoDivs.concat(
+                    Object.keys(this.info.shading)
+                        .filter((propKey) => (propKey in MATERIAL_INFO_KEY_TO_STRING))
+                        .map((propKey) => html`
+                            <div key="${propKey}" class="info-item">
+                                ${MATERIAL_INFO_KEY_TO_STRING[propKey]} = ${this.info.shading[propKey]}
+                            </div>
+                        `)
+                );
+            }
+            if (this.info.raster) {
+                infoDivs = infoDivs.concat(
+                    Object.keys(this.info.raster)
+                        .filter((propKey) => (propKey in MATERIAL_INFO_KEY_TO_STRING))
+                        .map((propKey) => html`
+                            <div key=${propKey} class="info-item">
+                                ${MATERIAL_INFO_KEY_TO_STRING[propKey]} = ${this.info.raster[propKey]}
+                            </div>
+                        `)
+                );
+            }
+        }
+        let divClass = 'container';
+        if (infoDivs.length == 0) {
+            divClass += ' hide';
+        }
+        return html`
+            <div class="${divClass}">
+                <div class="section-title expander" @click="${this._showClick}">
+                    <span>Material Details</span> <span>${expandedIcon}</span>
+                </div>
+                <hr />
+                ${this.showing ? infoDivs : []}
+            </div>
+        `;
+    }
+}
+customElements.define('material-info', MaterialInfo);
 
 class MaterialSidePanel extends LitElement {
     // Setting the style in render() has poor performance implications.  We use it simply to avoid
@@ -281,15 +421,13 @@ class MaterialSidePanel extends LitElement {
                 font-size: 20px;
             }
             .material-section {
-                font-size: 16px;
-                color: ${UNSELECTED_COLOR};
-                margin-top: 5px;
+                ${MENU_SECTION_TITLE}
             }
             .materials {
                 display: flex;
                 flex-direction: column;
-                margin-bottom: 10px;
-                font-size: 12px;
+                margin-bottom: 20px;
+                font-size: ${REGULAR_FONT_SIZE}px;
                 color: ${UNSELECTED_COLOR};
             }
             .material_variant_language:hover {
@@ -309,7 +447,7 @@ class MaterialSidePanel extends LitElement {
                 padding-left: 20px;
             }
             .language {
-                margin: 0 4px;
+                margin: 0 8px 0 0;
             }
             .languages {
                 padding-left: 20px;
@@ -317,13 +455,7 @@ class MaterialSidePanel extends LitElement {
                 display: flex;
             }
             hr {
-                display: block;
-                height: 1px;
-                border: 0px;
-                border-top: 1px solid ${UNSELECTED_COLOR};
-                padding: 0;
-                width: 100%;
-                margin: 3px 0 8px 0;
+                ${MENU_HR}
             }
         `;
     }
@@ -342,6 +474,10 @@ class MaterialSidePanel extends LitElement {
 
             variants: {type: Array, state: true},
         }
+    }
+
+    get _materialInfo() {
+        return this.renderRoot.querySelector('#material-info');
     }
 
     constructor() {
@@ -401,6 +537,11 @@ class MaterialSidePanel extends LitElement {
                     });
                 }
                 this.variants = variants;
+            }
+
+            if (this.currentMaterial && this.database) {
+                const material = this.database[this.currentMaterial];
+                this._materialInfo.info = material;
             }
         }
     }
@@ -521,6 +662,7 @@ class MaterialSidePanel extends LitElement {
                 <div class="title">matdbg</div>
                 ${sections("Surface", "surface")}
                 ${sections("Post-processing", "postpro")}
+                <material-info id="material-info"></material-info>
             </div>
         `;
     }
@@ -585,6 +727,16 @@ class MatdbgViewer extends LitElement {
         return shaders[this.currentShaderIndex];
     }
 
+    _onResize() {
+        const rect = this._sidepanel.getBoundingClientRect();
+        this.codeViewerExpectedWidth = window.innerWidth - rect.width - 1;
+        this.codeViewerExpectedHeight = window.innerHeight;
+    }
+
+    firstUpdated() {
+        this._onResize();
+    }
+
     constructor() {
         super();
         this.connected = false;
@@ -637,6 +789,8 @@ class MatdbgViewer extends LitElement {
                 }
             }
         );
+
+        addEventListener('resize', this._onResize.bind(this));
     }
 
     static get properties() {
@@ -649,6 +803,8 @@ class MatdbgViewer extends LitElement {
             // Each material has a list of variants compiled for it, this index tracks a position in the list.
             currentShaderIndex: {type: Number, state: true},
             currentBackend: {type: String, state: true},
+            codeViewerExpectedWidth: {type: Number, state: true},
+            codeViewerExpectedHeight: {type: Number, state: true},
         }
     }
 
@@ -692,6 +848,10 @@ class MatdbgViewer extends LitElement {
                     shader.modified = false;
                     this.database = this.database;
                 }
+
+                // Size of the editor will be adjusted due to the code being loaded, we try to
+                // fit the editor again by calling the resize signal.
+                setTimeout(this._onResize.bind(this), 700);
             })();
         }
         if (props.has('activeShaders') || props.has('database')) {
@@ -754,7 +914,9 @@ class MatdbgViewer extends LitElement {
             <code-viewer id="code-viewer"
                  ?active=${shader && shader.active}
                  ?modified=${shader && shader.modified}
-                 ?connected="${this.connected}">
+                 ?connected="${this.connected}"
+                 expected-width="${this.codeViewerExpectedWidth}"
+                 expected-height="${this.codeViewerExpectedHeight}" >
             </code-viewer>
         `;
     }
