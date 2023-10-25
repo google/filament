@@ -153,14 +153,15 @@ public:
     // glGet*() values
     struct Gets {
         GLfloat max_anisotropy;
+        GLint max_combined_texture_image_units;
         GLint max_draw_buffers;
         GLint max_renderbuffer_size;
         GLint max_samples;
-        GLint max_uniform_block_size;
         GLint max_texture_image_units;
-        GLint max_combined_texture_image_units;
         GLint max_transform_feedback_separate_attribs;
-        GLint max_uniform_buffer_bindings; 
+        GLint max_uniform_block_size;
+        GLint max_uniform_buffer_bindings;
+        GLint num_program_binary_formats;
         GLint uniform_buffer_offset_alignment;
     } gets = {};
 

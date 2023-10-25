@@ -16,6 +16,8 @@
 
 #include "OpenGLBlobCache.h"
 
+#include "OpenGLContext.h"
+
 #include <backend/Platform.h>
 #include <backend/Program.h>
 
@@ -28,16 +30,17 @@ struct OpenGLBlobCache::Blob {
     char data[];
 };
 
-GLuint OpenGLBlobCache::retrieve(BlobCacheKey* outKey, Platform& platform,
-        Program const& program) noexcept {
-    SYSTRACE_CALL();
+OpenGLBlobCache::OpenGLBlobCache(OpenGLContext& gl) noexcept
+    : mCachingSupported(gl.gets.num_program_binary_formats >= 1) {
+}
 
-    if (!platform.hasBlobFunc()) {
+GLuint OpenGLBlobCache::retrieve(BlobCacheKey* outKey, Platform& platform,
+        Program const& program) const noexcept {
+    SYSTRACE_CALL();
+    if (!mCachingSupported || !platform.hasRetrieveBlobFunc()) {
         // the key is never updated in that case
         return 0;
     }
-
-    SYSTRACE_CONTEXT();
 
     GLuint programId = 0;
 
@@ -64,8 +67,10 @@ GLuint OpenGLBlobCache::retrieve(BlobCacheKey* outKey, Platform& platform,
 
         programId = glCreateProgram();
 
-        SYSTRACE_NAME("glProgramBinary");
-        glProgramBinary(programId, blob->format, blob->data, programBinarySize);
+        { // scope for systrace
+            SYSTRACE_NAME("glProgramBinary");
+            glProgramBinary(programId, blob->format, blob->data, programBinarySize);
+        }
 
         if (UTILS_UNLIKELY(glGetError() != GL_NO_ERROR)) {
             // glProgramBinary can fail if for instance the driver has been updated
@@ -85,46 +90,36 @@ GLuint OpenGLBlobCache::retrieve(BlobCacheKey* outKey, Platform& platform,
 
 void OpenGLBlobCache::insert(Platform& platform,
         BlobCacheKey const& key, GLuint program) noexcept {
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     SYSTRACE_CALL();
-    if (platform.hasBlobFunc()) {
-        SYSTRACE_CONTEXT();
-        GLenum format;
-        GLint programBinarySize = 0;
+    if (!mCachingSupported || !platform.hasInsertBlobFunc()) {
+        // the key is never updated in that case
+        return;
+    }
+
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    GLenum format;
+    GLint programBinarySize = 0;
+    { // scope for systrace
         SYSTRACE_NAME("glGetProgramiv");
         glGetProgramiv(program, GL_PROGRAM_BINARY_LENGTH, &programBinarySize);
-        if (programBinarySize) {
-            size_t const size = sizeof(Blob) + programBinarySize;
-            std::unique_ptr<Blob, decltype(&::free)> blob{ (Blob*)malloc(size), &::free };
-            if (UTILS_LIKELY(blob)) {
-                SYSTRACE_NAME("glGetProgramBinary");
-                glGetProgramBinary(program, programBinarySize, &programBinarySize, &format,
-                        blob->data);
-                GLenum const error = glGetError();
-                if (error == GL_NO_ERROR) {
-                    blob->format = format;
-                    platform.insertBlob(key.data(), key.size(), blob.get(), size);
-                }
-            }
-        }
     }
-#endif
-}
-
-void OpenGLBlobCache::insert(Platform& platform, BlobCacheKey const& key,
-        GLenum format, void* data, GLsizei programBinarySize) noexcept {
-    SYSTRACE_CALL();
-    if (platform.hasBlobFunc()) {
-        if (programBinarySize) {
-            size_t const size = sizeof(Blob) + programBinarySize;
-            std::unique_ptr<Blob, decltype(&::free)> blob{ (Blob*)malloc(size), &::free };
-            if (UTILS_LIKELY(blob)) {
+    if (programBinarySize) {
+        size_t const size = sizeof(Blob) + programBinarySize;
+        std::unique_ptr<Blob, decltype(&::free)> blob{ (Blob*)malloc(size), &::free };
+        if (UTILS_LIKELY(blob)) {
+            { // scope for systrace
+                SYSTRACE_NAME("glGetProgramBinary");
+                glGetProgramBinary(program, programBinarySize,
+                        &programBinarySize, &format, blob->data);
+            }
+            GLenum const error = glGetError();
+            if (error == GL_NO_ERROR) {
                 blob->format = format;
-                memcpy(blob->data, data, programBinarySize);
                 platform.insertBlob(key.data(), key.size(), blob.get(), size);
             }
         }
     }
+#endif
 }
 
 } // namespace filament::backend
