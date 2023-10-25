@@ -44,9 +44,8 @@ public:
     public:
         virtual void onEntitiesDestroyed(size_t n, Entity const* entities) noexcept = 0;
     protected:
-        ~Listener() noexcept;
+        virtual ~Listener() noexcept;
     };
-
 
     // maximum number of entities that can exist at the same time
     static size_t getMaxEntityCount() noexcept {

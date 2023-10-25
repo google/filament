@@ -829,6 +829,10 @@ public:
             typename = typename is_supported_index_type<INDEX>::type>
     static Box computeAABB(VECTOR const* vertices, INDEX const* indices, size_t count,
             size_t stride = sizeof(VECTOR)) noexcept;
+
+protected:
+    // prevent heap allocation
+    ~RenderableManager() = default;
 };
 
 RenderableManager::Builder& RenderableManager::Builder::morphing(uint8_t level, size_t primitiveIndex,

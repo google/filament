@@ -308,6 +308,10 @@ public:
      * @see openLocalTransformTransaction(), setTransform()
      */
     void commitLocalTransformTransaction() noexcept;
+
+protected:
+    // prevent heap allocation
+    ~TransformManager() = default;
 };
 
 } // namespace filament

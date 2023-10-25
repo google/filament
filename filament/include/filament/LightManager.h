@@ -966,6 +966,10 @@ public:
             func(pEntity[i], Instance(i + 1));
         }
     }
+
+protected:
+    // prevent heap allocation
+    ~LightManager() = default;
 };
 
 } // namespace filament

@@ -75,6 +75,10 @@ public:
      *          FenceStatus::ERROR otherwise.
      */
     static FenceStatus waitAndDestroy(Fence* fence, Mode mode = Mode::FLUSH);
+
+protected:
+    // prevent heap allocation
+    ~Fence() = default;
 };
 
 } // namespace filament

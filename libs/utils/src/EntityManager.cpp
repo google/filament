@@ -22,6 +22,8 @@
 
 namespace utils {
 
+EntityManager::Listener::~Listener() noexcept = default;
+
 EntityManager::EntityManager()
         : mGens(new uint8_t[RAW_INDEX_COUNT]) {
     // initialize all the generations to 0
@@ -31,8 +33,6 @@ EntityManager::EntityManager()
 EntityManager::~EntityManager() {
     delete [] mGens;
 }
-
-EntityManager::Listener::~Listener() noexcept = default;
 
 EntityManager& EntityManager::get() noexcept {
     // note: we leak the EntityManager because it's more important that it survives everything else

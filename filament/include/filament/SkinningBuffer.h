@@ -115,6 +115,10 @@ public:
      * @return The number of bones the SkinningBuffer holds.
      */
     size_t getBoneCount() const noexcept;
+
+protected:
+    // prevent heap allocation
+    ~SkinningBuffer() = default;
 };
 
 } // namespace filament

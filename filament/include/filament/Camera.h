@@ -565,6 +565,10 @@ public:
      * @return                  effective full field of view in degrees
      */
     static double computeEffectiveFov(double fovInDegrees, double focusDistance) noexcept;
+
+protected:
+    // prevent heap allocation
+    ~Camera() = default;
 };
 
 } // namespace filament

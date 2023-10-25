@@ -142,6 +142,10 @@ public:
         float pid_i = 0.0f;
         float pid_d = 0.0f;
     };
+
+protected:
+    // prevent heap allocation
+    ~DebugRegistry() = default;
 };
 
 

@@ -110,6 +110,10 @@ public:
      * @return The maximum capacity of the BufferObject.
      */
     size_t getByteCount() const noexcept;
+
+protected:
+    // prevent heap allocation
+    ~BufferObject() = default;
 };
 
 } // namespace filament

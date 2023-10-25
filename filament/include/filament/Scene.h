@@ -168,6 +168,10 @@ public:
      * @param functor User provided functor called for each entity in the scene
      */
     void forEach(utils::Invocable<void(utils::Entity entity)>&& functor) const noexcept;
+
+protected:
+    // prevent heap allocation
+    ~Scene() = default;
 };
 
 } // namespace filament

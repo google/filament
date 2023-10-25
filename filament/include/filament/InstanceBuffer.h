@@ -91,6 +91,10 @@ public:
      * @param offset index of the first instance to set local transforms
      */
     void setLocalTransforms(math::mat4f const* localTransforms, size_t count, size_t offset = 0);
+
+protected:
+    // prevent heap allocation
+    ~InstanceBuffer() = default;
 };
 
 } // namespace filament
