@@ -114,6 +114,7 @@ public:
      * Platform.  The <insert> and <retrieve> Invocables may be called at any time and
      * from any thread from the time at which setBlobFunc is called until the time that Platform
      * is destroyed. Concurrent calls to these functions from different threads is also allowed.
+     * Either function can be null.
      *
      * @param insertBlob    an Invocable that inserts a new value into the cache and associates
      *                      it with the given key
@@ -123,9 +124,21 @@ public:
     void setBlobFunc(InsertBlobFunc&& insertBlob, RetrieveBlobFunc&& retrieveBlob) noexcept;
 
     /**
-     * @return true if setBlobFunc was called.
+     * @return true if insertBlob is valid.
      */
-    bool hasBlobFunc() const noexcept;
+    bool hasInsertBlobFunc() const noexcept;
+
+    /**
+     * @return true if retrieveBlob is valid.
+     */
+    bool hasRetrieveBlobFunc() const noexcept;
+
+    /**
+     * @return true if either of insertBlob or retrieveBlob are valid.
+     */
+    bool hasBlobFunc() const noexcept {
+        return hasInsertBlobFunc() || hasRetrieveBlobFunc();
+    }
 
     /**
      * To insert a new binary value into the cache and associate it with a given
