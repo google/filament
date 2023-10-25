@@ -50,13 +50,28 @@ using utils::FixedCapacityVector;
 // serves files directly from the source code tree.
 #define SERVE_FROM_SOURCE_TREE 0
 
-// When set to 1, we will serve an experimental frontend, which will potentially replace the current
-// frontend when ready.
-#define EXPERIMENTAL_WEB_FRAMEWORK 0
+#if SERVE_FROM_SOURCE_TREE
 
-#if !SERVE_FROM_SOURCE_TREE
+namespace {
+std::string const BASE_URL = "libs/matdbg/web";
+} // anonymous
+
+#else
+
 #include "matdbg_resources.h"
-#endif
+#include <unordered_map>
+
+namespace {
+
+struct Asset {
+    std::string_view mime;
+    std::string_view data;
+};
+std::unordered_map<std::string_view, Asset> ASSET_MAP;
+
+} // anonymous
+
+#endif // SERVE_FROM_SOURCE_TREE
 
 namespace filament::matdbg {
 
@@ -74,14 +89,6 @@ std::string_view const DebugServer::kErrorHeader =
         "HTTP/1.1 404 Not Found\r\nContent-Type: %s\r\n"
         "Connection: close\r\n\r\n";
 
-#if EXPERIMENTAL_WEB_FRAMEWORK
-
-namespace {
-
-std::string const BASE_URL = "libs/matdbg/web/experiment";
-
-} // anonymous
-
 class FileRequestHandler : public CivetHandler {
 public:
     FileRequestHandler(DebugServer* server) : mServer(server) {}
@@ -92,66 +99,44 @@ public:
         if (uri == "/") {
             uri = "/index.html";
         }
+
+#if SERVE_FROM_SOURCE_TREE
         if (uri == "/index.html" || uri == "/app.js" || uri == "/api.js") {
             mg_send_file(conn, (BASE_URL + uri).c_str());
             return true;
         }
-        slog.e << "DebugServer: bad request at line " <<  __LINE__ << ": " << uri << io::endl;
-        return false;
-    }
-private:
-    DebugServer* mServer;
-};
-
 #else
-class FileRequestHandler : public CivetHandler {
-public:
-    FileRequestHandler(DebugServer* server) : mServer(server) {}
-    bool handleGet(CivetServer *server, struct mg_connection *conn) {
-        auto const& kSuccessHeader = DebugServer::kSuccessHeader;
-
-        const struct mg_request_info* request = mg_get_request_info(conn);
-        std::string uri(request->request_uri);
-        if (uri == "/" || uri == "/index.html") {
-            #if SERVE_FROM_SOURCE_TREE
-            mg_send_file(conn, "libs/matdbg/web/index.html");
-            #else
-            mg_printf(conn, kSuccessHeader.data(), "text/html");
-            mg_write(conn, mServer->mHtml.c_str(), mServer->mHtml.size());
-            #endif
+        auto const& asset_itr = ASSET_MAP.find(uri);
+        if (asset_itr != ASSET_MAP.end()) {
+            auto const& mime = asset_itr->second.mime;
+            auto const& data = asset_itr->second.data;
+            mg_printf(conn, kSuccessHeader.data(), mime.data());
+            mg_write(conn, data.data(), data.size());
             return true;
         }
-        if (uri == "/style.css") {
-            #if SERVE_FROM_SOURCE_TREE
-            mg_send_file(conn, "libs/matdbg/web/style.css");
-            #else
-            mg_printf(conn, kSuccessHeader.data(), "text/css");
-            mg_write(conn, mServer->mCss.c_str(), mServer->mCss.size());
-            #endif
-            return true;
-        }
-        if (uri == "/script.js") {
-            #if SERVE_FROM_SOURCE_TREE
-            mg_send_file(conn, "libs/matdbg/web/script.js");
-            #else
-            mg_printf(conn, kSuccessHeader.data(), "text/javascript");
-            mg_write(conn, mServer->mJavascript.c_str(), mServer->mJavascript.size());
-            #endif
-            return true;
-        }
+#endif
         slog.e << "DebugServer: bad request at line " <<  __LINE__ << ": " << uri << io::endl;
         return false;
     }
 private:
     DebugServer* mServer;
 };
-#endif
 
 DebugServer::DebugServer(Backend backend, int port) : mBackend(backend) {
+
     #if !SERVE_FROM_SOURCE_TREE
-    mHtml = CString((const char*) MATDBG_RESOURCES_INDEX_DATA, MATDBG_RESOURCES_INDEX_SIZE - 1);
-    mJavascript = CString((const char*) MATDBG_RESOURCES_SCRIPT_DATA, MATDBG_RESOURCES_SCRIPT_SIZE - 1);
-    mCss = CString((const char*) MATDBG_RESOURCES_STYLE_DATA, MATDBG_RESOURCES_STYLE_SIZE - 1);
+    ASSET_MAP["/index.html"] = {
+        .mime = "text/html",
+        .data = {(char const*) MATDBG_RESOURCES_INDEX_DATA},
+    };
+    ASSET_MAP["/app.js"] = {
+        .mime = "text/javascript",
+        .data = {(char const*) MATDBG_RESOURCES_APP_DATA},
+    };
+    ASSET_MAP["/api.js"] = {
+        .mime = "text/javascript",
+        .data = {(char const*) MATDBG_RESOURCES_API_DATA},
+    };
     #endif
 
     // By default the server spawns 50 threads so we override this to 10. According to the civetweb

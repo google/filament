@@ -41,8 +41,8 @@ set(SRCS
 set(RESOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(RESOURCE_BINS
-        ${CMAKE_CURRENT_SOURCE_DIR}/web/style.css
-        ${CMAKE_CURRENT_SOURCE_DIR}/web/script.js
+        ${CMAKE_CURRENT_SOURCE_DIR}/web/api.js
+        ${CMAKE_CURRENT_SOURCE_DIR}/web/app.js
         ${CMAKE_CURRENT_SOURCE_DIR}/web/index.html
 )
 
