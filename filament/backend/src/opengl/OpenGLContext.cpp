@@ -99,37 +99,40 @@ OpenGLContext::OpenGLContext() noexcept {
 
     if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-        glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE,
-                &gets.max_uniform_block_size);
-        glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS,
-                &gets.max_uniform_buffer_bindings);
-        glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT,
-                &gets.uniform_buffer_offset_alignment);
-        glGetIntegerv(GL_MAX_SAMPLES,
-                &gets.max_samples);
-        glGetIntegerv(GL_MAX_DRAW_BUFFERS,
-                &gets.max_draw_buffers);
-        glGetIntegerv(GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS,
-                &gets.max_transform_feedback_separate_attribs);
 #ifdef GL_EXT_texture_filter_anisotropic
         if (ext.EXT_texture_filter_anisotropic) {
             glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gets.max_anisotropy);
         }
 #endif
+        glGetIntegerv(GL_MAX_DRAW_BUFFERS,
+                &gets.max_draw_buffers);
+        glGetIntegerv(GL_MAX_SAMPLES,
+                &gets.max_samples);
+        glGetIntegerv(GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS,
+                &gets.max_transform_feedback_separate_attribs);
+        glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE,
+                &gets.max_uniform_block_size);
+        glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS,
+                &gets.max_uniform_buffer_bindings);
+        glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS,
+                &gets.num_program_binary_formats);
+        glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT,
+                &gets.uniform_buffer_offset_alignment);
 #endif
     }
+
 #ifdef BACKEND_OPENGL_VERSION_GLES
     else {
+        gets.max_anisotropy = 1;
+        gets.max_draw_buffers = 1;
+        gets.max_samples = 1;
+        gets.max_transform_feedback_separate_attribs = 0;
         gets.max_uniform_block_size = 0;
         gets.max_uniform_buffer_bindings = 0;
+        gets.num_program_binary_formats = 0;
         gets.uniform_buffer_offset_alignment = 0;
-        gets.max_samples = 1;
-        gets.max_draw_buffers = 1;
-        gets.max_transform_feedback_separate_attribs = 0;
-        gets.max_anisotropy = 1;
     }
 #endif
-
 
     slog.v << "Feature level: " << +mFeatureLevel << '\n';
     slog.v << "Active workarounds: " << '\n';
@@ -143,13 +146,18 @@ OpenGLContext::OpenGLContext() noexcept {
 
 #ifndef NDEBUG
     // this is useful for development
-    slog.v  << "GL_MAX_DRAW_BUFFERS = " << gets.max_draw_buffers << '\n'
-            << "GL_MAX_RENDERBUFFER_SIZE = " << gets.max_renderbuffer_size << '\n'
-            << "GL_MAX_SAMPLES = " << gets.max_samples << '\n'
-            << "GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = " << gets.max_anisotropy << '\n'
-            << "GL_MAX_UNIFORM_BLOCK_SIZE = " << gets.max_uniform_block_size << '\n'
-            << "GL_MAX_TEXTURE_IMAGE_UNITS = " << gets.max_texture_image_units << '\n'
-            << "GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT = " << gets.uniform_buffer_offset_alignment << '\n'
+    slog.v
+            << "GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT" << gets.max_anisotropy << '\n'
+            << "GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS" << gets.max_combined_texture_image_units << '\n'
+            << "GL_MAX_DRAW_BUFFERS" << gets.max_draw_buffers << '\n'
+            << "GL_MAX_RENDERBUFFER_SIZE" << gets.max_renderbuffer_size << '\n'
+            << "GL_MAX_SAMPLES" << gets.max_samples << '\n'
+            << "GL_MAX_TEXTURE_IMAGE_UNITS" << gets.max_texture_image_units << '\n'
+            << "GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS" << gets.max_transform_feedback_separate_attribs << '\n'
+            << "GL_MAX_UNIFORM_BLOCK_SIZE" << gets.max_uniform_block_size << '\n'
+            << "GL_MAX_UNIFORM_BUFFER_BINDINGS" << gets.max_uniform_buffer_bindings << '\n'
+            << "GL_NUM_PROGRAM_BINARY_FORMATS" << gets.num_program_binary_formats << '\n'
+            << "GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT" << gets.uniform_buffer_offset_alignment << '\n'
             ;
     flush(slog.v);
 #endif
