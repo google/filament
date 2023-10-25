@@ -219,7 +219,7 @@ DECL_DRIVER_API_R_N(backend::TextureHandle, importTexture,
         backend::TextureUsage, usage)
 
 DECL_DRIVER_API_R_N(backend::SamplerGroupHandle, createSamplerGroup,
-        uint32_t, size)
+        uint32_t, size, utils::FixedSizeString<32>, debugName)
 
 DECL_DRIVER_API_R_N(backend::RenderPrimitiveHandle, createRenderPrimitive,
         backend::VertexBufferHandle, vbh,

@@ -27,7 +27,7 @@ void main() {
 
     initObjectUniforms();
 
-#if defined(BLEND_MODE_MASKED) || ((defined(BLEND_MODE_TRANSPARENT) || defined(BLEND_MODE_FADE)) && defined(MATERIAL_HAS_TRANSPARENT_SHADOW))
+#if defined(MATERIAL_HAS_CUSTOM_DEPTH) || defined(BLEND_MODE_MASKED) || ((defined(BLEND_MODE_TRANSPARENT) || defined(BLEND_MODE_FADE)) && defined(MATERIAL_HAS_TRANSPARENT_SHADOW))
     MaterialInputs inputs;
     initMaterial(inputs);
     material(inputs);

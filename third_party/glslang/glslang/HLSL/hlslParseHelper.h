@@ -147,14 +147,14 @@ public:
     void declareTypedef(const TSourceLoc&, const TString& identifier, const TType&);
     void declareStruct(const TSourceLoc&, TString& structName, TType&);
     TSymbol* lookupUserType(const TString&, TType&);
-    TIntermNode* declareVariable(const TSourceLoc&, const TString& identifier, TType&, TIntermTyped* initializer = 0);
+    TIntermNode* declareVariable(const TSourceLoc&, const TString& identifier, TType&, TIntermTyped* initializer = nullptr);
     void lengthenList(const TSourceLoc&, TIntermSequence& list, int size, TIntermTyped* scalarInit);
     TIntermTyped* handleConstructor(const TSourceLoc&, TIntermTyped*, const TType&);
     TIntermTyped* addConstructor(const TSourceLoc&, TIntermTyped*, const TType&);
     TIntermTyped* convertArray(TIntermTyped*, const TType&);
     TIntermTyped* constructAggregate(TIntermNode*, const TType&, int, const TSourceLoc&);
     TIntermTyped* constructBuiltIn(const TType&, TOperator, TIntermTyped*, const TSourceLoc&, bool subset);
-    void declareBlock(const TSourceLoc&, TType&, const TString* instanceName = 0);
+    void declareBlock(const TSourceLoc&, TType&, const TString* instanceName = nullptr);
     void declareStructBufferCounter(const TSourceLoc& loc, const TType& bufferType, const TString& name);
     void fixBlockLocations(const TSourceLoc&, TQualifier&, TTypeList&, bool memberWithLocation, bool memberWithoutLocation);
     void fixXfbOffsets(TQualifier&, TTypeList&);
@@ -171,10 +171,10 @@ public:
     void unnestAnnotations() { --annotationNestingLevel; }
     int getAnnotationNestingLevel() { return annotationNestingLevel; }
     void pushScope()         { symbolTable.push(); }
-    void popScope()          { symbolTable.pop(0); }
+    void popScope()          { symbolTable.pop(nullptr); }
 
     void pushThisScope(const TType&, const TVector<TFunctionDeclarator>&);
-    void popThisScope()      { symbolTable.pop(0); }
+    void popThisScope()      { symbolTable.pop(nullptr); }
 
     void pushImplicitThis(TVariable* thisParameter) { implicitThisStack.push_back(thisParameter); }
     void popImplicitThis() { implicitThisStack.pop_back(); }

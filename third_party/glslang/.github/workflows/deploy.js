@@ -3,11 +3,11 @@ module.exports = async ({github, context, core}) => {
         await github.rest.git.updateRef({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            ref: 'tags/master-tot',
+            ref: 'tags/main-tot',
             sha: context.sha
         })
     } catch (error) {
-        core.setFailed(`upload master-tot tag; ${error.name}; ${error.message}`)
+        core.setFailed(`upload main-tot tag; ${error.name}; ${error.message}`)
     }
 
     let release
@@ -15,10 +15,10 @@ module.exports = async ({github, context, core}) => {
         release = await github.rest.repos.getReleaseByTag({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            tag: 'master-tot'
+            tag: 'main-tot'
         })
     } catch (error) {
-        core.setFailed(`get the master release; ${error.name}; ${error.message}`)
+        core.setFailed(`get the main release; ${error.name}; ${error.message}`)
     }
 
     try {
@@ -28,7 +28,7 @@ module.exports = async ({github, context, core}) => {
             release_id: release.data.id
         })
     } catch (error) {
-        core.setFailed(`update the master release; ${error.name}; ${error.message}`)
+        core.setFailed(`update the main release; ${error.name}; ${error.message}`)
     }
 
     let release_assets

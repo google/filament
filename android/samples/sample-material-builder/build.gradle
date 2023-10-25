@@ -32,13 +32,6 @@ android {
         targetSdkVersion versions.targetSdk
     }
 
-    // The filamat library has two variants: full and lite. Here we default to the "full" variant.
-    // Replace "full" with "lite" to use the filamat-lite variant, which has a smaller binary size
-    // but comes with certain restrictions. See "Filamat Lite" in libs/filamat/README.md.
-    defaultConfig {
-        missingDimensionStrategy 'functionality', 'full'
-    }
-
     // NOTE: This is a workaround required because the AGP task collectReleaseDependencies
     //       is not configuration-cache friendly yet; this is only useful for Play publication
     dependenciesInfo {

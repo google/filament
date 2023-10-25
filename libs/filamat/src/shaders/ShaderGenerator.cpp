@@ -579,7 +579,11 @@ std::string ShaderGenerator::createFragmentProgram(ShaderModel shaderModel,
     if (filament::Variant::isValidDepthVariant(variant)) {
         // In MASKED mode or with transparent shadows, we need the alpha channel computed by
         // the material (user code), so we append it here.
-        if (material.blendingMode == BlendingMode::MASKED || material.hasTransparentShadow) {
+        if (material.userMaterialHasCustomDepth ||
+            material.blendingMode == BlendingMode::MASKED || ((
+                     material.blendingMode == BlendingMode::TRANSPARENT ||
+                     material.blendingMode == BlendingMode::FADE)
+             && material.hasTransparentShadow)) {
             appendShader(fs, mMaterialFragmentCode, mMaterialLineOffset);
         }
         // These variants are special and are treated as DEPTH variants. Filament will never

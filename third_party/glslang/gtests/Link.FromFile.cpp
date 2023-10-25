@@ -90,6 +90,9 @@ INSTANTIATE_TEST_SUITE_P(
     Glsl, LinkTest,
     ::testing::ValuesIn(std::vector<std::vector<std::string>>({
         {"mains1.frag", "mains2.frag", "noMain1.geom", "noMain2.geom"},
+        {"implicitArraySize.vert", "implicitArraySize.frag"},
+        {"implicitArraySizeBuiltin.vert", "implicitArraySizeBuiltin.geom"},
+        {"implicitArraySize1.geom", "implicitArraySize2.geom"},
         {"noMain.vert", "mains.frag"},
         {"link1.frag", "link2.frag", "link3.frag"},
         {"recurse1.vert", "recurse1.frag", "recurse2.frag"},

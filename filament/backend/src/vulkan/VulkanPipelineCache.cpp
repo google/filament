@@ -156,7 +156,7 @@ bool VulkanPipelineCache::bindDescriptors(VkCommandBuffer cmdbuffer) noexcept {
                 = std::make_unique<VulkanAcquireOnlyResourceManager>(mResourceAllocator);
         resourceEntry = mDescriptorResources.find(cacheEntry->id);
     }
-    resourceEntry->second->acquire(&mPipelineBoundResources);
+    resourceEntry->second->acquireAll(&mPipelineBoundResources);
 
     vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
             getOrCreatePipelineLayout()->handle, 0, VulkanPipelineCache::DESCRIPTOR_TYPE_COUNT,

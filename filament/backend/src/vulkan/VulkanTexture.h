@@ -25,6 +25,8 @@
 
 #include <utils/RangeMap.h>
 
+#include <unordered_map>
+
 namespace filament::backend {
 
 struct VulkanTexture : public HwTexture, VulkanResource {
@@ -48,12 +50,18 @@ struct VulkanTexture : public HwTexture, VulkanResource {
             uint32_t depth, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset, uint32_t miplevel);
 
     // Returns the primary image view, which is used for shader sampling.
-    VkImageView getPrimaryImageView() const { return mCachedImageViews.at(mPrimaryViewRange); }
+    VkImageView getPrimaryImageView() {
+        return getImageView(mPrimaryViewRange, mViewType, mSwizzle);
+    }
+
+    VkImageViewType getViewType() const { return mViewType; }
 
     // Sets the min/max range of miplevels in the primary image view.
     void setPrimaryRange(uint32_t minMiplevel, uint32_t maxMiplevel);
 
-    VkImageSubresourceRange getPrimaryRange() const { return mPrimaryViewRange; }
+    VkImageSubresourceRange getPrimaryViewRange() const { return mPrimaryViewRange; }
+
+    VkImageSubresourceRange getFullViewRange() const { return mFullViewRange; }
 
     VulkanLayout getPrimaryImageLayout() const {
         return getLayout(mPrimaryViewRange.baseArrayLayer, mPrimaryViewRange.baseMipLevel);
@@ -63,6 +71,12 @@ struct VulkanTexture : public HwTexture, VulkanResource {
     // target attachment.  Unlike the primary image view, this always has type VK_IMAGE_VIEW_TYPE_2D
     // and the identity swizzle.
     VkImageView getAttachmentView(VkImageSubresourceRange range);
+
+    // This is a workaround for the first few frames where we're waiting for the texture to actually
+    // be uploaded.  In that case, we bind the sampler to an empty texture, but the corresponding
+    // imageView needs to be of the right type. Hence, we provide an option to indicate the
+    // view type. Swizzle option does not matter in this case.
+    VkImageView getViewForType(VkImageSubresourceRange const& range, VkImageViewType type);
 
     VkFormat getVkFormat() const { return mVkFormat; }
     VkImage getVkImage() const { return mTextureImage; }
@@ -84,11 +98,37 @@ struct VulkanTexture : public HwTexture, VulkanResource {
     // For now this always returns either DEPTH or COLOR.
     VkImageAspectFlags getImageAspect() const;
 
+    // For implicit transition like the end of a render pass, we need to be able to set the layout
+    // manually (outside of calls to transitionLayout).
+    void setLayout(const VkImageSubresourceRange& range, VulkanLayout newLayout);
+
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)
     void print() const;
 #endif
 
 private:
+
+    struct ImageViewKey {
+        VkImageSubresourceRange range;  // 4 * 5 bytes
+        VkImageViewType type;           // 4 bytes
+        VkComponentMapping swizzle;     // 4 * 4 bytes
+
+        bool operator==(ImageViewKey const& k2) const {
+            auto const& k1 = *this;
+            return k1.range.aspectMask == k2.range.aspectMask
+                   && k1.range.baseMipLevel == k2.range.baseMipLevel
+                   && k1.range.levelCount == k2.range.levelCount
+                   && k1.range.baseArrayLayer == k2.range.baseArrayLayer
+                   && k1.range.layerCount == k2.range.layerCount && k1.type == k2.type
+                   && k1.swizzle.r == k2.swizzle.r && k1.swizzle.g == k2.swizzle.g
+                   && k1.swizzle.b == k2.swizzle.b && k1.swizzle.a == k2.swizzle.a;
+        }
+    };
+    // No implicit padding allowed due to it being a hash key.
+    static_assert(sizeof(ImageViewKey) == 40);
+
+    using ImageViewHash = utils::hash::MurmurHashFn<ImageViewKey>;
+
     // Gets or creates a cached VkImageView for a range of miplevels, array layers, viewType, and
     // swizzle (or not).
     VkImageView getImageView(VkImageSubresourceRange range, VkImageViewType viewType,
@@ -108,11 +148,13 @@ private:
     // Track the image layout of each subresource using a sparse range map.
     utils::RangeMap<uint32_t, VulkanLayout> mSubresourceLayouts;
 
+    VkImageSubresourceRange mFullViewRange;
+
     // Track the range of subresources that define the "primary" image view, which is the special
     // image view that gets bound to an actual texture sampler.
     VkImageSubresourceRange mPrimaryViewRange;
 
-    std::map<VkImageSubresourceRange, VkImageView> mCachedImageViews;
+    std::unordered_map<ImageViewKey, VkImageView, ImageViewHash> mCachedImageViews;
     VulkanStagePool& mStagePool;
     VkDevice mDevice;
     VmaAllocator mAllocator;

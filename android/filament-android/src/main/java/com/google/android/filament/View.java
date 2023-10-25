@@ -1032,7 +1032,8 @@ public class View {
      * </p>
      *
      * <p>
-     * Post-processing must be enabled in order to use the stencil buffer.
+     * If post-processing is disabled, then the SwapChain must have the CONFIG_HAS_STENCIL_BUFFER
+     * flag set in order to use the stencil buffer.
      * </p>
      *
      * <p>

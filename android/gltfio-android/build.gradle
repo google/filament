@@ -1,12 +1,6 @@
 android {
     namespace 'com.google.android.filament.gltfio'
 
-    flavorDimensions "functionality"
-    productFlavors {
-        full {
-            dimension "functionality"
-        }
-    }
     packagingOptions {
         // No need to package up the following shared libs, which arise as a side effect of our
         // externalNativeBuild dependencies. When clients pick and choose from project-level gradle
@@ -18,7 +12,7 @@ android {
     }
 
     publishing {
-        singleVariant("fullRelease") {
+        singleVariant("release") {
             withSourcesJar()
             withJavadocJar()
         }
@@ -36,9 +30,9 @@ apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
 afterEvaluate { project ->
     publishing {
         publications {
-            fullRelease(MavenPublication) {
+            release(MavenPublication) {
                 artifactId = POM_ARTIFACT_ID_FULL
-                from components.fullRelease
+                from components.release
             }
         }
     }

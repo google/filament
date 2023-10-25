@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "glslang/Include/glslang_c_interface.h"
 
 #include "StandAlone/DirStackFileIncluder.h"
-#include "StandAlone/ResourceLimits.h"
+#include "glslang/Public/ResourceLimits.h"
 #include "glslang/Include/ShHandle.h"
 
 #include "glslang/Include/ResourceLimits.h"
@@ -81,25 +81,6 @@ typedef struct glslang_program_s {
 */
 class CallbackIncluder : public glslang::TShader::Includer {
 public:
-    /* Wrapper of IncludeResult which stores a glsl_include_result object internally */
-    class CallbackIncludeResult : public glslang::TShader::Includer::IncludeResult {
-    public:
-        CallbackIncludeResult(const std::string& headerName, const char* const headerData, const size_t headerLength,
-                              void* userData, glsl_include_result_t* includeResult)
-            : glslang::TShader::Includer::IncludeResult(headerName, headerData, headerLength, userData),
-              includeResult(includeResult)
-        {
-        }
-
-        virtual ~CallbackIncludeResult() {}
-
-    protected:
-        friend class CallbackIncluder;
-
-        glsl_include_result_t* includeResult;
-    };
-
-public:
     CallbackIncluder(glsl_include_callbacks_t _callbacks, void* _context) : callbacks(_callbacks), context(_context) {}
 
     virtual ~CallbackIncluder() {}
@@ -110,9 +91,7 @@ public:
         if (this->callbacks.include_system) {
             glsl_include_result_t* result =
                 this->callbacks.include_system(this->context, headerName, includerName, inclusionDepth);
-
-            return new CallbackIncludeResult(std::string(headerName), result->header_data, result->header_length,
-                                             nullptr, result);
+            return makeIncludeResult(result);
         }
 
         return glslang::TShader::Includer::includeSystem(headerName, includerName, inclusionDepth);
@@ -124,9 +103,7 @@ public:
         if (this->callbacks.include_local) {
             glsl_include_result_t* result =
                 this->callbacks.include_local(this->context, headerName, includerName, inclusionDepth);
-
-            return new CallbackIncludeResult(std::string(headerName), result->header_data, result->header_length,
-                                             nullptr, result);
+            return makeIncludeResult(result);
         }
 
         return glslang::TShader::Includer::includeLocal(headerName, includerName, inclusionDepth);
@@ -139,21 +116,24 @@ public:
         if (result == nullptr)
             return;
 
-        if (this->callbacks.free_include_result && (result->userData == nullptr)) {
-            CallbackIncludeResult* innerResult = static_cast<CallbackIncludeResult*>(result);
-            /* use internal free() function */
-            this->callbacks.free_include_result(this->context, innerResult->includeResult);
-            /* ignore internal fields of TShader::Includer::IncludeResult */
-            delete result;
-            return;
+        if (this->callbacks.free_include_result) {
+            this->callbacks.free_include_result(this->context, static_cast<glsl_include_result_t*>(result->userData));
         }
 
-        delete[] static_cast<char*>(result->userData);
         delete result;
     }
 
 private:
     CallbackIncluder() {}
+
+    IncludeResult* makeIncludeResult(glsl_include_result_t* result) {
+        if (!result) {
+            return nullptr;
+        }
+
+        return new glslang::TShader::Includer::IncludeResult(
+            std::string(result->header_name), result->header_data, result->header_length, result);
+    }
 
     /* C callback pointers */
     glsl_include_callbacks_t callbacks;
@@ -351,6 +331,10 @@ GLSLANG_EXPORT glslang_shader_t* glslang_shader_create(const glslang_input_t* in
     return shader;
 }
 
+GLSLANG_EXPORT void glslang_shader_set_preamble(glslang_shader_t* shader, const char* s) {
+    shader->shader->setPreamble(s);
+}
+
 GLSLANG_EXPORT void glslang_shader_shift_binding(glslang_shader_t* shader, glslang_resource_type_t res, unsigned int base)
 {
     const glslang::TResourceType res_type = glslang::TResourceType(res);
@@ -390,8 +374,11 @@ GLSLANG_EXPORT const char* glslang_shader_get_preprocessed_code(glslang_shader_t
 
 GLSLANG_EXPORT int glslang_shader_preprocess(glslang_shader_t* shader, const glslang_input_t* input)
 {
-    DirStackFileIncluder Includer;
-    /* TODO: use custom callbacks if they are available in 'i->callbacks' */
+    DirStackFileIncluder dirStackFileIncluder;
+    CallbackIncluder callbackIncluder(input->callbacks, input->callbacks_ctx);
+    glslang::TShader::Includer& Includer = (input->callbacks.include_local||input->callbacks.include_system)
+        ? static_cast<glslang::TShader::Includer&>(callbackIncluder)
+        : static_cast<glslang::TShader::Includer&>(dirStackFileIncluder);
     return shader->shader->preprocess(
         reinterpret_cast<const TBuiltInResource*>(input->resource),
         input->default_version,

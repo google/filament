@@ -846,21 +846,25 @@ void ViewerGui::updateUserInterface() {
         }
         if (ImGui::CollapsingHeader("Sunlight")) {
             ImGui::Checkbox("Enable sunlight", &light.enableSunlight);
-            ImGui::SliderFloat("Sun intensity", &light.sunlightIntensity, 50000.0f, 150000.0f);
+            ImGui::SliderFloat("Sun intensity", &light.sunlightIntensity, 0.0f, 150000.0f);
             ImGui::SliderFloat("Halo size", &light.sunlightHaloSize, 1.01f, 40.0f);
             ImGui::SliderFloat("Halo falloff", &light.sunlightHaloFalloff, 4.0f, 1024.0f);
             ImGui::SliderFloat("Sun radius", &light.sunlightAngularRadius, 0.1f, 10.0f);
             ImGuiExt::DirectionWidget("Sun direction", light.sunlightDirection.v);
+            ImGui::SliderFloat("Shadow Far", &light.shadowOptions.shadowFar, 0.0f,
+                    mSettings.viewer.cameraFar);
 
-            float3 shadowDirection = light.shadowOptions.transform * light.sunlightDirection;
-            ImGuiExt::DirectionWidget("Shadow direction", shadowDirection.v);
-            light.shadowOptions.transform = normalize(quatf{
-                    cross(light.sunlightDirection, shadowDirection),
-                    sqrt(length2(light.sunlightDirection) * length2(shadowDirection))
-                            + dot(light.sunlightDirection, shadowDirection)
-            });
+            if (ImGui::CollapsingHeader("Shadow direction")) {
+                float3 shadowDirection = light.shadowOptions.transform * light.sunlightDirection;
+                ImGuiExt::DirectionWidget("Shadow direction", shadowDirection.v);
+                light.shadowOptions.transform = normalize(quatf{
+                        cross(light.sunlightDirection, shadowDirection),
+                        sqrt(length2(light.sunlightDirection) * length2(shadowDirection))
+                        + dot(light.sunlightDirection, shadowDirection)
+                });
+            }
         }
-        if (ImGui::CollapsingHeader("All lights")) {
+        if (ImGui::CollapsingHeader("Shadows")) {
             ImGui::Checkbox("Enable shadows", &light.enableShadows);
             int mapSize = light.shadowOptions.mapSize;
             ImGui::SliderInt("Shadow map size", &mapSize, 32, 1024);

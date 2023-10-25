@@ -755,7 +755,7 @@ private:
             MaterialBuilder::PropertyList& allProperties,
             CodeGenParams const& semanticCodeGenParams) noexcept;
 
-    bool runSemanticAnalysis(MaterialInfo const& info,
+    bool runSemanticAnalysis(MaterialInfo* inOutInfo,
             CodeGenParams const& semanticCodeGenParams) noexcept;
 
     bool checkLiteRequirements() noexcept;

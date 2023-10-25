@@ -57,8 +57,11 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
 }
 
 MetalSwapChain::MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow, uint64_t flags)
-        : context(context), layer(nativeWindow), externalImage(context),
-        type(SwapChainType::CAMETALLAYER) {
+    : context(context),
+      depthStencilFormat(decideDepthStencilFormat(flags)),
+      layer(nativeWindow),
+      externalImage(context),
+      type(SwapChainType::CAMETALLAYER) {
 
     if (!(flags & SwapChain::CONFIG_TRANSPARENT) && !nativeWindow.opaque) {
         utils::slog.w << "Warning: Filament SwapChain has no CONFIG_TRANSPARENT flag, "
@@ -79,15 +82,28 @@ MetalSwapChain::MetalSwapChain(MetalContext& context, CAMetalLayer* nativeWindow
 }
 
 MetalSwapChain::MetalSwapChain(MetalContext& context, int32_t width, int32_t height, uint64_t flags)
-        : context(context), headlessWidth(width), headlessHeight(height), externalImage(context),
-        type(SwapChainType::HEADLESS) { }
+    : context(context),
+      depthStencilFormat(decideDepthStencilFormat(flags)),
+      headlessWidth(width),
+      headlessHeight(height),
+      externalImage(context),
+      type(SwapChainType::HEADLESS) {}
 
 MetalSwapChain::MetalSwapChain(MetalContext& context, CVPixelBufferRef pixelBuffer, uint64_t flags)
-        : context(context), externalImage(context), type(SwapChainType::CVPIXELBUFFERREF) {
+    : context(context),
+      depthStencilFormat(decideDepthStencilFormat(flags)),
+      externalImage(context),
+      type(SwapChainType::CVPIXELBUFFERREF) {
     assert_invariant(flags & SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER);
     MetalExternalImage::assertWritableImage(pixelBuffer);
     externalImage.set(pixelBuffer);
     assert_invariant(externalImage.isValid());
+}
+
+MTLPixelFormat MetalSwapChain::decideDepthStencilFormat(uint64_t flags) {
+    // These formats are supported on all devices, both iOS and macOS.
+    return flags & SwapChain::CONFIG_HAS_STENCIL_BUFFER ? MTLPixelFormatDepth32Float_Stencil8
+                                                        : MTLPixelFormatDepth32Float;
 }
 
 MetalSwapChain::~MetalSwapChain() {
@@ -156,37 +172,40 @@ void MetalSwapChain::releaseDrawable() {
 }
 
 id<MTLTexture> MetalSwapChain::acquireDepthTexture() {
-    if (depthTexture) {
-        // If the surface size has changed, we'll need to allocate a new depth texture.
-        if (depthTexture.width != getSurfaceWidth() ||
-            depthTexture.height != getSurfaceHeight()) {
-            depthTexture = nil;
+    ensureDepthStencilTexture();
+    assert_invariant(depthStencilTexture);
+    return depthStencilTexture;
+}
+
+id<MTLTexture> MetalSwapChain::acquireStencilTexture() {
+    if (!isMetalFormatStencil(depthStencilFormat)) {
+        return nil;
+    }
+    ensureDepthStencilTexture();
+    assert_invariant(depthStencilTexture);
+    return depthStencilTexture;
+}
+
+void MetalSwapChain::ensureDepthStencilTexture() {
+    NSUInteger width = getSurfaceWidth();
+    NSUInteger height = getSurfaceHeight();
+    if (UTILS_LIKELY(depthStencilTexture)) {
+        // If the surface size has changed, we'll need to allocate a new depth/stencil texture.
+        if (UTILS_UNLIKELY(
+                    depthStencilTexture.width != width || depthStencilTexture.height != height)) {
+            depthStencilTexture = nil;
         } else {
-            return depthTexture;
+            return;
         }
     }
-
-    const MTLPixelFormat depthFormat =
-#if defined(IOS)
-            MTLPixelFormatDepth32Float;
-#else
-    context.device.depth24Stencil8PixelFormatSupported ?
-            MTLPixelFormatDepth24Unorm_Stencil8 : MTLPixelFormatDepth32Float;
-#endif
-
-    const NSUInteger width = getSurfaceWidth();
-    const NSUInteger height = getSurfaceHeight();
     MTLTextureDescriptor* descriptor =
-            [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:depthFormat
+            [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:depthStencilFormat
                                                                width:width
                                                               height:height
                                                            mipmapped:NO];
     descriptor.usage = MTLTextureUsageRenderTarget;
     descriptor.resourceOptions = MTLResourceStorageModePrivate;
-
-    depthTexture = [context.device newTextureWithDescriptor:descriptor];
-
-    return depthTexture;
+    depthStencilTexture = [context.device newTextureWithDescriptor:descriptor];
 }
 
 void MetalSwapChain::setFrameScheduledCallback(FrameScheduledCallback callback, void* user) {
@@ -516,6 +535,15 @@ MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t le
     setLodRange(0, levels - 1);
 }
 
+void MetalTexture::terminate() noexcept {
+    texture = nil;
+    swizzledTextureView = nil;
+    lodTextureView = nil;
+    msaaSidecar = nil;
+    externalImage.set(nullptr);
+    terminated = true;
+}
+
 MetalTexture::~MetalTexture() {
     externalImage.set(nullptr);
 }
@@ -788,14 +816,14 @@ void MetalTexture::loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region
     context.blitter->blit(getPendingCommandBuffer(&context), args, "Texture upload blit");
 }
 
-void MetalTexture::extendLodRangeTo(uint32_t level) {
+void MetalTexture::extendLodRangeTo(uint16_t level) {
     assert_invariant(!isInRenderPass(&context));
     minLod = std::min(minLod, level);
     maxLod = std::max(maxLod, level);
     lodTextureView = nil;
 }
 
-void MetalTexture::setLodRange(uint32_t min, uint32_t max) {
+void MetalTexture::setLodRange(uint16_t min, uint16_t max) {
     assert_invariant(!isInRenderPass(&context));
     assert_invariant(min <= max);
     minLod = min;
@@ -1123,7 +1151,7 @@ MetalRenderTarget::Attachment MetalRenderTarget::getDepthAttachment() {
 MetalRenderTarget::Attachment MetalRenderTarget::getStencilAttachment() {
     Attachment result = stencil;
     if (defaultRenderTarget) {
-        // TODO: do we want the default SwapChain to have a default stencil buffer?
+        result.texture = context->currentDrawSwapChain->acquireStencilTexture();
     }
     return result;
 }

@@ -103,8 +103,7 @@ float getDistanceAttenuation(const highp vec3 posToLight, float falloff) {
     float attenuation = getSquareFalloffAttenuation(distanceSquare, falloff);
     // light far attenuation
     highp vec3 v = getWorldPosition() - getWorldCameraPosition();
-    float d = dot(v, v);
-    attenuation *= saturate(frameUniforms.lightFarAttenuationParams.x - d * frameUniforms.lightFarAttenuationParams.y);
+    attenuation *= saturate(frameUniforms.lightFarAttenuationParams.x - dot(v, v) * frameUniforms.lightFarAttenuationParams.y);
     // Assume a punctual light occupies a volume of 1cm to avoid a division by 0
     return attenuation / max(distanceSquare, 1e-4);
 }
