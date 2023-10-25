@@ -90,18 +90,21 @@ void OpenGLBlobCache::insert(Platform& platform,
     if (platform.hasBlobFunc()) {
         SYSTRACE_CONTEXT();
         GLenum format;
-        GLint programBinarySize;
+        GLint programBinarySize = 0;
         SYSTRACE_NAME("glGetProgramiv");
         glGetProgramiv(program, GL_PROGRAM_BINARY_LENGTH, &programBinarySize);
         if (programBinarySize) {
             size_t const size = sizeof(Blob) + programBinarySize;
             std::unique_ptr<Blob, decltype(&::free)> blob{ (Blob*)malloc(size), &::free };
-            SYSTRACE_NAME("glGetProgramBinary");
-            glGetProgramBinary(program, programBinarySize, &programBinarySize, &format, blob->data);
-            GLenum const error = glGetError();
-            if (error == GL_NO_ERROR) {
-                blob->format = format;
-                platform.insertBlob(key.data(), key.size(), blob.get(), size);
+            if (UTILS_LIKELY(blob)) {
+                SYSTRACE_NAME("glGetProgramBinary");
+                glGetProgramBinary(program, programBinarySize, &programBinarySize, &format,
+                        blob->data);
+                GLenum const error = glGetError();
+                if (error == GL_NO_ERROR) {
+                    blob->format = format;
+                    platform.insertBlob(key.data(), key.size(), blob.get(), size);
+                }
             }
         }
     }
@@ -115,9 +118,11 @@ void OpenGLBlobCache::insert(Platform& platform, BlobCacheKey const& key,
         if (programBinarySize) {
             size_t const size = sizeof(Blob) + programBinarySize;
             std::unique_ptr<Blob, decltype(&::free)> blob{ (Blob*)malloc(size), &::free };
-            blob->format = format;
-            memcpy(blob->data, data, programBinarySize);
-            platform.insertBlob(key.data(), key.size(), blob.get(), size);
+            if (UTILS_LIKELY(blob)) {
+                blob->format = format;
+                memcpy(blob->data, data, programBinarySize);
+                platform.insertBlob(key.data(), key.size(), blob.get(), size);
+            }
         }
     }
 }
