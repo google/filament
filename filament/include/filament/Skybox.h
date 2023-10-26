@@ -174,6 +174,10 @@ public:
      * @return the associated texture, or null if it does not exist
      */
     Texture const* getTexture() const noexcept;
+
+protected:
+    // prevent heap allocation
+    ~Skybox() = default;
 };
 
 } // namespace filament

@@ -57,7 +57,23 @@ public:
     }
 
     Instance getInstance(utils::Entity e) const noexcept {
-        return Instance(mManager.getInstance(e));
+        return { mManager.getInstance(e) };
+    }
+
+    size_t getComponentCount() const noexcept {
+        return mManager.getComponentCount();
+    }
+
+    bool empty() const noexcept {
+        return mManager.empty();
+    }
+
+    utils::Entity getEntity(Instance i) const noexcept {
+        return mManager.getEntity(i);
+    }
+
+    utils::Entity const* getEntities() const noexcept {
+        return mManager.getEntities();
     }
 
     FCamera* getCamera(Instance i) noexcept {

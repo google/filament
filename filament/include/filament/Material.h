@@ -375,6 +375,10 @@ public:
 
     //! Returns this material's default instance.
     MaterialInstance const* getDefaultInstance() const noexcept;
+
+protected:
+    // prevent heap allocation
+    ~Material() = default;
 };
 
 } // namespace filament

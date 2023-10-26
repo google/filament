@@ -678,7 +678,9 @@ void FRenderableManager::terminate() noexcept {
 }
 
 void FRenderableManager::gc(utils::EntityManager& em) noexcept {
-    mManager.gc(em);
+    mManager.gc(em, [this](Entity e) {
+        destroy(e);
+    });
 }
 
 // This is basically a Renderable's destructor.

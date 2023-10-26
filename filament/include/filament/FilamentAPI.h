@@ -49,8 +49,6 @@ public:
     // prevent heap allocation
     static void *operator new     (size_t) = delete;
     static void *operator new[]   (size_t) = delete;
-    static void  operator delete  (void*)  = delete;
-    static void  operator delete[](void*)  = delete;
 };
 
 template<typename T>

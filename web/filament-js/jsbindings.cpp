@@ -688,6 +688,7 @@ class_<Scene>("Scene")
     .function("getSkybox", &Scene::getSkybox, allow_raw_pointers())
     .function("setIndirectLight", &Scene::setIndirectLight, allow_raw_pointers())
     .function("getIndirectLight", &Scene::getIndirectLight, allow_raw_pointers())
+    .function("getEntityCount", &Scene::getEntityCount)
     .function("getRenderableCount", &Scene::getRenderableCount)
     .function("getLightCount", &Scene::getLightCount);
 

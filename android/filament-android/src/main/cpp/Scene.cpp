@@ -72,6 +72,13 @@ Java_com_google_android_filament_Scene_nRemoveEntities(JNIEnv *env, jclass type,
 }
 
 extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_Scene_nGetEntityCount(JNIEnv *env, jclass type,
+        jlong nativeScene) {
+    Scene* scene = (Scene*) nativeScene;
+    return (jint) scene->getEntityCount();
+}
+
+extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_Scene_nGetRenderableCount(JNIEnv *env, jclass type,
         jlong nativeScene) {
     Scene* scene = (Scene*) nativeScene;
