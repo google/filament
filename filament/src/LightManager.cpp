@@ -22,16 +22,24 @@ namespace filament {
 
 using namespace math;
 
+bool LightManager::hasComponent(Entity e) const noexcept {
+    return downcast(this)->hasComponent(e);
+}
+
 size_t LightManager::getComponentCount() const noexcept {
     return downcast(this)->getComponentCount();
 }
 
-utils::Entity const* LightManager::getEntities() const noexcept {
-    return downcast(this)->getEntities();
+bool LightManager::empty() const noexcept {
+    return downcast(this)->empty();
 }
 
-bool LightManager::hasComponent(Entity e) const noexcept {
-    return downcast(this)->hasComponent(e);
+utils::Entity LightManager::getEntity(LightManager::Instance i) const noexcept {
+    return downcast(this)->getEntity(i);
+}
+
+utils::Entity const* LightManager::getEntities() const noexcept {
+    return downcast(this)->getEntities();
 }
 
 LightManager::Instance LightManager::getInstance(Entity e) const noexcept {

@@ -31,6 +31,22 @@ bool RenderableManager::hasComponent(utils::Entity e) const noexcept {
     return downcast(this)->hasComponent(e);
 }
 
+size_t RenderableManager::getComponentCount() const noexcept {
+    return downcast(this)->getComponentCount();
+}
+
+bool RenderableManager::empty() const noexcept {
+    return downcast(this)->empty();
+}
+
+utils::Entity RenderableManager::getEntity(RenderableManager::Instance i) const noexcept {
+    return downcast(this)->getEntity(i);
+}
+
+utils::Entity const* RenderableManager::getEntities() const noexcept {
+    return downcast(this)->getEntities();
+}
+
 RenderableManager::Instance
 RenderableManager::getInstance(utils::Entity e) const noexcept {
     return downcast(this)->getInstance(e);

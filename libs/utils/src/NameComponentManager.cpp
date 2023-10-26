@@ -21,7 +21,7 @@ namespace utils {
 
 static constexpr size_t NAME = 0;
 
-NameComponentManager::NameComponentManager(EntityManager& em) {
+NameComponentManager::NameComponentManager(EntityManager&) {
 }
 
 NameComponentManager::~NameComponentManager() = default;
@@ -36,24 +36,12 @@ const char* NameComponentManager::getName(Instance instance) const noexcept {
     return elementAt<NAME>(instance).c_str();
 }
 
-size_t NameComponentManager::getComponentCount() const noexcept {
-    return SingleInstanceComponentManager::getComponentCount();
-}
-
-Entity const* NameComponentManager::getEntities() const noexcept {
-    return SingleInstanceComponentManager::getEntities();
-}
-
 void NameComponentManager::addComponent(Entity e) {
     SingleInstanceComponentManager::addComponent(e);
 }
 
 void NameComponentManager::removeComponent(Entity e) {
     SingleInstanceComponentManager::removeComponent(e);
-}
-
-void NameComponentManager::gc(const EntityManager& em, size_t ratio) noexcept {
-    SingleInstanceComponentManager::gc(em, ratio);
 }
 
 } // namespace utils

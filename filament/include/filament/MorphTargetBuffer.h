@@ -136,6 +136,10 @@ public:
      * @return The number of targets the MorphTargetBuffer holds.
      */
     size_t getCount() const noexcept;
+
+protected:
+    // prevent heap allocation
+    ~MorphTargetBuffer() = default;
 };
 
 } // namespace filament

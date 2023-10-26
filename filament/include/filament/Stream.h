@@ -207,6 +207,10 @@ public:
      * @return timestamp in nanosecond.
      */
     int64_t getTimestamp() const noexcept;
+
+protected:
+    // prevent heap allocation
+    ~Stream() = default;
 };
 
 } // namespace filament
