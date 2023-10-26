@@ -294,6 +294,9 @@ public:
     //! Returns the reflection mode used by this material.
     ReflectionMode getReflectionMode() const noexcept;
 
+    //! Returns the minimum required feature level for this material.
+    backend::FeatureLevel getFeatureLevel() const noexcept;
+
     /**
      * Returns the number of parameters declared by this material.
      * The returned value can be 0.
