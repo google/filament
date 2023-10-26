@@ -424,7 +424,7 @@ void FEngine::shutdown() {
     mDFG.terminate(*this);                  // free-up the DFG
     mRenderableManager.terminate();         // free-up all renderables
     mLightManager.terminate();              // free-up all lights
-    mCameraManager.terminate();             // free-up all cameras
+    mCameraManager.terminate(*this);        // free-up all cameras
 
     driver.destroyRenderPrimitive(mFullScreenTriangleRph);
     destroy(mFullScreenTriangleIb);
@@ -537,7 +537,7 @@ void FEngine::gc() {
     mRenderableManager.gc(em);
     mLightManager.gc(em);
     mTransformManager.gc(em);
-    mCameraManager.gc(em);
+    mCameraManager.gc(*this, em);
 }
 
 void FEngine::flush() {
@@ -828,7 +828,7 @@ FSwapChain* FEngine::createSwapChain(uint32_t width, uint32_t height, uint64_t f
 
 
 FCamera* FEngine::createCamera(Entity entity) noexcept {
-    return mCameraManager.create(entity);
+    return mCameraManager.create(*this, entity);
 }
 
 FCamera* FEngine::getCameraComponent(Entity entity) noexcept {
@@ -837,7 +837,7 @@ FCamera* FEngine::getCameraComponent(Entity entity) noexcept {
 }
 
 void FEngine::destroyCameraComponent(utils::Entity entity) noexcept {
-    mCameraManager.destroy(entity);
+    mCameraManager.destroy(*this, entity);
 }
 
 
@@ -1053,7 +1053,7 @@ void FEngine::destroy(Entity e) {
     mRenderableManager.destroy(e);
     mLightManager.destroy(e);
     mTransformManager.destroy(e);
-    mCameraManager.destroy(e);
+    mCameraManager.destroy(*this, e);
 }
 
 bool FEngine::isValid(const FBufferObject* p) {
