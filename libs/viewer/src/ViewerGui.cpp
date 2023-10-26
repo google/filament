@@ -1045,7 +1045,7 @@ void ViewerGui::updateUserInterface() {
 
             std::vector<std::string> names;
             names.reserve(cameraCount + 1);
-            names.push_back("Free camera");
+            names.emplace_back("Free camera");
             int c = 0;
             for (size_t i = 0; i < cameraCount; i++) {
                 const char* n = mAsset->getName(cameras[i]);
@@ -1060,8 +1060,8 @@ void ViewerGui::updateUserInterface() {
 
             std::vector<const char*> cstrings;
             cstrings.reserve(names.size());
-            for (size_t i = 0; i < names.size(); i++) {
-                cstrings.push_back(names[i].c_str());
+            for (const auto & name : names) {
+                cstrings.push_back(name.c_str());
             }
 
             ImGui::ListBox("Cameras", &mCurrentCamera, cstrings.data(), cstrings.size());
@@ -1083,8 +1083,16 @@ void ViewerGui::updateUserInterface() {
     // At this point, all View settings have been modified,
     //  so we can now push them into the Filament View.
     applySettings(mEngine, mSettings.view, mView);
+
+    auto lights = utils::FixedCapacityVector<utils::Entity>::with_capacity(mScene->getEntityCount());
+    mScene->forEach([&](utils::Entity entity) {
+        if (lm.hasComponent(entity)) {
+            lights.push_back(entity);
+        }
+    });
+
     applySettings(mEngine, mSettings.lighting, mIndirectLight, mSunlight,
-                  lm.getEntities(), lm.getComponentCount(), &lm, mScene, mView);
+            lights.data(), lights.size(), &lm, mScene, mView);
 
     // TODO(prideout): add support for hierarchy, animation and variant selection in remote mode. To
     // support these features, we will need to send a message (list of strings) from DebugServer to

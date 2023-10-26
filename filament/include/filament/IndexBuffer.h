@@ -118,6 +118,10 @@ public:
      * @return The number of indices the IndexBuffer holds.
      */
     size_t getIndexCount() const noexcept;
+
+protected:
+    // prevent heap allocation
+    ~IndexBuffer() = default;
 };
 
 } // namespace filament

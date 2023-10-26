@@ -478,6 +478,10 @@ public:
     private:
         friend class FColorGrading;
     };
+
+protected:
+    // prevent heap allocation
+    ~ColorGrading() = default;
 };
 
 } // namespace filament

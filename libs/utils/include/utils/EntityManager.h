@@ -44,9 +44,8 @@ public:
     public:
         virtual void onEntitiesDestroyed(size_t n, Entity const* entities) noexcept = 0;
     protected:
-        ~Listener() noexcept;
+        virtual ~Listener() noexcept;
     };
-
 
     // maximum number of entities that can exist at the same time
     static size_t getMaxEntityCount() noexcept {
@@ -54,13 +53,16 @@ public:
         return RAW_INDEX_COUNT - 1;
     }
 
-    // create n entities. Thread safe.
+    // number of active Entities
+    size_t getEntityCount() const noexcept;
+
+    // Create n entities. Thread safe.
     void create(size_t n, Entity* entities);
 
     // destroys n entities. Thread safe.
     void destroy(size_t n, Entity* entities) noexcept;
 
-    // create a new Entity. Thread safe.
+    // Create a new Entity. Thread safe.
     // Return Entity.isNull() if the entity cannot be allocated.
     Entity create() {
         Entity e;
@@ -68,20 +70,20 @@ public:
         return e;
     }
 
-    // destroys an Entity. Thread safe.
+    // Destroys an Entity. Thread safe.
     void destroy(Entity e) noexcept {
         destroy(1, &e);
     }
 
-    // return whether the given Entity has been destroyed (false) or not (true).
+    // Return whether the given Entity has been destroyed (false) or not (true).
     // Thread safe.
     bool isAlive(Entity e) const noexcept {
         assert(getIndex(e) < RAW_INDEX_COUNT);
         return (!e.isNull()) && (getGeneration(e) == mGens[getIndex(e)]);
     }
 
-    // registers a listener to be called when an entity is destroyed. thread safe.
-    // if the listener is already register, this method has no effect.
+    // Registers a listener to be called when an entity is destroyed. Thread safe.
+    // If the listener is already registered, this method has no effect.
     void registerListener(Listener* l) noexcept;
 
     // unregisters a listener.
@@ -94,6 +96,7 @@ public:
     uint8_t getGenerationForIndex(size_t index) const noexcept {
         return mGens[index];
     }
+
     // singleton, can't be copied
     EntityManager(const EntityManager& rhs) = delete;
     EntityManager& operator=(const EntityManager& rhs) = delete;

@@ -49,6 +49,16 @@ public:
     using EntityManager::destroy;
 
     UTILS_NOINLINE
+    size_t getEntityCount() const noexcept {
+        std::lock_guard<Mutex> const lock(mFreeListLock);
+        if (mCurrentIndex < RAW_INDEX_COUNT) {
+            return (mCurrentIndex - 1) - mFreeList.size();
+        } else {
+            return getMaxEntityCount() - mFreeList.size();
+        }
+    }
+
+    UTILS_NOINLINE
     void create(size_t n, Entity* entities) {
         Entity::Type index{};
         auto& freeList = mFreeList;

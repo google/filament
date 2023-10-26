@@ -46,20 +46,32 @@ public:
 
     void gc(utils::EntityManager& em) noexcept;
 
-    size_t getComponentCount() const noexcept {
-        return mManager.getComponentCount();
-    }
-
-    utils::Entity const* getEntities() const noexcept {
-        return mManager.getEntities();
-    }
+    /*
+     * Component Manager APIs
+     */
 
     bool hasComponent(utils::Entity e) const noexcept {
         return mManager.hasComponent(e);
     }
 
     Instance getInstance(utils::Entity e) const noexcept {
-        return mManager.getInstance(e);
+        return { mManager.getInstance(e) };
+    }
+
+    size_t getComponentCount() const noexcept {
+        return mManager.getComponentCount();
+    }
+
+    bool empty() const noexcept {
+        return mManager.empty();
+    }
+
+    utils::Entity getEntity(Instance i) const noexcept {
+        return mManager.getEntity(i);
+    }
+
+    utils::Entity const* getEntities() const noexcept {
+        return mManager.getEntities();
     }
 
     void create(const FLightManager::Builder& builder, utils::Entity entity);

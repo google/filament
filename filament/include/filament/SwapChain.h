@@ -286,6 +286,10 @@ public:
     void setFrameCompletedCallback(backend::CallbackHandler* handler = nullptr,
             FrameCompletedCallback&& callback = {}) noexcept;
 
+
+protected:
+    // prevent heap allocation
+    ~SwapChain() = default;
 };
 
 } // namespace filament

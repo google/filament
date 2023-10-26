@@ -48,7 +48,7 @@ class EntityManager;
  * printf("%s\n", names->getName(names->getInstance(myEntity));
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
-class UTILS_PUBLIC NameComponentManager : public SingleInstanceComponentManager<utils::CString> {
+class UTILS_PUBLIC NameComponentManager : private SingleInstanceComponentManager<utils::CString> {
 public:
     using Instance = EntityInstance<NameComponentManager>;
 
@@ -75,15 +75,6 @@ public:
         return { SingleInstanceComponentManager::getInstance(e) };
     }
 
-    /*! \cond PRIVATE */
-    // these are implemented in SingleInstanceComponentManager<>, but we need to
-    // reimplement them in each manager, to ensure they are generated in an implementation file
-    // for backward binary compatibility reasons.
-    size_t getComponentCount() const noexcept;
-    Entity const* getEntities() const noexcept;
-    void gc(const EntityManager& em, size_t ratio = 4) noexcept;
-    /*! \endcond */
-
     /**
      * Adds a name component to the given entity if it doesn't already exist.
      */
@@ -105,6 +96,12 @@ public:
      * @return pointer to the copy that was made during setName()
      */
     const char* getName(Instance instance) const noexcept;
+
+    void gc(EntityManager& em) noexcept {
+        SingleInstanceComponentManager<utils::CString>::gc(em, [this](Entity e) {
+            removeComponent(e);
+        });
+    }
 };
 
 } // namespace utils

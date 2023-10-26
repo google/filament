@@ -143,7 +143,7 @@ public:
     using Instance = utils::EntityInstance<LightManager>;
 
     /**
-     * Returns the number of component in the LightManager, not that component are not
+     * Returns the number of component in the LightManager, note that component are not
      * guaranteed to be active. Use the EntityManager::isAlive() before use if needed.
      *
      * @return number of component in the LightManager
@@ -151,18 +151,29 @@ public:
     size_t getComponentCount() const noexcept;
 
     /**
-     * Returns the list of Entity for all components. Use getComponentCount() to know the size
-     * of the list.
-     * @return a pointer to Entity
-     */
-    utils::Entity const* getEntities() const noexcept;
-
-    /**
      * Returns whether a particular Entity is associated with a component of this LightManager
      * @param e An Entity.
      * @return true if this Entity has a component associated with this manager.
      */
     bool hasComponent(utils::Entity e) const noexcept;
+
+    /**
+     * @return true if the this manager has no components
+     */
+    bool empty() const noexcept;
+
+    /**
+     * Retrieve the `Entity` of the component from its `Instance`.
+     * @param i Instance of the component obtained from getInstance()
+     * @return
+     */
+    utils::Entity getEntity(Instance i) const noexcept;
+
+    /**
+     * Retrieve the Entities of all the components of this manager.
+     * @return A list, in no particular order, of all the entities managed by this manager.
+     */
+    utils::Entity const* getEntities() const noexcept;
 
     /**
      * Gets an Instance representing the Light component associated with the given Entity.
@@ -953,19 +964,9 @@ public:
      */
     bool isShadowCaster(Instance i) const noexcept;
 
-    /**
-     * Helper to process all components with a given function
-     * @tparam F    a void(Entity entity, Instance instance)
-     * @param func  a function of type F
-     */
-    template<typename F>
-    void forEachComponent(F func) noexcept {
-        utils::Entity const* const pEntity = getEntities();
-        for (size_t i = 0, c = getComponentCount(); i < c; i++) {
-            // Instance 0 is the invalid instance
-            func(pEntity[i], Instance(i + 1));
-        }
-    }
+protected:
+    // prevent heap allocation
+    ~LightManager() = default;
 };
 
 } // namespace filament
