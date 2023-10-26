@@ -242,6 +242,10 @@ class CodeViewer extends LitElement {
     }
 
     _rebuild() {
+        if (!this.active || !this.modified) {
+            console.log('Called rebuild while variant is inactive or unmodified');
+            return;
+        }
         this.dispatchEvent(new CustomEvent(
             'rebuild-shader',
             {detail: this.editor.getValue(), bubbles: true, composed: true}
