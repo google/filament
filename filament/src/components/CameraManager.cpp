@@ -23,70 +23,82 @@
 #include <utils/Log.h>
 #include <utils/debug.h>
 
-#include <math/mat4.h>
-
 using namespace utils;
 using namespace filament::math;
 
 namespace filament {
 
-FCameraManager::FCameraManager(FEngine& engine) noexcept
-        : mEngine(engine) {
+FCameraManager::FCameraManager(FEngine&) noexcept {
 }
 
-FCameraManager::~FCameraManager() noexcept {
-}
+FCameraManager::~FCameraManager() noexcept = default;
 
-void FCameraManager::terminate() noexcept {
+void FCameraManager::terminate(FEngine& engine) noexcept {
     auto& manager = mManager;
     if (!manager.empty()) {
 #ifndef NDEBUG
         slog.d << "cleaning up " << manager.getComponentCount()
                << " leaked Camera components" << io::endl;
 #endif
-        while (!manager.empty()) {
-            Instance const ci = manager.end() - 1;
-            destroy(manager.getEntity(ci));
+        utils::Slice<Entity> const entities{ manager.getEntities(), manager.getComponentCount() };
+        for (Entity const e : entities) {
+            destroy(engine, e);
         }
     }
 }
 
-void FCameraManager::gc(utils::EntityManager& em) noexcept {
+void FCameraManager::gc(FEngine& engine, utils::EntityManager& em) noexcept {
     auto& manager = mManager;
-    manager.gc(em, [this](Entity e) {
-        destroy(e);
+    manager.gc(em, [this, &engine](Entity e) {
+        destroy(engine, e);
     });
 }
 
-FCamera* FCameraManager::create(Entity entity) {
-    FEngine& engine = mEngine;
+FCamera* FCameraManager::create(FEngine& engine, Entity entity) {
     auto& manager = mManager;
 
+    // if this entity already has Camera component, destroy it.
     if (UTILS_UNLIKELY(manager.hasComponent(entity))) {
-        destroy(entity);
+        destroy(engine, entity);
     }
+
+    // add the Camera component to the entity
     Instance const i = manager.addComponent(entity);
 
-    FCamera* camera = engine.getHeapAllocator().make<FCamera>(engine, entity);
+    // For historical reasons, FCamera must not move. So the CameraManager stores a pointer.
+    FCamera* const camera = engine.getHeapAllocator().make<FCamera>(engine, entity);
     manager.elementAt<CAMERA>(i) = camera;
+    manager.elementAt<OWNS_TRANSFORM_COMPONENT>(i) = false;
 
     // Make sure we have a transform component
-    FTransformManager& transformManager = engine.getTransformManager();
-    if (!transformManager.hasComponent(entity)) {
-        transformManager.create(entity);
+    FTransformManager& tcm = engine.getTransformManager();
+    if (!tcm.hasComponent(entity)) {
+        tcm.create(entity);
+        manager.elementAt<OWNS_TRANSFORM_COMPONENT>(i) = true;
     }
     return camera;
 }
 
-void FCameraManager::destroy(Entity e) noexcept {
+void FCameraManager::destroy(FEngine& engine, Entity e) noexcept {
     auto& manager = mManager;
-    Instance const i = manager.getInstance(e);
-    if (i) {
-        FCamera* camera = manager.elementAt<CAMERA>(i);
-        assert_invariant(camera);
-        camera->terminate(mEngine);
-        mEngine.getHeapAllocator().destroy(camera);
-        manager.removeComponent(e);
+    if (Instance const i = manager.getInstance(e) ; i) {
+        // destroy the FCamera object
+        bool const ownsTransformComponent = manager.elementAt<OWNS_TRANSFORM_COMPONENT>(i);
+
+        { // scope for camera -- it's invalid after this scope.
+            FCamera* const camera = manager.elementAt<CAMERA>(i);
+            assert_invariant(camera);
+            camera->terminate(engine);
+            engine.getHeapAllocator().destroy(camera);
+
+            // Remove the camera component
+            manager.removeComponent(e);
+        }
+
+        // if we added the transform component, remove it.
+        if (ownsTransformComponent) {
+            engine.getTransformManager().destroy(e);
+        }
     }
 }
 

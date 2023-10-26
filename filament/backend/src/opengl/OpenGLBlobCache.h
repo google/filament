@@ -25,20 +25,21 @@ namespace filament::backend {
 
 class Platform;
 class Program;
+class OpenGLContext;
 
 class OpenGLBlobCache {
 public:
-    static GLuint retrieve(BlobCacheKey* key, Platform& platform,
-            Program const& program) noexcept;
+    explicit OpenGLBlobCache(OpenGLContext& gl) noexcept;
 
-    static void insert(Platform& platform,
+    GLuint retrieve(BlobCacheKey* key, Platform& platform,
+            Program const& program) const noexcept;
+
+    void insert(Platform& platform,
             BlobCacheKey const& key, GLuint program) noexcept;
-
-    static void insert(Platform& platform, BlobCacheKey const& key,
-            GLenum format, void* data, GLsizei programBinarySize) noexcept;
 
 private:
     struct Blob;
+    bool mCachingSupported = false;
 };
 
 } // namespace filament::backend

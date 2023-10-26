@@ -44,9 +44,9 @@ public:
     ~FCameraManager() noexcept;
 
     // free-up all resources
-    void terminate() noexcept;
+    void terminate(FEngine& engine) noexcept;
 
-    void gc(utils::EntityManager& em) noexcept;
+    void gc(FEngine& engine, utils::EntityManager& em) noexcept;
 
     /*
     * Component Manager APIs
@@ -80,25 +80,24 @@ public:
         return mManager.elementAt<CAMERA>(i);
     }
 
-    FCamera* create(utils::Entity entity);
+    FCamera* create(FEngine& engine, utils::Entity entity);
 
-    void destroy(utils::Entity e) noexcept;
+    void destroy(FEngine& engine, utils::Entity e) noexcept;
 
 private:
 
     enum {
-        CAMERA
+        CAMERA,
+        OWNS_TRANSFORM_COMPONENT
     };
 
-    using Base = utils::SingleInstanceComponentManager<FCamera *>;
+    using Base = utils::SingleInstanceComponentManager<FCamera*, bool>;
 
     struct CameraManagerImpl : public Base {
         using Base::gc;
         using Base::swap;
         using Base::hasComponent;
     } mManager;
-
-    FEngine& mEngine;
 };
 
 } // namespace filament
