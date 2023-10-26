@@ -23,7 +23,6 @@ material {
     depthWrite : false,
     depthCulling : false,
     domain: postprocess,
-    shadingModel : unlit,
     featureLevel : 0
 }
 

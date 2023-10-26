@@ -1098,6 +1098,12 @@ error:
         return Package::invalidPackage();
     }
 
+    // Force post process materials to be unlit. This prevents imposing a lot of extraneous
+    // data, code, and expectations for materials which do not need them.
+    if (mMaterialDomain == MaterialDomain::POST_PROCESS) {
+        mShading = Shading::UNLIT;
+    }
+
     // Add a default color output.
     if (mMaterialDomain == MaterialDomain::POST_PROCESS && mOutputs.empty()) {
         output(VariableQualifier::OUT,
