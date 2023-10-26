@@ -28,14 +28,16 @@ bool Platform::pumpEvents() noexcept {
 }
 
 void Platform::setBlobFunc(InsertBlobFunc&& insertBlob, RetrieveBlobFunc&& retrieveBlob) noexcept {
-    if (!mInsertBlob && !mRetrieveBlob) {
-        mInsertBlob = std::move(insertBlob);
-        mRetrieveBlob = std::move(retrieveBlob);
-    }
+    mInsertBlob = std::move(insertBlob);
+    mRetrieveBlob = std::move(retrieveBlob);
 }
 
-bool Platform::hasBlobFunc() const noexcept {
-    return mInsertBlob && mRetrieveBlob;
+bool Platform::hasInsertBlobFunc() const noexcept {
+    return bool(mInsertBlob);
+}
+
+bool Platform::hasRetrieveBlobFunc() const noexcept {
+    return bool(mRetrieveBlob);
 }
 
 void Platform::insertBlob(void const* key, size_t keySize, void const* value, size_t valueSize) {

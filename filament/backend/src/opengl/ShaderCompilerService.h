@@ -21,6 +21,7 @@
 
 #include "CallbackManager.h"
 #include "CompilerThreadPool.h"
+#include "OpenGLBlobCache.h"
 
 #include <backend/CallbackHandler.h>
 #include <backend/Program.h>
@@ -95,6 +96,7 @@ public:
 
 private:
     OpenGLDriver& mDriver;
+    OpenGLBlobCache mBlobCache;
     CallbackManager mCallbackManager;
     CompilerThreadPool mCompilerThreadPool;
 

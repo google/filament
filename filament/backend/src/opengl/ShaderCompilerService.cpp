@@ -140,6 +140,7 @@ void* ShaderCompilerService::getUserData(const program_token_t& token) noexcept 
 
 ShaderCompilerService::ShaderCompilerService(OpenGLDriver& driver)
         : mDriver(driver),
+          mBlobCache(driver.getContext()),
           mCallbackManager(driver),
           KHR_parallel_shader_compile(driver.getContext().ext.KHR_parallel_shader_compile) {
 }
@@ -219,7 +220,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
         token->attributes = std::move(program.getAttributes());
     }
 
-    token->gl.program = OpenGLBlobCache::retrieve(&token->key, mDriver.mPlatform, program);
+    token->gl.program = mBlobCache.retrieve(&token->key, mDriver.mPlatform, program);
     if (token->gl.program) {
         return token;
     }
@@ -264,7 +265,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                     // caching must be the last thing we do
                     if (token->key && status == GL_TRUE) {
                         // Attempt to cache. This calls glGetProgramBinary.
-                        OpenGLBlobCache::insert(mDriver.mPlatform, token->key, glProgram);
+                        mBlobCache.insert(mDriver.mPlatform, token->key, glProgram);
                     }
                 });
 
@@ -317,7 +318,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                 //       do this later, maybe depending on CPU usage?
                 // attempt to cache if we don't have a thread pool (otherwise it's done
                 // by the pool).
-                OpenGLBlobCache::insert(mDriver.mPlatform, token->key, token->gl.program);
+                mBlobCache.insert(mDriver.mPlatform, token->key, token->gl.program);
             }
 
             return true;
@@ -431,7 +432,7 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) noexcept {
             mCallbackManager.put(token->handle);
 
             if (token->key) {
-                OpenGLBlobCache::insert(mDriver.mPlatform, token->key, token->gl.program);
+                mBlobCache.insert(mDriver.mPlatform, token->key, token->gl.program);
             }
         } else {
             // if we don't have a program yet, block until we get it.
