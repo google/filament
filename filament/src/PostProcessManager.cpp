@@ -207,10 +207,13 @@ PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMater
 
 #define MATERIAL(n) MATERIALS_ ## n ## _DATA, MATERIALS_ ## n ## _SIZE
 
+static const PostProcessManager::MaterialInfo sMaterialListFeatureLevel0[] = {
+        { "blitLow",                    MATERIAL(BLITLOW) },
+};
+
 static const PostProcessManager::MaterialInfo sMaterialList[] = {
         { "bilateralBlur",              MATERIAL(BILATERALBLUR) },
         { "bilateralBlurBentNormals",   MATERIAL(BILATERALBLURBENTNORMALS) },
-        { "blitLow",                    MATERIAL(BLITLOW) },
         { "bloomDownsample",            MATERIAL(BLOOMDOWNSAMPLE) },
         { "bloomDownsample2x",          MATERIAL(BLOOMDOWNSAMPLE2X) },
         { "bloomDownsample9",           MATERIAL(BLOOMDOWNSAMPLE9) },
@@ -273,8 +276,15 @@ void PostProcessManager::init() noexcept {
             driver.isWorkaroundNeeded(Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP);
 
     #pragma nounroll
-    for (auto const& info : sMaterialList) {
+    for (auto const& info : sMaterialListFeatureLevel0) {
         registerPostProcessMaterial(info.name, info);
+    }
+
+    if (mEngine.getActiveFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1) {
+        #pragma nounroll
+        for (auto const& info : sMaterialList) {
+            registerPostProcessMaterial(info.name, info);
+        }
     }
 
     mStarburstTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,

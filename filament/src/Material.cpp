@@ -120,6 +120,10 @@ ReflectionMode Material::getReflectionMode() const noexcept {
     return downcast(this)->getReflectionMode();
 }
 
+FeatureLevel Material::getFeatureLevel() const noexcept {
+    return downcast(this)->getFeatureLevel();
+}
+
 bool Material::hasParameter(const char* name) const noexcept {
     return downcast(this)->hasParameter(name);
 }
