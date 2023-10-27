@@ -212,6 +212,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* const gld) const noexcept {
         assert_invariant(binding < Program::SAMPLER_BINDING_COUNT);
         auto const * const sb = samplerBindings[binding];
         assert_invariant(sb);
+        if (!sb) continue; // should never happen, this would be a user error.
         for (uint8_t j = 0, m = sb->textureUnitEntries.size(); j < m; ++j, ++tmu) { // "<=" on purpose here
             const GLTexture* const t = sb->textureUnitEntries[j].texture;
             if (t) { // program may not use all samplers of sampler group
