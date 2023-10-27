@@ -1459,9 +1459,9 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
     DEBUG_MARKER()
 
     if (th) {
+        auto& gl = mContext;
         GLTexture* t = handle_cast<GLTexture*>(th);
         if (UTILS_LIKELY(!t->gl.imported)) {
-            auto& gl = mContext;
             if (UTILS_LIKELY(t->usage & TextureUsage::SAMPLEABLE)) {
                 gl.unbindTexture(t->gl.target, t->gl.id);
                 if (UTILS_UNLIKELY(t->hwStream)) {
@@ -1479,6 +1479,8 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
             if (t->gl.sidecarRenderBufferMS) {
                 glDeleteRenderbuffers(1, &t->gl.sidecarRenderBufferMS);
             }
+        } else {
+            gl.unbindTexture(t->gl.target, t->gl.id);
         }
         destruct(th, t);
     }
