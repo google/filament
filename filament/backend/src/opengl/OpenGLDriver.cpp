@@ -1451,6 +1451,11 @@ void OpenGLDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
     DEBUG_MARKER()
     if (sbh) {
         GLSamplerGroup* sb = handle_cast<GLSamplerGroup*>(sbh);
+        for (auto& binding : mSamplerBindings) {
+            if (binding == sb) {
+                binding = nullptr;
+            }
+        }
         destruct(sbh, sb);
     }
 }
