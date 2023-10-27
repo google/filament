@@ -239,14 +239,16 @@ private:
         }
     };
 
-
+// FIXME: We should be using a Spinlock here, at least on platforms where mutexes are not
+//        efficient (i.e. non-Linux). However, we've seen some hangs on that spinlock, which
+//        we don't understand well (b/308029108).
 #ifndef NDEBUG
     using HandleArena = utils::Arena<Allocator,
-            utils::LockingPolicy::SpinLock,
+            utils::LockingPolicy::Mutex,
             utils::TrackingPolicy::DebugAndHighWatermark>;
 #else
     using HandleArena = utils::Arena<Allocator,
-            utils::LockingPolicy::SpinLock>;
+            utils::LockingPolicy::Mutex>;
 #endif
 
     // allocateHandle()/deallocateHandle() selects the pool to use at compile-time based on the

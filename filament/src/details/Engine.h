@@ -487,7 +487,7 @@ private:
     ResourceList<FRenderTarget> mRenderTargets{ "RenderTarget" };
 
     // the fence list is accessed from multiple threads
-    utils::SpinLock mFenceListLock;
+    utils::Mutex mFenceListLock;
     ResourceList<FFence> mFences{"Fence"};
 
     mutable uint32_t mMaterialId = 0;
