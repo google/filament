@@ -168,7 +168,7 @@ error:
 }
 
 bool PlatformWGL::isExtraContextSupported() const noexcept {
-    return true;
+    return false;
 }
 
 void PlatformWGL::createContext(bool shared) {
