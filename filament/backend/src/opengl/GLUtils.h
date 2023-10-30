@@ -373,16 +373,19 @@ constexpr inline GLenum getCullingMode(CullingMode mode) noexcept {
 constexpr inline std::pair<GLenum, GLenum> textureFormatToFormatAndType(
         TextureFormat format) noexcept {
     switch (format) {
-        case TextureFormat::RGB8:       return { GL_RGB,                GL_UNSIGNED_BYTE };
-        case TextureFormat::RGBA8:      return { GL_RGBA,               GL_UNSIGNED_BYTE };
-        case TextureFormat::RGB565:     return { GL_RGB,                GL_UNSIGNED_SHORT_5_6_5 };
-        case TextureFormat::RGB5_A1:    return { GL_RGBA,               GL_UNSIGNED_SHORT_5_5_5_1 };
-        case TextureFormat::RGBA4:      return { GL_RGBA,               GL_UNSIGNED_SHORT_4_4_4_4 };
-        case TextureFormat::DEPTH16:    return { GL_DEPTH_COMPONENT,    GL_UNSIGNED_SHORT };
-        case TextureFormat::DEPTH24:    return { GL_DEPTH_COMPONENT,    GL_UNSIGNED_INT };
+        case TextureFormat::R8:         return { 0x1909 /*GL_LUMINANCE*/, GL_UNSIGNED_BYTE };
+        case TextureFormat::RGB8:       return { GL_RGB,                  GL_UNSIGNED_BYTE };
+        case TextureFormat::SRGB8:      return { GL_RGB,                  GL_UNSIGNED_BYTE };
+        case TextureFormat::RGBA8:      return { GL_RGBA,                 GL_UNSIGNED_BYTE };
+        case TextureFormat::SRGB8_A8:   return { GL_RGBA,                 GL_UNSIGNED_BYTE };
+        case TextureFormat::RGB565:     return { GL_RGB,                  GL_UNSIGNED_SHORT_5_6_5 };
+        case TextureFormat::RGB5_A1:    return { GL_RGBA,                 GL_UNSIGNED_SHORT_5_5_5_1 };
+        case TextureFormat::RGBA4:      return { GL_RGBA,                 GL_UNSIGNED_SHORT_4_4_4_4 };
+        case TextureFormat::DEPTH16:    return { GL_DEPTH_COMPONENT,      GL_UNSIGNED_SHORT };
+        case TextureFormat::DEPTH24:    return { GL_DEPTH_COMPONENT,      GL_UNSIGNED_INT };
         case TextureFormat::DEPTH24_STENCIL8:
-                                        return { GL_DEPTH24_STENCIL8,   GL_UNSIGNED_INT_24_8 };
-        default:                        return { GL_NONE,               GL_NONE };
+                                        return { GL_DEPTH24_STENCIL8,     GL_UNSIGNED_INT_24_8 };
+        default:                        return { GL_NONE,                 GL_NONE };
     }
 }
 
