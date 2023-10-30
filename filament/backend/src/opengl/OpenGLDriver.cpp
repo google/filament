@@ -1290,7 +1290,9 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
                 checkDimensions(rt->gl.color[i], color[i].level);
             }
         }
-        glDrawBuffers((GLsizei)maxDrawBuffers, bufs);
+        if (UTILS_LIKELY(!getContext().isES2())) {
+            glDrawBuffers((GLsizei)maxDrawBuffers, bufs);
+        }
         CHECK_GL_ERROR(utils::slog.e)
     }
 #endif
@@ -1782,6 +1784,10 @@ bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat format) {
     // support more formats, but it requires querying GL_INTERNALFORMAT_SUPPORTED which is not
     // available in OpenGL ES.
     auto& gl = mContext;
+    if (UTILS_UNLIKELY(gl.isES2())) {
+        auto [es2format, type] = textureFormatToFormatAndType(format);
+        return es2format != GL_NONE && type != GL_NONE;
+    }
     switch (format) {
         // Core formats.
         case TextureFormat::R8:
@@ -2276,8 +2282,16 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
         return;
     }
 
-    GLenum const glFormat = getFormat(p.format);
-    GLenum const glType = getType(p.type);
+    GLenum glFormat;
+    GLenum glType;
+    if (mContext.isES2()) {
+        auto formatAndType = textureFormatToFormatAndType(t->format);
+        glFormat = formatAndType.first;
+        glType = formatAndType.second;
+    } else {
+        glFormat = getFormat(p.format);
+        glType = getType(p.type);
+    }
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     if (!gl.isES2()) {

@@ -164,11 +164,13 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
         if (stage == ShaderStage::VERTEX) {
             generateDefine(out, "VARYING", "out");
+            generateDefine(out, "ATTRIBUTE", "in");
         } else if (stage == ShaderStage::FRAGMENT) {
             generateDefine(out, "VARYING", "in");
         }
     } else {
         generateDefine(out, "VARYING", "varying");
+        generateDefine(out, "ATTRIBUTE", "attribute");
     }
 
     auto getShadingDefine = [](Shading shading) -> const char* {

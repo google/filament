@@ -15,3 +15,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - matc: Add support for post-process materials in feature level 0
 - engine: Add `Material::getFeatureLevel()`
 - engine: Add missing `Material::getReflectionMode()` method in Java
+- engine: Support basic usage of post-processing materials on feature level 0
