@@ -70,7 +70,7 @@ intptr_t CallStack::operator[](size_t index) const {
 #endif
         std::abort();
     }
-    return m_stack[index].pc;
+    return m_stack[index];
 }
 
 size_t CallStack::getFrameCount() const noexcept {
@@ -91,7 +91,7 @@ void CallStack::update_gcc(size_t ignore) noexcept {
     size -= ignore;
 #endif
     for (ssize_t i = 0; i < size; i++) {
-        m_stack[i].pc = intptr_t(array[ignore + i]);
+        m_stack[i] = intptr_t(array[ignore + i]);
     }
     size--; // the last one seems to always be 0x0
 

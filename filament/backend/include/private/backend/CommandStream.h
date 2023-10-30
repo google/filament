@@ -73,14 +73,32 @@ public:
         // a cost here (writing and reading the stack at each iteration), in the end it's
         // probably better to pay the cost at just one location.
         intptr_t next;
+        driver.mCurrentExecutingCommand = this;
         mExecute(driver, this, &next);
         return reinterpret_cast<CommandBase*>(reinterpret_cast<intptr_t>(this) + next);
+    }
+
+    inline void captureCallstack() noexcept {
+        auto c = utils::CallStack::unwind(4);
+        size_t i = 0;
+        for (; i < c.getFrameCount() && i < 16; i++) {
+            mCallstack[i] = c[i];
+        }
+        for (; i < 16; i++) {
+            mCallstack[i] = 0;
+        }
+    }
+
+    void printCallstack() noexcept {
+        auto c = utils::CallStack(mCallstack);
+        utils::slog.d << c << utils::io::endl;
     }
 
     inline ~CommandBase() noexcept = default;
 
 private:
     Execute mExecute;
+    std::array<intptr_t, 16> mCallstack = {0};
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -218,6 +236,7 @@ public:
         using Cmd = COMMAND_TYPE(methodName);                                                   \
         void* const p = allocateCommand(CommandBase::align(sizeof(Cmd)));                       \
         new(p) Cmd(mDispatcher.methodName##_, APPLY(std::move, params));                        \
+        ((Cmd*)p)->captureCallstack();                                                          \
         DEBUG_COMMAND_END(methodName, false);                                                   \
     }
 
@@ -237,6 +256,7 @@ public:
         using Cmd = COMMAND_TYPE(methodName##R);                                                \
         void* const p = allocateCommand(CommandBase::align(sizeof(Cmd)));                       \
         new(p) Cmd(mDispatcher.methodName##_, RetType(result), APPLY(std::move, params));       \
+        ((Cmd*)p)->captureCallstack();                                                          \
         DEBUG_COMMAND_END(methodName, false);                                                   \
         return result;                                                                          \
     }

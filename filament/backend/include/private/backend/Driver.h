@@ -53,6 +53,7 @@ template<typename T>
 class ConcreteDispatcher;
 class Dispatcher;
 class CommandStream;
+class CommandBase;
 
 class Driver {
 public:
@@ -82,6 +83,8 @@ public:
 
     virtual void debugCommandEnd(CommandStream* cmds,
             bool synchronous, const char* methodName) noexcept = 0;
+
+    CommandBase* mCurrentExecutingCommand = nullptr;
 
     /*
      * Asynchronous calls here only to provide a type to CommandStream. They must be non-virtual

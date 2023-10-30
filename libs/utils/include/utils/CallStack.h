@@ -36,6 +36,13 @@ public:
      * @see CallStack::capture()
      */
     CallStack() = default;
+    template <unsigned long N>
+    explicit CallStack(const std::array<intptr_t, N>& symbols)
+        : m_frame_count(N) {
+        for (size_t i = 0; i < N; i++) {
+            m_stack[i] = symbols[i];
+        }
+    }
     CallStack(const CallStack&) = default;
     ~CallStack() = default;
 
@@ -114,12 +121,10 @@ private:
 
     static constexpr size_t NUM_FRAMES = 20;
 
-    struct StackFrameInfo {
-        intptr_t pc;
-    };
+    using StackFrameInfo = intptr_t;
 
     size_t m_frame_count = 0;
-    StackFrameInfo m_stack[NUM_FRAMES];
+    StackFrameInfo m_stack[NUM_FRAMES] = {0};
 };
 
 } // namespace utils
