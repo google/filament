@@ -77,6 +77,33 @@ public:
         Builder& bindingType(BindingType bindingType) noexcept;
 
         /**
+         * Specify a native buffer to import as a Filament buffer.
+         *
+         * The buffer id is backend-specific:
+         *   - OpenGL: GLuint buffer object ID
+         *   - Metal: id<MTLBuffer>
+         *
+         * With Metal, the id<MTLBuffer> object should be cast to an intptr_t using
+         * __bridge cast to transfer to Filament. Management of ownership is done by Filament.
+         *
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+         *  id<MTLBuffer> metalBuffer = ...
+         *  filamentBuffer->import(intptr_t((__bridge void*) metalBuffer));
+         *
+         *  // after using buffer:
+         *  engine->destroy(filamentBuffer);
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         *
+         * @warning This method should be used as a last resort. This API is subject to change or
+         * removal.
+         *
+         * @param id a backend specific buffer identifier
+         *
+         * @return This Builder, for chaining calls.
+         */
+        Builder& import(intptr_t id) noexcept;
+
+        /**
          * Creates the BufferObject and returns a pointer to it. After creation, the buffer
          * object is uninitialized. Use BufferObject::setBuffer() to initialize it.
          *
