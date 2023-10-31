@@ -195,7 +195,7 @@ public:
     void setStereoscopicOptions(StereoscopicOptions const& options);
 
     FCamera const* getDirectionalLightCamera() const noexcept {
-        return &mShadowMapManager.getShadowMap(0)->getDebugCamera();
+        return mShadowMapManager.getDirectionalLightCamera();
     }
 
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {
