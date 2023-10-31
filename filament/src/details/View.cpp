@@ -746,9 +746,11 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
     mPerViewUniforms.prepareSSAO(ssao, mAmbientOcclusionOptions);
 }
 
-void FView::prepareSSR(Handle<HwTexture> ssr, float refractionLodOffset,
+void FView::prepareSSR(Handle<HwTexture> ssr,
+        bool disableSSR,
+        float refractionLodOffset,
         ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
-    mPerViewUniforms.prepareSSR(ssr, refractionLodOffset, ssrOptions);
+    mPerViewUniforms.prepareSSR(ssr, disableSSR, refractionLodOffset, ssrOptions);
 }
 
 void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
