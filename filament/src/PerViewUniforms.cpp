@@ -83,7 +83,7 @@ void PerViewUniforms::prepareCamera(FEngine& engine, const CameraInfo& camera) n
 
     mat4f const& headFromWorld = camera.view;
     Engine::Config const& config = engine.getConfig();
-    for (uint8_t i = 0; i < config.stereoscopicEyeCount; i++) {
+    for (int i = 0; i < config.stereoscopicEyeCount; i++) {
         mat4f const& eyeFromHead = camera.eyeFromView[i];   // identity for monoscopic rendering
         mat4f const& clipFromEye = camera.eyeProjection[i];
         // clipFromEye * eyeFromHead * headFromWorld
