@@ -356,6 +356,13 @@ enum class SamplerFormat : uint8_t {
     SHADOW = 3      //!< shadow sampler (PCF)
 };
 
+//! Texture color space
+enum class SamplerTransferFunction : uint8_t {
+    UNDEFINED = 0,      //!< don't care
+    IDENTITY = 1,       //!< sampled as-is
+    SRGB_TO_LINEAR = 2, //!< sampled as sRGB and converted to linear
+};
+
 /**
  * Supported element types
  */

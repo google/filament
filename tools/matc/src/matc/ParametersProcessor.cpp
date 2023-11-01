@@ -180,6 +180,19 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         }
     }
 
+    const JsonishValue* transferFunctionValue = jsonObject.getValue("transferFunction");
+    if (transferFunctionValue) {
+        if (transferFunctionValue->getType() != JsonishValue::STRING) {
+            std::cerr << "parameters: transferFunction must be a STRING." << std::endl;
+            return false;
+        }
+
+        auto transferFunctionString = formatValue->toJsonString();
+        if (!Enums::isValid<SamplerTransferFunction>(transferFunctionString->getString())){
+            return logEnumIssue("parameters", *transferFunctionString, Enums::map<SamplerTransferFunction>());
+        }
+    }
+
     auto typeString = typeValue->toJsonString()->getString();
     auto nameString = nameValue->toJsonString()->getString();
 
@@ -205,22 +218,22 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
             return false;
         }
 
-        MaterialBuilder::SamplerType type = Enums::toEnum<SamplerType>(typeString);
-        if (precisionValue && formatValue) {
-            auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
-            auto precision =
-                    Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
-            builder.parameter(nameString.c_str(), type, format, precision);
-        } else if (formatValue) {
-            auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
-            builder.parameter(nameString.c_str(), type, format);
-        } else if (precisionValue) {
-            auto precision =
-                    Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
-            builder.parameter(nameString.c_str(), type, precision);
-        } else {
-            builder.parameter(nameString.c_str(), type);
+        SamplerType type = Enums::toEnum<SamplerType>(typeString);
+        SamplerFormat format = SamplerFormat::FLOAT;
+        if (formatValue) {
+            format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
         }
+        ParameterPrecision precision = ParameterPrecision::DEFAULT;
+        if (precisionValue) {
+            precision =
+                    Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
+        }
+        SamplerTransferFunction transferFunction = SamplerTransferFunction::UNDEFINED;
+        if (transferFunctionValue) {
+            transferFunction =
+                    Enums::toEnum<SamplerTransferFunction>(transferFunctionValue->toJsonString()->getString());
+        }
+        builder.parameter(nameString.c_str(), type, format, precision, transferFunction);
     } else {
         std::cerr << "parameters: the type '" << typeString
                << "' for parameter with name '" << nameString << "' is neither a valid uniform "

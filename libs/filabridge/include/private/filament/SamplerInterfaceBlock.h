@@ -46,6 +46,7 @@ public:
     using Format = backend::SamplerFormat;
     using Precision = backend::Precision;
     using SamplerParams = backend::SamplerParams;
+    using SamplerTransferFunction = backend::SamplerTransferFunction;
 
     struct SamplerInfo { // NOLINT(cppcoreguidelines-pro-type-member-init)
         utils::CString name;        // name of this sampler
@@ -55,6 +56,7 @@ public:
         Format format;              // format of this sampler
         Precision precision;        // precision of this sampler
         bool multisample;           // multisample capable
+        SamplerTransferFunction transferFunction;
     };
 
     class Builder {
@@ -73,6 +75,7 @@ public:
             Format format;                  // format of this sampler
             Precision precision;            // precision of this sampler
             bool multisample = false;       // multisample capable
+            SamplerTransferFunction transferFunction;
         };
 
         // Give a name to this sampler interface block
@@ -83,7 +86,8 @@ public:
         // Add a sampler
         Builder& add(std::string_view samplerName, Type type, Format format,
                 Precision precision = Precision::MEDIUM,
-                bool multisample = false) noexcept;
+                bool multisample = false,
+                SamplerTransferFunction transferFunction = SamplerTransferFunction::UNDEFINED) noexcept;
 
         // Add multiple samplers
         Builder& add(std::initializer_list<ListEntry> list) noexcept;

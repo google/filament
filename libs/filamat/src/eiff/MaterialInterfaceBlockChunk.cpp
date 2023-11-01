@@ -65,6 +65,7 @@ void MaterialSamplerInterfaceBlockChunk::flatten(Flattener& f) {
         f.writeUint8(static_cast<uint8_t>(sInfo.format));
         f.writeUint8(static_cast<uint8_t>(sInfo.precision));
         f.writeBool(sInfo.multisample);
+        f.writeUint8(static_cast<uint8_t>(sInfo.transferFunction));
     }
 }
 

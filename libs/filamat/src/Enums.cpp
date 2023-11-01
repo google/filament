@@ -117,6 +117,17 @@ std::unordered_map<std::string, ParameterPrecision>& Enums::getMap<ParameterPrec
     return mStringToSamplerPrecision;
 };
 
+std::unordered_map<std::string, SamplerTransferFunction> Enums::mStringToSamplerTransferFunction = {
+        { "undefined",    SamplerTransferFunction::UNDEFINED },
+        { "identity",     SamplerTransferFunction::IDENTITY },
+        { "srgbToLinear", SamplerTransferFunction::SRGB_TO_LINEAR },
+};
+
+template <>
+std::unordered_map<std::string, SamplerTransferFunction>& Enums::getMap<SamplerTransferFunction>() noexcept {
+    return mStringToSamplerTransferFunction;
+};
+
 std::unordered_map<std::string, OutputTarget> Enums::mStringToOutputTarget = {
         { "color",   OutputTarget::COLOR },
         { "depth",   OutputTarget::DEPTH }

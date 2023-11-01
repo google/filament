@@ -239,6 +239,7 @@ public:
     using SubpassType = filament::backend::SubpassType;
     using SamplerFormat = filament::backend::SamplerFormat;
     using ParameterPrecision = filament::backend::Precision;
+    using SamplerTransferFunction = filament::backend::SamplerTransferFunction;
     using Precision = filament::backend::Precision;
     using CullingMode = filament::backend::CullingMode;
     using FeatureLevel = filament::backend::FeatureLevel;
@@ -307,11 +308,8 @@ public:
      */
     MaterialBuilder& parameter(const char* name, SamplerType samplerType,
             SamplerFormat format = SamplerFormat::FLOAT,
-            ParameterPrecision precision = ParameterPrecision::DEFAULT) noexcept;
-
-    /// @copydoc parameter(SamplerType, SamplerFormat, ParameterPrecision, const char*)
-    MaterialBuilder& parameter(const char* name, SamplerType samplerType,
-            ParameterPrecision precision) noexcept;
+            ParameterPrecision precision = ParameterPrecision::DEFAULT,
+            SamplerTransferFunction transferFunction = SamplerTransferFunction::UNDEFINED) noexcept;
 
 
     MaterialBuilder& buffer(filament::BufferInterfaceBlock bib) noexcept;
@@ -618,16 +616,20 @@ public:
         Parameter() noexcept: parameterType(INVALID) {}
 
         // Sampler
-        Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p)
-                : name(paramName), size(1), precision(p), samplerType(t), format(f), parameterType(SAMPLER) { }
+        Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p,
+                SamplerTransferFunction tf)
+            : name(paramName), size(1), precision(p), samplerType(t), format(f),
+              parameterType(SAMPLER), transferFunction(tf) { }
 
         // Uniform
         Parameter(const char* paramName, UniformType t, size_t typeSize, ParameterPrecision p)
-                : name(paramName), size(typeSize), uniformType(t), precision(p), parameterType(UNIFORM) { }
+                : name(paramName), size(typeSize), uniformType(t), precision(p),
+                  parameterType(UNIFORM) { }
 
         // Subpass
         Parameter(const char* paramName, SubpassType t, SamplerFormat f, ParameterPrecision p)
-                : name(paramName), size(1), precision(p), subpassType(t), format(f), parameterType(SUBPASS) { }
+                : name(paramName), size(1), precision(p), subpassType(t), format(f),
+                  parameterType(SUBPASS) { }
 
         utils::CString name;
         size_t size;
@@ -636,6 +638,7 @@ public:
         SamplerType samplerType;
         SubpassType subpassType;
         SamplerFormat format;
+        SamplerTransferFunction transferFunction;
         enum {
             INVALID,
             UNIFORM,

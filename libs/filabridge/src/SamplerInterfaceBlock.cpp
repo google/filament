@@ -44,10 +44,10 @@ SamplerInterfaceBlock::Builder::stageFlags(backend::ShaderStageFlags stageFlags)
 
 SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
         std::string_view samplerName, Type type, Format format,
-        Precision precision, bool multisample) noexcept {
+        Precision precision, bool multisample, SamplerTransferFunction transferFunction) noexcept {
     mEntries.push_back({
             { samplerName.data(), samplerName.size() }, { },
-            uint8_t(mEntries.size()), type, format, precision, multisample });
+            uint8_t(mEntries.size()), type, format, precision, multisample, transferFunction });
     return *this;
 }
 
@@ -58,7 +58,7 @@ SamplerInterfaceBlock SamplerInterfaceBlock::Builder::build() {
 SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
         std::initializer_list<ListEntry> list) noexcept {
     for (auto& e : list) {
-        add(e.name, e.type, e.format, e.precision, e.multisample);
+        add(e.name, e.type, e.format, e.precision, e.multisample, e.transferFunction);
     }
     return *this;
 }

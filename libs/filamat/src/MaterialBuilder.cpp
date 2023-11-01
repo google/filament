@@ -248,17 +248,12 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, UniformType type,
     return parameter(name, 1, type, precision);
 }
 
-
 MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType samplerType,
-        SamplerFormat format, ParameterPrecision precision) noexcept {
+        SamplerFormat format, ParameterPrecision precision,
+        SamplerTransferFunction transferFunction) noexcept {
     ASSERT_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT, "Too many parameters");
-    mParameters[mParameterCount++] = { name, samplerType, format, precision };
+    mParameters[mParameterCount++] = { name, samplerType, format, precision, transferFunction };
     return *this;
-}
-
-MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType samplerType,
-        ParameterPrecision precision) noexcept {
-    return parameter(name, samplerType, SamplerFormat::FLOAT, precision);
 }
 
 template<typename T, typename>
@@ -556,7 +551,8 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         assert_invariant(!param.isSubpass());
         if (param.isSampler()) {
             sbb.add({ param.name.data(), param.name.size() },
-                    param.samplerType, param.format, param.precision);
+                    param.samplerType, param.format, param.precision, /*multisample=*/false,
+                    param.transferFunction);
         } else if (param.isUniform()) {
             ibb.add({{{ param.name.data(), param.name.size() },
                       uint32_t(param.size == 1u ? 0u : param.size), param.uniformType,
