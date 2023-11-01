@@ -41,6 +41,8 @@
 
 #include <camutils/Manipulator.h>
 
+#include <private/filament/EngineEnums.h>
+
 #include <getopt/getopt.h>
 
 #include <utils/NameComponentManager.h>
@@ -178,10 +180,13 @@ static void printUsage(char* name) {
         "       Set the camera mode: orbit (default) or flight\n"
         "       Flight mode uses the following controls:\n"
         "           Click and drag the mouse to pan the camera\n"
-        "           Use the scroll weel to adjust movement speed\n"
+        "           Use the scroll wheel to adjust movement speed\n"
         "           W / S: forward / backward\n"
         "           A / D: left / right\n"
         "           E / Q: up / down\n\n"
+        "   --eyes=<stereoscopic eyes>, -y <stereoscopic eyes>\n"
+        "       Sets the number of stereoscopic eyes (default: 2) when stereoscopic rendering is\n"
+        "       enabled.\n\n"
         "   --split-view, -v\n"
         "       Splits the window into 4 views\n\n"
         "   --vulkan-gpu-hint=<hint>, -g\n"
@@ -213,6 +218,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
         { "ubershader",      no_argument,          nullptr, 'u' },
         { "actual-size",     no_argument,          nullptr, 's' },
         { "camera",          required_argument,    nullptr, 'c' },
+        { "eyes",            required_argument,    nullptr, 'y' },
         { "recompute-aabb",  no_argument,          nullptr, 'r' },
         { "settings",        required_argument,    nullptr, 't' },
         { "split-view",      no_argument,          nullptr, 'v' },
@@ -259,6 +265,19 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                     std::cerr << "Unrecognized camera mode. Must be 'flight'|'orbit'.\n";
                 }
                 break;
+            case 'y': {
+                int eyeCount = 0;
+                try {
+                    eyeCount = std::stoi(arg);
+                } catch (std::invalid_argument &e) { }
+                if (eyeCount >= 1 && eyeCount <= CONFIG_MAX_STEREOSCOPIC_EYES) {
+                    app->config.stereoscopicEyeCount = eyeCount;
+                } else {
+                    std::cerr << "Eye count must be between 1 and CONFIG_MAX_STEREOSCOPIC_EYES ("
+                              << (int) CONFIG_MAX_STEREOSCOPIC_EYES << ") (inclusive).\n";
+                }
+                break;
+            }
             case 'e':
                 app->config.headless = true;
                 break;
@@ -946,25 +965,27 @@ int main(int argc, char** argv) {
         if (view->getStereoscopicOptions().enabled) {
             Camera& c = view->getCamera();
             auto od = app.viewer->getOcularDistance();
-            // Eye 0 is always rendered to the left side of the screen; Eye 1, the right side.
+            // Eyes are rendered from left-to-right, i.e., eye 0 is rendered to the left side of the
+            // window.
             // For testing, we want to render a side-by-side layout so users can view with
             // "cross-eyed" stereo.
             // For cross-eyed stereo, Eye 0 is really the RIGHT eye, while Eye 1 is the LEFT eye.
             const mat4 rightEye = mat4::translation(double3{ od, 0.0, 0.0});    // right eye
             const mat4 leftEye  = mat4::translation(double3{-od, 0.0, 0.0});    // left eye
-            c.setEyeModelMatrix(0, rightEye);
-            c.setEyeModelMatrix(1, leftEye);
-            mat4 projections[2];
-            // Use an aspect ratio of 1.0. The viewport will be taken into account in
-            // FilamentApp.cpp.
-            projections[0] = mat4::perspective(70.0, 1.0, .1, 10.0);
-            projections[1] = mat4::perspective(70.0, 1.0, .1, 10.0);
-            c.setCustomEyeProjection(projections, 2, projections[0], .1, 10.0);
-            // FIXME: the aspect ratio will be incorrect until configureCamerasForWindow is
-            // triggered, which will happen the next time the window is resized.
+            const mat4 modelMatrices[4] = { rightEye, leftEye, rightEye, leftEye };
+            for (int i = 0; i < std::min(app.config.stereoscopicEyeCount, 4); i++) {
+                c.setEyeModelMatrix(i, modelMatrices[i]);
+            }
         } else {
-            view->getCamera().setEyeModelMatrix(0, {});
-            view->getCamera().setEyeModelMatrix(1, {});
+            for (int i = 0; i < app.config.stereoscopicEyeCount; i++) {
+                view->getCamera().setEyeModelMatrix(i, {});
+            }
+        }
+        static bool stereoscopicEnabled = false;
+        if (stereoscopicEnabled != view->getStereoscopicOptions().enabled) {
+            // Stereo was turned on/off.
+            FilamentApp::get().reconfigureCameras();
+            stereoscopicEnabled = view->getStereoscopicOptions().enabled;
         }
 
         app.scene.groundMaterial->setDefaultParameter(

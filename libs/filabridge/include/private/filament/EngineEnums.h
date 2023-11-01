@@ -66,6 +66,7 @@ enum class ReservedSpecializationConstants : uint8_t {
     CONFIG_POWER_VR_SHADER_WORKAROUNDS = 5,
     CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP = 6,
     CONFIG_DEBUG_FROXEL_VISUALIZATION = 7,
+    CONFIG_STEREO_EYE_COUNT = 8,
 };
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
@@ -75,7 +76,8 @@ constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 
 // The number of specialization constants that Filament reserves for its own use. These are always
 // the first constants (from 0 to CONFIG_MAX_RESERVED_SPEC_CONSTANTS - 1).
-constexpr size_t CONFIG_MAX_RESERVED_SPEC_CONSTANTS = 8;
+// Updating this value necessitates a material version bump.
+constexpr size_t CONFIG_MAX_RESERVED_SPEC_CONSTANTS = 16;
 
 // The maximum number of shadowmaps.
 // There is currently a maximum limit of 128 shadowmaps.
@@ -120,8 +122,10 @@ constexpr size_t CONFIG_MAX_BONE_COUNT = 256;
 // Furthermore, this is constrained by CONFIG_MINSPEC_UBO_SIZE (16 bytes per morph target).
 constexpr size_t CONFIG_MAX_MORPH_TARGET_COUNT = 256;
 
-// The number of eyes in stereoscopic mode.
-constexpr uint8_t CONFIG_STEREOSCOPIC_EYES = 2;
+// The max number of eyes supported in stereoscopic mode.
+// The number of eyes actually rendered is set at Engine creation time, see
+// Engine::Config::stereoscopicEyeCount.
+constexpr uint8_t CONFIG_MAX_STEREOSCOPIC_EYES = 4;
 
 } // namespace filament
 

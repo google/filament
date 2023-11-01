@@ -250,10 +250,13 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     generateSpecializationConstant(out, "CONFIG_POWER_VR_SHADER_WORKAROUNDS",
             +ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS, false);
 
-    // CONFIG_STEREOSCOPIC_EYES is used to size arrays and on Adreno GPUs + vulkan, this has to
+    generateSpecializationConstant(out, "CONFIG_STEREO_EYE_COUNT",
+            +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT, 2);
+
+    // CONFIG_MAX_STEREOSCOPIC_EYES is used to size arrays and on Adreno GPUs + vulkan, this has to
     // be explicitly, statically defined (as in #define). Otherwise (using const int for
     // example), we'd run into a GPU crash.
-    out << "#define CONFIG_STEREOSCOPIC_EYES " << (int) CONFIG_STEREOSCOPIC_EYES << "\n";
+    out << "#define CONFIG_MAX_STEREOSCOPIC_EYES " << (int) CONFIG_MAX_STEREOSCOPIC_EYES << "\n";
 
     if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
         // On ES2 since we don't have post-processing, we need to emulate EGL_GL_COLORSPACE_KHR,

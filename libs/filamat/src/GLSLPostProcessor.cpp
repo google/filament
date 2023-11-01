@@ -553,7 +553,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
         // According to EXT_clip_cull_distance, gl_ClipDistance can be
         // "implicitly sized by indexing it only with integral constant expressions".
         std::string& str = *internalConfig.glslOutput;
-        const std::string clipDistanceDefinition = "out float gl_ClipDistance[1];";
+        const std::string clipDistanceDefinition = "out float gl_ClipDistance[2];";
         size_t const found = str.find(clipDistanceDefinition);
         if (found != std::string::npos) {
             str.replace(found, clipDistanceDefinition.length(), "");

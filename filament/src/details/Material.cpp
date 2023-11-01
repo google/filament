@@ -260,6 +260,9 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     mSpecializationConstants.push_back({
                     +ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS,
                     (bool)powerVrShaderWorkarounds });
+    mSpecializationConstants.push_back({
+                    +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT,
+                    (int)engine.getConfig().stereoscopicEyeCount });
     if (UTILS_UNLIKELY(engine.getShaderLanguage() == ShaderLanguage::ESSL1)) {
         // The actual value of this spec-constant is set in the OpenGLDriver backend.
         mSpecializationConstants.push_back({

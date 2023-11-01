@@ -408,13 +408,15 @@ private:
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
             Variant variant, RenderFlags renderFlags,
             FScene::VisibleMaskType visibilityMask,
-            math::float3 cameraPosition, math::float3 cameraForward) noexcept;
+            math::float3 cameraPosition, math::float3 cameraForward,
+            uint8_t instancedStereoEyeCount) noexcept;
 
     template<uint32_t commandTypeFlags>
     static inline Command* generateCommandsImpl(uint32_t extraFlags, Command* curr,
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
             Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
-            math::float3 cameraPosition, math::float3 cameraForward) noexcept;
+            math::float3 cameraPosition, math::float3 cameraForward,
+            uint8_t instancedStereoEyeCount) noexcept;
 
     static void setupColorCommand(Command& cmdDraw, Variant variant,
             FMaterialInstance const* mi, bool inverseFrontFaces) noexcept;
