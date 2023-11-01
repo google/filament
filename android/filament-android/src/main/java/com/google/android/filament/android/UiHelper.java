@@ -227,8 +227,10 @@ public class UiHelper {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
                 mTextureView.getSurfaceTexture().setDefaultBufferSize(width, height);
             }
-            // the call above won't cause TextureView.onSurfaceTextureSizeChanged()
-            mRenderCallback.onResized(width, height);
+            if (mRenderCallback != null) {
+                // the call above won't cause TextureView.onSurfaceTextureSizeChanged()
+                mRenderCallback.onResized(width, height);
+            }
         }
 
         @Override
@@ -298,7 +300,6 @@ public class UiHelper {
 
     /**
      * Checks whether we are ready to render into the attached surface.
-     *
      * Using OpenGL ES when this returns true, will result in drawing commands being lost,
      * HOWEVER, GLES state will be preserved. This is useful to initialize the engine.
      *
@@ -343,7 +344,6 @@ public class UiHelper {
     /**
      * Controls whether the render target (SurfaceView or TextureView) is opaque or not.
      * The render target is considered opaque by default.
-     *
      * Must be called before calling {@link #attachTo(SurfaceView)}, {@link #attachTo(TextureView)},
      * or {@link #attachTo(SurfaceHolder)}.
      *
@@ -366,10 +366,8 @@ public class UiHelper {
      * positioned above other surfaces but below the activity's surface. This property
      * only has an effect when used in combination with {@link #setOpaque(boolean) setOpaque(false)}
      * and does not affect TextureView targets.
-     *
      * Must be called before calling {@link #attachTo(SurfaceView)}
      * or {@link #attachTo(TextureView)}.
-     *
      * Has no effect when using {@link #attachTo(SurfaceHolder)}.
      *
      * @param overlay Indicates whether the render target should be rendered below the activity's
@@ -390,7 +388,6 @@ public class UiHelper {
 
     /**
      * Associate UiHelper with a SurfaceView.
-     *
      * As soon as SurfaceView is ready (i.e. has a Surface), we'll create the
      * EGL resources needed, and call user callbacks if needed.
      */
@@ -412,21 +409,23 @@ public class UiHelper {
 
             final SurfaceHolder.Callback callback = new SurfaceHolder.Callback() {
                 @Override
-                public void surfaceCreated(SurfaceHolder holder) {
+                public void surfaceCreated(@NonNull SurfaceHolder holder) {
                     if (LOGGING) Log.d(LOG_TAG, "surfaceCreated()");
                     createSwapChain(holder.getSurface());
                 }
 
                 @Override
                 public void surfaceChanged(
-                        SurfaceHolder holder, int format, int width, int height) {
+                    @NonNull SurfaceHolder holder, int format, int width, int height) {
                     // Note: this is always called at least once after surfaceCreated()
                     if (LOGGING) Log.d(LOG_TAG, "surfaceChanged(" + width + ", " + height + ")");
-                    mRenderCallback.onResized(width, height);
+                    if (mRenderCallback != null) {
+                        mRenderCallback.onResized(width, height);
+                    }
                 }
 
                 @Override
-                public void surfaceDestroyed(SurfaceHolder holder) {
+                public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
                     if (LOGGING) Log.d(LOG_TAG, "surfaceDestroyed()");
                     destroySwapChain();
                 }
@@ -450,7 +449,6 @@ public class UiHelper {
 
     /**
      * Associate UiHelper with a TextureView.
-     *
      * As soon as TextureView is ready (i.e. has a buffer), we'll create the
      * EGL resources needed, and call user callbacks if needed.
      */
@@ -463,7 +461,7 @@ public class UiHelper {
             TextureView.SurfaceTextureListener listener = new TextureView.SurfaceTextureListener() {
                 @Override
                 public void onSurfaceTextureAvailable(
-                        SurfaceTexture surfaceTexture, int width, int height) {
+                    @NonNull SurfaceTexture surfaceTexture, int width, int height) {
                     if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureAvailable()");
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
@@ -478,40 +476,44 @@ public class UiHelper {
 
                     createSwapChain(surface);
 
-                    // Call this the first time because onSurfaceTextureSizeChanged()
-                    // isn't called at initialization time
-                    mRenderCallback.onResized(width, height);
+                    if (mRenderCallback != null) {
+                        // Call this the first time because onSurfaceTextureSizeChanged()
+                        // isn't called at initialization time
+                        mRenderCallback.onResized(width, height);
+                    }
                 }
 
                 @Override
                 public void onSurfaceTextureSizeChanged(
-                        SurfaceTexture surfaceTexture, int width, int height) {
+                    @NonNull SurfaceTexture surfaceTexture, int width, int height) {
                     if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureSizeChanged()");
-                    if (mDesiredWidth > 0 && mDesiredHeight > 0) {
-                        surfaceTexture.setDefaultBufferSize(mDesiredWidth, mDesiredHeight);
-                        mRenderCallback.onResized(mDesiredWidth, mDesiredHeight);
-                    } else {
-                        mRenderCallback.onResized(width, height);
+                    if (mRenderCallback != null) {
+                        if (mDesiredWidth > 0 && mDesiredHeight > 0) {
+                            surfaceTexture.setDefaultBufferSize(mDesiredWidth, mDesiredHeight);
+                            mRenderCallback.onResized(mDesiredWidth, mDesiredHeight);
+                        } else {
+                            mRenderCallback.onResized(width, height);
+                        }
+                        // We must recreate the SwapChain to guarantee that it sees the new size.
+                        // More precisely, for an EGL client, the EGLSurface must be recreated. For
+                        // a Vulkan client, the SwapChain must be recreated. Calling
+                        // onNativeWindowChanged() will accomplish that.
+                        // This requirement comes from SurfaceTexture.setDefaultBufferSize()
+                        // documentation.
+                        TextureViewHandler textureViewHandler = (TextureViewHandler) mRenderSurface;
+                        mRenderCallback.onNativeWindowChanged(textureViewHandler.getSurface());
                     }
-                    // We must recreate the SwapChain to guarantee that it sees the new size.
-                    // More precisely, for an EGL client, the EGLSurface must be recreated. For
-                    // a Vulkan client, the SwapChain must be recreated. Calling
-                    // onNativeWindowChanged() will accomplish that.
-                    // This requirement comes from SurfaceTexture.setDefaultBufferSize()
-                    // documentation.
-                    TextureViewHandler textureViewHandler = (TextureViewHandler) mRenderSurface;
-                    mRenderCallback.onNativeWindowChanged(textureViewHandler.getSurface());
                 }
 
                 @Override
-                public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
+                public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surfaceTexture) {
                     if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureDestroyed()");
                     destroySwapChain();
                     return true;
                 }
 
                 @Override
-                public void onSurfaceTextureUpdated(SurfaceTexture surface) { }
+                public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) { }
             };
 
             view.setSurfaceTextureListener(listener);
@@ -519,14 +521,15 @@ public class UiHelper {
             // in case the View's SurfaceTexture already existed
             if (view.isAvailable()) {
                 SurfaceTexture surfaceTexture = view.getSurfaceTexture();
-                listener.onSurfaceTextureAvailable(surfaceTexture, mDesiredWidth, mDesiredHeight);
+                if (surfaceTexture != null) {
+                    listener.onSurfaceTextureAvailable(surfaceTexture, mDesiredWidth, mDesiredHeight);
+                }
             }
         }
     }
 
     /**
      * Associate UiHelper with a SurfaceHolder.
-     *
      * As soon as a Surface is created, we'll create the
      * EGL resources needed, and call user callbacks if needed.
      */
@@ -539,20 +542,22 @@ public class UiHelper {
 
             final SurfaceHolder.Callback callback = new SurfaceHolder.Callback() {
                 @Override
-                public void surfaceCreated(SurfaceHolder surfaceHolder) {
+                public void surfaceCreated(@NonNull SurfaceHolder surfaceHolder) {
                     if (LOGGING) Log.d(LOG_TAG, "surfaceCreated()");
                     createSwapChain(holder.getSurface());
                 }
 
                 @Override
-                public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+                public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {
                     // Note: this is always called at least once after surfaceCreated()
                     if (LOGGING) Log.d(LOG_TAG, "surfaceChanged(" + width + ", " + height + ")");
-                    mRenderCallback.onResized(width, height);
+                    if (mRenderCallback != null) {
+                        mRenderCallback.onResized(width, height);
+                    }
                 }
 
                 @Override
-                public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+                public void surfaceDestroyed(@NonNull SurfaceHolder surfaceHolder) {
                     if (LOGGING) Log.d(LOG_TAG, "surfaceDestroyed()");
                     destroySwapChain();
                 }
@@ -587,7 +592,9 @@ public class UiHelper {
     }
 
     private void createSwapChain(@NonNull Surface surface) {
-        mRenderCallback.onNativeWindowChanged(surface);
+        if (mRenderCallback != null) {
+            mRenderCallback.onNativeWindowChanged(surface);
+        }
         mHasSwapChain = true;
     }
 
@@ -595,7 +602,9 @@ public class UiHelper {
         if (mRenderSurface != null) {
             mRenderSurface.detach();
         }
-        mRenderCallback.onDetachedFromSurface();
+        if (mRenderCallback != null) {
+            mRenderCallback.onDetachedFromSurface();
+        }
         mHasSwapChain = false;
     }
 }

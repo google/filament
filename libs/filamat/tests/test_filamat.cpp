@@ -872,24 +872,6 @@ TEST_F(MaterialCompiler, FeatureLevel0Sampler2D) {
   EXPECT_TRUE(result.isValid());
 }
 
-TEST_F(MaterialCompiler, FeatureLevel0Sampler3D) {
-  std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.baseColor = texture3D(materialParams_sampler, vec3(0.0, 0.0, 0.0));
-        }
-    )");
-  filamat::MaterialBuilder builder;
-  builder.parameter("sampler", SamplerType::SAMPLER_3D);
-
-  builder.featureLevel(FeatureLevel::FEATURE_LEVEL_0);
-  builder.shading(filament::Shading::UNLIT);
-  builder.material(shaderCode.c_str());
-  builder.printShaders(true);
-  filamat::Package result = builder.build(*jobSystem);
-  EXPECT_TRUE(result.isValid());
-}
-
 TEST_F(MaterialCompiler, FeatureLevel0Ess3CallFails) {
   std::string shaderCode(R"(
         void material(inout MaterialInputs material) {

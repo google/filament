@@ -358,10 +358,11 @@ void FEngine::init() {
         driverApi.update3DImage(mDummyZeroTextureArray, 0, 0, 0, 0, 1, 1, 1,
                 { zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
 
-        mPostProcessManager.init();
         mLightManager.init(*this);
         mDFG.init(*this);
     }
+
+    mPostProcessManager.init();
 
     mDebugRegistry.registerProperty("d.shadowmap.debug_directional_shadowmap",
             &debug.shadowmap.debug_directional_shadowmap, [this]() {

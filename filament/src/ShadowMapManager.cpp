@@ -90,40 +90,39 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::update(FEngine& engine, FVie
 }
 
 void ShadowMapManager::reset() noexcept {
-    mCascadeShadowMaps.clear();
-    mSpotShadowMaps.clear();
+    mDirectionalShadowMapCount = 0;
+    mSpotShadowMapCount = 0;
 }
 
 void ShadowMapManager::setDirectionalShadowMap(size_t lightIndex,
         LightManager::ShadowOptions const* options) noexcept {
     assert_invariant(options->shadowCascades <= CONFIG_MAX_SHADOW_CASCADES);
+
+    // this updates getCascadedShadowMap()
+    mDirectionalShadowMapCount = options->shadowCascades;
+    utils::Slice<ShadowMap> cascadedShadowMap = getCascadedShadowMap();
     for (size_t c = 0; c < options->shadowCascades; c++) {
-        const size_t i = c;
-        assert_invariant(i < CONFIG_MAX_SHADOW_CASCADES);
-        auto* pShadowMap = getShadowMap(i);
-        pShadowMap->initialize(lightIndex, ShadowType::DIRECTIONAL, i, 0, options);
-        mCascadeShadowMaps.push_back(pShadowMap);
+        ShadowMap& shadowMap = cascadedShadowMap[c];
+        shadowMap.initialize(lightIndex, ShadowType::DIRECTIONAL, c, 0, options);
     }
 }
 
 void ShadowMapManager::addShadowMap(size_t lightIndex, bool spotlight,
         LightManager::ShadowOptions const* options) noexcept {
     if (spotlight) {
-        const size_t c = mSpotShadowMaps.size();
+        const size_t c = mSpotShadowMapCount++;
         const size_t i = c + CONFIG_MAX_SHADOW_CASCADES;
         assert_invariant(i < CONFIG_MAX_SHADOWMAPS);
-        auto* pShadowMap = getShadowMap(i);
-        pShadowMap->initialize(lightIndex, ShadowType::SPOT, i, 0, options);
-        mSpotShadowMaps.push_back(pShadowMap);
+        auto& shadowMap = getShadowMap(i);
+        shadowMap.initialize(lightIndex, ShadowType::SPOT, i, 0, options);
     } else {
         // point-light, generate 6 independent shadowmaps
         for (size_t face = 0; face < 6; face++) {
-            const size_t c = mSpotShadowMaps.size();
+            const size_t c = mSpotShadowMapCount++;
             const size_t i = c + CONFIG_MAX_SHADOW_CASCADES;
             assert_invariant(i < CONFIG_MAX_SHADOWMAPS);
-            auto* pShadowMap = getShadowMap(i);
-            pShadowMap->initialize(lightIndex, ShadowType::POINT, i, face, options);
-            mSpotShadowMaps.push_back(pShadowMap);
+            auto& shadowMap = getShadowMap(i);
+            shadowMap.initialize(lightIndex, ShadowType::POINT, i, face, options);
         }
     }
 }
@@ -179,11 +178,11 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                 // Directional, cascaded shadow maps
                 auto const directionalShadowCastersRange = view.getVisibleDirectionalShadowCasters();
                 if (!directionalShadowCastersRange.empty()) {
-                    for (auto* pShadowMap : mCascadeShadowMaps) {
+                    for (auto& shadowMap : getCascadedShadowMap()) {
                         // for the directional light, we already know if it has visible shadows.
-                        if (pShadowMap->hasVisibleShadows()) {
+                        if (shadowMap.hasVisibleShadows()) {
                             passList.push_back({
-                                    {}, pShadowMap, directionalShadowCastersRange,
+                                    {}, &shadowMap, directionalShadowCastersRange,
                                     VISIBLE_DIR_SHADOW_RENDERABLE });
                         }
                     }
@@ -192,10 +191,10 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                 // Point lights and Spotlight shadow maps
                 auto const spotShadowCastersRange = view.getVisibleSpotShadowCasters();
                 if (!spotShadowCastersRange.empty()) {
-                    for (auto* pShadowMap : mSpotShadowMaps) {
-                        assert_invariant(!pShadowMap->isDirectionalShadow());
+                    for (auto& shadowMap : getSpotShadowMaps()) {
+                        assert_invariant(!shadowMap.isDirectionalShadow());
                         passList.push_back({
-                                {}, pShadowMap, spotShadowCastersRange,
+                                {}, &shadowMap, spotShadowCastersRange,
                                 VISIBLE_DYN_SHADOW_RENDERABLE });
                     }
                 }
@@ -517,10 +516,11 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
     };
 
     bool hasVisibleShadows = false;
-    if (!mCascadeShadowMaps.empty()) {
+    utils::Slice<ShadowMap> cascadedShadowMaps = getCascadedShadowMap();
+    if (!cascadedShadowMaps.empty()) {
         // Even if we have more than one cascade, we cull directional shadow casters against the
         // entire camera frustum, as if we only had a single cascade.
-        ShadowMap& shadowMap = *mCascadeShadowMaps[0];
+        ShadowMap& shadowMap = cascadedShadowMaps[0];
 
         const auto direction = options.transform * lightData.elementAt<FScene::DIRECTION>(0);
 
@@ -558,7 +558,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             vsFar = std::max(vsFar, sceneInfo.vsNearFar.y);
         }
 
-        const size_t cascadeCount = mCascadeShadowMaps.size();
+        const size_t cascadeCount = cascadedShadowMaps.size();
 
         // We divide the camera frustum into N cascades. This gives us N + 1 split positions.
         // The first split position is the near plane; the last split position is the far plane.
@@ -592,11 +592,9 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         // note: normalBias is set to zero for VSM
         const float normalBias = shadowMapInfo.vsm ? 0.0f : 0.5f * lcm.getShadowNormalBias(0);
 
-        for (size_t i = 0, c = mCascadeShadowMaps.size(); i < c; i++) {
-            assert_invariant(mCascadeShadowMaps[i]);
-
+        for (size_t i = 0, c = cascadedShadowMaps.size(); i < c; i++) {
             // Compute the frustum for the directional light.
-            ShadowMap& shadowMap = *mCascadeShadowMaps[i];
+            ShadowMap& shadowMap = cascadedShadowMaps[i];
             assert_invariant(shadowMap.getLightIndex() == 0);
 
             sceneInfo.csNearFar = { csSplitPosition[i], csSplitPosition[i + 1] };
@@ -643,7 +641,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
     }
 
     uint32_t cascades = 0;
-    cascades |= uint32_t(mCascadeShadowMaps.size());
+    cascades |= uint32_t(cascadedShadowMaps.size());
     cascades |= cascadeHasVisibleShadows << 8u;
 
     mShadowMappingUniforms.directionalShadows = directionalShadowsMask;
@@ -852,16 +850,17 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
             lightData.data<FScene::SHADOW_INFO>());
 
     ShadowTechnique shadowTechnique{};
-    if (!mSpotShadowMaps.empty()) {
+    utils::Slice<ShadowMap> const spotShadowMaps = getSpotShadowMaps();
+    if (!spotShadowMaps.empty()) {
         shadowTechnique |= ShadowTechnique::SHADOW_MAP;
-        for (auto const* pShadowMap : mSpotShadowMaps) {
-            const size_t lightIndex = pShadowMap->getLightIndex();
+        for (ShadowMap const& shadowMap : spotShadowMaps) {
+            const size_t lightIndex = shadowMap.getLightIndex();
             // gather the per-light (not per shadow map) information. For point lights we will
             // "see" 6 shadowmaps (one per face), we must use the first face one, the shader
             // knows how to find the entry for other faces (they're guaranteed to be sequential).
-            if (pShadowMap->getFace() == 0) {
+            if (shadowMap.getFace() == 0) {
                 shadowInfo[lightIndex].castsShadows = true;     // FIXME: is that set correctly?
-                shadowInfo[lightIndex].index = pShadowMap->getShadowIndex();
+                shadowInfo[lightIndex].index = shadowMap.getShadowIndex();
             }
         }
     }
@@ -891,18 +890,18 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
     uint8_t layer = 0;
     uint32_t maxDimension = 0;
     bool elvsm = false;
-    for (auto* pShadowMap : mCascadeShadowMaps) {
+    for (ShadowMap& shadowMap : getCascadedShadowMap()) {
         // Shadow map size should be the same for all cascades.
-        auto const& options = pShadowMap->getShadowOptions();
+        auto const& options = shadowMap.getShadowOptions();
         maxDimension = std::max(maxDimension, options->mapSize);
         elvsm = elvsm || options->vsm.elvsm;
-        pShadowMap->setLayer(layer++);
+        shadowMap.setLayer(layer++);
     }
-    for (auto& pShadowMap : mSpotShadowMaps) {
-        auto const& options = pShadowMap->getShadowOptions();
+    for (ShadowMap& shadowMap : getSpotShadowMaps()) {
+        auto const& options = shadowMap.getShadowOptions();
         maxDimension = std::max(maxDimension, options->mapSize);
         elvsm = elvsm || options->vsm.elvsm;
-        pShadowMap->setLayer(layer++);
+        shadowMap.setLayer(layer++);
     }
 
     const uint8_t layersNeeded = layer;

@@ -107,6 +107,22 @@ Java_com_google_android_filament_Material_nGetRefractionType(JNIEnv*, jclass,
 
 extern "C"
 JNIEXPORT jint JNICALL
+Java_com_google_android_filament_Material_nGetReflectionMode(JNIEnv*, jclass,
+        jlong nativeMaterial) {
+    Material* material = (Material*) nativeMaterial;
+    return (jint) material->getReflectionMode();
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_google_android_filament_Material_nGetFeatureLevel(JNIEnv*, jclass,
+        jlong nativeMaterial) {
+    Material* material = (Material*) nativeMaterial;
+    return (jint) material->getFeatureLevel();
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
 Java_com_google_android_filament_Material_nGetVertexDomain(JNIEnv*, jclass,
         jlong nativeMaterial) {
     Material* material = (Material*) nativeMaterial;

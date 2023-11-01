@@ -193,8 +193,8 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                 TextureHandle const ssr = data.ssr ?
                         resources.getTexture(data.ssr) : engine.getOneTextureArray();
 
-                view.prepareSSR(ssr, config.ssrLodOffset,
-                        view.getScreenSpaceReflectionsOptions());
+                view.prepareSSR(ssr, config.screenSpaceReflectionHistoryNotReady,
+                        config.ssrLodOffset, view.getScreenSpaceReflectionsOptions());
 
                 // Note: here we can't use data.color's descriptor for the viewport because
                 // the actual viewport might be offset when the target is the swapchain.

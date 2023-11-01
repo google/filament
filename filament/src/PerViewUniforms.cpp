@@ -246,6 +246,7 @@ void PerViewUniforms::prepareMaterialGlobals(
 }
 
 void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr,
+        bool disableSSR,
         float refractionLodOffset,
         ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
 
@@ -256,7 +257,7 @@ void PerViewUniforms::prepareSSR(Handle<HwTexture> ssr,
 
     auto& s = mUniforms.edit();
     s.refractionLodOffset = refractionLodOffset;
-    s.ssrDistance = ssrOptions.enabled ? ssrOptions.maxDistance : 0.0f;
+    s.ssrDistance = (ssrOptions.enabled && !disableSSR) ? ssrOptions.maxDistance : 0.0f;
 }
 
 void PerViewUniforms::prepareHistorySSR(Handle<HwTexture> ssr,

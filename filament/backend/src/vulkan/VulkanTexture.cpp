@@ -272,6 +272,8 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
         return;
     }
 
+    assert_invariant(hostData->size > 0 && "Data is empty");
+
     // Otherwise, use vkCmdCopyBufferToImage.
     void* mapped = nullptr;
     VulkanStage const* stage = mStagePool.acquireStage(hostData->size);

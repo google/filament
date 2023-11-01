@@ -67,6 +67,8 @@ public:
         bool hasScreenSpaceReflectionsOrRefractions;
         // Use a depth format with a stencil component.
         bool enabledStencilBuffer;
+        // whether the screenspace reflections history buffer is initialized
+        bool screenSpaceReflectionHistoryNotReady;
     };
 
     static FrameGraphId<FrameGraphTexture> colorPass(

@@ -21,6 +21,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Size;
 
 import com.google.android.filament.proguard.UsedByNative;
+import com.google.android.filament.Engine.FeatureLevel;
 
 import java.nio.Buffer;
 import java.util.ArrayList;
@@ -46,6 +47,8 @@ public class Material {
         static final BlendingMode[] sBlendingModeValues = BlendingMode.values();
         static final RefractionMode[] sRefractionModeValues = RefractionMode.values();
         static final RefractionType[] sRefractionTypeValues = RefractionType.values();
+        static final ReflectionMode[] sReflectionModeValues = ReflectionMode.values();
+        static final FeatureLevel[] sFeatureLevelValues = FeatureLevel.values();
         static final VertexDomain[] sVertexDomainValues = VertexDomain.values();
         static final CullingMode[] sCullingModeValues = CullingMode.values();
         static final VertexBuffer.VertexAttribute[] sVertexAttributeValues =
@@ -179,6 +182,18 @@ public class Material {
     public enum RefractionType {
         SOLID,
         THIN
+    }
+
+    /**
+     * Supported reflection modes
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/lighting:reflections">
+     * Lighting: reflections</a>
+     */
+    public enum ReflectionMode {
+        DEFAULT,
+        SCREEN_SPACE
     }
 
     /**
@@ -435,6 +450,28 @@ public class Material {
      */
     public RefractionType getRefractionType() {
         return EnumCache.sRefractionTypeValues[nGetRefractionType(getNativeObject())];
+    }
+
+    /**
+     * Returns the reflection mode of this material.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/lighting:reflections">
+     * Lighting: reflections</a>
+     */
+    public ReflectionMode getReflectionMode() {
+        return EnumCache.sReflectionModeValues[nGetReflectionMode(getNativeObject())];
+    }
+
+    /**
+     * Returns the minimum required feature level for this material.
+     *
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/general:featurelevel">
+     * General: featureLevel</a>
+     */
+    public FeatureLevel getFeatureLevel() {
+        return EnumCache.sFeatureLevelValues[nGetFeatureLevel(getNativeObject())];
     }
 
     /**
@@ -932,6 +969,8 @@ public class Material {
     private static native float nGetSpecularAntiAliasingThreshold(long nativeMaterial);
     private static native int nGetRefractionMode(long nativeMaterial);
     private static native int nGetRefractionType(long nativeMaterial);
+    private static native int nGetReflectionMode(long nativeMaterial);
+    private static native int nGetFeatureLevel(long nativeMaterial);
 
 
     private static native int nGetParameterCount(long nativeMaterial);
