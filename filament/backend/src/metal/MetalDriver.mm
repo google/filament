@@ -261,6 +261,11 @@ void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteC
     construct_handle<MetalBufferObject>(boh, *mContext, bindingType, usage, byteCount);
 }
 
+void MetalDriver::importBufferObjectR(Handle<HwBufferObject> boh, intptr_t id_,
+        BufferObjectBinding bindingType, BufferUsage usage, uint32_t byteCount) {
+    // TODO: implement!
+}
+
 void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, TextureUsage usage) {
@@ -414,6 +419,10 @@ Handle<HwIndexBuffer> MetalDriver::createIndexBufferS() noexcept {
 }
 
 Handle<HwBufferObject> MetalDriver::createBufferObjectS() noexcept {
+    return alloc_handle<MetalBufferObject>();
+}
+
+Handle<HwBufferObject> MetalDriver::importBufferObjectS() noexcept {
     return alloc_handle<MetalBufferObject>();
 }
 

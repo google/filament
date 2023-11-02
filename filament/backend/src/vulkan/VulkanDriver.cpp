@@ -378,6 +378,11 @@ void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byte
     mResourceManager.acquire(bufferObject);
 }
 
+void VulkanDriver::importBufferObjectR(Handle<HwBufferObject> boh,
+        intptr_t id, BufferObjectBinding bindingType, BufferUsage usage, uint32_t byteCount) {
+    // not supported in this backend
+}
+
 void VulkanDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     if (!boh) {
         return;
@@ -558,6 +563,10 @@ Handle<HwIndexBuffer> VulkanDriver::createIndexBufferS() noexcept {
 }
 
 Handle<HwBufferObject> VulkanDriver::createBufferObjectS() noexcept {
+    return mResourceAllocator.allocHandle<VulkanBufferObject>();
+}
+
+Handle<HwBufferObject> VulkanDriver::importBufferObjectS() noexcept {
     return mResourceAllocator.allocHandle<VulkanBufferObject>();
 }
 

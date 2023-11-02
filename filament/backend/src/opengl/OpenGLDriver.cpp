@@ -391,6 +391,10 @@ Handle<HwBufferObject> OpenGLDriver::createBufferObjectS() noexcept {
     return initHandle<GLBufferObject>();
 }
 
+Handle<HwBufferObject> OpenGLDriver::importBufferObjectS() noexcept {
+    return initHandle<GLBufferObject>();
+}
+
 Handle<HwRenderPrimitive> OpenGLDriver::createRenderPrimitiveS() noexcept {
     return initHandle<GLRenderPrimitive>();
 }
@@ -489,6 +493,11 @@ void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh,
     }
 
     CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::importBufferObjectR(Handle<HwBufferObject> boh,
+        intptr_t id, BufferObjectBinding bindingType, BufferUsage usage, uint32_t byteCount) {
+    // not supported in this backend
 }
 
 void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
