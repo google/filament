@@ -9,3 +9,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 ## Release notes for next branch cut
 
 - engine: Allow instantiating Engine at a given feature level via `Engine::Builder::featureLevel`
+- engine: move `setFrontFaceWindingInverted` from `View` to `MaterialInstance` [**API CHANGE**]

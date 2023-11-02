@@ -630,27 +630,6 @@ public:
     bool isPostProcessingEnabled() const noexcept;
 
     /**
-     * Inverts the winding order of front faces. By default front faces use a counter-clockwise
-     * winding order. When the winding order is inverted, front faces are faces with a clockwise
-     * winding order.
-     *
-     * Changing the winding order will directly affect the culling mode in materials
-     * (see Material::getCullingMode()).
-     *
-     * Inverting the winding order of front faces is useful when rendering mirrored reflections
-     * (water, mirror surfaces, front camera in AR, etc.).
-     *
-     * @param inverted True to invert front faces, false otherwise.
-     */
-    void setFrontFaceWindingInverted(bool inverted) noexcept;
-
-    /**
-     * Returns true if the winding order of front faces is inverted.
-     * See setFrontFaceWindingInverted() for more information.
-     */
-    bool isFrontFaceWindingInverted() const noexcept;
-
-    /**
      * Enables use of the stencil buffer.
      *
      * The stencil buffer is an 8-bit, per-fragment unsigned integer stored alongside the depth
