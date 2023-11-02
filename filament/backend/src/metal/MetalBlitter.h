@@ -24,8 +24,7 @@
 #include <tsl/robin_map.h>
 #include <utils/Hash.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 struct MetalContext;
 
@@ -35,36 +34,45 @@ public:
 
     explicit MetalBlitter(MetalContext& context) noexcept;
 
+    enum class FormatType { NONE, COLOR, DEPTH, STENCIL, DEPTH_STENCIL };
+    static FormatType getFormatType(TextureFormat format) noexcept {
+        bool const depth = isDepthFormat(format);
+        bool const stencil = isStencilFormat(format);
+        if (depth && stencil) return FormatType::DEPTH_STENCIL;
+        if (depth) return FormatType::DEPTH;
+        if (stencil) return FormatType::STENCIL;
+        return FormatType::COLOR;
+    }
+
     struct BlitArgs {
         struct Attachment {
-            id<MTLTexture> color = nil;
-            id<MTLTexture> depth = nil;
+            using Type = FormatType;
+            id<MTLTexture> texture = nil;
             MTLRegion region = {};
             uint8_t level = 0;
             uint32_t slice = 0;      // must be 0 on source attachment
+            Type type = Type::NONE;
         };
 
         // Valid source formats:       2D, 2DArray, 2DMultisample, 3D
         // Valid destination formats:  2D, 2DArray, 3D, Cube
-        Attachment source, destination;
+        Attachment source;
+        Attachment destination;
         SamplerMagFilter filter;
 
         bool blitColor() const {
-            return source.color != nil && destination.color != nil;
+            return source.type == Attachment::Type::COLOR &&
+                   destination.type == Attachment::Type::COLOR;
         }
 
         bool blitDepth() const {
-            return source.depth != nil && destination.depth != nil;
+            return source.type == Attachment::Type::DEPTH &&
+                   destination.type == Attachment::Type::DEPTH;
         }
 
-        bool colorDestinationIsFullAttachment() const {
-            return destination.color.width == destination.region.size.width &&
-                   destination.color.height == destination.region.size.height;
-        }
-
-        bool depthDestinationIsFullAttachment() const {
-            return destination.depth.width == destination.region.size.width &&
-                   destination.depth.height == destination.region.size.height;
+        bool destinationIsFullAttachment() const {
+            return destination.texture.width == destination.region.size.width &&
+                   destination.texture.height == destination.region.size.height;
         }
     };
 
@@ -78,10 +86,8 @@ public:
 
 private:
 
-    static void setupColorAttachment(const BlitArgs& args, MTLRenderPassDescriptor* descriptor,
-            uint32_t depthPlane);
-    static void setupDepthAttachment(const BlitArgs& args, MTLRenderPassDescriptor* descriptor,
-            uint32_t depthPlane);
+    static void setupAttachment(MTLRenderPassAttachmentDescriptor* descriptor,
+            const BlitArgs& args, uint32_t depthPlane);
 
     struct BlitFunctionKey {
         bool blitColor;
@@ -94,7 +100,7 @@ private:
 
         bool isValid() const noexcept {
             // MSAA 3D textures do not exist.
-            bool hasMsaa = msaaColorSource || msaaDepthSource;
+            bool const hasMsaa = msaaColorSource || msaaDepthSource;
             return !(hasMsaa && sources3D);
         }
 
@@ -111,15 +117,17 @@ private:
         }
     };
 
-    void blitFastPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
+    static bool blitFastPath(id<MTLCommandBuffer> cmdBuffer,
             const BlitArgs& args, const char* label);
-    void blitSlowPath(id<MTLCommandBuffer> cmdBuffer, bool& blitColor, bool& blitDepth,
+
+    void blitSlowPath(id<MTLCommandBuffer> cmdBuffer,
             const BlitArgs& args, const char* label);
+
     void blitDepthPlane(id<MTLCommandBuffer> cmdBuffer, bool blitColor, bool blitDepth,
             const BlitArgs& args, uint32_t depthPlaneSource, uint32_t depthPlaneDest,
             const char* label);
-    id<MTLTexture> createIntermediateTexture(id<MTLTexture> t, MTLSize size);
-    id<MTLFunction> compileFragmentFunction(BlitFunctionKey key);
+
+    id<MTLFunction> compileFragmentFunction(BlitFunctionKey key) const;
     id<MTLFunction> getBlitVertexFunction();
     id<MTLFunction> getBlitFragmentFunction(BlitFunctionKey key);
 
@@ -130,10 +138,9 @@ private:
     tsl::robin_map<BlitFunctionKey, Function, HashFn> mBlitFunctions;
 
     id<MTLFunction> mVertexFunction = nil;
-
 };
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
+
 
 #endif //TNT_METALBLITTER_H

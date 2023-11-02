@@ -233,7 +233,7 @@ TEST_F(BackendTest, ColorMagnify) {
 
     // Do a "magnify" blit from level 1 of the source RT to the level 0 of the destination RT.
     const int srcLevel = 1;
-    api.blit(TargetBufferFlags::COLOR0, dstRenderTargets[0],
+    api.blitDEPRECATED(TargetBufferFlags::COLOR0, dstRenderTargets[0],
             {0, 0, kDstTexWidth, kDstTexHeight}, srcRenderTargets[srcLevel],
             {0, 0, kSrcTexWidth >> srcLevel, kSrcTexHeight >> srcLevel}, SamplerMagFilter::LINEAR);
 
@@ -308,7 +308,8 @@ TEST_F(BackendTest, ColorMinify) {
 
     // Do a "minify" blit from level 1 of the source RT to the level 0 of the destination RT.
     const int srcLevel = 1;
-    api.blit(TargetBufferFlags::COLOR0,
+
+    api.blitDEPRECATED(TargetBufferFlags::COLOR0,
             dstRenderTargets[0], {0, 0, kDstTexWidth, kDstTexHeight},
             srcRenderTargets[srcLevel], {0, 0, kSrcTexWidth >> srcLevel, kSrcTexHeight >> srcLevel},
             SamplerMagFilter::LINEAR);
@@ -331,147 +332,6 @@ TEST_F(BackendTest, ColorMinify) {
     api.destroySwapChain(swapChain);
     for (auto rt : srcRenderTargets)  api.destroyRenderTarget(rt);
     for (auto rt : dstRenderTargets)  api.destroyRenderTarget(rt);
-    executeCommands();
-}
-
-TEST_F(BackendTest, DepthMinify) {
-    auto& api = getDriverApi();
-
-    constexpr int kSrcTexWidth = 1024;
-    constexpr int kSrcTexHeight = 1024;
-    constexpr int kDstTexWidth = 256;
-    constexpr int kDstTexHeight = 256;
-    constexpr auto kColorTexFormat = TextureFormat::RGBA8;
-    constexpr auto kDepthTexFormat = TextureFormat::DEPTH24;
-    constexpr int kNumLevels = 3;
-
-    // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
-    auto swapChain = api.createSwapChainHeadless(256, 256, 0);
-    api.makeCurrent(swapChain, swapChain);
-
-    // Create a program.
-    ProgramHandle program;
-    {
-        ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
-        Program prog = shaderGen.getProgram(api);
-        prog.uniformBlockBindings({{"params", 1}});
-        program = api.createProgram(std::move(prog));
-    }
-
-    // Create a VertexBuffer, IndexBuffer, and RenderPrimitive.
-    TrianglePrimitive* triangle = new TrianglePrimitive(api);
-
-    // Create textures for the first rendering pass.
-    Handle<HwTexture> srcColorTexture = api.createTexture(
-        SamplerType::SAMPLER_2D, kNumLevels, kColorTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
-        TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT);
-
-    Handle<HwTexture> srcDepthTexture = api.createTexture(
-        SamplerType::SAMPLER_2D, 1, kDepthTexFormat, 1, kSrcTexWidth, kSrcTexHeight,
-        1, TextureUsage::DEPTH_ATTACHMENT);
-
-    // Create textures for the second rendering pass.
-    Handle<HwTexture> dstColorTexture = api.createTexture(
-        SamplerType::SAMPLER_2D, kNumLevels, kColorTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
-        TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT);
-
-    Handle<HwTexture> dstDepthTexture = api.createTexture(
-        SamplerType::SAMPLER_2D, 1, kDepthTexFormat, 1, kDstTexWidth, kDstTexHeight,
-        1, TextureUsage::DEPTH_ATTACHMENT);
-
-    // Create render targets.
-    const int level = 0;
-
-    Handle<HwRenderTarget> srcRenderTarget = api.createRenderTarget(
-            TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH,
-            kSrcTexWidth >> level, kSrcTexHeight >> level, 1,
-            {{ srcColorTexture, level }},
-            { srcDepthTexture, level }, {});
-
-    Handle<HwRenderTarget> dstRenderTarget = api.createRenderTarget(
-            TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH,
-            kDstTexWidth >> level, kDstTexHeight >> level, 1,
-            {{ dstColorTexture, level }},
-            { dstDepthTexture, level }, {});
-
-    // Prep for rendering.
-    RenderPassParams params = {};
-    params.flags.clear = TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
-    params.clearColor = float4(1, 1, 0, 1);
-    params.clearDepth = 1.0;
-    params.viewport.width = kSrcTexWidth;
-    params.viewport.height = kSrcTexHeight;
-
-    PipelineState state = {};
-    state.rasterState.colorWrite = true;
-    state.rasterState.depthWrite = true;
-    state.rasterState.depthFunc = RasterState::DepthFunc::L;
-    state.rasterState.culling = RasterState::CullingMode::NONE;
-    state.program = program;
-    auto ubuffer = api.createBufferObject(sizeof(MaterialParams),
-            BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
-    api.makeCurrent(swapChain, swapChain);
-    api.beginFrame(0, 0);
-    api.bindUniformBuffer(0, ubuffer);
-
-    // Draw red triangle into srcRenderTarget.
-    uploadUniforms(api, ubuffer, {
-        .color = float4(1, 0, 0, 1),
-        .scale = float4(1, 1, 0.5, 0),
-    });
-    api.beginRenderPass(srcRenderTarget, params);
-    api.draw(state, triangle->getRenderPrimitive(), 1);
-    api.endRenderPass();
-    api.endFrame(0);
-
-    // Copy over the color buffer and the depth buffer.
-    api.blit(TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, dstRenderTarget,
-            {0, 0, kDstTexWidth, kDstTexHeight}, srcRenderTarget,
-            {0, 0, kSrcTexWidth, kSrcTexHeight}, SamplerMagFilter::LINEAR);
-
-    // Draw a larger blue triangle into dstRenderTarget. We carefully place it below the red
-    // triangle in order to exercise depth testing.
-    api.beginFrame(0, 0);
-    params.viewport.width = kDstTexWidth;
-    params.viewport.height = kDstTexHeight;
-    params.flags.clear = TargetBufferFlags::NONE;
-    uploadUniforms(api, ubuffer, {
-        .color = float4(0, 0, 1, 1),
-        .scale = float4(1.2, 1.2, 0.75, 0),
-    });
-    api.beginRenderPass(dstRenderTarget, params);
-    api.draw(state, triangle->getRenderPrimitive(), 1);
-    api.endRenderPass();
-    api.endFrame(0);
-
-    // Grab a screenshot.
-    ScreenshotParams sparams { kDstTexWidth, kDstTexHeight, "DepthMinify.png" };
-    api.beginFrame(0, 0);
-    dumpScreenshot(api, dstRenderTarget, &sparams);
-    api.commit(swapChain);
-    api.endFrame(0);
-
-    // Wait for the ReadPixels result to come back.
-    api.finish();
-    executeCommands();
-    getDriver().purge();
-
-    // Check if the image matches perfectly to our golden run.
-    const uint32_t expected = 0x92b6f5c1;
-    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", sparams.pixelHashResult, expected);
-    EXPECT_TRUE(sparams.pixelHashResult == expected);
-
-    // Cleanup.
-    api.destroyBufferObject(ubuffer);
-    api.destroyProgram(program);
-    api.destroyTexture(srcColorTexture);
-    api.destroyTexture(dstColorTexture);
-    api.destroyTexture(srcDepthTexture);
-    api.destroyTexture(dstDepthTexture);
-    api.destroySwapChain(swapChain);
-    api.destroyRenderTarget(srcRenderTarget);
-    api.destroyRenderTarget(dstRenderTarget);
-    delete triangle;
     executeCommands();
 }
 
@@ -550,7 +410,7 @@ TEST_F(BackendTest, ColorResolve) {
     api.endFrame(0);
 
     // Resolve the MSAA render target into the single-sample render target.
-    api.blit(TargetBufferFlags::COLOR,
+    api.blitDEPRECATED(TargetBufferFlags::COLOR,
             dstRenderTarget, {0, 0, kDstTexWidth, kDstTexHeight},
             srcRenderTarget, {0, 0, kSrcTexWidth, kSrcTexHeight},
             SamplerMagFilter::NEAREST);
@@ -575,142 +435,6 @@ TEST_F(BackendTest, ColorResolve) {
     api.destroyRenderTarget(srcRenderTarget);
     api.destroyRenderTarget(dstRenderTarget);
     flushAndWait();
-}
-
-TEST_F(BackendTest, DepthResolve) {
-    auto& api = getDriverApi();
-
-    constexpr int kSrcTexWidth = 256;
-    constexpr int kSrcTexHeight = 256;
-    constexpr int kDstTexWidth = 256;
-    constexpr int kDstTexHeight = 256;
-    constexpr auto kColorTexFormat = TextureFormat::RGBA8;
-    constexpr auto kDepthTexFormat = TextureFormat::DEPTH24;
-    constexpr int kSampleCount = 4;
-
-    // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
-    auto swapChain = api.createSwapChainHeadless(256, 256, 0);
-    api.makeCurrent(swapChain, swapChain);
-
-    // Create a program.
-    ProgramHandle program;
-    {
-        ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
-        Program prog = shaderGen.getProgram(api);
-        prog.uniformBlockBindings({{"params", 1}});
-        program = api.createProgram(std::move(prog));
-    }
-
-    // Create a VertexBuffer, IndexBuffer, and RenderPrimitive.
-    TrianglePrimitive* triangle = new TrianglePrimitive(api);
-
-    // Create 4-sample textures.
-    Handle<HwTexture> srcColorTexture = api.createTexture(
-        SamplerType::SAMPLER_2D, 1, kColorTexFormat, kSampleCount, kSrcTexWidth, kSrcTexHeight, 1,
-        TextureUsage::COLOR_ATTACHMENT);
-
-    Handle<HwTexture> srcDepthTexture = api.createTexture(
-        SamplerType::SAMPLER_2D, 1, kDepthTexFormat, kSampleCount, kSrcTexWidth, kSrcTexHeight, 1,
-        TextureUsage::DEPTH_ATTACHMENT);
-
-    // Create 1-sample textures.
-    Handle<HwTexture> dstColorTexture = api.createTexture(
-        SamplerType::SAMPLER_2D, 1, kColorTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
-        TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT);
-
-    Handle<HwTexture> dstDepthTexture = api.createTexture(
-        SamplerType::SAMPLER_2D, 1, kDepthTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
-        TextureUsage::DEPTH_ATTACHMENT);
-
-    // Create a 4-sample render target with 4-sample textures.
-    Handle<HwRenderTarget> srcRenderTarget = api.createRenderTarget(
-            TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, kSrcTexWidth, kSrcTexHeight,
-            kSampleCount, {{ srcColorTexture }}, { srcDepthTexture }, {});
-
-    // Create a 1-sample render target with 1-sample textures.
-    Handle<HwRenderTarget> dstRenderTarget = api.createRenderTarget(
-            TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, kDstTexWidth, kDstTexHeight,
-            1, {{ dstColorTexture }}, { dstDepthTexture }, {});
-
-    // Prep for rendering.
-    RenderPassParams params = {};
-    params.flags.clear = TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
-    params.clearColor = float4(1, 1, 0, 1);
-    params.clearDepth = 1.0;
-    params.flags.discardEnd = TargetBufferFlags::NONE;
-    params.viewport.width = kSrcTexWidth;
-    params.viewport.height = kSrcTexHeight;
-
-    PipelineState state = {};
-    state.rasterState.colorWrite = true;
-    state.rasterState.depthWrite = true;
-    state.rasterState.depthFunc = RasterState::DepthFunc::L;
-    state.rasterState.culling = RasterState::CullingMode::NONE;
-    state.program = program;
-    auto ubuffer = api.createBufferObject(sizeof(MaterialParams),
-            BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
-    api.makeCurrent(swapChain, swapChain);
-    api.beginFrame(0, 0);
-    api.bindUniformBuffer(0, ubuffer);
-
-    // Draw red triangle into srcRenderTarget.
-    uploadUniforms(api, ubuffer, {
-        .color = float4(1, 0, 0, 1),
-        .scale = float4(1, 1, 0.5, 0),
-    });
-    api.beginRenderPass(srcRenderTarget, params);
-    api.draw(state, triangle->getRenderPrimitive(), 1);
-    api.endRenderPass();
-    api.endFrame(0);
-
-    // Resolve the MSAA color and depth buffers into the single-sample render target.
-    api.blit(TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, dstRenderTarget,
-            {0, 0, kDstTexWidth, kDstTexHeight}, srcRenderTarget,
-            {0, 0, kSrcTexWidth, kSrcTexHeight}, SamplerMagFilter::LINEAR);
-
-    // Draw a larger blue triangle into dstRenderTarget. We carefully place it below the red
-    // triangle in order to exercise depth testing.
-    api.beginFrame(0, 0);
-    params.viewport.width = kDstTexWidth;
-    params.viewport.height = kDstTexHeight;
-    params.flags.clear = TargetBufferFlags::NONE;
-    uploadUniforms(api, ubuffer, {
-        .color = float4(0, 0, 1, 1),
-        .scale = float4(1.2, 1.2, 0.75, 0),
-    });
-    api.beginRenderPass(dstRenderTarget, params);
-    api.draw(state, triangle->getRenderPrimitive(), 1);
-    api.endRenderPass();
-
-    // Grab a screenshot.
-    ScreenshotParams sparams { kDstTexWidth, kDstTexHeight, "DepthResolve.png" };
-    api.beginFrame(0, 0);
-    dumpScreenshot(api, dstRenderTarget, &sparams);
-    api.commit(swapChain);
-    api.endFrame(0);
-
-    // Wait for the ReadPixels result to come back.
-    api.finish();
-    executeCommands();
-    getDriver().purge();
-
-    // Check if the image matches perfectly to our golden run.
-    const uint32_t expected = 0x5a38e6ba;
-    printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", sparams.pixelHashResult, expected);
-    EXPECT_TRUE(sparams.pixelHashResult == expected);
-
-    // Cleanup.
-    api.destroyBufferObject(ubuffer);
-    api.destroyProgram(program);
-    api.destroyTexture(srcColorTexture);
-    api.destroyTexture(dstColorTexture);
-    api.destroyTexture(srcDepthTexture);
-    api.destroyTexture(dstDepthTexture);
-    api.destroySwapChain(swapChain);
-    api.destroyRenderTarget(srcRenderTarget);
-    api.destroyRenderTarget(dstRenderTarget);
-    delete triangle;
-    executeCommands();
 }
 
 TEST_F(BackendTest, Blit2DTextureArray) {
@@ -755,7 +479,7 @@ TEST_F(BackendTest, Blit2DTextureArray) {
 
     // Do a blit from kSrcTexLayer of the source RT to kDstTexLayer of the destination RT.
     const int srcLevel = 0;
-    api.blit(TargetBufferFlags::COLOR0, dstRenderTarget,
+    api.blitDEPRECATED(TargetBufferFlags::COLOR0, dstRenderTarget,
             {0, 0, kDstTexWidth, kDstTexHeight}, srcRenderTarget,
             {0, 0, kSrcTexWidth >> srcLevel, kSrcTexHeight >> srcLevel}, SamplerMagFilter::LINEAR);
 
@@ -846,7 +570,7 @@ TEST_F(BackendTest, BlitRegion) {
             api.createRenderTarget(TargetBufferFlags::COLOR, kDstTexWidth >> kDstLevel,
                     kDstTexHeight >> kDstLevel, 1, {dstTexture, kDstLevel, 0}, {}, {});
 
-    api.blit(TargetBufferFlags::COLOR0, dstRenderTarget, dstRect, srcRenderTarget, srcRect,
+    api.blitDEPRECATED(TargetBufferFlags::COLOR0, dstRenderTarget, dstRect, srcRenderTarget, srcRect,
             SamplerMagFilter::LINEAR);
 
     // Push through an empty frame to allow the texture to upload and the blit to execute.
@@ -933,7 +657,7 @@ TEST_F(BackendTest, BlitRegionToSwapChain) {
 
     api.beginFrame(0, 0);
 
-    api.blit(TargetBufferFlags::COLOR0, dstRenderTarget,
+    api.blitDEPRECATED(TargetBufferFlags::COLOR0, dstRenderTarget,
             dstRect, srcRenderTargets[srcLevel],
             srcRect, SamplerMagFilter::LINEAR);
 

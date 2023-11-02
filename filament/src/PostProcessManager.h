@@ -221,32 +221,30 @@ public:
             TemporalAntiAliasingOptions const& taaOptions,
             ColorGradingConfig const& colorGradingConfig) noexcept;
 
-    // Blit/rescaling/resolves
-    FrameGraphId<FrameGraphTexture> opaqueBlit(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
-            FrameGraphTexture::Descriptor const& outDesc,
-            backend::SamplerMagFilter filter = backend::SamplerMagFilter::LINEAR) noexcept;
+    /*
+     * Blit/rescaling/resolves
+     */
 
+    // high quality upscaler
+    //  - when translucent, reverts to LINEAR
+    //  - doens't handle sub-resouces
     FrameGraphId<FrameGraphTexture> upscale(FrameGraph& fg, bool translucent,
             DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
             filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
-            backend::SamplerMagFilter filter = backend::SamplerMagFilter::LINEAR) noexcept;
+            backend::SamplerMagFilter filter) noexcept;
 
+    // upscale/downscale blitter using shaders
     FrameGraphId<FrameGraphTexture> blit(FrameGraph& fg, bool translucent,
-            FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
-            FrameGraphTexture::Descriptor const& outDesc,
-            backend::SamplerMagFilter filter = backend::SamplerMagFilter::LINEAR) noexcept;
+            FrameGraphId<FrameGraphTexture> input,
+            filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
+            backend::SamplerMagFilter filterMag,
+            backend::SamplerMinFilter filterMin) noexcept;
 
-    // resolve base level of input and outputs a 1-level texture
-    FrameGraphId<FrameGraphTexture> resolveBaseLevel(FrameGraph& fg,
-            const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept;
-
-    // resolves base level of input and outputs a texture from outDesc. outDesc must
-    // have the same dimensions and format as input, or this will fail.
-    // outDesc can have mipmaps.
-    FrameGraphId<FrameGraphTexture> resolveBaseLevelNoCheck(FrameGraph& fg,
+    // Resolves base level of input and outputs a texture from outDesc.
+    // outDesc with, height, format and samples will be overridden.
+    FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
             const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
-            FrameGraphTexture::Descriptor const& outDesc) noexcept;
+            FrameGraphTexture::Descriptor outDesc) noexcept;
 
     // VSM shadow mipmap pass
     FrameGraphId<FrameGraphTexture> vsmMipmapPass(FrameGraph& fg,
