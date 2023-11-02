@@ -293,20 +293,6 @@ io::ostream& operator<<(io::ostream& out, TextureFormat format) {
     return out;
 }
 
-io::ostream& operator<<(io::ostream& out, TextureUsage usage) {
-    switch (usage) {
-        CASE(TextureUsage, NONE)
-        CASE(TextureUsage, DEFAULT)
-        CASE(TextureUsage, COLOR_ATTACHMENT)
-        CASE(TextureUsage, DEPTH_ATTACHMENT)
-        CASE(TextureUsage, STENCIL_ATTACHMENT)
-        CASE(TextureUsage, UPLOADABLE)
-        CASE(TextureUsage, SAMPLEABLE)
-        CASE(TextureUsage, SUBPASS_INPUT)
-    }
-    return out;
-}
-
 io::ostream& operator<<(io::ostream& out, TextureCubemapFace face) {
     switch (face) {
         CASE(TextureCubemapFace, NEGATIVE_X)

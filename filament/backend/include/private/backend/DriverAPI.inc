@@ -303,7 +303,6 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isParallelShaderCompileSupported)
 DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
 DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxUniformBufferSize)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
-DECL_DRIVER_API_SYNCHRONOUS_0(bool, canGenerateMipmaps)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, getTimerQueryValue, backend::TimerQueryHandle, query, uint64_t*, elapsedTime)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, workaround)
@@ -468,13 +467,28 @@ DECL_DRIVER_API_N(readBufferSubData,
  * --------------------
  */
 
-DECL_DRIVER_API_N(blit,
+DECL_DRIVER_API_N(blitDEPRECATED,
         backend::TargetBufferFlags, buffers,
         backend::RenderTargetHandle, dst,
         backend::Viewport, dstRect,
         backend::RenderTargetHandle, src,
         backend::Viewport, srcRect,
         backend::SamplerMagFilter, filter)
+
+DECL_DRIVER_API_N(resolve,
+        backend::TextureHandle, dst,
+        uint8_t, dstLevel, uint8_t, dstLayer,
+        backend::TextureHandle, src,
+        uint8_t, srcLevel, uint8_t, srcLayer)
+
+DECL_DRIVER_API_N(blit,
+        backend::TextureHandle, dst,
+        uint8_t, dstLevel, uint8_t, dstLayer,
+        math::uint2, dstOrigin,
+        backend::TextureHandle, src,
+        uint8_t, srcLevel, uint8_t, srcLayer,
+        math::uint2, srcOrigin,
+        math::uint2, size)
 
 DECL_DRIVER_API_N(draw,
         backend::PipelineState, state,

@@ -676,32 +676,34 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
         FrameGraphId<FrameGraphTexture> output;
     };
 
+    // Needed for Vulkan and GLES. Some GLES implementations don't need it. Never needed for Metal.
     auto& duplicateDepthPass = fg.addPass<DuplicateDepthPassData>("Duplicate Depth Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
-                // read the depth as an attachment
                 data.input = builder.read(depth,
-                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                        FrameGraphTexture::Usage::BLIT_SRC);
+
                 auto desc = builder.getDescriptor(data.input);
                 desc.levels = 1; // only copy the base level
+
                 // create a new buffer for the copy
                 data.output = builder.createTexture("Depth Texture Copy", desc);
+
+                // output is an attachment
                 data.output = builder.write(data.output,
-                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
-                builder.declareRenderPass("Depth Copy RenderTarget", {{ .depth = data.output }});
+                        FrameGraphTexture::Usage::BLIT_DST);
             },
-            [=](FrameGraphResources const& resources,
-                    auto const& data, DriverApi& driver) {
-                auto const& desc = resources.getDescriptor(data.input);
-                auto out = resources.getRenderPassInfo();
-                // create a temporary render target for source, needed for the blit.
-                auto inTarget = driver.createRenderTarget(TargetBufferFlags::DEPTH,
-                        desc.width, desc.height, desc.samples, {},
-                        { resources.getTexture(data.input) }, {});
-                driver.blit(TargetBufferFlags::DEPTH,
-                        out.target, out.params.viewport,
-                        inTarget, out.params.viewport,
-                        SamplerMagFilter::NEAREST);
-                driver.destroyRenderTarget(inTarget);
+            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                auto const& src = resources.getTexture(data.input);
+                auto const& dst = resources.getTexture(data.output);
+                auto const& srcSubDesc = resources.getSubResourceDescriptor(data.input);
+                auto const& dstSubDesc = resources.getSubResourceDescriptor(data.output);
+                auto const& desc = resources.getDescriptor(data.output);
+                assert_invariant(desc.samples == resources.getDescriptor(data.input).samples);
+                // here we can guarantee that src and dst format and size match, by construction.
+                driver.blit(
+                        dst, dstSubDesc.level, dstSubDesc.layer, { 0, 0 },
+                        src, srcSubDesc.level, srcSubDesc.layer, { 0, 0 },
+                        { desc.width, desc.height });
             });
 
     auto& SSAOPass = fg.addPass<SSAOPassData>("SSAO Pass",
@@ -1343,14 +1345,18 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(
         if (desc.samples > 1 &&
                 outDesc.width == desc.width && outDesc.height == desc.height &&
                 desc.format == outDesc.format) {
-            // resolve directly into the destination
-            input = ppm.resolveBaseLevelNoCheck(fg, "ssr", input, outDesc);
+            // Resolve directly into the destination. This guarantees a blit/resolve will be
+            // performed (i.e.: the source is copied) and we also guarantee that format/scaling
+            // is the same after the forwardResource call below.
+            input = ppm.resolve(fg, "ssr", input, outDesc);
         } else {
-            // first resolve (if needed)
-            input = ppm.resolveBaseLevel(fg, "ssr", input);
-            // then blit into an appropriate texture
-            // this handles scaling, format conversion and mipmaping
-            input = ppm.opaqueBlit(fg, input, { 0, 0, desc.width, desc.height }, outDesc);
+            // First resolve (if needed), may be a no-op. Guarantees that format/size is unchanged
+            // by construction.
+            input = ppm.resolve(fg, "ssr", input, { .levels = 1 });
+            // Then blit into an appropriate texture, this handles scaling and format conversion.
+            // The input/output sizes may differ when non-homogenous DSR is enabled.
+            input = ppm.blit(fg, false, input, { 0, 0, desc.width, desc.height }, outDesc,
+                    SamplerMagFilter::LINEAR, SamplerMinFilter::LINEAR);
         }
     }
 
@@ -2664,60 +2670,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
     return exportHistoryPass->color;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::opaqueBlit(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
-        FrameGraphTexture::Descriptor const& outDesc,
-        SamplerMagFilter filter) noexcept {
-
-    struct PostProcessScaling {
-        FrameGraphId<FrameGraphTexture> input;
-        FrameGraphId<FrameGraphTexture> output;
-    };
-
-    auto& ppBlit = fg.addPass<PostProcessScaling>("opaque blit",
-            [&](FrameGraph::Builder& builder, auto& data) {
-
-                // we currently have no use for this case, so we just assert. This is better for now to trap
-                // cases that we might not intend.
-                assert_invariant(fg.getDescriptor(input).samples <= 1);
-
-                data.output = builder.declareRenderPass(
-                        builder.createTexture("opaque blit output", outDesc));
-
-                data.input =  builder.read(input);
-
-                // We use a RenderPass for the source here, instead of just creating a render
-                // target from data.input in the execute closure, because data.input may refer to
-                // an imported render target and in this case data.input won't resolve to an actual
-                // HwTexture handle. Using a RenderPass works because data.input will resolve
-                // to the actual imported render target and will have the correct viewport.
-                builder.declareRenderPass("opaque blit input", {
-                        .attachments = { .color = { data.input }},
-                        .viewport = vp
-                });
-            },
-            [=](FrameGraphResources const& resources, auto const&, DriverApi& driver) {
-                auto out = resources.getRenderPassInfo(0);
-                auto in = resources.getRenderPassInfo(1);
-                driver.blit(TargetBufferFlags::COLOR,
-                        out.target, out.params.viewport,
-                        in.target, in.params.viewport,
-                        filter);
-            });
-
-    // we rely on automatic culling of unused render passes
-    return ppBlit->output;
-}
-
 FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool translucent,
         DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
         filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
         backend::SamplerMagFilter filter) noexcept {
-
-    if (UTILS_LIKELY(!translucent && dsrOptions.quality == QualityLevel::LOW &&
-            mEngine.getDriverApi().getFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1)) {
-        return opaqueBlit(fg, input, vp, outDesc, filter);
-    }
 
     // The code below cannot handle sub-resources
     assert_invariant(fg.getSubResourceDescriptor(input).layer == 0);
@@ -2916,83 +2872,120 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool translucent,
-        FrameGraphId<FrameGraphTexture> input, filament::Viewport const& vp,
-        FrameGraphTexture::Descriptor const& outDesc,
-        backend::SamplerMagFilter filter) noexcept {
-    // for now, we implement this by calling upscale() with the low-quality setting.
-    return upscale(fg, translucent, { .quality = QualityLevel::LOW }, input, vp, outDesc, filter);
+        FrameGraphId<FrameGraphTexture> input,
+        filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
+        SamplerMagFilter filterMag,
+        SamplerMinFilter filterMin) noexcept {
+
+    // TODO: add support for sub-resources
+    assert_invariant(fg.getSubResourceDescriptor(input).layer == 0);
+    assert_invariant(fg.getSubResourceDescriptor(input).level == 0);
+
+    struct QuadBlitData {
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> output;
+    };
+
+    auto& ppQuadBlit = fg.addPass<QuadBlitData>("blitting",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.input = builder.sample(input);
+                data.output = builder.createTexture("upscaled output", outDesc);
+                data.output = builder.write(data.output,
+                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                builder.declareRenderPass(builder.getName(data.output), {
+                        .attachments = { .color = { data.output }},
+                        .clearFlags = TargetBufferFlags::DEPTH });
+            },
+            [=](FrameGraphResources const& resources,
+                    auto const& data, DriverApi& driver) {
+                auto color = resources.getTexture(data.input);
+                auto const& inputDesc = resources.getDescriptor(data.input);
+                auto const& outputDesc = resources.getDescriptor(data.output);
+                auto out = resources.getRenderPassInfo();
+
+                // --------------------------------------------------------------------------------
+                // set uniforms
+
+                PostProcessMaterial const& material = getPostProcessMaterial("blitLow");
+                auto* mi = material.getMaterialInstance(mEngine);
+                mi->setParameter("color", color, {
+                        .filterMag = filterMag,
+                        .filterMin = filterMin
+                });
+                mi->setParameter("resolution",
+                        float4{ outputDesc.width, outputDesc.height,
+                                1.0f / outputDesc.width, 1.0f / outputDesc.height });
+                mi->setParameter("viewport", float4{
+                        float(vp.left)   / inputDesc.width,
+                        float(vp.bottom) / inputDesc.height,
+                        float(vp.width)  / inputDesc.width,
+                        float(vp.height) / inputDesc.height
+                });
+                mi->commit(driver);
+                mi->use(driver);
+
+                PipelineState pipeline(material.getPipelineState(mEngine));
+                if (translucent) {
+                    pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                    pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                }
+                render(out, pipeline, driver);
+            });
+
+    return ppQuadBlit->output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::resolveBaseLevel(FrameGraph& fg,
-        const char* outputBufferName, FrameGraphId<FrameGraphTexture> input) noexcept {
+FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
+        const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
+        FrameGraphTexture::Descriptor outDesc) noexcept {
+
     // Don't do anything if we're not a MSAA buffer
-    auto desc = fg.getDescriptor(input);
-    if (desc.samples <= 1) {
+    auto const& inDesc = fg.getDescriptor(input);
+    if (inDesc.samples <= 1) {
         return input;
     }
-    desc.samples = 0;
-    desc.levels = 1;
-    return resolveBaseLevelNoCheck(fg, outputBufferName, input, desc);
-}
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::resolveBaseLevelNoCheck(FrameGraph& fg,
-        const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
-        FrameGraphTexture::Descriptor const& desc) noexcept {
+    outDesc.width = inDesc.width;
+    outDesc.height = inDesc.height;
+    outDesc.format = inDesc.format;
+    outDesc.samples = 0;
 
     struct ResolveData {
         FrameGraphId<FrameGraphTexture> input;
         FrameGraphId<FrameGraphTexture> output;
-        backend::TargetBufferFlags inFlags;
-        FrameGraphTexture::Usage usage;
     };
 
     auto& ppResolve = fg.addPass<ResolveData>("resolve",
             [&](FrameGraph::Builder& builder, auto& data) {
-                FrameGraphRenderPass::Descriptor rpDesc;
-
-                auto& rpDescAttachment = isDepthFormat(desc.format) ?
-                                   rpDesc.attachments.depth :
-                                   rpDesc.attachments.color[0];
-
-                data.usage = isDepthFormat(desc.format) ?
-                             FrameGraphTexture::Usage::DEPTH_ATTACHMENT :
-                             FrameGraphTexture::Usage::COLOR_ATTACHMENT;
-
-                data.inFlags = isDepthFormat(desc.format) ?
-                               backend::TargetBufferFlags::DEPTH :
-                               backend::TargetBufferFlags::COLOR0;
-
-                data.input = builder.read(input, data.usage);
-
-                rpDescAttachment = builder.createTexture(outputBufferName, desc);
-                rpDescAttachment = builder.write(rpDescAttachment, data.usage);
-                data.output = rpDescAttachment;
-                builder.declareRenderPass("Resolve Pass", rpDesc);
+                data.input = builder.read(input, FrameGraphTexture::Usage::BLIT_SRC);
+                data.output = builder.createTexture(outputBufferName, outDesc);
+                data.output = builder.write(data.output, FrameGraphTexture::Usage::BLIT_DST);
             },
             [](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
-                auto inDesc = resources.getDescriptor(data.input);
-                auto in = resources.getTexture(data.input);
-                auto out = resources.getRenderPassInfo();
+                auto const& src = resources.getTexture(data.input);
+                auto const& dst = resources.getTexture(data.output);
+                auto const& srcSubDesc = resources.getSubResourceDescriptor(data.input);
+                auto const& dstSubDesc = resources.getSubResourceDescriptor(data.output);
+                auto const& srcDesc = resources.getDescriptor(data.input);
+                auto const& dstDesc = resources.getDescriptor(data.output);
+                assert_invariant(src);
+                assert_invariant(dst);
 
-                assert_invariant(in);
+                ASSERT_POSTCONDITION(
+                        srcDesc.format == dstDesc.format,
+                        "resolve: src (%d) and dst (%d) formats don't match.",
+                        srcDesc.format, dstDesc.format);
 
-                Handle<HwRenderTarget> inRt;
-                if (data.usage == FrameGraphTexture::Usage::COLOR_ATTACHMENT) {
-                    inRt = driver.createRenderTarget(data.inFlags,
-                            out.params.viewport.width, out.params.viewport.height,
-                            inDesc.samples, {{ in }}, {}, {});
-                }
-                if (data.usage == FrameGraphTexture::Usage::DEPTH_ATTACHMENT) {
-                    inRt = driver.createRenderTarget(data.inFlags,
-                            out.params.viewport.width, out.params.viewport.height,
-                            inDesc.samples, {}, { in }, {});
-                }
+                ASSERT_POSTCONDITION(
+                        srcDesc.width == dstDesc.width && srcDesc.height == dstDesc.height,
+                        "resolve: src [%u, %u] and dst [%u, %u] sizes don't match.",
+                        srcDesc.width, srcDesc.height, dstDesc.width, dstDesc.height);
 
-                driver.blit(data.inFlags,
-                        out.target, out.params.viewport, inRt, out.params.viewport,
-                        SamplerMagFilter::NEAREST);
-
-                driver.destroyRenderTarget(inRt);
+                driver.resolve(
+                        dst, dstSubDesc.level, dstSubDesc.layer,
+                        src, srcSubDesc.level, srcSubDesc.layer);
             });
 
     return ppResolve->output;
