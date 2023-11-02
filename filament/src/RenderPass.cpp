@@ -560,8 +560,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
             renderableVariant.setFog(soaVisibility[i].fog && Variant::isFogVariant(variant));
         }
 
-        const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
-        const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
+        bool const shadowCaster = soaVisibility[i].castShadows & hasShadowing;
+        bool const writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
+        bool const reverseWindingOrder = soaVisibility[i].reversedWindingOrder;
 
         const Slice<FRenderPrimitive>& primitives = soaPrimitives[i];
         const FRenderableManager::SkinningBindingInfo& skinning = soaSkinning[i];
@@ -576,8 +577,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
             auto const& morphTargets = morphing.targets[pi];
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
             FMaterial const* const ma = mi->getMaterial();
-            bool const invertedFrontFaces =
-                    mi->isFrontFaceWindingInverted() ^ soaVisibility[i].reversedWindingOrder;
+            bool const invertedFrontFaces = mi->isFrontFaceWindingInverted() ^ reverseWindingOrder;
 
             if constexpr (isColorPass) {
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();

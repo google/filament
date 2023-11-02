@@ -171,6 +171,14 @@ BufferInterfaceBlock::FieldInfo const* BufferInterfaceBlock::getFieldInfo(
     return &mFieldInfoList[pos->second];
 }
 
+bool BufferInterfaceBlock::isEmptyForFeatureLevel(
+        backend::FeatureLevel featureLevel) const noexcept {
+    return std::all_of(mFieldInfoList.begin(), mFieldInfoList.end(),
+                       [featureLevel](auto const &info) {
+                           return featureLevel < info.minFeatureLevel;
+                       });
+}
+
 uint8_t UTILS_NOINLINE BufferInterfaceBlock::baseAlignmentForType(BufferInterfaceBlock::Type type) noexcept {
     switch (type) {
         case Type::BOOL:
@@ -230,4 +238,3 @@ uint8_t UTILS_NOINLINE BufferInterfaceBlock::strideForType(BufferInterfaceBlock:
 }
 
 } // namespace filament
-

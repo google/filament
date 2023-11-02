@@ -147,17 +147,28 @@ OpenGLContext::OpenGLContext() noexcept {
 #ifndef NDEBUG
     // this is useful for development
     slog.v
-            << "GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT" << gets.max_anisotropy << '\n'
-            << "GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS" << gets.max_combined_texture_image_units << '\n'
-            << "GL_MAX_DRAW_BUFFERS" << gets.max_draw_buffers << '\n'
-            << "GL_MAX_RENDERBUFFER_SIZE" << gets.max_renderbuffer_size << '\n'
-            << "GL_MAX_SAMPLES" << gets.max_samples << '\n'
-            << "GL_MAX_TEXTURE_IMAGE_UNITS" << gets.max_texture_image_units << '\n'
-            << "GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS" << gets.max_transform_feedback_separate_attribs << '\n'
-            << "GL_MAX_UNIFORM_BLOCK_SIZE" << gets.max_uniform_block_size << '\n'
-            << "GL_MAX_UNIFORM_BUFFER_BINDINGS" << gets.max_uniform_buffer_bindings << '\n'
-            << "GL_NUM_PROGRAM_BINARY_FORMATS" << gets.num_program_binary_formats << '\n'
-            << "GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT" << gets.uniform_buffer_offset_alignment << '\n'
+            << "GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = "
+                    << gets.max_anisotropy << '\n'
+            << "GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS = "
+                    << gets.max_combined_texture_image_units << '\n'
+            << "GL_MAX_DRAW_BUFFERS = "
+                    << gets.max_draw_buffers << '\n'
+            << "GL_MAX_RENDERBUFFER_SIZE = "
+                    << gets.max_renderbuffer_size << '\n'
+            << "GL_MAX_SAMPLES = "
+                    << gets.max_samples << '\n'
+            << "GL_MAX_TEXTURE_IMAGE_UNITS = "
+                    << gets.max_texture_image_units << '\n'
+            << "GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS = "
+                    << gets.max_transform_feedback_separate_attribs << '\n'
+            << "GL_MAX_UNIFORM_BLOCK_SIZE = "
+                    << gets.max_uniform_block_size << '\n'
+            << "GL_MAX_UNIFORM_BUFFER_BINDINGS = "
+                    << gets.max_uniform_buffer_bindings << '\n'
+            << "GL_NUM_PROGRAM_BINARY_FORMATS = "
+                    << gets.num_program_binary_formats << '\n'
+            << "GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT = "
+                    << gets.uniform_buffer_offset_alignment << '\n'
             ;
     flush(slog.v);
 #endif

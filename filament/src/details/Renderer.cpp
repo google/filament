@@ -858,6 +858,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             PostProcessManager::generateMipmapSSR(ppm, fg,
                     reflections, ssrConfig.reflection, false, ssrConfig);
         }
+        config.screenSpaceReflectionHistoryNotReady = !reflections;
     }
 
     // --------------------------------------------------------------------------------------------
