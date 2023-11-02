@@ -802,10 +802,10 @@ FFence* FEngine::createFence() noexcept {
 FSwapChain* FEngine::createSwapChain(void* nativeWindow, uint64_t flags) noexcept {
     if (UTILS_UNLIKELY(flags & backend::SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER)) {
         // If this flag is set, then the nativeWindow is a CVPixelBufferRef.
-        // The call to setupExternalImage is synchronous, and allows the driver to take ownership of
+        // The call to setupExternalResource is synchronous, and allows the driver to take ownership of
         // the buffer on this thread.
-        // For non-Metal backends, this is a no-op.
-        getDriverApi().setupExternalImage(nativeWindow);
+        // Apart from Metal and OpenGL+Cocoa backends, this is a no-op.
+        getDriverApi().setupExternalResource((intptr_t) nativeWindow);
     }
     FSwapChain* p = mHeapAllocator.make<FSwapChain>(*this, nativeWindow, flags);
     if (p) {

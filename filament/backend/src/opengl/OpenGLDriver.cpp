@@ -2489,8 +2489,8 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t, uint32_t level,
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::setupExternalImage(void* image) {
-    mPlatform.retainExternalImage(image);
+void OpenGLDriver::setupExternalResource(intptr_t externalResource) {
+    mPlatform.retainExternalResource(externalResource);
 }
 
 void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {

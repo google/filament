@@ -233,10 +233,10 @@ public:
      */
     virtual void destroyExternalImage(ExternalTexture* texture) noexcept;
 
-    // called on the application thread to allow Filament to take ownership of the image
+    // called on the application thread to allow Filament to take ownership of the resource
 
     /**
-     * Takes ownership of the externalImage. The externalImage parameter depends on the Platform's
+     * Takes ownership of the externalResource. The externalResource parameter depends on the Platform's
      * concrete implementation. Ownership is released when destroyExternalImage() is called.
      *
      * WARNING: This is called synchronously from the application thread (NOT the Driver thread)
@@ -244,7 +244,7 @@ public:
      * @param externalImage A token representing the platform's external image.
      * @see destroyExternalImage
      */
-    virtual void retainExternalImage(void* externalImage) noexcept;
+    virtual void retainExternalResource(intptr_t externalResource) noexcept;
 
     /**
      * Called to bind the platform-specific externalImage to an ExternalTexture.

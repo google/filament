@@ -913,7 +913,7 @@ void VulkanDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t 
     scheduleDestroy(std::move(data));
 }
 
-void VulkanDriver::setupExternalImage(void* image) {
+void VulkanDriver::setupExternalResource(intptr_t externalResource) {
 }
 
 bool VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {

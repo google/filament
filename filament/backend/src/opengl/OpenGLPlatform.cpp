@@ -91,8 +91,8 @@ void OpenGLPlatform::destroyExternalImage(
         UTILS_UNUSED ExternalTexture* texture) noexcept {
 }
 
-void OpenGLPlatform::retainExternalImage(
-        UTILS_UNUSED void* externalImage) noexcept {
+void OpenGLPlatform::retainExternalResource(
+        UTILS_UNUSED intptr_t externalResource) noexcept {
 }
 
 bool OpenGLPlatform::setExternalImage(

@@ -234,7 +234,7 @@ void NoopDriver::update3DImage(Handle<HwTexture> th,
     scheduleDestroy(std::move(data));
 }
 
-void NoopDriver::setupExternalImage(void* image) {
+void NoopDriver::setupExternalResource(intptr_t externalResource) {
 }
 
 bool NoopDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
