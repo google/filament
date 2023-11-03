@@ -331,6 +331,10 @@ bool Engine::isStereoSupported() const noexcept {
     return downcast(this)->isStereoSupported();
 }
 
+size_t Engine::getMaxStereoscopicEyes() noexcept {
+    return FEngine::getMaxStereoscopicEyes();
+}
+
 #if defined(__EMSCRIPTEN__)
 void Engine::resetBackendState() noexcept {
     downcast(this)->resetBackendState();

@@ -294,9 +294,10 @@ public:
 
         /*
          * The number of eyes to render when stereoscopic rendering is enabled. Supported values are
-         * between 1 and CONFIG_MAX_STEREOSCOPIC_EYES (inclusive).
+         * between 1 and Engine::getMaxStereoscopicEyes() (inclusive).
          *
          * @see View::setStereoscopicOptions
+         * @see Engine::getMaxStereoscopicEyes
          */
         uint8_t stereoscopicEyeCount = 2;
     };
@@ -561,6 +562,16 @@ public:
      * @see View::setStereoscopicOptions
      */
     bool isStereoSupported() const noexcept;
+
+    /**
+     * Returns the maximum number of stereoscopic eyes supported by Filament. The actual number of
+     * eyes rendered is set at Engine creation time with the Engine::Config::stereoscopicEyeCount
+     * setting.
+     *
+     * @return the max number of stereoscopic eyes supported
+     * @see Engine::Config::stereoscopicEyeCount
+     */
+    static size_t getMaxStereoscopicEyes() noexcept;
 
     /**
      * @return EntityManager used by filament
