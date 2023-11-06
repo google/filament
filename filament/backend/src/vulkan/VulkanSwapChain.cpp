@@ -99,11 +99,16 @@ void VulkanSwapChain::present() {
         mColors[mCurrentSwapIndex]->transitionLayout(cmdbuf, subresources, VulkanLayout::PRESENT);
     }
     mCommands->flush();
-    VkSemaphore const finishedDrawing = mCommands->acquireFinishedSignal();
-    VkResult const result = mPlatform->present(swapChain, mCurrentSwapIndex, finishedDrawing);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR
-                                 || result == VK_ERROR_OUT_OF_DATE_KHR,
-            "Cannot present in swapchain.");
+
+    // We only present if it is not headless.  No-op for headless (but note that we still need the
+    // flush() in the above line).
+    if (!mHeadless) {
+        VkSemaphore const finishedDrawing = mCommands->acquireFinishedSignal();
+        VkResult const result = mPlatform->present(swapChain, mCurrentSwapIndex, finishedDrawing);
+        ASSERT_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR ||
+                                     result == VK_ERROR_OUT_OF_DATE_KHR,
+                "Cannot present in swapchain.");
+    }
 
     // We presented the last acquired buffer.
     mAcquired = false;
