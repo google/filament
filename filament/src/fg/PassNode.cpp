@@ -82,22 +82,22 @@ uint32_t RenderPassNode::declareRenderTarget(FrameGraph& fg, FrameGraph::Builder
     RenderPassData data;
     data.name = name;
     data.descriptor = descriptor;
-    FrameGraphRenderPass::Attachments const& attachments = data.descriptor.attachments;
 
     // retrieve the ResourceNode of the attachments coming to us -- this will be used later
     // to compute the discard flags.
 
     DependencyGraph const& dependencyGraph = fg.getGraph();
     auto incomingEdges = dependencyGraph.getIncomingEdges(this);
-    auto outgoingEdges = dependencyGraph.getOutgoingEdges(this);
 
     for (size_t i = 0; i < RenderPassData::ATTACHMENT_COUNT; i++) {
-        if (descriptor.attachments.array[i]) {
-            data.attachmentInfo[i] = attachments.array[i];
+        FrameGraphId<FrameGraphTexture> const& handle =
+                data.descriptor.attachments.array[i];
+        if (handle) {
+            data.attachmentInfo[i] = handle;
 
             // TODO: this is not very efficient
             auto incomingPos = std::find_if(incomingEdges.begin(), incomingEdges.end(),
-                    [&dependencyGraph, handle = descriptor.attachments.array[i]]
+                    [&dependencyGraph, handle]
                             (DependencyGraph::Edge const* edge) {
                         ResourceNode const* node = static_cast<ResourceNode const*>(
                                 dependencyGraph.getNode(edge->from));
@@ -111,7 +111,7 @@ uint32_t RenderPassNode::declareRenderTarget(FrameGraph& fg, FrameGraph::Builder
             }
 
             // this could be either outgoing or incoming (if there are no outgoing)
-            data.outgoing[i] = fg.getActiveResourceNode(descriptor.attachments.array[i]);
+            data.outgoing[i] = fg.getActiveResourceNode(handle);
             if (data.outgoing[i] == data.incoming[i]) {
                 data.outgoing[i] = nullptr;
             }
