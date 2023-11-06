@@ -171,14 +171,6 @@ bool View::isPostProcessingEnabled() const noexcept {
     return downcast(this)->hasPostProcessPass();
 }
 
-void View::setFrontFaceWindingInverted(bool inverted) noexcept {
-    downcast(this)->setFrontFaceWindingInverted(inverted);
-}
-
-bool View::isFrontFaceWindingInverted() const noexcept {
-    return downcast(this)->isFrontFaceWindingInverted();
-}
-
 void View::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept {
     downcast(this)->setDynamicLightingOptions(zLightNear, zLightFar);
 }

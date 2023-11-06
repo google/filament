@@ -16,3 +16,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - engine: Add `Material::getFeatureLevel()`
 - engine: Add missing `Material::getReflectionMode()` method in Java
 - engine: Support basic usage of post-processing materials on feature level 0
+- engine: move `setFrontFaceWindingInverted` from `View` to `MaterialInstance` [**API CHANGE**]

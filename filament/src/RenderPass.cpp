@@ -323,7 +323,7 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
 UTILS_ALWAYS_INLINE // this function exists only to make the code more readable. we want it inlined.
 inline              // and we don't need it in the compilation unit
 void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
-        FMaterialInstance const* const UTILS_RESTRICT mi, bool inverseFrontFaces) noexcept {
+        FMaterialInstance const* const UTILS_RESTRICT mi, bool invertedFrontFaces) noexcept {
 
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
     variant = Variant::filterVariant(variant, ma->isVariantLit());
@@ -359,7 +359,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
     cmdDraw.primitive.rasterState.blendFunctionDstAlpha = blendingMustBeOff ?
             BlendFunction::ZERO : cmdDraw.primitive.rasterState.blendFunctionDstAlpha;
 
-    cmdDraw.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
+    cmdDraw.primitive.rasterState.inverseFrontFaces = invertedFrontFaces;
     cmdDraw.primitive.rasterState.culling = mi->getCullingMode();
     cmdDraw.primitive.rasterState.colorWrite = mi->isColorWriteEnabled();
     cmdDraw.primitive.rasterState.depthWrite = mi->isDepthWriteEnabled();
@@ -458,7 +458,6 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
     auto const* const UTILS_RESTRICT soaInstanceInfo        = soa.data<FScene::INSTANCES>();
 
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
-    const bool viewInverseFrontFaces = renderFlags & HAS_INVERSE_FRONT_FACES;
     const bool hasInstancedStereo = renderFlags & IS_STEREOSCOPIC;
 
     Command cmdColor;
@@ -513,7 +512,6 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
         const uint32_t distanceBits = reinterpret_cast<uint32_t&>(distance);
 
         // calculate the per-primitive face winding order inversion
-        const bool inverseFrontFaces = viewInverseFrontFaces ^ soaVisibility[i].reversedWindingOrder;
         const bool hasMorphing = soaVisibility[i].morphing;
         const bool hasSkinningOrMorphing = soaVisibility[i].skinning || hasMorphing;
 
@@ -551,7 +549,6 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
                     soaInstanceInfo[i].count | PrimitiveInfo::USER_INSTANCE_MASK;
             cmdDepth.primitive.instanceBufferHandle = soaInstanceInfo[i].handle;
             cmdDepth.primitive.materialVariant.setSkinning(hasSkinningOrMorphing);
-            cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
 
             if (UTILS_UNLIKELY(hasInstancedStereo)) {
                 cmdColor.primitive.instanceCount =
@@ -563,8 +560,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
             renderableVariant.setFog(soaVisibility[i].fog && Variant::isFogVariant(variant));
         }
 
-        const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
-        const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
+        bool const shadowCaster = soaVisibility[i].castShadows & hasShadowing;
+        bool const writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
+        bool const reverseWindingOrder = soaVisibility[i].reversedWindingOrder;
 
         const Slice<FRenderPrimitive>& primitives = soaPrimitives[i];
         const FRenderableManager::SkinningBindingInfo& skinning = soaSkinning[i];
@@ -579,10 +577,11 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
             auto const& morphTargets = morphing.targets[pi];
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
             FMaterial const* const ma = mi->getMaterial();
+            bool const invertedFrontFaces = mi->isFrontFaceWindingInverted() ^ reverseWindingOrder;
 
             if constexpr (isColorPass) {
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
-                RenderPass::setupColorCommand(cmdColor, renderableVariant, mi, inverseFrontFaces);
+                RenderPass::setupColorCommand(cmdColor, renderableVariant, mi, invertedFrontFaces);
 
                 cmdColor.primitive.skinningHandle = skinning.handle;
                 cmdColor.primitive.skinningOffset = skinning.offset;
@@ -610,7 +609,6 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
                     // write blend order
                     cmdColor.key |= makeField(primitive.getBlendOrder(),
                             BLEND_ORDER_MASK, BLEND_ORDER_SHIFT);
-
 
                     const TransparencyMode mode = mi->getTransparencyMode();
 
@@ -689,6 +687,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
                 cmdDepth.primitive.primitiveHandle = primitive.getHwHandle();
                 cmdDepth.primitive.mi = mi;
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
+                cmdDepth.primitive.rasterState.inverseFrontFaces = invertedFrontFaces;
 
                 cmdDepth.primitive.skinningHandle = skinning.handle;
                 cmdDepth.primitive.skinningOffset = skinning.offset;
