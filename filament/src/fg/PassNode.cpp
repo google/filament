@@ -90,18 +90,18 @@ uint32_t RenderPassNode::declareRenderTarget(FrameGraph& fg, FrameGraph::Builder
     auto incomingEdges = dependencyGraph.getIncomingEdges(this);
 
     for (size_t i = 0; i < RenderPassData::ATTACHMENT_COUNT; i++) {
-        FrameGraphId<FrameGraphTexture> const& cur_attachment_handle =
+        FrameGraphId<FrameGraphTexture> const& handle =
                 data.descriptor.attachments.array[i];
-        if (cur_attachment_handle) {
-            data.attachmentInfo[i] = cur_attachment_handle;
+        if (handle) {
+            data.attachmentInfo[i] = handle;
 
             // TODO: this is not very efficient
             auto incomingPos = std::find_if(incomingEdges.begin(), incomingEdges.end(),
-                    [&dependencyGraph, cur_attachment_handle]
+                    [&dependencyGraph, handle]
                             (DependencyGraph::Edge const* edge) {
                         ResourceNode const* node = static_cast<ResourceNode const*>(
                                 dependencyGraph.getNode(edge->from));
-                        return node->resourceHandle == cur_attachment_handle;
+                        return node->resourceHandle == handle;
                     });
 
             if (incomingPos != incomingEdges.end()) {
@@ -111,7 +111,7 @@ uint32_t RenderPassNode::declareRenderTarget(FrameGraph& fg, FrameGraph::Builder
             }
 
             // this could be either outgoing or incoming (if there are no outgoing)
-            data.outgoing[i] = fg.getActiveResourceNode(cur_attachment_handle);
+            data.outgoing[i] = fg.getActiveResourceNode(handle);
             if (data.outgoing[i] == data.incoming[i]) {
                 data.outgoing[i] = nullptr;
             }
