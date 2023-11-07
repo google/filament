@@ -33,6 +33,7 @@
 
 #include "MetalArgumentBuffer.h"
 #include "SpirvFixup.h"
+#include "utils/ostream.h"
 
 #include <filament/MaterialEnums.h>
 
@@ -396,12 +397,8 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
             break;
         case MaterialBuilder::Optimization::SIZE:
         case MaterialBuilder::Optimization::PERFORMANCE:
-            if (config.featureLevel == filament::backend::FeatureLevel::FEATURE_LEVEL_0) {
-                // Full optimization blocked by upstream issue:
-                // https://github.com/KhronosGroup/SPIRV-Cross/issues/2223
-                preprocessOptimization(tShader, config, internalConfig);
-            } else {
-                fullOptimization(tShader, config, internalConfig);
+            if (!fullOptimization(tShader, config, internalConfig)) {
+                return false;
             }
             break;
     }
@@ -485,7 +482,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
     }
 }
 
-void GLSLPostProcessor::fullOptimization(const TShader& tShader,
+bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
         GLSLPostProcessor::Config const& config, InternalConfig& internalConfig) const {
     SpirvBlob spirv;
 
@@ -553,7 +550,16 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
             }
         }
 
+#ifdef SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS
         *internalConfig.glslOutput = glslCompiler.compile();
+#else
+        try {
+            *internalConfig.glslOutput = glslCompiler.compile();
+        } catch (spirv_cross::CompilerError e) {
+            slog.e << "ERROR: " << e.what() << io::endl;
+            return false;
+        }
+#endif
 
         // spirv-cross automatically redeclares gl_ClipDistance if it's used. Some drivers don't
         // like this, so we simply remove it.
@@ -566,6 +572,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
             str.replace(found, clipDistanceDefinition.length(), "");
         }
     }
+    return true;
 }
 
 std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
