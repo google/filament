@@ -17,6 +17,7 @@ Instead, if you are authoring a PR for the main branch, add your release note to
 - engine: Add `Material::getFeatureLevel()`
 - engine: Add missing `Material::getReflectionMode()` method in Java
 - engine: Support basic usage of post-processing materials on feature level 0
+- engine: Fix critical GLES 2.0 bugs
 
 ## v1.45.1
 

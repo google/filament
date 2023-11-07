@@ -172,7 +172,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
           mShaderCompilerService(*this),
           mHandleAllocator("Handles", driverConfig.handleArenaSize),
           mSamplerMap(32) {
-  
+
     std::fill(mSamplerBindings.begin(), mSamplerBindings.end(), nullptr);
 
     // set a reasonable default value for our stream array
@@ -268,9 +268,9 @@ void OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
 
     if (UTILS_UNLIKELY(mContext.isES2())) {
         for (uint32_t i = 0; i < Program::UNIFORM_BINDING_COUNT; i++) {
-            auto [buffer, age] = mUniformBindings[i];
+            auto [id, buffer, age] = mUniformBindings[i];
             if (buffer) {
-                p->updateUniforms(i, buffer, age);
+                p->updateUniforms(i, id, buffer, age);
             }
         }
         // Set the output colorspace for this program (linear or rec709). This in only relevant
@@ -479,6 +479,7 @@ void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh,
 
     GLBufferObject* bo = construct<GLBufferObject>(boh, byteCount, bindingType, usage);
     if (UTILS_UNLIKELY(bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
+        bo->gl.id = ++mLastAssignedEmulatedUboId;
         bo->gl.buffer = malloc(byteCount);
         memset(bo->gl.buffer, 0, byteCount);
     } else {
@@ -595,8 +596,9 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
                         }
                     } else {
                         glTexImage2D(t->gl.target, level, GLint(t->gl.internalFormat),
-                                GLsizei(width), GLsizei(height), 0,
-                                format, type, nullptr);
+                                std::max(GLsizei(1), GLsizei(width >> level)),
+                                std::max(GLsizei(1), GLsizei(height >> level)),
+                                0, format, type, nullptr);
                     }
                 }
             }
@@ -2901,7 +2903,11 @@ void OpenGLDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t ind
     assert_invariant(offset + size <= ub->byteCount);
 
     if (UTILS_UNLIKELY(ub->bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
-        mUniformBindings[index] = { static_cast<uint8_t const*>(ub->gl.buffer) + offset, ub->age };
+        mUniformBindings[index] = {
+                ub->gl.id,
+                static_cast<uint8_t const*>(ub->gl.buffer) + offset,
+                ub->age,
+        };
     } else {
         GLenum const target = GLUtils::getBufferBindingType(bindingType);
 
