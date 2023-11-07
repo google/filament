@@ -324,3 +324,88 @@ TEST_F(QuatTest, NaN) {
     EXPECT_NEAR(qs[2], 0.5, 0.1);
     EXPECT_NEAR(qs[3], 0.5, 0.1);
 }
+
+TEST_F(QuatTest, Conversions) {
+    quat qd;
+    quatf qf;
+    float3 vf;
+    double3 vd;
+    double d = 0.0;
+    float f = 0.0f;
+
+    static_assert(std::is_same<details::arithmetic_result_t<float, float>, float>::value);
+    static_assert(std::is_same<details::arithmetic_result_t<float, double>, double>::value);
+    static_assert(std::is_same<details::arithmetic_result_t<double, float>, double>::value);
+    static_assert(std::is_same<details::arithmetic_result_t<double, double>, double>::value);
+
+    {
+        auto r1 = qd * d;
+        auto r2 = qd * f;
+        auto r3 = qf * d;
+        auto r4 = qf * f;
+        static_assert(std::is_same<decltype(r1), quat>::value);
+        static_assert(std::is_same<decltype(r2), quat>::value);
+        static_assert(std::is_same<decltype(r3), quat>::value);
+        static_assert(std::is_same<decltype(r4), quatf>::value);
+    }
+    {
+        auto r1 = qd / d;
+        auto r2 = qd / f;
+        auto r3 = qf / d;
+        auto r4 = qf / f;
+        static_assert(std::is_same<decltype(r1), quat>::value);
+        static_assert(std::is_same<decltype(r2), quat>::value);
+        static_assert(std::is_same<decltype(r3), quat>::value);
+        static_assert(std::is_same<decltype(r4), quatf>::value);
+    }
+    {
+        auto r1 = d * qd;
+        auto r2 = f * qd;
+        auto r3 = d * qf;
+        auto r4 = f * qf;
+        static_assert(std::is_same<decltype(r1), quat>::value);
+        static_assert(std::is_same<decltype(r2), quat>::value);
+        static_assert(std::is_same<decltype(r3), quat>::value);
+        static_assert(std::is_same<decltype(r4), quatf>::value);
+    }
+    {
+        auto r1 = qd * vd;
+        auto r2 = qf * vd;
+        auto r3 = qd * vf;
+        auto r4 = qf * vf;
+        static_assert(std::is_same<decltype(r1), double3>::value);
+        static_assert(std::is_same<decltype(r2), double3>::value);
+        static_assert(std::is_same<decltype(r3), double3>::value);
+        static_assert(std::is_same<decltype(r4), float3>::value);
+    }
+    {
+        auto r1 = qd * qd;
+        auto r2 = qf * qd;
+        auto r3 = qd * qf;
+        auto r4 = qf * qf;
+        static_assert(std::is_same<decltype(r1), quat>::value);
+        static_assert(std::is_same<decltype(r2), quat>::value);
+        static_assert(std::is_same<decltype(r3), quat>::value);
+        static_assert(std::is_same<decltype(r4), quatf>::value);
+    }
+    {
+        auto r1 = dot(qd, qd);
+        auto r2 = dot(qf, qd);
+        auto r3 = dot(qd, qf);
+        auto r4 = dot(qf, qf);
+        static_assert(std::is_same<decltype(r1), double>::value);
+        static_assert(std::is_same<decltype(r2), double>::value);
+        static_assert(std::is_same<decltype(r3), double>::value);
+        static_assert(std::is_same<decltype(r4), float>::value);
+    }
+    {
+        auto r1 = cross(qd, qd);
+        auto r2 = cross(qf, qd);
+        auto r3 = cross(qd, qf);
+        auto r4 = cross(qf, qf);
+        static_assert(std::is_same<decltype(r1), quat>::value);
+        static_assert(std::is_same<decltype(r2), quat>::value);
+        static_assert(std::is_same<decltype(r3), quat>::value);
+        static_assert(std::is_same<decltype(r4), quatf>::value);
+    }
+}
