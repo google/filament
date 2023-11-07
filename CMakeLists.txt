@@ -67,6 +67,9 @@ set(FILAMENT_METAL_HANDLE_ARENA_SIZE_IN_MB "8" CACHE STRING
     "Size of the Metal handle arena, default 8."
 )
 
+# Enable exceptions by default in spirv-cross.
+set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS OFF)
+
 # ==================================================================================================
 # CMake policies
 # ==================================================================================================
@@ -339,6 +342,7 @@ endif()
 
 if (CYGWIN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
+    set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
 endif()
 
 if (MSVC)
@@ -375,6 +379,7 @@ endif()
 # saved by -fno-exception and 10 KiB saved by -fno-rtti).
 if (ANDROID OR IOS OR WEBGL)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-exceptions -fno-rtti")
+    set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
 
     if (ANDROID OR WEBGL)
         # Omitting unwind info prevents the generation of readable stack traces in crash reports on iOS
@@ -386,6 +391,7 @@ endif()
 # std::visit, which is not supported on iOS 11.0 when exceptions are enabled.
 if (IOS)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-exceptions")
+    set(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS ON)
 endif()
 
 # With WebGL, we disable RTTI even for debug builds because we pass emscripten::val back and forth

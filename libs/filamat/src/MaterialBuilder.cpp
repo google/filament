@@ -142,11 +142,10 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics,
             if (mIncludeEssl1
                     && featureLevel == filament::backend::FeatureLevel::FEATURE_LEVEL_0
                     && shaderModel == ShaderModel::MOBILE) {
-                // ESSL1 code may never be compiled to SPIR-V.
                 mCodeGenPermutations.push_back({
                     shaderModel,
                     TargetApi::OPENGL,
-                    TargetLanguage::GLSL,
+                    glTargetLanguage,
                     filament::backend::FeatureLevel::FEATURE_LEVEL_0
                 });
             }
@@ -1422,15 +1421,15 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
         uniforms.push_back({
                 "objectUniforms.data[0].morphTargetCount",
                 offsetof(PerRenderableUib, data[0].morphTargetCount), 1,
-                UniformType::UINT });
+                UniformType::INT });
         uniforms.push_back({
                 "objectUniforms.data[0].flagsChannels",
                 offsetof(PerRenderableUib, data[0].flagsChannels), 1,
-                UniformType::UINT });
+                UniformType::INT });
         uniforms.push_back({
                 "objectUniforms.data[0].objectId",
                 offsetof(PerRenderableUib, data[0].objectId), 1,
-                UniformType::UINT });
+                UniformType::INT });
         uniforms.push_back({
                 "objectUniforms.data[0].userData",
                 offsetof(PerRenderableUib, data[0].userData), 1,

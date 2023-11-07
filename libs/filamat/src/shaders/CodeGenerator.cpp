@@ -301,8 +301,9 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     out << '\n';
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;
 
-    if (mFeatureLevel > FeatureLevel::FEATURE_LEVEL_0 &&
-            material.featureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+    if (material.featureLevel == FeatureLevel::FEATURE_LEVEL_0 &&
+            (mFeatureLevel > FeatureLevel::FEATURE_LEVEL_0
+                    || mTargetLanguage == TargetLanguage::SPIRV)) {
         // Insert compatibility definitions for ESSL 1.0 functions which were removed in ESSL 3.0.
 
         // This is the minimum required value according to the OpenGL ES Shading Language Version
@@ -490,11 +491,14 @@ io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage type,
     const char* materialTypeString = getOutputTypeName(materialOutputType);
     const char* typeString = getOutputTypeName(outputType);
 
+    bool generate_essl3_code = mTargetLanguage == TargetLanguage::SPIRV
+            || mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1;
+
     out << "\n#define FRAG_OUTPUT"               << index << " " << name.c_str();
-    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
-        out << "\n#define FRAG_OUTPUT_AT"        << index << " gl_FragColor";
-    } else {
+    if (generate_essl3_code) {
         out << "\n#define FRAG_OUTPUT_AT"        << index << " output_" << name.c_str();
+    } else {
+        out << "\n#define FRAG_OUTPUT_AT"        << index << " gl_FragColor";
     }
     out << "\n#define FRAG_OUTPUT_MATERIAL_TYPE" << index << " " << materialTypeString;
     out << "\n#define FRAG_OUTPUT_PRECISION"     << index << " " << precisionString;
@@ -502,7 +506,7 @@ io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage type,
     out << "\n#define FRAG_OUTPUT_SWIZZLE"       << index << " " << swizzleString;
     out << "\n";
 
-    if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+    if (generate_essl3_code) {
         out << "\nlayout(location=" << index << ") out " << precisionString << " "
             << typeString << " output_" << name.c_str() << ";\n";
     }
