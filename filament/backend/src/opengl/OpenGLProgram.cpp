@@ -229,15 +229,16 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* const gld) const noexcept {
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLProgram::updateUniforms(uint32_t index, void const* buffer, uint16_t age) noexcept {
+void OpenGLProgram::updateUniforms(uint32_t index, GLuint id, void const* buffer, uint16_t age) noexcept {
     assert_invariant(mUniformsRecords);
     assert_invariant(buffer);
 
     // only update the uniforms if the UBO has changed since last time we updated
     UniformsRecord const& records = mUniformsRecords[index];
-    if (records.age == age) {
+    if (records.id == id && records.age == age) {
         return;
     }
+    records.id = id;
     records.age = age;
 
     assert_invariant(records.uniforms.size() == records.locations.size());

@@ -83,11 +83,9 @@ public:
         }
 
         struct {
+            GLuint id;
             union {
-                struct {
-                    GLuint id;
-                    GLenum binding;
-                };
+                GLenum binding;
                 void* buffer;
             };
         } gl;
@@ -363,7 +361,8 @@ private:
     void setScissor(Viewport const& scissor) noexcept;
 
     // ES2 only. Uniform buffer emulation binding points
-    std::array<std::pair<void const*, uint16_t>, Program::UNIFORM_BINDING_COUNT> mUniformBindings = {};
+    GLuint mLastAssignedEmulatedUboId = 0;
+    std::array<std::tuple<GLuint, void const*, uint16_t>, Program::UNIFORM_BINDING_COUNT> mUniformBindings = {};
 
     // sampler buffer binding points (nullptr if not used)
     std::array<GLSamplerGroup*, Program::SAMPLER_BINDING_COUNT> mSamplerBindings = {};   // 4 pointers
