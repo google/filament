@@ -626,7 +626,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     RenderPass::RenderFlags renderFlags = 0;
     if (view.hasShadowing())                renderFlags |= RenderPass::HAS_SHADOWING;
-    if (view.isFrontFaceWindingInverted())  renderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
     if (view.hasInstancedStereo())          renderFlags |= RenderPass::IS_STEREOSCOPIC;
 
     RenderPass pass(engine, commandArena);

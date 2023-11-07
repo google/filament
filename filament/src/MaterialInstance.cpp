@@ -340,4 +340,12 @@ bool MaterialInstance::isDepthCullingEnabled() const noexcept {
     return downcast(this)->isDepthCullingEnabled();
 }
 
+void MaterialInstance::setFrontFaceWindingInverted(bool inverted) noexcept {
+    downcast(this)->setFrontFaceWindingInverted(inverted);
+}
+
+bool MaterialInstance::isFrontFaceWindingInverted() const noexcept {
+    return downcast(this)->isFrontFaceWindingInverted();
+}
+
 } // namespace filament

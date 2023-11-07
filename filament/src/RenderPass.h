@@ -264,8 +264,7 @@ public:
 
     using RenderFlags = uint8_t;
     static constexpr RenderFlags HAS_SHADOWING           = 0x01;
-    static constexpr RenderFlags HAS_INVERSE_FRONT_FACES = 0x02;
-    static constexpr RenderFlags IS_STEREOSCOPIC         = 0x04;
+    static constexpr RenderFlags IS_STEREOSCOPIC         = 0x02;
 
     // Arena used for commands
     using Arena = utils::Arena<
@@ -416,11 +415,11 @@ private:
             Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward) noexcept;
 
-    static void setupColorCommand(Command& cmdDraw, Variant variant,
-            FMaterialInstance const* mi, bool inverseFrontFaces) noexcept;
+    static void setupColorCommand(Command& cmdDraw, Variant variant, FMaterialInstance const* mi,
+            bool invertedFrontFaces) noexcept;
 
-    static void updateSummedPrimitiveCounts(
-            FScene::RenderableSoa& renderableData, utils::Range<uint32_t> vr) noexcept;
+    static void updateSummedPrimitiveCounts(FScene::RenderableSoa& renderableData,
+            utils::Range<uint32_t> vr) noexcept;
 
     // a reference to the Engine, mostly to get to things like JobSystem
 
