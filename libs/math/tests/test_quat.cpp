@@ -17,6 +17,7 @@
 #include <math.h>
 #include <random>
 #include <functional>
+#include <type_traits>
 
 #include <gtest/gtest.h>
 
@@ -409,3 +410,18 @@ TEST_F(QuatTest, Conversions) {
         static_assert(std::is_same<decltype(r4), quatf>::value);
     }
 }
+
+template <typename L, typename R, typename = void>
+struct has_divide_assign : std::false_type {};
+
+template <typename L, typename R>
+struct has_divide_assign<L, R,
+        decltype(std::declval<L&>() /= std::declval<R>(), void())> : std::true_type {};
+
+// Static assertions to validate the availability of the /= operator for specific type
+// combinations. The first static_assert checks that the quat does not have a /= operator with Foo.
+// This ensures that quat does not provide an inappropriate overload that could be erroneously
+// selected.
+struct Foo {};
+static_assert(!has_divide_assign<quat, Foo>::value);
+static_assert(has_divide_assign<quat, float>::value);
