@@ -122,8 +122,8 @@ public:
         uint8_t visibleLayers;
     };
 
-    static math::mat4f getDirectionalLightViewMatrix(math::float3 direction, math::float3 up,
-            math::float3 position = {}) noexcept;
+    static math::mat4f getDirectionalLightViewMatrix(
+            math::float3 direction, math::float3 position = {}) noexcept;
 
     static math::mat4f getPointLightViewMatrix(backend::TextureCubemapFace face,
             math::float3 position) noexcept;
@@ -246,15 +246,16 @@ private:
 
     static inline math::mat4f computeLightRotation(math::float3 const& lsDirection) noexcept;
 
-    static inline math::float4 computeFocusParams(
-            math::mat4f const& LMpMv,
-            math::mat4f const& WLMp,
+    static inline math::mat4f computeFocusMatrix(
+            const math::mat4f& LMpMv,
+            const math::mat4f& WLMp,
+            Aabb const& wsShadowReceiversVolume,
             FrustumBoxIntersection const& lsShadowVolume, size_t vertexCount,
             filament::CameraInfo const& camera, math::float2 const& csNearFar,
-            float shadowFar, bool stable) noexcept;
+            uint16_t shadowDimension, bool stable) noexcept;
 
     static inline void snapLightFrustum(math::float2& s, math::float2& o,
-            math::double2 lsRef, math::int2 resolution) noexcept;
+            math::mat4f const& Mv, math::double3 wsSnapCoords, math::int2 resolution) noexcept;
 
     static inline Aabb computeLightFrustumBounds(const math::mat4f& lightView,
             Aabb const& wsShadowReceiversVolume, Aabb const& wsShadowCastersVolume,

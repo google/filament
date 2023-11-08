@@ -289,14 +289,6 @@ public:
         return matrix::cof(m);
     }
 
-    /*
-     * Returns a matrix representing the pose of a virtual camera looking towards -Z in its
-     * local Y-up coordinate system. "up" defines where the Y axis of the camera's local coordinate
-     * system is.
-     */
-    template<typename A, typename B>
-    static TMat33 lookTo(const TVec3<A>& direction, const TVec3<B>& up) noexcept;
-
     /**
      * Packs the tangent frame represented by the specified matrix into a quaternion.
      * Reflection is preserved by encoding it as the sign of the w component in the
@@ -412,29 +404,6 @@ constexpr TMat33<T>::TMat33(const TQuaternion<U>& q) noexcept : m_value{} {
     m_value[0] = col_type(1 - yy - zz, xy + zw, xz - yw);  // NOLINT
     m_value[1] = col_type(xy - zw, 1 - xx - zz, yz + xw);  // NOLINT
     m_value[2] = col_type(xz + yw, yz - xw, 1 - xx - yy);  // NOLINT
-}
-
-template<typename T>
-constexpr T dot_tolerance() noexcept;
-
-template<>
-constexpr float dot_tolerance<float>() noexcept { return 0.999f; }
-
-template<>
-constexpr double dot_tolerance<double>() noexcept { return 0.9999; }
-
-template<typename T>
-template<typename A, typename B>
-TMat33<T> TMat33<T>::lookTo(const TVec3<A>& direction, const TVec3<B>& up) noexcept {
-    auto const z_axis = direction;
-    auto norm_up = up;
-    if (std::abs(dot(z_axis, norm_up)) > dot_tolerance< arithmetic_result_t<A, B> >()) {
-        // Fix up vector if we're degenerate (looking straight up, basically)
-        norm_up = { norm_up.z, norm_up.x, norm_up.y };
-    }
-    auto const x_axis = normalize(cross(z_axis, norm_up));
-    auto const y_axis = cross(x_axis, z_axis);
-    return { x_axis, y_axis, -z_axis };
 }
 
 //------------------------------------------------------------------------------

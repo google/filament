@@ -33,8 +33,6 @@
 #include <utils/Range.h>
 #include <utils/Systrace.h>
 
-#include <math/quat.h>
-
 #include <algorithm>
 
 using namespace filament::backend;
@@ -54,7 +52,7 @@ FScene::~FScene() noexcept = default;
 
 void FScene::prepare(utils::JobSystem& js,
         LinearAllocatorArena& allocator,
-        mat4 const& worldTransform,
+        const mat4& worldOriginTransform,
         bool shadowReceiversAreCasters) noexcept {
     // TODO: can we skip this in most cases? Since we rely on indices staying the same,
     //       we could only skip, if nothing changed in the RCM.
@@ -170,7 +168,7 @@ void FScene::prepare(utils::JobSystem& js,
      * Fill the SoA with the JobSystem
      */
 
-    auto renderableWork = [first = renderableInstances.data(), &rcm, &tcm, &worldTransform,
+    auto renderableWork = [first = renderableInstances.data(), &rcm, &tcm, &worldOriginTransform,
                  &sceneData, shadowReceiversAreCasters](auto* p, auto c) {
         SYSTRACE_NAME("renderableWork");
 
@@ -178,12 +176,12 @@ void FScene::prepare(utils::JobSystem& js,
             auto [ri, ti] = p[i];
 
             // this is where we go from double to float for our transforms
-            const mat4f shaderWorldTransform{
-                    worldTransform * tcm.getWorldTransformAccurate(ti) };
-            const bool reversedWindingOrder = det(shaderWorldTransform.upperLeft()) < 0;
+            const mat4f worldTransform{
+                    worldOriginTransform * tcm.getWorldTransformAccurate(ti) };
+            const bool reversedWindingOrder = det(worldTransform.upperLeft()) < 0;
 
             // compute the world AABB so we can perform culling
-            const Box worldAABB = rigidTransform(rcm.getAABB(ri), shaderWorldTransform);
+            const Box worldAABB = rigidTransform(rcm.getAABB(ri), worldTransform);
 
             auto visibility = rcm.getVisibility(ri);
             visibility.reversedWindingOrder = reversedWindingOrder;
@@ -201,7 +199,7 @@ void FScene::prepare(utils::JobSystem& js,
             assert_invariant(index < sceneData.size());
 
             sceneData.elementAt<RENDERABLE_INSTANCE>(index) = ri;
-            sceneData.elementAt<WORLD_TRANSFORM>(index)     = shaderWorldTransform;
+            sceneData.elementAt<WORLD_TRANSFORM>(index)     = worldTransform;
             sceneData.elementAt<VISIBILITY_STATE>(index)    = visibility;
             sceneData.elementAt<SKINNING_BUFFER>(index)     = rcm.getSkinningBufferInfo(ri);
             sceneData.elementAt<MORPHING_BUFFER>(index)     = rcm.getMorphingBufferInfo(ri);
@@ -218,20 +216,19 @@ void FScene::prepare(utils::JobSystem& js,
         }
     };
 
-    auto lightWork = [first = lightInstances.data(), &lcm, &tcm, &worldTransform,
+    auto lightWork = [first = lightInstances.data(), &lcm, &tcm, &worldOriginTransform,
             &lightData](auto* p, auto c) {
         SYSTRACE_NAME("lightWork");
         for (size_t i = 0; i < c; i++) {
             auto [li, ti] = p[i];
             // this is where we go from double to float for our transforms
-            mat4f const shaderWorldTransform{
-                    worldTransform * tcm.getWorldTransformAccurate(ti) };
-            float4 const position = shaderWorldTransform * float4{ lcm.getLocalPosition(li), 1 };
+            const mat4f worldTransform{ worldOriginTransform * tcm.getWorldTransformAccurate(ti) };
+            const float4 position = worldTransform * float4{ lcm.getLocalPosition(li), 1 };
             float3 d = 0;
             if (!lcm.isPointLight(li) || lcm.isIESLight(li)) {
                 d = lcm.getLocalDirection(li);
                 // using mat3f::getTransformForNormals handles non-uniform scaling
-                d = normalize(mat3f::getTransformForNormals(shaderWorldTransform.upperLeft()) * d);
+                d = normalize(mat3f::getTransformForNormals(worldTransform.upperLeft()) * d);
             }
             size_t const index = DIRECTIONAL_LIGHTS_COUNT + std::distance(first, p) + i;
             assert_invariant(index < lightData.size());
@@ -264,43 +261,14 @@ void FScene::prepare(utils::JobSystem& js,
      */
 
     if (auto [li, ti] = directionalLightInstances ; li) {
-        // in the code below, we only transform directions, so the translation of the
-        // world transform is irrelevant, and we don't need to use getWorldTransformAccurate()
-
-        FLightManager::ShadowParams const params = lcm.getShadowParams(li);
-        float3 const localDirection = lcm.getLocalDirection(li);
-        float3 const shadowLocalDirection = params.options.transform * localDirection;
-        mat3 const worldDirectionTransform = tcm.getWorldTransformAccurate(ti).upperLeft();
-        mat3 const shaderWorldTransform = worldTransform.upperLeft() * worldDirectionTransform;
-
-        // using mat3::getTransformForNormals handles non-uniform scaling
-        // note: in the common case of the rigid-body transform, getTransformForNormals() returns
-        // identity.
-        mat3 const worlTransformNormals = mat3::getTransformForNormals(shaderWorldTransform);
-        double3 const d = worlTransformNormals * localDirection;
-        double3 const s = worlTransformNormals * shadowLocalDirection;
-
-        // We compute the reference point for snapping shadowmaps without applying the
-        // rotation of `worldOriginTransform` on both sides, so that we don't have any instability
-        // due to the limited precision of the "light space" matrix (even at double precision).
-
-        // getMv() Returns the world-to-lightspace transformation. See ShadowMap.cpp.
-        auto getMv = [](double3 direction) -> mat3 {
-            // We use the x-axis as the "up" reference so that the math is stable when the light
-            // is pointing down, which is a common case for lights. See ShadowMap.cpp.
-            return transpose(mat3::lookTo(direction, double3{ 1, 0, 0 }));
-        };
-        double3 const worldDirection =
-                mat3::getTransformForNormals(worldDirectionTransform) * shadowLocalDirection;
-        double3 const worldOrigin = transpose(worldTransform.upperLeft()) * worldTransform[3].xyz;
-        mat3 const Mv = getMv(worldDirection);
-        double2 const lsReferencePoint = (Mv * worldOrigin).xy;
-
+        const mat4f worldTransform{
+                worldOriginTransform * tcm.getWorldTransformAccurate(ti) };
+        // using mat3f::getTransformForNormals handles non-uniform scaling
+        float3 d = lcm.getLocalDirection(li);
+        d = normalize(mat3f::getTransformForNormals(worldTransform.upperLeft()) * d);
         constexpr float inf = std::numeric_limits<float>::infinity();
         lightData.elementAt<POSITION_RADIUS>(0) = float4{ 0, 0, 0, inf };
-        lightData.elementAt<DIRECTION>(0) = normalize(d);
-        lightData.elementAt<SHADOW_DIRECTION>(0) = normalize(s);
-        lightData.elementAt<SHADOW_REF>(0) = lsReferencePoint;
+        lightData.elementAt<DIRECTION>(0) = d;
         lightData.elementAt<LIGHT_INSTANCE>(0) = li;
     } else {
         lightData.elementAt<LIGHT_INSTANCE>(0) = 0;

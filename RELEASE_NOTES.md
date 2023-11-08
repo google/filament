@@ -15,7 +15,6 @@ Instead, if you are authoring a PR for the main branch, add your release note to
 - engine: New tone mapper: `AgXTonemapper`.
 - matinfo: Add support for viewing ESSL 1.0 shaders
 - engine: Add `Renderer::getClearOptions()` [b/243846268]
-- engine: Fix stable shadows (again) when an IBL rotation is used
 
 ## v1.45.0
 

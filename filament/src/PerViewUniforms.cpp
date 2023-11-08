@@ -75,7 +75,7 @@ void PerViewUniforms::prepareCamera(FEngine& engine, const CameraInfo& camera) n
     s.clipFromViewMatrix  = clipFromView;     // projection
     s.viewFromClipMatrix  = viewFromClip;     // 1/projection
     s.worldFromClipMatrix = worldFromClip;    // 1/(projection * view)
-    s.userWorldFromWorldMatrix = mat4f(inverse(camera.worldTransform));
+    s.userWorldFromWorldMatrix = mat4f(inverse(camera.worldOrigin));
     s.clipTransform = camera.clipTransform;
     s.cameraFar = camera.zf;
     s.oneOverFarMinusNear = 1.0f / (camera.zf - camera.zn);
@@ -151,7 +151,7 @@ void PerViewUniforms::prepareFog(FEngine& engine, const CameraInfo& cameraInfo,
     // why we store the cofactor matrix.
 
     mat4f const viewFromWorld       = cameraInfo.view;
-    mat4 const worldFromUserWorld   = cameraInfo.worldTransform;
+    mat4 const worldFromUserWorld   = cameraInfo.worldOrigin;
     mat4 const worldFromFog         = worldFromUserWorld * userWorldFromFog;
     mat4 const viewFromFog          = viewFromWorld * worldFromFog;
 
