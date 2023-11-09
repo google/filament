@@ -67,15 +67,28 @@ public:
      * @return Address of the data of the \p name property
      * @{
      */
-    void* getPropertyAddress(const char* name) noexcept;
+    void* getPropertyAddress(const char* name);
+
+    void const* getPropertyAddress(const char* name) const noexcept;
 
     template<typename T>
-    inline T* getPropertyAddress(const char* name) noexcept {
+    inline T* getPropertyAddress(const char* name) {
         return static_cast<T*>(getPropertyAddress(name));
     }
 
     template<typename T>
-    inline bool getPropertyAddress(const char* name, T** p) noexcept {
+    inline T const* getPropertyAddress(const char* name) const noexcept {
+        return static_cast<T*>(getPropertyAddress(name));
+    }
+
+    template<typename T>
+    inline bool getPropertyAddress(const char* name, T** p) {
+        *p = getPropertyAddress<T>(name);
+        return *p != nullptr;
+    }
+
+    template<typename T>
+    inline bool getPropertyAddress(const char* name, T* const* p) const noexcept {
         *p = getPropertyAddress<T>(name);
         return *p != nullptr;
     }
@@ -129,6 +142,10 @@ public:
         float pid_i = 0.0f;
         float pid_d = 0.0f;
     };
+
+protected:
+    // prevent heap allocation
+    ~DebugRegistry() = default;
 };
 
 

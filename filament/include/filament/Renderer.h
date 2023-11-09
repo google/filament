@@ -174,6 +174,12 @@ public:
     void setClearOptions(const ClearOptions& options);
 
     /**
+     * Returns the ClearOptions currently set.
+     * @return A reference to a ClearOptions structure.
+     */
+    ClearOptions const& getClearOptions() const noexcept;
+
+    /**
      * Get the Engine that created this Renderer.
      *
      * @return A pointer to the Engine instance this Renderer is associated to.
@@ -573,6 +579,10 @@ public:
      * getUserTime()
      */
     void resetUserTime();
+
+protected:
+    // prevent heap allocation
+    ~Renderer() = default;
 };
 
 } // namespace filament

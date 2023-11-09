@@ -50,7 +50,23 @@ public:
     }
 
     Instance getInstance(utils::Entity e) const noexcept {
-        return Instance(mManager.getInstance(e));
+        return { mManager.getInstance(e) };
+    }
+
+    size_t getComponentCount() const noexcept {
+        return mManager.getComponentCount();
+    }
+
+    bool empty() const noexcept {
+        return mManager.empty();
+    }
+
+    utils::Entity getEntity(Instance i) const noexcept {
+        return mManager.getEntity(i);
+    }
+
+    utils::Entity const* getEntities() const noexcept {
+        return mManager.getEntities();
     }
 
     void setAccurateTranslationsEnabled(bool enable) noexcept;
@@ -103,7 +119,7 @@ public:
 
     math::mat4 getTransformAccurate(Instance ci) const noexcept {
         math::mat4f const& local = mManager[ci].local;
-        math::float3 localTranslationLo = mManager[ci].localTranslationLo;
+        math::float3 const localTranslationLo = mManager[ci].localTranslationLo;
         math::mat4 r(local);
         r[3].xyz += localTranslationLo;
         return r;
@@ -111,7 +127,7 @@ public:
 
     math::mat4 getWorldTransformAccurate(Instance ci) const noexcept {
         math::mat4f const& world = mManager[ci].world;
-        math::float3 worldTranslationLo = mManager[ci].worldTranslationLo;
+        math::float3 const worldTranslationLo = mManager[ci].worldTranslationLo;
         math::mat4 r(world);
         r[3].xyz += worldTranslationLo;
         return r;

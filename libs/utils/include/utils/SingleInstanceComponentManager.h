@@ -98,7 +98,7 @@ public:
         return pos != map.end() ? pos->second : 0;
     }
 
-    // returns the number of components (i.e. size of each arrays)
+    // Returns the number of components (i.e. size of each array)
     size_t getComponentCount() const noexcept {
         // The array as an extra dummy component at index 0, so the visible count is 1 less.
         return mData.size() - 1;
@@ -108,11 +108,8 @@ public:
         return getComponentCount() == 0;
     }
 
-    // returns a pointer to the Entity array. This is basically the list
-    // of entities this component manager handles.
-    // The pointer becomes invalid when adding or removing a component.
-    Entity const* getEntities() const noexcept {
-        return begin<ENTITY_INDEX>();
+    utils::Entity const* getEntities() const noexcept {
+        return data<ENTITY_INDEX>() + 1;
     }
 
     Entity getEntity(Instance i) const noexcept {
@@ -127,14 +124,6 @@ public:
     // Removes a component from the given entity.
     // This invalidates all pointers components.
     inline Instance removeComponent(Entity e);
-
-    // trigger one round of garbage collection. this is intended to be called on a regular
-    // basis. This gc gives up after it cannot randomly free 'ratio' component in a row.
-    void gc(const EntityManager& em, size_t ratio = 4) noexcept {
-        gc(em, ratio, [this](Entity e) {
-                    removeComponent(e);
-                });
-    }
 
     // return the first instance
     Instance begin() const noexcept { return 1u; }
@@ -235,23 +224,32 @@ protected:
     }
 
     template<typename REMOVE>
+    void gc(const EntityManager& em,
+            REMOVE&& removeComponent) noexcept {
+        gc(em, 4, std::forward<REMOVE>(removeComponent));
+    }
+
+    template<typename REMOVE>
     void gc(const EntityManager& em, size_t ratio,
-            REMOVE removeComponent) noexcept {
-        Entity const* entities = getEntities();
+            REMOVE&& removeComponent) noexcept {
+        Entity const* const pEntities = begin<ENTITY_INDEX>();
         size_t count = getComponentCount();
         size_t aliveInARow = 0;
         default_random_engine& rng = mRng;
         UTILS_NOUNROLL
         while (count && aliveInARow < ratio) {
+            assert_invariant(count == getComponentCount());
             // note: using the modulo favorizes lower number
-            size_t i = rng() % count;
-            if (UTILS_LIKELY(em.isAlive(entities[i]))) {
+            size_t const i = rng() % count;
+            Entity const entity = pEntities[i];
+            assert_invariant(entity);
+            if (UTILS_LIKELY(em.isAlive(entity))) {
                 ++aliveInARow;
                 continue;
             }
+            removeComponent(entity);
             aliveInARow = 0;
             count--;
-            removeComponent(entities[i]);
         }
     }
 

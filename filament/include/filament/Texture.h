@@ -541,6 +541,10 @@ public:
             return *this;
         }
     };
+
+protected:
+    // prevent heap allocation
+    ~Texture() = default;
 };
 
 } // namespace filament

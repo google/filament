@@ -119,6 +119,29 @@ public:
     Instance getInstance(utils::Entity e) const noexcept;
 
     /**
+     * @return the number of Components
+     */
+    size_t getComponentCount() const noexcept;
+
+    /**
+     * @return true if the this manager has no components
+     */
+    bool empty() const noexcept;
+
+    /**
+     * Retrieve the `Entity` of the component from its `Instance`.
+     * @param i Instance of the component obtained from getInstance()
+     * @return
+     */
+    utils::Entity getEntity(Instance i) const noexcept;
+
+    /**
+     * Retrieve the Entities of all the components of this manager.
+     * @return A list, in no particular order, of all the entities managed by this manager.
+     */
+    utils::Entity const* getEntities() const noexcept;
+
+    /**
      * Enables or disable the accurate translation mode. Disabled by default.
      *
      * When accurate translation mode is active, the translation component of all transforms is
@@ -261,7 +284,7 @@ public:
      *         returns the value set by setTransform().
      * @see setTransform()
      */
-    const math::mat4 getTransformAccurate(Instance ci) const noexcept;
+    math::mat4 getTransformAccurate(Instance ci) const noexcept;
 
     /**
      * Return the world transform of a transform component.
@@ -279,7 +302,7 @@ public:
      *         composition of this component's local transform with its parent's world transform.
      * @see setTransform()
      */
-    const math::mat4 getWorldTransformAccurate(Instance ci) const noexcept;
+    math::mat4 getWorldTransformAccurate(Instance ci) const noexcept;
 
     /**
      * Opens a local transform transaction. During a transaction, getWorldTransform() can
@@ -308,6 +331,10 @@ public:
      * @see openLocalTransformTransaction(), setTransform()
      */
     void commitLocalTransformTransaction() noexcept;
+
+protected:
+    // prevent heap allocation
+    ~TransformManager() = default;
 };
 
 } // namespace filament

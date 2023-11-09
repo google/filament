@@ -91,6 +91,7 @@ public:
 
     using UsageFlags = utils::bitset128;
     static UsageFlags getUsageFlags(uint16_t binding, ShaderStageFlags stages, UsageFlags src = {});
+    static UsageFlags disableUsageFlags(uint16_t binding, UsageFlags src);
 
     #pragma clang diagnostic push
     #pragma clang diagnostic warning "-Wpadded"
@@ -150,7 +151,7 @@ public:
     void bindScissor(VkCommandBuffer cmdbuffer, VkRect2D scissor) noexcept;
 
     // Each of the following methods are fast and do not make Vulkan calls.
-    void bindProgram(const VulkanProgram& program) noexcept;
+    void bindProgram(VulkanProgram* program) noexcept;
     void bindRasterState(const RasterState& rasterState) noexcept;
     void bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept;
     void bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept;
@@ -415,7 +416,7 @@ private:
     RasterState mCurrentRasterState;
     PipelineKey mPipelineRequirements = {};
     DescriptorKey mDescriptorRequirements = {};
-    VkSpecializationInfo* mSpecializationRequirements = {};
+    VkSpecializationInfo const* mSpecializationRequirements = nullptr;
 
     // Current bindings for the pipeline and descriptor sets.
     PipelineKey mBoundPipeline = {};

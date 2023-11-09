@@ -180,6 +180,10 @@ public:
      * @return Number of color attachments usable in a render target.
      */
     uint8_t getSupportedColorAttachmentsCount() const noexcept;
+
+protected:
+    // prevent heap allocation
+    ~RenderTarget() = default;
 };
 
 } // namespace filament

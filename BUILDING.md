@@ -56,9 +56,11 @@ To trigger both incremental debug and release builds:
 ./build.sh debug release
 ```
 
+If build fails for some reasons, it may leave the `out/` directory in a broken state. You can
+force a clean build by adding the `-c` flag in that case.
+
 To install the libraries and executables in `out/debug/` and `out/release/`, add the `-i` flag.
-You can force a clean build by adding the `-c` flag. The script offers more features described
-by executing `build.sh -h`.
+The script offers more features described by executing `build.sh -h`.
 
 ### Filament-specific CMake Options
 
@@ -172,12 +174,12 @@ See [ios/samples/README.md](./ios/samples/README.md) for more information.
 
 ### Windows
 
-#### Building on Windows with Visual Studio 2019
+#### Building on Windows with Visual Studio 2019 or later
 
 Install the following components:
 
-- [Visual Studio 2019](https://www.visualstudio.com/downloads)
-- [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk)
+- [Visual Studio 2019 or later](https://www.visualstudio.com/downloads)
+- [Windows SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/)
 - [Python 3.7](https://www.python.org/ftp/python/3.7.0/python-3.7.0.exe)
 - [CMake 3.14 or later](https://github.com/Kitware/CMake/releases/download/v3.14.7/cmake-3.14.7-win64-x64.msi)
 

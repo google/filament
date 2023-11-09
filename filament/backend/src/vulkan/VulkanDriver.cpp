@@ -156,7 +156,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mThreadSafeResourceManager(&mResourceAllocator),
       mPipelineCache(&mResourceAllocator),
       mBlitter(mStagePool, mPipelineCache, mFramebufferCache, mSamplerCache),
-      mReadPixels(mPlatform->getDevice()) {
+      mReadPixels(mPlatform->getDevice()),
+      mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported) {
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     UTILS_UNUSED const PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback
@@ -706,10 +707,6 @@ FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> fh) {
 // the GPU supports the given texture format with non-zero optimal tiling features.
 bool VulkanDriver::isTextureFormatSupported(TextureFormat format) {
     VkFormat vkformat = getVkFormat(format);
-    // We automatically use an alternative format when the client requests DEPTH24.
-    if (format == TextureFormat::DEPTH24) {
-        vkformat = mContext.getDepthFormat();
-    }
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;
     }
@@ -737,10 +734,6 @@ bool VulkanDriver::isTextureFormatMipmappable(TextureFormat format) {
 
 bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
     VkFormat vkformat = getVkFormat(format);
-    // We automatically use an alternative format when the client requests DEPTH24.
-    if (format == TextureFormat::DEPTH24) {
-        vkformat = mContext.getDepthFormat();
-    }
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;
     }
@@ -766,7 +759,7 @@ bool VulkanDriver::isAutoDepthResolveSupported() {
 }
 
 bool VulkanDriver::isSRGBSwapChainSupported() {
-    return mPlatform->isSRGBSwapChainSupported();
+    return mIsSRGBSwapChainSupported;
 }
 
 bool VulkanDriver::isStereoSupported() {
@@ -1549,7 +1542,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     VkDeviceSize const* offsets = prim.vertexBuffer->getOffsets();
 
     // Push state changes to the VulkanPipelineCache instance. This is fast and does not make VK calls.
-    mPipelineCache.bindProgram(*program);
+    mPipelineCache.bindProgram(program);
     mPipelineCache.bindRasterState(mPipelineCache.getCurrentRasterState());
     mPipelineCache.bindPrimitiveTopology(prim.primitiveTopology);
     mPipelineCache.bindVertexArray(attribDesc, bufferDesc, bufferCount);
@@ -1561,68 +1554,69 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     VkDescriptorImageInfo samplerInfo[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {};
     VulkanTexture* samplerTextures[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {nullptr};
 
-    VulkanPipelineCache::UsageFlags usage;
+    auto const& bindingToSamplerIndex = program->getBindingToSamplerIndex();
+    VulkanPipelineCache::UsageFlags  usage = program->getUsage();
 
     UTILS_NOUNROLL
-    for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < Program::SAMPLER_BINDING_COUNT; samplerGroupIdx++) {
-        const auto& samplerGroup = program->samplerGroupInfo[samplerGroupIdx];
-        const auto& samplers = samplerGroup.samplers;
-        if (samplers.empty()) {
+    for (uint8_t binding = 0; binding < VulkanPipelineCache::SAMPLER_BINDING_COUNT; binding++) {
+        uint16_t const indexPair = bindingToSamplerIndex[binding];
+
+        if (indexPair == 0xffff) {
+            usage = VulkanPipelineCache::disableUsageFlags(binding, usage);
             continue;
         }
-        VulkanSamplerGroup* vksb = mSamplerBindings[samplerGroupIdx];
+
+        uint16_t const samplerGroupInd = (indexPair >> 8) & 0xff;
+        uint16_t const samplerInd = (indexPair & 0xff);
+
+        VulkanSamplerGroup* vksb = mSamplerBindings[samplerGroupInd];
         if (!vksb) {
+            usage = VulkanPipelineCache::disableUsageFlags(binding, usage);
             continue;
         }
-        SamplerGroup* sb = vksb->sb.get();
-        assert_invariant(sb->getSize() == samplers.size());
-        size_t samplerIdx = 0;
-        for (auto& sampler : samplers) {
-            const SamplerDescriptor* boundSampler = sb->data() + samplerIdx;
-            samplerIdx++;
+        SamplerDescriptor const* boundSampler = ((SamplerDescriptor*) vksb->sb->data()) + samplerInd;
 
-            if (UTILS_LIKELY(boundSampler->t)) {
-                VulkanTexture* texture = mResourceAllocator.handle_cast<VulkanTexture*>(boundSampler->t);
-                VkImageViewType const expectedType = texture->getViewType();
-
-                // TODO: can this uninitialized check be checked in a higher layer?
-                // This fallback path is very flaky because the dummy texture might not have
-                // matching characteristics. (e.g. if the missing texture is a 3D texture)
-                if (UTILS_UNLIKELY(texture->getPrimaryImageLayout() == VulkanLayout::UNDEFINED)) {
-#if FVK_ENABLED(FVK_DEBUG_TEXTURE)
-                    utils::slog.w << "Uninitialized texture bound to '" << sampler.name.c_str() << "'";
-                    utils::slog.w << " in material '" << program->name.c_str() << "'";
-                    utils::slog.w << " at binding point " << +sampler.binding << utils::io::endl;
-#endif
-                    texture = mEmptyTexture.get();
-                }
-
-                const SamplerParams& samplerParams = boundSampler->s;
-                VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
-
-                usage = VulkanPipelineCache::getUsageFlags(sampler.binding, samplerGroup.stageFlags, usage);
-
-                VkImageView imageView = VK_NULL_HANDLE;
-                VkImageSubresourceRange const range = texture->getPrimaryViewRange();
-                if (any(texture->usage & TextureUsage::DEPTH_ATTACHMENT)
-                        && expectedType == VK_IMAGE_VIEW_TYPE_2D) {
-                    // If the sampler is part of a mipmapped depth texture, where one of the level
-                    // *can* be an attachment, then the sampler for this texture has the same view
-                    // properties as a view for an attachment. Therefore, we can use
-                    // getAttachmentView to get a corresponding VkImageView.
-                    imageView = texture->getAttachmentView(range);
-                } else {
-                    imageView = texture->getViewForType(range, expectedType);
-                }
-
-                samplerInfo[sampler.binding] = {
-                    .sampler = vksampler,
-                    .imageView = imageView,
-                    .imageLayout = ImgUtil::getVkLayout(texture->getPrimaryImageLayout())
-                };
-                samplerTextures[sampler.binding] = texture;
-            }
+        if (UTILS_UNLIKELY(!boundSampler->t)) {
+            usage = VulkanPipelineCache::disableUsageFlags(binding, usage);
+            continue;
         }
+
+        VulkanTexture* texture = mResourceAllocator.handle_cast<VulkanTexture*>(boundSampler->t);
+        VkImageViewType const expectedType = texture->getViewType();
+
+        // TODO: can this uninitialized check be checked in a higher layer?
+        // This fallback path is very flaky because the dummy texture might not have
+        // matching characteristics. (e.g. if the missing texture is a 3D texture)
+        if (UTILS_UNLIKELY(texture->getPrimaryImageLayout() == VulkanLayout::UNDEFINED)) {
+#if FVK_ENABLED(FVK_DEBUG_TEXTURE)
+            utils::slog.w << "Uninitialized texture bound to '" << sampler.name.c_str() << "'";
+            utils::slog.w << " in material '" << program->name.c_str() << "'";
+            utils::slog.w << " at binding point " << +sampler.binding << utils::io::endl;
+#endif
+            texture = mEmptyTexture.get();
+        }
+
+        SamplerParams const& samplerParams = boundSampler->s;
+        VkSampler const vksampler = mSamplerCache.getSampler(samplerParams);
+        VkImageView imageView = VK_NULL_HANDLE;
+        VkImageSubresourceRange const range = texture->getPrimaryViewRange();
+        if (any(texture->usage & TextureUsage::DEPTH_ATTACHMENT) &&
+                expectedType == VK_IMAGE_VIEW_TYPE_2D) {
+            // If the sampler is part of a mipmapped depth texture, where one of the level *can* be
+            // an attachment, then the sampler for this texture has the same view properties as a
+            // view for an attachment. Therefore, we can use getAttachmentView to get a
+            // corresponding VkImageView.
+            imageView = texture->getAttachmentView(range);
+        } else {
+            imageView = texture->getViewForType(range, expectedType);
+        }
+
+        samplerInfo[binding] = {
+            .sampler = vksampler,
+            .imageView = imageView,
+            .imageLayout = ImgUtil::getVkLayout(texture->getPrimaryImageLayout())
+        };
+        samplerTextures[binding] = texture;
     }
 
     mPipelineCache.bindSamplers(samplerInfo, samplerTextures, usage);

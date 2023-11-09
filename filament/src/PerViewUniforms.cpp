@@ -76,7 +76,7 @@ void PerViewUniforms::prepareCamera(FEngine& engine, const CameraInfo& camera) n
     s.viewFromClipMatrix  = viewFromClip;     // 1/projection
     s.worldFromClipMatrix = worldFromClip;    // 1/(projection * view)
     s.userWorldFromWorldMatrix = mat4f(inverse(camera.worldOrigin));
-    s.clipTransform = camera.clipTransfrom;
+    s.clipTransform = camera.clipTransform;
     s.cameraFar = camera.zf;
     s.oneOverFarMinusNear = 1.0f / (camera.zf - camera.zn);
     s.nearOverFarMinusNear = camera.zn / (camera.zf - camera.zn);
@@ -426,6 +426,17 @@ void PerViewUniforms::prepareShadowPCSS(Handle<HwTexture> texture,
     auto& s = mUniforms.edit();
     s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCSS;
     s.shadowPenumbraRatioScale = options.penumbraRatioScale;
+    PerViewUniforms::prepareShadowSampling(s, shadowMappingUniforms);
+}
+
+void PerViewUniforms::prepareShadowPCFDebug(Handle<HwTexture> texture,
+        ShadowMappingUniforms const& shadowMappingUniforms) noexcept {
+    mSamplers.setSampler(PerViewSib::SHADOW_MAP, { texture, {
+            .filterMag = SamplerMagFilter::NEAREST,
+            .filterMin = SamplerMinFilter::NEAREST
+    }});
+    auto& s = mUniforms.edit();
+    s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCF;
     PerViewUniforms::prepareShadowSampling(s, shadowMappingUniforms);
 }
 

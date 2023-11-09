@@ -1930,6 +1930,7 @@ public class View {
          * PCF with soft shadows and contact hardening
          */
         PCSS,
+        PCFd,
     }
 
     /**

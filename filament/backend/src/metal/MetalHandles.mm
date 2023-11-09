@@ -299,6 +299,9 @@ MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uin
         uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
         buffer(context, BufferObjectBinding::VERTEX, usage, elementSize * indexCount, true) { }
 
+MetalRenderPrimitive::MetalRenderPrimitive()
+    : bufferMapping(utils::FixedCapacityVector<Entry>::with_capacity(MAX_VERTEX_BUFFER_COUNT)) {}
+
 void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer*
         indexBuffer) {
     this->vertexBuffer = vertexBuffer;
@@ -306,118 +309,94 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
 
     const size_t attributeCount = vertexBuffer->attributes.size();
 
+    auto& mapping = bufferMapping;
+    mapping.clear();
     vertexDescription = {};
 
-    // Each attribute gets its own vertex buffer, starting at logical buffer 1.
-    uint32_t bufferIndex = 1;
+    // Set the layout for the zero buffer, which unused attributes are mapped to.
+    vertexDescription.layouts[ZERO_VERTEX_BUFFER_LOGICAL_INDEX] = {
+            .step = MTLVertexStepFunctionConstant, .stride = 16
+    };
+
+    // Here we map each source buffer to a Metal buffer argument.
+    // Each attribute has a source buffer, offset, and stride.
+    // Two source buffers with the same index and stride can share the same Metal buffer argument
+    // index.
+    //
+    // The source buffer is the buffer index that the Filament client sets.
+    //                                       * source buffer
+    // .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 12)
+    // .attribute(VertexAttribute::UV,       0, VertexBuffer::AttributeType::HALF2,  8, 12)
+    // .attribute(VertexAttribute::COLOR,    1, VertexBuffer::AttributeType::UBYTE4, 0,  4)
+
+    auto allocateOrGetBufferArgumentIndex =
+            [&mapping, currentBufferArgumentIndex = USER_VERTEX_BUFFER_BINDING_START, this](
+                    auto sourceBuffer, auto sourceBufferStride) mutable -> uint8_t {
+        auto match = [&](const auto& e) {
+            return e.sourceBufferIndex == sourceBuffer && e.stride == sourceBufferStride;
+        };
+        if (auto it = std::find_if(mapping.begin(), mapping.end(), match); it != mapping.end()) {
+            return it->bufferArgumentIndex;
+        } else {
+            auto bufferArgumentIndex = currentBufferArgumentIndex++;
+            mapping.emplace_back(sourceBuffer, sourceBufferStride, bufferArgumentIndex);
+            vertexDescription.layouts[bufferArgumentIndex] = {
+                    .step = MTLVertexStepFunctionPerVertex, .stride = sourceBufferStride
+            };
+            return bufferArgumentIndex;
+        }
+    };
+
     for (uint32_t attributeIndex = 0; attributeIndex < attributeCount; attributeIndex++) {
         const auto& attribute = vertexBuffer->attributes[attributeIndex];
-        if (attribute.buffer == Attribute::BUFFER_UNUSED) {
-            const uint8_t flags = attribute.flags;
-            const MTLVertexFormat format = (flags & Attribute::FLAG_INTEGER_TARGET) ?
-                    MTLVertexFormatUInt4 : MTLVertexFormatFloat4;
 
-            // If the attribute is not enabled, bind it to the zero buffer. It's a Metal error for a
-            // shader to read from missing vertex attributes.
+        // If the attribute is unused, bind it to the zero buffer. It's a Metal error for a shader
+        // to read from missing vertex attributes.
+        if (attribute.buffer == Attribute::BUFFER_UNUSED) {
+            const MTLVertexFormat format = (attribute.flags & Attribute::FLAG_INTEGER_TARGET)
+                    ? MTLVertexFormatUInt4
+                    : MTLVertexFormatFloat4;
             vertexDescription.attributes[attributeIndex] = {
-                    .format = format,
-                    .buffer = ZERO_VERTEX_BUFFER_LOGICAL_INDEX,
-                    .offset = 0
-            };
-            vertexDescription.layouts[ZERO_VERTEX_BUFFER_LOGICAL_INDEX] = {
-                    .step = MTLVertexStepFunctionConstant,
-                    .stride = 16
+                    .format = format, .buffer = ZERO_VERTEX_BUFFER_LOGICAL_INDEX, .offset = 0
             };
             continue;
         }
+
+        // Map the source buffer and stride of this attribute to a Metal buffer argument.
+        auto bufferArgumentIndex =
+                allocateOrGetBufferArgumentIndex(attribute.buffer, attribute.stride);
 
         vertexDescription.attributes[attributeIndex] = {
-                .format = getMetalFormat(attribute.type,
-                                         attribute.flags & Attribute::FLAG_NORMALIZED),
-                .buffer = bufferIndex,
-                .offset = 0
+                .format = getMetalFormat(
+                        attribute.type, attribute.flags & Attribute::FLAG_NORMALIZED),
+                .buffer = uint32_t(bufferArgumentIndex),
+                .offset = attribute.offset
         };
-        vertexDescription.layouts[bufferIndex] = {
-                .step = MTLVertexStepFunctionPerVertex,
-                .stride = attribute.stride
-        };
-
-        bufferIndex++;
-    };
+    }
 }
 
-MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcept
-    : HwProgram(program.getName()), vertexFunction(nil), fragmentFunction(nil),
-            computeFunction(nil), isValid(false) {
-
-    using MetalFunctionPtr = __strong id<MTLFunction>*;
-
-    static_assert(Program::SHADER_TYPE_COUNT == 3, "Only vertex, fragment, and/or compute shaders expected.");
-    MetalFunctionPtr shaderFunctions[3] = { &vertexFunction, &fragmentFunction, &computeFunction };
-
-    const auto& sources = program.getShadersSource();
-    for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
-        const auto& source = sources[i];
-        // It's okay for some shaders to be empty, they shouldn't be used in any draw calls.
-        if (source.empty()) {
-            continue;
-        }
-
-        assert_invariant( source[source.size() - 1] == '\0' );
-
-        // the shader string is null terminated and the length includes the null character
-        NSString* objcSource = [[NSString alloc] initWithBytes:source.data()
-                                                        length:source.size() - 1
-                                                      encoding:NSUTF8StringEncoding];
-        NSError* error = nil;
-        // When options is nil, Metal uses the most recent language version available.
-        id<MTLLibrary> library = [device newLibraryWithSource:objcSource
-                                                      options:nil
-                                                        error:&error];
-        if (library == nil) {
-            if (error) {
-                auto description =
-                        [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
-                utils::slog.w << description << utils::io::endl;
-            }
-            PANIC_LOG("Failed to compile Metal program.");
-            return;
-        }
-
-        MTLFunctionConstantValues* constants = [MTLFunctionConstantValues new];
-        auto const& specializationConstants = program.getSpecializationConstants();
-        for (auto const& sc : specializationConstants) {
-            const std::array<MTLDataType, 3> types{
-                MTLDataTypeInt, MTLDataTypeFloat, MTLDataTypeBool };
-            std::visit([&sc, constants, type = types[sc.value.index()]](auto&& arg) {
-                [constants setConstantValue:&arg
-                                       type:type
-                                    atIndex:sc.id];
-            }, sc.value);
-        }
-
-        id<MTLFunction> function = [library newFunctionWithName:@"main0"
-                                                 constantValues:constants
-                                                          error:&error];
-        if (!program.getName().empty()) {
-            function.label = @(program.getName().c_str());
-        }
-        assert_invariant(function);
-        *shaderFunctions[i] = function;
-    }
-
-    UTILS_UNUSED_IN_RELEASE const bool isRasterizationProgram =
-            vertexFunction != nil && fragmentFunction != nil;
-    UTILS_UNUSED_IN_RELEASE const bool isComputeProgram = computeFunction != nil;
-    // The program must be either a rasterization program XOR a compute program.
-    assert_invariant(isRasterizationProgram != isComputeProgram);
-
-    // All stages of the program have compiled successfully, this is a valid program.
-    isValid = true;
+MetalProgram::MetalProgram(MetalContext& context, Program&& program) noexcept
+    : HwProgram(program.getName()), mContext(context) {
 
     // Save this program's SamplerGroupInfo, it's used during draw calls to bind sampler groups to
     // the appropriate stage(s).
     samplerGroupInfo = program.getSamplerGroupInfo();
+
+    mToken = context.shaderCompiler->createProgram(program.getName(), std::move(program));
+    assert_invariant(mToken);
+}
+
+const MetalShaderCompiler::MetalFunctionBundle& MetalProgram::getFunctions() {
+    initialize();
+    return mFunctionBundle;
+}
+
+void MetalProgram::initialize() {
+    if (!mToken) {
+        return;
+    }
+    mFunctionBundle = mContext.shaderCompiler->getProgram(mToken);
+    assert_invariant(!mToken);
 }
 
 MetalTexture::MetalTexture(MetalContext& context, SamplerType target, uint8_t levels,

@@ -61,9 +61,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     : HwTexture(target, levels, samples, w, h, depth, tformat, tusage),
       VulkanResource(
               heapAllocated ? VulkanResourceType::HEAP_ALLOCATED : VulkanResourceType::TEXTURE),
-      // Vulkan does not support 24-bit depth, use the official fallback format.
-      mVkFormat(tformat == TextureFormat::DEPTH24 ? context.getDepthFormat()
-                                                  : backend::getVkFormat(tformat)),
+      mVkFormat(backend::getVkFormat(tformat)),
       mViewType(ImgUtil::getViewType(target)),
       mSwizzle(swizzle),
       mStagePool(stagePool),
@@ -146,7 +144,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     // any kind of attachment (color or depth).
     const auto& limits = context.getPhysicalDeviceLimits();
     if (imageInfo.usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
-        samples = reduceSampleCount(samples, isDepthFormat(mVkFormat)
+        samples = reduceSampleCount(samples, isVkDepthFormat(mVkFormat)
                                                      ? limits.sampledImageDepthSampleCounts
                                                      : limits.sampledImageColorSampleCounts);
     }
@@ -454,7 +452,7 @@ void VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, const VkImageSubres
                   << "," << range.levelCount << ")"
                   << " from=" << oldLayout << " to=" << newLayout
                   << " format=" << mVkFormat
-                  << " depth=" << isDepthFormat(mVkFormat)
+                  << " depth=" << isVkDepthFormat(mVkFormat)
                   << " slice-by-slice=" << transitionSliceBySlice
                   << utils::io::endl;
 #endif

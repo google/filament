@@ -33,7 +33,7 @@
 
 #define HandleAllocatorGL  HandleAllocator<16, 64, 208>
 #define HandleAllocatorVK  HandleAllocator<16, 64, 880>
-#define HandleAllocatorMTL HandleAllocator<16, 64, 576>
+#define HandleAllocatorMTL HandleAllocator<16, 64, 584>
 
 namespace filament::backend {
 
@@ -239,14 +239,16 @@ private:
         }
     };
 
-
+// FIXME: We should be using a Spinlock here, at least on platforms where mutexes are not
+//        efficient (i.e. non-Linux). However, we've seen some hangs on that spinlock, which
+//        we don't understand well (b/308029108).
 #ifndef NDEBUG
     using HandleArena = utils::Arena<Allocator,
-            utils::LockingPolicy::SpinLock,
+            utils::LockingPolicy::Mutex,
             utils::TrackingPolicy::DebugAndHighWatermark>;
 #else
     using HandleArena = utils::Arena<Allocator,
-            utils::LockingPolicy::SpinLock>;
+            utils::LockingPolicy::Mutex>;
 #endif
 
     // allocateHandle()/deallocateHandle() selects the pool to use at compile-time based on the
@@ -256,6 +258,7 @@ private:
     HandleBase::HandleId allocateHandle() noexcept {
         if constexpr (SIZE <= P0) { return allocateHandleInPool<P0>(); }
         if constexpr (SIZE <= P1) { return allocateHandleInPool<P1>(); }
+        static_assert(SIZE <= P2);
         return allocateHandleInPool<P2>();
     }
 
@@ -266,6 +269,7 @@ private:
         } else if constexpr (SIZE <= P1) {
             deallocateHandleFromPool<P1>(id);
         } else {
+            static_assert(SIZE <= P2);
             deallocateHandleFromPool<P2>(id);
         }
     }

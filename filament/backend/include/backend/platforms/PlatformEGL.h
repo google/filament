@@ -42,6 +42,9 @@ public:
     void createContext(bool shared) override;
     void releaseContext() noexcept override;
 
+    // Return true if we're on an OpenGL platform (as opposed to OpenGL ES). false by default.
+    virtual bool isOpenGL() const noexcept;
+
 protected:
 
     // --------------------------------------------------------------------------------------------
@@ -126,6 +129,7 @@ protected:
     EGLSurface mCurrentDrawSurface = EGL_NO_SURFACE;
     EGLSurface mCurrentReadSurface = EGL_NO_SURFACE;
     EGLSurface mEGLDummySurface = EGL_NO_SURFACE;
+    // mEGLConfig is valid only if ext.egl.KHR_no_config_context is false
     EGLConfig mEGLConfig = EGL_NO_CONFIG_KHR;
     Config mContextAttribs;
     std::vector<EGLContext> mAdditionalContexts;
@@ -146,8 +150,8 @@ protected:
 
     void initializeGlExtensions() noexcept;
 
-private:
-    EGLConfig findSwapChainConfig(uint64_t flags) const;
+protected:
+    EGLConfig findSwapChainConfig(uint64_t flags, bool window, bool pbuffer) const;
 };
 
 } // namespace filament::backend

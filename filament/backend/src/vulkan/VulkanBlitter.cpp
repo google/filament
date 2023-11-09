@@ -237,11 +237,12 @@ void VulkanBlitter::lazyInit() noexcept {
 
     VkShaderModule vertexShader = decode(VKSHADERS_BLITDEPTHVS_DATA, VKSHADERS_BLITDEPTHVS_SIZE);
     VkShaderModule fragmentShader = decode(VKSHADERS_BLITDEPTHFS_DATA, VKSHADERS_BLITDEPTHFS_SIZE);
-    mDepthResolveProgram = new VulkanProgram(mDevice, vertexShader, fragmentShader);
 
     // Allocate one anonymous sampler at slot 0.
-    mDepthResolveProgram->samplerGroupInfo[0].samplers.reserve(1);
-    mDepthResolveProgram->samplerGroupInfo[0].samplers.resize(1);
+    VulkanProgram::CustomSamplerInfoList samplers = {
+        {0, 0, ShaderStageFlags::FRAGMENT},
+    };
+    mDepthResolveProgram = new VulkanProgram(mDevice, vertexShader, fragmentShader, samplers);
 
 #if FVK_ENABLED(FVK_DEBUG_BLITTER)
     utils::slog.d << "Created Shader Module for VulkanBlitter "
@@ -359,7 +360,7 @@ void VulkanBlitter::blitSlowDepth(VkFilter filter, const VkExtent2D srcExtent, V
     // DRAW THE TRIANGLE
     // -----------------
 
-    mPipelineCache.bindProgram(*mDepthResolveProgram);
+    mPipelineCache.bindProgram(mDepthResolveProgram);
     mPipelineCache.bindPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
 
     auto vkraster = mPipelineCache.getCurrentRasterState();

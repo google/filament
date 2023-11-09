@@ -22,6 +22,30 @@ namespace filament {
 
 using namespace math;
 
+bool TransformManager::hasComponent(Entity e) const noexcept {
+    return downcast(this)->hasComponent(e);
+}
+
+size_t TransformManager::getComponentCount() const noexcept {
+    return downcast(this)->getComponentCount();
+}
+
+bool TransformManager::empty() const noexcept {
+    return downcast(this)->empty();
+}
+
+utils::Entity TransformManager::getEntity(TransformManager::Instance i) const noexcept {
+    return downcast(this)->getEntity(i);
+}
+
+utils::Entity const* TransformManager::getEntities() const noexcept {
+    return downcast(this)->getEntities();
+}
+
+TransformManager::Instance TransformManager::getInstance(Entity e) const noexcept {
+    return downcast(this)->getInstance(e);
+}
+
 void TransformManager::create(Entity entity, Instance parent, const mat4f& worldTransform) {
     downcast(this)->create(entity, parent, worldTransform);
 }
@@ -38,14 +62,6 @@ void TransformManager::destroy(Entity e) noexcept {
     downcast(this)->destroy(e);
 }
 
-bool TransformManager::hasComponent(Entity e) const noexcept {
-    return downcast(this)->hasComponent(e);
-}
-
-TransformManager::Instance TransformManager::getInstance(Entity e) const noexcept {
-    return downcast(this)->getInstance(e);
-}
-
 void TransformManager::setTransform(Instance ci, const mat4f& model) noexcept {
     downcast(this)->setTransform(ci, model);
 }
@@ -58,7 +74,7 @@ const mat4f& TransformManager::getTransform(Instance ci) const noexcept {
     return downcast(this)->getTransform(ci);
 }
 
-const mat4 TransformManager::getTransformAccurate(Instance ci) const noexcept {
+mat4 TransformManager::getTransformAccurate(Instance ci) const noexcept {
     return downcast(this)->getTransformAccurate(ci);
 }
 
@@ -66,7 +82,7 @@ const mat4f& TransformManager::getWorldTransform(Instance ci) const noexcept {
     return downcast(this)->getWorldTransform(ci);
 }
 
-const mat4 TransformManager::getWorldTransformAccurate(Instance ci) const noexcept {
+mat4 TransformManager::getWorldTransformAccurate(Instance ci) const noexcept {
     return downcast(this)->getWorldTransformAccurate(ci);
 }
 
@@ -110,7 +126,7 @@ void TransformManager::setAccurateTranslationsEnabled(bool enable) noexcept {
 }
 
 bool TransformManager::isAccurateTranslationsEnabled() const noexcept {
-    return downcast(this)->isAccurateTranslationsEnabled();;
+    return downcast(this)->isAccurateTranslationsEnabled();
 }
 
 } // namespace filament

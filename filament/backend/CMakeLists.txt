@@ -133,6 +133,7 @@ if (FILAMENT_SUPPORTS_METAL)
             src/metal/MetalExternalImage.mm
             src/metal/MetalHandles.mm
             src/metal/MetalPlatform.mm
+            src/metal/MetalShaderCompiler.mm
             src/metal/MetalState.mm
             src/metal/MetalTimerQuery.mm
             src/metal/MetalUtils.mm

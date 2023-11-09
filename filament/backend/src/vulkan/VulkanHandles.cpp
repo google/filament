@@ -49,88 +49,100 @@ static void clampToFramebuffer(VkRect2D* rect, uint32_t fbWidth, uint32_t fbHeig
 VulkanProgram::VulkanProgram(VkDevice device, const Program& builder) noexcept
     : HwProgram(builder.getName()),
       VulkanResource(VulkanResourceType::PROGRAM),
+      mInfo(new PipelineInfo(builder.getSpecializationConstants().size())),
       mDevice(device) {
-    auto const& blobs = builder.getShadersSource();
-    VkShaderModule* modules[2] = {&bundle.vertex, &bundle.fragment};
-    // TODO: handle compute shaders.
-    for (size_t i = 0; i < 2; i++) {
+    auto& blobs = builder.getShadersSource();
+    auto& modules = mInfo->shaders;
+    for (size_t i = 0; i < MAX_SHADER_MODULES; i++) {
         const auto& blob = blobs[i];
-        VkShaderModule* module = modules[i];
-        VkShaderModuleCreateInfo moduleInfo = {};
-        moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        moduleInfo.codeSize = blob.size();
-        moduleInfo.pCode = (uint32_t*) blob.data();
-        VkResult result = vkCreateShaderModule(mDevice, &moduleInfo, VKALLOC, module);
+        uint32_t* data = (uint32_t*)blob.data();
+        VkShaderModule& module = modules[i];
+        VkShaderModuleCreateInfo moduleInfo = {
+            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .codeSize = blob.size(),
+            .pCode = data,
+        };
+        VkResult result = vkCreateShaderModule(mDevice, &moduleInfo, VKALLOC, &module);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create shader module.");
     }
 
+    // Note that bools are 4-bytes in Vulkan
+    // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBool32.html
+    constexpr uint32_t const CONSTANT_SIZE = 4;
+
     // populate the specialization constants requirements right now
     auto const& specializationConstants = builder.getSpecializationConstants();
-    if (!specializationConstants.empty()) {
-        // Allocate a single heap block to store all the specialization constants structures
-        // our supported types are int32, float and bool, so we use 4 bytes per data. bool will
-        // just use the first byte.
-        char* pStorage = (char*)malloc(
-                sizeof(VkSpecializationInfo) +
-                specializationConstants.size() * sizeof(VkSpecializationMapEntry) +
-                specializationConstants.size() * 4);
-
-        VkSpecializationInfo* const pInfo = (VkSpecializationInfo*)pStorage;
-        VkSpecializationMapEntry* const pEntries =
-                (VkSpecializationMapEntry*)(pStorage + sizeof(VkSpecializationInfo));
-        void* pData = pStorage + sizeof(VkSpecializationInfo) +
-                      specializationConstants.size() * sizeof(VkSpecializationMapEntry);
-
-        *pInfo = {
-                .mapEntryCount = specializationConstants.size(),
-                .pMapEntries = pEntries,
-                .dataSize = specializationConstants.size() * 4,
-                .pData = pData,
+    uint32_t const specConstCount = static_cast<uint32_t>(specializationConstants.size());
+    char* specData = mInfo->specConstData.get();
+    if (specConstCount > 0) {
+        mInfo->specializationInfo = {
+            .mapEntryCount = specConstCount,
+            .pMapEntries = mInfo->specConsts.data(),
+            .dataSize = specConstCount * CONSTANT_SIZE,
+            .pData = specData,
         };
-
-        for (size_t i = 0; i < specializationConstants.size(); i++) {
-            uint32_t const offset = uint32_t(i) * 4;
-            pEntries[i] = {
-                .constantID = specializationConstants[i].id,
-                .offset = offset,
-                // Note that bools are 4-bytes in Vulkan
-                // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBool32.html
-                .size = 4,
-            };
-
-            using SpecConstant = Program::SpecializationConstant::Type;
-            char const* addr = (char*)pData + offset;
-            SpecConstant const& arg = specializationConstants[i].value;
-            if (std::holds_alternative<bool>(arg)) {
-                *((VkBool32*)addr) = std::get<bool>(arg) ? VK_TRUE : VK_FALSE;
-            } else if (std::holds_alternative<float>(arg)) {
-                *((float*)addr) = std::get<float>(arg);
-            } else {
-                *((int32_t*)addr) = std::get<int32_t>(arg);
-            }
+    }
+    for (uint32_t i = 0; i < specConstCount; ++i) {
+        uint32_t const offset = i * CONSTANT_SIZE;
+        mInfo->specConsts[i] = {
+            .constantID = specializationConstants[i].id,
+            .offset = offset,
+            .size = CONSTANT_SIZE,
+        };
+        using SpecConstant = Program::SpecializationConstant::Type;
+        char const* addr = (char*)specData + offset;
+        SpecConstant const& arg = specializationConstants[i].value;
+        if (std::holds_alternative<bool>(arg)) {
+            *((VkBool32*)addr) = std::get<bool>(arg) ? VK_TRUE : VK_FALSE;
+        } else if (std::holds_alternative<float>(arg)) {
+            *((float*)addr) = std::get<float>(arg);
+        } else {
+            *((int32_t*)addr) = std::get<int32_t>(arg);
         }
-        bundle.specializationInfos = pInfo;
     }
 
-    // Make a copy of the binding map
-    samplerGroupInfo = builder.getSamplerGroupInfo();
+    auto& groupInfo = builder.getSamplerGroupInfo();
+    auto& bindingToSamplerIndex = mInfo->bindingToSamplerIndex;
+    auto& usage = mInfo->usage;
+    for (uint8_t groupInd = 0; groupInd < Program::SAMPLER_BINDING_COUNT; groupInd++) {
+        auto const& group = groupInfo[groupInd];
+        auto const& samplers = group.samplers;
+        for (size_t i = 0; i < samplers.size(); ++i) {
+            uint32_t const binding = samplers[i].binding;
+            bindingToSamplerIndex[binding] = (groupInd << 8) | (0xff & i);
+            usage = VulkanPipelineCache::getUsageFlags(binding, group.stageFlags, usage);
+        }
+    }
+
     #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
         utils::slog.d << "Created VulkanProgram " << builder << ", shaders = (" << bundle.vertex
                       << ", " << bundle.fragment << ")" << utils::io::endl;
     #endif
 }
 
-VulkanProgram::VulkanProgram(VkDevice device, VkShaderModule vs, VkShaderModule fs) noexcept
+VulkanProgram::VulkanProgram(VkDevice device, VkShaderModule vs, VkShaderModule fs,
+        CustomSamplerInfoList const& samplerInfo) noexcept
     : VulkanResource(VulkanResourceType::PROGRAM),
+      mInfo(new PipelineInfo(0)),
       mDevice(device) {
-    bundle.vertex = vs;
-    bundle.fragment = fs;
+    mInfo->shaders[0] = vs;
+    mInfo->shaders[1] = fs;
+    auto& bindingToSamplerIndex = mInfo->bindingToSamplerIndex;
+    auto& usage = mInfo->usage;
+    bindingToSamplerIndex.resize(samplerInfo.size());
+    for (uint16_t binding = 0; binding < samplerInfo.size(); ++binding) {
+        auto const& sampler = samplerInfo[binding];
+        bindingToSamplerIndex[binding]
+                = (sampler.groupIndex << 8) | (0xff & sampler.samplerIndex);
+        usage = VulkanPipelineCache::getUsageFlags(binding, sampler.flags, usage);
+    }
 }
 
 VulkanProgram::~VulkanProgram() {
-    vkDestroyShaderModule(mDevice, bundle.vertex, VKALLOC);
-    vkDestroyShaderModule(mDevice, bundle.fragment, VKALLOC);
-    free(bundle.specializationInfos);
+    for (auto shader: mInfo->shaders) {
+        vkDestroyShaderModule(mDevice, shader, VKALLOC);
+    }
+    delete mInfo;
 }
 
 // Creates a special "default" render target (i.e. associated with the swap chain)

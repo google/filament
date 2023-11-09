@@ -578,13 +578,14 @@ std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
         registerSizePasses(*optimizer, config);
     } else if (optimization == MaterialBuilder::Optimization::PERFORMANCE) {
         registerPerformancePasses(*optimizer, config);
-        // Metal doesn't support relaxed precision, but does have support for float16 math operations.
-        if (config.targetApi == MaterialBuilder::TargetApi::METAL) {
-           optimizer->RegisterPass(CreateConvertRelaxedToHalfPass());
-           optimizer->RegisterPass(CreateSimplificationPass());
-           optimizer->RegisterPass(CreateRedundancyEliminationPass());
-           optimizer->RegisterPass(CreateAggressiveDCEPass());
-        }
+    }
+
+    // Metal doesn't support relaxed precision, but does have support for float16 math operations.
+    if (config.targetApi == MaterialBuilder::TargetApi::METAL) {
+        optimizer->RegisterPass(CreateConvertRelaxedToHalfPass());
+        optimizer->RegisterPass(CreateSimplificationPass());
+        optimizer->RegisterPass(CreateRedundancyEliminationPass());
+        optimizer->RegisterPass(CreateAggressiveDCEPass());
     }
 
     return optimizer;

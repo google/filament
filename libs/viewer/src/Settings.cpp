@@ -86,6 +86,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ToneMapp
     else if (0 == compare(tokens[i], jsonChunk, "ACES_LEGACY")) { *out = ToneMapping::ACES_LEGACY; }
     else if (0 == compare(tokens[i], jsonChunk, "ACES")) { *out = ToneMapping::ACES; }
     else if (0 == compare(tokens[i], jsonChunk, "FILMIC")) { *out = ToneMapping::FILMIC; }
+    else if (0 == compare(tokens[i], jsonChunk, "AGX")) { *out = ToneMapping::AGX; }
     else if (0 == compare(tokens[i], jsonChunk, "GENERIC")) { *out = ToneMapping::GENERIC; }
     else if (0 == compare(tokens[i], jsonChunk, "DISPLAY_RANGE")) { *out = ToneMapping::DISPLAY_RANGE; }
     else {
@@ -130,6 +131,36 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, GenericT
     return i;
 }
 
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AgxToneMapper::AgxLook* out) {
+    if (0 == compare(tokens[i], jsonChunk, "NONE")) { *out = AgxToneMapper::AgxLook::NONE; }
+    else if (0 == compare(tokens[i], jsonChunk, "PUNCHY")) { *out = AgxToneMapper::AgxLook::PUNCHY; }
+    else if (0 == compare(tokens[i], jsonChunk, "GOLDEN")) { *out = AgxToneMapper::AgxLook::GOLDEN; }
+    else {
+        slog.w << "Invalid AgxLook: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
+    }
+    return i + 1;
+}
+
+static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AgxToneMapperSettings* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "look") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->look);
+        } else {
+            slog.w << "Invalid AgX tone mapper key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid AgX tone mapper value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
 static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ColorGradingSettings* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -146,6 +177,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ColorGra
             i = parse(tokens, i + 1, jsonChunk, &out->toneMapping);
         } else if (compare(tok, jsonChunk, "genericToneMapper") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->genericToneMapper);
+        } else if (compare(tok, jsonChunk, "agxToneMapper") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->agxToneMapper);
         } else if (compare(tok, jsonChunk, "luminanceScaling") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->luminanceScaling);
         } else if (compare(tok, jsonChunk, "gamutMapping") == 0) {
@@ -579,8 +612,10 @@ void applySettings(Engine* engine, const LightSettings& settings, IndirectLight*
     }
     for (size_t i = 0; i < sceneLightCount; i++) {
         auto const li = lm->getInstance(sceneLights[i]);
-        lm->setShadowCaster(li, settings.enableShadows);
-        lm->setShadowOptions(li, settings.shadowOptions);
+        if (li) {
+            lm->setShadowCaster(li, settings.enableShadows);
+            lm->setShadowOptions(li, settings.shadowOptions);
+        }
     }
     view->setSoftShadowOptions(settings.softShadowOptions);
 }
@@ -619,6 +654,7 @@ constexpr ToneMapper* createToneMapper(const ColorGradingSettings& settings) noe
         case ToneMapping::ACES_LEGACY: return new ACESLegacyToneMapper;
         case ToneMapping::ACES: return new ACESToneMapper;
         case ToneMapping::FILMIC: return new FilmicToneMapper;
+        case ToneMapping::AGX: return new AgxToneMapper(settings.agxToneMapper.look);
         case ToneMapping::GENERIC: return new GenericToneMapper(
                     settings.genericToneMapper.contrast,
                     settings.genericToneMapper.midGrayIn,
@@ -673,6 +709,7 @@ static std::ostream& operator<<(std::ostream& out, ToneMapping in) {
         case ToneMapping::ACES_LEGACY: return out << "\"ACES_LEGACY\"";
         case ToneMapping::ACES: return out << "\"ACES\"";
         case ToneMapping::FILMIC: return out << "\"FILMIC\"";
+        case ToneMapping::AGX: return out << "\"AGX\"";
         case ToneMapping::GENERIC: return out << "\"GENERIC\"";
         case ToneMapping::DISPLAY_RANGE: return out << "\"DISPLAY_RANGE\"";
     }
@@ -688,6 +725,21 @@ static std::ostream& operator<<(std::ostream& out, const GenericToneMapperSettin
        << "}";
 }
 
+static std::ostream& operator<<(std::ostream& out, AgxToneMapper::AgxLook in) {
+    switch (in) {
+        case AgxToneMapper::AgxLook::NONE: return out << "\"NONE\"";
+        case AgxToneMapper::AgxLook::PUNCHY: return out << "\"PUNCHY\"";
+        case AgxToneMapper::AgxLook::GOLDEN: return out << "\"GOLDEN\"";
+    }
+    return out << "\"INVALID\"";
+}
+
+static std::ostream& operator<<(std::ostream& out, const AgxToneMapperSettings& in) {
+    return out << "{\n"
+               << "\"look\": " << (in.look) << ",\n"
+               << "}";
+}
+
 static std::ostream& operator<<(std::ostream& out, const ColorGradingSettings& in) {
     return out << "{\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
@@ -695,6 +747,7 @@ static std::ostream& operator<<(std::ostream& out, const ColorGradingSettings& i
         << "\"quality\": " << (in.quality) << ",\n"
         << "\"toneMapping\": " << (in.toneMapping) << ",\n"
         << "\"genericToneMapper\": " << (in.genericToneMapper) << ",\n"
+        << "\"agxToneMapper\": " << (in.agxToneMapper) << ",\n"
         << "\"luminanceScaling\": " << to_string(in.luminanceScaling) << ",\n"
         << "\"gamutMapping\": " << to_string(in.gamutMapping) << ",\n"
         << "\"exposure\": " << (in.exposure) << ",\n"
@@ -854,7 +907,7 @@ static std::ostream& operator<<(std::ostream& out, const Settings& in) {
         << "}";
 }
 
-bool GenericToneMapperSettings::operator==(const GenericToneMapperSettings &rhs) const {
+bool GenericToneMapperSettings::operator==(const GenericToneMapperSettings& rhs) const {
     static_assert(sizeof(GenericToneMapperSettings) == 16, "Please update Settings.cpp");
     return contrast == rhs.contrast &&
            midGrayIn == rhs.midGrayIn &&
@@ -862,7 +915,12 @@ bool GenericToneMapperSettings::operator==(const GenericToneMapperSettings &rhs)
            hdrMax == rhs.hdrMax;
 }
 
-bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
+bool AgxToneMapperSettings::operator==(const AgxToneMapperSettings& rhs) const {
+    static_assert(sizeof(AgxToneMapperSettings) == 1, "Please update Settings.cpp");
+    return look == rhs.look;
+}
+
+bool ColorGradingSettings::operator==(const ColorGradingSettings& rhs) const {
     // If you had to fix the following codeline, then you likely also need to update the
     // implementation of operator==.
     static_assert(sizeof(ColorGradingSettings) == 312, "Please update Settings.cpp");
@@ -871,6 +929,7 @@ bool ColorGradingSettings::operator==(const ColorGradingSettings &rhs) const {
             quality == rhs.quality &&
             toneMapping == rhs.toneMapping &&
             genericToneMapper == rhs.genericToneMapper &&
+            agxToneMapper == rhs.agxToneMapper &&
             luminanceScaling == rhs.luminanceScaling &&
             gamutMapping == rhs.gamutMapping &&
             exposure == rhs.exposure &&

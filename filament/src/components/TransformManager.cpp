@@ -471,8 +471,7 @@ void FTransformManager::validateNode(UTILS_UNUSED_IN_RELEASE Instance i) noexcep
 }
 
 void FTransformManager::gc(utils::EntityManager& em) noexcept {
-    auto& manager = mManager;
-    manager.gc(em, 4, [this](Entity e) {
+    mManager.gc(em, [this](Entity e) {
                 destroy(e);
             });
 }

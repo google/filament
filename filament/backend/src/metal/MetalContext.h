@@ -18,6 +18,7 @@
 #define TNT_METALCONTEXT_H
 
 #include "MetalResourceTracker.h"
+#include "MetalShaderCompiler.h"
 #include "MetalState.h"
 
 #include <CoreVideo/CVMetalTextureCache.h>
@@ -148,6 +149,8 @@ struct MetalContext {
     std::stack<const char*> groupMarkers;
 
     MTLViewport currentViewport;
+
+    MetalShaderCompiler* shaderCompiler = nullptr;
 
 #if defined(FILAMENT_METAL_PROFILING)
     // Logging and profiling.

@@ -15,7 +15,7 @@
 */
 
 // If you are bundling this with rollup, webpack, or esbuild, the following URL should be trimmed.
-import { LitElement, html, css } from "https://unpkg.com/lit?module";
+import { LitElement, html, css } from "https://unpkg.com/lit@2.8.0?module";
 
 // This little utility checks if the Filament module is ready for action.
 // If so, it immediately calls the given function. If not, it asks the Filament
@@ -287,12 +287,12 @@ class FilamentViewer extends LitElement {
         // Dropping a glb file is simple because there are no external resources.
         if (this.srcBlob && this.srcBlob.name.endsWith(".glb")) {
             this.srcBlob.arrayBuffer().then(buffer => {
-                this.asset = this.loader.createAssetFromBinary(new Uint8Array(buffer));
+                this.asset = this.loader.createAsset(new Uint8Array(buffer));
                 const aabb = this.asset.getBoundingBox();
                 this.assetRoot = this.asset.getRoot();
                 this.unitCubeTransform = Filament.fitIntoUnitCube(aabb, zoffset);
                 this.asset.loadResources();
-                this.animator = this.asset.getAnimator();
+                this.animator = this.asset.getInstance().getAnimator();
                 this.animationStartTime = Date.now();
                 this._updateOverlay();
             });
@@ -304,8 +304,6 @@ class FilamentViewer extends LitElement {
 
             const config = {
                 normalizeSkinningWeights: true,
-                recomputeBoundingBoxes: false,
-                ignoreBindTransform: false,
                 asyncInterval: 30
             };
 
@@ -320,22 +318,20 @@ class FilamentViewer extends LitElement {
                         resourceLoader.delete();
                         stbProvider.delete();
                         ktx2Provider.delete();
-                        this.animator = this.asset.getAnimator();
+                        this.animator = this.asset.getInstance().getAnimator();
                         this.animationStartTime = Date.now();
                     }
                 }, config.asyncInterval);
             };
 
             this.srcBlob.arrayBuffer().then(buffer => {
-                this.asset = this.loader.createAssetFromJson(new Uint8Array(buffer));
+                this.asset = this.loader.createAsset(new Uint8Array(buffer));
                 const aabb = this.asset.getBoundingBox();
                 this.assetRoot = this.asset.getRoot();
                 this.unitCubeTransform = Filament.fitIntoUnitCube(aabb, zoffset);
 
                 const resourceLoader = new Filament.gltfio$ResourceLoader(this.engine,
-                    config.normalizeSkinningWeights,
-                    config.recomputeBoundingBoxes,
-                    config.ignoreBindTransform);
+                    config.normalizeSkinningWeights);
 
                 const stbProvider = new Filament.gltfio$StbProvider(this.engine);
                 const ktx2Provider = new Filament.gltfio$Ktx2Provider(this.engine);
@@ -367,12 +363,7 @@ class FilamentViewer extends LitElement {
             return response.arrayBuffer();
         }).then(arrayBuffer => {
             const modelData = new Uint8Array(arrayBuffer);
-            if (this.src.endsWith(".glb")) {
-                this.asset = this.loader.createAssetFromBinary(modelData);
-            } else {
-                this.asset = this.loader.createAssetFromJson(modelData);
-            }
-
+            this.asset = this.loader.createAsset(modelData);
             const aabb = this.asset.getBoundingBox();
             this.assetRoot = this.asset.getRoot();
             this.unitCubeTransform = Filament.fitIntoUnitCube(aabb, zoffset);
@@ -380,7 +371,7 @@ class FilamentViewer extends LitElement {
             const basePath = '' + new URL(this.src, document.location);
 
             this.asset.loadResources(() => {
-                this.animator = this.asset.getAnimator();
+                this.animator = this.asset.getInstance().getAnimator();
                 this.animationStartTime = Date.now();
                 this._applyMaterialVariant();
             }, null, basePath);
@@ -441,14 +432,15 @@ class FilamentViewer extends LitElement {
         if (!this.hasAttribute("materialVariant")) {
             return;
         }
-        const names = this.asset.getMaterialVariantNames();
+        const instance = this.asset.getInstance();
+        const names = instance.getMaterialVariantNames();
         const index = this.materialVariant;
         if (index < 0 || index >= names.length) {
             console.error(`Material variant ${index} does not exist in this asset.`);
             return;
         }
         console.info(this.src, `Applying material variant: ${names[index]}`);
-        this.asset.applyMaterialVariant(index);
+        instance.applyMaterialVariant(index);
     }
 }
 

@@ -479,6 +479,10 @@ public:
      */
     void setStencilWriteMask(uint8_t writeMask,
             StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
+
+protected:
+    // prevent heap allocation
+    ~MaterialInstance() = default;
 };
 
 } // namespace filament

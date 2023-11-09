@@ -128,6 +128,9 @@ public:
             ShadowMappingUniforms const& shadowMappingUniforms,
             SoftShadowOptions const& options) noexcept;
 
+    void prepareShadowPCFDebug(TextureHandle texture,
+            ShadowMappingUniforms const& shadowMappingUniforms) noexcept;
+
     // update local data into GPU UBO
     void commit(backend::DriverApi& driver) noexcept;
 

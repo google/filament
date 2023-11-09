@@ -55,7 +55,7 @@ class FSkybox;
 class FScene : public Scene {
 public:
     /*
-     * Filaments-scope Public API
+     * Filament-scope Public API
      */
 
     FSkybox* getSkybox() const noexcept { return mSkybox; }
@@ -193,6 +193,7 @@ private:
     void addEntities(const utils::Entity* entities, size_t count);
     void remove(utils::Entity entity);
     void removeEntities(const utils::Entity* entities, size_t count);
+    size_t getEntityCount() const noexcept { return mEntities.size(); }
     size_t getRenderableCount() const noexcept;
     size_t getLightCount() const noexcept;
     bool hasEntity(utils::Entity entity) const noexcept;

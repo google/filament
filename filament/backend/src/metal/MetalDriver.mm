@@ -144,6 +144,9 @@ MetalDriver::MetalDriver(MetalPlatform* platform, const Platform::DriverConfig& 
         mContext->eventListener = [[MTLSharedEventListener alloc] initWithDispatchQueue:queue];
     }
 
+    mContext->shaderCompiler = new MetalShaderCompiler(mContext->device, *this);
+    mContext->shaderCompiler->init();
+
 #if defined(FILAMENT_METAL_PROFILING)
     mContext->log = os_log_create("com.google.filament", "Metal");
     mContext->signpostId = os_signpost_id_generate(mContext->log);
@@ -158,6 +161,7 @@ MetalDriver::~MetalDriver() noexcept {
     delete mContext->bufferPool;
     delete mContext->blitter;
     delete mContext->timerQueryImpl;
+    delete mContext->shaderCompiler;
     delete mContext;
 }
 
@@ -319,7 +323,7 @@ void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
 }
 
 void MetalDriver::createProgramR(Handle<HwProgram> rph, Program&& program) {
-    construct_handle<MetalProgram>(rph, mContext->device, program);
+    construct_handle<MetalProgram>(rph, *mContext, std::move(program));
 }
 
 void MetalDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int dummy) {
@@ -584,6 +588,7 @@ void MetalDriver::terminate() {
 
     MetalExternalImage::shutdown(*mContext);
     mContext->blitter->shutdown();
+    mContext->shaderCompiler->terminate();
 }
 
 ShaderModel MetalDriver::getShaderModel() const noexcept {
@@ -719,7 +724,7 @@ bool MetalDriver::isStereoSupported() {
 }
 
 bool MetalDriver::isParallelShaderCompileSupported() {
-    return false;
+    return true;
 }
 
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
@@ -957,7 +962,7 @@ void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh, BufferDescripto
 void MetalDriver::compilePrograms(CompilerPriorityQueue priority,
         CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     if (callback) {
-        scheduleCallback(handler, user, callback);
+        mContext->shaderCompiler->notifyWhenAllProgramsAreReady(handler, callback, user);
     }
 }
 
@@ -1473,14 +1478,19 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     auto program = handle_cast<MetalProgram>(ps.program);
     const auto& rs = ps.rasterState;
 
+    // This might block until the shader compilation has finished.
+    auto functions = program->getFunctions();
+
     // If the material debugger is enabled, avoid fatal (or cascading) errors and that can occur
     // during the draw call when the program is invalid. The shader compile error has already been
     // dumped to the console at this point, so it's fine to simply return early.
-    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!program->isValid)) {
+    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!functions)) {
         return;
     }
 
-    ASSERT_PRECONDITION(program->isValid, "Attempting to draw with an invalid Metal program.");
+    ASSERT_PRECONDITION(bool(functions), "Attempting to draw with an invalid Metal program.");
+
+    auto [fragment, vertex] = functions.getRasterFunctions();
 
     // Pipeline state
     MTLPixelFormat colorPixelFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { MTLPixelFormatInvalid };
@@ -1503,8 +1513,8 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         assert_invariant(isMetalFormatStencil(stencilPixelFormat));
     }
     MetalPipelineState pipelineState {
-        .vertexFunction = program->vertexFunction,
-        .fragmentFunction = program->fragmentFunction,
+        .vertexFunction = vertex,
+        .fragmentFunction = fragment,
         .vertexDescription = primitive->vertexDescription,
         .colorAttachmentPixelFormat = {
             colorPixelFormat[0],
@@ -1649,7 +1659,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         if (!samplerGroup) {
             continue;
         }
-        const auto& stageFlags = program->samplerGroupInfo[s].stageFlags;
+        const auto& stageFlags = program->getSamplerGroupInfo()[s].stageFlags;
         if (stageFlags == ShaderStageFlags::NONE) {
             continue;
         }
@@ -1676,26 +1686,23 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
 
     // Bind the user vertex buffers.
 
-    MetalBuffer* buffers[MAX_VERTEX_BUFFER_COUNT] = {};
+    MetalBuffer* vertexBuffers[MAX_VERTEX_BUFFER_COUNT] = {};
     size_t vertexBufferOffsets[MAX_VERTEX_BUFFER_COUNT] = {};
-    size_t bufferIndex = 0;
+    size_t maxBufferIndex = 0;
 
     auto vb = primitive->vertexBuffer;
-    for (uint32_t attributeIndex = 0; attributeIndex < vb->attributes.size(); attributeIndex++) {
-        const auto& attribute = vb->attributes[attributeIndex];
-        if (attribute.buffer == Attribute::BUFFER_UNUSED) {
-            continue;
-        }
-
-        assert_invariant(vb->buffers[attribute.buffer]);
-        buffers[bufferIndex] = vb->buffers[attribute.buffer];
-        vertexBufferOffsets[bufferIndex] = attribute.offset;
-        bufferIndex++;
+    for (auto m : primitive->bufferMapping) {
+        assert_invariant(
+                m.bufferArgumentIndex >= USER_VERTEX_BUFFER_BINDING_START &&
+                m.bufferArgumentIndex < USER_VERTEX_BUFFER_BINDING_START + MAX_VERTEX_BUFFER_COUNT);
+        size_t vertexBufferIndex = m.bufferArgumentIndex - USER_VERTEX_BUFFER_BINDING_START;
+        vertexBuffers[vertexBufferIndex] = vb->buffers[m.sourceBufferIndex];
+        maxBufferIndex = std::max(maxBufferIndex, vertexBufferIndex);
     }
 
-    const auto bufferCount = bufferIndex;
+    const auto bufferCount = maxBufferIndex + 1;
     MetalBuffer::bindBuffers(getPendingCommandBuffer(mContext), mContext->currentRenderPassEncoder,
-            USER_VERTEX_BUFFER_BINDING_START, MetalBuffer::Stage::VERTEX, buffers,
+            USER_VERTEX_BUFFER_BINDING_START, MetalBuffer::Stage::VERTEX, vertexBuffers,
             vertexBufferOffsets, bufferCount);
 
     // Bind the zero buffer, used for missing vertex attributes.
@@ -1722,21 +1729,26 @@ void MetalDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGro
 
     auto mtlProgram = handle_cast<MetalProgram>(program);
 
+    // This might block until the shader compilation has finished.
+    auto functions = mtlProgram->getFunctions();
+
     // If the material debugger is enabled, avoid fatal (or cascading) errors and that can occur
     // during the draw call when the program is invalid. The shader compile error has already been
     // dumped to the console at this point, so it's fine to simply return early.
-    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!mtlProgram->isValid)) {
+    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!functions)) {
         return;
     }
 
-    assert_invariant(mtlProgram->isValid && mtlProgram->computeFunction);
+    auto compute = functions.getComputeFunction();
+
+    assert_invariant(bool(functions) && compute);
 
     id<MTLComputeCommandEncoder> computeEncoder =
             [getPendingCommandBuffer(mContext) computeCommandEncoder];
 
     NSError* error = nil;
     id<MTLComputePipelineState> computePipelineState =
-            [mContext->device newComputePipelineStateWithFunction:mtlProgram->computeFunction
+            [mContext->device newComputePipelineStateWithFunction:compute
                                                             error:&error];
     if (error) {
         auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];

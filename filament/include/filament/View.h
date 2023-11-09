@@ -894,6 +894,10 @@ public:
      */
     UTILS_DEPRECATED
     AmbientOcclusion getAmbientOcclusion() const noexcept;
+
+protected:
+    // prevent heap allocation
+    ~View() = default;
 };
 
 } // namespace filament

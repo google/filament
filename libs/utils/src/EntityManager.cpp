@@ -18,7 +18,11 @@
 
 #include "EntityManagerImpl.h"
 
+#include <new>
+
 namespace utils {
+
+EntityManager::Listener::~Listener() noexcept = default;
 
 EntityManager::EntityManager()
         : mGens(new uint8_t[RAW_INDEX_COUNT]) {
@@ -30,12 +34,10 @@ EntityManager::~EntityManager() {
     delete [] mGens;
 }
 
-EntityManager::Listener::~Listener() noexcept = default;
-
 EntityManager& EntityManager::get() noexcept {
     // note: we leak the EntityManager because it's more important that it survives everything else
-    // the leak is really not a problem because the process is terminating anyways.
-    static EntityManagerImpl* instance = new EntityManagerImpl;
+    // the leak is really not a problem because the process is terminating anyway.
+    static EntityManagerImpl* instance = new(std::nothrow) EntityManagerImpl;
     return *instance;
 }
 
@@ -53,6 +55,10 @@ void EntityManager::registerListener(EntityManager::Listener* l) noexcept {
 
 void EntityManager::unregisterListener(EntityManager::Listener* l) noexcept {
     static_cast<EntityManagerImpl *>(this)->unregisterListener(l);
+}
+
+size_t EntityManager::getEntityCount() const noexcept {
+    return static_cast<EntityManagerImpl const *>(this)->getEntityCount();
 }
 
 #if FILAMENT_UTILS_TRACK_ENTITIES
