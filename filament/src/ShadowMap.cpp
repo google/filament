@@ -108,6 +108,9 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
         ShadowMapInfo const& shadowMapInfo,
         SceneInfo const& sceneInfo) noexcept {
 
+    // reset the visible shadow status
+    mHasVisibleShadows = false;
+
     FLightManager const& lcm = engine.getLightManager();
     FLightManager::Instance const li = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
     FLightManager::ShadowParams const params = lcm.getShadowParams(li);
