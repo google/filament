@@ -126,7 +126,7 @@ public:
         return {
                 buffer, size,
                 handler, [](void* b, size_t s, void* u) {
-                    (*static_cast<T**>(u)->*method)(b, s);
+                    (static_cast<T*>(u)->*method)(b, s);
                 }, data
         };
     }
