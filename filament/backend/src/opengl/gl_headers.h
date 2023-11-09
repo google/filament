@@ -190,8 +190,10 @@ using namespace glext;
 
 #if defined(GL_EXT_clip_cull_distance)
 #   define GL_CLIP_DISTANCE0                        GL_CLIP_DISTANCE0_EXT
+#   define GL_CLIP_DISTANCE1                        GL_CLIP_DISTANCE1_EXT
 #else
 #   define GL_CLIP_DISTANCE0                        0x3000
+#   define GL_CLIP_DISTANCE1                        0x3001
 #endif
 
 #if defined(GL_KHR_debug)

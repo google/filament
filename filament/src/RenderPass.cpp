@@ -116,14 +116,17 @@ void RenderPass::appendCommands(FEngine& engine, CommandTypeFlags const commandT
     commandCount += 1; // for the sentinel
     Command* const curr = append(commandCount);
 
+    auto stereoscopicEyeCount =
+            renderFlags & IS_STEREOSCOPIC ? engine.getConfig().stereoscopicEyeCount : 1;
+
     const float3 cameraPosition(mCameraPosition);
     const float3 cameraForwardVector(mCameraForwardVector);
     auto work = [commandTypeFlags, curr, &soa, variant, renderFlags, visibilityMask, cameraPosition,
-                 cameraForwardVector]
+                 cameraForwardVector, stereoscopicEyeCount]
             (uint32_t startIndex, uint32_t indexCount) {
         RenderPass::generateCommands(commandTypeFlags, curr,
                 soa, { startIndex, startIndex + indexCount }, variant, renderFlags, visibilityMask,
-                cameraPosition, cameraForwardVector);
+                cameraPosition, cameraForwardVector, stereoscopicEyeCount);
     };
 
     if (vr.size() <= JOBS_PARALLEL_FOR_COMMANDS_COUNT) {
@@ -374,8 +377,8 @@ UTILS_NOINLINE
 void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const commands,
         FScene::RenderableSoa const& soa, Range<uint32_t> range,
         Variant variant, RenderFlags renderFlags,
-        FScene::VisibleMaskType visibilityMask,
-        float3 cameraPosition, float3 cameraForward) noexcept {
+        FScene::VisibleMaskType visibilityMask, float3 cameraPosition, float3 cameraForward,
+        uint8_t instancedStereoEyeCount) noexcept {
 
     SYSTRACE_CALL();
 
@@ -406,11 +409,13 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
     switch (commandTypeFlags & (CommandTypeFlags::COLOR | CommandTypeFlags::DEPTH)) {
         case CommandTypeFlags::COLOR:
             curr = generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
-                    soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward);
+                    soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
+                    instancedStereoEyeCount);
             break;
         case CommandTypeFlags::DEPTH:
             curr = generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
-                    soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward);
+                    soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
+                    instancedStereoEyeCount);
             break;
         default:
             // we should never end-up here
@@ -433,7 +438,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
         Variant const variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
-        float3 cameraPosition, float3 cameraForward) noexcept {
+        float3 cameraPosition, float3 cameraForward, uint8_t instancedStereoEyeCount) noexcept {
 
     // generateCommands() writes both the draw and depth commands simultaneously such that
     // we go throw the list of renderables just once.
@@ -527,7 +532,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
         // eye count.
         if (UTILS_UNLIKELY(hasInstancedStereo)) {
             cmdColor.primitive.instanceCount =
-                    (soaInstanceInfo[i].count * CONFIG_STEREOSCOPIC_EYES) |
+                    (soaInstanceInfo[i].count * instancedStereoEyeCount) |
                     PrimitiveInfo::USER_INSTANCE_MASK;
         }
 
@@ -552,7 +557,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
 
             if (UTILS_UNLIKELY(hasInstancedStereo)) {
                 cmdColor.primitive.instanceCount =
-                        (soaInstanceInfo[i].count * CONFIG_STEREOSCOPIC_EYES) |
+                        (soaInstanceInfo[i].count * instancedStereoEyeCount) |
                         PrimitiveInfo::USER_INSTANCE_MASK;
             }
         }

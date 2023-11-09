@@ -8,3 +8,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
+- engine: Support up to 4 side-by-side stereoscopic eyes, configurable at Engine creation time. See
+  `Engine::Config::stereoscopicEyeCount`. [⚠️ **Recompile Materials**]

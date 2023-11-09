@@ -85,11 +85,7 @@ public:
     math::mat4 getEyeFromViewMatrix(uint8_t eye) const noexcept { return mEyeFromView[eye]; }
 
     // viewing projection matrix set by the user
-    const math::mat4& getUserProjectionMatrix(uint8_t eyeId) const {
-        ASSERT_PRECONDITION(eyeId < CONFIG_STEREOSCOPIC_EYES,
-                "eyeId must be < CONFIG_STEREOSCOPIC_EYES(%d)", CONFIG_STEREOSCOPIC_EYES);
-        return mEyeProjection[eyeId];
-    }
+    const math::mat4& getUserProjectionMatrix(uint8_t eyeId) const;
 
     // culling projection matrix set by the user
     math::mat4 getUserCullingProjectionMatrix() const noexcept { return mProjectionForCulling; }
@@ -189,6 +185,8 @@ public:
 
     static double computeEffectiveFov(double fovInDegrees, double focusDistance) noexcept;
 
+    uint8_t getStereoscopicEyeCount() const noexcept;
+
     utils::Entity getEntity() const noexcept {
         return mEntity;
     }
@@ -204,10 +202,10 @@ private:
     utils::Entity mEntity;
 
     // For monoscopic cameras, mEyeProjection[0] == mEyeProjection[1].
-    math::mat4 mEyeProjection[CONFIG_STEREOSCOPIC_EYES]; // projection matrix per eye (infinite far)
-    math::mat4 mProjectionForCulling;                    // projection matrix (with far plane)
-    math::mat4 mEyeFromView[CONFIG_STEREOSCOPIC_EYES];   // transforms from the main view (head)
-                                                         // space to each eye's unique view space
+    math::mat4 mEyeProjection[CONFIG_MAX_STEREOSCOPIC_EYES]; // projection matrix per eye (infinite far)
+    math::mat4 mProjectionForCulling;                        // projection matrix (with far plane)
+    math::mat4 mEyeFromView[CONFIG_MAX_STEREOSCOPIC_EYES];   // transforms from the main view (head)
+                                                             // space to each eye's unique view space
     math::double2 mScalingCS = {1.0};  // additional scaling applied to projection
     math::double2 mShiftCS = {0.0};    // additional translation applied to projection
 
@@ -232,15 +230,15 @@ struct CameraInfo {
         math::mat4f projection;
 
         // for stereo rendering, one matrix per eye
-        math::mat4f eyeProjection[CONFIG_STEREOSCOPIC_EYES] = {};
+        math::mat4f eyeProjection[CONFIG_MAX_STEREOSCOPIC_EYES] = {};
     };
 
-    math::mat4f cullingProjection;                      // projection matrix for culling
-    math::mat4f model;                                  // camera model matrix
-    math::mat4f view;                                   // camera view matrix (inverse(model))
-    math::mat4f eyeFromView[CONFIG_STEREOSCOPIC_EYES];  // eye view matrix (only for stereoscopic)
-    math::mat4 worldTransform;                          // world transform (already applied
-                                                        // to model and view)
+    math::mat4f cullingProjection;                          // projection matrix for culling
+    math::mat4f model;                                      // camera model matrix
+    math::mat4f view;                                       // camera view matrix (inverse(model))
+    math::mat4f eyeFromView[CONFIG_MAX_STEREOSCOPIC_EYES];  // eye view matrix (only for stereoscopic)
+    math::mat4 worldTransform;                              // world transform (already applied
+                                                            // to model and view)
     math::float4 clipTransform{1, 1, 0, 0};  // clip-space transform, only for VERTEX_DOMAIN_DEVICE
     float zn{};                              // distance (positive) to the near plane
     float zf{};                              // distance (positive) to the far plane
