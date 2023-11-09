@@ -115,10 +115,6 @@ public:
     void setFrustumCullingEnabled(bool culling) noexcept { mCulling = culling; }
     bool isFrustumCullingEnabled() const noexcept { return mCulling; }
 
-    void setFrontFaceWindingInverted(bool inverted) noexcept { mFrontFaceWindingInverted = inverted; }
-    bool isFrontFaceWindingInverted() const noexcept { return mFrontFaceWindingInverted; }
-
-
     void setVisibleLayers(uint8_t select, uint8_t values) noexcept;
     uint8_t getVisibleLayers() const noexcept {
         return mVisibleLayers;
@@ -495,7 +491,6 @@ private:
 
     Viewport mViewport;
     bool mCulling = true;
-    bool mFrontFaceWindingInverted = false;
 
     FRenderTarget* mRenderTarget = nullptr;
 

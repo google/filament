@@ -69,8 +69,11 @@ class UTILS_PUBLIC ResourceLoader {
 public:
     using BufferDescriptor = filament::backend::BufferDescriptor;
 
-    ResourceLoader(const ResourceConfiguration& config);
+    explicit ResourceLoader(const ResourceConfiguration& config);
     ~ResourceLoader();
+
+
+    void setConfiguration(const ResourceConfiguration& config);
 
     /**
      * Feeds the binary content of an external resource into the loader's URI cache.

@@ -203,20 +203,6 @@ Java_com_google_android_filament_View_nIsPostProcessingEnabled(JNIEnv*,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetFrontFaceWindingInverted(JNIEnv*,
-        jclass, jlong nativeView, jboolean inverted) {
-    View* view = (View*) nativeView;
-    view->setFrontFaceWindingInverted(inverted);
-}
-
-extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_View_nIsFrontFaceWindingInverted(JNIEnv*,
-        jclass, jlong nativeView) {
-    View* view = (View*) nativeView;
-    return static_cast<jboolean>(view->isFrontFaceWindingInverted());
-}
-
-extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetAmbientOcclusion(JNIEnv*, jclass, jlong nativeView, jint ordinal) {
     View* view = (View*) nativeView;
 #pragma clang diagnostic push
