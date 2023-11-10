@@ -384,6 +384,13 @@ Java_com_google_android_filament_Engine_nFlushAndWait(JNIEnv*, jclass,
     engine->flushAndWait();
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Engine_nFlush(JNIEnv*, jclass,
+        jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    engine->flush();
+}
+
 // Managers...
 
 extern "C" JNIEXPORT jlong JNICALL

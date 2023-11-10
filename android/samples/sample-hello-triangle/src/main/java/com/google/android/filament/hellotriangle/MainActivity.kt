@@ -166,6 +166,7 @@ class MainActivity : Activity() {
                         android.util.Log.i("hellotriangle",
                             "Material " + material.name + " compiled.")
             }
+            engine.flush()
         }
     }
 
