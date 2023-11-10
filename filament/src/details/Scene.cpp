@@ -267,16 +267,16 @@ void FScene::prepare(utils::JobSystem& js,
         // in the code below, we only transform directions, so the translation of the
         // world transform is irrelevant, and we don't need to use getWorldTransformAccurate()
 
+        mat3 const worldDirectionTransform =
+                mat3::getTransformForNormals(tcm.getWorldTransformAccurate(ti).upperLeft());
         FLightManager::ShadowParams const params = lcm.getShadowParams(li);
-        float3 const localDirection = lcm.getLocalDirection(li);
-        float3 const shadowLocalDirection = params.options.transform * localDirection;
-        mat3 const worldDirectionTransform = tcm.getWorldTransformAccurate(ti).upperLeft();
-        mat3 const shaderWorldTransform = worldTransform.upperLeft() * worldDirectionTransform;
+        float3 const localDirection = worldDirectionTransform * lcm.getLocalDirection(li);
+        double3 const shadowLocalDirection = params.options.transform * localDirection;
 
         // using mat3::getTransformForNormals handles non-uniform scaling
         // note: in the common case of the rigid-body transform, getTransformForNormals() returns
         // identity.
-        mat3 const worlTransformNormals = mat3::getTransformForNormals(shaderWorldTransform);
+        mat3 const worlTransformNormals = mat3::getTransformForNormals(worldTransform.upperLeft());
         double3 const d = worlTransformNormals * localDirection;
         double3 const s = worlTransformNormals * shadowLocalDirection;
 
@@ -290,10 +290,8 @@ void FScene::prepare(utils::JobSystem& js,
             // is pointing down, which is a common case for lights. See ShadowMap.cpp.
             return transpose(mat3::lookTo(direction, double3{ 1, 0, 0 }));
         };
-        double3 const worldDirection =
-                mat3::getTransformForNormals(worldDirectionTransform) * shadowLocalDirection;
         double3 const worldOrigin = transpose(worldTransform.upperLeft()) * worldTransform[3].xyz;
-        mat3 const Mv = getMv(worldDirection);
+        mat3 const Mv = getMv(shadowLocalDirection);
         double2 const lsReferencePoint = (Mv * worldOrigin).xy;
 
         constexpr float inf = std::numeric_limits<float>::infinity();
