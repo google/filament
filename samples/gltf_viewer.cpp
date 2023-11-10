@@ -1003,25 +1003,6 @@ int main(int argc, char** argv) {
             camera->setScaling({1.0 / aspectRatio, 1.0});
         }
 
-        if (view->getStereoscopicOptions().enabled) {
-            Camera& c = view->getCamera();
-            auto od = app.viewer->getOcularDistance();
-            // Eyes are rendered from left-to-right, i.e., eye 0 is rendered to the left side of the
-            // window.
-            // For testing, we want to render a side-by-side layout so users can view with
-            // "cross-eyed" stereo.
-            // For cross-eyed stereo, Eye 0 is really the RIGHT eye, while Eye 1 is the LEFT eye.
-            const mat4 rightEye = mat4::translation(double3{ od, 0.0, 0.0});    // right eye
-            const mat4 leftEye  = mat4::translation(double3{-od, 0.0, 0.0});    // left eye
-            const mat4 modelMatrices[4] = { rightEye, leftEye, rightEye, leftEye };
-            for (int i = 0; i < std::min(app.config.stereoscopicEyeCount, 4); i++) {
-                c.setEyeModelMatrix(i, modelMatrices[i]);
-            }
-        } else {
-            for (int i = 0; i < app.config.stereoscopicEyeCount; i++) {
-                view->getCamera().setEyeModelMatrix(i, {});
-            }
-        }
         static bool stereoscopicEnabled = false;
         if (stereoscopicEnabled != view->getStereoscopicOptions().enabled) {
             // Stereo was turned on/off.
