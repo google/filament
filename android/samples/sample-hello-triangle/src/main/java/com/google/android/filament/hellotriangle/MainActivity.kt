@@ -20,6 +20,8 @@ import android.animation.ValueAnimator
 import android.app.Activity
 import android.opengl.Matrix
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Choreographer
 import android.view.Surface
 import android.view.SurfaceView
@@ -157,6 +159,13 @@ class MainActivity : Activity() {
     private fun loadMaterial() {
         readUncompressedAsset("materials/baked_color.filamat").let {
             material = Material.Builder().payload(it, it.remaining()).build(engine)
+            material.compile(
+                Material.CompilerPriorityQueue.HIGH,
+                Material.UserVariantFilterBit.ALL,
+                Handler(Looper.getMainLooper())) {
+                        android.util.Log.i("hellotriangle",
+                            "Material " + material.name + " compiled.")
+            }
         }
     }
 
