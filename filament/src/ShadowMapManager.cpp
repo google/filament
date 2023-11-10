@@ -522,7 +522,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
         // entire camera frustum, as if we only had a single cascade.
         ShadowMap& shadowMap = cascadedShadowMaps[0];
 
-        const auto direction = options.transform * lightData.elementAt<FScene::DIRECTION>(0);
+        const auto direction = lightData.elementAt<FScene::SHADOW_DIRECTION>(0);
 
         // We compute the directional light's model matrix using the origin's as the light position.
         // The choice of the light's origin initially doesn't matter for a directional light.
