@@ -742,10 +742,10 @@ public:
      * @param handler   Handler to dispatch the callback or nullptr for the default handler.
      */
     template<typename T, void(T::*method)(PickingQueryResult const&)>
-    void pick(uint32_t x, uint32_t y, T* instance, backend::CallbackHandler* handler = nullptr) noexcept {
+    void pick(uint32_t x, uint32_t y, T* instance,
+            backend::CallbackHandler* handler = nullptr) noexcept {
         PickingQuery& query = pick(x, y, [](PickingQueryResult const& result, PickingQuery* pq) {
-            void* user = pq->storage;
-            (*static_cast<T**>(user)->*method)(result);
+            (static_cast<T*>(pq->storage[0])->*method)(result);
         }, handler);
         query.storage[0] = instance;
     }
@@ -762,11 +762,11 @@ public:
      * @param handler   Handler to dispatch the callback or nullptr for the default handler.
      */
     template<typename T, void(T::*method)(PickingQueryResult const&)>
-    void pick(uint32_t x, uint32_t y, T instance, backend::CallbackHandler* handler = nullptr) noexcept {
+    void pick(uint32_t x, uint32_t y, T instance,
+            backend::CallbackHandler* handler = nullptr) noexcept {
         static_assert(sizeof(instance) <= sizeof(PickingQuery::storage), "user data too large");
         PickingQuery& query = pick(x, y, [](PickingQueryResult const& result, PickingQuery* pq) {
-            void* user = pq->storage;
-            T* that = static_cast<T*>(user);
+            T* const that = static_cast<T*>(reinterpret_cast<void*>(pq->storage));
             (that->*method)(result);
             that->~T();
         }, handler);
@@ -783,15 +783,15 @@ public:
      * @param handler   Handler to dispatch the callback or nullptr for the default handler.
      */
     template<typename T>
-    void pick(uint32_t x, uint32_t y, T functor, backend::CallbackHandler* handler = nullptr) noexcept {
+    void pick(uint32_t x, uint32_t y, T functor,
+            backend::CallbackHandler* handler = nullptr) noexcept {
         static_assert(sizeof(functor) <= sizeof(PickingQuery::storage), "functor too large");
         PickingQuery& query = pick(x, y, handler,
                 (PickingQueryResultCallback)[](PickingQueryResult const& result, PickingQuery* pq) {
-            void* user = pq->storage;
-            T& that = *static_cast<T*>(user);
-            that(result);
-            that.~T();
-        });
+                    T* const that = static_cast<T*>(reinterpret_cast<void*>(pq->storage));
+                    that->operator()(result);
+                    that->~T();
+                });
         new(query.storage) T(std::move(functor));
     }
 
