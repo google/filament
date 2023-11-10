@@ -60,6 +60,7 @@
 #include <array>
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <string>
 
 #include "generated/resources/gltf_demo.h"
@@ -595,6 +596,41 @@ int main(int argc, char** argv) {
         if (!app.asset) {
             std::cerr << "Unable to parse " << filename << std::endl;
             exit(1);
+        }
+
+        // pre-compile all material variants
+        std::set<Material*> materials;
+        RenderableManager const& rcm = app.engine->getRenderableManager();
+        Slice<Entity> const renderables{
+                app.asset->getRenderableEntities(), app.asset->getRenderableEntityCount() };
+        for (Entity const e: renderables) {
+            auto ri = rcm.getInstance(e);
+            size_t const c = rcm.getPrimitiveCount(ri);
+            for (size_t i = 0; i < c; i++) {
+                MaterialInstance* const mi = rcm.getMaterialInstanceAt(ri, i);
+                Material* ma = const_cast<Material *>(mi->getMaterial());
+                materials.insert(ma);
+            }
+        }
+        for (Material* ma : materials) {
+            // Don't attempt to precompile shaders on WebGL.
+            // Chrome already suffers from slow shader compilation:
+            // https://github.com/google/filament/issues/6615
+            // Precompiling shaders exacerbates the problem.
+#if !defined(__EMSCRIPTEN__)
+            // First compile high priority variants
+            ma->compile(Material::CompilerPriorityQueue::HIGH,
+                    UserVariantFilterBit::DIRECTIONAL_LIGHTING |
+                    UserVariantFilterBit::DYNAMIC_LIGHTING |
+                    UserVariantFilterBit::SHADOW_RECEIVER);
+
+            // and then, everything else at low priority, except STE, which is very uncommon.
+            ma->compile(Material::CompilerPriorityQueue::LOW,
+                    UserVariantFilterBit::FOG |
+                    UserVariantFilterBit::SKINNING |
+                    UserVariantFilterBit::SSR |
+                    UserVariantFilterBit::VSM);
+#endif
         }
 
         app.instance = app.asset->getInstance();
