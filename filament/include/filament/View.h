@@ -670,11 +670,12 @@ public:
      * - punctual lights
      *
      * Stereo rendering depends on device and platform support. To check if stereo rendering is
-     * supported, use Engine::isStereoSupported().
+     * supported, use Engine::isStereoSupported(). If stereo rendering is not supported, then the
+     * stereoscopic options have no effect.
      *
      * @param options The stereoscopic options to use on this view
      */
-    void setStereoscopicOptions(StereoscopicOptions const& options);
+    void setStereoscopicOptions(StereoscopicOptions const& options) noexcept;
 
     /**
      * Returns the stereoscopic options associated with this View.

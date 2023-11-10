@@ -1126,9 +1126,7 @@ View::PickingQuery& FView::pick(uint32_t x, uint32_t y, backend::CallbackHandler
     return *pQuery;
 }
 
-void FView::setStereoscopicOptions(const StereoscopicOptions& options) {
-    ASSERT_PRECONDITION(!options.enabled || mIsStereoSupported,
-            "Stereo rendering is not supported.");
+void FView::setStereoscopicOptions(const StereoscopicOptions& options) noexcept {
     mStereoscopicOptions = options;
 }
 

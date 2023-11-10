@@ -164,7 +164,9 @@ public:
     bool hasDPCF() const noexcept { return mShadowType == ShadowType::DPCF; }
     bool hasPCSS() const noexcept { return mShadowType == ShadowType::PCSS; }
     bool hasPicking() const noexcept { return mActivePickingQueriesList != nullptr; }
-    bool hasInstancedStereo() const noexcept { return mStereoscopicOptions.enabled; }
+    bool hasInstancedStereo() const noexcept {
+        return mIsStereoSupported && mStereoscopicOptions.enabled;
+    }
 
     FrameGraphId<FrameGraphTexture> renderShadowMaps(FEngine& engine, FrameGraph& fg,
             CameraInfo const& cameraInfo, math::float4 const& userTime,
@@ -188,7 +190,7 @@ public:
 
     bool isStencilBufferEnabled() const noexcept { return mStencilBufferEnabled; }
 
-    void setStereoscopicOptions(StereoscopicOptions const& options);
+    void setStereoscopicOptions(StereoscopicOptions const& options) noexcept;
 
     FCamera const* getDirectionalLightCamera() const noexcept {
         return mShadowMapManager.getDirectionalLightCamera();
