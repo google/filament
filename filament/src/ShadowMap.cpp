@@ -115,7 +115,6 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
     FLightManager::Instance const li = lightData.elementAt<FScene::LIGHT_INSTANCE>(index);
     FLightManager::ShadowParams const params = lcm.getShadowParams(li);
 
-    // We can't use LISPSM in stable mode
     const auto direction = lightData.elementAt<FScene::SHADOW_DIRECTION>(index);
 
     auto [Mv, znear, zfar, lsClippedShadowVolume, vertexCount, visibleShadows] =
@@ -140,6 +139,7 @@ ShadowMap::ShaderParameters ShadowMap::updateDirectional(FEngine& engine,
      */
 
     mat4f W, Wp, L;
+    // We can't use LISPSM in stable mode
     const bool useLispsm = params.options.lispsm && !params.options.stable;
     if (useLispsm) {
         // Orient the shadow map in the direction of the view vector by constructing a
