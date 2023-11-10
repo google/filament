@@ -564,6 +564,19 @@ public:
     bool isStereoSupported() const noexcept;
 
     /**
+     * Retrieves the configuration settings of this Engine.
+     *
+     * This method returns the configuration object that was supplied to the Engine's
+     * Builder::config method during the creation of this Engine. If the Builder::config method was
+     * not explicitly called (or called with nullptr), this method returns the default configuration
+     * settings.
+     *
+     * @return a Config object with this Engine's configuration
+     * @see Builder::config
+     */
+    const Config& getConfig() const noexcept;
+
+    /**
      * Returns the maximum number of stereoscopic eyes supported by Filament. The actual number of
      * eyes rendered is set at Engine creation time with the Engine::Config::stereoscopicEyeCount
      * setting.

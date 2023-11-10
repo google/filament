@@ -327,6 +327,10 @@ size_t Engine::getMaxAutomaticInstances() const noexcept {
     return downcast(this)->getMaxAutomaticInstances();
 }
 
+const Engine::Config& Engine::getConfig() const noexcept {
+    return downcast(this)->getConfig();
+}
+
 bool Engine::isStereoSupported() const noexcept {
     return downcast(this)->isStereoSupported();
 }
