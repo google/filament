@@ -150,8 +150,10 @@ public class Engine {
         FEATURE_LEVEL_0,
         /** OpenGL ES 3.0 features (default) */
         FEATURE_LEVEL_1,
+        /** OpenGL ES 3.1 features + 16 textures units + cubemap arrays */
+        FEATURE_LEVEL_2,
         /** OpenGL ES 3.1 features + 31 textures units + cubemap arrays */
-        FEATURE_LEVEL_2
+        FEATURE_LEVEL_3,
     };
 
     /**
