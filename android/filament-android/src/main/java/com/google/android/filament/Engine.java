@@ -111,6 +111,8 @@ public class Engine {
 
     private long mNativeObject;
 
+    private Config mConfig;
+
     @NonNull private final TransformManager mTransformManager;
     @NonNull private final LightManager mLightManager;
     @NonNull private final RenderableManager mRenderableManager;
@@ -163,6 +165,7 @@ public class Engine {
         @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"})
         private final BuilderFinalizer mFinalizer;
         private final long mNativeBuilder;
+        private Config mConfig;
 
         public Builder() {
             mNativeBuilder = nCreateBuilder();
@@ -204,10 +207,11 @@ public class Engine {
          * @return A reference to this Builder for chaining calls.
          */
         public Builder config(Config config) {
+            mConfig = config;
             nSetBuilderConfig(mNativeBuilder, config.commandBufferSizeMB,
                     config.perRenderPassArenaSizeMB, config.driverHandleArenaSizeMB,
                     config.minCommandBufferSizeMB, config.perFrameCommandsSizeMB,
-                    config.jobSystemThreadCount);
+                    config.jobSystemThreadCount, config.stereoscopicEyeCount);
             return this;
         }
 
@@ -235,7 +239,7 @@ public class Engine {
         public Engine build() {
             long nativeEngine = nBuilderBuild(mNativeBuilder);
             if (nativeEngine == 0) throw new IllegalStateException("Couldn't create Engine");
-            return new Engine(nativeEngine);
+            return new Engine(nativeEngine, mConfig);
         }
 
         private static class BuilderFinalizer {
@@ -343,14 +347,24 @@ public class Engine {
          * the number of threads to use.
          */
         public long jobSystemThreadCount = 0;
+
+        /**
+         * The number of eyes to render when stereoscopic rendering is enabled. Supported values are
+         * between 1 and Engine#getMaxStereoscopicEyes() (inclusive).
+         *
+         * @see View#setStereoscopicOptions
+         * @see Engine#getMaxStereoscopicEyes
+         */
+        public long stereoscopicEyeCount = 2;
     }
 
-    private Engine(long nativeEngine) {
+    private Engine(long nativeEngine, Config config) {
         mNativeObject = nativeEngine;
         mTransformManager = new TransformManager(nGetTransformManager(nativeEngine));
         mLightManager = new LightManager(nGetLightManager(nativeEngine));
         mRenderableManager = new RenderableManager(nGetRenderableManager(nativeEngine));
         mEntityManager = new EntityManager(nGetEntityManager(nativeEngine));
+        mConfig = config;
     }
 
     /**
@@ -541,6 +555,37 @@ public class Engine {
      */
     public boolean isAutomaticInstancingEnabled() {
         return nIsAutomaticInstancingEnabled(getNativeObject());
+    }
+
+    /**
+     * Retrieves the configuration settings of this {@link Engine}.
+     *
+     * This method returns the configuration object that was supplied to the Engine's {@link
+     * Builder#config} method during the creation of this Engine. If the {@link Builder::config}
+     * method was not explicitly called (or called with null), this method returns the default
+     * configuration settings.
+     *
+     * @return a {@link Config} object with this Engine's configuration
+     * @see Builder#config
+     */
+    @NonNull
+    public Config getConfig() {
+        if (mConfig == null) {
+            mConfig = new Config();
+        }
+        return mConfig;
+    }
+
+    /**
+     * Returns the maximum number of stereoscopic eyes supported by Filament. The actual number of
+     * eyes rendered is set at Engine creation time with the {@link
+     * Engine#Config#stereoscopicEyeCount} setting.
+     *
+     * @return the max number of stereoscopic eyes supported
+     * @see Engine#Config#stereoscopicEyeCount
+     */
+    public long getMaxStereoscopicEyes() {
+        return nGetMaxStereoscopicEyes(getNativeObject());
     }
 
 
@@ -1158,6 +1203,7 @@ public class Engine {
     private static native long nGetEntityManager(long nativeEngine);
     private static native void nSetAutomaticInstancingEnabled(long nativeEngine, boolean enable);
     private static native boolean nIsAutomaticInstancingEnabled(long nativeEngine);
+    private static native long nGetMaxStereoscopicEyes(long nativeEngine);
     private static native int nGetSupportedFeatureLevel(long nativeEngine);
     private static native int nSetActiveFeatureLevel(long nativeEngine, int ordinal);
     private static native int nGetActiveFeatureLevel(long nativeEngine);
@@ -1167,7 +1213,8 @@ public class Engine {
     private static native void nSetBuilderBackend(long nativeBuilder, long backend);
     private static native void nSetBuilderConfig(long nativeBuilder, long commandBufferSizeMB,
             long perRenderPassArenaSizeMB, long driverHandleArenaSizeMB,
-            long minCommandBufferSizeMB, long perFrameCommandsSizeMB, long jobSystemThreadCount);
+            long minCommandBufferSizeMB, long perFrameCommandsSizeMB, long jobSystemThreadCount,
+            long stereoscopicEyeCount);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
     private static native long nBuilderBuild(long nativeBuilder);
