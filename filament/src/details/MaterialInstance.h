@@ -205,14 +205,6 @@ public:
         }
     }
 
-    void setFrontFaceWindingInverted(bool inverted) noexcept {
-        mFrontFaceWindingInverted = inverted;
-    }
-
-    bool isFrontFaceWindingInverted() const noexcept {
-        return mFrontFaceWindingInverted;
-    }
-
     const char* getName() const noexcept;
 
     void setParameter(std::string_view name,
@@ -274,8 +266,6 @@ private:
             (uint32_t)std::numeric_limits<int32_t>::max(),
             (uint32_t)std::numeric_limits<int32_t>::max()
     };
-
-    bool mFrontFaceWindingInverted : 1;
 
     utils::CString mName;
 };

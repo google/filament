@@ -17,7 +17,6 @@ Instead, if you are authoring a PR for the main branch, add your release note to
 - engine: Add `Material::getFeatureLevel()`
 - engine: Add missing `Material::getReflectionMode()` method in Java
 - engine: Support basic usage of post-processing materials on feature level 0
-- engine: move `setFrontFaceWindingInverted` from `View` to `MaterialInstance` [**API CHANGE**]
 
 ## v1.45.1
 

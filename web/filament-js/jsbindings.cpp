@@ -1411,10 +1411,7 @@ class_<MaterialInstance>("MaterialInstance")
     .function("setStencilWriteMask", EMBIND_LAMBDA(void,
             (MaterialInstance* self, uint8_t writeMask), {
                 self->setStencilWriteMask(writeMask, backend::StencilFace::FRONT_AND_BACK);
-            }), allow_raw_pointers())
-    .function("setFrontFaceWindingInverted", &MaterialInstance::setFrontFaceWindingInverted)
-    .function("isFrontFaceWindingInverted", &MaterialInstance::isFrontFaceWindingInverted);
-
+            }), allow_raw_pointers());
 
 class_<TextureSampler>("TextureSampler")
     .constructor<backend::SamplerMinFilter, backend::SamplerMagFilter, backend::SamplerWrapMode>()
