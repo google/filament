@@ -850,32 +850,6 @@ public class MaterialInstance {
         setStencilWriteMask(writeMask, StencilFace.FRONT_AND_BACK);
     }
 
-    /**
-     * Returns true if front face winding order is inverted.
-     *
-     * @see #setFrontFaceWindingInverted
-     */
-    public boolean isFrontFaceWindingInverted() {
-        return nIsFrontFaceWindingInverted(getNativeObject());
-    }
-
-    /**
-     * Inverts the winding order of front faces. By default front faces use a counter-clockwise
-     * winding order. When the winding order is inverted, front faces are faces with a clockwise
-     * winding order.
-     *
-     * Changing the winding order will directly affect the culling mode in materials
-     * (see Material#getCullingMode).
-     *
-     * Inverting the winding order of front faces is useful when rendering mirrored reflections
-     * (water, mirror surfaces, front camera in AR, etc.).
-     *
-     * @param inverted True to invert front faces, false otherwise.
-     */
-    public void setFrontFaceWindingInverted(boolean inverted) {
-        nSetFrontFaceWindingInverted(getNativeObject(), inverted);
-    }
-
     public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed MaterialInstance");
@@ -966,9 +940,6 @@ public class MaterialInstance {
             long face);
     private static native void nSetStencilWriteMask(long nativeMaterialInstance, int writeMask,
             long face);
-
-    private static native void nSetFrontFaceWindingInverted(long nativeView, boolean inverted);
-    private static native boolean nIsFrontFaceWindingInverted(long nativeView);
 
     private static native String nGetName(long nativeMaterialInstance);
     private static native long nGetMaterial(long nativeMaterialInstance);

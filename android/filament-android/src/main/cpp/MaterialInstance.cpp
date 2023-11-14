@@ -433,13 +433,6 @@ Java_com_google_android_filament_MaterialInstance_nSetStencilWriteMask(JNIEnv*, 
     instance->setStencilWriteMask(writeMask, static_cast<MaterialInstance::StencilFace>(face));
 }
 
-extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_MaterialInstance_nSetFrontFaceWindingInverted(JNIEnv*,
-        jclass, jlong nativeMaterialInstance, jboolean inverted) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    instance->setFrontFaceWindingInverted(inverted);
-}
-
 extern "C"
 JNIEXPORT jstring JNICALL
 Java_com_google_android_filament_MaterialInstance_nGetName(JNIEnv* env, jclass,
@@ -476,7 +469,7 @@ extern "C"
 JNIEXPORT jfloat JNICALL
 Java_com_google_android_filament_MaterialInstance_nGetMaskThreshold(JNIEnv* env, jclass clazz,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
     return instance->getMaskThreshold();
 }
 
@@ -484,7 +477,7 @@ extern "C"
 JNIEXPORT jfloat JNICALL
 Java_com_google_android_filament_MaterialInstance_nGetSpecularAntiAliasingVariance(JNIEnv* env,
         jclass clazz, jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
     return instance->getSpecularAntiAliasingVariance();
 }
 
@@ -492,7 +485,7 @@ extern "C"
 JNIEXPORT jfloat JNICALL
 Java_com_google_android_filament_MaterialInstance_nGetSpecularAntiAliasingThreshold(JNIEnv* env,
         jclass clazz, jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
     return instance->getSpecularAntiAliasingThreshold();
 }
 
@@ -500,7 +493,7 @@ extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_MaterialInstance_nIsDoubleSided(JNIEnv* env, jclass clazz,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
     return instance->isDoubleSided();
 }
 
@@ -508,7 +501,7 @@ extern "C"
 JNIEXPORT jint JNICALL
 Java_com_google_android_filament_MaterialInstance_nGetCullingMode(JNIEnv* env, jclass clazz,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
     return (jint)instance->getCullingMode();
 }
 
@@ -516,7 +509,7 @@ extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_MaterialInstance_nIsColorWriteEnabled(JNIEnv* env, jclass clazz,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
     return instance->isColorWriteEnabled();
 }
 
@@ -524,7 +517,7 @@ extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_MaterialInstance_nIsDepthWriteEnabled(JNIEnv* env, jclass clazz,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
     return instance->isDepthWriteEnabled();
 }
 
@@ -532,7 +525,7 @@ extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_MaterialInstance_nIsStencilWriteEnabled(JNIEnv* env, jclass clazz,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
     return instance->isStencilWriteEnabled();
 }
 
@@ -540,7 +533,7 @@ extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_MaterialInstance_nIsDepthCullingEnabled(JNIEnv* env, jclass clazz,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
     return instance->isDepthCullingEnabled();
 }
 
@@ -548,13 +541,6 @@ extern "C"
 JNIEXPORT jint JNICALL
 Java_com_google_android_filament_MaterialInstance_nGetDepthFunc(JNIEnv* env, jclass clazz,
         jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    MaterialInstance* instance = (MaterialInstance*)nativeMaterialInstance;
     return (jint)instance->getDepthFunc();
-}
-
-extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_MaterialInstance_nIsFrontFaceWindingInverted(JNIEnv*,
-        jclass, jlong nativeMaterialInstance) {
-    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
-    return static_cast<jboolean>(instance->isFrontFaceWindingInverted());
 }
