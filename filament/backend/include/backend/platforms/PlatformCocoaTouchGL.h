@@ -58,7 +58,7 @@ public:
 
     OpenGLPlatform::ExternalTexture* createExternalImageTexture() noexcept override;
     void destroyExternalImage(ExternalTexture* texture) noexcept override;
-    void retainExternalImage(void* externalImage) noexcept override;
+    void retainExternalResource(intptr_t externalResource) noexcept override;
     bool setExternalImage(void* externalImage, ExternalTexture* texture) noexcept override;
 
 private:
