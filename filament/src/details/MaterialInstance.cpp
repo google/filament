@@ -42,8 +42,7 @@ FMaterialInstance::FMaterialInstance() noexcept
           mDepthWrite(false),
           mHasScissor(false),
           mIsDoubleSided(false),
-          mTransparencyMode(TransparencyMode::DEFAULT),
-          mFrontFaceWindingInverted(false) {
+          mTransparencyMode(TransparencyMode::DEFAULT) {
 }
 
 FMaterialInstance::FMaterialInstance(FEngine& engine,
@@ -61,7 +60,6 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
           mHasScissor(false),
           mIsDoubleSided(other->mIsDoubleSided),
           mScissorRect(other->mScissorRect),
-          mFrontFaceWindingInverted(other->mFrontFaceWindingInverted),
           mName(name ? CString(name) : other->mName) {
 
     FEngine::DriverApi& driver = engine.getDriverApi();
