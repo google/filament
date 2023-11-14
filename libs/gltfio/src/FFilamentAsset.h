@@ -71,7 +71,7 @@ namespace utils {
 
 namespace filament::gltfio {
 
-class Wireframe;
+struct Wireframe;
 
 // Encapsulates VertexBuffer::setBufferAt() or IndexBuffer::setBuffer().
 struct BufferSlot {

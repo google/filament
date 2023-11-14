@@ -42,6 +42,7 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <utils/compiler.h>
 #include <utils/EntityManager.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
@@ -768,7 +769,6 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
 
 void FAssetLoader::createMaterialVariants(const cgltf_mesh* mesh, Entity entity,
         FFilamentAsset* fAsset, FFilamentInstance* instance) {
-    const cgltf_data* srcAsset = fAsset->mSourceAsset->hierarchy;
     UvMap uvmap {};
     for (cgltf_size prim = 0, n = mesh->primitives_count; prim < n; ++prim) {
         const cgltf_primitive& srcPrim = mesh->primitives[prim];
@@ -1076,7 +1076,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
                 .build(mEngine);
         outPrim->targets = targets;
         fAsset->mMorphTargetBuffers.push_back(targets);
-        const cgltf_accessor* previous = nullptr;
+        UTILS_UNUSED_IN_RELEASE cgltf_accessor const* previous = nullptr;
         for (int tindex = 0; tindex < targetsCount; ++tindex) {
             const cgltf_morph_target& inTarget = inPrim.targets[tindex];
             for (cgltf_size aindex = 0; aindex < inTarget.attributes_count; ++aindex) {

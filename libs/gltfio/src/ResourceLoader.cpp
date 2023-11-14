@@ -32,6 +32,7 @@
 
 #include <geometry/Transcoder.h>
 
+#include <utils/compiler.h>
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
 #include <utils/Systrace.h>
@@ -243,7 +244,7 @@ static void decodeMeshoptCompression(cgltf_data* data) {
         void* destination = malloc(compression->count * compression->stride);
         assert_invariant(destination);
 
-        int error = 0;
+        UTILS_UNUSED_IN_RELEASE int error = 0;
         switch (compression->mode) {
             case cgltf_meshopt_compression_mode_invalid:
                 break;
