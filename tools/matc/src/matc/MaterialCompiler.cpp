@@ -34,6 +34,7 @@
 #include "ParametersProcessor.h"
 
 #include <GlslangToSpv.h>
+#include "glslang/Include/intermediate.h"
 
 #include "sca/builtinResource.h"
 
