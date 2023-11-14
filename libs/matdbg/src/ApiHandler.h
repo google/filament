@@ -60,7 +60,7 @@ private:
     // This variable is to implement a *hanging* effect for /api/status. The call to /api/status
     // will always block until statusMaterialId is updated again. The client is expected to keep
     // calling /api/status (a constant "pull" to simulate a push).
-    std::atomic_uint64_t mCurrentStatus = 0;
+    std::atomic<uint64_t> mCurrentStatus = 0;
 };
 
 } // filament::matdbg
