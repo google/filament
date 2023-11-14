@@ -72,7 +72,7 @@ public:
     } gl; // 12 bytes
 
     // For ES2 only
-    void updateUniforms(uint32_t index, void const* buffer, uint16_t age) noexcept;
+    void updateUniforms(uint32_t index, GLuint id, void const* buffer, uint16_t age) noexcept;
     void setRec709ColorSpace(bool rec709) const noexcept;
 
 private:
@@ -98,6 +98,7 @@ private:
     struct UniformsRecord {
         Program::UniformInfo uniforms;
         LocationInfo locations;
+        mutable GLuint id = 0;
         mutable uint16_t age = std::numeric_limits<uint16_t>::max();
     };
     UniformsRecord const* mUniformsRecords = nullptr;

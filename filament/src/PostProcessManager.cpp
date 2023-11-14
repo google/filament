@@ -2714,7 +2714,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
         filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
         backend::SamplerMagFilter filter) noexcept {
 
-    if (UTILS_LIKELY(!translucent && dsrOptions.quality == QualityLevel::LOW)) {
+    if (UTILS_LIKELY(!translucent && dsrOptions.quality == QualityLevel::LOW &&
+            mEngine.getDriverApi().getFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1)) {
         return opaqueBlit(fg, input, vp, outDesc, filter);
     }
 
