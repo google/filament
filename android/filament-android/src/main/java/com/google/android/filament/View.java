@@ -710,6 +710,32 @@ public class View {
     }
 
     /**
+     * Returns true if post-processing is enabled.
+     *
+     * @see #setPostProcessingEnabled
+     */
+    public boolean isFrontFaceWindingInverted() {
+        return nIsFrontFaceWindingInverted(getNativeObject());
+    }
+
+    /**
+     * Inverts the winding order of front faces. By default front faces use a counter-clockwise
+     * winding order. When the winding order is inverted, front faces are faces with a clockwise
+     * winding order.
+     *
+     * Changing the winding order will directly affect the culling mode in materials
+     * (see Material#getCullingMode).
+     *
+     * Inverting the winding order of front faces is useful when rendering mirrored reflections
+     * (water, mirror surfaces, front camera in AR, etc.).
+     *
+     * @param inverted True to invert front faces, false otherwise.
+     */
+    public void setFrontFaceWindingInverted(boolean inverted) {
+        nSetFrontFaceWindingInverted(getNativeObject(), inverted);
+    }
+
+    /**
      * Sets options relative to dynamic lighting for this view.
      *
      * <p>
@@ -1185,6 +1211,8 @@ public class View {
     private static native void nSetColorGrading(long nativeView, long nativeColorGrading);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);
+    private static native void nSetFrontFaceWindingInverted(long nativeView, boolean inverted);
+    private static native boolean nIsFrontFaceWindingInverted(long nativeView);
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
     private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution, float intensity, float bilateralThreshold, int quality, int lowPassFilter, int upsampling, boolean enabled, boolean bentNormals, float minHorizonAngleRad);

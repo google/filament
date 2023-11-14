@@ -65,14 +65,13 @@ struct App {
     View* offscreenView = nullptr;
     Scene* offscreenScene = nullptr;
     Camera* offscreenCamera = nullptr;
-    MaterialInstance* invertedMeshMatInstance = nullptr;
 
     enum class ReflectionMode {
-        NEGATIVE_SCALE_TRANSFORM,
-        MATERIAL,
+        RENDERABLES,
+        CAMERA,
     };
 
-    ReflectionMode mode = ReflectionMode::MATERIAL;
+    ReflectionMode mode = ReflectionMode::CAMERA;
     Config config;
 
     utils::Entity quadEntity;
@@ -106,6 +105,22 @@ static mat4f reflectionMatrix(float4 plane) {
     return transpose(m);
 }
 
+static void setReflectionMode(App& app, App::ReflectionMode mode) {
+    switch (mode) {
+    case App::ReflectionMode::RENDERABLES:
+        app.offscreenScene->addEntity(app.reflectedMonkey);
+        app.offscreenScene->remove(app.monkeyMesh.renderable);
+        app.offscreenView->setFrontFaceWindingInverted(false);
+        break;
+    case App::ReflectionMode::CAMERA:
+        app.offscreenScene->addEntity(app.monkeyMesh.renderable);
+        app.offscreenScene->remove(app.reflectedMonkey);
+        app.offscreenView->setFrontFaceWindingInverted(true);
+        break;
+    }
+    app.mode = mode;
+}
+
 static void printUsage(char* name) {
     std::string exec_name(utils::Path(name).getName());
     std::string usage(
@@ -118,7 +133,7 @@ static void printUsage(char* name) {
         "   --api, -a\n"
         "       Specify the backend API: opengl (default), vulkan, or metal\n"
         "   --mode, -m\n"
-        "       Specify the reflection mode: material (default), or ntransform\n\n"
+        "       Specify the reflection mode: camera (default), or renderables\n\n"
     );
     const std::string from("SHOWCASE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -157,12 +172,12 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 }
                 break;
             case 'm':
-                if (arg == "material") {
-                    app->mode = App::ReflectionMode::MATERIAL;
-                } else if (arg == "ntransform") {
-                    app->mode = App::ReflectionMode::NEGATIVE_SCALE_TRANSFORM;
+                if (arg == "camera") {
+                    app->mode = App::ReflectionMode::CAMERA;
+                } else if (arg == "renderables") {
+                    app->mode = App::ReflectionMode::RENDERABLES;
                 } else {
-                    std::cerr << "Unrecognized mode. Must be 'materail'|'ntransform'.\n";
+                    std::cerr << "Unrecognized mode. Must be 'camera'|'renderables'.\n";
                     exit(1);
                 }
                 break;
@@ -182,11 +197,6 @@ int main(int argc, char** argv) {
         auto& em = utils::EntityManager::get();
         auto vp = view->getViewport();
 
-        // For Vulkan, DEPTH32F is more readily available.
-        auto const depthFormat = app.config.backend == Engine::Backend::VULKAN
-                                         ? Texture::InternalFormat::DEPTH32F
-                                         : Texture::InternalFormat::DEPTH24;
-
         // Instantiate offscreen render target.
         app.offscreenView = engine->createView();
         app.offscreenScene = engine->createScene();
@@ -199,7 +209,7 @@ int main(int argc, char** argv) {
         app.offscreenDepthTexture = Texture::Builder()
             .width(vp.width).height(vp.height).levels(1)
             .usage(Texture::Usage::DEPTH_ATTACHMENT)
-            .format(depthFormat).build(*engine);
+            .format(Texture::InternalFormat::DEPTH24).build(*engine);
         app.offscreenRenderTarget = RenderTarget::Builder()
             .texture(RenderTarget::AttachmentPoint::COLOR, app.offscreenColorTexture)
             .texture(RenderTarget::AttachmentPoint::DEPTH, app.offscreenDepthTexture)
@@ -276,22 +286,19 @@ int main(int argc, char** argv) {
         rcm.setCastShadows(rcm.getInstance(app.monkeyMesh.renderable), false);
         scene->addEntity(app.monkeyMesh.renderable);
 
-        auto invertedMi = app.invertedMeshMatInstance = MaterialInstance::duplicate(mi);
-        invertedMi->setFrontFaceWindingInverted(true);
-
-        // Create a reflected monkey.
+        // Create a reflected monkey, which is used only for App::ReflectionMode::RENDERABLES.
         app.reflectedMonkey = em.create();
         RenderableManager::Builder(1)
                 .boundingBox({{ -2, -2, -2 }, { 2, 2, 2 }})
-                .material(0, app.mode == App::ReflectionMode::MATERIAL ? invertedMi : mi)
+                .material(0, mi)
                 .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.monkeyMesh.vertexBuffer, app.monkeyMesh.indexBuffer)
                 .receiveShadows(true)
                 .castShadows(false)
                 .build(*engine, app.reflectedMonkey);
-        app.offscreenScene->addEntity(app.reflectedMonkey);
+        setReflectionMode(app, app.mode);
 
         // Add light source to both scenes.
-        // NOTE: this is slightly wrong when the reflection mode is NEGATIVE_SCALE_TRANSFORM.
+        // NOTE: this is slightly wrong when the reflection mode is RENDERABLES.
         app.lightEntity = em.create();
         LightManager::Builder(LightManager::Type::SUN)
                 .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
@@ -314,7 +321,6 @@ int main(int argc, char** argv) {
         engine->destroy(app.reflectedMonkey);
         engine->destroy(app.lightEntity);
         engine->destroy(app.quadEntity);
-        engine->destroy(app.invertedMeshMatInstance);
         engine->destroy(app.meshMatInstance);
         engine->destroy(app.meshMaterial);
         engine->destroy(app.monkeyMesh.renderable);
@@ -357,12 +363,11 @@ int main(int argc, char** argv) {
         app.offscreenCamera->setCustomProjection(renderingProjection, cullingProjection,
                 camera.getNear(), camera.getCullingFar());
         switch (app.mode) {
-            case App::ReflectionMode::NEGATIVE_SCALE_TRANSFORM:
+            case App::ReflectionMode::RENDERABLES:
                 tcm.setTransform(tcm.getInstance(app.reflectedMonkey), reflection * xform);
                 app.offscreenCamera->setModelMatrix(model);
                 break;
-            case App::ReflectionMode::MATERIAL:
-                tcm.setTransform(tcm.getInstance(app.reflectedMonkey), xform);
+            case App::ReflectionMode::CAMERA:
                 app.offscreenCamera->setModelMatrix(reflection * model);
                 break;
         }
