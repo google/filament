@@ -151,6 +151,36 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         out << "#define FILAMENT_HAS_FEATURE_INSTANCING\n";
     }
 
+    // During compilation and optimization, __VERSION__ reflects the shader language version of the
+    // intermediate code, not the version of the final code. spirv-cross automatically adapts
+    // certain language features (e.g. fragment output) but leaves others untouched (e.g. sampler
+    // functions, bit shift operations). Client code may have to make decisions based on this
+    // information, so define a FILAMENT_EFFECTIVE_VERSION constant.
+    const char *effective_version;
+    if (mTargetLanguage == TargetLanguage::GLSL) {
+        effective_version = "__VERSION__";
+    } else {
+        switch (mShaderModel) {
+            case ShaderModel::MOBILE:
+                if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+                    effective_version = "300";
+                } else {
+                    effective_version = "100";
+                }
+                break;
+            case ShaderModel::DESKTOP:
+                if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
+                    effective_version = "450";
+                } else {
+                    effective_version = "410";
+                }
+                break;
+            default:
+                assert(false);
+        }
+    }
+    generateDefine(out, "FILAMENT_EFFECTIVE_VERSION", effective_version);
+
     if (stage == ShaderStage::VERTEX) {
         CodeGenerator::generateDefine(out, "FLIP_UV_ATTRIBUTE", material.flipUV);
         CodeGenerator::generateDefine(out, "LEGACY_MORPHING", material.useLegacyMorphing);

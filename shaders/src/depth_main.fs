@@ -57,7 +57,7 @@ void main() {
     fragColor.xy = computeDepthMomentsVSM(depth);
     fragColor.zw = computeDepthMomentsVSM(-1.0 / depth); // requires at least RGBA16F
 #elif defined(VARIANT_HAS_PICKING)
-#if MATERIAL_FEATURE_LEVEL == 0
+#if FILAMENT_EFFECTIVE_VERSION == 0
     outPicking.a = mod(float(object_uniforms_objectId / 65536), 256.0) / 255.0;
     outPicking.b = mod(float(object_uniforms_objectId /   256), 256.0) / 255.0;
     outPicking.g = mod(float(object_uniforms_objectId)        , 256.0) / 255.0;
