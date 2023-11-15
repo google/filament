@@ -400,6 +400,8 @@ class_<Engine>("Engine")
 
     .function("getActiveFeatureLevel", &Engine::getActiveFeatureLevel)
 
+    .class_function("getMaxStereoscopicEyes", &Engine::getMaxStereoscopicEyes)
+
     .function("_execute", EMBIND_LAMBDA(void, (Engine* engine), {
         EM_ASM_INT({
             const handle = window.filament_contextHandle;
@@ -654,6 +656,7 @@ class_<View>("View")
     .function("_setFogOptions", &View::setFogOptions)
     .function("_setVignetteOptions", &View::setVignetteOptions)
     .function("_setGuardBandOptions", &View::setGuardBandOptions)
+    .function("_setStereoscopicOptions", &View::setStereoscopicOptions)
     .function("setAmbientOcclusion", &View::setAmbientOcclusion)
     .function("getAmbientOcclusion", &View::getAmbientOcclusion)
     .function("setAntiAliasing", &View::setAntiAliasing)

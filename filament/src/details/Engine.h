@@ -184,6 +184,10 @@ public:
 
     bool isStereoSupported() const noexcept { return getDriver().isStereoSupported(); }
 
+    static size_t getMaxStereoscopicEyes() noexcept {
+        return CONFIG_MAX_STEREOSCOPIC_EYES;
+    }
+
     PostProcessManager const& getPostProcessManager() const noexcept {
         return mPostProcessManager;
     }

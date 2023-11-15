@@ -435,6 +435,13 @@ Java_com_google_android_filament_Engine_nIsAutomaticInstancingEnabled(JNIEnv*, j
     return (jboolean)engine->isAutomaticInstancingEnabled();
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_Engine_nGetMaxStereoscopicEyes(JNIEnv*, jclass, jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jlong) engine->getMaxStereoscopicEyes();
+}
+
+
 extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_Engine_nGetSupportedFeatureLevel(JNIEnv *, jclass,
         jlong nativeEngine) {
@@ -477,7 +484,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
 extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBuilderConfig(JNIEnv*,
         jclass, jlong nativeBuilder, jlong commandBufferSizeMB, jlong perRenderPassArenaSizeMB,
         jlong driverHandleArenaSizeMB, jlong minCommandBufferSizeMB, jlong perFrameCommandsSizeMB,
-        jlong jobSystemThreadCount) {
+        jlong jobSystemThreadCount, jlong stereoscopicEyeCount) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     Engine::Config config = {
             .commandBufferSizeMB = (uint32_t) commandBufferSizeMB,
@@ -486,6 +493,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
             .minCommandBufferSizeMB = (uint32_t) minCommandBufferSizeMB,
             .perFrameCommandsSizeMB = (uint32_t) perFrameCommandsSizeMB,
             .jobSystemThreadCount = (uint32_t) jobSystemThreadCount,
+            .stereoscopicEyeCount = (uint8_t) stereoscopicEyeCount,
     };
     builder->config(&config);
 }

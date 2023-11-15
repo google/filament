@@ -75,6 +75,7 @@ public class View {
     private AmbientOcclusionOptions mAmbientOcclusionOptions;
     private BloomOptions mBloomOptions;
     private FogOptions mFogOptions;
+    private StereoscopicOptions mStereoscopicOptions;
     private RenderTarget mRenderTarget;
     private BlendMode mBlendMode;
     private DepthOfFieldOptions mDepthOfFieldOptions;
@@ -1056,6 +1057,51 @@ public class View {
     }
 
     /**
+     * Sets the stereoscopic rendering options for this view.
+     *
+     * <p>
+     * Currently, only one type of stereoscopic rendering is supported: side-by-side.
+     * Side-by-side stereo rendering splits the viewport into two halves: a left and right half.
+     * Eye 0 will render to the left half, while Eye 1 will render into the right half.
+     * </p>
+     *
+     * <p>
+     * Currently, the following features are not supported with stereoscopic rendering:
+     * - post-processing
+     * - shadowing
+     * - punctual lights
+     * </p>
+     *
+     * <p>
+     * Stereo rendering depends on device and platform support. To check if stereo rendering is
+     * supported, use {@link Engine#isStereoSupported()}. If stereo rendering is not supported, then
+     * the stereoscopic options have no effect.
+     * </p>
+     *
+     * @param options The stereoscopic options to use on this view
+     * @see #getStereoscopicOptions
+     */
+    public void setStereoscopicOptions(@NonNull StereoscopicOptions options) {
+        mStereoscopicOptions = options;
+        nSetStereoscopicOptions(getNativeObject(), options.enabled);
+    }
+
+    /**
+     * Gets the stereoscopic options.
+     *
+     * @return options Stereoscopic options currently set.
+     * @see #setStereoscopicOptions
+     */
+    @NonNull
+    public StereoscopicOptions getStereoscoopicOptions() {
+        if (mStereoscopicOptions == null) {
+            mStereoscopicOptions = new StereoscopicOptions();
+        }
+        return mStereoscopicOptions;
+    }
+
+
+    /**
      * A class containing the result of a picking query
      */
     public static class PickingQueryResult {
@@ -1220,6 +1266,7 @@ public class View {
     private static native void nSetBloomOptions(long nativeView, long dirtNativeObject, float dirtStrength, float strength, int resolution, int levels, int blendMode, boolean threshold, boolean enabled, float highlight,
             boolean lensFlare, boolean starburst, float chromaticAberration, int ghostCount, float ghostSpacing, float ghostThreshold, float haloThickness, float haloRadius, float haloThreshold);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float cutOffDistance, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, long skyColorNativeObject, boolean enabled);
+    private static native void nSetStereoscopicOptions(long nativeView, boolean enabled);
     private static native void nSetBlendMode(long nativeView, int blendMode);
     private static native void nSetDepthOfFieldOptions(long nativeView, float cocScale, float maxApertureDiameter, boolean enabled, int filter,
             boolean nativeResolution, int foregroundRingCount, int backgroundRingCount, int fastGatherRingCount, int maxForegroundCOC, int maxBackgroundCOC);
