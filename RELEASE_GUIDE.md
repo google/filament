@@ -128,3 +128,15 @@ Navigate to [Filament's release
 workflow](https://github.com/google/filament/actions/workflows/release.yml). Hit the _Run workflow_
 dropdown. Modify _Platform to build_ and _Release tag to build_, then hit _Run workflow_. This will
 initiate a new release run.
+
+## 11. Kick off the npm and CocoaPods release jobs
+
+Navigate to [Filament's npm deploy
+workflow](https://github.com/google/filament/actions/workflows/npm-deploy.yml).
+Hit the _Run workflow_ dropdown. Modify _Release tag to deploy_ to the tag corresponding to this
+release (for example, v1.42.2).
+
+Navigate to [Filament's CocoaPods deploy
+workflow](https://github.com/google/filament/actions/workflows/cocopods-deploy.yml).
+Hit the _Run workflow_ dropdown. Modify _Release tag to deploy_ to the tag corresponding to this
+release (for example, v1.42.2).

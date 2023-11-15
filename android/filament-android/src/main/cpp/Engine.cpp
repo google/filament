@@ -483,6 +483,12 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
     builder->config(&config);
 }
 
+extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBuilderFeatureLevel(
+        JNIEnv*, jclass, jlong nativeBuilder, jint ordinal) {
+    Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
+    builder->featureLevel((Engine::FeatureLevel)ordinal);
+}
+
 extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBuilderSharedContext(
         JNIEnv*, jclass, jlong nativeBuilder, jlong sharedContext) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;

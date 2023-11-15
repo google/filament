@@ -89,6 +89,7 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
 #elif FILAMENT_APP_USE_METAL
         [self initializeMetalLayer];
 #endif
+        self.opaque = NO;
         [self initializeFilament];
         self.contentScaleFactor = UIScreen.mainScreen.nativeScale;
     }

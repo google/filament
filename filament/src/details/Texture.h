@@ -104,7 +104,7 @@ public:
 
     // Returns the max number of levels for a texture of given dimensions
     static inline uint8_t maxLevelCount(uint32_t width, uint32_t height) noexcept {
-        uint32_t maxDimension = std::max(width, height);
+        uint32_t const maxDimension = std::max(width, height);
         return maxLevelCount(maxDimension);
     }
 

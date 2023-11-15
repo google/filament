@@ -172,7 +172,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
           mShaderCompilerService(*this),
           mHandleAllocator("Handles", driverConfig.handleArenaSize),
           mSamplerMap(32) {
-  
+
     std::fill(mSamplerBindings.begin(), mSamplerBindings.end(), nullptr);
 
     // set a reasonable default value for our stream array
@@ -268,9 +268,9 @@ void OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
 
     if (UTILS_UNLIKELY(mContext.isES2())) {
         for (uint32_t i = 0; i < Program::UNIFORM_BINDING_COUNT; i++) {
-            auto [buffer, age] = mUniformBindings[i];
+            auto [id, buffer, age] = mUniformBindings[i];
             if (buffer) {
-                p->updateUniforms(i, buffer, age);
+                p->updateUniforms(i, id, buffer, age);
             }
         }
         // Set the output colorspace for this program (linear or rec709). This in only relevant
@@ -479,6 +479,7 @@ void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh,
 
     GLBufferObject* bo = construct<GLBufferObject>(boh, byteCount, bindingType, usage);
     if (UTILS_UNLIKELY(bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
+        bo->gl.id = ++mLastAssignedEmulatedUboId;
         bo->gl.buffer = malloc(byteCount);
         memset(bo->gl.buffer, 0, byteCount);
     } else {
@@ -595,8 +596,9 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
                         }
                     } else {
                         glTexImage2D(t->gl.target, level, GLint(t->gl.internalFormat),
-                                GLsizei(width), GLsizei(height), 0,
-                                format, type, nullptr);
+                                std::max(GLsizei(1), GLsizei(width >> level)),
+                                std::max(GLsizei(1), GLsizei(height >> level)),
+                                0, format, type, nullptr);
                     }
                 }
             }
@@ -1290,7 +1292,9 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
                 checkDimensions(rt->gl.color[i], color[i].level);
             }
         }
-        glDrawBuffers((GLsizei)maxDrawBuffers, bufs);
+        if (UTILS_LIKELY(!getContext().isES2())) {
+            glDrawBuffers((GLsizei)maxDrawBuffers, bufs);
+        }
         CHECK_GL_ERROR(utils::slog.e)
     }
 #endif
@@ -1451,6 +1455,11 @@ void OpenGLDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
     DEBUG_MARKER()
     if (sbh) {
         GLSamplerGroup* sb = handle_cast<GLSamplerGroup*>(sbh);
+        for (auto& binding : mSamplerBindings) {
+            if (binding == sb) {
+                binding = nullptr;
+            }
+        }
         destruct(sbh, sb);
     }
 }
@@ -1459,9 +1468,9 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
     DEBUG_MARKER()
 
     if (th) {
+        auto& gl = mContext;
         GLTexture* t = handle_cast<GLTexture*>(th);
         if (UTILS_LIKELY(!t->gl.imported)) {
-            auto& gl = mContext;
             if (UTILS_LIKELY(t->usage & TextureUsage::SAMPLEABLE)) {
                 gl.unbindTexture(t->gl.target, t->gl.id);
                 if (UTILS_UNLIKELY(t->hwStream)) {
@@ -1479,6 +1488,8 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
             if (t->gl.sidecarRenderBufferMS) {
                 glDeleteRenderbuffers(1, &t->gl.sidecarRenderBufferMS);
             }
+        } else {
+            gl.unbindTexture(t->gl.target, t->gl.id);
         }
         destruct(th, t);
     }
@@ -1775,6 +1786,10 @@ bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat format) {
     // support more formats, but it requires querying GL_INTERNALFORMAT_SUPPORTED which is not
     // available in OpenGL ES.
     auto& gl = mContext;
+    if (UTILS_UNLIKELY(gl.isES2())) {
+        auto [es2format, type] = textureFormatToFormatAndType(format);
+        return es2format != GL_NONE && type != GL_NONE;
+    }
     switch (format) {
         // Core formats.
         case TextureFormat::R8:
@@ -2269,8 +2284,16 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
         return;
     }
 
-    GLenum const glFormat = getFormat(p.format);
-    GLenum const glType = getType(p.type);
+    GLenum glFormat;
+    GLenum glType;
+    if (mContext.isES2()) {
+        auto formatAndType = textureFormatToFormatAndType(t->format);
+        glFormat = formatAndType.first;
+        glType = formatAndType.second;
+    } else {
+        glFormat = getFormat(p.format);
+        glType = getType(p.type);
+    }
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     if (!gl.isES2()) {
@@ -2880,7 +2903,11 @@ void OpenGLDriver::bindBufferRange(BufferObjectBinding bindingType, uint32_t ind
     assert_invariant(offset + size <= ub->byteCount);
 
     if (UTILS_UNLIKELY(ub->bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
-        mUniformBindings[index] = { static_cast<uint8_t const*>(ub->gl.buffer) + offset, ub->age };
+        mUniformBindings[index] = {
+                ub->gl.id,
+                static_cast<uint8_t const*>(ub->gl.buffer) + offset,
+                ub->age,
+        };
     } else {
         GLenum const target = GLUtils::getBufferBindingType(bindingType);
 

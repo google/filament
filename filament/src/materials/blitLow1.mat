@@ -23,7 +23,6 @@ material {
     depthWrite : false,
     depthCulling : false,
     domain: postprocess,
-    featureLevel : 0
 }
 
 vertex {
@@ -35,10 +34,6 @@ vertex {
 
 fragment {
     void postProcess(inout PostProcessInputs postProcess) {
-#if __VERSION__ == 100
-        postProcess.color = texture2D(materialParams_color, variable_vertex.xy);
-#else
         postProcess.color = textureLod(materialParams_color, variable_vertex.xy, 0.0);
-#endif
     }
 }

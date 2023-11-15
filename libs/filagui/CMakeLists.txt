@@ -35,10 +35,19 @@ set(MATERIAL_SRCS
 
 file(MAKE_DIRECTORY ${MATERIAL_DIR})
 
+# HACK: Pick between the normal and FL0-exclusionary variants of the materials
+# based on the value of FILAMENT_ENABLE_FEATURE_LEVEL_0.
 foreach (mat_src ${MATERIAL_SRCS})
     get_filename_component(localname "${mat_src}" NAME_WE)
     get_filename_component(fullname "${mat_src}" ABSOLUTE)
     set(output_path "${MATERIAL_DIR}/${localname}.filamat")
+
+    if (NOT FILAMENT_ENABLE_FATURE_LEVEL_0)
+        # Pick the non-FL0 variant instead.
+        string(REGEX REPLACE "\\.mat$" "1.mat" fullname "${fullname}")
+        string(REGEX REPLACE "\\.mat$" "1.mat" mat_src "${mat_src}")
+    endif()
+
     add_custom_command(
             OUTPUT ${output_path}
             COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}

@@ -1,96 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <title>Filament Debugger</title>
     <meta charset="utf-8">
-    <link rel="icon" type="image/png" href="https://google.github.io/filament/favicon.png" />
-    <link href="https://fonts.googleapis.com/css?family=Lexend Deca" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-</head>
-<body class="vbox viewport">
-
-    <header>matdbg</header>
-
-    <section class="main hbox space-between">
-      <nav class="vbox">
-        <div id="material-list" class="scrollable squishy">
-        </div>
-        <div id="material-detail" class="scrollable stretchy">
-        </div>
-      </nav>
-      <article id="shader-source">
-      </article>
-    </section>
-
-    <footer>&nbsp;</footer>
-
-    <template id="material-list-template">
-    <div style="white-space: nowrap">
-      {{#item}}
-        {{#is_label}}
-          <br/><b>{{label}}</b>
-        {{/is_label}}
-        {{#is_material}}
-          <a class="material {{classes}}" data-matid="{{matid}}">{{name}}</a>
-        {{/is_material}}
-        <br/>
-      {{/item}}
-    </div>
-    </template>
-
-    <template id="material-detail-template">
-    <div style="white-space: pre">
-name = {{ name }}
-version = {{ version }}
-{{#required_attributes.length}}
-
-<b>Required attributes</b>
-{{#required_attributes}}
-{{.}}
-{{/required_attributes}}
-{{/required_attributes.length}}
-
-<b>OpenGL shaders</b>
-{{#opengl}}
-<a class="shader {{classes}}" data-glindex="{{index}}">{{index}} {{shaderModel}} {{pipelineStage}} {{variantString}}</a>
-{{/opengl}}
-
-<b>Vulkan shaders</b>
-{{#vulkan}}
-<a class="shader {{classes}}" data-vkindex="{{index}}">{{index}} {{shaderModel}} {{pipelineStage}} {{variantString}}</a>
-{{/vulkan}}
-
-<b>Metal shaders</b>
-{{#metal}}
-<a class="shader {{classes}}" data-metalindex="{{index}}">{{index}} {{shaderModel}} {{pipelineStage}} {{variantString}}</a>
-{{/metal}}
-
-<b>Material details</b>
-{{#shading}}
-shading model = {{model}}
-vertex domain = {{vertex_domain}}
-interpolation = {{interpolation}}
-shadow multiply = {{shadow_multiply}}
-specular antialiasing = {{specular_antialiasing}}
-variance = {{variance}}
-threshold = {{threshold}}
-clear coat IOR change = {{clear_coat_IOR_change}}
-{{/shading}}
-{{#raster}}
-blending = {{blending}}
-mask threshold = {{mask_threshold}}
-color write = {{color_write}}
-depth write = {{depth_write}}
-depth test = {{depth_test}}
-double sided = {{double_sided}}
-culling = {{culling}}
-transparency = {{transparency}}
-{{/raster}}
-    </div>
-    </template>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/3.0.1/mustache.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.17.1/min/vs/loader.js"></script>
-    <script src="script.js"></script>
-</body>
+    <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
+    <link href="https://google.github.io/filament/favicon.png" rel="icon" type="image/x-icon" />
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet">
+    <style>
+      html, body {
+          height: 100%;
+          margin: 0;
+          font-family: "Open Sans";
+      }
+    </style>
+    <script src="api.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.25.2/min/vs/loader.js"></script>
+  </head>
+  <body>
+    <script src="app.js" type="module"></script>
+    <matdbg-viewer></matdbg-viewer>
+  </body>
 </html>

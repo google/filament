@@ -231,7 +231,7 @@ public:
             default:
                 return backend::ShaderLanguage::ESSL3;
             case Backend::OPENGL:
-                return mActiveFeatureLevel == FeatureLevel::FEATURE_LEVEL_0
+                return getDriver().getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0
                         ? backend::ShaderLanguage::ESSL1 : backend::ShaderLanguage::ESSL3;
             case Backend::VULKAN:
                 return backend::ShaderLanguage::SPIRV;

@@ -95,6 +95,7 @@ public:
 
     // screen-space reflection and/or refraction (SSR)
     void prepareSSR(TextureHandle ssr,
+            bool disableSSR,
             float refractionLodOffset,
             ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;
 

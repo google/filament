@@ -67,6 +67,7 @@ struct Engine::BuilderDetails {
     Backend mBackend = Backend::DEFAULT;
     Platform* mPlatform = nullptr;
     Engine::Config mConfig;
+    FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     void* mSharedContext = nullptr;
     static Config validateConfig(const Config* pConfig) noexcept;
 };
@@ -185,6 +186,7 @@ static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
 FEngine::FEngine(Engine::Builder const& builder) :
         mBackend(builder->mBackend),
+        mActiveFeatureLevel(builder->mFeatureLevel),
         mPlatform(builder->mPlatform),
         mSharedGLContext(builder->mSharedContext),
         mPostProcessManager(*this),
@@ -241,6 +243,10 @@ void FEngine::init() {
     DriverApi& driverApi = getDriverApi();
 
     mActiveFeatureLevel = std::min(mActiveFeatureLevel, driverApi.getFeatureLevel());
+
+#ifndef FILAMENT_ENABLE_FEATURE_LEVEL_0
+    assert_invariant(mActiveFeatureLevel > FeatureLevel::FEATURE_LEVEL_0);
+#endif
 
     slog.i << "Backend feature level: " << int(driverApi.getFeatureLevel()) << io::endl;
     slog.i << "FEngine feature level: " << int(mActiveFeatureLevel) << io::endl;
@@ -326,7 +332,7 @@ void FEngine::init() {
     driverApi.update3DImage(mDummyZeroTexture, 0, 0, 0, 0, 1, 1, 1,
             { zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
 
-#ifdef FILAMENT_TARGET_MOBILE
+#ifdef FILAMENT_ENABLE_FEATURE_LEVEL_0
     if (UTILS_UNLIKELY(mActiveFeatureLevel == FeatureLevel::FEATURE_LEVEL_0)) {
         FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
         defaultMaterialBuilder.package(
@@ -359,10 +365,11 @@ void FEngine::init() {
         driverApi.update3DImage(mDummyZeroTextureArray, 0, 0, 0, 0, 1, 1, 1,
                 { zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
 
-        mPostProcessManager.init();
         mLightManager.init(*this);
         mDFG.init(*this);
     }
+
+    mPostProcessManager.init();
 
     mDebugRegistry.registerProperty("d.shadowmap.debug_directional_shadowmap",
             &debug.shadowmap.debug_directional_shadowmap, [this]() {
@@ -1171,6 +1178,8 @@ Engine::FeatureLevel FEngine::getSupportedFeatureLevel() const noexcept {
 Engine::FeatureLevel FEngine::setActiveFeatureLevel(FeatureLevel featureLevel) {
     ASSERT_PRECONDITION(featureLevel <= getSupportedFeatureLevel(),
             "Feature level %u not supported", (unsigned)featureLevel);
+    ASSERT_PRECONDITION(mActiveFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1,
+            "Cannot adjust feature level beyond 0 at runtime");
     return (mActiveFeatureLevel = std::max(mActiveFeatureLevel, featureLevel));
 }
 
@@ -1201,6 +1210,11 @@ Engine::Builder& Engine::Builder::platform(Platform* platform) noexcept {
 
 Engine::Builder& Engine::Builder::config(Engine::Config const* config) noexcept {
     mImpl->mConfig = BuilderDetails::validateConfig(config);
+    return *this;
+}
+
+Engine::Builder& Engine::Builder::featureLevel(FeatureLevel featureLevel) noexcept {
+    mImpl->mFeatureLevel = featureLevel;
     return *this;
 }
 

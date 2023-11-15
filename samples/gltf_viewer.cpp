@@ -53,6 +53,8 @@
 #include <imgui.h>
 #include <filagui/ImGuiExtensions.h>
 
+#include <cgltf.h>
+
 #include <array>
 #include <fstream>
 #include <iostream>
@@ -101,7 +103,7 @@ struct App {
 
     bool actualSize = false;
     bool originIsFarAway = false;
-    float originDistance = 6378137; // Earth's radius in [m]
+    float originDistance = 1.0f;
 
     struct Scene {
         Entity groundPlane;
@@ -485,6 +487,57 @@ static void onClick(App& app, View* view, ImVec2 pos) {
     });
 }
 
+static utils::Path getPathForAsset(std::string_view string) {
+    utils::Path filename{ string };
+    if (!filename.exists()) {
+        std::cerr << "file " << filename << " not found!" << std::endl;
+        return {};
+    }
+    if (filename.isDirectory()) {
+        auto files = filename.listContents();
+        for (const auto& file: files) {
+            if (file.getExtension() == "gltf" || file.getExtension() == "glb") {
+                filename = file;
+                break;
+            }
+        }
+        if (filename.isDirectory()) {
+            std::cerr << "no glTF file found in " << filename << std::endl;
+            return {};
+        }
+    }
+    return filename;
+}
+
+
+static bool checkAsset(const utils::Path& filename) {
+    // Peek at the file size to allow pre-allocation.
+    long const contentSize = static_cast<long>(getFileSize(filename.c_str()));
+    if (contentSize <= 0) {
+        std::cerr << "Unable to open " << filename << std::endl;
+        return false;
+    }
+
+    // Consume the glTF file.
+    std::ifstream in(filename.c_str(), std::ifstream::binary | std::ifstream::in);
+    std::vector<uint8_t> buffer(static_cast<unsigned long>(contentSize));
+    if (!in.read((char*) buffer.data(), contentSize)) {
+        std::cerr << "Unable to read " << filename << std::endl;
+        return false;
+    }
+
+    // Parse the glTF file and create Filament entities.
+    cgltf_options options{};
+    cgltf_data* sourceAsset;
+    cgltf_result result = cgltf_parse(&options, buffer.data(), contentSize, &sourceAsset);
+    if (result != cgltf_result_success) {
+        slog.e << "Unable to parse glTF file." << io::endl;
+        return false;
+    }
+    return true;
+};
+
+
 int main(int argc, char** argv) {
     App app;
 
@@ -496,23 +549,9 @@ int main(int argc, char** argv) {
     utils::Path filename;
     int const num_args = argc - optionIndex;
     if (num_args >= 1) {
-        filename = argv[optionIndex];
-        if (!filename.exists()) {
-            std::cerr << "file " << filename << " not found!" << std::endl;
+        filename = getPathForAsset(argv[optionIndex]);
+        if (filename.isEmpty()) {
             return 1;
-        }
-        if (filename.isDirectory()) {
-            auto files = filename.listContents();
-            for (const auto& file : files) {
-                if (file.getExtension() == "gltf" || file.getExtension() == "glb") {
-                    filename = file;
-                    break;
-                }
-            }
-            if (filename.isDirectory()) {
-                std::cerr << "no glTF file found in " << filename << std::endl;
-                return 1;
-            }
         }
     }
 
@@ -534,14 +573,14 @@ int main(int argc, char** argv) {
 
         // Parse the glTF file and create Filament entities.
         app.asset = app.assetLoader->createAsset(buffer.data(), buffer.size());
-        app.instance = app.asset->getInstance();
-        buffer.clear();
-        buffer.shrink_to_fit();
-
         if (!app.asset) {
             std::cerr << "Unable to parse " << filename << std::endl;
             exit(1);
         }
+
+        app.instance = app.asset->getInstance();
+        buffer.clear();
+        buffer.shrink_to_fit();
     };
 
     auto loadResources = [&app] (const utils::Path& filename) {
@@ -559,6 +598,8 @@ int main(int argc, char** argv) {
             app.resourceLoader->addTextureProvider("image/png", app.stbDecoder);
             app.resourceLoader->addTextureProvider("image/jpeg", app.stbDecoder);
             app.resourceLoader->addTextureProvider("image/ktx2", app.ktxDecoder);
+        } else {
+            app.resourceLoader->setConfiguration(configuration);
         }
 
         if (!app.resourceLoader->asyncBeginLoad(app.asset)) {
@@ -762,7 +803,7 @@ int main(int argc, char** argv) {
                 ImGui::Checkbox("Camera at origin",
                         debug.getPropertyAddress<bool>("d.view.camera_at_origin"));
                 ImGui::Checkbox("Far Origin", &app.originIsFarAway);
-                ImGui::SliderFloat("Origin", &app.originDistance, 0, 10000000);
+                ImGui::SliderFloat("Origin", &app.originDistance, 0, 1);
                 ImGui::Checkbox("Far uses shadow casters",
                         debug.getPropertyAddress<bool>("d.shadowmap.far_uses_shadowcasters"));
                 ImGui::Checkbox("Focus shadow casters",
@@ -981,7 +1022,12 @@ int main(int argc, char** argv) {
         tcm.setParent(tcm.getInstance(camera.getEntity()), root);
         tcm.setParent(tcm.getInstance(app.asset->getRoot()), root);
         tcm.setParent(tcm.getInstance(view->getFogEntity()), root);
-        tcm.setTransform(root, mat4f::translation(float3{ app.originIsFarAway ? app.originDistance : 0.0f }));
+
+        // these values represent a point somewhere on Earth's surface
+        float const d = app.originIsFarAway ? app.originDistance : 0.0f;
+//        tcm.setTransform(root, mat4::translation(double3{ 67.0, -6366759.0, -21552.0 } * d));
+        tcm.setTransform(root, mat4::translation(
+                double3{ 2304097.1410110965, -4688442.9915525438, -3639452.5611694567 } * d));
 
         // Check if color grading has changed.
         ColorGradingSettings const& options = app.viewer->getSettings().view.colorGrading;
@@ -1016,14 +1062,19 @@ int main(int argc, char** argv) {
     filamentApp.animate(animate);
     filamentApp.resize(resize);
 
-    filamentApp.setDropHandler([&] (std::string_view path) {
-        app.resourceLoader->asyncCancelLoad();
-        app.resourceLoader->evictResourceData();
-        app.viewer->removeAsset();
-        app.assetLoader->destroyAsset(app.asset);
-        loadAsset(path);
-        loadResources(path);
-        app.viewer->setAsset(app.asset, app.instance);
+    filamentApp.setDropHandler([&](std::string_view path) {
+        utils::Path const filename = getPathForAsset(path);
+        if (!filename.isEmpty()) {
+            if (checkAsset(filename)) {
+                app.resourceLoader->asyncCancelLoad();
+                app.resourceLoader->evictResourceData();
+                app.viewer->removeAsset();
+                app.assetLoader->destroyAsset(app.asset);
+                loadAsset(filename);
+                loadResources(filename);
+                app.viewer->setAsset(app.asset, app.instance);
+            }
+        }
     });
 
     filamentApp.run(app.config, setup, cleanup, gui, preRender, postRender);

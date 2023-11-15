@@ -100,7 +100,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                              "Depth/Stencil Buffer" : "Depth Buffer";
 
                     bool const isES2 =
-                            engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0;
+                            engine.getDriverApi().getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0;
 
                     TextureFormat const stencilFormat = isES2 ?
                             TextureFormat::DEPTH24_STENCIL8 : TextureFormat::DEPTH32F_STENCIL8;
@@ -193,8 +193,8 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                 TextureHandle const ssr = data.ssr ?
                         resources.getTexture(data.ssr) : engine.getOneTextureArray();
 
-                view.prepareSSR(ssr, config.ssrLodOffset,
-                        view.getScreenSpaceReflectionsOptions());
+                view.prepareSSR(ssr, config.screenSpaceReflectionHistoryNotReady,
+                        config.ssrLodOffset, view.getScreenSpaceReflectionsOptions());
 
                 // Note: here we can't use data.color's descriptor for the viewport because
                 // the actual viewport might be offset when the target is the swapchain.

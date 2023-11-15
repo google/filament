@@ -20,6 +20,7 @@
 #include <draco/compression/decode.h>
 #endif
 
+#include <utils/compiler.h>
 #include <utils/Log.h>
 
 #if GLTFIO_DRACO_SUPPORTED
@@ -65,7 +66,7 @@ DracoMesh::~DracoMesh() {
 }
 
 // Gets the number of components in the given cgltf vector type, or -1 for matrices.
-static int getNumComponents(cgltf_type ctype) {
+UTILS_UNUSED_IN_RELEASE static int getNumComponents(cgltf_type ctype) {
     return ((int) ctype) <= 4 ? ((int) ctype) : -1;
 }
 

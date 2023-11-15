@@ -191,6 +191,7 @@ function build_clean {
     rm -Rf android/filamat-android/build android/filamat-android/.externalNativeBuild android/filamat-android/.cxx
     rm -Rf android/gltfio-android/build android/gltfio-android/.externalNativeBuild android/gltfio-android/.cxx
     rm -Rf android/filament-utils-android/build android/filament-utils-android/.externalNativeBuild android/filament-utils-android/.cxx
+    rm -f compile_commands.json
 }
 
 function build_clean_aggressive {
@@ -232,6 +233,8 @@ function build_desktop_target {
             ${ASAN_UBSAN_OPTION} \
             ${architectures} \
             ../..
+        ln -sf "out/cmake-${lc_target}/compile_commands.json" \
+           ../../compile_commands.json
     fi
     ${BUILD_COMMAND} ${build_targets}
 
@@ -287,6 +290,8 @@ function build_webgl_with_target {
             -DCMAKE_INSTALL_PREFIX="../webgl-${lc_target}/filament" \
             -DWEBGL=1 \
             ../..
+        ln -sf "out/cmake-webgl-${lc_target}/compile_commands.json" \
+           ../../compile_commands.json
         ${BUILD_COMMAND} ${BUILD_TARGETS}
         )
     fi
@@ -359,6 +364,8 @@ function build_android_target {
             ${MATOPT_OPTION} \
             ${VULKAN_ANDROID_OPTION} \
             ../..
+        ln -sf "out/cmake-android-${lc_target}-${arch}/compile_commands.json" \
+           ../../compile_commands.json
     fi
 
     # We must always install Android libraries to build the AAR
@@ -591,6 +598,8 @@ function build_ios_target {
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ../..
+        ln -sf "out/cmake-ios-${lc_target}-${arch}/compile_commands.json" \
+           ../../compile_commands.json
     fi
 
     ${BUILD_COMMAND}

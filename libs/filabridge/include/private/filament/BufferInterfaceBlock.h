@@ -160,6 +160,8 @@ public:
 
     bool isEmpty() const noexcept { return mFieldInfoList.empty(); }
 
+    bool isEmptyForFeatureLevel(backend::FeatureLevel featureLevel) const noexcept;
+
     Alignment getAlignment() const noexcept { return mAlignment; }
 
     Target getTarget() const noexcept { return mTarget; }

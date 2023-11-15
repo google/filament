@@ -207,10 +207,13 @@ PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMater
 
 #define MATERIAL(n) MATERIALS_ ## n ## _DATA, MATERIALS_ ## n ## _SIZE
 
+static const PostProcessManager::MaterialInfo sMaterialListFeatureLevel0[] = {
+        { "blitLow",                    MATERIAL(BLITLOW) },
+};
+
 static const PostProcessManager::MaterialInfo sMaterialList[] = {
         { "bilateralBlur",              MATERIAL(BILATERALBLUR) },
         { "bilateralBlurBentNormals",   MATERIAL(BILATERALBLURBENTNORMALS) },
-        { "blitLow",                    MATERIAL(BLITLOW) },
         { "bloomDownsample",            MATERIAL(BLOOMDOWNSAMPLE) },
         { "bloomDownsample2x",          MATERIAL(BLOOMDOWNSAMPLE2X) },
         { "bloomDownsample9",           MATERIAL(BLOOMDOWNSAMPLE9) },
@@ -273,8 +276,15 @@ void PostProcessManager::init() noexcept {
             driver.isWorkaroundNeeded(Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP);
 
     #pragma nounroll
-    for (auto const& info : sMaterialList) {
+    for (auto const& info : sMaterialListFeatureLevel0) {
         registerPostProcessMaterial(info.name, info);
+    }
+
+    if (mEngine.getActiveFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1) {
+        #pragma nounroll
+        for (auto const& info : sMaterialList) {
+            registerPostProcessMaterial(info.name, info);
+        }
     }
 
     mStarburstTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
@@ -380,7 +390,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
     // generate depth pass at the requested resolution
     auto& structurePass = fg.addPass<StructurePassData>("Structure Pass",
             [&](FrameGraph::Builder& builder, auto& data) {
-                bool const isES2 = mEngine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0;
+                bool const isES2 = mEngine.getDriverApi().getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0;
                 data.depth = builder.createTexture("Structure Buffer", {
                         .width = width, .height = height,
                         .levels = uint8_t(levelCount),
@@ -2704,7 +2714,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
         filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
         backend::SamplerMagFilter filter) noexcept {
 
-    if (UTILS_LIKELY(!translucent && dsrOptions.quality == QualityLevel::LOW)) {
+    if (UTILS_LIKELY(!translucent && dsrOptions.quality == QualityLevel::LOW &&
+            mEngine.getDriverApi().getFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1)) {
         return opaqueBlit(fg, input, vp, outDesc, filter);
     }
 

@@ -214,12 +214,12 @@ RenderableManager::Builder& RenderableManager::Builder::enableSkinningBuffers(bo
 
 RenderableManager::Builder& RenderableManager::Builder::boneIndicesAndWeights(size_t primitiveIndex,
                math::float2 const* indicesAndWeights, size_t count, size_t bonesPerVertex) noexcept {
-    size_t vertexCount = count / bonesPerVertex;
+    size_t const vertexCount = count / bonesPerVertex;
     utils::FixedCapacityVector<utils::FixedCapacityVector<filament::math::float2>> bonePairs(vertexCount);
-    for ( size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
+    for (size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
         utils::FixedCapacityVector<float2> vertexData(bonesPerVertex);
         std::copy_n(indicesAndWeights + iVertex * bonesPerVertex,
-                    bonesPerVertex, vertexData.data());
+                bonesPerVertex, vertexData.data());
         bonePairs[iVertex] = std::move(vertexData);
     }
     return boneIndicesAndWeights(primitiveIndex, bonePairs);
@@ -275,13 +275,13 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
     size_t maxPairsCount = 0; //size of texture, number of bone pairs
     size_t maxPairsCountPerVertex = 0; //maximum of number of bone per vertex
 
-    for (auto iBonePair = mBonePairs.begin(); iBonePair != mBonePairs.end(); ++iBonePair){
-        auto primitiveIndex = iBonePair->first;
+    for (auto& bonePair: mBonePairs) {
+        auto primitiveIndex = bonePair.first;
         auto entries = mEntries;
         ASSERT_PRECONDITION(primitiveIndex < entries.size() && primitiveIndex >= 0,
             "[primitive @ %u] primitiveindex is out of size (%u)", primitiveIndex, entries.size());
         auto entry = mEntries[primitiveIndex];
-        auto bonePairsForPrimitive = iBonePair->second;
+        auto bonePairsForPrimitive = bonePair.second;
         auto vertexCount = entry.vertices->getVertexCount();
         ASSERT_PRECONDITION(bonePairsForPrimitive.size() == vertexCount,
             "[primitive @ %u] bone indices and weights pairs count (%u) must be equal to vertex count (%u)",
@@ -292,7 +292,7 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
             "[entity=%u, primitive @ %u] for advanced skinning set VertexBuffer::Builder::advancedSkinning()",
             entity.getId(), primitiveIndex);
         for (size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
-            size_t bonesPerVertex = bonePairsForPrimitive[iVertex].size();
+            size_t const bonesPerVertex = bonePairsForPrimitive[iVertex].size();
             maxPairsCount += bonesPerVertex;
             maxPairsCountPerVertex = std::max(bonesPerVertex, maxPairsCountPerVertex);
         }
@@ -303,29 +303,28 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
         // final texture data, indices and weights
         mBoneIndicesAndWeights = utils::FixedCapacityVector<float2>(maxPairsCount);
         // temporary indices and weights for one vertex
-        std::unique_ptr<float2[]> tempPairs = std::make_unique<float2[]>
-                (maxPairsCountPerVertex);
-        for (auto iBonePair = mBonePairs.begin(); iBonePair != mBonePairs.end(); ++iBonePair) {
-            auto primitiveIndex = iBonePair->first;
-            auto bonePairsForPrimitive = iBonePair->second;
-            if (!bonePairsForPrimitive.size()) {
-              continue;
+        auto const tempPairs = std::make_unique<float2[]>(maxPairsCountPerVertex);
+        for (auto& bonePair: mBonePairs) {
+            auto primitiveIndex = bonePair.first;
+            auto bonePairsForPrimitive = bonePair.second;
+            if (bonePairsForPrimitive.empty()) {
+                continue;
             }
-            size_t vertexCount = mEntries[primitiveIndex].vertices->getVertexCount();
-            std::unique_ptr<uint16_t[]> skinJoints = std::make_unique<uint16_t[]>
-                (4 * vertexCount); // temporary indices for one vertex
-            std::unique_ptr<float[]> skinWeights = std::make_unique<float[]>
-                (4 * vertexCount); // temporary weights for one vertex
+            size_t const vertexCount = mEntries[primitiveIndex].vertices->getVertexCount();
+            // temporary indices for one vertex
+            auto skinJoints = std::make_unique<uint16_t[]>(4 * vertexCount);
+            // temporary weights for one vertex
+            auto skinWeights = std::make_unique<float[]>(4 * vertexCount);
             for (size_t iVertex = 0; iVertex < vertexCount; iVertex++) {
                 size_t tempPairCount = 0;
-                float boneWeightsSum = 0;
+                double boneWeightsSum = 0;
                 for (size_t k = 0; k < bonePairsForPrimitive[iVertex].size(); k++) {
                     auto boneWeight = bonePairsForPrimitive[iVertex][k][1];
                     auto boneIndex = bonePairsForPrimitive[iVertex][k][0];
                     ASSERT_PRECONDITION(boneWeight >= 0,
                             "[entity=%u, primitive @ %u] bone weight (%f) of vertex=%u is negative ",
                             entity.getId(), primitiveIndex, boneWeight, iVertex);
-                    if (boneWeight) {
+                    if (boneWeight > 0.0f) {
                         ASSERT_PRECONDITION(boneIndex >= 0,
                             "[entity=%u, primitive @ %u] bone index (%i) of vertex=%u is negative ",
                             entity.getId(), primitiveIndex, (int) boneIndex, iVertex);
@@ -342,26 +341,37 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
                 ASSERT_PRECONDITION(boneWeightsSum > 0,
                     "[entity=%u, primitive @ %u] sum of bone weights of vertex=%u is %f, it should be positive.",
                     entity.getId(), primitiveIndex, iVertex, boneWeightsSum);
-                if (abs(boneWeightsSum - 1.f) > std::numeric_limits<float>::epsilon()) {
+
+                // see https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#skinned-mesh-attributes
+                double const epsilon = 2e-7 * double(tempPairCount);
+                if (abs(boneWeightsSum - 1.0) <= epsilon) {
+                    boneWeightsSum = 1.0;
+                }
+#ifndef NDEBUG
+                else {
                     utils::slog.w << "Warning of skinning: [entity=%" << entity.getId()
                         << ", primitive @ %" << primitiveIndex
                         << "] sum of bone weights of vertex=" << iVertex << " is " << boneWeightsSum
                         << ", it should be one. Weights will be normalized." << utils::io::endl;
                 }
+#endif
+
                 // prepare data for vertex attributes
                 auto offset = iVertex * 4;
                 // set attributes, indices and weights, for <= 4 pairs
-                for (size_t j = 0, c = std::min((int) tempPairCount, 4); j < c; j++) {
-                    skinJoints[j + offset] = tempPairs[j][0];
-                    skinWeights[j + offset] = tempPairs[j][1] / boneWeightsSum;
+                for (size_t j = 0, c = std::min((int)tempPairCount, 4); j < c; j++) {
+                    skinJoints[j + offset] = uint16_t(tempPairs[j][0]);
+                    skinWeights[j + offset] = tempPairs[j][1] / float(boneWeightsSum);
                 }
                 // prepare data for texture
                 if (tempPairCount > 4) { // set attributes, indices and weights, for > 4 pairs
-                    skinWeights[3 + offset] = -(float) (pairsCount + 1); // negative offset to texture 0..-1, 1..-2
-                    skinJoints[3 + offset] = (uint16_t) tempPairCount; // number pairs per vertex in texture
+                    // number pairs per vertex in texture
+                    skinJoints[3 + offset] = (uint16_t)tempPairCount;
+                    // negative offset to texture 0..-1, 1..-2
+                    skinWeights[3 + offset] = -float(pairsCount + 1);
                     for (size_t j = 3; j < tempPairCount; j++) {
                         mBoneIndicesAndWeights[pairsCount][0] = tempPairs[j][0];
-                        mBoneIndicesAndWeights[pairsCount][1] = tempPairs[j][1] / boneWeightsSum;
+                        mBoneIndicesAndWeights[pairsCount][1] = tempPairs[j][1] / float(boneWeightsSum);
                         pairsCount++;
                     }
                 }
@@ -386,7 +396,7 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
             mImpl->mInstanceCount,
             CONFIG_MAX_INSTANCES);
     if (mImpl->mInstanceBuffer) {
-        size_t bufferInstanceCount = mImpl->mInstanceBuffer->mInstanceCount;
+        size_t const bufferInstanceCount = mImpl->mInstanceBuffer->mInstanceCount;
         ASSERT_PRECONDITION(mImpl->mInstanceCount <= bufferInstanceCount,
                 "instance count (%zu) must be less than or equal to the InstanceBuffer's instance "
                 "count "
@@ -402,7 +412,7 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
         auto& entry = mImpl->mEntries[i];
 
         // entry.materialInstance must be set to something even if indices/vertices are null
-        FMaterial const* material = nullptr;
+        FMaterial const* material;
         if (!entry.materialInstance) {
             material = downcast(engine.getDefaultMaterial());
             entry.materialInstance = material->getDefaultInstance();

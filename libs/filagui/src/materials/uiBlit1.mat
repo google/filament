@@ -14,7 +14,6 @@ material {
     culling : none,
     depthCulling: false,
     blending : transparent,
-    featureLevel : 0
 }
 
 fragment {
@@ -22,7 +21,7 @@ fragment {
 	prepareMaterial(material);
         vec2 uv = getUV0();
         uv.y = 1.0 - uv.y;
-        vec4 albedo = texture2D(materialParams_albedo, uv);
+        vec4 albedo = texture(materialParams_albedo, uv);
         material.baseColor = getColor() * albedo;
         material.baseColor.rgb *= material.baseColor.a;
     }

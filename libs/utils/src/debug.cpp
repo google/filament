@@ -18,6 +18,8 @@
 
 #include <utils/Panic.h>
 
+#include <cstdlib>
+
 namespace utils {
 
 // we use a non-inlined, not marked as "no return" function for aborting so that we can set

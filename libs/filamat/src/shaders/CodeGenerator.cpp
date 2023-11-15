@@ -63,9 +63,6 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                     out << "#extension GL_OES_EGL_image_external : require\n\n";
                 }
             }
-            if (material.has3dSamplers && mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
-                out << "#extension GL_OES_texture_3D : require\n\n";
-            }
             if (v.hasInstancedStereo() && stage == ShaderStage::VERTEX) {
                 // If we're not processing the shader through glslang (in the case of unoptimized
                 // OpenGL shaders), then we need to add the #extension string ourselves.
@@ -87,6 +84,10 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
                 out << "#extension GL_ARB_shading_language_packing : enable\n\n";
             }
             break;
+    }
+
+    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        out << "#extension GL_OES_standard_derivatives : require\n\n";
     }
 
     // This allows our includer system to use the #line directive to denote the source file for
@@ -163,11 +164,13 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
         if (stage == ShaderStage::VERTEX) {
             generateDefine(out, "VARYING", "out");
+            generateDefine(out, "ATTRIBUTE", "in");
         } else if (stage == ShaderStage::FRAGMENT) {
             generateDefine(out, "VARYING", "in");
         }
     } else {
         generateDefine(out, "VARYING", "varying");
+        generateDefine(out, "ATTRIBUTE", "attribute");
     }
 
     auto getShadingDefine = [](Shading shading) -> const char* {
@@ -421,6 +424,13 @@ io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage type,
         return out;
     }
 
+    // Feature level 0 only supports one output.
+    if (index > 0 && mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        slog.w << "Discarding an output in the generated ESSL 1.0 shader: index = " << index
+               << ", name = " << name.c_str() << io::endl;
+        return out;
+    }
+
     // TODO: add and support additional variable qualifiers
     (void) qualifier;
     assert(qualifier == MaterialBuilder::VariableQualifier::OUT);
@@ -434,7 +444,9 @@ io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage type,
     // formats behind the scenes. It's an error to output fewer components than the attachment
     // needs, so we always output a float4 instead of a float3. It's never an error to output extra
     // components.
-    if (mTargetApi == TargetApi::METAL) {
+    //
+    // Meanwhile, ESSL 1.0 must always write to gl_FragColor, a vec4.
+    if (mTargetApi == TargetApi::METAL || mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
         if (outputType == MaterialBuilder::OutputType::FLOAT3) {
             outputType = MaterialBuilder::OutputType::FLOAT4;
             swizzleString = ".rgb";
@@ -446,13 +458,21 @@ io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage type,
     const char* typeString = getOutputTypeName(outputType);
 
     out << "\n#define FRAG_OUTPUT"               << index << " " << name.c_str();
-    out << "\n#define FRAG_OUTPUT_AT"            << index << " output_" << name.c_str();
+    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+        out << "\n#define FRAG_OUTPUT_AT"        << index << " gl_FragColor";
+    } else {
+        out << "\n#define FRAG_OUTPUT_AT"        << index << " output_" << name.c_str();
+    }
     out << "\n#define FRAG_OUTPUT_MATERIAL_TYPE" << index << " " << materialTypeString;
     out << "\n#define FRAG_OUTPUT_PRECISION"     << index << " " << precisionString;
     out << "\n#define FRAG_OUTPUT_TYPE"          << index << " " << typeString;
     out << "\n#define FRAG_OUTPUT_SWIZZLE"       << index << " " << swizzleString;
-    out << "\nlayout(location=" << index << ") out " << precisionString << " "
+    out << "\n";
+
+    if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+        out << "\nlayout(location=" << index << ") out " << precisionString << " "
             << typeString << " output_" << name.c_str() << ";\n";
+    }
 
     return out;
 }
@@ -554,10 +574,11 @@ io::sstream& CodeGenerator::generateUboAsPlainUniforms(io::sstream& out, ShaderS
 
 io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, ShaderStage stage,
         uint32_t binding, const BufferInterfaceBlock& uib) const {
-    auto const& infos = uib.getFieldInfoList();
-    if (infos.empty()) {
+    if (uib.isEmptyForFeatureLevel(mFeatureLevel)) {
         return out;
     }
+
+    auto const& infos = uib.getFieldInfoList();
 
     if (mTargetLanguage == TargetLanguage::GLSL &&
             mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {

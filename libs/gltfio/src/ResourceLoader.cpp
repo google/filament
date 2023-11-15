@@ -32,6 +32,7 @@
 
 #include <geometry/Transcoder.h>
 
+#include <utils/compiler.h>
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
 #include <utils/Systrace.h>
@@ -74,15 +75,15 @@ enum class CacheResult {
 };
 
 struct ResourceLoader::Impl {
-    Impl(const ResourceConfiguration& config) :
+    explicit Impl(const ResourceConfiguration& config) :
         mEngine(config.engine),
         mNormalizeSkinningWeights(config.normalizeSkinningWeights),
         mGltfPath(config.gltfPath ? config.gltfPath : ""),
         mUriDataCache(std::make_shared<UriDataCache>()) {}
 
     Engine* const mEngine;
-    const bool mNormalizeSkinningWeights;
-    const std::string mGltfPath;
+    bool mNormalizeSkinningWeights;
+    std::string mGltfPath;
 
     // User-provided resource data with URI string keys, populated with addResourceData().
     // This is used on platforms without traditional file systems, such as Android, iOS, and WebGL.
@@ -243,7 +244,7 @@ static void decodeMeshoptCompression(cgltf_data* data) {
         void* destination = malloc(compression->count * compression->stride);
         assert_invariant(destination);
 
-        int error = 0;
+        UTILS_UNUSED_IN_RELEASE int error = 0;
         switch (compression->mode) {
             case cgltf_meshopt_compression_mode_invalid:
                 break;
@@ -318,6 +319,11 @@ ResourceLoader::ResourceLoader(const ResourceConfiguration& config) : pImpl(new 
 
 ResourceLoader::~ResourceLoader() {
     delete pImpl;
+}
+
+void ResourceLoader::setConfiguration(const ResourceConfiguration& config) {
+    pImpl->mNormalizeSkinningWeights = config.normalizeSkinningWeights;
+    pImpl->mGltfPath = config.gltfPath;
 }
 
 void ResourceLoader::addResourceData(const char* uri, BufferDescriptor&& buffer) {

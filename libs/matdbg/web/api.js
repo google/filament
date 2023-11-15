@@ -127,3 +127,19 @@ async function statusLoop(isConnected, onStatus) {
         setTimeout(() => statusLoop(isConnected, onStatus), STATUS_LOOP_TIMEOUT)
     }
 }
+
+// Use browser User-agent to guess the current backend.  This is mainly for matinfo which does
+// not have a running backend.
+function guessBackend() {
+    const AGENTS_TO_BACKEND = [
+        ['Mac OS', 'metal'],
+        ['Windows', 'opengl'],
+        ['Linux', 'vulkan'],
+    ];
+
+    const result = AGENTS_TO_BACKEND.filter((agent_backend) => {
+        return window.navigator.userAgent.search(agent_backend[0]);
+    }).map((agent_backend) => agent_backend[1]);
+
+    return result.length > 0 ? result[0] : null;
+}

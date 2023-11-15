@@ -25,6 +25,8 @@ const LANGUAGE_CHOICES = {
     'metal': ['msl'],
 };
 
+const BACKENDS = Object.keys(LANGUAGE_CHOICES);
+
 const MATERIAL_INFO_KEY_TO_STRING = {
     'model': 'shading model',
     'vertex_domain': 'vertex domain',
@@ -54,19 +56,6 @@ const BACKGROUND_COLOR = '#5362e5';
 const HOVER_BACKGROUND_COLOR = '#b3c2ff';
 const CODE_VIEWER_BOTTOM_ROW_HEIGHT = 60;
 const REGULAR_FONT_SIZE = 12;
-const MENU_HR = `
-                display: block;
-                height: 1px;
-                border: 0px;
-                border-top: 1px solid ${UNSELECTED_COLOR};
-                padding: 0;
-                width: 100%;
-                margin: 3px 0 8px 0;
-`;
-const MENU_SECTION_TITLE = `
-                font-size: 16px;
-                color: ${UNSELECTED_COLOR};
-`;
 
 // Set up the Monaco editor. See also CodeViewer
 const kMonacoBaseUrl = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.25.2/min/';
@@ -84,6 +73,14 @@ window.MonacoEnvironment = {
       )}`;
     }
 };
+
+const _validDict = (obj) => {
+    return obj && Object.keys(obj) > 0;
+}
+
+const _isMatInfoMode = (database) => {
+    return Object.keys(database).length == 1;
+}
 
 class Button extends LitElement {
     static get styles() {
@@ -222,11 +219,19 @@ class CodeViewer extends LitElement {
                 scrollBeyondLastLine: false,
                 readOnly: false,
                 minimap: { enabled: false },
-                automaticLayout: true
+                automaticLayout: true,
+
+                // Workaround see https://github.com/microsoft/monaco-editor/issues/3217
+                fontLigatures: '',
             });
             const KeyMod = monaco.KeyMod, KeyCode = monaco.KeyCode;
             this.editor.onDidChangeModelContent(this._onEdit.bind(this));
             this.editor.addCommand(KeyMod.CtrlCmd | KeyCode.KEY_S, this._rebuild.bind(this));
+
+            // It might be that the code is available before the editor has been created.
+            if (this.code && this.code.length > 0) {
+                this.editor.setValue(this.code);
+            }
         });
     }
 
@@ -242,6 +247,10 @@ class CodeViewer extends LitElement {
     }
 
     _rebuild() {
+        if (!this.active || !this.modified) {
+            console.log('Called rebuild while variant is inactive or unmodified');
+            return;
+        }
         this.dispatchEvent(new CustomEvent(
             'rebuild-shader',
             {detail: this.editor.getValue(), bubbles: true, composed: true}
@@ -250,13 +259,17 @@ class CodeViewer extends LitElement {
 
     updated(props) {
         if (props.has('code') && this.code.length > 0) {
-            this.editor.setValue(this.code);
+            // Note that the prop might have been updated before the editor is available.
+            if (this.editor) {
+                this.editor.setValue(this.code);
+            }
         }
         if ((props.has('expectedWidth') || props.has('expectedHeight')) &&
             (this.expectedWidth > 0 && (this.expectedHeight - CODE_VIEWER_BOTTOM_ROW_HEIGHT) > 0)) {
-            this._editorDiv.style.width = Math.floor(this.expectedWidth) + 'px';
-            this._editorDiv.style.height =
-                (Math.floor(this.expectedHeight) - CODE_VIEWER_BOTTOM_ROW_HEIGHT) + 'px';
+            const actualWidth = Math.floor(this.expectedWidth);
+            const actualHeight = (Math.floor(this.expectedHeight) - CODE_VIEWER_BOTTOM_ROW_HEIGHT);
+            this._editorDiv.style.width = actualWidth + 'px';
+            this._editorDiv.style.height = actualHeight + 'px';
         }
     }
 
@@ -307,12 +320,12 @@ class CodeViewer extends LitElement {
 }
 customElements.define("code-viewer", CodeViewer);
 
-class MaterialInfo extends LitElement {
+class MenuSection extends LitElement {
     static get properties() {
         return {
-            info: {type: Object, state: true},
             showing: {type: Boolean, state: true},
-        }
+            title: {type: String, attribute: 'title'},
+        };
     }
 
     static get styles() {
@@ -320,18 +333,23 @@ class MaterialInfo extends LitElement {
             :host {
                 font-size: ${unsafeCSS(REGULAR_FONT_SIZE)}px;
                 color: ${unsafeCSS(UNSELECTED_COLOR)};
-                margin-bottom: 20px;
             }
             .section-title {
-                ${unsafeCSS(MENU_SECTION_TITLE)}
+                font-size: 16px;
+                color: ${unsafeCSS(UNSELECTED_COLOR)};
                 cursor: pointer;
             }
-            hr {
-                ${unsafeCSS(MENU_HR)}
+            .container {
+                margin-bottom: 20px;
             }
-            .hide {
-                display: none;
-                flex-direction: column;
+            hr {
+                display: block;
+                height: 1px;
+                border: 0px;
+                border-top: 1px solid ${unsafeCSS(UNSELECTED_COLOR)};
+                padding: 0;
+                width: 100%;
+                margin: 3px 0 8px 0;
             }
             .expander {
                 display: flex;
@@ -342,9 +360,48 @@ class MaterialInfo extends LitElement {
         `;
     }
 
+    _showClick() {
+        this.showing = !this.showing;
+    }
+
     constructor() {
         super();
         this.showing = true;
+    }
+
+    render() {
+        const expandedIcon = this.showing ? '－' : '＋';
+        const slot = (() => html`<slot></slot>`)();
+        return html`
+            <div class="container">
+                <div class="section-title expander" @click="${this._showClick}">
+                    <span>${this.title}</span> <span>${expandedIcon}</span>
+                </div>
+                <hr />
+                ${this.showing ? slot : []}
+            </div>
+        `;
+    }
+}
+customElements.define('menu-section', MenuSection);
+
+class MaterialInfo extends LitElement {
+    static get properties() {
+        return {
+            info: {type: Object, state: true},
+        };
+    }
+
+    static get styles() {
+        return css`
+            :host {
+                font-size: ${unsafeCSS(REGULAR_FONT_SIZE)}px;
+            }
+        `;
+    }
+
+    constructor() {
+        super();
         this.info = null;
     }
 
@@ -352,12 +409,7 @@ class MaterialInfo extends LitElement {
         return this.info && Object.keys(this.info).length > 0;
     }
 
-    _showClick() {
-        this.showing = !this.showing;
-    }
-
     render() {
-        const expandedIcon = this._hasInfo() ? (this.showing ? '－' : '＋') : '';
         let infoDivs = [];
         if (this._hasInfo()) {
             if (this.info.shading && this.info.shading.material_domain === 'surface') {
@@ -383,22 +435,122 @@ class MaterialInfo extends LitElement {
                 );
             }
         }
-        let divClass = 'container';
-        if (infoDivs.length == 0) {
-            divClass += ' hide';
+        const shouldHide = infoDivs.length == 0;
+        if (infoDivs.length > 0) {
+            return html`
+                <menu-section title="Material Details">
+                    ${infoDivs}
+                </menu-section>
+            `;
         }
-        return html`
-            <div class="${divClass}">
-                <div class="section-title expander" @click="${this._showClick}">
-                    <span>Material Details</span> <span>${expandedIcon}</span>
-                </div>
-                <hr />
-                ${this.showing ? infoDivs : []}
-            </div>
-        `;
+        return html``;
     }
 }
 customElements.define('material-info', MaterialInfo);
+
+class AdvancedOptions extends LitElement {
+    static get properties() {
+        return {
+            currentBackend: {type: String, attribute: 'current-backend'},
+            availableBackends: {type: Array, state: true},
+        };
+    }
+
+    static get styles() {
+        return css`
+            :host {
+                font-size: ${unsafeCSS(REGULAR_FONT_SIZE)}px;
+            }
+            .option {
+                border: 1px solid ${unsafeCSS(UNSELECTED_COLOR)};
+                border-radius: 5px;
+                padding: 4px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: flex-start;
+            }
+            label {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                margin-right: 5px;
+            }
+            label input {
+                margin: 0 4px 0 0;
+            }
+            form {
+                display: flex;
+            }
+            .option-heading {
+                margin-bottom: 5px;
+            }
+        `;
+    }
+
+    get _backendOptionForm() {
+        return this.renderRoot.querySelector('#backend-option-form');
+    }
+
+    updated(props) {
+        if (props.has('currentBackend') || props.has('availableBackends')) {
+            // Clear the radio button selections. The correct option will be selected
+            // in _backendOption().
+            if (this._backendOptionForm) {
+                this._backendOptionForm.reset();
+            }
+        }
+    }
+
+    _backendOption() {
+        if (this.availableBackends.length == 0) {
+            return null;
+        }
+
+        const onChange = (ev) => {
+            const backend = ev.currentTarget.getAttribute('name');
+            this.dispatchEvent(
+                new CustomEvent(
+                    'option-backend',
+                    {detail: backend, bubbles: true, composed: true}));
+        }
+        const div = this.availableBackends.map((backend) => {
+            const selected = backend == this.currentBackend;
+            return html`
+                <label>
+                    <input type="radio" name="${backend}"
+                           ?checked=${selected} @change=${onChange}/>
+                    ${backend}
+                </label>
+            `;
+        });
+
+        return html`
+            <div class="option">
+                <div class="option-heading">Current Backend</div>
+                <form action="" id="backend-option-form">
+                    ${div}
+                </form>
+            </div>
+        `;
+    }
+
+    constructor() {
+        super();
+        this.availableBackends = [];
+    }
+
+    render() {
+        return html`
+            <menu-section title="Advanced Options">
+                ${this._backendOption() ?? nothing}
+            </menu-section>
+        `;
+    }
+}
+customElements.define('advanced-options', AdvancedOptions);
+
 
 class MaterialSidePanel extends LitElement {
     // Setting the style in render() has poor performance implications.  We use it simply to avoid
@@ -419,9 +571,6 @@ class MaterialSidePanel extends LitElement {
                 text-align: center;
                 margin: 0 0 10px 0;
                 font-size: 20px;
-            }
-            .material-section {
-                ${MENU_SECTION_TITLE}
             }
             .materials {
                 display: flex;
@@ -454,9 +603,6 @@ class MaterialSidePanel extends LitElement {
                 flex-direction: row;
                 display: flex;
             }
-            hr {
-                ${MENU_HR}
-            }
         `;
     }
 
@@ -478,6 +624,10 @@ class MaterialSidePanel extends LitElement {
 
     get _materialInfo() {
         return this.renderRoot.querySelector('#material-info');
+    }
+
+    get _advancedOptions() {
+        return this.renderRoot.querySelector('#advanced-options');
     }
 
     constructor() {
@@ -524,9 +674,9 @@ class MaterialSidePanel extends LitElement {
             });
         }
         if (props.has('currentMaterial')) {
-            if (this.currentBackend && this.database && this.activeShaders && this.currentMaterial) {
+            if (this.currentBackend && this.database && this.currentMaterial) {
                 const material = this.database[this.currentMaterial];
-                const activeVariants = this.activeShaders[this.currentMaterial].variants;
+                const activeVariants =  _validDict(this.activeShaders) ? this.activeShaders[this.currentMaterial].variants : [];
                 const materialShaders = material[this.currentBackend];
                 let variants = [];
                 for (const [index, shader] of materialShaders.entries()) {
@@ -542,6 +692,11 @@ class MaterialSidePanel extends LitElement {
             if (this.currentMaterial && this.database) {
                 const material = this.database[this.currentMaterial];
                 this._materialInfo.info = material;
+
+                // The matinfo usecase
+                if (_isMatInfoMode(this.database)) {
+                    this._advancedOptions.availableBackends = BACKENDS.filter((backend) => !!material[backend]);
+                }
             }
         }
     }
@@ -646,23 +801,29 @@ class MaterialSidePanel extends LitElement {
                     ${shaderDiv ?? nothing}
                 `;
             });
-            return html`
-                <div class="materials">
-                    <div class="material-section">
-                        ${title}
-                    </div>
-                    <hr />
-                    ${mats}
-                </div>
-            `;
+            if (mats.length > 0) {
+                return html`<menu-section title="${title}">${mats}</menu-section>`;
+            }
+            return null;
         };
+        let advancedOptions = null;
+        // Currently we only have one advanced option and it's only for when we're in matinfo
+        if (_isMatInfoMode(this.database)) {
+            advancedOptions =
+                (() => html`
+                    <advanced-options id="advanced-options"
+                             current-backend=${this.currentBackend}></advanced-options>
+                `)();
+        }
+
         return html`
             <style>${this.dynamicStyle()}</style>
             <div class="container">
                 <div class="title">matdbg</div>
-                ${sections("Surface", "surface")}
-                ${sections("Post-processing", "postpro")}
+                ${sections("Surface", "surface") ?? nothing}
+                ${sections("Post-processing", "postpro") ?? nothing}
                 <material-info id="material-info"></material-info>
+                ${advancedOptions ?? nothing}
             </div>
         `;
     }
@@ -790,6 +951,12 @@ class MatdbgViewer extends LitElement {
             }
         );
 
+        this.addEventListener('option-backend',
+            (ev) => {
+                this.currentBackend = ev.detail;
+            }
+        );
+
         addEventListener('resize', this._onResize.bind(this));
     }
 
@@ -871,7 +1038,7 @@ class MatdbgViewer extends LitElement {
                     material.active = material.active || shader.active;
                 }
             }
-            if (this.activeShaders) {
+            if (_validDict(this.activeShaders)) {
                 let backends = {};
                 for (let matid in this.activeShaders) {
                     const backend = this.activeShaders[matid].backend;
@@ -885,6 +1052,9 @@ class MatdbgViewer extends LitElement {
                 if (backendList.length > 0) {
                     this.currentBackend = backendList[0];
                 }
+            } else if (!this.currentBackend) {
+                // Make a guess on the backend if one wasn't from activeShaders.
+                this.currentBackend = guessBackend();
             }
 
             this._sidepanel.database = this.database;
@@ -896,6 +1066,12 @@ class MatdbgViewer extends LitElement {
                     const matInfo = await fetchMaterial(matid);
                     this.database[matInfo.matid] = matInfo;
                     this.database = this.database;
+                }
+
+                // In the `matinfo -w` usecase, we assume the current material to be the only
+                // material available in the database.
+                if (_isMatInfoMode(this.database)) {
+                    this.currentMaterial = Object.keys(this.database)[0];
                 }
             })();
         }

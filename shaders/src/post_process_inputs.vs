@@ -1,4 +1,4 @@
-LAYOUT_LOCATION(LOCATION_POSITION) in vec4 position;
+LAYOUT_LOCATION(LOCATION_POSITION) ATTRIBUTE vec4 position;
 
 struct PostProcessVertexInputs {
 

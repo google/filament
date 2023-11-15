@@ -9,7 +9,8 @@ material {
     blending : transparent,
     culling : none,
     depthCulling : false,
-    shadingModel : unlit
+    shadingModel : unlit,
+    featureLevel : 0
 }
 
 fragment {

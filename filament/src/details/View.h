@@ -145,7 +145,8 @@ public:
     void prepareLighting(FEngine& engine, ArenaScope& arena, CameraInfo const& cameraInfo) noexcept;
 
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
-    void prepareSSR(backend::Handle<backend::HwTexture> ssr, float refractionLodOffset,
+    void prepareSSR(backend::Handle<backend::HwTexture> ssr, bool disableSSR,
+            float refractionLodOffset,
             ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
@@ -194,7 +195,7 @@ public:
     void setStereoscopicOptions(StereoscopicOptions const& options);
 
     FCamera const* getDirectionalLightCamera() const noexcept {
-        return &mShadowMapManager.getShadowMap(0)->getDebugCamera();
+        return mShadowMapManager.getDirectionalLightCamera();
     }
 
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {

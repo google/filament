@@ -104,11 +104,11 @@ Froxelizer::Froxelizer(FEngine& engine)
     static_assert(std::is_same_v<RecordBufferType, uint8_t>,
             "Record Buffer must use bytes");
 
-    if (UTILS_UNLIKELY(engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)) {
+    DriverApi& driverApi = engine.getDriverApi();
+
+    if (UTILS_UNLIKELY(driverApi.getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)) {
         return;
     }
-
-    DriverApi& driverApi = engine.getDriverApi();
 
     mFroxelBufferEntryCount = std::min(
             FROXEL_BUFFER_MAX_ENTRY_COUNT,

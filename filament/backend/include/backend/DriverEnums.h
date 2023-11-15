@@ -154,6 +154,19 @@ enum class ShaderLanguage {
     MSL = 3,
 };
 
+static constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguage) {
+    switch (shaderLanguage) {
+        case ShaderLanguage::ESSL1:
+            return "ESSL 1.0";
+        case ShaderLanguage::ESSL3:
+            return "ESSL 3.0";
+        case ShaderLanguage::SPIRV:
+            return "SPIR-V";
+        case ShaderLanguage::MSL:
+            return "MSL";
+    }
+}
+
 /**
  * Bitmask for selecting render buffers
  */
