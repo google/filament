@@ -23,6 +23,7 @@
 #include <spirv_glsl.hpp>
 #include <spirv_msl.hpp>
 
+#include "backend/DriverEnums.h"
 #include "sca/builtinResource.h"
 #include "sca/GLSLTools.h"
 
@@ -395,7 +396,11 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
             break;
         case MaterialBuilder::Optimization::SIZE:
         case MaterialBuilder::Optimization::PERFORMANCE:
-            fullOptimization(tShader, config, internalConfig);
+            if (config.featureLevel == filament::backend::FeatureLevel::FEATURE_LEVEL_0) {
+                preprocessOptimization(tShader, config, internalConfig);
+            } else {
+                fullOptimization(tShader, config, internalConfig);
+            }
             break;
     }
 
