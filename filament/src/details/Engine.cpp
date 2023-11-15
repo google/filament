@@ -244,6 +244,10 @@ void FEngine::init() {
 
     mActiveFeatureLevel = std::min(mActiveFeatureLevel, driverApi.getFeatureLevel());
 
+#ifndef FILAMENT_ENABLE_FEATURE_LEVEL_0
+    assert_invariant(mActiveFeatureLevel > FeatureLevel::FEATURE_LEVEL_0);
+#endif
+
     slog.i << "Backend feature level: " << int(driverApi.getFeatureLevel()) << io::endl;
     slog.i << "FEngine feature level: " << int(mActiveFeatureLevel) << io::endl;
 
@@ -328,12 +332,15 @@ void FEngine::init() {
     driverApi.update3DImage(mDummyZeroTexture, 0, 0, 0, 0, 1, 1, 1,
             { zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
 
+#ifdef FILAMENT_ENABLE_FEATURE_LEVEL_0
     if (UTILS_UNLIKELY(mActiveFeatureLevel == FeatureLevel::FEATURE_LEVEL_0)) {
         FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
         defaultMaterialBuilder.package(
                 MATERIALS_DEFAULTMATERIAL0_DATA, MATERIALS_DEFAULTMATERIAL0_SIZE);
         mDefaultMaterial = downcast(defaultMaterialBuilder.build(*const_cast<FEngine*>(this)));
-    } else {
+    } else
+#endif
+    {
         mDefaultColorGrading = downcast(ColorGrading::Builder().build(*this));
 
         FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;

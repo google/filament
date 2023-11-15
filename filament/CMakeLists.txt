@@ -218,7 +218,6 @@ set(MATERIAL_SRCS
         src/materials/colorGrading/customResolveAsSubpass.mat
         src/materials/debugShadowCascades.mat
         src/materials/defaultMaterial.mat
-        src/materials/defaultMaterial0.mat
         src/materials/dof/dof.mat
         src/materials/dof/dofCoc.mat
         src/materials/dof/dofDownsample.mat
@@ -229,7 +228,6 @@ set(MATERIAL_SRCS
         src/materials/dof/dofMipmap.mat
         src/materials/dof/dofMedian.mat
         src/materials/flare/flare.mat
-        src/materials/blitLow.mat
         src/materials/bloom/bloomDownsample.mat
         src/materials/bloom/bloomDownsample2x.mat
         src/materials/bloom/bloomDownsample9.mat
@@ -238,13 +236,24 @@ set(MATERIAL_SRCS
         src/materials/ssao/bilateralBlurBentNormals.mat
         src/materials/ssao/mipmapDepth.mat
         src/materials/skybox.mat
-        src/materials/skybox0.mat
         src/materials/ssao/sao.mat
         src/materials/ssao/saoBentNormals.mat
         src/materials/separableGaussianBlur.mat
         src/materials/antiAliasing/fxaa.mat
         src/materials/antiAliasing/taa.mat
         src/materials/vsmMipmap.mat
+)
+
+set(MATERIAL_FL0_SRCS
+        src/materials/defaultMaterial0.mat
+        src/materials/skybox0.mat
+)
+
+# TODO(exv): Replace the below duplicated materials with a command-line option
+# to matc to force disable including ESSL 1.0 code in FL0 materials.
+
+set(MATERIAL_SWITCH_FL0_SRCS_HACK
+        src/materials/blitLow.mat
 )
 
 # Embed the binary resource blob for materials.
@@ -270,6 +279,11 @@ if (NOT DFG_LUT_SIZE)
     endif()
 endif()
 message(STATUS "DFG LUT size set to ${DFG_LUT_SIZE}x${DFG_LUT_SIZE}")
+
+# Whether to include FL0 materials.
+if (FILAMENT_ENABLE_FEATURE_LEVEL_0)
+    add_definitions(-DFILAMENT_ENABLE_FEATURE_LEVEL_0)
+endif()
 
 # ==================================================================================================
 # Definitions
@@ -311,6 +325,47 @@ foreach (mat_src ${MATERIAL_SRCS})
     )
     list(APPEND MATERIAL_BINS ${output_path})
 endforeach()
+
+
+# HACK: Pick between the normal and FL0-exclusionary variants of the materials
+# based on the value of FILAMENT_ENABLE_FEATURE_LEVEL_0.
+foreach (mat_src ${MATERIAL_SWITCH_FL0_SRCS_HACK})
+    get_filename_component(localname "${mat_src}" NAME_WE)
+    get_filename_component(fullname "${mat_src}" ABSOLUTE)
+    set(output_path "${MATERIAL_DIR}/${localname}.filamat")
+
+    if (NOT FILAMENT_ENABLE_FATURE_LEVEL_0)
+        # Pick the non-FL0 variant instead.
+        string(REGEX REPLACE "\\.mat$" "1.mat" fullname "${fullname}")
+        string(REGEX REPLACE "\\.mat$" "1.mat" mat_src "${mat_src}")
+    endif()
+
+    add_custom_command(
+            OUTPUT ${output_path}
+            COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}
+            MAIN_DEPENDENCY ${fullname}
+            DEPENDS matc
+            COMMENT "Compiling material ${mat_src} to ${output_path}"
+    )
+    list(APPEND MATERIAL_BINS ${output_path})
+endforeach()
+
+if (FILAMENT_ENABLE_FEATURE_LEVEL_0 AND FILAMENT_SUPPORTS_OPENGL)
+    foreach (mat_src ${MATERIAL_FL0_SRCS})
+        get_filename_component(localname "${mat_src}" NAME_WE)
+        get_filename_component(fullname "${mat_src}" ABSOLUTE)
+        set(output_path "${MATERIAL_DIR}/${localname}.filamat")
+
+        add_custom_command(
+                OUTPUT ${output_path}
+                COMMAND matc -a opengl -p ${MATC_TARGET} ${MATC_OPT_FLAGS} -o ${output_path} ${fullname}
+                MAIN_DEPENDENCY ${fullname}
+                DEPENDS matc
+                COMMENT "Compiling material ${mat_src} to ${output_path}"
+        )
+        list(APPEND MATERIAL_BINS ${output_path})
+    endforeach ()
+endif ()
 
 # Additional dependencies on included files for materials
 

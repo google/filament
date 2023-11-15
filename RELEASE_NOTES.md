@@ -18,6 +18,8 @@ Instead, if you are authoring a PR for the main branch, add your release note to
 - engine: Add missing `Material::getReflectionMode()` method in Java
 - engine: Support basic usage of post-processing materials on feature level 0
 - engine: Fix critical GLES 2.0 bugs
+- engine: Add `FILAMENT_ENABLE_FEATURE_LEVEL_0` build-time option optionally allow building Filament
+  without FL0 support.
 
 ## v1.45.1
 
