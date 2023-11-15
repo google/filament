@@ -139,8 +139,9 @@ void MaterialBuilderBase::prepare(bool vulkanSemantics,
                 glTargetLanguage,
                 effectiveFeatureLevel,
             });
-            if (featureLevel == filament::backend::FeatureLevel::FEATURE_LEVEL_0
-                && shaderModel == ShaderModel::MOBILE) {
+            if (mIncludeEssl1
+                    && featureLevel == filament::backend::FeatureLevel::FEATURE_LEVEL_0
+                    && shaderModel == ShaderModel::MOBILE) {
                 // ESSL1 code may never be compiled to SPIR-V.
                 mCodeGenPermutations.push_back({
                     shaderModel,
@@ -1562,6 +1563,11 @@ void MaterialBuilder::writeSurfaceChunks(ChunkContainer& container) const noexce
 
 MaterialBuilder& MaterialBuilder::noSamplerValidation(bool enabled) noexcept {
     mNoSamplerValidation = enabled;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::includeEssl1(bool enabled) noexcept {
+    mIncludeEssl1 = enabled;
     return *this;
 }
 

@@ -119,6 +119,10 @@ public:
         return mNoSamplerValidation;
     }
 
+    bool includeEssl1() const noexcept {
+        return mIncludeEssl1;
+    }
+
     filament::UserVariantFilterMask getVariantFilter() const noexcept {
         return mVariantFilter;
     }
@@ -150,6 +154,7 @@ protected:
     StringReplacementMap mDefines;
     StringReplacementMap mTemplateMap;
     filament::UserVariantFilterMask mVariantFilter = 0;
+    bool mIncludeEssl1 = true;
 };
 
 }

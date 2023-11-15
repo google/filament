@@ -525,6 +525,11 @@ if (FILAMENT_SUPPORTS_METAL)
     set(MATC_API_FLAGS ${MATC_API_FLAGS} -a metal)
 endif()
 
+# Disable ESSL 1.0 code generation.
+if (NOT FILAMENT_ENABLE_FEATURE_LEVEL_0)
+  set(MATC_API_FLAGS ${MATC_API_FLAGS} -1)
+endif()
+
 # Enable debug info (preserves names in SPIR-V)
 if (FILAMENT_ENABLE_MATDBG)
     set(MATC_OPT_FLAGS ${MATC_OPT_FLAGS} -d)
