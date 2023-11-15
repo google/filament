@@ -62,6 +62,9 @@ static void usage(char* name) {
             "           MATC --api opengl --api metal ...\n\n"
             "   --feature-level, -l\n"
             "       Specify the maximum feature level allowed (default is 3).\n\n"
+            "   --no-essl1, -1\n"
+            "       Don't generate ESSL 1.0 code even for Feature Level 0 mobile shaders.\n"
+            "       Shaders are still validated against ESSL 1.0.\n\n"
             "   --define, -D\n"
             "       Add a preprocessor define macro via <macro>=<value>. <value> defaults to 1 if omitted.\n"
             "       Can be repeated to specify multiple definitions:\n"
@@ -171,7 +174,7 @@ static void parseDefine(std::string defineString, Config::StringReplacementMap& 
 }
 
 bool CommandlineConfig::parse() {
-    static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:OSEr:vV:gtwF";
+    static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:OSEr:vV:gtwF1";
     static const struct option OPTIONS[] = {
             { "help",                    no_argument, nullptr, 'h' },
             { "license",                 no_argument, nullptr, 'L' },
@@ -187,6 +190,7 @@ bool CommandlineConfig::parse() {
             { "preprocessor-only",       no_argument, nullptr, 'E' },
             { "api",               required_argument, nullptr, 'a' },
             { "feature-level",     required_argument, nullptr, 'l' },
+            { "no-essl1",                no_argument, nullptr, '1' },
             { "define",            required_argument, nullptr, 'D' },
             { "template",          required_argument, nullptr, 'T' },
             { "reflect",           required_argument, nullptr, 'r' },
@@ -270,6 +274,9 @@ bool CommandlineConfig::parse() {
                 }
                 break;
             }
+            case '1':
+                mIncludeEssl1 = false;
+                break;
             case 'D':
                 parseDefine(arg, mDefines);
                 break;
