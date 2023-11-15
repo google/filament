@@ -135,6 +135,7 @@ protected:
     Optimization mOptimization = Optimization::PERFORMANCE;
     bool mPrintShaders = false;
     bool mGenerateDebugInfo = false;
+    bool mIncludeEssl1 = true;
     utils::bitset32 mShaderModels;
     struct CodeGenParams {
         ShaderModel shaderModel;
@@ -270,6 +271,9 @@ public:
 
 
     MaterialBuilder& noSamplerValidation(bool enabled) noexcept;
+
+    //! Enable generation of ESSL 1.0 code in FL0 materials.
+    MaterialBuilder& includeEssl1(bool enabled) noexcept;
 
     //! Set the name of this material.
     MaterialBuilder& name(const char* name) noexcept;
