@@ -11,3 +11,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - engine: Support up to 4 side-by-side stereoscopic eyes, configurable at Engine creation time. See
   `Engine::Config::stereoscopicEyeCount`. [⚠️ **Recompile Materials**]
 - engine: Fix critical GLES 2.0 bugs
+- engine: Add `FILAMENT_ENABLE_FEATURE_LEVEL_0` build-time option optionally allow building Filament
+  without FL0 support.
