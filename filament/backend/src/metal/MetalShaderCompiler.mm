@@ -170,9 +170,6 @@ MetalShaderCompiler::program_token_t MetalShaderCompiler::createProgram(
     CompilerPriorityQueue const priorityQueue = program.getPriorityQueue();
     mCompilerThreadPool.queue(priorityQueue, token,
             [this, name, device = mDevice, program = std::move(program), token]() {
-                int sleepTime = atoi(name.c_str());
-                sleep(sleepTime);
-
                 MetalFunctionBundle compiledProgram = compileProgram(program, device);
 
                 token->set(compiledProgram);
