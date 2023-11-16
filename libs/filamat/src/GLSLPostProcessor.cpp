@@ -397,6 +397,8 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
         case MaterialBuilder::Optimization::SIZE:
         case MaterialBuilder::Optimization::PERFORMANCE:
             if (config.featureLevel == filament::backend::FeatureLevel::FEATURE_LEVEL_0) {
+                // Full optimization blocked by upstream issue:
+                // https://github.com/KhronosGroup/SPIRV-Cross/issues/2223
                 preprocessOptimization(tShader, config, internalConfig);
             } else {
                 fullOptimization(tShader, config, internalConfig);
