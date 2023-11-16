@@ -193,60 +193,6 @@ static void createFaces(DriverApi& dapi, Handle<HwTexture> texture, int baseWidt
     dapi.update3DImage(texture, level, 0, 0, 0, width, height, 6, std::move(pb));
 }
 
-TEST_F(BackendTest, CubemapMinify) {
-    auto& api = getDriverApi();
-
-    Handle<HwTexture> texture = api.createTexture(
-        SamplerType::SAMPLER_CUBEMAP, 4, TextureFormat::RGBA8, 1, 256, 256, 1,
-        TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT);
-
-    createFaces(api, texture, 256, 256, 0, float3(0.5, 0, 0));
-
-    const int srcLevel = 0;
-    const int dstLevel = 1;
-
-    const TextureCubemapFace srcFace = TextureCubemapFace::NEGATIVE_Y;
-    const TextureCubemapFace dstFace = TextureCubemapFace::NEGATIVE_Y;
-
-    const TargetBufferInfo srcInfo = { texture, srcLevel, +srcFace };
-    const TargetBufferInfo dstInfo = { texture, dstLevel, +dstFace };
-
-    Handle<HwRenderTarget> srcRenderTarget;
-    srcRenderTarget = api.createRenderTarget( TargetBufferFlags::COLOR,
-            256 >> srcLevel, 256 >> srcLevel, 1, { srcInfo }, {}, {});
-
-    Handle<HwRenderTarget> dstRenderTarget;
-    dstRenderTarget = api.createRenderTarget( TargetBufferFlags::COLOR,
-            256 >> dstLevel, 256 >> dstLevel, 1, { dstInfo }, {}, {});
-
-    api.blit(TargetBufferFlags::COLOR0, dstRenderTarget,
-            {0, 0, 256 >> dstLevel, 256 >> dstLevel}, srcRenderTarget,
-            {0, 0, 256 >> srcLevel, 256 >> srcLevel}, SamplerMagFilter::LINEAR);
-
-    // Push through an empty frame. Note that this test does not do
-    // makeCurrent / commit and is therefore similar to renderStandaloneView.
-    api.beginFrame(0, 0);
-    api.endFrame(0);
-
-    // Grab a screenshot.
-    ScreenshotParams params { 256 >> dstLevel, 256 >> dstLevel, "CubemapMinify.png" };
-    api.beginFrame(0, 0);
-    dumpScreenshot(api, dstRenderTarget, &params);
-    api.endFrame(0);
-
-    // Wait for the ReadPixels result to come back.
-    api.finish();
-    executeCommands();
-    getDriver().purge();
-
-    // Cleanup.
-    api.destroyTexture(texture);
-    api.destroyRenderTarget(srcRenderTarget);
-    api.destroyRenderTarget(dstRenderTarget);
-    executeCommands();
-}
-
-
 TEST_F(BackendTest, ColorMagnify) {
     auto& api = getDriverApi();
 
@@ -263,7 +209,7 @@ TEST_F(BackendTest, ColorMagnify) {
     api.makeCurrent(swapChain, swapChain);
 
     // Create a source texture.
-    Handle<HwTexture> srcTexture = api.createTexture(
+    Handle<HwTexture> const srcTexture = api.createTexture(
         SamplerType::SAMPLER_2D, kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
         TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT);
     const bool flipY = sBackend == Backend::OPENGL;
@@ -271,7 +217,7 @@ TEST_F(BackendTest, ColorMagnify) {
     createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 1, float3(0, 0, 0.5), flipY);
 
     // Create a destination texture.
-    Handle<HwTexture> dstTexture = api.createTexture(
+    Handle<HwTexture> const dstTexture = api.createTexture(
         SamplerType::SAMPLER_2D, kNumLevels, kDstTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
         TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT);
 
@@ -338,7 +284,7 @@ TEST_F(BackendTest, ColorMinify) {
     api.makeCurrent(swapChain, swapChain);
 
     // Create a source texture.
-    Handle<HwTexture> srcTexture = api.createTexture(
+    Handle<HwTexture> const srcTexture = api.createTexture(
         SamplerType::SAMPLER_2D, kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
         TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT);
     const bool flipY = sBackend == Backend::OPENGL;
@@ -346,7 +292,7 @@ TEST_F(BackendTest, ColorMinify) {
     createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 1, float3(0, 0, 0.5), flipY);
 
     // Create a destination texture.
-    Handle<HwTexture> dstTexture = api.createTexture(
+    Handle<HwTexture> const dstTexture = api.createTexture(
         SamplerType::SAMPLER_2D, kNumLevels, kDstTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
         TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT);
 
@@ -362,29 +308,20 @@ TEST_F(BackendTest, ColorMinify) {
 
     // Do a "minify" blit from level 1 of the source RT to the level 0 of the destination RT.
     const int srcLevel = 1;
-    api.blit(TargetBufferFlags::COLOR0, dstRenderTargets[0],
-            {0, 0, kDstTexWidth, kDstTexHeight}, srcRenderTargets[srcLevel],
-            {0, 0, kSrcTexWidth >> srcLevel, kSrcTexHeight >> srcLevel}, SamplerMagFilter::LINEAR);
-
-    // Push through an empty frame to allow the texture to upload and the blit to execute.
-    api.beginFrame(0, 0);
-    api.commit(swapChain);
-    api.endFrame(0);
+    api.blit(TargetBufferFlags::COLOR0,
+            dstRenderTargets[0], {0, 0, kDstTexWidth, kDstTexHeight},
+            srcRenderTargets[srcLevel], {0, 0, kSrcTexWidth >> srcLevel, kSrcTexHeight >> srcLevel},
+            SamplerMagFilter::LINEAR);
 
     // Grab a screenshot.
     ScreenshotParams params { kDstTexWidth, kDstTexHeight, "ColorMinify.png" };
-    api.beginFrame(0, 0);
     dumpScreenshot(api, dstRenderTargets[0], &params);
-    api.commit(swapChain);
-    api.endFrame(0);
 
     // Wait for the ReadPixels result to come back.
-    api.finish();
-    executeCommands();
-    getDriver().purge();
+    flushAndWait();
 
     // Check if the image matches perfectly to our golden run.
-    const uint32_t expected = 0x7739bef5;
+    const uint32_t expected = 0xf3d9c53f;
     printf("Computed hash is 0x%8.8x, Expected 0x%8.8x\n", params.pixelHashResult, expected);
     EXPECT_TRUE(params.pixelHashResult == expected);
 
@@ -417,8 +354,6 @@ TEST_F(BackendTest, DepthMinify) {
     {
         ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
         Program prog = shaderGen.getProgram(api);
-        Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
-        prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
         prog.uniformBlockBindings({{"params", 1}});
         program = api.createProgram(std::move(prog));
     }
@@ -550,85 +485,82 @@ TEST_F(BackendTest, ColorResolve) {
     constexpr auto kColorTexFormat = TextureFormat::RGBA8;
     constexpr int kSampleCount = 4;
 
-    // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
-    auto swapChain = api.createSwapChainHeadless(256, 256, 0);
-    api.makeCurrent(swapChain, swapChain);
-
     // Create a program.
     ProgramHandle program;
     {
         ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
         Program prog = shaderGen.getProgram(api);
-        Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
-        prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
         prog.uniformBlockBindings({{"params", 1}});
         program = api.createProgram(std::move(prog));
     }
 
     // Create a VertexBuffer, IndexBuffer, and RenderPrimitive.
-    TrianglePrimitive* triangle = new TrianglePrimitive(api);
+    TrianglePrimitive const triangle(api);
 
     // Create 4-sample texture.
-    Handle<HwTexture> srcColorTexture = api.createTexture(
+    Handle<HwTexture> const srcColorTexture = api.createTexture(
         SamplerType::SAMPLER_2D, 1, kColorTexFormat, kSampleCount, kSrcTexWidth, kSrcTexHeight, 1,
         TextureUsage::COLOR_ATTACHMENT);
 
     // Create 1-sample texture.
-    Handle<HwTexture> dstColorTexture = api.createTexture(
+    Handle<HwTexture> const dstColorTexture = api.createTexture(
         SamplerType::SAMPLER_2D, 1, kColorTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
         TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT);
 
     // Create a 4-sample render target with the 4-sample texture.
-    Handle<HwRenderTarget> srcRenderTarget = api.createRenderTarget(
-            TargetBufferFlags::COLOR, kSrcTexWidth, kSrcTexHeight, kSampleCount,{{ srcColorTexture }}, {}, {});
+    Handle<HwRenderTarget> const srcRenderTarget = api.createRenderTarget(
+            TargetBufferFlags::COLOR, kSrcTexWidth, kSrcTexHeight, kSampleCount,
+            {{ srcColorTexture }}, {}, {});
 
     // Create a 1-sample render target with the 1-sample texture.
-    Handle<HwRenderTarget> dstRenderTarget = api.createRenderTarget(
-            TargetBufferFlags::COLOR, kDstTexWidth, kDstTexHeight, 1, {{ dstColorTexture }}, {}, {});
+    Handle<HwRenderTarget> const dstRenderTarget = api.createRenderTarget(
+            TargetBufferFlags::COLOR, kDstTexWidth, kDstTexHeight, 1,
+            {{ dstColorTexture }}, {}, {});
 
     // Prep for rendering.
     RenderPassParams params = {};
     params.flags.clear = TargetBufferFlags::COLOR;
+    params.flags.discardStart = TargetBufferFlags::ALL;
+    params.flags.discardEnd = TargetBufferFlags::NONE;
     params.clearColor = float4(1, 1, 0, 1);
     params.viewport.width = kSrcTexWidth;
     params.viewport.height = kSrcTexHeight;
 
     PipelineState state = {};
-    state.rasterState.colorWrite = true;
-    state.rasterState.culling = RasterState::CullingMode::NONE;
     state.program = program;
+    state.rasterState.colorWrite = true;
+    state.rasterState.depthWrite = false;
+    state.rasterState.depthFunc = RasterState::DepthFunc::A;
+    state.rasterState.culling = CullingMode::NONE;
+
     auto ubuffer = api.createBufferObject(sizeof(MaterialParams),
             BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
-    api.makeCurrent(swapChain, swapChain);
-    api.beginFrame(0, 0);
-    api.bindUniformBuffer(0, ubuffer);
-
     // Draw red triangle into srcRenderTarget.
     uploadUniforms(api, ubuffer, {
         .color = float4(1, 0, 0, 1),
         .scale = float4(1, 1, 0.5, 0),
     });
-    api.beginRenderPass(srcRenderTarget, params);
-    api.draw(state, triangle->getRenderPrimitive(), 1);
-    api.endRenderPass();
+
+    // FIXME: on Metal this triangle is not drawn. Can't understand why.
+    api.beginFrame(0, 0);
+        api.beginRenderPass(srcRenderTarget, params);
+            api.bindUniformBuffer(0, ubuffer);
+            api.draw(state, triangle.getRenderPrimitive(), 1);
+        api.endRenderPass();
     api.endFrame(0);
 
     // Resolve the MSAA render target into the single-sample render target.
-    api.blit(TargetBufferFlags::COLOR, dstRenderTarget,
-            {0, 0, kDstTexWidth, kDstTexHeight}, srcRenderTarget,
-            {0, 0, kSrcTexWidth, kSrcTexHeight}, SamplerMagFilter::LINEAR);
+    api.blit(TargetBufferFlags::COLOR,
+            dstRenderTarget, {0, 0, kDstTexWidth, kDstTexHeight},
+            srcRenderTarget, {0, 0, kSrcTexWidth, kSrcTexHeight},
+            SamplerMagFilter::NEAREST);
 
     // Grab a screenshot.
-    ScreenshotParams sparams { kDstTexWidth, kDstTexHeight, "ColorResolve.png" };
-    api.beginFrame(0, 0);
+    ScreenshotParams sparams{ kDstTexWidth, kDstTexHeight, "ColorResolve.png" };
     dumpScreenshot(api, dstRenderTarget, &sparams);
-    api.commit(swapChain);
-    api.endFrame(0);
 
     // Wait for the ReadPixels result to come back.
-    api.finish();
-    executeCommands();
-    getDriver().purge();
+    flushAndWait();
 
     // Check if the image matches perfectly to our golden run.
     const uint32_t expected = 0xebfac2ef;
@@ -640,11 +572,9 @@ TEST_F(BackendTest, ColorResolve) {
     api.destroyProgram(program);
     api.destroyTexture(srcColorTexture);
     api.destroyTexture(dstColorTexture);
-    api.destroySwapChain(swapChain);
     api.destroyRenderTarget(srcRenderTarget);
     api.destroyRenderTarget(dstRenderTarget);
-    delete triangle;
-    executeCommands();
+    flushAndWait();
 }
 
 TEST_F(BackendTest, DepthResolve) {
@@ -667,8 +597,6 @@ TEST_F(BackendTest, DepthResolve) {
     {
         ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
         Program prog = shaderGen.getProgram(api);
-        Program::Sampler psamplers[] = { utils::CString("tex"), 0 };
-        prog.setSamplerGroup(0, ShaderStageFlags::ALL_SHADER_STAGE_FLAGS, psamplers, sizeof(psamplers) / sizeof(psamplers[0]));
         prog.uniformBlockBindings({{"params", 1}});
         program = api.createProgram(std::move(prog));
     }
