@@ -1969,6 +1969,13 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
     GLSwapChain* scRead = handle_cast<GLSwapChain*>(schRead);
     mPlatform.makeCurrent(scDraw->swapChain, scRead->swapChain);
     mCurrentDrawSwapChain = scDraw;
+
+    // From the GL spec for glViewport and glScissor:
+    // When a GL context is first attached to a window, width and height are set to the
+    // dimensions of that window.
+    // So basically, our viewport/scissor can be reset to "something" here.
+    mContext.state.window.viewport = {};
+    mContext.state.window.scissor = {};
 }
 
 // ------------------------------------------------------------------------------------------------
