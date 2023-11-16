@@ -86,9 +86,9 @@ void BackendTest::executeCommands() {
 }
 
 void BackendTest::flushAndWait() {
-    auto& api = getDriverApi();
-    api.finish();
+    getDriverApi().finish();
     executeCommands();
+    getDriver().purge();
 }
 
 Handle<HwSwapChain> BackendTest::createSwapChain() {
