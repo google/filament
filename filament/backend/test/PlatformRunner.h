@@ -22,6 +22,9 @@
 
 namespace test {
 
+constexpr uint32_t const WINDOW_WIDTH = 512;
+constexpr uint32_t const WINDOW_HEIGHT = 512;
+
 // To avoid a dependency on filabridge, the Backend enum is replicated here.
 enum class Backend : uint8_t {
     OPENGL = 1,

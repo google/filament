@@ -112,6 +112,7 @@ static void dumpScreenshot(DriverApi& dapi, Handle<HwRenderTarget> rt) {
         std::ofstream pngstrm("feedback.png", std::ios::binary | std::ios::trunc);
         ImageEncoder::encode(pngstrm, ImageEncoder::Format::PNG, image, "", "feedback.png");
         #endif
+        free(buffer);
     };
     PixelBufferDescriptor pb(buffer, size, PixelDataFormat::RGBA, PixelDataType::UBYTE, cb);
     dapi.readPixels(rt, 0, 0, kTexWidth, kTexHeight, std::move(pb));

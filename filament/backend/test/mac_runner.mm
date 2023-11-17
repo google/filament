@@ -58,7 +58,7 @@ test::NativeView getNativeView() {
 }
 
 - (NSView*)createView {
-    NSRect frame = NSMakeRect(0, 0, 512, 512);
+    NSRect frame = NSMakeRect(0, 0, test::WINDOW_WIDTH, test::WINDOW_HEIGHT);
     NSWindow* window  = [[NSWindow alloc] initWithContentRect:frame
                                                      styleMask:NSWindowStyleMaskBorderless
                                                        backing:NSBackingStoreBuffered
