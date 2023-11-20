@@ -66,6 +66,8 @@ protected:
     filament::backend::DriverApi& getDriverApi() { return *commandStream; }
     filament::backend::Driver& getDriver() { return *driver; }
 
+    std::string transformShaderText(std::string const& shader) const;
+
 private:
 
     filament::backend::Driver* driver = nullptr;

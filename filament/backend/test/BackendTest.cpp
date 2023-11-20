@@ -18,11 +18,16 @@
 
 #include <private/backend/PlatformFactory.h>
 
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+#include <backend/platforms/VulkanPlatform.h>
+#endif
+
 #include "BackendTest.h"
 
 #include <utils/Hash.h>
 
 #include <fstream>
+#include <string>
 
 #include "ShaderGenerator.h"
 #include "TrianglePrimitive.h"
@@ -33,12 +38,36 @@ static constexpr size_t CONFIG_COMMAND_BUFFERS_SIZE     = 3 * CONFIG_MIN_COMMAND
 using namespace filament;
 using namespace filament::backend;
 
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+namespace filament {
+class InternalVulkanPlatform : public VulkanPlatform {
+public:
+    InternalVulkanPlatform() {
+        mCustomization = {
+            .gpu = { .index = 0 },
+        };
+    }
+
+    virtual VulkanPlatform::Customization getCustomization() const noexcept override {
+        return mCustomization;
+    }
+private:
+    VulkanPlatform::Customization mCustomization;
+};
+}
+#endif
+
 #ifndef IOS
 #include <imageio/ImageEncoder.h>
 #include <image/ColorTransform.h>
 
 using namespace image;
 #endif
+
+namespace {
+std::string const SHADER_VULKAN_TAG = "// select(vulkan) ";
+std::string const SHADER_METAL_TAG = "// select(metal) ";
+}
 
 namespace test {
 
@@ -67,7 +96,14 @@ BackendTest::~BackendTest() {
 
 void BackendTest::initializeDriver() {
     auto backend = static_cast<filament::backend::Backend>(sBackend);
-    Platform* platform = PlatformFactory::create(&backend);
+
+    Platform* platform = nullptr;
+    if (backend == filament::backend::Backend::VULKAN) {
+        platform = new InternalVulkanPlatform();
+    } else {
+        platform = PlatformFactory::create(&backend);        
+    }
+
     assert_invariant(static_cast<uint8_t>(backend) == static_cast<uint8_t>(sBackend));
     Platform::DriverConfig const driverConfig;
     driver = platform->createDriver(nullptr, driverConfig);
@@ -191,6 +227,32 @@ void BackendTest::readPixelsAndAssertHash(const char* testName, size_t width, si
                 free(c);
             }, (void*)c);
     getDriverApi().readPixels(rt, 0, 0, width, height, std::move(pbd));
+}
+
+std::string BackendTest::transformShaderText(std::string const& shader) const {
+    std::string replacement;
+    switch (sBackend) {
+        case test::Backend::VULKAN:
+            replacement = SHADER_VULKAN_TAG;
+            break;
+        case test::Backend::METAL:
+            replacement = SHADER_METAL_TAG;
+            break;
+        default:
+            break;
+    }
+    if (replacement.size() == 0) {
+        return shader;
+    }
+    std::string replaced = shader;
+    while (true) {
+        size_t pos = replaced.find(replacement);
+        if (pos == std::string::npos) {
+            break;
+        }
+        replaced.replace(pos, replacement.length(), "");
+    }
+    return replaced;
 }
 
 class Environment : public ::testing::Environment {
