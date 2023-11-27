@@ -151,6 +151,36 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
         out << "#define FILAMENT_HAS_FEATURE_INSTANCING\n";
     }
 
+    // During compilation and optimization, __VERSION__ reflects the shader language version of the
+    // intermediate code, not the version of the final code. spirv-cross automatically adapts
+    // certain language features (e.g. fragment output) but leaves others untouched (e.g. sampler
+    // functions, bit shift operations). Client code may have to make decisions based on this
+    // information, so define a FILAMENT_EFFECTIVE_VERSION constant.
+    const char *effective_version;
+    if (mTargetLanguage == TargetLanguage::GLSL) {
+        effective_version = "__VERSION__";
+    } else {
+        switch (mShaderModel) {
+            case ShaderModel::MOBILE:
+                if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+                    effective_version = "300";
+                } else {
+                    effective_version = "100";
+                }
+                break;
+            case ShaderModel::DESKTOP:
+                if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
+                    effective_version = "450";
+                } else {
+                    effective_version = "410";
+                }
+                break;
+            default:
+                assert(false);
+        }
+    }
+    generateDefine(out, "FILAMENT_EFFECTIVE_VERSION", effective_version);
+
     if (stage == ShaderStage::VERTEX) {
         CodeGenerator::generateDefine(out, "FLIP_UV_ATTRIBUTE", material.flipUV);
         CodeGenerator::generateDefine(out, "LEGACY_MORPHING", material.useLegacyMorphing);
@@ -253,10 +283,13 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     generateSpecializationConstant(out, "CONFIG_POWER_VR_SHADER_WORKAROUNDS",
             +ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS, false);
 
-    // CONFIG_STEREOSCOPIC_EYES is used to size arrays and on Adreno GPUs + vulkan, this has to
+    generateSpecializationConstant(out, "CONFIG_STEREO_EYE_COUNT",
+            +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT, 2);
+
+    // CONFIG_MAX_STEREOSCOPIC_EYES is used to size arrays and on Adreno GPUs + vulkan, this has to
     // be explicitly, statically defined (as in #define). Otherwise (using const int for
     // example), we'd run into a GPU crash.
-    out << "#define CONFIG_STEREOSCOPIC_EYES " << (int) CONFIG_STEREOSCOPIC_EYES << "\n";
+    out << "#define CONFIG_MAX_STEREOSCOPIC_EYES " << (int) CONFIG_MAX_STEREOSCOPIC_EYES << "\n";
 
     if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
         // On ES2 since we don't have post-processing, we need to emulate EGL_GL_COLORSPACE_KHR,
@@ -268,8 +301,9 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     out << '\n';
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;
 
-    if (mFeatureLevel > FeatureLevel::FEATURE_LEVEL_0 &&
-            material.featureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+    if (material.featureLevel == FeatureLevel::FEATURE_LEVEL_0 &&
+            (mFeatureLevel > FeatureLevel::FEATURE_LEVEL_0
+                    || mTargetLanguage == TargetLanguage::SPIRV)) {
         // Insert compatibility definitions for ESSL 1.0 functions which were removed in ESSL 3.0.
 
         // This is the minimum required value according to the OpenGL ES Shading Language Version
@@ -457,11 +491,14 @@ io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage type,
     const char* materialTypeString = getOutputTypeName(materialOutputType);
     const char* typeString = getOutputTypeName(outputType);
 
+    bool generate_essl3_code = mTargetLanguage == TargetLanguage::SPIRV
+            || mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1;
+
     out << "\n#define FRAG_OUTPUT"               << index << " " << name.c_str();
-    if (mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
-        out << "\n#define FRAG_OUTPUT_AT"        << index << " gl_FragColor";
-    } else {
+    if (generate_essl3_code) {
         out << "\n#define FRAG_OUTPUT_AT"        << index << " output_" << name.c_str();
+    } else {
+        out << "\n#define FRAG_OUTPUT_AT"        << index << " gl_FragColor";
     }
     out << "\n#define FRAG_OUTPUT_MATERIAL_TYPE" << index << " " << materialTypeString;
     out << "\n#define FRAG_OUTPUT_PRECISION"     << index << " " << precisionString;
@@ -469,7 +506,7 @@ io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage type,
     out << "\n#define FRAG_OUTPUT_SWIZZLE"       << index << " " << swizzleString;
     out << "\n";
 
-    if (mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
+    if (generate_essl3_code) {
         out << "\nlayout(location=" << index << ") out " << precisionString << " "
             << typeString << " output_" << name.c_str() << ";\n";
     }

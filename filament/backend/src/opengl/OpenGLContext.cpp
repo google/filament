@@ -284,6 +284,7 @@ void OpenGLContext::setDefaultState() noexcept {
 
     if (ext.EXT_clip_cull_distance) {
         glEnable(GL_CLIP_DISTANCE0);
+        glEnable(GL_CLIP_DISTANCE1);
     }
 }
 

@@ -34,6 +34,7 @@ struct Config {
     filament::camutils::Mode cameraMode = filament::camutils::Mode::ORBIT;
     bool resizeable = true;
     bool headless = false;
+    int stereoscopicEyeCount = 2;
 
     // Provided to indicate GPU preference for vulkan
     std::string vulkanGPUHint;

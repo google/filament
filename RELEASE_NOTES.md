@@ -7,6 +7,10 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.47.0
+- engine: Support up to 4 side-by-side stereoscopic eyes, configurable at Engine creation time. See
+  `Engine::Config::stereoscopicEyeCount`. [⚠️ **Recompile Materials**]
+
 ## v1.46.0
 
 - engine: Allow instantiating Engine at a given feature level via `Engine::Builder::featureLevel`

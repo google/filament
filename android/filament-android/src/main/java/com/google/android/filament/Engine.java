@@ -150,8 +150,10 @@ public class Engine {
         FEATURE_LEVEL_0,
         /** OpenGL ES 3.0 features (default) */
         FEATURE_LEVEL_1,
+        /** OpenGL ES 3.1 features + 16 textures units + cubemap arrays */
+        FEATURE_LEVEL_2,
         /** OpenGL ES 3.1 features + 31 textures units + cubemap arrays */
-        FEATURE_LEVEL_2
+        FEATURE_LEVEL_3,
     };
 
     /**
@@ -1077,6 +1079,18 @@ public class Engine {
         nFlushAndWait(getNativeObject());
     }
 
+    /**
+     * Kicks the hardware thread (e.g. the OpenGL, Vulkan or Metal thread) but does not wait
+     * for commands to be either executed or the hardware finished.
+     *
+     * <p>This is typically used after creating a lot of objects to start draining the command
+     * queue which has a limited size.</p>
+     */
+    public void flush() {
+        nFlush(getNativeObject());
+    }
+
+
     @UsedByReflection("TextureHelper.java")
     public long getNativeObject() {
         if (mNativeObject == 0) {
@@ -1149,6 +1163,7 @@ public class Engine {
     private static native boolean nIsValidSwapChain(long nativeEngine, long nativeSwapChain);
     private static native void nDestroyEntity(long nativeEngine, int entity);
     private static native void nFlushAndWait(long nativeEngine);
+    private static native void nFlush(long nativeEngine);
     private static native long nGetTransformManager(long nativeEngine);
     private static native long nGetLightManager(long nativeEngine);
     private static native long nGetRenderableManager(long nativeEngine);

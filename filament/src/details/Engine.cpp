@@ -1273,6 +1273,9 @@ Engine::Config Engine::BuilderDetails::validateConfig(const Config* const pConfi
     // This value gets validated during driver creation, so pass it through
     config.driverHandleArenaSizeMB = config.driverHandleArenaSizeMB;
 
+    config.stereoscopicEyeCount =
+            std::clamp(config.stereoscopicEyeCount, uint8_t(1), CONFIG_MAX_STEREOSCOPIC_EYES);
+
     return config;
 }
 

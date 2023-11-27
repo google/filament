@@ -23,6 +23,7 @@
 #include <spirv_glsl.hpp>
 #include <spirv_msl.hpp>
 
+#include "backend/DriverEnums.h"
 #include "sca/builtinResource.h"
 #include "sca/GLSLTools.h"
 
@@ -32,6 +33,7 @@
 
 #include "MetalArgumentBuffer.h"
 #include "SpirvFixup.h"
+#include "utils/ostream.h"
 
 #include <filament/MaterialEnums.h>
 
@@ -395,7 +397,9 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
             break;
         case MaterialBuilder::Optimization::SIZE:
         case MaterialBuilder::Optimization::PERFORMANCE:
-            fullOptimization(tShader, config, internalConfig);
+            if (!fullOptimization(tShader, config, internalConfig)) {
+                return false;
+            }
             break;
     }
 
@@ -478,7 +482,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
     }
 }
 
-void GLSLPostProcessor::fullOptimization(const TShader& tShader,
+bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
         GLSLPostProcessor::Config const& config, InternalConfig& internalConfig) const {
     SpirvBlob spirv;
 
@@ -546,19 +550,29 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
             }
         }
 
+#ifdef SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS
         *internalConfig.glslOutput = glslCompiler.compile();
+#else
+        try {
+            *internalConfig.glslOutput = glslCompiler.compile();
+        } catch (spirv_cross::CompilerError e) {
+            slog.e << "ERROR: " << e.what() << io::endl;
+            return false;
+        }
+#endif
 
         // spirv-cross automatically redeclares gl_ClipDistance if it's used. Some drivers don't
         // like this, so we simply remove it.
         // According to EXT_clip_cull_distance, gl_ClipDistance can be
         // "implicitly sized by indexing it only with integral constant expressions".
         std::string& str = *internalConfig.glslOutput;
-        const std::string clipDistanceDefinition = "out float gl_ClipDistance[1];";
+        const std::string clipDistanceDefinition = "out float gl_ClipDistance[2];";
         size_t const found = str.find(clipDistanceDefinition);
         if (found != std::string::npos) {
             str.replace(found, clipDistanceDefinition.length(), "");
         }
     }
+    return true;
 }
 
 std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(

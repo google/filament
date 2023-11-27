@@ -291,6 +291,14 @@ public:
          * Currently only respected by the Metal backend.
          */
         size_t textureUseAfterFreePoolSize = 0;
+
+        /*
+         * The number of eyes to render when stereoscopic rendering is enabled. Supported values are
+         * between 1 and CONFIG_MAX_STEREOSCOPIC_EYES (inclusive).
+         *
+         * @see View::setStereoscopicOptions
+         */
+        uint8_t stereoscopicEyeCount = 2;
     };
 
 
