@@ -7,7 +7,13 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.48.0
+
+- matc: New option `-1` to disable generation of ESSL 1.0 code in Feature Level 0 materials
+- matc: Support optimizations for ESSL 1.0 code [⚠️ **Recompile materials**]
+
 ## v1.47.0
+
 - engine: Support up to 4 side-by-side stereoscopic eyes, configurable at Engine creation time. See
   `Engine::Config::stereoscopicEyeCount`. [⚠️ **Recompile Materials**]
 
