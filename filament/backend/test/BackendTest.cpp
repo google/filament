@@ -93,6 +93,9 @@ void BackendTest::flushAndWait() {
 
 Handle<HwSwapChain> BackendTest::createSwapChain() {
     const NativeView& view = getNativeView();
+    if (!view.ptr) {
+        return getDriverApi().createSwapChainHeadless(view.width, view.height, 0);
+    }
     return getDriverApi().createSwapChain(view.ptr, 0);
 }
 
@@ -212,4 +215,3 @@ int runTests() {
 }
 
 } // namespace test
-
