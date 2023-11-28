@@ -262,7 +262,12 @@ void OpenGLDriver::bindTexture(GLuint unit, GLTexture const* t) noexcept {
     mContext.bindTexture(unit, t->gl.target, t->gl.id, t->gl.targetIndex);
 }
 
-void OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
+bool OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
+    if (UTILS_UNLIKELY(!p->isValid())) {
+        // If the program is not valid, we can't call use().
+        return false;
+    }
+
     // set-up textures and samplers in the proper TMUs (as specified in setSamplers)
     p->use(this, mContext);
 
@@ -277,6 +282,7 @@ void OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
         // when mPlatform.isSRGBSwapChainSupported() is false (no need to check though).
         p->setRec709ColorSpace(mRec709OutputColorspace);
     }
+    return true;
 }
 
 
@@ -3531,18 +3537,17 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
     DEBUG_MARKER()
     auto& gl = mContext;
 
-    OpenGLProgram* p = handle_cast<OpenGLProgram*>(state.program);
+    OpenGLProgram* const p = handle_cast<OpenGLProgram*>(state.program);
 
-    // If the material debugger is enabled, avoid fatal (or cascading) errors and that can occur
-    // during the draw call when the program is invalid. The shader compile error has already been
-    // dumped to the console at this point, so it's fine to simply return early.
-    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!p->isValid())) {
+    bool const success = useProgram(p);
+    if (UTILS_UNLIKELY(!success)) {
+        // Avoid fatal (or cascading) errors that can occur during the draw call when the program
+        // is invalid. The shader compile error has already been dumped to the console at this
+        // point, so it's fine to simply return early.
         return;
     }
 
-    useProgram(p);
-
-    GLRenderPrimitive* rp = handle_cast<GLRenderPrimitive *>(rph);
+    GLRenderPrimitive* const rp = handle_cast<GLRenderPrimitive *>(rph);
 
     // Gracefully do nothing if the render primitive has not been set up.
     VertexBufferHandle vb = rp->gl.vertexBufferWithObjects;
@@ -3553,7 +3558,7 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
     gl.bindVertexArray(&rp->gl);
 
     // If necessary, mutate the bindings in the VAO.
-    const GLVertexBuffer* glvb = handle_cast<GLVertexBuffer*>(vb);
+    GLVertexBuffer const* const glvb = handle_cast<GLVertexBuffer*>(vb);
     if (UTILS_UNLIKELY(rp->gl.vertexBufferVersion != glvb->bufferObjectsVersion)) {
         updateVertexArrayObject(rp, glvb);
     }
@@ -3587,16 +3592,15 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
 void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
     getShaderCompilerService().tick();
 
-    OpenGLProgram* p = handle_cast<OpenGLProgram*>(program);
+    OpenGLProgram* const p = handle_cast<OpenGLProgram*>(program);
 
-    // If the material debugger is enabled, avoid fatal (or cascading) errors and that can occur
-    // during the draw call when the program is invalid. The shader compile error has already been
-    // dumped to the console at this point, so it's fine to simply return early.
-    if (FILAMENT_ENABLE_MATDBG && UTILS_UNLIKELY(!p->isValid())) {
+    bool const success = useProgram(p);
+    if (UTILS_UNLIKELY(!success)) {
+        // Avoid fatal (or cascading) errors that can occur during the draw call when the program
+        // is invalid. The shader compile error has already been dumped to the console at this
+        // point, so it's fine to simply return early.
         return;
     }
-
-    useProgram(p);
 
 #if defined(BACKEND_OPENGL_LEVEL_GLES31)
 

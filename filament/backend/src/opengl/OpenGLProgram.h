@@ -59,7 +59,7 @@ public:
             // - the content of any bound sampler buffer has changed
             // ... since last time we used this program
 
-            // turns out the former might be relatively cheap to check, the later requires
+            // Turns out the former might be relatively cheap to check, the latter requires
             // a bit less. Compared to what updateSamplers() actually does, which is
             // pretty little, I'm not sure if we'll get ahead.
 
