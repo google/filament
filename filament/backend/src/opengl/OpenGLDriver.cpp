@@ -3547,7 +3547,7 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
         return;
     }
 
-    GLRenderPrimitive* const rp = handle_cast<GLRenderPrimitive *>(rph);
+    GLRenderPrimitive* const rp = handle_cast<GLRenderPrimitive*>(rph);
 
     // Gracefully do nothing if the render primitive has not been set up.
     VertexBufferHandle vb = rp->gl.vertexBufferWithObjects;
