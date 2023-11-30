@@ -75,6 +75,7 @@ public:
      * the optimizations have been applied.
      */
     static void fixupExternalSamplers(filament::backend::ShaderModel sm, std::string& shader,
+            MaterialBuilder::FeatureLevel featureLevel,
             MaterialInfo const& material) noexcept;
 
 private:

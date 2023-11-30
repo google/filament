@@ -161,7 +161,8 @@ public:
     static utils::io::sstream& generateParameters(utils::io::sstream& out, ShaderStage type);
 
     static void fixupExternalSamplers(
-            std::string& shader, filament::SamplerInterfaceBlock const& sib) noexcept;
+            std::string& shader, filament::SamplerInterfaceBlock const& sib,
+            FeatureLevel featureLevel) noexcept;
 
     // These constants must match the equivalent in MetalState.h.
     // These values represent the starting index for uniform, ssbo, and sampler group [[buffer(n)]]

@@ -342,12 +342,13 @@ ShaderGenerator::ShaderGenerator(
     }
 }
 
-void ShaderGenerator::fixupExternalSamplers(ShaderModel sm,
-        std::string& shader, MaterialInfo const& material) noexcept {
+void ShaderGenerator::fixupExternalSamplers(ShaderModel sm, std::string& shader,
+        MaterialBuilder::FeatureLevel featureLevel,
+        MaterialInfo const& material) noexcept {
     // External samplers are only supported on GL ES at the moment, we must
     // skip the fixup on desktop targets
     if (material.hasExternalSamplers && sm == ShaderModel::MOBILE) {
-        CodeGenerator::fixupExternalSamplers(shader, material.sib);
+        CodeGenerator::fixupExternalSamplers(shader, material.sib, featureLevel);
     }
 }
 
