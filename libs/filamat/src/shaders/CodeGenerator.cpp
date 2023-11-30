@@ -778,7 +778,7 @@ io::sstream& CodeGenerator::generateSubpass(io::sstream& out, SubpassInfo subpas
 }
 
 void CodeGenerator::fixupExternalSamplers(
-        std::string& shader, SamplerInterfaceBlock const& sib) noexcept {
+        std::string& shader, SamplerInterfaceBlock const& sib, FeatureLevel featureLevel) noexcept {
     auto const& infos = sib.getSamplerInfoList();
     if (infos.empty()) {
         return;
@@ -813,7 +813,10 @@ void CodeGenerator::fixupExternalSamplers(
         while (shader[index] != '\n') index++;
         index++;
 
-        shader.insert(index, "#extension GL_OES_EGL_image_external_essl3 : require\n");
+        const char *extensionLine = (featureLevel >= FeatureLevel::FEATURE_LEVEL_1)
+                ? "#extension GL_OES_EGL_image_external_essl3 : require\n\n"
+                : "#extension GL_OES_EGL_image_external : require\n\n";
+        shader.insert(index, extensionLine);
     }
 }
 
