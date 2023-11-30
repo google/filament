@@ -169,6 +169,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/platform/VulkanPlatform.cpp
             src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
             src/vulkan/platform/VulkanPlatformSwapChainImpl.h
+            src/vulkan/spirv/VulkanSpirvUtils.cpp
+            src/vulkan/spirv/VulkanSpirvUtils.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
             src/vulkan/VulkanBuffer.cpp
@@ -313,6 +315,7 @@ endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
     target_link_libraries(${TARGET} PUBLIC bluevk vkmemalloc vkshaders smol-v)
+    target_link_libraries(${TARGET} PRIVATE SPIRV-Headers)
 endif()
 
 if (FILAMENT_SUPPORTS_METAL)

@@ -743,6 +743,8 @@ endif()
 if (FILAMENT_SUPPORTS_VULKAN)
     add_subdirectory(${LIBRARIES}/bluevk)
     add_subdirectory(${EXTERNAL}/vkmemalloc/tnt)
+    set(SPIRV_HEADERS_SKIP_EXAMPLES ON)
+    add_subdirectory(${EXTERNAL}/spirv-headers)
 endif()
 
 set(FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)

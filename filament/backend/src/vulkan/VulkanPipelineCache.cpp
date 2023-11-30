@@ -360,9 +360,7 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
 
     // If we reach this point, we need to create and stash a brand new pipeline object.
     shaderStages[0].module = mPipelineRequirements.shaders[0];
-    shaderStages[0].pSpecializationInfo = mSpecializationRequirements;
     shaderStages[1].module = mPipelineRequirements.shaders[1];
-    shaderStages[1].pSpecializationInfo = mSpecializationRequirements;
 
     // Expand our size-optimized structs into the proper Vk structs.
     uint32_t numVertexAttribs = 0;
@@ -568,7 +566,6 @@ VulkanPipelineCache::PipelineLayoutCacheEntry* VulkanPipelineCache::getOrCreateP
 void VulkanPipelineCache::bindProgram(VulkanProgram* program) noexcept {
     mPipelineRequirements.shaders[0] = program->getVertexShader();
     mPipelineRequirements.shaders[1] = program->getFragmentShader();
-    mSpecializationRequirements = &program->getSpecConstInfo();
 }
 
 void VulkanPipelineCache::bindRasterState(const RasterState& rasterState) noexcept {

@@ -416,7 +416,6 @@ private:
     RasterState mCurrentRasterState;
     PipelineKey mPipelineRequirements = {};
     DescriptorKey mDescriptorRequirements = {};
-    VkSpecializationInfo const* mSpecializationRequirements = nullptr;
 
     // Current bindings for the pipeline and descriptor sets.
     PipelineKey mBoundPipeline = {};
