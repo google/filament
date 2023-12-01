@@ -28,7 +28,7 @@
 # The SPIR-V headers from the SPIR-V Registry
 # https://www.khronos.org/registry/spir-v/
 #
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.0)
 project(SPIRV-Headers VERSION 1.5.5)
 
 # There are two ways to use this project.
@@ -44,9 +44,11 @@ project(SPIRV-Headers VERSION 1.5.5)
 #   2. cmake ..
 #   3. cmake --build . --target install
 
-option(SPIRV_HEADERS_SKIP_EXAMPLES "Skip building examples" ON)
+option(SPIRV_HEADERS_SKIP_EXAMPLES "Skip building examples"
+      ${SPIRV_HEADERS_SKIP_EXAMPLES})
 
-option(SPIRV_HEADERS_SKIP_INSTALL "Skip install" ON)
+option(SPIRV_HEADERS_SKIP_INSTALL "Skip install"
+      ${SPIRV_HEADERS_SKIP_INSTALL})
 
 if(NOT ${SPIRV_HEADERS_SKIP_EXAMPLES})
   set(SPIRV_HEADERS_ENABLE_EXAMPLES ON)

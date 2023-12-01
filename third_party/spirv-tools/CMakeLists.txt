@@ -24,6 +24,8 @@ if (POLICY CMP0054)
 endif()
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+set(SPIRV-Headers_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../spirv-headers)
+
 if (APPLE)
   set(CMAKE_MACOSX_RPATH ON)
 endif (APPLE)
@@ -106,6 +108,7 @@ set(SPIRV_LIB_FUZZING_ENGINE_LINK_OPTIONS "" CACHE STRING "Used by OSS-Fuzz to c
 option(SPIRV_BUILD_LIBFUZZER_TARGETS "Build libFuzzer targets" OFF)
 
 set(SPIRV_WERROR OFF)
+
 if(("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR (("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang") AND (NOT CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")))
   set(COMPILER_IS_LIKE_GNU TRUE)
 endif()
@@ -313,8 +316,6 @@ option(SPIRV_SKIP_EXECUTABLES
  ${SPIRV_SKIP_EXECUTABLES_OPTION})
 option(SPIRV_SKIP_TESTS
  "Skip building tests along with the library" ${SPIRV_SKIP_TESTS_OPTION})
-
-
 if ("${SPIRV_SKIP_EXECUTABLES}")
   set(SPIRV_SKIP_TESTS ON)
 endif()
@@ -378,4 +379,3 @@ endif()
 
 set(SPIRV_LIBRARIES "-lSPIRV-Tools-opt -lSPIRV-Tools -lSPIRV-Tools-link")
 set(SPIRV_SHARED_LIBRARIES "-lSPIRV-Tools-shared")
-
