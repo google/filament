@@ -15,6 +15,8 @@
 # This script is used to update SPIRV-Tools from source.
 # This script takes in a git commit hash as an argument.
 
+#!/usr/bin/env bash
+
 TOOLS_HASH=$1
 
 function sync_khronos_repo() {
