@@ -114,6 +114,6 @@ Java_com_google_android_filament_Scene_nGetEntities(JNIEnv *env, jclass ,
             out[i++] = (jint) entity.getId();
         }
     });
-    env->ReleaseIntArrayElements(outArray, (jint*) out, JNI_ABORT);
+    env->ReleaseIntArrayElements(outArray, (jint*) out, 0);
     return JNI_TRUE;
 }
