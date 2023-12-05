@@ -7,6 +7,10 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.49.0
+
+- matc: Fix ESSL 1.0 codegen when using external samplers [⚠️ **Recompile materials**]
+
 ## v1.48.0
 
 - matc: New option `-1` to disable generation of ESSL 1.0 code in Feature Level 0 materials
