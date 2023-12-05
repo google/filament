@@ -110,7 +110,7 @@ private:
 
     enum class Mode {
         UNDEFINED,      // init() has not beed called yet.
-        SYNCHRONOUS,    // synchrnous shader compilation
+        SYNCHRONOUS,    // synchronous shader compilation
         THREAD_POOL,    // asynchronous shader compilation using a thread-pool (most common)
         ASYNCHRONOUS    // asynchrnous shader compilation using KHR_parallel_shader_compile
     };
