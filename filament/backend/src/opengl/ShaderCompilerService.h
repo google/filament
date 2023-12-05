@@ -95,19 +95,42 @@ public:
             CallbackHandler* handler, CallbackHandler::Callback callback, void* user);
 
 private:
+    struct Job {
+        template<typename FUNC>
+        Job(FUNC&& fn) : fn(std::forward<FUNC>(fn)) {}
+        Job(std::function<bool(Job const& job)> fn,
+                CallbackHandler* handler, void* user, CallbackHandler::Callback callback)
+                : fn(std::move(fn)), handler(handler), user(user), callback(callback) {
+        }
+        std::function<bool(Job const& job)> fn;
+        CallbackHandler* handler = nullptr;
+        void* user = nullptr;
+        CallbackHandler::Callback callback{};
+    };
+
+    enum class Mode {
+        UNDEFINED,      // init() has not beed called yet.
+        SYNCHRONOUS,    // synchrnous shader compilation
+        THREAD_POOL,    // asynchronous shader compilation using a thread-pool (most common)
+        ASYNCHRONOUS    // asynchrnous shader compilation using KHR_parallel_shader_compile
+    };
+
     OpenGLDriver& mDriver;
     OpenGLBlobCache mBlobCache;
     CallbackManager mCallbackManager;
     CompilerThreadPool mCompilerThreadPool;
 
-    const bool KHR_parallel_shader_compile;
     uint32_t mShaderCompilerThreadCount = 0u;
+    Mode mMode = Mode::UNDEFINED; // valid after init() is called
+
+    using ContainerType = std::tuple<CompilerPriorityQueue, program_token_t, Job>;
+    std::vector<ContainerType> mRunAtNextTickOps;
 
     GLuint initialize(ShaderCompilerService::program_token_t& token) noexcept;
 
     static void getProgramFromCompilerPool(program_token_t& token) noexcept;
 
-        static void compileShaders(
+    static void compileShaders(
             OpenGLContext& context,
             Program::ShaderSource shadersSource,
             utils::FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
@@ -127,27 +150,11 @@ private:
 
     static bool checkProgramStatus(program_token_t const& token) noexcept;
 
-    struct Job {
-        template<typename FUNC>
-        Job(FUNC&& fn) : fn(std::forward<FUNC>(fn)) {}
-        Job(std::function<bool(Job const& job)> fn,
-                CallbackHandler* handler, void* user, CallbackHandler::Callback callback)
-                : fn(std::move(fn)), handler(handler), user(user), callback(callback) {
-        }
-        std::function<bool(Job const& job)> fn;
-        CallbackHandler* handler = nullptr;
-        void* user = nullptr;
-        CallbackHandler::Callback callback{};
-    };
-
     void runAtNextTick(CompilerPriorityQueue priority,
             const program_token_t& token, Job job) noexcept;
     void executeTickOps() noexcept;
     bool cancelTickOp(program_token_t token) noexcept;
     // order of insertion is important
-
-    using ContainerType = std::tuple<CompilerPriorityQueue, program_token_t, Job>;
-    std::vector<ContainerType> mRunAtNextTickOps;
 };
 
 } // namespace filament::backend
