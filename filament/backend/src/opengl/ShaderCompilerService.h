@@ -112,7 +112,7 @@ private:
         UNDEFINED,      // init() has not beed called yet.
         SYNCHRONOUS,    // synchronous shader compilation
         THREAD_POOL,    // asynchronous shader compilation using a thread-pool (most common)
-        ASYNCHRONOUS    // asynchrnous shader compilation using KHR_parallel_shader_compile
+        ASYNCHRONOUS    // asynchronous shader compilation using KHR_parallel_shader_compile
     };
 
     OpenGLDriver& mDriver;
