@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "glslang/Include/intermediate.h"
+
 const TBuiltInResource DefaultTBuiltInResource = {
         /* .MaxLights = */ 32,
         /* .MaxClipPlanes = */ 6,

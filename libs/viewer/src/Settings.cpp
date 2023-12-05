@@ -302,6 +302,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewSett
             i = parse(tokens, i + 1, jsonChunk, &out->vsmShadowOptions);
         } else if (compare(tok, jsonChunk, "postProcessingEnabled") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->postProcessingEnabled);
+        } else if (compare(tok, jsonChunk, "stereoscopicOptions") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->stereoscopicOptions);
         } else {
             slog.w << "Invalid view setting key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -500,6 +502,8 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewerOp
              i = parse(tokens, i + 1, jsonChunk, &out->cameraNear);
         } else if (compare(tok, jsonChunk, "cameraFar") == 0) {
              i = parse(tokens, i + 1, jsonChunk, &out->cameraFar);
+        } else if (compare(tok, jsonChunk, "cameraEyeOcularDistance") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->cameraEyeOcularDistance);
         } else if (compare(tok, jsonChunk, "groundShadowStrength") == 0) {
              i = parse(tokens, i + 1, jsonChunk, &out->groundShadowStrength);
         } else if (compare(tok, jsonChunk, "groundPlaneEnabled") == 0) {
@@ -572,6 +576,7 @@ void applySettings(Engine* engine, const ViewSettings& settings, View* dest) {
     dest->setShadowType(settings.shadowType);
     dest->setVsmShadowOptions(settings.vsmShadowOptions);
     dest->setGuardBandOptions(settings.guardBand);
+    dest->setStereoscopicOptions(settings.stereoscopicOptions);
     dest->setPostProcessingEnabled(settings.postProcessingEnabled);
 }
 
@@ -646,6 +651,20 @@ void applySettings(Engine* engine, const ViewerOptions& settings, Camera* camera
         camera->setFocusDistance(settings.cameraFocusDistance);
     }
     engine->setAutomaticInstancingEnabled(settings.autoInstancingEnabled);
+
+    // Eyes are rendered from left-to-right, i.e., eye 0 is rendered to the left side of the
+    // window.
+    // For testing, we want to render a side-by-side layout so users can view with
+    // "cross-eyed" stereo.
+    // For cross-eyed stereo, Eye 0 is really the RIGHT eye, while Eye 1 is the LEFT eye.
+    const auto od = settings.cameraEyeOcularDistance;
+    const auto eyeCount = engine->getConfig().stereoscopicEyeCount;
+    const mat4 rightEye = mat4::translation(double3{ od, 0.0, 0.0});    // right eye
+    const mat4 leftEye  = mat4::translation(double3{-od, 0.0, 0.0});    // left eye
+    const mat4 modelMatrices[2] = { rightEye, leftEye };
+    for (int i = 0; i < eyeCount; i++) {
+        camera->setEyeModelMatrix(i, modelMatrices[i % 2]);
+    }
 }
 
 constexpr ToneMapper* createToneMapper(const ColorGradingSettings& settings) noexcept {
@@ -857,6 +876,7 @@ static std::ostream& operator<<(std::ostream& out, const ViewerOptions& in) {
         << "\"cameraISO\": " << (in.cameraISO) << ",\n"
         << "\"cameraNear\": " << (in.cameraNear) << ",\n"
         << "\"cameraFar\": " << (in.cameraFar) << ",\n"
+        << "\"cameraEyeOcularDistance\": " << (in.cameraEyeOcularDistance) << ",\n"
         << "\"groundShadowStrength\": " << (in.groundShadowStrength) << ",\n"
         << "\"groundPlaneEnabled\": " << to_string(in.groundPlaneEnabled) << ",\n"
         << "\"skyboxEnabled\": " << to_string(in.skyboxEnabled) << ",\n"
@@ -894,6 +914,7 @@ static std::ostream& operator<<(std::ostream& out, const ViewSettings& in) {
         << "\"shadowType\": " << (in.shadowType) << ",\n"
         << "\"vsmShadowOptions\": " << (in.vsmShadowOptions) << ",\n"
         << "\"guardBand\": " << (in.guardBand) << ",\n"
+        << "\"stereoscopicOptions\": " << (in.stereoscopicOptions) << ",\n"
         << "\"postProcessingEnabled\": " << to_string(in.postProcessingEnabled) << "\n"
         << "}";
 }
