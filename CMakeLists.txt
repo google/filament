@@ -231,6 +231,16 @@ if (WIN32)
             string(REPLACE "/INCREMENTAL" "/INCREMENTAL:NO" ${LinkerFlag} ${${LinkerFlag}})
         endforeach()
     endif()
+
+    if (MSVC)
+        option(FILAMENT_SHORTEN_MSVC_COMPILATION "Shorten compile-time in Visual Studio" ON)
+        if (FILAMENT_SHORTEN_MSVC_COMPILATION)
+            # enable multi-processor compilation
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+            # disable run-time STL checks to improve tools (e.g. matc) performance
+            set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
+        endif()
+    endif()
 endif()
 
 # ==================================================================================================
