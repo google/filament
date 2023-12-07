@@ -39,7 +39,15 @@ namespace filament {
 namespace backend {
 
 static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
-    NSUInteger u = 0;
+    NSUInteger u = MTLTextureUsageUnknown;
+
+    if (any(usage & TextureUsage::SAMPLEABLE)) {
+        u |= MTLTextureUsageShaderRead;
+    }
+    if (any(usage & TextureUsage::UPLOADABLE)) {
+        // This is only needed because of the slowpath is MetalBlitter
+        u |= MTLTextureUsageRenderTarget;
+    }
     if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
         u |= MTLTextureUsageRenderTarget;
     }
@@ -49,9 +57,13 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
     if (any(usage & TextureUsage::STENCIL_ATTACHMENT)) {
         u |= MTLTextureUsageRenderTarget;
     }
-
-    // All textures can be blitted from, so they must have the UsageShaderRead flag.
-    u |= MTLTextureUsageShaderRead;
+    if (any(usage & TextureUsage::BLIT_DST)) {
+        // This is only needed because of the slowpath is MetalBlitter
+        u |= MTLTextureUsageRenderTarget;
+    }
+    if (any(usage & TextureUsage::BLIT_SRC)) {
+        u |= MTLTextureUsageShaderRead;
+    }
 
     return MTLTextureUsage(u);
 }
@@ -756,6 +768,7 @@ void MetalTexture::loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region
 #endif
 
     id<MTLTexture> stagingTexture = [context.device newTextureWithDescriptor:descriptor];
+    // FIXME? Why is this not just `MTLRegion sourceRegion = region;` ?
     MTLRegion sourceRegion = MTLRegionMake3D(0, 0, 0,
             region.size.width, region.size.height, region.size.depth);
     [stagingTexture replaceRegion:sourceRegion
@@ -782,16 +795,18 @@ void MetalTexture::loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region
                                                              slices:NSMakeRange(0, slices)];
     }
 
-    MetalBlitter::BlitArgs args;
+    MetalBlitter::BlitArgs args{};
     args.filter = SamplerMagFilter::NEAREST;
     args.source.level = 0;
     args.source.slice = 0;
     args.source.region = sourceRegion;
+    args.source.texture = stagingTexture;
+    args.source.type = MetalBlitter::FormatType::COLOR;
     args.destination.level = level;
     args.destination.slice = slice;
     args.destination.region = region;
-    args.source.color = stagingTexture;
-    args.destination.color = destinationTexture;
+    args.destination.texture = destinationTexture;
+    args.destination.type = MetalBlitter::FormatType::COLOR;
     context.blitter->blit(getPendingCommandBuffer(&context), args, "Texture upload blit");
 }
 

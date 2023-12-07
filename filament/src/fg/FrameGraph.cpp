@@ -204,7 +204,7 @@ void FrameGraph::execute(backend::DriverApi& driver) noexcept {
         }
 
         // call execute
-        FrameGraphResources resources(*this, *node);
+        FrameGraphResources const resources(*this, *node);
         node->execute(resources, driver);
 
         // destroy concrete resources

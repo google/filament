@@ -1093,7 +1093,7 @@ public class View {
      * @see #setStereoscopicOptions
      */
     @NonNull
-    public StereoscopicOptions getStereoscoopicOptions() {
+    public StereoscopicOptions getStereoscopicOptions() {
         if (mStereoscopicOptions == null) {
             mStereoscopicOptions = new StereoscopicOptions();
         }

@@ -89,7 +89,7 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                     data.color = builder.createTexture("Color Buffer", colorBufferDesc);
                 }
 
-                const bool canResolveDepth = engine.getDriverApi().isAutoDepthResolveSupported();
+                const bool canAutoResolveDepth = engine.getDriverApi().isAutoDepthResolveSupported();
 
                 if (!data.depth) {
                     // clear newly allocated depth/stencil buffers, regardless of given clear flags
@@ -114,13 +114,17 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                     data.depth = builder.createTexture(name, {
                             .width = colorBufferDesc.width,
                             .height = colorBufferDesc.height,
-                            // If the color attachment requested MS, we assume this means the MS buffer
-                            // must be kept, and for that reason we allocate the depth buffer with MS
-                            // as well. On the other hand, if the color attachment was allocated without
-                            // MS, no need to allocate the depth buffer with MS, if the RT is MS,
-                            // the tile depth buffer will be MS, but it'll be resolved to single
-                            // sample automatically -- which is what we want.
-                            .samples = canResolveDepth ? colorBufferDesc.samples : uint8_t(config.msaa),
+                            // If the color attachment requested MS, we assume this means the MS
+                            // buffer must be kept, and for that reason we allocate the depth
+                            // buffer with MS as well.
+                            // On the other hand, if the color attachment was allocated without
+                            // MS, no need to allocate the depth buffer with MS; Either it's not
+                            // multi-sampled or it is auto-resolved.
+                            // One complication above is that some backends don't support
+                            // depth auto-resolve, in which case we must allocate the depth
+                            // buffer with MS and manually resolve it (see "Resolved Depth Buffer"
+                            // pass).
+                            .samples = canAutoResolveDepth ? colorBufferDesc.samples : uint8_t(config.msaa),
                             .format = format,
                     });
                     if (config.enabledStencilBuffer) {
@@ -282,7 +286,7 @@ std::pair<FrameGraphId<FrameGraphTexture>, bool> RendererUtils::refractionPass(
 
         input = RendererUtils::colorPass(fg, "Color Pass (opaque)", engine, view, {
                         // When rendering the opaques, we need to conserve the sample buffer,
-                        // so create config that specifies the sample count.
+                        // so create a config that specifies the sample count.
                         .width = config.physicalViewport.width,
                         .height = config.physicalViewport.height,
                         .samples = config.msaa,
@@ -312,11 +316,11 @@ std::pair<FrameGraphId<FrameGraphTexture>, bool> RendererUtils::refractionPass(
                 config, colorGradingConfig, pass.getExecutor(refraction, pass.end()));
 
         if (config.msaa > 1 && !colorGradingConfig.asSubpass) {
-            // We need to do a resolve here because later passes (such as color grading or DoF) will need
-            // to sample from 'output'. However, because we have MSAA, we know we're not sampleable.
-            // And this is because in the SSR case, we had to use a renderbuffer to conserve the
-            // multi-sample buffer.
-            output = ppm.resolveBaseLevel(fg, "Resolved Color Buffer", output);
+            // We need to do a resolve here because later passes (such as color grading or DoF) will
+            // need to sample from 'output'. However, because we have MSAA, we know we're not
+            // sampleable. And this is because in the SSR case, we had to use a renderbuffer to
+            // conserve the multi-sample buffer.
+            output = ppm.resolve(fg, "Resolved Color Buffer", output, { .levels = 1 });
         }
     } else {
         output = input;

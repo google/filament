@@ -405,6 +405,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     mIsDefaultMaterial = builder->mDefaultMaterial;
 
     if (UTILS_UNLIKELY(mIsDefaultMaterial)) {
+        assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
         filaflat::MaterialChunk const& materialChunk{ mMaterialParser->getMaterialChunk() };
         auto variants = FixedCapacityVector<Variant>::with_capacity(materialChunk.getShaderCount());
         materialChunk.visitShaders([&variants](
@@ -420,12 +421,14 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
         std::swap(mDepthVariants, variants);
     }
 
-    if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
-        FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
-        auto& cachedPrograms = mCachedPrograms;
-        for (Variant const variant : pDefaultMaterial->mDepthVariants) {
-            pDefaultMaterial->prepareProgram(variant);
-            cachedPrograms[variant.key] = pDefaultMaterial->getProgram(variant);
+    if (mMaterialDomain == MaterialDomain::SURFACE) {
+        if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
+            FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
+            auto& cachedPrograms = mCachedPrograms;
+            for (Variant const variant: pDefaultMaterial->mDepthVariants) {
+                pDefaultMaterial->prepareProgram(variant);
+                cachedPrograms[variant.key] = pDefaultMaterial->getProgram(variant);
+            }
         }
     }
 
@@ -469,34 +472,47 @@ void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantV
         }
     }
 
-    DriverApi& driverApi = mEngine.getDriverApi();
-    auto& cachedPrograms = mCachedPrograms;
-    for (size_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
-        Variant const variant(k);
-        if ((k & variantMask) == variantValue) {
-            if (UTILS_LIKELY(!mIsDefaultMaterial)) {
-                // The depth variants may be shared with the default material, in which case
-                // we should not free it now.
-                bool const isSharedVariant =
-                        Variant::isValidDepthVariant(variant) && !mHasCustomDepthShader;
-                if (isSharedVariant) {
-                    // we don't own this variant, skip.
-                    continue;
+    if (mMaterialDomain == MaterialDomain::SURFACE) {
+        DriverApi& driverApi = mEngine.getDriverApi();
+        auto& cachedPrograms = mCachedPrograms;
+        for (size_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
+            Variant const variant(k);
+            if ((k & variantMask) == variantValue) {
+                if (UTILS_LIKELY(!mIsDefaultMaterial)) {
+                    // The depth variants may be shared with the default material, in which case
+                    // we should not free it now.
+                    bool const isSharedVariant =
+                            Variant::isValidDepthVariant(variant) && !mHasCustomDepthShader;
+                    if (isSharedVariant) {
+                        // we don't own this variant, skip.
+                        continue;
+                    }
+                }
+                driverApi.destroyProgram(cachedPrograms[k]);
+                cachedPrograms[k].clear();
+            }
+        }
+
+         if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
+            FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+            for (Variant const variant: pDefaultMaterial->mDepthVariants) {
+                pDefaultMaterial->prepareProgram(variant);
+                if (!cachedPrograms[variant.key]) {
+                    cachedPrograms[variant.key] = pDefaultMaterial->getProgram(variant);
                 }
             }
-            driverApi.destroyProgram(cachedPrograms[k]);
-            cachedPrograms[k].clear();
         }
-    }
-
-    if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
-        FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
-        for (Variant const variant: pDefaultMaterial->mDepthVariants) {
-            pDefaultMaterial->prepareProgram(variant);
-            if (!cachedPrograms[variant.key]) {
-                cachedPrograms[variant.key] = pDefaultMaterial->getProgram(variant);
+    } else if (mMaterialDomain == MaterialDomain::POST_PROCESS) {
+        DriverApi& driverApi = mEngine.getDriverApi();
+        auto& cachedPrograms = mCachedPrograms;
+        for (size_t k = 0, n = POST_PROCESS_VARIANT_COUNT; k < n; ++k) {
+            if ((k & variantMask) == variantValue) {
+                driverApi.destroyProgram(cachedPrograms[k]);
+                cachedPrograms[k].clear();
             }
         }
+    } else if (mMaterialDomain == MaterialDomain::COMPUTE) {
+        // TODO: handle compute variants if any
     }
 }
 
