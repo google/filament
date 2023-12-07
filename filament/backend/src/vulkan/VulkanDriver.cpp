@@ -54,7 +54,8 @@ VmaAllocator createAllocator(VkInstance instance, VkPhysicalDevice physicalDevic
     VmaAllocator allocator;
     VmaVulkanFunctions const funcs {
 #if VMA_DYNAMIC_VULKAN_FUNCTIONS
-        .vkGetInstanceProcAddr = vkGetInstanceProcAddr, .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
+        .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
+        .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
 #else
         .vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties,
         .vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties,
@@ -426,7 +427,8 @@ void VulkanDriver::destroyTexture(Handle<HwTexture> th) {
 }
 
 void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
-    auto vkprogram = mResourceAllocator.construct<VulkanProgram>(ph, mPlatform->getDevice(), program);
+    auto vkprogram
+            = mResourceAllocator.construct<VulkanProgram>(ph, mPlatform->getDevice(), program);
     mResourceManager.acquire(vkprogram);
 }
 
