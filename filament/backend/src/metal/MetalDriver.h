@@ -28,6 +28,10 @@
 #include <utils/Log.h>
 #include <utils/debug.h>
 
+#include <functional>
+#include <mutex>
+#include <vector>
+
 namespace filament {
 namespace backend {
 
@@ -58,13 +62,20 @@ private:
     friend class MetalSwapChain;
 
     MetalPlatform& mPlatform;
-
     MetalContext* mContext;
 
     ShaderModel getShaderModel() const noexcept final;
 
     // Overrides the default implementation by wrapping the call to fn in an @autoreleasepool block.
     void execute(std::function<void(void)> const& fn) noexcept final;
+
+    /*
+     * Tasks run regularly on the driver thread.
+     */
+    void runAtNextTick(const std::function<void()>& fn) noexcept;
+    void executeTickOps() noexcept;
+    std::vector<std::function<void()>> mTickOps;
+    std::mutex mTickOpsLock;
 
     /*
      * Driver interface

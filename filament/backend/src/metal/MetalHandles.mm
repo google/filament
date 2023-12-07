@@ -254,11 +254,12 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
     // capture the _this_ pointer (MetalSwapChain*) instead of the drawable.
     id<CAMetalDrawable> d = drawable;
     void* userData = frameScheduledUserData;
+    MetalDriver* driver = context.driver;
     [getPendingCommandBuffer(&context) addScheduledHandler:^(id<MTLCommandBuffer> cb) {
         // CFBridgingRetain is used here to give the drawable a +1 retain count before
         // casting it to a void*.
         PresentCallable callable(presentDrawable, (void*) CFBridgingRetain(d));
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        driver->runAtNextTick([userData, callback, callable]() {
             callback(callable, userData);
         });
     }];

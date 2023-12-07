@@ -166,6 +166,7 @@ MetalDriver::~MetalDriver() noexcept {
 }
 
 void MetalDriver::tick(int) {
+    executeTickOps();
 }
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
@@ -582,6 +583,8 @@ void MetalDriver::terminate() {
     // finish() will flush the pending command buffer and will ensure all GPU work has finished.
     // This must be done before calling bufferPool->reset() to ensure no buffers are in flight.
     finish();
+
+    executeTickOps();
 
     mContext->bufferPool->reset();
     mContext->commandQueue = nil;
@@ -1833,6 +1836,19 @@ void MetalDriver::enumerateBoundBuffers(BufferObjectBinding bindingType,
 }
 
 void MetalDriver::resetState(int) {
+}
+
+void MetalDriver::runAtNextTick(const std::function<void()>& fn) noexcept {
+    std::lock_guard<std::mutex> const lock(mTickOpsLock);
+    mTickOps.push_back(fn);
+}
+
+void MetalDriver::executeTickOps() noexcept {
+    std::lock_guard<std::mutex> const lock(mTickOpsLock);
+    for (const auto& f : mTickOps) {
+        f();
+    }
+    mTickOps.clear();
 }
 
 // explicit instantiation of the Dispatcher
