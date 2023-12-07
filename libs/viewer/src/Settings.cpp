@@ -504,7 +504,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, ViewerOp
              i = parse(tokens, i + 1, jsonChunk, &out->cameraFar);
         } else if (compare(tok, jsonChunk, "cameraEyeOcularDistance") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->cameraEyeOcularDistance);
-        } else if (compare(tok, jsonChunk, "cameraEyeToneIn") == 0) {
+        } else if (compare(tok, jsonChunk, "cameraEyeToeIn") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->cameraEyeToeIn);
         } else if (compare(tok, jsonChunk, "groundShadowStrength") == 0) {
              i = parse(tokens, i + 1, jsonChunk, &out->groundShadowStrength);
