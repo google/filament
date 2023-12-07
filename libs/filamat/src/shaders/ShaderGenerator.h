@@ -111,6 +111,10 @@ private:
     static void appendShader(utils::io::sstream& ss,
             const utils::CString& shader, size_t lineOffset) noexcept;
 
+    static bool hasSkinningOrMorphing(
+            filament::Variant variant,
+            MaterialBuilder::FeatureLevel featureLevel) noexcept;
+
     MaterialBuilder::PropertyList mProperties;
     MaterialBuilder::VariableList mVariables;
     MaterialBuilder::OutputList mOutputs;
