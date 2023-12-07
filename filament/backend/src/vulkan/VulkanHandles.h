@@ -25,7 +25,6 @@
 #include "VulkanResources.h"
 #include "VulkanSwapChain.h"
 #include "VulkanTexture.h"
-#include "VulkanUtility.h"
 
 #include "private/backend/SamplerGroup.h"
 
@@ -38,7 +37,7 @@ class VulkanTimestamps;
 
 struct VulkanProgram : public HwProgram, VulkanResource {
 
-    VulkanProgram(VkDevice device, const Program& builder) noexcept;
+    VulkanProgram(VkDevice device, Program& builder) noexcept;
 
     struct CustomSamplerInfo {
         uint8_t groupIndex;
@@ -65,21 +64,14 @@ struct VulkanProgram : public HwProgram, VulkanResource {
         return mInfo->bindingToSamplerIndex;
     }
 
-    inline VkSpecializationInfo const& getSpecConstInfo() const {
-        return mInfo->specializationInfo;
-    }
-
 private:
     // TODO: handle compute shaders.
     // The expected order of shaders - from frontend to backend - is vertex, fragment, compute.
-    static constexpr uint8_t MAX_SHADER_MODULES = 2;
+    static constexpr uint8_t const MAX_SHADER_MODULES = 2;
 
     struct PipelineInfo {
-        PipelineInfo(size_t specConstsCount) :
-            bindingToSamplerIndex(MAX_SAMPLER_COUNT, 0xffff),
-            specConsts(specConstsCount, VkSpecializationMapEntry{}),
-            specConstData(new char[specConstsCount * 4])
-        {}
+        PipelineInfo()
+            : bindingToSamplerIndex(MAX_SAMPLER_COUNT, 0xffff) {}
 
         // This bitset maps to each of the sampler in the sampler groups associated with this
         // program, and whether each sampler is used in which shader (i.e. vert, frag, compute).
@@ -87,10 +79,7 @@ private:
 
         // We store the samplerGroupIndex as the top 8-bit and the index within each group as the lower 8-bit.
         utils::FixedCapacityVector<uint16_t> bindingToSamplerIndex;
-        VkShaderModule shaders[MAX_SHADER_MODULES] = {VK_NULL_HANDLE};
-        VkSpecializationInfo specializationInfo = {};
-        utils::FixedCapacityVector<VkSpecializationMapEntry> specConsts;
-        std::unique_ptr<char[]> specConstData;
+        VkShaderModule shaders[MAX_SHADER_MODULES] = { VK_NULL_HANDLE };
     };
 
     PipelineInfo* mInfo;
