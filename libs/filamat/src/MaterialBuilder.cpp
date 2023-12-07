@@ -1163,7 +1163,6 @@ error:
         mVariantFilter |= uint32_t(UserVariantFilterBit::DIRECTIONAL_LIGHTING);
         mVariantFilter |= uint32_t(UserVariantFilterBit::DYNAMIC_LIGHTING);
         mVariantFilter |= uint32_t(UserVariantFilterBit::SHADOW_RECEIVER);
-        mVariantFilter |= uint32_t(UserVariantFilterBit::SKINNING);
         mVariantFilter |= uint32_t(UserVariantFilterBit::VSM);
         mVariantFilter |= uint32_t(UserVariantFilterBit::SSR);
         mVariantFilter |= uint32_t(UserVariantFilterBit::STE);
