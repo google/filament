@@ -881,6 +881,7 @@ static std::ostream& operator<<(std::ostream& out, const ViewerOptions& in) {
         << "\"cameraNear\": " << (in.cameraNear) << ",\n"
         << "\"cameraFar\": " << (in.cameraFar) << ",\n"
         << "\"cameraEyeOcularDistance\": " << (in.cameraEyeOcularDistance) << ",\n"
+        << "\"cameraEyeToeIn\": " << (in.cameraEyeToeIn) << ",\n"
         << "\"groundShadowStrength\": " << (in.groundShadowStrength) << ",\n"
         << "\"groundPlaneEnabled\": " << to_string(in.groundPlaneEnabled) << ",\n"
         << "\"skyboxEnabled\": " << to_string(in.skyboxEnabled) << ",\n"
