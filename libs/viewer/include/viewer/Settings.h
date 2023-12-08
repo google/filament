@@ -234,6 +234,7 @@ struct ViewerOptions {
     float cameraNear = 0.1f;
     float cameraFar = 100.0f;
     float cameraEyeOcularDistance = 0.0f;
+    float cameraEyeToeIn = 0.0f;
     float groundShadowStrength = 0.75f;
     bool groundPlaneEnabled = false;
     bool skyboxEnabled = true;
