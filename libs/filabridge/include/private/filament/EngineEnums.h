@@ -26,7 +26,9 @@
 
 namespace filament {
 
-static constexpr size_t POST_PROCESS_VARIANT_COUNT = 2;
+static constexpr size_t POST_PROCESS_VARIANT_BITS = 1;
+static constexpr size_t POST_PROCESS_VARIANT_COUNT = (1u << POST_PROCESS_VARIANT_BITS);
+static constexpr size_t POST_PROCESS_VARIANT_MASK = POST_PROCESS_VARIANT_COUNT - 1;
 enum class PostProcessVariant : uint8_t {
     OPAQUE,
     TRANSLUCENT
@@ -135,11 +137,15 @@ template<>
 struct utils::EnableIntegerOperators<filament::SamplerBindingPoints> : public std::true_type {};
 template<>
 struct utils::EnableIntegerOperators<filament::ReservedSpecializationConstants> : public std::true_type {};
+template<>
+struct utils::EnableIntegerOperators<filament::PostProcessVariant> : public std::true_type {};
 
 template<>
 inline constexpr size_t utils::Enum::count<filament::UniformBindingPoints>() { return 9; }
 template<>
 inline constexpr size_t utils::Enum::count<filament::SamplerBindingPoints>() { return 4; }
+template<>
+inline constexpr size_t utils::Enum::count<filament::PostProcessVariant>() { return filament::POST_PROCESS_VARIANT_COUNT; }
 
 static_assert(utils::Enum::count<filament::UniformBindingPoints>() <= filament::backend::CONFIG_UNIFORM_BINDING_COUNT);
 static_assert(utils::Enum::count<filament::SamplerBindingPoints>() <= filament::backend::CONFIG_SAMPLER_BINDING_COUNT);

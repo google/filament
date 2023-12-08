@@ -46,6 +46,8 @@
 #include <math/half.h>
 #include <math/mat2.h>
 
+#include <utils/BitmaskEnum.h>
+
 #include <algorithm>
 #include <limits>
 
@@ -200,7 +202,8 @@ void PostProcessManager::registerPostProcessMaterial(std::string_view name, Mate
 }
 
 UTILS_NOINLINE
-PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMaterial(std::string_view name) noexcept {
+PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMaterial(
+        std::string_view name) noexcept {
     assert_invariant(mMaterialRegistry.find(name) != mMaterialRegistry.end());
     return mMaterialRegistry[name];
 }
@@ -2528,6 +2531,36 @@ void PostProcessManager::prepareTaa(FrameGraph& fg, filament::Viewport const& sv
     });
 }
 
+void PostProcessManager::configureTemporalAntiAliasingMaterial(
+        TemporalAntiAliasingOptions const& taaOptions) noexcept {
+
+    FMaterial* const ma = getPostProcessMaterial("taa").getMaterial(mEngine);
+    bool dirty = false;
+
+    auto setConstantParameter =
+            [&dirty](FMaterial* const ma, std::string_view name, auto value) noexcept {
+        auto id = ma->getSpecializationConstantId(name);
+        if (id.has_value()) {
+            if (ma->setConstant(id.value(), value)) {
+                dirty = true;
+            }
+        }
+    };
+
+    setConstantParameter(ma, "historyReprojection", taaOptions.historyReprojection);
+    setConstantParameter(ma, "filterHistory", taaOptions.filterHistory);
+    setConstantParameter(ma, "filterInput", taaOptions.filterInput);
+    setConstantParameter(ma, "useYCoCg", taaOptions.useYCoCg);
+    setConstantParameter(ma, "preventFlickering", taaOptions.preventFlickering);
+    setConstantParameter(ma, "boxType", (int32_t)taaOptions.boxType);
+    setConstantParameter(ma, "boxClipping", (int32_t)taaOptions.boxClipping);
+    if (dirty) {
+        ma->invalidate();
+        // TODO: call Material::compile(), we can't si that now because it works only
+        //       with surface materials
+    }
+}
+
 FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
         FrameGraphId<FrameGraphTexture> depth,
@@ -2616,8 +2649,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 auto color = resources.getTexture(data.color);
                 auto depth = resources.getTexture(data.depth);
                 auto history = resources.getTexture(data.history);
-
                 auto const& material = getPostProcessMaterial("taa");
+
                 FMaterialInstance* mi = material.getMaterialInstance(mEngine);
                 mi->setParameter("color",  color, {});  // nearest
                 mi->setParameter("depth",  depth, {});  // nearest
