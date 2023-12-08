@@ -39,7 +39,7 @@ rm -rf .git .github
 git checkout filament-specific-changes.patch FILAMENT_README.md filament-update.sh
 git apply filament-specific-changes.patch
 
-HEADERS_HASH=`grep  "spirv_headers_revision\':" DEPS | awk '{ print $2 }' | sed "s/[\'\,\\n]//g"`
+HEADERS_HASH=`grep  "spirv_headers_revision':" DEPS | awk '{ print $2 }' | sed "s/[\'\,\\n]//g"`
 
 # Next we update SPIRV-Headers to the right hash (dependency as given by SPIRV-Tools)
 sync_khronos_repo SPIRV-Headers ${HEADERS_HASH}
@@ -49,5 +49,6 @@ cd ../spirv-headers
 rsync -r /tmp/SPIRV-Headers/ ./ --delete
 rm -rf .git .github
 # Recover the filament specific files lost in the above rsync
-git checkout FILAMENT_README.md
+git checkout filament-specific-changes.patch FILAMENT_README.md
+git apply filament-specific-changes.patch
 popd
