@@ -33,6 +33,18 @@ enum_<View::DepthOfFieldOptions::Filter>("View$DepthOfFieldOptions$Filter")
     .value("MEDIAN", View::DepthOfFieldOptions::Filter::MEDIAN)
     ;
 
+enum_<View::TemporalAntiAliasingOptions::BoxType>("View$TemporalAntiAliasingOptions$BoxType")
+    .value("AABB", View::TemporalAntiAliasingOptions::BoxType::AABB)
+    .value("VARIANCE", View::TemporalAntiAliasingOptions::BoxType::VARIANCE)
+    .value("AABB_VARIANCE", View::TemporalAntiAliasingOptions::BoxType::AABB_VARIANCE)
+    ;
+
+enum_<View::TemporalAntiAliasingOptions::BoxClipping>("View$TemporalAntiAliasingOptions$BoxClipping")
+    .value("ACCURATE", View::TemporalAntiAliasingOptions::BoxClipping::ACCURATE)
+    .value("CLAMP", View::TemporalAntiAliasingOptions::BoxClipping::CLAMP)
+    .value("NONE", View::TemporalAntiAliasingOptions::BoxClipping::NONE)
+    ;
+
 enum_<View::AntiAliasing>("View$AntiAliasing")
     .value("NONE", View::AntiAliasing::NONE)
     .value("FXAA", View::AntiAliasing::FXAA)

@@ -792,6 +792,22 @@ void ViewerGui::updateUserInterface() {
         ImGui::Checkbox("Lens Flare", &mSettings.view.bloom.lensFlare);
     }
 
+    if (ImGui::CollapsingHeader("TAA Options")) {
+        ImGui::Checkbox("History Reprojection", &mSettings.view.taa.historyReprojection);
+        ImGui::SliderFloat("Feedback", &mSettings.view.taa.feedback, 0.0f, 1.0f);
+        ImGui::Checkbox("Filter History", &mSettings.view.taa.filterHistory);
+        ImGui::Checkbox("Filter Input", &mSettings.view.taa.filterInput);
+        ImGui::SliderFloat("FilterWidth", &mSettings.view.taa.filterWidth, 0.0f, 1.0f);
+        ImGui::Checkbox("Use YCoCg", &mSettings.view.taa.useYCoCg);
+        ImGui::Checkbox("Prevent Flickering", &mSettings.view.taa.preventFlickering);
+        int boxClipping = (int)mSettings.view.taa.boxClipping;
+        int boxType = (int)mSettings.view.taa.boxType;
+        ImGui::Combo("Box Clipping", &boxClipping, "Accurate\0Clamp\0None\0\0");
+        ImGui::Combo("Box Type", &boxType, "AABB\0Variance\0Both\0\0");
+        mSettings.view.taa.boxClipping = (TemporalAntiAliasingOptions::BoxClipping)boxClipping;
+        mSettings.view.taa.boxType = (TemporalAntiAliasingOptions::BoxType)boxType;
+    }
+
     if (ImGui::CollapsingHeader("SSAO Options")) {
         auto& ssao = mSettings.view.ssao;
 

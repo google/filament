@@ -373,8 +373,13 @@ void FEngine::init() {
 
     mDebugRegistry.registerProperty("d.shadowmap.debug_directional_shadowmap",
             &debug.shadowmap.debug_directional_shadowmap, [this]() {
-                mMaterials.forEach([](FMaterial* material) {
+                mMaterials.forEach([this](FMaterial* material) {
                     if (material->getMaterialDomain() == MaterialDomain::SURFACE) {
+
+                        material->setConstant(
+                                +ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
+                                debug.shadowmap.debug_directional_shadowmap);
+
                         material->invalidate(
                                 Variant::DIR | Variant::SRE | Variant::DEP,
                                 Variant::DIR | Variant::SRE);
@@ -384,8 +389,13 @@ void FEngine::init() {
 
     mDebugRegistry.registerProperty("d.lighting.debug_froxel_visualization",
             &debug.lighting.debug_froxel_visualization, [this]() {
-                mMaterials.forEach([](FMaterial* material) {
+                mMaterials.forEach([this](FMaterial* material) {
                     if (material->getMaterialDomain() == MaterialDomain::SURFACE) {
+
+                        material->setConstant(
+                                +ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION,
+                                debug.lighting.debug_froxel_visualization);
+
                         material->invalidate(
                                 Variant::DYN | Variant::DEP,
                                 Variant::DYN);

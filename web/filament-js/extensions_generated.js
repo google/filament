@@ -140,6 +140,13 @@ Filament.loadGeneratedExtensions = function() {
             filterWidth: 1.0,
             feedback: 0.04,
             enabled: false,
+            filterHistory: true,
+            filterInput: true,
+            useYCoCg: false,
+            boxType: Filament.View$TemporalAntiAliasingOptions$BoxType.VARIANCE,
+            boxClipping: Filament.View$TemporalAntiAliasingOptions$BoxClipping.ACCURATE,
+            preventFlickering: false,
+            historyReprojection: true,
         };
         return Object.assign(options, overrides);
     };

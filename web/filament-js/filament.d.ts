@@ -1636,13 +1636,28 @@ export interface View$MultiSampleAntiAliasingOptions {
     customResolve?: boolean;
 }
 
+export enum View$TemporalAntiAliasingOptions$BoxType {
+    AABB, // use an AABB neighborhood
+    VARIANCE, // use the variance of the neighborhood
+    AABB_VARIANCE, // use both AABB and variance
+}
+
+export enum View$TemporalAntiAliasingOptions$BoxClipping {
+    ACCURATE, // Accurate box clipping
+    CLAMP, // clamping
+    NONE, // no rejections (use for debugging)
+}
+
 /**
  * Options for Temporal Anti-aliasing (TAA)
+ * Most TAA parameters are extremely costly to change, as they will trigger the TAA post-process
+ * shaders to be recompiled. These options should be changed or set during initialization.
+ * `filterWidth` and `feedback`, however, could be changed an any time.
  * @see setTemporalAntiAliasingOptions()
  */
 export interface View$TemporalAntiAliasingOptions {
     /**
-     * reconstruction filter width typically between 0 (sharper, aliased) and 1 (smoother)
+     * reconstruction filter width typically between 0.2 (sharper, aliased) and 1 (smoother)
      */
     filterWidth?: number;
     /**
@@ -1653,6 +1668,34 @@ export interface View$TemporalAntiAliasingOptions {
      * enables or disables temporal anti-aliasing
      */
     enabled?: boolean;
+    /**
+     * whether to filter the history buffer
+     */
+    filterHistory?: boolean;
+    /**
+     * whether to apply the reconstruction filter to the input
+     */
+    filterInput?: boolean;
+    /**
+     * whether to use the YcoCg color-space for history rejection
+     */
+    useYCoCg?: boolean;
+    /**
+     * type of color gamut box
+     */
+    boxType?: View$TemporalAntiAliasingOptions$BoxType;
+    /**
+     * clipping algorithm
+     */
+    boxClipping?: View$TemporalAntiAliasingOptions$BoxClipping;
+    /**
+     * adjust the feedback dynamically to reduce flickering
+     */
+    preventFlickering?: boolean;
+    /**
+     * whether to apply history reprojection (debug option)
+     */
+    historyReprojection?: boolean;
 }
 
 /**

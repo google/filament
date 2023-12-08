@@ -79,7 +79,10 @@ struct Material::BuilderDetails {
     size_t mSize = 0;
     MaterialParser* mMaterialParser = nullptr;
     bool mDefaultMaterial = false;
-    std::unordered_map<std::string, std::variant<int32_t, float, bool>> mConstantSpecializations;
+    std::unordered_map<
+        utils::CString,
+        std::variant<int32_t, float, bool>,
+        CString::Hasher> mConstantSpecializations;
 };
 
 FMaterial::DefaultMaterialBuilder::DefaultMaterialBuilder() : Material::Builder() {
@@ -216,9 +219,14 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
         mSubpassInfo.isValid = false;
     }
 
-    utils::FixedCapacityVector<MaterialConstant> constants;
     // Older materials won't have a constants chunk, but that's okay.
-    parser->getConstants(&constants);
+    parser->getConstants(&mMaterialConstants);
+    for (size_t i = 0, c = mMaterialConstants.size(); i < c; i++) {
+        auto& item = mMaterialConstants[i];
+        // the key can be a string_view because mMaterialConstant owns the CString
+        std::string_view const key{ item.name.data(), item.name.size() };
+        mSpecializationConstantsNameToIndex[key] = i;
+    }
 
     // Verify that all the constant specializations exist in the material and that their types match.
     // The first specialization constants are defined internally by Filament.
@@ -238,7 +246,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     bool const powerVrShaderWorkarounds =
             engine.getDriverApi().isWorkaroundNeeded(Workaround::POWER_VR_SHADER_WORKAROUNDS);
 
-    mSpecializationConstants.reserve(constants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
+    mSpecializationConstants.reserve(mMaterialConstants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
     mSpecializationConstants.push_back({
                     +ReservedSpecializationConstants::BACKEND_FEATURE_LEVEL,
                     (int)engine.getSupportedFeatureLevel() });
@@ -250,16 +258,16 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
                     (int)maxFroxelBufferHeight });
     mSpecializationConstants.push_back({
                     +ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
-                    (bool)engine.debug.shadowmap.debug_directional_shadowmap });
+                    engine.debug.shadowmap.debug_directional_shadowmap });
     mSpecializationConstants.push_back({
                     +ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION,
-                    (bool)engine.debug.lighting.debug_froxel_visualization });
+                    engine.debug.lighting.debug_froxel_visualization });
     mSpecializationConstants.push_back({
                     +ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND,
-                    (bool)staticTextureWorkaround });
+                    staticTextureWorkaround });
     mSpecializationConstants.push_back({
                     +ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS,
-                    (bool)powerVrShaderWorkarounds });
+                    powerVrShaderWorkarounds });
     mSpecializationConstants.push_back({
                     +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT,
                     (int)engine.getConfig().stereoscopicEyeCount });
@@ -270,19 +278,18 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
             false});
     }
 
-    for (const auto& [name, value] : builder->mConstantSpecializations) {
-        auto found = std::find_if(
-                constants.begin(), constants.end(), [name = name](const auto& constant) {
-                    return strncmp(constant.name.data(), name.data(), name.length()) == 0;
-                });
-        ASSERT_PRECONDITION(found != constants.end(),
+    for (auto const& [name, value] : builder->mConstantSpecializations) {
+        std::string_view const key{ name.data(), name.size() };
+        auto pos = mSpecializationConstantsNameToIndex.find(key);
+        ASSERT_PRECONDITION(pos != mSpecializationConstantsNameToIndex.end(),
                 "The material %s does not have a constant parameter named %s.",
                 mName.c_str_safe(), name.c_str());
         const char* const types[3] = {"an int", "a float", "a bool"};
         const char* const errorMessage =
                 "The constant parameter %s on material %s is of type %s, but %s was "
                 "provided.";
-        switch (found->type) {
+        auto& constant = mMaterialConstants[pos->second];
+        switch (constant.type) {
             case ConstantType::INT:
                 ASSERT_PRECONDITION(std::holds_alternative<int32_t>(value), errorMessage,
                         name.c_str(), mName.c_str_safe(), "int", types[value.index()]);
@@ -296,8 +303,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
                         name.c_str(), mName.c_str_safe(), "bool", types[value.index()]);
                 break;
         }
-        uint32_t const index =
-                std::distance(constants.begin(), found) + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+        uint32_t const index = pos->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
         mSpecializationConstants.push_back({ index, value });
     }
 
@@ -462,16 +468,6 @@ FMaterial::~FMaterial() noexcept {
 }
 
 void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantValue) noexcept {
-    // update the spec constants that can change
-    // TODO: should we just always update all of them?
-    for (auto& item : mSpecializationConstants) {
-        if (item.id == ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP) {
-            item.value = mEngine.debug.shadowmap.debug_directional_shadowmap;
-        } else if (item.id == ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION) {
-            item.value = mEngine.debug.lighting.debug_froxel_visualization;
-        }
-    }
-
     if (mMaterialDomain == MaterialDomain::SURFACE) {
         DriverApi& driverApi = mEngine.getDriverApi();
         auto& cachedPrograms = mCachedPrograms;
@@ -840,5 +836,56 @@ void FMaterial::destroyPrograms(FEngine& engine) {
         cachedPrograms[k].clear();
     }
 }
+
+std::optional<uint32_t> FMaterial::getSpecializationConstantId(std::string_view name) const noexcept {
+    auto pos = mSpecializationConstantsNameToIndex.find(name);
+    if (pos != mSpecializationConstantsNameToIndex.end()) {
+        return pos->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+    }
+    return std::nullopt;
+}
+
+template<typename T, typename>
+bool FMaterial::setConstant(uint32_t id, T value) noexcept {
+    size_t const maxId = mMaterialConstants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+    if (UTILS_LIKELY(id < maxId)) {
+        if (id >= CONFIG_MAX_RESERVED_SPEC_CONSTANTS) {
+            // Constant from the material itself (as opposed to the reserved ones)
+            auto& constant = mMaterialConstants[id - CONFIG_MAX_RESERVED_SPEC_CONSTANTS];
+            using ConstantType = backend::ConstantType;
+            switch (constant.type) {
+                case ConstantType::INT:
+                    if (!std::is_same_v<T, int32_t>) return false;
+                    break;
+                case ConstantType::FLOAT:
+                    if (!std::is_same_v<T, float>) return false;
+                    break;
+                case ConstantType::BOOL:
+                    if (!std::is_same_v<T, bool>) return false;
+                    break;
+            }
+        }
+
+        auto pos = std::find_if(
+                mSpecializationConstants.begin(), mSpecializationConstants.end(),
+                [id](backend::Program::SpecializationConstant const& specializationConstant) {
+                    return specializationConstant.id == id;
+                });
+        if (pos != mSpecializationConstants.end()) {
+            if (std::get<T>(pos->value) != value) {
+                pos->value = value;
+                return true;
+            }
+        } else {
+            mSpecializationConstants.push_back({ id, value });
+            return true;
+        }
+    }
+    return false;
+}
+
+template bool FMaterial::setConstant<int32_t>(uint32_t id, int32_t value) noexcept;
+template bool FMaterial::setConstant<float>(uint32_t id, float value) noexcept;
+template bool FMaterial::setConstant<bool>(uint32_t id, bool value) noexcept;
 
 } // namespace filament

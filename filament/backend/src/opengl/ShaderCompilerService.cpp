@@ -547,7 +547,8 @@ void ShaderCompilerService::compileShaders(OpenGLContext& context,
             // add support for ARB_shading_language_packing if needed
             auto const packingFunctions = process_ARB_shading_language_packing(context);
 
-            // split shader source, so we can insert the specification constants and the packing functions
+            // split shader source, so we can insert the specialization constants and the packing
+            // functions
             auto const [prolog, body] = splitShaderSource(source);
 
             const std::array<const char*, 4> sources = {

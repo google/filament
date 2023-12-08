@@ -86,6 +86,10 @@ public:
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
 
+
+    void configureTemporalAntiAliasingMaterial(
+            TemporalAntiAliasingOptions const& taaOptions) noexcept;
+
     // methods below are ordered relative to their position in the pipeline (as much as possible)
 
     // structure (depth) pass
