@@ -22,7 +22,7 @@
 
 #include <backend/platforms/VulkanPlatform.h>
 
-#include <utils/Panic.h>
+#include <utils/Panic.h>    // ASSERT_POSTCONDITION
 
 using namespace bluevk;
 
@@ -47,23 +47,28 @@ static void clampToFramebuffer(VkRect2D* rect, uint32_t fbWidth, uint32_t fbHeig
     rect->extent.height = std::max(top - y, 0);
 }
 
-VulkanProgram::VulkanProgram(VkDevice device, Program& builder) noexcept
+VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
     : HwProgram(builder.getName()),
       VulkanResource(VulkanResourceType::PROGRAM),
       mInfo(new PipelineInfo()),
       mDevice(device) {
-    Program::ShaderSource& blobs = builder.getShadersSource();
+    Program::ShaderSource const& blobs = builder.getShadersSource();
     auto& modules = mInfo->shaders;
 
     auto const& specializationConstants = builder.getSpecializationConstants();
 
+    std::vector<uint32_t> shader;
     for (size_t i = 0; i < MAX_SHADER_MODULES; i++) {
-        Program::ShaderBlob& blob = blobs[i];
-
-        workaroundSpecConstant(blob, specializationConstants);
+        Program::ShaderBlob const& blob = blobs[i];
 
         uint32_t* data = (uint32_t*) blob.data();
         size_t dataSize = blob.size();
+
+        if (!specializationConstants.empty()) {
+            workaroundSpecConstant(blob, specializationConstants, shader);
+            data = (uint32_t*) shader.data();
+            dataSize = shader.size() * 4;
+        }
 
         VkShaderModule& module = modules[i];
         VkShaderModuleCreateInfo moduleInfo = {
