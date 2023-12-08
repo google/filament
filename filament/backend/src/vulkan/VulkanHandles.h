@@ -37,7 +37,7 @@ class VulkanTimestamps;
 
 struct VulkanProgram : public HwProgram, VulkanResource {
 
-    VulkanProgram(VkDevice device, Program& builder) noexcept;
+    VulkanProgram(VkDevice device, Program const& builder) noexcept;
 
     struct CustomSamplerInfo {
         uint8_t groupIndex;
