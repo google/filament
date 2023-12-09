@@ -1844,11 +1844,13 @@ void MetalDriver::runAtNextTick(const std::function<void()>& fn) noexcept {
 }
 
 void MetalDriver::executeTickOps() noexcept {
-    std::lock_guard<std::mutex> const lock(mTickOpsLock);
-    for (const auto& f : mTickOps) {
+    std::vector<std::function<void()>> ops;
+    mTickOpsLock.lock();
+    std::swap(ops, mTickOps);
+    mTickOpsLock.unlock();
+    for (const auto& f : ops) {
         f();
     }
-    mTickOps.clear();
 }
 
 // explicit instantiation of the Dispatcher
