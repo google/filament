@@ -18,10 +18,11 @@
 
 #include "VulkanConstants.h"
 #include "VulkanMemory.h"
+#include "spirv/VulkanSpirvUtils.h"
 
 #include <backend/platforms/VulkanPlatform.h>
 
-#include <utils/Panic.h>
+#include <utils/Panic.h>    // ASSERT_POSTCONDITION
 
 using namespace bluevk;
 
@@ -46,59 +47,37 @@ static void clampToFramebuffer(VkRect2D* rect, uint32_t fbWidth, uint32_t fbHeig
     rect->extent.height = std::max(top - y, 0);
 }
 
-VulkanProgram::VulkanProgram(VkDevice device, const Program& builder) noexcept
+VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
     : HwProgram(builder.getName()),
       VulkanResource(VulkanResourceType::PROGRAM),
-      mInfo(new PipelineInfo(builder.getSpecializationConstants().size())),
+      mInfo(new PipelineInfo()),
       mDevice(device) {
-    auto& blobs = builder.getShadersSource();
+    Program::ShaderSource const& blobs = builder.getShadersSource();
     auto& modules = mInfo->shaders;
+
+    auto const& specializationConstants = builder.getSpecializationConstants();
+
+    std::vector<uint32_t> shader;
     for (size_t i = 0; i < MAX_SHADER_MODULES; i++) {
-        const auto& blob = blobs[i];
-        uint32_t* data = (uint32_t*)blob.data();
+        Program::ShaderBlob const& blob = blobs[i];
+
+        uint32_t* data = (uint32_t*) blob.data();
+        size_t dataSize = blob.size();
+
+        if (!specializationConstants.empty()) {
+            workaroundSpecConstant(blob, specializationConstants, shader);
+            data = (uint32_t*) shader.data();
+            dataSize = shader.size() * 4;
+        }
+
         VkShaderModule& module = modules[i];
         VkShaderModuleCreateInfo moduleInfo = {
             .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            .codeSize = blob.size(),
+            .codeSize = dataSize,
             .pCode = data,
         };
         VkResult result = vkCreateShaderModule(mDevice, &moduleInfo, VKALLOC, &module);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create shader module.");
-    }
-
-    // Note that bools are 4-bytes in Vulkan
-    // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBool32.html
-    constexpr uint32_t const CONSTANT_SIZE = 4;
-
-    // populate the specialization constants requirements right now
-    auto const& specializationConstants = builder.getSpecializationConstants();
-    uint32_t const specConstCount = static_cast<uint32_t>(specializationConstants.size());
-    char* specData = mInfo->specConstData.get();
-    if (specConstCount > 0) {
-        mInfo->specializationInfo = {
-            .mapEntryCount = specConstCount,
-            .pMapEntries = mInfo->specConsts.data(),
-            .dataSize = specConstCount * CONSTANT_SIZE,
-            .pData = specData,
-        };
-    }
-    for (uint32_t i = 0; i < specConstCount; ++i) {
-        uint32_t const offset = i * CONSTANT_SIZE;
-        mInfo->specConsts[i] = {
-            .constantID = specializationConstants[i].id,
-            .offset = offset,
-            .size = CONSTANT_SIZE,
-        };
-        using SpecConstant = Program::SpecializationConstant::Type;
-        char const* addr = (char*)specData + offset;
-        SpecConstant const& arg = specializationConstants[i].value;
-        if (std::holds_alternative<bool>(arg)) {
-            *((VkBool32*)addr) = std::get<bool>(arg) ? VK_TRUE : VK_FALSE;
-        } else if (std::holds_alternative<float>(arg)) {
-            *((float*)addr) = std::get<float>(arg);
-        } else {
-            *((int32_t*)addr) = std::get<int32_t>(arg);
-        }
     }
 
     auto& groupInfo = builder.getSamplerGroupInfo();
@@ -123,7 +102,7 @@ VulkanProgram::VulkanProgram(VkDevice device, const Program& builder) noexcept
 VulkanProgram::VulkanProgram(VkDevice device, VkShaderModule vs, VkShaderModule fs,
         CustomSamplerInfoList const& samplerInfo) noexcept
     : VulkanResource(VulkanResourceType::PROGRAM),
-      mInfo(new PipelineInfo(0)),
+      mInfo(new PipelineInfo()),
       mDevice(device) {
     mInfo->shaders[0] = vs;
     mInfo->shaders[1] = fs;

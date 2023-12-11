@@ -205,7 +205,7 @@ Java_com_google_android_filament_MaterialInstance_nSetIntParameterArray(JNIEnv *
             break;
     }
 
-    env->ReleaseIntArrayElements(v_, v, 0);
+    env->ReleaseIntArrayElements(v_, v, JNI_ABORT);
 
     env->ReleaseStringUTFChars(name_, name);
 }

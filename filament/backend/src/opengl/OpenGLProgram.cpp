@@ -129,7 +129,7 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
 #endif
     {
         // ES2 initialization of (fake) UBOs
-        UniformsRecord* const uniformsRecords = new UniformsRecord[Program::UNIFORM_BINDING_COUNT];
+        UniformsRecord* const uniformsRecords = new(std::nothrow) UniformsRecord[Program::UNIFORM_BINDING_COUNT];
         UTILS_NOUNROLL
         for (GLuint binding = 0, n = Program::UNIFORM_BINDING_COUNT; binding < n; binding++) {
             Program::UniformInfo& uniforms = lazyInitializationData.bindingUniformInfo[binding];

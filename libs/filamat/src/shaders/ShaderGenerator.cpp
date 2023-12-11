@@ -23,6 +23,7 @@
 
 #include <utils/CString.h>
 
+#include "backend/DriverEnums.h"
 #include "filamat/MaterialBuilder.h"
 #include "CodeGenerator.h"
 #include "SibGenerator.h"
@@ -56,7 +57,7 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(utils::io::sstream& 
     switch (stage) {
         case ShaderStage::VERTEX:
         CodeGenerator::generateDefine(out, "VARIANT_HAS_SKINNING_OR_MORPHING",
-                variant.hasSkinningOrMorphing());
+                hasSkinningOrMorphing(variant, featureLevel));
             break;
         case ShaderStage::FRAGMENT:
             CodeGenerator::generateDefine(out, "VARIANT_HAS_FOG",
@@ -342,12 +343,13 @@ ShaderGenerator::ShaderGenerator(
     }
 }
 
-void ShaderGenerator::fixupExternalSamplers(ShaderModel sm,
-        std::string& shader, MaterialInfo const& material) noexcept {
+void ShaderGenerator::fixupExternalSamplers(ShaderModel sm, std::string& shader,
+        MaterialBuilder::FeatureLevel featureLevel,
+        MaterialInfo const& material) noexcept {
     // External samplers are only supported on GL ES at the moment, we must
     // skip the fixup on desktop targets
     if (material.hasExternalSamplers && sm == ShaderModel::MOBILE) {
-        CodeGenerator::fixupExternalSamplers(shader, material.sib);
+        CodeGenerator::fixupExternalSamplers(shader, material.sib, featureLevel);
     }
 }
 
@@ -396,7 +398,7 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
     generateSurfaceMaterialVariantProperties(vs, mProperties, mDefines);
 
     AttributeBitset attributes = material.requiredAttributes;
-    if (variant.hasSkinningOrMorphing()) {
+    if (hasSkinningOrMorphing(variant, featureLevel)) {
         attributes.set(VertexAttribute::BONE_INDICES);
         attributes.set(VertexAttribute::BONE_WEIGHTS);
         if (material.useLegacyMorphing) {
@@ -436,7 +438,7 @@ std::string ShaderGenerator::createVertexProgram(ShaderModel shaderModel,
                 UniformBindingPoints::SHADOW, UibGenerator::getShadowUib());
     }
 
-    if (variant.hasSkinningOrMorphing()) {
+    if (hasSkinningOrMorphing(variant, featureLevel)) {
         cg.generateUniforms(vs, ShaderStage::VERTEX,
                 UniformBindingPoints::PER_RENDERABLE_BONES,
                 UibGenerator::getPerRenderableBonesUib());
@@ -745,6 +747,15 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
     CodeGenerator::generatePostProcessMain(fs, ShaderStage::FRAGMENT);
     CodeGenerator::generateEpilog(fs);
     return fs.c_str();
+}
+
+bool ShaderGenerator::hasSkinningOrMorphing(
+        filament::Variant variant, MaterialBuilder::FeatureLevel featureLevel) noexcept {
+    return variant.hasSkinningOrMorphing()
+            // HACK(exv): Ignore skinning/morphing variant when targeting ESSL 1.0. We should
+            // either properly support skinning on FL0 or build a system in matc which allows
+            // the set of included variants to differ per-feature level.
+            && featureLevel > MaterialBuilder::FeatureLevel::FEATURE_LEVEL_0;
 }
 
 } // namespace filament

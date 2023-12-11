@@ -75,6 +75,7 @@ public:
      * the optimizations have been applied.
      */
     static void fixupExternalSamplers(filament::backend::ShaderModel sm, std::string& shader,
+            MaterialBuilder::FeatureLevel featureLevel,
             MaterialInfo const& material) noexcept;
 
 private:
@@ -109,6 +110,10 @@ private:
 
     static void appendShader(utils::io::sstream& ss,
             const utils::CString& shader, size_t lineOffset) noexcept;
+
+    static bool hasSkinningOrMorphing(
+            filament::Variant variant,
+            MaterialBuilder::FeatureLevel featureLevel) noexcept;
 
     MaterialBuilder::PropertyList mProperties;
     MaterialBuilder::VariableList mVariables;

@@ -318,7 +318,7 @@ private:
 
            void bindTexture(GLuint unit, GLTexture const* t) noexcept;
            void bindSampler(GLuint unit, GLuint sampler) noexcept;
-    inline void useProgram(OpenGLProgram* p) noexcept;
+    inline bool useProgram(OpenGLProgram* p) noexcept;
 
     enum class ResolveAction { LOAD, STORE };
     void resolvePass(ResolveAction action, GLRenderTarget const* rt,

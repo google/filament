@@ -22,7 +22,6 @@
 
 #include <private/backend/BackendUtils.h>
 
-#include <backend/platforms/OpenGLPlatform.h>
 #include <backend/Program.h>
 
 #include <utils/compiler.h>
@@ -254,8 +253,6 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                     glGetProgramiv(glProgram, GL_LINK_STATUS, &status);
                     programData.program = glProgram;
 
-                    token->gl.program = programData.program;
-
                     // we don't need to check for success here, it'll be done on the
                     // main thread side.
                     token->set(programData);
@@ -337,12 +334,12 @@ GLuint ShaderCompilerService::getProgram(ShaderCompilerService::program_token_t&
     return program;
 }
 
-/* static*/ void ShaderCompilerService::terminate(program_token_t& token) {
+void ShaderCompilerService::terminate(program_token_t& token) {
     assert_invariant(token);
 
     token->canceled = true;
 
-    bool canceled = token->compiler.cancelTickOp(token);
+    bool const canceled = token->compiler.cancelTickOp(token);
 
     if (token->compiler.mShaderCompilerThreadCount) {
         auto job = token->compiler.mCompilerThreadPool.dequeue(token);
