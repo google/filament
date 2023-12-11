@@ -10,6 +10,7 @@ Instead, if you are authoring a PR for the main branch, add your release note to
 ## v1.49.0
 
 - matc: Fix ESSL 1.0 codegen when using external samplers [⚠️ **Recompile materials**]
+- matc: Generate skinning variants for FL0 materials [⚠️ **Recompile materials**]
 
 ## v1.48.0
 
