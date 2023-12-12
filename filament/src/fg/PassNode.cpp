@@ -229,6 +229,11 @@ void RenderPassNode::resolve() noexcept {
             rt.descriptor.samples    = pImportedRenderTarget->importedDesc.samples;
             rt.backend.target        = pImportedRenderTarget->target;
 
+            // We could end-up here more than once, for instance if the rendertarget is used
+            // by multiple passes (this would imply a read-back, btw). In this case, we don't want
+            // to clear it the 2nd time, so we clear the imported pass's clear flags.
+            pImportedRenderTarget->importedDesc.clearFlags = TargetBufferFlags::NONE;
+
             // but don't discard attachments the imported target tells us to keep
             rt.backend.params.flags.discardStart &= ~pImportedRenderTarget->importedDesc.keepOverrideStart;
             rt.backend.params.flags.discardEnd   &= ~pImportedRenderTarget->importedDesc.keepOverrideEnd;
