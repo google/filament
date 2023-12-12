@@ -81,14 +81,14 @@ buildscript {
     ext.versions = [
         'jdk': 17,
         'minSdk': 19,
-        'targetSdk': 33,
-        'compileSdk': 33,
-        'kotlin': '1.9.0',
-        'kotlin_coroutines': '1.7.2',
+        'targetSdk': 34,
+        'compileSdk': 34,
+        'kotlin': '1.9.21',
+        'kotlin_coroutines': '1.7.3',
         'buildTools': '34.0.0',
-        'ndk': '25.1.8937393',
-        'androidx_core': '1.10.1',
-        'androidx_annotations': '1.6.0'
+        'ndk': '26.1.10909125',
+        'androidx_core': '1.12.0',
+        'androidx_annotations': '1.7.0'
     ]
 
     ext.deps = [
@@ -104,7 +104,7 @@ buildscript {
     ]
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.0'
+        classpath 'com.android.tools.build:gradle:8.2.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
     }
 
