@@ -56,6 +56,7 @@ class MetalDriver final : public DriverBase {
 
 public:
     static Driver* create(MetalPlatform* platform, const Platform::DriverConfig& driverConfig);
+    void runAtNextTick(const std::function<void()>& fn) noexcept;
 
 private:
 
@@ -72,7 +73,6 @@ private:
     /*
      * Tasks run regularly on the driver thread.
      */
-    void runAtNextTick(const std::function<void()>& fn) noexcept;
     void executeTickOps() noexcept;
     std::vector<std::function<void()>> mTickOps;
     std::mutex mTickOpsLock;
