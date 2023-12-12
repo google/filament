@@ -1,0 +1,2361 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Materials Overview - Filament</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="core.html"><strong aria-hidden="true">1.</strong> Core Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="core-design.html"><strong aria-hidden="true">1.1.</strong> Filament Design</a></li><li class="chapter-item expanded "><a href="core-materials.html" class="active"><strong aria-hidden="true">1.2.</strong> Materials Overview</a></li></ol></li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">2.</strong> API Reference</a></li><li class="chapter-item expanded "><a href="ios.html"><strong aria-hidden="true">3.</strong> iOS</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="cocoapods.html"><strong aria-hidden="true">3.1.</strong> CocoaPods Hello Triangle</a></li></ol></li><li class="chapter-item expanded "><a href="web.html"><strong aria-hidden="true">4.</strong> Web</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="web-tutorials.html"><strong aria-hidden="true">4.1.</strong> Tutorials</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="web-tutorial-triangle.html"><strong aria-hidden="true">4.1.1.</strong> Triangle Tutorial</a></li><li class="chapter-item expanded "><a href="web-tutorial-redball.html"><strong aria-hidden="true">4.1.2.</strong> Redball Tutorial</a></li><li class="chapter-item expanded "><a href="web-tutorial-suzanne.html"><strong aria-hidden="true">4.1.3.</strong> Suzanne Tutorial</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="dev.html"><strong aria-hidden="true">5.</strong> Developing Filament</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="dev-debugging.html"><strong aria-hidden="true">5.1.</strong> Filament Debugging</a></li><li class="chapter-item expanded "><a href="dev-spirv-debugging.html"><strong aria-hidden="true">5.2.</strong> Investigating SPIRV Issues</a></li><li class="chapter-item expanded "><a href="dev-versioning.html"><strong aria-hidden="true">5.3.</strong> Versioning</a></li><li class="chapter-item expanded "><a href="dev-vulkan.html"><strong aria-hidden="true">5.4.</strong> Vulkan Backend</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Filament</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="overview"><a class="header" href="#overview">Overview</a></h1>
+<p>Filament is a physically based rendering (PBR) engine for Android. Filament
+offers a customizable material system that you can use to create both simple and
+complex materials. This document describes all the features available to
+materials and how to create your own material.</p>
+<h2 id="core-concepts"><a class="header" href="#core-concepts">Core concepts</a></h2>
+<p>Material
+:   A material defines the visual appearance of a surface. To completely
+describe and render a surface, a material provides the following
+information:
+-   Material model
+-   Set of use-controllable named parameters
+-   Raster state (blending mode, backface culling, etc.)
+-   Vertex shader code
+-   Fragment shader code</p>
+<p>Material model
+:   Also called <em>shading model</em> or <em>lighting model</em>, the material model defines
+the intrinsic properties of a surface. These properties have a direct
+influence on the way lighting is computed and therefore on the appearance of
+a surface.</p>
+<p>Material definition
+:   A text file that describes all the information required by a material. This
+is the file that you will directly author to create new materials.</p>
+<p>Material package
+:   At runtime, materials are loaded from <em>material packages</em> compiled from
+material definitions using the <code>matc</code> tool. A material package contains all
+the information required to describe a material, and shaders generated for
+the target runtime platforms. This is necessary because different platforms
+(Android, macOS, Linux, etc.) use different graphics APIs or different
+variants of similar graphics APIs (OpenGL vs OpenGL ES for instance).</p>
+<p>Material instance
+:   A material instance is a reference to a material and a set of values for the
+different values of that material. Material instances are not covered in
+this document as they are created and manipulated directly from code using
+Filament's APIs.</p>
+<h1 id="material-models"><a class="header" href="#material-models">Material models</a></h1>
+<p>Filament materials can use one of the following material models: - Lit (or
+standard) - Subsurface - Cloth - Unlit - Specular glossiness (legacy)</p>
+<h2 id="lit-model"><a class="header" href="#lit-model">Lit model</a></h2>
+<p>The lit model is Filament's standard material model. This physically-based
+shading model was designed after to offer good interoperability with other
+common tools and engines such as <em>Unity 5</em>, <em>Unreal Engine 4</em>, <em>Substance
+Designer</em> or <em>Marmoset Toolbag</em>.</p>
+<p>This material model can be used to describe many non-metallic surfaces
+(<em>dielectrics</em>) or metallic surfaces (<em>conductors</em>).</p>
+<p>The appearance of a material using the standard model is controlled using the
+properties described in table [standardProperties].</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: right">Property</th><th style="text-align: left">Definition</th></tr></thead><tbody>
+<tr><td style="text-align: right"><strong>baseColor</strong></td><td style="text-align: left">Diffuse albedo for non-metallic surfaces, and specular color for metallic surfaces</td></tr>
+<tr><td style="text-align: right"><strong>metallic</strong></td><td style="text-align: left">Whether a surface appears to be dielectric (0.0) or conductor (1.0). Often used as a binary value (0 or 1)</td></tr>
+<tr><td style="text-align: right"><strong>roughness</strong></td><td style="text-align: left">Perceived smoothness (1.0) or roughness (0.0) of a surface. Smooth surfaces exhibit sharp reflections</td></tr>
+<tr><td style="text-align: right"><strong>reflectance</strong></td><td style="text-align: left">Fresnel reflectance at normal incidence for dielectric surfaces. This directly controls the strength of the reflections</td></tr>
+<tr><td style="text-align: right"><strong>sheenColor</strong></td><td style="text-align: left">Strength of the sheen layer</td></tr>
+<tr><td style="text-align: right"><strong>sheenRoughness</strong></td><td style="text-align: left">Perceived smoothness or roughness of the sheen layer</td></tr>
+<tr><td style="text-align: right"><strong>clearCoat</strong></td><td style="text-align: left">Strength of the clear coat layer</td></tr>
+<tr><td style="text-align: right"><strong>clearCoatRoughness</strong></td><td style="text-align: left">Perceived smoothness or roughness of the clear coat layer</td></tr>
+<tr><td style="text-align: right"><strong>anisotropy</strong></td><td style="text-align: left">Amount of anisotropy in either the tangent or bitangent direction</td></tr>
+<tr><td style="text-align: right"><strong>anisotropyDirection</strong></td><td style="text-align: left">Local surface direction in tangent space</td></tr>
+<tr><td style="text-align: right"><strong>ambientOcclusion</strong></td><td style="text-align: left">Defines how much of the ambient light is accessible to a surface point. It is a per-pixel shadowing factor between 0.0 and 1.0</td></tr>
+<tr><td style="text-align: right"><strong>normal</strong></td><td style="text-align: left">A detail normal used to perturb the surface using <em>bump mapping</em> (<em>normal mapping</em>)</td></tr>
+<tr><td style="text-align: right"><strong>bentNormal</strong></td><td style="text-align: left">A normal pointing in the average unoccluded direction. Can be used to improve indirect lighting quality</td></tr>
+<tr><td style="text-align: right"><strong>clearCoatNormal</strong></td><td style="text-align: left">A detail normal used to perturb the clear coat layer using <em>bump mapping</em> (<em>normal mapping</em>)</td></tr>
+<tr><td style="text-align: right"><strong>emissive</strong></td><td style="text-align: left">Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass</td></tr>
+<tr><td style="text-align: right"><strong>postLightingColor</strong></td><td style="text-align: left">Additional color that can be blended with the result of the lighting computations. See <code>postLightingBlending</code></td></tr>
+<tr><td style="text-align: right"><strong>ior</strong></td><td style="text-align: left">Index of refraction, either for refractive objects or as an alternative to reflectance</td></tr>
+<tr><td style="text-align: right"><strong>transmission</strong></td><td style="text-align: left">Defines how much of the diffuse light of a dielectric is transmitted through the object, in other words this defines how transparent an object is</td></tr>
+<tr><td style="text-align: right"><strong>absorption</strong></td><td style="text-align: left">Absorption factor for refractive objects</td></tr>
+<tr><td style="text-align: right"><strong>microThickness</strong></td><td style="text-align: left">Thickness of the thin layer of refractive objects</td></tr>
+<tr><td style="text-align: right"><strong>thickness</strong></td><td style="text-align: left">Thickness of the solid volume of refractive objects</td></tr>
+</tbody></table>
+</div>
+<p>[Table [standardProperties]: Properties of the standard model]</p>
+<p>The type and range of each property is described in table
+[standardPropertiesTypes].</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: right">Property</th><th style="text-align: center">Type</th><th style="text-align: center">Range</th><th style="text-align: left">Note</th></tr></thead><tbody>
+<tr><td style="text-align: right"><strong>baseColor</strong></td><td style="text-align: center">float4</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Pre-multiplied linear RGB</td></tr>
+<tr><td style="text-align: right"><strong>metallic</strong></td><td style="text-align: center">float</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Should be 0 or 1</td></tr>
+<tr><td style="text-align: right"><strong>roughness</strong></td><td style="text-align: center">float</td><td style="text-align: center">[0..1]</td><td style="text-align: left"></td></tr>
+<tr><td style="text-align: right"><strong>reflectance</strong></td><td style="text-align: center">float</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Prefer values &gt; 0.35</td></tr>
+<tr><td style="text-align: right"><strong>sheenColor</strong></td><td style="text-align: center">float3</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Linear RGB</td></tr>
+<tr><td style="text-align: right"><strong>sheenRoughness</strong></td><td style="text-align: center">float</td><td style="text-align: center">[0..1]</td><td style="text-align: left"></td></tr>
+<tr><td style="text-align: right"><strong>clearCoat</strong></td><td style="text-align: center">float</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Should be 0 or 1</td></tr>
+<tr><td style="text-align: right"><strong>clearCoatRoughness</strong></td><td style="text-align: center">float</td><td style="text-align: center">[0..1]</td><td style="text-align: left"></td></tr>
+<tr><td style="text-align: right"><strong>anisotropy</strong></td><td style="text-align: center">float</td><td style="text-align: center">[-1..1]</td><td style="text-align: left">Anisotropy is in the tangent direction when this value is positive</td></tr>
+<tr><td style="text-align: right"><strong>anisotropyDirection</strong></td><td style="text-align: center">float3</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Linear RGB, encodes a direction vector in tangent space</td></tr>
+<tr><td style="text-align: right"><strong>ambientOcclusion</strong></td><td style="text-align: center">float</td><td style="text-align: center">[0..1]</td><td style="text-align: left"></td></tr>
+<tr><td style="text-align: right"><strong>normal</strong></td><td style="text-align: center">float3</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Linear RGB, encodes a direction vector in tangent space</td></tr>
+<tr><td style="text-align: right"><strong>bentNormal</strong></td><td style="text-align: center">float3</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Linear RGB, encodes a direction vector in tangent space</td></tr>
+<tr><td style="text-align: right"><strong>clearCoatNormal</strong></td><td style="text-align: center">float3</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Linear RGB, encodes a direction vector in tangent space</td></tr>
+<tr><td style="text-align: right"><strong>emissive</strong></td><td style="text-align: center">float4</td><td style="text-align: center">rgb=[0..n], a=[0..1]</td><td style="text-align: left">Linear RGB intensity in nits, alpha encodes the exposure weight</td></tr>
+<tr><td style="text-align: right"><strong>postLightingColor</strong></td><td style="text-align: center">float4</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Pre-multiplied linear RGB</td></tr>
+<tr><td style="text-align: right"><strong>ior</strong></td><td style="text-align: center">float</td><td style="text-align: center">[1..n]</td><td style="text-align: left">Optional, usually deduced from the reflectance</td></tr>
+<tr><td style="text-align: right"><strong>transmission</strong></td><td style="text-align: center">float</td><td style="text-align: center">[0..1]</td><td style="text-align: left"></td></tr>
+<tr><td style="text-align: right"><strong>absorption</strong></td><td style="text-align: center">float3</td><td style="text-align: center">[0..n]</td><td style="text-align: left"></td></tr>
+<tr><td style="text-align: right"><strong>microThickness</strong></td><td style="text-align: center">float</td><td style="text-align: center">[0..n]</td><td style="text-align: left"></td></tr>
+<tr><td style="text-align: right"><strong>thickness</strong></td><td style="text-align: center">float</td><td style="text-align: center">[0..n]</td><td style="text-align: left"></td></tr>
+</tbody></table>
+</div>
+<p>[Table [standardPropertiesTypes]: Range and type of the standard model's properties]</p>
+<p>!!! Note: About linear RGB Several material model properties expect RGB colors.
+Filament materials use RGB colors in linear space and you must take proper care
+of supplying colors in that space. See the Linear colors section for more
+information.</p>
+<p>!!! Note: About pre-multiplied RGB Filament materials expect colors to use
+pre-multiplied alpha. See the Pre-multiplied alpha section for more information.</p>
+<p>!!! Note: About <code>absorption</code> The light attenuation through the material is
+defined as \(e^{-absorption \cdot distance}\), and the distance depends on the
+<code>thickness</code> parameter. If <code>thickness</code> is not provided, then the <code>absorption</code>
+parameter is used directly and the light attenuation through the material
+becomes \(1 - absorption\). To obtain a certain color at a desired distance, the
+above equation can be inverted such as $absorption =
+-\frac{ln(color)}{distance}$.</p>
+<p>!!! Note: About <code>ior</code> and <code>reflectance</code> The index of refraction (IOR) and the
+reflectance represent the same physical attribute, therefore they don't need to
+be both specified. Typically, only the reflectance is specified, and the IOR is
+deduced automatically. When only the IOR is specified, the reflectance is then
+deduced automatically. It is possible to specify both, in which case their
+values are kept as-is, which can lead to physically impossible materials,
+however, this might be desirable for artistic reasons.</p>
+<p>!!! Note: About <code>thickness</code> and <code>microThickness</code> for refraction <code>thickness</code>
+represents the thickness of solid objects in the direction of the normal, for
+satisfactory results, this should be provided per fragment (e.g.: as a texture)
+or at least per vertex. <code>microThickness</code> represent the thickness of the thin
+layer of an object, and can generally be provided as a constant value. For
+example, a 1mm thin hollow sphere of radius 1m, would have a <code>thickness</code> of 1
+and a <code>microThickness</code> of 0.001. Currently <code>thickness</code> is not used when
+<code>refractionType</code> is set to <code>thin</code>.</p>
+<h3 id="base-color"><a class="header" href="#base-color">Base color</a></h3>
+<p>The <code>baseColor</code> property defines the perceived color of an object (sometimes
+called albedo). The effect of <code>baseColor</code> depends on the nature of the surface,
+controlled by the <code>metallic</code> property explained in the Metallic section.</p>
+<p>Non-metals (dielectrics)
+:   Defines the diffuse color of the surface. Real-world values are typically
+found in the range \([10..240]\) if the value is encoded between 0 and 255, or
+in the range \([0.04..0.94]\) between 0 and 1. Several examples of base colors
+for non-metallic surfaces can be found in table [baseColorsDielectrics].</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: right">Metal</th><th style="text-align: center">sRGB</th><th style="text-align: center">Hexadecimal</th><th>Color</th></tr></thead><tbody>
+<tr><td style="text-align: right">Coal</td><td style="text-align: center">0.19, 0.19, 0.19</td><td style="text-align: center">#323232</td><td><div style="background-color: #323232; width: 60px"> </div></td></tr>
+<tr><td style="text-align: right">Rubber</td><td style="text-align: center">0.21, 0.21, 0.21</td><td style="text-align: center">#353535</td><td><div style="background-color: #353535; width: 60px"> </div></td></tr>
+<tr><td style="text-align: right">Mud</td><td style="text-align: center">0.33, 0.24, 0.19</td><td style="text-align: center">#553d31</td><td><div style="background-color: #875c3c; width: 60px"> </div></td></tr>
+<tr><td style="text-align: right">Wood</td><td style="text-align: center">0.53, 0.36, 0.24</td><td style="text-align: center">#875c3c</td><td><div style="background-color: #c4c6c6; width: 60px"> </div></td></tr>
+<tr><td style="text-align: right">Vegetation</td><td style="text-align: center">0.48, 0.51, 0.31</td><td style="text-align: center">#7b824e</td><td><div style="background-color: #7b824e; width: 60px"> </div></td></tr>
+<tr><td style="text-align: right">Brick</td><td style="text-align: center">0.58, 0.49, 0.46</td><td style="text-align: center">#947d75</td><td><div style="background-color: #947d75; width: 60px"> </div></td></tr>
+<tr><td style="text-align: right">Sand</td><td style="text-align: center">0.69, 0.66, 0.52</td><td style="text-align: center">#b1a884</td><td><div style="background-color: #b1a884; width: 60px"> </div></td></tr>
+<tr><td style="text-align: right">Concrete</td><td style="text-align: center">0.75, 0.75, 0.73</td><td style="text-align: center">#c0bfbb</td><td><div style="background-color: #c0bfbb; width: 60px"> </div></td></tr>
+</tbody></table>
+</div>
+<p>[Table [baseColorsDielectrics]: <code>baseColor</code> for common non-metals]</p>
+<p>Metals (conductors)
+:   Defines the specular color of the surface. Real-world values are typically found in the range
+\([170..255]\) if the value is encoded between 0 and 255, or in the range \([0.66..1.0]\)
+between 0 and 1. Several examples of base colors for metallic surfaces can be found in table
+[baseColorsConductors].</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: right">Metal</th><th style="text-align: center">sRGB</th><th style="text-align: center">Hexadecimal</th><th>Color</th></tr></thead><tbody>
+<tr><td style="text-align: right">Silver</td><td style="text-align: center">0.97, 0.96, 0.91</td><td style="text-align: center">#f7f4e8</td><td><div style="background-color: #faf9f5; width: 60px"> </div></td></tr>
+<tr><td style="text-align: right">Aluminum</td><td style="text-align: center">0.91, 0.92, 0.92</td><td style="text-align: center">#e8eaea</td><td><div style="background-color: #f4f5f5; width: 60px"> </div></td></tr>
+<tr><td style="text-align: right">Titanium</td><td style="text-align: center">0.76, 0.73, 0.69</td><td style="text-align: center">#c1baaf</td><td><div style="background-color: #cec8c2; width: 60px"> </div></td></tr>
+<tr><td style="text-align: right">Iron</td><td style="text-align: center">0.77, 0.78, 0.78</td><td style="text-align: center">#c4c6c6</td><td><div style="background-color: #c0bdba; width: 60px"> </div></td></tr>
+<tr><td style="text-align: right">Platinum</td><td style="text-align: center">0.83, 0.81, 0.78</td><td style="text-align: center">#d3cec6</td><td><div style="background-color: #d6d1c8; width: 60px"> </div></td></tr>
+<tr><td style="text-align: right">Gold</td><td style="text-align: center">1.00, 0.85, 0.57</td><td style="text-align: center">#ffd891</td><td><div style="background-color: #fedc9d; width: 60px"> </div></td></tr>
+<tr><td style="text-align: right">Brass</td><td style="text-align: center">0.98, 0.90, 0.59</td><td style="text-align: center">#f9e596</td><td><div style="background-color: #f4e4ad; width: 60px"> </div></td></tr>
+<tr><td style="text-align: right">Copper</td><td style="text-align: center">0.97, 0.74, 0.62</td><td style="text-align: center">#f7bc9e</td><td><div style="background-color: #fbd8b8; width: 60px"> </div></td></tr>
+</tbody></table>
+</div>
+<p>[Table [baseColorsConductors]: <code>baseColor</code> for common metals]</p>
+<h3 id="metallic"><a class="header" href="#metallic">Metallic</a></h3>
+<p>The <code>metallic</code> property defines whether the surface is a metallic (<em>conductor</em>)
+or a non-metallic (<em>dielectric</em>) surface. This property should be used as a
+binary value, set to either 0 or 1. Intermediate values are only truly useful to
+create transitions between different types of surfaces when using textures.</p>
+<p>This property can dramatically change the appearance of a surface. Non-metallic
+surfaces have chromatic diffuse reflection and achromatic specular reflection
+(reflected light does not change color). Metallic surfaces do not have any
+diffuse reflection and chromatic specular reflection (reflected light takes on
+the color of the surfaced as defined by <code>baseColor</code>).</p>
+<p>The effect of <code>metallic</code> is shown in figure
+[metallicProperty](click on the image to see a larger version).</p>
+<p><img src="images/materials/metallic.png" alt="Figure [metallicProperty]: metallic varying from 0.0 (left) to 1.0 (right)" /></p>
+<h3 id="roughness"><a class="header" href="#roughness">Roughness</a></h3>
+<p>The <code>roughness</code> property controls the perceived smoothness of the surface. When
+<code>roughness</code> is set to 0, the surface is perfectly smooth and highly glossy. The
+rougher a surface is, the &quot;blurrier&quot; the reflections are. This property is often
+called <em>glossiness</em> in other engines and tools, and is simply the opposite of
+the roughness (<code>roughness = 1 - glossiness</code>).</p>
+<h3 id="non-metals"><a class="header" href="#non-metals">Non-metals</a></h3>
+<p>The effect of <code>roughness</code> on non-metallic surfaces is shown in figure
+[roughnessProperty](click on the image to see a larger version).</p>
+<p><img src="images/materials/dielectric_roughness.png" alt="Figure [roughnessProperty]: Dielectric roughness varying from 0.0 (left) to 1.0 (right)" /></p>
+<h3 id="metals"><a class="header" href="#metals">Metals</a></h3>
+<p>The effect of <code>roughness</code> on metallic surfaces is shown in figure
+[roughnessConductorProperty](click on the image to see a larger version).</p>
+<p><img src="images/materials/conductor_roughness.png" alt="Figure [roughnessConductorProperty]: Conductor roughness varying from 0.0 (left) to 1.0 (right)" /></p>
+<h3 id="refraction"><a class="header" href="#refraction">Refraction</a></h3>
+<p>When refraction through an object is enabled (using a <code>refractonType</code> of <code>thin</code>
+or <code>solid</code>), the <code>roughness</code> property will also affect the refractions, as shown
+in figure
+[roughnessRefractionProperty](click on the image to see a larger version).</p>
+<p><img src="images/materials/refraction_roughness.png" alt="Figure [roughnessRefractionProperty]: Refractive sphere with roughness varying from 0.0 (left) to 1.0 (right)" /></p>
+<h3 id="reflectance"><a class="header" href="#reflectance">Reflectance</a></h3>
+<p>The <code>reflectance</code> property only affects non-metallic surfaces. This property can
+be used to control the specular intensity and index of refraction of materials.
+This value is defined between 0 and 1 and represents a remapping of a percentage
+of reflectance. For instance, the default value of 0.5 corresponds to a
+reflectance of 4%. Values below 0.35 (2% reflectance) should be avoided as no
+real-world materials have such low reflectance.</p>
+<p>The effect of <code>reflectance</code> on non-metallic surfaces is shown in figure
+[reflectanceProperty](click on the image to see a larger version).</p>
+<p><img src="images/materials/reflectance.png" alt="Figure [reflectanceProperty]: reflectance varying from 0.0 (left) to 1.0 (right)" /></p>
+<p>Figure [reflectance] shows common values and how they relate to the mapping
+function.</p>
+<p><img src="images/diagram_reflectance.png" alt="Figure [reflectance]: Common reflectance values" /></p>
+<p>Table [commonMatReflectance] describes acceptable reflectance values for various
+types of materials (no real world material has a value under 2%).</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: right">Material</th><th style="text-align: left">Reflectance</th><th style="text-align: left">IOR</th><th style="text-align: left">Linear value</th></tr></thead><tbody>
+<tr><td style="text-align: right">Water</td><td style="text-align: left">2%</td><td style="text-align: left">1.33</td><td style="text-align: left">0.35</td></tr>
+<tr><td style="text-align: right">Fabric</td><td style="text-align: left">4% to 5.6%</td><td style="text-align: left">1.5 to 1.62</td><td style="text-align: left">0.5 to 0.59</td></tr>
+<tr><td style="text-align: right">Common liquids</td><td style="text-align: left">2% to 4%</td><td style="text-align: left">1.33 to 1.5</td><td style="text-align: left">0.35 to 0.5</td></tr>
+<tr><td style="text-align: right">Common gemstones</td><td style="text-align: left">5% to 16%</td><td style="text-align: left">1.58 to 2.33</td><td style="text-align: left">0.56 to 1.0</td></tr>
+<tr><td style="text-align: right">Plastics, glass</td><td style="text-align: left">4% to 5%</td><td style="text-align: left">1.5 to 1.58</td><td style="text-align: left">0.5 to 0.56</td></tr>
+<tr><td style="text-align: right">Other dielectric materials</td><td style="text-align: left">2% to 5%</td><td style="text-align: left">1.33 to 1.58</td><td style="text-align: left">0.35 to 0.56</td></tr>
+<tr><td style="text-align: right">Eyes</td><td style="text-align: left">2.5%</td><td style="text-align: left">1.38</td><td style="text-align: left">0.39</td></tr>
+<tr><td style="text-align: right">Skin</td><td style="text-align: left">2.8%</td><td style="text-align: left">1.4</td><td style="text-align: left">0.42</td></tr>
+<tr><td style="text-align: right">Hair</td><td style="text-align: left">4.6%</td><td style="text-align: left">1.55</td><td style="text-align: left">0.54</td></tr>
+<tr><td style="text-align: right">Teeth</td><td style="text-align: left">5.8%</td><td style="text-align: left">1.63</td><td style="text-align: left">0.6</td></tr>
+<tr><td style="text-align: right">Default value</td><td style="text-align: left">4%</td><td style="text-align: left">1.5</td><td style="text-align: left">0.5</td></tr>
+</tbody></table>
+</div>
+<p>[Table [commonMatReflectance]: Reflectance of common materials]</p>
+<p>Note that the <code>reflectance</code> property also defines the index of refraction of the
+surface. When this property is defined it is not necessary to define the <code>ior</code>
+property. Setting either of these properties will automatically compute the
+other property. It is possible to specify both, in which case their values are
+kept as-is, which can lead to physically impossible materials, however, this
+might be desirable for artistic reasons.</p>
+<p>The <code>reflectance</code> property is designed as a normalized property in the range
+0..1 which makes it easy to define from a texture.</p>
+<p>See section [Index of refraction] for more information about the <code>ior</code> property
+and refractive indices.</p>
+<h3 id="sheen-color"><a class="header" href="#sheen-color">Sheen color</a></h3>
+<p>The sheen color controls the color appearance and strength of an optional sheen
+layer on top of the base layer described by the properties above. The sheen
+layer always sits below the clear coat layer if such a layer is present.</p>
+<p>The sheen layer can be used to represent cloth and fabric materials. Please
+refer to section [Cloth model] for more information about cloth and fabric
+materials.</p>
+<p>The effect of <code>sheenColor</code> is shown in figure
+[materialSheenColor](click on the image to see a larger version).</p>
+<p><img src="images/screenshot_sheen_color.png" alt="Figure [materialSheenColor]: Different sheen colors" /></p>
+<p>!!! Note If you do not need the other properties offered by the standard lit
+material model but want to create a cloth-like or fabric-like appearance, it is
+more efficient to use the dedicated cloth model described in section [Cloth
+model].</p>
+<h3 id="sheen-roughness"><a class="header" href="#sheen-roughness">Sheen roughness</a></h3>
+<p>The <code>sheenRoughness</code> property is similar to the <code>roughness</code> property but applies
+only to the sheen layer.</p>
+<p>The effect of <code>sheenRoughness</code> on a rough metal is shown in figure
+[sheenRoughnessProperty](click on the image to see a larger version). In this
+picture, the base layer is a dark blue, with <code>metallic</code> set to <code>0.0</code> and
+<code>roughness</code> set to <code>1.0</code>.</p>
+<p><img src="images/materials/sheen_roughness.png" alt="Figure [sheenRoughnessProperty]: sheenRoughness varying from 0.0 (left) to 1.0 (right)" /></p>
+<h3 id="clear-coat"><a class="header" href="#clear-coat">Clear coat</a></h3>
+<p>Multi-layer materials are fairly common, particularly materials with a thin
+translucent layer over a base layer. Real world examples of such materials
+include car paints, soda cans, lacquered wood and acrylic.</p>
+<p>The <code>clearCoat</code> property can be used to describe materials with two layers. The
+clear coat layer will always be isotropic and dielectric.</p>
+<p><img src="images/material_carbon_fiber.png" alt="Figure [clearCoat]: Comparison of a carbon-fiber material under the standard material model (left) and the clear coat model (right)" /></p>
+<p>The <code>clearCoat</code> property controls the strength of the clear coat layer. This
+should be treated as a binary value, set to either 0 or 1. Intermediate values
+are useful to control transitions between parts of the surface that have a clear
+coat layers and parts that don't.</p>
+<p>The effect of <code>clearCoat</code> on a rough metal is shown in figure
+[clearCoatProperty](click on the image to see a larger version).</p>
+<p><img src="images/materials/clear_coat.png" alt="Figure [clearCoatProperty]: clearCoat varying from 0.0 (left) to 1.0 (right)" /></p>
+<p>!!! Warning The clear coat layer effectively doubles the cost of specular
+computations. Do not assign a value, even 0.0, to the clear coat property if you
+don't need this second layer.</p>
+<p>!!! Note The clear coat layer is added on top of the sheen layer if present.</p>
+<h3 id="clear-coat-roughness"><a class="header" href="#clear-coat-roughness">Clear coat roughness</a></h3>
+<p>The <code>clearCoatRoughness</code> property is similar to the <code>roughness</code> property but
+applies only to the clear coat layer.</p>
+<p>The effect of <code>clearCoatRoughness</code> on a rough metal is shown in figure
+[clearCoatRoughnessProperty](click on the image to see a larger version).</p>
+<p><img src="images/materials/clear_coat_roughness.png" alt="Figure [clearCoatRoughnessProperty]: clearCoatRoughness varying from 0.0 (left) to 1.0 (right)" /></p>
+<h3 id="anisotropy"><a class="header" href="#anisotropy">Anisotropy</a></h3>
+<p>Many real-world materials, such as brushed metal, can only be replicated using
+an anisotropic reflectance model. A material can be changed from the default
+isotropic model to an anisotropic model by using the <code>anisotropy</code> property.</p>
+<p><img src="images/material_anisotropic.png" alt="Figure [anisotropic]: Comparison of isotropic material (left) and anistropic material (right)" /></p>
+<p>The effect of <code>anisotropy</code> on a rough metal is shown in figure
+[anisotropyProperty](click on the image to see a larger version).</p>
+<p><img src="images/materials/anisotropy.png" alt="Figure [anisotropyProperty]: anisotropy varying from 0.0 (left) to 1.0 (right)" /></p>
+<p>The figure [anisotropyDir] below shows how the direction of the anisotropic
+highlights can be controlled by using either positive or negative values:
+positive values define anisotropy in the tangent direction and negative values
+in the bitangent direction.</p>
+<p><img src="images/screenshot_anisotropy_direction.png" alt="Figure [anisotropyDir]: Positive (left) vs negative (right) anisotropy values" /></p>
+<p>!!! Tip The anisotropic material model is slightly more expensive than the
+standard material model. Do not assign a value (even 0.0) to the <code>anisotropy</code>
+property if you don't need anisotropy.</p>
+<h3 id="anisotropy-direction"><a class="header" href="#anisotropy-direction">Anisotropy direction</a></h3>
+<p>The <code>anisotropyDirection</code> property defines the direction of the surface at a
+given point and thus control the shape of the specular highlights. It is
+specified as vector of 3 values that usually come from a texture, encoding the
+directions local to the surface in tangent space. Because the direction is in
+tangent space, the Z component should be set to 0.</p>
+<p>The effect of <code>anisotropyDirection</code> on a metal is shown in figure
+[anisotropyDirectionProperty](click on the image to see a larger version).</p>
+<p><img src="images/screenshot_anisotropy.png" alt="Figure [anisotropyDirectionProperty]: Anisotropic metal rendered with a direction map" /></p>
+<p>The result shown in figure [anisotropyDirectionProperty] was obtained using the
+direction map shown in figure [anisotropyDirectionProperty].</p>
+<p><img src="images/screenshot_anisotropy_map.jpg" alt="Figure [anisotropyDirectionProperty]: Example of Lighting: specularAmbientOcclusiona direction map" /></p>
+<h3 id="ambient-occlusion"><a class="header" href="#ambient-occlusion">Ambient occlusion</a></h3>
+<p>The <code>ambientOcclusion</code> property defines how much of the ambient light is
+accessible to a surface point. It is a per-pixel shadowing factor between 0.0
+(fully shadowed) and 1.0 (fully lit). This property only affects diffuse
+indirect lighting (image-based lighting), not direct lights such as directional,
+point and spot lights, nor specular lighting.</p>
+<p><img src="images/screenshot_ao.jpg" alt="Figure [aoExample]: Comparison of materials without diffuse ambient occlusion (left) and with (right)" /></p>
+<h3 id="normal"><a class="header" href="#normal">Normal</a></h3>
+<p>The <code>normal</code> property defines the normal of the surface at a given point. It
+usually comes from a <em>normal map</em> texture, which allows to vary the property
+per-pixel. The normal is supplied in tangent space, which means that +Z points
+outside of the surface.</p>
+<p>For example, let's imagine that we want to render a piece of furniture covered
+in tufted leather. Modeling the geometry to accurately represent the tufted
+pattern would require too many triangles so we instead bake a high-poly mesh
+into a normal map. Once the base map is applied to a simplified mesh, we get the
+result in figure [normalMapped].</p>
+<p>Note that the <code>normal</code> property affects the <em>base layer</em> and not the clear coat
+layer.</p>
+<p><img src="images/screenshot_normal_mapping.jpg" alt="Figure [normalMapped]: Low-poly mesh without normal mapping (left) and with (right)" /></p>
+<p>!!! Warning Using a normal map increases the runtime cost of the material model.</p>
+<h3 id="bent-normal"><a class="header" href="#bent-normal">Bent normal</a></h3>
+<p>The <code>bentNormal</code> property defines the average unoccluded direction at a point on
+the surface. It is used to improve the accuracy of indirect lighting. Bent
+normals can also improve the quality of specular ambient occlusion (see section
+[Lighting: specularAmbientOcclusion] about <code>specularAmbientOcclusion</code>).</p>
+<p>Bent normals can greatly increase the visual fidelity of an asset with various
+cavities and concave areas, as shown in figure [bentNormalMapped]. See the areas
+of the ears, nostrils and eyes for instance.</p>
+<p><img src="images/material_bent_normal.gif" alt="Figure [bentNormalMapped]: Example of a model rendered with and without a bent normal map. Both versions use the same ambient occlusion map." /></p>
+<h3 id="clear-coat-normal"><a class="header" href="#clear-coat-normal">Clear coat normal</a></h3>
+<p>The <code>clearCoatNormal</code> property defines the normal of the clear coat layer at a
+given point. It behaves otherwise like the <code>normal</code> property.</p>
+<p><img src="images/screenshot_clear_coat_normal.jpg" alt="Figure [clearCoatNormalMapped]: A material with a clear coat normal map and a surface normal map" /></p>
+<p>!!! Warning Using a clear coat normal map increases the runtime cost of the
+material model.</p>
+<h3 id="emissive"><a class="header" href="#emissive">Emissive</a></h3>
+<p>The <code>emissive</code> property can be used to simulate additional light emitted by the
+surface. It is defined as a <code>float4</code> value that contains an RGB intensity in
+nits as well as an exposure weight (in the alpha channel).</p>
+<p>The intensity in nits allows an emissive surface to function as a light and can
+be used to recreate real world surfaces. For instance a computer display has an
+intensity between 200 and 1,000 nits.</p>
+<p>If you prefer to work in EV (or f-stops), you can simplify multiply your
+emissive color by the output of the API <code>filament::Exposure::luminance(ev)</code>.
+This API returns the luminance in nits of the specific EV. You can perform this
+conversion yourself using the following formula, where \(L\) is the final
+intensity in nits: \( L = 2^{EV - 3} \).</p>
+<p>The exposure weight carried in the alpha channel can be used to undo the camera
+exposure, and thus force an emissive surface to bloom. When the exposure weight
+is set to 0, the emissive intensity is not affected by the camera exposure. When
+the weight is set to 1, the intensity is multiplied by the camera exposure like
+with any regular light.</p>
+<h3 id="post-lighting-color"><a class="header" href="#post-lighting-color">Post-lighting color</a></h3>
+<p>The <code>postLightingColor</code> can be used to modify the surface color after lighting
+computations. This property has no physical meaning and only exists to implement
+specific effects or to help with debugging. This property is defined as a
+<code>float4</code> value containing a pre-multiplied RGB color in linear space.</p>
+<p>The post-lighting color is blended with the result of lighting according to the
+blending mode specified by the <code>postLightingBlending</code> material option. Please
+refer to the documentation of this option for more information.</p>
+<p>!!! Tip <code>postLightingColor</code> can be used as a simpler <code>emissive</code> property by
+setting <code>postLightingBlending</code> to <code>add</code> and by providing an RGB color with alpha
+set to <code>0.0</code>.</p>
+<h3 id="index-of-refraction"><a class="header" href="#index-of-refraction">Index of refraction</a></h3>
+<p>The <code>ior</code> property only affects non-metallic surfaces. This property can be used
+to control the index of refraction and the specular intensity of materials. The
+<code>ior</code> property is intended to be used with refractive (transmissive) materials,
+which are enabled when the <code>refractionMode</code> is set to <code>cubemap</code> or
+<code>screenspace</code>. It can also be used on non-refractive objects as an alternative
+to setting the reflectance.</p>
+<p>The index of refraction (or refractive index) of a material is a dimensionless
+number that describes how fast light travels through that material. The higher
+the number, the slower light travels through the medium. More importantly for
+rendering materials, the refractive index determines how the path light travels
+is bent when entering the material. Higher indices of refraction will cause
+light to bend further away from the initial path.</p>
+<p>Table [commonMatIOR] describes acceptable refractive indices for various types
+of materials.</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: right">Material</th><th style="text-align: left">IOR</th></tr></thead><tbody>
+<tr><td style="text-align: right">Air</td><td style="text-align: left">1.0</td></tr>
+<tr><td style="text-align: right">Water</td><td style="text-align: left">1.33</td></tr>
+<tr><td style="text-align: right">Common liquids</td><td style="text-align: left">1.33 to 1.5</td></tr>
+<tr><td style="text-align: right">Common gemstones</td><td style="text-align: left">1.58 to 2.33</td></tr>
+<tr><td style="text-align: right">Plastics, glass</td><td style="text-align: left">1.5 to 1.58</td></tr>
+<tr><td style="text-align: right">Other dielectric materials</td><td style="text-align: left">1.33 to 1.58</td></tr>
+</tbody></table>
+</div>
+<p>[Table [commonMatIOR]: Index of refraction of common materials]</p>
+<p>The appearance of a refractive material will greatly depend on the
+<code>refractionType</code> and <code>refractionMode</code> settings of the material. Refer to section
+[Blending and transparency: refractionType] and section [Blending and
+transparency: refractionMode] for more information.</p>
+<p>The effect of <code>ior</code> when <code>refractionMode</code> is set to <code>cubemap</code> and
+<code>refractionType</code> is set to <code>solid</code> can be seen in figure
+[iorProperty2](click on the image to see a larger version).</p>
+<p><img src="images/materials/ior.png" alt="Figure [iorProperty2]: transmission varying from 1.0 (left) to 1.5 (right)" /></p>
+<p>Figure [iorProperty] shows the comparison of a sphere of <code>ior</code> 1.0 with a sphere
+of <code>ior</code> 1.33, with the <code>refractionMode</code> set to <code>screenspace</code> and the
+<code>refractionType</code> set to <code>solid</code> (click on the image to see a larger version).</p>
+<p><img src="images/material_ior.png" alt="Figure [iorProperty]: ior of 1.0 (left) and 1.33 (right)" /></p>
+<p>Note that the <code>ior</code> property also defines the reflectance (or specular
+intensity) of the surface. When this property is defined it is not necessary to
+define the <code>reflectance</code> property. Setting either of these properties will
+automatically compute the other property. It is possible to specify both, in
+which case their values are kept as-is, which can lead to physically impossible
+materials, however, this might be desirable for artistic reasons.</p>
+<p>See the Reflectance section for more information on the <code>reflectance</code> property.</p>
+<p>!!! Tip Refractive materials are affected by the <code>roughness</code> property. Rough
+materials will scatter light, creating a diffusion effect useful to recreate
+&quot;blurry&quot; appearances such as frosted glass, certain plastics, etc.</p>
+<h3 id="transmission"><a class="header" href="#transmission">Transmission</a></h3>
+<p>The <code>transmission</code> property defines what ratio of diffuse light is transmitted
+through a refractive material. This property only affects materials with a
+<code>refractionMode</code> set to <code>cubemap</code> or <code>screenspace</code>.</p>
+<p>When <code>transmission</code> is set to 0, no amount of light is transmitted and the
+diffuse component of the surface is 100% visible. When <code>transmission</code> is set to
+1, all the light is transmitted and the diffuse component is not visible
+anymore, only the specular component is.</p>
+<p>The effect of <code>transmission</code> on a glossy dielectric (<code>ior</code> of 1.5,
+<code>refractionMode</code> set to <code>cubemap</code>, <code>refractionType</code> set to <code>solid</code>) is shown in
+figure [transmissionProperty](click on the image to see a larger version).</p>
+<p><img src="images/materials/transmission.png" alt="Figure [transmissionProperty]: transmission varying from 0.0 (left) to 1.0 (right)" /></p>
+<p>!!! Tip The <code>transmission</code> property is useful to create decals, paint, etc. at
+the surface of refractive materials.</p>
+<h3 id="absorption"><a class="header" href="#absorption">Absorption</a></h3>
+<p>The <code>absorption</code> property defines the absorption coefficients of light
+transmitted through the material. Figure [absorptionExample] shows the effect of
+<code>absorption</code> on a refracting object with an index of refraction of 1.5 and a
+base color set to white.</p>
+<p><img src="images/material_absorption.png" alt="Figure [absorptionExample]: Refracting object without (left) and with (right) absorption" /></p>
+<p>Transmittance through a volume is exponential with respect to the optical depth
+(defined either with <code>microThickness</code> or <code>thickness</code>). The computed color
+follows the following formula:</p>
+<p>$$color \cdot e^{-absorption \cdot distance}$$</p>
+<p>Where <code>distance</code> is either <code>microThickness</code> or <code>thickness</code>, that is the distance
+light will travel through the material at a given point. If no
+thickness/distance is specified, the computed color follows this formula
+instead:</p>
+<p>$$color \cdot (1 - absorption)$$</p>
+<p>The effect of varying the <code>absorption</code> coefficients is shown in figure
+[absorptionProperty](click on the image to see a larger version). In this
+picture, the object has a fixed <code>thickness</code> of 4.5 and an index of refraction
+set to 1.3.</p>
+<p><img src="images/materials/absorption.png" alt="Figure [absorptionProperty]: absorption varying from (0.0, 0.02, 0.14) (left) to (0.0, 0.36, 2.3) (right)" /></p>
+<p>Setting the absorption coefficients directly can be unintuitive which is why we
+recommend working with a <em>transmittance color</em> and a <em>&quot;at distance&quot;</em> factor
+instead. These two parameters allow an artist to specify the precise color the
+material should have at a specified distance through the volume. The value to
+pass to <code>absorption</code> can be computed this way:</p>
+<p>$$absorption = -\frac{ln(transmittanceColor)}{atDistance}$$</p>
+<p>While this computation can be done in the material itself we recommend doing it
+offline whenever possible. Filament provides an API for this purpose,
+<code>Color::absorptionAtDistance()</code>.</p>
+<h3 id="micro-thickness-and-thickness"><a class="header" href="#micro-thickness-and-thickness">Micro-thickness and thickness</a></h3>
+<p>The <code>microThickness</code> and <code>thickness</code> properties define the optical depth of the
+material of a refracting object. <code>microThickness</code> is used when <code>refractionType</code>
+is set to <code>thin</code>, and <code>thickness</code> is used when <code>refractionType</code> is set to
+<code>volume</code>.</p>
+<p><code>thickness</code> represents the thickness of solid objects in the direction of the
+normal, for satisfactory results, this should be provided per fragment (e.g.: as
+a texture) or at least per vertex.</p>
+<p><code>microThickness</code> represent the thickness of the thin layer (shell) of an object,
+and can generally be provided as a constant value. For example, a 1mm thin
+hollow sphere of radius 1m, would have a <code>thickness</code> of 1 and a <code>microThickness</code>
+of 0.001. Currently <code>thickness</code> is not used when <code>refractionType</code> is set to
+<code>thin</code>. Both properties are made available for possible future use.</p>
+<p>Both <code>thickness</code> and <code>microThickness</code> are used to compute the transmitted color
+of the material when the <code>absorption</code> property is set. In solid volumes,
+<code>thickness</code> will also affect how light rays are refracted.</p>
+<p>The effect <code>thickness</code> in a solid volume with <code>refractionMode</code> set to
+<code>screenSpace</code> is shown in figure
+[thicknessProperty](click on the image to see a larger version). Note how the
+<code>thickness</code> value not only changes the effect of <code>absorption</code> but also modifies
+the direction of the refracted light.</p>
+<p><img src="images/materials/thickness.png" alt="Figure [thicknessProperty]: thickness varying from 0.0 (left) to 2.0 (right)" /></p>
+<p>Figure [varyingThickness] shows what a prism with spatially varying <code>thickness</code>
+looks like when the <code>refractionType</code> is set to <code>solid</code> and <code>absorption</code>
+coefficients are set.</p>
+<p><img src="images/material_thickness.png" alt="Figure [varyingThickness]: thickness varying from 0.0 at the top of the prism to 3.0 at the bottom of the prism" /></p>
+<h2 id="subsurface-model"><a class="header" href="#subsurface-model">Subsurface model</a></h2>
+<h3 id="thickness"><a class="header" href="#thickness">Thickness</a></h3>
+<h3 id="subsurface-color"><a class="header" href="#subsurface-color">Subsurface color</a></h3>
+<h3 id="subsurface-power"><a class="header" href="#subsurface-power">Subsurface power</a></h3>
+<h2 id="cloth-model"><a class="header" href="#cloth-model">Cloth model</a></h2>
+<p>All the material models described previously are designed to simulate dense
+surfaces, both at a macro and at a micro level. Clothes and fabrics are however
+often made of loosely connected threads that absorb and scatter incident light.
+When compared to hard surfaces, cloth is characterized by a softer specular lob
+with a large falloff and the presence of fuzz lighting, caused by
+forward/backward scattering. Some fabrics also exhibit two-tone specular colors
+(velvets for instance).</p>
+<p>Figure [materialCloth] shows how the standard material model fails to capture
+the appearance of a sample of denim fabric. The surface appears rigid (almost
+plastic-like), more similar to a tarp than a piece of clothing. This figure also
+shows how important the softer specular lobe caused by absorption and scattering
+is to the faithful recreation of the fabric.</p>
+<p><img src="images/screenshot_cloth.png" alt="Figure [materialCloth]: Comparison of denim fabric rendered using the standard model (left) and the cloth model (right)" /></p>
+<p>Velvet is an interesting use case for a cloth material model. As shown in figure
+[materialVelvet] this type of fabric exhibits strong rim lighting due to forward
+and backward scattering. These scattering events are caused by fibers standing
+straight at the surface of the fabric. When the incident light comes from the
+direction opposite to the view direction, the fibers will forward scatter the
+light. Similarly, when the incident light from the same direction as the view
+direction, the fibers will scatter the light backward.</p>
+<p><img src="images/screenshot_cloth_velvet.png" alt="Figure [materialVelvet]: Velvet fabric showcasing forward and backward scattering" /></p>
+<p>It is important to note that there are types of fabrics that are still best
+modeled by hard surface material models. For instance, leather, silk and satin
+can be recreated using the standard or anisotropic material models.</p>
+<p>The cloth material model encompasses all the parameters previously defined for
+the standard material mode except for <em>metallic</em> and <em>reflectance</em>. Two extra
+parameters described in table [clothProperties] are also available.</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: right">Parameter</th><th style="text-align: left">Definition</th></tr></thead><tbody>
+<tr><td style="text-align: right"><strong>sheenColor</strong></td><td style="text-align: left">Specular tint to create two-tone specular fabrics (defaults to \(\sqrt{baseColor}\))</td></tr>
+<tr><td style="text-align: right"><strong>subsurfaceColor</strong></td><td style="text-align: left">Tint for the diffuse color after scattering and absorption through the material</td></tr>
+</tbody></table>
+</div>
+<p>[Table [clothProperties]: Cloth model parameters]</p>
+<p>The type and range of each property is described in table
+[clothPropertiesTypes].</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: right">Property</th><th style="text-align: center">Type</th><th style="text-align: center">Range</th><th style="text-align: left">Note</th></tr></thead><tbody>
+<tr><td style="text-align: right"><strong>sheenColor</strong></td><td style="text-align: center">float3</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Linear RGB</td></tr>
+<tr><td style="text-align: right"><strong>subsurfaceColor</strong></td><td style="text-align: center">float3</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Linear RGB</td></tr>
+</tbody></table>
+</div>
+<p>[Table [clothPropertiesTypes]: Range and type of the cloth model's properties]</p>
+<p>To create a velvet-like material, the base color can be set to black (or a dark
+color). Chromaticity information should instead be set on the sheen color. To
+create more common fabrics such as denim, cotton, etc. use the base color for
+chromaticity and use the default sheen color or set the sheen color to the
+luminance of the base color.</p>
+<p>!!! Tip To see the effect of the <code>roughness</code> parameter make sure the
+<code>sheenColor</code> is brighter than <code>baseColor</code>. This can be used to create a fuzz
+effect. Taking the luminance of <code>baseColor</code> as the <code>sheenColor</code> will produce a
+fairly natural effect that works for common cloth. A dark <code>baseColor</code> combined
+with a bright/saturated <code>sheenColor</code> can be used to create velvet.</p>
+<p>!!! Tip The <code>subsurfaceColor</code> parameter should be used with care. High values
+can interfere with shadows in some areas. It is best suited for subtle
+transmission effects through the material.</p>
+<h3 id="sheen-color-1"><a class="header" href="#sheen-color-1">Sheen color</a></h3>
+<p>The <code>sheenColor</code> property can be used to directly modify the specular
+reflectance. It offers better control over the appearance of cloth and gives
+give the ability to create two-tone specular materials.</p>
+<p>The effect of <code>sheenColor</code> is shown in figure
+[materialClothSheen](click on the image to see a larger version).</p>
+<p><img src="images/screenshot_cloth_sheen.png" alt="Figure [materialClothSheen]: Blue fabric without (left) and with (right) sheen" /></p>
+<h3 id="subsurface-color-1"><a class="header" href="#subsurface-color-1">Subsurface color</a></h3>
+<p>The <code>subsurfaceColor</code> property is not physically-based and can be used to
+simulate the scattering, partial absorption and re-emission of light in certain
+types of fabrics. This is particularly useful to create softer fabrics.</p>
+<p>!!! Warning The cloth material model is more expensive to compute when the
+<code>subsurfaceColor</code> property is used.</p>
+<p>The effect of <code>subsurfaceColor</code> is shown in figure
+[materialClothSubsurface](click on the image to see a larger version).</p>
+<p><img src="images/screenshot_cloth_subsurface.png" alt="Figure [materialClothSubsurface]: White cloth (left column) vs white cloth with brown subsurface scatting (right)" /></p>
+<h2 id="unlit-model"><a class="header" href="#unlit-model">Unlit model</a></h2>
+<p>The unlit material model can be used to turn off all lighting computations. Its
+primary purpose is to render pre-lit elements such as a cubemap, external
+content (such as a video or camera stream), user interfaces,
+visualization/debugging etc. The unlit model exposes only two properties
+described in table [unlitProperties].</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: right">Property</th><th style="text-align: left">Definition</th></tr></thead><tbody>
+<tr><td style="text-align: right"><strong>baseColor</strong></td><td style="text-align: left">Surface diffuse color</td></tr>
+<tr><td style="text-align: right"><strong>emissive</strong></td><td style="text-align: left">Additional diffuse color to simulate emissive surfaces. This property is mostly useful in an HDR pipeline with a bloom pass</td></tr>
+<tr><td style="text-align: right"><strong>postLightingColor</strong></td><td style="text-align: left">Additional color to blend with base color and emissive</td></tr>
+</tbody></table>
+</div>
+<p>[Table [unlitProperties]: Properties of the standard model]</p>
+<p>The type and range of each property is described in table
+[unlitPropertiesTypes].</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: right">Property</th><th style="text-align: center">Type</th><th style="text-align: center">Range</th><th style="text-align: left">Note</th></tr></thead><tbody>
+<tr><td style="text-align: right"><strong>baseColor</strong></td><td style="text-align: center">float4</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Pre-multiplied linear RGB</td></tr>
+<tr><td style="text-align: right"><strong>emissive</strong></td><td style="text-align: center">float4</td><td style="text-align: center">rgb=[0..n], a=[0..1]</td><td style="text-align: left">Linear RGB intensity in nits, alpha encodes the exposure weight</td></tr>
+<tr><td style="text-align: right"><strong>postLightingColor</strong></td><td style="text-align: center">float4</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Pre-multiplied linear RGB</td></tr>
+</tbody></table>
+</div>
+<p>[Table [unlitPropertiesTypes]: Range and type of the unlit model's properties]</p>
+<p>The value of <code>postLightingColor</code> is blended with the sum of <code>emissive</code> and
+<code>baseColor</code> according to the blending mode specified by the
+<code>postLightingBlending</code> material option.</p>
+<p>Figure [materialUnlit] shows an example of the unlit material model (click on
+the image to see a larger version).</p>
+<p><img src="images/screenshot_unlit.jpg" alt="Figure [materialUnlit]: The unlit model is used to render debug information" /></p>
+<h2 id="specular-glossiness"><a class="header" href="#specular-glossiness">Specular glossiness</a></h2>
+<p>This alternative lighting model exists to comply with legacy standards. Since it
+is not a physically-based formulation, we do not recommend using it except when
+loading legacy assets.</p>
+<p>This model encompasses the parameters previously defined for the standard lit
+mode except for <em>metallic</em>, <em>reflectance</em>, and <em>roughness</em>. It adds parameters
+for <em>specularColor</em> and <em>glossiness</em>.</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: right">Parameter</th><th style="text-align: left">Definition</th></tr></thead><tbody>
+<tr><td style="text-align: right"><strong>baseColor</strong></td><td style="text-align: left">Surface diffuse color</td></tr>
+<tr><td style="text-align: right"><strong>specularColor</strong></td><td style="text-align: left">Specular tint (defaults to black)</td></tr>
+<tr><td style="text-align: right"><strong>glossiness</strong></td><td style="text-align: left">Glossiness (defaults to 0.0)</td></tr>
+</tbody></table>
+</div>
+<p>[Table [glossinessProperties]: Properties of the specular-glossiness shading
+model]</p>
+<p>The type and range of each property is described in table
+[glossinessPropertiesTypes].</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: right">Property</th><th style="text-align: center">Type</th><th style="text-align: center">Range</th><th style="text-align: left">Note</th></tr></thead><tbody>
+<tr><td style="text-align: right"><strong>baseColor</strong></td><td style="text-align: center">float4</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Pre-multiplied linear RGB</td></tr>
+<tr><td style="text-align: right"><strong>specularColor</strong></td><td style="text-align: center">float3</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Linear RGB</td></tr>
+<tr><td style="text-align: right"><strong>glossiness</strong></td><td style="text-align: center">float</td><td style="text-align: center">[0..1]</td><td style="text-align: left">Inverse of roughness</td></tr>
+</tbody></table>
+</div>
+<p>[Table [glossinessPropertiesTypes]: Range and type of the specular-glossiness
+model's properties]</p>
+<h1 id="material-definitions"><a class="header" href="#material-definitions">Material definitions</a></h1>
+<p>A material definition is a text file that describes all the information required
+by a material:</p>
+<ul>
+<li>Name</li>
+<li>User parameters</li>
+<li>Material model</li>
+<li>Required attributes</li>
+<li>Interpolants (called <em>variables</em>)</li>
+<li>Raster state (blending mode, etc.)</li>
+<li>Shader code (fragment shader, optionally vertex shader)</li>
+</ul>
+<h2 id="format"><a class="header" href="#format">Format</a></h2>
+<p>The material definition format is a format loosely based on
+<a href="https://www.json.org/">JSON</a> that we call <em>JSONish</em>. At the top level a
+material definition is composed of 3 different blocks that use the JSON object
+notation:</p>
+<pre><code class="language-json">material {
+    // material properties
+}
+
+vertex {
+    // vertex shader, optional
+}
+
+fragment {
+    // fragment shader
+}
+</code></pre>
+<p>A minimum viable material definition must contain a <code>material</code> preamble and a
+<code>fragment</code> block. The <code>vertex</code> block is optional.</p>
+<h3 id="differences-with-json"><a class="header" href="#differences-with-json">Differences with JSON</a></h3>
+<p>In JSON, an object is made of key/value <em>pairs</em>. A JSON pair has the following
+syntax:</p>
+<pre><code class="language-json">&quot;key&quot; : value
+</code></pre>
+<p>Where value can be a string, number, object, array or a literal (<code>true</code>, <code>false</code>
+or <code>null</code>). While this syntax is perfectly valid in a material definition, a
+variant without quotes around strings is also accepted in JSONish:</p>
+<pre><code class="language-json">key : value
+</code></pre>
+<p>Quotes remain mandatory when the string contains spaces.</p>
+<p>The <code>vertex</code> and <code>fragment</code> blocks contain unescaped, unquoted GLSL code, which
+is not valid in JSON.</p>
+<p>Single-line C++-style comments are allowed.</p>
+<p>The key of a pair is case-sensitive.</p>
+<p>The value of a pair is not case-sensitive.</p>
+<h3 id="example"><a class="header" href="#example">Example</a></h3>
+<p>The following code listing shows an example of a valid material definition. This
+definition uses the <em>lit</em> material model (see Lit model section), uses the
+default opaque blending mode, requires that a set of UV coordinates be presented
+in the rendered mesh and defines 3 user parameters. The following sections of
+this document describe the <code>material</code> and <code>fragment</code> blocks in detail.</p>
+<pre><code class="language-json">material {
+    name : &quot;Textured material&quot;,
+    parameters : [
+        {
+           type : sampler2d,
+           name : texture
+        },
+        {
+           type : float,
+           name : metallic
+        },
+        {
+            type : float,
+            name : roughness
+        }
+    ],
+    requires : [
+        uv0
+    ],
+    shadingModel : lit,
+    blending : opaque
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_texture, getUV0());
+        material.metallic = materialParams.metallic;
+        material.roughness = materialParams.roughness;
+    }
+}
+</code></pre>
+<h2 id="material-block"><a class="header" href="#material-block">Material block</a></h2>
+<p>The material block is mandatory block that contains a list of property pairs to
+describe all non-shader data.</p>
+<h3 id="general-name"><a class="header" href="#general-name">General: name</a></h3>
+<p>Type
+:   <code>string</code></p>
+<p>Value
+:   Any string. Double quotes are required if the name contains spaces.</p>
+<p>Description
+:   Sets the name of the material. The name is retained at runtime for debugging
+purpose.</p>
+<pre><code class="language-json">material {
+    name : stone
+}
+
+material {
+    name : &quot;Wet pavement&quot;
+}
+</code></pre>
+<h3 id="general-featurelevel"><a class="header" href="#general-featurelevel">General: featureLevel</a></h3>
+<p>Type
+:   <code>number</code></p>
+<p>Value
+:   An integer value, either 1, 2 or 3. Defaults to 1.</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: right">Feature Level</th><th style="text-align: left">Guaranteed features</th></tr></thead><tbody>
+<tr><td style="text-align: right">1</td><td style="text-align: left">9 textures per material</td></tr>
+<tr><td style="text-align: right">2</td><td style="text-align: left">9 textures per material, cubemap arrays, ESSL 3.10</td></tr>
+<tr><td style="text-align: right">3</td><td style="text-align: left">12 textures per material, cubemap arrays, ESSL 3.10</td></tr>
+</tbody></table>
+</div>
+<p>[Table [featureLevels]: Feature levels]</p>
+<p>Description
+:   Sets the feature level of the material. Each feature level defines a set of
+features the material can use. If the material uses a feature not supported
+by the selected level, <code>matc</code> will generate an error during compilation. A
+given feature level is guaranteed to support all features of lower feature
+levels.</p>
+<pre><code class="language-json">material {
+    featureLevel : 2
+}
+</code></pre>
+<p>Bugs
+:   <code>matc</code> doesn't verify that a material is not using features above its
+selected feature level.</p>
+<h3 id="general-shadingmodel"><a class="header" href="#general-shadingmodel">General: shadingModel</a></h3>
+<p>Type
+:   <code>string</code></p>
+<p>Value
+:   Any of <code>lit</code>, <code>subsurface</code>, <code>cloth</code>, <code>unlit</code>, <code>specularGlossiness</code>. Defaults
+to <code>lit</code>.</p>
+<p>Description
+:   Selects the material model as described in the Material models section.</p>
+<pre><code class="language-json">material {
+    shadingModel : unlit
+}
+
+material {
+    shadingModel : &quot;subsurface&quot;
+}
+</code></pre>
+<h3 id="general-parameters"><a class="header" href="#general-parameters">General: parameters</a></h3>
+<p>Type
+:   array of parameter objects</p>
+<p>Value
+:   Each entry is an object with the properties <code>name</code> and <code>type</code>, both of
+<code>string</code> type. The name must be a valid GLSL identifier. Entries also have
+an optional <code>precision</code>, which can be one of <code>default</code> (best precision for
+the platform, typically <code>high</code> on desktop, <code>medium</code> on mobile), <code>low</code>,
+<code>medium</code>, <code>high</code>. The type must be one of the types described in table
+[materialParamsTypes].</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: right">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<tr><td style="text-align: right">bool</td><td style="text-align: left">Single boolean</td></tr>
+<tr><td style="text-align: right">bool2</td><td style="text-align: left">Vector of 2 booleans</td></tr>
+<tr><td style="text-align: right">bool3</td><td style="text-align: left">Vector of 3 booleans</td></tr>
+<tr><td style="text-align: right">bool4</td><td style="text-align: left">Vector of 4 booleans</td></tr>
+<tr><td style="text-align: right">float</td><td style="text-align: left">Single float</td></tr>
+<tr><td style="text-align: right">float2</td><td style="text-align: left">Vector of 2 floats</td></tr>
+<tr><td style="text-align: right">float3</td><td style="text-align: left">Vector of 3 floats</td></tr>
+<tr><td style="text-align: right">float4</td><td style="text-align: left">Vector of 4 floats</td></tr>
+<tr><td style="text-align: right">int</td><td style="text-align: left">Single integer</td></tr>
+<tr><td style="text-align: right">int2</td><td style="text-align: left">Vector of 2 integers</td></tr>
+<tr><td style="text-align: right">int3</td><td style="text-align: left">Vector of 3 integers</td></tr>
+<tr><td style="text-align: right">int4</td><td style="text-align: left">Vector of 4 integers</td></tr>
+<tr><td style="text-align: right">uint</td><td style="text-align: left">Single unsigned integer</td></tr>
+<tr><td style="text-align: right">uint2</td><td style="text-align: left">Vector of 2 unsigned integers</td></tr>
+<tr><td style="text-align: right">uint3</td><td style="text-align: left">Vector of 3 unsigned integers</td></tr>
+<tr><td style="text-align: right">uint4</td><td style="text-align: left">Vector of 4 unsigned integers</td></tr>
+<tr><td style="text-align: right">float3x3</td><td style="text-align: left">Matrix of 3x3 floats</td></tr>
+<tr><td style="text-align: right">float4x4</td><td style="text-align: left">Matrix of 4x4 floats</td></tr>
+<tr><td style="text-align: right">sampler2d</td><td style="text-align: left">2D texture</td></tr>
+<tr><td style="text-align: right">sampler2dArray</td><td style="text-align: left">Array of 2D textures</td></tr>
+<tr><td style="text-align: right">samplerExternal</td><td style="text-align: left">External texture (platform-specific)</td></tr>
+<tr><td style="text-align: right">samplerCubemap</td><td style="text-align: left">Cubemap texture</td></tr>
+</tbody></table>
+</div>
+<p>[Table [materialParamsTypes]: Material parameter types]</p>
+<p>Samplers
+:   Sampler types can also specify a <code>format</code> which can be either <code>int</code> or
+<code>float</code> (defaults to <code>float</code>).</p>
+<p>Arrays
+:   A parameter can define an array of values by appending <code>[size]</code> after the
+type name, where <code>size</code> is a positive integer. For instance: <code>float[9]</code>
+declares an array of nine <code>float</code> values. This syntax does not apply to
+samplers as arrays are treated as separate types.</p>
+<p>Description
+:   Lists the parameters required by your material. These parameters can be set
+at runtime using Filament's material API. Accessing parameters from the
+shaders varies depending on the type of parameter:</p>
+<pre><code>-   **Samplers types**: use the parameter name prefixed with
+    `materialParams_`. For instance, `materialParams_myTexture`.
+-   **Other types**: use the parameter name as the field of a structure
+    called `materialParams`. For instance, `materialParams.myColor`.
+</code></pre>
+<pre><code class="language-json">material {
+    parameters : [
+        {
+           type : float4,
+           name : albedo
+        },
+        {
+           type      : sampler2d,
+           format    : float,
+           precision : high,
+           name      : roughness
+        },
+        {
+            type : float2,
+            name : metallicReflectance
+        }
+    ],
+    requires : [
+        uv0
+    ],
+    shadingModel : lit,
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = materialParams.albedo;
+        material.roughness = texture(materialParams_roughness, getUV0());
+        material.metallic = materialParams.metallicReflectance.x;
+        material.reflectance = materialParams.metallicReflectance.y;
+    }
+}
+</code></pre>
+<h3 id="general-constants"><a class="header" href="#general-constants">General: constants</a></h3>
+<p>Type
+:   array of constant objects</p>
+<p>Value
+:   Each entry is an object with the properties <code>name</code> and <code>type</code>, both of
+<code>string</code> type. The name must be a valid GLSL identifier. Entries also have
+an optional <code>default</code>, which can either be a <code>bool</code> or <code>number</code>, depending
+on the <code>type</code> of the constant. The type must be one of the types described
+in table [materialConstantsTypes].</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: right">Type</th><th style="text-align: left">Description</th><th style="text-align: left">Default</th></tr></thead><tbody>
+<tr><td style="text-align: right">int</td><td style="text-align: left">A signed, 32 bit GLSL int</td><td style="text-align: left"></td></tr>
+<tr><td style="text-align: right">float</td><td style="text-align: left">A single-precision GLSL float</td><td style="text-align: left">0.0</td></tr>
+<tr><td style="text-align: right">bool</td><td style="text-align: left">A GLSL bool</td><td style="text-align: left">false</td></tr>
+</tbody></table>
+</div>
+<p>[Table [materialConstantsTypes]: Material constants types]</p>
+<p>Description
+:   Lists the constant parameters accepted by your material. These constants can
+be set, or &quot;specialized&quot;, at runtime when loading a material package.
+Multiple materials can be loaded from the same material package with
+differing constant parameter specializations. Once a material is loaded from
+a material package, its constant parameters cannot be changed. Compared to
+regular parameters, constant parameters allow the compiler to generate more
+efficient code. Access constant parameters from the shader by prefixing the
+name with <code>materialConstant_</code>. For example, a constant parameter named
+<code>myConstant</code> is accessed in the shader as <code>materialConstant_myConstant</code>. If
+a constant parameter is not set at runtime, the default is used.</p>
+<pre><code class="language-json">material {
+    constants : [
+        {
+           name : overrideAlpha,
+           type : bool
+        },
+        {
+           name : customAlpha,
+           type : float,
+           default : 0.5
+        }
+    ],
+    shadingModel : lit,
+    blending : transparent,
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        if (materialConstants_overrideAlpha) {
+            material.baseColor.a = materialConstants_customAlpha;
+            material.baseColor.rgb *= material.baseColor.a;
+        }
+    }
+}
+</code></pre>
+<h3 id="general-variantfilter"><a class="header" href="#general-variantfilter">General: variantFilter</a></h3>
+<p>Type
+:   array of <code>string</code></p>
+<p>Value
+:   Each entry must be any of <code>dynamicLighting</code>, <code>directionalLighting</code>,
+<code>shadowReceiver</code>, <code>skinning</code>, <code>ssr</code>, or <code>stereo</code>.</p>
+<p>Description
+:   Used to specify a list of shader variants that the application guarantees
+will never be needed. These shader variants are skipped during the code
+generation phase, thus reducing the overall size of the material. Note that
+some variants may automatically be filtered out. For instance, all lighting
+related variants (<code>directionalLighting</code>, etc.) are filtered out when
+compiling an <code>unlit</code> material. Use the variant filter with caution,
+filtering out a variant required at runtime may lead to crashes.</p>
+<p>Description of the variants: - <code>directionalLighting</code>, used when a directional
+light is present in the scene - <code>dynamicLighting</code>, used when a non-directional
+light (point, spot, etc.) is present in the scene - <code>shadowReceiver</code>, used when
+an object can receive shadows - <code>skinning</code>, used when an object is animated
+using GPU skinning - <code>fog</code>, used when global fog is applied to the scene -
+<code>vsm</code>, used when VSM shadows are enabled and the object is a shadow receiver -
+<code>ssr</code>, used when screen-space reflections are enabled in the View - <code>stereo</code>,
+used when stereoscopic rendering is enabled in the View</p>
+<pre><code class="language-json">material {
+    name : &quot;Invisible shadow plane&quot;,
+    shadingModel : unlit,
+    shadowMultiplier : true,
+    blending : transparent,
+    variantFilter : [ skinning ]
+}
+</code></pre>
+<h3 id="general-flipuv"><a class="header" href="#general-flipuv">General: flipUV</a></h3>
+<p>Type
+:   <code>boolean</code></p>
+<p>Value
+:   <code>true</code> or <code>false</code>. Defaults to <code>true</code>.</p>
+<p>Description
+:   When set to <code>true</code> (default value), the Y coordinate of UV attributes will
+be flipped when read by this material's vertex shader. Flipping is
+equivalent to <code>y = 1.0 - y</code>. When set to <code>false</code>, flipping is disabled and
+the UV attributes are read as is.</p>
+<pre><code class="language-json">material {
+    flipUV : false
+}
+</code></pre>
+<h3 id="general-quality"><a class="header" href="#general-quality">General: quality</a></h3>
+<p>Type
+:   <code>string</code></p>
+<p>Value
+:   Any of <code>low</code>, <code>normal</code>, <code>high</code>, <code>default</code>. Defaults to <code>default</code>.</p>
+<p>Description
+:   Set some global quality parameters of the material. <code>low</code> enables
+optimizations that can slightly affect correctness and is the default on
+mobile platforms. <code>normal</code> does not affect correctness and is otherwise
+similar to <code>low</code>. <code>high</code> enables quality settings that can adversely affect
+performance and is the default on desktop platforms.</p>
+<pre><code class="language-json">material {
+    quality : default
+}
+</code></pre>
+<h3 id="general-instanced"><a class="header" href="#general-instanced">General: instanced</a></h3>
+<p>Type
+:   <code>boolean</code></p>
+<p>Value
+:   <code>true</code> or <code>false</code>. Defaults to <code>false</code>.</p>
+<p>Description
+:   Allows a material to access the instance index (i.e.:
+<strong><code>gl_InstanceIndex</code></strong>) of instanced primitives using <code>getInstanceIndex()</code>
+in the material's shader code. Never use <strong><code>gl_InstanceIndex</code></strong> directly.
+This is typically used with <code>RenderableManager::Builder::instances()</code>.
+<code>getInstanceIndex()</code> is available in both the vertex and fragment shader.</p>
+<pre><code class="language-json">material {
+    instanced : true
+}
+</code></pre>
+<h3 id="general-vertexdomaindevicejittered"><a class="header" href="#general-vertexdomaindevicejittered">General: vertexDomainDeviceJittered</a></h3>
+<p>Type
+:   <code>boolean</code></p>
+<p>Value
+:   <code>true</code> or <code>false</code>. Defaults to <code>false</code>.</p>
+<p>Description
+:   Only meaningful for <code>vertexDomain:Device</code> materials, this parameter
+specifies whether the filament clip-space transforms need to be applied or
+not, which affects TAA and guard bands. Generally it needs to be applied
+because by definition <code>vertexDomain:Device</code> materials vertices are not
+transformed and used <em>as is</em>. However, if the vertex shader uses for
+instance <code>getViewFromClipMatrix()</code> (or other matrices based on the
+projection), the clip-space transform is already applied. Setting this
+parameter incorrectly can prevent TAA or the guard bands to work correctly.</p>
+<pre><code class="language-json">material {
+    vertexDomainDeviceJittered : true
+}
+</code></pre>
+<h3 id="vertex-and-attributes-requires"><a class="header" href="#vertex-and-attributes-requires">Vertex and attributes: requires</a></h3>
+<p>Type
+:   array of <code>string</code></p>
+<p>Value
+:   Each entry must be any of <code>uv0</code>, <code>uv1</code>, <code>color</code>, <code>position</code>, <code>tangents</code>,
+<code>custom0</code> through <code>custom7</code>.</p>
+<p>Description
+:   Lists the vertex attributes required by the material. The <code>position</code>
+attribute is always required and does not need to be specified. The
+<code>tangents</code> attribute is automatically required when selecting any shading
+model that is not <code>unlit</code>. See the shader sections of this document for more
+information on how to access these attributes from the shaders.</p>
+<pre><code class="language-json">material {
+    parameters : [
+        {
+           type : sampler2d,
+           name : texture
+        },
+    ],
+    requires : [
+        uv0,
+        custom0
+    ],
+    shadingModel : lit,
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_texture, getUV0());
+        material.baseColor.rgb *= getCustom0().rgb;
+    }
+}
+</code></pre>
+<h3 id="vertex-and-attributes-variables"><a class="header" href="#vertex-and-attributes-variables">Vertex and attributes: variables</a></h3>
+<p>Type
+:   array of <code>string</code></p>
+<p>Value
+:   Up to 4 strings, each must be a valid GLSL identifier.</p>
+<p>Description
+:   Defines custom interpolants (or variables) that are output by the material's
+vertex shader. Each entry of the array defines the name of an interpolant.
+The full name in the fragment shader is the name of the interpolant with the
+<code>variable_</code> prefix. For instance, if you declare a variable called
+<code>eyeDirection</code> you can access it in the fragment shader using
+<code>variable_eyeDirection</code>. In the vertex shader, the interpolant name is
+simply a member of the <code>MaterialVertexInputs</code> structure
+(<code>material.eyeDirection</code> in your example). Each interpolant is of type
+<code>float4</code> (<code>vec4</code>) in the shaders.</p>
+<pre><code class="language-json">material {
+    name : Skybox,
+    parameters : [
+        {
+           type : samplerCubemap,
+           name : skybox
+        }
+    ],
+    variables : [
+         eyeDirection
+    ],
+    vertexDomain : device,
+    depthWrite : false,
+    shadingModel : unlit
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        float3 sky = texture(materialParams_skybox, variable_eyeDirection.xyz).rgb;
+        material.baseColor = vec4(sky, 1.0);
+    }
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        float3 p = getPosition().xyz;
+        float3 u = mulMat4x4Float3(getViewFromClipMatrix(), p).xyz;
+        material.eyeDirection.xyz = mulMat3x3Float3(getWorldFromViewMatrix(), u);
+    }
+}
+</code></pre>
+<h3 id="vertex-and-attributes-vertexdomain"><a class="header" href="#vertex-and-attributes-vertexdomain">Vertex and attributes: vertexDomain</a></h3>
+<p>Type
+:   <code>string</code></p>
+<p>Value
+:   Any of <code>object</code>, <code>world</code>, <code>view</code>, <code>device</code>. Defaults to <code>object</code>.</p>
+<p>Description
+:   Defines the domain (or coordinate space) of the rendered mesh. The domain
+influences how the vertices are transformed in the vertex shader. The
+possible domains are:</p>
+<pre><code>-   **Object**: the vertices are defined in the object (or model) coordinate
+    space. The vertices are transformed using the rendered object's
+    transform matrix
+-   **World**: the vertices are defined in world coordinate space. The
+    vertices are not transformed using the rendered object's transform.
+-   **View**: the vertices are defined in view (or eye or camera) coordinate
+    space. The vertices are not transformed using the rendered object's
+    transform.
+-   **Device**: the vertices are defined in normalized device (or clip)
+    coordinate space. The vertices are not transformed using the rendered
+    object's transform.
+</code></pre>
+<pre><code class="language-json">material {
+    vertexDomain : device
+}
+</code></pre>
+<h3 id="vertex-and-attributes-interpolation"><a class="header" href="#vertex-and-attributes-interpolation">Vertex and attributes: interpolation</a></h3>
+<p>Type
+:   <code>string</code></p>
+<p>Value
+:   Any of <code>smooth</code>, <code>flat</code>. Defaults to <code>smooth</code>.</p>
+<p>Description
+:   Defines how interpolants (or variables) are interpolated between vertices.
+When this property is set to <code>smooth</code>, a perspective correct interpolation
+is performed on each interpolant. When set to <code>flat</code>, no interpolation is
+performed and all the fragments within a given triangle will be shaded the
+same.</p>
+<pre><code class="language-json">material {
+    interpolation : flat
+}
+</code></pre>
+<h3 id="blending-and-transparency-blending"><a class="header" href="#blending-and-transparency-blending">Blending and transparency: blending</a></h3>
+<p>Type
+:   <code>string</code></p>
+<p>Value
+:   Any of <code>opaque</code>, <code>transparent</code>, <code>fade</code>, <code>add</code>, <code>masked</code>, <code>multiply</code>,
+<code>screen</code>. Defaults to <code>opaque</code>.</p>
+<p>Description
+:   Defines how/if the rendered object is blended with the content of the render
+target. The possible blending modes are:</p>
+<pre><code>-   **Opaque**: blending is disabled, the alpha channel of the material's
+    output is ignored.
+-   **Transparent**: blending is enabled. The material's output is alpha
+    composited with the render target, using Porter-Duff's `source over`
+    rule. This blending mode assumes pre-multiplied alpha.
+-   **Fade**: acts as `transparent` but transparency is also applied to
+    specular lighting. In `transparent` mode, the material's alpha values
+    only applies to diffuse lighting. This blending mode is useful to fade
+    lit objects in and out.
+-   **Add**: blending is enabled. The material's output is added to the
+    content of the render target.
+-   **Multiply**: blending is enabled. The material's output is multiplied
+    with the content of the render target, darkening the content.
+-   **Screen**: blending is enabled. Effectively the opposite of the
+    `multiply`, the content of the render target is brightened.
+-   **Masked**: blending is disabled. This blending mode enables alpha
+    masking. The alpha channel of the material's output defines whether a
+    fragment is discarded or not. Additionally, ALPHA_TO_COVERAGE is enabled
+    for non-translucent views. See the maskThreshold section for more
+    information.
+</code></pre>
+<p>!!! Note When <code>blending</code> is set to <code>masked</code>, alpha to coverage is automatically
+enabled for the material. If this behavior is undesirable, refer to the
+Rasterization: alphaToCoverage section to turn alpha to coverage off using the
+<code>alphaToCoverage</code> property.</p>
+<pre><code class="language-json">material {
+    blending : transparent
+}
+</code></pre>
+<h3 id="blending-and-transparency-postlightingblending"><a class="header" href="#blending-and-transparency-postlightingblending">Blending and transparency: postLightingBlending</a></h3>
+<p>Type
+:   <code>string</code></p>
+<p>Value
+:   Any of <code>opaque</code>, <code>transparent</code>, <code>add</code>. Defaults to <code>transparent</code>.</p>
+<p>Description
+:   Defines how the <code>postLightingColor</code> material property is blended with the
+result of the lighting computations. The possible blending modes are:</p>
+<pre><code>-   **Opaque**: blending is disabled, the material will output
+    `postLightingColor` directly.
+-   **Transparent**: blending is enabled. The material's computed color is
+    alpha composited with the `postLightingColor`, using Porter-Duff's
+    `source over` rule. This blending mode assumes pre-multiplied alpha.
+-   **Add**: blending is enabled. The material's computed color is added to
+    `postLightingColor`.
+-   **Multiply**: blending is enabled. The material's computed color is
+    multiplied with `postLightingColor`.
+-   **Screen**: blending is enabled. The material's computed color is
+    inverted and multiplied with `postLightingColor`, and the result is
+    added to the material's computed color.
+</code></pre>
+<pre><code class="language-json">material {
+    postLightingBlending : add
+}
+</code></pre>
+<h3 id="blending-and-transparency-transparency"><a class="header" href="#blending-and-transparency-transparency">Blending and transparency: transparency</a></h3>
+<p>Type
+:   <code>string</code></p>
+<p>Value
+:   Any of <code>default</code>, <code>twoPassesOneSide</code> or <code>twoPassesTwoSides</code>. Defaults to
+<code>default</code>.</p>
+<p>Description
+:   Controls how transparent objects are rendered. It is only valid when the
+<code>blending</code> mode is not <code>opaque</code> and <code>refractionMode</code> is <code>none</code>. None of
+these methods can accurately render concave geometry, but in practice they
+are often good enough.</p>
+<p>The three possible transparency modes are: - <code>default</code>: the transparent object
+is rendered normally (as seen in figure [transparencyDefault]), honoring the
+<code>culling</code> mode, etc. - <code>twoPassesOneSide</code>: the transparent object is first
+rendered in the depth buffer, then again in the color buffer, honoring the
+<code>culling</code> mode. This effectively renders only half of the transparent object as
+shown in figure [transparencyTwoPassesOneSide]. - <code>twoPassesTwoSides</code>: the
+transparent object is rendered twice in the color buffer: first with its back
+faces, then with its front faces. This mode lets you render both set of faces
+while reducing or eliminating sorting issues, as shown in figure
+[transparencyTwoPassesTwoSides]. <code>twoPassesTwoSides</code> can be combined with
+<code>doubleSided</code> for better effect.</p>
+<pre><code class="language-json">material {
+    transparency : twoPassesOneSide
+}
+</code></pre>
+<p><img src="images/screenshot_transparency_default.png" alt="Figure [transparencyDefault]: This double sided model shows the type of sorting issues transparent objects can be subject to in default mode" /></p>
+<p><img src="images/screenshot_twopasses_oneside.png" alt="Figure [transparencyTwoPassesOneSide]: In twoPassesOneSide mode, only one set of faces is visible and correctly sorted" /></p>
+<p><img src="images/screenshot_twopasses_twosides.png" alt="Figure [transparencyTwoPassesTwoSides]: In twoPassesTwoSides mode, both set of faces are visible and sorting issues are minimized or eliminated" /></p>
+<h3 id="blending-and-transparency-maskthreshold"><a class="header" href="#blending-and-transparency-maskthreshold">Blending and transparency: maskThreshold</a></h3>
+<p>Type
+:   <code>number</code></p>
+<p>Value
+:   A value between <code>0.0</code> and <code>1.0</code>. Defaults to <code>0.4</code>.</p>
+<p>Description
+:   Sets the minimum alpha value a fragment must have to not be discarded when
+the <code>blending</code> mode is set to <code>masked</code>. If the fragment is not discarded,
+its source alpha is set to 1. When the blending mode is not <code>masked</code>, this
+value is ignored. This value can be used to controlled the appearance of
+alpha-masked objects.</p>
+<pre><code class="language-json">material {
+    blending : masked,
+    maskThreshold : 0.5
+}
+</code></pre>
+<h3 id="blending-and-transparency-refractionmode"><a class="header" href="#blending-and-transparency-refractionmode">Blending and transparency: refractionMode</a></h3>
+<p>Type
+:   <code>string</code></p>
+<p>Value
+:   Any of <code>none</code>, <code>cubemap</code>, <code>screenspace</code>. Defaults to <code>none</code>.</p>
+<p>Description
+:   Activates refraction when set to anything but <code>none</code>. A value of <code>cubemap</code>
+will only use the IBL cubemap as source of refraction, while this is
+significantly more efficient, no scene objects will be refracted, only the
+distant environment encoded in the cubemap. This mode is adequate for an
+object viewer for instance. A value of <code>screenspace</code> will employ the more
+advanced screen-space refraction algorithm which allows opaque objects in
+the scene to be refracted. In <code>cubemap</code> mode, refracted rays are assumed to
+emerge from the center of the object and the <code>thickness</code> parameter is only
+used for computing the absorption, but has no impact on the refraction
+itself. In <code>screenspace</code> mode, refracted rays are assumed to travel parallel
+to the view direction when they exit the refractive medium.</p>
+<pre><code class="language-json">material {
+    refractionMode : cubemap,
+}
+</code></pre>
+<h3 id="blending-and-transparency-refractiontype"><a class="header" href="#blending-and-transparency-refractiontype">Blending and transparency: refractionType</a></h3>
+<p>Type
+:   <code>string</code></p>
+<p>Value
+:   Any of <code>solid</code>, <code>thin</code>. Defaults to <code>solid</code>.</p>
+<p>Description
+:   This is only meaningful when <code>refractionMode</code> is set to anything but <code>none</code>.
+<code>refractionType</code> defines the refraction model used. <code>solid</code> is used for
+thick objects such as a crystal ball, an ice cube or as sculpture. <code>thin</code> is
+used for thin objects such as a window, an ornament ball or a soap bubble.
+In <code>solid</code> mode all refracive objects are assumed to be a sphere tangent to
+the entry point and of radius <code>thickness</code>. In <code>thin</code> mode, all refractive
+objects are assumed to be flat and thin and of thickness <code>thickness</code>.</p>
+<pre><code class="language-json">material {
+    refractionMode : cubemap,
+    refractionType : thin,
+}
+</code></pre>
+<h3 id="rasterization-culling"><a class="header" href="#rasterization-culling">Rasterization: culling</a></h3>
+<p>Type
+:   <code>string</code></p>
+<p>Value
+:   Any of <code>none</code>, <code>front</code>, <code>back</code>, <code>frontAndBack</code>. Defaults to <code>back</code>.</p>
+<p>Description
+:   Defines which triangles should be culled: none, front-facing triangles,
+back-facing triangles or all.</p>
+<pre><code class="language-json">material {
+    culling : none
+}
+</code></pre>
+<h3 id="rasterization-colorwrite"><a class="header" href="#rasterization-colorwrite">Rasterization: colorWrite</a></h3>
+<p>Type
+:   <code>boolean</code></p>
+<p>Value
+:   <code>true</code> or <code>false</code>. Defaults to <code>true</code>.</p>
+<p>Description
+:   Enables or disables writes to the color buffer.</p>
+<pre><code class="language-json">material {
+    colorWrite : false
+}
+</code></pre>
+<h3 id="rasterization-depthwrite"><a class="header" href="#rasterization-depthwrite">Rasterization: depthWrite</a></h3>
+<p>Type
+:   <code>boolean</code></p>
+<p>Value
+:   <code>true</code> or <code>false</code>. Defaults to <code>true</code> for opaque materials, <code>false</code> for
+transparent materials.</p>
+<p>Description
+:   Enables or disables writes to the depth buffer.</p>
+<pre><code class="language-json">material {
+    depthWrite : false
+}
+</code></pre>
+<h3 id="rasterization-depthculling"><a class="header" href="#rasterization-depthculling">Rasterization: depthCulling</a></h3>
+<p>Type
+:   <code>boolean</code></p>
+<p>Value
+:   <code>true</code> or <code>false</code>. Defaults to <code>true</code>.</p>
+<p>Description
+:   Enables or disables depth testing. When depth testing is disabled, an object
+rendered with this material will always appear on top of other opaque
+objects.</p>
+<pre><code class="language-json">material {
+    depthCulling : false
+}
+</code></pre>
+<h3 id="rasterization-doublesided"><a class="header" href="#rasterization-doublesided">Rasterization: doubleSided</a></h3>
+<p>Type
+:   <code>boolean</code></p>
+<p>Value
+:   <code>true</code> or <code>false</code>. Defaults to <code>false</code>.</p>
+<p>Description
+:   Enables two-sided rendering and its capability to be toggled at run time.
+When set to <code>true</code>, <code>culling</code> is automatically set to <code>none</code>; if the
+triangle is back-facing, the triangle's normal is flipped to become
+front-facing. When explicitly set to <code>false</code>, this allows the
+double-sidedness to be toggled at run time.</p>
+<pre><code class="language-json">material {
+    name : &quot;Double sided material&quot;,
+    shadingModel : lit,
+    doubleSided : true
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = materialParams.albedo;
+    }
+}
+</code></pre>
+<h3 id="rasterization-alphatocoverage"><a class="header" href="#rasterization-alphatocoverage">Rasterization: alphaToCoverage</a></h3>
+<p>Type
+:   <code>boolean</code></p>
+<p>Value
+:   <code>true</code> or <code>false</code>. Defaults to <code>false</code>.</p>
+<p>Description
+:   Enables or disables alpha to coverage. When alpha to coverage is enabled,
+the coverage of fragment is derived from its alpha. This property is only
+meaningful when MSAA is enabled. Note: setting <code>blending</code> to <code>masked</code>
+automatically enables alpha to coverage. If this is not desired, you can
+override this behavior by setting alpha to coverage to false as in the
+example below.</p>
+<pre><code class="language-json">material {
+    name : &quot;Alpha to coverage&quot;,
+    shadingModel : lit,
+    blending : masked,
+    alphaToCoverage : false
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = materialParams.albedo;
+    }
+}
+</code></pre>
+<h3 id="lighting-reflections"><a class="header" href="#lighting-reflections">Lighting: reflections</a></h3>
+<p>Type
+:   <code>string</code></p>
+<p>Value
+:   <code>default</code> or <code>screenspace</code>. Defaults to <code>default</code>.</p>
+<p>Description
+:   Controls the source of specular reflections for this material. When this
+property is set to <code>default</code>, reflections only come image-based lights. When
+this property is set to <code>screenspace</code>, reflections come from the screen
+space's color buffer in addition to image-based lights.</p>
+<pre><code class="language-json">material {
+    name : &quot;Glossy metal&quot;,
+    reflections : screenspace
+}
+</code></pre>
+<h3 id="lighting-shadowmultiplier"><a class="header" href="#lighting-shadowmultiplier">Lighting: shadowMultiplier</a></h3>
+<p>Type
+:   <code>boolean</code></p>
+<p>Value
+:   <code>true</code> or <code>false</code>. Defaults to <code>false</code>.</p>
+<p>Description
+:   Only available in the <code>unlit</code> shading model. If this property is enabled,
+the final color computed by the material is multiplied by the shadowing
+factor (or visibility). This allows to create transparent shadow-receiving
+objects (for instance an invisible ground plane in AR). This is only
+supported with shadows from directional lights.</p>
+<pre><code class="language-json">material {
+    name : &quot;Invisible shadow plane&quot;,
+    shadingModel : unlit,
+    shadowMultiplier : true,
+    blending : transparent
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        // baseColor defines the color and opacity of the final shadow
+        material.baseColor = vec4(0.0, 0.0, 0.0, 0.7);
+    }
+}
+</code></pre>
+<h3 id="lighting-transparentshadow"><a class="header" href="#lighting-transparentshadow">Lighting: transparentShadow</a></h3>
+<p>Type
+:   <code>boolean</code></p>
+<p>Value
+:   <code>true</code> or <code>false</code>. Defaults to <code>false</code>.</p>
+<p>Description
+:   Enables transparent shadows on this material. When this feature is enabled,
+Filament emulates transparent shadows using a dithering pattern: they work
+best with variance shadow maps (VSM) and blurring enabled. The opacity of
+the shadow derives directly from the alpha channel of the material's
+<code>baseColor</code> property. Transparent shadows can be enabled on opaque objects,
+making them compatible with refractive/transmissive objects that are
+otherwise considered opaque.</p>
+<pre><code class="language-json">material {
+    name : &quot;Clear plastic with stickers&quot;,
+    transparentShadow : true,
+    blending : transparent,
+    // ...
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_baseColor, getUV0());
+    }
+}
+</code></pre>
+<p><img src="images/screenshot_transparent_shadows.jpg" alt="Figure [transparentShadow]: Objects rendered with transparent shadows and blurry VSM with a radius of 4. Model Bottle of Water by T-Art." /></p>
+<h3 id="lighting-clearcoatiorchange"><a class="header" href="#lighting-clearcoatiorchange">Lighting: clearCoatIorChange</a></h3>
+<p>Type
+:   <code>boolean</code></p>
+<p>Value
+:   <code>true</code> or <code>false</code>. Defaults to <code>true</code>.</p>
+<p>Description
+:   When adding a clear coat layer, the change in index of refraction (IoR) is
+taken into account to modify the specular color of the base layer. This
+appears to darken <code>baseColor</code>. When this effect is disabled, <code>baseColor</code> is
+left unmodified. See figure [clearCoatIorChange] for an example of how this
+property can affect a red metallic base layer.</p>
+<pre><code class="language-json">material {
+    clearCoatIorChange : false
+}
+</code></pre>
+<p><img src="images/screenshot_clear_coat_ior_change.jpg" alt="Figure [clearCoatIorChange]: The same rough metallic ball with a clear coat layer rendered with clearCoatIorChange enabled (left) and disabled (right)." /></p>
+<h3 id="lighting-multibounceambientocclusion"><a class="header" href="#lighting-multibounceambientocclusion">Lighting: multiBounceAmbientOcclusion</a></h3>
+<p>Type
+:   <code>boolean</code></p>
+<p>Value
+:   <code>true</code> or <code>false</code>. Defaults to <code>false</code> on mobile, <code>true</code> on desktop.</p>
+<p>Description
+:   Multi-bounce ambient occlusion takes into account interreflections when
+applying ambient occlusion to image-based lighting. Turning this feature on
+avoids over-darkening occluded areas. It also takes the surface color into
+account to generate colored ambient occlusion. Figure [multiBounceAO]
+compares the ambient occlusion term of a surface with and without
+multi-bounce ambient occlusion. Notice how multi-bounce ambient occlusion
+introduces color in the occluded areas. Figure [multiBounceAOAnimated]
+toggles between multi-bounce ambient occlusion on and off on a lit brick
+material to highlight the effects of this property.</p>
+<pre><code class="language-json">material {
+    multiBounceAmbientOcclusion : true
+}
+</code></pre>
+<p><img src="images/screenshot_multi_bounce_ao.jpg" alt="Figure [multiBounceAO]: Brick texture amient occlusion map rendered with multi-bounce ambient occclusion enabled (left) and disabled (right)." /></p>
+<p><img src="images/screenshot_multi_bounce_ao.gif" alt="Figure [multiBounceAOAnimated]: Brick texture rendered with multi-bounce ambient occclusion enabled and disabled." /></p>
+<h3 id="lighting-specularambientocclusion"><a class="header" href="#lighting-specularambientocclusion">Lighting: specularAmbientOcclusion</a></h3>
+<p>Type
+:   <code>string</code></p>
+<p>Value
+:   <code>none</code>, <code>simple</code> or <code>bentNormals</code>. Defaults to <code>none</code> on mobile, <code>simple</code> on
+desktop. For compatibility reasons, <code>true</code> and <code>false</code> are also accepted and
+map respectively to <code>simple</code> and <code>none</code>.</p>
+<p>Description
+:   Static ambient occlusion maps and dynamic ambient occlusion (SSAO, etc.)
+apply to diffuse indirect lighting. When setting this property to other than
+<code>none</code>, a new ambient occlusion term is derived from the surface roughness
+and applied to specular indirect lighting. This effect helps remove unwanted
+specular reflections as shown in figure [specularAO]. When this value is set
+to <code>simple</code>, Filament uses a cheap but approximate method of computing the
+specular ambient occlusion term. If this value is set to <code>bentNormals</code>,
+Filament will use a much more accurate but much more expensive method.</p>
+<pre><code class="language-json">material {
+    specularAmbientOcclusion : simple
+}
+</code></pre>
+<p><img src="images/screenshot_specular_ao.gif" alt="Figure [specularAO]: Comparison of specular ambient occlusion on and off. The effect is particularly visible under the hose." /></p>
+<h3 id="anti-aliasing-specularantialiasing"><a class="header" href="#anti-aliasing-specularantialiasing">Anti-aliasing: specularAntiAliasing</a></h3>
+<p>Type
+:   <code>boolean</code></p>
+<p>Value
+:   <code>true</code> or <code>false</code>. Defaults to <code>false</code>.</p>
+<p>Description
+:   Reduces specular aliasing and preserves the shape of specular highlights as
+an object moves away from the camera. This anti-aliasing solution is
+particularly effective on glossy materials (low roughness) but increases the
+cost of the material. The strength of the anti-aliasing effect can be
+controlled using two other properties: <code>specularAntiAliasingVariance</code> and
+<code>specularAntiAliasingThreshold</code>.</p>
+<pre><code class="language-json">material {
+    specularAntiAliasing : true
+}
+</code></pre>
+<h3 id="anti-aliasing-specularantialiasingvariance"><a class="header" href="#anti-aliasing-specularantialiasingvariance">Anti-aliasing: specularAntiAliasingVariance</a></h3>
+<p>Type
+:   <code>float</code></p>
+<p>Value
+:   A value between 0 and 1, set to 0.15 by default.</p>
+<p>Description
+:   Sets the screen space variance of the filter kernel used when applying
+specular anti-aliasing. Higher values will increase the effect of the filter
+but may increase roughness in unwanted areas.</p>
+<pre><code class="language-json">material {
+    specularAntiAliasingVariance : 0.2
+}
+</code></pre>
+<h3 id="anti-aliasing-specularantialiasingthreshold"><a class="header" href="#anti-aliasing-specularantialiasingthreshold">Anti-aliasing: specularAntiAliasingThreshold</a></h3>
+<p>Type
+:   <code>float</code></p>
+<p>Value
+:   A value between 0 and 1, set to 0.2 by default.</p>
+<p>Description
+:   Sets the clamping threshold used to suppress estimation errors when applying
+specular anti-aliasing. When set to 0, specular anti-aliasing is disabled.</p>
+<pre><code class="language-json">material {
+    specularAntiAliasingThreshold : 0.1
+}
+</code></pre>
+<h3 id="shading-customsurfaceshading"><a class="header" href="#shading-customsurfaceshading">Shading: customSurfaceShading</a></h3>
+<p>Type
+:   <code>bool</code></p>
+<p>Value
+:   <code>true</code> or <code>false</code>. Defaults to <code>false</code>.</p>
+<p>Description
+:   Enables custom surface shading when set to true. When surface shading is
+enabled, the fragment shader must provide an extra function that will be
+invoked for every light in the scene that may influence the current
+fragment. Please refer to the Custom surface shading section below for more
+information.</p>
+<pre><code class="language-json">material {
+    customSurfaceShading : true
+}
+</code></pre>
+<h2 id="vertex-block"><a class="header" href="#vertex-block">Vertex block</a></h2>
+<p>The vertex block is optional and can be used to control the vertex shading stage
+of the material. The vertex block must contain valid
+<a href="https://www.khronos.org/registry/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf">ESSL 3.0</a>
+code (the version of GLSL supported in OpenGL ES 3.0). You are free to create
+multiple functions inside the vertex block but you <strong>must</strong> declare the
+<code>materialVertex</code> function:</p>
+<pre><code class="language-glsl">vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        // vertex shading code
+    }
+}
+</code></pre>
+<p>This function will be invoked automatically at runtime by the shading system and
+gives you the ability to read and modify material properties using the
+<code>MaterialVertexInputs</code> structure. This full definition of the structure can be
+found in the Material vertex inputs section.</p>
+<p>You can use this structure to compute your custom variables/interpolants or to
+modify the value of the attributes. For instance, the following vertex blocks
+modifies both the color and the UV coordinates of the vertex over time:</p>
+<pre><code class="language-glsl">material {
+    requires : [uv0, color]
+}
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.color *= sin(getUserTime().x);
+        material.uv0 *= sin(getUserTime().x);
+    }
+}
+</code></pre>
+<p>In addition to the <code>MaterialVertexInputs</code> structure, your vertex shading code
+can use all the public APIs listed in the Shader public APIs section.</p>
+<h3 id="material-vertex-inputs"><a class="header" href="#material-vertex-inputs">Material vertex inputs</a></h3>
+<pre><code class="language-glsl">struct MaterialVertexInputs {
+    float4 color;              // if the color attribute is required
+    float2 uv0;                // if the uv0 attribute is required
+    float2 uv1;                // if the uv1 attribute is required
+    float3 worldNormal;        // only if the shading model is not unlit
+    float4 worldPosition;      // always available (see note below about world-space)
+
+    mat4   clipSpaceTransform; // default: identity, transforms the clip-space position, only available for `vertexDomain:device`
+
+    // variable* names are replaced with actual names
+    float4 variable0;          // if 1 or more variables is defined
+    float4 variable1;          // if 2 or more variables is defined
+    float4 variable2;          // if 3 or more variables is defined
+    float4 variable3;          // if 4 or more variables is defined
+};
+</code></pre>
+<p>!!! TIP: worldPosition To achieve good precision, the <code>worldPosition</code> coordinate
+in the vertex shader is shifted by the camera position. To get the true
+world-space position, users can use <code>getUserWorldPosition()</code>, however be aware
+that the true world-position might not be able to fit in a <code>float</code> or might be
+represented with severely reduced precision.</p>
+<p>!!! TIP: UV attributes By default the vertex shader of a material will flip the
+Y coordinate of the UV attributes of the current mesh: <code>material.uv0 = vec2(mesh_uv0.x, 1.0 - mesh_uv0.y)</code>. You can control this behavior using the
+<code>flipUV</code> property and setting it to <code>false</code>.</p>
+<h3 id="custom-vertex-attributes"><a class="header" href="#custom-vertex-attributes">Custom vertex attributes</a></h3>
+<p>You can use up to 8 custom vertex attributes, all of type <code>float4</code>. These
+attributes can be accessed using the vertex block shader functions
+<code>getCustom0()</code> to <code>getCustom7()</code>. However, before using custom attributes, you
+<em>must</em> declare those attributes as required in the <code>requires</code> property of the
+material:</p>
+<pre><code class="language-json">material {
+    requires : [
+        custom0,
+        custom1,
+        custom2
+    ]
+}
+</code></pre>
+<h2 id="fragment-block"><a class="header" href="#fragment-block">Fragment block</a></h2>
+<p>The fragment block must be used to control the fragment shading stage of the
+material. The fragment block must contain valid
+<a href="https://www.khronos.org/registry/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf">ESSL 3.0</a>
+code (the version of GLSL supported in OpenGL ES 3.0). You are free to create
+multiple functions inside the fragment block but you <strong>must</strong> declare the
+<code>material</code> function:</p>
+<pre><code class="language-glsl">fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        // fragment shading code
+    }
+}
+</code></pre>
+<p>This function will be invoked automatically at runtime by the shading system and
+gives you the ability to read and modify material properties using the
+<code>MaterialInputs</code> structure. This full definition of the structure can be found
+in the Material fragment inputs section. The full definition of the various
+members of the structure can be found in the Material models section of this
+document.</p>
+<p>The goal of the <code>material()</code> function is to compute the material properties
+specific to the selected shading model. For instance, here is a fragment block
+that creates a glossy red metal using the standard lit shading model:</p>
+<pre><code class="language-glsl">fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor.rgb = vec3(1.0, 0.0, 0.0);
+        material.metallic = 1.0;
+        material.roughness = 0.0;
+    }
+}
+</code></pre>
+<h3 id="preparematerial-function"><a class="header" href="#preparematerial-function">prepareMaterial function</a></h3>
+<p>Note that you <strong>must</strong> call <code>prepareMaterial(material)</code> before exiting the
+<code>material()</code> function. This <code>prepareMaterial</code> function sets up the internal
+state of the material model. Some of the APIs described in the Fragment APIs
+section - like <code>shading_normal</code> for instance - can only be accessed <em>after</em>
+invoking <code>prepareMaterial()</code>.</p>
+<p>It is also important to remember that the <code>normal</code> property - as described in
+the Material fragment inputs section - only has an effect when modified <em>before</em>
+calling <code>prepareMaterial()</code>. Here is an example of a fragment shader that
+properly modifies the <code>normal</code> property to implement a glossy red plastic with
+bump mapping:</p>
+<pre><code class="language-glsl">fragment {
+    void material(inout MaterialInputs material) {
+        // fetch the normal in tangent space
+        vec3 normal = texture(materialParams_normalMap, getUV0()).xyz;
+        material.normal = normal * 2.0 - 1.0;
+
+        // prepare the material
+        prepareMaterial(material);
+
+        // from now on, shading_normal, etc. can be accessed
+        material.baseColor.rgb = vec3(1.0, 0.0, 0.0);
+        material.metallic = 0.0;
+        material.roughness = 1.0;
+    }
+}
+</code></pre>
+<h3 id="material-fragment-inputs"><a class="header" href="#material-fragment-inputs">Material fragment inputs</a></h3>
+<pre><code class="language-glsl">struct MaterialInputs {
+    float4 baseColor;           // default: float4(1.0)
+    float4 emissive;            // default: float4(0.0, 0.0, 0.0, 1.0)
+    float4 postLightingColor;   // default: float4(0.0)
+
+    // no other field is available with the unlit shading model
+    float  roughness;           // default: 1.0
+    float  metallic;            // default: 0.0, not available with cloth or specularGlossiness
+    float  reflectance;         // default: 0.5, not available with cloth or specularGlossiness
+    float  ambientOcclusion;    // default: 0.0
+
+    // not available when the shading model is subsurface or cloth
+    float3 sheenColor;          // default: float3(0.0)
+    float  sheenRoughness;      // default: 0.0
+    float  clearCoat;           // default: 1.0
+    float  clearCoatRoughness;  // default: 0.0
+    float3 clearCoatNormal;     // default: float3(0.0, 0.0, 1.0)
+    float  anisotropy;          // default: 0.0
+    float3 anisotropyDirection; // default: float3(1.0, 0.0, 0.0)
+
+    // only available when the shading model is subsurface or refraction is enabled
+    float  thickness;           // default: 0.5
+
+    // only available when the shading model is subsurface
+    float  subsurfacePower;     // default: 12.234
+    float3 subsurfaceColor;     // default: float3(1.0)
+
+    // only available when the shading model is cloth
+    float3 sheenColor;          // default: sqrt(baseColor)
+    float3 subsurfaceColor;     // default: float3(0.0)
+
+    // only available when the shading model is specularGlossiness
+    float3 specularColor;       // default: float3(0.0)
+    float  glossiness;          // default: 0.0
+
+    // not available when the shading model is unlit
+    // must be set before calling prepareMaterial()
+    float3 normal;              // default: float3(0.0, 0.0, 1.0)
+
+    // only available when refraction is enabled
+    float transmission;         // default: 1.0
+    float3 absorption;          // default float3(0.0, 0.0, 0.0)
+    float ior;                  // default: 1.5
+    float microThickness;       // default: 0.0, not available with refractionType &quot;solid&quot;
+}
+</code></pre>
+<h3 id="custom-surface-shading"><a class="header" href="#custom-surface-shading">Custom surface shading</a></h3>
+<p>When <code>customSurfaceShading</code> is set to <code>true</code> in the material block, the fragment
+block <strong>must</strong> declare and implement the <code>surfaceShading</code> function:</p>
+<pre><code class="language-glsl">fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        // prepare material inputs
+    }
+
+    vec3 surfaceShading(
+        const MaterialInputs materialInputs,
+        const ShadingData shadingData,
+        const LightData lightData
+    ) {
+        return vec3(1.0); // output of custom lighting
+    }
+}
+</code></pre>
+<p>This function will be invoked for every light (directional, spot or point) in
+the scene that may influence the current fragment. The <code>surfaceShading</code> is
+invoked with 3 sets of data:</p>
+<ul>
+<li><code>MaterialInputs</code>, as described in the Material fragment inputs section and
+prepared in the <code>material</code> function explained above</li>
+<li><code>ShadingData</code>, a structure containing values derived from <code>MaterialInputs</code>
+(see below)</li>
+<li><code>LightData</code>, a structure containing values specific to the light being
+currently evaluated (see below)</li>
+</ul>
+<p>The <code>surfaceShading</code> function must return an RGB color in linear sRGB. Alpha
+blending and alpha masking are handled outside of this function and must
+therefore be ignored.</p>
+<p>!!! Note: About shadowed fragments The <code>surfaceShading</code> function is invoked even
+when a fragment is known to be fully in the shadow of the current light
+(<code>lightData.NdotL &lt;= 0.0</code> or <code>lightData.visibility &lt;= 0.0</code>). This gives more
+flexibility to the <code>surfaceShading</code> function as it provides a simple way to
+handle constant ambient lighting for instance.</p>
+<p>!!! Warning: Shading models Custom surface shading only works with the <code>lit</code>
+shading model. Attempting to use any other model will result in an error.</p>
+<h4 id="shading-data-structure"><a class="header" href="#shading-data-structure">Shading data structure</a></h4>
+<pre><code class="language-glsl">struct ShadingData {
+    // The material's diffuse color, as derived from baseColor and metallic.
+    // This color is pre-multiplied by alpha and in the linear sRGB color space.
+    vec3  diffuseColor;
+
+    // The material's specular color, as derived from baseColor and metallic.
+    // This color is pre-multiplied by alpha and in the linear sRGB color space.
+    vec3  f0;
+
+    // The perceptual roughness is the roughness value set in MaterialInputs,
+    // with extra processing:
+    // - Clamped to safe values
+    // - Filtered if specularAntiAliasing is enabled
+    // This value is between 0.0 and 1.0.
+    float perceptualRoughness;
+
+    // The roughness value expected by BRDFs. This value is the square of
+    // perceptualRoughness. This value is between 0.0 and 1.0.
+    float roughness;
+};
+</code></pre>
+<h4 id="light-data-structure"><a class="header" href="#light-data-structure">Light data structure</a></h4>
+<pre><code class="language-glsl">struct LightData {
+    // The color (.rgb) and pre-exposed intensity (.w) of the light.
+    // The color is an RGB value in the linear sRGB color space.
+    // The pre-exposed intensity is the intensity of the light multiplied by
+    // the camera's exposure value.
+    vec4  colorIntensity;
+
+    // The normalized light vector, in world space (direction from the
+    // current fragment's position to the light).
+    vec3  l;
+
+    // The dot product of the shading normal (with normal mapping applied)
+    // and the light vector. This value is equal to the result of
+    // saturate(dot(getWorldSpaceNormal(), lightData.l)).
+    // This value is always between 0.0 and 1.0. When the value is &lt;= 0.0,
+    // the current fragment is not visible from the light and lighting
+    // computations can be skipped.
+    float NdotL;
+
+    // The position of the light in world space.
+    vec3  worldPosition;
+
+    // Attenuation of the light based on the distance from the current
+    // fragment to the light in world space. This value between 0.0 and 1.0
+    // is computed differently for each type of light (it's always 1.0 for
+    // directional lights).
+    float attenuation;
+
+    // Visibility factor computed from shadow maps or other occlusion data
+    // specific to the light being evaluated. This value is between 0.0 and
+    // 1.0.
+    float visibility;
+};
+</code></pre>
+<h4 id="example-1"><a class="header" href="#example-1">Example</a></h4>
+<p>The material below shows how to use custom surface shading to implement a
+simplified toon shader:</p>
+<pre><code class="language-glsl">material {
+    name : Toon,
+    shadingModel : lit,
+    parameters : [
+        {
+            type : float3,
+            name : baseColor
+        }
+    ],
+    customSurfaceShading : true
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor.rgb = materialParams.baseColor;
+    }
+
+    vec3 surfaceShading(
+            const MaterialInputs materialInputs,
+            const ShadingData shadingData,
+            const LightData lightData
+    ) {
+        // Number of visible shade transitions
+        const float shades = 5.0;
+        // Ambient intensity
+        const float ambient = 0.1;
+
+        float toon = max(ceil(lightData.NdotL * shades) / shades, ambient);
+
+        // Shadowing and attenuation
+        toon *= lightData.visibility * lightData.attenuation;
+
+        // Color and intensity
+        vec3 light = lightData.colorIntensity.rgb * lightData.colorIntensity.w;
+
+        return shadingData.diffuseColor * light * toon;
+    }
+}
+</code></pre>
+<p>The result can be seen in figure [toonShading].</p>
+<p><img src="images/screenshot_toon_shading.png" alt="Figure [toonShading]: simple toon shading implemented with custom surface shading" /></p>
+<h2 id="shader-public-apis"><a class="header" href="#shader-public-apis">Shader public APIs</a></h2>
+<h3 id="types"><a class="header" href="#types">Types</a></h3>
+<p>While GLSL types can be used directly (<code>vec4</code> or <code>mat4</code>) we recommend the use of
+the following type aliases:</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: center">GLSL type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>bool2</strong></td><td style="text-align: center">bvec2</td><td style="text-align: left">A vector of 2 booleans</td></tr>
+<tr><td style="text-align: left"><strong>bool3</strong></td><td style="text-align: center">bvec3</td><td style="text-align: left">A vector of 3 booleans</td></tr>
+<tr><td style="text-align: left"><strong>bool4</strong></td><td style="text-align: center">bvec4</td><td style="text-align: left">A vector of 4 booleans</td></tr>
+<tr><td style="text-align: left"><strong>int2</strong></td><td style="text-align: center">ivec2</td><td style="text-align: left">A vector of 2 integers</td></tr>
+<tr><td style="text-align: left"><strong>int3</strong></td><td style="text-align: center">ivec3</td><td style="text-align: left">A vector of 3 integers</td></tr>
+<tr><td style="text-align: left"><strong>int4</strong></td><td style="text-align: center">ivec4</td><td style="text-align: left">A vector of 4 integers</td></tr>
+<tr><td style="text-align: left"><strong>uint2</strong></td><td style="text-align: center">uvec2</td><td style="text-align: left">A vector of 2 unsigned integers</td></tr>
+<tr><td style="text-align: left"><strong>uint3</strong></td><td style="text-align: center">uvec3</td><td style="text-align: left">A vector of 3 unsigned integers</td></tr>
+<tr><td style="text-align: left"><strong>uint4</strong></td><td style="text-align: center">uvec4</td><td style="text-align: left">A vector of 4 unsigned integers</td></tr>
+<tr><td style="text-align: left"><strong>float2</strong></td><td style="text-align: center">float2</td><td style="text-align: left">A vector of 2 floats</td></tr>
+<tr><td style="text-align: left"><strong>float3</strong></td><td style="text-align: center">float3</td><td style="text-align: left">A vector of 3 floats</td></tr>
+<tr><td style="text-align: left"><strong>float4</strong></td><td style="text-align: center">float4</td><td style="text-align: left">A vector of 4 floats</td></tr>
+<tr><td style="text-align: left"><strong>float4x4</strong></td><td style="text-align: center">mat4</td><td style="text-align: left">A 4x4 float matrix</td></tr>
+<tr><td style="text-align: left"><strong>float3x3</strong></td><td style="text-align: center">mat3</td><td style="text-align: left">A 3x3 float matrix</td></tr>
+</tbody></table>
+</div>
+<h3 id="math"><a class="header" href="#math">Math</a></h3>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: center">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>PI</strong></td><td style="text-align: center">float</td><td style="text-align: left">A constant that represent \(\pi\)</td></tr>
+<tr><td style="text-align: left"><strong>HALF_PI</strong></td><td style="text-align: center">float</td><td style="text-align: left">A constant that represent \(\frac{\pi}{2}\)</td></tr>
+<tr><td style="text-align: left"><strong>saturate(float x)</strong></td><td style="text-align: center">float</td><td style="text-align: left">Clamps the specified value between 0.0 and 1.0</td></tr>
+<tr><td style="text-align: left"><strong>pow5(float x)</strong></td><td style="text-align: center">float</td><td style="text-align: left">Computes \(x^5\)</td></tr>
+<tr><td style="text-align: left"><strong>sq(float x)</strong></td><td style="text-align: center">float</td><td style="text-align: left">Computes \(x^2\)</td></tr>
+<tr><td style="text-align: left"><strong>max3(float3 v)</strong></td><td style="text-align: center">float</td><td style="text-align: left">Returns the maximum value of the specified <code>float3</code></td></tr>
+<tr><td style="text-align: left"><strong>mulMat4x4Float3(float4x4 m, float3 v)</strong></td><td style="text-align: center">float4</td><td style="text-align: left">Returns \(m * v\)</td></tr>
+<tr><td style="text-align: left"><strong>mulMat3x3Float3(float4x4 m, float3 v)</strong></td><td style="text-align: center">float4</td><td style="text-align: left">Returns \(m * v\)+</td></tr>
+</tbody></table>
+</div>
+<h3 id="matrices"><a class="header" href="#matrices">Matrices</a></h3>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: center">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>getViewFromWorldMatrix()</strong></td><td style="text-align: center">float4x4</td><td style="text-align: left">Matrix that converts from world space to view/eye space</td></tr>
+<tr><td style="text-align: left"><strong>getWorldFromViewMatrix()</strong></td><td style="text-align: center">float4x4</td><td style="text-align: left">Matrix that converts from view/eye space to world space</td></tr>
+<tr><td style="text-align: left"><strong>getClipFromViewMatrix()</strong></td><td style="text-align: center">float4x4</td><td style="text-align: left">Matrix that converts from view/eye space to clip (NDC) space</td></tr>
+<tr><td style="text-align: left"><strong>getViewFromClipMatrix()</strong></td><td style="text-align: center">float4x4</td><td style="text-align: left">Matrix that converts from clip (NDC) space to view/eye space</td></tr>
+<tr><td style="text-align: left"><strong>getClipFromWorldMatrix()</strong></td><td style="text-align: center">float4x4</td><td style="text-align: left">Matrix that converts from world to clip (NDC) space</td></tr>
+<tr><td style="text-align: left"><strong>getWorldFromClipMatrix()</strong></td><td style="text-align: center">float4x4</td><td style="text-align: left">Matrix that converts from clip (NDC) space to world space</td></tr>
+</tbody></table>
+</div>
+<h3 id="frame-constants"><a class="header" href="#frame-constants">Frame constants</a></h3>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: center">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>getResolution()</strong></td><td style="text-align: center">float4</td><td style="text-align: left">Dimensions of the view's effective (physical) viewport in pixels: <code>width</code>, <code>height</code>, <code>1 / width</code>, <code>1 / height</code>. This might be different from <code>View::getViewport()</code> for instance because of added rendering guard-bands.</td></tr>
+<tr><td style="text-align: left"><strong>getWorldCameraPosition()</strong></td><td style="text-align: center">float3</td><td style="text-align: left">Position of the camera/eye in world space (see note below)</td></tr>
+<tr><td style="text-align: left"><strong>getWorldOffset()</strong></td><td style="text-align: center">float3</td><td style="text-align: left">[deprecated] The shift required to obtain API-level world space. Use getUserWorldPosition() instead</td></tr>
+<tr><td style="text-align: left"><strong>getUserWorldFromWorldMatrix()</strong></td><td style="text-align: center">float4x4</td><td style="text-align: left">Matrix that converts from world space to API-level (user) world space.</td></tr>
+<tr><td style="text-align: left"><strong>getTime()</strong></td><td style="text-align: center">float</td><td style="text-align: left">Current time as a remainder of 1 second. Yields a value between 0 and 1</td></tr>
+<tr><td style="text-align: left"><strong>getUserTime()</strong></td><td style="text-align: center">float4</td><td style="text-align: left">Current time in seconds: <code>time</code>, <code>(double)time - time</code>, <code>0</code>, <code>0</code></td></tr>
+<tr><td style="text-align: left"><strong>getUserTimeMod(float m)</strong></td><td style="text-align: center">float</td><td style="text-align: left">Current time modulo m in seconds</td></tr>
+<tr><td style="text-align: left"><strong>getExposure()</strong></td><td style="text-align: center">float</td><td style="text-align: left">Photometric exposure of the camera</td></tr>
+<tr><td style="text-align: left"><strong>getEV100()</strong></td><td style="text-align: center">float</td><td style="text-align: left"><a href="https://en.wikipedia.org/wiki/Exposure_value">Exposure value at ISO 100</a> of the camera</td></tr>
+</tbody></table>
+</div>
+<p>!!! TIP: world space To achieve good precision, the &quot;world space&quot; in Filament's
+shading system does not necessarily match the API-level world space. To obtain
+the position of the API-level camera, custom materials can use
+<code>getUserWorldFromWorldMatrix()</code> to transform <code>getWorldCameraPosition()</code>.</p>
+<h3 id="material-globals"><a class="header" href="#material-globals">Material globals</a></h3>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: center">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>getMaterialGlobal0()</strong></td><td style="text-align: center">float4</td><td style="text-align: left">A vec4 visible by all materials, its value is set by <code>View::setMaterialGlobal(0, float4)</code>. Its default value is {0,0,0,1}.</td></tr>
+<tr><td style="text-align: left"><strong>getMaterialGlobal1()</strong></td><td style="text-align: center">float4</td><td style="text-align: left">A vec4 visible by all materials, its value is set by <code>View::setMaterialGlobal(1, float4)</code>. Its default value is {0,0,0,1}.</td></tr>
+<tr><td style="text-align: left"><strong>getMaterialGlobal2()</strong></td><td style="text-align: center">float4</td><td style="text-align: left">A vec4 visible by all materials, its value is set by <code>View::setMaterialGlobal(2, float4)</code>. Its default value is {0,0,0,1}.</td></tr>
+<tr><td style="text-align: left"><strong>getMaterialGlobal3()</strong></td><td style="text-align: center">float4</td><td style="text-align: left">A vec4 visible by all materials, its value is set by <code>View::setMaterialGlobal(3, float4)</code>. Its default value is {0,0,0,1}.</td></tr>
+</tbody></table>
+</div>
+<h3 id="vertex-only"><a class="header" href="#vertex-only">Vertex only</a></h3>
+<p>The following APIs are only available from the vertex block:</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: center">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>getPosition()</strong></td><td style="text-align: center">float4</td><td style="text-align: left">Vertex position in the domain defined by the material (default: object/model space)</td></tr>
+<tr><td style="text-align: left"><strong>getCustom0()</strong> to <strong>getCustom7()</strong></td><td style="text-align: center">float4</td><td style="text-align: left">Custom vertex attribute</td></tr>
+<tr><td style="text-align: left"><strong>getWorldFromModelMatrix()</strong></td><td style="text-align: center">float4x4</td><td style="text-align: left">Matrix that converts from model (object) space to world space</td></tr>
+<tr><td style="text-align: left"><strong>getWorldFromModelNormalMatrix()</strong></td><td style="text-align: center">float3x3</td><td style="text-align: left">Matrix that converts normals from model (object) space to world space</td></tr>
+<tr><td style="text-align: left"><strong>getVertexIndex()</strong></td><td style="text-align: center">int</td><td style="text-align: left">Index of the current vertex</td></tr>
+</tbody></table>
+</div>
+<h3 id="fragment-only"><a class="header" href="#fragment-only">Fragment only</a></h3>
+<p>The following APIs are only available from the fragment block:</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: left">Name</th><th style="text-align: center">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>getWorldTangentFrame()</strong></td><td style="text-align: center">float3x3</td><td style="text-align: left">Matrix containing in each column the <code>tangent</code> (<code>frame[0]</code>), <code>bi-tangent</code> (<code>frame[1]</code>) and <code>normal</code> (<code>frame[2]</code>) of the vertex in world space. If the material does not compute a tangent space normal for bump mapping or if the shading is not anisotropic, only the <code>normal</code> is valid in this matrix.</td></tr>
+<tr><td style="text-align: left"><strong>getWorldPosition()</strong></td><td style="text-align: center">float3</td><td style="text-align: left">Position of the fragment in world space (see note below about world-space)</td></tr>
+<tr><td style="text-align: left"><strong>getUserWorldPosition()</strong></td><td style="text-align: center">float3</td><td style="text-align: left">Position of the fragment in API-level (user) world-space (see note below about world-space)</td></tr>
+<tr><td style="text-align: left"><strong>getWorldViewVector()</strong></td><td style="text-align: center">float3</td><td style="text-align: left">Normalized vector in world space from the fragment position to the eye</td></tr>
+<tr><td style="text-align: left"><strong>getWorldNormalVector()</strong></td><td style="text-align: center">float3</td><td style="text-align: left">Normalized normal in world space, after bump mapping (must be used after <code>prepareMaterial()</code>)</td></tr>
+<tr><td style="text-align: left"><strong>getWorldGeometricNormalVector()</strong></td><td style="text-align: center">float3</td><td style="text-align: left">Normalized normal in world space, before bump mapping (can be used before <code>prepareMaterial()</code>)</td></tr>
+<tr><td style="text-align: left"><strong>getWorldReflectedVector()</strong></td><td style="text-align: center">float3</td><td style="text-align: left">Reflection of the view vector about the normal (must be used after <code>prepareMaterial()</code>)</td></tr>
+<tr><td style="text-align: left"><strong>getNormalizedViewportCoord()</strong></td><td style="text-align: center">float3</td><td style="text-align: left">Normalized user viewport position (i.e. NDC coordinates normalized to [0, 1] for the position, [1, 0] for the depth), can be used before <code>prepareMaterial()</code>). Because the user viewport is smaller than the actual physical viewport, these coordinates can be negative or superior to 1 in the non-visible area of the physical viewport.</td></tr>
+<tr><td style="text-align: left"><strong>getNdotV()</strong></td><td style="text-align: center">float</td><td style="text-align: left">The result of <code>dot(normal, view)</code>, always strictly greater than 0 (must be used after <code>prepareMaterial()</code>)</td></tr>
+<tr><td style="text-align: left"><strong>getColor()</strong></td><td style="text-align: center">float4</td><td style="text-align: left">Interpolated color of the fragment, if the color attribute is required</td></tr>
+<tr><td style="text-align: left"><strong>getUV0()</strong></td><td style="text-align: center">float2</td><td style="text-align: left">First interpolated set of UV coordinates, only available if the uv0 attribute is required</td></tr>
+<tr><td style="text-align: left"><strong>getUV1()</strong></td><td style="text-align: center">float2</td><td style="text-align: left">First interpolated set of UV coordinates, only available if the uv1 attribute is required</td></tr>
+<tr><td style="text-align: left"><strong>getMaskThreshold()</strong></td><td style="text-align: center">float</td><td style="text-align: left">Returns the mask threshold, only available when <code>blending</code> is set to <code>masked</code></td></tr>
+<tr><td style="text-align: left"><strong>inverseTonemap(float3)</strong></td><td style="text-align: center">float3</td><td style="text-align: left">Applies the inverse tone mapping operator to the specified linear sRGB color and returns a linear sRGB color. This operation may be an approximation and works best with the &quot;Filmic&quot; tone mapping operator</td></tr>
+<tr><td style="text-align: left"><strong>inverseTonemapSRGB(float3)</strong></td><td style="text-align: center">float3</td><td style="text-align: left">Applies the inverse tone mapping operator to the specified non-linear sRGB color and returns a linear sRGB color. This operation may be an approximation and works best with the &quot;Filmic&quot; tone mapping operator</td></tr>
+<tr><td style="text-align: left"><strong>luminance(float3)</strong></td><td style="text-align: center">float</td><td style="text-align: left">Computes the luminance of the specified linear sRGB color</td></tr>
+<tr><td style="text-align: left"><strong>ycbcrToRgb(float, float2)</strong></td><td style="text-align: center">float3</td><td style="text-align: left">Converts a luminance and CbCr pair to a sRGB color</td></tr>
+<tr><td style="text-align: left"><strong>uvToRenderTargetUV(float2)</strong></td><td style="text-align: center">float2</td><td style="text-align: left">Transforms a UV coordinate to allow sampling from a <code>RenderTarget</code> attachment</td></tr>
+</tbody></table>
+</div>
+<p>!!! TIP: world-space To obtain API-level world-space coordinates, custom
+materials should use <code>getUserWorldPosition()</code> or use
+<code>getUserWorldFromWorldMatrix()</code>. Note that API-level world-space coordinates
+should never or rarely be used because they may not fit in a float3 or have
+severely reduced precision.</p>
+<p>!!! TIP: sampling from render targets When sampling from a <code>filament::Texture</code>
+that is attached to a <code>filament::RenderTarget</code> for materials in the surface
+domain, please use <code>uvToRenderTargetUV</code> to transform the texture coordinate.
+This will flip the coordinate depending on which backend is being used.</p>
+<h1 id="compiling-materials"><a class="header" href="#compiling-materials">Compiling materials</a></h1>
+<p>Material packages can be compiled from material definitions using the command
+line tool called <code>matc</code>. The simplest way to use <code>matc</code> is to specify an input
+material definition (<code>car_paint.mat</code> in the example below) and an output
+material package (<code>car_paint.filamat</code> in the example below):</p>
+<pre><code class="language-text">$ matc -o ./materials/bin/car_paint.filamat ./materials/src/car_paint.mat
+</code></pre>
+<h2 id="shader-validation"><a class="header" href="#shader-validation">Shader validation</a></h2>
+<p><code>matc</code> attempts to validate shaders when compiling a material package. The
+example below shows an example of an error message generated when compiling a
+material definition containing a typo in the fragment shader (<code>metalic</code> instead
+of <code>metallic</code>). The reported line numbers are line numbers in the source
+material definition file.</p>
+<pre><code class="language-text">ERROR: 0:13: 'metalic' : no such field in structure
+ERROR: 0:13: '' : compilation terminated
+ERROR: 2 compilation errors.  No code generated.
+
+Could not compile material metal.mat
+</code></pre>
+<h2 id="flags"><a class="header" href="#flags">Flags</a></h2>
+<p>The command line flags relevant to application development are described in
+table [matcFlags].</p>
+<div class="table-wrapper"><table><thead><tr><th style="text-align: right">Flag</th><th style="text-align: center">Value</th><th style="text-align: left">Usage</th></tr></thead><tbody>
+<tr><td style="text-align: right"><strong>-o</strong>, <strong>--output</strong></td><td style="text-align: center">[path]</td><td style="text-align: left">Specify the output file path</td></tr>
+<tr><td style="text-align: right"><strong>-p</strong>, <strong>--platform</strong></td><td style="text-align: center">desktop/mobile/all</td><td style="text-align: left">Select the target platform(s)</td></tr>
+<tr><td style="text-align: right"><strong>-a</strong>, <strong>--api</strong></td><td style="text-align: center">opengl/vulkan/all</td><td style="text-align: left">Specify the target graphics API</td></tr>
+<tr><td style="text-align: right"><strong>-S</strong>, <strong>--optimize-size</strong></td><td style="text-align: center">N/A</td><td style="text-align: left">Optimize compiled material for size instead of just performance</td></tr>
+<tr><td style="text-align: right"><strong>-r</strong>, <strong>--reflect</strong></td><td style="text-align: center">parameters</td><td style="text-align: left">Outputs the specified metadata as JSON</td></tr>
+<tr><td style="text-align: right"><strong>-v</strong>, <strong>--variant-filter</strong></td><td style="text-align: center">[variant]</td><td style="text-align: left">Filters out the specified, comma-separated variants</td></tr>
+</tbody></table>
+</div>
+<p>[Table [matcFlags]: List of <code>matc</code> flags]</p>
+<p><code>matc</code> offers a few other flags that are irrelevant to application developers
+and for internal use only.</p>
+<h3 id="--platform"><a class="header" href="#--platform">--platform</a></h3>
+<p>By default, <code>matc</code> generates material packages containing shaders for all
+supported platforms. If you wish to reduce the size of your material packages,
+it is recommended to select only the appropriate target platform. For instance,
+to compile a material package for Android only, run the following command:</p>
+<pre><code class="language-text">$ matc -p mobile -o ./materials/bin/car_paint.filamat ./materials/src/car_paint.mat
+</code></pre>
+<h3 id="--api"><a class="header" href="#--api">--api</a></h3>
+<p>By default, <code>matc</code> generates material packages containing shaders for the OpenGL
+API. You can choose to generate shaders for the Vulkan API in addition to the
+OpenGL shaders. If you intend on targeting only Vulkan capable devices, you can
+reduce the size of the material packages by generating only the set of Vulkan
+shaders:</p>
+<pre><code class="language-text">$ matc -a vulkan -o ./materials/bin/car_paint.filamat ./materials/src/car_paint.mat
+</code></pre>
+<h3 id="--optimize-size"><a class="header" href="#--optimize-size">--optimize-size</a></h3>
+<p>This flag applies fewer optimization techniques to try and keep the final
+material as small as possible. If the compiled material is deemed too large by
+default, using this flag might be a good compromise between runtime performance
+and size.</p>
+<h3 id="--reflect"><a class="header" href="#--reflect">--reflect</a></h3>
+<p>This flag was designed to help build tools around <code>matc</code>. It allows you to print
+out specific metadata in JSON format. The example below prints out the list of
+parameters defined in Filament's standard skybox material. It produces a list of
+2 parameters, named <code>showSun</code> and <code>skybox</code>, respectively a boolean and a cubemap
+texture.</p>
+<pre><code class="language-text">$ matc --reflect parameters filament/src/materials/skybox.mat
+{
+  &quot;parameters&quot;: [
+    {
+      &quot;name&quot;: &quot;showSun&quot;,
+      &quot;type&quot;: &quot;bool&quot;,
+      &quot;size&quot;: &quot;1&quot;
+    },
+    {
+      &quot;name&quot;: &quot;skybox&quot;,
+      &quot;type&quot;: &quot;samplerCubemap&quot;,
+      &quot;format&quot;: &quot;float&quot;,
+      &quot;precision&quot;: &quot;default&quot;
+    }
+  ]
+}
+</code></pre>
+<h3 id="--variant-filter"><a class="header" href="#--variant-filter">--variant-filter</a></h3>
+<p>This flag can be used to further reduce the size of a compiled material. It is
+used to specify a list of shader variants that the application guarantees will
+never be needed. These shader variants are skipped during the code generation
+phase of <code>matc</code>, thus reducing the overall size of the material.</p>
+<p>The variants must be specified as a comma-separated list, using one of the
+following available variants:</p>
+<ul>
+<li><code>directionalLighting</code>, used when a directional light is present in the scene</li>
+<li><code>dynamicLighting</code>, used when a non-directional light (point, spot, etc.) is
+present in the scene</li>
+<li><code>shadowReceiver</code>, used when an object can receive shadows</li>
+<li><code>skinning</code>, used when an object is animated using GPU skinning or vertex
+morphing</li>
+<li><code>fog</code>, used when global fog is applied to the scene</li>
+<li><code>vsm</code>, used when VSM shadows are enabled and the object is a shadow receiver</li>
+<li><code>ssr</code>, used when screen-space reflections are enabled in the View</li>
+</ul>
+<p>Example: <code>--variant-filter=skinning,shadowReceiver</code></p>
+<p>Note that some variants may automatically be filtered out. For instance, all
+lighting related variants (<code>directionalLighting</code>, etc.) are filtered out when
+compiling an <code>unlit</code> material.</p>
+<p>When this flag is used, the specified variant filters are merged with the
+variant filters specified in the material itself.</p>
+<p>Use this flag with caution, filtering out a variant required at runtime may lead
+to crashes.</p>
+<h1 id="handling-colors"><a class="header" href="#handling-colors">Handling colors</a></h1>
+<h2 id="linear-colors"><a class="header" href="#linear-colors">Linear colors</a></h2>
+<p>If the color data comes from a texture, simply make sure you use an sRGB texture
+to benefit from automatic hardware conversion from sRGB to linear. If the color
+data is passed as a parameter to the material you can convert from sRGB to
+linear by running the following algorithm on each color channel:</p>
+<pre><code class="language-glsl">float sRGB_to_linear(float color) {
+    return color &lt;= 0.04045 ? color / 12.92 : pow((color + 0.055) / 1.055, 2.4);
+}
+</code></pre>
+<p>Alternatively you can use one of the two cheaper but less accurate versions
+shown below:</p>
+<pre><code class="language-glsl">// Cheaper
+linearColor = pow(color, 2.2);
+// Cheapest
+linearColor = color * color;
+</code></pre>
+<h2 id="pre-multiplied-alpha"><a class="header" href="#pre-multiplied-alpha">Pre-multiplied alpha</a></h2>
+<p>A color uses pre-multiplied alpha if its RGB components are multiplied by the
+alpha channel:</p>
+<pre><code class="language-glsl">// Compute pre-multiplied color
+color.rgb *= color.a;
+</code></pre>
+<p>If the color is sampled from a texture, you can simply ensure that the texture
+data is pre-multiplied ahead of time. On Android, any texture uploaded from a
+<a href="https://developer.android.com/reference/android/graphics/Bitmap.html">Bitmap</a>
+will be pre-multiplied by default.</p>
+<h1 id="sampler-usage-in-materials"><a class="header" href="#sampler-usage-in-materials">Sampler usage in Materials</a></h1>
+<p>The number of usable sampler parameters (e.g.: type is <code>sampler2d</code>) in materials
+is limited and depends on the material properties, shading model, feature level
+and variant filter.</p>
+<h2 id="feature-level-1-and-2"><a class="header" href="#feature-level-1-and-2">Feature level 1 and 2</a></h2>
+<p><code>unlit</code> materials can use up to 12 samplers by default.</p>
+<p><code>lit</code> materials can use up to 9 samplers by default, however if <code>refractionMode</code>
+or <code>reflectionMode</code> is set to <code>screenspace</code> that number is reduced to 8.</p>
+<p>Finally if <code>variantFilter</code> contains the <code>fog</code> filter, an extra sampler is made
+available, such that <code>unlit</code> materials can use up to 13 and <code>lit</code> materials up
+to 10 samplers by default.</p>
+<h2 id="feature-level-3"><a class="header" href="#feature-level-3">Feature level 3</a></h2>
+<p>16 samplers are available.</p>
+<p>!!! TIP: external samplers Be aware that <code>external</code> samplers account for 2
+regular samplers.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="core-design.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="api.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="core-design.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="api.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

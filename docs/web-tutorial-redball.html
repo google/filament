@@ -1,0 +1,505 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Redball Tutorial - Filament</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="core.html"><strong aria-hidden="true">1.</strong> Core Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="core-design.html"><strong aria-hidden="true">1.1.</strong> Filament Design</a></li><li class="chapter-item expanded "><a href="core-materials.html"><strong aria-hidden="true">1.2.</strong> Materials Overview</a></li></ol></li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">2.</strong> API Reference</a></li><li class="chapter-item expanded "><a href="ios.html"><strong aria-hidden="true">3.</strong> iOS</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="cocoapods.html"><strong aria-hidden="true">3.1.</strong> CocoaPods Hello Triangle</a></li></ol></li><li class="chapter-item expanded "><a href="web.html"><strong aria-hidden="true">4.</strong> Web</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="web-tutorials.html"><strong aria-hidden="true">4.1.</strong> Tutorials</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="web-tutorial-triangle.html"><strong aria-hidden="true">4.1.1.</strong> Triangle Tutorial</a></li><li class="chapter-item expanded "><a href="web-tutorial-redball.html" class="active"><strong aria-hidden="true">4.1.2.</strong> Redball Tutorial</a></li><li class="chapter-item expanded "><a href="web-tutorial-suzanne.html"><strong aria-hidden="true">4.1.3.</strong> Suzanne Tutorial</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="dev.html"><strong aria-hidden="true">5.</strong> Developing Filament</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="dev-debugging.html"><strong aria-hidden="true">5.1.</strong> Filament Debugging</a></li><li class="chapter-item expanded "><a href="dev-spirv-debugging.html"><strong aria-hidden="true">5.2.</strong> Investigating SPIRV Issues</a></li><li class="chapter-item expanded "><a href="dev-versioning.html"><strong aria-hidden="true">5.3.</strong> Versioning</a></li><li class="chapter-item expanded "><a href="dev-vulkan.html"><strong aria-hidden="true">5.4.</strong> Vulkan Backend</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Filament</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="suzanne-tutorial"><a class="header" href="#suzanne-tutorial">Suzanne Tutorial</a></h1>
+<p>This tutorial will describe how to create the <strong>redball</strong> demo, introducing you to materials and
+textures.</p>
+<p>For starters, create a text file called <code>redball.html</code> and copy over the HTML that we used in the
+<a href="tutorial_triangle.html">previous tutorial</a>. Change the last script tag from <code>triangle.js</code> to <code>redball.js</code>.</p>
+<p>Next you'll need to get a couple command-line tools: <code>matc</code> and <code>cmgen</code>. You can find these in the
+appropriate <a href="//github.com/google/filament/releases">Filament release</a>. You should choose the
+archive that corresponds to your development machine rather than the one for web, and the version
+that matches the <code>unpkg.com/filament@x.x.x</code> url in the script tag of <code>redball.html</code> (you may check
+out the last available release of <a href="https://www.npmjs.com/package/filament">filament on npm</a>).</p>
+<h2 id="define-plastic-material"><a class="header" href="#define-plastic-material">Define plastic material</a></h2>
+<p>The <code>matc</code> tool consumes a text file containing a high-level description of a PBR material, and
+produces a binary material package that contains shader code and associated metadata. For more
+information, see the official document describing the <a href="https://google.github.io/filament/Materials.md.html">Filament Material System</a>.</p>
+<p>Let's try out <code>matc</code>. Create the following file in your favorite text editor and call it
+<code>plastic.mat</code>.</p>
+<pre><code class="language-text">material {
+    name : Lit,
+    shadingModel : lit,
+    parameters : [
+        { type : float3, name : baseColor },
+        { type : float,  name : roughness },
+        { type : float,  name : clearCoat },
+        { type : float,  name : clearCoatRoughness }
+    ],
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor.rgb = materialParams.baseColor;
+        material.roughness = materialParams.roughness;
+        material.clearCoat = materialParams.clearCoat;
+        material.clearCoatRoughness = materialParams.clearCoatRoughness;
+    }
+}
+</code></pre>
+<p>Next, invoke <code>matc</code> as follows.</p>
+<pre><code class="language-bash">matc -a opengl -p mobile -o plastic.filamat plastic.mat
+</code></pre>
+<p>You should now have a material archive in your working directory, which we'll use later in the
+tutorial.</p>
+<h2 id="bake-environment-map"><a class="header" href="#bake-environment-map">Bake environment map</a></h2>
+<p>Next we'll use Filament's <code>cmgen</code> tool to consume a HDR environment map in latlong format, and
+produce two cubemap files: a mipmapped IBL and a blurry skybox.</p>
+<p>Download <a href="//github.com/google/filament/blob/main/third_party/environments/pillars_2k.hdr">pillars_2k.hdr</a>, then invoke the following command in your terminal.</p>
+<pre><code class="language-bash">cmgen -x pillars_2k --format=ktx --size=256 --extract-blur=0.1 pillars_2k.hdr
+</code></pre>
+<p>You should now have a <code>pillars_2k</code> folder containing a couple KTX files for the IBL and skybox, as
+well as a text file with spherical harmonics coefficients. You can discard the text file because the
+IBL KTX contains these coefficients in its metadata.</p>
+<h2 id="create-javascript"><a class="header" href="#create-javascript">Create JavaScript</a></h2>
+<p>Next, create <code>redball.js</code> with the following content.</p>
+<pre><code class="language-js {fragment=&quot;root&quot;}">const environ = 'pillars_2k';
+const ibl_url = `${environ}/${environ}_ibl.ktx`;
+const sky_url = `${environ}/${environ}_skybox.ktx`;
+const filamat_url = 'plastic.filamat'
+
+Filament.init([ filamat_url, ibl_url, sky_url ], () =&gt; {
+  // Create some global aliases to enums for convenience.
+  window.VertexAttribute = Filament.VertexAttribute;
+  window.AttributeType = Filament.VertexBuffer$AttributeType;
+  window.PrimitiveType = Filament.RenderableManager$PrimitiveType;
+  window.IndexType = Filament.IndexBuffer$IndexType;
+  window.Fov = Filament.Camera$Fov;
+  window.LightType = Filament.LightManager$Type;
+
+  // Obtain the canvas DOM object and pass it to the App.
+  const canvas = document.getElementsByTagName('canvas')[0];
+  window.app = new App(canvas);
+} );
+
+class App {
+  constructor(canvas) {
+    this.canvas = canvas;
+    const engine = this.engine = Filament.Engine.create(canvas);
+    const scene = engine.createScene();
+
+    // TODO: create material
+    // TODO: create sphere
+    // TODO: create lights
+    // TODO: create IBL
+    // TODO: create skybox
+
+    this.swapChain = engine.createSwapChain();
+    this.renderer = engine.createRenderer();
+    this.camera = engine.createCamera(Filament.EntityManager.get().create());
+    this.view = engine.createView();
+    this.view.setCamera(this.camera);
+    this.view.setScene(scene);
+    this.resize();
+    this.render = this.render.bind(this);
+    this.resize = this.resize.bind(this);
+    window.addEventListener('resize', this.resize);
+    window.requestAnimationFrame(this.render);
+  }
+
+  render() {
+    const eye = [0, 0, 4], center = [0, 0, 0], up = [0, 1, 0];
+    const radians = Date.now() / 10000;
+    vec3.rotateY(eye, eye, center, radians);
+    this.camera.lookAt(eye, center, up);
+    this.renderer.render(this.swapChain, this.view);
+    window.requestAnimationFrame(this.render);
+  }
+
+  resize() {
+    const dpr = window.devicePixelRatio;
+    const width = this.canvas.width = window.innerWidth * dpr;
+    const height = this.canvas.height = window.innerHeight * dpr;
+    this.view.setViewport([0, 0, width, height]);
+    this.camera.setProjectionFov(45, width / height, 1.0, 10.0, Fov.VERTICAL);
+  }
+}
+</code></pre>
+<p>The above boilerplate should be familiar to you from the previous tutorial, although it loads in a
+new set of assets. We also added some animation to the camera.</p>
+<p>Next let's create a material instance from the package that we built at the beginning the tutorial.
+Replace the <strong>create material</strong> comment with the following snippet.</p>
+<pre><code class="language-js {fragment=&quot;create material&quot;}">const material = engine.createMaterial(filamat_url);
+const matinstance = material.createInstance();
+
+const red = [0.8, 0.0, 0.0];
+matinstance.setColor3Parameter('baseColor', Filament.RgbType.sRGB, red);
+matinstance.setFloatParameter('roughness', 0.5);
+matinstance.setFloatParameter('clearCoat', 1.0);
+matinstance.setFloatParameter('clearCoatRoughness', 0.3);
+</code></pre>
+<p>The next step is to create a renderable for the sphere. To help with this, we'll use the <code>IcoSphere</code>
+utility class, whose constructor takes a LOD. Its job is to subdivide an icosadedron, producing
+three arrays:</p>
+<ul>
+<li><code>icosphere.vertices</code> Float32Array of XYZ coordinates.</li>
+<li><code>icosphere.tangents</code> Uint16Array (interpreted as half-floats) encoding the surface orientation
+as quaternions.</li>
+<li><code>icosphere.triangles</code> Uint16Array with triangle indices.</li>
+</ul>
+<p>Let's go ahead use these arrays to build the vertex buffer and index buffer. Replace <strong>create
+sphere</strong> with the following snippet.</p>
+<pre><code class="language-js {fragment=&quot;create sphere&quot;}">const renderable = Filament.EntityManager.get().create();
+scene.addEntity(renderable);
+
+const icosphere = new Filament.IcoSphere(5);
+
+const vb = Filament.VertexBuffer.Builder()
+  .vertexCount(icosphere.vertices.length / 3)
+  .bufferCount(2)
+  .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, 0)
+  .attribute(VertexAttribute.TANGENTS, 1, AttributeType.SHORT4, 0, 0)
+  .normalized(VertexAttribute.TANGENTS)
+  .build(engine);
+
+const ib = Filament.IndexBuffer.Builder()
+  .indexCount(icosphere.triangles.length)
+  .bufferType(IndexType.USHORT)
+  .build(engine);
+
+vb.setBufferAt(engine, 0, icosphere.vertices);
+vb.setBufferAt(engine, 1, icosphere.tangents);
+ib.setBuffer(engine, icosphere.triangles);
+
+Filament.RenderableManager.Builder(1)
+  .boundingBox({ center: [-1, -1, -1], halfExtent: [1, 1, 1] })
+  .material(0, matinstance)
+  .geometry(0, PrimitiveType.TRIANGLES, vb, ib)
+  .build(engine, renderable);
+</code></pre>
+<p>At this point, the app is rendering a sphere, but it is black so it doesn't show up. To prove that
+the sphere is there, you can try changing the background color to blue via <code>setClearColor</code>, like we
+did in the first tutorial.</p>
+<h2 id="add-lighting"><a class="header" href="#add-lighting">Add lighting</a></h2>
+<p>In this section we will create some directional light sources, as well as an image-based light (IBL)
+defined by one of the KTX files we built at the start of the demo. First, replace the <strong>create
+lights</strong> comment with the following snippet.</p>
+<pre><code class="language-js {fragment=&quot;create lights&quot;}">const sunlight = Filament.EntityManager.get().create();
+scene.addEntity(sunlight);
+Filament.LightManager.Builder(LightType.SUN)
+  .color([0.98, 0.92, 0.89])
+  .intensity(110000.0)
+  .direction([0.6, -1.0, -0.8])
+  .sunAngularRadius(1.9)
+  .sunHaloSize(10.0)
+  .sunHaloFalloff(80.0)
+  .build(engine, sunlight);
+
+const backlight = Filament.EntityManager.get().create();
+scene.addEntity(backlight);
+Filament.LightManager.Builder(LightType.DIRECTIONAL)
+        .direction([-1, 0, 1])
+        .intensity(50000.0)
+        .build(engine, backlight);
+</code></pre>
+<p>The <code>SUN</code> light source is similar to the <code>DIRECTIONAL</code> light source, but has some extra
+parameters because Filament will automatically draw a disk into the skybox.</p>
+<p>Next we need to create an <code>IndirectLight</code> object from the KTX IBL. One way of doing this is the
+following (don't type this out, there's an easier way).</p>
+<pre><code class="language-js">const format = Filament.PixelDataFormat.RGB;
+const datatype = Filament.PixelDataType.UINT_10F_11F_11F_REV;
+
+// Create a Texture object for the mipmapped cubemap.
+const ibl_package = Filament.Buffer(Filament.assets[ibl_url]);
+const iblktx = new Filament.Ktx1Bundle(ibl_package);
+
+const ibltex = Filament.Texture.Builder()
+  .width(iblktx.info().pixelWidth)
+  .height(iblktx.info().pixelHeight)
+  .levels(iblktx.getNumMipLevels())
+  .sampler(Filament.Texture$Sampler.SAMPLER_CUBEMAP)
+  .format(Filament.Texture$InternalFormat.RGBA8)
+  .build(engine);
+
+for (let level = 0; level &lt; iblktx.getNumMipLevels(); ++level) {
+  const uint8array = iblktx.getCubeBlob(level).getBytes();
+  const pixelbuffer = Filament.PixelBuffer(uint8array, format, datatype);
+  ibltex.setImageCube(engine, level, pixelbuffer);
+}
+
+// Parse the spherical harmonics metadata.
+const shstring = iblktx.getMetadata('sh');
+const shfloats = shstring.split(/\s/, 9 * 3).map(parseFloat);
+
+// Build the IBL object and insert it into the scene.
+const indirectLight = Filament.IndirectLight.Builder()
+  .reflections(ibltex)
+  .irradianceSh(3, shfloats)
+  .intensity(50000.0)
+  .build(engine);
+
+scene.setIndirectLight(indirectLight);
+</code></pre>
+<p>Filament provides a JavaScript utility to make this simpler,
+simply replace the <strong>create IBL</strong> comment with the following snippet.</p>
+<pre><code class="language-js {fragment=&quot;create IBL&quot;}">const indirectLight = engine.createIblFromKtx1(ibl_url);
+indirectLight.setIntensity(50000);
+scene.setIndirectLight(indirectLight);
+</code></pre>
+<h2 id="add-background"><a class="header" href="#add-background">Add background</a></h2>
+<p>At this point you can run the demo and you should see a red plastic ball against a black background.
+Without a skybox, the reflections on the ball are not representative of its surroundings.
+Here's one way to create a texture for the skybox:</p>
+<pre><code class="language-js">const sky_package = Filament.Buffer(Filament.assets[sky_url]);
+const skyktx = new Filament.Ktx1Bundle(sky_package);
+const skytex = Filament.Texture.Builder()
+  .width(skyktx.info().pixelWidth)
+  .height(skyktx.info().pixelHeight)
+  .levels(1)
+  .sampler(Filament.Texture$Sampler.SAMPLER_CUBEMAP)
+  .format(Filament.Texture$InternalFormat.RGBA8)
+  .build(engine);
+
+const uint8array = skyktx.getCubeBlob(0).getBytes();
+const pixelbuffer = Filament.PixelBuffer(uint8array, format, datatype);
+skytex.setImageCube(engine, 0, pixelbuffer);
+</code></pre>
+<p>Filament provides a Javascript utility to make this easier.
+Replace <strong>create skybox</strong> with the following.</p>
+<pre><code class="language-js {fragment=&quot;create skybox&quot;}">const skybox = engine.createSkyFromKtx1(sky_url);
+scene.setSkybox(skybox);
+</code></pre>
+<p>That's it, we now have a shiny red ball floating in an environment! The complete JavaScript file is
+available <a href="tutorial_redball.js">here</a>.</p>
+<p>In the <a href="tutorial_suzanne.html">next tutorial</a>, we'll take a closer look at textures and interaction.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="web-tutorial-triangle.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="web-tutorial-suzanne.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="web-tutorial-triangle.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="web-tutorial-suzanne.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

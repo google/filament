@@ -1,0 +1,13 @@
+[book]
+authors = ["Eliza Velasquez"]
+language = "en"
+multilingual = false
+src = "mdbook"
+title = "Filament"
+
+[build]
+build-dir = "docs"
+create-missing = false
+
+[output.html]
+mathjax-support = true

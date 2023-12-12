@@ -321,8 +321,15 @@ if (WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1")
 endif()
 
+set(CMAKE_VERBOSE_MAKEFILE ON)
+
 if (LINUX)
     option(USE_STATIC_LIBCXX "Link against the static runtime libraries." ON)
+
+    if (DEFINED ENV{NIX_CC})
+        set(USE_STATIC_LIBCXX OFF)
+    endif()
+
     if (${USE_STATIC_LIBCXX})
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
         link_libraries("-static-libgcc -static-libstdc++")

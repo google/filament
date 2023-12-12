@@ -1,0 +1,456 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Triangle Tutorial - Filament</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="core.html"><strong aria-hidden="true">1.</strong> Core Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="core-design.html"><strong aria-hidden="true">1.1.</strong> Filament Design</a></li><li class="chapter-item expanded "><a href="core-materials.html"><strong aria-hidden="true">1.2.</strong> Materials Overview</a></li></ol></li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">2.</strong> API Reference</a></li><li class="chapter-item expanded "><a href="ios.html"><strong aria-hidden="true">3.</strong> iOS</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="cocoapods.html"><strong aria-hidden="true">3.1.</strong> CocoaPods Hello Triangle</a></li></ol></li><li class="chapter-item expanded "><a href="web.html"><strong aria-hidden="true">4.</strong> Web</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="web-tutorials.html"><strong aria-hidden="true">4.1.</strong> Tutorials</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="web-tutorial-triangle.html" class="active"><strong aria-hidden="true">4.1.1.</strong> Triangle Tutorial</a></li><li class="chapter-item expanded "><a href="web-tutorial-redball.html"><strong aria-hidden="true">4.1.2.</strong> Redball Tutorial</a></li><li class="chapter-item expanded "><a href="web-tutorial-suzanne.html"><strong aria-hidden="true">4.1.3.</strong> Suzanne Tutorial</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="dev.html"><strong aria-hidden="true">5.</strong> Developing Filament</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="dev-debugging.html"><strong aria-hidden="true">5.1.</strong> Filament Debugging</a></li><li class="chapter-item expanded "><a href="dev-spirv-debugging.html"><strong aria-hidden="true">5.2.</strong> Investigating SPIRV Issues</a></li><li class="chapter-item expanded "><a href="dev-versioning.html"><strong aria-hidden="true">5.3.</strong> Versioning</a></li><li class="chapter-item expanded "><a href="dev-vulkan.html"><strong aria-hidden="true">5.4.</strong> Vulkan Backend</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Filament</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="triangle-tutorial"><a class="header" href="#triangle-tutorial">Triangle Tutorial</a></h1>
+<h2 id="start-your-project"><a class="header" href="#start-your-project">Start your project</a></h2>
+<p>First, create a text file called <code>triangle.html</code> and fill it with the following HTML. This creates
+a mobile-friendly page with a full-screen canvas.</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+    &lt;title&gt;Filament Tutorial&lt;/title&gt;
+    &lt;meta charset=&quot;utf-8&quot;&gt;
+    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width,user-scalable=no,initial-scale=1&quot;&gt;
+    &lt;style&gt;
+        body { margin: 0; overflow: hidden; }
+        canvas { touch-action: none; width: 100%; height: 100%; }
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;canvas&gt;&lt;/canvas&gt;
+    &lt;script src=&quot;filament.js&quot;&gt;&lt;/script&gt;
+    &lt;script src=&quot;//unpkg.com/gl-matrix@2.8.1&quot;&gt;&lt;/script&gt;
+    &lt;script src=&quot;triangle.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<p>The above HTML loads three JavaScript files:</p>
+<ul>
+<li><code>filament.js</code> does a couple things:
+<ul>
+<li>Downloads assets and compiles the Filament WASM module.</li>
+<li>Contains high-level utilities, e.g. to simplify loading KTX textures from JavaScript.</li>
+</ul>
+</li>
+<li><code>gl-matrix-min.js</code> is a small library that provides vector math functionality.</li>
+<li><code>triangle.js</code> will contain your application code.</li>
+</ul>
+<p>Go ahead and create <code>triangle.js</code> with the following content.</p>
+<pre><code class="language-js {fragment=&quot;root&quot;}">class App {
+  constructor() {
+    // TODO: create entities
+    this.render = this.render.bind(this);
+    this.resize = this.resize.bind(this);
+    window.addEventListener('resize', this.resize);
+    window.requestAnimationFrame(this.render);
+  }
+  render() {
+    // TODO: render scene
+    window.requestAnimationFrame(this.render);
+  }
+  resize() {
+    // TODO: adjust viewport and canvas
+  }
+}
+
+Filament.init(['triangle.filamat'], () =&gt; { window.app = new App() } );
+</code></pre>
+<p>The two calls to <code>bind()</code> allow us to pass instance methods as callbacks for animation and resize
+events.</p>
+<p><code>Filament.init()</code> consumes two things: a list of asset URLs and a callback.</p>
+<p>The callback will be triggered only after all assets finish downloading and the Filament module has
+become ready. In our callback, we simply instantiated the <code>App</code> object, since we'll do most of the
+work in its constructor. We also set the app instance into a <code>Window</code> property to make it accessible
+from the developer console.</p>
+<p>Go ahead and download <a href="triangle.filamat">triangle.filamat</a> and place it in your project folder.
+This is a <em>material package</em>, which is a binary file that contains shaders and other bits of data
+that define a PBR material. We'll learn more about material packages in the next tutorial.</p>
+<h2 id="spawn-a-local-server"><a class="header" href="#spawn-a-local-server">Spawn a local server</a></h2>
+<p>Because of CORS restrictions, your web app cannot fetch the material package directly from the
+file system. One way around this is to create a temporary server using Python or node:</p>
+<pre><code class="language-bash">python3 -m http.server     # Python 3
+python -m SimpleHTTPServer # Python 2.7
+npx http-server -p 8000    # nodejs
+</code></pre>
+<p>To see if this works, navigate to <a href="http://localhost:8000">http://localhost:8000</a> and check if you
+can load the page without any errors appearing in the developer console.</p>
+<p>Take care not to use Python's simple server in production since it does not serve WebAssembly files
+with the correct MIME type.</p>
+<h2 id="create-the-engine-and-scene"><a class="header" href="#create-the-engine-and-scene">Create the Engine and Scene</a></h2>
+<p>We now have a basic skeleton that can respond to paint and resize events. Let's start adding
+Filament objects to the app. Insert the following code into the top of the app constructor.</p>
+<pre><code class="language-js {fragment=&quot;create entities&quot;}">this.canvas = document.getElementsByTagName('canvas')[0];
+const engine = this.engine = Filament.Engine.create(this.canvas);
+</code></pre>
+<p>The above snippet creates the <code>Engine</code> by passing it a canvas DOM object. The engine needs the
+canvas in order to create a WebGL 2.0 context in its contructor.</p>
+<p>The engine is a factory for many Filament entities, including <code>Scene</code>, which is a flat container of
+entities. Let's go ahead and create a scene, then add a blank entity called <code>triangle</code> into the
+scene.</p>
+<pre><code class="language-js {fragment=&quot;create entities&quot;}">this.scene = engine.createScene();
+this.triangle = Filament.EntityManager.get().create();
+this.scene.addEntity(this.triangle);
+</code></pre>
+<p>Filament uses an <a href="//en.wikipedia.org/wiki/Entity-component-system">Entity-Component System</a>.
+The triangle entity in the above snippet does not yet have an associated component. Later in the
+tutorial we will make it into a <em>renderable</em>. Renderables are entities that have associated draw
+calls.</p>
+<h2 id="construct-typed-arrays"><a class="header" href="#construct-typed-arrays">Construct typed arrays</a></h2>
+<p>Next we'll create two typed arrays: a positions array with XY coordinates for each vertex, and a
+colors array with a 32-bit word for each vertex.</p>
+<pre><code class="language-js {fragment=&quot;create entities&quot;}">const TRIANGLE_POSITIONS = new Float32Array([
+    1, 0,
+    Math.cos(Math.PI * 2 / 3), Math.sin(Math.PI * 2 / 3),
+    Math.cos(Math.PI * 4 / 3), Math.sin(Math.PI * 4 / 3),
+]);
+
+const TRIANGLE_COLORS = new Uint32Array([0xffff0000, 0xff00ff00, 0xff0000ff]);
+</code></pre>
+<p>Next we'll use the positions and colors buffers to create a single <code>VertexBuffer</code> object.</p>
+<pre><code class="language-js {fragment=&quot;create entities&quot;}">const VertexAttribute = Filament.VertexAttribute;
+const AttributeType = Filament.VertexBuffer$AttributeType;
+this.vb = Filament.VertexBuffer.Builder()
+    .vertexCount(3)
+    .bufferCount(2)
+    .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT2, 0, 8)
+    .attribute(VertexAttribute.COLOR, 1, AttributeType.UBYTE4, 0, 4)
+    .normalized(VertexAttribute.COLOR)
+    .build(engine);
+
+this.vb.setBufferAt(engine, 0, TRIANGLE_POSITIONS);
+this.vb.setBufferAt(engine, 1, TRIANGLE_COLORS);
+</code></pre>
+<p>The above snippet first creates aliases for two enum types, then constructs the vertex buffer using
+its <code>Builder</code> method. After that, it pushes two buffer objects into the appropriate slots using
+<code>setBufferAt</code>.</p>
+<p>In the Filament API, the above builder pattern is often used for constructing objects in lieu of
+long argument lists. The daisy chain of function calls allows the client code to be somewhat
+self-documenting.</p>
+<p>Our app sets up two buffer slots in the vertex buffer, and each slot is associated with a single
+attribute. Alternatively, we could have interleaved or concatenated these attributes into a single
+buffer slot.</p>
+<p>Next we'll construct an index buffer. The index buffer for our triangle is trivial: it simply holds
+the integers 0,1,2.</p>
+<pre><code class="language-js {fragment=&quot;create entities&quot;}">this.ib = Filament.IndexBuffer.Builder()
+    .indexCount(3)
+    .bufferType(Filament.IndexBuffer$IndexType.USHORT)
+    .build(engine);
+
+this.ib.setBuffer(engine, new Uint16Array([0, 1, 2]));
+</code></pre>
+<p>Note that constructing an index buffer is similar to constructing a vertex buffer, but it only has
+one buffer slot, and it can only contain two types of data (USHORT or UINT).</p>
+<h2 id="finish-up-initialization"><a class="header" href="#finish-up-initialization">Finish up initialization</a></h2>
+<p>Next let's construct an actual <code>Material</code> from the material package that was downloaded (the
+material is an object; the package is just a binary blob), then extract the default
+<code>MaterialInstance</code> from the material object. Material instances have concrete values for their
+parameters, and they can be bound to renderables. We'll learn more about material instances in the
+next tutorial.</p>
+<p>After extracting the material instance, we can finally create a renderable component for the
+triangle by setting up a bounding box and passing in the vertex and index buffers.</p>
+<pre><code class="language-js {fragment=&quot;create entities&quot;}">const mat = engine.createMaterial('triangle.filamat');
+const matinst = mat.getDefaultInstance();
+Filament.RenderableManager.Builder(1)
+    .boundingBox({ center: [-1, -1, -1], halfExtent: [1, 1, 1] })
+    .material(0, matinst)
+    .geometry(0, Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
+    .build(engine, this.triangle);
+</code></pre>
+<p>Next let's wrap up the initialization routine by creating the swap chain, renderer, camera, and
+view.</p>
+<pre><code class="language-js {fragment=&quot;create entities&quot;}">this.swapChain = engine.createSwapChain();
+this.renderer = engine.createRenderer();
+this.camera = engine.createCamera(Filament.EntityManager.get().create());
+this.view = engine.createView();
+this.view.setCamera(this.camera);
+this.view.setScene(this.scene);
+
+// Set up a blue-green background:
+this.renderer.setClearOptions({clearColor: [0.0, 0.1, 0.2, 1.0], clear: true});
+
+// Adjust the initial viewport:
+this.resize();
+</code></pre>
+<p>At this point, we're done creating all Filament entities, and the code should run without errors.
+However the canvas is still blank!</p>
+<h2 id="render-and-resize-handlers"><a class="header" href="#render-and-resize-handlers">Render and resize handlers</a></h2>
+<p>Recall that our App class has a skeletal render method, which the browser calls every time it needs
+to repaint. Often this is 60 times a second.</p>
+<pre><code class="language-js">render() {
+    // TODO: render scene
+    window.requestAnimationFrame(this.render);
+}
+</code></pre>
+<p>Let's flesh this out by rotating the triangle and invoking the Filament renderer. Add the following
+code to the top of the render method.</p>
+<pre><code class="language-js {fragment=&quot;render scene&quot;}">// Rotate the triangle.
+const radians = Date.now() / 1000;
+const transform = mat4.fromRotation(mat4.create(), radians, [0, 0, 1]);
+const tcm = this.engine.getTransformManager();
+const inst = tcm.getInstance(this.triangle);
+tcm.setTransform(inst, transform);
+inst.delete();
+
+// Render the frame.
+this.renderer.render(this.swapChain, this.view);
+</code></pre>
+<p>The first half of our render method obtains the transform component of the triangle entity and uses
+gl-matrix to generate a rotation matrix.</p>
+<p>The second half of our render method invokes the Filament renderer on the view, and tells the
+Filament engine to execute its internal command buffer. The Filament renderer can tell the app
+that it wants to skip a frame, hence the <code>if</code> statement.</p>
+<p>One last step. Add the following code to the resize method. This adjusts the resolution of the
+rendering surface when the window size changes, taking <code>devicePixelRatio</code> into account for high-DPI
+displays. It also adjusts the camera frustum accordingly.</p>
+<pre><code class="language-js {fragment=&quot;adjust viewport and canvas&quot;}">const dpr = window.devicePixelRatio;
+const width = this.canvas.width = window.innerWidth * dpr;
+const height = this.canvas.height = window.innerHeight * dpr;
+this.view.setViewport([0, 0, width, height]);
+
+const aspect = width / height;
+const Projection = Filament.Camera$Projection;
+this.camera.setProjection(Projection.ORTHO, -aspect, aspect, -1, 1, 0, 1);
+</code></pre>
+<p>You should now have a spinning triangle! The completed JavaScript is available
+<a href="tutorial_triangle.js">here</a>.</p>
+<p>In the <a href="tutorial_redball.html">next tutorial</a>, we'll take a closer look at Filament materials and 3D rendering.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="web-tutorials.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="web-tutorial-redball.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="web-tutorials.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="web-tutorial-redball.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

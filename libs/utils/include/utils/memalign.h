@@ -40,7 +40,7 @@ inline void* aligned_alloc(size_t size, size_t align) noexcept {
 #if defined(WIN32)
     p = ::_aligned_malloc(size, align);
 #else
-    ::posix_memalign(&p, align, size);
+    assert(::posix_memalign(&p, align, size) == 0);
 #endif
     return p;
 }

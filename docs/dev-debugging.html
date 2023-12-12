@@ -1,0 +1,301 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Filament Debugging - Filament</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="core.html"><strong aria-hidden="true">1.</strong> Core Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="core-design.html"><strong aria-hidden="true">1.1.</strong> Filament Design</a></li><li class="chapter-item expanded "><a href="core-materials.html"><strong aria-hidden="true">1.2.</strong> Materials Overview</a></li></ol></li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">2.</strong> API Reference</a></li><li class="chapter-item expanded "><a href="ios.html"><strong aria-hidden="true">3.</strong> iOS</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="cocoapods.html"><strong aria-hidden="true">3.1.</strong> CocoaPods Hello Triangle</a></li></ol></li><li class="chapter-item expanded "><a href="web.html"><strong aria-hidden="true">4.</strong> Web</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="web-tutorials.html"><strong aria-hidden="true">4.1.</strong> Tutorials</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="web-tutorial-triangle.html"><strong aria-hidden="true">4.1.1.</strong> Triangle Tutorial</a></li><li class="chapter-item expanded "><a href="web-tutorial-redball.html"><strong aria-hidden="true">4.1.2.</strong> Redball Tutorial</a></li><li class="chapter-item expanded "><a href="web-tutorial-suzanne.html"><strong aria-hidden="true">4.1.3.</strong> Suzanne Tutorial</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="dev.html"><strong aria-hidden="true">5.</strong> Developing Filament</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="dev-debugging.html" class="active"><strong aria-hidden="true">5.1.</strong> Filament Debugging</a></li><li class="chapter-item expanded "><a href="dev-spirv-debugging.html"><strong aria-hidden="true">5.2.</strong> Investigating SPIRV Issues</a></li><li class="chapter-item expanded "><a href="dev-versioning.html"><strong aria-hidden="true">5.3.</strong> Versioning</a></li><li class="chapter-item expanded "><a href="dev-vulkan.html"><strong aria-hidden="true">5.4.</strong> Vulkan Backend</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Filament</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="filament-debugging"><a class="header" href="#filament-debugging">Filament Debugging</a></h1>
+<h2 id="debugging-vulkan-on-linux"><a class="header" href="#debugging-vulkan-on-linux">Debugging Vulkan on Linux</a></h2>
+<h3 id="enable-validation-logs"><a class="header" href="#enable-validation-logs">Enable Validation Logs</a></h3>
+<p>Simply install the LunarG SDK (it's fast and easy), then make sure you've got the following
+environment variables set up in your <strong>bashrc</strong> file. For example:</p>
+<pre><code>export VULKAN_SDK='/path_to_home/VulkanSDK/1.3.216.0/x86_64'
+export VK_LAYER_PATH=&quot;$VULKAN_SDK/etc/explicit_layer.d&quot;
+export PATH=&quot;$VULKAN_SDK/bin:$PATH&quot;
+</code></pre>
+<p>As long as you're running a debug build of Filament, you should now see extra debugging spew in your
+console if there are any errors or performance issues being caught by validation.</p>
+<h3 id="frame-capture-in-renderdoc"><a class="header" href="#frame-capture-in-renderdoc">Frame Capture in RenderDoc</a></h3>
+<p>The following instructions assume you've already installed the LunarG SDK and therefore have the
+<code>VK_LAYER_PATH</code> environment variable.</p>
+<ol>
+<li>Modify <code>VulkanDriver.cpp</code> by defining <code>ENABLE_RENDERDOC</code></li>
+<li>Download the RenderDoc tarball for Linux and unzip it somewhere.</li>
+<li>Find <code>renderdoc_capture.json</code> in the unzipped folders and copy it to <code>VK_LAYER_PATH</code>. For
+example:</li>
+</ol>
+<pre><code>cp ~/Downloads/renderdoc_1.0/etc/vulkan/implicit_layer.d/renderdoc_capture.json ${VK_LAYER_PATH}
+</code></pre>
+<ol>
+<li>Edit <code>${VK_LAYER_PATH}/renderdoc_capture.json</code> and update the <code>library_path</code> attribute.</li>
+<li>Launch RenderDoc by running <code>renderdoc_1.0/bin/qrenderdoc</code>.</li>
+<li>Go to the <strong>Launch Application</strong> tab and click the ellipses next to <strong>Environment Variables</strong>.</li>
+<li>Add VK_LAYER_PATH so that it matches whatever you've got set in your <strong>bashrc</strong>.</li>
+<li>Save yourself some time in the future by clicking <strong>Save Settings</strong> after setting up the working
+directory, executable path, etc.</li>
+<li>Click <strong>Launch</strong> in RenderDoc, then press <strong>F12</strong> in your app.  You should see a new capture show up in
+RenderDoc.</li>
+</ol>
+<h2 id="enable-metal-validation"><a class="header" href="#enable-metal-validation">Enable Metal Validation</a></h2>
+<p>To enable the Metal validation layers when running a sample through the command-line, set the
+following environment variable:</p>
+<pre><code>export METAL_DEVICE_WRAPPER_TYPE=1
+</code></pre>
+<p>You should then see the following output when running a sample with the Metal backend:</p>
+<pre><code>2020-10-13 18:01:44.101 gltf_viewer[73303:4946828] Metal API Validation Enabled
+</code></pre>
+<h2 id="metal-frame-capture-from-gltf_viewer"><a class="header" href="#metal-frame-capture-from-gltf_viewer">Metal Frame Capture from gltf_viewer</a></h2>
+<p>To capture Metal frames from within gltf_viewer:</p>
+<h3 id="1-create-an-infoplist-file"><a class="header" href="#1-create-an-infoplist-file">1. Create an Info.plist file</a></h3>
+<p>Create an <code>Info.plist</code> file in the same directory as <code>gltf_viewer</code> (<code>cmake/samples</code>). Set its
+contents to:</p>
+<pre><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;!DOCTYPE plist PUBLIC &quot;-//Apple//DTD PLIST 1.0//EN&quot; &quot;http://www.apple.com/DTDs/PropertyList-1.0.dtd&quot;&gt;
+&lt;plist version=&quot;1.0&quot;&gt;
+&lt;dict&gt;
+    &lt;key&gt;MetalCaptureEnabled&lt;/key&gt;
+    &lt;true/&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;
+</code></pre>
+<h3 id="2-capture-a-frame"><a class="header" href="#2-capture-a-frame">2. Capture a frame</a></h3>
+<p>Run gltf_viewer as normal, and hit the &quot;Capture frame&quot; button under the Debug menu. The captured
+frame will be saved to <code>filament.gputrace</code> in the current working directory. This file can then be
+opened with Xcode for inspection.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="dev.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="dev-spirv-debugging.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="dev.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="dev-spirv-debugging.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

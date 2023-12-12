@@ -1,19 +1,50 @@
-.sidebar {
-  display: none !important;
+
+#sidebar,
+#menu-bar,
+.nav-chapters,
+.mobile-nav-chapters {
+    display: none;
 }
 
-.content {
-  margin: 0 auto;
-  width: 100%;
-  float: none;
-  display: initial;
+#page-wrapper.page-wrapper {
+    transform: none;
+    margin-inline-start: 0px;
+    overflow-y: initial;
 }
 
-.container {
-  width: 100%;
-  float: none;
-  display: initial;
-  padding-left:  1rem;
-  padding-right: 1rem;
-  margin: 0 auto;
+#content {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+
+.page {
+    overflow-y: initial;
+}
+
+code {
+    direction: ltr !important;
+}
+
+pre > .buttons {
+    z-index: 2;
+}
+
+a, a:visited, a:active, a:hover {
+    color: #4183c4;
+    text-decoration: none;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    page-break-inside: avoid;
+    page-break-after: avoid;
+}
+
+pre, code {
+    page-break-inside: avoid;
+    white-space: pre-wrap;
+}
+
+.fa {
+    display: none !important;
 }
