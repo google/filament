@@ -70,6 +70,22 @@ FRenderer::FRenderer(FEngine& engine) :
             &engine.debug.renderer.doFrameCapture);
     debugRegistry.registerProperty("d.renderer.disable_buffer_padding",
             &engine.debug.renderer.disable_buffer_padding);
+    debugRegistry.registerProperty("d.shadowmap.display_shadow_texture",
+            &engine.debug.shadowmap.display_shadow_texture);
+    debugRegistry.registerProperty("d.shadowmap.display_shadow_texture_scale",
+            &engine.debug.shadowmap.display_shadow_texture_scale);
+    debugRegistry.registerProperty("d.shadowmap.display_shadow_texture_layer",
+            &engine.debug.shadowmap.display_shadow_texture_layer);
+    debugRegistry.registerProperty("d.shadowmap.display_shadow_texture_level",
+            &engine.debug.shadowmap.display_shadow_texture_level);
+    debugRegistry.registerProperty("d.shadowmap.display_shadow_texture_channel",
+            &engine.debug.shadowmap.display_shadow_texture_channel);
+    debugRegistry.registerProperty("d.shadowmap.display_shadow_texture_layer_count",
+            &engine.debug.shadowmap.display_shadow_texture_layer_count);
+    debugRegistry.registerProperty("d.shadowmap.display_shadow_texture_level_count",
+            &engine.debug.shadowmap.display_shadow_texture_level_count);
+    debugRegistry.registerProperty("d.shadowmap.display_shadow_texture_power",
+            &engine.debug.shadowmap.display_shadow_texture_power);
 
     DriverApi& driver = engine.getDriverApi();
 
@@ -1131,6 +1147,16 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         ASSERT_PRECONDITION(mSwapChain->hasStencilBuffer(),
                 "View has stencil buffer enabled, but SwapChain does not have "
                 "SwapChain::CONFIG_HAS_STENCIL_BUFFER flag set.");
+    }
+
+    if (UTILS_UNLIKELY(engine.debug.shadowmap.display_shadow_texture)) {
+        auto shadowmap = blackboard.get<FrameGraphTexture>("shadowmap");
+        input = ppm.debugDisplayShadowTexture(fg, input, shadowmap,
+                engine.debug.shadowmap.display_shadow_texture_scale,
+                engine.debug.shadowmap.display_shadow_texture_layer,
+                engine.debug.shadowmap.display_shadow_texture_level,
+                engine.debug.shadowmap.display_shadow_texture_channel,
+                engine.debug.shadowmap.display_shadow_texture_power);
     }
 
 //    auto debug = structure

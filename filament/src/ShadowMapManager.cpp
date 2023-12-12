@@ -294,6 +294,8 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
     // Shadow Passes
     // -------------------------------------------------------------------------------------------
 
+    fg.getBlackboard()["shadowmap"] = prepareShadowPass->shadows;
+
     struct ShadowPassData {
         FrameGraphId<FrameGraphTexture> tempBlurSrc{};  // temporary shadowmap when blurring
         FrameGraphId<FrameGraphTexture> output;
@@ -942,6 +944,10 @@ void ShadowMapManager::calculateTextureRequirements(FEngine& engine, FView& view
         int const lowMipmapLevel = 7;    // log2(256) - 1
         mipLevels = std::max(1, FTexture::maxLevelCount(maxDimension) - lowMipmapLevel);
     }
+
+    // publish the debugging data
+    engine.debug.shadowmap.display_shadow_texture_layer_count = layersNeeded;
+    engine.debug.shadowmap.display_shadow_texture_level_count = mipLevels;
 
     mTextureAtlasRequirements = {
             (uint16_t)maxDimension,

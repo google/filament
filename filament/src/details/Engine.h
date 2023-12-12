@@ -548,12 +548,20 @@ public:
     struct {
         struct {
             bool debug_directional_shadowmap = false;
+            bool display_shadow_texture = false;
             bool far_uses_shadowcasters = true;
             bool focus_shadowcasters = true;
             bool visualize_cascades = false;
             bool tightly_bound_scene = true;
             float dzn = -1.0f;
             float dzf =  1.0f;
+            float display_shadow_texture_scale = 0.25f;
+            int display_shadow_texture_layer = 0;
+            int display_shadow_texture_level = 0;
+            int display_shadow_texture_channel = 0;
+            int display_shadow_texture_layer_count = 0;
+            int display_shadow_texture_level_count = 0;
+            float display_shadow_texture_power = 1;
         } shadowmap;
         struct {
             bool camera_at_origin = true;
