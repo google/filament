@@ -329,7 +329,6 @@ public class UiHelper {
         @Override
         public void detach() {
             mTextureView.setSurfaceTextureListener(null);
-            setSurface(null);
         }
 
 
@@ -382,6 +381,7 @@ public class UiHelper {
         @Override
         public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surfaceTexture) {
             if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureDestroyed()");
+            setSurface(null);
             destroySwapChain();
             return true;
         }
@@ -445,6 +445,9 @@ public class UiHelper {
      * {@link #attachTo(TextureView)}, or {@link #attachTo(SurfaceHolder)}.
      */
     public void detach() {
+        if (mRenderSurface != null) {
+            mRenderSurface.detach();
+        }
         destroySwapChain();
         mNativeWindow = null;
         mRenderSurface = null;
@@ -590,6 +593,10 @@ public class UiHelper {
                 // nothing to do
                 return false;
             }
+            if (mRenderSurface != null) {
+                mRenderSurface.detach();
+                mRenderSurface = null;
+            }
             destroySwapChain();
         }
         mNativeWindow = nativeWindow;
@@ -604,9 +611,6 @@ public class UiHelper {
     }
 
     private void destroySwapChain() {
-        if (mRenderSurface != null) {
-            mRenderSurface.detach();
-        }
         if (mRenderCallback != null) {
             mRenderCallback.onDetachedFromSurface();
         }
