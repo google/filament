@@ -247,7 +247,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 
 
                         // cameraInfo only valid after calling update
-                        const CameraInfo cameraInfo{ shadowMap.getCamera() };
+                        const CameraInfo cameraInfo{ shadowMap.getCamera(), mainCameraInfo };
 
                         auto transaction = ShadowMap::open(driver);
                         ShadowMap::prepareCamera(transaction, engine, cameraInfo);
