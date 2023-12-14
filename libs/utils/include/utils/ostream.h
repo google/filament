@@ -69,6 +69,13 @@ public:
     ostream& dec() noexcept;
     ostream& hex() noexcept;
 
+    /*! @cond PRIVATE */
+    // Sets a consumer of the log. The consumer is invoked on flush() and replaces the default.
+    // Thread safe and reentrant.
+    using ConsumerCallback = void(*)(void*, char const*);
+    void setConsumer(ConsumerCallback consumer, void* user) noexcept;
+    /*! @endcond */
+
 protected:
     ostream& print(const char* format, ...) noexcept;
 

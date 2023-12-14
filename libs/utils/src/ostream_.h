@@ -25,6 +25,7 @@ namespace utils::io {
 struct ostream_ {
     std::mutex mLock;
     ostream::Buffer mData;
+    std::pair<ostream::ConsumerCallback, void*> mConsumer{};
     bool mShowHex = false;
 };
 

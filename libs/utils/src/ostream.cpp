@@ -24,9 +24,12 @@
 #include <utils/PrivateImplementation-impl.h>
 
 #include <algorithm>
+#include <mutex>
 #include <string>
 #include <string_view>
+#include <utility>
 
+#include <stdlib.h>
 #include <stdarg.h>
 
 template class utils::PrivateImplementation<utils::io::ostream_>;
@@ -35,7 +38,31 @@ namespace utils::io {
 
 ostream::~ostream() = default;
 
+void ostream::setConsumer(ConsumerCallback consumer, void* user) noexcept {
+    auto* const pImpl = mImpl;
+    std::lock_guard const lock(pImpl->mLock);
+    pImpl->mConsumer = { consumer, user };
+}
+
 ostream& flush(ostream& s) noexcept {
+    auto* const pImpl = s.mImpl;
+    pImpl->mLock.lock();
+    auto const callback = pImpl->mConsumer;
+    if (UTILS_UNLIKELY(callback.first)) {
+        auto& buf = s.getBuffer();
+        char const* const data = buf.get();
+        if (UTILS_LIKELY(data)) {
+            char* const str = strdup(data);
+            buf.reset();
+            pImpl->mLock.unlock();
+            // call ConsumerCallback without lock held
+            callback.first(callback.second, str);
+            ::free(str);
+            return s;
+        }
+    }
+    pImpl->mLock.unlock();
+
     return s.flush();
 }
 
