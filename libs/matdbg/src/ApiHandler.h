@@ -17,7 +17,8 @@
 #ifndef MATDBG_APIHANDLER_H
 #define MATDBG_APIHANDLER_H
 
-#include <utils/Mutex.h>
+#include <mutex>
+#include <condition_variable>
 
 #include <CivetServer.h>
 
@@ -53,7 +54,7 @@ private:
 
     DebugServer* mServer;
 
-    utils::Mutex mStatusMutex;
+    std::mutex mStatusMutex;
     std::condition_variable mStatusCondition;
     char statusMaterialId[9] = {};
 
