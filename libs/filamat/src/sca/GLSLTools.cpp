@@ -176,7 +176,7 @@ bool GLSLTools::analyzeComputeShader(const std::string& shaderCode,
     bool const ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
         utils::slog.e << "ERROR: Unable to parse compute shader:" << utils::io::endl;
-        utils::slog.e << tShader.getInfoLog() << utils::io::flush;
+        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
         return false;
     }
 
@@ -214,7 +214,7 @@ std::optional<GLSLTools::FragmentShaderInfo> GLSLTools::analyzeFragmentShader(
     bool const ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
         utils::slog.e << "ERROR: Unable to parse fragment shader:" << utils::io::endl;
-        utils::slog.e << tShader.getInfoLog() << utils::io::flush;
+        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
         return std::nullopt;
     }
 
@@ -294,7 +294,7 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode,
     bool const ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
         utils::slog.e << "ERROR: Unable to parse vertex shader" << utils::io::endl;
-        utils::slog.e << tShader.getInfoLog() << utils::io::flush;
+        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
         return false;
     }
 

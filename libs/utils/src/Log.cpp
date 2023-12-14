@@ -46,30 +46,22 @@ public:
     ostream& flush() noexcept override;
 
 private:
-    Priority mPriority;
+    const Priority mPriority;
 };
 
 ostream& LogStream::flush() noexcept {
-    std::lock_guard lock(mImpl->mLock);
+    std::lock_guard const lock(mImpl->mLock);
     Buffer& buf = getBuffer();
 #ifdef __ANDROID__
+    int prio = ANDROID_LOG_UNKNOWN;
     switch (mPriority) {
-        case LOG_DEBUG:
-            __android_log_write(ANDROID_LOG_DEBUG, UTILS_LOG_TAG, buf.get());
-            break;
-        case LOG_ERROR:
-            __android_log_write(ANDROID_LOG_ERROR, UTILS_LOG_TAG, buf.get());
-            break;
-        case LOG_WARNING:
-            __android_log_write(ANDROID_LOG_WARN, UTILS_LOG_TAG, buf.get());
-            break;
-        case LOG_INFO:
-            __android_log_write(ANDROID_LOG_INFO, UTILS_LOG_TAG, buf.get());
-            break;
-        case LOG_VERBOSE:
-            __android_log_write(ANDROID_LOG_VERBOSE, UTILS_LOG_TAG, buf.get());
-            break;
+        case LOG_DEBUG:     prio = ANDROID_LOG_DEBUG;   break;
+        case LOG_ERROR:     prio = ANDROID_LOG_ERROR;   break;
+        case LOG_WARNING:   prio = ANDROID_LOG_WARN;    break;
+        case LOG_INFO:      prio = ANDROID_LOG_INFO;    break;
+        case LOG_VERBOSE:   prio = ANDROID_LOG_VERBOSE; break;
     }
+    __android_log_write(prio, UTILS_LOG_TAG, buf.get());
 #elif defined(__EMSCRIPTEN__)
     switch (mPriority) {
         case LOG_DEBUG:
