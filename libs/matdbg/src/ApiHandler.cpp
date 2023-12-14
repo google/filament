@@ -215,7 +215,7 @@ bool ApiHandler::handleGetApiShader(struct mg_connection* conn,
 }
 
 void ApiHandler::addMaterial(MaterialRecord const* material) {
-    std::unique_lock<utils::Mutex> lock(mStatusMutex);
+    std::unique_lock const lock(mStatusMutex);
     snprintf(statusMaterialId, sizeof(statusMaterialId), "%8.8x", material->key);
     mStatusCondition.notify_all();
 }
@@ -229,7 +229,7 @@ bool ApiHandler::handleGetStatus(struct mg_connection* conn,
         return true;
     }
 
-    std::unique_lock<utils::Mutex> lock(mStatusMutex);
+    std::unique_lock<std::mutex> lock(mStatusMutex);
     uint64_t const currentStatusCount = mCurrentStatus;
     if (mStatusCondition.wait_for(lock, 10s,
                 [this, currentStatusCount] { return currentStatusCount < mCurrentStatus; })) {
@@ -258,13 +258,13 @@ bool ApiHandler::handlePost(CivetServer* server, struct mg_connection* conn) {
     //   [material id] [api index] [shader index] [shader source....]
     if (uri == "/api/edit") {
         struct mg_request_info const* req_info = mg_get_request_info(conn);
-        size_t msgLen = req_info->content_length;
+        size_t const msgLen = req_info->content_length;
 
         char buf[1024];
         size_t readLen = 0;
         std::stringstream sstream;
         while (readLen < msgLen) {
-            int res = mg_read(conn, buf, sizeof(buf));
+            int const res = mg_read(conn, buf, sizeof(buf));
             if (res < 0) {
                 utils::slog.e << "civet error parsing /api/edit body: " << res << utils::io::endl;
                 break;
@@ -279,7 +279,7 @@ bool ApiHandler::handlePost(CivetServer* server, struct mg_connection* conn) {
         int api;
         int shaderIndex;
         sstream >> std::hex >> matid >> std::dec >> api >> shaderIndex;
-        std::string shader = sstream.str().substr(sstream.tellg());
+        std::string const shader = sstream.str().substr(sstream.tellg());
 
         mServer->handleEditCommand(matid, backend::Backend(api), shaderIndex, shader.c_str(),
                 shader.size());
@@ -298,7 +298,7 @@ bool ApiHandler::handleGet(CivetServer* server, struct mg_connection* conn) {
         mServer->updateActiveVariants();
 
         // Careful not to lock the above line.
-        std::unique_lock<utils::Mutex> lock(mServer->mMaterialRecordsMutex);
+        std::unique_lock const lock(mServer->mMaterialRecordsMutex);
         mg_printf(conn, kSuccessHeader.data(), "application/json");
         mg_printf(conn, "{");
 
@@ -329,7 +329,7 @@ bool ApiHandler::handleGet(CivetServer* server, struct mg_connection* conn) {
     }
 
     if (uri == "/api/matids") {
-        std::unique_lock<utils::Mutex> lock(mServer->mMaterialRecordsMutex);
+        std::unique_lock const lock(mServer->mMaterialRecordsMutex);
         mg_printf(conn, kSuccessHeader.data(), "application/json");
         mg_printf(conn, "[");
         int index = 0;
@@ -342,7 +342,7 @@ bool ApiHandler::handleGet(CivetServer* server, struct mg_connection* conn) {
     }
 
     if (uri == "/api/materials") {
-        std::unique_lock<utils::Mutex> lock(mServer->mMaterialRecordsMutex);
+        std::unique_lock const lock(mServer->mMaterialRecordsMutex);
         mg_printf(conn, kSuccessHeader.data(), "application/json");
         mg_printf(conn, "[");
         int index = 0;
