@@ -18,7 +18,32 @@
 
 #include <utils/sstream.h>
 
+#include <utils/Log.h>
+
+using namespace utils;
 using namespace utils::io;
+
+TEST(ostream, setConsumer) {
+    slog.d.setConsumer(+[](void*, char const*) {
+        GTEST_FAIL();
+    }, nullptr);
+    // we test that we don't crash if the log is empty and that we don't call the consumer.
+    flush(slog.d);
+
+    slog.d.setConsumer(nullptr, nullptr);
+    slog.d << "hello world";
+    // we test that after resetting the consumer, it's not called on flush.
+    flush(slog.d);
+
+    const char* str = "hello world!";
+    slog.d.setConsumer(+[](void* user, char const* str) {
+        ASSERT_STREQ(str, (const char*)user);
+    }, (void*)str);
+    slog.d << str;
+    // we test that the comsumer is called with the right string
+    flush(slog.d);
+    slog.d.setConsumer(nullptr, nullptr);
+}
 
 TEST(sstream, EmptyString) {
     sstream ss;
