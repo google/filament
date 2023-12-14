@@ -245,13 +245,30 @@ void MetalSwapChain::present() {
     }
 }
 
+struct PresentDrawableData {
+    void* drawable = nullptr;
+    MetalDriver* driver = nullptr;
+};
+
 void presentDrawable(bool presentFrame, void* user) {
-    // CFBridgingRelease here is used to balance the CFBridgingRetain inside of acquireDrawable.
-    id<CAMetalDrawable> drawable = (id<CAMetalDrawable>) CFBridgingRelease(user);
+    auto* presentDrawableData = static_cast<PresentDrawableData*>(user);
+
+    // CFBridgingRelease here is used to balance the CFBridgingRetain inside acquireDrawable.
+    id<CAMetalDrawable> drawable =
+            (id<CAMetalDrawable>)CFBridgingRelease(presentDrawableData->drawable);
     if (presentFrame) {
         [drawable present];
     }
-    // The drawable will be released here when the "drawable" variable goes out of scope.
+
+    // Schedule the drawable destruction on the driver thread.
+    void* voidDrawable = (void*) CFBridgingRetain(drawable);
+    MetalDriver* driver = presentDrawableData->driver;
+    driver->runAtNextTick([voidDrawable]() {
+        // The drawable is released here.
+        CFBridgingRelease(voidDrawable);
+    });
+
+    delete presentDrawableData;
 }
 
 void MetalSwapChain::scheduleFrameScheduledCallback() {
@@ -266,13 +283,15 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
     // capture the _this_ pointer (MetalSwapChain*) instead of the drawable.
     id<CAMetalDrawable> d = drawable;
     void* userData = frameScheduledUserData;
+    MetalDriver* driver = context.driver;
     [getPendingCommandBuffer(&context) addScheduledHandler:^(id<MTLCommandBuffer> cb) {
         // CFBridgingRetain is used here to give the drawable a +1 retain count before
         // casting it to a void*.
-        PresentCallable callable(presentDrawable, (void*) CFBridgingRetain(d));
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            callback(callable, userData);
-        });
+        auto* presentDrawableData = new PresentDrawableData;
+        presentDrawableData->drawable = (void*) CFBridgingRetain(d);
+        presentDrawableData->driver = driver;
+        PresentCallable callable(presentDrawable, (void*) presentDrawableData);
+        callback(callable, userData);
     }];
 }
 

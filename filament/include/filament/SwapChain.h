@@ -252,6 +252,12 @@ public:
      * automatically schedule itself for presentation. Instead, the application must call the
      * PresentCallable passed to the FrameScheduledCallback.
      *
+     * If your application delays the call to the PresentCallable by, for example, calling it on a
+     * separate thread, you must ensure all PresentCallables have been called before shutting down
+     * the Filament Engine. You can do this by issuing an Engine::flushAndWait before calling
+     * Engine::shutdown. This is necessary to ensure the Filament Engine has had a chance to clean
+     * up all memory related to frame presentation.
+     *
      * @param callback    A callback, or nullptr to unset.
      * @param user        An optional pointer to user data passed to the callback function.
      *
