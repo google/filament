@@ -112,6 +112,7 @@ namespace glext {
 // it is currently called from PlatformEGL.
 void importGLESExtensionsEntryPoints();
 
+#ifndef __EMSCRIPTEN__
 #ifdef GL_OES_EGL_image
 extern PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
 #endif
@@ -153,6 +154,7 @@ extern PFNGLMAXSHADERCOMPILERTHREADSKHRPROC glMaxShaderCompilerThreadsKHR;
 #if defined(__ANDROID__) && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
 extern PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
 #endif
+#endif // __EMSCRIPTEN__
 } // namespace glext
 
 using namespace glext;

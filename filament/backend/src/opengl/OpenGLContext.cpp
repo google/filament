@@ -274,6 +274,7 @@ void OpenGLContext::setDefaultState() noexcept {
     glHint(GL_FRAGMENT_SHADER_DERIVATIVE_HINT, GL_NICEST);
 #endif
 
+#if !defined(__EMSCRIPTEN__)
     if (ext.EXT_clip_control) {
 #if defined(BACKEND_OPENGL_VERSION_GL)
         glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
@@ -281,6 +282,7 @@ void OpenGLContext::setDefaultState() noexcept {
         glClipControlEXT(GL_LOWER_LEFT_EXT, GL_ZERO_TO_ONE_EXT);
 #endif
     }
+#endif
 
     if (ext.EXT_clip_cull_distance) {
         glEnable(GL_CLIP_DISTANCE0);
@@ -309,7 +311,9 @@ void OpenGLContext::initProcs(Procs* procs,
 #   ifdef BACKEND_OPENGL_VERSION_GL
     procs->getQueryObjectui64v = glGetQueryObjectui64v; // only core in GL
 #   elif defined(GL_EXT_disjoint_timer_query)
-    procs->getQueryObjectui64v = glGetQueryObjectui64vEXT;
+#       ifndef __EMSCRIPTEN__
+            procs->getQueryObjectui64v = glGetQueryObjectui64vEXT;
+#       endif
 #   endif // BACKEND_OPENGL_VERSION_GL
 
     // core in ES 3.0 and GL 4.3
@@ -321,6 +325,7 @@ void OpenGLContext::initProcs(Procs* procs,
 
 #ifdef BACKEND_OPENGL_VERSION_GLES
 #   ifndef IOS // IOS is guaranteed to have ES3.x
+#       ifndef __EMSCRIPTEN__
     if (UTILS_UNLIKELY(major == 2)) {
         // Runtime OpenGL version is ES 2.x
         if (UTILS_LIKELY(ext.OES_vertex_array_object)) {
@@ -348,6 +353,7 @@ void OpenGLContext::initProcs(Procs* procs,
 
         procs->maxShaderCompilerThreadsKHR = glMaxShaderCompilerThreadsKHR;
     }
+#       endif // __EMSCRIPTEN__
 #   endif // IOS
 #else
     procs->maxShaderCompilerThreadsKHR = glMaxShaderCompilerThreadsARB;
@@ -580,17 +586,23 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
     // figure out and initialize the extensions we need
     using namespace std::literals;
     ext->APPLE_color_buffer_packed_float = exts.has("GL_APPLE_color_buffer_packed_float"sv);
+#ifndef __EMSCRIPTEN__
     ext->EXT_clip_control = exts.has("GL_EXT_clip_control"sv);
+#endif
     ext->EXT_clip_cull_distance = exts.has("GL_EXT_clip_cull_distance"sv);
     ext->EXT_color_buffer_float = exts.has("GL_EXT_color_buffer_float"sv);
     ext->EXT_color_buffer_half_float = exts.has("GL_EXT_color_buffer_half_float"sv);
+#ifndef __EMSCRIPTEN__
     ext->EXT_debug_marker = exts.has("GL_EXT_debug_marker"sv);
+#endif
     ext->EXT_discard_framebuffer = exts.has("GL_EXT_discard_framebuffer"sv);
+#ifndef __EMSCRIPTEN__
     ext->EXT_disjoint_timer_query = exts.has("GL_EXT_disjoint_timer_query"sv);
     ext->EXT_multisampled_render_to_texture = exts.has("GL_EXT_multisampled_render_to_texture"sv);
     ext->EXT_multisampled_render_to_texture2 = exts.has("GL_EXT_multisampled_render_to_texture2"sv);
+#endif
     ext->EXT_shader_framebuffer_fetch = exts.has("GL_EXT_shader_framebuffer_fetch"sv);
-#if !defined(__EMSCRIPTEN__)
+#ifndef __EMSCRIPTEN__
     ext->EXT_texture_compression_etc2 = true;
 #endif
     ext->EXT_texture_compression_s3tc = exts.has("GL_EXT_texture_compression_s3tc"sv);

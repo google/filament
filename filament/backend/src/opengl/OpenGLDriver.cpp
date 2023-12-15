@@ -1064,6 +1064,7 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
         }
         CHECK_GL_ERROR(utils::slog.e)
     } else
+#ifndef __EMSCRIPTEN__
 #ifdef GL_EXT_multisampled_render_to_texture
         // EXT_multisampled_render_to_texture only support GL_COLOR_ATTACHMENT0
     if (!attachmentTypeNotSupportedByMSRTT && (t->depth <= 1)
@@ -1076,7 +1077,7 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
         // This extension only exists on OpenGL ES.
         gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
         if (any(t->usage & TextureUsage::SAMPLEABLE)) {
-            glext::glFramebufferTexture2DMultisampleEXT(GL_FRAMEBUFFER,
+            glFramebufferTexture2DMultisampleEXT(GL_FRAMEBUFFER,
                     attachment, target, t->gl.id, binfo.level, rt->gl.samples);
         } else {
             glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment,
@@ -1084,7 +1085,8 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
         }
         CHECK_GL_ERROR(utils::slog.e)
     } else
-#endif
+#endif // GL_EXT_multisampled_render_to_texture
+#endif // __EMSCRIPTEN__
     if (!any(t->usage & TextureUsage::SAMPLEABLE) && t->samples > 1) {
         assert_invariant(rt->gl.samples > 1);
         assert_invariant(glIsRenderbuffer(t->gl.id));
@@ -1183,6 +1185,7 @@ void OpenGLDriver::renderBufferStorage(GLuint rbo, GLenum internalformat, uint32
         uint32_t height, uint8_t samples) const noexcept {
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
     if (samples > 1) {
+#ifndef __EMSCRIPTEN__
 #ifdef GL_EXT_multisampled_render_to_texture
         auto& gl = mContext;
         if (gl.ext.EXT_multisampled_render_to_texture ||
@@ -1190,7 +1193,8 @@ void OpenGLDriver::renderBufferStorage(GLuint rbo, GLenum internalformat, uint32
             glext::glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER,
                     samples, internalformat, width, height);
         } else
-#endif
+#endif // GL_EXT_multisampled_render_to_texture
+#endif // __EMSCRIPTEN__
         {
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
             glRenderbufferStorageMultisample(GL_RENDERBUFFER,
@@ -2981,16 +2985,18 @@ GLuint OpenGLDriver::getSamplerSlow(SamplerParams params) const noexcept {
 #endif
 
 void OpenGLDriver::insertEventMarker(char const* string, uint32_t len) {
+#ifndef __EMSCRIPTEN__
 #ifdef GL_EXT_debug_marker
     auto& gl = mContext;
     if (gl.ext.EXT_debug_marker) {
         glInsertEventMarkerEXT(GLsizei(len ? len : strlen(string)), string);
     }
 #endif
+#endif
 }
 
 void OpenGLDriver::pushGroupMarker(char const* string, uint32_t len) {
-
+#ifndef __EMSCRIPTEN__
 #ifdef GL_EXT_debug_marker
 #if DEBUG_MARKER_LEVEL & DEBUG_MARKER_OPENGL
     if (UTILS_LIKELY(mContext.ext.EXT_debug_marker)) {
@@ -3003,9 +3009,11 @@ void OpenGLDriver::pushGroupMarker(char const* string, uint32_t len) {
     SYSTRACE_CONTEXT();
     SYSTRACE_NAME_BEGIN(string);
 #endif
+#endif
 }
 
 void OpenGLDriver::popGroupMarker(int) {
+#ifndef __EMSCRIPTEN__
 #ifdef GL_EXT_debug_marker
 #if DEBUG_MARKER_LEVEL & DEBUG_MARKER_OPENGL
     if (UTILS_LIKELY(mContext.ext.EXT_debug_marker)) {
@@ -3017,6 +3025,7 @@ void OpenGLDriver::popGroupMarker(int) {
 #if DEBUG_MARKER_LEVEL & DEBUG_MARKER_BACKEND
     SYSTRACE_CONTEXT();
     SYSTRACE_NAME_END();
+#endif
 #endif
 }
 
