@@ -2283,6 +2283,7 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
         PixelBufferDescriptor&& p) {
     auto& gl = mContext;
 
+    assert_invariant(t != nullptr);
     assert_invariant(xoffset + width <= std::max(1u, t->width >> level));
     assert_invariant(yoffset + height <= std::max(1u, t->height >> level));
     assert_invariant(t->samples <= 1);
