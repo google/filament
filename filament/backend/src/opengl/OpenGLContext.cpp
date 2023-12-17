@@ -18,6 +18,7 @@
 
 #include <backend/platforms/OpenGLPlatform.h>
 
+#include <string>
 #include <utility>
 
 // change to true to display all GL extensions in the console on start-up
@@ -30,9 +31,26 @@ namespace filament::backend {
 bool OpenGLContext::queryOpenGLVersion(GLint* major, GLint* minor) noexcept {
 #ifdef BACKEND_OPENGL_VERSION_GLES
 #   ifdef BACKEND_OPENGL_LEVEL_GLES30
-    char const* version = (char const*)glGetString(GL_VERSION);
-    // This works on all versions of GLES
-    int const n = version ? sscanf(version, "OpenGL ES %d.%d", major, minor) : 0;
+    char const* version_cstr = (char const*)glGetString(GL_VERSION);
+    if (!version_cstr) {
+        return false;
+    }
+
+    // This prefix works on all versions of GLES.
+    constexpr char kVersionPrefix[] = "OpenGL ES ";
+    constexpr size_t kVersionPrefixLen = sizeof(kVersionPrefix) - 1;
+    if (strncmp(version_cstr, kVersionPrefix, kVersionPrefixLen)) {
+        return false;
+    }
+    std::string versionStr(version_cstr + kVersionPrefixLen);
+
+    // Remove vendor-specific data at the tail of string.
+    size_t p = versionStr.find(' ');
+    if (p != std::string::npos) {
+        versionStr = versionStr.substr(0, p);
+    }
+
+    int const n = sscanf(versionStr.c_str(), "%d.%d", major, minor);
     return n == 2;
 #   else
     // when we compile with GLES2.0 only, we force the context version to 2.0
