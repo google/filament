@@ -73,7 +73,7 @@
 #elif defined(WIN32)
     // No platform specific includes
 #else
-    #error Not a supported Vulkan platform
+    // Not a supported Vulkan platform
 #endif
 
 using namespace bluevk;
