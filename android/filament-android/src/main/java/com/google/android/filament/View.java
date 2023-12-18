@@ -1852,7 +1852,7 @@ public class View {
     }
 
     /**
-     * Options for Temporal Multi-Sample Anti-aliasing (MSAA)
+     * Options for Multi-Sample Anti-aliasing (MSAA)
      * @see setMultiSampleAntiAliasingOptions()
      */
     public static class MultiSampleAntiAliasingOptions {
@@ -1878,7 +1878,11 @@ public class View {
      * Options for Temporal Anti-aliasing (TAA)
      * Most TAA parameters are extremely costly to change, as they will trigger the TAA post-process
      * shaders to be recompiled. These options should be changed or set during initialization.
-     * `filterWidth` and `feedback`, however, could be changed an any time.
+     * `filterWidth`, `feedback` and `jitterPattern`, however, could be changed an any time.
+     *
+     * `feedback` of 0.1 effectively accumulates a maximum of 19 samples in steady state.
+     * see "A Survey of Temporal Antialiasing Techniques" by Lei Yang and all for more information.
+     *
      * @see setTemporalAntiAliasingOptions()
      */
     public static class TemporalAntiAliasingOptions {
@@ -1888,7 +1892,7 @@ public class View {
              */
             AABB,
             /**
-             * use the variance of the neighborhood
+             * use the variance of the neighborhood (not recommended)
              */
             VARIANCE,
             /**
@@ -1912,14 +1916,21 @@ public class View {
             NONE,
         }
 
+        public enum JitterPattern {
+            RGSS_X4,
+            UNIFORM_HELIX_X4,
+            HALTON_23_X8,
+            HALTON_23_X16,
+        }
+
         /**
-         * reconstruction filter width typically between 0.2 (sharper, aliased) and 1 (smoother)
+         * reconstruction filter width typically between 0.2 (sharper, aliased) and 1.5 (smoother)
          */
         public float filterWidth = 1.0f;
         /**
          * history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA).
          */
-        public float feedback = 0.04f;
+        public float feedback = 0.12f;
         /**
          * enables or disables temporal anti-aliasing
          */
@@ -1940,12 +1951,15 @@ public class View {
          * type of color gamut box
          */
         @NonNull
-        public TemporalAntiAliasingOptions.BoxType boxType = TemporalAntiAliasingOptions.BoxType.VARIANCE;
+        public TemporalAntiAliasingOptions.BoxType boxType = TemporalAntiAliasingOptions.BoxType.AABB;
         /**
          * clipping algorithm
          */
         @NonNull
         public TemporalAntiAliasingOptions.BoxClipping boxClipping = TemporalAntiAliasingOptions.BoxClipping.ACCURATE;
+        @NonNull
+        public TemporalAntiAliasingOptions.JitterPattern jitterPattern = TemporalAntiAliasingOptions.JitterPattern.HALTON_23_X16;
+        public float varianceGamma = 1.0f;
         /**
          * adjust the feedback dynamically to reduce flickering
          */

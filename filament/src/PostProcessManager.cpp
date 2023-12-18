@@ -169,7 +169,21 @@ FMaterialInstance* PostProcessManager::PostProcessMaterial::getMaterialInstance(
 
 // ------------------------------------------------------------------------------------------------
 
-const math::float2 PostProcessManager::sHaltonSamples[16] = {
+const PostProcessManager::JitterSequence<4> PostProcessManager::sRGSS4 = {{
+        { 0.625f, 0.125f },
+        { 0.125f, 0.375f },
+        { 0.875f, 0.625f },
+        { 0.375f, 0.875f }
+}};
+
+const PostProcessManager::JitterSequence<4> PostProcessManager::sUniformHelix4 = {{
+        { 0.25f, 0.25f },
+        { 0.75f, 0.75f },
+        { 0.25f, 0.75f },
+        { 0.75f, 0.25f },
+}};
+
+const PostProcessManager::JitterSequence<16> PostProcessManager::sHaltonSamples = {{
         { filament::halton( 0, 2), filament::halton( 0, 3) },
         { filament::halton( 1, 2), filament::halton( 1, 3) },
         { filament::halton( 2, 2), filament::halton( 2, 3) },
@@ -186,7 +200,7 @@ const math::float2 PostProcessManager::sHaltonSamples[16] = {
         { filament::halton(13, 2), filament::halton(13, 3) },
         { filament::halton(14, 2), filament::halton(14, 3) },
         { filament::halton(15, 2), filament::halton(15, 3) }
-};
+}};
 
 PostProcessManager::PostProcessManager(FEngine& engine) noexcept
         : mEngine(engine),
@@ -2500,7 +2514,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
     return ppFXAA->output;
 }
 
-void PostProcessManager::prepareTaa(FrameGraph& fg, filament::Viewport const& svp,
+void PostProcessManager::prepareTaa(FrameGraph& fg,
+        filament::Viewport const& svp,
+        TemporalAntiAliasingOptions const& taaOptions,
         FrameHistory& frameHistory,
         FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
         CameraInfo* inoutCameraInfo,
@@ -2512,9 +2528,33 @@ void PostProcessManager::prepareTaa(FrameGraph& fg, filament::Viewport const& sv
     current.projection = inoutCameraInfo->projection * inoutCameraInfo->getUserViewMatrix();
     current.frameId = previous.frameId + 1;
 
+    auto jitterPosition = [pattern = taaOptions.jitterPattern](size_t frameIndex){
+        using JitterPattern = TemporalAntiAliasingOptions::JitterPattern;
+        switch (pattern) {
+            case JitterPattern::RGSS_X4:
+                return sRGSS4(frameIndex);
+            case JitterPattern::UNIFORM_HELIX_X4:
+                return sUniformHelix4(frameIndex);
+            case JitterPattern::HALTON_23_X8:
+                return sHaltonSamples(frameIndex % 8);
+            case JitterPattern::HALTON_23_X16:
+                return sHaltonSamples(frameIndex);
+        }
+    };
+
     // sample position within a pixel [-0.5, 0.5]
-    float2 const jitter = halton(previous.frameId) - 0.5f;
-    current.jitter = jitter;
+    // for metal/vulkan we need to reverse the y-offset
+    current.jitter = jitterPosition(previous.frameId);
+    float2 jitter = current.jitter;
+    switch (mEngine.getBackend()) {
+        case Backend::VULKAN:
+        case Backend::METAL:
+            jitter.y = -jitter.y;
+            UTILS_FALLTHROUGH;
+        case Backend::OPENGL:
+        default:
+            break;
+    }
 
     float2 const jitterInClipSpace = jitter * (2.0f / float2{ svp.width, svp.height });
 
@@ -2554,6 +2594,7 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(
     setConstantParameter(ma, "preventFlickering", taaOptions.preventFlickering);
     setConstantParameter(ma, "boxType", (int32_t)taaOptions.boxType);
     setConstantParameter(ma, "boxClipping", (int32_t)taaOptions.boxClipping);
+    setConstantParameter(ma, "varianceGamma", taaOptions.varianceGamma);
     if (dirty) {
         ma->invalidate();
         // TODO: call Material::compile(), we can't si that now because it works only
@@ -2628,18 +2669,17 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 };
 
                 float sum = 0.0;
-                float weights[9];
+                float4 weights[9];
 
                 // this doesn't get vectorized (probably because of exp()), so don't bother
                 // unrolling it.
                 #pragma nounroll
                 for (size_t i = 0; i < 9; i++) {
-                    float2 d = sampleOffsets[i] - current.jitter;
-                    d *= 1.0f / taaOptions.filterWidth;
-                    // this is a gaussian fit of a 3.3 Blackman Harris window
+                    float2 const d = (sampleOffsets[i] - current.jitter) / taaOptions.filterWidth;
+                    // This is a gaussian fit of a 3.3-wide Blackman-Harris window
                     // see: "High Quality Temporal Supersampling" by Brian Karis
-                    weights[i] = std::exp2(-3.3f * (d.x * d.x + d.y * d.y));
-                    sum += weights[i];
+                    weights[i][0] = std::exp(-2.29f * (d.x * d.x + d.y * d.y));
+                    sum += weights[i][0];
                 }
                 for (auto& w : weights) {
                     w /= sum;
@@ -2660,6 +2700,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                         .filterMin = SamplerMinFilter::LINEAR
                 });
                 mi->setParameter("filterWeights",  weights, 9);
+                mi->setParameter("jitter",  current.jitter);
                 mi->setParameter("reprojection",
                         mat4f{ historyProjection * inverse(current.projection) } *
                         normalizedToClip);

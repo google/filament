@@ -401,7 +401,7 @@ struct AmbientOcclusionOptions {
 };
 
 /**
- * Options for Temporal Multi-Sample Anti-aliasing (MSAA)
+ * Options for Multi-Sample Anti-aliasing (MSAA)
  * @see setMultiSampleAntiAliasingOptions()
  */
 struct MultiSampleAntiAliasingOptions {
@@ -426,17 +426,21 @@ struct MultiSampleAntiAliasingOptions {
  * Options for Temporal Anti-aliasing (TAA)
  * Most TAA parameters are extremely costly to change, as they will trigger the TAA post-process
  * shaders to be recompiled. These options should be changed or set during initialization.
- * `filterWidth` and `feedback`, however, could be changed an any time.
+ * `filterWidth`, `feedback` and `jitterPattern`, however, could be changed an any time.
+ *
+ * `feedback` of 0.1 effectively accumulates a maximum of 19 samples in steady state.
+ * see "A Survey of Temporal Antialiasing Techniques" by Lei Yang and all for more information.
+ *
  * @see setTemporalAntiAliasingOptions()
  */
 struct TemporalAntiAliasingOptions {
-    float filterWidth = 1.0f;   //!< reconstruction filter width typically between 0.2 (sharper, aliased) and 1 (smoother)
-    float feedback = 0.04f;     //!< history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA).
+    float filterWidth = 1.0f;   //!< reconstruction filter width typically between 0.2 (sharper, aliased) and 1.5 (smoother)
+    float feedback = 0.12f;     //!< history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA).
     bool enabled = false;       //!< enables or disables temporal anti-aliasing
 
     enum class BoxType : uint8_t {
         AABB,           //!< use an AABB neighborhood
-        VARIANCE,       //!< use the variance of the neighborhood
+        VARIANCE,       //!< use the variance of the neighborhood (not recommended)
         AABB_VARIANCE   //!< use both AABB and variance
     };
 
@@ -446,11 +450,20 @@ struct TemporalAntiAliasingOptions {
         NONE            //!< no rejections (use for debugging)
     };
 
+    enum class JitterPattern : uint8_t {
+        RGSS_X4,             //!  4-samples, rotated grid sampling
+        UNIFORM_HELIX_X4,    //!  4-samples, uniform grid in helix sequence
+        HALTON_23_X8,        //!  8-samples of halton 2,3
+        HALTON_23_X16        //! 16-samples of halton 2,3
+    };
+
     bool filterHistory = true;      //!< whether to filter the history buffer
     bool filterInput = true;        //!< whether to apply the reconstruction filter to the input
     bool useYCoCg = false;          //!< whether to use the YcoCg color-space for history rejection
-    BoxType boxType = BoxType::VARIANCE;                //!< type of color gamut box
-    BoxClipping boxClipping = BoxClipping::ACCURATE;    //!< clipping algorithm
+    BoxType boxType = BoxType::AABB;            //!< type of color gamut box
+    BoxClipping boxClipping = BoxClipping::ACCURATE;     //!< clipping algorithm
+    JitterPattern jitterPattern = JitterPattern::HALTON_23_X16; //! Jitter Pattern
+    float varianceGamma = 1.0f; //! High values increases ghosting artefact, lower values increases jittering, range [0.75, 1.25]
 
     bool preventFlickering = false;     //!< adjust the feedback dynamically to reduce flickering
     bool historyReprojection = true;    //!< whether to apply history reprojection (debug option)
