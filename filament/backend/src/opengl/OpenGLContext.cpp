@@ -476,7 +476,6 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
             // (that should be regardless of ANGLE, but we should double-check)
             bugs->split_easu = true;
         }
-        // TODO: see if we could use `bugs.allow_read_only_ancillary_feedback_loop = true`
     }
 
 #ifdef BACKEND_OPENGL_VERSION_GLES

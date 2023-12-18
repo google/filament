@@ -140,20 +140,37 @@ void* ShaderCompilerService::getUserData(const program_token_t& token) noexcept 
 ShaderCompilerService::ShaderCompilerService(OpenGLDriver& driver)
         : mDriver(driver),
           mBlobCache(driver.getContext()),
-          mCallbackManager(driver),
-          KHR_parallel_shader_compile(driver.getContext().ext.KHR_parallel_shader_compile) {
+          mCallbackManager(driver) {
 }
 
 ShaderCompilerService::~ShaderCompilerService() noexcept = default;
 
 bool ShaderCompilerService::isParallelShaderCompileSupported() const noexcept {
-    return KHR_parallel_shader_compile || mShaderCompilerThreadCount;
+    assert_invariant(mMode != Mode::UNDEFINED);
+    return mMode != Mode::SYNCHRONOUS;
 }
 
 void ShaderCompilerService::init() noexcept {
-    // If we have KHR_parallel_shader_compile, we always use it, it should be more resource
-    // friendly.
-    if (!KHR_parallel_shader_compile) {
+    // Here we decide which mode we'll be using. We always prefer our own thread-pool if
+    // that mode is available because, we have no control on how the compilation queues are
+    // handled if done by the driver (so at the very least we'd need to decode this per-driver).
+    // In theory, using Mode::ASYNCHRONOUS (a.k.a. KHR_parallel_shader_compile) could be more
+    // efficient, since it doesn't require shared contexts.
+    // In practice, we already know that with ANGLE, Mode::ASYNCHRONOUS can cause very long
+    // pauses at glDraw() time in the situation where glLinkProgram() has been emitted, but has
+    // other programs ahead of it in ANGLE's queue.
+    if (mDriver.mPlatform.isExtraContextSupported()) {
+        // our thread-pool if possible
+        mMode = Mode::THREAD_POOL;
+    } else if (mDriver.getContext().ext.KHR_parallel_shader_compile) {
+        // if not, async shader compilation and link if the driver supports it
+        mMode = Mode::ASYNCHRONOUS;
+    } else {
+        // fallback to synchronous shader compilation
+        mMode = Mode::SYNCHRONOUS;
+    }
+
+    if (mMode == Mode::THREAD_POOL) {
         // - on Adreno there is a single compiler object. We can't use a pool > 1
         //   also glProgramBinary blocks if other threads are compiling.
         // - on Mali shader compilation can be multi-threaded, but program linking happens on
@@ -163,37 +180,42 @@ void ShaderCompilerService::init() noexcept {
         // - on macOS (M1 MacBook Pro/Ventura) there is global lock around all GL APIs when using
         //   a shared context, so parallel shader compilation yields no benefit.
         // - on windows/linux we could use more threads, tbd.
-        if (mDriver.mPlatform.isExtraContextSupported()) {
-            // By default, we use one thread at the same priority as the gl thread. This is the
-            // safest choice that avoids priority inversions.
-            uint32_t poolSize = 1;
-            JobSystem::Priority priority = JobSystem::Priority::DISPLAY;
 
-            auto const& renderer = mDriver.getContext().state.renderer;
-            if (UTILS_UNLIKELY(strstr(renderer, "PowerVR"))) {
-                // The PowerVR driver support parallel shader compilation well, so we use 2
-                // threads, we can use lower priority threads here because urgent compilations
-                // will most likely happen on the main gl thread. Using too many thread can
-                // increase memory pressure significantly.
-                poolSize = 2;
-                priority = JobSystem::Priority::BACKGROUND;
-            }
+        // By default, we use one thread at the same priority as the gl thread. This is the
+        // safest choice that avoids priority inversions.
+        uint32_t poolSize = 1;
+        JobSystem::Priority priority = JobSystem::Priority::DISPLAY;
 
-            mShaderCompilerThreadCount = poolSize;
-            mCompilerThreadPool.init(mShaderCompilerThreadCount,
-                    [&platform = mDriver.mPlatform, priority]() {
-                        // give the thread a name
-                        JobSystem::setThreadName("CompilerThreadPool");
-                        // run at a slightly lower priority than other filament threads
-                        JobSystem::setThreadPriority(priority);
-                        // create a gl context current to this thread
-                        platform.createContext(true);
-                    },
-                    [&platform = mDriver.mPlatform]() {
-                        // release context and thread state
-                        platform.releaseContext();
-                    });
+        auto const& renderer = mDriver.getContext().state.renderer;
+        // Some drivers support parallel shader compilation well, so we use N
+        // threads, we can use lower priority threads here because urgent compilations
+        // will most likely happen on the main gl thread. Using too many thread can
+        // increase memory pressure significantly.
+        if (UTILS_UNLIKELY(strstr(renderer, "PowerVR"))) {
+            // For PowerVR, it's unclear what the cost of extra shared contexts is, so we only
+            // use 2 to be safe.
+            poolSize = 2;
+            priority = JobSystem::Priority::BACKGROUND;
+        } else if (UTILS_UNLIKELY(strstr(renderer, "ANGLE"))) {
+            // Angle shared contexts are not expensive once we have two.
+            poolSize = (std::thread::hardware_concurrency() + 1) / 2;
+            priority = JobSystem::Priority::BACKGROUND;
         }
+
+        mShaderCompilerThreadCount = poolSize;
+        mCompilerThreadPool.init(mShaderCompilerThreadCount,
+                [&platform = mDriver.mPlatform, priority]() {
+                    // give the thread a name
+                    JobSystem::setThreadName("CompilerThreadPool");
+                    // run at a slightly lower priority than other filament threads
+                    JobSystem::setThreadPriority(priority);
+                    // create a gl context current to this thread
+                    platform.createContext(true);
+                },
+                [&platform = mDriver.mPlatform]() {
+                    // release context and thread state
+                    platform.releaseContext();
+                });
     }
 }
 
@@ -227,7 +249,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
     token->handle = mCallbackManager.get();
 
     CompilerPriorityQueue const priorityQueue = program.getPriorityQueue();
-    if (mShaderCompilerThreadCount) {
+    if (mMode == Mode::THREAD_POOL) {
         // queue a compile job
         mCompilerThreadPool.queue(priorityQueue, token,
                 [this, &gl, program = std::move(program), token]() mutable {
@@ -276,7 +298,8 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                 token->shaderSourceCode);
 
         runAtNextTick(priorityQueue, token, [this, token](Job const&) {
-            if (KHR_parallel_shader_compile) {
+            assert_invariant(mMode != Mode::THREAD_POOL);
+            if (mMode == Mode::ASYNCHRONOUS) {
                 // don't attempt to link this program if all shaders are not done compiling
                 GLint status;
                 if (token->gl.program) {
@@ -300,7 +323,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                 // link the program, this also cannot fail because status is checked later.
                 token->gl.program = linkProgram(mDriver.getContext(),
                         token->gl.shaders, token->attributes);
-                if (KHR_parallel_shader_compile) {
+                if (mMode == Mode::ASYNCHRONOUS) {
                     // wait until the link finishes...
                     return false;
                 }
@@ -341,7 +364,7 @@ void ShaderCompilerService::terminate(program_token_t& token) {
 
     bool const canceled = token->compiler.cancelTickOp(token);
 
-    if (token->compiler.mShaderCompilerThreadCount) {
+    if (token->compiler.mMode == Mode::THREAD_POOL) {
         auto job = token->compiler.mCompilerThreadPool.dequeue(token);
         if (!job) {
             // The job is being executed right now. We need to wait for it to finish to avoid a
@@ -375,7 +398,7 @@ void ShaderCompilerService::terminate(program_token_t& token) {
 
 void ShaderCompilerService::tick() {
     // we don't need to run executeTickOps() if we're using the thread-pool
-    if (UTILS_UNLIKELY(!mShaderCompilerThreadCount)) {
+    if (UTILS_UNLIKELY(mMode != Mode::THREAD_POOL)) {
         executeTickOps();
     }
 }
@@ -400,7 +423,7 @@ void ShaderCompilerService::getProgramFromCompilerPool(program_token_t& token) n
 GLuint ShaderCompilerService::initialize(program_token_t& token) noexcept {
     SYSTRACE_CALL();
     if (!token->gl.program) {
-        if (mShaderCompilerThreadCount) {
+        if (mMode == Mode::THREAD_POOL) {
             // we need this program right now, remove it from the queue
             auto job = mCompilerThreadPool.dequeue(token);
             if (job) {
@@ -416,7 +439,7 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) noexcept {
             // Block until we get the program from the pool. Generally this wouldn't block
             // because we just compiled the program above, when executing job.
             ShaderCompilerService::getProgramFromCompilerPool(token);
-        } else if (KHR_parallel_shader_compile) {
+        } else if (mMode == Mode::ASYNCHRONOUS) {
             // we force the program link -- which might stall, either here or below in
             // checkProgramStatus(), but we don't have a choice, we need to use the program now.
             token->compiler.cancelTickOp(token);

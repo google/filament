@@ -450,12 +450,13 @@ public:
 
     /**
      * Generates all the mipmap levels automatically. This requires the texture to have a
-     * color-renderable format.
+     * color-renderable format and usage set to BLIT_SRC | BLIT_DST. If unspecified,
+     * usage bits are set automatically.
      *
      * @param engine        Engine this texture is associated to.
      *
      * @attention \p engine must be the instance passed to Builder::build()
-     * @attention This Texture instance must NOT use Sampler::SAMPLER_CUBEMAP or it has no effect
+     * @attention This Texture instance must NOT use SamplerType::SAMPLER_3D or it has no effect
      */
     void generateMipmaps(Engine& engine) const noexcept;
 

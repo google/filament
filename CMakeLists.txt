@@ -230,6 +230,21 @@ if (WIN32)
             # we don't need them on CI.
             string(REPLACE "/INCREMENTAL" "/INCREMENTAL:NO" ${LinkerFlag} ${${LinkerFlag}})
         endforeach()
+
+        # We turn off compile-time optimizations for CI, as options that speed up the compile-time
+        # (e.g. /MP) might increase memory usage, leading to instabilities on limited CI machines.
+        option(FILAMENT_SHORTEN_MSVC_COMPILATION "Shorten compile-time in Visual Studio" OFF)
+    else()
+        option(FILAMENT_SHORTEN_MSVC_COMPILATION "Shorten compile-time in Visual Studio" ON)
+    endif()
+
+    if (MSVC)
+        if (FILAMENT_SHORTEN_MSVC_COMPILATION)
+            # enable multi-processor compilation
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+            # disable run-time STL checks to improve tools (e.g. matc) performance
+            set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
+        endif()
     endif()
 endif()
 

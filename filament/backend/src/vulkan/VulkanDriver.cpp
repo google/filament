@@ -955,10 +955,43 @@ void VulkanDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint
 void VulkanDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
 
-void VulkanDriver::generateMipmaps(Handle<HwTexture> th) { }
+void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
+    auto* const t = mResourceAllocator.handle_cast<VulkanTexture*>(th);
+    assert_invariant(t);
 
-bool VulkanDriver::canGenerateMipmaps() {
-    return false;
+    int32_t layerCount = int32_t(t->depth);
+    if (t->target == SamplerType::SAMPLER_CUBEMAP_ARRAY ||
+        t->target == SamplerType::SAMPLER_CUBEMAP) {
+        layerCount *= 6;
+    }
+
+    // FIXME: the loop below can perform many layout transitions and back. We should be
+    //        able to optimize that.
+
+    uint8_t level = 0;
+    int32_t srcw = int32_t(t->width);
+    int32_t srch = int32_t(t->height);
+    do {
+        int32_t const dstw = std::max(srcw >> 1, 1);
+        int32_t const dsth = std::max(srch >> 1, 1);
+        const VkOffset3D srcOffsets[2] = {{ 0, 0, 0 }, { srcw, srch, 1 }};
+        const VkOffset3D dstOffsets[2] = {{ 0, 0, 0 }, { dstw, dsth, 1 }};
+
+        // TODO: there should be a way to do this using layerCount in vkBlitImage
+        // TODO: vkBlitImage should be able to handle 3D textures too
+        for (int32_t layer = 0; layer < layerCount; layer++) {
+            mBlitter.blit(VK_FILTER_LINEAR,
+                    { .texture = t, .level = uint8_t(level + 1), .layer = (uint16_t)layer },
+                    dstOffsets,
+                    { .texture = t, .level = uint8_t(level    ), .layer = (uint16_t)layer },
+                    srcOffsets);
+        }
+
+        level++;
+        srcw = dstw;
+        srch = dsth;
+    } while ((srcw > 1 || srch > 1) && level < t->levels);
+    t->setPrimaryRange(0, t->levels - 1);
 }
 
 void VulkanDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
@@ -1439,50 +1472,132 @@ void VulkanDriver::readBufferSubData(backend::BufferObjectHandle boh,
     scheduleDestroy(std::move(p));
 }
 
-void VulkanDriver::blit(TargetBufferFlags buffers, Handle<HwRenderTarget> dst, Viewport dstRect,
-        Handle<HwRenderTarget> src, Viewport srcRect, SamplerMagFilter filter) {
+void VulkanDriver::resolve(
+        Handle<HwTexture> dst, uint8_t srcLevel, uint8_t srcLayer,
+        Handle<HwTexture> src, uint8_t dstLevel, uint8_t dstLayer) {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("resolve");
+
+    ASSERT_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE,
+            "resolve() cannot be invoked inside a render pass.");
+
+    auto* const srcTexture = mResourceAllocator.handle_cast<VulkanTexture*>(src);
+    auto* const dstTexture = mResourceAllocator.handle_cast<VulkanTexture*>(dst);
+    assert_invariant(srcTexture);
+    assert_invariant(dstTexture);
+
+    ASSERT_PRECONDITION(
+            dstTexture->width == srcTexture->width && dstTexture->height == srcTexture->height,
+            "invalid resolve: src and dst sizes don't match");
+
+    ASSERT_PRECONDITION(srcTexture->samples > 1 && dstTexture->samples == 1,
+            "invalid resolve: src.samples=%u, dst.samples=%u",
+            +srcTexture->samples, +dstTexture->samples);
+
+    ASSERT_PRECONDITION(srcTexture->format == dstTexture->format,
+            "src and dst texture format don't match");
+
+    ASSERT_PRECONDITION(any(dstTexture->usage & TextureUsage::BLIT_DST),
+            "texture doesn't have BLIT_DST");
+
+    ASSERT_PRECONDITION(any(srcTexture->usage & TextureUsage::BLIT_SRC),
+            "texture doesn't have BLIT_SRC");
+
+    mBlitter.resolve(
+            { .texture = dstTexture, .level = dstLevel, .layer = dstLayer },
+            { .texture = srcTexture, .level = srcLevel, .layer = srcLayer });
+
+    FVK_SYSTRACE_END();
+}
+
+void VulkanDriver::blit(
+        Handle<HwTexture> dst, uint8_t srcLevel, uint8_t srcLayer, math::uint2 dstOrigin,
+        Handle<HwTexture> src, uint8_t dstLevel, uint8_t dstLayer, math::uint2 srcOrigin,
+        math::uint2 size) {
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("blit");
 
-    assert_invariant(mCurrentRenderPass.renderPass == VK_NULL_HANDLE);
+    ASSERT_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE,
+            "blit() cannot be invoked inside a render pass.");
 
-    // blit operation only support COLOR0 color buffer
-    assert_invariant(
-            !(buffers & (TargetBufferFlags::COLOR_ALL & ~TargetBufferFlags::COLOR0)));
+    auto* const srcTexture = mResourceAllocator.handle_cast<VulkanTexture*>(src);
+    auto* const dstTexture = mResourceAllocator.handle_cast<VulkanTexture*>(dst);
 
-    if (UTILS_UNLIKELY(mCurrentRenderPass.renderPass)) {
-        utils::slog.e << "Blits cannot be invoked inside a render pass." << utils::io::endl;
-        return;
-    }
+    ASSERT_PRECONDITION(any(dstTexture->usage & TextureUsage::BLIT_DST),
+            "texture doesn't have BLIT_DST");
+
+    ASSERT_PRECONDITION(any(srcTexture->usage & TextureUsage::BLIT_SRC),
+            "texture doesn't have BLIT_SRC");
+
+    ASSERT_PRECONDITION(srcTexture->format == dstTexture->format,
+            "src and dst texture format don't match");
+
+    // The Y inversion below makes it so that Vk matches GL and Metal.
+
+    auto const srcLeft   = int32_t(srcOrigin.x);
+    auto const dstLeft   = int32_t(dstOrigin.x);
+    auto const srcTop    = int32_t(srcTexture->height - (srcOrigin.y + size.y));
+    auto const dstTop    = int32_t(dstTexture->height - (dstOrigin.y + size.y));
+    auto const srcRight  = int32_t(srcOrigin.x + size.x);
+    auto const dstRight  = int32_t(dstOrigin.x + size.x);
+    auto const srcBottom = int32_t(srcTop + size.y);
+    auto const dstBottom = int32_t(dstTop + size.y);
+    VkOffset3D const srcOffsets[2] = { { srcLeft, srcTop, 0 }, { srcRight, srcBottom, 1 }};
+    VkOffset3D const dstOffsets[2] = { { dstLeft, dstTop, 0 }, { dstRight, dstBottom, 1 }};
+
+    // no scallng guaranteed
+    mBlitter.blit(VK_FILTER_NEAREST,
+            { .texture = dstTexture, .level = dstLevel, .layer = dstLayer }, dstOffsets,
+            { .texture = srcTexture, .level = srcLevel, .layer = srcLayer }, srcOffsets);
+
+    FVK_SYSTRACE_END();
+}
+
+void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
+        Handle<HwRenderTarget> dst, Viewport dstRect,
+        Handle<HwRenderTarget> src, Viewport srcRect,
+        SamplerMagFilter filter) {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("blitDEPRECATED");
+
+    // Note: blitDEPRECATED is only used for Renderer::copyFrame()
+
+    ASSERT_PRECONDITION(mCurrentRenderPass.renderPass == VK_NULL_HANDLE,
+            "blitDEPRECATED() cannot be invoked inside a render pass.");
+
+    ASSERT_PRECONDITION(buffers == TargetBufferFlags::COLOR0,
+            "blitDEPRECATED only supports COLOR0");
+
+    ASSERT_PRECONDITION(srcRect.left >= 0 && srcRect.bottom >= 0 &&
+                        dstRect.left >= 0 && dstRect.bottom >= 0,
+            "Source and destination rects must be positive.");
 
     VulkanRenderTarget* dstTarget = mResourceAllocator.handle_cast<VulkanRenderTarget*>(dst);
     VulkanRenderTarget* srcTarget = mResourceAllocator.handle_cast<VulkanRenderTarget*>(src);
 
-    VkFilter vkfilter = filter == SamplerMagFilter::NEAREST ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
+    VkFilter const vkfilter = (filter == SamplerMagFilter::NEAREST) ?
+            VK_FILTER_NEAREST : VK_FILTER_LINEAR;
 
     // The Y inversion below makes it so that Vk matches GL and Metal.
 
-    const VkExtent2D srcExtent = srcTarget->getExtent();
-    const int32_t srcLeft = srcRect.left;
-    const int32_t srcTop = srcExtent.height - srcRect.bottom - srcRect.height;
-    const int32_t srcRight = srcRect.left + srcRect.width;
-    const int32_t srcBottom = srcTop + srcRect.height;
-    const VkOffset3D srcOffsets[2] = { { srcLeft, srcTop, 0 }, { srcRight, srcBottom, 1 }};
+    VkExtent2D const srcExtent = srcTarget->getExtent();
+    VkExtent2D const dstExtent = dstTarget->getExtent();
 
-    const VkExtent2D dstExtent = dstTarget->getExtent();
-    const int32_t dstLeft = dstRect.left;
-    const int32_t dstTop = dstExtent.height - dstRect.bottom - dstRect.height;
-    const int32_t dstRight = dstRect.left + dstRect.width;
-    const int32_t dstBottom = dstTop + dstRect.height;
-    const VkOffset3D dstOffsets[2] = { { dstLeft, dstTop, 0 }, { dstRight, dstBottom, 1 }};
+    auto const dstLeft   = int32_t(dstRect.left);
+    auto const srcLeft   = int32_t(srcRect.left);
+    auto const dstTop    = int32_t(dstExtent.height - (dstRect.bottom + dstRect.height));
+    auto const srcTop    = int32_t(srcExtent.height - (srcRect.bottom + srcRect.height));
+    auto const dstRight  = int32_t(dstRect.left + dstRect.width);
+    auto const srcRight  = int32_t(srcRect.left + srcRect.width);
+    auto const dstBottom = int32_t(dstTop + dstRect.height);
+    auto const srcBottom = int32_t(srcTop + srcRect.height);
+    VkOffset3D const srcOffsets[2] = { { srcLeft, srcTop, 0 }, { srcRight, srcBottom, 1 }};
+    VkOffset3D const dstOffsets[2] = { { dstLeft, dstTop, 0 }, { dstRight, dstBottom, 1 }};
 
-    if (any(buffers & TargetBufferFlags::DEPTH) && srcTarget->hasDepth() && dstTarget->hasDepth()) {
-        mBlitter.blitDepth({dstTarget, dstOffsets, srcTarget, srcOffsets});
-    }
+    mBlitter.blit(vkfilter,
+            dstTarget->getColor(0), dstOffsets,
+            srcTarget->getColor(0), srcOffsets);
 
-    if (any(buffers & TargetBufferFlags::COLOR0)) {
-        mBlitter.blitColor({ dstTarget, dstOffsets, srcTarget, srcOffsets, vkfilter, int(0) });
-    }
     FVK_SYSTRACE_END();
 }
 
