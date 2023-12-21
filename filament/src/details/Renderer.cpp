@@ -1033,7 +1033,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
         FrameGraphId<FrameGraphTexture> bloom, flare;
         if (bloomOptions.enabled) {
-            // generate the bloom buffer, which is stored in the blackboard as "bloom". This is
+            // Generate the bloom buffer, which is stored in the blackboard as "bloom". This is
             // consumed by the colorGrading pass and will be culled if colorGrading is disabled.
             auto [bloom_, flare_] = ppm.bloom(fg, input, bloomOptions, TextureFormat::R11F_G11F_B10F, scale);
             bloom = bloom_;

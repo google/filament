@@ -209,10 +209,13 @@ set(PRIVATE_HDRS
 )
 
 set(MATERIAL_SRCS
-        src/materials/fsr/fsr_easu.mat
-        src/materials/fsr/fsr_easu_mobile.mat
-        src/materials/fsr/fsr_easu_mobileF.mat
-        src/materials/fsr/fsr_rcas.mat
+        src/materials/antiAliasing/fxaa.mat
+        src/materials/antiAliasing/taa.mat
+        src/materials/blitLow.mat
+        src/materials/bloom/bloomDownsample.mat
+        src/materials/bloom/bloomDownsample2x.mat
+        src/materials/bloom/bloomDownsample9.mat
+        src/materials/bloom/bloomUpsample.mat
         src/materials/colorGrading/colorGrading.mat
         src/materials/colorGrading/colorGradingAsSubpass.mat
         src/materials/colorGrading/customResolveAsSubpass.mat
@@ -220,29 +223,27 @@ set(MATERIAL_SRCS
         src/materials/defaultMaterial.mat
         src/materials/dof/dof.mat
         src/materials/dof/dofCoc.mat
-        src/materials/dof/dofDownsample.mat
         src/materials/dof/dofCombine.mat
+        src/materials/dof/dofDilate.mat
+        src/materials/dof/dofDownsample.mat
+        src/materials/dof/dofMedian.mat
+        src/materials/dof/dofMipmap.mat
         src/materials/dof/dofTiles.mat
         src/materials/dof/dofTilesSwizzle.mat
-        src/materials/dof/dofDilate.mat
-        src/materials/dof/dofMipmap.mat
-        src/materials/dof/dofMedian.mat
         src/materials/flare/flare.mat
-        src/materials/bloom/bloomDownsample.mat
-        src/materials/bloom/bloomDownsample2x.mat
-        src/materials/bloom/bloomDownsample9.mat
-        src/materials/bloom/bloomUpsample.mat
+        src/materials/fsr/fsr_easu.mat
+        src/materials/fsr/fsr_easu_mobile.mat
+        src/materials/fsr/fsr_easu_mobileF.mat
+        src/materials/fsr/fsr_rcas.mat
+        src/materials/resolveDepth.mat
+        src/materials/separableGaussianBlur.mat
+        src/materials/skybox.mat
         src/materials/ssao/bilateralBlur.mat
         src/materials/ssao/bilateralBlurBentNormals.mat
         src/materials/ssao/mipmapDepth.mat
-        src/materials/skybox.mat
         src/materials/ssao/sao.mat
         src/materials/ssao/saoBentNormals.mat
-        src/materials/separableGaussianBlur.mat
-        src/materials/antiAliasing/fxaa.mat
-        src/materials/antiAliasing/taa.mat
         src/materials/vsmMipmap.mat
-        src/materials/blitLow.mat
 )
 
 set(MATERIAL_FL0_SRCS

@@ -275,6 +275,7 @@ static const PostProcessManager::MaterialInfo sMaterialList[] = {
         { "fsr_easu_mobileF",           MATERIAL(FSR_EASU_MOBILEF) },
         { "fsr_rcas",                   MATERIAL(FSR_RCAS) },
         { "debugShadowCascades",        MATERIAL(DEBUGSHADOWCASCADES) },
+        { "resolveDepth",               MATERIAL(RESOLVEDEPTH) },
 };
 
 void PostProcessManager::init() noexcept {
@@ -3021,6 +3022,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
         return input;
     }
 
+    // we currently don't support stencil resolve
+    assert_invariant(!isStencilFormat(inDesc.format));
+
+    // The Metal / Vulkan backends currently don't support depth/stencil resolve.
+    if (isDepthFormat(inDesc.format) && (!mEngine.getDriverApi().isDepthStencilResolveSupported())) {
+        return resolveDepth(fg, outputBufferName, input, outDesc);
+    }
+
     outDesc.width = inDesc.width;
     outDesc.height = inDesc.height;
     outDesc.format = inDesc.format;
@@ -3042,24 +3051,60 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
                 auto const& dst = resources.getTexture(data.output);
                 auto const& srcSubDesc = resources.getSubResourceDescriptor(data.input);
                 auto const& dstSubDesc = resources.getSubResourceDescriptor(data.output);
-                auto const& srcDesc = resources.getDescriptor(data.input);
-                auto const& dstDesc = resources.getDescriptor(data.output);
+                UTILS_UNUSED_IN_RELEASE auto const& srcDesc = resources.getDescriptor(data.input);
+                UTILS_UNUSED_IN_RELEASE auto const& dstDesc = resources.getDescriptor(data.output);
                 assert_invariant(src);
                 assert_invariant(dst);
-
-                ASSERT_POSTCONDITION(
-                        srcDesc.format == dstDesc.format,
-                        "resolve: src (%d) and dst (%d) formats don't match.",
-                        srcDesc.format, dstDesc.format);
-
-                ASSERT_POSTCONDITION(
-                        srcDesc.width == dstDesc.width && srcDesc.height == dstDesc.height,
-                        "resolve: src [%u, %u] and dst [%u, %u] sizes don't match.",
-                        srcDesc.width, srcDesc.height, dstDesc.width, dstDesc.height);
-
+                assert_invariant(srcDesc.format == dstDesc.format);
+                assert_invariant(srcDesc.width == dstDesc.width && srcDesc.height == dstDesc.height);
                 driver.resolve(
                         dst, dstSubDesc.level, dstSubDesc.layer,
                         src, srcSubDesc.level, srcSubDesc.layer);
+            });
+
+    return ppResolve->output;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepth(FrameGraph& fg,
+        const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
+        FrameGraphTexture::Descriptor outDesc) noexcept {
+
+    // Don't do anything if we're not a MSAA buffer
+    auto const& inDesc = fg.getDescriptor(input);
+    if (inDesc.samples <= 1) {
+        return input;
+    }
+
+    UTILS_UNUSED_IN_RELEASE auto const& inSubDesc = fg.getSubResourceDescriptor(input);
+    assert_invariant(isDepthFormat(inDesc.format));
+    assert_invariant(inSubDesc.layer == 0);
+    assert_invariant(inSubDesc.level == 0);
+
+    outDesc.width = inDesc.width;
+    outDesc.height = inDesc.height;
+    outDesc.format = inDesc.format;
+    outDesc.samples = 0;
+
+    struct ResolveData {
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> output;
+    };
+
+    auto& ppResolve = fg.addPass<ResolveData>("resolveDepth",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.input = builder.sample(input);
+                data.output = builder.createTexture(outputBufferName, outDesc);
+                data.output = builder.write(data.output, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                builder.declareRenderPass(builder.getName(data.output), {
+                        .attachments = { .depth = { data.output }},
+                        .clearFlags = TargetBufferFlags::DEPTH });
+            },
+            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                auto const& input = resources.getTexture(data.input);
+                auto const& material = getPostProcessMaterial("resolveDepth");
+                auto* mi = material.getMaterialInstance(mEngine);
+                mi->setParameter("depth", input, {}); // NEAREST
+                commitAndRender(resources.getRenderPassInfo(), material, driver);
             });
 
     return ppResolve->output;

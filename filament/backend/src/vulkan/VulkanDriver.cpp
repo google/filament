@@ -156,7 +156,6 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mResourceManager(&mResourceAllocator),
       mThreadSafeResourceManager(&mResourceAllocator),
       mPipelineCache(&mResourceAllocator),
-      mBlitter(mStagePool, mPipelineCache, mFramebufferCache, mSamplerCache),
       mReadPixels(mPlatform->getDevice()),
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported) {
 
@@ -206,7 +205,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
 
     mPipelineCache.setDummyTexture(mEmptyTexture->getPrimaryImageView());
     mBlitter.initialize(mPlatform->getPhysicalDevice(), mPlatform->getDevice(), mAllocator,
-            mCommands.get(), mEmptyTexture.get());
+            mCommands.get());
 }
 
 VulkanDriver::~VulkanDriver() noexcept = default;
@@ -757,6 +756,7 @@ bool VulkanDriver::isFrameTimeSupported() {
 }
 
 bool VulkanDriver::isAutoDepthResolveSupported() {
+    // TODO: this could be supported with vk 1.2 or VK_KHR_depth_stencil_resolve
     return false;
 }
 
@@ -769,6 +769,11 @@ bool VulkanDriver::isStereoSupported() {
 }
 
 bool VulkanDriver::isParallelShaderCompileSupported() {
+    return false;
+}
+
+bool VulkanDriver::isDepthStencilResolveSupported() {
+    // TODO: apparently it could be supported in core 1.2 and/or with VK_KHR_depth_stencil_resolve
     return false;
 }
 
@@ -1497,6 +1502,12 @@ void VulkanDriver::resolve(
     ASSERT_PRECONDITION(srcTexture->format == dstTexture->format,
             "src and dst texture format don't match");
 
+    ASSERT_PRECONDITION(!isDepthFormat(srcTexture->format),
+            "can't resolve depth formats");
+
+    ASSERT_PRECONDITION(!isStencilFormat(srcTexture->format),
+            "can't resolve stencil formats");
+
     ASSERT_PRECONDITION(any(dstTexture->usage & TextureUsage::BLIT_DST),
             "texture doesn't have BLIT_DST");
 
@@ -1545,7 +1556,7 @@ void VulkanDriver::blit(
     VkOffset3D const srcOffsets[2] = { { srcLeft, srcTop, 0 }, { srcRight, srcBottom, 1 }};
     VkOffset3D const dstOffsets[2] = { { dstLeft, dstTop, 0 }, { dstRight, dstBottom, 1 }};
 
-    // no scallng guaranteed
+    // no scaling guaranteed
     mBlitter.blit(VK_FILTER_NEAREST,
             { .texture = dstTexture, .level = dstLevel, .layer = dstLayer }, dstOffsets,
             { .texture = srcTexture, .level = srcLevel, .layer = srcLayer }, srcOffsets);

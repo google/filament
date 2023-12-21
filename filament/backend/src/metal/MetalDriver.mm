@@ -730,6 +730,10 @@ bool MetalDriver::isParallelShaderCompileSupported() {
     return true;
 }
 
+bool MetalDriver::isDepthStencilResolveSupported() {
+    return false;
+}
+
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:
@@ -1260,11 +1264,9 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
     args.source.level = miplevel;
     args.source.region = MTLRegionMake2D(0, 0, srcTexture.width >> miplevel, srcTexture.height >> miplevel);
     args.source.texture = srcTexture;
-    args.source.type = MetalBlitter::BlitArgs::Attachment::Type::COLOR;
     args.destination.level = 0;
     args.destination.region = MTLRegionMake2D(0, 0, readPixelsTexture.width, readPixelsTexture.height);
     args.destination.texture = readPixelsTexture;
-    args.destination.type = MetalBlitter::BlitArgs::Attachment::Type::COLOR;
 
     mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "readPixels blit");
 
@@ -1321,6 +1323,12 @@ void MetalDriver::resolve(
 
     ASSERT_PRECONDITION(srcTexture->format == dstTexture->format,
             "src and dst texture format don't match");
+
+    ASSERT_PRECONDITION(!isDepthFormat(srcTexture->format),
+            "can't resolve depth formats");
+
+    ASSERT_PRECONDITION(!isStencilFormat(srcTexture->format),
+            "can't resolve stencil formats");
 
     ASSERT_PRECONDITION(any(dstTexture->usage & TextureUsage::BLIT_DST),
             "texture doesn't have BLIT_DST");
@@ -1381,9 +1389,7 @@ void MetalDriver::blit(
     // FIXME: we shouldn't need to know the type here. This is an artifact of using the old API.
 
     args.source.texture = srcTexture->getMtlTextureForRead();
-    args.source.type = MetalBlitter::getFormatType(srcTexture->format);
     args.destination.texture = dstTexture->getMtlTextureForWrite();
-    args.destination.type = MetalBlitter::getFormatType(dstTexture->format);
     args.source.level = srcLevel;
     args.source.slice = srcLayer;
     args.destination.level = dstLevel;
@@ -1438,13 +1444,11 @@ void MetalDriver::blitDEPRECATED(TargetBufferFlags buffers,
         args.source.texture = srcColorAttachment.getTexture();
         args.source.level = srcColorAttachment.level;
         args.source.slice = srcColorAttachment.layer;
-        args.source.type = MetalBlitter::FormatType::COLOR;
 
         args.destination.region = dstTarget->getRegionFromClientRect(dstRect);
         args.destination.texture = dstColorAttachment.getTexture();
         args.destination.level = dstColorAttachment.level;
         args.destination.slice = dstColorAttachment.layer;
-        args.destination.type = MetalBlitter::FormatType::COLOR;
 
         mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "blitDEPRECATED");
     }
@@ -1584,7 +1588,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         stencilPixelFormat = stencilAttachment.getPixelFormat();
         assert_invariant(isMetalFormatStencil(stencilPixelFormat));
     }
-    MetalPipelineState pipelineState {
+    MetalPipelineState const pipelineState {
         .vertexFunction = vertex,
         .fragmentFunction = fragment,
         .vertexDescription = primitive->vertexDescription,
@@ -1602,13 +1606,13 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
         .stencilAttachmentPixelFormat = stencilPixelFormat,
         .sampleCount = mContext->currentRenderTarget->getSamples(),
         .blendState = BlendState {
-            .blendingEnabled = rs.hasBlending(),
-            .rgbBlendOperation = getMetalBlendOperation(rs.blendEquationRGB),
             .alphaBlendOperation = getMetalBlendOperation(rs.blendEquationAlpha),
-            .sourceRGBBlendFactor = getMetalBlendFactor(rs.blendFunctionSrcRGB),
-            .sourceAlphaBlendFactor = getMetalBlendFactor(rs.blendFunctionSrcAlpha),
+            .rgbBlendOperation = getMetalBlendOperation(rs.blendEquationRGB),
+            .destinationAlphaBlendFactor = getMetalBlendFactor(rs.blendFunctionDstAlpha),
             .destinationRGBBlendFactor = getMetalBlendFactor(rs.blendFunctionDstRGB),
-            .destinationAlphaBlendFactor = getMetalBlendFactor(rs.blendFunctionDstAlpha)
+            .sourceAlphaBlendFactor = getMetalBlendFactor(rs.blendFunctionSrcAlpha),
+            .sourceRGBBlendFactor = getMetalBlendFactor(rs.blendFunctionSrcRGB),
+            .blendingEnabled = rs.hasBlending(),
         },
         .colorWrite = rs.colorWrite
     };

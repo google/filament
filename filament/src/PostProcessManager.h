@@ -252,6 +252,12 @@ public:
             const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
             FrameGraphTexture::Descriptor outDesc) noexcept;
 
+    // Resolves base level of input and outputs a texture from outDesc.
+    // outDesc with, height, format and samples will be overridden.
+    FrameGraphId<FrameGraphTexture> resolveDepth(FrameGraph& fg,
+            const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
+            FrameGraphTexture::Descriptor outDesc) noexcept;
+
     // VSM shadow mipmap pass
     FrameGraphId<FrameGraphTexture> vsmMipmapPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
