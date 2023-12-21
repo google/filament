@@ -29,11 +29,20 @@ MetalArgumentBuffer::Builder& filamat::MetalArgumentBuffer::Builder::name(
 
 MetalArgumentBuffer::Builder& MetalArgumentBuffer::Builder::texture(size_t index,
         const std::string& name, filament::backend::SamplerType type,
-        filament::backend::SamplerFormat format) noexcept {
+        filament::backend::SamplerFormat format,
+        bool multisample) noexcept {
+
+    using namespace filament::backend;
+
     // All combinations of SamplerType and SamplerFormat are valid except for SAMPLER_3D / SHADOW.
-    assert_invariant(type != filament::backend::SamplerType::SAMPLER_3D ||
-            format != filament::backend::SamplerFormat::SHADOW);
-    mArguments.emplace_back(TextureArgument { name, index, type, format });
+    assert_invariant(type != SamplerType::SAMPLER_3D || format != SamplerFormat::SHADOW);
+
+    // multisample textures have restrictions too
+    assert_invariant(!multisample || (
+            format != SamplerFormat::SHADOW && (
+                    type == SamplerType::SAMPLER_2D || type == SamplerType::SAMPLER_2D_ARRAY)));
+
+    mArguments.emplace_back(TextureArgument { name, index, type, format, multisample });
     return *this;
 }
 
@@ -77,6 +86,10 @@ std::ostream& MetalArgumentBuffer::Builder::TextureArgument::write(std::ostream&
         case filament::backend::SamplerType::SAMPLER_CUBEMAP_ARRAY:
             os << "cube_array";
             break;
+    }
+
+    if (multisample) {
+        os << "_ms";
     }
 
     switch (format) {

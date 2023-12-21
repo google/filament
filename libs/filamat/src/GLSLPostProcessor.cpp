@@ -234,7 +234,7 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob *spirv, std::string *outMsl,
         for (const auto& info: infoList) {
             const std::string name = info.uniformName.c_str();
             argBufferBuilder
-                    .texture(info.offset * 2, name, info.type, info.format)
+                    .texture(info.offset * 2, name, info.type, info.format, info.multisample)
                     .sampler(info.offset * 2 + 1, name + "Smplr");
         }
 

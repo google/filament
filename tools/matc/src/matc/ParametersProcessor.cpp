@@ -160,7 +160,6 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
             std::cerr << "parameters: precision must be a STRING." << std::endl;
             return false;
         }
-
         auto precisionString = precisionValue->toJsonString();
         if (!Enums::isValid<ParameterPrecision>(precisionString->getString())){
             return logEnumIssue("parameters", *precisionString, Enums::map<ParameterPrecision>());
@@ -173,20 +172,27 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
             std::cerr << "parameters: format must be a STRING." << std::endl;
             return false;
         }
-
         auto formatString = formatValue->toJsonString();
         if (!Enums::isValid<SamplerFormat>(formatString->getString())){
             return logEnumIssue("parameters", *formatString, Enums::map<SamplerFormat>());
         }
     }
 
+    const JsonishValue* multiSampleValue = jsonObject.getValue("multisample");
+    if (multiSampleValue) {
+        if (multiSampleValue->getType() != JsonishValue::BOOL) {
+            std::cerr << "parameters: multisample must be a BOOL." << std::endl;
+            return false;
+        }
+    }
+
     auto typeString = typeValue->toJsonString()->getString();
     auto nameString = nameValue->toJsonString()->getString();
 
-    size_t arraySize = extractArraySize(typeString);
+    size_t const arraySize = extractArraySize(typeString);
 
     if (Enums::isValid<UniformType>(typeString)) {
-        MaterialBuilder::UniformType type = Enums::toEnum<UniformType>(typeString);
+        MaterialBuilder::UniformType const type = Enums::toEnum<UniformType>(typeString);
         ParameterPrecision precision = ParameterPrecision::DEFAULT;
         if (precisionValue) {
             precision =
@@ -205,22 +211,18 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
             return false;
         }
 
-        MaterialBuilder::SamplerType type = Enums::toEnum<SamplerType>(typeString);
-        if (precisionValue && formatValue) {
-            auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
-            auto precision =
-                    Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
-            builder.parameter(nameString.c_str(), type, format, precision);
-        } else if (formatValue) {
-            auto format = Enums::toEnum<SamplerFormat>(formatValue->toJsonString()->getString());
-            builder.parameter(nameString.c_str(), type, format);
-        } else if (precisionValue) {
-            auto precision =
-                    Enums::toEnum<ParameterPrecision>(precisionValue->toJsonString()->getString());
-            builder.parameter(nameString.c_str(), type, precision);
-        } else {
-            builder.parameter(nameString.c_str(), type);
-        }
+        MaterialBuilder::SamplerType const type = Enums::toEnum<SamplerType>(typeString);
+
+        auto format = formatValue ? Enums::toEnum<SamplerFormat>(
+                formatValue->toJsonString()->getString()) : SamplerFormat::FLOAT;
+
+        auto precision = precisionValue ? Enums::toEnum<ParameterPrecision>(
+                precisionValue->toJsonString()->getString()) : ParameterPrecision::DEFAULT;
+
+        auto multisample = multiSampleValue ? multiSampleValue->toJsonBool()->getBool() : false;
+
+        builder.parameter(nameString.c_str(), type, format, precision, multisample);
+
     } else {
         std::cerr << "parameters: the type '" << typeString
                << "' for parameter with name '" << nameString << "' is neither a valid uniform "
