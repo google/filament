@@ -1910,6 +1910,10 @@ bool OpenGLDriver::isParallelShaderCompileSupported() {
     return mShaderCompilerService.isParallelShaderCompileSupported();
 }
 
+bool OpenGLDriver::isDepthStencilResolveSupported() {
+    return true;
+}
+
 bool OpenGLDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:

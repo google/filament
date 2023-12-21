@@ -820,12 +820,10 @@ void MetalTexture::loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region
     args.source.slice = 0;
     args.source.region = sourceRegion;
     args.source.texture = stagingTexture;
-    args.source.type = MetalBlitter::FormatType::COLOR;
     args.destination.level = level;
     args.destination.slice = slice;
     args.destination.region = region;
     args.destination.texture = destinationTexture;
-    args.destination.type = MetalBlitter::FormatType::COLOR;
     context.blitter->blit(getPendingCommandBuffer(&context), args, "Texture upload blit");
 }
 

@@ -32,11 +32,10 @@ struct VulkanProgram;
 
 class VulkanBlitter {
 public:
-    VulkanBlitter(VulkanStagePool& stagePool, VulkanPipelineCache& pipelineCache,
-            VulkanFboCache& fboCache, VulkanSamplerCache& samplerCache) noexcept;
+    VulkanBlitter() noexcept;
 
-    void initialize(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator,
-            VulkanCommands* commands, VulkanTexture* emptyTexture) noexcept;
+    void initialize(VkPhysicalDevice physicalDevice, VkDevice device,
+            VmaAllocator allocator, VulkanCommands* commands) noexcept;
 
     void blit(VkFilter filter,
             VulkanAttachment dst, const VkOffset3D* dstRectPair,
@@ -47,24 +46,10 @@ public:
     void terminate() noexcept;
 
 private:
-    void lazyInit() noexcept;
-
-    void resolveSlowDepth(VulkanAttachment src, VulkanAttachment dst);
-
-    VulkanBuffer* mTriangleBuffer = nullptr;
-    VulkanBuffer* mParamsBuffer = nullptr;
-    VulkanProgram* mDepthResolveProgram = nullptr;
-
     UTILS_UNUSED VkPhysicalDevice mPhysicalDevice;
     VkDevice mDevice;
     VmaAllocator mAllocator;
     VulkanCommands* mCommands;
-    VulkanTexture* mEmptyTexture;
-
-    VulkanStagePool& mStagePool;
-    VulkanPipelineCache& mPipelineCache;
-    VulkanFboCache& mFramebufferCache;
-    VulkanSamplerCache& mSamplerCache;
 };
 
 } // namespace filament::backend
