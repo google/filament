@@ -1150,13 +1150,12 @@ char const* CodeGenerator::getOutputTypeName(MaterialBuilder::OutputType type) n
 
 char const* CodeGenerator::getSamplerTypeName(SamplerType type, SamplerFormat format,
         bool multisample) const noexcept {
-    assert(!multisample);   // multisample samplers not yet supported.
     switch (type) {
         case SamplerType::SAMPLER_2D:
             switch (format) {
-                case SamplerFormat::INT:    return "isampler2D";
-                case SamplerFormat::UINT:   return "usampler2D";
-                case SamplerFormat::FLOAT:  return "sampler2D";
+                case SamplerFormat::INT:    return multisample ? "isampler2DMS" : "isampler2D";
+                case SamplerFormat::UINT:   return multisample ? "usampler2DMS" : "usampler2D";
+                case SamplerFormat::FLOAT:  return multisample ? "sampler2DMS" : "sampler2D";
                 case SamplerFormat::SHADOW: return "sampler2DShadow";
             }
         case SamplerType::SAMPLER_3D:
@@ -1169,9 +1168,9 @@ char const* CodeGenerator::getSamplerTypeName(SamplerType type, SamplerFormat fo
             }
         case SamplerType::SAMPLER_2D_ARRAY:
             switch (format) {
-                case SamplerFormat::INT:    return "isampler2DArray";
-                case SamplerFormat::UINT:   return "usampler2DArray";
-                case SamplerFormat::FLOAT:  return "sampler2DArray";
+                case SamplerFormat::INT:    return multisample ? "isampler2DMSArray": "isampler2DArray";
+                case SamplerFormat::UINT:   return multisample ? "usampler2DMSArray": "usampler2DArray";
+                case SamplerFormat::FLOAT:  return multisample ? "sampler2DMSArray": "sampler2DArray";
                 case SamplerFormat::SHADOW: return "sampler2DArrayShadow";
             }
         case SamplerType::SAMPLER_CUBEMAP:
