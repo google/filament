@@ -793,11 +793,13 @@ void ViewerGui::updateUserInterface() {
     }
 
     if (ImGui::CollapsingHeader("TAA Options")) {
+        ImGui::Checkbox("Upscaling", &mSettings.view.taa.upscaling);
         ImGui::Checkbox("History Reprojection", &mSettings.view.taa.historyReprojection);
         ImGui::SliderFloat("Feedback", &mSettings.view.taa.feedback, 0.0f, 1.0f);
         ImGui::Checkbox("Filter History", &mSettings.view.taa.filterHistory);
         ImGui::Checkbox("Filter Input", &mSettings.view.taa.filterInput);
         ImGui::SliderFloat("FilterWidth", &mSettings.view.taa.filterWidth, 0.2f, 2.0f);
+        ImGui::SliderFloat("LOD bias", &mSettings.view.taa.lodBias, -8.0f, 0.0f);
         ImGui::Checkbox("Use YCoCg", &mSettings.view.taa.useYCoCg);
         ImGui::Checkbox("Prevent Flickering", &mSettings.view.taa.preventFlickering);
         int jitterSequence = (int)mSettings.view.taa.jitterPattern;

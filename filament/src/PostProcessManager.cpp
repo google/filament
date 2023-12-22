@@ -2665,6 +2665,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
     auto& taaPass = fg.addPass<TAAData>("TAA",
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto desc = fg.getDescriptor(input);
+                if (taaOptions.upscaling) {
+                    desc.width *= 2;
+                    desc.height *= 2;
+                }
                 data.color = builder.sample(input);
                 data.depth = builder.sample(depth);
                 data.history = builder.sample(colorHistory);
@@ -2699,18 +2703,26 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                         { -1.0f,  1.0f }, {  0.0f,  1.0f }, {  1.0f,  1.0f },
                 };
 
-                float sum = 0.0;
+                constexpr float2 subSampleOffsets[4] = {
+                        { -0.25f, 0.25f }, {  0.25f, 0.25f }, { 0.25f, -0.25f }, { -0.25f, -0.25f }
+                };
+
+                float4 sum = 0.0;
                 float4 weights[9];
 
                 // this doesn't get vectorized (probably because of exp()), so don't bother
                 // unrolling it.
                 #pragma nounroll
                 for (size_t i = 0; i < 9; i++) {
-                    float2 const d = (sampleOffsets[i] - current.jitter) / taaOptions.filterWidth;
-                    // This is a gaussian fit of a 3.3-wide Blackman-Harris window
-                    // see: "High Quality Temporal Supersampling" by Brian Karis
-                    weights[i][0] = std::exp(-2.29f * (d.x * d.x + d.y * d.y));
-                    sum += weights[i][0];
+                    float2 const o = sampleOffsets[i];
+                    for (size_t j = 0; j < 4; j++) {
+                        float2 const s = taaOptions.upscaling ? subSampleOffsets[j] : float2{ 0 };
+                        float2 const d = (o - current.jitter - s) / taaOptions.filterWidth;
+                        // This is a gaussian fit of a 3.3-wide Blackman-Harris window
+                        // see: "High Quality Temporal Supersampling" by Brian Karis
+                        weights[i][j] = std::exp(-2.29f * (d.x * d.x + d.y * d.y));
+                    }
+                    sum += weights[i];
                 }
                 for (auto& w : weights) {
                     w /= sum;

@@ -37,8 +37,11 @@ float normalFiltering(float perceptualRoughness, const vec3 worldNormal) {
     vec3 du = dFdx(worldNormal);
     vec3 dv = dFdy(worldNormal);
 
-    float variance = materialParams._specularAntiAliasingVariance * (dot(du, du) + dot(dv, dv));
+    // specular AA factor to correct for resolution scaling (DSR and TAAx4)
+    du *= frameUniforms.derivativesScale.x;
+    dv *= frameUniforms.derivativesScale.y;
 
+    float variance = materialParams._specularAntiAliasingVariance * (dot(du, du) + dot(dv, dv));
     float roughness = perceptualRoughnessToRoughness(perceptualRoughness);
     float kernelRoughness = min(2.0 * variance, materialParams._specularAntiAliasingThreshold);
     float squareRoughness = saturate(roughness * roughness + kernelRoughness);

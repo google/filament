@@ -99,6 +99,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     float lodBias;                  // load bias to apply to user materials
     float refractionLodOffset;
+    math::float2 derivativesScale;
 
     // camera position in view space (when camera_at_origin is enabled), i.e. it's (0,0,0).
     float oneOverFarMinusNear;      // 1 / (f-n), always positive
@@ -111,8 +112,6 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     // AO
     float aoSamplingQualityAndEdgeDistance;     // <0: no AO, 0: bilinear, !0: bilateral edge distance
     float aoBentNormals;                        // 0: no AO bent normal, >0.0 AO bent normals
-    float aoReserved0;
-    float aoReserved1;
 
     // --------------------------------------------------------------------------------------------
     // Dynamic Lighting [variant: DYN]
