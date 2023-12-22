@@ -133,7 +133,7 @@ public:
         return mName.c_str_safe();
     }
 
-    void prepareUpscaler(math::float2 scale) const noexcept;
+    void prepareUpscaler(math::float2 scale, DynamicResolutionOptions const& options) const noexcept;
     void prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) const noexcept;
 
     void prepareViewport(
@@ -417,7 +417,7 @@ public:
             View::PickingQueryResultCallback callback) noexcept;
 
     void executePickingQueries(backend::DriverApi& driver,
-            backend::RenderTargetHandle handle, float scale) noexcept;
+            backend::RenderTargetHandle handle, math::float2 scale) noexcept;
 
     void setMaterialGlobal(uint32_t index, math::float4 const& value);
 

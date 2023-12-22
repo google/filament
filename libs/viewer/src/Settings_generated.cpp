@@ -685,6 +685,27 @@ std::ostream& operator<<(std::ostream& out, TemporalAntiAliasingOptions::BoxClip
     return out << "\"INVALID\"";
 }
 
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAliasingOptions::JitterPattern* out) {
+    if (0 == compare(tokens[i], jsonChunk, "RGSS_X4")) { *out = TemporalAntiAliasingOptions::JitterPattern::RGSS_X4; }
+    else if (0 == compare(tokens[i], jsonChunk, "UNIFORM_HELIX_X4")) { *out = TemporalAntiAliasingOptions::JitterPattern::UNIFORM_HELIX_X4; }
+    else if (0 == compare(tokens[i], jsonChunk, "HALTON_23_X8")) { *out = TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X8; }
+    else if (0 == compare(tokens[i], jsonChunk, "HALTON_23_X16")) { *out = TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X16; }
+    else {
+        slog.w << "Invalid TemporalAntiAliasingOptions::JitterPattern: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
+    }
+    return i + 1;
+}
+
+std::ostream& operator<<(std::ostream& out, TemporalAntiAliasingOptions::JitterPattern in) {
+    switch (in) {
+        case TemporalAntiAliasingOptions::JitterPattern::RGSS_X4: return out << "\"RGSS_X4\"";
+        case TemporalAntiAliasingOptions::JitterPattern::UNIFORM_HELIX_X4: return out << "\"UNIFORM_HELIX_X4\"";
+        case TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X8: return out << "\"HALTON_23_X8\"";
+        case TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X16: return out << "\"HALTON_23_X16\"";
+    }
+    return out << "\"INVALID\"";
+}
+
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAliasingOptions* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -707,6 +728,10 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAli
             i = parse(tokens, i + 1, jsonChunk, &out->boxType);
         } else if (compare(tok, jsonChunk, "boxClipping") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->boxClipping);
+        } else if (compare(tok, jsonChunk, "jitterPattern") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->jitterPattern);
+        } else if (compare(tok, jsonChunk, "varianceGamma") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->varianceGamma);
         } else if (compare(tok, jsonChunk, "preventFlickering") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->preventFlickering);
         } else if (compare(tok, jsonChunk, "historyReprojection") == 0) {
@@ -733,6 +758,8 @@ std::ostream& operator<<(std::ostream& out, const TemporalAntiAliasingOptions& i
         << "\"useYCoCg\": " << to_string(in.useYCoCg) << ",\n"
         << "\"boxType\": " << (in.boxType) << ",\n"
         << "\"boxClipping\": " << (in.boxClipping) << ",\n"
+        << "\"jitterPattern\": " << (in.jitterPattern) << ",\n"
+        << "\"varianceGamma\": " << (in.varianceGamma) << ",\n"
         << "\"preventFlickering\": " << to_string(in.preventFlickering) << ",\n"
         << "\"historyReprojection\": " << to_string(in.historyReprojection) << "\n"
         << "}";

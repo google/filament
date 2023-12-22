@@ -125,6 +125,8 @@ value_object<View::TemporalAntiAliasingOptions>("View$TemporalAntiAliasingOption
     .field("useYCoCg", &View::TemporalAntiAliasingOptions::useYCoCg)
     .field("boxType", &View::TemporalAntiAliasingOptions::boxType)
     .field("boxClipping", &View::TemporalAntiAliasingOptions::boxClipping)
+    .field("jitterPattern", &View::TemporalAntiAliasingOptions::jitterPattern)
+    .field("varianceGamma", &View::TemporalAntiAliasingOptions::varianceGamma)
     .field("preventFlickering", &View::TemporalAntiAliasingOptions::preventFlickering)
     .field("historyReprojection", &View::TemporalAntiAliasingOptions::historyReprojection)
     ;

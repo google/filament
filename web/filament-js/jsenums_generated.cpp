@@ -45,6 +45,13 @@ enum_<View::TemporalAntiAliasingOptions::BoxClipping>("View$TemporalAntiAliasing
     .value("NONE", View::TemporalAntiAliasingOptions::BoxClipping::NONE)
     ;
 
+enum_<View::TemporalAntiAliasingOptions::JitterPattern>("View$TemporalAntiAliasingOptions$JitterPattern")
+    .value("RGSS_X4", View::TemporalAntiAliasingOptions::JitterPattern::RGSS_X4)
+    .value("UNIFORM_HELIX_X4", View::TemporalAntiAliasingOptions::JitterPattern::UNIFORM_HELIX_X4)
+    .value("HALTON_23_X8", View::TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X8)
+    .value("HALTON_23_X16", View::TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X16)
+    ;
+
 enum_<View::AntiAliasing>("View$AntiAliasing")
     .value("NONE", View::AntiAliasing::NONE)
     .value("FXAA", View::AntiAliasing::FXAA)

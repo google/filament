@@ -797,15 +797,19 @@ void ViewerGui::updateUserInterface() {
         ImGui::SliderFloat("Feedback", &mSettings.view.taa.feedback, 0.0f, 1.0f);
         ImGui::Checkbox("Filter History", &mSettings.view.taa.filterHistory);
         ImGui::Checkbox("Filter Input", &mSettings.view.taa.filterInput);
-        ImGui::SliderFloat("FilterWidth", &mSettings.view.taa.filterWidth, 0.0f, 1.0f);
+        ImGui::SliderFloat("FilterWidth", &mSettings.view.taa.filterWidth, 0.2f, 2.0f);
         ImGui::Checkbox("Use YCoCg", &mSettings.view.taa.useYCoCg);
         ImGui::Checkbox("Prevent Flickering", &mSettings.view.taa.preventFlickering);
+        int jitterSequence = (int)mSettings.view.taa.jitterPattern;
         int boxClipping = (int)mSettings.view.taa.boxClipping;
         int boxType = (int)mSettings.view.taa.boxType;
+        ImGui::Combo("Jitter Pattern", &jitterSequence, "RGSS x4\0Uniform Helix x4\0Halton x8\0Halton x16\0\0");
         ImGui::Combo("Box Clipping", &boxClipping, "Accurate\0Clamp\0None\0\0");
         ImGui::Combo("Box Type", &boxType, "AABB\0Variance\0Both\0\0");
+        ImGui::SliderFloat("Variance Gamma", &mSettings.view.taa.varianceGamma, 0.75f, 1.25f);
         mSettings.view.taa.boxClipping = (TemporalAntiAliasingOptions::BoxClipping)boxClipping;
         mSettings.view.taa.boxType = (TemporalAntiAliasingOptions::BoxType)boxType;
+        mSettings.view.taa.jitterPattern = (TemporalAntiAliasingOptions::JitterPattern)jitterSequence;
     }
 
     if (ImGui::CollapsingHeader("SSAO Options")) {

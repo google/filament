@@ -614,7 +614,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     view.prepare(engine, driver, arena, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);
 
-    view.prepareUpscaler(scale);
+    view.prepareUpscaler(scale, dsrOptions);
 
     /*
      * Allocate command buffer
@@ -818,14 +818,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 [=, &view](FrameGraphResources const& resources,
                         auto const&, DriverApi& driver) mutable {
                     auto out = resources.getRenderPassInfo();
-                    view.executePickingQueries(driver, out.target, aoOptions.resolution);
+                    view.executePickingQueries(driver, out.target, scale * aoOptions.resolution);
                 });
     }
 
     // Store this frame's camera projection in the frame history.
     if (UTILS_UNLIKELY(taaOptions.enabled)) {
         // Apply the TAA jitter to everything after the structure pass, starting with the color pass.
-        ppm.prepareTaa(fg, svp, view.getFrameHistory(), &FrameHistoryEntry::taa,
+        ppm.prepareTaa(fg, svp, taaOptions, view.getFrameHistory(), &FrameHistoryEntry::taa,
                 &cameraInfo, view.getPerViewUniforms());
     }
 
