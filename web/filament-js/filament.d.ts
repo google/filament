@@ -1676,9 +1676,17 @@ export interface View$TemporalAntiAliasingOptions {
      */
     feedback?: number;
     /**
+     * texturing lod bias (typically -1 or -2)
+     */
+    lodBias?: number;
+    /**
      * enables or disables temporal anti-aliasing
      */
     enabled?: boolean;
+    /**
+     * 4x TAA upscaling. Disables Dynamic Resolution. [BETA]
+     */
+    upscaling?: boolean;
     /**
      * whether to filter the history buffer
      */

@@ -495,6 +495,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         // This configures post-process materials by setting constant parameters
         if (taaOptions.enabled) {
             ppm.configureTemporalAntiAliasingMaterial(taaOptions);
+            if (taaOptions.upscaling) {
+                // for now TAA upscaling is incompatible with regular dsr
+                dsrOptions.enabled = false;
+                // also, upscaling doesn't work well with quater-resolution SSAO
+                aoOptions.resolution = 1.0;
+                // Currently we only support a fixed TAA upscaling ratio
+                scale = 0.5f;
+            }
         }
     }
 
@@ -525,7 +533,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     };
 
     // whether we're scaled at all
-    const bool scaled = any(notEqual(scale, float2(1.0f)));
+     bool scaled = any(notEqual(scale, float2(1.0f)));
 
     // vp is the user defined viewport within the View
     filament::Viewport const& vp = view.getViewport();
@@ -614,7 +622,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     view.prepare(engine, driver, arena, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);
 
-    view.prepareUpscaler(scale, dsrOptions);
+    view.prepareUpscaler(scale, taaOptions, dsrOptions);
 
     /*
      * Allocate command buffer
@@ -1011,6 +1019,15 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (taaOptions.enabled) {
         input = ppm.taa(fg, input, depth, view.getFrameHistory(), &FrameHistoryEntry::taa,
                 taaOptions, colorGradingConfig);
+        if (taaOptions.upscaling) {
+            scale = 1.0f;
+            scaled = false;
+            UTILS_UNUSED_IN_RELEASE auto const& inputDesc = fg.getDescriptor(input);
+            svp.width = inputDesc.width;
+            svp.height = inputDesc.height;
+            xvp.width *= 2;
+            xvp.height *= 2;
+        }
     }
 
     // --------------------------------------------------------------------------------------------

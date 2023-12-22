@@ -69,7 +69,7 @@ public:
     void terminate(backend::DriverApi& driver);
 
     void prepareCamera(FEngine& engine, const CameraInfo& camera) noexcept;
-    void prepareLodBias(float bias) noexcept;
+    void prepareLodBias(float bias, math::float2 derivativesScale) noexcept;
 
     /*
      * @param viewport  viewport (should be same as RenderPassParams::viewport)
