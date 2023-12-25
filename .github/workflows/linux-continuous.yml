@@ -21,3 +21,19 @@ jobs:
         with:
           name: filament-linux
           path: out/filament-release-linux.tgz
+
+  build-fedora:
+    name: build-fedora
+    runs-on: ubuntu-22.04
+    container: fedora:rawhide
+
+    steps:
+      - uses: actions/checkout@v3.3.0
+      - name: Install build dependencies
+        run: |
+          dnf -y install clang cmake ninja-build libcxx-devel libcxx-static \
+            libXcomposite-devel libXxf86vm-devel
+      - name: CMake build
+        run: |
+          cmake . -G Ninja -B build
+          cmake --build build -j$(nproc)
