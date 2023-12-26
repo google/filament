@@ -142,7 +142,7 @@ struct MetalContext {
     // Fences, only supported on macOS 10.14 and iOS 12 and above.
     API_AVAILABLE(macos(10.14), ios(12.0))
     MTLSharedEventListener* eventListener = nil;
-    uint64_t signalId = 1;
+    std::atomic<uint64_t> signalId = 1;
 
     MetalTimerQueryInterface* timerQueryImpl;
 
