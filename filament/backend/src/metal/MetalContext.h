@@ -142,6 +142,9 @@ struct MetalContext {
     // Fences, only supported on macOS 10.14 and iOS 12 and above.
     API_AVAILABLE(macos(10.14), ios(12.0))
     MTLSharedEventListener* eventListener = nil;
+    // signalId is incremented in the MetalFence constructor, which is called on
+    // both the driver (MetalTimerQueryFence::beginTimeElapsedQuery) and main
+    // threads (in createFenceS), so an atomic is necessary.
     std::atomic<uint64_t> signalId = 1;
 
     MetalTimerQueryInterface* timerQueryImpl;
