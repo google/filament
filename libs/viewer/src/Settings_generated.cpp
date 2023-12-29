@@ -391,6 +391,8 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DepthOfFieldOpt
         CHECK_KEY(tok);
         if (compare(tok, jsonChunk, "cocScale") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->cocScale);
+        } else if (compare(tok, jsonChunk, "cocAspectRatio") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->cocAspectRatio);
         } else if (compare(tok, jsonChunk, "maxApertureDiameter") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->maxApertureDiameter);
         } else if (compare(tok, jsonChunk, "enabled") == 0) {
@@ -424,6 +426,7 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DepthOfFieldOpt
 std::ostream& operator<<(std::ostream& out, const DepthOfFieldOptions& in) {
     return out << "{\n"
         << "\"cocScale\": " << (in.cocScale) << ",\n"
+        << "\"cocAspectRatio\": " << (in.cocAspectRatio) << ",\n"
         << "\"maxApertureDiameter\": " << (in.maxApertureDiameter) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"filter\": " << (in.filter) << ",\n"

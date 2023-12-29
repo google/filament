@@ -1034,6 +1034,7 @@ void ViewerGui::updateUserInterface() {
             ImGui::Checkbox("Enabled##dofEnabled", &mSettings.view.dof.enabled);
             ImGui::SliderFloat("Focus distance", &mSettings.viewer.cameraFocusDistance, 0.0f, 30.0f);
             ImGui::SliderFloat("Blur scale", &mSettings.view.dof.cocScale, 0.1f, 10.0f);
+            ImGui::SliderFloat("CoC aspect-ratio", &mSettings.view.dof.cocAspectRatio, 0.25f, 4.0f);
             ImGui::SliderInt("Ring count", &dofRingCount, 1, 17);
             ImGui::SliderInt("Max CoC", &dofMaxCoC, 1, 32);
             ImGui::Checkbox("Native Resolution", &mSettings.view.dof.nativeResolution);
