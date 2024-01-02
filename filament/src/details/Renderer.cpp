@@ -491,6 +491,11 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         hasDithering = false;
         hasFXAA = false;
         scale = 1.0f;
+    } else {
+        // This configures post-process materials by setting constant parameters
+        if (taaOptions.enabled) {
+            ppm.configureTemporalAntiAliasingMaterial(taaOptions);
+        }
     }
 
     const bool blendModeTranslucent = view.getBlendMode() == BlendMode::TRANSLUCENT;

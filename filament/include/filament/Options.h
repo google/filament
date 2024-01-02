@@ -424,12 +424,36 @@ struct MultiSampleAntiAliasingOptions {
 
 /**
  * Options for Temporal Anti-aliasing (TAA)
+ * Most TAA parameters are extremely costly to change, as they will trigger the TAA post-process
+ * shaders to be recompiled. These options should be changed or set during initialization.
+ * `filterWidth` and `feedback`, however, could be changed an any time.
  * @see setTemporalAntiAliasingOptions()
  */
 struct TemporalAntiAliasingOptions {
-    float filterWidth = 1.0f;   //!< reconstruction filter width typically between 0 (sharper, aliased) and 1 (smoother)
+    float filterWidth = 1.0f;   //!< reconstruction filter width typically between 0.2 (sharper, aliased) and 1 (smoother)
     float feedback = 0.04f;     //!< history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA).
     bool enabled = false;       //!< enables or disables temporal anti-aliasing
+
+    enum class BoxType : uint8_t {
+        AABB,           //!< use an AABB neighborhood
+        VARIANCE,       //!< use the variance of the neighborhood
+        AABB_VARIANCE   //!< use both AABB and variance
+    };
+
+    enum class BoxClipping : uint8_t {
+        ACCURATE,       //!< Accurate box clipping
+        CLAMP,          //!< clamping
+        NONE            //!< no rejections (use for debugging)
+    };
+
+    bool filterHistory = true;      //!< whether to filter the history buffer
+    bool filterInput = true;        //!< whether to apply the reconstruction filter to the input
+    bool useYCoCg = false;          //!< whether to use the YcoCg color-space for history rejection
+    BoxType boxType = BoxType::VARIANCE;                //!< type of color gamut box
+    BoxClipping boxClipping = BoxClipping::ACCURATE;    //!< clipping algorithm
+
+    bool preventFlickering = false;     //!< adjust the feedback dynamically to reduce flickering
+    bool historyReprojection = true;    //!< whether to apply history reprojection (debug option)
 };
 
 /**

@@ -28,6 +28,43 @@ material {
             name : filterWeights
         }
     ],
+    constants : [
+        {
+            type : bool,
+            name : historyReprojection,
+            default : true
+        },
+        {
+            type : bool,
+            name : filterHistory,
+            default : true
+        },
+        {
+            type : bool,
+            name : filterInput,
+            default : true
+        },
+        {
+            type : int,
+            name : boxClipping,
+            default : 0
+        },
+        {
+            type : int,
+            name : boxType,
+            default : 1
+        },
+        {
+            type : bool,
+            name : useYCoCg,
+            default : false
+        },
+        {
+            type : bool,
+            name : preventFlickering,
+            default : false
+        }
+    ],
     variables : [
         vertex
     ],
@@ -73,34 +110,12 @@ fragment {
 // no clipping (for debugging only)
 #define BOX_CLIPPING_NONE       2
 
-/* Configuration mobile/desktop */
-
-#if FILAMENT_QUALITY < FILAMENT_QUALITY_HIGH
-#define BOX_CLIPPING            BOX_CLIPPING_ACCURATE
-#define BOX_TYPE                BOX_TYPE_VARIANCE
-#define USE_YCoCg               0
-#define FILTER_INPUT            1
-#define FILTER_HISTORY          0
-#else
-#define BOX_CLIPPING            BOX_CLIPPING_ACCURATE
-#define BOX_TYPE                BOX_TYPE_AABB_VARIANCE
-#define USE_YCoCg               1
-#define FILTER_INPUT            1
-#define FILTER_HISTORY          1
-#endif
-
-/* debugging helper */
-
-#define HISTORY_REPROJECTION    1
-#define PREVENT_FLICKERING      0   // FIXME: thin lines disapear
-
-
 float luma(const vec3 color) {
-#if USE_YCoCg
-    return color.x;
-#else
-    return luminance(color);
-#endif
+    if (materialConstants_useYCoCg) {
+        return color.x;
+    } else {
+        return luminance(color);
+    }
 }
 
 vec3 RGB_YCoCg(const vec3 c) {
@@ -203,26 +218,27 @@ void postProcess(inout PostProcessInputs postProcess) {
     // read the depth buffer center sample for reprojection
     float depth = textureLod(materialParams_depth, uv.xy, 0.0).r;
 
-#if HISTORY_REPROJECTION
-    uv.zw = uvToRenderTargetUV(uv.zw);
-    // reproject history to current frame
-    highp vec4 q = materialParams.reprojection * vec4(uv.zw, depth, 1.0);
-    uv.zw = (q.xy * (1.0 / q.w)) * 0.5 + 0.5;
-    uv.zw = uvToRenderTargetUV(uv.zw);
-#endif
+    if (materialConstants_historyReprojection) {
+        uv.zw = uvToRenderTargetUV(uv.zw);
+        // reproject history to current frame
+        highp vec4 q = materialParams.reprojection * vec4(uv.zw, depth, 1.0);
+        uv.zw = (q.xy * (1.0 / q.w)) * 0.5 + 0.5;
+        uv.zw = uvToRenderTargetUV(uv.zw);
+    }
 
     // read center color and history samples
     vec4 color = textureLod(materialParams_color, uv.xy, 0.0);
-#if FILTER_HISTORY
-    vec4 history = sampleTextureCatmullRom(materialParams_history, uv.zw,
-            vec2(textureSize(materialParams_history, 0)));
-#else
-    vec4 history = textureLod(materialParams_history, uv.zw, 0.0);
-#endif
+    vec4 history;
+    if (materialConstants_filterHistory) {
+        history = sampleTextureCatmullRom(materialParams_history, uv.zw,
+                vec2(textureSize(materialParams_history, 0)));
+    } else {
+        history = textureLod(materialParams_history, uv.zw, 0.0);
+    }
 
-#if USE_YCoCg
-    history.rgb = RGB_YCoCg(history.rgb);
-#endif
+    if (materialConstants_useYCoCg) {
+        history.rgb = RGB_YCoCg(history.rgb);
+    }
 
     // build the history clamping box
     vec3 s[9];
@@ -236,66 +252,73 @@ void postProcess(inout PostProcessInputs postProcess) {
     s[7] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2( 0, TEXTURE_SPACE_UP)).rgb;
     s[8] = textureLodOffset(materialParams_color, uv.xy, 0.0, ivec2( 1, TEXTURE_SPACE_UP)).rgb;
 
-#if USE_YCoCg
-    for (int i = 0 ; i < 9 ; i++) {
-        s[i] = RGB_YCoCg(s[i]);
+    if (materialConstants_useYCoCg) {
+        for (int i = 0; i < 9; i++) {
+            s[i] = RGB_YCoCg(s[i]);
+        }
+        color.rgb = s[4].rgb;
     }
-    color.rgb = s[4].rgb;
-#endif
 
-#if FILTER_INPUT
-    // unjitter/filter input
-    vec4 filtered = vec4(0, 0, 0, color.a);
-    for (int i = 0 ; i < 9 ; i++) {
-        filtered.rgb += s[i] * materialParams.filterWeights[i];
+    vec4 filtered;
+    if (materialConstants_filterInput) {
+        // unjitter/filter input
+        filtered = vec4(0, 0, 0, color.a);
+        for (int i = 0; i < 9; i++) {
+            filtered.rgb += s[i] * materialParams.filterWeights[i];
+        }
+    } else {
+        filtered = color;
     }
-#else
-    vec4 filtered = color;
-#endif
 
-#if BOX_TYPE == BOX_TYPE_AABB || BOX_TYPE == BOX_TYPE_AABB_VARIANCE
-    vec3 boxmin = min(s[4], min(min(s[1], s[3]), min(s[5], s[7])));
-    vec3 boxmax = max(s[4], max(max(s[1], s[3]), max(s[5], s[7])));
-    vec3 box9min = min(boxmin, min(min(s[0], s[2]), min(s[6], s[8])));
-    vec3 box9max = max(boxmax, max(max(s[0], s[2]), max(s[6], s[8])));
-    // round the corners of the 3x3 box
-    boxmin = (boxmin + box9min) * 0.5;
-    boxmax = (boxmax + box9max) * 0.5;
-#endif
 
-#if BOX_TYPE == BOX_TYPE_VARIANCE || BOX_TYPE == BOX_TYPE_AABB_VARIANCE
-    // "An Excursion in Temporal Supersampling" by Marco Salvi
-    vec3 m0 = s[4];
-    vec3 m1 = s[4] * s[4];
-    // we use only 5 samples instead of all 9
-    for (int i = 1 ; i < 9 ; i+=2) {
-        m0 += s[i];
-        m1 += s[i] * s[i];
+    vec3 boxmin;
+    vec3 boxmax;
+    if (materialConstants_boxType == BOX_TYPE_AABB ||
+            materialConstants_boxType == BOX_TYPE_AABB_VARIANCE) {
+        boxmin = min(s[4], min(min(s[1], s[3]), min(s[5], s[7])));
+        boxmax = max(s[4], max(max(s[1], s[3]), max(s[5], s[7])));
+        vec3 box9min = min(boxmin, min(min(s[0], s[2]), min(s[6], s[8])));
+        vec3 box9max = max(boxmax, max(max(s[0], s[2]), max(s[6], s[8])));
+        // round the corners of the 3x3 box
+        boxmin = (boxmin + box9min) * 0.5;
+        boxmax = (boxmax + box9max) * 0.5;
     }
-    vec3 a0 = m0 * (1.0 / 5.0);
-    vec3 a1 = m1 * (1.0 / 5.0);
-    vec3 sigma = sqrt(a1 - a0 * a0);
-#if BOX_TYPE == BOX_TYPE_VARIANCE
-    vec3 boxmin = a0 - VARIANCE_GAMMA * sigma;
-    vec3 boxmax = a0 + VARIANCE_GAMMA * sigma;
-#else
-    boxmin = min(boxmin, a0 - VARIANCE_GAMMA * sigma);
-    boxmax = max(boxmax, a0 + VARIANCE_GAMMA * sigma);
-#endif
-#endif
+
+    if (materialConstants_boxType == BOX_TYPE_VARIANCE ||
+            materialConstants_boxType == BOX_TYPE_AABB_VARIANCE) {
+        // "An Excursion in Temporal Supersampling" by Marco Salvi
+        highp vec3 m0 = s[4];  // conversion to highp
+        highp vec3 m1 = m0 * m0;
+        // we use only 5 samples instead of all 9
+        for (int i = 1; i < 9; i+=2) {
+            highp vec3 c = s[i]; // conversion to highp
+            m0 += c;
+            m1 += c * c;
+        }
+        highp vec3 a0 = m0 * (1.0 / 5.0);
+        highp vec3 a1 = m1 * (1.0 / 5.0);
+        highp vec3 sigma = sqrt(a1 - a0 * a0);
+        if (materialConstants_boxType == BOX_TYPE_VARIANCE) {
+            boxmin = a0 - VARIANCE_GAMMA * sigma;
+            boxmax = a0 + VARIANCE_GAMMA * sigma;
+        } else {
+            boxmin = min(boxmin, a0 - VARIANCE_GAMMA * sigma);
+            boxmax = max(boxmax, a0 + VARIANCE_GAMMA * sigma);
+        }
+    }
 
     // history clamping
-    history = clipToBox(BOX_CLIPPING, boxmin, boxmax, filtered, history);
+    history = clipToBox(materialConstants_boxClipping, boxmin, boxmax, filtered, history);
 
     float lumaColor   = luma(filtered.rgb);
     float lumaHistory = luma(history.rgb);
 
     float alpha = materialParams.alpha;
-#if PREVENT_FLICKERING
-    // [Lottes] prevents flickering by modulating the blend weight by the difference in luma
-    float diff = 1.0 - abs(lumaColor - lumaHistory) / (0.001 + max(lumaColor, lumaHistory));
-    alpha *= diff * diff;
-#endif
+    if (materialConstants_preventFlickering) {
+        // [Lottes] prevents flickering by modulating the blend weight by the difference in luma
+        float diff = 1.0 - abs(lumaColor - lumaHistory) / (0.001 + max(lumaColor, lumaHistory));
+        alpha *= diff * diff;
+    }
 
     // tonemapping for handling HDR
     filtered.rgb *= 1.0 / (1.0 + lumaColor);
@@ -307,9 +330,9 @@ void postProcess(inout PostProcessInputs postProcess) {
     // untonemap result
     result.rgb *= 1.0 / (1.0 - luma(result.rgb));
 
-#if USE_YCoCg
-    result.rgb = YCoCg_RGB(result.rgb);
-#endif
+    if (materialConstants_useYCoCg) {
+        result.rgb = YCoCg_RGB(result.rgb);
+    }
 
     // store result (which will becomes new history)
     // we could end-up with negative values due to the bicubic filter, which never recover on

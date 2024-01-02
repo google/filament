@@ -537,7 +537,7 @@ void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
 
 
     if (UTILS_UNLIKELY(mContext.isES2())) {
-        // Here we patch the specification constants to enable or not the rec709 output
+        // Here we patch the specialization constants to enable or not the rec709 output
         // color space emulation in this program. Obviously, the backend shouldn't know about
         // specific spec-constants, so we need to handle failures gracefully. This cannot be
         // done at Material creation time because only the backend has access to
@@ -2283,6 +2283,7 @@ void OpenGLDriver::setTextureData(GLTexture* t, uint32_t level,
         PixelBufferDescriptor&& p) {
     auto& gl = mContext;
 
+    assert_invariant(t != nullptr);
     assert_invariant(xoffset + width <= std::max(1u, t->width >> level));
     assert_invariant(yoffset + height <= std::max(1u, t->height >> level));
     assert_invariant(t->samples <= 1);

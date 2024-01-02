@@ -50,7 +50,7 @@ PerViewUniforms::PerViewUniforms(FEngine& engine) noexcept
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
 
     if (engine.getDFG().isValid()) {
-        TextureSampler sampler(TextureSampler::MagFilter::LINEAR);
+        TextureSampler const sampler(TextureSampler::MagFilter::LINEAR);
         mSamplers.setSampler(PerViewSib::IBL_DFG_LUT,
                 { engine.getDFG().getTexture(), sampler.getSamplerParams() });
     }

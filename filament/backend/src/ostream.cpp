@@ -455,7 +455,7 @@ io::ostream& operator<<(io::ostream& out, filament::backend::Viewport const& vie
 
 io::ostream& operator<<(io::ostream& out, TargetBufferFlags flags) {
     // TODO: implement decoding of enum
-    out << uint8_t(flags);
+    out << uint32_t(flags);
     return out;
 }
 

@@ -31,6 +31,8 @@
 #include <emscripten/console.h>
 #endif
 
+#include <mutex>
+
 namespace utils {
 namespace io {
 
@@ -46,43 +48,41 @@ public:
     ostream& flush() noexcept override;
 
 private:
-    Priority mPriority;
+    const Priority mPriority;
 };
 
 ostream& LogStream::flush() noexcept {
-    std::lock_guard lock(mImpl->mLock);
+    std::lock_guard const lock(mImpl->mLock);
     Buffer& buf = getBuffer();
-#ifdef __ANDROID__
-    switch (mPriority) {
-        case LOG_DEBUG:
-            __android_log_write(ANDROID_LOG_DEBUG, UTILS_LOG_TAG, buf.get());
-            break;
-        case LOG_ERROR:
-            __android_log_write(ANDROID_LOG_ERROR, UTILS_LOG_TAG, buf.get());
-            break;
-        case LOG_WARNING:
-            __android_log_write(ANDROID_LOG_WARN, UTILS_LOG_TAG, buf.get());
-            break;
-        case LOG_INFO:
-            __android_log_write(ANDROID_LOG_INFO, UTILS_LOG_TAG, buf.get());
-            break;
-        case LOG_VERBOSE:
-            __android_log_write(ANDROID_LOG_VERBOSE, UTILS_LOG_TAG, buf.get());
-            break;
+    char const* const str = buf.get();
+    if (UTILS_UNLIKELY(!str)) {
+        // this can happen if the log hasn't been written ever
+        return *this;
     }
+
+#ifdef __ANDROID__
+    int prio = ANDROID_LOG_UNKNOWN;
+    switch (mPriority) {
+        case LOG_DEBUG:     prio = ANDROID_LOG_DEBUG;   break;
+        case LOG_ERROR:     prio = ANDROID_LOG_ERROR;   break;
+        case LOG_WARNING:   prio = ANDROID_LOG_WARN;    break;
+        case LOG_INFO:      prio = ANDROID_LOG_INFO;    break;
+        case LOG_VERBOSE:   prio = ANDROID_LOG_VERBOSE; break;
+    }
+    __android_log_write(prio, UTILS_LOG_TAG, str);
 #elif defined(__EMSCRIPTEN__)
     switch (mPriority) {
         case LOG_DEBUG:
         case LOG_WARNING:
         case LOG_INFO:
-            _emscripten_out(buf.get());
+            _emscripten_out(str);
             break;
         case LOG_ERROR:
-            _emscripten_err(buf.get());
+            _emscripten_err(str);
             break;
         case LOG_VERBOSE:
 #ifndef NFIL_DEBUG
-            _emscripten_out(buf.get());
+            _emscripten_out(str);
 #endif
             break;
     }
@@ -91,14 +91,14 @@ ostream& LogStream::flush() noexcept {
         case LOG_DEBUG:
         case LOG_WARNING:
         case LOG_INFO:
-            fprintf(stdout, "%s", buf.get());
+            fprintf(stdout, "%s", str);
             break;
         case LOG_ERROR:
-            fprintf(stderr, "%s", buf.get());
+            fprintf(stderr, "%s", str);
             break;
         case LOG_VERBOSE:
 #ifndef NDEBUG
-            fprintf(stdout, "%s", buf.get());
+            fprintf(stdout, "%s", str);
 #endif
             break;
     }

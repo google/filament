@@ -29,7 +29,7 @@ namespace utils::io {
 
 struct ostream_;
 
-class UTILS_PUBLIC  ostream : protected utils::PrivateImplementation<ostream_> {
+class UTILS_PUBLIC ostream : protected utils::PrivateImplementation<ostream_> {
     friend struct ostream_;
 
 public:
@@ -68,6 +68,13 @@ public:
 
     ostream& dec() noexcept;
     ostream& hex() noexcept;
+
+    /*! @cond PRIVATE */
+    // Sets a consumer of the log. The consumer is invoked on flush() and replaces the default.
+    // Thread safe and reentrant.
+    using ConsumerCallback = void(*)(void*, char const*);
+    void setConsumer(ConsumerCallback consumer, void* user) noexcept;
+    /*! @endcond */
 
 protected:
     ostream& print(const char* format, ...) noexcept;
@@ -132,8 +139,7 @@ inline ostream& operator<<(ostream& stream, const VECTOR<T>& v) {
 
 inline ostream& hex(ostream& s) noexcept { return s.hex(); }
 inline ostream& dec(ostream& s) noexcept { return s.dec(); }
-inline ostream& endl(ostream& s) noexcept { s << '\n'; return s.flush(); }
-inline ostream& flush(ostream& s) noexcept { return s.flush(); }
+inline ostream& endl(ostream& s) noexcept { return flush(s << '\n'); }
 
 } // namespace utils::io
 

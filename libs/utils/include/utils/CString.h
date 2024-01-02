@@ -35,7 +35,7 @@ struct hashCStrings {
     typedef size_t result_type;
     result_type operator()(argument_type cstr) const noexcept {
         size_t hash = 5381;
-        while (int c = *cstr++) {
+        while (int const c = *cstr++) {
             hash = (hash * 33u) ^ size_t(c);
         }
         return hash;

@@ -165,6 +165,14 @@ public:
 
     void destroyPrograms(FEngine& engine);
 
+    // return the id of a specialization constant specified by name for this material
+    std::optional<uint32_t> getSpecializationConstantId(std::string_view name) const noexcept ;
+
+    // Sets a specialization constant by id. call is no-op if the id is invalid.
+    // Return true is the value was changed.
+    template<typename T, typename = Builder::is_supported_constant_parameter_t<T>>
+    bool setConstant(uint32_t id, T value) noexcept;
+
 #if FILAMENT_ENABLE_MATDBG
     void applyPendingEdits() noexcept;
 
@@ -261,6 +269,11 @@ private:
 
     SamplerGroupBindingInfoList mSamplerGroupBindingInfoList;
     SamplerBindingToNameMap mSamplerBindingToNameMap;
+    // Constants defined by this Material
+    utils::FixedCapacityVector<MaterialConstant> mMaterialConstants;
+    // A map from the Constant name to the mMaterialConstant index
+    std::unordered_map<std::string_view, uint32_t> mSpecializationConstantsNameToIndex;
+    // current specialization constants for the HwProgram
     utils::FixedCapacityVector<backend::Program::SpecializationConstant> mSpecializationConstants;
 
 #if FILAMENT_ENABLE_MATDBG

@@ -265,24 +265,22 @@ uint8_t FCamera::getStereoscopicEyeCount() const noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-CameraInfo::CameraInfo(FCamera const& camera) noexcept {
-    for (int i = 0; i < camera.getStereoscopicEyeCount(); i++) {
-        eyeProjection[i]   = mat4f{ camera.getProjectionMatrix(i) };
-    }
-    cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() };
-    model              = mat4f{ camera.getModelMatrix() };
-    view               = mat4f{ camera.getViewMatrix() };
-    zn                 = (float)camera.getNear();
-    zf                 = (float)camera.getCullingFar();
-    ev100              = Exposure::ev100(camera);
-    f                  = (float)camera.getFocalLength();
-    A                  = f / camera.getAperture();
-    d                  = std::max(zn, camera.getFocusDistance());
+CameraInfo::CameraInfo(FCamera const& camera) noexcept
+        : CameraInfo(camera, {}, camera.getModelMatrix()) {
 }
 
-CameraInfo::CameraInfo(FCamera const& camera, math::mat4 const& inWorldTransform) noexcept {
-    const mat4 modelMatrix{ inWorldTransform * camera.getModelMatrix() };
-    for (int i = 0; i < camera.getStereoscopicEyeCount(); i++) {
+CameraInfo::CameraInfo(FCamera const& camera, math::mat4 const& inWorldTransform) noexcept
+        : CameraInfo(camera, inWorldTransform, inWorldTransform * camera.getModelMatrix()) {
+}
+
+CameraInfo::CameraInfo(FCamera const& camera, CameraInfo const& mainCameraInfo) noexcept
+        : CameraInfo(camera, mainCameraInfo.worldTransform, camera.getModelMatrix()) {
+}
+
+CameraInfo::CameraInfo(FCamera const& camera,
+        math::mat4 const& inWorldTransform,
+        math::mat4 const& modelMatrix) noexcept {
+    for (size_t i = 0; i < camera.getStereoscopicEyeCount(); i++) {
         eyeProjection[i]   = mat4f{ camera.getProjectionMatrix(i) };
         eyeFromView[i]     = mat4f{ camera.getEyeFromViewMatrix(i) };
     }

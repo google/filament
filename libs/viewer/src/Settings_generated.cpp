@@ -647,6 +647,44 @@ std::ostream& operator<<(std::ostream& out, const MultiSampleAntiAliasingOptions
         << "}";
 }
 
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAliasingOptions::BoxType* out) {
+    if (0 == compare(tokens[i], jsonChunk, "AABB")) { *out = TemporalAntiAliasingOptions::BoxType::AABB; }
+    else if (0 == compare(tokens[i], jsonChunk, "VARIANCE")) { *out = TemporalAntiAliasingOptions::BoxType::VARIANCE; }
+    else if (0 == compare(tokens[i], jsonChunk, "AABB_VARIANCE")) { *out = TemporalAntiAliasingOptions::BoxType::AABB_VARIANCE; }
+    else {
+        slog.w << "Invalid TemporalAntiAliasingOptions::BoxType: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
+    }
+    return i + 1;
+}
+
+std::ostream& operator<<(std::ostream& out, TemporalAntiAliasingOptions::BoxType in) {
+    switch (in) {
+        case TemporalAntiAliasingOptions::BoxType::AABB: return out << "\"AABB\"";
+        case TemporalAntiAliasingOptions::BoxType::VARIANCE: return out << "\"VARIANCE\"";
+        case TemporalAntiAliasingOptions::BoxType::AABB_VARIANCE: return out << "\"AABB_VARIANCE\"";
+    }
+    return out << "\"INVALID\"";
+}
+
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAliasingOptions::BoxClipping* out) {
+    if (0 == compare(tokens[i], jsonChunk, "ACCURATE")) { *out = TemporalAntiAliasingOptions::BoxClipping::ACCURATE; }
+    else if (0 == compare(tokens[i], jsonChunk, "CLAMP")) { *out = TemporalAntiAliasingOptions::BoxClipping::CLAMP; }
+    else if (0 == compare(tokens[i], jsonChunk, "NONE")) { *out = TemporalAntiAliasingOptions::BoxClipping::NONE; }
+    else {
+        slog.w << "Invalid TemporalAntiAliasingOptions::BoxClipping: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
+    }
+    return i + 1;
+}
+
+std::ostream& operator<<(std::ostream& out, TemporalAntiAliasingOptions::BoxClipping in) {
+    switch (in) {
+        case TemporalAntiAliasingOptions::BoxClipping::ACCURATE: return out << "\"ACCURATE\"";
+        case TemporalAntiAliasingOptions::BoxClipping::CLAMP: return out << "\"CLAMP\"";
+        case TemporalAntiAliasingOptions::BoxClipping::NONE: return out << "\"NONE\"";
+    }
+    return out << "\"INVALID\"";
+}
+
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAliasingOptions* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -659,6 +697,20 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAli
             i = parse(tokens, i + 1, jsonChunk, &out->feedback);
         } else if (compare(tok, jsonChunk, "enabled") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (compare(tok, jsonChunk, "filterHistory") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->filterHistory);
+        } else if (compare(tok, jsonChunk, "filterInput") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->filterInput);
+        } else if (compare(tok, jsonChunk, "useYCoCg") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->useYCoCg);
+        } else if (compare(tok, jsonChunk, "boxType") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->boxType);
+        } else if (compare(tok, jsonChunk, "boxClipping") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->boxClipping);
+        } else if (compare(tok, jsonChunk, "preventFlickering") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->preventFlickering);
+        } else if (compare(tok, jsonChunk, "historyReprojection") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->historyReprojection);
         } else {
             slog.w << "Invalid TemporalAntiAliasingOptions key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -675,7 +727,14 @@ std::ostream& operator<<(std::ostream& out, const TemporalAntiAliasingOptions& i
     return out << "{\n"
         << "\"filterWidth\": " << (in.filterWidth) << ",\n"
         << "\"feedback\": " << (in.feedback) << ",\n"
-        << "\"enabled\": " << to_string(in.enabled) << "\n"
+        << "\"enabled\": " << to_string(in.enabled) << ",\n"
+        << "\"filterHistory\": " << to_string(in.filterHistory) << ",\n"
+        << "\"filterInput\": " << to_string(in.filterInput) << ",\n"
+        << "\"useYCoCg\": " << to_string(in.useYCoCg) << ",\n"
+        << "\"boxType\": " << (in.boxType) << ",\n"
+        << "\"boxClipping\": " << (in.boxClipping) << ",\n"
+        << "\"preventFlickering\": " << to_string(in.preventFlickering) << ",\n"
+        << "\"historyReprojection\": " << to_string(in.historyReprojection) << "\n"
         << "}";
 }
 

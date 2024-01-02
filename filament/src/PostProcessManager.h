@@ -86,6 +86,10 @@ public:
     void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
 
+
+    void configureTemporalAntiAliasingMaterial(
+            TemporalAntiAliasingOptions const& taaOptions) noexcept;
+
     // methods below are ordered relative to their position in the pipeline (as much as possible)
 
     // structure (depth) pass
@@ -269,44 +273,6 @@ public:
         return mHaltonSamples[index & 0xFu];
     }
 
-private:
-    FEngine& mEngine;
-    class PostProcessMaterial;
-
-    struct BilateralPassConfig {
-        uint8_t kernelSize = 11;
-        bool bentNormals = false;
-        float standardDeviation = 1.0f;
-        float bilateralThreshold = 0.0625f;
-        float scale = 1.0f;
-    };
-
-    FrameGraphId<FrameGraphTexture> bilateralBlurPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, FrameGraphId<FrameGraphTexture> depth,
-            math::int2 axis, float zf, backend::TextureFormat format,
-            BilateralPassConfig const& config) noexcept;
-
-    BloomPassOutput bloomPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
-            BloomOptions& inoutBloomOptions, math::float2 scale) noexcept;
-
-    FrameGraphId<FrameGraphTexture> downscalePass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input,
-            FrameGraphTexture::Descriptor const& outDesc,
-            bool threshold, float highlight, bool fireflies) noexcept;
-
-    void commitAndRender(FrameGraphResources::RenderPassInfo const& out,
-            PostProcessMaterial const& material, uint8_t variant,
-            backend::DriverApi& driver) const noexcept;
-
-    void commitAndRender(FrameGraphResources::RenderPassInfo const& out,
-            PostProcessMaterial const& material,
-            backend::DriverApi& driver) const noexcept;
-
-    void render(FrameGraphResources::RenderPassInfo const& out,
-            backend::PipelineState const& pipeline,
-            backend::DriverApi& driver) const noexcept;
-
     class PostProcessMaterial {
     public:
         PostProcessMaterial() noexcept;
@@ -340,14 +306,52 @@ private:
         utils::FixedCapacityVector<ConstantInfo> mConstants{};
     };
 
+    void registerPostProcessMaterial(std::string_view name, MaterialInfo const& info);
+
+    PostProcessMaterial& getPostProcessMaterial(std::string_view name) noexcept;
+
+    void commitAndRender(FrameGraphResources::RenderPassInfo const& out,
+            PostProcessMaterial const& material, uint8_t variant,
+            backend::DriverApi& driver) const noexcept;
+
+    void commitAndRender(FrameGraphResources::RenderPassInfo const& out,
+            PostProcessMaterial const& material,
+            backend::DriverApi& driver) const noexcept;
+
+    void render(FrameGraphResources::RenderPassInfo const& out,
+            backend::PipelineState const& pipeline,
+            backend::DriverApi& driver) const noexcept;
+
+private:
+    FEngine& mEngine;
+
+    struct BilateralPassConfig {
+        uint8_t kernelSize = 11;
+        bool bentNormals = false;
+        float standardDeviation = 1.0f;
+        float bilateralThreshold = 0.0625f;
+        float scale = 1.0f;
+    };
+
+    FrameGraphId<FrameGraphTexture> bilateralBlurPass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, FrameGraphId<FrameGraphTexture> depth,
+            math::int2 axis, float zf, backend::TextureFormat format,
+            BilateralPassConfig const& config) noexcept;
+
+    BloomPassOutput bloomPass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
+            BloomOptions& inoutBloomOptions, math::float2 scale) noexcept;
+
+    FrameGraphId<FrameGraphTexture> downscalePass(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphTexture::Descriptor const& outDesc,
+            bool threshold, float highlight, bool fireflies) noexcept;
+
     using MaterialRegistryMap = tsl::robin_map<
             std::string_view,
             PostProcessMaterial>;
 
     MaterialRegistryMap mMaterialRegistry;
-
-    void registerPostProcessMaterial(std::string_view name, MaterialInfo const& info);
-    PostProcessMaterial& getPostProcessMaterial(std::string_view name) noexcept;
 
     backend::Handle<backend::HwTexture> mStarburstTexture;
 

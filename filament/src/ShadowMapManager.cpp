@@ -247,7 +247,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 
 
                         // cameraInfo only valid after calling update
-                        const CameraInfo cameraInfo{ shadowMap.getCamera() };
+                        const CameraInfo cameraInfo{ shadowMap.getCamera(), mainCameraInfo };
 
                         auto transaction = ShadowMap::open(driver);
                         ShadowMap::prepareCamera(transaction, engine, cameraInfo);
@@ -844,7 +844,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
         FScene::LightSoa const& lightData) noexcept {
 
     // The const_cast here is a little ugly, but conceptually lightData should be const,
-    // it's just that we're using it to store some temporary data. with SoA we can't have
+    // it's just that we're using it to store some temporary data. With SoA we can't have
     // a `mutable` element, so that's a workaround.
     FScene::ShadowInfo* const shadowInfo = const_cast<FScene::ShadowInfo*>(
             lightData.data<FScene::SHADOW_INFO>());
@@ -855,7 +855,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
         shadowTechnique |= ShadowTechnique::SHADOW_MAP;
         for (ShadowMap const& shadowMap : spotShadowMaps) {
             const size_t lightIndex = shadowMap.getLightIndex();
-            // gather the per-light (not per shadow map) information. For point lights we will
+            // Gather the per-light (not per shadow map) information. For point lights we will
             // "see" 6 shadowmaps (one per face), we must use the first face one, the shader
             // knows how to find the entry for other faces (they're guaranteed to be sequential).
             if (shadowMap.getFace() == 0) {

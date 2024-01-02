@@ -313,6 +313,10 @@ void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableD
         }
 
         if (UTILS_LIKELY(!lcm.isShadowCaster(li))) {
+            // Because we early exit here, we need to make sure we mark the light as non-casting.
+            // See `ShadowMapManager::updateSpotShadowMaps` for const_cast<> justification.
+            const_cast<FScene::ShadowInfo&>(
+                    lightData.elementAt<FScene::SHADOW_INFO>(l)).castsShadows = false;
             continue; // doesn't cast shadows
         }
 

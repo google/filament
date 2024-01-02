@@ -320,7 +320,7 @@ foreach (mat_src ${MATERIAL_SRCS})
     list(APPEND MATERIAL_BINS ${output_path})
 endforeach()
 
-if (FILAMENT_ENABLE_FEATURE_LEVEL_0 AND FILAMENT_SUPPORTS_OPENGL)
+if (FILAMENT_ENABLE_FEATURE_LEVEL_0)
     foreach (mat_src ${MATERIAL_FL0_SRCS})
         get_filename_component(localname "${mat_src}" NAME_WE)
         get_filename_component(fullname "${mat_src}" ABSOLUTE)
@@ -328,7 +328,7 @@ if (FILAMENT_ENABLE_FEATURE_LEVEL_0 AND FILAMENT_SUPPORTS_OPENGL)
 
         add_custom_command(
                 OUTPUT ${output_path}
-                COMMAND matc -a opengl -p ${MATC_TARGET} ${MATC_OPT_FLAGS} -o ${output_path} ${fullname}
+                COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}
                 MAIN_DEPENDENCY ${fullname}
                 DEPENDS matc
                 COMMENT "Compiling material ${mat_src} to ${output_path}"

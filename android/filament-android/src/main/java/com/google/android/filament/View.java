@@ -1876,11 +1876,44 @@ public class View {
 
     /**
      * Options for Temporal Anti-aliasing (TAA)
+     * Most TAA parameters are extremely costly to change, as they will trigger the TAA post-process
+     * shaders to be recompiled. These options should be changed or set during initialization.
+     * `filterWidth` and `feedback`, however, could be changed an any time.
      * @see setTemporalAntiAliasingOptions()
      */
     public static class TemporalAntiAliasingOptions {
+        public enum BoxType {
+            /**
+             * use an AABB neighborhood
+             */
+            AABB,
+            /**
+             * use the variance of the neighborhood
+             */
+            VARIANCE,
+            /**
+             * use both AABB and variance
+             */
+            AABB_VARIANCE,
+        }
+
+        public enum BoxClipping {
+            /**
+             * Accurate box clipping
+             */
+            ACCURATE,
+            /**
+             * clamping
+             */
+            CLAMP,
+            /**
+             * no rejections (use for debugging)
+             */
+            NONE,
+        }
+
         /**
-         * reconstruction filter width typically between 0 (sharper, aliased) and 1 (smoother)
+         * reconstruction filter width typically between 0.2 (sharper, aliased) and 1 (smoother)
          */
         public float filterWidth = 1.0f;
         /**
@@ -1891,6 +1924,36 @@ public class View {
          * enables or disables temporal anti-aliasing
          */
         public boolean enabled = false;
+        /**
+         * whether to filter the history buffer
+         */
+        public boolean filterHistory = true;
+        /**
+         * whether to apply the reconstruction filter to the input
+         */
+        public boolean filterInput = true;
+        /**
+         * whether to use the YcoCg color-space for history rejection
+         */
+        public boolean useYCoCg = false;
+        /**
+         * type of color gamut box
+         */
+        @NonNull
+        public TemporalAntiAliasingOptions.BoxType boxType = TemporalAntiAliasingOptions.BoxType.VARIANCE;
+        /**
+         * clipping algorithm
+         */
+        @NonNull
+        public TemporalAntiAliasingOptions.BoxClipping boxClipping = TemporalAntiAliasingOptions.BoxClipping.ACCURATE;
+        /**
+         * adjust the feedback dynamically to reduce flickering
+         */
+        public boolean preventFlickering = false;
+        /**
+         * whether to apply history reprojection (debug option)
+         */
+        public boolean historyReprojection = true;
     }
 
     /**

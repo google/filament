@@ -120,6 +120,13 @@ value_object<View::TemporalAntiAliasingOptions>("View$TemporalAntiAliasingOption
     .field("filterWidth", &View::TemporalAntiAliasingOptions::filterWidth)
     .field("feedback", &View::TemporalAntiAliasingOptions::feedback)
     .field("enabled", &View::TemporalAntiAliasingOptions::enabled)
+    .field("filterHistory", &View::TemporalAntiAliasingOptions::filterHistory)
+    .field("filterInput", &View::TemporalAntiAliasingOptions::filterInput)
+    .field("useYCoCg", &View::TemporalAntiAliasingOptions::useYCoCg)
+    .field("boxType", &View::TemporalAntiAliasingOptions::boxType)
+    .field("boxClipping", &View::TemporalAntiAliasingOptions::boxClipping)
+    .field("preventFlickering", &View::TemporalAntiAliasingOptions::preventFlickering)
+    .field("historyReprojection", &View::TemporalAntiAliasingOptions::historyReprojection)
     ;
 
 value_object<View::ScreenSpaceReflectionsOptions>("View$ScreenSpaceReflectionsOptions")

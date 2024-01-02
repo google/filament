@@ -220,8 +220,18 @@ private:
 
 struct CameraInfo {
     CameraInfo() noexcept {}
-    explicit CameraInfo(FCamera const& camera) noexcept;
+
+    // Creates a CameraInfo relative to inWorldTransform (i.e. it's model matrix is
+    // transformed by inWorldTransform and inWorldTransform is recorded).
+    // This is typically used for the color pass camera.
     CameraInfo(FCamera const& camera, math::mat4 const& inWorldTransform) noexcept;
+
+    // Creates a CameraInfo from a camera that is relative to mainCameraInfo.
+    // This is typically used for the shadow pass cameras.
+    CameraInfo(FCamera const& camera, CameraInfo const& mainCameraInfo) noexcept;
+
+    // Creates a CameraInfo from the FCamera
+    explicit CameraInfo(FCamera const& camera) noexcept;
 
     union {
         // projection matrix for drawing (infinite zfar)
@@ -249,6 +259,11 @@ struct CameraInfo {
     math::float3 const& getPosition() const noexcept { return model[3].xyz; }
     math::float3 getForwardVector() const noexcept { return normalize(-model[2].xyz); }
     math::mat4 getUserViewMatrix() const noexcept { return view * worldTransform; }
+
+private:
+    CameraInfo(FCamera const& camera,
+            math::mat4 const& inWorldTransform,
+            math::mat4 const& modelMatrix) noexcept;
 };
 
 FILAMENT_DOWNCAST(Camera)
