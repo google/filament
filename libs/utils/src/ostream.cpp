@@ -31,6 +31,7 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 
 template class utils::PrivateImplementation<utils::io::ostream_>;
 
