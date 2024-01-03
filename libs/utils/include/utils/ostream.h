@@ -111,7 +111,7 @@ private:
     friend ostream& hex(ostream& s) noexcept;
     friend ostream& dec(ostream& s) noexcept;
     friend ostream& endl(ostream& s) noexcept;
-    friend ostream& flush(ostream& s) noexcept;
+    UTILS_PUBLIC friend ostream& flush(ostream& s) noexcept;
 
     enum type {
         SHORT, USHORT, CHAR, UCHAR, INT, UINT, LONG, ULONG, LONG_LONG, ULONG_LONG, FLOAT, DOUBLE,
