@@ -9,6 +9,7 @@ Instead, if you are authoring a PR for the main branch, add your release note to
 
 ## v1.49.3
 
+- matc: Generate stereo variants for FL0 materials [⚠️ **Recompile materials**]
 
 ## v1.49.2
 

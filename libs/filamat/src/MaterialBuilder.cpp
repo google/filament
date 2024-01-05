@@ -1168,7 +1168,6 @@ error:
         mVariantFilter |= uint32_t(UserVariantFilterBit::SHADOW_RECEIVER);
         mVariantFilter |= uint32_t(UserVariantFilterBit::VSM);
         mVariantFilter |= uint32_t(UserVariantFilterBit::SSR);
-        mVariantFilter |= uint32_t(UserVariantFilterBit::STE);
     }
 
     // Create chunk tree.
