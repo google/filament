@@ -115,6 +115,10 @@ private:
             filament::Variant variant,
             MaterialBuilder::FeatureLevel featureLevel) noexcept;
 
+    static bool hasInstancedStereo(
+            filament::Variant variant,
+            MaterialBuilder::FeatureLevel featureLevel) noexcept;
+
     MaterialBuilder::PropertyList mProperties;
     MaterialBuilder::VariableList mVariables;
     MaterialBuilder::OutputList mOutputs;
