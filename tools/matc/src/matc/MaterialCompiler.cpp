@@ -229,7 +229,7 @@ static bool reflectParameters(const MaterialBuilder& builder) {
             std::cout << R"(      "format": ")" <<
                       Enums::toString(parameter.format) << "\"," << std::endl;
             std::cout << R"(      "precision": ")" <<
-                      Enums::toString(parameter.precision) << "\"" << std::endl;
+                      Enums::toString(parameter.precision) << "\"," << std::endl;
             std::cout << R"(      "multisample": ")" <<
                       (parameter.multisample ? "true" : "false")<< "\"" << std::endl;
         } else if (parameter.isUniform()) {
