@@ -1925,14 +1925,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     return ppDoFCombine->output;
 }
 
-PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
-        BloomOptions& inoutBloomOptions,
-        backend::TextureFormat outFormat,
-        math::float2 scale) noexcept {
-    return bloomPass(fg, input, outFormat, inoutBloomOptions, scale);
-}
-
 FrameGraphId<FrameGraphTexture> PostProcessManager::downscalePass(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
         FrameGraphTexture::Descriptor const& outDesc,
@@ -1964,9 +1956,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::downscalePass(FrameGraph& fg
     return downsamplePass->output;
 }
 
-PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg,
+PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, TextureFormat outFormat,
-        BloomOptions& inoutBloomOptions, float2 scale) noexcept {
+        BloomOptions& inoutBloomOptions,
+        TemporalAntiAliasingOptions const& taaOptions,
+        float2 scale) noexcept {
 
     // Figure out a good size for the bloom buffer. We must use a fixed bloom buffer size so
     // that the size/strength of the bloom doesn't vary much with the resolution, otherwise
@@ -2008,6 +2002,9 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
 
     bool threshold = inoutBloomOptions.threshold;
 
+    // we don't need to do the fireflies reduction if we have TAA (it already does it)
+    bool fireflies = threshold && !taaOptions.enabled;
+
     while (2 * bloomWidth < float(desc.width) || 2 * bloomHeight < float(desc.height)) {
         if (inoutBloomOptions.quality == QualityLevel::LOW ||
             inoutBloomOptions.quality == QualityLevel::MEDIUM) {
@@ -2016,8 +2013,9 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
                             .height = (desc.height = std::max(1u, desc.height / 2)),
                             .format = outFormat
                     },
-                    threshold, inoutBloomOptions.highlight, threshold);
+                    threshold, inoutBloomOptions.highlight, fireflies);
             threshold = false; // we do the thresholding only once during down sampling
+            fireflies = false; // we do the fireflies reduction only once during down sampling
         } else if (inoutBloomOptions.quality == QualityLevel::HIGH ||
                    inoutBloomOptions.quality == QualityLevel::ULTRA) {
             // In high quality mode, we increase the size of the bloom buffer such that the
@@ -2038,7 +2036,7 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
 
     input = downscalePass(fg, input,
             { .width = width, .height = height, .format = outFormat },
-            threshold, inoutBloomOptions.highlight, threshold);
+            threshold, inoutBloomOptions.highlight, fireflies);
 
     struct BloomPassData {
         FrameGraphId<FrameGraphTexture> out;
