@@ -181,6 +181,16 @@ vec3 fresnel(const vec3 f0, float LoH) {
 #endif
 }
 
+vec3 fresnel(const vec3 f0, const float f90, float LoH) {
+#if BRDF_SPECULAR_F == SPECULAR_F_SCHLICK
+#if FILAMENT_QUALITY == FILAMENT_QUALITY_LOW
+    return F_Schlick(f0, LoH); // f90 = 1.0
+#else
+    return F_Schlick(f0, f90, LoH);
+#endif
+#endif
+}
+
 float distributionAnisotropic(float at, float ab, float ToH, float BoH, float NoH) {
 #if BRDF_ANISOTROPIC_D == SPECULAR_D_GGX_ANISOTROPIC
     return D_GGX_Anisotropic(at, ab, ToH, BoH, NoH);

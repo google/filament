@@ -63,6 +63,20 @@ static void prepareConfig(MaterialKey* config, const char* label) {
         config->hasSheen = false;
         config->hasIOR = false;
     }
+
+    if (config->useSpecularGlossiness && config->hasSpecular) {
+        slog.w << "SpecularGlossiness and specular are not supported together in ubershader mode,"
+                  " removing specularGlossiness (" << label << ")." << io::endl;
+
+        config->useSpecularGlossiness = false;
+    }
+
+    if (config->unlit && config->hasSpecular) {
+        slog.w << "Unlit and specular are not supported together in ubershader mode,"
+                  " removing unlit (" << label << ")." << io::endl;
+
+        config->unlit = false;
+    }
 }
 
 class UbershaderProvider : public MaterialProvider {
@@ -155,6 +169,9 @@ Material* UbershaderProvider::getMaterial(const MaterialKey& config) const {
     requirements.features["SheenColorTexture"] = config.hasSheenColorTexture;
     requirements.features["SheenRoughnessTexture"] = config.hasSheenRoughnessTexture;
     requirements.features["VolumeThicknessTexture"] = config.hasVolumeThicknessTexture;
+    requirements.features["Specular"] = config.hasSpecular;
+    requirements.features["SpecularTexture"] = config.hasSpecularTexture;
+    requirements.features["SpecularColorTexture"] = config.hasSpecularColorTexture;
 
     if (Material* mat = mMaterials.getMaterial(requirements); mat != nullptr) {
         return mat;
@@ -250,6 +267,14 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
             mi->setParameter("transmissionIndex",
                     getUvIndex(config->transmissionUV, config->hasTransmissionTexture));
         }
+        if (config->hasSpecular) {
+            mi->setParameter("specularUvMatrix", identity );
+            mi->setParameter( "specularIndex",
+                              getUvIndex( config->specularTextureUV, config->hasSpecularTexture ));
+            mi->setParameter("specularColorUvMatrix", identity );
+            mi->setParameter( "specularColorIndex",
+                              getUvIndex( config->specularColorTextureUV, config->hasSpecularColorTexture ));
+        }
     }
 
     TextureSampler sampler;
@@ -298,6 +323,14 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
     }
     if (mi->getMaterial()->hasParameter("reflectance")) {
         mi->setParameter("reflectance", 0.5f);
+    }
+
+    if (needsTexture("SpecularTexture")) {
+        mi->setParameter("specularMap", mDummyTexture, sampler);
+    }
+
+    if (needsTexture("SpecularColorTexture")) {
+        mi->setParameter("specularColorMap", mDummyTexture, sampler);
     }
 
     return mi;

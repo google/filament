@@ -93,10 +93,16 @@ struct alignas(4) MaterialKey {
     bool hasSheen : 1;
     bool hasIOR : 1;
     bool hasVolume : 1;
-    uint8_t padding : 5;
+    bool hasSpecular : 1;
+    bool hasSpecularTexture : 1;
+    bool hasSpecularColorTexture : 3;
+    // -- 32 bit boundary --
+    uint8_t specularTextureUV;
+    uint8_t specularColorTextureUV;
+    uint16_t padding;
 };
 
-static_assert(sizeof(MaterialKey) == 16, "MaterialKey has unexpected size.");
+static_assert(sizeof(MaterialKey) == 20, "MaterialKey has unexpected size.");
 
 UTILS_WARNING_POP
 
