@@ -27,9 +27,12 @@
 #include "details/Engine.h"
 
 #include "fg/FrameGraph.h"
+#include "fg/FrameGraphId.h"
 #include "fg/FrameGraphResources.h"
+#include "fg/FrameGraphTexture.h"
 
 #include "fsr.h"
+#include "FrameHistory.h"
 #include "PerViewUniforms.h"
 #include "RenderPass.h"
 
@@ -41,15 +44,44 @@
 
 #include "generated/resources/materials.h"
 
+#include <filament/Material.h>
 #include <filament/MaterialEnums.h>
+#include <filament/Options.h>
+#include <filament/Viewport.h>
+
+#include <private/filament/EngineEnums.h>
+
+#include <backend/DriverEnums.h>
+#include <backend/DriverApiForward.h>
+#include <backend/Handle.h>
+#include <backend/PipelineState.h>
+#include <backend/PixelBufferDescriptor.h>
+
+#include <private/backend/BackendUtils.h>
 
 #include <math/half.h>
 #include <math/mat2.h>
+#include <math/mat3.h>
+#include <math/mat4.h>
+#include <math/scalar.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 
+#include <utils/algorithm.h>
 #include <utils/BitmaskEnum.h>
+#include <utils/debug.h>
+#include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
+#include <string_view>
+#include <variant>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -772,7 +804,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 auto ssao = resources.getRenderPassInfo();
                 auto const& desc = resources.getDescriptor(data.depth);
 
-                // estimate of the size in pixel of a 1m tall/wide object viewed from 1m away (i.e. at z=-1)
+                // Estimate of the size in pixel units of a 1m tall/wide object viewed from 1m away (i.e. at z=-1)
                 const float projectionScale = std::min(
                         0.5f * cameraInfo.projection[0].x * desc.width,
                         0.5f * cameraInfo.projection[1].y * desc.height);
@@ -929,7 +961,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
                 auto const& desc = resources.getDescriptor(data.blurred);
 
                 // unnormalized gaussian half-kernel of a given standard deviation
-                // returns number of samples stored in array (max 16)
+                // returns number of samples stored in the array (max 16)
                 constexpr size_t kernelArraySize = 16; // limited by bilateralBlur.mat
                 auto gaussianKernel =
                         [kernelArraySize](float* outKernel, size_t gaussianWidth, float stdDev) -> uint32_t {
@@ -973,7 +1005,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(Frame
 
     auto const subResourceDesc = fg.getSubResourceDescriptor(input);
 
-    // create one subresource per level to be generated from the input. These will be our
+    // Create one subresource per level to be generated from the input. These will be our
     // destinations.
     struct MipmapPassData {
         FixedCapacityVector<FrameGraphId<FrameGraphTexture>> out;
@@ -1134,7 +1166,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 size_t const m = computeGaussianCoefficients(kernel,
                         std::min(sizeof(kernel) / sizeof(*kernel), kernelStorageSize));
 
-                std::string_view sourceParameterName = is2dArray ? "sourceArray"sv : "source"sv;
+                std::string_view const sourceParameterName = is2dArray ? "sourceArray"sv : "source"sv;
                 // horizontal pass
                 mi->setParameter(sourceParameterName, hwIn, {
                         .filterMag = SamplerMagFilter::LINEAR,
@@ -1180,7 +1212,7 @@ PostProcessManager::ScreenSpaceRefConfig PostProcessManager::prepareMipmapSSR(Fr
 
     // The kernel-size was determined empirically so that we don't get too many artifacts
     // due to the down-sampling with a box filter (which happens implicitly).
-    // requires only 6 stored coefficients and 11 tap/pass
+    // Requires only 6 stored coefficients and 11 tap/pass
     // e.g.: size of 13 (4 stored coefficients)
     //      +-------+-------+-------*===*-------+-------+-------+
     //  ... | 6 | 5 | 4 | 3 | 2 | 1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | ...
@@ -1344,10 +1376,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(
         FrameGraphId<FrameGraphTexture> output,
         bool needInputDuplication, ScreenSpaceRefConfig const& config) noexcept {
 
-    // descriptor of our actual input image (e.g. reflection buffer or refraction framebuffer)
+    // Descriptor of our actual input image (e.g. reflection buffer or refraction framebuffer)
     auto const& desc = fg.getDescriptor(input);
 
-    // descriptor of the destination. output is a subresource (i.e. a layer of a 2D array)
+    // Descriptor of the destination. `output` is a subresource (i.e. a layer of a 2D array)
     auto const& outDesc = fg.getDescriptor(output);
 
     /*
@@ -1407,7 +1439,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     const TextureFormat format = translucent ? TextureFormat::RGBA16F
                                              : TextureFormat::R11F_G11F_B10F;
 
-    // rotate the bokeh based on the aperture diameter (i.e. angle of the blades)
+    // Rotate the bokeh based on the aperture diameter (i.e. angle of the blades)
     float bokehAngle = f::PI / 6.0f;
     if (dofOptions.maxApertureDiameter > 0.0f) {
         bokehAngle += f::PI_2 * saturate(cameraInfo.A / dofOptions.maxApertureDiameter);
@@ -3149,7 +3181,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 auto& material = getPostProcessMaterial("vsmMipmap");
 
                 // When generating shadow map mip levels, we want to preserve the 1 texel border.
-                // (note clearing never respects the scissor in filament)
+                // (note clearing never respects the scissor in Filament)
                 PipelineState pipeline(material.getPipelineState(mEngine));
                 pipeline.scissor = { 1u, 1u, dim - 2u, dim - 2u };
 
