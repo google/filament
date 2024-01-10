@@ -103,10 +103,19 @@ void MetalShaderCompiler::terminate() noexcept {
         NSString* objcSource = [[NSString alloc] initWithBytes:source.data()
                                                         length:source.size() - 1
                                                       encoding:NSUTF8StringEncoding];
+
+        // By default, Metal uses the most recent language version.
+        MTLCompileOptions* options = [MTLCompileOptions new];
+
+        // Disable Fast Math optimizations.
+        // This ensures that operations adhere to IEEE standards for floating-point arithmetic,
+        // which is crucial for half precision floats in scenarios where fast math optimizations
+        // lead to inaccuracies, such as in handling special values like NaN or Infinity.
+        options.fastMathEnabled = NO;
+
         NSError* error = nil;
-        // When options is nil, Metal uses the most recent language version available.
         id<MTLLibrary> library = [device newLibraryWithSource:objcSource
-                                                      options:nil
+                                                      options:options
                                                         error:&error];
         if (library == nil) {
             if (error) {
