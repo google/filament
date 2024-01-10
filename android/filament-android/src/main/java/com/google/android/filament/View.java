@@ -1882,7 +1882,7 @@ public class View {
      * Options for Temporal Anti-aliasing (TAA)
      * Most TAA parameters are extremely costly to change, as they will trigger the TAA post-process
      * shaders to be recompiled. These options should be changed or set during initialization.
-     * `filterWidth`, `feedback` and `jitterPattern`, however, could be changed an any time.
+     * `filterWidth`, `feedback` and `jitterPattern`, however, could be changed at any time.
      *
      * `feedback` of 0.1 effectively accumulates a maximum of 19 samples in steady state.
      * see "A Survey of Temporal Antialiasing Techniques" by Lei Yang and all for more information.
