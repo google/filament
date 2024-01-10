@@ -293,6 +293,7 @@ struct DepthOfFieldOptions {
         MEDIAN
     };
     float cocScale = 1.0f;              //!< circle of confusion scale factor (amount of blur)
+    float cocAspectRatio = 1.0f;        //!< width/height aspect ratio of the circle of confusion (simulate anamorphic lenses)
     float maxApertureDiameter = 0.01f;  //!< maximum aperture diameter in meters (zero to disable rotation)
     bool enabled = false;               //!< enable or disable depth of field effect
     Filter filter = Filter::MEDIAN;     //!< filter to use for filling gaps in the kernel

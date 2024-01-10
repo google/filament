@@ -1428,7 +1428,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> depth,
         const CameraInfo& cameraInfo,
         bool translucent,
-        float bokehAspectRatio,
+        float2 bokehScale,
         const DepthOfFieldOptions& dofOptions) noexcept {
 
     assert_invariant(depth);
@@ -1818,8 +1818,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 mi->setParameter("tiles", tilesCocMinMax,
                         { .filterMin = SamplerMinFilter::NEAREST });
                 mi->setParameter("cocToTexelScale", float2{
-                        bokehAspectRatio / (inputDesc.width  * dofResolution),
-                                     1.0 / (inputDesc.height * dofResolution)
+                        bokehScale.x / (inputDesc.width * dofResolution),
+                        bokehScale.y / (inputDesc.height * dofResolution)
                 });
                 mi->setParameter("cocToPixelScale", (1.0f / float(dofResolution)));
                 mi->setParameter("ringCounts", float4{

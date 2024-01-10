@@ -58,6 +58,7 @@ value_object<View::FogOptions>("View$FogOptions")
 
 value_object<View::DepthOfFieldOptions>("View$DepthOfFieldOptions")
     .field("cocScale", &View::DepthOfFieldOptions::cocScale)
+    .field("cocAspectRatio", &View::DepthOfFieldOptions::cocAspectRatio)
     .field("maxApertureDiameter", &View::DepthOfFieldOptions::maxApertureDiameter)
     .field("enabled", &View::DepthOfFieldOptions::enabled)
     .field("filter", &View::DepthOfFieldOptions::filter)

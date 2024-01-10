@@ -162,7 +162,7 @@ public:
             FrameGraphId<FrameGraphTexture> depth,
             const CameraInfo& cameraInfo,
             bool translucent,
-            float bokehAspectRatio,
+            math::float2 bokehScale,
             const DepthOfFieldOptions& dofOptions) noexcept;
 
     // Bloom

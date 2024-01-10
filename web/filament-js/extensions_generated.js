@@ -60,6 +60,7 @@ Filament.loadGeneratedExtensions = function() {
     Filament.View.prototype.setDepthOfFieldOptionsDefaults = function(overrides) {
         const options = {
             cocScale: 1.0,
+            cocAspectRatio: 1.0,
             maxApertureDiameter: 0.01,
             enabled: false,
             filter: Filament.View$DepthOfFieldOptions$Filter.MEDIAN,
