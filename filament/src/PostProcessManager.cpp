@@ -1683,8 +1683,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
     // we assume the width/height is already multiple of 16
     assert_invariant(!(colorDesc.width  & 0xF) && !(colorDesc.height & 0xF));
-    const uint32_t tileBufferWidth  = colorDesc.width  / dofResolution;
-    const uint32_t tileBufferHeight = colorDesc.height / dofResolution;
+    const uint32_t tileBufferWidth  = width;
+    const uint32_t tileBufferHeight = height;
     const size_t tileReductionCount = ctz(tileSize / dofResolution);
 
     struct PostProcessDofTiling1 {
@@ -2618,6 +2618,7 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(
         }
     };
 
+    setConstantParameter(ma, "upscaling", taaOptions.upscaling);
     setConstantParameter(ma, "historyReprojection", taaOptions.historyReprojection);
     setConstantParameter(ma, "filterHistory", taaOptions.filterHistory);
     setConstantParameter(ma, "filterInput", taaOptions.filterInput);
