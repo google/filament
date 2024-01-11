@@ -36,6 +36,11 @@ material {
     constants : [
         {
             type : bool,
+            name : upscaling,
+            default : false
+        },
+        {
+            type : bool,
             name : historyReprojection,
             default : true
         },
@@ -267,24 +272,34 @@ void postProcess(inout PostProcessInputs postProcess) {
     }
 
     vec2 subPixelOffset = p - uv.xy;  // +/- [0.25, 0.25]
-    float confidence = 0.0;
+    float confidence = materialConstants_upscaling ? 0.0 : 1.0;
 
     vec4 filtered = color;
+
     if (materialConstants_filterInput) {
         // unjitter/filter input
         // figure out which set of coeficients to use
-        int jxp = subPixelOffset.y > 0.0 ? 3 : 0;
-        int jxn = subPixelOffset.y > 0.0 ? 2 : 1;
-        int j   = subPixelOffset.x > 0.0 ? jxp : jxn;
         filtered = vec4(0, 0, 0, color.a);
-        for (int i = 0; i < 9; i++) {
-            float w = materialParams.filterWeights[i][j];
-            filtered.rgb += s[i] * w;
-            confidence = max(confidence, w);
+        if (materialConstants_upscaling) {
+            int jxp = subPixelOffset.y > 0.0 ? 3 : 0;
+            int jxn = subPixelOffset.y > 0.0 ? 2 : 1;
+            int j   = subPixelOffset.x > 0.0 ? jxp : jxn;
+            for (int i = 0; i < 9; i++) {
+                float w = materialParams.filterWeights[i][j];
+                filtered.rgb += s[i] * w;
+                confidence = max(confidence, w);
+            }
+        } else {
+            for (int i = 0; i < 9; i++) {
+                float w = materialParams.filterWeights[i][0];
+                filtered.rgb += s[i] * w;
+            }
         }
     } else {
-        confidence = float(materialParams.jitter.x * subPixelOffset.x > 0.0 &&
-                           materialParams.jitter.y * subPixelOffset.y > 0.0);
+        if (materialConstants_upscaling) {
+            confidence = float(materialParams.jitter.x * subPixelOffset.x > 0.0 &&
+                               materialParams.jitter.y * subPixelOffset.y > 0.0);
+        }
     }
 
     // build the history clamping box
