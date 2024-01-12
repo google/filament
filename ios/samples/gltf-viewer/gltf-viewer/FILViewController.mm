@@ -47,6 +47,9 @@ const float kToastDelayDuration = 2.0f;
 - (void)createRenderables;
 - (void)createLights;
 
+- (void)appWillResignActive:(NSNotification*)notification;
+- (void)appDidBecomeActive:(NSNotification*)notification;
+
 @end
 
 @implementation FILViewController {
@@ -72,6 +75,16 @@ const float kToastDelayDuration = 2.0f;
     [super viewDidLoad];
 
     self.title = @"https://google.github.io/filament/remote";
+
+    // Observe lifecycle notifications to prevent us from rendering in the background.
+    [NSNotificationCenter.defaultCenter addObserver:self
+                                           selector:@selector(appWillResignActive:)
+                                               name:UIApplicationWillResignActiveNotification
+                                             object:nil];
+    [NSNotificationCenter.defaultCenter addObserver:self
+                                           selector:@selector(appDidBecomeActive:)
+                                               name:UIApplicationDidBecomeActiveNotification
+                                             object:nil];
 
     // Arguments:
     // --model <path>
@@ -123,6 +136,14 @@ const float kToastDelayDuration = 2.0f;
     _toastLabel.text = @"";
     _toastLabel.alpha = 0.0f;
     [self.view addSubview:_toastLabel];
+}
+
+- (void)appWillResignActive:(NSNotification*)notification {
+    [self stopDisplayLink];
+}
+
+- (void)appDidBecomeActive:(NSNotification*)notification {
+    [self startDisplayLink];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -330,6 +351,7 @@ const float kToastDelayDuration = 2.0f;
 }
 
 - (void)dealloc {
+    [NSNotificationCenter.defaultCenter removeObserver:self];
     delete _server;
     delete _automation;
     self.modelView.engine->destroy(_indirectLight);
