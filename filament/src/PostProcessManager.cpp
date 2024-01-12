@@ -64,6 +64,7 @@
 #include <math/mat3.h>
 #include <math/mat4.h>
 #include <math/scalar.h>
+#include <math/vec2.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
 
@@ -74,6 +75,7 @@
 #include <utils/FixedCapacityVector.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 #include <string_view>
@@ -201,38 +203,33 @@ FMaterialInstance* PostProcessManager::PostProcessMaterial::getMaterialInstance(
 
 // ------------------------------------------------------------------------------------------------
 
-const PostProcessManager::JitterSequence<4> PostProcessManager::sRGSS4 = {{
+const PostProcessManager::JitterSequence<4> PostProcessManager::sRGSS4 = {{{
         { 0.625f, 0.125f },
         { 0.125f, 0.375f },
         { 0.875f, 0.625f },
         { 0.375f, 0.875f }
-}};
+}}};
 
-const PostProcessManager::JitterSequence<4> PostProcessManager::sUniformHelix4 = {{
+const PostProcessManager::JitterSequence<4> PostProcessManager::sUniformHelix4 = {{{
         { 0.25f, 0.25f },
         { 0.75f, 0.75f },
         { 0.25f, 0.75f },
         { 0.75f, 0.25f },
-}};
+}}};
 
-const PostProcessManager::JitterSequence<16> PostProcessManager::sHaltonSamples = {{
-        { filament::halton( 0, 2), filament::halton( 0, 3) },
-        { filament::halton( 1, 2), filament::halton( 1, 3) },
-        { filament::halton( 2, 2), filament::halton( 2, 3) },
-        { filament::halton( 3, 2), filament::halton( 3, 3) },
-        { filament::halton( 4, 2), filament::halton( 4, 3) },
-        { filament::halton( 5, 2), filament::halton( 5, 3) },
-        { filament::halton( 6, 2), filament::halton( 6, 3) },
-        { filament::halton( 7, 2), filament::halton( 7, 3) },
-        { filament::halton( 8, 2), filament::halton( 8, 3) },
-        { filament::halton( 9, 2), filament::halton( 9, 3) },
-        { filament::halton(10, 2), filament::halton(10, 3) },
-        { filament::halton(11, 2), filament::halton(11, 3) },
-        { filament::halton(12, 2), filament::halton(12, 3) },
-        { filament::halton(13, 2), filament::halton(13, 3) },
-        { filament::halton(14, 2), filament::halton(14, 3) },
-        { filament::halton(15, 2), filament::halton(15, 3) }
-}};
+template<size_t COUNT>
+constexpr auto halton() {
+    std::array<float2, COUNT> h;
+    for (size_t i = 0; i < COUNT; i++) {
+        h[i] = {
+                filament::halton(i, 2),
+                filament::halton(i, 3) };
+    }
+    return h;
+}
+
+const PostProcessManager::JitterSequence<32>
+        PostProcessManager::sHaltonSamples = { halton<32>() };
 
 PostProcessManager::PostProcessManager(FEngine& engine) noexcept
         : mEngine(engine),
@@ -2569,6 +2566,8 @@ void PostProcessManager::prepareTaa(FrameGraph& fg,
             case JitterPattern::HALTON_23_X8:
                 return sHaltonSamples(frameIndex % 8);
             case JitterPattern::HALTON_23_X16:
+                return sHaltonSamples(frameIndex % 16);
+            case JitterPattern::HALTON_23_X32:
                 return sHaltonSamples(frameIndex);
         }
     };

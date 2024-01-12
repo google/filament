@@ -457,7 +457,8 @@ struct TemporalAntiAliasingOptions {
         RGSS_X4,             //!  4-samples, rotated grid sampling
         UNIFORM_HELIX_X4,    //!  4-samples, uniform grid in helix sequence
         HALTON_23_X8,        //!  8-samples of halton 2,3
-        HALTON_23_X16        //! 16-samples of halton 2,3
+        HALTON_23_X16,       //! 16-samples of halton 2,3
+        HALTON_23_X32        //! 32-samples of halton 2,3
     };
 
     bool filterHistory = true;      //!< whether to filter the history buffer

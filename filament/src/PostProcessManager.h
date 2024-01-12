@@ -36,6 +36,7 @@
 
 #include <tsl/robin_map.h>
 
+#include <array>
 #include <random>
 #include <string_view>
 #include <variant>
@@ -362,12 +363,12 @@ private:
     template<size_t SIZE>
     struct JitterSequence {
         auto operator()(size_t i) const noexcept { return positions[i % SIZE] - 0.5f; }
-        const math::float2 positions[SIZE];
+        const std::array<math::float2, SIZE> positions;
     };
 
     static const JitterSequence<4> sRGSS4;
     static const JitterSequence<4> sUniformHelix4;
-    static const JitterSequence<16> sHaltonSamples;
+    static const JitterSequence<32> sHaltonSamples;
 
     bool mWorkaroundSplitEasu : 1;
     bool mWorkaroundAllowReadOnlyAncillaryFeedbackLoop : 1;
