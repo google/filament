@@ -702,9 +702,12 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
         optimizer.RegisterPass(std::move(pass));
     };
 
+    if (config.targetApi == MaterialBuilder::TargetApi::METAL) {
+        return;
+    }
+
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
-    RegisterPass(CreateMergeReturnPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateInlineExhaustivePass());
     RegisterPass(CreateEliminateDeadFunctionsPass());
     RegisterPass(CreatePrivateToLocalPass());
@@ -713,11 +716,9 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
     RegisterPass(CreateCCPPass());
     RegisterPass(CreateLoopUnrollPass(true));
     RegisterPass(CreateDeadBranchElimPass());
-    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateScalarReplacementPass(0));
     RegisterPass(CreateLocalSingleStoreElimPass());
     RegisterPass(CreateIfConversionPass());
-    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreateDeadBranchElimPass());
     RegisterPass(CreateBlockMergePass());
@@ -733,7 +734,6 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
     RegisterPass(CreateBlockMergePass());
     RegisterPass(CreateLocalMultiStoreElimPass());
     RegisterPass(CreateRedundancyEliminationPass());
-    RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreateCFGCleanupPass());
 }
