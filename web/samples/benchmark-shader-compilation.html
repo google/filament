@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Shader Compilation Benchmark</title>
+    <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
+    <style>
+      body { margin: 0; overflow: hidden; }
+      canvas { touch-action: none; width: 100%; height: 100%; }
+      .frame-time { position: absolute; color: #ffffff;  }
+    </style>
+  </head>
+  <body>
+    <div class="frame-time">
+      Average Frame Time: <span id="frame-time-counter">Calculating...</span>
+    </div>
+    <canvas></canvas>
+    <script src="filament.js"></script>
+    <script src="gl-matrix-min.js"></script>
+    <script src="benchmark-shader-compilation.js"></script>
+  </body>
+</html>

@@ -203,7 +203,9 @@ set(HTML_FILES
     skinning.html
     suzanne.html
     test-filament-viewer.html
-    triangle.html)
+    triangle.html
+    benchmark-shader-compilation.html
+    benchmark-shader-compilation.js)
 
 set(ASSET_FILES
     assets/favicon.png)
