@@ -666,7 +666,6 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 
     // Combine all terms
     // Note: iblLuminance is already premultiplied by the exposure
-
     color.rgb += Fr + Fd;
 #if defined(MATERIAL_HAS_REFRACTION)
     color.rgb += Ft;

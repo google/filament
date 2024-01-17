@@ -8,8 +8,6 @@ material {
     flipUV : false,
     specularAmbientOcclusion : simple,
     specularAntiAliasing : true,
-    refractionMode: screenspace,
-    refractionType: thin,
     reflections: screenspace,
     parameters : [
 
@@ -46,7 +44,7 @@ material {
         { type : mat3, name : emissiveUvMatrix, precision: high },
 
         // KHR_materials_specular
-        { type : float, name : specularFactor },
+        { type : float, name : specularStrength },
         { type : float3, name : specularColorFactor },
         { type : int, name : specularIndex },
         { type : sampler2d, name : specularMap },
@@ -95,11 +93,12 @@ void material(inout MaterialInputs material) {
 
     material.roughness = materialParams.roughnessFactor;
     material.metallic = materialParams.metallicFactor;
-    material.specularFactor = materialParams.specularFactor;
-    material.specularColorFactor = materialParams.specularColorFactor;
 
     material.emissive = vec4(materialParams.emissiveStrength *
                              materialParams.emissiveFactor.rgb, 0.0);
+
+    material.specularFactor = materialParams.specularStrength;
+    material.specularColorFactor = materialParams.specularColorFactor;
 
     if (materialParams.specularIndex > -1) {
         highp float2 uv = uvs[materialParams.specularIndex];

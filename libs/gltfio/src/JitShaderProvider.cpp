@@ -311,7 +311,7 @@ std::string shaderFromKey(const MaterialKey& config) {
 
         if (config.hasSpecular) {
             shader += R"SHADER(
-                material.specularFactor = materialParams.specularFactor;
+                material.specularFactor = materialParams.specularStrength;
                 material.specularColorFactor = materialParams.specularColorFactor;
             )SHADER";
 
@@ -492,7 +492,7 @@ Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap&
 
     // SPECULAR
     if (config.hasSpecular) {
-        builder.parameter("specularFactor", MaterialBuilder::UniformType::FLOAT);
+        builder.parameter("specularStrength", MaterialBuilder::UniformType::FLOAT);
         builder.parameter("specularColorFactor", MaterialBuilder::UniformType::FLOAT3);
         if (config.hasSpecularTexture) {
             builder.parameter("specularMap", MaterialBuilder::SamplerType::SAMPLER_2D);

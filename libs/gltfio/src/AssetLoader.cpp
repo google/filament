@@ -1546,7 +1546,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     if (matkey.hasSpecular) {
         const float* s = spConfig.specular_color_factor;
         mi->setParameter("specularColorFactor", float3{s[0], s[1], s[2]});
-        mi->setParameter("specularFactor", spConfig.specular_factor);
+        mi->setParameter("specularStrength", spConfig.specular_factor);
 
         if (matkey.hasSpecularColorTexture) {
             fAsset->addTextureBinding(mi, "specularColorMap", spConfig.specular_color_texture.texture, sRGB);

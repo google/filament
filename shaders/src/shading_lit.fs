@@ -84,8 +84,8 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
     dielectricSpecularF0 *= material.specularFactor;
     dielectricSpecularF90 = material.specularFactor;
 #endif
-    pixel.f0 = baseColor.rgb * material.metallic + (dielectricSpecularF0 * (1.0 - material.metallic));
-    pixel.f90 = 1.0 * material.metallic + (dielectricSpecularF90 * (1.0 - material.metallic));
+    pixel.f0 = baseColor.rgb * material.metallic + dielectricSpecularF0 * (1.0 - material.metallic);
+    pixel.f90 = 1.0 * material.metallic + dielectricSpecularF90 * (1.0 - material.metallic);
 #endif
 #else
     pixel.diffuseColor = baseColor.rgb;
@@ -253,13 +253,13 @@ void getEnergyCompensationPixelParams(inout PixelParams pixel) {
  * testing fails.
  */
 void getPixelParams(const MaterialInputs material, out PixelParams pixel) {
+    getSpecularPixelParams(material, pixel);
     getCommonPixelParams(material, pixel);
     getSheenPixelParams(material, pixel);
     getClearCoatPixelParams(material, pixel);
     getRoughnessPixelParams(material, pixel);
     getSubsurfacePixelParams(material, pixel);
     getAnisotropyPixelParams(material, pixel);
-    getSpecularPixelParams(material, pixel);
     getEnergyCompensationPixelParams(pixel);
 }
 
