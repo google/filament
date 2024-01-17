@@ -115,6 +115,14 @@ void material(inout MaterialInputs material) {
         material.specularColorFactor.b *= sc.b;
     }
 
+    if (materialParams.metallicRoughnessIndex > -1) {
+        highp float2 uv = uvs[materialParams.metallicRoughnessIndex];
+        uv = (vec3(uv, 1.0) * materialParams.metallicRoughnessUvMatrix).xy;
+        vec4 mr = texture(materialParams_metallicRoughnessMap, uv);
+        material.roughness *= mr.g;
+        material.metallic *= mr.b;
+    }
+
     if (materialParams.aoIndex > -1) {
         highp float2 uv = uvs[materialParams.aoIndex];
         uv = (vec3(uv, 1.0) * materialParams.occlusionUvMatrix).xy;
