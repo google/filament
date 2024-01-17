@@ -22,6 +22,8 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include <cstdint>
+
 namespace utils {
 
 bool Path::mkdir() const {
