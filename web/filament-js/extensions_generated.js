@@ -141,6 +141,7 @@ Filament.loadGeneratedExtensions = function() {
             filterWidth: 1.0,
             feedback: 0.12,
             lodBias: -1.0,
+            sharpness: 0.0,
             enabled: false,
             upscaling: false,
             filterHistory: true,

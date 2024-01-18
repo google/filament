@@ -242,6 +242,13 @@ public:
             filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
             backend::SamplerMagFilter filter) noexcept;
 
+    FrameGraphId<FrameGraphTexture> rcas(
+            FrameGraph& fg,
+            float sharpness,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphTexture::Descriptor const& outDesc,
+            bool translucent);
+
     // upscale/downscale blitter using shaders
     FrameGraphId<FrameGraphTexture> blit(FrameGraph& fg, bool translucent,
             FrameGraphId<FrameGraphTexture> input,

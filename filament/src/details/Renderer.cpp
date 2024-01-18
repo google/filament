@@ -985,8 +985,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     auto& history = view.getFrameHistory();
                     auto& current = history.getCurrent();
                     current.ssr.projection = projection;
-                    resources.detach(data.history,
-                            &current.ssr.color, &current.ssr.desc);
+                    resources.detach(data.history, &current.ssr.color, &current.ssr.desc);
                 });
     }
 
