@@ -313,11 +313,13 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
         mi->setParameter("transmissionMap", mDummyTexture, sampler);
     }
 
-    if (needsTexture("SheenColorTexture")) {
+    if (needsTexture("SheenColorTexture") &&
+        !config->hasSpecularColorTexture) {
         mi->setParameter("sheenColorMap", mDummyTexture, sampler);
     }
 
-    if (needsTexture("SheenRoughnessTexture")) {
+    if (needsTexture("SheenRoughnessTexture") &&
+        !config->hasSpecularColorTexture) {
         mi->setParameter("sheenRoughnessMap", mDummyTexture, sampler);
     }
 
