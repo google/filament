@@ -19,7 +19,6 @@
 #endif
 
 #define saturate(x)        clamp(x, 0.0, 1.0)
-#define atan2(x, y)        atan(y, x)
 
 //------------------------------------------------------------------------------
 // Scalar operations
