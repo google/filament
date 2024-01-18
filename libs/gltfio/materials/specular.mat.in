@@ -8,6 +8,7 @@ material {
     flipUV : false,
     specularAmbientOcclusion : simple,
     specularAntiAliasing : true,
+    clearCoatIorChange : false,
     reflections: screenspace,
     parameters : [
 
@@ -43,6 +44,20 @@ material {
         { type : sampler2d, name : emissiveMap },
         { type : mat3, name : emissiveUvMatrix, precision: high },
 
+        // Clear coat, we drop texture support for clear coat due to 8 texture limits.
+        { type : float, name : clearCoatFactor },
+        { type : float, name : clearCoatRoughnessFactor },
+        { type : int, name : clearCoatIndex },
+        //{ type : sampler2d, name : clearCoatMap },
+        { type : mat3, name : clearCoatUvMatrix, precision: high },
+        { type : int, name : clearCoatRoughnessIndex },
+        //{ type : sampler2d, name : clearCoatRoughnessMap },
+        { type : mat3, name : clearCoatRoughnessUvMatrix, precision: high },
+        { type : int, name : clearCoatNormalIndex },
+        //{ type : sampler2d, name : clearCoatNormalMap },
+        { type : mat3, name : clearCoatNormalUvMatrix, precision: high },
+        { type : float, name : clearCoatNormalScale },
+
         // KHR_materials_specular
         { type : float, name : specularStrength },
         { type : float3, name : specularColorFactor },
@@ -51,7 +66,10 @@ material {
         { type : mat3, name : specularUvMatrix, precision: high },
         { type : int, name : specularColorIndex },
         { type : sampler2d, name : specularColorMap },
-        { type : mat3, name : specularColorUvMatrix, precision: high }
+        { type : mat3, name : specularColorUvMatrix, precision: high },
+
+        // IOR
+        { type : float, name : ior }
 
         ${CUSTOM_PARAMS}
     ],
@@ -93,9 +111,15 @@ void material(inout MaterialInputs material) {
 
     material.roughness = materialParams.roughnessFactor;
     material.metallic = materialParams.metallicFactor;
+    material.ior = materialParams.ior;
 
     material.emissive = vec4(materialParams.emissiveStrength *
                              materialParams.emissiveFactor.rgb, 0.0);
+
+    // KHR_materials_clearcoat forbids clear coat from
+    // being applied in the specular/glossiness model
+    material.clearCoat = materialParams.clearCoatFactor;
+    material.clearCoatRoughness = materialParams.clearCoatRoughnessFactor;
 
     material.specularFactor = materialParams.specularStrength;
     material.specularColorFactor = materialParams.specularColorFactor;

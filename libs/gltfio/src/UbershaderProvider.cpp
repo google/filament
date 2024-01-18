@@ -290,15 +290,18 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
         return iter != features.end() && iter.value() != ArchiveFeature::UNSUPPORTED;
     };
 
-    if (needsTexture("ClearCoatTexture")) {
+    if (needsTexture("ClearCoatTexture") &&
+        !config->hasSpecular && !config->hasSpecularTexture) {
         mi->setParameter("clearCoatMap", mDummyTexture, sampler);
     }
 
-    if (needsTexture("ClearCoatRoughnessTexture")) {
+    if (needsTexture("ClearCoatRoughnessTexture") &&
+        !config->hasSpecular && !config->hasSpecularTexture) {
         mi->setParameter("clearCoatRoughnessMap", mDummyTexture, sampler);
     }
 
-    if (needsTexture("ClearCoatNormalTexture")) {
+    if (needsTexture("ClearCoatNormalTexture") &&
+        !config->hasSpecular && !config->hasSpecularTexture) {
         mi->setParameter("clearCoatNormalMap", mDummyTexture, sampler);
     }
 
