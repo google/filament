@@ -9,3 +9,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 ## Release notes for next branch cut
 
 - Metal: fix some shader artifacts by disabling fast math optimizations.
+- backend: remove `atan2` overload which had a typo and wasn't useful. Fixes b/320856413.
