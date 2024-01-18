@@ -1941,6 +1941,10 @@ public class View {
          */
         public float lodBias = -1.0f;
         /**
+         * post-TAA sharpen, especially useful when upscaling is true.
+         */
+        public float sharpness = 0.0f;
+        /**
          * enables or disables temporal anti-aliasing
          */
         public boolean enabled = false;

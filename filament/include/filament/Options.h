@@ -438,6 +438,7 @@ struct TemporalAntiAliasingOptions {
     float filterWidth = 1.0f;   //!< reconstruction filter width typically between 0.2 (sharper, aliased) and 1.5 (smoother)
     float feedback = 0.12f;     //!< history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA).
     float lodBias = -1.0f;      //!< texturing lod bias (typically -1 or -2)
+    float sharpness = 0.0f;     //!< post-TAA sharpen, especially useful when upscaling is true.
     bool enabled = false;       //!< enables or disables temporal anti-aliasing
     bool upscaling = false;     //!< 4x TAA upscaling. Disables Dynamic Resolution. [BETA]
 

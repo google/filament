@@ -1685,6 +1685,10 @@ export interface View$TemporalAntiAliasingOptions {
      */
     lodBias?: number;
     /**
+     * post-TAA sharpen, especially useful when upscaling is true.
+     */
+    sharpness?: number;
+    /**
      * enables or disables temporal anti-aliasing
      */
     enabled?: boolean;

@@ -121,6 +121,7 @@ value_object<View::TemporalAntiAliasingOptions>("View$TemporalAntiAliasingOption
     .field("filterWidth", &View::TemporalAntiAliasingOptions::filterWidth)
     .field("feedback", &View::TemporalAntiAliasingOptions::feedback)
     .field("lodBias", &View::TemporalAntiAliasingOptions::lodBias)
+    .field("sharpness", &View::TemporalAntiAliasingOptions::sharpness)
     .field("enabled", &View::TemporalAntiAliasingOptions::enabled)
     .field("upscaling", &View::TemporalAntiAliasingOptions::upscaling)
     .field("filterHistory", &View::TemporalAntiAliasingOptions::filterHistory)

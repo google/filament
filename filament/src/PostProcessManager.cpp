@@ -115,7 +115,7 @@ PostProcessManager::PostProcessMaterial::PostProcessMaterial() noexcept {
 }
 
 PostProcessManager::PostProcessMaterial::PostProcessMaterial(MaterialInfo const& info) noexcept
-    : PostProcessMaterial() {
+        : PostProcessMaterial() {
     mData = info.data; // aliased to mMaterial
     mSize = info.size;
     mConstants = info.constants;
@@ -167,7 +167,7 @@ void PostProcessManager::PostProcessMaterial::loadMaterial(FEngine& engine) cons
     mHasMaterial = true;
     auto builder = Material::Builder();
     builder.package(mData, mSize);
-    for (auto const& constant : mConstants) {
+    for (auto const& constant: mConstants) {
         std::visit([&](auto&& arg) {
             builder.constant(constant.name.data(), constant.name.size(), arg);
         }, constant.value);
@@ -189,14 +189,15 @@ PipelineState PostProcessManager::PostProcessMaterial::getPipelineState(
     FMaterial* const material = getMaterial(engine);
     material->prepareProgram(Variant{ variantKey });
     return {
-            .program = material->getProgram(Variant{variantKey}),
+            .program = material->getProgram(Variant{ variantKey }),
             .rasterState = material->getRasterState(),
             .scissor = material->getDefaultInstance()->getScissor()
     };
 }
 
 UTILS_NOINLINE
-FMaterialInstance* PostProcessManager::PostProcessMaterial::getMaterialInstance(FEngine& engine) const noexcept {
+FMaterialInstance* PostProcessManager::PostProcessMaterial::getMaterialInstance(
+        FEngine& engine) const noexcept {
     FMaterial* const material = getMaterial(engine);
     return material->getDefaultInstance();
 }
@@ -233,14 +234,15 @@ const PostProcessManager::JitterSequence<32>
 
 PostProcessManager::PostProcessManager(FEngine& engine) noexcept
         : mEngine(engine),
-         mWorkaroundSplitEasu(false),
-         mWorkaroundAllowReadOnlyAncillaryFeedbackLoop(false) {
+          mWorkaroundSplitEasu(false),
+          mWorkaroundAllowReadOnlyAncillaryFeedbackLoop(false) {
 }
 
 PostProcessManager::~PostProcessManager() noexcept = default;
 
 UTILS_NOINLINE
-void PostProcessManager::registerPostProcessMaterial(std::string_view name, MaterialInfo const& info) {
+void PostProcessManager::registerPostProcessMaterial(std::string_view name,
+        MaterialInfo const& info) {
     mMaterialRegistry.try_emplace(name, info);
 }
 
@@ -323,13 +325,13 @@ void PostProcessManager::init() noexcept {
             driver.isWorkaroundNeeded(Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP);
 
     #pragma nounroll
-    for (auto const& info : sMaterialListFeatureLevel0) {
+    for (auto const& info: sMaterialListFeatureLevel0) {
         registerPostProcessMaterial(info.name, info);
     }
 
     if (mEngine.getActiveFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1) {
         #pragma nounroll
-        for (auto const& info : sMaterialList) {
+        for (auto const& info: sMaterialList) {
             registerPostProcessMaterial(info.name, info);
         }
     }
@@ -2767,24 +2769,77 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
             });
 
     input = colorGradingConfig.asSubpass ? taaPass->tonemappedOutput : taaPass->output;
+    auto history = input;
+
+    // optional sharpen pass from FSR1
+    if (taaOptions.sharpness > 0.0f) {
+        input = rcas(fg, taaOptions.sharpness,
+                input, fg.getDescriptor(input), colorGradingConfig.translucent);
+    }
 
     struct ExportColorHistoryData {
         FrameGraphId<FrameGraphTexture> color;
     };
-    auto& exportHistoryPass = fg.addPass<ExportColorHistoryData>("Export TAA history",
+    fg.addPass<ExportColorHistoryData>("Export TAA history",
             [&](FrameGraph::Builder& builder, auto& data) {
                 // We need to use sideEffect here to ensure this pass won't be culled.
                 // The "output" of this pass is going to be used during the next frame as
                 // an "import".
                 builder.sideEffect();
-                data.color = builder.sample(input); // FIXME: an access must be declared for detach(), why?
-            }, [&current](FrameGraphResources const& resources, auto const& data,
-                    backend::DriverApi&) {
-                resources.detach(data.color,
-                        &current.color, &current.desc);
+                data.color = builder.sample(history); // FIXME: an access must be declared for detach(), why?
+            }, [&current](FrameGraphResources const& resources, auto const& data, auto&) {
+                resources.detach(data.color, &current.color, &current.desc);
             });
 
-    return exportHistoryPass->color;
+    return input;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
+        FrameGraph& fg,
+        float sharpness,
+        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphTexture::Descriptor const& outDesc,
+        bool translucent) {
+
+    struct QuadBlitData {
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> output;
+    };
+
+    auto& ppFsrRcas = fg.addPass<QuadBlitData>("FidelityFX FSR1 Rcas",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.input = builder.sample(input);
+                data.input = builder.createTexture("FFX FSR1 Rcas output", outDesc);
+                data.input = builder.declareRenderPass(data.input);
+            },
+            [=](FrameGraphResources const& resources,
+                    auto const& data, DriverApi& driver) {
+
+                auto input = resources.getTexture(data.input);
+                auto out = resources.getRenderPassInfo();
+                auto const& outputDesc = resources.getDescriptor(data.input);
+
+                auto& material = getPostProcessMaterial("fsr_rcas");
+                FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
+
+                FSRUniforms uniforms;
+                FSR_SharpeningSetup(&uniforms, { .sharpness = 2.0f - 2.0f * sharpness });
+                mi->setParameter("RcasCon", uniforms.RcasCon);
+                mi->setParameter("color", input, {}); // uses texelFetch
+                mi->setParameter("resolution", float4{
+                        outputDesc.width, outputDesc.height,
+                        1.0f / outputDesc.width, 1.0f / outputDesc.height });
+                mi->commit(driver);
+                mi->use(driver);
+
+                const uint8_t variant = uint8_t(
+                        translucent ? PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
+
+                PipelineState const pipeline(material.getPipelineState(mEngine, variant));
+                render(out, pipeline, driver);
+            });
+
+    return ppFsrRcas->output;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool translucent,
@@ -2947,41 +3002,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
     auto output = ppQuadBlit->output;
 
     // if we had to take the low quality fallback, we still do the "sharpen pass"
-    if (dsrOptions.sharpness > 0.0f && (dsrOptions.quality != QualityLevel::LOW || lowQualityFallback)) {
-        auto& ppFsrRcas = fg.addPass<QuadBlitData>("FidelityFX FSR1 Rcas",
-                [&](FrameGraph::Builder& builder, auto& data) {
-                    data.input = builder.sample(output);
-                    data.output = builder.createTexture("FFX FSR1 Rcas output", outDesc);
-                    data.output = builder.declareRenderPass(data.output);
-                },
-                [=](FrameGraphResources const& resources,
-                        auto const& data, DriverApi& driver) {
-
-                    auto color = resources.getTexture(data.input);
-                    auto out = resources.getRenderPassInfo();
-                    auto const& outputDesc = resources.getDescriptor(data.output);
-
-                    auto& material = getPostProcessMaterial("fsr_rcas");
-                    FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
-
-                    FSRUniforms uniforms;
-                    FSR_SharpeningSetup(&uniforms, { .sharpness = 2.0f - 2.0f * dsrOptions.sharpness });
-                    mi->setParameter("RcasCon", uniforms.RcasCon);
-                    mi->setParameter("color", color, { }); // uses texelFetch
-                    mi->setParameter("resolution", float4{
-                            outputDesc.width, outputDesc.height,
-                            1.0f / outputDesc.width, 1.0f / outputDesc.height });
-                    mi->commit(driver);
-                    mi->use(driver);
-
-                    const uint8_t variant = uint8_t(translucent ?
-                            PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
-
-                    PipelineState const pipeline(material.getPipelineState(mEngine, variant));
-                    render(out, pipeline, driver);
-                });
-
-        output = ppFsrRcas->output;
+    if (dsrOptions.sharpness > 0.0f &&
+            (dsrOptions.quality != QualityLevel::LOW || lowQualityFallback)) {
+        output = rcas(fg, dsrOptions.sharpness, output, outDesc, translucent);
     }
 
     // we rely on automatic culling of unused render passes
