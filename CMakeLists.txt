@@ -23,6 +23,8 @@ option(FILAMENT_USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenG
 
 option(FILAMENT_USE_SWIFTSHADER "Compile Filament against SwiftShader" OFF)
 
+option(FILAMENT_USE_MULTIVIEW_STEREO "Compile Filament against multiview extension for stereo rendering; This disables instanced stereo" OFF)
+
 option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
 
 option(FILAMENT_SKIP_SAMPLES "Don't build samples" OFF)
@@ -529,6 +531,11 @@ if (CMAKE_BUILD_TYPE MATCHES Release)
     option(FILAMENT_DISABLE_MATOPT "Disable material optimizations" OFF)
 else()
     option(FILAMENT_DISABLE_MATOPT "Disable material optimizations" ON)
+endif()
+
+# Build Filament with multiview extension for stereo rendering. This disables the instanced stereo implementation.
+if (FILAMENT_USE_MULTIVIEW_STEREO)
+  add_definitions(-DFILAMENT_USE_MULTIVIEW_STEREO)
 endif()
 
 # ==================================================================================================
