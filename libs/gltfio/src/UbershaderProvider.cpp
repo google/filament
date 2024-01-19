@@ -77,6 +77,21 @@ static void prepareConfig(MaterialKey* config, const char* label) {
 
         config->unlit = false;
     }
+
+    // Also due to sampler overload, clearcoat with specular, we can only support with specular map.
+    if ((config->hasClearCoatNormalTexture || config->hasClearCoatRoughnessTexture) && config->hasSpecular) {
+        slog.w << "Specular can only work with clearcoat that does not use clear coat normal or clear coat roughness map,"
+                  " removing clear coat normal and roughness (" << label << ")." << io::endl;
+        config->hasClearCoatNormalTexture = false;
+        config->hasClearCoatRoughnessTexture = false;
+    }
+
+    // Also due to sampler overload, sheen with specular, we can only support without specular color texture.
+    if (config->hasSpecularColorTexture && config->hasSheen) {
+        slog.w << "Sheen can only work with specular that does not use specular color map,"
+                  " removing specular color (" << label << ")." << io::endl;
+        config->hasSpecularColorTexture = false;
+    }
 }
 
 class UbershaderProvider : public MaterialProvider {
@@ -290,18 +305,15 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
         return iter != features.end() && iter.value() != ArchiveFeature::UNSUPPORTED;
     };
 
-    if (needsTexture("ClearCoatTexture") &&
-        !config->hasSpecular && !config->hasSpecularTexture) {
+    if (needsTexture("ClearCoatTexture")) {
         mi->setParameter("clearCoatMap", mDummyTexture, sampler);
     }
 
-    if (needsTexture("ClearCoatRoughnessTexture") &&
-        !config->hasSpecular && !config->hasSpecularTexture) {
+    if (needsTexture("ClearCoatRoughnessTexture")) {
         mi->setParameter("clearCoatRoughnessMap", mDummyTexture, sampler);
     }
 
-    if (needsTexture("ClearCoatNormalTexture") &&
-        !config->hasSpecular && !config->hasSpecularTexture) {
+    if (needsTexture("ClearCoatNormalTexture")) {
         mi->setParameter("clearCoatNormalMap", mDummyTexture, sampler);
     }
 
@@ -313,13 +325,11 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
         mi->setParameter("transmissionMap", mDummyTexture, sampler);
     }
 
-    if (needsTexture("SheenColorTexture") &&
-        !config->hasSpecularColorTexture) {
+    if (needsTexture("SheenColorTexture")) {
         mi->setParameter("sheenColorMap", mDummyTexture, sampler);
     }
 
-    if (needsTexture("SheenRoughnessTexture") &&
-        !config->hasSpecularColorTexture) {
+    if (needsTexture("SheenRoughnessTexture")) {
         mi->setParameter("sheenRoughnessMap", mDummyTexture, sampler);
     }
 

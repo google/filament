@@ -48,13 +48,13 @@ material {
         { type : float, name : clearCoatFactor },
         { type : float, name : clearCoatRoughnessFactor },
         { type : int, name : clearCoatIndex },
-        //{ type : sampler2d, name : clearCoatMap },
+        { type : sampler2d, name : clearCoatMap },
         { type : mat3, name : clearCoatUvMatrix, precision: high },
         { type : int, name : clearCoatRoughnessIndex },
-        //{ type : sampler2d, name : clearCoatRoughnessMap },
+        //{ type : sampler2d, name : clearCoatRoughnessMap }, // due to 8 samplers limit, we need to drop the texture.
         { type : mat3, name : clearCoatRoughnessUvMatrix, precision: high },
         { type : int, name : clearCoatNormalIndex },
-        //{ type : sampler2d, name : clearCoatNormalMap },
+        //{ type : sampler2d, name : clearCoatNormalMap }, // due to 8 samplers limit, we need to drop the texture.
         { type : mat3, name : clearCoatNormalUvMatrix, precision: high },
         { type : float, name : clearCoatNormalScale },
 
@@ -120,6 +120,12 @@ void material(inout MaterialInputs material) {
     // being applied in the specular/glossiness model
     material.clearCoat = materialParams.clearCoatFactor;
     material.clearCoatRoughness = materialParams.clearCoatRoughnessFactor;
+
+    if (materialParams.clearCoatIndex > -1) {
+        highp float2 uv = uvs[materialParams.clearCoatIndex];
+        uv = (vec3(uv, 1.0) * materialParams.clearCoatUvMatrix).xy;
+        material.clearCoat *= texture(materialParams_clearCoatMap, uv).r;
+    }
 
     material.specularFactor = materialParams.specularStrength;
     material.specularColorFactor = materialParams.specularColorFactor;

@@ -11,16 +11,14 @@ EmissiveTexture=optional
 MetallicRoughnessTexture=optional
 TextureTransforms=optional
 
-# ClearCoat Features
-ClearCoat = optional
-ClearCoatTexture = optional
-ClearCoatRoughnessTexture = optional
-ClearCoatNormalTexture = optional
-
-# KHR_material_specular Features
+# KHR_materials_specular Features
 Specular=optional
 SpecularTexture=optional
 SpecularColorTexture=optional
+
+# ClearCoat Features
+ClearCoat = optional
+ClearCoatTexture = optional
 
 # Sheen Features
 Sheen = unsupported
