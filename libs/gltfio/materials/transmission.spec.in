@@ -15,7 +15,7 @@ EmissiveTexture=optional
 MetallicRoughnessTexture=optional
 TextureTransforms=optional
 
-# KHR_material_specular Features
+# KHR_materials_specular Features
 Specular=optional
 SpecularTexture=optional
 SpecularColorTexture=optional

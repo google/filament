@@ -92,6 +92,13 @@ static void prepareConfig(MaterialKey* config, const char* label) {
                   " removing specular color (" << label << ")." << io::endl;
         config->hasSpecularColorTexture = false;
     }
+
+    // Also due to sampler overload, volume with specular, we can only support without specular color texture.
+    if (config->hasSpecularColorTexture && config->hasVolume) {
+        slog.w << "Volume can only work with specular that does not use specular color map,"
+                  "removing specular color (" << label << ")." << io::endl;
+        config->hasSpecularColorTexture = false;
+    }
 }
 
 class UbershaderProvider : public MaterialProvider {
