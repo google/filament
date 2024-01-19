@@ -22,7 +22,6 @@
 #include <utils/debug.h>
 #include <utils/memalign.h>
 #include <utils/Mutex.h>
-#include <utils/SpinLock.h>
 
 #include <atomic>
 #include <cstddef>
@@ -478,7 +477,6 @@ struct NoLock {
     void unlock() noexcept { }
 };
 
-using SpinLock = utils::SpinLock;
 using Mutex = utils::Mutex;
 
 } // namespace LockingPolicy

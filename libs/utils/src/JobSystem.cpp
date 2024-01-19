@@ -293,7 +293,7 @@ void JobSystem::wakeOne() noexcept {
 }
 
 inline JobSystem::ThreadState& JobSystem::getState() noexcept {
-    std::lock_guard<utils::SpinLock> lock(mThreadMapLock);
+    std::lock_guard<utils::Mutex> lock(mThreadMapLock);
     auto iter = mThreadMap.find(std::this_thread::get_id());
     ASSERT_PRECONDITION(iter != mThreadMap.end(), "This thread has not been adopted.");
     return *iter->second;
@@ -585,7 +585,7 @@ void JobSystem::runAndWait(JobSystem::Job*& job) noexcept {
 void JobSystem::adopt() {
     const auto tid = std::this_thread::get_id();
 
-    std::unique_lock<utils::SpinLock> lock(mThreadMapLock);
+    std::unique_lock<utils::Mutex> lock(mThreadMapLock);
     auto iter = mThreadMap.find(tid);
     ThreadState* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
     lock.unlock();
@@ -618,7 +618,7 @@ void JobSystem::adopt() {
 
 void JobSystem::emancipate() {
     const auto tid = std::this_thread::get_id();
-    std::lock_guard<utils::SpinLock> lock(mThreadMapLock);
+    std::lock_guard<utils::Mutex> lock(mThreadMapLock);
     auto iter = mThreadMap.find(tid);
     ThreadState* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
     ASSERT_PRECONDITION(state, "this thread is not an adopted thread");
