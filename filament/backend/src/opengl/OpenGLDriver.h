@@ -400,6 +400,9 @@ private:
     // timer query implementation
     OpenGLTimerQueryInterface* mTimerQueryImpl = nullptr;
 
+    const Platform::DriverConfig mDriverConfig;
+    Platform::DriverConfig const& getDriverConfig() const noexcept { return mDriverConfig; }
+
     // for ES2 sRGB support
     GLSwapChain* mCurrentDrawSwapChain = nullptr;
     bool mRec709OutputColorspace = false;

@@ -41,18 +41,24 @@ public:
     struct Stream {};
 
     struct DriverConfig {
-        /*
-         * size of handle arena in bytes. Setting to 0 indicates default value is to be used.
+        /**
+         * Size of handle arena in bytes. Setting to 0 indicates default value is to be used.
          * Driver clamps to valid values.
          */
         size_t handleArenaSize = 0;
 
-        /*
-         * this number of most-recently destroyed textures will be tracked for use-after-free.
+        /**
+         * This number of most-recently destroyed textures will be tracked for use-after-free.
          * Throws an exception when a texture is freed but still bound to a SamplerGroup and used in
          * a draw call. 0 disables completely. Currently only respected by the Metal backend.
          */
         size_t textureUseAfterFreePoolSize = 0;
+
+        /**
+         * Set to `true` to forcibly disable parallel shader compilation in the backend.
+         * Currently only honored by the GL backend.
+         */
+        bool disableParallelShaderCompile = false;
     };
 
     Platform() noexcept;
