@@ -182,6 +182,10 @@ bool NoopDriver::isParallelShaderCompileSupported() {
     return false;
 }
 
+bool NoopDriver::isDepthStencilResolveSupported() {
+    return true;
+}
+
 bool NoopDriver::isWorkaroundNeeded(Workaround) {
     return false;
 }

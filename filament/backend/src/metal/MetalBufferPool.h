@@ -73,7 +73,10 @@ private:
     std::unordered_set<MetalBufferPoolEntry const*> mUsedStages;
 
     // Store the current "time" (really just a frame count) and LRU eviction parameters.
-    uint64_t mCurrentFrame = 0;
+    // An atomic is necessary as mCurrentFrame is incremented in gc() (called on
+    // the driver thread) and read from acquireBuffer() and releaseBuffer(),
+    // which may be called on non-driver threads.
+    std::atomic<uint64_t> mCurrentFrame = 0;
     static constexpr uint32_t TIME_BEFORE_EVICTION = 10;
 };
 

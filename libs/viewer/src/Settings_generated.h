@@ -75,6 +75,9 @@ std::ostream& operator<<(std::ostream& out, TemporalAntiAliasingOptions::BoxType
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAliasingOptions::BoxClipping* out);
 std::ostream& operator<<(std::ostream& out, TemporalAntiAliasingOptions::BoxClipping in);
 
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAliasingOptions::JitterPattern* out);
+std::ostream& operator<<(std::ostream& out, TemporalAntiAliasingOptions::JitterPattern in);
+
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAliasingOptions* out);
 std::ostream& operator<<(std::ostream& out, const TemporalAntiAliasingOptions& in);
 

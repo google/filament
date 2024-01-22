@@ -144,7 +144,7 @@ public class FilamentInstance {
      *
      * Ignored if variantIndex is out of bounds.
      */
-    void applyMaterialVariant(@IntRange(from = 0) int variantIndex) {
+    public void applyMaterialVariant(@IntRange(from = 0) int variantIndex) {
         nApplyMaterialVariant(mNativeObject, variantIndex);
     }
 

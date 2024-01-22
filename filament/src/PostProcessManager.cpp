@@ -169,7 +169,21 @@ FMaterialInstance* PostProcessManager::PostProcessMaterial::getMaterialInstance(
 
 // ------------------------------------------------------------------------------------------------
 
-const math::float2 PostProcessManager::sHaltonSamples[16] = {
+const PostProcessManager::JitterSequence<4> PostProcessManager::sRGSS4 = {{
+        { 0.625f, 0.125f },
+        { 0.125f, 0.375f },
+        { 0.875f, 0.625f },
+        { 0.375f, 0.875f }
+}};
+
+const PostProcessManager::JitterSequence<4> PostProcessManager::sUniformHelix4 = {{
+        { 0.25f, 0.25f },
+        { 0.75f, 0.75f },
+        { 0.25f, 0.75f },
+        { 0.75f, 0.25f },
+}};
+
+const PostProcessManager::JitterSequence<16> PostProcessManager::sHaltonSamples = {{
         { filament::halton( 0, 2), filament::halton( 0, 3) },
         { filament::halton( 1, 2), filament::halton( 1, 3) },
         { filament::halton( 2, 2), filament::halton( 2, 3) },
@@ -186,7 +200,7 @@ const math::float2 PostProcessManager::sHaltonSamples[16] = {
         { filament::halton(13, 2), filament::halton(13, 3) },
         { filament::halton(14, 2), filament::halton(14, 3) },
         { filament::halton(15, 2), filament::halton(15, 3) }
-};
+}};
 
 PostProcessManager::PostProcessManager(FEngine& engine) noexcept
         : mEngine(engine),
@@ -261,6 +275,7 @@ static const PostProcessManager::MaterialInfo sMaterialList[] = {
         { "fsr_easu_mobileF",           MATERIAL(FSR_EASU_MOBILEF) },
         { "fsr_rcas",                   MATERIAL(FSR_RCAS) },
         { "debugShadowCascades",        MATERIAL(DEBUGSHADOWCASCADES) },
+        { "resolveDepth",               MATERIAL(RESOLVEDEPTH) },
 };
 
 void PostProcessManager::init() noexcept {
@@ -2500,7 +2515,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
     return ppFXAA->output;
 }
 
-void PostProcessManager::prepareTaa(FrameGraph& fg, filament::Viewport const& svp,
+void PostProcessManager::prepareTaa(FrameGraph& fg,
+        filament::Viewport const& svp,
+        TemporalAntiAliasingOptions const& taaOptions,
         FrameHistory& frameHistory,
         FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
         CameraInfo* inoutCameraInfo,
@@ -2512,9 +2529,33 @@ void PostProcessManager::prepareTaa(FrameGraph& fg, filament::Viewport const& sv
     current.projection = inoutCameraInfo->projection * inoutCameraInfo->getUserViewMatrix();
     current.frameId = previous.frameId + 1;
 
+    auto jitterPosition = [pattern = taaOptions.jitterPattern](size_t frameIndex){
+        using JitterPattern = TemporalAntiAliasingOptions::JitterPattern;
+        switch (pattern) {
+            case JitterPattern::RGSS_X4:
+                return sRGSS4(frameIndex);
+            case JitterPattern::UNIFORM_HELIX_X4:
+                return sUniformHelix4(frameIndex);
+            case JitterPattern::HALTON_23_X8:
+                return sHaltonSamples(frameIndex % 8);
+            case JitterPattern::HALTON_23_X16:
+                return sHaltonSamples(frameIndex);
+        }
+    };
+
     // sample position within a pixel [-0.5, 0.5]
-    float2 const jitter = halton(previous.frameId) - 0.5f;
-    current.jitter = jitter;
+    // for metal/vulkan we need to reverse the y-offset
+    current.jitter = jitterPosition(previous.frameId);
+    float2 jitter = current.jitter;
+    switch (mEngine.getBackend()) {
+        case Backend::VULKAN:
+        case Backend::METAL:
+            jitter.y = -jitter.y;
+            UTILS_FALLTHROUGH;
+        case Backend::OPENGL:
+        default:
+            break;
+    }
 
     float2 const jitterInClipSpace = jitter * (2.0f / float2{ svp.width, svp.height });
 
@@ -2554,6 +2595,7 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(
     setConstantParameter(ma, "preventFlickering", taaOptions.preventFlickering);
     setConstantParameter(ma, "boxType", (int32_t)taaOptions.boxType);
     setConstantParameter(ma, "boxClipping", (int32_t)taaOptions.boxClipping);
+    setConstantParameter(ma, "varianceGamma", taaOptions.varianceGamma);
     if (dirty) {
         ma->invalidate();
         // TODO: call Material::compile(), we can't si that now because it works only
@@ -2628,18 +2670,17 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 };
 
                 float sum = 0.0;
-                float weights[9];
+                float4 weights[9];
 
                 // this doesn't get vectorized (probably because of exp()), so don't bother
                 // unrolling it.
                 #pragma nounroll
                 for (size_t i = 0; i < 9; i++) {
-                    float2 d = sampleOffsets[i] - current.jitter;
-                    d *= 1.0f / taaOptions.filterWidth;
-                    // this is a gaussian fit of a 3.3 Blackman Harris window
+                    float2 const d = (sampleOffsets[i] - current.jitter) / taaOptions.filterWidth;
+                    // This is a gaussian fit of a 3.3-wide Blackman-Harris window
                     // see: "High Quality Temporal Supersampling" by Brian Karis
-                    weights[i] = std::exp2(-3.3f * (d.x * d.x + d.y * d.y));
-                    sum += weights[i];
+                    weights[i][0] = std::exp(-2.29f * (d.x * d.x + d.y * d.y));
+                    sum += weights[i][0];
                 }
                 for (auto& w : weights) {
                     w /= sum;
@@ -2660,6 +2701,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                         .filterMin = SamplerMinFilter::LINEAR
                 });
                 mi->setParameter("filterWeights",  weights, 9);
+                mi->setParameter("jitter",  current.jitter);
                 mi->setParameter("reprojection",
                         mat4f{ historyProjection * inverse(current.projection) } *
                         normalizedToClip);
@@ -2980,6 +3022,14 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
         return input;
     }
 
+    // we currently don't support stencil resolve
+    assert_invariant(!isStencilFormat(inDesc.format));
+
+    // The Metal / Vulkan backends currently don't support depth/stencil resolve.
+    if (isDepthFormat(inDesc.format) && (!mEngine.getDriverApi().isDepthStencilResolveSupported())) {
+        return resolveDepth(fg, outputBufferName, input, outDesc);
+    }
+
     outDesc.width = inDesc.width;
     outDesc.height = inDesc.height;
     outDesc.format = inDesc.format;
@@ -3001,24 +3051,60 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
                 auto const& dst = resources.getTexture(data.output);
                 auto const& srcSubDesc = resources.getSubResourceDescriptor(data.input);
                 auto const& dstSubDesc = resources.getSubResourceDescriptor(data.output);
-                auto const& srcDesc = resources.getDescriptor(data.input);
-                auto const& dstDesc = resources.getDescriptor(data.output);
+                UTILS_UNUSED_IN_RELEASE auto const& srcDesc = resources.getDescriptor(data.input);
+                UTILS_UNUSED_IN_RELEASE auto const& dstDesc = resources.getDescriptor(data.output);
                 assert_invariant(src);
                 assert_invariant(dst);
-
-                ASSERT_POSTCONDITION(
-                        srcDesc.format == dstDesc.format,
-                        "resolve: src (%d) and dst (%d) formats don't match.",
-                        srcDesc.format, dstDesc.format);
-
-                ASSERT_POSTCONDITION(
-                        srcDesc.width == dstDesc.width && srcDesc.height == dstDesc.height,
-                        "resolve: src [%u, %u] and dst [%u, %u] sizes don't match.",
-                        srcDesc.width, srcDesc.height, dstDesc.width, dstDesc.height);
-
+                assert_invariant(srcDesc.format == dstDesc.format);
+                assert_invariant(srcDesc.width == dstDesc.width && srcDesc.height == dstDesc.height);
                 driver.resolve(
                         dst, dstSubDesc.level, dstSubDesc.layer,
                         src, srcSubDesc.level, srcSubDesc.layer);
+            });
+
+    return ppResolve->output;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepth(FrameGraph& fg,
+        const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
+        FrameGraphTexture::Descriptor outDesc) noexcept {
+
+    // Don't do anything if we're not a MSAA buffer
+    auto const& inDesc = fg.getDescriptor(input);
+    if (inDesc.samples <= 1) {
+        return input;
+    }
+
+    UTILS_UNUSED_IN_RELEASE auto const& inSubDesc = fg.getSubResourceDescriptor(input);
+    assert_invariant(isDepthFormat(inDesc.format));
+    assert_invariant(inSubDesc.layer == 0);
+    assert_invariant(inSubDesc.level == 0);
+
+    outDesc.width = inDesc.width;
+    outDesc.height = inDesc.height;
+    outDesc.format = inDesc.format;
+    outDesc.samples = 0;
+
+    struct ResolveData {
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> output;
+    };
+
+    auto& ppResolve = fg.addPass<ResolveData>("resolveDepth",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.input = builder.sample(input);
+                data.output = builder.createTexture(outputBufferName, outDesc);
+                data.output = builder.write(data.output, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                builder.declareRenderPass(builder.getName(data.output), {
+                        .attachments = { .depth = { data.output }},
+                        .clearFlags = TargetBufferFlags::DEPTH });
+            },
+            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                auto const& input = resources.getTexture(data.input);
+                auto const& material = getPostProcessMaterial("resolveDepth");
+                auto* mi = material.getMaterialInstance(mEngine);
+                mi->setParameter("depth", input, {}); // NEAREST
+                commitAndRender(resources.getRenderPassInfo(), material, driver);
             });
 
     return ppResolve->output;

@@ -311,12 +311,8 @@ public:
      */
     MaterialBuilder& parameter(const char* name, SamplerType samplerType,
             SamplerFormat format = SamplerFormat::FLOAT,
-            ParameterPrecision precision = ParameterPrecision::DEFAULT) noexcept;
-
-    /// @copydoc parameter(SamplerType, SamplerFormat, ParameterPrecision, const char*)
-    MaterialBuilder& parameter(const char* name, SamplerType samplerType,
-            ParameterPrecision precision) noexcept;
-
+            ParameterPrecision precision = ParameterPrecision::DEFAULT,
+            bool multisample = false) noexcept;
 
     MaterialBuilder& buffer(filament::BufferInterfaceBlock bib) noexcept;
 
@@ -622,8 +618,8 @@ public:
         Parameter() noexcept: parameterType(INVALID) {}
 
         // Sampler
-        Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p)
-                : name(paramName), size(1), precision(p), samplerType(t), format(f), parameterType(SAMPLER) { }
+        Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p, bool ms)
+                : name(paramName), size(1), precision(p), samplerType(t), format(f), parameterType(SAMPLER), multisample(ms) { }
 
         // Uniform
         Parameter(const char* paramName, UniformType t, size_t typeSize, ParameterPrecision p)
@@ -640,6 +636,7 @@ public:
         SamplerType samplerType;
         SubpassType subpassType;
         SamplerFormat format;
+        bool multisample;
         enum {
             INVALID,
             UNIFORM,

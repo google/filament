@@ -725,9 +725,9 @@ UTILS_NOINLINE
     });
 }
 
-void FView::prepareUpscaler(float2 scale) const noexcept {
+void FView::prepareUpscaler(float2 scale, DynamicResolutionOptions const& options) const noexcept {
     SYSTRACE_CALL();
-    const float bias = (mDynamicResolution.quality >= QualityLevel::HIGH) ?
+    const float bias = (options.quality >= QualityLevel::HIGH) ?
             std::log2(std::min(scale.x, scale.y)) : 0.0f;
     mPerViewUniforms.prepareLodBias(bias);
 }
@@ -985,15 +985,15 @@ void FView::drainFrameHistory(FEngine& engine) noexcept {
 }
 
 void FView::executePickingQueries(backend::DriverApi& driver,
-        backend::RenderTargetHandle handle, float scale) noexcept {
+        backend::RenderTargetHandle handle, float2 scale) noexcept {
 
     while (mActivePickingQueriesList) {
         FPickingQuery* const pQuery = mActivePickingQueriesList;
         mActivePickingQueriesList = pQuery->next;
 
         // adjust for dynamic resolution and structure buffer scale
-        const uint32_t x = uint32_t(float(pQuery->x) * (scale * mScale.x));
-        const uint32_t y = uint32_t(float(pQuery->y) * (scale * mScale.y));
+        const uint32_t x = uint32_t(float(pQuery->x) * scale.x);
+        const uint32_t y = uint32_t(float(pQuery->y) * scale.y);
 
         if (UTILS_UNLIKELY(driver.getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)) {
             driver.readPixels(handle, x, y, 1, 1, {

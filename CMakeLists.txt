@@ -41,6 +41,8 @@ option(FILAMENT_LINUX_IS_MOBILE "Treat Linux as Mobile" OFF)
 
 option(FILAMENT_ENABLE_ASAN_UBSAN "Enable Address and Undefined Behavior Sanitizers" OFF)
 
+option(FILAMENT_ENABLE_TSAN "Enable Thread Sanitizer" OFF)
+
 option(FILAMENT_ENABLE_FEATURE_LEVEL_0 "Enable Feature Level 0" ON)
 
 set(FILAMENT_NDK_VERSION "" CACHE STRING
@@ -426,7 +428,13 @@ endif()
 if (FILAMENT_ENABLE_ASAN_UBSAN)
    set(EXTRA_SANITIZE_OPTIONS "-fsanitize=address -fsanitize=undefined")
 endif()
-
+if (FILAMENT_ENABLE_TSAN)
+   set(EXTRA_SANITIZE_OPTIONS "-fsanitize=thread")
+endif()
+if (ANDROID)
+    # keep STL debug infos (mimics what the NDK does)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-limit-debug-info")
+endif()
 if (NOT MSVC AND NOT WEBGL)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fstack-protector")
 endif()

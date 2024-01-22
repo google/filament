@@ -211,7 +211,9 @@ public:
             backend::TextureFormat outFormat, bool translucent) noexcept;
 
     // Temporal Anti-aliasing
-    void prepareTaa(FrameGraph& fg, filament::Viewport const& svp,
+    void prepareTaa(FrameGraph& fg,
+            filament::Viewport const& svp,
+            TemporalAntiAliasingOptions const& taaOptions,
             FrameHistory& frameHistory,
             FrameHistoryEntry::TemporalAA FrameHistoryEntry::*pTaa,
             CameraInfo* inoutCameraInfo,
@@ -250,6 +252,12 @@ public:
             const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
             FrameGraphTexture::Descriptor outDesc) noexcept;
 
+    // Resolves base level of input and outputs a texture from outDesc.
+    // outDesc with, height, format and samples will be overridden.
+    FrameGraphId<FrameGraphTexture> resolveDepth(FrameGraph& fg,
+            const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
+            FrameGraphTexture::Descriptor outDesc) noexcept;
+
     // VSM shadow mipmap pass
     FrameGraphId<FrameGraphTexture> vsmMipmapPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, uint8_t layer, size_t level,
@@ -268,10 +276,6 @@ public:
     backend::Handle<backend::HwTexture> getZeroTexture() const;
     backend::Handle<backend::HwTexture> getOneTextureArray() const;
     backend::Handle<backend::HwTexture> getZeroTextureArray() const;
-
-    math::float2 halton(size_t index) const noexcept {
-        return mHaltonSamples[index & 0xFu];
-    }
 
     class PostProcessMaterial {
     public:
@@ -357,8 +361,15 @@ private:
 
     std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};
 
-    static const math::float2 sHaltonSamples[16];
-    math::float2 const* mHaltonSamples = sHaltonSamples;
+    template<size_t SIZE>
+    struct JitterSequence {
+        auto operator()(size_t i) const noexcept { return positions[i % SIZE] - 0.5f; }
+        const math::float2 positions[SIZE];
+    };
+
+    static const JitterSequence<4> sRGSS4;
+    static const JitterSequence<4> sUniformHelix4;
+    static const JitterSequence<16> sHaltonSamples;
 
     bool mWorkaroundSplitEasu : 1;
     bool mWorkaroundAllowReadOnlyAncillaryFeedbackLoop : 1;

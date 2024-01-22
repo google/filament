@@ -48,7 +48,8 @@ public:
          */
         Builder& texture(size_t index, const std::string& name,
                 filament::backend::SamplerType type,
-                filament::backend::SamplerFormat format) noexcept;
+                filament::backend::SamplerFormat format,
+                bool multisample) noexcept;
 
         /**
          * Add a sampler argument to the argument buffer structure.
@@ -69,6 +70,7 @@ public:
             size_t index;
             filament::backend::SamplerType type;
             filament::backend::SamplerFormat format;
+            bool multisample;
 
             std::ostream& write(std::ostream& os) const;
         };
