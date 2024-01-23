@@ -132,7 +132,7 @@ public:
     Descriptor descriptor;
     SubResourceDescriptor subResourceDescriptor;
 
-    // weather the resource was detached
+    // whether the resource was detached
     bool detached = false;
 
     // An Edge with added data from this resource

@@ -151,6 +151,12 @@ bool ShaderCompilerService::isParallelShaderCompileSupported() const noexcept {
 }
 
 void ShaderCompilerService::init() noexcept {
+    if (UTILS_UNLIKELY(mDriver.getDriverConfig().disableParallelShaderCompile)) {
+        // user disabled parallel shader compile
+        mMode = Mode::SYNCHRONOUS;
+        return;
+    }
+
     // Here we decide which mode we'll be using. We always prefer our own thread-pool if
     // that mode is available because, we have no control on how the compilation queues are
     // handled if done by the driver (so at the very least we'd need to decode this per-driver).

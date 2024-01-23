@@ -1410,6 +1410,10 @@ export interface View$DepthOfFieldOptions {
      */
     cocScale?: number;
     /**
+     * width/height aspect ratio of the circle of confusion (simulate anamorphic lenses)
+     */
+    cocAspectRatio?: number;
+    /**
      * maximum aperture diameter in meters (zero to disable rotation)
      */
     maxApertureDiameter?: number;
@@ -1653,6 +1657,7 @@ export enum View$TemporalAntiAliasingOptions$JitterPattern {
     UNIFORM_HELIX_X4,
     HALTON_23_X8,
     HALTON_23_X16,
+    HALTON_23_X32,
 }
 
 /**
@@ -1676,9 +1681,21 @@ export interface View$TemporalAntiAliasingOptions {
      */
     feedback?: number;
     /**
+     * texturing lod bias (typically -1 or -2)
+     */
+    lodBias?: number;
+    /**
+     * post-TAA sharpen, especially useful when upscaling is true.
+     */
+    sharpness?: number;
+    /**
      * enables or disables temporal anti-aliasing
      */
     enabled?: boolean;
+    /**
+     * 4x TAA upscaling. Disables Dynamic Resolution. [BETA]
+     */
+    upscaling?: boolean;
     /**
      * whether to filter the history buffer
      */

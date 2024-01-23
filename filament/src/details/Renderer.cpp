@@ -495,6 +495,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         // This configures post-process materials by setting constant parameters
         if (taaOptions.enabled) {
             ppm.configureTemporalAntiAliasingMaterial(taaOptions);
+            if (taaOptions.upscaling) {
+                // for now TAA upscaling is incompatible with regular dsr
+                dsrOptions.enabled = false;
+                // also, upscaling doesn't work well with quater-resolution SSAO
+                aoOptions.resolution = 1.0;
+                // Currently we only support a fixed TAA upscaling ratio
+                scale = 0.5f;
+            }
         }
     }
 
@@ -525,7 +533,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     };
 
     // whether we're scaled at all
-    const bool scaled = any(notEqual(scale, float2(1.0f)));
+     bool scaled = any(notEqual(scale, float2(1.0f)));
 
     // vp is the user defined viewport within the View
     filament::Viewport const& vp = view.getViewport();
@@ -614,7 +622,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     view.prepare(engine, driver, arena, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);
 
-    view.prepareUpscaler(scale, dsrOptions);
+    view.prepareUpscaler(scale, taaOptions, dsrOptions);
 
     /*
      * Allocate command buffer
@@ -977,8 +985,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     auto& history = view.getFrameHistory();
                     auto& current = history.getCurrent();
                     current.ssr.projection = projection;
-                    resources.detach(data.history,
-                            &current.ssr.color, &current.ssr.desc);
+                    resources.detach(data.history, &current.ssr.color, &current.ssr.desc);
                 });
     }
 
@@ -1011,6 +1018,15 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (taaOptions.enabled) {
         input = ppm.taa(fg, input, depth, view.getFrameHistory(), &FrameHistoryEntry::taa,
                 taaOptions, colorGradingConfig);
+        if (taaOptions.upscaling) {
+            scale = 1.0f;
+            scaled = false;
+            UTILS_UNUSED_IN_RELEASE auto const& inputDesc = fg.getDescriptor(input);
+            svp.width = inputDesc.width;
+            svp.height = inputDesc.height;
+            xvp.width *= 2;
+            xvp.height *= 2;
+        }
     }
 
     // --------------------------------------------------------------------------------------------
@@ -1026,16 +1042,21 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             // The bokeh height is always correct regardless of the dynamic resolution scaling.
             // (because the CoC is calculated w.r.t. the height), so we only need to adjust
             // the width.
-            float const bokehAspectRatio = scale.x / scale.y;
+            float const aspect = (scale.x / scale.y) * dofOptions.cocAspectRatio;
+            float2 const bokehScale{
+                aspect < 1.0f ? aspect : 1.0f,
+                aspect > 1.0f ? 1.0f / aspect : 1.0f
+            };
             input = ppm.dof(fg, input, depth, cameraInfo, needsAlphaChannel,
-                    bokehAspectRatio, dofOptions);
+                    bokehScale, dofOptions);
         }
 
         FrameGraphId<FrameGraphTexture> bloom, flare;
         if (bloomOptions.enabled) {
             // Generate the bloom buffer, which is stored in the blackboard as "bloom". This is
             // consumed by the colorGrading pass and will be culled if colorGrading is disabled.
-            auto [bloom_, flare_] = ppm.bloom(fg, input, bloomOptions, TextureFormat::R11F_G11F_B10F, scale);
+            auto [bloom_, flare_] = ppm.bloom(fg, input, TextureFormat::R11F_G11F_B10F,
+                    bloomOptions, taaOptions, scale);
             bloom = bloom_;
             flare = flare_;
         }

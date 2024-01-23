@@ -43,6 +43,8 @@ fragment {
     #define FSR_RCAS_F 1
     #if !POST_PROCESS_OPAQUE
     #   define FSR_RCAS_PASSTHROUGH_ALPHA
+    // todo: make this a spec constant
+    #   define FSR_RCAS_DENOISE
     #endif
     #include "ffx_fsr1.h"
 
@@ -60,6 +62,9 @@ fragment {
             postProcess.color.a,
 #endif
             p, materialParams.RcasCon);
+
+        // todo: make this an option
+        postProcess.color.rgb = max(vec3(0), postProcess.color.rgb);
 
 #if POST_PROCESS_OPAQUE
         postProcess.color.a = 1.0;

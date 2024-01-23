@@ -27,9 +27,12 @@
 #include "details/Engine.h"
 
 #include "fg/FrameGraph.h"
+#include "fg/FrameGraphId.h"
 #include "fg/FrameGraphResources.h"
+#include "fg/FrameGraphTexture.h"
 
 #include "fsr.h"
+#include "FrameHistory.h"
 #include "PerViewUniforms.h"
 #include "RenderPass.h"
 
@@ -41,15 +44,46 @@
 
 #include "generated/resources/materials.h"
 
+#include <filament/Material.h>
 #include <filament/MaterialEnums.h>
+#include <filament/Options.h>
+#include <filament/Viewport.h>
+
+#include <private/filament/EngineEnums.h>
+
+#include <backend/DriverEnums.h>
+#include <backend/DriverApiForward.h>
+#include <backend/Handle.h>
+#include <backend/PipelineState.h>
+#include <backend/PixelBufferDescriptor.h>
+
+#include <private/backend/BackendUtils.h>
 
 #include <math/half.h>
 #include <math/mat2.h>
+#include <math/mat3.h>
+#include <math/mat4.h>
+#include <math/scalar.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 
+#include <utils/algorithm.h>
 #include <utils/BitmaskEnum.h>
+#include <utils/debug.h>
+#include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <limits>
+#include <string_view>
+#include <variant>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -81,7 +115,7 @@ PostProcessManager::PostProcessMaterial::PostProcessMaterial() noexcept {
 }
 
 PostProcessManager::PostProcessMaterial::PostProcessMaterial(MaterialInfo const& info) noexcept
-    : PostProcessMaterial() {
+        : PostProcessMaterial() {
     mData = info.data; // aliased to mMaterial
     mSize = info.size;
     mConstants = info.constants;
@@ -133,7 +167,7 @@ void PostProcessManager::PostProcessMaterial::loadMaterial(FEngine& engine) cons
     mHasMaterial = true;
     auto builder = Material::Builder();
     builder.package(mData, mSize);
-    for (auto const& constant : mConstants) {
+    for (auto const& constant: mConstants) {
         std::visit([&](auto&& arg) {
             builder.constant(constant.name.data(), constant.name.size(), arg);
         }, constant.value);
@@ -155,63 +189,60 @@ PipelineState PostProcessManager::PostProcessMaterial::getPipelineState(
     FMaterial* const material = getMaterial(engine);
     material->prepareProgram(Variant{ variantKey });
     return {
-            .program = material->getProgram(Variant{variantKey}),
+            .program = material->getProgram(Variant{ variantKey }),
             .rasterState = material->getRasterState(),
             .scissor = material->getDefaultInstance()->getScissor()
     };
 }
 
 UTILS_NOINLINE
-FMaterialInstance* PostProcessManager::PostProcessMaterial::getMaterialInstance(FEngine& engine) const noexcept {
+FMaterialInstance* PostProcessManager::PostProcessMaterial::getMaterialInstance(
+        FEngine& engine) const noexcept {
     FMaterial* const material = getMaterial(engine);
     return material->getDefaultInstance();
 }
 
 // ------------------------------------------------------------------------------------------------
 
-const PostProcessManager::JitterSequence<4> PostProcessManager::sRGSS4 = {{
+const PostProcessManager::JitterSequence<4> PostProcessManager::sRGSS4 = {{{
         { 0.625f, 0.125f },
         { 0.125f, 0.375f },
         { 0.875f, 0.625f },
         { 0.375f, 0.875f }
-}};
+}}};
 
-const PostProcessManager::JitterSequence<4> PostProcessManager::sUniformHelix4 = {{
+const PostProcessManager::JitterSequence<4> PostProcessManager::sUniformHelix4 = {{{
         { 0.25f, 0.25f },
         { 0.75f, 0.75f },
         { 0.25f, 0.75f },
         { 0.75f, 0.25f },
-}};
+}}};
 
-const PostProcessManager::JitterSequence<16> PostProcessManager::sHaltonSamples = {{
-        { filament::halton( 0, 2), filament::halton( 0, 3) },
-        { filament::halton( 1, 2), filament::halton( 1, 3) },
-        { filament::halton( 2, 2), filament::halton( 2, 3) },
-        { filament::halton( 3, 2), filament::halton( 3, 3) },
-        { filament::halton( 4, 2), filament::halton( 4, 3) },
-        { filament::halton( 5, 2), filament::halton( 5, 3) },
-        { filament::halton( 6, 2), filament::halton( 6, 3) },
-        { filament::halton( 7, 2), filament::halton( 7, 3) },
-        { filament::halton( 8, 2), filament::halton( 8, 3) },
-        { filament::halton( 9, 2), filament::halton( 9, 3) },
-        { filament::halton(10, 2), filament::halton(10, 3) },
-        { filament::halton(11, 2), filament::halton(11, 3) },
-        { filament::halton(12, 2), filament::halton(12, 3) },
-        { filament::halton(13, 2), filament::halton(13, 3) },
-        { filament::halton(14, 2), filament::halton(14, 3) },
-        { filament::halton(15, 2), filament::halton(15, 3) }
-}};
+template<size_t COUNT>
+constexpr auto halton() {
+    std::array<float2, COUNT> h;
+    for (size_t i = 0; i < COUNT; i++) {
+        h[i] = {
+                filament::halton(i, 2),
+                filament::halton(i, 3) };
+    }
+    return h;
+}
+
+const PostProcessManager::JitterSequence<32>
+        PostProcessManager::sHaltonSamples = { halton<32>() };
 
 PostProcessManager::PostProcessManager(FEngine& engine) noexcept
         : mEngine(engine),
-         mWorkaroundSplitEasu(false),
-         mWorkaroundAllowReadOnlyAncillaryFeedbackLoop(false) {
+          mWorkaroundSplitEasu(false),
+          mWorkaroundAllowReadOnlyAncillaryFeedbackLoop(false) {
 }
 
 PostProcessManager::~PostProcessManager() noexcept = default;
 
 UTILS_NOINLINE
-void PostProcessManager::registerPostProcessMaterial(std::string_view name, MaterialInfo const& info) {
+void PostProcessManager::registerPostProcessMaterial(std::string_view name,
+        MaterialInfo const& info) {
     mMaterialRegistry.try_emplace(name, info);
 }
 
@@ -294,13 +325,13 @@ void PostProcessManager::init() noexcept {
             driver.isWorkaroundNeeded(Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP);
 
     #pragma nounroll
-    for (auto const& info : sMaterialListFeatureLevel0) {
+    for (auto const& info: sMaterialListFeatureLevel0) {
         registerPostProcessMaterial(info.name, info);
     }
 
     if (mEngine.getActiveFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1) {
         #pragma nounroll
-        for (auto const& info : sMaterialList) {
+        for (auto const& info: sMaterialList) {
             registerPostProcessMaterial(info.name, info);
         }
     }
@@ -772,7 +803,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 auto ssao = resources.getRenderPassInfo();
                 auto const& desc = resources.getDescriptor(data.depth);
 
-                // estimate of the size in pixel of a 1m tall/wide object viewed from 1m away (i.e. at z=-1)
+                // Estimate of the size in pixel units of a 1m tall/wide object viewed from 1m away (i.e. at z=-1)
                 const float projectionScale = std::min(
                         0.5f * cameraInfo.projection[0].x * desc.width,
                         0.5f * cameraInfo.projection[1].y * desc.height);
@@ -929,7 +960,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
                 auto const& desc = resources.getDescriptor(data.blurred);
 
                 // unnormalized gaussian half-kernel of a given standard deviation
-                // returns number of samples stored in array (max 16)
+                // returns number of samples stored in the array (max 16)
                 constexpr size_t kernelArraySize = 16; // limited by bilateralBlur.mat
                 auto gaussianKernel =
                         [kernelArraySize](float* outKernel, size_t gaussianWidth, float stdDev) -> uint32_t {
@@ -973,7 +1004,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(Frame
 
     auto const subResourceDesc = fg.getSubResourceDescriptor(input);
 
-    // create one subresource per level to be generated from the input. These will be our
+    // Create one subresource per level to be generated from the input. These will be our
     // destinations.
     struct MipmapPassData {
         FixedCapacityVector<FrameGraphId<FrameGraphTexture>> out;
@@ -1134,7 +1165,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 size_t const m = computeGaussianCoefficients(kernel,
                         std::min(sizeof(kernel) / sizeof(*kernel), kernelStorageSize));
 
-                std::string_view sourceParameterName = is2dArray ? "sourceArray"sv : "source"sv;
+                std::string_view const sourceParameterName = is2dArray ? "sourceArray"sv : "source"sv;
                 // horizontal pass
                 mi->setParameter(sourceParameterName, hwIn, {
                         .filterMag = SamplerMagFilter::LINEAR,
@@ -1180,7 +1211,7 @@ PostProcessManager::ScreenSpaceRefConfig PostProcessManager::prepareMipmapSSR(Fr
 
     // The kernel-size was determined empirically so that we don't get too many artifacts
     // due to the down-sampling with a box filter (which happens implicitly).
-    // requires only 6 stored coefficients and 11 tap/pass
+    // Requires only 6 stored coefficients and 11 tap/pass
     // e.g.: size of 13 (4 stored coefficients)
     //      +-------+-------+-------*===*-------+-------+-------+
     //  ... | 6 | 5 | 4 | 3 | 2 | 1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | ...
@@ -1344,10 +1375,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(
         FrameGraphId<FrameGraphTexture> output,
         bool needInputDuplication, ScreenSpaceRefConfig const& config) noexcept {
 
-    // descriptor of our actual input image (e.g. reflection buffer or refraction framebuffer)
+    // Descriptor of our actual input image (e.g. reflection buffer or refraction framebuffer)
     auto const& desc = fg.getDescriptor(input);
 
-    // descriptor of the destination. output is a subresource (i.e. a layer of a 2D array)
+    // Descriptor of the destination. `output` is a subresource (i.e. a layer of a 2D array)
     auto const& outDesc = fg.getDescriptor(output);
 
     /*
@@ -1396,7 +1427,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> depth,
         const CameraInfo& cameraInfo,
         bool translucent,
-        float bokehAspectRatio,
+        float2 bokehScale,
         const DepthOfFieldOptions& dofOptions) noexcept {
 
     assert_invariant(depth);
@@ -1407,7 +1438,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     const TextureFormat format = translucent ? TextureFormat::RGBA16F
                                              : TextureFormat::R11F_G11F_B10F;
 
-    // rotate the bokeh based on the aperture diameter (i.e. angle of the blades)
+    // Rotate the bokeh based on the aperture diameter (i.e. angle of the blades)
     float bokehAngle = f::PI / 6.0f;
     if (dofOptions.maxApertureDiameter > 0.0f) {
         bokehAngle += f::PI_2 * saturate(cameraInfo.A / dofOptions.maxApertureDiameter);
@@ -1651,8 +1682,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
     // we assume the width/height is already multiple of 16
     assert_invariant(!(colorDesc.width  & 0xF) && !(colorDesc.height & 0xF));
-    const uint32_t tileBufferWidth  = colorDesc.width  / dofResolution;
-    const uint32_t tileBufferHeight = colorDesc.height / dofResolution;
+    const uint32_t tileBufferWidth  = width;
+    const uint32_t tileBufferHeight = height;
     const size_t tileReductionCount = ctz(tileSize / dofResolution);
 
     struct PostProcessDofTiling1 {
@@ -1786,8 +1817,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 mi->setParameter("tiles", tilesCocMinMax,
                         { .filterMin = SamplerMinFilter::NEAREST });
                 mi->setParameter("cocToTexelScale", float2{
-                        bokehAspectRatio / (inputDesc.width  * dofResolution),
-                                     1.0 / (inputDesc.height * dofResolution)
+                        bokehScale.x / (inputDesc.width * dofResolution),
+                        bokehScale.y / (inputDesc.height * dofResolution)
                 });
                 mi->setParameter("cocToPixelScale", (1.0f / float(dofResolution)));
                 mi->setParameter("ringCounts", float4{
@@ -1893,14 +1924,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     return ppDoFCombine->output;
 }
 
-PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
-        BloomOptions& inoutBloomOptions,
-        backend::TextureFormat outFormat,
-        math::float2 scale) noexcept {
-    return bloomPass(fg, input, outFormat, inoutBloomOptions, scale);
-}
-
 FrameGraphId<FrameGraphTexture> PostProcessManager::downscalePass(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
         FrameGraphTexture::Descriptor const& outDesc,
@@ -1932,9 +1955,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::downscalePass(FrameGraph& fg
     return downsamplePass->output;
 }
 
-PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg,
+PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, TextureFormat outFormat,
-        BloomOptions& inoutBloomOptions, float2 scale) noexcept {
+        BloomOptions& inoutBloomOptions,
+        TemporalAntiAliasingOptions const& taaOptions,
+        float2 scale) noexcept {
 
     // Figure out a good size for the bloom buffer. We must use a fixed bloom buffer size so
     // that the size/strength of the bloom doesn't vary much with the resolution, otherwise
@@ -1976,6 +2001,9 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
 
     bool threshold = inoutBloomOptions.threshold;
 
+    // we don't need to do the fireflies reduction if we have TAA (it already does it)
+    bool fireflies = threshold && !taaOptions.enabled;
+
     while (2 * bloomWidth < float(desc.width) || 2 * bloomHeight < float(desc.height)) {
         if (inoutBloomOptions.quality == QualityLevel::LOW ||
             inoutBloomOptions.quality == QualityLevel::MEDIUM) {
@@ -1984,8 +2012,9 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
                             .height = (desc.height = std::max(1u, desc.height / 2)),
                             .format = outFormat
                     },
-                    threshold, inoutBloomOptions.highlight, threshold);
+                    threshold, inoutBloomOptions.highlight, fireflies);
             threshold = false; // we do the thresholding only once during down sampling
+            fireflies = false; // we do the fireflies reduction only once during down sampling
         } else if (inoutBloomOptions.quality == QualityLevel::HIGH ||
                    inoutBloomOptions.quality == QualityLevel::ULTRA) {
             // In high quality mode, we increase the size of the bloom buffer such that the
@@ -2006,7 +2035,7 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
 
     input = downscalePass(fg, input,
             { .width = width, .height = height, .format = outFormat },
-            threshold, inoutBloomOptions.highlight, threshold);
+            threshold, inoutBloomOptions.highlight, fireflies);
 
     struct BloomPassData {
         FrameGraphId<FrameGraphTexture> out;
@@ -2539,6 +2568,8 @@ void PostProcessManager::prepareTaa(FrameGraph& fg,
             case JitterPattern::HALTON_23_X8:
                 return sHaltonSamples(frameIndex % 8);
             case JitterPattern::HALTON_23_X16:
+                return sHaltonSamples(frameIndex % 16);
+            case JitterPattern::HALTON_23_X32:
                 return sHaltonSamples(frameIndex);
         }
     };
@@ -2588,6 +2619,7 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(
         }
     };
 
+    setConstantParameter(ma, "upscaling", taaOptions.upscaling);
     setConstantParameter(ma, "historyReprojection", taaOptions.historyReprojection);
     setConstantParameter(ma, "filterHistory", taaOptions.filterHistory);
     setConstantParameter(ma, "filterInput", taaOptions.filterInput);
@@ -2635,6 +2667,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
     auto& taaPass = fg.addPass<TAAData>("TAA",
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto desc = fg.getDescriptor(input);
+                if (taaOptions.upscaling) {
+                    desc.width *= 2;
+                    desc.height *= 2;
+                }
                 data.color = builder.sample(input);
                 data.depth = builder.sample(depth);
                 data.history = builder.sample(colorHistory);
@@ -2669,18 +2705,26 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                         { -1.0f,  1.0f }, {  0.0f,  1.0f }, {  1.0f,  1.0f },
                 };
 
-                float sum = 0.0;
+                constexpr float2 subSampleOffsets[4] = {
+                        { -0.25f, 0.25f }, {  0.25f, 0.25f }, { 0.25f, -0.25f }, { -0.25f, -0.25f }
+                };
+
+                float4 sum = 0.0;
                 float4 weights[9];
 
                 // this doesn't get vectorized (probably because of exp()), so don't bother
                 // unrolling it.
                 #pragma nounroll
                 for (size_t i = 0; i < 9; i++) {
-                    float2 const d = (sampleOffsets[i] - current.jitter) / taaOptions.filterWidth;
-                    // This is a gaussian fit of a 3.3-wide Blackman-Harris window
-                    // see: "High Quality Temporal Supersampling" by Brian Karis
-                    weights[i][0] = std::exp(-2.29f * (d.x * d.x + d.y * d.y));
-                    sum += weights[i][0];
+                    float2 const o = sampleOffsets[i];
+                    for (size_t j = 0; j < 4; j++) {
+                        float2 const s = taaOptions.upscaling ? subSampleOffsets[j] : float2{ 0 };
+                        float2 const d = (o - current.jitter - s) / taaOptions.filterWidth;
+                        // This is a gaussian fit of a 3.3-wide Blackman-Harris window
+                        // see: "High Quality Temporal Supersampling" by Brian Karis
+                        weights[i][j] = std::exp(-2.29f * (d.x * d.x + d.y * d.y));
+                    }
+                    sum += weights[i];
                 }
                 for (auto& w : weights) {
                     w /= sum;
@@ -2725,24 +2769,77 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
             });
 
     input = colorGradingConfig.asSubpass ? taaPass->tonemappedOutput : taaPass->output;
+    auto history = input;
+
+    // optional sharpen pass from FSR1
+    if (taaOptions.sharpness > 0.0f) {
+        input = rcas(fg, taaOptions.sharpness,
+                input, fg.getDescriptor(input), colorGradingConfig.translucent);
+    }
 
     struct ExportColorHistoryData {
         FrameGraphId<FrameGraphTexture> color;
     };
-    auto& exportHistoryPass = fg.addPass<ExportColorHistoryData>("Export TAA history",
+    fg.addPass<ExportColorHistoryData>("Export TAA history",
             [&](FrameGraph::Builder& builder, auto& data) {
                 // We need to use sideEffect here to ensure this pass won't be culled.
                 // The "output" of this pass is going to be used during the next frame as
                 // an "import".
                 builder.sideEffect();
-                data.color = builder.sample(input); // FIXME: an access must be declared for detach(), why?
-            }, [&current](FrameGraphResources const& resources, auto const& data,
-                    backend::DriverApi&) {
-                resources.detach(data.color,
-                        &current.color, &current.desc);
+                data.color = builder.sample(history); // FIXME: an access must be declared for detach(), why?
+            }, [&current](FrameGraphResources const& resources, auto const& data, auto&) {
+                resources.detach(data.color, &current.color, &current.desc);
             });
 
-    return exportHistoryPass->color;
+    return input;
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
+        FrameGraph& fg,
+        float sharpness,
+        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphTexture::Descriptor const& outDesc,
+        bool translucent) {
+
+    struct QuadBlitData {
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> output;
+    };
+
+    auto& ppFsrRcas = fg.addPass<QuadBlitData>("FidelityFX FSR1 Rcas",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.input = builder.sample(input);
+                data.input = builder.createTexture("FFX FSR1 Rcas output", outDesc);
+                data.input = builder.declareRenderPass(data.input);
+            },
+            [=](FrameGraphResources const& resources,
+                    auto const& data, DriverApi& driver) {
+
+                auto input = resources.getTexture(data.input);
+                auto out = resources.getRenderPassInfo();
+                auto const& outputDesc = resources.getDescriptor(data.input);
+
+                auto& material = getPostProcessMaterial("fsr_rcas");
+                FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
+
+                FSRUniforms uniforms;
+                FSR_SharpeningSetup(&uniforms, { .sharpness = 2.0f - 2.0f * sharpness });
+                mi->setParameter("RcasCon", uniforms.RcasCon);
+                mi->setParameter("color", input, {}); // uses texelFetch
+                mi->setParameter("resolution", float4{
+                        outputDesc.width, outputDesc.height,
+                        1.0f / outputDesc.width, 1.0f / outputDesc.height });
+                mi->commit(driver);
+                mi->use(driver);
+
+                const uint8_t variant = uint8_t(
+                        translucent ? PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
+
+                PipelineState const pipeline(material.getPipelineState(mEngine, variant));
+                render(out, pipeline, driver);
+            });
+
+    return ppFsrRcas->output;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool translucent,
@@ -2905,41 +3002,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
     auto output = ppQuadBlit->output;
 
     // if we had to take the low quality fallback, we still do the "sharpen pass"
-    if (dsrOptions.sharpness > 0.0f && (dsrOptions.quality != QualityLevel::LOW || lowQualityFallback)) {
-        auto& ppFsrRcas = fg.addPass<QuadBlitData>("FidelityFX FSR1 Rcas",
-                [&](FrameGraph::Builder& builder, auto& data) {
-                    data.input = builder.sample(output);
-                    data.output = builder.createTexture("FFX FSR1 Rcas output", outDesc);
-                    data.output = builder.declareRenderPass(data.output);
-                },
-                [=](FrameGraphResources const& resources,
-                        auto const& data, DriverApi& driver) {
-
-                    auto color = resources.getTexture(data.input);
-                    auto out = resources.getRenderPassInfo();
-                    auto const& outputDesc = resources.getDescriptor(data.output);
-
-                    auto& material = getPostProcessMaterial("fsr_rcas");
-                    FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
-
-                    FSRUniforms uniforms;
-                    FSR_SharpeningSetup(&uniforms, { .sharpness = 2.0f - 2.0f * dsrOptions.sharpness });
-                    mi->setParameter("RcasCon", uniforms.RcasCon);
-                    mi->setParameter("color", color, { }); // uses texelFetch
-                    mi->setParameter("resolution", float4{
-                            outputDesc.width, outputDesc.height,
-                            1.0f / outputDesc.width, 1.0f / outputDesc.height });
-                    mi->commit(driver);
-                    mi->use(driver);
-
-                    const uint8_t variant = uint8_t(translucent ?
-                            PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
-
-                    PipelineState const pipeline(material.getPipelineState(mEngine, variant));
-                    render(out, pipeline, driver);
-                });
-
-        output = ppFsrRcas->output;
+    if (dsrOptions.sharpness > 0.0f &&
+            (dsrOptions.quality != QualityLevel::LOW || lowQualityFallback)) {
+        output = rcas(fg, dsrOptions.sharpness, output, outDesc, translucent);
     }
 
     // we rely on automatic culling of unused render passes
@@ -3149,7 +3214,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 auto& material = getPostProcessMaterial("vsmMipmap");
 
                 // When generating shadow map mip levels, we want to preserve the 1 texel border.
-                // (note clearing never respects the scissor in filament)
+                // (note clearing never respects the scissor in Filament)
                 PipelineState pipeline(material.getPipelineState(mEngine));
                 pipeline.scissor = { 1u, 1u, dim - 2u, dim - 2u };
 

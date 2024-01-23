@@ -147,9 +147,9 @@ Driver* OpenGLDriver::create(OpenGLPlatform* const platform,
 #endif
 
     size_t const defaultSize = FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
-    Platform::DriverConfig validConfig {driverConfig};
+    Platform::DriverConfig validConfig{ driverConfig };
     validConfig.handleArenaSize = std::max(driverConfig.handleArenaSize, defaultSize);
-    OpenGLDriver* const driver = new OpenGLDriver(ec, validConfig);
+    OpenGLDriver* const driver = new(std::nothrow) OpenGLDriver(ec, validConfig);
     return driver;
 }
 
@@ -171,7 +171,8 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
           mContext(),
           mShaderCompilerService(*this),
           mHandleAllocator("Handles", driverConfig.handleArenaSize),
-          mSamplerMap(32) {
+          mSamplerMap(32),
+          mDriverConfig(driverConfig) {
 
     std::fill(mSamplerBindings.begin(), mSamplerBindings.end(), nullptr);
 

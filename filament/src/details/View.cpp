@@ -725,11 +725,22 @@ UTILS_NOINLINE
     });
 }
 
-void FView::prepareUpscaler(float2 scale, DynamicResolutionOptions const& options) const noexcept {
+void FView::prepareUpscaler(float2 scale,
+        TemporalAntiAliasingOptions const& taaOptions,
+        DynamicResolutionOptions const& dsrOptions) const noexcept {
     SYSTRACE_CALL();
-    const float bias = (options.quality >= QualityLevel::HIGH) ?
-            std::log2(std::min(scale.x, scale.y)) : 0.0f;
-    mPerViewUniforms.prepareLodBias(bias);
+    float bias = 0.0f;
+    float2 derivativesScale{ 1.0f };
+    if (dsrOptions.enabled && dsrOptions.quality >= QualityLevel::HIGH) {
+        bias = std::log2(std::min(scale.x, scale.y));
+    }
+    if (taaOptions.enabled) {
+        bias += taaOptions.lodBias;
+        if (taaOptions.upscaling) {
+            derivativesScale = 0.5f;
+        }
+    }
+    mPerViewUniforms.prepareLodBias(bias, derivativesScale);
 }
 
 void FView::prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) const noexcept {

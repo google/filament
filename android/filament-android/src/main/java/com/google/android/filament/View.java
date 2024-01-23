@@ -1638,6 +1638,10 @@ public class View {
          */
         public float cocScale = 1.0f;
         /**
+         * width/height aspect ratio of the circle of confusion (simulate anamorphic lenses)
+         */
+        public float cocAspectRatio = 1.0f;
+        /**
          * maximum aperture diameter in meters (zero to disable rotation)
          */
         public float maxApertureDiameter = 0.01f;
@@ -1921,6 +1925,7 @@ public class View {
             UNIFORM_HELIX_X4,
             HALTON_23_X8,
             HALTON_23_X16,
+            HALTON_23_X32,
         }
 
         /**
@@ -1932,9 +1937,21 @@ public class View {
          */
         public float feedback = 0.12f;
         /**
+         * texturing lod bias (typically -1 or -2)
+         */
+        public float lodBias = -1.0f;
+        /**
+         * post-TAA sharpen, especially useful when upscaling is true.
+         */
+        public float sharpness = 0.0f;
+        /**
          * enables or disables temporal anti-aliasing
          */
         public boolean enabled = false;
+        /**
+         * 4x TAA upscaling. Disables Dynamic Resolution. [BETA]
+         */
+        public boolean upscaling = false;
         /**
          * whether to filter the history buffer
          */

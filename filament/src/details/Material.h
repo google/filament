@@ -33,6 +33,7 @@
 #include <utils/Mutex.h>
 
 #include <atomic>
+#include <optional>
 
 namespace filament {
 

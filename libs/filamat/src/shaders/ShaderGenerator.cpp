@@ -52,7 +52,7 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(utils::io::sstream& 
     CodeGenerator::generateDefine(out, "VARIANT_HAS_VSM",
             filament::Variant::isVSMVariant(variant));
     CodeGenerator::generateDefine(out, "VARIANT_HAS_INSTANCED_STEREO",
-            filament::Variant::isStereoVariant(variant));
+            hasInstancedStereo(variant, featureLevel));
 
     switch (stage) {
         case ShaderStage::VERTEX:
@@ -755,6 +755,14 @@ bool ShaderGenerator::hasSkinningOrMorphing(
             // HACK(exv): Ignore skinning/morphing variant when targeting ESSL 1.0. We should
             // either properly support skinning on FL0 or build a system in matc which allows
             // the set of included variants to differ per-feature level.
+            && featureLevel > MaterialBuilder::FeatureLevel::FEATURE_LEVEL_0;
+}
+
+bool ShaderGenerator::hasInstancedStereo(
+        filament::Variant variant, MaterialBuilder::FeatureLevel featureLevel) noexcept {
+    return variant.hasInstancedStereo()
+            // HACK(exv): Ignore stereo variant when targeting ESSL 1.0. We should properly build a
+            // system in matc which allows the set of included variants to differ per-feature level.
             && featureLevel > MaterialBuilder::FeatureLevel::FEATURE_LEVEL_0;
 }
 
