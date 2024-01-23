@@ -171,7 +171,9 @@ public:
         FrameGraphId<FrameGraphTexture> flare;
     };
     BloomPassOutput bloom(FrameGraph& fg, FrameGraphId<FrameGraphTexture> input,
-            BloomOptions& inoutBloomOptions, backend::TextureFormat outFormat,
+            backend::TextureFormat outFormat,
+            BloomOptions& inoutBloomOptions,
+            TemporalAntiAliasingOptions const& taaOptions,
             math::float2 scale) noexcept;
 
     FrameGraphId<FrameGraphTexture> flarePass(FrameGraph& fg,
@@ -341,10 +343,6 @@ private:
             FrameGraphId<FrameGraphTexture> input, FrameGraphId<FrameGraphTexture> depth,
             math::int2 axis, float zf, backend::TextureFormat format,
             BilateralPassConfig const& config) noexcept;
-
-    BloomPassOutput bloomPass(FrameGraph& fg,
-            FrameGraphId<FrameGraphTexture> input, backend::TextureFormat outFormat,
-            BloomOptions& inoutBloomOptions, math::float2 scale) noexcept;
 
     FrameGraphId<FrameGraphTexture> downscalePass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input,

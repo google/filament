@@ -71,8 +71,7 @@ void PerShadowMapUniforms::prepareCamera(Transaction const& transaction,
     s.clipControl = engine.getDriverApi().getClipSpaceParams();
 }
 
-void PerShadowMapUniforms::prepareLodBias(Transaction const& transaction,
-        float bias) noexcept {
+void PerShadowMapUniforms::prepareLodBias(Transaction const& transaction, float bias) noexcept {
     auto& s = edit(transaction);
     s.lodBias = bias;
 }

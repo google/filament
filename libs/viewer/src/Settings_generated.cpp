@@ -716,8 +716,12 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAli
             i = parse(tokens, i + 1, jsonChunk, &out->filterWidth);
         } else if (compare(tok, jsonChunk, "feedback") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->feedback);
+        } else if (compare(tok, jsonChunk, "lodBias") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->lodBias);
         } else if (compare(tok, jsonChunk, "enabled") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else if (compare(tok, jsonChunk, "upscaling") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->upscaling);
         } else if (compare(tok, jsonChunk, "filterHistory") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->filterHistory);
         } else if (compare(tok, jsonChunk, "filterInput") == 0) {
@@ -752,7 +756,9 @@ std::ostream& operator<<(std::ostream& out, const TemporalAntiAliasingOptions& i
     return out << "{\n"
         << "\"filterWidth\": " << (in.filterWidth) << ",\n"
         << "\"feedback\": " << (in.feedback) << ",\n"
+        << "\"lodBias\": " << (in.lodBias) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
+        << "\"upscaling\": " << to_string(in.upscaling) << ",\n"
         << "\"filterHistory\": " << to_string(in.filterHistory) << ",\n"
         << "\"filterInput\": " << to_string(in.filterInput) << ",\n"
         << "\"useYCoCg\": " << to_string(in.useYCoCg) << ",\n"

@@ -1932,9 +1932,17 @@ public class View {
          */
         public float feedback = 0.12f;
         /**
+         * texturing lod bias (typically -1 or -2)
+         */
+        public float lodBias = -1.0f;
+        /**
          * enables or disables temporal anti-aliasing
          */
         public boolean enabled = false;
+        /**
+         * 4x TAA upscaling. Disables Dynamic Resolution. [BETA]
+         */
+        public boolean upscaling = false;
         /**
          * whether to filter the history buffer
          */

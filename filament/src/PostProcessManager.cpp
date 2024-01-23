@@ -27,9 +27,12 @@
 #include "details/Engine.h"
 
 #include "fg/FrameGraph.h"
+#include "fg/FrameGraphId.h"
 #include "fg/FrameGraphResources.h"
+#include "fg/FrameGraphTexture.h"
 
 #include "fsr.h"
+#include "FrameHistory.h"
 #include "PerViewUniforms.h"
 #include "RenderPass.h"
 
@@ -41,15 +44,44 @@
 
 #include "generated/resources/materials.h"
 
+#include <filament/Material.h>
 #include <filament/MaterialEnums.h>
+#include <filament/Options.h>
+#include <filament/Viewport.h>
+
+#include <private/filament/EngineEnums.h>
+
+#include <backend/DriverEnums.h>
+#include <backend/DriverApiForward.h>
+#include <backend/Handle.h>
+#include <backend/PipelineState.h>
+#include <backend/PixelBufferDescriptor.h>
+
+#include <private/backend/BackendUtils.h>
 
 #include <math/half.h>
 #include <math/mat2.h>
+#include <math/mat3.h>
+#include <math/mat4.h>
+#include <math/scalar.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 
+#include <utils/algorithm.h>
 #include <utils/BitmaskEnum.h>
+#include <utils/debug.h>
+#include <utils/compiler.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
+#include <string_view>
+#include <variant>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -772,7 +804,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 auto ssao = resources.getRenderPassInfo();
                 auto const& desc = resources.getDescriptor(data.depth);
 
-                // estimate of the size in pixel of a 1m tall/wide object viewed from 1m away (i.e. at z=-1)
+                // Estimate of the size in pixel units of a 1m tall/wide object viewed from 1m away (i.e. at z=-1)
                 const float projectionScale = std::min(
                         0.5f * cameraInfo.projection[0].x * desc.width,
                         0.5f * cameraInfo.projection[1].y * desc.height);
@@ -929,7 +961,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
                 auto const& desc = resources.getDescriptor(data.blurred);
 
                 // unnormalized gaussian half-kernel of a given standard deviation
-                // returns number of samples stored in array (max 16)
+                // returns number of samples stored in the array (max 16)
                 constexpr size_t kernelArraySize = 16; // limited by bilateralBlur.mat
                 auto gaussianKernel =
                         [kernelArraySize](float* outKernel, size_t gaussianWidth, float stdDev) -> uint32_t {
@@ -973,7 +1005,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateGaussianMipmap(Frame
 
     auto const subResourceDesc = fg.getSubResourceDescriptor(input);
 
-    // create one subresource per level to be generated from the input. These will be our
+    // Create one subresource per level to be generated from the input. These will be our
     // destinations.
     struct MipmapPassData {
         FixedCapacityVector<FrameGraphId<FrameGraphTexture>> out;
@@ -1134,7 +1166,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 size_t const m = computeGaussianCoefficients(kernel,
                         std::min(sizeof(kernel) / sizeof(*kernel), kernelStorageSize));
 
-                std::string_view sourceParameterName = is2dArray ? "sourceArray"sv : "source"sv;
+                std::string_view const sourceParameterName = is2dArray ? "sourceArray"sv : "source"sv;
                 // horizontal pass
                 mi->setParameter(sourceParameterName, hwIn, {
                         .filterMag = SamplerMagFilter::LINEAR,
@@ -1180,7 +1212,7 @@ PostProcessManager::ScreenSpaceRefConfig PostProcessManager::prepareMipmapSSR(Fr
 
     // The kernel-size was determined empirically so that we don't get too many artifacts
     // due to the down-sampling with a box filter (which happens implicitly).
-    // requires only 6 stored coefficients and 11 tap/pass
+    // Requires only 6 stored coefficients and 11 tap/pass
     // e.g.: size of 13 (4 stored coefficients)
     //      +-------+-------+-------*===*-------+-------+-------+
     //  ... | 6 | 5 | 4 | 3 | 2 | 1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | ...
@@ -1344,10 +1376,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::generateMipmapSSR(
         FrameGraphId<FrameGraphTexture> output,
         bool needInputDuplication, ScreenSpaceRefConfig const& config) noexcept {
 
-    // descriptor of our actual input image (e.g. reflection buffer or refraction framebuffer)
+    // Descriptor of our actual input image (e.g. reflection buffer or refraction framebuffer)
     auto const& desc = fg.getDescriptor(input);
 
-    // descriptor of the destination. output is a subresource (i.e. a layer of a 2D array)
+    // Descriptor of the destination. `output` is a subresource (i.e. a layer of a 2D array)
     auto const& outDesc = fg.getDescriptor(output);
 
     /*
@@ -1407,7 +1439,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     const TextureFormat format = translucent ? TextureFormat::RGBA16F
                                              : TextureFormat::R11F_G11F_B10F;
 
-    // rotate the bokeh based on the aperture diameter (i.e. angle of the blades)
+    // Rotate the bokeh based on the aperture diameter (i.e. angle of the blades)
     float bokehAngle = f::PI / 6.0f;
     if (dofOptions.maxApertureDiameter > 0.0f) {
         bokehAngle += f::PI_2 * saturate(cameraInfo.A / dofOptions.maxApertureDiameter);
@@ -1893,14 +1925,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
     return ppDoFCombine->output;
 }
 
-PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
-        FrameGraphId<FrameGraphTexture> input,
-        BloomOptions& inoutBloomOptions,
-        backend::TextureFormat outFormat,
-        math::float2 scale) noexcept {
-    return bloomPass(fg, input, outFormat, inoutBloomOptions, scale);
-}
-
 FrameGraphId<FrameGraphTexture> PostProcessManager::downscalePass(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input,
         FrameGraphTexture::Descriptor const& outDesc,
@@ -1932,9 +1956,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::downscalePass(FrameGraph& fg
     return downsamplePass->output;
 }
 
-PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg,
+PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> input, TextureFormat outFormat,
-        BloomOptions& inoutBloomOptions, float2 scale) noexcept {
+        BloomOptions& inoutBloomOptions,
+        TemporalAntiAliasingOptions const& taaOptions,
+        float2 scale) noexcept {
 
     // Figure out a good size for the bloom buffer. We must use a fixed bloom buffer size so
     // that the size/strength of the bloom doesn't vary much with the resolution, otherwise
@@ -1976,6 +2002,9 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
 
     bool threshold = inoutBloomOptions.threshold;
 
+    // we don't need to do the fireflies reduction if we have TAA (it already does it)
+    bool fireflies = threshold && !taaOptions.enabled;
+
     while (2 * bloomWidth < float(desc.width) || 2 * bloomHeight < float(desc.height)) {
         if (inoutBloomOptions.quality == QualityLevel::LOW ||
             inoutBloomOptions.quality == QualityLevel::MEDIUM) {
@@ -1984,8 +2013,9 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
                             .height = (desc.height = std::max(1u, desc.height / 2)),
                             .format = outFormat
                     },
-                    threshold, inoutBloomOptions.highlight, threshold);
+                    threshold, inoutBloomOptions.highlight, fireflies);
             threshold = false; // we do the thresholding only once during down sampling
+            fireflies = false; // we do the fireflies reduction only once during down sampling
         } else if (inoutBloomOptions.quality == QualityLevel::HIGH ||
                    inoutBloomOptions.quality == QualityLevel::ULTRA) {
             // In high quality mode, we increase the size of the bloom buffer such that the
@@ -2006,7 +2036,7 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloomPass(FrameGraph& fg
 
     input = downscalePass(fg, input,
             { .width = width, .height = height, .format = outFormat },
-            threshold, inoutBloomOptions.highlight, threshold);
+            threshold, inoutBloomOptions.highlight, fireflies);
 
     struct BloomPassData {
         FrameGraphId<FrameGraphTexture> out;
@@ -2635,6 +2665,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
     auto& taaPass = fg.addPass<TAAData>("TAA",
             [&](FrameGraph::Builder& builder, auto& data) {
                 auto desc = fg.getDescriptor(input);
+                if (taaOptions.upscaling) {
+                    desc.width *= 2;
+                    desc.height *= 2;
+                }
                 data.color = builder.sample(input);
                 data.depth = builder.sample(depth);
                 data.history = builder.sample(colorHistory);
@@ -2669,18 +2703,26 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                         { -1.0f,  1.0f }, {  0.0f,  1.0f }, {  1.0f,  1.0f },
                 };
 
-                float sum = 0.0;
+                constexpr float2 subSampleOffsets[4] = {
+                        { -0.25f, 0.25f }, {  0.25f, 0.25f }, { 0.25f, -0.25f }, { -0.25f, -0.25f }
+                };
+
+                float4 sum = 0.0;
                 float4 weights[9];
 
                 // this doesn't get vectorized (probably because of exp()), so don't bother
                 // unrolling it.
                 #pragma nounroll
                 for (size_t i = 0; i < 9; i++) {
-                    float2 const d = (sampleOffsets[i] - current.jitter) / taaOptions.filterWidth;
-                    // This is a gaussian fit of a 3.3-wide Blackman-Harris window
-                    // see: "High Quality Temporal Supersampling" by Brian Karis
-                    weights[i][0] = std::exp(-2.29f * (d.x * d.x + d.y * d.y));
-                    sum += weights[i][0];
+                    float2 const o = sampleOffsets[i];
+                    for (size_t j = 0; j < 4; j++) {
+                        float2 const s = taaOptions.upscaling ? subSampleOffsets[j] : float2{ 0 };
+                        float2 const d = (o - current.jitter - s) / taaOptions.filterWidth;
+                        // This is a gaussian fit of a 3.3-wide Blackman-Harris window
+                        // see: "High Quality Temporal Supersampling" by Brian Karis
+                        weights[i][j] = std::exp(-2.29f * (d.x * d.x + d.y * d.y));
+                    }
+                    sum += weights[i];
                 }
                 for (auto& w : weights) {
                     w /= sum;
@@ -3149,7 +3191,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 auto& material = getPostProcessMaterial("vsmMipmap");
 
                 // When generating shadow map mip levels, we want to preserve the 1 texel border.
-                // (note clearing never respects the scissor in filament)
+                // (note clearing never respects the scissor in Filament)
                 PipelineState pipeline(material.getPipelineState(mEngine));
                 pipeline.scissor = { 1u, 1u, dim - 2u, dim - 2u };
 
