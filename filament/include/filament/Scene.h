@@ -24,6 +24,8 @@
 #include <utils/compiler.h>
 #include <utils/Invocable.h>
 
+#include <stddef.h>
+
 namespace utils {
     class Entity;
 } // namespace utils

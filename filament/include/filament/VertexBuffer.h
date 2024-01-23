@@ -27,6 +27,9 @@
 
 #include <utils/compiler.h>
 
+#include <stddef.h>
+#include <stdint.h>
+
 namespace filament {
 
 class FVertexBuffer;

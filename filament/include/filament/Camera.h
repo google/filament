@@ -28,6 +28,11 @@
 #include <math/vec4.h>
 #include <math/mat4.h>
 
+#include <math.h>
+
+#include <stdint.h>
+#include <stddef.h>
+
 namespace utils {
 class Entity;
 } // namespace utils
@@ -184,7 +189,7 @@ public:
      * @see Fov.
      */
     static math::mat4 projection(Fov direction, double fovInDegrees,
-            double aspect, double near, double far = std::numeric_limits<double>::infinity());
+            double aspect, double near, double far = INFINITY);
 
     /** Returns the projection matrix from the focal length.
      *
@@ -194,7 +199,7 @@ public:
      * @param far         distance in world units from the camera to the far plane. \p far > \p near.
      */
     static math::mat4 projection(double focalLengthInMillimeters,
-            double aspect, double near, double far = std::numeric_limits<double>::infinity());
+            double aspect, double near, double far = INFINITY);
 
 
     /** Sets the projection matrix from a frustum defined by six planes.

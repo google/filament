@@ -18,10 +18,13 @@
 #define TNT_FILAMENT_INSTANCEBUFFER_H
 
 #include <filament/FilamentAPI.h>
-
 #include <filament/Engine.h>
 
+#include <utils/compiler.h>
+
 #include <math/mathfwd.h>
+
+#include <stddef.h>
 
 namespace filament {
 
@@ -45,7 +48,7 @@ public:
          *                      >= 1 and <= \c Engine::getMaxAutomaticInstances()
          * @see Engine::getMaxAutomaticInstances
          */
-        Builder(size_t instanceCount) noexcept;
+        explicit Builder(size_t instanceCount) noexcept;
 
         Builder(Builder const& rhs) noexcept;
         Builder(Builder&& rhs) noexcept;

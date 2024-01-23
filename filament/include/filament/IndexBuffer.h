@@ -27,6 +27,7 @@
 
 #include <utils/compiler.h>
 
+#include <stdint.h>
 #include <stddef.h>
 
 namespace filament {

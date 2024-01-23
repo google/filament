@@ -28,6 +28,12 @@
 
 #include <math/mathfwd.h>
 
+#include <type_traits>
+
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
 namespace filament {
 
 class Material;
