@@ -30,7 +30,12 @@
 
 #include <math/mathfwd.h>
 
+#include <type_traits>
+#include <utility>
+
+#include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 namespace utils {
     class CString;

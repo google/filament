@@ -21,8 +21,11 @@
 
 #include <filament/Engine.h>
 
+#include <utils/compiler.h>
+
 #include <math/mathfwd.h>
 
+#include <stddef.h>
 
 namespace filament {
 

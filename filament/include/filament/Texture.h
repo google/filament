@@ -20,12 +20,16 @@
 #define TNT_FILAMENT_TEXTURE_H
 
 #include <filament/FilamentAPI.h>
+
 #include <backend/DriverEnums.h>
 #include <backend/PixelBufferDescriptor.h>
 
 #include <utils/compiler.h>
 
+#include <utility>
+
 #include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 

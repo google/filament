@@ -23,9 +23,6 @@
 
 #include <utils/compiler.h>
 
-#include <backend/PresentCallable.h>
-#include <backend/DriverEnums.h>
-
 #include <math/vec4.h>
 
 #include <stdint.h>
