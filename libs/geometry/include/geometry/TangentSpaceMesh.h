@@ -21,6 +21,8 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <variant>
+
 namespace filament {
 namespace geometry {
 
@@ -106,15 +108,23 @@ public:
          *     - http://people.compute.dtu.dk/jerf/code/hairy/
          */
         FRISVAD = 4,
-
-        /**
-         * Flat Shading
-         *
-         * **Requires**: `positions + indices` <br/>
-         * **Note**: Will remesh
-         */
-        FLAT_SHADING = 5
     };
+
+    /**
+     * This enum specifies the auxiliary attributes of each vertex that can be provided as input.
+     * These attributes do not affect the computation of the tangent space, but they will be
+     * properly mapped when a remeshing is carried out.
+     */
+    enum class AuxAttribute : uint8_t {
+        UV1 = 0x0,
+        COLORS = 0x1,
+        JOINTS = 0x2,
+        WEIGHTS = 0x3,
+    };
+
+    using InData = std::variant<filament::math::float2 const*, filament::math::float3 const*,
+            filament::math::float4 const*, filament::math::ushort3 const*,
+            filament::math::ushort4 const*>;
 
     /**
      * Use this class to provide input to the TangentSpaceMesh computation. **Important**:
@@ -171,16 +181,46 @@ public:
         Builder& uvs(filament::math::float2 const* uvs, size_t stride = 0) noexcept;
 
         /**
+         * Sets "auxiliary" attributes that will be properly mapped when remeshed.
+         *
+         * @param attribute The attribute of the data to be stored
+         * @param data The data to be store
+         * @param stride The stride for iterating through `attribute`
+         * @return Builder
+         */
+        Builder& aux(AuxAttribute attribute, InData data, size_t stride = 0) noexcept;
+
+        /**
          * @param positions The input positions
          * @param stride The stride for iterating through `positions`
          * @return Builder
          */
         Builder& positions(filament::math::float3 const* positions, size_t stride = 0) noexcept;
 
+        /**
+         * @param triangleCount The input number of triangles
+         * @return Builder
+         */
         Builder& triangleCount(size_t triangleCount) noexcept;
+
+        /**
+         * @param triangles The triangles in 32-bit indices
+         * @return Builder
+         */
         Builder& triangles(filament::math::uint3 const* triangles) noexcept;
+
+        /**
+         * @param triangles The triangles in 16-bit indices
+         * @return Builder
+         */
         Builder& triangles(filament::math::ushort3 const* triangles) noexcept;
 
+        /**
+         * The Client can provide an algorithm hint to produce the tangents.
+         *
+         * @param algorithm The algorithm hint.
+         * @return Builder
+         */
         Builder& algorithm(Algorithm algorithm) noexcept;
 
         /**
@@ -199,7 +239,7 @@ public:
     };
 
     /**
-     * Destory the mesh object
+     * Destroy the mesh object
      * @param mesh A pointer to a TangentSpaceMesh ready to be destroyed
      */
      static void destroy(TangentSpaceMesh* mesh) noexcept;
@@ -285,6 +325,24 @@ public:
     void getQuats(filament::math::quath* out, size_t stride = 0) const noexcept;
 
     /**
+     * Get output auxiliary attributes.
+     * Assumes the `out` param is at least of getVertexCount() length (while accounting for
+     * `stride`).
+     *
+     * @param  out    Client-allocated array that will be used for copying out attribute as T
+     * @param  stride Stride for iterating through `out`
+     */
+    template<typename T>
+    using is_supported_aux_t =
+            typename std::enable_if<std::is_same<filament::math::float2, T>::value ||
+                                    std::is_same<filament::math::float3, T>::value ||
+                                    std::is_same<filament::math::float4, T>::value ||
+                                    std::is_same<filament::math::ushort3, T>::value ||
+                                    std::is_same<filament::math::ushort4, T>::value>::type;
+    template<typename T, typename = is_supported_aux_t<T>>
+    void getAux(AuxAttribute attribute, T* out, size_t stride = 0) const noexcept;
+
+    /**
      * Get number of output triangles.
      * The number of output triangles is the same as the number of input triangles. However, when a
      * "remesh" is carried out the output triangles are not guarranteed to have any correlation with
@@ -315,9 +373,9 @@ public:
     void getTriangles(filament::math::ushort3* out) const;
 
     /**
-     * @return The algorithm used to compute the output mesh.
+     * @return Whether the TBN algorithm remeshed the input.
      */
-    Algorithm getAlgorithm() const noexcept;
+    bool remeshed() const noexcept;
 
 private:
     ~TangentSpaceMesh() noexcept;

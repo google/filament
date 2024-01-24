@@ -21,13 +21,19 @@
 
 #include <gtest/gtest.h>
 
+#include <utils/Log.h>
+
+#include <vector>
+
 class TangentSpaceMeshTest : public testing::Test {};
 
 using namespace filament::geometry;
 using namespace filament::math;
 
 namespace {
-const std::vector<float3> CUBE_VERTS {
+using AuxAttribute = TangentSpaceMesh::AuxAttribute;
+
+std::vector<float3> const CUBE_VERTS {
         float3{0, 0, 0},
         float3{0, 0, 1},
         float3{0, 1, 0},
@@ -38,7 +44,7 @@ const std::vector<float3> CUBE_VERTS {
         float3{1, 1, 1}
 };
 
-const std::vector<float2> CUBE_UVS {
+std::vector<float2> const CUBE_UVS {
         float2{0, 0},
         float2{0, 0},
         float2{1, 0},
@@ -49,8 +55,20 @@ const std::vector<float2> CUBE_UVS {
         float2{0, 1}
 };
 
-const float3 CUBE_CENTER{.5, .5, .5};
-const std::vector<float3> CUBE_NORMALS {
+// This is used to verify that attributes are properly mapped for remeshed methods.
+std::vector<float4> const CUBE_COLORS {
+        float4{0, 0, 0, 1},
+        float4{0, 0, 1, 1},
+        float4{0, 1, 0, 1},
+        float4{0, 1, 1, 1},
+        float4{1, 0, 0, 1},
+        float4{1, 0, 1, 1},
+        float4{1, 1, 0, 1},
+        float4{1, 1, 1, 1},
+};
+
+float3 const CUBE_CENTER { .5, .5, .5 };
+std::vector<float3> const CUBE_NORMALS {
     normalize(CUBE_VERTS[0] - CUBE_CENTER),
     normalize(CUBE_VERTS[1] - CUBE_CENTER),
     normalize(CUBE_VERTS[2] - CUBE_CENTER),
@@ -61,7 +79,19 @@ const std::vector<float3> CUBE_NORMALS {
     normalize(CUBE_VERTS[7] - CUBE_CENTER),
 };
 
-const std::vector<ushort3> CUBE_TRIANGLES {
+float3 const UP_VEC{1, 0, 0};
+std::vector<float4> const CUBE_TANGENTS {
+    float4{normalize(cross(CUBE_NORMALS[0], UP_VEC)), -1.0},
+    float4{normalize(cross(CUBE_NORMALS[1], UP_VEC)), -1.0},
+    float4{normalize(cross(CUBE_NORMALS[2], UP_VEC)), -1.0},
+    float4{normalize(cross(CUBE_NORMALS[3], UP_VEC)), -1.0},
+    float4{normalize(cross(CUBE_NORMALS[4], UP_VEC)), -1.0},
+    float4{normalize(cross(CUBE_NORMALS[5], UP_VEC)), -1.0},
+    float4{normalize(cross(CUBE_NORMALS[6], UP_VEC)), -1.0},
+    float4{normalize(cross(CUBE_NORMALS[7], UP_VEC)), -1.0},
+};
+
+std::vector<ushort3> const CUBE_TRIANGLES {
         ushort3{0, 6, 4}, ushort3{0, 2, 6}, // XY-plane at z=0, normal=(0, 0, -1)
         ushort3{4, 7, 5}, ushort3{4, 6, 7}, // YZ-plane at x=1, normal=(1, 0 , 0)
         ushort3{2, 7, 6}, ushort3{2, 3, 7}, // XZ-plane at y=1, normal=(0, 1, 0)
@@ -71,7 +101,7 @@ const std::vector<ushort3> CUBE_TRIANGLES {
 };
 
 // Corresponding to the faces in CUBE_TRIANGLES
-const std::vector<float3> CUBE_FACE_NORMALS {
+std::vector<float3> const CUBE_FACE_NORMALS {
     float3{0, 0, -1},
     float3{1, 0, 0},
     float3{0, 1, 0},
@@ -80,7 +110,7 @@ const std::vector<float3> CUBE_FACE_NORMALS {
     float3{0, 0, 1}
 };
 
-const std::vector<float3> TEST_NORMALS {
+std::vector<float3> const TEST_NORMALS {
     float3{1, 0, 0},
     float3{0, 1, 0},
     float3{0, 0, 1},
@@ -89,50 +119,46 @@ const std::vector<float3> TEST_NORMALS {
     normalize(float3{1, 1, 1})
 };
 
-const float3 NORMAL_AXIS{0, 0, 1};
-const float3 TANGENT_AXIS{1, 0, 0};
-const float3 BITANGENT_AXIS{0, 1, 0};
+float3 const NORMAL_AXIS{0, 0, 1};
+float3 const TANGENT_AXIS{1, 0, 0};
+float3 const BITANGENT_AXIS{0, 1, 0};
 
-bool isAlmostEqual3(const float3& a, const float3& b) noexcept {
-    const float3 diff = a - b;
-    const size_t steps = sizeof(float3) / sizeof(float);
-    for (int i = 0; i < steps; ++i) {
-        if (abs(diff[i]) > std::numeric_limits<float>::epsilon()) {
-            return false;
-        }
-    }
-    return true;
-}
+#define ALMOST_EQUAL()                                                                             \
+    decltype(a) diff = a - b;                                                                      \
+    const size_t steps = sizeof(decltype(a)) / sizeof(float);                                      \
+    for (int i = 0; i < steps; ++i) {                                                              \
+        if (abs(diff[i]) > std::numeric_limits<float>::epsilon()) { return false; }                \
+    }                                                                                              \
+    return true
 
-bool isAlmostEqual2(const float2& a, const float2& b) noexcept {
-    const float2 diff = a - b;
-    const size_t steps = sizeof(float2) / sizeof(float);
-    for (int i = 0; i < steps; ++i) {
-        if (abs(diff[i]) > std::numeric_limits<float>::epsilon()) {
-            return false;
-        }
-    }
-    return true;
-}
+bool isAlmostEqual4(const float4& a, const float4& b) noexcept { ALMOST_EQUAL(); }
+bool isAlmostEqual3(const float3& a, const float3& b) noexcept { ALMOST_EQUAL(); }
+bool isAlmostEqual2(const float2& a, const float2& b) noexcept { ALMOST_EQUAL(); }
+
+#undef ALMOST_EQUAL
+
 } // anonymous namespace
 
-TEST_F(TangentSpaceMeshTest, BuilderDefaultAlgorithms) {
+TEST_F(TangentSpaceMeshTest, BuilderDefaultAlgorithmsRemeshes) {
+    // Expect flat shading selected.
     TangentSpaceMesh* mesh = TangentSpaceMesh::Builder()
             .vertexCount(CUBE_VERTS.size())
             .positions(CUBE_VERTS.data())
             .triangleCount(CUBE_TRIANGLES.size())
             .triangles(CUBE_TRIANGLES.data())
             .build();
-    EXPECT_EQ(mesh->getAlgorithm(), TangentSpaceMesh::Algorithm::FLAT_SHADING);
+    EXPECT_TRUE(mesh->remeshed());
     TangentSpaceMesh::destroy(mesh);
 
+    // Expect frisvad selected.
     mesh = TangentSpaceMesh::Builder()
             .vertexCount(1)
             .normals(TEST_NORMALS.data())
             .build();
-    EXPECT_EQ(mesh->getAlgorithm(), TangentSpaceMesh::Algorithm::FRISVAD);
+    EXPECT_FALSE(mesh->remeshed());
     TangentSpaceMesh::destroy(mesh);
 
+    // Expect mikktspace selected.
     mesh = TangentSpaceMesh::Builder()
             .vertexCount(CUBE_VERTS.size())
             .positions(CUBE_VERTS.data())
@@ -141,7 +167,7 @@ TEST_F(TangentSpaceMeshTest, BuilderDefaultAlgorithms) {
             .triangleCount(CUBE_TRIANGLES.size())
             .triangles(CUBE_TRIANGLES.data())
             .build();
-    EXPECT_EQ(mesh->getAlgorithm(), TangentSpaceMesh::Algorithm::MIKKTSPACE);
+    EXPECT_TRUE(mesh->remeshed());
     TangentSpaceMesh::destroy(mesh);
 }
 
@@ -153,7 +179,7 @@ TEST_F(TangentSpaceMeshTest, FlatShadingRemesh) {
             .triangleCount(CUBE_TRIANGLES.size())
             .triangles(CUBE_TRIANGLES.data())
             .uvs(CUBE_UVS.data())
-            .algorithm(TangentSpaceMesh::Algorithm::FLAT_SHADING)
+            .aux(AuxAttribute::COLORS, CUBE_COLORS.data())
             .build();
 
     // Number of triangles should remain the same
@@ -165,17 +191,23 @@ TEST_F(TangentSpaceMeshTest, FlatShadingRemesh) {
     std::vector<float2> outUVs(mesh->getVertexCount());
     mesh->getUVs(outUVs.data());
 
+    std::vector<float4> outColors(mesh->getVertexCount());
+    mesh->getAux(AuxAttribute::COLORS, outColors.data());
+
     for (size_t i = 0; i < outPositions.size(); ++i) {
         const auto& outPos = outPositions[i];
         const auto& outUV = outUVs[i];
+        const auto& outColor = outColors[i];
 
         bool found = false;
         for (size_t j = 0; j < CUBE_VERTS.size(); ++j) {
             const auto& inPos = CUBE_VERTS[j];
             const auto& inUV = CUBE_UVS[j];
+            const auto& inColor = CUBE_COLORS[j];
             if (isAlmostEqual3(outPos, inPos)) {
                 found = true;
                 EXPECT_PRED2(isAlmostEqual2, outUV, inUV);
+                EXPECT_PRED2(isAlmostEqual4, outColor, inColor);
                 break;
             }
         }
@@ -190,7 +222,6 @@ TEST_F(TangentSpaceMeshTest, FlatShading) {
             .positions(CUBE_VERTS.data())
             .triangleCount(CUBE_TRIANGLES.size())
             .triangles(CUBE_TRIANGLES.data())
-            .algorithm(TangentSpaceMesh::Algorithm::FLAT_SHADING)
             .build();
 
     ASSERT_EQ(mesh->getVertexCount(), CUBE_TRIANGLES.size() * 3);
@@ -207,6 +238,28 @@ TEST_F(TangentSpaceMeshTest, FlatShading) {
             const quatf& quat = quats[triangles[i][j]];
             EXPECT_PRED2(isAlmostEqual3, quat * NORMAL_AXIS, expectedNormal);
         }
+    }
+    TangentSpaceMesh::destroy(mesh);
+}
+
+TEST_F(TangentSpaceMeshTest, TangentsProvided) {
+    TangentSpaceMesh* mesh = TangentSpaceMesh::Builder()
+            .vertexCount(CUBE_VERTS.size())
+            .normals(CUBE_NORMALS.data())
+            .tangents(CUBE_TANGENTS.data())
+            .triangleCount(CUBE_TRIANGLES.size())
+            .triangles(CUBE_TRIANGLES.data())
+            .build();
+
+    ASSERT_EQ(mesh->getVertexCount(), CUBE_VERTS.size());
+    ASSERT_EQ(mesh->getTriangleCount(), CUBE_TRIANGLES.size());
+
+    size_t const vertexCount = mesh->getVertexCount();
+    std::vector<quatf> quats(vertexCount);
+    mesh->getQuats(quats.data());
+    for (size_t i = 0; i < vertexCount; ++i) {
+        float3 const n = quats[i] * NORMAL_AXIS;
+        EXPECT_PRED2(isAlmostEqual3, n, CUBE_NORMALS[i]);        
     }
     TangentSpaceMesh::destroy(mesh);
 }
@@ -273,6 +326,7 @@ TEST_F(TangentSpaceMeshTest, MikktspaceRemesh) {
             .uvs(CUBE_UVS.data())
             .triangleCount(CUBE_TRIANGLES.size())
             .triangles(CUBE_TRIANGLES.data())
+            .aux(AuxAttribute::COLORS, CUBE_COLORS.data())
             .algorithm(TangentSpaceMesh::Algorithm::MIKKTSPACE)
             .build();
 
@@ -284,17 +338,23 @@ TEST_F(TangentSpaceMeshTest, MikktspaceRemesh) {
     std::vector<float2> outUVs(vertexCount);
     mesh->getUVs(outUVs.data());
 
+    std::vector<float4> outColors(mesh->getVertexCount());
+    mesh->getAux(AuxAttribute::COLORS, outColors.data());
+
     for (size_t i = 0; i < outPositions.size(); ++i) {
         auto const& outPos = outPositions[i];
         auto const& outUV = outUVs[i];
+        auto const& outColor = outColors[i];
 
         bool found = false;
         for (size_t j = 0; j < CUBE_VERTS.size(); ++j) {
             auto const& inPos = CUBE_VERTS[j];
             auto const& inUV = CUBE_UVS[j];
+            auto const& inColor = CUBE_COLORS[j];
             if (isAlmostEqual3(outPos, inPos)) {
                 found = true;
                 EXPECT_PRED2(isAlmostEqual2, outUV, inUV);
+                EXPECT_PRED2(isAlmostEqual4, outColor, inColor);
                 break;
             }
         }
