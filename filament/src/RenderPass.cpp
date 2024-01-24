@@ -184,17 +184,18 @@ void RenderPass::appendCommands(FEngine& engine,
     Command* curr = commands.data();
     size_t const commandCount = commands.size();
 
+    StereoscopicType stereoscopicType = engine.getConfig().stereoscopicType;
     auto stereoscopicEyeCount =
             renderFlags & IS_STEREOSCOPIC ? engine.getConfig().stereoscopicEyeCount : 1;
 
     const float3 cameraPosition(mCameraPosition);
     const float3 cameraForwardVector(mCameraForwardVector);
     auto work = [commandTypeFlags, curr, &soa, variant, renderFlags, visibilityMask, cameraPosition,
-                 cameraForwardVector, stereoscopicEyeCount]
+                 cameraForwardVector, stereoscopicType, stereoscopicEyeCount]
             (uint32_t startIndex, uint32_t indexCount) {
         RenderPass::generateCommands(commandTypeFlags, curr,
                 soa, { startIndex, startIndex + indexCount }, variant, renderFlags, visibilityMask,
-                cameraPosition, cameraForwardVector, stereoscopicEyeCount);
+                cameraPosition, cameraForwardVector, stereoscopicType, stereoscopicEyeCount);
     };
 
     if (vr.size() <= JOBS_PARALLEL_FOR_COMMANDS_COUNT) {
@@ -435,7 +436,7 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
         FScene::RenderableSoa const& soa, Range<uint32_t> range,
         Variant variant, RenderFlags renderFlags,
         FScene::VisibleMaskType visibilityMask, float3 cameraPosition, float3 cameraForward,
-        uint8_t stereoEyeCount) noexcept {
+        backend::StereoscopicType stereoscopicType, uint8_t stereoEyeCount) noexcept {
 
     SYSTRACE_CALL();
 
@@ -467,12 +468,12 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
         case CommandTypeFlags::COLOR:
             curr = generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
                     soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
-                    stereoEyeCount);
+                    stereoscopicType, stereoEyeCount);
             break;
         case CommandTypeFlags::DEPTH:
             curr = generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
                     soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
-                    stereoEyeCount);
+                    stereoscopicType, stereoEyeCount);
             break;
         default:
             // we should never end-up here
@@ -495,7 +496,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
         Variant const variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
-        float3 cameraPosition, float3 cameraForward, uint8_t stereoEyeCount) noexcept {
+        float3 cameraPosition, float3 cameraForward,
+        backend::StereoscopicType stereoscopicType, uint8_t stereoEyeCount) noexcept {
 
     // generateCommands() writes both the draw and depth commands simultaneously such that
     // we go throw the list of renderables just once.
@@ -591,9 +593,16 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         // manual or hybrid instancing. Instanced stereo multiplies the number of instances by the
         // eye count.
         if (UTILS_UNLIKELY(hasStereo)) {
-            cmdColor.primitive.instanceCount =
-                    (soaInstanceInfo[i].count * stereoEyeCount) |
-                    PrimitiveInfo::USER_INSTANCE_MASK;
+            switch (stereoscopicType) {
+                case StereoscopicType::INSTANCED:
+                    cmdColor.primitive.instanceCount =
+                        (soaInstanceInfo[i].count * stereoEyeCount) |
+                        PrimitiveInfo::USER_INSTANCE_MASK;
+                    break;
+                case StereoscopicType::MULTIVIEW:
+                    // Do nothing
+                    break;
+            }
         }
 
         // if we are already an SSR variant, the SRE bit is already set,
@@ -625,9 +634,16 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             cmdDepth.primitive.morphWeightBuffer = morphing.handle;
 
             if (UTILS_UNLIKELY(hasStereo)) {
-                cmdColor.primitive.instanceCount =
-                        (soaInstanceInfo[i].count * stereoEyeCount) |
-                        PrimitiveInfo::USER_INSTANCE_MASK;
+                switch (stereoscopicType) {
+                    case StereoscopicType::INSTANCED:
+                        cmdColor.primitive.instanceCount =
+                            (soaInstanceInfo[i].count * stereoEyeCount) |
+                            PrimitiveInfo::USER_INSTANCE_MASK;
+                        break;
+                    case StereoscopicType::MULTIVIEW:
+                        // Do nothing
+                        break;
+                }
             }
         }
         if constexpr (isColorPass) {

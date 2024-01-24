@@ -520,7 +520,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // DEBUG: driver commands must all happen from the same thread. Enforce that on debug builds.
     driver.debugThreading();
 
-    const bool hasPostProcess = view.hasPostProcessPass();
+    bool hasPostProcess = view.hasPostProcessPass();
     bool hasScreenSpaceRefraction = false;
     bool hasColorGrading = hasPostProcess;
     bool hasDithering = view.getDithering() == Dithering::TEMPORAL;
@@ -536,7 +536,20 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     auto colorGrading = view.getColorGrading();
     auto ssReflectionsOptions = view.getScreenSpaceReflectionsOptions();
     auto guardBandOptions = view.getGuardBandOptions();
+    auto stereoscopicOptions = view.getStereoscopicOptions();
+    const bool isRenderingMultiview =
+            stereoscopicOptions.enabled && view.hasStereo() &&
+            engine.getConfig().stereoscopicType == backend::StereoscopicType::MULTIVIEW;
+    // FIXME: This is to override some settings that are not supported for multiview at the moment.
+    // Remove this when all features are supported.
+    if (isRenderingMultiview) {
+        hasPostProcess = false;
+        msaaOptions.enabled = false;
+        // FIXME: for now, we always combine layers into one.
+        stereoscopicOptions.combineMultiviewImages = true;
+    }
     const uint8_t msaaSampleCount = msaaOptions.enabled ? msaaOptions.sampleCount : 1u;
+
     if (!hasPostProcess) {
         // disable all effects that are part of post-processing
         dofOptions.enabled = false;
@@ -977,11 +990,17 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     RenderPass const pass{ passBuilder.build(engine) };
 
-    FrameGraphTexture::Descriptor const desc = {
+    FrameGraphTexture::Descriptor colorBufferDesc = {
             .width = config.physicalViewport.width,
             .height = config.physicalViewport.height,
             .format = config.hdrFormat
     };
+
+    // Set the depth to the number of layers if we're rendering multiview.
+    if (isRenderingMultiview) {
+        colorBufferDesc.depth = engine.getConfig().stereoscopicEyeCount;
+        colorBufferDesc.type = backend::SamplerType::SAMPLER_2D_ARRAY;
+    }
 
     // a non-drawing pass to prepare everything that need to be before the color passes execute
     fg.addTrivialSideEffectPass("Prepare Color Passes",
@@ -990,7 +1009,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 if (colorGradingConfig.asSubpass) {
                     ppm.colorGradingPrepareSubpass(driver,
                             colorGrading, colorGradingConfig, vignetteOptions,
-                            desc.width, desc.height);
+                            colorBufferDesc.width, colorBufferDesc.height);
                 } else if (colorGradingConfig.customResolve) {
                     ppm.customResolvePrepareSubpass(driver,
                             PostProcessManager::CustomResolveOp::COMPRESS);
@@ -1008,7 +1027,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     // the color pass itself + color-grading as subpass if needed
     auto colorPassOutput = RendererUtils::colorPass(fg, "Color Pass", mEngine, view,
-            desc, config, colorGradingConfigForColor, pass.getExecutor());
+            colorBufferDesc, config, colorGradingConfigForColor, pass.getExecutor());
 
     if (view.isScreenSpaceRefractionEnabled() && !pass.empty()) {
         // this cancels the colorPass() call above if refraction is active.
@@ -1150,6 +1169,15 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             xvp.left = xvp.bottom = 0;
             svp = xvp;
         }
+    }
+
+    // Debug: combine the array texture for multiview into a single image.
+    if (isRenderingMultiview &&
+        stereoscopicOptions.combineMultiviewImages) {
+        input = ppm.debugCombineArrayTexture(fg, blendModeTranslucent, input, xvp, {
+                        .width = vp.width, .height = vp.height,
+                        .format = colorGradingConfig.ldrFormat },
+                        SamplerMagFilter::NEAREST, SamplerMinFilter::NEAREST);
     }
 
     // We need to do special processing when rendering directly into the swap-chain, that is when

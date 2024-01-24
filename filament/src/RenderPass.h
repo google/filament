@@ -397,14 +397,14 @@ private:
             Variant variant, RenderFlags renderFlags,
             FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward,
-            uint8_t instancedStereoEyeCount) noexcept;
+            backend::StereoscopicType stereoscopicType, uint8_t instancedStereoEyeCount) noexcept;
 
     template<RenderPass::CommandTypeFlags commandTypeFlags>
     static inline Command* generateCommandsImpl(RenderPass::CommandTypeFlags extraFlags, Command* curr,
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
             Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward,
-            uint8_t instancedStereoEyeCount) noexcept;
+            backend::StereoscopicType stereoscopicType, uint8_t instancedStereoEyeCount) noexcept;
 
     static void setupColorCommand(Command& cmdDraw, Variant variant,
             FMaterialInstance const* mi, bool inverseFrontFaces) noexcept;
