@@ -81,9 +81,17 @@ set(GLTFIO_SRCS
         ${GLTFIO_DIR}/src/TangentsJob.cpp
         ${GLTFIO_DIR}/src/TangentsJob.h
         ${GLTFIO_DIR}/src/UbershaderProvider.cpp
+        ${GLTFIO_DIR}/src/Utility.cpp
+        ${GLTFIO_DIR}/src/Utility.h
         ${GLTFIO_DIR}/src/Wireframe.cpp
         ${GLTFIO_DIR}/src/Wireframe.h
         ${GLTFIO_DIR}/src/downcast.h
+        ${GLTFIO_DIR}/src/extended/AssetLoaderExtended.cpp
+        ${GLTFIO_DIR}/src/extended/AssetLoaderExtended.h
+        ${GLTFIO_DIR}/src/extended/ResourceLoaderExtended.cpp
+        ${GLTFIO_DIR}/src/extended/ResourceLoaderExtended.h
+        ${GLTFIO_DIR}/src/extended/TangentsJobExtended.cpp
+        ${GLTFIO_DIR}/src/extended/TangentsJobExtended.h
 
         src/main/cpp/Animator.cpp
         src/main/cpp/AssetLoader.cpp

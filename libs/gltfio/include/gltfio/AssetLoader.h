@@ -38,6 +38,18 @@ namespace filament::gltfio {
 
 class NodeManager;
 
+// Use this struct to enable mikktspace-based tangent-space computation.
+/**
+ * \struct AssetConfigurationExtended AssetLoader.h gltfio/AssetLoader.h
+ * \brief extends struct AssetConfiguration
+ * Useful if client needs mikktspace tangents.
+ */
+struct AssetConfigurationExtended {
+    //! Optional The same parameter as provided to \struct ResourceConfiguration ResourceLoader.h
+    //! gltfio/ResourceLoader.h
+    char const* gltfPath;
+};
+
 /**
  * \struct AssetConfiguration AssetLoader.h gltfio/AssetLoader.h
  * \brief Construction parameters for AssetLoader.
@@ -62,6 +74,9 @@ struct AssetConfiguration {
 
     //! Optional default node name for anonymous nodes
     char* defaultNodeName = nullptr;
+
+    //! Optional to enable mikktspace tangents.
+    AssetConfigurationExtended* ext = nullptr;
 };
 
 /**

@@ -242,7 +242,7 @@ public:
      * Destroy the mesh object
      * @param mesh A pointer to a TangentSpaceMesh ready to be destroyed
      */
-     static void destroy(TangentSpaceMesh* mesh) noexcept;
+    static void destroy(TangentSpaceMesh* mesh) noexcept;
 
     /**
      * Move constructor
