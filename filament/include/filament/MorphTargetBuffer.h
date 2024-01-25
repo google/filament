@@ -68,14 +68,13 @@ public:
          *
          * @param engine Reference to the filament::Engine to associate this MorphTargetBuffer with.
          *
-         * @return pointer to the newly created object or nullptr if exceptions are disabled and
-         *         an error occurred.
+         * @return pointer to the newly created object.
          *
          * @exception utils::PostConditionPanic if a runtime error occurred, such as running out of
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
          */
-        MorphTargetBuffer* build(Engine& engine);
+        MorphTargetBuffer* UTILS_NONNULL build(Engine& engine);
     private:
         friend class FMorphTargetBuffer;
     };
@@ -95,7 +94,7 @@ public:
      * @see setTangentsAt
      */
     void setPositionsAt(Engine& engine, size_t targetIndex,
-            math::float3 const* positions, size_t count, size_t offset = 0);
+            math::float3 const* UTILS_NONNULL positions, size_t count, size_t offset = 0);
 
     /**
      * Updates positions for the given morph target.
@@ -110,7 +109,7 @@ public:
      * @see setTangentsAt
      */
     void setPositionsAt(Engine& engine, size_t targetIndex,
-            math::float4 const* positions, size_t count, size_t offset = 0);
+            math::float4 const* UTILS_NONNULL positions, size_t count, size_t offset = 0);
 
     /**
      * Updates tangents for the given morph target.
@@ -126,7 +125,7 @@ public:
      * @see setPositionsAt
      */
     void setTangentsAt(Engine& engine, size_t targetIndex,
-            math::short4 const* tangents, size_t count, size_t offset = 0);
+            math::short4 const* UTILS_NONNULL tangents, size_t count, size_t offset = 0);
 
     /**
      * Returns the vertex count of this MorphTargetBuffer.
