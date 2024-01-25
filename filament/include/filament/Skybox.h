@@ -92,7 +92,7 @@ public:
          *
          * @see Texture
          */
-        Builder& environment(Texture* cubemap) noexcept;
+        Builder& environment(Texture* UTILS_NONNULL cubemap) noexcept;
 
         /**
          * Indicates whether the sun should be rendered. The sun can only be
@@ -136,9 +136,9 @@ public:
          *
          * @param engine Reference to the filament::Engine to associate this Skybox with.
          *
-         * @return pointer to the newly created object, or nullptr if the light couldn't be created.
+         * @return pointer to the newly created object.
          */
-        Skybox* build(Engine& engine);
+        Skybox* UTILS_NONNULL build(Engine& engine);
 
     private:
         friend class FSkybox;
@@ -172,9 +172,9 @@ public:
     float getIntensity() const noexcept;
 
     /**
-     * @return the associated texture, or null if it does not exist
+     * @return the associated texture
      */
-    Texture const* getTexture() const noexcept;
+    Texture const* UTILS_NONNULL getTexture() const noexcept;
 
 protected:
     // prevent heap allocation

@@ -176,7 +176,7 @@ public:
      * Retrieve the Entities of all the components of this manager.
      * @return A list, in no particular order, of all the entities managed by this manager.
      */
-    utils::Entity const* getEntities() const noexcept;
+    utils::Entity const* UTILS_NONNULL getEntities() const noexcept;
 
     /**
      * Gets an Instance representing the Light component associated with the given Entity.
@@ -394,7 +394,7 @@ public:
          *                          positions into
          * @param cascades          the number of shadow cascades, at most 4
          */
-        static void computeUniformSplits(float* splitPositions, uint8_t cascades);
+        static void computeUniformSplits(float* UTILS_NONNULL splitPositions, uint8_t cascades);
 
         /**
          * Utility method to compute ShadowOptions::cascadeSplitPositions according to a logarithmic
@@ -406,7 +406,7 @@ public:
          * @param near              the camera near plane
          * @param far               the camera far plane
          */
-        static void computeLogSplits(float* splitPositions, uint8_t cascades,
+        static void computeLogSplits(float* UTILS_NONNULL splitPositions, uint8_t cascades,
                 float near, float far);
 
         /**
@@ -426,7 +426,7 @@ public:
          * @param lambda            a float in the range [0, 1] that interpolates between log and
          *                          uniform split schemes
          */
-        static void computePracticalSplits(float* splitPositions, uint8_t cascades,
+        static void computePracticalSplits(float* UTILS_NONNULL splitPositions, uint8_t cascades,
                 float near, float far, float lambda);
     };
 

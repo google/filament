@@ -163,7 +163,7 @@ public:
     FCamera const& getCamera() const noexcept { return *mCamera; }
 
     // use only for debugging
-    FCamera const& getDebugCamera() const noexcept { return *mDebugCamera; }
+    FCamera const* getDebugCamera() const noexcept { return mDebugCamera; }
 
     // Update SceneInfo struct for a given light
     static void updateSceneInfoDirectional(const math::mat4f& Mv, FScene const& scene,

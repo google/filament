@@ -152,7 +152,7 @@ class Engine;
 class UTILS_PUBLIC SwapChain : public FilamentAPI {
 public:
     using FrameScheduledCallback = backend::FrameScheduledCallback;
-    using FrameCompletedCallback = utils::Invocable<void(SwapChain*)>;
+    using FrameCompletedCallback = utils::Invocable<void(SwapChain* UTILS_NONNULL)>;
 
     /**
      * Requests a SwapChain with an alpha channel.
@@ -236,7 +236,7 @@ public:
      */
     static bool isSRGBSwapChainSupported(Engine& engine) noexcept;
 
-    void* getNativeWindow() const noexcept;
+    void* UTILS_NULLABLE getNativeWindow() const noexcept;
 
     /**
      * FrameScheduledCallback is a callback function that notifies an application when Filament has
@@ -269,7 +269,8 @@ public:
      *
      * @see PresentCallable
      */
-    void setFrameScheduledCallback(FrameScheduledCallback callback, void* user = nullptr);
+    void setFrameScheduledCallback(FrameScheduledCallback UTILS_NULLABLE callback,
+            void* UTILS_NULLABLE user = nullptr);
 
     /**
      * FrameCompletedCallback is a callback function that notifies an application when a frame's
@@ -290,7 +291,7 @@ public:
      *
      * @see CallbackHandler
      */
-    void setFrameCompletedCallback(backend::CallbackHandler* handler = nullptr,
+    void setFrameCompletedCallback(backend::CallbackHandler* UTILS_NULLABLE handler = nullptr,
             FrameCompletedCallback&& callback = {}) noexcept;
 
 

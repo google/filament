@@ -25,7 +25,7 @@ MaterialInstance* Material::createInstance(const char* name) const noexcept {
 }
 
 const char* Material::getName() const noexcept {
-    return downcast(this)->getName().c_str();
+    return downcast(this)->getName().c_str_safe();
 }
 
 Shading Material::getShading()  const noexcept {

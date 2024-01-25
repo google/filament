@@ -74,8 +74,7 @@ public:
          *
          * @param engine Reference to the filament::Engine to associate this SkinningBuffer with.
          *
-         * @return pointer to the newly created object or nullptr if exceptions are disabled and
-         *         an error occurred.
+         * @return pointer to the newly created object.
          *
          * @exception utils::PostConditionPanic if a runtime error occurred, such as running out of
          *            memory or other resources.
@@ -83,7 +82,7 @@ public:
          *
          * @see SkinningBuffer::setBones
          */
-        SkinningBuffer* build(Engine& engine);
+        SkinningBuffer* UTILS_NONNULL build(Engine& engine);
     private:
         friend class FSkinningBuffer;
     };
@@ -96,7 +95,7 @@ public:
      * @param offset offset in elements (not bytes) in the SkinningBuffer (not in transforms)
      * @see RenderableManager::setSkinningBuffer
      */
-    void setBones(Engine& engine, RenderableManager::Bone const* transforms,
+    void setBones(Engine& engine, RenderableManager::Bone const* UTILS_NONNULL transforms,
             size_t count, size_t offset = 0);
 
     /**
@@ -107,7 +106,7 @@ public:
      * @param offset offset in elements (not bytes) in the SkinningBuffer (not in transforms)
      * @see RenderableManager::setSkinningBuffer
      */
-    void setBones(Engine& engine, math::mat4f const* transforms,
+    void setBones(Engine& engine, math::mat4f const* UTILS_NONNULL transforms,
             size_t count, size_t offset = 0);
 
     /**

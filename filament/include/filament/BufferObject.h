@@ -84,8 +84,7 @@ public:
          *
          * @param engine Reference to the filament::Engine to associate this BufferObject with.
          *
-         * @return pointer to the newly created object or nullptr if exceptions are disabled and
-         *         an error occurred.
+         * @return pointer to the newly created object
          *
          * @exception utils::PostConditionPanic if a runtime error occurred, such as running out of
          *            memory or other resources.
@@ -93,7 +92,7 @@ public:
          *
          * @see IndexBuffer::setBuffer
          */
-        BufferObject* build(Engine& engine);
+        BufferObject* UTILS_NONNULL build(Engine& engine);
     private:
         friend class FBufferObject;
     };

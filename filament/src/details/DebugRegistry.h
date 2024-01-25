@@ -34,6 +34,10 @@ class FEngine;
 
 class FDebugRegistry : public DebugRegistry {
 public:
+    enum Type {
+        BOOL, INT, FLOAT, FLOAT2, FLOAT3, FLOAT4
+    };
+
     FDebugRegistry() noexcept;
 
     void registerProperty(std::string_view name, bool* p) noexcept {

@@ -75,14 +75,14 @@ public:
      *
      * @param skybox The Skybox to use to fill untouched pixels, or nullptr to unset the Skybox.
      */
-    void setSkybox(Skybox* skybox) noexcept;
+    void setSkybox(Skybox* UTILS_NULLABLE skybox) noexcept;
 
     /**
      * Returns the Skybox associated with the Scene.
      *
      * @return The associated Skybox, or nullptr if there is none.
      */
-    Skybox* getSkybox() const noexcept;
+    Skybox* UTILS_NULLABLE getSkybox() const noexcept;
 
     /**
      * Set the IndirectLight to use when rendering the Scene.
@@ -93,7 +93,7 @@ public:
      * @param ibl The IndirectLight to use when rendering the Scene or nullptr to unset.
      * @see getIndirectLight
      */
-    void setIndirectLight(IndirectLight* ibl) noexcept;
+    void setIndirectLight(IndirectLight* UTILS_NULLABLE ibl) noexcept;
 
     /**
      * Get the IndirectLight or nullptr if none is set.
@@ -101,7 +101,7 @@ public:
      * @return the the IndirectLight or nullptr if none is set
      * @see setIndirectLight
      */
-    IndirectLight* getIndirectLight() const noexcept;
+    IndirectLight* UTILS_NULLABLE getIndirectLight() const noexcept;
 
     /**
      * Adds an Entity to the Scene.
@@ -120,7 +120,7 @@ public:
      * @param entities Array containing entities to add to the scene.
      * @param count Size of the entity array.
      */
-    void addEntities(const utils::Entity* entities, size_t count);
+    void addEntities(const utils::Entity* UTILS_NONNULL entities, size_t count);
 
     /**
      * Removes the Renderable from the Scene.
@@ -139,7 +139,7 @@ public:
      * @param entities Array containing entities to remove from the scene.
      * @param count Size of the entity array.
      */
-    void removeEntities(const utils::Entity* entities, size_t count);
+    void removeEntities(const utils::Entity* UTILS_NONNULL entities, size_t count);
 
     /**
      * Returns the total number of Entities in the Scene, whether alive or not.

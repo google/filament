@@ -28,7 +28,8 @@ void Stream::setAcquiredImage(void* image, Callback callback, void* userdata) no
     downcast(this)->setAcquiredImage(image, callback, userdata);
 }
 
-void Stream::setAcquiredImage(void* image, backend::CallbackHandler* handler, Callback callback, void* userdata) noexcept {
+void Stream::setAcquiredImage(void* image,
+        backend::CallbackHandler* handler, Callback callback, void* userdata) noexcept {
     downcast(this)->setAcquiredImage(image, handler, callback, userdata);
 }
 
