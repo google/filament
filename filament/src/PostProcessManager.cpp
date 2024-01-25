@@ -2810,8 +2810,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
     auto& ppFsrRcas = fg.addPass<QuadBlitData>("FidelityFX FSR1 Rcas",
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.input = builder.sample(input);
-                data.input = builder.createTexture("FFX FSR1 Rcas output", outDesc);
-                data.input = builder.declareRenderPass(data.input);
+                data.output = builder.createTexture("FFX FSR1 Rcas output", outDesc);
+                data.output = builder.declareRenderPass(data.output);
             },
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
