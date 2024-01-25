@@ -338,6 +338,7 @@ public:
         //   'OpenGL error 0x502 (GL_INVALID_OPERATION) in "draw2" at line 4389'
         // This coincides with the use of framebuffer fetch (ColorGradingAsSubpass). We disable
         // framebuffer fetch in the case of llvmpipe.
+        // Some Mali drivers also have problems with this (b/445721121)
         bool disable_framebuffer_fetch_extension;
 
     } bugs = {};
