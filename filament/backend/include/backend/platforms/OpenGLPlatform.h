@@ -21,6 +21,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
 
+#include <utils/compiler.h>
+
 #include <stdint.h>
 
 namespace filament::backend {
@@ -41,8 +43,8 @@ protected:
      * Derived classes can use this to instantiate the default OpenGLDriver backend.
      * This is typically called from your implementation of createDriver()
      */
-    static Driver* createDefaultDriver(OpenGLPlatform* platform,
-            void* sharedContext, const DriverConfig& driverConfig);
+    static Driver* UTILS_NULLABLE createDefaultDriver(OpenGLPlatform* UTILS_NONNULL platform,
+            void* UTILS_NULLABLE sharedContext, const DriverConfig& driverConfig);
 
     ~OpenGLPlatform() noexcept override;
 
@@ -69,7 +71,8 @@ public:
      * @return              The driver's SwapChain object.
      *
      */
-    virtual SwapChain* createSwapChain(void* nativeWindow, uint64_t flags) noexcept = 0;
+    virtual SwapChain* UTILS_NONNULL createSwapChain(
+            void* UTILS_NULLABLE nativeWindow, uint64_t flags) noexcept = 0;
 
     /**
      * Return whether createSwapChain supports the SWAP_CHAIN_CONFIG_SRGB_COLORSPACE flag.
@@ -90,13 +93,14 @@ public:
      * TODO: we need a more generic way of passing construction parameters
      *       A void* might be enough.
      */
-    virtual SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept = 0;
+    virtual SwapChain* UTILS_NULLABLE createSwapChain(
+            uint32_t width, uint32_t height, uint64_t flags) noexcept = 0;
 
     /**
      * Called by the driver to destroys the SwapChain
      * @param swapChain SwapChain to be destroyed.
      */
-    virtual void destroySwapChain(SwapChain* swapChain) noexcept = 0;
+    virtual void destroySwapChain(SwapChain* UTILS_NONNULL swapChain) noexcept = 0;
 
     /**
      * Returns the set of buffers that must be preserved up to the call to commit().
@@ -109,7 +113,7 @@ public:
      * @return buffer that must be preserved
      * @see commit()
      */
-    virtual TargetBufferFlags getPreservedFlags(SwapChain* swapChain) noexcept;
+    virtual TargetBufferFlags getPreservedFlags(SwapChain* UTILS_NONNULL swapChain) noexcept;
 
     /**
      * Called by the driver to establish the default FBO. The default implementation returns 0.
@@ -123,14 +127,16 @@ public:
      * @param drawSwapChain SwapChain to draw to. It must be bound to the default FBO.
      * @param readSwapChain SwapChain to read from (for operation like `glBlitFramebuffer`)
      */
-    virtual void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept = 0;
+    virtual void makeCurrent(
+            SwapChain* UTILS_NONNULL drawSwapChain,
+            SwapChain* UTILS_NONNULL readSwapChain) noexcept = 0;
 
     /**
      * Called by the driver once the current frame finishes drawing. Typically, this should present
      * the drawSwapChain. This is for example where `eglMakeCurrent()` would be called.
      * @param swapChain the SwapChain to present.
      */
-    virtual void commit(SwapChain* swapChain) noexcept = 0;
+    virtual void commit(SwapChain* UTILS_NONNULL swapChain) noexcept = 0;
 
     /**
      * Set the time the next committed buffer should be presented to the user at.
@@ -155,14 +161,14 @@ public:
      *
      * @return A Fence object. The default implementation returns nullptr.
      */
-    virtual Fence* createFence() noexcept;
+    virtual Fence* UTILS_NULLABLE createFence() noexcept;
 
     /**
      * Destroys a Fence object. The default implementation does nothing.
      *
      * @param fence Fence to destroy.
      */
-    virtual void destroyFence(Fence* fence) noexcept;
+    virtual void destroyFence(Fence* UTILS_NONNULL fence) noexcept;
 
     /**
      * Waits on a Fence.
@@ -172,7 +178,7 @@ public:
      * @return Whether the fence signaled or timed out. See backend::FenceStatus.
      *         The default implementation always return backend::FenceStatus::ERROR.
      */
-    virtual backend::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept;
+    virtual backend::FenceStatus waitFence(Fence* UTILS_NONNULL fence, uint64_t timeout) noexcept;
 
 
     // --------------------------------------------------------------------------------------------
@@ -186,13 +192,13 @@ public:
      * @param nativeStream The native stream, this parameter depends on the concrete implementation.
      * @return A new Stream object.
      */
-    virtual Stream* createStream(void* nativeStream) noexcept;
+    virtual Stream* UTILS_NULLABLE createStream(void* UTILS_NULLABLE nativeStream) noexcept;
 
     /**
      * Destroys a Stream.
      * @param stream Stream to destroy.
      */
-    virtual void destroyStream(Stream* stream) noexcept;
+    virtual void destroyStream(Stream* UTILS_NONNULL stream) noexcept;
 
     /**
      * The specified stream takes ownership of the texture (tname) object
@@ -202,20 +208,21 @@ public:
      * @param stream Stream to take ownership of the texture
      * @param tname  GL texture id to "bind" to the Stream.
      */
-    virtual void attach(Stream* stream, intptr_t tname) noexcept;
+    virtual void attach(Stream* UTILS_NONNULL stream, intptr_t tname) noexcept;
 
     /**
      * Destroys the texture associated to the stream
      * @param stream Stream to detach from its texture
      */
-    virtual void detach(Stream* stream) noexcept;
+    virtual void detach(Stream* UTILS_NONNULL stream) noexcept;
 
     /**
      * Updates the content of the texture attached to the stream.
      * @param stream Stream to update
      * @param timestamp Output parameter: Timestamp of the image bound to the texture.
      */
-    virtual void updateTexImage(Stream* stream, int64_t* timestamp) noexcept;
+    virtual void updateTexImage(Stream* UTILS_NONNULL stream,
+            int64_t* UTILS_NONNULL timestamp) noexcept;
 
 
     // --------------------------------------------------------------------------------------------
@@ -228,13 +235,13 @@ public:
      *         implementation could just return { 0, GL_TEXTURE_2D } at this point. The actual
      *         values can be delayed until setExternalImage.
      */
-    virtual ExternalTexture *createExternalImageTexture() noexcept;
+    virtual ExternalTexture* UTILS_NULLABLE createExternalImageTexture() noexcept;
 
     /**
      * Destroys an external texture handle and associated data.
      * @param texture a pointer to the handle to destroy.
      */
-    virtual void destroyExternalImage(ExternalTexture* texture) noexcept;
+    virtual void destroyExternalImage(ExternalTexture* UTILS_NONNULL texture) noexcept;
 
     // called on the application thread to allow Filament to take ownership of the image
 
@@ -247,7 +254,7 @@ public:
      * @param externalImage A token representing the platform's external image.
      * @see destroyExternalImage
      */
-    virtual void retainExternalImage(void* externalImage) noexcept;
+    virtual void retainExternalImage(void* UTILS_NONNULL externalImage) noexcept;
 
     /**
      * Called to bind the platform-specific externalImage to an ExternalTexture.
@@ -261,7 +268,8 @@ public:
      * @param texture an in/out pointer to ExternalTexture, id and target can be updated if necessary.
      * @return true on success, false on error.
      */
-    virtual bool setExternalImage(void* externalImage, ExternalTexture* texture) noexcept;
+    virtual bool setExternalImage(void* UTILS_NONNULL externalImage,
+            ExternalTexture* UTILS_NONNULL texture) noexcept;
 
     /**
      * The method allows platforms to convert a user-supplied external image object into a new type
