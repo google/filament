@@ -17,10 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_PRIVATE_CIRCULARBUFFER_H
 #define TNT_FILAMENT_BACKEND_PRIVATE_CIRCULARBUFFER_H
 
-#include <utils/compiler.h>
-
 #include <stddef.h>
-#include <stdint.h>
 
 namespace filament::backend {
 

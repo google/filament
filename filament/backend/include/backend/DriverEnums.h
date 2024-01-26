@@ -28,7 +28,8 @@
 
 #include <math/vec4.h>
 
-#include <array>    // FIXME: STL headers are not allowed in public headers
+#include <array>        // FIXME: STL headers are not allowed in public headers
+#include <type_traits>  // FIXME: STL headers are not allowed in public headers
 
 #include <stddef.h>
 #include <stdint.h>

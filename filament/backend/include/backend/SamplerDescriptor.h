@@ -24,9 +24,6 @@
 
 #include <utils/compiler.h>
 
-#include <stddef.h>
-#include <stdint.h>
-
 namespace filament::backend {
 
 struct UTILS_PUBLIC SamplerDescriptor {

@@ -20,12 +20,17 @@
 #include <backend/Platform.h>
 
 #include <bluevk/BlueVK.h>
+
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/PrivateImplementation.h>
 
+#include <string_view>
 #include <tuple>
 #include <unordered_set>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 
