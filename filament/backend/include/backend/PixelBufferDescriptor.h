@@ -24,6 +24,7 @@
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/ostream.h>
 
 #include <stddef.h>
 #include <stdint.h>

@@ -32,11 +32,13 @@
 #include <backend/TargetBufferInfo.h>
 
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/ThreadUtils.h>
 
 #include <cstddef>
 #include <functional>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 #ifndef NDEBUG
@@ -152,14 +154,14 @@ struct CommandType<void (Driver::*)(ARGS...)> {
         }
 
         // placement new declared as "throw" to avoid the compiler's null-check
-        inline void* operator new(std::size_t size, void* ptr) {
+        inline void* operator new(std::size_t, void* ptr) {
             assert_invariant(ptr);
             return ptr;
         }
     };
 };
 
-// convert an method of "class Driver" into a Command<> type
+// convert a method of "class Driver" into a Command<> type
 #define COMMAND_TYPE(method) CommandType<decltype(&Driver::method)>::Command<&Driver::method>
 
 // ------------------------------------------------------------------------------------------------

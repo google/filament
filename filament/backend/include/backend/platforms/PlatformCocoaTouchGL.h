@@ -30,7 +30,7 @@ struct PlatformCocoaTouchGLImpl;
 class PlatformCocoaTouchGL : public OpenGLPlatform {
 public:
     PlatformCocoaTouchGL();
-    ~PlatformCocoaTouchGL() noexcept;
+    ~PlatformCocoaTouchGL() noexcept override;
 
     // --------------------------------------------------------------------------------------------
     // Platform Interface

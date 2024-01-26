@@ -17,7 +17,13 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
 
+#include <backend/AcquiredImage.h>
+#include <backend/Platform.h>
+#include <backend/platforms/OpenGLPlatform.h>
 #include <backend/platforms/PlatformEGL.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 

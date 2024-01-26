@@ -17,9 +17,11 @@
 #ifndef TNT_FILAMENT_BACKEND_TARGETBUFFERINFO_H
 #define TNT_FILAMENT_BACKEND_TARGETBUFFERINFO_H
 
-#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
+#include <utils/ostream.h>
+
+#include <stddef.h>
 #include <stdint.h>
 
 namespace filament::backend {
