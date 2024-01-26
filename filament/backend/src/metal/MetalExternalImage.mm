@@ -21,6 +21,7 @@
 #include "MetalUtils.h"
 
 #include <utils/Panic.h>
+#include <utils/Log.h>
 #include <utils/trap.h>
 
 #define NSERROR_CHECK(message)                                                                     \
