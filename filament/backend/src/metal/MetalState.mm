@@ -18,6 +18,8 @@
 
 #include "MetalEnums.h"
 
+#include <utils/Log.h>
+
 namespace filament {
 namespace backend {
 
