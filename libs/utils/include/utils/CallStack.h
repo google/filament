@@ -22,7 +22,8 @@
 #include <typeinfo>
 
 #include <utils/CString.h>
-#include <utils/Log.h>
+#include <utils/compiler.h>
+#include <utils/ostream.h>
 
 namespace utils {
 

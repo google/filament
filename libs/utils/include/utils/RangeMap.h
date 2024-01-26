@@ -22,6 +22,9 @@
 #include <utils/debug.h>
 
 #include <map>
+#include <utility>
+
+#include <stddef.h>
 
 namespace utils {
 

@@ -23,7 +23,6 @@
 
 #include <stdint.h>
 
-
 namespace utils {
 
 class UTILS_PUBLIC EntityInstanceBase {
@@ -77,7 +76,7 @@ public:
     // return a value for this Instance (mostly needed for debugging
     constexpr uint32_t asValue() const noexcept { return mInstance; }
 
-    // auto convert to Type so it can be used as an index
+    // auto convert to Type, so it can be used as an index
     constexpr operator Type() const noexcept { return mInstance; } // NOLINT(google-explicit-constructor)
 
     // conversion from Type so we can initialize from an index

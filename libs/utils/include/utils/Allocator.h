@@ -17,7 +17,6 @@
 #ifndef TNT_UTILS_ALLOCATOR_H
 #define TNT_UTILS_ALLOCATOR_H
 
-
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/memalign.h>
@@ -30,6 +29,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 namespace utils {
 

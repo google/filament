@@ -46,6 +46,7 @@
 #include <getopt/getopt.h>
 
 #include <utils/NameComponentManager.h>
+#include <utils/Log.h>
 
 #include <math/vec3.h>
 #include <math/vec4.h>

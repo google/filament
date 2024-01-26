@@ -17,8 +17,6 @@
 #ifndef TNT_UTILS_ANDROID_THERMALMANAGER_H
 #define TNT_UTILS_ANDROID_THERMALMANAGER_H
 
-#include <utils/compiler.h>
-
 #include <stdint.h>
 
 struct AThermalManager;

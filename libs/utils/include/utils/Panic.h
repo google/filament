@@ -17,10 +17,10 @@
 #ifndef TNT_UTILS_PANIC_H
 #define TNT_UTILS_PANIC_H
 
-#include <string>
-
 #include <utils/CallStack.h>
 #include <utils/compiler.h>
+
+#include <string>
 
 #ifdef __EXCEPTIONS
 #   define UTILS_EXCEPTIONS 1

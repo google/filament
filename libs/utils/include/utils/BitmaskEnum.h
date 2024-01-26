@@ -17,13 +17,10 @@
 #ifndef TNT_UTILS_BITMASKENUM_H
 #define TNT_UTILS_BITMASKENUM_H
 
-#include <utils/compiler.h>
-
 #include <type_traits> // for std::false_type
 
 #include <assert.h>
 #include <stddef.h>
-#include <stdint.h>
 
 namespace utils {
 

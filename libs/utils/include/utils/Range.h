@@ -17,9 +17,9 @@
 #ifndef TNT_UTILS_RANGE_H
 #define TNT_UTILS_RANGE_H
 
-#include <stddef.h>
-
 #include <iterator>
+
+#include <stddef.h>
 
 namespace utils {
 
