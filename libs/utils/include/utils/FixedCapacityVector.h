@@ -17,16 +17,18 @@
 #ifndef TNT_UTILS_FIXEDCAPACITYVECTOR_H
 #define TNT_UTILS_FIXEDCAPACITYVECTOR_H
 
+#include <utils/compiler.h>
 #include <utils/compressed_pair.h>
 #include <utils/Panic.h>
 
 #include <initializer_list>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <type_traits>
 #include <utility>
-#include <vector> // TODO: is this necessary?
 
+#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 

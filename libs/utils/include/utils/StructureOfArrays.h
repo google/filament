@@ -17,8 +17,10 @@
 #ifndef TNT_UTILS_STRUCTUREOFARRAYS_H
 #define TNT_UTILS_STRUCTUREOFARRAYS_H
 
+#include <type_traits>
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/Slice.h>
 
 #include <stddef.h>
@@ -555,7 +557,7 @@ private:
     }
 
     inline void resizeNoCheck(size_t needed) noexcept {
-        assert(mCapacity >= needed);
+        assert_invariant(mCapacity >= needed);
         if (needed < mSize) {
             // we shrink the arrays
             destroy_each(needed, mSize);

@@ -20,13 +20,16 @@
 
 #include <backend/DriverEnums.h>
 
-#include <utils/compiler.h>
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 
 #include <initializer_list>
 #include <unordered_map>
 #include <string_view>
+#include <vector>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 

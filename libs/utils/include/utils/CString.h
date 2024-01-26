@@ -192,8 +192,8 @@ private:
     };
 
     int compare(const CString& rhs) const noexcept {
-        size_type lhs_size = size();
-        size_type rhs_size = rhs.size();
+        size_type const lhs_size = size();
+        size_type const rhs_size = rhs.size();
         if (lhs_size < rhs_size) return -1;
         if (lhs_size > rhs_size) return 1;
         return strncmp(data(), rhs.data(), size());

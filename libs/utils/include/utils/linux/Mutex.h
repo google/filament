@@ -17,9 +17,11 @@
 #ifndef TNT_UTILS_LINUX_MUTEX_H
 #define TNT_UTILS_LINUX_MUTEX_H
 
+#include <utils/compiler.h>
+
 #include <atomic>
 
-#include <utils/compiler.h>
+#include <stdint.h>
 
 namespace utils {
 

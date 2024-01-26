@@ -17,8 +17,6 @@
 #ifndef TNT_UTILS_STRING_H
 #define TNT_UTILS_STRING_H
 
-#include <utils/ostream.h>
-
 namespace utils {
 
 float strtof_c(const char* start, char** end);

@@ -17,8 +17,6 @@
 #ifndef UTILS_PRIVATEIMPLEMENTATION_H
 #define UTILS_PRIVATEIMPLEMENTATION_H
 
-#include <utils/compiler.h>
-
 #include <stddef.h>
 
 namespace utils {
