@@ -38,9 +38,9 @@ namespace filament::backend {
 
 size_t CircularBuffer::sPageSize = arch::getPageSize();
 
-CircularBuffer::CircularBuffer(size_t size) {
+CircularBuffer::CircularBuffer(size_t size)
+    : mSize(size) {
     mData = alloc(size);
-    mSize = size;
     mTail = mData;
     mHead = mData;
 }
@@ -160,7 +160,7 @@ void CircularBuffer::circularize() noexcept {
             #endif
         }
     } else {
-        // Only circularize if mHead if in the second buffer.
+        // Only circularize if mHead is in the second buffer.
         if (intptr_t(mHead) - intptr_t(mData) > ssize_t(mSize)) {
             mHead = mData;
         }

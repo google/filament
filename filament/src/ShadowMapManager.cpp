@@ -395,7 +395,6 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 
                     auto rt = resources.getRenderPassInfo(data.rt);
 
-                    engine.flush();
                     driver.beginRenderPass(rt.target, rt.params);
                     entry.shadowMap->bind(driver);
                     entry.executor.overrideScissor(entry.shadowMap->getScissor());

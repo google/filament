@@ -41,6 +41,10 @@
 
 namespace filament {
 
+namespace backend {
+class CommandBufferQueue;
+}
+
 class FMaterialInstance;
 
 class RenderPass {
@@ -346,8 +350,7 @@ public:
 
         Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept;
 
-        void execute(backend::DriverApi& driver,
-                const Command* first, const Command* last) const noexcept;
+        void execute(FEngine& engine, const Command* first, const Command* last) const noexcept;
 
     public:
         Executor() = default;

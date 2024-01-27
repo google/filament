@@ -442,7 +442,7 @@ void FRenderer::render(FView const* view) {
 
     if (UTILS_LIKELY(view && view->getScene())) {
         if (mViewRenderedCount) {
-            // this is a good place to kick the GPU, since we've rendered a View before,
+            // This is a good place to kick the GPU, since we've rendered a View before,
             // and we're about to render another one.
             mEngine.getDriverApi().flush();
         }
