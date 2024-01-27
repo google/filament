@@ -228,10 +228,6 @@ FrameGraphId<FrameGraphTexture> RendererUtils::colorPass(
                     out.params.subpassMask = 1;
                 }
 
-                // this is a good time to flush the CommandStream, because we're about to potentially
-                // output a lot of commands. This guarantees here that we have at least
-                // FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB bytes (1MiB by default).
-                engine.flush();
                 driver.beginRenderPass(out.target, out.params);
                 passExecutor.execute(engine, resources.getPassName());
                 driver.endRenderPass();

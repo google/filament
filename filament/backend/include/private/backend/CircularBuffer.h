@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_PRIVATE_CIRCULARBUFFER_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 
@@ -55,6 +56,9 @@ public:
 
     void* getTail() const noexcept { return mTail; }
 
+    // size used since the last flush()
+    size_t getUsed() const noexcept { return intptr_t(mHead) - intptr_t(mTail); }
+
     // call at least once every getRequiredSize() bytes allocated from the buffer
     void circularize() noexcept;
 
@@ -69,7 +73,7 @@ private:
     int mUsesAshmem = -1;
 
     // size of the circular buffer (constant)
-    size_t mSize = 0;
+    size_t const mSize;
 
     // pointer to the beginning of recorded data
     void* mTail = nullptr;

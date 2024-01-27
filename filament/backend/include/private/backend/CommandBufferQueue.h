@@ -58,7 +58,10 @@ public:
     CommandBufferQueue(size_t requiredSize, size_t bufferSize);
     ~CommandBufferQueue();
 
-    CircularBuffer& getCircularBuffer() { return mCircularBuffer; }
+    CircularBuffer& getCircularBuffer() noexcept { return mCircularBuffer; }
+    CircularBuffer const& getCircularBuffer() const noexcept { return mCircularBuffer; }
+
+    size_t getCapacity() const noexcept { return mRequiredSize; }
 
     size_t getHighWatermark() const noexcept { return mHighWatermark; }
 
