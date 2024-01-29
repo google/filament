@@ -31,13 +31,20 @@
 
 #include <utils/Allocator.h>
 #include <utils/Range.h>
+#include <utils/Slice.h>
 #include <utils/architecture.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 
+#include <math/mathfwd.h>
+
 #include <functional>
 #include <limits>
+#include <type_traits>
 #include <vector>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
@@ -244,7 +251,6 @@ public:
         uint32_t skinningOffset = 0;                                    // 4 bytes
         uint16_t instanceCount;                                         // 2 bytes [MSb: user]
         Variant materialVariant;                                        // 1 byte
-//        uint8_t reserved[0] = {};                                       // 0 bytes
 
         static const uint16_t USER_INSTANCE_MASK = 0x8000u;
         static const uint16_t INSTANCE_COUNT_MASK = 0x7fffu;
@@ -257,7 +263,7 @@ public:
         uint64_t reserved[1] = {};  //  8 bytes
         bool operator < (Command const& rhs) const noexcept { return key < rhs.key; }
         // placement new declared as "throw" to avoid the compiler's null-check
-        inline void* operator new (std::size_t, void* ptr) {
+        inline void* operator new (size_t, void* ptr) {
             assert_invariant(ptr);
             return ptr;
         }
@@ -298,7 +304,7 @@ public:
     void setGeometry(FScene::RenderableSoa const& soa, utils::Range<uint32_t> vr,
             backend::Handle<backend::HwBufferObject> uboHandle) noexcept;
 
-    // specifies camera information (e.g. used for sorting commands)
+    // Specifies camera information (e.g. used for sorting commands)
     void setCamera(const CameraInfo& camera) noexcept;
 
     //  flags controlling how commands are generated

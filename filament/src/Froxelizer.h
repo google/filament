@@ -110,7 +110,7 @@ public:
      *
      * return true if updateUniforms() needs to be called
      */
-    bool prepare(backend::DriverApi& driverApi, ArenaScope& arena, Viewport const& viewport,
+    bool prepare(backend::DriverApi& driverApi, RootArenaScope& rootArenaScope, Viewport const& viewport,
             const math::mat4f& projection, float projectionNear, float projectionFar) noexcept;
 
     Froxel getFroxelAt(size_t x, size_t y, size_t z) const noexcept;
