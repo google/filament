@@ -33,7 +33,7 @@ namespace filament::backend {
  * A producer-consumer command queue that uses a CircularBuffer as main storage
  */
 class CommandBufferQueue {
-    struct Slice {
+    struct Range {
         void* begin;
         void* end;
     };
@@ -46,7 +46,7 @@ class CommandBufferQueue {
 
     mutable utils::Mutex mLock;
     mutable utils::Condition mCondition;
-    mutable std::vector<Slice> mCommandBuffersToExecute;
+    mutable std::vector<Range> mCommandBuffersToExecute;
     size_t mFreeSpace = 0;
     size_t mHighWatermark = 0;
     uint32_t mExitRequested = 0;
@@ -66,12 +66,12 @@ public:
     size_t getHighWatermark() const noexcept { return mHighWatermark; }
 
     // wait for commands to be available and returns an array containing these commands
-    std::vector<Slice> waitForCommands() const;
+    std::vector<Range> waitForCommands() const;
 
     // return the memory used by this command buffer to the circular buffer
     // WARNING: releaseBuffer() must be called in sequence of the Slices returned by
     // waitForCommands()
-    void releaseBuffer(Slice const& buffer);
+    void releaseBuffer(Range const& buffer);
 
     // all commands buffers (Slices) written to this point are returned by waitForCommand(). This
     // call blocks until the CircularBuffer has at least mRequiredSize bytes available.
