@@ -720,6 +720,8 @@ class ArenaScope {
     }
 
 public:
+    using Arena = ARENA;
+
     explicit ArenaScope(ARENA& allocator)
             : mArena(allocator), mRewind(allocator.getCurrent()) {
     }
@@ -771,7 +773,7 @@ public:
     }
 
     // use with caution
-    ARENA& getAllocator() noexcept { return mArena; }
+    ARENA& getArena() noexcept { return mArena; }
 
 private:
     ARENA& mArena;

@@ -16,6 +16,9 @@
 
 #include "details/Renderer.h"
 
+#include "Allocators.h"
+#include "DebugRegistry.h"
+#include "FrameHistory.h"
 #include "PostProcessManager.h"
 #include "RendererUtils.h"
 #include "RenderPass.h"
@@ -28,20 +31,39 @@
 #include "details/Texture.h"
 #include "details/View.h"
 
+#include <filament/Camera.h>
+#include <filament/Fence.h>
+#include <filament/Options.h>
 #include <filament/Renderer.h>
 
+#include <backend/DriverEnums.h>
+#include <backend/DriverApiForward.h>
+#include <backend/Handle.h>
 #include <backend/PixelBufferDescriptor.h>
 
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphId.h"
 #include "fg/FrameGraphResources.h"
+#include "fg/FrameGraphTexture.h"
+
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/mat4.h>
 
 #include <utils/compiler.h>
 #include <utils/JobSystem.h>
+#include <utils/Log.h>
+#include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
-#include <utils/vector.h>
 #include <utils/debug.h>
+
+#include <chrono>
+#include <limits>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 // this helps visualize what dynamic-scaling is doing
 #define DEBUG_DYNAMIC_SCALING false
@@ -62,8 +84,7 @@ FRenderer::FRenderer(FEngine& engine) :
         mHdrQualityMedium(TextureFormat::R11F_G11F_B10F),
         mHdrQualityHigh(TextureFormat::RGB16F),
         mIsRGB8Supported(false),
-        mUserEpoch(engine.getEngineEpoch()),
-        mPerRenderPassArena(engine.getPerRenderPassAllocator())
+        mUserEpoch(engine.getEngineEpoch())
 {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.renderer.doFrameCapture",
@@ -452,17 +473,17 @@ void FRenderer::render(FView const* view) {
 }
 
 void FRenderer::renderInternal(FView const* view) {
-    // per-renderpass data
-    ArenaScope rootArena(mPerRenderPassArena);
-
     FEngine& engine = mEngine;
-    JobSystem& js = engine.getJobSystem();
+
+    // per-renderpass data
+    RootArenaScope rootArenaScope(engine.getPerRenderPassArena());
 
     // create a root job so no other job can escape
+    JobSystem& js = engine.getJobSystem();
     auto *rootJob = js.setRootJob(js.createJob());
 
     // execute the render pass
-    renderJob(rootArena, const_cast<FView&>(*view));
+    renderJob(rootArenaScope, const_cast<FView&>(*view));
 
     // make sure to flush the command buffer
     engine.flush();
@@ -471,7 +492,7 @@ void FRenderer::renderInternal(FView const* view) {
     js.runAndWait(rootJob);
 }
 
-void FRenderer::renderJob(ArenaScope& arena, FView& view) {
+void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     FEngine& engine = mEngine;
     JobSystem& js = engine.getJobSystem();
     FEngine::DriverApi& driver = engine.getDriverApi();
@@ -636,7 +657,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         xvp.bottom = int32_t(guardBand);
     }
 
-    view.prepare(engine, driver, arena, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);
+    view.prepare(engine, driver, rootArenaScope, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);
 
     view.prepareUpscaler(scale, taaOptions, dsrOptions);
 
@@ -649,7 +670,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // Allocate some space for our commands in the per-frame Arena, and use that space as
     // an Arena for commands. All this space is released when we exit this method.
     size_t const perFrameCommandsSize = engine.getPerFrameCommandsSize();
-    void* const arenaBegin = arena.allocate(perFrameCommandsSize, CACHELINE_SIZE);
+    void* const arenaBegin = rootArenaScope.allocate(perFrameCommandsSize, CACHELINE_SIZE);
     void* const arenaEnd = pointermath::add(arenaBegin, perFrameCommandsSize);
     RenderPass::Arena commandArena("Command Arena", { arenaBegin, arenaEnd });
 

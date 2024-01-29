@@ -60,10 +60,9 @@ namespace filament {
 
 using namespace backend;
 
-RenderPass::RenderPass(FEngine& engine,
-        RenderPass::Arena& arena) noexcept
+RenderPass::RenderPass(FEngine& engine, RenderPass::Arena& arena) noexcept
         : mCommandArena(arena),
-          mCustomCommands(engine.getPerRenderPassAllocator()) {
+          mCustomCommands(engine.getPerRenderPassArena()) {
 }
 
 RenderPass::RenderPass(RenderPass const& rhs) = default;
