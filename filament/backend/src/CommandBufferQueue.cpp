@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <mutex>
+#include <iterator>
 #include <utility>
 #include <vector>
 
@@ -77,19 +78,17 @@ void CommandBufferQueue::flush() noexcept {
 
     const size_t requiredSize = mRequiredSize;
 
-    // end of this slice
-    void* const head = circularBuffer.getHead();
+    // get the current buffer
+    auto const [begin, end] = circularBuffer.getBuffer();
 
-    // beginning of this slice
-    void* const tail = circularBuffer.getTail();
+    assert_invariant(circularBuffer.empty());
 
-    // size of this slice
-    size_t const used = circularBuffer.getUsed();
-
-    circularBuffer.circularize();
+    // size of the current buffer
+    size_t const used = std::distance(
+            static_cast<char const*>(begin), static_cast<char const*>(end));
 
     std::unique_lock<utils::Mutex> lock(mLock);
-    mCommandBuffersToExecute.push_back({ tail, head });
+    mCommandBuffersToExecute.push_back({ begin, end });
     mCondition.notify_one();
 
     // circular buffer is too small, we corrupted the stream
@@ -123,7 +122,7 @@ void CommandBufferQueue::flush() noexcept {
     }
 }
 
-std::vector<CommandBufferQueue::Slice> CommandBufferQueue::waitForCommands() const {
+std::vector<CommandBufferQueue::Range> CommandBufferQueue::waitForCommands() const {
     if (!UTILS_HAS_THREADING) {
         return std::move(mCommandBuffersToExecute);
     }
@@ -138,7 +137,7 @@ std::vector<CommandBufferQueue::Slice> CommandBufferQueue::waitForCommands() con
     return std::move(mCommandBuffersToExecute);
 }
 
-void CommandBufferQueue::releaseBuffer(CommandBufferQueue::Slice const& buffer) {
+void CommandBufferQueue::releaseBuffer(CommandBufferQueue::Range const& buffer) {
     std::lock_guard<utils::Mutex> const lock(mLock);
     mFreeSpace += uintptr_t(buffer.end) - uintptr_t(buffer.begin);
     mCondition.notify_one();

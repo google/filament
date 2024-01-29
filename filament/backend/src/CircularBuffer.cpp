@@ -16,6 +16,14 @@
 
 #include "private/backend/CircularBuffer.h"
 
+#include <utils/Log.h>
+#include <utils/Panic.h>
+#include <utils/architecture.h>
+#include <utils/ashmem.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/ostream.h>
+
 #if !defined(WIN32) && !defined(__EMSCRIPTEN__) && !defined(IOS)
 #    include <sys/mman.h>
 #    include <unistd.h>
@@ -24,13 +32,10 @@
 #    define HAS_MMAP 0
 #endif
 
+#include <stdint.h>
+#include <stddef.h>
+#include <stdlib.h>
 #include <stdio.h>
-
-#include <utils/architecture.h>
-#include <utils/ashmem.h>
-#include <utils/debug.h>
-#include <utils/Log.h>
-#include <utils/Panic.h>
 
 using namespace utils;
 
@@ -85,7 +90,7 @@ void* CircularBuffer::alloc(size_t size) noexcept {
                             MAP_PRIVATE, fd, (off_t)size);
                     if (vaddr_guard != MAP_FAILED && (vaddr_guard == (char*)vaddr_shadow + size)) {
                         // woo-hoo success!
-                        mUsesAshmem = fd;
+                        mAshmemFd = fd;
                         data = vaddr;
                     }
                 }
@@ -93,7 +98,7 @@ void* CircularBuffer::alloc(size_t size) noexcept {
         }
     }
 
-    if (UTILS_UNLIKELY(mUsesAshmem < 0)) {
+    if (UTILS_UNLIKELY(mAshmemFd < 0)) {
         // ashmem failed
         if (vaddr_guard != MAP_FAILED) {
             munmap(vaddr_guard, size);
@@ -137,9 +142,9 @@ void CircularBuffer::dealloc() noexcept {
     if (mData) {
         size_t const BLOCK_SIZE = getBlockSize();
         munmap(mData, mSize * 2 + BLOCK_SIZE);
-        if (mUsesAshmem >= 0) {
-            close(mUsesAshmem);
-            mUsesAshmem = -1;
+        if (mAshmemFd >= 0) {
+            close(mAshmemFd);
+            mAshmemFd = -1;
         }
     }
 #else
@@ -149,23 +154,37 @@ void CircularBuffer::dealloc() noexcept {
 }
 
 
-void CircularBuffer::circularize() noexcept {
-    if (mUsesAshmem > 0) {
-        intptr_t const overflow = intptr_t(mHead) - (intptr_t(mData) + ssize_t(mSize));
-        if (overflow >= 0) {
-            assert_invariant(size_t(overflow) <= mSize);
-            mHead = (void *) (intptr_t(mData) + overflow);
-            #ifndef NDEBUG
-            memset(mData, 0xA5, size_t(overflow));
-            #endif
-        }
-    } else {
-        // Only circularize if mHead is in the second buffer.
-        if (intptr_t(mHead) - intptr_t(mData) > ssize_t(mSize)) {
+CircularBuffer::Range CircularBuffer::getBuffer() noexcept {
+    Range const range{ .tail = mTail, .head = mHead };
+
+    char* const pData = static_cast<char*>(mData);
+    char const* const pEnd = pData + mSize;
+    char const* const pHead = static_cast<char const*>(mHead);
+    if (UTILS_UNLIKELY(pHead >= pEnd)) {
+        size_t const overflow = pHead - pEnd;
+        if (UTILS_LIKELY(mAshmemFd > 0)) {
+            assert_invariant(overflow <= mSize);
+            mHead = static_cast<void*>(pData + overflow);
+            // Data         Tail  End   Head              [virtual]
+            //  v             v    v     v
+            //  +-------------:----+-----:--------------+
+            //  |             :    |     :              |
+            //  +-----:------------+--------------------+
+            //       Head          |<------ copy ------>| [physical]
+        } else {
+            // Data         Tail  End   Head
+            //  v             v    v     v
+            //  +-------------:----+-----:--------------+
+            //  |             :    |     :              |
+            //  +-----|------------+-----|--------------+
+            //        |<---------------->|
+            //           sliding window
             mHead = mData;
         }
     }
     mTail = mHead;
+
+    return range;
 }
 
 } // namespace filament::backend
