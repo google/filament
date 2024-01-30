@@ -15,7 +15,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-22.04]
+        os: [macos-14, ubuntu-22.04]
 
     steps:
       - uses: actions/checkout@v3.3.0
@@ -40,7 +40,7 @@ jobs:
 
   build-android:
     name: build-android
-    runs-on: macos-latest
+    runs-on: macos-14
 
     steps:
       - uses: actions/checkout@v3.3.0
@@ -54,7 +54,7 @@ jobs:
 
   build-ios:
     name: build-iOS
-    runs-on: macos-latest
+    runs-on: macos-14
 
     steps:
       - uses: actions/checkout@v3.3.0
@@ -67,7 +67,7 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: macos-latest
+    runs-on: macos-14
 
     steps:
       - uses: actions/checkout@v3.3.0
