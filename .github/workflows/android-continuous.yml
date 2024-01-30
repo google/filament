@@ -10,7 +10,7 @@ on:
 jobs:
   build-android:
     name: build-android
-    runs-on: macos-latest
+    runs-on: macos-14
 
     steps:
       - uses: actions/checkout@v3.3.0
