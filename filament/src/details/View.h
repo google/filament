@@ -176,7 +176,7 @@ public:
 
     FrameGraphId<FrameGraphTexture> renderShadowMaps(FEngine& engine, FrameGraph& fg,
             CameraInfo const& cameraInfo, math::float4 const& userTime,
-            RenderPass const& pass) noexcept;
+            RenderPassBuilder const& passBuilder) noexcept;
 
     void updatePrimitivesLod(
             FEngine& engine, const CameraInfo& camera,

@@ -414,7 +414,7 @@ void PostProcessManager::commitAndRender(FrameGraphResources::RenderPassInfo con
 // ------------------------------------------------------------------------------------------------
 
 PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph& fg,
-        RenderPass const& pass, uint8_t structureRenderFlags,
+        RenderPassBuilder const& passBuilder, uint8_t structureRenderFlags,
         uint32_t width, uint32_t height,
         StructurePassConfig const& config) noexcept {
 
@@ -466,17 +466,19 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                         .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH
                 });
             },
-            [=, renderPass = pass](FrameGraphResources const& resources,
+            [=, passBuilder = passBuilder](FrameGraphResources const& resources,
                     auto const&, DriverApi&) mutable {
                 Variant structureVariant(Variant::DEPTH_VARIANT);
                 structureVariant.setPicking(config.picking);
 
                 auto out = resources.getRenderPassInfo();
-                renderPass.setRenderFlags(structureRenderFlags);
-                renderPass.setVariant(structureVariant);
-                renderPass.appendCommands(mEngine, RenderPass::CommandTypeFlags::SSAO);
-                renderPass.sortCommands(mEngine);
-                renderPass.execute(mEngine, resources.getPassName(), out.target, out.params);
+
+                passBuilder.renderFlags(structureRenderFlags);
+                passBuilder.variant(structureVariant);
+                passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::SSAO);
+
+                RenderPass const pass{ passBuilder.build(mEngine) };
+                RenderPass::execute(pass, mEngine, resources.getPassName(), out.target, out.params);
             });
 
     auto depth = structurePass->depth;
@@ -523,7 +525,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
 // ------------------------------------------------------------------------------------------------
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
-        RenderPass const& pass,
+        RenderPassBuilder const& passBuilder,
         FrameHistory const& frameHistory,
         CameraInfo const& cameraInfo,
         PerViewUniforms& uniforms,
@@ -586,7 +588,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
             },
             [this, projection = cameraInfo.projection,
                     userViewMatrix = cameraInfo.getUserViewMatrix(), uvFromClipMatrix, historyProjection,
-                    options, &uniforms, renderPass = pass]
+                    options, &uniforms, passBuilder = passBuilder]
             (FrameGraphResources const& resources, auto const& data, DriverApi& driver) mutable {
                 // set structure sampler
                 uniforms.prepareStructure(data.structure ?
@@ -607,17 +609,17 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                 auto out = resources.getRenderPassInfo();
 
                 // Remove the HAS_SHADOWING RenderFlags, since it's irrelevant when rendering reflections
-                RenderPass::RenderFlags flags = renderPass.getRenderFlags();
-                flags &= ~RenderPass::HAS_SHADOWING;
-                renderPass.setRenderFlags(flags);
+                passBuilder.renderFlags(~RenderPass::HAS_SHADOWING, 0);
 
                 // use our special SSR variant, it can only be applied to object that have
                 // the SCREEN_SPACE ReflectionMode.
-                renderPass.setVariant(Variant{Variant::SPECIAL_SSR});
+                passBuilder.variant(Variant{ Variant::SPECIAL_SSR });
+
                 // generate all our drawing commands, except blended objects.
-                renderPass.appendCommands(mEngine, RenderPass::CommandTypeFlags::SCREEN_SPACE_REFLECTIONS);
-                renderPass.sortCommands(mEngine);
-                renderPass.execute(mEngine, resources.getPassName(), out.target, out.params);
+                passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::SCREEN_SPACE_REFLECTIONS);
+
+                RenderPass const pass{ passBuilder.build(mEngine) };
+                RenderPass::execute(pass, mEngine, resources.getPassName(), out.target, out.params);
             });
 
     return ssrPass->reflections;

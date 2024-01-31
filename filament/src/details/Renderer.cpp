@@ -679,8 +679,8 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     if (view.isFrontFaceWindingInverted())  renderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
     if (view.hasInstancedStereo())          renderFlags |= RenderPass::IS_STEREOSCOPIC;
 
-    RenderPass pass(engine, commandArena);
-    pass.setRenderFlags(renderFlags);
+    RenderPassBuilder passBuilder(commandArena);
+    passBuilder.renderFlags(renderFlags);
 
     Variant variant;
     variant.setDirectionalLighting(view.hasDirectionalLight());
@@ -703,10 +703,10 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     if (view.needsShadowMap()) {
         Variant shadowVariant(Variant::DEPTH_VARIANT);
         shadowVariant.setVsm(view.getShadowType() == ShadowType::VSM);
-
-        RenderPass shadowPass(pass);
-        shadowPass.setVariant(shadowVariant);
-        auto shadows = view.renderShadowMaps(engine, fg, cameraInfo, mShaderUserTime, shadowPass);
+        auto shadows = view.renderShadowMaps(engine, fg, cameraInfo, mShaderUserTime,
+                RenderPassBuilder{ commandArena }
+                    .renderFlags(renderFlags)
+                    .variant(shadowVariant));
         blackboard["shadows"] = shadows;
     }
 
@@ -792,8 +792,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     view.updatePrimitivesLod(engine, cameraInfo,
             scene.getRenderableData(), view.getVisibleRenderables());
 
-    pass.setCamera(cameraInfo);
-    pass.setGeometry(scene.getRenderableData(), view.getVisibleRenderables(), scene.getRenderableUBO());
+    passBuilder.camera(cameraInfo);
+    passBuilder.geometry(scene.getRenderableData(),
+            view.getVisibleRenderables(), scene.getRenderableUBO());
 
     // view set-ups that need to happen before rendering
     fg.addTrivialSideEffectPass("Prepare View Uniforms",
@@ -839,7 +840,8 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // This is normally used by SSAO and contact-shadows
 
     // TODO: the scaling should depends on all passes that need the structure pass
-    const auto [structure, picking_] = ppm.structure(fg, pass, renderFlags, svp.width, svp.height, {
+    const auto [structure, picking_] = ppm.structure(fg,
+            passBuilder, renderFlags, svp.width, svp.height, {
             .scale = aoOptions.resolution,
             .picking = view.hasPicking()
     });
@@ -897,7 +899,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // screen-space reflections pass
 
     if (ssReflectionsOptions.enabled) {
-        auto reflections = ppm.ssr(fg, pass,
+        auto reflections = ppm.ssr(fg, passBuilder,
                 view.getFrameHistory(), cameraInfo,
                 view.getPerViewUniforms(),
                 structure,
@@ -915,10 +917,15 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // --------------------------------------------------------------------------------------------
     // Color passes
 
+    // this makes the viewport relative to xvp
+    // FIXME: we should use 'vp' when rendering directly into the swapchain, but that's hard to
+    //        know at this point. This will usually be the case when post-process is disabled.
+    // FIXME: we probably should take the dynamic scaling into account too
+    passBuilder.scissorViewport(hasPostProcess ? xvp : vp);
+
     // This one doesn't need to be a FrameGraph pass because it always happens by construction
     // (i.e. it won't be culled, unless everything is culled), so no need to complexify things.
-    pass.setVariant(variant);
-    pass.appendCommands(engine, RenderPass::COLOR);
+    passBuilder.variant(variant);
 
     // color-grading as subpass is done either by the color pass or the TAA pass if any
     auto colorGradingConfigForColor = colorGradingConfig;
@@ -926,7 +933,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     if (colorGradingConfigForColor.asSubpass) {
         // append color grading subpass after all other passes
-        pass.appendCustomCommand(3,
+        passBuilder.customCommand(engine, 3,
                 RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,
                 0, [&ppm, &driver, colorGradingConfigForColor]() {
@@ -934,7 +941,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 });
     } else if (colorGradingConfig.customResolve) {
         // append custom resolve subpass after all other passes
-        pass.appendCustomCommand(3,
+        passBuilder.customCommand(engine, 3,
                 RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,
                 0, [&ppm, &driver]() {
@@ -942,16 +949,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 });
     }
 
-    // sort commands once we're done adding commands
-    pass.sortCommands(engine);
+    passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::COLOR);
 
-
-    // this makes the viewport relative to xvp
-    // FIXME: we should use 'vp' when rendering directly into the swapchain, but that's hard to
-    //        know at this point. This will usually be the case when post-process is disabled.
-    // FIXME: we probably should take the dynamic scaling into account too
-    pass.setScissorViewport(hasPostProcess ? xvp : vp);
-
+    RenderPass const pass{ passBuilder.build(engine) };
 
     FrameGraphTexture::Descriptor const desc = {
             .width = config.physicalViewport.width,

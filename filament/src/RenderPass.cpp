@@ -37,9 +37,12 @@
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>
 
+#include "private/backend/CircularBuffer.h"
+
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/JobSystem.h>
+#include <utils/Panic.h>
 #include <utils/Slice.h>
 #include <utils/Systrace.h>
 #include <utils/Range.h>
@@ -60,19 +63,63 @@ namespace filament {
 
 using namespace backend;
 
-RenderPass::RenderPass(FEngine& engine, RenderPass::Arena& arena) noexcept
-        : mCommandArena(arena),
-          mCustomCommands(engine.getPerRenderPassArena()) {
+RenderPassBuilder& RenderPassBuilder::customCommand(
+        FEngine& engine,
+        uint8_t channel,
+        RenderPass::Pass pass,
+        RenderPass::CustomCommand custom,
+        uint32_t order,
+        RenderPass::Executor::CustomCommandFn const& command) {
+    if (!mCustomCommands.has_value()) {
+        // construct the vector the first time
+        mCustomCommands.emplace(engine.getPerRenderPassArena());
+    }
+    mCustomCommands->emplace_back(channel, pass, custom, order, command);
+    return *this;
 }
 
-RenderPass::RenderPass(RenderPass const& rhs) = default;
+RenderPass RenderPassBuilder::build(FEngine& engine) {
+    ASSERT_POSTCONDITION(mRenderableSoa, "RenderPassBuilder::geometry() hasn't been called");
+    assert_invariant(mScissorViewport.width  <= std::numeric_limits<int32_t>::max());
+    assert_invariant(mScissorViewport.height <= std::numeric_limits<int32_t>::max());
+    return RenderPass{ engine, *this };
+}
+
+// ------------------------------------------------------------------------------------------------
+
+RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexcept
+        : mRenderableSoa(*builder.mRenderableSoa),
+          mVisibleRenderables(builder.mVisibleRenderables),
+          mUboHandle(builder.mUboHandle),
+          mCameraPosition(builder.mCameraPosition),
+          mCameraForwardVector(builder.mCameraForwardVector),
+          mFlags(builder.mFlags),
+          mVariant(builder.mVariant),
+          mVisibilityMask(builder.mVisibilityMask),
+          mScissorViewport(builder.mScissorViewport),
+          mCustomCommands(engine.getPerRenderPassArena()) {
+
+    appendCommands(engine, builder.mArena, builder.mCommandTypeFlags);
+    if (builder.mCustomCommands.has_value()) {
+        for (auto [channel, passId, command, order, fn]: builder.mCustomCommands.value()) {
+            appendCustomCommand(builder.mArena, channel, passId, command, order, fn);
+        }
+    }
+
+    // sort commands once we're done adding commands
+    sortCommands(builder.mArena);
+
+    if (engine.isAutomaticInstancingEnabled()) {
+        instanceify(engine, builder.mArena);
+    }
+}
 
 // this destructor is actually heavy because it inlines ~vector<>
 RenderPass::~RenderPass() noexcept = default;
 
-RenderPass::Command* RenderPass::append(size_t count) noexcept {
-    // this is like an "in-place" realloc(). Works only with LinearAllocator.
-    Command* const curr = mCommandArena.alloc<Command>(count);
+RenderPass::Command* RenderPass::append(Arena& arena, size_t count) noexcept {
+    // This is like an "in-place" realloc(). Works only with LinearAllocator.
+    Command* const curr = arena.alloc<Command>(count);
     assert_invariant(curr);
     assert_invariant(mCommandBegin == nullptr || curr == mCommandEnd);
     if (mCommandBegin == nullptr) {
@@ -82,36 +129,16 @@ RenderPass::Command* RenderPass::append(size_t count) noexcept {
     return curr;
 }
 
-void RenderPass::resize(size_t count) noexcept {
+void RenderPass::resize(Arena& arena, size_t count) noexcept {
     if (mCommandBegin) {
         mCommandEnd = mCommandBegin + count;
-        mCommandArena.rewind(mCommandEnd);
+        arena.rewind(mCommandEnd);
     }
 }
 
-void RenderPass::setGeometry(FScene::RenderableSoa const& soa, Range<uint32_t> vr,
-        backend::Handle<backend::HwBufferObject> uboHandle) noexcept {
-    mRenderableSoa = &soa;
-    mVisibleRenderables = vr;
-    mUboHandle = uboHandle;
-}
-
-void RenderPass::setCamera(const CameraInfo& camera) noexcept {
-    mCameraPosition = camera.getPosition();
-    mCameraForwardVector = camera.getForwardVector();
-}
-
-void RenderPass::setScissorViewport(backend::Viewport viewport) noexcept {
-    assert_invariant(viewport.width  <= std::numeric_limits<int32_t>::max());
-    assert_invariant(viewport.height <= std::numeric_limits<int32_t>::max());
-    mScissorViewport = viewport;
-}
-
-void RenderPass::appendCommands(FEngine& engine, CommandTypeFlags const commandTypeFlags) noexcept {
+void RenderPass::appendCommands(FEngine& engine, Arena& arena, CommandTypeFlags const commandTypeFlags) noexcept {
     SYSTRACE_CALL();
     SYSTRACE_CONTEXT();
-
-    assert_invariant(mRenderableSoa);
 
     utils::Range<uint32_t> const vr = mVisibleRenderables;
     // trace the number of visible renderables
@@ -126,7 +153,7 @@ void RenderPass::appendCommands(FEngine& engine, CommandTypeFlags const commandT
     const FScene::VisibleMaskType visibilityMask = mVisibilityMask;
 
     // up-to-date summed primitive counts needed for generateCommands()
-    FScene::RenderableSoa const& soa = *mRenderableSoa;
+    FScene::RenderableSoa const& soa = mRenderableSoa;
     updateSummedPrimitiveCounts(const_cast<FScene::RenderableSoa&>(soa), vr);
 
     // compute how much maximum storage we need for this pass
@@ -136,7 +163,7 @@ void RenderPass::appendCommands(FEngine& engine, CommandTypeFlags const commandT
     const bool depthPass  = bool(commandTypeFlags & CommandTypeFlags::DEPTH);
     commandCount *= uint32_t(colorPass * 2 + depthPass);
     commandCount += 1; // for the sentinel
-    Command* const curr = append(commandCount);
+    Command* const curr = append(arena, commandCount);
 
     auto stereoscopicEyeCount =
             renderFlags & IS_STEREOSCOPIC ? engine.getConfig().stereoscopicEyeCount : 1;
@@ -174,7 +201,7 @@ void RenderPass::appendCommands(FEngine& engine, CommandTypeFlags const commandT
     }
 }
 
-void RenderPass::appendCustomCommand(uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
+void RenderPass::appendCustomCommand(Arena& arena, uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
         Executor::CustomCommandFn command) {
 
     assert_invariant((uint64_t(order) << CUSTOM_ORDER_SHIFT) <=  CUSTOM_ORDER_MASK);
@@ -190,11 +217,11 @@ void RenderPass::appendCustomCommand(uint8_t channel, Pass pass, CustomCommand c
     cmd |= uint64_t(order) << CUSTOM_ORDER_SHIFT;
     cmd |= uint64_t(index);
 
-    Command* const curr = append(1);
+    Command* const curr = append(arena, 1);
     curr->key = cmd;
 }
 
-void RenderPass::sortCommands(FEngine& engine) noexcept {
+void RenderPass::sortCommands(Arena& arena) noexcept {
     SYSTRACE_NAME("sort and trim commands");
 
     std::sort(mCommandBegin, mCommandEnd);
@@ -205,23 +232,20 @@ void RenderPass::sortCommands(FEngine& engine) noexcept {
                 return c.key != uint64_t(Pass::SENTINEL);
             });
 
-    resize(uint32_t(last - mCommandBegin));
-
-    if (engine.isAutomaticInstancingEnabled()) {
-        instanceify(engine);
-    }
+    resize(arena, uint32_t(last - mCommandBegin));
 }
 
-void RenderPass::execute(FEngine& engine, const char* name,
+void RenderPass::execute(RenderPass const& pass,
+        FEngine& engine, const char* name,
         backend::Handle<backend::HwRenderTarget> renderTarget,
-        backend::RenderPassParams params) const noexcept {
+        backend::RenderPassParams params) noexcept {
     DriverApi& driver = engine.getDriverApi();
     driver.beginRenderPass(renderTarget, params);
-    getExecutor().execute(engine, name);
+    pass.getExecutor().execute(engine, name);
     driver.endRenderPass();
 }
 
-void RenderPass::instanceify(FEngine& engine) noexcept {
+void RenderPass::instanceify(FEngine& engine, Arena& arena) noexcept {
     SYSTRACE_NAME("instanceify");
 
     // instanceify works by scanning the **sorted** command stream, looking for repeat draw
@@ -277,7 +301,8 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
                 // buffer large enough for all instances data
                 stagingBufferSize = sizeof(PerRenderableData) * (last - curr);
                 stagingBuffer = (PerRenderableData*)::malloc(stagingBufferSize);
-                uboData = mRenderableSoa->data<FScene::UBO>();
+                uboData = mRenderableSoa.data<FScene::UBO>();
+                assert_invariant(uboData);
             }
 
             // copy the ubo data to a staging buffer
@@ -330,7 +355,7 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
             return command.key == uint64_t(Pass::SENTINEL);
         });
 
-        resize(uint32_t(lastCommand - mCommandBegin));
+        resize(arena, uint32_t(lastCommand - mCommandBegin));
     }
 
     assert_invariant(stagingBuffer == nullptr);
@@ -389,7 +414,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
 
 /* static */
 UTILS_NOINLINE
-void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const commands,
+void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* const commands,
         FScene::RenderableSoa const& soa, Range<uint32_t> range,
         Variant variant, RenderFlags renderFlags,
         FScene::VisibleMaskType visibilityMask, float3 cameraPosition, float3 cameraForward,
@@ -447,9 +472,9 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
 }
 
 /* static */
-template<uint32_t commandTypeFlags>
+template<RenderPass::CommandTypeFlags commandTypeFlags>
 UTILS_NOINLINE
-RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
+RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFlags extraFlags,
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
         Variant const variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
