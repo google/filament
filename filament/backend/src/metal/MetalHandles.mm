@@ -260,18 +260,18 @@ public:
         return new PresentDrawableData(drawable, driver);
     }
 
-    void maybePresentAndCleanupAsync(bool shouldPresent) {
+    static void maybePresentAndDestroyAsync(PresentDrawableData* that, bool shouldPresent) {
         if (shouldPresent) {
-           [mDrawable present];
+           [that->mDrawable present];
         }
 
 #if FILAMENT_RELEASE_PRESENT_DRAWABLE_MAIN_THREAD == 1
         // mDrawable is acquired on the driver thread. Typically, we would release this object on
         // the same thread, but after receiving consistent crash reports from within
         // [CAMetalDrawable dealloc], we suspect this object requires releasing on the main thread.
-        dispatch_async(dispatch_get_main_queue(), ^{ cleanupAndDestroy(this); });
+        dispatch_async(dispatch_get_main_queue(), ^{ cleanupAndDestroy(that); });
 #else
-        mDriver->runAtNextTick([this]() { cleanupAndDestroy(this); });
+        that->mDriver->runAtNextTick([that]() { cleanupAndDestroy(that); });
 #endif
     }
 
@@ -291,7 +291,7 @@ private:
 
 void presentDrawable(bool presentFrame, void* user) {
     auto* presentDrawableData = static_cast<PresentDrawableData*>(user);
-    presentDrawableData->maybePresentAndCleanupAsync(presentFrame);
+    PresentDrawableData::maybePresentAndDestroyAsync(presentDrawableData, presentFrame);
 }
 
 void MetalSwapChain::scheduleFrameScheduledCallback() {
@@ -301,7 +301,7 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
 
     assert_invariant(drawable);
 
-    // Destroy this by calling maybePresentAndCleanupAsync() later.
+    // Destroy this by calling maybePresentAndDestroyAsync() later.
     auto* presentData = PresentDrawableData::create(drawable, context.driver);
 
     FrameScheduledCallback userCallback = frameScheduledCallback;
