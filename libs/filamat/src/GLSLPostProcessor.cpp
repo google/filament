@@ -43,6 +43,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <glslkomi/Komi.h>
+
 using namespace glslang;
 using namespace spirv_cross;
 using namespace spvtools;
@@ -371,6 +373,9 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
         slog.e << tShader.getInfoLog() << io::endl;
         return false;
     }
+
+    glslkomi::Komi komi;
+    komi.slurp(*tShader.getIntermediate());
 
     switch (mOptimization) {
         case MaterialBuilder::Optimization::NONE:

@@ -1,75 +1,19 @@
 cmake_minimum_required(VERSION 3.19)
-project(filamat)
+project(glslkomi)
 
-set(TARGET         filamat)
+set(TARGET         glslkomi)
 set(PUBLIC_HDR_DIR include)
 
 # ==================================================================================================
 # Sources and headers
 # ==================================================================================================
 set(HDRS
-        include/filamat/Enums.h
-        include/filamat/IncludeCallback.h
-        include/filamat/MaterialBuilder.h
-        include/filamat/Package.h)
+        include/glslkomi/Komi.h)
 
-set(COMMON_PRIVATE_HDRS
-        src/eiff/Chunk.h
-        src/eiff/ChunkContainer.h
-        src/eiff/DictionaryTextChunk.h
-        src/eiff/Flattener.h
-        src/eiff/LineDictionary.h
-        src/eiff/MaterialTextChunk.h
-        src/eiff/MaterialInterfaceBlockChunk.h
-        src/eiff/ShaderEntry.h
-        src/eiff/SimpleFieldChunk.h
-        src/Includes.h)
-
-set(COMMON_SRCS
-        src/eiff/Chunk.cpp
-        src/eiff/ChunkContainer.cpp
-        src/eiff/DictionaryTextChunk.cpp
-        src/eiff/LineDictionary.cpp
-        src/eiff/MaterialTextChunk.cpp
-        src/eiff/MaterialInterfaceBlockChunk.cpp
-        src/eiff/SimpleFieldChunk.cpp
-        src/shaders/CodeGenerator.cpp
-        src/shaders/ShaderGenerator.cpp
-        src/shaders/SibGenerator.cpp
-        src/shaders/UibGenerator.cpp
-        src/Enums.cpp
-        src/Includes.cpp
-        src/MaterialBuilder.cpp
-        src/MaterialVariants.cpp
-        src/SamplerBindingMap.cpp
-)
-
-# Sources and headers for filamat
-
-set(PRIVATE_HDRS
-        ${COMMON_PRIVATE_HDRS}
-        src/eiff/BlobDictionary.h
-        src/eiff/DictionarySpirvChunk.h
-        src/eiff/MaterialSpirvChunk.h
-        src/GLSLPostProcessor.h
-        src/MetalArgumentBuffer.h
-        src/ShaderMinifier.h
-        src/SpirvFixup.h
-        src/sca/ASTHelpers.h
-        src/sca/GLSLTools.h
-        src/sca/builtinResource.h)
+set(PRIVATE_HDRS)
 
 set(SRCS
-        ${COMMON_SRCS}
-        src/eiff/BlobDictionary.cpp
-        src/eiff/DictionarySpirvChunk.cpp
-        src/eiff/MaterialSpirvChunk.cpp
-        src/MetalArgumentBuffer.cpp
-        src/sca/ASTHelpers.cpp
-        src/sca/GLSLTools.cpp
-        src/GLSLPostProcessor.cpp
-        src/ShaderMinifier.cpp
-        src/SpirvFixup.cpp)
+        src/Komi.cpp)
 
 # ==================================================================================================
 # Include and target definitions
@@ -77,11 +21,11 @@ set(SRCS
 include_directories(${PUBLIC_HDR_DIR})
 include_directories(${CMAKE_BINARY_DIR})
 
-# Filamat
+# glslkomi
 add_library(${TARGET} STATIC ${HDRS} ${PRIVATE_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
-target_link_libraries(${TARGET} shaders filabridge utils smol-v glslkomi)
+target_link_libraries(${TARGET} backend_headers math utils)
 
 # We are being naughty and accessing private headers here
 # For spirv-tools, we're just following glslang's example
@@ -115,45 +59,42 @@ endif()
 # Installation
 # ==================================================================================================
 
-# Filamat has dependencies on a bunch of SPIRV-related libraries. To make things simpler, we bundle
+# Glslkomi has dependencies on a bunch of SPIRV-related libraries. To make things simpler, we bundle
 # them together into a single shared library and copy this into the installation folder. This
 # requires us to explicitly list the dependencies below, as CMake doesn't have a way to recursively
 # query dependencies.
-set(FILAMAT_DEPS
+set(GLSLKOMI_DEPS
         OGLCompiler
         OSDependent
         SPIRV
         SPIRV-Tools
         SPIRV-Tools-opt
-        filamat
+        glslkomi
         glslang
         spirv-cross-core
         spirv-cross-glsl
         spirv-cross-msl
         )
 
-set(FILAMAT_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libfilamat_combined.a")
-combine_static_libs(filamat "${FILAMAT_COMBINED_OUTPUT}" "${FILAMAT_DEPS}")
+set(GLSLKOMI_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libglslkomi_combined.a")
+combine_static_libs(glslkomi "${GLSLKOMI_COMBINED_OUTPUT}" "${GLSLKOMI_DEPS}")
 
-set(FILAMAT_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}filamat${CMAKE_STATIC_LIBRARY_SUFFIX})
-install(FILES "${FILAMAT_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${FILAMAT_LIB_NAME})
-install(DIRECTORY ${PUBLIC_HDR_DIR}/filamat DESTINATION include)
+set(GLSLKOMI_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}glslkomi${CMAKE_STATIC_LIBRARY_SUFFIX})
+install(FILES "${GLSLKOMI_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${GLSLKOMI_LIB_NAME})
+install(DIRECTORY ${PUBLIC_HDR_DIR}/glslkomi DESTINATION include)
 
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-project(test_filamat)
-set(TARGET test_filamat)
+project(test_glslkomi)
+set(TARGET test_glslkomi)
 set(SRCS
-        tests/test_filamat.cpp
-        tests/test_argBufferFixup.cpp
-        tests/test_clipDistanceFixup.cpp
-        tests/test_includes.cpp)
+        tests/test_glslkomi.cpp)
 
 add_executable(${TARGET} ${SRCS})
 
 target_include_directories(${TARGET} PRIVATE src)
 
-target_link_libraries(${TARGET} filamat gtest)
+target_link_libraries(${TARGET} glslkomi gtest)
 
 set_target_properties(${TARGET} PROPERTIES FOLDER Tests)
