@@ -293,6 +293,7 @@ struct DepthOfFieldOptions {
         MEDIAN
     };
     float cocScale = 1.0f;              //!< circle of confusion scale factor (amount of blur)
+    float cocAspectRatio = 1.0f;        //!< width/height aspect ratio of the circle of confusion (simulate anamorphic lenses)
     float maxApertureDiameter = 0.01f;  //!< maximum aperture diameter in meters (zero to disable rotation)
     bool enabled = false;               //!< enable or disable depth of field effect
     Filter filter = Filter::MEDIAN;     //!< filter to use for filling gaps in the kernel
@@ -437,6 +438,7 @@ struct TemporalAntiAliasingOptions {
     float filterWidth = 1.0f;   //!< reconstruction filter width typically between 0.2 (sharper, aliased) and 1.5 (smoother)
     float feedback = 0.12f;     //!< history feedback, between 0 (maximum temporal AA) and 1 (no temporal AA).
     float lodBias = -1.0f;      //!< texturing lod bias (typically -1 or -2)
+    float sharpness = 0.0f;     //!< post-TAA sharpen, especially useful when upscaling is true.
     bool enabled = false;       //!< enables or disables temporal anti-aliasing
     bool upscaling = false;     //!< 4x TAA upscaling. Disables Dynamic Resolution. [BETA]
 
@@ -456,7 +458,8 @@ struct TemporalAntiAliasingOptions {
         RGSS_X4,             //!  4-samples, rotated grid sampling
         UNIFORM_HELIX_X4,    //!  4-samples, uniform grid in helix sequence
         HALTON_23_X8,        //!  8-samples of halton 2,3
-        HALTON_23_X16        //! 16-samples of halton 2,3
+        HALTON_23_X16,       //! 16-samples of halton 2,3
+        HALTON_23_X32        //! 32-samples of halton 2,3
     };
 
     bool filterHistory = true;      //!< whether to filter the history buffer

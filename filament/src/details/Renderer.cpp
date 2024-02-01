@@ -985,8 +985,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     auto& history = view.getFrameHistory();
                     auto& current = history.getCurrent();
                     current.ssr.projection = projection;
-                    resources.detach(data.history,
-                            &current.ssr.color, &current.ssr.desc);
+                    resources.detach(data.history, &current.ssr.color, &current.ssr.desc);
                 });
     }
 
@@ -1043,9 +1042,13 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             // The bokeh height is always correct regardless of the dynamic resolution scaling.
             // (because the CoC is calculated w.r.t. the height), so we only need to adjust
             // the width.
-            float const bokehAspectRatio = scale.x / scale.y;
+            float const aspect = (scale.x / scale.y) * dofOptions.cocAspectRatio;
+            float2 const bokehScale{
+                aspect < 1.0f ? aspect : 1.0f,
+                aspect > 1.0f ? 1.0f / aspect : 1.0f
+            };
             input = ppm.dof(fg, input, depth, cameraInfo, needsAlphaChannel,
-                    bokehAspectRatio, dofOptions);
+                    bokehScale, dofOptions);
         }
 
         FrameGraphId<FrameGraphTexture> bloom, flare;

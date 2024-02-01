@@ -391,6 +391,8 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DepthOfFieldOpt
         CHECK_KEY(tok);
         if (compare(tok, jsonChunk, "cocScale") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->cocScale);
+        } else if (compare(tok, jsonChunk, "cocAspectRatio") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->cocAspectRatio);
         } else if (compare(tok, jsonChunk, "maxApertureDiameter") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->maxApertureDiameter);
         } else if (compare(tok, jsonChunk, "enabled") == 0) {
@@ -424,6 +426,7 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DepthOfFieldOpt
 std::ostream& operator<<(std::ostream& out, const DepthOfFieldOptions& in) {
     return out << "{\n"
         << "\"cocScale\": " << (in.cocScale) << ",\n"
+        << "\"cocAspectRatio\": " << (in.cocAspectRatio) << ",\n"
         << "\"maxApertureDiameter\": " << (in.maxApertureDiameter) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"filter\": " << (in.filter) << ",\n"
@@ -690,6 +693,7 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAli
     else if (0 == compare(tokens[i], jsonChunk, "UNIFORM_HELIX_X4")) { *out = TemporalAntiAliasingOptions::JitterPattern::UNIFORM_HELIX_X4; }
     else if (0 == compare(tokens[i], jsonChunk, "HALTON_23_X8")) { *out = TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X8; }
     else if (0 == compare(tokens[i], jsonChunk, "HALTON_23_X16")) { *out = TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X16; }
+    else if (0 == compare(tokens[i], jsonChunk, "HALTON_23_X32")) { *out = TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X32; }
     else {
         slog.w << "Invalid TemporalAntiAliasingOptions::JitterPattern: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
     }
@@ -702,6 +706,7 @@ std::ostream& operator<<(std::ostream& out, TemporalAntiAliasingOptions::JitterP
         case TemporalAntiAliasingOptions::JitterPattern::UNIFORM_HELIX_X4: return out << "\"UNIFORM_HELIX_X4\"";
         case TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X8: return out << "\"HALTON_23_X8\"";
         case TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X16: return out << "\"HALTON_23_X16\"";
+        case TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X32: return out << "\"HALTON_23_X32\"";
     }
     return out << "\"INVALID\"";
 }
@@ -718,6 +723,8 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAli
             i = parse(tokens, i + 1, jsonChunk, &out->feedback);
         } else if (compare(tok, jsonChunk, "lodBias") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->lodBias);
+        } else if (compare(tok, jsonChunk, "sharpness") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sharpness);
         } else if (compare(tok, jsonChunk, "enabled") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->enabled);
         } else if (compare(tok, jsonChunk, "upscaling") == 0) {
@@ -757,6 +764,7 @@ std::ostream& operator<<(std::ostream& out, const TemporalAntiAliasingOptions& i
         << "\"filterWidth\": " << (in.filterWidth) << ",\n"
         << "\"feedback\": " << (in.feedback) << ",\n"
         << "\"lodBias\": " << (in.lodBias) << ",\n"
+        << "\"sharpness\": " << (in.sharpness) << ",\n"
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"upscaling\": " << to_string(in.upscaling) << ",\n"
         << "\"filterHistory\": " << to_string(in.filterHistory) << ",\n"

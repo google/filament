@@ -36,6 +36,7 @@
 
 #include <tsl/robin_map.h>
 
+#include <array>
 #include <random>
 #include <string_view>
 #include <variant>
@@ -162,7 +163,7 @@ public:
             FrameGraphId<FrameGraphTexture> depth,
             const CameraInfo& cameraInfo,
             bool translucent,
-            float bokehAspectRatio,
+            math::float2 bokehScale,
             const DepthOfFieldOptions& dofOptions) noexcept;
 
     // Bloom
@@ -240,6 +241,13 @@ public:
             DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
             filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
             backend::SamplerMagFilter filter) noexcept;
+
+    FrameGraphId<FrameGraphTexture> rcas(
+            FrameGraph& fg,
+            float sharpness,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphTexture::Descriptor const& outDesc,
+            bool translucent);
 
     // upscale/downscale blitter using shaders
     FrameGraphId<FrameGraphTexture> blit(FrameGraph& fg, bool translucent,
@@ -362,12 +370,12 @@ private:
     template<size_t SIZE>
     struct JitterSequence {
         auto operator()(size_t i) const noexcept { return positions[i % SIZE] - 0.5f; }
-        const math::float2 positions[SIZE];
+        const std::array<math::float2, SIZE> positions;
     };
 
     static const JitterSequence<4> sRGSS4;
     static const JitterSequence<4> sUniformHelix4;
-    static const JitterSequence<16> sHaltonSamples;
+    static const JitterSequence<32> sHaltonSamples;
 
     bool mWorkaroundSplitEasu : 1;
     bool mWorkaroundAllowReadOnlyAncillaryFeedbackLoop : 1;

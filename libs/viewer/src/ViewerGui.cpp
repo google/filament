@@ -805,10 +805,11 @@ void ViewerGui::updateUserInterface() {
         int jitterSequence = (int)mSettings.view.taa.jitterPattern;
         int boxClipping = (int)mSettings.view.taa.boxClipping;
         int boxType = (int)mSettings.view.taa.boxType;
-        ImGui::Combo("Jitter Pattern", &jitterSequence, "RGSS x4\0Uniform Helix x4\0Halton x8\0Halton x16\0\0");
+        ImGui::Combo("Jitter Pattern", &jitterSequence, "RGSS x4\0Uniform Helix x4\0Halton x8\0Halton x16\0Halton x32\0\0");
         ImGui::Combo("Box Clipping", &boxClipping, "Accurate\0Clamp\0None\0\0");
         ImGui::Combo("Box Type", &boxType, "AABB\0Variance\0Both\0\0");
         ImGui::SliderFloat("Variance Gamma", &mSettings.view.taa.varianceGamma, 0.75f, 1.25f);
+        ImGui::SliderFloat("RCAS", &mSettings.view.taa.sharpness, 0.0f, 1.0f);
         mSettings.view.taa.boxClipping = (TemporalAntiAliasingOptions::BoxClipping)boxClipping;
         mSettings.view.taa.boxType = (TemporalAntiAliasingOptions::BoxType)boxType;
         mSettings.view.taa.jitterPattern = (TemporalAntiAliasingOptions::JitterPattern)jitterSequence;
@@ -1036,6 +1037,7 @@ void ViewerGui::updateUserInterface() {
             ImGui::Checkbox("Enabled##dofEnabled", &mSettings.view.dof.enabled);
             ImGui::SliderFloat("Focus distance", &mSettings.viewer.cameraFocusDistance, 0.0f, 30.0f);
             ImGui::SliderFloat("Blur scale", &mSettings.view.dof.cocScale, 0.1f, 10.0f);
+            ImGui::SliderFloat("CoC aspect-ratio", &mSettings.view.dof.cocAspectRatio, 0.25f, 4.0f);
             ImGui::SliderInt("Ring count", &dofRingCount, 1, 17);
             ImGui::SliderInt("Max CoC", &dofMaxCoC, 1, 32);
             ImGui::Checkbox("Native Resolution", &mSettings.view.dof.nativeResolution);
