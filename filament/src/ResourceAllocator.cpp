@@ -16,15 +16,30 @@
 
 #include "ResourceAllocator.h"
 
-#include "private/backend/DriverApi.h"
+#include <filament/Engine.h>
 
 #include "details/Texture.h"
 
+#include <backend/DriverApiForward.h>
+#include <backend/Handle.h>
+#include <backend/TargetBufferInfo.h>
+#include <backend/DriverEnums.h>
+
+#include "private/backend/DriverApi.h"
+
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
-#include <utils/debug.h>
+#include <utils/ostream.h>
 
+#include <array>
+#include <algorithm>
 #include <iterator>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 using namespace utils;
 
@@ -42,8 +57,7 @@ ResourceAllocator::AssociativeContainer<K, V, H>::AssociativeContainer() {
 
 template<typename K, typename V, typename H>
 UTILS_NOINLINE
-ResourceAllocator::AssociativeContainer<K, V, H>::~AssociativeContainer() noexcept {
-}
+ResourceAllocator::AssociativeContainer<K, V, H>::~AssociativeContainer() noexcept = default;
 
 template<typename K, typename V, typename H>
 UTILS_NOINLINE
@@ -78,9 +92,9 @@ void ResourceAllocator::AssociativeContainer<K, V, H>::emplace(ARGS&& ... args) 
 ResourceAllocatorInterface::~ResourceAllocatorInterface() = default;
 
 size_t ResourceAllocator::TextureKey::getSize() const noexcept {
-    size_t pixelCount = width * height * depth;
+    size_t const pixelCount = width * height * depth;
     size_t size = pixelCount * FTexture::getFormatSize(format);
-    size_t s = std::max(uint8_t(1), samples);
+    size_t const s = std::max(uint8_t(1), samples);
     if (s > 1) {
         // if we have MSAA, we assume N times the storage
         size *= s;
@@ -94,8 +108,10 @@ size_t ResourceAllocator::TextureKey::getSize() const noexcept {
     return size;
 }
 
-ResourceAllocator::ResourceAllocator(DriverApi& driverApi) noexcept
-        : mBackend(driverApi) {
+ResourceAllocator::ResourceAllocator(Engine::Config const& config, DriverApi& driverApi) noexcept
+        : mCacheCapacity(config.resourceAllocatorCacheSizeMB),
+          mCacheMaxAge(config.resourceAllocatorCacheMaxAge),
+          mBackend(driverApi) {
 }
 
 ResourceAllocator::~ResourceAllocator() noexcept {
@@ -112,7 +128,7 @@ void ResourceAllocator::terminate() noexcept {
     }
 }
 
-RenderTargetHandle ResourceAllocator::createRenderTarget(const char* name,
+RenderTargetHandle ResourceAllocator::createRenderTarget(const char*,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
         uint8_t samples, MRT color, TargetBufferInfo depth,
         TargetBufferInfo stencil) noexcept {
@@ -181,7 +197,7 @@ void ResourceAllocator::destroyTexture(TextureHandle h) noexcept {
 
         // move it to the cache
         const TextureKey key = it->second;
-        uint32_t size = key.getSize();
+        uint32_t const size = key.getSize();
 
         mTextureCache.emplace(key, TextureCachePayload{ h, mAge, size });
         mCacheSize += size;
@@ -208,9 +224,9 @@ void ResourceAllocator::gc() noexcept {
     auto& textureCache = mTextureCache;
     for (auto it = textureCache.begin(); it != textureCache.end();) {
         const size_t ageDiff = age - it->second.age;
-        if (ageDiff >= CACHE_MAX_AGE) {
+        if (ageDiff >= mCacheMaxAge) {
             it = purge(it);
-            if (mCacheSize < CACHE_CAPACITY) {
+            if (mCacheSize < mCacheCapacity) {
                 // if we're not at capacity, only purge a single entry per gc, trying to
                 // avoid a burst of work.
                 break;
@@ -220,7 +236,7 @@ void ResourceAllocator::gc() noexcept {
         }
     }
 
-    if (UTILS_UNLIKELY(mCacheSize >= CACHE_CAPACITY)) {
+    if (UTILS_UNLIKELY(mCacheSize >= mCacheCapacity)) {
         // make a copy of our CacheContainer to a vector
         using Vector = FixedCapacityVector<std::pair<TextureKey, TextureCachePayload>>;
         auto cache = Vector::with_capacity(textureCache.size());
@@ -233,14 +249,14 @@ void ResourceAllocator::gc() noexcept {
 
         // now remove entries until we're at capacity
         auto curr = cache.begin();
-        while (mCacheSize >= CACHE_CAPACITY) {
+        while (mCacheSize >= mCacheCapacity) {
             // by construction this entry must exist
             purge(textureCache.find(curr->first));
             ++curr;
         }
 
         // Since we're sorted already, reset the oldestAge of the whole system
-        size_t oldestAge = cache.front().second.age;
+        size_t const oldestAge = cache.front().second.age;
         for (auto& it : textureCache) {
             it.second.age -= oldestAge;
         }
