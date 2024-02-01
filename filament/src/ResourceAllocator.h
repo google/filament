@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_RESOURCEALLOCATOR_H
 #define TNT_FILAMENT_RESOURCEALLOCATOR_H
 
+#include <filament/Engine.h>
+
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/TargetBufferInfo.h>
@@ -27,7 +29,9 @@
 
 #include <array>
 #include <vector>
+#include <utility>
 
+#include <stddef.h>
 #include <stdint.h>
 
 namespace filament {
@@ -62,7 +66,8 @@ protected:
 
 class ResourceAllocator final : public ResourceAllocatorInterface {
 public:
-    explicit ResourceAllocator(backend::DriverApi& driverApi) noexcept;
+    explicit ResourceAllocator(
+            Engine::Config const& config, backend::DriverApi& driverApi) noexcept;
     ~ResourceAllocator() noexcept override;
 
     void terminate() noexcept;
@@ -89,9 +94,8 @@ public:
     void gc() noexcept;
 
 private:
-    // TODO: these should be settings of the engine
-    static constexpr size_t CACHE_CAPACITY = 64u << 20u;   // 64 MiB
-    static constexpr size_t CACHE_MAX_AGE  = 30u;
+    size_t const mCacheCapacity;
+    size_t const mCacheMaxAge;
 
     struct TextureKey {
         const char* name; // doesn't participate in the hash

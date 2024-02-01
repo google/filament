@@ -252,7 +252,7 @@ void FEngine::init() {
     slog.i << "FEngine feature level: " << int(mActiveFeatureLevel) << io::endl;
 
 
-    mResourceAllocator = new ResourceAllocator(driverApi);
+    mResourceAllocator = new ResourceAllocator(mConfig, driverApi);
 
     mFullScreenTriangleVb = downcast(VertexBuffer::Builder()
             .vertexCount(3)
