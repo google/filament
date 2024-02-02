@@ -99,10 +99,41 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
           mScissorViewport(builder.mScissorViewport),
           mCustomCommands(engine.getPerRenderPassArena()) {
 
-    appendCommands(engine, builder.mArena, builder.mCommandTypeFlags);
+    // compute the number of commands we need
+    updateSummedPrimitiveCounts(
+            const_cast<FScene::RenderableSoa&>(mRenderableSoa), mVisibleRenderables);
+
+    uint32_t commandCount =
+            FScene::getPrimitiveCount(mRenderableSoa, mVisibleRenderables.last);
+    const bool colorPass  = bool(builder.mCommandTypeFlags & CommandTypeFlags::COLOR);
+    const bool depthPass  = bool(builder.mCommandTypeFlags & CommandTypeFlags::DEPTH);
+    commandCount *= uint32_t(colorPass * 2 + depthPass);
+    commandCount += 1; // for the sentinel
+
+    uint32_t const customCommandCount =
+            builder.mCustomCommands.has_value() ? builder.mCustomCommands->size() : 0;
+
+    Command* const curr = builder.mArena.alloc<Command>(commandCount + customCommandCount);
+    assert_invariant(curr);
+
+    if (UTILS_UNLIKELY(builder.mArena.getAllocator().isHeapAllocation(curr))) {
+        static bool sLogOnce = true;
+        if (UTILS_UNLIKELY(sLogOnce)) {
+            sLogOnce = false;
+            PANIC_LOG("RenderPass arena is full, using slower system heap. Please increase "
+                      "the appropriate constant (e.g. FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB).");
+        }
+    }
+
+    mCommandBegin = curr;
+    mCommandEnd = curr + commandCount + customCommandCount;
+
+    appendCommands(engine, { curr, commandCount }, builder.mCommandTypeFlags);
+
     if (builder.mCustomCommands.has_value()) {
+        Command* p = curr + commandCount;
         for (auto [channel, passId, command, order, fn]: builder.mCustomCommands.value()) {
-            appendCustomCommand(builder.mArena, channel, passId, command, order, fn);
+            appendCustomCommand(p++, channel, passId, command, order, fn);
         }
     }
 
@@ -117,18 +148,6 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
 // this destructor is actually heavy because it inlines ~vector<>
 RenderPass::~RenderPass() noexcept = default;
 
-RenderPass::Command* RenderPass::append(Arena& arena, size_t count) noexcept {
-    // This is like an "in-place" realloc(). Works only with LinearAllocator.
-    Command* const curr = arena.alloc<Command>(count);
-    assert_invariant(curr);
-    assert_invariant(mCommandBegin == nullptr || curr == mCommandEnd);
-    if (mCommandBegin == nullptr) {
-        mCommandBegin = mCommandEnd = curr;
-    }
-    mCommandEnd += count;
-    return curr;
-}
-
 void RenderPass::resize(Arena& arena, size_t count) noexcept {
     if (mCommandBegin) {
         mCommandEnd = mCommandBegin + count;
@@ -136,7 +155,8 @@ void RenderPass::resize(Arena& arena, size_t count) noexcept {
     }
 }
 
-void RenderPass::appendCommands(FEngine& engine, Arena& arena, CommandTypeFlags const commandTypeFlags) noexcept {
+void RenderPass::appendCommands(FEngine& engine,
+        Slice<Command> commands, CommandTypeFlags const commandTypeFlags) noexcept {
     SYSTRACE_CALL();
     SYSTRACE_CONTEXT();
 
@@ -154,16 +174,9 @@ void RenderPass::appendCommands(FEngine& engine, Arena& arena, CommandTypeFlags 
 
     // up-to-date summed primitive counts needed for generateCommands()
     FScene::RenderableSoa const& soa = mRenderableSoa;
-    updateSummedPrimitiveCounts(const_cast<FScene::RenderableSoa&>(soa), vr);
 
-    // compute how much maximum storage we need for this pass
-    uint32_t commandCount = FScene::getPrimitiveCount(soa, vr.last);
-    // double the color pass for transparent objects that need to render twice
-    const bool colorPass  = bool(commandTypeFlags & CommandTypeFlags::COLOR);
-    const bool depthPass  = bool(commandTypeFlags & CommandTypeFlags::DEPTH);
-    commandCount *= uint32_t(colorPass * 2 + depthPass);
-    commandCount += 1; // for the sentinel
-    Command* const curr = append(arena, commandCount);
+    Command* curr = commands.data();
+    size_t const commandCount = commands.size();
 
     auto stereoscopicEyeCount =
             renderFlags & IS_STEREOSCOPIC ? engine.getConfig().stereoscopicEyeCount : 1;
@@ -201,7 +214,8 @@ void RenderPass::appendCommands(FEngine& engine, Arena& arena, CommandTypeFlags 
     }
 }
 
-void RenderPass::appendCustomCommand(Arena& arena, uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
+void RenderPass::appendCustomCommand(Command* commands,
+        uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
         Executor::CustomCommandFn command) {
 
     assert_invariant((uint64_t(order) << CUSTOM_ORDER_SHIFT) <=  CUSTOM_ORDER_MASK);
@@ -217,8 +231,7 @@ void RenderPass::appendCustomCommand(Arena& arena, uint8_t channel, Pass pass, C
     cmd |= uint64_t(order) << CUSTOM_ORDER_SHIFT;
     cmd |= uint64_t(index);
 
-    Command* const curr = append(arena, 1);
-    curr->key = cmd;
+    commands->key = cmd;
 }
 
 void RenderPass::sortCommands(Arena& arena) noexcept {
