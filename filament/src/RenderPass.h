@@ -279,7 +279,7 @@ public:
 
     // Arena used for commands
     using Arena = utils::Arena<
-            utils::LinearAllocator,                 // note: can't change this allocator
+            utils::LinearAllocatorWithFallback,
             utils::LockingPolicy::NoLock,
             utils::TrackingPolicy::HighWatermark,
             utils::AreaPolicy::StaticArea>;
@@ -354,10 +354,6 @@ public:
         return { this, b, e };
     }
 
-    // Appends a custom command.
-    void appendCustomCommand(Arena& arena, uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
-            Executor::CustomCommandFn command);
-
 private:
     friend class FRenderer;
     friend class RenderPassBuilder;
@@ -365,8 +361,14 @@ private:
 
     // This is the main function of this class, this appends commands to the pass using
     // the current camera, geometry and flags set. This can be called multiple times if needed.
-    void appendCommands(FEngine& engine, Arena& arena, CommandTypeFlags commandTypeFlags) noexcept;
-    Command* append(Arena& arena, size_t count) noexcept;
+    void appendCommands(FEngine& engine,
+            utils::Slice<Command> commands, CommandTypeFlags commandTypeFlags) noexcept;
+
+    // Appends a custom command.
+    void appendCustomCommand(Command* commands,
+            uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
+            Executor::CustomCommandFn command);
+
     void resize(Arena& arena, size_t count) noexcept;
 
     // sorts commands then trims sentinels

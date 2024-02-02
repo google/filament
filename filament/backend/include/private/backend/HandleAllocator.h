@@ -231,7 +231,7 @@ private:
         explicit Allocator(const utils::AreaPolicy::HeapArea& area);
 
         // this is in fact always called with a constexpr size argument
-        [[nodiscard]] inline void* alloc(size_t size, size_t, size_t extra) noexcept {
+        [[nodiscard]] inline void* alloc(size_t size, size_t, size_t extra = 0) noexcept {
             void* p = nullptr;
                  if (size <= mPool0.getSize()) p = mPool0.alloc(size, 16, extra);
             else if (size <= mPool1.getSize()) p = mPool1.alloc(size, 16, extra);

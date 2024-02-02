@@ -672,6 +672,8 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     size_t const perFrameCommandsSize = engine.getPerFrameCommandsSize();
     void* const arenaBegin = rootArenaScope.allocate(perFrameCommandsSize, CACHELINE_SIZE);
     void* const arenaEnd = pointermath::add(arenaBegin, perFrameCommandsSize);
+
+    // This arena *must* stay valid until all commands have been processed
     RenderPass::Arena commandArena("Command Arena", { arenaBegin, arenaEnd });
 
     RenderPass::RenderFlags renderFlags = 0;
