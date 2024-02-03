@@ -584,6 +584,9 @@ void ShaderCompilerService::compileShaders(OpenGLContext& context,
             outShaders[i] = shaderId;
         }
     }
+
+    // Hint to release the resources allocated by the shader compiler.
+    glReleaseShaderCompiler();
 }
 
 // If usages of the Google-style line directive are present, remove them, as some
