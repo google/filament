@@ -90,9 +90,9 @@ public:
      * used instead. The default material can be overridden by adding a material
      * named "DefaultMaterial" to the registry.
      */
-    static Mesh loadMeshFromFile(filament::Engine* engine,
+    static Mesh loadMeshFromFile(filament::Engine *const engine,
             const utils::Path& path,
-            MaterialRegistry& materials);
+            MaterialRegistry& materialRegistry);
 
     /**
      * Loads a filamesh renderable from an in-memory buffer. The material registry
@@ -103,7 +103,7 @@ public:
      */
     static Mesh loadMeshFromBuffer(filament::Engine* engine,
             void const* data, Callback destructor, void* user,
-            MaterialRegistry& materials);
+            MaterialRegistry& materialRegistry);
 
     /**
      * Loads a filamesh renderable from an in-memory buffer. The material registry

@@ -159,30 +159,32 @@ static size_t fileSize(int fd) {
 
 namespace filamesh {
 
-MeshReader::Mesh MeshReader::loadMeshFromFile(filament::Engine* engine, const utils::Path& path,
-        MaterialRegistry& materials) {
-
+MeshReader::Mesh MeshReader::loadMeshFromFile(filament::Engine *const engine, const utils::Path& path,
+        MaterialRegistry& materialRegistry) {
     Mesh mesh;
 
-    int fd = open(path.c_str(), O_RDONLY);
+    /* Open the mesh file for reading only. */
+    const int fd = open(path.c_str(), O_RDONLY);
 
-    size_t size = fileSize(fd);
-    char* data = (char*) malloc(size);
-    read(fd, data, size);
+    /* Check if an error occurred when opening the file. */
+    if (fd == -1) return mesh;
+
+    const size_t size = fileSize(fd);
+    const char *const data = (char *)malloc(size);
 
     if (data) {
-        char *p = data;
-        char *magic = p;
-        p += sizeof(MAGICID);
+        (void)read(fd, (void *)data, size);
 
-        if (!strncmp(MAGICID, magic, 8)) {
-            mesh = loadMeshFromBuffer(engine, data, nullptr, nullptr, materials);
+        if (strncmp(MAGICID, data, 8) == 0) {
+            mesh = loadMeshFromBuffer(engine, data, nullptr, nullptr, materialRegistry);
         }
 
         Fence::waitAndDestroy(engine->createFence());
-        free(data);
+        free((void *)data);
     }
-    close(fd);
+
+    /* Close the file. */
+    (void)close(fd);
 
     return mesh;
 }
@@ -197,7 +199,7 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
 
 MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
         void const* data, Callback destructor, void* user,
-        MaterialRegistry& materials) {
+        MaterialRegistry& materialRegistry) {
     const uint8_t* p = (const uint8_t*) data;
     if (strncmp(MAGICID, (const char *) p, 8)) {
         utils::slog.e << "Magic string not found." << utils::io::endl;
@@ -217,14 +219,14 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
     Part* parts = (Part*) p;
     p += header->parts * sizeof(Part);
 
-    uint32_t materialCount = (uint32_t) *p;
+    const uint32_t materialCount = *(const uint32_t *)p;
     p += sizeof(uint32_t);
 
-    std::vector<std::string> partsMaterial(materialCount);
+    std::string materials[materialCount];
     for (size_t i = 0; i < materialCount; i++) {
         uint32_t nameLength = (uint32_t) *p;
         p += sizeof(uint32_t);
-        partsMaterial[i] = (const char*) p;
+        materials[i] = (const char*) p;
         p += nameLength + 1; // null terminated
     }
 
@@ -354,7 +356,7 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
     RenderableManager::Builder builder(header->parts);
     builder.boundingBox(header->aabb);
 
-    const auto defaultmi = materials.getMaterialInstance(utils::CString(DEFAULT_MATERIAL));
+    const auto defaultmi = materialRegistry.getMaterialInstance(utils::CString(DEFAULT_MATERIAL));
     for (size_t i = 0; i < header->parts; i++) {
         builder.geometry(i, RenderableManager::PrimitiveType::TRIANGLES,
                 mesh.vertexBuffer, mesh.indexBuffer, parts[i].offset,
@@ -363,18 +365,18 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
         // It may happen that there are more parts than materials
         // therefore we have to use Part::material instead of i.
         uint32_t materialIndex = parts[i].material;
-        if (materialIndex >= partsMaterial.size()) {
+        if (materialIndex >= materialCount) {
             utils::slog.e << "Material index (" << materialIndex << ") of mesh part ("
-                    << i << ") is out of bounds (" << partsMaterial.size() << ")" << utils::io::endl;
+                    << i << ") is out of bounds (" << materialCount << ")" << utils::io::endl;
             continue;
         }
 
         const utils::CString materialName(
-                partsMaterial[materialIndex].c_str(), partsMaterial[materialIndex].size());
-        const auto mat = materials.getMaterialInstance(materialName);
+                materials[materialIndex].c_str(), materials[materialIndex].size());
+        const auto mat = materialRegistry.getMaterialInstance(materialName);
         if (mat == nullptr) {
             builder.material(i, defaultmi);
-            materials.registerMaterialInstance(materialName, defaultmi);
+            materialRegistry.registerMaterialInstance(materialName, defaultmi);
         } else {
             builder.material(i, mat);
         }
