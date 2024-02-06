@@ -24,21 +24,18 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
+#include <utils/Panic.h>
 
 #include <tsl/robin_map.h>
 
+#include <cstddef>
 #include <exception>
 #include <type_traits>
 #include <unordered_map>
+#include <utility>
 
 #include <stddef.h>
 #include <stdint.h>
-
-#if !defined(NDEBUG) && UTILS_HAS_RTTI
-#   define HANDLE_TYPE_SAFETY 1
-#else
-#   define HANDLE_TYPE_SAFETY 0
-#endif
 
 #define HandleAllocatorGL  HandleAllocator<16,  64, 208>    // ~3640 / pool / MiB
 #define HandleAllocatorVK  HandleAllocator<80, 176, 320>    // ~1820 / pool / MiB
@@ -52,11 +49,6 @@ namespace filament::backend {
 template<size_t P0, size_t P1, size_t P2>
 class HandleAllocator {
 public:
-
-    static_assert(P0 % 16 == 0, "HandleAllocator Pools must be multiple of 16 bytes");
-    static_assert(P1 % 16 == 0, "HandleAllocator Pools must be multiple of 16 bytes");
-    static_assert(P2 % 16 == 0, "HandleAllocator Pools must be multiple of 16 bytes");
-
     HandleAllocator(const char* name, size_t size) noexcept;
     HandleAllocator(HandleAllocator const& rhs) = delete;
     HandleAllocator& operator=(HandleAllocator const& rhs) = delete;
@@ -74,14 +66,9 @@ public:
      */
     template<typename D, typename ... ARGS>
     Handle<D> allocateAndConstruct(ARGS&& ... args) noexcept {
-        Handle<D> h{ allocateHandle<sizeof(D)>() };
+        Handle<D> h{ allocateHandle<D>() };
         D* addr = handle_cast<D*>(h);
         new(addr) D(std::forward<ARGS>(args)...);
-#if HANDLE_TYPE_SAFETY
-        mLock.lock();
-        mHandleTypeId[addr] = typeid(D).name();
-        mLock.unlock();
-#endif
         return h;
     }
 
@@ -97,13 +84,7 @@ public:
      */
     template<typename D>
     Handle<D> allocate() noexcept {
-        Handle<D> h{ allocateHandle<sizeof(D)>() };
-#if HANDLE_TYPE_SAFETY
-        D* addr = handle_cast<D*>(h);
-        mLock.lock();
-        mHandleTypeId[addr] = typeid(D).name();
-        mLock.unlock();
-#endif
+        Handle<D> h{ allocateHandle<D>() };
         return h;
     }
 
@@ -120,17 +101,10 @@ public:
         assert_invariant(handle);
         D* addr = handle_cast<D*>(const_cast<Handle<B>&>(handle));
         assert_invariant(addr);
-
         // currently we implement construct<> with dtor+ctor, we could use operator= also
         // but all our dtors are trivial, ~D() is actually a noop.
         addr->~D();
         new(addr) D(std::forward<ARGS>(args)...);
-
-#if HANDLE_TYPE_SAFETY
-        mLock.lock();
-        mHandleTypeId[addr] = typeid(D).name();
-        mLock.unlock();
-#endif
         return addr;
     }
 
@@ -147,12 +121,6 @@ public:
         D* addr = handle_cast<D*>(const_cast<Handle<B>&>(handle));
         assert_invariant(addr);
         new(addr) D(std::forward<ARGS>(args)...);
-
-#if HANDLE_TYPE_SAFETY
-        mLock.lock();
-        mHandleTypeId[addr] = typeid(D).name();
-        mLock.unlock();
-#endif
         return addr;
     }
 
@@ -168,19 +136,8 @@ public:
     void deallocate(Handle<B>& handle, D const* p) noexcept {
         // allow to destroy the nullptr, similarly to operator delete
         if (p) {
-#if HANDLE_TYPE_SAFETY
-            mLock.lock();
-            auto typeId = mHandleTypeId[p];
-            mHandleTypeId.erase(p);
-            mLock.unlock();
-            if (UTILS_UNLIKELY(typeId != typeid(D).name())) {
-                utils::slog.e << "Destroying handle " << handle.getId() << ", type " << typeid(D).name()
-                       << ", but handle's actual type is " << typeId << utils::io::endl;
-                std::terminate();
-            }
-#endif
             p->~D();
-            deallocateHandle<sizeof(D)>(handle.getId());
+            deallocateHandle<D>(handle.getId());
         }
     }
 
@@ -208,7 +165,17 @@ public:
             std::is_base_of_v<B, typename std::remove_pointer_t<Dp>>, Dp>
     handle_cast(Handle<B>& handle) noexcept {
         assert_invariant(handle);
-        void* const p = handleToPointer(handle.getId());
+        auto [p, tag] = handleToPointer(handle.getId());
+
+        if (isPoolHandle(handle.getId())) {
+            // check for use after free
+            uint8_t const age = (tag & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
+            auto const pNode = static_cast<typename Allocator::Node*>(p);
+            uint8_t const expectedAge = pNode[-1].age;
+            ASSERT_POSTCONDITION(expectedAge == age,
+                    "use-after-free of Handle with id=%d", handle.getId());
+        }
+
         return static_cast<Dp>(p);
     }
 
@@ -223,29 +190,57 @@ public:
 
 private:
 
-    // template <int P0, int P1, int P2>
+    template<typename D>
+    static constexpr size_t getBucketSize() noexcept {
+        if constexpr (sizeof(D) <= P0) { return P0; }
+        if constexpr (sizeof(D) <= P1) { return P1; }
+        static_assert(sizeof(D) <= P2);
+        return P2;
+    }
+
     class Allocator {
         friend class HandleAllocator;
-        utils::PoolAllocator<P0, 16>   mPool0;
-        utils::PoolAllocator<P1, 16>   mPool1;
-        utils::PoolAllocator<P2, 16>   mPool2;
+        static constexpr size_t MIN_ALIGNMENT = alignof(std::max_align_t);
+        struct Node { uint8_t age; };
+        // Note: using the `extra` parameter of PoolAllocator<>, even with a 1-byte structure,
+        // generally increases all pool allocations by 8-bytes because of alignment restrictions.
+        template<size_t SIZE>
+        using Pool = utils::PoolAllocator<SIZE, MIN_ALIGNMENT, sizeof(Node)>;
+        Pool<P0> mPool0;
+        Pool<P1> mPool1;
+        Pool<P2> mPool2;
         UTILS_UNUSED_IN_RELEASE const utils::AreaPolicy::HeapArea& mArea;
     public:
-        static constexpr size_t MIN_ALIGNMENT_SHIFT = 4;
         explicit Allocator(const utils::AreaPolicy::HeapArea& area);
 
+        static constexpr size_t getAlignment() noexcept { return MIN_ALIGNMENT; }
+
         // this is in fact always called with a constexpr size argument
-        [[nodiscard]] inline void* alloc(size_t size, size_t, size_t extra = 0) noexcept {
+        [[nodiscard]] inline void* alloc(size_t size, size_t, size_t, uint8_t* outAge) noexcept {
             void* p = nullptr;
-                 if (size <= mPool0.getSize()) p = mPool0.alloc(size, 16, extra);
-            else if (size <= mPool1.getSize()) p = mPool1.alloc(size, 16, extra);
-            else if (size <= mPool2.getSize()) p = mPool2.alloc(size, 16, extra);
+            if      (size <= mPool0.getSize()) p = mPool0.alloc(size);
+            else if (size <= mPool1.getSize()) p = mPool1.alloc(size);
+            else if (size <= mPool2.getSize()) p = mPool2.alloc(size);
+            if (UTILS_LIKELY(p)) {
+                Node const* const pNode = static_cast<Node const*>(p);
+                // we are guaranteed to have at least sizeof<Node> bytes of extra storage before
+                // the allocation address.
+                *outAge = pNode[-1].age;
+            }
             return p;
         }
 
         // this is in fact always called with a constexpr size argument
-        inline void free(void* p, size_t size) noexcept {
+        inline void free(void* p, size_t size, uint8_t age) noexcept {
             assert_invariant(p >= mArea.begin() && (char*)p + size <= (char*)mArea.end());
+
+            // check for double-free
+            Node* const pNode = static_cast<Node*>(p);
+            uint8_t& expectedAge = pNode[-1].age;
+            ASSERT_POSTCONDITION(expectedAge == age,
+                    "double-free of Handle of size %d at %p", size, p);
+            expectedAge = (expectedAge + 1) & 0xF; // fixme
+
             if (size <= mPool0.getSize()) { mPool0.free(p); return; }
             if (size <= mPool1.getSize()) { mPool1.free(p); return; }
             if (size <= mPool2.getSize()) { mPool2.free(p); return; }
@@ -267,24 +262,16 @@ private:
     // allocateHandle()/deallocateHandle() selects the pool to use at compile-time based on the
     // allocation size this is always inlined, because all these do is to call
     // allocateHandleInPool()/deallocateHandleFromPool() with the right pool size.
-    template<size_t SIZE>
+    template<typename D>
     HandleBase::HandleId allocateHandle() noexcept {
-        if constexpr (SIZE <= P0) { return allocateHandleInPool<P0>(); }
-        if constexpr (SIZE <= P1) { return allocateHandleInPool<P1>(); }
-        static_assert(SIZE <= P2);
-        return allocateHandleInPool<P2>();
+        constexpr size_t BUCKET_SIZE = getBucketSize<D>();
+        return allocateHandleInPool<BUCKET_SIZE>();
     }
 
-    template<size_t SIZE>
+    template<typename D>
     void deallocateHandle(HandleBase::HandleId id) noexcept {
-        if constexpr (SIZE <= P0) {
-            deallocateHandleFromPool<P0>(id);
-        } else if constexpr (SIZE <= P1) {
-            deallocateHandleFromPool<P1>(id);
-        } else {
-            static_assert(SIZE <= P2);
-            deallocateHandleFromPool<P2>(id);
-        }
+        constexpr size_t BUCKET_SIZE = getBucketSize<D>();
+        deallocateHandleFromPool<BUCKET_SIZE>(id);
     }
 
     // allocateHandleInPool()/deallocateHandleFromPool() is NOT inlined, which will cause three
@@ -293,9 +280,11 @@ private:
     template<size_t SIZE>
     UTILS_NOINLINE
     HandleBase::HandleId allocateHandleInPool() noexcept {
-        void* p = mHandleArena.alloc(SIZE);
+        uint8_t age;
+        void* p = mHandleArena.alloc(SIZE, alignof(std::max_align_t), 0, &age);
         if (UTILS_LIKELY(p)) {
-            return pointerToHandle(p);
+            uint32_t const tag = (uint32_t(age) << HANDLE_AGE_SHIFT) & HANDLE_AGE_MASK;
+            return arenaPointerToHandle(p, tag);
         } else {
             return allocateHandleSlow(SIZE);
         }
@@ -305,42 +294,51 @@ private:
     UTILS_NOINLINE
     void deallocateHandleFromPool(HandleBase::HandleId id) noexcept {
         if (UTILS_LIKELY(isPoolHandle(id))) {
-            void* p = handleToPointer(id);
-            mHandleArena.free(p, SIZE);
+            auto [p, tag] = handleToPointer(id);
+            uint8_t const age = (tag & HANDLE_AGE_MASK) >> HANDLE_AGE_SHIFT;
+            mHandleArena.free(p, SIZE, age);
         } else {
             deallocateHandleSlow(id, SIZE);
         }
     }
 
-    static constexpr uint32_t HEAP_HANDLE_FLAG = 0x80000000u;
+    // we handle a 4 bits age per address
+    static constexpr uint32_t HANDLE_HEAP_FLAG      = 0x80000000u;      // pool vs heap handle
+    static constexpr uint32_t HANDLE_AGE_MASK       = 0x78000000u;      // handle's age
+    static constexpr uint32_t HANDLE_INDEX_MASK     = 0x07FFFFFFu;      // handle index
+    static constexpr uint32_t HANDLE_TAG_MASK       = HANDLE_AGE_MASK;
+    static constexpr uint32_t HANDLE_AGE_SHIFT      = 27;
 
     static bool isPoolHandle(HandleBase::HandleId id) noexcept {
-        return (id & HEAP_HANDLE_FLAG) == 0u;
+        return (id & HANDLE_HEAP_FLAG) == 0u;
     }
 
     HandleBase::HandleId allocateHandleSlow(size_t size) noexcept;
     void deallocateHandleSlow(HandleBase::HandleId id, size_t size) noexcept;
 
     // We inline this because it's just 4 instructions in the fast case
-    inline void* handleToPointer(HandleBase::HandleId id) const noexcept {
+    inline std::pair<void*, uint32_t> handleToPointer(HandleBase::HandleId id) const noexcept {
         // note: the null handle will end-up returning nullptr b/c it'll be handled as
         // a non-pool handle.
         if (UTILS_LIKELY(isPoolHandle(id))) {
             char* const base = (char*)mHandleArena.getArea().begin();
-            size_t offset = id << Allocator::MIN_ALIGNMENT_SHIFT;
-            return static_cast<void*>(base + offset);
+            uint32_t const tag = id & HANDLE_TAG_MASK;
+            size_t const offset = (id & HANDLE_INDEX_MASK) * Allocator::getAlignment();
+            return { static_cast<void*>(base + offset), tag };
         }
-        return handleToPointerSlow(id);
+        return { handleToPointerSlow(id), 0 };
     }
 
     void* handleToPointerSlow(HandleBase::HandleId id) const noexcept;
 
     // We inline this because it's just 3 instructions
-    inline HandleBase::HandleId pointerToHandle(void* p) const noexcept {
+    inline HandleBase::HandleId arenaPointerToHandle(void* p, uint32_t tag) const noexcept {
         char* const base = (char*)mHandleArena.getArea().begin();
-        size_t offset = (char*)p - base;
-        auto id = HandleBase::HandleId(offset >> Allocator::MIN_ALIGNMENT_SHIFT);
-        assert_invariant((id & HEAP_HANDLE_FLAG) == 0);
+        size_t const offset = (char*)p - base;
+        assert_invariant((offset % Allocator::getAlignment()) == 0);
+        auto id = HandleBase::HandleId(offset / Allocator::getAlignment());
+        id |= tag & HANDLE_TAG_MASK;
+        assert_invariant((id & HANDLE_HEAP_FLAG) == 0);
         return id;
     }
 
@@ -350,9 +348,6 @@ private:
     mutable utils::Mutex mLock;
     tsl::robin_map<HandleBase::HandleId, void*> mOverflowMap;
     HandleBase::HandleId mId = 0;
-#if HANDLE_TYPE_SAFETY
-    mutable std::unordered_map<const void*, const char*> mHandleTypeId;
-#endif
 };
 
 } // namespace filament::backend

@@ -250,11 +250,11 @@ public:
         return mHead;
     }
 
-private:
     struct Node {
         Node* next;
     };
 
+private:
     static Node* init(void* begin, void* end,
             size_t elementSize, size_t alignment, size_t extra) noexcept;
 
@@ -272,8 +272,8 @@ public:
     AtomicFreeList() noexcept = default;
     AtomicFreeList(void* begin, void* end,
             size_t elementSize, size_t alignment, size_t extra) noexcept;
-    AtomicFreeList(const FreeList& rhs) = delete;
-    AtomicFreeList& operator=(const FreeList& rhs) = delete;
+    AtomicFreeList(const AtomicFreeList& rhs) = delete;
+    AtomicFreeList& operator=(const AtomicFreeList& rhs) = delete;
 
     void* pop() noexcept {
         Node* const pStorage = mStorage;
@@ -319,7 +319,6 @@ public:
         return mStorage + mHead.load(std::memory_order_relaxed).offset;
     }
 
-private:
     struct Node {
         // This should be a regular (non-atomic) pointer, but this causes TSAN to complain
         // about a data-race that exists but is benin. We always use this atomic<> in
@@ -350,6 +349,7 @@ private:
         std::atomic<Node*> next;
     };
 
+private:
     // This struct is using a 32-bit offset into the arena rather than
     // a direct pointer, because together with the 32-bit tag, it needs to 
     // fit into 8 bytes. If it was any larger, it would not be possible to
@@ -372,7 +372,8 @@ template <
         size_t OFFSET = 0,
         typename FREELIST = FreeList>
 class PoolAllocator {
-    static_assert(ELEMENT_SIZE >= sizeof(void*), "ELEMENT_SIZE must accommodate at least a pointer");
+    static_assert(ELEMENT_SIZE >= sizeof(typename FREELIST::Node),
+            "ELEMENT_SIZE must accommodate at least a FreeList::Node");
 public:
     // our allocator concept
     void* alloc(size_t size = ELEMENT_SIZE,
@@ -636,6 +637,15 @@ public:
               mListener(name, mArea.data(), mArea.size()) {
     }
 
+    template<typename ... ARGS>
+    void* alloc(size_t size, size_t alignment, size_t extra, ARGS&& ... args) noexcept {
+        std::lock_guard<LockingPolicy> guard(mLock);
+        void* p = mAllocator.alloc(size, alignment, extra, std::forward<ARGS>(args) ...);
+        mListener.onAlloc(p, size, alignment, extra);
+        return p;
+    }
+
+
     // allocate memory from arena with given size and alignment
     // (acceptable size/alignment may depend on the allocator provided)
     void* alloc(size_t size, size_t alignment, size_t extra) noexcept {
@@ -668,13 +678,13 @@ public:
         return (T*)alloc(count * sizeof(T), alignment);
     }
 
-    // return memory pointed by p to the arena
-    // (actual behaviour may depend on allocator provided)
-    void free(void* p) noexcept {
+    // some allocators require more parameters
+    template<typename ... ARGS>
+    void free(void* p, size_t size, ARGS&& ... args) noexcept {
         if (p) {
             std::lock_guard<LockingPolicy> guard(mLock);
-            mListener.onFree(p);
-            mAllocator.free(p);
+            mListener.onFree(p, size);
+            mAllocator.free(p, size, std::forward<ARGS>(args) ...);
         }
     }
 
@@ -684,6 +694,16 @@ public:
             std::lock_guard<LockingPolicy> guard(mLock);
             mListener.onFree(p, size);
             mAllocator.free(p, size);
+        }
+    }
+
+    // return memory pointed by p to the arena
+    // (actual behaviour may depend on allocator provided)
+    void free(void* p) noexcept {
+        if (p) {
+            std::lock_guard<LockingPolicy> guard(mLock);
+            mListener.onFree(p);
+            mAllocator.free(p);
         }
     }
 
