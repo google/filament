@@ -667,6 +667,14 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         mSwapChain = mFilamentApp->mEngine->createSwapChain(
                 nativeSwapChain, filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
     }
+
+    auto* platform = mFilamentApp->mEngine->getPlatform();
+    if (platform) {
+        platform->setDebugLogFunc([](const char* str, size_t) {
+            printf("%s\n", str);
+        });
+    }
+
     mRenderer = mFilamentApp->mEngine->createRenderer();
 
     // create cameras

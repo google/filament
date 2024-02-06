@@ -188,9 +188,28 @@ public:
     size_t retrieveBlob(const void* UTILS_NONNULL key, size_t keySize,
             void* UTILS_NONNULL value, size_t valueSize);
 
+    using DebugLogFunc = utils::Invocable<void(const char* UTILS_NONNULL str, size_t len)>;
+
+    /**
+     * Sets the callback function that the backend can use to log backend-specific debug
+     * information.
+     *
+     * @param str A null-terminated c-string containing debug log information.
+     * @param len The length of str, not including the null terminator.
+     */
+    void setDebugLogFunc(DebugLogFunc&& debugLog) noexcept;
+
+    /**
+     * @return true if debugLog is valid.
+     */
+    bool hasDebugLogFunc() const noexcept;
+
+    void debugLog(const char* UTILS_NONNULL str, size_t len);
+
 private:
     InsertBlobFunc mInsertBlob;
     RetrieveBlobFunc mRetrieveBlob;
+    DebugLogFunc mDebugLog;
 };
 
 } // namespace filament

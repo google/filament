@@ -45,12 +45,12 @@ MetalBufferPoolEntry const* MetalBufferPool::acquireBuffer(size_t numBytes) {
     id<MTLBuffer> buffer = [mContext.device newBufferWithLength:numBytes
                                                         options:MTLResourceStorageModeShared];
     ASSERT_POSTCONDITION(buffer, "Could not allocate Metal staging buffer of size %zu.", numBytes);
-    MetalBufferPoolEntry* stage = new MetalBufferPoolEntry({
+    MetalBufferPoolEntry* stage = new MetalBufferPoolEntry {
         .buffer = buffer,
         .capacity = numBytes,
         .lastAccessed = mCurrentFrame,
         .referenceCount = 1
-    });
+    };
     mUsedStages.insert(stage);
 
     return stage;

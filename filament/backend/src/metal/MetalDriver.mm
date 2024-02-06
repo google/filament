@@ -20,6 +20,7 @@
 #include "metal/MetalDriver.h"
 
 #include "MetalBlitter.h"
+#include "MetalBufferPool.h"
 #include "MetalContext.h"
 #include "MetalDriverFactory.h"
 #include "MetalEnums.h"
@@ -36,6 +37,7 @@
 
 #include <utils/Log.h>
 #include <utils/Panic.h>
+#include <utils/sstream.h>
 
 #include <algorithm>
 
@@ -173,6 +175,11 @@ void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_begin(mContext->log, mContext->signpostId, "Frame encoding", "%{public}d", frameId);
 #endif
+    utils::io::sstream stream;
+    stream << "[FILAMENT METAL] Frame " << frameId << " -- alive buffers: "
+           << TrackedMetalBuffer::getAliveBuffers() << utils::io::endl;
+    const char* output = stream.c_str();
+    mPlatform.debugLog(output, strlen(output));
 }
 
 void MetalDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
