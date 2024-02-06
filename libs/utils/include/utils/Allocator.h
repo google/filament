@@ -280,7 +280,7 @@ public:
 
         HeadPtr currentHead = mHead.load();
         while (currentHead.offset >= 0) {
-            // The value of "next" we load here might already contain application data if another
+            // The value of "pNext" we load here might already contain application data if another
             // thread raced ahead of us. But in that case, the computed "newHead" will be discarded
             // since compare_exchange_weak fails. Then this thread will loop with the updated
             // value of currentHead, and try again.
