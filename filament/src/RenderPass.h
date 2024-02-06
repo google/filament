@@ -407,7 +407,6 @@ private:
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> vr) noexcept;
 
 
-    // Arena where all Commands are allocated. The Arena owns the commands.
     FScene::RenderableSoa const& mRenderableSoa;
     utils::Range<uint32_t> const mVisibleRenderables;
     backend::Handle<backend::HwBufferObject> const mUboHandle;
