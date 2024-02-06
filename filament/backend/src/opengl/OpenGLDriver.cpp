@@ -90,24 +90,24 @@ Driver* OpenGLDriver::create(OpenGLPlatform* const platform,
 #if 0
     // this is useful for development, but too verbose even for debug builds
     // For reference on a 64-bits machine in Release mode:
-    //    GLFence                   :   8       few
     //    GLIndexBuffer             :   8       moderate
-    //    GLSamplerGroup            :   8       few
+    //    GLSamplerGroup            :  16       few
+    //    GLSwapChain               :  16       few
+    //    GLTimerQuery              :  16       few
     // -- less than or equal 16 bytes
-    //    GLBufferObject            :  24       many
-    //    GLSync                    :  24       few
-    //    GLTimerQuery              :  32       few
-    //    OpenGLProgram             :  32       moderate
-    //    GLRenderPrimitive         :  48       many
+    //    GLFence                   :  24       few
+    //    GLBufferObject            :  32       many
+    //    GLRenderPrimitive         :  40       many
+    //    OpenGLProgram             :  56       moderate
+    //    GLTexture                 :  64       moderate
     // -- less than or equal 64 bytes
-    //    GLTexture                 :  72       moderate
+    //    GLStream                  : 104       few
     //    GLRenderTarget            : 112       few
-    //    GLStream                  : 184       few
     //    GLVertexBuffer            : 200       moderate
     // -- less than or equal to 208 bytes
 
     slog.d
-           << "HwFence: " << sizeof(HwFence)
+           << "\nGLSwapChain: " << sizeof(GLSwapChain)
            << "\nGLBufferObject: " << sizeof(GLBufferObject)
            << "\nGLVertexBuffer: " << sizeof(GLVertexBuffer)
            << "\nGLIndexBuffer: " << sizeof(GLIndexBuffer)
@@ -117,7 +117,7 @@ Driver* OpenGLDriver::create(OpenGLPlatform* const platform,
            << "\nGLTimerQuery: " << sizeof(GLTimerQuery)
            << "\nGLStream: " << sizeof(GLStream)
            << "\nGLRenderTarget: " << sizeof(GLRenderTarget)
-           << "\nGLSync: " << sizeof(GLSync)
+           << "\nGLFence: " << sizeof(GLFence)
            << "\nOpenGLProgram: " << sizeof(OpenGLProgram)
            << io::endl;
 #endif
