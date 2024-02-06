@@ -18,7 +18,10 @@
 #define TNT_FILAMENT_BACKEND_PRIVATE_OPENGLPLATFORM_H
 
 #include <backend/AcquiredImage.h>
+#include <backend/DriverEnums.h>
 #include <backend/Platform.h>
+
+#include <stdint.h>
 
 namespace filament::backend {
 

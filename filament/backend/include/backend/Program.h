@@ -17,17 +17,19 @@
 #ifndef TNT_FILAMENT_BACKEND_PRIVATE_PROGRAM_H
 #define TNT_FILAMENT_BACKEND_PRIVATE_PROGRAM_H
 
-#include <utils/compiler.h>
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
-#include <utils/Log.h>
 #include <utils/ostream.h>
 
 #include <backend/DriverEnums.h>
 
-#include <array>
-#include <variant>
+#include <array>    // FIXME: STL headers are not allowed in public headers
+#include <utility>  // FIXME: STL headers are not allowed in public headers
+#include <variant>  // FIXME: STL headers are not allowed in public headers
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 

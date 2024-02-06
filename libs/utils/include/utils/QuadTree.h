@@ -17,7 +17,6 @@
 #ifndef TNT_UTILS_QUADTREE_H
 #define TNT_UTILS_QUADTREE_H
 
-#include <utils/compiler.h>
 #include <utils/debug.h>
 
 #include <array>

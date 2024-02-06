@@ -307,6 +307,7 @@ static const PostProcessManager::MaterialInfo sMaterialList[] = {
         { "fsr_rcas",                   MATERIAL(FSR_RCAS) },
         { "debugShadowCascades",        MATERIAL(DEBUGSHADOWCASCADES) },
         { "resolveDepth",               MATERIAL(RESOLVEDEPTH) },
+        { "shadowmap",                  MATERIAL(SHADOWMAP) },
 };
 
 void PostProcessManager::init() noexcept {
@@ -2809,8 +2810,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
     auto& ppFsrRcas = fg.addPass<QuadBlitData>("FidelityFX FSR1 Rcas",
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.input = builder.sample(input);
-                data.input = builder.createTexture("FFX FSR1 Rcas output", outDesc);
-                data.input = builder.declareRenderPass(data.input);
+                data.output = builder.createTexture("FFX FSR1 Rcas output", outDesc);
+                data.output = builder.declareRenderPass(data.output);
             },
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
@@ -3272,5 +3273,52 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugShadowCascades(FrameGra
 
     return debugShadowCascadePass->output;
 }
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::debugDisplayShadowTexture(
+        FrameGraph& fg,
+        FrameGraphId<FrameGraphTexture> input,
+        FrameGraphId<FrameGraphTexture> shadowmap, float scale,
+        uint8_t layer, uint8_t level, uint8_t channel, float power) noexcept {
+    if (shadowmap) {
+        struct ShadowMapData {
+            FrameGraphId<FrameGraphTexture> color;
+            FrameGraphId<FrameGraphTexture> depth;
+        };
+
+        auto const& desc = fg.getDescriptor(input);
+        float const ratio = float(desc.height) / float(desc.width);
+        float const screenScale = float(fg.getDescriptor(shadowmap).height) / float(desc.height);
+        float2 const s = { screenScale * scale * ratio, screenScale * scale };
+
+        auto& shadomapDebugPass = fg.addPass<ShadowMapData>("shadowmap debug pass",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    data.color = builder.read(input,
+                            FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                    data.color = builder.write(data.color,
+                            FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                    data.depth = builder.sample(shadowmap);
+                    builder.declareRenderPass("color target", {
+                            .attachments = { .color = { data.color }}
+                    });
+                },
+                [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                    auto out = resources.getRenderPassInfo();
+                    auto in = resources.getTexture(data.depth);
+                    auto const& material = getPostProcessMaterial("shadowmap");
+                    FMaterialInstance* const mi = material.getMaterialInstance(mEngine);
+                    mi->setParameter("shadowmap", in, {
+                        .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+                    mi->setParameter("scale", s);
+                    mi->setParameter("layer", (uint32_t)layer);
+                    mi->setParameter("level", (uint32_t)level);
+                    mi->setParameter("channel", (uint32_t)channel);
+                    mi->setParameter("power", power);
+                    commitAndRender(out, material, driver);
+                });
+        input = shadomapDebugPass->color;
+    }
+    return input;
+}
+
 
 } // namespace filament

@@ -26,6 +26,7 @@
 
 #include <iterator>
 
+#include <stddef.h>
 
 namespace utils {
 class Entity;

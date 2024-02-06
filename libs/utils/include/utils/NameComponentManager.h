@@ -24,7 +24,6 @@
 #include <utils/SingleInstanceComponentManager.h>
 
 #include <stddef.h>
-#include <stdint.h>
 
 namespace utils {
 

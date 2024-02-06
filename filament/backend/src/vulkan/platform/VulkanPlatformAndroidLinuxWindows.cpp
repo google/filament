@@ -15,6 +15,7 @@
  */
 
 #include <backend/platforms/VulkanPlatform.h>
+#include <backend/DriverEnums.h>
 
 #include "vulkan/VulkanConstants.h"
 #include "vulkan/VulkanDriverFactory.h"
@@ -22,6 +23,11 @@
 #include <utils/Panic.h>
 
 #include <bluevk/BlueVK.h>
+
+#include <tuple>
+
+#include <stdint.h>
+#include <stddef.h>
 
 #if defined(__linux__) || defined(__FreeBSD__)
 #define LINUX_OR_FREEBSD 1

@@ -29,8 +29,14 @@
 #include <utils/FixedCapacityVector.h>
 
 #include <math/mathfwd.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 
 #include <type_traits>
+
+#include <float.h>
+#include <stddef.h>
+#include <stdint.h>
 
 namespace utils {
     class Entity;
@@ -873,8 +879,8 @@ void RenderableManager::setMorphTargetBufferAt(Instance instance, uint8_t level,
 template<typename VECTOR, typename INDEX, typename, typename>
 Box RenderableManager::computeAABB(VECTOR const* vertices, INDEX const* indices, size_t count,
         size_t stride) noexcept {
-    math::float3 bmin(std::numeric_limits<float>::max());
-    math::float3 bmax(std::numeric_limits<float>::lowest());
+    math::float3 bmin(FLT_MAX);
+    math::float3 bmax(-FLT_MAX);
     for (size_t i = 0; i < count; ++i) {
         VECTOR const* p = reinterpret_cast<VECTOR const*>(
                 (char const*)vertices + indices[i] * stride);

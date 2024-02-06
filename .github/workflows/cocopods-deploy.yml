@@ -13,7 +13,7 @@ on:
 jobs:
   cocoapods-deploy:
     name: cocoapods-deploy
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - name: Check out iOS/CocoaPods directory
         uses: Bhacaz/checkout-files@49fc3050859046bf4f4873678d46099985640e89

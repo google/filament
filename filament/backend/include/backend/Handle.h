@@ -17,16 +17,14 @@
 #ifndef TNT_FILAMENT_BACKEND_HANDLE_H
 #define TNT_FILAMENT_BACKEND_HANDLE_H
 
-#include <utils/compiler.h>
 #if !defined(NDEBUG)
-#include <utils/Log.h>
+#include <utils/ostream.h>
 #endif
 #include <utils/debug.h>
 
-#include <stdint.h>
+#include <type_traits> // FIXME: STL headers are not allowed in public headers
 
-#include <limits>
-#include <type_traits>
+#include <stdint.h>
 
 namespace filament::backend {
 
@@ -54,7 +52,7 @@ struct HwVertexBuffer;
 class HandleBase {
 public:
     using HandleId = uint32_t;
-    static constexpr const HandleId nullid = HandleId{ std::numeric_limits<HandleId>::max() };
+    static constexpr const HandleId nullid = HandleId{ UINT32_MAX };
 
     constexpr HandleBase() noexcept: object(nullid) {}
 

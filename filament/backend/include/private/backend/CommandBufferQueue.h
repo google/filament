@@ -19,11 +19,13 @@
 
 #include "private/backend/CircularBuffer.h"
 
-#include <utils/compiler.h>
 #include <utils/Condition.h>
 #include <utils/Mutex.h>
 
 #include <vector>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 

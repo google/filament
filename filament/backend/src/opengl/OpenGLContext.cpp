@@ -427,7 +427,6 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
             if (strstr(renderer, "Mali-T")) {
                 bugs->disable_glFlush = true;
                 bugs->disable_shared_context_draws = true;
-                bugs->texture_external_needs_rebind = true;
                 // We have not verified that timer queries work on Mali-T, so we disable to be safe.
                 bugs->dont_use_timer_query = true;
             }

@@ -1,0 +1,59 @@
+material {
+    name : shadowmap,
+    parameters : [
+        {
+           type : sampler2dArray,
+           name : shadowmap,
+           precision : high
+        },
+        {
+           type : float,
+           name : power,
+           precision : high
+        },
+        {
+           type : float2,
+           name : scale,
+        },
+        {
+            type : int,
+            name : layer
+        },
+        {
+            type : int,
+            name : level
+        },
+        {
+            type : int,
+            name : channel
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    vertexDomain : device,
+    depthWrite : false,
+    depthCulling : false,
+    domain: postprocess
+}
+
+vertex {
+    void postProcessVertex(inout PostProcessVertexInputs postProcess) {
+        postProcess.vertex.xy = postProcess.normalizedUV;
+        postProcess.position.xy = 1.0 + (postProcess.position.xy - 1.0) * materialParams.scale;
+    }
+}
+
+fragment {
+    void dummy(){}
+
+    void postProcess(inout PostProcessInputs postProcess) {
+        highp vec2 uv = uvToRenderTargetUV(variable_vertex.xy);
+        highp vec3 p = vec3(uv, float(materialParams.layer));
+        float m = float(materialParams.level);
+        highp float c = textureLod(materialParams_shadowmap, p, m)[materialParams.channel];
+        c = pow(abs(c), materialParams.power);
+        postProcess.color.rgb = vec3(c);
+        postProcess.color.a = 1.0;
+    }
+}

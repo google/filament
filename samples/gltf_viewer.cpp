@@ -46,6 +46,7 @@
 #include <getopt/getopt.h>
 
 #include <utils/NameComponentManager.h>
+#include <utils/Log.h>
 
 #include <math/vec3.h>
 #include <math/vec4.h>
@@ -870,6 +871,27 @@ int main(int argc, char** argv) {
                     ImGui::Checkbox("Debug DIR shadowmap", &debugDirectionalShadowmap);
                     debug.setProperty("d.shadowmap.debug_directional_shadowmap",
                             debugDirectionalShadowmap);
+                }
+
+                ImGui::Checkbox("Display Shadow Texture",
+                        debug.getPropertyAddress<bool>("d.shadowmap.display_shadow_texture"));
+                if (*debug.getPropertyAddress<bool>("d.shadowmap.display_shadow_texture")) {
+                    int layerCount;
+                    int levelCount;
+                    debug.getProperty("d.shadowmap.display_shadow_texture_layer_count", &layerCount);
+                    debug.getProperty("d.shadowmap.display_shadow_texture_level_count", &levelCount);
+                    ImGui::Indent();
+                    ImGui::SliderFloat("scale", debug.getPropertyAddress<float>(
+                                    "d.shadowmap.display_shadow_texture_scale"), 0.0f, 8.0f);
+                    ImGui::SliderFloat("contrast", debug.getPropertyAddress<float>(
+                                    "d.shadowmap.display_shadow_texture_power"), 0.0f, 2.0f);
+                    ImGui::SliderInt("layer", debug.getPropertyAddress<int>(
+                                    "d.shadowmap.display_shadow_texture_layer"), 0, layerCount - 1);
+                    ImGui::SliderInt("level", debug.getPropertyAddress<int>(
+                                    "d.shadowmap.display_shadow_texture_level"), 0, levelCount - 1);
+                    ImGui::SliderInt("channel", debug.getPropertyAddress<int>(
+                                    "d.shadowmap.display_shadow_texture_channel"), 0, 3);
+                    ImGui::Unindent();
                 }
 
                 bool debugFroxelVisualization;

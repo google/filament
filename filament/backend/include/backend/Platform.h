@@ -19,10 +19,10 @@
 #ifndef TNT_FILAMENT_BACKEND_PLATFORM_H
 #define TNT_FILAMENT_BACKEND_PLATFORM_H
 
-#include <backend/DriverEnums.h>
-
 #include <utils/compiler.h>
 #include <utils/Invocable.h>
+
+#include <stddef.h>
 
 namespace filament::backend {
 

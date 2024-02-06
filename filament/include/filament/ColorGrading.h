@@ -26,6 +26,9 @@
 
 #include <math/mathfwd.h>
 
+#include <stdint.h>
+#include <stddef.h>
+
 namespace filament {
 
 class Engine;

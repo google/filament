@@ -17,8 +17,6 @@
 #ifndef TNT_FILAMENT_BACKEND_CALLBACKHANDLER_H
 #define TNT_FILAMENT_BACKEND_CALLBACKHANDLER_H
 
-#include <utils/compiler.h>
-
 namespace filament::backend {
 
 /**

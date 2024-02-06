@@ -19,16 +19,18 @@
 #ifndef TNT_FILAMENT_VIEW_H
 #define TNT_FILAMENT_VIEW_H
 
-#include <filament/Color.h>
 #include <filament/FilamentAPI.h>
 #include <filament/Options.h>
-
-#include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>
 
 #include <math/mathfwd.h>
+
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 

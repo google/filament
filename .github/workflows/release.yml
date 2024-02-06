@@ -31,7 +31,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-22.04]
+        os: [macos-14, ubuntu-22.04]
 
     steps:
       - name: Decide Git ref
@@ -65,7 +65,7 @@ jobs:
 
   build-web:
     name: build-web
-    runs-on: macos-latest
+    runs-on: macos-14
     if: github.event_name == 'release' || github.event.inputs.platform == 'web'
 
     steps:
@@ -98,7 +98,7 @@ jobs:
 
   build-android:
     name: build-android
-    runs-on: macos-latest
+    runs-on: macos-14
     if: github.event_name == 'release' || github.event.inputs.platform == 'android'
 
     steps:
@@ -152,7 +152,7 @@ jobs:
 
   build-ios:
     name: build-ios
-    runs-on: macos-latest
+    runs-on: macos-14
     if: github.event_name == 'release' || github.event.inputs.platform == 'ios'
 
     steps:

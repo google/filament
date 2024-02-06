@@ -20,11 +20,11 @@
 #include <filament/FilamentAPI.h>
 
 #include <backend/DriverEnums.h>
-
-#include <backend/PixelBufferDescriptor.h>
 #include <backend/CallbackHandler.h>
 
 #include <utils/compiler.h>
+
+#include <stdint.h>
 
 namespace filament {
 

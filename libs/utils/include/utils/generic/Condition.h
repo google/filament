@@ -19,6 +19,8 @@
 
 #include <condition_variable>
 
+#include <stddef.h>
+
 namespace utils {
 
 class Condition : public std::condition_variable {

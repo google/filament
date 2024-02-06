@@ -5,22 +5,11 @@ set(TARGET mikktspace)
 set(PUBLIC_HDR_DIR include)
 
 # ==================================================================================================
-# Sources and headers
-# ==================================================================================================
-set(PUBLIC_HDRS
-    ${PUBLIC_HDR_DIR}/mikktspace/mikktspace.h
-)
-
-set(SRCS
-    src/mikktspace.c
-)
-
-# ==================================================================================================
 # Target definitions
 # ==================================================================================================
 include_directories(${PUBLIC_HDR_DIR})
 
-add_library(${TARGET} ${PUBLIC_HDRS} ${PRIVATE_HDRS} ${SRCS})
+add_library(${TARGET} STATIC ${PUBLIC_HDR_DIR}/mikktspace/mikktspace.h src/mikktspace.c)
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 
@@ -30,7 +19,7 @@ set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
 if (MSVC)
     target_compile_options(${TARGET} PRIVATE /fp:fast)
 else()
-    target_compile_options(${TARGET} PRIVATE -ffast-math)
+    target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:-ffast-math -fno-finite-math-only>)
 endif()
 
 # ==================================================================================================

@@ -20,7 +20,7 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include <limits>
+#include <utils/ostream.h>
 
 #include <stdint.h>
 
@@ -33,10 +33,7 @@ struct PipelineState {
     RasterState rasterState;
     StencilState stencilState;
     PolygonOffset polygonOffset;
-    Viewport scissor{ 0, 0,
-                      (uint32_t)std::numeric_limits<int32_t>::max(),
-                      (uint32_t)std::numeric_limits<int32_t>::max()
-    };
+    Viewport scissor{ 0, 0, (uint32_t)INT32_MAX, (uint32_t)INT32_MAX };
 };
 
 } // namespace filament::backend

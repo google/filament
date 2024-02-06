@@ -21,8 +21,7 @@
 
 #include <utils/compiler.h>
 
-namespace filament {
-namespace backend {
+namespace filament::backend {
 
 /**
  * A PresentCallable is a callable object that, when called, schedules a frame for presentation on
@@ -98,7 +97,6 @@ private:
  */
 using FrameFinishedCallback UTILS_DEPRECATED = void(*)(PresentCallable callable, void* user);
 
-} // namespace backend
-} // namespace filament
+} // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_PRESENTCALLABLE

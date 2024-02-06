@@ -23,7 +23,6 @@
 #include <utils/ostream.h>
 
 #include <stddef.h>
-#include <stdint.h>
 
 namespace filament::backend {
 

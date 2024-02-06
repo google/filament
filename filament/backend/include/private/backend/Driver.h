@@ -29,6 +29,7 @@
 
 #include <functional>
 
+#include <stddef.h>
 #include <stdint.h>
 
 // Command debugging off. debugging virtuals are not called.

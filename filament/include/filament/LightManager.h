@@ -27,6 +27,9 @@
 #include <math/mathfwd.h>
 #include <math/quat.h>
 
+#include <stdint.h>
+#include <stddef.h>
+
 namespace utils {
     class Entity;
 } // namespace utils

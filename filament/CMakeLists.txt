@@ -238,6 +238,7 @@ set(MATERIAL_SRCS
         src/materials/resolveDepth.mat
         src/materials/separableGaussianBlur.mat
         src/materials/skybox.mat
+        src/materials/shadowmap.mat
         src/materials/ssao/bilateralBlur.mat
         src/materials/ssao/bilateralBlurBentNormals.mat
         src/materials/ssao/mipmapDepth.mat

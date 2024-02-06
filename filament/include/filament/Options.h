@@ -19,9 +19,12 @@
 
 #include <filament/Color.h>
 
-#include <stdint.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
 
 #include <math.h>
+
+#include <stdint.h>
 
 namespace filament {
 

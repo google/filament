@@ -17,11 +17,10 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_COCOA_GL_H
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_COCOA_GL_H
 
-#include <stdint.h>
-
+#include <backend/DriverEnums.h>
 #include <backend/platforms/OpenGLPlatform.h>
 
-#include <backend/DriverEnums.h>
+#include <stdint.h>
 
 namespace filament::backend {
 

@@ -20,6 +20,7 @@
 #include "MetalUtils.h"
 
 #include <utils/Panic.h>
+#include <utils/Log.h>
 
 namespace filament::backend {
 

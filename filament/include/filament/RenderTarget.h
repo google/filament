@@ -24,7 +24,10 @@
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
 
+#include <utils/compiler.h>
+
 #include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 

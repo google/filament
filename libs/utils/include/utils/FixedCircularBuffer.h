@@ -22,8 +22,9 @@
 
 #include <memory>
 #include <optional>
-#include <stddef.h>
 #include <type_traits>
+
+#include <stddef.h>
 
 namespace utils {
 

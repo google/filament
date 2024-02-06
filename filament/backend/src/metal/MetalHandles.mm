@@ -245,30 +245,53 @@ void MetalSwapChain::present() {
     }
 }
 
-struct PresentDrawableData {
-    void* drawable = nullptr;
-    MetalDriver* driver = nullptr;
+#ifndef FILAMENT_RELEASE_PRESENT_DRAWABLE_MAIN_THREAD
+#define FILAMENT_RELEASE_PRESENT_DRAWABLE_MAIN_THREAD 1
+#endif
+
+class PresentDrawableData {
+public:
+    PresentDrawableData() = delete;
+    PresentDrawableData(const PresentDrawableData&) = delete;
+    PresentDrawableData& operator=(const PresentDrawableData&) = delete;
+
+    static PresentDrawableData* create(id<CAMetalDrawable> drawable, MetalDriver* driver) {
+        assert_invariant(driver);
+        return new PresentDrawableData(drawable, driver);
+    }
+
+    static void maybePresentAndDestroyAsync(PresentDrawableData* that, bool shouldPresent) {
+        if (shouldPresent) {
+           [that->mDrawable present];
+        }
+
+#if FILAMENT_RELEASE_PRESENT_DRAWABLE_MAIN_THREAD == 1
+        // mDrawable is acquired on the driver thread. Typically, we would release this object on
+        // the same thread, but after receiving consistent crash reports from within
+        // [CAMetalDrawable dealloc], we suspect this object requires releasing on the main thread.
+        dispatch_async(dispatch_get_main_queue(), ^{ cleanupAndDestroy(that); });
+#else
+        that->mDriver->runAtNextTick([that]() { cleanupAndDestroy(that); });
+#endif
+    }
+
+private:
+    PresentDrawableData(id<CAMetalDrawable> drawable, MetalDriver* driver)
+        : mDrawable(drawable), mDriver(driver) {}
+
+    static void cleanupAndDestroy(PresentDrawableData *that) {
+        that->mDrawable = nil;
+        that->mDriver = nullptr;
+        delete that;
+    }
+
+    id<CAMetalDrawable> mDrawable;
+    MetalDriver* mDriver = nullptr;
 };
 
 void presentDrawable(bool presentFrame, void* user) {
     auto* presentDrawableData = static_cast<PresentDrawableData*>(user);
-
-    // CFBridgingRelease here is used to balance the CFBridgingRetain inside acquireDrawable.
-    id<CAMetalDrawable> drawable =
-            (id<CAMetalDrawable>)CFBridgingRelease(presentDrawableData->drawable);
-    if (presentFrame) {
-        [drawable present];
-    }
-
-    // Schedule the drawable destruction on the driver thread.
-    void* voidDrawable = (void*) CFBridgingRetain(drawable);
-    MetalDriver* driver = presentDrawableData->driver;
-    driver->runAtNextTick([voidDrawable]() {
-        // The drawable is released here.
-        CFBridgingRelease(voidDrawable);
-    });
-
-    delete presentDrawableData;
+    PresentDrawableData::maybePresentAndDestroyAsync(presentDrawableData, presentFrame);
 }
 
 void MetalSwapChain::scheduleFrameScheduledCallback() {
@@ -277,21 +300,16 @@ void MetalSwapChain::scheduleFrameScheduledCallback() {
     }
 
     assert_invariant(drawable);
-    FrameScheduledCallback callback = frameScheduledCallback;
-    // This block strongly captures drawable to keep it alive until the handler executes.
-    // We cannot simply reference this->drawable inside the block because the block would then only
-    // capture the _this_ pointer (MetalSwapChain*) instead of the drawable.
-    id<CAMetalDrawable> d = drawable;
+
+    // Destroy this by calling maybePresentAndDestroyAsync() later.
+    auto* presentData = PresentDrawableData::create(drawable, context.driver);
+
+    FrameScheduledCallback userCallback = frameScheduledCallback;
     void* userData = frameScheduledUserData;
-    MetalDriver* driver = context.driver;
+
     [getPendingCommandBuffer(&context) addScheduledHandler:^(id<MTLCommandBuffer> cb) {
-        // CFBridgingRetain is used here to give the drawable a +1 retain count before
-        // casting it to a void*.
-        auto* presentDrawableData = new PresentDrawableData;
-        presentDrawableData->drawable = (void*) CFBridgingRetain(d);
-        presentDrawableData->driver = driver;
-        PresentCallable callable(presentDrawable, (void*) presentDrawableData);
-        callback(callable, userData);
+        PresentCallable callable(presentDrawable, static_cast<void*>(presentData));
+        userCallback(callable, userData);
     }];
 }
 

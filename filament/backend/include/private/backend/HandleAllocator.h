@@ -22,8 +22,17 @@
 #include <utils/Allocator.h>
 #include <utils/Log.h>
 #include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/ostream.h>
+
 #include <tsl/robin_map.h>
+
+#include <exception>
+#include <type_traits>
 #include <unordered_map>
+
+#include <stddef.h>
+#include <stdint.h>
 
 #if !defined(NDEBUG) && UTILS_HAS_RTTI
 #   define HANDLE_TYPE_SAFETY 1
@@ -222,7 +231,7 @@ private:
         explicit Allocator(const utils::AreaPolicy::HeapArea& area);
 
         // this is in fact always called with a constexpr size argument
-        [[nodiscard]] inline void* alloc(size_t size, size_t alignment, size_t extra) noexcept {
+        [[nodiscard]] inline void* alloc(size_t size, size_t, size_t extra) noexcept {
             void* p = nullptr;
                  if (size <= mPool0.getSize()) p = mPool0.alloc(size, 16, extra);
             else if (size <= mPool1.getSize()) p = mPool1.alloc(size, 16, extra);

@@ -11,7 +11,7 @@ on:
 jobs:
   npm-deploy:
     name: npm-deploy
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v3.3.0
         with:

@@ -15,19 +15,31 @@
  */
 
 #include <utils/CallStack.h>
-#include <utils/Log.h>
+#include <utils/CString.h>
+#include <utils/compiler.h>
+#include <utils/ostream.h>
 
-#include <cstdio>
-#include <cstdlib>
 #include <algorithm>
 #include <memory>
+#include <cstdlib>
 
-// FIXME: Some platforms do not have execinfo.h (but have unwind.h)
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+
+// FIXME: Some platforms do not have execinfo.h
 #if !defined(__ANDROID__) && !defined(WIN32) && !defined(__EMSCRIPTEN__)
 #include <execinfo.h>
 #define HAS_EXECINFO 1
 #else
 #define HAS_EXECINFO 0
+#endif
+
+// execinfo.h is available as of Android 33
+#if defined(__ANDROID__) && (__ANDROID_API__ >= 33)
+#include <execinfo.h>
+#undef HAS_EXECINFO
+#define HAS_EXECINFO 1
 #endif
 
 #if !defined(WIN32) && !defined(__EMSCRIPTEN__)
@@ -81,19 +93,19 @@ void CallStack::update(size_t ignore) noexcept {
     update_gcc(ignore);
 }
 
-void CallStack::update_gcc(size_t ignore) noexcept {
+void CallStack::update_gcc(size_t UTILS_UNUSED ignore) noexcept {
     // reset the object
     ssize_t size = 0;
 
-    void* array[NUM_FRAMES];
 #if HAS_EXECINFO
+    void* array[NUM_FRAMES];
     size = ::backtrace(array, NUM_FRAMES);
     size -= ignore;
-#endif
     for (ssize_t i = 0; i < size; i++) {
         m_stack[i].pc = intptr_t(array[ignore + i]);
     }
     size--; // the last one seems to always be 0x0
+#endif
 
     // update how many frames we have
     m_frame_count = size_t(std::max(ssize_t(0), size));
@@ -112,7 +124,7 @@ utils::CString CallStack::demangle(const char* mangled) {
 #if !defined(NDEBUG) && !defined(WIN32)
     size_t len;
     int status;
-    std::unique_ptr<char, FreeDeleter> demangled(abi::__cxa_demangle(mangled, nullptr, &len, &status));
+    std::unique_ptr<char, FreeDeleter> const demangled(abi::__cxa_demangle(mangled, nullptr, &len, &status));
     if (!status && demangled) {
         // success
         return CString(demangled.get());
@@ -129,9 +141,9 @@ utils::CString CallStack::demangleTypeName(const char* mangled) {
 
 // ------------------------------------------------------------------------------------------------
 
-io::ostream& operator<<(io::ostream& stream, const CallStack& callstack) {
+io::ostream& operator<<(io::ostream& stream, CallStack const& UTILS_UNUSED callstack) {
 #if HAS_EXECINFO
-    size_t size = callstack.getFrameCount();
+    size_t const size = callstack.getFrameCount();
     char buf[1024];
     for (size_t i = 0; i < size; i++) {
         Dl_info info;
@@ -152,7 +164,7 @@ io::ostream& operator<<(io::ostream& stream, const CallStack& callstack) {
         {
             char** symbols = ::backtrace_symbols(&pc, 1);
             stream << "#" << i << "\t" << symbols[0] << "\n";
-            free(symbols);
+            free((void*)symbols);
         }
     }
     stream << io::endl;

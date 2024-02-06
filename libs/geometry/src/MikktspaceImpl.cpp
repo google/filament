@@ -75,27 +75,61 @@ void MikktspaceImpl::setTSpaceBasic(SMikkTSpaceContext const* context, float con
     float3 const pos = *pointerAdd(wrapper->mPositions, vertInd, wrapper->mPositionStride);
     float3 const n = normalize(*pointerAdd(wrapper->mNormals, vertInd, wrapper->mNormalStride));
     float2 const uv = *pointerAdd(wrapper->mUVs, vertInd, wrapper->mUVStride);
-    float3 const t{fvTangent[0], fvTangent[1], fvTangent[2]};
+    float3 const t { fvTangent[0], fvTangent[1], fvTangent[2] };
     float3 const b = fSign * normalize(cross(n, t));
 
     // TODO: packTangentFrame actually changes the orientation of b.
     quatf const quat = mat3f::packTangentFrame({t, b, n}, sizeof(int32_t));
 
-    wrapper->mOutVertices.push_back({pos, uv, quat});
+    auto output = wrapper->mOutputData;
+    auto const& EMPTY_ELEMENT = wrapper->EMPTY_ELEMENT;
+
+    size_t const outputCurSize = output.size();
+
+    // Prepare for the next element
+    output.insert(output.end(), EMPTY_ELEMENT.begin(), EMPTY_ELEMENT.end());
+
+    uint8_t* cursor = output.data() + outputCurSize;
+
+    *((float3*) (cursor)) = pos;
+    *((float2*) (cursor + 12)) = uv;
+    *((quatf*) (cursor + 20)) = quat;
+
+    cursor += 36;
+    for (auto [attribArray, attribStride, attribSize]: wrapper->mInputAttribArrays) {
+        uint8_t const* input = pointerAdd(attribArray, vertInd, attribStride);
+        std::memcpy(cursor, input, attribSize);
+        cursor += attribSize;
+    }
 }
 
 MikktspaceImpl::MikktspaceImpl(const TangentSpaceMeshInput* input) noexcept
     : mFaceCount((int) input->triangleCount),
-      mPositions(input->positions),
-      mPositionStride(input->positionStride ? input->positionStride : sizeof(float3)),
-      mNormals(input->normals),
-      mNormalStride(input->normalStride ? input->normalStride : sizeof(float3)),
-      mUVs(input->uvs),
-      mUVStride(input->uvStride ? input->uvStride : sizeof(float2)),
+      mPositions(input->positions()),
+      mPositionStride(input->positionsStride()),
+      mNormals(input->normals()),
+      mNormalStride(input->normalsStride()),
+      mUVs(input->uvs()),
+      mUVStride(input->uvsStride()),
       mIsTriangle16(input->triangles16),
       mTriangles(
-              input->triangles16 ? (uint8_t*) input->triangles16 : (uint8_t*) input->triangles32) {
-    mOutVertices.reserve(mFaceCount * 3);
+              input->triangles16 ? (uint8_t*) input->triangles16 : (uint8_t*) input->triangles32),
+      mOutputElementSize(BASE_OUTPUT_SIZE) {
+
+    // We don't know how many attributes there are so we have to create an ordering of the
+    // output components.  The first three components are
+    //   - float3 positions
+    //   - float2 uv
+    //   - quatf tangent
+    for (auto attrib: input->getAuxAttributes()) {
+        size_t const attribSize =input->attributeSize(attrib);
+        mOutputElementSize += attribSize;
+        mInputAttribArrays.push_back({input->raw(attrib), input->stride(attrib), attribSize});
+    }
+    mOutputData.reserve(mFaceCount * 3 * mOutputElementSize);
+
+    // We will insert 0s to signify a new element being added to the output.
+    EMPTY_ELEMENT = std::vector<uint8_t>(mOutputElementSize);
 }
 
 MikktspaceImpl* MikktspaceImpl::getThis(SMikkTSpaceContext const* context) noexcept {
@@ -120,20 +154,22 @@ void MikktspaceImpl::run(TangentSpaceMeshOutput* output) noexcept {
     SMikkTSpaceContext context{.m_pInterface = &interface, .m_pUserData = this};
     genTangSpaceDefault(&context);
 
-    std::vector<unsigned int> remap(mOutVertices.size());
-    size_t vertexCount = meshopt_generateVertexRemap(remap.data(), NULL, mOutVertices.size(),
-            mOutVertices.data(), mOutVertices.size(), sizeof(IOVertex));
+    size_t oVertexCount = mOutputData.size() / mOutputElementSize;
+
+    std::vector<unsigned int> remap(oVertexCount);
+    size_t vertexCount = meshopt_generateVertexRemap(remap.data(), NULL, remap.size(),
+            mOutputData.data(), oVertexCount, mOutputElementSize);
 
     std::vector<IOVertex> newVertices(vertexCount);
-    meshopt_remapVertexBuffer((void*) newVertices.data(), mOutVertices.data(), mOutVertices.size(),
-            sizeof(IOVertex), remap.data());
+    meshopt_remapVertexBuffer((void*) newVertices.data(), mOutputData.data(), oVertexCount,
+            mOutputElementSize, remap.data());
 
     uint3* triangles32 = output->triangles32.allocate(mFaceCount);
-    meshopt_remapIndexBuffer((uint32_t*) triangles32, NULL, mOutVertices.size(), remap.data());
+    meshopt_remapIndexBuffer((uint32_t*) triangles32, NULL, remap.size(), remap.data());
 
-    float3* outPositions = output->positions.allocate(vertexCount);
-    float2* outUVs = output->uvs.allocate(vertexCount);
-    quatf* outQuats = output->tangentSpace.allocate(vertexCount);
+    float3* outPositions = output->positions().allocate(vertexCount);
+    float2* outUVs = output->uvs().allocate(vertexCount);
+    quatf* outQuats = output->tspace().allocate(vertexCount);
 
     for (size_t i = 0; i < vertexCount; ++i) {
         outPositions[i] = newVertices[i].position;

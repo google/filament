@@ -17,11 +17,13 @@
 #ifndef TNT_UTILS_PROFILER_H
 #define TNT_UTILS_PROFILER_H
 
+#include <ratio>
+#include <chrono>   // note: This is safe (only used inline)
+
 #include <assert.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-
-#include <chrono>   // note: This is safe (only used inline)
 
 #if defined(__linux__)
 #   include <unistd.h>
@@ -82,6 +84,7 @@ public:
 
     class Counters {
         friend class Profiler;
+
         uint64_t nr;
         uint64_t time_enabled;
         uint64_t time_running;

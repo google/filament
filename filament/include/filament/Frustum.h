@@ -23,8 +23,11 @@
 
 #include <math/mat4.h>
 #include <math/vec3.h>
+#include <math/vec4.h>
 
 #include <utils/unwindows.h> // Because we define NEAR and FAR in the Plane enum.
+
+#include <stdint.h>
 
 namespace filament {
 

@@ -21,10 +21,11 @@
 
 #include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
-#include <backend/PresentCallable.h>
 
 #include <utils/compiler.h>
 #include <utils/Invocable.h>
+
+#include <stdint.h>
 
 namespace filament {
 

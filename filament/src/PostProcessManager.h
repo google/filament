@@ -282,6 +282,11 @@ public:
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphId<FrameGraphTexture> depth) noexcept;
 
+    FrameGraphId<FrameGraphTexture> debugDisplayShadowTexture(FrameGraph& fg,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphId<FrameGraphTexture> shadowmap, float scale,
+            uint8_t layer, uint8_t level, uint8_t channel, float power) noexcept;
+
     backend::Handle<backend::HwTexture> getOneTexture() const;
     backend::Handle<backend::HwTexture> getZeroTexture() const;
     backend::Handle<backend::HwTexture> getOneTextureArray() const;

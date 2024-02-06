@@ -222,10 +222,6 @@ public:
         // Some drivers have gl state issues when drawing from shared contexts
         bool disable_shared_context_draws;
 
-        // Some drivers require the GL_TEXTURE_EXTERNAL_OES target to be bound when
-        // the texture image changes, even if it's already bound to that texture
-        bool texture_external_needs_rebind;
-
         // Some web browsers seem to immediately clear the default framebuffer when calling
         // glInvalidateFramebuffer with WebGL 2.0
         bool disable_invalidate_framebuffer;
@@ -432,9 +428,6 @@ private:
                     ""},
             {   bugs.disable_shared_context_draws,
                     "disable_shared_context_draws",
-                    ""},
-            {   bugs.texture_external_needs_rebind,
-                    "texture_external_needs_rebind",
                     ""},
             {   bugs.disable_invalidate_framebuffer,
                     "disable_invalidate_framebuffer",
@@ -711,7 +704,7 @@ void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId, size_t
     update_state(state.textures.units[unit].targets[targetIndex].texture_id, texId, [&]() {
         activeTexture(unit);
         glBindTexture(target, texId);
-    }, (target == GL_TEXTURE_EXTERNAL_OES) && bugs.texture_external_needs_rebind);
+    }, target == GL_TEXTURE_EXTERNAL_OES);
 }
 
 void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept {

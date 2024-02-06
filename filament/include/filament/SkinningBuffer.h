@@ -26,7 +26,7 @@
 #include <math/mathfwd.h>
 
 #include <stddef.h>
-
+#include <stdint.h>
 
 namespace filament {
 

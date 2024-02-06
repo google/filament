@@ -25,6 +25,8 @@
 
 #include <utils/compiler.h>
 
+#include <stdint.h>
+
 namespace filament {
 
 /**

@@ -19,9 +19,14 @@
 
 #include <filament/FilamentAPI.h>
 
+#include <backend/DriverEnums.h>
 #include <backend/Platform.h>
 
 #include <utils/compiler.h>
+#include <utils/Invocable.h>
+
+#include <stdint.h>
+#include <stddef.h>
 
 namespace utils {
 class Entity;

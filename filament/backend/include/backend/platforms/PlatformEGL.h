@@ -17,17 +17,20 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_H
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_H
 
-#include <stdint.h>
+#include <backend/DriverEnums.h>
+#include <backend/Platform.h>
+#include <backend/platforms/OpenGLPlatform.h>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
+#include <EGL/eglplatform.h>
 
-#include <backend/platforms/OpenGLPlatform.h>
-
-#include <backend/DriverEnums.h>
-
+#include <initializer_list>
 #include <utility>
 #include <vector>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament::backend {
 
