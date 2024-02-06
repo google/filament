@@ -22,26 +22,38 @@
 #include "details/Camera.h"
 #include "details/Scene.h"
 
-#include "backend/DriverApiForward.h"
-
-#include <private/filament/Variant.h>
+#include "private/filament/Variant.h"
+#include "utils/BitmaskEnum.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 #include <utils/Allocator.h>
 #include <utils/Range.h>
+#include <utils/Slice.h>
 #include <utils/architecture.h>
-#include <utils/compiler.h>
 #include <utils/debug.h>
+
+#include <math/mathfwd.h>
 
 #include <functional>
 #include <limits>
+#include <optional>
+#include <type_traits>
+#include <tuple>
 #include <vector>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
+namespace backend {
+class CommandBufferQueue;
+}
+
 class FMaterialInstance;
+class RenderPassBuilder;
 
 class RenderPass {
 public:
@@ -171,7 +183,7 @@ public:
         EPILOG  = uint64_t(0x2) << CUSTOM_SHIFT
     };
 
-    enum CommandTypeFlags : uint8_t {
+    enum class CommandTypeFlags : uint32_t {
         COLOR = 0x1,    // generate the color pass only
         DEPTH = 0x2,    // generate the depth pass only ( e.g. shadowmap)
 
@@ -190,7 +202,6 @@ public:
         // generate commands for screen-space reflections
         SCREEN_SPACE_REFLECTIONS = COLOR | FILTER_TRANSLUCENT_OBJECTS
     };
-
 
     /*
      * The sorting material key is 32 bits and encoded as:
@@ -240,7 +251,6 @@ public:
         uint32_t skinningOffset = 0;                                    // 4 bytes
         uint16_t instanceCount;                                         // 2 bytes [MSb: user]
         Variant materialVariant;                                        // 1 byte
-//        uint8_t reserved[0] = {};                                       // 0 bytes
 
         static const uint16_t USER_INSTANCE_MASK = 0x8000u;
         static const uint16_t INSTANCE_COUNT_MASK = 0x7fffu;
@@ -253,7 +263,7 @@ public:
         uint64_t reserved[1] = {};  //  8 bytes
         bool operator < (Command const& rhs) const noexcept { return key < rhs.key; }
         // placement new declared as "throw" to avoid the compiler's null-check
-        inline void* operator new (std::size_t, void* ptr) {
+        inline void* operator new (size_t, void* ptr) {
             assert_invariant(ptr);
             return ptr;
         }
@@ -269,61 +279,31 @@ public:
 
     // Arena used for commands
     using Arena = utils::Arena<
-            utils::LinearAllocator,                 // note: can't change this allocator
+            utils::LinearAllocatorWithFallback,
             utils::LockingPolicy::NoLock,
             utils::TrackingPolicy::HighWatermark,
             utils::AreaPolicy::StaticArea>;
 
-    /*
-     * Create a RenderPass.
-     * The Arena is used to allocate commands which are then owned by the Arena.
-     */
-    RenderPass(FEngine& engine, Arena& arena) noexcept;
+    // RenderPass can only be moved
+    RenderPass(RenderPass&& rhs) = default;
 
-    // Copy the RenderPass as is. This can be used to create a RenderPass from a "template"
-    // by copying from an "empty" RenderPass.
-    RenderPass(RenderPass const& rhs);
+    // RenderPass can't be copied
+    RenderPass(RenderPass const& rhs) = delete;
+    RenderPass& operator=(RenderPass const& rhs) = delete;
+    RenderPass& operator=(RenderPass&& rhs) = delete;
 
     // allocated commands ARE NOT freed, they're owned by the Arena
     ~RenderPass() noexcept;
-
-    // a box that both offsets the viewport and clips it
-    void setScissorViewport(backend::Viewport viewport) noexcept;
-
-    // specifies the geometry to generate commands for
-    void setGeometry(FScene::RenderableSoa const& soa, utils::Range<uint32_t> vr,
-            backend::Handle<backend::HwBufferObject> uboHandle) noexcept;
-
-    // specifies camera information (e.g. used for sorting commands)
-    void setCamera(const CameraInfo& camera) noexcept;
-
-    //  flags controlling how commands are generated
-    void setRenderFlags(RenderFlags flags) noexcept { mFlags = flags; }
-    RenderFlags getRenderFlags() const noexcept { return mFlags; }
-
-    // variant to use
-    void setVariant(Variant variant) noexcept { mVariant = variant; }
-
-    // Sets the visibility mask, which is AND-ed against each Renderable's VISIBLE_MASK to determine
-    // if the renderable is visible for this pass.
-    // Defaults to all 1's, which means all renderables in this render pass will be rendered.
-    void setVisibilityMask(FScene::VisibleMaskType mask) noexcept { mVisibilityMask = mask; }
 
     Command const* begin() const noexcept { return mCommandBegin; }
     Command const* end() const noexcept { return mCommandEnd; }
     bool empty() const noexcept { return begin() == end(); }
 
-    // This is the main function of this class, this appends commands to the pass using
-    // the current camera, geometry and flags set. This can be called multiple times if needed.
-    void appendCommands(FEngine& engine, CommandTypeFlags commandTypeFlags) noexcept;
-
-    // sorts and instanceify commands then trims sentinels
-    void sortCommands(FEngine& engine) noexcept;
-
     // Helper to execute all the commands generated by this RenderPass
-    void execute(FEngine& engine, const char* name,
+    static void execute(RenderPass const& pass,
+            FEngine& engine, const char* name,
             backend::Handle<backend::HwRenderTarget> renderTarget,
-            backend::RenderPassParams params) const noexcept;
+            backend::RenderPassParams params) noexcept;
 
     /*
      * Executor holds the range of commands to execute for a given pass
@@ -331,6 +311,7 @@ public:
     class Executor {
         using CustomCommandFn = std::function<void()>;
         friend class RenderPass;
+        friend class RenderPassBuilder;
 
         // these fields are constant after creation
         utils::Slice<Command> mCommands;
@@ -346,8 +327,7 @@ public:
 
         Executor(RenderPass const* pass, Command const* b, Command const* e) noexcept;
 
-        void execute(backend::DriverApi& driver,
-                const Command* first, const Command* last) const noexcept;
+        void execute(FEngine& engine, const Command* first, const Command* last) const noexcept;
 
     public:
         Executor() = default;
@@ -366,37 +346,39 @@ public:
     };
 
     // returns a new executor for this pass
-    Executor getExecutor() {
-        return { this, mCommandBegin, mCommandEnd };
-    }
-
     Executor getExecutor() const {
         return { this, mCommandBegin, mCommandEnd };
-    }
-
-    // returns a new executor for this pass with a custom range
-    Executor getExecutor(Command const* b, Command const* e) {
-        return { this, b, e };
     }
 
     Executor getExecutor(Command const* b, Command const* e) const {
         return { this, b, e };
     }
 
-    // Appends a custom command.
-    void appendCustomCommand(uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
-            Executor::CustomCommandFn command);
-
-
 private:
     friend class FRenderer;
+    friend class RenderPassBuilder;
+    RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexcept;
 
-    Command* append(size_t count) noexcept;
-    void resize(size_t count) noexcept;
-    void instanceify(FEngine& engine) noexcept;
+    // This is the main function of this class, this appends commands to the pass using
+    // the current camera, geometry and flags set. This can be called multiple times if needed.
+    void appendCommands(FEngine& engine,
+            utils::Slice<Command> commands, CommandTypeFlags commandTypeFlags) noexcept;
 
-    // we choose the command count per job to minimize JobSystem overhead.
-    // on a Pixel 4, 2048 commands is about half a millisecond of processing.
+    // Appends a custom command.
+    void appendCustomCommand(Command* commands,
+            uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
+            Executor::CustomCommandFn command);
+
+    void resize(Arena& arena, size_t count) noexcept;
+
+    // sorts commands then trims sentinels
+    void sortCommands(Arena& arena) noexcept;
+
+    // instanceify commands then trims sentinels
+    void instanceify(FEngine& engine, Arena& arena) noexcept;
+
+    // We choose the command count per job to minimize JobSystem overhead.
+    // On a Pixel 4, 2048 commands is about half a millisecond of processing.
     static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_COUNT = 2048;
     static constexpr size_t JOBS_PARALLEL_FOR_COMMANDS_SIZE  =
             sizeof(Command) * JOBS_PARALLEL_FOR_COMMANDS_COUNT;
@@ -404,15 +386,15 @@ private:
     static_assert(JOBS_PARALLEL_FOR_COMMANDS_SIZE % utils::CACHELINE_SIZE == 0,
             "Size of Commands jobs must be multiple of a cache-line size");
 
-    static inline void generateCommands(uint32_t commandTypeFlags, Command* commands,
+    static inline void generateCommands(CommandTypeFlags commandTypeFlags, Command* commands,
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
             Variant variant, RenderFlags renderFlags,
             FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward,
             uint8_t instancedStereoEyeCount) noexcept;
 
-    template<uint32_t commandTypeFlags>
-    static inline Command* generateCommandsImpl(uint32_t extraFlags, Command* curr,
+    template<RenderPass::CommandTypeFlags commandTypeFlags>
+    static inline Command* generateCommandsImpl(RenderPass::CommandTypeFlags extraFlags, Command* curr,
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> range,
             Variant variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
             math::float3 cameraPosition, math::float3 cameraForward,
@@ -424,50 +406,128 @@ private:
     static void updateSummedPrimitiveCounts(
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> vr) noexcept;
 
-    // a reference to the Engine, mostly to get to things like JobSystem
 
-    // Arena where all Commands are allocated. The Arena owns the commands.
-    Arena& mCommandArena;
+    FScene::RenderableSoa const& mRenderableSoa;
+    utils::Range<uint32_t> const mVisibleRenderables;
+    backend::Handle<backend::HwBufferObject> const mUboHandle;
+    math::float3 const mCameraPosition;
+    math::float3 const mCameraForwardVector;
+    RenderFlags const mFlags;
+    Variant const mVariant;
+    FScene::VisibleMaskType const mVisibilityMask;
+    backend::Viewport const mScissorViewport;
 
     // Pointer to the first command
     Command* mCommandBegin = nullptr;
-
     // Pointer to one past the last command
     Command* mCommandEnd = nullptr;
-
-    // the SOA containing the renderables we're interested in
-    FScene::RenderableSoa const* mRenderableSoa = nullptr;
-
-    // The range of visible renderables in the SOA above
-    utils::Range<uint32_t> mVisibleRenderables{};
-
-    // the UBO containing the data for the renderables
-    backend::Handle<backend::HwBufferObject> mUboHandle;
+    // a UBO for instanced primitives
     backend::Handle<backend::HwBufferObject> mInstancedUboHandle;
-
-    // info about the camera
-    math::float3 mCameraPosition{};
-    math::float3 mCameraForwardVector{};
-
-    // info about the scene features (e.g.: has shadows, lighting, etc...)
-    RenderFlags mFlags{};
-
-    // Variant to use
-    Variant mVariant{};
-
-    // Additional visibility mask
-    FScene::VisibleMaskType mVisibilityMask = std::numeric_limits<FScene::VisibleMaskType>::max();
-
-    backend::Viewport mScissorViewport{ 0, 0,
-            std::numeric_limits<int32_t>::max(),
-            std::numeric_limits<int32_t>::max() };
-
     // a vector for our custom commands
     using CustomCommandVector = std::vector<Executor::CustomCommandFn,
             utils::STLAllocator<Executor::CustomCommandFn, LinearAllocatorArena>>;
     mutable CustomCommandVector mCustomCommands;
 };
 
+class RenderPassBuilder {
+    friend class RenderPass;
+
+    RenderPass::Arena& mArena;
+    RenderPass::CommandTypeFlags mCommandTypeFlags{};
+    backend::Viewport mScissorViewport{ 0, 0, INT32_MAX, INT32_MAX };
+    FScene::RenderableSoa const* mRenderableSoa = nullptr;
+    utils::Range<uint32_t> mVisibleRenderables{};
+    backend::Handle<backend::HwBufferObject> mUboHandle;
+    math::float3 mCameraPosition{};
+    math::float3 mCameraForwardVector{};
+    RenderPass::RenderFlags mFlags{};
+    Variant mVariant{};
+    FScene::VisibleMaskType mVisibilityMask = std::numeric_limits<FScene::VisibleMaskType>::max();
+
+    using CustomCommandRecord = std::tuple<
+            uint8_t,
+            RenderPass::Pass,
+            RenderPass::CustomCommand,
+            uint32_t,
+            RenderPass::Executor::CustomCommandFn>;
+
+    using CustomCommandContainer = std::vector<CustomCommandRecord,
+            utils::STLAllocator<CustomCommandRecord, LinearAllocatorArena>>;
+
+    // we make this optional because it's not used often, and we don't want to have
+    // to construct it by default.
+    std::optional<CustomCommandContainer> mCustomCommands;
+
+public:
+    explicit RenderPassBuilder(RenderPass::Arena& arena) : mArena(arena) { }
+
+    RenderPassBuilder& commandTypeFlags(RenderPass::CommandTypeFlags commandTypeFlags) noexcept {
+        mCommandTypeFlags = commandTypeFlags;
+        return *this;
+    }
+
+    RenderPassBuilder& scissorViewport(backend::Viewport viewport) noexcept {
+        mScissorViewport = viewport;
+        return *this;
+    }
+
+    // specifies the geometry to generate commands for
+    RenderPassBuilder& geometry(FScene::RenderableSoa const& soa, utils::Range<uint32_t> vr,
+            backend::Handle<backend::HwBufferObject> uboHandle) noexcept {
+        mRenderableSoa = &soa;
+        mVisibleRenderables = vr;
+        mUboHandle = uboHandle;
+        return *this;
+    }
+
+    // Specifies camera information (e.g. used for sorting commands)
+    RenderPassBuilder& camera(const CameraInfo& camera) noexcept {
+        mCameraPosition = camera.getPosition();
+        mCameraForwardVector = camera.getForwardVector();
+        return *this;
+    }
+
+    //  flags controlling how commands are generated
+    RenderPassBuilder& renderFlags(RenderPass::RenderFlags flags) noexcept {
+        mFlags = flags;
+        return *this;
+    }
+
+    // like above but allows to set specific flags
+    RenderPassBuilder& renderFlags(
+            RenderPass::RenderFlags mask, RenderPass::RenderFlags value) noexcept {
+        mFlags = (mFlags & mask) | (value & mask);
+        return *this;
+    }
+
+    // variant to use
+    RenderPassBuilder& variant(Variant variant) noexcept {
+        mVariant = variant;
+        return *this;
+    }
+
+    // Sets the visibility mask, which is AND-ed against each Renderable's VISIBLE_MASK to
+    // determine if the renderable is visible for this pass.
+    // Defaults to all 1's, which means all renderables in this render pass will be rendered.
+    RenderPassBuilder& visibilityMask(FScene::VisibleMaskType mask) noexcept {
+        mVisibilityMask = mask;
+        return *this;
+    }
+
+    RenderPassBuilder& customCommand(FEngine& engine,
+            uint8_t channel,
+            RenderPass::Pass pass,
+            RenderPass::CustomCommand custom,
+            uint32_t order,
+            const RenderPass::Executor::CustomCommandFn& command);
+
+    RenderPass build(FEngine& engine);
+};
+
+
 } // namespace filament
+
+template<> struct utils::EnableBitMaskOperators<filament::RenderPass::CommandTypeFlags>
+        : public std::true_type {};
 
 #endif // TNT_FILAMENT_RENDERPASS_H

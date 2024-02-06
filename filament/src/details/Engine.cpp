@@ -198,7 +198,7 @@ FEngine::FEngine(Engine::Builder const& builder) :
         mCommandBufferQueue(
                 builder->mConfig.minCommandBufferSizeMB * MiB,
                 builder->mConfig.commandBufferSizeMB * MiB),
-        mPerRenderPassAllocator(
+        mPerRenderPassArena(
                 "FEngine::mPerRenderPassAllocator",
                 builder->mConfig.perRenderPassArenaSizeMB * MiB),
         mHeapAllocator("FEngine::mHeapAllocator", AreaPolicy::NullArea{}),

@@ -43,6 +43,7 @@ namespace filament {
 class FView;
 class FrameGraph;
 class RenderPass;
+class RenderPassBuilder;
 
 struct ShadowMappingUniforms {
     math::float4 cascadeSplits;
@@ -86,7 +87,8 @@ public:
             FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept;
 
     // Renders all the shadow maps.
-    FrameGraphId<FrameGraphTexture> render(FEngine& engine, FrameGraph& fg, RenderPass const& pass,
+    FrameGraphId<FrameGraphTexture> render(FEngine& engine, FrameGraph& fg,
+            RenderPassBuilder const& passBuilder,
             FView& view, CameraInfo const& mainCameraInfo, math::float4 const& userTime) noexcept;
 
     // valid after calling update() above

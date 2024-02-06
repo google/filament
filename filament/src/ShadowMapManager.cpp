@@ -19,13 +19,20 @@
 #include "RenderPass.h"
 #include "ShadowMap.h"
 
+#include "details/DebugRegistry.h"
 #include "details/Texture.h"
 #include "details/View.h"
 
 #include <fg/FrameGraph.h>
 
+#include <backend/DriverEnums.h>
+
+#include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
+
+#include <new>
+#include <memory>
 
 namespace filament {
 
@@ -128,7 +135,8 @@ void ShadowMapManager::addShadowMap(size_t lightIndex, bool spotlight,
 }
 
 FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameGraph& fg,
-        RenderPass const& pass, FView& view, CameraInfo const& mainCameraInfo,
+        RenderPassBuilder const& passBuilder,
+        FView& view, CameraInfo const& mainCameraInfo,
         float4 const& userTime) noexcept {
 
     const float moment2 = std::numeric_limits<half>::max();
@@ -206,8 +214,8 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                 builder.sideEffect();
             },
             [this, &engine, &view, vsmShadowOptions,
-                scene, mainCameraInfo, userTime, passTemplate = pass](
-                    FrameGraphResources const&, auto const& data, DriverApi& driver) {
+                scene, mainCameraInfo, userTime, passBuilder = passBuilder](
+                    FrameGraphResources const&, auto const& data, DriverApi& driver) mutable {
 
                 // Note: we could almost parallel_for the loop below, the problem currently is
                 // that updatePrimitivesLod() updates temporary global state.
@@ -262,19 +270,20 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                                 cameraInfo, scene->getRenderableData(), entry.range);
 
                         // generate and sort the commands for rendering the shadow map
-                        RenderPass pass(passTemplate);
-                        pass.setCamera(cameraInfo);
-                        pass.setVisibilityMask(entry.visibilityMask);
-                        pass.setGeometry(scene->getRenderableData(),
-                                entry.range, scene->getRenderableUBO());
-                        pass.appendCommands(engine, RenderPass::SHADOW);
-                        pass.sortCommands(engine);
+
+                        RenderPass const pass = passBuilder
+                            .camera(cameraInfo)
+                            .visibilityMask(entry.visibilityMask)
+                            .geometry(scene->getRenderableData(),
+                                    entry.range, scene->getRenderableUBO())
+                            .commandTypeFlags(RenderPass::CommandTypeFlags::SHADOW)
+                            .build(engine);
 
                         entry.executor = pass.getExecutor();
 
                         if (!view.hasVSM()) {
                             auto const* options = shadowMap.getShadowOptions();
-                            const PolygonOffset polygonOffset = { // handle reversed Z
+                            PolygonOffset const polygonOffset = { // handle reversed Z
                                     .slope    = -options->polygonOffsetSlope,
                                     .constant = -options->polygonOffsetConstant
                             };
@@ -395,7 +404,6 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 
                     auto rt = resources.getRenderPassInfo(data.rt);
 
-                    engine.flush();
                     driver.beginRenderPass(rt.target, rt.params);
                     entry.shadowMap->bind(driver);
                     entry.executor.overrideScissor(entry.shadowMap->getScissor());
