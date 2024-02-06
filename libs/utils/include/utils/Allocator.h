@@ -393,6 +393,10 @@ public:
         : mFreeList(begin, end, ELEMENT_SIZE, ALIGNMENT, OFFSET) {
     }
 
+    PoolAllocator(void* begin, size_t size) noexcept
+        : mFreeList(begin, static_cast<char *>(begin) + size, ELEMENT_SIZE, ALIGNMENT, OFFSET) {
+    }
+
     template <typename AREA>
     explicit PoolAllocator(const AREA& area) noexcept
         : PoolAllocator(area.begin(), area.end()) {

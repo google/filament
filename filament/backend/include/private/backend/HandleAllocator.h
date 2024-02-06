@@ -40,18 +40,22 @@
 #   define HANDLE_TYPE_SAFETY 0
 #endif
 
-#define HandleAllocatorGL  HandleAllocator<16, 64, 208>
-#define HandleAllocatorVK  HandleAllocator<16, 64, 880>
-#define HandleAllocatorMTL HandleAllocator<16, 64, 584>
+#define HandleAllocatorGL  HandleAllocator<16,  64, 208>    // ~3640 / pool / MiB
+#define HandleAllocatorVK  HandleAllocator<80, 176, 320>    // ~1820 / pool / MiB
+#define HandleAllocatorMTL HandleAllocator<48, 160, 592>    // ~1310 / pool / MiB
 
 namespace filament::backend {
 
 /*
  * A utility class to efficiently allocate and manage Handle<>
  */
-template <size_t P0, size_t P1, size_t P2>
+template<size_t P0, size_t P1, size_t P2>
 class HandleAllocator {
 public:
+
+    static_assert(P0 % 16 == 0, "HandleAllocator Pools must be multiple of 16 bytes");
+    static_assert(P1 % 16 == 0, "HandleAllocator Pools must be multiple of 16 bytes");
+    static_assert(P2 % 16 == 0, "HandleAllocator Pools must be multiple of 16 bytes");
 
     HandleAllocator(const char* name, size_t size) noexcept;
     HandleAllocator(HandleAllocator const& rhs) = delete;
