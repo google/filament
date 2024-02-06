@@ -129,7 +129,7 @@ jobs:
       - name: Sign sample-gltf-viewer
         run: |
           echo "${APK_KEYSTORE_BASE64}" > filament.jks.base64
-          base64 --decode filament.jks.base64 > filament.jks
+          base64 --decode -i filament.jks.base64 > filament.jks
           BUILD_TOOLS_VERSION=$(ls ${ANDROID_HOME}/build-tools | sort -V | tail -n 1)
           APKSIGNER=${ANDROID_HOME}/build-tools/${BUILD_TOOLS_VERSION}/apksigner
           IN_FILE="out/sample-gltf-viewer-release.apk"
