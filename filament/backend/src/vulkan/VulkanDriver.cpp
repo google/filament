@@ -213,6 +213,41 @@ VulkanDriver::~VulkanDriver() noexcept = default;
 UTILS_NOINLINE
 Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& context,
          Platform::DriverConfig const& driverConfig) noexcept {
+#if 0
+    // this is useful for development, but too verbose even for debug builds
+    // For reference on a 64-bits machine in Release mode:
+    //    VulkanSamplerGroup            :  24       few
+    //    HwStream                      :  24       few
+    //    VulkanFence                   :  40       few
+    //    VulkanProgram                 :  40       moderate
+    //    VulkanIndexBuffer             :  72       moderate
+    //    VulkanBufferObject            :  72       many
+    // -- less than or equal 80 bytes
+    //    VulkanRenderPrimitive         : 104       many
+    //    VulkanSwapChain               : 112       few
+    //    VulkanTimerQuery              : 168       few
+    // -- less than or equal 176 bytes
+    //    VulkanTexture                 : 232       moderate
+    //    VulkanVertexBuffer            : 312       moderate
+    //    VulkanRenderTarget            : 320       few
+    // -- less than or equal to 320 bytes
+
+    utils::slog.d
+           << "\nVulkanSwapChain: " << sizeof(VulkanSwapChain)
+           << "\nVulkanBufferObject: " << sizeof(VulkanBufferObject)
+           << "\nVulkanVertexBuffer: " << sizeof(VulkanVertexBuffer)
+           << "\nVulkanIndexBuffer: " << sizeof(VulkanIndexBuffer)
+           << "\nVulkanSamplerGroup: " << sizeof(VulkanSamplerGroup)
+           << "\nVulkanRenderPrimitive: " << sizeof(VulkanRenderPrimitive)
+           << "\nVulkanTexture: " << sizeof(VulkanTexture)
+           << "\nVulkanTimerQuery: " << sizeof(VulkanTimerQuery)
+           << "\nHwStream: " << sizeof(HwStream)
+           << "\nVulkanRenderTarget: " << sizeof(VulkanRenderTarget)
+           << "\nVulkanFence: " << sizeof(VulkanFence)
+           << "\nVulkanProgram: " << sizeof(VulkanProgram)
+           << utils::io::endl;
+#endif
+
     assert_invariant(platform);
     size_t defaultSize = FVK_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
     Platform::DriverConfig validConfig {driverConfig};

@@ -16,9 +16,16 @@
 
 #include "private/backend/HandleAllocator.h"
 
+#include <backend/Handle.h>
+
+#include <utils/Allocator.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/Panic.h>
 
 #include <stdlib.h>
+
+#include <mutex>
 
 namespace filament::backend {
 
@@ -28,14 +35,16 @@ template <size_t P0, size_t P1, size_t P2>
 UTILS_NOINLINE
 HandleAllocator<P0, P1, P2>::Allocator::Allocator(AreaPolicy::HeapArea const& area)
         : mArea(area) {
-    // TODO: we probably need a better way to set the size of these pools
-    const size_t unit = area.size() / 32;
-    const size_t offsetPool1 =      unit;
-    const size_t offsetPool2 = 16 * unit;
-    char* const p = (char*)area.begin();
-    mPool0 = PoolAllocator< P0, 16>(p, p + offsetPool1);
-    mPool1 = PoolAllocator< P1, 16>(p + offsetPool1, p + offsetPool2);
-    mPool2 = PoolAllocator< P2, 16>(p + offsetPool2, area.end());
+
+    // size the different pools so that they can all contain the same number of handles
+    size_t const count = area.size() / (P0 + P1 + P2);
+    char* const p0 = static_cast<char*>(area.begin());
+    char* const p1 = p0 + count * P0;
+    char* const p2 = p1 + count * P1;
+
+    mPool0 = PoolAllocator< P0, 16>(p0,              count * P0);
+    mPool1 = PoolAllocator< P1, 16>(p1 + count * P0, count * P1);
+    mPool2 = PoolAllocator< P2, 16>(p2 + count * P0, count * P2);
 }
 
 // ------------------------------------------------------------------------------------------------
