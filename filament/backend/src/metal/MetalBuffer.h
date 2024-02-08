@@ -34,17 +34,20 @@ namespace filament::backend {
 class TrackedMetalBuffer {
 public:
     TrackedMetalBuffer() noexcept : mBuffer(nil) {}
-    TrackedMetalBuffer(id<MTLBuffer> buffer) noexcept : mBuffer(buffer) { aliveBuffers++; }
-
-    TrackedMetalBuffer(TrackedMetalBuffer&&) = delete;
-    TrackedMetalBuffer(TrackedMetalBuffer const&) = delete;
-    TrackedMetalBuffer& operator=(TrackedMetalBuffer const&) = delete;
-
+    TrackedMetalBuffer(id<MTLBuffer> buffer) noexcept : mBuffer(buffer) {
+        if (buffer) {
+            aliveBuffers++;
+        }
+    }
     ~TrackedMetalBuffer() {
         if (mBuffer) {
             aliveBuffers--;
         }
     }
+
+    TrackedMetalBuffer(TrackedMetalBuffer&&) = delete;
+    TrackedMetalBuffer(TrackedMetalBuffer const&) = delete;
+    TrackedMetalBuffer& operator=(TrackedMetalBuffer const&) = delete;
 
     TrackedMetalBuffer& operator=(TrackedMetalBuffer&& rhs) noexcept {
         swap(rhs);
