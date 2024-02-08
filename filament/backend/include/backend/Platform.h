@@ -192,10 +192,9 @@ public:
 
     /**
      * Sets the callback function that the backend can use to log backend-specific debug
-     * information.
+     * information. This callback is guaranteed to be called on the Filament driver thread.
      *
-     * @param str A null-terminated c-string containing debug log information.
-     * @param len The length of str, not including the null terminator.
+     * @param debugLog    an Invocable that logs debug information
      */
     void setDebugLogFunc(DebugLogFunc&& debugLog) noexcept;
 
@@ -204,6 +203,16 @@ public:
      */
     bool hasDebugLogFunc() const noexcept;
 
+    /**
+     * To log backend-specific debug information, the backend implementation can call the
+     * application-provided callback function debugLog.
+     *
+     * This function is guaranteed to be called only on a single thread, the Filament driver
+     * thread.
+     *
+     * @param str          a null-terminated C-string containing debug log information.
+     * @param len          the length of str, not including the null terminator.
+     */
     void debugLog(const char* UTILS_NONNULL str, size_t len);
 
 private:
