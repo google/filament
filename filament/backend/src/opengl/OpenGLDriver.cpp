@@ -1894,11 +1894,12 @@ bool OpenGLDriver::isSRGBSwapChainSupported() {
 }
 
 bool OpenGLDriver::isStereoSupported() {
-    // Stereo requires instancing and EXT_clip_cull_distance.
+    // Instanced-stereo requires instancing and EXT_clip_cull_distance.
+    // Multiview-stereo requires ES 3.0 and OVR_multiview2.
     if (UTILS_UNLIKELY(mContext.isES2())) {
         return false;
     }
-    return mContext.ext.EXT_clip_cull_distance;
+    return mContext.ext.EXT_clip_cull_distance || mContext.ext.OVR_multiview2;
 }
 
 bool OpenGLDriver::isParallelShaderCompileSupported() {
