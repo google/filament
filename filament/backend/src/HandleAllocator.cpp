@@ -42,9 +42,9 @@ HandleAllocator<P0, P1, P2>::Allocator::Allocator(AreaPolicy::HeapArea const& ar
     char* const p1 = p0 + count * P0;
     char* const p2 = p1 + count * P1;
 
-    mPool0 = PoolAllocator< P0, 16>(p0,              count * P0);
-    mPool1 = PoolAllocator< P1, 16>(p1 + count * P0, count * P1);
-    mPool2 = PoolAllocator< P2, 16>(p2 + count * P0, count * P2);
+    mPool0 = PoolAllocator<P0, 16>(p0, count * P0);
+    mPool1 = PoolAllocator<P1, 16>(p1, count * P1);
+    mPool2 = PoolAllocator<P2, 16>(p2, count * P2);
 }
 
 // ------------------------------------------------------------------------------------------------
