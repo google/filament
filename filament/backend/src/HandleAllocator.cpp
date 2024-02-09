@@ -25,12 +25,13 @@
 #include <utils/debug.h>
 #include <utils/ostream.h>
 
-#include <stdlib.h>
-
 #include <algorithm>
 #include <exception>
 #include <limits>
 #include <mutex>
+
+#include <stdlib.h>
+#include <string.h>
 
 namespace filament::backend {
 
@@ -54,6 +55,10 @@ HandleAllocator<P0, P1, P2>::Allocator::Allocator(AreaPolicy::HeapArea const& ar
         slog.w << "HandleAllocator heap size reduced to "
                << maxHeapSize << " from " << area.size() << io::endl;
     }
+
+    // make sure we start with a clean arena. This is needed to ensure that all blocks start
+    // with an age of 0.
+    memset(area.data(), 0, maxHeapSize);
 
     // size the different pools so that they can all contain the same number of handles
     size_t const count = maxHeapSize / (P0 + P1 + P2);
