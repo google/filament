@@ -17,20 +17,30 @@
 #ifndef TNT_FILAMENT_DETAILS_SHADOWMAP_H
 #define TNT_FILAMENT_DETAILS_SHADOWMAP_H
 
-#include "components/LightManager.h"
+#include <filament/Box.h>
 
+#include "Culler.h"
 #include "PerShadowMapUniforms.h"
 
 #include "details/Camera.h"
 #include "details/Scene.h"
 
+#include "components/LightManager.h"
+
 #include <backend/DriverApiForward.h>
+#include <backend/DriverEnums.h>
 
-#include <filament/Box.h>
-#include <filament/Viewport.h>
+#include <utils/compiler.h>
 
-#include <math/mat4.h>
+#include <math/mathfwd.h>
+#include <math/vec3.h>
 #include <math/vec4.h>
+#include <math/mat4.h>
+
+#include <array>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 

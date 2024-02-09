@@ -15,24 +15,48 @@
  */
 
 #include "ShadowMapManager.h"
-
 #include "RenderPass.h"
 #include "ShadowMap.h"
 
+#include <filament/Frustum.h>
+#include <filament/LightManager.h>
+#include <filament/Options.h>
+
+#include <private/filament/EngineEnums.h>
+
+#include "components/RenderableManager.h"
+
+#include "details/Camera.h"
 #include "details/DebugRegistry.h"
 #include "details/Texture.h"
 #include "details/View.h"
 
-#include <fg/FrameGraph.h>
+#include "fg/FrameGraph.h"
+#include "fg/FrameGraphId.h"
+#include "fg/FrameGraphRenderPass.h"
+#include "fg/FrameGraphTexture.h"
 
+#include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 
+#include <utils/FixedCapacityVector.h>
+#include <utils/Range.h>
+#include <utils/Slice.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/FixedCapacityVector.h>
 
+#include <math/half.h>
+#include <math/mat4.h>
+#include <math/vec4.h>
+#include <math/scalar.h>
+
+#include <cmath>
+#include <limits>
 #include <new>
 #include <memory>
+
+#include <stdint.h>
+#include <stddef.h>
 
 namespace filament {
 
@@ -41,15 +65,6 @@ using namespace math;
 
 ShadowMapManager::ShadowMapManager(FEngine& engine)
         : mEngine(engine) {
-    // initialize our ShadowMap array in-place
-    UTILS_NOUNROLL
-    for (auto& entry : mShadowMapCache) {
-        new (&entry) ShadowMap(engine);
-    }
-
-    mShadowUbh = engine.getDriverApi().createBufferObject(mShadowUb.getSize(),
-            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
-
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.visualize_cascades",
             &engine.debug.shadowmap.visualize_cascades);
@@ -59,25 +74,75 @@ ShadowMapManager::ShadowMapManager(FEngine& engine)
 
 ShadowMapManager::~ShadowMapManager() {
     // destroy the ShadowMap array in-place
-    UTILS_NOUNROLL
-    for (auto& entry : mShadowMapCache) {
-        std::destroy_at(std::launder(reinterpret_cast<ShadowMap*>(&entry)));
+    if (UTILS_UNLIKELY(mInitialized)) {
+        UTILS_NOUNROLL
+        for (auto& entry: mShadowMapCache) {
+            std::destroy_at(std::launder(reinterpret_cast<ShadowMap*>(&entry)));
+        }
+    }
+}
+
+void ShadowMapManager::createIfNeeded(FEngine& engine,
+        std::unique_ptr<ShadowMapManager>& inOutShadowMapManager) {
+    if (UTILS_UNLIKELY(!inOutShadowMapManager)) {
+        inOutShadowMapManager.reset(new ShadowMapManager(engine));
+    }
+}
+
+void ShadowMapManager::terminate(FEngine& engine,
+        std::unique_ptr<ShadowMapManager>& shadowMapManager) {
+    if (shadowMapManager) {
+        shadowMapManager->terminate(engine);
     }
 }
 
 void ShadowMapManager::terminate(FEngine& engine) {
-    DriverApi& driver = engine.getDriverApi();
-    driver.destroyBufferObject(mShadowUbh);
-    UTILS_NOUNROLL
-    for (auto& entry : mShadowMapCache) {
-        std::launder(reinterpret_cast<ShadowMap*>(&entry))->terminate(engine);
+    if (UTILS_UNLIKELY(mInitialized)) {
+        DriverApi& driver = engine.getDriverApi();
+        driver.destroyBufferObject(mShadowUbh);
+        UTILS_NOUNROLL
+        for (auto& entry: mShadowMapCache) {
+            std::launder(reinterpret_cast<ShadowMap*>(&entry))->terminate(engine);
+        }
     }
 }
 
-
-ShadowMapManager::ShadowTechnique ShadowMapManager::update(FEngine& engine, FView& view,
+ShadowMapManager::ShadowTechnique ShadowMapManager::update(
+        Builder const& builder,
+        FEngine& engine, FView& view,
         CameraInfo const& cameraInfo,
         FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept {
+
+    if (!builder.mDirectionalShadowMapCount && !builder.mSpotShadowMapCount) {
+        // no shadows were recorder
+        return ShadowTechnique::NONE;
+    }
+
+    // initialize the shadowmap array the first time
+    if (UTILS_UNLIKELY(!mInitialized)) {
+        mInitialized = true;
+        // initialize our ShadowMap array in-place
+        mShadowUbh = engine.getDriverApi().createBufferObject(mShadowUb.getSize(),
+                BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
+        UTILS_NOUNROLL
+        for (auto& entry: mShadowMapCache) {
+            new(&entry) ShadowMap(engine);
+        }
+    }
+
+    mDirectionalShadowMapCount = builder.mDirectionalShadowMapCount;
+    mSpotShadowMapCount = builder.mSpotShadowMapCount;
+
+    for (auto const& entry : builder.mShadowMaps) {
+        auto& shadowMap = getShadowMap(entry.shadowIndex);
+        shadowMap.initialize(
+                entry.lightIndex,
+                entry.shadowType,
+                entry.shadowIndex,
+                entry.face,
+                entry.options);
+    }
+
     ShadowTechnique shadowTechnique = {};
 
     calculateTextureRequirements(engine, view, lightData);
@@ -96,42 +161,49 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::update(FEngine& engine, FVie
     return shadowTechnique;
 }
 
-void ShadowMapManager::reset() noexcept {
-    mDirectionalShadowMapCount = 0;
-    mSpotShadowMapCount = 0;
-}
-
-void ShadowMapManager::setDirectionalShadowMap(size_t lightIndex,
+ShadowMapManager::Builder& ShadowMapManager::Builder::directionalShadowMap(size_t lightIndex,
         LightManager::ShadowOptions const* options) noexcept {
     assert_invariant(options->shadowCascades <= CONFIG_MAX_SHADOW_CASCADES);
-
     // this updates getCascadedShadowMap()
     mDirectionalShadowMapCount = options->shadowCascades;
-    utils::Slice<ShadowMap> cascadedShadowMap = getCascadedShadowMap();
     for (size_t c = 0; c < options->shadowCascades; c++) {
-        ShadowMap& shadowMap = cascadedShadowMap[c];
-        shadowMap.initialize(lightIndex, ShadowType::DIRECTIONAL, c, 0, options);
+        mShadowMaps.push_back({
+                .lightIndex = lightIndex,
+                .shadowType = ShadowType::DIRECTIONAL,
+                .shadowIndex = uint8_t(c),
+                .face = 0,
+                .options = options });
     }
+    return *this;
 }
 
-void ShadowMapManager::addShadowMap(size_t lightIndex, bool spotlight,
+ShadowMapManager::Builder& ShadowMapManager::Builder::shadowMap(size_t lightIndex, bool spotlight,
         LightManager::ShadowOptions const* options) noexcept {
     if (spotlight) {
         const size_t c = mSpotShadowMapCount++;
         const size_t i = c + CONFIG_MAX_SHADOW_CASCADES;
         assert_invariant(i < CONFIG_MAX_SHADOWMAPS);
-        auto& shadowMap = getShadowMap(i);
-        shadowMap.initialize(lightIndex, ShadowType::SPOT, i, 0, options);
+        mShadowMaps.push_back({
+                .lightIndex = lightIndex,
+                .shadowType = ShadowType::SPOT,
+                .shadowIndex = uint8_t(i),
+                .face = 0,
+                .options = options });
     } else {
         // point-light, generate 6 independent shadowmaps
         for (size_t face = 0; face < 6; face++) {
             const size_t c = mSpotShadowMapCount++;
             const size_t i = c + CONFIG_MAX_SHADOW_CASCADES;
             assert_invariant(i < CONFIG_MAX_SHADOWMAPS);
-            auto& shadowMap = getShadowMap(i);
-            shadowMap.initialize(lightIndex, ShadowType::POINT, i, face, options);
+            mShadowMaps.push_back({
+                    .lightIndex = lightIndex,
+                    .shadowType = ShadowType::POINT,
+                    .shadowIndex = uint8_t(i),
+                    .face = uint8_t(face),
+                    .options = options });
         }
     }
+    return *this;
 }
 
 FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameGraph& fg,
@@ -773,7 +845,7 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
         FEngine& engine, FView& view, CameraInfo const& mainCameraInfo,
         FScene::RenderableSoa& renderableData, utils::Range<uint32_t> range,
         FScene::LightSoa& lightData,
-        ShadowMap::SceneInfo const& sceneInfo) noexcept {
+        ShadowMap::SceneInfo const&) noexcept {
 
     const uint8_t face = shadowMap.getFace();
     const size_t lightIndex = shadowMap.getLightIndex();

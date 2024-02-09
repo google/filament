@@ -53,6 +53,9 @@
 #include <math/scalar.h>
 #include <math/mat4.h>
 
+#include <array>
+#include <memory>
+
 namespace utils {
 class JobSystem;
 } // namespace utils;
@@ -198,8 +201,9 @@ public:
 
     void setStereoscopicOptions(StereoscopicOptions const& options) noexcept;
 
-    FCamera const* getDirectionalLightCamera() const noexcept {
-        return mShadowMapManager.getDirectionalLightCamera();
+    FCamera const* getDirectionalShadowCamera() const noexcept {
+        if (!mShadowMapManager) return nullptr;
+        return mShadowMapManager->getDirectionalShadowCamera();
     }
 
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {
@@ -555,7 +559,7 @@ private:
     mutable bool mHasShadowing = false;
     mutable bool mNeedsShadowMap = false;
 
-    ShadowMapManager mShadowMapManager;
+    std::unique_ptr<ShadowMapManager> mShadowMapManager;
 
     std::array<math::float4, 4> mMaterialGlobals = {{
                                                             { 0, 0, 0, 1 },
@@ -565,7 +569,7 @@ private:
                                                     }};
 
 #ifndef NDEBUG
-    std::array<DebugRegistry::FrameHistory, 5*60> mDebugFrameHistory;
+    std::unique_ptr<std::array<DebugRegistry::FrameHistory, 5*60>> mDebugFrameHistory;
 #endif
 };
 
