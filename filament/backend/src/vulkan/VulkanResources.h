@@ -63,7 +63,8 @@ protected:
     explicit VulkanResourceBase(VulkanResourceType type)
         : mRefCount(IS_HEAP_ALLOC_TYPE(type) ? 1 : 0),
           mType(type),
-          mHandleId(0) {}
+          mHandleId(0) {
+    }
 
 private:
     inline VulkanResourceType getType() {
@@ -82,6 +83,7 @@ private:
         if (IS_HEAP_ALLOC_TYPE(mType)) {
             return;
         }
+        assert_invariant(mRefCount < ((1<<24) - 1));
         ++mRefCount;
     }
 
@@ -89,6 +91,7 @@ private:
         if (IS_HEAP_ALLOC_TYPE(mType)) {
             return;
         }
+        assert_invariant(mRefCount > 0);
         --mRefCount;
     }
 
@@ -96,8 +99,8 @@ private:
         return mRefCount;
     }
 
-    size_t mRefCount = 0;
-    VulkanResourceType mType = VulkanResourceType::BUFFER_OBJECT;
+    uint32_t mRefCount : 24; // 16M is enough for the refcount
+    VulkanResourceType mType : 8;
     HandleBase::HandleId mHandleId;
 
     friend struct VulkanThreadSafeResource;
