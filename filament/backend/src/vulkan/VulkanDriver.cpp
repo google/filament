@@ -1676,26 +1676,26 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     // Update the VK raster state.
     const VulkanRenderTarget* rt = mCurrentRenderPass.renderTarget;
 
-    auto vkraster = mPipelineCache.getCurrentRasterState();
-    vkraster.cullMode = getCullMode(rasterState.culling);
-    vkraster.frontFace = getFrontFace(rasterState.inverseFrontFaces);
-    vkraster.depthBiasEnable = (depthOffset.constant || depthOffset.slope) ? true : false;
-    vkraster.depthBiasConstantFactor = depthOffset.constant;
-    vkraster.depthBiasSlopeFactor = depthOffset.slope;
-    vkraster.blendEnable = rasterState.hasBlending();
-    vkraster.srcColorBlendFactor = getBlendFactor(rasterState.blendFunctionSrcRGB);
-    vkraster.dstColorBlendFactor = getBlendFactor(rasterState.blendFunctionDstRGB);
-    vkraster.colorBlendOp = rasterState.blendEquationRGB;
-    vkraster.srcAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionSrcAlpha);
-    vkraster.dstAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionDstAlpha);
-    vkraster.alphaBlendOp =  rasterState.blendEquationAlpha;
-    vkraster.colorWriteMask = (VkColorComponentFlags) (rasterState.colorWrite ? 0xf : 0x0);
-    vkraster.depthWriteEnable = rasterState.depthWrite;
-    vkraster.depthCompareOp = rasterState.depthFunc;
-    vkraster.rasterizationSamples = rt->getSamples();
-    vkraster.alphaToCoverageEnable = rasterState.alphaToCoverage;
-    vkraster.colorTargetCount = rt->getColorTargetCount(mCurrentRenderPass);
-    mPipelineCache.setCurrentRasterState(vkraster);
+    VulkanPipelineCache::RasterState const vulkanRasterState{
+        .cullMode = getCullMode(rasterState.culling),
+        .frontFace = getFrontFace(rasterState.inverseFrontFaces),
+        .depthBiasEnable = (depthOffset.constant || depthOffset.slope) ? true : false,
+        .blendEnable = rasterState.hasBlending(),
+        .depthWriteEnable = rasterState.depthWrite,
+        .alphaToCoverageEnable = rasterState.alphaToCoverage,
+        .srcColorBlendFactor = getBlendFactor(rasterState.blendFunctionSrcRGB),
+        .dstColorBlendFactor = getBlendFactor(rasterState.blendFunctionDstRGB),
+        .srcAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionSrcAlpha),
+        .dstAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionDstAlpha),
+        .colorWriteMask = (VkColorComponentFlags) (rasterState.colorWrite ? 0xf : 0x0),
+        .rasterizationSamples = rt->getSamples(),
+        .colorTargetCount = rt->getColorTargetCount(mCurrentRenderPass),
+        .colorBlendOp = rasterState.blendEquationRGB,
+        .alphaBlendOp =  rasterState.blendEquationAlpha,
+        .depthCompareOp = rasterState.depthFunc,
+        .depthBiasConstantFactor = depthOffset.constant,
+        .depthBiasSlopeFactor = depthOffset.slope
+    };
 
     // Declare fixed-size arrays that get passed to the pipeCache and to vkCmdBindVertexBuffers.
     uint32_t const bufferCount = prim.vertexBuffer->attributes.size();
@@ -1706,7 +1706,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
     // Push state changes to the VulkanPipelineCache instance. This is fast and does not make VK calls.
     mPipelineCache.bindProgram(program);
-    mPipelineCache.bindRasterState(mPipelineCache.getCurrentRasterState());
+    mPipelineCache.bindRasterState(vulkanRasterState);
     mPipelineCache.bindPrimitiveTopology(prim.primitiveTopology);
     mPipelineCache.bindVertexArray(attribDesc, bufferDesc, bufferCount);
 

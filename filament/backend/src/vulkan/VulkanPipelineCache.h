@@ -199,15 +199,6 @@ public:
         mPipelineBoundResources.acquire(resource);
     }
 
-    inline RasterState getCurrentRasterState() const noexcept {
-        return mCurrentRasterState;
-    }
-
-    // We need to update this outside of bindRasterState due to VulkanDriver::draw.
-    inline void setCurrentRasterState(RasterState const& rasterState) noexcept {
-        mCurrentRasterState = rasterState;
-    }
-
 private:
     // PIPELINE LAYOUT CACHE KEY
     // -------------------------
@@ -413,7 +404,6 @@ private:
     VmaAllocator mAllocator = VK_NULL_HANDLE;
 
     // Current requirements for the pipeline layout, pipeline, and descriptor sets.
-    RasterState mCurrentRasterState;
     PipelineKey mPipelineRequirements = {};
     DescriptorKey mDescriptorRequirements = {};
 
