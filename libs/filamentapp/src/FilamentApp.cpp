@@ -670,8 +670,8 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
 
     auto* platform = mFilamentApp->mEngine->getPlatform();
     if (platform) {
-        platform->setDebugLogFunc([](const char* str, size_t) {
-            printf("%s\n", str);
+        platform->setDebugUpdateStatFunc([](const char* key, uint64_t value) {
+            printf("%s: %lld\n", key, value);
         });
     }
 

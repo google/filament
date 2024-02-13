@@ -175,11 +175,8 @@ void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
 #if defined(FILAMENT_METAL_PROFILING)
     os_signpost_interval_begin(mContext->log, mContext->signpostId, "Frame encoding", "%{public}d", frameId);
 #endif
-    if (mPlatform.hasDebugLogFunc()) {
-        utils::io::sstream stream;
-        stream << "[FILAMENT METAL] Frame " << frameId << " -- alive buffers: "
-               << TrackedMetalBuffer::getAliveBuffers() << utils::io::endl;
-        mPlatform.debugLog(stream.c_str(), stream.length());
+    if (mPlatform.hasDebugUpdateStatFunc()) {
+        mPlatform.debugUpdateStat("filament.metal.alive_buffers", TrackedMetalBuffer::getAliveBuffers());
     }
 }
 

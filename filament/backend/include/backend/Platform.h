@@ -188,37 +188,40 @@ public:
     size_t retrieveBlob(const void* UTILS_NONNULL key, size_t keySize,
             void* UTILS_NONNULL value, size_t valueSize);
 
-    using DebugLogFunc = utils::Invocable<void(const char* UTILS_NONNULL str, size_t len)>;
+    using DebugUpdateStatFunc = utils::Invocable<void(const char* UTILS_NONNULL key, uint64_t value)>;
 
     /**
-     * Sets the callback function that the backend can use to log backend-specific debug
-     * information. This callback is guaranteed to be called on the Filament driver thread.
+     * Sets the callback function that the backend can use to update backend-specific statistics
+     * to aid with debugging. This callback is guaranteed to be called on the Filament driver
+     * thread.
      *
-     * @param debugLog    an Invocable that logs debug information
+     * @param debugUpdateStat   an Invocable that updates debug statistics
      */
-    void setDebugLogFunc(DebugLogFunc&& debugLog) noexcept;
+    void setDebugUpdateStatFunc(DebugUpdateStatFunc&& debugUpdateStat) noexcept;
 
     /**
-     * @return true if debugLog is valid.
+     * @return true if debugUpdateStat is valid.
      */
-    bool hasDebugLogFunc() const noexcept;
+    bool hasDebugUpdateStatFunc() const noexcept;
 
     /**
-     * To log backend-specific debug information, the backend implementation can call the
-     * application-provided callback function debugLog.
+     * To track backend-specific statistics, the backend implementation can call the
+     * application-provided callback function debugUpdateStatFunc to associate or update a value
+     * with a given key. It is possible for this function to be called multiple times with the
+     * same key, in which case newer values should overwrite older values.
      *
      * This function is guaranteed to be called only on a single thread, the Filament driver
      * thread.
      *
-     * @param str          a null-terminated C-string containing debug log information.
-     * @param len          the length of str, not including the null terminator.
+     * @param key          a null-terminated C-string with the key of the debug statistic
+     * @param value        the updated value of key
      */
-    void debugLog(const char* UTILS_NONNULL str, size_t len);
+    void debugUpdateStat(const char* UTILS_NONNULL key, uint64_t value);
 
 private:
     InsertBlobFunc mInsertBlob;
     RetrieveBlobFunc mRetrieveBlob;
-    DebugLogFunc mDebugLog;
+    DebugUpdateStatFunc mDebugUpdateStat;
 };
 
 } // namespace filament

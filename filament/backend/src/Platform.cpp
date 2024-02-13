@@ -53,17 +53,17 @@ size_t Platform::retrieveBlob(void const* key, size_t keySize, void* value, size
     return 0;
 }
 
-void Platform::setDebugLogFunc(DebugLogFunc&& debugLog) noexcept {
-    mDebugLog = std::move(debugLog);
+void Platform::setDebugUpdateStatFunc(DebugUpdateStatFunc&& debugUpdateStat) noexcept {
+    mDebugUpdateStat = std::move(debugUpdateStat);
 }
 
-bool Platform::hasDebugLogFunc() const noexcept {
-    return bool(mDebugLog);
+bool Platform::hasDebugUpdateStatFunc() const noexcept {
+    return bool(mDebugUpdateStat);
 }
 
-void Platform::debugLog(const char* str, size_t len) {
-    if (mDebugLog) {
-        mDebugLog(str, len);
+void Platform::debugUpdateStat(const char* key, uint64_t value) {
+    if (mDebugUpdateStat) {
+        mDebugUpdateStat(key, value);
     }
 }
 
