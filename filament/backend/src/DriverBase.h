@@ -88,11 +88,6 @@ struct HwIndexBuffer : public HwBase {
 };
 
 struct HwRenderPrimitive : public HwBase {
-    uint32_t offset{};
-    uint32_t minIndex{};
-    uint32_t maxIndex{};
-    uint32_t count{};
-    uint32_t maxVertexCount{};
     PrimitiveType type = PrimitiveType::TRIANGLES;
 };
 

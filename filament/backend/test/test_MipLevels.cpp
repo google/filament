@@ -168,7 +168,7 @@ TEST_F(BackendTest, SetMinMaxLevel) {
             ps.rasterState.colorWrite = true;
             ps.rasterState.depthWrite = false;
             api.beginRenderPass(renderTarget, params);
-            api.draw(ps, triangle.getRenderPrimitive(), 1);
+            api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
             api.endRenderPass();
         }
 
@@ -203,7 +203,7 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         // Because the min level is 1, the result color should be the white triangle drawn in the
         // previous pass.
         api.beginRenderPass(defaultRenderTarget, params);
-        api.draw(state, triangle.getRenderPrimitive(), 1);
+        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
 
         // Adjust the base mip to 2.
@@ -221,7 +221,7 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         params.flags.clear = TargetBufferFlags::NONE;
         params.flags.discardStart = TargetBufferFlags::NONE;
         api.beginRenderPass(defaultRenderTarget, params);
-        api.draw(state, triangle.getRenderPrimitive(), 1);
+        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
 
         api.commit(swapChain);

@@ -501,8 +501,7 @@ void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh,
 
 void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
-        PrimitiveType pt, uint32_t offset,
-        uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
+        PrimitiveType pt) {
     DEBUG_MARKER()
 
     auto& gl = mContext;
@@ -515,10 +514,6 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
     rp->gl.indicesSize = (ib->elementSize == 4u) ? 4u : 2u;
     rp->gl.vertexBufferWithObjects = vbh;
     rp->type = pt;
-    rp->offset = offset * rp->gl.indicesSize;
-    rp->count = count;
-    rp->minIndex = minIndex;
-    rp->maxIndex = maxIndex > minIndex ? maxIndex : rp->maxVertexCount - 1; // sanitize max index
 
     gl.procs.genVertexArrays(1, &rp->gl.vao);
 
@@ -862,7 +857,6 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
         // that it's always reset in draw
     }
 
-    rp->maxVertexCount = vb->vertexCount;
     for (size_t i = 0, n = vb->attributes.size(); i < n; i++) {
         const auto& attribute = vb->attributes[i];
         const uint8_t bi = attribute.buffer;
@@ -3698,7 +3692,8 @@ void OpenGLDriver::updateTextureLodRange(GLTexture* texture, int8_t targetLevel)
 #endif
 }
 
-void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint32_t instanceCount) {
+void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph,
+        uint32_t const indexOffset, uint32_t const indexCount, uint32_t const instanceCount) {
     DEBUG_MARKER()
     auto& gl = mContext;
 
@@ -3736,13 +3731,14 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
     setScissor(state.scissor);
 
     if (UTILS_LIKELY(instanceCount <= 1)) {
-        glDrawElements(GLenum(rp->type), (GLsizei)rp->count, rp->gl.getIndicesType(),
-                reinterpret_cast<const void*>(rp->offset));
+        glDrawElements(GLenum(rp->type), (GLsizei)indexCount, rp->gl.getIndicesType(),
+                reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize));
     } else {
         assert_invariant(!mContext.isES2());
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-        glDrawElementsInstanced(GLenum(rp->type), (GLsizei)rp->count,
-                rp->gl.getIndicesType(), reinterpret_cast<const void*>(rp->offset),
+        glDrawElementsInstanced(GLenum(rp->type), (GLsizei)indexCount,
+                rp->gl.getIndicesType(),
+                reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize),
                 (GLsizei)instanceCount);
 #endif
     }

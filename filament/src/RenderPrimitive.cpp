@@ -23,6 +23,9 @@
 
 #include <utils/debug.h>
 
+#include <stdint.h>
+#include <stddef.h>
+
 namespace filament {
 
 void FRenderPrimitive::init(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
@@ -37,15 +40,16 @@ void FRenderPrimitive::init(HwRenderPrimitiveFactory& factory, backend::DriverAp
         FVertexBuffer* vertexBuffer = downcast(entry.vertices);
         FIndexBuffer* indexBuffer = downcast(entry.indices);
 
-        AttributeBitset enabledAttributes = vertexBuffer->getDeclaredAttributes();
+        AttributeBitset const enabledAttributes = vertexBuffer->getDeclaredAttributes();
 
         auto const& ebh = vertexBuffer->getHwHandle();
         auto const& ibh = indexBuffer->getHwHandle();
 
-        mHandle = factory.create(driver, ebh, ibh, entry.type, (uint32_t)entry.offset,
-                (uint32_t)entry.minIndex, (uint32_t)entry.maxIndex, (uint32_t)entry.count);
+        mHandle = factory.create(driver, ebh, ibh, entry.type);
 
         mPrimitiveType = entry.type;
+        mIndexOffset = entry.offset;
+        mIndexCount = entry.count;
         mEnabledAttributes = enabledAttributes;
     }
 }
@@ -58,22 +62,21 @@ void FRenderPrimitive::terminate(HwRenderPrimitiveFactory& factory, backend::Dri
 
 void FRenderPrimitive::set(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
         RenderableManager::PrimitiveType type,
-        FVertexBuffer* vertices, FIndexBuffer* indices, size_t offset,
-        size_t minIndex, size_t maxIndex, size_t count) noexcept {
-
-    AttributeBitset enabledAttributes = vertices->getDeclaredAttributes();
-
-    auto const& ebh = vertices->getHwHandle();
-    auto const& ibh = indices->getHwHandle();
-
+        FVertexBuffer* vertices, FIndexBuffer* indices, size_t offset, size_t count) noexcept {
     if (mHandle) {
         factory.destroy(driver, mHandle);
     }
 
-    mHandle = factory.create(driver, ebh, ibh, type,
-            (uint32_t)offset, (uint32_t)minIndex, (uint32_t)maxIndex, (uint32_t)count);
+    AttributeBitset const enabledAttributes = vertices->getDeclaredAttributes();
+
+    auto const& ebh = vertices->getHwHandle();
+    auto const& ibh = indices->getHwHandle();
+
+    mHandle = factory.create(driver, ebh, ibh, type);
 
     mPrimitiveType = type;
+    mIndexOffset = offset;
+    mIndexCount = count;
     mEnabledAttributes = enabledAttributes;
 }
 

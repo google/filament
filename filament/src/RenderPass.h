@@ -249,18 +249,19 @@ public:
         backend::Handle<backend::HwBufferObject> instanceBufferHandle;  // 4 bytes
         uint32_t index = 0;                                             // 4 bytes
         uint32_t skinningOffset = 0;                                    // 4 bytes
+        uint32_t indexOffset;                                           // 4 bytes
+        uint32_t indexCount;                                            // 4 bytes
         uint16_t instanceCount;                                         // 2 bytes [MSb: user]
         Variant materialVariant;                                        // 1 byte
 
         static const uint16_t USER_INSTANCE_MASK = 0x8000u;
         static const uint16_t INSTANCE_COUNT_MASK = 0x7fffu;
     };
-    static_assert(sizeof(PrimitiveInfo) == 48);
+    static_assert(sizeof(PrimitiveInfo) == 56);
 
     struct alignas(8) Command {     // 64 bytes
         CommandKey key = 0;         //  8 bytes
         PrimitiveInfo primitive;    // 48 bytes
-        uint64_t reserved[1] = {};  //  8 bytes
         bool operator < (Command const& rhs) const noexcept { return key < rhs.key; }
         // placement new declared as "throw" to avoid the compiler's null-check
         inline void* operator new (size_t, void* ptr) {

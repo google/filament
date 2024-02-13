@@ -583,8 +583,6 @@ public:
             VertexBuffer* UTILS_NULLABLE vertices = nullptr;
             IndexBuffer* UTILS_NULLABLE indices = nullptr;
             size_t offset = 0;
-            size_t minIndex = 0;
-            size_t maxIndex = 0;
             size_t count = 0;
             MaterialInstance const* UTILS_NULLABLE materialInstance = nullptr;
             PrimitiveType type = PrimitiveType::TRIANGLES;

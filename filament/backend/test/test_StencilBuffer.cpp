@@ -113,7 +113,7 @@ public:
         api.beginFrame(0, 0);
 
         api.beginRenderPass(renderTarget, params);
-        api.draw(ps, smallTriangle.getRenderPrimitive(), 1);
+        api.draw(ps, smallTriangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
 
         // Step 2: Render a larger triangle with the stencil test enabled.
@@ -126,7 +126,7 @@ public:
         ps.stencilState.front.ref = 0u;
 
         api.beginRenderPass(renderTarget, params);
-        api.draw(ps, triangle.getRenderPrimitive(), 1);
+        api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
 
         api.commit(swapChain);
@@ -240,7 +240,7 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     api.beginFrame(0, 0);
 
     api.beginRenderPass(renderTarget0, params);
-    api.draw(ps, smallTriangle.getRenderPrimitive(), 1);
+    api.draw(ps, smallTriangle.getRenderPrimitive(), 0, 3, 1);
     api.endRenderPass();
 
     // Step 2: Render a larger triangle with the stencil test enabled.
@@ -255,7 +255,7 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     ps.stencilState.front.ref = 0u;
 
     api.beginRenderPass(renderTarget1, params);
-    api.draw(ps, triangle.getRenderPrimitive(), 1);
+    api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
     api.endRenderPass();
 
     api.commit(swapChain);

@@ -340,7 +340,7 @@ void NoopDriver::blit(
 }
 
 void NoopDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,
-        uint32_t instanceCount) {
+        uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
 }
 
 void NoopDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {

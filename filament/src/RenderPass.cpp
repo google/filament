@@ -292,6 +292,8 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena) noexcept {
             // skinning/morphing.
             return  lhs.primitive.mi                == rhs.primitive.mi                 &&
                     lhs.primitive.primitiveHandle   == rhs.primitive.primitiveHandle    &&
+                    lhs.primitive.indexOffset       == rhs.primitive.indexOffset        &&
+                    lhs.primitive.indexCount        == rhs.primitive.indexCount         &&
                     lhs.primitive.rasterState       == rhs.primitive.rasterState        &&
                     lhs.primitive.skinningHandle    == rhs.primitive.skinningHandle     &&
                     lhs.primitive.skinningOffset    == rhs.primitive.skinningOffset     &&
@@ -640,6 +642,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
 
             if constexpr (isColorPass) {
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
+                cmdColor.primitive.indexOffset = primitive.getIndexOffset();
+                cmdColor.primitive.indexCount = primitive.getIndexCount();
                 RenderPass::setupColorCommand(cmdColor, renderableVariant, mi, inverseFrontFaces);
 
                 cmdColor.primitive.skinningHandle = skinning.handle;
@@ -745,6 +749,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
 
                 // unconditionally write the command
                 cmdDepth.primitive.primitiveHandle = primitive.getHwHandle();
+                cmdDepth.primitive.indexOffset = primitive.getIndexOffset();
+                cmdDepth.primitive.indexCount = primitive.getIndexCount();
                 cmdDepth.primitive.mi = mi;
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
 
@@ -988,7 +994,8 @@ void RenderPass::Executor::execute(FEngine& engine,
                             info.skinningTexture);
                 }
 
-                driver.draw(pipeline, info.primitiveHandle, instanceCount);
+                driver.draw(pipeline, info.primitiveHandle,
+                        info.indexOffset, info.indexCount, instanceCount);
             }
         }
 
