@@ -218,7 +218,7 @@ TEST_F(BackendTest, FeedbackLoops) {
                     .sourceLevel = float(sourceLevel),
                 });
                 api.beginRenderPass(renderTargets[targetLevel], params);
-                api.draw(state, triangle.getRenderPrimitive(), 1);
+                api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
                 api.endRenderPass();
             }
 
@@ -237,7 +237,7 @@ TEST_F(BackendTest, FeedbackLoops) {
                     .sourceLevel = float(sourceLevel),
                 });
                 api.beginRenderPass(renderTargets[targetLevel], params);
-                api.draw(state, triangle.getRenderPrimitive(), 1);
+                api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
                 api.endRenderPass();
             }
 

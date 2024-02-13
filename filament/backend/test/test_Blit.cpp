@@ -405,7 +405,7 @@ TEST_F(BackendTest, ColorResolve) {
     api.beginFrame(0, 0);
         api.beginRenderPass(srcRenderTarget, params);
             api.bindUniformBuffer(0, ubuffer);
-            api.draw(state, triangle.getRenderPrimitive(), 1);
+            api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
     api.endFrame(0);
 

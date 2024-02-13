@@ -359,12 +359,10 @@ void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t coun
 
 void VulkanDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
-        PrimitiveType pt, uint32_t offset,
-        uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
+        PrimitiveType pt) {
     auto rp = mResourceAllocator.construct<VulkanRenderPrimitive>(rph, &mResourceAllocator);
     mResourceManager.acquire(rp);
-    VulkanDriver::setRenderPrimitiveBuffer(rph, vbh, ibh);
-    VulkanDriver::setRenderPrimitiveRange(rph, pt, offset, minIndex, maxIndex, count);
+    VulkanDriver::setRenderPrimitiveBuffer(rph, pt, vbh, ibh);
 }
 
 void VulkanDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
@@ -1384,22 +1382,12 @@ void VulkanDriver::nextSubpass(int) {
     }
 }
 
-void VulkanDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
+void VulkanDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph, PrimitiveType pt,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh) {
     auto primitive = mResourceAllocator.handle_cast<VulkanRenderPrimitive*>(rph);
     primitive->setBuffers(mResourceAllocator.handle_cast<VulkanVertexBuffer*>(vbh),
             mResourceAllocator.handle_cast<VulkanIndexBuffer*>(ibh));
-}
-
-void VulkanDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
-        PrimitiveType pt, uint32_t offset,
-        uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
-    auto& primitive = *mResourceAllocator.handle_cast<VulkanRenderPrimitive*>(rph);
-    primitive.setPrimitiveType(pt);
-    primitive.offset = offset * primitive.indexBuffer->elementSize;
-    primitive.count = count;
-    primitive.minIndex = minIndex;
-    primitive.maxIndex = maxIndex > minIndex ? maxIndex : primitive.maxVertexCount - 1;
+    primitive->setPrimitiveType(pt);
 }
 
 void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {
@@ -1648,7 +1636,7 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
 }
 
 void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,
-        const uint32_t instanceCount) {
+        uint32_t const indexOffset, uint32_t const indexCount, uint32_t const instanceCount) {
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("draw");
 
@@ -1827,8 +1815,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             prim.indexBuffer->indexType);
 
     // Finally, make the actual draw call. TODO: support subranges
-    const uint32_t indexCount = prim.count;
-    const uint32_t firstIndex = prim.offset / prim.indexBuffer->elementSize;
+    const uint32_t firstIndex = indexOffset;
     const int32_t vertexOffset = 0;
     const uint32_t firstInstId = 0;
 

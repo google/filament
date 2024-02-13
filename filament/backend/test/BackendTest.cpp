@@ -143,7 +143,7 @@ void BackendTest::renderTriangle(Handle<HwRenderTarget> renderTarget,
     state.rasterState.depthFunc = RasterState::DepthFunc::A;
     state.rasterState.culling = CullingMode::NONE;
 
-    api.draw(state, triangle.getRenderPrimitive(), 1);
+    api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
 
     api.endRenderPass();
 }

@@ -224,11 +224,7 @@ DECL_DRIVER_API_R_N(backend::SamplerGroupHandle, createSamplerGroup,
 DECL_DRIVER_API_R_N(backend::RenderPrimitiveHandle, createRenderPrimitive,
         backend::VertexBufferHandle, vbh,
         backend::IndexBufferHandle, ibh,
-        backend::PrimitiveType, pt,
-        uint32_t, offset,
-        uint32_t, minIndex,
-        uint32_t, maxIndex,
-        uint32_t, count)
+        backend::PrimitiveType, pt)
 
 DECL_DRIVER_API_R_N(backend::ProgramHandle, createProgram,
         backend::Program&&, program)
@@ -494,6 +490,8 @@ DECL_DRIVER_API_N(blit,
 DECL_DRIVER_API_N(draw,
         backend::PipelineState, state,
         backend::RenderPrimitiveHandle, rph,
+        uint32_t, indexOffset,
+        uint32_t, indexCount,
         uint32_t, instanceCount)
 
 DECL_DRIVER_API_N(dispatchCompute,

@@ -350,11 +350,9 @@ void MetalDriver::createSamplerGroupR(
 
 void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
-        PrimitiveType pt, uint32_t offset,
-        uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
+        PrimitiveType pt) {
     construct_handle<MetalRenderPrimitive>(rph);
-    MetalDriver::setRenderPrimitiveBuffer(rph, vbh, ibh);
-    MetalDriver::setRenderPrimitiveRange(rph, pt, offset, minIndex, maxIndex, count);
+    MetalDriver::setRenderPrimitiveBuffer(rph, pt, vbh, ibh);
 }
 
 void MetalDriver::createProgramR(Handle<HwProgram> rph, Program&& program) {
@@ -1063,23 +1061,13 @@ void MetalDriver::endRenderPass(int dummy) {
     mContext->currentRenderPassEncoder = nil;
 }
 
-void MetalDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
+void MetalDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph, PrimitiveType pt,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh) {
     auto primitive = handle_cast<MetalRenderPrimitive>(rph);
     auto vertexBuffer = handle_cast<MetalVertexBuffer>(vbh);
     auto indexBuffer = handle_cast<MetalIndexBuffer>(ibh);
     primitive->setBuffers(vertexBuffer, indexBuffer);
-}
-
-void MetalDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
-        PrimitiveType pt, uint32_t offset, uint32_t minIndex, uint32_t maxIndex,
-        uint32_t count) {
-    auto primitive = handle_cast<MetalRenderPrimitive>(rph);
     primitive->type = pt;
-    primitive->offset = offset * primitive->indexBuffer->elementSize;
-    primitive->count = count;
-    primitive->minIndex = minIndex;
-    primitive->maxIndex = maxIndex > minIndex ? maxIndex : primitive->maxVertexCount - 1;
 }
 
 void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
@@ -1581,7 +1569,8 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
     }
 }
 
-void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t instanceCount) {
+void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph,
+        uint32_t const indexOffset, uint32_t const indexCount, uint32_t const instanceCount) {
     ASSERT_PRECONDITION(mContext->currentRenderPassEncoder != nullptr,
             "Attempted to draw without a valid command encoder.");
     auto primitive = handle_cast<MetalRenderPrimitive>(rph);
@@ -1826,10 +1815,10 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(mContext);
     id<MTLBuffer> metalIndexBuffer = indexBuffer->buffer.getGpuBufferForDraw(cmdBuffer);
     [mContext->currentRenderPassEncoder drawIndexedPrimitives:getMetalPrimitiveType(primitive->type)
-                                                   indexCount:primitive->count
+                                                   indexCount:indexCount
                                                     indexType:getIndexType(indexBuffer->elementSize)
                                                   indexBuffer:metalIndexBuffer
-                                            indexBufferOffset:primitive->offset
+                                            indexBufferOffset:indexOffset * primitive->indexBuffer->elementSize
                                                 instanceCount:instanceCount];
 }
 

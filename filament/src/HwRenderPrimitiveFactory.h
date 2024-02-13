@@ -26,8 +26,10 @@
 
 #include <tsl/robin_map.h>
 
+#include <functional>
 #include <set>
 
+#include <stddef.h>
 #include <stdint.h>
 
 namespace filament {
@@ -50,11 +52,7 @@ public:
     backend::RenderPrimitiveHandle create(backend::DriverApi& driver,
             backend::VertexBufferHandle vbh,
             backend::IndexBufferHandle ibh,
-            backend::PrimitiveType type,
-            uint32_t offset,
-            uint32_t minIndex,
-            uint32_t maxIndex,
-            uint32_t count) noexcept;
+            backend::PrimitiveType type) noexcept;
 
     void destroy(backend::DriverApi& driver,
             backend::RenderPrimitiveHandle rph) noexcept;
@@ -63,8 +61,6 @@ private:
     struct Key { // 20 bytes
         backend::VertexBufferHandle vbh;            // 4
         backend::IndexBufferHandle ibh;             // 4
-        uint32_t offset;                            // 4
-        uint32_t count;                             // 4
         backend::PrimitiveType type;                // 4
     };
 

@@ -104,7 +104,7 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
 
         // Render a triangle.
         getDriverApi().beginRenderPass(defaultRenderTarget, params);
-        getDriverApi().draw(state, triangle.getRenderPrimitive(), 1);
+        getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
         getDriverApi().endRenderPass();
 
         getDriverApi().flush();

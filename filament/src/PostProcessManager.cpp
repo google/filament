@@ -392,7 +392,7 @@ void PostProcessManager::render(FrameGraphResources::RenderPassInfo const& out,
     FEngine const& engine = mEngine;
     Handle<HwRenderPrimitive> const fullScreenQuad = engine.getFullScreenRenderPrimitive();
     driver.beginRenderPass(out.target, out.params);
-    driver.draw(pipeline, fullScreenQuad, 1);
+    driver.draw(pipeline, fullScreenQuad, 0, 3, 1);
     driver.endRenderPass();
 }
 
@@ -2300,7 +2300,7 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
             PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE);
 
     driver.nextSubpass();
-    driver.draw(material.getPipelineState(mEngine, variant), fullScreenRenderPrimitive, 1);
+    driver.draw(material.getPipelineState(mEngine, variant), fullScreenRenderPrimitive, 0, 3, 1);
 }
 
 void PostProcessManager::customResolvePrepareSubpass(DriverApi& driver, CustomResolveOp op) noexcept {
@@ -2319,7 +2319,7 @@ void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
     FMaterialInstance* mi = material.getMaterialInstance(mEngine);
     mi->use(driver);
     driver.nextSubpass();
-    driver.draw(material.getPipelineState(mEngine), fullScreenRenderPrimitive, 1);
+    driver.draw(material.getPipelineState(mEngine), fullScreenRenderPrimitive, 0, 3, 1);
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::customResolveUncompressPass(FrameGraph& fg,
@@ -2764,7 +2764,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                 }
                 PipelineState const pipeline(material.getPipelineState(mEngine, variant));
                 driver.beginRenderPass(out.target, out.params);
-                driver.draw(pipeline, mEngine.getFullScreenRenderPrimitive(), 1);
+                driver.draw(pipeline, mEngine.getFullScreenRenderPrimitive(), 0, 3, 1);
                 if (colorGradingConfig.asSubpass) {
                     colorGradingSubpass(driver, colorGradingConfig);
                 }
@@ -2988,8 +2988,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
                         enableTranslucentBlending(pipeline1);
                     }
                     driver.beginRenderPass(out.target, out.params);
-                    driver.draw(pipeline0, fullScreenRenderPrimitive, 1);
-                    driver.draw(pipeline1, fullScreenRenderPrimitive, 1);
+                    driver.draw(pipeline0, fullScreenRenderPrimitive, 0, 3, 1);
+                    driver.draw(pipeline1, fullScreenRenderPrimitive, 0, 3, 1);
                     driver.endRenderPass();
                 } else {
                     PipelineState pipeline(easuMaterial->getPipelineState(mEngine));
@@ -2997,7 +2997,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
                         enableTranslucentBlending(pipeline);
                     }
                     driver.beginRenderPass(out.target, out.params);
-                    driver.draw(pipeline, fullScreenRenderPrimitive, 1);
+                    driver.draw(pipeline, fullScreenRenderPrimitive, 0, 3, 1);
                     driver.endRenderPass();
                 }
             });

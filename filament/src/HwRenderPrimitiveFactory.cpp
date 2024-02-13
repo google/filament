@@ -27,15 +27,7 @@ bool operator<(HwRenderPrimitiveFactory::Key const& lhs,
         HwRenderPrimitiveFactory::Key const& rhs) noexcept {
     if (lhs.vbh == rhs.vbh) {
         if (lhs.ibh == rhs.ibh) {
-            if (lhs.offset == rhs.offset) {
-                if (lhs.count == rhs.count) {
-                    return lhs.type < rhs.type;
-                } else {
-                    return lhs.count < rhs.count;
-                }
-            } else {
-                return lhs.offset < rhs.offset;
-            }
+            return lhs.type < rhs.type;
         } else {
             return lhs.ibh < rhs.ibh;
         }
@@ -69,17 +61,16 @@ HwRenderPrimitiveFactory::HwRenderPrimitiveFactory()
 
 HwRenderPrimitiveFactory::~HwRenderPrimitiveFactory() noexcept = default;
 
-void HwRenderPrimitiveFactory::terminate(DriverApi& driver) noexcept {
+void HwRenderPrimitiveFactory::terminate(DriverApi&) noexcept {
     assert_invariant(mMap.empty());
     assert_invariant(mSet.empty());
 }
 
 RenderPrimitiveHandle HwRenderPrimitiveFactory::create(DriverApi& driver,
         VertexBufferHandle vbh, IndexBufferHandle ibh,
-        PrimitiveType type, uint32_t offset, uint32_t minIndex, uint32_t maxIndex,
-        uint32_t count) noexcept {
+        PrimitiveType type) noexcept {
 
-    const Key key = { vbh, ibh, offset, count, type };
+    const Key key = { vbh, ibh, type };
 
     // see if we already have seen this RenderPrimitive
     auto pos = mSet.find(key);
@@ -87,8 +78,7 @@ RenderPrimitiveHandle HwRenderPrimitiveFactory::create(DriverApi& driver,
     // the common case is that we've never seen it (i.e.: no reuse)
     if (UTILS_LIKELY(pos == mSet.end())) {
         // create the backend object
-        auto handle = driver.createRenderPrimitive(vbh, ibh,
-                type, offset, minIndex, maxIndex, count);
+        auto handle = driver.createRenderPrimitive(vbh, ibh, type);
         // insert key/handle in our set with a refcount of 1
         // IMPORTANT: std::set<> doesn't invalidate iterators in insert/erase
         auto [ipos, _] = mSet.insert({ key, handle, 1 });

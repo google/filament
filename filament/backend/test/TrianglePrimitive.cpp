@@ -60,7 +60,7 @@ TrianglePrimitive::TrianglePrimitive(filament::backend::DriverApi& driverApi,
     mDriverApi.updateIndexBuffer(mIndexBuffer, std::move(indexBufferDesc), 0);
 
     mRenderPrimitive = mDriverApi.createRenderPrimitive(
-            mVertexBuffer, mIndexBuffer, PrimitiveType::TRIANGLES, 0, 0, 2, 3);
+            mVertexBuffer, mIndexBuffer, PrimitiveType::TRIANGLES);
 }
 
 void TrianglePrimitive::updateVertices(const filament::math::float2 vertices[3]) noexcept {

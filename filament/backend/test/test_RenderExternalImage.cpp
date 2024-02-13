@@ -120,7 +120,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     // Render a triangle.
     getDriverApi().beginRenderPass(defaultRenderTarget, params);
-    getDriverApi().draw(state, triangle.getRenderPrimitive(), 1);
+    getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
     getDriverApi().endRenderPass();
 
     getDriverApi().flush();
@@ -242,7 +242,7 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     // Render a triangle.
     getDriverApi().beginRenderPass(defaultRenderTarget, params);
-    getDriverApi().draw(state, triangle.getRenderPrimitive(), 1);
+    getDriverApi().draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
     getDriverApi().endRenderPass();
 
     getDriverApi().flush();
