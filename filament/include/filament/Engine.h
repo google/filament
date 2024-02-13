@@ -178,6 +178,7 @@ public:
     using Backend = backend::Backend;
     using DriverConfig = backend::Platform::DriverConfig;
     using FeatureLevel = backend::FeatureLevel;
+    using StereoscopicType = backend::StereoscopicType;
 
     /**
      * Config is used to define the memory footprint used by the engine, such as the
@@ -296,6 +297,17 @@ public:
          * Currently only respected by the Metal backend.
          */
         size_t textureUseAfterFreePoolSize = 0;
+
+        /*
+         * The type of technique for stereoscopic rendering.
+         *
+         * This setting determines the algorithm used when stereoscopic rendering is enabled. This
+         * decision applies the entire Engine during the lifetime of the Engine.
+         * E.g., multiple Views must use the same stereoscopic type.
+         *
+         * @see View::setStereoscopicOptions
+         */
+        StereoscopicType stereoscopicType = StereoscopicType::INSTANCED;
 
         /*
          * The number of eyes to render when stereoscopic rendering is enabled. Supported values are

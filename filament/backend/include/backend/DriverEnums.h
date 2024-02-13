@@ -1212,6 +1212,14 @@ enum class Workaround : uint16_t {
     DISABLE_THREAD_AFFINITY
 };
 
+//! The type of technique for stereoscopic rendering
+enum class StereoscopicType : uint8_t {
+    // Stereoscopic rendering is performed using instanced rendering technique.
+    INSTANCED,
+    // Stereoscopic rendering is performed using the multiview feature from the graphics backend.
+    MULTIVIEW,
+};
+
 } // namespace filament::backend
 
 template<> struct utils::EnableBitMaskOperators<filament::backend::ShaderStageFlags>
