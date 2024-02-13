@@ -106,7 +106,7 @@ public:
          * @param texture The associated texture object.
          * @return A reference to this Builder for chaining calls.
          */
-        Builder& texture(AttachmentPoint attachment, Texture* texture) noexcept;
+        Builder& texture(AttachmentPoint attachment, Texture* UTILS_NULLABLE texture) noexcept;
 
         /**
          * Sets the mipmap level for a given attachment point.
@@ -138,10 +138,9 @@ public:
         /**
          * Creates the RenderTarget object and returns a pointer to it.
          *
-         * @return pointer to the newly created object or nullptr if exceptions are disabled and
-         *         an error occurred.
+         * @return pointer to the newly created object.
          */
-        RenderTarget* build(Engine& engine);
+        RenderTarget* UTILS_NONNULL build(Engine& engine);
 
     private:
         friend class FRenderTarget;
@@ -152,7 +151,7 @@ public:
      * @param attachment Attachment point
      * @return A Texture object or nullptr if no texture is set for this attachment point
      */
-    Texture* getTexture(AttachmentPoint attachment) const noexcept;
+    Texture* UTILS_NULLABLE getTexture(AttachmentPoint attachment) const noexcept;
 
     /**
      * Returns the mipmap level set on the given attachment point

@@ -100,7 +100,7 @@ public:
 
     // for debugging only
     FCamera const* getDirectionalLightCamera() const noexcept {
-        return &getShadowMap(0).getDebugCamera();
+        return getShadowMap(0).getDebugCamera();
     }
 
 private:

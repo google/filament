@@ -204,14 +204,13 @@ public:
          *
          * @param engine Reference to the filament::Engine to associate this Texture with.
          *
-         * @return pointer to the newly created object or nullptr if exceptions are disabled and
-         *         an error occurred.
+         * @return pointer to the newly created object.
          *
          * @exception utils::PostConditionPanic if a runtime error occurred, such as running out of
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
          */
-        Texture* build(Engine& engine);
+        Texture* UTILS_NONNULL build(Engine& engine);
 
         /* no user serviceable parts below */
 
@@ -400,7 +399,7 @@ public:
      * @see Builder::sampler()
      *
      */
-    void setExternalImage(Engine& engine, void* image) noexcept;
+    void setExternalImage(Engine& engine, void* UTILS_NONNULL image) noexcept;
 
     /**
      * Specify the external image and plane to associate with this Texture. Typically the external
@@ -431,7 +430,7 @@ public:
      *                      kCVPixelFormatType_420YpCbCr8BiPlanarFullRange images. On platforms
      *                      other than iOS, this method is a no-op.
      */
-    void setExternalImage(Engine& engine, void* image, size_t plane) noexcept;
+    void setExternalImage(Engine& engine, void* UTILS_NONNULL image, size_t plane) noexcept;
 
     /**
      * Specify the external stream to associate with this Texture. Typically the external
@@ -450,7 +449,7 @@ public:
      * @see Builder::sampler(), Stream
      *
      */
-    void setExternalStream(Engine& engine, Stream* stream) noexcept;
+    void setExternalStream(Engine& engine, Stream* UTILS_NULLABLE stream) noexcept;
 
     /**
      * Generates all the mipmap levels automatically. This requires the texture to have a
@@ -500,7 +499,7 @@ public:
      */
     void generatePrefilterMipmap(Engine& engine,
             PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,
-            PrefilterOptions const* options = nullptr);
+            PrefilterOptions const* UTILS_NULLABLE options = nullptr);
 
 
     /** @deprecated */

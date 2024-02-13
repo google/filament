@@ -269,7 +269,7 @@ const char* FMaterialInstance::getName() const noexcept {
     // the instance's CString rather than calling empty(). This allows instances to override the
     // parent material's name with a blank string.
     if (mName.data() == nullptr) {
-        return mMaterial->getName().c_str();
+        return mMaterial->getName().c_str_safe();
     }
     return mName.c_str();
 }

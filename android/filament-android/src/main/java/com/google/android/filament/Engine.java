@@ -211,7 +211,8 @@ public class Engine {
             nSetBuilderConfig(mNativeBuilder, config.commandBufferSizeMB,
                     config.perRenderPassArenaSizeMB, config.driverHandleArenaSizeMB,
                     config.minCommandBufferSizeMB, config.perFrameCommandsSizeMB,
-                    config.jobSystemThreadCount, config.stereoscopicEyeCount);
+                    config.jobSystemThreadCount, config.stereoscopicEyeCount,
+                    config.resourceAllocatorCacheSizeMB, config.resourceAllocatorCacheMaxAge);
             return this;
         }
 
@@ -356,6 +357,18 @@ public class Engine {
          * @see Engine#getMaxStereoscopicEyes
          */
         public long stereoscopicEyeCount = 2;
+
+        /*
+         * Size in MiB of the frame graph texture cache. This should be adjusted based on the
+         * size of used render targets (typically the screen).
+         */
+        public long resourceAllocatorCacheSizeMB = 64;
+
+        /*
+         * This value determines for how many frames are texture entries kept in the cache.
+         * The default value of 30 corresponds to about half a second at 60 fps.
+         */
+        public long resourceAllocatorCacheMaxAge = 30;
     }
 
     private Engine(long nativeEngine, Config config) {
@@ -1227,7 +1240,8 @@ public class Engine {
     private static native void nSetBuilderConfig(long nativeBuilder, long commandBufferSizeMB,
             long perRenderPassArenaSizeMB, long driverHandleArenaSizeMB,
             long minCommandBufferSizeMB, long perFrameCommandsSizeMB, long jobSystemThreadCount,
-            long stereoscopicEyeCount);
+            long stereoscopicEyeCount,
+            long resourceAllocatorCacheSizeMB, long resourceAllocatorCacheMaxAge);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
     private static native long nBuilderBuild(long nativeBuilder);

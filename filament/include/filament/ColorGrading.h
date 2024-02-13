@@ -203,7 +203,7 @@ public:
          *
          * @return This Builder, for chaining calls
          */
-        Builder& toneMapper(const ToneMapper* toneMapper) noexcept;
+        Builder& toneMapper(ToneMapper const* UTILS_NULLABLE toneMapper) noexcept;
 
         /**
          * Selects the tone mapping operator to apply to the HDR color buffer as the last
@@ -473,10 +473,9 @@ public:
          *
          * @param engine Reference to the filament::Engine to associate this ColorGrading with.
          *
-         * @return pointer to the newly created object or nullptr if exceptions are disabled and
-         *         an error occurred.
+         * @return pointer to the newly created object.
          */
-        ColorGrading* build(Engine& engine);
+        ColorGrading* UTILS_NONNULL build(Engine& engine);
 
     private:
         friend class FColorGrading;
