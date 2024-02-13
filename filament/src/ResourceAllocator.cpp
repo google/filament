@@ -109,7 +109,7 @@ size_t ResourceAllocator::TextureKey::getSize() const noexcept {
 }
 
 ResourceAllocator::ResourceAllocator(Engine::Config const& config, DriverApi& driverApi) noexcept
-        : mCacheCapacity(config.resourceAllocatorCacheSizeMB),
+        : mCacheCapacity(config.resourceAllocatorCacheSizeMB << 20),
           mCacheMaxAge(config.resourceAllocatorCacheMaxAge),
           mBackend(driverApi) {
 }
