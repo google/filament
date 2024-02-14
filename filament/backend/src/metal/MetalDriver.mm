@@ -754,8 +754,15 @@ bool MetalDriver::isSRGBSwapChainSupported() {
     return false;
 }
 
-bool MetalDriver::isStereoSupported() {
-    return true;
+bool MetalDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
+    switch (stereoscopicType) {
+    case backend::StereoscopicType::INSTANCED:
+        return true;
+    case backend::StereoscopicType::MULTIVIEW:
+        // TODO: implement multiview feature in Metal.
+    default:
+        return false;
+    }
 }
 
 bool MetalDriver::isParallelShaderCompileSupported() {
