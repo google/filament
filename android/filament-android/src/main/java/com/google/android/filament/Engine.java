@@ -159,6 +159,16 @@ public class Engine {
     };
 
     /**
+     * The type of technique for stereoscopic rendering
+     */
+    public enum StereoscopicType {
+        /** Stereoscopic rendering is performed using instanced rendering technique. */
+        INSTANCED,
+        /** Stereoscopic rendering is performed using the multiview feature from the graphics backend. */
+        MULTIVIEW,
+    };
+
+    /**
      * Constructs <code>Engine</code> objects using a builder pattern.
      */
     public static class Builder {
@@ -211,7 +221,8 @@ public class Engine {
             nSetBuilderConfig(mNativeBuilder, config.commandBufferSizeMB,
                     config.perRenderPassArenaSizeMB, config.driverHandleArenaSizeMB,
                     config.minCommandBufferSizeMB, config.perFrameCommandsSizeMB,
-                    config.jobSystemThreadCount, config.stereoscopicEyeCount,
+                    config.jobSystemThreadCount,
+                    config.stereoscopicType.ordinal(), config.stereoscopicEyeCount,
                     config.resourceAllocatorCacheSizeMB, config.resourceAllocatorCacheMaxAge);
             return this;
         }
@@ -348,6 +359,19 @@ public class Engine {
          * the number of threads to use.
          */
         public long jobSystemThreadCount = 0;
+
+        /**
+         * The type of technique for stereoscopic rendering.
+         *
+         * This setting determines the algorithm used when stereoscopic rendering is enabled. This
+         * decision applies to the entire Engine for the lifetime of the Engine. E.g., multiple
+         * Views created from the Engine must use the same stereoscopic type.
+         *
+         * Each view can enable stereoscopic rendering via the StereoscopicOptions::enable flag.
+         *
+         * @see View#setStereoscopicOptions
+         */
+        public StereoscopicType stereoscopicType = StereoscopicType.INSTANCED;
 
         /**
          * The number of eyes to render when stereoscopic rendering is enabled. Supported values are
@@ -1240,7 +1264,7 @@ public class Engine {
     private static native void nSetBuilderConfig(long nativeBuilder, long commandBufferSizeMB,
             long perRenderPassArenaSizeMB, long driverHandleArenaSizeMB,
             long minCommandBufferSizeMB, long perFrameCommandsSizeMB, long jobSystemThreadCount,
-            long stereoscopicEyeCount,
+            int stereoscopicType, long stereoscopicEyeCount,
             long resourceAllocatorCacheSizeMB, long resourceAllocatorCacheMaxAge);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);

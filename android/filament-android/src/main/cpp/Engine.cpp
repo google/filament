@@ -484,7 +484,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
 extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBuilderConfig(JNIEnv*,
         jclass, jlong nativeBuilder, jlong commandBufferSizeMB, jlong perRenderPassArenaSizeMB,
         jlong driverHandleArenaSizeMB, jlong minCommandBufferSizeMB, jlong perFrameCommandsSizeMB,
-        jlong jobSystemThreadCount, jlong stereoscopicEyeCount,
+        jlong jobSystemThreadCount, jint stereoscopicType, jlong stereoscopicEyeCount,
         jlong resourceAllocatorCacheSizeMB, jlong resourceAllocatorCacheMaxAge) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     Engine::Config config = {
@@ -494,6 +494,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
             .minCommandBufferSizeMB = (uint32_t) minCommandBufferSizeMB,
             .perFrameCommandsSizeMB = (uint32_t) perFrameCommandsSizeMB,
             .jobSystemThreadCount = (uint32_t) jobSystemThreadCount,
+            .stereoscopicType = (Engine::StereoscopicType) stereoscopicType,
             .stereoscopicEyeCount = (uint8_t) stereoscopicEyeCount,
             .resourceAllocatorCacheSizeMB = (uint32_t) resourceAllocatorCacheSizeMB,
             .resourceAllocatorCacheMaxAge = (uint8_t) resourceAllocatorCacheMaxAge,
