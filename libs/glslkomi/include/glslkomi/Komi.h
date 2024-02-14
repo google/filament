@@ -963,29 +963,57 @@ enum class RValueOperator : uint16_t {
     FetchMicroTriangleVertexBarycentricNV,
 };
 
+// The order of the fields in this enum is very important due to a hack in glslangTypeToType.
 enum class BuiltInType : uint8_t {
     Void,
-    Float,
-    Double,
-    Float16,
-    Int8,
-    Uint8,
-    Int16,
-    Uint16,
-    Int,
-    Uint,
-    Int64,
-    Uint64,
-    Bool,
-    AtomicUint,
-    Sampler,
     Struct,
     Block,
-    AccStruct,
-    Reference,
-    RayQuery,
-    HitObjectNV,
-    Coopmat,
+    Sampler2DArray,
+    // Float
+    Float,
+    Vec2,
+    Vec3,
+    Vec4,
+    Mat2,
+    Mat2x3,
+    Mat2x4,
+    Mat3x2,
+    Mat3,
+    Mat3x4,
+    Mat4x2,
+    Mat4x3,
+    Mat4,
+    // Double
+    Double,
+    Dvec2,
+    Dvec3,
+    Dvec4,
+    Dmat2,
+    Dmat2x3,
+    Dmat2x4,
+    Dmat3x2,
+    Dmat3,
+    Dmat3x4,
+    Dmat4x2,
+    Dmat4x3,
+    Dmat4,
+    // Int
+    Int,
+    IVec2,
+    IVec3,
+    IVec4,
+    // UInt
+    Uint,
+    Uvec2,
+    Uvec3,
+    Uvec4,
+    // Bool
+    Bool,
+    Bvec2,
+    Bvec3,
+    Bvec4,
+    // AtomicUInt
+    AtomicUint,
 };
 
 // // Workaround for missing std::expected.
@@ -1017,16 +1045,15 @@ void hashCombine(std::size_t& seed, const T& v, const Rest&... rest) {
     (hashCombine(seed, rest), ...);
 }
 
+// TODO: qualifiers
 struct Type {
-    BuiltInType builtInType;
-    int cols;
-    int rows;
+    std::string_view name;
+    std::string_view precision;
     std::vector<std::size_t> arraySizes;
 
     bool operator==(const Type& o) const {
-        return builtInType == o.builtInType
-                && cols == o.cols
-                && rows == o.rows
+        return name == o.name
+                && precision == o.precision
                 && arraySizes == o.arraySizes;
     }
 };
@@ -1039,7 +1066,6 @@ struct LValue {
     }
 };
 
-// TODO: type
 struct FunctionCallRValue {
     FunctionId function;
     std::vector<ValueId> args;
@@ -1050,7 +1076,6 @@ struct FunctionCallRValue {
     }
 };
 
-// TODO: type
 struct OperatorRValue {
     RValueOperator op;
     std::vector<ValueId> args;
@@ -1061,7 +1086,7 @@ struct OperatorRValue {
     }
 };
 
-// TODO: type, value
+// TODO: value
 struct LiteralRValue {
     bool operator==(const LiteralRValue& o) const {
         return true;
@@ -1073,15 +1098,28 @@ using RValue = std::variant<
     OperatorRValue,
     LiteralRValue>;
 
-// TODO: type, argument qualifiers
+// TODO: annotation
+struct FunctionParameter {
+    LValueId name;
+    TypeId type;
+
+    bool operator==(const FunctionParameter& o) const {
+        return name == o.name
+                && type == o.type;
+    }
+};
+
+// TODO: type, local variables
 struct FunctionDefinition {
     FunctionId name;
-    std::vector<TypeId> argTypes;
+    TypeId returnType;
+    std::vector<FunctionParameter> parameters;
     std::optional<StatementBlockId> body;
 
     bool operator==(const FunctionDefinition& o) const {
         return name == o.name
-                && argTypes == o.argTypes
+                && returnType == o.returnType
+                && parameters == o.parameters
                 && body == o.body;
     }
 };
@@ -1158,7 +1196,7 @@ template<>
 struct ::std::hash<glslkomi::Type> {
     std::size_t operator()(const glslkomi::Type& o) const {
         std::size_t result = 0;
-        glslkomi::hashCombine(result, o.builtInType, o.cols, o.rows, o.arraySizes.size());
+        glslkomi::hashCombine(result, o.name, o.precision, o.arraySizes.size());
         for (const auto& size : o.arraySizes) {
             glslkomi::hashCombine(result, size);
         }
@@ -1208,12 +1246,21 @@ struct ::std::hash<glslkomi::LiteralRValue> {
 };
 
 template<>
+struct ::std::hash<glslkomi::FunctionParameter> {
+    std::size_t operator()(const glslkomi::FunctionParameter& o) const {
+        std::size_t result = 0;
+        glslkomi::hashCombine(result, o.name, o.type);
+        return result;
+    }
+};
+
+template<>
 struct ::std::hash<glslkomi::FunctionDefinition> {
     std::size_t operator()(const glslkomi::FunctionDefinition& o) const {
         std::size_t result = 0;
-        glslkomi::hashCombine(result, o.name, o.body, o.argTypes.size());
-        for (const auto& arg : o.argTypes) {
-            glslkomi::hashCombine(result, arg);
+        glslkomi::hashCombine(result, o.name, o.returnType, o.body, o.parameters.size());
+        for (const auto& argument : o.parameters) {
+            glslkomi::hashCombine(result, argument);
         }
         return result;
     }

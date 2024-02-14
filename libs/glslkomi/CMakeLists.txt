@@ -8,12 +8,14 @@ set(PUBLIC_HDR_DIR include)
 # Sources and headers
 # ==================================================================================================
 set(HDRS
-        include/glslkomi/Komi.h)
+        include/glslkomi/Komi.h
+        include/glslkomi/Debug.h)
 
 set(PRIVATE_HDRS)
 
 set(SRCS
-        src/Komi.cpp)
+        src/Komi.cpp
+        src/Debug.cpp)
 
 # ==================================================================================================
 # Include and target definitions
