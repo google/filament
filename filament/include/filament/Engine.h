@@ -302,8 +302,10 @@ public:
          * The type of technique for stereoscopic rendering.
          *
          * This setting determines the algorithm used when stereoscopic rendering is enabled. This
-         * decision applies the entire Engine during the lifetime of the Engine.
-         * E.g., multiple Views must use the same stereoscopic type.
+         * decision applies the entire Engine during the lifetime of the Engine. E.g., multiple
+         * Views created from the Engine must use the same stereoscopic type.
+         *
+         * Each view can enable stereoscopic rendering via the StereoscopicOptions::enable flag.
          *
          * @see View::setStereoscopicOptions
          */
