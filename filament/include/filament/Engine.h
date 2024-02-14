@@ -590,12 +590,12 @@ public:
     size_t getMaxAutomaticInstances() const noexcept;
 
     /**
-     * Queries the device and platform for instanced stereo rendering support.
+     * Queries the device and platform for support of the given stereoscopic type.
      *
-     * @return true if stereo rendering is supported, false otherwise
+     * @return true if the given stereo rendering is supported, false otherwise
      * @see View::setStereoscopicOptions
      */
-    bool isStereoSupported() const noexcept;
+    bool isStereoSupported(StereoscopicType stereoscopicType) const noexcept;
 
     /**
      * Retrieves the configuration settings of this Engine.

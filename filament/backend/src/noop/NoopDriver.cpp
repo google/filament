@@ -174,7 +174,7 @@ bool NoopDriver::isSRGBSwapChainSupported() {
     return false;
 }
 
-bool NoopDriver::isStereoSupported() {
+bool NoopDriver::isStereoSupported(backend::StereoscopicType) {
     return false;
 }
 
