@@ -167,11 +167,14 @@ DECL_DRIVER_API_0(resetState)
  * -----------------------
  */
 
-DECL_DRIVER_API_R_N(backend::VertexBufferHandle, createVertexBuffer,
+DECL_DRIVER_API_R_N(backend::VertexBufferInfoHandle, createVertexBufferInfo,
         uint8_t, bufferCount,
         uint8_t, attributeCount,
-        uint32_t, vertexCount,
         backend::AttributeArray, attributes)
+
+DECL_DRIVER_API_R_N(backend::VertexBufferHandle, createVertexBuffer,
+        uint32_t, vertexCount,
+        backend::VertexBufferInfoHandle, vbih)
 
 DECL_DRIVER_API_R_N(backend::IndexBufferHandle, createIndexBuffer,
         backend::ElementType, elementType,
@@ -260,6 +263,7 @@ DECL_DRIVER_API_R_0(backend::TimerQueryHandle, createTimerQuery)
  */
 
 DECL_DRIVER_API_N(destroyVertexBuffer,    backend::VertexBufferHandle, vbh)
+DECL_DRIVER_API_N(destroyVertexBufferInfo,backend::VertexBufferInfoHandle, vbih)
 DECL_DRIVER_API_N(destroyIndexBuffer,     backend::IndexBufferHandle, ibh)
 DECL_DRIVER_API_N(destroyBufferObject,    backend::BufferObjectHandle, ibh)
 DECL_DRIVER_API_N(destroyRenderPrimitive, backend::RenderPrimitiveHandle, rph)

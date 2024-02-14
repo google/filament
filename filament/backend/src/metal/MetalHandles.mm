@@ -340,9 +340,16 @@ void MetalBufferObject::updateBufferUnsynchronized(void* data, size_t size, uint
     buffer.copyIntoBufferUnsynchronized(data, size, byteOffset);
 }
 
-MetalVertexBuffer::MetalVertexBuffer(MetalContext& context, uint8_t bufferCount,
-            uint8_t attributeCount, uint32_t vertexCount, AttributeArray const& attributes)
-    : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes), buffers(bufferCount, nullptr) {}
+MetalVertexBufferInfo::MetalVertexBufferInfo(MetalContext& context, uint8_t bufferCount,
+        uint8_t attributeCount, AttributeArray const& attributes)
+        : HwVertexBufferInfo(bufferCount, attributeCount),
+          attributes(attributes) {
+}
+
+MetalVertexBuffer::MetalVertexBuffer(MetalContext& context,
+        uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih)
+    : HwVertexBuffer(vertexCount), vbih(vbih), buffers(bufferCount, nullptr) {
+}
 
 MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uint8_t elementSize,
         uint32_t indexCount) : HwIndexBuffer(elementSize, indexCount),
@@ -351,12 +358,12 @@ MetalIndexBuffer::MetalIndexBuffer(MetalContext& context, BufferUsage usage, uin
 MetalRenderPrimitive::MetalRenderPrimitive()
     : bufferMapping(utils::FixedCapacityVector<Entry>::with_capacity(MAX_VERTEX_BUFFER_COUNT)) {}
 
-void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer*
-        indexBuffer) {
+void MetalRenderPrimitive::setBuffers(MetalVertexBufferInfo const* const vbi,
+        MetalVertexBuffer* vertexBuffer, MetalIndexBuffer* indexBuffer) {
     this->vertexBuffer = vertexBuffer;
     this->indexBuffer = indexBuffer;
 
-    const size_t attributeCount = vertexBuffer->attributes.size();
+    const size_t attributeCount = vbi->attributes.size();
 
     auto& mapping = bufferMapping;
     mapping.clear();
@@ -397,7 +404,7 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
     };
 
     for (uint32_t attributeIndex = 0; attributeIndex < attributeCount; attributeIndex++) {
-        const auto& attribute = vertexBuffer->attributes[attributeIndex];
+        const auto& attribute = vbi->attributes[attributeIndex];
 
         // If the attribute is unused, bind it to the zero buffer. It's a Metal error for a shader
         // to read from missing vertex attributes.

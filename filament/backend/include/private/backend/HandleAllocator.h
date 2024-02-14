@@ -37,7 +37,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define HandleAllocatorGL  HandleAllocator<16,  64, 208>    // ~3640 / pool / MiB
+#define HandleAllocatorGL  HandleAllocator<24,  64, 136>    // ~3640 / pool / MiB
 #define HandleAllocatorVK  HandleAllocator<80, 176, 320>    // ~1820 / pool / MiB
 #define HandleAllocatorMTL HandleAllocator<48, 160, 592>    // ~1310 / pool / MiB
 

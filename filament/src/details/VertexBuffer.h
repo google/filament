@@ -40,6 +40,7 @@ class FEngine;
 
 class FVertexBuffer : public VertexBuffer {
 public:
+    using VertexBufferInfoHandle = backend::VertexBufferInfoHandle;
     using VertexBufferHandle = backend::VertexBufferHandle;
     using BufferObjectHandle = backend::BufferObjectHandle;
 
@@ -74,6 +75,7 @@ private:
         AttributeData() : backend::Attribute{ .type = backend::ElementType::FLOAT4 } {}
     };
 
+    VertexBufferInfoHandle mVertexBufferInfoHandle;
     VertexBufferHandle mHandle;
     std::array<AttributeData, backend::MAX_VERTEX_ATTRIBUTE_COUNT> mAttributes;
     std::array<BufferObjectHandle, backend::MAX_VERTEX_BUFFER_COUNT> mBufferObjects;

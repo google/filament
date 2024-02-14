@@ -40,6 +40,7 @@ public:
 
     using PrimitiveHandle = filament::backend::Handle<filament::backend::HwRenderPrimitive>;
     using BufferObjectHandle = filament::backend::Handle<filament::backend::HwBufferObject>;
+    using VertexInfoHandle = filament::backend::Handle<filament::backend::HwVertexBufferInfo>;
     using VertexHandle = filament::backend::Handle<filament::backend::HwVertexBuffer>;
     using IndexHandle = filament::backend::Handle<filament::backend::HwIndexBuffer>;
 
@@ -63,6 +64,7 @@ private:
 
     PrimitiveHandle mRenderPrimitive;
     BufferObjectHandle mBufferObject;
+    VertexInfoHandle mVertexBufferInfo;
     VertexHandle mVertexBuffer;
     IndexHandle mIndexBuffer;
 

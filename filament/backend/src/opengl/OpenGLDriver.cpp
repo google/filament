@@ -94,22 +94,24 @@ Driver* OpenGLDriver::create(OpenGLPlatform* const platform,
     //    GLSamplerGroup            :  16       few
     //    GLSwapChain               :  16       few
     //    GLTimerQuery              :  16       few
-    // -- less than or equal 16 bytes
+    //    GLRenderPrimitive         :  20       many
     //    GLFence                   :  24       few
+    // -- less than or equal 24 bytes
     //    GLBufferObject            :  32       many
-    //    GLRenderPrimitive         :  40       many
     //    OpenGLProgram             :  56       moderate
     //    GLTexture                 :  64       moderate
     // -- less than or equal 64 bytes
+    //    GLVertexBuffer            :  76       moderate
     //    GLStream                  : 104       few
     //    GLRenderTarget            : 112       few
-    //    GLVertexBuffer            : 200       moderate
-    // -- less than or equal to 208 bytes
+    //    GLVertexBufferInfo        : 132       moderate
+    // -- less than or equal to 136 bytes
 
     slog.d
            << "\nGLSwapChain: " << sizeof(GLSwapChain)
            << "\nGLBufferObject: " << sizeof(GLBufferObject)
            << "\nGLVertexBuffer: " << sizeof(GLVertexBuffer)
+           << "\nGLVertexBufferInfo: " << sizeof(GLVertexBufferInfo)
            << "\nGLIndexBuffer: " << sizeof(GLIndexBuffer)
            << "\nGLSamplerGroup: " << sizeof(GLSamplerGroup)
            << "\nGLRenderPrimitive: " << sizeof(GLRenderPrimitive)
@@ -386,6 +388,10 @@ void OpenGLDriver::setStencilState(StencilState ss) noexcept {
 // Creating driver objects
 // ------------------------------------------------------------------------------------------------
 
+Handle<HwVertexBufferInfo> OpenGLDriver::createVertexBufferInfoS() noexcept {
+    return initHandle<GLVertexBufferInfo>();
+}
+
 Handle<HwVertexBuffer> OpenGLDriver::createVertexBufferS() noexcept {
     return initHandle<GLVertexBuffer>();
 }
@@ -446,14 +452,21 @@ Handle<HwTimerQuery> OpenGLDriver::createTimerQueryS() noexcept {
     return initHandle<GLTimerQuery>();
 }
 
-void OpenGLDriver::createVertexBufferR(
-        Handle<HwVertexBuffer> vbh,
+void OpenGLDriver::createVertexBufferInfoR(
+        Handle<HwVertexBufferInfo> vbih,
         uint8_t bufferCount,
         uint8_t attributeCount,
-        uint32_t elementCount,
         AttributeArray attributes) {
     DEBUG_MARKER()
-    construct<GLVertexBuffer>(vbh, bufferCount, attributeCount, elementCount, attributes);
+    construct<GLVertexBufferInfo>(vbih, bufferCount, attributeCount, attributes);
+}
+
+void OpenGLDriver::createVertexBufferR(
+        Handle<HwVertexBuffer> vbh,
+        uint32_t vertexCount,
+        Handle<HwVertexBufferInfo> vbih) {
+    DEBUG_MARKER()
+    construct<GLVertexBuffer>(vbh, vertexCount, vbih);
 }
 
 void OpenGLDriver::createIndexBufferR(
@@ -506,7 +519,7 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
 
     auto& gl = mContext;
 
-    GLVertexBuffer const* const eb = handle_cast<const GLVertexBuffer*>(vbh);
+    GLVertexBuffer const* const vb = handle_cast<const GLVertexBuffer*>(vbh);
     GLIndexBuffer const* const ib = handle_cast<const GLIndexBuffer*>(ibh);
     assert_invariant(ib->elementSize == 2 || ib->elementSize == 4);
 
@@ -520,7 +533,7 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
     gl.bindVertexArray(&rp->gl);
 
     // update the VBO bindings in the VAO
-    updateVertexArrayObject(rp, eb);
+    updateVertexArrayObject(rp, vb);
 
     // this records the index buffer into the currently bound VAO
     gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
@@ -857,8 +870,10 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
         // that it's always reset in draw
     }
 
-    for (size_t i = 0, n = vb->attributes.size(); i < n; i++) {
-        const auto& attribute = vb->attributes[i];
+    GLVertexBufferInfo const* const vbi = handle_cast<const GLVertexBufferInfo*>(vb->vbih);
+
+    for (size_t i = 0, n = vbi->attributes.size(); i < n; i++) {
+        const auto& attribute = vbi->attributes[i];
         const uint8_t bi = attribute.buffer;
 
         // Invoking glVertexAttribPointer without a bound VBO is an invalid operation, so we must
@@ -1403,6 +1418,14 @@ void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
 // ------------------------------------------------------------------------------------------------
 // Destroying driver objects
 // ------------------------------------------------------------------------------------------------
+
+void OpenGLDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
+    DEBUG_MARKER()
+    if (vbih) {
+        GLVertexBufferInfo const* vbi = handle_cast<const GLVertexBufferInfo*>(vbih);
+        destruct(vbih, vbi);
+    }
+}
 
 void OpenGLDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     DEBUG_MARKER()

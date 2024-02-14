@@ -77,6 +77,9 @@ void NoopDriver::finish(int) {
 void NoopDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
+void NoopDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
+}
+
 void NoopDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
 }
 

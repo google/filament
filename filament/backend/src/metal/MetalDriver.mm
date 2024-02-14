@@ -279,10 +279,16 @@ void MetalDriver::finish(int) {
     [oneOffBuffer waitUntilCompleted];
 }
 
-void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
-        uint8_t attributeCount, uint32_t vertexCount, AttributeArray attributes) {
-    construct_handle<MetalVertexBuffer>(vbh, *mContext, bufferCount,
-            attributeCount, vertexCount, attributes);
+void MetalDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vbih, uint8_t bufferCount,
+        uint8_t attributeCount, AttributeArray attributes) {
+    construct_handle<MetalVertexBufferInfo>(vbih, *mContext,
+            bufferCount, attributeCount, attributes);
+}
+
+void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh,
+        uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih) {
+    MetalVertexBufferInfo const* const vbi = handle_cast<const MetalVertexBufferInfo>(vbih);
+    construct_handle<MetalVertexBuffer>(vbh, *mContext, vertexCount, vbi->bufferCount, vbih);
 }
 
 void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
@@ -438,6 +444,10 @@ void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     // nothing to do, timer query was constructed in createTimerQueryS
 }
 
+Handle<HwVertexBufferInfo> MetalDriver::createVertexBufferInfoS() noexcept {
+    return alloc_handle<MetalVertexBufferInfo>();
+}
+
 Handle<HwVertexBuffer> MetalDriver::createVertexBufferS() noexcept {
     return alloc_handle<MetalVertexBuffer>();
 }
@@ -500,6 +510,12 @@ Handle<HwTimerQuery> MetalDriver::createTimerQueryS() noexcept {
     // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
     // before createTimerQueryR is executed.
     return alloc_and_construct_handle<MetalTimerQuery, HwTimerQuery>();
+}
+
+void MetalDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
+    if (vbih) {
+        destruct_handle<MetalVertexBufferInfo>(vbih);
+    }
 }
 
 void MetalDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
@@ -1072,7 +1088,8 @@ void MetalDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph, Primit
     auto primitive = handle_cast<MetalRenderPrimitive>(rph);
     auto vertexBuffer = handle_cast<MetalVertexBuffer>(vbh);
     auto indexBuffer = handle_cast<MetalIndexBuffer>(ibh);
-    primitive->setBuffers(vertexBuffer, indexBuffer);
+    MetalVertexBufferInfo const* const vbi = handle_cast<MetalVertexBufferInfo>(vertexBuffer->vbih);
+    primitive->setBuffers(vbi, vertexBuffer, indexBuffer);
     primitive->type = pt;
 }
 
