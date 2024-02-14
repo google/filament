@@ -41,6 +41,7 @@
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/Texture.h"
+#include "details/VertexBuffer.h"
 
 #include "generated/resources/materials.h"
 
@@ -190,8 +191,9 @@ std::pair<backend::PipelineState, backend::Viewport>
     FMaterial* const material = getMaterial(engine);
     material->prepareProgram(Variant{ variantKey });
     return {{
-                    .program = material->getProgram(Variant{ variantKey }),
-                    .rasterState = material->getRasterState() },
+            .program = material->getProgram(Variant{ variantKey }),
+            .vertexBufferInfo = engine.getFullScreenVertexBuffer()->getVertexBufferInfoHandle(),
+            .rasterState = material->getRasterState() },
             material->getDefaultInstance()->getScissor() };
 }
 

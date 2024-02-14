@@ -493,12 +493,24 @@ DECL_DRIVER_API_N(blit,
         math::uint2, srcOrigin,
         math::uint2, size)
 
+DECL_DRIVER_API_N(bindPipeline,
+        backend::PipelineState, state)
+
+DECL_DRIVER_API_N(bindRenderPrimitive,
+        backend::RenderPrimitiveHandle, rph)
+
+DECL_DRIVER_API_N(draw2,
+        uint32_t, indexOffset,
+        uint32_t, indexCount,
+        uint32_t, instanceCount)
+
 DECL_DRIVER_API_N(draw,
         backend::PipelineState, state,
         backend::RenderPrimitiveHandle, rph,
         uint32_t, indexOffset,
         uint32_t, indexCount,
         uint32_t, instanceCount)
+
 
 DECL_DRIVER_API_N(dispatchCompute,
         backend::ProgramHandle, program,
