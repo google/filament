@@ -149,7 +149,21 @@ struct MetalVertexBufferInfo : public HwVertexBufferInfo {
     MetalVertexBufferInfo(MetalContext& context,
             uint8_t bufferCount, uint8_t attributeCount, AttributeArray const& attributes);
 
-    AttributeArray attributes;
+    // This struct is used to create the pipeline description to describe vertex assembly.
+    VertexDescription vertexDescription = {};
+
+    struct Entry {
+        uint8_t sourceBufferIndex = 0;
+        uint8_t stride = 0;
+        // maps to ->
+        uint8_t bufferArgumentIndex = 0;
+
+        Entry(uint8_t sourceBufferIndex, uint8_t stride, uint8_t bufferArgumentIndex)
+                : sourceBufferIndex(sourceBufferIndex),
+                  stride(stride),
+                  bufferArgumentIndex(bufferArgumentIndex) {}
+    };
+    utils::FixedCapacityVector<Entry> bufferMapping;
 };
 
 struct MetalVertexBuffer : public HwVertexBuffer {
@@ -176,22 +190,6 @@ struct MetalRenderPrimitive : public HwRenderPrimitive {
 
     MetalVertexBuffer* vertexBuffer = nullptr;
     MetalIndexBuffer* indexBuffer = nullptr;
-
-    // This struct is used to create the pipeline description to describe vertex assembly.
-    VertexDescription vertexDescription = {};
-
-    struct Entry {
-        uint8_t sourceBufferIndex = 0;
-        uint8_t stride = 0;
-        // maps to ->
-        uint8_t bufferArgumentIndex = 0;
-
-        Entry(uint8_t sourceBufferIndex, uint8_t stride, uint8_t bufferArgumentIndex)
-                : sourceBufferIndex(sourceBufferIndex),
-                  stride(stride),
-                  bufferArgumentIndex(bufferArgumentIndex) {}
-    };
-    utils::FixedCapacityVector<Entry> bufferMapping;
 };
 
 class MetalProgram : public HwProgram {

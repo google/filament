@@ -264,26 +264,28 @@ Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& cont
 #if 0
     // this is useful for development, but too verbose even for debug builds
     // For reference on a 64-bits machine in Release mode:
-    //    VulkanSamplerGroup            :  24       few
+    //    VulkanSamplerGroup            :  16       few
     //    HwStream                      :  24       few
-    //    VulkanFence                   :  40       few
-    //    VulkanProgram                 :  40       moderate
-    //    VulkanIndexBuffer             :  72       moderate
-    //    VulkanBufferObject            :  72       many
-    // -- less than or equal 80 bytes
-    //    VulkanRenderPrimitive         : 104       many
-    //    VulkanSwapChain               : 112       few
-    //    VulkanTimerQuery              : 168       few
-    // -- less than or equal 176 bytes
-    //    VulkanTexture                 : 232       moderate
-    //    VulkanVertexBuffer            : 312       moderate
-    //    VulkanRenderTarget            : 320       few
-    // -- less than or equal to 320 bytes
+    //    VulkanFence                   :  32       few
+    //    VulkanProgram                 :  32       moderate
+    //    VulkanIndexBuffer             :  64       moderate
+    //    VulkanBufferObject            :  64       many
+    // -- less than or equal 64 bytes
+    //    VulkanRenderPrimitive         :  72       many
+    //    VulkanVertexBufferInfo        :  96       moderate
+    //    VulkanSwapChain               : 104       few
+    //    VulkanTimerQuery              : 160       few
+    // -- less than or equal 160 bytes
+    //    VulkanVertexBuffer            : 192       moderate
+    //    VulkanTexture                 : 224       moderate
+    //    VulkanRenderTarget            : 312       few
+    // -- less than or equal to 312 bytes
 
     utils::slog.d
            << "\nVulkanSwapChain: " << sizeof(VulkanSwapChain)
            << "\nVulkanBufferObject: " << sizeof(VulkanBufferObject)
            << "\nVulkanVertexBuffer: " << sizeof(VulkanVertexBuffer)
+           << "\nVulkanVertexBufferInfo: " << sizeof(VulkanVertexBufferInfo)
            << "\nVulkanIndexBuffer: " << sizeof(VulkanIndexBuffer)
            << "\nVulkanSamplerGroup: " << sizeof(VulkanSamplerGroup)
            << "\nVulkanRenderPrimitive: " << sizeof(VulkanRenderPrimitive)
@@ -416,9 +418,9 @@ void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t coun
 void VulkanDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
         PrimitiveType pt) {
-    auto rp = mResourceAllocator.construct<VulkanRenderPrimitive>(rph, &mResourceAllocator);
+    auto rp = mResourceAllocator.construct<VulkanRenderPrimitive>(rph,
+            &mResourceAllocator, pt, vbh, ibh);
     mResourceManager.acquire(rp);
-    VulkanDriver::setRenderPrimitiveBuffer(rph, pt, vbh, ibh);
 }
 
 void VulkanDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
@@ -987,7 +989,6 @@ void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t in
     auto vb = mResourceAllocator.handle_cast<VulkanVertexBuffer*>(vbh);
     auto bo = mResourceAllocator.handle_cast<VulkanBufferObject*>(boh);
     assert_invariant(bo->bindingType == BufferObjectBinding::VERTEX);
-
     vb->setBuffer(mResourceAllocator, bo, index);
 }
 
@@ -1465,14 +1466,6 @@ void VulkanDriver::nextSubpass(int) {
     }
 }
 
-void VulkanDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph, PrimitiveType pt,
-        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh) {
-    auto primitive = mResourceAllocator.handle_cast<VulkanRenderPrimitive*>(rph);
-    primitive->setBuffers(mResourceAllocator.handle_cast<VulkanVertexBuffer*>(vbh),
-            mResourceAllocator.handle_cast<VulkanIndexBuffer*>(ibh));
-    primitive->setPrimitiveType(pt);
-}
-
 void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("makeCurrent");
@@ -1718,14 +1711,13 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
     FVK_SYSTRACE_END();
 }
 
-void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,
-        uint32_t const indexOffset, uint32_t const indexCount, uint32_t const instanceCount) {
+void VulkanDriver::bindPipeline(PipelineState pipelineState) {
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("draw");
 
     VulkanCommandBuffer* commands = &mCommands->get();
-    VkCommandBuffer cmdbuffer = commands->buffer();
-    const VulkanRenderPrimitive& prim = *mResourceAllocator.handle_cast<VulkanRenderPrimitive*>(rph);
+    const VulkanVertexBufferInfo& vbi =
+            *mResourceAllocator.handle_cast<VulkanVertexBufferInfo*>(pipelineState.vertexBufferInfo);
 
     Handle<HwProgram> programHandle = pipelineState.program;
     RasterState rasterState = pipelineState.rasterState;
@@ -1733,8 +1725,6 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
     auto* program = mResourceAllocator.handle_cast<VulkanProgram*>(programHandle);
     commands->acquire(program);
-    commands->acquire(prim.indexBuffer);
-    commands->acquire(prim.vertexBuffer);
 
     // Update the VK raster state.
     const VulkanRenderTarget* rt = mCurrentRenderPass.renderTarget;
@@ -1760,20 +1750,19 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
         .depthBiasSlopeFactor = depthOffset.slope
     };
 
+    // unfortunately in Vulkan the topology is per pipeline
+    VkPrimitiveTopology const topology =
+            VulkanPipelineCache::getPrimitiveTopology(pipelineState.primitiveType);
+
     // Declare fixed-size arrays that get passed to the pipeCache and to vkCmdBindVertexBuffers.
-    VulkanVertexBufferInfo const* const vbi =
-            mResourceAllocator.handle_cast<VulkanVertexBufferInfo*>(prim.vertexBuffer->vbih);
-    uint32_t const bufferCount = vbi->attributes.size();
-    VkVertexInputAttributeDescription const* attribDesc = prim.vertexBuffer->getAttribDescriptions();
-    VkVertexInputBindingDescription const* bufferDesc =  prim.vertexBuffer->getBufferDescriptions();
-    VkBuffer const* buffers = prim.vertexBuffer->getVkBuffers();
-    VkDeviceSize const* offsets = prim.vertexBuffer->getOffsets();
+    VkVertexInputAttributeDescription const* attribDesc = vbi.getAttribDescriptions();
+    VkVertexInputBindingDescription const* bufferDesc =  vbi.getBufferDescriptions();
 
     // Push state changes to the VulkanPipelineCache instance. This is fast and does not make VK calls.
     mPipelineCache.bindProgram(program);
     mPipelineCache.bindRasterState(vulkanRasterState);
-    mPipelineCache.bindPrimitiveTopology(prim.primitiveTopology);
-    mPipelineCache.bindVertexArray(attribDesc, bufferDesc, bufferCount);
+    mPipelineCache.bindPrimitiveTopology(topology);
+    mPipelineCache.bindVertexArray(attribDesc, bufferDesc, vbi.getAttributeCount());
 
     // Query the program for the mapping from (SamplerGroupBinding,Offset) to (SamplerBinding),
     // where "SamplerBinding" is the integer in the GLSL, and SamplerGroupBinding is the abstract
@@ -1859,19 +1848,33 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
     mPipelineCache.bindSamplers(samplerInfo, samplerTextures, usage);
 
-    // Bind new descriptor sets if they need to change.
-    // If descriptor set allocation failed, skip the draw call and bail. No need to emit an error
-    // message since the validation layers already do so.
-    if (!mPipelineCache.bindDescriptors(cmdbuffer)) {
-        return;
-    }
-
     // Bind a new pipeline if the pipeline state changed.
     // If allocation failed, skip the draw call and bail. We do not emit an error since the
     // validation layer will already do so.
     if (!mPipelineCache.bindPipeline(commands)) {
         return;
     }
+    FVK_SYSTRACE_END();
+}
+
+void VulkanDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("bindRenderPrimitive");
+
+    VulkanCommandBuffer* commands = &mCommands->get();
+    VkCommandBuffer cmdbuffer = commands->buffer();
+    const VulkanRenderPrimitive& prim = *mResourceAllocator.handle_cast<VulkanRenderPrimitive*>(rph);
+    commands->acquire(prim.indexBuffer);
+    commands->acquire(prim.vertexBuffer);
+
+    // This *must* match the VulkanVertexBufferInfo that was bound in bindPipeline(). But we want
+    // to allow to call this before bindPipeline(), so the validation can only happen in draw()
+    VulkanVertexBufferInfo const* const vbi =
+            mResourceAllocator.handle_cast<VulkanVertexBufferInfo*>(prim.vertexBuffer->vbih);
+
+    uint32_t const bufferCount = vbi->getAttributeCount();
+    VkDeviceSize const* offsets = vbi->getOffsets();
+    VkBuffer const* buffers = prim.vertexBuffer->getVkBuffers();
 
     // Next bind the vertex buffers and index buffer. One potential performance improvement is to
     // avoid rebinding these if they are already bound, but since we do not (yet) support subranges
@@ -1880,13 +1883,41 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     vkCmdBindIndexBuffer(cmdbuffer, prim.indexBuffer->buffer.getGpuBuffer(), 0,
             prim.indexBuffer->indexType);
 
+    FVK_SYSTRACE_END();
+}
+
+void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("draw2");
+
+    VulkanCommandBuffer* commands = &mCommands->get();
+    VkCommandBuffer cmdbuffer = commands->buffer();
+
+    // Bind new descriptor sets if they need to change.
+    // If descriptor set allocation failed, skip the draw call and bail. No need to emit an error
+    // message since the validation layers already do so.
+    if (!mPipelineCache.bindDescriptors(cmdbuffer)) {
+        return;
+    }
+
     // Finally, make the actual draw call. TODO: support subranges
     const uint32_t firstIndex = indexOffset;
     const int32_t vertexOffset = 0;
     const uint32_t firstInstId = 0;
 
     vkCmdDrawIndexed(cmdbuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstId);
+
     FVK_SYSTRACE_END();
+}
+
+void VulkanDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph,
+        uint32_t const indexOffset, uint32_t const indexCount, uint32_t const instanceCount) {
+    VulkanRenderPrimitive* const rp = mResourceAllocator.handle_cast<VulkanRenderPrimitive*>(rph);
+    state.primitiveType = rp->type;
+    state.vertexBufferInfo = rp->vertexBuffer->vbih;
+    bindPipeline(state);
+    bindRenderPrimitive(rph);
+    draw2(indexOffset, indexCount, instanceCount);
 }
 
 void VulkanDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {

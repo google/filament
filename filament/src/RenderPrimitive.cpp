@@ -16,14 +16,18 @@
 
 #include "RenderPrimitive.h"
 
-#include "details/Engine.h"
+#include <filament/RenderableManager.h>
+#include <filament/MaterialEnums.h>
+
 #include "details/IndexBuffer.h"
-#include "details/Material.h"
+#include "details/MaterialInstance.h"
 #include "details/VertexBuffer.h"
+
+#include <private/backend/CommandStream.h>
+#include <backend/DriverApiForward.h>
 
 #include <utils/debug.h>
 
-#include <stdint.h>
 #include <stddef.h>
 
 namespace filament {
@@ -39,18 +43,7 @@ void FRenderPrimitive::init(HwRenderPrimitiveFactory& factory, backend::DriverAp
     if (entry.indices && entry.vertices) {
         FVertexBuffer* vertexBuffer = downcast(entry.vertices);
         FIndexBuffer* indexBuffer = downcast(entry.indices);
-
-        AttributeBitset const enabledAttributes = vertexBuffer->getDeclaredAttributes();
-
-        auto const& ebh = vertexBuffer->getHwHandle();
-        auto const& ibh = indexBuffer->getHwHandle();
-
-        mHandle = factory.create(driver, ebh, ibh, entry.type);
-
-        mPrimitiveType = entry.type;
-        mIndexOffset = entry.offset;
-        mIndexCount = entry.count;
-        mEnabledAttributes = enabledAttributes;
+        set(factory, driver, entry.type, vertexBuffer, indexBuffer, entry.offset, entry.count);
     }
 }
 
@@ -62,17 +55,19 @@ void FRenderPrimitive::terminate(HwRenderPrimitiveFactory& factory, backend::Dri
 
 void FRenderPrimitive::set(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
         RenderableManager::PrimitiveType type,
-        FVertexBuffer* vertices, FIndexBuffer* indices, size_t offset, size_t count) noexcept {
+        FVertexBuffer* vertexBuffer, FIndexBuffer* indexBuffer,
+        size_t offset, size_t count) noexcept {
     if (mHandle) {
         factory.destroy(driver, mHandle);
     }
 
-    AttributeBitset const enabledAttributes = vertices->getDeclaredAttributes();
+    AttributeBitset const enabledAttributes = vertexBuffer->getDeclaredAttributes();
 
-    auto const& ebh = vertices->getHwHandle();
-    auto const& ibh = indices->getHwHandle();
+    auto const& ebh = vertexBuffer->getHwHandle();
+    auto const& ibh = indexBuffer->getHwHandle();
 
     mHandle = factory.create(driver, ebh, ibh, type);
+    mVertexBufferInfoHandle = vertexBuffer->getVertexBufferInfoHandle();
 
     mPrimitiveType = type;
     mIndexOffset = offset;

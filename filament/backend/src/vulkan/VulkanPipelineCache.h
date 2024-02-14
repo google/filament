@@ -191,10 +191,19 @@ public:
         mDummyTargetInfo.imageView = imageView;
     }
 
-    // Acquires a resource to be bound to the current pipeline. The ownership of the resource
-    // will be transferred to the corresponding pipeline when pipeline is bound.
-    void acquireResource(VulkanResource* resource) {
-        mPipelineBoundResources.acquire(resource);
+    static VkPrimitiveTopology getPrimitiveTopology(PrimitiveType pt) noexcept {
+        switch (pt) {
+            case PrimitiveType::POINTS:
+                return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+            case PrimitiveType::LINES:
+                return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+            case PrimitiveType::LINE_STRIP:
+                return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+            case PrimitiveType::TRIANGLES:
+                return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            case PrimitiveType::TRIANGLE_STRIP:
+                return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+        }
     }
 
 private:

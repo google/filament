@@ -142,6 +142,7 @@ public:
     struct GLRenderPrimitive : public HwRenderPrimitive {
         using HwRenderPrimitive::HwRenderPrimitive;
         OpenGLContext::RenderPrimitive gl;
+        Handle<HwVertexBufferInfo> vbih;
     };
 
     struct GLTexture : public HwTexture {
@@ -365,6 +366,10 @@ private:
     GLboolean mRenderPassColorWrite{};
     GLboolean mRenderPassDepthWrite{};
     GLboolean mRenderPassStencilWrite{};
+
+    GLRenderPrimitive const* mBoundRenderPrimitive = nullptr;
+    bool mValidProgram = false;
+
 
     void clearWithRasterPipe(TargetBufferFlags clearFlags,
             math::float4 const& linearColor, GLfloat depth, GLint stencil) noexcept;

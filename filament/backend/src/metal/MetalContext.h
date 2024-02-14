@@ -99,6 +99,7 @@ struct MetalContext {
     std::array<BufferState, MAX_SSBO_COUNT> ssboState;
     CullModeStateTracker cullModeState;
     WindingStateTracker windingState;
+    Handle<HwRenderPrimitive> currentRenderPrimitive;
 
     // State caches.
     DepthStencilStateCache depthStencilStateCache;
