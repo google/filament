@@ -424,10 +424,26 @@ void VulkanDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     mResourceManager.release(rp);
 }
 
-void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
-        uint8_t attributeCount, uint32_t elementCount, AttributeArray attributes) {
-    auto vertexBuffer = mResourceAllocator.construct<VulkanVertexBuffer>(vbh, mContext, mStagePool,
-            &mResourceAllocator, bufferCount, attributeCount, elementCount, attributes);
+void VulkanDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vbih, uint8_t bufferCount,
+        uint8_t attributeCount, AttributeArray attributes) {
+    auto vbi = mResourceAllocator.construct<VulkanVertexBufferInfo>(vbih,
+            bufferCount, attributeCount, attributes);
+    mResourceManager.acquire(vbi);
+}
+
+void VulkanDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
+    if (!vbih) {
+        return;
+    }
+    auto vbi = mResourceAllocator.handle_cast<VulkanVertexBufferInfo*>(vbih);
+    mResourceManager.release(vbi);
+}
+
+
+void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh,
+        uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih) {
+    auto vertexBuffer = mResourceAllocator.construct<VulkanVertexBuffer>(vbh,
+            mContext, mStagePool, &mResourceAllocator, vertexCount, vbih);
     mResourceManager.acquire(vertexBuffer);
 }
 
@@ -632,6 +648,10 @@ void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t wi
 
 void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     // nothing to do, timer query was constructed in createTimerQueryS
+}
+
+Handle<HwVertexBufferInfo> VulkanDriver::createVertexBufferInfoS() noexcept {
+    return mResourceAllocator.allocHandle<VulkanVertexBufferInfo>();
 }
 
 Handle<HwVertexBuffer> VulkanDriver::createVertexBufferS() noexcept {
@@ -954,7 +974,7 @@ void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t in
     auto bo = mResourceAllocator.handle_cast<VulkanBufferObject*>(boh);
     assert_invariant(bo->bindingType == BufferObjectBinding::VERTEX);
 
-    vb->setBuffer(bo, index);
+    vb->setBuffer(mResourceAllocator, bo, index);
 }
 
 void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
@@ -1735,7 +1755,9 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     };
 
     // Declare fixed-size arrays that get passed to the pipeCache and to vkCmdBindVertexBuffers.
-    uint32_t const bufferCount = prim.vertexBuffer->attributes.size();
+    VulkanVertexBufferInfo const* const vbi =
+            mResourceAllocator.handle_cast<VulkanVertexBufferInfo*>(prim.vertexBuffer->vbih);
+    uint32_t const bufferCount = vbi->attributes.size();
     VkVertexInputAttributeDescription const* attribDesc = prim.vertexBuffer->getAttribDescriptions();
     VkVertexInputBindingDescription const* bufferDesc =  prim.vertexBuffer->getBufferDescriptions();
     VkBuffer const* buffers = prim.vertexBuffer->getVkBuffers();

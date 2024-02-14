@@ -129,14 +129,21 @@ private:
 
 struct VulkanBufferObject;
 
+struct VulkanVertexBufferInfo : public HwVertexBufferInfo, VulkanResource {
+    VulkanVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
+            AttributeArray const& attributes);
+    AttributeArray attributes;
+};
+
 struct VulkanVertexBuffer : public HwVertexBuffer, VulkanResource {
     VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-            VulkanResourceAllocator* allocator, uint8_t bufferCount, uint8_t attributeCount,
-            uint32_t elementCount, AttributeArray const& attributes);
+            VulkanResourceAllocator* allocator,
+            uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih);
 
     ~VulkanVertexBuffer();
 
-    void setBuffer(VulkanBufferObject* bufferObject, uint32_t index);
+    void setBuffer(VulkanResourceAllocator const& allocator,
+            VulkanBufferObject* bufferObject, uint32_t index);
 
     inline VkVertexInputAttributeDescription const* getAttribDescriptions() {
         return mInfo->mSoa.data<PipelineInfo::ATTRIBUTE_DESCRIPTION>();
@@ -154,6 +161,8 @@ struct VulkanVertexBuffer : public HwVertexBuffer, VulkanResource {
         return mInfo->mSoa.data<PipelineInfo::OFFSETS>();
     }
 
+    Handle<HwVertexBufferInfo> vbih;
+
 private:
     struct PipelineInfo {
         PipelineInfo(size_t size)
@@ -161,7 +170,7 @@ private:
             mSoa.resize(size);
         }
 
-        // These corresponds to the index of the element in the SoA
+        // These correspond to the index of the element in the SoA
         static constexpr uint8_t ATTRIBUTE_DESCRIPTION = 0;
         static constexpr uint8_t BUFFER_DESCRIPTION = 1;
         static constexpr uint8_t VK_BUFFER = 2;

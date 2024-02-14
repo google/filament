@@ -43,6 +43,7 @@ enum class VulkanResourceType : uint8_t {
     TEXTURE,
     TIMER_QUERY,
     VERTEX_BUFFER,
+    VERTEX_BUFFER_INFO,
 
     // Below are resources that are managed manually (i.e. not ref counted).
     FENCE,

@@ -16,6 +16,7 @@
 
 #include "VulkanHandles.h"
 
+#include "VulkanDriver.h"
 #include "VulkanConstants.h"
 #include "VulkanDriver.h"
 #include "VulkanMemory.h"
@@ -280,13 +281,23 @@ uint8_t VulkanRenderTarget::getColorTargetCount(const VulkanRenderPass& pass) co
     return count;
 }
 
+VulkanVertexBufferInfo::VulkanVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
+        AttributeArray const& attributes)
+        : HwVertexBufferInfo(bufferCount, attributeCount),
+          VulkanResource(VulkanResourceType::VERTEX_BUFFER_INFO),
+          attributes(attributes) {
+}
+
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        VulkanResourceAllocator* allocator, uint8_t bufferCount, uint8_t attributeCount,
-        uint32_t elementCount, AttributeArray const& attribs)
-    : HwVertexBuffer(bufferCount, attributeCount, elementCount, attribs),
+        VulkanResourceAllocator* allocator, uint32_t vertexCount, Handle<HwVertexBufferInfo> vbih)
+    : HwVertexBuffer(vertexCount),
       VulkanResource(VulkanResourceType::VERTEX_BUFFER),
-      mInfo(new PipelineInfo(attribs.size())),
+      vbih(vbih),
       mResources(allocator) {
+
+    VulkanVertexBufferInfo const* const vbi = allocator->handle_cast<VulkanVertexBufferInfo*>(vbih);
+    mInfo = new PipelineInfo(vbi->attributes.size());
+
     auto attribDesc = mInfo->mSoa.data<PipelineInfo::ATTRIBUTE_DESCRIPTION>();
     auto bufferDesc = mInfo->mSoa.data<PipelineInfo::BUFFER_DESCRIPTION>();
     auto offsets = mInfo->mSoa.data<PipelineInfo::OFFSETS>();
@@ -294,8 +305,8 @@ VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& 
     std::fill(mInfo->mSoa.begin<PipelineInfo::ATTRIBUTE_TO_BUFFER_INDEX>(),
             mInfo->mSoa.end<PipelineInfo::ATTRIBUTE_TO_BUFFER_INDEX>(), -1);
 
-    for (uint32_t attribIndex = 0; attribIndex < attribs.size(); attribIndex++) {
-        Attribute attrib = attribs[attribIndex];
+    for (uint32_t attribIndex = 0; attribIndex < vbi->attributes.size(); attribIndex++) {
+        Attribute attrib = vbi->attributes[attribIndex];
         bool const isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
         bool const isNormalized = attrib.flags & Attribute::FLAG_NORMALIZED;
         VkFormat vkformat = getVkFormat(attrib.type, isNormalized, isInteger);
@@ -307,7 +318,7 @@ VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& 
         // expects to receive floats or ints.
         if (attrib.buffer == Attribute::BUFFER_UNUSED) {
             vkformat = isInteger ? VK_FORMAT_R8G8B8A8_UINT : VK_FORMAT_R8G8B8A8_SNORM;
-            attrib = attribs[0];
+            attrib = vbi->attributes[0];
         }
         offsets[attribIndex] = attrib.offset;
         attribDesc[attribIndex] = {
@@ -327,8 +338,12 @@ VulkanVertexBuffer::~VulkanVertexBuffer() {
     delete mInfo;
 }
 
-void VulkanVertexBuffer::setBuffer(VulkanBufferObject* bufferObject, uint32_t index) {
-    size_t count = attributes.size();
+void VulkanVertexBuffer::setBuffer(VulkanResourceAllocator const& allocator,
+        VulkanBufferObject* bufferObject, uint32_t index) {
+
+    VulkanVertexBufferInfo const* const vbi =
+            const_cast<VulkanResourceAllocator&>(allocator).handle_cast<VulkanVertexBufferInfo*>(vbih);
+    size_t count = vbi->attributes.size();
     auto vkbuffers = mInfo->mSoa.data<PipelineInfo::VK_BUFFER>();
     auto attribToBuffer = mInfo->mSoa.data<PipelineInfo::ATTRIBUTE_TO_BUFFER_INDEX>();
     for (uint8_t attribIndex = 0; attribIndex < count; attribIndex++) {

@@ -213,8 +213,11 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
 
     FEngine::DriverApi& driver = engine.getDriverApi();
 
-    mHandle = driver.createVertexBuffer(
-            mBufferCount, attributeCount, mVertexCount, attributeArray);
+    // TODO: this should use a cache
+    mVertexBufferInfoHandle = driver.createVertexBufferInfo(
+            mBufferCount, attributeCount, attributeArray);
+
+    mHandle = driver.createVertexBuffer(mVertexCount, mVertexBufferInfoHandle);
 
     // If buffer objects are not enabled at the API level, then we create them internally.
     if (!mBufferObjectsEnabled) {
@@ -238,7 +241,6 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
             }
         }
     }
-
 }
 
 void FVertexBuffer::terminate(FEngine& engine) {
@@ -249,6 +251,7 @@ void FVertexBuffer::terminate(FEngine& engine) {
         }
     }
     driver.destroyVertexBuffer(mHandle);
+    driver.destroyVertexBufferInfo(mVertexBufferInfoHandle);
 }
 
 size_t FVertexBuffer::getVertexCount() const noexcept {

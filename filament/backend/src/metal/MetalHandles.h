@@ -145,10 +145,18 @@ private:
     MetalBuffer buffer;
 };
 
-struct MetalVertexBuffer : public HwVertexBuffer {
-    MetalVertexBuffer(MetalContext& context, uint8_t bufferCount, uint8_t attributeCount,
-            uint32_t vertexCount, AttributeArray const& attributes);
+struct MetalVertexBufferInfo : public HwVertexBufferInfo {
+    MetalVertexBufferInfo(MetalContext& context,
+            uint8_t bufferCount, uint8_t attributeCount, AttributeArray const& attributes);
 
+    AttributeArray attributes;
+};
+
+struct MetalVertexBuffer : public HwVertexBuffer {
+    MetalVertexBuffer(MetalContext& context,
+            uint32_t vertexCount, uint32_t bufferCount, Handle<HwVertexBufferInfo> vbih);
+
+    Handle<HwVertexBufferInfo> vbih;
     utils::FixedCapacityVector<MetalBuffer*> buffers;
 };
 
@@ -161,7 +169,8 @@ struct MetalIndexBuffer : public HwIndexBuffer {
 
 struct MetalRenderPrimitive : public HwRenderPrimitive {
     MetalRenderPrimitive();
-    void setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer* indexBuffer);
+    void setBuffers(MetalVertexBufferInfo const* const vbi,
+            MetalVertexBuffer* vertexBuffer, MetalIndexBuffer* indexBuffer);
     // The pointers to MetalVertexBuffer and MetalIndexBuffer are "weak".
     // The MetalVertexBuffer and MetalIndexBuffer must outlive the MetalRenderPrimitive.
 
