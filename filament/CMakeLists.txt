@@ -137,6 +137,7 @@ set(SRCS
 
 set(PRIVATE_HDRS
         src/Allocators.h
+        src/Bimap.h
         src/BufferPoolAllocator.h
         src/ColorSpaceUtils.h
         src/Culler.h

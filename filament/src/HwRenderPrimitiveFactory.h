@@ -17,17 +17,15 @@
 #ifndef TNT_FILAMENT_HWRENDERPRIMITIVEFACTORY_H
 #define TNT_FILAMENT_HWRENDERPRIMITIVEFACTORY_H
 
+#include "Bimap.h"
+
+#include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include <private/backend/DriverApi.h>
-
 #include <utils/Allocator.h>
 
-#include <tsl/robin_map.h>
-
 #include <functional>
-#include <set>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -38,6 +36,7 @@ class FEngine;
 
 class HwRenderPrimitiveFactory {
 public:
+    using Handle = backend::RenderPrimitiveHandle;
 
     HwRenderPrimitiveFactory();
     ~HwRenderPrimitiveFactory() noexcept;
@@ -49,64 +48,64 @@ public:
 
     void terminate(backend::DriverApi& driver) noexcept;
 
-    backend::RenderPrimitiveHandle create(backend::DriverApi& driver,
-            backend::VertexBufferHandle vbh,
-            backend::IndexBufferHandle ibh,
-            backend::PrimitiveType type) noexcept;
-
-    void destroy(backend::DriverApi& driver,
-            backend::RenderPrimitiveHandle rph) noexcept;
-
-private:
-    struct Key { // 20 bytes
+    struct Parameters { // 20 bytes
         backend::VertexBufferHandle vbh;            // 4
         backend::IndexBufferHandle ibh;             // 4
         backend::PrimitiveType type;                // 4
     };
 
-    struct Entry { // 28 bytes
-        Key key;                                    // 20
-        backend::RenderPrimitiveHandle handle;      //  4
-        mutable uint32_t refs;                      //  4
+    Handle create(backend::DriverApi& driver,
+            backend::VertexBufferHandle vbh,
+            backend::IndexBufferHandle ibh,
+            backend::PrimitiveType type) noexcept;
+
+    void destroy(backend::DriverApi& driver, Handle handle) noexcept;
+
+private:
+    struct Key {
+        Parameters params;
+        mutable uint32_t refs;  // 4 bytes
     };
 
+    struct KeyHash {
+        size_t operator()(Key const& p) const noexcept;
+    };
+
+    friend bool operator==(Key const& lhs, Key const& rhs) noexcept;
+
+
+    struct Value { // 4 bytes
+        Handle handle;
+    };
+
+    struct ValueHash {
+        size_t operator()(Value const& p) const noexcept {
+            std::hash<Handle::HandleId> const h;
+            return h(p.handle.getId());
+        }
+    };
+
+    friend bool operator==(Value const& lhs, Value const& rhs) noexcept {
+        return lhs.handle == rhs.handle;
+    }
 
     // Size of the arena used for the "set" part of the bimap
     static constexpr size_t SET_ARENA_SIZE = 4 * 1024 * 1024;
 
     // Arena for the set<>, using a pool allocator inside a heap area.
-    using Arena = utils::Arena<
-            utils::PoolAllocator<64>,   // this seems to work with clang and msvc
+    using PoolAllocatorArena = utils::Arena<
+            utils::PoolAllocatorWithFallback<sizeof(Key)>,
             utils::LockingPolicy::NoLock,
-#ifndef NDEBUG
-            utils::TrackingPolicy::HighWatermark,
-#else
             utils::TrackingPolicy::Untracked,
-#endif
             utils::AreaPolicy::HeapArea>;
 
-    using Set = std::set<
-            Entry,
-            std::less<>,
-            utils::STLAllocator<Entry, Arena>>;
-
-    using Map = tsl::robin_map<
-            backend::RenderPrimitiveHandle::HandleId,
-            Set::const_iterator>;
 
     // Arena where the set memory is allocated
-    Arena mArena;
+    PoolAllocatorArena mArena;
 
-    // set of HwRenderPrimitive data
-    Set mSet;
-
-    // map of RenderPrimitiveHandle to Set Entry
-    Map mMap;
-
-    friend bool operator<(Key const& lhs, Key const& rhs) noexcept;
-    friend bool operator<(Key const& lhs, Entry const& rhs) noexcept;
-    friend bool operator<(Entry const& lhs, Key const& rhs) noexcept;
-    friend bool operator<(Entry const& lhs, Entry const& rhs) noexcept;
+    // The special Bimap
+    Bimap<Key, Value, KeyHash, ValueHash,
+            utils::STLAllocator<Key, PoolAllocatorArena>> mBimap;
 };
 
 } // namespace filament
