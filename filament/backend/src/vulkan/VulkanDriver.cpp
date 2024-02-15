@@ -797,8 +797,14 @@ bool VulkanDriver::isSRGBSwapChainSupported() {
     return mIsSRGBSwapChainSupported;
 }
 
-bool VulkanDriver::isStereoSupported() {
-    return true;
+bool VulkanDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
+    switch (stereoscopicType) {
+    case backend::StereoscopicType::INSTANCED:
+        return true;
+    case backend::StereoscopicType::MULTIVIEW:
+        // TODO: implement multiview feature in Vulkan.
+        return false;
+    }
 }
 
 bool VulkanDriver::isParallelShaderCompileSupported() {
