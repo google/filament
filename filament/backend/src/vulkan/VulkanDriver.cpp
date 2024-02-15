@@ -803,7 +803,6 @@ bool VulkanDriver::isStereoSupported(backend::StereoscopicType stereoscopicType)
         return true;
     case backend::StereoscopicType::MULTIVIEW:
         // TODO: implement multiview feature in Vulkan.
-    default:
         return false;
     }
 }
