@@ -23,6 +23,8 @@
 
 #include <bluevk/BlueVK.h>
 
+#include <utility>
+
 namespace filament::backend {
 
 VkFormat getVkFormat(ElementType type, bool normalized, bool integer);
@@ -88,9 +90,99 @@ utils::FixedCapacityVector<OutType> enumerate(
 #undef EXPAND_ENUM_NO_ARGS
 #undef EXPAND_ENUM_ARGS
 
-
 // Useful shorthands
 using VkFormatList = utils::FixedCapacityVector<VkFormat>;
+
+// An Array that will be fixed capacity, but the "size" (as in user added elements) is variable.
+// Note that this class is movable.
+template<typename T, uint16_t CAPACITY>
+class CappedArray {
+private:
+    using FixedSizeArray = std::array<T, CAPACITY>;
+public:
+    using const_iterator = typename FixedSizeArray::const_iterator;
+    using iterator = typename FixedSizeArray::iterator;
+
+    CappedArray() = default;
+
+    // Delete copy constructor/assignment.
+    CappedArray(CappedArray const& rhs) = delete;
+    CappedArray& operator=(CappedArray& rhs) = delete;
+
+    CappedArray(CappedArray&& rhs) noexcept {
+        this->swap(rhs);
+    }
+
+    CappedArray& operator=(CappedArray&& rhs) noexcept {
+        this->swap(rhs);
+        return *this;
+    }
+
+    inline ~CappedArray() {
+        clear();
+    }
+
+    inline const_iterator begin() {
+        if (mInd == 0) {
+            return mArray.cend();
+        }
+        return mArray.cbegin();
+    }
+
+    inline const_iterator end() {
+        if (mInd > 0 && mInd < CAPACITY) {
+            return mArray.begin() + mInd;
+        }
+        return mArray.cend();
+    }
+
+    inline T back() {
+        assert_invariant(mInd > 0);
+        return *(mArray.begin() + mInd);
+    }
+
+    inline void pop_back() {
+        assert_invariant(mInd > 0);
+        mInd--;
+    }
+
+    inline const_iterator find(T item) {
+        return std::find(begin(), end(), item);
+    }
+
+    inline void insert(T item) {
+        assert_invariant(mInd < CAPACITY);
+        mArray[mInd++] = item;
+    }
+
+    inline void erase(T item) {
+        PANIC_PRECONDITION("CappedArray::erase should not be called");
+    }
+
+    inline void clear() {
+        if (mInd == 0) {
+            return;
+        }
+        mInd = 0;
+    }
+
+    inline T& operator[](uint16_t ind) {
+        return mArray[ind];
+    }
+
+    inline size_t size() {
+        return mInd;
+    }
+
+private:
+    void swap(CappedArray& rhs) {
+        std::swap(mArray, rhs.mArray);
+        std::swap(mInd, rhs.mInd);
+    }
+
+    FixedSizeArray mArray;
+    size_t mInd = 0;
+};
 
 } // namespace filament::backend
 

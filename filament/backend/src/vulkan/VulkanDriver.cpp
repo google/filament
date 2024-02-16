@@ -1757,7 +1757,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     VulkanTexture* samplerTextures[VulkanPipelineCache::SAMPLER_BINDING_COUNT] = {nullptr};
 
     auto const& bindingToSamplerIndex = program->getBindingToSamplerIndex();
-    VulkanPipelineCache::UsageFlags  usage = program->getUsage();
+    VulkanPipelineCache::UsageFlags usage = program->getUsage();
 
     UTILS_NOUNROLL
     for (uint8_t binding = 0; binding < VulkanPipelineCache::SAMPLER_BINDING_COUNT; binding++) {
