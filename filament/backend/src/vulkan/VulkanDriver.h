@@ -45,6 +45,30 @@ public:
     static Driver* create(VulkanPlatform* platform, VulkanContext const& context,
             Platform::DriverConfig const& driverConfig) noexcept;
 
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
+    // Encapsulates the VK_EXT_debug_utils extension.  In particular, we use
+    // vkSetDebugUtilsObjectNameEXT and vkCreateDebugUtilsMessengerEXT
+    class DebugUtils {
+    public:
+        static void setName(VkObjectType type, uint64_t handle, char const* name);
+
+    private:
+        static DebugUtils* get();
+
+        DebugUtils(VkInstance instance, VkDevice device, VulkanContext const* context);
+        ~DebugUtils();
+
+        VkInstance const mInstance;
+        VkDevice const mDevice;
+        bool const mEnabled;
+        VkDebugUtilsMessengerEXT mDebugMessenger = VK_NULL_HANDLE;
+
+        static DebugUtils* mSingleton;
+
+        friend class VulkanDriver;
+    };
+#endif // FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
+
 private:
     void debugCommandBegin(CommandStream* cmds, bool synchronous,
             const char* methodName) noexcept override;
@@ -93,7 +117,6 @@ private:
     VulkanRenderPass mCurrentRenderPass = {};
     VmaAllocator mAllocator = VK_NULL_HANDLE;
     VkDebugReportCallbackEXT mDebugCallback = VK_NULL_HANDLE;
-    VkDebugUtilsMessengerEXT mDebugMessenger = VK_NULL_HANDLE;
 
     VulkanContext mContext = {};
     VulkanResourceAllocator mResourceAllocator;

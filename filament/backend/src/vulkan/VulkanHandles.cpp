@@ -17,6 +17,7 @@
 #include "VulkanHandles.h"
 
 #include "VulkanConstants.h"
+#include "VulkanDriver.h"
 #include "VulkanMemory.h"
 #include "spirv/VulkanSpirvUtils.h"
 
@@ -78,6 +79,23 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
         };
         VkResult result = vkCreateShaderModule(mDevice, &moduleInfo, VKALLOC, &module);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create shader module.");
+
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
+        std::string name{ builder.getName().c_str(), builder.getName().size() };
+        switch (static_cast<ShaderStage>(i)) {
+            case ShaderStage::VERTEX:
+                name += "_vs";
+                break;
+            case ShaderStage::FRAGMENT:
+                name += "_fs";
+                break;
+            default:
+                PANIC_POSTCONDITION("Unexpected stage");
+                break;
+        }
+        VulkanDriver::DebugUtils::setName(VK_OBJECT_TYPE_SHADER_MODULE,
+                reinterpret_cast<uint64_t>(module), name.c_str());
+#endif
     }
 
     auto& groupInfo = builder.getSamplerGroupInfo();
@@ -93,10 +111,10 @@ VulkanProgram::VulkanProgram(VkDevice device, Program const& builder) noexcept
         }
     }
 
-    #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
-        utils::slog.d << "Created VulkanProgram " << builder << ", shaders = (" << bundle.vertex
-                      << ", " << bundle.fragment << ")" << utils::io::endl;
-    #endif
+#if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
+    utils::slog.d << "Created VulkanProgram " << builder << ", shaders = (" << bundle.vertex
+                  << ", " << bundle.fragment << ")" << utils::io::endl;
+#endif
 }
 
 VulkanProgram::VulkanProgram(VkDevice device, VkShaderModule vs, VkShaderModule fs,

@@ -23,6 +23,7 @@
 
 #include <bluevk/BlueVK.h>
 #include <utils/PrivateImplementation-impl.h>
+#include <utils/Panic.h>
 
 #define SWAPCHAIN_RET_FUNC(func, handle, ...)                                                      \
     if (mImpl->mSurfaceSwapChains.find(handle) != mImpl->mSurfaceSwapChains.end()) {               \
@@ -158,7 +159,9 @@ ExtensionSet getInstanceExtensions() {
             VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
 
             // Request these if available.
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
             VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+#endif
             VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
@@ -181,7 +184,9 @@ ExtensionSet getInstanceExtensions() {
 
 ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
     std::string_view const TARGET_EXTS[] = {
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
             VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
+#endif
             VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
             VK_KHR_MAINTENANCE1_EXTENSION_NAME,
             VK_KHR_MAINTENANCE2_EXTENSION_NAME,
@@ -337,36 +342,22 @@ std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(VkPhysicalDevice device,
         ExtensionSet const& instExts, ExtensionSet const& deviceExts) {
     ExtensionSet newInstExts = instExts;
     ExtensionSet newDeviceExts = deviceExts;
-    if (vkGetPhysicalDeviceProperties2KHR) {
-        VkPhysicalDeviceDriverProperties driverProperties = {
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES,
-        };
-        VkPhysicalDeviceProperties2 physicalDeviceProperties2 = {
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
-                .pNext = &driverProperties,
-        };
-        vkGetPhysicalDeviceProperties2KHR(device, &physicalDeviceProperties2);
-        char* driverInfo = driverProperties.driverInfo;
 
-        if (newInstExts.find(VK_EXT_DEBUG_UTILS_EXTENSION_NAME) != newInstExts.end()) {
-            // Workaround for Mesa drivers. See issue #6192
-            if ((driverInfo && strstr(driverInfo, "Mesa"))) {
-                newInstExts.erase(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-            }
-        }
-    }
-
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)    
     // debugUtils and debugMarkers extensions are used mutually exclusively.
     if (newInstExts.find(VK_EXT_DEBUG_UTILS_EXTENSION_NAME) != newInstExts.end()
             && newDeviceExts.find(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) != newDeviceExts.end()) {
         newDeviceExts.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     }
+#endif    
 
+#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     // debugMarker must also request debugReport the instance extension. So check if that's present.
     if (newDeviceExts.find(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) != newDeviceExts.end()
             && newInstExts.find(VK_EXT_DEBUG_REPORT_EXTENSION_NAME) == newInstExts.end()) {
         newDeviceExts.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     }
+#endif
 
     return std::tuple(newInstExts, newDeviceExts);
 }
@@ -670,6 +661,12 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
             = instExts.find(VK_EXT_DEBUG_UTILS_EXTENSION_NAME) != instExts.end();
     context.mDebugMarkersSupported
             = deviceExts.find(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) != deviceExts.end();
+
+#ifdef NDEBUG
+    // If we are in release build, we should not have turned on debug extensions
+    ASSERT_POSTCONDITION(!context.mDebugUtilsSupported && !context.mDebugMarkersSupported,
+            "Debug utils should not be enabled in release build.");
+#endif
 
     context.mDepthFormats = findAttachmentDepthFormats(mImpl->mPhysicalDevice);
 
