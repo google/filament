@@ -217,7 +217,7 @@ void RenderPass::appendCommands(FEngine& engine,
     // This must be done from the main thread.
     for (Command const* first = curr, *last = curr + commandCount ; first != last ; ++first) {
         if (UTILS_LIKELY((first->key & CUSTOM_MASK) == uint64_t(CustomCommand::PASS))) {
-            auto ma = first->primitive.mi->getMaterial();
+            auto ma = first->primitive.primitive->getMaterialInstance()->getMaterial();
             ma->prepareProgram(first->primitive.materialVariant);
         }
     }
@@ -299,10 +299,7 @@ void RenderPass::instanceify(FEngine& engine, Arena& arena) noexcept {
                 [lhs = *curr](Command const& rhs) {
             // primitives must be identical to be instanced. Currently, instancing doesn't support
             // skinning/morphing.
-            return  lhs.primitive.mi                == rhs.primitive.mi                 &&
-                    lhs.primitive.primitiveHandle   == rhs.primitive.primitiveHandle    &&
-                    lhs.primitive.indexOffset       == rhs.primitive.indexOffset        &&
-                    lhs.primitive.indexCount        == rhs.primitive.indexCount         &&
+            return  lhs.primitive.primitive         == rhs.primitive.primitive          &&
                     lhs.primitive.rasterState       == rhs.primitive.rasterState        &&
                     lhs.primitive.skinningHandle    == rhs.primitive.skinningHandle     &&
                     lhs.primitive.skinningOffset    == rhs.primitive.skinningOffset     &&
@@ -431,7 +428,6 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
     cmdDraw.primitive.rasterState.colorWrite = mi->isColorWriteEnabled();
     cmdDraw.primitive.rasterState.depthWrite = mi->isDepthWriteEnabled();
     cmdDraw.primitive.rasterState.depthFunc = mi->getDepthFunc();
-    cmdDraw.primitive.mi = mi;
     cmdDraw.primitive.materialVariant = variant;
     // we keep "RasterState::colorWrite" to the value set by material (could be disabled)
 }
@@ -588,7 +584,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
 
         cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdColor.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
-        cmdColor.primitive.index = (uint16_t)i;
+        cmdColor.primitive.index = i;
         cmdColor.primitive.instanceCount =
                 soaInstanceInfo[i].count | PrimitiveInfo::USER_INSTANCE_MASK;
         cmdColor.primitive.instanceBufferHandle = soaInstanceInfo[i].handle;
@@ -615,7 +611,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             cmdDepth.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
             cmdDepth.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
             cmdDepth.key |= makeField(distanceBits >> 22u, Z_BUCKET_MASK, Z_BUCKET_SHIFT);
-            cmdDepth.primitive.index = (uint16_t)i;
+            cmdDepth.primitive.index = i;
             cmdDepth.primitive.instanceCount =
                     soaInstanceInfo[i].count | PrimitiveInfo::USER_INSTANCE_MASK;
             cmdDepth.primitive.instanceBufferHandle = soaInstanceInfo[i].handle;
@@ -650,9 +646,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             FMaterial const* const ma = mi->getMaterial();
 
             if constexpr (isColorPass) {
-                cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
-                cmdColor.primitive.indexOffset = primitive.getIndexOffset();
-                cmdColor.primitive.indexCount = primitive.getIndexCount();
+                cmdColor.primitive.primitive = &primitive;
                 RenderPass::setupColorCommand(cmdColor, renderableVariant, mi, inverseFrontFaces);
 
                 cmdColor.primitive.skinningHandle = skinning.handle;
@@ -757,10 +751,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
                 cmdDepth.key |= mi->getSortingKey(); // already all set-up for direct or'ing
 
                 // unconditionally write the command
-                cmdDepth.primitive.primitiveHandle = primitive.getHwHandle();
-                cmdDepth.primitive.indexOffset = primitive.getIndexOffset();
-                cmdDepth.primitive.indexCount = primitive.getIndexCount();
-                cmdDepth.primitive.mi = mi;
+                cmdDepth.primitive.primitive = &primitive;
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
 
                 cmdDepth.primitive.skinningHandle = skinning.handle;
@@ -895,17 +886,18 @@ void RenderPass::Executor::execute(FEngine& engine,
                 }
 
                 // primitiveHandle may be invalid if no geometry was set on the renderable.
-                if (UTILS_UNLIKELY(!first->primitive.primitiveHandle)) {
+                if (UTILS_UNLIKELY(!first->primitive.primitive->getHwHandle())) {
                     continue;
                 }
 
                 // per-renderable uniform
                 const PrimitiveInfo info = first->primitive;
                 pipeline.rasterState = info.rasterState;
+                //pipeline.vertexBufferInfo = info.vertexBufferInfo;
 
-                if (UTILS_UNLIKELY(mi != info.mi)) {
+                if (UTILS_UNLIKELY(mi != info.primitive->getMaterialInstance())) {
                     // this is always taken the first time
-                    mi = info.mi;
+                    mi = info.primitive->getMaterialInstance();
                     assert_invariant(mi);
 
                     ma = mi->getMaterial();
@@ -1003,8 +995,9 @@ void RenderPass::Executor::execute(FEngine& engine,
                             info.skinningTexture);
                 }
 
-                driver.draw(pipeline, info.primitiveHandle,
-                        info.indexOffset, info.indexCount, instanceCount);
+                driver.draw(pipeline, info.primitive->getHwHandle(),
+                        info.primitive->getIndexOffset(), info.primitive->getIndexCount(),
+                        instanceCount);
             }
         }
 
