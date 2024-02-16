@@ -34,8 +34,6 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-static VulkanPipelineCache::RasterState createDefaultRasterState();
-
 static VkShaderStageFlags getShaderStageFlags(VulkanPipelineCache::UsageFlags key, uint16_t binding) {
     // NOTE: if you modify this function, you also need to modify getUsageFlags.
     assert_invariant(binding < MAX_SAMPLER_COUNT);
@@ -73,8 +71,7 @@ VulkanPipelineCache::UsageFlags VulkanPipelineCache::disableUsageFlags(uint16_t 
 }
 
 VulkanPipelineCache::VulkanPipelineCache(VulkanResourceAllocator* allocator)
-    : mCurrentRasterState(createDefaultRasterState()),
-      mResourceAllocator(allocator),
+    : mResourceAllocator(allocator),
       mPipelineBoundResources(allocator) {
     mDummyBufferWriteInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     mDummyBufferWriteInfo.pNext = nullptr;
@@ -569,7 +566,7 @@ void VulkanPipelineCache::bindProgram(VulkanProgram* program) noexcept {
 }
 
 void VulkanPipelineCache::bindRasterState(const RasterState& rasterState) noexcept {
-    mPipelineRequirements.rasterState = mCurrentRasterState = rasterState;
+    mPipelineRequirements.rasterState = rasterState;
 }
 
 void VulkanPipelineCache::bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept {
@@ -915,23 +912,6 @@ bool VulkanPipelineCache::DescEqual::operator()(const DescriptorKey& k1,
         }
     }
     return true;
-}
-
-static VulkanPipelineCache::RasterState createDefaultRasterState() {
-    return VulkanPipelineCache::RasterState {
-        .cullMode = VK_CULL_MODE_NONE,
-        .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
-        .depthBiasEnable = VK_FALSE,
-        .blendEnable = VK_FALSE,
-        .depthWriteEnable = VK_TRUE,
-        .alphaToCoverageEnable = true,
-        .colorWriteMask = 0xf,
-        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-        .colorTargetCount = 1,
-        .depthCompareOp = SamplerCompareFunc::LE,
-        .depthBiasConstantFactor = 0.0f,
-        .depthBiasSlopeFactor = 0.0f,
-    };
 }
 
 } // namespace filament::backend

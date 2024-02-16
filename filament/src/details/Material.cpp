@@ -532,7 +532,8 @@ void FMaterial::compile(CompilerPriorityQueue priority,
         utils::Invocable<void(Material*)>&& callback) noexcept {
 
     // Turn off the STE variant if stereo is not supported.
-    if (!mEngine.getDriverApi().isStereoSupported()) {
+    const StereoscopicType stereoscopicType = mEngine.getConfig().stereoscopicType;
+    if (!mEngine.getDriverApi().isStereoSupported(stereoscopicType)) {
         variantSpec &= ~UserVariantFilterMask(UserVariantFilterBit::STE);
     }
 

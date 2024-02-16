@@ -140,7 +140,7 @@ public:
      * Retrieve the Entities of all the components of this manager.
      * @return A list, in no particular order, of all the entities managed by this manager.
      */
-    utils::Entity const* getEntities() const noexcept;
+    utils::Entity const* UTILS_NONNULL getEntities() const noexcept;
 
     /**
      * Enables or disable the accurate translation mode. Disabled by default.
@@ -224,7 +224,7 @@ public:
      * @param count The maximum number of children to retrieve.
      * @return The number of children written to the pointer.
      */
-    size_t getChildren(Instance i, utils::Entity* children, size_t count) const noexcept;
+    size_t getChildren(Instance i, utils::Entity* UTILS_NONNULL children, size_t count) const noexcept;
 
     /**
      * Returns an iterator to the Instance of the first child of the given parent.

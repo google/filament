@@ -62,14 +62,6 @@ public:
     // clear the handle, this doesn't free associated resources
     void clear() noexcept { object = nullid; }
 
-    // compare handles
-    bool operator==(const HandleBase& rhs) const noexcept { return object == rhs.object; }
-    bool operator!=(const HandleBase& rhs) const noexcept { return object != rhs.object; }
-    bool operator<(const HandleBase& rhs) const noexcept { return object < rhs.object; }
-    bool operator<=(const HandleBase& rhs) const noexcept { return object <= rhs.object; }
-    bool operator>(const HandleBase& rhs) const noexcept { return object > rhs.object; }
-    bool operator>=(const HandleBase& rhs) const noexcept { return object >= rhs.object; }
-
     // get this handle's handleId
     HandleId getId() const noexcept { return object; }
 
@@ -100,6 +92,14 @@ struct Handle : public HandleBase {
     Handle& operator=(Handle const& rhs) noexcept = default;
 
     explicit Handle(HandleId id) noexcept : HandleBase(id) { }
+
+    // compare handles of the same type
+    bool operator==(const Handle& rhs) const noexcept { return getId() == rhs.getId(); }
+    bool operator!=(const Handle& rhs) const noexcept { return getId() != rhs.getId(); }
+    bool operator<(const Handle& rhs) const noexcept { return getId() < rhs.getId(); }
+    bool operator<=(const Handle& rhs) const noexcept { return getId() <= rhs.getId(); }
+    bool operator>(const Handle& rhs) const noexcept { return getId() > rhs.getId(); }
+    bool operator>=(const Handle& rhs) const noexcept { return getId() >= rhs.getId(); }
 
     // type-safe Handle cast
     template<typename B, typename = std::enable_if_t<std::is_base_of<T, B>::value> >

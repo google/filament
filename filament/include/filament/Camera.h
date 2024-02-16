@@ -306,7 +306,7 @@ public:
      * @see setCustomProjection
      * @see Engine::Config::stereoscopicEyeCount
      */
-    void setCustomEyeProjection(math::mat4 const* projection, size_t count,
+    void setCustomEyeProjection(math::mat4 const* UTILS_NONNULL projection, size_t count,
             math::mat4 const& projectionForCulling, double near, double far);
 
     /** Sets an additional matrix that scales the projection matrix.

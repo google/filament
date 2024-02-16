@@ -58,17 +58,6 @@
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
 
-#if FILAMENT_ENABLE_MATDBG
-#include <matdbg/DebugServer.h>
-#else
-namespace filament {
-namespace matdbg {
-class DebugServer;
-using MaterialKey = uint32_t;
-} // namespace matdbg
-} // namespace filament
-#endif
-
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
 #include <utils/JobSystem.h>
@@ -78,7 +67,18 @@ using MaterialKey = uint32_t;
 #include <memory>
 #include <new>
 #include <random>
+#include <thread>
+#include <type_traits>
 #include <unordered_map>
+
+#if FILAMENT_ENABLE_MATDBG
+#include <matdbg/DebugServer.h>
+#else
+namespace filament::matdbg {
+class DebugServer;
+using MaterialKey = uint32_t;
+} // namespace filament::matdbg
+#endif
 
 namespace filament {
 
@@ -142,7 +142,7 @@ public:
     // the per-frame Area is used by all Renderer, so they must run in sequence and
     // have freed all allocated memory when done. If this needs to change in the future,
     // we'll simply have to use separate Areas (for instance).
-    LinearAllocatorArena& getPerRenderPassAllocator() noexcept { return mPerRenderPassAllocator; }
+    LinearAllocatorArena& getPerRenderPassArena() noexcept { return mPerRenderPassArena; }
 
     // Material IDs...
     uint32_t getMaterialId() const noexcept { return mMaterialId++; }
@@ -182,7 +182,9 @@ public:
         return CONFIG_MAX_INSTANCES;
     }
 
-    bool isStereoSupported() const noexcept { return getDriver().isStereoSupported(); }
+    bool isStereoSupported(StereoscopicType stereoscopicType) const noexcept {
+        return getDriver().isStereoSupported(stereoscopicType);
+    }
 
     static size_t getMaxStereoscopicEyes() noexcept {
         return CONFIG_MAX_STEREOSCOPIC_EYES;
@@ -508,7 +510,7 @@ private:
 
     uint32_t mFlushCounter = 0;
 
-    LinearAllocatorArena mPerRenderPassAllocator;
+    RootArenaScope::Arena mPerRenderPassArena;
     HeapAllocatorArena mHeapAllocator;
 
     utils::JobSystem mJobSystem;

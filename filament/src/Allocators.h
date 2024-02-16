@@ -54,7 +54,7 @@ using LinearAllocatorArena = utils::Arena<
 
 #endif
 
-using ArenaScope = utils::ArenaScope<LinearAllocatorArena>;
+using RootArenaScope = utils::ArenaScope<LinearAllocatorArena>;
 
 } // namespace filament
 

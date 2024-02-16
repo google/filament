@@ -179,6 +179,14 @@
 #   define UTILS_HAS_FEATURE_CXX_THREAD_LOCAL 0
 #endif
 
+#if defined(__clang__)
+#define UTILS_NONNULL _Nonnull
+#define UTILS_NULLABLE _Nullable
+#else
+#define UTILS_NONNULL
+#define UTILS_NULLABLE
+#endif
+
 #if defined(_MSC_VER)
 // MSVC does not support loop unrolling hints
 #   define UTILS_UNROLL

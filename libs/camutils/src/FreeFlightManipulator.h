@@ -24,6 +24,7 @@
 #include <math/mat4.h>
 #include <math/quat.h>
 
+#include <algorithm>
 #include <cmath>
 
 namespace filament {
@@ -121,50 +122,90 @@ public:
     }
 
     void update(FLOAT deltaTime) override {
-        vec3 forceLocal { 0.0, 0.0, 0.0 };
 
-        if (mKeyDown[(int) Base::Key::FORWARD]) {
-            forceLocal += vec3{  0.0,  0.0, -1.0 };
-        }
-        if (mKeyDown[(int) Base::Key::LEFT]) {
-            forceLocal += vec3{ -1.0,  0.0,  0.0 };
-        }
-        if (mKeyDown[(int) Base::Key::BACKWARD]) {
-            forceLocal += vec3{  0.0,  0.0,  1.0 };
-        }
-        if (mKeyDown[(int) Base::Key::RIGHT]) {
-            forceLocal += vec3{  1.0,  0.0,  0.0 };
-        }
+        auto getLocalDirection = [this]() -> vec3 {
+            vec3 directionLocal{ 0.0, 0.0, 0.0 };
+            if (mKeyDown[(int)Base::Key::FORWARD]) {
+                directionLocal += vec3{ 0.0, 0.0, -1.0 };
+            }
+            if (mKeyDown[(int)Base::Key::LEFT]) {
+                directionLocal += vec3{ -1.0, 0.0, 0.0 };
+            }
+            if (mKeyDown[(int)Base::Key::BACKWARD]) {
+                directionLocal += vec3{ 0.0, 0.0, 1.0 };
+            }
+            if (mKeyDown[(int)Base::Key::RIGHT]) {
+                directionLocal += vec3{ 1.0, 0.0, 0.0 };
+            }
+            return directionLocal;
+        };
 
-        const mat4 orientation = mat4::lookAt(Base::mEye, Base::mTarget, Base::mProps.upVector);
-        vec3 forceWorld = (orientation * vec4{ forceLocal, 0.0f }).xyz;
+        auto getWorldDirection = [this](vec3 directionLocal) -> vec3 {
+            const mat4 orientation = mat4::lookAt(Base::mEye, Base::mTarget, Base::mProps.upVector);
+            vec3 directionWorld = (orientation * vec4{ directionLocal, 0.0f }).xyz;
+            if (mKeyDown[(int)Base::Key::UP]) {
+                directionWorld += vec3{ 0.0, 1.0, 0.0 };
+            }
+            if (mKeyDown[(int)Base::Key::DOWN]) {
+                directionWorld += vec3{ 0.0, -1.0, 0.0 };
+            }
+            return directionWorld;
+        };
 
-        if (mKeyDown[(int) Base::Key::UP]) {
-            forceWorld += vec3{  0.0,  1.0,  0.0 };
-        }
-        if (mKeyDown[(int) Base::Key::DOWN]) {
-            forceWorld += vec3{  0.0, -1.0,  0.0 };
-        }
+        vec3 const localDirection = getLocalDirection();
+        vec3 const worldDirection = getWorldDirection(localDirection);
 
-        forceWorld *= mMoveSpeed;
-
-        const auto dampingFactor = Base::mProps.flightMoveDamping;
+        // unit of dampingFactor is [1/s]
+        FLOAT const dampingFactor = Base::mProps.flightMoveDamping;
         if (dampingFactor == 0.0) {
             // Without damping, we simply treat the force as our velocity.
-            mEyeVelocity = forceWorld;
+            vec3 const speed = worldDirection * mMoveSpeed;
+            mEyeVelocity = speed;
+            vec3 const positionDelta = mEyeVelocity * deltaTime;
+            Base::mEye += positionDelta;
+            Base::mTarget += positionDelta;
         } else {
-            // The dampingFactor acts as "friction", which acts upon the camera in the direction
-            // opposite its velocity.
-            // Force is also multiplied by the dampingFactor, to "make up" for the friction.
-            // This ensures that the max velocity still approaches mMoveSpeed;
-            vec3 velocityDelta = (forceWorld - mEyeVelocity) * dampingFactor;
-            mEyeVelocity += velocityDelta * deltaTime;
+            auto dt = deltaTime / 16.0;
+            for (size_t i = 0; i < 16; i++) {
+                // Note: the algorithm below doesn't work well for large time steps because
+                //       we're not using a closed form for updating the position, so we need
+                //       to loop a few times. We could make this better by having a dynamic
+                //       loop count. What we're really doing is evaluation the solution to
+                //       a differential equation numerically.
+
+                // Kinetic friction is a force opposing velocity and proportional to it.:
+                //      F = -kv
+                //      F = ma
+                // ==>  ma = -kv
+                //      a = -vk/m               [m.s^-2] = [m/s] * [Kg/s] / [Kg]
+                // ==>  dampingFactor = k/m        [1/s] = [Kg/s] / [Kg]
+                //
+                // The velocity update for dt due to friction is then:
+                // v = v + a.dt
+                //   = v - v * dampingFactor * dt
+                //   = v * (1.0 - dampingFactor * dt)
+                mEyeVelocity = mEyeVelocity * saturate(1.0 - dampingFactor * dt);
+
+                // We also undergo an acceleration proportional to the distance to the target speed
+                // (the closer we are the less we accelerate, similar to a car).
+                //       F = k * (target_v - v)
+                //       F = ma
+                //  ==> ma = k * (target_v - v)
+                //       a = k/m * (target_v - v)       [m.s^-2] = [Kg/s] / [Kg] * [m/s]
+                //
+                // The velocity update for dt due to the acceleration (the gas basically) is then:
+                // v = v + a.dt
+                //   = v + k/m * (target_v - v).dt
+                // We're using the same dampingFactor here, but we don't have to.
+                auto const accelerationFactor = dampingFactor;
+                vec3 const acceleration = worldDirection *
+                        (accelerationFactor * std::max(mMoveSpeed - length(mEyeVelocity), FLOAT(0)));
+                mEyeVelocity += acceleration * dt;
+                vec3 const positionDelta = mEyeVelocity * dt;
+                Base::mEye += positionDelta;
+                Base::mTarget += positionDelta;
+            }
         }
-
-        const vec3 positionDelta = mEyeVelocity * deltaTime;
-
-        Base::mEye += positionDelta;
-        Base::mTarget += positionDelta;
     }
 
     Bookmark getCurrentBookmark() const override {

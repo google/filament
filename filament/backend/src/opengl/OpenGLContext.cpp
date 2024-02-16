@@ -622,6 +622,7 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
     ext->OES_standard_derivatives = exts.has("GL_OES_standard_derivatives"sv);
     ext->OES_texture_npot = exts.has("GL_OES_texture_npot"sv);
     ext->OES_vertex_array_object = exts.has("GL_OES_vertex_array_object"sv);
+    ext->OVR_multiview2 = exts.has("GL_OVR_multiview2"sv);
     ext->WEBGL_compressed_texture_etc = exts.has("WEBGL_compressed_texture_etc"sv);
     ext->WEBGL_compressed_texture_s3tc = exts.has("WEBGL_compressed_texture_s3tc"sv);
     ext->WEBGL_compressed_texture_s3tc_srgb = exts.has("WEBGL_compressed_texture_s3tc_srgb"sv);
@@ -686,6 +687,7 @@ void OpenGLContext::initExtensionsGL(Extensions* ext, GLint major, GLint minor) 
     ext->OES_standard_derivatives = true;
     ext->OES_texture_npot = true;
     ext->OES_vertex_array_object = true;
+    ext->OVR_multiview2 = exts.has("GL_OVR_multiview2"sv);
     ext->WEBGL_compressed_texture_etc = false;
     ext->WEBGL_compressed_texture_s3tc = false;
     ext->WEBGL_compressed_texture_s3tc_srgb = false;

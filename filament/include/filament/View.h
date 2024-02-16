@@ -93,7 +93,7 @@ public:
      * Sets the View's name. Only useful for debugging.
      * @param name Pointer to the View's name. The string is copied.
      */
-    void setName(const char* name) noexcept;
+    void setName(const char* UTILS_NONNULL name) noexcept;
 
     /**
      * Returns the View's name
@@ -102,7 +102,7 @@ public:
      *
      * @attention Do *not* free the pointer or modify its content.
      */
-    const char* getName() const noexcept;
+    const char* UTILS_NULLABLE getName() const noexcept;
 
     /**
      * Set this View instance's Scene.
@@ -118,19 +118,19 @@ public:
      *  There is no reference-counting.
      *  Make sure to dissociate a Scene from all Views before destroying it.
      */
-    void setScene(Scene* scene);
+    void setScene(Scene* UTILS_NULLABLE scene);
 
     /**
      * Returns the Scene currently associated with this View.
      * @return A pointer to the Scene associated to this View. nullptr if no Scene is set.
      */
-    Scene* getScene() noexcept;
+    Scene* UTILS_NULLABLE getScene() noexcept;
 
     /**
      * Returns the Scene currently associated with this View.
      * @return A pointer to the Scene associated to this View. nullptr if no Scene is set.
      */
-    Scene const* getScene() const noexcept {
+    Scene const* UTILS_NULLABLE getScene() const noexcept {
         return const_cast<View*>(this)->getScene();
     }
 
@@ -145,7 +145,7 @@ public:
      *
      * @param renderTarget Render target associated with view, or nullptr for the swap chain.
      */
-    void setRenderTarget(RenderTarget* renderTarget) noexcept;
+    void setRenderTarget(RenderTarget* UTILS_NULLABLE renderTarget) noexcept;
 
     /**
      * Gets the offscreen render target associated with this view.
@@ -154,7 +154,7 @@ public:
      *
      * @see setRenderTarget
      */
-    RenderTarget* getRenderTarget() const noexcept;
+    RenderTarget* UTILS_NULLABLE getRenderTarget() const noexcept;
 
     /**
      * Sets the rectangular region to render to.
@@ -187,7 +187,7 @@ public:
      *  There is no reference-counting.
      *  Make sure to dissociate a Camera from all Views before destroying it.
      */
-    void setCamera(Camera* camera) noexcept;
+    void setCamera(Camera* UTILS_NONNULL camera) noexcept;
 
     /**
      * Returns the Camera currently associated with this View.
@@ -404,13 +404,13 @@ public:
      *  There is no reference-counting.
      *  Make sure to dissociate a ColorGrading from all Views before destroying it.
      */
-    void setColorGrading(ColorGrading* colorGrading) noexcept;
+    void setColorGrading(ColorGrading* UTILS_NULLABLE colorGrading) noexcept;
 
     /**
      * Returns the color grading transforms currently associated to this view.
      * @return A pointer to the ColorGrading associated to this View.
      */
-    const ColorGrading* getColorGrading() const noexcept;
+    const ColorGrading* UTILS_NULLABLE getColorGrading() const noexcept;
 
     /**
      * Sets ambient occlusion options.
@@ -716,10 +716,10 @@ public:
     bool isFrustumCullingEnabled() const noexcept;
 
     //! debugging: sets the Camera used for rendering. It may be different from the culling camera.
-    void setDebugCamera(Camera* camera) noexcept;
+    void setDebugCamera(Camera* UTILS_NULLABLE camera) noexcept;
 
     //! debugging: returns a Camera from the point of view of *the* dominant directional light used for shadowing.
-    Camera const* getDirectionalLightCamera() const noexcept;
+    Camera const* UTILS_NULLABLE getDirectionalShadowCamera() const noexcept;
 
 
     /** Result of a picking query */
@@ -748,11 +748,12 @@ public:
     /** User data for PickingQueryResultCallback */
     struct PickingQuery {
         // note: this is enough to store a std::function<> -- just saying...
-        void* storage[4];
+        void* UTILS_NULLABLE storage[4];
     };
 
     /** callback type used for picking queries. */
-    using PickingQueryResultCallback = void(*)(PickingQueryResult const& result, PickingQuery* pq);
+    using PickingQueryResultCallback =
+            void(*)(PickingQueryResult const& result, PickingQuery* UTILS_NONNULL pq);
 
     /**
      * Helper for creating a picking query from Foo::method, by pointer.
@@ -766,8 +767,8 @@ public:
      * @param handler   Handler to dispatch the callback or nullptr for the default handler.
      */
     template<typename T, void(T::*method)(PickingQueryResult const&)>
-    void pick(uint32_t x, uint32_t y, T* instance,
-            backend::CallbackHandler* handler = nullptr) noexcept {
+    void pick(uint32_t x, uint32_t y, T* UTILS_NONNULL instance,
+            backend::CallbackHandler* UTILS_NULLABLE handler = nullptr) noexcept {
         PickingQuery& query = pick(x, y, [](PickingQueryResult const& result, PickingQuery* pq) {
             (static_cast<T*>(pq->storage[0])->*method)(result);
         }, handler);
@@ -787,7 +788,7 @@ public:
      */
     template<typename T, void(T::*method)(PickingQueryResult const&)>
     void pick(uint32_t x, uint32_t y, T instance,
-            backend::CallbackHandler* handler = nullptr) noexcept {
+            backend::CallbackHandler* UTILS_NULLABLE handler = nullptr) noexcept {
         static_assert(sizeof(instance) <= sizeof(PickingQuery::storage), "user data too large");
         PickingQuery& query = pick(x, y, [](PickingQueryResult const& result, PickingQuery* pq) {
             T* const that = static_cast<T*>(reinterpret_cast<void*>(pq->storage));
@@ -808,7 +809,7 @@ public:
      */
     template<typename T>
     void pick(uint32_t x, uint32_t y, T functor,
-            backend::CallbackHandler* handler = nullptr) noexcept {
+            backend::CallbackHandler* UTILS_NULLABLE handler = nullptr) noexcept {
         static_assert(sizeof(functor) <= sizeof(PickingQuery::storage), "functor too large");
         PickingQuery& query = pick(x, y, handler,
                 (PickingQueryResultCallback)[](PickingQueryResult const& result, PickingQuery* pq) {
@@ -834,8 +835,9 @@ public:
      *                  8*sizeof(void*) bytes of user data. This user data is later accessible
      *                  in the PickingQueryResultCallback callback 3rd parameter.
      */
-    PickingQuery& pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
-            PickingQueryResultCallback callback) noexcept;
+    PickingQuery& pick(uint32_t x, uint32_t y,
+            backend::CallbackHandler* UTILS_NULLABLE handler,
+            PickingQueryResultCallback UTILS_NONNULL callback) noexcept;
 
     /**
      * Set the value of material global variables. There are up-to four such variable each of

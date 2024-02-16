@@ -90,24 +90,24 @@ Driver* OpenGLDriver::create(OpenGLPlatform* const platform,
 #if 0
     // this is useful for development, but too verbose even for debug builds
     // For reference on a 64-bits machine in Release mode:
-    //    GLFence                   :   8       few
     //    GLIndexBuffer             :   8       moderate
-    //    GLSamplerGroup            :   8       few
+    //    GLSamplerGroup            :  16       few
+    //    GLSwapChain               :  16       few
+    //    GLTimerQuery              :  16       few
     // -- less than or equal 16 bytes
-    //    GLBufferObject            :  24       many
-    //    GLSync                    :  24       few
-    //    GLTimerQuery              :  32       few
-    //    OpenGLProgram             :  32       moderate
-    //    GLRenderPrimitive         :  48       many
+    //    GLFence                   :  24       few
+    //    GLBufferObject            :  32       many
+    //    GLRenderPrimitive         :  40       many
+    //    OpenGLProgram             :  56       moderate
+    //    GLTexture                 :  64       moderate
     // -- less than or equal 64 bytes
-    //    GLTexture                 :  72       moderate
+    //    GLStream                  : 104       few
     //    GLRenderTarget            : 112       few
-    //    GLStream                  : 184       few
     //    GLVertexBuffer            : 200       moderate
     // -- less than or equal to 208 bytes
 
     slog.d
-           << "HwFence: " << sizeof(HwFence)
+           << "\nGLSwapChain: " << sizeof(GLSwapChain)
            << "\nGLBufferObject: " << sizeof(GLBufferObject)
            << "\nGLVertexBuffer: " << sizeof(GLVertexBuffer)
            << "\nGLIndexBuffer: " << sizeof(GLIndexBuffer)
@@ -117,7 +117,7 @@ Driver* OpenGLDriver::create(OpenGLPlatform* const platform,
            << "\nGLTimerQuery: " << sizeof(GLTimerQuery)
            << "\nGLStream: " << sizeof(GLStream)
            << "\nGLRenderTarget: " << sizeof(GLRenderTarget)
-           << "\nGLSync: " << sizeof(GLSync)
+           << "\nGLFence: " << sizeof(GLFence)
            << "\nOpenGLProgram: " << sizeof(OpenGLProgram)
            << io::endl;
 #endif
@@ -501,8 +501,7 @@ void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh,
 
 void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
-        PrimitiveType pt, uint32_t offset,
-        uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
+        PrimitiveType pt) {
     DEBUG_MARKER()
 
     auto& gl = mContext;
@@ -515,10 +514,6 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
     rp->gl.indicesSize = (ib->elementSize == 4u) ? 4u : 2u;
     rp->gl.vertexBufferWithObjects = vbh;
     rp->type = pt;
-    rp->offset = offset * rp->gl.indicesSize;
-    rp->count = count;
-    rp->minIndex = minIndex;
-    rp->maxIndex = maxIndex > minIndex ? maxIndex : rp->maxVertexCount - 1; // sanitize max index
 
     gl.procs.genVertexArrays(1, &rp->gl.vao);
 
@@ -862,7 +857,6 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
         // that it's always reset in draw
     }
 
-    rp->maxVertexCount = vb->vertexCount;
     for (size_t i = 0, n = vb->attributes.size(); i < n; i++) {
         const auto& attribute = vb->attributes[i];
         const uint8_t bi = attribute.buffer;
@@ -1899,12 +1893,20 @@ bool OpenGLDriver::isSRGBSwapChainSupported() {
     return mPlatform.isSRGBSwapChainSupported();
 }
 
-bool OpenGLDriver::isStereoSupported() {
-    // Stereo requires instancing and EXT_clip_cull_distance.
+bool OpenGLDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
+    // Instanced-stereo requires instancing and EXT_clip_cull_distance.
+    // Multiview-stereo requires ES 3.0 and OVR_multiview2.
     if (UTILS_UNLIKELY(mContext.isES2())) {
         return false;
     }
-    return mContext.ext.EXT_clip_cull_distance;
+    switch (stereoscopicType) {
+    case backend::StereoscopicType::INSTANCED:
+        return mContext.ext.EXT_clip_cull_distance;
+    case backend::StereoscopicType::MULTIVIEW:
+        return mContext.ext.OVR_multiview2;
+    default:
+        return false;
+    }
 }
 
 bool OpenGLDriver::isParallelShaderCompileSupported() {
@@ -3698,7 +3700,8 @@ void OpenGLDriver::updateTextureLodRange(GLTexture* texture, int8_t targetLevel)
 #endif
 }
 
-void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint32_t instanceCount) {
+void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph,
+        uint32_t const indexOffset, uint32_t const indexCount, uint32_t const instanceCount) {
     DEBUG_MARKER()
     auto& gl = mContext;
 
@@ -3736,13 +3739,14 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph, uint
     setScissor(state.scissor);
 
     if (UTILS_LIKELY(instanceCount <= 1)) {
-        glDrawElements(GLenum(rp->type), (GLsizei)rp->count, rp->gl.getIndicesType(),
-                reinterpret_cast<const void*>(rp->offset));
+        glDrawElements(GLenum(rp->type), (GLsizei)indexCount, rp->gl.getIndicesType(),
+                reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize));
     } else {
         assert_invariant(!mContext.isES2());
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-        glDrawElementsInstanced(GLenum(rp->type), (GLsizei)rp->count,
-                rp->gl.getIndicesType(), reinterpret_cast<const void*>(rp->offset),
+        glDrawElementsInstanced(GLenum(rp->type), (GLsizei)indexCount,
+                rp->gl.getIndicesType(),
+                reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize),
                 (GLsizei)instanceCount);
 #endif
     }

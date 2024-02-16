@@ -43,6 +43,40 @@ namespace filament {
 namespace backend {
 
 Driver* MetalDriverFactory::create(MetalPlatform* const platform, const Platform::DriverConfig& driverConfig) {
+#if 0
+    // this is useful for development, but too verbose even for debug builds
+    // For reference on a 64-bits machine in Release mode:
+    //    MetalTimerQuery              :  16       few
+    //    HwStream                     :  24       few
+    //    MetalIndexBuffer             :  40       moderate
+    //    MetalFence                   :  48       few
+    //    MetalBufferObject            :  48       many
+    // -- less than or equal 48 bytes
+    //    MetalSamplerGroup            : 112       few
+    //    MetalProgram                 : 144       moderate
+    //    MetalTexture                 : 152       moderate
+    //    MetalVertexBuffer            : 152       moderate
+    // -- less than or equal 160 bytes
+    //    MetalSwapChain               : 184       few
+    //    MetalRenderTarget            : 272       few
+    //    MetalRenderPrimitive         : 584       many
+    // -- less than or equal to 592 bytes
+
+    utils::slog.d
+           << "\nMetalSwapChain: " << sizeof(MetalSwapChain)
+           << "\nMetalBufferObject: " << sizeof(MetalBufferObject)
+           << "\nMetalVertexBuffer: " << sizeof(MetalVertexBuffer)
+           << "\nMetalIndexBuffer: " << sizeof(MetalIndexBuffer)
+           << "\nMetalSamplerGroup: " << sizeof(MetalSamplerGroup)
+           << "\nMetalRenderPrimitive: " << sizeof(MetalRenderPrimitive)
+           << "\nMetalTexture: " << sizeof(MetalTexture)
+           << "\nMetalTimerQuery: " << sizeof(MetalTimerQuery)
+           << "\nHwStream: " << sizeof(HwStream)
+           << "\nMetalRenderTarget: " << sizeof(MetalRenderTarget)
+           << "\nMetalFence: " << sizeof(MetalFence)
+           << "\nMetalProgram: " << sizeof(MetalProgram)
+           << utils::io::endl;
+#endif
     return MetalDriver::create(platform, driverConfig);
 }
 
@@ -316,11 +350,9 @@ void MetalDriver::createSamplerGroupR(
 
 void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
-        PrimitiveType pt, uint32_t offset,
-        uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
+        PrimitiveType pt) {
     construct_handle<MetalRenderPrimitive>(rph);
-    MetalDriver::setRenderPrimitiveBuffer(rph, vbh, ibh);
-    MetalDriver::setRenderPrimitiveRange(rph, pt, offset, minIndex, maxIndex, count);
+    MetalDriver::setRenderPrimitiveBuffer(rph, pt, vbh, ibh);
 }
 
 void MetalDriver::createProgramR(Handle<HwProgram> rph, Program&& program) {
@@ -722,8 +754,14 @@ bool MetalDriver::isSRGBSwapChainSupported() {
     return false;
 }
 
-bool MetalDriver::isStereoSupported() {
-    return true;
+bool MetalDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
+    switch (stereoscopicType) {
+    case backend::StereoscopicType::INSTANCED:
+        return true;
+    case backend::StereoscopicType::MULTIVIEW:
+        // TODO: implement multiview feature in Metal.
+        return false;
+    }
 }
 
 bool MetalDriver::isParallelShaderCompileSupported() {
@@ -1029,23 +1067,13 @@ void MetalDriver::endRenderPass(int dummy) {
     mContext->currentRenderPassEncoder = nil;
 }
 
-void MetalDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
+void MetalDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph, PrimitiveType pt,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh) {
     auto primitive = handle_cast<MetalRenderPrimitive>(rph);
     auto vertexBuffer = handle_cast<MetalVertexBuffer>(vbh);
     auto indexBuffer = handle_cast<MetalIndexBuffer>(ibh);
     primitive->setBuffers(vertexBuffer, indexBuffer);
-}
-
-void MetalDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
-        PrimitiveType pt, uint32_t offset, uint32_t minIndex, uint32_t maxIndex,
-        uint32_t count) {
-    auto primitive = handle_cast<MetalRenderPrimitive>(rph);
     primitive->type = pt;
-    primitive->offset = offset * primitive->indexBuffer->elementSize;
-    primitive->count = count;
-    primitive->minIndex = minIndex;
-    primitive->maxIndex = maxIndex > minIndex ? maxIndex : primitive->maxVertexCount - 1;
 }
 
 void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
@@ -1547,7 +1575,8 @@ void MetalDriver::finalizeSamplerGroup(MetalSamplerGroup* samplerGroup) {
     }
 }
 
-void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t instanceCount) {
+void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph,
+        uint32_t const indexOffset, uint32_t const indexCount, uint32_t const instanceCount) {
     ASSERT_PRECONDITION(mContext->currentRenderPassEncoder != nullptr,
             "Attempted to draw without a valid command encoder.");
     auto primitive = handle_cast<MetalRenderPrimitive>(rph);
@@ -1792,10 +1821,10 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph, uint32_t
     id<MTLCommandBuffer> cmdBuffer = getPendingCommandBuffer(mContext);
     id<MTLBuffer> metalIndexBuffer = indexBuffer->buffer.getGpuBufferForDraw(cmdBuffer);
     [mContext->currentRenderPassEncoder drawIndexedPrimitives:getMetalPrimitiveType(primitive->type)
-                                                   indexCount:primitive->count
+                                                   indexCount:indexCount
                                                     indexType:getIndexType(indexBuffer->elementSize)
                                                   indexBuffer:metalIndexBuffer
-                                            indexBufferOffset:primitive->offset
+                                            indexBufferOffset:indexOffset * primitive->indexBuffer->elementSize
                                                 instanceCount:instanceCount];
 }
 

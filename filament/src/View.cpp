@@ -67,8 +67,8 @@ const char* View::getName() const noexcept {
     return downcast(this)->getName();
 }
 
-Camera const* View::getDirectionalLightCamera() const noexcept {
-    return downcast(this)->getDirectionalLightCamera();
+Camera const* View::getDirectionalShadowCamera() const noexcept {
+    return downcast(this)->getDirectionalShadowCamera();
 }
 
 void View::setShadowingEnabled(bool enabled) noexcept {

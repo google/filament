@@ -205,6 +205,7 @@ public:
         bool OES_standard_derivatives;
         bool OES_texture_npot;
         bool OES_vertex_array_object;
+        bool OVR_multiview2;
         bool WEBGL_compressed_texture_etc;
         bool WEBGL_compressed_texture_s3tc;
         bool WEBGL_compressed_texture_s3tc_srgb;

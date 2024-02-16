@@ -76,7 +76,7 @@ public:
      * @return  FenceStatus::CONDITION_SATISFIED on success,
      *          FenceStatus::ERROR otherwise.
      */
-    static FenceStatus waitAndDestroy(Fence* fence, Mode mode = Mode::FLUSH);
+    static FenceStatus waitAndDestroy(Fence* UTILS_NONNULL fence, Mode mode = Mode::FLUSH);
 
 protected:
     // prevent heap allocation

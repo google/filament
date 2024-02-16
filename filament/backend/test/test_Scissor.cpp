@@ -140,7 +140,7 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         api.beginFrame(0, 0);
 
         api.beginRenderPass(srcRenderTarget, params);
-        api.draw(ps, triangle.getRenderPrimitive(), 1);
+        api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
 
         readPixelsAndAssertHash("scissor", kSrcTexWidth >> 1, kSrcTexHeight >> 1, fullRenderTarget,
@@ -231,14 +231,14 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         api.beginFrame(0, 0);
 
         api.beginRenderPass(renderTarget, params);
-        api.draw(ps, triangle.getRenderPrimitive(), 1);
+        api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
 
         params.viewport = topLeftViewport;
         params.flags.clear = TargetBufferFlags::NONE;
         params.flags.discardStart = TargetBufferFlags::NONE;
         api.beginRenderPass(renderTarget, params);
-        api.draw(ps, triangle.getRenderPrimitive(), 1);
+        api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
 
         readPixelsAndAssertHash(

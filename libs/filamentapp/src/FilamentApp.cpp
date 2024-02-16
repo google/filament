@@ -430,8 +430,10 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         window->mDebugCamera->lookAt(eye, center, up);
 
         // Update the cube distortion matrix used for frustum visualization.
-        const Camera* lightmapCamera = window->mMainView->getView()->getDirectionalLightCamera();
-        lightmapCube->mapFrustum(*mEngine, lightmapCamera);
+        const Camera* lightmapCamera = window->mMainView->getView()->getDirectionalShadowCamera();
+        if (lightmapCamera) {
+            lightmapCube->mapFrustum(*mEngine, lightmapCamera);
+        }
         cameraCube->mapFrustum(*mEngine, window->mMainCamera);
 
         // Delay rendering for roughly one monitor refresh interval
@@ -713,7 +715,10 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         mGodView->setCameraManipulator(mDebugCameraMan);
 
         // Ortho view obviously uses an ortho camera
-        mOrthoView->setCamera( (Camera *)mMainView->getView()->getDirectionalLightCamera() );
+        Camera const* debugDirectionalShadowCamera = mMainView->getView()->getDirectionalShadowCamera();
+        if (debugDirectionalShadowCamera) {
+            mOrthoView->setCamera(const_cast<Camera *>(debugDirectionalShadowCamera));
+        }
     }
 
     // configure the cameras

@@ -53,6 +53,9 @@
 #include <math/scalar.h>
 #include <math/mat4.h>
 
+#include <array>
+#include <memory>
+
 namespace utils {
 class JobSystem;
 } // namespace utils;
@@ -88,7 +91,7 @@ public:
 
     // note: viewport/cameraInfo are passed by value to make it clear that prepare cannot
     // keep references on them that would outlive the scope of prepare() (e.g. with JobSystem).
-    void prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& arena,
+    void prepare(FEngine& engine, backend::DriverApi& driver, RootArenaScope& rootArenaScope,
             filament::Viewport viewport, CameraInfo cameraInfo,
             math::float4 const& userTime, bool needsAlphaChannel) noexcept;
 
@@ -144,7 +147,7 @@ public:
 
     void prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableData,
             FScene::LightSoa const& lightData, CameraInfo const& cameraInfo) noexcept;
-    void prepareLighting(FEngine& engine, ArenaScope& arena, CameraInfo const& cameraInfo) noexcept;
+    void prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexcept;
 
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void prepareSSR(backend::Handle<backend::HwTexture> ssr, bool disableSSR,
@@ -176,7 +179,7 @@ public:
 
     FrameGraphId<FrameGraphTexture> renderShadowMaps(FEngine& engine, FrameGraph& fg,
             CameraInfo const& cameraInfo, math::float4 const& userTime,
-            RenderPass const& pass) noexcept;
+            RenderPassBuilder const& passBuilder) noexcept;
 
     void updatePrimitivesLod(
             FEngine& engine, const CameraInfo& camera,
@@ -198,8 +201,9 @@ public:
 
     void setStereoscopicOptions(StereoscopicOptions const& options) noexcept;
 
-    FCamera const* getDirectionalLightCamera() const noexcept {
-        return mShadowMapManager.getDirectionalLightCamera();
+    FCamera const* getDirectionalShadowCamera() const noexcept {
+        if (!mShadowMapManager) return nullptr;
+        return mShadowMapManager->getDirectionalShadowCamera();
     }
 
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {
@@ -460,7 +464,8 @@ private:
     void prepareVisibleRenderables(utils::JobSystem& js,
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
 
-    static void prepareVisibleLights(FLightManager const& lcm, ArenaScope& rootArena,
+    static void prepareVisibleLights(FLightManager const& lcm,
+            utils::Slice<float> scratch,
             math::mat4f const& viewMatrix, Frustum const& frustum,
             FScene::LightSoa& lightData) noexcept;
 
@@ -490,7 +495,7 @@ private:
 
     FScene* mScene = nullptr;
     // The camera set by the user, used for culling and viewing
-    FCamera* mCullingCamera = nullptr;
+    FCamera* /* UTILS_NONNULL */ mCullingCamera = nullptr; // FIXME: should alaways be non-null
     // The optional (debug) camera, used only for viewing
     FCamera* mViewingCamera = nullptr;
 
@@ -554,7 +559,7 @@ private:
     mutable bool mHasShadowing = false;
     mutable bool mNeedsShadowMap = false;
 
-    ShadowMapManager mShadowMapManager;
+    std::unique_ptr<ShadowMapManager> mShadowMapManager;
 
     std::array<math::float4, 4> mMaterialGlobals = {{
                                                             { 0, 0, 0, 1 },
@@ -564,7 +569,7 @@ private:
                                                     }};
 
 #ifndef NDEBUG
-    std::array<DebugRegistry::FrameHistory, 5*60> mDebugFrameHistory;
+    std::unique_ptr<std::array<DebugRegistry::FrameHistory, 5*60>> mDebugFrameHistory;
 #endif
 };
 

@@ -213,6 +213,8 @@ public:
     CommandStream(CommandStream const& rhs) noexcept = delete;
     CommandStream& operator=(CommandStream const& rhs) noexcept = delete;
 
+    CircularBuffer const& getCircularBuffer() const noexcept { return mCurrentBuffer; }
+
 public:
 #define DECL_DRIVER_API(methodName, paramsDecl, params)                                         \
     inline void methodName(paramsDecl) {                                                        \

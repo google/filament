@@ -213,6 +213,41 @@ VulkanDriver::~VulkanDriver() noexcept = default;
 UTILS_NOINLINE
 Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& context,
          Platform::DriverConfig const& driverConfig) noexcept {
+#if 0
+    // this is useful for development, but too verbose even for debug builds
+    // For reference on a 64-bits machine in Release mode:
+    //    VulkanSamplerGroup            :  24       few
+    //    HwStream                      :  24       few
+    //    VulkanFence                   :  40       few
+    //    VulkanProgram                 :  40       moderate
+    //    VulkanIndexBuffer             :  72       moderate
+    //    VulkanBufferObject            :  72       many
+    // -- less than or equal 80 bytes
+    //    VulkanRenderPrimitive         : 104       many
+    //    VulkanSwapChain               : 112       few
+    //    VulkanTimerQuery              : 168       few
+    // -- less than or equal 176 bytes
+    //    VulkanTexture                 : 232       moderate
+    //    VulkanVertexBuffer            : 312       moderate
+    //    VulkanRenderTarget            : 320       few
+    // -- less than or equal to 320 bytes
+
+    utils::slog.d
+           << "\nVulkanSwapChain: " << sizeof(VulkanSwapChain)
+           << "\nVulkanBufferObject: " << sizeof(VulkanBufferObject)
+           << "\nVulkanVertexBuffer: " << sizeof(VulkanVertexBuffer)
+           << "\nVulkanIndexBuffer: " << sizeof(VulkanIndexBuffer)
+           << "\nVulkanSamplerGroup: " << sizeof(VulkanSamplerGroup)
+           << "\nVulkanRenderPrimitive: " << sizeof(VulkanRenderPrimitive)
+           << "\nVulkanTexture: " << sizeof(VulkanTexture)
+           << "\nVulkanTimerQuery: " << sizeof(VulkanTimerQuery)
+           << "\nHwStream: " << sizeof(HwStream)
+           << "\nVulkanRenderTarget: " << sizeof(VulkanRenderTarget)
+           << "\nVulkanFence: " << sizeof(VulkanFence)
+           << "\nVulkanProgram: " << sizeof(VulkanProgram)
+           << utils::io::endl;
+#endif
+
     assert_invariant(platform);
     size_t defaultSize = FVK_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
     Platform::DriverConfig validConfig {driverConfig};
@@ -324,12 +359,10 @@ void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, uint32_t coun
 
 void VulkanDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
-        PrimitiveType pt, uint32_t offset,
-        uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
+        PrimitiveType pt) {
     auto rp = mResourceAllocator.construct<VulkanRenderPrimitive>(rph, &mResourceAllocator);
     mResourceManager.acquire(rp);
-    VulkanDriver::setRenderPrimitiveBuffer(rph, vbh, ibh);
-    VulkanDriver::setRenderPrimitiveRange(rph, pt, offset, minIndex, maxIndex, count);
+    VulkanDriver::setRenderPrimitiveBuffer(rph, pt, vbh, ibh);
 }
 
 void VulkanDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
@@ -764,8 +797,14 @@ bool VulkanDriver::isSRGBSwapChainSupported() {
     return mIsSRGBSwapChainSupported;
 }
 
-bool VulkanDriver::isStereoSupported() {
-    return true;
+bool VulkanDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
+    switch (stereoscopicType) {
+    case backend::StereoscopicType::INSTANCED:
+        return true;
+    case backend::StereoscopicType::MULTIVIEW:
+        // TODO: implement multiview feature in Vulkan.
+        return false;
+    }
 }
 
 bool VulkanDriver::isParallelShaderCompileSupported() {
@@ -1349,22 +1388,12 @@ void VulkanDriver::nextSubpass(int) {
     }
 }
 
-void VulkanDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
+void VulkanDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph, PrimitiveType pt,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh) {
     auto primitive = mResourceAllocator.handle_cast<VulkanRenderPrimitive*>(rph);
     primitive->setBuffers(mResourceAllocator.handle_cast<VulkanVertexBuffer*>(vbh),
             mResourceAllocator.handle_cast<VulkanIndexBuffer*>(ibh));
-}
-
-void VulkanDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
-        PrimitiveType pt, uint32_t offset,
-        uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
-    auto& primitive = *mResourceAllocator.handle_cast<VulkanRenderPrimitive*>(rph);
-    primitive.setPrimitiveType(pt);
-    primitive.offset = offset * primitive.indexBuffer->elementSize;
-    primitive.count = count;
-    primitive.minIndex = minIndex;
-    primitive.maxIndex = maxIndex > minIndex ? maxIndex : primitive.maxVertexCount - 1;
+    primitive->setPrimitiveType(pt);
 }
 
 void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {
@@ -1613,7 +1642,7 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
 }
 
 void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph,
-        const uint32_t instanceCount) {
+        uint32_t const indexOffset, uint32_t const indexCount, uint32_t const instanceCount) {
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("draw");
 
@@ -1641,26 +1670,26 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     // Update the VK raster state.
     const VulkanRenderTarget* rt = mCurrentRenderPass.renderTarget;
 
-    auto vkraster = mPipelineCache.getCurrentRasterState();
-    vkraster.cullMode = getCullMode(rasterState.culling);
-    vkraster.frontFace = getFrontFace(rasterState.inverseFrontFaces);
-    vkraster.depthBiasEnable = (depthOffset.constant || depthOffset.slope) ? true : false;
-    vkraster.depthBiasConstantFactor = depthOffset.constant;
-    vkraster.depthBiasSlopeFactor = depthOffset.slope;
-    vkraster.blendEnable = rasterState.hasBlending();
-    vkraster.srcColorBlendFactor = getBlendFactor(rasterState.blendFunctionSrcRGB);
-    vkraster.dstColorBlendFactor = getBlendFactor(rasterState.blendFunctionDstRGB);
-    vkraster.colorBlendOp = rasterState.blendEquationRGB;
-    vkraster.srcAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionSrcAlpha);
-    vkraster.dstAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionDstAlpha);
-    vkraster.alphaBlendOp =  rasterState.blendEquationAlpha;
-    vkraster.colorWriteMask = (VkColorComponentFlags) (rasterState.colorWrite ? 0xf : 0x0);
-    vkraster.depthWriteEnable = rasterState.depthWrite;
-    vkraster.depthCompareOp = rasterState.depthFunc;
-    vkraster.rasterizationSamples = rt->getSamples();
-    vkraster.alphaToCoverageEnable = rasterState.alphaToCoverage;
-    vkraster.colorTargetCount = rt->getColorTargetCount(mCurrentRenderPass);
-    mPipelineCache.setCurrentRasterState(vkraster);
+    VulkanPipelineCache::RasterState const vulkanRasterState{
+        .cullMode = getCullMode(rasterState.culling),
+        .frontFace = getFrontFace(rasterState.inverseFrontFaces),
+        .depthBiasEnable = (depthOffset.constant || depthOffset.slope) ? true : false,
+        .blendEnable = rasterState.hasBlending(),
+        .depthWriteEnable = rasterState.depthWrite,
+        .alphaToCoverageEnable = rasterState.alphaToCoverage,
+        .srcColorBlendFactor = getBlendFactor(rasterState.blendFunctionSrcRGB),
+        .dstColorBlendFactor = getBlendFactor(rasterState.blendFunctionDstRGB),
+        .srcAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionSrcAlpha),
+        .dstAlphaBlendFactor = getBlendFactor(rasterState.blendFunctionDstAlpha),
+        .colorWriteMask = (VkColorComponentFlags) (rasterState.colorWrite ? 0xf : 0x0),
+        .rasterizationSamples = rt->getSamples(),
+        .colorTargetCount = rt->getColorTargetCount(mCurrentRenderPass),
+        .colorBlendOp = rasterState.blendEquationRGB,
+        .alphaBlendOp =  rasterState.blendEquationAlpha,
+        .depthCompareOp = rasterState.depthFunc,
+        .depthBiasConstantFactor = depthOffset.constant,
+        .depthBiasSlopeFactor = depthOffset.slope
+    };
 
     // Declare fixed-size arrays that get passed to the pipeCache and to vkCmdBindVertexBuffers.
     uint32_t const bufferCount = prim.vertexBuffer->attributes.size();
@@ -1671,7 +1700,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
     // Push state changes to the VulkanPipelineCache instance. This is fast and does not make VK calls.
     mPipelineCache.bindProgram(program);
-    mPipelineCache.bindRasterState(mPipelineCache.getCurrentRasterState());
+    mPipelineCache.bindRasterState(vulkanRasterState);
     mPipelineCache.bindPrimitiveTopology(prim.primitiveTopology);
     mPipelineCache.bindVertexArray(attribDesc, bufferDesc, bufferCount);
 
@@ -1792,8 +1821,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
             prim.indexBuffer->indexType);
 
     // Finally, make the actual draw call. TODO: support subranges
-    const uint32_t indexCount = prim.count;
-    const uint32_t firstIndex = prim.offset / prim.indexBuffer->elementSize;
+    const uint32_t firstIndex = indexOffset;
     const int32_t vertexOffset = 0;
     const uint32_t firstInstId = 0;
 
