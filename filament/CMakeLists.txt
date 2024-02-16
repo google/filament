@@ -66,6 +66,7 @@ set(SRCS
         src/Froxelizer.cpp
         src/Frustum.cpp
         src/HwRenderPrimitiveFactory.cpp
+        src/HwVertexBufferInfoFactory.cpp
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
         src/InstanceBuffer.cpp
@@ -148,6 +149,7 @@ set(PRIVATE_HDRS
         src/FrameSkipper.h
         src/Froxelizer.h
         src/HwRenderPrimitiveFactory.h
+        src/HwVertexBufferInfoFactory.h
         src/Intersections.h
         src/MaterialParser.h
         src/PerViewUniforms.h
