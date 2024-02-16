@@ -153,7 +153,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
     mDeclaredAttributes = builder->mDeclaredAttributes;
     uint8_t const attributeCount = (uint8_t)mDeclaredAttributes.count();
 
-    AttributeArray attributeArray;
+    AttributeArray attributeArray{};
 
     static_assert(attributeArray.size() == MAX_VERTEX_ATTRIBUTE_COUNT,
             "Attribute and Builder::Attribute arrays must match");
@@ -213,8 +213,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
 
     FEngine::DriverApi& driver = engine.getDriverApi();
 
-    // TODO: this should use a cache
-    mVertexBufferInfoHandle = driver.createVertexBufferInfo(
+    mVertexBufferInfoHandle = engine.getVertexBufferInfoFactory().create(driver,
             mBufferCount, attributeCount, attributeArray);
 
     mHandle = driver.createVertexBuffer(mVertexCount, mVertexBufferInfoHandle);
@@ -251,7 +250,7 @@ void FVertexBuffer::terminate(FEngine& engine) {
         }
     }
     driver.destroyVertexBuffer(mHandle);
-    driver.destroyVertexBufferInfo(mVertexBufferInfoHandle);
+    engine.getVertexBufferInfoFactory().destroy(driver, mVertexBufferInfoHandle);
 }
 
 size_t FVertexBuffer::getVertexCount() const noexcept {
