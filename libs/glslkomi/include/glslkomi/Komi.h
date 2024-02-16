@@ -41,7 +41,7 @@ enum class BranchOperator : uint8_t {
 
 // Represents an operation whose syntax differs from a function call. For example, addition,
 // equality. GLSL is not Lisp, unfortunately.
-enum class RValueOperator : uint16_t {
+enum class RValueOperator : uint8_t {
     // Unary
     Negative,
     LogicalNot,
@@ -83,10 +83,6 @@ enum class RValueOperator : uint16_t {
     AddAssign,
     SubAssign,
     MulAssign,
-    VectorTimesMatrixAssign,
-    VectorTimesScalarAssign,
-    MatrixTimesScalarAssign,
-    MatrixTimesMatrixAssign,
     DivAssign,
     ModAssign,
     AndAssign,
@@ -206,21 +202,11 @@ struct LValue {
     }
 };
 
-struct FunctionCallRValue {
-    FunctionId function;
+struct EvaluableRValue {
+    std::variant<RValueOperator, FunctionId> op;
     std::vector<ValueId> args;
 
-    bool operator==(const FunctionCallRValue& o) const {
-        return function == o.function
-                && args == o.args;
-    }
-};
-
-struct OperatorRValue {
-    RValueOperator op;
-    std::vector<ValueId> args;
-
-    bool operator==(const OperatorRValue& o) const {
+    bool operator==(const EvaluableRValue& o) const {
         return op == o.op
                 && args == o.args;
     }
@@ -234,8 +220,7 @@ struct LiteralRValue {
 };
 
 using RValue = std::variant<
-    FunctionCallRValue,
-    OperatorRValue,
+    EvaluableRValue,
     LiteralRValue>;
 
 // TODO: annotation
@@ -354,20 +339,8 @@ struct ::std::hash<glslkomi::LValue> {
 };
 
 template<>
-struct ::std::hash<glslkomi::FunctionCallRValue> {
-    std::size_t operator()(const glslkomi::FunctionCallRValue& o) const {
-        std::size_t result = 0;
-        glslkomi::hashCombine(result, o.function, o.args.size());
-        for (const auto& arg : o.args) {
-            glslkomi::hashCombine(result, arg);
-        }
-        return result;
-    }
-};
-
-template<>
-struct ::std::hash<glslkomi::OperatorRValue> {
-    std::size_t operator()(const glslkomi::OperatorRValue& o) const {
+struct ::std::hash<glslkomi::EvaluableRValue> {
+    std::size_t operator()(const glslkomi::EvaluableRValue& o) const {
         std::size_t result = 0;
         glslkomi::hashCombine(result, o.op, o.args.size());
         for (const auto& arg : o.args) {

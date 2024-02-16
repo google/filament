@@ -25,7 +25,8 @@
 
 namespace glslkomi {
 
-std::variant<RValueOperator, std::string_view> glslangOperatorToRValueOperator(glslang::TOperator op) {
+std::variant<RValueOperator, std::string_view> glslangOperatorToRValueOperator(
+        glslang::TOperator op, int version, Type returnType, std::optional<Type> arg1Type) {
     using namespace glslang;
     switch (op) {
         case EOpNegative: return RValueOperator::Negative;
@@ -137,18 +138,6 @@ std::variant<RValueOperator, std::string_view> glslangOperatorToRValueOperator(g
         case EOpFloatBitsToUint: return "floatBitsToUint";
         case EOpIntBitsToFloat: return "intBitsToFloat";
         case EOpUintBitsToFloat: return "uintBitsToFloat";
-        case EOpDoubleBitsToInt64: return "doubleBitsToInt64";
-        case EOpDoubleBitsToUint64: return "doubleBitsToUint64";
-        case EOpInt64BitsToDouble: return "int64BitsToDouble";
-        case EOpUint64BitsToDouble: return "uint64BitsToDouble";
-        case EOpFloat16BitsToInt16: return "float16BitsToInt16";
-        case EOpFloat16BitsToInt16: return "halfBitsToInt16";
-        case EOpFloat16BitsToUint16: return "float16BitsToUint16";
-        case EOpFloat16BitsToUint16: return "halfBitsToUint16";
-        case EOpInt16BitsToFloat16: return "int16BitsToFloat16";
-        case EOpInt16BitsToFloat16: return "int16BitsToHalf";
-        case EOpUint16BitsToFloat16: return "uint16BitsToFloat16";
-        case EOpUint16BitsToFloat16: return "uint16BitsToHalf";
         case EOpPackSnorm2x16: return "packSnorm2x16";
         case EOpUnpackSnorm2x16: return "unpackSnorm2x16";
         case EOpPackUnorm2x16: return "packUnorm2x16";
@@ -210,19 +199,13 @@ std::variant<RValueOperator, std::string_view> glslangOperatorToRValueOperator(g
         case EOpMatrixInverse: return "inverse";
         case EOpTranspose: return "transpose";
         case EOpFtransform: return "ftransform";
-        case EOpNoise: return "noise1";
-        case EOpNoise: return "noise2";
-        case EOpNoise: return "noise3";
-        case EOpNoise: return "noise4";
         case EOpEmitVertex: return "EmitVertex";
         case EOpEndPrimitive: return "EndPrimitive";
         case EOpEmitStreamVertex: return "EmitStreamVertex";
         case EOpEndStreamPrimitive: return "EndStreamPrimitive";
         case EOpBarrier: return "barrier";
-        case EOpBarrier: return "controlBarrier";
         case EOpMemoryBarrier: return "memoryBarrier";
         case EOpMemoryBarrierAtomicCounter: return "memoryBarrierAtomicCounter";
-        case EOpMemoryBarrierBuffer: return "memoryBarrierAtomicCounter";
         case EOpMemoryBarrierBuffer: return "memoryBarrierBuffer";
         case EOpMemoryBarrierImage: return "memoryBarrierImage";
         case EOpMemoryBarrierShared: return "memoryBarrierShared";
@@ -230,12 +213,9 @@ std::variant<RValueOperator, std::string_view> glslangOperatorToRValueOperator(g
         case EOpBallot: return "ballotARB";
         case EOpReadInvocation: return "readInvocationARB";
         case EOpReadFirstInvocation: return "readFirstInvocationARB";
-        case EOpAnyInvocation: return "anyInvocation";
-        case EOpAnyInvocation: return "anyInvocationARB";
-        case EOpAllInvocations: return "allInvocations";
-        case EOpAllInvocations: return "allInvocationsARB";
-        case EOpAllInvocationsEqual: return "allInvocationsEqual";
-        case EOpAllInvocationsEqual: return "allInvocationsEqualARB";
+        case EOpAnyInvocation: return version >= 460 ? "anyInvocation" : "anyInvocationARB";
+        case EOpAllInvocations: return version >= 460 ? "allInvocations" : "allInvocationsARB";
+        case EOpAllInvocationsEqual: return version >= 460 ? "allInvocationsEqual" : "allInvocationsEqualARB";
         case EOpSubgroupBarrier: return "subgroupBarrier";
         case EOpSubgroupMemoryBarrier: return "subgroupMemoryBarrier";
         case EOpSubgroupMemoryBarrierBuffer: return "subgroupMemoryBarrierBuffer";
@@ -339,45 +319,27 @@ std::variant<RValueOperator, std::string_view> glslangOperatorToRValueOperator(g
         case EOpCubeFaceCoord: return "cubeFaceCoordAMD";
         case EOpTime: return "timeAMD";
         case EOpAtomicAdd: return "atomicAdd";
-        case EOpAtomicAdd: return "atomicCounterAdd";
-        case EOpAtomicSubtract: return "atomicCounterSubtract";
-        case EOpAtomicMin: return "atomicCounterMin";
         case EOpAtomicMin: return "atomicMin";
-        case EOpAtomicMax: return "atomicCounterMax";
         case EOpAtomicMax: return "atomicMax";
         case EOpAtomicAnd: return "atomicAnd";
-        case EOpAtomicAnd: return "atomicCounterAnd";
-        case EOpAtomicOr: return "atomicCounterOr";
         case EOpAtomicOr: return "atomicOr";
-        case EOpAtomicXor: return "atomicCounterXor";
         case EOpAtomicXor: return "atomicXor";
-        case EOpAtomicExchange: return "atomicCounterExchange";
         case EOpAtomicExchange: return "atomicExchange";
         case EOpAtomicCompSwap: return "atomicCompSwap";
-        case EOpAtomicCompSwap: return "atomicCounterCompSwap";
         case EOpAtomicLoad: return "atomicLoad";
         case EOpAtomicStore: return "atomicStore";
         case EOpAtomicCounterIncrement: return "atomicCounterIncrement";
         case EOpAtomicCounterDecrement: return "atomicCounterDecrement";
         case EOpAtomicCounter: return "atomicCounter";
-        case EOpAtomicCounterAdd: return "atomicCounterAdd";
-        case EOpAtomicCounterAdd: return "atomicCounterAddARB";
-        case EOpAtomicCounterSubtract: return "atomicCounterSubtract";
-        case EOpAtomicCounterSubtract: return "atomicCounterSubtractARB";
-        case EOpAtomicCounterMin: return "atomicCounterMin";
-        case EOpAtomicCounterMin: return "atomicCounterMinARB";
-        case EOpAtomicCounterMax: return "atomicCounterMax";
-        case EOpAtomicCounterMax: return "atomicCounterMaxARB";
-        case EOpAtomicCounterAnd: return "atomicCounterAnd";
-        case EOpAtomicCounterAnd: return "atomicCounterAndARB";
-        case EOpAtomicCounterOr: return "atomicCounterOr";
-        case EOpAtomicCounterOr: return "atomicCounterOrARB";
-        case EOpAtomicCounterXor: return "atomicCounterXor";
-        case EOpAtomicCounterXor: return "atomicCounterXorARB";
-        case EOpAtomicCounterExchange: return "atomicCounterExchange";
-        case EOpAtomicCounterExchange: return "atomicCounterExchangeARB";
-        case EOpAtomicCounterCompSwap: return "atomicCounterCompSwap";
-        case EOpAtomicCounterCompSwap: return "atomicCounterCompSwapARB";
+        case EOpAtomicCounterAdd: return version >= 460 ? "atomicCounterAdd" : "atomicCounterAddARB";
+        case EOpAtomicCounterSubtract: return version >= 460 ? "atomicCounterSubtract" : "atomicCounterSubtractARB";
+        case EOpAtomicCounterMin: return version >= 460 ? "atomicCounterMin" : "atomicCounterMinARB";
+        case EOpAtomicCounterMax: return version >= 460 ? "atomicCounterMax" : "atomicCounterMaxARB";
+        case EOpAtomicCounterAnd: return version >= 460 ? "atomicCounterAnd" : "atomicCounterAndARB";
+        case EOpAtomicCounterOr: return version >= 460 ? "atomicCounterOr" : "atomicCounterOrARB";
+        case EOpAtomicCounterXor: return version >= 460 ? "atomicCounterXor" : "atomicCounterXorARB";
+        case EOpAtomicCounterExchange: return version >= 460 ? "atomicCounterExchange" : "atomicCounterExchangeARB";
+        case EOpAtomicCounterCompSwap: return version >= 460 ? "atomicCounterCompSwap" : "atomicCounterCompSwapARB";
         case EOpAny: return "any";
         case EOpAll: return "all";
         case EOpCooperativeMatrixLoad: return "coopMatLoad";
@@ -501,11 +463,12 @@ std::variant<RValueOperator, std::string_view> glslangOperatorToRValueOperator(g
         case EOpAssign: return RValueOperator::Assign;
         case EOpAddAssign: return RValueOperator::AddAssign;
         case EOpSubAssign: return RValueOperator::SubAssign;
-        case EOpMulAssign: return RValueOperator::MulAssign;
-        case EOpVectorTimesMatrixAssign: return RValueOperator::VectorTimesMatrixAssign;
-        case EOpVectorTimesScalarAssign: return RValueOperator::VectorTimesScalarAssign;
-        case EOpMatrixTimesScalarAssign: return RValueOperator::MatrixTimesScalarAssign;
-        case EOpMatrixTimesMatrixAssign: return RValueOperator::MatrixTimesMatrixAssign;
+        case EOpMulAssign:
+        case EOpVectorTimesMatrixAssign:
+        case EOpVectorTimesScalarAssign:
+        case EOpMatrixTimesScalarAssign:
+        case EOpMatrixTimesMatrixAssign:
+            return RValueOperator::MulAssign;
         case EOpDivAssign: return RValueOperator::DivAssign;
         case EOpModAssign: return RValueOperator::ModAssign;
         case EOpAndAssign: return RValueOperator::AndAssign;
@@ -536,72 +499,71 @@ std::variant<RValueOperator, std::string_view> glslangOperatorToRValueOperator(g
         case EOpSparseImageLoadLod: return "sparseImageLoadLodAMD";
         case EOpColorAttachmentReadEXT: return "colorAttachmentReadEXT";
         case EOpTextureQuerySize: return "textureSize";
-        case EOpTextureQueryLod: return "textureQueryLOD";
-        case EOpTextureQueryLod: return "textureQueryLod";
+        case EOpTextureQueryLod: return version >= 400 ? "textureQueryLod" : "textureQueryLOD";
         case EOpTextureQueryLevels: return "textureQueryLevels";
         case EOpTextureQuerySamples: return "textureSamples";
-        case EOpTexture: return "shadow1D";
-        case EOpTexture: return "shadow2D";
-        case EOpTexture: return "shadow2DEXT";
-        case EOpTexture: return "shadow2DRect";
-        case EOpTexture: return "texture";
-        case EOpTexture: return "texture1D";
-        case EOpTexture: return "texture2D";
-        case EOpTexture: return "texture2DRect";
-        case EOpTexture: return "texture3D";
-        case EOpTexture: return "textureCube";
-        case EOpTextureProj: return "shadow1DProj";
-        case EOpTextureProj: return "shadow2DProj";
-        case EOpTextureProj: return "shadow2DProjEXT";
-        case EOpTextureProj: return "shadow2DRectProj";
-        case EOpTextureProj: return "texture1DProj";
-        case EOpTextureProj: return "texture2DProj";
-        case EOpTextureProj: return "texture2DRectProj";
-        case EOpTextureProj: return "texture3DProj";
-        case EOpTextureProj: return "textureProj";
-        case EOpTextureLod: return "shadow1DLod";
-        case EOpTextureLod: return "shadow2DLod";
-        case EOpTextureLod: return "texture1DLod";
-        case EOpTextureLod: return "texture2DLod";
-        case EOpTextureLod: return "texture2DLodEXT";
-        case EOpTextureLod: return "texture3DLod";
-        case EOpTextureLod: return "textureCubeLod";
-        case EOpTextureLod: return "textureCubeLodEXT";
-        case EOpTextureLod: return "textureLod";
+        // case EOpTexture: return "shadow1D";
+        // case EOpTexture: return "shadow2D";
+        // case EOpTexture: return "shadow2DEXT";
+        // case EOpTexture: return "shadow2DRect";
+        // case EOpTexture: return "texture";
+        // case EOpTexture: return "texture1D";
+        // case EOpTexture: return "texture2D";
+        // case EOpTexture: return "texture2DRect";
+        // case EOpTexture: return "texture3D";
+        // case EOpTexture: return "textureCube";
+        // case EOpTextureProj: return "shadow1DProj";
+        // case EOpTextureProj: return "shadow2DProj";
+        // case EOpTextureProj: return "shadow2DProjEXT";
+        // case EOpTextureProj: return "shadow2DRectProj";
+        // case EOpTextureProj: return "texture1DProj";
+        // case EOpTextureProj: return "texture2DProj";
+        // case EOpTextureProj: return "texture2DRectProj";
+        // case EOpTextureProj: return "texture3DProj";
+        // case EOpTextureProj: return "textureProj";
+        // case EOpTextureLod: return "shadow1DLod";
+        // case EOpTextureLod: return "shadow2DLod";
+        // case EOpTextureLod: return "texture1DLod";
+        // case EOpTextureLod: return "texture2DLod";
+        // case EOpTextureLod: return "texture2DLodEXT";
+        // case EOpTextureLod: return "texture3DLod";
+        // case EOpTextureLod: return "textureCubeLod";
+        // case EOpTextureLod: return "textureCubeLodEXT";
+        // case EOpTextureLod: return "textureLod";
         case EOpTextureOffset: return "textureOffset";
         case EOpTextureFetch: return "texelFetch";
         case EOpTextureFetchOffset: return "texelFetchOffset";
         case EOpTextureProjOffset: return "textureProjOffset";
         case EOpTextureLodOffset: return "textureLodOffset";
-        case EOpTextureProjLod: return "shadow1DProjLod";
-        case EOpTextureProjLod: return "shadow2DProjLod";
-        case EOpTextureProjLod: return "texture1DProjLod";
-        case EOpTextureProjLod: return "texture2DProjLod";
-        case EOpTextureProjLod: return "texture2DProjLodEXT";
-        case EOpTextureProjLod: return "texture3DProjLod";
-        case EOpTextureProjLod: return "textureProjLod";
+        // case EOpTextureProjLod: return "shadow1DProjLod";
+        // case EOpTextureProjLod: return "shadow2DProjLod";
+        // case EOpTextureProjLod: return "texture1DProjLod";
+        // case EOpTextureProjLod: return "texture2DProjLod";
+        // case EOpTextureProjLod: return "texture2DProjLodEXT";
+        // case EOpTextureProjLod: return "texture3DProjLod";
+        // case EOpTextureProjLod: return "textureProjLod";
         case EOpTextureProjLodOffset: return "textureProjLodOffset";
-        case EOpTextureGrad: return "shadow1DGradARB";
-        case EOpTextureGrad: return "shadow2DGradARB";
-        case EOpTextureGrad: return "shadow2DRectGradARB";
-        case EOpTextureGrad: return "texture1DGradARB";
-        case EOpTextureGrad: return "texture2DGradARB";
-        case EOpTextureGrad: return "texture2DGradEXT";
-        case EOpTextureGrad: return "texture2DRectGradARB";
-        case EOpTextureGrad: return "texture3DGradARB";
-        case EOpTextureGrad: return "textureCubeGradARB";
-        case EOpTextureGrad: return "textureCubeGradEXT";
-        case EOpTextureGrad: return "textureGrad";
+        // case EOpTextureGrad: return "shadow1DGradARB";
+        // case EOpTextureGrad: return "shadow2DGradARB";
+        // case EOpTextureGrad: return "shadow2DRectGradARB";
+        // case EOpTextureGrad: return "texture1DGradARB";
+        // case EOpTextureGrad: return "texture2DGradARB";
+        // case EOpTextureGrad: return "texture2DGradEXT";
+        // case EOpTextureGrad: return "texture2DRectGradARB";
+        // case EOpTextureGrad: return "texture3DGradARB";
+        // case EOpTextureGrad: return "textureCubeGradARB";
+        // case EOpTextureGrad: return "textureCubeGradEXT";
+        // case EOpTextureGrad: return "textureGrad";
         case EOpTextureGradOffset: return "textureGradOffset";
-        case EOpTextureProjGrad: return "shadow1DProjGradARB";
-        case EOpTextureProjGrad: return "shadow2DProjGradARB";
-        case EOpTextureProjGrad: return "shadow2DRectProjGradARB";
-        case EOpTextureProjGrad: return "texture1DProjGradARB";
-        case EOpTextureProjGrad: return "texture2DProjGradARB";
-        case EOpTextureProjGrad: return "texture2DProjGradEXT";
-        case EOpTextureProjGrad: return "texture2DRectProjGradARB";
-        case EOpTextureProjGrad: return "texture3DProjGradARB";
-        case EOpTextureProjGrad: return "textureProjGrad";
+        // case EOpTextureProjGrad: return "shadow1DProjGradARB";
+        // case EOpTextureProjGrad: return "shadow2DProjGradARB";
+        // case EOpTextureProjGrad: return "shadow2DRectProjGradARB";
+        // case EOpTextureProjGrad: return "texture1DProjGradARB";
+        // case EOpTextureProjGrad: return "texture2DProjGradARB";
+        // case EOpTextureProjGrad: return "texture2DProjGradEXT";
+        // case EOpTextureProjGrad: return "texture2DRectProjGradARB";
+        // case EOpTextureProjGrad: return "texture3DProjGradARB";
+        // case EOpTextureProjGrad: return "textureProjGrad";
         case EOpTextureProjGradOffset: return "textureProjGradOffset";
         case EOpTextureGather: return "textureGather";
         case EOpTextureGatherOffset: return "textureGatherOffset";
@@ -661,7 +623,6 @@ std::variant<RValueOperator, std::string_view> glslangOperatorToRValueOperator(g
         case EOpTraceRayMotionNV: return "traceRayMotionNV";
         case EOpTraceKHR: return "traceRayEXT";
         case EOpReportIntersection: return "reportIntersectionEXT";
-        case EOpReportIntersection: return "reportIntersectionNV";
         case EOpIgnoreIntersectionNV: return "ignoreIntersectionNV";
         case EOpTerminateRayNV: return "terminateRayNV";
         case EOpExecuteCallableNV: return "executeCallableNV";
@@ -725,10 +686,10 @@ std::variant<RValueOperator, std::string_view> glslangOperatorToRValueOperator(g
         case EOpReorderThreadNV: return "reorderThreadNV";
         case EOpFetchMicroTriangleVertexPositionNV: return "fetchMicroTriangleVertexPositionNV";
         case EOpFetchMicroTriangleVertexBarycentricNV: return "fetchMicroTriangleVertexBarycentricNV";
-        case EOpReadClockSubgroupKHR: return "clock2x32ARB";
-        case EOpReadClockSubgroupKHR: return "clockARB";
-        case EOpReadClockDeviceKHR: return "clockRealtime2x32EXT";
-        case EOpReadClockDeviceKHR: return "clockRealtimeEXT";
+        // case EOpReadClockSubgroupKHR: return "clock2x32ARB";
+        // case EOpReadClockSubgroupKHR: return "clockARB";
+        // case EOpReadClockDeviceKHR: return "clockRealtime2x32EXT";
+        // case EOpReadClockDeviceKHR: return "clockRealtimeEXT";
         case EOpRayQueryGetIntersectionTriangleVertexPositionsEXT: return "rayQueryGetIntersectionTriangleVertexPositionsEXT";
         case EOpStencilAttachmentReadEXT: return "stencilAttachmentReadEXT";
         case EOpDepthAttachmentReadEXT: return "depthAttachmentReadEXT";
@@ -934,6 +895,11 @@ private:
 
 class Slurper {
 public:
+    Slurper(const glslang::TIntermediate& intermediate) {
+        mVersion = intermediate.getVersion();
+        slurpFromRoot(intermediate.getTreeRoot()->getAsAggregate());
+    }
+
     void slurpFromRoot(glslang::TIntermAggregate* node) {
         ASSERT_PRECONDITION(node != nullptr, "Node must not be null");
         ASSERT_PRECONDITION(node->getOp() == glslang::EOpSequence, "Node must be a sequence");
@@ -989,6 +955,7 @@ public:
     }
 
 private:
+    int mVersion;
     IdStore<TypeId, Type> mTypes;
     IdStore<LValueId, LValue> mLValues;
     IdStore<RValueId, RValue> mRValues;
@@ -1130,6 +1097,19 @@ private:
                 glslangNodeToStringWithLoc(parent).c_str());
     }
 
+    std::variant<RValueOperator, FunctionId> slurpOperator(
+            glslang::TOperator op, Type returnType, std::optional<Type> arg1Type) {
+        auto opOrFunctionName = glslangOperatorToRValueOperator(op, mVersion, returnType, arg1Type);
+        if (auto* rValueOperator = std::get_if<RValueOperator>(&opOrFunctionName)) {
+            return *rValueOperator;
+        }
+        if (auto* functionName = std::get_if<std::string_view>(&opOrFunctionName)) {
+            return mFunctionNames.getOrInsertByValue(*functionName);
+        }
+        PANIC_POSTCONDITION("Unreachable");
+    }
+
+
     ValueId slurpValue(glslang::TIntermTyped* node, TIntermNode* parent) {
         auto typeId = mTypes.getOrInsertByValue(glslangTypeToType(node->getType()));
         if (auto nodeAsSymbol = node->getAsSymbolNode()) {
@@ -1139,8 +1119,12 @@ private:
             return mRValues.getOrInsertByValue(LiteralRValue{});
         }
         if (auto nodeAsUnary = node->getAsUnaryNode()) {
-            auto operand = slurpValue(nodeAsUnary->getOperand(), node);
-            return mRValues.getOrInsertByValue(OperatorRValue{glslangOperatorToRValueOperator(nodeAsUnary->getOp()), {operand}});
+            auto operandId = slurpValue(nodeAsUnary->getOperand(), node);
+            auto op = slurpOperator(
+                    nodeAsUnary->getOp(),
+                    glslangTypeToType(node->getType()),
+                    glslangTypeToType(nodeAsUnary->getOperand()->getType()));
+            return mRValues.getOrInsertByValue(EvaluableRValue{op, {operandId}});
         }
         if (auto nodeAsBinary = node->getAsBinaryNode()) {
             switch (nodeAsBinary->getOp()) {
@@ -1149,12 +1133,16 @@ private:
                     auto swizzle = nodeAsBinary->getRight()->getAsAggregate();
                     ASSERT_PRECONDITION(swizzle != nullptr, "Swizzle node must be an aggregate");
                     ASSERT_PRECONDITION(swizzle->getOp() == glslang::EOpSequence, "Swizzle node must be a sequence");
-                    return mRValues.getOrInsertByValue(OperatorRValue{RValueOperator::VectorSwizzle});
+                    return mRValues.getOrInsertByValue(EvaluableRValue{RValueOperator::VectorSwizzle});
                 }
                 default: {
                     auto lhsId = slurpValue(nodeAsBinary->getLeft(), node);
                     auto rhsId = slurpValue(nodeAsBinary->getRight(), node);
-                    return mRValues.getOrInsertByValue(OperatorRValue{glslangOperatorToRValueOperator(nodeAsBinary->getOp()), {lhsId, rhsId}});
+                    auto op = slurpOperator(
+                            nodeAsBinary->getOp(),
+                            glslangTypeToType(node->getType()),
+                            glslangTypeToType(nodeAsBinary->getLeft()->getType()));
+                    return mRValues.getOrInsertByValue(EvaluableRValue{op, {lhsId, rhsId}});
                 }
             }
         }
@@ -1166,7 +1154,7 @@ private:
             if (trueNodeAsTyped && falseNodeAsTyped) {
                 auto trueId = slurpValue(trueNodeAsTyped, parent);
                 auto falseId = slurpValue(falseNodeAsTyped, parent);
-                return mRValues.getOrInsertByValue(OperatorRValue{RValueOperator::Ternary, {conditionId, trueId, falseId}});
+                return mRValues.getOrInsertByValue(EvaluableRValue{RValueOperator::Ternary, {conditionId, trueId, falseId}});
             } else {
                 PANIC_PRECONDITION("A selection node branch was not typed: true = %s, false = %s, parent = %s %s",
                         glslangNodeToStringWithLoc(nodeAsSelection->getTrueBlock()).c_str(),
@@ -1198,7 +1186,7 @@ private:
                         }
                     }
                     return mRValues.getOrInsertByValue(
-                            FunctionCallRValue{functionId, std::move(args)});
+                            EvaluableRValue{functionId, std::move(args)});
                 }
                 default: {
                     std::vector<ValueId> args;
@@ -1212,8 +1200,16 @@ private:
                                     glslangNodeToStringWithLoc(parent).c_str());
                         }
                     }
+                    std::optional<Type> firstArgType;
+                    if (!sequence.empty()) {
+                        firstArgType = glslangTypeToType(sequence[0]->getAsTyped()->getType());
+                    }
+                    auto op = slurpOperator(
+                            nodeAsAggregate->getOp(),
+                            glslangTypeToType(node->getType()),
+                            std::move(firstArgType));
                     return mRValues.getOrInsertByValue(
-                            OperatorRValue{glslangOperatorToRValueOperator(nodeAsAggregate->getOp()), std::move(args)});
+                            EvaluableRValue{op, std::move(args)});
                 }
             }
         }
@@ -1341,17 +1337,16 @@ private:
             return;
         }
         auto rValue = mRValues.getById(rValueId);
-        if (auto* functionCall = std::get_if<FunctionCallRValue>(&rValue)) {
-            auto name = mFunctionNames.getById(functionCall->function);
-            out << "(" << name;
-            for (auto& arg : functionCall->args) {
-                out << " ";
-                dumpValue(arg, out);
+        if (auto* evaluable = std::get_if<EvaluableRValue>(&rValue)) {
+            if (auto* op = std::get_if<RValueOperator>(&evaluable->op)) {
+                out << "(" << rValueOperatorToString(*op);
+            } else if (auto* function = std::get_if<FunctionId>(&evaluable->op)) {
+                auto name = mFunctionNames.getById(*function);
+                out << name << "(";
+            } else {
+                PANIC_PRECONDITION("Unreachable");
             }
-            out << ")";
-        } else if (auto* op = std::get_if<OperatorRValue>(&rValue)) {
-            out << "(" << rValueOperatorToString(op->op);
-            for (auto& arg : op->args) {
+            for (auto& arg : evaluable->args) {
                 out << " ";
                 dumpValue(arg, out);
             }
@@ -1385,8 +1380,7 @@ private:
 };
 
 void Komi::slurp(const glslang::TIntermediate& intermediate) {
-    Slurper slurper;
-    slurper.slurpFromRoot(intermediate.getTreeRoot()->getAsAggregate());
+    Slurper slurper(intermediate);
     std::stringstream glsl;
     slurper.dumpAll(glsl);
     utils::slog.i << std::move(glsl.str()) << utils::io::endl;
