@@ -55,6 +55,7 @@ public:
     backend::Handle<backend::HwRenderPrimitive> getHwHandle() const noexcept { return mHandle; }
     uint32_t getIndexOffset() const noexcept { return mIndexOffset; }
     uint32_t getIndexCount() const noexcept { return mIndexCount; }
+
     backend::PrimitiveType getPrimitiveType() const noexcept { return mPrimitiveType; }
     AttributeBitset getEnabledAttributes() const noexcept { return mEnabledAttributes; }
     uint16_t getBlendOrder() const noexcept { return mBlendOrder; }
@@ -71,14 +72,19 @@ public:
     }
 
 private:
-    FMaterialInstance const* mMaterialInstance = nullptr;
-    backend::Handle<backend::HwRenderPrimitive> mHandle = {};
+    // These first fields are dereferences from PrimitiveInfo, keep them together
+    struct {
+        FMaterialInstance const* mMaterialInstance = nullptr;
+        backend::Handle<backend::HwRenderPrimitive> mHandle = {};
+        UTILS_UNUSED uint8_t padding[4]= {};
+        uint32_t mIndexOffset = 0;
+        uint32_t mIndexCount = 0;
+    };
+
     AttributeBitset mEnabledAttributes = {};
     uint16_t mBlendOrder = 0;
     bool mGlobalBlendOrderEnabled = false;
     backend::PrimitiveType mPrimitiveType = backend::PrimitiveType::TRIANGLES;
-    uint32_t mIndexOffset = 0;
-    uint32_t mIndexCount = 0;
 };
 
 } // namespace filament

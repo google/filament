@@ -53,6 +53,7 @@ class CommandBufferQueue;
 }
 
 class FMaterialInstance;
+class FRenderPrimitive;
 class RenderPassBuilder;
 
 class RenderPass {
@@ -235,13 +236,13 @@ public:
         return boolish ? value : uint64_t(0);
     }
 
-    struct PrimitiveInfo { // 48 bytes
+    struct PrimitiveInfo { // 56 bytes
         union {
-            FMaterialInstance const* mi;
-            uint64_t padding = {}; // ensures mi is 8 bytes on all archs
+            FRenderPrimitive const* primitive;                          // 8 bytes;
+            uint64_t padding = {}; // ensures primitive is 8 bytes on all archs
         };                                                              // 8 bytes
+        uint64_t rfu0;                                                  // 8 bytes
         backend::RasterState rasterState;                               // 4 bytes
-        backend::Handle<backend::HwRenderPrimitive> primitiveHandle;    // 4 bytes
         backend::Handle<backend::HwBufferObject> skinningHandle;        // 4 bytes
         backend::Handle<backend::HwSamplerGroup> skinningTexture;       // 4 bytes
         backend::Handle<backend::HwBufferObject> morphWeightBuffer;     // 4 bytes
@@ -249,10 +250,9 @@ public:
         backend::Handle<backend::HwBufferObject> instanceBufferHandle;  // 4 bytes
         uint32_t index = 0;                                             // 4 bytes
         uint32_t skinningOffset = 0;                                    // 4 bytes
-        uint32_t indexOffset;                                           // 4 bytes
-        uint32_t indexCount;                                            // 4 bytes
         uint16_t instanceCount;                                         // 2 bytes [MSb: user]
         Variant materialVariant;                                        // 1 byte
+        uint8_t rfu1;                                                   // 1 byte
 
         static const uint16_t USER_INSTANCE_MASK = 0x8000u;
         static const uint16_t INSTANCE_COUNT_MASK = 0x7fffu;
