@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-#ifndef TNT_GLSLKOMI_DEBUG_H
-#define TNT_GLSLKOMI_DEBUG_H
+#ifndef TNT_ASTRICT_DEBUGGLSL_H
+#define TNT_ASTRICT_DEBUGGLSL_H
 
-#include <glslkomi/Komi.h>
-#include <glslang/MachineIndependent/localintermediate.h>
+#include "glslang/Include/intermediate.h"
 
-namespace glslkomi {
+namespace astrict {
 
 const char* glslangOperatorToString(glslang::TOperator op);
 std::string glslangNodeToString(const TIntermNode* node);
 std::string glslangLocToString(const glslang::TSourceLoc& loc);
 std::string glslangNodeToStringWithLoc(const TIntermNode* node);
-const char* rValueOperatorToString(RValueOperator op);
 
-} // namespace glslkomi
+} // namespace astrict
 
-#endif  // TNT_GLSLKOMI_INCLUDE_GLSLKOMI_DEBUG_H
+#endif  // TNT_ASTRICT_DEBUGGLSL_H

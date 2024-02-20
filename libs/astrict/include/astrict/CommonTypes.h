@@ -14,17 +14,13 @@
  * limitations under the License.
  */
 
-#ifndef TNT_GLSLKOMI_KOMI_H
-#define TNT_GLSLKOMI_KOMI_H
+#ifndef TNT_ASTRICT_COMMONTYPES_H
+#define TNT_ASTRICT_COMMONTYPES_H
 
-#include <utils/compiler.h>
 #include <vector>
 #include <variant>
-#include "intermediate.h"
-#include <backend/DriverEnums.h>
-#include <ShaderLang.h>
 
-namespace glslkomi {
+namespace astrict {
 
 enum class BranchOperator : uint8_t {
     Discard,             // Fragment only
@@ -155,9 +151,6 @@ enum class BuiltInType : uint8_t {
 // // Workaround for missing std::expected.
 // template<typename T>
 // using StatusOr = std::variant<T, int>;
-
-using Precision = filament::backend::Precision;
-using ElementType = filament::backend::ElementType;
 
 template<typename T>
 struct Id {
@@ -302,49 +295,70 @@ using Statement = std::variant<
     BranchStatement,
     LoopStatement>;
 
-class Komi {
+template<typename Id, typename Value>
+class IdStore {
 public:
-    void slurp(const glslang::TIntermediate& intermediate);
+    // Throws if non-existent.
+    Value getById(Id id) const {
+        return mIdToValue.at(id);
+    }
+
+    // Inserts if non-existent.
+    Id getOrInsertByValue(Value value) {
+        auto it = mValueToId.find(value);
+        if (it == mValueToId.end()) {
+            Id id = Id {mIdToValue.size() + 1};
+            mIdToValue[id] = value;
+            mValueToId[value] = id;
+            return id;
+        } else {
+            return it->second;
+        }
+    }
+
+private:
+    std::unordered_map<Id, Value> mIdToValue;
+    std::unordered_map<Value, Id> mValueToId;
 };
 
-} // namespace glslkomi
+} // namespace astrict
 
 template<typename T>
-struct ::std::hash<glslkomi::Id<T>> {
-    std::size_t operator()(const glslkomi::Id<T>& o) const {
+struct ::std::hash<astrict::Id<T>> {
+    std::size_t operator()(const astrict::Id<T>& o) const {
         return o.id;
     }
 };
 
 
 template<>
-struct ::std::hash<glslkomi::Type> {
-    std::size_t operator()(const glslkomi::Type& o) const {
+struct ::std::hash<astrict::Type> {
+    std::size_t operator()(const astrict::Type& o) const {
         std::size_t result = 0;
-        glslkomi::hashCombine(result, o.name, o.precision, o.arraySizes.size());
+        astrict::hashCombine(result, o.name, o.precision, o.arraySizes.size());
         for (const auto& size : o.arraySizes) {
-            glslkomi::hashCombine(result, size);
+            astrict::hashCombine(result, size);
         }
         return result;
     }
 };
 
 template<>
-struct ::std::hash<glslkomi::LValue> {
-    std::size_t operator()(const glslkomi::LValue& o) const {
+struct ::std::hash<astrict::LValue> {
+    std::size_t operator()(const astrict::LValue& o) const {
         std::size_t result = 0;
-        glslkomi::hashCombine(result, o.name);
+        astrict::hashCombine(result, o.name);
         return result;
     }
 };
 
 template<>
-struct ::std::hash<glslkomi::EvaluableRValue> {
-    std::size_t operator()(const glslkomi::EvaluableRValue& o) const {
+struct ::std::hash<astrict::EvaluableRValue> {
+    std::size_t operator()(const astrict::EvaluableRValue& o) const {
         std::size_t result = 0;
-        glslkomi::hashCombine(result, o.op, o.args.size());
+        astrict::hashCombine(result, o.op, o.args.size());
         for (const auto& arg : o.args) {
-            glslkomi::hashCombine(result, arg);
+            astrict::hashCombine(result, arg);
         }
         return result;
     }
@@ -352,78 +366,78 @@ struct ::std::hash<glslkomi::EvaluableRValue> {
 
 // TODO
 template<>
-struct ::std::hash<glslkomi::LiteralRValue> {
-    std::size_t operator()(const glslkomi::LiteralRValue& o) const {
+struct ::std::hash<astrict::LiteralRValue> {
+    std::size_t operator()(const astrict::LiteralRValue& o) const {
         return 0;
     }
 };
 
 template<>
-struct ::std::hash<glslkomi::FunctionParameter> {
-    std::size_t operator()(const glslkomi::FunctionParameter& o) const {
+struct ::std::hash<astrict::FunctionParameter> {
+    std::size_t operator()(const astrict::FunctionParameter& o) const {
         std::size_t result = 0;
-        glslkomi::hashCombine(result, o.name, o.type);
+        astrict::hashCombine(result, o.name, o.type);
         return result;
     }
 };
 
 template<>
-struct ::std::hash<glslkomi::FunctionDefinition> {
-    std::size_t operator()(const glslkomi::FunctionDefinition& o) const {
+struct ::std::hash<astrict::FunctionDefinition> {
+    std::size_t operator()(const astrict::FunctionDefinition& o) const {
         std::size_t result = 0;
-        glslkomi::hashCombine(result, o.name, o.returnType, o.body, o.parameters.size());
+        astrict::hashCombine(result, o.name, o.returnType, o.body, o.parameters.size());
         for (const auto& argument : o.parameters) {
-            glslkomi::hashCombine(result, argument);
+            astrict::hashCombine(result, argument);
         }
         return result;
     }
 };
 
 template<>
-struct ::std::hash<glslkomi::IfStatement> {
-    std::size_t operator()(const glslkomi::IfStatement& o) const {
+struct ::std::hash<astrict::IfStatement> {
+    std::size_t operator()(const astrict::IfStatement& o) const {
         std::size_t result = 0;
-        glslkomi::hashCombine(result, o.condition, o.thenBlock, o.elseBlock);
+        astrict::hashCombine(result, o.condition, o.thenBlock, o.elseBlock);
         return result;
     }
 };
 
 template<>
-struct ::std::hash<glslkomi::SwitchStatement> {
-    std::size_t operator()(const glslkomi::SwitchStatement& o) const {
+struct ::std::hash<astrict::SwitchStatement> {
+    std::size_t operator()(const astrict::SwitchStatement& o) const {
         std::size_t result = 0;
-        glslkomi::hashCombine(result, o.condition, o.body);
+        astrict::hashCombine(result, o.condition, o.body);
         return result;
     }
 };
 
 template<>
-struct ::std::hash<glslkomi::BranchStatement> {
-    std::size_t operator()(const glslkomi::BranchStatement& o) const {
+struct ::std::hash<astrict::BranchStatement> {
+    std::size_t operator()(const astrict::BranchStatement& o) const {
         std::size_t result = 0;
-        glslkomi::hashCombine(result, o.op, o.operand);
+        astrict::hashCombine(result, o.op, o.operand);
         return result;
     }
 };
 
 template<>
-struct ::std::hash<glslkomi::LoopStatement> {
-    std::size_t operator()(const glslkomi::LoopStatement& o) const {
+struct ::std::hash<astrict::LoopStatement> {
+    std::size_t operator()(const astrict::LoopStatement& o) const {
         std::size_t result = 0;
-        glslkomi::hashCombine(result, o.condition, o.terminal, o.testFirst, o.body);
+        astrict::hashCombine(result, o.condition, o.terminal, o.testFirst, o.body);
         return result;
     }
 };
 
 template<>
-struct ::std::hash<std::vector<glslkomi::Statement>> {
-    std::size_t operator()(const std::vector<glslkomi::Statement>& o) const {
+struct ::std::hash<std::vector<astrict::Statement>> {
+    std::size_t operator()(const std::vector<astrict::Statement>& o) const {
         std::size_t result = o.size();
         for (const auto& statement : o) {
-            glslkomi::hashCombine(result, statement);
+            astrict::hashCombine(result, statement);
         }
         return result;
     }
 };
 
-#endif
+#endif  // TNT_ASTRICT_COMMONTYPES_H

@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#include <glslkomi/Komi.h>
-#include <glslkomi/Debug.h>
-#include <intermediate.h>
-#include <glslang/MachineIndependent/localintermediate.h>
-#include <unordered_map>
-#include "utils/Log.h"
-#include <sstream>
+#include <astrict/FromGlsl.h>
+
+#include <astrict/CommonTypes.h>
+#include <astrict/DebugGlsl.h>
+#include <utils/Log.h>
 #include <utils/Panic.h>
 
-namespace glslkomi {
+#include "glslang/MachineIndependent/localintermediate.h"
+
+namespace astrict {
 
 std::variant<RValueOperator, std::string_view> glslangOperatorToRValueOperator(
         glslang::TOperator op, int version, Type returnType, std::optional<Type> arg1Type) {
@@ -867,32 +867,6 @@ Type glslangTypeToType(const glslang::TType& type) {
     return Type{typeName, type.getPrecisionQualifierString(), std::move(arraySizes)};
 }
 
-template<typename Id, typename Value>
-class IdStore {
-public:
-    // Throws if non-existent.
-    Value getById(Id id) {
-        return mIdToValue.at(id);
-    }
-
-    // Inserts if non-existent.
-    Id getOrInsertByValue(Value value) {
-        auto it = mValueToId.find(value);
-        if (it == mValueToId.end()) {
-            Id id = Id {mIdToValue.size() + 1};
-            mIdToValue[id] = value;
-            mValueToId[value] = id;
-            return id;
-        } else {
-            return it->second;
-        }
-    }
-
-private:
-    std::unordered_map<Id, Value> mIdToValue;
-    std::unordered_map<Value, Id> mValueToId;
-};
-
 class Slurper {
 public:
     Slurper(const glslang::TIntermediate& intermediate) {
@@ -927,31 +901,16 @@ public:
         }
     }
 
-    void dumpAll(std::stringstream &out) {
-        for (const auto& functionDefinition : mFunctionDefinitions) {
-            auto name = mFunctionNames.getById(functionDefinition.name);
-            dumpType(functionDefinition.returnType, out);
-            out << " " << name << "(";
-            bool firstParameter = true;
-            for (const auto& parameter : functionDefinition.parameters) {
-                if (firstParameter) {
-                    firstParameter = false;
-                } else {
-                    out << ", ";
-                }
-                dumpType(parameter.type, out);
-                out << " ";
-                dumpLValue(parameter.name, out);
-            }
-            out << ")";
-            if (functionDefinition.body) {
-                out << " {\n";
-                dump(functionDefinition.body.value(), 1, out);
-                out << "}\n";
-            } else {
-                out << ";\n";
-            }
-        }
+    PackFromGlsl intoPack() {
+        return PackFromGlsl {
+                mVersion,
+                std::move(mTypes),
+                std::move(mLValues),
+                std::move(mRValues),
+                std::move(mFunctionNames),
+                std::move(mStatementBlocks),
+                std::move(mFunctionDefinitions),
+        };
     }
 
 private:
@@ -1217,173 +1176,11 @@ private:
                 glslangNodeToStringWithLoc(node).c_str(),
                 glslangNodeToStringWithLoc(parent).c_str());
     }
-
-    void dump(StatementBlockId blockId, int depth, std::stringstream &out) {
-        std::string indentMinusOne;
-        for (int i = 0; i < depth - 1; ++i) {
-            indentMinusOne += "  ";
-        }
-        std::string indent = indentMinusOne;
-        if (depth > 0) {
-            indent += "  ";
-        }
-        for (auto statement : mStatementBlocks.getById(blockId)) {
-            if (auto* rValueId = std::get_if<RValueId>(&statement)) {
-                out << indent;
-                dumpRValue(*rValueId, out);
-                out << ";\n";
-            } else if (auto* ifStatement = std::get_if<IfStatement>(&statement)) {
-                out << indent << "if (";
-                dumpValue(ifStatement->condition, out);
-                out << ") {\n";
-                dump(ifStatement->thenBlock, depth + 1, out);
-                if (ifStatement->elseBlock) {
-                    out << indent << "} else {\n";
-                    dump(ifStatement->elseBlock.value(), depth + 1, out);
-                }
-                out << indent << "}\n";
-            } else if (auto* switchStatement = std::get_if<SwitchStatement>(&statement)) {
-                out << indent << "switch (";
-                dumpValue(switchStatement->condition, out);
-                out << ") {\n";
-                dump(switchStatement->body, depth + 1, out);
-                out << indent << "}\n";
-            } else if (auto* branchStatement = std::get_if<BranchStatement>(&statement)) {
-                switch (branchStatement->op) {
-                    case BranchOperator::Discard:
-                        out << indent << "discard";
-                        break;
-                    case BranchOperator::TerminateInvocation:
-                        out << indent << "terminateInvocation";
-                        break;
-                    case BranchOperator::Demote:
-                        out << indent << "demote";
-                        break;
-                    case BranchOperator::TerminateRayEXT:
-                        out << indent << "terminateRayEXT";
-                        break;
-                    case BranchOperator::IgnoreIntersectionEXT:
-                        out << indent << "terminateIntersectionEXT";
-                        break;
-                    case BranchOperator::Return:
-                        out << indent << "return";
-                        break;
-                    case BranchOperator::Break:
-                        out << indent << "break";
-                        break;
-                    case BranchOperator::Continue:
-                        out << indent << "continue";
-                        break;
-                    case BranchOperator::Case:
-                        out << indentMinusOne << "case";
-                        break;
-                    case BranchOperator::Default:
-                        out << indentMinusOne << "default";
-                        break;
-                }
-                if (branchStatement->operand) {
-                    out << " ";
-                    dumpValue(branchStatement->operand.value(), out);
-                }
-                switch (branchStatement->op) {
-                    case BranchOperator::Case:
-                    case BranchOperator::Default:
-                        out << ":\n";
-                        break;
-                    default:
-                        out << ";\n";
-                        break;
-                }
-            } else if (auto* loopStatement = std::get_if<LoopStatement>(&statement)) {
-                if (loopStatement->testFirst) {
-                    if (loopStatement->terminal) {
-                        out << indent << "for (; ";
-                        dumpValue(loopStatement->condition, out);
-                        out << "; ";
-                        dumpRValue(loopStatement->terminal.value(), out);
-                    } else {
-                        out << indent << "while (";
-                        dumpValue(loopStatement->condition, out);
-                    }
-                    out << ") {\n";
-                    dump(loopStatement->body, depth + 1, out);
-                    out << indent << "}\n";
-                } else {
-                    out << indent << "do {\n";
-                    dump(loopStatement->body, depth + 1, out);
-                    out << indent << "} while (";
-                    dumpValue(loopStatement->condition, out);
-                    out << ");\n";
-                }
-            } else {
-                PANIC_PRECONDITION("Unreachable");
-            }
-        }
-    }
-
-    void dumpValue(ValueId valueId, std::stringstream &out) {
-        if (auto* rValueId = std::get_if<RValueId>(&valueId)) {
-            dumpRValue(*rValueId, out);
-        } else if (auto *lValueId = std::get_if<LValueId>(&valueId)) {
-            dumpLValue(*lValueId, out);
-        } else {
-            PANIC_PRECONDITION("Unreachable");
-        }
-    }
-
-    void dumpRValue(RValueId rValueId, std::stringstream &out) {
-        if (rValueId.id == 0) {
-            out << "INVALID_RVALUE";
-            return;
-        }
-        auto rValue = mRValues.getById(rValueId);
-        if (auto* evaluable = std::get_if<EvaluableRValue>(&rValue)) {
-            if (auto* op = std::get_if<RValueOperator>(&evaluable->op)) {
-                out << "(" << rValueOperatorToString(*op);
-            } else if (auto* function = std::get_if<FunctionId>(&evaluable->op)) {
-                auto name = mFunctionNames.getById(*function);
-                out << name << "(";
-            } else {
-                PANIC_PRECONDITION("Unreachable");
-            }
-            for (auto& arg : evaluable->args) {
-                out << " ";
-                dumpValue(arg, out);
-            }
-            out << ")";
-        } else if (auto* literal = std::get_if<LiteralRValue>(&rValue)) {
-            out << "LITERAL";
-        } else {
-            PANIC_PRECONDITION("Unreachable");
-        }
-    }
-
-    void dumpLValue(LValueId lValueId, std::stringstream &out) {
-        if (lValueId.id == 0) {
-            out << "INVALID_LVALUE";
-            return;
-        }
-        auto lValue = mLValues.getById(lValueId);
-        out << lValue.name;
-    }
-
-    void dumpType(TypeId typeId, std::stringstream &out) {
-        auto type = mTypes.getById(typeId);
-        if (!type.precision.empty()) {
-            out << type.precision << " ";
-        }
-        out << type.name;
-        for (const auto& arraySize : type.arraySizes) {
-            out << "[" << arraySize << "]";
-        }
-    }
 };
 
-void Komi::slurp(const glslang::TIntermediate& intermediate) {
+PackFromGlsl fromGlsl(const glslang::TIntermediate& intermediate) {
     Slurper slurper(intermediate);
-    std::stringstream glsl;
-    slurper.dumpAll(glsl);
-    utils::slog.i << std::move(glsl.str()) << utils::io::endl;
+    return slurper.intoPack();
 }
 
-} // namespace glslkomi
+} // namespace astrict

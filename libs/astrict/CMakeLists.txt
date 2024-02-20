@@ -1,21 +1,27 @@
 cmake_minimum_required(VERSION 3.19)
-project(glslkomi)
+project(astrict)
 
-set(TARGET         glslkomi)
+set(TARGET         astrict)
 set(PUBLIC_HDR_DIR include)
 
 # ==================================================================================================
 # Sources and headers
 # ==================================================================================================
 set(HDRS
-        include/glslkomi/Komi.h
-        include/glslkomi/Debug.h)
+        include/astrict/CommonTypes.h
+        include/astrict/DebugCommon.h
+        include/astrict/DebugGlsl.h
+        include/astrict/FromGlsl.h
+        include/astrict/GlslTypes.h
+        include/astrict/ToGlsl.h)
 
 set(PRIVATE_HDRS)
 
 set(SRCS
-        src/Komi.cpp
-        src/Debug.cpp)
+        src/DebugCommon.cpp
+        src/DebugGlsl.cpp
+        src/FromGlsl.cpp
+        src/ToGlsl.cpp)
 
 # ==================================================================================================
 # Include and target definitions
@@ -23,7 +29,7 @@ set(SRCS
 include_directories(${PUBLIC_HDR_DIR})
 include_directories(${CMAKE_BINARY_DIR})
 
-# glslkomi
+# astrict
 add_library(${TARGET} STATIC ${HDRS} ${PRIVATE_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
@@ -61,42 +67,42 @@ endif()
 # Installation
 # ==================================================================================================
 
-# Glslkomi has dependencies on a bunch of SPIRV-related libraries. To make things simpler, we bundle
+# Astrict has dependencies on a bunch of SPIRV-related libraries. To make things simpler, we bundle
 # them together into a single shared library and copy this into the installation folder. This
 # requires us to explicitly list the dependencies below, as CMake doesn't have a way to recursively
 # query dependencies.
-set(GLSLKOMI_DEPS
+set(ASTRICT_DEPS
         OGLCompiler
         OSDependent
         SPIRV
         SPIRV-Tools
         SPIRV-Tools-opt
-        glslkomi
+        astrict
         glslang
         spirv-cross-core
         spirv-cross-glsl
         spirv-cross-msl
         )
 
-set(GLSLKOMI_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libglslkomi_combined.a")
-combine_static_libs(glslkomi "${GLSLKOMI_COMBINED_OUTPUT}" "${GLSLKOMI_DEPS}")
+set(ASTRICT_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libastrict_combined.a")
+combine_static_libs(astrict "${ASTRICT_COMBINED_OUTPUT}" "${ASTRICT_DEPS}")
 
-set(GLSLKOMI_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}glslkomi${CMAKE_STATIC_LIBRARY_SUFFIX})
-install(FILES "${GLSLKOMI_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${GLSLKOMI_LIB_NAME})
-install(DIRECTORY ${PUBLIC_HDR_DIR}/glslkomi DESTINATION include)
+set(ASTRICT_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}astrict${CMAKE_STATIC_LIBRARY_SUFFIX})
+install(FILES "${ASTRICT_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${ASTRICT_LIB_NAME})
+install(DIRECTORY ${PUBLIC_HDR_DIR}/astrict DESTINATION include)
 
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-project(test_glslkomi)
-set(TARGET test_glslkomi)
+project(test_astrict)
+set(TARGET test_astrict)
 set(SRCS
-        tests/test_glslkomi.cpp)
+        tests/test_FromGlsl.cpp)
 
 add_executable(${TARGET} ${SRCS})
 
 target_include_directories(${TARGET} PRIVATE src)
 
-target_link_libraries(${TARGET} glslkomi gtest)
+target_link_libraries(${TARGET} astrict gtest)
 
 set_target_properties(${TARGET} PROPERTIES FOLDER Tests)

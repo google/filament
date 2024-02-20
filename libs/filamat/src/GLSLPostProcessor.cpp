@@ -43,7 +43,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include <glslkomi/Komi.h>
+#include <astrict/FromGlsl.h>
+#include <astrict/ToGlsl.h>
 
 using namespace glslang;
 using namespace spirv_cross;
@@ -374,8 +375,10 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
         return false;
     }
 
-    glslkomi::Komi komi;
-    komi.slurp(*tShader.getIntermediate());
+    auto pack = astrict::fromGlsl(*tShader.getIntermediate());
+    std::ostringstream dump;
+    astrict::toGlsl(pack, dump);
+    // slog.i << dump.str() << io::endl;
 
     switch (mOptimization) {
         case MaterialBuilder::Optimization::NONE:

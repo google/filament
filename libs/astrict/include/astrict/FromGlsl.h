@@ -14,22 +14,17 @@
  * limitations under the License.
  */
 
-#include <glslkomi/Komi.h>
-#include <gtest/gtest.h>
+#ifndef TNT_ASTRICT_FROMGLSL_H
+#define TNT_ASTRICT_FROMGLSL_H
 
-using namespace glslkomi;
+#include <astrict/GlslTypes.h>
 
-TEST(Compress, Compress) {
-  std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.baseColor = texture(materialParams_sampler, vec3(0.0, 0.0));
-        }
-    )");
-  // auto result = std::get<std::vector<uint8_t>>(compress(shaderCode));
-}
+#include "glslang/Include/intermediate.h"
 
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
+namespace astrict {
+
+PackFromGlsl fromGlsl(const glslang::TIntermediate& intermediate);
+
+} // namespace astrict
+
+#endif  // TNT_ASTRICT_FROMGLSL_H

@@ -757,7 +757,7 @@ if (FILAMENT_BUILD_FILAMAT OR IS_HOST_PLATFORM)
     add_subdirectory(${EXTERNAL}/spirv-tools)
     add_subdirectory(${EXTERNAL}/glslang/tnt)
     add_subdirectory(${EXTERNAL}/spirv-cross/tnt)
-    add_subdirectory(${LIBRARIES}/glslkomi)
+    add_subdirectory(${LIBRARIES}/astrict)
     add_subdirectory(${LIBRARIES}/filamat)
 
     # the material debugger requires filamat

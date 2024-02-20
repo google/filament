@@ -81,7 +81,7 @@ include_directories(${CMAKE_BINARY_DIR})
 add_library(${TARGET} STATIC ${HDRS} ${PRIVATE_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 set_target_properties(${TARGET} PROPERTIES FOLDER Libs)
-target_link_libraries(${TARGET} shaders filabridge utils smol-v glslkomi)
+target_link_libraries(${TARGET} shaders filabridge utils smol-v astrict)
 
 # We are being naughty and accessing private headers here
 # For spirv-tools, we're just following glslang's example
