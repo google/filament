@@ -118,13 +118,15 @@ void MetalShaderCompiler::terminate() noexcept {
                                                       options:options
                                                         error:&error];
         if (library == nil) {
+            NSString* errorMessage = @"unknown error";
             if (error) {
                 auto description =
                         [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
                 utils::slog.w << description << utils::io::endl;
+                errorMessage = error.localizedDescription;
             }
             PANIC_LOG("Failed to compile Metal program.");
-            return {};
+            return MetalFunctionBundle::error(errorMessage);
         }
 
         MTLFunctionConstantValues* constants = [MTLFunctionConstantValues new];
@@ -160,14 +162,15 @@ void MetalShaderCompiler::terminate() noexcept {
     assert_invariant(isRasterizationProgram != isComputeProgram);
 
     if (isRasterizationProgram) {
-        return {fragmentFunction, vertexFunction};
+        return MetalFunctionBundle::raster(fragmentFunction, vertexFunction);
     }
 
     if (isComputeProgram) {
-        return MetalFunctionBundle{computeFunction};
+        return MetalFunctionBundle::compute(computeFunction);
     }
 
-    return {};
+    // Should never reach here.
+    return MetalFunctionBundle::none();
 }
 
 MetalShaderCompiler::program_token_t MetalShaderCompiler::createProgram(
