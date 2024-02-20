@@ -331,6 +331,10 @@ public:
 
         void execute(FEngine& engine, const Command* first, const Command* last) const noexcept;
 
+        static backend::Viewport applyScissorViewport(
+                backend::Viewport const& scissorViewport,
+                backend::Viewport const& scissor) noexcept;
+
     public:
         Executor() = default;
         Executor(Executor const& rhs);
