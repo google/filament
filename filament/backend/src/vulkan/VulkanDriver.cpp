@@ -1653,7 +1653,6 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     Handle<HwProgram> programHandle = pipelineState.program;
     RasterState rasterState = pipelineState.rasterState;
     PolygonOffset depthOffset = pipelineState.polygonOffset;
-    Viewport const& scissorBox = pipelineState.scissor;
 
     auto* program = mResourceAllocator.handle_cast<VulkanProgram*>(programHandle);
     commands->acquire(program);
@@ -1785,27 +1784,6 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
         return;
     }
 
-    // Set scissoring.
-    // clamp left-bottom to 0,0 and avoid overflows
-    constexpr int32_t maxvali  = std::numeric_limits<int32_t>::max();
-    constexpr uint32_t maxvalu  = std::numeric_limits<int32_t>::max();
-    int32_t l = scissorBox.left;
-    int32_t b = scissorBox.bottom;
-    uint32_t w = std::min(maxvalu, scissorBox.width);
-    uint32_t h = std::min(maxvalu, scissorBox.height);
-    int32_t r = (l > int32_t(maxvalu - w)) ? maxvali : l + int32_t(w);
-    int32_t t = (b > int32_t(maxvalu - h)) ? maxvali : b + int32_t(h);
-    l = std::max(0, l);
-    b = std::max(0, b);
-    assert_invariant(r >= l && t >= b);
-    VkRect2D scissor{
-            .offset = { l, b },
-            .extent = { uint32_t(r - l), uint32_t(t - b) }
-    };
-
-    rt->transformClientRectToPlatform(&scissor);
-    mPipelineCache.bindScissor(cmdbuffer, scissor);
-
     // Bind a new pipeline if the pipeline state changed.
     // If allocation failed, skip the draw call and bail. We do not emit an error since the
     // validation layer will already do so.
@@ -1831,6 +1809,33 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
 void VulkanDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
     // FIXME: implement me
+}
+
+void VulkanDriver::scissor(Viewport scissorBox) {
+    VulkanCommandBuffer* commands = &mCommands->get();
+    VkCommandBuffer cmdbuffer = commands->buffer();
+
+    // Set scissoring.
+    // clamp left-bottom to 0,0 and avoid overflows
+    constexpr int32_t maxvali  = std::numeric_limits<int32_t>::max();
+    constexpr uint32_t maxvalu  = std::numeric_limits<int32_t>::max();
+    int32_t l = scissorBox.left;
+    int32_t b = scissorBox.bottom;
+    uint32_t w = std::min(maxvalu, scissorBox.width);
+    uint32_t h = std::min(maxvalu, scissorBox.height);
+    int32_t r = (l > int32_t(maxvalu - w)) ? maxvali : l + int32_t(w);
+    int32_t t = (b > int32_t(maxvalu - h)) ? maxvali : b + int32_t(h);
+    l = std::max(0, l);
+    b = std::max(0, b);
+    assert_invariant(r >= l && t >= b);
+    VkRect2D scissor{
+            .offset = { l, b },
+            .extent = { uint32_t(r - l), uint32_t(t - b) }
+    };
+
+    const VulkanRenderTarget* rt = mCurrentRenderPass.renderTarget;
+    rt->transformClientRectToPlatform(&scissor);
+    mPipelineCache.bindScissor(cmdbuffer, scissor);
 }
 
 void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {

@@ -498,6 +498,9 @@ DECL_DRIVER_API_N(dispatchCompute,
         backend::ProgramHandle, program,
         math::uint3, workGroupCount)
 
+DECL_DRIVER_API_N(scissor,
+        Viewport, scissor)
+
 
 #pragma clang diagnostic pop
 

@@ -346,6 +346,10 @@ void NoopDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph
 void NoopDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
 }
 
+void NoopDriver::scissor(
+        Viewport scissor) {
+}
+
 void NoopDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
