@@ -164,6 +164,11 @@ void RenderPass::appendCommands(FEngine& engine,
     // trace the number of visible renderables
     SYSTRACE_VALUE32("visibleRenderables", vr.size());
     if (UTILS_UNLIKELY(vr.empty())) {
+        // no renderables, we still need the sentinel and the command buffer size should be
+        // exactly 1.
+        assert_invariant(commands.size() == 1);
+        Command* curr = commands.data();
+        curr->key = uint64_t(Pass::SENTINEL);
         return;
     }
 
