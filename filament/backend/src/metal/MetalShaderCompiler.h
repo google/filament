@@ -58,8 +58,13 @@ public:
         }
 
         /**
-         * If this MetalFunctionBundle contains an error, will throw an NSException with the error
-         * string and program name passed to MetalFunctionBundle::error(NSString*, NSString*).
+         * Throws an NSException if this MetalFunctionBundle either contains an error or is empty.
+         *
+         * If this MetalFunctionBundle contains an error, will throw a MetalCompilationFailure
+         * NSException with the error string and program name passed to
+         * MetalFunctionBundle::error(NSString*, NSString*).
+         *
+         * If this MetalFunctionBundle is empty, will throw a MetalEmptyFunctionBundle NSException.
          */
         void validate() const;
 
