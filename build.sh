@@ -23,6 +23,8 @@ function print_help {
     echo "        This is sometimes needed instead of -c (which still misses some clean steps)."
     echo "    -d"
     echo "        Enable matdbg."
+    echo "    -w"
+    echo "        Exclude Filamat from the build."
     echo "    -f"
     echo "        Always invoke CMake before incremental builds."
     echo "    -g"
@@ -164,6 +166,8 @@ SWIFTSHADER_OPTION="-DFILAMENT_USE_SWIFTSHADER=OFF"
 
 EGL_ON_LINUX_OPTION="-DFILAMENT_SUPPORTS_EGL_ON_LINUX=OFF"
 
+FILAMAT_OPTION="-DFILAMENT_BUILD_FILAMAT=ON"
+
 MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=OFF"
 MATDBG_GRADLE_OPTION=""
 
@@ -229,6 +233,7 @@ function build_desktop_target {
             ${SWIFTSHADER_OPTION} \
             ${EGL_ON_LINUX_OPTION} \
             ${MATDBG_OPTION} \
+            ${FILAMAT_OPTION} \
             ${MATOPT_OPTION} \
             ${ASAN_UBSAN_OPTION} \
             ${architectures} \
@@ -361,6 +366,7 @@ function build_android_target {
             -DCMAKE_INSTALL_PREFIX="../android-${lc_target}/filament" \
             -DCMAKE_TOOLCHAIN_FILE="../../build/toolchain-${arch}-linux-android.cmake" \
             ${MATDBG_OPTION} \
+            ${FILAMAT_OPTION} \
             ${MATOPT_OPTION} \
             ${VULKAN_ANDROID_OPTION} \
             ../..
@@ -596,6 +602,7 @@ function build_ios_target {
             -DIOS=1 \
             -DCMAKE_TOOLCHAIN_FILE=../../third_party/clang/iOS.cmake \
             ${MATDBG_OPTION} \
+            ${FILAMAT_OPTION} \
             ${MATOPT_OPTION} \
             ../..
         ln -sf "out/cmake-ios-${lc_target}-${arch}/compile_commands.json" \
@@ -794,7 +801,8 @@ while getopts ":hacCfgijmp:q:uvslwtedk:b" opt; do
             ;;
         d)
             PRINT_MATDBG_HELP=true
-            MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=ON, -DFILAMENT_BUILD_FILAMAT=ON"
+            MATDBG_OPTION="-DFILAMENT_ENABLE_MATDBG=ON"
+            FILAMAT_OPTION="-DFILAMENT_BUILD_FILAMAT=ON"
             MATDBG_GRADLE_OPTION="-Pcom.google.android.filament.matdbg"
             ;;
         f)
@@ -803,6 +811,9 @@ while getopts ":hacCfgijmp:q:uvslwtedk:b" opt; do
         g)
             MATOPT_OPTION="-DFILAMENT_DISABLE_MATOPT=ON"
             MATOPT_GRADLE_OPTION="-Pcom.google.android.filament.matnopt"
+            ;;
+        w)
+            FILAMAT_OPTION="-DFILAMENT_BUILD_FILAMAT=OFF"
             ;;
         i)
             INSTALL_COMMAND=install
@@ -840,7 +851,7 @@ while getopts ":hacCfgijmp:q:uvslwtedk:b" opt; do
                         echo "Platform must be one of [desktop|android|ios|webgl|all]"
                         echo ""
                         exit 1
-                    ;;    
+                    ;;
                 esac
             done
             ;;
