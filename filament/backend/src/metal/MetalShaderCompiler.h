@@ -59,7 +59,7 @@ public:
 
         /**
          * If this MetalFunctionBundle contains an error, will throw an NSException with the error
-         * string that was passed to MetalFunctionBundle::error(NSString*).
+         * string and program name passed to MetalFunctionBundle::error(NSString*, NSString*).
          */
         void validate() const;
 
