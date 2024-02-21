@@ -18,18 +18,22 @@
 #define TNT_ASTRICT_GLSLTYPES_H
 
 #include <astrict/CommonTypes.h>
+#include <set>
+#include <unordered_map>
 #include <vector>
 
 namespace astrict {
 
 struct PackFromGlsl {
     int version;
-    IdStore<TypeId, Type> types;
-    IdStore<LValueId, LValue> lValues;
-    IdStore<RValueId, RValue> rValues;
-    IdStore<FunctionId, std::string_view> functionNames;
-    IdStore<StatementBlockId, std::vector<Statement>> statementBlocks;
-    std::vector<FunctionDefinition> functionDefinitions;
+    std::unordered_map<TypeId, Type> types;
+    std::unordered_map<GlobalSymbolId, GlobalSymbol> globalSymbols;
+    std::unordered_map<RValueId, RValue> rValues;
+    std::unordered_map<FunctionId, std::string_view> functionNames;
+    std::unordered_map<StatementBlockId, std::vector<Statement>> statementBlocks;
+    std::unordered_map<FunctionId, FunctionDefinition> functionDefinitions;
+    std::set<FunctionId> functionPrototypes;
+    std::vector<FunctionId> functionDefinitionOrder;
 };
 
 };

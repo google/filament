@@ -378,7 +378,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     auto pack = astrict::fromGlsl(*tShader.getIntermediate());
     std::ostringstream dump;
     astrict::toGlsl(pack, dump);
-    // slog.i << dump.str() << io::endl;
+    slog.i << dump.str() << io::endl;
 
     switch (mOptimization) {
         case MaterialBuilder::Optimization::NONE:

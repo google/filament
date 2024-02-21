@@ -24,26 +24,39 @@
 
 namespace astrict {
 
-void dumpValue(const PackFromGlsl& pack, ValueId valueId, std::ostringstream &out);
+void dumpFunctionName(const PackFromGlsl& pack, const FunctionId& functionId,
+        std::ostringstream& out) {
+    auto name = pack.functionNames.at(functionId);
+    auto indexParenthesis = name.find('(');
+    out << name.substr(0, indexParenthesis);
+}
 
-void dumpRValue(const PackFromGlsl& pack, RValueId rValueId, std::ostringstream &out) {
+void dumpValue(
+        const PackFromGlsl& pack, const FunctionDefinition& function, ValueId valueId,
+        std::ostringstream& out);
+
+void dumpRValue(
+        const PackFromGlsl& pack, const FunctionDefinition& function, RValueId rValueId,
+        std::ostringstream& out) {
     if (rValueId.id == 0) {
         out << "INVALID_RVALUE";
         return;
     }
-    auto rValue = pack.rValues.getById(rValueId);
+    ASSERT_PRECONDITION(pack.rValues.find(rValueId) != pack.rValues.end(),
+            "missing RValue");
+    auto& rValue = pack.rValues.at(rValueId);
     if (auto* evaluable = std::get_if<EvaluableRValue>(&rValue)) {
         if (auto* op = std::get_if<RValueOperator>(&evaluable->op)) {
             out << "(" << rValueOperatorToString(*op);
         } else if (auto* function = std::get_if<FunctionId>(&evaluable->op)) {
-            auto name = pack.functionNames.getById(*function);
-            out << name << "(";
+            dumpFunctionName(pack, *function, out);
+            out << "(";
         } else {
             PANIC_PRECONDITION("Unreachable");
         }
         for (auto& arg : evaluable->args) {
             out << " ";
-            dumpValue(pack, arg, out);
+            dumpValue(pack, function, arg, out);
         }
         out << ")";
     } else if (auto* literal = std::get_if<LiteralRValue>(&rValue)) {
@@ -53,27 +66,50 @@ void dumpRValue(const PackFromGlsl& pack, RValueId rValueId, std::ostringstream 
     }
 }
 
-void dumpLValue(const PackFromGlsl& pack, LValueId lValueId, std::ostringstream &out) {
-    if (lValueId.id == 0) {
-        out << "INVALID_LVALUE";
+void dumpGlobalSymbol(
+        const PackFromGlsl& pack, GlobalSymbolId globalSymbolId, std::ostringstream& out) {
+    if (globalSymbolId.id == 0) {
+        out << "INVALID_GLOBAL_SYMBOL";
         return;
     }
-    auto lValue = pack.lValues.getById(lValueId);
-    out << lValue.name;
+    ASSERT_PRECONDITION(pack.globalSymbols.find(globalSymbolId) != pack.globalSymbols.end(),
+            "missing global symbol");
+
+    auto globalSymbol = pack.globalSymbols.at(globalSymbolId);
+    out << globalSymbol.name;
 }
 
-void dumpValue(const PackFromGlsl& pack, ValueId valueId, std::ostringstream &out) {
+void dumpLocalSymbol(
+        const FunctionDefinition& function, LocalSymbolId localSymbolId, std::ostringstream& out) {
+    if (localSymbolId.id == 0) {
+        out << "INVALID_LOCAL_SYMBOL";
+        return;
+    }
+    ASSERT_PRECONDITION(function.localSymbols.find(localSymbolId) != function.localSymbols.end(),
+            "missing local symbol");
+
+    auto& localSymbol = function.localSymbols.at(localSymbolId);
+    out << localSymbol.debugName;
+}
+
+void dumpValue(
+        const PackFromGlsl& pack, const FunctionDefinition& function, ValueId valueId,
+        std::ostringstream& out) {
     if (auto* rValueId = std::get_if<RValueId>(&valueId)) {
-        dumpRValue(pack, *rValueId, out);
-    } else if (auto *lValueId = std::get_if<LValueId>(&valueId)) {
-        dumpLValue(pack, *lValueId, out);
+        dumpRValue(pack, function, *rValueId, out);
+    } else if (auto *globalSymbolId = std::get_if<GlobalSymbolId>(&valueId)) {
+        dumpGlobalSymbol(pack, *globalSymbolId, out);
+    } else if (auto *localSymbolId = std::get_if<LocalSymbolId>(&valueId)) {
+        dumpLocalSymbol(function, *localSymbolId, out);
     } else {
         PANIC_PRECONDITION("Unreachable");
     }
 }
 
-void dumpType(const PackFromGlsl& pack, TypeId typeId, std::ostringstream &out) {
-    auto type = pack.types.getById(typeId);
+void dumpType(const PackFromGlsl& pack, TypeId typeId, std::ostringstream& out) {
+    ASSERT_PRECONDITION(pack.types.find(typeId) != pack.types.end(),
+            "missing type definition");
+    auto& type = pack.types.at(typeId);
     if (!type.precision.empty()) {
         out << type.precision << " ";
     }
@@ -83,7 +119,11 @@ void dumpType(const PackFromGlsl& pack, TypeId typeId, std::ostringstream &out) 
     }
 }
 
-void dumpBlock(const PackFromGlsl& pack, StatementBlockId blockId, int depth, std::ostringstream &out) {
+void dumpBlock(
+        const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
+        int depth, std::ostringstream& out) {
+    ASSERT_PRECONDITION(pack.statementBlocks.find(blockId) != pack.statementBlocks.end(),
+            "missing block definition");
     std::string indentMinusOne;
     for (int i = 0; i < depth - 1; ++i) {
         indentMinusOne += "  ";
@@ -92,26 +132,26 @@ void dumpBlock(const PackFromGlsl& pack, StatementBlockId blockId, int depth, st
     if (depth > 0) {
         indent += "  ";
     }
-    for (auto statement : pack.statementBlocks.getById(blockId)) {
+    for (auto statement : pack.statementBlocks.at(blockId)) {
         if (auto* rValueId = std::get_if<RValueId>(&statement)) {
             out << indent;
-            dumpRValue(pack, *rValueId, out);
+            dumpRValue(pack, function, *rValueId, out);
             out << ";\n";
         } else if (auto* ifStatement = std::get_if<IfStatement>(&statement)) {
             out << indent << "if (";
-            dumpValue(pack, ifStatement->condition, out);
+            dumpValue(pack, function, ifStatement->condition, out);
             out << ") {\n";
-            dumpBlock(pack, ifStatement->thenBlock, depth + 1, out);
+            dumpBlock(pack, function, ifStatement->thenBlock, depth + 1, out);
             if (ifStatement->elseBlock) {
                 out << indent << "} else {\n";
-                dumpBlock(pack, ifStatement->elseBlock.value(), depth + 1, out);
+                dumpBlock(pack, function, ifStatement->elseBlock.value(), depth + 1, out);
             }
             out << indent << "}\n";
         } else if (auto* switchStatement = std::get_if<SwitchStatement>(&statement)) {
             out << indent << "switch (";
-            dumpValue(pack, switchStatement->condition, out);
+            dumpValue(pack, function, switchStatement->condition, out);
             out << ") {\n";
-            dumpBlock(pack, switchStatement->body, depth + 1, out);
+            dumpBlock(pack, function, switchStatement->body, depth + 1, out);
             out << indent << "}\n";
         } else if (auto* branchStatement = std::get_if<BranchStatement>(&statement)) {
             switch (branchStatement->op) {
@@ -148,7 +188,7 @@ void dumpBlock(const PackFromGlsl& pack, StatementBlockId blockId, int depth, st
             }
             if (branchStatement->operand) {
                 out << " ";
-                dumpValue(pack, branchStatement->operand.value(), out);
+                dumpValue(pack, function, branchStatement->operand.value(), out);
             }
             switch (branchStatement->op) {
                 case BranchOperator::Case:
@@ -163,21 +203,21 @@ void dumpBlock(const PackFromGlsl& pack, StatementBlockId blockId, int depth, st
             if (loopStatement->testFirst) {
                 if (loopStatement->terminal) {
                     out << indent << "for (; ";
-                    dumpValue(pack, loopStatement->condition, out);
+                    dumpValue(pack, function, loopStatement->condition, out);
                     out << "; ";
-                    dumpRValue(pack, loopStatement->terminal.value(), out);
+                    dumpRValue(pack, function, loopStatement->terminal.value(), out);
                 } else {
                     out << indent << "while (";
-                    dumpValue(pack, loopStatement->condition, out);
+                    dumpValue(pack, function, loopStatement->condition, out);
                 }
                 out << ") {\n";
-                dumpBlock(pack, loopStatement->body, depth + 1, out);
+                dumpBlock(pack, function, loopStatement->body, depth + 1, out);
                 out << indent << "}\n";
             } else {
                 out << indent << "do {\n";
-                dumpBlock(pack, loopStatement->body, depth + 1, out);
+                dumpBlock(pack, function, loopStatement->body, depth + 1, out);
                 out << indent << "} while (";
-                dumpValue(pack, loopStatement->condition, out);
+                dumpValue(pack, function, loopStatement->condition, out);
                 out << ");\n";
             }
         } else {
@@ -186,30 +226,47 @@ void dumpBlock(const PackFromGlsl& pack, StatementBlockId blockId, int depth, st
     }
 }
 
-void toGlsl(const PackFromGlsl& pack, std::ostringstream &out) {
-    for (const auto& functionDefinition : pack.functionDefinitions) {
-        auto name = pack.functionNames.getById(functionDefinition.name);
-        dumpType(pack, functionDefinition.returnType, out);
-        out << " " << name << "(";
-        bool firstParameter = true;
-        for (const auto& parameter : functionDefinition.parameters) {
-            if (firstParameter) {
-                firstParameter = false;
-            } else {
-                out << ", ";
-            }
-            dumpType(pack, parameter.type, out);
-            out << " ";
-            dumpLValue(pack, parameter.name, out);
-        }
-        out << ")";
-        if (functionDefinition.body) {
-            out << " {\n";
-            dumpBlock(pack, functionDefinition.body.value(), 1, out);
-            out << "}\n";
+void dumpFunction(
+        const PackFromGlsl& pack, const FunctionId& functionId, bool dumpBody,
+        std::ostringstream& out) {
+    if (!dumpBody && pack.functionDefinitions.find(functionId) == pack.functionDefinitions.end()) {
+        // TODO: prune function prototypes with no actual definition.
+        return;
+    }
+    ASSERT_PRECONDITION(pack.functionDefinitions.find(functionId) != pack.functionDefinitions.end(),
+            "missing function definition");
+    auto& function = pack.functionDefinitions.at(functionId);
+    dumpType(pack, function.returnType, out);
+    out << " ";
+    dumpFunctionName(pack, function.name, out);
+    out << "(";
+    bool firstParameter = true;
+    for (const auto& parameter : function.parameters) {
+        if (firstParameter) {
+            firstParameter = false;
         } else {
-            out << ";\n";
+            out << ", ";
         }
+        dumpType(pack, parameter.type, out);
+        out << " ";
+        dumpLocalSymbol(function, parameter.name, out);
+    }
+    out << ")";
+    if (dumpBody) {
+        out << " {\n";
+        dumpBlock(pack, function, function.body, 1, out);
+        out << "}\n";
+    } else {
+        out << ";\n";
+    }
+}
+
+void toGlsl(const PackFromGlsl& pack, std::ostringstream& out) {
+    for (auto functionId : pack.functionPrototypes) {
+        dumpFunction(pack, functionId, /*dumpBody=*/false, out);
+    }
+    for (auto functionId : pack.functionDefinitionOrder) {
+        dumpFunction(pack, functionId, /*dumpBody=*/true, out);
     }
 }
 

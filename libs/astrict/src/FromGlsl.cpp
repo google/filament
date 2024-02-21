@@ -20,8 +20,10 @@
 #include <astrict/DebugGlsl.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
+#include <set>
 
 #include "glslang/MachineIndependent/localintermediate.h"
+#include "intermediate.h"
 
 namespace astrict {
 
@@ -723,11 +725,6 @@ BranchOperator glslangOperatorToBranchOperator(glslang::TOperator op) {
     }
 }
 
-std::string_view functionSignatureToName(std::string_view functionSignature) {
-    auto indexParenthesis = functionSignature.find('(');
-    return functionSignature.substr(0, indexParenthesis);
-}
-
 std::string_view expandTypeNameToVector(
         const char* const* typeNames, int vectorSize) {
     ASSERT_PRECONDITION(vectorSize >= 1 && vectorSize <= 4,
@@ -864,8 +861,33 @@ Type glslangTypeToType(const glslang::TType& type) {
             PANIC_PRECONDITION("Cannot convert glslang type `%s' to Type",
                     type.getCompleteString().c_str());
     };
-    return Type{typeName, type.getPrecisionQualifierString(), std::move(arraySizes)};
+    return Type{std::string(typeName), type.getPrecisionQualifierString(), std::move(arraySizes)};
 }
+
+template<typename Id, typename Value>
+class IdStore {
+public:
+    // Inserts if non-existent.
+    Id insert(Value value) {
+        auto it = mValueToId.find(value);
+        if (it == mValueToId.end()) {
+            Id id = Id {mIdToValue.size() + 1};
+            mIdToValue[id] = value;
+            mValueToId[value] = id;
+            return id;
+        } else {
+            return it->second;
+        }
+    }
+
+    std::unordered_map<Id, Value> intoMap() {
+        return std::move(mIdToValue);
+    }
+
+private:
+    std::unordered_map<Id, Value> mIdToValue;
+    std::unordered_map<Value, Id> mValueToId;
+};
 
 class Slurper {
 public:
@@ -874,21 +896,51 @@ public:
         slurpFromRoot(intermediate.getTreeRoot()->getAsAggregate());
     }
 
+    PackFromGlsl intoPack() {
+        return PackFromGlsl {
+                mVersion,
+                mTypes.intoMap(),
+                mGlobalSymbols.intoMap(),
+                mRValues.intoMap(),
+                mFunctionNames.intoMap(),
+                mStatementBlocks.intoMap(),
+                std::move(mFunctionDefinitions),
+                std::move(mFunctionPrototypes),
+                std::move(mFunctionDefinitionOrder),
+        };
+    }
+
+private:
+    int mVersion;
+    IdStore<TypeId, Type> mTypes;
+    IdStore<GlobalSymbolId, GlobalSymbol> mGlobalSymbols;
+    IdStore<RValueId, RValue> mRValues;
+    IdStore<FunctionId, std::string_view> mFunctionNames;
+    IdStore<StatementBlockId, std::vector<Statement>> mStatementBlocks;
+    std::unordered_map<FunctionId, FunctionDefinition> mFunctionDefinitions;
+    std::set<FunctionId> mFunctionPrototypes;
+    std::vector<FunctionId> mFunctionDefinitionOrder;
+
     void slurpFromRoot(glslang::TIntermAggregate* node) {
         ASSERT_PRECONDITION(node != nullptr, "Node must not be null");
         ASSERT_PRECONDITION(node->getOp() == glslang::EOpSequence, "Node must be a sequence");
 
+        std::vector<glslang::TIntermAggregate*> linkerObjectNodes;
+        std::vector<glslang::TIntermAggregate*> sequenceNodes;
+        std::vector<glslang::TIntermAggregate*> functionNodes;
+
+        // Sort children into categories to be processed in order.
         for (TIntermNode* child : node->getSequence()) {
             if (auto childAsAggregate = child->getAsAggregate()) {
                 switch (childAsAggregate->getOp()) {
-                    case glslang::EOpFunction:
-                        mFunctionDefinitions.push_back(slurpFunctionDefinition(childAsAggregate, node));
-                        continue;
                     case glslang::EOpLinkerObjects:
-                        // TODO: linker objects
+                        linkerObjectNodes.push_back(childAsAggregate);
                         continue;
                     case glslang::EOpSequence:
-                        // TODO: Why does this appear?
+                        sequenceNodes.push_back(childAsAggregate);
+                        continue;
+                    case glslang::EOpFunction:
+                        functionNodes.push_back(childAsAggregate);
                         continue;
                     default:
                         // Fall through.
@@ -899,30 +951,21 @@ public:
                     glslangNodeToStringWithLoc(child).c_str(),
                     glslangNodeToStringWithLoc(node).c_str());
         }
+
+        for (auto child : linkerObjectNodes) {
+            // TODO: handle linker object nodes
+        }
+        for (auto child : sequenceNodes) {
+            // TODO: handle linker object nodes
+        }
+        for (auto child : functionNodes) {
+            slurpFunctionDefinition(child, node);
+        }
     }
 
-    PackFromGlsl intoPack() {
-        return PackFromGlsl {
-                mVersion,
-                std::move(mTypes),
-                std::move(mLValues),
-                std::move(mRValues),
-                std::move(mFunctionNames),
-                std::move(mStatementBlocks),
-                std::move(mFunctionDefinitions),
-        };
-    }
-
-private:
-    int mVersion;
-    IdStore<TypeId, Type> mTypes;
-    IdStore<LValueId, LValue> mLValues;
-    IdStore<RValueId, RValue> mRValues;
-    IdStore<FunctionId, std::string_view> mFunctionNames;
-    IdStore<StatementBlockId, std::vector<Statement>> mStatementBlocks;
-    std::vector<FunctionDefinition> mFunctionDefinitions;
-
-    StatementBlockId slurpStatementBlock(TIntermNode* node, TIntermNode* parent) {
+    StatementBlockId slurpStatementBlock(
+            TIntermNode* node, TIntermNode* parent,
+            IdStore<LocalSymbolId, LocalSymbol>& localSymbols) {
         std::vector<Statement> statements;
         auto nodeAsAggregate = node->getAsAggregate();
         if (nodeAsAggregate != nullptr && nodeAsAggregate->getOp() == glslang::EOpSequence) {
@@ -932,16 +975,16 @@ private:
                     utils::slog.i << "child of switch: " << glslangNodeToString(child)
                                   << utils::io::endl;
                 }
-                nodeToStatements(child, node, statements);
+                nodeToStatements(child, node, localSymbols, statements);
             }
         } else {
             // Wrap whatever this is into a new statement block.
-            nodeToStatements(node, parent, statements);
+            nodeToStatements(node, parent, localSymbols, statements);
         }
-        return mStatementBlocks.getOrInsertByValue(statements);
+        return mStatementBlocks.insert(statements);
     }
 
-    FunctionDefinition slurpFunctionDefinition(
+    void slurpFunctionDefinition(
             glslang::TIntermAggregate* node, TIntermNode* parent) {
         ASSERT_PRECONDITION(node->getOp() == glslang::EOpFunction, "Node must be a function");
         auto& sequence = node->getSequence();
@@ -949,11 +992,18 @@ private:
         auto parametersNode = sequence[0]->getAsAggregate();
         ASSERT_PRECONDITION(parametersNode != nullptr, "Function parameters must be an aggregate node");
 
-        auto functionId = mFunctionNames.getOrInsertByValue(
-            functionSignatureToName(node->getName()));
-        auto returnTypeId =
-            mTypes.getOrInsertByValue(glslangTypeToType(node->getType()));
+        auto functionId = mFunctionNames.insert(node->getName());
 
+        if (sequence.size() == 1) {
+            // This is just a prototype. Make a record of it.
+            mFunctionPrototypes.insert(functionId);
+            return;
+        }
+
+        auto returnTypeId =
+            mTypes.insert(glslangTypeToType(node->getType()));
+
+        IdStore<LocalSymbolId, LocalSymbol> localSymbols;
         std::vector<FunctionParameter> parameters;
         for (const auto parameter : parametersNode->getSequence()) {
             auto parameterAsSymbol = parameter->getAsSymbolNode();
@@ -962,37 +1012,35 @@ private:
                     glslangNodeToStringWithLoc(parameter).c_str(),
                     glslangNodeToStringWithLoc(node).c_str(),
                     glslangNodeToStringWithLoc(parent).c_str());
-            auto nameId = mLValues.getOrInsertByValue(LValue{parameterAsSymbol->getName()});
-            auto typeId = mTypes.getOrInsertByValue(glslangTypeToType(parameterAsSymbol->getType()));
+            auto nameId = localSymbols.insert(LocalSymbol{parameterAsSymbol->getName()});
+            auto typeId = mTypes.insert(glslangTypeToType(parameterAsSymbol->getType()));
             parameters.push_back(FunctionParameter{nameId, typeId});
         }
 
-        std::optional<StatementBlockId> bodyId;
-        if (sequence.size() == 2) {
-            bodyId = slurpStatementBlock(sequence[1], node);
-        } else {
-            // Prototype. No body ID.
-        }
-        return FunctionDefinition{functionId, returnTypeId, std::move(parameters), bodyId};
+        auto bodyId = slurpStatementBlock(sequence[1], node, localSymbols);
+        mFunctionDefinitions[functionId] = FunctionDefinition{
+                functionId, returnTypeId, std::move(parameters), bodyId,
+                std::move(localSymbols.intoMap())};
+        mFunctionDefinitionOrder.push_back(functionId);
     }
 
     // Turn a non-root node into one or more statements.
-    void nodeToStatements(TIntermNode* node, TIntermNode* parent, std::vector<Statement> &output) {
+    void nodeToStatements(TIntermNode* node, TIntermNode* parent,
+            IdStore<LocalSymbolId, LocalSymbol>& localSymbols, std::vector<Statement> &output) {
         if (auto nodeAsLoopNode = node->getAsLoopNode()) {
-            auto conditionId = slurpValue(nodeAsLoopNode->getTest(), parent);
+            auto conditionId = slurpValue(nodeAsLoopNode->getTest(), parent, localSymbols);
             std::optional<RValueId> terminalId;
             if (nodeAsLoopNode->getTerminal()) {
-                auto terminalIdAsValueId = slurpValue(nodeAsLoopNode->getTerminal(), parent);
-                if (auto* terminalIdAsLValueId = std::get_if<LValueId>(&terminalIdAsValueId)) {
-                    // Ignore random stray LValues, since they don't do anything.
-                } else if (auto* terminalIdAsRValueId = std::get_if<RValueId>(&terminalIdAsValueId)) {
+                auto terminalIdAsValueId = slurpValue(
+                        nodeAsLoopNode->getTerminal(), parent, localSymbols);
+                if (auto* terminalIdAsRValueId = std::get_if<RValueId>(&terminalIdAsValueId)) {
                     terminalId = *terminalIdAsRValueId;
                 } else {
-                    PANIC_PRECONDITION("unreachable");
+                    // Ignore random stray symbols, since they don't do anything.
                 }
             }
             bool testFirst = nodeAsLoopNode->testFirst();
-            auto bodyId = slurpStatementBlock(nodeAsLoopNode->getBody(), parent);
+            auto bodyId = slurpStatementBlock(nodeAsLoopNode->getBody(), parent, localSymbols);
             output.push_back(LoopStatement{conditionId, terminalId, testFirst, bodyId});
             return;
         }
@@ -1000,15 +1048,16 @@ private:
             auto op = glslangOperatorToBranchOperator(nodeAsBranchNode->getFlowOp());
             std::optional<ValueId> operandId;
             if (auto operand = nodeAsBranchNode->getExpression()) {
-                operandId = slurpValue(operand, node);
+                operandId = slurpValue(operand, node, localSymbols);
             }
             output.push_back(BranchStatement{op, operandId});
             return;
         }
         if (auto nodeAsSwitchNode = node->getAsSwitchNode()) {
             if (auto conditionAsTyped = nodeAsSwitchNode->getCondition()->getAsTyped()) {
-                auto conditionId = slurpValue(conditionAsTyped, parent);
-                auto bodyId = slurpStatementBlock(nodeAsSwitchNode->getBody(), parent);
+                auto conditionId = slurpValue(conditionAsTyped, parent, localSymbols);
+                auto bodyId = slurpStatementBlock(
+                        nodeAsSwitchNode->getBody(), parent, localSymbols);
                 output.push_back(SwitchStatement{conditionId, bodyId});
             } else {
                 PANIC_PRECONDITION("Switch node condition was not typed: %s, parent = %s",
@@ -1018,11 +1067,13 @@ private:
             return;
         }
         if (auto nodeAsSelectionNode = node->getAsSelectionNode()) {
-            auto conditionId = slurpValue(nodeAsSelectionNode->getCondition(), parent);
-            auto trueId = slurpStatementBlock(nodeAsSelectionNode->getTrueBlock(), parent);
+            auto conditionId = slurpValue(nodeAsSelectionNode->getCondition(), parent, localSymbols);
+            auto trueId = slurpStatementBlock(
+                    nodeAsSelectionNode->getTrueBlock(), parent, localSymbols);
             std::optional<StatementBlockId> falseId;
             if (nodeAsSelectionNode->getFalseBlock()) {
-                falseId = slurpStatementBlock(nodeAsSelectionNode->getFalseBlock(), parent);
+                falseId = slurpStatementBlock(
+                        nodeAsSelectionNode->getFalseBlock(), parent, localSymbols);
             }
             output.push_back(IfStatement{conditionId, trueId, falseId});
             return;
@@ -1032,7 +1083,7 @@ private:
                 case glslang::EOpSequence:
                     // Flatten this.
                     for (auto child : nodeAsAggregate->getSequence()) {
-                        nodeToStatements(child, node, output);
+                        nodeToStatements(child, node, localSymbols, output);
                     }
                     return;
                 default:
@@ -1041,13 +1092,11 @@ private:
             }
         }
         if (auto nodeAsTyped = node->getAsTyped()) {
-            auto valueId = slurpValue(nodeAsTyped, parent);
-            if (auto* lValueId = std::get_if<LValueId>(&valueId)) {
-                // Ignore random stray LValues, since they don't do anything.
-            } else if (auto* rValueId = std::get_if<RValueId>(&valueId)) {
+            auto valueId = slurpValue(nodeAsTyped, parent, localSymbols);
+            if (auto* rValueId = std::get_if<RValueId>(&valueId)) {
                 output.push_back(*rValueId);
             } else {
-                PANIC_PRECONDITION("Unreachable");
+                // Ignore random stray symbols, since they don't do anything.
             }
             return;
         }
@@ -1063,27 +1112,28 @@ private:
             return *rValueOperator;
         }
         if (auto* functionName = std::get_if<std::string_view>(&opOrFunctionName)) {
-            return mFunctionNames.getOrInsertByValue(*functionName);
+            return mFunctionNames.insert(*functionName);
         }
         PANIC_POSTCONDITION("Unreachable");
     }
 
-
-    ValueId slurpValue(glslang::TIntermTyped* node, TIntermNode* parent) {
-        auto typeId = mTypes.getOrInsertByValue(glslangTypeToType(node->getType()));
+    ValueId slurpValue(
+            glslang::TIntermTyped* node, TIntermNode* parent,
+            IdStore<LocalSymbolId, LocalSymbol>& localSymbols) {
+        auto typeId = mTypes.insert(glslangTypeToType(node->getType()));
         if (auto nodeAsSymbol = node->getAsSymbolNode()) {
-            return mLValues.getOrInsertByValue(LValue{nodeAsSymbol->getName()});
+            return mGlobalSymbols.insert(GlobalSymbol{nodeAsSymbol->getAccessName()});
         }
         if (auto nodeAsConstantUnion = node->getAsConstantUnion()) {
-            return mRValues.getOrInsertByValue(LiteralRValue{});
+            return mRValues.insert(LiteralRValue{});
         }
         if (auto nodeAsUnary = node->getAsUnaryNode()) {
-            auto operandId = slurpValue(nodeAsUnary->getOperand(), node);
+            auto operandId = slurpValue(nodeAsUnary->getOperand(), node, localSymbols);
             auto op = slurpOperator(
                     nodeAsUnary->getOp(),
                     glslangTypeToType(node->getType()),
                     glslangTypeToType(nodeAsUnary->getOperand()->getType()));
-            return mRValues.getOrInsertByValue(EvaluableRValue{op, {operandId}});
+            return mRValues.insert(EvaluableRValue{op, {operandId}});
         }
         if (auto nodeAsBinary = node->getAsBinaryNode()) {
             switch (nodeAsBinary->getOp()) {
@@ -1092,28 +1142,28 @@ private:
                     auto swizzle = nodeAsBinary->getRight()->getAsAggregate();
                     ASSERT_PRECONDITION(swizzle != nullptr, "Swizzle node must be an aggregate");
                     ASSERT_PRECONDITION(swizzle->getOp() == glslang::EOpSequence, "Swizzle node must be a sequence");
-                    return mRValues.getOrInsertByValue(EvaluableRValue{RValueOperator::VectorSwizzle});
+                    return mRValues.insert(EvaluableRValue{RValueOperator::VectorSwizzle});
                 }
                 default: {
-                    auto lhsId = slurpValue(nodeAsBinary->getLeft(), node);
-                    auto rhsId = slurpValue(nodeAsBinary->getRight(), node);
+                    auto lhsId = slurpValue(nodeAsBinary->getLeft(), node, localSymbols);
+                    auto rhsId = slurpValue(nodeAsBinary->getRight(), node, localSymbols);
                     auto op = slurpOperator(
                             nodeAsBinary->getOp(),
                             glslangTypeToType(node->getType()),
                             glslangTypeToType(nodeAsBinary->getLeft()->getType()));
-                    return mRValues.getOrInsertByValue(EvaluableRValue{op, {lhsId, rhsId}});
+                    return mRValues.insert(EvaluableRValue{op, {lhsId, rhsId}});
                 }
             }
         }
         if (auto nodeAsSelection = node->getAsSelectionNode()) {
             // A "selection" as interpreted as an expression is a ternary.
-            auto conditionId = slurpValue(nodeAsSelection->getCondition(), parent);
+            auto conditionId = slurpValue(nodeAsSelection->getCondition(), parent, localSymbols);
             auto trueNodeAsTyped = nodeAsSelection->getTrueBlock()->getAsTyped();
             auto falseNodeAsTyped = nodeAsSelection->getFalseBlock()->getAsTyped();
             if (trueNodeAsTyped && falseNodeAsTyped) {
-                auto trueId = slurpValue(trueNodeAsTyped, parent);
-                auto falseId = slurpValue(falseNodeAsTyped, parent);
-                return mRValues.getOrInsertByValue(EvaluableRValue{RValueOperator::Ternary, {conditionId, trueId, falseId}});
+                auto trueId = slurpValue(trueNodeAsTyped, parent, localSymbols);
+                auto falseId = slurpValue(falseNodeAsTyped, parent, localSymbols);
+                return mRValues.insert(EvaluableRValue{RValueOperator::Ternary, {conditionId, trueId, falseId}});
             } else {
                 PANIC_PRECONDITION("A selection node branch was not typed: true = %s, false = %s, parent = %s %s",
                         glslangNodeToStringWithLoc(nodeAsSelection->getTrueBlock()).c_str(),
@@ -1132,11 +1182,11 @@ private:
                     // somewhere...
                     break;
                 case glslang::EOpFunctionCall: {
-                    auto functionId = mFunctionNames.getOrInsertByValue(functionSignatureToName(nodeAsAggregate->getName()));
+                    auto functionId = mFunctionNames.insert(nodeAsAggregate->getName());
                     std::vector<ValueId> args;
                     for (TIntermNode* arg : sequence) {
                         if (auto argAsTyped = arg->getAsTyped()) {
-                            args.push_back(slurpValue(argAsTyped, node));
+                            args.push_back(slurpValue(argAsTyped, node, localSymbols));
                         } else {
                             PANIC_PRECONDITION("Function call argument was not typed: arg = %s, function = %s, parent = %s %s",
                                     glslangNodeToStringWithLoc(arg).c_str(),
@@ -1144,14 +1194,14 @@ private:
                                     glslangNodeToStringWithLoc(parent).c_str());
                         }
                     }
-                    return mRValues.getOrInsertByValue(
+                    return mRValues.insert(
                             EvaluableRValue{functionId, std::move(args)});
                 }
                 default: {
                     std::vector<ValueId> args;
                     for (TIntermNode* arg : sequence) {
                         if (auto argAsTyped = arg->getAsTyped()) {
-                            args.push_back(slurpValue(argAsTyped, node));
+                            args.push_back(slurpValue(argAsTyped, node, localSymbols));
                         } else {
                             PANIC_PRECONDITION("Operator argument was not typed: arg = %s, function = %s, parent = %s %s",
                                     glslangNodeToStringWithLoc(arg).c_str(),
@@ -1167,7 +1217,7 @@ private:
                             nodeAsAggregate->getOp(),
                             glslangTypeToType(node->getType()),
                             std::move(firstArgType));
-                    return mRValues.getOrInsertByValue(
+                    return mRValues.insert(
                             EvaluableRValue{op, std::move(args)});
                 }
             }

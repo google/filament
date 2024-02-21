@@ -17,8 +17,44 @@
 #ifndef TNT_ASTRICT_COMMONTYPES_H
 #define TNT_ASTRICT_COMMONTYPES_H
 
-#include <vector>
+#include <string>
 #include <variant>
+#include <vector>
+
+namespace astrict {
+
+template<typename T>
+struct Id {
+    std::size_t id;
+
+    bool operator==(const Id<T>& o) const {
+        return id == o.id;
+    }
+
+    bool operator<(const Id<T>& o) const {
+        return id < o.id;
+    }
+};
+
+using TypeId = Id<struct TypeIdTag>;
+using GlobalSymbolId = Id<struct GlobalSymbolIdTag>;
+using LocalSymbolId = Id<struct LocalSymbolIdTag>;
+using RValueId = Id<struct RValueTag>;
+using FunctionId = Id<struct FunctionIdTag>;
+using StatementBlockId = Id<struct StatementBlockIdTag>;
+
+}  // namespace astrict
+
+namespace std {
+
+template<typename T>
+struct hash<astrict::Id<T>> {
+    std::size_t operator()(const astrict::Id<T>& o) const {
+        return o.id;
+    }
+};
+
+}  // namespace std
 
 namespace astrict {
 
@@ -152,31 +188,11 @@ enum class BuiltInType : uint8_t {
 // template<typename T>
 // using StatusOr = std::variant<T, int>;
 
-template<typename T>
-struct Id {
-    std::size_t id;
-
-    bool operator==(const Id<T>& o) const {
-        return id == o.id;
-    };
-};
-
-using TypeId = Id<struct TypeIdTag>;
-using LValueId = Id<struct LValueTag>;
-using RValueId = Id<struct RValueTag>;
-using ValueId = std::variant<LValueId, RValueId>;
-using FunctionId = Id<struct FunctionIdTag>;
-using StatementBlockId = Id<struct StatementBlockIdTag>;
-
-template <typename T, typename... Rest>
-void hashCombine(std::size_t& seed, const T& v, const Rest&... rest) {
-    seed ^= std::hash<T>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-    (hashCombine(seed, rest), ...);
-}
+using ValueId = std::variant<GlobalSymbolId, LocalSymbolId, RValueId>;
 
 // TODO: qualifiers
 struct Type {
-    std::string_view name;
+    std::string name; // string_view sometimes deallocated
     std::string_view precision;
     std::vector<std::size_t> arraySizes;
 
@@ -187,11 +203,19 @@ struct Type {
     }
 };
 
-struct LValue {
+struct GlobalSymbol {
     std::string_view name;
 
-    bool operator==(const LValue& o) const {
+    bool operator==(const GlobalSymbol& o) const {
         return name == o.name;
+    }
+};
+
+struct LocalSymbol {
+    std::string_view debugName;
+
+    bool operator==(const LocalSymbol& o) const {
+        return debugName == o.debugName;
     }
 };
 
@@ -218,7 +242,7 @@ using RValue = std::variant<
 
 // TODO: annotation
 struct FunctionParameter {
-    LValueId name;
+    LocalSymbolId name;
     TypeId type;
 
     bool operator==(const FunctionParameter& o) const {
@@ -227,18 +251,19 @@ struct FunctionParameter {
     }
 };
 
-// TODO: type, local variables
 struct FunctionDefinition {
     FunctionId name;
     TypeId returnType;
     std::vector<FunctionParameter> parameters;
-    std::optional<StatementBlockId> body;
+    StatementBlockId body;
+    std::unordered_map<LocalSymbolId, LocalSymbol> localSymbols;
 
     bool operator==(const FunctionDefinition& o) const {
         return name == o.name
                 && returnType == o.returnType
                 && parameters == o.parameters
-                && body == o.body;
+                && body == o.body
+                && localSymbols == o.localSymbols;
     }
 };
 
@@ -295,44 +320,18 @@ using Statement = std::variant<
     BranchStatement,
     LoopStatement>;
 
-template<typename Id, typename Value>
-class IdStore {
-public:
-    // Throws if non-existent.
-    Value getById(Id id) const {
-        return mIdToValue.at(id);
-    }
-
-    // Inserts if non-existent.
-    Id getOrInsertByValue(Value value) {
-        auto it = mValueToId.find(value);
-        if (it == mValueToId.end()) {
-            Id id = Id {mIdToValue.size() + 1};
-            mIdToValue[id] = value;
-            mValueToId[value] = id;
-            return id;
-        } else {
-            return it->second;
-        }
-    }
-
-private:
-    std::unordered_map<Id, Value> mIdToValue;
-    std::unordered_map<Value, Id> mValueToId;
-};
+template <typename T, typename... Rest>
+void hashCombine(std::size_t& seed, const T& v, const Rest&... rest) {
+    seed ^= std::hash<T>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    (hashCombine(seed, rest), ...);
+}
 
 } // namespace astrict
 
-template<typename T>
-struct ::std::hash<astrict::Id<T>> {
-    std::size_t operator()(const astrict::Id<T>& o) const {
-        return o.id;
-    }
-};
-
+namespace std {
 
 template<>
-struct ::std::hash<astrict::Type> {
+struct hash<astrict::Type> {
     std::size_t operator()(const astrict::Type& o) const {
         std::size_t result = 0;
         astrict::hashCombine(result, o.name, o.precision, o.arraySizes.size());
@@ -344,8 +343,8 @@ struct ::std::hash<astrict::Type> {
 };
 
 template<>
-struct ::std::hash<astrict::LValue> {
-    std::size_t operator()(const astrict::LValue& o) const {
+struct hash<astrict::GlobalSymbol> {
+    std::size_t operator()(const astrict::GlobalSymbol& o) const {
         std::size_t result = 0;
         astrict::hashCombine(result, o.name);
         return result;
@@ -353,7 +352,16 @@ struct ::std::hash<astrict::LValue> {
 };
 
 template<>
-struct ::std::hash<astrict::EvaluableRValue> {
+struct hash<astrict::LocalSymbol> {
+    std::size_t operator()(const astrict::LocalSymbol& o) const {
+        std::size_t result = 0;
+        astrict::hashCombine(result, o.debugName);
+        return result;
+    }
+};
+
+template<>
+struct hash<astrict::EvaluableRValue> {
     std::size_t operator()(const astrict::EvaluableRValue& o) const {
         std::size_t result = 0;
         astrict::hashCombine(result, o.op, o.args.size());
@@ -366,14 +374,14 @@ struct ::std::hash<astrict::EvaluableRValue> {
 
 // TODO
 template<>
-struct ::std::hash<astrict::LiteralRValue> {
+struct hash<astrict::LiteralRValue> {
     std::size_t operator()(const astrict::LiteralRValue& o) const {
         return 0;
     }
 };
 
 template<>
-struct ::std::hash<astrict::FunctionParameter> {
+struct hash<astrict::FunctionParameter> {
     std::size_t operator()(const astrict::FunctionParameter& o) const {
         std::size_t result = 0;
         astrict::hashCombine(result, o.name, o.type);
@@ -382,19 +390,23 @@ struct ::std::hash<astrict::FunctionParameter> {
 };
 
 template<>
-struct ::std::hash<astrict::FunctionDefinition> {
+struct hash<astrict::FunctionDefinition> {
     std::size_t operator()(const astrict::FunctionDefinition& o) const {
         std::size_t result = 0;
-        astrict::hashCombine(result, o.name, o.returnType, o.body, o.parameters.size());
+        astrict::hashCombine(result, o.name, o.returnType, o.body,
+                o.parameters.size(), o.localSymbols.size());
         for (const auto& argument : o.parameters) {
             astrict::hashCombine(result, argument);
+        }
+        for (const auto& symbol : o.localSymbols) {
+            astrict::hashCombine(result, symbol.first, symbol.second);
         }
         return result;
     }
 };
 
 template<>
-struct ::std::hash<astrict::IfStatement> {
+struct hash<astrict::IfStatement> {
     std::size_t operator()(const astrict::IfStatement& o) const {
         std::size_t result = 0;
         astrict::hashCombine(result, o.condition, o.thenBlock, o.elseBlock);
@@ -403,7 +415,7 @@ struct ::std::hash<astrict::IfStatement> {
 };
 
 template<>
-struct ::std::hash<astrict::SwitchStatement> {
+struct hash<astrict::SwitchStatement> {
     std::size_t operator()(const astrict::SwitchStatement& o) const {
         std::size_t result = 0;
         astrict::hashCombine(result, o.condition, o.body);
@@ -412,7 +424,7 @@ struct ::std::hash<astrict::SwitchStatement> {
 };
 
 template<>
-struct ::std::hash<astrict::BranchStatement> {
+struct hash<astrict::BranchStatement> {
     std::size_t operator()(const astrict::BranchStatement& o) const {
         std::size_t result = 0;
         astrict::hashCombine(result, o.op, o.operand);
@@ -421,7 +433,7 @@ struct ::std::hash<astrict::BranchStatement> {
 };
 
 template<>
-struct ::std::hash<astrict::LoopStatement> {
+struct hash<astrict::LoopStatement> {
     std::size_t operator()(const astrict::LoopStatement& o) const {
         std::size_t result = 0;
         astrict::hashCombine(result, o.condition, o.terminal, o.testFirst, o.body);
@@ -430,7 +442,7 @@ struct ::std::hash<astrict::LoopStatement> {
 };
 
 template<>
-struct ::std::hash<std::vector<astrict::Statement>> {
+struct hash<std::vector<astrict::Statement>> {
     std::size_t operator()(const std::vector<astrict::Statement>& o) const {
         std::size_t result = o.size();
         for (const auto& statement : o) {
@@ -439,5 +451,7 @@ struct ::std::hash<std::vector<astrict::Statement>> {
         return result;
     }
 };
+
+}  // namespace std
 
 #endif  // TNT_ASTRICT_COMMONTYPES_H

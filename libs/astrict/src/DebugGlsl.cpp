@@ -889,8 +889,8 @@ std::string glslangNodeToString(const TIntermNode* node) {
     if (auto nodeAsBranch = node->getAsBranchNode()) {
         return std::string("Branch(") + glslangOperatorToString(nodeAsBranch->getFlowOp()) + ")";
     }
-    if (node->getAsSymbolNode()) {
-        return "Symbol";
+    if (auto nodeAsSymbol = node->getAsSymbolNode()) {
+        return std::string("Symbol(") + std::string(nodeAsSymbol->getAccessName()) + ")";
     }
     if (node->getAsMethodNode()) {
         return "Method";
