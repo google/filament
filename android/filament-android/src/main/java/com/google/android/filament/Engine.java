@@ -222,6 +222,7 @@ public class Engine {
                     config.perRenderPassArenaSizeMB, config.driverHandleArenaSizeMB,
                     config.minCommandBufferSizeMB, config.perFrameCommandsSizeMB,
                     config.jobSystemThreadCount,
+                    config.textureUseAfterFreePoolSize, config.disableParallelShaderCompile,
                     config.stereoscopicType.ordinal(), config.stereoscopicEyeCount,
                     config.resourceAllocatorCacheSizeMB, config.resourceAllocatorCacheMaxAge);
             return this;
@@ -359,6 +360,22 @@ public class Engine {
          * the number of threads to use.
          */
         public long jobSystemThreadCount = 0;
+
+        /**
+         * Number of most-recently destroyed textures to track for use-after-free.
+         *
+         * This will cause the backend to throw an exception when a texture is freed but still bound
+         * to a SamplerGroup and used in a draw call. 0 disables completely.
+         *
+         * Currently only respected by the Metal backend.
+         */
+        public long textureUseAfterFreePoolSize = 0;
+
+        /**
+         * Set to `true` to forcibly disable parallel shader compilation in the backend.
+         * Currently only honored by the GL backend.
+         */
+        public boolean disableParallelShaderCompile = false;
 
         /**
          * The type of technique for stereoscopic rendering.
@@ -1264,6 +1281,7 @@ public class Engine {
     private static native void nSetBuilderConfig(long nativeBuilder, long commandBufferSizeMB,
             long perRenderPassArenaSizeMB, long driverHandleArenaSizeMB,
             long minCommandBufferSizeMB, long perFrameCommandsSizeMB, long jobSystemThreadCount,
+            long textureUseAfterFreePoolSize, boolean disableParallelShaderCompile,
             int stereoscopicType, long stereoscopicEyeCount,
             long resourceAllocatorCacheSizeMB, long resourceAllocatorCacheMaxAge);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
