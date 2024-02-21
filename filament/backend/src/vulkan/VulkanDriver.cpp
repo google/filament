@@ -24,6 +24,7 @@
 #include "VulkanHandles.h"
 #include "VulkanImageUtility.h"
 #include "VulkanMemory.h"
+#include "VulkanTexture.h"
 
 #include <backend/platforms/VulkanPlatform.h>
 
@@ -117,7 +118,9 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
     utils::slog.e << utils::io::endl;
     return VK_FALSE;
 }
+#endif // FVK_EANBLED(FVK_DEBUG_VALIDATION)
 
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
 VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
         VkDebugUtilsMessageTypeFlagsEXT types, const VkDebugUtilsMessengerCallbackDataEXT* cbdata,
         void* pUserData) {
@@ -136,9 +139,63 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
     utils::slog.e << utils::io::endl;
     return VK_FALSE;
 }
-#endif // FVK_EANBLED(FVK_DEBUG_VALIDATION)
+#endif // FVK_EANBLED(FVK_DEBUG_DEBUG_UTILS)
 
-} // anonymous namespace
+}// anonymous namespace
+
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
+using DebugUtils = VulkanDriver::DebugUtils;
+DebugUtils* DebugUtils::mSingleton = nullptr;
+
+DebugUtils::DebugUtils(VkInstance instance, VkDevice device, VulkanContext const* context)
+    : mInstance(instance), mDevice(device), mEnabled(context->isDebugUtilsSupported()) {
+
+#if FVK_ENABLED(FVK_DEBUG_VALIDATION)
+    // Also initialize debug utils messenger here
+    if (mEnabled) {
+        VkDebugUtilsMessengerCreateInfoEXT const createInfo = {
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+                .pNext = nullptr,
+                .flags = 0,
+                .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
+                                   | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+                .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
+                               | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
+                .pfnUserCallback = debugUtilsCallback,
+        };
+        VkResult result = vkCreateDebugUtilsMessengerEXT(instance, &createInfo,
+                VKALLOC, &mDebugMessenger);
+        ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan debug messenger.");
+    }
+#endif // FVK_EANBLED(FVK_DEBUG_VALIDATION)
+}
+
+DebugUtils* DebugUtils::get() {
+    assert_invariant(DebugUtils::mSingleton);
+    return DebugUtils::mSingleton;
+}
+
+DebugUtils::~DebugUtils() {
+    if (mDebugMessenger) {
+        vkDestroyDebugUtilsMessengerEXT(mInstance, mDebugMessenger, VKALLOC);
+    }
+}
+
+void DebugUtils::setName(VkObjectType type, uint64_t handle, char const* name) {
+    auto impl = DebugUtils::get();
+    if (!impl->mEnabled) {
+        return;
+    }
+    VkDebugUtilsObjectNameInfoEXT const info = {
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+            .pNext = nullptr,
+            .objectType = type,
+            .objectHandle = handle,
+            .pObjectName = name,
+    };
+    vkSetDebugUtilsObjectNameEXT(impl->mDevice, &info);
+}
+#endif // FVK_EANBLED(FVK_DEBUG_DEBUG_UTILS)
 
 using ImgUtil = VulkanImageUtility;
 
@@ -159,35 +216,26 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mReadPixels(mPlatform->getDevice()),
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported) {
 
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
+    DebugUtils::mSingleton =
+            new DebugUtils(mPlatform->getInstance(), mPlatform->getDevice(), &context);
+#endif
+
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     UTILS_UNUSED const PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback
             = vkCreateDebugReportCallbackEXT;
-    VkResult result;
-    if (mContext.isDebugUtilsSupported()) {
-        VkDebugUtilsMessengerCreateInfoEXT const createInfo = {
-                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
-                .pNext = nullptr,
-                .flags = 0,
-                .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
-                                   | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
-                .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
-                               | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
-                .pfnUserCallback = debugUtilsCallback,
-        };
-        result = vkCreateDebugUtilsMessengerEXT(mPlatform->getInstance(), &createInfo, VKALLOC,
-                &mDebugMessenger);
-        ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan debug messenger.");
-    } else if (createDebugReportCallback) {
+    if (!context.isDebugUtilsSupported() && createDebugReportCallback) {
         VkDebugReportCallbackCreateInfoEXT const cbinfo = {
                 .sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
                 .flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT,
                 .pfnCallback = debugReportCallback,
         };
-        result = createDebugReportCallback(mPlatform->getInstance(), &cbinfo, VKALLOC,
+        VkResult result = createDebugReportCallback(mPlatform->getInstance(), &cbinfo, VKALLOC,
                 &mDebugCallback);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan debug callback.");
     }
 #endif
+
     mTimestamps = std::make_unique<VulkanTimestamps>(mPlatform->getDevice());
     mCommands = std::make_unique<VulkanCommands>(mPlatform->getDevice(),
             mPlatform->getGraphicsQueue(), mPlatform->getGraphicsQueueFamilyIndex(), &mContext,
@@ -286,9 +334,12 @@ void VulkanDriver::terminate() {
     if (mDebugCallback) {
         vkDestroyDebugReportCallbackEXT(mPlatform->getInstance(), mDebugCallback, VKALLOC);
     }
-    if (mDebugMessenger) {
-        vkDestroyDebugUtilsMessengerEXT(mPlatform->getInstance(), mDebugMessenger, VKALLOC);
-    }
+
+#if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
+    assert_invariant(DebugUtils::mSingleton);
+    delete DebugUtils::mSingleton;
+#endif
+
     mPlatform->terminate();
 }
 
@@ -1219,22 +1270,14 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     }
     VkFramebuffer vkfb = mFramebufferCache.getFramebuffer(fbkey);
 
-    // Assign a label to the framebuffer for debugging purposes.
-    #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-    if (UTILS_UNLIKELY(mContext.isDebugUtilsSupported())) {
-        auto const topMarker = mCommands->getTopGroupMarker();
-        if (!topMarker.empty()) {
-            const VkDebugUtilsObjectNameInfoEXT info = {
-                VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-                nullptr,
-                VK_OBJECT_TYPE_FRAMEBUFFER,
-                reinterpret_cast<uint64_t>(vkfb),
-                topMarker.c_str(),
-            };
-            vkSetDebugUtilsObjectNameEXT(mPlatform->getDevice(), &info);
-        }
+// Assign a label to the framebuffer for debugging purposes.
+#if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS | FVK_DEBUG_DEBUG_UTILS)
+    auto const topMarker = mCommands->getTopGroupMarker();
+    if (!topMarker.empty()) {
+        DebugUtils::setName(VK_OBJECT_TYPE_FRAMEBUFFER, reinterpret_cast<uint64_t>(vkfb),
+                topMarker.c_str());
     }
-    #endif
+#endif
 
     // The current command buffer now owns a reference to the render target and its attachments.
     // Note that we must acquire parent textures, not sidecars.
