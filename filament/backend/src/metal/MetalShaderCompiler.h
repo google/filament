@@ -45,7 +45,7 @@ public:
     public:
         using Raster = std::tuple<id<MTLFunction>, id<MTLFunction>>;
         using Compute = id<MTLFunction>;
-        using Error = NSString*;
+        using Error = std::tuple<NSString*, NSString*>; // error message, Program name
         struct None {};
 
         MetalFunctionBundle() : mPrograms{None{}} {}
@@ -57,21 +57,11 @@ public:
                 std::holds_alternative<Compute>(mPrograms);
         }
 
-        void validate() const {
-            if (UTILS_LIKELY(!std::holds_alternative<Error>(mPrograms))) {
-                return;
-            }
-            NSString* errorMessage = std::get<Error>(mPrograms);
-            NSString* reason =
-                    [NSString stringWithFormat:
-                            @"Attempting to draw with an id<MTLFunction> that "
-                            @"failed to compile. Compiler error: %@", errorMessage];
-            NSException* compilationFailureException =
-                    [NSException exceptionWithName:@"MetalCompilationFailure"
-                                            reason:reason
-                                          userInfo:nil];
-            [compilationFailureException raise];
-        }
+        /**
+         * If this MetalFunctionBundle contains an error, will throw an NSException with the error
+         * string that was passed to MetalFunctionBundle::error(NSString*).
+         */
+        void validate() const;
 
         Raster getRasterFunctions() const {
             assert_invariant(std::holds_alternative<Raster>(mPrograms));
@@ -100,8 +90,8 @@ public:
             return MetalFunctionBundle(Compute{compute});
         }
 
-        static MetalFunctionBundle error(NSString* error) {
-            return MetalFunctionBundle(Error{error});
+        static MetalFunctionBundle error(NSString* errorMessage, NSString* programName) {
+            return MetalFunctionBundle(Error{errorMessage, programName});
         }
 
     private:

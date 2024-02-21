@@ -104,6 +104,8 @@ void MetalShaderCompiler::terminate() noexcept {
                                                         length:source.size() - 1
                                                       encoding:NSUTF8StringEncoding];
 
+        objcSource = [NSString stringWithFormat:@"%@ foobar crash!!", objcSource];
+
         // By default, Metal uses the most recent language version.
         MTLCompileOptions* options = [MTLCompileOptions new];
 
@@ -126,7 +128,8 @@ void MetalShaderCompiler::terminate() noexcept {
                 errorMessage = error.localizedDescription;
             }
             PANIC_LOG("Failed to compile Metal program.");
-            return MetalFunctionBundle::error(errorMessage);
+            NSString* programName = [NSString stringWithFormat:@"%s", program.getName().c_str_safe()];
+            return MetalFunctionBundle::error(errorMessage, programName);
         }
 
         MTLFunctionConstantValues* constants = [MTLFunctionConstantValues new];
@@ -226,6 +229,24 @@ MetalShaderCompiler::MetalFunctionBundle MetalShaderCompiler::getProgram(program
 void MetalShaderCompiler::notifyWhenAllProgramsAreReady(
         CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
     mCallbackManager.setCallback(handler, callback, user);
+}
+
+UTILS_NOINLINE
+void MetalShaderCompiler::MetalFunctionBundle::validate() const {
+    if (UTILS_LIKELY(!std::holds_alternative<Error>(mPrograms))) {
+        return;
+    }
+    auto [errorMessage, programName] = std::get<Error>(mPrograms);
+    NSString* reason =
+            [NSString stringWithFormat:
+                    @"Attempting to draw with an id<MTLFunction> that failed to compile.\n"
+                    @"Program: %@\n"
+                    @"%@", programName, errorMessage];
+    NSException* compilationFailureException =
+            [NSException exceptionWithName:@"MetalCompilationFailure"
+                                    reason:reason
+                                  userInfo:nil];
+    [compilationFailureException raise];
 }
 
 } // namespace filament::backend
