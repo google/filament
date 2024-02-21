@@ -104,8 +104,6 @@ void MetalShaderCompiler::terminate() noexcept {
                                                         length:source.size() - 1
                                                       encoding:NSUTF8StringEncoding];
 
-        objcSource = [NSString stringWithFormat:@"%@ foobar crash!!", objcSource];
-
         // By default, Metal uses the most recent language version.
         MTLCompileOptions* options = [MTLCompileOptions new];
 
