@@ -484,7 +484,9 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
 extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBuilderConfig(JNIEnv*,
         jclass, jlong nativeBuilder, jlong commandBufferSizeMB, jlong perRenderPassArenaSizeMB,
         jlong driverHandleArenaSizeMB, jlong minCommandBufferSizeMB, jlong perFrameCommandsSizeMB,
-        jlong jobSystemThreadCount, jint stereoscopicType, jlong stereoscopicEyeCount,
+        jlong jobSystemThreadCount,
+        jlong textureUseAfterFreePoolSize, jboolean disableParallelShaderCompile,
+        jint stereoscopicType, jlong stereoscopicEyeCount,
         jlong resourceAllocatorCacheSizeMB, jlong resourceAllocatorCacheMaxAge) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     Engine::Config config = {
@@ -494,6 +496,8 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
             .minCommandBufferSizeMB = (uint32_t) minCommandBufferSizeMB,
             .perFrameCommandsSizeMB = (uint32_t) perFrameCommandsSizeMB,
             .jobSystemThreadCount = (uint32_t) jobSystemThreadCount,
+            .textureUseAfterFreePoolSize = (uint32_t) textureUseAfterFreePoolSize,
+            .disableParallelShaderCompile = (bool) disableParallelShaderCompile,
             .stereoscopicType = (Engine::StereoscopicType) stereoscopicType,
             .stereoscopicEyeCount = (uint8_t) stereoscopicEyeCount,
             .resourceAllocatorCacheSizeMB = (uint32_t) resourceAllocatorCacheSizeMB,

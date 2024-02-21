@@ -298,6 +298,12 @@ public:
          */
         size_t textureUseAfterFreePoolSize = 0;
 
+        /**
+         * Set to `true` to forcibly disable parallel shader compilation in the backend.
+         * Currently only honored by the GL backend.
+         */
+        bool disableParallelShaderCompile = false;
+
         /*
          * The type of technique for stereoscopic rendering.
          *

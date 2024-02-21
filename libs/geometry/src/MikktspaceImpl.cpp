@@ -19,11 +19,12 @@
 #include <math/mat3.h>
 #include <math/norm.h>
 
-
 #include <meshoptimizer.h>
 #include <mikktspace/mikktspace.h>
 
 #include <vector>
+
+#include <string.h>  // memcpy
 
 namespace filament::geometry {
 
@@ -98,7 +99,7 @@ void MikktspaceImpl::setTSpaceBasic(SMikkTSpaceContext const* context, float con
     cursor += 36;
     for (auto [attribArray, attribStride, attribSize]: wrapper->mInputAttribArrays) {
         uint8_t const* input = pointerAdd(attribArray, vertInd, attribStride);
-        std::memcpy(cursor, input, attribSize);
+        memcpy(cursor, input, attribSize);
         cursor += attribSize;
     }
 }
