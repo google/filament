@@ -29,11 +29,9 @@
 
 #include <sys/system_properties.h>
 
-// We require filament to be built with an API 19 toolchain, before that, OpenGLES 3.0 didn't exist
-// Actually, OpenGL ES 3.0 was added to API 18, but API 19 is the better target and
-// the minimum for Jetpack at the time of this comment.
-#if __ANDROID_API__ < 19
-#   error "__ANDROID_API__ must be at least 19"
+// We require filament to be built with a API 21 toolchain, before that, OpenGLES 3.1 didn't exist
+#if __ANDROID_API__ < 21
+#   error "__ANDROID_API__ must be at least 21"
 #endif
 
 using namespace utils;
