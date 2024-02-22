@@ -253,6 +253,7 @@ public:
         uint16_t instanceCount;                                         // 2 bytes [MSb: user]
         Variant materialVariant;                                        // 1 byte
         uint8_t rfu1;                                                   // 1 byte
+        uint32_t rfu2;                                                  // 4 byte
 
         static const uint16_t USER_INSTANCE_MASK = 0x8000u;
         static const uint16_t INSTANCE_COUNT_MASK = 0x7fffu;
@@ -261,7 +262,7 @@ public:
 
     struct alignas(8) Command {     // 64 bytes
         CommandKey key = 0;         //  8 bytes
-        PrimitiveInfo primitive;    // 48 bytes
+        PrimitiveInfo primitive;    // 56 bytes
         bool operator < (Command const& rhs) const noexcept { return key < rhs.key; }
         // placement new declared as "throw" to avoid the compiler's null-check
         inline void* operator new (size_t, void* ptr) {
