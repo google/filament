@@ -127,59 +127,6 @@ enum class RValueOperator : uint8_t {
     ConstructStruct,
 };
 
-// The order of the fields in this enum is very important due to a hack in glslangTypeToType.
-enum class BuiltInType : uint8_t {
-    Void,
-    Struct,
-    Block,
-    Sampler2DArray,
-    // Float
-    Float,
-    Vec2,
-    Vec3,
-    Vec4,
-    Mat2,
-    Mat2x3,
-    Mat2x4,
-    Mat3x2,
-    Mat3,
-    Mat3x4,
-    Mat4x2,
-    Mat4x3,
-    Mat4,
-    // Double
-    Double,
-    Dvec2,
-    Dvec3,
-    Dvec4,
-    Dmat2,
-    Dmat2x3,
-    Dmat2x4,
-    Dmat3x2,
-    Dmat3,
-    Dmat3x4,
-    Dmat4x2,
-    Dmat4x3,
-    Dmat4,
-    // Int
-    Int,
-    IVec2,
-    IVec3,
-    IVec4,
-    // UInt
-    Uint,
-    Uvec2,
-    Uvec3,
-    Uvec4,
-    // Bool
-    Bool,
-    Bvec2,
-    Bvec3,
-    Bvec4,
-    // AtomicUInt
-    AtomicUint,
-};
-
 // // Workaround for missing std::expected.
 // template<typename T>
 // using StatusOr = std::variant<T, int>;
@@ -219,10 +166,15 @@ struct EvaluableRValue {
     }
 };
 
-// TODO: value
 struct LiteralRValue {
+    std::variant<
+        bool,
+        int,
+        double,
+        unsigned int> value;
+
     bool operator==(const LiteralRValue& o) const {
-        return true;
+        return value == o.value;
     }
 };
 
@@ -351,11 +303,12 @@ struct hash<astrict::EvaluableRValue> {
     }
 };
 
-// TODO
 template<>
 struct hash<astrict::LiteralRValue> {
     std::size_t operator()(const astrict::LiteralRValue& o) const {
-        return 0;
+        std::size_t result = 0;
+        astrict::hashCombine(result, o.value);
+        return result;
     }
 };
 

@@ -275,6 +275,20 @@ void dumpRValueFunctionCall(
     out << ")";
 }
 
+void dumpRValueLiteral(const LiteralRValue& literal, std::ostringstream& out) {
+    if (auto* valueAsBool = std::get_if<bool>(&literal.value)) {
+        out << *valueAsBool;
+    } else if (auto* valueAsInt = std::get_if<int>(&literal.value)) {
+        out << *valueAsInt;
+    } else if (auto* valueAsDouble = std::get_if<double>(&literal.value)) {
+        out << *valueAsDouble;
+    } else if (auto* valueAsUnsignedInt = std::get_if<unsigned int>(&literal.value)) {
+        out << *valueAsUnsignedInt;
+    } else {
+        PANIC_PRECONDITION("Unreachable");
+    }
+}
+
 void dumpRValue(
         const PackFromGlsl& pack, const FunctionDefinition& function, RValueId rValueId,
         std::ostringstream& out) {
@@ -294,7 +308,7 @@ void dumpRValue(
             PANIC_PRECONDITION("Unreachable");
         }
     } else if (auto* literal = std::get_if<LiteralRValue>(&rValue)) {
-        out << "LITERAL";
+        dumpRValueLiteral(*literal, out);
     } else {
         PANIC_PRECONDITION("Unreachable");
     }

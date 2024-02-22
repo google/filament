@@ -1181,6 +1181,33 @@ private:
 
     ValueId slurpValue(
             glslang::TIntermTyped* node, TIntermNode* parent, LocalSymbols& localSymbols) {
+        if (auto nodeAsConstantUnion = node->getAsConstantUnion()) {
+            const auto& constArray = nodeAsConstantUnion->getConstArray();
+            ASSERT_PRECONDITION(!constArray.empty(),
+                    "ConstantUnion's value array must not be empty");
+            if (constArray.size() > 1) {
+                // TODO: Encode this as a constructor function call for now.
+                return mRValues.insert(LiteralRValue{});
+            }
+            const auto& inValue = constArray[0];
+            LiteralRValue outValue;
+            switch (inValue.getType()) {
+                case glslang::EbtInt8: outValue.value = inValue.getI8Const(); break;
+                case glslang::EbtUint8: outValue.value = inValue.getU8Const(); break;
+                case glslang::EbtInt16: outValue.value = inValue.getI16Const(); break;
+                case glslang::EbtUint16: outValue.value = inValue.getU16Const(); break;
+                case glslang::EbtInt: outValue.value = inValue.getIConst(); break;
+                case glslang::EbtUint: outValue.value = inValue.getUConst(); break;
+                case glslang::EbtInt64: PANIC_PRECONDITION("Unsupported type: Int64");
+                case glslang::EbtUint64: PANIC_PRECONDITION("Unsupported type: Uint64");
+                case glslang::EbtDouble: outValue.value = inValue.getDConst(); break;
+                case glslang::EbtBool: outValue.value = inValue.getBConst(); break;
+                case glslang::EbtString: PANIC_PRECONDITION("Unsupported type: String");
+                default: PANIC_PRECONDITION("Unsupported type: %d", inValue.getType());
+            }
+            return mRValues.insert(outValue);
+        }
+
         auto typeId = mTypes.insert(glslangTypeToType(node->getType()));
         if (auto nodeAsSymbol = node->getAsSymbolNode()) {
             long long id = nodeAsSymbol->getId();
@@ -1188,9 +1215,6 @@ private:
                 return globalId.value();
             }
             return localSymbols.insert(id, Symbol{nodeAsSymbol->getAccessName(), typeId});
-        }
-        if (auto nodeAsConstantUnion = node->getAsConstantUnion()) {
-            return mRValues.insert(LiteralRValue{});
         }
         if (auto nodeAsUnary = node->getAsUnaryNode()) {
             auto operandId = slurpValue(nodeAsUnary->getOperand(), node, localSymbols);
