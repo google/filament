@@ -30,7 +30,7 @@ android {
     compileSdkVersion versions.compileSdk
     defaultConfig {
         applicationId "com.google.android.filament.gltf"
-        minSdkVersion 21
+        minSdkVersion versions.minSdk
         targetSdkVersion versions.targetSdk
     }
 
