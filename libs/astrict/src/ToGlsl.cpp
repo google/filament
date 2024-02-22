@@ -20,9 +20,13 @@
 #include <astrict/DebugCommon.h>
 #include <astrict/GlslTypes.h>
 #include <sstream>
+#include <unordered_set>
 #include <utils/Panic.h>
 
 namespace astrict {
+
+constexpr auto kIndentAmount = "  ";
+constexpr auto kSpace = " ";
 
 void dumpFunctionName(const PackFromGlsl& pack, const FunctionId& functionId,
         std::ostringstream& out) {
@@ -31,9 +35,245 @@ void dumpFunctionName(const PackFromGlsl& pack, const FunctionId& functionId,
     out << name.substr(0, indexParenthesis);
 }
 
+void dumpType(const PackFromGlsl& pack, TypeId typeId, std::ostringstream& out) {
+    ASSERT_PRECONDITION(pack.types.find(typeId) != pack.types.end(),
+            "Missing type definition");
+    auto& type = pack.types.at(typeId);
+    if (!type.precision.empty()) {
+        out << type.precision << " ";
+    }
+    out << type.name;
+    for (const auto& arraySize : type.arraySizes) {
+        out << "[" << arraySize << "]";
+    }
+}
+
 void dumpValue(
         const PackFromGlsl& pack, const FunctionDefinition& function, ValueId valueId,
         std::ostringstream& out);
+
+void dumpBinaryRValueOperator(
+        const PackFromGlsl& pack, const FunctionDefinition& function,
+        RValueOperator op, const std::vector<ValueId>& args,
+        const char* opString,
+        std::ostringstream& out) {
+    ASSERT_PRECONDITION(args.size() == 2,
+            "%s must be a binary operator", rValueOperatorToString(op));
+    out << "(";
+    dumpValue(pack, function, args[0], out);
+    out << kSpace << opString << kSpace;
+    dumpValue(pack, function, args[1], out);
+    out << ")";
+}
+
+void dumpRValueOperator(
+        const PackFromGlsl& pack, const FunctionDefinition& function,
+        RValueOperator op, const std::vector<ValueId>& args,
+        std::ostringstream& out) {
+    switch (op) {
+        // Unary
+        case RValueOperator::Negative:
+            ASSERT_PRECONDITION(args.size() == 1,
+                    "Negative must be a unary operator");
+            out << "-(";
+            dumpValue(pack, function, args[0], out);
+            out << ")";
+            break;
+        case RValueOperator::LogicalNot:
+            ASSERT_PRECONDITION(args.size() == 1,
+                    "LogicalNot must be a unary operator");
+            out << "!(";
+            dumpValue(pack, function, args[0], out);
+            out << ")";
+            break;
+        case RValueOperator::BitwiseNot:
+            ASSERT_PRECONDITION(args.size() == 1,
+                    "BitwiseNot must be a unary operator");
+            out << "~(";
+            dumpValue(pack, function, args[0], out);
+            out << ")";
+            break;
+        case RValueOperator::PostIncrement:
+            ASSERT_PRECONDITION(args.size() == 1,
+                    "PostIncrement must be a unary operator");
+            dumpValue(pack, function, args[0], out);
+            out << "++";
+            break;
+        case RValueOperator::PostDecrement:
+            ASSERT_PRECONDITION(args.size() == 1,
+                    "PostDecrement must be a unary operator");
+            dumpValue(pack, function, args[0], out);
+            out << "--";
+            break;
+        case RValueOperator::PreIncrement:
+            ASSERT_PRECONDITION(args.size() == 1,
+                    "PreIncrement must be a unary operator");
+            out << "++";
+            dumpValue(pack, function, args[0], out);
+            break;
+        case RValueOperator::PreDecrement:
+            ASSERT_PRECONDITION(args.size() == 1,
+                    "PreDecrement must be a unary operator");
+            out << "--";
+            dumpValue(pack, function, args[0], out);
+            break;
+        case RValueOperator::ArrayLength:
+            ASSERT_PRECONDITION(args.size() == 1,
+                    "ArrayLength must be a unary operator");
+            dumpValue(pack, function, args[0], out);
+            out << ".length";
+            break;
+
+        // Binary
+        case RValueOperator::Add:
+            dumpBinaryRValueOperator(pack, function, op, args, "+", out);
+            break;
+        case RValueOperator::Sub:
+            dumpBinaryRValueOperator(pack, function, op, args, "-", out);
+            break;
+        case RValueOperator::Mul:
+            dumpBinaryRValueOperator(pack, function, op, args, "*", out);
+            break;
+        case RValueOperator::Div:
+            dumpBinaryRValueOperator(pack, function, op, args, "/", out);
+            break;
+        case RValueOperator::Mod:
+            dumpBinaryRValueOperator(pack, function, op, args, "%", out);
+            break;
+        case RValueOperator::RightShift:
+            dumpBinaryRValueOperator(pack, function, op, args, ">>", out);
+            break;
+        case RValueOperator::LeftShift:
+            dumpBinaryRValueOperator(pack, function, op, args, "<<", out);
+            break;
+        case RValueOperator::And:
+            dumpBinaryRValueOperator(pack, function, op, args, "&", out);
+            break;
+        case RValueOperator::InclusiveOr:
+            dumpBinaryRValueOperator(pack, function, op, args, "|", out);
+            break;
+        case RValueOperator::ExclusiveOr:
+            dumpBinaryRValueOperator(pack, function, op, args, "^", out);
+            break;
+        case RValueOperator::Equal:
+            dumpBinaryRValueOperator(pack, function, op, args, "==", out);
+            break;
+        case RValueOperator::NotEqual:
+            dumpBinaryRValueOperator(pack, function, op, args, "!=", out);
+            break;
+        case RValueOperator::LessThan:
+            dumpBinaryRValueOperator(pack, function, op, args, "<", out);
+            break;
+        case RValueOperator::GreaterThan:
+            dumpBinaryRValueOperator(pack, function, op, args, ">", out);
+            break;
+        case RValueOperator::LessThanEqual:
+            dumpBinaryRValueOperator(pack, function, op, args, "<=", out);
+            break;
+        case RValueOperator::GreaterThanEqual:
+            dumpBinaryRValueOperator(pack, function, op, args, ">=", out);
+            break;
+        case RValueOperator::Comma:
+            dumpBinaryRValueOperator(pack, function, op, args, ",", out);
+            break;
+        case RValueOperator::LogicalOr:
+            dumpBinaryRValueOperator(pack, function, op, args, "||", out);
+            break;
+        case RValueOperator::LogicalXor:
+            dumpBinaryRValueOperator(pack, function, op, args, "^^", out);
+            break;
+        case RValueOperator::LogicalAnd:
+            dumpBinaryRValueOperator(pack, function, op, args, "&&", out);
+            break;
+        case RValueOperator::Index:
+            ASSERT_PRECONDITION(args.size() == 2,
+                    "%s must be a binary operator", rValueOperatorToString(op));
+            dumpValue(pack, function, args[0], out);
+            out << "[";
+            dumpValue(pack, function, args[1], out);
+            out << "]";
+            break;
+        // case RValueOperator::IndexStruct:
+        //     break;
+        // case RValueOperator::VectorSwizzle:
+        //     break;
+        case RValueOperator::Assign:
+            dumpBinaryRValueOperator(pack, function, op, args, "=", out);
+            break;
+        case RValueOperator::AddAssign:
+            dumpBinaryRValueOperator(pack, function, op, args, "+=", out);
+            break;
+        case RValueOperator::SubAssign:
+            dumpBinaryRValueOperator(pack, function, op, args, "-=", out);
+            break;
+        case RValueOperator::MulAssign:
+            dumpBinaryRValueOperator(pack, function, op, args, "*=", out);
+            break;
+        case RValueOperator::DivAssign:
+            dumpBinaryRValueOperator(pack, function, op, args, "/=", out);
+            break;
+        case RValueOperator::ModAssign:
+            dumpBinaryRValueOperator(pack, function, op, args, "%=", out);
+            break;
+        case RValueOperator::AndAssign:
+            dumpBinaryRValueOperator(pack, function, op, args, "&=", out);
+            break;
+        case RValueOperator::InclusiveOrAssign:
+            dumpBinaryRValueOperator(pack, function, op, args, "|=", out);
+            break;
+        case RValueOperator::ExclusiveOrAssign:
+            dumpBinaryRValueOperator(pack, function, op, args, "^=", out);
+            break;
+        case RValueOperator::LeftShiftAssign:
+            dumpBinaryRValueOperator(pack, function, op, args, "<<=", out);
+            break;
+        case RValueOperator::RightShiftAssign:
+            dumpBinaryRValueOperator(pack, function, op, args, ">>=", out);
+            break;
+
+        // Ternary
+        case RValueOperator::Ternary:
+            ASSERT_PRECONDITION(args.size() == 3,
+                    "Ternary must be a ternary operator");
+            out << "((";
+            dumpValue(pack, function, args[0], out);
+            out << ")" << kSpace << "?" << kSpace << "(";
+            dumpValue(pack, function, args[1], out);
+            out << ")" << kSpace << ":" << kSpace << "(";
+            dumpValue(pack, function, args[2], out);
+            out << "))";
+            break;
+
+        // Misc
+        case RValueOperator::ConstructStruct:
+        default:
+            out << "(" << rValueOperatorToString(op);
+            for (auto& arg : args) {
+                out << kSpace;
+                dumpValue(pack, function, arg, out);
+            }
+            out << ")";
+            break;
+    }
+}
+
+void dumpRValueFunctionCall(
+        const PackFromGlsl& pack, const FunctionDefinition& function,
+        FunctionId functionId, const std::vector<ValueId>& args,
+        std::ostringstream& out) {
+    dumpFunctionName(pack, functionId, out);
+    out << "(";
+    bool firstArg = true;
+    for (auto& arg : args) {
+        if (firstArg) {
+            firstArg = false;
+        } else {
+            out << "," << kSpace;
+        }
+        dumpValue(pack, function, arg, out);
+    }
+    out << ")";
+}
 
 void dumpRValue(
         const PackFromGlsl& pack, const FunctionDefinition& function, RValueId rValueId,
@@ -43,22 +283,16 @@ void dumpRValue(
         return;
     }
     ASSERT_PRECONDITION(pack.rValues.find(rValueId) != pack.rValues.end(),
-            "missing RValue");
+            "Missing RValue");
     auto& rValue = pack.rValues.at(rValueId);
     if (auto* evaluable = std::get_if<EvaluableRValue>(&rValue)) {
         if (auto* op = std::get_if<RValueOperator>(&evaluable->op)) {
-            out << "(" << rValueOperatorToString(*op);
-        } else if (auto* function = std::get_if<FunctionId>(&evaluable->op)) {
-            dumpFunctionName(pack, *function, out);
-            out << "(";
+            dumpRValueOperator(pack, function, *op, evaluable->args, out);
+        } else if (auto* functionId = std::get_if<FunctionId>(&evaluable->op)) {
+            dumpRValueFunctionCall(pack, function, *functionId, evaluable->args, out);
         } else {
             PANIC_PRECONDITION("Unreachable");
         }
-        for (auto& arg : evaluable->args) {
-            out << " ";
-            dumpValue(pack, function, arg, out);
-        }
-        out << ")";
     } else if (auto* literal = std::get_if<LiteralRValue>(&rValue)) {
         out << "LITERAL";
     } else {
@@ -73,23 +307,28 @@ void dumpGlobalSymbol(
         return;
     }
     ASSERT_PRECONDITION(pack.globalSymbols.find(globalSymbolId) != pack.globalSymbols.end(),
-            "missing global symbol");
+            "Missing global symbol");
 
     auto globalSymbol = pack.globalSymbols.at(globalSymbolId);
     out << globalSymbol.name;
 }
 
 void dumpLocalSymbol(
-        const FunctionDefinition& function, LocalSymbolId localSymbolId, std::ostringstream& out) {
+        const PackFromGlsl& pack, const FunctionDefinition& function, LocalSymbolId localSymbolId,
+        bool dumpType, std::ostringstream& out) {
     if (localSymbolId.id == 0) {
         out << "INVALID_LOCAL_SYMBOL";
         return;
     }
     ASSERT_PRECONDITION(function.localSymbols.find(localSymbolId) != function.localSymbols.end(),
-            "missing local symbol");
+            "Missing local symbol");
 
     auto& localSymbol = function.localSymbols.at(localSymbolId);
-    out << localSymbol.debugName;
+    if (dumpType) {
+        astrict::dumpType(pack, localSymbol.type, out);
+        out << " ";
+    }
+    out << localSymbol.name;
 }
 
 void dumpValue(
@@ -100,22 +339,9 @@ void dumpValue(
     } else if (auto *globalSymbolId = std::get_if<GlobalSymbolId>(&valueId)) {
         dumpGlobalSymbol(pack, *globalSymbolId, out);
     } else if (auto *localSymbolId = std::get_if<LocalSymbolId>(&valueId)) {
-        dumpLocalSymbol(function, *localSymbolId, out);
+        dumpLocalSymbol(pack, function, *localSymbolId, /*dumpType=*/false, out);
     } else {
         PANIC_PRECONDITION("Unreachable");
-    }
-}
-
-void dumpType(const PackFromGlsl& pack, TypeId typeId, std::ostringstream& out) {
-    ASSERT_PRECONDITION(pack.types.find(typeId) != pack.types.end(),
-            "missing type definition");
-    auto& type = pack.types.at(typeId);
-    if (!type.precision.empty()) {
-        out << type.precision << " ";
-    }
-    out << type.name;
-    for (const auto& arraySize : type.arraySizes) {
-        out << "[" << arraySize << "]";
     }
 }
 
@@ -123,14 +349,14 @@ void dumpBlock(
         const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
         int depth, std::ostringstream& out) {
     ASSERT_PRECONDITION(pack.statementBlocks.find(blockId) != pack.statementBlocks.end(),
-            "missing block definition");
+            "Missing block definition");
     std::string indentMinusOne;
     for (int i = 0; i < depth - 1; ++i) {
-        indentMinusOne += "  ";
+        indentMinusOne += kIndentAmount;
     }
     std::string indent = indentMinusOne;
     if (depth > 0) {
-        indent += "  ";
+        indent += kIndentAmount;
     }
     for (auto statement : pack.statementBlocks.at(blockId)) {
         if (auto* rValueId = std::get_if<RValueId>(&statement)) {
@@ -138,19 +364,19 @@ void dumpBlock(
             dumpRValue(pack, function, *rValueId, out);
             out << ";\n";
         } else if (auto* ifStatement = std::get_if<IfStatement>(&statement)) {
-            out << indent << "if (";
+            out << indent << "if" << kSpace << "(";
             dumpValue(pack, function, ifStatement->condition, out);
-            out << ") {\n";
+            out << ")" << kSpace << "{\n";
             dumpBlock(pack, function, ifStatement->thenBlock, depth + 1, out);
             if (ifStatement->elseBlock) {
-                out << indent << "} else {\n";
+                out << indent << "}" << kSpace << "else" << kSpace << "{\n";
                 dumpBlock(pack, function, ifStatement->elseBlock.value(), depth + 1, out);
             }
             out << indent << "}\n";
         } else if (auto* switchStatement = std::get_if<SwitchStatement>(&statement)) {
-            out << indent << "switch (";
+            out << indent << "switch" << kSpace << "(";
             dumpValue(pack, function, switchStatement->condition, out);
-            out << ") {\n";
+            out << ")" << kSpace << "{\n";
             dumpBlock(pack, function, switchStatement->body, depth + 1, out);
             out << indent << "}\n";
         } else if (auto* branchStatement = std::get_if<BranchStatement>(&statement)) {
@@ -202,21 +428,21 @@ void dumpBlock(
         } else if (auto* loopStatement = std::get_if<LoopStatement>(&statement)) {
             if (loopStatement->testFirst) {
                 if (loopStatement->terminal) {
-                    out << indent << "for (; ";
+                    out << indent << "for" << kSpace << "(;" << kSpace;
                     dumpValue(pack, function, loopStatement->condition, out);
-                    out << "; ";
+                    out << ";" << kSpace;
                     dumpRValue(pack, function, loopStatement->terminal.value(), out);
                 } else {
-                    out << indent << "while (";
+                    out << indent << "while" << kSpace << "(";
                     dumpValue(pack, function, loopStatement->condition, out);
                 }
-                out << ") {\n";
+                out << ")" << kSpace << "{\n";
                 dumpBlock(pack, function, loopStatement->body, depth + 1, out);
                 out << indent << "}\n";
             } else {
-                out << indent << "do {\n";
+                out << indent << "do" << kSpace << "{\n";
                 dumpBlock(pack, function, loopStatement->body, depth + 1, out);
-                out << indent << "} while (";
+                out << indent << "}" << kSpace << "while" << kSpace << "(";
                 dumpValue(pack, function, loopStatement->condition, out);
                 out << ");\n";
             }
@@ -234,26 +460,33 @@ void dumpFunction(
         return;
     }
     ASSERT_PRECONDITION(pack.functionDefinitions.find(functionId) != pack.functionDefinitions.end(),
-            "missing function definition");
+            "Missing function definition");
     auto& function = pack.functionDefinitions.at(functionId);
     dumpType(pack, function.returnType, out);
     out << " ";
     dumpFunctionName(pack, function.name, out);
     out << "(";
+    std::unordered_set<LocalSymbolId> parameterSymbolIds;
     bool firstParameter = true;
     for (const auto& parameter : function.parameters) {
         if (firstParameter) {
             firstParameter = false;
         } else {
-            out << ", ";
+            out << "," << kSpace;
         }
-        dumpType(pack, parameter.type, out);
-        out << " ";
-        dumpLocalSymbol(function, parameter.name, out);
+        parameterSymbolIds.insert(parameter.name);
+        dumpLocalSymbol(pack, function, parameter.name, /*dumpType=*/true, out);
     }
     out << ")";
     if (dumpBody) {
         out << " {\n";
+        for (const auto& localSymbol : function.localSymbols) {
+            if (parameterSymbolIds.find(localSymbol.first) == parameterSymbolIds.end()) {
+                out << kIndentAmount;
+                dumpType(pack, localSymbol.second.type, out);
+                out << kSpace << localSymbol.second.name << ";\n";
+            }
+        }
         dumpBlock(pack, function, function.body, 1, out);
         out << "}\n";
     } else {

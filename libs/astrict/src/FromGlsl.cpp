@@ -91,9 +91,10 @@ std::variant<RValueOperator, std::string_view> glslangOperatorToRValueOperator(
         case EOpLogicalOr: return RValueOperator::LogicalOr;
         case EOpLogicalXor: return RValueOperator::LogicalXor;
         case EOpLogicalAnd: return RValueOperator::LogicalAnd;
-        case EOpIndexDirect: return RValueOperator::IndexDirect;
-        case EOpIndexIndirect: return RValueOperator::IndexIndirect;
-        case EOpIndexDirectStruct: return RValueOperator::IndexDirectStruct;
+        case EOpIndexDirect:
+        case EOpIndexIndirect:
+            return RValueOperator::Index;
+        case EOpIndexDirectStruct: return RValueOperator::IndexStruct;
         case EOpVectorSwizzle: return RValueOperator::VectorSwizzle;
         case EOpRadians: return "radians";
         case EOpDegrees: return "degrees";
@@ -865,29 +866,69 @@ Type glslangTypeToType(const glslang::TType& type) {
 }
 
 template<typename Id, typename Value>
-class IdStore {
+class IdStoreByValue {
 public:
     // Inserts if non-existent.
     Id insert(Value value) {
-        auto it = mValueToId.find(value);
-        if (it == mValueToId.end()) {
-            Id id = Id {mIdToValue.size() + 1};
-            mIdToValue[id] = value;
-            mValueToId[value] = id;
+        auto it = mMap.find(value);
+        if (it == mMap.end()) {
+            Id id = Id {++mLastId};
+            mMap[value] = id;
             return id;
-        } else {
-            return it->second;
         }
+        return it->second;
     }
 
-    std::unordered_map<Id, Value> intoMap() {
-        return std::move(mIdToValue);
+    std::unordered_map<Id, Value> getFinal() {
+        std::unordered_map<Id, Value> r;
+        for (const auto& pair : mMap) {
+            r[pair.second] = pair.first;
+        }
+        return r;
     }
 
 private:
-    std::unordered_map<Id, Value> mIdToValue;
-    std::unordered_map<Value, Id> mValueToId;
+    int mLastId = 0;
+    std::unordered_map<Value, Id> mMap;
 };
+
+template<typename Id, typename Value, typename Key>
+class IdStoreByKey {
+public:
+    // Inserts if non-existent.
+    Id insert(Key key, Value value) {
+        auto it = mMap.find(key);
+        if (it == mMap.end()) {
+            Id id = Id {++mLastId};
+            mMap[key] = std::pair(id, value);
+            return id;
+        }
+        return it->second.first;
+    }
+
+    // Gets if extant.
+    std::optional<Id> get(Key key) {
+        auto it = mMap.find(key);
+        if (it == mMap.end()) {
+            return std::nullopt;
+        }
+        return it->second.first;
+    }
+
+    std::unordered_map<Id, Value> getFinal() {
+        std::unordered_map<Id, Value> r;
+        for (const auto& pair : mMap) {
+            r[pair.second.first] = pair.second.second;
+        }
+        return r;
+    }
+
+private:
+    int mLastId = 0;
+    std::unordered_map<Key, std::pair<Id, Value>> mMap;
+};
+
+using LocalSymbols = IdStoreByKey<LocalSymbolId, Symbol, long long>;
 
 class Slurper {
 public:
@@ -899,11 +940,11 @@ public:
     PackFromGlsl intoPack() {
         return PackFromGlsl {
                 mVersion,
-                mTypes.intoMap(),
-                mGlobalSymbols.intoMap(),
-                mRValues.intoMap(),
-                mFunctionNames.intoMap(),
-                mStatementBlocks.intoMap(),
+                mTypes.getFinal(),
+                mGlobalSymbols.getFinal(),
+                mRValues.getFinal(),
+                mFunctionNames.getFinal(),
+                mStatementBlocks.getFinal(),
                 std::move(mFunctionDefinitions),
                 std::move(mFunctionPrototypes),
                 std::move(mFunctionDefinitionOrder),
@@ -912,11 +953,11 @@ public:
 
 private:
     int mVersion;
-    IdStore<TypeId, Type> mTypes;
-    IdStore<GlobalSymbolId, GlobalSymbol> mGlobalSymbols;
-    IdStore<RValueId, RValue> mRValues;
-    IdStore<FunctionId, std::string_view> mFunctionNames;
-    IdStore<StatementBlockId, std::vector<Statement>> mStatementBlocks;
+    IdStoreByValue<TypeId, Type> mTypes;
+    IdStoreByKey<GlobalSymbolId, Symbol, long long> mGlobalSymbols;
+    IdStoreByValue<RValueId, RValue> mRValues;
+    IdStoreByValue<FunctionId, std::string_view> mFunctionNames;
+    IdStoreByValue<StatementBlockId, std::vector<Statement>> mStatementBlocks;
     std::unordered_map<FunctionId, FunctionDefinition> mFunctionDefinitions;
     std::set<FunctionId> mFunctionPrototypes;
     std::vector<FunctionId> mFunctionDefinitionOrder;
@@ -952,29 +993,46 @@ private:
                     glslangNodeToStringWithLoc(node).c_str());
         }
 
-        for (auto child : linkerObjectNodes) {
-            // TODO: handle linker object nodes
+        // Linker objects contain a list of global symbols.
+        for (auto linkerObject : linkerObjectNodes) {
+            for (auto child : linkerObject->getSequence()) {
+                if (auto childAsSymbol = child->getAsSymbolNode()) {
+                    auto typeId = mTypes.insert(glslangTypeToType(childAsSymbol->getType()));
+                    mGlobalSymbols.insert(
+                            childAsSymbol->getId(),
+                            Symbol{childAsSymbol->getAccessName(), typeId});
+                    continue;
+                }
+                PANIC_PRECONDITION("Unhandled child of LinkerObjects node: %s, parent = %s",
+                        glslangNodeToStringWithLoc(child).c_str(),
+                        glslangNodeToStringWithLoc(linkerObject).c_str());
+            }
         }
-        for (auto child : sequenceNodes) {
-            // TODO: handle linker object nodes
+        // Sequence nodes contain assignment operations.
+        for (auto sequence : sequenceNodes) {
+            for (auto child : sequence->getSequence()) {
+                auto childAsBinary = child->getAsBinaryNode();
+                if (childAsBinary && childAsBinary->getOp() == glslang::EOpAssign) {
+                    continue;
+                }
+                PANIC_PRECONDITION("Unhandled child of LinkerObjects node: %s, parent = %s",
+                        glslangNodeToStringWithLoc(child).c_str(),
+                        glslangNodeToStringWithLoc(sequence).c_str());
+            }
         }
+        // Function definitions are the meat of the AST.
         for (auto child : functionNodes) {
             slurpFunctionDefinition(child, node);
         }
     }
 
     StatementBlockId slurpStatementBlock(
-            TIntermNode* node, TIntermNode* parent,
-            IdStore<LocalSymbolId, LocalSymbol>& localSymbols) {
+            TIntermNode* node, TIntermNode* parent, LocalSymbols& localSymbols) {
         std::vector<Statement> statements;
         auto nodeAsAggregate = node->getAsAggregate();
         if (nodeAsAggregate != nullptr && nodeAsAggregate->getOp() == glslang::EOpSequence) {
             // Read all children into this statement block.
             for (TIntermNode* child : nodeAsAggregate->getSequence()) {
-                if (parent->getAsSwitchNode()) {
-                    utils::slog.i << "child of switch: " << glslangNodeToString(child)
-                                  << utils::io::endl;
-                }
                 nodeToStatements(child, node, localSymbols, statements);
             }
         } else {
@@ -986,11 +1044,14 @@ private:
 
     void slurpFunctionDefinition(
             glslang::TIntermAggregate* node, TIntermNode* parent) {
-        ASSERT_PRECONDITION(node->getOp() == glslang::EOpFunction, "Node must be a function");
+        ASSERT_PRECONDITION(node->getOp() == glslang::EOpFunction,
+                "Node must be a function");
         auto& sequence = node->getSequence();
-        ASSERT_PRECONDITION(sequence.size() == 1 || sequence.size() == 2, "Sequence must be of length 1 or 2");
+        ASSERT_PRECONDITION(sequence.size() == 1 || sequence.size() == 2,
+                "Sequence must be of length 1 or 2");
         auto parametersNode = sequence[0]->getAsAggregate();
-        ASSERT_PRECONDITION(parametersNode != nullptr, "Function parameters must be an aggregate node");
+        ASSERT_PRECONDITION(parametersNode != nullptr,
+                "Function parameters must be an aggregate node");
 
         auto functionId = mFunctionNames.insert(node->getName());
 
@@ -1003,7 +1064,7 @@ private:
         auto returnTypeId =
             mTypes.insert(glslangTypeToType(node->getType()));
 
-        IdStore<LocalSymbolId, LocalSymbol> localSymbols;
+        LocalSymbols localSymbols;
         std::vector<FunctionParameter> parameters;
         for (const auto parameter : parametersNode->getSequence()) {
             auto parameterAsSymbol = parameter->getAsSymbolNode();
@@ -1012,21 +1073,22 @@ private:
                     glslangNodeToStringWithLoc(parameter).c_str(),
                     glslangNodeToStringWithLoc(node).c_str(),
                     glslangNodeToStringWithLoc(parent).c_str());
-            auto nameId = localSymbols.insert(LocalSymbol{parameterAsSymbol->getName()});
             auto typeId = mTypes.insert(glslangTypeToType(parameterAsSymbol->getType()));
-            parameters.push_back(FunctionParameter{nameId, typeId});
+            auto nameId = localSymbols.insert(
+                    parameterAsSymbol->getId(), Symbol{parameterAsSymbol->getName(), typeId});
+            parameters.push_back(FunctionParameter{nameId});
         }
 
         auto bodyId = slurpStatementBlock(sequence[1], node, localSymbols);
         mFunctionDefinitions[functionId] = FunctionDefinition{
                 functionId, returnTypeId, std::move(parameters), bodyId,
-                std::move(localSymbols.intoMap())};
+                localSymbols.getFinal()};
         mFunctionDefinitionOrder.push_back(functionId);
     }
 
     // Turn a non-root node into one or more statements.
-    void nodeToStatements(TIntermNode* node, TIntermNode* parent,
-            IdStore<LocalSymbolId, LocalSymbol>& localSymbols, std::vector<Statement> &output) {
+    void nodeToStatements(TIntermNode* node, TIntermNode* parent, LocalSymbols& localSymbols,
+            std::vector<Statement> &output) {
         if (auto nodeAsLoopNode = node->getAsLoopNode()) {
             auto conditionId = slurpValue(nodeAsLoopNode->getTest(), parent, localSymbols);
             std::optional<RValueId> terminalId;
@@ -1118,11 +1180,14 @@ private:
     }
 
     ValueId slurpValue(
-            glslang::TIntermTyped* node, TIntermNode* parent,
-            IdStore<LocalSymbolId, LocalSymbol>& localSymbols) {
+            glslang::TIntermTyped* node, TIntermNode* parent, LocalSymbols& localSymbols) {
         auto typeId = mTypes.insert(glslangTypeToType(node->getType()));
         if (auto nodeAsSymbol = node->getAsSymbolNode()) {
-            return mGlobalSymbols.insert(GlobalSymbol{nodeAsSymbol->getAccessName()});
+            long long id = nodeAsSymbol->getId();
+            if (auto globalId = mGlobalSymbols.get(id)) {
+                return globalId.value();
+            }
+            return localSymbols.insert(id, Symbol{nodeAsSymbol->getAccessName(), typeId});
         }
         if (auto nodeAsConstantUnion = node->getAsConstantUnion()) {
             return mRValues.insert(LiteralRValue{});
@@ -1140,8 +1205,10 @@ private:
                 case glslang::EOpVectorSwizzle: {
                     // TODO: swizzle it up
                     auto swizzle = nodeAsBinary->getRight()->getAsAggregate();
-                    ASSERT_PRECONDITION(swizzle != nullptr, "Swizzle node must be an aggregate");
-                    ASSERT_PRECONDITION(swizzle->getOp() == glslang::EOpSequence, "Swizzle node must be a sequence");
+                    ASSERT_PRECONDITION(swizzle != nullptr,
+                            "Swizzle node must be an aggregate");
+                    ASSERT_PRECONDITION(swizzle->getOp() == glslang::EOpSequence,
+                            "Swizzle node must be a sequence");
                     return mRValues.insert(EvaluableRValue{RValueOperator::VectorSwizzle});
                 }
                 default: {

@@ -27,6 +27,7 @@ const char* rValueOperatorToString(RValueOperator op) {
         case RValueOperator::PostDecrement: return "PostDecrement";
         case RValueOperator::PreIncrement: return "PreIncrement";
         case RValueOperator::PreDecrement: return "PreDecrement";
+        case RValueOperator::ArrayLength: return "ArrayLength";
         case RValueOperator::Add: return "Add";
         case RValueOperator::Sub: return "Sub";
         case RValueOperator::Mul: return "Mul";
@@ -39,8 +40,6 @@ const char* rValueOperatorToString(RValueOperator op) {
         case RValueOperator::ExclusiveOr: return "ExclusiveOr";
         case RValueOperator::Equal: return "Equal";
         case RValueOperator::NotEqual: return "NotEqual";
-        case RValueOperator::VectorEqual: return "VectorEqual";
-        case RValueOperator::VectorNotEqual: return "VectorNotEqual";
         case RValueOperator::LessThan: return "LessThan";
         case RValueOperator::GreaterThan: return "GreaterThan";
         case RValueOperator::LessThanEqual: return "LessThanEqual";
@@ -49,9 +48,8 @@ const char* rValueOperatorToString(RValueOperator op) {
         case RValueOperator::LogicalOr: return "LogicalOr";
         case RValueOperator::LogicalXor: return "LogicalXor";
         case RValueOperator::LogicalAnd: return "LogicalAnd";
-        case RValueOperator::IndexDirect: return "IndexDirect";
-        case RValueOperator::IndexIndirect: return "IndexIndirect";
-        case RValueOperator::IndexDirectStruct: return "IndexDirectStruct";
+        case RValueOperator::Index: return "Index";
+        case RValueOperator::IndexStruct: return "IndexStruct";
         case RValueOperator::VectorSwizzle: return "VectorSwizzle";
         case RValueOperator::Assign: return "Assign";
         case RValueOperator::AddAssign: return "AddAssign";
@@ -64,7 +62,6 @@ const char* rValueOperatorToString(RValueOperator op) {
         case RValueOperator::ExclusiveOrAssign: return "ExclusiveOrAssign";
         case RValueOperator::LeftShiftAssign: return "LeftShiftAssign";
         case RValueOperator::RightShiftAssign: return "RightShiftAssign";
-        case RValueOperator::ArrayLength: return "ArrayLength";
         case RValueOperator::Ternary: return "Ternary";
         case RValueOperator::ConstructStruct: return "ConstructStruct";
     }

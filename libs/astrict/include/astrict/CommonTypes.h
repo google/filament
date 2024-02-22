@@ -25,7 +25,7 @@ namespace astrict {
 
 template<typename T>
 struct Id {
-    std::size_t id;
+    int id;
 
     bool operator==(const Id<T>& o) const {
         return id == o.id;
@@ -72,17 +72,17 @@ enum class BranchOperator : uint8_t {
 };
 
 // Represents an operation whose syntax differs from a function call. For example, addition,
-// equality. GLSL is not Lisp, unfortunately.
+// equality.
 enum class RValueOperator : uint8_t {
     // Unary
     Negative,
     LogicalNot,
     BitwiseNot,
-
     PostIncrement,
     PostDecrement,
     PreIncrement,
     PreDecrement,
+    ArrayLength,
 
     // Binary
     Add,
@@ -97,8 +97,6 @@ enum class RValueOperator : uint8_t {
     ExclusiveOr,
     Equal,
     NotEqual,
-    VectorEqual,
-    VectorNotEqual,
     LessThan,
     GreaterThan,
     LessThanEqual,
@@ -107,9 +105,8 @@ enum class RValueOperator : uint8_t {
     LogicalOr,
     LogicalXor,
     LogicalAnd,
-    IndexDirect,
-    IndexIndirect,
-    IndexDirectStruct,
+    Index,
+    IndexStruct,
     VectorSwizzle,
     Assign,
     AddAssign,
@@ -122,7 +119,6 @@ enum class RValueOperator : uint8_t {
     ExclusiveOrAssign,
     LeftShiftAssign,
     RightShiftAssign,
-    ArrayLength,
 
     // Ternary
     Ternary,
@@ -203,19 +199,13 @@ struct Type {
     }
 };
 
-struct GlobalSymbol {
+struct Symbol {
     std::string_view name;
+    TypeId type;
 
-    bool operator==(const GlobalSymbol& o) const {
-        return name == o.name;
-    }
-};
-
-struct LocalSymbol {
-    std::string_view debugName;
-
-    bool operator==(const LocalSymbol& o) const {
-        return debugName == o.debugName;
+    bool operator==(const Symbol& o) const {
+        return name == o.name
+                && type == o.type;
     }
 };
 
@@ -243,11 +233,9 @@ using RValue = std::variant<
 // TODO: annotation
 struct FunctionParameter {
     LocalSymbolId name;
-    TypeId type;
 
     bool operator==(const FunctionParameter& o) const {
-        return name == o.name
-                && type == o.type;
+        return name == o.name;
     }
 };
 
@@ -256,7 +244,7 @@ struct FunctionDefinition {
     TypeId returnType;
     std::vector<FunctionParameter> parameters;
     StatementBlockId body;
-    std::unordered_map<LocalSymbolId, LocalSymbol> localSymbols;
+    std::unordered_map<LocalSymbolId, Symbol> localSymbols;
 
     bool operator==(const FunctionDefinition& o) const {
         return name == o.name
@@ -343,19 +331,10 @@ struct hash<astrict::Type> {
 };
 
 template<>
-struct hash<astrict::GlobalSymbol> {
-    std::size_t operator()(const astrict::GlobalSymbol& o) const {
+struct hash<astrict::Symbol> {
+    std::size_t operator()(const astrict::Symbol& o) const {
         std::size_t result = 0;
-        astrict::hashCombine(result, o.name);
-        return result;
-    }
-};
-
-template<>
-struct hash<astrict::LocalSymbol> {
-    std::size_t operator()(const astrict::LocalSymbol& o) const {
-        std::size_t result = 0;
-        astrict::hashCombine(result, o.debugName);
+        astrict::hashCombine(result, o.name, o.type);
         return result;
     }
 };
@@ -384,7 +363,7 @@ template<>
 struct hash<astrict::FunctionParameter> {
     std::size_t operator()(const astrict::FunctionParameter& o) const {
         std::size_t result = 0;
-        astrict::hashCombine(result, o.name, o.type);
+        astrict::hashCombine(result, o.name);
         return result;
     }
 };
