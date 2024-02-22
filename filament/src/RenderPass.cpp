@@ -99,10 +99,6 @@ RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexce
           mScissorViewport(builder.mScissorViewport),
           mCustomCommands(engine.getPerRenderPassArena()) {
 
-    if (mVisibleRenderables.empty()) {
-        return;
-    }
-
     // compute the number of commands we need
     updateSummedPrimitiveCounts(
             const_cast<FScene::RenderableSoa&>(mRenderableSoa), mVisibleRenderables);

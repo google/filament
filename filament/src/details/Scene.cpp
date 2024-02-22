@@ -148,7 +148,7 @@ void FScene::prepare(utils::JobSystem& js,
 
     // TODO: the resize below could happen in a job
 
-    if (sceneData.size() != renderableInstances.size()) {
+    if (!sceneData.capacity() || sceneData.size() != renderableInstances.size()) {
         sceneData.clear();
         if (sceneData.capacity() < renderableDataCapacity) {
             sceneData.setCapacity(renderableDataCapacity);
