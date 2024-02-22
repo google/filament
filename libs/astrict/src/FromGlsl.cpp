@@ -27,8 +27,45 @@
 
 namespace astrict {
 
-std::variant<RValueOperator, std::string_view> glslangOperatorToRValueOperator(
-        glslang::TOperator op, int version, Type returnType, std::optional<Type> arg1Type) {
+std::string textureFunctionNameForSampler(
+        const char* suffix, const char* arbOrExt, int version, const glslang::TType* arg1Type) {
+    using namespace glslang;
+    if (version > 100) {
+        return std::string("texture") + suffix;
+    }
+    ASSERT_PRECONDITION(arg1Type, "First argument to texture function must not be null");
+    auto sampler = arg1Type->getSampler();
+    std::string result = sampler.isShadow() ? "shadow" : "texture";
+    switch (sampler.dim) {
+        case Esd1D: result += "1D"; break;
+        case Esd2D: result += "2D"; break;
+        case Esd3D: result += "3D"; break;
+        case EsdCube: result += "Cube"; break;
+        case EsdRect: result += "2DRect"; break;
+        default:
+            PANIC_PRECONDITION("Unhandled sampler dimension: %d",
+                    sampler.dim);
+    }
+    result += suffix;
+    result += arbOrExt;
+    return result;
+}
+
+std::string constructorFunctionNameForType(const char* name, const glslang::TType& returnType) {
+    if (!returnType.isArray()) {
+        return name;
+    }
+    std::string result = name;
+    const int numDims = returnType.getArraySizes()->getNumDims();
+    for (int i = 0; i < numDims; i++) {
+        result += "[]";
+    }
+    return result;
+}
+
+std::variant<RValueOperator, std::string> glslangOperatorToRValueOperator(
+        glslang::TOperator op, int version,
+        const glslang::TType& returnType, const glslang::TType* arg1Type) {
     using namespace glslang;
     switch (op) {
         case EOpNegative: return RValueOperator::Negative;
@@ -355,108 +392,108 @@ std::variant<RValueOperator, std::string_view> glslangOperatorToRValueOperator(
         case EOpEndInvocationInterlock: return "endInvocationInterlockARB";
         case EOpIsHelperInvocation: return "helperInvocationEXT";
         case EOpDebugPrintf: return "debugPrintfEXT";
-        case EOpConstructInt: return "int";
-        case EOpConstructUint: return "uint";
-        case EOpConstructInt8: return "int8";
-        case EOpConstructUint8: return "uint8";
-        case EOpConstructInt16: return "int16";
-        case EOpConstructUint16: return "uint16";
-        case EOpConstructInt64: return "int64";
-        case EOpConstructUint64: return "uint64";
-        case EOpConstructBool: return "bool";
-        case EOpConstructFloat: return "float";
-        case EOpConstructDouble: return "double";
-        case EOpConstructVec2: return "vec2";
-        case EOpConstructVec3: return "vec3";
-        case EOpConstructVec4: return "vec4";
-        case EOpConstructMat2x2: return "mat2x2";
-        case EOpConstructMat2x3: return "mat2x3";
-        case EOpConstructMat2x4: return "mat2x4";
-        case EOpConstructMat3x2: return "mat3x2";
-        case EOpConstructMat3x3: return "mat3x3";
-        case EOpConstructMat3x4: return "mat3x4";
-        case EOpConstructMat4x2: return "mat4x2";
-        case EOpConstructMat4x3: return "mat4x3";
-        case EOpConstructMat4x4: return "mat4x4";
-        case EOpConstructDVec2: return "dvec2";
-        case EOpConstructDVec3: return "dvec3";
-        case EOpConstructDVec4: return "dvec4";
-        case EOpConstructBVec2: return "bvec2";
-        case EOpConstructBVec3: return "bvec3";
-        case EOpConstructBVec4: return "bvec4";
-        case EOpConstructI8Vec2: return "i8vec2";
-        case EOpConstructI8Vec3: return "i8vec3";
-        case EOpConstructI8Vec4: return "i8vec4";
-        case EOpConstructU8Vec2: return "u8vec2";
-        case EOpConstructU8Vec3: return "u8vec3";
-        case EOpConstructU8Vec4: return "u8vec4";
-        case EOpConstructI16Vec2: return "i16vec2";
-        case EOpConstructI16Vec3: return "i16vec3";
-        case EOpConstructI16Vec4: return "i16vec4";
-        case EOpConstructU16Vec2: return "u16vec2";
-        case EOpConstructU16Vec3: return "u16vec3";
-        case EOpConstructU16Vec4: return "u16vec4";
-        case EOpConstructIVec2: return "ivec2";
-        case EOpConstructIVec3: return "ivec3";
-        case EOpConstructIVec4: return "ivec4";
-        case EOpConstructUVec2: return "uvec2";
-        case EOpConstructUVec3: return "uvec3";
-        case EOpConstructUVec4: return "uvec4";
-        case EOpConstructI64Vec2: return "i64vec2";
-        case EOpConstructI64Vec3: return "i64vec3";
-        case EOpConstructI64Vec4: return "i64vec4";
-        case EOpConstructU64Vec2: return "u64vec2";
-        case EOpConstructU64Vec3: return "u64vec3";
-        case EOpConstructU64Vec4: return "u64vec4";
-        case EOpConstructDMat2x2: return "dmat2x2";
-        case EOpConstructDMat2x3: return "dmat2x3";
-        case EOpConstructDMat2x4: return "dmat2x4";
-        case EOpConstructDMat3x2: return "dmat3x2";
-        case EOpConstructDMat3x3: return "dmat3x3";
-        case EOpConstructDMat3x4: return "dmat3x4";
-        case EOpConstructDMat4x2: return "dmat4x2";
-        case EOpConstructDMat4x3: return "dmat4x3";
-        case EOpConstructDMat4x4: return "dmat4x4";
-        case EOpConstructIMat2x2: return "imat2x2";
-        case EOpConstructIMat2x3: return "imat2x3";
-        case EOpConstructIMat2x4: return "imat2x4";
-        case EOpConstructIMat3x2: return "imat3x2";
-        case EOpConstructIMat3x3: return "imat3x3";
-        case EOpConstructIMat3x4: return "imat3x4";
-        case EOpConstructIMat4x2: return "imat4x2";
-        case EOpConstructIMat4x3: return "imat4x3";
-        case EOpConstructIMat4x4: return "imat4x4";
-        case EOpConstructUMat2x2: return "umat2x2";
-        case EOpConstructUMat2x3: return "umat2x3";
-        case EOpConstructUMat2x4: return "umat2x4";
-        case EOpConstructUMat3x2: return "umat3x2";
-        case EOpConstructUMat3x3: return "umat3x3";
-        case EOpConstructUMat3x4: return "umat3x4";
-        case EOpConstructUMat4x2: return "umat4x2";
-        case EOpConstructUMat4x3: return "umat4x3";
-        case EOpConstructUMat4x4: return "umat4x4";
-        case EOpConstructBMat2x2: return "bmat2x2";
-        case EOpConstructBMat2x3: return "bmat2x3";
-        case EOpConstructBMat2x4: return "bmat2x4";
-        case EOpConstructBMat3x2: return "bmat3x2";
-        case EOpConstructBMat3x3: return "bmat3x3";
-        case EOpConstructBMat3x4: return "bmat3x4";
-        case EOpConstructBMat4x2: return "bmat4x2";
-        case EOpConstructBMat4x3: return "bmat4x3";
-        case EOpConstructBMat4x4: return "bmat4x4";
-        case EOpConstructFloat16: return "float16";
-        case EOpConstructF16Vec2: return "f16vec2";
-        case EOpConstructF16Vec3: return "f16vec3";
-        case EOpConstructF16Vec4: return "f16vec4";
-        case EOpConstructF16Mat2x2: return "f16mat2x2";
-        case EOpConstructF16Mat2x3: return "f16mat2x3";
-        case EOpConstructF16Mat2x4: return "f16mat2x4";
-        case EOpConstructF16Mat3x2: return "f16mat3x2";
-        case EOpConstructF16Mat3x3: return "f16mat3x3";
-        case EOpConstructF16Mat3x4: return "f16mat3x4";
-        case EOpConstructF16Mat4x2: return "f16mat4x2";
-        case EOpConstructF16Mat4x3: return "f16mat4x3";
-        case EOpConstructF16Mat4x4: return "f16mat4x4";
+        case EOpConstructInt: return constructorFunctionNameForType("int", returnType);
+        case EOpConstructUint: return constructorFunctionNameForType("uint", returnType);
+        case EOpConstructInt8: return constructorFunctionNameForType("int8", returnType);
+        case EOpConstructUint8: return constructorFunctionNameForType("uint8", returnType);
+        case EOpConstructInt16: return constructorFunctionNameForType("int16", returnType);
+        case EOpConstructUint16: return constructorFunctionNameForType("uint16", returnType);
+        case EOpConstructInt64: return constructorFunctionNameForType("int64", returnType);
+        case EOpConstructUint64: return constructorFunctionNameForType("uint64", returnType);
+        case EOpConstructBool: return constructorFunctionNameForType("bool", returnType);
+        case EOpConstructFloat: return constructorFunctionNameForType("float", returnType);
+        case EOpConstructDouble: return constructorFunctionNameForType("double", returnType);
+        case EOpConstructVec2: return constructorFunctionNameForType("vec2", returnType);
+        case EOpConstructVec3: return constructorFunctionNameForType("vec3", returnType);
+        case EOpConstructVec4: return constructorFunctionNameForType("vec4", returnType);
+        case EOpConstructMat2x2: return constructorFunctionNameForType("mat2x2", returnType);
+        case EOpConstructMat2x3: return constructorFunctionNameForType("mat2x3", returnType);
+        case EOpConstructMat2x4: return constructorFunctionNameForType("mat2x4", returnType);
+        case EOpConstructMat3x2: return constructorFunctionNameForType("mat3x2", returnType);
+        case EOpConstructMat3x3: return constructorFunctionNameForType("mat3x3", returnType);
+        case EOpConstructMat3x4: return constructorFunctionNameForType("mat3x4", returnType);
+        case EOpConstructMat4x2: return constructorFunctionNameForType("mat4x2", returnType);
+        case EOpConstructMat4x3: return constructorFunctionNameForType("mat4x3", returnType);
+        case EOpConstructMat4x4: return constructorFunctionNameForType("mat4x4", returnType);
+        case EOpConstructDVec2: return constructorFunctionNameForType("dvec2", returnType);
+        case EOpConstructDVec3: return constructorFunctionNameForType("dvec3", returnType);
+        case EOpConstructDVec4: return constructorFunctionNameForType("dvec4", returnType);
+        case EOpConstructBVec2: return constructorFunctionNameForType("bvec2", returnType);
+        case EOpConstructBVec3: return constructorFunctionNameForType("bvec3", returnType);
+        case EOpConstructBVec4: return constructorFunctionNameForType("bvec4", returnType);
+        case EOpConstructI8Vec2: return constructorFunctionNameForType("i8vec2", returnType);
+        case EOpConstructI8Vec3: return constructorFunctionNameForType("i8vec3", returnType);
+        case EOpConstructI8Vec4: return constructorFunctionNameForType("i8vec4", returnType);
+        case EOpConstructU8Vec2: return constructorFunctionNameForType("u8vec2", returnType);
+        case EOpConstructU8Vec3: return constructorFunctionNameForType("u8vec3", returnType);
+        case EOpConstructU8Vec4: return constructorFunctionNameForType("u8vec4", returnType);
+        case EOpConstructI16Vec2: return constructorFunctionNameForType("i16vec2", returnType);
+        case EOpConstructI16Vec3: return constructorFunctionNameForType("i16vec3", returnType);
+        case EOpConstructI16Vec4: return constructorFunctionNameForType("i16vec4", returnType);
+        case EOpConstructU16Vec2: return constructorFunctionNameForType("u16vec2", returnType);
+        case EOpConstructU16Vec3: return constructorFunctionNameForType("u16vec3", returnType);
+        case EOpConstructU16Vec4: return constructorFunctionNameForType("u16vec4", returnType);
+        case EOpConstructIVec2: return constructorFunctionNameForType("ivec2", returnType);
+        case EOpConstructIVec3: return constructorFunctionNameForType("ivec3", returnType);
+        case EOpConstructIVec4: return constructorFunctionNameForType("ivec4", returnType);
+        case EOpConstructUVec2: return constructorFunctionNameForType("uvec2", returnType);
+        case EOpConstructUVec3: return constructorFunctionNameForType("uvec3", returnType);
+        case EOpConstructUVec4: return constructorFunctionNameForType("uvec4", returnType);
+        case EOpConstructI64Vec2: return constructorFunctionNameForType("i64vec2", returnType);
+        case EOpConstructI64Vec3: return constructorFunctionNameForType("i64vec3", returnType);
+        case EOpConstructI64Vec4: return constructorFunctionNameForType("i64vec4", returnType);
+        case EOpConstructU64Vec2: return constructorFunctionNameForType("u64vec2", returnType);
+        case EOpConstructU64Vec3: return constructorFunctionNameForType("u64vec3", returnType);
+        case EOpConstructU64Vec4: return constructorFunctionNameForType("u64vec4", returnType);
+        case EOpConstructDMat2x2: return constructorFunctionNameForType("dmat2x2", returnType);
+        case EOpConstructDMat2x3: return constructorFunctionNameForType("dmat2x3", returnType);
+        case EOpConstructDMat2x4: return constructorFunctionNameForType("dmat2x4", returnType);
+        case EOpConstructDMat3x2: return constructorFunctionNameForType("dmat3x2", returnType);
+        case EOpConstructDMat3x3: return constructorFunctionNameForType("dmat3x3", returnType);
+        case EOpConstructDMat3x4: return constructorFunctionNameForType("dmat3x4", returnType);
+        case EOpConstructDMat4x2: return constructorFunctionNameForType("dmat4x2", returnType);
+        case EOpConstructDMat4x3: return constructorFunctionNameForType("dmat4x3", returnType);
+        case EOpConstructDMat4x4: return constructorFunctionNameForType("dmat4x4", returnType);
+        case EOpConstructIMat2x2: return constructorFunctionNameForType("imat2x2", returnType);
+        case EOpConstructIMat2x3: return constructorFunctionNameForType("imat2x3", returnType);
+        case EOpConstructIMat2x4: return constructorFunctionNameForType("imat2x4", returnType);
+        case EOpConstructIMat3x2: return constructorFunctionNameForType("imat3x2", returnType);
+        case EOpConstructIMat3x3: return constructorFunctionNameForType("imat3x3", returnType);
+        case EOpConstructIMat3x4: return constructorFunctionNameForType("imat3x4", returnType);
+        case EOpConstructIMat4x2: return constructorFunctionNameForType("imat4x2", returnType);
+        case EOpConstructIMat4x3: return constructorFunctionNameForType("imat4x3", returnType);
+        case EOpConstructIMat4x4: return constructorFunctionNameForType("imat4x4", returnType);
+        case EOpConstructUMat2x2: return constructorFunctionNameForType("umat2x2", returnType);
+        case EOpConstructUMat2x3: return constructorFunctionNameForType("umat2x3", returnType);
+        case EOpConstructUMat2x4: return constructorFunctionNameForType("umat2x4", returnType);
+        case EOpConstructUMat3x2: return constructorFunctionNameForType("umat3x2", returnType);
+        case EOpConstructUMat3x3: return constructorFunctionNameForType("umat3x3", returnType);
+        case EOpConstructUMat3x4: return constructorFunctionNameForType("umat3x4", returnType);
+        case EOpConstructUMat4x2: return constructorFunctionNameForType("umat4x2", returnType);
+        case EOpConstructUMat4x3: return constructorFunctionNameForType("umat4x3", returnType);
+        case EOpConstructUMat4x4: return constructorFunctionNameForType("umat4x4", returnType);
+        case EOpConstructBMat2x2: return constructorFunctionNameForType("bmat2x2", returnType);
+        case EOpConstructBMat2x3: return constructorFunctionNameForType("bmat2x3", returnType);
+        case EOpConstructBMat2x4: return constructorFunctionNameForType("bmat2x4", returnType);
+        case EOpConstructBMat3x2: return constructorFunctionNameForType("bmat3x2", returnType);
+        case EOpConstructBMat3x3: return constructorFunctionNameForType("bmat3x3", returnType);
+        case EOpConstructBMat3x4: return constructorFunctionNameForType("bmat3x4", returnType);
+        case EOpConstructBMat4x2: return constructorFunctionNameForType("bmat4x2", returnType);
+        case EOpConstructBMat4x3: return constructorFunctionNameForType("bmat4x3", returnType);
+        case EOpConstructBMat4x4: return constructorFunctionNameForType("bmat4x4", returnType);
+        case EOpConstructFloat16: return constructorFunctionNameForType("float16", returnType);
+        case EOpConstructF16Vec2: return constructorFunctionNameForType("f16vec2", returnType);
+        case EOpConstructF16Vec3: return constructorFunctionNameForType("f16vec3", returnType);
+        case EOpConstructF16Vec4: return constructorFunctionNameForType("f16vec4", returnType);
+        case EOpConstructF16Mat2x2: return constructorFunctionNameForType("f16mat2x2", returnType);
+        case EOpConstructF16Mat2x3: return constructorFunctionNameForType("f16mat2x3", returnType);
+        case EOpConstructF16Mat2x4: return constructorFunctionNameForType("f16mat2x4", returnType);
+        case EOpConstructF16Mat3x2: return constructorFunctionNameForType("f16mat3x2", returnType);
+        case EOpConstructF16Mat3x3: return constructorFunctionNameForType("f16mat3x3", returnType);
+        case EOpConstructF16Mat3x4: return constructorFunctionNameForType("f16mat3x4", returnType);
+        case EOpConstructF16Mat4x2: return constructorFunctionNameForType("f16mat4x2", returnType);
+        case EOpConstructF16Mat4x3: return constructorFunctionNameForType("f16mat4x3", returnType);
+        case EOpConstructF16Mat4x4: return constructorFunctionNameForType("f16mat4x4", returnType);
         case EOpConstructStruct: return RValueOperator::ConstructStruct;
         case EOpConstructTextureSampler: return "textureSampler";
         case EOpConstructNonuniform: return "nonuniform";
@@ -505,68 +542,19 @@ std::variant<RValueOperator, std::string_view> glslangOperatorToRValueOperator(
         case EOpTextureQueryLod: return version >= 400 ? "textureQueryLod" : "textureQueryLOD";
         case EOpTextureQueryLevels: return "textureQueryLevels";
         case EOpTextureQuerySamples: return "textureSamples";
-        // case EOpTexture: return "shadow1D";
-        // case EOpTexture: return "shadow2D";
-        // case EOpTexture: return "shadow2DEXT";
-        // case EOpTexture: return "shadow2DRect";
-        // case EOpTexture: return "texture";
-        // case EOpTexture: return "texture1D";
-        // case EOpTexture: return "texture2D";
-        // case EOpTexture: return "texture2DRect";
-        // case EOpTexture: return "texture3D";
-        // case EOpTexture: return "textureCube";
-        // case EOpTextureProj: return "shadow1DProj";
-        // case EOpTextureProj: return "shadow2DProj";
-        // case EOpTextureProj: return "shadow2DProjEXT";
-        // case EOpTextureProj: return "shadow2DRectProj";
-        // case EOpTextureProj: return "texture1DProj";
-        // case EOpTextureProj: return "texture2DProj";
-        // case EOpTextureProj: return "texture2DRectProj";
-        // case EOpTextureProj: return "texture3DProj";
-        // case EOpTextureProj: return "textureProj";
-        // case EOpTextureLod: return "shadow1DLod";
-        // case EOpTextureLod: return "shadow2DLod";
-        // case EOpTextureLod: return "texture1DLod";
-        // case EOpTextureLod: return "texture2DLod";
-        // case EOpTextureLod: return "texture2DLodEXT";
-        // case EOpTextureLod: return "texture3DLod";
-        // case EOpTextureLod: return "textureCubeLod";
-        // case EOpTextureLod: return "textureCubeLodEXT";
-        // case EOpTextureLod: return "textureLod";
+        case EOpTexture: return textureFunctionNameForSampler("", "", version, arg1Type);
+        case EOpTextureProj: return textureFunctionNameForSampler("Proj", "", version, arg1Type);
+        case EOpTextureLod: return textureFunctionNameForSampler("Lod", "", version, arg1Type);
         case EOpTextureOffset: return "textureOffset";
         case EOpTextureFetch: return "texelFetch";
         case EOpTextureFetchOffset: return "texelFetchOffset";
         case EOpTextureProjOffset: return "textureProjOffset";
         case EOpTextureLodOffset: return "textureLodOffset";
-        // case EOpTextureProjLod: return "shadow1DProjLod";
-        // case EOpTextureProjLod: return "shadow2DProjLod";
-        // case EOpTextureProjLod: return "texture1DProjLod";
-        // case EOpTextureProjLod: return "texture2DProjLod";
-        // case EOpTextureProjLod: return "texture2DProjLodEXT";
-        // case EOpTextureProjLod: return "texture3DProjLod";
-        // case EOpTextureProjLod: return "textureProjLod";
+        case EOpTextureProjLod: return textureFunctionNameForSampler("ProjLod", "", version, arg1Type);
         case EOpTextureProjLodOffset: return "textureProjLodOffset";
-        // case EOpTextureGrad: return "shadow1DGradARB";
-        // case EOpTextureGrad: return "shadow2DGradARB";
-        // case EOpTextureGrad: return "shadow2DRectGradARB";
-        // case EOpTextureGrad: return "texture1DGradARB";
-        // case EOpTextureGrad: return "texture2DGradARB";
-        // case EOpTextureGrad: return "texture2DGradEXT";
-        // case EOpTextureGrad: return "texture2DRectGradARB";
-        // case EOpTextureGrad: return "texture3DGradARB";
-        // case EOpTextureGrad: return "textureCubeGradARB";
-        // case EOpTextureGrad: return "textureCubeGradEXT";
-        // case EOpTextureGrad: return "textureGrad";
+        case EOpTextureGrad: return textureFunctionNameForSampler("Grad", "ARB", version, arg1Type);
         case EOpTextureGradOffset: return "textureGradOffset";
-        // case EOpTextureProjGrad: return "shadow1DProjGradARB";
-        // case EOpTextureProjGrad: return "shadow2DProjGradARB";
-        // case EOpTextureProjGrad: return "shadow2DRectProjGradARB";
-        // case EOpTextureProjGrad: return "texture1DProjGradARB";
-        // case EOpTextureProjGrad: return "texture2DProjGradARB";
-        // case EOpTextureProjGrad: return "texture2DProjGradEXT";
-        // case EOpTextureProjGrad: return "texture2DRectProjGradARB";
-        // case EOpTextureProjGrad: return "texture3DProjGradARB";
-        // case EOpTextureProjGrad: return "textureProjGrad";
+        case EOpTextureProjGrad: return textureFunctionNameForSampler("ProjGrad", "ARB", version, arg1Type);
         case EOpTextureProjGradOffset: return "textureProjGradOffset";
         case EOpTextureGather: return "textureGather";
         case EOpTextureGatherOffset: return "textureGatherOffset";
@@ -689,10 +677,8 @@ std::variant<RValueOperator, std::string_view> glslangOperatorToRValueOperator(
         case EOpReorderThreadNV: return "reorderThreadNV";
         case EOpFetchMicroTriangleVertexPositionNV: return "fetchMicroTriangleVertexPositionNV";
         case EOpFetchMicroTriangleVertexBarycentricNV: return "fetchMicroTriangleVertexBarycentricNV";
-        // case EOpReadClockSubgroupKHR: return "clock2x32ARB";
-        // case EOpReadClockSubgroupKHR: return "clockARB";
-        // case EOpReadClockDeviceKHR: return "clockRealtime2x32EXT";
-        // case EOpReadClockDeviceKHR: return "clockRealtimeEXT";
+        case EOpReadClockSubgroupKHR:  return "clock2x32ARB"; // clockARB unsupported
+        case EOpReadClockDeviceKHR: return "clockRealtime2x32EXT"; // clockRealtimeEXT unsupported
         case EOpRayQueryGetIntersectionTriangleVertexPositionsEXT: return "rayQueryGetIntersectionTriangleVertexPositionsEXT";
         case EOpStencilAttachmentReadEXT: return "stencilAttachmentReadEXT";
         case EOpDepthAttachmentReadEXT: return "depthAttachmentReadEXT";
@@ -865,6 +851,23 @@ Type glslangTypeToType(const glslang::TType& type) {
     return Type{std::string(typeName), type.getPrecisionQualifierString(), std::move(arraySizes)};
 }
 
+LiteralRValue constUnionToLiteralRValue(const glslang::TConstUnion& value) {
+    switch (value.getType()) {
+        case glslang::EbtInt8: return LiteralRValue{value.getI8Const()};
+        case glslang::EbtUint8: return LiteralRValue{value.getU8Const()};
+        case glslang::EbtInt16: return LiteralRValue{value.getI16Const()};
+        case glslang::EbtUint16: return LiteralRValue{value.getU16Const()};
+        case glslang::EbtInt: return LiteralRValue{value.getIConst()};
+        case glslang::EbtUint: return LiteralRValue{value.getUConst()};
+        case glslang::EbtInt64: PANIC_PRECONDITION("Unsupported type: Int64");
+        case glslang::EbtUint64: PANIC_PRECONDITION("Unsupported type: Uint64");
+        case glslang::EbtDouble: return LiteralRValue{value.getDConst()};
+        case glslang::EbtBool: return LiteralRValue{value.getBConst()};
+        case glslang::EbtString: PANIC_PRECONDITION("Unsupported type: String");
+        default: PANIC_PRECONDITION("Unsupported type: %d", value.getType());
+    }
+}
+
 template<typename Id, typename Value>
 class IdStoreByValue {
 public:
@@ -956,7 +959,7 @@ private:
     IdStoreByValue<TypeId, Type> mTypes;
     IdStoreByKey<GlobalSymbolId, Symbol, long long> mGlobalSymbols;
     IdStoreByValue<RValueId, RValue> mRValues;
-    IdStoreByValue<FunctionId, std::string_view> mFunctionNames;
+    IdStoreByValue<FunctionId, std::string> mFunctionNames;
     IdStoreByValue<StatementBlockId, std::vector<Statement>> mStatementBlocks;
     std::unordered_map<FunctionId, FunctionDefinition> mFunctionDefinitions;
     std::set<FunctionId> mFunctionPrototypes;
@@ -1053,7 +1056,7 @@ private:
         ASSERT_PRECONDITION(parametersNode != nullptr,
                 "Function parameters must be an aggregate node");
 
-        auto functionId = mFunctionNames.insert(node->getName());
+        auto functionId = mFunctionNames.insert(std::string(node->getName()));
 
         if (sequence.size() == 1) {
             // This is just a prototype. Make a record of it.
@@ -1062,7 +1065,7 @@ private:
         }
 
         auto returnTypeId =
-            mTypes.insert(glslangTypeToType(node->getType()));
+                mTypes.insert(glslangTypeToType(node->getType()));
 
         LocalSymbols localSymbols;
         std::vector<FunctionParameter> parameters;
@@ -1168,149 +1171,199 @@ private:
     }
 
     std::variant<RValueOperator, FunctionId> slurpOperator(
-            glslang::TOperator op, Type returnType, std::optional<Type> arg1Type) {
+            glslang::TOperator op,
+            const glslang::TType& returnType, const glslang::TType* arg1Type) {
         auto opOrFunctionName = glslangOperatorToRValueOperator(op, mVersion, returnType, arg1Type);
         if (auto* rValueOperator = std::get_if<RValueOperator>(&opOrFunctionName)) {
             return *rValueOperator;
         }
-        if (auto* functionName = std::get_if<std::string_view>(&opOrFunctionName)) {
-            return mFunctionNames.insert(*functionName);
+        if (auto* functionName = std::get_if<std::string>(&opOrFunctionName)) {
+            return mFunctionNames.insert(std::move(*functionName));
         }
         PANIC_POSTCONDITION("Unreachable");
     }
 
-    ValueId slurpValue(
-            glslang::TIntermTyped* node, TIntermNode* parent, LocalSymbols& localSymbols) {
-        if (auto nodeAsConstantUnion = node->getAsConstantUnion()) {
-            const auto& constArray = nodeAsConstantUnion->getConstArray();
-            ASSERT_PRECONDITION(!constArray.empty(),
-                    "ConstantUnion's value array must not be empty");
-            if (constArray.size() > 1) {
-                // TODO: Encode this as a constructor function call for now.
-                return mRValues.insert(LiteralRValue{});
-            }
-            const auto& inValue = constArray[0];
-            LiteralRValue outValue;
-            switch (inValue.getType()) {
-                case glslang::EbtInt8: outValue.value = inValue.getI8Const(); break;
-                case glslang::EbtUint8: outValue.value = inValue.getU8Const(); break;
-                case glslang::EbtInt16: outValue.value = inValue.getI16Const(); break;
-                case glslang::EbtUint16: outValue.value = inValue.getU16Const(); break;
-                case glslang::EbtInt: outValue.value = inValue.getIConst(); break;
-                case glslang::EbtUint: outValue.value = inValue.getUConst(); break;
-                case glslang::EbtInt64: PANIC_PRECONDITION("Unsupported type: Int64");
-                case glslang::EbtUint64: PANIC_PRECONDITION("Unsupported type: Uint64");
-                case glslang::EbtDouble: outValue.value = inValue.getDConst(); break;
-                case glslang::EbtBool: outValue.value = inValue.getBConst(); break;
-                case glslang::EbtString: PANIC_PRECONDITION("Unsupported type: String");
-                default: PANIC_PRECONDITION("Unsupported type: %d", inValue.getType());
-            }
-            return mRValues.insert(outValue);
+    ValueId slurpValueFromConstantUnion(
+            glslang::TIntermConstantUnion* node, TIntermNode* parent, LocalSymbols& localSymbols) {
+        const auto& constArray = node->getConstArray();
+        ASSERT_PRECONDITION(!constArray.empty(),
+                "ConstantUnion's value array must not be empty: %s, parent = %s",
+                glslangNodeToStringWithLoc(node).c_str(),
+                glslangNodeToStringWithLoc(parent).c_str());
+        if (constArray.size() == 1) {
+            return mRValues.insert(constUnionToLiteralRValue(constArray[0]));
         }
+        // Encode this as a constructor function call for now. Maybe encode it as a literal
+        // down the line?
+        ASSERT_PRECONDITION(node->isVector(),
+                "ConstantUnion with multiple values must be a vector: %s, parent = %s",
+                glslangNodeToStringWithLoc(node).c_str(),
+                glslangNodeToStringWithLoc(parent).c_str());
+        const char* functionName;
+        switch (constArray.size()) {
+            case 2: functionName = "vec2"; break;
+            case 3: functionName = "vec3"; break;
+            case 4: functionName = "vec4"; break;
+            default:
+                PANIC_PRECONDITION("Unsupporeted ConstArray size of %d: %s, parent = %s",
+                        constArray.size(),
+                        glslangNodeToStringWithLoc(node).c_str(),
+                        glslangNodeToStringWithLoc(parent).c_str());
+        }
+        auto functionId = mFunctionNames.insert(functionName);
+        std::vector<ValueId> args(constArray.size());
+        for (int i = 0; i < constArray.size(); i++) {
+            args[i] = mRValues.insert(constUnionToLiteralRValue(constArray[i]));
+        }
+        return mRValues.insert(
+                EvaluableRValue{functionId, std::move(args)});
 
+    }
+
+    ValueId slurpValueFromSymbol(
+            glslang::TIntermSymbol* node, LocalSymbols& localSymbols) {
         auto typeId = mTypes.insert(glslangTypeToType(node->getType()));
-        if (auto nodeAsSymbol = node->getAsSymbolNode()) {
-            long long id = nodeAsSymbol->getId();
-            if (auto globalId = mGlobalSymbols.get(id)) {
-                return globalId.value();
+        long long id = node->getId();
+        if (auto globalId = mGlobalSymbols.get(id)) {
+            return globalId.value();
+        }
+        return localSymbols.insert(
+                id, Symbol{node->getAccessName(), typeId});
+    }
+
+    ValueId slurpValueFromUnary(glslang::TIntermUnary*& node, LocalSymbols& localSymbols) {
+        auto operandId = slurpValue(node->getOperand(), node, localSymbols);
+        auto op = slurpOperator(node->getOp(), node->getType(), &node->getOperand()->getType());
+        return mRValues.insert(EvaluableRValue{op, {operandId}});
+    }
+
+    ValueId slurpValueFromBinary(
+            glslang::TIntermBinary* node, TIntermNode* parent, LocalSymbols& localSymbols) {
+        switch (node->getOp()) {
+            case glslang::EOpVectorSwizzle: {
+                // TODO: swizzle it up
+                auto swizzle = node->getRight()->getAsAggregate();
+                ASSERT_PRECONDITION(swizzle != nullptr,
+                        "Swizzle node must be an aggregate: %s, parent = %s",
+                        glslangNodeToStringWithLoc(node).c_str(),
+                        glslangNodeToStringWithLoc(parent).c_str());
+                ASSERT_PRECONDITION(swizzle->getOp() == glslang::EOpSequence,
+                        "Swizzle node must be a sequence: %s, parent = %s",
+                        glslangNodeToStringWithLoc(node).c_str(),
+                        glslangNodeToStringWithLoc(parent).c_str());
+                return mRValues.insert(
+                        EvaluableRValue{RValueOperator::VectorSwizzle});
             }
-            return localSymbols.insert(id, Symbol{nodeAsSymbol->getAccessName(), typeId});
-        }
-        if (auto nodeAsUnary = node->getAsUnaryNode()) {
-            auto operandId = slurpValue(nodeAsUnary->getOperand(), node, localSymbols);
-            auto op = slurpOperator(
-                    nodeAsUnary->getOp(),
-                    glslangTypeToType(node->getType()),
-                    glslangTypeToType(nodeAsUnary->getOperand()->getType()));
-            return mRValues.insert(EvaluableRValue{op, {operandId}});
-        }
-        if (auto nodeAsBinary = node->getAsBinaryNode()) {
-            switch (nodeAsBinary->getOp()) {
-                case glslang::EOpVectorSwizzle: {
-                    // TODO: swizzle it up
-                    auto swizzle = nodeAsBinary->getRight()->getAsAggregate();
-                    ASSERT_PRECONDITION(swizzle != nullptr,
-                            "Swizzle node must be an aggregate");
-                    ASSERT_PRECONDITION(swizzle->getOp() == glslang::EOpSequence,
-                            "Swizzle node must be a sequence");
-                    return mRValues.insert(EvaluableRValue{RValueOperator::VectorSwizzle});
-                }
-                default: {
-                    auto lhsId = slurpValue(nodeAsBinary->getLeft(), node, localSymbols);
-                    auto rhsId = slurpValue(nodeAsBinary->getRight(), node, localSymbols);
-                    auto op = slurpOperator(
-                            nodeAsBinary->getOp(),
-                            glslangTypeToType(node->getType()),
-                            glslangTypeToType(nodeAsBinary->getLeft()->getType()));
-                    return mRValues.insert(EvaluableRValue{op, {lhsId, rhsId}});
-                }
+            default: {
+                auto lhsId =
+                        slurpValue(node->getLeft(), node, localSymbols);
+                auto rhsId =
+                        slurpValue(node->getRight(), node, localSymbols);
+                auto op = slurpOperator(
+                        node->getOp(), node->getType(), &node->getLeft()->getType());
+                return mRValues.insert(EvaluableRValue{op, {lhsId, rhsId}});
             }
         }
-        if (auto nodeAsSelection = node->getAsSelectionNode()) {
-            // A "selection" as interpreted as an expression is a ternary.
-            auto conditionId = slurpValue(nodeAsSelection->getCondition(), parent, localSymbols);
-            auto trueNodeAsTyped = nodeAsSelection->getTrueBlock()->getAsTyped();
-            auto falseNodeAsTyped = nodeAsSelection->getFalseBlock()->getAsTyped();
-            if (trueNodeAsTyped && falseNodeAsTyped) {
-                auto trueId = slurpValue(trueNodeAsTyped, parent, localSymbols);
-                auto falseId = slurpValue(falseNodeAsTyped, parent, localSymbols);
-                return mRValues.insert(EvaluableRValue{RValueOperator::Ternary, {conditionId, trueId, falseId}});
+    }
+
+    ValueId slurpValueFromSelection(
+            glslang::TIntermSelection* node, TIntermNode* parent, LocalSymbols& localSymbols) {
+        // A "selection" as interpreted as an expression is a ternary.
+        auto conditionId =
+                slurpValue(node->getCondition(), parent, localSymbols);
+        auto trueNodeAsTyped = node->getTrueBlock()->getAsTyped();
+        auto falseNodeAsTyped = node->getFalseBlock()->getAsTyped();
+        if (trueNodeAsTyped && falseNodeAsTyped) {
+            auto trueId = slurpValue(trueNodeAsTyped, parent, localSymbols);
+            auto falseId = slurpValue(falseNodeAsTyped, parent, localSymbols);
+            return mRValues.insert(EvaluableRValue{
+                RValueOperator::Ternary, {conditionId, trueId, falseId}});
+        } else {
+            PANIC_PRECONDITION(
+                    "A selection node branch was not typed: true = %s, false = %s, "
+                    "parent = %s %s",
+                    glslangNodeToStringWithLoc(node->getTrueBlock()).c_str(),
+                    glslangNodeToStringWithLoc(node->getFalseBlock()).c_str(),
+                    glslangNodeToStringWithLoc(parent).c_str());
+        }
+    }
+
+    ValueId slurpValueFromFunctionCall(
+            glslang::TIntermAggregate* node, TIntermNode* parent, LocalSymbols& localSymbols) {
+        auto& sequence = node->getSequence();
+        auto functionId = mFunctionNames.insert(std::string(node->getName()));
+        std::vector<ValueId> args;
+        for (TIntermNode* arg : sequence) {
+            if (auto argAsTyped = arg->getAsTyped()) {
+                args.push_back(slurpValue(argAsTyped, node, localSymbols));
             } else {
-                PANIC_PRECONDITION("A selection node branch was not typed: true = %s, false = %s, parent = %s %s",
-                        glslangNodeToStringWithLoc(nodeAsSelection->getTrueBlock()).c_str(),
-                        glslangNodeToStringWithLoc(nodeAsSelection->getFalseBlock()).c_str(),
+                PANIC_PRECONDITION(
+                        "Function call argument was not typed: arg = %s, function "
+                        "= %s, parent = %s %s",
+                        glslangNodeToStringWithLoc(arg).c_str(),
+                        glslangNodeToStringWithLoc(node).c_str(),
                         glslangNodeToStringWithLoc(parent).c_str());
             }
         }
+        return mRValues.insert(
+                EvaluableRValue{functionId, std::move(args)});
+    }
+
+    ValueId slurpValueFromAggregate(
+            glslang::TIntermAggregate* node, TIntermNode* parent, LocalSymbols& localSymbols) {
+        auto& sequence = node->getSequence();
+        std::vector<ValueId> args;
+        for (TIntermNode* arg : sequence) {
+            if (auto argAsTyped = arg->getAsTyped()) {
+                args.push_back(slurpValue(argAsTyped, node, localSymbols));
+            } else {
+                PANIC_PRECONDITION(
+                        "Operator argument was not typed: arg = %s, function = %s, "
+                        "parent = %s %s",
+                        glslangNodeToStringWithLoc(arg).c_str(),
+                        glslangNodeToStringWithLoc(node).c_str(),
+                        glslangNodeToStringWithLoc(parent).c_str());
+            }
+        }
+        const glslang::TType* firstArgType = nullptr;
+        if (!sequence.empty()) {
+            firstArgType = &sequence[0]->getAsTyped()->getType();
+        }
+        auto op = slurpOperator(node->getOp(), node->getType(), firstArgType);
+        return mRValues.insert(EvaluableRValue{op, std::move(args)});
+    }
+
+    ValueId slurpValue(glslang::TIntermTyped* node, TIntermNode* parent,
+            LocalSymbols& localSymbols) {
+        if (auto nodeAsConstantUnion = node->getAsConstantUnion()) {
+            return slurpValueFromConstantUnion(
+                    nodeAsConstantUnion, parent, localSymbols);
+        }
+        if (auto nodeAsSymbol = node->getAsSymbolNode()) {
+            return slurpValueFromSymbol(nodeAsSymbol, localSymbols);
+        }
+        if (auto nodeAsUnary = node->getAsUnaryNode()) {
+            return slurpValueFromUnary(nodeAsUnary, localSymbols);
+        }
+        if (auto nodeAsBinary = node->getAsBinaryNode()) {
+            return slurpValueFromBinary(nodeAsBinary, parent, localSymbols);
+        }
+        if (auto nodeAsSelection = node->getAsSelectionNode()) {
+            return slurpValueFromSelection(nodeAsSelection, parent, localSymbols);
+        }
         if (auto nodeAsAggregate = node->getAsAggregate()) {
-            auto& sequence = nodeAsAggregate->getSequence();
             switch (nodeAsAggregate->getOp()) {
                 case glslang::EOpFunction:
                 case glslang::EOpLinkerObjects:
                 case glslang::EOpParameters:
                 case glslang::EOpSequence:
-                    // Explicitly ban these from becoming RValues, since we probably made a mistake
-                    // somewhere...
+                    // Explicitly ban these from becoming RValues, since we probably
+                    // made a mistake somewhere...
                     break;
-                case glslang::EOpFunctionCall: {
-                    auto functionId = mFunctionNames.insert(nodeAsAggregate->getName());
-                    std::vector<ValueId> args;
-                    for (TIntermNode* arg : sequence) {
-                        if (auto argAsTyped = arg->getAsTyped()) {
-                            args.push_back(slurpValue(argAsTyped, node, localSymbols));
-                        } else {
-                            PANIC_PRECONDITION("Function call argument was not typed: arg = %s, function = %s, parent = %s %s",
-                                    glslangNodeToStringWithLoc(arg).c_str(),
-                                    glslangNodeToStringWithLoc(node).c_str(),
-                                    glslangNodeToStringWithLoc(parent).c_str());
-                        }
-                    }
-                    return mRValues.insert(
-                            EvaluableRValue{functionId, std::move(args)});
-                }
-                default: {
-                    std::vector<ValueId> args;
-                    for (TIntermNode* arg : sequence) {
-                        if (auto argAsTyped = arg->getAsTyped()) {
-                            args.push_back(slurpValue(argAsTyped, node, localSymbols));
-                        } else {
-                            PANIC_PRECONDITION("Operator argument was not typed: arg = %s, function = %s, parent = %s %s",
-                                    glslangNodeToStringWithLoc(arg).c_str(),
-                                    glslangNodeToStringWithLoc(node).c_str(),
-                                    glslangNodeToStringWithLoc(parent).c_str());
-                        }
-                    }
-                    std::optional<Type> firstArgType;
-                    if (!sequence.empty()) {
-                        firstArgType = glslangTypeToType(sequence[0]->getAsTyped()->getType());
-                    }
-                    auto op = slurpOperator(
-                            nodeAsAggregate->getOp(),
-                            glslangTypeToType(node->getType()),
-                            std::move(firstArgType));
-                    return mRValues.insert(
-                            EvaluableRValue{op, std::move(args)});
-                }
+                case glslang::EOpFunctionCall:
+                    return slurpValueFromFunctionCall(nodeAsAggregate, parent, localSymbols);
+                default:
+                    return slurpValueFromAggregate(nodeAsAggregate, parent, localSymbols);
             }
         }
         PANIC_PRECONDITION("Cannot convert to statement: %s, parent = %s",

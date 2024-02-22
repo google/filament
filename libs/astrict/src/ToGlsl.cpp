@@ -27,6 +27,7 @@ namespace astrict {
 
 constexpr auto kIndentAmount = "  ";
 constexpr auto kSpace = " ";
+constexpr auto kNewline = "\n";
 
 void dumpFunctionName(const PackFromGlsl& pack, const FunctionId& functionId,
         std::ostringstream& out) {
@@ -50,7 +51,7 @@ void dumpType(const PackFromGlsl& pack, TypeId typeId, std::ostringstream& out) 
 
 void dumpValue(
         const PackFromGlsl& pack, const FunctionDefinition& function, ValueId valueId,
-        std::ostringstream& out);
+        bool parenthesize, std::ostringstream& out);
 
 void dumpBinaryRValueOperator(
         const PackFromGlsl& pack, const FunctionDefinition& function,
@@ -59,138 +60,178 @@ void dumpBinaryRValueOperator(
         std::ostringstream& out) {
     ASSERT_PRECONDITION(args.size() == 2,
             "%s must be a binary operator", rValueOperatorToString(op));
-    out << "(";
-    dumpValue(pack, function, args[0], out);
+    dumpValue(pack, function, args[0], /*parenthesize=*/true, out);
     out << kSpace << opString << kSpace;
-    dumpValue(pack, function, args[1], out);
-    out << ")";
+    dumpValue(pack, function, args[1], /*parenthesize=*/true, out);
 }
 
 void dumpRValueOperator(
         const PackFromGlsl& pack, const FunctionDefinition& function,
         RValueOperator op, const std::vector<ValueId>& args,
-        std::ostringstream& out) {
+        bool parenthesize, std::ostringstream& out) {
+    const char* lParen = parenthesize ? "(" : "";
+    const char* rParen = parenthesize ? ")" : "";
     switch (op) {
         // Unary
         case RValueOperator::Negative:
             ASSERT_PRECONDITION(args.size() == 1,
                     "Negative must be a unary operator");
-            out << "-(";
-            dumpValue(pack, function, args[0], out);
-            out << ")";
+            out << "-" << lParen;
+            dumpValue(pack, function, args[0], /*parenthesize=*/true, out);
+            out << rParen;
             break;
         case RValueOperator::LogicalNot:
             ASSERT_PRECONDITION(args.size() == 1,
                     "LogicalNot must be a unary operator");
-            out << "!(";
-            dumpValue(pack, function, args[0], out);
-            out << ")";
+            out << "!" << lParen;
+            dumpValue(pack, function, args[0], /*parenthesize=*/true, out);
+            out << rParen;
             break;
         case RValueOperator::BitwiseNot:
             ASSERT_PRECONDITION(args.size() == 1,
                     "BitwiseNot must be a unary operator");
-            out << "~(";
-            dumpValue(pack, function, args[0], out);
-            out << ")";
+            out << "~" << lParen;
+            dumpValue(pack, function, args[0], /*parenthesize=*/true, out);
+            out << rParen;
             break;
         case RValueOperator::PostIncrement:
             ASSERT_PRECONDITION(args.size() == 1,
                     "PostIncrement must be a unary operator");
-            dumpValue(pack, function, args[0], out);
+            dumpValue(pack, function, args[0], /*parenthesize=*/true, out);
             out << "++";
             break;
         case RValueOperator::PostDecrement:
             ASSERT_PRECONDITION(args.size() == 1,
                     "PostDecrement must be a unary operator");
-            dumpValue(pack, function, args[0], out);
+            dumpValue(pack, function, args[0], /*parenthesize=*/true, out);
             out << "--";
             break;
         case RValueOperator::PreIncrement:
             ASSERT_PRECONDITION(args.size() == 1,
                     "PreIncrement must be a unary operator");
             out << "++";
-            dumpValue(pack, function, args[0], out);
+            dumpValue(pack, function, args[0], /*parenthesize=*/true, out);
             break;
         case RValueOperator::PreDecrement:
             ASSERT_PRECONDITION(args.size() == 1,
                     "PreDecrement must be a unary operator");
             out << "--";
-            dumpValue(pack, function, args[0], out);
+            dumpValue(pack, function, args[0], /*parenthesize=*/true, out);
             break;
         case RValueOperator::ArrayLength:
             ASSERT_PRECONDITION(args.size() == 1,
                     "ArrayLength must be a unary operator");
-            dumpValue(pack, function, args[0], out);
+            dumpValue(pack, function, args[0], /*parenthesize=*/true, out);
             out << ".length";
             break;
 
         // Binary
         case RValueOperator::Add:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "+", out);
+            out << rParen;
             break;
         case RValueOperator::Sub:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "-", out);
+            out << rParen;
             break;
         case RValueOperator::Mul:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "*", out);
+            out << rParen;
             break;
         case RValueOperator::Div:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "/", out);
+            out << rParen;
             break;
         case RValueOperator::Mod:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "%", out);
+            out << rParen;
             break;
         case RValueOperator::RightShift:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, ">>", out);
+            out << rParen;
             break;
         case RValueOperator::LeftShift:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "<<", out);
+            out << rParen;
             break;
         case RValueOperator::And:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "&", out);
+            out << rParen;
             break;
         case RValueOperator::InclusiveOr:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "|", out);
+            out << rParen;
             break;
         case RValueOperator::ExclusiveOr:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "^", out);
+            out << rParen;
             break;
         case RValueOperator::Equal:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "==", out);
+            out << rParen;
             break;
         case RValueOperator::NotEqual:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "!=", out);
+            out << rParen;
             break;
         case RValueOperator::LessThan:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "<", out);
+            out << rParen;
             break;
         case RValueOperator::GreaterThan:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, ">", out);
+            out << rParen;
             break;
         case RValueOperator::LessThanEqual:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "<=", out);
+            out << rParen;
             break;
         case RValueOperator::GreaterThanEqual:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, ">=", out);
+            out << rParen;
             break;
         case RValueOperator::Comma:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, ",", out);
+            out << rParen;
             break;
         case RValueOperator::LogicalOr:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "||", out);
+            out << rParen;
             break;
         case RValueOperator::LogicalXor:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "^^", out);
+            out << rParen;
             break;
         case RValueOperator::LogicalAnd:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "&&", out);
+            out << rParen;
             break;
         case RValueOperator::Index:
             ASSERT_PRECONDITION(args.size() == 2,
                     "%s must be a binary operator", rValueOperatorToString(op));
-            dumpValue(pack, function, args[0], out);
+            dumpValue(pack, function, args[0], /*parenthesize=*/true, out);
             out << "[";
-            dumpValue(pack, function, args[1], out);
+            dumpValue(pack, function, args[1], /*parenthesize=*/true, out);
             out << "]";
             break;
         // case RValueOperator::IndexStruct:
@@ -198,50 +239,72 @@ void dumpRValueOperator(
         // case RValueOperator::VectorSwizzle:
         //     break;
         case RValueOperator::Assign:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "=", out);
+            out << rParen;
             break;
         case RValueOperator::AddAssign:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "+=", out);
+            out << rParen;
             break;
         case RValueOperator::SubAssign:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "-=", out);
+            out << rParen;
             break;
         case RValueOperator::MulAssign:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "*=", out);
+            out << rParen;
             break;
         case RValueOperator::DivAssign:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "/=", out);
+            out << rParen;
             break;
         case RValueOperator::ModAssign:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "%=", out);
+            out << rParen;
             break;
         case RValueOperator::AndAssign:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "&=", out);
+            out << rParen;
             break;
         case RValueOperator::InclusiveOrAssign:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "|=", out);
+            out << rParen;
             break;
         case RValueOperator::ExclusiveOrAssign:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "^=", out);
+            out << rParen;
             break;
         case RValueOperator::LeftShiftAssign:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, "<<=", out);
+            out << rParen;
             break;
         case RValueOperator::RightShiftAssign:
+            out << lParen;
             dumpBinaryRValueOperator(pack, function, op, args, ">>=", out);
+            out << rParen;
             break;
 
         // Ternary
         case RValueOperator::Ternary:
             ASSERT_PRECONDITION(args.size() == 3,
                     "Ternary must be a ternary operator");
-            out << "((";
-            dumpValue(pack, function, args[0], out);
+            out << lParen << "(";
+            dumpValue(pack, function, args[0], /*parenthesize=*/true, out);
             out << ")" << kSpace << "?" << kSpace << "(";
-            dumpValue(pack, function, args[1], out);
+            dumpValue(pack, function, args[1], /*parenthesize=*/true, out);
             out << ")" << kSpace << ":" << kSpace << "(";
-            dumpValue(pack, function, args[2], out);
-            out << "))";
+            dumpValue(pack, function, args[2], /*parenthesize=*/true, out);
+            out << ")" << rParen;
             break;
 
         // Misc
@@ -250,7 +313,7 @@ void dumpRValueOperator(
             out << "(" << rValueOperatorToString(op);
             for (auto& arg : args) {
                 out << kSpace;
-                dumpValue(pack, function, arg, out);
+                dumpValue(pack, function, arg, /*parenthesize=*/true, out);
             }
             out << ")";
             break;
@@ -270,7 +333,7 @@ void dumpRValueFunctionCall(
         } else {
             out << "," << kSpace;
         }
-        dumpValue(pack, function, arg, out);
+        dumpValue(pack, function, arg, /*parenthesize=*/false, out);
     }
     out << ")";
 }
@@ -291,7 +354,7 @@ void dumpRValueLiteral(const LiteralRValue& literal, std::ostringstream& out) {
 
 void dumpRValue(
         const PackFromGlsl& pack, const FunctionDefinition& function, RValueId rValueId,
-        std::ostringstream& out) {
+        bool parenthesize, std::ostringstream& out) {
     if (rValueId.id == 0) {
         out << "INVALID_RVALUE";
         return;
@@ -301,7 +364,7 @@ void dumpRValue(
     auto& rValue = pack.rValues.at(rValueId);
     if (auto* evaluable = std::get_if<EvaluableRValue>(&rValue)) {
         if (auto* op = std::get_if<RValueOperator>(&evaluable->op)) {
-            dumpRValueOperator(pack, function, *op, evaluable->args, out);
+            dumpRValueOperator(pack, function, *op, evaluable->args, parenthesize, out);
         } else if (auto* functionId = std::get_if<FunctionId>(&evaluable->op)) {
             dumpRValueFunctionCall(pack, function, *functionId, evaluable->args, out);
         } else {
@@ -347,9 +410,9 @@ void dumpLocalSymbol(
 
 void dumpValue(
         const PackFromGlsl& pack, const FunctionDefinition& function, ValueId valueId,
-        std::ostringstream& out) {
+        bool parenthesize, std::ostringstream& out) {
     if (auto* rValueId = std::get_if<RValueId>(&valueId)) {
-        dumpRValue(pack, function, *rValueId, out);
+        dumpRValue(pack, function, *rValueId, parenthesize, out);
     } else if (auto *globalSymbolId = std::get_if<GlobalSymbolId>(&valueId)) {
         dumpGlobalSymbol(pack, *globalSymbolId, out);
     } else if (auto *localSymbolId = std::get_if<LocalSymbolId>(&valueId)) {
@@ -375,24 +438,24 @@ void dumpBlock(
     for (auto statement : pack.statementBlocks.at(blockId)) {
         if (auto* rValueId = std::get_if<RValueId>(&statement)) {
             out << indent;
-            dumpRValue(pack, function, *rValueId, out);
-            out << ";\n";
+            dumpRValue(pack, function, *rValueId, /*parenthesize=*/false, out);
+            out << ";" << kNewline;
         } else if (auto* ifStatement = std::get_if<IfStatement>(&statement)) {
             out << indent << "if" << kSpace << "(";
-            dumpValue(pack, function, ifStatement->condition, out);
-            out << ")" << kSpace << "{\n";
+            dumpValue(pack, function, ifStatement->condition, /*parenthesize=*/false, out);
+            out << ")" << kSpace << "{" << kNewline;
             dumpBlock(pack, function, ifStatement->thenBlock, depth + 1, out);
             if (ifStatement->elseBlock) {
-                out << indent << "}" << kSpace << "else" << kSpace << "{\n";
+                out << indent << "}" << kSpace << "else" << kSpace << "{" << kNewline;
                 dumpBlock(pack, function, ifStatement->elseBlock.value(), depth + 1, out);
             }
-            out << indent << "}\n";
+            out << indent << "}" << kNewline;
         } else if (auto* switchStatement = std::get_if<SwitchStatement>(&statement)) {
             out << indent << "switch" << kSpace << "(";
-            dumpValue(pack, function, switchStatement->condition, out);
-            out << ")" << kSpace << "{\n";
+            dumpValue(pack, function, switchStatement->condition, /*parenthesize=*/false, out);
+            out << ")" << kSpace << "{" << kNewline;
             dumpBlock(pack, function, switchStatement->body, depth + 1, out);
-            out << indent << "}\n";
+            out << indent << "}" << kNewline;
         } else if (auto* branchStatement = std::get_if<BranchStatement>(&statement)) {
             switch (branchStatement->op) {
                 case BranchOperator::Discard:
@@ -428,37 +491,41 @@ void dumpBlock(
             }
             if (branchStatement->operand) {
                 out << " ";
-                dumpValue(pack, function, branchStatement->operand.value(), out);
+                dumpValue(pack, function, branchStatement->operand.value(),
+                        /*parenthesize=*/false, out);
             }
             switch (branchStatement->op) {
                 case BranchOperator::Case:
                 case BranchOperator::Default:
-                    out << ":\n";
+                    out << ":" << kNewline;
                     break;
                 default:
-                    out << ";\n";
+                    out << ";" << kNewline;
                     break;
             }
         } else if (auto* loopStatement = std::get_if<LoopStatement>(&statement)) {
             if (loopStatement->testFirst) {
                 if (loopStatement->terminal) {
                     out << indent << "for" << kSpace << "(;" << kSpace;
-                    dumpValue(pack, function, loopStatement->condition, out);
+                    dumpValue(pack, function, loopStatement->condition,
+                            /*parenthesize=*/false, out);
                     out << ";" << kSpace;
-                    dumpRValue(pack, function, loopStatement->terminal.value(), out);
+                    dumpRValue(pack, function, loopStatement->terminal.value(),
+                            /*parenthesize=*/false, out);
                 } else {
                     out << indent << "while" << kSpace << "(";
-                    dumpValue(pack, function, loopStatement->condition, out);
+                    dumpValue(pack, function, loopStatement->condition,
+                            /*parenthesize=*/false, out);
                 }
-                out << ")" << kSpace << "{\n";
+                out << ")" << kSpace << "{" << kNewline;
                 dumpBlock(pack, function, loopStatement->body, depth + 1, out);
-                out << indent << "}\n";
+                out << indent << "}" << kNewline;
             } else {
-                out << indent << "do" << kSpace << "{\n";
+                out << indent << "do" << kSpace << "{" << kNewline;
                 dumpBlock(pack, function, loopStatement->body, depth + 1, out);
                 out << indent << "}" << kSpace << "while" << kSpace << "(";
-                dumpValue(pack, function, loopStatement->condition, out);
-                out << ");\n";
+                dumpValue(pack, function, loopStatement->condition, /*parenthesize=*/false, out);
+                out << ");" << kNewline;
             }
         } else {
             PANIC_PRECONDITION("Unreachable");
@@ -493,18 +560,18 @@ void dumpFunction(
     }
     out << ")";
     if (dumpBody) {
-        out << " {\n";
+        out << kSpace << "{" << kNewline;
         for (const auto& localSymbol : function.localSymbols) {
             if (parameterSymbolIds.find(localSymbol.first) == parameterSymbolIds.end()) {
                 out << kIndentAmount;
                 dumpType(pack, localSymbol.second.type, out);
-                out << kSpace << localSymbol.second.name << ";\n";
+                out << kSpace << localSymbol.second.name << ";" << kNewline;
             }
         }
         dumpBlock(pack, function, function.body, 1, out);
-        out << "}\n";
+        out << "}" << kNewline;
     } else {
-        out << ";\n";
+        out << ";" << kNewline;
     }
 }
 

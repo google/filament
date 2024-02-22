@@ -29,7 +29,7 @@ struct PackFromGlsl {
     std::unordered_map<TypeId, Type> types;
     std::unordered_map<GlobalSymbolId, Symbol> globalSymbols;
     std::unordered_map<RValueId, RValue> rValues;
-    std::unordered_map<FunctionId, std::string_view> functionNames;
+    std::unordered_map<FunctionId, std::string> functionNames;
     std::unordered_map<StatementBlockId, std::vector<Statement>> statementBlocks;
     std::unordered_map<FunctionId, FunctionDefinition> functionDefinitions;
     std::set<FunctionId> functionPrototypes;
