@@ -1610,7 +1610,7 @@ void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph,
         return;
     }
 
-    ASSERT_PRECONDITION(bool(functions), "Attempting to draw with an invalid Metal program.");
+    functions.validate();
 
     auto [fragment, vertex] = functions.getRasterFunctions();
 
