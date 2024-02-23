@@ -16,12 +16,14 @@ package com.google.android.filament;
  * <li>Configurable tone mapping operators</li>
  * <ul>
  *   <li>GenericToneMapper</li>
+ *   <li>AgXToneMapper</li>
  * </ul>
  * <li>Fixed-aesthetic tone mapping operators</li>
  * <ul>
  *   <li>ACESToneMapper</li>
  *   <li>ACESLegacyToneMapper</li>
  *   <li>FilmicToneMapper</li>
+ *   <li>PBRNeutralToneMapper</li>
  * </ul>
  * <li>Debug/validation tone mapping operators</li>
  * <ul>
@@ -101,10 +103,20 @@ public class ToneMapper {
     }
 
     /**
+     * Khronos PBR Neutral tone mapping operator. This tone mapper was designed
+     * to preserve the appearance of materials across lighting conditions while
+     * avoiding artifacts in the highlights in high dynamic range conditions.
+     */
+    public static class PBRNeutralToneMapper extends ToneMapper {
+        public PBRNeutralToneMapper() {
+            super(nCreatePBRNeutralToneMapper());
+        }
+    }
+
+    /**
      * AgX tone mapping operator.
      */
     public static class Agx extends ToneMapper {
-
         public enum AgxLook {
             /**
              * Base contrast with no look applied
@@ -233,6 +245,7 @@ public class ToneMapper {
     private static native long nCreateACESToneMapper();
     private static native long nCreateACESLegacyToneMapper();
     private static native long nCreateFilmicToneMapper();
+    private static native long nCreatePBRNeutralToneMapper();
     private static native long nCreateAgxToneMapper(int look);
     private static native long nCreateGenericToneMapper(
             float contrast, float midGrayIn, float midGrayOut, float hdrMax);
