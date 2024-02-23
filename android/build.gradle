@@ -80,7 +80,7 @@ buildscript {
 
     ext.versions = [
         'jdk': 17,
-        'minSdk': 19,
+        'minSdk': 21,
         'targetSdk': 34,
         'compileSdk': 34,
         'kotlin': '1.9.21',

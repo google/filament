@@ -7,3 +7,6 @@ for next branch cut* header.
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+
+- android: NDK 26.1.10909125 is used by default
+- android: Minimum API level on Android is now API 21 instead of API 19. This allows the use of OpenGL ES 3.1

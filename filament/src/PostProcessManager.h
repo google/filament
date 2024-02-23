@@ -311,7 +311,7 @@ public:
         FMaterial* getMaterial(FEngine& engine) const noexcept;
         FMaterialInstance* getMaterialInstance(FEngine& engine) const noexcept;
 
-        backend::PipelineState getPipelineState(FEngine& engine,
+        std::pair<backend::PipelineState, backend::Viewport> getPipelineState(FEngine& engine,
                 Variant::type_t variantKey = 0u) const noexcept;
 
     private:
@@ -339,8 +339,14 @@ public:
             backend::DriverApi& driver) const noexcept;
 
     void render(FrameGraphResources::RenderPassInfo const& out,
-            backend::PipelineState const& pipeline,
+            backend::PipelineState const& pipeline, backend::Viewport const& scissor,
             backend::DriverApi& driver) const noexcept;
+
+    void render(FrameGraphResources::RenderPassInfo const& out,
+            std::pair<backend::PipelineState, backend::Viewport> const& combo,
+            backend::DriverApi& driver) const noexcept {
+        render(out, combo.first, combo.second, driver);
+    }
 
 private:
     FEngine& mEngine;

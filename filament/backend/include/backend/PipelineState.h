@@ -33,7 +33,6 @@ struct PipelineState {
     RasterState rasterState;
     StencilState stencilState;
     PolygonOffset polygonOffset;
-    Viewport scissor{ 0, 0, (uint32_t)INT32_MAX, (uint32_t)INT32_MAX };
 };
 
 } // namespace filament::backend
