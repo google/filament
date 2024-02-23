@@ -18,16 +18,31 @@
 
 #include "opengl/GLUtils.h"
 
+#include <backend/platforms/OpenGLPlatform.h>
+
+#include <backend/Platform.h>
+#include <backend/DriverEnums.h>
+
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
-
 #if defined(__ANDROID__)
+
 #include <sys/system_properties.h>
 #endif
-
 #include <utils/compiler.h>
+
+#include <utils/debug.h>
 #include <utils/Log.h>
-#include <utils/Panic.h>
+#include <utils/ostream.h>
+
+#include <algorithm>
+#include <new>
+#include <initializer_list>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 #ifndef EGL_CONTEXT_OPENGL_BACKWARDS_COMPATIBLE_ANGLE
 #   define EGL_CONTEXT_OPENGL_BACKWARDS_COMPATIBLE_ANGLE 0x3483
@@ -47,7 +62,6 @@ UTILS_PRIVATE PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR = {};
 UTILS_PRIVATE PFNEGLDESTROYIMAGEKHRPROC eglDestroyImageKHR = {};
 }
 using namespace glext;
-
 
 // ---------------------------------------------------------------------------------------------
 // Utilities
@@ -137,7 +151,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
     ext.egl.KHR_gl_colorspace = extensions.has("EGL_KHR_gl_colorspace");
     ext.egl.KHR_create_context = extensions.has("EGL_KHR_create_context");
     ext.egl.KHR_no_config_context = extensions.has("EGL_KHR_no_config_context");
-    ext.egl.KHR_surfaceless_context = extensions.has("KHR_surfaceless_context");
+    ext.egl.KHR_surfaceless_context = extensions.has("EGL_KHR_surfaceless_context");
     if (ext.egl.KHR_create_context) {
         // KHR_create_context implies KHR_surfaceless_context for ES3.x contexts
         ext.egl.KHR_surfaceless_context = true;
@@ -461,7 +475,13 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
     // this is not fatal
     eglSurfaceAttrib(mEGLDisplay, sur, EGL_SWAP_BEHAVIOR, EGL_BUFFER_DESTROYED);
 
-    return (SwapChain*)sur;
+    SwapChainEGL* const sc = new(std::nothrow) SwapChainEGL({
+        .sur = sur,
+        .attribs = std::move(attribs),
+        .nativeWindow = (EGLNativeWindowType)nativeWindow,
+        .config = config
+    });
+    return sc;
 }
 
 Platform::SwapChain* PlatformEGL::createSwapChain(
@@ -495,30 +515,42 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
         logEglError("eglCreatePbufferSurface");
         return nullptr;
     }
-    return (SwapChain*)sur;
+
+    SwapChainEGL* const sc = new(std::nothrow) SwapChainEGL({
+            .sur = sur,
+            .attribs = std::move(attribs),
+            .config = config
+    });
+    return sc;
 }
 
 void PlatformEGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
-    EGLSurface sur = (EGLSurface) swapChain;
-    if (sur != EGL_NO_SURFACE) {
-        makeCurrent(mEGLDummySurface, mEGLDummySurface);
-        eglDestroySurface(mEGLDisplay, sur);
+    if (swapChain) {
+        SwapChainEGL const* const sc = static_cast<SwapChainEGL const*>(swapChain);
+        if (sc->sur != EGL_NO_SURFACE) {
+            makeCurrent(mEGLDummySurface, mEGLDummySurface);
+            eglDestroySurface(mEGLDisplay, sc->sur);
+            delete sc;
+        }
     }
 }
 
 void PlatformEGL::makeCurrent(Platform::SwapChain* drawSwapChain,
                               Platform::SwapChain* readSwapChain) noexcept {
-    EGLSurface drawSur = (EGLSurface) drawSwapChain;
-    EGLSurface readSur = (EGLSurface) readSwapChain;
-    if (drawSur != EGL_NO_SURFACE || readSur != EGL_NO_SURFACE) {
-        makeCurrent(drawSur, readSur);
+    SwapChainEGL const* const dsc = static_cast<SwapChainEGL const*>(drawSwapChain);
+    SwapChainEGL const* const rsc = static_cast<SwapChainEGL const*>(readSwapChain);
+    if (UTILS_UNLIKELY(dsc->sur == EGL_NO_SURFACE && rsc->sur == EGL_NO_SURFACE)) {
+        return;
     }
+    makeCurrent(dsc->sur, rsc->sur);
 }
 
 void PlatformEGL::commit(Platform::SwapChain* swapChain) noexcept {
-    EGLSurface sur = (EGLSurface) swapChain;
-    if (sur != EGL_NO_SURFACE) {
-        eglSwapBuffers(mEGLDisplay, sur);
+    if (swapChain) {
+        SwapChainEGL const* const sc = static_cast<SwapChainEGL const*>(swapChain);
+        if (sc->sur != EGL_NO_SURFACE) {
+            eglSwapBuffers(mEGLDisplay, sc->sur);
+        }
     }
 }
 
@@ -561,7 +593,7 @@ FenceStatus PlatformEGL::waitFence(
 }
 
 OpenGLPlatform::ExternalTexture* PlatformEGL::createExternalImageTexture() noexcept {
-    ExternalTexture* outTexture = new ExternalTexture{};
+    ExternalTexture* outTexture = new(std::nothrow) ExternalTexture{};
     glGenTextures(1, &outTexture->id);
     if (UTILS_LIKELY(ext.gl.OES_EGL_image_external_essl3)) {
         outTexture->target = GL_TEXTURE_EXTERNAL_OES;
