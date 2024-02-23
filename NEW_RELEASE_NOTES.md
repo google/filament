@@ -10,3 +10,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 - Add new API `SwapChain::getFrameScheduledCallback`
 - vulkan: fixed validation error VUID-vkAcquireNextImageKHR-semaphore-01779
+- opengl: Add support for protected content swapchains and contexts
