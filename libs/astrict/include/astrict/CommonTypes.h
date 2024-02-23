@@ -133,6 +133,26 @@ enum class RValueOperator : uint8_t {
 
 using ValueId = std::variant<GlobalSymbolId, LocalSymbolId, RValueId>;
 
+struct StructMember {
+    std::string name;
+    TypeId type;
+
+    bool operator==(const StructMember& o) const {
+        return name == o.name
+                && type == o.type;
+    }
+};
+
+struct Struct {
+    std::string name;
+    std::vector<StructMember> members;
+
+    bool operator==(const Struct& o) const {
+        return name == o.name
+                && members == o.members;
+    }
+};
+
 // TODO: qualifiers
 struct Type {
     std::string name; // string_view sometimes deallocated
@@ -269,6 +289,27 @@ void hashCombine(std::size_t& seed, const T& v, const Rest&... rest) {
 } // namespace astrict
 
 namespace std {
+
+template<>
+struct hash<astrict::StructMember> {
+    std::size_t operator()(const astrict::StructMember& o) const {
+        std::size_t result = 0;
+        astrict::hashCombine(result, o.name, o.type);
+        return result;
+    }
+};
+
+template<>
+struct hash<astrict::Struct> {
+    std::size_t operator()(const astrict::Struct& o) const {
+        std::size_t result = 0;
+        astrict::hashCombine(result, o.name, o.members.size());
+        for (const auto& member : o.members) {
+            astrict::hashCombine(result, member);
+        }
+        return result;
+    }
+};
 
 template<>
 struct hash<astrict::Type> {
