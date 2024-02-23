@@ -152,6 +152,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const Platform::DriverCon
     ext.egl.KHR_create_context = extensions.has("EGL_KHR_create_context");
     ext.egl.KHR_no_config_context = extensions.has("EGL_KHR_no_config_context");
     ext.egl.KHR_surfaceless_context = extensions.has("EGL_KHR_surfaceless_context");
+    ext.egl.EXT_protected_content = extensions.has("EGL_EXT_protected_content");
     if (ext.egl.KHR_create_context) {
         // KHR_create_context implies KHR_surfaceless_context for ES3.x contexts
         ext.egl.KHR_surfaceless_context = true;
@@ -318,6 +319,10 @@ bool PlatformEGL::isExtraContextSupported() const noexcept {
     return ext.egl.KHR_surfaceless_context;
 }
 
+bool PlatformEGL::isProtectedContextSupported() const noexcept {
+    return ext.egl.EXT_protected_content;
+}
+
 void PlatformEGL::createContext(bool shared) {
     EGLConfig config = ext.egl.KHR_no_config_context ? EGL_NO_CONFIG_KHR : mEGLConfig;
 
@@ -438,6 +443,8 @@ EGLConfig PlatformEGL::findSwapChainConfig(uint64_t flags, bool window, bool pbu
     return config;
 }
 
+// -----------------------------------------------------------------------------------------------
+
 bool PlatformEGL::isSRGBSwapChainSupported() const noexcept {
     return ext.egl.KHR_gl_colorspace;
 }
@@ -462,6 +469,16 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
         if (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) {
             attribs[EGL_GL_COLORSPACE_KHR] = EGL_GL_COLORSPACE_SRGB_KHR;
         }
+    } else {
+        flags &= ~SWAP_CHAIN_CONFIG_SRGB_COLORSPACE;
+    }
+
+    if (ext.egl.EXT_protected_content) {
+        if (flags & SWAP_CHAIN_CONFIG_PROTECTED_CONTENT) {
+            attribs[EGL_PROTECTED_CONTENT_EXT] = EGL_TRUE;
+        }
+    } else {
+        flags &= ~SWAP_CHAIN_CONFIG_PROTECTED_CONTENT;
     }
 
     EGLSurface sur = eglCreateWindowSurface(mEGLDisplay, config,
@@ -479,7 +496,8 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
         .sur = sur,
         .attribs = std::move(attribs),
         .nativeWindow = (EGLNativeWindowType)nativeWindow,
-        .config = config
+        .config = config,
+        .flags = flags
     });
     return sc;
 }
@@ -507,6 +525,16 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
         if (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) {
             attribs[EGL_GL_COLORSPACE_KHR] = EGL_GL_COLORSPACE_SRGB_KHR;
         }
+    } else {
+        flags &= ~SWAP_CHAIN_CONFIG_SRGB_COLORSPACE;
+    }
+
+    if (ext.egl.EXT_protected_content) {
+        if (flags & SWAP_CHAIN_CONFIG_PROTECTED_CONTENT) {
+            attribs[EGL_PROTECTED_CONTENT_EXT] = EGL_TRUE;
+        }
+    } else {
+        flags &= ~SWAP_CHAIN_CONFIG_PROTECTED_CONTENT;
     }
 
     EGLSurface sur = eglCreatePbufferSurface(mEGLDisplay, config, attribs.data());
@@ -554,6 +582,8 @@ void PlatformEGL::commit(Platform::SwapChain* swapChain) noexcept {
     }
 }
 
+// -----------------------------------------------------------------------------------------------
+
 bool PlatformEGL::canCreateFence() noexcept {
     return true;
 }
@@ -592,6 +622,8 @@ FenceStatus PlatformEGL::waitFence(
     return FenceStatus::ERROR;
 }
 
+// -----------------------------------------------------------------------------------------------
+
 OpenGLPlatform::ExternalTexture* PlatformEGL::createExternalImageTexture() noexcept {
     ExternalTexture* outTexture = new(std::nothrow) ExternalTexture{};
     glGenTextures(1, &outTexture->id);
@@ -621,6 +653,8 @@ bool PlatformEGL::setExternalImage(void* externalImage,
     }
     return true;
 }
+
+// -----------------------------------------------------------------------------------------------
 
 void PlatformEGL::initializeGlExtensions() noexcept {
     // We're guaranteed to be on an ES platform, since we're using EGL
@@ -667,5 +701,3 @@ void PlatformEGL::Config::erase(EGLint name) noexcept {
 }
 
 } // namespace filament::backend
-
-// ---------------------------------------------------------------------------------------------

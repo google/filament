@@ -770,6 +770,11 @@ bool MetalDriver::isSRGBSwapChainSupported() {
     return false;
 }
 
+bool MetalDriver::isProtectedContentSupported() {
+    // the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag is not supported
+    return false;
+}
+
 bool MetalDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
     switch (stereoscopicType) {
     case backend::StereoscopicType::INSTANCED:

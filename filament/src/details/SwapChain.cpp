@@ -18,6 +18,12 @@
 
 #include "details/Engine.h"
 
+
+#include <new>
+#include <utility>
+
+#include <stdint.h>
+
 namespace filament {
 
 FSwapChain::FSwapChain(FEngine& engine, void* nativeWindow, uint64_t flags)
@@ -60,6 +66,10 @@ void FSwapChain::setFrameCompletedCallback(backend::CallbackHandler* handler,
 
 bool FSwapChain::isSRGBSwapChainSupported(FEngine& engine) noexcept {
     return engine.getDriverApi().isSRGBSwapChainSupported();
+}
+
+bool FSwapChain::isProtectedContentSupported(FEngine& engine) noexcept {
+    return engine.getDriverApi().isProtectedContentSupported();
 }
 
 } // namespace filament

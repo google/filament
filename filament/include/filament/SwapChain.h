@@ -225,14 +225,29 @@ public:
      * @see View.setStencilBufferEnabled
      * @see View.setPostProcessingEnabled
      */
-    static constexpr uint64_t CONFIG_HAS_STENCIL_BUFFER = backend::SWAP_CHAIN_HAS_STENCIL_BUFFER;
+    static constexpr uint64_t CONFIG_HAS_STENCIL_BUFFER = backend::SWAP_CHAIN_CONFIG_HAS_STENCIL_BUFFER;
 
     /**
-     * Return whether createSwapChain supports the SWAP_CHAIN_CONFIG_SRGB_COLORSPACE flag.
+     * The SwapChain contains protected content. Only supported when isProtectedContentSupported()
+     * is true.
+     */
+    static constexpr uint64_t CONFIG_PROTECTED_CONTENT = backend::SWAP_CHAIN_CONFIG_PROTECTED_CONTENT;
+
+    /**
+     * Return whether createSwapChain supports the CONFIG_PROTECTED_CONTENT flag.
      * The default implementation returns false.
      *
      * @param engine A pointer to the filament Engine
-     * @return true if SWAP_CHAIN_CONFIG_SRGB_COLORSPACE is supported, false otherwise.
+     * @return true if CONFIG_PROTECTED_CONTENT is supported, false otherwise.
+     */
+    static bool isProtectedContentSupported(Engine& engine) noexcept;
+
+    /**
+     * Return whether createSwapChain supports the CONFIG_SRGB_COLORSPACE flag.
+     * The default implementation returns false.
+     *
+     * @param engine A pointer to the filament Engine
+     * @return true if CONFIG_SRGB_COLORSPACE is supported, false otherwise.
      */
     static bool isSRGBSwapChainSupported(Engine& engine) noexcept;
 
