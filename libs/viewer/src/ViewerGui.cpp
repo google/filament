@@ -145,6 +145,9 @@ static void computeToneMapPlot(ColorGradingSettings& settings, float* plot) {
             );
             hdrMax = settings.genericToneMapper.hdrMax;
             break;
+        case ToneMapping::PBR_NEUTRAL:
+            mapper = new PBRNeutralToneMapper;
+            break;
         case ToneMapping::DISPLAY_RANGE:
             mapper = new DisplayRangeToneMapper;
             break;
@@ -196,7 +199,7 @@ static void colorGradingUI(Settings& settings, float* rangePlot, float* curvePlo
 
         int toneMapping = (int) colorGrading.toneMapping;
         ImGui::Combo("Tone-mapping", &toneMapping,
-                "Linear\0ACES (legacy)\0ACES\0Filmic\0AgX\0Generic\0Display Range\0\0");
+                "Linear\0ACES (legacy)\0ACES\0Filmic\0AgX\0Generic\0PBR Neutral\0Display Range\0\0");
         colorGrading.toneMapping = (decltype(colorGrading.toneMapping)) toneMapping;
         if (colorGrading.toneMapping == ToneMapping::GENERIC) {
             if (ImGui::CollapsingHeader("Tonemap parameters")) {

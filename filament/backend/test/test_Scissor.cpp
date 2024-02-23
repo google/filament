@@ -134,12 +134,12 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         ps.program = program;
         ps.rasterState.colorWrite = true;
         ps.rasterState.depthWrite = false;
-        ps.scissor = scissor;
 
         api.makeCurrent(swapChain, swapChain);
         api.beginFrame(0, 0);
 
         api.beginRenderPass(srcRenderTarget, params);
+        api.scissor(scissor);
         api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
 
@@ -225,12 +225,12 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         ps.program = program;
         ps.rasterState.colorWrite = true;
         ps.rasterState.depthWrite = false;
-        ps.scissor = scissor;
 
         api.makeCurrent(swapChain, swapChain);
         api.beginFrame(0, 0);
 
         api.beginRenderPass(renderTarget, params);
+        api.scissor(scissor);
         api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
 
@@ -238,6 +238,7 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         params.flags.clear = TargetBufferFlags::NONE;
         params.flags.discardStart = TargetBufferFlags::NONE;
         api.beginRenderPass(renderTarget, params);
+        api.scissor(scissor);
         api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
 

@@ -848,7 +848,7 @@ bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
 }
 
 bool VulkanDriver::isFrameBufferFetchSupported() {
-    return true;
+    return false;
 }
 
 bool VulkanDriver::isFrameBufferFetchMultiSampleSupported() {
@@ -1138,7 +1138,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     VulkanRenderTarget* const rt = mResourceAllocator.handle_cast<VulkanRenderTarget*>(rth);
     const VkExtent2D extent = rt->getExtent();
-    assert_invariant(extent.width > 0 && extent.height > 0);
+    assert_invariant(rt == mDefaultRenderTarget || extent.width > 0 && extent.height > 0);
 
     // Filament has the expectation that the contents of the swap chain are not preserved on the
     // first render pass. Note however that its contents are often preserved on subsequent render
@@ -1247,7 +1247,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     }
 
     VkRenderPass renderPass = mFramebufferCache.getRenderPass(rpkey);
-    mPipelineCache.bindRenderPass(renderPass, 0);
+    mPipelineCache.bindRenderPass(renderPass);
 
     // Create the VkFramebuffer or fetch it from cache.
     VulkanFboCache::FboKey fbkey {
@@ -1372,7 +1372,6 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
         .renderTarget = rt,
         .renderPass = renderPassInfo.renderPass,
         .params = params,
-        .currentSubpass = 0,
     };
     FVK_SYSTRACE_END();
 }
@@ -1415,40 +1414,13 @@ void VulkanDriver::endRenderPass(int) {
                 0, 1, &barrier, 0, nullptr, 0, nullptr);
     }
 
-    if (mCurrentRenderPass.currentSubpass > 0) {
-        for (uint32_t i = 0; i < VulkanPipelineCache::INPUT_ATTACHMENT_COUNT; i++) {
-            mPipelineCache.bindInputAttachment(i, {});
-        }
-        mCurrentRenderPass.currentSubpass = 0;
-    }
     mCurrentRenderPass.renderTarget = nullptr;
     mCurrentRenderPass.renderPass = VK_NULL_HANDLE;
     FVK_SYSTRACE_END();
 }
 
 void VulkanDriver::nextSubpass(int) {
-    ASSERT_PRECONDITION(mCurrentRenderPass.currentSubpass == 0,
-            "Only two subpasses are currently supported.");
-
-    VulkanRenderTarget* renderTarget = mCurrentRenderPass.renderTarget;
-    assert_invariant(renderTarget);
-    assert_invariant(mCurrentRenderPass.params.subpassMask);
-
-    vkCmdNextSubpass(mCommands->get().buffer(), VK_SUBPASS_CONTENTS_INLINE);
-
-    mPipelineCache.bindRenderPass(mCurrentRenderPass.renderPass,
-            ++mCurrentRenderPass.currentSubpass);
-
-    for (uint32_t i = 0; i < VulkanPipelineCache::INPUT_ATTACHMENT_COUNT; i++) {
-        if ((1 << i) & mCurrentRenderPass.params.subpassMask) {
-            VulkanAttachment subpassInput = renderTarget->getColor(i);
-            VkDescriptorImageInfo info = {
-                .imageView = subpassInput.getImageView(VK_IMAGE_ASPECT_COLOR_BIT),
-                .imageLayout = ImgUtil::getVkLayout(subpassInput.getLayout()),
-            };
-            mPipelineCache.bindInputAttachment(i, info);
-        }
-    }
+    PANIC_POSTCONDITION("Subpasses are unsupported");
 }
 
 void VulkanDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph, PrimitiveType pt,
@@ -1716,7 +1688,6 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     Handle<HwProgram> programHandle = pipelineState.program;
     RasterState rasterState = pipelineState.rasterState;
     PolygonOffset depthOffset = pipelineState.polygonOffset;
-    Viewport const& scissorBox = pipelineState.scissor;
 
     auto* program = mResourceAllocator.handle_cast<VulkanProgram*>(programHandle);
     commands->acquire(program);
@@ -1850,27 +1821,6 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
         return;
     }
 
-    // Set scissoring.
-    // clamp left-bottom to 0,0 and avoid overflows
-    constexpr int32_t maxvali  = std::numeric_limits<int32_t>::max();
-    constexpr uint32_t maxvalu  = std::numeric_limits<int32_t>::max();
-    int32_t l = scissorBox.left;
-    int32_t b = scissorBox.bottom;
-    uint32_t w = std::min(maxvalu, scissorBox.width);
-    uint32_t h = std::min(maxvalu, scissorBox.height);
-    int32_t r = (l > int32_t(maxvalu - w)) ? maxvali : l + int32_t(w);
-    int32_t t = (b > int32_t(maxvalu - h)) ? maxvali : b + int32_t(h);
-    l = std::max(0, l);
-    b = std::max(0, b);
-    assert_invariant(r >= l && t >= b);
-    VkRect2D scissor{
-            .offset = { l, b },
-            .extent = { uint32_t(r - l), uint32_t(t - b) }
-    };
-
-    rt->transformClientRectToPlatform(&scissor);
-    mPipelineCache.bindScissor(cmdbuffer, scissor);
-
     // Bind a new pipeline if the pipeline state changed.
     // If allocation failed, skip the draw call and bail. We do not emit an error since the
     // validation layer will already do so.
@@ -1896,6 +1846,33 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 
 void VulkanDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
     // FIXME: implement me
+}
+
+void VulkanDriver::scissor(Viewport scissorBox) {
+    VulkanCommandBuffer* commands = &mCommands->get();
+    VkCommandBuffer cmdbuffer = commands->buffer();
+
+    // Set scissoring.
+    // clamp left-bottom to 0,0 and avoid overflows
+    constexpr int32_t maxvali  = std::numeric_limits<int32_t>::max();
+    constexpr uint32_t maxvalu  = std::numeric_limits<int32_t>::max();
+    int32_t l = scissorBox.left;
+    int32_t b = scissorBox.bottom;
+    uint32_t w = std::min(maxvalu, scissorBox.width);
+    uint32_t h = std::min(maxvalu, scissorBox.height);
+    int32_t r = (l > int32_t(maxvalu - w)) ? maxvali : l + int32_t(w);
+    int32_t t = (b > int32_t(maxvalu - h)) ? maxvali : b + int32_t(h);
+    l = std::max(0, l);
+    b = std::max(0, b);
+    assert_invariant(r >= l && t >= b);
+    VkRect2D scissor{
+            .offset = { l, b },
+            .extent = { uint32_t(r - l), uint32_t(t - b) }
+    };
+
+    const VulkanRenderTarget* rt = mCurrentRenderPass.renderTarget;
+    rt->transformClientRectToPlatform(&scissor);
+    mPipelineCache.bindScissor(cmdbuffer, scissor);
 }
 
 void VulkanDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
