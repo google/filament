@@ -65,6 +65,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef __ANDROID__
+#include <sys/system_properties.h>
+#endif
+
 // this helps visualize what dynamic-scaling is doing
 #define DEBUG_DYNAMIC_SCALING false
 
@@ -228,6 +232,22 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     assert_invariant(swapChain);
 
     SYSTRACE_CALL();
+
+
+#if defined(__ANDROID__)
+    char scratch[PROP_VALUE_MAX + 1];
+    int length = __system_property_get("debug.filament.protected", scratch);
+    if (swapChain && length > 0) {
+        uint64_t flags = swapChain->getFlags();
+        bool value = bool(atoi(scratch));
+        if (value) {
+            flags |= SwapChain::CONFIG_PROTECTED_CONTENT;
+        } else {
+            flags &= ~SwapChain::CONFIG_PROTECTED_CONTENT;
+        }
+        swapChain->recreateWithNewFlags(mEngine, flags);
+    }
+#endif
 
     // get the timestamp as soon as possible
     using namespace std::chrono;
@@ -549,6 +569,8 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     const bool needsAlphaChannel =
             (mSwapChain && mSwapChain->isTransparent()) || blendModeTranslucent;
 
+    const bool isProtectedContent =  mSwapChain && mSwapChain->isProtected();
+
     // asSubpass is disabled with TAA (although it's supported) because performance was degraded
     // on qualcomm hardware -- we might need a backend dependent toggle at some point
     const PostProcessManager::ColorGradingConfig colorGradingConfig{
@@ -695,7 +717,8 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
      * Frame graph
      */
 
-    FrameGraph fg(engine.getResourceAllocator());
+    FrameGraph fg(engine.getResourceAllocator(),
+            isProtectedContent ? FrameGraph::Mode::PROTECTED : FrameGraph::Mode::UNPROTECTED);
     auto& blackboard = fg.getBlackboard();
 
     /*

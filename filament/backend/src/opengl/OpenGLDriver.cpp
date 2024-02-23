@@ -523,8 +523,13 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
     rp->gl.vertexBufferWithObjects = vbh;
     rp->type = pt;
 
-    gl.procs.genVertexArrays(1, &rp->gl.vao);
+    // create a name for this VAO in the current context
+    gl.procs.genVertexArrays(1, &rp->gl.vao[gl.contextIndex]);
 
+    // this implies our name is up-to-date
+    rp->gl.nameVersion = gl.state.age;
+
+    // binding the VAO will actually create it
     gl.bindVertexArray(&rp->gl);
 
     // Note: we don't update the vertex buffer bindings in the VAO just yet, we will do that
@@ -864,22 +869,20 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
 }
 
 void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer const* vb) {
+    // NOTE: this is called from draw() and must be as efficient as possible.
 
     auto& gl = mContext;
 
-    // NOTE: this is called from draw() and must be as efficient as possible.
-
     if (UTILS_LIKELY(gl.ext.OES_vertex_array_object)) {
         // The VAO for the given render primitive must already be bound.
-#ifndef NDEBUG
         GLint vaoBinding;
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vaoBinding);
-        assert_invariant(vaoBinding == (GLint)rp->gl.vao);
-#endif
-        rp->gl.vertexBufferVersion = vb->bufferObjectsVersion;
-    } else {
-        // if we don't have OES_vertex_array_object, we never update the buffer version so
-        // that it's always reset in draw
+        assert_invariant(vaoBinding == (GLint)rp->gl.vao[gl.contextIndex]);
+    }
+
+    if (UTILS_LIKELY(rp->gl.vertexBufferVersion == vb->bufferObjectsVersion &&
+                     rp->gl.stateVersion == gl.state.age)) {
+        return;
     }
 
     GLVertexBufferInfo const* const vbi = handle_cast<const GLVertexBufferInfo*>(vb->vbih);
@@ -914,7 +917,7 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
                 glVertexAttribPointer(index, size, type, normalized, stride, pointer);
             }
 
-            gl.enableVertexAttribArray(GLuint(i));
+            gl.enableVertexAttribArray(&rp->gl, GLuint(i));
         } else {
             // In some OpenGL implementations, we must supply a properly-typed placeholder for
             // every integer input that is declared in the vertex shader.
@@ -937,8 +940,16 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
                 glVertexAttrib4f(GLuint(i), 0, 0, 0, 0);
             }
 
-            gl.disableVertexAttribArray(GLuint(i));
+            gl.disableVertexAttribArray(&rp->gl, GLuint(i));
         }
+    }
+
+    rp->gl.stateVersion = gl.state.age;
+    if (UTILS_LIKELY(gl.ext.OES_vertex_array_object)) {
+        rp->gl.vertexBufferVersion = vb->bufferObjectsVersion;
+    } else {
+        // if we don't have OES_vertex_array_object, we never update the buffer version so
+        // that it's always reset in draw
     }
 }
 
@@ -1484,7 +1495,20 @@ void OpenGLDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     if (rph) {
         auto& gl = mContext;
         GLRenderPrimitive const* rp = handle_cast<const GLRenderPrimitive*>(rph);
-        gl.deleteVertexArrays(1, &rp->gl.vao);
+        gl.deleteVertexArray(rp->gl.vao[gl.contextIndex]);
+
+        // If we have a name in the "other" context, we need to schedule the destroy for
+        // later, because it can't be done here. VAOs are "container objects" and are not
+        // shared between contexts.
+        size_t const otherContextIndex = 1 - gl.contextIndex;
+        GLuint const nameInOtherContext = rp->gl.vao[otherContextIndex];
+        if (UTILS_UNLIKELY(nameInOtherContext)) {
+            gl.destroyWithContext(otherContextIndex,
+                    [name = nameInOtherContext](OpenGLContext& gl) {
+                gl.deleteVertexArray(name);
+            });
+        }
+
         destruct(rph, rp);
     }
 }
@@ -2033,7 +2057,18 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
 
     GLSwapChain* scDraw = handle_cast<GLSwapChain*>(schDraw);
     GLSwapChain* scRead = handle_cast<GLSwapChain*>(schRead);
-    mPlatform.makeCurrent(scDraw->swapChain, scRead->swapChain);
+
+    mPlatform.makeCurrent(scDraw->swapChain, scRead->swapChain,
+            [this]() {
+                // OpenGL context is about to change, unbind everything
+                mContext.unbindEverything();
+            },
+            [this](size_t index) {
+                // OpenGL context has changed, resynchronize the state with the cache
+                mContext.synchronizeStateAndCache(index);
+                slog.d << "*** OpenGL context change : " << (index ? "protected" : "default") << io::endl;
+            });
+
     mCurrentDrawSwapChain = scDraw;
 
     // From the GL spec for glViewport and glScissor:
@@ -3776,9 +3811,7 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph,
 
     // If necessary, mutate the bindings in the VAO.
     GLVertexBuffer const* const glvb = handle_cast<GLVertexBuffer*>(vb);
-    if (UTILS_UNLIKELY(rp->gl.vertexBufferVersion != glvb->bufferObjectsVersion)) {
-        updateVertexArrayObject(rp, glvb);
-    }
+    updateVertexArrayObject(rp, glvb);
 
     setRasterState(state.rasterState);
     setStencilState(state.stencilState);

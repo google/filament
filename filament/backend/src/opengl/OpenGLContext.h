@@ -29,9 +29,11 @@
 #include "GLUtils.h"
 
 #include <array>
+#include <functional>
 #include <set>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 namespace filament::backend {
 
@@ -48,19 +50,29 @@ public:
     struct RenderPrimitive {
         static_assert(MAX_VERTEX_ATTRIBUTE_COUNT <= 16);
 
-        GLuint vao = 0;                                         // 4
+        GLuint vao[2] = {};                                     // 4
         GLuint elementArray = 0;                                // 4
-        utils::bitset<uint16_t> vertexAttribArray;              // 2
+        mutable utils::bitset<uint16_t> vertexAttribArray;      // 2
 
-        // If this version number does not match vertexBufferWithObjects->bufferObjectsVersion,
-        // then the VAO needs to be updated.
+        // if this differs from vertexBufferWithObjects->bufferObjectsVersion, this VAO needs to
+        // be updated (see OpenGLDriver::updateVertexArrayObject())
         uint8_t vertexBufferVersion = 0;                        // 1
+
+        // if this differs from OpenGLContext::state.age, this VAO needs to
+        // be updated (see OpenGLDriver::updateVertexArrayObject())
+        uint8_t stateVersion = 0;                               // 1
+
+        // If this differs from OpenGLContext::state.age, this VAO's name needs to be updated.
+        // See OpenGLContext::bindVertexArray()
+        uint8_t nameVersion = 0;                                // 1
+
+        // Size in bytes of indices in the index buffer
         uint8_t indicesSize = 0;                                // 1
 
         // The optional 32-bit handle to a GLVertexBuffer is necessary only if the referenced
         // VertexBuffer supports buffer objects. If this is zero, then the VBO handles array is
         // immutable.
-        Handle<HwVertexBuffer> vertexBufferWithObjects = {};    // 4
+        Handle<HwVertexBuffer> vertexBufferWithObjects;         // 4
 
         GLenum getIndicesType() const noexcept {
             return indicesSize == 4 ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
@@ -138,8 +150,8 @@ public:
 
     inline void bindFramebuffer(GLenum target, GLuint buffer) noexcept;
 
-    inline void enableVertexAttribArray(GLuint index) noexcept;
-    inline void disableVertexAttribArray(GLuint index) noexcept;
+    inline void enableVertexAttribArray(RenderPrimitive const* rp, GLuint index) noexcept;
+    inline void disableVertexAttribArray(RenderPrimitive const* rp, GLuint index) noexcept;
     inline void enable(GLenum cap) noexcept;
     inline void disable(GLenum cap) noexcept;
     inline void frontFace(GLenum mode) noexcept;
@@ -161,7 +173,9 @@ public:
     inline void depthRange(GLclampf near, GLclampf far) noexcept;
 
     void deleteBuffers(GLsizei n, const GLuint* buffers, GLenum target) noexcept;
-    void deleteVertexArrays(GLsizei n, const GLuint* arrays) noexcept;
+    void deleteVertexArray(GLuint vao) noexcept;
+
+    void destroyWithContext(size_t index, std::function<void(OpenGLContext&)> const& closure) noexcept;
 
     // glGet*() values
     struct Gets {
@@ -305,8 +319,19 @@ public:
 
     FeatureLevel getFeatureLevel() const noexcept { return mFeatureLevel; }
 
+    // This is the index of the context in use. Must be 0 or 1. This is used to manange the
+    // OpenGL name of ContainerObjects within each context.
+    uint32_t contextIndex = 0;
+
     // Try to keep the State structure sorted by data-access patterns
     struct State {
+        State() noexcept = default;
+        // make sure we don't copy this state by accident
+        State(State const& rhs) = delete;
+        State(State&& rhs) noexcept = delete;
+        State& operator=(State const& rhs) = delete;
+        State& operator=(State&& rhs) noexcept = delete;
+
         GLint major = 0;
         GLint minor = 0;
 
@@ -411,6 +436,7 @@ public:
             vec4gli viewport { 0 };
             vec2glf depthRange { 0.0f, 1.0f };
         } window;
+        uint8_t age = 0;
     } state;
 
     struct Procs {
@@ -430,10 +456,14 @@ public:
         void (* maxShaderCompilerThreadsKHR)(GLuint count);
     } procs{};
 
+    void unbindEverything() noexcept;
+    void synchronizeStateAndCache(size_t index) noexcept;
+
 private:
     ShaderModel mShaderModel = ShaderModel::MOBILE;
     FeatureLevel mFeatureLevel = FeatureLevel::FEATURE_LEVEL_1;
     TimerQueryFactoryInterface* mTimerQueryFactory = nullptr;
+    std::vector<std::function<void(OpenGLContext&)>> mDestroyWithNormalContext;
 
     const std::array<std::tuple<bool const&, char const*, char const*>, sizeof(bugs)> mBugDatabase{{
             {   bugs.disable_glFlush,
@@ -645,11 +675,26 @@ void OpenGLContext::depthRange(GLclampf near, GLclampf far) noexcept {
 void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
     RenderPrimitive* vao = p ? const_cast<RenderPrimitive *>(p) : &mDefaultVAO;
     update_state(state.vao.p, vao, [&]() {
-        procs.bindVertexArray(vao->vao);
+
+        // See if we need to create a name for this VAO on the fly, this would happen if:
+        // - we're not the default VAO, because its name is always 0
+        // - our name is 0, this could happen if this VAO was created in the "other" context
+        // - the nameVersion is out of date *and* we're on the protected context, in this case:
+        //      - the name must be stale from a previous use of this context because we always
+        //        destroy the protected context when we're done with it.
+        bool const recreateVaoName = p != &mDefaultVAO &&
+                ((vao->vao[contextIndex] == 0) ||
+                        (vao->nameVersion != state.age && contextIndex == 1));
+        if (UTILS_UNLIKELY(recreateVaoName)) {
+            vao->nameVersion = state.age;
+            procs.genVertexArrays(1, &vao->vao[contextIndex]);
+        }
+
+        procs.bindVertexArray(vao->vao[contextIndex]);
         // update GL_ELEMENT_ARRAY_BUFFER, which is updated by glBindVertexArray
         size_t const targetIndex = getIndexForBufferTarget(GL_ELEMENT_ARRAY_BUFFER);
         state.buffers.genericBinding[targetIndex] = vao->elementArray;
-        if (UTILS_UNLIKELY(bugs.vao_doesnt_store_element_array_buffer_binding)) {
+        if (UTILS_UNLIKELY(bugs.vao_doesnt_store_element_array_buffer_binding || recreateVaoName)) {
             // This shouldn't be needed, but it looks like some drivers don't do the implicit
             // glBindBuffer().
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vao->elementArray);
@@ -733,20 +778,22 @@ void OpenGLContext::useProgram(GLuint program) noexcept {
     });
 }
 
-void OpenGLContext::enableVertexAttribArray(GLuint index) noexcept {
-    assert_invariant(state.vao.p);
-    assert_invariant(index < state.vao.p->vertexAttribArray.size());
-    if (UTILS_UNLIKELY(!state.vao.p->vertexAttribArray[index])) {
-        state.vao.p->vertexAttribArray.set(index);
+void OpenGLContext::enableVertexAttribArray(RenderPrimitive const* rp, GLuint index) noexcept {
+    assert_invariant(rp);
+    assert_invariant(index < rp->vertexAttribArray.size());
+    bool const force = rp->stateVersion != state.age;
+    if (UTILS_UNLIKELY(force || !rp->vertexAttribArray[index])) {
+        rp->vertexAttribArray.set(index);
         glEnableVertexAttribArray(index);
     }
 }
 
-void OpenGLContext::disableVertexAttribArray(GLuint index) noexcept {
-    assert_invariant(state.vao.p);
-    assert_invariant(index < state.vao.p->vertexAttribArray.size());
-    if (UTILS_UNLIKELY(state.vao.p->vertexAttribArray[index])) {
-        state.vao.p->vertexAttribArray.unset(index);
+void OpenGLContext::disableVertexAttribArray(RenderPrimitive const* rp, GLuint index) noexcept {
+    assert_invariant(rp);
+    assert_invariant(index < rp->vertexAttribArray.size());
+    bool const force = rp->stateVersion != state.age;
+    if (UTILS_UNLIKELY(force || rp->vertexAttribArray[index])) {
+        rp->vertexAttribArray.unset(index);
         glDisableVertexAttribArray(index);
     }
 }

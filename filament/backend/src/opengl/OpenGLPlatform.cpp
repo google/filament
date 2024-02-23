@@ -24,7 +24,10 @@
 
 #include <utils/compiler.h>
 
+#include <utils/Invocable.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 namespace filament::backend {
 
@@ -34,6 +37,11 @@ Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform,
 }
 
 OpenGLPlatform::~OpenGLPlatform() noexcept = default;
+
+void OpenGLPlatform::makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain,
+        utils::Invocable<void()>, utils::Invocable<void(size_t)>) noexcept {
+    makeCurrent(drawSwapChain, readSwapChain);
+}
 
 bool OpenGLPlatform::isProtectedContextSupported() const noexcept {
     return false;
