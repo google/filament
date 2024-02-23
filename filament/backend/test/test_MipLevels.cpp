@@ -182,7 +182,6 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         params.flags.discardEnd = TargetBufferFlags::NONE;
 
         PipelineState state;
-        state.scissor = params.viewport;
         state.program = textureProgram;
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
@@ -203,6 +202,7 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         // Because the min level is 1, the result color should be the white triangle drawn in the
         // previous pass.
         api.beginRenderPass(defaultRenderTarget, params);
+        api.scissor(params.viewport);
         api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
 
@@ -221,6 +221,7 @@ TEST_F(BackendTest, SetMinMaxLevel) {
         params.flags.clear = TargetBufferFlags::NONE;
         params.flags.discardStart = TargetBufferFlags::NONE;
         api.beginRenderPass(defaultRenderTarget, params);
+        api.scissor(params.viewport);
         api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
         api.endRenderPass();
 

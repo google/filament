@@ -3759,8 +3759,6 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph,
 
     gl.polygonOffset(state.polygonOffset.slope, state.polygonOffset.constant);
 
-    setScissor(state.scissor);
-
     if (UTILS_LIKELY(instanceCount <= 1)) {
         glDrawElements(GLenum(rp->type), (GLsizei)indexCount, rp->gl.getIndicesType(),
                 reinterpret_cast<const void*>(indexOffset * rp->gl.indicesSize));
@@ -3779,6 +3777,10 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph,
 #else
     CHECK_GL_ERROR(utils::slog.e)
 #endif
+}
+
+void OpenGLDriver::scissor(Viewport scissor) {
+    setScissor(scissor);
 }
 
 void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGroupCount) {
