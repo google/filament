@@ -1921,6 +1921,10 @@ bool OpenGLDriver::isSRGBSwapChainSupported() {
     return mPlatform.isSRGBSwapChainSupported();
 }
 
+bool OpenGLDriver::isProtectedContentSupported() {
+    return mPlatform.isProtectedContextSupported();
+}
+
 bool OpenGLDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
     // Instanced-stereo requires instancing and EXT_clip_cull_distance.
     // Multiview-stereo requires ES 3.0 and OVR_multiview2.

@@ -128,9 +128,26 @@ public class SwapChain {
      */
     public static final long CONFIG_HAS_STENCIL_BUFFER = 0x20;
 
+    /**
+     * The SwapChain contains protected content. Only supported when isProtectedContentSupported()
+     * is true.
+     */
+    public static final long CONFIG_PROTECTED_CONTENT   = 0x40;
+
     SwapChain(long nativeSwapChain, Object surface) {
         mNativeObject = nativeSwapChain;
         mSurface = surface;
+    }
+
+    /**
+     * Return whether createSwapChain supports the CONFIG_PROTECTED_CONTENT flag.
+     * The default implementation returns false.
+     *
+     * @param engine A reference to the filament Engine
+     * @return true if CONFIG_PROTECTED_CONTENT is supported, false otherwise.
+     */
+    public static boolean isProtectedContentSupported(@NonNull Engine engine) {
+        return nIsProtectedContentSupported(engine.getNativeObject());
     }
 
     /**
@@ -186,4 +203,5 @@ public class SwapChain {
 
     private static native void nSetFrameCompletedCallback(long nativeSwapChain, Object handler, Runnable callback);
     private static native boolean nIsSRGBSwapChainSupported(long nativeEngine);
+    private static native boolean nIsProtectedContentSupported(long nativeEngine);
 }

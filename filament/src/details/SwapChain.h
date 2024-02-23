@@ -73,6 +73,8 @@ public:
 
     static bool isSRGBSwapChainSupported(FEngine& engine) noexcept;
 
+    static bool isProtectedContentSupported(FEngine& engine) noexcept;
+
 private:
     FEngine& mEngine;
     backend::Handle<backend::HwSwapChain> mSwapChain;

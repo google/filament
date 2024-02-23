@@ -868,6 +868,11 @@ bool VulkanDriver::isSRGBSwapChainSupported() {
     return mIsSRGBSwapChainSupported;
 }
 
+bool VulkanDriver::isProtectedContentSupported() {
+    // the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag is not supported
+    return false;
+}
+
 bool VulkanDriver::isStereoSupported(backend::StereoscopicType stereoscopicType) {
     switch (stereoscopicType) {
     case backend::StereoscopicType::INSTANCED:
