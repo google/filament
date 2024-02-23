@@ -70,14 +70,9 @@ public:
 
 private:
     friend class VertexBuffer;
-
-    struct AttributeData : backend::Attribute {
-        AttributeData() : backend::Attribute{ .type = backend::ElementType::FLOAT4 } {}
-    };
-
     VertexBufferInfoHandle mVertexBufferInfoHandle;
     VertexBufferHandle mHandle;
-    std::array<AttributeData, backend::MAX_VERTEX_ATTRIBUTE_COUNT> mAttributes;
+    backend::AttributeArray mAttributes;
     std::array<BufferObjectHandle, backend::MAX_VERTEX_BUFFER_COUNT> mBufferObjects;
     AttributeBitset mDeclaredAttributes;
     uint32_t mVertexCount = 0;

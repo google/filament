@@ -519,7 +519,6 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
 
     auto& gl = mContext;
 
-    GLVertexBuffer const* const vb = handle_cast<const GLVertexBuffer*>(vbh);
     GLIndexBuffer const* const ib = handle_cast<const GLIndexBuffer*>(ibh);
     assert_invariant(ib->elementSize == 2 || ib->elementSize == 4);
 
@@ -532,8 +531,9 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
 
     gl.bindVertexArray(&rp->gl);
 
-    // update the VBO bindings in the VAO
-    updateVertexArrayObject(rp, vb);
+    // Note: we don't update the vertex buffer bindings in the VAO just yet, we will do that
+    // later in draw() or bindRenderPrimitive(). At this point, the HwVertexBuffer might not
+    // have all its buffers set.
 
     // this records the index buffer into the currently bound VAO
     gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
@@ -856,7 +856,6 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
 
     // NOTE: this is called from draw() and must be as efficient as possible.
 
-
     if (UTILS_LIKELY(gl.ext.OES_vertex_array_object)) {
         // The VAO for the given render primitive must already be bound.
 #ifndef NDEBUG
@@ -875,38 +874,44 @@ void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer
     for (size_t i = 0, n = vbi->attributes.size(); i < n; i++) {
         const auto& attribute = vbi->attributes[i];
         const uint8_t bi = attribute.buffer;
+        if (bi != Attribute::BUFFER_UNUSED) {
+            // if a buffer is defined it must not be invalid.
+            assert_invariant(vb->gl.buffers[bi]);
 
-        // Invoking glVertexAttribPointer without a bound VBO is an invalid operation, so we must
-        // take care to avoid it. This can occur when VertexBuffer is only partially populated with
-        // BufferObject items.
-        if (bi != Attribute::BUFFER_UNUSED && UTILS_LIKELY(vb->gl.buffers[bi] != 0)) {
-
+            // if w're on ES2, the user shouldn't use FLAG_INTEGER_TARGET
             assert_invariant(!(gl.isES2() && (attribute.flags & Attribute::FLAG_INTEGER_TARGET)));
 
             gl.bindBuffer(GL_ARRAY_BUFFER, vb->gl.buffers[bi]);
+            GLuint const index = i;
+            GLint const size = getComponentCount(attribute.type);
+            GLenum const type = getComponentType(attribute.type);
+            GLboolean const normalized = getNormalization(attribute.flags & Attribute::FLAG_NORMALIZED);
+            GLsizei const stride = attribute.stride;
+            void const* pointer = reinterpret_cast<void const *>(attribute.offset);
+
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
             if (UTILS_UNLIKELY(attribute.flags & Attribute::FLAG_INTEGER_TARGET)) {
-                glVertexAttribIPointer(GLuint(i),
-                        (GLint)getComponentCount(attribute.type),
-                        getComponentType(attribute.type),
-                        attribute.stride,
-                        (void*) uintptr_t(attribute.offset));
+                // integer attributes can't be floats
+                assert_invariant(type == GL_BYTE || type == GL_UNSIGNED_BYTE || type == GL_SHORT ||
+                        type == GL_UNSIGNED_SHORT || type == GL_INT || type == GL_UNSIGNED_INT);
+                glVertexAttribIPointer(index, size, type, stride, pointer);
             } else
 #endif
             {
-                glVertexAttribPointer(GLuint(i),
-                        (GLint)getComponentCount(attribute.type),
-                        getComponentType(attribute.type),
-                        getNormalization(attribute.flags & Attribute::FLAG_NORMALIZED),
-                        attribute.stride,
-                        (void*) uintptr_t(attribute.offset));
+                glVertexAttribPointer(index, size, type, normalized, stride, pointer);
             }
 
             gl.enableVertexAttribArray(GLuint(i));
         } else {
-
             // In some OpenGL implementations, we must supply a properly-typed placeholder for
-            // every integer input that is declared in the vertex shader, even if disabled.
+            // every integer input that is declared in the vertex shader.
+            // Note that the corresponding doesn't have to be enabled and in fact won't be. If it
+            // was enabled, it would indicate a user-error (providing the wrong type of array).
+            // With a disabled array, the vertex shader gets the attribute from glVertexAttrib,
+            // and must have the proper intergerness.
+            // But at this point, we don't know what the shader requirements are, and so we must
+            // rely on the attribute.
+
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
             if (UTILS_UNLIKELY(attribute.flags & Attribute::FLAG_INTEGER_TARGET)) {
                 if (!gl.isES2()) {
