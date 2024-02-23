@@ -81,16 +81,6 @@ VulkanPipelineCache::VulkanPipelineCache(VulkanResourceAllocator* allocator)
     mDummyBufferWriteInfo.pImageInfo = nullptr;
     mDummyBufferWriteInfo.pBufferInfo = &mDummyBufferInfo;
     mDummyBufferWriteInfo.pTexelBufferView = nullptr;
-
-    mDummyTargetInfo.imageLayout = VulkanImageUtility::getVkLayout(VulkanLayout::READ_ONLY);
-    mDummyTargetWriteInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    mDummyTargetWriteInfo.pNext = nullptr;
-    mDummyTargetWriteInfo.dstArrayElement = 0;
-    mDummyTargetWriteInfo.descriptorCount = 1;
-    mDummyTargetWriteInfo.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-    mDummyTargetWriteInfo.pImageInfo = &mDummyTargetInfo;
-    mDummyTargetWriteInfo.pBufferInfo = nullptr;
-    mDummyTargetWriteInfo.pTexelBufferView = nullptr;
 }
 
 VulkanPipelineCache::~VulkanPipelineCache() {
@@ -256,9 +246,7 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
     // Rewrite every binding in the new descriptor sets.
     VkDescriptorBufferInfo descriptorBuffers[UBUFFER_BINDING_COUNT];
     VkDescriptorImageInfo descriptorSamplers[SAMPLER_BINDING_COUNT];
-    VkDescriptorImageInfo descriptorInputAttachments[INPUT_ATTACHMENT_COUNT];
-    VkWriteDescriptorSet descriptorWrites[UBUFFER_BINDING_COUNT + SAMPLER_BINDING_COUNT +
-            INPUT_ATTACHMENT_COUNT];
+    VkWriteDescriptorSet descriptorWrites[UBUFFER_BINDING_COUNT + SAMPLER_BINDING_COUNT];
     uint32_t nwrites = 0;
     VkWriteDescriptorSet* writes = descriptorWrites;
     nwrites = 0;
@@ -305,23 +293,6 @@ VulkanPipelineCache::DescriptorCacheEntry* VulkanPipelineCache::createDescriptor
             writeInfo.pBufferInfo = nullptr;
             writeInfo.pTexelBufferView = nullptr;
             writeInfo.dstSet = descriptorCacheEntry.handles[1];
-            writeInfo.dstBinding = binding;
-        }
-    }
-    for (uint32_t binding = 0; binding < INPUT_ATTACHMENT_COUNT; binding++) {
-        if (mDescriptorRequirements.inputAttachments[binding].imageView) {
-            VkWriteDescriptorSet& writeInfo = writes[nwrites++];
-            VkDescriptorImageInfo& imageInfo = descriptorInputAttachments[binding];
-            imageInfo = mDescriptorRequirements.inputAttachments[binding];
-            writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            writeInfo.pNext = nullptr;
-            writeInfo.dstArrayElement = 0;
-            writeInfo.descriptorCount = 1;
-            writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-            writeInfo.pImageInfo = &imageInfo;
-            writeInfo.pBufferInfo = nullptr;
-            writeInfo.pTexelBufferView = nullptr;
-            writeInfo.dstSet = descriptorCacheEntry.handles[2];
             writeInfo.dstBinding = binding;
         }
     }
@@ -402,15 +373,15 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
 
     const bool hasFragmentShader = shaderStages[1].module != VK_NULL_HANDLE;
 
-    VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
-    pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineCreateInfo.layout = layout->handle;
-    pipelineCreateInfo.renderPass = mPipelineRequirements.renderPass;
-    pipelineCreateInfo.subpass = mPipelineRequirements.subpassIndex;
-    pipelineCreateInfo.stageCount = hasFragmentShader ? SHADER_MODULE_COUNT : 1;
-    pipelineCreateInfo.pStages = shaderStages;
-    pipelineCreateInfo.pVertexInputState = &vertexInputState;
-    pipelineCreateInfo.pInputAssemblyState = &inputAssemblyState;
+    VkGraphicsPipelineCreateInfo pipelineCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+            .stageCount = hasFragmentShader ? SHADER_MODULE_COUNT : 1,
+            .pStages = shaderStages,
+            .pVertexInputState = &vertexInputState,
+            .pInputAssemblyState = &inputAssemblyState,
+            .layout = layout->handle,
+            .renderPass = mPipelineRequirements.renderPass,
+    };
 
     VkPipelineRasterizationStateCreateInfo vkRaster = {};
     vkRaster.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -535,18 +506,6 @@ VulkanPipelineCache::PipelineLayoutCacheEntry* VulkanPipelineCache::getOrCreateP
     dlinfo.pBindings = sbindings;
     vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &cacheEntry.descriptorSetLayouts[1]);
 
-    // Next create the descriptor set layout for input attachments.
-    VkDescriptorSetLayoutBinding tbindings[INPUT_ATTACHMENT_COUNT];
-    binding.descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-    binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    for (uint32_t i = 0; i < INPUT_ATTACHMENT_COUNT; i++) {
-        binding.binding = i;
-        tbindings[i] = binding;
-    }
-    dlinfo.bindingCount = INPUT_ATTACHMENT_COUNT;
-    dlinfo.pBindings = tbindings;
-    vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &cacheEntry.descriptorSetLayouts[2]);
-
     // Create VkPipelineLayout based on how to resources are bounded.
     VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
     pPipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -569,9 +528,8 @@ void VulkanPipelineCache::bindRasterState(const RasterState& rasterState) noexce
     mPipelineRequirements.rasterState = rasterState;
 }
 
-void VulkanPipelineCache::bindRenderPass(VkRenderPass renderPass, int subpassIndex) noexcept {
+void VulkanPipelineCache::bindRenderPass(VkRenderPass renderPass) noexcept {
     mPipelineRequirements.renderPass = renderPass;
-    mPipelineRequirements.subpassIndex = subpassIndex;
 }
 
 void VulkanPipelineCache::bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept {
@@ -619,11 +577,6 @@ void VulkanPipelineCache::unbindImageView(VkImageView imageView) noexcept {
             sampler = {};
         }
     }
-    for (auto& target : mDescriptorRequirements.inputAttachments) {
-        if (target.imageView == imageView) {
-            target = {};
-        }
-    }
 }
 
 void VulkanPipelineCache::bindUniformBufferObject(uint32_t bindingIndex,
@@ -660,14 +613,6 @@ void VulkanPipelineCache::bindSamplers(VkDescriptorImageInfo samplers[SAMPLER_BI
         }
     }
     mPipelineRequirements.layout = flags;
-}
-
-void VulkanPipelineCache::bindInputAttachment(uint32_t bindingIndex,
-        VkDescriptorImageInfo targetInfo) noexcept {
-    ASSERT_POSTCONDITION(bindingIndex < INPUT_ATTACHMENT_COUNT,
-            "Input attachment bindings overflow: index = %d, capacity = %d.",
-            bindingIndex, INPUT_ATTACHMENT_COUNT);
-    mDescriptorRequirements.inputAttachments[bindingIndex] = targetInfo;
 }
 
 void VulkanPipelineCache::terminate() noexcept {
@@ -793,8 +738,6 @@ VkDescriptorPool VulkanPipelineCache::createDescriptorPool(uint32_t size) const 
     poolSizes[0].descriptorCount = poolInfo.maxSets * UBUFFER_BINDING_COUNT;
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     poolSizes[1].descriptorCount = poolInfo.maxSets * SAMPLER_BINDING_COUNT;
-    poolSizes[2].type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-    poolSizes[2].descriptorCount = poolInfo.maxSets * INPUT_ATTACHMENT_COUNT;
 
     VkDescriptorPool pool;
     const UTILS_UNUSED VkResult result = vkCreateDescriptorPool(mDevice, &poolInfo, VKALLOC, &pool);
@@ -902,12 +845,6 @@ bool VulkanPipelineCache::DescEqual::operator()(const DescriptorKey& k1,
         if (k1.samplers[i].sampler != k2.samplers[i].sampler ||
             k1.samplers[i].imageView != k2.samplers[i].imageView ||
             k1.samplers[i].imageLayout != k2.samplers[i].imageLayout) {
-            return false;
-        }
-    }
-    for (uint32_t i = 0; i < INPUT_ATTACHMENT_COUNT; i++) {
-        if (k1.inputAttachments[i].imageView != k2.inputAttachments[i].imageView ||
-            k1.inputAttachments[i].imageLayout != k2.inputAttachments[i].imageLayout) {
             return false;
         }
     }

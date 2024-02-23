@@ -83,7 +83,6 @@ struct VulkanRenderPass {
     VulkanRenderTarget* renderTarget;
     VkRenderPass renderPass;
     RenderPassParams params;
-    int currentSubpass;
 };
 
 // This is a collection of immutable data about the vulkan context. This actual handles to the

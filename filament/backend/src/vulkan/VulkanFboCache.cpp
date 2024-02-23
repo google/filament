@@ -129,7 +129,6 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         iter.value().timestamp = mCurrentTime;
         return iter->second.handle;
     }
-    const bool hasSubpasses = config.subpassMask != 0;
 
     // Set up some const aliases for terseness.
     const VkAttachmentLoadOp kClear = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -141,24 +140,16 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     // In Vulkan, the subpass desc specifies the layout to transition to at the start of the render
     // pass, and the attachment description specifies the layout to transition to at the end.
 
-    VkAttachmentReference inputAttachmentRef[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VkAttachmentReference colorAttachmentRefs[2][MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VkAttachmentReference resolveAttachmentRef[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     VkAttachmentReference depthAttachmentRef = {};
 
     const bool hasDepth = config.depthFormat != VK_FORMAT_UNDEFINED;
 
-    VkSubpassDescription subpasses[2] = {{
+    VkSubpassDescription subpasses[1] = {{
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .pInputAttachments = nullptr,
         .pColorAttachments = colorAttachmentRefs[0],
-        .pResolveAttachments = resolveAttachmentRef,
-        .pDepthStencilAttachment = hasDepth ? &depthAttachmentRef : nullptr
-    },
-    {
-        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-        .pInputAttachments = inputAttachmentRef,
-        .pColorAttachments = colorAttachmentRefs[1],
         .pResolveAttachments = resolveAttachmentRef,
         .pDepthStencilAttachment = hasDepth ? &depthAttachmentRef : nullptr
     }};
@@ -168,28 +159,19 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     // Note that this needs to have the same ordering as the corollary array in getFramebuffer.
     VkAttachmentDescription attachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1] = {};
 
-    // We support 2 subpasses, which means we need to supply 1 dependency struct.
-    VkSubpassDependency dependencies[1] = {{
-        .srcSubpass = 0,
-        .dstSubpass = 1,
-        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
-        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
-    }};
-
     VkRenderPassCreateInfo renderPassInfo {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .attachmentCount = 0u,
         .pAttachments = attachments,
-        .subpassCount = hasSubpasses ? 2u : 1u,
+        .subpassCount = 1u,
         .pSubpasses = subpasses,
-        .dependencyCount = hasSubpasses ? 1u : 0u,
-        .pDependencies = dependencies
+        .dependencyCount = 0u,
+        .pDependencies = nullptr,
     };
 
     int attachmentIndex = 0;
+
+    assert_invariant(config.subpassMask == 0 && "Subpass is not supported");
 
     // Populate the Color Attachments.
     for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
@@ -199,36 +181,9 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
         const VkImageLayout subpassLayout = ImgUtil::getVkLayout(VulkanLayout::COLOR_ATTACHMENT);
         uint32_t index;
 
-        if (!hasSubpasses) {
-            index = subpasses[0].colorAttachmentCount++;
-            colorAttachmentRefs[0][index].layout = subpassLayout;
-            colorAttachmentRefs[0][index].attachment = attachmentIndex;
-        } else {
-
-            // The Driver API consolidates all color attachments from the first and second subpasses
-            // into a single list, and uses a bitmask to mark attachments that belong only to the
-            // second subpass and should be available as inputs. All color attachments in the first
-            // subpass are automatically made available to the second subpass.
-
-            // If there are subpasses, we require the input attachment to be the first attachment.
-            // Breaking this assumption would likely require enhancements to the Driver API in order
-            // to supply Vulkan with all the information needed.
-            assert_invariant(config.subpassMask == 1);
-
-            if (config.subpassMask & (1 << i)) {
-                index = subpasses[0].colorAttachmentCount++;
-                colorAttachmentRefs[0][index].layout = subpassLayout;
-                colorAttachmentRefs[0][index].attachment = attachmentIndex;
-
-                index = subpasses[1].inputAttachmentCount++;
-                inputAttachmentRef[index].layout = subpassLayout;
-                inputAttachmentRef[index].attachment = attachmentIndex;
-            }
-
-            index = subpasses[1].colorAttachmentCount++;
-            colorAttachmentRefs[1][index].layout = subpassLayout;
-            colorAttachmentRefs[1][index].attachment = attachmentIndex;
-        }
+        index = subpasses[0].colorAttachmentCount++;
+        colorAttachmentRefs[0][index].layout = subpassLayout;
+        colorAttachmentRefs[0][index].attachment = attachmentIndex;
 
         const TargetBufferFlags flag = TargetBufferFlags(int(TargetBufferFlags::COLOR0) << i);
         const bool clear = any(config.clear & flag);
@@ -252,8 +207,6 @@ VkRenderPass VulkanFboCache::getRenderPass(RenderPassKey config) noexcept {
     if (subpasses[0].colorAttachmentCount == 0) {
         subpasses[0].pColorAttachments = nullptr;
         subpasses[0].pResolveAttachments = nullptr;
-        subpasses[1].pColorAttachments = nullptr;
-        subpasses[1].pResolveAttachments = nullptr;
     }
 
     // Populate the Resolve Attachments.
