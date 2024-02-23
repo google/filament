@@ -68,6 +68,8 @@ public:
 
     void setFrameScheduledCallback(FrameScheduledCallback callback, void* user);
 
+    FrameScheduledCallback getFrameScheduledCallback() const noexcept;
+
     void setFrameCompletedCallback(backend::CallbackHandler* handler,
                 utils::Invocable<void(SwapChain*)>&& callback) noexcept;
 
@@ -76,6 +78,7 @@ public:
 private:
     FEngine& mEngine;
     backend::Handle<backend::HwSwapChain> mSwapChain;
+    FrameScheduledCallback mFrameScheduledCallback;
     void* mNativeWindow = nullptr;
     uint64_t mConfigFlags = 0;
 };
