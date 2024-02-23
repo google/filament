@@ -576,7 +576,8 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         // calculate the per-primitive face winding order inversion
         const bool inverseFrontFaces = viewInverseFrontFaces ^ soaVisibility[i].reversedWindingOrder;
         const bool hasMorphing = soaVisibility[i].morphing;
-        const bool hasSkinningOrMorphing = soaVisibility[i].skinning || hasMorphing;
+        const bool hasSkinning = soaVisibility[i].skinning;
+        const bool hasSkinningOrMorphing = hasSkinning || hasMorphing;
 
         cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdColor.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
@@ -601,6 +602,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
                 Variant::isSSRVariant(variant) || (soaVisibility[i].receiveShadows & hasShadowing));
         renderableVariant.setSkinning(hasSkinningOrMorphing);
 
+        const FRenderableManager::SkinningBindingInfo& skinning = soaSkinning[i];
+        const FRenderableManager::MorphingBindingInfo& morphing = soaMorphing[i];
+
         if constexpr (isDepthPass) {
             cmdDepth.key = uint64_t(Pass::DEPTH);
             cmdDepth.key |= uint64_t(CustomCommand::PASS);
@@ -614,6 +618,11 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             cmdDepth.primitive.materialVariant.setSkinning(hasSkinningOrMorphing);
             cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
 
+            cmdDepth.primitive.skinningHandle = skinning.handle;
+            cmdDepth.primitive.skinningOffset = skinning.offset;
+            cmdDepth.primitive.skinningTexture = skinning.handleSampler;
+            cmdDepth.primitive.morphWeightBuffer = morphing.handle;
+
             if (UTILS_UNLIKELY(hasInstancedStereo)) {
                 cmdColor.primitive.instanceCount =
                         (soaInstanceInfo[i].count * instancedStereoEyeCount) |
@@ -622,15 +631,17 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         }
         if constexpr (isColorPass) {
             renderableVariant.setFog(soaVisibility[i].fog && Variant::isFogVariant(variant));
+
+            cmdColor.primitive.skinningHandle = skinning.handle;
+            cmdColor.primitive.skinningOffset = skinning.offset;
+            cmdColor.primitive.skinningTexture = skinning.handleSampler;
+            cmdColor.primitive.morphWeightBuffer = morphing.handle;
         }
 
         const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
         const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
 
         const Slice<FRenderPrimitive>& primitives = soaPrimitives[i];
-        const FRenderableManager::SkinningBindingInfo& skinning = soaSkinning[i];
-        const FRenderableManager::MorphingBindingInfo& morphing = soaMorphing[i];
-
         /*
          * This is our hot loop. It's written to avoid branches.
          * When modifying this code, always ensure it stays efficient.
@@ -641,15 +652,13 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             FMaterialInstance const* const mi = primitive.getMaterialInstance();
             FMaterial const* const ma = mi->getMaterial();
 
+            // TODO: we should disable the SKN variant if this primitive doesn't have either
+            //       skinning or morphing.
+
             if constexpr (isColorPass) {
                 cmdColor.primitive.primitive = &primitive;
                 RenderPass::setupColorCommand(cmdColor, renderableVariant, mi, inverseFrontFaces);
 
-                cmdColor.primitive.skinningHandle = skinning.handle;
-                cmdColor.primitive.skinningOffset = skinning.offset;
-                cmdColor.primitive.skinningTexture = skinning.handleSampler;
-
-                cmdColor.primitive.morphWeightBuffer = morphing.handle;
                 cmdColor.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
 
                 const bool blendPass = Pass(cmdColor.key & PASS_MASK) == Pass::BLENDED;
@@ -744,17 +753,14 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
                 const bool translucent = (blendingMode != BlendingMode::OPAQUE
                         && blendingMode != BlendingMode::MASKED);
 
+                // TODO: we should disable the SKN variant if this primitive doesn't have either
+                //       skinning or morphing.
+
                 cmdDepth.key |= mi->getSortingKey(); // already all set-up for direct or'ing
 
                 // unconditionally write the command
                 cmdDepth.primitive.primitive = &primitive;
                 cmdDepth.primitive.rasterState.culling = mi->getCullingMode();
-
-                cmdDepth.primitive.skinningHandle = skinning.handle;
-                cmdDepth.primitive.skinningOffset = skinning.offset;
-                cmdDepth.primitive.skinningTexture = skinning.handleSampler;
-
-                cmdDepth.primitive.morphWeightBuffer = morphing.handle;
                 cmdDepth.primitive.morphTargetBuffer = morphTargets.buffer->getHwHandle();
 
                 // FIXME: should writeDepthForShadowCasters take precedence over mi->getDepthWrite()?

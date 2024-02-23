@@ -63,7 +63,7 @@ struct HwVertexBufferInfo : public HwBase {
 
 struct HwVertexBuffer : public HwBase {
     uint32_t vertexCount{};               //   4
-    uint8_t bufferObjectsVersion{};       //   1
+    uint8_t bufferObjectsVersion{0xff};   //   1
     bool padding[3]{};                    //   2
     HwVertexBuffer() noexcept = default;
     explicit HwVertexBuffer(uint32_t vertextCount) noexcept
