@@ -29,6 +29,19 @@ constexpr auto kIndentAmount = "  ";
 constexpr auto kSpace = " ";
 constexpr auto kNewline = "\n";
 
+void dumpValue(
+        const PackFromGlsl& pack, const FunctionDefinition& function, ValueId valueId,
+        bool parenthesize, std::ostringstream& out);
+void dumpBlock(
+        const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
+        int depth, std::ostringstream& out);
+
+void indent(int depth, std::ostringstream& out) {
+    for (int i = 0; i < depth; ++i) {
+        out << kIndentAmount;
+    }
+}
+
 void dumpFunctionName(const PackFromGlsl& pack, const FunctionId& functionId,
         std::ostringstream& out) {
     auto name = pack.functionNames.at(functionId);
@@ -40,18 +53,23 @@ void dumpType(const PackFromGlsl& pack, TypeId typeId, std::ostringstream& out) 
     ASSERT_PRECONDITION(pack.types.find(typeId) != pack.types.end(),
             "Missing type definition");
     auto& type = pack.types.at(typeId);
-    if (!type.precision.empty()) {
-        out << type.precision << " ";
+    if (!type.qualifiers.empty()) {
+        out << type.qualifiers << " ";
     }
-    out << type.name;
+    std::visit([&](auto&& arg) {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, std::string>) {
+            out << arg;
+        } else if constexpr (std::is_same_v<T, StructId>) {
+            out << arg.id;
+        } else {
+            static_assert(always_false_v<T>, "unreachable");
+        }
+    }, type.name);
     for (const auto& arraySize : type.arraySizes) {
         out << "[" << arraySize << "]";
     }
 }
-
-void dumpValue(
-        const PackFromGlsl& pack, const FunctionDefinition& function, ValueId valueId,
-        bool parenthesize, std::ostringstream& out);
 
 void dumpBinaryRValueOperator(
         const PackFromGlsl& pack, const FunctionDefinition& function,
@@ -339,29 +357,27 @@ void dumpRValueFunctionCall(
 }
 
 void dumpRValueLiteral(const LiteralRValue& literal, std::ostringstream& out) {
-    if (auto* valueAsBool = std::get_if<bool>(&literal.value)) {
-        out << *valueAsBool;
-    } else if (auto* valueAsInt = std::get_if<int>(&literal.value)) {
-        out << *valueAsInt;
-    } else if (auto* valueAsDouble = std::get_if<double>(&literal.value)) {
-        out << *valueAsDouble;
-    } else if (auto* valueAsUnsignedInt = std::get_if<unsigned int>(&literal.value)) {
-        out << *valueAsUnsignedInt;
-    } else {
-        PANIC_PRECONDITION("Unreachable");
-    }
+    std::visit([&](auto&& value) {
+        out << value;
+    }, literal.value);
 }
 
-void dumpRValue(
-        const PackFromGlsl& pack, const FunctionDefinition& function, RValueId rValueId,
+template<typename T>
+void dumpValue(
+        const PackFromGlsl& pack, const FunctionDefinition& function, T valueId,
+        bool parenthesize, std::ostringstream& out);
+
+template<>
+void dumpValue<RValueId>(
+        const PackFromGlsl& pack, const FunctionDefinition& function, RValueId valueId,
         bool parenthesize, std::ostringstream& out) {
-    if (rValueId.id == 0) {
+    if (valueId.id == 0) {
         out << "INVALID_RVALUE";
         return;
     }
-    ASSERT_PRECONDITION(pack.rValues.find(rValueId) != pack.rValues.end(),
+    ASSERT_PRECONDITION(pack.rValues.find(valueId) != pack.rValues.end(),
             "Missing RValue");
-    auto& rValue = pack.rValues.at(rValueId);
+    auto& rValue = pack.rValues.at(valueId);
     if (auto* evaluable = std::get_if<EvaluableRValue>(&rValue)) {
         if (auto* op = std::get_if<RValueOperator>(&evaluable->op)) {
             dumpRValueOperator(pack, function, *op, evaluable->args, parenthesize, out);
@@ -377,48 +393,180 @@ void dumpRValue(
     }
 }
 
-void dumpGlobalSymbol(
-        const PackFromGlsl& pack, GlobalSymbolId globalSymbolId, std::ostringstream& out) {
-    if (globalSymbolId.id == 0) {
+template<>
+void dumpValue<GlobalSymbolId>(
+        const PackFromGlsl& pack, const FunctionDefinition& function, GlobalSymbolId valueId,
+        bool parenthesize, std::ostringstream& out) {
+    if (valueId.id == 0) {
         out << "INVALID_GLOBAL_SYMBOL";
         return;
     }
-    ASSERT_PRECONDITION(pack.globalSymbols.find(globalSymbolId) != pack.globalSymbols.end(),
+    ASSERT_PRECONDITION(pack.globalSymbols.find(valueId) != pack.globalSymbols.end(),
             "Missing global symbol");
 
-    auto globalSymbol = pack.globalSymbols.at(globalSymbolId);
+    auto globalSymbol = pack.globalSymbols.at(valueId);
     out << globalSymbol.name;
 }
 
-void dumpLocalSymbol(
-        const PackFromGlsl& pack, const FunctionDefinition& function, LocalSymbolId localSymbolId,
-        bool dumpType, std::ostringstream& out) {
-    if (localSymbolId.id == 0) {
+template<>
+void dumpValue<LocalSymbolId>(
+        const PackFromGlsl& pack, const FunctionDefinition& function, LocalSymbolId valueId,
+        bool parenthesize, std::ostringstream& out) {
+    if (valueId.id == 0) {
         out << "INVALID_LOCAL_SYMBOL";
         return;
     }
-    ASSERT_PRECONDITION(function.localSymbols.find(localSymbolId) != function.localSymbols.end(),
+    ASSERT_PRECONDITION(function.localSymbols.find(valueId) != function.localSymbols.end(),
             "Missing local symbol");
 
-    auto& localSymbol = function.localSymbols.at(localSymbolId);
-    if (dumpType) {
-        astrict::dumpType(pack, localSymbol.type, out);
-        out << " ";
-    }
+    auto& localSymbol = function.localSymbols.at(valueId);
     out << localSymbol.name;
 }
 
-void dumpValue(
-        const PackFromGlsl& pack, const FunctionDefinition& function, ValueId valueId,
-        bool parenthesize, std::ostringstream& out) {
-    if (auto* rValueId = std::get_if<RValueId>(&valueId)) {
-        dumpRValue(pack, function, *rValueId, parenthesize, out);
-    } else if (auto *globalSymbolId = std::get_if<GlobalSymbolId>(&valueId)) {
-        dumpGlobalSymbol(pack, *globalSymbolId, out);
-    } else if (auto *localSymbolId = std::get_if<LocalSymbolId>(&valueId)) {
-        dumpLocalSymbol(pack, function, *localSymbolId, /*dumpType=*/false, out);
+template<typename T>
+void dumpStatement(
+        const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
+        int depth, T statement,
+        std::ostringstream& out);
+
+template<>
+void dumpStatement<RValueId>(
+        const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
+        int depth, RValueId statement,
+        std::ostringstream& out) {
+    indent(depth, out);
+    dumpValue(pack, function, statement, /*parenthesize=*/false, out);
+    out << ";" << kNewline;
+}
+
+template<>
+void dumpStatement<const IfStatement&>(
+        const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
+        int depth, const IfStatement& statement,
+        std::ostringstream& out) {
+    indent(depth, out);
+    out << "if" << kSpace << "(";
+    dumpValue(pack, function, statement.condition, /*parenthesize=*/false, out);
+    out << ")" << kSpace << "{" << kNewline;
+    dumpBlock(pack, function, statement.thenBlock, depth + 1, out);
+    if (statement.elseBlock) {
+        indent(depth, out);
+        out << "}" << kSpace << "else" << kSpace << "{" << kNewline;
+        dumpBlock(pack, function, statement.elseBlock.value(), depth + 1, out);
+    }
+    indent(depth, out);
+    out << "}" << kNewline;
+}
+
+template<>
+void dumpStatement<const SwitchStatement&>(
+        const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
+        int depth, const SwitchStatement& statement,
+        std::ostringstream& out) {
+    indent(depth, out);
+    out << "switch" << kSpace << "(";
+    dumpValue(pack, function, statement.condition, /*parenthesize=*/false, out);
+    out << ")" << kSpace << "{" << kNewline;
+    dumpBlock(pack, function, statement.body, depth + 1, out);
+    indent(depth, out);
+    out << "}" << kNewline;
+}
+
+template<>
+void dumpStatement<const BranchStatement&>(
+        const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
+        int depth, const BranchStatement& statement,
+        std::ostringstream& out) {
+    switch (statement.op) {
+        case BranchOperator::Discard:
+            indent(depth, out);
+            out << "discard";
+            break;
+        case BranchOperator::TerminateInvocation:
+            indent(depth, out);
+            out << "terminateInvocation";
+            break;
+        case BranchOperator::Demote:
+            indent(depth, out);
+            out << "demote";
+            break;
+        case BranchOperator::TerminateRayEXT:
+            indent(depth, out);
+            out << "terminateRayEXT";
+            break;
+        case BranchOperator::IgnoreIntersectionEXT:
+            indent(depth, out);
+            out << "terminateIntersectionEXT";
+            break;
+        case BranchOperator::Return:
+            indent(depth, out);
+            out << "return";
+            break;
+        case BranchOperator::Break:
+            indent(depth, out);
+            out << "break";
+            break;
+        case BranchOperator::Continue:
+            indent(depth, out);
+            out << "continue";
+            break;
+        case BranchOperator::Case:
+            indent(depth - 1, out);
+            out << "case";
+            break;
+        case BranchOperator::Default:
+            indent(depth - 1, out);
+            out << "default";
+            break;
+    }
+    if (statement.operand) {
+        out << " ";
+        dumpValue(pack, function, statement.operand.value(),
+                /*parenthesize=*/false, out);
+    }
+    switch (statement.op) {
+        case BranchOperator::Case:
+        case BranchOperator::Default:
+            out << ":" << kNewline;
+            break;
+        default:
+            out << ";" << kNewline;
+            break;
+    }
+}
+
+template<>
+void dumpStatement<const LoopStatement&>(
+        const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
+        int depth, const LoopStatement& statement,
+        std::ostringstream& out) {
+    if (statement.testFirst) {
+        if (statement.terminal) {
+            indent(depth, out);
+            out << "for" << kSpace << "(;" << kSpace;
+            dumpValue(pack, function, statement.condition,
+                    /*parenthesize=*/false, out);
+            out << ";" << kSpace;
+            dumpValue(pack, function, statement.terminal.value(),
+                    /*parenthesize=*/false, out);
+        } else {
+            indent(depth, out);
+            out << "while" << kSpace << "(";
+            dumpValue(pack, function, statement.condition,
+                    /*parenthesize=*/false, out);
+        }
+        out << ")" << kSpace << "{" << kNewline;
+        dumpBlock(pack, function, statement.body, depth + 1, out);
+        indent(depth, out);
+        out << "}" << kNewline;
     } else {
-        PANIC_PRECONDITION("Unreachable");
+        indent(depth, out);
+        out << "do" << kSpace << "{" << kNewline;
+        dumpBlock(pack, function, statement.body, depth + 1, out);
+        indent(depth, out);
+        out << "}" << kSpace << "while" << kSpace << "(";
+        dumpValue(pack, function, statement.condition, /*parenthesize=*/false, out);
+        out << ");" << kNewline;
     }
 }
 
@@ -427,109 +575,8 @@ void dumpBlock(
         int depth, std::ostringstream& out) {
     ASSERT_PRECONDITION(pack.statementBlocks.find(blockId) != pack.statementBlocks.end(),
             "Missing block definition");
-    std::string indentMinusOne;
-    for (int i = 0; i < depth - 1; ++i) {
-        indentMinusOne += kIndentAmount;
-    }
-    std::string indent = indentMinusOne;
-    if (depth > 0) {
-        indent += kIndentAmount;
-    }
     for (auto statement : pack.statementBlocks.at(blockId)) {
-        if (auto* rValueId = std::get_if<RValueId>(&statement)) {
-            out << indent;
-            dumpRValue(pack, function, *rValueId, /*parenthesize=*/false, out);
-            out << ";" << kNewline;
-        } else if (auto* ifStatement = std::get_if<IfStatement>(&statement)) {
-            out << indent << "if" << kSpace << "(";
-            dumpValue(pack, function, ifStatement->condition, /*parenthesize=*/false, out);
-            out << ")" << kSpace << "{" << kNewline;
-            dumpBlock(pack, function, ifStatement->thenBlock, depth + 1, out);
-            if (ifStatement->elseBlock) {
-                out << indent << "}" << kSpace << "else" << kSpace << "{" << kNewline;
-                dumpBlock(pack, function, ifStatement->elseBlock.value(), depth + 1, out);
-            }
-            out << indent << "}" << kNewline;
-        } else if (auto* switchStatement = std::get_if<SwitchStatement>(&statement)) {
-            out << indent << "switch" << kSpace << "(";
-            dumpValue(pack, function, switchStatement->condition, /*parenthesize=*/false, out);
-            out << ")" << kSpace << "{" << kNewline;
-            dumpBlock(pack, function, switchStatement->body, depth + 1, out);
-            out << indent << "}" << kNewline;
-        } else if (auto* branchStatement = std::get_if<BranchStatement>(&statement)) {
-            switch (branchStatement->op) {
-                case BranchOperator::Discard:
-                    out << indent << "discard";
-                    break;
-                case BranchOperator::TerminateInvocation:
-                    out << indent << "terminateInvocation";
-                    break;
-                case BranchOperator::Demote:
-                    out << indent << "demote";
-                    break;
-                case BranchOperator::TerminateRayEXT:
-                    out << indent << "terminateRayEXT";
-                    break;
-                case BranchOperator::IgnoreIntersectionEXT:
-                    out << indent << "terminateIntersectionEXT";
-                    break;
-                case BranchOperator::Return:
-                    out << indent << "return";
-                    break;
-                case BranchOperator::Break:
-                    out << indent << "break";
-                    break;
-                case BranchOperator::Continue:
-                    out << indent << "continue";
-                    break;
-                case BranchOperator::Case:
-                    out << indentMinusOne << "case";
-                    break;
-                case BranchOperator::Default:
-                    out << indentMinusOne << "default";
-                    break;
-            }
-            if (branchStatement->operand) {
-                out << " ";
-                dumpValue(pack, function, branchStatement->operand.value(),
-                        /*parenthesize=*/false, out);
-            }
-            switch (branchStatement->op) {
-                case BranchOperator::Case:
-                case BranchOperator::Default:
-                    out << ":" << kNewline;
-                    break;
-                default:
-                    out << ";" << kNewline;
-                    break;
-            }
-        } else if (auto* loopStatement = std::get_if<LoopStatement>(&statement)) {
-            if (loopStatement->testFirst) {
-                if (loopStatement->terminal) {
-                    out << indent << "for" << kSpace << "(;" << kSpace;
-                    dumpValue(pack, function, loopStatement->condition,
-                            /*parenthesize=*/false, out);
-                    out << ";" << kSpace;
-                    dumpRValue(pack, function, loopStatement->terminal.value(),
-                            /*parenthesize=*/false, out);
-                } else {
-                    out << indent << "while" << kSpace << "(";
-                    dumpValue(pack, function, loopStatement->condition,
-                            /*parenthesize=*/false, out);
-                }
-                out << ")" << kSpace << "{" << kNewline;
-                dumpBlock(pack, function, loopStatement->body, depth + 1, out);
-                out << indent << "}" << kNewline;
-            } else {
-                out << indent << "do" << kSpace << "{" << kNewline;
-                dumpBlock(pack, function, loopStatement->body, depth + 1, out);
-                out << indent << "}" << kSpace << "while" << kSpace << "(";
-                dumpValue(pack, function, loopStatement->condition, /*parenthesize=*/false, out);
-                out << ");" << kNewline;
-            }
-        } else {
-            PANIC_PRECONDITION("Unreachable");
-        }
+        dumpStatement(pack, function, blockId, depth, statement, out);
     }
 }
 
@@ -555,8 +602,9 @@ void dumpFunction(
         } else {
             out << "," << kSpace;
         }
-        parameterSymbolIds.insert(parameter.name);
-        dumpLocalSymbol(pack, function, parameter.name, /*dumpType=*/true, out);
+        parameterSymbolIds.insert(parameter);
+        // TODO: dump type and value
+        // dumpValue(pack, function, parameter, /*dumpType=*/true, out);
     }
     out << ")";
     if (dumpBody) {

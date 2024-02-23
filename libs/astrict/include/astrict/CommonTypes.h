@@ -42,6 +42,10 @@ using LocalSymbolId = Id<struct LocalSymbolIdTag>;
 using RValueId = Id<struct RValueTag>;
 using FunctionId = Id<struct FunctionIdTag>;
 using StatementBlockId = Id<struct StatementBlockIdTag>;
+using StructId = Id<struct StructIdTag>;
+
+template<class>
+inline constexpr bool always_false_v = false;
 
 }  // namespace astrict
 
@@ -153,15 +157,14 @@ struct Struct {
     }
 };
 
-// TODO: qualifiers
 struct Type {
-    std::string name; // string_view sometimes deallocated
-    std::string_view precision;
+    std::variant<std::string, StructId> name; // string_view sometimes deallocated in glslang
+    std::string qualifiers;
     std::vector<std::size_t> arraySizes;
 
     bool operator==(const Type& o) const {
         return name == o.name
-                && precision == o.precision
+                && qualifiers == o.qualifiers
                 && arraySizes == o.arraySizes;
     }
 };
@@ -202,19 +205,10 @@ using RValue = std::variant<
     EvaluableRValue,
     LiteralRValue>;
 
-// TODO: annotation
-struct FunctionParameter {
-    LocalSymbolId name;
-
-    bool operator==(const FunctionParameter& o) const {
-        return name == o.name;
-    }
-};
-
 struct FunctionDefinition {
     FunctionId name;
     TypeId returnType;
-    std::vector<FunctionParameter> parameters;
+    std::vector<LocalSymbolId> parameters;
     StatementBlockId body;
     std::unordered_map<LocalSymbolId, Symbol> localSymbols;
 
@@ -315,7 +309,7 @@ template<>
 struct hash<astrict::Type> {
     std::size_t operator()(const astrict::Type& o) const {
         std::size_t result = 0;
-        astrict::hashCombine(result, o.name, o.precision, o.arraySizes.size());
+        astrict::hashCombine(result, o.name, o.qualifiers, o.arraySizes.size());
         for (const auto& size : o.arraySizes) {
             astrict::hashCombine(result, size);
         }
@@ -349,15 +343,6 @@ struct hash<astrict::LiteralRValue> {
     std::size_t operator()(const astrict::LiteralRValue& o) const {
         std::size_t result = 0;
         astrict::hashCombine(result, o.value);
-        return result;
-    }
-};
-
-template<>
-struct hash<astrict::FunctionParameter> {
-    std::size_t operator()(const astrict::FunctionParameter& o) const {
-        std::size_t result = 0;
-        astrict::hashCombine(result, o.name);
         return result;
     }
 };
