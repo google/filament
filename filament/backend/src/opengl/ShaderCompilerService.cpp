@@ -261,12 +261,11 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                 [this, &gl, program = std::move(program), token]() mutable {
                     // compile the shaders
                     std::array<GLuint, Program::SHADER_TYPE_COUNT> shaders{};
-                    std::array<utils::CString, Program::SHADER_TYPE_COUNT> shaderSourceCode;
                     compileShaders(gl,
                             std::move(program.getShadersSource()),
                             program.getSpecializationConstants(),
                             shaders,
-                            shaderSourceCode);
+                            token->shaderSourceCode);
 
                     // link the program
                     GLuint const glProgram = linkProgram(gl, shaders, token->attributes);
