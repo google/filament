@@ -1095,13 +1095,19 @@ private:
         if (auto nodeAsLoopNode = node->getAsLoopNode()) {
             auto conditionId = slurpValue(nodeAsLoopNode->getTest(), parent, localSymbols);
             std::optional<RValueId> terminalId;
-            if (nodeAsLoopNode->getTerminal()) {
-                auto terminalIdAsValueId = slurpValue(
-                        nodeAsLoopNode->getTerminal(), parent, localSymbols);
-                if (auto* terminalIdAsRValueId = std::get_if<RValueId>(&terminalIdAsValueId)) {
-                    terminalId = *terminalIdAsRValueId;
-                } else {
-                    // Ignore random stray symbols, since they don't do anything.
+            if (auto terminal = nodeAsLoopNode->getTerminal()) {
+                // Ignore random stray symbols and literals for the terminal since they don't do
+                // anything.
+                if (!terminal->getAsSymbolNode() && !terminal->getAsConstantUnion()) {
+                    auto terminalIdAsValueId = slurpValue(
+                            nodeAsLoopNode->getTerminal(), parent, localSymbols);
+                    if (auto* terminalIdAsRValueId = std::get_if<RValueId>(&terminalIdAsValueId)) {
+                        terminalId = *terminalIdAsRValueId;
+                    } else {
+                        PANIC_PRECONDITION("Encountered non-RValue in Loop terminal: %s, parent = %s",
+                                glslangNodeToStringWithLoc(terminal).c_str(),
+                                glslangNodeToStringWithLoc(node).c_str());
+                    }
                 }
             }
             bool testFirst = nodeAsLoopNode->testFirst();
@@ -1157,11 +1163,17 @@ private:
             }
         }
         if (auto nodeAsTyped = node->getAsTyped()) {
-            auto valueId = slurpValue(nodeAsTyped, parent, localSymbols);
-            if (auto* rValueId = std::get_if<RValueId>(&valueId)) {
-                output.push_back(*rValueId);
-            } else {
-                // Ignore random stray symbols, since they don't do anything.
+            // Ignore random stray symbols and literals as standalone statements since they don't do
+            // anything.
+            if (!node->getAsSymbolNode() && !node->getAsConstantUnion()) {
+                auto valueId = slurpValue(nodeAsTyped, parent, localSymbols);
+                if (auto* rValueId = std::get_if<RValueId>(&valueId)) {
+                    output.push_back(*rValueId);
+                } else {
+                    PANIC_PRECONDITION("Encountered non-RValue as statement: %s, parent = %s",
+                            glslangNodeToStringWithLoc(node).c_str(),
+                            glslangNodeToStringWithLoc(parent).c_str());
+                }
             }
             return;
         }
@@ -1174,13 +1186,17 @@ private:
             glslang::TOperator op,
             const glslang::TType& returnType, const glslang::TType* arg1Type) {
         auto opOrFunctionName = glslangOperatorToRValueOperator(op, mVersion, returnType, arg1Type);
-        if (auto* rValueOperator = std::get_if<RValueOperator>(&opOrFunctionName)) {
-            return *rValueOperator;
-        }
-        if (auto* functionName = std::get_if<std::string>(&opOrFunctionName)) {
-            return mFunctionNames.insert(std::move(*functionName));
-        }
-        PANIC_POSTCONDITION("Unreachable");
+        return std::visit([&](auto&& op) {
+            using T = std::decay_t<decltype(op)>;
+            if constexpr (std::is_same_v<T, std::string>) {
+                return std::variant<RValueOperator, FunctionId>(
+                        mFunctionNames.insert(std::move(op)));
+            } else if constexpr (std::is_same_v<T, RValueOperator>) {
+                return std::variant<RValueOperator, FunctionId>(op);
+            } else {
+                static_assert(always_false_v<T>, "unreachable");
+            }
+        }, opOrFunctionName);
     }
 
     ValueId slurpValueFromConstantUnion(
