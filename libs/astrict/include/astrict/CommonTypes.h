@@ -105,7 +105,6 @@ enum class RValueOperator : uint8_t {
     GreaterThan,
     LessThanEqual,
     GreaterThanEqual,
-    Comma,
     LogicalOr,
     LogicalXor,
     LogicalAnd,
@@ -126,6 +125,9 @@ enum class RValueOperator : uint8_t {
 
     // Ternary
     Ternary,
+
+    // Variadic
+    Comma,
 
     // Misc
     ConstructStruct,

@@ -1068,7 +1068,7 @@ private:
                 mTypes.insert(glslangTypeToType(node->getType()));
 
         LocalSymbols localSymbols;
-        std::vector<FunctionParameter> parameters;
+        std::vector<LocalSymbolId> parameters;
         for (const auto parameter : parametersNode->getSequence()) {
             auto parameterAsSymbol = parameter->getAsSymbolNode();
             ASSERT_PRECONDITION(parameterAsSymbol != nullptr,
@@ -1079,7 +1079,7 @@ private:
             auto typeId = mTypes.insert(glslangTypeToType(parameterAsSymbol->getType()));
             auto nameId = localSymbols.insert(
                     parameterAsSymbol->getId(), Symbol{parameterAsSymbol->getName(), typeId});
-            parameters.push_back(FunctionParameter{nameId});
+            parameters.push_back(nameId);
         }
 
         auto bodyId = slurpStatementBlock(sequence[1], node, localSymbols);

@@ -44,7 +44,6 @@ const char* rValueOperatorToString(RValueOperator op) {
         case RValueOperator::GreaterThan: return "GreaterThan";
         case RValueOperator::LessThanEqual: return "LessThanEqual";
         case RValueOperator::GreaterThanEqual: return "GreaterThanEqual";
-        case RValueOperator::Comma: return "Comma";
         case RValueOperator::LogicalOr: return "LogicalOr";
         case RValueOperator::LogicalXor: return "LogicalXor";
         case RValueOperator::LogicalAnd: return "LogicalAnd";
@@ -63,6 +62,7 @@ const char* rValueOperatorToString(RValueOperator op) {
         case RValueOperator::LeftShiftAssign: return "LeftShiftAssign";
         case RValueOperator::RightShiftAssign: return "RightShiftAssign";
         case RValueOperator::Ternary: return "Ternary";
+        case RValueOperator::Comma: return "Comma";
         case RValueOperator::ConstructStruct: return "ConstructStruct";
     }
 }
