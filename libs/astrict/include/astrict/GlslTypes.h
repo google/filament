@@ -28,14 +28,17 @@ struct PackFromGlsl {
     int version;
     std::unordered_map<StringId, std::string> strings;
     std::unordered_map<TypeId, Type> types;
-    std::unordered_map<GlobalSymbolId, Symbol> globalSymbols;
-    std::unordered_map<RValueId, RValue> rValues;
+    std::unordered_map<StructId, Struct> structs;
+    std::unordered_map<GlobalVariableId, Variable> globalVariables;
+    std::unordered_map<ExpressionId, Expression> expressions;
     std::unordered_map<FunctionId, std::string> functionNames;
     std::unordered_map<StatementBlockId, std::vector<Statement>> statementBlocks;
-    std::unordered_map<FunctionId, FunctionDefinition> functionDefinitions;
+    std::unordered_map<FunctionId, Function> functions;
+    // The below serve as the roots for conversion to glsl.
+    std::vector<StructId> structsInOrder;
     std::set<FunctionId> functionPrototypes;
-    std::vector<std::pair<GlobalSymbolId, ValueId>> globalSymbolDefinitionsInOrder;
-    std::vector<FunctionId> functionDefinitionsInOrder;
+    std::vector<std::pair<GlobalVariableId, VariableOrExpressionId>> globalSymbolsInOrder;
+    std::vector<FunctionId> functionsInOrder;
 };
 
 };

@@ -21,7 +21,7 @@
 
 namespace astrict {
 
-const char* rValueOperatorToString(RValueOperator op);
+const char* rValueOperatorToString(ExpressionOperator op);
 
 } // namespace astrict
 

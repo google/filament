@@ -30,32 +30,32 @@ constexpr auto kSpace = " ";
 constexpr auto kNewline = "\n";
 
 template<typename T>
-void dumpValue(
-        const PackFromGlsl& pack, const FunctionDefinition& function,
+void dumpVariableOrExpression(
+        const PackFromGlsl& pack, const Function& function,
         T valueId, bool parenthesize, std::ostringstream& out);
-void dumpAnyValue(
-        const PackFromGlsl& pack, const FunctionDefinition& function,
-        ValueId valueId, bool parenthesize, std::ostringstream& out);
+void dumpAnyVariableOrExpression(
+        const PackFromGlsl& pack, const Function& function,
+        VariableOrExpressionId valueId, bool parenthesize, std::ostringstream& out);
 
 template<typename T>
-void dumpRValue(
-        const PackFromGlsl& pack, const FunctionDefinition& function,
+void dumpExpression(
+        const PackFromGlsl& pack, const Function& function,
         const T& value, bool parenthesize, std::ostringstream& out);
 
 template<typename T>
-void dumpEvaluableRValue(
-        const PackFromGlsl& pack, const FunctionDefinition& function,
-        const T& op, const std::vector<ValueId>& args,
+void dumpEvaluableExpression(
+        const PackFromGlsl& pack, const Function& function,
+        const T& op, const std::vector<VariableOrExpressionId>& args,
         bool parenthesize, std::ostringstream& out);
 
 template<typename T>
 void dumpStatement(
-        const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
+        const PackFromGlsl& pack, const Function& function, StatementBlockId blockId,
         const T& statement, int depth,
         std::ostringstream& out);
 
 void dumpBlock(
-        const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
+        const PackFromGlsl& pack, const Function& function, StatementBlockId blockId,
         int depth, std::ostringstream& out);
 
 void indent(int depth, std::ostringstream& out) {
@@ -101,273 +101,273 @@ void dumpType(const PackFromGlsl& pack, TypeId typeId, std::ostringstream& out) 
     }
 }
 
-void dumpBinaryRValueOperator(
-        const PackFromGlsl& pack, const FunctionDefinition& function,
-        RValueOperator op, const std::vector<ValueId>& args,
+void dumpBinaryExpressionOperator(
+        const PackFromGlsl& pack, const Function& function,
+        ExpressionOperator op, const std::vector<VariableOrExpressionId>& args,
         const char* opString,
         std::ostringstream& out) {
     ASSERT_PRECONDITION(args.size() == 2,
             "%s must be a binary operator", rValueOperatorToString(op));
-    dumpAnyValue(pack, function, args[0], /*parenthesize=*/true, out);
+    dumpAnyVariableOrExpression(pack, function, args[0], /*parenthesize=*/true, out);
     out << kSpace << opString << kSpace;
-    dumpAnyValue(pack, function, args[1], /*parenthesize=*/true, out);
+    dumpAnyVariableOrExpression(pack, function, args[1], /*parenthesize=*/true, out);
 }
 
 template<>
-void dumpEvaluableRValue<RValueOperator>(
-        const PackFromGlsl& pack, const FunctionDefinition& function,
-        const RValueOperator& op, const std::vector<ValueId>& args,
+void dumpEvaluableExpression<ExpressionOperator>(
+        const PackFromGlsl& pack, const Function& function,
+        const ExpressionOperator& op, const std::vector<VariableOrExpressionId>& args,
         bool parenthesize, std::ostringstream& out) {
     const char* lParen = parenthesize ? "(" : "";
     const char* rParen = parenthesize ? ")" : "";
     switch (op) {
         // Unary
-        case RValueOperator::Negative:
+        case ExpressionOperator::Negative:
             ASSERT_PRECONDITION(args.size() == 1,
                     "Negative must be a unary operator");
             out << "-";
-            dumpAnyValue(pack, function, args[0], /*parenthesize=*/true, out);
+            dumpAnyVariableOrExpression(pack, function, args[0], /*parenthesize=*/true, out);
             break;
-        case RValueOperator::LogicalNot:
+        case ExpressionOperator::LogicalNot:
             ASSERT_PRECONDITION(args.size() == 1,
                     "LogicalNot must be a unary operator");
             out << "!";
-            dumpAnyValue(pack, function, args[0], /*parenthesize=*/true, out);
+            dumpAnyVariableOrExpression(pack, function, args[0], /*parenthesize=*/true, out);
             break;
-        case RValueOperator::BitwiseNot:
+        case ExpressionOperator::BitwiseNot:
             ASSERT_PRECONDITION(args.size() == 1,
                     "BitwiseNot must be a unary operator");
             out << "~";
-            dumpAnyValue(pack, function, args[0], /*parenthesize=*/true, out);
+            dumpAnyVariableOrExpression(pack, function, args[0], /*parenthesize=*/true, out);
             break;
-        case RValueOperator::PostIncrement:
+        case ExpressionOperator::PostIncrement:
             ASSERT_PRECONDITION(args.size() == 1,
                     "PostIncrement must be a unary operator");
-            dumpAnyValue(pack, function, args[0], /*parenthesize=*/true, out);
+            dumpAnyVariableOrExpression(pack, function, args[0], /*parenthesize=*/true, out);
             out << "++";
             break;
-        case RValueOperator::PostDecrement:
+        case ExpressionOperator::PostDecrement:
             ASSERT_PRECONDITION(args.size() == 1,
                     "PostDecrement must be a unary operator");
-            dumpAnyValue(pack, function, args[0], /*parenthesize=*/true, out);
+            dumpAnyVariableOrExpression(pack, function, args[0], /*parenthesize=*/true, out);
             out << "--";
             break;
-        case RValueOperator::PreIncrement:
+        case ExpressionOperator::PreIncrement:
             ASSERT_PRECONDITION(args.size() == 1,
                     "PreIncrement must be a unary operator");
             out << "++";
-            dumpAnyValue(pack, function, args[0], /*parenthesize=*/true, out);
+            dumpAnyVariableOrExpression(pack, function, args[0], /*parenthesize=*/true, out);
             break;
-        case RValueOperator::PreDecrement:
+        case ExpressionOperator::PreDecrement:
             ASSERT_PRECONDITION(args.size() == 1,
                     "PreDecrement must be a unary operator");
             out << "--";
-            dumpAnyValue(pack, function, args[0], /*parenthesize=*/true, out);
+            dumpAnyVariableOrExpression(pack, function, args[0], /*parenthesize=*/true, out);
             break;
-        case RValueOperator::ArrayLength:
+        case ExpressionOperator::ArrayLength:
             ASSERT_PRECONDITION(args.size() == 1,
                     "ArrayLength must be a unary operator");
-            dumpAnyValue(pack, function, args[0], /*parenthesize=*/true, out);
+            dumpAnyVariableOrExpression(pack, function, args[0], /*parenthesize=*/true, out);
             out << ".length";
             break;
 
             // Binary
-        case RValueOperator::Add:
+        case ExpressionOperator::Add:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "+", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "+", out);
             out << rParen;
             break;
-        case RValueOperator::Sub:
+        case ExpressionOperator::Sub:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "-", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "-", out);
             out << rParen;
             break;
-        case RValueOperator::Mul:
+        case ExpressionOperator::Mul:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "*", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "*", out);
             out << rParen;
             break;
-        case RValueOperator::Div:
+        case ExpressionOperator::Div:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "/", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "/", out);
             out << rParen;
             break;
-        case RValueOperator::Mod:
+        case ExpressionOperator::Mod:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "%", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "%", out);
             out << rParen;
             break;
-        case RValueOperator::RightShift:
+        case ExpressionOperator::RightShift:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, ">>", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, ">>", out);
             out << rParen;
             break;
-        case RValueOperator::LeftShift:
+        case ExpressionOperator::LeftShift:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "<<", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "<<", out);
             out << rParen;
             break;
-        case RValueOperator::And:
+        case ExpressionOperator::And:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "&", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "&", out);
             out << rParen;
             break;
-        case RValueOperator::InclusiveOr:
+        case ExpressionOperator::InclusiveOr:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "|", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "|", out);
             out << rParen;
             break;
-        case RValueOperator::ExclusiveOr:
+        case ExpressionOperator::ExclusiveOr:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "^", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "^", out);
             out << rParen;
             break;
-        case RValueOperator::Equal:
+        case ExpressionOperator::Equal:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "==", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "==", out);
             out << rParen;
             break;
-        case RValueOperator::NotEqual:
+        case ExpressionOperator::NotEqual:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "!=", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "!=", out);
             out << rParen;
             break;
-        case RValueOperator::LessThan:
+        case ExpressionOperator::LessThan:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "<", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "<", out);
             out << rParen;
             break;
-        case RValueOperator::GreaterThan:
+        case ExpressionOperator::GreaterThan:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, ">", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, ">", out);
             out << rParen;
             break;
-        case RValueOperator::LessThanEqual:
+        case ExpressionOperator::LessThanEqual:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "<=", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "<=", out);
             out << rParen;
             break;
-        case RValueOperator::GreaterThanEqual:
+        case ExpressionOperator::GreaterThanEqual:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, ">=", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, ">=", out);
             out << rParen;
             break;
-        case RValueOperator::LogicalOr:
+        case ExpressionOperator::LogicalOr:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "||", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "||", out);
             out << rParen;
             break;
-        case RValueOperator::LogicalXor:
+        case ExpressionOperator::LogicalXor:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "^^", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "^^", out);
             out << rParen;
             break;
-        case RValueOperator::LogicalAnd:
+        case ExpressionOperator::LogicalAnd:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "&&", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "&&", out);
             out << rParen;
             break;
-        case RValueOperator::Index:
+        case ExpressionOperator::Index:
             ASSERT_PRECONDITION(args.size() == 2,
                     "%s must be a binary operator", rValueOperatorToString(op));
-            dumpAnyValue(pack, function, args[0], /*parenthesize=*/true, out);
+            dumpAnyVariableOrExpression(pack, function, args[0], /*parenthesize=*/true, out);
             out << "[";
-            dumpAnyValue(pack, function, args[1], /*parenthesize=*/true, out);
+            dumpAnyVariableOrExpression(pack, function, args[1], /*parenthesize=*/true, out);
             out << "]";
             break;
-            // case RValueOperator::IndexStruct:
+            // case ExpressionOperator::IndexStruct:
             //     break;
-            // case RValueOperator::VectorSwizzle:
+            // case ExpressionOperator::VectorSwizzle:
             //     break;
-        case RValueOperator::Assign:
+        case ExpressionOperator::Assign:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "=", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "=", out);
             out << rParen;
             break;
-        case RValueOperator::AddAssign:
+        case ExpressionOperator::AddAssign:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "+=", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "+=", out);
             out << rParen;
             break;
-        case RValueOperator::SubAssign:
+        case ExpressionOperator::SubAssign:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "-=", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "-=", out);
             out << rParen;
             break;
-        case RValueOperator::MulAssign:
+        case ExpressionOperator::MulAssign:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "*=", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "*=", out);
             out << rParen;
             break;
-        case RValueOperator::DivAssign:
+        case ExpressionOperator::DivAssign:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "/=", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "/=", out);
             out << rParen;
             break;
-        case RValueOperator::ModAssign:
+        case ExpressionOperator::ModAssign:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "%=", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "%=", out);
             out << rParen;
             break;
-        case RValueOperator::AndAssign:
+        case ExpressionOperator::AndAssign:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "&=", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "&=", out);
             out << rParen;
             break;
-        case RValueOperator::InclusiveOrAssign:
+        case ExpressionOperator::InclusiveOrAssign:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "|=", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "|=", out);
             out << rParen;
             break;
-        case RValueOperator::ExclusiveOrAssign:
+        case ExpressionOperator::ExclusiveOrAssign:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "^=", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "^=", out);
             out << rParen;
             break;
-        case RValueOperator::LeftShiftAssign:
+        case ExpressionOperator::LeftShiftAssign:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, "<<=", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, "<<=", out);
             out << rParen;
             break;
-        case RValueOperator::RightShiftAssign:
+        case ExpressionOperator::RightShiftAssign:
             out << lParen;
-            dumpBinaryRValueOperator(pack, function, op, args, ">>=", out);
+            dumpBinaryExpressionOperator(pack, function, op, args, ">>=", out);
             out << rParen;
             break;
 
             // Ternary
-        case RValueOperator::Ternary:
+        case ExpressionOperator::Ternary:
             ASSERT_PRECONDITION(args.size() == 3,
                     "Ternary must be a ternary operator");
             out << lParen << "(";
-            dumpAnyValue(pack, function, args[0], /*parenthesize=*/true, out);
+            dumpAnyVariableOrExpression(pack, function, args[0], /*parenthesize=*/true, out);
             out << ")" << kSpace << "?" << kSpace << "(";
-            dumpAnyValue(pack, function, args[1], /*parenthesize=*/true, out);
+            dumpAnyVariableOrExpression(pack, function, args[1], /*parenthesize=*/true, out);
             out << ")" << kSpace << ":" << kSpace << "(";
-            dumpAnyValue(pack, function, args[2], /*parenthesize=*/true, out);
+            dumpAnyVariableOrExpression(pack, function, args[2], /*parenthesize=*/true, out);
             out << ")" << rParen;
             break;
 
             // Variadic
-        case RValueOperator::Comma:
+        case ExpressionOperator::Comma:
             ASSERT_PRECONDITION(args.size() >= 2,
                     "Comma operator must have at least two arguments");
             out << lParen;
-            dumpAnyValue(pack, function, args[0], /*parenthesize=*/false, out);
+            dumpAnyVariableOrExpression(pack, function, args[0], /*parenthesize=*/false, out);
             for (int i = 1; i < args.size(); i++) {
                 out << "," << kSpace;
-                dumpAnyValue(pack, function, args[i], /*parenthesize=*/false, out);
+                dumpAnyVariableOrExpression(pack, function, args[i], /*parenthesize=*/false, out);
             }
             out << rParen;
             break;
 
             // Misc
-        case RValueOperator::ConstructStruct:
+        case ExpressionOperator::ConstructStruct:
         default:
             out << "(" << rValueOperatorToString(op);
             for (auto& arg : args) {
                 out << kSpace;
-                dumpAnyValue(pack, function, arg, /*parenthesize=*/true, out);
+                dumpAnyVariableOrExpression(pack, function, arg, /*parenthesize=*/true, out);
             }
             out << ")";
             break;
@@ -375,11 +375,11 @@ void dumpEvaluableRValue<RValueOperator>(
 }
 
 template <>
-void dumpEvaluableRValue<FunctionId>(
-        const PackFromGlsl& pack, const FunctionDefinition& function,
-        const FunctionId& functionId, const std::vector<ValueId>& args,
+void dumpEvaluableExpression<FunctionId>(
+        const PackFromGlsl& pack, const Function& function,
+        const FunctionId& op, const std::vector<VariableOrExpressionId>& args,
         bool parenthesize, std::ostringstream& out) {
-    dumpFunctionName(pack, functionId, out);
+    dumpFunctionName(pack, op, out);
     out << "(";
     bool firstArg = true;
     for (auto& arg : args) {
@@ -388,25 +388,33 @@ void dumpEvaluableRValue<FunctionId>(
         } else {
             out << "," << kSpace;
         }
-        dumpAnyValue(pack, function, arg, /*parenthesize=*/false, out);
+        dumpAnyVariableOrExpression(pack, function, arg, /*parenthesize=*/false, out);
     }
     out << ")";
 }
 
+template <>
+void dumpEvaluableExpression<StructId>(
+        const PackFromGlsl& pack, const Function& function,
+        const StructId& op, const std::vector<VariableOrExpressionId>& args,
+        bool parenthesize, std::ostringstream& out) {
+    // TODO
+}
+
 template<>
-void dumpRValue<EvaluableRValue>(
-        const PackFromGlsl& pack, const FunctionDefinition& function,
-        const EvaluableRValue& value, bool parenthesize,
+void dumpExpression<EvaluableExpression>(
+        const PackFromGlsl& pack, const Function& function,
+        const EvaluableExpression& value, bool parenthesize,
         std::ostringstream& out) {
     std::visit([&](auto&& op) {
-        dumpEvaluableRValue(pack, function, op, value.args, parenthesize, out);
+        dumpEvaluableExpression(pack, function, op, value.args, parenthesize, out);
     }, value.op);
 }
 
 template<>
-void dumpRValue<LiteralRValue>(
-        const PackFromGlsl& pack, const FunctionDefinition& function,
-        const LiteralRValue& value, bool parenthesize,
+void dumpExpression<LiteralExpression>(
+        const PackFromGlsl& pack, const Function& function,
+        const LiteralExpression& value, bool parenthesize,
         std::ostringstream& out) {
     std::visit([&](auto&& value) {
         out << value;
@@ -414,68 +422,68 @@ void dumpRValue<LiteralRValue>(
 }
 
 template<>
-void dumpValue<RValueId>(
-        const PackFromGlsl& pack, const FunctionDefinition& function, RValueId valueId,
+void dumpVariableOrExpression<ExpressionId>(
+        const PackFromGlsl& pack, const Function& function, ExpressionId valueId,
         bool parenthesize, std::ostringstream& out) {
     if (valueId.id == 0) {
-        out << "INVALID_RVALUE";
+        out << "INVALID_EXPRESSION";
         return;
     }
-    ASSERT_PRECONDITION(pack.rValues.find(valueId) != pack.rValues.end(),
-            "Missing RValue");
+    ASSERT_PRECONDITION(pack.expressions.find(valueId) != pack.expressions.end(),
+            "Missing Expression");
     std::visit([&](auto&& value) {
-        dumpRValue(pack, function, value, parenthesize, out);
-    }, pack.rValues.at(valueId));
+        dumpExpression(pack, function, value, parenthesize, out);
+    }, pack.expressions.at(valueId));
 }
 
 template<>
-void dumpValue<GlobalSymbolId>(
-        const PackFromGlsl& pack, const FunctionDefinition& function, GlobalSymbolId valueId,
+void dumpVariableOrExpression<GlobalVariableId>(
+        const PackFromGlsl& pack, const Function& function, GlobalVariableId valueId,
         bool parenthesize, std::ostringstream& out) {
     if (valueId.id == 0) {
         out << "INVALID_GLOBAL_SYMBOL";
         return;
     }
-    ASSERT_PRECONDITION(pack.globalSymbols.find(valueId) != pack.globalSymbols.end(),
+    ASSERT_PRECONDITION(pack.globalVariables.find(valueId) != pack.globalVariables.end(),
             "Missing global symbol");
 
-    auto globalSymbol = pack.globalSymbols.at(valueId);
+    auto globalSymbol = pack.globalVariables.at(valueId);
     dumpString(pack, globalSymbol.name, out);
 }
 
 template<>
-void dumpValue<LocalSymbolId>(
-        const PackFromGlsl& pack, const FunctionDefinition& function, LocalSymbolId valueId,
+void dumpVariableOrExpression<LocalVariableId>(
+        const PackFromGlsl& pack, const Function& function, LocalVariableId valueId,
         bool parenthesize, std::ostringstream& out) {
     if (valueId.id == 0) {
         out << "INVALID_LOCAL_SYMBOL";
         return;
     }
-    ASSERT_PRECONDITION(function.localSymbols.find(valueId) != function.localSymbols.end(),
+    ASSERT_PRECONDITION(function.localVariables.find(valueId) != function.localVariables.end(),
             "Missing local symbol");
 
-    auto& localSymbol = function.localSymbols.at(valueId);
+    auto& localSymbol = function.localVariables.at(valueId);
     dumpString(pack, localSymbol.name, out);
 }
 
 template<>
-void dumpStatement<RValueId>(
-        const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
-        const RValueId& statement, int depth,
+void dumpStatement<ExpressionId>(
+        const PackFromGlsl& pack, const Function& function, StatementBlockId blockId,
+        const ExpressionId& statement, int depth,
         std::ostringstream& out) {
     indent(depth, out);
-    dumpAnyValue(pack, function, statement, /*parenthesize=*/false, out);
+    dumpAnyVariableOrExpression(pack, function, statement, /*parenthesize=*/false, out);
     out << ";" << kNewline;
 }
 
 template<>
 void dumpStatement<IfStatement>(
-        const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
+        const PackFromGlsl& pack, const Function& function, StatementBlockId blockId,
         const IfStatement& statement, int depth,
         std::ostringstream& out) {
     indent(depth, out);
     out << "if" << kSpace << "(";
-    dumpAnyValue(pack, function, statement.condition, /*parenthesize=*/false, out);
+    dumpAnyVariableOrExpression(pack, function, statement.condition, /*parenthesize=*/false, out);
     out << ")" << kSpace << "{" << kNewline;
     dumpBlock(pack, function, statement.thenBlock, depth + 1, out);
     if (statement.elseBlock) {
@@ -489,12 +497,12 @@ void dumpStatement<IfStatement>(
 
 template<>
 void dumpStatement<SwitchStatement>(
-        const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
+        const PackFromGlsl& pack, const Function& function, StatementBlockId blockId,
         const SwitchStatement& statement, int depth,
         std::ostringstream& out) {
     indent(depth, out);
     out << "switch" << kSpace << "(";
-    dumpAnyValue(pack, function, statement.condition, /*parenthesize=*/false, out);
+    dumpAnyVariableOrExpression(pack, function, statement.condition, /*parenthesize=*/false, out);
     out << ")" << kSpace << "{" << kNewline;
     dumpBlock(pack, function, statement.body, depth + 1, out);
     indent(depth, out);
@@ -503,7 +511,7 @@ void dumpStatement<SwitchStatement>(
 
 template<>
 void dumpStatement<BranchStatement>(
-        const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
+        const PackFromGlsl& pack, const Function& function, StatementBlockId blockId,
         const BranchStatement& statement, int depth,
         std::ostringstream& out) {
     switch (statement.op) {
@@ -550,7 +558,7 @@ void dumpStatement<BranchStatement>(
     }
     if (statement.operand) {
         out << " ";
-        dumpAnyValue(pack, function, statement.operand.value(),
+        dumpAnyVariableOrExpression(pack, function, statement.operand.value(),
                 /*parenthesize=*/false, out);
     }
     switch (statement.op) {
@@ -566,22 +574,22 @@ void dumpStatement<BranchStatement>(
 
 template<>
 void dumpStatement<LoopStatement>(
-        const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
+        const PackFromGlsl& pack, const Function& function, StatementBlockId blockId,
         const LoopStatement& statement, int depth,
         std::ostringstream& out) {
     if (statement.testFirst) {
         if (statement.terminal) {
             indent(depth, out);
             out << "for" << kSpace << "(;" << kSpace;
-            dumpAnyValue(pack, function, statement.condition,
+            dumpAnyVariableOrExpression(pack, function, statement.condition,
                     /*parenthesize=*/false, out);
             out << ";" << kSpace;
-            dumpAnyValue(pack, function, statement.terminal.value(),
+            dumpAnyVariableOrExpression(pack, function, statement.terminal.value(),
                     /*parenthesize=*/false, out);
         } else {
             indent(depth, out);
             out << "while" << kSpace << "(";
-            dumpAnyValue(pack, function, statement.condition,
+            dumpAnyVariableOrExpression(pack, function, statement.condition,
                     /*parenthesize=*/false, out);
         }
         out << ")" << kSpace << "{" << kNewline;
@@ -594,21 +602,21 @@ void dumpStatement<LoopStatement>(
         dumpBlock(pack, function, statement.body, depth + 1, out);
         indent(depth, out);
         out << "}" << kSpace << "while" << kSpace << "(";
-        dumpAnyValue(pack, function, statement.condition, /*parenthesize=*/false, out);
+        dumpAnyVariableOrExpression(pack, function, statement.condition, /*parenthesize=*/false, out);
         out << ");" << kNewline;
     }
 }
 
-void dumpAnyValue(
-        const PackFromGlsl& pack, const FunctionDefinition& function, ValueId valueId,
+void dumpAnyVariableOrExpression(
+        const PackFromGlsl& pack, const Function& function, VariableOrExpressionId valueId,
         bool parenthesize, std::ostringstream& out) {
     std::visit([&](auto&& variantValueId){
-        dumpValue(pack, function, variantValueId, parenthesize, out);
+        dumpVariableOrExpression(pack, function, variantValueId, parenthesize, out);
     }, valueId);
 }
 
 void dumpBlock(
-        const PackFromGlsl& pack, const FunctionDefinition& function, StatementBlockId blockId,
+        const PackFromGlsl& pack, const Function& function, StatementBlockId blockId,
         int depth, std::ostringstream& out) {
     ASSERT_PRECONDITION(pack.statementBlocks.find(blockId) != pack.statementBlocks.end(),
             "Missing block definition");
@@ -620,7 +628,7 @@ void dumpBlock(
 }
 
 void dumpSymbolDefinition(
-        const PackFromGlsl& pack, const Symbol& symbol,
+        const PackFromGlsl& pack, const Variable& symbol,
         std::ostringstream& out) {
     ASSERT_PRECONDITION(symbol.type.has_value(),
             "Symbol definition must have type");
@@ -632,18 +640,18 @@ void dumpSymbolDefinition(
 void dumpFunction(
         const PackFromGlsl& pack, const FunctionId& functionId, bool dumpBody,
         std::ostringstream& out) {
-    if (!dumpBody && pack.functionDefinitions.find(functionId) == pack.functionDefinitions.end()) {
+    if (!dumpBody && pack.functions.find(functionId) == pack.functions.end()) {
         // TODO: prune function prototypes with no actual definition.
         return;
     }
-    ASSERT_PRECONDITION(pack.functionDefinitions.find(functionId) != pack.functionDefinitions.end(),
+    ASSERT_PRECONDITION(pack.functions.find(functionId) != pack.functions.end(),
             "Missing function definition");
-    auto& function = pack.functionDefinitions.at(functionId);
+    auto& function = pack.functions.at(functionId);
     dumpType(pack, function.returnType, out);
     out << " ";
     dumpFunctionName(pack, function.name, out);
     out << "(";
-    std::unordered_set<LocalSymbolId> parameterSymbolIds;
+    std::unordered_set<LocalVariableId> parameterSymbolIds;
     bool firstParameter = true;
     for (const auto& parameterId : function.parameters) {
         if (firstParameter) {
@@ -652,13 +660,13 @@ void dumpFunction(
             out << "," << kSpace;
         }
         parameterSymbolIds.insert(parameterId);
-        const auto& parameter = function.localSymbols.at(parameterId);
+        const auto& parameter = function.localVariables.at(parameterId);
         dumpSymbolDefinition(pack, parameter, out);
     }
     out << ")";
     if (dumpBody) {
         out << kSpace << "{" << kNewline;
-        for (const auto& localSymbol : function.localSymbols) {
+        for (const auto& localSymbol : function.localVariables) {
             if (parameterSymbolIds.find(localSymbol.first) == parameterSymbolIds.end()) {
                 out << kIndentAmount;
                 dumpSymbolDefinition(pack, localSymbol.second, out);
@@ -672,33 +680,54 @@ void dumpFunction(
     }
 }
 
+void dumpStruct(const PackFromGlsl& pack, StructId structId, std::ostringstream& out) {
+    ASSERT_PRECONDITION(pack.structs.find(structId) != pack.structs.end(),
+            "Missing struct definition");
+    auto& strukt = pack.structs.at(structId);
+    out << "struct ";
+    dumpString(pack, strukt.name, out);
+    out << kSpace << "{" << kNewline;
+    for (const auto& member : strukt.members) {
+        indent(1, out);
+        dumpType(pack, member.type, out);
+        out << " "; // non-optional
+        dumpString(pack, member.name, out);
+        out << ";" << kNewline;
+    }
+    out << "};" << kNewline;
+}
+
 void toGlsl(const PackFromGlsl& pack, std::ostringstream& out) {
-    const FunctionDefinition emptyFunction{};
-    std::unordered_set<GlobalSymbolId> globalSymbolIdsWithValues;
-    for (auto globalSymbolPair : pack.globalSymbolDefinitionsInOrder) {
+    const Function emptyFunction{};
+    for (auto structId : pack.structsInOrder) {
+        dumpStruct(pack, structId, out);
+    }
+    std::unordered_set<GlobalVariableId> globalSymbolIdsWithValues;
+    for (auto globalSymbolPair : pack.globalSymbolsInOrder) {
         globalSymbolIdsWithValues.insert(globalSymbolPair.first);
     }
-    for (auto globalSymbolPair : pack.globalSymbols) {
+    for (auto globalSymbolPair : pack.globalVariables) {
         if (globalSymbolIdsWithValues.find(globalSymbolPair.first)
                 == globalSymbolIdsWithValues.end()) {
-            const auto& globalSymbol = pack.globalSymbols.at(globalSymbolPair.first);
+            const auto& globalSymbol = pack.globalVariables.at(globalSymbolPair.first);
             if (globalSymbol.type) {
                 dumpSymbolDefinition(pack, globalSymbol, out);
                 out << ";" << kNewline;
             }
         }
     }
-    for (auto globalSymbolPair : pack.globalSymbolDefinitionsInOrder) {
-        const auto& globalSymbol = pack.globalSymbols.at(globalSymbolPair.first);
+    for (auto globalSymbolPair : pack.globalSymbolsInOrder) {
+        const auto& globalSymbol = pack.globalVariables.at(globalSymbolPair.first);
         dumpSymbolDefinition(pack, globalSymbol, out);
         out << kSpace << "=" << kSpace;
-        dumpAnyValue(pack, emptyFunction, globalSymbolPair.second, /*parenthesize=*/false, out);
+        dumpAnyVariableOrExpression(pack, emptyFunction, globalSymbolPair.second,
+                /*parenthesize=*/false, out);
         out << ";" << kNewline;
     }
     for (auto functionId : pack.functionPrototypes) {
         dumpFunction(pack, functionId, /*dumpBody=*/false, out);
     }
-    for (auto functionId : pack.functionDefinitionsInOrder) {
+    for (auto functionId : pack.functionsInOrder) {
         dumpFunction(pack, functionId, /*dumpBody=*/true, out);
     }
 }

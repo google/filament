@@ -37,9 +37,9 @@ struct Id {
 
 using StringId = Id<struct StringIdTag>;
 using TypeId = Id<struct TypeIdTag>;
-using GlobalSymbolId = Id<struct GlobalSymbolIdTag>;
-using LocalSymbolId = Id<struct LocalSymbolIdTag>;
-using RValueId = Id<struct RValueTag>;
+using GlobalVariableId = Id<struct GlobalVariableIdTag>;
+using LocalVariableId = Id<struct LocalVariableIdTag>;
+using ExpressionId = Id<struct ExpressionIdTag>;
 using FunctionId = Id<struct FunctionIdTag>;
 using StatementBlockId = Id<struct StatementBlockIdTag>;
 using StructId = Id<struct StructIdTag>;
@@ -77,7 +77,7 @@ enum class BranchOperator : uint8_t {
 
 // Represents an operation whose syntax differs from a function call. For example, addition,
 // equality.
-enum class RValueOperator : uint8_t {
+enum class ExpressionOperator : uint8_t {
     // Unary
     Negative,
     LogicalNot,
@@ -137,7 +137,7 @@ enum class RValueOperator : uint8_t {
 // template<typename T>
 // using StatusOr = std::variant<T, int>;
 
-using ValueId = std::variant<GlobalSymbolId, LocalSymbolId, RValueId>;
+using VariableOrExpressionId = std::variant<GlobalVariableId, LocalVariableId, ExpressionId>;
 
 struct StructMember {
     StringId name;
@@ -171,60 +171,60 @@ struct Type {
     }
 };
 
-struct Symbol {
+struct Variable {
     StringId name;
     std::optional<TypeId> type; // Don't record globals' types.
 
-    bool operator==(const Symbol& o) const {
+    bool operator==(const Variable& o) const {
         return name == o.name
                 && type == o.type;
     }
 };
 
-struct EvaluableRValue {
-    std::variant<RValueOperator, FunctionId> op;
-    std::vector<ValueId> args;
+struct EvaluableExpression {
+    std::variant<ExpressionOperator, FunctionId, StructId> op;
+    std::vector<VariableOrExpressionId> args;
 
-    bool operator==(const EvaluableRValue& o) const {
+    bool operator==(const EvaluableExpression& o) const {
         return op == o.op
                 && args == o.args;
     }
 };
 
-struct LiteralRValue {
+struct LiteralExpression {
     std::variant<
         bool,
         int,
         double,
         unsigned int> value;
 
-    bool operator==(const LiteralRValue& o) const {
+    bool operator==(const LiteralExpression& o) const {
         return value == o.value;
     }
 };
 
-using RValue = std::variant<
-    EvaluableRValue,
-    LiteralRValue>;
+using Expression = std::variant<
+    EvaluableExpression,
+    LiteralExpression>;
 
-struct FunctionDefinition {
+struct Function {
     FunctionId name;
     TypeId returnType;
-    std::vector<LocalSymbolId> parameters;
+    std::vector<LocalVariableId> parameters;
     StatementBlockId body;
-    std::unordered_map<LocalSymbolId, Symbol> localSymbols;
+    std::unordered_map<LocalVariableId, Variable> localVariables;
 
-    bool operator==(const FunctionDefinition& o) const {
+    bool operator==(const Function& o) const {
         return name == o.name
                 && returnType == o.returnType
                 && parameters == o.parameters
                 && body == o.body
-                && localSymbols == o.localSymbols;
+                && localVariables == o.localVariables;
     }
 };
 
 struct IfStatement {
-    ValueId condition;
+    VariableOrExpressionId condition;
     StatementBlockId thenBlock;
     std::optional<StatementBlockId> elseBlock;
 
@@ -236,7 +236,7 @@ struct IfStatement {
 };
 
 struct SwitchStatement {
-    ValueId condition;
+    VariableOrExpressionId condition;
     StatementBlockId body;
 
     bool operator==(const SwitchStatement& o) const {
@@ -247,7 +247,7 @@ struct SwitchStatement {
 
 struct BranchStatement {
     BranchOperator op;
-    std::optional<ValueId> operand;
+    std::optional<VariableOrExpressionId> operand;
 
     bool operator==(const BranchStatement& o) const {
         return op == o.op
@@ -256,8 +256,8 @@ struct BranchStatement {
 };
 
 struct LoopStatement {
-    ValueId condition;
-    std::optional<RValueId> terminal;
+    VariableOrExpressionId condition;
+    std::optional<ExpressionId> terminal;
     bool testFirst;
     StatementBlockId body;
 
@@ -270,7 +270,7 @@ struct LoopStatement {
 };
 
 using Statement = std::variant<
-    RValueId,
+    ExpressionId,
     IfStatement,
     SwitchStatement,
     BranchStatement,
@@ -320,8 +320,8 @@ struct hash<astrict::Type> {
 };
 
 template<>
-struct hash<astrict::Symbol> {
-    std::size_t operator()(const astrict::Symbol& o) const {
+struct hash<astrict::Variable> {
+    std::size_t operator()(const astrict::Variable& o) const {
         std::size_t result = 0;
         astrict::hashCombine(result, o.name, o.type);
         return result;
@@ -329,8 +329,8 @@ struct hash<astrict::Symbol> {
 };
 
 template<>
-struct hash<astrict::EvaluableRValue> {
-    std::size_t operator()(const astrict::EvaluableRValue& o) const {
+struct hash<astrict::EvaluableExpression> {
+    std::size_t operator()(const astrict::EvaluableExpression& o) const {
         std::size_t result = 0;
         astrict::hashCombine(result, o.op, o.args.size());
         for (const auto& arg : o.args) {
@@ -341,8 +341,8 @@ struct hash<astrict::EvaluableRValue> {
 };
 
 template<>
-struct hash<astrict::LiteralRValue> {
-    std::size_t operator()(const astrict::LiteralRValue& o) const {
+struct hash<astrict::LiteralExpression> {
+    std::size_t operator()(const astrict::LiteralExpression& o) const {
         std::size_t result = 0;
         astrict::hashCombine(result, o.value);
         return result;
@@ -350,15 +350,15 @@ struct hash<astrict::LiteralRValue> {
 };
 
 template<>
-struct hash<astrict::FunctionDefinition> {
-    std::size_t operator()(const astrict::FunctionDefinition& o) const {
+struct hash<astrict::Function> {
+    std::size_t operator()(const astrict::Function& o) const {
         std::size_t result = 0;
         astrict::hashCombine(result, o.name, o.returnType, o.body,
-                o.parameters.size(), o.localSymbols.size());
+                o.parameters.size(), o.localVariables.size());
         for (const auto& argument : o.parameters) {
             astrict::hashCombine(result, argument);
         }
-        for (const auto& symbol : o.localSymbols) {
+        for (const auto& symbol : o.localVariables) {
             astrict::hashCombine(result, symbol.first, symbol.second);
         }
         return result;

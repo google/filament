@@ -66,19 +66,19 @@ std::string constructorFunctionNameForType(const char* name, const glslang::TTyp
     return result;
 }
 
-std::variant<RValueOperator, std::string> glslangOperatorToRValueOperator(
+std::variant<ExpressionOperator, std::string> glslangOperatorToExpressionOperator(
         glslang::TOperator op, int version,
         const glslang::TType& returnType, const glslang::TType* arg1Type) {
     using namespace glslang;
     switch (op) {
-        case EOpNegative: return RValueOperator::Negative;
-        case EOpLogicalNot: return RValueOperator::LogicalNot;
+        case EOpNegative: return ExpressionOperator::Negative;
+        case EOpLogicalNot: return ExpressionOperator::LogicalNot;
         case EOpVectorLogicalNot: return "not";
-        case EOpBitwiseNot: return RValueOperator::BitwiseNot;
-        case EOpPostIncrement: return RValueOperator::PostIncrement;
-        case EOpPostDecrement: return RValueOperator::PostDecrement;
-        case EOpPreIncrement: return RValueOperator::PreIncrement;
-        case EOpPreDecrement: return RValueOperator::PreDecrement;
+        case EOpBitwiseNot: return ExpressionOperator::BitwiseNot;
+        case EOpPostIncrement: return ExpressionOperator::PostIncrement;
+        case EOpPostDecrement: return ExpressionOperator::PostDecrement;
+        case EOpPreIncrement: return ExpressionOperator::PreIncrement;
+        case EOpPreDecrement: return ExpressionOperator::PreDecrement;
         case EOpConvIntToBool:
         case EOpConvUintToBool:
         case EOpConvFloatToBool:
@@ -104,38 +104,38 @@ std::variant<RValueOperator, std::string> glslangOperatorToRValueOperator(
         case EOpConvFloatToUint:
         case EOpConvDoubleToUint:
             return "uint";
-        case EOpAdd: return RValueOperator::Add;
-        case EOpSub: return RValueOperator::Sub;
+        case EOpAdd: return ExpressionOperator::Add;
+        case EOpSub: return ExpressionOperator::Sub;
         case EOpMul:
         case EOpVectorTimesScalar:
         case EOpVectorTimesMatrix:
         case EOpMatrixTimesVector:
         case EOpMatrixTimesScalar:
-            return RValueOperator::Mul;
-        case EOpDiv: return RValueOperator::Div;
-        case EOpMod: return RValueOperator::Mod;
-        case EOpRightShift: return RValueOperator::RightShift;
-        case EOpLeftShift: return RValueOperator::LeftShift;
-        case EOpAnd: return RValueOperator::And;
-        case EOpInclusiveOr: return RValueOperator::InclusiveOr;
-        case EOpExclusiveOr: return RValueOperator::ExclusiveOr;
-        case EOpEqual: return RValueOperator::Equal;
-        case EOpNotEqual: return RValueOperator::NotEqual;
+            return ExpressionOperator::Mul;
+        case EOpDiv: return ExpressionOperator::Div;
+        case EOpMod: return ExpressionOperator::Mod;
+        case EOpRightShift: return ExpressionOperator::RightShift;
+        case EOpLeftShift: return ExpressionOperator::LeftShift;
+        case EOpAnd: return ExpressionOperator::And;
+        case EOpInclusiveOr: return ExpressionOperator::InclusiveOr;
+        case EOpExclusiveOr: return ExpressionOperator::ExclusiveOr;
+        case EOpEqual: return ExpressionOperator::Equal;
+        case EOpNotEqual: return ExpressionOperator::NotEqual;
         case EOpVectorEqual: return "equal";
         case EOpVectorNotEqual: return "notEqual";
-        case EOpLessThan: return RValueOperator::LessThan;
-        case EOpGreaterThan: return RValueOperator::GreaterThan;
-        case EOpLessThanEqual: return RValueOperator::LessThanEqual;
-        case EOpGreaterThanEqual: return RValueOperator::GreaterThanEqual;
-        case EOpComma: return RValueOperator::Comma;
-        case EOpLogicalOr: return RValueOperator::LogicalOr;
-        case EOpLogicalXor: return RValueOperator::LogicalXor;
-        case EOpLogicalAnd: return RValueOperator::LogicalAnd;
+        case EOpLessThan: return ExpressionOperator::LessThan;
+        case EOpGreaterThan: return ExpressionOperator::GreaterThan;
+        case EOpLessThanEqual: return ExpressionOperator::LessThanEqual;
+        case EOpGreaterThanEqual: return ExpressionOperator::GreaterThanEqual;
+        case EOpComma: return ExpressionOperator::Comma;
+        case EOpLogicalOr: return ExpressionOperator::LogicalOr;
+        case EOpLogicalXor: return ExpressionOperator::LogicalXor;
+        case EOpLogicalAnd: return ExpressionOperator::LogicalAnd;
         case EOpIndexDirect:
         case EOpIndexIndirect:
-            return RValueOperator::Index;
-        case EOpIndexDirectStruct: return RValueOperator::IndexStruct;
-        case EOpVectorSwizzle: return RValueOperator::VectorSwizzle;
+            return ExpressionOperator::Index;
+        case EOpIndexDirectStruct: return ExpressionOperator::IndexStruct;
+        case EOpVectorSwizzle: return ExpressionOperator::VectorSwizzle;
         case EOpRadians: return "radians";
         case EOpDegrees: return "degrees";
         case EOpSin: return "sin";
@@ -497,29 +497,29 @@ std::variant<RValueOperator, std::string> glslangOperatorToRValueOperator(
         case EOpConstructF16Mat4x2: return constructorFunctionNameForType("f16mat4x2", returnType);
         case EOpConstructF16Mat4x3: return constructorFunctionNameForType("f16mat4x3", returnType);
         case EOpConstructF16Mat4x4: return constructorFunctionNameForType("f16mat4x4", returnType);
-        case EOpConstructStruct: return RValueOperator::ConstructStruct;
+        case EOpConstructStruct: return ExpressionOperator::ConstructStruct;
         case EOpConstructTextureSampler: return "textureSampler";
         case EOpConstructNonuniform: return "nonuniform";
         case EOpConstructReference: return "reference";
         case EOpConstructCooperativeMatrixNV: return "cooperativeMatrixNV";
         case EOpConstructCooperativeMatrixKHR: return "cooperativeMatrixKHR";
-        case EOpAssign: return RValueOperator::Assign;
-        case EOpAddAssign: return RValueOperator::AddAssign;
-        case EOpSubAssign: return RValueOperator::SubAssign;
+        case EOpAssign: return ExpressionOperator::Assign;
+        case EOpAddAssign: return ExpressionOperator::AddAssign;
+        case EOpSubAssign: return ExpressionOperator::SubAssign;
         case EOpMulAssign:
         case EOpVectorTimesMatrixAssign:
         case EOpVectorTimesScalarAssign:
         case EOpMatrixTimesScalarAssign:
         case EOpMatrixTimesMatrixAssign:
-            return RValueOperator::MulAssign;
-        case EOpDivAssign: return RValueOperator::DivAssign;
-        case EOpModAssign: return RValueOperator::ModAssign;
-        case EOpAndAssign: return RValueOperator::AndAssign;
-        case EOpInclusiveOrAssign: return RValueOperator::InclusiveOrAssign;
-        case EOpExclusiveOrAssign: return RValueOperator::ExclusiveOrAssign;
-        case EOpLeftShiftAssign: return RValueOperator::LeftShiftAssign;
-        case EOpRightShiftAssign: return RValueOperator::RightShiftAssign;
-        case EOpArrayLength: return RValueOperator::ArrayLength;
+            return ExpressionOperator::MulAssign;
+        case EOpDivAssign: return ExpressionOperator::DivAssign;
+        case EOpModAssign: return ExpressionOperator::ModAssign;
+        case EOpAndAssign: return ExpressionOperator::AndAssign;
+        case EOpInclusiveOrAssign: return ExpressionOperator::InclusiveOrAssign;
+        case EOpExclusiveOrAssign: return ExpressionOperator::ExclusiveOrAssign;
+        case EOpLeftShiftAssign: return ExpressionOperator::LeftShiftAssign;
+        case EOpRightShiftAssign: return ExpressionOperator::RightShiftAssign;
+        case EOpArrayLength: return ExpressionOperator::ArrayLength;
         case EOpImageQuerySize: return "imageSize";
         case EOpImageQuerySamples: return "imageSamples";
         case EOpImageLoad: return "imageLoad";
@@ -690,9 +690,9 @@ std::variant<RValueOperator, std::string> glslangOperatorToRValueOperator(
         case EOpImageBlockMatchSADQCOM: return "textureBlockMatchSADQCOM";
         case EOpImageBlockMatchSSDQCOM: return "textureBlockMatchSSDQCOM";
         default:
-            utils::slog.e << "Cannot convert operator " << glslangOperatorToString(op) << " to RValue operator.";
+            utils::slog.e << "Cannot convert operator " << glslangOperatorToString(op) << " to expression operator.";
             // TODO: abort here
-            return RValueOperator::Ternary;
+            return ExpressionOperator::Ternary;
     }
 }
 
@@ -739,18 +739,18 @@ std::string_view expandTypeNameToVectorOrMatrix(
     return expandTypeNameToVector(typeNames, vectorSize);
 }
 
-LiteralRValue constUnionToLiteralRValue(const glslang::TConstUnion& value) {
+LiteralExpression constUnionToLiteralExpression(const glslang::TConstUnion& value) {
     switch (value.getType()) {
-        case glslang::EbtInt8: return LiteralRValue{value.getI8Const()};
-        case glslang::EbtUint8: return LiteralRValue{value.getU8Const()};
-        case glslang::EbtInt16: return LiteralRValue{value.getI16Const()};
-        case glslang::EbtUint16: return LiteralRValue{value.getU16Const()};
-        case glslang::EbtInt: return LiteralRValue{value.getIConst()};
-        case glslang::EbtUint: return LiteralRValue{value.getUConst()};
+        case glslang::EbtInt8: return LiteralExpression{value.getI8Const()};
+        case glslang::EbtUint8: return LiteralExpression{value.getU8Const()};
+        case glslang::EbtInt16: return LiteralExpression{value.getI16Const()};
+        case glslang::EbtUint16: return LiteralExpression{value.getU16Const()};
+        case glslang::EbtInt: return LiteralExpression{value.getIConst()};
+        case glslang::EbtUint: return LiteralExpression{value.getUConst()};
         case glslang::EbtInt64: PANIC_PRECONDITION("Unsupported type: Int64");
         case glslang::EbtUint64: PANIC_PRECONDITION("Unsupported type: Uint64");
-        case glslang::EbtDouble: return LiteralRValue{value.getDConst()};
-        case glslang::EbtBool: return LiteralRValue{value.getBConst()};
+        case glslang::EbtDouble: return LiteralExpression{value.getDConst()};
+        case glslang::EbtBool: return LiteralExpression{value.getBConst()};
         case glslang::EbtString: PANIC_PRECONDITION("Unsupported type: String");
         default: PANIC_PRECONDITION("Unsupported type: %d", value.getType());
     }
@@ -760,12 +760,18 @@ template<typename Id, typename Value>
 class IdStoreByValue {
 public:
     // Inserts if non-existent.
-    Id insert(Value value) {
+    Id insert(Value value, bool* outWasExtant = nullptr) {
         auto it = mMap.find(value);
         if (it == mMap.end()) {
             Id id = Id {++mLastId};
             mMap[value] = id;
+            if (outWasExtant) {
+                *outWasExtant = false;
+            }
             return id;
+        }
+        if (outWasExtant) {
+            *outWasExtant = true;
         }
         return it->second;
     }
@@ -823,7 +829,7 @@ private:
     std::unordered_map<Key, std::pair<Id, Value>> mMap;
 };
 
-using LocalSymbols = IdStoreByKey<LocalSymbolId, Symbol, long long>;
+using LocalVariables = IdStoreByKey<LocalVariableId, Variable, long long>;
 
 class Slurper {
 public:
@@ -837,14 +843,16 @@ public:
                 mVersion,
                 mStrings.getFinal(),
                 mTypes.getFinal(),
+                mStructs.getFinal(),
                 mGlobalSymbols.getFinal(),
-                mRValues.getFinal(),
+                mExpressions.getFinal(),
                 mFunctionNames.getFinal(),
                 mStatementBlocks.getFinal(),
-                std::move(mFunctionDefinitions),
+                std::move(mFunctions),
+                std::move(mStructsInOrder),
                 std::move(mFunctionPrototypes),
-                std::move(mGlobalSymbolDefinitionsInOrder),
-                std::move(mFunctionDefinitionsInOrder),
+                std::move(mGlobalSymbolsInOrder),
+                std::move(mFunctionsInOrder),
         };
     }
 
@@ -852,15 +860,16 @@ private:
     int mVersion;
     IdStoreByValue<StringId, std::string> mStrings;
     IdStoreByValue<TypeId, Type> mTypes;
-    IdStoreByKey<StructId, Symbol, long long> mStructs;
-    IdStoreByKey<GlobalSymbolId, Symbol, long long> mGlobalSymbols;
-    IdStoreByValue<RValueId, RValue> mRValues;
+    IdStoreByValue<StructId, Struct> mStructs;
+    IdStoreByKey<GlobalVariableId, Variable, long long> mGlobalSymbols;
+    IdStoreByValue<ExpressionId, Expression> mExpressions;
     IdStoreByValue<FunctionId, std::string> mFunctionNames;
     IdStoreByValue<StatementBlockId, std::vector<Statement>> mStatementBlocks;
-    std::unordered_map<FunctionId, FunctionDefinition> mFunctionDefinitions;
+    std::vector<StructId> mStructsInOrder;
+    std::unordered_map<FunctionId, Function> mFunctions;
     std::set<FunctionId> mFunctionPrototypes;
-    std::vector<std::pair<GlobalSymbolId, ValueId>> mGlobalSymbolDefinitionsInOrder;
-    std::vector<FunctionId> mFunctionDefinitionsInOrder;
+    std::vector<std::pair<GlobalVariableId, VariableOrExpressionId>> mGlobalSymbolsInOrder;
+    std::vector<FunctionId> mFunctionsInOrder;
 
     void slurpFromRoot(glslang::TIntermAggregate* node) {
         ASSERT_PRECONDITION(node != nullptr, "Node must not be null");
@@ -903,12 +912,12 @@ private:
                         glslangNodeToStringWithLoc(linkerObject).c_str());
                 auto pair = slurpGlobalSymbol(childAsSymbol, node);
                 if (pair.second.has_value()) {
-                    mGlobalSymbolDefinitionsInOrder.push_back({pair.first, pair.second.value()});
+                    mGlobalSymbolsInOrder.push_back({pair.first, pair.second.value()});
                 }
             }
         }
         // Sequence nodes contain assignment operations.
-        LocalSymbols emptyLocalSymbols;
+        LocalVariables emptyLocalSymbols;
         for (auto sequence : sequenceNodes) {
             for (auto child : sequence->getSequence()) {
                 auto childAsBinary = child->getAsBinaryNode();
@@ -929,14 +938,14 @@ private:
                         glslangNodeToStringWithLoc(child).c_str(),
                         glslangNodeToStringWithLoc(sequence).c_str());
                 auto globalSymbolId = pair.first;
-                auto initialValue = slurpValue(
+                auto initialValue = slurpVariableOrExpression(
                         childAsBinary->getRight(), sequence, emptyLocalSymbols);
                 ASSERT_PRECONDITION(emptyLocalSymbols.empty(),
                         "Global symbol definition must not touch local symbols: "
                         "%s, parent = %s",
                         glslangNodeToStringWithLoc(child).c_str(),
                         glslangNodeToStringWithLoc(sequence).c_str());
-                mGlobalSymbolDefinitionsInOrder.push_back({globalSymbolId, initialValue});
+                mGlobalSymbolsInOrder.push_back({globalSymbolId, initialValue});
             }
         }
         // Function definitions are the meat of the AST.
@@ -945,12 +954,12 @@ private:
         }
     }
 
-    std::pair<GlobalSymbolId, std::optional<ValueId>> slurpGlobalSymbol(
+    std::pair<GlobalVariableId, std::optional<VariableOrExpressionId>> slurpGlobalSymbol(
             const glslang::TIntermSymbol* node,
             const TIntermNode* parent) {
         auto typeId = slurpType(node->getType());
         auto nameId = mStrings.insert(std::string(node->getAccessName()));
-        auto globalSymbolId = mGlobalSymbols.insert(node->getId(), Symbol{nameId, typeId});
+        auto globalSymbolId = mGlobalSymbols.insert(node->getId(), Variable{nameId, typeId});
         const auto& constArray = node->getConstArray();
         if (constArray.empty()) {
             return {globalSymbolId, std::nullopt};
@@ -959,8 +968,32 @@ private:
         return {globalSymbolId, valueId};
     }
 
-    // StructId slurpStruct(const glslang::TTypeList* typeList) {
-    // }
+    StructId slurpStruct(const glslang::TType& type) {
+        ASSERT_PRECONDITION(type.isStruct(), "Type must be struct");
+        auto typeList = type.getStruct();
+        ASSERT_PRECONDITION(typeList, "Type must have non-null struct");
+        std::vector<StructMember> members;
+        for (auto pair : *typeList) {
+            auto field = pair.type;
+            const auto& loc = pair.loc;
+            ASSERT_PRECONDITION(field,
+                    "Field in struct must not be null: %s",
+                    glslangLocToString(loc).c_str());
+            auto fieldName = mStrings.insert(std::string(field->getFieldName()));
+            auto fieldType = slurpType(*field);
+            members.push_back(StructMember{fieldName, fieldType});
+        }
+        auto structName = mStrings.insert(std::string(type.getTypeName()));
+        bool outWasExtant = false;
+        auto structId = mStructs.insert(Struct{structName, std::move(members)}, &outWasExtant);
+        if (!outWasExtant) {
+            // In order for a Struct to be created, all of its child Structs must have been created
+            // beforehand. This means that we can just push to this vector in order of ID creation
+            // and guarantee the correct dependency chain.
+            mStructsInOrder.push_back(structId);
+        }
+        return structId;
+    }
 
     std::optional<StringId> slurpQualifiers(const glslang::TQualifier& qualifier) {
         using namespace glslang;
@@ -999,7 +1032,7 @@ private:
         return std::nullopt;
     }
 
-    TypeId slurpType(const glslang::TType& type) {
+    std::variant<StringId, StructId> slurpTypeName(const glslang::TType& type) {
         using namespace glslang;
 
         static const char* const FLOAT_TYPE_NAMES[] = {
@@ -1055,12 +1088,6 @@ private:
                 "bvec4",
         };
 
-        auto typeArraySizes = type.getArraySizes();
-        std::vector<std::size_t> arraySizes(typeArraySizes ? typeArraySizes->getNumDims() : 0);
-        for (int i = 0; i < arraySizes.size(); ++i) {
-            arraySizes[i] = typeArraySizes->getDimSize(i);
-        }
-
         std::string_view typeName;
         switch (type.getBasicType()) {
             case EbtVoid:
@@ -1105,29 +1132,38 @@ private:
                 break;
             case EbtStruct:
             case EbtBlock:
-                typeName = type.getTypeName();
-                break;
+                return slurpStruct(type);
             default:
                 PANIC_PRECONDITION("Cannot convert glslang type `%s' to Type",
                         type.getCompleteString().c_str());
         };
-        auto nameId = mStrings.insert(std::string(typeName));
+        return mStrings.insert(std::string(typeName));
+    }
+
+    TypeId slurpType(const glslang::TType& type) {
+        auto typeArraySizes = type.getArraySizes();
+        std::vector<std::size_t> arraySizes(typeArraySizes ? typeArraySizes->getNumDims() : 0);
+        for (int i = 0; i < arraySizes.size(); ++i) {
+            arraySizes[i] = typeArraySizes->getDimSize(i);
+        }
+
+        auto nameId = slurpTypeName(type);
         auto qualifiersId = slurpQualifiers(type.getQualifier());
         return mTypes.insert(Type{nameId, qualifiersId, std::move(arraySizes)});
     }
 
     StatementBlockId slurpStatementBlock(
-            TIntermNode* node, TIntermNode* parent, LocalSymbols& localSymbols) {
+            TIntermNode* node, TIntermNode* parent, LocalVariables& localVariables) {
         std::vector<Statement> statements;
         auto nodeAsAggregate = node->getAsAggregate();
         if (nodeAsAggregate != nullptr && nodeAsAggregate->getOp() == glslang::EOpSequence) {
             // Read all children into this statement block.
             for (TIntermNode* child : nodeAsAggregate->getSequence()) {
-                nodeToStatements(child, node, localSymbols, statements);
+                nodeToStatements(child, node, localVariables, statements);
             }
         } else {
             // Wrap whatever this is into a new statement block.
-            nodeToStatements(node, parent, localSymbols, statements);
+            nodeToStatements(node, parent, localVariables, statements);
         }
         return mStatementBlocks.insert(statements);
     }
@@ -1153,8 +1189,8 @@ private:
 
         auto returnTypeId = slurpType(node->getType());
 
-        LocalSymbols localSymbols;
-        std::vector<LocalSymbolId> parameters;
+        LocalVariables localVariables;
+        std::vector<LocalVariableId> parameters;
         for (const auto parameter : parametersNode->getSequence()) {
             auto parameterAsSymbol = parameter->getAsSymbolNode();
             ASSERT_PRECONDITION(parameterAsSymbol != nullptr,
@@ -1164,57 +1200,57 @@ private:
                     glslangNodeToStringWithLoc(parent).c_str());
             auto nameId = mStrings.insert(std::string(parameterAsSymbol->getName()));
             auto typeId = slurpType(parameterAsSymbol->getType());
-            auto symbolId = localSymbols.insert(parameterAsSymbol->getId(), Symbol{nameId, typeId});
-            parameters.push_back(symbolId);
+            auto variableId = localVariables.insert(parameterAsSymbol->getId(), Variable{nameId, typeId});
+            parameters.push_back(variableId);
         }
 
-        auto bodyId = slurpStatementBlock(sequence[1], node, localSymbols);
-        mFunctionDefinitions[functionId] = FunctionDefinition{
+        auto bodyId = slurpStatementBlock(sequence[1], node, localVariables);
+        mFunctions[functionId] = Function{
                 functionId, returnTypeId, std::move(parameters), bodyId,
-                localSymbols.getFinal()};
-        mFunctionDefinitionsInOrder.push_back(functionId);
+                localVariables.getFinal()};
+        mFunctionsInOrder.push_back(functionId);
     }
 
     // Turn a non-root node into one or more statements.
-    void nodeToStatements(TIntermNode* node, TIntermNode* parent, LocalSymbols& localSymbols,
+    void nodeToStatements(TIntermNode* node, TIntermNode* parent, LocalVariables& localVariables,
             std::vector<Statement> &output) {
         if (auto nodeAsLoopNode = node->getAsLoopNode()) {
-            auto conditionId = slurpValue(nodeAsLoopNode->getTest(), parent, localSymbols);
-            std::optional<RValueId> terminalId;
+            auto conditionId = slurpVariableOrExpression(nodeAsLoopNode->getTest(), parent, localVariables);
+            std::optional<ExpressionId> terminalId;
             if (auto terminal = nodeAsLoopNode->getTerminal()) {
                 // Ignore random stray symbols and literals for the terminal since they don't do
                 // anything.
                 if (!terminal->getAsSymbolNode() && !terminal->getAsConstantUnion()) {
-                    auto terminalIdAsValueId = slurpValue(
-                            nodeAsLoopNode->getTerminal(), parent, localSymbols);
-                    if (auto* terminalIdAsRValueId = std::get_if<RValueId>(&terminalIdAsValueId)) {
-                        terminalId = *terminalIdAsRValueId;
+                    auto terminalIdAsValueId = slurpVariableOrExpression(
+                            nodeAsLoopNode->getTerminal(), parent, localVariables);
+                    if (auto* terminalIdAsExpressionId = std::get_if<ExpressionId>(&terminalIdAsValueId)) {
+                        terminalId = *terminalIdAsExpressionId;
                     } else {
-                        PANIC_PRECONDITION("Encountered non-RValue in Loop terminal: %s, parent = %s",
+                        PANIC_PRECONDITION("Encountered non-Expression in Loop terminal: %s, parent = %s",
                                 glslangNodeToStringWithLoc(terminal).c_str(),
                                 glslangNodeToStringWithLoc(node).c_str());
                     }
                 }
             }
             bool testFirst = nodeAsLoopNode->testFirst();
-            auto bodyId = slurpStatementBlock(nodeAsLoopNode->getBody(), parent, localSymbols);
+            auto bodyId = slurpStatementBlock(nodeAsLoopNode->getBody(), parent, localVariables);
             output.push_back(LoopStatement{conditionId, terminalId, testFirst, bodyId});
             return;
         }
         if (auto nodeAsBranchNode = node->getAsBranchNode()) {
             auto op = glslangOperatorToBranchOperator(nodeAsBranchNode->getFlowOp());
-            std::optional<ValueId> operandId;
+            std::optional<VariableOrExpressionId> operandId;
             if (auto operand = nodeAsBranchNode->getExpression()) {
-                operandId = slurpValue(operand, node, localSymbols);
+                operandId = slurpVariableOrExpression(operand, node, localVariables);
             }
             output.push_back(BranchStatement{op, operandId});
             return;
         }
         if (auto nodeAsSwitchNode = node->getAsSwitchNode()) {
             if (auto conditionAsTyped = nodeAsSwitchNode->getCondition()->getAsTyped()) {
-                auto conditionId = slurpValue(conditionAsTyped, parent, localSymbols);
+                auto conditionId = slurpVariableOrExpression(conditionAsTyped, parent, localVariables);
                 auto bodyId = slurpStatementBlock(
-                        nodeAsSwitchNode->getBody(), parent, localSymbols);
+                        nodeAsSwitchNode->getBody(), parent, localVariables);
                 output.push_back(SwitchStatement{conditionId, bodyId});
             } else {
                 PANIC_PRECONDITION("Switch node condition was not typed: %s, parent = %s",
@@ -1224,13 +1260,13 @@ private:
             return;
         }
         if (auto nodeAsSelectionNode = node->getAsSelectionNode()) {
-            auto conditionId = slurpValue(nodeAsSelectionNode->getCondition(), parent, localSymbols);
+            auto conditionId = slurpVariableOrExpression(nodeAsSelectionNode->getCondition(), parent, localVariables);
             auto trueId = slurpStatementBlock(
-                    nodeAsSelectionNode->getTrueBlock(), parent, localSymbols);
+                    nodeAsSelectionNode->getTrueBlock(), parent, localVariables);
             std::optional<StatementBlockId> falseId;
             if (nodeAsSelectionNode->getFalseBlock()) {
                 falseId = slurpStatementBlock(
-                        nodeAsSelectionNode->getFalseBlock(), parent, localSymbols);
+                        nodeAsSelectionNode->getFalseBlock(), parent, localVariables);
             }
             output.push_back(IfStatement{conditionId, trueId, falseId});
             return;
@@ -1240,7 +1276,7 @@ private:
                 case glslang::EOpSequence:
                     // Flatten this.
                     for (auto child : nodeAsAggregate->getSequence()) {
-                        nodeToStatements(child, node, localSymbols, output);
+                        nodeToStatements(child, node, localVariables, output);
                     }
                     return;
                 default:
@@ -1252,11 +1288,11 @@ private:
             // Ignore random stray symbols and literals as standalone statements since they don't do
             // anything.
             if (!node->getAsSymbolNode() && !node->getAsConstantUnion()) {
-                auto valueId = slurpValue(nodeAsTyped, parent, localSymbols);
-                if (auto* rValueId = std::get_if<RValueId>(&valueId)) {
+                auto valueId = slurpVariableOrExpression(nodeAsTyped, parent, localVariables);
+                if (auto* rValueId = std::get_if<ExpressionId>(&valueId)) {
                     output.push_back(*rValueId);
                 } else {
-                    PANIC_PRECONDITION("Encountered non-RValue as statement: %s, parent = %s",
+                    PANIC_PRECONDITION("Encountered non-Expression as statement: %s, parent = %s",
                             glslangNodeToStringWithLoc(node).c_str(),
                             glslangNodeToStringWithLoc(parent).c_str());
                 }
@@ -1268,24 +1304,24 @@ private:
                 glslangNodeToStringWithLoc(parent).c_str());
     }
 
-    std::variant<RValueOperator, FunctionId> slurpOperator(
+    std::variant<ExpressionOperator, FunctionId, StructId> slurpOperator(
             glslang::TOperator op,
             const glslang::TType& returnType, const glslang::TType* arg1Type) {
-        auto opOrFunctionName = glslangOperatorToRValueOperator(op, mVersion, returnType, arg1Type);
+        auto opOrFunctionName = glslangOperatorToExpressionOperator(op, mVersion, returnType, arg1Type);
         return std::visit([&](auto&& op) {
             using T = std::decay_t<decltype(op)>;
             if constexpr (std::is_same_v<T, std::string>) {
-                return std::variant<RValueOperator, FunctionId>(
+                return std::variant<ExpressionOperator, FunctionId, StructId>(
                         mFunctionNames.insert(std::move(op)));
-            } else if constexpr (std::is_same_v<T, RValueOperator>) {
-                return std::variant<RValueOperator, FunctionId>(op);
+            } else if constexpr (std::is_same_v<T, ExpressionOperator>) {
+                return std::variant<ExpressionOperator, FunctionId, StructId>(op);
             } else {
                 static_assert(always_false_v<T>, "unreachable");
             }
         }, opOrFunctionName);
     }
 
-    RValueId slurpValueFromConstantArray(
+    ExpressionId slurpValueFromConstantArray(
             const glslang::TConstUnionArray& constArray,
             const glslang::TIntermTyped* node, const TIntermNode* parent) {
         ASSERT_PRECONDITION(!constArray.empty(),
@@ -1293,7 +1329,7 @@ private:
                 glslangNodeToStringWithLoc(node).c_str(),
                 glslangNodeToStringWithLoc(parent).c_str());
         if (constArray.size() == 1) {
-            return mRValues.insert(constUnionToLiteralRValue(constArray[0]));
+            return mExpressions.insert(constUnionToLiteralExpression(constArray[0]));
         }
         // Encode this as a constructor function call for now. Maybe encode it as a literal
         // down the line?
@@ -1313,37 +1349,37 @@ private:
                         glslangNodeToStringWithLoc(parent).c_str());
         }
         auto functionId = mFunctionNames.insert(functionName);
-        std::vector<ValueId> args(constArray.size());
+        std::vector<VariableOrExpressionId> args(constArray.size());
         for (int i = 0; i < constArray.size(); i++) {
-            args[i] = mRValues.insert(constUnionToLiteralRValue(constArray[i]));
+            args[i] = mExpressions.insert(constUnionToLiteralExpression(constArray[i]));
         }
-        return mRValues.insert(
-                EvaluableRValue{functionId, std::move(args)});
+        return mExpressions.insert(
+                EvaluableExpression{functionId, std::move(args)});
 
     }
 
-    ValueId slurpValueFromSymbol(
-            glslang::TIntermSymbol* node, LocalSymbols& localSymbols) {
+    VariableOrExpressionId slurpValueFromSymbol(
+            glslang::TIntermSymbol* node, LocalVariables& localVariables) {
         long long id = node->getId();
         if (auto globalId = mGlobalSymbols.get(id)) {
             return globalId.value();
         }
         auto nameId = mStrings.insert(std::string(node->getAccessName()));
         if (node->getType().isBuiltIn()) {
-            return mGlobalSymbols.insert(id, Symbol{nameId, std::nullopt});
+            return mGlobalSymbols.insert(id, Variable{nameId, std::nullopt});
         }
         auto typeId = slurpType(node->getType());
-        return localSymbols.insert(id, Symbol{nameId, typeId});
+        return localVariables.insert(id, Variable{nameId, typeId});
     }
 
-    ValueId slurpValueFromUnary(glslang::TIntermUnary*& node, LocalSymbols& localSymbols) {
-        auto operandId = slurpValue(node->getOperand(), node, localSymbols);
+    VariableOrExpressionId slurpValueFromUnary(glslang::TIntermUnary*& node, LocalVariables& localVariables) {
+        auto operandId = slurpVariableOrExpression(node->getOperand(), node, localVariables);
         auto op = slurpOperator(node->getOp(), node->getType(), &node->getOperand()->getType());
-        return mRValues.insert(EvaluableRValue{op, {operandId}});
+        return mExpressions.insert(EvaluableExpression{op, {operandId}});
     }
 
-    ValueId slurpValueFromBinary(
-            glslang::TIntermBinary* node, TIntermNode* parent, LocalSymbols& localSymbols) {
+    VariableOrExpressionId slurpValueFromBinary(
+            glslang::TIntermBinary* node, TIntermNode* parent, LocalVariables& localVariables) {
         switch (node->getOp()) {
             case glslang::EOpVectorSwizzle: {
                 // TODO: swizzle it up
@@ -1356,33 +1392,33 @@ private:
                         "Swizzle node must be a sequence: %s, parent = %s",
                         glslangNodeToStringWithLoc(node).c_str(),
                         glslangNodeToStringWithLoc(parent).c_str());
-                return mRValues.insert(
-                        EvaluableRValue{RValueOperator::VectorSwizzle});
+                return mExpressions.insert(
+                        EvaluableExpression{ExpressionOperator::VectorSwizzle});
             }
             default: {
                 auto lhsId =
-                        slurpValue(node->getLeft(), node, localSymbols);
+                        slurpVariableOrExpression(node->getLeft(), node, localVariables);
                 auto rhsId =
-                        slurpValue(node->getRight(), node, localSymbols);
+                        slurpVariableOrExpression(node->getRight(), node, localVariables);
                 auto op = slurpOperator(
                         node->getOp(), node->getType(), &node->getLeft()->getType());
-                return mRValues.insert(EvaluableRValue{op, {lhsId, rhsId}});
+                return mExpressions.insert(EvaluableExpression{op, {lhsId, rhsId}});
             }
         }
     }
 
-    ValueId slurpValueFromSelection(
-            glslang::TIntermSelection* node, TIntermNode* parent, LocalSymbols& localSymbols) {
+    VariableOrExpressionId slurpValueFromSelection(
+            glslang::TIntermSelection* node, TIntermNode* parent, LocalVariables& localVariables) {
         // A "selection" as interpreted as an expression is a ternary.
         auto conditionId =
-                slurpValue(node->getCondition(), parent, localSymbols);
+                slurpVariableOrExpression(node->getCondition(), parent, localVariables);
         auto trueNodeAsTyped = node->getTrueBlock()->getAsTyped();
         auto falseNodeAsTyped = node->getFalseBlock()->getAsTyped();
         if (trueNodeAsTyped && falseNodeAsTyped) {
-            auto trueId = slurpValue(trueNodeAsTyped, parent, localSymbols);
-            auto falseId = slurpValue(falseNodeAsTyped, parent, localSymbols);
-            return mRValues.insert(EvaluableRValue{
-                RValueOperator::Ternary, {conditionId, trueId, falseId}});
+            auto trueId = slurpVariableOrExpression(trueNodeAsTyped, parent, localVariables);
+            auto falseId = slurpVariableOrExpression(falseNodeAsTyped, parent, localVariables);
+            return mExpressions.insert(EvaluableExpression{
+                ExpressionOperator::Ternary, {conditionId, trueId, falseId}});
         } else {
             PANIC_PRECONDITION(
                     "A selection node branch was not typed: true = %s, false = %s, "
@@ -1393,14 +1429,14 @@ private:
         }
     }
 
-    ValueId slurpValueFromFunctionCall(
-            glslang::TIntermAggregate* node, TIntermNode* parent, LocalSymbols& localSymbols) {
+    VariableOrExpressionId slurpValueFromFunctionCall(
+            glslang::TIntermAggregate* node, TIntermNode* parent, LocalVariables& localVariables) {
         auto& sequence = node->getSequence();
         auto functionId = mFunctionNames.insert(std::string(node->getName()));
-        std::vector<ValueId> args;
+        std::vector<VariableOrExpressionId> args;
         for (TIntermNode* arg : sequence) {
             if (auto argAsTyped = arg->getAsTyped()) {
-                args.push_back(slurpValue(argAsTyped, node, localSymbols));
+                args.push_back(slurpVariableOrExpression(argAsTyped, node, localVariables));
             } else {
                 PANIC_PRECONDITION(
                         "Function call argument was not typed: arg = %s, function "
@@ -1410,17 +1446,17 @@ private:
                         glslangNodeToStringWithLoc(parent).c_str());
             }
         }
-        return mRValues.insert(
-                EvaluableRValue{functionId, std::move(args)});
+        return mExpressions.insert(
+                EvaluableExpression{functionId, std::move(args)});
     }
 
-    ValueId slurpValueFromAggregate(
-            glslang::TIntermAggregate* node, TIntermNode* parent, LocalSymbols& localSymbols) {
+    VariableOrExpressionId slurpValueFromAggregate(
+            glslang::TIntermAggregate* node, TIntermNode* parent, LocalVariables& localVariables) {
         auto& sequence = node->getSequence();
-        std::vector<ValueId> args;
+        std::vector<VariableOrExpressionId> args;
         for (TIntermNode* arg : sequence) {
             if (auto argAsTyped = arg->getAsTyped()) {
-                args.push_back(slurpValue(argAsTyped, node, localSymbols));
+                args.push_back(slurpVariableOrExpression(argAsTyped, node, localVariables));
             } else {
                 PANIC_PRECONDITION(
                         "Operator argument was not typed: arg = %s, function = %s, "
@@ -1435,27 +1471,27 @@ private:
             firstArgType = &sequence[0]->getAsTyped()->getType();
         }
         auto op = slurpOperator(node->getOp(), node->getType(), firstArgType);
-        return mRValues.insert(EvaluableRValue{op, std::move(args)});
+        return mExpressions.insert(EvaluableExpression{op, std::move(args)});
     }
 
-    ValueId slurpValue(glslang::TIntermTyped* node, TIntermNode* parent,
-            LocalSymbols& localSymbols) {
+    VariableOrExpressionId slurpVariableOrExpression(glslang::TIntermTyped* node, TIntermNode* parent,
+            LocalVariables& localVariables) {
         if (auto nodeAsConstantUnion = node->getAsConstantUnion()) {
             return slurpValueFromConstantArray(
                     nodeAsConstantUnion->getConstArray(),
                     nodeAsConstantUnion, parent);
         }
         if (auto nodeAsSymbol = node->getAsSymbolNode()) {
-            return slurpValueFromSymbol(nodeAsSymbol, localSymbols);
+            return slurpValueFromSymbol(nodeAsSymbol, localVariables);
         }
         if (auto nodeAsUnary = node->getAsUnaryNode()) {
-            return slurpValueFromUnary(nodeAsUnary, localSymbols);
+            return slurpValueFromUnary(nodeAsUnary, localVariables);
         }
         if (auto nodeAsBinary = node->getAsBinaryNode()) {
-            return slurpValueFromBinary(nodeAsBinary, parent, localSymbols);
+            return slurpValueFromBinary(nodeAsBinary, parent, localVariables);
         }
         if (auto nodeAsSelection = node->getAsSelectionNode()) {
-            return slurpValueFromSelection(nodeAsSelection, parent, localSymbols);
+            return slurpValueFromSelection(nodeAsSelection, parent, localVariables);
         }
         if (auto nodeAsAggregate = node->getAsAggregate()) {
             switch (nodeAsAggregate->getOp()) {
@@ -1463,13 +1499,13 @@ private:
                 case glslang::EOpLinkerObjects:
                 case glslang::EOpParameters:
                 case glslang::EOpSequence:
-                    // Explicitly ban these from becoming RValues, since we probably
-                    // made a mistake somewhere...
+                    // Explicitly ban these from becoming Expressions, since we probably made a
+                    // mistake somewhere...
                     break;
                 case glslang::EOpFunctionCall:
-                    return slurpValueFromFunctionCall(nodeAsAggregate, parent, localSymbols);
+                    return slurpValueFromFunctionCall(nodeAsAggregate, parent, localVariables);
                 default:
-                    return slurpValueFromAggregate(nodeAsAggregate, parent, localSymbols);
+                    return slurpValueFromAggregate(nodeAsAggregate, parent, localVariables);
             }
         }
         PANIC_PRECONDITION("Cannot convert to statement: %s, parent = %s",
