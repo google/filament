@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.50.3'
+    implementation 'com.google.android.filament:filament-android:1.49.3'
 }
 ```
 
