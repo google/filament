@@ -22,27 +22,48 @@
 
 namespace astrict {
 
-template<typename T>
-struct Id {
-    int id;
+template<typename T, typename Tag>
+class Newtype {
+public:
+    Newtype() : mValue() {}
+    Newtype(const Newtype<T, Tag> &other) : mValue(other.mValue) {}
+    Newtype(Newtype<T, Tag> &&other) : mValue(other.mValue) {}
+    Newtype(T& value) : mValue(value) {}
+    Newtype(T&& value) : mValue(value) {}
 
-    bool operator==(const Id<T>& o) const {
-        return id == o.id;
+    Newtype& operator=(const Newtype<T, Tag>& other) {
+        mValue = other.mValue;
+        return *this;
     }
 
-    bool operator<(const Id<T>& o) const {
-        return id < o.id;
+    Newtype& operator=(Newtype<T, Tag>&& other) {
+        mValue = other.mValue;
+        return *this;
     }
+
+    const T& operator*() const {
+        return mValue;
+    }
+
+    bool operator==(const Newtype<T, Tag>& o) const {
+        return mValue == o.mValue;
+    }
+
+    bool operator<(const Newtype<T, Tag>& o) const {
+        return mValue < o.mValue;
+    }
+private:
+    T mValue;
 };
 
-using StringId = Id<struct StringIdTag>;
-using TypeId = Id<struct TypeIdTag>;
-using GlobalVariableId = Id<struct GlobalVariableIdTag>;
-using LocalVariableId = Id<struct LocalVariableIdTag>;
-using ExpressionId = Id<struct ExpressionIdTag>;
-using FunctionId = Id<struct FunctionIdTag>;
-using StatementBlockId = Id<struct StatementBlockIdTag>;
-using StructId = Id<struct StructIdTag>;
+using StringId = Newtype<int, struct StringIdTag>;
+using TypeId = Newtype<int, struct TypeIdTag>;
+using GlobalVariableId = Newtype<int, struct GlobalVariableIdTag>;
+using LocalVariableId = Newtype<int, struct LocalVariableIdTag>;
+using ExpressionId = Newtype<int, struct ExpressionIdTag>;
+using FunctionId = Newtype<int, struct FunctionIdTag>;
+using StatementBlockId = Newtype<int, struct StatementBlockIdTag>;
+using StructId = Newtype<int, struct StructIdTag>;
 
 template<class>
 inline constexpr bool always_false_v = false;
@@ -51,10 +72,17 @@ inline constexpr bool always_false_v = false;
 
 namespace std {
 
-template<typename T>
-struct hash<astrict::Id<T>> {
-    std::size_t operator()(const astrict::Id<T>& o) const {
-        return o.id;
+template<typename Tag>
+struct hash<astrict::Newtype<int, Tag>> {
+    std::size_t operator()(const astrict::Newtype<int, Tag>& o) const {
+        return *o;
+    }
+};
+
+template<typename Tag>
+struct hash<astrict::Newtype<uint16_t, Tag>> {
+    std::size_t operator()(const astrict::Newtype<uint16_t, Tag>& o) const {
+        return *o;
     }
 };
 
@@ -109,8 +137,6 @@ enum class ExpressionOperator : uint8_t {
     LogicalXor,
     LogicalAnd,
     Index,
-    IndexStruct,
-    VectorSwizzle,
     Assign,
     AddAssign,
     SubAssign,
@@ -128,9 +154,6 @@ enum class ExpressionOperator : uint8_t {
 
     // Variadic
     Comma,
-
-    // Misc
-    ConstructStruct,
 };
 
 // // Workaround for missing std::expected.
@@ -181,13 +204,26 @@ struct Variable {
     }
 };
 
-struct EvaluableExpression {
+struct ExpressionOperandExpression {
     std::variant<ExpressionOperator, FunctionId, StructId> op;
     std::vector<VariableOrExpressionId> args;
 
-    bool operator==(const EvaluableExpression& o) const {
+    bool operator==(const ExpressionOperandExpression& o) const {
         return op == o.op
                 && args == o.args;
+    }
+};
+
+using Swizzle = Newtype<uint16_t, struct SwizzleTag>;
+using IndexStruct = Newtype<uint16_t, struct StructIndexTag>;
+
+struct LiteralOperandExpression {
+    VariableOrExpressionId lhs;
+    std::variant<Swizzle, IndexStruct> rhs;
+
+    bool operator==(const LiteralOperandExpression& o) const {
+        return lhs == o.lhs
+                && rhs == o.rhs;
     }
 };
 
@@ -204,7 +240,8 @@ struct LiteralExpression {
 };
 
 using Expression = std::variant<
-    EvaluableExpression,
+    ExpressionOperandExpression,
+    LiteralOperandExpression,
     LiteralExpression>;
 
 struct Function {
@@ -329,13 +366,22 @@ struct hash<astrict::Variable> {
 };
 
 template<>
-struct hash<astrict::EvaluableExpression> {
-    std::size_t operator()(const astrict::EvaluableExpression& o) const {
+struct hash<astrict::ExpressionOperandExpression> {
+    std::size_t operator()(const astrict::ExpressionOperandExpression& o) const {
         std::size_t result = 0;
         astrict::hashCombine(result, o.op, o.args.size());
         for (const auto& arg : o.args) {
             astrict::hashCombine(result, arg);
         }
+        return result;
+    }
+};
+
+template<>
+struct hash<astrict::LiteralOperandExpression> {
+    std::size_t operator()(const astrict::LiteralOperandExpression& o) const {
+        std::size_t result = 0;
+        astrict::hashCombine(result, o.lhs, o.rhs);
         return result;
     }
 };

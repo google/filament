@@ -134,8 +134,6 @@ std::variant<ExpressionOperator, std::string> glslangOperatorToExpressionOperato
         case EOpIndexDirect:
         case EOpIndexIndirect:
             return ExpressionOperator::Index;
-        case EOpIndexDirectStruct: return ExpressionOperator::IndexStruct;
-        case EOpVectorSwizzle: return ExpressionOperator::VectorSwizzle;
         case EOpRadians: return "radians";
         case EOpDegrees: return "degrees";
         case EOpSin: return "sin";
@@ -497,7 +495,6 @@ std::variant<ExpressionOperator, std::string> glslangOperatorToExpressionOperato
         case EOpConstructF16Mat4x2: return constructorFunctionNameForType("f16mat4x2", returnType);
         case EOpConstructF16Mat4x3: return constructorFunctionNameForType("f16mat4x3", returnType);
         case EOpConstructF16Mat4x4: return constructorFunctionNameForType("f16mat4x4", returnType);
-        case EOpConstructStruct: return ExpressionOperator::ConstructStruct;
         case EOpConstructTextureSampler: return "textureSampler";
         case EOpConstructNonuniform: return "nonuniform";
         case EOpConstructReference: return "reference";
@@ -690,9 +687,8 @@ std::variant<ExpressionOperator, std::string> glslangOperatorToExpressionOperato
         case EOpImageBlockMatchSADQCOM: return "textureBlockMatchSADQCOM";
         case EOpImageBlockMatchSSDQCOM: return "textureBlockMatchSSDQCOM";
         default:
-            utils::slog.e << "Cannot convert operator " << glslangOperatorToString(op) << " to expression operator.";
-            // TODO: abort here
-            return ExpressionOperator::Ternary;
+            PANIC_PRECONDITION("Cannot convert operator %s to expression operator",
+                    glslangOperatorToString(op));
     }
 }
 
@@ -763,7 +759,7 @@ public:
     Id insert(Value value, bool* outWasExtant = nullptr) {
         auto it = mMap.find(value);
         if (it == mMap.end()) {
-            Id id = Id {++mLastId};
+            Id id(++mLastId);
             mMap[value] = id;
             if (outWasExtant) {
                 *outWasExtant = false;
@@ -964,7 +960,7 @@ private:
         if (constArray.empty()) {
             return {globalSymbolId, std::nullopt};
         }
-        auto valueId = slurpValueFromConstantArray(constArray, node, parent);
+        auto valueId = slurpExpressionFromConstantArray(constArray, node, parent);
         return {globalSymbolId, valueId};
     }
 
@@ -1321,7 +1317,7 @@ private:
         }, opOrFunctionName);
     }
 
-    ExpressionId slurpValueFromConstantArray(
+    ExpressionId slurpExpressionFromConstantArray(
             const glslang::TConstUnionArray& constArray,
             const glslang::TIntermTyped* node, const TIntermNode* parent) {
         ASSERT_PRECONDITION(!constArray.empty(),
@@ -1354,11 +1350,10 @@ private:
             args[i] = mExpressions.insert(constUnionToLiteralExpression(constArray[i]));
         }
         return mExpressions.insert(
-                EvaluableExpression{functionId, std::move(args)});
-
+                ExpressionOperandExpression{functionId, std::move(args)});
     }
 
-    VariableOrExpressionId slurpValueFromSymbol(
+    VariableOrExpressionId slurpVariableOrExpressionFromSymbol(
             glslang::TIntermSymbol* node, LocalVariables& localVariables) {
         long long id = node->getId();
         if (auto globalId = mGlobalSymbols.get(id)) {
@@ -1372,42 +1367,77 @@ private:
         return localVariables.insert(id, Variable{nameId, typeId});
     }
 
-    VariableOrExpressionId slurpValueFromUnary(glslang::TIntermUnary*& node, LocalVariables& localVariables) {
+    ExpressionId slurpExpressionFromUnary(
+            glslang::TIntermUnary*& node, LocalVariables& localVariables) {
         auto operandId = slurpVariableOrExpression(node->getOperand(), node, localVariables);
         auto op = slurpOperator(node->getOp(), node->getType(), &node->getOperand()->getType());
-        return mExpressions.insert(EvaluableExpression{op, {operandId}});
+        return mExpressions.insert(ExpressionOperandExpression{op, {operandId}});
     }
 
-    VariableOrExpressionId slurpValueFromBinary(
+    ExpressionId slurpExpressionFromBinary(
             glslang::TIntermBinary* node, TIntermNode* parent, LocalVariables& localVariables) {
-        switch (node->getOp()) {
-            case glslang::EOpVectorSwizzle: {
-                // TODO: swizzle it up
-                auto swizzle = node->getRight()->getAsAggregate();
-                ASSERT_PRECONDITION(swizzle != nullptr,
-                        "Swizzle node must be an aggregate: %s, parent = %s",
-                        glslangNodeToStringWithLoc(node).c_str(),
-                        glslangNodeToStringWithLoc(parent).c_str());
-                ASSERT_PRECONDITION(swizzle->getOp() == glslang::EOpSequence,
-                        "Swizzle node must be a sequence: %s, parent = %s",
-                        glslangNodeToStringWithLoc(node).c_str(),
-                        glslangNodeToStringWithLoc(parent).c_str());
-                return mExpressions.insert(
-                        EvaluableExpression{ExpressionOperator::VectorSwizzle});
-            }
-            default: {
-                auto lhsId =
-                        slurpVariableOrExpression(node->getLeft(), node, localVariables);
-                auto rhsId =
-                        slurpVariableOrExpression(node->getRight(), node, localVariables);
-                auto op = slurpOperator(
-                        node->getOp(), node->getType(), &node->getLeft()->getType());
-                return mExpressions.insert(EvaluableExpression{op, {lhsId, rhsId}});
-            }
-        }
+        auto lhsId = slurpVariableOrExpression(node->getLeft(), node, localVariables);
+        auto rhsId = slurpVariableOrExpression(node->getRight(), node, localVariables);
+        auto op = slurpOperator(
+                node->getOp(), node->getType(), &node->getLeft()->getType());
+        return mExpressions.insert(ExpressionOperandExpression{op, {lhsId, rhsId}});
     }
 
-    VariableOrExpressionId slurpValueFromSelection(
+    ExpressionId slurpExpressionFromVectorSwizzle(
+            glslang::TIntermBinary* node, TIntermNode* parent, LocalVariables& localVariables) {
+        ASSERT_PRECONDITION(node->getOp() == glslang::EOpVectorSwizzle,
+                "Swizzle operator must be EOpVectorSwizzle: %s, parent = %s",
+                glslangNodeToStringWithLoc(node).c_str(),
+                glslangNodeToStringWithLoc(parent).c_str());
+        auto lhsId = slurpVariableOrExpression(node->getLeft(), node, localVariables);
+        auto rhs = node->getRight()->getAsAggregate();
+        ASSERT_PRECONDITION(rhs != nullptr,
+                "Swizzle RHS must be an aggregate: %s, parent = %s",
+                glslangNodeToStringWithLoc(node).c_str(),
+                glslangNodeToStringWithLoc(parent).c_str());
+        ASSERT_PRECONDITION(rhs->getOp() == glslang::EOpSequence,
+                "Swizzle RHS must be a sequence: %s, parent = %s",
+                glslangNodeToStringWithLoc(node).c_str(),
+                glslangNodeToStringWithLoc(parent).c_str());
+        return mExpressions.insert(
+                LiteralOperandExpression{lhsId, Swizzle(0)});
+    }
+
+    ExpressionId slurpExpressionFromIndexStruct(
+            glslang::TIntermBinary* node, TIntermNode* parent, LocalVariables& localVariables) {
+        ASSERT_PRECONDITION(node->getOp() == glslang::EOpIndexDirectStruct,
+                "Index struct operator must be EOpIndexDirectStruct: %s, parent = %s",
+                glslangNodeToStringWithLoc(node).c_str(),
+                glslangNodeToStringWithLoc(parent).c_str());
+        auto lhsId = slurpVariableOrExpression(node->getLeft(), node, localVariables);
+        auto rhs = node->getRight()->getAsConstantUnion();
+        ASSERT_PRECONDITION(rhs != nullptr,
+                "Index struct RHS must be a constant union: %s, parent = %s",
+                glslangNodeToStringWithLoc(node->getRight()).c_str(),
+                glslangNodeToStringWithLoc(node).c_str());
+        const auto& constArray = rhs->getConstArray();
+        ASSERT_PRECONDITION(constArray.size() == 1,
+                "Index struct RHS const array must have only one value: %s, parent = %s",
+                glslangNodeToStringWithLoc(rhs).c_str(),
+                glslangNodeToStringWithLoc(node).c_str());
+
+        const auto& constUnion = constArray[0];
+        uint16_t index;
+        switch (constUnion.getType()) {
+            case glslang::EbtUint: index = constUnion.getUConst(); break;
+            case glslang::EbtInt: index = constUnion.getIConst(); break;
+            default:
+                PANIC_PRECONDITION(
+                        "Index struct RHS const array of incorrect type `%d': %s, parent = %s",
+                        constUnion.getType(),
+                        glslangNodeToStringWithLoc(rhs).c_str(),
+                        glslangNodeToStringWithLoc(node).c_str());
+        }
+        return mExpressions.insert(
+                LiteralOperandExpression{lhsId, IndexStruct(index)});
+    }
+
+    ExpressionId slurpExpressionFromSelection(
             glslang::TIntermSelection* node, TIntermNode* parent, LocalVariables& localVariables) {
         // A "selection" as interpreted as an expression is a ternary.
         auto conditionId =
@@ -1417,7 +1447,7 @@ private:
         if (trueNodeAsTyped && falseNodeAsTyped) {
             auto trueId = slurpVariableOrExpression(trueNodeAsTyped, parent, localVariables);
             auto falseId = slurpVariableOrExpression(falseNodeAsTyped, parent, localVariables);
-            return mExpressions.insert(EvaluableExpression{
+            return mExpressions.insert(ExpressionOperandExpression{
                 ExpressionOperator::Ternary, {conditionId, trueId, falseId}});
         } else {
             PANIC_PRECONDITION(
@@ -1429,28 +1459,32 @@ private:
         }
     }
 
-    VariableOrExpressionId slurpValueFromFunctionCall(
+    ExpressionId slurpExpressionFromFunctionCall(
             glslang::TIntermAggregate* node, TIntermNode* parent, LocalVariables& localVariables) {
         auto& sequence = node->getSequence();
         auto functionId = mFunctionNames.insert(std::string(node->getName()));
         std::vector<VariableOrExpressionId> args;
         for (TIntermNode* arg : sequence) {
-            if (auto argAsTyped = arg->getAsTyped()) {
-                args.push_back(slurpVariableOrExpression(argAsTyped, node, localVariables));
-            } else {
-                PANIC_PRECONDITION(
-                        "Function call argument was not typed: arg = %s, function "
-                        "= %s, parent = %s %s",
-                        glslangNodeToStringWithLoc(arg).c_str(),
-                        glslangNodeToStringWithLoc(node).c_str(),
-                        glslangNodeToStringWithLoc(parent).c_str());
-            }
+            auto argAsTyped = arg->getAsTyped();
+            ASSERT_PRECONDITION(argAsTyped,
+                    "Function call argument was not typed: arg = %s, function "
+                    "= %s, parent = %s %s",
+                    glslangNodeToStringWithLoc(arg).c_str(),
+                    glslangNodeToStringWithLoc(node).c_str(),
+                    glslangNodeToStringWithLoc(parent).c_str());
+            args.push_back(slurpVariableOrExpression(argAsTyped, node, localVariables));
         }
         return mExpressions.insert(
-                EvaluableExpression{functionId, std::move(args)});
+                ExpressionOperandExpression{functionId, std::move(args)});
     }
 
-    VariableOrExpressionId slurpValueFromAggregate(
+    ExpressionId slurpExpressionFromConstructStruct(
+            glslang::TIntermAggregate* node, TIntermNode* parent, LocalVariables& localVariables) {
+        // TODO
+        return ExpressionId{};
+    }
+
+    ExpressionId slurpExpressionFromAggregate(
             glslang::TIntermAggregate* node, TIntermNode* parent, LocalVariables& localVariables) {
         auto& sequence = node->getSequence();
         std::vector<VariableOrExpressionId> args;
@@ -1471,27 +1505,36 @@ private:
             firstArgType = &sequence[0]->getAsTyped()->getType();
         }
         auto op = slurpOperator(node->getOp(), node->getType(), firstArgType);
-        return mExpressions.insert(EvaluableExpression{op, std::move(args)});
+        return mExpressions.insert(ExpressionOperandExpression{op, std::move(args)});
     }
 
-    VariableOrExpressionId slurpVariableOrExpression(glslang::TIntermTyped* node, TIntermNode* parent,
-            LocalVariables& localVariables) {
+    VariableOrExpressionId slurpVariableOrExpression(
+            glslang::TIntermTyped* node, TIntermNode* parent, LocalVariables& localVariables) {
         if (auto nodeAsConstantUnion = node->getAsConstantUnion()) {
-            return slurpValueFromConstantArray(
+            return slurpExpressionFromConstantArray(
                     nodeAsConstantUnion->getConstArray(),
                     nodeAsConstantUnion, parent);
         }
         if (auto nodeAsSymbol = node->getAsSymbolNode()) {
-            return slurpValueFromSymbol(nodeAsSymbol, localVariables);
+            return slurpVariableOrExpressionFromSymbol(nodeAsSymbol, localVariables);
         }
         if (auto nodeAsUnary = node->getAsUnaryNode()) {
-            return slurpValueFromUnary(nodeAsUnary, localVariables);
+            return slurpExpressionFromUnary(nodeAsUnary, localVariables);
         }
         if (auto nodeAsBinary = node->getAsBinaryNode()) {
-            return slurpValueFromBinary(nodeAsBinary, parent, localVariables);
+            switch (nodeAsBinary->getOp()) {
+                case glslang::EOpVectorSwizzle:
+                    return slurpExpressionFromVectorSwizzle(nodeAsBinary, parent, localVariables);
+                case glslang::EOpIndexDirectStruct:
+                    return slurpExpressionFromIndexStruct(nodeAsBinary, parent, localVariables);
+                default:
+                    return slurpExpressionFromBinary(nodeAsBinary, parent, localVariables);
+
+
+            }
         }
         if (auto nodeAsSelection = node->getAsSelectionNode()) {
-            return slurpValueFromSelection(nodeAsSelection, parent, localVariables);
+            return slurpExpressionFromSelection(nodeAsSelection, parent, localVariables);
         }
         if (auto nodeAsAggregate = node->getAsAggregate()) {
             switch (nodeAsAggregate->getOp()) {
@@ -1503,9 +1546,14 @@ private:
                     // mistake somewhere...
                     break;
                 case glslang::EOpFunctionCall:
-                    return slurpValueFromFunctionCall(nodeAsAggregate, parent, localVariables);
+                    return slurpExpressionFromFunctionCall(
+                            nodeAsAggregate, parent, localVariables);
+                case glslang::EOpConstructStruct:
+                    return slurpExpressionFromConstructStruct(
+                            nodeAsAggregate, parent, localVariables);
                 default:
-                    return slurpValueFromAggregate(nodeAsAggregate, parent, localVariables);
+                    return slurpExpressionFromAggregate(
+                            nodeAsAggregate, parent, localVariables);
             }
         }
         PANIC_PRECONDITION("Cannot convert to statement: %s, parent = %s",

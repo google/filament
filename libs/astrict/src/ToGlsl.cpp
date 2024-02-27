@@ -86,12 +86,14 @@ void dumpType(const PackFromGlsl& pack, TypeId typeId, std::ostringstream& out) 
     if (type.qualifiers) {
         dumpString(pack, type.qualifiers.value(), out);
     }
-    std::visit([&](auto&& arg) {
-        using T = std::decay_t<decltype(arg)>;
+    std::visit([&](auto&& name) {
+        using T = std::decay_t<decltype(name)>;
         if constexpr (std::is_same_v<T, StringId>) {
-            dumpString(pack, arg, out);
+            dumpString(pack, name, out);
+        } else if constexpr (std::is_same_v<T, FunctionId>) {
+            out << *name;
         } else if constexpr (std::is_same_v<T, StructId>) {
-            out << arg.id;
+            out << *name;
         } else {
             static_assert(always_false_v<T>, "unreachable");
         }
@@ -360,17 +362,6 @@ void dumpEvaluableExpression<ExpressionOperator>(
             }
             out << rParen;
             break;
-
-            // Misc
-        case ExpressionOperator::ConstructStruct:
-        default:
-            out << "(" << rValueOperatorToString(op);
-            for (auto& arg : args) {
-                out << kSpace;
-                dumpAnyVariableOrExpression(pack, function, arg, /*parenthesize=*/true, out);
-            }
-            out << ")";
-            break;
     }
 }
 
@@ -402,13 +393,21 @@ void dumpEvaluableExpression<StructId>(
 }
 
 template<>
-void dumpExpression<EvaluableExpression>(
+void dumpExpression<ExpressionOperandExpression>(
         const PackFromGlsl& pack, const Function& function,
-        const EvaluableExpression& value, bool parenthesize,
+        const ExpressionOperandExpression& value, bool parenthesize,
         std::ostringstream& out) {
     std::visit([&](auto&& op) {
         dumpEvaluableExpression(pack, function, op, value.args, parenthesize, out);
     }, value.op);
+}
+
+template<>
+void dumpExpression<LiteralOperandExpression>(
+        const PackFromGlsl& pack, const Function& function,
+        const LiteralOperandExpression& value, bool parenthesize,
+        std::ostringstream& out) {
+    // TODO
 }
 
 template<>
@@ -425,7 +424,7 @@ template<>
 void dumpVariableOrExpression<ExpressionId>(
         const PackFromGlsl& pack, const Function& function, ExpressionId valueId,
         bool parenthesize, std::ostringstream& out) {
-    if (valueId.id == 0) {
+    if (*valueId == 0) {
         out << "INVALID_EXPRESSION";
         return;
     }
@@ -440,7 +439,7 @@ template<>
 void dumpVariableOrExpression<GlobalVariableId>(
         const PackFromGlsl& pack, const Function& function, GlobalVariableId valueId,
         bool parenthesize, std::ostringstream& out) {
-    if (valueId.id == 0) {
+    if (*valueId == 0) {
         out << "INVALID_GLOBAL_SYMBOL";
         return;
     }
@@ -455,7 +454,7 @@ template<>
 void dumpVariableOrExpression<LocalVariableId>(
         const PackFromGlsl& pack, const Function& function, LocalVariableId valueId,
         bool parenthesize, std::ostringstream& out) {
-    if (valueId.id == 0) {
+    if (*valueId == 0) {
         out << "INVALID_LOCAL_SYMBOL";
         return;
     }

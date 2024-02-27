@@ -48,8 +48,6 @@ const char* rValueOperatorToString(ExpressionOperator op) {
         case ExpressionOperator::LogicalXor: return "LogicalXor";
         case ExpressionOperator::LogicalAnd: return "LogicalAnd";
         case ExpressionOperator::Index: return "Index";
-        case ExpressionOperator::IndexStruct: return "IndexStruct";
-        case ExpressionOperator::VectorSwizzle: return "VectorSwizzle";
         case ExpressionOperator::Assign: return "Assign";
         case ExpressionOperator::AddAssign: return "AddAssign";
         case ExpressionOperator::SubAssign: return "SubAssign";
@@ -63,7 +61,6 @@ const char* rValueOperatorToString(ExpressionOperator op) {
         case ExpressionOperator::RightShiftAssign: return "RightShiftAssign";
         case ExpressionOperator::Ternary: return "Ternary";
         case ExpressionOperator::Comma: return "Comma";
-        case ExpressionOperator::ConstructStruct: return "ConstructStruct";
     }
 }
 
