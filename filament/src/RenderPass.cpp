@@ -434,7 +434,7 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
         FScene::RenderableSoa const& soa, Range<uint32_t> range,
         Variant variant, RenderFlags renderFlags,
         FScene::VisibleMaskType visibilityMask, float3 cameraPosition, float3 cameraForward,
-        uint8_t instancedStereoEyeCount) noexcept {
+        uint8_t stereoEyeCount) noexcept {
 
     SYSTRACE_CALL();
 
@@ -466,12 +466,12 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
         case CommandTypeFlags::COLOR:
             curr = generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
                     soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
-                    instancedStereoEyeCount);
+                    stereoEyeCount);
             break;
         case CommandTypeFlags::DEPTH:
             curr = generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
                     soa, range, variant, renderFlags, visibilityMask, cameraPosition, cameraForward,
-                    instancedStereoEyeCount);
+                    stereoEyeCount);
             break;
         default:
             // we should never end-up here
@@ -494,7 +494,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
         Variant const variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
-        float3 cameraPosition, float3 cameraForward, uint8_t instancedStereoEyeCount) noexcept {
+        float3 cameraPosition, float3 cameraForward, uint8_t stereoEyeCount) noexcept {
 
     // generateCommands() writes both the draw and depth commands simultaneously such that
     // we go throw the list of renderables just once.
@@ -520,7 +520,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
 
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
     const bool viewInverseFrontFaces = renderFlags & HAS_INVERSE_FRONT_FACES;
-    const bool hasInstancedStereo = renderFlags & IS_STEREOSCOPIC;
+    const bool hasStereo = renderFlags & IS_STEREOSCOPIC;
 
     Command cmdColor;
 
@@ -589,9 +589,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
         // soaInstanceInfo[i].count is the number of instances the user has requested, either for
         // manual or hybrid instancing. Instanced stereo multiplies the number of instances by the
         // eye count.
-        if (UTILS_UNLIKELY(hasInstancedStereo)) {
+        if (UTILS_UNLIKELY(hasStereo)) {
             cmdColor.primitive.instanceCount =
-                    (soaInstanceInfo[i].count * instancedStereoEyeCount) |
+                    (soaInstanceInfo[i].count * stereoEyeCount) |
                     PrimitiveInfo::USER_INSTANCE_MASK;
         }
 
@@ -623,9 +623,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFla
             cmdDepth.primitive.skinningTexture = skinning.handleSampler;
             cmdDepth.primitive.morphWeightBuffer = morphing.handle;
 
-            if (UTILS_UNLIKELY(hasInstancedStereo)) {
+            if (UTILS_UNLIKELY(hasStereo)) {
                 cmdColor.primitive.instanceCount =
-                        (soaInstanceInfo[i].count * instancedStereoEyeCount) |
+                        (soaInstanceInfo[i].count * stereoEyeCount) |
                         PrimitiveInfo::USER_INSTANCE_MASK;
             }
         }

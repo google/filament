@@ -173,7 +173,7 @@ public:
     bool hasDPCF() const noexcept { return mShadowType == ShadowType::DPCF; }
     bool hasPCSS() const noexcept { return mShadowType == ShadowType::PCSS; }
     bool hasPicking() const noexcept { return mActivePickingQueriesList != nullptr; }
-    bool hasInstancedStereo() const noexcept {
+    bool hasStereo() const noexcept {
         return mIsStereoSupported && mStereoscopicOptions.enabled;
     }
 
