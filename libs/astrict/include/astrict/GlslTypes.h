@@ -26,6 +26,7 @@ namespace astrict {
 
 struct PackFromGlsl {
     int version;
+    std::unordered_map<StringId, std::string> strings;
     std::unordered_map<TypeId, Type> types;
     std::unordered_map<GlobalSymbolId, Symbol> globalSymbols;
     std::unordered_map<RValueId, RValue> rValues;
@@ -33,7 +34,8 @@ struct PackFromGlsl {
     std::unordered_map<StatementBlockId, std::vector<Statement>> statementBlocks;
     std::unordered_map<FunctionId, FunctionDefinition> functionDefinitions;
     std::set<FunctionId> functionPrototypes;
-    std::vector<FunctionId> functionDefinitionOrder;
+    std::vector<std::tuple<GlobalSymbolId, ValueId>> globalSymbolDefinitionsInOrder;
+    std::vector<FunctionId> functionDefinitionsInOrder;
 };
 
 };

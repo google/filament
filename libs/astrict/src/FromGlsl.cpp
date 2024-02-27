@@ -20,8 +20,10 @@
 #include <astrict/DebugGlsl.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
+#include <optional>
 #include <set>
 
+#include "Types.h"
 #include "glslang/MachineIndependent/localintermediate.h"
 #include "intermediate.h"
 
@@ -736,121 +738,6 @@ std::string_view expandTypeNameToVectorOrMatrix(
     return expandTypeNameToVector(typeNames, vectorSize);
 }
 
-Type glslangTypeToType(const glslang::TType& type) {
-    using namespace glslang;
-
-    static const char* const FLOAT_TYPE_NAMES[] = {
-            "float",
-            "vec2",
-            "vec3",
-            "vec4",
-            "mat2",
-            "mat2x3",
-            "mat2x4",
-            "mat3x2",
-            "mat3",
-            "mat3x4",
-            "mat4x2",
-            "mat4x3",
-            "mat4",
-    };
-
-    static const char* const DOUBLE_TYPE_NAMES[] = {
-            "double",
-            "dvec2",
-            "dvec3",
-            "dvec4",
-            "dmat2",
-            "dmat2x3",
-            "dmat2x4",
-            "dmat3x2",
-            "dmat3",
-            "dmat3x4",
-            "dmat4x2",
-            "dmat4x3",
-            "dmat4",
-    };
-
-    static const char* const INT_TYPE_NAMES[] = {
-            "int",
-            "ivec2",
-            "ivec3",
-            "ivec4",
-    };
-
-    static const char* const UINT_TYPE_NAMES[] = {
-            "uint",
-            "uvec2",
-            "uvec3",
-            "uvec4",
-    };
-
-    static const char* const BOOL_TYPE_NAMES[] = {
-            "bool",
-            "bvec2",
-            "bvec3",
-            "bvec4",
-    };
-
-    auto typeArraySizes = type.getArraySizes();
-    std::vector<std::size_t> arraySizes(typeArraySizes ? typeArraySizes->getNumDims() : 0);
-    for (int i = 0; i < arraySizes.size(); ++i) {
-        arraySizes[i] = typeArraySizes->getDimSize(i);
-    }
-
-    std::string_view typeName;
-    switch (type.getBasicType()) {
-        case EbtVoid:
-            typeName = "void";
-            break;
-        case EbtFloat:
-            typeName = expandTypeNameToVectorOrMatrix(
-                    FLOAT_TYPE_NAMES,
-                    type.isMatrix(),
-                    type.getVectorSize(),
-                    type.getMatrixCols(),
-                    type.getMatrixRows());
-            break;
-        case EbtDouble:
-            typeName = expandTypeNameToVectorOrMatrix(
-                    DOUBLE_TYPE_NAMES,
-                    type.isMatrix(),
-                    type.getVectorSize(),
-                    type.getMatrixCols(),
-                    type.getMatrixRows());
-            break;
-        case EbtInt:
-            typeName = expandTypeNameToVector(
-                    INT_TYPE_NAMES,
-                    type.getVectorSize());
-            break;
-        case EbtUint:
-            typeName = expandTypeNameToVector(
-                    UINT_TYPE_NAMES,
-                    type.getVectorSize());
-            break;
-        case EbtBool:
-            typeName = expandTypeNameToVector(
-                    BOOL_TYPE_NAMES,
-                    type.getVectorSize());
-            break;
-        case EbtAtomicUint:
-            typeName = "atomic_uint";
-            break;
-        case EbtSampler:
-            typeName = type.getSampler().getString();
-            break;
-        case EbtStruct:
-        case EbtBlock:
-            typeName = type.getTypeName();
-            break;
-        default:
-            PANIC_PRECONDITION("Cannot convert glslang type `%s' to Type",
-                    type.getCompleteString().c_str());
-    };
-    return Type{std::string(typeName), type.getPrecisionQualifierString(), std::move(arraySizes)};
-}
-
 LiteralRValue constUnionToLiteralRValue(const glslang::TConstUnion& value) {
     switch (value.getType()) {
         case glslang::EbtInt8: return LiteralRValue{value.getI8Const()};
@@ -926,6 +813,10 @@ public:
         return r;
     }
 
+    bool empty() const {
+        return mMap.empty();
+    }
+
 private:
     int mLastId = 0;
     std::unordered_map<Key, std::pair<Id, Value>> mMap;
@@ -943,6 +834,7 @@ public:
     PackFromGlsl intoPack() {
         return PackFromGlsl {
                 mVersion,
+                mStrings.getFinal(),
                 mTypes.getFinal(),
                 mGlobalSymbols.getFinal(),
                 mRValues.getFinal(),
@@ -950,20 +842,24 @@ public:
                 mStatementBlocks.getFinal(),
                 std::move(mFunctionDefinitions),
                 std::move(mFunctionPrototypes),
-                std::move(mFunctionDefinitionOrder),
+                std::move(mGlobalSymbolDefinitionsInOrder),
+                std::move(mFunctionDefinitionsInOrder),
         };
     }
 
 private:
     int mVersion;
+    IdStoreByValue<StringId, std::string> mStrings;
     IdStoreByValue<TypeId, Type> mTypes;
+    IdStoreByKey<StructId, Symbol, long long> mStructs;
     IdStoreByKey<GlobalSymbolId, Symbol, long long> mGlobalSymbols;
     IdStoreByValue<RValueId, RValue> mRValues;
     IdStoreByValue<FunctionId, std::string> mFunctionNames;
     IdStoreByValue<StatementBlockId, std::vector<Statement>> mStatementBlocks;
     std::unordered_map<FunctionId, FunctionDefinition> mFunctionDefinitions;
     std::set<FunctionId> mFunctionPrototypes;
-    std::vector<FunctionId> mFunctionDefinitionOrder;
+    std::vector<std::tuple<GlobalSymbolId, ValueId>> mGlobalSymbolDefinitionsInOrder;
+    std::vector<FunctionId> mFunctionDefinitionsInOrder;
 
     void slurpFromRoot(glslang::TIntermAggregate* node) {
         ASSERT_PRECONDITION(node != nullptr, "Node must not be null");
@@ -999,34 +895,207 @@ private:
         // Linker objects contain a list of global symbols.
         for (auto linkerObject : linkerObjectNodes) {
             for (auto child : linkerObject->getSequence()) {
-                if (auto childAsSymbol = child->getAsSymbolNode()) {
-                    auto typeId = mTypes.insert(glslangTypeToType(childAsSymbol->getType()));
-                    mGlobalSymbols.insert(
-                            childAsSymbol->getId(),
-                            Symbol{childAsSymbol->getAccessName(), typeId});
-                    continue;
-                }
-                PANIC_PRECONDITION("Unhandled child of LinkerObjects node: %s, parent = %s",
+                auto childAsSymbol = child->getAsSymbolNode();
+                ASSERT_PRECONDITION(childAsSymbol,
+                        "Unhandled child of LinkerObjects node: %s, parent = %s",
                         glslangNodeToStringWithLoc(child).c_str(),
                         glslangNodeToStringWithLoc(linkerObject).c_str());
+                slurpGlobalSymbol(childAsSymbol);
             }
         }
         // Sequence nodes contain assignment operations.
+        LocalSymbols emptyLocalSymbols;
         for (auto sequence : sequenceNodes) {
             for (auto child : sequence->getSequence()) {
                 auto childAsBinary = child->getAsBinaryNode();
-                if (childAsBinary && childAsBinary->getOp() == glslang::EOpAssign) {
-                    continue;
-                }
-                PANIC_PRECONDITION("Unhandled child of LinkerObjects node: %s, parent = %s",
+                ASSERT_PRECONDITION(childAsBinary && childAsBinary->getOp() == glslang::EOpAssign,
+                        "Unhandled child of LinkerObjects node: %s, parent = %s",
                         glslangNodeToStringWithLoc(child).c_str(),
                         glslangNodeToStringWithLoc(sequence).c_str());
+                auto leftAsSymbol = childAsBinary->getLeft()->getAsSymbolNode();
+                ASSERT_PRECONDITION(leftAsSymbol,
+                        "Left-hand side of global variable definition must be symbol: "
+                        "%s, parent = %s",
+                        glslangNodeToStringWithLoc(child).c_str(),
+                        glslangNodeToStringWithLoc(sequence).c_str());
+                auto globalSymbolId = slurpGlobalSymbol(leftAsSymbol);
+                auto initialValue = slurpValue(
+                        childAsBinary->getRight(), sequence, emptyLocalSymbols);
+                ASSERT_PRECONDITION(emptyLocalSymbols.empty(),
+                        "Global symbol definition must not touch local symbols: "
+                        "%s, parent = %s",
+                        glslangNodeToStringWithLoc(child).c_str(),
+                        glslangNodeToStringWithLoc(sequence).c_str());
+                mGlobalSymbolDefinitionsInOrder.push_back({globalSymbolId, initialValue});
             }
         }
         // Function definitions are the meat of the AST.
         for (auto child : functionNodes) {
             slurpFunctionDefinition(child, node);
         }
+    }
+
+    GlobalSymbolId slurpGlobalSymbol(const glslang::TIntermSymbol* node) {
+        auto typeId = slurpType(node->getType());
+        auto nameId = mStrings.insert(std::string(node->getAccessName()));
+        return mGlobalSymbols.insert(node->getId(), Symbol{nameId, typeId});
+    }
+
+    // StructId slurpStruct(const glslang::TTypeList* typeList) {
+    // }
+
+    std::optional<StringId> slurpQualifiers(const glslang::TQualifier& qualifier) {
+        using namespace glslang;
+        std::string s;
+        if (qualifier.invariant) {
+            s += "invariant ";
+        }
+        if (qualifier.flat) {
+            s += "flat ";
+        }
+        if (qualifier.nopersp) {
+            s += "noperspective ";
+        }
+        if (qualifier.smooth) {
+            s += "smooth ";
+        }
+        if (qualifier.hasLayout()) {
+            s += "layout(";
+            // TODO
+            s += ") ";
+        }
+        if (qualifier.isConstant()) {
+            s += "const ";
+        }
+        switch (qualifier.precision) {
+            case EpqLow: s += "lowp "; break;
+            case EpqMedium: s += "mediump "; break;
+            case EpqHigh: s += "highp "; break;
+            case EpqNone:
+            default:
+                break;
+        }
+        if (!s.empty()) {
+            return mStrings.insert(std::move(s));
+        }
+        return std::nullopt;
+    }
+
+    TypeId slurpType(const glslang::TType& type) {
+        using namespace glslang;
+
+        static const char* const FLOAT_TYPE_NAMES[] = {
+                "float",
+                "vec2",
+                "vec3",
+                "vec4",
+                "mat2",
+                "mat2x3",
+                "mat2x4",
+                "mat3x2",
+                "mat3",
+                "mat3x4",
+                "mat4x2",
+                "mat4x3",
+                "mat4",
+        };
+
+        static const char* const DOUBLE_TYPE_NAMES[] = {
+                "double",
+                "dvec2",
+                "dvec3",
+                "dvec4",
+                "dmat2",
+                "dmat2x3",
+                "dmat2x4",
+                "dmat3x2",
+                "dmat3",
+                "dmat3x4",
+                "dmat4x2",
+                "dmat4x3",
+                "dmat4",
+        };
+
+        static const char* const INT_TYPE_NAMES[] = {
+                "int",
+                "ivec2",
+                "ivec3",
+                "ivec4",
+        };
+
+        static const char* const UINT_TYPE_NAMES[] = {
+                "uint",
+                "uvec2",
+                "uvec3",
+                "uvec4",
+        };
+
+        static const char* const BOOL_TYPE_NAMES[] = {
+                "bool",
+                "bvec2",
+                "bvec3",
+                "bvec4",
+        };
+
+        auto typeArraySizes = type.getArraySizes();
+        std::vector<std::size_t> arraySizes(typeArraySizes ? typeArraySizes->getNumDims() : 0);
+        for (int i = 0; i < arraySizes.size(); ++i) {
+            arraySizes[i] = typeArraySizes->getDimSize(i);
+        }
+
+        std::string_view typeName;
+        switch (type.getBasicType()) {
+            case EbtVoid:
+                typeName = "void";
+                break;
+            case EbtFloat:
+                typeName = expandTypeNameToVectorOrMatrix(
+                        FLOAT_TYPE_NAMES,
+                        type.isMatrix(),
+                        type.getVectorSize(),
+                        type.getMatrixCols(),
+                        type.getMatrixRows());
+                break;
+            case EbtDouble:
+                typeName = expandTypeNameToVectorOrMatrix(
+                        DOUBLE_TYPE_NAMES,
+                        type.isMatrix(),
+                        type.getVectorSize(),
+                        type.getMatrixCols(),
+                        type.getMatrixRows());
+                break;
+            case EbtInt:
+                typeName = expandTypeNameToVector(
+                        INT_TYPE_NAMES,
+                        type.getVectorSize());
+                break;
+            case EbtUint:
+                typeName = expandTypeNameToVector(
+                        UINT_TYPE_NAMES,
+                        type.getVectorSize());
+                break;
+            case EbtBool:
+                typeName = expandTypeNameToVector(
+                        BOOL_TYPE_NAMES,
+                        type.getVectorSize());
+                break;
+            case EbtAtomicUint:
+                typeName = "atomic_uint";
+                break;
+            case EbtSampler:
+                typeName = type.getSampler().getString();
+                break;
+            case EbtStruct:
+            case EbtBlock:
+                typeName = type.getTypeName();
+                break;
+            default:
+                PANIC_PRECONDITION("Cannot convert glslang type `%s' to Type",
+                        type.getCompleteString().c_str());
+        };
+        auto nameId = mStrings.insert(std::string(typeName));
+        auto qualifiersId = slurpQualifiers(type.getQualifier());
+        return mTypes.insert(Type{nameId, qualifiersId, std::move(arraySizes)});
     }
 
     StatementBlockId slurpStatementBlock(
@@ -1064,8 +1133,7 @@ private:
             return;
         }
 
-        auto returnTypeId =
-                mTypes.insert(glslangTypeToType(node->getType()));
+        auto returnTypeId = slurpType(node->getType());
 
         LocalSymbols localSymbols;
         std::vector<LocalSymbolId> parameters;
@@ -1076,17 +1144,17 @@ private:
                     glslangNodeToStringWithLoc(parameter).c_str(),
                     glslangNodeToStringWithLoc(node).c_str(),
                     glslangNodeToStringWithLoc(parent).c_str());
-            auto typeId = mTypes.insert(glslangTypeToType(parameterAsSymbol->getType()));
-            auto nameId = localSymbols.insert(
-                    parameterAsSymbol->getId(), Symbol{parameterAsSymbol->getName(), typeId});
-            parameters.push_back(nameId);
+            auto nameId = mStrings.insert(std::string(parameterAsSymbol->getName()));
+            auto typeId = slurpType(parameterAsSymbol->getType());
+            auto symbolId = localSymbols.insert(parameterAsSymbol->getId(), Symbol{nameId, typeId});
+            parameters.push_back(symbolId);
         }
 
         auto bodyId = slurpStatementBlock(sequence[1], node, localSymbols);
         mFunctionDefinitions[functionId] = FunctionDefinition{
                 functionId, returnTypeId, std::move(parameters), bodyId,
                 localSymbols.getFinal()};
-        mFunctionDefinitionOrder.push_back(functionId);
+        mFunctionDefinitionsInOrder.push_back(functionId);
     }
 
     // Turn a non-root node into one or more statements.
@@ -1238,13 +1306,16 @@ private:
 
     ValueId slurpValueFromSymbol(
             glslang::TIntermSymbol* node, LocalSymbols& localSymbols) {
-        auto typeId = mTypes.insert(glslangTypeToType(node->getType()));
         long long id = node->getId();
         if (auto globalId = mGlobalSymbols.get(id)) {
             return globalId.value();
         }
-        return localSymbols.insert(
-                id, Symbol{node->getAccessName(), typeId});
+        auto nameId = mStrings.insert(std::string(node->getAccessName()));
+        if (node->getType().isBuiltIn()) {
+            return mGlobalSymbols.insert(id, Symbol{nameId, std::nullopt});
+        }
+        auto typeId = slurpType(node->getType());
+        return localSymbols.insert(id, Symbol{nameId, typeId});
     }
 
     ValueId slurpValueFromUnary(glslang::TIntermUnary*& node, LocalSymbols& localSymbols) {

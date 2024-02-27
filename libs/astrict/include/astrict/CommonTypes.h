@@ -17,7 +17,6 @@
 #ifndef TNT_ASTRICT_COMMONTYPES_H
 #define TNT_ASTRICT_COMMONTYPES_H
 
-#include <string>
 #include <variant>
 #include <vector>
 
@@ -36,6 +35,7 @@ struct Id {
     }
 };
 
+using StringId = Id<struct StringIdTag>;
 using TypeId = Id<struct TypeIdTag>;
 using GlobalSymbolId = Id<struct GlobalSymbolIdTag>;
 using LocalSymbolId = Id<struct LocalSymbolIdTag>;
@@ -140,7 +140,7 @@ enum class RValueOperator : uint8_t {
 using ValueId = std::variant<GlobalSymbolId, LocalSymbolId, RValueId>;
 
 struct StructMember {
-    std::string name;
+    StringId name;
     TypeId type;
 
     bool operator==(const StructMember& o) const {
@@ -150,7 +150,7 @@ struct StructMember {
 };
 
 struct Struct {
-    std::string name;
+    StringId name;
     std::vector<StructMember> members;
 
     bool operator==(const Struct& o) const {
@@ -160,8 +160,8 @@ struct Struct {
 };
 
 struct Type {
-    std::variant<std::string, StructId> name; // string_view sometimes deallocated in glslang
-    std::string qualifiers;
+    std::variant<StringId, StructId> name;
+    std::optional<StringId> qualifiers;
     std::vector<std::size_t> arraySizes;
 
     bool operator==(const Type& o) const {
@@ -172,8 +172,8 @@ struct Type {
 };
 
 struct Symbol {
-    std::string_view name;
-    TypeId type;
+    StringId name;
+    std::optional<TypeId> type; // Don't record globals' types.
 
     bool operator==(const Symbol& o) const {
         return name == o.name

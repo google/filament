@@ -64,7 +64,15 @@ void indent(int depth, std::ostringstream& out) {
     }
 }
 
-void dumpFunctionName(const PackFromGlsl& pack, const FunctionId& functionId,
+void dumpString(const PackFromGlsl& pack, StringId stringId,
+        std::ostringstream& out) {
+    ASSERT_PRECONDITION(pack.strings.find(stringId) != pack.strings.end(),
+            "Missing string");
+    const auto& string = pack.strings.at(stringId);
+    out << string;
+}
+
+void dumpFunctionName(const PackFromGlsl& pack, FunctionId functionId,
         std::ostringstream& out) {
     auto name = pack.functionNames.at(functionId);
     auto indexParenthesis = name.find('(');
@@ -75,13 +83,13 @@ void dumpType(const PackFromGlsl& pack, TypeId typeId, std::ostringstream& out) 
     ASSERT_PRECONDITION(pack.types.find(typeId) != pack.types.end(),
             "Missing type definition");
     auto& type = pack.types.at(typeId);
-    if (!type.qualifiers.empty()) {
-        out << type.qualifiers << " ";
+    if (type.qualifiers) {
+        dumpString(pack, type.qualifiers.value(), out);
     }
     std::visit([&](auto&& arg) {
         using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_same_v<T, std::string>) {
-            out << arg;
+        if constexpr (std::is_same_v<T, StringId>) {
+            dumpString(pack, arg, out);
         } else if constexpr (std::is_same_v<T, StructId>) {
             out << arg.id;
         } else {
@@ -432,7 +440,7 @@ void dumpValue<GlobalSymbolId>(
             "Missing global symbol");
 
     auto globalSymbol = pack.globalSymbols.at(valueId);
-    out << globalSymbol.name;
+    dumpString(pack, globalSymbol.name, out);
 }
 
 template<>
@@ -447,7 +455,7 @@ void dumpValue<LocalSymbolId>(
             "Missing local symbol");
 
     auto& localSymbol = function.localSymbols.at(valueId);
-    out << localSymbol.name;
+    dumpString(pack, localSymbol.name, out);
 }
 
 template<>
@@ -611,6 +619,16 @@ void dumpBlock(
     }
 }
 
+void dumpSymbolDefinition(
+        const PackFromGlsl& pack, const Symbol& symbol,
+        std::ostringstream& out) {
+    ASSERT_PRECONDITION(symbol.type.has_value(),
+            "Symbol definition must have type");
+    dumpType(pack, symbol.type.value(), out);
+    out << " "; // required space
+    dumpString(pack, symbol.name, out);
+}
+
 void dumpFunction(
         const PackFromGlsl& pack, const FunctionId& functionId, bool dumpBody,
         std::ostringstream& out) {
@@ -635,8 +653,7 @@ void dumpFunction(
         }
         parameterSymbolIds.insert(parameterId);
         const auto& parameter = function.localSymbols.at(parameterId);
-        dumpType(pack, parameter.type, out);
-        out << " " << parameter.name;
+        dumpSymbolDefinition(pack, parameter, out);
     }
     out << ")";
     if (dumpBody) {
@@ -644,8 +661,8 @@ void dumpFunction(
         for (const auto& localSymbol : function.localSymbols) {
             if (parameterSymbolIds.find(localSymbol.first) == parameterSymbolIds.end()) {
                 out << kIndentAmount;
-                dumpType(pack, localSymbol.second.type, out);
-                out << " " << localSymbol.second.name << ";" << kNewline;
+                dumpSymbolDefinition(pack, localSymbol.second, out);
+                out << ";" << kNewline;
             }
         }
         dumpBlock(pack, function, function.body, 1, out);
@@ -656,10 +673,20 @@ void dumpFunction(
 }
 
 void toGlsl(const PackFromGlsl& pack, std::ostringstream& out) {
+    const FunctionDefinition emptyFunction{};
+    for (auto globalSymbolPair : pack.globalSymbolDefinitionsInOrder) {
+        auto globalSymbolId = std::get<0>(globalSymbolPair);
+        auto valueId = std::get<1>(globalSymbolPair);
+        const auto& globalSymbol = pack.globalSymbols.at(globalSymbolId);
+        dumpSymbolDefinition(pack, globalSymbol, out);
+        out << kSpace << "=" << kSpace;
+        dumpAnyValue(pack, emptyFunction, valueId, /*parenthesize=*/false, out);
+        out << ";" << kNewline;
+    }
     for (auto functionId : pack.functionPrototypes) {
         dumpFunction(pack, functionId, /*dumpBody=*/false, out);
     }
-    for (auto functionId : pack.functionDefinitionOrder) {
+    for (auto functionId : pack.functionDefinitionsInOrder) {
         dumpFunction(pack, functionId, /*dumpBody=*/true, out);
     }
 }
