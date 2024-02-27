@@ -50,6 +50,7 @@ class FMaterialInstance;
 class FrameGraph;
 class PerViewUniforms;
 class RenderPass;
+class RenderPassBuilder;
 struct CameraInfo;
 
 class PostProcessManager {
@@ -99,12 +100,12 @@ public:
         FrameGraphId<FrameGraphTexture> picking;
     };
     StructurePassOutput structure(FrameGraph& fg,
-            RenderPass const& pass, uint8_t structureRenderFlags,
+            RenderPassBuilder const& passBuilder, uint8_t structureRenderFlags,
             uint32_t width, uint32_t height, StructurePassConfig const& config) noexcept;
 
     // reflections pass
     FrameGraphId<FrameGraphTexture> ssr(FrameGraph& fg,
-            RenderPass const& pass,
+            RenderPassBuilder const& passBuilder,
             FrameHistory const& frameHistory,
             CameraInfo const& cameraInfo,
             PerViewUniforms& uniforms,

@@ -19,16 +19,42 @@
 #include "RenderPrimitive.h"
 #include "ShadowMap.h"
 
+#include "details/Camera.h"
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/View.h"
 
+#include "components/RenderableManager.h"
+
+#include <private/filament/EngineEnums.h>
 #include <private/filament/UibStructs.h>
+#include <private/filament/Variant.h>
 
+#include <filament/MaterialEnums.h>
+
+#include <backend/DriverApiForward.h>
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+#include <backend/PipelineState.h>
+
+#include "private/backend/CircularBuffer.h"
+
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/JobSystem.h>
+#include <utils/Panic.h>
+#include <utils/Slice.h>
 #include <utils/Systrace.h>
+#include <utils/Range.h>
 
+#include <algorithm>
+#include <functional>
+#include <limits>
 #include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 using namespace utils;
 using namespace filament::math;
@@ -37,64 +63,112 @@ namespace filament {
 
 using namespace backend;
 
-RenderPass::RenderPass(FEngine& engine,
-        RenderPass::Arena& arena) noexcept
-        : mCommandArena(arena),
-          mCustomCommands(engine.getPerRenderPassAllocator()) {
+RenderPassBuilder& RenderPassBuilder::customCommand(
+        FEngine& engine,
+        uint8_t channel,
+        RenderPass::Pass pass,
+        RenderPass::CustomCommand custom,
+        uint32_t order,
+        RenderPass::Executor::CustomCommandFn const& command) {
+    if (!mCustomCommands.has_value()) {
+        // construct the vector the first time
+        mCustomCommands.emplace(engine.getPerRenderPassArena());
+    }
+    mCustomCommands->emplace_back(channel, pass, custom, order, command);
+    return *this;
 }
 
-RenderPass::RenderPass(RenderPass const& rhs) = default;
+RenderPass RenderPassBuilder::build(FEngine& engine) {
+    ASSERT_POSTCONDITION(mRenderableSoa, "RenderPassBuilder::geometry() hasn't been called");
+    assert_invariant(mScissorViewport.width  <= std::numeric_limits<int32_t>::max());
+    assert_invariant(mScissorViewport.height <= std::numeric_limits<int32_t>::max());
+    return RenderPass{ engine, *this };
+}
+
+// ------------------------------------------------------------------------------------------------
+
+RenderPass::RenderPass(FEngine& engine, RenderPassBuilder const& builder) noexcept
+        : mRenderableSoa(*builder.mRenderableSoa),
+          mVisibleRenderables(builder.mVisibleRenderables),
+          mUboHandle(builder.mUboHandle),
+          mCameraPosition(builder.mCameraPosition),
+          mCameraForwardVector(builder.mCameraForwardVector),
+          mFlags(builder.mFlags),
+          mVariant(builder.mVariant),
+          mVisibilityMask(builder.mVisibilityMask),
+          mScissorViewport(builder.mScissorViewport),
+          mCustomCommands(engine.getPerRenderPassArena()) {
+
+    // compute the number of commands we need
+    updateSummedPrimitiveCounts(
+            const_cast<FScene::RenderableSoa&>(mRenderableSoa), mVisibleRenderables);
+
+    uint32_t commandCount =
+            FScene::getPrimitiveCount(mRenderableSoa, mVisibleRenderables.last);
+    const bool colorPass  = bool(builder.mCommandTypeFlags & CommandTypeFlags::COLOR);
+    const bool depthPass  = bool(builder.mCommandTypeFlags & CommandTypeFlags::DEPTH);
+    commandCount *= uint32_t(colorPass * 2 + depthPass);
+    commandCount += 1; // for the sentinel
+
+    uint32_t const customCommandCount =
+            builder.mCustomCommands.has_value() ? builder.mCustomCommands->size() : 0;
+
+    Command* const curr = builder.mArena.alloc<Command>(commandCount + customCommandCount);
+    assert_invariant(curr);
+
+    if (UTILS_UNLIKELY(builder.mArena.getAllocator().isHeapAllocation(curr))) {
+        static bool sLogOnce = true;
+        if (UTILS_UNLIKELY(sLogOnce)) {
+            sLogOnce = false;
+            PANIC_LOG("RenderPass arena is full, using slower system heap. Please increase "
+                      "the appropriate constant (e.g. FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB).");
+        }
+    }
+
+    mCommandBegin = curr;
+    mCommandEnd = curr + commandCount + customCommandCount;
+
+    appendCommands(engine, { curr, commandCount }, builder.mCommandTypeFlags);
+
+    if (builder.mCustomCommands.has_value()) {
+        Command* p = curr + commandCount;
+        for (auto [channel, passId, command, order, fn]: builder.mCustomCommands.value()) {
+            appendCustomCommand(p++, channel, passId, command, order, fn);
+        }
+    }
+
+    // sort commands once we're done adding commands
+    sortCommands(builder.mArena);
+
+    if (engine.isAutomaticInstancingEnabled()) {
+        instanceify(engine, builder.mArena);
+    }
+}
 
 // this destructor is actually heavy because it inlines ~vector<>
 RenderPass::~RenderPass() noexcept = default;
 
-RenderPass::Command* RenderPass::append(size_t count) noexcept {
-    // this is like an "in-place" realloc(). Works only with LinearAllocator.
-    Command* const curr = mCommandArena.alloc<Command>(count);
-    assert_invariant(curr);
-    assert_invariant(mCommandBegin == nullptr || curr == mCommandEnd);
-    if (mCommandBegin == nullptr) {
-        mCommandBegin = mCommandEnd = curr;
-    }
-    mCommandEnd += count;
-    return curr;
-}
-
-void RenderPass::resize(size_t count) noexcept {
+void RenderPass::resize(Arena& arena, size_t count) noexcept {
     if (mCommandBegin) {
         mCommandEnd = mCommandBegin + count;
-        mCommandArena.rewind(mCommandEnd);
+        arena.rewind(mCommandEnd);
     }
 }
 
-void RenderPass::setGeometry(FScene::RenderableSoa const& soa, Range<uint32_t> vr,
-        backend::Handle<backend::HwBufferObject> uboHandle) noexcept {
-    mRenderableSoa = &soa;
-    mVisibleRenderables = vr;
-    mUboHandle = uboHandle;
-}
-
-void RenderPass::setCamera(const CameraInfo& camera) noexcept {
-    mCameraPosition = camera.getPosition();
-    mCameraForwardVector = camera.getForwardVector();
-}
-
-void RenderPass::setScissorViewport(backend::Viewport viewport) noexcept {
-    assert_invariant(viewport.width  <= std::numeric_limits<int32_t>::max());
-    assert_invariant(viewport.height <= std::numeric_limits<int32_t>::max());
-    mScissorViewport = viewport;
-}
-
-void RenderPass::appendCommands(FEngine& engine, CommandTypeFlags const commandTypeFlags) noexcept {
+void RenderPass::appendCommands(FEngine& engine,
+        Slice<Command> commands, CommandTypeFlags const commandTypeFlags) noexcept {
     SYSTRACE_CALL();
     SYSTRACE_CONTEXT();
-
-    assert_invariant(mRenderableSoa);
 
     utils::Range<uint32_t> const vr = mVisibleRenderables;
     // trace the number of visible renderables
     SYSTRACE_VALUE32("visibleRenderables", vr.size());
     if (UTILS_UNLIKELY(vr.empty())) {
+        // no renderables, we still need the sentinel and the command buffer size should be
+        // exactly 1.
+        assert_invariant(commands.size() == 1);
+        Command* curr = commands.data();
+        curr->key = uint64_t(Pass::SENTINEL);
         return;
     }
 
@@ -104,17 +178,10 @@ void RenderPass::appendCommands(FEngine& engine, CommandTypeFlags const commandT
     const FScene::VisibleMaskType visibilityMask = mVisibilityMask;
 
     // up-to-date summed primitive counts needed for generateCommands()
-    FScene::RenderableSoa const& soa = *mRenderableSoa;
-    updateSummedPrimitiveCounts(const_cast<FScene::RenderableSoa&>(soa), vr);
+    FScene::RenderableSoa const& soa = mRenderableSoa;
 
-    // compute how much maximum storage we need for this pass
-    uint32_t commandCount = FScene::getPrimitiveCount(soa, vr.last);
-    // double the color pass for transparent objects that need to render twice
-    const bool colorPass  = bool(commandTypeFlags & CommandTypeFlags::COLOR);
-    const bool depthPass  = bool(commandTypeFlags & CommandTypeFlags::DEPTH);
-    commandCount *= uint32_t(colorPass * 2 + depthPass);
-    commandCount += 1; // for the sentinel
-    Command* const curr = append(commandCount);
+    Command* curr = commands.data();
+    size_t const commandCount = commands.size();
 
     auto stereoscopicEyeCount =
             renderFlags & IS_STEREOSCOPIC ? engine.getConfig().stereoscopicEyeCount : 1;
@@ -152,7 +219,8 @@ void RenderPass::appendCommands(FEngine& engine, CommandTypeFlags const commandT
     }
 }
 
-void RenderPass::appendCustomCommand(uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
+void RenderPass::appendCustomCommand(Command* commands,
+        uint8_t channel, Pass pass, CustomCommand custom, uint32_t order,
         Executor::CustomCommandFn command) {
 
     assert_invariant((uint64_t(order) << CUSTOM_ORDER_SHIFT) <=  CUSTOM_ORDER_MASK);
@@ -168,11 +236,10 @@ void RenderPass::appendCustomCommand(uint8_t channel, Pass pass, CustomCommand c
     cmd |= uint64_t(order) << CUSTOM_ORDER_SHIFT;
     cmd |= uint64_t(index);
 
-    Command* const curr = append(1);
-    curr->key = cmd;
+    commands->key = cmd;
 }
 
-void RenderPass::sortCommands(FEngine& engine) noexcept {
+void RenderPass::sortCommands(Arena& arena) noexcept {
     SYSTRACE_NAME("sort and trim commands");
 
     std::sort(mCommandBegin, mCommandEnd);
@@ -183,30 +250,20 @@ void RenderPass::sortCommands(FEngine& engine) noexcept {
                 return c.key != uint64_t(Pass::SENTINEL);
             });
 
-    resize(uint32_t(last - mCommandBegin));
-
-    if (engine.isAutomaticInstancingEnabled()) {
-        instanceify(engine);
-    }
+    resize(arena, uint32_t(last - mCommandBegin));
 }
 
-void RenderPass::execute(FEngine& engine, const char* name,
+void RenderPass::execute(RenderPass const& pass,
+        FEngine& engine, const char* name,
         backend::Handle<backend::HwRenderTarget> renderTarget,
-        backend::RenderPassParams params) const noexcept {
-
+        backend::RenderPassParams params) noexcept {
     DriverApi& driver = engine.getDriverApi();
-
-    // this is a good time to flush the CommandStream, because we're about to potentially
-    // output a lot of commands. This guarantees here that we have at least
-    // FILAMENT_MIN_COMMAND_BUFFERS_SIZE_IN_MB bytes (1MiB by default).
-    engine.flush();
-
     driver.beginRenderPass(renderTarget, params);
-    getExecutor().execute(engine, name);
+    pass.getExecutor().execute(engine, name);
     driver.endRenderPass();
 }
 
-void RenderPass::instanceify(FEngine& engine) noexcept {
+void RenderPass::instanceify(FEngine& engine, Arena& arena) noexcept {
     SYSTRACE_NAME("instanceify");
 
     // instanceify works by scanning the **sorted** command stream, looking for repeat draw
@@ -262,7 +319,8 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
                 // buffer large enough for all instances data
                 stagingBufferSize = sizeof(PerRenderableData) * (last - curr);
                 stagingBuffer = (PerRenderableData*)::malloc(stagingBufferSize);
-                uboData = mRenderableSoa->data<FScene::UBO>();
+                uboData = mRenderableSoa.data<FScene::UBO>();
+                assert_invariant(uboData);
             }
 
             // copy the ubo data to a staging buffer
@@ -315,7 +373,7 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
             return command.key == uint64_t(Pass::SENTINEL);
         });
 
-        resize(uint32_t(lastCommand - mCommandBegin));
+        resize(arena, uint32_t(lastCommand - mCommandBegin));
     }
 
     assert_invariant(stagingBuffer == nullptr);
@@ -323,7 +381,7 @@ void RenderPass::instanceify(FEngine& engine) noexcept {
 
 
 /* static */
-UTILS_ALWAYS_INLINE // this function exists only to make the code more readable. we want it inlined.
+UTILS_ALWAYS_INLINE // This function exists only to make the code more readable. we want it inlined.
 inline              // and we don't need it in the compilation unit
 void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
         FMaterialInstance const* const UTILS_RESTRICT mi, bool inverseFrontFaces) noexcept {
@@ -374,7 +432,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant,
 
 /* static */
 UTILS_NOINLINE
-void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const commands,
+void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* const commands,
         FScene::RenderableSoa const& soa, Range<uint32_t> range,
         Variant variant, RenderFlags renderFlags,
         FScene::VisibleMaskType visibilityMask, float3 cameraPosition, float3 cameraForward,
@@ -432,9 +490,9 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
 }
 
 /* static */
-template<uint32_t commandTypeFlags>
+template<RenderPass::CommandTypeFlags commandTypeFlags>
 UTILS_NOINLINE
-RenderPass::Command* RenderPass::generateCommandsImpl(uint32_t extraFlags,
+RenderPass::Command* RenderPass::generateCommandsImpl(RenderPass::CommandTypeFlags extraFlags,
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
         Variant const variant, RenderFlags renderFlags, FScene::VisibleMaskType visibilityMask,
@@ -737,13 +795,13 @@ void RenderPass::updateSummedPrimitiveCounts(
 // ------------------------------------------------------------------------------------------------
 
 void RenderPass::Executor::overridePolygonOffset(backend::PolygonOffset const* polygonOffset) noexcept {
-    if ((mPolygonOffsetOverride = (polygonOffset != nullptr))) {
+    if ((mPolygonOffsetOverride = (polygonOffset != nullptr))) { // NOLINT(*-assignment-in-if-condition)
         mPolygonOffset = *polygonOffset;
     }
 }
 
 void RenderPass::Executor::overrideScissor(backend::Viewport const* scissor) noexcept {
-    if ((mScissorOverride = (scissor != nullptr))) {
+    if ((mScissorOverride = (scissor != nullptr))) { // NOLINT(*-assignment-in-if-condition)
         mScissor = *scissor;
     }
 }
@@ -754,14 +812,19 @@ void RenderPass::Executor::overrideScissor(backend::Viewport const& scissor) noe
 }
 
 void RenderPass::Executor::execute(FEngine& engine, const char*) const noexcept {
-    execute(engine.getDriverApi(), mCommands.begin(), mCommands.end());
+    execute(engine, mCommands.begin(), mCommands.end());
 }
 
 UTILS_NOINLINE // no need to be inlined
-void RenderPass::Executor::execute(backend::DriverApi& driver,
+void RenderPass::Executor::execute(FEngine& engine,
         const Command* first, const Command* last) const noexcept {
+
     SYSTRACE_CALL();
     SYSTRACE_CONTEXT();
+
+    DriverApi& driver = engine.getDriverApi();
+    size_t const capacity = engine.getMinCommandBufferSize();
+    CircularBuffer const& circularBuffer = driver.getCircularBuffer();
 
     if (first != last) {
         SYSTRACE_VALUE32("commandCount", last - first);
@@ -781,126 +844,163 @@ void RenderPass::Executor::execute(backend::DriverApi& driver,
         FMaterial const* UTILS_RESTRICT ma = nullptr;
         auto const* UTILS_RESTRICT pCustomCommands = mCustomCommands.data();
 
-        first--;
-        while (++first != last) {
-            assert_invariant(first->key != uint64_t(Pass::SENTINEL));
+        // Maximum space occupied in the CircularBuffer by a single `Command`. This must be
+        // reevaluated when the inner loop below adds DriverApi commands or when we change the
+        // CommandStream protocol. Currently, the maximum is 240 bytes, and we use 256 to be on
+        // the safer side.
+        size_t const maxCommandSizeInBytes = 256;
 
-            /*
-             * Be careful when changing code below, this is the hot inner-loop
-             */
+        // Number of Commands that can be issued and guaranteed to fit in the current
+        // CircularBuffer allocation. In practice, we'll have tons of headroom especially if
+        // skinning and morphing aren't used. With a 2 MiB buffer (the default) a batch is
+        // 8192 commands (i.e. draw calls).
+        size_t const batchCommandCount = capacity / maxCommandSizeInBytes;
+        while(first != last) {
+            Command const* const batchLast = std::min(first + batchCommandCount, last);
 
-            if (UTILS_UNLIKELY((first->key & CUSTOM_MASK) != uint64_t(CustomCommand::PASS))) {
-                mi = nullptr; // custom command could change the currently bound MaterialInstance
-                uint32_t const index = (first->key & CUSTOM_INDEX_MASK) >> CUSTOM_INDEX_SHIFT;
-                assert_invariant(index < mCustomCommands.size());
-                pCustomCommands[index]();
-                continue;
+            // actual number of commands we need to write (can be smaller than batchCommandCount)
+            size_t const commandCount = batchLast - first;
+            size_t const commandSizeInBytes = commandCount * maxCommandSizeInBytes;
+
+            // check we have enough capacity to write these commandCount commands, if not,
+            // request a new CircularBuffer allocation of `capacity` bytes.
+            if (UTILS_UNLIKELY(circularBuffer.getUsed() > capacity - commandSizeInBytes)) {
+                engine.flush(); // TODO: we should use a "fast" flush if possible
             }
 
-            // primitiveHandle may be invalid if no geometry was set on the renderable.
-            if (UTILS_UNLIKELY(!first->primitive.primitiveHandle)) {
-                continue;
-            }
+            first--;
+            while (++first != batchLast) {
+                assert_invariant(first->key != uint64_t(Pass::SENTINEL));
 
-            // per-renderable uniform
-            const PrimitiveInfo info = first->primitive;
-            pipeline.rasterState = info.rasterState;
+                /*
+                 * Be careful when changing code below, this is the hot inner-loop
+                 */
 
-            if (UTILS_UNLIKELY(mi != info.mi)) {
-                // this is always taken the first time
-                mi = info.mi;
-                ma = mi->getMaterial();
-
-                auto const& scissor = mi->getScissor();
-                if (UTILS_UNLIKELY(mi->hasScissor())) {
-                    // scissor is set, we need to apply the offset/clip
-                    // clang vectorizes this!
-                    constexpr int32_t maxvali = std::numeric_limits<int32_t>::max();
-                    const backend::Viewport scissorViewport = mScissorViewport;
-                    // compute new left/bottom, assume no overflow
-                    int32_t l = scissor.left + scissorViewport.left;
-                    int32_t b = scissor.bottom + scissorViewport.bottom;
-                    // compute right/top without overflowing, scissor.width/height guaranteed
-                    // to convert to int32
-                    int32_t r = (l > maxvali - int32_t(scissor.width)) ?
-                            maxvali : l + int32_t(scissor.width);
-                    int32_t t = (b > maxvali - int32_t(scissor.height)) ?
-                            maxvali : b + int32_t(scissor.height);
-                    // clip to the viewport
-                    l = std::max(l, scissorViewport.left);
-                    b = std::max(b, scissorViewport.bottom);
-                    r = std::min(r, scissorViewport.left + int32_t(scissorViewport.width));
-                    t = std::min(t, scissorViewport.bottom + int32_t(scissorViewport.height));
-                    assert_invariant(r >= l && t >= b);
-                    *pScissor = { l, b, uint32_t(r - l), uint32_t(t - b) };
-                } else {
-                    // no scissor set (common case), 'scissor' has its default value, use that.
-                    *pScissor = scissor;
+                if (UTILS_UNLIKELY((first->key & CUSTOM_MASK) != uint64_t(CustomCommand::PASS))) {
+                    mi = nullptr; // custom command could change the currently bound MaterialInstance
+                    uint32_t const index = (first->key & CUSTOM_INDEX_MASK) >> CUSTOM_INDEX_SHIFT;
+                    assert_invariant(index < mCustomCommands.size());
+                    pCustomCommands[index]();
+                    continue;
                 }
 
-                *pPipelinePolygonOffset = mi->getPolygonOffset();
-                pipeline.stencilState = mi->getStencilState();
-                mi->use(driver);
-            }
-
-            pipeline.program = ma->getProgram(info.materialVariant);
-
-            uint16_t const instanceCount = info.instanceCount & PrimitiveInfo::INSTANCE_COUNT_MASK;
-            auto getPerObjectUboHandle =
-                    [this, &info, &instanceCount]() -> std::pair<Handle<backend::HwBufferObject>, uint32_t> {
-                if (info.instanceBufferHandle) {
-                    // "hybrid" instancing -- instanceBufferHandle takes the place of the UBO
-                    return { info.instanceBufferHandle, 0 };
+                // primitiveHandle may be invalid if no geometry was set on the renderable.
+                if (UTILS_UNLIKELY(!first->primitive.primitiveHandle)) {
+                    continue;
                 }
-                bool const userInstancing =
-                        (info.instanceCount & PrimitiveInfo::USER_INSTANCE_MASK) != 0u;
-                if (!userInstancing && instanceCount > 1) {
-                    // automatic instancing
-                    return { mInstancedUboHandle, info.index * sizeof(PerRenderableData) };
-                } else {
-                    // manual instancing
-                    return { mUboHandle, info.index * sizeof(PerRenderableData) };
+
+                // per-renderable uniform
+                const PrimitiveInfo info = first->primitive;
+                pipeline.rasterState = info.rasterState;
+
+                if (UTILS_UNLIKELY(mi != info.mi)) {
+                    // this is always taken the first time
+                    mi = info.mi;
+                    assert_invariant(mi);
+
+                    ma = mi->getMaterial();
+
+                    auto const& scissor = mi->getScissor();
+                    if (UTILS_UNLIKELY(mi->hasScissor())) {
+                        // scissor is set, we need to apply the offset/clip
+                        // clang vectorizes this!
+                        constexpr int32_t maxvali = std::numeric_limits<int32_t>::max();
+                        const backend::Viewport scissorViewport = mScissorViewport;
+                        // compute new left/bottom, assume no overflow
+                        int32_t l = scissor.left + scissorViewport.left;
+                        int32_t b = scissor.bottom + scissorViewport.bottom;
+                        // compute right/top without overflowing, scissor.width/height guaranteed
+                        // to convert to int32
+                        int32_t r = (l > maxvali - int32_t(scissor.width)) ?
+                                    maxvali : l + int32_t(scissor.width);
+                        int32_t t = (b > maxvali - int32_t(scissor.height)) ?
+                                    maxvali : b + int32_t(scissor.height);
+                        // clip to the viewport
+                        l = std::max(l, scissorViewport.left);
+                        b = std::max(b, scissorViewport.bottom);
+                        r = std::min(r, scissorViewport.left + int32_t(scissorViewport.width));
+                        t = std::min(t, scissorViewport.bottom + int32_t(scissorViewport.height));
+                        assert_invariant(r >= l && t >= b);
+                        *pScissor = { l, b, uint32_t(r - l), uint32_t(t - b) };
+                    } else {
+                        // no scissor set (common case), 'scissor' has its default value, use that.
+                        *pScissor = scissor;
+                    }
+
+                    *pPipelinePolygonOffset = mi->getPolygonOffset();
+                    pipeline.stencilState = mi->getStencilState();
+                    mi->use(driver);
                 }
-            };
 
-            // bind per-renderable uniform block. there is no need to attempt to skip this command
-            // because the backends already do this.
-            auto const [perObjectUboHandle, offset] = getPerObjectUboHandle();
-            assert_invariant(perObjectUboHandle);
-            driver.bindBufferRange(BufferObjectBinding::UNIFORM,
-                    +UniformBindingPoints::PER_RENDERABLE,
-                    perObjectUboHandle,
-                    offset,
-                    sizeof(PerRenderableUib));
+                assert_invariant(ma);
+                pipeline.program = ma->getProgram(info.materialVariant);
 
-            if (UTILS_UNLIKELY(info.skinningHandle)) {
-                // note: we can't bind less than sizeof(PerRenderableBoneUib) due to glsl limitations
+                uint16_t const instanceCount =
+                        info.instanceCount & PrimitiveInfo::INSTANCE_COUNT_MASK;
+                auto getPerObjectUboHandle =
+                        [this, &info, &instanceCount]() -> std::pair<Handle<backend::HwBufferObject>, uint32_t> {
+                            if (info.instanceBufferHandle) {
+                                // "hybrid" instancing -- instanceBufferHandle takes the place of the UBO
+                                return { info.instanceBufferHandle, 0 };
+                            }
+                            bool const userInstancing =
+                                    (info.instanceCount & PrimitiveInfo::USER_INSTANCE_MASK) != 0u;
+                            if (!userInstancing && instanceCount > 1) {
+                                // automatic instancing
+                                return {
+                                        mInstancedUboHandle,
+                                        info.index * sizeof(PerRenderableData) };
+                            } else {
+                                // manual instancing
+                                return { mUboHandle, info.index * sizeof(PerRenderableData) };
+                            }
+                        };
+
+                // Bind per-renderable uniform block. There is no need to attempt to skip this command
+                // because the backends already do this.
+                auto const [perObjectUboHandle, offset] = getPerObjectUboHandle();
+                assert_invariant(perObjectUboHandle);
                 driver.bindBufferRange(BufferObjectBinding::UNIFORM,
-                        +UniformBindingPoints::PER_RENDERABLE_BONES,
-                        info.skinningHandle,
-                        info.skinningOffset * sizeof(PerRenderableBoneUib::BoneData),
-                        sizeof(PerRenderableBoneUib));
-                // note: always bind the skinningTexture because the shader needs it.
-                driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_SKINNING,
-                        info.skinningTexture);
-                // note: even if only skinning is enabled, binding morphTargetBuffer is needed.
-                driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_MORPHING,
-                        info.morphTargetBuffer);
-           }
+                        +UniformBindingPoints::PER_RENDERABLE,
+                        perObjectUboHandle,
+                        offset,
+                        sizeof(PerRenderableUib));
 
-            if (UTILS_UNLIKELY(info.morphWeightBuffer)) {
-                // Instead of using a UBO per primitive, we could also have a single UBO for all
-                // primitives and use bindUniformBufferRange which might be more efficient.
-                driver.bindUniformBuffer(+UniformBindingPoints::PER_RENDERABLE_MORPHING,
-                        info.morphWeightBuffer);
-                driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_MORPHING,
-                        info.morphTargetBuffer);
-                // note: even if only morphing is enabled, binding skinningTexture is needed.
-                driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_SKINNING,
-                        info.skinningTexture);
+                if (UTILS_UNLIKELY(info.skinningHandle)) {
+                    // note: we can't bind less than sizeof(PerRenderableBoneUib) due to glsl limitations
+                    driver.bindBufferRange(BufferObjectBinding::UNIFORM,
+                            +UniformBindingPoints::PER_RENDERABLE_BONES,
+                            info.skinningHandle,
+                            info.skinningOffset * sizeof(PerRenderableBoneUib::BoneData),
+                            sizeof(PerRenderableBoneUib));
+                    // note: always bind the skinningTexture because the shader needs it.
+                    driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_SKINNING,
+                            info.skinningTexture);
+                    // note: even if only skinning is enabled, binding morphTargetBuffer is needed.
+                    driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_MORPHING,
+                            info.morphTargetBuffer);
+                }
+
+                if (UTILS_UNLIKELY(info.morphWeightBuffer)) {
+                    // Instead of using a UBO per primitive, we could also have a single UBO for all
+                    // primitives and use bindUniformBufferRange which might be more efficient.
+                    driver.bindUniformBuffer(+UniformBindingPoints::PER_RENDERABLE_MORPHING,
+                            info.morphWeightBuffer);
+                    driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_MORPHING,
+                            info.morphTargetBuffer);
+                    // note: even if only morphing is enabled, binding skinningTexture is needed.
+                    driver.bindSamplers(+SamplerBindingPoints::PER_RENDERABLE_SKINNING,
+                            info.skinningTexture);
+                }
+
+                driver.draw(pipeline, info.primitiveHandle, instanceCount);
             }
+        }
 
-            driver.draw(pipeline, info.primitiveHandle, instanceCount);
+        // If the remaining space is less than half the capacity, we flush right away to
+        // allow some headroom for commands that might come later.
+        if (UTILS_UNLIKELY(circularBuffer.getUsed() > capacity / 2)) {
+            engine.flush();
         }
     }
 

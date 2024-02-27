@@ -16,6 +16,9 @@
 
 #include "details/Renderer.h"
 
+#include "Allocators.h"
+#include "DebugRegistry.h"
+#include "FrameHistory.h"
 #include "PostProcessManager.h"
 #include "RendererUtils.h"
 #include "RenderPass.h"
@@ -28,20 +31,39 @@
 #include "details/Texture.h"
 #include "details/View.h"
 
+#include <filament/Camera.h>
+#include <filament/Fence.h>
+#include <filament/Options.h>
 #include <filament/Renderer.h>
 
+#include <backend/DriverEnums.h>
+#include <backend/DriverApiForward.h>
+#include <backend/Handle.h>
 #include <backend/PixelBufferDescriptor.h>
 
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphId.h"
 #include "fg/FrameGraphResources.h"
+#include "fg/FrameGraphTexture.h"
+
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/mat4.h>
 
 #include <utils/compiler.h>
 #include <utils/JobSystem.h>
+#include <utils/Log.h>
+#include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
-#include <utils/vector.h>
 #include <utils/debug.h>
+
+#include <chrono>
+#include <limits>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 // this helps visualize what dynamic-scaling is doing
 #define DEBUG_DYNAMIC_SCALING false
@@ -62,8 +84,7 @@ FRenderer::FRenderer(FEngine& engine) :
         mHdrQualityMedium(TextureFormat::R11F_G11F_B10F),
         mHdrQualityHigh(TextureFormat::RGB16F),
         mIsRGB8Supported(false),
-        mUserEpoch(engine.getEngineEpoch()),
-        mPerRenderPassArena(engine.getPerRenderPassAllocator())
+        mUserEpoch(engine.getEngineEpoch())
 {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.renderer.doFrameCapture",
@@ -442,7 +463,7 @@ void FRenderer::render(FView const* view) {
 
     if (UTILS_LIKELY(view && view->getScene())) {
         if (mViewRenderedCount) {
-            // this is a good place to kick the GPU, since we've rendered a View before,
+            // This is a good place to kick the GPU, since we've rendered a View before,
             // and we're about to render another one.
             mEngine.getDriverApi().flush();
         }
@@ -452,17 +473,17 @@ void FRenderer::render(FView const* view) {
 }
 
 void FRenderer::renderInternal(FView const* view) {
-    // per-renderpass data
-    ArenaScope rootArena(mPerRenderPassArena);
-
     FEngine& engine = mEngine;
-    JobSystem& js = engine.getJobSystem();
+
+    // per-renderpass data
+    RootArenaScope rootArenaScope(engine.getPerRenderPassArena());
 
     // create a root job so no other job can escape
+    JobSystem& js = engine.getJobSystem();
     auto *rootJob = js.setRootJob(js.createJob());
 
     // execute the render pass
-    renderJob(rootArena, const_cast<FView&>(*view));
+    renderJob(rootArenaScope, const_cast<FView&>(*view));
 
     // make sure to flush the command buffer
     engine.flush();
@@ -471,7 +492,7 @@ void FRenderer::renderInternal(FView const* view) {
     js.runAndWait(rootJob);
 }
 
-void FRenderer::renderJob(ArenaScope& arena, FView& view) {
+void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     FEngine& engine = mEngine;
     JobSystem& js = engine.getJobSystem();
     FEngine::DriverApi& driver = engine.getDriverApi();
@@ -636,7 +657,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         xvp.bottom = int32_t(guardBand);
     }
 
-    view.prepare(engine, driver, arena, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);
+    view.prepare(engine, driver, rootArenaScope, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);
 
     view.prepareUpscaler(scale, taaOptions, dsrOptions);
 
@@ -649,8 +670,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // Allocate some space for our commands in the per-frame Arena, and use that space as
     // an Arena for commands. All this space is released when we exit this method.
     size_t const perFrameCommandsSize = engine.getPerFrameCommandsSize();
-    void* const arenaBegin = arena.allocate(perFrameCommandsSize, CACHELINE_SIZE);
+    void* const arenaBegin = rootArenaScope.allocate(perFrameCommandsSize, CACHELINE_SIZE);
     void* const arenaEnd = pointermath::add(arenaBegin, perFrameCommandsSize);
+
+    // This arena *must* stay valid until all commands have been processed
     RenderPass::Arena commandArena("Command Arena", { arenaBegin, arenaEnd });
 
     RenderPass::RenderFlags renderFlags = 0;
@@ -658,8 +681,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (view.isFrontFaceWindingInverted())  renderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
     if (view.hasInstancedStereo())          renderFlags |= RenderPass::IS_STEREOSCOPIC;
 
-    RenderPass pass(engine, commandArena);
-    pass.setRenderFlags(renderFlags);
+    RenderPassBuilder passBuilder(commandArena);
+    passBuilder.renderFlags(renderFlags);
 
     Variant variant;
     variant.setDirectionalLighting(view.hasDirectionalLight());
@@ -682,10 +705,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     if (view.needsShadowMap()) {
         Variant shadowVariant(Variant::DEPTH_VARIANT);
         shadowVariant.setVsm(view.getShadowType() == ShadowType::VSM);
-
-        RenderPass shadowPass(pass);
-        shadowPass.setVariant(shadowVariant);
-        auto shadows = view.renderShadowMaps(engine, fg, cameraInfo, mShaderUserTime, shadowPass);
+        auto shadows = view.renderShadowMaps(engine, fg, cameraInfo, mShaderUserTime,
+                RenderPassBuilder{ commandArena }
+                    .renderFlags(renderFlags)
+                    .variant(shadowVariant));
         blackboard["shadows"] = shadows;
     }
 
@@ -771,8 +794,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     view.updatePrimitivesLod(engine, cameraInfo,
             scene.getRenderableData(), view.getVisibleRenderables());
 
-    pass.setCamera(cameraInfo);
-    pass.setGeometry(scene.getRenderableData(), view.getVisibleRenderables(), scene.getRenderableUBO());
+    passBuilder.camera(cameraInfo);
+    passBuilder.geometry(scene.getRenderableData(),
+            view.getVisibleRenderables(), scene.getRenderableUBO());
 
     // view set-ups that need to happen before rendering
     fg.addTrivialSideEffectPass("Prepare View Uniforms",
@@ -818,7 +842,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // This is normally used by SSAO and contact-shadows
 
     // TODO: the scaling should depends on all passes that need the structure pass
-    const auto [structure, picking_] = ppm.structure(fg, pass, renderFlags, svp.width, svp.height, {
+    const auto [structure, picking_] = ppm.structure(fg,
+            passBuilder, renderFlags, svp.width, svp.height, {
             .scale = aoOptions.resolution,
             .picking = view.hasPicking()
     });
@@ -876,7 +901,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // screen-space reflections pass
 
     if (ssReflectionsOptions.enabled) {
-        auto reflections = ppm.ssr(fg, pass,
+        auto reflections = ppm.ssr(fg, passBuilder,
                 view.getFrameHistory(), cameraInfo,
                 view.getPerViewUniforms(),
                 structure,
@@ -894,10 +919,15 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // --------------------------------------------------------------------------------------------
     // Color passes
 
+    // this makes the viewport relative to xvp
+    // FIXME: we should use 'vp' when rendering directly into the swapchain, but that's hard to
+    //        know at this point. This will usually be the case when post-process is disabled.
+    // FIXME: we probably should take the dynamic scaling into account too
+    passBuilder.scissorViewport(hasPostProcess ? xvp : vp);
+
     // This one doesn't need to be a FrameGraph pass because it always happens by construction
     // (i.e. it won't be culled, unless everything is culled), so no need to complexify things.
-    pass.setVariant(variant);
-    pass.appendCommands(engine, RenderPass::COLOR);
+    passBuilder.variant(variant);
 
     // color-grading as subpass is done either by the color pass or the TAA pass if any
     auto colorGradingConfigForColor = colorGradingConfig;
@@ -905,7 +935,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     if (colorGradingConfigForColor.asSubpass) {
         // append color grading subpass after all other passes
-        pass.appendCustomCommand(3,
+        passBuilder.customCommand(engine, 3,
                 RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,
                 0, [&ppm, &driver, colorGradingConfigForColor]() {
@@ -913,7 +943,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 });
     } else if (colorGradingConfig.customResolve) {
         // append custom resolve subpass after all other passes
-        pass.appendCustomCommand(3,
+        passBuilder.customCommand(engine, 3,
                 RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,
                 0, [&ppm, &driver]() {
@@ -921,16 +951,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 });
     }
 
-    // sort commands once we're done adding commands
-    pass.sortCommands(engine);
+    passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::COLOR);
 
-
-    // this makes the viewport relative to xvp
-    // FIXME: we should use 'vp' when rendering directly into the swapchain, but that's hard to
-    //        know at this point. This will usually be the case when post-process is disabled.
-    // FIXME: we probably should take the dynamic scaling into account too
-    pass.setScissorViewport(hasPostProcess ? xvp : vp);
-
+    RenderPass const pass{ passBuilder.build(engine) };
 
     FrameGraphTexture::Descriptor const desc = {
             .width = config.physicalViewport.width,

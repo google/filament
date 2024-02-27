@@ -22,11 +22,16 @@
 #include <filament/DebugRegistry.h>
 
 #include <utils/compiler.h>
+#include <utils/Invocable.h>
+
+#include <math/mathfwd.h>
 
 #include <functional>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
+
+#include <stddef.h>
 
 namespace filament {
 
@@ -95,7 +100,12 @@ public:
         registerProperty(name, p, FLOAT4, std::move(fn));
     }
 
+    // registers a DataSource directly
     void registerDataSource(std::string_view name, void const* data, size_t count) noexcept;
+
+    // registers a DataSource lazily
+    void registerDataSource(std::string_view name,
+            utils::Invocable<DataSource()>&& creator) noexcept;
 
 #if !defined(_MSC_VER)
 private:
@@ -113,7 +123,8 @@ private:
     void const* getPropertyAddress(const char* name) const noexcept;
     DataSource getDataSource(const char* name) const noexcept;
     std::unordered_map<std::string_view, PropertyInfo> mPropertyMap;
-    std::unordered_map<std::string_view, DataSource> mDataSourceMap;
+    mutable std::unordered_map<std::string_view, DataSource> mDataSourceMap;
+    mutable std::unordered_map<std::string_view, utils::Invocable<DataSource()>> mDataSourceCreatorMap;
 };
 
 FILAMENT_DOWNCAST(DebugRegistry)

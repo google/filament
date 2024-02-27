@@ -98,7 +98,10 @@ Engine* FEngine::create(Engine::Builder const& builder) {
             return nullptr;
         }
         DriverConfig const driverConfig{
-            .handleArenaSize = instance->getRequestedDriverHandleArenaSize() };
+                .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
+                .textureUseAfterFreePoolSize = instance->getConfig().textureUseAfterFreePoolSize,
+                .disableParallelShaderCompile = instance->getConfig().disableParallelShaderCompile
+        };
         instance->mDriver = platform->createDriver(sharedContext, driverConfig);
 
     } else {
@@ -198,7 +201,7 @@ FEngine::FEngine(Engine::Builder const& builder) :
         mCommandBufferQueue(
                 builder->mConfig.minCommandBufferSizeMB * MiB,
                 builder->mConfig.commandBufferSizeMB * MiB),
-        mPerRenderPassAllocator(
+        mPerRenderPassArena(
                 "FEngine::mPerRenderPassAllocator",
                 builder->mConfig.perRenderPassArenaSizeMB * MiB),
         mHeapAllocator("FEngine::mHeapAllocator", AreaPolicy::NullArea{}),
@@ -651,7 +654,8 @@ int FEngine::loop() {
 
     DriverConfig const driverConfig {
             .handleArenaSize = getRequestedDriverHandleArenaSize(),
-            .textureUseAfterFreePoolSize = mConfig.textureUseAfterFreePoolSize
+            .textureUseAfterFreePoolSize = mConfig.textureUseAfterFreePoolSize,
+            .disableParallelShaderCompile = mConfig.disableParallelShaderCompile
     };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
 

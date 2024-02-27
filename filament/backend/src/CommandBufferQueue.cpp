@@ -15,14 +15,25 @@
  */
 
 #include "private/backend/CommandBufferQueue.h"
+#include "private/backend/CircularBuffer.h"
+#include "private/backend/CommandStream.h"
 
+#include <utils/compiler.h>
 #include <utils/Log.h>
-#include <utils/Systrace.h>
+#include <utils/Mutex.h>
+#include <utils/ostream.h>
 #include <utils/Panic.h>
+#include <utils/Systrace.h>
 #include <utils/debug.h>
 
-#include "private/backend/BackendUtils.h"
-#include "private/backend/CommandStream.h"
+#include <algorithm>
+#include <mutex>
+#include <iterator>
+#include <utility>
+#include <vector>
+
+#include <stddef.h>
+#include <stdint.h>
 
 using namespace utils;
 
@@ -65,50 +76,53 @@ void CommandBufferQueue::flush() noexcept {
     // always guaranteed to have enough space for the NoopCommand
     new(circularBuffer.allocate(sizeof(NoopCommand))) NoopCommand(nullptr);
 
-    // end of this slice
-    void* const head = circularBuffer.getHead();
+    const size_t requiredSize = mRequiredSize;
 
-    // beginning of this slice
-    void* const tail = circularBuffer.getTail();
+    // get the current buffer
+    auto const [begin, end] = circularBuffer.getBuffer();
 
-    // size of this slice
-    uint32_t const used = uint32_t(intptr_t(head) - intptr_t(tail));
+    assert_invariant(circularBuffer.empty());
 
-    circularBuffer.circularize();
+    // size of the current buffer
+    size_t const used = std::distance(
+            static_cast<char const*>(begin), static_cast<char const*>(end));
 
     std::unique_lock<utils::Mutex> lock(mLock);
-    mCommandBuffersToExecute.push_back({ tail, head });
+    mCommandBuffersToExecute.push_back({ begin, end });
+    mCondition.notify_one();
 
     // circular buffer is too small, we corrupted the stream
     ASSERT_POSTCONDITION(used <= mFreeSpace,
             "Backend CommandStream overflow. Commands are corrupted and unrecoverable.\n"
             "Please increase minCommandBufferSizeMB inside the Config passed to Engine::create.\n"
-            "Space used at this time: %u bytes",
-            (unsigned)used);
+            "Space used at this time: %u bytes, overflow: %u bytes",
+            (unsigned)used, unsigned(used - mFreeSpace));
 
     // wait until there is enough space in the buffer
     mFreeSpace -= used;
-    const size_t requiredSize = mRequiredSize;
+    if (UTILS_UNLIKELY(mFreeSpace < requiredSize)) {
+
 
 #ifndef NDEBUG
-    size_t totalUsed = circularBuffer.size() - mFreeSpace;
-    mHighWatermark = std::max(mHighWatermark, totalUsed);
-    if (UTILS_UNLIKELY(totalUsed > requiredSize)) {
-        slog.d << "CommandStream used too much space: " << totalUsed
-            << ", out of " << requiredSize << " (will block)" << io::endl;
-    }
+        size_t const totalUsed = circularBuffer.size() - mFreeSpace;
+        slog.d << "CommandStream used too much space (will block): "
+                << "needed space " << requiredSize << " out of " << mFreeSpace
+                << ", totalUsed=" << totalUsed << ", current=" << used
+                << ", queue size=" << mCommandBuffersToExecute.size() << " buffers"
+                << io::endl;
+
+        mHighWatermark = std::max(mHighWatermark, totalUsed);
 #endif
 
-    mCondition.notify_one();
-    if (UTILS_LIKELY(mFreeSpace < requiredSize)) {
         SYSTRACE_NAME("waiting: CircularBuffer::flush()");
         mCondition.wait(lock, [this, requiredSize]() -> bool {
+            // TODO: on macOS, we need to call pumpEvents from time to time
             return mFreeSpace >= requiredSize;
         });
     }
 }
 
-std::vector<CommandBufferQueue::Slice> CommandBufferQueue::waitForCommands() const {
+std::vector<CommandBufferQueue::Range> CommandBufferQueue::waitForCommands() const {
     if (!UTILS_HAS_THREADING) {
         return std::move(mCommandBuffersToExecute);
     }
@@ -123,7 +137,7 @@ std::vector<CommandBufferQueue::Slice> CommandBufferQueue::waitForCommands() con
     return std::move(mCommandBuffersToExecute);
 }
 
-void CommandBufferQueue::releaseBuffer(CommandBufferQueue::Slice const& buffer) {
+void CommandBufferQueue::releaseBuffer(CommandBufferQueue::Range const& buffer) {
     std::lock_guard<utils::Mutex> const lock(mLock);
     mFreeSpace += uintptr_t(buffer.end) - uintptr_t(buffer.begin);
     mCondition.notify_one();

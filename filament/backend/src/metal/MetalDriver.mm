@@ -43,6 +43,40 @@ namespace filament {
 namespace backend {
 
 Driver* MetalDriverFactory::create(MetalPlatform* const platform, const Platform::DriverConfig& driverConfig) {
+#if 0
+    // this is useful for development, but too verbose even for debug builds
+    // For reference on a 64-bits machine in Release mode:
+    //    MetalTimerQuery              :  16       few
+    //    HwStream                     :  24       few
+    //    MetalIndexBuffer             :  40       moderate
+    //    MetalFence                   :  48       few
+    //    MetalBufferObject            :  48       many
+    // -- less than or equal 48 bytes
+    //    MetalSamplerGroup            : 112       few
+    //    MetalProgram                 : 144       moderate
+    //    MetalTexture                 : 152       moderate
+    //    MetalVertexBuffer            : 152       moderate
+    // -- less than or equal 160 bytes
+    //    MetalSwapChain               : 184       few
+    //    MetalRenderTarget            : 272       few
+    //    MetalRenderPrimitive         : 584       many
+    // -- less than or equal to 592 bytes
+
+    utils::slog.d
+           << "\nMetalSwapChain: " << sizeof(MetalSwapChain)
+           << "\nMetalBufferObject: " << sizeof(MetalBufferObject)
+           << "\nMetalVertexBuffer: " << sizeof(MetalVertexBuffer)
+           << "\nMetalIndexBuffer: " << sizeof(MetalIndexBuffer)
+           << "\nMetalSamplerGroup: " << sizeof(MetalSamplerGroup)
+           << "\nMetalRenderPrimitive: " << sizeof(MetalRenderPrimitive)
+           << "\nMetalTexture: " << sizeof(MetalTexture)
+           << "\nMetalTimerQuery: " << sizeof(MetalTimerQuery)
+           << "\nHwStream: " << sizeof(HwStream)
+           << "\nMetalRenderTarget: " << sizeof(MetalRenderTarget)
+           << "\nMetalFence: " << sizeof(MetalFence)
+           << "\nMetalProgram: " << sizeof(MetalProgram)
+           << utils::io::endl;
+#endif
     return MetalDriver::create(platform, driverConfig);
 }
 
