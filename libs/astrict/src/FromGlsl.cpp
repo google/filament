@@ -23,6 +23,7 @@
 #include <optional>
 #include <set>
 
+#include "ConstantUnion.h"
 #include "Types.h"
 #include "glslang/MachineIndependent/localintermediate.h"
 #include "intermediate.h"
@@ -858,7 +859,7 @@ private:
     IdStoreByValue<StatementBlockId, std::vector<Statement>> mStatementBlocks;
     std::unordered_map<FunctionId, FunctionDefinition> mFunctionDefinitions;
     std::set<FunctionId> mFunctionPrototypes;
-    std::vector<std::tuple<GlobalSymbolId, ValueId>> mGlobalSymbolDefinitionsInOrder;
+    std::vector<std::pair<GlobalSymbolId, ValueId>> mGlobalSymbolDefinitionsInOrder;
     std::vector<FunctionId> mFunctionDefinitionsInOrder;
 
     void slurpFromRoot(glslang::TIntermAggregate* node) {
@@ -900,7 +901,10 @@ private:
                         "Unhandled child of LinkerObjects node: %s, parent = %s",
                         glslangNodeToStringWithLoc(child).c_str(),
                         glslangNodeToStringWithLoc(linkerObject).c_str());
-                slurpGlobalSymbol(childAsSymbol);
+                auto pair = slurpGlobalSymbol(childAsSymbol, node);
+                if (pair.second.has_value()) {
+                    mGlobalSymbolDefinitionsInOrder.push_back({pair.first, pair.second.value()});
+                }
             }
         }
         // Sequence nodes contain assignment operations.
@@ -918,7 +922,13 @@ private:
                         "%s, parent = %s",
                         glslangNodeToStringWithLoc(child).c_str(),
                         glslangNodeToStringWithLoc(sequence).c_str());
-                auto globalSymbolId = slurpGlobalSymbol(leftAsSymbol);
+                auto pair = slurpGlobalSymbol(leftAsSymbol, child);
+                ASSERT_PRECONDITION(!pair.second.has_value(),
+                        "Global symbol assignment with extant value: "
+                        "%s, parent = %s",
+                        glslangNodeToStringWithLoc(child).c_str(),
+                        glslangNodeToStringWithLoc(sequence).c_str());
+                auto globalSymbolId = pair.first;
                 auto initialValue = slurpValue(
                         childAsBinary->getRight(), sequence, emptyLocalSymbols);
                 ASSERT_PRECONDITION(emptyLocalSymbols.empty(),
@@ -935,10 +945,18 @@ private:
         }
     }
 
-    GlobalSymbolId slurpGlobalSymbol(const glslang::TIntermSymbol* node) {
+    std::pair<GlobalSymbolId, std::optional<ValueId>> slurpGlobalSymbol(
+            const glslang::TIntermSymbol* node,
+            const TIntermNode* parent) {
         auto typeId = slurpType(node->getType());
         auto nameId = mStrings.insert(std::string(node->getAccessName()));
-        return mGlobalSymbols.insert(node->getId(), Symbol{nameId, typeId});
+        auto globalSymbolId = mGlobalSymbols.insert(node->getId(), Symbol{nameId, typeId});
+        const auto& constArray = node->getConstArray();
+        if (constArray.empty()) {
+            return {globalSymbolId, std::nullopt};
+        }
+        auto valueId = slurpValueFromConstantArray(constArray, node, parent);
+        return {globalSymbolId, valueId};
     }
 
     // StructId slurpStruct(const glslang::TTypeList* typeList) {
@@ -1267,9 +1285,9 @@ private:
         }, opOrFunctionName);
     }
 
-    ValueId slurpValueFromConstantUnion(
-            glslang::TIntermConstantUnion* node, TIntermNode* parent, LocalSymbols& localSymbols) {
-        const auto& constArray = node->getConstArray();
+    RValueId slurpValueFromConstantArray(
+            const glslang::TConstUnionArray& constArray,
+            const glslang::TIntermTyped* node, const TIntermNode* parent) {
         ASSERT_PRECONDITION(!constArray.empty(),
                 "ConstantUnion's value array must not be empty: %s, parent = %s",
                 glslangNodeToStringWithLoc(node).c_str(),
@@ -1423,8 +1441,9 @@ private:
     ValueId slurpValue(glslang::TIntermTyped* node, TIntermNode* parent,
             LocalSymbols& localSymbols) {
         if (auto nodeAsConstantUnion = node->getAsConstantUnion()) {
-            return slurpValueFromConstantUnion(
-                    nodeAsConstantUnion, parent, localSymbols);
+            return slurpValueFromConstantArray(
+                    nodeAsConstantUnion->getConstArray(),
+                    nodeAsConstantUnion, parent);
         }
         if (auto nodeAsSymbol = node->getAsSymbolNode()) {
             return slurpValueFromSymbol(nodeAsSymbol, localSymbols);

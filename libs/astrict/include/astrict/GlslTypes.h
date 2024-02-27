@@ -34,7 +34,7 @@ struct PackFromGlsl {
     std::unordered_map<StatementBlockId, std::vector<Statement>> statementBlocks;
     std::unordered_map<FunctionId, FunctionDefinition> functionDefinitions;
     std::set<FunctionId> functionPrototypes;
-    std::vector<std::tuple<GlobalSymbolId, ValueId>> globalSymbolDefinitionsInOrder;
+    std::vector<std::pair<GlobalSymbolId, ValueId>> globalSymbolDefinitionsInOrder;
     std::vector<FunctionId> functionDefinitionsInOrder;
 };
 

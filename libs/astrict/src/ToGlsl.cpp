@@ -674,13 +674,25 @@ void dumpFunction(
 
 void toGlsl(const PackFromGlsl& pack, std::ostringstream& out) {
     const FunctionDefinition emptyFunction{};
+    std::unordered_set<GlobalSymbolId> globalSymbolIdsWithValues;
     for (auto globalSymbolPair : pack.globalSymbolDefinitionsInOrder) {
-        auto globalSymbolId = std::get<0>(globalSymbolPair);
-        auto valueId = std::get<1>(globalSymbolPair);
-        const auto& globalSymbol = pack.globalSymbols.at(globalSymbolId);
+        globalSymbolIdsWithValues.insert(globalSymbolPair.first);
+    }
+    for (auto globalSymbolPair : pack.globalSymbols) {
+        if (globalSymbolIdsWithValues.find(globalSymbolPair.first)
+                == globalSymbolIdsWithValues.end()) {
+            const auto& globalSymbol = pack.globalSymbols.at(globalSymbolPair.first);
+            if (globalSymbol.type) {
+                dumpSymbolDefinition(pack, globalSymbol, out);
+                out << ";" << kNewline;
+            }
+        }
+    }
+    for (auto globalSymbolPair : pack.globalSymbolDefinitionsInOrder) {
+        const auto& globalSymbol = pack.globalSymbols.at(globalSymbolPair.first);
         dumpSymbolDefinition(pack, globalSymbol, out);
         out << kSpace << "=" << kSpace;
-        dumpAnyValue(pack, emptyFunction, valueId, /*parenthesize=*/false, out);
+        dumpAnyValue(pack, emptyFunction, globalSymbolPair.second, /*parenthesize=*/false, out);
         out << ";" << kNewline;
     }
     for (auto functionId : pack.functionPrototypes) {
