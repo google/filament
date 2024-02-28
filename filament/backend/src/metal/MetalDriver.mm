@@ -923,9 +923,10 @@ void MetalDriver::setExternalImagePlane(Handle<HwTexture> th, void* image, uint3
 void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
 
-bool MetalDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
+TimerQueryResult MetalDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     auto* tq = handle_cast<MetalTimerQuery>(tqh);
-    return mContext->timerQueryImpl->getQueryResult(tq, elapsedTime);
+    return mContext->timerQueryImpl->getQueryResult(tq, elapsedTime) ?
+           TimerQueryResult::AVAILABLE : TimerQueryResult::NOT_READY;
 }
 
 void MetalDriver::generateMipmaps(Handle<HwTexture> th) {

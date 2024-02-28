@@ -62,7 +62,7 @@ public:
     virtual void beginTimeElapsedQuery(GLTimerQuery* query) = 0;
     virtual void endTimeElapsedQuery(GLTimerQuery* query) = 0;
 
-    static bool getTimerQueryValue(GLTimerQuery* tq, uint64_t* elapsedTime) noexcept;
+    static TimerQueryResult getTimerQueryValue(GLTimerQuery* tq, uint64_t* elapsedTime) noexcept;
 };
 
 #if defined(BACKEND_OPENGL_VERSION_GL) || defined(GL_EXT_disjoint_timer_query)

@@ -54,10 +54,19 @@ void FrameInfoManager::terminate(DriverApi& driver) noexcept {
 void FrameInfoManager::beginFrame(DriverApi& driver,Config const& config, uint32_t) noexcept {
     driver.beginTimerQuery(mQueries[mIndex]);
     uint64_t elapsed = 0;
-    if (driver.getTimerQueryValue(mQueries[mLast], &elapsed)) {
-        mLast = (mLast + 1) % POOL_COUNT;
-        // conversion to our duration happens here
-        mFrameTime = std::chrono::duration<uint64_t, std::nano>(elapsed);
+    TimerQueryResult const result = driver.getTimerQueryValue(mQueries[mLast], &elapsed);
+    switch (result) {
+        case TimerQueryResult::NOT_READY:
+            // nothing to do
+            break;
+        case TimerQueryResult::ERROR:
+            mLast = (mLast + 1) % POOL_COUNT;
+            break;
+        case TimerQueryResult::AVAILABLE:
+            mLast = (mLast + 1) % POOL_COUNT;
+            // conversion to our duration happens here
+            mFrameTime = std::chrono::duration<uint64_t, std::nano>(elapsed);
+            break;
     }
     update(config, mFrameTime);
 }

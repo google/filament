@@ -2694,7 +2694,7 @@ void OpenGLDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
     mTimerQueryImpl->endTimeElapsedQuery(tq);
 }
 
-bool OpenGLDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
+TimerQueryResult OpenGLDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
     return OpenGLTimerQueryInterface::getTimerQueryValue(tq, elapsedTime);
 }
