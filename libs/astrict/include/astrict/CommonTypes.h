@@ -28,8 +28,8 @@ public:
     Newtype() : mValue() {}
     Newtype(const Newtype<T, Tag> &other) : mValue(other.mValue) {}
     Newtype(Newtype<T, Tag> &&other) : mValue(other.mValue) {}
-    Newtype(T& value) : mValue(value) {}
-    Newtype(T&& value) : mValue(value) {}
+    explicit Newtype(T& value) : mValue(value) {}
+    explicit Newtype(T&& value) : mValue(value) {}
 
     Newtype& operator=(const Newtype<T, Tag>& other) {
         mValue = other.mValue;
@@ -214,16 +214,25 @@ struct ExpressionOperandExpression {
     }
 };
 
-using Swizzle = Newtype<uint16_t, struct SwizzleTag>;
-using IndexStruct = Newtype<uint16_t, struct StructIndexTag>;
+struct VectorSwizzleExpression {
+    VariableOrExpressionId operand;
+    uint16_t swizzle;
 
-struct LiteralOperandExpression {
-    VariableOrExpressionId lhs;
-    std::variant<Swizzle, IndexStruct> rhs;
+    bool operator==(const VectorSwizzleExpression& o) const {
+        return operand == o.operand
+                && swizzle == o.swizzle;
+    }
+};
 
-    bool operator==(const LiteralOperandExpression& o) const {
-        return lhs == o.lhs
-                && rhs == o.rhs;
+struct IndexStructExpression {
+    VariableOrExpressionId operand;
+    StructId strukt;
+    uint16_t index;
+
+    bool operator==(const IndexStructExpression& o) const {
+        return operand == o.operand
+                && strukt == o.strukt
+                && index == o.index;
     }
 };
 
@@ -241,7 +250,8 @@ struct LiteralExpression {
 
 using Expression = std::variant<
     ExpressionOperandExpression,
-    LiteralOperandExpression,
+    VectorSwizzleExpression,
+    IndexStructExpression,
     LiteralExpression>;
 
 struct Function {
@@ -378,10 +388,19 @@ struct hash<astrict::ExpressionOperandExpression> {
 };
 
 template<>
-struct hash<astrict::LiteralOperandExpression> {
-    std::size_t operator()(const astrict::LiteralOperandExpression& o) const {
+struct hash<astrict::IndexStructExpression> {
+    std::size_t operator()(const astrict::IndexStructExpression& o) const {
         std::size_t result = 0;
-        astrict::hashCombine(result, o.lhs, o.rhs);
+        astrict::hashCombine(result, o.operand, o.strukt, o.index);
+        return result;
+    }
+};
+
+template<>
+struct hash<astrict::VectorSwizzleExpression> {
+    std::size_t operator()(const astrict::VectorSwizzleExpression& o) const {
+        std::size_t result = 0;
+        astrict::hashCombine(result, o.operand, o.swizzle);
         return result;
     }
 };

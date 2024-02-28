@@ -43,7 +43,7 @@ void dumpExpression(
         const T& value, bool parenthesize, std::ostringstream& out);
 
 template<typename T>
-void dumpEvaluableExpression(
+void dumpExpressionOperandExpression(
         const PackFromGlsl& pack, const Function& function,
         const T& op, const std::vector<VariableOrExpressionId>& args,
         bool parenthesize, std::ostringstream& out);
@@ -90,9 +90,8 @@ void dumpType(const PackFromGlsl& pack, TypeId typeId, std::ostringstream& out) 
         using T = std::decay_t<decltype(name)>;
         if constexpr (std::is_same_v<T, StringId>) {
             dumpString(pack, name, out);
-        } else if constexpr (std::is_same_v<T, FunctionId>) {
-            out << *name;
         } else if constexpr (std::is_same_v<T, StructId>) {
+            // TODO: dump the name
             out << *name;
         } else {
             static_assert(always_false_v<T>, "unreachable");
@@ -116,7 +115,7 @@ void dumpBinaryExpressionOperator(
 }
 
 template<>
-void dumpEvaluableExpression<ExpressionOperator>(
+void dumpExpressionOperandExpression<ExpressionOperator>(
         const PackFromGlsl& pack, const Function& function,
         const ExpressionOperator& op, const std::vector<VariableOrExpressionId>& args,
         bool parenthesize, std::ostringstream& out) {
@@ -277,10 +276,6 @@ void dumpEvaluableExpression<ExpressionOperator>(
             dumpAnyVariableOrExpression(pack, function, args[1], /*parenthesize=*/true, out);
             out << "]";
             break;
-            // case ExpressionOperator::IndexStruct:
-            //     break;
-            // case ExpressionOperator::VectorSwizzle:
-            //     break;
         case ExpressionOperator::Assign:
             out << lParen;
             dumpBinaryExpressionOperator(pack, function, op, args, "=", out);
@@ -366,7 +361,7 @@ void dumpEvaluableExpression<ExpressionOperator>(
 }
 
 template <>
-void dumpEvaluableExpression<FunctionId>(
+void dumpExpressionOperandExpression<FunctionId>(
         const PackFromGlsl& pack, const Function& function,
         const FunctionId& op, const std::vector<VariableOrExpressionId>& args,
         bool parenthesize, std::ostringstream& out) {
@@ -385,7 +380,7 @@ void dumpEvaluableExpression<FunctionId>(
 }
 
 template <>
-void dumpEvaluableExpression<StructId>(
+void dumpExpressionOperandExpression<StructId>(
         const PackFromGlsl& pack, const Function& function,
         const StructId& op, const std::vector<VariableOrExpressionId>& args,
         bool parenthesize, std::ostringstream& out) {
@@ -398,16 +393,40 @@ void dumpExpression<ExpressionOperandExpression>(
         const ExpressionOperandExpression& value, bool parenthesize,
         std::ostringstream& out) {
     std::visit([&](auto&& op) {
-        dumpEvaluableExpression(pack, function, op, value.args, parenthesize, out);
+        dumpExpressionOperandExpression(pack, function, op, value.args, parenthesize, out);
     }, value.op);
 }
 
 template<>
-void dumpExpression<LiteralOperandExpression>(
+void dumpExpression<IndexStructExpression>(
         const PackFromGlsl& pack, const Function& function,
-        const LiteralOperandExpression& value, bool parenthesize,
+        const IndexStructExpression& value, bool parenthesize,
         std::ostringstream& out) {
-    // TODO
+    dumpAnyVariableOrExpression(pack, function, value.operand, /*parenthesize=*/true, out);
+    out << ".";
+    ASSERT_PRECONDITION(pack.structs.find(value.strukt) != pack.structs.end(),
+            "Missing struct definition");
+    auto& strukt = pack.structs.at(value.strukt);
+    ASSERT_PRECONDITION(value.index < strukt.members.size(),
+            "Struct member index out of bounds");
+    dumpString(pack, strukt.members[value.index].name, out);
+}
+
+template<>
+void dumpExpression<VectorSwizzleExpression>(
+        const PackFromGlsl& pack, const Function& function,
+        const VectorSwizzleExpression& value, bool parenthesize,
+        std::ostringstream& out) {
+    static const char COMPONENTS[] = {'x', 'y', 'z', 'w'};
+    dumpAnyVariableOrExpression(pack, function, value.operand, /*parenthesize=*/true, out);
+    out << ".";
+    for (int i = 0; i < 4; i++) {
+        int component = (value.swizzle >> (i * 3)) & 0x7;
+        if (component == 0) {
+            break;
+        }
+        out << COMPONENTS[component - 1];
+    }
 }
 
 template<>

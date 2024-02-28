@@ -27,6 +27,7 @@
 #include "Types.h"
 #include "glslang/MachineIndependent/localintermediate.h"
 #include "intermediate.h"
+#include "utils/ostream.h"
 
 namespace astrict {
 
@@ -752,6 +753,32 @@ LiteralExpression constUnionToLiteralExpression(const glslang::TConstUnion& valu
     }
 }
 
+template<typename T>
+T coerceNodeToInt(const TIntermNode* node, const TIntermNode* parent) {
+    auto nodeAsConstantUnion = node->getAsConstantUnion();
+    ASSERT_PRECONDITION(nodeAsConstantUnion != nullptr,
+            "Node must be a constant union: %s, parent = %s",
+            glslangNodeToStringWithLoc(node).c_str(),
+            glslangNodeToStringWithLoc(parent).c_str());
+    const auto& constArray = nodeAsConstantUnion->getConstArray();
+    ASSERT_PRECONDITION(constArray.size() == 1,
+            "Node const array must have only one value: %s, parent = %s",
+            glslangNodeToStringWithLoc(node).c_str(),
+            glslangNodeToStringWithLoc(parent).c_str());
+
+    const auto& constUnion = constArray[0];
+    switch (constUnion.getType()) {
+        case glslang::EbtUint: return constUnion.getUConst();
+        case glslang::EbtInt: return constUnion.getIConst();
+        default:
+            PANIC_PRECONDITION(
+                    "Node const array of incorrect type `%d': %s, parent = %s",
+                    constUnion.getType(),
+                    glslangNodeToStringWithLoc(node).c_str(),
+                    glslangNodeToStringWithLoc(parent).c_str());
+    }
+}
+
 template<typename Id, typename Value>
 class IdStoreByValue {
 public:
@@ -1399,8 +1426,20 @@ private:
                 "Swizzle RHS must be a sequence: %s, parent = %s",
                 glslangNodeToStringWithLoc(node).c_str(),
                 glslangNodeToStringWithLoc(parent).c_str());
+        auto sequence = rhs->getSequence();
+        uint16_t swizzle = 0;
+        for (int i = 0; i < sequence.size(); i++) {
+            auto component = coerceNodeToInt<int>(sequence[i], rhs);
+            ASSERT_PRECONDITION(component >= 0 && component <= 3,
+                    "Swizzle component value `%d' not in valid range: %s, parent = %s",
+                    component,
+                    glslangNodeToStringWithLoc(node).c_str(),
+                    glslangNodeToStringWithLoc(parent).c_str());
+            // 3 bits per component.
+            swizzle |= (component + 1) << (3 * i);
+        }
         return mExpressions.insert(
-                LiteralOperandExpression{lhsId, Swizzle(0)});
+                VectorSwizzleExpression{lhsId, swizzle});
     }
 
     ExpressionId slurpExpressionFromIndexStruct(
@@ -1410,31 +1449,14 @@ private:
                 glslangNodeToStringWithLoc(node).c_str(),
                 glslangNodeToStringWithLoc(parent).c_str());
         auto lhsId = slurpVariableOrExpression(node->getLeft(), node, localVariables);
-        auto rhs = node->getRight()->getAsConstantUnion();
-        ASSERT_PRECONDITION(rhs != nullptr,
-                "Index struct RHS must be a constant union: %s, parent = %s",
-                glslangNodeToStringWithLoc(node->getRight()).c_str(),
+        ASSERT_PRECONDITION(node->getLeft()->getType().isStruct(),
+                "Index struct LHS must be struct: %s, parent = %s",
+                glslangNodeToStringWithLoc(node->getLeft()).c_str(),
                 glslangNodeToStringWithLoc(node).c_str());
-        const auto& constArray = rhs->getConstArray();
-        ASSERT_PRECONDITION(constArray.size() == 1,
-                "Index struct RHS const array must have only one value: %s, parent = %s",
-                glslangNodeToStringWithLoc(rhs).c_str(),
-                glslangNodeToStringWithLoc(node).c_str());
-
-        const auto& constUnion = constArray[0];
-        uint16_t index;
-        switch (constUnion.getType()) {
-            case glslang::EbtUint: index = constUnion.getUConst(); break;
-            case glslang::EbtInt: index = constUnion.getIConst(); break;
-            default:
-                PANIC_PRECONDITION(
-                        "Index struct RHS const array of incorrect type `%d': %s, parent = %s",
-                        constUnion.getType(),
-                        glslangNodeToStringWithLoc(rhs).c_str(),
-                        glslangNodeToStringWithLoc(node).c_str());
-        }
+        auto structId = slurpStruct(node->getLeft()->getType());
+        auto index = coerceNodeToInt<uint16_t>(node->getRight(), node);
         return mExpressions.insert(
-                LiteralOperandExpression{lhsId, IndexStruct(index)});
+                IndexStructExpression{lhsId, structId, index});
     }
 
     ExpressionId slurpExpressionFromSelection(

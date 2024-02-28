@@ -904,6 +904,8 @@ std::string glslangNodeToString(const TIntermNode* node) {
     if (auto nodeAsConstantUnion = node->getAsConstantUnion()) {
         return "ConstantUnion(size = "
                 + std::to_string(nodeAsConstantUnion->getConstArray().size())
+                + ", type = "
+                + std::string(nodeAsConstantUnion->getType().getCompleteString())
                 + ")";
     }
     if (node->getAsTyped()) {
