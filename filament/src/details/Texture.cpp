@@ -125,6 +125,13 @@ Texture* Texture::Builder::build(Engine& engine) {
     ASSERT_PRECONDITION(Texture::isTextureFormatSupported(engine, mImpl->mFormat),
             "Texture format %u not supported on this platform", mImpl->mFormat);
 
+    const bool isProtectedTexturesSupported =
+            downcast(engine).getDriverApi().isProtectedTexturesSupported();
+    const bool useProtectedMemory = bool(mImpl->mUsage & TextureUsage::PROTECTED);
+
+    ASSERT_PRECONDITION((isProtectedTexturesSupported && useProtectedMemory) || !useProtectedMemory,
+            "Texture is PROTECTED but protected textures are not supported");
+
     uint8_t maxLevelCount;
     switch (mImpl->mTarget) {
         case SamplerType::SAMPLER_2D:
@@ -422,6 +429,10 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
 
 bool FTexture::isTextureFormatSupported(FEngine& engine, InternalFormat format) noexcept {
     return engine.getDriverApi().isTextureFormatSupported(format);
+}
+
+bool FTexture::isProtectedTexturesSupported(FEngine& engine) noexcept {
+    return engine.getDriverApi().isProtectedTexturesSupported();
 }
 
 bool FTexture::isTextureSwizzleSupported(FEngine& engine) noexcept {

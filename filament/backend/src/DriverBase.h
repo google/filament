@@ -113,7 +113,9 @@ struct HwTexture : public HwBase {
     uint8_t levels : 4;  // This allows up to 15 levels (max texture size of 32768 x 32768)
     uint8_t samples : 4; // Sample count per pixel (should always be a power of 2)
     TextureFormat format{};
+    uint8_t reserved0 = 0;
     TextureUsage usage{};
+    uint16_t reserved1 = 0;
     HwStream* hwStream = nullptr;
 
     HwTexture() noexcept : levels{}, samples{} {}

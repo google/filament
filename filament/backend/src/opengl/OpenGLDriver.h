@@ -325,8 +325,8 @@ private:
     void renderBufferStorage(GLuint rbo, GLenum internalformat, uint32_t width,
             uint32_t height, uint8_t samples) const noexcept;
 
-    void textureStorage(GLTexture* t,
-            uint32_t width, uint32_t height, uint32_t depth) noexcept;
+    void textureStorage(OpenGLDriver::GLTexture* t, uint32_t width, uint32_t height,
+            uint32_t depth, bool useProtectedMemory) noexcept;
 
     /* State tracking GL wrappers... */
 

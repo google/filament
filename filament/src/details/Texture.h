@@ -79,10 +79,13 @@ public:
      * Utilities
      */
 
-    // synchronous call to the backend. returns whether a backend supports a particular format.
+    // Synchronous call to the backend. Returns whether a backend supports a particular format.
     static bool isTextureFormatSupported(FEngine& engine, InternalFormat format) noexcept;
 
-    // synchronous call to the backend. returns whether a backend supports texture swizzling.
+    // Synchronous call to the backend. Returns whether a backend supports protected textures.
+    static bool isProtectedTexturesSupported(FEngine& engine) noexcept;
+
+    // Synchronous call to the backend. Returns whether a backend supports texture swizzling.
     static bool isTextureSwizzleSupported(FEngine& engine) noexcept;
 
     // storage needed on the CPU side for texture data uploads

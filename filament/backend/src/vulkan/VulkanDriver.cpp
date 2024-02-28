@@ -887,6 +887,10 @@ bool VulkanDriver::isDepthStencilResolveSupported() {
     return false;
 }
 
+bool VulkanDriver::isProtectedTexturesSupported() {
+    return false;
+}
+
 bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU: {

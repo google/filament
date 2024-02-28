@@ -599,6 +599,7 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
     ext->EXT_disjoint_timer_query = exts.has("GL_EXT_disjoint_timer_query"sv);
     ext->EXT_multisampled_render_to_texture = exts.has("GL_EXT_multisampled_render_to_texture"sv);
     ext->EXT_multisampled_render_to_texture2 = exts.has("GL_EXT_multisampled_render_to_texture2"sv);
+    ext->EXT_protected_textures = exts.has("GL_EXT_protected_textures"sv);
 #endif
     ext->EXT_shader_framebuffer_fetch = exts.has("GL_EXT_shader_framebuffer_fetch"sv);
 #ifndef __EMSCRIPTEN__

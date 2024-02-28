@@ -788,6 +788,10 @@ bool MetalDriver::isDepthStencilResolveSupported() {
     return false;
 }
 
+bool MetalDriver::isProtectedTexturesSupported() {
+    return false;
+}
+
 bool MetalDriver::isWorkaroundNeeded(Workaround workaround) {
     switch (workaround) {
         case Workaround::SPLIT_EASU:
