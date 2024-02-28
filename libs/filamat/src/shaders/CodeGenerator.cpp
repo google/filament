@@ -181,12 +181,13 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     }
     generateDefine(out, "FILAMENT_EFFECTIVE_VERSION", effective_version);
 
-    if (material.stereoscopicType == StereoscopicType::INSTANCED) {
+    switch (material.stereoscopicType) {
+    case StereoscopicType::INSTANCED:
         generateDefine(out, "FILAMENT_STEREO_INSTANCED", true);
-    } else if (material.stereoscopicType == StereoscopicType::MULTIVIEW) {
+        break;
+    case StereoscopicType::MULTIVIEW:
         generateDefine(out, "FILAMENT_STEREO_MULTIVIEW", true);
-    } else {
-        assert(false);
+        break;
     }
 
     if (stage == ShaderStage::VERTEX) {
