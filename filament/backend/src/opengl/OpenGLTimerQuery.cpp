@@ -69,16 +69,17 @@ OpenGLTimerQueryInterface* OpenGLTimerQueryFactory::init(
 OpenGLTimerQueryInterface::~OpenGLTimerQueryInterface() = default;
 
 // This is a backend synchronous call
-bool OpenGLTimerQueryInterface::getTimerQueryValue(GLTimerQuery* tq, uint64_t* elapsedTime) noexcept {
+TimerQueryResult OpenGLTimerQueryInterface::getTimerQueryValue(
+        GLTimerQuery* tq, uint64_t* elapsedTime) noexcept {
     if (UTILS_LIKELY(tq->state)) {
         int64_t const elapsed = tq->state->elapsed.load(std::memory_order_relaxed);
-        bool const available = elapsed > 0;
-        if (available) {
+        if (elapsed > 0) {
             *elapsedTime = elapsed;
+            return TimerQueryResult::AVAILABLE;
         }
-        return available;
+        return TimerQueryResult(elapsed);
     }
-    return false;
+    return TimerQueryResult::ERROR;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -107,19 +108,20 @@ void TimerQueryNative::destroyTimerQuery(GLTimerQuery* tq) {
 
 void TimerQueryNative::beginTimeElapsedQuery(GLTimerQuery* tq) {
     assert_invariant(tq->state);
-    tq->state->elapsed.store(0);
+    tq->state->elapsed.store(int64_t(TimerQueryResult::NOT_READY));
     mDriver.getContext().procs.beginQuery(GL_TIME_ELAPSED, tq->state->gl.query);
     CHECK_GL_ERROR(utils::slog.e)
 }
 
 void TimerQueryNative::endTimeElapsedQuery(GLTimerQuery* tq) {
     assert_invariant(tq->state);
-    mDriver.getContext().procs.endQuery(GL_TIME_ELAPSED);
+    auto& context = mDriver.getContext();
+    context.procs.endQuery(GL_TIME_ELAPSED);
     CHECK_GL_ERROR(utils::slog.e)
 
     std::weak_ptr<GLTimerQuery::State> const weak = tq->state;
 
-    mDriver.runEveryNowAndThen([context = mDriver.getContext(), weak]() -> bool {
+    mDriver.runEveryNowAndThen([&context, weak]() -> bool {
         auto state = weak.lock();
         if (state) {
             GLuint available = 0;
@@ -133,6 +135,8 @@ void TimerQueryNative::endTimeElapsedQuery(GLTimerQuery* tq) {
             // we won't end-up here if we're on ES and don't have GL_EXT_disjoint_timer_query
             context.procs.getQueryObjectui64v(state->gl.query, GL_QUERY_RESULT, &elapsedTime);
             state->elapsed.store((int64_t)elapsedTime, std::memory_order_relaxed);
+        } else {
+            state->elapsed.store(int64_t(TimerQueryResult::ERROR), std::memory_order_relaxed);
         }
         return true;
     });

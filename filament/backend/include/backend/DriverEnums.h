@@ -129,6 +129,12 @@ enum class Backend : uint8_t {
     NOOP = 4,     //!< Selects the no-op driver for testing purposes.
 };
 
+enum class TimerQueryResult : int8_t {
+    ERROR = -1,     // an error occurred, result won't be available
+    NOT_READY = 0,  // result to ready yet
+    AVAILABLE = 1,  // result is available
+};
+
 static constexpr const char* backendToString(Backend backend) {
     switch (backend) {
         case Backend::NOOP:

@@ -305,7 +305,7 @@ DECL_DRIVER_API_SYNCHRONOUS_0(uint8_t, getMaxDrawBuffers)
 DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxUniformBufferSize)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
-DECL_DRIVER_API_SYNCHRONOUS_N(bool, getTimerQueryValue, backend::TimerQueryHandle, query, uint64_t*, elapsedTime)
+DECL_DRIVER_API_SYNCHRONOUS_N(backend::TimerQueryResult, getTimerQueryValue, backend::TimerQueryHandle, query, uint64_t*, elapsedTime)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, workaround)
 DECL_DRIVER_API_SYNCHRONOUS_0(backend::FeatureLevel, getFeatureLevel)
 
