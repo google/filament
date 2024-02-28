@@ -78,6 +78,10 @@ bool Texture::isTextureFormatSupported(Engine& engine, InternalFormat format) no
     return FTexture::isTextureFormatSupported(downcast(engine), format);
 }
 
+bool Texture::isProtectedTexturesSupported(Engine& engine) noexcept {
+    return FTexture::isProtectedTexturesSupported(downcast(engine));
+}
+
 bool Texture::isTextureSwizzleSupported(Engine& engine) noexcept {
     return FTexture::isTextureSwizzleSupported(downcast(engine));
 }

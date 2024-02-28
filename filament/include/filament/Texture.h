@@ -88,6 +88,9 @@ public:
     /** @return whether a backend supports a particular format. */
     static bool isTextureFormatSupported(Engine& engine, InternalFormat format) noexcept;
 
+    /** @return whether this backend supports protected textures. */
+    static bool isProtectedTexturesSupported(Engine& engine) noexcept;
+
     /** @return whether a backend supports texture swizzling. */
     static bool isTextureSwizzleSupported(Engine& engine) noexcept;
 

@@ -659,16 +659,17 @@ enum class TextureFormat : uint16_t {
 };
 
 //! Bitmask describing the intended Texture Usage
-enum class TextureUsage : uint8_t {
-    NONE                = 0x00,
-    COLOR_ATTACHMENT    = 0x01,                     //!< Texture can be used as a color attachment
-    DEPTH_ATTACHMENT    = 0x02,                     //!< Texture can be used as a depth attachment
-    STENCIL_ATTACHMENT  = 0x04,                     //!< Texture can be used as a stencil attachment
-    UPLOADABLE          = 0x08,                     //!< Data can be uploaded into this texture (default)
-    SAMPLEABLE          = 0x10,                     //!< Texture can be sampled (default)
-    SUBPASS_INPUT       = 0x20,                     //!< Texture can be used as a subpass input
-    BLIT_SRC            = 0x40,                     //!< Texture can be used the source of a blit()
-    BLIT_DST            = 0x80,                     //!< Texture can be used the destination of a blit()
+enum class TextureUsage : uint16_t {
+    NONE                = 0x0000,
+    COLOR_ATTACHMENT    = 0x0001,            //!< Texture can be used as a color attachment
+    DEPTH_ATTACHMENT    = 0x0002,            //!< Texture can be used as a depth attachment
+    STENCIL_ATTACHMENT  = 0x0004,            //!< Texture can be used as a stencil attachment
+    UPLOADABLE          = 0x0008,            //!< Data can be uploaded into this texture (default)
+    SAMPLEABLE          = 0x0010,            //!< Texture can be sampled (default)
+    SUBPASS_INPUT       = 0x0020,            //!< Texture can be used as a subpass input
+    BLIT_SRC            = 0x0040,            //!< Texture can be used the source of a blit()
+    BLIT_DST            = 0x0080,            //!< Texture can be used the destination of a blit()
+    PROTECTED           = 0x0100,            //!< Texture can be used the destination of a blit()
     DEFAULT             = UPLOADABLE | SAMPLEABLE   //!< Default texture usage
 };
 

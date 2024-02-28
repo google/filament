@@ -189,6 +189,10 @@ bool NoopDriver::isDepthStencilResolveSupported() {
     return true;
 }
 
+bool NoopDriver::isProtectedTexturesSupported() {
+    return true;
+}
+
 bool NoopDriver::isWorkaroundNeeded(Workaround) {
     return false;
 }
