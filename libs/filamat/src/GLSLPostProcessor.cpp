@@ -536,6 +536,13 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
             glslOptions.emit_uniform_buffer_as_plain_uniforms = true;
         }
 
+        if (config.variant.hasStereo() &&
+            config.shaderType == ShaderStage::VERTEX &&
+            config.materialInfo->stereoscopicType == StereoscopicType::MULTIVIEW) {
+            // IFTTT: This value should be changed along with the settings in CodeGenerator.cpp.
+            glslOptions.ovr_multiview_view_count = 2;
+        }
+
         CompilerGLSL glslCompiler(std::move(spirv));
         glslCompiler.set_common_options(glslOptions);
 
