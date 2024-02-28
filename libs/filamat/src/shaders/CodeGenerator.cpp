@@ -181,6 +181,15 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
     }
     generateDefine(out, "FILAMENT_EFFECTIVE_VERSION", effective_version);
 
+    switch (material.stereoscopicType) {
+    case StereoscopicType::INSTANCED:
+        generateDefine(out, "FILAMENT_STEREO_INSTANCED", true);
+        break;
+    case StereoscopicType::MULTIVIEW:
+        generateDefine(out, "FILAMENT_STEREO_MULTIVIEW", true);
+        break;
+    }
+
     if (stage == ShaderStage::VERTEX) {
         CodeGenerator::generateDefine(out, "FLIP_UV_ATTRIBUTE", material.flipUV);
         CodeGenerator::generateDefine(out, "LEGACY_MORPHING", material.useLegacyMorphing);

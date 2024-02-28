@@ -68,6 +68,7 @@ struct UTILS_PUBLIC MaterialInfo {
     filament::SamplerBindingMap samplerBindings;
     filament::ShaderQuality quality;
     filament::backend::FeatureLevel featureLevel;
+    filament::backend::StereoscopicType stereoscopicType;
     filament::math::uint3 groupSize;
 
     using BufferContainer = utils::FixedCapacityVector<filament::BufferInterfaceBlock const*>;

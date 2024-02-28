@@ -796,6 +796,20 @@ static bool processGroupSizes(MaterialBuilder& builder, const JsonishValue& v) {
     return true;
 }
 
+static bool processStereoscopicType(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, MaterialBuilder::StereoscopicType> strToEnum{
+            { "instanced", MaterialBuilder::StereoscopicType::INSTANCED },
+            { "multiview",  MaterialBuilder::StereoscopicType::MULTIVIEW },
+    };
+    auto jsonString = value.toJsonString();
+    if (!isStringValidEnum(strToEnum, jsonString->getString())) {
+        return logEnumIssue("stereoscopicType", *jsonString, strToEnum);
+    }
+
+    builder.stereoscopicType(stringToEnum(strToEnum, jsonString->getString()));
+    return true;
+}
+
 static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
 
     const JsonishValue* nameValue = jsonObject.getValue("name");
@@ -1214,6 +1228,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["customSurfaceShading"]          = { &processCustomSurfaceShading, Type::BOOL };
     mParameters["featureLevel"]                  = { &processFeatureLevel, Type::NUMBER };
     mParameters["groupSize"]                     = { &processGroupSizes, Type::ARRAY };
+    mParameters["stereoscopicType"]              = { &processStereoscopicType, Type::STRING };
 }
 
 bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {
