@@ -218,7 +218,13 @@ public:
 
     // --------------------------------------------------------------------------------------------
 
-    explicit FrameGraph(ResourceAllocatorInterface& resourceAllocator);
+    enum class Mode {
+        UNPROTECTED,
+        PROTECTED,
+    };
+
+    explicit FrameGraph(ResourceAllocatorInterface& resourceAllocator,
+            Mode mode = Mode::UNPROTECTED);
     FrameGraph(FrameGraph const&) = delete;
     FrameGraph& operator=(FrameGraph const&) = delete;
     ~FrameGraph() noexcept;
@@ -517,6 +523,7 @@ private:
     ResourceAllocatorInterface& mResourceAllocator;
     LinearAllocatorArena mArena;
     DependencyGraph mGraph;
+    const Mode mMode;
 
     Vector<ResourceSlot> mResourceSlots;
     Vector<VirtualResource*> mResources;

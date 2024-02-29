@@ -23,7 +23,12 @@
 namespace filament {
 
 void FrameGraphTexture::create(ResourceAllocatorInterface& resourceAllocator, const char* name,
-        FrameGraphTexture::Descriptor const& descriptor, FrameGraphTexture::Usage usage) noexcept {
+        FrameGraphTexture::Descriptor const& descriptor, FrameGraphTexture::Usage usage,
+        bool useProtectedMemory) noexcept {
+    if (useProtectedMemory) {
+        // FIXME: I think we should restrict this to attachments and blit destinations only
+        usage |= FrameGraphTexture::Usage::PROTECTED;
+    }
     std::array<backend::TextureSwizzle, 4> swizzle = {
             descriptor.swizzle.r,
             descriptor.swizzle.g,

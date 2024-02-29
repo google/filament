@@ -84,7 +84,8 @@ public:
             ResourceEdgeBase const* writer) noexcept = 0;
 
     /* Instantiate the concrete resource */
-    virtual void devirtualize(ResourceAllocatorInterface& resourceAllocator) noexcept = 0;
+    virtual void devirtualize(ResourceAllocatorInterface& resourceAllocator,
+            bool useProtectedMemory) noexcept = 0;
 
     /* Destroy the concrete resource */
     virtual void destroy(ResourceAllocatorInterface& resourceAllocator) noexcept = 0;
@@ -229,9 +230,10 @@ protected:
         delete static_cast<ResourceEdge *>(edge);
     }
 
-    void devirtualize(ResourceAllocatorInterface& resourceAllocator) noexcept override {
+    void devirtualize(ResourceAllocatorInterface& resourceAllocator,
+            bool useProtectedMemory) noexcept override {
         if (!isSubResource()) {
-            resource.create(resourceAllocator, name, descriptor, usage);
+            resource.create(resourceAllocator, name, descriptor, usage, useProtectedMemory);
         } else {
             // resource is guaranteed to be initialized before we are by construction
             resource = static_cast<Resource const*>(parent)->resource;
@@ -268,7 +270,7 @@ public:
     }
 
 protected:
-    void devirtualize(ResourceAllocatorInterface&) noexcept override {
+    void devirtualize(ResourceAllocatorInterface&, bool) noexcept override {
         // imported resources don't need to devirtualize
     }
     void destroy(ResourceAllocatorInterface&) noexcept override {
