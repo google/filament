@@ -542,8 +542,7 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
         if (config.variant.hasStereo() &&
             config.shaderType == ShaderStage::VERTEX &&
             config.materialInfo->stereoscopicType == StereoscopicType::MULTIVIEW) {
-            // FIXME: This value should be changed along with the settings in CodeGenerator.cpp.
-            glslOptions.ovr_multiview_view_count = 2;
+            glslOptions.ovr_multiview_view_count = config.materialInfo->stereoscopicEyeCount;
         }
 
         CompilerGLSL glslCompiler(std::move(spirv));

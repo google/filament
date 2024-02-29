@@ -525,6 +525,9 @@ public:
     //! Specify the stereoscopic type (default is INSTANCED)
     MaterialBuilder& stereoscopicType(StereoscopicType stereoscopicType) noexcept;
 
+    //! Specify the number of eye count for stereoscopic rendering
+    MaterialBuilder& stereoscopicEyeCount(uint8_t eyeCount) noexcept;
+
     /**
      * Enable / disable custom surface shading. Custom surface shading requires the LIT
      * shading model. In addition, the following function must be defined in the fragment
@@ -834,6 +837,7 @@ private:
     VertexDomain mVertexDomain = VertexDomain::OBJECT;
     TransparencyMode mTransparencyMode = TransparencyMode::DEFAULT;
     StereoscopicType mStereoscopicType = StereoscopicType::INSTANCED;
+    uint8_t mStereoscopicEyeCount = 2;
 
     filament::AttributeBitset mRequiredAttributes;
 

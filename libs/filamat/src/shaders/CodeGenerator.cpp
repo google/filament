@@ -117,8 +117,7 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
             // Nothing to generate
             break;
         case StereoscopicType::MULTIVIEW:
-            // FIXME: This value should be changed along with the settings in GLSLPostProcessor.cpp.
-            out << "layout(num_views = 2) in;\n";
+            out << "layout(num_views = " << material.stereoscopicEyeCount << ") in;\n";
             break;
         }
     }
@@ -322,7 +321,7 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
             +ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS, false);
 
     generateSpecializationConstant(out, "CONFIG_STEREO_EYE_COUNT",
-            +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT, 2);
+            +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT, material.stereoscopicEyeCount);
 
     // CONFIG_MAX_STEREOSCOPIC_EYES is used to size arrays and on Adreno GPUs + vulkan, this has to
     // be explicitly, statically defined (as in #define). Otherwise (using const int for
