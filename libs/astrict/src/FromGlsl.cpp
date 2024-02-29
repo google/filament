@@ -1474,7 +1474,7 @@ private:
         } else {
             PANIC_PRECONDITION(
                     "A selection node branch was not typed: true = %s, false = %s, "
-                    "parent = %s %s",
+                    "parent = %s",
                     glslangNodeToStringWithLoc(node->getTrueBlock()).c_str(),
                     glslangNodeToStringWithLoc(node->getFalseBlock()).c_str(),
                     glslangNodeToStringWithLoc(parent).c_str());
@@ -1483,6 +1483,10 @@ private:
 
     ExpressionId slurpExpressionFromFunctionCall(
             glslang::TIntermAggregate* node, TIntermNode* parent, LocalVariables& localVariables) {
+        ASSERT_PRECONDITION(node->getOp() == glslang::EOpFunctionCall,
+                "Function call operator must be EOpFunctionCall: %s, parent = %s",
+                glslangNodeToStringWithLoc(node).c_str(),
+                glslangNodeToStringWithLoc(parent).c_str());
         auto& sequence = node->getSequence();
         auto functionId = mFunctionNames.insert(std::string(node->getName()));
         std::vector<VariableOrExpressionId> args;
@@ -1490,7 +1494,7 @@ private:
             auto argAsTyped = arg->getAsTyped();
             ASSERT_PRECONDITION(argAsTyped,
                     "Function call argument was not typed: arg = %s, function "
-                    "= %s, parent = %s %s",
+                    "= %s, parent = %s",
                     glslangNodeToStringWithLoc(arg).c_str(),
                     glslangNodeToStringWithLoc(node).c_str(),
                     glslangNodeToStringWithLoc(parent).c_str());
@@ -1502,8 +1506,25 @@ private:
 
     ExpressionId slurpExpressionFromConstructStruct(
             glslang::TIntermAggregate* node, TIntermNode* parent, LocalVariables& localVariables) {
-        // TODO
-        return ExpressionId{};
+        ASSERT_PRECONDITION(node->getOp() == glslang::EOpConstructStruct,
+                "Constructor operator must be EOpConstructStruct: %s, parent = %s",
+                glslangNodeToStringWithLoc(node).c_str(),
+                glslangNodeToStringWithLoc(parent).c_str());
+        auto& sequence = node->getSequence();
+        auto structId = slurpStruct(node->getType());
+        std::vector<VariableOrExpressionId> args;
+        for (TIntermNode* arg : sequence) {
+            auto argAsTyped = arg->getAsTyped();
+            ASSERT_PRECONDITION(argAsTyped,
+                    "Constructor argument was not typed: arg = %s, constructor = %s, "
+                    "parent = %s",
+                    glslangNodeToStringWithLoc(arg).c_str(),
+                    glslangNodeToStringWithLoc(node).c_str(),
+                    glslangNodeToStringWithLoc(parent).c_str());
+            args.push_back(slurpVariableOrExpression(argAsTyped, node, localVariables));
+        }
+        return mExpressions.insert(
+                ExpressionOperandExpression{structId, std::move(args)});
     }
 
     ExpressionId slurpExpressionFromAggregate(
@@ -1551,8 +1572,6 @@ private:
                     return slurpExpressionFromIndexStruct(nodeAsBinary, parent, localVariables);
                 default:
                     return slurpExpressionFromBinary(nodeAsBinary, parent, localVariables);
-
-
             }
         }
         if (auto nodeAsSelection = node->getAsSelectionNode()) {

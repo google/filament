@@ -91,8 +91,10 @@ void dumpType(const PackFromGlsl& pack, TypeId typeId, std::ostringstream& out) 
         if constexpr (std::is_same_v<T, StringId>) {
             dumpString(pack, name, out);
         } else if constexpr (std::is_same_v<T, StructId>) {
-            // TODO: dump the name
-            out << *name;
+            ASSERT_PRECONDITION(pack.structs.find(name) != pack.structs.end(),
+                    "Missing struct definition");
+            auto& strukt = pack.structs.at(name);
+            dumpString(pack, strukt.name, out);
         } else {
             static_assert(always_false_v<T>, "unreachable");
         }
@@ -384,7 +386,20 @@ void dumpExpressionOperandExpression<StructId>(
         const PackFromGlsl& pack, const Function& function,
         const StructId& op, const std::vector<VariableOrExpressionId>& args,
         bool parenthesize, std::ostringstream& out) {
-    // TODO
+    ASSERT_PRECONDITION(pack.structs.find(op) != pack.structs.end(),
+            "Missing struct definition");
+    auto& strukt = pack.structs.at(op);
+    out << "(";
+    bool firstArg = true;
+    for (auto& arg : args) {
+        if (firstArg) {
+            firstArg = false;
+        } else {
+            out << "," << kSpace;
+        }
+        dumpAnyVariableOrExpression(pack, function, arg, /*parenthesize=*/false, out);
+    }
+    out << ")";
 }
 
 template<>
