@@ -117,7 +117,7 @@ utils::io::sstream& CodeGenerator::generateProlog(utils::io::sstream& out, Shade
             // Nothing to generate
             break;
         case StereoscopicType::MULTIVIEW:
-            // IFTTT: This value should be changed along with the settings in GLSLPostProcessor.cpp.
+            // FIXME: This value should be changed along with the settings in GLSLPostProcessor.cpp.
             out << "layout(num_views = 2) in;\n";
             break;
         }
