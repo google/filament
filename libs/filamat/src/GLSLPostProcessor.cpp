@@ -536,13 +536,18 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
             glslOptions.emit_uniform_buffer_as_plain_uniforms = true;
         }
 
-        // For stereo variants using multiview feature, this generates the shader code below.
-        //   #extension GL_OVR_multiview2 : require
-        //   layout(num_views = 2) in;
-        if (config.variant.hasStereo() &&
-            config.shaderType == ShaderStage::VERTEX &&
-            config.materialInfo->stereoscopicType == StereoscopicType::MULTIVIEW) {
-            glslOptions.ovr_multiview_view_count = config.materialInfo->stereoscopicEyeCount;
+        if (config.variant.hasStereo() && config.shaderType == ShaderStage::VERTEX) {
+            switch (config.materialInfo->stereoscopicType) {
+            case StereoscopicType::INSTANCED:
+                // Nothing to generate
+                break;
+            case StereoscopicType::MULTIVIEW:
+                // For stereo variants using multiview feature, this generates the shader code below.
+                //   #extension GL_OVR_multiview2 : require
+                //   layout(num_views = 2) in;
+                glslOptions.ovr_multiview_view_count = config.materialInfo->stereoscopicEyeCount;
+                break;
+            }
         }
 
         CompilerGLSL glslCompiler(std::move(spirv));
