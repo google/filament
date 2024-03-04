@@ -41,15 +41,11 @@ class PlatformEGL : public OpenGLPlatform {
 public:
 
     PlatformEGL() noexcept;
-    bool isExtraContextSupported() const noexcept override;
-    void createContext(bool shared) override;
-    void releaseContext() noexcept override;
 
     // Return true if we're on an OpenGL platform (as opposed to OpenGL ES). false by default.
     virtual bool isOpenGL() const noexcept;
 
 protected:
-
     // --------------------------------------------------------------------------------------------
     // Helper for EGL configs and attributes parameters
 
@@ -88,6 +84,10 @@ protected:
 
     // --------------------------------------------------------------------------------------------
     // OpenGLPlatform Interface
+
+    bool isExtraContextSupported() const noexcept override;
+    void createContext(bool shared) override;
+    void releaseContext() noexcept override;
 
     void terminate() noexcept override;
 
