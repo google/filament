@@ -44,17 +44,23 @@ PORT_CONSTANT(Program, SAMPLER_BINDING_COUNT)
 
 #undef PORT_CONSTANT
 
-uint8_t BIT_COUNT[256] = {0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2,
-    3, 3, 4, 3, 4, 4, 5, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3,
-    4, 4, 5, 4, 5, 5, 6, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3,
-    4, 4, 5, 4, 5, 5, 6, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4,
-    5, 5, 6, 5, 6, 6, 7, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3,
-    4, 4, 5, 4, 5, 5, 6, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4,
-    5, 5, 6, 5, 6, 6, 7, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4,
-    5, 5, 6, 5, 6, 6, 7, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 4, 5, 5, 6, 5, 6, 6, 7, 5,
-    6, 6, 7, 6, 7, 7, 8};
+// Use constexpr to statically generate a bit count table for 8-bit numbers.
+struct BitCountHelper {
+    constexpr BitCountHelper() : data{} {
+        for (uint16_t i = 0; i < 256; ++i) {
+            data[i] = 0;
+            for (auto j = i; j > 0; j /= 2) {
+                if (j & 1) {
+                    data[i]++;
+                }
+            }
+        }
+    }
+    uint8_t data[256];
+} BitCountImpl;
 
 inline uint8_t countBits(uint32_t num) {
+    static constexpr uint8_t const* BIT_COUNT = BitCountImpl.data;
     return BIT_COUNT[num & 0xFF] + BIT_COUNT[(num >> 8) & 0xFF] + BIT_COUNT[(num >> 16) & 0xFF] +
            BIT_COUNT[(num >> 24) & 0xFF];
 }
@@ -122,11 +128,6 @@ struct UBOSet {
 
 constexpr uint8_t MAX_BINDINGS = UNIFORM_BINDING_COUNT * MAX_SUPPORTED_SHADER_STAGE;
 static_assert(MAX_BINDINGS >= SAMPLER_BINDING_COUNT * MAX_SUPPORTED_SHADER_STAGE);
-
-template<typename MaskType>
-inline MaskType genMask(uint8_t stage, MaskType bit) {
-    return static_cast<MaskType>(bit << (sizeof(MaskType) * 4 * (stage - 1)));
-}
 
 template<typename TYPE>
 class DescriptorPool {
@@ -487,8 +488,8 @@ public:
             uboCount++;
 
             // Currently we let ubo be visible in all stages.
-            uboMask |= genMask<UBOSet::Mask>(VERTEX_STAGE, 1 << binding);
-            uboMask |= genMask<UBOSet::Mask>(FRAGMENT_STAGE, 1 << binding);
+            uboMask |= (VERTEX_STAGE << binding);
+            uboMask |= (FRAGMENT_STAGE << binding);
         }
 
         if (uboMask) {
@@ -530,7 +531,7 @@ public:
         auto& samplerMask = samplerKey.mask;
         uint8_t samplerCount = 0;
         for (auto const sampler: mSamplers) {
-            samplerMask |= genMask<SamplerSet::Mask>(sampler.stage, 1 << sampler.binding);
+            samplerMask |= (sampler.stage << sampler.binding);
 
             samplerKey.sampler[samplerCount] = sampler.info.sampler;
             samplerKey.imageView[samplerCount] = sampler.info.imageView;
